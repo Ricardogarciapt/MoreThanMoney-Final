@@ -19,6 +19,14 @@ export interface MtmFundedConfig {
   torneio_ativo: string | null
   /** Minutos entre leituras das contas para actualizar a classificação. */
   minutos_entre_leituras: number
+  /**
+   * Quando as contas SIMULADAS foram lançadas aos clientes (ISO), ou null.
+   *
+   * É um lançamento, não um interruptor: define-se uma vez, no admin, com confirmação — e o
+   * cartão desaparece a seguir. Desligar depois deixava contas já vendidas no nosso motor sem
+   * dono do outro lado.
+   */
+  sim_lancado_em: string | null
 }
 
 export const MTMFUNDED_DEFAULT: MtmFundedConfig = {
@@ -26,6 +34,7 @@ export const MTMFUNDED_DEFAULT: MtmFundedConfig = {
   vendas_abertas: false,
   torneio_ativo: '2026-q3',
   minutos_entre_leituras: 60,
+  sim_lancado_em: null,
 }
 
 export async function getMtmFundedConfig(): Promise<MtmFundedConfig> {
@@ -42,6 +51,7 @@ export async function getMtmFundedConfig(): Promise<MtmFundedConfig> {
         Number.isFinite(Number(v.minutos_entre_leituras)) && Number(v.minutos_entre_leituras) >= 5
           ? Number(v.minutos_entre_leituras)
           : MTMFUNDED_DEFAULT.minutos_entre_leituras,
+      sim_lancado_em: typeof v.sim_lancado_em === 'string' ? v.sim_lancado_em : null,
     }
   } catch {
     return MTMFUNDED_DEFAULT
@@ -53,6 +63,8 @@ export async function setMtmFundedConfig(patch: Partial<MtmFundedConfig>): Promi
   const novo: MtmFundedConfig = {
     ...atual,
     ...patch,
+    // O lançamento não se desfaz por aqui: uma vez com data, fica com a data.
+    sim_lancado_em: atual.sim_lancado_em ?? patch.sim_lancado_em ?? null,
     // Desligar o produto desliga as vendas com ele. Deixar vendas abertas num produto
     // invisível era vender uma porta que já não existe.
     vendas_abertas: (patch.ativo ?? atual.ativo) ? (patch.vendas_abertas ?? atual.vendas_abertas) : false,

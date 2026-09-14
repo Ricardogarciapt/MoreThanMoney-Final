@@ -229,8 +229,17 @@ export async function GET(request: NextRequest) {
   const { count: totalContas } = await db.from('mtm_trading_accounts').select('id', { count: 'exact', head: true })
   const { count: certificados } = await db.from('mtm_certificates').select('id', { count: 'exact', head: true })
 
+  // As contas simuladas: enquanto não forem lançadas, o cartão de lançamento mostra o que falta.
+  const { prontidaoDoLancamento } = await import('@/lib/mtmfunded/simulado/motor')
+  const simulado = config.sim_lancado_em
+    ? { lancadoEm: config.sim_lancado_em, prontidao: null }
+    : { lancadoEm: null, prontidao: await prontidaoDoLancamento() }
+  const { count: contasSimuladas } = await db
+    .from('mtm_trading_accounts').select('id', { count: 'exact', head: true }).eq('motor', 'sim')
+
   return NextResponse.json({
     config,
+    simulado: { ...simulado, contas: contasSimuladas ?? 0 },
     torneios: (torneios ?? []).map((t) => ({ ...t, participantes: contagens.get(t.id as string) ?? 0 })),
     contas: {
       total: totalContas ?? 0,
@@ -264,6 +273,48 @@ export async function POST(request: NextRequest) {
         : {}),
     })
     return NextResponse.json({ ok: true, config })
+  }
+
+  // ── contas simuladas: LANÇAR aos clientes (uma vez, irreversível pelo painel) ──
+  //
+  // Duas travas no servidor, não só no ecrã: a frase de confirmação escrita à mão e a prontidão
+  // toda verde. Lançar sem motor de preços ou sem WebTrader vendia contas sem sítio onde negociar.
+  if (accao === 'sim_lancar') {
+    const config = await getMtmFundedConfig()
+    if (config.sim_lancado_em) return NextResponse.json({ error: 'já foi lançado' }, { status: 409 })
+    if (String(b?.confirmacao ?? '').trim().toUpperCase() !== 'LANÇAR') {
+      return NextResponse.json({ error: 'escreve LANÇAR para confirmar' }, { status: 400 })
+    }
+    const { prontidaoDoLancamento } = await import('@/lib/mtmfunded/simulado/motor')
+    const p = await prontidaoDoLancamento()
+    if (!p.pronto) return NextResponse.json({ error: `ainda não: ${p.faltas.join('; ')}` }, { status: 409 })
+    const novo = await setMtmFundedConfig({ sim_lancado_em: new Date().toISOString() })
+    return NextResponse.json({ ok: true, config: novo })
+  }
+
+  // ── contas simuladas: conta de TESTE para o próprio admin ─────────────────
+  //
+  // Antes do lançamento é por aqui que se experimenta o motor e o WebTrader: a conta nasce
+  // simulada e activa, na conta de quem carregou, sem compra e sem email.
+  if (accao === 'sim_conta_teste') {
+    const { verifyAdminAccess } = await import('@/lib/admin-api-helpers')
+    const { userId } = await verifyAdminAccess()
+    if (!userId) return NextResponse.json({ error: 'sem sessão de admin' }, { status: 401 })
+    const { data: programa } = await db
+      .from('mtm_funded_programs').select('id, saldo').eq('slug', String(b?.programa ?? '10k-2f')).maybeSingle()
+    if (!programa) return NextResponse.json({ error: 'programa desconhecido' }, { status: 404 })
+    const { camposDeContaSimulada } = await import('@/lib/mtmfunded/simulado/motor')
+    const { data: conta, error } = await db.from('mtm_trading_accounts').insert({
+      user_id: userId,
+      tipo: 'desafio',
+      program_id: programa.id,
+      saldo_inicial: programa.saldo,
+      alavancagem: 100,
+      ...camposDeContaSimulada(Number(programa.saldo)),
+      metricas: { teste: true },
+    }).select('id').single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true, contaId: conta.id })
   }
 
   // ── torneio: publicar / estado ───────────────────────────────────────────
@@ -345,10 +396,13 @@ export async function POST(request: NextRequest) {
     if (!id) return NextResponse.json({ error: 'contaId em falta' }, { status: 400 })
     const { data: conta } = await db
       .from('mtm_trading_accounts')
-      .select('id, mt5_login, tipo, servidor, saldo_inicial, alavancagem, user_id')
+      .select('id, mt5_login, tipo, servidor, saldo_inicial, alavancagem, user_id, motor')
       .eq('id', id)
       .maybeSingle()
     if (!conta) return NextResponse.json({ error: 'conta desconhecida' }, { status: 404 })
+    if ((conta as Record<string, unknown>).motor === 'sim') {
+      return NextResponse.json({ error: 'conta simulada — não passa pela fila da corretora' }, { status: 409 })
+    }
     // Uma conta que JÁ tem login não se volta a pedir: criava uma segunda conta real na
     // corretora para a mesma pessoa, e ninguém saberia qual vale.
     if (conta.mt5_login) {

@@ -23,7 +23,12 @@ interface Torneio {
   saldo_inicial: number; regras: Record<string, number>
 }
 interface Resumo {
-  config: { ativo: boolean; vendas_abertas: boolean; minutos_entre_leituras: number }
+  config: { ativo: boolean; vendas_abertas: boolean; minutos_entre_leituras: number; sim_lancado_em: string | null }
+  simulado: {
+    lancadoEm: string | null
+    contas: number
+    prontidao: { simbolos: number; precosFrescos: number; webtrader: boolean; pronto: boolean; faltas: string[] } | null
+  }
   torneios: Torneio[]
   contas: { total: number; porEmitir: number; ativas: number; quebradas: number }
   fila: { emFila: number; erro: number }
@@ -143,6 +148,9 @@ function Resumo({ dados, accao, ocupado }: { dados: Resumo; accao: Accao; ocupad
           />
         </div>
       </section>
+
+      {/* Desaparece depois do lançamento: é um passo que se dá uma vez, não um interruptor. */}
+      {!dados.simulado.lancadoEm && <LancarSimulado dados={dados} accao={accao} ocupado={ocupado} />}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Cartao icone={Users} titulo="Participantes" valor={dados.torneios.reduce((a, t) => a + t.participantes, 0)} />
@@ -1249,5 +1257,98 @@ function IconeBotao({ children, onClick, ocupado, titulo, perigo }: {
       }`}>
       {ocupado ? <Loader2 className="h-3 w-3 animate-spin" /> : children}
     </button>
+  )
+}
+
+// ── Lançamento das contas simuladas ──────────────────────────────────────────
+/**
+ * O interruptor de lançamento das contas emitidas por nós.
+ *
+ * Não é um interruptor como os outros: liga-se UMA vez, com confirmação escrita, e o cartão
+ * desaparece. A partir daí, compras e ofertas novas nascem simuladas; o que já existia na
+ * corretora continua lá até terminar o seu ciclo.
+ */
+function LancarSimulado({ dados, accao, ocupado }: { dados: Resumo; accao: Accao; ocupado: string | null }) {
+  const [aConfirmar, setAConfirmar] = useState(false)
+  const [frase, setFrase] = useState('')
+  const p = dados.simulado.prontidao
+
+  return (
+    <section className="rounded-xl border border-[#D2A63C]/40 bg-[#D2A63C]/[0.04] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-gray-100">Contas simuladas MTM — lançamento</h3>
+          <p className="mt-1 max-w-xl text-xs leading-relaxed text-gray-400">
+            Depois de lançado, cada compra ou oferta nova cria a conta na hora no nosso servidor, sem
+            fila nem corretora externa. As contas que já estão na corretora acabam o ciclo lá. Não se
+            desfaz pelo painel.
+          </p>
+          <ul className="mt-3 space-y-1 text-xs">
+            <Item ok={(p?.simbolos ?? 0) > 0} texto={`Símbolos activos: ${p?.simbolos ?? 0}`} />
+            <Item ok={(p?.precosFrescos ?? 0) > 0} texto={`Motor de preços (M2): ${p?.precosFrescos ? `${p.precosFrescos} símbolos com preço fresco` : 'parado'}`} />
+            <Item ok={Boolean(p?.webtrader)} texto={`WebTrader (M3): ${p?.webtrader ? 'em produção' : 'por publicar'}`} />
+          </ul>
+          <p className="mt-2 text-[11px] text-gray-500">Contas simuladas de teste: {dados.simulado.contas}</p>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <Interruptor
+            titulo="Lançar aos clientes"
+            ligado={false}
+            desativado={!p?.pronto}
+            ocupado={ocupado === 'sim_lancar'}
+            nota={p?.pronto ? 'Pede confirmação.' : 'Fica disponível quando tudo estiver verde.'}
+            aoMudar={(v) => { if (v) setAConfirmar(true) }}
+          />
+          <button
+            onClick={() => accao({ accao: 'sim_conta_teste', programa: '10k-2f' }, 'sim_teste')}
+            disabled={ocupado === 'sim_teste'}
+            className="rounded-md border border-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-800 disabled:opacity-40"
+          >
+            {ocupado === 'sim_teste' ? 'A criar…' : 'Criar conta de teste (10K, para mim)'}
+          </button>
+        </div>
+      </div>
+
+      {aConfirmar && (
+        <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/[0.05] p-4">
+          <p className="text-sm text-gray-200">
+            Confirmas o lançamento? A partir de agora, todas as contas novas são simuladas e emitidas por nós.
+          </p>
+          <p className="mt-1 text-xs text-gray-400">Escreve <b className="text-gray-200">LANÇAR</b> para confirmar.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              value={frase}
+              onChange={(e) => setFrase(e.target.value)}
+              className="rounded-md border border-gray-700 bg-black/40 px-3 py-1.5 text-sm text-gray-100"
+              placeholder="LANÇAR"
+              autoFocus
+            />
+            <button
+              onClick={async () => {
+                const r = await accao({ accao: 'sim_lancar', confirmacao: frase }, 'sim_lancar')
+                if (r) { setAConfirmar(false); setFrase('') }
+              }}
+              disabled={frase.trim().toUpperCase() !== 'LANÇAR' || ocupado === 'sim_lancar'}
+              className="rounded-md bg-[#D2A63C] px-3 py-1.5 text-sm font-semibold text-black disabled:opacity-40"
+            >
+              Lançar
+            </button>
+            <button onClick={() => { setAConfirmar(false); setFrase('') }} className="text-xs text-gray-400 hover:text-gray-200">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function Item({ ok, texto }: { ok: boolean; texto: string }) {
+  return (
+    <li className={`flex items-center gap-1.5 ${ok ? 'text-emerald-400' : 'text-amber-400'}`}>
+      <span className={`inline-block h-1.5 w-1.5 rounded-full ${ok ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+      {texto}
+    </li>
   )
 }

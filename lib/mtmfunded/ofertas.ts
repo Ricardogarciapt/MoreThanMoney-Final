@@ -159,16 +159,18 @@ export async function ofertarDesafioDaRenovacao(
   if (!programa) return { ok: false, motivo: `programa ${regra.programas[0]} não existe` }
 
   // ── a conta ───────────────────────────────────────────────────────────────
+  const { motorDeNovasContas, camposDeContaSimulada, camposDeContaMt5 } = await import('./simulado/motor')
+  const motor = await motorDeNovasContas()
+
   const { data: conta, error: erroConta } = await db
     .from('mtm_trading_accounts')
     .insert({
       user_id: userId,
       tipo: 'desafio',
       program_id: programa.id,
-      servidor: 'TheTradingMaster-Live',
       saldo_inicial: programa.saldo,
       alavancagem: 100,
-      estado: 'pedida',
+      ...(motor === 'sim' ? camposDeContaSimulada(Number(programa.saldo)) : camposDeContaMt5()),
     })
     .select('id')
     .single()
@@ -189,7 +191,7 @@ export async function ofertarDesafioDaRenovacao(
   const partes = nomeCompleto.split(/\s+/).filter(Boolean)
   const { apelidoComTipo } = await import('./metaapi')
 
-  await db.from('mtm_account_requests').insert({
+  if (motor === 'mt5') await db.from('mtm_account_requests').insert({
     account_id: conta.id,
     primeiro_nome: partes[0] || 'Trader',
     sobrenome: apelidoComTipo(partes.length > 1 ? partes[partes.length - 1] : 'MTM', 'desafio', {

@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { camposDeContaSimulada, camposDeContaMt5 } from './simulado/motor'
 import {
   brandedMailAttachments,
   createMailTransporter,
@@ -417,7 +418,7 @@ async function emitirFaseSeguinte(
 
   const { data: anterior } = await db
     .from('mtm_trading_accounts')
-    .select('user_id, program_id, saldo_inicial, alavancagem, servidor')
+    .select('user_id, program_id, saldo_inicial, alavancagem, servidor, motor')
     .eq('id', contaAnteriorId)
     .maybeSingle()
   if (!anterior?.user_id || !anterior.program_id) return { ok: false, motivo: 'conta sem dono ou sem programa' }
@@ -453,10 +454,12 @@ async function emitirFaseSeguinte(
       user_id: anterior.user_id,
       tipo: 'desafio',
       program_id: anterior.program_id,
-      servidor: anterior.servidor ?? 'TheTradingMaster-Live',
       saldo_inicial: anterior.saldo_inicial,
       alavancagem: anterior.alavancagem ?? 100,
-      estado: 'pedida',
+      // A fase seguinte herda o motor da anterior: um desafio não muda de casa a meio.
+      ...(anterior.motor === 'sim'
+        ? camposDeContaSimulada(Number(anterior.saldo_inicial ?? 0))
+        : camposDeContaMt5(anterior.servidor as string | null)),
       metricas: { fase },
     })
     .select('id')
@@ -466,7 +469,7 @@ async function emitirFaseSeguinte(
   const partes = String(perfil.full_name ?? '').trim().split(/\s+/).filter(Boolean)
   const { apelidoComTipo } = await import('./metaapi')
 
-  await db.from('mtm_account_requests').insert({
+  if (anterior.motor !== 'sim') await db.from('mtm_account_requests').insert({
     account_id: nova.id,
     tarefa: 'criar',
     primeiro_nome: partes[0] || 'Trader',
@@ -626,7 +629,7 @@ export async function emitirContaFinanciada(userId: string): Promise<ResultadoFi
   // fase. Sem um desafio aprovado não há nada a financiar.
   const { data: aprovado } = await db
     .from('mtm_trading_accounts')
-    .select('id, saldo_inicial, program_id')
+    .select('id, saldo_inicial, program_id, motor')
     .eq('user_id', userId)
     .eq('tipo', 'desafio')
     .eq('estado', 'aprovada')
@@ -650,10 +653,9 @@ export async function emitirContaFinanciada(userId: string): Promise<ResultadoFi
       user_id: userId,
       tipo: 'financiada',
       program_id: aprovado.program_id,
-      servidor: 'TheTradingMaster-Live',
       saldo_inicial: saldo,
       alavancagem: 100,
-      estado: 'pedida',
+      ...(aprovado.motor === 'sim' ? camposDeContaSimulada(saldo) : camposDeContaMt5()),
     })
     .select('id')
     .single()
@@ -662,7 +664,7 @@ export async function emitirContaFinanciada(userId: string): Promise<ResultadoFi
   const partes = String(perfil.full_name ?? '').trim().split(/\s+/).filter(Boolean)
   const { apelidoComTipo } = await import('./metaapi')
 
-  await db.from('mtm_account_requests').insert({
+  if (aprovado.motor !== 'sim') await db.from('mtm_account_requests').insert({
     account_id: conta.id,
     tarefa: 'criar',
     primeiro_nome: partes[0] || 'Trader',
@@ -717,7 +719,7 @@ export async function renovarContaAposLevantamento(
 
   const { data: conta } = await db
     .from('mtm_trading_accounts')
-    .select('id, user_id, tipo, mt5_login, servidor, saldo_inicial, alavancagem, program_id, metaapi_account_id, mt5_password_cifrada, metricas')
+    .select('id, user_id, tipo, mt5_login, servidor, saldo_inicial, alavancagem, program_id, metaapi_account_id, mt5_password_cifrada, metricas, motor')
     .eq('id', accountId)
     .maybeSingle()
   if (!conta) return { ok: false, motivo: 'conta não encontrada' }
@@ -770,10 +772,9 @@ export async function renovarContaAposLevantamento(
       user_id: conta.user_id,
       tipo: 'financiada',
       program_id: conta.program_id,
-      servidor: conta.servidor ?? 'TheTradingMaster-Live',
       saldo_inicial: saldo,
       alavancagem: conta.alavancagem ?? 100,
-      estado: 'pedida',
+      ...(conta.motor === 'sim' ? camposDeContaSimulada(saldo) : camposDeContaMt5(conta.servidor as string | null)),
       metricas: {
         cicloAnterior: conta.mt5_login ?? null,
         renovadaEm: new Date().toISOString(),
@@ -788,7 +789,7 @@ export async function renovarContaAposLevantamento(
   }
 
   const { apelidoComTipo } = await import('./metaapi')
-  await db.from('mtm_account_requests').insert({
+  if (conta.motor !== 'sim') await db.from('mtm_account_requests').insert({
     account_id: nova.id,
     tarefa: 'criar',
     primeiro_nome: partes[0] || 'Trader',

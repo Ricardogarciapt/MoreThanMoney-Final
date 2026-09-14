@@ -62,6 +62,10 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
     return
   }
 
+  // Antes do lançamento das contas simuladas, na corretora (fila MT5); depois, no nosso motor.
+  const { motorDeNovasContas, camposDeContaSimulada, camposDeContaMt5 } = await import('./simulado/motor')
+  const motor = await motorDeNovasContas()
+
   // A conta primeiro — é ela que o pedido da fila referencia.
   const { data: conta, error: erroConta } = await db
     .from('mtm_trading_accounts')
@@ -69,10 +73,9 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
       user_id: userId,
       tipo: 'desafio',
       program_id: programa.id,
-      servidor: 'TheTradingMaster-Live',
       saldo_inicial: programa.saldo,
       alavancagem: 100,
-      estado: 'pedida',
+      ...(motor === 'sim' ? camposDeContaSimulada(Number(programa.saldo)) : camposDeContaMt5()),
     })
     .select('id')
     .single()
@@ -102,7 +105,8 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
   }
 
   const { apelidoComTipo } = await import('@/lib/mtmfunded/metaapi')
-  await db.from('mtm_account_requests').insert({
+  // Conta simulada: já está activa, não há fila nem agente.
+  if (motor === 'mt5') await db.from('mtm_account_requests').insert({
     account_id: conta.id,
     primeiro_nome: primeiroNome,
     // A conta nasce sempre na PRIMEIRA fase. A segunda é outra conta, emitida quando esta
@@ -129,5 +133,5 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
     await registarUsoDoCupao(String(meta.cupao), userId).catch(() => undefined)
   }
 
-  console.log(`✅ [MTMFUNDED] ${programa.nome} pago por ${email} — conta ${conta.id} na fila`)
+  console.log(`✅ [MTMFUNDED] ${programa.nome} pago por ${email} — conta ${conta.id} ${motor === 'sim' ? 'simulada, activa' : 'na fila'}`)
 }
