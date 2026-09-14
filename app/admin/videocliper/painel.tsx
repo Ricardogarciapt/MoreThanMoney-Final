@@ -235,6 +235,16 @@ export default function PainelVideocliper() {
                     ))}
                   </div>
 
+                  {job?.estado === 'pronto' && clips.length > 0 && (
+                    <button
+                      onClick={() => void accao({ accao: 'rever_legendas', jobId: j.id }, 'rever')}
+                      disabled={ocupado === 'rever'}
+                      className="mt-3 mr-2 inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-[12px] text-neutral-300 hover:bg-neutral-800 disabled:opacity-40"
+                    >
+                      {ocupado === 'rever' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      Rever legendas
+                    </button>
+                  )}
                   {job?.estado === 'pronto' && (
                     <button
                       onClick={() => void accao({ accao: 'reanalisar', jobId: j.id }, 'reanalisar')}

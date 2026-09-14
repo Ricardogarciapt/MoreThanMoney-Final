@@ -266,10 +266,18 @@ export async function GET(request: NextRequest) {
     dvrJobId: job.dvr_job_id,
     ficheiroLocal,
     titulo: job.titulo,
-    idioma: job.idioma ?? 'pt',
+    // Sem idioma forçado: forçar `pt` numa sessão falada em inglês fazia o Whisper «traduzir»
+    // à força e sair uma legenda sem sentido. Quem pediu um idioma no vídeo continua a mandar.
+    idioma: job.idioma ?? null,
     // `word` é o ponto todo: sem tempos por palavra não há legenda a acender palavra a palavra,
     // e o estilo que foi pedido deixa de ser possível.
-    asr: { granularidade: 'word', modelo: 'whisper-large-v3-turbo' },
+    // O modelo grande, não o turbo: é mais lento e acerta mais nas palavras — e as palavras são
+    // o que fica queimado no vídeo. O `prompt` dá ao Whisper o vocabulário da casa.
+    asr: {
+      granularidade: 'word',
+      modelo: 'whisper-large-v3',
+      prompt: 'More Than Money, MTM, Ricardo Garcia, trading, pips, stop loss, take profit, breakeven, lote, spread, XAUUSD, ouro, Nasdaq, PU Prime, MetaTrader, Premium, Sensei, GoldKiller.',
+    },
     apagarDepoisDeSubir: true,
   })
 }

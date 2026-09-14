@@ -261,7 +261,14 @@ export async function guardarPropostas(jobId: string, clips: ClipeProposto[], pa
   // reanálise seria deitar fora trabalho feito.
   await db.from('videocliper_clips').delete().eq('job_id', jobId).eq('estado', 'proposto')
 
-  const linhas = clips.map((c) => ({
+  // As legendas passam pela revisão antes de gravar: o Whisper erra na escrita, e o que se
+  // grava aqui é o que fica queimado no vídeo. Em paralelo — são dez pedidos pequenos.
+  const { reverPalavras } = await import('./revisao')
+  const revistas = await Promise.all(
+    clips.map((c) => reverPalavras(legendasDoClipe(palavras, c.inicioSeg, c.fimSeg), `${c.titulo} — ${c.hook ?? ''}`)),
+  )
+
+  const linhas = clips.map((c, i) => ({
     job_id: jobId,
     ordem: c.ordem,
     titulo: c.titulo,
@@ -271,7 +278,7 @@ export async function guardarPropostas(jobId: string, clips: ClipeProposto[], pa
     inicio_seg: c.inicioSeg,
     fim_seg: c.fimSeg,
     duracao_seg: c.duracaoSeg,
-    legendas: legendasDoClipe(palavras, c.inicioSeg, c.fimSeg),
+    legendas: revistas[i],
     caption: c.caption,
     cta_palavra: c.ctaPalavra,
     estado: 'proposto',

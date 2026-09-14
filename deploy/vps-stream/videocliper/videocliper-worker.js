@@ -345,7 +345,8 @@ async function transcrever(trabalho) {
 
     const form = new FormData()
     form.append("file", new Blob([fs.readFileSync(audio)]), "audio.m4a")
-    form.append("model", ASR_MODELO)
+    form.append("model", (trabalho.asr && trabalho.asr.modelo) || ASR_MODELO)
+    if (trabalho.asr && trabalho.asr.prompt) form.append("prompt", String(trabalho.asr.prompt).slice(0, 800))
     form.append("response_format", "verbose_json")
     // ISTO é o ponto todo. Sem tempos por palavra não há legenda a acender palavra a palavra,
     // e o estilo que foi pedido deixa de ser possível.

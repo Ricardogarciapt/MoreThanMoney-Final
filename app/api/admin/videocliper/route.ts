@@ -118,6 +118,44 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, ficheiros: caminhos.length })
   }
 
+  // ── rever as legendas dos clips ainda por cortar ─────────────────────────
+  //
+  // Refaz as legendas a partir da transcrição e passa-as pela revisão; as pré-visualizações
+  // voltam a ser geradas com o texto novo. Clips já cortados não mudam: a legenda está queimada
+  // no ficheiro, e recortá-los sem ninguém pedir era gastar máquina às escondidas.
+  if (accao === 'rever_legendas') {
+    const jobId = String(corpo?.jobId ?? '')
+    const { data: job } = await db.from('videocliper_jobs').select('transcricao').eq('id', jobId).maybeSingle()
+    if (!Array.isArray(job?.transcricao)) return NextResponse.json({ erro: 'vídeo sem transcrição' }, { status: 400 })
+    const { data: clips } = await db
+      .from('videocliper_clips')
+      .select('id, titulo, hook, inicio_seg, fim_seg, preview_url, thumbnail_url')
+      .eq('job_id', jobId)
+      .in('estado', ['proposto', 'rejeitado', 'erro'])
+
+    const { legendasDoClipe } = await import('@/lib/videocliper/analise')
+    const { reverPalavras } = await import('@/lib/videocliper/revisao')
+    const MARCA = '/storage/v1/object/public/uploads/'
+    const velhos: string[] = []
+
+    await Promise.all((clips ?? []).map(async (c) => {
+      const legendas = await reverPalavras(
+        legendasDoClipe(job!.transcricao as never, Number(c.inicio_seg), Number(c.fim_seg)),
+        `${c.titulo} — ${c.hook ?? ''}`,
+      )
+      for (const u of [c.preview_url, c.thumbnail_url]) {
+        if (typeof u === 'string' && u.includes(MARCA)) velhos.push(decodeURIComponent(u.split(MARCA)[1].split('?')[0]))
+      }
+      await db.from('videocliper_clips').update({
+        legendas,
+        preview_estado: null, preview_url: null, thumbnail_url: null, preview_erro: null,
+        updated_at: new Date().toISOString(),
+      }).eq('id', c.id)
+    }))
+    if (velhos.length) await db.storage.from('uploads').remove(velhos).catch(() => undefined)
+    return NextResponse.json({ ok: true, revistos: clips?.length ?? 0 })
+  }
+
   // ── pôr um vídeo na fila ──────────────────────────────────────────────────
   if (accao === 'clipar') {
     const url = String(corpo?.url ?? '').trim()
