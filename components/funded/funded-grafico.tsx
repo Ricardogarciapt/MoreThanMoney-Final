@@ -146,11 +146,11 @@ export default function FundedGrafico(props: GraficoProps) {
           <div className="ml-auto flex shrink-0 gap-1 pl-2">
             <button onClick={() => setModo(modo === "buy" ? null : "buy")} className="flex items-center gap-1 rounded border px-2 py-1"
               style={modo === "buy" ? { borderColor: TV.tp, background: "rgba(8,153,129,0.2)", color: "#fff" } : { borderColor: TV.borda, color: TV.tp }}>
-              <TrendingUp className="h-3.5 w-3.5" /> Long
+              <TrendingUp className="h-3.5 w-3.5" /> Posição longa
             </button>
             <button onClick={() => setModo(modo === "sell" ? null : "sell")} className="flex items-center gap-1 rounded border px-2 py-1"
               style={modo === "sell" ? { borderColor: TV.sl, background: "rgba(242,54,69,0.2)", color: "#fff" } : { borderColor: TV.borda, color: TV.sl }}>
-              <TrendingDown className="h-3.5 w-3.5" /> Short
+              <TrendingDown className="h-3.5 w-3.5" /> Posição curta
             </button>
           </div>
         )}

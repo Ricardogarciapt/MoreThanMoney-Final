@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Loader2, Minus, Plus } from "lucide-react"
+import { Loader2, Minus, Plus, TrendingDown, TrendingUp } from "lucide-react"
 import { type Direcao, normalizarVolume, pips } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
 import { useRascunho } from "./rascunho-ordem"
@@ -93,26 +93,6 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
           <p className="text-[10.5px] text-zinc-500">{s.nome ?? ""} · spread {s.spread_pontos} pts</p>
         </div>
         <div className="flex gap-1 rounded-lg bg-white/5 p-0.5 text-[11px]">
-          {/* Long/Short: a ferramenta de posição do gráfico, a partir do ticket — desenha já a
-              entrada com SL/TP por defeito, que se ajustam aqui ou arrastando as linhas. */}
-          {(["buy", "sell"] as const).map((lado) => (
-            <button
-              key={lado}
-              onClick={() => {
-                if (k.ferramenta === lado) { k.setFerramenta(null); return }
-                k.setFerramenta(lado)
-                k.colocar(lado, r.tipo === "mercado" ? null : r.entrada)
-              }}
-              className={`rounded-md px-2 py-1 font-semibold ${
-                k.ferramenta === lado
-                  ? lado === "buy" ? "bg-[#089981] text-white" : "bg-[#F23645] text-white"
-                  : lado === "buy" ? "text-[#26A69A]" : "text-[#EF5350]"
-              }`}
-            >
-              {lado === "buy" ? "Long" : "Short"}
-            </button>
-          ))}
-          <span className="mx-0.5 w-px bg-white/10" />
           {(["mercado", "limit", "stop"] as const).map((t) => (
             <button key={t} onClick={() => trocarTipo(t)} className={`rounded-md px-2 py-1 ${r.tipo === t ? "bg-[#2962FF] text-white" : "text-zinc-400"}`}>
               {t === "mercado" ? "Mercado" : t === "limit" ? "Limit" : "Stop"}
@@ -148,6 +128,35 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
           <Erro t={erros.entrada} />
         </>
       )}
+
+      {/* Desenhar no gráfico: a MESMA ordem, marcada à mão com a ferramenta de posição. Não é um
+          segundo par de botões de compra/venda — esses são o SELL/BUY lá em baixo. Por isso tem
+          aspecto de ferramenta (ícone + «desenhar»), não de botão de ordem. */}
+      <div className="flex items-center justify-between">
+        <span className="text-zinc-400">Desenhar no gráfico</span>
+        <div className="flex gap-1 text-[11px]">
+          {(["buy", "sell"] as const).map((lado) => {
+            const on = k.ferramenta === lado
+            const Icone = lado === "buy" ? TrendingUp : TrendingDown
+            return (
+              <button
+                key={lado}
+                title={lado === "buy" ? "Ferramenta de posição longa: marca entrada, SL e TP no gráfico" : "Ferramenta de posição curta: marca entrada, SL e TP no gráfico"}
+                onClick={() => {
+                  if (on) { k.setFerramenta(null); return }
+                  k.setFerramenta(lado)
+                  k.colocar(lado, r.tipo === "mercado" ? null : r.entrada)
+                }}
+                className={`flex items-center gap-1 rounded-md border px-2 py-0.5 ${
+                  on ? "border-[#2962FF] bg-[#2962FF]/20 text-white" : "border-white/10 text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Icone className="h-3.5 w-3.5" /> {lado === "buy" ? "posição longa" : "posição curta"}
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       <div className="flex items-center justify-between">
         <span className="text-zinc-400">SL / TP</span>
