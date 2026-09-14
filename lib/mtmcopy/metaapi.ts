@@ -3,6 +3,7 @@ import { convertTrailingToRelativePoints } from './pip-points'
 import { resolveBrokerSymbol, rankedBrokerSymbols } from './symbol-resolver'
 import { orderCommentFor } from '@/lib/mtmcopy/no-comment-accounts'
 import { inicioDaContagem } from './metricas-desde'
+import { simbolosDaContaCache, specDoSimboloCache, invalidarLeiturasDeSimbolos } from './metaapi-cache'
 
 export interface OrderRequest {
   accountId: string
@@ -462,7 +463,38 @@ function tradeModeAllowsOpen(tradeMode: string | undefined, direction: 'buy' | '
   return true // FULL (ou desconhecido tolerado)
 }
 
+/**
+ * Lista de símbolos da conta pela cache de 1 hora (ver metaapi-cache.ts).
+ *
+ * O `getSymbols` custa ~500 créditos e era pedido em cada ordem; a lista é configuração da
+ * corretora e quase não muda. Quando se passam símbolos canónicos, a lista guardada só é usada se
+ * TODOS tiverem candidato nela — senão relê-se uma vez (símbolo acabado de acrescentar na corretora).
+ */
+function simbolosDaConta(accountId: string, connection: RpcConnection, canonicos: string[] = []): Promise<string[]> {
+  const pedidos = canonicos.map((c) => c.trim()).filter(Boolean)
+  return simbolosDaContaCache(
+    accountId,
+    () => connection.getSymbols(),
+    pedidos.length ? (lista) => pedidos.every((c) => rankedBrokerSymbols(c, lista).length > 0) : undefined,
+  )
+}
+
+/**
+ * Especificação CRUA do símbolo pela cache de 1 hora. Os erros propagam-se como na chamada direta
+ * (não ficam guardados). Uma spec sem `point` não se guarda e devolve null.
+ */
+async function specCruaDaConta(
+  accountId: string,
+  connection: RpcConnection,
+  brokerSymbol: string,
+): Promise<MetaApiSymbolSpecification | null> {
+  if (!connection.getSymbolSpecification) return null
+  const ler = connection.getSymbolSpecification.bind(connection)
+  return specDoSimboloCache(accountId, brokerSymbol, () => ler(brokerSymbol))
+}
+
 async function fetchSpec(
+  accountId: string,
   connection: RpcConnection,
   brokerSymbol: string,
   specCache?: Map<string, MetaApiSymbolSpecification | null>,
@@ -475,7 +507,7 @@ async function fetchSpec(
     // seletor aceitar um símbolo disabled por engano.
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const raw = await connection.getSymbolSpecification(brokerSymbol)
+        const raw = await specCruaDaConta(accountId, connection, brokerSymbol)
         spec = raw?.point
           ? {
               point: raw.point,
@@ -506,6 +538,7 @@ async function fetchSpec(
  * Percorre os candidatos ranqueados (exato → sufixo nativo) e salta os não-negociáveis.
  */
 async function resolveTradeableBrokerSymbol(
+  accountId: string,
   connection: RpcConnection,
   symbols: string[],
   canonical: string,
@@ -519,7 +552,7 @@ async function resolveTradeableBrokerSymbol(
   // (spec transiente) — nunca uma explicitamente DISABLED/CLOSEONLY.
   let unknownFallback: { brokerSymbol: string; spec: MetaApiSymbolSpecification | null } | null = null
   for (const cand of ranked.slice(0, 8)) {
-    const spec = await fetchSpec(connection, cand, specCache)
+    const spec = await fetchSpec(accountId, connection, cand, specCache)
     if (spec?.tradeMode) {
       if (tradeModeAllowsOpen(spec.tradeMode, direction)) return { brokerSymbol: cand, spec }
       continue // tradeMode conhecido mas não permite → salta (não é fallback)
@@ -585,13 +618,14 @@ async function resolveEffectiveOrderType(
 }
 
 async function placeOrderOnConnection(
+  accountId: string,
   connection: RpcConnection,
   symbols: string[],
   specCache: Map<string, MetaApiSymbolSpecification | null>,
   req: OrderRequest,
 ): Promise<OrderResult> {
   try {
-    const picked = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction, specCache)
+    const picked = await resolveTradeableBrokerSymbol(accountId, connection, symbols, req.symbol, req.direction, specCache)
     const brokerSymbol = picked.brokerSymbol
     let sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     let tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
@@ -600,7 +634,7 @@ async function placeOrderOnConnection(
     if (spec === undefined) {
       if (connection.getSymbolSpecification) {
         try {
-          const raw = await connection.getSymbolSpecification(brokerSymbol)
+          const raw = await specCruaDaConta(accountId, connection, brokerSymbol)
           spec = raw?.point
             ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits, tradeMode: raw.tradeMode, stopsLevel: raw.stopsLevel, minVolume: raw.minVolume, maxVolume: raw.maxVolume, volumeStep: raw.volumeStep }
             : null
@@ -698,12 +732,15 @@ export async function placeOrdersSequential(accountId: string, requests: OrderRe
     try {
       const { connection, close: closeFn } = await getRpcConnection(accountId, 0, { forceFresh })
       close = closeFn
-      const symbols = await connection.getSymbols()
+      const symbols = await simbolosDaConta(accountId, connection, requests.map((r) => r.symbol))
       const specCache = new Map<string, MetaApiSymbolSpecification | null>()
       const results: OrderResult[] = []
       for (const req of requests) {
-        results.push(await placeOrderOnConnection(connection, symbols, specCache, req))
+        results.push(await placeOrderOnConnection(accountId, connection, symbols, specCache, req))
       }
+      // Uma ordem recusada pode vir de configuração da corretora que mudou (lote mínimo, stops,
+      // símbolo desativado): esquece-se o guardado para a próxima ler tudo fresco.
+      if (results.some((r) => !r.success)) invalidarLeiturasDeSimbolos(accountId)
       return results
     } finally {
       if (close) await close()
@@ -715,6 +752,7 @@ export async function placeOrdersSequential(accountId: string, requests: OrderRe
   } catch (err: unknown) {
     // Ligação cacheada possivelmente morta → invalida e tenta UMA vez com ligação fresca.
     invalidateRpcCache(accountId)
+    invalidarLeiturasDeSimbolos(accountId)
     if (isRetryableMetaApiError(err)) {
       try {
         return await run(true)
@@ -916,7 +954,7 @@ export async function fetchLotSizingContext(
     let marketPrice: number | null = null
     if (symbol.trim() && rpc.connection.getSymbolPrice) {
       try {
-        const symbols = await rpc.connection.getSymbols()
+        const symbols = await simbolosDaConta(accountId, rpc.connection, [symbol])
         const brokerSymbol = resolveBrokerSymbol(symbol, symbols)
         const tick = await rpc.connection.getSymbolPrice(brokerSymbol)
         const bid = tick?.bid
@@ -946,8 +984,8 @@ export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> 
     const { connection, close: closeFn } = await getRpcConnection(req.accountId)
     close = closeFn
 
-    const symbols = await connection.getSymbols()
-    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
+    const symbols = await simbolosDaConta(req.accountId, connection, [req.symbol])
+    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(req.accountId, connection, symbols, req.symbol, req.direction)
     req.volume = clampVolume(req.volume, spec) // sobe ao lote mínimo do broker (índices)
 
     let sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
@@ -987,6 +1025,7 @@ export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> 
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao executar ordem no MT5'
+    invalidarLeiturasDeSimbolos(req.accountId) // a próxima ordem relê símbolos/specs frescos
     return { success: false, error: message }
   } finally {
     if (close) await close()
@@ -1004,8 +1043,8 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
     const { connection, close: closeFn } = await getRpcConnection(req.accountId)
     close = closeFn
 
-    const symbols = await connection.getSymbols()
-    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
+    const symbols = await simbolosDaConta(req.accountId, connection, [req.symbol])
+    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(req.accountId, connection, symbols, req.symbol, req.direction)
     req.volume = clampVolume(req.volume, spec) // sobe ao lote mínimo do broker (índices)
 
     let sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
@@ -1049,6 +1088,7 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao colocar ordem LIMIT no MT5'
+    invalidarLeiturasDeSimbolos(req.accountId) // a próxima ordem relê símbolos/specs frescos
     return { success: false, error: message }
   } finally {
     if (close) await close()
@@ -1066,8 +1106,8 @@ export async function placeStopOrder(req: OrderRequest): Promise<OrderResult> {
     const { connection, close: closeFn } = await getRpcConnection(req.accountId)
     close = closeFn
 
-    const symbols = await connection.getSymbols()
-    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
+    const symbols = await simbolosDaConta(req.accountId, connection, [req.symbol])
+    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(req.accountId, connection, symbols, req.symbol, req.direction)
     req.volume = clampVolume(req.volume, spec) // sobe ao lote mínimo do broker (índices)
 
     let sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
@@ -1096,6 +1136,7 @@ export async function placeStopOrder(req: OrderRequest): Promise<OrderResult> {
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao colocar ordem STOP no MT5'
+    invalidarLeiturasDeSimbolos(req.accountId) // a próxima ordem relê símbolos/specs frescos
     return { success: false, error: message }
   } finally {
     if (close) await close()
@@ -1125,8 +1166,8 @@ export async function lerContextoDeCopia(
   try {
     const { connection, close: closeFn } = await getRpcConnection(accountId)
     close = closeFn
-    const symbols = await connection.getSymbols()
-    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, canonicalSymbol, direction)
+    const symbols = await simbolosDaConta(accountId, connection, [canonicalSymbol])
+    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(accountId, connection, symbols, canonicalSymbol, direction)
     const info = await connection.getAccountInformation()
     let bid: number | null = null
     let ask: number | null = null
@@ -1141,7 +1182,9 @@ export async function lerContextoDeCopia(
     }
     let tickSize: number | null = null
     if (connection.getSymbolSpecification) {
-      const raw = (await connection.getSymbolSpecification(brokerSymbol).catch(() => null)) as { tickSize?: number; point?: number } | null
+      // Spec pela cache; sem `point` não se guarda e lê-se direto como antes (o tickSize pode vir sozinho).
+      const raw = ((await specCruaDaConta(accountId, connection, brokerSymbol).catch(() => null)) ??
+        (await connection.getSymbolSpecification(brokerSymbol).catch(() => null))) as { tickSize?: number; point?: number } | null
       tickSize = raw?.tickSize && raw.tickSize > 0 ? raw.tickSize : raw?.point && raw.point > 0 ? raw.point : null
     }
     return { brokerSymbol, spec, bid, ask, balance: info.balance ?? null, equity: info.equity ?? null, tickSize, tickValue }
@@ -1379,7 +1422,7 @@ export async function getAccountSymbols(accountId: string): Promise<string[]> {
   try {
     const { connection, close: closeFn } = await getRpcConnection(accountId)
     close = closeFn
-    const symbols = await connection.getSymbols()
+    const symbols = await simbolosDaConta(accountId, connection)
     return Array.isArray(symbols) ? symbols : []
   } catch {
     return []
@@ -1398,9 +1441,9 @@ export async function getSymbolSpecification(
     close = closeFn
     if (!connection.getSymbolSpecification) return null
 
-    const symbols = await connection.getSymbols()
+    const symbols = await simbolosDaConta(accountId, connection, [canonicalSymbol])
     const brokerSymbol = resolveBrokerSymbol(canonicalSymbol, symbols)
-    const spec = await connection.getSymbolSpecification(brokerSymbol)
+    const spec = await specCruaDaConta(accountId, connection, brokerSymbol)
     if (!spec?.point) return null
     return {
       point: spec.point,
@@ -1430,9 +1473,13 @@ export async function getRiskTickContext(
   try {
     const { connection, close: closeFn } = await getRpcConnection(accountId)
     close = closeFn
-    const symbols = await connection.getSymbols()
+    const symbols = await simbolosDaConta(accountId, connection, [canonicalSymbol])
     const brokerSymbol = resolveBrokerSymbol(canonicalSymbol, symbols)
-    const spec = connection.getSymbolSpecification ? await connection.getSymbolSpecification(brokerSymbol) : null
+    // Spec pela cache; se a corretora devolver uma spec sem `point` (não se guarda), lê-se direto
+    // como antes — o tickSize pode vir sozinho.
+    const spec = connection.getSymbolSpecification
+      ? ((await specCruaDaConta(accountId, connection, brokerSymbol)) ?? (await connection.getSymbolSpecification(brokerSymbol)))
+      : null
     const s = spec as unknown as { tickSize?: number; point?: number } | null
     const tickSize = s?.tickSize && s.tickSize > 0 ? s.tickSize : s?.point && s.point > 0 ? s.point : null
     let tickValue: number | null = null
@@ -1460,8 +1507,9 @@ export async function getMarketPrice(accountId: string, canonicalSymbol: string)
     const { connection, close: closeFn } = await getRpcConnection(accountId)
     close = closeFn
     if (!connection.getSymbolPrice) return null
-    const symbols = await connection.getSymbols()
+    const symbols = await simbolosDaConta(accountId, connection, [canonicalSymbol])
     const brokerSymbol = resolveBrokerSymbol(canonicalSymbol, symbols)
+    // O preço continua sempre ao vivo — só a lista de símbolos vem da cache.
     const q = await connection.getSymbolPrice(brokerSymbol)
     const mid = q?.ask != null && q?.bid != null ? (q.ask + q.bid) / 2 : (q?.ask ?? q?.bid ?? null)
     return typeof mid === 'number' && mid > 0 ? mid : null
@@ -1592,7 +1640,7 @@ export async function cancelPendingOrdersForSymbol(
       return result
     }
 
-    const symbols = await connection.getSymbols()
+    const symbols = await simbolosDaConta(accountId, connection, [signalSymbol])
     const brokerSymbol = resolveBrokerSymbol(signalSymbol, symbols)
     const orders = (await connection.getOrders()) as MetaApiPendingOrder[]
 
