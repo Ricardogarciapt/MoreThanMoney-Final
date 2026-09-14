@@ -19,6 +19,7 @@ import {
 } from './provider-constants'
 import { fetchMetaApiOverview } from './metaapi-admin'
 import { getAccountSnapshot } from './metaapi'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export type ProviderKey =
   | 'premium'
@@ -123,6 +124,62 @@ async function fetchMetaStats(
 }
 
 /**
+ * CACHE DE 24 H DO METASTATS, por conta provider, em `site_settings`.
+ *
+ * Porquê: esta função corre em cada abertura da página pública /mtmcopy/metrics (e no briefing).
+ * O MetaStats é um pedido pago por conta, e os números que devolve (win rate, profit factor, nº de
+ * trades acumulados) mudam devagar — lê-los a cada visita era pagar a mesma resposta muitas vezes.
+ *
+ * Guarda-se na base e não na memória porque as funções serverless arrancam a frio muitas vezes e
+ * a memória não sobreviveria às 24 h. Só se guardam leituras BEM SUCEDIDAS: uma falha não fica
+ * «presa» um dia inteiro — na visita seguinte tenta-se de novo.
+ *
+ * O relatório diário (`accounts-daily-report.ts`) lê o MetaStats diretamente e não passa por aqui.
+ */
+const CHAVE_CACHE_METASTATS = 'mtmcopy_metastats_cache'
+export const TTL_METASTATS_MS = 24 * 60 * 60 * 1000
+
+type CacheMetaStats = Record<string, { metrics: Record<string, unknown>; lidoEm: string }>
+
+/** A entrada guardada ainda serve? Pura, para teste. */
+export function metaStatsGuardadoValido(
+  entrada: { lidoEm?: string } | null | undefined,
+  agora: number = Date.now(),
+  ttlMs: number = TTL_METASTATS_MS,
+): boolean {
+  if (!entrada?.lidoEm) return false
+  const t = Date.parse(entrada.lidoEm)
+  return Number.isFinite(t) && agora - t >= 0 && agora - t < ttlMs
+}
+
+async function lerCacheMetaStats(): Promise<CacheMetaStats> {
+  try {
+    const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', CHAVE_CACHE_METASTATS).maybeSingle()
+    // Há chaves de site_settings guardadas como texto JSON — aceita-se as duas formas.
+    const v = typeof data?.value === 'string' ? JSON.parse(data.value) : data?.value
+    return v && typeof v === 'object' ? (v as CacheMetaStats) : {}
+  } catch {
+    return {}
+  }
+}
+
+async function gravarCacheMetaStats(cache: CacheMetaStats): Promise<void> {
+  try {
+    await getSupabaseAdmin().from('site_settings').upsert(
+      {
+        key: CHAVE_CACHE_METASTATS,
+        value: cache as unknown as Record<string, unknown>,
+        description: 'Cache 24h do MetaStats das contas provider (poupa créditos MetaApi)',
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' },
+    )
+  } catch {
+    /* sem gravação a próxima visita relê ao vivo — nada se perde */
+  }
+}
+
+/**
  * Métricas de desempenho das 3 estratégias MTM (contas Provider).
  * Admin-only — chamar só de rotas protegidas por `requireAdmin`.
  */
@@ -133,7 +190,11 @@ export async function getProviderStrategyMetrics(): Promise<ProviderPerformanceP
     return { configured: false, providers: [], fetchedAt }
   }
 
-  const overview = await fetchMetaApiOverview().catch(() => null)
+  const [overview, cacheMetaStats] = await Promise.all([
+    fetchMetaApiOverview().catch(() => null),
+    lerCacheMetaStats(),
+  ])
+  let cacheMudou = false
 
   const accountById = new Map(
     (overview?.accounts ?? []).map((a) => [a.id, a] as const),
@@ -177,7 +238,17 @@ export async function getProviderStrategyMetrics(): Promise<ProviderPerformanceP
         hasMetaStats: false,
       }
 
-      const m = await fetchMetaStats(def.accountId, region)
+      const guardado = cacheMetaStats[def.accountId]
+      let m: Record<string, unknown> | null = null
+      if (metaStatsGuardadoValido(guardado)) {
+        m = guardado.metrics
+      } else {
+        m = await fetchMetaStats(def.accountId, region)
+        if (m) {
+          cacheMetaStats[def.accountId] = { metrics: m, lidoEm: new Date().toISOString() }
+          cacheMudou = true
+        }
+      }
       if (m) {
         base.hasMetaStats = true
         base.balance = num(m.balance)
@@ -216,6 +287,9 @@ export async function getProviderStrategyMetrics(): Promise<ProviderPerformanceP
       return base
     }),
   )
+
+  // Uma só escrita no fim (e não uma por conta em paralelo, que se pisariam umas às outras).
+  if (cacheMudou) await gravarCacheMetaStats(cacheMetaStats)
 
   return { configured: true, providers, fetchedAt }
 }
