@@ -274,11 +274,12 @@ export async function GET(request: NextRequest) {
     // `word` é o ponto todo: sem tempos por palavra não há legenda a acender palavra a palavra,
     // e o estilo que foi pedido deixa de ser possível.
     // O modelo grande, não o turbo: é mais lento e acerta mais nas palavras — e as palavras são
-    // o que fica queimado no vídeo. O `prompt` dá ao Whisper o vocabulário da casa.
+    // o que fica queimado no vídeo.
     asr: {
       granularidade: 'word',
       modelo: 'whisper-large-v3',
-      prompt: 'More Than Money, MTM, Ricardo Garcia, trading, pips, stop loss, take profit, breakeven, lote, spread, XAUUSD, ouro, Nasdaq, PU Prime, MetaTrader, Premium, Sensei, GoldKiller.',
+      // SEM `prompt` de vocabulário: um prompt numa língua empurra o Whisper a TRADUZIR para ela
+      // (uma sessão em inglês saiu legendada em português). O vocabulário corrige-o a revisão.
     },
     apagarDepoisDeSubir: true,
   })

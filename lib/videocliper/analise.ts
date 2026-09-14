@@ -119,7 +119,7 @@ TITULO: <curto, para o painel de admin>
 HOOK: <a primeira frase do clipe, literal da transcrição>
 PORQUE: <uma linha: porque é que este momento prende>
 CTA: <uma das palavras dadas>
-BROLL: <inicio>-<fim> | <descrição em inglês>; <inicio>-<fim> | <descrição em inglês>
+BROLL: <segundos DENTRO do clipe, a contar de 0>-<fim> | <descrição em inglês>; <inicio>-<fim> | <descrição em inglês>
 CAPTION: <a legenda da publicação, em pt-PT, até 5 linhas, a acabar no pedido do comentário>
 ===FIM===`
 
@@ -249,7 +249,7 @@ function interpretar(bruto: string, palavras: Palavra[]): ClipeProposto[] {
       duracaoSeg: duracao as 15 | 30 | 60,
       ctaPalavra: cta,
       caption,
-      broll: lerBroll(campo('BROLL'), fim - inicio),
+      broll: lerBroll(campo('BROLL'), fim - inicio, inicio),
     })
   }
 
@@ -278,13 +278,19 @@ export function legendasDoClipe(palavras: Palavra[], inicioSeg: number, fimSeg: 
  * Lê «4-7 | description; 12-15 | description» e recusa o que não cabe: fora do clipe, dentro
  * do gancho ou do fecho, curto ou longo de mais, ou por cima de outro.
  */
-export function lerBroll(bruto: string, duracao: number): BRoll[] {
+export function lerBroll(bruto: string, duracao: number, inicioDoClipe = 0): BRoll[] {
   const saida: BRoll[] = []
   for (const parte of bruto.split(';')) {
-    const m = parte.match(/(\d+(?:[.,]\d+)?)\s*s?\s*-\s*(\d+(?:[.,]\d+)?)\s*s?\s*\|\s*(.+)/)
+    const m = parte.match(/(\d+(?:[.,]\d+)?)\s*s?\s*[-–—]\s*(\d+(?:[.,]\d+)?)\s*s?\s*\|\s*(.+)/)
     if (!m) continue
-    const inicio = Number(m[1].replace(',', '.'))
-    const fim = Number(m[2].replace(',', '.'))
+    let inicio = Number(m[1].replace(',', '.'))
+    let fim = Number(m[2].replace(',', '.'))
+    // O modelo às vezes dá os tempos do VÍDEO e não do clipe (os mesmos que usa em INICIO/FIM).
+    // Se caem dentro do clipe em tempo absoluto, convertem-se em vez de se deitarem fora.
+    if (fim > duracao && inicioDoClipe > 0 && inicio >= inicioDoClipe && fim <= inicioDoClipe + duracao) {
+      inicio -= inicioDoClipe
+      fim -= inicioDoClipe
+    }
     const descricao = m[3].trim().slice(0, 300)
     if (!(fim > inicio) || inicio < 3 || fim > duracao - 3) continue
     if (fim - inicio < 1.5 || fim - inicio > 4.5 || !descricao) continue
