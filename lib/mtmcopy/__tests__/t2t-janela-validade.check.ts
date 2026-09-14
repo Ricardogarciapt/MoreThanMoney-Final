@@ -11,7 +11,7 @@ function hasEntryLevel(content?: string | null): boolean {
   return /^\s*\d{2,7}(?:[.,]\d+)?\s*[-–—]\s*\d{2,7}(?:[.,]\d+)?\s*$/m.test(content)
 }
 
-// Golden Moves escreve a zona A SECO — era isto que caía na janela dos 5 minutos.
+// A Aurum Flow escreve a zona A SECO — era isto que caía na janela dos 5 minutos.
 assert.equal(
   hasEntryLevel("I'm buying XAUUSD\n\n4606-4602\n\nTP1 4609\nTP2 4611\n\nSL 4598"),
   true,

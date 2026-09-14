@@ -24,7 +24,6 @@ export type T2TSourceKey =
   | 'goldkiller'
   | 'mtmscanner'
   | 'forexideas'
-  | 'goldenmoves'
 export type T2TAssetClass = 'gold' | 'forex' | 'crypto' | 'indices'
 
 /** Catálogo de fontes para a UI de "O que seguir". */
@@ -37,7 +36,6 @@ export const T2T_SOURCES: { key: T2TSourceKey; label: string; hint: string }[] =
   { key: 'james', label: 'Forex Swings', hint: 'Swings de forex (James)' },
   { key: 'primeverse', label: 'PrimeVerse', hint: 'Reencaminhados PrimeVerse' },
   { key: 'aurum', label: 'Aurum Flow', hint: 'Scanner ORB — ouro e perpétuos' },
-  { key: 'goldenmoves', label: 'Golden Moves', hint: 'Sinais do canal Golden Moves' },
 ]
 
 /** Catálogo de classes de ativo para a UI. */
@@ -61,7 +59,8 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
     return 'mtmscanner'
   }
   if (channelSlug === 'premium-ideas') return 'premium'
-  if (channelSlug === 'golden-moves') return 'goldenmoves'
+  // Chat da Aurum Flow (slug `aurum-flow` desde 2026-09-14). Alias do slug antigo da Aurum Flow — remover depois de 2026-10-14 (30 dias após 2026-09-14).
+  if (channelSlug === 'aurum-flow' || channelSlug === 'golden-moves') return 'aurum'
   if (channelSlug === 'sensei-scanner') return 'sensei'
   if (channelSlug === 'sinais-goldkiller' || /gold\s*killer|goldkiller/i.test(c)) return 'goldkiller'
   if (channelSlug === 'ideias-e-sinais') return /forex\s*swings/i.test(c) ? 'james' : null
@@ -115,7 +114,7 @@ const T2T_FOLLOWUP_RE =
 // Performance / resumo / recap (London/New York Performance, Total Win/Loss/Net PIPS…) — NUNCA são T2T.
 const T2T_PERF_RE =
   /(performance|resultado\s+do\s+dia|resumo|recap|relat[óo]rio|estat[íi]stic|balan[çc]o|total\s+(de\s+)?pips|total\s+(win|loss|net)|pips\s+(de\s+)?(hoje|esta\s+semana|do\s+dia)|fecho\s+do\s+dia|lucro\s+do\s+dia)/i
-// O gerúndio conta como direção: "I'm buying XAUUSD" é como o Gold Did e o Golden Moves
+// O gerúndio conta como direção: "I'm buying XAUUSD" é como o Gold Did e a Aurum Flow
 // escrevem uma entrada. Sem isto a mensagem não passava por sinal.
 const T2T_DIR_RE = /(\b(buy|buying|sell|selling|long|short|compra|comprando|venda|vendendo)\b|🟢|🔴|🔵)/i
 

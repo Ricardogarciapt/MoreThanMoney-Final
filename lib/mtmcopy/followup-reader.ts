@@ -23,7 +23,6 @@ export const SOURCE_LABEL: Record<T2TSourceKey, string> = {
   james: 'Forex Swings',
   primeverse: 'PrimeVerse',
   aurum: 'Aurum Flow',
-  goldenmoves: 'Golden Moves',
 }
 
 /**
@@ -62,7 +61,7 @@ export function detectLifecycleEvent(content: string | null | undefined): Signal
   if (/posi[çc][ãa]o\s*fechada|trade\s*fechad|encerrad\w*|close\s*all|closed\s*(manually)?/i.test(c))
     return 'closed'
 
-  // ── Fontes Gold Did / Golden Moves ────────────────────────────────────────────────────
+  // ── Fontes com escrita livre (Gold Did, Aurum Flow) ────────────────────────────────────────────────────
   // O trader escreve como fala. Sem estas regras, "Tp2 hit" ou "SET BE" ficavam por
   // interpretar e o chat mostrava o texto cru, sem o cartão de gestão do nosso formato.
 

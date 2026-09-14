@@ -233,8 +233,8 @@ function extractDirection(text: string): 'buy' | 'sell' | null {
     if (d) return d
   }
 
-  // "I'm buying XAUUSD" / "XAUUSD I'm buying" — é assim que os traders do Gold Did e do Golden
-  // Moves escrevem. Sem isto o gerúndio não casava com \bbuy\b e a entrada inteira era ignorada.
+  // "I'm buying XAUUSD" / "XAUUSD I'm buying" — é assim que os traders do Gold Did e da Aurum
+  // Flow escrevem. Sem isto o gerúndio não casava com \bbuy\b e a entrada inteira era ignorada.
   const gerundio = text.match(/\b(buying|selling|comprando|vendendo)\b/i)
   if (gerundio) {
     const g = gerundio[1].toLowerCase()
@@ -290,7 +290,7 @@ export function extractZoneRange(text: string): [number, number] | null {
         'i',
       ),
     ) ?? text.match(/zone\s*(\d+(?:[.,]\d+)?)\s*[-–—]\s*(\d+(?:[.,]\d+)?)/i)
-    // Linha SÓ com o intervalo — "4642.50-4638". O Golden Moves escreve a zona assim, sem
+    // Linha SÓ com o intervalo — "4642.50-4638". A Aurum Flow escreve a zona assim, sem
     // rótulo nenhum, logo a seguir ao "I'm buying XAUUSD".
     ?? text.match(/^\s*(\d{2,7}(?:[.,]\d+)?)\s*[-–—]\s*(\d{2,7}(?:[.,]\d+)?)\s*$/m)
   if (!zone) return null

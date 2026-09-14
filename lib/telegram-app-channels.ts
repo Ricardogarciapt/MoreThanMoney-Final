@@ -15,7 +15,7 @@ export type AppChatChannelSlug =
   | 'sinais-goldkiller'
   | 'sinais-scanner-mtm'
   | 'cripto-perps'
-  | 'golden-moves'
+  | 'aurum-flow'
 
 const map = new Map<string, AppChatChannelSlug>()
 
@@ -64,7 +64,7 @@ export function detectSlugFromChannelTitle(title: string | null | undefined): Ap
   // Perpétuos ANTES do fallback genérico 'ideias'/'scanner' (o título "Ideias de Perpétuos Cripto"
   // senão cairia em Forex). Cobre perp/perpétuo/perpetuo.
   if (t.includes('perp')) return 'cripto-perps'
-  // O Golden Moves / Aurum Flow já NÃO tem chat na app: a estratégia continua (copia-se por
+  // A Aurum Flow já NÃO tem chat na app: a estratégia continua (copia-se por
   // vT8w no MTM Auto), o canal de conversa é que deixou de existir para o cliente.
   // GoldKiller ANTES de "scanner" genérico (o título GoldKiller também contém "scanner").
   if (t.includes('goldkiller') || t.includes('gold killer') || t.includes('gold-killer')) return 'sinais-goldkiller'

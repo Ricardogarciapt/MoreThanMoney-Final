@@ -12,7 +12,7 @@
  * consulta procurava-o em `channel_slug`, onde está escrito `premium-ideas`.
  *
  * O mapa vive aqui e só aqui. Existia copiado em dois módulos, e as cópias já tinham divergido:
- * uma conhecia os dois nomes da Gold Did, a outra só um — a mesma estratégia media-se diferente
+ * uma conhecia os dois nomes de uma fonte, a outra só um — a mesma estratégia media-se diferente
  * conforme o ecrã que a perguntava.
  *
  * Cada slug pode ter MAIS DO QUE UMA chave. Não é indecisão: são nomes que a mesma fonte teve
@@ -25,11 +25,10 @@ const ALIASES: Record<string, string[]> = {
   sensei: ['sensei'],
   Goldkiller: ['goldkiller'],
   'mtm-scanner': ['mtmscanner'],
-  // A Aurum Flow publica nos perpétuos de cripto; `golden-moves` é o slug herdado do nome antigo.
+  // A Aurum Flow publica nos perpétuos de cripto. O slug passou a `aurum-flow` a 2026-09-14.
+  'aurum-flow': ['aurum'],
+  // Alias do slug antigo da Aurum Flow — remover depois de 2026-10-14 (30 dias após 2026-09-14).
   'golden-moves': ['aurum'],
-  'golden-moves-fonte': ['goldenmoves'],
-  'gold-did-premium': ['golddid', 'gold-did'],
-  'mtm-auto-golden-astro': ['goldenastro', 'golden-astro'],
 }
 
 /**

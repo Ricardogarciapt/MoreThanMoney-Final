@@ -99,6 +99,8 @@ async function diasDeContaEspelho(slug: string, fonteMtm: string | null): Promis
  * Quem não está aqui conta desde sempre.
  */
 export const MEDE_DESDE: Record<string, string> = {
+  'aurum-flow': '2026-09-12',
+  // Alias do slug antigo da Aurum Flow — remover depois de 2026-10-14 (30 dias após 2026-09-14).
   'golden-moves': '2026-09-12',
 }
 

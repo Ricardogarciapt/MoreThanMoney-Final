@@ -42,6 +42,8 @@ export const CANAIS_DE_SINAIS = [
   'cripto-perps',
   'ideias-e-sinais',
   'sinais',
+  'aurum-flow',
+  // Alias do slug antigo da Aurum Flow — remover depois de 2026-10-14 (30 dias após 2026-09-14).
   'golden-moves',
 ] as const
 

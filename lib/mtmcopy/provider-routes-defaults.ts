@@ -91,7 +91,7 @@ export function buildCanonicalProviderRoutes(): ProviderRoute[] {
       enabled: true,
     },
     /**
-     * MTM Auto Aurum Flow — ex-«Golden Moves» (MT5 34744077, estratégia vT8w).
+     * MTM Auto Aurum Flow — renomeada a 2026-08-27 (MT5 34744077, estratégia vT8w).
      *
      * Aqui NÃO se gere nada por cima: o trailing já vem da fonte, que faz a gestão dela na
      * própria conta. Ligar o motor de preço a esta conta seria pôr dois donos a mexer no mesmo

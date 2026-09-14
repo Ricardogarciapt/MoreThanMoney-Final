@@ -104,18 +104,19 @@ export interface PipsProof {
  * O que é NOSSO.
  *
  * O destaque só se constrói sobre o sistema e as fontes MTM — Premium, Sensei, GoldKiller, MTM
- * Scanner, Golden Moves e os perpétuos da casa. As fontes de terceiros continuam a ser medidas e
+ * Scanner, Aurum Flow e os perpétuos da casa. As fontes de terceiros continuam a ser medidas e
  * a entrar no total (esconder metade do que se publica não seria medir, seria escolher), mas não
  * servem de montra: vender o acerto de outra pessoa é vender uma coisa que não controlamos.
  */
-const FONTES_MTM = new Set(['premium', 'sensei', 'goldkiller', 'mtmscanner', 'goldenmoves', 'perps', 'golddid'])
+const FONTES_MTM = new Set(['premium', 'sensei', 'goldkiller', 'mtmscanner', 'goldenmoves', 'perps'])
+// `goldenmoves` fica só como chave HISTÓRICA: há linhas de 2026-08-25 gravadas com ela.
 export function fonteEhMtm(chave: string | null | undefined): boolean {
   return FONTES_MTM.has(String(chave ?? '').toLowerCase())
 }
 /** O nome legível de cada fonte — o mesmo dos flyers semanais e das provas. */
 export const NOME_FONTE: Record<string, string> = {
   premium: 'Premium', sensei: 'Sensei', goldkiller: 'GoldKiller',
-  mtmscanner: 'MTM Scanner', goldenmoves: 'Aurum Flow', perps: 'Perpétuos', golddid: 'Gold Did',
+  mtmscanner: 'MTM Scanner', goldenmoves: 'Aurum Flow', perps: 'Perpétuos',
 }
 
 /** Tecto de plausibilidade por unidade. Acima disto é erro de dados, não uma trade. */

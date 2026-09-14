@@ -10,15 +10,14 @@ Dedup por state file por-rota + dedup atómico no servidor. DRY_RUN=1 → só im
 ENV:
   TELEGRAM_API_ID, TELEGRAM_API_HASH, GMI_SESSION_STRING   (sessão de utilizador — make_session.py)
   RELAY_ROUTES  JSON de rotas; se ausente usa o modo legado GMI_* (uma rota).
-      [{"name":"gold-did",     "source": -1003452689502,     "dest": "-1002424441843", "filter": "gold"},
-       {"name":"golden-astro", "source": -1004428793414,     "dest": "-1002424441843", "filter": "gold", "enabled": false}]
+      [{"name":"gold-did", "source": -1003452689502, "dest": "-1002424441843", "filter": "gold"}]
       · source: id numérico OU título/username exato — resolvido dos diálogos da sessão no arranque.
       · dest: chat Telegram MTM onde o bot publica (o relay-post deriva daí o canal da app).
       · filter: "gold" (setups/TP/SL/pips — o filtro clássico) ou "all" (tudo o que não for lixo).
       · header: cabeçalho de marca opcional (default "🏦 MTM Premium" quando dest é a Premium).
       · enabled: false para desligar a rota sem a apagar.
       · app_only: true → NÃO publica no Telegram. Serve as fontes que só existem para executar
-        na conta provedora (Golden Astro): o `dest` é o próprio id da FONTE, e o site resolve a
+        na conta provedora: o `dest` é o próprio id da FONTE, e o site resolve a
         estratégia por esse id. Nunca apontar uma destas ao chat Premium (-1002424441843): esse
         slug é o único que executa nas contas dos CLIENTES.
   GMI_SOURCE_ID / GMI_DEST_CHAT                            (modo legado, 1 rota)
@@ -119,18 +118,6 @@ def brand(text: str, header) -> str:
 
 NOISE = ("standby", "good morning traders", "new position", "position closed 🔒", "position closed")
 
-# Formato do GOLDEN ASTRO: «XAUUSD I'm buying» + zona/stop/alvos, e follow-ups «Tp2 hit».
-# O filtro "gold" não os apanha — exige «gold buy zone» ou pips, e ele não escreve nem uma
-# coisa nem outra. Sem esta lista a rota lia o canal e não passava um único sinal.
-ASTRO = [
-    re.compile(r"i.?m\s+(buying|selling)", re.I),
-    re.compile(r"entry\s*zone", re.I),
-    re.compile(r"\btp\s*\d\s*hit", re.I),
-    re.compile(r"\bsl\s*hit\b", re.I),
-    re.compile(r"stop\s*loss\b", re.I),
-    re.compile(r"\b(close|closed|be|break\s*even)\b", re.I),
-]
-
 def should_forward(text: str, mode: str) -> bool:
     if not text or len(text.strip()) < 4:
         return False
@@ -138,8 +125,6 @@ def should_forward(text: str, mode: str) -> bool:
         return False
     if mode == "all":
         return True
-    if mode == "astro":
-        return any(rx.search(text) for rx in ASTRO)
     return any(rx.search(text) for rx in KEEP)
 
 # ── Estado por rota ──────────────────────────────────────────────────────────

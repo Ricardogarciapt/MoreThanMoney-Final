@@ -2,7 +2,7 @@
 
 Lê canais Telegram pela **sessão de utilizador do Ricardo** (Telethon/MTProto — os bots
 foram removidos/não são admins nas fontes) e **re-publica** nos destinos MTM pelo bot
-MoreThanMoney via relay-post. Multi-fonte desde 2026-09-09: GOLD DID, GOLDEN ASTRO
+MoreThanMoney via relay-post. Multi-fonte desde 2026-09-09: hoje só GOLD DID
 (e o que mais se puser em `RELAY_ROUTES`).
 
 ## Porque no VPS (e não na Vercel)
@@ -18,8 +18,7 @@ A conta tem de ESTAR nos canais-fonte. A string é a sessão da conta — só no
 
 ## Rotas (`RELAY_ROUTES` no .env — JSON numa linha)
 ```json
-[{"name":"gold-did","source":-1003452689502,"dest":"-1002424441843","filter":"gold"},
- {"name":"golden-astro","source":-1004428793414,"dest":"-1002424441843","filter":"gold","enabled":false}]
+[{"name":"gold-did","source":-1003452689502,"dest":"-1002424441843","filter":"gold"}]
 ```
 - `source`: id numérico OU título/username (resolvido dos diálogos da sessão no arranque).
 - `dest`: chat MTM onde o bot publica; o relay-post deriva daí o canal da app/motor.

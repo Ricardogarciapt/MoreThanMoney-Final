@@ -754,7 +754,7 @@ const TAP_TRADE_PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000
 function hasEntryLevel(content?: string | null): boolean {
   if (!content) return false
   // A etiqueta nem sempre encosta ao número («Entrada activada: 4637.54») e nem sempre existe
-  // (o Golden Moves escreve a zona a seco, «4606-4602»). Espelha o feed do T2T.
+  // (a Aurum Flow escreve a zona a seco, «4606-4602»). Espelha o feed do T2T.
   if (/(entrada|entry|zona|zone)[^\n\d]{0,20}[0-9]+[.,]?[0-9]*/i.test(content)) return true
   return /^\s*\d{2,7}(?:[.,]\d+)?\s*[-–—]\s*\d{2,7}(?:[.,]\d+)?\s*$/m.test(content)
 }

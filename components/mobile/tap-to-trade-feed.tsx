@@ -100,6 +100,8 @@ const CHANNEL_LABEL: Record<string, string> = {
   "sinais-scanner-mtm": "PrimeVerse",
   "ideias-e-sinais": "Ideias Forex Swings",
   "cripto-perps": "Perpétuos Cripto",
+  "aurum-flow": "Aurum Flow",
+  // Alias do slug antigo da Aurum Flow — remover depois de 2026-10-14 (30 dias após 2026-09-14).
   "golden-moves": "Aurum Flow",
 }
 
@@ -125,7 +127,7 @@ const T2T_PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000
  * O sinal traz um NÍVEL de entrada (zona/limite)? Decide a validade: com nível é um setup
  * PENDENTE e vale 24h; sem nível é "a mercado" e morre em 5 minutos.
  *
- * A zona nem sempre vem etiquetada. O Golden Moves escreve-a a seco — «I'm buying XAUUSD ⏎
+ * A zona nem sempre vem etiquetada. A Aurum Flow escreve-a a seco — «I'm buying XAUUSD ⏎
  * 4606-4602 ⏎ TP1 4609» — e como aqui só se procurava a PALAVRA «entrada/zona», todos os sinais
  * dele caíam na janela dos 5 minutos e desapareciam do Tap to Trade antes de alguém lhes tocar.
  * Eram 239 mensagens em duas semanas contra 560 com nível reconhecido.

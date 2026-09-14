@@ -16,7 +16,7 @@ const casos: Array<{ nome: string; texto: string; entrada: number; ponta: number
     ponta: 4643,
   },
   {
-    nome: 'Golden Moves zona sem etiqueta',
+    nome: 'Aurum Flow zona sem etiqueta',
     texto: "I'm buying XAUUSD\n\n4642.50-4638\n\nTP1 4645\n\nSL 4635",
     entrada: 4642.5,
     ponta: 4638,

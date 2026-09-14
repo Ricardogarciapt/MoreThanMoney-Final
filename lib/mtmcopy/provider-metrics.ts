@@ -26,7 +26,6 @@ export type ProviderKey =
   | 'sensei'
   | 'goldkiller'
   | 'booster'
-  | 'golddid'
   | 'bybit-perps'
   | 'copytrader-rg'
 

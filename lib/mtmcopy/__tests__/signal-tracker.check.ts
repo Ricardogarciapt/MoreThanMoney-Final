@@ -25,7 +25,7 @@ assert.equal(t2tSourceKey('ideias-e-sinais', JAMES), 'james', 'fonte do James ma
 
 // E as que já tinham.
 assert.equal(admite('premium-ideas', '8. GOLD BUY SETUP\nGold Buy Zone 4643 - 4637\nSL : 4635\nTP1 : 4650\nTP2 : 4655').ok, true, 'Premium')
-assert.equal(admite('golden-moves', "I'm buying XAUUSD\n4606-4602\nTP1 4609\nTP2 4611\nSL 4598").ok, true, 'Golden Moves')
+assert.equal(admite('aurum-flow', "I'm buying XAUUSD\n4606-4602\nTP1 4609\nTP2 4611\nSL 4598").ok, true, 'Aurum Flow')
 assert.equal(admite('sensei-scanner', '🧠 Sensei Scanner — Entry Alert — Ideia Activada #1 ✅\n📊 XAUUSD 🔵 COMPRA\n🎯 Entrada activada: 4637.54\n🛑 Stop Loss: 4626.07\n✅ Take Profit 1: 4654.75').ok, true, 'Sensei')
 
 // O que NÃO pode entrar.

@@ -5,7 +5,7 @@ import { chaveDaFonte } from './chaves-de-fonte'
  * AS FONTES DE SINAL — uma lista só, derivada de quem as produz.
  *
  * Havia duas listas escritas à mão e não coincidiam: `lib/pips-proof.ts` conhecia
- * `goldkiller, mtmscanner, goldenmoves, golddid`, e a validação do Tap to Trade conhecia
+ * `goldkiller, mtmscanner` e outras duas, e a validação do Tap to Trade conhecia
  * `james, primeverse, aurum`. Um cliente podia escolher uma fonte que as provas ignoravam, e
  * as provas contavam fontes que ninguém podia escolher.
  *
@@ -33,7 +33,7 @@ export interface FonteSinal {
  * Fontes sem provider próprio — externas, mas que produzem sinais medidos.
  *
  * Os nomes vêm de `lib/pips-proof`, que é quem os escreve nos flyers semanais e nas provas.
- * Repeti-los aqui faria a mesma fonte chamar-se «Aurum Flow» num sítio e «Golden Moves»
+ * Repeti-los aqui faria a mesma fonte chamar-se «Aurum Flow» num sítio e pelo nome antigo
  * noutro — que é exactamente o que acontecia antes de esta lista existir.
  */
 const EXTERNAS: Array<Omit<FonteSinal, 'temEstrategia' | 'slugProvider'>> = [

@@ -58,7 +58,8 @@ export async function abrirNaContaMestreAurum(sinal: {
     .from('mtm_trading_accounts')
     .select('metaapi_account_id, metricas, saldo_inicial')
     .eq('tipo', 'provider')
-    .eq('provider_slug', 'golden-moves')
+    // Slug `aurum-flow` desde 2026-09-14; o antigo fica aceite até 2026-10-14 (alias de 30 dias).
+    .in('provider_slug', ['aurum-flow', 'golden-moves'])
     .maybeSingle()
 
   if (!conta?.metaapi_account_id) return { ok: false, motivo: 'conta mestre do Aurum não está na MetaApi' }

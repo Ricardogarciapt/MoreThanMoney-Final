@@ -19,7 +19,9 @@ assert.equal(t2tUsaTrailing('trade-ideas-setup', IDEIAS_FOREX), true, 'Ideias de
 for (const [slug, txt, nome] of [
   ['premium-ideas', PREMIUM, 'Premium'],
   ['sensei-scanner', SENSEI, 'Sensei'],
-  ['golden-moves', GOLDEN, 'Golden Moves'],
+  ['aurum-flow', GOLDEN, 'Aurum Flow'],
+  // Alias do slug antigo (até 2026-10-14).
+  ['golden-moves', GOLDEN, 'Aurum Flow (slug antigo)'],
 ] as const) {
   assert.equal(t2tUsaTrailing(slug, txt), true, `${nome} devia levar trailing`)
 }

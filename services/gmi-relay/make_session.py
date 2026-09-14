@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Gera a GMI_SESSION_STRING — a sessão MTProto do UTILIZADOR (@RicardoSubtilGarcia)
-que o relay usa para LER os canais (GOLD DID, GOLDEN ASTRO…).
+que o relay usa para LER os canais (GOLD DID…).
 
 Correr UMA vez, interativamente (no VPS ou no teu computador):
 

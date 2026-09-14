@@ -12,7 +12,7 @@ const casos: Array<[string, string, number[]]> = [
   ['forex 0.x', '📊 AUDCHF 🔵 COMPRA\n🎯 Entrada: 0.57438\n🛑 Stop Loss: 0.57398\n✅ Take Profit 1: 0.57517\n✅ Take Profit 2: 0.57597', [0.57517, 0.57597]],
   ['ouro', '📊 XAUUSD 🔵 COMPRA\n🎯 Entrada: 4637.54\n🛑 Stop Loss: 4626.07\n✅ Take Profit 1: 4654.75\n✅ Take Profit 2: 4666.22', [4654.75, 4666.22]],
   ['Premium', '8. GOLD BUY SETUP\nGold Buy Zone 4643 - 4637\nSL : 4635\nTP1 : 4650\nTP2 : 4655\nTP3 : 4660', [4650, 4655, 4660]],
-  ['Golden Moves', "I'm buying XAUUSD\n4606-4602\nTP1 4609\nTP2 4611\nSL 4598", [4609, 4611]],
+  ['Aurum Flow', "I'm buying XAUUSD\n4606-4602\nTP1 4609\nTP2 4611\nSL 4598", [4609, 4611]],
 ]
 
 for (const [nome, texto, esperado] of casos) {
