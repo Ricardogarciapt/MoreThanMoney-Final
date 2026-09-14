@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { estiloParaWorker, estiloValido, ganchoParaEcra } from '@/lib/videocliper/estilos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -59,6 +60,23 @@ async function ficheiroDoDvr(dvrJobId: string | null, nome?: string | null): Pro
   return (data?.base_file as string) ?? (data?.multi_file as string) ?? null
 }
 
+/**
+ * As colunas da migração 066 (estilo, ênfase) pedidas com rede.
+ *
+ * Se o código chegar à produção antes da migração, pedir uma coluna que não existe devolvia
+ * erro — e um erro aqui lê-se como «não há trabalho», com a fila parada sem aviso. Tenta-se com
+ * as colunas novas e, se a base as recusar, repete-se sem elas.
+ */
+async function comColunasNovas<T>(
+  pedido: (extra: string) => PromiseLike<{ data: T | null; error: { message: string } | null }>,
+  extra: string,
+): Promise<T | null> {
+  const r = await pedido(extra)
+  if (!r.error) return r.data
+  if (/column|estilo|enfase/i.test(r.error.message)) return (await pedido('')).data
+  return null
+}
+
 /** Um trabalho reclamado há mais do que isto foi abandonado — a máquina morreu a meio. */
 const MINUTOS_ATE_DESISTIR = 40
 
@@ -87,20 +105,21 @@ export async function GET(request: NextRequest) {
   // Vem primeiro: um clipe aprovado é trabalho que alguém já decidiu que quer, e um vídeo novo
   // pode esperar. Se a ordem fosse ao contrário, uma tarde de análises deixava as aprovações
   // paradas atrás delas.
-  const { data: clip } = await db
+  type LinhaClip = Record<string, unknown> & { id: string; job_id: string }
+  const clip = await comColunasNovas<LinhaClip>((extra) => db
     .from('videocliper_clips')
-    .select('id, job_id, ordem, titulo, inicio_seg, fim_seg, duracao_seg, legendas, caption, cta_palavra, broll')
+    .select(`id, job_id, ordem, titulo, hook, inicio_seg, fim_seg, duracao_seg, legendas, caption, cta_palavra, broll${extra}`)
     .eq('estado', 'aprovado')
     .order('score', { ascending: false })
     .limit(1)
-    .maybeSingle()
+    .maybeSingle() as unknown as PromiseLike<{ data: LinhaClip | null; error: { message: string } | null }>, ', estilo, enfase')
 
   if (clip) {
-    const { data: job } = await db
+    const job = await comColunasNovas<Record<string, unknown>>((extra) => db
       .from('videocliper_jobs')
-      .select('id, origem, youtube_url, youtube_video_id, dvr_job_id, dvr_ficheiro, titulo')
+      .select(`id, origem, youtube_url, youtube_video_id, dvr_job_id, dvr_ficheiro, titulo${extra}`)
       .eq('id', clip.job_id as string)
-      .maybeSingle()
+      .maybeSingle() as unknown as PromiseLike<{ data: Record<string, unknown> | null; error: { message: string } | null }>, ', estilo')
 
     const ficheiroLocal = await ficheiroDoDvr(job?.dvr_job_id as string | null, job?.dvr_ficheiro as string | null)
 
@@ -125,6 +144,9 @@ export async function GET(request: NextRequest) {
       broll: clip.broll ?? [],
       titulo: clip.titulo,
       caption: clip.caption,
+      // O cartão do topo (≤7 palavras) e as palavras-chave que a legenda destaca.
+      gancho: ganchoParaEcra(clip.hook as string | null),
+      enfase: Array.isArray(clip.enfase) ? clip.enfase : [],
       /**
        * O Short vai do VPS, não daqui.
        *
@@ -144,20 +166,8 @@ export async function GET(request: NextRequest) {
        * site, mudá-lo é uma linha aqui em vez de um deploy numa máquina a que quase ninguém
        * acede — e os dois nunca ficam a discordar sobre qual é o amarelo certo.
        */
-      estilo: {
-        largura: 1080,
-        altura: 1920,
-        fonte: 'Montserrat Black',
-        tamanho: 96,
-        corBase: '#FFFFFF',
-        corDestaque: '#FFD700',
-        contorno: '#000000',
-        contornoPx: 8,
-        // Terço inferior, mas não encostado: o Instagram desenha a sua interface por cima dos
-        // últimos ~15% do ecrã, e a legenda ficava debaixo dos botões.
-        posicaoY: 0.68,
-        palavrasPorEcra: 3,
-      },
+      // O preset vem de lib/videocliper/estilos.ts: o do clipe, se tiver; senão o do vídeo.
+      estilo: estiloParaWorker(estiloValido(clip.estilo) ? clip.estilo : job?.estilo, 1080, 1920),
       // A regra do disco viaja COM o trabalho, para não depender de o worker se lembrar dela.
       apagarDepoisDeSubir: true,
     })
@@ -188,17 +198,19 @@ export async function GET(request: NextRequest) {
 
   if (semPreview) {
     const jobId = semPreview.job_id as string
-    const [{ data: jobP }, { data: clipsP }] = await Promise.all([
-      db.from('videocliper_jobs')
-        .select('id, origem, youtube_url, dvr_job_id, dvr_ficheiro')
-        .eq('id', jobId).maybeSingle(),
-      db.from('videocliper_clips')
-        .select('id, inicio_seg, fim_seg, legendas, broll')
+    type Linha = Record<string, unknown>
+    type Resp<T> = PromiseLike<{ data: T | null; error: { message: string } | null }>
+    const [jobP, clipsP] = await Promise.all([
+      comColunasNovas<Linha>((extra) => db.from('videocliper_jobs')
+        .select(`id, origem, youtube_url, dvr_job_id, dvr_ficheiro${extra}`)
+        .eq('id', jobId).maybeSingle() as unknown as Resp<Linha>, ', estilo'),
+      comColunasNovas<Linha[]>((extra) => db.from('videocliper_clips')
+        .select(`id, hook, inicio_seg, fim_seg, legendas, broll${extra}`)
         .eq('job_id', jobId)
         .is('preview_estado', null)
         .in('estado', ['proposto', 'rejeitado', 'erro'])
         .order('ordem')
-        .limit(12),
+        .limit(12) as unknown as Resp<Linha[]>, ', estilo, enfase'),
     ])
 
     if (jobP && clipsP?.length) {
@@ -217,21 +229,14 @@ export async function GET(request: NextRequest) {
           fimSeg: Number(c.fim_seg),
           legendas: c.legendas,
           broll: c.broll ?? [],
+          gancho: ganchoParaEcra(c.hook as string | null),
+          enfase: Array.isArray(c.enfase) ? c.enfase : [],
+          // Um clipe com estilo próprio sobrepõe o do vídeo; sem isso o worker usa o do trabalho.
+          ...(estiloValido(c.estilo) ? { estilo: estiloParaWorker(c.estilo, 540, 960) } : {}),
         })),
         // Metade da resolução final e as legendas à mesma proporção: o suficiente para decidir,
         // leve o bastante para abrir dez de seguida no telemóvel.
-        estilo: {
-          largura: 540,
-          altura: 960,
-          fonte: 'Montserrat Black',
-          tamanho: 48,
-          corBase: '#FFFFFF',
-          corDestaque: '#FFD700',
-          contorno: '#000000',
-          contornoPx: 4,
-          posicaoY: 0.68,
-          palavrasPorEcra: 3,
-        },
+        estilo: estiloParaWorker(jobP.estilo, 540, 960),
       })
     }
   }

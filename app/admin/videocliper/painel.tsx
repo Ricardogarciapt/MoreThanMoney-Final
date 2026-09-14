@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { LISTA_ESTILOS } from '@/lib/videocliper/estilos'
 import { Loader2, Scissors, Check, X, Send, RefreshCw, Youtube, Instagram, Clock, ChevronUp, ChevronDown, Play, Download, Trash2 } from 'lucide-react'
 
 /**
@@ -29,6 +30,7 @@ interface Job {
   clips?: number
   publicados?: number
   aprovados?: number
+  estilo?: string
 }
 
 interface Clip {
@@ -54,6 +56,7 @@ interface Clip {
   preview_estado: string | null
   preview_erro: string | null
   broll: { inicio: number; fim: number; descricao: string }[] | null
+  enfase?: { palavra: string; emoji?: string }[] | null
 }
 
 const relogio = (s: number) => {
@@ -224,6 +227,32 @@ export default function PainelVideocliper() {
               {/* ── os dez cartões ──────────────────────────────────────── */}
               {aberto === j.id && (
                 <div className="border-t border-neutral-800 p-3">
+                  {/* O estilo visual (letra, cores, efeitos) do que ainda está por cortar. Mudar
+                      refaz as pré-visualizações; os clips já cortados ficam como estão. */}
+                  {job?.id === j.id && (
+                    <label className="mb-3 flex flex-wrap items-center gap-2 text-[12px] text-neutral-400">
+                      Estilo
+                      <select
+                        value={job.estilo ?? 'ricardogarciapt'}
+                        disabled={ocupado === `estilo-${j.id}`}
+                        onChange={(e) => {
+                          if (e.target.value === job.estilo) return
+                          void accao({ accao: 'estilo', jobId: j.id, estilo: e.target.value }, `estilo-${j.id}`)
+                        }}
+                        className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-[12px] text-neutral-100 disabled:opacity-40"
+                      >
+                        {LISTA_ESTILOS.map((e) => (
+                          <option key={e.id} value={e.id}>{e.nome}</option>
+                        ))}
+                      </select>
+                      <span
+                        className="inline-block h-3 w-3 rounded-full border border-neutral-700"
+                        style={{ background: LISTA_ESTILOS.find((e) => e.id === (job.estilo ?? 'ricardogarciapt'))?.cor }}
+                      />
+                      {ocupado === `estilo-${j.id}` && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      <span className="text-neutral-600">muda as pré-visualizações e os cortes que ainda não foram feitos</span>
+                    </label>
+                  )}
                   {!clips.length && (
                     <p className="py-6 text-center text-[13px] text-neutral-500">
                       {job?.estado === 'pronto' ? 'sem clips propostos' : 'ainda a preparar…'}
@@ -406,6 +435,13 @@ function ModalClipe({
 
           {c.hook && <p className="mt-3 border-l-2 border-amber-500/60 pl-2 text-[13px] italic text-neutral-200">“{c.hook}”</p>}
           {c.porque && <p className="mt-2 text-[12.5px] text-neutral-400">{c.porque}</p>}
+
+          {(c.enfase ?? []).length > 0 && (
+            <p className="mt-3 text-[12px] text-neutral-400">
+              <span className="text-[11px] uppercase tracking-wide text-neutral-500">Palavras-chave</span>{' '}
+              {(c.enfase ?? []).map((e) => `${e.palavra}${e.emoji ? ` ${e.emoji}` : ''}`).join(' · ')}
+            </p>
+          )}
 
           {(c.broll ?? []).length > 0 && (
             <div className="mt-3">

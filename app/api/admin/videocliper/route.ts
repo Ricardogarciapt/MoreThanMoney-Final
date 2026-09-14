@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { ESTILO_POR_OMISSAO, estiloValido } from '@/lib/videocliper/estilos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -33,16 +34,20 @@ export async function GET(req: NextRequest) {
   const jobId = req.nextUrl.searchParams.get('job')
 
   if (jobId) {
-    const [{ data: job }, { data: clips }] = await Promise.all([
-      db.from('videocliper_jobs')
-        .select('id, origem, youtube_url, titulo, duracao_seg, estado, erro, progresso, idioma, created_at')
-        .eq('id', jobId).maybeSingle(),
-      db.from('videocliper_clips')
-        .select('id, ordem, titulo, hook, score, porque, inicio_seg, fim_seg, duracao_seg, caption, cta_palavra, estado, erro, video_url, thumbnail_url, ig_permalink, youtube_short_url, legendas, preview_url, preview_estado, preview_erro, broll')
-        .eq('job_id', jobId).order('ordem'),
+    const BASE_JOB = 'id, origem, youtube_url, titulo, duracao_seg, estado, erro, progresso, idioma, created_at'
+    const BASE_CLIPS = 'id, ordem, titulo, hook, score, porque, inicio_seg, fim_seg, duracao_seg, caption, cta_palavra, estado, erro, video_url, thumbnail_url, ig_permalink, youtube_short_url, legendas, preview_url, preview_estado, preview_erro, broll'
+    const ler = (novas: boolean) => Promise.all([
+      db.from('videocliper_jobs').select(novas ? `${BASE_JOB}, estilo` : BASE_JOB).eq('id', jobId).maybeSingle(),
+      db.from('videocliper_clips').select(novas ? `${BASE_CLIPS}, estilo, enfase` : BASE_CLIPS).eq('job_id', jobId).order('ordem'),
     ])
+    let [{ data: job, error: e1 }, { data: clips, error: e2 }] = await ler(true)
+    // Antes da migração 066 as colunas novas não existem: o painel abre na mesma, com o estilo por omissão.
+    if (e1 || e2) [{ data: job, error: e1 }, { data: clips, error: e2 }] = await ler(false)
     if (!job) return NextResponse.json({ erro: 'vídeo não encontrado' }, { status: 404 })
-    return NextResponse.json({ job, clips: clips ?? [] })
+    return NextResponse.json({
+      job: { estilo: ESTILO_POR_OMISSAO, ...(job as unknown as Record<string, unknown>) },
+      clips: clips ?? [],
+    })
   }
 
   // A lista não traz a transcrição: são milhares de palavras por vídeo, e o que o ecrã mostra é
@@ -116,6 +121,39 @@ export async function POST(req: NextRequest) {
       await db.from('videocliper_jobs').delete().eq('id', alvo)
     }
     return NextResponse.json({ ok: true, ficheiros: caminhos.length })
+  }
+
+  // ── mudar o estilo visual de um vídeo ─────────────────────────────────────
+  //
+  // Vale para o que ainda não foi cortado: as pré-visualizações dos clips por cortar voltam à
+  // fila e saem com o estilo novo. Um clipe já cortado tem o estilo queimado no ficheiro — mudar
+  // o vídeo não o recorta às escondidas.
+  if (accao === 'estilo') {
+    const jobId = String(corpo?.jobId ?? '')
+    const estilo = corpo?.estilo
+    if (!jobId || !estiloValido(estilo)) return NextResponse.json({ erro: 'estilo desconhecido' }, { status: 400 })
+    const { error } = await db.from('videocliper_jobs')
+      .update({ estilo, updated_at: new Date().toISOString() }).eq('id', jobId)
+    if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
+
+    const { data: clips } = await db
+      .from('videocliper_clips')
+      .select('id, preview_url, thumbnail_url')
+      .eq('job_id', jobId)
+      .in('estado', ['proposto', 'rejeitado', 'erro'])
+    const MARCA = '/storage/v1/object/public/uploads/'
+    const velhos = (clips ?? [])
+      .flatMap((c) => [c.preview_url, c.thumbnail_url])
+      .filter((u): u is string => typeof u === 'string' && u.includes(MARCA))
+      .map((u) => decodeURIComponent(u.split(MARCA)[1].split('?')[0]))
+    if (clips?.length) {
+      await db.from('videocliper_clips').update({
+        preview_estado: null, preview_url: null, thumbnail_url: null, preview_erro: null,
+        updated_at: new Date().toISOString(),
+      }).in('id', clips.map((c) => c.id as string))
+    }
+    if (velhos.length) await db.storage.from('uploads').remove(velhos).catch(() => undefined)
+    return NextResponse.json({ ok: true, previews: clips?.length ?? 0 })
   }
 
   // ── tirar o B-roll a um clipe (fica só a cara) ────────────────────────────

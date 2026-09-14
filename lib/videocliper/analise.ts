@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { modeloClaude } from '@/lib/modelo-claude'
+import { EMOJIS_PERMITIDOS, lerEnfase, type Enfase } from './estilos'
 
 /**
  * ESCOLHER OS DEZ MOMENTOS de uma sessão de duas horas.
@@ -40,6 +41,8 @@ export interface ClipeProposto {
   caption: string
   /** Cortes para imagem de apoio (B-roll), em segundos RELATIVOS ao início do clipe. */
   broll: BRoll[]
+  /** Até 3 palavras-chave ditas no clipe: a legenda mostra-as sozinhas, maiores e na cor de acento. */
+  enfase: Enfase[]
 }
 
 export interface BRoll {
@@ -105,6 +108,12 @@ A-ROLL E B-ROLL: o clipe é a pessoa a falar (A-roll) intercalada com imagens de
 · a descrição é em INGLÊS, cinematográfica, vertical, sem texto, sem logótipos, sem notas nem
   moedas, sem gráficos a subir em flecha (nada que sugira lucro fácil).
 
+PALAVRAS-CHAVE (ENFASE): até 3 palavras DITAS dentro do clipe, escritas exactamente como na
+transcrição, que carregam a ideia (um conceito, uma emoção, uma decisão — «disciplina», «stop»,
+«medo», «plano»). Aparecem sozinhas no ecrã, grandes e na cor da marca, com um zoom na cara.
+Nunca palavras de dinheiro nem de resultado («lucro», «ganhar», «euros»). Opcionalmente um
+emoji a seguir à palavra, SÓ destes: ${EMOJIS_PERMITIDOS.join(' ')}.
+
 Para cada clipe escreves uma legenda de publicação que acaba a pedir um comentário com UMA das
 palavras que te forem dadas — sem inventar outras.
 
@@ -119,6 +128,7 @@ TITULO: <curto, para o painel de admin>
 HOOK: <a primeira frase do clipe, literal da transcrição>
 PORQUE: <uma linha: porque é que este momento prende>
 CTA: <uma das palavras dadas>
+ENFASE: <palavra> [emoji]; <palavra>; <palavra>
 BROLL: <segundos DENTRO do clipe, a contar de 0>-<fim> | <descrição em inglês>; <inicio>-<fim> | <descrição em inglês>
 CAPTION: <a legenda da publicação, em pt-PT, até 5 linhas, a acabar no pedido do comentário>
 ===FIM===`
@@ -250,12 +260,24 @@ function interpretar(bruto: string, palavras: Palavra[]): ClipeProposto[] {
       ctaPalavra: cta,
       caption,
       broll: lerBroll(campo('BROLL'), fim - inicio, inicio),
+      enfase: filtrarEnfase(lerEnfase(campo('ENFASE')), palavras, inicio, fim),
     })
   }
 
   // Os melhores em cima: é por aqui que alguém escolhe o que aprova primeiro.
   saida.sort((a, b) => b.score - a.score)
   return saida.map((c, i) => ({ ...c, ordem: i + 1 }))
+}
+
+/**
+ * Só ficam palavras-chave que foram mesmo DITAS no excerto — uma inventada nunca acendia, e o
+ * zoom caía em lado nenhum — e nenhuma de dinheiro, mesmo que o modelo a proponha.
+ */
+const PROIBIDAS_ENFASE = /^(lucro|lucros|ganhar|ganhei|ganhos?|euros?|dolares|dólares|dinheiro|rico|riqueza|milion)/i
+function filtrarEnfase(lista: Enfase[], palavras: Palavra[], inicioSeg: number, fimSeg: number): Enfase[] {
+  const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9%]/g, '')
+  const ditas = new Set(palavras.filter((p) => p.fim > inicioSeg && p.inicio < fimSeg).map((p) => norm(p.palavra)))
+  return lista.filter((e) => !PROIBIDAS_ENFASE.test(norm(e.palavra)) && ditas.has(norm(e.palavra)))
 }
 
 /**
@@ -329,11 +351,19 @@ export async function guardarPropostas(jobId: string, clips: ClipeProposto[], pa
     caption: c.caption,
     cta_palavra: c.ctaPalavra,
     broll: c.broll ?? [],
+    enfase: c.enfase ?? [],
     estado: 'proposto',
   }))
   if (!linhas.length) return 0
 
-  const { error } = await db.from('videocliper_clips').upsert(linhas, { onConflict: 'job_id,ordem' })
+  let { error } = await db.from('videocliper_clips').upsert(linhas, { onConflict: 'job_id,ordem' })
+  // Sem a migração 066 a coluna `enfase` não existe: grava-se o resto em vez de perder a análise.
+  if (error && /enfase/i.test(error.message)) {
+    ;({ error } = await db.from('videocliper_clips').upsert(
+      linhas.map(({ enfase: _e, ...resto }) => resto),
+      { onConflict: 'job_id,ordem' },
+    ))
+  }
   if (error) throw new Error(error.message)
   return linhas.length
 }
