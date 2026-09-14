@@ -10,6 +10,7 @@ import {
 } from '../copia/dimensionar'
 import { podeCopiarFunded, destinoPermitido, motivoParaNaoAbrir, classificarDemo, type ContextoAbertura } from '../copia/elegibilidade'
 import { SEM_DIREITOS, type MotivoCopia } from '../../entitlements'
+import { validarConfig } from '../copia/config'
 import { colapsarModificacoes, proximaTentativa, erroIncerto, type EventoCopia } from '../copia/processar'
 
 let ok = 0
@@ -143,6 +144,17 @@ const IDX: MetaApiSymbolSpecification = { point: 0.1, digits: 1, minVolume: 0.1,
   eq('depois desiste', proximaTentativa(4), { desistir: true })
   eq('timeout é incerto', erroIncerto('MetaApi RPC connect timeout (55000ms)'), true)
   eq('volume inválido é certo', erroIncerto('Invalid volume'), false)
+}
+
+// ── configuração vinda do ecrã ───────────────────────────────────────────────
+{
+  const c = validarConfig({ modoLote: 'proporcional_saldo', loteMax: '0.5', perdaDiariaMax: 3, simbolos: ['xauusd', 'XAUUSD', ' eurusd', 'rm -rf'] })
+  eq('config válida normaliza símbolos', c.ok && c.config, { modo_lote: 'proporcional_saldo', lote_max: 0.5, perda_diaria_max: 3, simbolos: ['XAUUSD', 'EURUSD'] })
+  eq('risco % acima de 10 → recusa', validarConfig({ modoLote: 'risco_pct', valor: 15 }).ok, false)
+  eq('multiplicador sem valor → recusa', validarConfig({ modoLote: 'multiplicador' }).ok, false)
+  eq('perda diária é %', validarConfig({ perdaDiariaMax: 250 }).ok, false)
+  eq('lote máximo negativo → recusa', validarConfig({ loteMax: -1 }).ok, false)
+  eq('PATCH só com um campo não traz os outros', validarConfig({ copiarTp: false }), { ok: true, config: { copiar_tp: false } })
 }
 
 console.log(mau ? `\n${mau} errado(s), ${ok} certo(s)` : `todos certos (${ok})`)
