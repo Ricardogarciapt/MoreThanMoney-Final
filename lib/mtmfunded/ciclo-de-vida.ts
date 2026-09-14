@@ -67,10 +67,22 @@ export async function quebrarConta(
 
   const { data: conta } = await db
     .from('mtm_trading_accounts')
-    .select('id, user_id, tipo, mt5_login, servidor, saldo_inicial, metaapi_account_id, metricas, tournament_id, program_id, mt5_password_cifrada')
+    .select('id, user_id, tipo, mt5_login, servidor, saldo_inicial, metaapi_account_id, metricas, tournament_id, program_id, mt5_password_cifrada, motor')
     .eq('id', accountId)
     .maybeSingle()
   if (!conta) return { ...out, erro: 'conta não encontrada' }
+
+  /**
+   * CONTA SIMULADA: nem MetaApi, nem agente do VPS, nem apagar por omissão.
+   *
+   * Desde as credenciais (M1) as contas `sim` têm `mt5_login` — um login 77xxxxxx do nosso
+   * servidor «MTM Funded», que não existe em corretora nenhuma. Sem esta guarda, cada quebra
+   * mandava o agente do MT5 procurar e «apagar» uma conta que não está lá (a fila empanca numa
+   * tarefa impossível). E apagar a linha levava em cascata as posições e os ticks — exactamente
+   * o registo que responde a «porque é que a minha conta quebrou?». Fica, marcada como quebrada.
+   */
+  const simulada = conta.motor === 'sim'
+  const apagar = opts?.apagar ?? !simulada
 
   const { data: perfil } = conta.user_id
     ? await db.from('profiles').select('full_name, email').eq('id', conta.user_id).maybeSingle()
@@ -93,7 +105,7 @@ export async function quebrarConta(
   }
 
   // ── 2. fora da MetaApi ────────────────────────────────────────────────────
-  if (conta.metaapi_account_id) {
+  if (conta.metaapi_account_id && !simulada) {
     try {
       const { undeployMetaApiAccount, deleteMetaApiAccount } = await import('@/lib/mtmcopy/metaapi-provision')
       // Undeploy antes de apagar: a MetaApi recusa apagar uma conta ainda implantada.
@@ -113,7 +125,7 @@ export async function quebrarConta(
    * árvore do Navegador de crescer sem fim — e essa árvore é por onde o próprio agente se
    * orienta para criar as contas seguintes.
    */
-  if (conta.mt5_login) {
+  if (conta.mt5_login && !simulada) {
     const { error } = await db.from('mtm_account_requests').insert({
       account_id: conta.id,
       tarefa: 'apagar',
@@ -135,7 +147,7 @@ export async function quebrarConta(
   }
 
   // ── 4. a base de dados, por último ────────────────────────────────────────
-  if (opts?.apagar !== false) {
+  if (apagar) {
     // O participante do torneio fica, com a conta desligada: apagá-lo faria desaparecer da
     // classificação alguém que competiu — e a classificação tem de mostrar quem quebrou.
     await db
@@ -167,6 +179,12 @@ export async function quebrarConta(
       .from('mtm_trading_accounts')
       .update({ estado: 'quebrada', quebrou_regra: motivo, quebrada_em: new Date().toISOString() })
       .eq('id', conta.id)
+    // O participante sai da corrida com a conta LIGADA: a classificação mostra-o quebrado, e a
+    // conta (com o histórico) continua a ser alcançável a partir dele.
+    await db
+      .from('mtm_tournament_participants')
+      .update({ estado: 'quebrado', updated_at: new Date().toISOString() })
+      .eq('account_id', conta.id)
   }
 
   out.ok = true
@@ -807,7 +825,12 @@ export async function renovarContaAposLevantamento(
   })
 
   // 3. E agora a antiga sai: MetaApi, depois password trocada e removida do MetaTrader.
-  if (conta.metaapi_account_id) {
+  //
+  // Nada disto existe para uma conta SIMULADA (tem `mt5_login` do nosso servidor, não da
+  // corretora): mandar o agente do MT5 apagá-la seria uma tarefa impossível a entupir a fila. A
+  // antiga fica «expirada» com o histórico, que é o que prova o ciclo que foi pago.
+  const simulada = conta.motor === 'sim'
+  if (conta.metaapi_account_id && !simulada) {
     try {
       const { undeployMetaApiAccount, deleteMetaApiAccount } = await import('@/lib/mtmcopy/metaapi-provision')
       await undeployMetaApiAccount(conta.metaapi_account_id as string).catch(() => undefined)
@@ -817,7 +840,7 @@ export async function renovarContaAposLevantamento(
     }
   }
 
-  if (conta.mt5_login) {
+  if (conta.mt5_login && !simulada) {
     await db.from('mtm_account_requests').insert({
       account_id: conta.id,
       tarefa: 'apagar',
