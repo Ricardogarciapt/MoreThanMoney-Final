@@ -140,11 +140,48 @@ export async function POST(request: NextRequest) {
   // procura pelo id e verifica-se depois, que é onde estas coisas costumam correr mal.
   const { data: conta } = await db
     .from('mtm_trading_accounts')
-    .select('id, saldo_inicial, metricas, estado')
+    .select('id, tipo, saldo_inicial, metricas, estado, motor, metaapi_account_id, sim_saldo, sim_equity')
     .eq('id', contaId)
     .eq('user_id', user.id)
     .maybeSingle()
   if (!conta) return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
+
+  // ── porta 3: só contas FINANCIADAS e activas ──────────────────────────────
+  // Um desafio ou um torneio não se levanta — o que se paga é o desempenho da conta Funded.
+  if (!['financiada', 'funded'].includes(String(conta.tipo)) || conta.estado !== 'ativa') {
+    return NextResponse.json({ error: 'Só se pode levantar de uma conta Funded activa' }, { status: 403 })
+  }
+
+  // ── porta 4: SEM posições abertas nem ordens pendentes ─────────────────────
+  //
+  // O levantável mede-se sobre a equity; com posições abertas a equity mexe a cada tick, e um
+  // pedido feito num pico podia pagar lucro que o mercado devolve cinco minutos depois — com a
+  // conta já renovada e a perda sem sítio onde cair. Fecha-se tudo, e o valor fica parado.
+  if (conta.motor === 'sim') {
+    const [{ count: abertas }, { count: pendentes }] = await Promise.all([
+      db.from('funded_positions').select('id', { count: 'exact', head: true }).eq('account_id', contaId).eq('estado', 'aberta'),
+      db.from('funded_orders').select('id', { count: 'exact', head: true }).eq('account_id', contaId).eq('estado', 'pendente'),
+    ])
+    if ((abertas ?? 0) > 0 || (pendentes ?? 0) > 0) {
+      return NextResponse.json(
+        { error: `Fecha as ${abertas ?? 0} posições abertas e cancela as ${pendentes ?? 0} ordens pendentes antes de pedir o levantamento.` },
+        { status: 409 },
+      )
+    }
+  } else if (conta.metaapi_account_id) {
+    const { readOpenPositions } = await import('@/lib/mtmcopy/metaapi')
+    const posicoes = await readOpenPositions(String(conta.metaapi_account_id)).catch(() => null)
+    // Sem resposta da MetaApi não se sabe — e na dúvida não se paga: tenta-se de novo daqui a pouco.
+    if (posicoes == null) {
+      return NextResponse.json({ error: 'Não consegui confirmar as posições da conta agora. Tenta daqui a um minuto.' }, { status: 503 })
+    }
+    if (posicoes.length > 0) {
+      return NextResponse.json(
+        { error: `Fecha as ${posicoes.length} posições abertas antes de pedir o levantamento.` },
+        { status: 409 },
+      )
+    }
+  }
 
   // Um pedido em curso de cada vez, por conta. Dois pedidos ao mesmo tempo sobre o mesmo
   // lucro levantavam o dobro do que existe.
@@ -169,7 +206,11 @@ export async function POST(request: NextRequest) {
   const jaPago = (anteriores ?? []).reduce((t, p) => t + Number(p.valor_usd), 0)
 
   const m = (conta.metricas ?? {}) as Record<string, unknown>
-  const equity = typeof m.equity === 'number' ? m.equity : Number(conta.saldo_inicial ?? 0)
+  // Conta simulada: sem posições abertas, o saldo É a equity — e é o valor exacto, não a última
+  // leitura das métricas.
+  const equity = conta.motor === 'sim' && conta.sim_saldo != null
+    ? Number(conta.sim_saldo)
+    : typeof m.equity === 'number' ? m.equity : Number(conta.saldo_inicial ?? 0)
   const disponivel = levantavelUsd(Number(conta.saldo_inicial ?? 0), equity, jaPago)
 
   if (!(valor > 0)) return NextResponse.json({ error: 'Indica o valor' }, { status: 400 })
