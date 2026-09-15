@@ -103,7 +103,7 @@ export function estadoFanout(s: string | null | undefined): EstadoFanout {
 
 /** Um motivo de salto/erro é «ruído esperado» (cliente sem acesso, sem saldo) ou falha do sistema? */
 export function motivoEsperado(motivo: string | null | undefined): boolean {
-  return /access is not active|no balance|not enough money|sem acesso|sem saldo|market (is )?closed|mercado fechado|fora do hor|paused|pausad|not subscribed|não subscrit|symbol not allowed|filtro/i.test(String(motivo ?? ''))
+  return /access is not active|no balance|not enough money|gestão não aplicada|sem acesso|sem saldo|market (is )?closed|mercado fechado|fora do hor|paused|pausad|not subscribed|não subscrit|symbol not allowed|filtro/i.test(String(motivo ?? ''))
 }
 
 // ── alertas ─────────────────────────────────────────────────────────────────────────────────────

@@ -18,7 +18,8 @@ import { db, ler, txt } from './base'
  * Registo de contas inexistentes (contrato partilhado site ↔ MTM Auto, mtm-auto/lib/contas-inexistentes.ts):
  * linha em metaapi_simbolos_cache com metaapi_quota_api='nao_existe' e bloqueio 24 h.
  */
-export const API_NAO_EXISTE = 'nao_existe'
+export { MOTIVO_NAO_EXISTE as API_NAO_EXISTE } from '@/lib/mtmcopy/metaapi-inexistentes'
+import { MOTIVO_NAO_EXISTE as API_NAO_EXISTE, CONTAS_METAAPI_APAGADAS } from '@/lib/mtmcopy/metaapi-inexistentes'
 
 export interface Infra {
   lidaEm: string
@@ -27,7 +28,7 @@ export interface Infra {
   servicosPendente: boolean
   streaming: { conta: string; motorTempoReal: boolean; sincronizado: boolean; em: string; idadeS: number | null }[]
   quota: { bloqueioGlobalAte: string | null; api: string | null; motivo: string | null; contasBloqueadas: number; pendente: boolean }
-  fantasmas: { total: number | null; pendente: boolean; contas: { conta: string; ate: string | null; motivo: string | null }[] }
+  fantasmas: { total: number | null; conhecidasApagadas: number; pendente: boolean; contas: { conta: string; ate: string | null; motivo: string | null }[] }
   copia: { pendente: boolean; motorLigado: boolean; liveDesbloqueado: boolean; rotas: number; ativas: number; pedidos: number; live: number; eventosPendentes: number; errosEventos24h: number }
   crons: { caminho: string; horario: string; ultimoEm: string | null; ok: boolean | null; duracaoMs: number | null }[]
   cronsPendente: boolean
@@ -78,7 +79,7 @@ async function lerInfra(): Promise<Infra> {
       contasBloqueadas: quota.linhas.filter((q) => q.account_id !== '*').length, pendente: quota.semTabela,
     },
     fantasmas: {
-      total: bloqueios.semTabela || bloqueios.erro ? null : fantasmas.length, pendente: bloqueios.semTabela,
+      total: bloqueios.semTabela || bloqueios.erro ? null : fantasmas.length, conhecidasApagadas: CONTAS_METAAPI_APAGADAS.size, pendente: bloqueios.semTabela,
       contas: fantasmas.map((f) => ({ conta: String(f.account_id), ate: txt(f.metaapi_quota_bloqueio_ate), motivo: txt(f.metaapi_quota_motivo) })),
     },
     copia: {

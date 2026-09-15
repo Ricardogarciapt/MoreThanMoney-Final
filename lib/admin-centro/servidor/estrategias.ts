@@ -37,7 +37,7 @@ export interface EstrategiaCentro {
   metaapiAccountId: string | null
   estrategiaCf: string | null
   seguidores: { mtmauto: number; mtmautoAuto: number; site: number; siteNaoSubscritas: number; funded: number; total: number }
-  desempenho30d: { sinais: number; fechados: number; pips: number; pct: number | null; acerto: number | null; dinheiro: number | null; execucoes: number }
+  desempenho30d: { sinais: number; fechados: number; incoerentes: number; pips: number; pct: number | null; acerto: number | null; dinheiro: number | null; execucoes: number }
   divergencias: string[]
   ultimoSinal: string | null
 }
@@ -70,7 +70,11 @@ async function lerEstrategias() {
     const siteSeg = cf ? contas.contas.filter((c) => c.origem === 'site' && c.estrategias.includes(cf)) : []
     const fundedSeg = contas.contas.filter((c) => c.origem === 'funded' && c.estrategias.some((e) => e.toLowerCase() === slug.toLowerCase()))
     const sinaisP = sinais.linhas.filter((s) => String(s.provider_id) === id)
-    const fechados = sinaisP.filter((s) => s.estado === 'closed' && s.resultado_pips != null)
+    // Resultados incoerentes (ex.: +409 950 pips / +923 % a 31/08, stop mal lido) não entram na soma:
+    // uma trade de ouro não faz mais de 50 % nem 5 000 pips. Contam-se à parte.
+    const coerente = (s: Linha) => Math.abs(num(s.resultado_pct) ?? 0) <= 50 && Math.abs(num(s.resultado_pips) ?? 0) <= 5000
+    const fechadosTodos = sinaisP.filter((s) => s.estado === 'closed' && s.resultado_pips != null)
+    const fechados = fechadosTodos.filter(coerente)
     const pips = fechados.reduce((a, s) => a + (num(s.resultado_pips) ?? 0), 0)
     const pctV = fechados.map((s) => num(s.resultado_pct)).filter((x): x is number => x != null)
     const execP = execs.linhas.filter((e) => sinalProv.get(String(e.signal_id)) === id)
@@ -87,12 +91,13 @@ async function lerEstrategias() {
     const pausadasSub = siteSeg.filter((c) => !c.ativa && !c.usos.some((u) => u.includes('não subscrita'))).length
     if (pausadasSub) divergencias.push(`${pausadasSub} ligação(ões) pausada(s) ainda marcadas como subscritas`)
     if (p.metaapi_account_id && contas.contas.some((c) => c.metaapiAccountId === p.metaapi_account_id && c.metaapi.inexistente)) divergencias.push('conta mestre no registo de inexistentes')
+    if (fechadosTodos.length > fechados.length) divergencias.push(`${fechadosTodos.length - fechados.length} resultado(s) incoerente(s) excluído(s) do desempenho`)
     if (p.fonte_execucao === 'espelho' && v && v.alinhado !== true) divergencias.push('fonte espelho sem veredicto alinhado')
 
     return {
       id, slug, nome: String(p.nome ?? slug), equipa: p.tenant_id ? nomeEquipa.get(String(p.tenant_id)) ?? 'equipa' : null, tipo: txt(p.tipo),
       ativa: p.ativo !== false, apagada: Boolean(p.apagado_em),
-      fonteExecucao: p.fonte_execucao === 'espelho' ? 'espelho' : p.fonte_execucao === 'mestre' ? 'mestre' : null,
+      fonteExecucao: (p.fonte_execucao === 'espelho' ? 'espelho' : p.fonte_execucao === 'mestre' ? 'mestre' : null) as EstrategiaCentro['fonteExecucao'],
       espelho: p.espelho_funded_account_id || v ? {
         conta: txt(p.espelho_funded_account_id), alinhado: v ? v.alinhado === true : null,
         motivos: Array.isArray(v?.motivos) ? (v!.motivos as unknown[]).map(String) : [],
@@ -105,7 +110,7 @@ async function lerEstrategias() {
         total: subsP.length + siteSeg.length + fundedSeg.length,
       },
       desempenho30d: {
-        sinais: sinaisP.length, fechados: fechados.length, pips: Math.round(pips * 10) / 10,
+        sinais: sinaisP.length, fechados: fechados.length, incoerentes: fechadosTodos.length - fechados.length, pips: Math.round(pips * 10) / 10,
         pct: pctV.length ? Math.round(pctV.reduce((a, b) => a + b, 0) * 100) / 100 : null,
         acerto: fechados.length ? Math.round((fechados.filter((s) => (num(s.resultado_pips) ?? 0) > 0).length / fechados.length) * 100) : null,
         dinheiro: execP.length ? Math.round(dinheiro * 100) / 100 : null, execucoes: execP.length,

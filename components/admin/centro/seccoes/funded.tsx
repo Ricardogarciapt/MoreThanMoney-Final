@@ -1,0 +1,56 @@
+"use client"
+
+import { useState } from "react"
+import type { carregarFunded } from "@/lib/admin-centro/servidor/outros"
+import MtmFundedManager from "@/components/admin/mtmfunded-manager"
+import ContaModal from "@/components/admin/mtmfunded-conta-modal"
+import { Recolhivel } from "@/components/admin/mtmauto-copia/estrategias"
+import { useCentroCtx } from "../contexto"
+import { tomEstadoConta } from "./contas"
+import { Aviso, Azulejo, BotaoLer, Painel, Pilula, Tabela, Vazio, fmtNum, td, th, trClic, useCentro } from "../ui"
+
+type Funded = Awaited<ReturnType<typeof carregarFunded>>
+
+export default function SeccaoFunded() {
+  const ctx = useCentroCtx()
+  const { dados: f, erro, aCarregar, recarregar, lidoEm } = useCentro<Funded>(`/api/admin/centro/funded?v=${ctx.versao}`, 30_000)
+  const [modal, setModal] = useState<string | null>(null)
+
+  return (
+    <div className="space-y-4">
+      {erro && <Aviso tom="grave">{erro}</Aviso>}
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+        <Azulejo rotulo="Equidade MTM (casa)" valor={f?.equidadeCasa.pendente ? "—" : `$${fmtNum(f?.equidadeCasa.equity, 0)}`} sub={f?.equidadeCasa.nota} tom={f?.equidadeCasa.pendente ? "neutro" : "ok"} className="md:col-span-2" />
+        <Azulejo rotulo="Contas" valor={f?.contas.length ?? "—"} sub={Object.entries(f?.porEstado ?? {}).map(([k, v]) => `${k} ${v}`).join(" · ")} />
+        <Azulejo rotulo="Seguem estratégia" valor={f?.seguidoras ?? "—"} />
+        <Azulejo rotulo="Programas" valor={f?.programas.length ?? "—"} sub={`${(f?.programas ?? []).filter((p) => p.ativo === true).length} à venda`} />
+      </div>
+
+      <Painel titulo="Contas MTM Funded" sub="Clica para abrir a ficha completa (resumo, métricas, posições, histórico, gestão, levantamentos, auditoria)." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
+        {!f ? <Vazio>A ler…</Vazio> : f.contas.length === 0 ? <Vazio>Sem contas.</Vazio> : (
+          <Tabela min={820}>
+            <thead><tr><th className={th}>Login</th><th className={th}>Tipo</th><th className={th}>Dono</th><th className={th}>Estado</th><th className={th}>Saldo / equity</th><th className={th}>Usos</th></tr></thead>
+            <tbody>
+              {f.contas.map((c) => (
+                <tr key={c.ref} className={trClic} onClick={() => setModal(c.ref.slice(7))}>
+                  <td className={`${td} font-mono text-zinc-100`}>{c.login ?? "por emitir"}</td>
+                  <td className={td}>{c.rotulo}</td>
+                  <td className={td}>{c.userId ? <button type="button" className="hover:text-[#E9C46A]" onClick={(e) => { e.stopPropagation(); ctx.abrir({ tipo: "utilizador", id: c.userId! }) }}>{c.email ?? c.userId.slice(0, 8)}</button> : "—"}</td>
+                  <td className={td}><Pilula tom={tomEstadoConta(c)}>{c.estado}</Pilula>{c.erro && <p className="mt-0.5 text-[10px] text-rose-300">{c.erro}</p>}</td>
+                  <td className={`${td} font-mono`}>{fmtNum(c.saldo, 2)} / {fmtNum(c.equity, 2)}</td>
+                  <td className={`${td} text-[10.5px] text-zinc-400`}>{c.usos.join(" · ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Tabela>
+        )}
+      </Painel>
+
+      <Recolhivel titulo="Gestor MTM Funded completo" descricao="Resumo, lançamento, torneios, participantes, contas, programas, levantamentos, certificados, regras.">
+        <MtmFundedManager />
+      </Recolhivel>
+
+      {modal && <ContaModal contaId={modal} aoFechar={() => setModal(null)} aoMudar={() => { ctx.depoisDeAcao(); void recarregar() }} />}
+    </div>
+  )
+}

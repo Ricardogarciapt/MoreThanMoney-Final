@@ -3,6 +3,8 @@ import { CONTAS_MOTOR_TEMPO_REAL } from '@/lib/mtmcopy/provider-constants'
 import { direitosEmLote } from '@/lib/copia-contas/servidor/direitos-lote'
 import { emCache } from '../cache'
 import { erroActual } from '../regras'
+import { CONTAS_METAAPI_APAGADAS } from '@/lib/mtmcopy/metaapi-inexistentes'
+import { ehErroDeQuotaTexto } from '@/lib/mtmcopy/erro-historico'
 import { carregarInfra } from './infra'
 import { lerProviders } from './sinais'
 import { db, ler, num, txt, type Linha } from './base'
@@ -79,7 +81,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
   const nomeProv = new Map(providers.map((p) => [String(p.id), String(p.nome ?? p.slug ?? '—')]))
   const contasProvider = new Set(providers.map((p) => txt(p.metaapi_account_id)).filter(Boolean) as string[])
   const equipa = new Set(tenants.linhas.map((t) => String(t.user_id)))
-  const inexistentes = new Set(infra.fantasmas.contas.map((f) => f.conta))
+  const inexistentes = new Set([...CONTAS_METAAPI_APAGADAS, ...infra.fantasmas.contas.map((f) => f.conta)])
   const snap = new Map(infra.streaming.map((s) => [s.conta, s]))
   const usosRota = new Map<string, string[]>()
   for (const x of rotas.linhas) {
@@ -115,7 +117,8 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
       userId: txt(c.user_id), rotulo: txt(c.account_label),
       login: plataforma === 'tradelocker' ? txt(c.tl_acc_num) : txt(c.mt5_login), servidor: plataforma === 'tradelocker' ? txt(c.tl_server) ?? txt(c.mt5_server) : txt(c.mt5_server),
       estado: String(c.mt5_status ?? '—'), ativa: c.is_active !== false, demo: plataforma === 'tradelocker' ? c.tl_env === 'demo' : demoPeloNome(c.mt5_server),
-      erro, erroEstado: erroActual(erro, txt(c.updated_at), agora), metaapiAccountId: acc, metaapi: metaapi(acc, txt(c.mt5_status)),
+      erro, erroEstado: erro && ehErroDeQuotaTexto(erro) && c.last_signal_at && Date.parse(String(c.last_signal_at)) > Date.parse(String(c.updated_at ?? 0)) ? 'velho' : erroActual(erro, txt(c.updated_at), agora),
+      metaapiAccountId: acc, metaapi: metaapi(acc, txt(c.mt5_status)),
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: acc, login: txt(c.mt5_login), plataforma, estado: txt(c.mt5_status) }),
       usos, estrategias: c.copyfactory_strategy_pick ? [String(c.copyfactory_strategy_pick)] : [],
       saldo: num(c.balance), equity: null, ultimaActividade: txt(c.last_signal_at), criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
