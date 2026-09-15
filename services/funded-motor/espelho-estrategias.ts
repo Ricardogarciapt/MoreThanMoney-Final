@@ -5,11 +5,16 @@
  * da conta-mestre dessa estratégia (mtmauto_providers.metaapi_account_id). As decisões são puras
  * (lib/mtmfunded/espelho/calculo.ts, com teste); aqui só há canos:
  *
- *  · LER: uma ligação RPC da MetaApi por conta-mestre, `getPositions` de 3 em 3 s. O streaming
- *    (terminalState) seria mais imediato mas custa uma subscrição permanente por mestre; 3 s é
- *    muito menos do que a gestão de qualquer das estratégias precisa, e a ligação RPC é a mesma que
- *    o motor já usa como recurso do feed. `getAccountInformation` de minuto a minuto (equity da
- *    mestre, a base da proporção).
+ *  · LER: uma ligação de STREAMING da MetaApi por conta-mestre (espelho-leitor.ts). As posições,
+ *    a equity (base da proporção) e o contrato dos símbolos vêm do `terminalState` em memória —
+ *    ZERO pedidos RPC em regime normal. Até 14/09 era `getPositions` por RPC de 3 em 3 s, e a
+ *    MetaApi cortou o token («ws:getPositions … 180000 cpu credits per 1h»), o mesmo token do MTM
+ *    Auto e do MTM Copy. Os eventos do ouvinte disparam o ciclo (debounce 250 ms), repete-se 3 s
+ *    depois enquanto houver trabalho, e reconcilia-se de 60 em 60 s a partir da memória.
+ *    Se o feed de preços já ouve a mesma conta, a ligação é partilhada (metaapi-partilhada.ts).
+ *  · INTERRUPTOR: a entrega das trades aos subscritores tem prioridade absoluta sobre isto. Ao
+ *    primeiro erro de limite da MetaApi visto em qualquer parte do motor, o espelho fecha as
+ *    ligações dele e fica parado 1 h (ESPELHO_PAUSA_LIMITE_MIN).
  *  · ABRIR ao NOSSO preço (funded_precos, o do motor) no instante em que a posição é vista — o
  *    preço da corretora da mestre fica gravado em `tick_entrada.mestre` para comparar.
  *  · ESCREVER pelas mesmas funções atómicas do site: insert da posição + funded_somar_saldo
@@ -22,6 +27,8 @@
  *
  * Estado reconstruível da base: as ligações e as ausências são cache. Reiniciar é seguro — no
  * pior caso uma posição que fechou na mestre durante a paragem fecha 2 leituras depois de voltar.
+ * Mestre não sincronizada (a ligar, caída, a ressincronizar) = leitura falhada: não fecha nada, e
+ * as ausências contadas antes da queda recomeçam do zero.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { MapaPrecos, Simbolo } from '../../lib/mtmfunded/simulado/matematica'
@@ -37,8 +44,8 @@ import {
   type PosicaoMestre,
   type PosicaoSeguidora,
 } from '../../lib/mtmfunded/espelho/calculo'
-
-type Qualquer = any // eslint-disable-line @typescript-eslint/no-explicit-any
+import { Agendador, LeitorMestre, sdkMetaApi, type SdkEspelho } from './espelho-leitor'
+import { aoLimiteMetaApi, espelhoPausadoAte, registarErroMetaApi } from './metaapi-partilhada'
 
 export interface ContextoEspelho {
   db: SupabaseClient
@@ -52,6 +59,8 @@ export interface ContextoEspelho {
   negociavel: (sym: string) => boolean
   /** A conta mudou por fora: o motor reavalia-a no próximo ciclo. */
   marcarSuja: (accountId: string) => void
+  /** Só para testes: um SDK falso. Por defeito, o da MetaApi com `metaapiToken`. */
+  sdk?: SdkEspelho
 }
 
 interface Seguidora {
@@ -71,7 +80,10 @@ interface Mestre {
   seguidoras: Seguidora[]
 }
 
-const POLL_MS = Number(process.env.ESPELHO_POLL_MS || 3000)
+/** Repetição curta enquanto há trabalho (abrir à espera de preço, 2.ª leitura antes de fechar). Só memória e base. */
+const REPETIR_MS = Number(process.env.ESPELHO_REPETIR_MS || process.env.ESPELHO_POLL_MS || 3000)
+const DEBOUNCE_MS = Number(process.env.ESPELHO_DEBOUNCE_MS || 250)
+const RECONCILIAR_MS = Number(process.env.ESPELHO_RECONCILIAR_MS || 60_000)
 const ATRASO_MAX_MS = Number(process.env.ESPELHO_ATRASO_MAX_MIN || 30) * 60_000
 
 /** Símbolos canónicos que as mestres têm abertos — o motor subscreve-os no feed. */
@@ -87,15 +99,16 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
   }
   const ultimoSeco = new Map<string, number>()
   const mestres = new Map<string, Mestre>()
-  const ligacoes = new Map<string, Qualquer>()
-  const aLigar = new Map<string, Promise<Qualquer | null>>()
-  const equityMestre = new Map<string, { v: number; em: number }>()
-  const contratoMestre = new Map<string, number | null>()
+  const leitores = new Map<string, LeitorMestre>()
   const ausencias = new Map<string, Map<string, number>>() // seguidora → (posição-mestre → n)
-  const ocupado = new Set<string>()
   const timers: NodeJS.Timeout[] = []
   let parado = false
-  let api: Qualquer = null
+  let sdk: SdkEspelho | null = ctx.sdk ?? null
+  const agendador = new Agendador(
+    (id) => { const m = mestres.get(id); return m ? processarMestre(m) : Promise.resolve({ repetir: false }) },
+    () => mestres.keys(),
+    { debounceMs: DEBOUNCE_MS, repetirMs: REPETIR_MS, reconciliarMs: RECONCILIAR_MS, log },
+  )
 
   // ── quem segue o quê ──────────────────────────────────────────────────────
   async function carregarSeguidoras(): Promise<void> {
@@ -123,109 +136,91 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
         alavancagem: Number(c.alavancagem ?? 100), created_at: String(c.created_at),
       })
     }
-    for (const id of [...ligacoes.keys()]) {
+    for (const id of [...leitores.keys()]) {
       if (novos.has(id)) continue
-      await ligacoes.get(id)?.close?.().catch(() => undefined)
-      ligacoes.delete(id)
+      await leitores.get(id)?.fechar().catch(() => undefined)
+      leitores.delete(id)
     }
     const antes = mestres.size
+    const contagemAntes = new Map([...mestres].map(([k, v]) => [k, v.seguidoras.map((x) => x.id).sort().join(',')]))
     mestres.clear()
     for (const [k, v] of novos) mestres.set(k, v)
+    if (parado || pausadoPorLimite()) return
+    for (const [id, m] of mestres) {
+      if (!leitores.has(id)) {
+        try {
+          if (!sdk) sdk = sdkMetaApi(ctx.metaapiToken)
+          const l = new LeitorMestre(id, sdk, { log, aoMudar: (x) => agendador.sinalizar(x), aoErroMetaApi: registarErroMetaApi })
+          leitores.set(id, l)
+          l.iniciar()
+        } catch (e) {
+          log(`[espelho] leitor da mestre ${id.slice(0, 8)} não arrancou:`, e instanceof Error ? e.message : e)
+        }
+      }
+      // Seguidoras novas nesta mestre: processa já em vez de esperar pela reconciliação.
+      if (contagemAntes.get(id) !== m.seguidoras.map((x) => x.id).sort().join(',')) agendador.sinalizar(id)
+    }
     if (antes !== mestres.size) log(`[espelho] ${mestres.size} conta(s)-mestre · ${[...mestres.values()].map((m) => `${m.slug}:${m.seguidoras.length}`).join(' ')}`)
   }
 
-  // ── MetaApi ───────────────────────────────────────────────────────────────
-  async function ligacao(id: string): Promise<Qualquer | null> {
-    const ja = ligacoes.get(id)
-    if (ja) return ja
-    if (aLigar.has(id)) return aLigar.get(id)!
-    const p = (async () => {
-      try {
-        if (!api) {
-          // Uma instância do SDK para todas as mestres: cada instância abre os seus websockets.
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const sdk = require('metaapi.cloud-sdk/node')
-          const MetaApi = sdk.default ?? sdk
-          api = new MetaApi(ctx.metaapiToken)
-        }
-        const conta = await api.metatraderAccountApi.getAccount(id)
-        const c = conta.getRPCConnection()
-        await c.connect()
-        await c.waitSynchronized(120)
-        ligacoes.set(id, c)
-        log(`[espelho] ligado à mestre ${id.slice(0, 8)}`)
-        return c
-      } catch (e) {
-        log(`[espelho] mestre ${id.slice(0, 8)} não ligou:`, e instanceof Error ? e.message : e)
-        return null
-      } finally {
-        aLigar.delete(id)
-      }
-    })()
-    aLigar.set(id, p)
-    return p
+  // ── MetaApi (só memória: ver espelho-leitor.ts) ─────────────────────────────
+  let avisadoPausa = 0
+  /** O interruptor global está ligado? (Fecha as ligações na 1.ª vez que o vê.) */
+  function pausadoPorLimite(): boolean {
+    const ate = espelhoPausadoAte()
+    if (!ate) {
+      if (avisadoPausa) { avisadoPausa = 0; log('[espelho] fim da pausa por limite da MetaApi — a religar as mestres') }
+      return false
+    }
+    if (avisadoPausa !== ate) {
+      avisadoPausa = ate
+      log(`[espelho] PAUSADO até ${new Date(ate).toISOString()} — limite da MetaApi visto no motor; a entrega aos subscritores tem prioridade`)
+    }
+    if (leitores.size) {
+      const fechar = [...leitores.values()]
+      leitores.clear()
+      for (const l of fechar) void l.fechar().catch(() => undefined)
+    }
+    return true
   }
-
-  const comPrazo = <T>(p: Promise<T>, ms: number): Promise<T> =>
-    Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`timeout ${ms}ms`)), ms))])
+  const largarOuvinteLimite = aoLimiteMetaApi(() => { pausadoPorLimite() })
 
   /** null = não consegui ler (NÃO é «sem posições»). */
-  async function lerMestre(m: Mestre): Promise<PosicaoMestre[] | null> {
-    const c = await ligacao(m.metaapiId)
-    if (!c) return null
-    try {
-      const brutas = (await comPrazo(c.getPositions(), 10_000)) as Record<string, unknown>[] | null
-      if (!Array.isArray(brutas)) return null
-      const eq = equityMestre.get(m.metaapiId)
-      if (!eq || Date.now() - eq.em > 60_000) {
-        const info = await comPrazo(c.getAccountInformation(), 10_000).catch(() => null) as { equity?: number } | null
-        if (info?.equity && info.equity > 0) equityMestre.set(m.metaapiId, { v: info.equity, em: Date.now() })
-      }
-      return brutas.map(posicaoMestreDaMetaApi).filter((x): x is PosicaoMestre => x != null)
-    } catch (e) {
-      log(`[espelho] leitura da mestre ${m.metaapiId.slice(0, 8)} falhou:`, e instanceof Error ? e.message : e)
-      // Uma ligação que dá erro recria-se na próxima volta.
-      await ligacoes.get(m.metaapiId)?.close?.().catch(() => undefined)
-      ligacoes.delete(m.metaapiId)
-      return null
-    }
+  function lerMestre(m: Mestre): PosicaoMestre[] | null {
+    return leitores.get(m.metaapiId)?.ler() ?? null
   }
 
-  async function contrato(m: Mestre, simboloMestre: string): Promise<number | null> {
-    const k = `${m.metaapiId}:${simboloMestre}`
-    if (contratoMestre.has(k)) return contratoMestre.get(k) ?? null
-    const c = ligacoes.get(m.metaapiId)
-    try {
-      const spec = c?.getSymbolSpecification ? await comPrazo(c.getSymbolSpecification(simboloMestre), 8_000) as { contractSize?: number } : null
-      const v = spec?.contractSize && spec.contractSize > 0 ? Number(spec.contractSize) : null
-      contratoMestre.set(k, v)
-      return v
-    } catch {
-      return null // sem especificação: não se guarda, tenta-se na próxima
-    }
+  function contrato(m: Mestre, simboloMestre: string): number | null {
+    return leitores.get(m.metaapiId)?.contrato(simboloMestre) ?? null
   }
 
   // ── o ciclo de uma mestre ─────────────────────────────────────────────────
-  async function processarMestre(m: Mestre): Promise<void> {
-    const lidas = await lerMestre(m)
-    if (lidas) {
-      for (const p of lidas) {
-        const s = simboloDoCatalogo(p.symbol, ctx.simbolos)
-        if (s) simbolosDoEspelho.add(s)
-      }
+  /** `repetir` = volta a correr daqui a REPETIR_MS (há trabalho por acabar). */
+  async function processarMestre(m: Mestre): Promise<{ repetir: boolean }> {
+    if (pausadoPorLimite()) return { repetir: false }
+    const leitor = leitores.get(m.metaapiId)
+    const lidas = lerMestre(m)
+    // Leitura falhada: não se toca na base nem nas ausências. O ouvinte volta a chamar quando a
+    // mestre sincronizar.
+    if (!lidas || !leitor) return { repetir: false }
+    // Houve queda desde a última leitura: as ausências contadas antes não valem — recomeça-se.
+    if (leitor.houveQuebraDesdeUltimaLeitura()) for (const seg of m.seguidoras) ausencias.delete(seg.id)
+    for (const p of lidas) {
+      const s = simboloDoCatalogo(p.symbol, ctx.simbolos)
+      if (s) simbolosDoEspelho.add(s)
     }
-    if (!m.seguidoras.length) return
+    if (!m.seguidoras.length) return { repetir: false }
 
     const ids = m.seguidoras.map((s) => s.id)
     const { data: pontesDb, error } = await db.from('funded_espelho_posicoes')
       .select('id, follower_account_id, master_position_id, funded_position_id, volume_master_abertura, volume_seguidora_abertura, estado')
       .eq('master_account_id', m.metaapiId).in('follower_account_id', ids)
-      .or(`estado.eq.aberta${lidas?.length ? `,master_position_id.in.(${lidas.map((p) => `"${p.id}"`).join(',')})` : ''}`)
+      .or(`estado.eq.aberta${lidas.length ? `,master_position_id.in.(${lidas.map((p) => `"${p.id}"`).join(',')})` : ''}`)
       .limit(5000)
     if (error) {
       // Sem a ponte não se sabe o que já está aberto — abrir às cegas é a duplicação.
       if (!/does not exist/.test(error.message)) log('[espelho] pontes:', error.message)
-      return
+      return { repetir: !/does not exist/.test(error.message) }
     }
     const fundedIds = (pontesDb ?? []).map((p) => p.funded_position_id).filter(Boolean) as string[]
     const seguidorasPos = new Map<string, PosicaoSeguidora>()
@@ -239,6 +234,7 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
       }
     }
 
+    let repetir = false
     for (const seg of m.seguidoras) {
       const pontes: Ponte[] = (pontesDb ?? []).filter((p) => p.follower_account_id === seg.id).map((p) => ({
         id: String(p.id), master_position_id: String(p.master_position_id),
@@ -258,6 +254,7 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
         agora: new Date(), atrasoMaxMs: ATRASO_MAX_MS,
       })
       ausencias.set(seg.id, novas)
+      if (accoes.length || novas.size) repetir = true
       for (const a of accoes) {
         try {
           await aplicar(m, seg, a, seguidorasPos)
@@ -266,6 +263,7 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
         }
       }
     }
+    return { repetir }
   }
 
   // ── aplicar uma decisão ───────────────────────────────────────────────────
@@ -285,7 +283,7 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
 
     if (a.tipo === 'ignorar_antiga') {
       if (!ctx.escrita) return seco(`antiga:${seg.id}:${a.mestre.id}`, `${curto} não copia ${a.mestre.symbol} #${a.mestre.id}: ${a.motivo}`)
-      // Grava-se como recusada para não voltar a ser considerada a cada 3 s.
+      // Grava-se como recusada para não voltar a ser considerada a cada leitura.
       const { error } = await db.from('funded_espelho_posicoes').insert({
         follower_account_id: seg.id, master_account_id: m.metaapiId, master_position_id: a.mestre.id, estrategia: m.slug,
         master_symbol: a.mestre.symbol, direcao: a.mestre.direcao, volume_master_abertura: a.mestre.volume,
@@ -316,10 +314,10 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
       // O prazo de ATRASO_MAX_MS no diff é o que acaba por desistir.
       if (!vivo) return seco(`sem-preco:${symbol}`, `${curto} à espera de preço para ${symbol}`)
 
-      const eqM = equityMestre.get(m.metaapiId)?.v ?? null
+      const eqM = leitores.get(m.metaapiId)?.equity() ?? null
       const tamanho = volumeEspelho({
         volumeMestre: mp.volume, equityMestre: eqM, equitySeguidora: seg.sim_equity ?? seg.sim_saldo,
-        simbolo: s, contratoMestre: await contrato(m, mp.symbol),
+        simbolo: s, contratoMestre: contrato(m, mp.symbol),
       })
       if (!tamanho.ok) {
         if (tamanho.motivo.includes('equity da mestre')) return seco(`sem-equity:${m.metaapiId}`, `${curto} à espera da equity da mestre`)
@@ -467,27 +465,20 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
   }
 
   // ── arranque ──────────────────────────────────────────────────────────────
-  const volta = async () => {
-    if (parado) return
-    await Promise.all([...mestres.values()].map(async (m) => {
-      if (ocupado.has(m.metaapiId)) return
-      ocupado.add(m.metaapiId)
-      try { await processarMestre(m) } catch (e) {
-        log(`[espelho] mestre ${m.slug}:`, e instanceof Error ? e.message : e)
-      } finally { ocupado.delete(m.metaapiId) }
-    }))
-  }
-
-  void carregarSeguidoras().then(volta)
-  timers.push(setInterval(() => { void carregarSeguidoras() }, 30_000))
-  timers.push(setInterval(() => { void volta() }, POLL_MS))
-  log(`[espelho] ligado · escrita=${ctx.escrita ? 'LIGADA' : 'seco'} · poll ${POLL_MS}ms · atraso máx ${ATRASO_MAX_MS / 60000} min`)
+  // Nada aqui é esperado pelo motor: uma mestre que não liga só atrasa o espelho dela — o feed de
+  // preços (outra instância do SDK) e o ciclo de regras não dependem disto.
+  void carregarSeguidoras().catch((e) => log('[espelho] arranque:', e instanceof Error ? e.message : e))
+  timers.push(setInterval(() => { void carregarSeguidoras().catch(() => undefined) }, 30_000))
+  log(`[espelho] ligado · escrita=${ctx.escrita ? 'LIGADA' : 'seco'} · streaming (zero RPC) · debounce ${DEBOUNCE_MS}ms · repetir ${REPETIR_MS}ms · reconciliar ${RECONCILIAR_MS / 1000}s · atraso máx ${ATRASO_MAX_MS / 60000} min`)
 
   return {
     async parar() {
       parado = true
+      largarOuvinteLimite()
+      agendador.parar()
       for (const t of timers) clearInterval(t)
-      for (const c of ligacoes.values()) await c?.close?.().catch(() => undefined)
+      for (const l of leitores.values()) await l.fechar().catch(() => undefined)
+      leitores.clear()
     },
   }
 }

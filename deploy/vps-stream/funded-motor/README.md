@@ -79,14 +79,24 @@ Então `MOTOR_ESCRITA=1` no ficheiro e `systemctl restart mtm-funded-motor`.
 
 `services/funded-motor/espelho-estrategias.ts`, ligado dentro do motor. Contas `sim` com
 `segue_estrategia` (migração **070**, aplicar antes) copiam as posições da conta-mestre da estratégia
-(`mtmauto_providers.metaapi_account_id`): uma ligação RPC da MetaApi por mestre, `getPositions` de 3 em
-3 s, abertura ao nosso preço em proporção à equity (mínimo do símbolo + `escala` quando o lote
+(`mtmauto_providers.metaapi_account_id`): uma ligação de **STREAMING** da MetaApi por mestre
+(`services/funded-motor/espelho-leitor.ts`) — posições, equity e contrato lidos do `terminalState` em memória,
+**zero pedidos RPC** (até 14/09 era `getPositions` por RPC de 3 em 3 s e a MetaApi cortou o token partilhado com o
+MTM Auto/MTM Copy: «ws:getPositions … 180000 cpu credits per 1h»). Eventos do ouvinte → debounce 250 ms → diff;
+repete 3 s depois enquanto há trabalho; reconcilia de 60 em 60 s. Mestre não sincronizada = leitura falhada (não
+fecha nada). O feed e o espelho partilham UMA instância do SDK (`metaapi-partilhada.ts`): uma conta que o feed já
+ouve não ganha segunda subscrição. **Interruptor**: ao primeiro erro de limite da MetaApi visto em qualquer parte do
+motor, o espelho fecha as ligações e pára 1 h (o feed continua). Abertura ao nosso preço em proporção à equity (mínimo do símbolo + `escala` quando o lote
 proporcional não chega), SL/TP em níveis absolutos, parciais proporcionais, fecho após 2 leituras sem a
 posição. Ponte anti-duplicação: `funded_espelho_posicoes`. Posições abertas na mestre antes de a conta
 existir, ou vistas mais de `ESPELHO_ATRASO_MAX_MIN` (30) depois, não se copiam (ficam `recusada`).
 
 - `MOTOR_ESCRITA=0` → `[espelho][seco] …` no log; nada na base.
-- Opcionais: `ESPELHO_ATIVO=0` (desliga só o espelho) · `ESPELHO_POLL_MS=3000` · `ESPELHO_ATRASO_MAX_MIN=30`.
+- Opcionais: `ESPELHO_ATIVO=0` (desliga só o espelho) · `ESPELHO_REPETIR_MS=3000` · `ESPELHO_DEBOUNCE_MS=250` ·
+  `ESPELHO_RECONCILIAR_MS=60000` · `ESPELHO_PAUSA_LIMITE_MIN=60` · `ESPELHO_ATRASO_MAX_MIN=30`.
+- No log: `[espelho] mestre xxxxxxxx sincronizada (streaming)`, `… dessincronizada … não fecha nada até voltar`,
+  `[espelho] PAUSADO até … — limite da MetaApi`.
+- Testes: `npx tsx lib/mtmfunded/__tests__/espelho.check.ts` (inclui o fluxo por eventos com um SDK falso).
 - Contas com `metricas.analise = true` não são quebradas pelas regras do programa (o stop-out mantém-se).
 - No log: `[espelho] <estratégia>→<conta> abriu|parcial|fechou|SL …`.
 

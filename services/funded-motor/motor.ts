@@ -48,6 +48,7 @@ import {
 } from './avaliacao'
 import { FonteRpc, FonteStreaming, type FontePrecos, type Tick } from './feed'
 import { iniciarEspelho, simbolosDoEspelho } from './espelho-estrategias'
+import { registarErroMetaApi } from './metaapi-partilhada'
 
 // ── configuração ──────────────────────────────────────────────────────────────
 const env = (k: string, obrigatoria = true) => {
@@ -791,6 +792,7 @@ async function ligarFonte(): Promise<FontePrecos> {
     await principal.iniciar(aoTick)
     return principal
   } catch (e) {
+    registarErroMetaApi(e, 'feed:streaming')
     log('[feed] streaming não ligou, passo a RPC:', e instanceof Error ? e.message : e)
     await principal.parar()
     const recurso = new FonteRpc(CFG.metaapiToken, CFG.contaPrecos, CFG.intervaloMs)
@@ -858,6 +860,15 @@ async function main(): Promise<void> {
   process.on('SIGTERM', sair)
   process.on('SIGINT', sair)
 }
+
+// Uma promessa rejeitada sem catch (tipicamente dentro do SDK da MetaApi, numa ligação de uma
+// mestre do espelho) NÃO pode matar o motor: o systemd reiniciava-o e cada arranque volta a
+// subscrever todas as contas na MetaApi — é exactamente o gasto de quota que se quer evitar. Regista,
+// e se for limite liga o interruptor que pára o espelho. O feed mudo continua a sair pelo [pulso].
+process.on('unhandledRejection', (e) => {
+  const limite = registarErroMetaApi(e, 'unhandledRejection')
+  log(`[motor] promessa rejeitada sem catch${limite ? ' (LIMITE da MetaApi — espelho em pausa)' : ''}:`, e instanceof Error ? e.message : e)
+})
 
 main().catch((e) => {
   console.error('[motor] falhou no arranque:', e instanceof Error ? e.message : e)
