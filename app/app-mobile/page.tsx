@@ -264,9 +264,17 @@ function AppMobileContent() {
 
   const embeddedApp = searchParams.get("app")
 
-  // Swipe para mudar tab — desativado no separador "Ao vivo" e em cima de &lt;video&gt;
+  // Swipe para mudar tab — desativado no separador "Ao vivo" e em cima de &lt;video&gt;.
+  // Também DESLIGADO nas apps nativas (têm tab bar própria e o gesto tirava o cliente do WebTrader
+  // sem forma de voltar) e em toda a aba Trading (Scanner/Web trader: arrastar é negociar).
+  const swipeDesligado = () =>
+    activeTab === "live" ||
+    activeTab === "scanner" ||
+    (activeTab === "apps" && embeddedApp) ||
+    (typeof navigator !== "undefined" && /MTMNativeApp|MTMSystemAndroid/i.test(navigator.userAgent))
+
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (activeTab === "live" || (activeTab === "apps" && embeddedApp)) return
+    if (swipeDesligado()) return
 
     const target = e.target as HTMLElement
     if (target.closest("video")) return
@@ -284,7 +292,7 @@ function AppMobileContent() {
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (activeTab === "live" || (activeTab === "apps" && embeddedApp)) return
+    if (swipeDesligado()) return
 
     const target = e.target as HTMLElement
     if (target.closest("video")) return
@@ -299,7 +307,7 @@ function AppMobileContent() {
   }
 
   const handleTouchEnd = () => {
-    if (activeTab === "live" || (activeTab === "apps" && embeddedApp)) {
+    if (swipeDesligado()) {
       setTouchStart(0)
       setTouchEnd(0)
       return
