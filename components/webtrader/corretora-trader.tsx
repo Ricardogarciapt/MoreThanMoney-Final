@@ -42,7 +42,8 @@ export default function CorretoraTrader(props: { contaRef: string; plataforma: P
 function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraPermitida }: { contaRef: string; plataforma: PlataformaWT; altura?: string; prefill: Prefill | null; simboloInicial: string | null; compraPermitida: boolean }) {
   const u = useUmClique()
   const [info, setInfo] = useState<{ conta: ContaWT; podeNegociar: boolean; capacidades: CapacidadesWT } | null>(null)
-  const [erro, setErro] = useState<{ texto: string; status: number } | null>(null)
+  const [erro, setErro] = useState<{ texto: string; status: number; codigo?: string } | null>(null)
+  const [aLigar, setALigar] = useState(false)
   const [posicoes, setPosicoes] = useState<PosicaoWT[]>([])
   const [ordens, setOrdens] = useState<OrdemWT[]>([])
   const [historico, setHistorico] = useState<NegocioWT[] | null>(null)
@@ -57,7 +58,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
       setInfo(await pedirWT(plataforma, "conta", { conta: contaRef }))
       setErro(null)
     } catch (e) {
-      setErro({ texto: (e as Error).message, status: (e as ErroWT).status ?? 0 })
+      setErro({ texto: (e as Error).message, status: (e as ErroWT).status ?? 0, codigo: String((e as ErroWT).dados?.code ?? "") })
     }
   }, [plataforma, contaRef])
   const lerPosicoes = useCallback(async () => {
@@ -120,12 +121,32 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     void lerPosicoes(); void lerConta()
     return r
   }, [u, plataforma, contaRef, garantirAceite, lerPosicoes, lerConta])
+  /** Deploy de uma conta MT5 desligada — só por clique, com confirmação (pode demorar ~1 min). */
+  const ligarConta = async () => {
+    if (!window.confirm("Ligar esta conta MT5 à corretora? Pode demorar cerca de 1 minuto. Depois de algum tempo parada, a MetaApi volta a desligá-la.")) return
+    setALigar(true)
+    try {
+      await pedirWT(plataforma, "ligar", { conta: contaRef, metodo: "POST", corpo: {} })
+      setErro({ texto: "A ligar à corretora… a página volta a tentar sozinha.", status: 0 })
+      setTimeout(() => { void lerConta(); void lerPosicoes() }, 30_000)
+    } catch (e) {
+      setErro({ texto: (e as Error).message, status: (e as ErroWT).status ?? 0 })
+    } finally {
+      setALigar(false)
+    }
+  }
+  const botaoLigar = erro?.codigo === "mt5_desligada" && (
+    <button disabled={aLigar} onClick={() => void ligarConta()} className="rounded-lg bg-violet-400 px-3 py-1.5 text-[12px] font-bold text-black disabled:opacity-40">
+      {aLigar ? "A ligar…" : "Ligar conta"}
+    </button>
+  )
   const semCancelar = (p: Promise<unknown>) => p.catch((e) => { if (!(e instanceof AccaoCancelada)) throw e })
 
   if (erro && !info) {
     return (
       <div className="space-y-2 p-6 text-center text-[13px]">
         <p className="text-rose-300">{erro.texto}</p>
+        {botaoLigar}
         {erro.status === 402 && compraPermitida && <a href="/upgrade" className="inline-block font-semibold text-[#D2A63C] underline">Ver planos</a>}
         {erro.status === 401 && <p className="text-zinc-500">Volta a entrar com as credenciais desta conta.</p>}
       </div>
@@ -152,7 +173,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
         {metricas.map(([k, v, cor]) => <span key={k} className="whitespace-nowrap"><span className="text-zinc-500">{k} </span><span className={`font-mono ${cor ?? ""}`}>{v}{c.moeda ? ` ${c.moeda}` : ""}</span></span>)}
         {podeNegociar && <span className="ml-auto h-7"><InterruptorUmClique /></span>}
       </div>
-      {erro && <p className="px-3 py-1 text-[11.5px] text-amber-300">{erro.texto}</p>}
+      {erro && <p className="flex items-center gap-2 px-3 py-1 text-[11.5px] text-amber-300">{erro.texto} {botaoLigar}</p>}
 
       <div className="grid min-h-0 flex-1 gap-2 p-2 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0 space-y-2">

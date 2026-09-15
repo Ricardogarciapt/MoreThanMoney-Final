@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict'
 import { TradeLockerSessao, limparCachesTradeLocker, lerOrdens } from '../../tradelocker/client'
 import { adaptadorTradeLocker, montarPosicoesEOrdensTL } from '../corretoras/tradelocker'
-import { adaptadorMt5, ordemMt5, posicaoMt5, type DepsMt5 } from '../corretoras/mt5'
+import { adaptadorMt5, lerRespostaTrade, ordemMt5, posicaoMt5, type DepsMt5 } from '../corretoras/mt5'
 import { canonicoDe, chaveTentativa, criarLimitador, decidirAcessoMt5, lerRefConta, plataformaValida } from '../corretoras/regras'
 import { emitirSessaoTL, lerSessaoTL } from '../tradelocker-sessao'
 import { CAPACIDADES, ErroCorretora, validarPedido, type AdaptadorCorretora } from '../corretoras/tipos'
@@ -215,26 +215,28 @@ async function main() {
   assert.equal(lerSessaoTL(s1.token.slice(0, -2) + 'xx', 'user-A', '42'), null, 'token adulterado → recusado')
   assert.equal(lerSessaoTL(null, 'user-A', '42'), null)
 
-  // ── MT5 com MetaApi simulada: contrato, custo e ordens pelos helpers ────────────────────────
-  const rest: Array<{ caminho: string; init?: unknown }> = []
-  const ordensFeitas: unknown[] = []
+  // ── MT5: tudo por REST (DepsMt5 é a ÚNICA porta de I/O do adaptador) ─────────────────────────
+  const rest: Array<{ caminho: string; init?: { method?: string; body?: Record<string, unknown> } }> = []
+  let respostaTrade: Record<string, unknown> = { numericCode: 10009, stringCode: 'TRADE_RETCODE_DONE', orderId: 'X1', positionId: 'P7' }
   const deps: DepsMt5 = {
     rest: async (_id, caminho, init) => {
-      rest.push({ caminho, init })
+      rest.push({ caminho, init: init as never })
       if (caminho === '/account-information') return { balance: 5000, equity: 5050, margin: 200, freeMargin: 4850, currency: 'USD' }
       if (caminho === '/positions') return [{ id: '9', symbol: 'EURUSD-STD', type: 'POSITION_TYPE_SELL', openPrice: 1.1, volume: 1, stopLoss: 1.11, takeProfit: 0, profit: -3, time: '2026-09-15T10:00:00Z' }]
       if (caminho === '/orders') return [{ id: '77', symbol: 'XAUUSD.s', type: 'ORDER_TYPE_BUY_LIMIT', openPrice: 2380, currentVolume: 0.1, stopLoss: 2370 }]
-      if (caminho === '/symbols') return ['EURUSD-STD', 'XAUUSD.s']
-      return { numericCode: 0 }
+      if (caminho === '/symbols') return ['XAUUSD', 'XAUUSD.s', 'EURUSD-STD']
+      // VT-like: o símbolo «bare» está DISABLED, a variante nativa está FULL.
+      if (caminho === '/symbols/XAUUSD/specification') return { point: 0.01, digits: 2, tradeMode: 'SYMBOL_TRADE_MODE_DISABLED' }
+      if (caminho === '/symbols/XAUUSD.s/specification') return { point: 0.01, digits: 2, tradeMode: 'SYMBOL_TRADE_MODE_FULL', minVolume: 0.01, volumeStep: 0.01, maxVolume: 50, stopsLevel: 100 }
+      if (caminho.endsWith('/current-price')) return { bid: 2400, ask: 2400.2 }
+      if (caminho.startsWith('/history-deals/')) return [
+        { id: 'd1', type: 'DEAL_TYPE_BALANCE', profit: 1000 },
+        { id: 'd2', symbol: 'EURUSD-STD', type: 'DEAL_TYPE_BUY', entryType: 'DEAL_ENTRY_OUT', volume: 1, price: 1.1, profit: 10, commission: -2, swap: 0, time: '2026-09-14T10:00:00Z' },
+      ]
+      if (caminho === '/trade') return respostaTrade
+      throw new Error(`caminho inesperado ${caminho}`)
     },
-    placeOrder: async (req) => { ordensFeitas.push(req); return { success: true, orderId: 'X1', brokerSymbol: 'XAUUSD.s' } },
-    modifyPositionSlTp: async () => ({ success: true }),
-    closePositionById: async (_a, _p, v) => { ordensFeitas.push({ fechar: v }); return { success: true } },
-    lerHistorico: async () => [
-      { id: 'd1', type: 'DEAL_TYPE_BALANCE', profit: 1000 },
-      { id: 'd2', symbol: 'EURUSD-STD', type: 'DEAL_TYPE_BUY', entryType: 'DEAL_ENTRY_OUT', volume: 1, price: 1.1, profit: 10, commission: -2, swap: 0, time: '2026-09-14T10:00:00Z' },
-    ],
-    posicoesStreaming: () => null,
+    snapshot: async () => null,
   }
   const mt5 = adaptadorMt5('acc-teste', { podeNegociar: true }, deps)
   cumpreContrato(mt5)
@@ -245,7 +247,6 @@ async function main() {
   assert.equal(p5[0].symbol, 'EURUSD')
   assert.equal(p5[0].tp, null, 'TP 0 = sem TP')
   await mt5.posicoes()
-  await mt5.ordens()
   assert.equal(rest.filter((r) => r.caminho === '/positions').length, 1, 'MT5: no máximo 1 leitura de posições a cada 5 s')
   const o5 = await mt5.ordens()
   assert.equal(o5[0].tipo, 'limit')
@@ -255,23 +256,62 @@ async function main() {
   assert.equal(h5.length, 1, 'movimentos de saldo não são negócios')
   assert.equal(h5[0].lucro, 8)
 
-  await mt5.enviarOrdem({ symbol: 'XAUUSD', direcao: 'buy', tipo: 'stop', volume: 0.1, preco: 2450 })
-  assert.deepEqual(ordensFeitas[0], { accountId: 'acc-teste', symbol: 'XAUUSD', direction: 'buy', volume: 0.1, orderType: 'stop', openPrice: 2450, stopLoss: null, takeProfit: null, comment: 'MTM WebTrader' })
+  const trades = () => rest.filter((r) => r.caminho === '/trade').map((r) => r.init!.body!)
+  // Ordem a mercado: salta a variante DISABLED, afasta o SL até ao stopsLevel, vai por POST /trade.
+  const env5 = await mt5.enviarOrdem({ symbol: 'XAUUSD', direcao: 'buy', volume: 0.1, sl: 2399.9 })
+  assert.equal(env5.id, 'P7')
+  assert.deepEqual(trades()[0], { actionType: 'ORDER_TYPE_BUY', symbol: 'XAUUSD.s', volume: 0.1, stopLoss: 2399.05 }, 'sem comentário: conta de cliente abre como trade manual')
+  assert.ok(rest.filter((r) => r.init?.method === 'POST').every((r) => r.caminho === '/trade'), 'escritas só em /trade')
+  await mt5.enviarOrdem({ symbol: 'XAUUSD', direcao: 'sell', tipo: 'stop', volume: 0.1, preco: 2350 })
+  assert.equal(trades()[1].actionType, 'ORDER_TYPE_SELL_STOP')
+  assert.equal(trades()[1].openPrice, 2350)
+  await mt5.modificar({ alvo: 'posicao', id: '9', sl: 1.12 })
+  assert.deepEqual(trades()[2], { actionType: 'POSITION_MODIFY', positionId: '9', stopLoss: 1.12 })
   await mt5.fechar('9', 0.3)
-  assert.deepEqual(ordensFeitas[1], { fechar: 0.3 })
+  assert.deepEqual(trades()[3], { actionType: 'POSITION_PARTIAL', positionId: '9', volume: 0.3 })
+  await mt5.fechar('9')
+  assert.deepEqual(trades()[4], { actionType: 'POSITION_CLOSE_ID', positionId: '9' })
   await mt5.cancelar('77')
-  assert.deepEqual(rest.at(-1), { caminho: '/trade', init: { method: 'POST', body: { actionType: 'ORDER_CANCEL', orderId: '77' } } })
+  assert.deepEqual(trades()[5], { actionType: 'ORDER_CANCEL', orderId: '77' })
   await mt5.modificar({ alvo: 'ordem', id: '77', preco: 2385 })
-  assert.equal((rest.at(-1)!.init as { body: { actionType: string; openPrice: number } }).body.openPrice, 2385)
+  assert.equal(trades()[6].actionType, 'ORDER_MODIFY')
+  assert.equal(trades()[6].openPrice, 2385)
 
-  const recusa: DepsMt5 = { ...deps, placeOrder: async () => ({ success: false, error: 'Market closed' }) }
-  await lanca(adaptadorMt5('acc-2', { podeNegociar: true }, recusa).enviarOrdem({ symbol: 'XAUUSD', direcao: 'sell', volume: 0.1 }), 422)
+  respostaTrade = { numericCode: 10018, stringCode: 'TRADE_RETCODE_MARKET_CLOSED', message: 'Market is closed' }
+  const e5 = await lanca(mt5.enviarOrdem({ symbol: 'XAUUSD', direcao: 'sell', volume: 0.1 }), 422)
+  assert.match(e5.message, /Market is closed/)
+  assert.throws(() => lerRespostaTrade({ numericCode: 10006 }), ErroCorretora)
+  assert.deepEqual(lerRespostaTrade({ numericCode: 10009, orderId: 5 }), { orderId: '5', positionId: null })
+  const antesSoLer = rest.length
   await lanca(adaptadorMt5('acc-3', { podeNegociar: false }, deps).enviarOrdem({ symbol: 'XAUUSD', direcao: 'sell', volume: 0.1 }), 403)
+  assert.equal(rest.length, antesSoLer, 'só leitura: nada chega à MetaApi')
 
   // Símbolos: nunca getSymbols por pedido — a cache de 1 hora serve os pedidos seguintes.
+  // (a ordem recusada acima esquece a lista de propósito → UMA releitura, depois cache)
+  const simbAntes = rest.filter((r) => r.caminho === '/symbols').length
   await mt5.simbolos('xau')
   await mt5.simbolos('eur')
-  assert.equal(rest.filter((r) => r.caminho === '/symbols').length, 1)
+  await mt5.simbolos('')
+  assert.equal(rest.filter((r) => r.caminho === '/symbols').length - simbAntes, 1)
+
+  // ── o WebTrader NUNCA toca na cache RPC partilhada da entrega (nem a importa) ────────────────
+  const fs = await import('node:fs')
+  const path = await import('node:path')
+  const raiz = path.resolve(__dirname, '..')
+  const ficheiros = ['corretoras/mt5.ts', 'corretoras/comum.ts', 'corretoras/tradelocker.ts', 'corretoras/regras.ts', 'contas.ts', 'entrar.ts', 'tradelocker-sessao.ts']
+    .map((f) => path.join(raiz, f))
+    .concat([path.resolve(raiz, '../../app/api/webtrader/[plataforma]/[acao]/route.ts'), path.resolve(raiz, '../../app/api/webtrader/contas/route.ts')])
+  const proibidos = /\b(placeOrder|placeMarketOrder|placeLimitOrder|placeStopOrder|placeOrdersSequential|modifyPositionSlTp|closePositionById|closePositionsForSymbol|readOpenPositions|listOpenPositions|readPendingOrders|listPendingOrders|cancelPendingOrdersForSymbol|getRpcConnection|invalidateRpcCache|getAccountSnapshot|getAccountBalance|fetchLotSizingContext|getMarketPrice|getSymbolSpecification|getAccountSymbols|lerHistorico|getHistoryDeals|lerPosicoesMotor|precoMotor|ensureMetaApiAccountOnline|checkAccountHealth)\b|metaapi\.cloud-sdk|metaapi-snapshot'/
+  for (const f of ficheiros) {
+    const src = fs.readFileSync(f, 'utf8')
+    const m = src.match(proibidos)
+    assert.equal(m, null, `${path.basename(f)} usa ${m?.[0]} (ligação RPC partilhada)`)
+  }
+  // Abrir a página nunca faz deploy: só ligarContaMt5 (botão «Ligar conta») chama /deploy.
+  const srcMt5 = fs.readFileSync(path.join(raiz, 'corretoras/mt5.ts'), 'utf8')
+  assert.equal(srcMt5.split("'/deploy'").length - 1, 1, 'um só sítio com /deploy')
+  assert.ok(/export async function ligarContaMt5[\s\S]*'\/deploy'/.test(srcMt5))
+  assert.ok(!/\/deploy/.test(srcMt5.slice(0, srcMt5.indexOf('export async function ligarContaMt5'))), 'restReal não faz deploy')
 
   console.log('corretoras.check: OK')
 }

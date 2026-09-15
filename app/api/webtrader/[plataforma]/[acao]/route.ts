@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { isIosAppRequest } from '@/lib/is-native-request'
-import { resolverAdaptador } from '@/lib/webtrader/contas'
+import { autorizarMt5, resolverAdaptador } from '@/lib/webtrader/contas'
+import { ligarContaMt5 } from '@/lib/webtrader/corretoras/mt5'
+import { lerRefConta } from '@/lib/webtrader/corretoras/regras'
 import { entrarMt5, entrarTradeLocker } from '@/lib/webtrader/entrar'
 import { plataformaValida } from '@/lib/webtrader/corretoras/regras'
 import { ErroCorretora, type PlataformaWT } from '@/lib/webtrader/corretoras/tipos'
@@ -18,6 +20,7 @@ export const maxDuration = 120
  *   POST /api/webtrader/{plataforma}/modificar  { conta, alvo: posicao|ordem, id, sl?, tp?, preco? }
  *   POST /api/webtrader/{plataforma}/fechar     { conta, positionId, volume? }
  *   POST /api/webtrader/{plataforma}/cancelar   { conta, orderId }
+ *   POST /api/webtrader/mt5/ligar            { conta } — deploy EXPLÍCITO de uma conta desligada (botão «Ligar conta»)
  *   POST /api/webtrader/{tradelocker|mt5}/entrar  (login com credenciais; MTM Funded usa /api/mtmfunded/simulado/entrar)
  *
  * Em TODOS os pedidos: sessão MTM (ou sessão da conta MTM Funded) e verificação do dono no servidor.
@@ -94,6 +97,15 @@ export async function POST(request: NextRequest, { params }: Params) {
       if (plataforma === 'tradelocker') return NextResponse.json(await entrarTradeLocker(userId, b))
       if (plataforma === 'mt5') return NextResponse.json(await entrarMt5(userId, b, { compraPermitida: !isIosAppRequest(request) }))
       throw new ErroCorretora(400, 'Contas MTM Funded entram em /api/mtmfunded/simulado/entrar.')
+    }
+
+    if (acao === 'ligar') {
+      // Só por clique do utilizador, com dono + quota verificados. Abrir a página nunca faz deploy.
+      const ref = lerRefConta('mt5', b.conta)
+      if (plataforma !== 'mt5' || !ref || ref.plataforma !== 'mt5') throw new ErroCorretora(400, 'conta inválida')
+      const userId = await userIdDoPedido(request)
+      if (!userId) throw new ErroCorretora(401, 'Sem sessão.')
+      return NextResponse.json(await ligarContaMt5(await autorizarMt5(userId, ref.origem, ref.id)))
     }
 
     const a = await resolverAdaptador(request, plataforma, b.conta)

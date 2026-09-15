@@ -1,28 +1,29 @@
 /**
- * Adaptador MT5 — conta REAL na corretora, pela MetaApi. A regra que manda neste ficheiro é o CUSTO.
+ * Adaptador MT5 — conta REAL na corretora, pela MetaApi. A regra que manda neste ficheiro é o CUSTO
+ * e NÃO COMPETIR COM A ENTREGA AOS SUBSCRITORES.
  *
- * Leituras (a MetaApi cobra créditos por pedido):
- *  · NUNCA por ligação RPC. O RPC tem uma cache de 12 ligações quentes (lib/mtmcopy/metaapi.ts) que
- *    serve a ENTREGA aos subscritores; uma conta aberta no WebTrader a entrar nessa cache podia
- *    empurrar para fora a ligação de uma conta que está à espera de um sinal. Por isso as leituras
- *    vão pelo REST (account-information, positions, orders), que não ocupa ligação nenhuma.
- *  · Contas em streaming (PREMIUM_STREAMING_CONTAS) leem a fotografia `metaapi_snapshot`.
- *  · Limitador por conta, partilhado por todos os pedidos da instância: no máximo 1 leitura real a
- *    cada 5 s por conta (INTERVALO_MIN_LEITURA_MS.mt5), histórico a cada 60 s. O ecrã só pede com o
- *    separador visível e pára quando fica escondido.
- *  · Lista de símbolos: a cache de 1 hora de sempre (simbolosDaContaCache) — nunca getSymbols por pedido.
- *  · Preço para o gráfico/ticket: o nosso feed (funded_precos, grátis), marcado como indicativo.
- *    A ordem a mercado executa ao preço da corretora.
- *
- * Ordens: os helpers de execução de sempre (placeOrder com resolução de símbolo negociável conforme
- * o tradeMode, modifyPositionSlTp, closePositionById). Cancelar/mover pendente pelo REST /trade.
+ * Canal: SÓ o REST cliente regional (mt-client-api-v1.<região>.agiliumtrade.ai), leituras E ordens.
+ *  · Nenhuma ligação RPC/streaming do SDK. A cache de 12 ligações quentes de lib/mtmcopy/metaapi.ts
+ *    serve a entrega de sinais (subscritores/provider); o WebTrader nunca lá entra nem despeja ninguém.
+ *    Escolhido em vez de um pool isolado porque o REST não abre socket nenhum: não há ligação para
+ *    limitar, fechar por inactividade nem sincronizar, e cada pedido é independente.
+ *  · Ordens/modificar/fechar/cancelar: POST /users/current/accounts/{id}/trade (actionType MT5).
+ *    Símbolo negociável conforme o tradeMode (mesma regra do caminho de execução: candidatos
+ *    ordenados por rankedBrokerSymbols, salta DISABLED/CLOSEONLY), volume ajustado à spec e SL/TP
+ *    afastados até ao stopsLevel — tudo por REST, com as caches de 1 h de símbolos/specs.
+ *  · Leituras com limitador por conta (≥5 s posições/ordens/saldo, 60 s histórico). Contas em
+ *    streaming (PREMIUM_STREAMING_CONTAS) leem a fotografia `metaapi_snapshot` quando está fresca;
+ *    senão REST — nunca o fallback RPC do motor.
+ *  · Conta desligada (a MetaApi faz undeploy às ociosas): o WebTrader NÃO faz deploy sozinho. Responde
+ *    503 `mt5_desligada` e o ecrã oferece «Ligar conta» (acção explícita, com aviso de ~1 min) →
+ *    `ligarContaMt5`. A política de undeploy das ociosas continua a mandar depois disso.
  */
-import {
-  closePositionById, lerHistorico, modifyPositionSlTp, placeOrder,
-  type MetaApiDeal, type MetaApiPendingOrder, type MetaApiPosition, type OrderRequest, type OrderResult,
-} from '@/lib/mtmcopy/metaapi'
-import { simbolosDaContaCache } from '@/lib/mtmcopy/metaapi-cache'
-import { contaEmStreaming, lerPosicoesMotor } from '@/lib/mtmcopy/metaapi-snapshot'
+import { clampStopsToMinDistance, clampVolume, type MetaApiDeal, type MetaApiPendingOrder, type MetaApiPosition, type MetaApiSymbolSpecification } from '@/lib/mtmcopy/metaapi'
+import { invalidarLeiturasDeSimbolos, simbolosDaContaCache, specDoSimboloCache } from '@/lib/mtmcopy/metaapi-cache'
+import { contasStreaming, decidirFonte, type MetaApiSnapshot } from '@/lib/mtmcopy/metaapi-snapshot-regras'
+import { orderCommentFor } from '@/lib/mtmcopy/no-comment-accounts'
+import { rankedBrokerSymbols } from '@/lib/mtmcopy/symbol-resolver'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isoDe, limitador, numOuNull, precoIndicativo } from './comum'
 import { INTERVALO_HISTORICO_MS, INTERVALO_MIN_LEITURA_MS, canonicoDe } from './regras'
 import { CAPACIDADES, ErroCorretora, validarPedido, type AdaptadorCorretora, type OrdemWT, type PosicaoWT } from './tipos'
@@ -32,39 +33,27 @@ const PROVISIONING = process.env.METAAPI_PROVISIONING_URL ?? 'https://mt-provisi
 export interface DepsMt5 {
   /** GET/POST ao REST cliente da conta (caminho depois de /users/current/accounts/{id}). */
   rest: (accountId: string, caminho: string, init?: { method?: 'GET' | 'POST'; body?: unknown }) => Promise<unknown>
-  placeOrder: (req: OrderRequest) => Promise<OrderResult>
-  modifyPositionSlTp: typeof modifyPositionSlTp
-  closePositionById: typeof closePositionById
-  lerHistorico: (accountId: string, de: Date, ate: Date) => Promise<MetaApiDeal[] | null>
-  posicoesStreaming: (accountId: string) => Promise<MetaApiPosition[] | null> | null
+  /** Fotografia de streaming fresca, ou null (sem streaming / velha) → REST. */
+  snapshot: (accountId: string) => Promise<MetaApiSnapshot | null>
 }
 
 // ── REST ─────────────────────────────────────────────────────────────────────────────────────
 
 const regioes = new Map<string, string>()
-const ultimoDeploy = new Map<string, number>()
+
+async function provisioning(accountId: string, token: string, caminho = '', method: 'GET' | 'POST' = 'GET') {
+  const r = await fetch(`${PROVISIONING}/users/current/accounts/${accountId}${caminho}`, { method, headers: { 'auth-token': token }, cache: 'no-store', signal: AbortSignal.timeout(10_000) })
+  if (r.status === 404) throw new ErroCorretora(404, 'Esta conta já não existe na MetaApi. Remove-a e liga-a de novo.')
+  if (!r.ok && r.status !== 204) throw new ErroCorretora(502, 'A MetaApi não respondeu. Tenta daqui a pouco.')
+  return (await r.json().catch(() => ({}))) as { region?: string; state?: string; connectionStatus?: string }
+}
 
 async function regiaoDe(accountId: string, token: string): Promise<string> {
   const g = regioes.get(accountId)
   if (g) return g
-  const r = await fetch(`${PROVISIONING}/users/current/accounts/${accountId}`, { headers: { 'auth-token': token }, cache: 'no-store', signal: AbortSignal.timeout(8_000) })
-  if (r.status === 404) throw new ErroCorretora(404, 'Esta conta já não existe na MetaApi. Remove-a e liga-a de novo.')
-  if (!r.ok) throw new ErroCorretora(502, 'A MetaApi não respondeu. Tenta daqui a pouco.')
-  const j = (await r.json()) as { region?: string }
-  const reg = String(j.region ?? 'london')
+  const reg = String((await provisioning(accountId, token)).region ?? 'london')
   regioes.set(accountId, reg)
   return reg
-}
-
-/**
- * Conta não ligada (a MetaApi faz undeploy de contas paradas): pede UM deploy a cada 5 min por
- * conta, só porque alguém está a usá-la no WebTrader. Nunca em ciclo.
- */
-async function acordar(accountId: string, token: string) {
-  const t = Date.now()
-  if (t - (ultimoDeploy.get(accountId) ?? 0) < 5 * 60_000) return
-  ultimoDeploy.set(accountId, t)
-  await fetch(`${PROVISIONING}/users/current/accounts/${accountId}/deploy`, { method: 'POST', headers: { 'auth-token': token } }).catch(() => null)
 }
 
 async function restReal(accountId: string, caminho: string, init: { method?: 'GET' | 'POST'; body?: unknown } = {}): Promise<unknown> {
@@ -78,17 +67,17 @@ async function restReal(accountId: string, caminho: string, init: { method?: 'GE
       headers: { 'auth-token': token, ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
       body: init.body ? JSON.stringify(init.body) : undefined,
       cache: 'no-store',
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(init.method === 'POST' ? 20_000 : 10_000),
     })
   } catch {
     throw new ErroCorretora(504, 'A MetaApi demorou demasiado a responder.')
   }
-  const j = await r.json().catch(() => null) as { message?: string; error?: string } | null
+  const j = (await r.json().catch(() => null)) as { message?: string; error?: string } | null
   if (!r.ok) {
     const msg = String(j?.message ?? j?.error ?? '')
-    if (/not connected|not deployed|NotConnected|timed out waiting/i.test(msg) || r.status === 504) {
-      await acordar(accountId, token)
-      throw new ErroCorretora(503, 'A conta MT5 está a ligar à corretora — tenta daqui a um minuto.', 'mt5_a_ligar')
+    if (/not connected|not deployed|NotConnected|undeployed|timed out waiting/i.test(msg) || r.status === 504) {
+      // Sem deploy automático: só a acção explícita «Ligar conta» o faz.
+      throw new ErroCorretora(503, 'A conta MT5 está desligada da corretora (a MetaApi desliga contas paradas). Carrega em «Ligar conta» — pode demorar cerca de 1 minuto.', 'mt5_desligada')
     }
     if (r.status === 404) throw new ErroCorretora(404, 'A MetaApi não encontrou a conta ou o recurso.')
     throw new ErroCorretora(502, msg ? `MetaApi: ${msg.slice(0, 200)}` : 'A MetaApi recusou o pedido.')
@@ -96,13 +85,57 @@ async function restReal(accountId: string, caminho: string, init: { method?: 'GE
   return j
 }
 
-export const DEPS_MT5: DepsMt5 = {
-  rest: restReal,
-  placeOrder,
-  modifyPositionSlTp,
-  closePositionById,
-  lerHistorico,
-  posicoesStreaming: (accountId) => (contaEmStreaming(accountId) ? lerPosicoesMotor(accountId).then((l) => l.posicoes) : null),
+async function snapshotReal(accountId: string): Promise<MetaApiSnapshot | null> {
+  if (!contasStreaming(process.env.PREMIUM_STREAMING_CONTAS).includes(accountId)) return null
+  try {
+    const { data } = await getSupabaseAdmin().from('metaapi_snapshot').select('account_id, posicoes, precos, sincronizado, em').eq('account_id', accountId).maybeSingle()
+    if (!data) return null
+    const snap: MetaApiSnapshot = {
+      account_id: String(data.account_id), posicoes: Array.isArray(data.posicoes) ? data.posicoes : [],
+      precos: (data.precos as MetaApiSnapshot['precos']) ?? {}, sincronizado: data.sincronizado === true, em: String(data.em),
+    }
+    return decidirFonte(snap, Date.now()).fonte === 'snapshot' ? snap : null
+  } catch {
+    return null
+  }
+}
+
+export const DEPS_MT5: DepsMt5 = { rest: restReal, snapshot: snapshotReal }
+
+/**
+ * «Ligar conta» — deploy EXPLÍCITO pedido pelo utilizador (nunca ao abrir a página). Não espera pela
+ * ligação: devolve logo; o ecrã volta a ler dali a pouco.
+ */
+export async function ligarContaMt5(accountId: string): Promise<{ estado: string }> {
+  const token = process.env.METAAPI_TOKEN
+  if (!token) throw new ErroCorretora(503, 'MetaApi indisponível no servidor.')
+  const conta = await provisioning(accountId, token)
+  const deployed = String(conta.state ?? '').toUpperCase() === 'DEPLOYED'
+  if (deployed && String(conta.connectionStatus ?? '').toUpperCase() === 'CONNECTED') return { estado: 'ligada' }
+  if (!deployed) await provisioning(accountId, token, '/deploy', 'POST')
+  return { estado: 'a_ligar' }
+}
+
+// ── resultado das acções /trade ──────────────────────────────────────────────────────────────
+
+const CODIGOS_OK = new Set(['ERR_NO_ERROR', 'TRADE_RETCODE_DONE', 'TRADE_RETCODE_PLACED', 'TRADE_RETCODE_DONE_PARTIAL', 'TRADE_RETCODE_NO_CHANGES'])
+const NUMERICOS_OK = new Set([0, 10008, 10009, 10010, 10025])
+
+/** Resposta do POST /trade → ids, ou ErroCorretora 422 com a mensagem da corretora (puro — testado). */
+export function lerRespostaTrade(r: unknown): { orderId: string | null; positionId: string | null } {
+  const j = (r ?? {}) as { numericCode?: number; stringCode?: string; message?: string; orderId?: string; positionId?: string }
+  const ok = (j.stringCode != null && CODIGOS_OK.has(j.stringCode)) || (j.stringCode == null && typeof j.numericCode === 'number' && NUMERICOS_OK.has(j.numericCode))
+  if (!ok) throw new ErroCorretora(422, `A corretora recusou: ${j.message ?? j.stringCode ?? 'erro desconhecido'}`, 'mt5_recusada')
+  return { orderId: j.orderId ? String(j.orderId) : null, positionId: j.positionId ? String(j.positionId) : null }
+}
+
+function tradeModePermite(tradeMode: string | undefined, direcao: 'buy' | 'sell'): boolean | null {
+  if (!tradeMode) return null
+  const t = tradeMode.toUpperCase()
+  if (t.includes('DISABLED') || t.includes('CLOSE')) return false
+  if (t.includes('LONG')) return direcao === 'buy'
+  if (t.includes('SHORT')) return direcao === 'sell'
+  return true
 }
 
 // ── mapeamento puro ──────────────────────────────────────────────────────────────────────────
@@ -135,13 +168,26 @@ export function adaptadorMt5(accountId: string, opcoes: { podeNegociar: boolean 
   const exigir = () => {
     if (!opcoes.podeNegociar) throw new ErroCorretora(403, 'Esta conta está só em leitura no WebTrader.')
   }
-  const depois = () => limitador.invalidarPrefixo(k)
-  const posicoesCruas = () => limitador.ler(`${k}posicoes`, intervalo, async () => {
-    const streaming = deps.posicoesStreaming(accountId)
-    if (streaming) {
-      const p = await streaming
-      if (p) return p
+  const trade = async (corpo: Record<string, unknown>) => {
+    try {
+      return lerRespostaTrade(await deps.rest(accountId, '/trade', { method: 'POST', body: corpo }))
+    } finally {
+      limitador.invalidarPrefixo(k)
     }
+  }
+  const simbolosConta = (canonicos: string[] = []) => simbolosDaContaCache(
+    accountId,
+    async () => {
+      const r = await deps.rest(accountId, '/symbols')
+      return Array.isArray(r) ? r.map(String) : []
+    },
+    canonicos.length ? (lista) => canonicos.every((c) => rankedBrokerSymbols(c, lista).length > 0) : undefined,
+  )
+  const spec = (simbolo: string) => specDoSimboloCache<MetaApiSymbolSpecification>(accountId, simbolo, async () =>
+    (await deps.rest(accountId, `/symbols/${encodeURIComponent(simbolo)}/specification`)) as MetaApiSymbolSpecification)
+  const posicoesCruas = () => limitador.ler(`${k}posicoes`, intervalo, async () => {
+    const snap = await deps.snapshot(accountId)
+    if (snap) return snap.posicoes as MetaApiPosition[]
     const r = await deps.rest(accountId, '/positions')
     return (Array.isArray(r) ? r : []) as MetaApiPosition[]
   })
@@ -149,10 +195,21 @@ export function adaptadorMt5(accountId: string, opcoes: { podeNegociar: boolean 
     const r = await deps.rest(accountId, '/orders')
     return (Array.isArray(r) ? r : []) as MetaApiPendingOrder[]
   })
-  const resultado = (r: { success: boolean; error?: string; orderId?: string }, id?: string) => {
-    depois()
-    if (!r.success) throw new ErroCorretora(422, r.error ? `A corretora recusou: ${r.error}` : 'A corretora recusou o pedido.')
-    return { ok: true as const, id: r.orderId ?? id ?? null }
+
+  /** 1.ª variante negociável para a direcção (tradeMode), como no caminho de execução. */
+  const resolverSimbolo = async (canonico: string, direcao: 'buy' | 'sell') => {
+    const lista = await simbolosConta([canonico])
+    const candidatos = rankedBrokerSymbols(canonico, lista).slice(0, 8)
+    if (!candidatos.length) throw new ErroCorretora(422, `${canonico} não existe nesta conta MT5.`)
+    let desconhecido: { simbolo: string; spec: MetaApiSymbolSpecification | null } | null = null
+    for (const c of candidatos) {
+      const s = await spec(c).catch(() => null)
+      const permite = tradeModePermite(s?.tradeMode, direcao)
+      if (permite === true) return { simbolo: c, spec: s }
+      if (permite === null && !desconhecido) desconhecido = { simbolo: c, spec: s }
+    }
+    if (desconhecido) return desconhecido
+    throw new ErroCorretora(422, `${canonico} não está negociável nesta conta (modo de negociação da corretora).`)
   }
 
   return {
@@ -176,9 +233,10 @@ export function adaptadorMt5(accountId: string, opcoes: { podeNegociar: boolean 
     historico: async (dias = 30) => {
       const d = Math.min(90, Math.max(1, dias))
       const deals = await limitador.ler(`${k}historico:${d}`, INTERVALO_HISTORICO_MS, async () => {
-        const r = await deps.lerHistorico(accountId, new Date(Date.now() - d * 86_400_000), new Date())
-        if (r == null) throw new ErroCorretora(502, 'Não foi possível ler o histórico na MetaApi.')
-        return r
+        const de = encodeURIComponent(new Date(Date.now() - d * 86_400_000).toISOString())
+        const ate = encodeURIComponent(new Date().toISOString())
+        const r = (await deps.rest(accountId, `/history-deals/time/${de}/${ate}`)) as MetaApiDeal[] | { deals?: MetaApiDeal[] } | null
+        return Array.isArray(r) ? r : (r?.deals ?? [])
       })
       return deals
         .filter((x) => /DEAL_TYPE_(BUY|SELL)/i.test(String(x.type ?? '')))
@@ -195,56 +253,64 @@ export function adaptadorMt5(accountId: string, opcoes: { podeNegociar: boolean 
     enviarOrdem: async (bruto) => {
       exigir()
       const p = validarPedido(bruto)
-      const r = await deps.placeOrder({
-        accountId, symbol: p.symbol, direction: p.direcao, volume: p.volume,
-        orderType: p.tipo === 'mercado' ? 'market' : p.tipo, openPrice: p.preco ?? null,
-        stopLoss: p.sl ?? null, takeProfit: p.tp ?? null, comment: 'MTM WebTrader',
-      })
-      return { ...resultado(r), mensagem: r.brokerSymbol ? `executada em ${r.brokerSymbol}` : undefined }
+      const { simbolo, spec: s } = await resolverSimbolo(p.symbol, p.direcao)
+      const volume = clampVolume(p.volume, s)
+      let sl = p.sl ?? undefined
+      let tp = p.tp ?? undefined
+      if ((sl != null || tp != null) && s?.stopsLevel) {
+        let ref = p.tipo === 'mercado' ? null : p.preco ?? null
+        if (ref == null) {
+          const q = (await deps.rest(accountId, `/symbols/${encodeURIComponent(simbolo)}/current-price`).catch(() => null)) as { bid?: number; ask?: number } | null
+          ref = p.direcao === 'buy' ? q?.ask ?? null : q?.bid ?? null
+        }
+        ;({ sl, tp } = clampStopsToMinDistance(s, ref, p.direcao, sl, tp))
+      }
+      const tipoMt5 = `ORDER_TYPE_${p.direcao.toUpperCase()}${p.tipo === 'mercado' ? '' : `_${p.tipo.toUpperCase()}`}`
+      const comentario = orderCommentFor(accountId, 'MTM WebTrader')
+      try {
+        const r = await trade({
+          actionType: tipoMt5, symbol: simbolo, volume,
+          ...(p.tipo !== 'mercado' ? { openPrice: p.preco } : {}),
+          ...(sl != null ? { stopLoss: sl } : {}), ...(tp != null ? { takeProfit: tp } : {}),
+          ...(comentario ? { comment: comentario } : {}),
+        })
+        return { ok: true as const, id: r.positionId ?? r.orderId, mensagem: `${volume} lote(s) em ${simbolo}` }
+      } catch (e) {
+        // Recusa pode vir de configuração da corretora que mudou: a próxima lê símbolos/specs frescos.
+        invalidarLeiturasDeSimbolos(accountId)
+        throw e
+      }
     },
 
     modificar: async (m) => {
       exigir()
-      if (m.alvo === 'posicao') return resultado(await deps.modifyPositionSlTp(accountId, m.id, m.sl ?? null, m.tp ?? null), m.id)
+      if (m.alvo === 'posicao') {
+        await trade({ actionType: 'POSITION_MODIFY', positionId: m.id, ...(m.sl != null ? { stopLoss: m.sl } : {}), ...(m.tp != null ? { takeProfit: m.tp } : {}) })
+        return { ok: true as const, id: m.id }
+      }
       const atual = (await ordensCruas()).find((o) => String(o.id) === m.id)
       if (!atual) throw new ErroCorretora(404, 'Ordem pendente não encontrada.')
-      try {
-        await deps.rest(accountId, '/trade', {
-          method: 'POST',
-          body: {
-            actionType: 'ORDER_MODIFY', orderId: m.id,
-            openPrice: m.preco ?? atual.openPrice,
-            ...(m.sl != null ? { stopLoss: m.sl } : {}), ...(m.tp != null ? { takeProfit: m.tp } : {}),
-          },
-        })
-      } finally {
-        depois()
-      }
+      await trade({ actionType: 'ORDER_MODIFY', orderId: m.id, openPrice: m.preco ?? atual.openPrice, ...(m.sl != null ? { stopLoss: m.sl } : {}), ...(m.tp != null ? { takeProfit: m.tp } : {}) })
       return { ok: true as const, id: m.id }
     },
 
     fechar: async (positionId, volume) => {
       exigir()
-      return resultado(await deps.closePositionById(accountId, positionId, volume ?? undefined), positionId)
+      await trade(volume != null && volume > 0
+        ? { actionType: 'POSITION_PARTIAL', positionId, volume }
+        : { actionType: 'POSITION_CLOSE_ID', positionId })
+      return { ok: true as const, id: positionId }
     },
 
     cancelar: async (orderId) => {
       exigir()
-      try {
-        await deps.rest(accountId, '/trade', { method: 'POST', body: { actionType: 'ORDER_CANCEL', orderId } })
-      } finally {
-        depois()
-      }
+      await trade({ actionType: 'ORDER_CANCEL', orderId })
       return { ok: true as const, id: orderId }
     },
 
     simbolos: async (q = '') => {
-      const lista = await simbolosDaContaCache(accountId, async () => {
-        const r = await deps.rest(accountId, '/symbols')
-        return Array.isArray(r) ? r.map(String) : []
-      })
       const termo = q.trim().toUpperCase()
-      return lista
+      return (await simbolosConta())
         .map((s) => ({ symbol: canonicoDe(s), simboloCorretora: s, nome: null }))
         .filter((s) => !termo || s.symbol.includes(termo) || s.simboloCorretora.toUpperCase().includes(termo))
         .slice(0, 80)

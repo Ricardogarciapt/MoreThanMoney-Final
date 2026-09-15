@@ -156,10 +156,15 @@ export async function resolverAdaptador(request: Request, plataforma: Plataforma
     return adaptadorTradeLocker(sessao, { podeNegociar: true })
   }
 
-  const metaapiId = await metaApiDaRef(userId, ref.origem, ref.id)
+  return adaptadorMt5(await autorizarMt5(userId, ref.origem, ref.id), { podeNegociar: true })
+}
+
+/** Id MetaApi de uma conta MT5 SÓ se for do utilizador E estiver dentro da quota do plano. */
+export async function autorizarMt5(userId: string, origem: 'site' | 'auto' | 'wt', id: string): Promise<string> {
+  const metaapiId = await metaApiDaRef(userId, origem, id)
   if (!metaapiId) throw new ErroCorretora(404, 'Conta MT5 não encontrada.')
   const [quota, datadas] = await Promise.all([quotaDoUtilizador(userId), contasMetaApiDatadas(userId)])
   const acesso = decidirAcessoMt5(quota, datadas, metaapiId)
   if (!acesso.ok) throw new ErroCorretora(402, acesso.erro, 'quota_metaapi', { quota: { plano: quota.plano, emUso: quota.emUso, limite: Number.isFinite(quota.limite) ? quota.limite : null, mensagem: mensagemQuota(quota) } })
-  return adaptadorMt5(metaapiId, { podeNegociar: true })
+  return metaapiId
 }
