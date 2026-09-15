@@ -5,6 +5,7 @@ import { Activity, AlertTriangle, Clock, Database, Gauge, Radio, Server, ShieldA
 import type { cockpit } from "@/lib/admin-centro/servidor/cockpit"
 import { CONFIRMACOES, tomIdade, type AcaoRunbook, type Alerta } from "@/lib/admin-centro/regras"
 import { useCentroCtx } from "../contexto"
+import MotorRealSombra from "../motor-real-sombra"
 import {
   Aviso, Azulejo, BotaoLer, Botao, Faixa, Painel, Pilula, Sparkline, Tabela, Vazio, curto, fmtIdade, fmtMs, fmtNum, fmtQuando,
   idadeDe, pedirCentro, pedirPalavra, td, th, useCentro,
@@ -172,6 +173,8 @@ export default function SeccaoCockpit() {
           </div>
         </Painel>
       </div>
+
+      <MotorRealSombra versao={ctx.versao} />
 
       {/* ── crons ── */}
       <Painel titulo="Crons da Vercel" icone={<Zap className="h-3.5 w-3.5 text-[#D2A63C]" />} sub={c.cronsPendente ? "Horários do vercel.json. «Última execução» aparece quando a 095 (cron_pulso) estiver aplicada e os crons chamarem registarPulsoCron." : "Última execução registada por cada cron"}>
