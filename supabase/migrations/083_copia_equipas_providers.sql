@@ -122,7 +122,15 @@ declare
   v_tipo text;
   v_payload jsonb;
   v_disc text;
+  v_ref_espelho text;
 begin
+  -- Conta ESPELHO de uma estratégia (082, espelho-provider): a posição simulada nasce com
+  -- ideia_ref = 'espelho-provider:<slug>:<posição da mestre>'. A identidade da posição na cópia passa a
+  -- ser a da MESTRE — a mesma que a fonte MetaApi usa — para que trocar a fonte de uma estratégia
+  -- (mestre ↔ espelho) nunca abra a mesma trade duas vezes nem deixe o fecho sem a sua abertura.
+  v_ref_espelho := case when new.mae_id is null then new.ideia_ref
+                        else (select m.ideia_ref from public.funded_positions m where m.id = new.mae_id) end;
+
   if tg_op = 'INSERT' and new.estado = 'aberta' and new.mae_id is null then
     v_tipo := 'open'; v_pos := new.id::text; v_disc := '0';
     v_payload := jsonb_build_object('symbol', new.symbol, 'direcao', new.direcao, 'volume', new.volume,
@@ -143,6 +151,10 @@ begin
       'preco', new.preco_entrada, 'sl', new.sl, 'tp', new.tp);
   else
     return null;
+  end if;
+
+  if v_ref_espelho like 'espelho-provider:%:%' and split_part(v_ref_espelho, ':', 3) <> '' then
+    v_pos := split_part(v_ref_espelho, ':', 3);
   end if;
 
   -- funded:<id> e prov:<id> (provider MTM Funded) partilham a chave física

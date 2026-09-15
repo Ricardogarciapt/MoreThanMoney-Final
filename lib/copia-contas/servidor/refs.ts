@@ -19,6 +19,8 @@ export type ContaPorRef = LinhaContaCopia & {
 
 /** Plataforma de uma conta de estratégia; null = tipo que não é uma conta (mtm_t2t, telegram). */
 export function plataformaDoProvider(p: Record<string, unknown>): PlataformaCopia | null {
+  // fonte_execucao='espelho' (084): a estratégia é lida da conta MTM Funded espelho da casa
+  if (p.fonte_execucao === 'espelho' && p.espelho_funded_account_id) return 'mtmfunded'
   if (p.tipo === 'mtmfunded') return 'mtmfunded'
   if (p.tipo === 'tradelocker') return 'tradelocker'
   if (p.tipo === 'metaapi') return p.plataforma === 'mt4' ? 'mt4' : 'mt5'
@@ -66,7 +68,8 @@ export async function lerContaPorRef(ref: string): Promise<ContaPorRef | null> {
       // o «dono» de uma estratégia é quem a criou (a regra do mesmo dono não se lhe aplica)
       userId: String(data.criado_por ?? data.tenant_id ?? 'provider'),
       login: txt(data.login), servidor: txt(data.servidor), tlEnv: txt(data.tl_env), tlAccountId: txt(data.tl_account_id),
-      fundedAccountId: txt(data.funded_account_id), metaapiAccountId: txt(data.metaapi_account_id),
+      fundedAccountId: plataforma === 'mtmfunded' && data.fonte_execucao === 'espelho' ? txt(data.espelho_funded_account_id) : txt(data.funded_account_id),
+      metaapiAccountId: plataforma === 'mtmfunded' ? null : txt(data.metaapi_account_id),
       // um provider nunca recebe ordens
       soLeitura: true, linha: data, provider: { id: r.id, tenantId }, tenantId,
       providerNaChaveEquipa: data.metaapi_chave_equipa === true,

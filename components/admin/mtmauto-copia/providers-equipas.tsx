@@ -2,7 +2,7 @@
 
 import { Aviso, BotaoRecarregar, Etiqueta, Tabela, td, th, useDadosAdmin } from "./comum"
 
-interface Provider { id: string; nome: string; slug: string; tipo: string; ativo: boolean; espelhar: boolean; conta: string | null; chave: "casa" | "equipa" | "—"; fonteDeCopia: boolean; rotas: number; partilhadaCom: string[] }
+interface Provider { id: string; nome: string; slug: string; tipo: string; ativo: boolean; espelhar: boolean; conta: string | null; chave: "casa" | "equipa" | "—"; fonteDeCopia: boolean; rotas: number; partilhadaCom: string[]; fonteExecucao: "mestre" | "espelho" }
 interface Equipa { tenantId: string | null; nome: string; temChaveMetaApi: boolean; quotaProvidersMetaApi: number | null; providersMetaApi: number; providers: Provider[] }
 
 const TIPO: Record<string, string> = { metaapi: "MT4/MT5", mtmfunded: "MTM Funded", tradelocker: "TradeLocker", mtm_t2t: "Fonte MTM", telegram: "Telegram" }
@@ -32,7 +32,7 @@ export default function ProvidersEquipas() {
             <p className="text-xs text-zinc-500">Sem providers.</p>
           ) : (
             <Tabela>
-              <thead><tr><th className={th}>Estratégia</th><th className={th}>Tipo</th><th className={th}>Conta</th><th className={th}>Chave</th><th className={th}>Estado</th><th className={th}>Cópia</th><th className={th}>Partilhada com</th></tr></thead>
+              <thead><tr><th className={th}>Estratégia</th><th className={th}>Tipo</th><th className={th}>Conta</th><th className={th}>Chave</th><th className={th}>Fonte</th><th className={th}>Estado</th><th className={th}>Cópia</th><th className={th}>Partilhada com</th></tr></thead>
               <tbody>
                 {e.providers.map((p) => (
                   <tr key={p.id}>
@@ -40,6 +40,7 @@ export default function ProvidersEquipas() {
                     <td className={td}>{TIPO[p.tipo] ?? p.tipo}</td>
                     <td className={td}>{p.conta ?? "—"}</td>
                     <td className={td}>{p.chave}</td>
+                    <td className={td}><Etiqueta tom={p.fonteExecucao === "espelho" ? "info" : "neutro"}>{p.fonteExecucao}</Etiqueta></td>
                     <td className={td}><Etiqueta tom={p.ativo ? "ok" : "neutro"}>{p.ativo ? "activa" : "inactiva"}</Etiqueta> {p.espelhar && <Etiqueta tom="info">espelha</Etiqueta>}</td>
                     <td className={td}>{p.fonteDeCopia ? <Etiqueta tom="ouro">fonte · {p.rotas} rota(s)</Etiqueta> : "—"}</td>
                     <td className={td}>{p.partilhadaCom.join(", ") || "—"}</td>

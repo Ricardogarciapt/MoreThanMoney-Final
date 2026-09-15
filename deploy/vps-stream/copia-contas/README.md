@@ -40,6 +40,12 @@ npx tsx lib/copia-contas/__tests__/copia-equipas.check.ts    # risco % TradeLock
 - Destinos TradeLocker em `risco_pct`: valor do tick pelo detalhe do instrumento (tickCost/tickSize por faixa
   de preço; sem ticks, lotSize só na mesma moeda — senão recusa), lote arredondado para BAIXO ao passo;
   detalhe em cache 12 h por conta+instrumento, lista de instrumentos 6 h, sessão partilhada 10 min.
+- Fonte de uma estratégia (084): `mtmauto_trocar_fonte_execucao` muda a estratégia E a `origem_chave` das rotas
+  `prov:` no mesmo commit (só com `espelho_alinhado(slug)`). A posição da conta espelho usa a identidade da
+  MESTRE (trigger lê `ideia_ref='espelho-provider:<slug>:<posição>'`), por isso as chaves deduplicam; o serviço
+  relê por PK as rotas antes de publicar factos, e uma fonte antiga nunca escreve em rotas que já mudaram.
+- Pedidos do cliente pela app MTM Auto (`/copytrading`): linhas `auto:`→`auto:` com `estado='pedido'`, inactivas,
+  em sombra — aprovam-se aqui como os pedidos do site.
 
 ## Construir
 
@@ -62,7 +68,9 @@ COPIA_ESCRITA=0             # 0 = sombra, sempre, mesmo com rota em live
 
 ## Instalar (não feito nesta entrega)
 
-1. Aplicar `supabase/migrations/078_copia_contas.sql` (feito a 15/09) e depois `083_copia_equipas_providers.sql`.
+1. Aplicar `supabase/migrations/078_copia_contas.sql` (feito a 15/09), depois `083_copia_equipas_providers.sql` e
+   `084_estrategias_fonte_e_apagar.sql` (a 082 do espelho provider é independente; sem ela a troca para
+   `fonte_execucao='espelho'` é recusada).
 2. `scp dist/servico.js mtm-copia-contas.service mtm-stream:/tmp/` → `/opt/mtm/copia-contas/` e
    `/etc/systemd/system/`, `systemctl enable --now mtm-copia-contas`.
 3. `journalctl -u mtm-copia-contas -f` — `[pulso]` de minuto a minuto, `[sombra] open #id … → sombra {acção}`.

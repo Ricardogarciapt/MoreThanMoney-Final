@@ -19,6 +19,8 @@ export interface ProviderEquipaAdmin {
   fonteDeCopia: boolean
   rotas: number
   partilhadaCom: string[]
+  /** 084: de onde a estratégia executa — conta mestre ou espelho MTM Funded da casa */
+  fonteExecucao: 'mestre' | 'espelho'
 }
 
 export interface EquipaComProviders {
@@ -62,7 +64,8 @@ export async function listarProvidersPorEquipa(): Promise<{ equipas: EquipaComPr
     return g
   }
   for (const t of tenants ?? []) grupo(String(t.id))
-  for (const p of provs ?? []) {
+  // apagadas (084, apagado_em) ficam fora; filtra-se aqui para funcionar com ou sem a 084 aplicada
+  for (const p of (provs ?? []).filter((x) => !x.apagado_em)) {
     const g = grupo(p.tenant_id ? String(p.tenant_id) : null)
     const conta = p.tipo === 'metaapi' ? (p.login ? `${p.plataforma ?? 'mt5'} ${p.login}@${p.servidor ?? '?'}` : p.metaapi_account_id ? `MetaApi ${String(p.metaapi_account_id).slice(0, 8)}…` : null)
       : p.tipo === 'mtmfunded' ? (p.funded_account_id ? `MTM Funded ${String(p.funded_account_id).slice(0, 8)}…` : null)
@@ -73,6 +76,7 @@ export async function listarProvidersPorEquipa(): Promise<{ equipas: EquipaComPr
       id: String(p.id), nome: String(p.nome), slug: String(p.slug), tipo: String(p.tipo), ativo: p.ativo === true, espelhar: p.espelhar === true, conta,
       chave: p.tipo !== 'metaapi' ? '—' : p.metaapi_chave_equipa === true ? 'equipa' : 'casa',
       fonteDeCopia: providerEhFonteDeCopia(p), rotas: rotasPorProv.get(String(p.id)) ?? 0, partilhadaCom: partilhadas.get(String(p.id)) ?? [],
+      fonteExecucao: p.fonte_execucao === 'espelho' ? 'espelho' : 'mestre',
     })
   }
   return { equipas: [...grupos.values()].sort((a, b) => (a.tenantId ? 1 : 0) - (b.tenantId ? 1 : 0) || a.nome.localeCompare(b.nome)) }

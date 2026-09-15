@@ -124,7 +124,15 @@ const fontes = new Map<string, Fonte>()
 async function publicarFactos(f: Fonte, factos: Facto[]): Promise<void> {
   if (!factos.length) return
   const { manter } = colapsarModificacoes(factos)
-  const linhas = f.rotas.flatMap((r) => manter
+  // A lista de rotas em memória tem até 30 s. Uma estratégia que trocou de fonte (mestre ↔ espelho,
+  // mtmauto_trocar_fonte_execucao) muda a origem_chave das rotas NA HORA: relê-se (por PK, só quando há
+  // factos de trading) para a fonte antiga nunca publicar em rotas que já não são dela.
+  const origemChave = f.chave.slice(f.chave.indexOf('|') + 1)
+  const { data: vivas, error: eVivas } = await db.from('copia_rotas').select('id').in('id', f.rotas.map((r) => r.id))
+    .eq('origem_chave', origemChave).eq('ativa', true).eq('estado', 'aprovada')
+  if (eVivas) { log('[erro] confirmar rotas da fonte', eVivas.message); return }
+  const ids = new Set((vivas ?? []).map((r) => String(r.id)))
+  const linhas = f.rotas.filter((r) => ids.has(r.id)).flatMap((r) => manter
     .filter((x) => x.tipo !== 'open' || !r.aprovada_em || !x.payload.aberta_em || Date.parse(x.payload.aberta_em) >= Date.parse(r.aprovada_em))
     .map((x) => ({
       rota_id: r.id, origem_posicao_id: x.posicaoId, tipo: x.tipo, payload: x.payload,
