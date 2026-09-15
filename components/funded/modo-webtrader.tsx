@@ -63,9 +63,9 @@ export function InterruptorModo({ compacto }: { compacto?: boolean }) {
   return (
     <div role="radiogroup" aria-label="Modo do WebTrader" className="flex shrink-0 rounded-lg border border-white/10 bg-black/40 p-0.5 text-[11px]">
       {opcoes.map(([m, nome, Icone]) => (
-        <button key={m} type="button" role="radio" aria-checked={modo === m} onClick={() => definir(m)} title={`Modo ${nome} (Alt+M)`}
+        <button key={m} type="button" role="radio" aria-checked={modo === m} aria-label={`Modo ${nome}`} onClick={() => definir(m)} title={`Modo ${nome} (Alt+M)`}
           className={`flex items-center gap-1 rounded-md px-2 py-1 font-semibold transition ${modo === m ? "bg-[#D2A63C] text-black" : "text-zinc-400 hover:text-white"}`}>
-          <Icone className="h-3.5 w-3.5" />{!compacto && nome}
+          <Icone className="h-3.5 w-3.5" />{!compacto && <span className="hidden sm:inline">{nome}</span>}
         </button>
       ))}
     </div>

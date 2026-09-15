@@ -10,7 +10,7 @@ import PainelInferior from "./painel-inferior"
 import CalendarioEconomico from "./calendario-economico"
 import Atalhos, { type Layout } from "./atalhos"
 import { EstadoMercado, Sentimento } from "./estado-mercado"
-import { AplicarPrefill, AvisosConta, EtiquetaConta, FaixaPrefill, GraficoConta, ProvedorRascunho, type Trader } from "./trader-contexto"
+import { AplicarPrefill, AvisosConta, FaixaPrefill, GraficoConta, ProvedorRascunho, type Trader } from "./trader-contexto"
 
 /**
  * O MODO PRO — a plataforma de secretária.
@@ -69,7 +69,7 @@ export default function LayoutPro({ t }: { t: Trader }) {
           </button>
         ))}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+      <div className="min-h-0 flex-1 overflow-y-auto p-1.5 [scrollbar-width:thin] [scrollbar-color:#363A45_transparent]">
         {lateral === "calendario" ? <CalendarioEconomico altura="100%" /> : t.podeNegociar ? <FundedTicket margemLivre={t.vivo.margemLivre} /> : (
           <p className="p-4 text-center text-[12px] text-zinc-500">{t.dados.modo === "investor" ? "Sessão investor — só leitura." : "Conta sem negociação."}</p>
         )}
@@ -130,9 +130,7 @@ function BarraPro({ t, layout, setLayout, onF9 }: { t: Trader; layout: Layout; s
   const escolhidas = t.metricas.filter(([k]) => ["Saldo", "Equity", "Flutuante", "Margem livre", "Nível margem", "Perda diária restante", "Perda máx. restante", "Objetivo"].includes(k))
   const layouts: Array<[Layout, string, typeof Square]> = [["1", "1 gráfico (Alt+1)", Square], ["2h", "2 lado a lado (Alt+2)", Columns2], ["2v", "2 em pilha (Alt+3)", Rows2], ["4", "4 gráficos (Alt+4)", Grid2x2]]
   return (
-    <div className="flex shrink-0 items-center gap-3 overflow-x-auto border-b border-[#2A2E39] bg-[#1E222D] px-2.5 py-1 text-[11.5px]">
-      <EtiquetaConta t={t} />
-      <span className="shrink-0 font-mono text-zinc-300">{String(t.dados.conta.login ?? "—")}</span>
+    <div className="flex shrink-0 items-center gap-3 overflow-x-auto border-b border-[#2A2E39] bg-[#1E222D] px-2.5 py-1 text-[11.5px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="flex shrink-0 items-center gap-3">
         {escolhidas.map(([k, v, cor]) => (
           <span key={k} className="flex shrink-0 flex-col leading-tight">

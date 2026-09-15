@@ -111,7 +111,7 @@ export default function FundedWatchlist(props: {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar símbolo" className="h-9 w-full bg-transparent text-[13px] text-white outline-none" />
           {aCarregar && <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" />}
         </div>
-        <div className="flex gap-1 overflow-x-auto text-[11px]">
+        <div className="flex gap-1 overflow-x-auto text-[11px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {["fav", "todas", ...classes].map((c) => (
             <button key={c} onClick={() => setClasse(c)} className={`shrink-0 rounded-full border px-2.5 py-1 ${classe === c ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-white/10 text-zinc-400"}`}>
               {c === "fav" ? "★ Favoritos" : c === "todas" ? "Todos" : NOME_CLASSE[c] ?? c}
@@ -122,7 +122,7 @@ export default function FundedWatchlist(props: {
       <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 px-3 py-1 text-[10px] uppercase text-zinc-500">
         <span>Símbolo</span><span className="text-right">Bid</span><span className="text-right">{props.detalhe ? "24 h" : "Ask"}</span>
       </div>
-      <div className={props.preencher ? "min-h-0 flex-1 overflow-y-auto" : "max-h-[52vh] overflow-y-auto"}>
+      <div className={props.preencher ? "min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#363A45_transparent]" : "max-h-[52vh] overflow-y-auto"}>
         {lista.length === 0 && !aCarregar && (
           <p className="p-4 text-center text-[12px] text-zinc-500">{classe === "fav" && !q ? "Sem favoritos — procura um símbolo e toca na estrela." : "Nenhum símbolo encontrado."}</p>
         )}

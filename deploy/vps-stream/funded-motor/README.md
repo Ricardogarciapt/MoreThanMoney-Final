@@ -16,7 +16,10 @@ Por esta ordem, na Supabase:
 1. `supabase/migrations/064_funded_symbols_classes.sql` — classes novas, `moeda_lucro`, `sessoes`,
    `funded_precos_pedidos`, e as funções atómicas `funded_fechar_posicao` / `funded_executar_pendente`
    / `funded_somar_saldo`. **Sem ela o motor em modo 1 falha ao fechar posições.**
-2. `supabase/seeds/funded_symbols_puprime.sql` — o catálogo da PU Prime (gerado por
+2. `supabase/migrations/072_funded_ordens_avancadas.sql` — trailing, break-even, TPs parciais, OCO,
+   diário e alertas de preço. **O motor novo lê as colunas desta migração: aplica-a ANTES de o
+   actualizar** (sem ela as leituras de posições/ordens falham e o motor não arranca).
+3. `supabase/seeds/funded_symbols_puprime.sql` — o catálogo da PU Prime (gerado por
    `npx tsx scripts/funded-sync-simbolos.ts`; voltar a correr quando a corretora mudar).
 
 ## Construir

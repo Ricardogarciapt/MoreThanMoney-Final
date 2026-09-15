@@ -40,7 +40,7 @@ export default function PainelInferior({ t, denso = true }: { t: Trader; denso?:
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#131722]">
-      <div role="tablist" aria-label="Painel da conta" className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-[#2A2E39] px-1.5">
+      <div role="tablist" aria-label="Painel da conta" className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-[#2A2E39] px-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {separadores.map(([s, nome, Icone, n]) => (
           <button key={s} role="tab" aria-selected={sep === s} onClick={() => escolher(s)}
             className={`flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-1.5 text-[12px] ${sep === s ? "border-[#D2A63C] text-white" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}>
@@ -48,7 +48,7 @@ export default function PainelInferior({ t, denso = true }: { t: Trader; denso?:
           </button>
         ))}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#363A45_transparent]">
         {sep === "posicoes" && lista("posicoes")}
         {sep === "ordens" && lista("ordens")}
         {sep === "historico" && lista("historico")}

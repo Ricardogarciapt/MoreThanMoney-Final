@@ -154,7 +154,7 @@ export default function FundedGrafico(props: GraficoProps) {
       </div>
 
       {/* Linha 2 — timeframes, estudos (setas), ferramentas */}
-      <div className="flex items-center gap-1 overflow-x-auto border-b px-2 py-1 text-[12px]" style={{ borderColor: TV.borda }}>
+      <div className="flex items-center gap-1 overflow-x-auto border-b px-2 py-1 text-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ borderColor: TV.borda }}>
         {motor !== "tv" && TIMEFRAMES.map((t) => (
           <button key={t.chave} onClick={() => setTf(t.chave)} className="shrink-0 rounded px-2 py-1 font-medium hover:bg-white/5" style={{ color: tf === t.chave ? TV.azul : TV.texto }}>
             {t.rotulo}

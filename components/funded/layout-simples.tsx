@@ -169,7 +169,7 @@ function Conteudo({ t }: { t: Trader }) {
             )
           })}
         </div>
-        <div className={`overflow-hidden transition-[height] duration-200 ${gaveta ? "h-[48dvh]" : "h-0"}`}>
+        <div className={`overflow-hidden transition-[height] duration-200 ${gaveta ? "h-[min(44dvh,400px)]" : "h-0"}`}>
           <div ref={faixa} onScroll={aoDeslizar} className="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
             {[lista("posicoes"), lista("ordens"), lista("historico")].map((c, i) => (
               <div key={i} className="h-full w-full shrink-0 snap-start overflow-y-auto">{c}</div>
@@ -195,7 +195,7 @@ function Conteudo({ t }: { t: Trader }) {
       </div>
 
       {folha === "ticket" && (
-        <Folha titulo="Nova ordem" onFechar={() => { setFolha(null); k.set({ escolhido: false }) }}>
+        <Folha titulo="Nova ordem" onFechar={() => { setFolha(null); k.limpar(); k.setFerramenta(null) }}>
           <FundedTicket margemLivre={t.vivo.margemLivre} />
         </Folha>
       )}
