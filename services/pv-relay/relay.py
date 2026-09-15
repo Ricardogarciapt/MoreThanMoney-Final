@@ -42,6 +42,35 @@ RX_ENTRY = re.compile(r"Entry:\s*([0-9]+\.?[0-9]*)", re.I)
 RX_SL = re.compile(r"Stop\s*Loss:\s*([0-9]+\.?[0-9]*)", re.I)
 RX_TP = re.compile(r"TP\d\s*:\s*([0-9]+\.?[0-9]*)", re.I)
 RX_ENTRY_HIT = re.compile(r"entry\s*hit", re.I)   # "🟢 ENTRY HIT | XAUUSD"
+# CICLO DE VIDA (reply ao setup): o trader CANCELA a ordem pendente ou FECHA a posição → apaga/fecha
+# as ordens T2T dos seguidores. PV_LIFECYCLE: "shadow" (só regista, default) | "live" (envia kind).
+RX_CANCEL = re.compile(r"\bcancel", re.I)                                   # cancel / cancelled / cancelling
+RX_CLOSED = re.compile(r"trade\s*closed|closed\s*manually|manual\s*close|\bclos(e|ed|ing)\b", re.I)
+PV_LIFECYCLE = os.environ.get("PV_LIFECYCLE", "shadow").strip().lower()      # shadow | live
+# SEGUIMENTOS para as estratégias MTM Auto Edge/King/Wolf (092): TP HIT, SL → BE / BREAKEVEN, SL HIT.
+# O site só os aceita depois do deploy do ramo estrategias-primeverse (antes disso, um kind novo era
+# lido como ENTRY HIT!) → "off" por defeito | "shadow" (só regista) | "live" (envia).
+PV_FOLLOWUPS = os.environ.get("PV_FOLLOWUPS", "off").strip().lower()
+RX_TP_HIT = re.compile(r"\bTP(\d)\s*HIT", re.I)                  # "✅ TP2 HIT +60 pips ✅✅ 🔥🔥"
+RX_SL_HIT = re.compile(r"\bSL\s*HIT", re.I)                       # "❌ SL HIT -100 pips"
+RX_SL_BE = re.compile(r"SL\s*(?:→|->|to)\s*BE\b|\bBREAKEVEN\b", re.I)  # "🛡️ SL → BE | XAUUSD 🔴 | @ 4357.00 | fxedge"
+RX_BE_PRICE = re.compile(r"@\s*([0-9]+\.?[0-9]*)")
+
+def followup_kind(text):
+    t = clean(text).split("\n")[0]
+    m = RX_TP_HIT.search(t)
+    if m: return "tp_hit", {"level": int(m.group(1))}
+    if RX_SL_HIT.search(t): return "sl_hit", {}
+    if RX_SL_BE.search(t):
+        mp = RX_BE_PRICE.search(t)
+        return "sl_be", ({"price": float(mp.group(1))} if mp else {})
+    return None, {}
+
+def lifecycle_kind(text):
+    t = clean(text)
+    if RX_CANCEL.search(t): return "cancel"
+    if RX_CLOSED.search(t): return "close"
+    return None
 
 def norm_symbol(s):
     s = s.upper().strip()
@@ -131,7 +160,7 @@ async def run_once(client, state):
                 if not setup:
                     print(f"[pv-relay] ENTRY HIT {m.id} sem setup-pai → ignoro")
                 new_last = max(new_last, m.id); continue
-            if post_exec({**setup, "kind": "entry_hit"}):
+            if post_exec({**setup, "kind": "entry_hit", "setup_msg_id": parent_id}):
                 done.append(m.id); state["done"] = done[-300:]
                 fails.pop(str(m.id), None)
                 new_last = max(new_last, m.id); sent += 1
@@ -142,7 +171,38 @@ async def run_once(client, state):
                     print(f"[pv-relay] DESISTO ENTRY HIT {m.id} após {n} falhas — avanço"); fails.pop(str(m.id), None); new_last = max(new_last, m.id); continue
                 print(f"[pv-relay] ENTRY HIT {m.id} falhou (tentativa {n}) — paro aqui, retento"); break
             continue
-        # 3) Gestão (TP/SL/CLOSED) → ignora (a ordem já leva SL+TP1)
+        # 3) CICLO DE VIDA (CANCEL/CLOSE do trader) → reply ao setup: thread no chat + apaga/fecha as
+        #    ordens T2T dos seguidores. TP/SL HIT automáticos continuam ignorados (o broker já fecha).
+        cc = lifecycle_kind(txt)
+        if cc:
+            parent_id = getattr(getattr(m, "reply_to", None), "reply_to_msg_id", None)
+            setup = setups.get(str(parent_id)) if parent_id else None
+            if setup is None and parent_id:
+                try:
+                    pm = await client.get_messages(SOURCE_ID, ids=parent_id)
+                    setup = parse_entry(pm.message) if pm and pm.message else None
+                except Exception:
+                    setup = None
+            if setup and symbol_allowed(setup["symbol"]):
+                payload = {"symbol": setup["symbol"], "direction": setup["direction"], "trader": setup["trader"], "kind": cc, "setup_msg_id": parent_id}
+                if PV_LIFECYCLE == "live":
+                    post_exec(payload)
+                else:
+                    print(f"[pv-relay] SHADOW {cc.upper()} (msg {m.id} → setup {parent_id}): {json.dumps(payload)} | texto: {clean(txt)[:80]!r}")
+            new_last = max(new_last, m.id)
+            continue
+        # 4) Gestão automática (TP HIT / SL → BE / SL HIT) → só para as estratégias MTM Auto (PV_FOLLOWUPS).
+        #    O T2T continua a ignorá-los (a ordem já leva SL+TP1).
+        fk, extra = followup_kind(txt)
+        if fk and PV_FOLLOWUPS in ("shadow", "live"):
+            parent_id = getattr(getattr(m, "reply_to", None), "reply_to_msg_id", None)
+            setup = setups.get(str(parent_id)) if parent_id else None
+            if setup and symbol_allowed(setup["symbol"]):
+                payload = {"symbol": setup["symbol"], "direction": setup["direction"], "trader": setup["trader"], "entry": setup.get("entry"), "sl": setup.get("sl"), "tps": setup.get("tps") or [], "kind": fk, "setup_msg_id": parent_id, **extra}
+                if PV_FOLLOWUPS == "live":
+                    post_exec(payload)
+                else:
+                    print(f"[pv-relay] SHADOW {fk.upper()} (msg {m.id} → setup {parent_id}): {json.dumps(payload)}")
         new_last = max(new_last, m.id)
     state["last_id"] = new_last
     save_state(state)
