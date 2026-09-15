@@ -15,7 +15,13 @@ import type { SinalEstudo } from "./use-sinais-estudos"
  * recebe as mesmas acções (modificar SL/TP, mover pendente, fechar, cancelar, confirmar ferramenta).
  */
 
-export interface PosicaoGrafico { id: string; direcao: Direcao; volume: number; preco_entrada: number; sl: number | null; tp: number | null }
+export interface PosicaoGrafico {
+  id: string; direcao: Direcao; volume: number; preco_entrada: number; sl: number | null; tp: number | null
+  /** TPs parciais da gestão automática (072): linhas finas, só referência. */
+  tps?: Array<{ preco: number; pct: number; atingido: boolean }> | null
+}
+/** Alerta de preço do trader (funded_alertas): linha fina amarela, não arrasta. */
+export interface AlertaGrafico { id: string; preco: number; nota?: string | null }
 export interface OrdemGrafico { id: string; direcao: Direcao; tipo: "limit" | "stop"; volume: number; preco: number; sl: number | null; tp: number | null }
 export interface Ferramenta { direcao: Direcao; entrada: number; sl: number; tp: number }
 export type FerramentaConfirmada = Ferramenta & { tipo: "mercado" | "limit" | "stop" }
@@ -31,6 +37,11 @@ export interface GraficoProps {
   ferramentaInicial?: Ferramenta | null
   /** Classe Tailwind da altura da área do gráfico (a app standalone usa quase o ecrã inteiro). */
   alturaClasse?: string
+  /** Ocupar a altura toda do pai (painéis redimensionáveis do modo PRO e ecrã inteiro do SIMPLE). */
+  preencher?: boolean
+  /** Sufixo da chave do timeframe guardado — cada gráfico do multi-gráfico lembra o seu. */
+  chaveTf?: string
+  alertas?: AlertaGrafico[]
   /**
    * As acções sobre a conta. Devolvem a promessa do pedido: o gráfico passa-as pela negociação num
    * clique (um-clique.tsx), que confirma ou não, e repõe a linha se falhar ou for cancelada.

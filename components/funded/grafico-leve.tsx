@@ -393,6 +393,16 @@ export default function GraficoLeve(props: GraficoProps & {
       if (o.sl != null) out.push({ chave: `ord:${o.id}:sl`, preco: valorDe(`ord:${o.id}:sl`, o.sl), cor: TV.sl, corpo: "SL (ordem)", arrastavel: podeNegociar, tracejada: true, fecho: podeNegociar ? "remover" : undefined, dono: { tipo: "ord", id: o.id, campo: "sl" } })
       if (o.tp != null) out.push({ chave: `ord:${o.id}:tp`, preco: valorDe(`ord:${o.id}:tp`, o.tp), cor: TV.tp, corpo: "TP (ordem)", arrastavel: podeNegociar, tracejada: true, fecho: podeNegociar ? "remover" : undefined, dono: { tipo: "ord", id: o.id, campo: "tp" } })
     }
+    // TPs parciais da gestão automática e alertas de preço: referência, não arrastam nem fecham.
+    for (const p of posicoes) {
+      for (const [i, t] of (p.tps ?? []).entries()) {
+        if (t.atingido) continue
+        out.push({ chave: `pos:${p.id}:tp${i + 1}`, preco: t.preco, cor: `${TV.tp}aa`, corpo: `TP${i + 1} · ${t.pct}%`, arrastavel: false, tracejada: true, dono: { tipo: "sinal", id: `tp:${p.id}:${i}`, campo: "tp" } })
+      }
+    }
+    for (const a of props.alertas ?? []) {
+      out.push({ chave: `alerta:${a.id}`, preco: a.preco, cor: "#F5B301", corpo: `🔔 ${a.nota ? a.nota.slice(0, 24) : "alerta"}`, arrastavel: false, tracejada: true, dono: { tipo: "sinal", id: `alerta:${a.id}`, campo: "entrada" } })
+    }
     // O sinal activo do estudo: só referência visual (ténue, não arrasta, não fecha).
     const sa = props.sinalAtivo
     if (sa) {
@@ -413,7 +423,7 @@ export default function GraficoLeve(props: GraficoProps & {
       if (k.tp != null) out.push({ chave: "tool:tp", preco: k.tp, cor: erros.tp ? invalido : TV.tp, corpo: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.ganhoPct != null ? ` (${resumo.ganhoPct}%)` : ""}${resumo.rr ? ` · R:R ${resumo.rr}` : ""}`, arrastavel: true, tracejada: Boolean(erros.tp), dono: { tipo: "tool", campo: "tp" } })
     }
     return out
-  }, [posicoes, ordens, k.mostrar, k.entrada, k.sl, k.tp, k.r, k.erros, k.resumo, rascunho, podeNegociar, simbolo, volume, precos, preco, props.sinalAtivo]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [posicoes, ordens, k.mostrar, k.entrada, k.sl, k.tp, k.r, k.erros, k.resumo, rascunho, podeNegociar, simbolo, volume, precos, preco, props.sinalAtivo, props.alertas]) // eslint-disable-line react-hooks/exhaustive-deps
   linhasRef.current = linhas
 
   // Setas dos sinais dos estudos, na vela em que chegaram (arredondada ao timeframe).
@@ -788,9 +798,9 @@ export default function GraficoLeve(props: GraficoProps & {
   const larguraEscala = larguraEscalaRef.current
 
   return (
-    <div style={{ background: TV.fundo }}>
+    <div className={props.preencher ? "flex min-h-0 flex-1 flex-col" : undefined} style={{ background: TV.fundo }}>
       <div
-        className={`relative touch-pan-y select-none ${props.alturaClasse ?? (props.compacto ? "h-[200px] md:h-[240px]" : "h-[400px] md:h-[500px]")} ${modo ? "cursor-crosshair" : ""}`}
+        className={`relative touch-pan-y select-none ${props.preencher ? "min-h-0 flex-1" : props.alturaClasse ?? (props.compacto ? "h-[200px] md:h-[240px]" : "h-[400px] md:h-[500px]")} ${modo ? "cursor-crosshair" : ""}`}
         onPointerDownCapture={aoPressionar}
         onPointerMoveCapture={aoMover}
         onPointerUpCapture={aoLargar}

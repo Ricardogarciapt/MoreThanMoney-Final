@@ -71,10 +71,10 @@ export default function FundedGrafico(props: GraficoProps) {
   useEffect(() => {
     bibliotecaTvDisponivel().then((ok) => setMotor(ok ? "tv" : "leve"))
     setEstudos(ler<ChaveEstudoWebtrader[]>(CHAVE_ESTUDOS, ["Goldkiller"]))
-    const guardado = ler<string | null>(CHAVE_TF, null)
+    const guardado = ler<string | null>(CHAVE_TF + (props.chaveTf ?? ""), null)
     if (guardado && TIMEFRAMES.some((t) => t.chave === guardado)) setTfEstado(guardado as Tf)
   }, [])
-  const setTf = (t: Tf) => { setTfEstado(t); guardar(CHAVE_TF, t) }
+  const setTf = (t: Tf) => { setTfEstado(t); guardar(CHAVE_TF + (props.chaveTf ?? ""), t) }
 
   // Quem pode usar que estudos — a mesma regra das páginas do MTM Funded e dos torneios.
   const permitidos = useMemo(() => {
@@ -138,7 +138,7 @@ export default function FundedGrafico(props: GraficoProps) {
   const spread = preco ? Math.round((preco.ask - preco.bid) * Math.pow(10, simbolo.digits)) : null
 
   return (
-    <div className="overflow-hidden rounded-md border" style={{ background: TV.fundo, borderColor: TV.borda, color: TV.texto }}>
+    <div className={`overflow-hidden rounded-md border ${props.preencher ? "flex h-full min-h-0 flex-col" : ""}`} style={{ background: TV.fundo, borderColor: TV.borda, color: TV.texto }}>
       {/* Linha 1 — símbolo, bid/spread/ask, ⚡ */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-2.5 py-1.5" style={{ borderColor: TV.borda }}>
         <div className="flex min-w-0 items-baseline gap-2">
@@ -206,7 +206,7 @@ export default function FundedGrafico(props: GraficoProps) {
       )}
 
       {motor === "a_verificar" ? (
-        <div className={props.alturaClasse ?? "h-[400px] md:h-[500px]"} />
+        <div className={props.preencher ? "min-h-0 flex-1" : props.alturaClasse ?? "h-[400px] md:h-[500px]"} />
       ) : motor === "tv" ? (
         // Adormecido: só com a Trading Platform instalada. Sem primitivas de trading ou a falhar → Lightweight.
         <GraficoTradingView {...props} sinais={sinais} sinalAtivo={ultimoAtivo} modo={modo} setModo={setModo} onFalhou={() => setMotor("leve")} onSemLinhas={() => { setSemTradingPlatform(true); setMotor("leve") }} />
