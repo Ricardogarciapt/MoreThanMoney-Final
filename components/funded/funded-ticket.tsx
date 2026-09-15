@@ -7,6 +7,7 @@ import { percentagemDeUsd, valorDoNivel } from "@/lib/mtmfunded/simulado/niveis-
 import { px, usd } from "./api"
 import { type ModoNiveis, type ModoVolume, useRascunho } from "./rascunho-ordem"
 import { EtiquetaUmClique, InterruptorUmClique, useUmClique } from "./um-clique"
+import OrdensAvancadas from "./ordens-avancadas"
 
 /**
  * O TICKET — comprar/vender com tudo à vista ANTES de confirmar: margem, comissão e valor do pip.
@@ -271,6 +272,8 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
       <Erro t={erros.sl} />
       <Erro t={erros.tp} />
       <Erro t={erros.margem} />
+
+      <OrdensAvancadas />
 
       <div className="flex gap-2">
       <div className="grid flex-1 grid-cols-2 gap-2">

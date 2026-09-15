@@ -19,6 +19,7 @@ import { useSinaisEstudos } from "./use-sinais-estudos"
 import FundedTicket from "./funded-ticket"
 import FundedPosicoes from "./funded-posicoes"
 import { RascunhoProvider, useRascunho, type PedidoOrdem } from "./rascunho-ordem"
+import { corpoDoPedido } from "./pedido"
 import GraficoLeve from "./grafico-leve"
 import { type Tf, tfPorResolucaoTv } from "./grafico-tipos"
 import { UmCliqueProvider } from "./um-clique"
@@ -311,10 +312,9 @@ function ContaNoScanner({ accountId, ficha, ativo, tvSymbol, intervalo, dentroDa
   const ordens = dados.ordens.filter((o) => o.symbol === ficha.symbol)
 
   const onEnviar = (p: PedidoOrdem) => {
-    const base = { accountId, symbol: ficha.symbol, direcao: p.direcao, volume: p.volume, sl: p.sl, tp: p.tp, origem: p.origem, ideiaRef: p.ideiaRef }
-    return p.accao === "abrir"
-      ? executar("abrir", base, `${p.direcao === "buy" ? "Compra" : "Venda"} executada`)
-      : executar("pendente", { ...base, tipo: p.tipo, preco: p.preco }, `${p.direcao} ${p.tipo} criada`)
+    // O mesmo corpo do WebTrader: bracket, TPs parciais, trailing, BE, GTD e OCO (pedido.ts).
+    const { accao, corpo } = corpoDoPedido(p, accountId, ficha.symbol)
+    return executar(accao, corpo, `${p.direcao === "buy" ? "Compra" : "Venda"} enviada`)
   }
 
   const metricas: Array<[string, string, string?]> = [
