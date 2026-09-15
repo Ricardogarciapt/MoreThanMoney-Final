@@ -5,6 +5,8 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react"
 import ChecklistSensei from "@/lib/estudos/sensei/checklist"
 import LegendaGoldKiller from "@/lib/estudos/goldkiller/legenda"
 import type { InputsGoldKiller, ResultadoGoldKiller } from "@/lib/estudos/goldkiller/tipos"
+import LegendaMTMScanner from "@/lib/estudos/mtmscanner/legenda"
+import type { InputsMTMScanner, ResultadoMTMScanner } from "@/lib/estudos/mtmscanner/tipos"
 import type { InputsSensei, ResultadoSensei, Vela } from "@/lib/estudos/sensei/tipos"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
@@ -12,6 +14,7 @@ import { type GraficoProps, type Tf, TV, tfPorChave } from "./grafico-tipos"
 import PainelFerramenta from "./painel-ferramenta"
 import { carregarExtrasSensei, useCalculadoraSensei } from "./sensei-estudo"
 import { useCalculadoraGoldKiller } from "./goldkiller-estudo"
+import { useCalculadoraMTMScanner } from "./mtmscanner-estudo"
 import { useRascunho } from "./rascunho-ordem"
 import { AccaoCancelada, useUmClique } from "./um-clique"
 
@@ -48,6 +51,11 @@ import { AccaoCancelada, useUmClique } from "./um-clique"
  * níveis Gain/Drawdown em degrau com as faixas até à Center Line, etiquetas dos níveis na escala,
  * BUY/SELL nas viragens e a linha de estado. Mesmo caminho do Sensei: 3000 velas, Web Worker,
  * recalcula só com vela fechada. Os dois estudos podem estar ligados ao mesmo tempo.
+ *
+ * MTM SCANNER (prop `mtmscanner`): o estudo oficial «MoreThanMoney - Scanner V3.5», portado do Pine
+ * (lib/estudos/mtmscanner) — DEMA 15/50/238, POC (fecho da vela de maior volume de ticks), B/S nos
+ * cruzamentos com o POC, caixa Entry/Stop/TP1-3 da última barra, estrutura CHoCH/BOS/IDM/x e swings.
+ * Mesmo caminho: 3000 velas, Web Worker, recalcula só com vela fechada.
  *
  * Mover/fechar/cancelar passa pela negociação num clique (um-clique.tsx): desligada, pede
  * confirmação; cancelada ou falhada, a linha volta ao sítio.
@@ -142,6 +150,12 @@ export default function GraficoLeve(props: GraficoProps & {
     /** Cada resultado novo (null ao desligar) — alimenta o «Usar este sinal». */
     aoCalcular?: (r: ResultadoGoldKiller | null) => void
   } | null
+  /** MTM Scanner desenhado no gráfico (null/undefined = desligado). */
+  mtmscanner?: {
+    inputs: InputsMTMScanner
+    /** Cada resultado novo (null ao desligar) — alimenta o «Usar este sinal». */
+    aoCalcular?: (r: ResultadoMTMScanner | null) => void
+  } | null
 }) {
   const { simbolo, preco, precos, volume, posicoes, ordens, podeNegociar, tf, modo, setModo } = props
   const [estadoVelas, setEstadoVelas] = useState<"a_carregar" | "historico" | "ao_vivo" | "erro">("a_carregar")
@@ -177,8 +191,10 @@ export default function GraficoLeve(props: GraficoProps & {
   // Só cresce: ligar o Sensei pede 3000 velas; desligá-lo não volta a pedir 300 (as a mais não fazem mal).
   const goldkillerLigado = Boolean(props.goldkiller)
   // O GoldKiller também: os níveis são percentis das pernas passadas — mais velas, mais pernas.
-  const [limiteHistorico, setLimiteHistorico] = useState(() => (props.sensei || props.goldkiller ? 3000 : 300))
-  useEffect(() => { if (senseiLigado || goldkillerLigado) setLimiteHistorico(3000) }, [senseiLigado, goldkillerLigado])
+  // O MTM Scanner: DEMA 238 aquece em 474 velas e a estrutura (swings 50) precisa de história.
+  const mtmscannerLigado = Boolean(props.mtmscanner)
+  const [limiteHistorico, setLimiteHistorico] = useState(() => (props.sensei || props.goldkiller || props.mtmscanner ? 3000 : 300))
+  useEffect(() => { if (senseiLigado || goldkillerLigado || mtmscannerLigado) setLimiteHistorico(3000) }, [senseiLigado, goldkillerLigado, mtmscannerLigado])
   const senseiRef = useRef<import("@/lib/estudos/sensei/lightweight").SenseiLW | null>(null)
   const [senseiPronto, setSenseiPronto] = useState(false)
   const [senseiR, setSenseiR] = useState<ResultadoSensei | null>(null)
@@ -195,6 +211,13 @@ export default function GraficoLeve(props: GraficoProps & {
   const calcularGK = useCalculadoraGoldKiller()
   const aoCalcularGKRef = useRef(props.goldkiller?.aoCalcular)
   aoCalcularGKRef.current = props.goldkiller?.aoCalcular
+  const msRef = useRef<import("@/lib/estudos/mtmscanner/lightweight").MTMScannerLW | null>(null)
+  const [msPronto, setMsPronto] = useState(false)
+  const [msR, setMsR] = useState<ResultadoMTMScanner | null>(null)
+  const [msMs, setMsMs] = useState<{ ms: number; onde: string; velas: number } | null>(null)
+  const calcularMS = useCalculadoraMTMScanner()
+  const aoCalcularMSRef = useRef(props.mtmscanner?.aoCalcular)
+  aoCalcularMSRef.current = props.mtmscanner?.aoCalcular
   // Telemóvel: os painéis começam fechados (tapavam o gráfico todo); abrem-se no botão.
   useEffect(() => { try { if (window.matchMedia("(max-width: 767px)").matches) setPaineisAbertos(false) } catch { /* ok */ } }, [])
 
@@ -510,6 +533,47 @@ export default function GraficoLeve(props: GraficoProps & {
     return () => { vivo = false }
   }, [gkPronto, versaoVelas, chaveInputsGK, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── MTM Scanner ──
+  useEffect(() => {
+    if (!pronto || !mtmscannerLigado) return
+    let vivo = true
+    import("@/lib/estudos/mtmscanner/lightweight").then((mod) => {
+      if (!vivo || !graficoRef.current || !serieRef.current) return
+      msRef.current = mod.anexarMTMScanner(graficoRef.current, serieRef.current, {
+        etiquetasEixo: !props.compacto,
+        aoCalcular: (r) => { setMsR(r); aoCalcularMSRef.current?.(r) },
+      })
+      setMsPronto(true)
+    }).catch(() => { /* sem estudo — o gráfico continua */ })
+    return () => {
+      vivo = false
+      try { msRef.current?.remove() } catch { /* o gráfico já foi removido */ }
+      msRef.current = null
+      setMsPronto(false)
+      setMsR(null)
+      aoCalcularMSRef.current?.(null)
+    }
+  }, [pronto, mtmscannerLigado]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const inputsMS = props.mtmscanner?.inputs
+  const chaveInputsMS = inputsMS ? JSON.stringify(inputsMS) : ""
+  useEffect(() => {
+    if (!msPronto || !inputsMS || estadoVelas === "a_carregar") return
+    const snapshot = velasRef.current.slice()
+    if (snapshot.length < 50) return
+    let vivo = true
+    const tfSeg = tfPorChave(tf).seg
+    // mintick = o tick do símbolo no funded_symbols (digits); o volume é o de ticks da rota das velas.
+    const inputs: Partial<InputsMTMScanner> = { ...inputsMS, simbolo: simbolo.symbol, tfSegundos: tfSeg, mintick: Math.pow(10, -simbolo.digits) }
+    ;(async () => {
+      const c = await calcularMS(snapshot, inputs)
+      if (!vivo || !c || !msRef.current) return
+      msRef.current.aplicar(snapshot, c.r)
+      setMsMs({ ms: Math.round(c.ms), onde: c.onde, velas: snapshot.length })
+    })()
+    return () => { vivo = false }
+  }, [msPronto, versaoVelas, chaveInputsMS, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // As zonas da ferramenta (primitiva no canvas).
   useEffect(() => {
     const z = zonasRef.current
@@ -794,6 +858,18 @@ export default function GraficoLeve(props: GraficoProps & {
               resultado={gkR}
               compacto={props.compacto}
               topo={senseiLigado && props.sensei?.paineis !== false && !props.compacto && senseiR ? 30 : 6}
+            />
+          </div>
+        )}
+        {mtmscannerLigado && msR && (
+          <div
+            data-mtmscanner-ms={msMs?.ms}
+            title={msMs ? `MTM Scanner: ${msMs.velas} velas calculadas em ${msMs.ms} ms (${msMs.onde === "worker" ? "Web Worker" : "thread principal"})` : undefined}
+          >
+            <LegendaMTMScanner
+              resultado={msR}
+              compacto={props.compacto}
+              topo={(senseiLigado && props.sensei?.paineis !== false && !props.compacto && senseiR ? 30 : 6) + (goldkillerLigado && gkR ? (props.compacto ? 18 : 34) : 0)}
             />
           </div>
         )}
