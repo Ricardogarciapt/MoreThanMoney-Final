@@ -11,7 +11,9 @@ import { COR_PLATAFORMA, ErroWT, NOME_PLATAFORMA, guardarSessaoTL, pedirWT } fro
  * «ENTRAR COM CREDENCIAIS» — seletor de plataforma (MTM Funded · TradeLocker · MT5).
  *
  *  · MTM Funded: login 77xxxxxx + password (master negoceia, investor só vê) — conta SIMULADA.
- *  · TradeLocker: email + password + servidor + Live/Demo → escolher a conta — conta REAL.
+ *  · TradeLocker: a conta EXTERNA da pessoa, na corretora dela, negociada através da MTM.
+ *    email + password + servidor + Live/Demo → escolher a conta. Liga-se pelo mesmo caminho do
+ *    ligador de contas (fica em «As minhas contas»; se já lá está, abre essa) — conta REAL.
  *  · MT5: login + password + servidor (pesquisa de servidores) — conta REAL, usa uma conta MetaApi
  *    do plano: reutiliza a que já tens ligada ou ocupa um lugar da quota (402 → caminho do upgrade;
  *    sem botão de compra dentro da app iOS).
@@ -21,17 +23,21 @@ type Resultado =
   | { plataforma: "mtmfunded"; sessao: SessaoConta }
   | { plataforma: "tradelocker" | "mt5"; ref: string }
 
-export default function EntrarCredenciais({ onEntrou, onFechar, temSessaoMtm, compraPermitida }: {
+export default function EntrarCredenciais({ onEntrou, onFechar, temSessaoMtm, compraPermitida, plataformaInicial = "mtmfunded", titulo, onPedirLoginMtm }: {
   onEntrou: (r: Resultado) => void
   onFechar?: () => void
   temSessaoMtm: boolean
   compraPermitida: boolean
+  plataformaInicial?: PlataformaWT
+  titulo?: string
+  /** Sem sessão MTM: em vez de sair para /login, volta ao ecrã de entrada do WebTrader. */
+  onPedirLoginMtm?: () => void
 }) {
-  const [plataforma, setPlataforma] = useState<PlataformaWT>("mtmfunded")
+  const [plataforma, setPlataforma] = useState<PlataformaWT>(plataformaInicial)
   return (
     <div className="space-y-2 rounded-xl border border-white/10 bg-[#0d0d0d] p-3 text-[12.5px]">
       <div className="flex items-center justify-between">
-        <p className="text-[13px] font-semibold">Entrar com credenciais</p>
+        <p className="text-[13px] font-semibold">{titulo ?? "Entrar com credenciais"}</p>
         {onFechar && <button onClick={onFechar} aria-label="fechar" className="text-zinc-500"><X className="h-4 w-4" /></button>}
       </div>
       <div role="tablist" className="grid grid-cols-3 gap-1 rounded-lg bg-black/40 p-1">
@@ -50,11 +56,24 @@ export default function EntrarCredenciais({ onEntrou, onFechar, temSessaoMtm, co
         </>
       ) : (
         <>
+          {plataforma === "tradelocker" && (
+            <p className="text-[12px] leading-snug text-zinc-200">Liga a tua conta TradeLocker da corretora e negoceia-a aqui. As ordens são executadas na tua corretora.</p>
+          )}
           <p className="flex items-start gap-1 rounded-lg bg-rose-500/10 px-2 py-1.5 text-[11px] text-rose-200">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Conta REAL na tua corretora — as ordens usam dinheiro real. A password não fica guardada na MTM.
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            {plataforma === "tradelocker"
+              ? "Conta REAL — as ordens usam dinheiro real. A ligação fica em «As minhas contas», com a password cifrada (a TradeLocker volta a pedi-la quando a sessão expira); remover a conta lá apaga-a."
+              : "Conta REAL na tua corretora — as ordens usam dinheiro real. A password não fica guardada na MTM."}
           </p>
           {!temSessaoMtm ? (
-            <p className="text-[12px] text-zinc-400">Para abrir contas reais, entra primeiro com a tua conta MTM. <a href="/login?redirect=/webtrader" className="font-semibold text-[#D2A63C]">Entrar →</a></p>
+            <p className="text-[12px] text-zinc-400">
+              {plataforma === "tradelocker"
+                ? "Contas TradeLocker precisam da conta MTM: a ligação fica em nome dela, só tu a vês e negoceias."
+                : "Contas MT5 precisam da conta MTM: a ligação fica em nome dela e usa uma das contas MetaApi do teu plano."}{" "}
+              {onPedirLoginMtm
+                ? <button type="button" onClick={onPedirLoginMtm} className="font-semibold text-[#D2A63C]">Entrar com a conta MTM →</button>
+                : <a href="/login?redirect=/webtrader" className="font-semibold text-[#D2A63C]">Entrar com a conta MTM →</a>}
+            </p>
           ) : plataforma === "tradelocker" ? (
             <FormTradeLocker onEntrou={(ref) => onEntrou({ plataforma: "tradelocker", ref })} />
           ) : (
@@ -120,7 +139,7 @@ function FormTradeLocker({ onEntrou }: { onEntrou: (ref: string) => void }) {
   if (bilhete) {
     return (
       <div className="space-y-2">
-        <p className="text-zinc-400">Escolhe a conta:</p>
+        <p className="text-zinc-400">Escolhe a conta a ligar e negociar:</p>
         {contas.map((c) => (
           <button key={c.id} disabled={aEntrar} onClick={() => escolher(c.id)} className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-black/40 p-2.5 text-left hover:border-sky-400/40 disabled:opacity-50">
             <span className="font-mono text-white">#{c.accNum}</span>
@@ -145,7 +164,7 @@ function FormTradeLocker({ onEntrou }: { onEntrou: (ref: string) => void }) {
       </div>
       {erro && <p className="text-[11.5px] text-rose-300">{erro}</p>}
       <button disabled={aEntrar || !email || !password || !servidor} className="flex h-10 w-full items-center justify-center rounded-lg bg-sky-400 font-bold text-black disabled:opacity-40">
-        {aEntrar ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar na TradeLocker"}
+        {aEntrar ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ver as minhas contas TradeLocker"}
       </button>
     </form>
   )

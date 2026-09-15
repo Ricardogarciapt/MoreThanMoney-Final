@@ -1,6 +1,10 @@
 /**
  * «ENTRAR COM CREDENCIAIS» NO WEBTRADER — TradeLocker e MT5 (MTM Funded usa /api/mtmfunded/simulado/entrar).
  *
+ * TradeLocker: é a conta EXTERNA da pessoa, na corretora dela, negociada através da MTM. Liga-se
+ * pelo mesmo caminho do ligador de contas (mtmcopy_connections + credenciais cifradas), por isso
+ * aparece em «As minhas contas» e vice-versa — nunca duas linhas para a mesma conta.
+ *
  * Travão de tentativas: a mesma tabela e a mesma regra da ligação MTM Funded (074 —
  * mtmfunded_ligacao_tentativas: 5 falhas por utilizador / 10 por login em 15 min), com a chave do
  * login em hash. Passwords: nunca gravadas nem registadas em logs.
@@ -18,13 +22,15 @@ import { createHash } from 'crypto'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { bloqueadoPorTentativas, registarTentativa } from '@/lib/mtmfunded/simulado/ligar-conta'
 import { autenticar, listarContas, TradeLockerError, type TLCredenciais } from '@/lib/tradelocker/client'
+import { ligarContaTradeLocker } from '@/lib/tradelocker/ligar-conta'
+import { ligarOuReutilizarTradeLocker } from './tradelocker-ligar'
+import { cifraDisponivel } from '@/lib/mtmfunded/credenciais'
 import { emitirBilhete, envValido, lerBilhete } from '@/lib/tradelocker/ligacao'
 import { verificarQuotaMetaApi } from '@/lib/contas/quota-metaapi'
 import { criarContaMetaApiDireta, deleteMetaApiAccount } from '@/lib/mtmcopy/metaapi-provision'
 import { isMetaApiConfigured } from '@/lib/mtmcopy/metaapi'
 import { chaveTentativa } from './corretoras/regras'
 import { ErroCorretora } from './corretoras/tipos'
-import { emitirSessaoTL } from './tradelocker-sessao'
 
 const hash = (s: string) => createHash('sha256').update(s).digest('hex')
 const ESPERA_FALHA_MS = 1200
@@ -46,26 +52,17 @@ export async function entrarTradeLocker(userId: string, corpo: Record<string, un
     const accountId = String(corpo.accountId ?? '').trim()
     if (!/^\d{1,20}$/.test(accountId)) throw new ErroCorretora(400, 'Escolhe uma conta.')
 
-    // Já ligada no ligador de contas? Então usa essa ligação (credenciais de lá, sem sessão nova).
-    const { data: ligadas } = await getSupabaseAdmin().from('mtmcopy_connections').select('id, tl_account_id, tl_env, tl_server, mt5_status')
-      .eq('user_id', userId).eq('mt5_platform', 'tradelocker').neq('mt5_status', 'disconnected')
-    const ligada = (ligadas ?? []).find((c) => String(c.tl_account_id) === accountId && c.tl_env === cred.env && String(c.tl_server ?? '').toLowerCase() === cred.server.toLowerCase())
-    if (ligada) return { ref: `tradelocker:site:${ligada.id}`, sessao: null }
-
-    try {
-      const tokens = await autenticar(cred)
-      const conta = (await listarContas(cred.env, tokens.accessToken)).find((c) => c.id === accountId)
-      if (!conta) throw new ErroCorretora(400, 'Essa conta não pertence a este login TradeLocker.')
-      const s = emitirSessaoTL({ userId, email: cred.email, server: cred.server, env: cred.env, accountId, accNum: conta.accNum, tokens })
-      return {
-        ref: `tradelocker:sessao:${accountId}`,
-        sessao: { token: s.token, expira: s.expira },
-        conta: { accNum: conta.accNum, nome: conta.name, moeda: conta.currency, servidor: cred.server, demo: cred.env === 'demo' },
-      }
-    } catch (e) {
-      if (e instanceof TradeLockerError) throw new ErroCorretora(e.codigo === 'credenciais' ? 401 : 502, e.message)
-      throw e
-    }
+    // UMA linha por conta (a do ligador de contas): já ligada → abre essa; senão liga-a pelo mesmo
+    // passo 2 do ligador (lib/tradelocker/ligar-conta), e passa a aparecer em «As minhas contas».
+    if (!cifraDisponivel()) throw new ErroCorretora(503, 'Ligação TradeLocker indisponível no servidor (cifra por configurar).')
+    const db = getSupabaseAdmin()
+    const r = await ligarOuReutilizarTradeLocker({
+      lerLigadas: async () => (await db.from('mtmcopy_connections').select('id, mt5_platform, mt5_status, tl_account_id, tl_env, tl_server')
+        .eq('user_id', userId).eq('mt5_platform', 'tradelocker').neq('mt5_status', 'disconnected')).data ?? [],
+      ligar: () => ligarContaTradeLocker(userId, cred, accountId, { purpose: 'tap_to_trade', account_label: 'WebTrader' }),
+    }, { accountId, env: cred.env, server: cred.server })
+    if (!r.ok) throw new ErroCorretora(r.status, r.erro)
+    return { ref: r.ref, sessao: null, ligada: r.ligada }
   }
 
   // Passo 1: login + lista de contas. Nada é guardado.

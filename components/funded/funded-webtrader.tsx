@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { Loader2, LogIn, ChevronDown, ShieldAlert, X } from "lucide-react"
+import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2 } from "lucide-react"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
 import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, usd, COR_ESTADO } from "./api"
 import FundedTrader from "./funded-trader"
@@ -11,9 +11,13 @@ import { InterruptorModo, useModoWebtrader } from "./modo-webtrader"
 import type { Prefill } from "./funded-ticket"
 import CorretoraTrader from "@/components/webtrader/corretora-trader"
 import EntrarCredenciais from "@/components/webtrader/entrar-credenciais"
+import EntrarWebtrader from "@/components/webtrader/entrar-webtrader"
 import {
-  type ContaReal, COR_PLATAFORMA, NOME_PLATAFORMA, apagarSessaoTL, ehRefReal, listarContasReais, lerSessoesTL, plataformaDaRef,
+  type ContaReal, COR_PLATAFORMA, apagarSessaoTL, ehRefReal, listarContasReais, lerSessoesTL, plataformaDaRef,
 } from "@/components/webtrader/api-corretoras"
+import { contaInicial, montarSeletor } from "@/lib/webtrader/seletor"
+import { getAccessToken } from "@/lib/auth-token"
+import type { PlataformaWT } from "@/lib/webtrader/corretoras/tipos"
 
 /**
  * MTM FUNDED — WEBTRADER. Vive em dois sítios com o mesmo código:
@@ -25,10 +29,15 @@ import {
  * (a própria ou a de outra pessoa, com a password investor) entra com Login + Password no servidor
  * «MTM Funded». O seletor no topo troca de conta sem sair do ecrã.
  *
- * Contas REAIS (TradeLocker e MT5) entram no mesmo seletor, com o emblema da plataforma: as já
- * ligadas no ligador de contas aparecem sozinhas; «Entrar com credenciais» tem o seletor
- * MTM Funded · TradeLocker · MT5. Uma conta real abre components/webtrader/corretora-trader.tsx,
- * que só fala com /api/webtrader/{plataforma}/… (MT5 respeita a quota MetaApi do plano).
+ * Sem sessão MTM (e sem contas abertas neste separador) → ecrã «Entrar no WebTrader»
+ * (components/webtrader/entrar-webtrader.tsx): conta MTM, Google, PrimeVerse, ou só credenciais.
+ * Com sessão MTM, SINCRONIZA: MTM Funded (programas, torneios, contas que seguem estratégias) +
+ * as contas reais do ligador (TradeLocker e MT5/MT4 via MetaApi) — lib/webtrader/seletor.ts.
+ * Abre a última usada (localStorage) ou a primeira. Sem contas → «Ainda não tens contas ligadas».
+ *
+ * Contas REAIS (TradeLocker e MT5) entram no mesmo seletor, com o emblema da plataforma. Uma conta
+ * real abre components/webtrader/corretora-trader.tsx, que só fala com /api/webtrader/{plataforma}/…
+ * (MT5 respeita a quota MetaApi do plano). TradeLocker ligada aqui = linha do ligador de contas.
  *
  * Deep-link dos scanners e das ideias:
  *   ?tab=funded&symbol=OANDA:XAUUSD&dir=buy&sl=…&tp=…&origem=scanner|ideia_mtm&ref=<id>
@@ -52,19 +61,25 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   const [reais, setReais] = useState<ContaReal[]>([])
   const [compraPermitida, setCompraPermitida] = useState(true)
   const [temSessaoMtm, setTemSessaoMtm] = useState(false)
+  const [ligarPlataforma, setLigarPlataforma] = useState<PlataformaWT | null>(null)
   const { modo } = useModoWebtrader()
 
   const carregar = useCallback(async () => {
     const ss = lerSessoes()
     setSessoes(ss)
     let lista: ContaResumo[] = []
-    let sessaoMtm = true
-    try {
-      const d = await pedir<{ contas: ContaResumo[] }>("/api/mtmfunded/simulado/contas")
-      lista = d.contas ?? []
-    } catch (e) {
-      if ((e as { status?: number }).status === 401) sessaoMtm = false
-      else setErro((e as Error).message)
+    // Sem token no cliente não há sessão MTM — nem se pergunta ao servidor (e uma base em baixo não
+    // transforma «sem sessão» em «sem contas»).
+    let sessaoMtm = Boolean(await getAccessToken().catch(() => null))
+    if (sessaoMtm) {
+      setErro(null)
+      try {
+        const d = await pedir<{ contas: ContaResumo[] }>("/api/mtmfunded/simulado/contas")
+        lista = d.contas ?? []
+      } catch (e) {
+        if ((e as { status?: number }).status === 401) sessaoMtm = false
+        else setErro((e as Error).message)
+      }
     }
     // Contas reais: as do ligador + as abertas no WebTrader (MT5) + sessões TradeLocker deste separador.
     let listaReais: ContaReal[] = []
@@ -75,16 +90,16 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
         setCompraPermitida(r.compraPermitida)
       } catch { /* sem contas reais não se perde o MTM Funded */ }
     }
-    for (const s of Object.values(lerSessoesTL())) {
-      if (!listaReais.some((c) => c.ref === s.ref)) listaReais.push({ ref: s.ref, plataforma: "tradelocker", rotulo: s.rotulo ?? null, login: s.login, servidor: s.servidor, demo: s.demo, real: true, bloqueada: null, origem: "sessao" })
-    }
+    // Sessões TradeLocker antigas deste separador (o WebTrader passou a ligar pelo ligador de contas).
+    // Só com sessão MTM: o servidor exige o dono também nestas.
+    if (sessaoMtm) listaReais = montarSeletor({ funded: [], reais: listaReais, sessoesTL: lerSessoesTL() }).map((e) => e.real!).filter(Boolean)
     setTemSessaoMtm(sessaoMtm)
     setReais(listaReais)
     setContas(lista)
     let ultima: string | null = null
     try { ultima = localStorage.getItem(CHAVE_ULTIMA) } catch { /* ok */ }
-    const ids = [...lista.map((c) => c.id), ...Object.keys(ss), ...listaReais.filter((c) => !c.bloqueada).map((c) => c.ref)]
-    setAtiva((a) => a && ids.includes(a) ? a : ultima && ids.includes(ultima) ? ultima : ids[0] ?? null)
+    const entradas = montarSeletor({ funded: lista, sessoesFunded: ss, reais: listaReais })
+    setAtiva((a) => contaInicial(entradas, a, ultima))
   }, [])
 
   useEffect(() => { carregar() }, [carregar])
@@ -93,6 +108,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     setAtiva(id)
     setSeletorAberto(false)
     setMostrarEntrada(false)
+    setLigarPlataforma(null)
     try { localStorage.setItem(CHAVE_ULTIMA, id) } catch { /* ok */ }
   }
 
@@ -113,22 +129,20 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     return s ? candidatosDeTicker(s).join(",") : null
   }, [sp])
 
-  const todas = useMemo(() => {
-    const out: Array<{ id: string; login: string | null; etiqueta: string; estadoCurto: string; modo: "master" | "investor"; saldo?: number | null; equity?: number | null; propria: boolean; segue?: string | null; real?: ContaReal }> = []
-    for (const c of contas ?? []) out.push({ id: c.id, login: c.mt5_login, etiqueta: c.etiqueta, estadoCurto: c.estadoCurto, modo: "master", saldo: c.sim_saldo, equity: c.sim_equity, propria: true, segue: c.segueEstrategia?.nome ?? null })
-    for (const s of Object.values(sessoes)) if (!out.some((o) => o.id === s.accountId)) {
-      out.push({ id: s.accountId, login: s.login, etiqueta: s.etiqueta ?? "—", estadoCurto: s.estadoCurto ?? "—", modo: s.modo, propria: false })
-    }
-    for (const r of reais) {
-      out.push({ id: r.ref, login: r.login, etiqueta: NOME_PLATAFORMA[r.plataforma], estadoCurto: r.bloqueada ? "Bloqueada" : r.demo ? "Demo" : "Real", modo: "master", propria: r.origem !== "sessao", real: r })
-    }
-    return out
-  }, [contas, sessoes, reais])
+  const todas = useMemo(() => montarSeletor({ funded: contas, sessoesFunded: sessoes, reais: reais as ContaReal[] }), [contas, sessoes, reais])
   const atual = todas.find((t) => t.id === ativa)
 
   if (contas == null) return <div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" /></div>
 
-  const emTrader = !(mostrarEntrada || todas.length === 0) && Boolean(ativa)
+  const semContas = todas.length === 0
+  // Sem conta MTM e sem nada aberto neste separador → ecrã de entrada do WebTrader.
+  const ecraLogin = !temSessaoMtm && (semContas || mostrarEntrada)
+  const emTrader = !(mostrarEntrada || semContas || ligarPlataforma) && Boolean(ativa)
+  const aoEntrarConta = async (r: { plataforma: "mtmfunded"; sessao: SessaoConta } | { plataforma: "tradelocker" | "mt5"; ref: string }) => {
+    if (r.plataforma === "mtmfunded") { guardarSessao(r.sessao); setSessoes(lerSessoes()); escolher(r.sessao.accountId); return }
+    await carregar()
+    escolher(r.ref)
+  }
   const ativaReal = ehRefReal(ativa)
   const plataformaAtiva = ativa ? plataformaDaRef(ativa) : null
   // A altura do trader: a app própria usa o ecrã todo menos a barra; embutido na app-mobile há a navegação dela.
@@ -187,8 +201,13 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                   </div>
                 ))}
                 <button onClick={() => { setMostrarEntrada(true); setSeletorAberto(false) }} className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-[12.5px] text-[#D2A63C]">
-                  <LogIn className="h-4 w-4" /> Entrar com credenciais
+                  <LogIn className="h-4 w-4" /> {temSessaoMtm ? "Ligar ou entrar noutra conta" : "Entrar com a conta MTM ou credenciais"}
                 </button>
+                {temSessaoMtm && (
+                  <a href="/member-area/contas" className="flex w-full items-center gap-2 border-t border-white/5 px-3 py-2 text-[12.5px] text-zinc-400 hover:text-white">
+                    <Settings2 className="h-4 w-4" /> Gerir contas ligadas
+                  </a>
+                )}
               </div>
             )}
           </div>
@@ -219,22 +238,41 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
 
       {erro && <p className="px-2 py-1 text-[12px] text-rose-300">{erro}</p>}
 
-      {(mostrarEntrada || todas.length === 0) ? (
+      {ecraLogin ? (
+        <EntrarWebtrader
+          compraPermitida={compraPermitida}
+          onFechar={semContas ? undefined : () => setMostrarEntrada(false)}
+          onEntrouMtm={async () => { setMostrarEntrada(false); setContas(null); await carregar() }}
+          onEntrouConta={aoEntrarConta}
+        />
+      ) : ligarPlataforma || (semContas && !mostrarEntrada) ? (
+        <SemContas
+          plataforma={ligarPlataforma}
+          onPlataforma={setLigarPlataforma}
+          formulario={ligarPlataforma && (
+            <EntrarCredenciais
+              key={ligarPlataforma}
+              titulo={ligarPlataforma === "mtmfunded" ? "Entrar numa conta MTM Funded" : "Ligar conta"}
+              plataformaInicial={ligarPlataforma}
+              temSessaoMtm={temSessaoMtm}
+              compraPermitida={compraPermitida}
+              onFechar={() => setLigarPlataforma(null)}
+              onEntrou={aoEntrarConta}
+            />
+          )}
+        />
+      ) : mostrarEntrada ? (
         <div className="p-2">
           <Entrada
             contas={contas}
             onEscolher={escolher}
-            onFechar={todas.length ? () => setMostrarEntrada(false) : undefined}
-            linkLoginMtm={contexto === "app" && !temSessaoMtm ? "/login?redirect=/webtrader" : undefined}
+            onFechar={() => setMostrarEntrada(false)}
             formulario={
               <EntrarCredenciais
+                titulo="Ligar ou entrar noutra conta"
                 temSessaoMtm={temSessaoMtm}
                 compraPermitida={compraPermitida}
-                onEntrou={async (r) => {
-                  if (r.plataforma === "mtmfunded") { guardarSessao(r.sessao); setSessoes(lerSessoes()); escolher(r.sessao.accountId); return }
-                  await carregar()
-                  escolher(r.ref)
-                }}
+                onEntrou={aoEntrarConta}
               />
             }
           />
@@ -254,9 +292,8 @@ function nomeCurto(nome: string) {
 }
 
 /** Ecrã de entrada: as contas MTM Funded da pessoa + «Entrar com credenciais» (três plataformas). */
-function Entrada({ contas, onEscolher, onFechar, linkLoginMtm, formulario }: {
+function Entrada({ contas, onEscolher, onFechar, formulario }: {
   contas: ContaResumo[]
-  linkLoginMtm?: string
   onEscolher: (id: string) => void
   onFechar?: () => void
   formulario: React.ReactNode
@@ -269,9 +306,6 @@ function Entrada({ contas, onEscolher, onFechar, linkLoginMtm, formulario }: {
           {onFechar && <button onClick={onFechar} className="text-zinc-500"><X className="h-4 w-4" /></button>}
         </div>
         {contas.length === 0 && <p className="text-[12px] text-zinc-500">Ainda não tens contas simuladas. Quando comprares um desafio ou entrares num torneio, a conta aparece aqui.</p>}
-        {linkLoginMtm && (
-          <a href={linkLoginMtm} className="mt-2 inline-block text-[12px] font-semibold text-[#D2A63C]">Entrar com a conta MTM →</a>
-        )}
         <div className="space-y-2">
           {contas.map((c) => (
             <button key={c.id} onClick={() => onEscolher(c.id)} className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-black/40 p-2.5 text-left text-[12px] hover:border-[#D2A63C]/40">
@@ -290,6 +324,42 @@ function Entrada({ contas, onEscolher, onFechar, linkLoginMtm, formulario }: {
         </div>
       </div>
       {formulario}
+    </div>
+  )
+}
+
+/** «Ainda não tens contas ligadas» — ligar TradeLocker / MT5 / MTM Funded aqui mesmo, ou no ligador. */
+function SemContas({ plataforma, onPlataforma, formulario }: {
+  plataforma: PlataformaWT | null
+  onPlataforma: (p: PlataformaWT | null) => void
+  formulario: React.ReactNode
+}) {
+  const opcoes: Array<{ p: PlataformaWT; nome: string; texto: string }> = [
+    { p: "tradelocker", nome: "TradeLocker", texto: "A tua conta da corretora, negociada aqui" },
+    { p: "mt5", nome: "MT5", texto: "MetaTrader 5 da tua corretora" },
+    { p: "mtmfunded", nome: "MTM Funded", texto: "Conta simulada (login 77xxxxxx)" },
+  ]
+  return (
+    <div className="mx-auto w-full max-w-md space-y-3 px-3 py-6 text-white">
+      {!plataforma && (
+        <div className="text-center">
+          <p className="text-[17px] font-bold">Ainda não tens contas ligadas</p>
+          <p className="mt-1 text-[12.5px] text-zinc-400">Liga uma conta para negociar no WebTrader. Fica também em «As minhas contas».</p>
+        </div>
+      )}
+      <div className="grid grid-cols-3 gap-2">
+        {opcoes.map((o) => (
+          <button key={o.p} onClick={() => onPlataforma(plataforma === o.p ? null : o.p)} aria-pressed={plataforma === o.p}
+            className={`rounded-xl border p-2.5 text-left ${plataforma === o.p ? "border-white/40 bg-white/10" : "border-white/10 bg-[#0d0f15] hover:border-white/25"}`}>
+            <span className="block text-[12.5px] font-bold" style={{ color: COR_PLATAFORMA[o.p] }}>{o.nome}</span>
+            <span className="mt-0.5 block text-[10.5px] leading-tight text-zinc-500">{o.texto}</span>
+          </button>
+        ))}
+      </div>
+      {formulario}
+      <p className="text-center text-[12px]">
+        <a href="/member-area/contas" className="font-semibold text-[#D2A63C]">Gerir em «As minhas contas» →</a>
+      </p>
     </div>
   )
 }
