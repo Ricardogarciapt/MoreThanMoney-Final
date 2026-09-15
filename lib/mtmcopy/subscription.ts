@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export interface MtmcopySubscriptionStatus {
   active: boolean
-  reason: 'admin' | 'paid' | 'checkout' | 'none'
+  reason: 'admin' | 'paid' | 'none'
   expiresAt?: string | null
 }
 
@@ -30,25 +30,15 @@ export async function getMtmcopySubscription(
     .eq('id', userId)
     .maybeSingle()
 
+  // Acesso legado: só com um período PAGO e DATADO. Um addon sem data (o webhook antigo gravava
+  // null) já não conta, e um checkout "completed" sem data também não — era assim que quem tinha
+  // pago uma vez em Junho continuava com acesso para sempre. As datas acertam-se com o Stripe em
+  // scripts/fase1-mtmcopy-expiracoes.ts.
   if (profile?.mtmcopy_subscription_active) {
     const expires = profile.mtmcopy_subscription_expires_at
-    if (!expires || new Date(expires) > new Date()) {
+    if (expires && new Date(expires) > new Date()) {
       return { active: true, reason: 'paid', expiresAt: expires }
     }
-  }
-
-  const { data: checkout } = await supabase
-    .from('checkout_sessions')
-    .select('completed_at, plan')
-    .eq('user_id', userId)
-    .eq('plan', 'mtmcopy_addon_monthly')
-    .eq('status', 'completed')
-    .order('completed_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (checkout?.completed_at) {
-    return { active: true, reason: 'checkout' }
   }
 
   return { active: false, reason: 'none' }
@@ -60,7 +50,8 @@ export async function activateMtmcopySubscription(userId: string, expiresAt?: st
     .from('profiles')
     .update({
       mtmcopy_subscription_active: true,
-      mtmcopy_subscription_expires_at: expiresAt ?? null,
+      // Nunca null: sem data, o acesso legado não vale nada (ver getMtmcopySubscription).
+      mtmcopy_subscription_expires_at: expiresAt ?? new Date(Date.now() + 32 * 24 * 60 * 60 * 1000).toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', userId)
