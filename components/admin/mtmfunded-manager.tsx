@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { tipoCurto, estadoCurto, COR_DO_ESTADO } from '@/lib/mtmfunded/etiquetas'
+import ContaModal from './mtmfunded-conta-modal'
 import {
   Loader2, Power, Trophy, Users, Wallet, AlertTriangle, Award,
   Shield, RefreshCw, Mail, KeyRound, Ban, Check, Package, Plus, Banknote, ExternalLink,
@@ -404,7 +405,7 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
   const [aCarregar, setACarregar] = useState(true)
 
   const puxar = useCallback(async () => {
-    setACarregar(true)
+    // Sem voltar ao «a carregar» nas releituras: isso desmontava o modal aberto por cima da lista.
     const r = await fetch('/api/admin/mtmfunded?vista=contas', { cache: 'no-store' })
     const j = await r.json()
     setLinhas(j?.contas ?? [])
@@ -420,16 +421,30 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
     }
   }
 
+  // Clicar na linha abre a gestão da conta (modal). Os botões da coluna Acções não abrem.
+  const [aberta, setAberta] = useState<string | null>(null)
+  const fecharModal = useCallback(() => setAberta(null), [])
+
   if (aCarregar) return <Loader2 className="h-4 w-4 animate-spin text-[#D2A63C]" />
 
   return (
+    <>
+    {aberta && <ContaModal contaId={aberta} aoFechar={fecharModal} aoMudar={puxar} />}
     <Tabela cabecalhos={['Dono', 'Tipo', 'Login', 'Servidor', 'Estado', 'Acções']}>
       {linhas.map((c) => {
         const dono = c.dono as { nome: string; email: string } | null
         const pedido = c.pedido as { estado: string; erro?: string; tentativas: number } | null
         const id = c.id as string
         return (
-          <tr key={id} className="border-t border-gray-900">
+          <tr
+            key={id}
+            role="button"
+            tabIndex={0}
+            aria-label={`Gerir a conta ${(c.mt5_login as string) ?? id.slice(0, 8)}`}
+            onClick={(e) => { if (!(e.target as HTMLElement).closest('button,a,input,select')) setAberta(id) }}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setAberta(id) } }}
+            className="cursor-pointer border-t border-gray-900 hover:bg-white/[0.03] focus:outline-none focus-visible:bg-white/[0.05] focus-visible:ring-1 focus-visible:ring-[#D2A63C]/60"
+          >
             <td className="px-3 py-2">
               <p className="text-gray-200">{dono?.nome ?? '—'}</p>
               <p className="font-mono text-xs text-gray-600">{dono?.email ?? ''}</p>
@@ -491,6 +506,7 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
       })}
       {!linhas.length && <tr><td colSpan={6} className="px-3 py-6 text-center text-sm text-gray-500">Sem contas.</td></tr>}
     </Tabela>
+    </>
   )
 }
 

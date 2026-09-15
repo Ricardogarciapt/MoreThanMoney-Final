@@ -17,10 +17,15 @@ export function tipoCurto(tipo: string, metricas?: Record<string, unknown> | nul
   return Number(metricas?.fase ?? 1) >= 2 ? 'F2' : 'F1'
 }
 
-export function estadoCurto(estado: string, metricas?: Record<string, unknown> | null): EstadoCurto {
+export function estadoCurto(
+  estado: string,
+  metricas?: Record<string, unknown> | null,
+  /** `pausada_em` (migração 079): pausa do admin — a conta continua `ativa` para o motor gerir SL/TP. */
+  pausadaEm?: string | null,
+): EstadoCurto {
   switch (estado) {
     case 'ativa':
-      return 'Active'
+      return pausadaEm ? 'Pause' : 'Active'
     // Rebentada ou inválida (cancelada por regra/fraude) — as duas são o fim por incumprimento.
     case 'quebrada':
     case 'cancelada':
