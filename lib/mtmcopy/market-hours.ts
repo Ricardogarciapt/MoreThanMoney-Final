@@ -69,3 +69,75 @@ export function isMarketOpen(symbol: string, at: Date = new Date()): MarketHours
 export function marketOpenNow(symbol: string, at: Date = new Date()): boolean {
   return isMarketOpen(symbol, at).open
 }
+
+// ── Saltar LEITURAS à MetaApi com o mercado fechado (fim de semana) ─────────────
+//
+// Ao fim de semana o ouro e o forex não mexem: não há ticks, os SL/TP não disparam e a corretora
+// não aceita ordens. Ler posições e preços dessas contas de segundo a segundo é pagar créditos
+// para receber a mesma fotografia de sexta à noite. A cripto negoceia 24/7 e continua a ser lida.
+//
+// A janela é a semana cambial de NOVA IORQUE (sexta 17:00 → domingo 17:00, hora de NY), que em UTC
+// é sexta 21:00 → domingo 21:00 no horário de verão e 22:00 → 22:00 no de inverno. Com 5 min de
+// margem dos dois lados: começa a saltar às 17:05 de sexta e volta a ler às 16:55 de domingo.
+// Ainda por cima exige que o `isMarketOpen` (acima) também diga fechado — só se salta quando as
+// duas contas concordam. Feriados da corretora: o helper não os conhece, por isso NÃO se saltam
+// (lê-se como num dia normal — é o lado seguro).
+
+const MARGEM_FIM_DE_SEMANA_MIN = 5
+
+/** Dia da semana (0=Dom) e minutos do dia em Nova Iorque. null se o Intl falhar. */
+function horaNovaIorque(at: Date): { dia: number; hm: number } | null {
+  try {
+    const partes = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(at)
+    const v = (t: string) => partes.find((p) => p.type === t)?.value ?? ''
+    const dia = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(v('weekday'))
+    const h = Number(v('hour'))
+    const m = Number(v('minute'))
+    if (dia < 0 || !Number.isFinite(h) || !Number.isFinite(m)) return null
+    return { dia, hm: (h % 24) * 60 + m }
+  } catch {
+    return null
+  }
+}
+
+/** Fim de semana cambial (sexta 17:05 → domingo 16:55, hora de Nova Iorque)? Falha → false. */
+export function fimDeSemanaFx(at: Date = new Date()): boolean {
+  const ny = horaNovaIorque(at)
+  if (!ny) return false
+  const fecho = 17 * 60 + MARGEM_FIM_DE_SEMANA_MIN
+  const abertura = 17 * 60 - MARGEM_FIM_DE_SEMANA_MIN
+  if (ny.dia === 6) return true
+  if (ny.dia === 5) return ny.hm >= fecho
+  if (ny.dia === 0) return ny.hm < abertura
+  return false
+}
+
+/** Interruptor `SALTAR_LEITURAS_MERCADO_FECHADO` — ligado por defeito; '0'/'false'/'off' desliga. */
+export function saltarLeiturasLigado(valor: string | undefined = process.env.SALTAR_LEITURAS_MERCADO_FECHADO): boolean {
+  const v = String(valor ?? '1').trim().toLowerCase()
+  return !(v === '0' || v === 'false' || v === 'off' || v === 'nao' || v === 'não')
+}
+
+/**
+ * Pode-se saltar a leitura de uma conta/posição com estes símbolos agora?
+ *
+ * Só quando: o interruptor está ligado, é fim de semana cambial, o `isMarketOpen` concorda, e
+ * NENHUM símbolo é cripto. Uma lista vazia NÃO salta (não sabemos o que lá está — lê-se).
+ */
+export function podeSaltarLeitura(
+  simbolos: Array<string | null | undefined>,
+  at: Date = new Date(),
+  ligado: boolean = saltarLeiturasLigado(),
+): boolean {
+  if (!ligado) return false
+  const lista = simbolos.map((s) => String(s ?? '').trim()).filter(Boolean)
+  if (!lista.length) return false
+  if (!fimDeSemanaFx(at)) return false
+  return lista.every((s) => marketKindForSymbol(s) !== 'crypto' && !isMarketOpen(s, at).open)
+}

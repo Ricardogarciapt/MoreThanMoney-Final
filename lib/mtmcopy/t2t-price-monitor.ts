@@ -31,6 +31,7 @@ import {
 import { lifecycleMessage, logStatusFor, type SignalEvent } from './signal-lifecycle'
 import { pipSizeForSymbol } from './trade-outcome'
 import { t2tUsaTrailing } from './t2t-source'
+import { podeSaltarLeitura } from './market-hours'
 
 const STATE_KEY = 't2t_monitor_state'
 /** Split dos parciais quando o sinal traz vários TPs. */
@@ -198,10 +199,30 @@ export async function runT2TPriceMonitor(): Promise<{
   const state = await loadState()
   let managed = 0
 
+  /**
+   * MERCADO FECHADO (fim de semana): contas em que TODAS as linhas são não-cripto não se leem —
+   * nem posições, nem pendentes, nem preços. As linhas ficam como estão (nada se conclui, nada se
+   * anuncia). Uma única linha cripto na conta mantém a conta inteira a ser lida.
+   * Interruptor SALTAR_LEITURAS_MERCADO_FECHADO (ver market-hours.ts).
+   */
+  const simbolosPorConta = new Map<string, Array<string | null>>()
+  for (const raw of rows) {
+    const r = raw as LogRow
+    const acc = accById.get(r.connection_id)
+    if (!acc) continue
+    if (!simbolosPorConta.has(acc)) simbolosPorConta.set(acc, [])
+    simbolosPorConta.get(acc)!.push(r.symbol)
+  }
+  const contasSaltadas = new Set(
+    [...simbolosPorConta].filter(([, simbolos]) => podeSaltarLeitura(simbolos)).map(([acc]) => acc),
+  )
+  if (contasSaltadas.size) actions.push(`${contasSaltadas.size} conta(s) sem cripto com o mercado fechado — leitura saltada`)
+
   for (const raw of rows) {
     const row = raw as LogRow
     const accountId = accById.get(row.connection_id)
     if (!accountId || !row.symbol || !row.broker_position_id) continue
+    if (contasSaltadas.has(accountId)) continue
     const dir: 'buy' | 'sell' = row.direction === 'sell' ? 'sell' : 'buy'
     const st: RowState = state[row.id] ?? { exitsDone: 0, beDone: false, trailing: false, announced: false }
 

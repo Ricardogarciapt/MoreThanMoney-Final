@@ -21,7 +21,7 @@ import { lifecycleMessage, type SignalEvent } from './signal-lifecycle'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { T2T_SIGNAL_CHANNELS } from './tap-to-trade-channels'
 import { placeOrdersSequential, getMarketPrice } from './metaapi'
-import { isMarketOpen } from './market-hours'
+import { isMarketOpen, podeSaltarLeitura } from './market-hours'
 import { slComMinimo } from './source-risk-rules'
 
 /**
@@ -328,7 +328,14 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
   // Uma cotação por SÍMBOLO, não por linha: vários sinais do mesmo par partilham o preço.
   const precos = new Map<string, number | null>()
   for (const l of linhas as Linha[]) {
-    if (!precos.has(l.symbol)) precos.set(l.symbol, await referencePrice(l.symbol))
+    if (precos.has(l.symbol)) continue
+    // Fim de semana e o par não é cripto: a cotação é a de sexta e não há nada a decidir com ela.
+    // Sem preço a linha é saltada nesta passagem, como numa leitura falhada (nada se conclui).
+    if (podeSaltarLeitura([l.symbol])) {
+      precos.set(l.symbol, null)
+      continue
+    }
+    precos.set(l.symbol, await referencePrice(l.symbol))
   }
 
   for (const l of linhas as Linha[]) {
