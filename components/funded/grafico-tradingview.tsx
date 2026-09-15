@@ -164,6 +164,8 @@ function criarDatafeed(precoRef: React.MutableRefObject<PrecoVivo | undefined>) 
         let p = precoRef.current
         // O preço do trader é o do símbolo seleccionado; noutro símbolo (comparação) pede-se à parte.
         if (!p || p.symbol !== info.ticker) {
+          // Com a app em segundo plano não se pede nada (Safari iOS recarrega páginas gulosas).
+          if (typeof document !== "undefined" && document.visibilityState === "hidden") return
           const d = await fetch(`/api/mtmfunded/simulado/precos?symbols=${encodeURIComponent(info.ticker)}`, { cache: "no-store" }).then((r) => r.json()).catch(() => null)
           p = d?.precos?.[0]
         }

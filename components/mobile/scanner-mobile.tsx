@@ -25,7 +25,9 @@ import { useToast } from "@/hooks/use-toast"
 import { useT } from "@/components/i18n-provider"
 import { isNativeApp } from "@/hooks/use-capacitor"
 import { scannerOrder, scannerStudies, scannerLabels, type ScannerKey } from "@/lib/scanners/estudos"
-import dynamic from "next/dynamic"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { linkWebtrader, estaNaAppMobile } from "@/lib/mtmfunded/link-webtrader"
 import { TV_STUDY_LEGEND_OVERRIDES } from "@/lib/trading-view-scanner-config"
 import { subscribeMediaQueryChange } from "@/lib/browser-compat"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -69,6 +71,7 @@ import {
   MessageCircle,
   Loader2,
   Share2,
+  CandlestickChart,
 } from "lucide-react"
 
 // Checklist Types
@@ -175,15 +178,6 @@ const assetCategories = {
   }
 }
 
-/**
- * O painel «Negociar» (conta simulada MTM Funded) carrega à parte: o gráfico do scanner abre sem
- * esperar pelo código do ticket, e o painel recolhido não faz pedidos nenhuns.
- */
-const PainelNegociacaoScanner = dynamic(() => import("@/components/funded/painel-negociacao-scanner"), {
-  ssr: false,
-  loading: () => <div className="h-[58px] rounded-xl border border-[#2962FF]/30 bg-[#0b0e14]" />,
-})
-
 export type ScannerMobileIntegration = "standalone" | "scanner-access"
 
 export type ScannerMobileProps = {
@@ -196,11 +190,11 @@ export type ScannerMobileProps = {
   externalInterval?: string
   externalStudies?: ScannerKey[]
   /**
-   * Onde fica o painel «Negociar»: `abaixo` (por defeito — sempre por baixo do gráfico),
-   * `abaixo-ate-lg` (só abaixo de 1024 px; acima, a página põe-no numa coluna à direita) ou `nenhum`.
+   * O link discreto «Negociar no Web trader» por baixo do gráfico: `abaixo` (por defeito) ou `nenhum`.
+   * Negociar vive SÓ no Web trader — o scanner não monta contas, preços nem polling do MTM Funded.
    */
-  painelNegociacao?: "abaixo" | "abaixo-ate-lg" | "nenhum"
-  /** O símbolo do gráfico mudou (a página usa-o para o painel lateral). */
+  linkWebtraderScanner?: "abaixo" | "nenhum"
+  /** O símbolo do gráfico mudou. */
   onSymbolChange?: (symbol: string) => void
 }
 
@@ -211,10 +205,11 @@ export default function ScannerMobile({
   externalSymbol,
   externalInterval,
   externalStudies,
-  painelNegociacao = "abaixo",
+  linkWebtraderScanner = "abaixo",
   onSymbolChange,
 }: ScannerMobileProps = {}) {
   const t = useT()
+  const pathname = usePathname()
   const isScannerAccess = integration === "scanner-access"
   const tvContainerId = isScannerAccess ? "tradingview_scanner_access_widget" : "tradingview_mobile_widget"
   const categoryLabelKeys: Record<keyof typeof assetCategories, string> = {
@@ -1320,11 +1315,18 @@ export default function ScannerMobile({
         </button>
       )}
 
-      {/* Negociar o símbolo do gráfico na conta simulada do MTM Funded, sem sair do scanner.
-          O botão «Abrir no Web trader» vive dentro do painel (gráfico com linhas arrastáveis). */}
-      {!isFullscreen && painelNegociacao !== "nenhum" && (
-        <div className={`px-4 pt-3 ${painelNegociacao === "abaixo-ate-lg" ? "lg:hidden" : ""}`}>
-          <PainelNegociacaoScanner tvSymbol={selectedSymbol} intervalo={selectedInterval} variante="dock" />
+      {/* Negociar vive só no Web trader (app-mobile: sub-separador; fora dela: /webtrader), com o
+          símbolo do gráfico pré-escolhido. O scanner fica simples e sem polling de contas. */}
+      {!isFullscreen && linkWebtraderScanner !== "nenhum" && (
+        <div className="px-4 pt-2 text-right">
+          <Link
+            href={linkWebtrader({ symbol: selectedSymbol, origem: "scanner" }, estaNaAppMobile(pathname))}
+            scroll={false}
+            className="inline-flex items-center gap-1 text-xs text-gray-400 underline-offset-2 hover:text-[#D2A63C] hover:underline"
+          >
+            <CandlestickChart style={{ width: 13, height: 13 }} />
+            Negociar no Web trader
+          </Link>
         </div>
       )}
 
