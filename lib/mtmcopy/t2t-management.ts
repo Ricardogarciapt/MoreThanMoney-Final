@@ -17,6 +17,7 @@ import {
 import { tapToTradeEnabledChannels, T2T_SENDER_TO_CHAT } from './tap-to-trade-channels'
 import { lifecycleMessage } from './signal-lifecycle'
 import { precoParaMonitor } from './metaapi-snapshot'
+import { filtrarContasExistentes } from './metaapi-inexistentes'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 
 const supabase = getSupabaseAdmin()
@@ -79,8 +80,14 @@ export async function openT2TRowsForManagement(
     .from('mtmcopy_connections')
     .select('id, metaapi_account_id')
     .in('id', connIds)
+    .neq('mt5_status', 'disconnected')
+  // Contas inexistentes na MetaApi ficam de fora (15/09) — nem leituras nem gestão.
+  const existentes = new Set(await filtrarContasExistentes((conns ?? []).map((c) => c.metaapi_account_id as string | null)))
   const accById = new Map(
-    (conns ?? []).map((c) => [c.id as string, (c.metaapi_account_id as string | null) ?? null]),
+    (conns ?? []).map((c) => {
+      const acc = (c.metaapi_account_id as string | null) ?? null
+      return [c.id as string, acc && existentes.has(acc) ? acc : null]
+    }),
   )
 
   const out: OpenT2TPosition[] = []
@@ -122,8 +129,14 @@ async function resolveOpenT2TByChannelSlug(
     .from('mtmcopy_connections')
     .select('id, metaapi_account_id')
     .in('id', connIds)
+    .neq('mt5_status', 'disconnected')
+  // Contas inexistentes na MetaApi ficam de fora (15/09) — nem leituras nem gestão.
+  const existentes = new Set(await filtrarContasExistentes((conns ?? []).map((c) => c.metaapi_account_id as string | null)))
   const accById = new Map(
-    (conns ?? []).map((c) => [c.id as string, (c.metaapi_account_id as string | null) ?? null]),
+    (conns ?? []).map((c) => {
+      const acc = (c.metaapi_account_id as string | null) ?? null
+      return [c.id as string, acc && existentes.has(acc) ? acc : null]
+    }),
   )
 
   const out: OpenT2TPosition[] = []

@@ -273,7 +273,9 @@ export async function runMtmcopySystemSync(opts?: {
       if (
         metaapiConfigured &&
         conn.metaapi_account_id &&
-        conn.mt5_status === 'connected'
+        conn.mt5_status === 'connected' &&
+        // Conta ausente da listagem fiável da MetaApi = não existe: nem snapshot nem CopyFactory (15/09).
+        (!existingAccountIds || existingAccountIds.has(conn.metaapi_account_id))
       ) {
         const lerSnapshot = conn.baseline_balance == null && !saltarSnapshot.has(String(conn.id))
         if (!lerSnapshot) snapshotsPoupados++

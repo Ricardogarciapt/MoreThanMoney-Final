@@ -13,7 +13,7 @@ import {
   CANONICAL_GOLDKILLER_STRATEGY_ID,
   SENSEI_PROVIDER_ACCOUNT_ID,
   CANONICAL_AURUMFLOW_ACCOUNT_ID,
-  CANONICAL_AURUMFLOW_STRATEGY_ID,
+  CANONICAL_AURUMFLOW_STRATEGY_ID, mesmaConta,
 } from './provider-constants'
 import {
   PREMIUM_PROVIDER_EXECUTION,
@@ -104,7 +104,8 @@ export function buildCanonicalProviderRoutes(): ProviderRoute[] {
       sender_channel: null,
       sender_chat_id: null,
       signal_source: 'webhook',
-      account_id: CANONICAL_AURUMFLOW_ACCOUNT_ID,
+      // null = conta a4ea0c45 apagada: rota sem conta não executa (routeMatchesSignal recusa).
+      account_id: CANONICAL_AURUMFLOW_ACCOUNT_ID ?? '',
       strategy_id: CANONICAL_AURUMFLOW_STRATEGY_ID,
       tag: 'MTM Auto Aurum Flow',
       ai_strategy_prompt: null,
@@ -196,10 +197,10 @@ function isCanonicalRoute(r: ProviderRoute): boolean {
   if (!r.account_id?.trim() && !r.strategy_id?.trim()) return false
   if (r.account_id === CANONICAL_PREMIUM_ACCOUNT_ID) return true
   if (r.account_id && r.account_id === SENSEI_PROVIDER_ACCOUNT_ID) return true
-  if (r.account_id === CANONICAL_AURUMFLOW_ACCOUNT_ID) return true
-  if (r.account_id === CANONICAL_TRADE_IDEAS_ACCOUNT_ID) return true
-  if (r.account_id === CANONICAL_SENSEI_ACCOUNT_ID) return true
-  if (r.account_id === CANONICAL_GOLDKILLER_ACCOUNT_ID) return true
+  if (mesmaConta(r.account_id, CANONICAL_AURUMFLOW_ACCOUNT_ID)) return true
+  if (mesmaConta(r.account_id, CANONICAL_TRADE_IDEAS_ACCOUNT_ID)) return true
+  if (mesmaConta(r.account_id, CANONICAL_SENSEI_ACCOUNT_ID)) return true
+  if (mesmaConta(r.account_id, CANONICAL_GOLDKILLER_ACCOUNT_ID)) return true
   if (r.strategy_id === CANONICAL_PREMIUM_STRATEGY_ID) return true
   if (r.strategy_id === CANONICAL_TRADE_IDEAS_STRATEGY_ID) return true
   if (r.strategy_id === CANONICAL_SENSEI_STRATEGY_ID) return true
@@ -220,9 +221,9 @@ export function routeBelongsToChannel(
   if (channel === 'premium-signals') {
     if (
       route.strategy_id === CANONICAL_TRADE_IDEAS_STRATEGY_ID ||
-      route.account_id === CANONICAL_TRADE_IDEAS_ACCOUNT_ID ||
+      mesmaConta(route.account_id, CANONICAL_TRADE_IDEAS_ACCOUNT_ID) ||
       route.strategy_id === CANONICAL_SENSEI_STRATEGY_ID ||
-      route.account_id === CANONICAL_SENSEI_ACCOUNT_ID
+      mesmaConta(route.account_id, CANONICAL_SENSEI_ACCOUNT_ID)
     ) {
       return false
     }
@@ -240,6 +241,6 @@ export function routeBelongsToChannel(
   }
   return (
     route.strategy_id === CANONICAL_TRADE_IDEAS_STRATEGY_ID ||
-    route.account_id === CANONICAL_TRADE_IDEAS_ACCOUNT_ID
+    mesmaConta(route.account_id, CANONICAL_TRADE_IDEAS_ACCOUNT_ID)
   )
 }

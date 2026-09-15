@@ -50,9 +50,17 @@ export async function GET(req: NextRequest) {
       let conta: Record<string, unknown> | null = null
       let existe = false
       try {
-        const r = await fetch(`${PROVISIONING}/users/current/accounts/${rota.account_id}`, { headers: cabecalho })
-        existe = r.ok
-        if (r.ok) conta = (await r.json()) as Record<string, unknown>
+        // Sem conta (constante apagada) ou já sabida inexistente: não se pergunta (15/09 — cada 404
+        // conta para o estrangulamento «too many unexisting accounts» do token inteiro).
+        const { contaInexistente, marcarContaInexistente } = await import('@/lib/mtmcopy/metaapi-inexistentes')
+        if (rota.account_id && !(await contaInexistente(rota.account_id))) {
+          const r = await fetch(`${PROVISIONING}/users/current/accounts/${rota.account_id}`, { headers: cabecalho })
+          existe = r.ok
+          if (r.ok) conta = (await r.json()) as Record<string, unknown>
+          else if (r.status === 404) {
+            await marcarContaInexistente(rota.account_id, Object.assign(new Error('HTTP 404'), { status: 404 }), { nivelConta: true, origem: 'fontes-vivas' })
+          }
+        }
       } catch {
         /* trata-se como ilegível, não como inexistente */
       }
@@ -89,7 +97,8 @@ export async function GET(req: NextRequest) {
   try {
     const { getPrimeverseExecConfig } = await import('@/lib/mtmcopy/primeverse-exec')
     const cfg = await getPrimeverseExecConfig()
-    if (cfg.mode !== 'off') {
+    const { contaInexistente } = await import('@/lib/mtmcopy/metaapi-inexistentes')
+    if (cfg.mode !== 'off' && cfg.accountId && !(await contaInexistente(cfg.accountId))) {
       let conta: Record<string, unknown> | null = null
       try {
         const r = await fetch(`${PROVISIONING}/users/current/accounts/${cfg.accountId}`, { headers: cabecalho })

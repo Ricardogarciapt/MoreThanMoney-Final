@@ -235,7 +235,8 @@ export async function desempenhoDaEstrategia(
    */
   let saldo: number | null | undefined
   let equity: number | null | undefined
-  if (opts?.admin && conta?.metaapi_account_id && process.env.METAAPI_TOKEN) {
+  const { contaInexistente } = await import('@/lib/mtmcopy/metaapi-inexistentes')
+  if (opts?.admin && conta?.metaapi_account_id && process.env.METAAPI_TOKEN && !(await contaInexistente(conta.metaapi_account_id))) {
     try {
       const r = await fetch(
         `https://mt-client-api-v1.london.agiliumtrade.ai/users/current/accounts/${conta.metaapi_account_id}/account-information`,

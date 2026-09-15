@@ -36,7 +36,8 @@ interface MetaOverview {
 // Ids vêm das constantes canónicas — antes estavam copiados aqui e desincronizavam
 // sempre que a conta provider mudava.
 const PREMIUM_ACCOUNT = CANONICAL_PREMIUM_ACCOUNT_ID
-const TRADE_IDEAS_ACCOUNT = CANONICAL_TRADE_IDEAS_ACCOUNT_ID
+// null = conta Trade Ideas apagada na MetaApi → a opção sai da lista.
+const TRADE_IDEAS_ACCOUNT = CANONICAL_TRADE_IDEAS_ACCOUNT_ID ?? ''
 
 const SAMPLE_PREMIUM = `XAUUSD SELL NOW
 Gold Sell Zone 2650 - 2655
@@ -85,12 +86,14 @@ export default function MtmcopyTestPanel() {
         accountId: PREMIUM_ACCOUNT,
         channel: "premium-signals",
       },
-      {
-        id: "trade-default",
-        label: "MTM Auto — Trade Ideas",
-        accountId: TRADE_IDEAS_ACCOUNT,
-        channel: "trade-ideas",
-      },
+      ...(TRADE_IDEAS_ACCOUNT
+        ? [{
+            id: "trade-default",
+            label: "MTM Auto — Trade Ideas",
+            accountId: TRADE_IDEAS_ACCOUNT,
+            channel: "trade-ideas" as const,
+          }]
+        : []),
     ]
 
     for (const r of routesRes.data?.config?.provider_routes ?? []) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin, requireAdmin } from '@/lib/admin-api-helpers'
 import { enrichConnectionsWithMetrics } from '@/lib/mtmcopy/subscriber-metrics'
+import { estadoDoUltimoErro, type LogResumo } from '@/lib/mtmcopy/erro-historico'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -42,12 +43,13 @@ export async function GET(request: NextRequest) {
     }
     const connList = connections ?? []
     const statsMap = await loadStatsMap(connList.map((c) => c.id))
-    const enrichedList = includeBalances
+    const enrichedList = (includeBalances
       ? await enrichConnectionsWithMetrics(connList)
       : connList
+    ).map((c) => anotarErro(c, statsMap))
     if (includeBalances) persistDiscoveredBaselines(connList, enrichedList as never[])
     const connection = enrichedList.find((c) => c.is_active) ?? enrichedList[0] ?? null
-    const stats = connection ? statsMap.get(connection.id) ?? null : null
+    const stats = connection ? semLogs(statsMap.get(connection.id)) : null
     const metrics = connection ? pickMetrics(connection) : null
     return NextResponse.json({
       users: [{ profile, connection, connections: enrichedList, stats, metrics }],
@@ -115,7 +117,7 @@ export async function GET(request: NextRequest) {
   }
 
   let rows = (profiles ?? []).map((profile) => {
-    const connList = connByUser.get(profile.id) ?? []
+    const connList = (connByUser.get(profile.id) ?? []).map((c) => anotarErro(c, statsMap))
     const connection = connList.find((c) => c.is_active) ?? connList[0] ?? null
     const connectionMetrics = connection ? metricsById.get(connection.id) ?? null : null
     const connectionsWithMetrics = connList.map((c) => ({
@@ -128,7 +130,7 @@ export async function GET(request: NextRequest) {
         ? { ...connection, ...(metricsById.get(connection.id) ?? {}) }
         : null,
       connections: connectionsWithMetrics,
-      stats: connection ? statsMap.get(connection.id) ?? null : null,
+      stats: connection ? semLogs(statsMap.get(connection.id)) : null,
       metrics: connectionMetrics,
     }
   })
@@ -246,8 +248,26 @@ async function loadConnectionStats(connectionId: string) {
   return map.get(connectionId) ?? null
 }
 
+/**
+ * Erro gravado na ligação: atual ou histórico? Erros de quota da MetaApi (cpu credits,
+ * «too many unexisting accounts») seguidos de uma execução com sucesso passam a «histórico»,
+ * com a data — a UI deixa de os pintar a vermelho como se a conta estivesse partida.
+ */
+function anotarErro<C extends { id: string; last_error?: string | null; last_signal_at?: string | null; updated_at?: string | null }>(
+  c: C,
+  statsMap: Awaited<ReturnType<typeof loadStatsMap>>,
+) {
+  return { ...c, ...estadoDoUltimoErro(c.last_error, statsMap.get(c.id)?.logs ?? [], c.last_signal_at, c.updated_at) }
+}
+
+function semLogs<T extends { logs?: unknown }>(s: T | undefined): Omit<T, 'logs'> | null {
+  if (!s) return null
+  const { logs: _logs, ...resto } = s
+  return resto
+}
+
 async function loadStatsMap(connectionIds: string[]) {
-  const map = new Map<string, { executed_total: number; executed_today: number; last_status: string | null }>()
+  const map = new Map<string, { executed_total: number; executed_today: number; last_status: string | null; logs: LogResumo[] }>()
   if (!connectionIds.length) return map
 
   const start = new Date()
@@ -268,6 +288,7 @@ async function loadStatsMap(connectionIds: string[]) {
         (l) => l.status === 'executed' && l.created_at >= start.toISOString(),
       ).length,
       last_status: logs[0]?.status ?? null,
+      logs: logs.map((l) => ({ status: l.status as string | null, created_at: l.created_at as string | null })),
     })
   }
   return map

@@ -15,6 +15,7 @@
  *  - Ordens, fechos, modificações e o dimensionamento de ordens nunca consultam este travão.
  */
 import { loja, SEM_TABELA } from './metaapi-loja'
+import { contaMarcadaInexistente, ehErroContasInexistentesEmExcesso, idsDeContaNoErro } from './metaapi-inexistentes'
 
 export const CONTA_GLOBAL = '*'
 const MIN_BLOQUEIO_MS = 60_000
@@ -43,6 +44,20 @@ export function ehErroDeQuota(err: unknown): boolean {
   if (e.status === 429 || e.statusCode === 429) return true
   if (String(e.name ?? '') === 'TooManyRequestsError') return true
   return /cpu credits|too ?many ?requests|rate ?limit|TooManyRequests/i.test(textoDoErro(err))
+}
+
+/**
+ * Que tipo de estrangulamento é?
+ *  - 'contas_inexistentes': «too many unexisting or undeployed trading accounts» (15/09 16:30) — NÃO
+ *    é falta de créditos; é o castigo por pedirmos contas apagadas/undeployed (ver metaapi-inexistentes.ts).
+ *  - 'creditos': «… API allows N cpu credits per 6h».
+ *  - 'limite': outro 429 / rate limit.
+ */
+export function tipoDeErroQuota(err: unknown): 'contas_inexistentes' | 'creditos' | 'limite' | null {
+  if (!ehErroDeQuota(err)) return null
+  if (ehErroContasInexistentesEmExcesso(err)) return 'contas_inexistentes'
+  if (/cpu credits/i.test(textoDoErro(err))) return 'creditos'
+  return 'limite'
 }
 
 /** A API que estourou, se a mensagem a disser (ex.: «ws:getSymbols»). */
@@ -95,15 +110,26 @@ let ultimaEscrita = 0
  */
 export async function registarErroQuota(accountId: string | null | undefined, err: unknown, agoraMs = Date.now()): Promise<boolean> {
   if (!ehErroDeQuota(err)) return false
+  const tipo = tipoDeErroQuota(err)
   const ate = bloqueioAteDoErro(err, agoraMs)
-  const ids = [CONTA_GLOBAL, ...(accountId ? [accountId] : [])]
+  // Uma conta já marcada como inexistente fica com a marca de 24 h — não a encurtar para minutos.
+  const ids = [CONTA_GLOBAL, ...(accountId && !contaMarcadaInexistente(accountId, agoraMs) ? [accountId] : [])]
   for (const id of ids) bloqueiosLocais.set(id, Math.max(bloqueiosLocais.get(id) ?? 0, ate))
   if (agoraMs - ultimaEscrita < 30_000) return true
   ultimaEscrita = agoraMs
   const motivo = textoDoErro(err).trim()
-  console.warn(`[metaapi-quota] quota esgotada (${apiDoErro(err) ?? '?'}) — leituras de fundo em pausa até ${new Date(ate).toISOString()}:`, motivo.slice(0, 200))
+  if (tipo === 'contas_inexistentes') {
+    const nomeados = idsDeContaNoErro(err)
+    console.error(
+      `[metaapi-quota] token ESTRANGULADO por contas inexistentes/undeployed (não é falta de créditos). ` +
+        `Pedido na conta ${accountId ?? '?'}; ids no erro: ${nomeados.length ? nomeados.join(', ') : 'nenhum'}. ` +
+        `Procurar NotFoundError nos logs. Leituras de fundo em pausa até ${new Date(ate).toISOString()}.`,
+    )
+  } else {
+    console.warn(`[metaapi-quota] quota esgotada (${apiDoErro(err) ?? '?'}) — leituras de fundo em pausa até ${new Date(ate).toISOString()}:`, motivo.slice(0, 200))
+  }
   try {
-    await loja().bloquear(ids, ate, apiDoErro(err), motivo)
+    await loja().bloquear(ids, ate, tipo === 'contas_inexistentes' ? 'contas_inexistentes' : apiDoErro(err), motivo)
   } catch (e) {
     console.warn('[metaapi-quota] não gravou o bloqueio:', e instanceof Error ? e.message : String(e))
   }
@@ -115,6 +141,7 @@ export async function registarErroQuota(accountId: string | null | undefined, er
  * máximo de 15 em 15 s por instância (uma query às linhas da conta e '*'). Falha a ler = não bloqueia.
  */
 export async function leituraDeFundoBloqueada(accountId: string, agoraMs = Date.now()): Promise<boolean> {
+  if (contaMarcadaInexistente(accountId, agoraMs)) return true
   const ids = [CONTA_GLOBAL, accountId]
   if (ids.some((id) => (bloqueiosLocais.get(id) ?? 0) > agoraMs)) return true
   const chave = accountId

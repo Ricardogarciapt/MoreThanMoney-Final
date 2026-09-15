@@ -136,6 +136,8 @@ export async function POST(req: NextRequest) {
   }
 
   const cfg = await getPrimeverseExecConfig()
+  // Sem conta de execução (a antiga foi apagada na MetaApi): não executa.
+  if (!cfg.accountId) cfg.mode = 'off'
 
   // SETUP (alerta pendente): só MOSTRA o sinal no chat da classe de ativo (de TODOS os traders) e
   // NÃO executa nada — o Entry do kingfkg é um nível pendente; entrar a mercado aqui poria o SL

@@ -90,6 +90,9 @@ export async function POST(req: NextRequest) {
   }
 
   const cfg = await getForexSwingsExecConfig()
+  // Sem conta-mestre (a antiga foi apagada na MetaApi): não executa — cada pedido a uma conta
+  // inexistente conta para o estrangulamento do token inteiro.
+  if (!cfg.accountId) cfg.mode = 'off'
 
   // Sempre: alimenta o chat da app + push T2T (membros veem e podem executar na conta deles).
   await feedAppChat(symbol, direction, sl, tp)

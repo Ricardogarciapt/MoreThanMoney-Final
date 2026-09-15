@@ -116,7 +116,9 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
       db.from('mtm_trading_accounts')
         .select('id, user_id, segue_estrategia, sim_saldo, sim_equity, alavancagem, created_at')
         .eq('motor', 'sim').eq('estado', 'ativa').not('segue_estrategia', 'is', null).limit(2000),
-      db.from('mtmauto_providers').select('slug, nome, metaapi_account_id'),
+      // Só providers ATIVOS: um provider desligado pode apontar para uma conta apagada na MetaApi
+      // (Gold Did Premium 9dfb4df3, 15/09) e o streaming ficava a reconectar a uma conta inexistente.
+      db.from('mtmauto_providers').select('slug, nome, metaapi_account_id').eq('ativo', true),
     ])
     // Sem conseguir ler, mantém-se o que havia: um erro de rede não desliga as seguidoras.
     if (e1 || e2) { log('[espelho] leitura das seguidoras falhou:', (e1 ?? e2)?.message); return }
