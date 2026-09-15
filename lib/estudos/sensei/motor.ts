@@ -11,7 +11,8 @@
  * sinal — exatamente o `bar_ok = not confirmClose or barstate.isconfirmed` do script.
  */
 import { INPUTS_SENSEI_DEFAULT, corPine, paletaSensei } from './inputs'
-import * as ta from './ta'
+import * as ta from '../comum/ta'
+import { deduzirMintick, deduzirTf } from '../comum/velas'
 import type {
   ConfirmacoesLado,
   DadosExtra,
@@ -37,33 +38,8 @@ const MAX_DESENHOS = 500
 // Contexto: timeframe, mintick, sessão, HTF, LTF
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Deduz o timeframe (s) pela diferença mais frequente entre velas consecutivas. */
-export function deduzirTf(velas: Vela[]): number {
-  const conta = new Map<number, number>()
-  for (let i = Math.max(1, velas.length - 300); i < velas.length; i++) {
-    const d = velas[i].t - velas[i - 1].t
-    if (d > 0) conta.set(d, (conta.get(d) ?? 0) + 1)
-  }
-  let melhor = 60
-  let max = -1
-  conta.forEach((n, d) => {
-    if (n > max || (n === max && d < melhor)) { melhor = d; max = n }
-  })
-  return melhor
-}
-
-/** Deduz o syminfo.mintick pelas casas decimais observadas (máx. 5). */
-export function deduzirMintick(velas: Vela[]): number {
-  let casas = 0
-  for (let i = Math.max(0, velas.length - 300); i < velas.length; i++) {
-    for (const x of [velas[i].o, velas[i].h, velas[i].l, velas[i].c]) {
-      const s = String(x)
-      const p = s.indexOf('.')
-      if (p >= 0) casas = Math.max(casas, Math.min(5, s.length - p - 1))
-    }
-  }
-  return Math.pow(10, -casas)
-}
+// deduzirTf / deduzirMintick vivem em ../comum/velas (partilhados com o GoldKiller); reexportados.
+export { deduzirTf, deduzirMintick }
 
 /** Minutos desde a meia-noite e dia da semana (1 = domingo, como no Pine) num fuso IANA. */
 function relogioLocal(tSeg: number, fuso: string): { min: number; dia: number } {

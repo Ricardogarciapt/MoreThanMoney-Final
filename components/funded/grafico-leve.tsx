@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react"
 import ChecklistSensei from "@/lib/estudos/sensei/checklist"
+import LegendaGoldKiller from "@/lib/estudos/goldkiller/legenda"
+import type { InputsGoldKiller, ResultadoGoldKiller } from "@/lib/estudos/goldkiller/tipos"
 import type { InputsSensei, ResultadoSensei, Vela } from "@/lib/estudos/sensei/tipos"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
 import { type GraficoProps, type Tf, TV, tfPorChave } from "./grafico-tipos"
 import PainelFerramenta from "./painel-ferramenta"
 import { carregarExtrasSensei, useCalculadoraSensei } from "./sensei-estudo"
+import { useCalculadoraGoldKiller } from "./goldkiller-estudo"
 import { useRascunho } from "./rascunho-ordem"
 import { AccaoCancelada, useUmClique } from "./um-clique"
 
@@ -40,6 +43,11 @@ import { AccaoCancelada, useUmClique } from "./um-clique"
  * ativa com ENTRY/SL/EXIT, velas pintadas (barcolor) e os painéis CHECKLIST/CONFIRMAÇÕES/TRADE.
  * Com o Sensei ligado pedem-se 3000 velas (e H4/M1 à parte); o cálculo corre num Web Worker e só
  * se repete quando FECHA uma vela (ou mudam velas/inputs) — nunca a cada tick.
+ *
+ * MTM GOLDKILLER (prop `goldkiller`): o estudo completo, portado do Pine (lib/estudos/goldkiller) —
+ * níveis Gain/Drawdown em degrau com as faixas até à Center Line, etiquetas dos níveis na escala,
+ * BUY/SELL nas viragens e a linha de estado. Mesmo caminho do Sensei: 3000 velas, Web Worker,
+ * recalcula só com vela fechada. Os dois estudos podem estar ligados ao mesmo tempo.
  *
  * Mover/fechar/cancelar passa pela negociação num clique (um-clique.tsx): desligada, pede
  * confirmação; cancelada ou falhada, a linha volta ao sítio.
@@ -128,6 +136,12 @@ export default function GraficoLeve(props: GraficoProps & {
     /** Cada resultado novo (null ao desligar) — alimenta o «Usar este sinal». */
     aoCalcular?: (r: ResultadoSensei | null) => void
   } | null
+  /** MTM GoldKiller desenhado no gráfico (null/undefined = desligado). */
+  goldkiller?: {
+    inputs: InputsGoldKiller
+    /** Cada resultado novo (null ao desligar) — alimenta o «Usar este sinal». */
+    aoCalcular?: (r: ResultadoGoldKiller | null) => void
+  } | null
 }) {
   const { simbolo, preco, precos, volume, posicoes, ordens, podeNegociar, tf, modo, setModo } = props
   const [estadoVelas, setEstadoVelas] = useState<"a_carregar" | "historico" | "ao_vivo" | "erro">("a_carregar")
@@ -161,8 +175,10 @@ export default function GraficoLeve(props: GraficoProps & {
   const [versaoVelas, setVersaoVelas] = useState(0)
   const senseiLigado = Boolean(props.sensei)
   // Só cresce: ligar o Sensei pede 3000 velas; desligá-lo não volta a pedir 300 (as a mais não fazem mal).
-  const [limiteHistorico, setLimiteHistorico] = useState(() => (props.sensei ? 3000 : 300))
-  useEffect(() => { if (senseiLigado) setLimiteHistorico(3000) }, [senseiLigado])
+  const goldkillerLigado = Boolean(props.goldkiller)
+  // O GoldKiller também: os níveis são percentis das pernas passadas — mais velas, mais pernas.
+  const [limiteHistorico, setLimiteHistorico] = useState(() => (props.sensei || props.goldkiller ? 3000 : 300))
+  useEffect(() => { if (senseiLigado || goldkillerLigado) setLimiteHistorico(3000) }, [senseiLigado, goldkillerLigado])
   const senseiRef = useRef<import("@/lib/estudos/sensei/lightweight").SenseiLW | null>(null)
   const [senseiPronto, setSenseiPronto] = useState(false)
   const [senseiR, setSenseiR] = useState<ResultadoSensei | null>(null)
@@ -172,6 +188,13 @@ export default function GraficoLeve(props: GraficoProps & {
   const calcular = useCalculadoraSensei()
   const aoCalcularRef = useRef(props.sensei?.aoCalcular)
   aoCalcularRef.current = props.sensei?.aoCalcular
+  const gkRef = useRef<import("@/lib/estudos/goldkiller/lightweight").GoldKillerLW | null>(null)
+  const [gkPronto, setGkPronto] = useState(false)
+  const [gkR, setGkR] = useState<ResultadoGoldKiller | null>(null)
+  const [gkMs, setGkMs] = useState<{ ms: number; onde: string; velas: number } | null>(null)
+  const calcularGK = useCalculadoraGoldKiller()
+  const aoCalcularGKRef = useRef(props.goldkiller?.aoCalcular)
+  aoCalcularGKRef.current = props.goldkiller?.aoCalcular
   // Telemóvel: os painéis começam fechados (tapavam o gráfico todo); abrem-se no botão.
   useEffect(() => { try { if (window.matchMedia("(max-width: 767px)").matches) setPaineisAbertos(false) } catch { /* ok */ } }, [])
 
@@ -445,6 +468,47 @@ export default function GraficoLeve(props: GraficoProps & {
     })()
     return () => { vivo = false }
   }, [senseiPronto, versaoVelas, chaveInputsSensei, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── MTM GoldKiller ──
+  useEffect(() => {
+    if (!pronto || !goldkillerLigado) return
+    let vivo = true
+    import("@/lib/estudos/goldkiller/lightweight").then((mod) => {
+      if (!vivo || !graficoRef.current || !serieRef.current) return
+      gkRef.current = mod.anexarGoldKiller(graficoRef.current, serieRef.current, {
+        // Na faixa compacta (240 px) as dez etiquetas no eixo tapavam a escala toda.
+        etiquetasEixo: !props.compacto,
+        aoCalcular: (r) => { setGkR(r); aoCalcularGKRef.current?.(r) },
+      })
+      setGkPronto(true)
+    }).catch(() => { /* sem estudo — o gráfico continua */ })
+    return () => {
+      vivo = false
+      try { gkRef.current?.remove() } catch { /* o gráfico já foi removido */ }
+      gkRef.current = null
+      setGkPronto(false)
+      setGkR(null)
+      aoCalcularGKRef.current?.(null)
+    }
+  }, [pronto, goldkillerLigado]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const inputsGK = props.goldkiller?.inputs
+  const chaveInputsGK = inputsGK ? JSON.stringify(inputsGK) : ""
+  useEffect(() => {
+    if (!gkPronto || !inputsGK || estadoVelas === "a_carregar") return
+    const snapshot = velasRef.current.slice()
+    if (snapshot.length < 50) return
+    let vivo = true
+    const tfSeg = tfPorChave(tf).seg
+    const inputs: Partial<InputsGoldKiller> = { ...inputsGK, simbolo: simbolo.symbol, tfSegundos: tfSeg, mintick: Math.pow(10, -simbolo.digits) }
+    ;(async () => {
+      const c = await calcularGK(snapshot, inputs)
+      if (!vivo || !c || !gkRef.current) return
+      gkRef.current.aplicar(snapshot, c.r)
+      setGkMs({ ms: Math.round(c.ms), onde: c.onde, velas: snapshot.length })
+    })()
+    return () => { vivo = false }
+  }, [gkPronto, versaoVelas, chaveInputsGK, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // As zonas da ferramenta (primitiva no canvas).
   useEffect(() => {
@@ -720,6 +784,18 @@ export default function GraficoLeve(props: GraficoProps & {
               Sensei {paineisAbertos ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             </button>
           </>
+        )}
+        {goldkillerLigado && gkR && (
+          <div
+            data-goldkiller-ms={gkMs?.ms}
+            title={gkMs ? `GoldKiller: ${gkMs.velas} velas calculadas em ${gkMs.ms} ms (${gkMs.onde === "worker" ? "Web Worker" : "thread principal"})` : undefined}
+          >
+            <LegendaGoldKiller
+              resultado={gkR}
+              compacto={props.compacto}
+              topo={senseiLigado && props.sensei?.paineis !== false && !props.compacto && senseiR ? 30 : 6}
+            />
+          </div>
         )}
         {modo && (
           <div className="pointer-events-none absolute left-1/2 top-2 z-[6] -translate-x-1/2 rounded px-3 py-1 text-[11px]" style={{ background: TV.painel, color: TV.texto, border: `1px solid ${TV.borda}` }}>

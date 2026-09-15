@@ -7,6 +7,7 @@
  * «Light Scalp» é o tema + estilo por defeito.
  */
 import type { InputsSensei, Tema } from './tipos'
+import { corPine } from '../comum/velas'
 
 export const INPUTS_SENSEI_DEFAULT: InputsSensei = {
   themeMode: 'Light',
@@ -94,18 +95,8 @@ export const PINE = {
   white: '#FFFFFF',
 } as const
 
-/**
- * color.new(cor, transp) do Pine: transparência 0-100 (0 = opaco). Devolve rgba() para o canvas.
- */
-export function corPine(hex: string, transp = 0): string {
-  const h = hex.replace('#', '')
-  const n = parseInt(h.length === 3 ? h.split('').map((x) => x + x).join('') : h.slice(0, 6), 16)
-  const r = (n >> 16) & 255
-  const g = (n >> 8) & 255
-  const b = n & 255
-  const a = Math.max(0, Math.min(1, 1 - transp / 100))
-  return `rgba(${r}, ${g}, ${b}, ${+a.toFixed(3)})`
-}
+/** color.new(cor, transp) do Pine — vive em ../comum/velas (partilhado); reexportado aqui. */
+export { corPine } from '../comum/velas'
 
 /** Paleta th_* do Pine, por tema. Cores já com a transparência que o Pine lhes aplica. */
 export interface PaletaSensei {

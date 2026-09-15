@@ -1,5 +1,6 @@
 /**
- * Funções ta.* do Pine v6, em série inteira, com a semântica de `na` do Pine.
+ * Funções ta.* e array.* do Pine (v5/v6 — nestas não mudou nada), em série inteira, com a semântica
+ * de `na` do Pine. Partilhadas pelos estudos portados (Sensei, GoldKiller).
  *
  * Regras que importam para bater certo com o TradingView:
  *  - `na` é NaN; aritmética com NaN dá NaN (igual ao Pine).
@@ -193,4 +194,53 @@ export function adxSensei(h: ArrayLike<number>, l: ArrayLike<number>, c: ArrayLi
     dx[i] = s === 0 ? na : (Math.abs(diP - diM) / s) * 100
   }
   return rma(dx, len)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// array.* (sobre arrays JS; o Pine devolve na com o array vazio)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Soma/percentagens de fontes do Pine: hl2, hlc3, ohlc4, hlcc4. */
+export const hl2 = (h: number, l: number): number => (h + l) / 2
+export const hlc3 = (h: number, l: number, c: number): number => (h + l + c) / 3
+export const ohlc4 = (o: number, h: number, l: number, c: number): number => (o + h + l + c) / 4
+export const hlcc4 = (h: number, l: number, c: number): number => (h + l + c + c) / 4
+
+/**
+ * array.percentile_linear_interpolation(id, p) sobre um array JÁ ORDENADO (ascendente).
+ * Posição p/100·(n−1) com interpolação linear entre os dois vizinhos (o método «inclusivo», o
+ * mesmo do NumPy/Excel PERCENTILE.INC). Vazio → na; p fora de 0-100 é cortado.
+ * NOTA: o manual do Pine não publica a fórmula; ver o relatório do porte do GoldKiller.
+ */
+export function percentilLinearOrdenado(ordenado: ArrayLike<number>, p: number): number {
+  const n = ordenado.length
+  if (n === 0 || Number.isNaN(p)) return na
+  if (n === 1) return ordenado[0]
+  const pos = (Math.max(0, Math.min(100, p)) / 100) * (n - 1)
+  const lo = Math.floor(pos)
+  const hi = Math.ceil(pos)
+  return ordenado[lo] + (ordenado[hi] - ordenado[lo]) * (pos - lo)
+}
+
+/** array.percentile_linear_interpolation(id, p) — ordena uma cópia. */
+export const percentilLinear = (arr: ArrayLike<number>, p: number): number =>
+  percentilLinearOrdenado(Array.from(arr).sort((a, b) => a - b), p)
+
+/** array.avg(id) — na com o array vazio. */
+export function mediaArray(arr: ArrayLike<number>): number {
+  if (arr.length === 0) return na
+  let s = 0
+  for (let i = 0; i < arr.length; i++) s += arr[i]
+  return s / arr.length
+}
+
+/** array.stdev(id, biased = true) — populacional (divide por n), o default do Pine. Vazio → na. */
+export function desvioArray(arr: ArrayLike<number>, biased = true): number {
+  const n = arr.length
+  if (n === 0) return na
+  if (!biased && n < 2) return na
+  const m = mediaArray(arr)
+  let s = 0
+  for (let i = 0; i < n; i++) s += (arr[i] - m) * (arr[i] - m)
+  return Math.sqrt(s / (biased ? n : n - 1))
 }
