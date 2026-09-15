@@ -1,0 +1,122 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import type { ContaCentro } from "@/lib/admin-centro/servidor/contas"
+import { nomeMotivo } from "@/lib/admin-centro/regras"
+import ContasCopia from "@/components/admin/mtmauto-copia/contas"
+import MTMcopierManager from "@/components/admin/mtmcopier-manager"
+import { Recolhivel } from "@/components/admin/mtmauto-copia/estrategias"
+import { useCentroCtx } from "../contexto"
+import { Aviso, Azulejo, BotaoLer, Chip, Painel, Pilula, Tabela, Vazio, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
+
+export type DadosContas = { contas: ContaCentro[]; avisos: string[]; lidaEm: string }
+
+const PLATAFORMAS = ["mt5", "mt4", "tradelocker", "mtmfunded"] as const
+const CATEGORIAS = ["cliente", "casa", "seguidora", "equipa", "mestre"] as const
+
+export function tomEstadoConta(c: ContaCentro) {
+  if (c.metaapi.inexistente) return "grave" as const
+  if (c.erro && c.erroEstado === "actual") return "grave" as const
+  if (/error|erro|breach|quebr/i.test(c.estado)) return "grave" as const
+  if (!c.ativa) return "neutro" as const
+  if (/pending|a_ligar|deploying/i.test(c.estado)) return "aviso" as const
+  return "ok" as const
+}
+
+export default function SeccaoContas() {
+  const ctx = useCentroCtx()
+  const { dados, erro, aCarregar, recarregar, lidoEm } = useCentro<DadosContas>(`/api/admin/centro/contas?v=${ctx.versao}`, 30_000)
+  const [q, setQ] = useState("")
+  const [plataforma, setPlataforma] = useState("")
+  const [categoria, setCategoria] = useState("")
+  const [problema, setProblema] = useState(ctx.filtro.problema ?? "")
+  useEffect(() => { setProblema(ctx.filtro.problema ?? "") }, [ctx.filtro])
+
+  const todas = dados?.contas ?? []
+  const lista = useMemo(() => {
+    const t = q.trim().toLowerCase()
+    return todas.filter((c) => {
+      if (plataforma && c.plataforma !== plataforma) return false
+      if (categoria && c.categoria !== categoria) return false
+      if (problema === "inexistente" && !c.metaapi.inexistente) return false
+      if (problema === "1" && tomEstadoConta(c) !== "grave" && !c.quota.acima) return false
+      if (problema === "quota" && !c.quota.acima) return false
+      if (t && ![c.email, c.nome, c.login, c.servidor, c.rotulo, c.metaapiAccountId, c.ref].some((x) => x && x.toLowerCase().includes(t))) return false
+      return true
+    })
+  }, [todas, q, plataforma, categoria, problema])
+
+  const graves = todas.filter((c) => tomEstadoConta(c) === "grave").length
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
+        <Azulejo rotulo="Contas" valor={fmtNum(todas.length)} sub={`${todas.filter((c) => c.ativa).length} activas`} />
+        <Azulejo rotulo="MetaApi" valor={todas.filter((c) => c.contaMetaApi).length} sub="contam para a quota" />
+        <Azulejo rotulo="Com problema" valor={graves} tom={graves ? "grave" : "ok"} onClick={() => setProblema("1")} />
+        <Azulejo rotulo="MetaApi inexistente" valor={todas.filter((c) => c.metaapi.inexistente).length} tom={todas.some((c) => c.metaapi.inexistente) ? "aviso" : "ok"} onClick={() => setProblema("inexistente")} />
+        <Azulejo rotulo="Acima da quota" valor={todas.filter((c) => c.quota.acima).length} tom={todas.some((c) => c.quota.acima) ? "aviso" : "neutro"} onClick={() => setProblema("quota")} />
+        <Azulejo rotulo="MTM Funded" valor={todas.filter((c) => c.plataforma === "mtmfunded").length} sub={`${todas.filter((c) => c.categoria === "casa").length} da casa`} />
+      </div>
+
+      <Painel titulo="Todas as contas" sub="T2T/site, MTM Auto, WebTrader e MTM Funded — estado guardado na base, sem chamadas à MetaApi. Clica para abrir a gaveta com acções." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="email, login, servidor, id MetaApi…" className="w-64 rounded-md border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-white placeholder:text-zinc-600" />
+          <Chip activo={!plataforma} onClick={() => setPlataforma("")}>todas</Chip>
+          {PLATAFORMAS.map((p) => <Chip key={p} activo={plataforma === p} onClick={() => setPlataforma(p)}>{p}</Chip>)}
+          <span className="mx-1 h-4 w-px bg-zinc-800" />
+          {CATEGORIAS.map((c) => <Chip key={c} activo={categoria === c} onClick={() => setCategoria(categoria === c ? "" : c)}>{c}</Chip>)}
+          {problema && <Chip activo onClick={() => setProblema("")}>filtro: {problema === "1" ? "com problema" : problema} ✕</Chip>}
+          <span className="ml-auto text-[11px] text-zinc-500">{lista.length} de {todas.length}</span>
+        </div>
+        {erro && <Aviso tom="grave">{erro}</Aviso>}
+        {dados?.avisos?.length ? <div className="mb-2"><Aviso>{dados.avisos.join(" · ")}</Aviso></div> : null}
+        {!dados ? <Vazio>A ler…</Vazio> : lista.length === 0 ? <Vazio>Nenhuma conta.</Vazio> : (
+          <Tabela min={1100}>
+            <thead><tr><th className={th}>Conta</th><th className={th}>Dono · direito</th><th className={th}>Estado</th><th className={th}>MetaApi</th><th className={th}>Quota</th><th className={th}>Usos</th><th className={th}>Saldo</th><th className={th}>Actividade</th></tr></thead>
+            <tbody>
+              {lista.slice(0, 500).map((c) => (
+                <tr key={c.ref} className={trClic} onClick={() => ctx.abrir({ tipo: "conta", id: c.ref })}>
+                  <td className={td}>
+                    <p className="font-mono text-zinc-100">{c.plataforma.toUpperCase()} {c.login ?? "—"}</p>
+                    <p className="text-[10px] text-zinc-500">{c.servidor ?? "—"}{c.rotulo ? ` · ${c.rotulo}` : ""} · {c.origem} · {c.categoria}{c.demo ? " · demo" : ""}</p>
+                  </td>
+                  <td className={td}>
+                    {c.userId ? (
+                      <button type="button" className="text-left hover:text-[#E9C46A]" onClick={(e) => { e.stopPropagation(); ctx.abrir({ tipo: "utilizador", id: c.userId! }) }}>
+                        <p className="text-zinc-200">{c.email ?? c.userId.slice(0, 8)}</p>
+                        <p className="text-[10px] text-zinc-500">{c.plano} · {nomeMotivo(c.motivoDireito)}</p>
+                      </button>
+                    ) : "—"}
+                  </td>
+                  <td className={td}>
+                    <Pilula tom={tomEstadoConta(c)}>{c.ativa ? c.estado : `${c.estado} · pausada`}</Pilula>
+                    {c.erro && <p className={`mt-1 max-w-[220px] truncate text-[10px] ${c.erroEstado === "actual" ? "text-rose-300" : "text-zinc-600"}`} title={c.erro}>{c.erroEstado === "velho" ? "histórico: " : ""}{c.erro}</p>}
+                  </td>
+                  <td className={`${td} text-[10.5px]`}>
+                    {c.metaapiAccountId ? <p className="font-mono text-zinc-400">{c.metaapiAccountId.slice(0, 8)}</p> : <span className="text-zinc-600">—</span>}
+                    <div className="mt-0.5 flex flex-wrap gap-1">
+                      {c.metaapi.inexistente && <Pilula tom="grave">inexistente</Pilula>}
+                      {c.metaapi.streaming && <Pilula tom={c.metaapi.streaming === "fresco" ? "ok" : "aviso"}>stream</Pilula>}
+                      {c.metaapi.motorTempoReal && <Pilula tom="info">motor</Pilula>}
+                    </div>
+                  </td>
+                  <td className={`${td} font-mono`}>{c.contaMetaApi ? <span className={c.quota.acima ? "text-amber-300" : ""}>{c.quota.emUso}/{c.quota.limite ?? "∞"}</span> : <span className="text-zinc-600">n/a</span>}</td>
+                  <td className={`${td} max-w-[240px] text-[10.5px] text-zinc-400`}>{[...c.usos, ...c.estrategias.filter((e) => !c.usos.some((u) => u.includes(e)))].join(" · ")}</td>
+                  <td className={`${td} font-mono`}>{c.saldo == null ? "—" : fmtNum(c.saldo, 2)}</td>
+                  <td className={`${td} font-mono`}>{c.ultimaActividade ? fmtIdade(idadeDe(c.ultimaActividade)) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Tabela>
+        )}
+      </Painel>
+
+      <Recolhivel titulo="Contas com MetaApi ao vivo (clássico)" descricao="Lista com a fotografia da MetaApi (60 s), vista de posições e acções — lê a MetaApi, abrir só quando preciso.">
+        <ContasCopia />
+      </Recolhivel>
+      <Recolhivel titulo="Gestor detalhado por utilizador (clássico)" descricao="Lotes, prop firm, trailing, auditoria de risco, re-sync, testar MT5, últimos sinais.">
+        <MTMcopierManager highlightUserId={ctx.filtro.userId ?? null} />
+      </Recolhivel>
+    </div>
+  )
+}
