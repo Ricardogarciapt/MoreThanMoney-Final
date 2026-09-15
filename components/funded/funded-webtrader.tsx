@@ -1,12 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
 import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2 } from "lucide-react"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
 import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, usd, COR_ESTADO } from "./api"
 import InstalarWebtrader from "./instalar-webtrader"
+import PopoverAncorado from "./popover-contas"
 import { preaquecerWebtrader } from "./pre-carga"
 import { InterruptorModo, useModoWebtrader } from "./modo-webtrader"
 import type { Prefill } from "./funded-ticket"
@@ -69,6 +70,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   const [ativa, setAtiva] = useState<string | null>(null)
   const [mostrarEntrada, setMostrarEntrada] = useState(false)
   const [seletorAberto, setSeletorAberto] = useState(false)
+  // O seletor abre num popover por portal (popover-contas.tsx): não fica por baixo nem por cima das métricas.
+  const botaoSeletor = useRef<HTMLButtonElement>(null)
+  const fecharSeletor = useCallback(() => setSeletorAberto(false), [])
   const [erro, setErro] = useState<string | null>(null)
   const [reais, setReais] = useState<ContaReal[]>([])
   const [compraPermitida, setCompraPermitida] = useState(true)
@@ -186,7 +190,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
         {contexto === "app" && <img src="/icon-192x192.png" alt="MTM" className="h-6 w-6 shrink-0 rounded" />}
         {todas.length > 0 && (
           <div className="relative min-w-0">
-            <button onClick={() => setSeletorAberto((v) => !v)} aria-expanded={seletorAberto} aria-haspopup="listbox"
+            <button ref={botaoSeletor} onClick={() => setSeletorAberto((v) => !v)} aria-expanded={seletorAberto} aria-haspopup="listbox"
               className="flex min-w-0 items-center gap-1.5 rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-left text-[12px]">
               {atual ? (
                 <>
@@ -200,8 +204,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
               ) : <span className="text-zinc-400">Escolhe uma conta</span>}
               <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
             </button>
-            {seletorAberto && (
-              <div role="listbox" className="absolute left-0 z-[950] mt-1 w-[min(92vw,380px)] overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl">
+            <PopoverAncorado aberto={seletorAberto} ancora={botaoSeletor} onFechar={fecharSeletor} titulo="Escolher conta">
+              <div role="listbox">
                 <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">MTM Funded (simuladas) · TradeLocker e MT5 (reais)</p>
                 {todas.map((t) => t.real ? (
                   <div key={t.id} className={`flex items-center gap-2 px-3 py-2 text-[12.5px] ${t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
@@ -238,7 +242,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                   </a>
                 )}
               </div>
-            )}
+            </PopoverAncorado>
           </div>
         )}
         {emTrader && ativaReal ? (

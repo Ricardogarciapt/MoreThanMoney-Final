@@ -100,7 +100,9 @@ export function numerosDaConta(c: LinhaContaNumeros): NumerosConta {
  * Conta de análise: as barras vêm na mesma (com «análise: não quebra»); o ecrã do dono troca-as
  * por «sem regras», o admin mostra-as — os valores são os mesmos.
  */
-export function barrasDaConta(num: NumerosConta, regras: Record<string, unknown> | null, equity?: number): BarraRegra[] {
+export type BaseBarras = Pick<NumerosConta, 'saldoInicial' | 'equity' | 'ancoraDia' | 'diasNegociados' | 'fase' | 'lucroPorDia' | 'analise'>
+
+export function barrasDaConta(num: BaseBarras, regras: Record<string, unknown> | null, equity?: number): BarraRegra[] {
   return barrasDeRegras({
     regras, saldoInicial: num.saldoInicial, equity: equity ?? num.equity, ancoraDia: num.ancoraDia,
     diasNegociados: num.diasNegociados, fase: num.fase, lucroPorDia: num.lucroPorDia, analise: num.analise,

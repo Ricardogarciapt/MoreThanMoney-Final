@@ -29,7 +29,8 @@ const VERDE = "#26A69A"
 const VERMELHO = "#EF5350"
 const OURO = "#D2A63C"
 
-export default function FundedEstatisticas({ accountId, equity, regras }: { accountId: string; equity: number | null; regras: RegrasResumo }) {
+/** `semRegras`: o painel «A minha conta» já mostra as barras das regras (as mesmas do admin) por cima. */
+export default function FundedEstatisticas({ accountId, equity, regras, semRegras = false }: { accountId: string; equity: number | null; regras: RegrasResumo; semRegras?: boolean }) {
   const [e, setE] = useState<Estatisticas | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [aCarregar, setACarregar] = useState(false)
@@ -85,7 +86,7 @@ export default function FundedEstatisticas({ accountId, equity, regras }: { acco
         </button>
       </div>
 
-      <ProgressoRegras r={regras} />
+      {!semRegras && <ProgressoRegras r={regras} />}
 
       <div className="grid gap-3 lg:grid-cols-[1.6fr_1fr]">
         <Cartao titulo="Saldo e equity (USD)">
