@@ -87,7 +87,7 @@
     },
     {
       "path": "/api/cron/mtm-terminal-daily",
-      "schedule": "0 8 * * *"
+      "schedule": "*/20 5-8 * * *"
     },
     {
       "path": "/api/cron/mtm-alerts-evaluate",

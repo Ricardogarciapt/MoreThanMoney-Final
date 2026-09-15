@@ -1,13 +1,28 @@
 /**
  * Catálogo de ativos do Terminal MTM.
- * Cada ativo tem tudo o que o terminal precisa: símbolo TradingView (gráfico),
- * fonte de preço ao vivo (Binance para crypto, Yahoo para o resto) e categoria.
- *
- * Não injeta variáveis novas — usa apenas as libs de preço já existentes.
+ * Cada ativo tem tudo o que o terminal precisa: símbolo TradingView (gráfico), símbolo da
+ * corretora (preço ao vivo, o mesmo do WebTrader), instrumento de referência e categoria.
+ * Regra: o número do cabeçalho tem de bater com o gráfico — mesmo instrumento, mesmo nível.
  */
 
 export type TerminalAssetType = "crypto" | "forex" | "commodity" | "index" | "stock"
 export type PriceSource = "binance" | "coingecko" | "yahoo"
+
+/**
+ * Instrumento de REFERÊNCIA — dá a variação e as velas diárias (níveis, técnicos).
+ * · binance-spot: par spot Binance (é o próprio instrumento do gráfico BINANCE:xxxUSDT).
+ * · binance-futures: perpétuo Binance que segue o spot (XAUUSDT/XAGUSDT) — mesmo nível do OANDA.
+ * · yahoo: símbolo Yahoo.
+ * `sameLevel` diz se o preço da referência está ao MESMO nível do gráfico. Os futuros do ouro
+ * (GC=F) estão ~40 $ acima do spot: foi daí que veio o «4335» contra os «4294» do gráfico.
+ * Quando não está (futuros de índices/petróleo), usa-se só a % da referência e as velas são
+ * reescaladas pela base (preço ao vivo ÷ último fecho da referência).
+ */
+export interface ReferenceInstrument {
+  kind: "binance-spot" | "binance-futures" | "yahoo"
+  symbol: string
+  sameLevel: boolean
+}
 
 export interface TerminalAsset {
   /** Identificador curto mostrado ao utilizador (ex.: BTCUSD, XAUUSD, AAPL) */
@@ -17,44 +32,54 @@ export interface TerminalAsset {
   type: TerminalAssetType
   /** Símbolo completo para o widget TradingView (ex.: BINANCE:BTCUSDT, OANDA:XAUUSD, NASDAQ:AAPL) */
   tvSymbol: string
-  /** Onde buscar o preço ao vivo */
+  /** Fonte legada (crypto → Binance; resto → preço da corretora/referência) */
   priceSource: PriceSource
-  /** Símbolo a passar à fonte de preço (par Binance / símbolo Yahoo) */
+  /** Símbolo legado da fonte de preço (par Binance / símbolo Yahoo) */
   priceSymbol: string
+  /**
+   * Símbolo na tabela `funded_precos` (streaming PU Prime escrito pelo motor do VPS — o mesmo
+   * preço do WebTrader). null = não se usa a corretora (cripto: o gráfico é Binance).
+   */
+  brokerSymbol: string | null
+  /** Referência para variação/velas. */
+  ref: ReferenceInstrument
+  /** Spot de último recurso para metais (gold-api.com: XAU/XAG). Nunca futuros. */
+  metalSpot?: "XAU" | "XAG"
 }
+
+const y = (symbol: string, sameLevel: boolean): ReferenceInstrument => ({ kind: "yahoo", symbol, sameLevel })
+const bs = (symbol: string): ReferenceInstrument => ({ kind: "binance-spot", symbol, sameLevel: true })
 
 export const TERMINAL_ASSETS: TerminalAsset[] = [
   // ─── Metais / Commodities ──────────────────────────────────────────────
-  { symbol: "XAUUSD", name: "Ouro / Gold", type: "commodity", tvSymbol: "OANDA:XAUUSD", priceSource: "yahoo", priceSymbol: "GC=F" },
-  { symbol: "XAGUSD", name: "Prata / Silver", type: "commodity", tvSymbol: "OANDA:XAGUSD", priceSource: "yahoo", priceSymbol: "SI=F" },
-  { symbol: "USOIL", name: "Petróleo WTI", type: "commodity", tvSymbol: "TVC:USOIL", priceSource: "yahoo", priceSymbol: "CL=F" },
+  { symbol: "XAUUSD", name: "Ouro / Gold", type: "commodity", tvSymbol: "OANDA:XAUUSD", priceSource: "yahoo", priceSymbol: "XAUUSD", brokerSymbol: "XAUUSD", ref: { kind: "binance-futures", symbol: "XAUUSDT", sameLevel: true }, metalSpot: "XAU" },
+  { symbol: "XAGUSD", name: "Prata / Silver", type: "commodity", tvSymbol: "OANDA:XAGUSD", priceSource: "yahoo", priceSymbol: "XAGUSD", brokerSymbol: "XAGUSD", ref: { kind: "binance-futures", symbol: "XAGUSDT", sameLevel: true }, metalSpot: "XAG" },
+  { symbol: "USOIL", name: "Petróleo WTI", type: "commodity", tvSymbol: "TVC:USOIL", priceSource: "yahoo", priceSymbol: "CL=F", brokerSymbol: "USOIL", ref: y("CL=F", false) },
 
   // ─── Crypto ────────────────────────────────────────────────────────────
-  { symbol: "BTCUSD", name: "Bitcoin", type: "crypto", tvSymbol: "BINANCE:BTCUSDT", priceSource: "binance", priceSymbol: "BTCUSDT" },
-  { symbol: "ETHUSD", name: "Ethereum", type: "crypto", tvSymbol: "BINANCE:ETHUSDT", priceSource: "binance", priceSymbol: "ETHUSDT" },
-  { symbol: "SOLUSD", name: "Solana", type: "crypto", tvSymbol: "BINANCE:SOLUSDT", priceSource: "binance", priceSymbol: "SOLUSDT" },
-  { symbol: "XRPUSD", name: "XRP", type: "crypto", tvSymbol: "BINANCE:XRPUSDT", priceSource: "binance", priceSymbol: "XRPUSDT" },
-  { symbol: "BNBUSD", name: "BNB", type: "crypto", tvSymbol: "BINANCE:BNBUSDT", priceSource: "binance", priceSymbol: "BNBUSDT" },
-  { symbol: "ADAUSD", name: "Cardano", type: "crypto", tvSymbol: "BINANCE:ADAUSDT", priceSource: "binance", priceSymbol: "ADAUSDT" },
-  { symbol: "DOGEUSD", name: "Dogecoin", type: "crypto", tvSymbol: "BINANCE:DOGEUSDT", priceSource: "binance", priceSymbol: "DOGEUSDT" },
+  { symbol: "BTCUSD", name: "Bitcoin", type: "crypto", tvSymbol: "BINANCE:BTCUSDT", priceSource: "binance", priceSymbol: "BTCUSDT", brokerSymbol: null, ref: bs("BTCUSDT") },
+  { symbol: "ETHUSD", name: "Ethereum", type: "crypto", tvSymbol: "BINANCE:ETHUSDT", priceSource: "binance", priceSymbol: "ETHUSDT", brokerSymbol: null, ref: bs("ETHUSDT") },
+  { symbol: "SOLUSD", name: "Solana", type: "crypto", tvSymbol: "BINANCE:SOLUSDT", priceSource: "binance", priceSymbol: "SOLUSDT", brokerSymbol: null, ref: bs("SOLUSDT") },
+  { symbol: "XRPUSD", name: "XRP", type: "crypto", tvSymbol: "BINANCE:XRPUSDT", priceSource: "binance", priceSymbol: "XRPUSDT", brokerSymbol: null, ref: bs("XRPUSDT") },
+  { symbol: "BNBUSD", name: "BNB", type: "crypto", tvSymbol: "BINANCE:BNBUSDT", priceSource: "binance", priceSymbol: "BNBUSDT", brokerSymbol: null, ref: bs("BNBUSDT") },
+  { symbol: "ADAUSD", name: "Cardano", type: "crypto", tvSymbol: "BINANCE:ADAUSDT", priceSource: "binance", priceSymbol: "ADAUSDT", brokerSymbol: null, ref: bs("ADAUSDT") },
+  { symbol: "DOGEUSD", name: "Dogecoin", type: "crypto", tvSymbol: "BINANCE:DOGEUSDT", priceSource: "binance", priceSymbol: "DOGEUSDT", brokerSymbol: null, ref: bs("DOGEUSDT") },
 
   // ─── Forex ─────────────────────────────────────────────────────────────
-  { symbol: "EURUSD", name: "Euro / Dólar", type: "forex", tvSymbol: "OANDA:EURUSD", priceSource: "yahoo", priceSymbol: "EURUSD=X" },
-  { symbol: "GBPUSD", name: "Libra / Dólar", type: "forex", tvSymbol: "OANDA:GBPUSD", priceSource: "yahoo", priceSymbol: "GBPUSD=X" },
-  { symbol: "USDJPY", name: "Dólar / Iene", type: "forex", tvSymbol: "OANDA:USDJPY", priceSource: "yahoo", priceSymbol: "USDJPY=X" },
+  { symbol: "EURUSD", name: "Euro / Dólar", type: "forex", tvSymbol: "OANDA:EURUSD", priceSource: "yahoo", priceSymbol: "EURUSD=X", brokerSymbol: "EURUSD", ref: y("EURUSD=X", true) },
+  { symbol: "GBPUSD", name: "Libra / Dólar", type: "forex", tvSymbol: "OANDA:GBPUSD", priceSource: "yahoo", priceSymbol: "GBPUSD=X", brokerSymbol: "GBPUSD", ref: y("GBPUSD=X", true) },
+  { symbol: "USDJPY", name: "Dólar / Iene", type: "forex", tvSymbol: "OANDA:USDJPY", priceSource: "yahoo", priceSymbol: "USDJPY=X", brokerSymbol: "USDJPY", ref: y("USDJPY=X", true) },
 
-  // ─── Índices ───────────────────────────────────────────────────────────
-  { symbol: "SPX500", name: "S&P 500", type: "index", tvSymbol: "SP:SPX", priceSource: "yahoo", priceSymbol: "^GSPC" },
-  { symbol: "NAS100", name: "Nasdaq 100", type: "index", tvSymbol: "NASDAQ:NDX", priceSource: "yahoo", priceSymbol: "^NDX" },
-  { symbol: "US30", name: "Dow Jones", type: "index", tvSymbol: "DJ:DJI", priceSource: "yahoo", priceSymbol: "^DJI" },
+  // ─── Índices (CFD da corretora ↔ CFD OANDA no gráfico; futuros só para a %) ─────────────
+  { symbol: "SPX500", name: "S&P 500", type: "index", tvSymbol: "OANDA:SPX500USD", priceSource: "yahoo", priceSymbol: "ES=F", brokerSymbol: "US500", ref: y("ES=F", false) },
+  { symbol: "NAS100", name: "Nasdaq 100", type: "index", tvSymbol: "OANDA:NAS100USD", priceSource: "yahoo", priceSymbol: "NQ=F", brokerSymbol: "NAS100", ref: y("NQ=F", false) },
+  { symbol: "US30", name: "Dow Jones", type: "index", tvSymbol: "OANDA:US30USD", priceSource: "yahoo", priceSymbol: "YM=F", brokerSymbol: "US30", ref: y("YM=F", false) },
 
   // ─── Ações ─────────────────────────────────────────────────────────────
-  { symbol: "AAPL", name: "Apple", type: "stock", tvSymbol: "NASDAQ:AAPL", priceSource: "yahoo", priceSymbol: "AAPL" },
-  { symbol: "NVDA", name: "NVIDIA", type: "stock", tvSymbol: "NASDAQ:NVDA", priceSource: "yahoo", priceSymbol: "NVDA" },
-  { symbol: "TSLA", name: "Tesla", type: "stock", tvSymbol: "NASDAQ:TSLA", priceSource: "yahoo", priceSymbol: "TSLA" },
-  { symbol: "MSFT", name: "Microsoft", type: "stock", tvSymbol: "NASDAQ:MSFT", priceSource: "yahoo", priceSymbol: "MSFT" },
-  { symbol: "META", name: "Meta", type: "stock", tvSymbol: "NASDAQ:META", priceSource: "yahoo", priceSymbol: "META" },
-  { symbol: "AMZN", name: "Amazon", type: "stock", tvSymbol: "NASDAQ:AMZN", priceSource: "yahoo", priceSymbol: "AMZN" },
+  ...(["AAPL:Apple", "NVDA:NVIDIA", "TSLA:Tesla", "MSFT:Microsoft", "META:Meta", "AMZN:Amazon"].map((e) => {
+    const [symbol, name] = e.split(":")
+    return { symbol, name, type: "stock" as const, tvSymbol: `NASDAQ:${symbol}`, priceSource: "yahoo" as const, priceSymbol: symbol, brokerSymbol: symbol, ref: y(symbol, true) }
+  })),
 ]
 
 export const TERMINAL_TYPE_LABELS: Record<TerminalAssetType, string> = {

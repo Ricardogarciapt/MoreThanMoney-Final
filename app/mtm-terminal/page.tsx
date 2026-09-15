@@ -17,6 +17,14 @@ import {
   type TerminalAsset,
   type TerminalAssetType,
 } from "@/lib/mtm-terminal-assets"
+import { analysisAgeState, BROKER_FRESH_MS, formatAge, type LiveQuote } from "@/lib/mtm-terminal-live"
+import {
+  basisAdjust,
+  computeTechnicals,
+  computeTerminalLevels,
+  type Candle,
+  type TerminalTechnicals,
+} from "@/lib/mtm-terminal-technicals"
 import {
   House,
   ChevronRight,
@@ -31,12 +39,14 @@ import {
   Radio,
   RefreshCw,
   Globe,
-  Building2,
   Newspaper,
   Target,
   AlertTriangle,
   GraduationCap,
-  Users,
+  Activity,
+  Gauge,
+  Waves,
+  Clock,
 } from "lucide-react"
 
 /** Acesso: admin, vip ou premium (mesma regra das Apps MTM). */
@@ -56,29 +66,22 @@ function canAccessTerminal(user: User | null): boolean {
   return false
 }
 
-interface LiveQuote {
-  price: number | null
-  changePercent: number | null
-  currency: string
-  source: string
-}
-
 interface Dashboard {
   verdict: { direction: "BULLISH" | "BEARISH" | "NEUTRO"; conviction: string; rationale: string }
-  sentiment: {
-    retailBias: "bullish" | "bearish" | "neutral"
-    retailPct: number
-    institutional: string
-    fearGreed: number
-    fearGreedLabel: string
-  }
-  macro: string[]
-  institutions: { name: string; stance: string }[]
-  news: { headline: string; impact: "alto" | "medio" | "baixo" }[]
-  scenarios: { kind: "bull" | "base" | "bear"; movePct: number; triggers: string }[]
-  levels: { supports: number[]; resistances: number[] }
-  risks: string[]
-  recommendation: { bias: string; timing: string; risk: string }
+  macro?: string[]
+  news?: { headline: string; impact: "alto" | "medio" | "baixo"; source?: string }[]
+  scenarios?: { kind: "bull" | "base" | "bear"; movePct: number; triggers: string }[]
+  levels?: { supports: number[]; resistances: number[] }
+  risks?: string[]
+  recommendation?: { bias: string; timing: string; risk: string }
+  grounding?: { asOf: string; price: number | null; priceSource: string; webSearch: boolean; signals: number }
+}
+
+interface StoredAnalysis {
+  dashboard: Dashboard
+  generatedAt: string | null
+  model: string | null
+  quote: Partial<LiveQuote> | null
 }
 
 export default function MtmTerminalPage() {
@@ -118,23 +121,136 @@ function TerminalGate() {
 const MOMENTUM_STUDIES = ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"]
 
 const DIR_META = {
-  BULLISH: { cls: "border-green-500/40 bg-green-500/15 text-green-400", Icon: TrendingUp, bar: "#34d399" },
-  BEARISH: { cls: "border-red-500/40 bg-red-500/15 text-red-400", Icon: TrendingDown, bar: "#f87171" },
-  NEUTRO: { cls: "border-gray-500/40 bg-gray-500/15 text-gray-300", Icon: Minus, bar: "#9ca3af" },
+  BULLISH: { cls: "border-green-500/40 bg-green-500/15 text-green-400", Icon: TrendingUp },
+  BEARISH: { cls: "border-red-500/40 bg-red-500/15 text-red-400", Icon: TrendingDown },
+  NEUTRO: { cls: "border-gray-500/40 bg-gray-500/15 text-gray-300", Icon: Minus },
 } as const
+
+const LIVE_POLL_MS = 3_000
+const CANDLES_POLL_MS = 60_000
+const GENERATE_TIMEOUT_MS = 130_000
+
+function fmtPrice(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "—"
+  const a = Math.abs(v)
+  const dp = a >= 1000 ? 2 : a >= 10 ? 3 : a >= 1 ? 5 : 6
+  return v.toLocaleString("pt-PT", { minimumFractionDigits: dp, maximumFractionDigits: dp })
+}
+
+/** Corre `fn` a cada `ms` enquanto o separador está visível; pára quando fica escondido. */
+function useVisibleInterval(fn: () => void, ms: number, deps: unknown[]) {
+  const fnRef = useRef(fn)
+  fnRef.current = fn
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null
+    const start = () => {
+      if (timer) return
+      fnRef.current()
+      timer = setInterval(() => fnRef.current(), ms)
+    }
+    const stop = () => {
+      if (timer) clearInterval(timer)
+      timer = null
+    }
+    const onVis = () => (document.hidden ? stop() : start())
+    if (!document.hidden) start()
+    document.addEventListener("visibilitychange", onVis)
+    return () => {
+      stop()
+      document.removeEventListener("visibilitychange", onVis)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ms, ...deps])
+}
+
+function useNow(ms = 1_000): number {
+  const [now, setNow] = useState(() => Date.now())
+  useVisibleInterval(() => setNow(Date.now()), ms, [])
+  return now
+}
+
+function useLiveQuote(symbol: string) {
+  const [quote, setQuote] = useState<LiveQuote | null>(null)
+  const [error, setError] = useState(false)
+  const current = useRef(symbol)
+  const busy = useRef(false)
+  useEffect(() => {
+    current.current = symbol
+    setQuote(null)
+    setError(false)
+  }, [symbol])
+  useVisibleInterval(
+    async () => {
+      if (busy.current) return
+      busy.current = true
+      const sym = symbol
+      try {
+        const res = await fetch(`/api/mtm-terminal/live?symbol=${sym}`, { signal: AbortSignal.timeout(8_000) })
+        const data = await res.json()
+        if (current.current !== sym) return
+        if (res.ok && data.quote) {
+          setQuote(data.quote)
+          setError(false)
+        } else setError(true)
+      } catch {
+        if (current.current === sym) setError(true)
+      } finally {
+        busy.current = false
+      }
+    },
+    LIVE_POLL_MS,
+    [symbol],
+  )
+  return { quote, error }
+}
+
+function useCandles(symbol: string) {
+  const [candles, setCandles] = useState<Candle[]>([])
+  const current = useRef(symbol)
+  useEffect(() => {
+    current.current = symbol
+    setCandles([])
+  }, [symbol])
+  useVisibleInterval(
+    async () => {
+      const sym = symbol
+      try {
+        const res = await fetch(`/api/mtm-terminal/candles?symbol=${sym}`, { signal: AbortSignal.timeout(10_000) })
+        const data = await res.json()
+        if (current.current !== sym || !Array.isArray(data.velas) || !data.velas.length) return
+        setCandles((data.velas as number[][]).map(([t, o, h, l, c]) => ({ t, o, h, l, c })))
+      } catch {
+        /* mantém as últimas */
+      }
+    },
+    CANDLES_POLL_MS,
+    [symbol],
+  )
+  return candles
+}
 
 function TerminalContent() {
   const [search, setSearch] = useState("")
   const [selected, setSelected] = useState<TerminalAsset>(TERMINAL_ASSETS[0])
-  const [dashboard, setDashboard] = useState<Dashboard | null>(null)
-  const [quote, setQuote] = useState<LiveQuote | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [analysis, setAnalysis] = useState<StoredAnalysis | null>(null)
+  const [analysisLoading, setAnalysisLoading] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [genSeconds, setGenSeconds] = useState(0)
   const [error, setError] = useState<string | null>(null)
-  const [generatedAt, setGeneratedAt] = useState<string | null>(null)
-  const [fromCache, setFromCache] = useState(false)
-  // Guarda o ativo cujo pedido está "vivo" — evita que uma resposta lenta de um
-  // ativo sobreponha os dados de outro depois de trocar de ativo (preço preso).
+  const [notice, setNotice] = useState<string | null>(null)
   const activeSymbolRef = useRef<string>(selected.symbol)
+
+  const now = useNow()
+  const { quote, error: quoteError } = useLiveQuote(selected.symbol)
+  const candles = useCandles(selected.symbol)
+
+  // Números ao vivo: níveis e técnicos recalculados com o preço que está a chegar.
+  const live = useMemo(() => {
+    const price = quote?.price ?? null
+    if (price == null || !candles.length) return { levels: null, technicals: null as TerminalTechnicals | null }
+    const { candles: adj } = basisAdjust(candles, price, selected.ref.sameLevel)
+    return { levels: computeTerminalLevels(adj, price), technicals: computeTechnicals(adj, price) }
+  }, [quote?.price, candles, selected.ref.sameLevel])
 
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -151,62 +267,117 @@ function TerminalContent() {
 
   const generate = useCallback(async (asset: TerminalAsset) => {
     activeSymbolRef.current = asset.symbol
-    setLoading(true)
+    setGenerating(true)
+    setGenSeconds(0)
     setError(null)
-    setFromCache(false)
+    setNotice(null)
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), GENERATE_TIMEOUT_MS)
+    const stillActive = () => activeSymbolRef.current === asset.symbol
     try {
       const res = await fetch("/api/mtm-terminal/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ symbol: asset.symbol }),
+        signal: ctrl.signal,
       })
-      const data = await res.json()
-      // Ignora respostas de um ativo que já não é o selecionado
-      if (activeSymbolRef.current !== asset.symbol) return
-      if (!res.ok) throw new Error(data.error || "Falha ao gerar análise")
-      setDashboard(data.dashboard)
-      setQuote(data.quote)
-      setGeneratedAt(new Date().toISOString())
+      const type = res.headers.get("content-type") || ""
+      if (!type.includes("ndjson")) {
+        const data = await res.json().catch(() => ({}))
+        if (!stillActive()) return
+        if (data.dashboard) {
+          setAnalysis({ dashboard: data.dashboard, generatedAt: data.generatedAt ?? null, model: data.model ?? null, quote: data.quote ?? null })
+        }
+        if (res.status === 429) setNotice(data.error || "Aguarda uns minutos antes de pedir outra análise.")
+        else setError(data.error || `Falha ao gerar análise (HTTP ${res.status})`)
+        return
+      }
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ""
+      let done = false
+      let finished = false
+      while (!done) {
+        const chunk = await reader.read()
+        done = chunk.done
+        buffer += decoder.decode(chunk.value ?? new Uint8Array(), { stream: !done })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() ?? ""
+        for (const line of lines) {
+          if (!line.trim()) continue
+          let msg: Record<string, any>
+          try {
+            msg = JSON.parse(line)
+          } catch {
+            continue
+          }
+          if (!stillActive()) continue
+          if (msg.estado === "a_gerar") setGenSeconds(Number(msg.segundos) || 0)
+          else if (msg.ok === true) {
+            finished = true
+            setAnalysis({ dashboard: msg.dashboard, generatedAt: msg.generatedAt ?? null, model: msg.model ?? null, quote: msg.quote ?? null })
+          } else if (msg.ok === false) {
+            finished = true
+            setError(msg.error || "Falha ao gerar a análise")
+          }
+        }
+      }
+      if (!finished && stillActive()) {
+        setError("A ligação terminou sem resposta (tempo limite do servidor). Tenta novamente daqui a pouco.")
+      }
     } catch (err: any) {
-      if (activeSymbolRef.current !== asset.symbol) return
-      setError(err?.message || "Erro ao gerar análise")
+      if (!stillActive()) return
+      setError(
+        err?.name === "AbortError"
+          ? "A análise demorou mais de 2 minutos e foi cancelada. Tenta novamente daqui a pouco."
+          : err?.message || "Erro ao gerar análise",
+      )
     } finally {
-      if (activeSymbolRef.current === asset.symbol) setLoading(false)
+      clearTimeout(timer)
+      if (stillActive()) setGenerating(false)
     }
   }, [])
 
-  // Ao abrir / mudar de ativo: mostra o dashboard diário guardado; se não houver, gera
+  // Ao abrir / mudar de ativo: mostra a análise guardada; só gera se ainda não existir nenhuma.
   useEffect(() => {
     activeSymbolRef.current = selected.symbol
     let cancelled = false
+    setAnalysis(null)
+    setError(null)
+    setNotice(null)
+    setGenerating(false)
     const load = async () => {
-      setLoading(true)
-      setError(null)
-      setDashboard(null)
-      setQuote(null)
-      setFromCache(false)
-      setGeneratedAt(null)
+      setAnalysisLoading(true)
       try {
         const res = await fetch(`/api/mtm-terminal/analyze?symbol=${selected.symbol}`, {
           credentials: "include",
           cache: "no-store",
+          signal: AbortSignal.timeout(15_000),
         })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (cancelled || activeSymbolRef.current !== selected.symbol) return
-        if (res.ok && data.cached?.dashboard) {
-          setDashboard(data.cached.dashboard)
-          setQuote(data.cached.quote || null)
-          setGeneratedAt(data.cached.generatedAt || null)
-          setFromCache(true)
-          setLoading(false)
+        // Análises do formato antigo (sem `grounding`) podiam trazer factos inventados: não se mostram, gera-se nova.
+        if (res.ok && data.cached?.dashboard?.grounding) {
+          setAnalysis({
+            dashboard: data.cached.dashboard,
+            generatedAt: data.cached.generatedAt ?? null,
+            model: data.cached.model ?? null,
+            quote: data.cached.quote ?? null,
+          })
+          return
+        }
+        if (!res.ok) {
+          setError(data.error || "Análise guardada indisponível agora. Os preços e níveis continuam ao vivo.")
           return
         }
       } catch {
-        /* sem cache → gera */
+        if (!cancelled) setError("Não foi possível carregar a análise guardada. Os preços e níveis continuam ao vivo.")
+        return
+      } finally {
+        if (!cancelled) setAnalysisLoading(false)
       }
-      if (cancelled) return
-      await generate(selected)
+      if (!cancelled) generate(selected)
     }
     load()
     return () => {
@@ -214,6 +385,9 @@ function TerminalContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected.symbol])
+
+  const ageMs = quote?.priceAt ? now - new Date(quote.priceAt).getTime() : null
+  const quoteStale = ageMs != null && ageMs > Math.max(BROKER_FRESH_MS, 60_000)
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -250,7 +424,7 @@ function TerminalContent() {
               </span>
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-gray-400 md:text-base">
-              Terminal sentimental de mercado com IA institucional — dashboard de sentimento, macro e cenários antes de negociares.
+              Preço, níveis e técnicos ao vivo + leitura diária com IA, antes de negociares.
             </p>
           </div>
           <Badge className="border-[#D2A63C]/30 bg-[#D2A63C]/10 text-[#D2A63C]">
@@ -300,70 +474,92 @@ function TerminalContent() {
               </div>
               <Button
                 onClick={() => generate(selected)}
-                disabled={loading}
+                disabled={generating || analysisLoading}
                 className="w-full bg-[#D2A63C] font-semibold text-black hover:bg-[#BB8525]"
               >
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                Atualizar análise
+                {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                {generating ? `A gerar… ${genSeconds} s` : "Atualizar análise"}
               </Button>
+              <p className="text-[11px] leading-snug text-gray-500">
+                Preço e níveis atualizam sozinhos. O botão gera uma nova leitura com IA (1 por ativo a cada 5 min).
+              </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Painel direito */}
         <div className="space-y-4">
-          {/* Cotação */}
+          {/* Cotação ao vivo */}
           <Card className="border-[#D2A63C]/20 bg-black/60">
             <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
               <div>
                 <p className="text-lg font-semibold text-white">{selected.name}</p>
-                <p className="text-xs text-gray-500">{selected.tvSymbol}</p>
+                <p className="text-xs text-gray-500">
+                  Gráfico {selected.tvSymbol}
+                  {selected.brokerSymbol ? ` · corretora ${selected.brokerSymbol}` : ""}
+                </p>
               </div>
               {quote?.price != null ? (
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                   <div className="text-right">
-                    <p className="font-mono text-lg font-semibold text-white">
-                      {quote.price.toLocaleString("pt-PT", { maximumFractionDigits: 6 })} {quote.currency}
-                    </p>
+                    <p className="font-mono text-lg font-semibold text-white">{fmtPrice(quote.price)}</p>
                     {quote.changePercent != null && (
                       <p className={`flex items-center justify-end gap-1 text-sm ${quote.changePercent >= 0 ? "text-green-400" : "text-red-400"}`}>
                         {quote.changePercent >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                        {quote.changePercent >= 0 ? "+" : ""}{quote.changePercent.toFixed(2)}% (24h)
+                        {quote.changePercent >= 0 ? "+" : ""}
+                        {quote.changePercent.toFixed(2)}% ({quote.changeBasis === "24h" ? "24h" : "vs fecho anterior"})
                       </p>
                     )}
                   </div>
-                  <Badge variant="outline" className="border-green-500/30 text-green-400">
-                    <Radio className="mr-1 h-3 w-3 animate-pulse" /> {quote.source}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge
+                      variant="outline"
+                      className={quoteStale || quoteError ? "border-amber-500/40 text-amber-300" : "border-green-500/30 text-green-400"}
+                    >
+                      <Radio className={`mr-1 h-3 w-3 ${quoteStale || quoteError ? "" : "animate-pulse"}`} /> {quote.source}
+                    </Badge>
+                    <span className={`text-[11px] ${quoteStale ? "text-amber-300" : "text-gray-500"}`}>
+                      {ageMs != null ? `último tick ${formatAge(ageMs)}` : ""}
+                      {quoteStale ? " · mercado fechado ou sem ticks" : ""}
+                      {quoteError ? " · a reconectar" : ""}
+                    </span>
+                    {!quote.sameLevel && (
+                      <span className="text-[11px] text-amber-300">aproximação — pode diferir do gráfico</span>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <span className="text-xs text-gray-500">Preço ao vivo aparece com a análise</span>
+                <span className="flex items-center gap-2 text-xs text-gray-500">
+                  {quoteError ? "Preço ao vivo indisponível — a tentar de novo" : <><Loader2 className="h-3 w-3 animate-spin" /> A ligar ao preço ao vivo…</>}
+                </span>
               )}
             </CardContent>
           </Card>
 
-          <TvChartEmbed
-            tvSymbol={selected.tvSymbol}
-            interval="240"
-            height={440}
-            studies={MOMENTUM_STUDIES}
-          />
+          <TvChartEmbed tvSymbol={selected.tvSymbol} interval="240" height={440} studies={MOMENTUM_STUDIES} />
 
+          {/* Técnicos e níveis ao vivo */}
+          <LiveNumbers technicals={live.technicals} levels={live.levels} fallbackLevels={analysis?.dashboard.levels ?? null} />
+
+          {notice && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">{notice}</div>
+          )}
           {error && (
             <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">{error}</div>
           )}
 
-          {loading && !dashboard && (
+          {(analysisLoading || generating) && !analysis && (
             <div className="flex items-center gap-2 rounded-xl border border-[#D2A63C]/20 bg-black/40 p-8 text-gray-400">
               <Loader2 className="h-4 w-4 animate-spin text-[#D2A63C]" />
-              A consultar mercados, macro e posicionamento institucional...
+              {generating ? `A gerar a leitura com IA… ${genSeconds} s` : "A carregar a análise de hoje…"}
             </div>
           )}
 
-          {dashboard && <DashboardView d={dashboard} fromCache={fromCache} generatedAt={generatedAt} />}
+          {analysis && <AnalysisView a={analysis} now={now} livePrice={quote?.price ?? null} />}
 
           <p className="text-center text-[11px] text-gray-600">
-            ⚠️ Análise educacional gerada por IA. Não constitui aconselhamento financeiro.
+            ⚠️ Conteúdo educacional. Números técnicos calculados automaticamente; leitura gerada por IA. Não constitui aconselhamento
+            financeiro nem promessa de resultados.
           </p>
         </div>
       </div>
@@ -371,132 +567,211 @@ function TerminalContent() {
   )
 }
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
-function DashboardView({ d, fromCache, generatedAt }: { d: Dashboard; fromCache: boolean; generatedAt: string | null }) {
-  const dir = DIR_META[d.verdict.direction] ?? DIR_META.NEUTRO
+// ─── Números ao vivo ──────────────────────────────────────────────────────────
+function LiveNumbers({
+  technicals: t,
+  levels,
+  fallbackLevels,
+}: {
+  technicals: TerminalTechnicals | null
+  levels: { supports: number[]; resistances: number[] } | null
+  fallbackLevels: { supports: number[]; resistances: number[] } | null
+}) {
+  const lv = levels ?? fallbackLevels
+  const regimeColor =
+    t?.regime === "tendência de alta" ? "text-green-400" : t?.regime === "tendência de baixa" ? "text-red-400" : "text-gray-200"
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+          <Activity className="h-4 w-4 text-green-400" /> Ao vivo · velas diárias + preço atual
+        </p>
+        {!levels && fallbackLevels && <span className="text-[11px] text-amber-300">níveis da análise (sem velas ao vivo)</span>}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <MetricCard title="Regime" icon={<Waves className="h-4 w-4" />}>
+          <p className={`text-sm font-semibold capitalize ${regimeColor}`}>{t?.regime ?? "—"}</p>
+          <p className="mt-1 text-[11px] text-gray-500">
+            EMA20 {fmtPrice(t?.ema20)} · EMA50 {fmtPrice(t?.ema50)}
+          </p>
+        </MetricCard>
+        <MetricCard title="Momentum (RSI 14)" icon={<Gauge className="h-4 w-4" />}>
+          {t?.rsi14 != null ? (
+            <>
+              <Meter value={t.rsi14} leftLabel="Sobrevendido" rightLabel="Sobrecomprado" />
+              <p className="mt-1 text-center text-sm font-semibold text-white">
+                {t.rsi14} · {t.momentum}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">—</p>
+          )}
+        </MetricCard>
+        <MetricCard title="Volatilidade (ATR 14)" icon={<Activity className="h-4 w-4" />}>
+          <p className="text-sm font-semibold text-white">{t?.atr14 != null ? fmtPrice(t.atr14) : "—"}</p>
+          <p className="mt-1 text-[11px] text-gray-500">{t?.atrPct != null ? `${t.atrPct}% do preço por dia` : ""}</p>
+        </MetricCard>
+        <MetricCard title="Intervalo 20 sessões" icon={<Target className="h-4 w-4" />}>
+          {t?.range20Pct != null && t.range20 ? (
+            <>
+              <Meter value={t.range20Pct} leftLabel={fmtPrice(t.range20.l)} rightLabel={fmtPrice(t.range20.h)} />
+              <p className="mt-1 text-center text-sm font-semibold text-white">{t.range20Pct}% do intervalo</p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">—</p>
+          )}
+        </MetricCard>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <MetricCard title="Suportes" icon={<TrendingDown className="h-4 w-4 text-green-400" />}>
+          <LevelChips values={lv?.supports ?? []} cls="border-green-500/20 bg-green-500/5 text-green-300" />
+        </MetricCard>
+        <MetricCard title="Resistências" icon={<TrendingUp className="h-4 w-4 text-red-400" />}>
+          <LevelChips values={lv?.resistances ?? []} cls="border-red-500/20 bg-red-500/5 text-red-300" />
+        </MetricCard>
+      </div>
+    </div>
+  )
+}
+
+function LevelChips({ values, cls }: { values: number[]; cls: string }) {
+  if (!values.length) return <p className="text-sm text-gray-500">—</p>
+  return (
+    <div className="flex flex-wrap gap-2">
+      {values.map((n, i) => (
+        <span key={i} className={`rounded-md border px-2 py-1 font-mono text-sm ${cls}`}>
+          {fmtPrice(n)}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// ─── Leitura da IA (diária) ───────────────────────────────────────────────────
+function AnalysisView({ a, now, livePrice }: { a: StoredAnalysis; now: number; livePrice: number | null }) {
+  const d = a.dashboard
+  const dir = DIR_META[d.verdict?.direction] ?? DIR_META.NEUTRO
+  const age = analysisAgeState(a.generatedAt, now)
+  const gen = a.generatedAt ? new Date(a.generatedAt) : null
+  const sameDay = gen ? gen.toDateString() === new Date(now).toDateString() : false
+  const when = gen
+    ? sameDay
+      ? `Análise de hoje ${gen.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}`
+      : `Análise de ${gen.toLocaleString("pt-PT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`
+    : "Análise sem data"
+  const priceAtAnalysis = d.grounding?.price ?? (typeof a.quote?.price === "number" ? a.quote.price : null)
+  const drift = priceAtAnalysis && livePrice ? ((livePrice - priceAtAnalysis) / priceAtAnalysis) * 100 : null
+  const sourcedNews = (d.news ?? []).filter((n) => typeof n.source === "string" && /^https?:\/\//.test(n.source))
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
+        <span className="flex items-center gap-1 font-semibold uppercase tracking-wider text-gray-300">
+          <BrainCircuit className="h-4 w-4 text-[#D2A63C]" /> Leitura com IA
+        </span>
+        <span className="flex items-center gap-1">
+          <Clock className="h-3 w-3" /> {when}
+        </span>
+        {age.state === "stale" && age.ageMs != null && (
+          <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-300">
+            Desatualizada · {formatAge(age.ageMs)}
+          </Badge>
+        )}
+        {priceAtAnalysis != null && (
+          <span>
+            · preço na análise {fmtPrice(priceAtAnalysis)}
+            {drift != null && Math.abs(drift) >= 0.05 ? ` (${drift >= 0 ? "+" : ""}${drift.toFixed(2)}% desde então)` : ""}
+          </span>
+        )}
+      </div>
+
       {/* Veredicto */}
       <Card className="border border-[#D2A63C]/20 bg-gradient-to-br from-[#151316] to-black">
         <CardContent className="p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-lg font-bold ${dir.cls}`}>
-                <dir.Icon className="h-5 w-5" />
-                {d.verdict.direction}
-              </span>
-              <div>
-                <p className="text-xs uppercase tracking-wider text-gray-500">Convicção</p>
-                <p className="font-semibold text-white">{d.verdict.conviction}</p>
-              </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-lg font-bold ${dir.cls}`}>
+              <dir.Icon className="h-5 w-5" />
+              {d.verdict?.direction ?? "NEUTRO"}
+            </span>
+            <div>
+              <p className="text-xs uppercase tracking-wider text-gray-500">Convicção</p>
+              <p className="font-semibold text-white">{d.verdict?.conviction ?? "—"}</p>
             </div>
-            {fromCache && generatedAt && (
-              <span className="text-[11px] text-gray-500">
-                Atualizado {new Date(generatedAt).toLocaleString("pt-PT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · diário às 9h
-              </span>
-            )}
           </div>
-          <p className="mt-3 text-sm text-gray-300">{d.verdict.rationale}</p>
+          <p className="mt-3 text-sm text-gray-300">{d.verdict?.rationale}</p>
         </CardContent>
       </Card>
-
-      {/* Sentimento */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard title="Sentimento Retail" icon={<Users className="h-4 w-4" />}>
-          <Meter value={d.sentiment.retailPct} leftLabel="Bearish" rightLabel="Bullish" pos />
-          <p className="mt-1 text-center text-sm font-semibold text-white">{d.sentiment.retailPct}% bullish</p>
-        </MetricCard>
-        <MetricCard title="Fear & Greed" icon={<Radio className="h-4 w-4" />}>
-          <Meter value={d.sentiment.fearGreed} leftLabel="Medo" rightLabel="Ganância" pos />
-          <p className="mt-1 text-center text-sm font-semibold text-white">
-            {d.sentiment.fearGreed} · {d.sentiment.fearGreedLabel}
-          </p>
-        </MetricCard>
-        <MetricCard title="Institucional" icon={<Building2 className="h-4 w-4" />}>
-          <p className="text-sm leading-relaxed text-gray-300">{d.sentiment.institutional}</p>
-        </MetricCard>
-      </div>
 
       {/* Cenários */}
-      <Card className="border-[#D2A63C]/20 bg-black/40">
-        <CardContent className="p-4">
-          <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-            <Target className="h-4 w-4 text-[#D2A63C]" /> Cenários (próximas 1-4 semanas)
-          </p>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {d.scenarios.map((s) => {
-              const up = s.movePct >= 0
-              const color = s.kind === "bull" ? "#34d399" : s.kind === "bear" ? "#f87171" : "#D2A63C"
-              const label = s.kind === "bull" ? "Bullish" : s.kind === "bear" ? "Bearish" : "Base"
-              const w = Math.min(100, Math.abs(s.movePct) * 6)
-              return (
-                <div key={s.kind} className="rounded-lg border border-white/10 bg-black/40 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wider" style={{ color }}>{label}</span>
-                    <span className="font-mono text-sm font-bold" style={{ color }}>{up ? "+" : ""}{s.movePct}%</span>
+      {!!d.scenarios?.length && (
+        <Card className="border-[#D2A63C]/20 bg-black/40">
+          <CardContent className="p-4">
+            <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+              <Target className="h-4 w-4 text-[#D2A63C]" /> Cenários hipotéticos (próximas 1-4 semanas)
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {d.scenarios.map((s) => {
+                const up = s.movePct >= 0
+                const color = s.kind === "bull" ? "#34d399" : s.kind === "bear" ? "#f87171" : "#D2A63C"
+                const label = s.kind === "bull" ? "Bullish" : s.kind === "bear" ? "Bearish" : "Base"
+                const w = Math.min(100, Math.abs(s.movePct) * 6)
+                return (
+                  <div key={s.kind} className="rounded-lg border border-white/10 bg-black/40 p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color }}>{label}</span>
+                      <span className="font-mono text-sm font-bold" style={{ color }}>{up ? "+" : ""}{s.movePct}%</span>
+                    </div>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full" style={{ width: `${w}%`, background: color }} />
+                    </div>
+                    <p className="mt-2 text-xs text-gray-400">{s.triggers}</p>
                   </div>
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                    <div className="h-full rounded-full" style={{ width: `${w}%`, background: color }} />
-                  </div>
-                  <p className="mt-2 text-xs text-gray-400">{s.triggers}</p>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Níveis */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <MetricCard title="Suportes" icon={<TrendingDown className="h-4 w-4 text-green-400" />}>
-          <div className="flex flex-wrap gap-2">
-            {d.levels.supports.map((n, i) => (
-              <span key={i} className="rounded-md border border-green-500/20 bg-green-500/5 px-2 py-1 font-mono text-sm text-green-300">
-                {n.toLocaleString("pt-PT", { maximumFractionDigits: 6 })}
-              </span>
-            ))}
-          </div>
-        </MetricCard>
-        <MetricCard title="Resistências" icon={<TrendingUp className="h-4 w-4 text-red-400" />}>
-          <div className="flex flex-wrap gap-2">
-            {d.levels.resistances.map((n, i) => (
-              <span key={i} className="rounded-md border border-red-500/20 bg-red-500/5 px-2 py-1 font-mono text-sm text-red-300">
-                {n.toLocaleString("pt-PT", { maximumFractionDigits: 6 })}
-              </span>
-            ))}
-          </div>
-        </MetricCard>
-      </div>
-
-      {/* Macro / Instituições / Notícias / Riscos */}
       <div className="grid gap-4 md:grid-cols-2">
-        <ListCard title="Macro & Geopolítica" icon={<Globe className="h-4 w-4 text-blue-400" />} items={d.macro} />
-        <ListCard
-          title="Grandes Instituições"
-          icon={<Building2 className="h-4 w-4 text-purple-400" />}
-          items={d.institutions.map((i) => `${i.name}: ${i.stance}`)}
-        />
-        <ListCard
-          title="Notícias Recentes"
-          icon={<Newspaper className="h-4 w-4 text-amber-400" />}
-          items={d.news.map((n) => `${impactDot(n.impact)} ${n.headline}`)}
-        />
-        <ListCard title="Riscos & Alertas" icon={<AlertTriangle className="h-4 w-4 text-red-400" />} items={d.risks} />
+        {!!d.macro?.length && <ListCard title="Fatores macro a vigiar" icon={<Globe className="h-4 w-4 text-blue-400" />} items={d.macro} />}
+        {!!d.risks?.length && <ListCard title="Riscos & Alertas" icon={<AlertTriangle className="h-4 w-4 text-red-400" />} items={d.risks} />}
+        {!!sourcedNews.length && (
+          <Card className="border-[#D2A63C]/20 bg-black/40">
+            <CardContent className="p-4">
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+                <Newspaper className="h-4 w-4 text-amber-400" /> Notícias (com fonte)
+              </p>
+              <ul className="space-y-1.5">
+                {sourcedNews.map((n, i) => (
+                  <li key={i} className="text-sm text-gray-300">
+                    {impactDot(n.impact)}{" "}
+                    <a href={n.source} target="_blank" rel="noopener noreferrer" className="underline decoration-gray-600 hover:text-[#D2A63C]">
+                      {n.headline}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Recomendação */}
-      <Card className="border-[#D2A63C]/30 bg-gradient-to-br from-[#D2A63C]/10 to-black">
-        <CardContent className="p-5">
-          <p className="mb-3 flex items-center gap-2 font-semibold text-[#D2A63C]">
-            <GraduationCap className="h-5 w-5" /> Recomendação para Traders
-          </p>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <RecoItem label="Direção" value={d.recommendation.bias} />
-            <RecoItem label="Timing" value={d.recommendation.timing} />
-            <RecoItem label="Gestão de risco" value={d.recommendation.risk} />
-          </div>
-        </CardContent>
-      </Card>
+      {d.recommendation && (
+        <Card className="border-[#D2A63C]/30 bg-gradient-to-br from-[#D2A63C]/10 to-black">
+          <CardContent className="p-5">
+            <p className="mb-3 flex items-center gap-2 font-semibold text-[#D2A63C]">
+              <GraduationCap className="h-5 w-5" /> Leitura para Traders
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <RecoItem label="Direção" value={d.recommendation.bias} />
+              <RecoItem label="Timing" value={d.recommendation.timing} />
+              <RecoItem label="Gestão de risco" value={d.recommendation.risk} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
@@ -505,7 +780,7 @@ function impactDot(i: "alto" | "medio" | "baixo"): string {
   return i === "alto" ? "🔴" : i === "medio" ? "🟡" : "🟢"
 }
 
-function Meter({ value, leftLabel, rightLabel }: { value: number; leftLabel: string; rightLabel: string; pos?: boolean }) {
+function Meter({ value, leftLabel, rightLabel }: { value: number; leftLabel: string; rightLabel: string }) {
   const v = Math.max(0, Math.min(100, value))
   return (
     <div>
