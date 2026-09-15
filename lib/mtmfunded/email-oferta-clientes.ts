@@ -102,7 +102,7 @@ export function montarEmailOferta(d: DadosEmailOferta): { assunto: string; html:
   const sorteioUrl = `${site}/sorteio`
   const logo = d.logoSrc ?? 'cid:mtm-logo'
   const nome = (d.nome || (pt ? 'Trader' : 'Trader')).trim()
-  const expira = dataCurta(d.expiraEm, d.idioma, true)
+  const expira = dataCurta(d.expiraEm, d.idioma, false)
   const r = d.regras
   const saldo = num(d.saldo, d.idioma)
   const fim = d.sorteios[0]?.acabaEm ? dataCurta(d.sorteios[0].acabaEm, d.idioma) : null
@@ -131,7 +131,7 @@ export function montarEmailOferta(d: DadosEmailOferta): { assunto: string; html:
     passo1: 'Toca em <b>Ver credenciais</b> e entra com a tua conta MTM (o email onde recebeste esta mensagem). A password da conta aparece uma vez, só para ti.',
     passo2: `Abre o <b>WebTrader</b> em <a href="${webtrader}" style="color:#f6c85a">morethanmoney.pt/webtrader</a> — a conta aparece no seletor de contas, com as tuas métricas.`,
     passo3: 'Negoceia com calma. O objetivo é mostrar consistência, não pressa.',
-    seguranca: `Por segurança, a password nunca vai por email. O link é só teu, vale até <b>${esc(expira)}</b> e abre uma única vez; depois disso pedes outro no WebTrader → A minha conta → Credenciais.`,
+    seguranca: `Por segurança, a password nunca vai por email. O link é só teu, vale 14 dias (até <b>${esc(expira)}</b>) e abre uma única vez; se expirar ou já o tiveres usado, pedes outro no WebTrader → A minha conta → Credenciais.`,
     btn1: 'Ver credenciais', btn2: 'Abrir o WebTrader',
     partilhaT: 'Partilha isto',
     partilha: 'Se este presente te fez sentido, conta a quem te segue. Publica nos stories ou no feed, identifica <a href="' + IG + '" style="color:#f6c85a">@morethanmoney.pt</a> e mostra o teu WebTrader. <b>Há outra surpresa a caminho para quem partilhar</b> — por isso partilha o mais que puderes.',
@@ -162,7 +162,7 @@ export function montarEmailOferta(d: DadosEmailOferta): { assunto: string; html:
     passo1: 'Tap <b>View credentials</b> and sign in with your MTM account (the email this message was sent to). The account password is shown once, only to you.',
     passo2: `Open the <b>WebTrader</b> at <a href="${webtrader}" style="color:#f6c85a">morethanmoney.pt/webtrader</a> — the account shows up in the account switcher, with your own metrics.`,
     passo3: 'Take your time. The goal is to show consistency, not speed.',
-    seguranca: `For your security, the password is never sent by email. The link is yours only, valid until <b>${esc(expira)}</b> (Lisbon time) and opens a single time; after that, request a new one in WebTrader → My account → Credentials.`,
+    seguranca: `For your security, the password is never sent by email. The link is yours only, valid for 14 days (until <b>${esc(expira)}</b>) and opens a single time; if it expires or you have already used it, request a new one in WebTrader → My account → Credentials.`,
     btn1: 'View credentials', btn2: 'Open the WebTrader',
     partilhaT: 'Share it',
     partilha: 'If this gift means something to you, tell the people who follow you. Post it in your stories or feed, tag <a href="' + IG + '" style="color:#f6c85a">@morethanmoney.pt</a> and show your WebTrader. <b>Another surprise is on its way for those who share</b> — so share as much as you can.',

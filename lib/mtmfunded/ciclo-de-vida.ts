@@ -436,10 +436,13 @@ async function emitirFaseSeguinte(
 
   const { data: anterior } = await db
     .from('mtm_trading_accounts')
-    .select('user_id, program_id, saldo_inicial, alavancagem, servidor, motor')
+    .select('user_id, program_id, saldo_inicial, alavancagem, servidor, motor, metricas')
     .eq('id', contaAnteriorId)
     .maybeSingle()
   if (!anterior?.user_id || !anterior.program_id) return { ok: false, motivo: 'conta sem dono ou sem programa' }
+  // Oferta de gratidão e desafio comprado do MESMO programa são cadeias separadas.
+  const { mesmaCadeia, marcaDeOferta } = await import('./oferta-clientes')
+  const ofertaAnterior = marcaDeOferta(anterior as { metricas?: Record<string, unknown> | null })
 
   // Idempotência: se a conta desta fase já existe, não se emite outra. O ciclo de leitura
   // corre de hora a hora e uma repetição dava duas contas da mesma fase à mesma pessoa.
@@ -449,7 +452,9 @@ async function emitirFaseSeguinte(
     .eq('user_id', anterior.user_id)
     .eq('program_id', anterior.program_id)
     .eq('tipo', 'desafio')
-  if ((contas ?? []).some((c) => Number((c.metricas as Record<string, unknown> | null)?.fase ?? 0) === fase)) {
+  if ((contas ?? []).some((c) =>
+    mesmaCadeia(c as { metricas?: Record<string, unknown> | null }, anterior as { metricas?: Record<string, unknown> | null }) &&
+    Number((c.metricas as Record<string, unknown> | null)?.fase ?? 0) === fase)) {
     return { ok: false, motivo: `a conta da fase ${fase} já existe` }
   }
 
@@ -478,7 +483,8 @@ async function emitirFaseSeguinte(
       ...(anterior.motor === 'sim'
         ? await camposDeContaSimulada(Number(anterior.saldo_inicial ?? 0))
         : camposDeContaMt5(anterior.servidor as string | null)),
-      metricas: { fase },
+      // A F2 da oferta herda a marca: continua fora do «um de cada vez» e com acesso ao WebTrader.
+      metricas: { fase, ...(ofertaAnterior ? { oferta: ofertaAnterior } : {}) },
     })
     .select('id')
     .single()

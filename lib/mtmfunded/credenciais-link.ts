@@ -22,6 +22,8 @@ import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from
  */
 
 export const VALIDADE_LINK_MS = 24 * 3600_000
+/** Tecto para validades específicas de campanha (ex.: oferta 2026-09 = 14 dias). */
+export const VALIDADE_MAXIMA_LINK_MS = 30 * 24 * 3600_000
 
 export type MotivoLink = 'criacao' | 'fase' | 'regeneracao' | 'reenvio' | 'backfill' | 'pedido'
 
@@ -60,8 +62,9 @@ function igual(a: string, b: string): boolean {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** Novo token para uma linha. Puro (menos o acaso) — a linha escreve-se em `emitirLink`. */
-export function criarToken(linkId: string, agoraMs: number, chave?: string): { token: string; expiraMs: number } {
-  const expiraMs = agoraMs + VALIDADE_LINK_MS
+export function criarToken(linkId: string, agoraMs: number, chave?: string, validadeMs: number = VALIDADE_LINK_MS): { token: string; expiraMs: number } {
+  if (!(validadeMs > 0) || validadeMs > VALIDADE_MAXIMA_LINK_MS) throw new Error('validade do link inválida')
+  const expiraMs = agoraMs + validadeMs
   const corpo = `v1.${linkId}.${expiraMs}.${randomBytes(18).toString('base64url')}`
   return { token: `${corpo}.${assinar(corpo, chave)}`, expiraMs }
 }
@@ -84,11 +87,12 @@ export function lerToken(token: unknown, agoraMs: number, chave?: string): Leitu
 export async function emitirLink(
   p: { accountId: string; userId: string; motivo: MotivoLink },
   repo: RepoLinks,
-  opts: { agoraMs?: number; chave?: string; id?: string } = {},
+  opts: { agoraMs?: number; chave?: string; id?: string; validadeMs?: number } = {},
 ): Promise<{ linkId: string; token: string; expiraEm: string }> {
   const agoraMs = opts.agoraMs ?? Date.now()
   const linkId = opts.id ?? randomUUID()
-  const { token, expiraMs } = criarToken(linkId, agoraMs, opts.chave)
+  // `validadeMs` só para campanhas que o decidem (24 h por omissão). Uso único e dono: iguais.
+  const { token, expiraMs } = criarToken(linkId, agoraMs, opts.chave, opts.validadeMs)
   const expiraEm = new Date(expiraMs).toISOString()
   await repo.inserir({
     id: linkId, account_id: p.accountId, user_id: p.userId, motivo: p.motivo,
@@ -116,14 +120,14 @@ export async function abrirLink(
   const t = lerToken(token, agoraMs, opts.chave)
   if (!t.ok) {
     return t.motivo === 'expirado'
-      ? { ok: false, status: 410, erro: 'Este link expirou (vale 24 horas). Pede um novo no WebTrader → A minha conta → Credenciais.' }
+      ? { ok: false, status: 410, erro: 'Este link expirou. Pede um novo no WebTrader → A minha conta → Credenciais.' }
       : { ok: false, status: 400, erro: 'Link inválido.' }
   }
   const linha = await repo.ler(t.linkId)
   if (!linha || !igual(linha.token_hash, hashDoToken(token as string))) return { ok: false, status: 404, erro: 'Link não encontrado.' }
   if (linha.user_id !== userId) return { ok: false, status: 404, erro: 'Link não encontrado.' }
   if (!(Date.parse(linha.expira_em) > agoraMs)) {
-    return { ok: false, status: 410, erro: 'Este link expirou (vale 24 horas). Pede um novo no WebTrader → A minha conta → Credenciais.' }
+    return { ok: false, status: 410, erro: 'Este link expirou. Pede um novo no WebTrader → A minha conta → Credenciais.' }
   }
   if (linha.usado_em) return { ok: false, status: 410, erro: 'Este link já foi usado. Por segurança só abre uma vez — pede um novo na tua área.' }
   const gastou = await repo.gastar(linha.id, userId, new Date(agoraMs).toISOString())

@@ -125,14 +125,16 @@ export async function ofertarDesafioDaRenovacao(
   if (contratoAssinado) return { ok: false, motivo: 'já assinou o contrato de trader financiado' }
 
   // ── regra 1: um desafio activo de cada vez ────────────────────────────────
-  const { data: emCurso } = await db
+  // As contas OFERECIDAS (metricas.oferta, ex.: gratificacao-2026-09) não contam: a oferta convive
+  // com o desafio da renovação — ./oferta-clientes.ts desafiosQueBloqueiam.
+  const { data: emCursoTodos } = await db
     .from('mtm_trading_accounts')
-    .select('id, estado')
+    .select('id, estado, metricas')
     .eq('user_id', userId)
     .eq('tipo', 'desafio')
     .in('estado', ['pedida', 'ativa'])
-    .limit(1)
-    .maybeSingle()
+  const { desafiosQueBloqueiam } = await import('./oferta-clientes')
+  const emCurso = desafiosQueBloqueiam((emCursoTodos ?? []) as Array<{ metricas?: Record<string, unknown> | null }>)[0]
   if (emCurso) return { ok: false, motivo: 'ainda tem um desafio a decorrer' }
 
   // ── um por mês ────────────────────────────────────────────────────────────

@@ -84,8 +84,11 @@ async function main() {
   const todos = (perfis ?? []) as Array<import('../lib/mtmfunded/oferta-clientes').PerfilOferta>
 
   const { data: ofertas } = await db.from('mtm_trading_accounts')
-    .select('id, user_id, mt5_login, servidor, metricas, estado').eq('metricas->>oferta', O.MARCA_OFERTA)
-  const ofertaDe = new Map((ofertas ?? []).map((c) => [String(c.user_id), c]))
+    .select('id, user_id, mt5_login, servidor, metricas, estado, created_at').eq('metricas->>oferta', O.MARCA_OFERTA)
+    .order('created_at', { ascending: true })
+  // A conta da F1 (a primeira): a F2 da oferta herda a marca e não pode receber este email.
+  const ofertaDe = new Map<string, NonNullable<typeof ofertas>[number]>()
+  for (const c of ofertas ?? []) if (!ofertaDe.has(String(c.user_id))) ofertaDe.set(String(c.user_id), c)
 
   const saltados: Record<string, string[]> = {}
   const saltar = (m: string, e: string | null) => { (saltados[m] ??= []).push(O.mascararEmail(e)) }
@@ -137,7 +140,7 @@ async function main() {
     const e = montarEmailOferta({
       idioma: lang, nome: lang === 'pt' ? 'Joana' : 'Alex', login: '77123456', servidor: 'MTM Funded',
       saldo: Number(programa.saldo), programa: String(programa.nome), regras: (programa.regras ?? {}) as Record<string, number>,
-      urlLink: `${site}/mtmfunded/credenciais#t=EXEMPLO`, expiraEm: new Date(Date.now() + 24 * 3600_000).toISOString(),
+      urlLink: `${site}/mtmfunded/credenciais#t=EXEMPLO`, expiraEm: new Date(Date.now() + O.VALIDADE_LINK_OFERTA_MS).toISOString(),
       siteUrl: site, sorteios, premios: premios(lang), logoSrc: `${site}/icon-512x512.png`,
     })
     writeFileSync(join(dir, `oferta-preview-${lang}.html`), e.html)
@@ -190,7 +193,7 @@ async function main() {
     try {
       if (!conta.mt5_login) throw new Error('conta sem login')
       const lang = idioma(p)
-      const link = await emitirLink({ accountId: String(conta.id), userId: p.id, motivo: 'criacao' }, repoSupabase(db))
+      const link = await emitirLink({ accountId: String(conta.id), userId: p.id, motivo: 'criacao' }, repoSupabase(db), { validadeMs: O.VALIDADE_LINK_OFERTA_MS })
       const e = montarEmailOferta({
         idioma: lang, nome: String(p.full_name ?? '').trim().split(/\s+/)[0] || 'Trader',
         login: String(conta.mt5_login), servidor: String(conta.servidor ?? 'MTM Funded'),

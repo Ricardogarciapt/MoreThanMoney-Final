@@ -6,8 +6,9 @@
 import assert from 'node:assert/strict'
 import {
   MARCA_OFERTA, PROGRAMA_OFERTA, colunasDaContaOferta, destinoDaOferta, idiomaDoCliente, jaTemOferta, motivoExclusao,
-  type PerfilOferta,
+  type PerfilOferta, VALIDADE_LINK_OFERTA_MS, desafiosQueBloqueiam, mesmaCadeia,
 } from '../oferta-clientes'
+import { abrirLink, emitirLink, lerToken, VALIDADE_LINK_MS, type LinhaLink, type RepoLinks } from '../credenciais-link'
 import { montarEmailOferta, type DadosEmailOferta } from '../email-oferta-clientes'
 import { gerarPassword } from '../simulado/credenciais'
 
@@ -117,4 +118,50 @@ t('assuntos e regras reais', () => {
   assert.ok(en.includes('8% in phase 1') && en.includes('5% in phase 2') && en.includes('Maximum overall loss: 10%'))
 })
 
-console.log(`oferta-clientes: ${ok} verificações ok${process.exitCode ? ' — COM FALHAS' : ''}`)
+// ── a oferta não bloqueia a renovação nem compras (e vice-versa) ───────────
+t('um de cada vez ignora as contas oferecidas', () => {
+  const oferta = { id: 'g', metricas: { oferta: MARCA_OFERTA, fase: 1 } }
+  const comprada = { id: 'c', metricas: { fase: 1 } }
+  const antiga = { id: 'a', metricas: null }
+  assert.deepEqual(desafiosQueBloqueiam([oferta]), [])
+  assert.deepEqual(desafiosQueBloqueiam([oferta, comprada]).map((c) => c.id), ['c'])
+  assert.deepEqual(desafiosQueBloqueiam([antiga]).map((c) => c.id), ['a'])
+})
+t('fases: cadeia da oferta e cadeia comprada são separadas', () => {
+  const f2Oferta = { metricas: { oferta: MARCA_OFERTA, fase: 2 } }
+  const f2Comprada = { metricas: { fase: 2 } }
+  assert.equal(mesmaCadeia(f2Comprada, { metricas: { oferta: MARCA_OFERTA, fase: 1 } }), false)
+  assert.equal(mesmaCadeia(f2Oferta, { metricas: { oferta: MARCA_OFERTA, fase: 1 } }), true)
+  assert.equal(mesmaCadeia(f2Comprada, { metricas: { fase: 1 } }), true)
+})
+
+// ── link de 14 dias só nesta campanha ──────────────────────────────────────
+const CHAVE = 'k'.repeat(40)
+function repoMem(): RepoLinks {
+  const m = new Map<string, LinhaLink>()
+  return {
+    async inserir(l) { m.set(l.id, { ...l }) },
+    async ler(id) { return m.get(id) ?? null },
+    async gastar(id, userId, agora) { const l = m.get(id); if (!l || l.user_id !== userId || l.usado_em) return false; l.usado_em = agora; return true },
+  }
+}
+async function linkTests() {
+  const agora = Date.parse('2026-09-16T10:00:00Z')
+  assert.equal(VALIDADE_LINK_OFERTA_MS, 14 * 24 * 3600_000)
+  const repo = repoMem()
+  const def = await emitirLink({ accountId: 'a1', userId: 'u1', motivo: 'criacao' }, repo, { agoraMs: agora, chave: CHAVE })
+  assert.equal(Date.parse(def.expiraEm) - agora, VALIDADE_LINK_MS, 'omissão continua 24 h')
+  const of = await emitirLink({ accountId: 'a1', userId: 'u1', motivo: 'criacao' }, repo, { agoraMs: agora, chave: CHAVE, validadeMs: VALIDADE_LINK_OFERTA_MS })
+  assert.equal(Date.parse(of.expiraEm) - agora, VALIDADE_LINK_OFERTA_MS)
+  const dia13 = agora + 13 * 24 * 3600_000
+  assert.equal(lerToken(def.token, dia13, CHAVE).ok, false, '24 h expirou')
+  assert.equal((await abrirLink(of.token, 'u2', repo, { agoraMs: dia13, chave: CHAVE })).ok, false, 'outro dono')
+  assert.equal((await abrirLink(of.token, 'u1', repo, { agoraMs: dia13, chave: CHAVE })).ok, true, 'dono no dia 13')
+  assert.equal((await abrirLink(of.token, 'u1', repo, { agoraMs: dia13, chave: CHAVE })).ok, false, 'uso único')
+  const of2 = await emitirLink({ accountId: 'a1', userId: 'u1', motivo: 'criacao' }, repo, { agoraMs: agora, chave: CHAVE, validadeMs: VALIDADE_LINK_OFERTA_MS })
+  assert.equal((await abrirLink(of2.token, 'u1', repo, { agoraMs: agora + 15 * 24 * 3600_000, chave: CHAVE })).ok, false, 'dia 15 expirou')
+  ok++
+}
+
+linkTests().catch((e) => { console.error(`✗ link 14 dias\n  ${e instanceof Error ? e.message : e}`); process.exitCode = 1 }).finally(() =>
+console.log(`oferta-clientes: ${ok} verificações ok${process.exitCode ? ' — COM FALHAS' : ''}`))
