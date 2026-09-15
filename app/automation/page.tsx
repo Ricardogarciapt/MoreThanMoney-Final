@@ -149,16 +149,17 @@ export default function AutomationPage() {
 
                 <div className="mt-auto pt-6">
                   <div className="flex items-baseline gap-2 mb-4">
-                    <span className="text-3xl font-black text-white">+20€</span>
-                    <span className="text-gray-400 text-sm">/mês, sobre a tua subscrição MTM</span>
+                    <span className="text-xl font-black text-white">Descontinuado</span>
+                    <span className="text-gray-400 text-sm">quem já subscreveu mantém o acesso no MTM Auto</span>
                   </div>
-                  <Link href="/mtmcopy">
+                  {/* MTM Copy descontinuado: já não se vende — quem chega aqui vai para o MTM Auto. */}
+                  <Link href="/mtmauto">
                     <Button className="w-full bg-gradient-to-r from-purple-600 via-mtm-primary to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-lg px-6 py-6 rounded-xl transition-all duration-300 hover:scale-[1.02]">
                       <Bot className="w-5 h-5 mr-2" />
-                      Ativar MTM Copy
+                      O MTM Copy passou a MTM Auto
                     </Button>
                   </Link>
-                  <p className="text-xs text-gray-500 mt-3 text-center">Requer conta MTM · pagamento via Stripe</p>
+                  <p className="text-xs text-gray-500 mt-3 text-center">As subscrições antigas continuam válidas</p>
                 </div>
               </CardContent>
             </Card>
@@ -343,7 +344,7 @@ export default function AutomationPage() {
                 </div>
                 <div className="mt-6 pt-6 border-t border-purple-500/30 flex items-center justify-between">
                   <p className="text-sm text-purple-400 font-semibold">Para quem já opera</p>
-                  <p className="text-white font-bold">+20€<span className="text-gray-400 text-sm font-normal">/mês</span></p>
+                  <p className="text-white font-bold">Agora no MTM Auto</p>
                 </div>
               </CardContent>
             </Card>
@@ -387,21 +388,14 @@ export default function AutomationPage() {
               Pronto para <span className="text-mtm-primary">Elevar</span> o Teu Trading?
             </h2>
             <p className="text-xl text-gray-300 mb-2 max-w-2xl mx-auto">
-              Duas portas para o mesmo motor. Escolhe pela tua experiência, não pelo preço.
+              Um motor, uma app: liga a tua conta e escolhe quem copias.
             </p>
             {/* Dizer para quem é cada uma poupa o cliente a uma escolha errada — e a nós um
                 reembolso e uma conversa de suporte. */}
             <p className="text-base text-gray-400 mb-8 max-w-2xl mx-auto">
-              Já operas e queres controlo fino sobre várias contas? <b className="text-purple-300">MTM Copy</b>.
-              Estás a começar, ou vens de fora do ecossistema? <b className="text-mtm-primary">MTM Auto</b>.
+              A cópia automática vive agora num só sítio: o <b className="text-mtm-primary">MTM Auto</b>.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/mtmcopy">
-                <Button className="bg-gradient-to-r from-purple-600 via-mtm-primary to-pink-600 hover:from-purple-500 hover:via-mtm-primary hover:to-pink-500 text-white font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105">
-                  <Bot className="w-5 h-5 mr-2" />
-                  MTM Copy · 20€/mês
-                </Button>
-              </Link>
               <Link href="/mtmauto">
                 <Button className="bg-gradient-to-r from-mtm-primary to-amber-500 hover:from-amber-400 hover:to-mtm-primary text-black font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105">
                   <Smartphone className="w-5 h-5 mr-2" />

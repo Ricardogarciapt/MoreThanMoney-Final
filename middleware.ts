@@ -200,23 +200,8 @@ export async function middleware(request: NextRequest) {
     response.headers.set("Expires", "0")
   }
 
-  // ── /mtmcopy = página de venda (sempre pública) ───────────────────────────
-  if (pathname === "/mtmcopy" || pathname === "/mtmcopy/") {
-    return response
-  }
-
-  const mtmcopyNeedsAuth =
-    pathname.startsWith("/mtmcopy/metrics") || pathname.startsWith("/mtmcopy/app")
-
-  if (mtmcopyNeedsAuth && hasSupabaseEnv) {
-    const mtmcopyUser = await getCachedUser()
-    if (!mtmcopyUser) {
-      const redirect = encodeURIComponent(pathname + request.nextUrl.search)
-      return NextResponse.redirect(new URL(`/login?redirect=${redirect}`, request.url))
-    }
-
-    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
-  }
+  // ── /mtmcopy: descontinuado (fase 1). As páginas reencaminham para /mtmauto no next.config.mjs
+  // (308), antes de chegarem aqui; as rotas /api/mtmcopy/* continuam vivas para as apps instaladas.
 
   // ── Membros sem perfil (OAuth backdoor) → /register ───────────────────────
   if (isMemberProtectedPath(pathname) && hasSupabaseEnv) {

@@ -80,12 +80,13 @@ export function getFastStartJourneySteps(siteUrl?: string): FastStartJourneyStep
     },
     {
       number: 5,
-      title: 'MTMcopier — Escolhe uma estratégia',
+      // O MTM Copy foi descontinuado (fase 1): a cópia automática vive agora só no MTM Auto.
+      title: 'MTM Auto — Escolhe uma estratégia',
       description:
-        'Liga a tua conta MT5 e escolhe copiar a estratégia MTM (Premium ou Trade Ideas) ou os grupos de sinais Telegram.',
-      ctaLabel: 'Configurar MTMcopier',
-      ctaUrl: `${base}/mtmcopy`,
-      previewPath: '/mtmcopy',
+        'Liga a tua conta MT5 no MTM Auto e escolhe que estratégia MTM copias, com o teu risco.',
+      ctaLabel: 'Abrir o MTM Auto',
+      ctaUrl: `${base}/mtmauto`,
+      previewPath: '/mtmauto',
       previewHint: 'Estratégia MTM · Grupos · Copy trader',
     },
     {
