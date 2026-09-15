@@ -430,7 +430,7 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
   return (
     <>
     {aberta && <ContaModal contaId={aberta} aoFechar={fecharModal} aoMudar={puxar} />}
-    <Tabela cabecalhos={['Dono', 'Tipo', 'Login', 'Servidor', 'Estado', 'Acções']}>
+    <Tabela cabecalhos={['Dono', 'Tipo', 'Login', 'Servidor', 'Saldo', 'Estado', 'Acções']}>
       {linhas.map((c) => {
         const dono = c.dono as { nome: string; email: string } | null
         const pedido = c.pedido as { estado: string; erro?: string; tentativas: number } | null
@@ -457,6 +457,24 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
               {(c.mt5_login as string) ?? <span className="text-amber-400">—</span>}
             </td>
             <td className="px-3 py-2 text-xs text-gray-500">{(c.servidor as string) ?? '—'}</td>
+            <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">
+              {(() => {
+                // Saldo fechado (sem flutuante): simuladas pelo sim_saldo, MT5 pelas métricas lidas.
+                const m = (c.metricas ?? {}) as Record<string, unknown>
+                const inicial = Number(c.saldo_inicial ?? 0)
+                const bruto = c.motor === 'sim' ? c.sim_saldo : (m.balance ?? m.saldo ?? m.equity)
+                const saldo = bruto == null || bruto === '' ? null : Number(bruto)
+                if (saldo == null || !Number.isFinite(saldo)) return <span className="text-gray-600">—</span>
+                const pct = inicial > 0 ? ((saldo - inicial) / inicial) * 100 : null
+                const cor = pct == null || Math.abs(pct) < 0.005 ? 'text-gray-400' : pct > 0 ? 'text-emerald-400' : 'text-red-400'
+                return (
+                  <>
+                    <p className="text-gray-200">{saldo.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $</p>
+                    {pct != null && <p className={cor}>{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</p>}
+                  </>
+                )
+              })()}
+            </td>
             <td className="px-3 py-2 text-xs">
               <span
                 className="rounded px-1.5 py-0.5 text-[11px] font-semibold"

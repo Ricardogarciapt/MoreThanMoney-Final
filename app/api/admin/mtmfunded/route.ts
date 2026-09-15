@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
   if (vista === 'contas') {
     const { data } = await db
       .from('mtm_trading_accounts')
-      .select('id, user_id, tipo, tournament_id, mt5_login, servidor, saldo_inicial, alavancagem, estado, quebrou_regra, quebrada_em, metricas, metricas_lidas_em, metaapi_account_id, motor, created_at')
+      .select('id, user_id, tipo, tournament_id, mt5_login, servidor, saldo_inicial, sim_saldo, alavancagem, estado, quebrou_regra, quebrada_em, metricas, metricas_lidas_em, metaapi_account_id, motor, created_at')
       .order('created_at', { ascending: false })
       .limit(300)
 
