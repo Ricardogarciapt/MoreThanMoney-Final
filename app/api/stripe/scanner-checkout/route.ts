@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripeClient } from '@/lib/stripe-client'
-import { requireStripePriceId } from '@/lib/stripe-prices'
+import { recusaPlanoDescontinuado, requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 
 const SUBSCRIPTION_PLANS = new Set(['mtm_scanner_monthly', 'scanners_monthly'])
@@ -13,6 +13,10 @@ export async function POST(request: NextRequest) {
     if (!planId || !email) {
       return NextResponse.json({ error: 'planId e email são obrigatórios' }, { status: 400 })
     }
+
+    // Planos descontinuados (MTM Copy) não abrem checkout novo.
+    const descontinuado = recusaPlanoDescontinuado(planId)
+    if (descontinuado) return NextResponse.json(descontinuado, { status: 410 })
 
     if (!tvUsername?.trim()) {
       return NextResponse.json(

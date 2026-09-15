@@ -3,7 +3,7 @@ import { opinlyTrack } from '@/lib/opinly/track'
 import type Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getStripeClient } from '@/lib/stripe-client'
-import { requireStripePriceId } from '@/lib/stripe-prices'
+import { recusaPlanoDescontinuado, requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 
@@ -37,6 +37,12 @@ export async function POST(request: NextRequest) {
 
     if (!planId) {
       return NextResponse.json({ error: 'planId é obrigatório' }, { status: 400 })
+    }
+
+    // MTM Copy descontinuado: 410 Gone, com a mensagem a apontar para o MTM Auto.
+    const descontinuado = recusaPlanoDescontinuado(planId)
+    if (descontinuado) {
+      return NextResponse.json(descontinuado, { status: 410 })
     }
 
     const priceId = requireStripePriceId(planId)
@@ -79,7 +85,7 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id)
     }
 
-    const cancelPath = planId === 'mtmcopy_addon_monthly' ? '/mtmcopy' : '/scanner'
+    const cancelPath = '/scanner'
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
