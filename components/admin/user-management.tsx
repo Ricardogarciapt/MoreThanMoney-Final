@@ -41,7 +41,12 @@ import {
   Plus,
   TrendingUp,
   Bot,
+  Wallet,
 } from "lucide-react"
+import dynamic from "next/dynamic"
+// As contas do utilizador (MTM Funded + ligadas) com os números que ele vê — components/admin/contas-do-utilizador.tsx.
+const ContasDoUtilizador = dynamic(() => import("./contas-do-utilizador"), { ssr: false })
+const ContaModalFunded = dynamic(() => import("./mtmfunded-conta-modal"), { ssr: false })
 import type { UserManagement } from "@/lib/admin-types"
 import {
   isSubscriptionCategory,
@@ -152,6 +157,8 @@ export default function UserManagementComponent({
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
+  const [contasDe, setContasDe] = useState<{ id: string; nome: string } | null>(null)
+  const [contaFundedAberta, setContaFundedAberta] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [togglingInactiveId, setTogglingInactiveId] = useState<string | null>(null)
   const [renewingId, setRenewingId] = useState<string | null>(null)
@@ -542,6 +549,9 @@ export default function UserManagementComponent({
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
+    <>
+    {contasDe && <ContasDoUtilizador userId={contasDe.id} nome={contasDe.nome} aoFechar={() => setContasDe(null)} aoAbrirConta={(id) => { setContasDe(null); setContaFundedAberta(id) }} />}
+    {contaFundedAberta && <ContaModalFunded contaId={contaFundedAberta} aoFechar={() => setContaFundedAberta(null)} aoMudar={() => undefined} />}
     <Card className="card-clean border-[#D2A63C]/20">
       <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -1155,6 +1165,16 @@ export default function UserManagementComponent({
                               Cópia
                             </Link>
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-[#D2A63C]/40 text-[#D2A63C] hover:bg-[#D2A63C]/10"
+                            title="Todas as contas (MTM Funded, MT5/MT4, TradeLocker) com os números que o utilizador vê"
+                            onClick={() => setContasDe({ id: user.id, nome: user.full_name || user.email || "—" })}
+                          >
+                            <Wallet className="h-4 w-4 mr-1" />
+                            Contas
+                          </Button>
                           <Dialog
                             open={isDeleteDialogOpen && selectedUser === user.id}
                             onOpenChange={(open) => {
@@ -1501,5 +1521,6 @@ export default function UserManagementComponent({
 
       </CardContent>
     </Card>
+    </>
   )
 }

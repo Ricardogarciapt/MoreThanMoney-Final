@@ -69,7 +69,7 @@ export function numerosDaConta(c: LinhaContaNumeros): NumerosConta {
   const m = (c.metricas ?? {}) as Record<string, unknown>
   const sim = c.motor === 'sim'
   const saldoInicial = n(c.saldo_inicial)
-  const saldo = sim ? n(c.sim_saldo) : n(m.saldo, saldoInicial)
+  const saldo = sim ? n(c.sim_saldo) : n(m.saldo ?? m.balance, n(m.equity, saldoInicial))
   const equity = sim ? n(c.sim_equity, saldo) : n(m.equity, saldoInicial)
   const ancora = sim ? c.sim_ancora_dia : m.saldoReferenciaDia
   return {
@@ -97,10 +97,10 @@ export function numerosDaConta(c: LinhaContaNumeros): NumerosConta {
 /**
  * As barras das regras (objectivo, perda diária, drawdown máximo, dias mínimos, consistência) —
  * as MESMAS no WebTrader e no admin. `equity` opcional: o WebTrader passa a do ecrã (preços ao vivo).
- * Conta de análise (sem regras que a quebrem) → lista vazia; o ecrã diz «sem regras».
+ * Conta de análise: as barras vêm na mesma (com «análise: não quebra»); o ecrã do dono troca-as
+ * por «sem regras», o admin mostra-as — os valores são os mesmos.
  */
 export function barrasDaConta(num: NumerosConta, regras: Record<string, unknown> | null, equity?: number): BarraRegra[] {
-  if (num.analise) return []
   return barrasDeRegras({
     regras, saldoInicial: num.saldoInicial, equity: equity ?? num.equity, ancoraDia: num.ancoraDia,
     diasNegociados: num.diasNegociados, fase: num.fase, lucroPorDia: num.lucroPorDia, analise: num.analise,

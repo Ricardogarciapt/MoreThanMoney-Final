@@ -79,7 +79,11 @@ export function exigirNegociavel(conta: Conta, modo: ModoSessao) {
 
 export async function lerConta(accountId: string): Promise<Conta | null> {
   if (!/^[0-9a-f-]{36}$/i.test(accountId)) return null
-  const { data } = await getSupabaseAdmin().from('mtm_trading_accounts').select(CAMPOS_CONTA).eq('id', accountId).maybeSingle()
+  // `pausada_em` (079) para o estado «Pause» igual ao do admin; sem a coluna, lê-se sem ela.
+  const db = getSupabaseAdmin()
+  const r = await db.from('mtm_trading_accounts').select(`${CAMPOS_CONTA}, pausada_em`).eq('id', accountId).maybeSingle()
+  if (!r.error) return (r.data as Conta | null) ?? null
+  const { data } = await db.from('mtm_trading_accounts').select(CAMPOS_CONTA).eq('id', accountId).maybeSingle()
   return (data as Conta | null) ?? null
 }
 
@@ -218,17 +222,6 @@ async function inserirComGestao(tabela: 'funded_positions' | 'funded_orders', ba
   if (semColuna && !pediuGestao) return db.from(tabela).insert(base).select('*').single()
   if (semColuna) throw new ErroOrdem(503, 'ordens avançadas ainda não estão ligadas nesta base (migração 072)')
   return r
-}
-
-/** Pausa do admin (079): as posições existentes continuam geridas, as novas não nascem. */
-async function exigirContaSemPausa(accountId: string) {
-  const { exigirSemPausa, ContaEmPausa } = await import('./pausa')
-  try {
-    await exigirSemPausa(accountId)
-  } catch (e) {
-    if (e instanceof ContaEmPausa) throw new ErroOrdem(e.status, e.message)
-    throw e
-  }
 }
 
 /** Pausa do admin (079): as posições existentes continuam geridas, as novas não nascem. */
@@ -590,13 +583,17 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao) {
     conta: {
       id: conta.id, login: conta.mt5_login, servidor: conta.servidor ?? SERVIDOR_SIMULADO,
       tipo: conta.tipo, estado: conta.estado,
-      etiqueta: tipoCurto(String(conta.tipo), metricas), estadoCurto: estadoCurto(String(conta.estado), metricas),
+      etiqueta: tipoCurto(String(conta.tipo), metricas), estadoCurto: estadoCurto(String(conta.estado), metricas, (conta.pausada_em as string | null) ?? null),
+      pausadaEm: (conta.pausada_em as string | null) ?? null,
       motivo: conta.quebrou_regra ?? null, quebradaEm: conta.quebrada_em ?? null,
       saldoInicial: Number(conta.saldo_inicial ?? 0), alavancagem: Number(conta.alavancagem ?? 100),
       diasNegociados: Number(conta.sim_dias_negociados ?? 0),
       ancoraDia: conta.sim_ancora_dia == null ? null : Number(conta.sim_ancora_dia),
       fase: Number(metricas.fase ?? 1),
       analise: ehContaDeAnalise(conta),
+      // Para as barras das regras do painel «A minha conta» (consistência) — as mesmas do admin.
+      lucroPorDia: (metricas.lucroPorDia ?? null) as Record<string, number> | null,
+      tournamentId: (conta.tournament_id as string | null) ?? null,
       aceitaT2T: Boolean(conta.aceita_t2t),
       segueEstrategia: segue
         ? { slug: segue, nome: String((estrategia as { nome?: string } | null)?.nome ?? segue), ativa: (estrategia as { ativo?: boolean } | null)?.ativo !== false }

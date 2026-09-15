@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CONTRATO_VERSAO, almofadaUsd, levantavelUsd, QUOTA_TRADER } from '@/lib/mtmfunded/contrato'
+import { equityParaLevantamento } from '@/lib/mtmfunded/numeros-conta'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   const { data: contas } = await db
     .from('mtm_trading_accounts')
-    .select('id, tipo, mt5_login, saldo_inicial, estado, metricas')
+    .select('id, tipo, mt5_login, saldo_inicial, estado, metricas, motor, sim_saldo')
     .eq('user_id', user.id)
     .in('estado', ['ativa', 'financiada'])
 
@@ -69,8 +70,9 @@ export async function GET(request: NextRequest) {
     contrato: contrato ? { versao: contrato.versao, assinadoEm: contrato.assinado_em } : null,
     quotaTrader: QUOTA_TRADER,
     contas: (contas ?? []).map((c) => {
-      const m = (c.metricas ?? {}) as Record<string, unknown>
-      const equity = typeof m.equity === 'number' ? m.equity : Number(c.saldo_inicial ?? 0)
+      // A MESMA equity do pedido (POST) e do admin: numa simulada, o saldo exacto (numeros-conta.ts).
+      // Antes lia-se `metricas.equity`, que numa conta simulada pode estar velha ou nem existir.
+      const equity = equityParaLevantamento(c as never)
       const jaPago = pagoPorConta.get(c.id as string) ?? 0
       return {
         id: c.id,
@@ -205,12 +207,9 @@ export async function POST(request: NextRequest) {
     .in('estado', ['pago', 'aprovado'])
   const jaPago = (anteriores ?? []).reduce((t, p) => t + Number(p.valor_usd), 0)
 
-  const m = (conta.metricas ?? {}) as Record<string, unknown>
   // Conta simulada: sem posições abertas, o saldo É a equity — e é o valor exacto, não a última
-  // leitura das métricas.
-  const equity = conta.motor === 'sim' && conta.sim_saldo != null
-    ? Number(conta.sim_saldo)
-    : typeof m.equity === 'number' ? m.equity : Number(conta.saldo_inicial ?? 0)
+  // leitura das métricas. Mesma função do GET e do admin.
+  const equity = equityParaLevantamento(conta as never)
   const disponivel = levantavelUsd(Number(conta.saldo_inicial ?? 0), equity, jaPago)
 
   if (!(valor > 0)) return NextResponse.json({ error: 'Indica o valor' }, { status: 400 })
