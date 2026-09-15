@@ -1,5 +1,6 @@
 "use client"
 
+import { aquecerWebtrader } from "@/components/funded/pre-carga"
 import { linkWebtrader, estaNaAppMobile } from "@/lib/mtmfunded/link-webtrader"
 import { usePathname } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -584,7 +585,9 @@ function AlertCard({
               <a href={linkWebtrader({
                 symbol: String(alert.tvSymbol || alert.ticker), dir: alert.direction,
                 sl: alert.stopLoss, tp: alert.takeProfits[0], origem: "scanner", ref: alert.id,
-              }, estaNaAppMobile(pathname))}>
+              }, estaNaAppMobile(pathname))}
+                onPointerEnter={() => aquecerWebtrader(String(alert.tvSymbol || alert.ticker))}
+                onTouchStart={() => aquecerWebtrader(String(alert.tvSymbol || alert.ticker))}>
                 <CandlestickChart className="mr-1 h-3 w-3" />
                 Negociar no Web trader
               </a>

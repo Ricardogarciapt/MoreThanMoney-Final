@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { BarChart3, CandlestickChart } from "lucide-react"
 import ScannerMobile from "@/components/mobile/scanner-mobile"
 import FundedWebtrader from "@/components/funded/funded-webtrader"
+import { aquecerWebtrader } from "@/components/funded/pre-carga"
 
 /**
  * O SEPARADOR SCANNER DA APP-MOBILE — dois sub-separadores: «Scanner» e «Web trader».
@@ -51,6 +52,9 @@ export default function ScannerTabMobile({ ativo, sub }: { ativo: boolean; sub: 
             key={v}
             type="button"
             onClick={() => mudar(v)}
+            // Hover/toque no «Web trader»: o código do gráfico, a ficha e as velas começam já a vir.
+            onPointerEnter={v === "webtrader" ? () => aquecerWebtrader(simboloPartilhado) : undefined}
+            onTouchStart={v === "webtrader" ? () => aquecerWebtrader(simboloPartilhado) : undefined}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-semibold transition-colors ${
               vista === v ? "bg-[#D2A63C] text-black" : "bg-white/5 text-gray-300"
             }`}
