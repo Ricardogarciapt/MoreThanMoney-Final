@@ -3,10 +3,16 @@
     "apps": [],
     "details": [
       {
-        "appID": "84TRST3649.pt.morethanmoney.app",
+        "appIDs": [
+          "2V2XZ23T68.pt.morethanmoney.app",
+          "84TRST3649.pt.morethanmoney.app"
+        ],
         "paths": [
           "/app-mobile",
           "/app-mobile/*",
+          "/webtrader",
+          "/webtrader/*",
+          "/mtmfunded/credenciais",
           "/auth/*",
           "/success",
           "/scanner",
@@ -17,6 +23,7 @@
   },
   "webcredentials": {
     "apps": [
+      "2V2XZ23T68.pt.morethanmoney.app",
       "84TRST3649.pt.morethanmoney.app"
     ]
   }
