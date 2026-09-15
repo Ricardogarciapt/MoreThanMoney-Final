@@ -350,7 +350,13 @@ export async function POST(request: NextRequest) {
     const avisos: Record<string, unknown> = {}
     if (b?.notificar === true) {
       const { avisarContasDeEstrategia } = await import('@/lib/mtmfunded/aviso-contas-estrategia')
-      for (const r of resultados) if (!r.erro) avisos[r.userId] = await avisarContasDeEstrategia(r, saldo)
+      const { enviarCredenciaisDaConta } = await import('@/lib/mtmfunded/credenciais-servico')
+      for (const r of resultados) {
+        if (r.erro) continue
+        avisos[r.userId] = await avisarContasDeEstrategia(r, saldo)
+        // Contas acabadas de nascer: as credenciais (login + link seguro) vão uma a uma.
+        for (const c of r.contas) if (c.nova) await enviarCredenciaisDaConta(c.accountId, 'criacao')
+      }
     }
     return NextResponse.json({ ok: true, resultados: resultados.map((r) => ({ ...r, aviso: avisos[r.userId] ?? null })) })
   }
@@ -473,6 +479,14 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
     if (!conta?.mt5_login) return NextResponse.json({ error: 'conta ainda sem credenciais' }, { status: 409 })
 
+    // Conta simulada: o email novo — login, servidor e link seguro de uso único; nunca a password.
+    const { data: motorDaLinha } = await db.from('mtm_trading_accounts').select('motor').eq('id', id).maybeSingle()
+    if (motorDaLinha?.motor === 'sim') {
+      const { enviarCredenciaisDaConta } = await import('@/lib/mtmfunded/credenciais-servico')
+      const r = await enviarCredenciaisDaConta(id, 'reenvio', { incluirCasa: true })
+      return NextResponse.json({ ok: r.enviado, error: r.enviado ? undefined : `o email não saiu (${r.motivo})` })
+    }
+
     const { data: perfil } = conta.user_id
       ? await db.from('profiles').select('full_name, email').eq('id', conta.user_id).maybeSingle()
       : { data: null }
@@ -487,7 +501,8 @@ export async function POST(request: NextRequest) {
     const r = await enviarEmailDaConta({
       para: perfil.email as string,
       nome: (perfil.full_name as string) || 'Participante',
-      tipo: conta.tipo === 'torneio' ? 'torneio' : 'desafio',
+      // Uma Funded reenviada como «desafio» dizia ao trader que ainda tinha uma prova pela frente.
+      tipo: conta.tipo === 'torneio' ? 'torneio' : conta.tipo === 'financiada' || conta.tipo === 'funded' ? 'financiada' : 'desafio',
       nomeProva: (torneio?.nome as string) || 'MTM Funded',
       login: conta.mt5_login as string,
       servidor: (conta.servidor as string) || 'TheTradingMaster-Live',

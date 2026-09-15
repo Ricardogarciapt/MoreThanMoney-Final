@@ -234,8 +234,12 @@ export async function executarAccao(ctx: ContextoAccao, p: PedidoAccao): Promise
         mt5_login: login, mt5_password_cifrada: cifrar(master), mt5_investor_cifrada: cifrar(investor), updated_at: agora,
       }).eq('id', conta.id)
       if (error) throw new ErroAdmin(500, error.message)
+      // O dono recebe o aviso da mudança com um link seguro (nunca as passwords no email).
+      const { enviarCredenciaisDaConta } = await import('./credenciais-servico')
+      const email = await enviarCredenciaisDaConta(conta.id, 'regeneracao', { db, incluirCasa: true })
       return {
         // Mostradas UMA vez no modal. Nem email, nem auditoria, nem logs.
+        emailAoDono: email.enviado,
         resposta: { login, servidor: conta.servidor ?? 'MTM Funded', password: master, investor },
         auditoria: { login, novoLogin: p.novoLogin, passwords: 'regeneradas (não guardadas)' },
       }

@@ -623,7 +623,7 @@ function SeparadorGestao({ r, accao, setAviso }: { r: Dados; accao: Accao; setAv
     { id: 'definir_estrategia', nome: 'Estratégia seguida', icone: GitBranch, visivel: sim, campos: 'estrategia',
       nota: `Hoje: ${c.segue_estrategia ?? 'nenhuma'}. O motor espelha as posições da estratégia escolhida.`, corpo: (x) => ({ accao: 'definir_estrategia', slug: x.slug || null }) },
     { id: 'regenerar_credenciais', nome: 'Regenerar credenciais', icone: KeyRound, perigo: true, visivel: sim, campos: 'credenciais',
-      nota: 'Passwords novas (master e investor), mostradas aqui UMA vez. Nunca por email.', corpo: (x) => ({ accao: 'regenerar_credenciais', novoLogin: Boolean(x.novoLogin) }) },
+      nota: 'Passwords novas (master e investor), mostradas aqui UMA vez. O dono recebe um email de aviso com link seguro — nunca as passwords.', corpo: (x) => ({ accao: 'regenerar_credenciais', novoLogin: Boolean(x.novoLogin) }) },
     { id: 'notificar', nome: 'Notificar o dono', icone: Bell, visivel: Boolean(c.user_id), campos: 'notificar',
       nota: 'Email e/ou push com um modelo (sem passwords).', corpo: (x) => ({ accao: 'notificar', modelo: x.modelo ?? 'conta_revista', texto: x.texto || undefined, email: x.email !== false, push: x.push !== false }) },
   ]

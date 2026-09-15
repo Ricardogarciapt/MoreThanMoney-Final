@@ -507,6 +507,12 @@ async function emitirFaseSeguinte(
     estado: 'em_fila',
   })
 
+  // Conta simulada: credenciais por email (login + link seguro, nunca a password) — lib/mtmfunded/credenciais-servico.ts
+  if (anterior.motor === 'sim') {
+    const { enviarCredenciaisDaConta } = await import('./credenciais-servico')
+    await enviarCredenciaisDaConta(nova.id, 'fase')
+  }
+
   return { ok: true, accountId: nova.id }
 }
 
@@ -699,6 +705,12 @@ export async function emitirContaFinanciada(userId: string): Promise<ResultadoFi
     estado: 'em_fila',
   })
 
+  // Conta simulada: credenciais por email (login + link seguro, nunca a password) — lib/mtmfunded/credenciais-servico.ts
+  if (aprovado.motor === 'sim') {
+    const { enviarCredenciaisDaConta } = await import('./credenciais-servico')
+    await enviarCredenciaisDaConta(conta.id, 'fase')
+  }
+
   return { ok: true, accountId: conta.id }
 }
 
@@ -857,6 +869,12 @@ export async function renovarContaAposLevantamento(
       alavancagem: Number(conta.alavancagem ?? 100),
       estado: 'em_fila',
     })
+  }
+
+  // Conta simulada: credenciais por email (login + link seguro, nunca a password) — lib/mtmfunded/credenciais-servico.ts
+  if (simulada) {
+    const { enviarCredenciaisDaConta } = await import('./credenciais-servico')
+    await enviarCredenciaisDaConta(nova.id, 'criacao')
   }
 
   await enviarEmailDeRenovacao({
