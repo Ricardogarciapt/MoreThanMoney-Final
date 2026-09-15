@@ -14,7 +14,6 @@
  *    `leituraDeFundoBloqueada` e, se sim, SALTAM (devolvem «não consegui ler», nunca lançam).
  *  - Ordens, fechos, modificações e o dimensionamento de ordens nunca consultam este travão.
  */
-import { AsyncLocalStorage } from 'node:async_hooks'
 import { loja, SEM_TABELA } from './metaapi-loja'
 
 export const CONTA_GLOBAL = '*'
@@ -63,7 +62,17 @@ export function bloqueioAteDoErro(err: unknown, agoraMs: number, padraoMs = bloq
 
 // ── contexto «segundo plano» ────────────────────────────────────────────────────────────────────
 
-const contexto = new AsyncLocalStorage<{ fundo: true }>()
+// Sem `import 'node:async_hooks'`: páginas cliente antigas importam a cadeia metaapi.ts e o webpack
+// do browser rebentava o build (15/09). No servidor (Node 22) o módulo vem por getBuiltinModule.
+type Contexto = { run<R>(s: { fundo: true }, f: () => R): R; getStore(): { fundo: true } | undefined }
+const contexto: Contexto = (() => {
+  const proc = (globalThis as { process?: { getBuiltinModule?: (m: string) => unknown } }).process
+  const mod = proc?.getBuiltinModule?.('node:async_hooks') as
+    | { AsyncLocalStorage: new () => Contexto }
+    | undefined
+  if (mod?.AsyncLocalStorage) return new mod.AsyncLocalStorage()
+  return { run: (_s, f) => f(), getStore: () => undefined }
+})()
 
 /** Corre `fn` como trabalho de FUNDO: as leituras lá dentro respeitam o travão de quota. */
 export function emSegundoPlano<T>(fn: () => Promise<T>): Promise<T> {
