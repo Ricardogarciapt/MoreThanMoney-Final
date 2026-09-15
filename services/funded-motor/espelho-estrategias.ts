@@ -46,6 +46,10 @@ import {
 } from '../../lib/mtmfunded/espelho/calculo'
 import { Agendador, LeitorMestre, sdkMetaApi, type SdkEspelho } from './espelho-leitor'
 import { aoLimiteMetaApi, espelhoPausadoAte, registarErroMetaApi } from './metaapi-partilhada'
+import { Latencias } from '../../lib/mtmfunded/espelho/provider'
+
+/** Evento da mestre → acção escrita nas seguidoras (inclui o debounce). Publicado no pulso do motor. */
+export const latenciaSeguidoras = new Latencias()
 
 export interface ContextoEspelho {
   db: SupabaseClient
@@ -104,6 +108,8 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
   const timers: NodeJS.Timeout[] = []
   let parado = false
   let sdk: SdkEspelho | null = ctx.sdk ?? null
+  /** Primeiro evento ainda por processar, por mestre (para medir evento → escrita). */
+  const pendenteDesde = new Map<string, number>()
   const agendador = new Agendador(
     (id) => { const m = mestres.get(id); return m ? processarMestre(m) : Promise.resolve({ repetir: false }) },
     () => mestres.keys(),
@@ -116,7 +122,9 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
       db.from('mtm_trading_accounts')
         .select('id, user_id, segue_estrategia, sim_saldo, sim_equity, alavancagem, created_at')
         .eq('motor', 'sim').eq('estado', 'ativa').not('segue_estrategia', 'is', null).limit(2000),
-      db.from('mtmauto_providers').select('slug, nome, metaapi_account_id'),
+      // Só providers ATIVOS: um provider desligado pode apontar para uma conta apagada na MetaApi
+      // (Gold Did Premium 9dfb4df3, 15/09) e o streaming ficava a reconectar a uma conta inexistente.
+      db.from('mtmauto_providers').select('slug, nome, metaapi_account_id').eq('ativo', true),
     ])
     // Sem conseguir ler, mantém-se o que havia: um erro de rede não desliga as seguidoras.
     if (e1 || e2) { log('[espelho] leitura das seguidoras falhou:', (e1 ?? e2)?.message); return }
@@ -150,7 +158,7 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
       if (!leitores.has(id)) {
         try {
           if (!sdk) sdk = sdkMetaApi(ctx.metaapiToken)
-          const l = new LeitorMestre(id, sdk, { log, aoMudar: (x) => agendador.sinalizar(x), aoErroMetaApi: registarErroMetaApi })
+          const l = new LeitorMestre(id, sdk, { log, aoMudar: (x) => { if (!pendenteDesde.has(x)) pendenteDesde.set(x, Date.now()); agendador.sinalizar(x) }, aoErroMetaApi: registarErroMetaApi })
           leitores.set(id, l)
           l.iniciar()
         } catch (e) {
@@ -198,6 +206,8 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
   /** `repetir` = volta a correr daqui a REPETIR_MS (há trabalho por acabar). */
   async function processarMestre(m: Mestre): Promise<{ repetir: boolean }> {
     if (pausadoPorLimite()) return { repetir: false }
+    const desde = pendenteDesde.get(m.metaapiId) ?? null
+    pendenteDesde.delete(m.metaapiId)
     const leitor = leitores.get(m.metaapiId)
     const lidas = lerMestre(m)
     // Leitura falhada: não se toca na base nem nas ausências. O ouvinte volta a chamar quando a
@@ -235,6 +245,7 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
     }
 
     let repetir = false
+    let aplicadas = 0
     for (const seg of m.seguidoras) {
       const pontes: Ponte[] = (pontesDb ?? []).filter((p) => p.follower_account_id === seg.id).map((p) => ({
         id: String(p.id), master_position_id: String(p.master_position_id),
@@ -258,11 +269,13 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
       for (const a of accoes) {
         try {
           await aplicar(m, seg, a, seguidorasPos)
+          if (a.tipo !== 'ignorar_antiga' && a.tipo !== 'marcar') aplicadas++
         } catch (e) {
           log(`[espelho] ${seg.id.slice(0, 8)} ${a.tipo} falhou:`, e instanceof Error ? e.message : e)
         }
       }
     }
+    if (aplicadas && desde != null) latenciaSeguidoras.registar(Date.now() - desde)
     return { repetir }
   }
 

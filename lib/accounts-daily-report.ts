@@ -65,12 +65,17 @@ export async function buildDailyReport(): Promise<DailyReport> {
     .select('account_label, metaapi_account_id, is_active')
     .not('metaapi_account_id', 'is', null)
     .eq('is_active', true)
+    .neq('mt5_status', 'disconnected')
     // Contas marcadas como fora das métricas continuam a operar, mas não entram no relatório.
     .eq('metrics_excluded', false)
     .limit(30)
 
   const accounts: AccountDay[] = []
+  // Contas inexistentes na MetaApi ficam de fora (15/09: MetaStats a contas apagadas = NotFoundError).
+  const { filtrarContasExistentes } = await import('@/lib/mtmcopy/metaapi-inexistentes')
+  const existentes = new Set(await filtrarContasExistentes((conns ?? []).map((c) => (c as { metaapi_account_id: string }).metaapi_account_id)))
   for (const c of conns ?? []) {
+    if (!existentes.has((c as { metaapi_account_id: string }).metaapi_account_id)) continue
     const label = (c as { account_label?: string | null }).account_label || 'Conta sem nome'
     const accountId = (c as { metaapi_account_id: string }).metaapi_account_id
     const m = token ? await metastats(accountId, token) : null

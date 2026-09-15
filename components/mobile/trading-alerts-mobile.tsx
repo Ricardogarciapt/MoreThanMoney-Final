@@ -1,5 +1,6 @@
 "use client"
 
+import { aquecerWebtrader } from "@/components/funded/pre-carga"
 import { linkWebtrader } from "@/lib/mtmfunded/link-webtrader"
 import { useSearchParams } from "next/navigation"
 
@@ -474,6 +475,8 @@ function MobileAlertCard({
             symbol: String(alert.tvSymbol || alert.ticker), dir: alert.direction,
             sl: alert.stopLoss, tp: alert.takeProfits[0], origem: "scanner", ref: alert.id,
           }, true)}
+          onPointerEnter={() => aquecerWebtrader(String(alert.tvSymbol || alert.ticker))}
+          onTouchStart={() => aquecerWebtrader(String(alert.tvSymbol || alert.ticker))}
           className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1.5 text-[11px] font-semibold text-emerald-300"
         >
           <TrendingUp className="h-3 w-3" />

@@ -74,8 +74,11 @@ const PROVIDERS: ProviderDef[] = [
   // 2026-08-20: as contas provider delas já não existiam na MetaApi (404) e cada leitura era
   // um pedido a falhar. Recriam-se pelo admin (Adicionar rota) quando houver contas novas.
   { key: 'premium', accountId: CANONICAL_PREMIUM_ACCOUNT_ID, strategyId: CANONICAL_PREMIUM_STRATEGY_ID },
-  // Copy Trader Ricardo Garcia — intermédia (0f38257a) que copia o Premium e revende (su0a) aos slaves RG.
-  { key: 'copytrader-rg', accountId: CANONICAL_COPYTRADER_RG_ACCOUNT_ID, strategyId: CANONICAL_COPYTRADER_RG_STRATEGY_ID },
+  // Copy Trader Ricardo Garcia — a intermédia 0f38257a foi apagada na MetaApi (15/09): a constante é
+  // null e a entrada sai da lista (MetaStats a uma conta inexistente = NotFoundError a cada leitura).
+  ...(CANONICAL_COPYTRADER_RG_ACCOUNT_ID
+    ? [{ key: 'copytrader-rg' as ProviderKey, accountId: CANONICAL_COPYTRADER_RG_ACCOUNT_ID, strategyId: CANONICAL_COPYTRADER_RG_STRATEGY_ID }]
+    : []),
 ]
 
 function token(): string | null {
@@ -106,6 +109,8 @@ async function fetchMetaStats(
 ): Promise<Record<string, unknown> | null> {
   const t = token()
   if (!t) return null
+  const { contaInexistente } = await import('./metaapi-inexistentes')
+  if (await contaInexistente(accountId)) return null
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 8000)
   try {

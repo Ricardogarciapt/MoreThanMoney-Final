@@ -14,8 +14,11 @@ export const NOME_PLATAFORMA_COPIA: Record<PlataformaCopia, string> = {
   tradelocker: 'TradeLocker',
 }
 
-/** Onde vive a linha da conta: site (mtmcopy_connections), auto (mtmauto_accounts), wt (webtrader_contas_mt5), funded (mtm_trading_accounts). */
-export type OrigemRef = 'site' | 'auto' | 'wt' | 'funded'
+/**
+ * Onde vive a linha da conta: site (mtmcopy_connections), auto (mtmauto_accounts), wt (webtrader_contas_mt5),
+ * funded (mtm_trading_accounts), prov (mtmauto_providers — conta de estratégia, SÓ origem; migração 083).
+ */
+export type OrigemRef = 'site' | 'auto' | 'wt' | 'funded' | 'prov'
 
 export type ModoLoteCopia = 'multiplicador' | 'fixo' | 'risco_pct' | 'proporcional_saldo'
 export const MODOS_LOTE_COPIA: ModoLoteCopia[] = ['multiplicador', 'fixo', 'risco_pct', 'proporcional_saldo']

@@ -10,6 +10,7 @@ import type { UserManagement, AdminStats } from "@/lib/admin-types"
 import { adminApiCall, clearAdminCache } from "@/lib/admin-helpers"
 import AdminSidebar from "@/components/admin/admin-sidebar"
 import MtmFundedManager from "@/components/admin/mtmfunded-manager"
+import EspelhoProviderRelatorio from "@/components/admin/espelho-provider-relatorio"
 import AdminOverview from "@/components/admin/admin-overview"
 import UserManagementComponent from "@/components/admin/user-management"
 import SiteContentManager from "@/components/admin/site-content-manager"
@@ -365,6 +366,7 @@ function AdminPageClient() {
                 </p>
               </div>
               <MtmFundedManager />
+              <EspelhoProviderRelatorio />
             </div>
           )}
 

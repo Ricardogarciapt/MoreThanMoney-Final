@@ -306,7 +306,7 @@ export function tipoDeEntrada(direcao: Direcao, nivel: number, preco: Preco, tol
  * `XAUUSDm`… O nome «limpo» vem primeiro; os apelidos e os cortes de sufixo vêm depois. Quem
  * escolhe é a rota, pelo primeiro que existir no catálogo — aqui só se imagina.
  */
-const APELIDOS: Record<string, string> = {
+export const APELIDOS: Record<string, string> = {
   GOLD: 'XAUUSD', SILVER: 'XAGUSD', XAUUSDT: 'XAUUSD',
   SPX500: 'US500', SPX: 'US500', US500USD: 'US500', SPX500USD: 'US500', ES1: 'US500',
   NDX: 'NAS100', US100: 'NAS100', NAS100USD: 'NAS100', USTEC: 'NAS100', NQ1: 'NAS100',

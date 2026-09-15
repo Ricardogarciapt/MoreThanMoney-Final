@@ -33,8 +33,11 @@ export interface Tick {
 export interface FontePrecos {
   nome: string
   iniciar(aoTick: (t: Tick) => void): Promise<void>
-  /** O conjunto de símbolos (da corretora) que se quer a receber. Idempotente. */
-  definirSimbolos(fontes: Set<string>): Promise<void>
+  /**
+   * O conjunto de símbolos (da corretora) que se quer a receber. Idempotente. `rapidos` (subconjunto)
+   * pede cotações ao intervalo curto — os símbolos com posições do espelho provider, geridas por tick.
+   */
+  definirSimbolos(fontes: Set<string>, rapidos?: Set<string>): Promise<void>
   /** Os símbolos que a corretora deixa negociar (tradeMode FULL), quando a fonte os conhece. */
   simbolosDaCorretora(): string[]
   parar(): Promise<void>
@@ -54,9 +57,10 @@ function desvioDe(p: { time?: Date | string; brokerTime?: string }): number | nu
 export class FonteStreaming implements FontePrecos {
   nome = 'streaming'
   private ligacao: Qualquer
-  private subscritos = new Set<string>()
+  /** símbolo → intervalo pedido (ms) */
+  private subscritos = new Map<string, number>()
 
-  constructor(private token: string, private contaId: string, private intervaloMs = 1000) {}
+  constructor(private token: string, private contaId: string, private intervaloMs = 1000, private intervaloRapidoMs = intervaloMs) {}
 
   async iniciar(aoTick: (t: Tick) => void): Promise<void> {
     const sdk = carregarSdk()
@@ -72,25 +76,31 @@ export class FonteStreaming implements FontePrecos {
         if (!p?.symbol || !(p.bid > 0) || !(p.ask > 0)) return
         aoTick({ fonte: p.symbol, bid: p.bid, ask: p.ask, em: p.time ? new Date(p.time) : new Date(), desvioMin: desvioDe(p) })
       }
+      // A MetaApi pode baixar a frequência pedida (carga/plano): fica no log para as latências se lerem bem.
+      onSubscriptionDowngraded(_i: string, symbol: string, updates: Qualquer) {
+        console.warn(`[feed] subscrição de ${symbol} baixada pela MetaApi:`, JSON.stringify(updates ?? null))
+      }
     }
     this.ligacao.addSynchronizationListener(new Ouvinte())
     await this.ligacao.connect()
     await this.ligacao.waitSynchronized({ timeoutInSeconds: 180 })
   }
 
-  async definirSimbolos(fontes: Set<string>): Promise<void> {
+  async definirSimbolos(fontes: Set<string>, rapidos?: Set<string>): Promise<void> {
     if (!this.ligacao) return
     for (const s of fontes) {
-      if (this.subscritos.has(s)) continue
+      const intervalo = rapidos?.has(s) ? this.intervaloRapidoMs : this.intervaloMs
+      if (this.subscritos.get(s) === intervalo) continue
       try {
-        await this.ligacao.subscribeToMarketData(s, [{ type: 'quotes', intervalInMilliseconds: this.intervaloMs }])
-        this.subscritos.add(s)
+        // Subscrever outra vez com outro intervalo actualiza a subscrição existente (não duplica).
+        await this.ligacao.subscribeToMarketData(s, [{ type: 'quotes', intervalInMilliseconds: intervalo }])
+        this.subscritos.set(s, intervalo)
       } catch (e) {
         registarErroMetaApi(e, `feed:subscrever:${s}`)
         console.warn(`[feed] não subscreveu ${s}:`, e instanceof Error ? e.message : e)
       }
     }
-    for (const s of [...this.subscritos]) {
+    for (const s of [...this.subscritos.keys()]) {
       if (fontes.has(s)) continue
       await this.ligacao.unsubscribeFromMarketData(s).catch(() => undefined)
       this.subscritos.delete(s)
@@ -142,7 +152,7 @@ export class FonteRpc implements FontePrecos {
     })()
   }
 
-  async definirSimbolos(fontes: Set<string>): Promise<void> {
+  async definirSimbolos(fontes: Set<string>, _rapidos?: Set<string>): Promise<void> {
     this.simbolos = [...fontes]
   }
 

@@ -3,6 +3,9 @@
 import type { PrecoVivo, SimboloFicha } from "./api"
 import { bibliotecaTvDisponivel } from "./biblioteca-tv"
 import { semearPrecos } from "./use-precos"
+import { buscarRecentes, lerDisco, lerMemoria } from "./armazem-velas"
+import { URL_FICHAS, tirarPreCarga } from "@/lib/webtrader/velas"
+import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
 
 /**
  * PRÉ-CARGA DO WEBTRADER — o que é público pede-se logo, sem esperar pela sessão nem pelas contas.
@@ -20,20 +23,19 @@ import { semearPrecos } from "./use-precos"
 
 interface RespostaFichas { simbolos?: SimboloFicha[]; precos?: PrecoVivo[] }
 export interface VelaApi { t: number; o: number; h: number; l: number; c: number; v?: number }
-interface RespostaVelas { velas?: VelaApi[] }
 
 const FICHAS_TTL_MS = 60_000
-const VELAS_TTL_MS = 15_000
 const fichas = new Map<string, { em: number; p: Promise<RespostaFichas> }>()
-const velas = new Map<string, { em: number; p: Promise<RespostaVelas> }>()
 
 /** A ficha (specs) + o primeiro preço de uma lista de candidatos («GBPCAD» ou «XAUUSD,XAUUSDM»). */
 export function pedirFichas(csv: string): Promise<RespostaFichas> {
   const chave = csv.toUpperCase()
   const c = fichas.get(chave)
   if (c && Date.now() - c.em < FICHAS_TTL_MS) return c.p
-  const p = fetch(`/api/mtmfunded/simulado/precos?symbols=${encodeURIComponent(chave)}&specs=1`)
-    .then((r) => r.json() as Promise<RespostaFichas>)
+  // O script do HTML de /webtrader pode já ter este pedido a caminho (lib/webtrader/pre-carga-inline.ts).
+  const url = URL_FICHAS(chave)
+  const doHtml = tirarPreCarga<RespostaFichas>(url)
+  const p = (doHtml ? doHtml.catch(() => fetch(url).then((r) => r.json() as Promise<RespostaFichas>)) : fetch(url).then((r) => r.json() as Promise<RespostaFichas>))
     .then((d) => {
       // O primeiro preço vem nesta mesma resposta: o bid/ask aparece antes do primeiro poll.
       if (d.precos?.length) semearPrecos(d.precos)
@@ -49,18 +51,6 @@ export async function fichaDe(csv: string): Promise<SimboloFicha | null> {
   const d = await pedirFichas(csv)
   const lista = d.simbolos ?? []
   return csv.toUpperCase().split(",").map((c) => lista.find((s) => s.symbol === c)).find(Boolean) ?? null
-}
-
-export function pedirVelas(symbol: string, tf: string, limite: number): Promise<RespostaVelas> {
-  const chave = `${symbol}:${tf}:${limite}`
-  const c = velas.get(chave)
-  if (c && Date.now() - c.em < VELAS_TTL_MS) return c.p
-  const p = fetch(`/api/mtmfunded/simulado/velas?symbol=${encodeURIComponent(symbol)}&tf=${tf}&limit=${limite}`)
-    .then((r) => r.json() as Promise<RespostaVelas>)
-    .catch(() => { velas.delete(chave); return { velas: [] } as RespostaVelas })
-  velas.set(chave, { em: Date.now(), p })
-  if (velas.size > 40) velas.delete(velas.keys().next().value as string)
-  return p
 }
 
 /** A janela recente que o gráfico pede primeiro (a CDN guarda-a 15 s). */
@@ -85,5 +75,20 @@ export function preaquecerWebtrader(candidatos: string | null) {
     if (typeof v === "string" && /^(M1|M5|M15|H1|H4|D1)$/.test(v)) tf = v
   } catch { /* ok */ }
   const csv = candidatos || "XAUUSD"
-  void fichaDe(csv).then((f) => { if (f) void pedirVelas(f.symbol, tf, VELAS_PRIMEIRA_JANELA) })
+  void fichaDe(csv).then((f) => {
+    if (!f || lerMemoria(f.symbol, tf)) return
+    // O disco primeiro (desenha já o que se viu da última vez); a rede junta as velas que faltam.
+    void lerDisco(f.symbol, tf).catch(() => null)
+    void buscarRecentes(f.symbol, tf, VELAS_PRIMEIRA_JANELA).catch(() => {})
+  })
+}
+
+/**
+ * Hover/toque num link ou separador do WebTrader: o código do trader e do gráfico começam a
+ * descarregar, e a ficha + velas do símbolo do link também — ao clicar, já está (quase) tudo cá.
+ */
+export function aquecerWebtrader(ticker?: string | null) {
+  if (typeof window === "undefined") return
+  void import("./funded-trader").catch(() => {})
+  preaquecerWebtrader(ticker ? candidatosDeTicker(ticker).join(",") : null)
 }

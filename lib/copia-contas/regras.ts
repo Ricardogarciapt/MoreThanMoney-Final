@@ -10,6 +10,8 @@ import { PLATAFORMAS_COPIA } from './tipos'
 
 /** Máximo de destinos por conta de origem. Igual ao `v_max_fanout` do trigger. */
 export const MAX_FANOUT = 5
+/** Contas de estratégia (`prov:`) servem muitos seguidores — o mesmo número do trigger (083). */
+export const MAX_FANOUT_PROVIDER = 2000
 
 /** Palavra a escrever para pedir o modo live. */
 export const PALAVRA_LIVE = 'LIGAR'
@@ -26,10 +28,12 @@ export interface LinhaContaCopia {
   metaapiAccountId?: string | null
   /** ligada com investor / só leitura → não pode ser destino */
   soLeitura?: boolean
+  /** conta de estratégia (mtmauto_providers): só origem, sem dono único, fan-out largo */
+  provider?: { id: string; tenantId: string | null } | null
 }
 
 export function lerRef(ref: unknown): { origem: OrigemRef; id: string } | null {
-  const m = /^(site|auto|wt|funded):([0-9a-f-]{36})$/i.exec(String(ref ?? ''))
+  const m = /^(site|auto|wt|funded|prov):([0-9a-f-]{36})$/i.exec(String(ref ?? ''))
   return m ? { origem: m[1].toLowerCase() as OrigemRef, id: m[2].toLowerCase() } : null
 }
 
@@ -37,7 +41,7 @@ export function lerRef(ref: unknown): { origem: OrigemRef; id: string } | null {
  * Identidade FÍSICA da conta. A mesma conta MT5 ligada no T2T e no MTM Auto tem duas linhas e uma
  * só chave — é por isso que os ciclos e o «mesma conta» se medem aqui e não pela referência.
  */
-export function chaveFisica(c: Pick<LinhaContaCopia, 'plataforma' | 'login' | 'servidor' | 'tlEnv' | 'tlAccountId' | 'fundedAccountId' | 'ref'>): string | null {
+export function chaveFisica(c: Pick<LinhaContaCopia, 'plataforma' | 'login' | 'servidor' | 'tlEnv' | 'tlAccountId' | 'fundedAccountId' | 'ref'> & { metaapiAccountId?: string | null }): string | null {
   if (c.plataforma === 'mtmfunded') {
     const id = c.fundedAccountId ?? (lerRef(c.ref)?.origem === 'funded' ? lerRef(c.ref)!.id : null)
     return id ? `mtmfunded:${String(id).toLowerCase()}` : null
@@ -47,7 +51,10 @@ export function chaveFisica(c: Pick<LinhaContaCopia, 'plataforma' | 'login' | 's
   }
   const login = String(c.login ?? '').replace(/\D/g, '')
   const servidor = String(c.servidor ?? '').trim().toLowerCase()
-  return login && servidor ? `mt:${login}@${servidor}` : null
+  if (login && servidor) return `mt:${login}@${servidor}`
+  // Providers antigos foram gravados só com o id MetaApi (sem login/servidor): a conta MetaApi é a identidade.
+  if (lerRef(c.ref)?.origem === 'prov' && c.metaapiAccountId) return `metaapi:${String(c.metaapiAccountId).toLowerCase()}`
+  return null
 }
 
 export type ErroRota =
@@ -59,6 +66,7 @@ export type ErroRota =
   | 'fanout'
   | 'ciclo'
   | 'duplicada'
+  | 'provider_destino'
 
 export const MENSAGEM_ERRO_ROTA: Record<ErroRota, string> = {
   plataforma_invalida: 'Plataforma não suportada na cópia entre contas.',
@@ -69,6 +77,7 @@ export const MENSAGEM_ERRO_ROTA: Record<ErroRota, string> = {
   fanout: `Esta conta de origem já tem ${MAX_FANOUT} destinos (máximo).`,
   ciclo: 'Esta rota fecha um ciclo — a origem acabaria a copiar-se a si própria.',
   duplicada: 'Já existe uma rota entre estas duas contas.',
+  provider_destino: 'Uma conta de estratégia (provider) só pode ser origem de cópia.',
 }
 
 export interface ArestaRota {
@@ -111,7 +120,10 @@ export function validarRota(
 ): { ok: true; origemChave: string; destinoChave: string } | { ok: false; erro: ErroRota; mensagem: string } {
   const falha = (erro: ErroRota) => ({ ok: false as const, erro, mensagem: MENSAGEM_ERRO_ROTA[erro] })
   if (!PLATAFORMAS_COPIA.includes(origem.plataforma) || !PLATAFORMAS_COPIA.includes(destino.plataforma)) return falha('plataforma_invalida')
-  if (origem.userId !== destino.userId) return falha('dono_diferente')
+  if (destino.provider || lerRef(destino.ref)?.origem === 'prov') return falha('provider_destino')
+  // Uma estratégia não é «do» seguidor: a regra do mesmo dono vale só entre contas de clientes.
+  const deProvider = Boolean(origem.provider) || lerRef(origem.ref)?.origem === 'prov'
+  if (!deProvider && origem.userId !== destino.userId) return falha('dono_diferente')
   if (destino.soLeitura) return falha('destino_so_leitura')
   const origemChave = chaveFisica(origem)
   const destinoChave = chaveFisica(destino)
@@ -119,7 +131,7 @@ export function validarRota(
   if (origem.ref === destino.ref || origemChave === destinoChave) return falha('mesma_conta')
   const vivas = existentes.filter((a) => a.estado !== 'recusada' && a.id !== opcoes.id)
   if (vivas.some((a) => a.origem_chave === origemChave && a.destino_chave === destinoChave)) return falha('duplicada')
-  if (destinosDaOrigem(vivas, origemChave) >= MAX_FANOUT) return falha('fanout')
+  if (destinosDaOrigem(vivas, origemChave) >= (deProvider ? MAX_FANOUT_PROVIDER : MAX_FANOUT)) return falha('fanout')
   if (criaCiclo(vivas, { id: opcoes.id, origem_chave: origemChave, destino_chave: destinoChave })) return falha('ciclo')
   return { ok: true, origemChave, destinoChave }
 }

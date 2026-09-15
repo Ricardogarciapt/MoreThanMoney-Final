@@ -49,8 +49,9 @@ export const MTM_PROVIDER_EXECUTION_PROFILE: Pick<
 }
 
 const PREMIUM_ACCOUNT_DEFAULT = CANONICAL_PREMIUM_ACCOUNT_ID
-const TRADE_IDEAS_ACCOUNT_DEFAULT = CANONICAL_TRADE_IDEAS_ACCOUNT_ID
-const SENSEI_ACCOUNT_DEFAULT = CANONICAL_SENSEI_ACCOUNT_ID
+// null (conta apagada) → '' → a Trade Ideas fica sem provider (getMtmChannelProviders devolve null).
+const TRADE_IDEAS_ACCOUNT_DEFAULT = CANONICAL_TRADE_IDEAS_ACCOUNT_ID ?? ''
+const SENSEI_ACCOUNT_DEFAULT = CANONICAL_SENSEI_ACCOUNT_ID ?? ''
 
 function envOr(key: string, fallback: string): string {
   return process.env[key]?.trim() || fallback

@@ -1,5 +1,6 @@
 "use client"
 
+import { velasPara } from "./armazem-velas"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { RotateCcw, Settings2, X } from "lucide-react"
 import { INPUTS_SENSEI_DEFAULT } from "@/lib/estudos/sensei/inputs"
@@ -129,10 +130,9 @@ const tfDeMinutos = (min: number): Tf | null => TIMEFRAMES.find((t) => t.seg ===
 
 async function buscarVelas(symbol: string, tf: Tf, limite: number): Promise<Vela[] | undefined> {
   try {
-    const r = await fetch(`/api/mtmfunded/simulado/velas?symbol=${encodeURIComponent(symbol)}&tf=${tf}&limit=${limite}`)
-    if (!r.ok) return undefined
-    const d = await r.json()
-    const velas = (d.velas ?? []) as Vela[]
+    // Pelo armazém do gráfico (2026-09): o H4/M1 do Sensei ficam em memória/disco e servem também
+    // a troca de timeframe — e o gráfico em H4 já não pede o mesmo H4 duas vezes.
+    const velas = (await velasPara(symbol, tf, limite)).map((v) => ({ t: v.t, o: v.o, h: v.h, l: v.l, c: v.c, v: Number(v.v) || 0 })) as Vela[]
     return velas.length ? velas : undefined
   } catch {
     return undefined

@@ -18,8 +18,8 @@ import { candidatosDeTicker } from './ordens'
  *
  * Por isso o nome a pedir RESOLVE-SE, por esta ordem, e o que funciona fica em cache por
  * símbolo+conta:
- *   1. `simbolo_fonte` do catálogo (quando a conta de leitura é da mesma corretora);
- *   2. o símbolo canónico (XAUUSD);
+ *   1. o símbolo canónico (XAUUSD) — primeiro desde 2026-09, ver `resolverSemCache`;
+ *   2. `simbolo_fonte` do catálogo (quando a conta de leitura é da mesma corretora);
  *   3. as variantes de `candidatosDeTicker` (sem sufixo, apelidos US30/DJ30…);
  *   4. a lista de símbolos da própria conta ordenada por `rankedBrokerSymbols` (DJIUSD para US30).
  * Cada candidato só «funciona» se devolver velas E a mais recente tiver menos de ~4 dias.
@@ -206,19 +206,36 @@ async function resolverSemCache(symbol: string, tf: string, token: string): Prom
   const contas = await contasDeLeitura()
   const base: string[] = []
   const add = (x: string | null | undefined) => { if (x && !base.includes(x)) base.push(x) }
-  add(fonteCatalogo)
+  // O canónico primeiro (2026-09): as contas de leitura são de OUTRA corretora, e um nome que não
+  // existe lá (XAUUSD.s) só falha ao fim de ~5 s (500 «unexpected error» da MetaApi). Com o `.s` à
+  // frente, cada símbolo novo esperava esses 5 s antes de poder usar o XAUUSD que respondera em 0,2 s.
+  // Um canónico «morto» (US30 com a última vela em 2024) não passa no `serve` e segue-se para o resto.
   add(symbol)
+  add(fonteCatalogo)
   for (const c of candidatosDeTicker(symbol)) add(c)
   if (fonteCatalogo) for (const c of candidatosDeTicker(fonteCatalogo)) add(c)
 
   // Várias contas provider costumam ser da mesma corretora: tentam-se por ordem e pára-se na 1.ª que serve.
   // Os candidatos de uma conta testam-se em PARALELO (cada «não existe» custa um pedido) e ganha o
-  // primeiro NA ORDEM de preferência que sirva — não o que responder primeiro.
-  const primeiroQueServe = async (conta: string, nomes: string[]) => {
-    const ok = await Promise.all(nomes.map((n) => serve(conta, n, tf, token)))
-    const i = ok.indexOf(true)
-    return i < 0 ? null : { conta, nome: nomes[i] }
-  }
+  // primeiro NA ORDEM de preferência que sirva — não o que responder primeiro. Mas não se espera pelos
+  // lentos de trás: assim que o candidato i serve e todos os anteriores já falharam, está decidido.
+  const primeiroQueServe = (conta: string, nomes: string[]) => new Promise<{ conta: string; nome: string } | null>((resolver) => {
+    if (!nomes.length) return resolver(null)
+    const estado: Array<boolean | undefined> = nomes.map(() => undefined)
+    let feito = false
+    const decidir = () => {
+      if (feito) return
+      for (let i = 0; i < estado.length; i++) {
+        if (estado[i] === undefined) return
+        if (estado[i]) { feito = true; return resolver({ conta, nome: nomes[i] }) }
+      }
+      feito = true
+      resolver(null)
+    }
+    nomes.forEach((n, i) => {
+      serve(conta, n, tf, token).catch(() => false).then((ok) => { estado[i] = ok; decidir() })
+    })
+  })
   for (const conta of contas) {
     let r = await primeiroQueServe(conta, base)
     if (!r) {

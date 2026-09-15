@@ -5,9 +5,10 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getHistoryDeals, type MetaApiDeal } from './metaapi'
+import { filtrarContasExistentes } from './metaapi-inexistentes'
 import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
-  CANONICAL_BOOSTER_ACCOUNT_ID,
+  CANONICAL_BOOSTER_ACCOUNT_ID, mesmaConta,
 } from './provider-constants'
 
 const HISTORY_DAYS = 90
@@ -236,15 +237,19 @@ export async function ingestClosedTradesForAllConnections(): Promise<{
   const { data: conns } = await supabase
     .from('mtmcopy_connections')
     .select('id, user_id, metaapi_account_id, is_audited')
+    .eq('is_active', true)
     .neq('mt5_status', 'disconnected')
     .not('metaapi_account_id', 'is', null)
+  // Só contas que existem na MetaApi (15/09: leituras a contas apagadas estrangularam o token).
+  const existentes = new Set(await filtrarContasExistentes((conns ?? []).map((c) => c.metaapi_account_id as string | null)))
 
   const runPass = async (): Promise<number> => {
     let n = 0
     for (const c of conns ?? []) {
       // Booster 20x (capital bónus): histórico excluído das métricas de utilizador —
       // percentagens desta conta ficam a zero no sistema (pedido do Ricardo, 2026-07-22).
-      if ((c as IngestConn).metaapi_account_id === CANONICAL_BOOSTER_ACCOUNT_ID) continue
+      if (mesmaConta((c as IngestConn).metaapi_account_id, CANONICAL_BOOSTER_ACCOUNT_ID)) continue
+      if (!existentes.has(String((c as IngestConn).metaapi_account_id))) continue
       try {
         n += (await ingestClosedTradesForConnection(c as IngestConn)).ingested
       } catch (e) {

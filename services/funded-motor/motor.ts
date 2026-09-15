@@ -49,7 +49,9 @@ import {
 } from './avaliacao'
 import { alertaDispara, gestaoDaLinha, temGestao, type AlertaPreco } from '../../lib/mtmfunded/simulado/avancadas'
 import { FonteRpc, FonteStreaming, type FontePrecos, type Tick } from './feed'
-import { iniciarEspelho, simbolosDoEspelho } from './espelho-estrategias'
+import { iniciarEspelho, latenciaSeguidoras, simbolosDoEspelho } from './espelho-estrategias'
+import { iniciarEspelhoProvider, simbolosDoProvider, type ControloProvider } from './espelho-provider'
+import { feedTradeLockerDoAmbiente, type ComparadorTradeLocker } from './feed-tradelocker'
 import { registarErroMetaApi } from './metaapi-partilhada'
 
 // ── configuração ──────────────────────────────────────────────────────────────
@@ -70,6 +72,8 @@ const CFG = {
   apiBase: (env('MTM_API_BASE', false) || 'https://www.morethanmoney.pt').replace(/\/+$/, ''),
   escrita: env('MOTOR_ESCRITA', false) === '1',
   intervaloMs: Number(env('MOTOR_INTERVALO_MS', false) || 1000),
+  /** Intervalo das cotações dos símbolos geridos por tick no espelho provider. */
+  intervaloRapidoMs: Number(env('MOTOR_INTERVALO_RAPIDO_MS', false) || 250),
   /** Desvio da hora do servidor da corretora até o primeiro tick o dizer (PU Prime: UTC+3 no verão). */
   desvioInicialMin: Number(env('MOTOR_DESVIO_CORRETORA_MIN', false) || 180),
 }
@@ -122,6 +126,8 @@ let desvioMin = CFG.desvioInicialMin
 let daCorretora: string[] = []
 let ultimoTickEm = 0
 let ticksNoMinuto = 0
+let provider: ControloProvider | null = null
+let feedTl: ComparadorTradeLocker | null = null
 
 const contas = new Map<string, ContaLinha>()
 const posicoesDe = new Map<string, PosicaoSim[]>()
@@ -221,8 +227,24 @@ function moedaDe(s: Simbolo): string {
 // ── contas, posições e ordens ─────────────────────────────────────────────────
 /** Colunas da gestão automática (migração 072) — iguais nas posições e nas ordens. */
 const COLS_GESTAO = 'trailing_distancia, trailing_ativacao, be_gatilho, be_offset, be_no_tp1, tps'
-const COLS_POSICAO = `id, account_id, symbol, direcao, volume, preco_entrada, sl, tp, comissao, swap, origem, ${COLS_GESTAO}, be_feito, volume_inicial`
-const COLS_ORDEM = `id, account_id, symbol, direcao, tipo, volume, preco, sl, tp, origem, expira_em, oco_grupo, ${COLS_GESTAO}`
+const COLS_POSICAO_BASE = 'id, account_id, symbol, direcao, volume, preco_entrada, sl, tp, comissao, swap, origem'
+const COLS_ORDEM_BASE = 'id, account_id, symbol, direcao, tipo, volume, preco, sl, tp, origem, expira_em'
+/**
+ * Com a 072 por aplicar as colunas da gestão não existem e a leitura inteira falhava (o motor não
+ * arrancava). À primeira falha por coluna em falta passa-se às colunas de base: tudo continua a
+ * funcionar sem ordens avançadas (a gestão do espelho provider vive em memória e não precisa delas).
+ */
+let tem072 = true
+let COLS_POSICAO = `${COLS_POSICAO_BASE}, ${COLS_GESTAO}, be_feito, volume_inicial`
+let COLS_ORDEM = `${COLS_ORDEM_BASE}, oco_grupo, ${COLS_GESTAO}`
+function semColunas072(msg: string | undefined): boolean {
+  if (!tem072 || !msg || !/column .* does not exist/i.test(msg)) return false
+  tem072 = false
+  COLS_POSICAO = COLS_POSICAO_BASE
+  COLS_ORDEM = COLS_ORDEM_BASE
+  log('[motor] migração 072 por aplicar — leio posições/ordens sem as colunas da gestão automática')
+  return true
+}
 const COLUNAS_CONTA =
   'id, user_id, tipo, tournament_id, program_id, saldo_inicial, alavancagem, sim_saldo, sim_equity, sim_margem, ' +
   'sim_ancora_dia, sim_ancora_em, sim_pico_equity, sim_dias_negociados, created_at, fase:metricas->>fase, fase_concluida:metricas->>faseConcluida, analise:metricas->>analise'
@@ -281,7 +303,10 @@ async function carregarContas(): Promise<void> {
       db.from('funded_positions').select(COLS_POSICAO).eq('estado', 'aberta').in('account_id', ids).limit(20000),
       db.from('funded_orders').select(COLS_ORDEM).eq('estado', 'pendente').in('account_id', ids).limit(20000),
     ])
-    if (e1 || e2) throw new Error(`posições/ordens: ${(e1 ?? e2)?.message}`)
+    if (e1 || e2) {
+      if (semColunas072(e1?.message) || semColunas072(e2?.message)) return carregarContas()
+      throw new Error(`posições/ordens: ${(e1 ?? e2)?.message}`)
+    }
     for (const r of (ps ?? []) as unknown as Record<string, unknown>[]) {
       const p = normalizarPosicao(r)
       novasPos.set(p.account_id, [...(novasPos.get(p.account_id) ?? []), p])
@@ -341,15 +366,17 @@ async function lerContaConsistente(id: string): Promise<boolean> {
     (ps ?? []).map((p) => `${p.id}:${p.volume}:${p.sl}:${p.tp}:${JSON.stringify(p.tps ?? null)}`).sort().join('|')
   for (let tentativa = 0; tentativa < 4; tentativa++) {
     const cols = COLS_POSICAO
-    const { data: a } = await db.from('funded_positions').select(cols).eq('account_id', id).eq('estado', 'aberta')
+    const { data: a, error: ea } = await db.from('funded_positions').select(cols).eq('account_id', id).eq('estado', 'aberta')
     const { data: c } = await db.from('mtm_trading_accounts').select(`${COLUNAS_CONTA}, estado`).eq('id', id).maybeSingle()
-    const { data: o } = await db.from('funded_orders').select(COLS_ORDEM).eq('account_id', id).eq('estado', 'pendente')
-    const { data: b } = await db.from('funded_positions').select(cols).eq('account_id', id).eq('estado', 'aberta')
+    const { data: o, error: eo } = await db.from('funded_orders').select(COLS_ORDEM).eq('account_id', id).eq('estado', 'pendente')
+    const { data: b, error: eb } = await db.from('funded_positions').select(cols).eq('account_id', id).eq('estado', 'aberta')
+    // Uma leitura falhada NÃO é «sem posições»: sem isto, duas leituras nulas batiam certo e a conta ficava vazia.
+    if (ea || eo || eb) { semColunas072((ea ?? eo ?? eb)?.message); return false }
     if (!c || (c as unknown as { estado: string }).estado !== 'ativa') {
       contas.delete(id)
       return false
     }
-    if (chave(a) === chave(b)) {
+    if (chave(a as unknown as Record<string, unknown>[]) === chave(b as unknown as Record<string, unknown>[])) {
       contas.set(id, normalizarConta(c as unknown as Record<string, unknown>))
       posicoesDe.set(id, ((b ?? []) as unknown as Record<string, unknown>[]).map(normalizarPosicao))
       ordensDe.set(id, ((o ?? []) as unknown as Record<string, unknown>[]).map(normalizarOrdem))
@@ -390,6 +417,15 @@ function aoTick(t: Tick): void {
   ultimoTickEm = Date.now()
   ticksNoMinuto++
   for (const c of interessados.get(sym) ?? []) sujas.add(c)
+  // Gestão do espelho provider NO PRÓPRIO tick (BE, trailing, parciais).
+  provider?.aoTick(sym, t.em.getTime())
+}
+
+/** Preço de recurso (feed secundário) já em símbolo canónico: só entra se o principal estiver velho. */
+function aoTickRecurso(sym: string, bid: number, ask: number, em: number): void {
+  if (!simbolos.has(sym)) return
+  const s = simbolos.get(sym)!
+  aoTick({ fonte: s.simbolo_fonte, bid, ask, em: new Date(em), desvioMin: null })
 }
 
 /** Há fills neste símbolo agora? Precisa de preço e de mercado aberto (sessão da corretora). */
@@ -425,6 +461,7 @@ function simbolosDesejados(): Set<string> {
   const canon = new Set<string>(BASE)
   for (const s of interessados.keys()) canon.add(s)
   for (const s of simbolosDoEspelho) canon.add(s)
+  for (const s of simbolosDoProvider) canon.add(s)
   for (const s of alertasPorSimbolo.keys()) canon.add(s)
   for (const s of pedidos) {
     canon.add(s)
@@ -629,6 +666,7 @@ async function aplicar(c: ContaLinha, d: Decisoes): Promise<void> {
     const { data, error } = await db.rpc('funded_fechar_posicao', { p_id: id, p_preco: f.preco, p_pnl: f.pnl, p_motivo: f.motivo, p_tick: tickJson(f.symbol) })
     if (error) log(`[${curto}] fecho ${id.slice(0, 8)} falhou:`, error.message)
     else if (data) log(`[${curto}] fechada ${f.symbol} ${f.motivo} @${f.preco} pnl ${f.pnl}`)
+    if (!error) provider?.aoFechoLocal(id)
   }
 
   escritaLocalEm.set(c.id, Date.now())
@@ -899,8 +937,15 @@ function repetir(nome: string, ms: number, f: () => Promise<void>): void {
   }, ms)
 }
 
+/** Símbolos da corretora a pedir ao intervalo curto: os que o espelho provider gere por tick. */
+function rapidos(): Set<string> {
+  const out = new Set<string>()
+  for (const s of simbolosDoProvider) { const sm = simbolos.get(s); if (sm) out.add(sm.simbolo_fonte) }
+  return out
+}
+
 async function ligarFonte(): Promise<FontePrecos> {
-  const principal = new FonteStreaming(CFG.metaapiToken, CFG.contaPrecos, CFG.intervaloMs)
+  const principal = new FonteStreaming(CFG.metaapiToken, CFG.contaPrecos, CFG.intervaloMs, CFG.intervaloRapidoMs)
   try {
     await principal.iniciar(aoTick)
     return principal
@@ -927,7 +972,7 @@ async function main(): Promise<void> {
   daCorretora = fonte.simbolosDaCorretora()
   if (daCorretora.length) await carregarCatalogo()
   await carregarPedidos()
-  await fonte.definirSimbolos(simbolosDesejados())
+  await fonte.definirSimbolos(simbolosDesejados(), rapidos())
 
   // Contas que seguem estratégias do MTM Auto (migração 070). ESPELHO_ATIVO=0 desliga só isto.
   const espelho = env('ESPELHO_ATIVO', false) === '0'
@@ -939,6 +984,30 @@ async function main(): Promise<void> {
         marcarSuja: (id) => { escritaLocalEm.set(id, 0); sujas.add(id) },
       })
 
+  // ── PONTO DE REGISTO dos módulos do motor ─────────────────────────────────
+  // Cada módulo recebe o mesmo contexto (db, preços, símbolos, negociavel, marcarSuja) e expõe
+  // aoTick/aoFechoLocal/estado/parar. Módulos novos (ex.: estrategias-sinais.ts) registam-se AQUI
+  // com uma linha, ao lado do espelho provider, sem mexer no resto do motor.
+  // Espelho provider (migração 082): conta da casa por estratégia, gestão nossa. ESPELHO_PROVIDER=1 liga.
+  provider = env('ESPELHO_PROVIDER', false) === '1'
+    ? iniciarEspelhoProvider({
+        db, metaapiToken: CFG.metaapiToken, escrita: CFG.escrita, log,
+        simbolos, precos, precoEm,
+        negociavel: (sym) => negociavel(sym, new Date()),
+        marcarSuja: (id) => { escritaLocalEm.set(id, 0); sujas.add(id) },
+      })
+    : null
+
+  // Feed secundário TradeLocker (comparação; recurso só com ESPELHO_FEED_TL_RECURSO=1).
+  feedTl = feedTradeLockerDoAmbiente({
+    simbolos: () => new Set([...simbolosDoProvider, ...simbolosDoEspelho, 'XAUUSD', 'EURUSD', 'BTCUSD']),
+    principal: (sym) => (precos[sym] ? { bid: precos[sym].bid, ask: precos[sym].ask, em: precoEm.get(sym) ?? 0 } : null),
+    pip: (sym) => simbolos.get(sym)?.pip_size ?? null,
+    aoRecurso: (sym, c) => aoTickRecurso(sym, c.bid, c.ask, c.em),
+    log,
+  })
+  feedTl?.iniciar()
+
   await carregarAlertas()
   repetir('avaliar', 250, cicloDeAvaliacao)
   repetir('alertas', 5000, carregarAlertas)
@@ -946,7 +1015,7 @@ async function main(): Promise<void> {
   repetir('contas', 1000, carregarContas)
   repetir('precos', 1000, escreverPrecos)
   repetir('pedidos', 5000, carregarPedidos)
-  repetir('subscricoes', 10_000, () => fonte.definirSimbolos(simbolosDesejados()))
+  repetir('subscricoes', 10_000, () => fonte.definirSimbolos(simbolosDesejados(), rapidos()))
   repetir('tudo-sujo', 5000, async () => { for (const id of contas.keys()) sujas.add(id) })
   repetir('dia', 30_000, virarDia)
   repetir('eventos', 30_000, reenviarEventos)
@@ -959,6 +1028,18 @@ async function main(): Promise<void> {
     const semTicks = Date.now() - ultimoTickEm
     const amostra = BASE.filter((s) => precos[s]).map((s) => `${s} ${precos[s].bid}/${precos[s].ask}`).join(' · ')
     log(`[pulso] ${ticksNoMinuto} ticks/min · ${contas.size} contas · desvio corretora ${desvioMin}min · ${amostra}`)
+    // Batimento na base: UMA escrita por minuto (servicos_pulso, 078). Sem a tabela, só o log.
+    const estadoProvider = provider?.estado() ?? null
+    const estado = {
+      ticksMin: ticksNoMinuto, contas: contas.size, feed: fonte.nome, semTicksMs: ultimoTickEm ? Date.now() - ultimoTickEm : null,
+      escrita: CFG.escrita, tem072, simbolosRapidos: simbolosDoProvider.size,
+      espelhoSeguidoras: { latenciaEventoEscrita: latenciaSeguidoras.resumo() },
+      espelhoProvider: estadoProvider,
+      feedTradeLocker: feedTl?.resumo() ?? null,
+    }
+    if (estadoProvider) log('[pulso][provider]', JSON.stringify(estadoProvider.latencias))
+    void db.from('servicos_pulso').upsert({ servico: 'mtm-funded-motor', host: process.env.HOSTNAME ?? null, versao: 'espelho-provider-082', estado, em: new Date().toISOString() }, { onConflict: 'servico' })
+      .then(({ error }) => { if (error && !/does not exist/.test(error.message)) log('[pulso] servicos_pulso:', error.message) })
     ticksNoMinuto = 0
     if (ultimoTickEm && semTicks > 180_000) {
       log('[pulso] feed mudo há 3 min — a sair para o systemd reiniciar')
@@ -970,6 +1051,8 @@ async function main(): Promise<void> {
     log('[motor] a parar')
     await escreverPrecos().catch(() => undefined)
     await espelho?.parar().catch(() => undefined)
+    await provider?.parar().catch(() => undefined)
+    feedTl?.parar()
     await fonte.parar()
     process.exit(0)
   }
