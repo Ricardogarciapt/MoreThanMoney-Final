@@ -33,7 +33,7 @@ import { INTERRUPTORES_FECHADOS, type Interruptores } from '../../lib/copia-cont
 import type { CopiaPosicao, EventoCopia, PosicaoOrigem, RotaCopia } from '../../lib/copia-contas/tipos'
 import { aoLimiteMetaApi, carregarSdk, espelhoPausadoAte, metaApiPartilhada, registarErroMetaApi } from '../funded-motor/metaapi-partilhada'
 
-type Qualquer = any // eslint-disable-line @typescript-eslint/no-explicit-any
+type Qualquer = any
 
 const VERSAO = 'copia-contas/1'
 const ESCRITA = process.env.COPIA_ESCRITA === '1'

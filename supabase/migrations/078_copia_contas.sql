@@ -309,6 +309,11 @@ select c.id, 'funded_copier'::text, c.user_id, 'mtmfunded', 'funded:' || c.accou
        'live', 'aprovada', c.created_at, c.updated_at
   from public.funded_copiers c;
 
+-- ── 9. Realtime: o serviço acorda ao INSERT (a sondagem de 10 s é a rede) ───
+do $$ begin
+  alter publication supabase_realtime add table public.copia_eventos;
+exception when duplicate_object or undefined_object then null; end $$;
+
 -- ── RLS: o dono lê as suas rotas e cópias; escrever só pelo servidor ────────
 alter table public.copia_rotas enable row level security;
 alter table public.copia_eventos enable row level security;

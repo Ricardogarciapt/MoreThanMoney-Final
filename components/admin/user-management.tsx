@@ -1150,9 +1150,9 @@ export default function UserManagementComponent({
                             variant="outline"
                             className="border-[#D2A63C]/40 text-[#D2A63C] hover:bg-[#D2A63C]/10"
                           >
-                            <Link href={`/admin/mtmcopy?userId=${user.id}`} title="Gestão MTMcopier">
+                            <Link href={`/admin/mtmcopy?userId=${user.id}`} title="MTM Auto · Cópia (contas do utilizador)">
                               <Bot className="h-4 w-4 mr-1" />
-                              MTMcopier
+                              Cópia
                             </Link>
                           </Button>
                           <Dialog

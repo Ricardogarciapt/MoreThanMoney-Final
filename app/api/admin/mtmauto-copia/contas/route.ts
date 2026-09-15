@@ -9,11 +9,18 @@ const ACOES: AcaoConta[] = ['sincronizar', 'pausar', 'retomar', 'deploy', 'undep
 
 /**
  *   GET ?userId=                          → todas as contas ligadas (4 plataformas), com plano/quota
+ *   GET ?vista=<ref>                      → conta + posições abertas (só leitura, como no WebTrader)
  *   POST { ref, acao, confirmacao? }      → sincronizar | pausar | retomar | deploy | undeploy
  *                                           («CONFIRMAR») | remover («REMOVER»)
  */
 export const GET = soAdmin(async (_a: string, req: NextRequest) => {
-  const userId = new URL(req.url).searchParams.get('userId')
+  const p = new URL(req.url).searchParams
+  // ?vista=<ref> → conta + posições (só leitura, adaptadores do WebTrader)
+  if (p.get('vista')) {
+    const { vistaAdminConta } = await import('@/lib/copia-contas/servidor/escritores')
+    return NextResponse.json(await vistaAdminConta(String(p.get('vista'))))
+  }
+  const userId = p.get('userId')
   return NextResponse.json(await listarContasAdmin({ userId: userId && /^[0-9a-f-]{36}$/i.test(userId) ? userId : null }))
 })
 

@@ -62,7 +62,6 @@ const plat = (v: unknown): PlataformaCopia => {
 const demoPeloNome = (s: unknown) => /\b(demo|trial|practice|paper|contest)\b/i.test(String(s ?? ''))
 
 export async function listarContasAdmin(filtro: { userId?: string | null } = {}): Promise<{ contas: ContaAdmin[]; metaapiLidaEm: string; metaapiFalhou: boolean }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const porUser = (q: any) => (filtro.userId ? q.eq('user_id', filtro.userId) : q)
   type Linhas = { data: Record<string, unknown>[] | null; error?: unknown }
   const [site, auto, wt, subs, copiadores, rotas, meta] = (await Promise.all([

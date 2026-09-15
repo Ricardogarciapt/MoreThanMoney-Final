@@ -185,6 +185,36 @@ export async function escritorPara(destinoRef: string): Promise<EscritorDestino 
   })
 }
 
+// ── vista do admin (só leitura) ──────────────────────────────────────────────
+
+/**
+ * «Ver no WebTrader (admin)»: conta + posições abertas de QUALQUER conta, sem sessão do cliente e
+ * sem poder negociar. Os mesmos adaptadores do WebTrader com `podeNegociar:false`; MT5 por REST com o
+ * limitador de 5 s (nunca RPC), só leitura.
+ */
+export async function vistaAdminConta(ref: string) {
+  const conta = await lerContaPorRef(ref)
+  if (!conta) return { erro: 'Conta não encontrada.' }
+  let adaptador: AdaptadorCorretora | null = null
+  if ((conta.plataforma === 'mt4' || conta.plataforma === 'mt5') && conta.metaapiAccountId) {
+    if (!(await usaChaveMetaApiDaCasa(conta))) return { erro: 'Conta de equipa MTM Auto (outra chave MetaApi).' }
+    adaptador = adaptadorMt5(conta.metaapiAccountId, { podeNegociar: false })
+  } else if (conta.plataforma === 'tradelocker') {
+    const sessao = await sessaoTradeLocker(conta.ref, conta.linha)
+    if (sessao) adaptador = adaptadorTradeLocker(sessao, { podeNegociar: false })
+  } else if (conta.plataforma === 'mtmfunded') {
+    const c = await lerConta(conta.fundedAccountId ?? lerRef(conta.ref)!.id)
+    if (c) adaptador = adaptadorMtmFunded(c, 'investor')
+  }
+  if (!adaptador) return { erro: 'Sem forma de ler esta conta (sem conta MetaApi ou credenciais).' }
+  try {
+    const [info, posicoes] = await Promise.all([adaptador.conta(), adaptador.posicoes()])
+    return { plataforma: adaptador.plataforma, real: adaptador.real, conta: info, posicoes }
+  } catch (e) {
+    return { erro: e instanceof Error ? e.message : String(e) }
+  }
+}
+
 // ── leitores de ORIGEM que não são streaming ────────────────────────────────
 
 /** Posições TradeLocker normalizadas (SL/TP das ordens de protecção). null = não deu para ler. */
