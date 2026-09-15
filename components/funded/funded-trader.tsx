@@ -11,8 +11,6 @@ import FundedGrafico from "./funded-grafico"
 import FundedTicket, { type Prefill } from "./funded-ticket"
 import { RascunhoProvider, useRascunho, type PedidoOrdem } from "./rascunho-ordem"
 import FundedPosicoes from "./funded-posicoes"
-import FundedWebhook from "./funded-webhook"
-import FundedCopier from "./funded-copier"
 import FundedDesempenho from "./funded-desempenho"
 import { InterruptorUmClique, UmCliqueProvider } from "./um-clique"
 
@@ -269,8 +267,6 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
         {vista === "conta" && <div className="space-y-2">
           {podeNegociar && <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><InterruptorUmClique variante="cartao" /></div>}
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedDesempenho d={dados.desempenho} estrategia={c.segueEstrategia?.nome} /></div>
-          <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedCopier accountId={accountId} podeGerir={dados.modo === "master"} /></div>
-          <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedWebhook accountId={accountId} podeGerir={dados.modo === "master"} /></div>
         </div>}
       </div>}
 
@@ -280,8 +276,6 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
           <FundedWatchlist precos={vivos} selecionado={simbolo?.symbol ?? null} onSelecionar={selecionar} onVisiveis={setVisiveis} />
           {podeNegociar && <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><InterruptorUmClique variante="cartao" /></div>}
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedDesempenho d={dados.desempenho} estrategia={c.segueEstrategia?.nome} /></div>
-          <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedCopier accountId={accountId} podeGerir={dados.modo === "master"} /></div>
-          <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedWebhook accountId={accountId} podeGerir={dados.modo === "master"} /></div>
         </div>
         <div className="space-y-2">
           {painelNegociar}
