@@ -1,14 +1,13 @@
 "use client"
 
-import FundedCopier from "./funded-copier"
 import FundedDesempenho from "./funded-desempenho"
-import FundedWebhook from "./funded-webhook"
 import { InterruptorUmClique } from "./um-clique"
 import { EtiquetaConta, type Trader } from "./trader-contexto"
 
 /**
- * O SEPARADOR «CONTA» — métricas completas, negociação num clique, desempenho da estratégia
- * seguida, copiador para contas MT5 e webhooks do TradingView. As interligações da conta, num sítio.
+ * O SEPARADOR «CONTA» — métricas completas, negociação num clique e desempenho da estratégia
+ * seguida. Os cartões «Copiar para a minha conta» e «TradingView → esta conta» saíram do WebTrader
+ * (decisão do dono, 2026-09-15); os componentes e as rotas ficam por agora.
  */
 export default function PainelConta({ t }: { t: Trader }) {
   const c = t.dados.conta
@@ -32,8 +31,6 @@ export default function PainelConta({ t }: { t: Trader }) {
       </div>
       {t.podeNegociar && <div className={cartao}><InterruptorUmClique variante="cartao" /></div>}
       <div className={cartao}><FundedDesempenho d={t.dados.desempenho} estrategia={c.segueEstrategia?.nome} /></div>
-      <div className={cartao}><FundedCopier accountId={t.accountId} podeGerir={t.dados.modo === "master"} /></div>
-      <div className={cartao}><FundedWebhook accountId={t.accountId} podeGerir={t.dados.modo === "master"} /></div>
     </div>
   )
 }
