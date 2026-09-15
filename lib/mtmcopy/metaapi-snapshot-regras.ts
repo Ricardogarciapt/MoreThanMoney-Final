@@ -105,6 +105,27 @@ export function precoDoSnapshot(
   return (bid + ask) / 2
 }
 
+/** Idade máxima da fotografia para servir de preço aos monitores (T2T, signal-tracker). */
+export const PRECO_MONITOR_MAX_IDADE_MS = 5_000
+
+/**
+ * Preço da fotografia para um MONITOR: a fotografia tem de estar sincronizada e ter menos de
+ * `maxIdadeMs` (e não estar no futuro além da tolerância); o tick segue as regras de `precoDoSnapshot`.
+ */
+export function precoDoSnapshotParaMonitor(
+  snap: Pick<MetaApiSnapshot, 'precos' | 'em' | 'sincronizado'>,
+  simboloCorretora: string,
+  agoraMs: number,
+  maxIdadeMs = PRECO_MONITOR_MAX_IDADE_MS,
+): number | null {
+  if (snap.sincronizado !== true) return null
+  const em = Date.parse(String(snap.em))
+  if (!Number.isFinite(em)) return null
+  const idade = agoraMs - em
+  if (idade > maxIdadeMs || idade < -SNAPSHOT_TOLERANCIA_FUTURO_MS) return null
+  return precoDoSnapshot(snap, simboloCorretora)
+}
+
 /** Assim chegam as posições do SDK (Date em `time`) → forma simples, serializável. */
 export function posicaoParaSnapshot(p: Record<string, unknown>): PosicaoSnapshot | null {
   if (!p || p.id == null || !p.symbol) return null

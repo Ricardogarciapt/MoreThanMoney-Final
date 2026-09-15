@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { runMtmcopySystemSync } from '@/lib/mtmcopy/system-sync'
 import { scanOrphanPositions, orphanAlertText } from '@/lib/mtmcopy/orphan-positions'
+import { emSegundoPlano } from '@/lib/mtmcopy/metaapi-quota'
 import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
     // nenhum. Se aparecerem, o admin é avisado no Telegram.
     let orfas: Awaited<ReturnType<typeof scanOrphanPositions>> | null = null
     try {
-      orfas = await scanOrphanPositions()
+      orfas = await emSegundoPlano(() => scanOrphanPositions())
       const aviso = orphanAlertText(orfas)
       if (aviso) {
         const { data } = await getSupabaseAdmin()

@@ -13,10 +13,10 @@ import {
   readPendingOrders,
   closePositionById,
   modifyPositionSlTp,
-  getMarketPrice,
 } from './metaapi'
 import { tapToTradeEnabledChannels, T2T_SENDER_TO_CHAT } from './tap-to-trade-channels'
 import { lifecycleMessage } from './signal-lifecycle'
+import { precoParaMonitor } from './metaapi-snapshot'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 
 const supabase = getSupabaseAdmin()
@@ -261,7 +261,7 @@ export async function reconcileT2TPositionsClosed(rows: OpenT2TPosition[]): Prom
         // mercado agora. É o mesmo instante em que a gestão a encerrou, com a diferença de
         // uma ronda do monitor — chega para o cliente saber com quanto fechou.
         const precoFecho = row.symbol && contaParaPreco
-          ? await getMarketPrice(contaParaPreco, row.symbol).catch(() => null)
+          ? await precoParaMonitor(contaParaPreco, row.symbol).catch(() => null)
           : null
         const { text } = lifecycleMessage('closed', {
           symbol: row.symbol ?? '',

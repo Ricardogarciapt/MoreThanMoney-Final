@@ -9,7 +9,7 @@
  * Lemos a cotação numa conta PROVIDER nossa (a mesma que executa os sinais) e guardamos 30s em
  * memória — um fecho toca em vários seguidores e não vale a pena abrir uma ligação RPC por cada.
  */
-import { getMarketPrice } from './metaapi'
+import { precoParaMonitor } from './metaapi-snapshot'
 import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
@@ -44,7 +44,9 @@ export async function referencePrice(symbol: string | null | undefined): Promise
 
   for (const acc of FONTES) {
     try {
-      const p = await getMarketPrice(acc, sym)
+      if (!acc) continue
+      // Fotografia do streaming (<5 s) ou REST current-price — nunca RPC com getSymbols.
+      const p = await precoParaMonitor(acc, sym)
       if (p != null && p > 0) {
         cache.set(sym, { price: p, at: Date.now() })
         return p
