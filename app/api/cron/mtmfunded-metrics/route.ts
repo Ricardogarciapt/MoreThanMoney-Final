@@ -79,6 +79,8 @@ interface Snapshot {
 async function lerConta(metaapiId: string): Promise<Snapshot | null> {
   const token = process.env.METAAPI_TOKEN
   if (!token) return null
+  const { contaInexistente } = await import('@/lib/mtmcopy/metaapi-inexistentes')
+  if (await contaInexistente(metaapiId)) return null
   try {
     const r = await fetch(
       `https://mt-client-api-v1.london.agiliumtrade.ai/users/current/accounts/${metaapiId}/account-information`,

@@ -18,8 +18,8 @@ import { candidatosDeTicker } from './ordens'
  *
  * Por isso o nome a pedir RESOLVE-SE, por esta ordem, e o que funciona fica em cache por
  * símbolo+conta:
- *   1. `simbolo_fonte` do catálogo (quando a conta de leitura é da mesma corretora);
- *   2. o símbolo canónico (XAUUSD);
+ *   1. o símbolo canónico (XAUUSD) — primeiro desde 2026-09, ver `resolverSemCache`;
+ *   2. `simbolo_fonte` do catálogo (quando a conta de leitura é da mesma corretora);
  *   3. as variantes de `candidatosDeTicker` (sem sufixo, apelidos US30/DJ30…);
  *   4. a lista de símbolos da própria conta ordenada por `rankedBrokerSymbols` (DJIUSD para US30).
  * Cada candidato só «funciona» se devolver velas E a mais recente tiver menos de ~4 dias.
@@ -88,6 +88,14 @@ class LRU<V> {
 }
 
 const CACHE_RESPOSTAS = new LRU<RespostaVelas>(96, 30_000)
+/**
+ * Janelas GRANDES (> JANELA_RECENTE velas, sem `ate`): o corpo antigo não muda, por isso guarda-se
+ * 10 min; a cauda (as últimas JANELA_RECENTE) continua com os 30 s de sempre e cola-se por cima.
+ * Três páginas de 1000 velas à MetaApi custavam ~9 s a frio — agora custam isso uma vez a cada
+ * 10 min por símbolo+timeframe, e não a cada 30 s.
+ */
+const CACHE_CORPO = new LRU<RespostaVelas>(64, 10 * 60_000)
+export const JANELA_RECENTE = 300
 const EM_CURSO = new Map<string, Promise<RespostaVelas>>()
 /** símbolo do catálogo → { conta, nome que serve } (6 h; invalidado se deixar de servir). */
 const RESOLVIDOS = new LRU<{ conta: string; nome: string }>(256, 6 * 3600_000)
@@ -174,6 +182,8 @@ async function simbolosDaConta(conta: string, token: string): Promise<string[]> 
  * Resolve o nome que a conta de leitura serve para este símbolo. Exportado para verificação
  * (tsx) e para quem precise do nome sem pedir velas.
  */
+const RESOLUCOES_EM_CURSO = new Map<string, Promise<{ conta: string; nome: string } | null>>()
+
 export async function resolverFonteHistorico(symbol: string, tf = 'M5', opcoes: { ignorarCache?: boolean } = {}): Promise<{ conta: string; nome: string } | null> {
   const token = process.env.METAAPI_TOKEN
   if (!token) return null
@@ -182,24 +192,50 @@ export async function resolverFonteHistorico(symbol: string, tf = 'M5', opcoes: 
     if (r) return r
     if (SEM_FONTE.get(symbol)) return null
   }
+  // O gráfico pede a cauda e o corpo ao mesmo tempo: a mesma resolução a frio não se faz duas vezes.
+  const emCurso = RESOLUCOES_EM_CURSO.get(symbol)
+  if (emCurso) return emCurso
+  const p = resolverSemCache(symbol, tf, token)
+  RESOLUCOES_EM_CURSO.set(symbol, p)
+  try { return await p } finally { RESOLUCOES_EM_CURSO.delete(symbol) }
+}
+
+async function resolverSemCache(symbol: string, tf: string, token: string): Promise<{ conta: string; nome: string } | null> {
   const { data: s } = await getSupabaseAdmin().from('funded_symbols').select('simbolo_fonte').eq('symbol', symbol).maybeSingle()
   const fonteCatalogo = s?.simbolo_fonte ? String(s.simbolo_fonte) : null
   const contas = await contasDeLeitura()
   const base: string[] = []
   const add = (x: string | null | undefined) => { if (x && !base.includes(x)) base.push(x) }
-  add(fonteCatalogo)
+  // O canónico primeiro (2026-09): as contas de leitura são de OUTRA corretora, e um nome que não
+  // existe lá (XAUUSD.s) só falha ao fim de ~5 s (500 «unexpected error» da MetaApi). Com o `.s` à
+  // frente, cada símbolo novo esperava esses 5 s antes de poder usar o XAUUSD que respondera em 0,2 s.
+  // Um canónico «morto» (US30 com a última vela em 2024) não passa no `serve` e segue-se para o resto.
   add(symbol)
+  add(fonteCatalogo)
   for (const c of candidatosDeTicker(symbol)) add(c)
   if (fonteCatalogo) for (const c of candidatosDeTicker(fonteCatalogo)) add(c)
 
   // Várias contas provider costumam ser da mesma corretora: tentam-se por ordem e pára-se na 1.ª que serve.
   // Os candidatos de uma conta testam-se em PARALELO (cada «não existe» custa um pedido) e ganha o
-  // primeiro NA ORDEM de preferência que sirva — não o que responder primeiro.
-  const primeiroQueServe = async (conta: string, nomes: string[]) => {
-    const ok = await Promise.all(nomes.map((n) => serve(conta, n, tf, token)))
-    const i = ok.indexOf(true)
-    return i < 0 ? null : { conta, nome: nomes[i] }
-  }
+  // primeiro NA ORDEM de preferência que sirva — não o que responder primeiro. Mas não se espera pelos
+  // lentos de trás: assim que o candidato i serve e todos os anteriores já falharam, está decidido.
+  const primeiroQueServe = (conta: string, nomes: string[]) => new Promise<{ conta: string; nome: string } | null>((resolver) => {
+    if (!nomes.length) return resolver(null)
+    const estado: Array<boolean | undefined> = nomes.map(() => undefined)
+    let feito = false
+    const decidir = () => {
+      if (feito) return
+      for (let i = 0; i < estado.length; i++) {
+        if (estado[i] === undefined) return
+        if (estado[i]) { feito = true; return resolver({ conta, nome: nomes[i] }) }
+      }
+      feito = true
+      resolver(null)
+    }
+    nomes.forEach((n, i) => {
+      serve(conta, n, tf, token).catch(() => false).then((ok) => { estado[i] = ok; decidir() })
+    })
+  })
   for (const conta of contas) {
     let r = await primeiroQueServe(conta, base)
     if (!r) {
@@ -246,8 +282,34 @@ async function recolher(conta: string, nome: string, tf: string, limite: number,
  */
 export async function obterVelas(symbol: string, tf: string, limite: number, ate: number | null = null): Promise<RespostaVelas> {
   const lim = Math.min(MAX_VELAS, Math.max(20, Math.floor(limite) || 300))
-  const chave = `${symbol}:${tf}:${lim}:${ate ?? 'agora'}`
-  const guardado = CACHE_RESPOSTAS.get(chave)
+  // Janela grande até agora = corpo (cache longa) + cauda recente (cache curta), colados por tempo.
+  if (ate == null && lim > JANELA_RECENTE) {
+    const [corpo, cauda] = await Promise.all([
+      comCache(CACHE_CORPO, symbol, tf, lim, null),
+      comCache(CACHE_RESPOSTAS, symbol, tf, JANELA_RECENTE, null),
+    ])
+    if (!corpo.velas.length) return cauda.velas.length ? cauda : corpo
+    if (!cauda.velas.length) return corpo
+    return { ...corpo, velas: colarVelas(corpo.velas, cauda.velas, lim) }
+  }
+  return comCache(CACHE_RESPOSTAS, symbol, tf, lim, ate)
+}
+
+/**
+ * Junta duas listas de velas por tempo — a `nova` ganha a partir da sua primeira vela (a vela viva
+ * mudou, e a cauda é mais fresca) — e fica com as `limite` mais recentes. O corpo tem no máximo
+ * 10 min e a cauda 300 velas (5 h no M1): as duas sobrepõem-se sempre, não fica buraco.
+ */
+export function colarVelas(antiga: VelaOHLCV[], nova: VelaOHLCV[], limite: number): VelaOHLCV[] {
+  if (!nova.length) return antiga.slice(-limite)
+  const primeiraNova = nova[0].t
+  return antiga.filter((v) => v.t < primeiraNova).concat(nova).slice(-limite)
+}
+
+async function comCache(cache: LRU<RespostaVelas>, symbol: string, tf: string, lim: number, ate: number | null): Promise<RespostaVelas> {
+  const chave = `${cache === CACHE_CORPO ? 'corpo' : 'r'}:${symbol}:${tf}:${lim}:${ate ?? 'agora'}`
+  // Um corpo vazio fica na cache curta (ver abaixo).
+  const guardado = cache.get(chave) ?? (cache === CACHE_CORPO ? CACHE_RESPOSTAS.get(chave) : undefined)
   if (guardado) return guardado
   const emCurso = EM_CURSO.get(chave)
   if (emCurso) return emCurso
@@ -274,8 +336,10 @@ export async function obterVelas(symbol: string, tf: string, limite: number, ate
   EM_CURSO.set(chave, trabalho)
   try {
     const r = await trabalho
-    // Respostas vazias guardam-se na mesma (30 s): um símbolo sem histórico não martela a MetaApi.
-    CACHE_RESPOSTAS.set(chave, r)
+    // Respostas vazias guardam-se só 30 s (na cache curta): um símbolo sem histórico não martela a
+    // MetaApi, mas também não fica 10 min sem gráfico se a conta de leitura voltar.
+    if (r.velas.length || cache !== CACHE_CORPO) cache.set(chave, r)
+    else CACHE_RESPOSTAS.set(chave, r)
     return r
   } finally {
     EM_CURSO.delete(chave)

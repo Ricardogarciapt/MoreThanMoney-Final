@@ -1,4 +1,3 @@
-import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   type PedidoAccao, transicao, podeAvancarFase, guardaLevantamento,
@@ -103,18 +102,8 @@ export async function executarAccao(ctx: ContextoAccao, p: PedidoAccao): Promise
       exigirSimulada(conta, 'Fechar tudo')
       if (p.confirmacao.trim() !== String(conta.mt5_login ?? '')) throw new ErroAdmin(400, 'escreve o login da conta para confirmar')
       const { ex, c } = await contaDeExecucao(conta.id)
-      // Fecho em lote posição a posição pelas funções atómicas (o fecharLote do WebTrader v2 ainda não está em produção).
-      const admin = getSupabaseAdmin()
-      const { data: abertas } = await admin.from('funded_positions').select('id').eq('account_id', conta.id).eq('estado', 'aberta').is('mae_id', null)
-      const lote = { pedidas: (abertas ?? []).length, fechadas: [] as string[], falhas: [] as string[] }
-      for (const pos of abertas ?? []) {
-        try { await ex.fecharPosicao(c, String(pos.id), null, 'manual'); lote.fechadas.push(String(pos.id)) } catch { lote.falhas.push(String(pos.id)) }
-      }
-      let canceladas = 0
-      if (p.cancelarPendentes) {
-        const { data: pend } = await admin.from('funded_orders').select('id').eq('account_id', conta.id).eq('estado', 'pendente')
-        for (const o of pend ?? []) { try { await ex.cancelarPendente(c, String(o.id)); canceladas++ } catch { /* segue */ } }
-      }
+      const lote = await comoAdmin(() => ex.fecharLote(c, 'todas'))
+      const canceladas = p.cancelarPendentes ? (await comoAdmin(() => ex.cancelarTodas(c))).canceladas : 0
       return {
         resposta: { pedidas: lote.pedidas, fechadas: lote.fechadas.length, falhas: lote.falhas, canceladas },
         auditoria: { pedidas: lote.pedidas, fechadas: lote.fechadas.length, falhas: lote.falhas, canceladas },

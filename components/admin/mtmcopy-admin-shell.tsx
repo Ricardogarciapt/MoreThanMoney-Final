@@ -3,24 +3,19 @@
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import {
-  Activity,
-  FlaskConical,
+  ArrowLeftRight,
   LayoutDashboard,
-  Send,
-  SlidersHorizontal,
-  UserCog,
-  Users,
-  Wrench,
+  ListTree,
+  RefreshCcw,
+  ScrollText,
+  Wallet,
 } from "lucide-react"
 
-export type MtmcopyAdminTab =
-  | "overview"
-  | "strategies"
-  | "senders"
-  | "subscribers"
-  | "logs"
-  | "tools"
-  | "users"
+/**
+ * «MTM Auto · Cópia» — as seis secções do admin (antes «Consola MTMcopier»). A rota continua
+ * /admin/mtmcopy (links antigos e a app) e tem o alias /admin/mtmauto-copia.
+ */
+export type MtmcopyAdminTab = "visao" | "contas" | "estrategias" | "copia" | "eventos" | "sincronizacao"
 
 export const MTMCOPY_ADMIN_TABS: {
   id: MtmcopyAdminTab
@@ -28,14 +23,24 @@ export const MTMCOPY_ADMIN_TABS: {
   short: string
   icon: typeof LayoutDashboard
 }[] = [
-  { id: "overview", label: "Visão geral", short: "Visão", icon: LayoutDashboard },
-  { id: "strategies", label: "Estratégias", short: "Estrat.", icon: SlidersHorizontal },
-  { id: "senders", label: "Senders", short: "Senders", icon: Send },
-  { id: "subscribers", label: "Subscribers", short: "Subs", icon: Users },
-  { id: "logs", label: "Monitorização", short: "Logs", icon: Activity },
-  { id: "tools", label: "Ferramentas", short: "Tools", icon: Wrench },
-  { id: "users", label: "Utilizadores", short: "Users", icon: UserCog },
+  { id: "visao", label: "Visão geral", short: "Visão", icon: LayoutDashboard },
+  { id: "contas", label: "Contas", short: "Contas", icon: Wallet },
+  { id: "estrategias", label: "Estratégias", short: "Estrat.", icon: ListTree },
+  { id: "copia", label: "Cópia entre contas", short: "Cópia", icon: ArrowLeftRight },
+  { id: "eventos", label: "Eventos", short: "Eventos", icon: ScrollText },
+  { id: "sincronizacao", label: "Sincronização", short: "Sync", icon: RefreshCcw },
 ]
+
+/** Tabs antigas (links guardados, user-management) → secções novas. */
+export const TABS_ANTIGAS: Record<string, MtmcopyAdminTab> = {
+  overview: "visao",
+  strategies: "estrategias",
+  senders: "estrategias",
+  subscribers: "estrategias",
+  logs: "eventos",
+  tools: "sincronizacao",
+  users: "contas",
+}
 
 export function MtmcopyAdminTabNav({
   active,
@@ -47,7 +52,7 @@ export function MtmcopyAdminTabNav({
   return (
     <nav
       className="flex flex-wrap gap-1 p-1 rounded-xl bg-zinc-900/80 border border-zinc-800"
-      aria-label="Secções MTMcopier"
+      aria-label="Secções MTM Auto · Cópia"
     >
       {MTMCOPY_ADMIN_TABS.map((tab) => {
         const Icon = tab.icon
@@ -84,7 +89,7 @@ export function MtmcopyAdminSection({
 }: {
   title: string
   description?: string
-  icon?: typeof FlaskConical
+  icon?: typeof LayoutDashboard
   accent?: "gold" | "emerald" | "violet" | "sky"
   children: ReactNode
   action?: ReactNode

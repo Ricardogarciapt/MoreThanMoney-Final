@@ -19,6 +19,44 @@ export const dynamic = 'force-dynamic'
  * alguém está a OLHAR para um símbolo e subscreve-o, em vez de subscrever o catálogo inteiro.
  */
 
+// ── Caches por instância (2026-09, depois da sobrecarga do Supabase) ─────────────────────────
+// Cada ecrã aberto pede preços de 1,5 em 1,5 s. Sem cache, dez pessoas no ouro eram dez leituras
+// por segundo à mesma linha. Agora a mesma instância serve a mesma linha durante 1 s, e a CDN
+// (s-maxage=1) poupa a própria função quando o URL se repete. A ficha (especificações) muda quase
+// nunca: 2 min em memória.
+const PRECO_TTL_MS = 1_000
+const FICHA_TTL_MS = 120_000
+const cachePrecos = new Map<string, { em: number; linha: { symbol: string; bid: unknown; ask: unknown; em: unknown } | null }>()
+const cacheFichas = new Map<string, { em: number; linha: Record<string, unknown> | null }>()
+
+async function lerPrecos(db: ReturnType<typeof getSupabaseAdmin>, symbols: string[]) {
+  const agora = Date.now()
+  const faltam = symbols.filter((s) => { const c = cachePrecos.get(s); return !c || agora - c.em > PRECO_TTL_MS })
+  if (faltam.length) {
+    const { data, error } = await db.from('funded_precos').select('symbol, bid, ask, em').in('symbol', faltam)
+    if (!error) {
+      const porSimbolo = new Map((data ?? []).map((p) => [String(p.symbol), p]))
+      for (const s of faltam) cachePrecos.set(s, { em: agora, linha: porSimbolo.get(s) ?? null })
+    }
+  }
+  return symbols.map((s) => cachePrecos.get(s)?.linha).filter(Boolean) as Array<{ symbol: string; bid: unknown; ask: unknown; em: unknown }>
+}
+
+async function lerFichas(db: ReturnType<typeof getSupabaseAdmin>, symbols: string[]) {
+  const agora = Date.now()
+  const faltam = symbols.filter((s) => { const c = cacheFichas.get(s); return !c || agora - c.em > FICHA_TTL_MS })
+  if (faltam.length) {
+    const { data, error } = await db.from('funded_symbols').select('*').in('symbol', faltam).eq('ativo', true)
+    if (!error) {
+      const porSimbolo = new Map((data ?? []).map((r) => [String(r.symbol), r as Record<string, unknown>]))
+      // Os que não existem também ficam (null): um link com cinco candidatos não relê a base a cada abertura.
+      for (const s of faltam) cacheFichas.set(s, { em: agora, linha: porSimbolo.get(s) ?? null })
+    }
+    if (cacheFichas.size > 2000) cacheFichas.clear()
+  }
+  return symbols.map((s) => cacheFichas.get(s)?.linha).filter(Boolean) as Array<Record<string, unknown>>
+}
+
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams
   const db = getSupabaseAdmin()
@@ -27,23 +65,25 @@ export async function GET(request: NextRequest) {
   if (symbolsParam != null) {
     const symbols = [...new Set(symbolsParam.split(',').map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z0-9._#-]{1,24}$/.test(s)))].slice(0, 60)
     if (!symbols.length) return NextResponse.json({ precos: [] })
-    const [{ data: precos }, specs] = await Promise.all([
-      db.from('funded_precos').select('symbol, bid, ask, em').in('symbol', symbols),
-      sp.get('specs') === '1'
-        ? db.from('funded_symbols').select('*').in('symbol', symbols).eq('ativo', true)
-        : Promise.resolve({ data: null }),
+    const comSpecs = sp.get('specs') === '1'
+    const [precos, specs] = await Promise.all([
+      lerPrecos(db, symbols),
+      comSpecs ? lerFichas(db, symbols) : Promise.resolve(null),
     ])
     void registarPedidosDePreco(symbols)
     const agora = Date.now()
     return NextResponse.json(
       {
         agora: new Date(agora).toISOString(),
-        precos: (precos ?? []).map((p) => ({
+        precos: precos.map((p) => ({
           symbol: p.symbol, bid: Number(p.bid), ask: Number(p.ask), em: p.em, fresco: precoFresco(p.em as string, agora),
         })),
-        ...(specs.data ? { simbolos: specs.data.map((r) => ({ ...simboloDaLinha(r), nome: r.nome, horario: r.horario, sessoes: r.sessoes ?? null })) } : {}),
+        ...(specs ? { simbolos: specs.map((r) => ({ ...simboloDaLinha(r), nome: r.nome, horario: r.horario, sessoes: r.sessoes ?? null })) } : {}),
       },
-      { headers: { 'Cache-Control': 'no-store' } },
+      // Preço público (ver acima): 1 s na CDN + 2 s a servir o anterior enquanto revalida. O ecrã
+      // pede de 1,5 em 1,5 s, por isso nunca vê um preço com mais de ~3 s — e o motor continua a
+      // saber quem está a olhar (cada revalidação passa pela função e por registarPedidosDePreco).
+      { headers: { 'Cache-Control': 'public, s-maxage=1, stale-while-revalidate=2' } },
     )
   }
 

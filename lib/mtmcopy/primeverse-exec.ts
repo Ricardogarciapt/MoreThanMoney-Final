@@ -32,7 +32,8 @@ export interface PrimeverseExecConfig {
 }
 
 const KEY = 'primeverse_execution'
-const DEFAULT_ACCOUNT = CANONICAL_SENSEI_ACCOUNT_ID
+// A conta Sensei antiga (a5a1dddd) foi apagada na MetaApi → sem conta por defeito ('' = não executa).
+const DEFAULT_ACCOUNT = CANONICAL_SENSEI_ACCOUNT_ID ?? ''
 
 export async function getPrimeverseExecConfig(): Promise<PrimeverseExecConfig> {
   try {

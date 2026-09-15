@@ -12,6 +12,9 @@ import { carregarDireitos, type Direitos } from '@/lib/entitlements'
  *   • Admin ......................................... sem limite
  *   • + extras já pagas (7 €/mês, site + app MTM Auto + App Store) + bónus da corretora parceira
  *
+ * Tabelas contadas: mtmcopy_connections, mtmauto_accounts e webtrader_contas_mt5 (contas MT5 abertas
+ * só no WebTrader, migração 076).
+ *
  * O que NÃO conta: TradeLocker e MTM Funded — nenhuma delas passa pela MetaApi.
  *
  * Quem já está acima do novo limite NÃO perde nada: não se apaga nem se faz undeploy de nenhuma
@@ -160,10 +163,12 @@ export function decidirQuotaMetaApi(
 /** Linhas de contas do utilizador nos DOIS produtos, normalizadas. */
 export async function linhasDeContas(userId: string): Promise<LinhaConta[]> {
   const db = getSupabaseAdmin()
-  const [{ data: site }, { data: auto }] = await Promise.all([
+  const [{ data: site }, { data: auto }, webtrader] = await Promise.all([
     // '*': colunas das migrações 069/074 podem não existir ainda.
     db.from('mtmcopy_connections').select('*').eq('user_id', userId),
     db.from('mtmauto_accounts').select('*').eq('user_id', userId),
+    // Contas MT5 abertas só no WebTrader (076). Sem a migração aplicada, a consulta falha e não conta nada.
+    db.from('webtrader_contas_mt5').select('*').eq('user_id', userId),
   ])
   return [
     ...(site ?? []).map((c: Record<string, unknown>) => ({
@@ -174,6 +179,13 @@ export async function linhasDeContas(userId: string): Promise<LinhaConta[]> {
       estado: (c.mt5_status as string) ?? null,
     })),
     ...(auto ?? []).map((c: Record<string, unknown>) => ({
+      metaapi_account_id: (c.metaapi_account_id as string) ?? null,
+      login: (c.login as string) ?? null,
+      servidor: (c.servidor as string) ?? null,
+      plataforma: (c.plataforma as string) ?? 'mt5',
+      estado: (c.estado as string) ?? null,
+    })),
+    ...(webtrader.error ? [] : (webtrader.data ?? [])).map((c: Record<string, unknown>) => ({
       metaapi_account_id: (c.metaapi_account_id as string) ?? null,
       login: (c.login as string) ?? null,
       servidor: (c.servidor as string) ?? null,

@@ -21,6 +21,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // A conta Forex (fbeeafeb) foi apagada na MetaApi: sem conta não há ordens para varrer, e pedir
+  // uma conta inexistente de 10 em 10 min ajudou a estrangular o token (15/09).
+  if (!CANONICAL_TRADE_IDEAS_ACCOUNT_ID) {
+    return NextResponse.json({ ok: true, skipped: 'sem_conta_forex' })
+  }
   const maxAgeMinutes = Number(process.env.TRADEIDEAS_ORDER_TTL_MIN || 240)
   const nowMs = Date.now()
 

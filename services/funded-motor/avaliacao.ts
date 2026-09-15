@@ -40,6 +40,7 @@ import {
   type Simbolo,
 } from '../../lib/mtmfunded/simulado/matematica'
 import { avaliarConta, type RegrasConta, type Veredicto } from '../../lib/mtmfunded/regras'
+import { decidirGestao, type Gestao, type TpParcial } from '../../lib/mtmfunded/simulado/avancadas'
 
 export type Origem = 'manual' | 'ideia_mtm' | 'scanner' | 'copia'
 
@@ -47,6 +48,8 @@ export interface PosicaoSim extends PosicaoAberta {
   id: string
   account_id: string
   origem: Origem
+  /** Trailing, break-even e TPs parciais (migração 072). Sem gestão = null. */
+  gestao?: Gestao | null
 }
 
 export interface OrdemSim {
@@ -61,6 +64,9 @@ export interface OrdemSim {
   tp: number | null
   origem: Origem
   expira_em: string | null
+  /** Pendentes com o mesmo grupo são OCO: a primeira a disparar cancela as outras. */
+  oco_grupo?: string | null
+  gestao?: Gestao | null
 }
 
 export interface ContaSim {
@@ -96,8 +102,34 @@ export interface Execucao {
   symbol: string
 }
 
+/** Take-profit parcial executado pelo motor (funded_fechar_parcial com motivo «tp_parcial»). */
+export interface Parcial {
+  posicaoId: string
+  volume: number
+  preco: number
+  pnl: number
+  symbol: string
+  indice: number
+  /** O estado dos TPs a gravar na mesma transacção (é também a guarda contra repetições). */
+  tps: TpParcial[] | null
+}
+
+/** SL movido pela gestão (trailing ou break-even). */
+export interface Modificacao {
+  posicaoId: string
+  slAntes: number | null
+  sl: number
+  motivo: 'trailing' | 'break_even'
+  beFeito: boolean
+  symbol: string
+}
+
 export interface Decisoes {
   expirar: string[]
+  /** Pendentes OCO canceladas porque a irmã disparou (a base fá-lo na mesma transacção). */
+  cancelarOco: string[]
+  parciais: Parcial[]
+  modificar: Modificacao[]
   /** Pendentes que dispararam mas a conta não tinha margem para as abrir. */
   cancelarSemMargem: string[]
   executar: Execucao[]
@@ -134,7 +166,7 @@ function nivel(saldo: number, alav: number, pos: PosicaoSim[], s: Record<string,
 export function avaliarTick(e: EntradaAvaliacao): Decisoes {
   const { conta, simbolos, precos, negociaveis, agora } = e
   const d: Decisoes = {
-    expirar: [], cancelarSemMargem: [], executar: [], fechar: [], cancelarPorFim: [],
+    expirar: [], cancelarOco: [], parciais: [], modificar: [], cancelarSemMargem: [], executar: [], fechar: [], cancelarPorFim: [],
     estado: { saldo: conta.saldo, equity: conta.saldo, margem: 0, nivelMargemPct: null, semPreco: [] },
     veredicto: null, quebra: null, objetivo: false, precisaConfirmacao: false,
   }
@@ -173,7 +205,13 @@ export function avaliarTick(e: EntradaAvaliacao): Decisoes {
     posicoes.push({
       id: `ordem:${o.id}`, account_id: o.account_id, symbol: o.symbol, direcao: o.direcao, volume: o.volume,
       preco_entrada: o.preco, sl: o.sl, tp: o.tp, comissao, swap: 0, origem: o.origem,
+      gestao: o.gestao ? { ...o.gestao, volume_inicial: o.volume } : null,
     })
+    // OCO: as irmãs saem já da lista — não podem disparar no mesmo tick.
+    if (o.oco_grupo) {
+      for (const irma of ordens.filter((x) => x.oco_grupo === o.oco_grupo)) d.cancelarOco.push(irma.id)
+      ordens = ordens.filter((x) => x.oco_grupo !== o.oco_grupo)
+    }
   }
 
   // ── 3. SL / TP ─────────────────────────────────────────────────────────────
@@ -197,8 +235,38 @@ export function avaliarTick(e: EntradaAvaliacao): Decisoes {
     // fechá-la no mesmo instante em que abriu é um fill e um fecho ao mesmo preço, que ninguém
     // consegue explicar a um aluno. O motor troca o id provisório `ordem:` pelo real.
     if (pos.id.startsWith('ordem:')) continue
-    if (tocaSl(pos, p)) fechar(pos, pos.sl as number, 'sl')
-    else if (tocaTp(pos, p)) fechar(pos, pos.tp as number, 'tp')
+    if (tocaSl(pos, p)) { fechar(pos, pos.sl as number, 'sl'); continue }
+
+    // Gestão (072): TPs parciais → break-even → trailing. O SL já foi visto acima: num gap que
+    // salta o SL e o TP1 ao mesmo tempo, o SL ganha (a mesma regra do SL e TP no mesmo tick).
+    const s = simbolos[pos.symbol]
+    let atual = pos
+    if (s && pos.gestao) {
+      const g = decidirGestao(pos, s, p, precos)
+      let fechou = false
+      for (const parte of g.parciais) {
+        if (parte.fechaTudo) {
+          fechou = fechar(atual, parte.preco, 'tp')
+          break
+        }
+        saldo = arred(saldo + parte.pnl)
+        d.parciais.push({ posicaoId: pos.id, volume: parte.volume, preco: parte.preco, pnl: parte.pnl, symbol: pos.symbol, indice: parte.indice, tps: g.tps })
+        const restante = Math.round((atual.volume - parte.volume) * 100) / 100
+        // A comissão fica proporcional na mãe, como em funded_fechar_parcial.
+        atual = { ...atual, volume: restante, comissao: arred(atual.comissao * (restante / atual.volume)), gestao: { ...atual.gestao!, tps: g.tps } }
+      }
+      if (fechou) continue
+      if (g.novoSl != null && g.motivoSl) {
+        d.modificar.push({ posicaoId: pos.id, slAntes: pos.sl, sl: g.novoSl, motivo: g.motivoSl, beFeito: g.beFeito, symbol: pos.symbol })
+        atual = { ...atual, sl: g.novoSl, gestao: { ...atual.gestao!, be_feito: g.beFeito } }
+      } else if (g.beFeito && !pos.gestao.be_feito) {
+        // BE armado mas o SL já estava melhor: marca-se feito para não voltar a tentar.
+        d.modificar.push({ posicaoId: pos.id, slAntes: pos.sl, sl: pos.sl as number, motivo: 'break_even', beFeito: true, symbol: pos.symbol })
+        atual = { ...atual, gestao: { ...atual.gestao!, be_feito: true } }
+      }
+      if (atual !== pos) posicoes = posicoes.map((x) => (x.id === pos.id ? atual : x))
+    }
+    if (tocaTp(atual, p)) fechar(atual, atual.tp as number, 'tp')
   }
 
   // ── 4. stop-out ────────────────────────────────────────────────────────────

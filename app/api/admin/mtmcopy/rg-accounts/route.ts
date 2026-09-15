@@ -10,6 +10,8 @@ export const dynamic = "force-dynamic"
  * (lote/risco/trailing/estado) + saldo/equidade ao vivo + P&L desde o baseline (métricas do zero).
  */
 
+// A intermédia 0f38257a foi apagada na MetaApi (15/09): o id fica só para as linhas históricas
+// (sem saldos ao vivo — attachConnectionBalances salta contas inexistentes/inativas).
 const INTERMEDIATE = "0f38257a-ba12-4f6c-b20c-9139693b3674"
 const STRATEGY_NAMES: Record<string, string> = {
   su0a: "Copy Trader Ricardo Garcia",

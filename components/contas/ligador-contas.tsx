@@ -5,6 +5,7 @@ import { Loader2, Pause, Play, Plus, Search, Trash2, Wallet, KeyRound, ExternalL
 import { T2T_BROKERS } from "@/lib/mtmcopy/t2t-brokers"
 import TradeLockerConnectForm, { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-form"
 import MtmFundedConnectForm, { MtmFundedBadge, SoLeituraBadge } from "@/components/ligar-mtmfunded/mtmfunded-connect-form"
+import CopiasEntreContas from "@/components/contas/copias-entre-contas"
 
 /**
  * LIGADOR DE CONTAS — «As minhas contas». UM componente para todo o lado:
@@ -24,7 +25,7 @@ export type PlataformaConta = "mt5" | "mt4" | "tradelocker" | "mtmfunded"
 export interface ContaUnificada {
   chave: string
   id: string
-  origem: "site" | "auto"
+  origem: "site" | "auto" | "wt"
   plataforma: PlataformaConta
   rotulo: string | null
   login: string | null
@@ -592,6 +593,7 @@ export default function LigadorContas({ getToken }: { getToken?: Obter }) {
   return (
     <div className="mtmauto space-y-4">
       <ListaContas estado={estado} />
+      <CopiasEntreContas estado={estado} />
       <LimitesPlano estado={estado} />
     </div>
   )

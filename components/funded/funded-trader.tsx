@@ -1,63 +1,65 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Loader2, Eye, AlertTriangle } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { type MapaPrecos, estadoDaConta } from "@/lib/mtmfunded/simulado/matematica"
 import { limitesDaConta, posicaoDaLinha, simbolosParaMedir } from "@/lib/mtmfunded/simulado/ordens"
-import { type SimboloFicha, type PrecoVivo, pedir, ordem, usd, COR_ESTADO } from "./api"
+import { type SimboloFicha, type PrecoVivo, pedir, ordem, usd } from "./api"
 import { usePrecos } from "./use-precos"
-import FundedWatchlist from "./funded-watchlist"
-import FundedGrafico from "./funded-grafico"
-import FundedTicket, { type Prefill } from "./funded-ticket"
-import { RascunhoProvider, useRascunho, type PedidoOrdem } from "./rascunho-ordem"
-import FundedPosicoes from "./funded-posicoes"
-import FundedDesempenho from "./funded-desempenho"
-import { InterruptorUmClique, UmCliqueProvider } from "./um-clique"
+import { fichaDe } from "./pre-carga"
+import type { Prefill } from "./funded-ticket"
+import type { PedidoOrdem } from "./rascunho-ordem"
+import { corpoDoPedido } from "./pedido"
+import { UmCliqueProvider } from "./um-clique"
+import { useModoWebtrader } from "./modo-webtrader"
+import { useAlertas } from "./funded-alertas"
+import { useDiario } from "./funded-diario"
+import type { Estado, Trader } from "./trader-contexto"
+import LayoutSimples from "./layout-simples"
+const LayoutPro = dynamic(() => import("./layout-pro"), { ssr: false })
 
 /**
- * O WEBTRADER DE UMA CONTA — cabeçalho de métricas, lista, gráfico, ticket e posições.
+ * O WEBTRADER DE UMA CONTA — os dados, num só sítio; a apresentação, em dois modos.
  *
- * A conta relê-se do servidor a cada 4 s (o motor fecha por SL/TP e executa pendentes sem o ecrã
- * saber); entre releituras, equity, margem e lucro mexem com os preços ao vivo, calculados com a
- * mesma matemática do servidor.
+ * Aqui vive tudo o que é da conta: a releitura a cada 4 s (o motor fecha por SL/TP, executa
+ * pendentes, move trailings e fecha TPs parciais sem o ecrã saber), os preços ao vivo só dos
+ * símbolos à vista, a equity/margem recalculadas a cada preço com a matemática do servidor, os
+ * alertas e o diário. O modo (modo-webtrader.tsx) só escolhe COMO se mostra:
+ *   · SIMPLE → layout-simples.tsx (telemóvel primeiro)
+ *   · PRO    → layout-pro.tsx (painéis, multi-gráfico, atalhos)
+ * Trocar de modo não relê nada e não desliga os preços.
  */
 
-type Estado = Awaited<ReturnType<typeof import("@/lib/mtmfunded/simulado/execucao")["estadoCompleto"]>>
-type Vista = "negociar" | "mercado" | "posicoes" | "historico" | "conta"
-
-export default function FundedTrader({ accountId, prefill, simboloInicial, alturaGrafico, onSimbolo }: {
+export default function FundedTrader({ accountId, prefill, simboloInicial, altura, onSimbolo }: {
   accountId: string
   prefill: Prefill | null
   simboloInicial: string | null
-  /** Classe Tailwind da altura do gráfico (a app /webtrader usa mais ecrã). */
-  alturaGrafico?: string
+  /** Altura disponível para o trader (CSS), p. ex. `calc(100dvh - 52px)`. */
+  altura?: string
   /** O símbolo seleccionado — o sub-separador Scanner usa-o para abrir o mesmo par. */
   onSimbolo?: (symbol: string) => void
 }) {
   const [dados, setDados] = useState<Estado | null>(null)
   const [erro, setErro] = useState<string | null>(null)
-  const [vista, setVista] = useState<Vista>("negociar")
   const [simbolo, setSimbolo] = useState<SimboloFicha | null>(null)
   const [fichas, setFichas] = useState<Record<string, SimboloFicha>>({})
   const [visiveis, setVisiveis] = useState<string[]>([])
+  const [extras, setExtras] = useState<string[]>([])
   const [volume, setVolume] = useState(0.01)
-  const [aviso, setAviso] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null)
-  // Um só layout montado de cada vez: duas listas escondidas pediam o catálogo e os preços em dobro.
-  const [desktop, setDesktop] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)")
-    const f = () => setDesktop(mq.matches)
-    f()
-    mq.addEventListener("change", f)
-    return () => mq.removeEventListener("change", f)
-  }, [])
-  useEffect(() => { if (!desktop && vista !== "mercado") setVisiveis([]) }, [desktop, vista])
+  const { modo } = useModoWebtrader()
+  const alertas = useAlertas(accountId)
+  const diario = useDiario(accountId)
 
   const recarregar = useCallback(async () => {
     try {
       const d = await pedir<Estado>(`/api/mtmfunded/simulado/ordens?accountId=${accountId}`, {}, accountId)
       setDados(d)
-      setFichas((f) => ({ ...f, ...(d.simbolos as Record<string, SimboloFicha>) }))
+      setFichas((f) => {
+        const novo = { ...f }
+        for (const [k, v] of Object.entries(d.simbolos as Record<string, SimboloFicha>)) novo[k] = { ...v, ...f[k] }
+        return novo
+      })
       setErro(null)
     } catch (e) {
       setErro((e as Error).message)
@@ -66,52 +68,55 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
 
   useEffect(() => {
     setDados(null)
-    recarregar()
-    const iv = setInterval(() => { if (document.visibilityState !== "hidden") recarregar() }, 4000)
+    void recarregar()
+    const iv = setInterval(() => { if (document.visibilityState !== "hidden") void recarregar() }, 4000)
     return () => clearInterval(iv)
   }, [recarregar])
 
-  // Símbolo inicial: o do link (scanner/ideia) ou o primeiro favorito.
+  /** A ficha COM especificações (sessões incluídas) — pede-se ao catálogo se ainda não houver. */
+  const obterFicha = useCallback(async (symbol: string): Promise<SimboloFicha | null> => {
+    if (fichas[symbol] && fichas[symbol].sessoes !== undefined) return fichas[symbol]
+    const s = await fichaDe(symbol)
+    if (s) setFichas((f) => ({ ...f, [s.symbol]: s }))
+    return s ?? fichas[symbol] ?? null
+  }, [fichas])
+
+  // Símbolo inicial: o do link (scanner/ideia) ou o ouro. A ficha já foi pedida pela pré-carga do
+  // WebTrader (pre-carga.ts) enquanto as contas carregavam — aqui apanha-se a mesma promessa.
   useEffect(() => {
+    let vivo = true
     const alvo = simboloInicial || "XAUUSD"
-    fetch(`/api/mtmfunded/simulado/precos?symbols=${encodeURIComponent(alvo)}&specs=1`)
-      .then((r) => r.json())
-      .then((d) => {
-        const lista = (d.simbolos ?? []) as SimboloFicha[]
-        // O link pode trazer vários candidatos (OANDA:XAUUSD → XAUUSD, …): vale o primeiro que existe.
-        const escolhido = alvo.split(",").map((c) => lista.find((s) => s.symbol === c)).find(Boolean)
-        if (escolhido) { setSimbolo(escolhido); setVolume(escolhido.volume_min) }
-        else if (simboloInicial) setAviso({ tipo: "erro", texto: `O símbolo ${simboloInicial.split(",")[0]} não existe no MTM Funded.` })
-      })
-      .catch(() => {})
+    // O link pode trazer vários candidatos (OANDA:XAUUSD → XAUUSD, …): vale o primeiro que existe.
+    fichaDe(alvo).then((escolhido) => {
+      if (!vivo) return
+      if (escolhido) { setSimbolo(escolhido); setVolume(escolhido.volume_min); setFichas((f) => ({ ...f, [escolhido.symbol]: escolhido })) }
+      else if (simboloInicial) setErro(`O símbolo ${simboloInicial.split(",")[0]} não existe no MTM Funded.`)
+    })
+    return () => { vivo = false }
   }, [simboloInicial])
 
   useEffect(() => { if (simbolo) onSimbolo?.(simbolo.symbol) }, [simbolo?.symbol]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selecionar = (s: SimboloFicha) => {
+  const selecionar = useCallback((s: SimboloFicha) => {
     setSimbolo(s)
-    setFichas((f) => ({ ...f, [s.symbol]: s }))
+    setFichas((f) => ({ ...f, [s.symbol]: { ...f[s.symbol], ...s } }))
     setVolume((v) => Math.max(s.volume_min, Math.min(v, s.volume_max)))
-    setVista("negociar")
-  }
-  const selecionarPorNome = async (symbol: string) => {
-    if (fichas[symbol]) return selecionar(fichas[symbol])
-    const d = await fetch(`/api/mtmfunded/simulado/precos?symbols=${symbol}&specs=1`).then((r) => r.json()).catch(() => null)
-    const s = d?.simbolos?.[0]
+  }, [])
+  const selecionarPorNome = useCallback(async (symbol: string) => {
+    const s = await obterFicha(symbol)
     if (s) selecionar(s)
-  }
+  }, [obterFicha, selecionar])
 
-  // ── preços: visíveis + gráfico + posições + conversões ──
+  // ── preços: visíveis + gráficos + posições + conversões ──
   const precisos = useMemo(() => {
-    const base = new Set<string>(visiveis)
-    const comClasse = Object.values(fichas)
+    const base = new Set<string>([...visiveis, ...extras])
     if (simbolo) base.add(simbolo.symbol)
     for (const p of dados?.posicoes ?? []) base.add(String(p.symbol))
     for (const o of dados?.ordens ?? []) base.add(String(o.symbol))
-    const medir = simbolosParaMedir(comClasse.filter((f) => base.has(f.symbol)))
+    const medir = simbolosParaMedir(Object.values(fichas).filter((f) => base.has(f.symbol)))
     // As conversões primeiro: sem elas o lucro de um EURJPY fica em branco.
     return [...new Set([...medir.filter((m) => !base.has(m)), ...base])].slice(0, 60)
-  }, [visiveis, simbolo, dados?.posicoes, dados?.ordens, fichas])
+  }, [visiveis, extras, simbolo, dados?.posicoes, dados?.ordens, fichas])
   const { precos: vivos } = usePrecos(precisos)
 
   const mapa: MapaPrecos = useMemo(() => {
@@ -129,30 +134,24 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
     return { ...e, limites: l }
   }, [dados, fichas, mapa])
 
-  const podeNegociar = dados?.modo === "master" && dados?.conta.estado === "ativa"
-
-  // O «feito @ preço» e os erros das ordens aparecem no aviso da negociação num clique (um-clique.tsx),
-  // que é por onde todas as acções passam; aqui só se relê a conta e se devolve a resposta.
-  const executar = async (accao: string, corpo: Record<string, unknown>, _sucesso: string) => {
+  // O «feito @ preço» e os erros aparecem no aviso da negociação num clique (um-clique.tsx); aqui relê-se a conta.
+  const executar = useCallback(async (accao: string, corpo: Record<string, unknown>) => {
     const r = await ordem(accao, corpo, accountId)
     void recarregar()
     return r
-  }
+  }, [accountId, recarregar])
+  const enviarPedido = useCallback((p: PedidoOrdem, symbol: string) => {
+    const { accao, corpo } = corpoDoPedido(p, accountId, symbol)
+    return executar(accao, corpo)
+  }, [accountId, executar])
 
   if (erro && !dados) return <div className="p-6 text-center text-[13px] text-rose-300">{erro}</div>
   if (!dados || !vivo) return <div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" /></div>
 
-  const c = dados.conta
-  const precoSel = simbolo ? vivos[simbolo.symbol] : undefined
-  const posSel = simbolo ? dados.posicoes.filter((p) => p.symbol === simbolo.symbol).map((p) => ({ ...posicaoDaLinha(p) })) : []
-  const ordSel = simbolo ? dados.ordens.filter((o) => o.symbol === simbolo.symbol).map((o) => ({
-    id: String(o.id), direcao: o.direcao, tipo: o.tipo, volume: Number(o.volume), preco: Number(o.preco),
-    sl: o.sl == null ? null : Number(o.sl), tp: o.tp == null ? null : Number(o.tp),
-  })) : []
-
   const metricas: Array<[string, string, string?]> = [
-    ["Saldo", usd(vivo ? dados.estado.saldo : null)],
+    ["Saldo", usd(dados.estado.saldo)],
     ["Equity", usd(vivo.equity), vivo.flutuante >= 0 ? "text-emerald-300" : "text-rose-300"],
+    ["Flutuante", usd(vivo.flutuante), vivo.flutuante >= 0 ? "text-emerald-300" : "text-rose-300"],
     ["Margem", usd(vivo.margem)],
     ["Margem livre", usd(vivo.margemLivre)],
     ["Nível margem", vivo.nivelMargemPct == null ? "—" : `${vivo.nivelMargemPct.toFixed(0)}%`],
@@ -161,149 +160,18 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
     ...(vivo.limites.objetivoValor ? [["Objetivo", `${vivo.limites.progressoObjetivoPct ?? 0}% de ${vivo.limites.objetivoPct}%`] as [string, string]] : []),
   ]
 
-  // Ticket e ferramenta do gráfico enviam pelo MESMO caminho: o rascunho partilhado.
-  const onEnviar = (p: PedidoOrdem) => {
-    const base = { accountId, symbol: simbolo!.symbol, direcao: p.direcao, volume: p.volume, sl: p.sl, tp: p.tp, origem: p.origem, ideiaRef: p.ideiaRef }
-    return p.accao === "abrir"
-      ? executar("abrir", base, `${p.direcao === "buy" ? "Compra" : "Venda"} executada`)
-      : executar("pendente", { ...base, tipo: p.tipo, preco: p.preco }, `${p.direcao} ${p.tipo} criada`)
+  const t: Trader = {
+    accountId, dados, vivo, mapa, vivos, fichas, simbolo, volume, setVolume,
+    podeNegociar: dados.modo === "master" && dados.conta.estado === "ativa",
+    selecionar, selecionarPorNome, obterFicha, executar, enviarPedido, setVisiveis, setExtras,
+    prefill, simboloInicial, alertas, diario, metricas,
   }
-
-  const painelNegociar = simbolo && (
-    <RascunhoProvider
-      simbolo={simbolo} preco={precoSel} precos={mapa} volume={volume} setVolume={setVolume}
-      alavancagem={c.alavancagem} margemLivre={vivo.margemLivre} saldo={dados.estado.saldo} onEnviar={onEnviar}
-    >
-      <AplicarPrefill prefill={prefill} simboloInicial={simboloInicial} />
-      <div className="space-y-2">
-        <FundedGrafico
-          simbolo={simbolo} preco={precoSel} precos={mapa} volume={volume}
-          posicoes={posSel} ordens={ordSel as any} podeNegociar={podeNegociar}
-          alturaClasse={alturaGrafico}
-          onModificarPosicao={(id, sl, tp) => executar("modificar", { positionId: id, sl, tp }, "SL/TP actualizados")}
-          onModificarPendente={(id, preco, sl, tp) => executar("modificar_pendente", { orderId: id, preco, sl, tp }, "Ordem actualizada")}
-          onFecharPosicao={(id) => executar("fechar", { positionId: id }, "Posição fechada")}
-          onCancelarPendente={(id) => executar("cancelar", { orderId: id }, "Ordem cancelada")}
-          onMudarSimbolo={selecionarPorNome}
-        />
-        {podeNegociar && <FundedTicket margemLivre={vivo.margemLivre} />}
-      </div>
-    </RascunhoProvider>
-  )
-
-  const posicoesPainel = (v: "posicoes" | "historico") => (
-    <FundedPosicoes
-      vista={v} posicoes={dados.posicoes} ordens={dados.ordens} historico={dados.historico}
-      simbolos={fichas} precos={mapa} podeNegociar={podeNegociar}
-      onFechar={(id, vol) => executar("fechar", { positionId: id, volume: vol }, vol ? "Fecho parcial feito" : "Posição fechada")}
-      onModificar={(id, sl, tp) => executar("modificar", { positionId: id, sl, tp }, "SL/TP actualizados")}
-      onCancelar={(id) => executar("cancelar", { orderId: id }, "Ordem cancelada")}
-      onSelecionarSimbolo={selecionarPorNome}
-    />
-  )
 
   return (
     <UmCliqueProvider accountId={accountId} investor={dados.modo !== "master"}>
-    <div className="space-y-2 pb-4">
-      {/* Cabeçalho da conta */}
-      <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-2.5">
-        <div className="flex flex-wrap items-center gap-2 text-[12px]">
-          <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[11px] font-bold text-black">{c.etiqueta}</span>
-          <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold" style={{ color: COR_ESTADO[c.estadoCurto], background: `${COR_ESTADO[c.estadoCurto]}22` }}>{c.estadoCurto}</span>
-          <span className="font-mono text-white">{String(c.login ?? "—")}</span>
-          <span className="text-zinc-500">{String(c.servidor ?? "")}</span>
-          {c.segueEstrategia && (
-            <span className="rounded-full border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-2 py-0.5 text-[11px] text-[#D2A63C]">
-              segue {c.segueEstrategia.nome}{c.segueEstrategia.ativa ? "" : " (estratégia em pausa)"}
-            </span>
-          )}
-          {c.aceitaT2T && <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300">aceita Tap to Trade</span>}
-          {dados.modo === "investor" && (
-            <span className="ml-auto flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-0.5 text-[11px] text-sky-300"><Eye className="h-3 w-3" /> Só leitura (investor)</span>
-          )}
-        </div>
-        {c.estado !== "ativa" && (
-          <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-rose-500/10 px-2 py-1.5 text-[12px] text-rose-300">
-            <AlertTriangle className="h-4 w-4" /> Conta {c.estadoCurto} — só leitura{c.motivo ? `: ${String(c.motivo)}` : ""}.
-          </p>
-        )}
-        <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-4">
-          {metricas.map(([k, v, cor]) => (
-            <div key={k} className="flex justify-between gap-2 text-[11.5px]">
-              <span className="text-zinc-500">{k}</span>
-              <span className={`font-mono ${cor ?? "text-white"}`}>{v}</span>
-            </div>
-          ))}
-        </div>
-        {vivo.semPreco.length > 0 && <p className="mt-1 text-[10.5px] text-amber-300">Sem preço para {vivo.semPreco.join(", ")} — o flutuante dessas posições conta 0.</p>}
+      <div className="relative flex flex-col overflow-hidden bg-[#131722] text-white" style={{ height: altura ?? "calc(100dvh - 120px)", minHeight: 420 }}>
+        {modo === "pro" ? <LayoutPro t={t} /> : <LayoutSimples t={t} />}
       </div>
-
-      {prefill && (prefill.direcao || prefill.sl || prefill.tp) && (
-        <div className="rounded-xl border border-[#D2A63C]/40 bg-[#D2A63C]/5 px-3 py-2 text-[12px] text-zinc-200">
-          {prefill.origem === "ideia_mtm" ? "Ideia MTM" : "Alerta do scanner"}: <b>{simbolo?.symbol}</b> {prefill.direcao?.toUpperCase()}
-          {prefill.sl ? ` · SL ${prefill.sl}` : ""}{prefill.tp ? ` · TP ${prefill.tp}` : ""} — confirma a conta acima e o volume no ticket.
-        </div>
-      )}
-
-      {aviso && (
-        <div className={`rounded-lg px-3 py-2 text-[12px] ${aviso.tipo === "ok" ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}`}>{aviso.texto}</div>
-      )}
-
-      {/* Separadores (telemóvel) */}
-      {!desktop && <div className="flex gap-1 overflow-x-auto rounded-xl bg-white/5 p-1 text-[12px]">
-        {([["negociar", "Negociar"], ["mercado", "Mercado"], ["posicoes", `Posições ${dados.posicoes.length || ""}`], ["historico", "Histórico"], ["conta", "Conta"]] as [Vista, string][]).map(([v, n]) => (
-          <button key={v} onClick={() => setVista(v)} className={`shrink-0 flex-1 rounded-lg px-2 py-1.5 ${vista === v ? "bg-[#D2A63C] font-semibold text-black" : "text-zinc-300"}`}>{n}</button>
-        ))}
-      </div>}
-
-      {/* Telemóvel: um painel de cada vez */}
-      {!desktop && <div>
-        {vista === "negociar" && painelNegociar}
-        {vista === "mercado" && (
-          <FundedWatchlist precos={vivos} selecionado={simbolo?.symbol ?? null} onSelecionar={selecionar} onVisiveis={setVisiveis} />
-        )}
-        {vista === "posicoes" && posicoesPainel("posicoes")}
-        {vista === "historico" && posicoesPainel("historico")}
-        {vista === "conta" && <div className="space-y-2">
-          {podeNegociar && <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><InterruptorUmClique variante="cartao" /></div>}
-          <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedDesempenho d={dados.desempenho} estrategia={c.segueEstrategia?.nome} /></div>
-        </div>}
-      </div>}
-
-      {/* Desktop: lista | gráfico+ticket, posições por baixo */}
-      {desktop && <div className="grid grid-cols-[260px_1fr] gap-2">
-        <div className="space-y-2">
-          <FundedWatchlist precos={vivos} selecionado={simbolo?.symbol ?? null} onSelecionar={selecionar} onVisiveis={setVisiveis} />
-          {podeNegociar && <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><InterruptorUmClique variante="cartao" /></div>}
-          <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedDesempenho d={dados.desempenho} estrategia={c.segueEstrategia?.nome} /></div>
-        </div>
-        <div className="space-y-2">
-          {painelNegociar}
-          {posicoesPainel("posicoes")}
-          {posicoesPainel("historico")}
-        </div>
-      </div>}
-    </div>
     </UmCliqueProvider>
   )
-}
-
-/**
- * Pré-preenchimento vindo de um alerta, ideia ou «Usar este sinal» noutro ecrã: vai para o rascunho
- * (e portanto para o ticket E para o gráfico). Só no símbolo do link — trocar de símbolo depois não
- * arrasta o SL de ouro para o EURUSD.
- */
-function AplicarPrefill({ prefill, simboloInicial }: { prefill: Prefill | null; simboloInicial: string | null }) {
-  const k = useRascunho()
-  const symbol = k.simbolo.symbol
-  useEffect(() => {
-    if (!prefill || !(prefill.direcao || prefill.sl || prefill.tp)) return
-    if (simboloInicial && !simboloInicial.split(",").includes(symbol)) return
-    k.aplicar({
-      lado: prefill.direcao, sl: prefill.sl ?? null, tp: prefill.tp ?? null,
-      origem: prefill.origem === "scanner" || prefill.origem === "ideia_mtm" ? prefill.origem : "manual",
-      ideiaRef: prefill.ideiaRef ?? null, escolhido: Boolean(prefill.direcao),
-    })
-  }, [prefill, symbol]) // eslint-disable-line react-hooks/exhaustive-deps
-  return null
 }

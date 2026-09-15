@@ -9,6 +9,7 @@
 import assert from 'node:assert/strict'
 import { avaliarTick, diaCorretora, emSessao, lucroPorDiaDe, resultadoSemIdeiasPct, type ContaSim, type EntradaAvaliacao, type OrdemSim, type PosicaoSim } from './avaliacao'
 import { lucroUsd, type Simbolo } from '../../lib/mtmfunded/simulado/matematica'
+import { GESTAO_VAZIA, alertaDispara, condicaoDoAlerta, distanciaEmPreco, selecionarParaFecho, validarGestao, type Gestao } from '../../lib/mtmfunded/simulado/avancadas'
 
 const XAU: Simbolo = { symbol: 'XAUUSD', classe: 'metal', digits: 2, contract_size: 100, pip_size: 0.1, spread_pontos: 30, comissao_lote: 7, volume_min: 0.01, volume_step: 0.01, volume_max: 100, alavancagem_max: 100, moeda_lucro: 'USD' }
 const EUR: Simbolo = { symbol: 'EURUSD', classe: 'forex', digits: 5, contract_size: 100000, pip_size: 0.0001, spread_pontos: 10, comissao_lote: 7, volume_min: 0.01, volume_step: 0.01, volume_max: 100, alavancagem_max: 100, moeda_lucro: 'USD' }
@@ -176,6 +177,142 @@ caso('sessões em hora da corretora (UTC+3)', () => {
   assert.equal(emSessao(s, new Date('2026-09-14T13:00:00Z'), 180), false) // 16:00 servidor
   assert.equal(emSessao(s, new Date('2026-09-14T14:00:00Z'), 180), true)  // 17:00 servidor
   assert.equal(emSessao(null, agora, 180), null)
+})
+
+// ── ordens avançadas (072) ────────────────────────────────────────────────────
+const gestao = (x: Partial<Gestao>): Gestao => ({ ...GESTAO_VAZIA, ...x })
+// Sem regras: aqui mede-se a gestão, não o objectivo do desafio (+10% fecharia o ciclo).
+const ent = (x: Partial<EntradaAvaliacao>) => entrada({ conta: conta({ regras: null }), ...x })
+const px = (bid: number) => ({ XAUUSD: { symbol: 'XAUUSD', bid, ask: bid + 0.3 } })
+
+caso('trailing: compra a +10 com trailing de 5 sobe o SL para preço − 5', () => {
+  const d = avaliarTick(ent({ posicoes: [pos({ sl: 1990, gestao: gestao({ trailing_distancia: 5 }) })], precos: px(2010) }))
+  assert.equal(d.modificar.length, 1)
+  assert.deepEqual([d.modificar[0].sl, d.modificar[0].motivo], [2005, 'trailing'])
+  assert.equal(d.fechar.length, 0)
+})
+
+caso('trailing só aperta: preço a recuar não baixa o SL', () => {
+  const d = avaliarTick(ent({ posicoes: [pos({ sl: 2005, gestao: gestao({ trailing_distancia: 5 }) })], precos: px(2008) }))
+  assert.equal(d.modificar.length, 0)
+})
+
+caso('trailing anda aos saltos (passo = máx(1 pip, distância/10))', () => {
+  // distância 5 → passo 0,5; SL 2004,8 e candidato 2005 (+0,2) não mexe.
+  const d = avaliarTick(ent({ posicoes: [pos({ sl: 2004.8, gestao: gestao({ trailing_distancia: 5 }) })], precos: px(2010) }))
+  assert.equal(d.modificar.length, 0)
+})
+
+caso('trailing com ativação só começa depois do lucro pedido', () => {
+  const e = (bid: number) => avaliarTick(ent({ posicoes: [pos({ sl: 1990, gestao: gestao({ trailing_distancia: 3, trailing_ativacao: 15 }) })], precos: px(bid) }))
+  assert.equal(e(2010).modificar.length, 0)
+  assert.equal(e(2016).modificar[0]?.sl, 2013)
+})
+
+caso('trailing de uma venda desce o SL', () => {
+  const d = avaliarTick(ent({
+    posicoes: [pos({ direcao: 'sell', preco_entrada: 2020, sl: 2030, gestao: gestao({ trailing_distancia: 4 }) })],
+    precos: { XAUUSD: { symbol: 'XAUUSD', bid: 2009.7, ask: 2010 } }, // venda fecha ao ASK 2010
+  }))
+  assert.equal(d.modificar[0]?.sl, 2014)
+})
+
+caso('break-even por distância: SL vai à entrada + offset, uma vez', () => {
+  const d = avaliarTick(ent({ posicoes: [pos({ sl: 1990, gestao: gestao({ be_gatilho: 10, be_offset: 0.5 }) })], precos: px(2011) }))
+  assert.deepEqual([d.modificar[0]?.sl, d.modificar[0]?.motivo, d.modificar[0]?.beFeito], [2000.5, 'break_even', true])
+  const feito = avaliarTick(ent({ posicoes: [pos({ sl: 1990, gestao: gestao({ be_gatilho: 10, be_feito: true }) })], precos: px(2011) }))
+  assert.equal(feito.modificar.length, 0)
+})
+
+caso('TP parcial: TP1 50% de 1 lote fecha 0,5 ao nível e o resto continua', () => {
+  const d = avaliarTick(ent({
+    posicoes: [pos({ tp: 2030, gestao: gestao({ volume_inicial: 1, tps: [{ preco: 2010, pct: 50, atingido: false }, { preco: 2020, pct: 25, atingido: false }] }) })],
+    precos: px(2012),
+  }))
+  assert.equal(d.parciais.length, 1)
+  assert.deepEqual([d.parciais[0].volume, d.parciais[0].preco, d.parciais[0].pnl], [0.5, 2010, 500])
+  assert.deepEqual(d.parciais[0].tps?.map((t) => t.atingido), [true, false])
+  assert.equal(d.fechar.length, 0)
+  assert.equal(d.estado.saldo, 10500)
+})
+
+caso('TP parcial + break-even no TP1 no mesmo preço', () => {
+  const d = avaliarTick(ent({
+    posicoes: [pos({ sl: 1990, gestao: gestao({ volume_inicial: 1, be_no_tp1: true, tps: [{ preco: 2010, pct: 50, atingido: false }] }) })],
+    precos: px(2012),
+  }))
+  assert.equal(d.parciais.length, 1)
+  assert.deepEqual([d.modificar[0]?.sl, d.modificar[0]?.motivo], [2000, 'break_even'])
+})
+
+caso('gap salta TP1 e TP2: fecham os dois, por ordem', () => {
+  const d = avaliarTick(ent({
+    posicoes: [pos({ gestao: gestao({ volume_inicial: 1, tps: [{ preco: 2010, pct: 30, atingido: false }, { preco: 2020, pct: 30, atingido: false }] }) })],
+    precos: px(2025),
+  }))
+  assert.deepEqual(d.parciais.map((p) => [p.volume, p.preco]), [[0.3, 2010], [0.3, 2020]])
+})
+
+caso('último TP a 100% fecha a posição inteira como TP', () => {
+  const d = avaliarTick(ent({
+    posicoes: [pos({ gestao: gestao({ volume_inicial: 1, tps: [{ preco: 2010, pct: 50, atingido: true }, { preco: 2020, pct: 50, atingido: false }] }), volume: 0.5 })],
+    precos: px(2021),
+  }))
+  assert.equal(d.parciais.length, 0)
+  assert.deepEqual([d.fechar[0]?.motivo, d.fechar[0]?.preco, d.fechar[0]?.pnl], ['tp', 2020, 1000])
+})
+
+caso('SL e TP1 no mesmo gap: vale o SL e não há parcial', () => {
+  const d = avaliarTick(ent({
+    posicoes: [pos({ sl: 2011, gestao: gestao({ volume_inicial: 1, tps: [{ preco: 2005, pct: 50, atingido: false }] }) })],
+    precos: px(2010),
+  }))
+  assert.equal(d.fechar[0]?.motivo, 'sl')
+  assert.equal(d.parciais.length, 0)
+})
+
+caso('OCO: uma perna dispara e a irmã sai no mesmo tick', () => {
+  const d = avaliarTick(ent({
+    ordens: [
+      ordem({ id: 'cima', tipo: 'stop', preco: 2005, oco_grupo: 'g1' }),
+      ordem({ id: 'baixo', direcao: 'sell', tipo: 'stop', preco: 1995, oco_grupo: 'g1' }),
+    ],
+    precos: px(2006),
+  }))
+  assert.deepEqual(d.executar.map((x) => x.ordemId), ['cima'])
+  assert.deepEqual(d.cancelarOco, ['baixo'])
+})
+
+caso('validarGestao recusa TPs fora de ordem e % acima de 100', () => {
+  const r1 = validarGestao(XAU, 'buy', 2000, 1, 1990, null, { tps: [{ preco: 2020, pct: 50, atingido: false }, { preco: 2010, pct: 50, atingido: false }] })
+  assert.equal(r1.ok, false)
+  const r2 = validarGestao(XAU, 'buy', 2000, 1, 1990, null, { tps: [{ preco: 2010, pct: 60, atingido: false }, { preco: 2020, pct: 50, atingido: false }] })
+  assert.equal(r2.ok, false)
+  const r3 = validarGestao(XAU, 'buy', 2000, 0.01, 1990, null, { tps: [{ preco: 2010, pct: 50, atingido: false }] })
+  assert.equal(r3.ok, false) // 50% de 0,01 < lote mínimo
+  const r4 = validarGestao(XAU, 'sell', 2000, 1, 2010, 1970, { tps: [{ preco: 1990, pct: 50, atingido: false }], trailing_distancia: 3, be_gatilho: 5, be_offset: 0.5 })
+  assert.equal(r4.ok, true)
+})
+
+caso('distância em pips / $ convertida para preço', () => {
+  assert.equal(distanciaEmPreco(EUR, 15, 'pips', 1, 1.1, {}), 0.0015)
+  assert.equal(distanciaEmPreco(XAU, 30, 'usd', 0.1, 2000, {}), 3) // 0,1 lote de ouro: 1 $ de preço = 10 $
+})
+
+caso('fechar ganhadoras / perdedoras / por símbolo', () => {
+  const ps = [pos({ id: 'g', preco_entrada: 1990 }), pos({ id: 'p', preco_entrada: 2010 }), pos({ id: 'e', symbol: 'EURUSD', preco_entrada: 1.1 })]
+  const pr = entrada({}).precos
+  assert.deepEqual(selecionarParaFecho(ps, 'ganhadoras', simbolos, pr).map((x) => x.id), ['g'])
+  assert.deepEqual(selecionarParaFecho(ps, 'perdedoras', simbolos, pr).map((x) => x.id), ['p']) // EURUSD a zero não é nem uma nem outra
+  assert.deepEqual(selecionarParaFecho(ps, 'simbolo', simbolos, pr, 'EURUSD').map((x) => x.id), ['e'])
+})
+
+caso('alerta de preço: condição pelo lado de agora, dispara ao cruzar', () => {
+  assert.equal(condicaoDoAlerta(2010, 2000), 'acima')
+  assert.equal(condicaoDoAlerta(1990, 2000), 'abaixo')
+  const a = { id: 'a', symbol: 'XAUUSD', condicao: 'acima' as const, preco: 2010 }
+  assert.equal(alertaDispara(a, px(2009.9).XAUUSD), false)
+  assert.equal(alertaDispara(a, px(2010).XAUUSD), true)
 })
 
 console.log(`\n${casos} casos, todos certos.`)

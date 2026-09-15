@@ -323,6 +323,7 @@ export async function runPremiumPriceMonitor(): Promise<{
     .select('metaapi_account_id')
     .eq('is_active', true)
     .eq('copy_method', 'telegram_group')
+    .neq('mt5_status', 'disconnected')
     .not('metaapi_account_id', 'is', null)
   const precisamDoMotor = new Set((diretas ?? []).map((c) => String(c.metaapi_account_id)))
 

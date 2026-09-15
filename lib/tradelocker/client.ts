@@ -305,6 +305,8 @@ export async function listarContas(env: TLEnv, accessToken: string, fetchImpl?: 
 export interface TLConfig {
   accountDetails: string[]
   positions: string[]
+  /** Colunas de /orders (ordens não finais) — `ordersConfig`. */
+  orders: string[]
   ordersHistory: string[]
   rateLimits: Array<{ rateLimitType: string; measure: string; intervalNum: number; limit: number }>
 }
@@ -321,6 +323,7 @@ export function lerConfig(json: unknown): TLConfig {
   return {
     accountDetails: colunas(d?.accountDetailsConfig),
     positions: colunas(d?.positionsConfig),
+    orders: colunas(d?.ordersConfig),
     ordersHistory: colunas(d?.ordersHistoryConfig),
     rateLimits: Array.isArray(d?.rateLimits) ? (d.rateLimits as TLConfig['rateLimits']) : [],
   }
@@ -383,6 +386,65 @@ export function lerPosicoes(json: unknown, cols: string[]): TLPosicao[] {
   })
 }
 
+/** Ordem da TradeLocker (activa ou do histórico), com os nomes das colunas do /trade/config. */
+export interface TLOrdem {
+  id: string
+  tradableInstrumentId: number
+  routeId: number
+  side: 'buy' | 'sell'
+  qty: number
+  type: string
+  status: string
+  price: number | null
+  stopPrice: number | null
+  avgPrice: number | null
+  filledQty: number | null
+  positionId: string | null
+  stopLoss: number | null
+  takeProfit: number | null
+  createdDate: number | null
+  lastModified: number | null
+}
+
+/** Colunas documentadas de /orders e /ordersHistory — só quando o /config não as traz. */
+const COLUNAS_ORDEM_DOC = [
+  'id', 'tradableInstrumentId', 'routeId', 'qty', 'side', 'type', 'status', 'filledQty', 'avgPrice',
+  'price', 'stopPrice', 'validity', 'expireDate', 'createdDate', 'lastModified', 'isOpen', 'positionId',
+  'stopLoss', 'stopLossType', 'takeProfit', 'takeProfitType', 'strategyId',
+]
+
+/**
+ * Linhas de /orders (`d.orders`) ou /ordersHistory (`d.ordersHistory`).
+ * https://public-api.tradelocker.com/reference/getorders.md · getordershistory.md
+ */
+export function lerOrdens(json: unknown, cols: string[], campo: 'orders' | 'ordersHistory' = 'orders'): TLOrdem[] {
+  const linhas = (((json as { d?: Record<string, unknown> })?.d?.[campo]) ?? []) as unknown[][]
+  const nomes = cols.length ? cols : COLUNAS_ORDEM_DOC
+  const idTxt = (v: unknown) => (v == null || String(v) === '0' || String(v) === '' ? null : String(v))
+  return linhas.map((l) => {
+    const o: Record<string, unknown> = {}
+    nomes.forEach((n, i) => { o[n] = l[i] })
+    return {
+      id: String(o.id ?? ''),
+      tradableInstrumentId: Number(o.tradableInstrumentId),
+      routeId: Number(o.routeId),
+      side: String(o.side).toLowerCase() === 'sell' ? 'sell' : 'buy',
+      qty: Number(o.qty),
+      type: String(o.type ?? '').toLowerCase(),
+      status: String(o.status ?? '').toLowerCase(),
+      price: num(o.price),
+      stopPrice: num(o.stopPrice),
+      avgPrice: num(o.avgPrice),
+      filledQty: num(o.filledQty),
+      positionId: idTxt(o.positionId),
+      stopLoss: num(o.stopLoss),
+      takeProfit: num(o.takeProfit),
+      createdDate: num(o.createdDate),
+      lastModified: num(o.lastModified),
+    }
+  })
+}
+
 /**
  * Corpo do POST /orders — https://public-api.tradelocker.com/reference/placeorder.md
  * Pura, para se poder testar sem rede.
@@ -430,6 +492,20 @@ export function limparCachesTradeLocker() {
   instrumentosEmCache.clear()
   detalheEmCache.clear()
   loginsEmCurso.clear()
+}
+
+/**
+ * Semeia a cache com tokens obtidos antes (sessão do WebTrader sem password guardada). Se o
+ * access e o refresh caducarem, o login completo falha e quem chama pede novo login.
+ */
+export function semearTokensTradeLocker(c: Pick<TLCredenciais, 'email' | 'server' | 'env'>, tokens: TLTokens): void {
+  const chave = `${c.env}|${c.server.toLowerCase()}|${c.email.toLowerCase()}`
+  if (!tokensEmCache.has(chave)) tokensEmCache.set(chave, { tokens, em: Date.now() })
+}
+
+/** Tokens actuais em cache (para renovar a sessão do WebTrader do lado do cliente). */
+export function tokensTradeLockerEmCache(c: Pick<TLCredenciais, 'email' | 'server' | 'env'>): TLTokens | null {
+  return tokensEmCache.get(`${c.env}|${c.server.toLowerCase()}|${c.email.toLowerCase()}`)?.tokens ?? null
 }
 
 export class TradeLockerSessao {
@@ -591,6 +667,40 @@ export class TradeLockerSessao {
     const linha = (json?.d?.ordersHistory ?? []).find((l) => String(l[iId]) === orderId)
     const pos = linha?.[iPos]
     return pos != null && String(pos) !== '0' ? String(pos) : null
+  }
+
+  /** GET /trade/accounts/{accountId}/orders — ordens não finais (pendentes, SL/TP das posições). */
+  async ordens(): Promise<TLOrdem[]> {
+    const [cfg, json] = await Promise.all([
+      this.config(),
+      this.pedido<unknown>({ path: `/trade/accounts/${this.accountId}/orders` }),
+    ])
+    return lerOrdens(json, cfg.orders, 'orders')
+  }
+
+  /** GET /trade/accounts/{accountId}/ordersHistory?from= — ordens finais (executadas, canceladas). */
+  async historicoOrdens(desdeMs?: number): Promise<TLOrdem[]> {
+    const [cfg, json] = await Promise.all([
+      this.config(),
+      this.pedido<unknown>({ path: `/trade/accounts/${this.accountId}/ordersHistory`, query: { from: desdeMs } }),
+    ])
+    return lerOrdens(json, cfg.ordersHistory, 'ordersHistory')
+  }
+
+  /** DELETE /trade/orders/{orderId} — https://public-api.tradelocker.com/reference/cancelorder.md */
+  async cancelarOrdem(orderId: string): Promise<void> {
+    await this.pedido<unknown>({ method: 'DELETE', path: `/trade/orders/${orderId}`, contexto: 'ordem' })
+  }
+
+  /** PATCH /trade/orders/{orderId} — https://public-api.tradelocker.com/reference/modifyorder.md */
+  async modificarOrdem(orderId: string, alteracao: { price?: number | null; stopPrice?: number | null; stopLoss?: number | null; takeProfit?: number | null }): Promise<void> {
+    const body: Record<string, number | string> = {}
+    if (alteracao.price != null && alteracao.price > 0) body.price = alteracao.price
+    if (alteracao.stopPrice != null && alteracao.stopPrice > 0) body.stopPrice = alteracao.stopPrice
+    if (alteracao.stopLoss != null && alteracao.stopLoss > 0) { body.stopLoss = alteracao.stopLoss; body.stopLossType = 'absolute' }
+    if (alteracao.takeProfit != null && alteracao.takeProfit > 0) { body.takeProfit = alteracao.takeProfit; body.takeProfitType = 'absolute' }
+    if (!Object.keys(body).length) return
+    await this.pedido<unknown>({ method: 'PATCH', path: `/trade/orders/${orderId}`, body, contexto: 'ordem' })
   }
 
   /** PATCH /trade/positions/{positionId} — https://public-api.tradelocker.com/reference/modifyposition.md */

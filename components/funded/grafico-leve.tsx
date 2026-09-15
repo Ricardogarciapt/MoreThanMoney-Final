@@ -16,6 +16,9 @@ import { carregarExtrasSensei, useCalculadoraSensei } from "./sensei-estudo"
 import { useCalculadoraGoldKiller } from "./goldkiller-estudo"
 import { useCalculadoraMTMScanner } from "./mtmscanner-estudo"
 import { useRascunho } from "./rascunho-ordem"
+import { VELAS_PRIMEIRA_JANELA } from "./pre-carga"
+import { TF_VIZINHOS, buscarAntigas, buscarRecentes, fresco, lerDerivado, lerDisco, lerMemoria, preBuscar, tocarVelaViva } from "./armazem-velas"
+import type { VelaC } from "@/lib/webtrader/velas"
 import { AccaoCancelada, useUmClique } from "./um-clique"
 
 /**
@@ -107,6 +110,22 @@ class ZonasFerramenta {
       }),
     }]
   }
+}
+
+/**
+ * Resultados dos estudos por símbolo+timeframe+inputs+velas (2026-09): voltar a um timeframe já
+ * calculado desenha o estudo logo, sem ir outra vez ao Web Worker (nem pedir o H4/M1 do Sensei).
+ * A chave inclui a última vela (tempo e fecho): vela nova ou preço diferente → calcula de novo.
+ */
+const CACHE_ESTUDOS = new Map<string, unknown>()
+function chaveEstudo(nome: string, symbol: string, tf: string, inputs: string, velas: Vela[]) {
+  const u = velas[velas.length - 1]
+  return `${nome}|${symbol}|${tf}|${inputs}|${velas.length}|${velas[0]?.t}|${u?.t}|${u?.c}`
+}
+function guardarEstudo(k: string, v: unknown) {
+  CACHE_ESTUDOS.delete(k)
+  CACHE_ESTUDOS.set(k, v)
+  while (CACHE_ESTUDOS.size > 18) CACHE_ESTUDOS.delete(CACHE_ESTUDOS.keys().next().value as string)
 }
 
 type Dono =
@@ -302,40 +321,196 @@ export default function GraficoLeve(props: GraficoProps & {
       zonasRef.current = null
       etiquetasEixoRef.current = new Map()
     }
-  }, [simbolo.digits, props.compacto]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [props.compacto]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Trocar de símbolo NÃO recria o gráfico (2026-09): antes, dígitos diferentes (XAUUSD 2 → EURUSD 5)
+  // destruíam o canvas e voltavam a importar e montar tudo. Agora só mudam o formato e a escala.
+  useEffect(() => {
+    if (!pronto) return
+    try {
+      serieRef.current?.applyOptions({ priceFormat: { type: "price", precision: simbolo.digits, minMove: Math.pow(10, -simbolo.digits) } })
+      graficoRef.current?.applyOptions({ localization: { priceFormatter: (p: number) => p.toFixed(simbolo.digits) } })
+    } catch { /* ok */ }
+  }, [pronto, simbolo.digits])
 
   useEffect(() => {
     try { marcaAguaRef.current?.applyOptions({ lines: [{ text: simbolo.symbol, color: "rgba(120,123,134,0.10)", fontSize: props.compacto ? 28 : 44 }] }) } catch { /* ok */ }
   }, [simbolo.symbol, pronto])
 
   // ── histórico ──
+  // «Rápido como o TradingView» (2026-09). Trocar de timeframe ou de símbolo nunca destrói o gráfico:
+  // é `setData` na mesma série, e o que se desenha primeiro vem do armazém (armazem-velas.ts), por
+  // esta ordem — memória (já visto neste separador) → derivado de um timeframe menor em memória
+  // (M5 → H1) → disco (IndexedDB) — e só depois a rede junta as velas que faltam por cima. Sem nada
+  // disto, o círculo, como antes.
+  // Em dois tempos: primeiro a janela recente (300 velas); depois, se os estudos precisam de
+  // história (3000), a janela grande em segundo plano, colada por baixo sem mexer no que se vê.
+  // Os estudos só calculam com a janela verdadeira completa — nunca com velas derivadas.
+  const [historicoCompleto, setHistoricoCompleto] = useState(false)
+  const historicoCompletoRef = useRef(false)
+  historicoCompletoRef.current = historicoCompleto
+  /** symbol:tf do que está na série — a mesma série a pedir mais história não se limpa. */
+  const serieChaveRef = useRef("")
+  /** O que está desenhado veio de agregar outro timeframe (não serve para estudos nem para histórico para trás). */
+  const derivadoRef = useRef(false)
+  const antigasRef = useRef<{ emCurso: boolean; fim: boolean }>({ emCurso: false, fim: false })
+  /** A última vela da série foi mexida por preços ao vivo desde o último `setData`. */
+  const vivaDoPrecoRef = useRef(false)
+
+  const aplicarVelas = useCallback((lista: VelaC[], manterVista: boolean, fonte: string) => {
+    const serie = serieRef.current
+    if (!serie) return
+    const velas = lista.map((v) => ({ time: v.t, open: v.o, high: v.h, low: v.l, close: v.c, volume: Number(v.v) || 0 }))
+    // A vela viva que já correu por cima do histórico (preços chegados entretanto) mantém-se — só se
+    // foi formada por preços ao vivo: a última vela do disco ou de uma derivação pode ser velha, e o
+    // fecho dela não pode tapar o da rede.
+    const viva = vivaDoPrecoRef.current ? ultimaVelaRef.current : null
+    const n = velas.length
+    if (viva && n && viva.time >= velas[n - 1].time) {
+      if (viva.time === velas[n - 1].time) velas[n - 1] = { ...velas[n - 1], high: Math.max(velas[n - 1].high, viva.high), low: Math.min(velas[n - 1].low, viva.low), close: viva.close }
+      else velas.push(viva)
+    }
+    const escala = graficoRef.current?.timeScale()
+    const antes = manterVista ? escala?.getVisibleLogicalRange() : null
+    const velhas = velasRef.current
+    // Quantas velas entraram ANTES da primeira que se estava a ver (histórico para trás ou janela
+    // grande): a vista desloca-se isso para ficar exatamente no mesmo sítio.
+    let aEsquerda = 0
+    if (antes && velhas.length && velas.length) {
+      const t0 = velhas[0].t
+      let lo = 0, hi = velas.length
+      while (lo < hi) { const m = (lo + hi) >> 1; if (velas[m].time < t0) lo = m + 1; else hi = m }
+      aEsquerda = lo
+    }
+    const cores = coresRef.current
+    serie.setData(velas.map(({ volume: _v, ...c }) => {
+      const cor = cores.size ? cores.get(c.time) : undefined
+      return cor ? { ...c, color: cor, wickColor: cor, borderColor: cor } : c
+    }))
+    volumeRef.current?.setData(velas.map((v) => ({ time: v.time, value: v.volume, color: v.close >= v.open ? "rgba(38,166,154,0.35)" : "rgba(239,83,80,0.35)" })))
+    ultimaVelaRef.current = velas.length ? velas[velas.length - 1] : null
+    vivaDoPrecoRef.current = Boolean(viva && ultimaVelaRef.current && viva.time === ultimaVelaRef.current.time)
+    velasRef.current = velas.map((v) => ({ t: v.time, o: v.open, h: v.high, l: v.low, c: v.close, v: v.volume }))
+    try { performance.mark("wt:velas", { detail: { symbol: simbolo.symbol, tf, n: velas.length, fonte } }) } catch { /* ok */ }
+    if (antes) {
+      // Quem estava a olhar para a vela atual continua nela (entraram velas novas à direita).
+      if (antes.to >= velhas.length - 2) escala?.scrollToRealTime()
+      else if (aEsquerda > 0) {
+        try { escala?.setVisibleLogicalRange({ from: antes.from + aEsquerda, to: antes.to + aEsquerda }) } catch { /* ok */ }
+      }
+    } else escala?.scrollToRealTime()
+  }, [simbolo.symbol, tf])
+
   useEffect(() => {
     if (!pronto) return
     let vivo = true
-    ultimaVelaRef.current = null
-    velasRef.current = []
-    coresRef.current = new Map()
-    setEstadoVelas("a_carregar")
+    const symbol = simbolo.symbol
+    const chave = `${symbol}:${tf}`
+    const mesmaSerie = serieChaveRef.current === chave
+    serieChaveRef.current = chave
+    setHistoricoCompleto(false)
+    let mostrado = mesmaSerie && velasRef.current.length > 0
+    if (!mesmaSerie) {
+      ultimaVelaRef.current = null
+      vivaDoPrecoRef.current = false
+      velasRef.current = []
+      coresRef.current = new Map()
+      derivadoRef.current = false
+      antigasRef.current = { emCurso: false, fim: false }
+      const mem = lerMemoria(symbol, tf)
+      const derivado = mem ? null : lerDerivado(symbol, tf)
+      if (mem) {
+        aplicarVelas(mem.velas, false, "memoria")
+        mostrado = true
+      } else if (derivado) {
+        derivadoRef.current = true
+        aplicarVelas(derivado, false, "derivado")
+        mostrado = true
+      } else {
+        try { serieRef.current?.setData([]); volumeRef.current?.setData([]) } catch { /* ok */ }
+      }
+      setEstadoVelas(mostrado ? "historico" : "a_carregar")
+    }
+    const verdadeiro = (lista: VelaC[], fonte: string) => {
+      // Velas derivadas → verdadeiras: bar spacing diferente, volta-se ao fim (não há vista a manter).
+      const manter = mostrado && !derivadoRef.current
+      derivadoRef.current = false
+      aplicarVelas(lista, manter, fonte)
+      mostrado = true
+    }
     ;(async () => {
       try {
-        // O Sensei precisa de história (DEMA 238 aquece em 474 velas, estrutura/estatísticas pedem mais).
-        const r = await fetch(`/api/mtmfunded/simulado/velas?symbol=${simbolo.symbol}&tf=${tf}&limit=${limiteHistorico}`)
-        const d = await r.json()
-        if (!vivo || !serieRef.current) return
-        const velas = (d.velas ?? []).map((v: any) => ({ time: v.t, open: v.o, high: v.h, low: v.l, close: v.c, volume: Number(v.v) || 0 }))
-        serieRef.current.setData(velas.map(({ volume: _v, ...c }: any) => c))
-        volumeRef.current?.setData(velas.map((v: any) => ({ time: v.time, value: v.volume, color: v.close >= v.open ? "rgba(38,166,154,0.35)" : "rgba(239,83,80,0.35)" })))
-        ultimaVelaRef.current = velas.length ? velas[velas.length - 1] : null
-        velasRef.current = velas.map((v: any) => ({ t: v.time, o: v.open, h: v.high, l: v.low, c: v.close, v: v.volume }))
-        setEstadoVelas(velas.length ? "historico" : "ao_vivo")
+        let serie = lerMemoria(symbol, tf)
+        if (!serie) {
+          const disco = await lerDisco(symbol, tf)
+          if (!vivo || !serieRef.current) return
+          if (disco?.velas.length) {
+            verdadeiro(disco.velas, "disco")
+            setEstadoVelas("historico")
+            serie = disco
+          }
+        }
+        if (!fresco(serie) || (serie && serie.janela < VELAS_PRIMEIRA_JANELA)) {
+          const recentes = await buscarRecentes(symbol, tf, VELAS_PRIMEIRA_JANELA)
+          if (!vivo || !serieRef.current) return
+          serie = recentes
+          if (recentes.velas.length) verdadeiro(recentes.velas, "rede")
+          setEstadoVelas(recentes.velas.length ? "historico" : "ao_vivo")
+        } else if (derivadoRef.current && serie) {
+          verdadeiro(serie.velas, "memoria")
+        }
+        if (!serie?.velas.length) {
+          if (!velasRef.current.length) setEstadoVelas("ao_vivo")
+          setHistoricoCompleto(true)
+          setVersaoVelas((x) => x + 1)
+          return
+        }
+        // O MTM Sensei/GoldKiller/Scanner precisam de história (DEMA 238 aquece em 474 velas).
+        if (limiteHistorico > VELAS_PRIMEIRA_JANELA && serie.janela < limiteHistorico && serie.velas.length < limiteHistorico) {
+          const grande = await buscarRecentes(symbol, tf, limiteHistorico)
+          if (!vivo || !serieRef.current) return
+          if (grande.velas.length > velasRef.current.length) aplicarVelas(grande.velas, true, "rede-grande")
+        }
+        setHistoricoCompleto(true)
         setVersaoVelas((x) => x + 1)
-        graficoRef.current?.timeScale().scrollToRealTime()
+        // Os vizinhos (em M15: H1 e M5) em tempo morto — a próxima troca de timeframe já não espera.
+        preBuscar(symbol, TF_VIZINHOS[tf] ?? [])
       } catch {
-        if (vivo) { serieRef.current?.setData([]); volumeRef.current?.setData([]); setEstadoVelas("ao_vivo") }
+        if (vivo) {
+          if (!velasRef.current.length) { try { serieRef.current?.setData([]); volumeRef.current?.setData([]) } catch { /* ok */ } setEstadoVelas("ao_vivo") }
+          setHistoricoCompleto(true)
+        }
       }
     })()
     return () => { vivo = false }
-  }, [pronto, simbolo.symbol, tf, limiteHistorico])
+  }, [pronto, simbolo.symbol, tf, limiteHistorico]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Histórico para trás ao arrastar para a esquerda: perto do início pede-se mais 1000 velas (com
+  // `ate`, na CDN 1 h) e cola-se por baixo sem saltar a vista. Pára quando o servidor não tem mais.
+  useEffect(() => {
+    const chart = graficoRef.current
+    if (!pronto || !chart) return
+    const escala = chart.timeScale()
+    const aoMudar = (r: { from: number; to: number } | null) => {
+      const estado = antigasRef.current
+      // Só depois da carga inicial (a janela grande dos estudos ainda pode estar a caminho).
+      if (!r || r.from > 40 || estado.emCurso || estado.fim || derivadoRef.current || !historicoCompletoRef.current) return
+      const primeira = velasRef.current[0]
+      if (!primeira) return
+      const symbol = simbolo.symbol, tfAgora = tf, chave = serieChaveRef.current
+      estado.emCurso = true
+      buscarAntigas(symbol, tfAgora, primeira.t, 1000)
+        .then(({ serie, novas }) => {
+          if (serieChaveRef.current !== chave || antigasRef.current !== estado) return
+          if (novas <= 0) { estado.fim = true; return }
+          aplicarVelas(serie.velas, true, "antigas")
+        })
+        .catch(() => { estado.fim = true })
+        .finally(() => { estado.emCurso = false })
+    }
+    escala.subscribeVisibleLogicalRangeChange(aoMudar)
+    return () => { try { escala.unsubscribeVisibleLogicalRangeChange(aoMudar) } catch { /* gráfico removido */ } }
+  }, [pronto, simbolo.symbol, tf, aplicarVelas])
 
   // ── a vela viva ──
   useEffect(() => {
@@ -357,14 +532,17 @@ export default function GraficoLeve(props: GraficoProps & {
       volumeRef.current?.update({ time: t, value: vol, color: vela.close >= vela.open ? "rgba(38,166,154,0.35)" : "rgba(239,83,80,0.35)" })
       const abriuVela = !u || t > u.time
       ultimaVelaRef.current = nova
+      vivaDoPrecoRef.current = true
       const vv = { t, o: nova.open, h: nova.high, l: nova.low, c: nova.close, v: nova.volume }
       const arr = velasRef.current
       if (arr.length && arr[arr.length - 1].t === t) arr[arr.length - 1] = vv
       else arr.push(vv)
+      // O armazém também: voltar a este timeframe mostra a vela viva, não a de quando se saiu.
+      if (!derivadoRef.current) tocarVelaViva(simbolo.symbol, tf, vv)
       // Abriu uma vela = a anterior FECHOU: é o único momento em que o Sensei pode dar sinal novo.
       if (abriuVela) setVersaoVelas((x) => x + 1)
     } catch { /* tempo fora de ordem */ }
-  }, [preco, tf, estadoVelas])
+  }, [preco, tf, estadoVelas]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── as linhas ──
   const valorDe = (chave: string, base: number) => (rascunho[chave] ?? base)
@@ -393,6 +571,16 @@ export default function GraficoLeve(props: GraficoProps & {
       if (o.sl != null) out.push({ chave: `ord:${o.id}:sl`, preco: valorDe(`ord:${o.id}:sl`, o.sl), cor: TV.sl, corpo: "SL (ordem)", arrastavel: podeNegociar, tracejada: true, fecho: podeNegociar ? "remover" : undefined, dono: { tipo: "ord", id: o.id, campo: "sl" } })
       if (o.tp != null) out.push({ chave: `ord:${o.id}:tp`, preco: valorDe(`ord:${o.id}:tp`, o.tp), cor: TV.tp, corpo: "TP (ordem)", arrastavel: podeNegociar, tracejada: true, fecho: podeNegociar ? "remover" : undefined, dono: { tipo: "ord", id: o.id, campo: "tp" } })
     }
+    // TPs parciais da gestão automática e alertas de preço: referência, não arrastam nem fecham.
+    for (const p of posicoes) {
+      for (const [i, t] of (p.tps ?? []).entries()) {
+        if (t.atingido) continue
+        out.push({ chave: `pos:${p.id}:tp${i + 1}`, preco: t.preco, cor: `${TV.tp}aa`, corpo: `TP${i + 1} · ${t.pct}%`, arrastavel: false, tracejada: true, dono: { tipo: "sinal", id: `tp:${p.id}:${i}`, campo: "tp" } })
+      }
+    }
+    for (const a of props.alertas ?? []) {
+      out.push({ chave: `alerta:${a.id}`, preco: a.preco, cor: "#F5B301", corpo: `🔔 ${a.nota ? a.nota.slice(0, 24) : "alerta"}`, arrastavel: false, tracejada: true, dono: { tipo: "sinal", id: `alerta:${a.id}`, campo: "entrada" } })
+    }
     // O sinal activo do estudo: só referência visual (ténue, não arrasta, não fecha).
     const sa = props.sinalAtivo
     if (sa) {
@@ -413,7 +601,7 @@ export default function GraficoLeve(props: GraficoProps & {
       if (k.tp != null) out.push({ chave: "tool:tp", preco: k.tp, cor: erros.tp ? invalido : TV.tp, corpo: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.ganhoPct != null ? ` (${resumo.ganhoPct}%)` : ""}${resumo.rr ? ` · R:R ${resumo.rr}` : ""}`, arrastavel: true, tracejada: Boolean(erros.tp), dono: { tipo: "tool", campo: "tp" } })
     }
     return out
-  }, [posicoes, ordens, k.mostrar, k.entrada, k.sl, k.tp, k.r, k.erros, k.resumo, rascunho, podeNegociar, simbolo, volume, precos, preco, props.sinalAtivo]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [posicoes, ordens, k.mostrar, k.entrada, k.sl, k.tp, k.r, k.erros, k.resumo, rascunho, podeNegociar, simbolo, volume, precos, preco, props.sinalAtivo, props.alertas]) // eslint-disable-line react-hooks/exhaustive-deps
   linhasRef.current = linhas
 
   // Setas dos sinais dos estudos, na vela em que chegaram (arredondada ao timeframe).
@@ -456,22 +644,29 @@ export default function GraficoLeve(props: GraficoProps & {
         try { serieRef.current?.setData(velasRef.current.map((v) => ({ time: v.t, open: v.o, high: v.h, low: v.l, close: v.c }))) } catch { /* ok */ }
       }
     }
-  }, [pronto, senseiLigado])
+  // Símbolo/timeframe na chave: o gráfico já não se recria ao trocar, e os desenhos do estudo anterior
+  // (DEMAs noutra escala de preço, noutros tempos) ficariam por cima das velas novas até recalcular.
+  }, [pronto, senseiLigado, simbolo.symbol, tf])
 
   // Recalcular: com velas novas (histórico ou vela FECHADA) e quando mudam os inputs — nunca por tick.
   const inputsSensei = props.sensei?.inputs
   const chaveInputsSensei = inputsSensei ? JSON.stringify(inputsSensei) : ""
   useEffect(() => {
-    if (!senseiPronto || !inputsSensei || estadoVelas === "a_carregar") return
+    if (!senseiPronto || !inputsSensei || estadoVelas === "a_carregar" || !historicoCompleto) return
     const snapshot = velasRef.current.slice()
     if (snapshot.length < 50) return
     let vivo = true
     const tfSeg = tfPorChave(tf).seg
     const inputs: Partial<InputsSensei> = { ...inputsSensei, simbolo: simbolo.symbol, tfSegundos: tfSeg, mintick: Math.pow(10, -simbolo.digits) }
     ;(async () => {
-      const extra = await carregarExtrasSensei(simbolo.symbol, tfSeg, { ...inputsSensei, ...inputs } as InputsSensei, snapshot)
-      if (!vivo) return
-      const c = await calcular(snapshot, inputs, extra)
+      const kc = chaveEstudo("sensei", simbolo.symbol, tf, chaveInputsSensei, snapshot)
+      let c = CACHE_ESTUDOS.get(kc) as Awaited<ReturnType<typeof calcular>> | undefined
+      if (!c) {
+        const extra = await carregarExtrasSensei(simbolo.symbol, tfSeg, { ...inputsSensei, ...inputs } as InputsSensei, snapshot)
+        if (!vivo) return
+        c = await calcular(snapshot, inputs, extra)
+        if (c) guardarEstudo(kc, c)
+      }
       if (!vivo || !c || !senseiRef.current) return
       senseiRef.current.aplicar(snapshot, c.r)
       setSenseiMs({ ms: Math.round(c.ms), onde: c.onde, velas: snapshot.length })
@@ -490,7 +685,7 @@ export default function GraficoLeve(props: GraficoProps & {
       }
     })()
     return () => { vivo = false }
-  }, [senseiPronto, versaoVelas, chaveInputsSensei, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [senseiPronto, versaoVelas, historicoCompleto, chaveInputsSensei, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── MTM GoldKiller ──
   useEffect(() => {
@@ -513,25 +708,27 @@ export default function GraficoLeve(props: GraficoProps & {
       setGkR(null)
       aoCalcularGKRef.current?.(null)
     }
-  }, [pronto, goldkillerLigado]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pronto, goldkillerLigado, simbolo.symbol, tf]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const inputsGK = props.goldkiller?.inputs
   const chaveInputsGK = inputsGK ? JSON.stringify(inputsGK) : ""
   useEffect(() => {
-    if (!gkPronto || !inputsGK || estadoVelas === "a_carregar") return
+    if (!gkPronto || !inputsGK || estadoVelas === "a_carregar" || !historicoCompleto) return
     const snapshot = velasRef.current.slice()
     if (snapshot.length < 50) return
     let vivo = true
     const tfSeg = tfPorChave(tf).seg
     const inputs: Partial<InputsGoldKiller> = { ...inputsGK, simbolo: simbolo.symbol, tfSegundos: tfSeg, mintick: Math.pow(10, -simbolo.digits) }
     ;(async () => {
-      const c = await calcularGK(snapshot, inputs)
+      const kc = chaveEstudo("gk", simbolo.symbol, tf, chaveInputsGK, snapshot)
+      let c = CACHE_ESTUDOS.get(kc) as Awaited<ReturnType<typeof calcularGK>> | undefined
+      if (!c) { c = await calcularGK(snapshot, inputs); if (c) guardarEstudo(kc, c) }
       if (!vivo || !c || !gkRef.current) return
       gkRef.current.aplicar(snapshot, c.r)
       setGkMs({ ms: Math.round(c.ms), onde: c.onde, velas: snapshot.length })
     })()
     return () => { vivo = false }
-  }, [gkPronto, versaoVelas, chaveInputsGK, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gkPronto, versaoVelas, historicoCompleto, chaveInputsGK, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── MTM Scanner ──
   useEffect(() => {
@@ -553,12 +750,12 @@ export default function GraficoLeve(props: GraficoProps & {
       setMsR(null)
       aoCalcularMSRef.current?.(null)
     }
-  }, [pronto, mtmscannerLigado]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pronto, mtmscannerLigado, simbolo.symbol, tf]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const inputsMS = props.mtmscanner?.inputs
   const chaveInputsMS = inputsMS ? JSON.stringify(inputsMS) : ""
   useEffect(() => {
-    if (!msPronto || !inputsMS || estadoVelas === "a_carregar") return
+    if (!msPronto || !inputsMS || estadoVelas === "a_carregar" || !historicoCompleto) return
     const snapshot = velasRef.current.slice()
     if (snapshot.length < 50) return
     let vivo = true
@@ -566,13 +763,15 @@ export default function GraficoLeve(props: GraficoProps & {
     // mintick = o tick do símbolo no funded_symbols (digits); o volume é o de ticks da rota das velas.
     const inputs: Partial<InputsMTMScanner> = { ...inputsMS, simbolo: simbolo.symbol, tfSegundos: tfSeg, mintick: Math.pow(10, -simbolo.digits) }
     ;(async () => {
-      const c = await calcularMS(snapshot, inputs)
+      const kc = chaveEstudo("ms", simbolo.symbol, tf, chaveInputsMS, snapshot)
+      let c = CACHE_ESTUDOS.get(kc) as Awaited<ReturnType<typeof calcularMS>> | undefined
+      if (!c) { c = await calcularMS(snapshot, inputs); if (c) guardarEstudo(kc, c) }
       if (!vivo || !c || !msRef.current) return
       msRef.current.aplicar(snapshot, c.r)
       setMsMs({ ms: Math.round(c.ms), onde: c.onde, velas: snapshot.length })
     })()
     return () => { vivo = false }
-  }, [msPronto, versaoVelas, chaveInputsMS, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [msPronto, versaoVelas, historicoCompleto, chaveInputsMS, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // As zonas da ferramenta (primitiva no canvas).
   useEffect(() => {
@@ -788,9 +987,9 @@ export default function GraficoLeve(props: GraficoProps & {
   const larguraEscala = larguraEscalaRef.current
 
   return (
-    <div style={{ background: TV.fundo }}>
+    <div className={props.preencher ? "flex min-h-0 flex-1 flex-col" : undefined} style={{ background: TV.fundo }}>
       <div
-        className={`relative touch-pan-y select-none ${props.alturaClasse ?? (props.compacto ? "h-[200px] md:h-[240px]" : "h-[400px] md:h-[500px]")} ${modo ? "cursor-crosshair" : ""}`}
+        className={`relative touch-pan-y select-none ${props.preencher ? "min-h-0 flex-1" : props.alturaClasse ?? (props.compacto ? "h-[200px] md:h-[240px]" : "h-[400px] md:h-[500px]")} ${modo ? "cursor-crosshair" : ""}`}
         onPointerDownCapture={aoPressionar}
         onPointerMoveCapture={aoMover}
         onPointerUpCapture={aoLargar}

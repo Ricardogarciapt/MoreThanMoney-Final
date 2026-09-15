@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { recebeT2T, t2tDesligadoNaConta } from "@/lib/mtmcopy/alvo-t2t"
 import { ehMtmFundedLigacao } from "@/lib/mtmcopy/destino-execucao"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { entradaT2T } from '@/lib/mtmcopy/t2t-entry'
@@ -89,11 +90,15 @@ export async function GET(request: NextRequest) {
    */
   // Ligações MTM Funded não passam por aqui (sem MetaApi/TradeLocker): abrem pelo motor simulado.
   const candidatas = (conns ?? []).filter(
-    (c) => !ehMtmFundedLigacao(c) && (c.purpose === "tap_to_trade" || c.t2t_enabled === true),
+    (c) => !ehMtmFundedLigacao(c) && (recebeT2T(c) || t2tDesligadoNaConta(c)),
   )
   const bloqueadas: Array<{ id: string; label: string; motivo: string; comoResolver: string }> = []
   const alvos = candidatas.filter((c) => {
     const label = c.account_label || (c.mt5_login_last4 ? `••${c.mt5_login_last4}` : c.id.slice(0, 6))
+    if (t2tDesligadoNaConta(c)) {
+      bloqueadas.push({ id: c.id, label, motivo: "O Tap to Trade está desligado nesta conta.", comoResolver: "Liga-o na lista de contas do Tap to Trade ou em «As minhas contas»." })
+      return false
+    }
     if (!c.metaapi_account_id && !(ehTradeLocker(c) && c.tl_account_id)) {
       bloqueadas.push({ id: c.id, label, motivo: "A conta ainda não terminou a ligação ao MT5.", comoResolver: "Abre as definições da conta e conclui a ligação." })
       return false

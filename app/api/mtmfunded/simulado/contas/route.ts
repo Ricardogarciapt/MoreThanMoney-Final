@@ -13,6 +13,10 @@ export const dynamic = 'force-dynamic'
  *
  * Sessão por token OU cookie, como as outras rotas da app: dentro do MTM System a sessão chega
  * como Bearer.
+ *
+ * `?leve=1` (o seletor do WebTrader): SÓ as contas. O WebTrader nunca usou posições, ordens, catálogo
+ * nem preços desta resposta — e o catálogo (1026 símbolos) + a tabela de preços inteira eram duas
+ * leituras grandes à base a cada abertura. Sem o parâmetro, a resposta fica igual à de sempre.
  */
 export async function GET(request: NextRequest) {
   const userId = await userIdDoPedido(request)
@@ -26,19 +30,23 @@ export async function GET(request: NextRequest) {
     .eq('motor', 'sim')
     .order('created_at', { ascending: false })
 
+  const leve = request.nextUrl.searchParams.get('leve') === '1'
   const ids = (contas ?? []).map((c) => c.id as string)
+  const programIds = [...new Set((contas ?? []).map((c) => c.program_id as string | null).filter(Boolean))] as string[]
+  const vazio = Promise.resolve({ data: [] as Record<string, unknown>[] })
   const [{ data: posicoes }, { data: ordens }, { data: simbolos }, { data: precos }, { data: programas }] = await Promise.all([
-    ids.length
+    leve ? vazio : ids.length
       ? db.from('funded_positions').select('*').in('account_id', ids).eq('estado', 'aberta').order('aberta_em', { ascending: false })
       : Promise.resolve({ data: [] }),
-    ids.length
+    leve ? vazio : ids.length
       ? db.from('funded_orders').select('*').in('account_id', ids).eq('estado', 'pendente').order('criada_em', { ascending: false })
       : Promise.resolve({ data: [] }),
-    db.from('funded_symbols')
+    leve ? vazio : db.from('funded_symbols')
       .select('symbol, nome, classe, digits, contract_size, pip_size, spread_pontos, comissao_lote, volume_min, volume_step, volume_max, alavancagem_max, horario')
       .eq('ativo', true).order('ordem'),
-    db.from('funded_precos').select('symbol, bid, ask, em'),
-    db.from('mtm_funded_programs').select('id, slug, nome, fases, regras'),
+    leve ? vazio : db.from('funded_precos').select('symbol, bid, ask, em'),
+    // Programas só das contas que os têm (e nenhum pedido sem contas).
+    programIds.length ? db.from('mtm_funded_programs').select('id, slug, nome, fases, regras').in('id', programIds) : vazio,
   ])
   // Contas que seguem uma estratégia do MTM Auto (migração 070): o nome dela vai pronto para o seletor.
   const slugs = [...new Set((contas ?? []).map((c) => (c as { segue_estrategia?: string | null }).segue_estrategia).filter(Boolean))] as string[]
@@ -64,9 +72,6 @@ export async function GET(request: NextRequest) {
           : null,
       }
     }),
-    posicoes: posicoes ?? [],
-    ordens: ordens ?? [],
-    simbolos: simbolos ?? [],
-    precos: precos ?? [],
-  })
+    ...(leve ? {} : { posicoes: posicoes ?? [], ordens: ordens ?? [], simbolos: simbolos ?? [], precos: precos ?? [] }),
+  }, { headers: { 'Cache-Control': 'private, no-store' } })
 }

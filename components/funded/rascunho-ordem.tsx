@@ -11,6 +11,8 @@ import {
 } from "@/lib/mtmfunded/simulado/niveis-financeiros"
 import type { SimboloFicha, PrecoVivo } from "./api"
 import { AccaoCancelada, useUmClique } from "./um-clique"
+import { AVANCADO_VAZIO, type Avancado, expiracaoDe, gestaoDoAvancado, numeroDe } from "./avancado"
+import type { Gestao } from "@/lib/mtmfunded/simulado/avancadas"
 
 /**
  * O RASCUNHO DA ORDEM — UM só estado para o ticket e para o gráfico, como no painel de ordens do
@@ -78,7 +80,7 @@ const VAZIO: Rascunho = {
   fixos: { sl: null, tp: null }, modoNiveis: "preco", visivel: false, origem: "manual", ideiaRef: null,
 }
 
-export interface ErrosRascunho { volume?: string; entrada?: string; sl?: string; tp?: string; margem?: string }
+export interface ErrosRascunho { volume?: string; entrada?: string; sl?: string; tp?: string; margem?: string; avancado?: string }
 
 export interface Dimensionamento extends VolumePorRisco {
   /** O risco pedido, já em USD (a % convertida pelo saldo). */
@@ -95,6 +97,12 @@ export interface PedidoOrdem {
   preco?: number
   origem: Rascunho["origem"]
   ideiaRef: string | null
+  /** Ordens avançadas (072): trailing, break-even e TPs parciais, em preço. */
+  gestao?: Partial<Gestao> | null
+  /** GTD das pendentes (ISO). */
+  expiraEm?: string | null
+  /** Segunda perna OCO (a primeira é esta ordem). */
+  oco?: { direcao: Direcao; tipo: "limit" | "stop"; preco: number } | null
 }
 
 interface ValorContexto {
@@ -147,6 +155,9 @@ interface ValorContexto {
    */
   ferramenta: Direcao | null
   setFerramenta: (d: Direcao | null) => void
+  /** Ordens avançadas escritas no ticket (avancado.ts). */
+  avancado: Avancado
+  setAvancado: (patch: Partial<Avancado>) => void
 }
 
 const Contexto = createContext<ValorContexto | null>(null)
@@ -189,6 +200,8 @@ export function RascunhoProvider(props: {
   const [aEnviar, setAEnviar] = useState(false)
   const [erroEnvio, setErroEnvio] = useState<string | null>(null)
   const [ferramenta, setFerramenta] = useState<Direcao | null>(null)
+  const [avancado, setAvancadoEstado] = useState<Avancado>(AVANCADO_VAZIO)
+  const setAvancado = useCallback((patch: Partial<Avancado>) => setAvancadoEstado((a) => ({ ...a, ...patch })), [])
   const umClique = useUmClique()
   const arred = useCallback((v: number) => Number(v.toFixed(s.digits)), [s.digits])
   const tolerancia = Math.max(spreadEmPreco(s), 2 * s.pip_size)
@@ -200,6 +213,7 @@ export function RascunhoProvider(props: {
     if (simboloAnterior.current === s.symbol) return
     simboloAnterior.current = s.symbol
     setR((x) => ({ ...VAZIO, modoNiveis: x.modoNiveis }))
+    setAvancadoEstado((a) => ({ ...AVANCADO_VAZIO, aberto: a.aberto, tpsModo: a.tpsModo }))
     setErroEnvio(null)
   }, [s.symbol])
 
@@ -264,9 +278,17 @@ export function RascunhoProvider(props: {
       }
       const m = margemUsd(s, volume, entrada, alavancagem, mapa)
       if (m != null && margemLivre != null && m > margemLivre) e.margem = `margem insuficiente: precisa ${m.toFixed(2)} $, livre ${margemLivre.toFixed(2)} $`
+      // Ordens avançadas: a mesma validação do servidor, antes de enviar.
+      const g = gestaoDoAvancado(avancado, s, r.lado, entrada, volume, sl, tp, mapa)
+      const ex = r.tipo !== "mercado" ? expiracaoDe(avancado) : { erro: null }
+      const oco = r.tipo !== "mercado" && avancado.oco.ligado && !(numeroDe(avancado.oco.preco) != null && (numeroDe(avancado.oco.preco) as number) > 0)
+        ? "OCO: indica o preço da segunda perna" : null
+      const ocoMercado = r.tipo === "mercado" && avancado.oco.ligado ? "OCO é só para ordens pendentes (Limit/Stop)" : null
+      const erroAv = g.erro ?? ex.erro ?? oco ?? ocoMercado
+      if (erroAv) e.avancado = erroAv
     }
     return e
-  }, [s, volume, dimensionamento, dim.modo, saldo, r.tipo, r.entrada, r.lado, r.fixos, preco, entrada, sl, tp, alavancagem, margemLivre, mapa])
+  }, [s, volume, dimensionamento, dim.modo, saldo, r.tipo, r.entrada, r.lado, r.fixos, preco, entrada, sl, tp, alavancagem, margemLivre, mapa, avancado])
 
   const resumo = useMemo(() => {
     const risco = entrada != null && sl != null ? lucroUsd(s, r.lado, volume, entrada, sl, mapa) : null
@@ -376,7 +398,13 @@ export function RascunhoProvider(props: {
     })
   }, [arred, preco, tolerancia])
 
-  const limpar = useCallback(() => { setR((x) => ({ ...VAZIO, modoNiveis: x.modoNiveis, lado: x.lado })); setErroEnvio(null) }, [])
+  const limpar = useCallback(() => {
+    setR((x) => ({ ...VAZIO, modoNiveis: x.modoNiveis, lado: x.lado }))
+    // As escolhas «de estilo» (TPs em pips, painel aberto, trailing ligado com a distância) ficam para a próxima;
+    // o que é desta ordem (expiração, OCO) sai.
+    setAvancadoEstado((a) => ({ ...a, expira: "", oco: { ...a.oco, ligado: false, preco: "" } }))
+    setErroEnvio(null)
+  }, [])
 
   const temErros = Object.keys(erros).length > 0
   const enviar = async () => {
@@ -385,9 +413,16 @@ export function RascunhoProvider(props: {
     if (v == null) return
     setAEnviar(true)
     setErroEnvio(null)
+    const gestao = gestaoDoAvancado(avancado, s, r.lado, entrada, v, sl, tp, mapa).gestao
     const pedido: PedidoOrdem = r.tipo === "mercado"
-      ? { accao: "abrir", direcao: r.lado, volume: v, sl, tp, origem: r.origem, ideiaRef: r.ideiaRef }
-      : { accao: "pendente", direcao: r.lado, volume: v, sl, tp, tipo: r.tipo, preco: r.entrada!, origem: r.origem, ideiaRef: r.ideiaRef }
+      ? { accao: "abrir", direcao: r.lado, volume: v, sl, tp, origem: r.origem, ideiaRef: r.ideiaRef, gestao }
+      : { accao: "pendente", direcao: r.lado, volume: v, sl, tp, tipo: r.tipo, preco: r.entrada!, origem: r.origem, ideiaRef: r.ideiaRef, gestao, expiraEm: expiracaoDe(avancado).iso }
+    if (r.tipo !== "mercado" && avancado.oco.ligado) {
+      const nivel = numeroDe(avancado.oco.preco) as number
+      const t = preco ? tipoDeEntrada(avancado.oco.direcao, nivel, preco, tolerancia) : "limit"
+      if (t === "mercado") { setErroEnvio("OCO: a segunda perna está em cima do preço — afasta-a"); setAEnviar(false); return }
+      pedido.oco = { direcao: avancado.oco.direcao, tipo: t, preco: arred(nivel) }
+    }
     const descricao = r.tipo === "mercado"
       ? `${r.lado === "buy" ? "Compra" : "Venda"} ${v} ${s.symbol}`
       : `${r.lado === "buy" ? "Buy" : "Sell"} ${r.tipo} ${v} ${s.symbol} @ ${r.entrada!.toFixed(s.digits)}`
@@ -410,7 +445,7 @@ export function RascunhoProvider(props: {
       r, simbolo: s, preco, precos, volume, setVolume, saldo, tolerancia, entrada, sl, tp, erros, temErros, resumo, mostrar,
       modoVolume: dim.modo, riscoEscrito: dim.valor, dimensionamento, definirModoNiveis, definirModoVolume, definirRisco,
       set, definirNivel, definirPips, definirValor, colocar, aplicar, limpar, enviar, aEnviar, erroEnvio,
-      ferramenta, setFerramenta,
+      ferramenta, setFerramenta, avancado, setAvancado,
     }}>
       {props.children}
     </Contexto.Provider>

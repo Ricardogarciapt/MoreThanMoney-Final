@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   ErroOrdem, autorizarConta, exigirNegociavel, estadoCompleto, abrirPosicao, fecharPosicao,
   modificarPosicao, criarPendente, modificarPendente, cancelarPendente, lerConta, num,
+  criarOco, modificarGestao, fecharLote, cancelarTodas, inverterPosicao,
 } from '@/lib/mtmfunded/simulado/execucao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
@@ -17,6 +18,14 @@ export const dynamic = 'force-dynamic'
  *   · pendente  { accountId, symbol, direcao, tipo: limit|stop, volume, preco, sl?, tp?, expiraEm? }
  *   · modificar_pendente { orderId, preco?, sl, tp }
  *   · cancelar  { orderId }
+ * Ordens avançadas (072) — `gestao` = { trailing_distancia, trailing_ativacao, be_gatilho, be_offset,
+ * be_no_tp1, tps: [{preco, pct}] }, distâncias em PREÇO:
+ *   · abrir / pendente aceitam `gestao` (bracket = entrada + sl + tp + tps numa ordem)
+ *   · oco       { accountId, pernas: [pendente, pendente] }
+ *   · gestao    { positionId, gestao }             (muda trailing/BE/TPs de uma posição aberta)
+ *   · fechar_lote { accountId, filtro: todas|simbolo|ganhadoras|perdedoras|compras|vendas, symbol? }
+ *   · cancelar_todas { accountId, symbol? }
+ *   · inverter  { positionId }                     (fecha e abre o lado contrário, mesmo volume)
  * GET ?accountId= → posições abertas, últimas 100 fechadas, pendentes, estado, limites, etiquetas.
  *
  * O site executa a MERCADO contra a última linha de `funded_precos` (≤5 s); o resto — pendentes,
@@ -56,8 +65,8 @@ export async function POST(request: NextRequest) {
     const accao = String(b.accao ?? '')
 
     let accountId: string
-    if (accao === 'abrir' || accao === 'pendente') accountId = String(b.accountId ?? '')
-    else if (accao === 'fechar' || accao === 'modificar') accountId = await contaDe('funded_positions', b.positionId)
+    if (['abrir', 'pendente', 'oco', 'fechar_lote', 'cancelar_todas'].includes(accao)) accountId = String(b.accountId ?? '')
+    else if (['fechar', 'modificar', 'gestao', 'inverter'].includes(accao)) accountId = await contaDe('funded_positions', b.positionId)
     else if (accao === 'cancelar' || accao === 'modificar_pendente') accountId = await contaDe('funded_orders', b.orderId)
     else throw new ErroOrdem(400, 'acção desconhecida')
 
@@ -69,7 +78,7 @@ export async function POST(request: NextRequest) {
       case 'abrir':
         resultado = await abrirPosicao(conta, {
           symbol: b.symbol, direcao: b.direcao, volume: Number(b.volume), sl: num(b.sl), tp: num(b.tp),
-          origem: b.origem, ideiaRef: b.ideiaRef,
+          origem: b.origem, ideiaRef: b.ideiaRef, gestao: b.gestao ?? null,
         })
         break
       case 'fechar':
@@ -82,7 +91,26 @@ export async function POST(request: NextRequest) {
         resultado = await criarPendente(conta, {
           symbol: b.symbol, direcao: b.direcao, tipo: b.tipo, volume: Number(b.volume), preco: Number(b.preco),
           sl: num(b.sl), tp: num(b.tp), expiraEm: b.expiraEm ?? null, origem: b.origem, ideiaRef: b.ideiaRef,
+          gestao: b.gestao ?? null,
         })
+        break
+      case 'oco':
+        resultado = await criarOco(conta, (Array.isArray(b.pernas) ? b.pernas : []).map((x: Record<string, any>) => ({
+          symbol: x.symbol, direcao: x.direcao, tipo: x.tipo, volume: Number(x.volume), preco: Number(x.preco),
+          sl: num(x.sl), tp: num(x.tp), expiraEm: x.expiraEm ?? null, origem: x.origem, gestao: x.gestao ?? null,
+        })))
+        break
+      case 'gestao':
+        resultado = await modificarGestao(conta, b.positionId, b.gestao ?? null)
+        break
+      case 'fechar_lote':
+        resultado = await fecharLote(conta, b.filtro, b.symbol ?? null)
+        break
+      case 'cancelar_todas':
+        resultado = await cancelarTodas(conta, b.symbol ?? null)
+        break
+      case 'inverter':
+        resultado = await inverterPosicao(conta, b.positionId)
         break
       case 'modificar_pendente':
         resultado = await modificarPendente(conta, b.orderId, b.preco, b.sl, b.tp)

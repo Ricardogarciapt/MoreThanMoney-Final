@@ -16,7 +16,10 @@ Por esta ordem, na Supabase:
 1. `supabase/migrations/064_funded_symbols_classes.sql` — classes novas, `moeda_lucro`, `sessoes`,
    `funded_precos_pedidos`, e as funções atómicas `funded_fechar_posicao` / `funded_executar_pendente`
    / `funded_somar_saldo`. **Sem ela o motor em modo 1 falha ao fechar posições.**
-2. `supabase/seeds/funded_symbols_puprime.sql` — o catálogo da PU Prime (gerado por
+2. `supabase/migrations/072_funded_ordens_avancadas.sql` — trailing, break-even, TPs parciais, OCO,
+   diário e alertas de preço. **O motor novo lê as colunas desta migração: aplica-a ANTES de o
+   actualizar** (sem ela as leituras de posições/ordens falham e o motor não arranca).
+3. `supabase/seeds/funded_symbols_puprime.sql` — o catálogo da PU Prime (gerado por
    `npx tsx scripts/funded-sync-simbolos.ts`; voltar a correr quando a corretora mudar).
 
 ## Construir
@@ -99,6 +102,49 @@ existir, ou vistas mais de `ESPELHO_ATRASO_MAX_MIN` (30) depois, não se copiam 
 - Testes: `npx tsx lib/mtmfunded/__tests__/espelho.check.ts` (inclui o fluxo por eventos com um SDK falso).
 - Contas com `metricas.analise = true` não são quebradas pelas regras do programa (o stop-out mantém-se).
 - No log: `[espelho] <estratégia>→<conta> abriu|parcial|fechou|SL …`.
+
+## Espelho provider (migração 082) — gestão nossa vs MetaApi
+
+`services/funded-motor/espelho-provider.ts` (decisões puras em `lib/mtmfunded/espelho/provider.ts`). Uma conta
+simulada **da casa** por estratégia (`mtmauto_providers.espelho_funded_account_id`, `mtm_trading_accounts.conta_casa`,
+`metricas.analise=true` → nenhuma regra a quebra) que:
+
+- lê a conta-mestre **por evento** (`onPositionUpdated/Removed/onDealAdded`, sem debounce, zero RPC); na
+  (re)sincronização compara o `terminalState` com o que conhecia (abertas/fechadas durante a queda);
+- abre a entrada ao **nosso** preço no próprio evento (ponte `funded_espelho_posicoes` = anti-duplicação);
+- gere a cada **tick** do nosso feed com as regras da estratégia (`be_gatilho`, `trailing_arranca_pips`,
+  `trailing_distancia_pips`, `trailing_passo_pips`, `saidas_pct`, `trailing_tempo_real`), independente da gestão da
+  mestre; SL/TP finais fecham pelo motor; segue só fechos **humanos** da mestre (`espelho_config.seguirFechos`);
+- os símbolos com posições do espelho pedem cotações a `MOTOR_INTERVALO_RAPIDO_MS` (250) em vez de 1000;
+- grava 1 linha em `espelho_comparacao` à abertura (`em_curso`) e fecha-a no fim (`completa|so_mestre|reinicio`);
+- batimento: `servicos_pulso.servico='mtm-funded-motor'` 1×/min com as latências (rede, entrada, tickSl, tickParcial).
+
+**Deploy**: (1) aplicar `082_espelho_provider.sql` (072 não é precisa — o motor passa às colunas de base se faltar);
+(2) build acima; (3) `/etc/mtm-funded-motor.env`: `ESPELHO_PROVIDER=1` (+ opcionais `MOTOR_INTERVALO_RAPIDO_MS=250`,
+`ESPELHO_PROVIDER_ESPERA_DEAL_MS=1500`); (4) restart; (5) no admin → MTM Funded → «Espelho provider»: criar conta
+(100 000 USD) e ligar por estratégia; (6) para medir a propagação, criar uma rota **em sombra** na cópia entre contas
+com origem `funded:<conta espelho>` → TradeLocker/MT5 (o trigger da 078 gera os eventos sozinho).
+Com `MOTOR_ESCRITA=0` só há `[provider][seco]` no log.
+
+**Ler a comparação**: `diferenca_pips` = pips do espelho − pips da mestre (ponderados pelo volume de abertura);
+`deslize_entrada_pips` > 0 = o espelho entrou pior; `latencia_entrada_ms` = evento recebido → posição escrita;
+`latencia_rede_ms` = hora da mestre → evento no VPS; saídas da mestre com motivo `sl|tp|expert|humana|estimado`
+(estimado = sem deal, ao último preço visto). A vista **`espelho_veredito`** (e `espelho_alinhado(slug)`) dá
+`alinhado` com: ≥30 trades completas · |dif. média| ≤ 3 pips · latência p95 (entrada e propagação outbox→processado)
+≤ 1500 ms · 0 trades perdidas · propagação medida. Os mesmos limiares em `CRITERIOS_PADRAO` (TS).
+
+Testes: `npx tsx lib/mtmfunded/__tests__/espelho-provider.check.ts` (ticks gravados em `__tests__/fixtures/`).
+
+### Fontes de preço — o que existe e as lacunas
+
+| Fonte | Estado | Latência / custo | Notas |
+|---|---|---|---|
+| MetaApi streaming, conta PU Prime `530d2e07` (é também a mestre Premium) | **principal**, em produção | tick push; `quotes` a 1000 ms (250 ms nos símbolos do espelho); sem custo extra por símbolo | continua a ser MetaApi: se o token for cortado, o motor fica sem preço (sai pelo `[pulso]` aos 3 min) |
+| MetaApi RPC `getSymbolPrice` | recurso automático se o streaming não liga | ~1 s por símbolo, gasta créditos RPC | só de recurso |
+| TradeLocker `GET /trade/quotes` | **implementado** (`feed-tradelocker.ts`), `ESPELHO_FEED_TL=1` | sondagem HTTP (sem streaming público), ronda `ESPELHO_FEED_TL_MS`=2000; grátis com conta demo; limites de pedidos da TL | outra corretora (diferença de preço/spread medida no pulso: `feedTradeLocker.porSimbolo`). `ESPELHO_FEED_TL_RECURSO=1` injecta quando a MetaApi tem >5 s — fecha SL/TP de TODAS as contas simuladas com esse preço; por defeito desligado. Vars: `TL_FEED_EMAIL/PASSWORD/SERVER/ENV/ACCOUNT_ID/ACCNUM` |
+| MT5 próprio no VPS (terminal PU Prime + EA a publicar ticks por socket) | não existe | sub-100 ms, zero créditos; custo = VPS Windows/Wine (~20–40 €/mês) | a opção mais independente: mesma corretora da mestre, sem MetaApi |
+| FIX da corretora (PU Prime/LP) | não existe | o mais rápido; exige conta institucional/acordo, normalmente com mínimo de volume | fora de alcance para já |
+| TradingView (dados/alertas) | não serve para ticks | sem API de ticks oficial; alertas com segundos de atraso | só para sinais, não para gerir SL |
 
 ## Regras de execução (as que se publicam)
 

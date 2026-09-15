@@ -51,6 +51,9 @@ interface MTMcopierConnection {
   is_active: boolean
   last_signal_at: string | null
   last_error: string | null
+  /** Erro de quota antigo, com sucesso depois → mostrar como histórico (ver lib/mtmcopy/erro-historico.ts). */
+  last_error_historico?: boolean
+  last_error_em?: string | null
   created_at: string
   updated_at: string
   metaapi_account_id: string | null
@@ -824,12 +827,23 @@ function UserRow({
             </div>
           )}
 
-          {connection?.last_error && (
+          {connection?.last_error && (connection.last_error_historico ? (
+            <div className="mt-2 text-[11px] text-zinc-500 bg-zinc-800/40 rounded px-2 py-1 flex items-start gap-1.5"
+              title="Erro de quota da MetaApi com execuções bem-sucedidas depois — já não é o estado atual da conta">
+              <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0 opacity-60" />
+              <span>
+                Histórico{connection.last_error_em ? ` (${new Date(connection.last_error_em).toLocaleString("pt-PT")})` : ""}: {connection.last_error}
+              </span>
+            </div>
+          ) : (
             <div className="mt-2 text-xs text-red-400 bg-red-500/10 rounded px-2 py-1 flex items-start gap-1.5">
               <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
-              {connection.last_error}
+              <span>
+                {connection.last_error}
+                {connection.last_error_em ? <span className="text-red-400/60"> · {new Date(connection.last_error_em).toLocaleString("pt-PT")}</span> : null}
+              </span>
             </div>
-          )}
+          ))}
         </div>
 
         <div className="flex-shrink-0 flex items-center gap-1.5">

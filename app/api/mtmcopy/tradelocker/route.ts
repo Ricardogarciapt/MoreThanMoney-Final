@@ -1,27 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { carregarDireitos } from '@/lib/entitlements'
-import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
-import { resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
-import { canAddConnection } from '@/lib/mtmcopy/user-copy-context'
-import { normalizeTelegramGroups } from '@/lib/mtmcopy/copy-methods'
 import { invalidateCopyConnectionsCache } from '@/lib/mtmcopy/db'
 import { cifraDisponivel } from '@/lib/mtmfunded/credenciais'
-import type { MTMcopierConnection } from '@/lib/mtmcopy/types'
-import { autenticar, listarContas, TradeLockerError, type TLCredenciais } from '@/lib/tradelocker/client'
-import {
-  emitirBilhete,
-  envValido,
-  guardarCredenciais,
-  lerBilhete,
-  sessaoDaLigacao,
-} from '@/lib/tradelocker/ligacao'
+import { autenticar, listarContas, type TLCredenciais } from '@/lib/tradelocker/client'
+import { emitirBilhete, envValido, lerBilhete, sessaoDaLigacao } from '@/lib/tradelocker/ligacao'
+import { erroTradeLocker, ligarContaTradeLocker } from '@/lib/tradelocker/ligar-conta'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 /**
- * Ligar uma conta TradeLocker ao Tap to Trade ou ao MTM Copy.
+ * Ligar uma conta TradeLocker (a conta da corretora da pessoa) — «As minhas contas» / Tap to Trade.
+ * O WebTrader liga pelo MESMO passo 2 (lib/tradelocker/ligar-conta.ts): uma linha por conta.
  *
  * Dois passos, porque um login TradeLocker dá acesso a VÁRIAS contas (uma por corretora/plano):
  *
@@ -50,13 +40,9 @@ async function authenticate(request: NextRequest) {
   return user
 }
 
-function erro(e: unknown, fallback = 'Erro inesperado na TradeLocker') {
-  if (e instanceof TradeLockerError) {
-    const status = e.codigo === 'credenciais' ? 400 : e.codigo === 'limite' ? 429 : 502
-    return NextResponse.json({ error: e.message, code: `tradelocker_${e.codigo}` }, { status })
-  }
-  console.error('[tradelocker] erro:', e instanceof Error ? e.message : 'desconhecido')
-  return NextResponse.json({ error: fallback }, { status: 500 })
+function erro(e: unknown, fallback?: string) {
+  const r = erroTradeLocker(e, fallback)
+  return NextResponse.json(r.corpo, { status: r.status })
 }
 
 function credenciaisDoCorpo(b: Record<string, unknown>): TLCredenciais | null {
@@ -106,136 +92,9 @@ export async function POST(request: NextRequest) {
   if (!cred) {
     return NextResponse.json({ error: 'A sessão de ligação expirou. Volta a introduzir o login TradeLocker.', code: 'ticket_expired' }, { status: 400 })
   }
-  const purpose = body.purpose === 'tap_to_trade' ? 'tap_to_trade' : 'mtmcopy'
-  if (purpose === 'mtmcopy' && body.copy_method && body.copy_method !== 'telegram_group') {
-    return NextResponse.json(
-      { error: 'Contas TradeLocker só copiam por grupos de sinais. Estratégias e copy trader pessoal usam a CopyFactory, que é só MetaTrader.' },
-      { status: 400 },
-    )
-  }
-
-  // Regra das contas (2026-09-15): TradeLocker NÃO passa pela MetaApi e por isso não conta para a
-  // quota de contas MetaApi (lib/contas/quota-metaapi). A cópia automática (fora do Tap to Trade)
-  // continua a precisar do direito ao MTM Auto.
-  const [direitos, { data: doSite }] = await Promise.all([
-    carregarDireitos(user.id),
-    supabase.from('mtmcopy_connections').select('*').eq('user_id', user.id).neq('mt5_status', 'disconnected'),
-  ])
-  if (purpose !== 'tap_to_trade' && !direitos.admin && !direitos.copiaAutomatica) {
-    return NextResponse.json(
-      {
-        error: 'A cópia automática precisa do MTM Auto (ou de seres Premium/VIP). No Tap to Trade continuas a poder aceitar sinais à mão.',
-        code: 'sem_copia_automatica',
-      },
-      { status: 403 },
-    )
-  }
-
-  const { data: perfil } = await supabase.from('profiles').select('user_type, member_category').eq('id', user.id).maybeSingle()
-  const subscription = await getMtmcopySubscription(user.id, perfil?.user_type)
-  const grupos = normalizeTelegramGroups(body.telegram_groups, (body.telegram_group as never) ?? null)
-  if (purpose === 'mtmcopy' && !grupos.length) {
-    return NextResponse.json({ error: 'Escolhe pelo menos um grupo de sinais' }, { status: 400 })
-  }
-  const limite = canAddConnection((doSite ?? []) as MTMcopierConnection[], 'telegram', 'slave', {
-    isAdmin: subscription.reason === 'admin',
-    limits: resolveMtmcopyUserLimits(perfil?.user_type, perfil?.member_category),
-    copyMethod: 'telegram_group',
-    purpose,
-  })
-  if (!limite.ok) return NextResponse.json({ error: limite.error }, { status: 400 })
-
-  const repetida = (doSite ?? []).find(
-    (c) => c.mt5_platform === 'tradelocker' && String(c.tl_account_id) === accountId && c.tl_env === cred.env &&
-      String(c.tl_server ?? '').toLowerCase() === cred.server.toLowerCase(),
-  )
-  if (repetida) return NextResponse.json({ error: 'Esta conta TradeLocker já está ligada' }, { status: 409 })
-
-  // A conta escolhida pertence mesmo a este login? (accNum vem da lista, não do cliente)
-  let accNum = String(body.accNum ?? body.acc_num ?? '').trim()
-  try {
-    const tokens = await autenticar(cred)
-    const contas = await listarContas(cred.env, tokens.accessToken)
-    const conta = contas.find((c) => c.id === accountId)
-    if (!conta) return NextResponse.json({ error: 'Essa conta não pertence a este login TradeLocker.' }, { status: 400 })
-    accNum = conta.accNum
-  } catch (e) {
-    return erro(e)
-  }
-
-  const agora = new Date().toISOString()
-  const n = (v: unknown) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : undefined)
-  const payload: Record<string, unknown> = {
-    user_id: user.id,
-    account_role: 'slave',
-    sender_mode: 'telegram',
-    copy_method: 'telegram_group',
-    purpose,
-    mt5_platform: 'tradelocker',
-    // mt5_login fica vazio de propósito: os fluxos MetaApi (reprovisão, CopyFactory) só tocam em
-    // ligações com login MT5 / metaapi_account_id — assim nunca apanham uma conta TradeLocker.
-    mt5_login: null,
-    mt5_login_last4: accountId.slice(-4),
-    mt5_server: `${cred.server} · TradeLocker${cred.env === 'demo' ? ' Demo' : ''}`,
-    mt5_status: 'pending',
-    telegram_status: purpose === 'mtmcopy' ? 'connected' : 'pending',
-    telegram_groups: grupos,
-    telegram_group: grupos[0] ?? null,
-    account_label: String(body.account_label ?? '').trim() || null,
-    is_active: subscription.active, // igual ao provision MT5
-    tl_server: cred.server,
-    tl_env: cred.env,
-    tl_account_id: accountId,
-    tl_acc_num: accNum,
-    updated_at: agora,
-  }
-  for (const k of ['lot_mode', 'symbols_whitelist', 't2t_lot_mode'] as const) if (body[k] !== undefined) payload[k] = body[k]
-  for (const k of ['lot_value', 'max_risk_percent', 'exit_pct_tp1', 'exit_pct_tp2', 'exit_pct_tp3', 't2t_lot_value'] as const) {
-    const v = n(body[k])
-    if (v !== undefined) payload[k] = v
-  }
-  for (const k of ['copy_sl', 'copy_tp', 'reverse_signals'] as const) if (typeof body[k] === 'boolean') payload[k] = body[k]
-  if (purpose === 'tap_to_trade' && payload.lot_mode === undefined) {
-    payload.lot_mode = 'risk_percent'
-    payload.lot_value = payload.lot_value ?? 1
-  }
-
-  const { data: ligacao, error: insErr } = await supabase.from('mtmcopy_connections').insert(payload).select().single()
-  if (insErr || !ligacao) {
-    console.error('[tradelocker] insert ligação:', insErr?.message)
-    return NextResponse.json({ error: 'Erro ao criar ligação' }, { status: 500 })
-  }
-  const guardado = await guardarCredenciais({ userId: user.id, mtmcopyConnectionId: ligacao.id, cred })
-  if (!guardado.ok) {
-    await supabase.from('mtmcopy_connections').delete().eq('id', ligacao.id)
-    console.error('[tradelocker] guardar credenciais:', guardado.erro)
-    return NextResponse.json({ error: 'Não foi possível guardar a ligação TradeLocker' }, { status: 500 })
-  }
-
-  // Teste real: ler o estado da conta escolhida.
-  const { sessao } = await sessaoDaLigacao(ligacao)
-  try {
-    const estado = await sessao!.estado()
-    const { data: final } = await supabase
-      .from('mtmcopy_connections')
-      .update({ mt5_status: 'connected', last_error: null, tl_last_error: null, tl_connected_at: new Date().toISOString(), baseline_balance: estado.balance })
-      .eq('id', ligacao.id)
-      .select()
-      .single()
-    invalidateCopyConnectionsCache()
-    return NextResponse.json({
-      success: true,
-      status: 'connected',
-      message: 'Conta TradeLocker ligada.',
-      connection: final ?? ligacao,
-      balance: estado.balance,
-      equity: estado.equity,
-    })
-  } catch (e) {
-    const mensagem = e instanceof TradeLockerError ? e.message : 'Não foi possível ler a conta TradeLocker'
-    await supabase.from('mtmcopy_connections').update({ mt5_status: 'error', last_error: mensagem, tl_last_error: mensagem }).eq('id', ligacao.id)
-    return NextResponse.json({ success: false, status: 'error', message: mensagem, error: mensagem, connection: { ...ligacao, mt5_status: 'error' } }, { status: 502 })
-  }
+  // Passo 2 partilhado com o WebTrader (lib/tradelocker/ligar-conta): uma linha por conta.
+  const r = await ligarContaTradeLocker(user.id, cred, accountId, body)
+  return NextResponse.json(r.corpo, { status: r.status })
 }
 
 async function ligacaoDoUtilizador(userId: string, id: string | null) {

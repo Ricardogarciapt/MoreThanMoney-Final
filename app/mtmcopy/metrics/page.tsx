@@ -107,12 +107,12 @@ export default function MtmcopyMetricsPage() {
 
         {isAdmin && (
           <Link
-            href="/admin/mtmcopy"
+            href="/admin/mtmauto-copia"
             className="mt-8 flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/20 bg-zinc-950/40 px-5 py-4 hover:border-emerald-500/40 transition-colors"
           >
             <span className="flex items-center gap-2 text-sm text-emerald-400">
               <Server className="w-4 h-4" />
-              Admin · Consola MTM Copy completa
+              Admin · MTM Auto · Cópia
             </span>
             <span className="text-xs text-zinc-500">Abrir →</span>
           </Link>

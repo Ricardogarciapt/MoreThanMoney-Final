@@ -1,5 +1,6 @@
 "use client"
 
+import { aquecerWebtrader } from "@/components/funded/pre-carga"
 import { useState, useEffect, useRef, useCallback, useImperativeHandle, type RefObject } from "react"
 import { supabase } from "@/lib/supabase"
 import ChartSocialShareDialog from "@/components/chart-social-share-dialog"
@@ -1322,6 +1323,8 @@ export default function ScannerMobile({
           <Link
             href={linkWebtrader({ symbol: selectedSymbol, origem: "scanner" }, estaNaAppMobile(pathname))}
             scroll={false}
+            onPointerEnter={() => aquecerWebtrader(selectedSymbol)}
+            onTouchStart={() => aquecerWebtrader(selectedSymbol)}
             className="inline-flex items-center gap-1 text-xs text-gray-400 underline-offset-2 hover:text-[#D2A63C] hover:underline"
           >
             <CandlestickChart style={{ width: 13, height: 13 }} />

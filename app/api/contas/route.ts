@@ -87,6 +87,7 @@ export async function PATCH(request: NextRequest) {
   const alvo = lerChave(corpo.chave)
   if (!alvo) return NextResponse.json({ error: 'Conta inválida' }, { status: 400 })
   const acao = String(corpo.acao ?? '')
+  if (alvo.origem === 'wt') return NextResponse.json({ error: 'Contas abertas no WebTrader só se removem.' }, { status: 400 })
 
   if (alvo.origem === 'site') {
     const { data: lig } = await db.from('mtmcopy_connections').select('*').eq('id', alvo.id).eq('user_id', user.id).maybeSingle()
@@ -180,6 +181,17 @@ export async function DELETE(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })
   const alvo = lerChave(new URL(request.url).searchParams.get('chave'))
   if (!alvo) return NextResponse.json({ error: 'Conta inválida' }, { status: 400 })
+
+  if (alvo.origem === 'wt') {
+    // Conta MT5 aberta só no WebTrader: apaga a conta MetaApi (se nenhuma outra ligação a usa) e a linha.
+    const { removerContaWebtraderMt5 } = await import('@/lib/webtrader/entrar')
+    try {
+      const r = await removerContaWebtraderMt5(user.id, alvo.id)
+      return NextResponse.json({ success: true, metaapi: r.metaapi })
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro ao remover conta' }, { status: (e as { status?: number }).status ?? 500 })
+    }
+  }
 
   if (alvo.origem === 'site') {
     const { data: lig } = await db.from('mtmcopy_connections').select('*').eq('id', alvo.id).eq('user_id', user.id).maybeSingle()

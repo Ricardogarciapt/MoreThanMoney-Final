@@ -31,6 +31,10 @@ export default function FundedWatchlist(props: {
   selecionado: string | null
   onSelecionar: (s: SimboloFicha) => void
   onVisiveis: (symbols: string[]) => void
+  /** PRO: variação 24 h e mini-gráfico (velas H1) dos primeiros visíveis. */
+  detalhe?: boolean
+  /** Ocupar a altura do painel (sem o máximo de 52vh do telemóvel). */
+  preencher?: boolean
 }) {
   const [q, setQ] = useState("")
   const [classe, setClasse] = useState("fav")
@@ -91,6 +95,8 @@ export default function FundedWatchlist(props: {
   const visiveis = useMemo(() => lista.slice(0, 40).map((s) => s.symbol), [lista])
   useEffect(() => { props.onVisiveis(visiveis) }, [visiveis.join(",")]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const variacoes = useVariacoes(props.detalhe ? visiveis.slice(0, 16) : [])
+
   const alternarFav = (symbol: string) => {
     const novo = favoritos.includes(symbol) ? favoritos.filter((f) => f !== symbol) : [...favoritos, symbol]
     setFavoritos(novo)
@@ -98,14 +104,14 @@ export default function FundedWatchlist(props: {
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0d0d0d]">
+    <div className={`rounded-xl border border-white/10 bg-[#0d0d0d] ${props.preencher ? "flex h-full min-h-0 flex-col" : ""}`}>
       <div className="space-y-2 border-b border-white/10 p-2">
         <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black px-2">
           <Search className="h-4 w-4 text-zinc-500" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar símbolo" className="h-9 w-full bg-transparent text-[13px] text-white outline-none" />
           {aCarregar && <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" />}
         </div>
-        <div className="flex gap-1 overflow-x-auto text-[11px]">
+        <div className="flex gap-1 overflow-x-auto text-[11px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {["fav", "todas", ...classes].map((c) => (
             <button key={c} onClick={() => setClasse(c)} className={`shrink-0 rounded-full border px-2.5 py-1 ${classe === c ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-white/10 text-zinc-400"}`}>
               {c === "fav" ? "★ Favoritos" : c === "todas" ? "Todos" : NOME_CLASSE[c] ?? c}
@@ -114,9 +120,9 @@ export default function FundedWatchlist(props: {
         </div>
       </div>
       <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 px-3 py-1 text-[10px] uppercase text-zinc-500">
-        <span>Símbolo</span><span className="text-right">Bid</span><span className="text-right">Ask</span>
+        <span>Símbolo</span><span className="text-right">Bid</span><span className="text-right">{props.detalhe ? "24 h" : "Ask"}</span>
       </div>
-      <div className="max-h-[52vh] overflow-y-auto">
+      <div className={props.preencher ? "min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#363A45_transparent]" : "max-h-[52vh] overflow-y-auto"}>
         {lista.length === 0 && !aCarregar && (
           <p className="p-4 text-center text-[12px] text-zinc-500">{classe === "fav" && !q ? "Sem favoritos — procura um símbolo e toca na estrela." : "Nenhum símbolo encontrado."}</p>
         )}
@@ -132,8 +138,20 @@ export default function FundedWatchlist(props: {
                 <p className="font-semibold text-white">{s.symbol}</p>
                 <p className="truncate text-[10px] text-zinc-500">{s.nome}</p>
               </div>
-              <span className={`text-right font-mono ${p?.fresco ? "text-rose-300" : "text-zinc-600"}`}>{px(p?.bid, s.digits)}</span>
-              <span className={`text-right font-mono ${p?.fresco ? "text-emerald-300" : "text-zinc-600"}`}>{px(p?.ask, s.digits)}</span>
+              {props.detalhe ? (
+                <>
+                  <span className="flex items-center justify-end gap-1.5">
+                    <Sparkline pontos={variacoes[s.symbol]?.pontos} ultimo={p?.bid} />
+                    <span className={`font-mono ${p?.fresco ? "text-white" : "text-zinc-600"}`}>{px(p?.bid, s.digits)}</span>
+                  </span>
+                  <Variacao ref24={variacoes[s.symbol]?.ref} bid={p?.bid} />
+                </>
+              ) : (
+                <>
+                  <span className={`text-right font-mono ${p?.fresco ? "text-rose-300" : "text-zinc-600"}`}>{px(p?.bid, s.digits)}</span>
+                  <span className={`text-right font-mono ${p?.fresco ? "text-emerald-300" : "text-zinc-600"}`}>{px(p?.ask, s.digits)}</span>
+                </>
+              )}
             </div>
           )
         })}
@@ -142,5 +160,55 @@ export default function FundedWatchlist(props: {
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Variação 24 h e mini-gráfico: as últimas 24 velas H1 de cada símbolo visível. Pedem-se uma vez e
+ * de 10 em 10 minutos (as velas vêm da MetaApi com cache no servidor): o mini-gráfico é contexto,
+ * não cotação — a cotação ao vivo continua a ser o bid ao lado.
+ */
+function useVariacoes(symbols: string[]) {
+  const [dados, setDados] = useState<Record<string, { ref: number; pontos: number[] }>>({})
+  const chave = symbols.join(",")
+  useEffect(() => {
+    if (!chave) return
+    let vivo = true
+    const ir = async () => {
+      for (const sym of chave.split(",")) {
+        try {
+          const r = await fetch(`/api/mtmfunded/simulado/velas?symbol=${sym}&tf=H1&limit=24`)
+          const d = await r.json()
+          const velas = (d.velas ?? []) as Array<{ o: number; c: number }>
+          if (!vivo || velas.length < 2) continue
+          setDados((x) => ({ ...x, [sym]: { ref: velas[0].o, pontos: velas.map((v) => v.c) } }))
+        } catch { /* sem velas: sem mini-gráfico */ }
+      }
+    }
+    void ir()
+    const iv = setInterval(() => { if (document.visibilityState !== "hidden") void ir() }, 10 * 60_000)
+    return () => { vivo = false; clearInterval(iv) }
+  }, [chave])
+  return dados
+}
+
+function Variacao({ ref24, bid }: { ref24?: number; bid?: number }) {
+  if (!ref24 || !bid) return <span className="text-right font-mono text-zinc-600">—</span>
+  const v = ((bid - ref24) / ref24) * 100
+  return <span className={`w-14 text-right font-mono text-[11.5px] ${v >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{v >= 0 ? "+" : ""}{v.toFixed(2)}%</span>
+}
+
+function Sparkline({ pontos, ultimo }: { pontos?: number[]; ultimo?: number }) {
+  if (!pontos || pontos.length < 2) return <span className="inline-block h-4 w-12" />
+  const serie = ultimo ? [...pontos, ultimo] : pontos
+  const min = Math.min(...serie)
+  const max = Math.max(...serie)
+  const amp = max - min || 1
+  const d = serie.map((v, i) => `${(i / (serie.length - 1)) * 48},${16 - ((v - min) / amp) * 14 - 1}`).join(" ")
+  const sobe = serie[serie.length - 1] >= serie[0]
+  return (
+    <svg width="48" height="16" viewBox="0 0 48 16" aria-hidden className="shrink-0">
+      <polyline points={d} fill="none" stroke={sobe ? "#26A69A" : "#EF5350"} strokeWidth="1.25" strokeLinejoin="round" />
+    </svg>
   )
 }
