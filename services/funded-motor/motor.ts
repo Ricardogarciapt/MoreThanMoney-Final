@@ -43,9 +43,11 @@ import {
   type Decisoes,
   type FechoHistorico,
   type OrdemSim,
+  type Parcial,
   type PosicaoSim,
   type Sessoes,
 } from './avaliacao'
+import { alertaDispara, gestaoDaLinha, temGestao, type AlertaPreco } from '../../lib/mtmfunded/simulado/avancadas'
 import { FonteRpc, FonteStreaming, type FontePrecos, type Tick } from './feed'
 import { iniciarEspelho, simbolosDoEspelho } from './espelho-estrategias'
 import { registarErroMetaApi } from './metaapi-partilhada'
@@ -135,6 +137,10 @@ const ultimasMetricas = new Map<string, number>()
 const fechosDe = new Map<string, FechoHistorico[]>()
 const eventoEnviadoEm = new Map<string, number>()
 const pedidos = new Set<string>()
+const ultimoTrailingEm = new Map<string, number>()
+/** Alertas de preço activos (funded_alertas), por símbolo. */
+const alertasPorSimbolo = new Map<string, Array<AlertaPreco & { user_id: string }>>()
+const alertasEmEnvio = new Set<string>()
 const ultimoSecoEm = new Map<string, number>()
 
 const programas = new Map<string, { regras: RegrasConta; saldo: number; fases: number }>()
@@ -213,6 +219,10 @@ function moedaDe(s: Simbolo): string {
 }
 
 // ── contas, posições e ordens ─────────────────────────────────────────────────
+/** Colunas da gestão automática (migração 072) — iguais nas posições e nas ordens. */
+const COLS_GESTAO = 'trailing_distancia, trailing_ativacao, be_gatilho, be_offset, be_no_tp1, tps'
+const COLS_POSICAO = `id, account_id, symbol, direcao, volume, preco_entrada, sl, tp, comissao, swap, origem, ${COLS_GESTAO}, be_feito, volume_inicial`
+const COLS_ORDEM = `id, account_id, symbol, direcao, tipo, volume, preco, sl, tp, origem, expira_em, oco_grupo, ${COLS_GESTAO}`
 const COLUNAS_CONTA =
   'id, user_id, tipo, tournament_id, program_id, saldo_inicial, alavancagem, sim_saldo, sim_equity, sim_margem, ' +
   'sim_ancora_dia, sim_ancora_em, sim_pico_equity, sim_dias_negociados, created_at, fase:metricas->>fase, fase_concluida:metricas->>faseConcluida, analise:metricas->>analise'
@@ -236,7 +246,12 @@ function normalizarPosicao(r: Record<string, unknown>): PosicaoSim {
     volume: Number(r.volume), preco_entrada: Number(r.preco_entrada), sl: r.sl == null ? null : Number(r.sl),
     tp: r.tp == null ? null : Number(r.tp), comissao: Number(r.comissao ?? 0), swap: Number(r.swap ?? 0),
     origem: (r.origem as PosicaoSim['origem']) ?? 'manual',
+    gestao: gestaoOuNull(r),
   }
+}
+function gestaoOuNull(r: Record<string, unknown>) {
+  const g = gestaoDaLinha(r)
+  return temGestao(g) ? g : null
 }
 function normalizarOrdem(r: Record<string, unknown>): OrdemSim {
   return {
@@ -244,6 +259,7 @@ function normalizarOrdem(r: Record<string, unknown>): OrdemSim {
     tipo: r.tipo as 'limit' | 'stop', volume: Number(r.volume), preco: Number(r.preco),
     sl: r.sl == null ? null : Number(r.sl), tp: r.tp == null ? null : Number(r.tp),
     origem: (r.origem as OrdemSim['origem']) ?? 'manual', expira_em: (r.expira_em as string) ?? null,
+    oco_grupo: (r.oco_grupo as string) ?? null, gestao: gestaoOuNull(r),
   }
 }
 
@@ -262,15 +278,15 @@ async function carregarContas(): Promise<void> {
   const novasOrd = new Map<string, OrdemSim[]>()
   if (ids.length) {
     const [{ data: ps, error: e1 }, { data: os, error: e2 }] = await Promise.all([
-      db.from('funded_positions').select('id, account_id, symbol, direcao, volume, preco_entrada, sl, tp, comissao, swap, origem').eq('estado', 'aberta').in('account_id', ids).limit(20000),
-      db.from('funded_orders').select('id, account_id, symbol, direcao, tipo, volume, preco, sl, tp, origem, expira_em').eq('estado', 'pendente').in('account_id', ids).limit(20000),
+      db.from('funded_positions').select(COLS_POSICAO).eq('estado', 'aberta').in('account_id', ids).limit(20000),
+      db.from('funded_orders').select(COLS_ORDEM).eq('estado', 'pendente').in('account_id', ids).limit(20000),
     ])
     if (e1 || e2) throw new Error(`posições/ordens: ${(e1 ?? e2)?.message}`)
-    for (const r of ps ?? []) {
+    for (const r of (ps ?? []) as unknown as Record<string, unknown>[]) {
       const p = normalizarPosicao(r)
       novasPos.set(p.account_id, [...(novasPos.get(p.account_id) ?? []), p])
     }
-    for (const r of os ?? []) {
+    for (const r of (os ?? []) as unknown as Record<string, unknown>[]) {
       const o = normalizarOrdem(r)
       novasOrd.set(o.account_id, [...(novasOrd.get(o.account_id) ?? []), o])
     }
@@ -322,12 +338,12 @@ function reconstruirInteressados(): void {
  */
 async function lerContaConsistente(id: string): Promise<boolean> {
   const chave = (ps: Record<string, unknown>[] | null) =>
-    (ps ?? []).map((p) => `${p.id}:${p.volume}:${p.sl}:${p.tp}`).sort().join('|')
+    (ps ?? []).map((p) => `${p.id}:${p.volume}:${p.sl}:${p.tp}:${JSON.stringify(p.tps ?? null)}`).sort().join('|')
   for (let tentativa = 0; tentativa < 4; tentativa++) {
-    const cols = 'id, account_id, symbol, direcao, volume, preco_entrada, sl, tp, comissao, swap, origem'
+    const cols = COLS_POSICAO
     const { data: a } = await db.from('funded_positions').select(cols).eq('account_id', id).eq('estado', 'aberta')
     const { data: c } = await db.from('mtm_trading_accounts').select(`${COLUNAS_CONTA}, estado`).eq('id', id).maybeSingle()
-    const { data: o } = await db.from('funded_orders').select('id, account_id, symbol, direcao, tipo, volume, preco, sl, tp, origem, expira_em').eq('account_id', id).eq('estado', 'pendente')
+    const { data: o } = await db.from('funded_orders').select(COLS_ORDEM).eq('account_id', id).eq('estado', 'pendente')
     const { data: b } = await db.from('funded_positions').select(cols).eq('account_id', id).eq('estado', 'aberta')
     if (!c || (c as unknown as { estado: string }).estado !== 'ativa') {
       contas.delete(id)
@@ -335,8 +351,8 @@ async function lerContaConsistente(id: string): Promise<boolean> {
     }
     if (chave(a) === chave(b)) {
       contas.set(id, normalizarConta(c as unknown as Record<string, unknown>))
-      posicoesDe.set(id, (b ?? []).map(normalizarPosicao))
-      ordensDe.set(id, (o ?? []).map(normalizarOrdem))
+      posicoesDe.set(id, ((b ?? []) as unknown as Record<string, unknown>[]).map(normalizarPosicao))
+      ordensDe.set(id, ((o ?? []) as unknown as Record<string, unknown>[]).map(normalizarOrdem))
       return true
     }
     await new Promise((r) => setTimeout(r, 300))
@@ -409,6 +425,7 @@ function simbolosDesejados(): Set<string> {
   const canon = new Set<string>(BASE)
   for (const s of interessados.keys()) canon.add(s)
   for (const s of simbolosDoEspelho) canon.add(s)
+  for (const s of alertasPorSimbolo.keys()) canon.add(s)
   for (const s of pedidos) {
     canon.add(s)
     const sm = simbolos.get(s)
@@ -421,6 +438,55 @@ function simbolosDesejados(): Set<string> {
     if (sm) fontes.add(sm.simbolo_fonte)
   }
   return fontes
+}
+
+// ── alertas de preço (funded_alertas, migração 072) ─────────────────────────────
+async function carregarAlertas(): Promise<void> {
+  const { data, error } = await db.from('funded_alertas').select('id, user_id, symbol, condicao, preco').eq('ativo', true).limit(5000)
+  if (error) return // antes da 072 a tabela não existe
+  alertasPorSimbolo.clear()
+  for (const r of data ?? []) {
+    const a = { id: String(r.id), user_id: String(r.user_id), symbol: String(r.symbol), condicao: r.condicao as 'acima' | 'abaixo', preco: Number(r.preco) }
+    alertasPorSimbolo.set(a.symbol, [...(alertasPorSimbolo.get(a.symbol) ?? []), a])
+  }
+}
+
+/**
+ * Um alerta dispara uma vez: marca-se na base com guarda (`ativo = true`) e só quem ganhou a escrita
+ * pede ao site a notificação — dois motores (ou um reinício a meio) não mandam dois avisos.
+ */
+async function verificarAlertas(): Promise<void> {
+  for (const [sym, lista] of alertasPorSimbolo) {
+    const p = precos[sym]
+    if (!p) continue
+    for (const a of lista) {
+      if (alertasEmEnvio.has(a.id) || !alertaDispara(a, p)) continue
+      alertasEmEnvio.add(a.id)
+      try {
+        if (!CFG.escrita) {
+          if (Date.now() - (ultimoSecoEm.get(`alerta:${a.id}`) ?? 0) > 60_000) {
+            ultimoSecoEm.set(`alerta:${a.id}`, Date.now())
+            seco(`alerta ${a.id.slice(0, 8)} ${sym} ${a.condicao} ${a.preco} dispararia @${p.bid}`)
+          }
+          continue
+        }
+        const { data } = await db.from('funded_alertas')
+          .update({ ativo: false, disparado_em: new Date().toISOString(), preco_disparo: p.bid })
+          .eq('id', a.id).eq('ativo', true).select('id')
+        alertasPorSimbolo.set(sym, (alertasPorSimbolo.get(sym) ?? []).filter((x) => x.id !== a.id))
+        if (!data?.length) continue
+        log(`[alerta] ${sym} ${a.condicao} ${a.preco} @${p.bid}`)
+        await fetch(`${CFG.apiBase}/api/mtmfunded/simulado/motor`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-caption-secret': CFG.segredo },
+          body: JSON.stringify({ evento: 'alerta', alertaId: a.id }),
+          signal: AbortSignal.timeout(20_000),
+        }).catch((e) => log('[alerta] aviso ao site falhou:', e instanceof Error ? e.message : e))
+      } finally {
+        alertasEmEnvio.delete(a.id)
+      }
+    }
+  }
 }
 
 // ── regras de cada conta ──────────────────────────────────────────────────────
@@ -490,6 +556,9 @@ async function aplicar(c: ContaLinha, d: Decisoes): Promise<void> {
     for (const id of d.expirar) seco(`${curto} expiraria ordem ${id.slice(0, 8)}`)
     for (const id of d.cancelarSemMargem) seco(`${curto} cancelaria ordem ${id.slice(0, 8)} (sem margem)`)
     for (const x of d.executar) seco(`${curto} executaria ordem ${x.ordemId.slice(0, 8)} ${x.symbol} @${x.preco} comissão ${x.comissao}`)
+    for (const id of d.cancelarOco) seco(`${curto} cancelaria ordem ${id.slice(0, 8)} (OCO)`)
+    for (const x of d.parciais) seco(`${curto} TP${x.indice + 1} parcial ${x.posicaoId.slice(0, 8)} ${x.symbol} ${x.volume} @${x.preco} pnl ${x.pnl}`)
+    for (const m of d.modificar) seco(`${curto} ${m.motivo} ${m.posicaoId.slice(0, 8)} ${m.symbol} SL ${m.slAntes} → ${m.sl}`)
     for (const f of d.fechar) seco(`${curto} fecharia ${f.posicaoId.slice(0, 8)} ${f.symbol} ${f.motivo} @${f.preco} pnl ${f.pnl}`)
     if (fim) seco(`${curto} ${fim}${d.quebra ? ` (${d.quebra.motivo}: ${d.quebra.detalhe})` : ''} → equity ${d.estado.equity}`)
     return
@@ -522,6 +591,38 @@ async function aplicar(c: ContaLinha, d: Decisoes): Promise<void> {
       log(`[${curto}] pendente executada ${x.symbol} @${x.preco}`)
     }
   }
+  // OCO: a base já cancelou a irmã dentro de funded_executar_pendente; aqui só se tira da memória.
+  const parciaisFeitos = new Map<string, { volume: number; tps: Parcial['tps'] }>()
+  for (const x of d.parciais) {
+    const { data, error } = await db.rpc('funded_fechar_parcial', {
+      p_mae: x.posicaoId, p_volume: x.volume, p_preco: x.preco, p_pnl: x.pnl, p_tick: tickJson(x.symbol),
+      p_motivo: 'tp_parcial', p_tps: x.tps,
+    })
+    if (error) log(`[${curto}] TP${x.indice + 1} parcial ${x.posicaoId.slice(0, 8)} falhou:`, error.message)
+    else if (data) {
+      const antes = parciaisFeitos.get(x.posicaoId)
+      parciaisFeitos.set(x.posicaoId, { volume: (antes?.volume ?? 0) + x.volume, tps: x.tps })
+      log(`[${curto}] TP${x.indice + 1} parcial ${x.symbol} ${x.volume} @${x.preco} pnl ${x.pnl}`)
+    }
+  }
+  const slMovidos = new Map<string, { sl: number | null; beFeito: boolean }>()
+  for (const m of d.modificar) {
+    // O trailing pode querer mexer a cada tick: no máximo 1 escrita por segundo por posição (o BE passa sempre).
+    if (m.motivo === 'trailing' && Date.now() - (ultimoTrailingEm.get(m.posicaoId) ?? 0) < 1000) continue
+    const patch: Record<string, unknown> = { be_feito: m.beFeito }
+    if (m.sl != null && m.sl !== m.slAntes) patch.sl = m.sl
+    // Guarda optimista: se o aluno mexeu no SL entretanto, a mão dele ganha e o motor reavalia no tick seguinte.
+    let q = db.from('funded_positions').update(patch).eq('id', m.posicaoId).eq('estado', 'aberta')
+    q = m.slAntes == null ? q.is('sl', null) : q.eq('sl', m.slAntes)
+    const { data, error } = await q.select('id')
+    if (error) log(`[${curto}] ${m.motivo} ${m.posicaoId.slice(0, 8)} falhou:`, error.message)
+    else if (data?.length) {
+      if (m.motivo === 'trailing') ultimoTrailingEm.set(m.posicaoId, Date.now())
+      slMovidos.set(m.posicaoId, { sl: patch.sl == null ? m.slAntes : m.sl, beFeito: m.beFeito })
+      if (patch.sl != null) log(`[${curto}] ${m.motivo} ${m.symbol} SL ${m.slAntes} → ${m.sl}`)
+    }
+  }
+
   for (const f of d.fechar) {
     const id = idReal.get(f.posicaoId) ?? f.posicaoId
     if (id.startsWith('ordem:')) continue // a pendente não chegou a abrir
@@ -531,12 +632,24 @@ async function aplicar(c: ContaLinha, d: Decisoes): Promise<void> {
   }
 
   escritaLocalEm.set(c.id, Date.now())
-  const houve = d.expirar.length + d.cancelarSemMargem.length + d.executar.length + d.fechar.length
+  const houve = d.expirar.length + d.cancelarSemMargem.length + d.executar.length + d.fechar.length + parciaisFeitos.size + slMovidos.size
   if (houve) {
     // A memória passa a ser a verdade até à próxima leitura começada DEPOIS disto.
     const fechadas = new Set(d.fechar.map((f) => idReal.get(f.posicaoId) ?? f.posicaoId))
-    const saem = new Set([...d.expirar, ...d.cancelarSemMargem, ...d.cancelarPorFim, ...d.executar.map((x) => x.ordemId)])
-    posicoesDe.set(c.id, (posicoesDe.get(c.id) ?? []).filter((p) => !fechadas.has(p.id)))
+    const saem = new Set([...d.expirar, ...d.cancelarSemMargem, ...d.cancelarPorFim, ...d.cancelarOco, ...d.executar.map((x) => x.ordemId)])
+    posicoesDe.set(c.id, (posicoesDe.get(c.id) ?? []).filter((p) => !fechadas.has(p.id)).map((p) => {
+      // Parciais e SL movidos entram já na memória: o tick seguinte (250 ms) não pode repeti-los.
+      const parte = parciaisFeitos.get(p.id)
+      const sl = slMovidos.get(p.id)
+      if (!parte && !sl) return p
+      const volume = parte ? Math.round((p.volume - parte.volume) * 100) / 100 : p.volume
+      return {
+        ...p, volume,
+        comissao: parte ? arred(p.comissao * (volume / p.volume)) : p.comissao,
+        sl: sl ? sl.sl : p.sl,
+        gestao: p.gestao ? { ...p.gestao, tps: parte ? parte.tps : p.gestao.tps, be_feito: sl ? sl.beFeito : p.gestao.be_feito } : p.gestao,
+      }
+    }))
     ordensDe.set(c.id, (ordensDe.get(c.id) ?? []).filter((o) => !saem.has(o.id)))
     c.sim_saldo = d.estado.saldo
     if (d.executar.length) {
@@ -681,7 +794,7 @@ async function processarConta(id: string, confirmado = false): Promise<void> {
     lucroPorDia: lucroPorDiaDe(fechosDe.get(id) ?? []),
   })
 
-  const haAccao = d.expirar.length || d.cancelarSemMargem.length || d.executar.length || d.fechar.length || d.quebra || d.objetivo
+  const haAccao = d.expirar.length || d.cancelarSemMargem.length || d.executar.length || d.fechar.length || d.parciais.length || d.modificar.length || d.quebra || d.objetivo
   if (haAccao && !CFG.escrita && Date.now() - (ultimoSecoEm.get(id) ?? 0) < 60_000) return
   if (haAccao && d.precisaConfirmacao && !confirmado) {
     // Decisão de fim (stop-out, quebra, passagem): só com uma fotografia consistente, e com os
@@ -826,7 +939,10 @@ async function main(): Promise<void> {
         marcarSuja: (id) => { escritaLocalEm.set(id, 0); sujas.add(id) },
       })
 
+  await carregarAlertas()
   repetir('avaliar', 250, cicloDeAvaliacao)
+  repetir('alertas', 5000, carregarAlertas)
+  repetir('alertas-precos', 500, verificarAlertas)
   repetir('contas', 1000, carregarContas)
   repetir('precos', 1000, escreverPrecos)
   repetir('pedidos', 5000, carregarPedidos)

@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
   if (!autorizado(request)) return NextResponse.json({ error: 'não autorizado' }, { status: 401 })
 
   const corpo = (await request.json().catch(() => null)) as {
+    alertaId?: string
     evento?: string
     accountId?: string
     motivo?: string
@@ -51,6 +52,8 @@ export async function POST(request: NextRequest) {
   } | null
   const evento = corpo?.evento
   const accountId = corpo?.accountId
+  // Alerta de preço disparado (072): o motor já o marcou como disparado; aqui só se avisa o dono.
+  if (evento === 'alerta') return avisarAlerta(String((corpo as { alertaId?: string }).alertaId ?? ''))
   if ((evento !== 'quebrou' && evento !== 'objetivo') || !accountId) {
     return NextResponse.json({ error: 'evento ou conta em falta' }, { status: 400 })
   }
@@ -104,4 +107,38 @@ export async function POST(request: NextRequest) {
     await db.from('mtm_trading_accounts').update({ metricas: m }).eq('id', accountId)
   }
   return NextResponse.json({ ok: r.ok, codigo: r.codigo, proximaFase: r.proximaFase ?? null, erro: r.erro })
+}
+
+/**
+ * Push + notificação na app de um alerta de preço do WebTrader. Não precisa de marca própria de
+ * idempotência: o motor só chama isto depois de GANHAR a escrita que desactiva o alerta
+ * (update … where ativo = true), por isso cada alerta chega cá uma vez.
+ */
+async function avisarAlerta(alertaId: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(alertaId)) return NextResponse.json({ error: 'alerta inválido' }, { status: 400 })
+  const db = getSupabaseAdmin()
+  const { data: a } = await db.from('funded_alertas')
+    .select('id, user_id, account_id, symbol, condicao, preco, nota, preco_disparo').eq('id', alertaId).maybeSingle()
+  if (!a) return NextResponse.json({ ok: true, ignorado: 'alerta não existe' })
+  const origem = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').trim().replace(/\/+$/, '')
+  const url = `/webtrader?symbol=${encodeURIComponent(String(a.symbol))}`
+  const titulo = `🔔 ${a.symbol} ${a.condicao === 'acima' ? 'subiu a' : 'desceu a'} ${Number(a.preco)}`
+  try {
+    await fetch(`${origem}/api/notifications/send-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userIds: [a.user_id],
+        title: titulo,
+        body: a.nota ? String(a.nota) : 'Alerta de preço do WebTrader MTM Funded (conta simulada educativa).',
+        url,
+        data: { type: 'funded_alerta', alerta_id: String(a.id), symbol: String(a.symbol), url },
+        tag: `funded_alerta_${a.id}`,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    })
+  } catch (e) {
+    console.error('[funded/motor] push do alerta falhou', (e as Error).message)
+  }
+  return NextResponse.json({ ok: true })
 }
