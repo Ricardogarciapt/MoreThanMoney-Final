@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { tipoCurto, estadoCurto, COR_DO_ESTADO } from '@/lib/mtmfunded/etiquetas'
 import ContaModal from './mtmfunded-conta-modal'
 import {
@@ -425,14 +425,86 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
   const [aberta, setAberta] = useState<string | null>(null)
   const fecharModal = useCallback(() => setAberta(null), [])
 
+  // Filtros (tudo no browser: a lista já vem inteira, até 1000 contas).
+  const [busca, setBusca] = useState('')
+  const [fTipo, setFTipo] = useState('')
+  const [fEstado, setFEstado] = useState('')
+  const [fMotor, setFMotor] = useState('')
+  const [fResultado, setFResultado] = useState('')
+  const saldoEPct = (c: Record<string, unknown>) => {
+    const m = (c.metricas ?? {}) as Record<string, unknown>
+    const inicial = Number(c.saldo_inicial ?? 0)
+    const bruto = c.motor === 'sim' ? c.sim_saldo : (m.balance ?? m.saldo ?? m.equity)
+    const saldo = bruto == null || bruto === '' ? null : Number(bruto)
+    const pct = saldo != null && Number.isFinite(saldo) && inicial > 0 ? ((saldo - inicial) / inicial) * 100 : null
+    return { saldo, pct }
+  }
+  const visiveis = useMemo(() => {
+    const q = busca.trim().toLowerCase()
+    return linhas.filter((c) => {
+      const dono = c.dono as { nome?: string; email?: string; username?: string | null } | null
+      const metricas = c.metricas as Record<string, unknown> | null
+      if (q) {
+        const texto = [dono?.nome, dono?.email, dono?.username, c.mt5_login, c.servidor, c.id].map((v) => String(v ?? '').toLowerCase()).join(' ')
+        if (!texto.includes(q)) return false
+      }
+      if (fTipo && tipoCurto(c.tipo as string, metricas) !== fTipo) return false
+      if (fEstado && estadoCurto(c.estado as string, metricas) !== fEstado) return false
+      if (fMotor && (fMotor === 'sim' ? c.motor !== 'sim' : c.motor === 'sim')) return false
+      if (fResultado) {
+        const { pct } = saldoEPct(c)
+        if (pct == null) return false
+        if (fResultado === 'positivo' && !(pct > 0)) return false
+        if (fResultado === 'negativo' && !(pct < 0)) return false
+      }
+      return true
+    })
+  }, [linhas, busca, fTipo, fEstado, fMotor, fResultado])
+  const opcoes = (valores: string[]) => [...new Set(valores)].filter(Boolean).sort()
+  const tipos = opcoes(linhas.map((c) => tipoCurto(c.tipo as string, c.metricas as Record<string, unknown> | null)))
+  const estados = opcoes(linhas.map((c) => estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)))
+
   if (aCarregar) return <Loader2 className="h-4 w-4 animate-spin text-[#D2A63C]" />
 
+  const seletor = 'rounded-lg border border-white/10 bg-black/40 px-2 py-1.5 text-xs text-gray-200 focus:border-[#D2A63C]/60 focus:outline-none'
   return (
     <>
     {aberta && <ContaModal contaId={aberta} aoFechar={fecharModal} aoMudar={puxar} />}
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      <input
+        value={busca}
+        onChange={(e) => setBusca(e.target.value)}
+        placeholder="Pesquisar nome, username, email, login ou servidor…"
+        className={`${seletor} min-w-[260px] flex-1`}
+        aria-label="Pesquisar contas"
+      />
+      <select value={fTipo} onChange={(e) => setFTipo(e.target.value)} className={seletor} aria-label="Tipo de conta">
+        <option value="">Todos os tipos</option>
+        {tipos.map((t) => <option key={t} value={t}>{t}</option>)}
+      </select>
+      <select value={fEstado} onChange={(e) => setFEstado(e.target.value)} className={seletor} aria-label="Estado">
+        <option value="">Todos os estados</option>
+        {estados.map((t) => <option key={t} value={t}>{t}</option>)}
+      </select>
+      <select value={fMotor} onChange={(e) => setFMotor(e.target.value)} className={seletor} aria-label="Servidor">
+        <option value="">MTM e MT5</option>
+        <option value="sim">Só MTM Funded (simuladas)</option>
+        <option value="mt5">Só MT5</option>
+      </select>
+      <select value={fResultado} onChange={(e) => setFResultado(e.target.value)} className={seletor} aria-label="Resultado">
+        <option value="">Qualquer resultado</option>
+        <option value="positivo">Em lucro (%)</option>
+        <option value="negativo">Em perda (%)</option>
+      </select>
+      <span className="text-xs text-gray-500">{visiveis.length} de {linhas.length}</span>
+      {(busca || fTipo || fEstado || fMotor || fResultado) && (
+        <button type="button" onClick={() => { setBusca(''); setFTipo(''); setFEstado(''); setFMotor(''); setFResultado('') }}
+          className="text-xs text-[#D2A63C] hover:underline">Limpar</button>
+      )}
+    </div>
     <Tabela cabecalhos={['Dono', 'Tipo', 'Login', 'Servidor', 'Saldo', 'Estado', 'Acções']}>
-      {linhas.map((c) => {
-        const dono = c.dono as { nome: string; email: string } | null
+      {visiveis.map((c) => {
+        const dono = c.dono as { nome: string; email: string; username?: string | null } | null
         const pedido = c.pedido as { estado: string; erro?: string; tentativas: number } | null
         const id = c.id as string
         return (
@@ -447,7 +519,7 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
           >
             <td className="px-3 py-2">
               <p className="text-gray-200">{dono?.nome ?? '—'}</p>
-              <p className="font-mono text-xs text-gray-600">{dono?.email ?? ''}</p>
+              <p className="font-mono text-xs text-gray-600">{dono?.username ? `@${dono.username} · ` : ''}{dono?.email ?? ''}</p>
             </td>
             <td className="px-3 py-2 text-xs text-gray-300">
               {tipoCurto(c.tipo as string, c.metricas as Record<string, unknown> | null)}
