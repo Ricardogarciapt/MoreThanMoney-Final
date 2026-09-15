@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { recebeT2T, t2tDesligadoNaConta } from '@/lib/mtmcopy/alvo-t2t'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { entradaT2T } from '@/lib/mtmcopy/t2t-entry'
 import { parseSignal, type ParsedSignal } from '@/lib/mtmcopy/signal-parser'
@@ -256,7 +257,8 @@ export async function POST(request: NextRequest) {
     const d = destinoDeExecucao(c)
     return d === 'metaapi' || d === 'tradelocker'
   })
-  const t2tTargets = withAccount.filter((c) => c.purpose === 'tap_to_trade' || c.t2t_enabled === true)
+  // Regra única (lib/mtmcopy/alvo-t2t): t2t_enabled=false numa conta dedicada = desligada nesta conta.
+  const t2tTargets = withAccount.filter((c) => recebeT2T(c))
 
   // Contas SIMULADAS MTM Funded com «aceita Tap to Trade» (migração 070): abrem a ideia ao lado
   // das reais. Um utilizador só com simuladas também pode aceitar — daí contarem para os guardas
@@ -275,7 +277,8 @@ export async function POST(request: NextRequest) {
   }
   // Retrocompat (conta única): sem nenhuma conta marcada como T2T → a 1ª conta MT5 ativa.
   if (!targets.length) {
-    const fallback = withAccount.find((c) => c.is_active !== false)
+    // Uma conta com o T2T desligado explicitamente (ex.: TradeLocker ligada no WebTrader) nunca é o recurso.
+    const fallback = withAccount.find((c) => c.is_active !== false && !t2tDesligadoNaConta(c))
     if (fallback) targets = [fallback]
   }
   if (!targets.length && !temSimuladas) {

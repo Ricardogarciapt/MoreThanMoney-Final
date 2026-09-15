@@ -59,7 +59,9 @@ export async function entrarTradeLocker(userId: string, corpo: Record<string, un
     const r = await ligarOuReutilizarTradeLocker({
       lerLigadas: async () => (await db.from('mtmcopy_connections').select('id, mt5_platform, mt5_status, tl_account_id, tl_env, tl_server')
         .eq('user_id', userId).eq('mt5_platform', 'tradelocker').neq('mt5_status', 'disconnected')).data ?? [],
-      ligar: () => ligarContaTradeLocker(userId, cred, accountId, { purpose: 'tap_to_trade', account_label: 'WebTrader' }),
+      // Ligada AQUI = para negociar à mão: T2T desligado (sem ordens automáticas dos sinais) até a
+      // pessoa o ligar no ligador de contas ou no T2T. Uma conta que já existia não se toca.
+      ligar: () => ligarContaTradeLocker(userId, cred, accountId, { purpose: 'tap_to_trade', account_label: 'WebTrader', t2t_enabled: false }),
     }, { accountId, env: cred.env, server: cred.server })
     if (!r.ok) throw new ErroCorretora(r.status, r.erro)
     return { ref: r.ref, sessao: null, ligada: r.ligada }

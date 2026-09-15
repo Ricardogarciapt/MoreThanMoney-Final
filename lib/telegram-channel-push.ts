@@ -1,4 +1,5 @@
 import { getSiteOrigin } from '@/lib/site-url'
+import { recebeT2T } from '@/lib/mtmcopy/alvo-t2t'
 import type { AppChatChannelSlug } from '@/lib/telegram-app-channels'
 import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
 import { isT2TEntrySignal, t2tMode, matchesT2TPrefs, isManagementFollowup } from '@/lib/mtmcopy/t2t-source'
@@ -50,7 +51,7 @@ async function activeT2TUserIds(channelSlug: string, content: string | null): Pr
       t2t_sources?: string[] | null; t2t_asset_classes?: string[] | null
     }
     if (!row.user_id) continue
-    if (row.purpose !== 'tap_to_trade' && row.t2t_enabled !== true) continue
+    if (!recebeT2T(row)) continue
     // Uma conta que siga este sinal chega para notificar o dono — não se exige que TODAS sigam.
     if (!matchesT2TPrefs(channelSlug, content, { sources: row.t2t_sources, assetClasses: row.t2t_asset_classes })) continue
     users.add(row.user_id)

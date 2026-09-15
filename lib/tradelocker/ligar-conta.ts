@@ -123,6 +123,9 @@ export async function ligarContaTradeLocker(
     if (v !== undefined) payload[k] = v
   }
   for (const k of ['copy_sl', 'copy_tp', 'reverse_signals'] as const) if (typeof body[k] === 'boolean') payload[k] = body[k]
+  // T2T desligado à partida (ligada no WebTrader para negociar à mão): ver lib/mtmcopy/alvo-t2t.
+  // O ligador não manda a bandeira — as contas dele continuam como sempre.
+  if (typeof body.t2t_enabled === 'boolean') payload.t2t_enabled = body.t2t_enabled
   if (purpose === 'tap_to_trade' && payload.lot_mode === undefined) {
     payload.lot_mode = 'risk_percent'
     payload.lot_value = payload.lot_value ?? 1
