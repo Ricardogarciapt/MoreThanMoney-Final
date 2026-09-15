@@ -14,7 +14,10 @@ export interface MTMcopierConnection {
   mt5_login_last4: string | null
   mt5_login?: string | null
   /** 'tradelocker' = conta TradeLocker (sem MetaApi) — ver lib/tradelocker e migração 069. */
-  mt5_platform?: 'mt4' | 'mt5' | 'tradelocker' | null
+  /** 'mtmfunded' = conta simulada MTM Funded (074): executa só o motor simulado. */
+  mt5_platform?: 'mt4' | 'mt5' | 'tradelocker' | 'mtmfunded' | null
+  funded_account_id?: string | null
+  funded_somente_leitura?: boolean | null
   tl_server?: string | null
   tl_env?: 'live' | 'demo' | null
   tl_account_id?: string | null

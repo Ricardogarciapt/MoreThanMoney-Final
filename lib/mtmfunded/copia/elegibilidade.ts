@@ -107,7 +107,7 @@ export async function destinosDoUtilizador(userId: string): Promise<Destino[]> {
   const db = getSupabaseAdmin()
   const [{ data: copy }, { data: auto }] = await Promise.all([
     db.from('mtmcopy_connections')
-      .select('id, metaapi_account_id, mt5_login, mt5_server, mt5_status, account_label, is_active, copyfactory_subscribed, t2t_enabled, purpose, copy_as_manual, prop_firm_type')
+      .select('id, metaapi_account_id, mt5_login, mt5_server, mt5_status, mt5_platform, account_label, is_active, copyfactory_subscribed, t2t_enabled, purpose, copy_as_manual, prop_firm_type')
       .eq('user_id', userId),
     db.from('mtmauto_accounts')
       .select('id, metaapi_account_id, login, servidor, corretora, estado, rotulo, nome_exibicao, copia_ativa, demo, sem_comentario, prop_firm')
@@ -117,6 +117,8 @@ export async function destinosDoUtilizador(userId: string): Promise<Destino[]> {
   ])
   const out: Destino[] = []
   for (const c of copy ?? []) {
+    // Ligação MTM Funded (074) não é destino de cópia — mesma regra das mtmauto_accounts acima.
+    if (String(c.mt5_platform ?? '').toLowerCase() === 'mtmfunded') continue
     out.push({
       tipo: 'mtmcopy', id: String(c.id), metaapiAccountId: (c.metaapi_account_id as string) || null,
       rotulo: String(c.account_label || `MTM Copy ${c.mt5_login ?? ''}`).trim(),

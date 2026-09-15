@@ -752,6 +752,8 @@ async function processManagementUpdate(
   }
 
   for (const conn of subscribers) {
+    // MTM Funded (074): nunca pela MetaApi/TradeLocker — a gestão é do motor simulado.
+    if (conn.mt5_platform === 'mtmfunded') continue
     if (conn.mt5_platform === 'tradelocker') {
       if (prefersDirectExecution(conn) && conn.is_active) {
         const { gestaoSubscritorTradeLocker } = await import('@/lib/tradelocker/mtmcopy-branch')
@@ -1726,6 +1728,9 @@ async function processSignalDirect(
     })
     return
   }
+
+  // MTM Funded (074): nunca executa por aqui (sem MetaApi/TradeLocker) — só o motor simulado.
+  if (conn.mt5_platform === 'mtmfunded') return
 
   // Conta TradeLocker: execução própria (sem MetaApi). O caminho MT5 abaixo fica intocado.
   if (conn.mt5_platform === 'tradelocker') {

@@ -57,6 +57,11 @@ export async function runProvisionJob(input: RunProvisionJobInput): Promise<MTMc
     normalizedGroups,
   } = input
 
+  // Segunda tranca: uma ligação MTM Funded nunca é provisionada na MetaApi/CopyFactory.
+  if (String((connection as { mt5_platform?: string | null }).mt5_platform ?? '').toLowerCase() === 'mtmfunded') {
+    throw new Error('ligação MTM Funded não se provisiona na MetaApi')
+  }
+
   const userLabel = `MTMcopier · ${label}`
 
   const { data: freshConnections } = await supabaseAdmin

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ehMtmFundedLigacao } from '@/lib/mtmcopy/destino-execucao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { carregarDireitos, pareceDemo, podeLigarConta, type ContaLigada } from '@/lib/entitlements'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
@@ -125,7 +126,8 @@ export async function POST(request: NextRequest) {
       .neq('plataforma', 'mtmfunded'),
   ])
   const ligadas: ContaLigada[] = [
-    ...(doSite ?? []).map((c) => ({
+    // Contas MTM Funded ligadas pelo cliente (074) não ocupam vagas.
+    ...(doSite ?? []).filter((c) => !ehMtmFundedLigacao(c)).map((c) => ({
       superficie: c.purpose === 'tap_to_trade' || c.t2t_enabled === true ? ('t2t' as const) : ('mtmcopy' as const),
       demo: ligacaoEhDemo(c, pareceDemo),
     })),

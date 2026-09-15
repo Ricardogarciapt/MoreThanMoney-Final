@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ehMtmFundedLigacao } from '@/lib/mtmcopy/destino-execucao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCopyFactoryEnabled, isMtmTelegramStrategyConfigured } from '@/lib/mtmcopy/copyfactory'
 import { isMetaApiConfigured } from '@/lib/mtmcopy/metaapi'
@@ -162,7 +163,8 @@ export async function POST(request: NextRequest) {
   ])
 
   const ligadas: ContaLigada[] = [
-    ...(doSite ?? []).map((c) => ({
+    // Contas MTM Funded ligadas pelo cliente (074) não ocupam vagas.
+    ...(doSite ?? []).filter((c) => !ehMtmFundedLigacao(c)).map((c) => ({
       superficie:
         c.purpose === 'tap_to_trade' || c.t2t_enabled === true ? ('t2t' as const) : ('mtmcopy' as const),
       // Contas TradeLocker contam pelo ambiente escolhido (lib/tradelocker/ligacao).
@@ -399,6 +401,10 @@ export async function PUT(request: NextRequest) {
 
   if (existing.mt5_status === 'disconnected') {
     return NextResponse.json({ error: 'Conta desligada — cria uma nova ligação' }, { status: 400 })
+  }
+  // MTM Funded / TradeLocker não se religam pela MetaApi.
+  if (ehMtmFundedLigacao(existing) || existing.mt5_platform === 'tradelocker') {
+    return NextResponse.json({ error: 'Esta conta não se religa por password MT5 — remove-a e liga-a de novo.' }, { status: 400 })
   }
 
   const conn = existing as MTMcopierConnection

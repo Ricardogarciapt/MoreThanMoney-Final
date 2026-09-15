@@ -109,7 +109,7 @@ export async function criarContasDeEstrategia(p: {
 
         // 2. a conta no MTM Auto
         const rotulo = `MTM Funded · ${nome}`
-        let { data: auto } = await db.from('mtmauto_accounts').select('id').eq('funded_account_id', accountId).maybeSingle()
+        let { data: auto } = await db.from('mtmauto_accounts').select('id').eq('user_id', userId).eq('funded_account_id', accountId).maybeSingle()
         if (!auto) {
           const { data: a, error } = await db.from('mtmauto_accounts').insert({
             user_id: userId, funded_account_id: accountId, plataforma: 'mtmfunded',

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ehMtmFundedLigacao } from '@/lib/mtmcopy/destino-execucao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { parseSignal } from '@/lib/mtmcopy/signal-parser'
 import { isT2TEntrySignal, matchesT2TPrefs } from '@/lib/mtmcopy/t2t-source'
@@ -29,10 +30,12 @@ export async function GET(request: NextRequest) {
   // 1) Conta + prefs de "o que seguir" do utilizador
   const { data: conns } = await supabase
     .from('mtmcopy_connections')
-    .select('id, account_label, metaapi_account_id, is_active, purpose, mt5_status, t2t_sources, t2t_asset_classes, t2t_enabled')
+    .select('id, account_label, metaapi_account_id, is_active, purpose, mt5_status, t2t_sources, t2t_asset_classes, t2t_enabled, mt5_platform')
     .eq('user_id', user.id)
     .neq('mt5_status', 'disconnected')
-  const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id)
+  // Conta MTM Funded ligada (não só-leitura: essas nascem com t2t_enabled=false) também dá feed.
+  const withAccount = (conns ?? []).filter((c) =>
+    ehMtmFundedLigacao(c) ? c.t2t_enabled === true && c.mt5_status === 'connected' : Boolean(c.metaapi_account_id))
   // Contas T2T (fan-out): dedicadas (purpose) + marcadas (t2t_enabled). Retrocompat: 1ª ligada.
   let t2tAccounts = withAccount.filter((c) => c.purpose === 'tap_to_trade' || c.t2t_enabled === true)
   if (!t2tAccounts.length && withAccount[0]) t2tAccounts = [withAccount[0]]
