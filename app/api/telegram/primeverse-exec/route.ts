@@ -6,6 +6,7 @@ import { getSiteOrigin } from '@/lib/site-url'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { handlePrimeverseCancelClose } from '@/lib/mtmcopy/primeverse-lifecycle'
+import { encaminharPrimeverseParaEstrategia, type KindPrimeverse } from '@/lib/mtmfunded/estrategias-sinais/executar'
 
 /** Classe de ativo → chat existente da app (reutilizados). */
 function chatForSymbol(s: string): string | null {
@@ -102,8 +103,15 @@ interface Body {
    *  thread no chat + apaga/fecha as ordens T2T dos seguidores desse setup.
    *  Default 'entry_hit' (retrocompat). Os setups do kingfkg são níveis pendentes: entrar a mercado
    *  neles fica com o preço longe do Entry → SL enorme. Por isso só se executa no ENTRY HIT. */
-  kind?: 'setup' | 'entry_hit' | 'cancel' | 'close'
+  kind?: 'setup' | 'entry_hit' | 'cancel' | 'close' | 'tp_hit' | 'sl_be' | 'sl_hit'
+  /** id da mensagem do SETUP no canal (relay com PV_FOLLOWUPS) — chave exacta das estratégias MTM Auto Edge/King/Wolf */
+  setup_msg_id?: number | string
+  /** tp_hit: nível · sl_be: preço do BE */
+  level?: number
+  price?: number
 }
+
+const KINDS = new Set(['setup', 'entry_hit', 'cancel', 'close', 'tp_hit', 'sl_be', 'sl_hit'])
 
 const ALLOWED = new Set(['XAUUSD', 'BTCUSD'])
 
@@ -117,8 +125,11 @@ export async function POST(req: NextRequest) {
   const symbol = (b.symbol || '').toString().trim().toUpperCase()
   const dir = (b.direction || '').toString().trim().toLowerCase()
   const direction: 'buy' | 'sell' = dir === 'sell' ? 'sell' : 'buy'
-  const kind: 'setup' | 'entry_hit' | 'cancel' | 'close' =
-    b.kind === 'setup' ? 'setup' : b.kind === 'cancel' ? 'cancel' : b.kind === 'close' ? 'close' : 'entry_hit'
+  // Sem kind = entry_hit (retrocompat). Um kind DESCONHECIDO nunca vira execução.
+  if (b.kind != null && !KINDS.has(String(b.kind))) {
+    return NextResponse.json({ ok: true, skipped: 'kind_desconhecido', kind: b.kind })
+  }
+  const kind = (b.kind ?? 'entry_hit') as KindPrimeverse
   // No ENTRY HIT o preço está NO Entry → entra a MERCADO (nunca limit longe do preço). No setup nunca
   // se executa, por isso o orderType do setup é irrelevante.
   const orderType: 'market' | 'limit' = kind === 'entry_hit' ? 'market' : ((b.orderType || '').toLowerCase() === 'limit' ? 'limit' : 'market')
@@ -135,6 +146,20 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // MTM Auto Edge / King / Wolf (092): o sinal do trader filtrado abre nas contas MTM Funded da
+  // estratégia (mestre da casa + seguidoras). Independente do resto desta rota e nunca a parte.
+  const estrategia = trader && symbol
+    ? await encaminharPrimeverseParaEstrategia({
+        kind, trader, symbol, direction, entry, sl, tps,
+        setupMsgId: b.setup_msg_id ?? null,
+      }).catch((e) => ({ skipped: `erro: ${e instanceof Error ? e.message : String(e)}` }))
+    : null
+
+  // Seguimentos novos (relay com PV_FOLLOWUPS): só interessam às estratégias acima.
+  if (kind === 'tp_hit' || kind === 'sl_be' || kind === 'sl_hit') {
+    return NextResponse.json({ ok: true, kind, estrategia })
+  }
+
   const cfg = await getPrimeverseExecConfig()
   // Sem conta de execução (a antiga foi apagada na MetaApi): não executa.
   if (!cfg.accountId) cfg.mode = 'off'
@@ -145,7 +170,7 @@ export async function POST(req: NextRequest) {
   const chatSlug = chatForSymbol(symbol)
   if (kind === 'setup') {
     if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null, trader, timeframe, entry, tps)
-    return NextResponse.json({ ok: true, routed: chatSlug, kind, exec: 'aguarda_entry_hit' })
+    return NextResponse.json({ ok: true, routed: chatSlug, kind, exec: 'aguarda_entry_hit', estrategia })
   }
 
   // ── kind === 'cancel' | 'close' ── o trader cancelou a ordem pendente ou fechou a posição →
@@ -153,7 +178,7 @@ export async function POST(req: NextRequest) {
   if (kind === 'cancel' || kind === 'close') {
     if (!chatSlug) return NextResponse.json({ ok: true, routed: null, kind, exec: 'sem_chat' })
     const r = await handlePrimeverseCancelClose({ kind, chatSlug, symbol, direction })
-    return NextResponse.json({ ok: true, routed: chatSlug, kind, ...r })
+    return NextResponse.json({ ok: true, routed: chatSlug, kind, ...r, estrategia })
   }
 
   // ── kind === 'entry_hit' ── o preço chegou ao Entry → ativa a ordem (limit/stop) do sistema PrimeVerse.
@@ -171,7 +196,7 @@ export async function POST(req: NextRequest) {
   }
 
   // EXECUÇÃO: só o(s) trader(s) escolhido(s) (cfg.traders) — os outros ficam só no chat.
-  if (!cfg.traders.includes(trader)) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_trader', trader })
+  if (!cfg.traders.includes(trader)) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_trader', trader, estrategia })
 
   // EXECUÇÃO: só XAUUSD/BTCUSD (a conta Sensei só trada esses), gated pelo modo.
   if (!ALLOWED.has(symbol)) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_symbol' })
@@ -194,7 +219,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ---- live ----
-  const out: Record<string, unknown> = { mode: 'live', symbol, trader }
+  const out: Record<string, unknown> = { mode: 'live', symbol, trader, estrategia }
 
   // 1) Sensei (MT5 / mADd)
   try {

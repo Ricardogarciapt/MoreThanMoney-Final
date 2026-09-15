@@ -66,7 +66,7 @@ export async function contasFundedNaEquidade(): Promise<ContaNaEquidade[]> {
 
   const { data: contas } = await db
     .from('mtm_trading_accounts')
-    .select('mt5_login, tipo, provider_slug, saldo_inicial, metaapi_account_id, metricas')
+    .select('mt5_login, tipo, provider_slug, saldo_inicial, metaapi_account_id, metricas, motor, sim_equity, sim_saldo')
     .in('tipo', ['financiada', 'provider'])
     .eq('estado', 'ativa')
 
@@ -83,7 +83,12 @@ export async function contasFundedNaEquidade(): Promise<ContaNaEquidade[]> {
      * MetaApi em vez de com o dinheiro.
      */
     let nominal = Number(c.saldo_inicial ?? 0)
-    if (c.metaapi_account_id && token) {
+    // Conta simulada (motor do VPS): a equity ao vivo está na própria linha, sem MetaApi.
+    if (c.motor === 'sim') {
+      const eq = Number(c.sim_equity ?? c.sim_saldo)
+      if (Number.isFinite(eq) && eq > 0) nominal = eq
+    }
+    if (c.motor !== 'sim' && c.metaapi_account_id && token) {
       try {
         // Cache de 45 s (só ecrãs/relatórios): o painel de desempenho abre-se muitas vezes seguidas e
         // cada abertura relia todas as contas na MetaApi.

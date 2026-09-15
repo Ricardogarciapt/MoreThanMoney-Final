@@ -361,6 +361,8 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
           .select('id')
         if (!ganhou?.length) continue
         await abrirNaContaEspelho(l, price)
+        // Conta MTM Funded «Todos os sinais» (092): mesmo sinal, 0,01, fonte no comentário. Nunca lança.
+        await import('@/lib/mtmfunded/estrategias-sinais/todos-os-sinais').then((m) => m.abrirNaContaTodosOsSinais(l)).catch(() => undefined)
         await anunciar(l, 'entry_hit', { price })
         eventos.push(`entrada ${l.symbol} ${l.channel_slug}`)
         continue

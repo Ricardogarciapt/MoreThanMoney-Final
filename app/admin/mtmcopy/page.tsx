@@ -16,6 +16,7 @@ import MtmcopyFontesVivas from "@/components/admin/mtmcopy-fontes-vivas"
 import MtmcopyGlobalPerformance from "@/components/admin/mtmcopy-global-performance"
 import { TrailingEstrategias } from "@/components/admin/trailing-estrategias"
 import { EstrategiasDesempenho } from "@/components/admin/estrategias-desempenho"
+import { EquidadeCasaCard } from "@/components/admin/equidade-casa-card"
 import {
   MtmcopyAdminSection,
   MtmcopyAdminTabNav,
@@ -170,7 +171,7 @@ function PaginaAdminCopia() {
                       <MtmcopyFontesVivas />
                     </Recolhivel>
                     <Recolhivel titulo="Controlo das estratégias" descricao="On/off por estratégia, modos PrimeVerse/Forex Swings, limites dos perps, trailing e desempenho.">
-                      <div className="space-y-6"><MtmcopyStrategyControl /><EstrategiasDesempenho /><TrailingEstrategias /></div>
+                      <div className="space-y-6"><MtmcopyStrategyControl /><EstrategiasDesempenho /><EquidadeCasaCard /><TrailingEstrategias /></div>
                     </Recolhivel>
                     <Recolhivel titulo="Saúde das ligações (regras de risco)" descricao="Multiplicador sem risco, T2T com grupos, sem baseline, MT5 em erro.">
                       <MtmcopySubscriberHealth />

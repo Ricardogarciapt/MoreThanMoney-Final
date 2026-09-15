@@ -192,6 +192,8 @@ export async function closeFollowersByMessage(
 ): Promise<{ followers: number; cancelled: number; closed: number }> {
   const supabase = getSupabaseAdmin()
   let followers = 0, cancelled = 0, closed = 0
+  // Conta MTM Funded «Todos os sinais» (092): a fonte fechou à mão → fecha a posição desse sinal lá. Nunca lança.
+  await import('@/lib/mtmfunded/estrategias-sinais/todos-os-sinais').then((m) => m.fecharTodosOsSinaisDaMensagem(chatMessageId, pendingOnly)).catch(() => undefined)
   const { data: logs } = await supabase
     .from('mtmcopy_signal_log')
     .select('id, connection_id')
