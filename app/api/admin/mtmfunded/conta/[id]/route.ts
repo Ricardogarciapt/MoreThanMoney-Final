@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdminAccess } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
-  decisaoDeAcesso, validarPedido, barrasDeRegras, paraCsv, fotografia, ACCOES_DE_DINHEIRO,
+  decisaoDeAcesso, validarPedido, paraCsv, fotografia, ACCOES_DE_DINHEIRO,
 } from '@/lib/mtmfunded/admin-conta'
 import { ErroAdmin, executarAccao, contarAbertas } from '@/lib/mtmfunded/admin-conta-accoes'
 import { tipoCurto, estadoCurto } from '@/lib/mtmfunded/etiquetas'
@@ -92,22 +92,10 @@ export async function GET(request: NextRequest, { params }: Ctx) {
 
   // ── métricas (as mesmas contas do separador Estatísticas do WebTrader) ─────
   if (vista === 'metricas') {
-    const { estatisticasDaConta } = await import('@/lib/mtmfunded/simulado/estatisticas')
-    const [{ data: fechadas }, { data: abertas }, { data: fotos }] = await Promise.all([
-      db.from('funded_positions')
-        .select('id, mae_id, symbol, direcao, volume, pnl, comissao, swap, aberta_em, fechada_em, origem, comentario, motivo_fecho, risco_inicial')
-        .eq('account_id', id).eq('estado', 'fechada').order('fechada_em', { ascending: true }).limit(10000),
-      db.from('funded_positions').select('id').eq('account_id', id).eq('estado', 'aberta'),
-      db.from('funded_equity_snapshots').select('em, saldo, equity').eq('account_id', id).order('em', { ascending: false }).limit(2000),
-    ])
-    const est = estatisticasDaConta({
-      saldoInicial: Number(conta.saldo_inicial ?? 0),
-      equity: Number(conta.sim_equity ?? conta.sim_saldo ?? conta.saldo_inicial ?? 0),
-      fechadas: (fechadas ?? []) as never,
-      abertasIds: new Set((abertas ?? []).map((a) => String(a.id))),
-      snapshots: ((fotos ?? []) as never[]).reverse(),
-    })
-    return NextResponse.json({ ...est, curva: reduzir(est.curva, 500), moeda: 'USD' }, semCache)
+    // A MESMA função da rota do WebTrader (lib/mtmfunded/numeros-conta.ts) — antes eram duas cópias.
+    const { estatisticasDaContaServidor, reduzirCurva, PONTOS_CURVA } = await import('@/lib/mtmfunded/numeros-conta')
+    const est = await estatisticasDaContaServidor(db, conta as never)
+    return NextResponse.json({ ...est, curva: reduzirCurva(est.curva, PONTOS_CURVA), moeda: 'USD' }, semCache)
   }
 
   // ── histórico (filtros + CSV) ─────────────────────────────────────────────
@@ -150,8 +138,8 @@ export async function GET(request: NextRequest, { params }: Ctx) {
       conta.motor === 'sim' ? contarAbertas(db, id) : Promise.resolve(null),
     ])
     const jaPago = (pedidos ?? []).filter((x) => ['pago', 'aprovado'].includes(String(x.estado))).reduce((t, x) => t + Number(x.valor_usd ?? 0), 0)
-    const m = (conta.metricas ?? {}) as Record<string, unknown>
-    const equity = conta.motor === 'sim' && conta.sim_saldo != null ? Number(conta.sim_saldo) : typeof m.equity === 'number' ? m.equity : Number(conta.saldo_inicial ?? 0)
+    const { equityParaLevantamento } = await import('@/lib/mtmfunded/numeros-conta')
+    const equity = equityParaLevantamento(conta as never)
     return NextResponse.json({
       pedidos: pedidos ?? [],
       regras: {
@@ -189,8 +177,11 @@ export async function GET(request: NextRequest, { params }: Ctx) {
   ])
   const m = (conta.metricas ?? {}) as Record<string, unknown>
   const regras = ((programa.data as { regras?: unknown } | null)?.regras ?? (torneio.data as { regras?: unknown } | null)?.regras ?? null) as Record<string, unknown> | null
-  const equity = conta.motor === 'sim' ? Number(conta.sim_equity ?? conta.sim_saldo ?? 0) : Number(m.equity ?? conta.saldo_inicial ?? 0)
-  const analise = m.analise === true || m.analise === 'true'
+  // Os números e as barras pela fonte única — as mesmas funções que o WebTrader do dono usa.
+  const { numerosDaConta, barrasDaConta } = await import('@/lib/mtmfunded/numeros-conta')
+  const num = numerosDaConta(conta as never)
+  const equity = num.equity
+  const analise = num.analise
   const limpar = (linhas: Array<Record<string, unknown>> | null) =>
     (linhas ?? []).map((l) => Object.fromEntries(Object.entries(l).filter(([k]) => !/password|token|secret|cifrad/i.test(k))))
 
@@ -209,22 +200,16 @@ export async function GET(request: NextRequest, { params }: Ctx) {
     torneio: torneio.data,
     regras,
     financeiro: {
-      saldo: conta.motor === 'sim' ? Number(conta.sim_saldo ?? 0) : Number(m.saldo ?? conta.saldo_inicial ?? 0),
+      saldo: num.saldo,
       equity,
-      margem: conta.motor === 'sim' ? Number(conta.sim_margem ?? 0) : Number(m.margemUsada ?? 0),
-      flutuante: Math.round((equity - (conta.motor === 'sim' ? Number(conta.sim_saldo ?? 0) : Number(m.saldo ?? equity))) * 100) / 100,
+      margem: num.margem,
+      flutuante: num.flutuante,
+      resultadoPct: num.resultadoPct,
       picoEquity: conta.sim_pico_equity ?? m.picoEquity ?? null,
-      ancoraDia: conta.sim_ancora_dia ?? m.saldoReferenciaDia ?? null,
+      ancoraDia: num.ancoraDia,
       atualizadoEm: conta.metricas_lidas_em ?? null,
     },
-    barras: barrasDeRegras({
-      regras, saldoInicial: Number(conta.saldo_inicial ?? 0), equity,
-      ancoraDia: conta.sim_ancora_dia == null ? (m.saldoReferenciaDia == null ? null : Number(m.saldoReferenciaDia)) : Number(conta.sim_ancora_dia),
-      diasNegociados: Number(conta.sim_dias_negociados ?? m.diasNegociados ?? 0),
-      fase: Number(m.fase ?? 1),
-      lucroPorDia: (m.lucroPorDia ?? null) as Record<string, number> | null,
-      analise,
-    }),
+    barras: barrasDaConta(num, regras),
     contagem,
     destinos: { mtmAuto: limpar(auto.data as never), t2t: limpar(t2t.data as never) },
     estrategias: providers.data ?? [],
@@ -311,17 +296,4 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     { ...resposta, dinheiro: ACCOES_DE_DINHEIRO.has(pedido.accao) || undefined },
     { status, headers: { 'Cache-Control': 'no-store' } },
   )
-}
-
-/** Reduz a curva por baldes, guardando em cada balde o ponto de maior drawdown. */
-function reduzir<T extends { ddPct: number }>(pts: T[], max: number): T[] {
-  if (pts.length <= max) return pts
-  const balde = Math.ceil(pts.length / max)
-  const out: T[] = [pts[0]]
-  for (let i = 1; i < pts.length - 1; i += balde) {
-    const fatia = pts.slice(i, Math.min(i + balde, pts.length - 1))
-    out.push(fatia.reduce((acc, p) => (p.ddPct < acc.ddPct ? p : acc), fatia[0]))
-  }
-  out.push(pts[pts.length - 1])
-  return out
 }

@@ -133,5 +133,11 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
     await registarUsoDoCupao(String(meta.cupao), userId).catch(() => undefined)
   }
 
+  // Conta simulada: credenciais por email (login + link seguro, nunca a password) — lib/mtmfunded/credenciais-servico.ts
+  if (motor === 'sim') {
+    const { enviarCredenciaisDaConta } = await import('./credenciais-servico')
+    await enviarCredenciaisDaConta(conta.id, 'criacao')
+  }
+
   console.log(`✅ [MTMFUNDED] ${programa.nome} pago por ${email} — conta ${conta.id} ${motor === 'sim' ? 'simulada, activa' : 'na fila'}`)
 }

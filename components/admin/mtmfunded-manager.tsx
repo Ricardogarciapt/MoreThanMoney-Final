@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { tipoCurto, estadoCurto, COR_DO_ESTADO } from '@/lib/mtmfunded/etiquetas'
 import ContaModal from './mtmfunded-conta-modal'
+import ContasDoUtilizador, { type NumerosLinha } from './contas-do-utilizador'
 import {
   Loader2, Power, Trophy, Users, Wallet, AlertTriangle, Award,
   Shield, RefreshCw, Mail, KeyRound, Ban, Check, Package, Plus, Banknote, ExternalLink,
@@ -431,13 +432,14 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
   const [fEstado, setFEstado] = useState('')
   const [fMotor, setFMotor] = useState('')
   const [fResultado, setFResultado] = useState('')
+  const [fGrupo, setFGrupo] = useState('')
+  const [donoAberto, setDonoAberto] = useState<{ id: string; nome: string } | null>(null)
+  // Os números vêm prontos do servidor (lib/mtmfunded/numeros-conta.ts) — os mesmos do WebTrader do
+  // dono: saldo, equity, % sobre a equity e o estado com a pausa do admin. Nada se recalcula aqui.
+  const num = (c: Record<string, unknown>) => (c.numeros ?? null) as NumerosLinha | null
   const saldoEPct = (c: Record<string, unknown>) => {
-    const m = (c.metricas ?? {}) as Record<string, unknown>
-    const inicial = Number(c.saldo_inicial ?? 0)
-    const bruto = c.motor === 'sim' ? c.sim_saldo : (m.balance ?? m.saldo ?? m.equity)
-    const saldo = bruto == null || bruto === '' ? null : Number(bruto)
-    const pct = saldo != null && Number.isFinite(saldo) && inicial > 0 ? ((saldo - inicial) / inicial) * 100 : null
-    return { saldo, pct }
+    const x = num(c)
+    return { saldo: x?.saldo ?? null, equity: x?.equity ?? null, pct: x?.resultadoPct ?? null }
   }
   const visiveis = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -449,7 +451,10 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
         if (!texto.includes(q)) return false
       }
       if (fTipo && tipoCurto(c.tipo as string, metricas) !== fTipo) return false
-      if (fEstado && estadoCurto(c.estado as string, metricas) !== fEstado) return false
+      if (fEstado && (num(c)?.estadoCurto ?? estadoCurto(c.estado as string, metricas)) !== fEstado) return false
+      if (fGrupo === 'casa' && !num(c)?.contaCasa) return false
+      if (fGrupo === 'segue' && !num(c)?.segueEstrategia) return false
+      if (fGrupo === 'clientes' && (num(c)?.contaCasa || num(c)?.segueEstrategia)) return false
       if (fMotor && (fMotor === 'sim' ? c.motor !== 'sim' : c.motor === 'sim')) return false
       if (fResultado) {
         const { pct } = saldoEPct(c)
@@ -459,10 +464,10 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
       }
       return true
     })
-  }, [linhas, busca, fTipo, fEstado, fMotor, fResultado])
+  }, [linhas, busca, fTipo, fEstado, fMotor, fResultado, fGrupo]) // eslint-disable-line react-hooks/exhaustive-deps
   const opcoes = (valores: string[]) => [...new Set(valores)].filter(Boolean).sort()
   const tipos = opcoes(linhas.map((c) => tipoCurto(c.tipo as string, c.metricas as Record<string, unknown> | null)))
-  const estados = opcoes(linhas.map((c) => estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)))
+  const estados = opcoes(linhas.map((c) => num(c)?.estadoCurto ?? estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)))
 
   if (aCarregar) return <Loader2 className="h-4 w-4 animate-spin text-[#D2A63C]" />
 
@@ -470,6 +475,7 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
   return (
     <>
     {aberta && <ContaModal contaId={aberta} aoFechar={fecharModal} aoMudar={puxar} />}
+    {donoAberto && <ContasDoUtilizador userId={donoAberto.id} nome={donoAberto.nome} aoFechar={() => setDonoAberto(null)} aoAbrirConta={(id) => { setDonoAberto(null); setAberta(id) }} />}
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <input
         value={busca}
@@ -491,14 +497,20 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
         <option value="sim">Só MTM Funded (simuladas)</option>
         <option value="mt5">Só MT5</option>
       </select>
+      <select value={fGrupo} onChange={(e) => setFGrupo(e.target.value)} className={seletor} aria-label="Grupo de contas">
+        <option value="">Todas as contas</option>
+        <option value="clientes">Clientes (sem casa nem estratégia)</option>
+        <option value="segue">Seguem uma estratégia</option>
+        <option value="casa">Contas da casa</option>
+      </select>
       <select value={fResultado} onChange={(e) => setFResultado(e.target.value)} className={seletor} aria-label="Resultado">
         <option value="">Qualquer resultado</option>
         <option value="positivo">Em lucro (%)</option>
         <option value="negativo">Em perda (%)</option>
       </select>
       <span className="text-xs text-gray-500">{visiveis.length} de {linhas.length}</span>
-      {(busca || fTipo || fEstado || fMotor || fResultado) && (
-        <button type="button" onClick={() => { setBusca(''); setFTipo(''); setFEstado(''); setFMotor(''); setFResultado('') }}
+      {(busca || fTipo || fEstado || fMotor || fResultado || fGrupo) && (
+        <button type="button" onClick={() => { setBusca(''); setFTipo(''); setFEstado(''); setFMotor(''); setFResultado(''); setFGrupo('') }}
           className="text-xs text-[#D2A63C] hover:underline">Limpar</button>
       )}
     </div>
@@ -531,17 +543,15 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
             <td className="px-3 py-2 text-xs text-gray-500">{(c.servidor as string) ?? '—'}</td>
             <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">
               {(() => {
-                // Saldo fechado (sem flutuante): simuladas pelo sim_saldo, MT5 pelas métricas lidas.
-                const m = (c.metricas ?? {}) as Record<string, unknown>
-                const inicial = Number(c.saldo_inicial ?? 0)
-                const bruto = c.motor === 'sim' ? c.sim_saldo : (m.balance ?? m.saldo ?? m.equity)
-                const saldo = bruto == null || bruto === '' ? null : Number(bruto)
-                if (saldo == null || !Number.isFinite(saldo)) return <span className="text-gray-600">—</span>
-                const pct = inicial > 0 ? ((saldo - inicial) / inicial) * 100 : null
+                // Saldo e equity pela fonte única; % sobre a equity (o «Retorno» que o dono vê no WebTrader).
+                const { saldo, equity, pct } = saldoEPct(c)
+                if (saldo == null) return <span className="text-gray-600">—</span>
                 const cor = pct == null || Math.abs(pct) < 0.005 ? 'text-gray-400' : pct > 0 ? 'text-emerald-400' : 'text-red-400'
+                const f = (v: number) => v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                 return (
                   <>
-                    <p className="text-gray-200">{saldo.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $</p>
+                    <p className="text-gray-200">{f(saldo)} $</p>
+                    {equity != null && Math.abs(equity - saldo) >= 0.01 && <p className="text-gray-500">eq {f(equity)}</p>}
                     {pct != null && <p className={cor}>{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</p>}
                   </>
                 )
@@ -551,18 +561,26 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
               <span
                 className="rounded px-1.5 py-0.5 text-[11px] font-semibold"
                 style={{
-                  color: COR_DO_ESTADO[estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)],
-                  background: `${COR_DO_ESTADO[estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)]}1f`,
+                  color: COR_DO_ESTADO[num(c)?.estadoCurto ?? estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)],
+                  background: `${COR_DO_ESTADO[num(c)?.estadoCurto ?? estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)]}1f`,
                 }}
                 title={c.estado as string}
               >
-                {estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)}
+                {num(c)?.estadoCurto ?? estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)}
               </span>
+              {num(c)?.contaCasa && <span className="ml-1 rounded bg-sky-500/15 px-1 text-[10px] text-sky-300">casa</span>}
+              {num(c)?.segueEstrategia && <p className="mt-1 text-[10.5px] text-[#D2A63C]">segue {num(c)?.segueEstrategia}</p>}
               {pedido?.erro && <p className="mt-1 max-w-[220px] truncate text-[11px] text-red-400" title={pedido.erro}>{pedido.erro}</p>}
               {Boolean(c.quebrou_regra) && <p className="mt-1 text-[11px] text-red-400">{c.quebrou_regra as string}</p>}
             </td>
             <td className="px-3 py-2">
               <div className="flex flex-wrap gap-1">
+                {Boolean(c.user_id) && (
+                  <IconeBotao titulo="Todas as contas deste utilizador (MTM Funded, MT5/MT4, TradeLocker)" ocupado={false}
+                    onClick={() => setDonoAberto({ id: String(c.user_id), nome: (c.dono as { nome?: string } | null)?.nome ?? '—' })}>
+                    <Users className="h-3 w-3" />
+                  </IconeBotao>
+                )}
                 {!c.mt5_login && (
                   <IconeBotao titulo="Voltar a pedir a criação" ocupado={ocupado === `n${id}`}
                     onClick={() => accao({ accao: 'conta_repetir', contaId: id }, `n${id}`).then(puxar)}>
@@ -594,7 +612,7 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
           </tr>
         )
       })}
-      {!linhas.length && <tr><td colSpan={6} className="px-3 py-6 text-center text-sm text-gray-500">Sem contas.</td></tr>}
+      {!visiveis.length && <tr><td colSpan={7} className="px-3 py-6 text-center text-sm text-gray-500">Sem contas.</td></tr>}
     </Tabela>
     </>
   )

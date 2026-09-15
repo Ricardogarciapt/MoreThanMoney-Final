@@ -206,7 +206,7 @@ function Conteudo({ t }: { t: Trader }) {
         </Folha>
       )}
       {folha === "conta" && (
-        <Folha titulo="Conta" onFechar={() => setFolha(null)}>
+        <Folha titulo="A minha conta" onFechar={() => setFolha(null)}>
           <div className="mb-2 flex items-center gap-2 px-1 text-[11.5px]"><span className="text-zinc-500">Sentimento {s.symbol}</span><Sentimento symbol={s.symbol} /></div>
           <PainelConta t={t} />
         </Folha>

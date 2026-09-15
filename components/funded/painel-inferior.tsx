@@ -28,7 +28,7 @@ export default function PainelInferior({ t, denso = true }: { t: Trader; denso?:
   const ativos = (t.alertas.alertas ?? []).filter((a) => a.ativo).length
   const separadores: Array<[Separador, string, typeof Wallet, number?]> = [
     ["posicoes", "Posições", Wallet, d.posicoes.length], ["ordens", "Ordens", ListOrdered, d.ordens.length], ["historico", "Histórico", History],
-    ["estatisticas", "Estatísticas", BarChart3], ["diario", "Diário", BookOpen], ["alertas", "Alertas", Bell, ativos], ["conta", "Conta", User],
+    ["estatisticas", "Estatísticas", BarChart3], ["diario", "Diário", BookOpen], ["alertas", "Alertas", Bell, ativos], ["conta", "A minha conta", User],
   ]
   const lista = (vista: "posicoes" | "ordens" | "historico") => (
     <ListaPosicoes

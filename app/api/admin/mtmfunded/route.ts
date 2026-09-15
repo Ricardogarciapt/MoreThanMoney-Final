@@ -61,11 +61,24 @@ export async function GET(request: NextRequest) {
 
   // ── contas ───────────────────────────────────────────────────────────────
   if (vista === 'contas') {
-    const { data } = await db
-      .from('mtm_trading_accounts')
-      .select('id, user_id, tipo, tournament_id, mt5_login, servidor, saldo_inicial, sim_saldo, alavancagem, estado, quebrou_regra, quebrada_em, metricas, metricas_lidas_em, metaapi_account_id, motor, created_at')
-      .order('created_at', { ascending: false })
-      .limit(1000)
+    // Os números de cada conta pela fonte única (lib/mtmfunded/numeros-conta.ts) — os mesmos do
+    // WebTrader do dono: saldo, equity, % e o estado com a pausa do admin. `?userId=` → só as dele.
+    const { selecionarComOpcionais, numerosDaConta } = await import('@/lib/mtmfunded/numeros-conta')
+    const soUser = request.nextUrl.searchParams.get('userId')
+    const { data: brutas } = await selecionarComOpcionais<Record<string, unknown>>(
+      'id, user_id, tipo, tournament_id, program_id, mt5_login, servidor, saldo_inicial, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_dias_negociados, alavancagem, estado, quebrou_regra, quebrada_em, metricas, metricas_lidas_em, metaapi_account_id, motor, segue_estrategia, aceita_t2t, created_at',
+      (cols) => {
+        let q = db.from('mtm_trading_accounts').select(cols).order('created_at', { ascending: false }).limit(1000)
+        if (soUser && /^[0-9a-f-]{36}$/i.test(soUser)) q = q.eq('user_id', soUser)
+        return q as never
+      },
+    )
+    // O histórico das métricas (mt5) é grande e a lista não o usa.
+    const data = brutas.map((c) => {
+      const m = (c.metricas ?? null) as Record<string, unknown> | null
+      const { historico: _h, ...leves } = m ?? {}
+      return { ...c, metricas: m ? leves : null, numeros: numerosDaConta(c as never) } as Record<string, unknown>
+    })
 
     const uids = [...new Set((data ?? []).map((c) => c.user_id).filter(Boolean))] as string[]
     const nomes = new Map<string, { nome: string; email: string; username: string | null }>()
@@ -82,7 +95,7 @@ export async function GET(request: NextRequest) {
       .in('estado', ['em_fila', 'reclamado', 'erro'])
 
     return NextResponse.json({
-      contas: (data ?? []).map((c) => ({
+      contas: data.map((c) => ({
         ...c,
         dono: c.user_id ? nomes.get(c.user_id as string) ?? null : null,
         // A password NUNCA sai daqui. O admin vê que ela existe, não qual é: um painel que
@@ -189,6 +202,41 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       contratos: (data ?? []).map((c) => ({ ...c, email: pessoas.get(c.user_id as string) ?? '—' })),
     })
+  }
+
+  // ── todas as contas de UM utilizador (dados do admin = o que o dono vê) ────
+  //
+  // MTM Funded (clientes, seguidoras de estratégia e da casa) pelos números da fonte única, com o
+  // diário e as trades de cada uma; e as contas LIGADAS (MT5/MT4 MetaApi, TradeLocker, MTM Auto)
+  // pela MESMA função de «As minhas contas» (lib/contas/ligador.ts). Leituras por `user_id` e por
+  // `account_id` (indexadas), só quando o admin abre — nada disto é sondado.
+  if (vista === 'contas_utilizador') {
+    const userId = request.nextUrl.searchParams.get('userId') ?? ''
+    if (!/^[0-9a-f-]{36}$/i.test(userId)) return NextResponse.json({ error: 'userId inválido' }, { status: 400 })
+    const { selecionarComOpcionais, numerosDaConta } = await import('@/lib/mtmfunded/numeros-conta')
+    const { listarContasUnificadas } = await import('@/lib/contas/ligador')
+    const [perfil, funded, ligadas] = await Promise.all([
+      db.from('profiles').select('id, full_name, email, username, user_type').eq('id', userId).maybeSingle(),
+      selecionarComOpcionais<Record<string, unknown>>(
+        'id, user_id, tipo, estado, motor, mt5_login, servidor, program_id, tournament_id, saldo_inicial, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_dias_negociados, metricas, segue_estrategia, aceita_t2t, created_at',
+        (cols) => db.from('mtm_trading_accounts').select(cols).eq('user_id', userId).order('created_at', { ascending: false }).limit(100) as never,
+      ),
+      listarContasUnificadas(userId).catch((e) => { console.error('[admin/mtmfunded] contas ligadas', e instanceof Error ? e.message : e); return null }),
+    ])
+    const contas = await Promise.all(funded.data.map(async (c) => {
+      const id = String(c.id)
+      const [diario, trades] = c.motor === 'sim'
+        ? await Promise.all([
+          db.from('funded_diario').select('id', { count: 'exact', head: true }).eq('account_id', id),
+          db.from('funded_positions').select('id', { count: 'exact', head: true }).eq('account_id', id).eq('estado', 'fechada').is('mae_id', null),
+        ])
+        : [{ count: null }, { count: null }]
+      return {
+        id, login: c.mt5_login ?? null, servidor: c.servidor ?? null, motor: c.motor, tipo: c.tipo, estado: c.estado,
+        numeros: numerosDaConta(c as never), entradasDiario: diario.count ?? null, tradesFechadas: trades.count ?? null,
+      }
+    }))
+    return NextResponse.json({ perfil: perfil.data ?? null, funded: contas, ligadas, erroLigadas: ligadas == null }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
   // ── pessoas (para escolher a quem se emite) ──────────────────────────────
@@ -350,7 +398,13 @@ export async function POST(request: NextRequest) {
     const avisos: Record<string, unknown> = {}
     if (b?.notificar === true) {
       const { avisarContasDeEstrategia } = await import('@/lib/mtmfunded/aviso-contas-estrategia')
-      for (const r of resultados) if (!r.erro) avisos[r.userId] = await avisarContasDeEstrategia(r, saldo)
+      const { enviarCredenciaisDaConta } = await import('@/lib/mtmfunded/credenciais-servico')
+      for (const r of resultados) {
+        if (r.erro) continue
+        avisos[r.userId] = await avisarContasDeEstrategia(r, saldo)
+        // Contas acabadas de nascer: as credenciais (login + link seguro) vão uma a uma.
+        for (const c of r.contas) if (c.nova) await enviarCredenciaisDaConta(c.accountId, 'criacao')
+      }
     }
     return NextResponse.json({ ok: true, resultados: resultados.map((r) => ({ ...r, aviso: avisos[r.userId] ?? null })) })
   }
@@ -473,6 +527,14 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
     if (!conta?.mt5_login) return NextResponse.json({ error: 'conta ainda sem credenciais' }, { status: 409 })
 
+    // Conta simulada: o email novo — login, servidor e link seguro de uso único; nunca a password.
+    const { data: motorDaLinha } = await db.from('mtm_trading_accounts').select('motor').eq('id', id).maybeSingle()
+    if (motorDaLinha?.motor === 'sim') {
+      const { enviarCredenciaisDaConta } = await import('@/lib/mtmfunded/credenciais-servico')
+      const r = await enviarCredenciaisDaConta(id, 'reenvio', { incluirCasa: true })
+      return NextResponse.json({ ok: r.enviado, error: r.enviado ? undefined : `o email não saiu (${r.motivo})` })
+    }
+
     const { data: perfil } = conta.user_id
       ? await db.from('profiles').select('full_name, email').eq('id', conta.user_id).maybeSingle()
       : { data: null }
@@ -487,7 +549,8 @@ export async function POST(request: NextRequest) {
     const r = await enviarEmailDaConta({
       para: perfil.email as string,
       nome: (perfil.full_name as string) || 'Participante',
-      tipo: conta.tipo === 'torneio' ? 'torneio' : 'desafio',
+      // Uma Funded reenviada como «desafio» dizia ao trader que ainda tinha uma prova pela frente.
+      tipo: conta.tipo === 'torneio' ? 'torneio' : conta.tipo === 'financiada' || conta.tipo === 'funded' ? 'financiada' : 'desafio',
       nomeProva: (torneio?.nome as string) || 'MTM Funded',
       login: conta.mt5_login as string,
       servidor: (conta.servidor as string) || 'TheTradingMaster-Live',

@@ -222,6 +222,12 @@ export async function ofertarDesafioDaRenovacao(
     }).catch(() => undefined)
   }
 
+  // Conta simulada: credenciais por email (login + link seguro, nunca a password) — lib/mtmfunded/credenciais-servico.ts
+  if (motor === 'sim') {
+    const { enviarCredenciaisDaConta } = await import('./credenciais-servico')
+    await enviarCredenciaisDaConta(conta.id, 'criacao')
+  }
+
   return { ok: true, accountId: conta.id, programa: programa.slug as string }
 }
 
