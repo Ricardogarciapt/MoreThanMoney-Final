@@ -1,17 +1,15 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
 import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2 } from "lucide-react"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
 import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, usd, COR_ESTADO } from "./api"
-import FundedTrader from "./funded-trader"
 import InstalarWebtrader from "./instalar-webtrader"
+import { preaquecerWebtrader } from "./pre-carga"
 import { InterruptorModo, useModoWebtrader } from "./modo-webtrader"
 import type { Prefill } from "./funded-ticket"
-import CorretoraTrader from "@/components/webtrader/corretora-trader"
-import EntrarCredenciais from "@/components/webtrader/entrar-credenciais"
-import EntrarWebtrader from "@/components/webtrader/entrar-webtrader"
 import {
   type ContaReal, COR_PLATAFORMA, apagarSessaoTL, ehRefReal, listarContasReais, lerSessoesTL, plataformaDaRef,
 } from "@/components/webtrader/api-corretoras"
@@ -44,6 +42,20 @@ import type { PlataformaWT } from "@/lib/webtrader/corretoras/tipos"
  * pré-preenche o ticket — nunca envia sozinho: o trader escolhe a conta e confirma.
  */
 
+/**
+ * Código dividido (2026-09): o trader MTM Funded, o das contas reais e os ecrãs de entrada são
+ * pedaços à parte — quem só vê o login não descarrega o gráfico, e quem negoceia não descarrega o
+ * login. Os pedaços do trader começam a descarregar logo no primeiro render (ver `useEffect` abaixo),
+ * em paralelo com as contas, por isso dividir não acrescenta espera.
+ */
+const carregarFundedTrader = () => import("./funded-trader")
+const carregarCorretoraTrader = () => import("@/components/webtrader/corretora-trader")
+const Girar = () => <div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" /></div>
+const FundedTrader = dynamic(carregarFundedTrader, { ssr: false, loading: Girar })
+const CorretoraTrader = dynamic(carregarCorretoraTrader, { ssr: false, loading: Girar })
+const EntrarCredenciais = dynamic(() => import("@/components/webtrader/entrar-credenciais"), { ssr: false, loading: Girar })
+const EntrarWebtrader = dynamic(() => import("@/components/webtrader/entrar-webtrader"), { ssr: false, loading: Girar })
+
 const SERVIDOR = "MTM Funded"
 const CHAVE_ULTIMA = "mtmfunded_ultima_conta"
 
@@ -71,24 +83,32 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     // Sem token no cliente não há sessão MTM — nem se pergunta ao servidor (e uma base em baixo não
     // transforma «sem sessão» em «sem contas»).
     let sessaoMtm = Boolean(await getAccessToken().catch(() => null))
-    if (sessaoMtm) {
-      setErro(null)
-      try {
-        const d = await pedir<{ contas: ContaResumo[] }>("/api/mtmfunded/simulado/contas")
-        lista = d.contas ?? []
-      } catch (e) {
-        if ((e as { status?: number }).status === 401) sessaoMtm = false
-        else setErro((e as Error).message)
-      }
+    if (sessaoMtm || Object.keys(ss).length) {
+      // Há onde negociar: o código do trader e o que é público do símbolo arrancam JÁ, ao lado das contas.
+      void carregarFundedTrader()
+      // Com deep link, a pré-carga já saiu com o símbolo do link (efeito abaixo) — não se pede o ouro à toa.
+      let temSimbolo = false
+      try { temSimbolo = Boolean(new URLSearchParams(window.location.search).get("symbol")) } catch { /* ok */ }
+      if (!temSimbolo) preaquecerWebtrader(null)
     }
     // Contas reais: as do ligador + as abertas no WebTrader (MT5) + sessões TradeLocker deste separador.
     let listaReais: ContaReal[] = []
     if (sessaoMtm) {
-      try {
-        const r = await listarContasReais()
-        listaReais = r.contas
-        setCompraPermitida(r.compraPermitida)
-      } catch { /* sem contas reais não se perde o MTM Funded */ }
+      setErro(null)
+      // As duas listas em PARALELO (antes era uma depois da outra). `leve=1`: só as contas — a rota
+      // deixava de ler o catálogo inteiro e a tabela de preços, que o seletor nunca usou.
+      const [funded, reaisR] = await Promise.allSettled([
+        pedir<{ contas: ContaResumo[] }>("/api/mtmfunded/simulado/contas?leve=1"),
+        listarContasReais(),
+      ])
+      if (funded.status === "fulfilled") lista = funded.value.contas ?? []
+      else if ((funded.reason as { status?: number }).status === 401) sessaoMtm = false
+      else setErro((funded.reason as Error).message)
+      // Sem contas reais não se perde o MTM Funded.
+      if (sessaoMtm && reaisR.status === "fulfilled") {
+        listaReais = reaisR.value.contas
+        setCompraPermitida(reaisR.value.compraPermitida)
+      }
     }
     // Sessões TradeLocker antigas deste separador (o WebTrader passou a ligar pelo ligador de contas).
     // Só com sessão MTM: o servidor exige o dono também nestas.
@@ -99,6 +119,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     let ultima: string | null = null
     try { ultima = localStorage.getItem(CHAVE_ULTIMA) } catch { /* ok */ }
     const entradas = montarSeletor({ funded: lista, sessoesFunded: ss, reais: listaReais })
+    const inicial = contaInicial(entradas, null, ultima)
+    if (inicial && ehRefReal(inicial)) void carregarCorretoraTrader()
     setAtiva((a) => contaInicial(entradas, a, ultima))
   }, [])
 
@@ -128,11 +150,18 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     const s = sp.get("symbol")
     return s ? candidatosDeTicker(s).join(",") : null
   }, [sp])
+  // Deep link (scanner/ideia): a ficha, o primeiro preço e as velas do símbolo do link pedem-se no
+  // PRIMEIRO render, antes de se saber quem é a pessoa — são públicos e é o que o ecrã vai mostrar.
+  useEffect(() => {
+    if (!simboloInicial) return
+    preaquecerWebtrader(simboloInicial)
+    void carregarFundedTrader()
+  }, [simboloInicial])
 
   const todas = useMemo(() => montarSeletor({ funded: contas, sessoesFunded: sessoes, reais: reais as ContaReal[] }), [contas, sessoes, reais])
   const atual = todas.find((t) => t.id === ativa)
 
-  if (contas == null) return <div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" /></div>
+  if (contas == null) return <Girar />
 
   const semContas = todas.length === 0
   // Sem conta MTM e sem nada aberto neste separador → ecrã de entrada do WebTrader.

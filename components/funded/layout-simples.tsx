@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { ChevronDown, Loader2, Minus, Plus, X } from "lucide-react"
 import { normalizarVolume } from "@/lib/mtmfunded/simulado/matematica"
@@ -7,15 +8,15 @@ import { px, usd } from "./api"
 import FundedTicket from "./funded-ticket"
 import FundedWatchlist from "./funded-watchlist"
 import ListaPosicoes from "./lista-posicoes"
-import FundedEstatisticas from "./funded-estatisticas"
 import FundedAlertas from "./funded-alertas"
 import FundedDiario from "./funded-diario"
 import PainelConta from "./painel-conta"
-import CalendarioEconomico from "./calendario-economico"
 import { EstadoMercado, Sentimento } from "./estado-mercado"
 import { useRascunho } from "./rascunho-ordem"
 import { useUmClique } from "./um-clique"
 import { AplicarPrefill, AvisosConta, FaixaPrefill, GraficoConta, ProvedorRascunho, type Trader } from "./trader-contexto"
+const CalendarioEconomico = dynamic(() => import("./calendario-economico"), { ssr: false })
+const FundedEstatisticas = dynamic(() => import("./funded-estatisticas"), { ssr: false })
 
 /**
  * O MODO SIMPLE — telemóvel primeiro, sem ruído.

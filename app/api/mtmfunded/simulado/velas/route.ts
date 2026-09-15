@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { MAX_VELAS, TF_METAAPI, obterVelas } from '@/lib/mtmfunded/simulado/velas'
+import { JANELA_RECENTE, MAX_VELAS, TF_METAAPI, obterVelas } from '@/lib/mtmfunded/simulado/velas'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,5 +32,13 @@ export async function GET(request: NextRequest) {
   const ateNum = Number(sp.get('ate'))
   const ate = Number.isFinite(ateNum) && ateNum > 946684800 ? Math.floor(ateNum / 60) * 60 : null
   const corpo = await obterVelas(symbol, tf, limit, ate)
-  return NextResponse.json(corpo, { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' } })
+  // Velas são do mercado (públicas). A janela recente (≤ 300, o primeiro pedido do gráfico) vive
+  // pouco na CDN; as janelas grandes e o histórico para trás (`ate`) podem servir-se antigas mais
+  // tempo enquanto revalidam — o gráfico cola-lhes por cima a janela recente e o preço ao vivo.
+  const cache = ate != null
+    ? 'public, s-maxage=600, stale-while-revalidate=86400'
+    : limit > JANELA_RECENTE
+      ? 'public, s-maxage=30, stale-while-revalidate=120'
+      : 'public, s-maxage=15, stale-while-revalidate=45'
+  return NextResponse.json(corpo, { headers: { 'Cache-Control': cache } })
 }

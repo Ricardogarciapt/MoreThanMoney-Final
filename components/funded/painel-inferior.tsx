@@ -1,13 +1,14 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useEffect, useState } from "react"
 import { BarChart3, Bell, BookOpen, History, ListOrdered, User, Wallet } from "lucide-react"
 import ListaPosicoes from "./lista-posicoes"
-import FundedEstatisticas from "./funded-estatisticas"
 import FundedDiario from "./funded-diario"
 import FundedAlertas from "./funded-alertas"
 import PainelConta from "./painel-conta"
 import type { Trader } from "./trader-contexto"
+const FundedEstatisticas = dynamic(() => import("./funded-estatisticas"), { ssr: false })
 
 /**
  * O PAINEL DE BAIXO (PRO) — Posições | Ordens | Histórico | Estatísticas | Diário | Alertas | Conta.

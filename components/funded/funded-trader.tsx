@@ -1,11 +1,13 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { type MapaPrecos, estadoDaConta } from "@/lib/mtmfunded/simulado/matematica"
 import { limitesDaConta, posicaoDaLinha, simbolosParaMedir } from "@/lib/mtmfunded/simulado/ordens"
 import { type SimboloFicha, type PrecoVivo, pedir, ordem, usd } from "./api"
 import { usePrecos } from "./use-precos"
+import { fichaDe } from "./pre-carga"
 import type { Prefill } from "./funded-ticket"
 import type { PedidoOrdem } from "./rascunho-ordem"
 import { corpoDoPedido } from "./pedido"
@@ -14,8 +16,8 @@ import { useModoWebtrader } from "./modo-webtrader"
 import { useAlertas } from "./funded-alertas"
 import { useDiario } from "./funded-diario"
 import type { Estado, Trader } from "./trader-contexto"
-import LayoutPro from "./layout-pro"
 import LayoutSimples from "./layout-simples"
+const LayoutPro = dynamic(() => import("./layout-pro"), { ssr: false })
 
 /**
  * O WEBTRADER DE UMA CONTA — os dados, num só sítio; a apresentação, em dois modos.
@@ -74,25 +76,23 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
   /** A ficha COM especificações (sessões incluídas) — pede-se ao catálogo se ainda não houver. */
   const obterFicha = useCallback(async (symbol: string): Promise<SimboloFicha | null> => {
     if (fichas[symbol] && fichas[symbol].sessoes !== undefined) return fichas[symbol]
-    const d = await fetch(`/api/mtmfunded/simulado/precos?symbols=${encodeURIComponent(symbol)}&specs=1`).then((r) => r.json()).catch(() => null)
-    const s = (d?.simbolos ?? []).find((x: SimboloFicha) => x.symbol === symbol) as SimboloFicha | undefined
+    const s = await fichaDe(symbol)
     if (s) setFichas((f) => ({ ...f, [s.symbol]: s }))
     return s ?? fichas[symbol] ?? null
   }, [fichas])
 
-  // Símbolo inicial: o do link (scanner/ideia) ou o ouro.
+  // Símbolo inicial: o do link (scanner/ideia) ou o ouro. A ficha já foi pedida pela pré-carga do
+  // WebTrader (pre-carga.ts) enquanto as contas carregavam — aqui apanha-se a mesma promessa.
   useEffect(() => {
+    let vivo = true
     const alvo = simboloInicial || "XAUUSD"
-    fetch(`/api/mtmfunded/simulado/precos?symbols=${encodeURIComponent(alvo)}&specs=1`)
-      .then((r) => r.json())
-      .then((d) => {
-        const lista = (d.simbolos ?? []) as SimboloFicha[]
-        // O link pode trazer vários candidatos (OANDA:XAUUSD → XAUUSD, …): vale o primeiro que existe.
-        const escolhido = alvo.split(",").map((c) => lista.find((s) => s.symbol === c)).find(Boolean)
-        if (escolhido) { setSimbolo(escolhido); setVolume(escolhido.volume_min); setFichas((f) => ({ ...f, [escolhido.symbol]: escolhido })) }
-        else if (simboloInicial) setErro(`O símbolo ${simboloInicial.split(",")[0]} não existe no MTM Funded.`)
-      })
-      .catch(() => {})
+    // O link pode trazer vários candidatos (OANDA:XAUUSD → XAUUSD, …): vale o primeiro que existe.
+    fichaDe(alvo).then((escolhido) => {
+      if (!vivo) return
+      if (escolhido) { setSimbolo(escolhido); setVolume(escolhido.volume_min); setFichas((f) => ({ ...f, [escolhido.symbol]: escolhido })) }
+      else if (simboloInicial) setErro(`O símbolo ${simboloInicial.split(",")[0]} não existe no MTM Funded.`)
+    })
+    return () => { vivo = false }
   }, [simboloInicial])
 
   useEffect(() => { if (simbolo) onSimbolo?.(simbolo.symbol) }, [simbolo?.symbol]) // eslint-disable-line react-hooks/exhaustive-deps

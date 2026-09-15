@@ -8,6 +8,7 @@ import FundedGrafico from "@/components/funded/funded-grafico"
 import type { SimboloFicha } from "@/components/funded/api"
 import { usd } from "@/components/funded/api"
 import { usePrecos } from "@/components/funded/use-precos"
+import { fichaDe } from "@/components/funded/pre-carga"
 import { AccaoCancelada, InterruptorUmClique, UmCliqueProvider, useUmClique } from "@/components/funded/um-clique"
 import type { Prefill } from "@/components/funded/funded-ticket"
 import { COR_PLATAFORMA, ErroWT, NOME_PLATAFORMA, pedirWT } from "./api-corretoras"
@@ -92,11 +93,8 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   // Ficha do catálogo MTM (para o gráfico e as casas decimais). Símbolo fora do catálogo → sem gráfico.
   useEffect(() => {
     let vivo = true
-    fetch(`/api/mtmfunded/simulado/precos?symbols=${encodeURIComponent(symbol)}&specs=1`).then((r) => r.json()).then((d) => {
-      if (!vivo) return
-      const s = ((d?.simbolos ?? []) as SimboloFicha[]).find((x) => x.symbol === symbol) ?? null
-      setFicha(s)
-    }).catch(() => vivo && setFicha(null))
+    // A mesma promessa da pré-carga do WebTrader (pre-carga.ts): o símbolo do link já vem a caminho.
+    fichaDe(symbol).then((s) => { if (vivo) setFicha(s) }).catch(() => vivo && setFicha(null))
     return () => { vivo = false }
   }, [symbol])
 

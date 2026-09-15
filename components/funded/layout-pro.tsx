@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useEffect, useRef, useState } from "react"
 import { Panel, PanelGroup, PanelResizeHandle, type ImperativePanelHandle } from "react-resizable-panels"
 import { CalendarDays, Columns2, Loader2, Rows2, Square, Grid2x2, Receipt } from "lucide-react"
@@ -7,10 +8,10 @@ import FundedTicket from "./funded-ticket"
 import FundedWatchlist from "./funded-watchlist"
 import MultiGrafico from "./multi-grafico"
 import PainelInferior from "./painel-inferior"
-import CalendarioEconomico from "./calendario-economico"
 import Atalhos, { type Layout } from "./atalhos"
 import { EstadoMercado, Sentimento } from "./estado-mercado"
 import { AplicarPrefill, AvisosConta, FaixaPrefill, GraficoConta, ProvedorRascunho, type Trader } from "./trader-contexto"
+const CalendarioEconomico = dynamic(() => import("./calendario-economico"), { ssr: false })
 
 /**
  * O MODO PRO — a plataforma de secretária.
