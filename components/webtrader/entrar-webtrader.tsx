@@ -76,6 +76,11 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
       if (perfil !== "timeout") {
         if (perfil && needsAccessRevalidation(perfil)) { window.location.replace("/access-migration"); return }
         if (!perfil || !isRegisteredMember(perfil)) {
+          // Oferta de gratidão (2026-09): quem tem a conta oferecida entra no WebTrader sem pack activo.
+          if (perfil) {
+            const { destinoPelaOferta } = await import("@/lib/mtmfunded/oferta-acesso-cliente")
+            if (await destinoPelaOferta(data.session.access_token, "/webtrader")) { onEntrouMtm(); return }
+          }
           await Promise.race([supabase.auth.signOut(), new Promise((ok) => setTimeout(ok, 2000))]).catch(() => null)
           clearCachedSession()
           setErro({ texto: REGISTER_NOT_FOUND_MESSAGE, registo: true })

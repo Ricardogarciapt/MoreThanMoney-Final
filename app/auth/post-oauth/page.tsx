@@ -120,6 +120,15 @@ export default function PostOAuthPage() {
       const isRegistered = isRegisteredMember(existingProfile)
 
       if (flow === OAUTH_FLOW_LOGIN) {
+        if (!isRegistered && existingProfile) {
+          // Oferta de gratidão (2026-09): WebTrader / credenciais para quem tem a conta oferecida.
+          const { destinoPelaOferta } = await import("@/lib/mtmfunded/oferta-acesso-cliente")
+          const destino = await destinoPelaOferta(session.access_token, redirectParam)
+          if (destino) {
+            window.location.replace(`${window.location.origin}${destino}`)
+            return
+          }
+        }
         if (!isRegistered) {
           await redirectToRegister(REGISTER_NOT_FOUND_MESSAGE)
           return

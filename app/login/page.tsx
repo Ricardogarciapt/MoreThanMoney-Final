@@ -81,6 +81,15 @@ export default function LoginPage() {
       return
     }
     if (!isRegisteredMember(profile)) {
+      // Oferta de gratidão (2026-09): quem tem a conta oferecida entra no WebTrader / credenciais
+      // mesmo sem pack activo. Só esses dois destinos, confirmado pelo servidor.
+      const { data: { session: s } } = await supabase.auth.getSession()
+      const { destinoPelaOferta } = await import('@/lib/mtmfunded/oferta-acesso-cliente')
+      const destino = await destinoPelaOferta(s?.access_token, redirectParam)
+      if (destino) {
+        window.location.replace(`${window.location.origin}${destino}`)
+        return
+      }
       await rejectUnknownUser()
       return
     }

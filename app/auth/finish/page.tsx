@@ -47,6 +47,15 @@ export default function AuthFinishPage() {
       const profile = await loadMemberProfile(supabase, session.user.id)
 
       if (!isRegisteredMember(profile)) {
+        // Oferta de gratidão (2026-09): WebTrader / credenciais para quem tem a conta oferecida.
+        if (profile) {
+          const { destinoPelaOferta } = await import("@/lib/mtmfunded/oferta-acesso-cliente")
+          const destino = await destinoPelaOferta(session.access_token, redirectParam)
+          if (destino) {
+            window.location.replace(`${window.location.origin}${destino}`)
+            return
+          }
+        }
         await supabase.auth.signOut()
         const { clearCachedSession } = await import("@/lib/auth-cache")
         clearCachedSession()
