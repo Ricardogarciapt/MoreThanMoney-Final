@@ -10,6 +10,9 @@ import {
   precoFresco, diaDaCorretora, simbolosParaMedir, simboloDaLinha, posicaoDaLinha,
   planoSincronizacao, type RegrasDeOrdem,
 } from './ordens'
+import {
+  type Gestao, type FiltroLote, validarGestao, gestaoDaLinha, riscoInicialUsd, selecionarParaFecho,
+} from './avancadas'
 
 /**
  * A EXECUÇÃO DAS ORDENS SIMULADAS — o lado que toca na base de dados.
@@ -188,6 +191,33 @@ export interface EntradaAbrir {
   ideiaRef?: string | null
   /** Comentário à MT5 («T2T premium», «MTM Auto Premium»). Só o servidor o escreve. */
   comentario?: string | null
+  /** Trailing, break-even e TPs parciais (distâncias em preço, migração 072). */
+  gestao?: Partial<Gestao> | null
+}
+
+/** As colunas da gestão para gravar — só as que a trade pediu (o resto fica no default da base). */
+function colunasGestao(g: Gestao, risco: number | null, volume: number) {
+  const out: Record<string, unknown> = { volume_inicial: volume }
+  if (risco != null) out.risco_inicial = risco
+  if (g.trailing_distancia) { out.trailing_distancia = g.trailing_distancia; out.trailing_ativacao = g.trailing_ativacao }
+  if (g.be_gatilho || g.be_no_tp1) { out.be_gatilho = g.be_gatilho; out.be_no_tp1 = g.be_no_tp1; out.be_offset = g.be_offset }
+  if (g.tps?.length) out.tps = g.tps
+  return out
+}
+
+/**
+ * Inserir com as colunas da 072 e, se a base ainda não as tiver (site publicado antes da migração),
+ * voltar a tentar sem elas quando a trade não pediu gestão nenhuma. Com gestão pedida, falha —
+ * gravar a ordem SEM o trailing que o trader pediu era pior do que recusar.
+ */
+async function inserirComGestao(tabela: 'funded_positions' | 'funded_orders', base: Record<string, unknown>, extra: Record<string, unknown>) {
+  const db = getSupabaseAdmin()
+  const r = await db.from(tabela).insert({ ...base, ...extra }).select('*').single()
+  const semColuna = r.error && /42703|PGRST204|column/i.test(`${r.error.code} ${r.error.message}`)
+  const pediuGestao = Object.keys(extra).some((k) => !['volume_inicial', 'risco_inicial', 'volume'].includes(k))
+  if (semColuna && !pediuGestao) return db.from(tabela).insert(base).select('*').single()
+  if (semColuna) throw new ErroOrdem(503, 'ordens avançadas ainda não estão ligadas nesta base (migração 072)')
+  return r
 }
 
 export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
@@ -207,15 +237,17 @@ export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
     posicoesAbertas: abertas.map(posicaoDaLinha), simbolos, precos, regras,
   })
   if (!plano.ok) throw new ErroOrdem(422, plano.erro)
+  const g = validarGestao(simbolo, e.direcao, plano.precoExecucao, plano.volume, num(e.sl), num(e.tp), e.gestao)
+  if (!g.ok) throw new ErroOrdem(422, g.erro)
 
   const agora = new Date().toISOString()
-  const { data: pos, error } = await getSupabaseAdmin().from('funded_positions').insert({
+  const { data: pos, error } = await inserirComGestao('funded_positions', {
     account_id: conta.id, symbol, direcao: e.direcao, volume: plano.volume, preco_entrada: plano.precoExecucao,
     sl: num(e.sl), tp: num(e.tp), comissao: plano.comissao, estado: 'aberta',
     origem: origemValida(e.origem), ideia_ref: e.ideiaRef ? String(e.ideiaRef).slice(0, 200) : null,
     ...(e.comentario ? { comentario: String(e.comentario).slice(0, 64) } : {}),
     tick_entrada: { bid: preco.bid, ask: preco.ask, em: em[symbol] }, aberta_em: agora,
-  }).select('*').single()
+  }, colunasGestao(g.gestao, riscoInicialUsd(simbolo, e.direcao, plano.volume, plano.precoExecucao, num(e.sl), precos), plano.volume))
   if (error?.code === '23505') throw new ErroOrdem(409, 'esta ideia já foi aberta nesta conta')
   if (error || !pos) throw new ErroOrdem(500, 'não foi possível abrir a posição')
 
@@ -305,6 +337,9 @@ export interface EntradaPendente {
   origem?: Origem
   ideiaRef?: string | null
   comentario?: string | null
+  gestao?: Partial<Gestao> | null
+  /** Pernas OCO partilham o grupo (criarOco). */
+  ocoGrupo?: string | null
 }
 
 export async function criarPendente(conta: Conta, e: EntradaPendente) {
@@ -314,6 +349,8 @@ export async function criarPendente(conta: Conta, e: EntradaPendente) {
   const simbolos = await carregarSimbolos([symbol])
   const simbolo = simbolos[symbol]
   if (!simbolo) throw new ErroOrdem(400, `símbolo ${symbol} não disponível`)
+  // Conversões (EURJPY → USDJPY) para o risco inicial em USD.
+  const { precos: conversoes } = await carregarPrecos(simbolosParaMedir([simbolo]))
   // Uma pendente não executa já, por isso aceita-se preço velho — mas usa-se se estiver fresco,
   // para recusar uma buy limit acima do mercado.
   const { precos, em } = await carregarPrecos([symbol])
@@ -326,12 +363,19 @@ export async function criarPendente(conta: Conta, e: EntradaPendente) {
     if (!Number.isFinite(t) || t <= Date.now()) throw new ErroOrdem(422, 'a expiração tem de ser no futuro')
     expira = new Date(t).toISOString()
   }
-  const { data, error } = await getSupabaseAdmin().from('funded_orders').insert({
+  const g = validarGestao(simbolo, e.direcao, Number(e.preco), v.volume, num(e.sl), num(e.tp), e.gestao)
+  if (!g.ok) throw new ErroOrdem(422, g.erro)
+  const extra = colunasGestao(g.gestao, riscoInicialUsd(simbolo, e.direcao, v.volume, Number(e.preco), num(e.sl), conversoes), v.volume)
+  // Nas ordens não há volume_inicial (é o volume da própria ordem; a função copia-o).
+  delete extra.volume_inicial
+  if (e.ocoGrupo) extra.oco_grupo = e.ocoGrupo
+  if (e.gestao || e.ocoGrupo) extra.bracket = { sl: num(e.sl), tp: num(e.tp), tps: g.gestao.tps, oco: Boolean(e.ocoGrupo) }
+  const { data, error } = await inserirComGestao('funded_orders', {
     account_id: conta.id, symbol, direcao: e.direcao, tipo: e.tipo, volume: v.volume, preco: Number(e.preco),
     sl: num(e.sl), tp: num(e.tp), estado: 'pendente', origem: origemValida(e.origem),
     ideia_ref: e.ideiaRef ? String(e.ideiaRef).slice(0, 200) : null, expira_em: expira,
     ...(e.comentario ? { comentario: String(e.comentario).slice(0, 64) } : {}),
-  }).select('*').single()
+  }, extra)
   if (error?.code === '23505') throw new ErroOrdem(409, 'esta ideia já foi aberta nesta conta')
   if (error || !data) throw new ErroOrdem(500, 'não foi possível criar a ordem')
   return { ordem: data }
@@ -362,6 +406,99 @@ export async function cancelarPendente(conta: Conta, orderId: string) {
     .eq('id', orderId).eq('account_id', conta.id).eq('estado', 'pendente').select('*')
   if (!data?.length) throw new ErroOrdem(409, 'a ordem já não está pendente')
   return { ordem: data[0] }
+}
+
+// ── ordens avançadas (072) ────────────────────────────────────────────────
+
+/**
+ * OCO: duas pendentes que se anulam. Cria-se a primeira e, se a segunda falhar a validação, a
+ * primeira cancela-se — nunca fica meia OCO viva (uma pendente solta que o trader julga protegida).
+ */
+export async function criarOco(conta: Conta, pernas: EntradaPendente[]) {
+  if (!Array.isArray(pernas) || pernas.length !== 2) throw new ErroOrdem(400, 'uma OCO tem exactamente duas pernas')
+  if (String(pernas[0].symbol).toUpperCase() !== String(pernas[1].symbol).toUpperCase()) throw new ErroOrdem(422, 'as duas pernas da OCO são do mesmo símbolo')
+  const grupo = crypto.randomUUID()
+  const a = await criarPendente(conta, { ...pernas[0], ocoGrupo: grupo })
+  try {
+    const b = await criarPendente(conta, { ...pernas[1], ocoGrupo: grupo })
+    return { ordens: [a.ordem, b.ordem], ocoGrupo: grupo }
+  } catch (e) {
+    await getSupabaseAdmin().from('funded_orders').update({ estado: 'cancelada' }).eq('id', String(a.ordem.id)).eq('estado', 'pendente')
+    throw e
+  }
+}
+
+/** Mudar a gestão de uma posição aberta (trailing, BE, TPs). TPs já atingidos mantêm-se. */
+export async function modificarGestao(conta: Conta, positionId: string, pedido: Partial<Gestao> | null) {
+  const db = getSupabaseAdmin()
+  const { data: linha } = await db.from('funded_positions').select('*').eq('id', positionId).eq('account_id', conta.id).maybeSingle()
+  if (!linha) throw new ErroOrdem(404, 'posição não encontrada')
+  if (linha.estado !== 'aberta') throw new ErroOrdem(409, 'a posição já está fechada')
+  const pos = posicaoDaLinha(linha)
+  const simbolo = (await carregarSimbolos([pos.symbol], false))[pos.symbol]
+  if (!simbolo) throw new ErroOrdem(400, 'símbolo sem especificação')
+  const atual = gestaoDaLinha(linha)
+  const volumeInicial = atual.volume_inicial ?? pos.volume
+  // Os TPs já atingidos não se validam outra vez (o preço já passou por eles): só os que faltam.
+  const atingidos = (atual.tps ?? []).filter((t) => t.atingido)
+  const novos = (pedido?.tps ?? []).filter((t) => !atingidos.some((x) => Math.abs(x.preco - Number(t.preco)) < 1e-9))
+  const v = validarGestao(simbolo, pos.direcao, atingidos.length ? atingidos[atingidos.length - 1].preco : pos.preco_entrada, volumeInicial, pos.sl, pos.tp, { ...pedido, tps: novos })
+  if (!v.ok) throw new ErroOrdem(422, v.erro)
+  const tps = [...atingidos, ...(v.gestao.tps ?? [])]
+  if (tps.reduce((a, t) => a + t.pct, 0) > 100 + 1e-9) throw new ErroOrdem(422, 'as % dos take-profits somam mais de 100%')
+  const { data, error } = await db.from('funded_positions').update({
+    trailing_distancia: v.gestao.trailing_distancia, trailing_ativacao: v.gestao.trailing_ativacao,
+    be_gatilho: v.gestao.be_gatilho, be_no_tp1: v.gestao.be_no_tp1, be_offset: v.gestao.be_offset,
+    tps: tps.length ? tps : null, volume_inicial: volumeInicial,
+  }).eq('id', pos.id).eq('estado', 'aberta').select('*')
+  if (error) throw new ErroOrdem(500, 'não foi possível guardar a gestão')
+  if (!data?.length) throw new ErroOrdem(409, 'a posição fechou entretanto')
+  return { posicao: data[0] }
+}
+
+/** Fechar em lote: todas, por símbolo, ganhadoras, perdedoras, compras ou vendas. Uma a uma, com o preço de cada. */
+export async function fecharLote(conta: Conta, filtro: FiltroLote, symbol?: string | null) {
+  const filtros: FiltroLote[] = ['todas', 'simbolo', 'ganhadoras', 'perdedoras', 'compras', 'vendas']
+  if (!filtros.includes(filtro)) throw new ErroOrdem(400, 'filtro inválido')
+  if (filtro === 'simbolo' && !symbol) throw new ErroOrdem(400, 'falta o símbolo')
+  const abertas = (await posicoesAbertas(conta.id)).map((l) => ({ ...posicaoDaLinha(l), id: String(l.id) }))
+  const simbolos = await carregarSimbolos(abertas.map((p) => p.symbol), false)
+  const { precos } = await carregarPrecos(simbolosParaMedir(Object.values(simbolos)))
+  const alvo = selecionarParaFecho(abertas, filtro, simbolos, precos, symbol ? String(symbol).toUpperCase() : null)
+  const fechadas: unknown[] = []
+  const falhas: Array<{ id: string; symbol: string; erro: string }> = []
+  for (const p of alvo) {
+    try { fechadas.push((await fecharPosicao(conta, p.id)).fechada) }
+    catch (e) { falhas.push({ id: p.id, symbol: p.symbol, erro: (e as Error).message }) }
+  }
+  return { fechadas, falhas, pedidas: alvo.length }
+}
+
+export async function cancelarTodas(conta: Conta, symbol?: string | null) {
+  let q = getSupabaseAdmin().from('funded_orders').update({ estado: 'cancelada' }).eq('account_id', conta.id).eq('estado', 'pendente')
+  if (symbol) q = q.eq('symbol', String(symbol).toUpperCase())
+  const { data, error } = await q.select('id')
+  if (error) throw new ErroOrdem(500, 'não foi possível cancelar as ordens')
+  return { canceladas: (data ?? []).length }
+}
+
+/**
+ * Inverter: fecha a posição e abre o lado contrário com o mesmo volume, sem SL/TP (os níveis de
+ * um lado não servem ao outro). Não é atómico — se a abertura falhar (margem, mercado), a posição
+ * já está fechada e o erro diz isso mesmo.
+ */
+export async function inverterPosicao(conta: Conta, positionId: string) {
+  const fecho = await fecharPosicao(conta, positionId)
+  const f = fecho.fechada as Record<string, unknown> | null
+  if (!f) throw new ErroOrdem(500, 'fechei a posição mas não a consegui reler para inverter')
+  try {
+    const aberta = await abrirPosicao(conta, {
+      symbol: String(f.symbol), direcao: f.direcao === 'buy' ? 'sell' : 'buy', volume: Number(f.volume), origem: 'manual',
+    })
+    return { fechada: f, posicao: aberta.posicao, plano: aberta.plano }
+  } catch (e) {
+    throw new ErroOrdem(e instanceof ErroOrdem ? e.status : 500, `posição fechada, mas a inversão falhou: ${(e as Error).message}`)
+  }
 }
 
 // ── webhook: fechar tudo / sincronizar ───────────────────────────────────
