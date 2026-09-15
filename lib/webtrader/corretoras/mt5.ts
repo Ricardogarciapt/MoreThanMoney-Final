@@ -59,6 +59,18 @@ async function regiaoDe(accountId: string, token: string): Promise<string> {
 async function restReal(accountId: string, caminho: string, init: { method?: 'GET' | 'POST'; body?: unknown } = {}): Promise<unknown> {
   const token = process.env.METAAPI_TOKEN
   if (!token) throw new ErroCorretora(503, 'MetaApi indisponível no servidor.')
+  return restComToken(token, accountId, caminho, init)
+}
+
+/**
+ * REST cliente com uma chave EXPLÍCITA — contas de equipas MTM Auto vivem noutra chave MetaApi
+ * (lib/copia-contas/tokens.ts decide qual). Mesmos erros e prazos do REST da casa.
+ */
+export function restMt5ComToken(token: string): DepsMt5['rest'] {
+  return (accountId, caminho, init) => restComToken(token, accountId, caminho, init ?? {})
+}
+
+async function restComToken(token: string, accountId: string, caminho: string, init: { method?: 'GET' | 'POST'; body?: unknown }): Promise<unknown> {
   const regiao = await regiaoDe(accountId, token)
   let r: Response
   try {

@@ -1,5 +1,9 @@
 # MTM Funded — copiador para a conta do aluno (VPS)
 
+> **A RETIRAR (15/09).** Substituído pela cópia entre contas (`deploy/vps-stream/copia-contas`). Migrar com
+> `scripts/copia-contas/migrar-funded-copiers.ts` e depois `systemctl stop mtm-funded-copier` — passos no README
+> de copia-contas, secção «Copiador MTM Funded (068) → rotas novas».
+
 Copia as posições de uma conta **simulada** do MTM Funded para uma conta MT5 que o aluno já ligou
 no MTM Copy ou no MTM Auto, pela MetaApi. Fonte: `services/funded-copier/copier.ts`; as decisões
 (lote, SL/TP, parciais, quando recusar) estão em `lib/mtmfunded/copia/` com testes.

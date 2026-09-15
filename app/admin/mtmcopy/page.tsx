@@ -29,6 +29,7 @@ import EstrategiasCopia, { Recolhivel } from "@/components/admin/mtmauto-copia/e
 import CopiaEntreContas from "@/components/admin/mtmauto-copia/copia-entre-contas"
 import EventosCopia from "@/components/admin/mtmauto-copia/eventos"
 import SincronizacaoCopia from "@/components/admin/mtmauto-copia/sincronizacao"
+import ProvidersEquipas from "@/components/admin/mtmauto-copia/providers-equipas"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ArrowLeftRight, Copy, LayoutDashboard, ListTree, Loader2, RefreshCcw, ScrollText, Wallet } from "lucide-react"
 
@@ -162,6 +163,9 @@ function PaginaAdminCopia() {
               <EstrategiasCopia
                 afinacoes={
                   <div className="space-y-3 pt-2">
+                    <Recolhivel titulo="Providers por equipa (MTM Auto)" descricao="Contas de estratégia de cada equipa — MT4/MT5 na chave certa, MTM Funded e TradeLocker — e as rotas de cópia que as usam como fonte.">
+                      <ProvidersEquipas />
+                    </Recolhivel>
                     <Recolhivel titulo="Fontes · estado real" descricao="Cada estratégia, a conta que a publica e o que a MetaApi diz sobre ela.">
                       <MtmcopyFontesVivas />
                     </Recolhivel>
