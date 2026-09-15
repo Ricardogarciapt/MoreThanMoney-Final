@@ -15,6 +15,7 @@ import { getSignalSourcesConfig } from './signal-sources-config'
 import { normalizeProviderRoutes } from './provider-routes'
 import { appChannelsForRoute } from './tap-to-trade-channels'
 import { listOpenPositions, type MetaApiPosition } from './metaapi'
+import { contaMarcadaInexistente } from './metaapi-inexistentes'
 import { closeT2TForSlaves, editT2TForSlaves } from './t2t-management'
 import { syncProviderRouteChannels } from './provider-channels-sync'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
@@ -66,6 +67,8 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
   const seen = new Set<string>()
   for (const route of masters) {
     const accountId = route.account_id.trim()
+    // Conta apagada na MetaApi (registo de inexistentes, 15/09): não se vigia.
+    if (contaMarcadaInexistente(accountId)) continue
     if (seen.has(accountId)) continue
     seen.add(accountId)
     result.accounts++

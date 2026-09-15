@@ -18,6 +18,8 @@
  * num arranque a frio começam vazios — o pior caso é o comportamento antigo, nunca pior.
  */
 
+import { contaInexistente, marcarContaInexistente } from './metaapi-inexistentes'
+
 type Entrada<V> = { valor: V; expiraEm: number }
 
 export interface CacheTtl<V> {
@@ -172,6 +174,7 @@ export async function lerInfoContaCache(
 ): Promise<Record<string, unknown> | null> {
   const token = process.env.METAAPI_TOKEN
   if (!token || !accountId) return null
+  if (await contaInexistente(accountId)) return null
   const regiao = opts.regiao ?? 'london'
   // Os dois caminhos já existiam no código (um por região); mantêm-se tal como estavam.
   const caminho = regiao === 'new-york' ? 'accountInformation' : 'account-information'
@@ -181,7 +184,13 @@ export async function lerInfoContaCache(
       cache: 'no-store',
       signal: AbortSignal.timeout(opts.timeoutMs ?? 8_000),
     })
-    if (!r.ok) return null
+    if (!r.ok) {
+      if (r.status === 404) {
+        const corpo = await r.text().catch(() => '')
+        await marcarContaInexistente(accountId, Object.assign(new Error(corpo || 'HTTP 404'), { status: 404 }), { origem: 'lerInfoContaCache' })
+      }
+      return null
+    }
     return (await r.json()) as Record<string, unknown>
   })
 }

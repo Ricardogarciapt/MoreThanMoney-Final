@@ -29,7 +29,15 @@ async function metaGet(url: string): Promise<{ ok: boolean; status: number; data
 
 /** Recolhe os dados de risco da conta MetaAPI (região → account-information + posições). */
 async function gatherAccountData(accountId: string) {
+  // Conta inexistente na MetaApi (registo de 15/09): não se pergunta nada — cada 404 conta para o
+  // estrangulamento do token inteiro.
+  const { contaInexistente, marcarContaInexistente } = await import('@/lib/mtmcopy/metaapi-inexistentes')
+  if (await contaInexistente(accountId)) return null
   const prov = await metaGet(`${PROVISIONING_BASE}/users/current/accounts/${accountId}`)
+  if (prov.status === 404) {
+    await marcarContaInexistente(accountId, Object.assign(new Error('HTTP 404'), { status: 404 }), { nivelConta: true, origem: 'risk-audit' })
+    return null
+  }
   const region = prov.data?.region ?? 'new-york'
   const clientBase = `https://mt-client-api-v1.${region}.agiliumtrade.ai`
 

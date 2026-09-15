@@ -8,7 +8,7 @@ import {
   CANONICAL_SENSEI_STRATEGY_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_STRATEGY_ID,
-  MTM_COPY_STRATEGY_CATALOG,
+  MTM_COPY_STRATEGY_CATALOG, mesmaConta,
 } from './provider-constants'
 import {
   repairProviderRoutes,
@@ -185,7 +185,7 @@ export function pickSingleProviderRoute(
           (r) =>
             r.signal_source === 'webhook' ||
             r.strategy_id === CANONICAL_SENSEI_STRATEGY_ID ||
-            r.account_id === CANONICAL_SENSEI_ACCOUNT_ID,
+            mesmaConta(r.account_id, CANONICAL_SENSEI_ACCOUNT_ID),
         ) ?? matched[0]!
       )
     }
@@ -195,7 +195,7 @@ export function pickSingleProviderRoute(
           (r.signal_source ?? 'telegram') !== 'webhook' &&
           (r.sender_channel === 'trade-ideas' ||
             r.strategy_id === CANONICAL_TRADE_IDEAS_STRATEGY_ID ||
-            r.account_id === CANONICAL_TRADE_IDEAS_ACCOUNT_ID),
+            mesmaConta(r.account_id, CANONICAL_TRADE_IDEAS_ACCOUNT_ID)),
       ) ?? matched[0]!
     )
   }

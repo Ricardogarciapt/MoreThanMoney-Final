@@ -31,7 +31,7 @@ import {
 import type { ParsedManagement } from './signal-parser'
 import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
-  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+  CANONICAL_TRADE_IDEAS_ACCOUNT_ID, mesmaConta,
 } from './provider-constants'
 import {
   applyProviderBrokerHitTp1,
@@ -636,7 +636,7 @@ export async function applyManagementToAccount(
   if (management.type === 'premium_trade_active' && management.symbol && management.premiumVariant) {
     if (
       accountId === CANONICAL_PREMIUM_ACCOUNT_ID ||
-      accountId === CANONICAL_TRADE_IDEAS_ACCOUNT_ID
+      mesmaConta(accountId, CANONICAL_TRADE_IDEAS_ACCOUNT_ID)
     ) {
       const positions = filterPositions(await listOpenPositions(accountId), management.symbol)
       if (hasPremiumProviderBrokerLegs(positions)) {

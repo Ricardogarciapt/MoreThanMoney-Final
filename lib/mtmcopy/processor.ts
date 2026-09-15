@@ -15,7 +15,7 @@ import {
   CANONICAL_SENSEI_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
   SENSEI_PROVIDER_ACCOUNT_ID,
-  senseiPronto,
+  senseiPronto, mesmaConta,
 } from './provider-constants'
 import { connectionCopyMethod, prefersDirectExecution } from './copy-limits'
 import { direitoMtmAuto } from '@/lib/entitlements'
@@ -1027,7 +1027,7 @@ async function executeViaMtmProvider(
   const clean6 = mappedSymbol.toUpperCase().replace(/[^A-Z]/g, '')
   const isForexSym = clean6.length === 6 && FX_CODES.has(clean6.slice(0, 3)) && FX_CODES.has(clean6.slice(3, 6))
   const isGoldKillerProvider =
-    provider.accountId === CANONICAL_GOLDKILLER_ACCOUNT_ID ||
+    mesmaConta(provider.accountId, CANONICAL_GOLDKILLER_ACCOUNT_ID) ||
     provider.strategyId === CANONICAL_GOLDKILLER_STRATEGY_ID
   const forceRisk05 = channel === 'premium-signals' || isForexSym || isGoldKillerProvider
   const forcedRiskPct = 0.5
@@ -1511,7 +1511,7 @@ async function executeViaMtmProvider(
     } else {
       const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
       if (channel === 'trade-ideas') {
-        const isSensei = provider.accountId === CANONICAL_SENSEI_ACCOUNT_ID
+        const isSensei = mesmaConta(provider.accountId, CANONICAL_SENSEI_ACCOUNT_ID)
         if (isSensei) {
           // Sensei: abre só com SL — TP/parciais geridos pelos alertas (25% por TP).
           req.takeProfit = null
@@ -1530,8 +1530,8 @@ async function executeViaMtmProvider(
       // em timeout SEM abrir a trade nem logar — por isso os sinais chegavam mas nada abria na
       // conta. Mercado enche na hora. (Sensei abre só com SL; TP/parciais geridos pelos alertas.)
       if (
-        provider.accountId === CANONICAL_GOLDKILLER_ACCOUNT_ID ||
-        provider.accountId === CANONICAL_SENSEI_ACCOUNT_ID
+        mesmaConta(provider.accountId, CANONICAL_GOLDKILLER_ACCOUNT_ID) ||
+        mesmaConta(provider.accountId, CANONICAL_SENSEI_ACCOUNT_ID)
       ) {
         req.orderType = 'market'
         req.openPrice = null

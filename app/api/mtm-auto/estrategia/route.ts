@@ -54,7 +54,7 @@ export const maxDuration = 40
  * para elas, mostram-se os alvos que os sinais atingiram, que é um facto.
  */
 /** A conta de execução de cada estratégia MTM Auto que não a tem guardada na tabela. */
-const CONTA_POR_FONTE_MTM: Record<string, string> = {
+const CONTA_POR_FONTE_MTM: Record<string, string | null> = {
   premium: CANONICAL_PREMIUM_ACCOUNT_ID,
   sensei: SENSEI_PROVIDER_ACCOUNT_ID,
   aurum: CANONICAL_AURUMFLOW_ACCOUNT_ID,

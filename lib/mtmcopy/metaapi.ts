@@ -6,6 +6,13 @@ import { inicioDaContagem } from './metricas-desde'
 import { invalidarLeiturasDeSimbolos } from './metaapi-cache'
 import { simbolosPartilhados, specPartilhada, esquecerPartilhado } from './metaapi-simbolos-partilhados'
 import { ehErroDeQuota, ehSegundoPlano, leituraDeFundoBloqueada, registarErroQuota } from './metaapi-quota'
+import {
+  ContaInexistenteError,
+  avisarOrdemParaContaInexistente,
+  contaInexistente,
+  ehErroContaInexistente,
+  marcarContaInexistente,
+} from './metaapi-inexistentes'
 
 export interface OrderRequest {
   accountId: string
@@ -400,13 +407,20 @@ export async function ensureMetaApiAccountOnline(accountId: string): Promise<{ o
     'Content-Type': 'application/json',
   }
 
+  if (await contaInexistente(accountId)) {
+    return { ok: false, error: new ContaInexistenteError(accountId).message }
+  }
+
   async function fetchAccount(): Promise<{ state?: string; connectionStatus?: string }> {
     const res = await fetch(`${base}/users/current/accounts/${accountId}`, { headers })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      throw new Error(
-        (data as { message?: string }).message ?? `MetaAPI HTTP ${res.status}`,
+      const erro = Object.assign(
+        new Error((data as { message?: string }).message ?? `MetaAPI HTTP ${res.status}`),
+        { status: res.status },
       )
+      if (res.status === 404) await marcarContaInexistente(accountId, erro, { nivelConta: true, origem: 'ensureMetaApiAccountOnline' })
+      throw erro
     }
     return res.json() as Promise<{ state?: string; connectionStatus?: string }>
   }
@@ -824,7 +838,17 @@ async function createRpcConnection(
   try {
     const MetaApi = (await import('metaapi.cloud-sdk')).default
     const api = new (MetaApi as any)(token)
-    const account = await api.metatraderAccountApi.getAccount(accountId)
+    let account
+    try {
+      account = await api.metatraderAccountApi.getAccount(accountId)
+    } catch (e) {
+      // NotFoundError aqui = a conta não existe. Marca (24 h) e NÃO tenta outra vez: cada nova
+      // tentativa conta para o estrangulamento «too many unexisting accounts» do token inteiro.
+      if (await marcarContaInexistente(accountId, e, { nivelConta: true, origem: 'getAccount' })) {
+        throw new ContaInexistenteError(accountId)
+      }
+      throw e
+    }
 
     await withTimeout(account.waitConnected(), CONNECT_TIMEOUT_MS, 'MetaApi waitConnected')
 
@@ -843,6 +867,7 @@ async function createRpcConnection(
       },
     }
   } catch (err: unknown) {
+    if (err instanceof ContaInexistenteError || ehErroContaInexistente(err)) throw err
     if (attempt < CONNECT_MAX_ATTEMPTS - 1 && isRetryableMetaApiError(err)) {
       console.warn(
         `[mtmcopy] MetaAPI retry ${attempt + 1}/${CONNECT_MAX_ATTEMPTS - 1} (${accountId.slice(0, 8)}…):`,
@@ -889,6 +914,14 @@ async function getRpcConnection(
   _attempt = 0,
   opts?: { forceFresh?: boolean },
 ): Promise<{ connection: RpcConnection; close: () => Promise<void> }> {
+  // Sem id não há conta (constantes apagadas a null/''): nunca pedir getAccount('').
+  if (!accountId?.trim()) throw new Error('MetaApi: pedido sem conta (id vazio) — não enviado')
+  // Registo de contas inexistentes: nem leituras nem ordens vão à MetaApi por uma conta apagada.
+  if (await contaInexistente(accountId)) {
+    invalidateRpcCache(accountId)
+    avisarOrdemParaContaInexistente(accountId, ehSegundoPlano() ? 'leitura de fundo' : 'pedido (ordem/leitura)')
+    throw new ContaInexistenteError(accountId)
+  }
   if (!RPC_CACHE_ENABLED) {
     const fresh = await createRpcConnection(accountId).catch(async (e: unknown) => {
       await registarErroQuota(accountId, e)
@@ -1365,11 +1398,17 @@ const regiaoPorConta = new Map<string, string>()
 async function regiaoDaConta(accountId: string, token: string): Promise<string | null> {
   const guardada = regiaoPorConta.get(accountId)
   if (guardada) return guardada
+  if (await contaInexistente(accountId)) return null
   try {
     const r = await fetch(
       `https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}`,
       { headers: { 'auth-token': token } },
     )
+    if (r.status === 404) {
+      const corpo = await r.text().catch(() => '')
+      await marcarContaInexistente(accountId, Object.assign(new Error(corpo || 'HTTP 404'), { status: 404 }), { nivelConta: true, origem: 'regiaoDaConta' })
+      return null
+    }
     if (!r.ok) return null
     const j = (await r.json()) as { region?: string }
     const reg = (j.region ?? '').trim()
@@ -1418,6 +1457,7 @@ export async function lerHistorico(
 ): Promise<MetaApiDeal[] | null> {
   const token = process.env.METAAPI_TOKEN
   if (!token) return null
+  if (await contaInexistente(accountId)) return null
 
   /**
    * Contas com a contagem reiniciada não devolvem o que aconteceu antes do marco.
@@ -1460,7 +1500,10 @@ export async function lerHistorico(
       metatraderAccountApi: { getAccount: (id: string) => Promise<MetaApiAccountNode> }
     }
     const api = new MetaApiNode(token)
-    const account = await api.metatraderAccountApi.getAccount(accountId)
+    const account = await api.metatraderAccountApi.getAccount(accountId).catch(async (e: unknown) => {
+      await marcarContaInexistente(accountId, e, { nivelConta: true, origem: 'lerHistorico' })
+      throw e
+    })
     await withTimeout(account.waitConnected(), CONNECT_TIMEOUT_MS, 'history waitConnected')
     connection = account.getRPCConnection() as RpcConnection & { close?: () => Promise<void> }
     await withTimeout(connection.connect(), CONNECT_TIMEOUT_MS, 'history connect')
@@ -1609,6 +1652,7 @@ async function lerSimbolosRest(accountId: string, regiao: string, token: string)
  * Sem região conhecida cai no `getMarketPrice` (RPC) como antes. Falha = null. Nunca lança.
  */
 export async function precoRest(accountId: string, canonicalSymbol: string): Promise<number | null> {
+  if (await contaInexistente(accountId)) return null
   if (ehSegundoPlano() && (await leituraDeFundoBloqueada(accountId))) return null
   const token = process.env.METAAPI_TOKEN
   if (!token || !accountId || !canonicalSymbol?.trim()) return null
@@ -1627,7 +1671,9 @@ export async function precoRest(accountId: string, canonicalSymbol: string): Pro
     )
     if (!r.ok) {
       const corpo = await r.text().catch(() => '')
-      await registarErroQuota(accountId, Object.assign(new Error(corpo || `HTTP ${r.status}`), { status: r.status }))
+      const erro = Object.assign(new Error(corpo || `HTTP ${r.status}`), { status: r.status })
+      await registarErroQuota(accountId, erro)
+      await marcarContaInexistente(accountId, erro, { origem: 'precoRest' })
       return null
     }
     const q = (await r.json()) as { bid?: number; ask?: number }

@@ -24,7 +24,8 @@ export interface ForexSwingsExecConfig {
 }
 
 const KEY = 'forex_swings_execution'
-const DEFAULT_ACCOUNT = CANONICAL_TRADE_IDEAS_ACCOUNT_ID
+// A conta Forex antiga (fbeeafeb) foi apagada na MetaApi → sem conta por defeito ('' = não executa).
+const DEFAULT_ACCOUNT = CANONICAL_TRADE_IDEAS_ACCOUNT_ID ?? ''
 
 export async function getForexSwingsExecConfig(): Promise<ForexSwingsExecConfig> {
   try {
