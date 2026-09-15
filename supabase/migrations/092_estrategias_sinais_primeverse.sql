@@ -43,6 +43,14 @@ create index if not exists mtm_trading_accounts_todos_sinais_idx on public.mtm_t
 create or replace function public.funded_forcar_analise() returns trigger
 language plpgsql set search_path = public as $$
 begin
+  -- Segunda barreira: uma conta sem regras NUNCA passa a «quebrada» por uma regra de programa
+  -- (perda diária/máxima, tempo). Levanta erro: o motor vê a escrita falhar e não fecha posições
+  -- (motor.ts só fecha depois de ganhar o update). O admin ('admin: …') continua a poder.
+  if tg_op = 'UPDATE' and (new.sem_regras or new.conta_casa) and new.estado = 'quebrada'
+     and old.estado is distinct from 'quebrada'
+     and coalesce(new.quebrou_regra, '') in ('perda_maxima', 'perda_diaria', 'tempo_esgotado') then
+    raise exception 'funded_forcar_analise: a conta % não tem regras de programa (%)', new.id, new.quebrou_regra;
+  end if;
   if new.sem_regras or new.conta_casa then
     if coalesce(new.metricas->>'analise', '') <> 'true' then
       new.metricas := coalesce(new.metricas, '{}'::jsonb) || jsonb_build_object('analise', true);
@@ -52,7 +60,7 @@ begin
 end $$;
 
 drop trigger if exists funded_forcar_analise on public.mtm_trading_accounts;
-create trigger funded_forcar_analise before insert or update of metricas, sem_regras, conta_casa
+create trigger funded_forcar_analise before insert or update of metricas, sem_regras, conta_casa, estado
   on public.mtm_trading_accounts for each row execute function public.funded_forcar_analise();
 
 -- Correcção de dados: as contas que seguem estratégias nasceram para NÃO ter regras (070), e

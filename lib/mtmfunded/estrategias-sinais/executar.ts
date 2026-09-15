@@ -48,7 +48,7 @@ export async function encaminharPrimeverseParaEstrategia(s: SinalPrimeverse): Pr
     const db = getSupabaseAdmin()
     const { data: prov } = await db.from('mtmauto_providers').select('*').ilike('slug', est.slug).limit(1).maybeSingle()
     if (!prov) return { estrategia: est.slug, accao: s.kind, skipped: 'estrategia_por_criar (092)' }
-    if (prov.ativo !== true) return { estrategia: est.slug, accao: s.kind, skipped: 'estrategia_desligada' }
+    if (prov.ativo !== true || prov.apagado_em) return { estrategia: est.slug, accao: s.kind, skipped: prov.apagado_em ? 'estrategia_apagada' : 'estrategia_desligada' }
     const cfg = configDoProvider(prov as Record<string, unknown>)
 
     if (s.kind === 'setup' || s.kind === 'tp_hit' || s.kind === 'sl_hit') {
