@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { readOpenPositions } from './metaapi'
+import { lerPosicoesMotor } from './metaapi-snapshot'
+import { fimDeSemanaFx, saltarLeiturasLigado } from './market-hours'
 import { CONTAS_MOTOR_TEMPO_REAL } from './provider-constants'
 import { symbolMatchesCanonical } from './symbol-resolver'
 
@@ -52,13 +53,28 @@ export interface Adotada {
  * Corre antes de cada passagem do monitor. É barato: já se leem as posições destas contas de
  * qualquer maneira, e são três.
  */
+/** Fim de semana: adopção por conta no máximo 1× por minuto (memória da instância). */
+const ADOPCAO_FIM_DE_SEMANA_MS = 60_000
+const ultimaAdopcaoFimDeSemana = new Map<string, number>()
+
 export async function adotarManuais(): Promise<{ adotadas: Adotada[]; notas: string[] }> {
   const db = getSupabaseAdmin()
   const adotadas: Adotada[] = []
   const notas: string[] = []
 
+  const agora = Date.now()
+  const fimDeSemana = saltarLeiturasLigado() && fimDeSemanaFx(new Date(agora))
   for (const conta of CONTAS_MOTOR_TEMPO_REAL) {
-    const posicoes = await readOpenPositions(conta)
+    // Fim de semana: uma trade à mão só pode ser cripto (o resto não negoceia), e para a apanhar
+    // chega olhar de minuto a minuto em vez de segundo a segundo. Ver market-hours.ts.
+    if (fimDeSemana) {
+      const ultima = ultimaAdopcaoFimDeSemana.get(conta)
+      if (ultima != null && agora - ultima < ADOPCAO_FIM_DE_SEMANA_MS) continue
+      ultimaAdopcaoFimDeSemana.set(conta, agora)
+    }
+    // Fotografia do streaming quando a conta está em PREMIUM_STREAMING_CONTAS e é de confiança;
+    // senão o mesmo readOpenPositions de sempre.
+    const posicoes = (await lerPosicoesMotor(conta)).posicoes
     // Leitura estrita: uma falha de leitura não pode parecer "não há nada aberto".
     if (posicoes == null) {
       notas.push(`${conta.slice(0, 8)}: ilegível`)

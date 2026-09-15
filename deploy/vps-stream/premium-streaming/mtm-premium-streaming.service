@@ -1,0 +1,25 @@
+[Unit]
+Description=MTM Premium - fotografia das contas do motor por streaming MetaApi (metaapi_snapshot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/mtm-premium-streaming.env
+# O SDK da MetaApi guarda a cache de sincronizacao em ./.metaapi: precisa de uma pasta escrevivel.
+StateDirectory=mtm-premium-streaming
+WorkingDirectory=/var/lib/mtm-premium-streaming
+ExecStart=/usr/bin/node --max-old-space-size=256 /opt/mtm/premium-streaming/streaming.js
+Restart=always
+RestartSec=10
+# Ao parar, o processo marca as fotografias como dessincronizadas antes de sair.
+TimeoutStopSec=15
+# Sem privilegios: so fala com a Supabase e a MetaApi. Nunca envia ordens.
+DynamicUser=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=384M
+
+[Install]
+WantedBy=multi-user.target

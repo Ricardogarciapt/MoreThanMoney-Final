@@ -20,11 +20,12 @@ import {
 } from './premium-trade-active'
 import { mirrorPremiumExit } from './premium-subscriber-exits'
 import { CANONICAL_PREMIUM_ACCOUNT_ID, CONTAS_MOTOR_TEMPO_REAL, ehContaDeMotor } from './provider-constants'
-import { getMarketPrice } from './metaapi'
 import { pipSizeForSymbol } from './trade-outcome'
 import { symbolMatchesCanonical } from './symbol-resolver'
 import { adotarManuais } from './adotar-manuais'
 import { trailingArrancaPips } from './source-risk-rules'
+import { lerPosicoesMotor, precoMotor, sombraSnapshot } from './metaapi-snapshot'
+import { podeSaltarLeitura } from './market-hours'
 
 interface ActiveRow {
   id: string
@@ -230,6 +231,29 @@ function positionDir(p: MetaApiPosition): 'buy' | 'sell' {
 }
 
 /**
+ * A posição desta linha na lista da conta. A posição é NOSSA pelo comentário; quando o comentário
+ * não vem (contas de trade manual, ordens que a corretora reescreve), vale a coincidência de par,
+ * lado e HORA de abertura. Sem isto a trade de 2026-08-25 às 14:20 — aberta sem comentário — ficou
+ * invisível ao motor: sem BE, sem trailing, e a linha era dada como fechada com a posição ainda
+ * aberta. Comparação CANÓNICA do par: a corretora devolve 'XAUUSD.s', 'XAUUSD-VIP', 'XAUUSD.s'…
+ * conforme a conta, e a linha guarda 'XAUUSD'. Com igualdade estrita a posição nunca era
+ * encontrada e a linha era encerrada com a trade ainda aberta.
+ */
+function acharPosicao(positions: MetaApiPosition[], row: ActiveRow): MetaApiPosition | undefined {
+  const candidatas = positions.filter(
+    (p) => symbolMatchesCanonical(p.symbol, row.symbol) && positionDir(p) === row.direction,
+  )
+  return (
+    candidatas.find((p) => /prem/i.test(p.comment ?? '') || /gold\s*did/i.test(p.comment ?? '')) ??
+    candidatas.find((p) => {
+      if (!p.time) return false
+      const dt = Math.abs(Date.parse(p.time) - Date.parse(row.created_at))
+      return Number.isFinite(dt) && dt <= JANELA_CASAMENTO_MS
+    })
+  )
+}
+
+/**
  * O espelhamento de saídas para os subscritores SÓ faz sentido a partir da conta MESTRE.
  * No modo SEMI-AUTOMÁTICO (premium_master_exec=off) cada subscritor tem a SUA linha em
  * mtmcopy_premium_active e é gerido individualmente — espelhar aí fecharia as posições dos OUTROS
@@ -322,35 +346,45 @@ export async function runPremiumPriceMonitor(): Promise<{
   let checked = 0
 
   for (const [accountId, accRows] of byAccount) {
+    // MERCADO FECHADO (fim de semana) e nenhuma trade desta conta é cripto: não há ticks nem SL/TP
+    // a disparar, ler é gastar créditos. As linhas ficam exactamente como estão (nada se fecha).
+    // Interruptor SALTAR_LEITURAS_MERCADO_FECHADO (ver market-hours.ts).
+    if (podeSaltarLeitura(accRows.map((r) => r.symbol))) {
+      detail.push(`conta ${accountId.slice(0, 8)}: mercado fechado, sem cripto — leitura saltada`)
+      continue
+    }
+
     // Leitura ESTRITA. Com o fail-open antigo, uma falha devolvia [] → o find abaixo não
     // encontrava a posição → a linha era marcada 'closed' e a trade deixava de ser gerida,
     // continuando aberta na corretora. Foi assim que 21 dos 37 registos de ouro de uma semana
     // morreram nos primeiros dois minutos.
-    const positions = await readOpenPositions(accountId)
+    //
+    // Contas em PREMIUM_STREAMING_CONTAS leem a fotografia do streaming quando é fresca e
+    // sincronizada; qualquer outra situação é o RPC de sempre (metaapi-snapshot.ts).
+    const leitura = await lerPosicoesMotor(accountId)
+    const positions = leitura.posicoes
     if (positions == null) {
       detail.push(`conta ${accountId.slice(0, 8)} ilegível — nada concluído`)
       continue
     }
+    /** Confirmação por RPC de uma ausência vista na fotografia (uma por conta e passagem). */
+    let confirmacaoRpc: MetaApiPosition[] | null | undefined
 
     for (const row of accRows) {
       checked++
-      // A posição é NOSSA pelo comentário; quando o comentário não vem (contas de trade manual,
-      // ordens que a corretora reescreve), vale a coincidência de par, lado e HORA de abertura.
-      // Sem isto a trade de 2026-08-25 às 14:20 — aberta sem comentário — ficou invisível ao
-      // motor: sem BE, sem trailing, e a linha era dada como fechada com a posição ainda aberta.
-      // Comparação CANÓNICA do par: a corretora devolve 'XAUUSD.s', 'XAUUSD-VIP', 'XAUUSD.s'…
-      // conforme a conta, e a linha guarda 'XAUUSD'. Com igualdade estrita a posição nunca era
-      // encontrada e a linha era encerrada com a trade ainda aberta.
-      const candidatas = positions.filter(
-        (p) => symbolMatchesCanonical(p.symbol, row.symbol) && positionDir(p) === row.direction,
-      )
-      const pos =
-        candidatas.find((p) => /prem/i.test(p.comment ?? '') || /gold\s*did/i.test(p.comment ?? '')) ??
-        candidatas.find((p) => {
-          if (!p.time) return false
-          const dt = Math.abs(Date.parse(p.time) - Date.parse(row.created_at))
-          return Number.isFinite(dt) && dt <= JANELA_CASAMENTO_MS
-        })
+      let pos = acharPosicao(positions, row)
+      if (!pos && leitura.snapshot) {
+        // A fotografia pode ter até ~1 s de atraso: uma posição acabada de abrir ainda não está
+        // lá. Uma AUSÊNCIA nunca se conclui pela fotografia — confirma-se por RPC. Se o RPC a
+        // tiver, gere-se já com a posição do RPC.
+        if (confirmacaoRpc === undefined) confirmacaoRpc = await readOpenPositions(accountId)
+        if (confirmacaoRpc == null) {
+          detail.push(`${row.symbol}: ausente na fotografia e RPC ilegível — nada concluído`)
+          continue
+        }
+        pos = acharPosicao(confirmacaoRpc, row)
+        if (pos) detail.push(`${row.symbol}: posição ausente na fotografia, presente no RPC`)
+      }
       if (!pos) {
         // Posição já não existe (fechada por trailing/SL/TP) → encerra o registo.
         await encerrarRegisto(admin, row, 'closed')
@@ -370,7 +404,7 @@ export async function runPremiumPriceMonitor(): Promise<{
        */
       let price = pos.currentPrice
       if (sw.trailing_tempo_real) {
-        const vivo = await getMarketPrice(accountId, row.symbol)
+        const vivo = await precoMotor(accountId, row.symbol, pos.symbol, leitura.snapshot)
         // Falhar a leitura NÃO pára a gestão: cai no instantâneo, que é o que havia antes.
         if (vivo != null && vivo > 0) price = vivo
       }
@@ -721,6 +755,15 @@ export async function runPremiumPriceMonitor(): Promise<{
       } else {
         await admin.from('mtmcopy_premium_active').update(patch).eq('id', row.id)
       }
+    }
+
+    // Sombra: com a fotografia em uso, compara-a com o RPC de 30 em 30 s. Depois da gestão, para
+    // não atrasar nenhuma decisão; nunca lança nem muda nada.
+    if (leitura.snapshot) {
+      const simbolos = accRows
+        .map((r) => ({ canonico: r.symbol, corretora: acharPosicao(positions, r)?.symbol }))
+        .filter((s): s is { canonico: string; corretora: string } => !!s.corretora)
+      await sombraSnapshot(accountId, leitura.snapshot, simbolos)
     }
   }
 
