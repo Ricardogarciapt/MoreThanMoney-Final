@@ -203,6 +203,26 @@ export interface EstadoDoEducadorMin {
   fracaoRestante: number
 }
 
+/**
+ * O que resta da posição do educador, a partir das posições abertas da conta dele.
+ * `abertas = null` (leitura falhada) → null, e null NÃO é «fechou». Sem volume de origem trata-se
+ * como intacta — o lado que não fecha nada por engano.
+ */
+export function estadoDoEducadorPelasPosicoes(
+  abertas: Array<Pick<PosicaoMtmAuto, 'id' | 'volume'>> | null,
+  refExterna: string,
+  volumeOrigem: number | null,
+): EstadoDoEducadorMin | null {
+  const id = refExterna.startsWith('pos:') ? refExterna.slice(4) : null
+  if (!id) return null
+  if (abertas == null) return null
+  const dele = abertas.find((p) => String(p.id) === id)
+  if (!dele) return { aberta: false, fracaoRestante: 0 }
+  if (!(Number(volumeOrigem) > 0)) return { aberta: true, fracaoRestante: 1 }
+  const resta = Number(dele.volume) / Number(volumeOrigem)
+  return { aberta: true, fracaoRestante: Math.max(0, Math.min(1, resta)) }
+}
+
 export type DecisaoEspelho =
   | { tipo: 'nada' }
   /** O educador fechou: fecha tudo (volume undefined = sem volume conhecido, fecha a posição toda). */
