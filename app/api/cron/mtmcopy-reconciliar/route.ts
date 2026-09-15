@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { reconciliarPosicoes } from '@/lib/mtmcopy/reconciliacao'
+import { emSegundoPlano } from '@/lib/mtmcopy/metaapi-quota'
 
 /**
  * Compara o que temos por aberto com o que a corretora tem mesmo, e fecha o que já lá não está.
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
   }
   const seco = req.nextUrl.searchParams.get('dry') === '1'
   try {
-    return NextResponse.json({ ok: true, ...(await reconciliarPosicoes({ seco })) })
+    return NextResponse.json({ ok: true, ...(await emSegundoPlano(() => reconciliarPosicoes({ seco }))) })
   } catch (e) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 })
   }

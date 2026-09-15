@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { runPremiumPriceMonitor } from '@/lib/mtmcopy/premium-price-monitor'
+import { emSegundoPlano } from '@/lib/mtmcopy/metaapi-quota'
 
 /**
  * CRON: monitor de preço Premium — fecha parciais/BE/trailing por PREÇO.
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
-    const result = await runPremiumPriceMonitor()
+    const result = await emSegundoPlano(() => runPremiumPriceMonitor()) // leituras saltam com a quota estourada; ordens nunca
     return NextResponse.json({ success: true, ...result })
   } catch (err) {
     return NextResponse.json(

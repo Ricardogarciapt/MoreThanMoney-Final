@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { runT2TPriceMonitor } from '@/lib/mtmcopy/t2t-price-monitor'
+import { emSegundoPlano } from '@/lib/mtmcopy/metaapi-quota'
 
 /**
  * CRON: monitor de PREÇO das posições Tap to Trade dos seguidores — entry-hit → parciais → BE →
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
-    const result = await runT2TPriceMonitor()
+    const result = await emSegundoPlano(() => runT2TPriceMonitor()) // leituras saltam com a quota estourada; ordens nunca
     return NextResponse.json({ success: true, ...result })
   } catch (err) {
     return NextResponse.json(

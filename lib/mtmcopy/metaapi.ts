@@ -3,7 +3,9 @@ import { convertTrailingToRelativePoints } from './pip-points'
 import { resolveBrokerSymbol, rankedBrokerSymbols } from './symbol-resolver'
 import { orderCommentFor } from '@/lib/mtmcopy/no-comment-accounts'
 import { inicioDaContagem } from './metricas-desde'
-import { simbolosDaContaCache, specDoSimboloCache, invalidarLeiturasDeSimbolos } from './metaapi-cache'
+import { invalidarLeiturasDeSimbolos } from './metaapi-cache'
+import { simbolosPartilhados, specPartilhada, esquecerPartilhado } from './metaapi-simbolos-partilhados'
+import { ehErroDeQuota, ehSegundoPlano, leituraDeFundoBloqueada, registarErroQuota } from './metaapi-quota'
 
 export interface OrderRequest {
   accountId: string
@@ -464,15 +466,17 @@ function tradeModeAllowsOpen(tradeMode: string | undefined, direction: 'buy' | '
 }
 
 /**
- * Lista de símbolos da conta pela cache de 1 hora (ver metaapi-cache.ts).
+ * Lista de símbolos da conta pela cache PARTILHADA entre instâncias (metaapi-simbolos-partilhados.ts;
+ * sem a tabela, a cache de memória de 1 hora de sempre).
  *
- * O `getSymbols` custa ~500 créditos e era pedido em cada ordem; a lista é configuração da
- * corretora e quase não muda. Quando se passam símbolos canónicos, a lista guardada só é usada se
- * TODOS tiverem candidato nela — senão relê-se uma vez (símbolo acabado de acrescentar na corretora).
+ * O `getSymbols` custa 500 créditos, a quota é do token inteiro, e a 2026-09-15 esgotou e fez
+ * falhar a ordem Premium dos clientes. Quando se passam símbolos canónicos, a lista guardada só é
+ * usada se TODOS tiverem candidato nela — senão refresca-se (no máximo de 10 em 10 min, uma
+ * instância de cada vez).
  */
 function simbolosDaConta(accountId: string, connection: RpcConnection, canonicos: string[] = []): Promise<string[]> {
   const pedidos = canonicos.map((c) => c.trim()).filter(Boolean)
-  return simbolosDaContaCache(
+  return simbolosPartilhados(
     accountId,
     () => connection.getSymbols(),
     pedidos.length ? (lista) => pedidos.every((c) => rankedBrokerSymbols(c, lista).length > 0) : undefined,
@@ -480,8 +484,9 @@ function simbolosDaConta(accountId: string, connection: RpcConnection, canonicos
 }
 
 /**
- * Especificação CRUA do símbolo pela cache de 1 hora. Os erros propagam-se como na chamada direta
- * (não ficam guardados). Uma spec sem `point` não se guarda e devolve null.
+ * Especificação do símbolo pela cache partilhada (12 h; a de memória de 1 h à frente). Os erros
+ * propagam-se como na chamada direta, salvo quando há uma spec guardada (mesmo velha) para usar.
+ * Uma spec sem `point` não se guarda e devolve null.
  */
 async function specCruaDaConta(
   accountId: string,
@@ -490,7 +495,36 @@ async function specCruaDaConta(
 ): Promise<MetaApiSymbolSpecification | null> {
   if (!connection.getSymbolSpecification) return null
   const ler = connection.getSymbolSpecification.bind(connection)
-  return specDoSimboloCache(accountId, brokerSymbol, () => ler(brokerSymbol))
+  const raw = await specPartilhada<MetaApiSymbolSpecification | null>(accountId, brokerSymbol, () => ler(brokerSymbol))
+  return raw?.point ? raw : null
+}
+
+/**
+ * Porque é que uma ordem falhou, para decidir o que esquecer:
+ *  - 'quota'  → NÃO se esquece nada (reler a lista era gastar o balde que já estourou);
+ *  - 'lista'  → o símbolo não existe na corretora: refresca-se a lista (com o limite de 10 min);
+ *  - 'spec'   → volume/stops/modo de negociação: esquecem-se as specs;
+ *  - 'outra'  → só a memória desta instância, como antes.
+ */
+export function tipoDeRecusa(err: unknown): 'quota' | 'lista' | 'spec' | 'outra' {
+  if (ehErroDeQuota(err)) return 'quota'
+  const msg = err instanceof Error ? err.message : String(err ?? '')
+  if (/unknown symbol|invalid symbol|symbol .*not (found|exist)|ERR_MARKET_UNKNOWN_SYMBOL/i.test(msg)) return 'lista'
+  if (/invalid volume|invalid stops|trade (is )?disabled|INVALID_VOLUME|INVALID_STOPS|TRADE_DISABLED|close ?only|long ?only|short ?only/i.test(msg)) return 'spec'
+  return 'outra'
+}
+
+async function depoisDeOrdemFalhada(accountId: string, erros: unknown[]): Promise<void> {
+  const tipos = erros.map(tipoDeRecusa)
+  if (tipos.includes('quota')) {
+    const e = erros[tipos.indexOf('quota')]
+    await registarErroQuota(accountId, e instanceof Error ? e : new Error(String(e)))
+  }
+  if (tipos.every((t) => t === 'quota')) return
+  invalidarLeiturasDeSimbolos(accountId)
+  if (tipos.includes('lista') || tipos.includes('spec')) {
+    await esquecerPartilhado(accountId, { lista: tipos.includes('lista') })
+  }
 }
 
 async function fetchSpec(
@@ -740,7 +774,8 @@ export async function placeOrdersSequential(accountId: string, requests: OrderRe
       }
       // Uma ordem recusada pode vir de configuração da corretora que mudou (lote mínimo, stops,
       // símbolo desativado): esquece-se o guardado para a próxima ler tudo fresco.
-      if (results.some((r) => !r.success)) invalidarLeiturasDeSimbolos(accountId)
+      const falhadas = results.filter((r) => !r.success)
+      if (falhadas.length) await depoisDeOrdemFalhada(accountId, falhadas.map((r) => r.error ?? ''))
       return results
     } finally {
       if (close) await close()
@@ -752,7 +787,7 @@ export async function placeOrdersSequential(accountId: string, requests: OrderRe
   } catch (err: unknown) {
     // Ligação cacheada possivelmente morta → invalida e tenta UMA vez com ligação fresca.
     invalidateRpcCache(accountId)
-    invalidarLeiturasDeSimbolos(accountId)
+    await depoisDeOrdemFalhada(accountId, [err])
     if (isRetryableMetaApiError(err)) {
       try {
         return await run(true)
@@ -822,6 +857,29 @@ async function createRpcConnection(
 }
 
 /**
+ * Embrulha a ligação para que QUALQUER erro de quota numa chamada RPC fique registado (travão das
+ * leituras de fundo, metaapi-quota.ts). Não muda resultados nem erros.
+ */
+function vigiarQuota(accountId: string, connection: RpcConnection): RpcConnection {
+  return new Proxy(connection, {
+    get(target, prop) {
+      const v = Reflect.get(target, prop, target) as unknown
+      if (typeof v !== 'function') return v
+      return (...args: unknown[]) => {
+        const r = (v as (...a: unknown[]) => unknown).apply(target, args)
+        if (r && typeof (r as Promise<unknown>).then === 'function') {
+          return (r as Promise<unknown>).catch(async (e: unknown) => {
+            await registarErroQuota(accountId, e)
+            throw e
+          })
+        }
+        return r
+      }
+    },
+  })
+}
+
+/**
  * Devolve uma ligação RPC para a conta. Reutiliza a ligação cacheada (quente) se
  * saudável; senão cria uma nova e cacheia. `close()` é no-op para ligações cacheadas
  * (mantém-se quente); a invalidação real faz-se via invalidateRpcCache/forceFresh.
@@ -832,8 +890,11 @@ async function getRpcConnection(
   opts?: { forceFresh?: boolean },
 ): Promise<{ connection: RpcConnection; close: () => Promise<void> }> {
   if (!RPC_CACHE_ENABLED) {
-    const fresh = await createRpcConnection(accountId)
-    return { connection: fresh.connection, close: fresh.realClose }
+    const fresh = await createRpcConnection(accountId).catch(async (e: unknown) => {
+      await registarErroQuota(accountId, e)
+      throw e
+    })
+    return { connection: vigiarQuota(accountId, fresh.connection), close: fresh.realClose }
   }
 
   if (opts?.forceFresh) invalidateRpcCache(accountId)
@@ -842,7 +903,7 @@ async function getRpcConnection(
   if (cached) {
     if (Date.now() - cached.createdAt < RPC_CACHE_TTL_MS && rpcConnectionHealthy(cached.connection)) {
       cached.lastUsed = Date.now()
-      return { connection: cached.connection, close: async () => {} }
+      return { connection: vigiarQuota(accountId, cached.connection), close: async () => {} }
     }
     invalidateRpcCache(accountId)
   }
@@ -853,10 +914,13 @@ async function getRpcConnection(
     inflight = createRpcConnection(accountId).finally(() => rpcInflight.delete(accountId))
     rpcInflight.set(accountId, inflight)
   }
-  const created = await inflight
+  const created = await inflight.catch(async (e: unknown) => {
+    await registarErroQuota(accountId, e)
+    throw e
+  })
   rpcCache.set(accountId, { ...created, createdAt: Date.now(), lastUsed: Date.now() })
   evictRpcLruIfNeeded()
-  return { connection: created.connection, close: async () => {} }
+  return { connection: vigiarQuota(accountId, created.connection), close: async () => {} }
 }
 
 export interface AccountSnapshot {
@@ -1025,7 +1089,7 @@ export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> 
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao executar ordem no MT5'
-    invalidarLeiturasDeSimbolos(req.accountId) // a próxima ordem relê símbolos/specs frescos
+    await depoisDeOrdemFalhada(req.accountId, [err]) // esquece só o que a recusa justifica (nunca por quota)
     return { success: false, error: message }
   } finally {
     if (close) await close()
@@ -1088,7 +1152,7 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao colocar ordem LIMIT no MT5'
-    invalidarLeiturasDeSimbolos(req.accountId) // a próxima ordem relê símbolos/specs frescos
+    await depoisDeOrdemFalhada(req.accountId, [err]) // esquece só o que a recusa justifica (nunca por quota)
     return { success: false, error: message }
   } finally {
     if (close) await close()
@@ -1136,7 +1200,7 @@ export async function placeStopOrder(req: OrderRequest): Promise<OrderResult> {
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao colocar ordem STOP no MT5'
-    invalidarLeiturasDeSimbolos(req.accountId) // a próxima ordem relê símbolos/specs frescos
+    await depoisDeOrdemFalhada(req.accountId, [err]) // esquece só o que a recusa justifica (nunca por quota)
     return { success: false, error: message }
   } finally {
     if (close) await close()
@@ -1228,6 +1292,8 @@ export function isMetaApiConfigured(): boolean {
  * Quem GERE posições usa esta função e não faz nada quando recebe `null`.
  */
 export async function readOpenPositions(accountId: string): Promise<MetaApiPosition[] | null> {
+  // Monitor de fundo com a quota estourada: salta (null = «não consegui ler», nada se conclui).
+  if (ehSegundoPlano() && (await leituraDeFundoBloqueada(accountId))) return null
   let close: (() => Promise<void>) | undefined
   try {
     return await withTimeout(
@@ -1502,6 +1568,7 @@ export async function getRiskTickContext(
 
 /** Preço de mercado (mid) atual de um símbolo na conta — para sizing por risco de ordens a mercado. */
 export async function getMarketPrice(accountId: string, canonicalSymbol: string): Promise<number | null> {
+  if (ehSegundoPlano() && (await leituraDeFundoBloqueada(accountId))) return null
   let close: (() => Promise<void>) | undefined
   try {
     const { connection, close: closeFn } = await getRpcConnection(accountId)
@@ -1517,6 +1584,58 @@ export async function getMarketPrice(accountId: string, canonicalSymbol: string)
     return null
   } finally {
     if (close) await close()
+  }
+}
+
+/** Lista de símbolos pelo REST (500 créditos) — só para o refrescador da cache partilhada. */
+async function lerSimbolosRest(accountId: string, regiao: string, token: string): Promise<string[]> {
+  const r = await fetch(`https://mt-client-api-v1.${regiao}.agiliumtrade.ai/users/current/accounts/${accountId}/symbols`, {
+    headers: { 'auth-token': token },
+    cache: 'no-store',
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (!r.ok) {
+    const corpo = await r.text().catch(() => '')
+    throw Object.assign(new Error(`MetaApi symbols HTTP ${r.status}: ${corpo.slice(0, 200)}`), { status: r.status })
+  }
+  const j = (await r.json()) as unknown
+  return Array.isArray(j) ? j.map(String) : []
+}
+
+/**
+ * Preço (mid) para MONITORES pelo endpoint REST `current-price` (50 créditos, sem ligação RPC nem
+ * sincronização). O símbolo da corretora vem da lista partilhada — nunca se pede getSymbols só
+ * para um preço (a lista refresca-se sozinha, no máximo de 12 em 12 h, uma instância de cada vez).
+ * Sem região conhecida cai no `getMarketPrice` (RPC) como antes. Falha = null. Nunca lança.
+ */
+export async function precoRest(accountId: string, canonicalSymbol: string): Promise<number | null> {
+  if (ehSegundoPlano() && (await leituraDeFundoBloqueada(accountId))) return null
+  const token = process.env.METAAPI_TOKEN
+  if (!token || !accountId || !canonicalSymbol?.trim()) return null
+  const regiao = await regiaoDaConta(accountId, token)
+  if (!regiao) return getMarketPrice(accountId, canonicalSymbol)
+  try {
+    const symbols = await simbolosPartilhados(
+      accountId,
+      () => lerSimbolosRest(accountId, regiao, token),
+      (lista) => rankedBrokerSymbols(canonicalSymbol, lista).length > 0,
+    ).catch(() => [] as string[])
+    const brokerSymbol = resolveBrokerSymbol(canonicalSymbol, symbols)
+    const r = await fetch(
+      `https://mt-client-api-v1.${regiao}.agiliumtrade.ai/users/current/accounts/${accountId}/symbols/${encodeURIComponent(brokerSymbol)}/current-price`,
+      { headers: { 'auth-token': token }, cache: 'no-store', signal: AbortSignal.timeout(8_000) },
+    )
+    if (!r.ok) {
+      const corpo = await r.text().catch(() => '')
+      await registarErroQuota(accountId, Object.assign(new Error(corpo || `HTTP ${r.status}`), { status: r.status }))
+      return null
+    }
+    const q = (await r.json()) as { bid?: number; ask?: number }
+    const mid = q?.ask != null && q?.bid != null ? (q.ask + q.bid) / 2 : (q?.ask ?? q?.bid ?? null)
+    return typeof mid === 'number' && mid > 0 ? mid : null
+  } catch (e) {
+    await registarErroQuota(accountId, e)
+    return null
   }
 }
 
@@ -1595,6 +1714,7 @@ export async function closePositionsForSymbol(
 
 /** Ordens pendentes distinguindo "não há" de "não consegui ler" — ver readOpenPositions. */
 export async function readPendingOrders(accountId: string): Promise<MetaApiPendingOrder[] | null> {
+  if (ehSegundoPlano() && (await leituraDeFundoBloqueada(accountId))) return null
   let close: (() => Promise<void>) | undefined
   try {
     const { connection, close: closeFn } = await getRpcConnection(accountId)

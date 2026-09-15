@@ -10,10 +10,13 @@
  * `metaapi_snapshot_sombra`. Não influencia nada — é só para verificar antes de alargar.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { getMarketPrice, readOpenPositions, type MetaApiPosition } from './metaapi'
+import { getMarketPrice, precoRest, readOpenPositions, type MetaApiPosition } from './metaapi'
+import { rankedBrokerSymbols } from './symbol-resolver'
 import {
   amostraSombraDevida,
   contasStreaming,
+  PRECO_MONITOR_MAX_IDADE_MS,
+  precoDoSnapshotParaMonitor,
   decidirFonte,
   diferencasSombra,
   posicaoParaSnapshot,
@@ -74,7 +77,8 @@ export async function lerPosicoesMotor(accountId: string, agoraMs = Date.now()):
 
 /**
  * Preço ao vivo para o trailing: da fotografia (símbolo da própria posição) quando há tick
- * recente; senão `getMarketPrice` como antes.
+ * recente; senão o preço dos monitores (`precoParaMonitor`: fotografia <5 s → REST current-price),
+ * nunca o RPC com getSymbols.
  */
 export async function precoMotor(
   accountId: string,
@@ -86,7 +90,33 @@ export async function precoMotor(
     const p = precoDoSnapshot(snapshot, simboloDaPosicao)
     if (p != null && p > 0) return p
   }
-  return getMarketPrice(accountId, canonicalSymbol)
+  return precoParaMonitor(accountId, canonicalSymbol)
+}
+
+// Uma leitura da fotografia por conta por segundo por instância chega (vários símbolos na mesma passagem).
+const snapshotRecente = new Map<string, { snap: MetaApiSnapshot | null; lidoEm: number }>()
+
+/**
+ * Preço (mid) para os MONITORES de fundo (T2T, signal-tracker, trailing), pela ordem mais barata:
+ *  1. contas em streaming: a fotografia do VPS, se tiver <5 s e o tick do símbolo — 0 créditos;
+ *  2. REST `current-price` (50 créditos), com o símbolo da corretora da lista partilhada.
+ * Nunca pede getSymbols só para um preço. null = sem preço (quem chama já sabe saltar).
+ */
+export async function precoParaMonitor(accountId: string, canonicalSymbol: string, agoraMs = Date.now()): Promise<number | null> {
+  if (contaEmStreaming(accountId)) {
+    let e = snapshotRecente.get(accountId)
+    if (!e || agoraMs - e.lidoEm > 1_000) {
+      e = { snap: await lerSnapshot(accountId), lidoEm: agoraMs }
+      snapshotRecente.set(accountId, e)
+    }
+    const snap = e.snap
+    if (snap) {
+      const chave = rankedBrokerSymbols(canonicalSymbol, Object.keys(snap.precos ?? {}))[0]
+      const p = chave ? precoDoSnapshotParaMonitor(snap, chave, agoraMs, PRECO_MONITOR_MAX_IDADE_MS) : null
+      if (p != null && p > 0) return p
+    }
+  }
+  return precoRest(accountId, canonicalSymbol)
 }
 
 // ── sombra ─────────────────────────────────────────────────────────────────────

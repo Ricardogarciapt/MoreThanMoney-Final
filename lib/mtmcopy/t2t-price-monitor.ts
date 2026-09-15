@@ -22,13 +22,13 @@ import {
   readOpenPositions,
   readPendingOrders,
   cancelPendingOrdersForSymbol,
-  getMarketPrice,
   modifyPositionSlTp,
   closePositionById,
   type MetaApiPosition,
   type MetaApiPendingOrder,
 } from './metaapi'
 import { lifecycleMessage, logStatusFor, type SignalEvent } from './signal-lifecycle'
+import { precoParaMonitor } from './metaapi-snapshot'
 import { pipSizeForSymbol } from './trade-outcome'
 import { t2tUsaTrailing } from './t2t-source'
 import { podeSaltarLeitura } from './market-hours'
@@ -254,7 +254,7 @@ export async function runT2TPriceMonitor(): Promise<{
       if (!pos && pend) {
         const tpsP = tpLevels(row)
         const key0 = `${accountId}|${row.symbol}`
-        if (!priceCache.has(key0)) priceCache.set(key0, await getMarketPrice(accountId, row.symbol))
+        if (!priceCache.has(key0)) priceCache.set(key0, await precoParaMonitor(accountId, row.symbol))
         const px = priceCache.get(key0) ?? null
 
         let morte: SignalEvent | null = null
@@ -320,7 +320,7 @@ export async function runT2TPriceMonitor(): Promise<{
         let exitPx: number | null = null
         if (event === 'closed') {
           const keyF = `${accountId}|${row.symbol}`
-          if (!priceCache.has(keyF)) priceCache.set(keyF, await getMarketPrice(accountId, row.symbol))
+          if (!priceCache.has(keyF)) priceCache.set(keyF, await precoParaMonitor(accountId, row.symbol))
           exitPx = priceCache.get(keyF) ?? null
         }
         await publishEvent(row, event, {
@@ -335,7 +335,7 @@ export async function runT2TPriceMonitor(): Promise<{
 
       managed++
       const key = `${accountId}|${row.symbol}`
-      if (!priceCache.has(key)) priceCache.set(key, await getMarketPrice(accountId, row.symbol))
+      if (!priceCache.has(key)) priceCache.set(key, await precoParaMonitor(accountId, row.symbol))
       const price = priceCache.get(key) ?? null
       if (price == null || !(price > 0)) continue
 

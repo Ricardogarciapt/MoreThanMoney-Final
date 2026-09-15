@@ -1,3 +1,4 @@
+import { simbolosPartilhados } from '@/lib/mtmcopy/metaapi-simbolos-partilhados'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { rankedBrokerSymbols } from '@/lib/mtmcopy/symbol-resolver'
 import { candidatosDeTicker } from './ordens'
@@ -155,11 +156,15 @@ async function simbolosDaConta(conta: string, token: string): Promise<string[]> 
   const p = await pedir(`${PROVISIONAMENTO}/users/current/accounts/${conta}`, token)
   const regiao = p?.ok ? String(((await p.json().catch(() => ({}))) as { region?: string }).region ?? '') : ''
   if (regiao) {
-    const r = await pedir(`https://mt-client-api-v1.${regiao}.agiliumtrade.ai/users/current/accounts/${conta}/symbols`, token)
-    if (r?.ok) {
+    // Lista PARTILHADA com a execução (tabela metaapi_simbolos_cache): as contas provider são as
+    // mesmas que executam o Premium, e cada getSymbols (500 créditos) sai da quota do token inteiro.
+    lista = await simbolosPartilhados(conta, async () => {
+      const r = await pedir(`https://mt-client-api-v1.${regiao}.agiliumtrade.ai/users/current/accounts/${conta}/symbols`, token)
+      if (!r) return []
+      if (!r.ok) throw Object.assign(new Error(await r.text().catch(() => `HTTP ${r.status}`)), { status: r.status })
       const j = await r.json().catch(() => [])
-      if (Array.isArray(j)) lista = j.map(String)
-    }
+      return Array.isArray(j) ? j.map(String) : []
+    }).catch(() => [] as string[])
   }
   SIMBOLOS_DA_CONTA.set(conta, lista)
   return lista
