@@ -2,7 +2,8 @@ import { verificarQuotaMetaApi } from '@/lib/contas/quota-metaapi'
 import { MAX_FANOUT, pedidoDeModo, validarRota, type ArestaRota } from '../regras'
 import { MODOS_LOTE_COPIA, type ModoLoteCopia, type RotaCopia } from '../tipos'
 import { db, lerInterruptores } from './base'
-import { lerContaPorRef, usaChaveMetaApiDaCasa } from './refs'
+import { providerVisivelPara } from './providers-equipas'
+import { lerContaPorRef, tokenDaConta } from './refs'
 
 /**
  * ROTAS DE CÓPIA ENTRE CONTAS — criar, editar, aprovar, pausar, apagar. As regras vivem em
@@ -111,7 +112,10 @@ export async function criarRota(p: {
 }): Promise<{ ok: true; rota: RotaCopia } | Erro> {
   const [origem, destino] = await Promise.all([lerContaPorRef(p.origemRef), lerContaPorRef(p.destinoRef)])
   if (!origem || !destino) return { ok: false, status: 404, erro: 'Conta de origem ou de destino não encontrada.' }
-  if (p.exigirDono && (origem.userId !== p.exigirDono || destino.userId !== p.exigirDono)) return { ok: false, status: 403, erro: 'Só podes copiar entre contas tuas.' }
+  // Cliente: o destino é sempre dele; a origem é dele OU uma estratégia visível para a equipa dele.
+  if (p.exigirDono && destino.userId !== p.exigirDono) return { ok: false, status: 403, erro: 'Só podes copiar para contas tuas.' }
+  if (p.exigirDono && !origem.provider && origem.userId !== p.exigirDono) return { ok: false, status: 403, erro: 'Só podes copiar entre contas tuas.' }
+  if (p.exigirDono && origem.provider && !(await providerVisivelPara(origem.provider, p.exigirDono))) return { ok: false, status: 403, erro: 'Essa estratégia não está disponível para a tua equipa.' }
   const v = validarRota(origem, destino, await arestas())
   if (!v.ok) return { ok: false, status: v.erro === 'fanout' || v.erro === 'ciclo' || v.erro === 'duplicada' ? 409 : 400, erro: v.mensagem }
 
@@ -122,15 +126,18 @@ export async function criarRota(p: {
     if ((c.plataforma === 'mt4' || c.plataforma === 'mt5') && !c.metaapiAccountId) {
       return { ok: false, status: 400, erro: 'A conta MetaTrader ainda não está ligada à MetaApi.' }
     }
-    if (!(await usaChaveMetaApiDaCasa(c))) return { ok: false, status: 400, erro: 'Conta de uma equipa MTM Auto (outra chave MetaApi): ainda não entra na cópia entre contas.' }
+    // Cada conta fala com a SUA chave (casa ou equipa); sem chave utilizável não entra.
+    if ((c.plataforma === 'mt4' || c.plataforma === 'mt5') && !(await tokenDaConta(c))) return { ok: false, status: 400, erro: 'Conta de uma equipa sem chave MetaApi utilizável.' }
   }
-  if ([origem, destino].some((c) => c.plataforma === 'mt4' || c.plataforma === 'mt5')) {
-    const q = await verificarQuotaMetaApi(origem.userId)
+  // Quota do dono das contas de clientes (a de um provider conta na quota da equipa, ao criá-lo).
+  if ([origem, destino].some((c) => !c.provider && (c.plataforma === 'mt4' || c.plataforma === 'mt5'))) {
+    const q = await verificarQuotaMetaApi(destino.userId)
     if (q.estado.acimaDoLimite) return { ok: false, status: 402, erro: `O dono está acima da quota MetaApi (${q.estado.emUso}/${q.estado.limite}). Resolve a quota antes de criar cópias.` }
   }
 
   const linha = {
-    user_id: origem.userId,
+    // numa rota de estratégia o «dono» da rota é o seguidor (dono do destino)
+    user_id: destino.userId,
     origem_tipo: origem.plataforma, origem_ref: origem.ref, origem_chave: v.origemChave,
     destino_tipo: destino.plataforma, destino_ref: destino.ref, destino_chave: v.destinoChave,
     modo_lote: 'multiplicador', valor: 1,

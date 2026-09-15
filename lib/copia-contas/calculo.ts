@@ -80,7 +80,8 @@ export function calcularLote(e: EntradaLote): Lote {
   const r = e.regra
   const min = r.min > 0 ? r.min : 0.01
   if (bruto < min / 2) return { ok: false, motivo: `lote ${bruto.toFixed(4)} abaixo de metade do mínimo ${min}` }
-  let v = Math.max(min, arredondarAoStep(bruto, r, 'perto'))
+  // Risco %: arredonda PARA BAIXO — um arredondamento nunca pode subir o risco escolhido.
+  let v = Math.max(min, arredondarAoStep(bruto, r, e.modo === 'risco_pct' ? 'baixo' : 'perto'))
   if (r.max != null && r.max > 0 && v > r.max) v = arredondarAoStep(r.max, r, 'baixo')
   if (e.loteMax != null && e.loteMax > 0 && v > e.loteMax) {
     v = arredondarAoStep(e.loteMax, r, 'baixo')
