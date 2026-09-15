@@ -75,6 +75,15 @@ export interface OpcoesLeitor {
   aoErroMetaApi?: (e: unknown, origem: string) => void
   /** Espera inicial pela sincronização (s). Passado o prazo a ligação continua a tentar sozinha. */
   esperaSincronizacaoS?: number
+  /**
+   * Eventos em bruto, SEM debounce, com a hora a que chegaram (Date.now()) — para quem precisa de
+   * reagir no próprio evento e medir latência (espelho-provider.ts). O `aoMudar` continua igual.
+   *  · 'posicao' / 'removida': uma posição mudou ou saiu (dados = posição MetaApi / id);
+   *  · 'deal': um deal novo (dados = deal MetaApi: positionId, entryType, price, volume, reason);
+   *  · 'sincronizada': fim de uma (re)sincronização — o terminalState é fiável outra vez;
+   *  · 'queda': perdeu a sincronização (nada se fecha até voltar).
+   */
+  aoEvento?: (tipo: 'posicao' | 'removida' | 'deal' | 'sincronizada' | 'queda', dados: unknown, recebidoEm: number) => void
 }
 
 const ATRASO_RELIGAR_MIN_MS = 60_000
@@ -130,6 +139,7 @@ export class LeitorMestre {
     // Qualquer queda (mesmo de uma só réplica) invalida as ausências contadas — conservador.
     this.epoca++
     if (tinha && this.sincronizadas.size === 0) this.o.log(`[espelho] mestre ${this.curto()} dessincronizada (${porque}) — não fecha nada até voltar`)
+    this.o.aoEvento?.('queda', porque, Date.now())
     this.o.aoMudar(this.id)
   }
 
@@ -137,10 +147,19 @@ export class LeitorMestre {
     const eu = this
     const seguro = (f: () => void) => { try { f() } catch (e) { eu.o.log(`[espelho] ouvinte ${eu.curto()}:`, e instanceof Error ? e.message : e) } }
     const Base = this.sdk.Base
+    const evento = (tipo: Parameters<NonNullable<OpcoesLeitor['aoEvento']>>[0], dados: unknown) => {
+      const t = Date.now()
+      if (eu.o.aoEvento) seguro(() => eu.o.aoEvento!(tipo, dados, t))
+    }
     class Ouvinte extends Base {
-      async onPositionUpdated() { seguro(() => eu.o.aoMudar(eu.id)) }
-      async onPositionRemoved() { seguro(() => eu.o.aoMudar(eu.id)) }
-      async onPositionsUpdated() { seguro(() => eu.o.aoMudar(eu.id)) }
+      async onPositionUpdated(_i: string, p: unknown) { evento('posicao', p); seguro(() => eu.o.aoMudar(eu.id)) }
+      async onPositionRemoved(_i: string, id: unknown) { evento('removida', id); seguro(() => eu.o.aoMudar(eu.id)) }
+      async onPositionsUpdated(_i: string, ps: unknown, removidas: unknown) {
+        for (const p of Array.isArray(ps) ? ps : []) evento('posicao', p)
+        for (const id of Array.isArray(removidas) ? removidas : []) evento('removida', id)
+        seguro(() => eu.o.aoMudar(eu.id))
+      }
+      async onDealAdded(_i: string, d: unknown) { evento('deal', d) }
       async onPositionsReplaced() { seguro(() => eu.o.aoMudar(eu.id)) }
       async onPositionsSynchronized() { seguro(() => eu.o.aoMudar(eu.id)) }
       async onSynchronizationStarted(i: string) { seguro(() => eu.perdeu(String(i), 'ressincronização')) }
@@ -151,6 +170,7 @@ export class LeitorMestre {
           eu.sincronizadas.add(String(i))
           eu.atrasoReligar = ATRASO_RELIGAR_MIN_MS
           if (!antes) eu.o.log(`[espelho] mestre ${eu.curto()} sincronizada (streaming) · ${eu.ligacao?.terminalState.positions.length ?? 0} posição(ões)`)
+          if (!antes) evento('sincronizada', null)
           eu.o.aoMudar(eu.id)
         })
       }
@@ -201,6 +221,7 @@ export class LeitorMestre {
       if (this.fechado || this.ligacao !== ligacao || this.sincronizadas.size) return
       this.sincronizadas.add(INICIAL)
       this.o.log(`[espelho] mestre ${this.curto()} sincronizada (ligação já existente) · ${ligacao.terminalState.positions.length} posição(ões)`)
+      this.o.aoEvento?.('sincronizada', null, Date.now())
       this.o.aoMudar(this.id)
     }).catch((e: unknown) => {
       this.o.aoErroMetaApi?.(e, `espelho:sincronizar:${this.curto()}`)
