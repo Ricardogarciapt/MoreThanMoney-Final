@@ -93,13 +93,15 @@ const IDX: MetaApiSymbolSpecification = { point: 0.1, digits: 1, minVolume: 0.1,
 
 // ── elegibilidade ────────────────────────────────────────────────────────────
 {
+  // Fase 1: basta o direito ao MTM Auto (copiaAutomatica) — Premium e VIP também entram.
   const matriz: Array<[MotivoCopia, boolean, boolean]> = [
     ['admin', true, true], ['mtmcopy', false, true], ['mtmauto', false, true],
-    ['vip', false, false], ['premium', false, false], ['nenhum', false, false],
+    ['vip', false, true], ['premium', false, true], ['nenhum', false, false],
   ]
   for (const [motivo, admin, esperado] of matriz) {
-    eq(`copia com motivo ${motivo}`, podeCopiarFunded({ ...SEM_DIREITOS, motivoCopia: motivo, admin }), esperado)
+    eq(`copia com motivo ${motivo}`, podeCopiarFunded({ ...SEM_DIREITOS, motivoCopia: motivo, admin, copiaAutomatica: motivo !== 'nenhum' }), esperado)
   }
+  eq('sem direito ao MTM Auto não copia', podeCopiarFunded({ ...SEM_DIREITOS, motivoCopia: 'premium', copiaAutomatica: false }), false)
   const demo = { tipo: 'mtmauto' as const, demo: true, ligado: true, metaapiAccountId: 'x' }
   eq('demo ligada: ok', destinoPermitido(demo, false, false).ok, true)
   eq('real: bloqueada para aluno', destinoPermitido({ ...demo, demo: false }, false, false).ok, false)

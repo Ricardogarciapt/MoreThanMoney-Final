@@ -5,7 +5,7 @@ export interface MtmcopyAccessResult {
   hasAccess: boolean
   subscribed: boolean
   canActivate: boolean
-  reason?: 'admin' | 'paid' | 'checkout' | 'connection' | 'none'
+  reason?: 'admin' | 'paid' | 'mtmauto' | 'connection' | 'none'
   connectionId?: string
 }
 

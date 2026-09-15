@@ -18,7 +18,7 @@ import {
   senseiPronto,
 } from './provider-constants'
 import { connectionCopyMethod, prefersDirectExecution } from './copy-limits'
-import { getMtmcopySubscription } from './subscription'
+import { direitoMtmAuto } from '@/lib/entitlements'
 import { chatMatchesAllowlist, connectionMatchesChannel, connectionMatchesSignalSource } from './sources'
 import {
   getActiveConnections,
@@ -284,24 +284,21 @@ async function filterEligibleSubscribers(
   )
   if (!candidates.length) return []
 
-  const supabase = getSupabaseAdmin()
+  // Fase 1: a cópia só corre para quem tem direito ao MTM Auto (regra única direito_mtm_auto —
+  // admin, Premium/VIP, subscritor do MTM Auto ou MTM Copy legado pago e datado). Uma pergunta
+  // por utilizador, não por ligação.
   const userIds = [...new Set(candidates.map((c) => c.user_id))]
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, user_type')
-    .in('id', userIds)
-
-  const userTypeById = new Map(
-    (profiles ?? []).map((p) => [p.id as string, p.user_type as string | undefined]),
-  )
-
-  const eligible: MTMcopierConnection[] = []
+  const direitos = new Map<string, boolean>()
   await Promise.all(
-    candidates.map(async (conn) => {
-      const sub = await getMtmcopySubscription(conn.user_id, userTypeById.get(conn.user_id))
-      if (sub.active) eligible.push(conn)
+    userIds.map(async (id) => {
+      try {
+        direitos.set(id, (await direitoMtmAuto(id)).tem)
+      } catch {
+        direitos.set(id, false) // na dúvida, não se abre ordem na conta de ninguém
+      }
     }),
   )
+  const eligible = candidates.filter((conn) => direitos.get(conn.user_id) === true)
 
   return eligible
 }

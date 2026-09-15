@@ -77,6 +77,164 @@ export const SEM_DIREITOS: Direitos = {
   depositoUsd: null,
 }
 
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// DIREITO AO MTM AUTO — a regra única (fase 1 da consolidação MTM Copy → MTM Auto)
+//
+// A fonte é a função SQL `direito_mtm_auto` (supabase/migrations/073_direito_mtm_auto.sql), que
+// serve o site E a app MTM Auto. Isto é o espelho em TypeScript: é o que os testes exercitam e o
+// que corre se a função ainda não existir na base (deploy antes da migração). Mudar a regra =
+// mudar a SQL, este espelho, o de mtm-auto/lib/direito.ts e os testes.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+export type MotivoDireitoMtmAuto =
+  | 'suspenso'
+  | 'admin'
+  | 'mtmauto_stripe'
+  | 'mtmauto_apple'
+  | 'legado_mtmcopy'
+  | 'mtmauto_isento'
+  | 'mtmauto_manual'
+  | 'vip'
+  | 'premium'
+  | 'membro_mtm'
+  | 'nenhum'
+
+export interface DireitoMtmAuto {
+  tem: boolean
+  motivo: MotivoDireitoMtmAuto
+}
+
+export interface PerfilDireito {
+  user_type?: string | null
+  member_category?: string | null
+  subscription_plan?: string | null
+  membership_level?: string | null
+  is_active?: boolean | null
+  subscription_status?: string | null
+  subscription_expires_at?: string | null
+  mtmcopy_subscription_active?: boolean | null
+  mtmcopy_subscription_expires_at?: string | null
+}
+
+export interface AutoDireito {
+  papel?: string | null
+  subscricao?: string | null
+  isento?: boolean | null
+  motivo_isencao?: string | null
+  acesso_manual?: boolean | null
+  acesso_ate?: string | null
+  suspenso?: boolean | null
+  apple_estado?: string | null
+  apple_expira_em?: string | null
+}
+
+/**
+ * O Membro (app_member) NÃO tem MTM Auto — decisão do dono: queremos mais Premium do que Membros.
+ * `MTMAUTO_APP_MEMBER_SEM_ACESSO=0` devolve-lhe o acesso (só para uma transição, se for preciso).
+ */
+export function appMemberSemAcessoMtmAuto(): boolean {
+  return String(process.env.MTMAUTO_APP_MEMBER_SEM_ACESSO ?? '1').trim() !== '0'
+}
+
+const depois = (data: string | null | undefined, agora: Date) => Boolean(data) && new Date(String(data)) > agora
+
+export function decidirDireitoMtmAuto(
+  perfil: PerfilDireito | null | undefined,
+  auto: AutoDireito | null | undefined,
+  opcoes: { appMemberSemAcesso?: boolean; agora?: Date } = {},
+): DireitoMtmAuto {
+  const agora = opcoes.agora ?? new Date()
+  const semMembro = opcoes.appMemberSemAcesso ?? true
+  const sim = (motivo: MotivoDireitoMtmAuto): DireitoMtmAuto => ({ tem: true, motivo })
+
+  if (auto?.suspenso) return { tem: false, motivo: 'suspenso' }
+
+  const tipo = String(perfil?.user_type ?? '').toLowerCase()
+  const categoria = String(perfil?.member_category ?? '').toLowerCase()
+  const plano = String(perfil?.subscription_plan ?? '').toLowerCase()
+  const nivel = String(perfil?.membership_level ?? '').toLowerCase()
+
+  if (tipo === 'admin' || auto?.papel === 'admin') return sim('admin')
+  if (auto?.subscricao === 'active' || auto?.subscricao === 'trialing') return sim('mtmauto_stripe')
+  if (auto?.apple_estado === 'grace' || (auto?.apple_estado === 'active' && (!auto.apple_expira_em || depois(auto.apple_expira_em, agora)))) {
+    return sim('mtmauto_apple')
+  }
+  // MTM Copy legado: pago E datado. Sem data não conta.
+  if (perfil?.mtmcopy_subscription_active && depois(perfil.mtmcopy_subscription_expires_at, agora)) return sim('legado_mtmcopy')
+  // A isenção 'cliente_mtm' é derivada do perfil do site: revê-se abaixo, com o perfil de hoje.
+  if (auto?.isento && auto.motivo_isencao !== 'cliente_mtm') return sim('mtmauto_isento')
+  if (auto?.acesso_manual && (!auto.acesso_ate || depois(auto.acesso_ate, agora))) return sim('mtmauto_manual')
+
+  // Do site: `inactive` ou is_active=false perdem tudo.
+  if (perfil && tipo && tipo !== 'inactive' && perfil.is_active === true) {
+    // VIP vive em dois campos (user_type OU member_category).
+    if (tipo === 'vip' || categoria === 'vip') return sim('vip')
+    const estadoOk = !['canceled', 'unpaid', 'incomplete_expired'].includes(String(perfil.subscription_status ?? '').toLowerCase())
+    const noPrazo = !perfil.subscription_expires_at || depois(perfil.subscription_expires_at, agora)
+    const premium =
+      /premium|founder|fundador|elite/.test(plano) || /premium|fundador/.test(categoria) || /premium|founder|fundador/.test(nivel)
+    if (estadoOk && noPrazo && premium) return sim('premium')
+    const membro = /app_member|membro/.test(plano) || /membro/.test(categoria)
+    if (!semMembro && estadoOk && noPrazo && membro) return sim('membro_mtm')
+  }
+  return { tem: false, motivo: 'nenhum' }
+}
+
+const MOTIVOS_VALIDOS = new Set<MotivoDireitoMtmAuto>([
+  'suspenso', 'admin', 'mtmauto_stripe', 'mtmauto_apple', 'legado_mtmcopy', 'mtmauto_isento',
+  'mtmauto_manual', 'vip', 'premium', 'membro_mtm', 'nenhum',
+])
+
+/**
+ * Tem direito ao MTM Auto (= cópia automática, em qualquer superfície)?
+ * Pergunta à função SQL; se ela ainda não existir, decide aqui com a mesma regra.
+ */
+export async function direitoMtmAuto(userId: string): Promise<DireitoMtmAuto> {
+  const db = getSupabaseAdmin()
+  const semMembro = appMemberSemAcessoMtmAuto()
+  const { data, error } = await db.rpc('direito_mtm_auto', { p_user: userId, p_app_member_sem_acesso: semMembro })
+  const linha = Array.isArray(data) ? data[0] : data
+  if (!error && linha && typeof linha.tem === 'boolean') {
+    const motivo = String(linha.motivo ?? 'nenhum') as MotivoDireitoMtmAuto
+    return { tem: linha.tem, motivo: MOTIVOS_VALIDOS.has(motivo) ? motivo : 'nenhum' }
+  }
+  const [{ data: perfil }, { data: auto }] = await Promise.all([
+    db
+      .from('profiles')
+      .select('user_type, member_category, subscription_plan, membership_level, is_active, subscription_status, subscription_expires_at, mtmcopy_subscription_active, mtmcopy_subscription_expires_at')
+      .eq('id', userId)
+      .maybeSingle(),
+    db
+      .from('mtmauto_users')
+      .select('papel, subscricao, isento, motivo_isencao, acesso_manual, acesso_ate, suspenso, apple_estado, apple_expira_em')
+      .eq('user_id', userId)
+      .maybeSingle(),
+  ])
+  return decidirDireitoMtmAuto(perfil, auto, { appMemberSemAcesso: semMembro })
+}
+
+/** O motivo do direito, na linguagem de `MotivoCopia` que o resto do site já usa. */
+export function motivoCopiaDoDireito(d: DireitoMtmAuto): MotivoCopia {
+  switch (d.motivo) {
+    case 'admin':
+      return 'admin'
+    case 'legado_mtmcopy':
+      return 'mtmcopy'
+    case 'mtmauto_stripe':
+    case 'mtmauto_apple':
+    case 'mtmauto_isento':
+    case 'mtmauto_manual':
+    case 'membro_mtm':
+      return 'mtmauto'
+    case 'vip':
+      return 'vip'
+    case 'premium':
+      return 'premium'
+    default:
+      return 'nenhum'
+  }
+}
+
 function ehPremium(perfil: Record<string, unknown> | null): boolean {
   const nivel = String(perfil?.membership_level ?? '').toLowerCase()
   const categoria = String(perfil?.member_category ?? '').toLowerCase()
@@ -104,19 +262,21 @@ function ehPremium(perfil: Record<string, unknown> | null): boolean {
 export async function carregarDireitos(userId: string): Promise<Direitos> {
   const db = getSupabaseAdmin()
 
-  const [{ data: perfil }, { data: auto }] = await Promise.all([
+  const [{ data: perfil }, { data: auto }, direito] = await Promise.all([
     db
       .from('profiles')
       .select(
-        'user_type, membership_level, member_category, broker_uid, broker_verified, mtmcopy_subscription_active, mtmcopy_subscription_expires_at, contas_extra_pagas',
+        'user_type, membership_level, member_category, broker_uid, broker_verified, contas_extra_pagas',
       )
       .eq('id', userId)
       .maybeSingle(),
     db
       .from('mtmauto_users')
-      .select('papel, subscricao, isento, suspenso, acesso_manual, acesso_ate, contas_extra_pagas, contas_extra_apple')
+      .select('papel, contas_extra_pagas, contas_extra_apple')
       .eq('user_id', userId)
       .maybeSingle(),
+    // A cópia automática decide-se na regra única (direito_mtm_auto) — não aqui.
+    direitoMtmAuto(userId),
   ])
 
   const admin = String(perfil?.user_type ?? '') === 'admin' || String(auto?.papel ?? '') === 'admin'
@@ -126,28 +286,9 @@ export async function carregarDireitos(userId: string): Promise<Direitos> {
     (String(perfil?.user_type ?? '') === 'vip' || String(perfil?.member_category ?? '').toLowerCase() === 'vip')
   const premium = ehPremium(perfil ?? null)
 
-  // MTM Copy: subscrição paga e ainda dentro da validade.
-  const expira = perfil?.mtmcopy_subscription_expires_at
-  const copyPago = Boolean(perfil?.mtmcopy_subscription_active) && (!expira || new Date(expira) > new Date())
-
-  // MTM Auto: subscrição, isenção ou acesso manual concedido — e nunca se está suspenso.
-  const autoAtivo =
-    !auto?.suspenso &&
-    (auto?.subscricao === 'ativa' ||
-      Boolean(auto?.isento) ||
-      (Boolean(auto?.acesso_manual) && (!auto?.acesso_ate || new Date(auto.acesso_ate) > new Date())))
-
-  const motivoCopia: MotivoCopia = admin
-    ? 'admin'
-    : copyPago
-      ? 'mtmcopy'
-      : autoAtivo
-        ? 'mtmauto'
-        : vip
-          ? 'vip'
-          : premium
-            ? 'premium'
-            : 'nenhum'
+  // Fase 1: MTM Copy legado, MTM Auto, Premium, VIP e admin têm EXACTAMENTE o mesmo direito, e é
+  // a função `direito_mtm_auto` que o decide. O Membro (app_member) fica de fora.
+  const motivoCopia: MotivoCopia = direito.tem ? motivoCopiaDoDireito(direito) : 'nenhum'
 
   // O bónus da corretora precisa do depósito REAL, não da palavra do cliente: `broker_clients` é
   // alimentado pelo relatório da corretora, e é por isso que serve de prova.
@@ -168,7 +309,7 @@ export async function carregarDireitos(userId: string): Promise<Direitos> {
     admin,
     vip,
     premium,
-    copiaAutomatica: motivoCopia !== 'nenhum',
+    copiaAutomatica: direito.tem,
     motivoCopia,
     extrasPagas:
       Number(perfil?.contas_extra_pagas ?? 0) +

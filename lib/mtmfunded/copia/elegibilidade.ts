@@ -4,11 +4,11 @@ import { carregarDireitos, pareceDemo, type Direitos, type MotivoCopia } from '@
 /**
  * QUEM PODE COPIAR A CONTA SIMULADA, E PARA ONDE.
  *
- * A cópia para a conta do aluno está incluída no MTM Copy e no MTM Auto — é software de cópia,
- * e é isso que esses produtos vendem. Premium ou VIP sozinhos NÃO dão isto (dão sinais; a cópia
- * automática dos sinais é outra coisa). A regra de `carregarDireitos` já ordena o motivo por
- * admin → MTM Copy → MTM Auto → VIP → Premium, por isso um VIP que também paga MTM Auto aparece
- * como `mtmauto` e entra.
+ * A cópia para a conta do aluno exige o DIREITO AO MTM AUTO — a regra única da fase 1
+ * (`direitoMtmAuto` → função SQL direito_mtm_auto): admin, subscritor do MTM Auto, MTM Copy
+ * legado pago e datado, Premium ou VIP activos. O Membro (app_member) não. Antes havia aqui uma
+ * lista própria de motivos (só admin/MTM Copy/MTM Auto) que deixava de fora o Premium e o VIP,
+ * que no resto do ecossistema já tinham o mesmo direito.
  *
  * O destino é sempre uma conta que o aluno JÁ ligou num desses produtos. Não se cria conta nem se
  * gasta vaga: a conta já está contada pelas regras de contas de lib/entitlements.ts.
@@ -17,12 +17,14 @@ import { carregarDireitos, pareceDemo, type Direitos, type MotivoCopia } from '@
  * não for `true`. Uma conta de que não se sabe o tipo conta como REAL — o erro seguro é recusar.
  */
 
-export const MOTIVOS_QUE_COPIAM: MotivoCopia[] = ['admin', 'mtmcopy', 'mtmauto']
+/** Os motivos com direito ao MTM Auto, tal como `motivoCopiaDoDireito` os traduz. */
+export const MOTIVOS_QUE_COPIAM: MotivoCopia[] = ['admin', 'mtmcopy', 'mtmauto', 'vip', 'premium']
 
 export type DestinoTipo = 'mtmcopy' | 'mtmauto' | 'tradelocker'
 
-export function podeCopiarFunded(d: Pick<Direitos, 'motivoCopia' | 'admin'>): boolean {
-  return d.admin || MOTIVOS_QUE_COPIAM.includes(d.motivoCopia)
+export function podeCopiarFunded(d: Pick<Direitos, 'motivoCopia' | 'admin' | 'copiaAutomatica'>): boolean {
+  // `copiaAutomatica` = direitoMtmAuto(...).tem, preenchido por carregarDireitos.
+  return d.admin || d.copiaAutomatica
 }
 
 export interface Destino {
