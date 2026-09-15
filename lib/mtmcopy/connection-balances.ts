@@ -1,4 +1,5 @@
 import { getAccountSnapshot, isMetaApiConfigured } from './metaapi'
+import { filtrarContasExistentes } from './metaapi-inexistentes'
 
 export interface ConnectionBalanceFields {
   account_balance: number | null
@@ -8,6 +9,7 @@ export interface ConnectionBalanceFields {
 type ConnWithMeta = {
   metaapi_account_id?: string | null
   mt5_status?: string | null
+  is_active?: boolean | null
 }
 
 /**
@@ -48,9 +50,19 @@ export async function attachConnectionBalances<T extends ConnWithMeta>(
     }))
   }
 
+  // Só contas ativas, ligadas e que existem na MetaApi (15/09: pedidos a contas apagadas
+  // estrangularam o token inteiro). Uma leitura à base para o lote, não uma por linha.
+  const existentes = new Set(
+    await filtrarContasExistentes(connections.map((c) => c.metaapi_account_id)).catch(() => [] as string[]),
+  )
   return Promise.all(
     connections.map(async (c) => {
-      if (!c.metaapi_account_id?.trim() || c.mt5_status !== 'connected') {
+      if (
+        !c.metaapi_account_id?.trim() ||
+        c.mt5_status !== 'connected' ||
+        c.is_active === false ||
+        !existentes.has(c.metaapi_account_id)
+      ) {
         return { ...c, account_balance: null, account_equity: null }
       }
       // Não esperar indefinidamente por uma conta cujo broker possa estar offline.

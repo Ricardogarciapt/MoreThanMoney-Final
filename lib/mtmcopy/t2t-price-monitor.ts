@@ -29,6 +29,7 @@ import {
 } from './metaapi'
 import { lifecycleMessage, logStatusFor, type SignalEvent } from './signal-lifecycle'
 import { precoParaMonitor } from './metaapi-snapshot'
+import { filtrarContasExistentes } from './metaapi-inexistentes'
 import { pipSizeForSymbol } from './trade-outcome'
 import { t2tUsaTrailing } from './t2t-source'
 import { podeSaltarLeitura } from './market-hours'
@@ -184,8 +185,20 @@ export async function runT2TPriceMonitor(): Promise<{
 
   // Conta MetaApi de cada conexão.
   const connIds = [...new Set(rows.map((r) => (r as LogRow).connection_id))]
-  const { data: conns } = await admin.from('mtmcopy_connections').select('id, metaapi_account_id').in('id', connIds)
-  const accById = new Map((conns ?? []).map((c) => [c.id as string, (c.metaapi_account_id as string | null) ?? null]))
+  // Ligações desligadas e contas que não existem na MetaApi ficam de fora (15/09: pedidos a contas
+  // apagadas estrangularam o token inteiro). Sem conta = null = a linha não se lê nesta passagem.
+  const { data: conns } = await admin
+    .from('mtmcopy_connections')
+    .select('id, metaapi_account_id')
+    .in('id', connIds)
+    .neq('mt5_status', 'disconnected')
+  const existentes = new Set(await filtrarContasExistentes((conns ?? []).map((c) => c.metaapi_account_id as string | null)))
+  const accById = new Map(
+    (conns ?? []).map((c) => {
+      const acc = (c.metaapi_account_id as string | null) ?? null
+      return [c.id as string, acc && existentes.has(acc) ? acc : null]
+    }),
+  )
 
   // Posições abertas E ordens pendentes por conta (1 chamada de cada, reutilizada).
   // Sem as pendentes, uma ordem-limite que ainda não encheu não aparecia em lado nenhum e o

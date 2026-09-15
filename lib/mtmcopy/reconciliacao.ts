@@ -23,6 +23,7 @@
 
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { readOpenPositions } from './metaapi'
+import { contaInexistente, marcarContaInexistente } from './metaapi-inexistentes'
 
 export type EstadoConta = 'apagada' | 'ligada' | 'indisponivel'
 
@@ -46,12 +47,18 @@ export function deveFechar(ctx: DecisaoCtx): boolean {
 async function estadoDaConta(accountId: string): Promise<EstadoConta> {
   const token = process.env.METAAPI_TOKEN
   if (!token) return 'indisponivel'
+  // Já sabida como inexistente: nem se pergunta à MetaApi (cada 404 conta para o estrangulamento).
+  if (await contaInexistente(accountId)) return 'apagada'
   try {
     const r = await fetch(
       `https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}`,
       { headers: { 'auth-token': token }, signal: AbortSignal.timeout(15_000) },
     )
-    if (r.status === 404) return 'apagada'
+    if (r.status === 404) {
+      const corpo = await r.text().catch(() => '')
+      await marcarContaInexistente(accountId, Object.assign(new Error(corpo || 'HTTP 404'), { status: 404 }), { nivelConta: true, origem: 'reconciliacao' })
+      return 'apagada'
+    }
     if (!r.ok) return 'indisponivel'
     const a = (await r.json()) as { state?: string; connectionStatus?: string }
     return a.state === 'DEPLOYED' && a.connectionStatus === 'CONNECTED' ? 'ligada' : 'indisponivel'
@@ -109,6 +116,7 @@ export async function reconciliarPosicoes(opts?: {
       .from('mtmcopy_connections')
       .select('id, metaapi_account_id')
       .in('id', connIds)
+      .neq('mt5_status', 'disconnected')
     for (const c of conns ?? []) {
       if (c.metaapi_account_id) contaDeConn.set(c.id as string, c.metaapi_account_id as string)
     }

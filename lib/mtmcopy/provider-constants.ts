@@ -2,8 +2,19 @@
 /** MTM Auto Premium — conta MT5 700160095 (substituiu a c17a8c46 a 2026-08-20, que deixou de
  *  existir na MetaApi). É esta que executa os sinais Premium e que entra nas métricas do sistema. */
 export const CANONICAL_PREMIUM_ACCOUNT_ID = '530d2e07-b391-440f-bc6e-f4c2a224057b'
-export const CANONICAL_TRADE_IDEAS_ACCOUNT_ID = 'fbeeafeb-96a9-4133-bc6c-194cc281b6e0'
-export const CANONICAL_SENSEI_ACCOUNT_ID = 'a5a1dddd-0099-4d67-98f1-86b65aad5845'
+/**
+ * ⚠️ CONTAS APAGADAS NA METAAPI → null (incidente 2026-09-15 16:30 UTC).
+ *
+ * Os nomes ficam (há código e histórico que os referem) mas o id passou a null: cada pedido a uma
+ * conta que não existe dá NotFoundError, e a MetaApi estrangulou o token INTEIRO («too many
+ * unexisting or undeployed trading accounts») — as ordens dos clientes falharam com ele.
+ * null quer dizer «não há conta»: quem lê estas constantes TEM de saltar. Os ids antigos estão em
+ * `CONTAS_METAAPI_APAGADAS` (metaapi-inexistentes.ts), para nunca voltarem por engano.
+ */
+/** Trade Ideas / Forex (estratégia 5IHE) — era fbeeafeb, apagada. */
+export const CANONICAL_TRADE_IDEAS_ACCOUNT_ID: string | null = null
+/** Sensei antigo — era a5a1dddd, apagada. */
+export const CANONICAL_SENSEI_ACCOUNT_ID: string | null = null
 
 /**
  * Conta PRÓPRIA do Sensei Scanner — «Copy PU Gold Did», login 34744071, PU Prime Live 6.
@@ -44,9 +55,11 @@ export function senseiPronto(): boolean {
   return SENSEI_PROVIDER_ACCOUNT_ID.length > 0
 }
 /** GoldKiller Scanner — conta MetaApi 181271197 (MetaQuotes) + estratégia CopyFactory SDNb */
-export const CANONICAL_GOLDKILLER_ACCOUNT_ID = 'bddad3b8-353f-4a19-badf-f8df8f532678'
+/** Era bddad3b8, apagada na MetaApi (2026-09-15 → null). */
+export const CANONICAL_GOLDKILLER_ACCOUNT_ID: string | null = null
 /** MTM 20X Booster — conta Monaxa 986912 (booster 20x, 1:50) + estratégia CopyFactory pIrJ */
-export const CANONICAL_BOOSTER_ACCOUNT_ID = 'dc588b39-1f0a-47a5-8985-28e6fbc98817'
+/** Era dc588b39, apagada na MetaApi (2026-09-15 → null). */
+export const CANONICAL_BOOSTER_ACCOUNT_ID: string | null = null
 /** MxsR criada a 2026-08-20 na conta 530d2e07. A 9gsL desapareceu com a conta antiga —
  *  a CopyFactory não deixa mover o accountId de uma estratégia, por isso é sempre uma nova. */
 export const CANONICAL_PREMIUM_STRATEGY_ID = 'MxsR'
@@ -62,7 +75,8 @@ export const CANONICAL_GOLDKILLER_STRATEGY_ID = 'SDNb'
 export const CANONICAL_BOOSTER_STRATEGY_ID = 'pIrJ'
 /** Copy Trader Ricardo Garcia — conta intermédia PU Prime (0f38257a) que copia o Premium
  *  (MxsR) e revende como estratégia própria su0a para os slaves do Ricardo Garcia. */
-export const CANONICAL_COPYTRADER_RG_ACCOUNT_ID = '0f38257a-ba12-4f6c-b20c-9139693b3674'
+/** Era 0f38257a, apagada na MetaApi (2026-09-15 → null). */
+export const CANONICAL_COPYTRADER_RG_ACCOUNT_ID: string | null = null
 export const CANONICAL_COPYTRADER_RG_STRATEGY_ID = 'su0a'
 
 /**
@@ -78,7 +92,8 @@ export const CANONICAL_COPYTRADER_RG_STRATEGY_ID = 'su0a'
  * A fonte a sério é a conta que executa mesmo os sinais do canal (alimentada pelo PrimeSync), e
  * é essa que publica a vT8w.
  */
-export const CANONICAL_AURUMFLOW_ACCOUNT_ID = 'a4ea0c45-3dd1-4b55-bd2a-7f44d8d6884b'
+/** Era a4ea0c45, apagada na MetaApi (2026-09-15 → null): a Aurum Flow está sem conta mestre. */
+export const CANONICAL_AURUMFLOW_ACCOUNT_ID: string | null = null
 export const CANONICAL_AURUMFLOW_STRATEGY_ID = 'vT8w'
 
 /**
@@ -102,13 +117,22 @@ export const CONTAS_MOTOR_TEMPO_REAL: string[] = [
   CANONICAL_PREMIUM_ACCOUNT_ID,      // MTM Auto Premium  · MT5 700160095 · MxsR
   // O Sensei está sem conta (reformado da 34744071). Entra sozinho quando a nova existir.
   ...(SENSEI_PROVIDER_ACCOUNT_ID ? [SENSEI_PROVIDER_ACCOUNT_ID] : []), // MTM Auto Sensei · Oca7
-  CANONICAL_AURUMFLOW_ACCOUNT_ID,    // MTM Auto Aurum Flow · MT5 34744077 · vT8w
+  // Aurum Flow: a conta a4ea0c45 foi apagada (null) — entra sozinha quando houver id.
+  ...(CANONICAL_AURUMFLOW_ACCOUNT_ID ? [CANONICAL_AURUMFLOW_ACCOUNT_ID] : []),
   // O layering da Aurum Flow depende do motor: é ele que põe a entrada de mercado em
   // break-even quando a limite enche, e que arrasta o runner. Sem esta conta na lista a estratégia
   // abria as duas camadas e ficava a olhar para elas.
   // A lista tem de ficar sem strings vazias: um '' aqui faria `ehContaDeMotor('')` dizer que sim
   // a uma conta sem id.
 ]
+
+/**
+ * As duas contas são a MESMA (e existem)? Comparar com `===` deixou de servir: com as constantes
+ * apagadas a null, `null === null` dava «é a conta do Trade Ideas» a qualquer rota sem conta.
+ */
+export function mesmaConta(a: string | null | undefined, b: string | null | undefined): boolean {
+  return Boolean(a) && Boolean(b) && String(a) === String(b)
+}
 
 export function ehContaDeMotor(accountId: string | null | undefined): boolean {
   return Boolean(accountId) && CONTAS_MOTOR_TEMPO_REAL.includes(String(accountId))
