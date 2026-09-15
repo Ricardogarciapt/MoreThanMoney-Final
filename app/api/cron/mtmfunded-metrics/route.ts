@@ -79,14 +79,22 @@ interface Snapshot {
 async function lerConta(metaapiId: string): Promise<Snapshot | null> {
   const token = process.env.METAAPI_TOKEN
   if (!token) return null
-  const { contaInexistente } = await import('@/lib/mtmcopy/metaapi-inexistentes')
+  const { contaInexistente, marcarContaInexistente } = await import('@/lib/mtmcopy/metaapi-inexistentes')
   if (await contaInexistente(metaapiId)) return null
+  // Travão de quota: uma leitura de classificação nunca pode gastar o que as ordens precisam.
+  const { leituraDeFundoBloqueada, registarErroQuota } = await import('@/lib/mtmcopy/metaapi-quota')
+  if (await leituraDeFundoBloqueada(metaapiId)) return null
   try {
     const r = await fetch(
       `https://mt-client-api-v1.london.agiliumtrade.ai/users/current/accounts/${metaapiId}/account-information`,
       { headers: { 'auth-token': token }, cache: 'no-store', signal: AbortSignal.timeout(20_000) },
     )
-    if (!r.ok) return null
+    if (!r.ok) {
+      const erro = { status: r.status, message: await r.text().catch(() => '') }
+      if (r.status === 429) await registarErroQuota(metaapiId, erro)
+      if (r.status === 404) await marcarContaInexistente(metaapiId, erro, { nivelConta: true, origem: 'mtmfunded-metrics' })
+      return null
+    }
     const d = (await r.json()) as {
       equity?: number
       balance?: number
@@ -155,171 +163,6 @@ async function limparOrfas(
   }
   if (apagadas) notas.push(`${apagadas} contas sem dono apagadas`)
   return apagadas
-}
-
-/**
- * OS DESAFIOS — as contas que NÃO estão num torneio.
- *
- * Faltava. O ciclo lia as contas pelos PARTICIPANTES do torneio, e uma conta de desafio não
- * tem participante nenhum: ficava com regras publicadas e ninguém a medi-las. Quem comprasse um
- * desafio negociava sem que uma quebra fosse alguma vez detectada — e sem que uma passagem
- * fosse alguma vez reconhecida, que é a metade pior.
- *
- * As regras vêm do PROGRAMA que a pessoa comprou, não de uma constante: é o que está publicado
- * na página no momento da compra, e é por isso que a coluna existe.
- */
-async function avaliarDesafios(
-  db: ReturnType<typeof getSupabaseAdmin>,
-  notas: string[],
-): Promise<{ lidas: number; quebradas: number; semResposta: number }> {
-  const out = { lidas: 0, quebradas: 0, semResposta: 0 }
-
-  const { data: contas } = await db
-    .from('mtm_trading_accounts')
-    .select('id, user_id, tipo, program_id, saldo_inicial, metaapi_account_id, metricas, estado, criada_em:created_at')
-    .in('tipo', ['desafio', 'funded', 'financiada'])
-    .eq('estado', 'ativa')
-    .not('metaapi_account_id', 'is', null)
-    // As simuladas (motor = 'sim') não entram: não têm MetaApi e são medidas pelo motor do VPS.
-    .neq('motor', 'sim')
-    .is('tournament_id', null)
-    .limit(200)
-
-  if (!contas?.length) return out
-
-  /**
-   * As regras de TODOS os programas, numa leitura só.
-   *
-   * Lêem-se todos e não apenas os das contas: uma conta emitida à mão fica sem `program_id`, e
-   * uma conta sem regras é uma conta que ninguém está a medir — exactamente o buraco que este
-   * bloco existe para tapar. Com a tabela toda em memória, a conta órfã de programa ainda pode
-   * ser ligada ao programa do seu TAMANHO, que é o que qualquer pessoa faria a olhar para ela.
-   */
-  const programas = new Map<string, RegrasConta>()
-  /** saldo + fases → programa, para as contas emitidas sem programa. */
-  const porTamanho = new Map<string, RegrasConta>()
-  {
-    const { data } = await db.from('mtm_funded_programs').select('id, regras, saldo, fases')
-    for (const p of data ?? []) {
-      const regras = (p.regras ?? {}) as RegrasConta
-      programas.set(p.id as string, regras)
-      // Uma fase é o caminho difícil e é o que se assume: assumir o fácil seria dar a alguém
-      // uma avaliação mais folgada do que a que comprou.
-      if (Number(p.fases) === 1) porTamanho.set(String(Number(p.saldo)), regras)
-    }
-  }
-
-  for (const conta of contas) {
-    let regras = conta.program_id ? programas.get(conta.program_id as string) : null
-    if (!regras) {
-      regras = porTamanho.get(String(Number(conta.saldo_inicial ?? 0))) ?? null
-      if (regras) {
-        notas.push(
-          `conta ${String(conta.id).slice(0, 8)}: sem programa — avaliada pelas regras do tamanho`,
-        )
-      }
-    }
-    // Ainda sem regras, não se avalia. Dar por quebrada uma conta cujas regras não conhecemos é
-    // exactamente o erro que este ficheiro não pode cometer.
-    if (!regras) {
-      notas.push(`conta ${String(conta.id).slice(0, 8)}: sem programa nem tamanho conhecido`)
-      continue
-    }
-
-    const snap = await lerConta(conta.metaapi_account_id as string)
-    if (!snap) {
-      out.semResposta++
-      continue
-    }
-    out.lidas++
-
-    const anterior = (conta.metricas ?? {}) as Record<string, unknown>
-    const saldoInicial = Number(conta.saldo_inicial ?? 0)
-    const refDia = Number(anterior.saldoReferenciaDia ?? snap.saldo)
-    const pico = Math.max(Number(anterior.picoEquity ?? saldoInicial), snap.equity)
-    const drawdownPct = pico > 0 ? Math.round(((pico - snap.equity) / pico) * 10000) / 100 : 0
-
-    const veredicto = avaliarConta(regras, {
-      saldoInicial,
-      equity: snap.equity,
-      saldoReferenciaDia: refDia,
-      lucroPorDia: (anterior.lucroPorDia ?? {}) as Record<string, number>,
-      diasNegociados: Number(anterior.diasNegociados ?? 0),
-      diasDecorridos: conta.criada_em
-        ? Math.floor((Date.now() - new Date(conta.criada_em as string).getTime()) / 86_400_000)
-        : undefined,
-    })
-
-    const metricas = {
-      ...anterior,
-      equity: snap.equity,
-      saldo: snap.saldo,
-      saldoReferenciaDia: refDia,
-      picoEquity: pico,
-      drawdownPct,
-      resultadoPct: veredicto.resultadoPct,
-      elegivel: veredicto.elegivel,
-      naoElegivelPorque: veredicto.naoElegivelPorque ?? null,
-      margemDiaria: veredicto.margemDiaria,
-      margemTotal: veredicto.margemTotal,
-      margemUsada: snap.margem ?? null,
-      margemLivre: snap.margemLivre ?? null,
-      nivelMargem: snap.nivelMargem ?? null,
-      historico: empilhar(anterior.historico, snap),
-      lidoEm: new Date().toISOString(),
-    }
-
-    if (veredicto.quebrou) {
-      out.quebradas++
-      await db
-        .from('mtm_trading_accounts')
-        .update({
-          estado: 'quebrada',
-          quebrou_regra: veredicto.motivo,
-          quebrada_em: new Date().toISOString(),
-          metricas: { ...metricas, congeladoEm: new Date().toISOString(), motivo: veredicto.detalhe },
-          metricas_lidas_em: new Date().toISOString(),
-        })
-        .eq('id', conta.id as string)
-
-      try {
-        const { quebrarConta } = await import('@/lib/mtmfunded/ciclo-de-vida')
-        const r = await quebrarConta(conta.id as string, String(veredicto.motivo ?? 'regra'))
-        if (!r.emailEnviado) notas.push(`desafio ${String(conta.id).slice(0, 8)}: quebrou, email falhou`)
-      } catch (e) {
-        notas.push(`desafio ${String(conta.id).slice(0, 8)}: limpeza falhou — ${String(e).slice(0, 60)}`)
-      }
-      continue
-    }
-
-    const objetivo = Number(regras.objetivo_pct ?? 0)
-    if (
-      objetivo > 0 &&
-      !anterior.faseConcluida &&
-      veredicto.resultadoPct != null &&
-      veredicto.resultadoPct >= objetivo &&
-      veredicto.elegivel
-    ) {
-      try {
-        const { concluirDesafio } = await import('@/lib/mtmfunded/ciclo-de-vida')
-        const r = await concluirDesafio(conta.id as string, { resultadoPct: veredicto.resultadoPct })
-        notas.push(
-          r.ok
-            ? `desafio ${String(conta.id).slice(0, 8)}: concluído · ${r.codigo}`
-            : `desafio ${String(conta.id).slice(0, 8)}: concluiu, certificado falhou — ${r.erro}`,
-        )
-      } catch (e) {
-        notas.push(`desafio ${String(conta.id).slice(0, 8)}: conclusão falhou — ${String(e).slice(0, 60)}`)
-      }
-    }
-
-    await db
-      .from('mtm_trading_accounts')
-      .update({ metricas, metricas_lidas_em: new Date().toISOString() })
-      .eq('id', conta.id as string)
-  }
-
-  return out
 }
 
 export async function GET(request: NextRequest) {
@@ -570,8 +413,12 @@ export async function GET(request: NextRequest) {
     notas.push(`${torneio.slug}: ${ordenadas.length} participantes ordenados`)
   }
 
-  // ── os desafios, que não têm participante nenhum a apontar para eles ──────
-  const desafios = await avaliarDesafios(db, notas)
+  // ── os desafios MT5, que não têm participante nenhum a apontar para eles ──
+  // Mesmo vigia do cron de 10 min (lib/mtmfunded/leitura-mt5-servidor.ts): só REST, respeita a
+  // quota, não lê contas undeployed, lê histórico para a âncora do dia e para o lucro por dia.
+  const { vigiarContasMt5 } = await import('@/lib/mtmfunded/leitura-mt5-servidor')
+  const { getMtmFundedConfig } = await import('@/lib/mtmfunded/config')
+  const desafios = await vigiarContasMt5(db, notas, (await getMtmFundedConfig()).minutos_entre_leituras)
   lidas += desafios.lidas
   quebradas += desafios.quebradas
   semResposta += desafios.semResposta

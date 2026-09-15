@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useT } from '@/components/i18n-provider'
+import { PRAZO_MT5_HORAS, type Plataforma } from '@/lib/mtmfunded/plataforma'
 import {
   CamposConta, DADOS_CONTA_VAZIOS, dadosContaCompletos, type DadosConta,
 } from '@/components/mtmfunded/campos-conta'
@@ -16,7 +18,12 @@ import {
  * O aviso das 14 dias está aqui, à vista, e não escondido nos termos: a lei manda dizê-lo
  * antes da compra, e é antes da compra que ele muda alguma coisa para quem está a decidir.
  */
-export default function FormularioCheckout({ slug, precoCents }: { slug: string; precoCents: number }) {
+export default function FormularioCheckout({
+  slug, precoCents, plataformas,
+}: { slug: string; precoCents: number; plataformas: Plataforma[] }) {
+  const t = useT()
+  // A primeira disponível é a recomendada (MTM Funded, quando lançada). O servidor revalida.
+  const [plataforma, setPlataforma] = useState<Plataforma>(plataformas[0] ?? 'mt5')
   const [dados, setDados] = useState<DadosConta>(DADOS_CONTA_VAZIOS)
   const [aceita, setAceita] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -64,7 +71,7 @@ export default function FormularioCheckout({ slug, precoCents }: { slug: string;
       const r = await fetch('/api/mtmfunded/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
-        body: JSON.stringify({ programa: slug, ...dados, cupao: desconto ? cupao : undefined }),
+        body: JSON.stringify({ programa: slug, plataforma, ...dados, cupao: desconto ? cupao : undefined }),
       })
       const j = await r.json()
       if (!r.ok || !j?.url) throw new Error(j?.error || 'Não foi possível abrir o pagamento')
@@ -77,6 +84,49 @@ export default function FormularioCheckout({ slug, precoCents }: { slug: string;
 
   return (
     <div className="mt-8 space-y-5">
+      {/* ── Plataforma ─────────────────────────────────────────────────────── */}
+      <fieldset>
+        <legend className="text-xs uppercase tracking-widest text-zinc-600">{t('mtmfunded.plataforma.titulo')}</legend>
+        <div className={`mt-3 grid gap-3 ${plataformas.length > 1 ? 'sm:grid-cols-2' : ''}`}>
+          {plataformas.map((p) => {
+            const ativa = plataforma === p
+            return (
+              <label
+                key={p}
+                className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition-colors ${
+                  ativa ? 'border-[#D2A63C] bg-[#D2A63C]/[0.06]' : 'border-zinc-800 bg-zinc-950/60 hover:border-zinc-700'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="plataforma"
+                  value={p}
+                  checked={ativa}
+                  onChange={() => setPlataforma(p)}
+                  className="mt-1 h-4 w-4 shrink-0 accent-[#D2A63C]"
+                />
+                <span className="min-w-0">
+                  <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-white">
+                    {p === 'mtmfunded' ? 'MTM Funded' : 'MetaTrader 5'}
+                    {p === 'mtmfunded' && (
+                      <span className="rounded-full bg-[#D2A63C]/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#D2A63C]">
+                        {t('mtmfunded.plataforma.recomendada')}
+                      </span>
+                    )}
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-zinc-400">
+                    {p === 'mtmfunded'
+                      ? t('mtmfunded.plataforma.simNota')
+                      : t('mtmfunded.plataforma.mt5Nota').replace('{h}', String(PRAZO_MT5_HORAS))}
+                  </span>
+                </span>
+              </label>
+            )
+          })}
+        </div>
+        <p className="mt-2 text-[11px] leading-relaxed text-zinc-600">{t('mtmfunded.plataforma.igual')}</p>
+      </fieldset>
+
       <p className="text-xs uppercase tracking-widest text-zinc-600">
         Dados da conta · pedidos pela corretora
       </p>

@@ -23,6 +23,10 @@ export type MotorConta = 'mt5' | 'sim'
 
 export const SERVIDOR_SIMULADO = 'MTM Funded'
 
+/**
+ * Motor das contas novas SEM escolha do cliente (ofertas, sessões de checkout antigas).
+ * As compras com plataforma escolhida seguem `planoDaEmissao` em ../plataforma.
+ */
 export async function motorDeNovasContas(): Promise<MotorConta> {
   const cfg = await getMtmFundedConfig()
   return cfg.sim_lancado_em ? 'sim' : 'mt5'
@@ -78,8 +82,11 @@ export interface Prontidao {
   faltas: string[]
 }
 
-/** Muda para `true` quando o WebTrader (M3) estiver em produção. */
-export const WEBTRADER_DISPONIVEL = false
+/**
+ * O WebTrader (M3) está em produção desde 2026-09-14 (/webtrader, v2 publicada a 15/09) — é onde
+ * as contas simuladas negoceiam. Voltar a `false` bloqueia o lançamento no admin.
+ */
+export const WEBTRADER_DISPONIVEL = true
 
 export async function prontidaoDoLancamento(): Promise<Prontidao> {
   const db = getSupabaseAdmin()

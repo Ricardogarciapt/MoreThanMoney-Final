@@ -26,7 +26,7 @@ interface Torneio {
   saldo_inicial: number; regras: Record<string, number>
 }
 interface Resumo {
-  config: { ativo: boolean; vendas_abertas: boolean; minutos_entre_leituras: number; sim_lancado_em: string | null }
+  config: { ativo: boolean; vendas_abertas: boolean; minutos_entre_leituras: number; sim_lancado_em: string | null; mt5_a_venda?: boolean }
   simulado: {
     lancadoEm: string | null
     contas: number
@@ -148,6 +148,14 @@ function Resumo({ dados, accao, ocupado }: { dados: Resumo; accao: Accao; ocupad
             titulo="Vendas abertas" ligado={c.vendas_abertas} desativado={!c.ativo} ocupado={ocupado === 'vendas'}
             nota="Activo mas com vendas fechadas, os programas ficam como montra."
             aoMudar={(v) => accao({ accao: 'config', vendas_abertas: v }, 'vendas')}
+          />
+          <Interruptor
+            titulo="Vender contas MT5 (corretora)" ligado={c.mt5_a_venda !== false} desativado={!c.vendas_abertas}
+            ocupado={ocupado === 'mt5_venda'}
+            nota={c.sim_lancado_em
+              ? 'No checkout o cliente escolhe MTM Funded (simulado, na hora) ou MT5 (fila do agente, até 24 h). Desligar tira só o MT5.'
+              : 'Antes do lançamento do simulado, o MT5 é a única plataforma à venda: desligar fecha a compra de programas.'}
+            aoMudar={(v) => accao({ accao: 'config', mt5_a_venda: v }, 'mt5_venda')}
           />
         </div>
       </section>
@@ -1416,9 +1424,9 @@ function LancarSimulado({ dados, accao, ocupado }: { dados: Resumo; accao: Accao
         <div className="min-w-0">
           <h3 className="font-semibold text-gray-100">Contas simuladas MTM — lançamento</h3>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-gray-400">
-            Depois de lançado, cada compra ou oferta nova cria a conta na hora no nosso servidor, sem
-            fila nem corretora externa. As contas que já estão na corretora acabam o ciclo lá. Não se
-            desfaz pelo painel.
+            Depois de lançado, o checkout passa a oferecer a plataforma MTM Funded (recomendada: conta
+            na hora no nosso servidor, sem fila) ao lado do MT5 na corretora, e as ofertas novas nascem
+            simuladas. As contas que já estão na corretora acabam o ciclo lá. Não se desfaz pelo painel.
           </p>
           <ul className="mt-3 space-y-1 text-xs">
             <Item ok={(p?.simbolos ?? 0) > 0} texto={`Símbolos activos: ${p?.simbolos ?? 0}`} />
@@ -1450,7 +1458,7 @@ function LancarSimulado({ dados, accao, ocupado }: { dados: Resumo; accao: Accao
       {aConfirmar && (
         <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/[0.05] p-4">
           <p className="text-sm text-gray-200">
-            Confirmas o lançamento? A partir de agora, todas as contas novas são simuladas e emitidas por nós.
+            Confirmas o lançamento? A partir de agora os clientes podem escolher a plataforma MTM Funded no checkout e as ofertas novas são simuladas.
           </p>
           <p className="mt-1 text-xs text-gray-400">Escreve <b className="text-gray-200">LANÇAR</b> para confirmar.</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">

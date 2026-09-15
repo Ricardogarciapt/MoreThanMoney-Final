@@ -68,7 +68,22 @@ export async function POST(request: NextRequest) {
   let avisoVivo: string | null = null
 
   const token = process.env.METAAPI_TOKEN
-  if (conta.metaapi_account_id && token && conta.estado === 'ativa') {
+  /**
+   * Conta MT5 em REPOUSO (undeploy por inactividade, lib/mtmfunded/leitura-mt5-servidor.ts): ler
+   * uma conta undeployed estrangula o token inteiro. O dono voltou → pede-se o deploy e mostra-se
+   * o guardado; o vigia de 10 min volta a lê-la assim que estiver ligada.
+   */
+  let emRepouso = false
+  const vigia = ((metricas.vigia ?? {}) as { paradaPorNosEm?: string | null })
+  if (admin && vigia.paradaPorNosEm) {
+    emRepouso = true
+    avisoVivo = 'Conta em repouso (undeploy por inactividade). Religa-se quando o dono abrir as métricas ou na varredura diária.'
+  } else if (conta.metaapi_account_id && token && conta.estado === 'ativa' && !admin) {
+    const { acordarContaDoDono } = await import('@/lib/mtmfunded/leitura-mt5-servidor')
+    emRepouso = await acordarContaDoDono(db, conta as { id: string; metaapi_account_id: string | null; metricas: unknown })
+    if (emRepouso) avisoVivo = 'A conta estava em repouso por inactividade e está a ser religada (2–5 min). Os números são da última leitura.'
+  }
+  if (!emRepouso && conta.metaapi_account_id && token && conta.estado === 'ativa') {
     const base = `https://mt-client-api-v1.london.agiliumtrade.ai/users/current/accounts/${conta.metaapi_account_id}`
     const cabecalhos = { 'auth-token': token }
     try {

@@ -3,6 +3,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getStripeClient } from '@/lib/stripe-client'
 import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
 import { buildStripeReturnUrl } from '@/lib/site-url'
+import { isIosAppRequest } from '@/lib/is-native-request'
+import { validarPlataformaDoCheckout, PRAZO_MT5_HORAS } from '@/lib/mtmfunded/plataforma'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -18,6 +20,15 @@ export const maxDuration = 30
  * a conta na abertura do checkout dava contas a quem abandonasse o pagamento a meio.
  */
 export async function POST(request: NextRequest) {
+  // App iOS nativa: nada de Stripe dentro da app (App Store 3.1.1) — o mesmo bloqueio do
+  // checkout das subscrições. A compra faz-se no browser.
+  if (isIosAppRequest(request)) {
+    return NextResponse.json(
+      { error: 'Os programas MTM Funded compram-se em morethanmoney.pt, no browser.', code: 'ios_web_only' },
+      { status: 403 },
+    )
+  }
+
   const config = await getMtmFundedConfig()
   if (!config.ativo || !config.vendas_abertas) {
     // Falha fechada, e no servidor: o botão pode estar escondido no cliente e alguém chamar
@@ -38,6 +49,14 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const slug = String(body?.programa ?? '').trim()
   if (!slug) return NextResponse.json({ error: 'programa em falta' }, { status: 400 })
+
+  /**
+   * A PLATAFORMA — validada aqui, contra o que está à venda agora (lançamento do simulado e
+   * interruptor do MT5). Recusa-se o que não está à venda; nunca se troca em silêncio.
+   */
+  const escolha = validarPlataformaDoCheckout(body?.plataforma, config)
+  if (!escolha.ok) return NextResponse.json({ error: escolha.erro }, { status: 409 })
+  const plataforma = escolha.plataforma
 
   const { data: programa } = await db
     .from('mtm_funded_programs')
@@ -145,18 +164,25 @@ export async function POST(request: NextRequest) {
   // A compra fica registada como PENDENTE antes de ir para o Stripe. Assim, se o webhook
   // chegar antes de qualquer outra coisa, encontra a linha à espera dele em vez de ter de a
   // inventar a partir de metadados.
-  const { data: compra } = await db
+  const linhaCompra = {
+    user_id: user.id,
+    program_id: programa.id,
+    valor_cents: cents,
+    moeda: programa.moeda ?? 'eur',
+    estado: 'pendente',
+    email: email.toLowerCase(),
+  }
+  let { data: compra, error: erroCompra } = await db
     .from('mtm_funded_purchases')
-    .insert({
-      user_id: user.id,
-      program_id: programa.id,
-      valor_cents: cents,
-      moeda: programa.moeda ?? 'eur',
-      estado: 'pendente',
-      email: email.toLowerCase(),
-    })
+    .insert({ ...linhaCompra, plataforma })
     .select('id')
     .single()
+  // Sem a coluna (migração 097 por aplicar) grava-se sem ela: a plataforma segue nos metadados
+  // do Stripe, que é o que manda na emissão.
+  if (erroCompra && /plataforma/i.test(erroCompra.message ?? '')) {
+    ;({ data: compra, error: erroCompra } = await db
+      .from('mtm_funded_purchases').insert(linhaCompra).select('id').single())
+  }
 
   const stripe = getStripeClient()
   const session = await stripe.checkout.sessions.create({
@@ -174,7 +200,10 @@ export async function POST(request: NextRequest) {
               unit_amount: cents,
               product_data: {
                 name: `MTM Funded · ${programa.nome}${cupaoAplicado ? ` (cupão ${cupaoAplicado})` : ''}`,
-                description: `Avaliação em conta simulada de ${Number(programa.saldo).toLocaleString('pt-PT')} USD`,
+                description:
+                  plataforma === 'mt5'
+                    ? `Avaliação em conta demo MT5 de ${Number(programa.saldo).toLocaleString('pt-PT')} USD · criada em até ${PRAZO_MT5_HORAS} h`
+                    : `Avaliação em conta simulada MTM Funded de ${Number(programa.saldo).toLocaleString('pt-PT')} USD · activa de imediato`,
               },
             },
           },
@@ -188,6 +217,7 @@ export async function POST(request: NextRequest) {
       compra_id: compra?.id ?? '',
       program_id: programa.id,
       user_id: user.id,
+      plataforma,
       primeiro_nome: primeiroNome,
       apelido,
       telefone,

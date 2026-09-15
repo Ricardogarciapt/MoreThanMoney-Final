@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
 import FormularioCheckout from './formulario'
+import { plataformasAVenda } from '@/lib/mtmfunded/plataforma'
+import T from '@/components/mtmfunded/t'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Checkout' }
@@ -33,6 +35,13 @@ export default async function CheckoutPage({
 
   if (!programa || !programa.ativo) redirect('/mtmfunded')
 
+  // App iOS nativa: sem checkout dentro da app (App Store 3.1.1) — o servidor também o recusa.
+  const { headers } = await import('next/headers')
+  const ua = ((await headers()).get('user-agent') || '').toLowerCase()
+  const iosNativo = ua.includes('mtmnativeapp') && /iphone|ipad|ipod/.test(ua)
+
+  const plataformas = plataformasAVenda(config)
+
   const r = (programa.regras ?? {}) as Record<string, number>
 
   return (
@@ -49,7 +58,7 @@ export default async function CheckoutPage({
           </span>
         </div>
         <ul className="mt-5 space-y-1.5 border-t border-zinc-900 pt-5 text-sm text-zinc-400">
-          <li>Conta simulada de {Number(programa.saldo).toLocaleString('pt-PT')} USD</li>
+          <li>{Number(programa.saldo).toLocaleString('pt-PT')} USD · <T k="mtmfunded.plataforma.contaSimulada" /></li>
           <li>{programa.fases} {programa.fases === 1 ? 'fase' : 'fases'}</li>
           {r.objetivo_pct != null && <li>Objectivo: +{r.objetivo_pct}%</li>}
           {r.perda_diaria_pct != null && <li>Perda diária máxima: {r.perda_diaria_pct}%</li>}
@@ -58,7 +67,17 @@ export default async function CheckoutPage({
         </ul>
       </div>
 
-      <FormularioCheckout slug={programa.slug} precoCents={programa.preco_cents} />
+      {iosNativo ? (
+        <p className="mt-8 rounded-xl border border-zinc-800 bg-zinc-950/60 p-5 text-sm text-zinc-300">
+          <T k="mtmfunded.plataforma.iosSemCheckout" />
+        </p>
+      ) : !plataformas.length ? (
+        <p className="mt-8 rounded-xl border border-zinc-800 bg-zinc-950/60 p-5 text-sm text-zinc-300">
+          <T k="mtmfunded.plataforma.nenhuma" />
+        </p>
+      ) : (
+        <FormularioCheckout slug={programa.slug} precoCents={programa.preco_cents} plataformas={plataformas} />
+      )}
     </main>
   )
 }

@@ -27,6 +27,12 @@ export interface MtmFundedConfig {
    * dono do outro lado.
    */
   sim_lancado_em: string | null
+  /**
+   * Vender contas MT5 (corretora, fila do agente) no checkout? Ligado por omissão.
+   * Desligar serve para travar a fila (agente parado, corretora em baixo) sem fechar as vendas
+   * da plataforma MTM Funded. Ver lib/mtmfunded/plataforma.ts.
+   */
+  mt5_a_venda: boolean
 }
 
 export const MTMFUNDED_DEFAULT: MtmFundedConfig = {
@@ -35,6 +41,7 @@ export const MTMFUNDED_DEFAULT: MtmFundedConfig = {
   torneio_ativo: '2026-q3',
   minutos_entre_leituras: 60,
   sim_lancado_em: null,
+  mt5_a_venda: true,
 }
 
 export async function getMtmFundedConfig(): Promise<MtmFundedConfig> {
@@ -52,6 +59,8 @@ export async function getMtmFundedConfig(): Promise<MtmFundedConfig> {
           ? Number(v.minutos_entre_leituras)
           : MTMFUNDED_DEFAULT.minutos_entre_leituras,
       sim_lancado_em: typeof v.sim_lancado_em === 'string' ? v.sim_lancado_em : null,
+      // Falta de valor = à venda (era o único formato antes desta escolha existir).
+      mt5_a_venda: v.mt5_a_venda !== false,
     }
   } catch {
     return MTMFUNDED_DEFAULT

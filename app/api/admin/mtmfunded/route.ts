@@ -316,6 +316,7 @@ export async function POST(request: NextRequest) {
     const config = await setMtmFundedConfig({
       ...(typeof b.ativo === 'boolean' ? { ativo: b.ativo } : {}),
       ...(typeof b.vendas_abertas === 'boolean' ? { vendas_abertas: b.vendas_abertas } : {}),
+      ...(typeof b.mt5_a_venda === 'boolean' ? { mt5_a_venda: b.mt5_a_venda } : {}),
       ...(Number.isFinite(Number(b.minutos_entre_leituras))
         ? { minutos_entre_leituras: Number(b.minutos_entre_leituras) }
         : {}),

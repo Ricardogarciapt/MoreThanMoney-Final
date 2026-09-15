@@ -160,7 +160,7 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "mtmfunded.escada.consistencia": "Consistência: máx.",
     "mtmfunded.passos.p1t": "Escolhes e recebes a conta",
     "mtmfunded.passos.p1x":
-      "A conta é criada no MetaTrader em teu nome e as credenciais chegam por email, com um código QR que entra na app com um toque.",
+      "Escolhes a plataforma: MTM Funded (conta activa na hora, WebTrader, credenciais por link seguro) ou MetaTrader 5 (conta demo na corretora, criada em até 24 horas e enviada por email).",
     "mtmfunded.passos.p2t": "Negoceias com as regras à vista",
     "mtmfunded.passos.p2x":
       "O painel mostra quanto falta até cada limite. Tudo medido sobre equity — as posições abertas contam.",
@@ -339,6 +339,31 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "mtmfunded.entrar.aceitasB": "e a",
     "mtmfunded.entrar.privacidade": "Privacidade",
     "mtmfunded.entrar.aceitasC": "do MTM Funded.",
+    // ── plataforma (checkout + página) ──
+    "mtmfunded.plataforma.titulo": "Plataforma",
+    "mtmfunded.plataforma.recomendada": "Recomendada",
+    "mtmfunded.plataforma.simNota":
+      "O nosso servidor simulado. A conta fica activa assim que o pagamento é confirmado; negoceias no WebTrader e recebes as credenciais por um link seguro (nunca a password por email).",
+    "mtmfunded.plataforma.mt5Nota":
+      "Conta demo na corretora, para negociares na app MetaTrader 5. É criada pela nossa fila automática em até {h} horas (normalmente menos de uma) e as credenciais chegam por email.",
+    "mtmfunded.plataforma.igual":
+      "As regras, o preço e os objectivos são os mesmos nas duas. Em ambas a negociação é simulada — dinheiro virtual. A plataforma fica para as fases seguintes e para a conta financiada.",
+    "mtmfunded.plataforma.contaSimulada": "conta simulada",
+    "mtmfunded.plataforma.iosSemCheckout":
+      "Na app iOS não é possível comprar programas. Abre morethanmoney.pt/mtmfunded no browser para concluir a compra — a conta aparece depois na app.",
+    "mtmfunded.plataforma.nenhuma": "Neste momento não há plataformas disponíveis para compra. Volta a tentar mais tarde.",
+    "mtmfunded.plataforma.secTitulo": "Duas plataformas, as mesmas regras",
+    "mtmfunded.plataforma.secSub":
+      "Escolhes no checkout. Em ambas a conta é simulada, as regras são as publicadas nesta página e os resultados medem-se em percentagem e pips — não prometemos rendimento.",
+    "mtmfunded.plataforma.simT": "MTM Funded",
+    "mtmfunded.plataforma.simX1": "Conta activa assim que o pagamento é confirmado",
+    "mtmfunded.plataforma.simX2": "WebTrader no browser, com as métricas das regras ao vivo",
+    "mtmfunded.plataforma.simX3": "Credenciais por link seguro, sem passwords no email",
+    "mtmfunded.plataforma.mt5T": "MetaTrader 5",
+    "mtmfunded.plataforma.mt5X1": "Conta demo na corretora, na app MetaTrader 5 que já conheces",
+    "mtmfunded.plataforma.mt5X2": "Criada em até 24 horas (normalmente menos de uma); credenciais por email",
+    "mtmfunded.plataforma.mt5X3": "Métricas lidas periodicamente; as regras são verificadas com mais frequência enquanto houver posições abertas",
+    "mtmfunded.plataforma.brevemente": "Brevemente",
   },
   en: {
     "mtmfunded.nav.programas": "Programs",
@@ -486,7 +511,7 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "mtmfunded.escada.consistencia": "Consistency: max.",
     "mtmfunded.passos.p1t": "You choose, and the account arrives",
     "mtmfunded.passos.p1x":
-      "The account is created in MetaTrader in your name and the credentials reach you by email, with a QR code that signs you in with one tap.",
+      "You choose the platform: MTM Funded (account active instantly, WebTrader, credentials via a secure link) or MetaTrader 5 (broker demo account, created within 24 hours and sent by email).",
     "mtmfunded.passos.p2t": "You trade with the rules in plain sight",
     "mtmfunded.passos.p2x":
       "The dashboard shows how far you are from each limit. Everything is measured on equity — open positions count.",
@@ -665,5 +690,30 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "mtmfunded.entrar.aceitasB": "and",
     "mtmfunded.entrar.privacidade": "Privacy Policy",
     "mtmfunded.entrar.aceitasC": ".",
+    // ── platform (checkout + page) ──
+    "mtmfunded.plataforma.titulo": "Platform",
+    "mtmfunded.plataforma.recomendada": "Recommended",
+    "mtmfunded.plataforma.simNota":
+      "Our simulated server. The account is active as soon as payment is confirmed; you trade on the WebTrader and receive your credentials through a secure link (never the password by email).",
+    "mtmfunded.plataforma.mt5Nota":
+      "Broker demo account, to trade in the MetaTrader 5 app. It is created by our automated queue within {h} hours (usually under one) and the credentials arrive by email.",
+    "mtmfunded.plataforma.igual":
+      "Rules, price and targets are the same on both. On both, trading is simulated — virtual money. The platform carries over to the next phases and to the funded account.",
+    "mtmfunded.plataforma.contaSimulada": "simulated account",
+    "mtmfunded.plataforma.iosSemCheckout":
+      "Programs cannot be purchased in the iOS app. Open morethanmoney.pt/mtmfunded in your browser to complete the purchase — the account then shows up in the app.",
+    "mtmfunded.plataforma.nenhuma": "No platforms are available for purchase right now. Please try again later.",
+    "mtmfunded.plataforma.secTitulo": "Two platforms, the same rules",
+    "mtmfunded.plataforma.secSub":
+      "You choose at checkout. On both the account is simulated, the rules are the ones published on this page and results are measured in percent and pips — we do not promise returns.",
+    "mtmfunded.plataforma.simT": "MTM Funded",
+    "mtmfunded.plataforma.simX1": "Account active as soon as payment is confirmed",
+    "mtmfunded.plataforma.simX2": "Browser WebTrader, with live rule metrics",
+    "mtmfunded.plataforma.simX3": "Credentials via a secure link, no passwords in email",
+    "mtmfunded.plataforma.mt5T": "MetaTrader 5",
+    "mtmfunded.plataforma.mt5X1": "Broker demo account, in the MetaTrader 5 app you already know",
+    "mtmfunded.plataforma.mt5X2": "Created within 24 hours (usually under one); credentials by email",
+    "mtmfunded.plataforma.mt5X3": "Metrics read periodically; rules are checked more often while positions are open",
+    "mtmfunded.plataforma.brevemente": "Coming soon",
   },
 }

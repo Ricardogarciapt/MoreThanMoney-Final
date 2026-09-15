@@ -62,9 +62,16 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
     return
   }
 
-  // Antes do lançamento das contas simuladas, na corretora (fila MT5); depois, no nosso motor.
-  const { motorDeNovasContas, camposDeContaSimulada, camposDeContaMt5 } = await import('./simulado/motor')
-  const motor = await motorDeNovasContas()
+  /**
+   * A PLATAFORMA escolhida no checkout manda: `mtmfunded` → motor simulado (activa já, credenciais
+   * por link seguro); `mt5` → fila do agente na corretora. Sessões sem a escolha (anteriores a
+   * ela) seguem o lançamento, como antes. Ver lib/mtmfunded/plataforma.ts.
+   */
+  const { camposDeContaSimulada, camposDeContaMt5 } = await import('./simulado/motor')
+  const { getMtmFundedConfig } = await import('./config')
+  const { planoDaEmissao } = await import('./plataforma')
+  const plano = planoDaEmissao(meta.plataforma, Boolean((await getMtmFundedConfig()).sim_lancado_em))
+  const motor = plano.motor
 
   // A conta primeiro — é ela que o pedido da fila referencia.
   const { data: conta, error: erroConta } = await db
@@ -102,11 +109,14 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
         pago_em: new Date().toISOString(),
       })
       .eq('id', compraId)
+    // A plataforma à parte e best-effort (migração 097): se a coluna faltar, esta escrita falha
+    // sozinha e NÃO leva consigo a marca de `pago`, que é a que impede uma segunda conta.
+    await db.from('mtm_funded_purchases').update({ plataforma: plano.plataforma }).eq('id', compraId)
   }
 
   const { apelidoComTipo } = await import('@/lib/mtmfunded/metaapi')
   // Conta simulada: já está activa, não há fila nem agente.
-  if (motor === 'mt5') await db.from('mtm_account_requests').insert({
+  if (plano.pedidoNaFila) await db.from('mtm_account_requests').insert({
     account_id: conta.id,
     primeiro_nome: primeiroNome,
     // A conta nasce sempre na PRIMEIRA fase. A segunda é outra conta, emitida quando esta
@@ -134,7 +144,7 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
   }
 
   // Conta simulada: credenciais por email (login + link seguro, nunca a password) — lib/mtmfunded/credenciais-servico.ts
-  if (motor === 'sim') {
+  if (plano.enviarCredenciais) {
     const { enviarCredenciaisDaConta } = await import('./credenciais-servico')
     await enviarCredenciaisDaConta(conta.id, 'criacao')
   }

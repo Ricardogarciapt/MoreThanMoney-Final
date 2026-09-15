@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { camposDeContaSimulada, camposDeContaMt5 } from './simulado/motor'
+import { motorDaContinuacao } from './plataforma'
 import {
   brandedMailAttachments,
   createMailTransporter,
@@ -480,7 +481,7 @@ async function emitirFaseSeguinte(
       saldo_inicial: anterior.saldo_inicial,
       alavancagem: anterior.alavancagem ?? 100,
       // A fase seguinte herda o motor da anterior: um desafio não muda de casa a meio.
-      ...(anterior.motor === 'sim'
+      ...(motorDaContinuacao(anterior) === 'sim'
         ? await camposDeContaSimulada(Number(anterior.saldo_inicial ?? 0))
         : camposDeContaMt5(anterior.servidor as string | null)),
       // A F2 da oferta herda a marca: continua fora do «um de cada vez» e com acesso ao WebTrader.
@@ -685,7 +686,7 @@ export async function emitirContaFinanciada(userId: string): Promise<ResultadoFi
       program_id: aprovado.program_id,
       saldo_inicial: saldo,
       alavancagem: 100,
-      ...(aprovado.motor === 'sim' ? await camposDeContaSimulada(saldo) : camposDeContaMt5()),
+      ...(motorDaContinuacao(aprovado) === 'sim' ? await camposDeContaSimulada(saldo) : camposDeContaMt5()),
     })
     .select('id')
     .single()
@@ -810,7 +811,7 @@ export async function renovarContaAposLevantamento(
       program_id: conta.program_id,
       saldo_inicial: saldo,
       alavancagem: conta.alavancagem ?? 100,
-      ...(conta.motor === 'sim' ? await camposDeContaSimulada(saldo) : camposDeContaMt5(conta.servidor as string | null)),
+      ...(motorDaContinuacao(conta) === 'sim' ? await camposDeContaSimulada(saldo) : camposDeContaMt5(conta.servidor as string | null)),
       metricas: {
         cicloAnterior: conta.mt5_login ?? null,
         renovadaEm: new Date().toISOString(),

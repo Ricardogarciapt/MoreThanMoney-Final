@@ -174,6 +174,10 @@
       "schedule": "7 * * * *"
     },
     {
+      "path": "/api/cron/mtmfunded-mt5-vigia",
+      "schedule": "3,13,23,33,43,53 * * * *"
+    },
+    {
       "path": "/api/cron/mtmfunded-vespera",
       "schedule": "0 9 * * *"
     },

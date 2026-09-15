@@ -263,6 +263,26 @@ export default async function MtmFundedPage() {
         )}
       </section>
 
+      {/* ── As duas plataformas ─────────────────────────────────────────────── */}
+      {/* Escolhe-se no checkout. Copy honesta: simulada nas duas, sem promessas, resultados em %/pips. */}
+      <section id="plataformas" className="mx-auto max-w-6xl px-5 pb-14">
+        <h2 className="r text-3xl font-bold"><T k="mtmfunded.plataforma.secTitulo" /></h2>
+        <p className="r d1 mt-3 max-w-2xl text-sm text-[#a9a49a]"><T k="mtmfunded.plataforma.secSub" /></p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <Plataforma
+            titulo="mtmfunded.plataforma.simT"
+            itens={['mtmfunded.plataforma.simX1', 'mtmfunded.plataforma.simX2', 'mtmfunded.plataforma.simX3']}
+            destaque
+            etiqueta={config.sim_lancado_em ? 'mtmfunded.plataforma.recomendada' : 'mtmfunded.plataforma.brevemente'}
+          />
+          <Plataforma
+            titulo="mtmfunded.plataforma.mt5T"
+            itens={['mtmfunded.plataforma.mt5X1', 'mtmfunded.plataforma.mt5X2', 'mtmfunded.plataforma.mt5X3']}
+            etiqueta={config.mt5_a_venda ? null : 'mtmfunded.plataforma.brevemente'}
+          />
+        </div>
+      </section>
+
       {/* ── Como funciona ──────────────────────────────────────────────────── */}
       <section className="border-y border-white/[0.06]">
         <div className="mx-auto max-w-6xl px-5 py-14">
@@ -354,6 +374,31 @@ function Facto({ titulo, nota }: { titulo: string; nota: string }) {
     <div className="vidro r p-5">
       <p className="font-semibold text-white"><T k={titulo} /></p>
       <p className="mt-1.5 text-sm leading-relaxed text-[#a9a49a]"><T k={nota} /></p>
+    </div>
+  )
+}
+
+function Plataforma({
+  titulo, itens, etiqueta, destaque = false,
+}: { titulo: string; itens: string[]; etiqueta: string | null; destaque?: boolean }) {
+  return (
+    <div className={`vidro r p-6 ${destaque ? 'destaque' : ''}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-lg font-semibold text-white"><T k={titulo} /></h3>
+        {etiqueta && (
+          <span className="rounded-full bg-[#D2A63C]/15 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-[#D2A63C]">
+            <T k={etiqueta} />
+          </span>
+        )}
+      </div>
+      <ul className="mt-4 space-y-2 text-sm leading-relaxed text-zinc-400">
+        {itens.map((k) => (
+          <li key={k} className="flex gap-2">
+            <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#D2A63C]" />
+            <span><T k={k} /></span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
