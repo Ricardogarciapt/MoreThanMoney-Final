@@ -239,8 +239,7 @@ export async function executarAccao(ctx: ContextoAccao, p: PedidoAccao): Promise
       const email = await enviarCredenciaisDaConta(conta.id, 'regeneracao', { db, incluirCasa: true })
       return {
         // Mostradas UMA vez no modal. Nem email, nem auditoria, nem logs.
-        emailAoDono: email.enviado,
-        resposta: { login, servidor: conta.servidor ?? 'MTM Funded', password: master, investor },
+        resposta: { login, servidor: conta.servidor ?? 'MTM Funded', password: master, investor, emailAoDono: email.enviado },
         auditoria: { login, novoLogin: p.novoLogin, passwords: 'regeneradas (não guardadas)' },
       }
     }

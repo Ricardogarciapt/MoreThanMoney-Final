@@ -63,16 +63,16 @@ export async function GET(request: NextRequest) {
   if (vista === 'contas') {
     const { data } = await db
       .from('mtm_trading_accounts')
-      .select('id, user_id, tipo, tournament_id, mt5_login, servidor, saldo_inicial, alavancagem, estado, quebrou_regra, quebrada_em, metricas, metricas_lidas_em, metaapi_account_id, motor, created_at')
+      .select('id, user_id, tipo, tournament_id, mt5_login, servidor, saldo_inicial, sim_saldo, alavancagem, estado, quebrou_regra, quebrada_em, metricas, metricas_lidas_em, metaapi_account_id, motor, created_at')
       .order('created_at', { ascending: false })
-      .limit(300)
+      .limit(1000)
 
     const uids = [...new Set((data ?? []).map((c) => c.user_id).filter(Boolean))] as string[]
-    const nomes = new Map<string, { nome: string; email: string }>()
+    const nomes = new Map<string, { nome: string; email: string; username: string | null }>()
     if (uids.length) {
-      const { data: ps } = await db.from('profiles').select('id, full_name, email').in('id', uids)
+      const { data: ps } = await db.from('profiles').select('id, full_name, email, username').in('id', uids)
       for (const p of ps ?? []) {
-        nomes.set(p.id as string, { nome: (p.full_name as string) ?? '—', email: (p.email as string) ?? '—' })
+        nomes.set(p.id as string, { nome: (p.full_name as string) ?? '—', email: (p.email as string) ?? '—', username: (p.username as string) ?? null })
       }
     }
 
