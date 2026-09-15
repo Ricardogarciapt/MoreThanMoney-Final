@@ -34,6 +34,9 @@ export const CHAVE_UM_CLIQUE_ACEITE_UTILIZADOR = "mtmfunded_um_clique_aceite"
 
 export const TEXTO_AVISO_UM_CLIQUE =
   "Com a negociação num clique, as ordens são enviadas imediatamente, sem janela de confirmação. Um toque por engano abre, fecha ou altera uma posição. Conta simulada educativa."
+/** Contas TradeLocker/MT5 no WebTrader: dinheiro real. */
+export const TEXTO_AVISO_UM_CLIQUE_REAL =
+  "CONTA REAL: com a negociação num clique, as ordens seguem imediatamente para a tua corretora, com dinheiro real, sem janela de confirmação. Um toque por engano abre, fecha ou altera uma posição real."
 
 const REPETICAO_MS = 800
 
@@ -78,7 +81,7 @@ function escrever(chave: string, v: string) {
   try { localStorage.setItem(chave, v) } catch { /* modo privado: vale só nesta página */ }
 }
 
-export function UmCliqueProvider({ accountId, investor, children }: { accountId: string; investor: boolean; children: ReactNode }) {
+export function UmCliqueProvider({ accountId, investor, real = false, children }: { accountId: string; investor: boolean; real?: boolean; children: ReactNode }) {
   const [ligadoGuardado, setLigadoGuardado] = useState(false)
   const [aAceitar, setAAceitar] = useState(false)
   const [confirmacao, setConfirmacao] = useState<{ descricao: string; ok: () => void; nao: () => void } | null>(null)
@@ -155,13 +158,14 @@ export function UmCliqueProvider({ accountId, investor, children }: { accountId:
 
       {aAceitar && (
         <Janela titulo="Negociação num clique">
-          <AceitarAviso onAceitar={aceitar} onCancelar={() => setAAceitar(false)} />
+          <AceitarAviso real={real} onAceitar={aceitar} onCancelar={() => setAAceitar(false)} />
         </Janela>
       )}
 
       {confirmacao && (
         <Janela titulo="Confirmar">
           <p className="text-[13px] text-zinc-200">{confirmacao.descricao}?</p>
+          {real && <p className="mt-1.5 rounded bg-rose-500/10 px-2 py-1 text-[11px] text-rose-200">Conta real — executa na tua corretora.</p>}
           <div className="mt-3 flex gap-2">
             <button type="button" onClick={confirmacao.nao} className="flex-1 rounded-lg border border-white/10 py-2 text-zinc-300">Cancelar</button>
             <button type="button" autoFocus onClick={confirmacao.ok} className="flex-[2] rounded-lg bg-[#2962FF] py-2 font-bold text-white">Confirmar</button>
@@ -192,11 +196,11 @@ function Janela({ titulo, children }: { titulo: string; children: ReactNode }) {
   )
 }
 
-function AceitarAviso({ onAceitar, onCancelar }: { onAceitar: () => void; onCancelar: () => void }) {
+function AceitarAviso({ onAceitar, onCancelar, real }: { onAceitar: () => void; onCancelar: () => void; real?: boolean }) {
   const [marcado, setMarcado] = useState(false)
   return (
     <>
-      <p className="leading-relaxed text-zinc-200">{TEXTO_AVISO_UM_CLIQUE}</p>
+      <p className="leading-relaxed text-zinc-200">{real ? TEXTO_AVISO_UM_CLIQUE_REAL : TEXTO_AVISO_UM_CLIQUE}</p>
       <label className="mt-3 flex items-start gap-2 text-zinc-300">
         <input type="checkbox" checked={marcado} onChange={(e) => setMarcado(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#2962FF]" />
         Li e percebi o risco. Posso desligar a qualquer momento.

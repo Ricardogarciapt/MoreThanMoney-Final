@@ -1,0 +1,131 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { userIdDoPedido } from '@/lib/sessao-do-pedido'
+import { isIosAppRequest } from '@/lib/is-native-request'
+import { resolverAdaptador } from '@/lib/webtrader/contas'
+import { entrarMt5, entrarTradeLocker } from '@/lib/webtrader/entrar'
+import { plataformaValida } from '@/lib/webtrader/corretoras/regras'
+import { ErroCorretora, type PlataformaWT } from '@/lib/webtrader/corretoras/tipos'
+
+export const dynamic = 'force-dynamic'
+// Criar uma conta MetaApi nova espera o deploy + ligação à corretora (até ~2 min).
+export const maxDuration = 120
+
+/**
+ * O WEBTRADER DAS TRÊS PLATAFORMAS — uma rota, um adaptador (lib/webtrader/corretoras).
+ *
+ *   GET  /api/webtrader/{mtmfunded|tradelocker|mt5}/{conta|posicoes|ordens|historico|simbolos|preco}?conta=<ref>[&q=][&symbol=][&dias=]
+ *   POST /api/webtrader/{plataforma}/ordem      { conta, symbol, direcao, tipo, volume, preco?, sl?, tp? }
+ *   POST /api/webtrader/{plataforma}/modificar  { conta, alvo: posicao|ordem, id, sl?, tp?, preco? }
+ *   POST /api/webtrader/{plataforma}/fechar     { conta, positionId, volume? }
+ *   POST /api/webtrader/{plataforma}/cancelar   { conta, orderId }
+ *   POST /api/webtrader/{tradelocker|mt5}/entrar  (login com credenciais; MTM Funded usa /api/mtmfunded/simulado/entrar)
+ *
+ * Em TODOS os pedidos: sessão MTM (ou sessão da conta MTM Funded) e verificação do dono no servidor.
+ * Contas TradeLocker abertas por sessão do WebTrader mandam o token em `x-webtrader-tl`.
+ * Erros: { error, code? } com o estado HTTP da corretora (402 = quota MetaApi → caminho do upgrade).
+ */
+
+type Params = { params: Promise<{ plataforma: string; acao: string }> }
+
+function falhou(e: unknown) {
+  if (e instanceof ErroCorretora) {
+    return NextResponse.json({ error: e.message, code: e.codigo, ...(e.extra ?? {}) }, { status: e.status })
+  }
+  // Nunca o corpo do pedido nos logs (pode trazer a password).
+  console.error('[webtrader]', e instanceof Error ? e.message : 'erro desconhecido')
+  return NextResponse.json({ error: 'erro interno' }, { status: 500 })
+}
+
+async function plataformaDe(params: Params['params']): Promise<{ plataforma: PlataformaWT; acao: string }> {
+  const { plataforma, acao } = await params
+  const p = plataformaValida(plataforma)
+  if (!p) throw new ErroCorretora(404, 'plataforma desconhecida')
+  return { plataforma: p, acao }
+}
+
+export async function GET(request: NextRequest, { params }: Params) {
+  try {
+    const { plataforma, acao } = await plataformaDe(params)
+    const sp = request.nextUrl.searchParams
+    const a = await resolverAdaptador(request, plataforma, sp.get('conta'))
+    let dados: unknown
+    switch (acao) {
+      case 'conta':
+        dados = { conta: await a.conta(), plataforma: a.plataforma, real: a.real, podeNegociar: a.podeNegociar, capacidades: a.capacidades }
+        break
+      case 'posicoes': {
+        // Posições e pendentes numa só ida: é o que o ecrã refresca.
+        const [posicoes, ordens] = await Promise.all([a.posicoes(), a.ordens()])
+        dados = { posicoes, ordens }
+        break
+      }
+      case 'ordens':
+        dados = { ordens: await a.ordens() }
+        break
+      case 'historico':
+        dados = { historico: await a.historico(Number(sp.get('dias') ?? 30) || 30) }
+        break
+      case 'simbolos':
+        dados = { simbolos: await a.simbolos(sp.get('q') ?? '') }
+        break
+      case 'preco': {
+        const symbol = String(sp.get('symbol') ?? '').toUpperCase()
+        if (!/^[A-Z0-9._#+-]{2,24}$/.test(symbol)) throw new ErroCorretora(400, 'símbolo inválido')
+        dados = { preco: await a.preco(symbol) }
+        break
+      }
+      default:
+        throw new ErroCorretora(404, 'acção desconhecida')
+    }
+    return NextResponse.json(dados, { headers: { 'Cache-Control': 'no-store' } })
+  } catch (e) {
+    return falhou(e)
+  }
+}
+
+export async function POST(request: NextRequest, { params }: Params) {
+  try {
+    const { plataforma, acao } = await plataformaDe(params)
+    const b = (await request.json().catch(() => ({}))) as Record<string, unknown>
+
+    if (acao === 'entrar') {
+      const userId = await userIdDoPedido(request)
+      if (!userId) throw new ErroCorretora(401, 'Entra com a tua conta MTM para abrir contas reais no WebTrader.')
+      if (plataforma === 'tradelocker') return NextResponse.json(await entrarTradeLocker(userId, b))
+      if (plataforma === 'mt5') return NextResponse.json(await entrarMt5(userId, b, { compraPermitida: !isIosAppRequest(request) }))
+      throw new ErroCorretora(400, 'Contas MTM Funded entram em /api/mtmfunded/simulado/entrar.')
+    }
+
+    const a = await resolverAdaptador(request, plataforma, b.conta)
+    const numero = (v: unknown) => (v == null || v === '' ? null : Number(v))
+    switch (acao) {
+      case 'ordem':
+        return NextResponse.json(await a.enviarOrdem({
+          symbol: String(b.symbol ?? ''), direcao: b.direcao as 'buy' | 'sell', tipo: (b.tipo as 'mercado' | 'limit' | 'stop') ?? 'mercado',
+          volume: Number(b.volume), preco: numero(b.preco), sl: numero(b.sl), tp: numero(b.tp),
+        }))
+      case 'modificar': {
+        const id = String(b.id ?? '')
+        if (!id || id.length > 64) throw new ErroCorretora(400, 'id inválido')
+        if (b.alvo !== 'posicao' && b.alvo !== 'ordem') throw new ErroCorretora(400, 'alvo inválido')
+        return NextResponse.json(await a.modificar({ alvo: b.alvo, id, sl: numero(b.sl), tp: numero(b.tp), preco: numero(b.preco) }))
+      }
+      case 'fechar': {
+        const id = String(b.positionId ?? '')
+        if (!id || id.length > 64) throw new ErroCorretora(400, 'posição inválida')
+        const v = numero(b.volume)
+        if (v != null && !(v > 0)) throw new ErroCorretora(400, 'volume inválido')
+        return NextResponse.json(await a.fechar(id, v))
+      }
+      case 'cancelar': {
+        const id = String(b.orderId ?? '')
+        if (!id || id.length > 64) throw new ErroCorretora(400, 'ordem inválida')
+        return NextResponse.json(await a.cancelar(id))
+      }
+      default:
+        throw new ErroCorretora(404, 'acção desconhecida')
+    }
+  } catch (e) {
+    return falhou(e)
+  }
+}

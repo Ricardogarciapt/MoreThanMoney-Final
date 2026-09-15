@@ -10,7 +10,8 @@ import { ehContaMetaApi } from '@/lib/contas/quota-metaapi'
 
 export type PlataformaConta = 'mt5' | 'mt4' | 'tradelocker' | 'mtmfunded'
 export type EstadoConta = 'ligada' | 'a_ligar' | 'erro' | 'so_leitura' | 'pausada'
-export type OrigemConta = 'site' | 'auto'
+/** `wt` = conta MT5 aberta só no WebTrader (webtrader_contas_mt5, migração 076). */
+export type OrigemConta = 'site' | 'auto' | 'wt'
 
 export interface ContaUnificada {
   /** `site:<uuid>` ou `auto:<uuid>` — a origem viaja no id para as acções. */
@@ -59,11 +60,13 @@ const demoPeloNome = (s: unknown) => /\b(demo|trial|practice|paper|contest)\b/i.
 
 export async function listarContasUnificadas(userId: string): Promise<ContaUnificada[]> {
   const db = getSupabaseAdmin()
-  const [{ data: site }, { data: auto }, { data: subs }, { data: copiadores }] = await Promise.all([
+  const [{ data: site }, { data: auto }, { data: subs }, { data: copiadores }, webtrader] = await Promise.all([
     db.from('mtmcopy_connections').select('*').eq('user_id', userId).neq('mt5_status', 'disconnected').order('created_at'),
     db.from('mtmauto_accounts').select('*').eq('user_id', userId).order('created_at'),
     db.from('mtmauto_subscriptions').select('conta_id, provider_id, ativo').eq('user_id', userId).eq('ativo', true),
     db.from('funded_copiers').select('destino_tipo, destino_id, ativo').eq('user_id', userId).eq('ativo', true),
+    // 076 por aplicar → erro → sem linhas do WebTrader.
+    db.from('webtrader_contas_mt5').select('*').eq('user_id', userId).order('created_at'),
   ])
 
   const provIds = [...new Set((subs ?? []).map((s) => String(s.provider_id)))]
@@ -159,11 +162,30 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
     })
   }
 
+  for (const c of (webtrader.error ? [] : webtrader.data ?? []) as Record<string, unknown>[]) {
+    contas.push({
+      chave: `wt:${c.id}`,
+      id: String(c.id),
+      origem: 'wt',
+      plataforma: c.plataforma === 'mt4' ? 'mt4' : 'mt5',
+      rotulo: txt(c.rotulo),
+      login: txt(c.login),
+      servidor: txt(c.servidor),
+      estado: c.estado === 'error' ? 'erro' : c.estado === 'pending' ? 'a_ligar' : 'ligada',
+      erro: txt(c.erro),
+      demo: demoPeloNome(c.servidor),
+      contaMetaApi: ehContaMetaApi({ metaapi_account_id: txt(c.metaapi_account_id), login: txt(c.login), plataforma: 'mt5', estado: txt(c.estado) }),
+      usos: ['WebTrader'],
+      saldo: null,
+      acoes: { editarCredenciais: false, pausar: false, retomar: false, remover: true, gerirNaAppMtmAuto: false },
+    })
+  }
+
   return contas
 }
 
-/** Parte `site:<uuid>` / `auto:<uuid>`. */
+/** Parte `site:<uuid>` / `auto:<uuid>` / `wt:<uuid>`. */
 export function lerChave(chave: unknown): { origem: OrigemConta; id: string } | null {
-  const m = /^(site|auto):([0-9a-f-]{36})$/i.exec(String(chave ?? ''))
+  const m = /^(site|auto|wt):([0-9a-f-]{36})$/i.exec(String(chave ?? ''))
   return m ? { origem: m[1] as OrigemConta, id: m[2] } : null
 }

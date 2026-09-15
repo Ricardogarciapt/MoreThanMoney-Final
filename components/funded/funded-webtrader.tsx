@@ -4,11 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Loader2, LogIn, ChevronDown, ShieldAlert, X } from "lucide-react"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
-import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, entrarComCredenciais, usd, COR_ESTADO } from "./api"
+import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, usd, COR_ESTADO } from "./api"
 import FundedTrader from "./funded-trader"
 import InstalarWebtrader from "./instalar-webtrader"
 import { InterruptorModo, useModoWebtrader } from "./modo-webtrader"
 import type { Prefill } from "./funded-ticket"
+import CorretoraTrader from "@/components/webtrader/corretora-trader"
+import EntrarCredenciais from "@/components/webtrader/entrar-credenciais"
+import {
+  type ContaReal, COR_PLATAFORMA, NOME_PLATAFORMA, apagarSessaoTL, ehRefReal, listarContasReais, lerSessoesTL, plataformaDaRef,
+} from "@/components/webtrader/api-corretoras"
 
 /**
  * MTM FUNDED — WEBTRADER. Vive em dois sítios com o mesmo código:
@@ -19,6 +24,11 @@ import type { Prefill } from "./funded-ticket"
  * Entrada à MetaTrader: as contas simuladas de quem tem sessão MTM aparecem logo; qualquer conta
  * (a própria ou a de outra pessoa, com a password investor) entra com Login + Password no servidor
  * «MTM Funded». O seletor no topo troca de conta sem sair do ecrã.
+ *
+ * Contas REAIS (TradeLocker e MT5) entram no mesmo seletor, com o emblema da plataforma: as já
+ * ligadas no ligador de contas aparecem sozinhas; «Entrar com credenciais» tem o seletor
+ * MTM Funded · TradeLocker · MT5. Uma conta real abre components/webtrader/corretora-trader.tsx,
+ * que só fala com /api/webtrader/{plataforma}/… (MT5 respeita a quota MetaApi do plano).
  *
  * Deep-link dos scanners e das ideias:
  *   ?tab=funded&symbol=OANDA:XAUUSD&dir=buy&sl=…&tp=…&origem=scanner|ideia_mtm&ref=<id>
@@ -39,22 +49,41 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   const [mostrarEntrada, setMostrarEntrada] = useState(false)
   const [seletorAberto, setSeletorAberto] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [reais, setReais] = useState<ContaReal[]>([])
+  const [compraPermitida, setCompraPermitida] = useState(true)
+  const [temSessaoMtm, setTemSessaoMtm] = useState(false)
   const { modo } = useModoWebtrader()
 
   const carregar = useCallback(async () => {
     const ss = lerSessoes()
     setSessoes(ss)
     let lista: ContaResumo[] = []
+    let sessaoMtm = true
     try {
       const d = await pedir<{ contas: ContaResumo[] }>("/api/mtmfunded/simulado/contas")
       lista = d.contas ?? []
     } catch (e) {
-      if ((e as { status?: number }).status !== 401) setErro((e as Error).message)
+      if ((e as { status?: number }).status === 401) sessaoMtm = false
+      else setErro((e as Error).message)
     }
+    // Contas reais: as do ligador + as abertas no WebTrader (MT5) + sessões TradeLocker deste separador.
+    let listaReais: ContaReal[] = []
+    if (sessaoMtm) {
+      try {
+        const r = await listarContasReais()
+        listaReais = r.contas
+        setCompraPermitida(r.compraPermitida)
+      } catch { /* sem contas reais não se perde o MTM Funded */ }
+    }
+    for (const s of Object.values(lerSessoesTL())) {
+      if (!listaReais.some((c) => c.ref === s.ref)) listaReais.push({ ref: s.ref, plataforma: "tradelocker", rotulo: s.rotulo ?? null, login: s.login, servidor: s.servidor, demo: s.demo, real: true, bloqueada: null, origem: "sessao" })
+    }
+    setTemSessaoMtm(sessaoMtm)
+    setReais(listaReais)
     setContas(lista)
     let ultima: string | null = null
     try { ultima = localStorage.getItem(CHAVE_ULTIMA) } catch { /* ok */ }
-    const ids = [...lista.map((c) => c.id), ...Object.keys(ss)]
+    const ids = [...lista.map((c) => c.id), ...Object.keys(ss), ...listaReais.filter((c) => !c.bloqueada).map((c) => c.ref)]
     setAtiva((a) => a && ids.includes(a) ? a : ultima && ids.includes(ultima) ? ultima : ids[0] ?? null)
   }, [])
 
@@ -85,18 +114,23 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   }, [sp])
 
   const todas = useMemo(() => {
-    const out: Array<{ id: string; login: string | null; etiqueta: string; estadoCurto: string; modo: "master" | "investor"; saldo?: number | null; equity?: number | null; propria: boolean; segue?: string | null }> = []
+    const out: Array<{ id: string; login: string | null; etiqueta: string; estadoCurto: string; modo: "master" | "investor"; saldo?: number | null; equity?: number | null; propria: boolean; segue?: string | null; real?: ContaReal }> = []
     for (const c of contas ?? []) out.push({ id: c.id, login: c.mt5_login, etiqueta: c.etiqueta, estadoCurto: c.estadoCurto, modo: "master", saldo: c.sim_saldo, equity: c.sim_equity, propria: true, segue: c.segueEstrategia?.nome ?? null })
     for (const s of Object.values(sessoes)) if (!out.some((o) => o.id === s.accountId)) {
       out.push({ id: s.accountId, login: s.login, etiqueta: s.etiqueta ?? "—", estadoCurto: s.estadoCurto ?? "—", modo: s.modo, propria: false })
     }
+    for (const r of reais) {
+      out.push({ id: r.ref, login: r.login, etiqueta: NOME_PLATAFORMA[r.plataforma], estadoCurto: r.bloqueada ? "Bloqueada" : r.demo ? "Demo" : "Real", modo: "master", propria: r.origem !== "sessao", real: r })
+    }
     return out
-  }, [contas, sessoes])
+  }, [contas, sessoes, reais])
   const atual = todas.find((t) => t.id === ativa)
 
   if (contas == null) return <div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" /></div>
 
   const emTrader = !(mostrarEntrada || todas.length === 0) && Boolean(ativa)
+  const ativaReal = ehRefReal(ativa)
+  const plataformaAtiva = ativa ? plataformaDaRef(ativa) : null
   // A altura do trader: a app própria usa o ecrã todo menos a barra; embutido na app-mobile há a navegação dela.
   const altura = contexto === "app"
     ? "calc(100dvh - 58px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))"
@@ -113,7 +147,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
               className="flex min-w-0 items-center gap-1.5 rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-left text-[12px]">
               {atual ? (
                 <>
-                  <span className="shrink-0 rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{atual.etiqueta}</span>
+                  <span className="shrink-0 rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: atual.real ? COR_PLATAFORMA[atual.real.plataforma] : "#D2A63C" }}>{atual.etiqueta}</span>
+                  {atual.real && <span className="shrink-0 text-[10px] font-bold text-rose-300">REAL</span>}
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: COR_ESTADO[atual.estadoCurto] ?? "#a1a1aa" }} />
                   <span className="truncate font-mono">{atual.login ?? "—"}</span>
                   {atual.segue && <span className="hidden truncate text-[10.5px] text-[#D2A63C] sm:inline">· {nomeCurto(atual.segue)}</span>}
@@ -124,8 +159,20 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
             </button>
             {seletorAberto && (
               <div role="listbox" className="absolute left-0 z-[950] mt-1 w-[min(92vw,380px)] overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl">
-                <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">Servidor {SERVIDOR}</p>
-                {todas.map((t) => (
+                <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">MTM Funded (simuladas) · TradeLocker e MT5 (reais)</p>
+                {todas.map((t) => t.real ? (
+                  <div key={t.id} className={`flex items-center gap-2 px-3 py-2 text-[12.5px] ${t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
+                    <button role="option" aria-selected={t.id === ativa} disabled={Boolean(t.real.bloqueada)} title={t.real.bloqueada ?? undefined} className="flex flex-1 items-center gap-2 text-left disabled:opacity-50" onClick={() => escolher(t.id)}>
+                      <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[t.real.plataforma] }}>{t.etiqueta}</span>
+                      <span className="rounded px-1.5 text-[10.5px] font-bold" style={{ color: t.real.bloqueada ? "#a1a1aa" : t.real.demo ? "#60a5fa" : "#fb7185" }}>{t.estadoCurto}</span>
+                      <span className="font-mono">{t.login ?? "—"}</span>
+                      <span className="ml-auto truncate text-[10.5px] text-zinc-500">{t.real.rotulo ?? t.real.servidor ?? ""}</span>
+                    </button>
+                    {t.real.origem === "sessao" && (
+                      <button aria-label="sair" onClick={() => { apagarSessaoTL(t.id); carregar() }} className="text-zinc-500"><X className="h-3.5 w-3.5" /></button>
+                    )}
+                  </div>
+                ) : (
                   <div key={t.id} className={`flex items-center gap-2 px-3 py-2 text-[12.5px] ${t.id === ativa ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
                     <button role="option" aria-selected={t.id === ativa} className="flex flex-1 items-center gap-2 text-left" onClick={() => escolher(t.id)}>
                       <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}{t.segue ? ` · ${nomeCurto(t.segue)}` : ""}</span>
@@ -146,17 +193,29 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
             )}
           </div>
         )}
-        <span className="hidden min-w-0 items-center gap-1 truncate text-[10.5px] text-amber-200/90 md:flex">
-          <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> Conta simulada educativa · MTM Funded · não é negociação real
-        </span>
+        {emTrader && ativaReal ? (
+          <span className="hidden min-w-0 items-center gap-1 truncate text-[10.5px] font-semibold text-rose-300 md:flex">
+            <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> Conta REAL · as ordens são executadas na tua corretora
+          </span>
+        ) : (
+          <span className="hidden min-w-0 items-center gap-1 truncate text-[10.5px] text-amber-200/90 md:flex">
+            <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> Conta simulada educativa · MTM Funded · não é negociação real
+          </span>
+        )}
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          {emTrader && <InterruptorModo compacto={false} />}
+          {emTrader && !ativaReal && <InterruptorModo compacto={false} />}
           <InstalarWebtrader contexto={contexto} />
         </div>
       </div>
-      <p className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 text-[10.5px] text-amber-200 md:hidden">
-        <ShieldAlert className="h-3 w-3 shrink-0" /> Conta simulada educativa · não é negociação real
-      </p>
+      {emTrader && ativaReal ? (
+        <p className="flex items-center gap-1 bg-rose-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-rose-300 md:hidden">
+          <ShieldAlert className="h-3 w-3 shrink-0" /> Conta REAL · ordens executadas na tua corretora
+        </p>
+      ) : (
+        <p className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 text-[10.5px] text-amber-200 md:hidden">
+          <ShieldAlert className="h-3 w-3 shrink-0" /> Conta simulada educativa · não é negociação real
+        </p>
+      )}
 
       {erro && <p className="px-2 py-1 text-[12px] text-rose-300">{erro}</p>}
 
@@ -164,12 +223,24 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
         <div className="p-2">
           <Entrada
             contas={contas}
-            onEntrar={(s) => { guardarSessao(s); setSessoes(lerSessoes()); escolher(s.accountId) }}
             onEscolher={escolher}
             onFechar={todas.length ? () => setMostrarEntrada(false) : undefined}
-            linkLoginMtm={contexto === "app" && contas.length === 0 ? "/login?redirect=/webtrader" : undefined}
+            linkLoginMtm={contexto === "app" && !temSessaoMtm ? "/login?redirect=/webtrader" : undefined}
+            formulario={
+              <EntrarCredenciais
+                temSessaoMtm={temSessaoMtm}
+                compraPermitida={compraPermitida}
+                onEntrou={async (r) => {
+                  if (r.plataforma === "mtmfunded") { guardarSessao(r.sessao); setSessoes(lerSessoes()); escolher(r.sessao.accountId); return }
+                  await carregar()
+                  escolher(r.ref)
+                }}
+              />
+            }
           />
         </div>
+      ) : ativa && ativaReal && plataformaAtiva ? (
+        <CorretoraTrader key={ativa} contaRef={ativa} plataforma={plataformaAtiva} prefill={prefill} simboloInicial={simboloInicial} altura={altura} compraPermitida={compraPermitida} />
       ) : ativa ? (
         <FundedTrader key={ativa} accountId={ativa} prefill={prefill} simboloInicial={simboloInicial} onSimbolo={onSimbolo} altura={altura} />
       ) : null}
@@ -182,32 +253,14 @@ function nomeCurto(nome: string) {
   return nome.replace(/^MTM Auto\s+/i, "").trim() || nome
 }
 
-/** Ecrã de entrada: as contas da pessoa + login MT5-like. */
-function Entrada({ contas, onEntrar, onEscolher, onFechar, linkLoginMtm }: {
+/** Ecrã de entrada: as contas MTM Funded da pessoa + «Entrar com credenciais» (três plataformas). */
+function Entrada({ contas, onEscolher, onFechar, linkLoginMtm, formulario }: {
   contas: ContaResumo[]
   linkLoginMtm?: string
-  onEntrar: (s: SessaoConta) => void
   onEscolher: (id: string) => void
   onFechar?: () => void
+  formulario: React.ReactNode
 }) {
-  const [login, setLogin] = useState("")
-  const [password, setPassword] = useState("")
-  const [aEntrar, setAEntrar] = useState(false)
-  const [erro, setErro] = useState<string | null>(null)
-
-  const entrar = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setAEntrar(true); setErro(null)
-    try {
-      onEntrar(await entrarComCredenciais(login, password))
-      setPassword("")
-    } catch (err) {
-      setErro((err as Error).message)
-    } finally {
-      setAEntrar(false)
-    }
-  }
-
   return (
     <div className="grid gap-3 md:grid-cols-2">
       <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3">
@@ -236,27 +289,7 @@ function Entrada({ contas, onEntrar, onEscolher, onFechar, linkLoginMtm }: {
           ))}
         </div>
       </div>
-
-      <form onSubmit={entrar} className="space-y-2 rounded-xl border border-white/10 bg-[#0d0d0d] p-3 text-[12.5px]">
-        <p className="text-[13px] font-semibold">Entrar com credenciais</p>
-        <p className="text-[11px] text-zinc-500">Password master negoceia; password investor só vê.</p>
-        <label className="block">
-          <span className="text-zinc-400">Login</span>
-          <input inputMode="numeric" autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} className="mt-1 h-10 w-full rounded-lg border border-white/10 bg-black px-2 font-mono text-white" />
-        </label>
-        <label className="block">
-          <span className="text-zinc-400">Password</span>
-          <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 h-10 w-full rounded-lg border border-white/10 bg-black px-2 text-white" />
-        </label>
-        <label className="block">
-          <span className="text-zinc-400">Servidor</span>
-          <input value={SERVIDOR} readOnly className="mt-1 h-10 w-full rounded-lg border border-white/10 bg-zinc-900 px-2 text-zinc-400" />
-        </label>
-        {erro && <p className="text-[11.5px] text-rose-300">{erro}</p>}
-        <button disabled={aEntrar || !login || !password} className="flex h-10 w-full items-center justify-center rounded-lg bg-[#D2A63C] font-bold text-black disabled:opacity-40">
-          {aEntrar ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
-        </button>
-      </form>
+      {formulario}
     </div>
   )
 }

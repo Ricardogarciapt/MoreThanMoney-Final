@@ -24,7 +24,7 @@ export type PlataformaConta = "mt5" | "mt4" | "tradelocker" | "mtmfunded"
 export interface ContaUnificada {
   chave: string
   id: string
-  origem: "site" | "auto"
+  origem: "site" | "auto" | "wt"
   plataforma: PlataformaConta
   rotulo: string | null
   login: string | null

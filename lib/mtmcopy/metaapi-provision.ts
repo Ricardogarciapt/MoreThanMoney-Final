@@ -542,3 +542,46 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
 }
 
 export { last4 }
+
+/**
+ * Conta MetaApi SÓ para negociar à mão (WebTrader) — sem papéis CopyFactory, sem subscrições,
+ * fiabilidade `regular` (a `high` custa o dobro e serve a entrega de sinais, que aqui não há).
+ *
+ * NUNCA reaproveita uma conta que já exista na MetaApi com o mesmo login+servidor: o caminho dos
+ * slaves faz update da password e desubscreve a CopyFactory, o que numa conta de outra ligação
+ * (ou de outra pessoa) desligava a cópia dela. Quem chama decide o que fazer com `existente`.
+ */
+export async function criarContaMetaApiDireta(req: {
+  login: string
+  password: string
+  server: string
+  platform: 'mt4' | 'mt5'
+  userId: string
+  userLabel: string
+}): Promise<{ ok: true; accountId: string } | { ok: false; erro: string; existente?: { id: string; mtmUserId: string | null }; credenciais?: boolean; accountId?: string }> {
+  const api = await getApi()
+  if (!api) return { ok: false, erro: 'MetaApi indisponível no servidor.' }
+  const login = req.login.replace(/\D/g, '')
+  if (!login || !req.password || !req.server?.trim()) return { ok: false, erro: 'Login, password e servidor são obrigatórios' }
+  let accountId: string | undefined
+  try {
+    const existing = (await findExistingAccount(login, req.server)) as { id?: string; _id?: string; metadata?: { mtmUserId?: string } } | null
+    if (existing) {
+      return { ok: false, erro: 'conta já existe na MetaApi', existente: { id: String(existing.id ?? existing._id), mtmUserId: existing.metadata?.mtmUserId ?? null } }
+    }
+    const region = await resolveMetaApiRegion()
+    const payload = {
+      ...buildSlaveCreatePayload({ ...req, login } as ProvisionRequest, region, true, 1),
+      reliability: 'regular',
+      metadata: { mtmUserId: req.userId, mtmRole: 'webtrader' },
+    }
+    const account = await createAccountWithResourceRetry(api, payload)
+    accountId = account.id ?? (account as { _id?: string })._id
+    if (!accountId) return { ok: false, erro: 'MetaAPI não devolveu account ID' }
+    await deployAccount(account)
+    return { ok: true, accountId }
+  } catch (err: unknown) {
+    const details = (err as { details?: unknown })?.details
+    return { ok: false, erro: formatMetaApiProvisionError(err), credenciais: details === 'E_AUTH', accountId }
+  }
+}
