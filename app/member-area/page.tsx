@@ -24,7 +24,8 @@ import {
   Lock,
   Eye,
   EyeOff,
-  CreditCard
+  CreditCard,
+  Wallet
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -790,7 +791,7 @@ export default function MemberAreaPage() {
         {/* Quick Actions */}
         <div className="max-w-4xl mx-auto mt-8">
           <h2 className="text-xl font-semibold text-[#D2A63C] mb-4">{t("memberarea.quickActions")}</h2>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link href="/scanner-access">
               <Card className="bg-gray-900/50 border-gray-700 hover:border-[#D2A63C]/50 transition-all cursor-pointer">
                 <CardContent className="p-4 text-center">
@@ -807,6 +808,16 @@ export default function MemberAreaPage() {
                   <Shield className="w-8 h-8 text-blue-400 mx-auto mb-2" />
                   <h3 className="font-semibold text-white">{t("memberarea.portfolios")}</h3>
                   <p className="text-gray-400 text-sm">{t("memberarea.portfoliosDesc")}</p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/member-area/contas">
+              <Card className="bg-gray-900/50 border-gray-700 hover:border-[#D2A63C]/50 transition-all cursor-pointer">
+                <CardContent className="p-4 text-center">
+                  <Wallet className="w-8 h-8 text-[#D2A63C] mx-auto mb-2" />
+                  <h3 className="font-semibold text-white">As minhas contas</h3>
+                  <p className="text-gray-400 text-sm">Ligar MT5, MT4, TradeLocker e MTM Funded</p>
                 </CardContent>
               </Card>
             </Link>
