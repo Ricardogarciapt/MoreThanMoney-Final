@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { lerInfoContaCache } from '@/lib/mtmcopy/metaapi-cache'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -71,13 +72,15 @@ export async function POST(request: NextRequest) {
     const base = `https://mt-client-api-v1.london.agiliumtrade.ai/users/current/accounts/${conta.metaapi_account_id}`
     const cabecalhos = { 'auth-token': token }
     try {
+      // A informação da conta vem da cache de 45 s (o ecrã refresca-se sozinho); as POSIÇÕES
+      // continuam sempre ao vivo.
       const [info, abertas] = await Promise.all([
-        fetch(`${base}/account-information`, { headers: cabecalhos, cache: 'no-store', signal: AbortSignal.timeout(12_000) }),
+        lerInfoContaCache(String(conta.metaapi_account_id), { regiao: 'london', timeoutMs: 12_000 }),
         fetch(`${base}/positions`, { headers: cabecalhos, cache: 'no-store', signal: AbortSignal.timeout(12_000) }),
       ])
 
-      if (info.ok) {
-        const d = (await info.json()) as Record<string, number>
+      if (info) {
+        const d = info as Record<string, number>
         aoVivo = {
           equity: d.equity,
           saldo: d.balance,

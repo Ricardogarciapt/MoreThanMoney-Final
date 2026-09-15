@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { parseTelegramGroups } from '@/lib/mtmcopy/copy-methods'
+import { lerInfoContaCache } from '@/lib/mtmcopy/metaapi-cache'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -137,12 +138,12 @@ export async function GET(request: NextRequest) {
     await Promise.all(
       comConta.map(async (l) => {
         try {
-          const r = await fetch(
-            `https://mt-client-api-v1.london.agiliumtrade.ai/users/current/accounts/${l.metaapiId}/account-information`,
-            { headers: { 'auth-token': token }, cache: 'no-store', signal: AbortSignal.timeout(8_000) },
-          )
-          if (!r.ok) return
-          const d = (await r.json()) as { balance?: number; equity?: number; currency?: string }
+          // Cache de 45 s: o painel refresca-se e reabre-se muito; um saldo com 45 s chega para
+          // responder «esta conta tem com que negociar?».
+          const d = (await lerInfoContaCache(String(l.metaapiId), { regiao: 'london', timeoutMs: 8_000 })) as
+            | { balance?: number; equity?: number; currency?: string }
+            | null
+          if (!d) return
           l.saldo = typeof d.balance === 'number' ? Math.round(d.balance * 100) / 100 : null
           l.equity = typeof d.equity === 'number' ? Math.round(d.equity * 100) / 100 : null
           l.moeda = d.currency ?? null

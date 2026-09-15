@@ -16,6 +16,7 @@ import {
   saveSignalSourcesConfig,
 } from './signal-sources-config'
 import type { MTMcopierConnection } from './types'
+import { contasComLinhasAbertas, deveSaltarLeitura, lerEstadosMetaApi, type EstadoMetaApi } from './contas-ociosas'
 
 export interface ConnectionSyncResult {
   connection_id: string
@@ -34,38 +35,18 @@ export interface SyncWarning {
   detail: string
 }
 
-const PROVISIONING_BASE =
-  process.env.METAAPI_PROVISIONING_URL ??
-  'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai'
-
 /**
  * Lê todos os accountIds existentes no MetaAPI numa só chamada.
  * Devolve `null` se a listagem falhar ou vier vazia — assim NUNCA se despromove
  * uma conta por engano quando a API está indisponível (evita falsos disconnects).
+ *
+ * A mesma listagem traz o estado de cada conta (DEPLOYED ou não), que se aproveita para não
+ * acordar contas desligadas só para ler o saldo (ver contas-ociosas.ts).
  */
-async function fetchExistingMetaApiAccountIds(): Promise<Set<string> | null> {
-  const token = process.env.METAAPI_TOKEN
-  if (!token) return null
-  try {
-    const res = await fetch(`${PROVISIONING_BASE}/users/current/accounts?limit=1000`, {
-      headers: { 'auth-token': token, Accept: 'application/json' },
-    })
-    if (!res.ok) return null
-    const data = (await res.json()) as unknown
-    const items = (Array.isArray(data) ? data : ((data as { items?: unknown[] })?.items ?? [])) as Array<{
-      _id?: string
-      id?: string
-    }>
-    if (!items.length) return null
-    const ids = new Set<string>()
-    for (const a of items) {
-      const id = a._id ?? a.id
-      if (id) ids.add(id)
-    }
-    return ids.size ? ids : null
-  } catch {
-    return null
-  }
+function idsExistentes(estados: Map<string, EstadoMetaApi> | null): Set<string> | null {
+  if (!estados) return null
+  const ids = new Set(estados.keys())
+  return ids.size ? ids : null
 }
 
 export interface SystemSyncResult {
@@ -175,7 +156,39 @@ export async function runMtmcopySystemSync(opts?: {
   const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]))
 
   // Listagem única de contas MetaAPI existentes (para detetar contas removidas sem N chamadas).
-  const existingAccountIds = metaapiConfigured ? await fetchExistingMetaApiAccountIds() : null
+  const estadosMetaApi = metaapiConfigured ? await lerEstadosMetaApi() : null
+  const existingAccountIds = idsExistentes(estadosMetaApi)
+
+  // A leitura do saldo (getAccountSnapshot, ligação RPC) só serve para fixar o saldo-base, uma
+  // vez. Antes lia-se em TODAS as contas ligadas em cada sincronização, com saldo-base já
+  // guardado ou não. Agora: só quando falta o saldo-base, e nunca numa conta que a MetaApi tem
+  // desligada e sem nada nosso aberto (a leitura acordava-a).
+  const candidatasSnapshot = (connections ?? []).filter(
+    (c) =>
+      c.metaapi_account_id &&
+      c.mt5_status === 'connected' &&
+      c.baseline_balance == null &&
+      deveSaltarLeitura({
+        accountId: String(c.metaapi_account_id),
+        mt5Status: c.mt5_status as string,
+        estadosMetaApi,
+        temLinhasAbertas: false,
+      }),
+  )
+  const linhasAbertas = candidatasSnapshot.length
+    ? await contasComLinhasAbertas(
+        candidatasSnapshot.map((c) => String(c.id)),
+        candidatasSnapshot.map((c) => String(c.metaapi_account_id)),
+      )
+    : null
+  const saltarSnapshot = new Set(
+    linhasAbertas
+      ? candidatasSnapshot
+          .filter((c) => !linhasAbertas.porConexao.has(String(c.id)) && !linhasAbertas.porConta.has(String(c.metaapi_account_id)))
+          .map((c) => String(c.id))
+      : [],
+  )
+  let snapshotsPoupados = 0
 
   const connectionResults: ConnectionSyncResult[] = []
   const warnings: SyncWarning[] = []
@@ -259,7 +272,9 @@ export async function runMtmcopySystemSync(opts?: {
         conn.metaapi_account_id &&
         conn.mt5_status === 'connected'
       ) {
-        const snap = await getAccountSnapshot(conn.metaapi_account_id)
+        const lerSnapshot = conn.baseline_balance == null && !saltarSnapshot.has(String(conn.id))
+        if (!lerSnapshot) snapshotsPoupados++
+        const snap = lerSnapshot ? await getAccountSnapshot(conn.metaapi_account_id) : null
         const updates: Record<string, unknown> = {}
 
         if (conn.baseline_balance == null && snap?.balance != null) {
@@ -377,6 +392,12 @@ export async function runMtmcopySystemSync(opts?: {
       actions,
       error,
     })
+  }
+
+  if (snapshotsPoupados) {
+    console.info(
+      `[system-sync] ${snapshotsPoupados} leitura(s) de saldo evitada(s) (${saltarSnapshot.size} conta(s) desligada(s) sem linhas abertas; as restantes já tinham saldo-base)`,
+    )
   }
 
   const okCount = connectionResults.filter((r) => r.ok).length

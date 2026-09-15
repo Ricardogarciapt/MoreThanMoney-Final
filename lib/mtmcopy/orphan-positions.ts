@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { readOpenPositions } from './metaapi'
 import { isMtmcopierPosition } from './premium-single'
+import { contasComLinhasAbertas, deveSaltarLeitura, lerEstadosMetaApi } from './contas-ociosas'
 
 /**
  * DETETOR DE POSIÇÕES ÓRFÃS — posições abertas na corretora que o motor não conhece.
@@ -28,17 +29,19 @@ export interface Orfa {
 export interface OrphanScan {
   contas: number
   ilegiveis: number
+  /** Contas desligadas e sem nenhuma linha aberta nossa — não se leram (ver contas-ociosas.ts). */
+  saltadas: number
   geridas: number
   orfas: Orfa[]
 }
 
 export async function scanOrphanPositions(): Promise<OrphanScan> {
   const admin = getSupabaseAdmin()
-  const out: OrphanScan = { contas: 0, ilegiveis: 0, geridas: 0, orfas: [] }
+  const out: OrphanScan = { contas: 0, ilegiveis: 0, saltadas: 0, geridas: 0, orfas: [] }
 
   const { data: conns } = await admin
     .from('mtmcopy_connections')
-    .select('id, account_label, metaapi_account_id, user_id')
+    .select('id, account_label, metaapi_account_id, user_id, mt5_status')
     .eq('is_active', true)
     .not('metaapi_account_id', 'is', null)
   if (!conns?.length) return out
@@ -64,8 +67,30 @@ export async function scanOrphanPositions(): Promise<OrphanScan> {
     (premium ?? []).map((r) => `${(r as { account_id: string }).account_id}|${String((r as { symbol?: string }).symbol ?? '').toUpperCase()}`),
   )
 
+  // Contas desligadas e sem nada nosso aberto não se leem: a leitura acordava-as (deploy) só
+  // para confirmar que estão vazias. Se não houver forma fiável de saber as linhas abertas,
+  // lê-se tudo como antes.
+  const estados = await lerEstadosMetaApi()
+  const semLinhas = (c: (typeof conns)[number], linhas: { porConexao: Set<string>; porConta: Set<string> }) =>
+    !linhas.porConexao.has(String(c.id)) && !linhas.porConta.has(String(c.metaapi_account_id))
+  const candidatas = conns.filter((c) =>
+    deveSaltarLeitura({
+      accountId: String(c.metaapi_account_id),
+      mt5Status: c.mt5_status as string | null,
+      estadosMetaApi: estados,
+      temLinhasAbertas: false,
+    }),
+  )
+  const linhasAbertas = candidatas.length
+    ? await contasComLinhasAbertas(candidatas.map((c) => String(c.id)), candidatas.map((c) => String(c.metaapi_account_id)))
+    : null
+  const saltar = new Set(
+    linhasAbertas ? candidatas.filter((c) => semLinhas(c, linhasAbertas)).map((c) => String(c.id)) : [],
+  )
+
   for (const c of conns) {
     const accountId = c.metaapi_account_id as string
+    if (saltar.has(String(c.id))) { out.saltadas++; continue }
     const posicoes = await readOpenPositions(accountId)
     if (posicoes == null) { out.ilegiveis++; continue }
     out.contas++
@@ -94,6 +119,9 @@ export async function scanOrphanPositions(): Promise<OrphanScan> {
     }
   }
 
+  if (out.saltadas) {
+    console.info(`[orphan-positions] ${out.saltadas} conta(s) desligada(s) e sem linhas abertas não foram lidas`)
+  }
   return out
 }
 
