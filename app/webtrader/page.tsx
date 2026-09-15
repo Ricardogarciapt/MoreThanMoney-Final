@@ -14,6 +14,8 @@ import FundedWebtrader from "@/components/funded/funded-webtrader"
  *
  * Os links «Negociar» de fora da app-mobile (scanner-access, /alertas-mtm) chegam aqui com
  * ?symbol=&dir=&sl=&tp=&origem=.
+ *
+ * O WebTrader v2 ocupa o ecrã todo: a barra (marca, conta, SIMPLE|PRO) é do próprio componente.
  */
 export default function WebtraderPage() {
   return (
@@ -21,10 +23,6 @@ export default function WebtraderPage() {
       className="min-h-[100dvh] bg-[#131722] text-white"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      <header className="mx-auto flex max-w-6xl items-center gap-2 px-3 pt-2">
-        <img src="/icon-192x192.png" alt="" className="h-6 w-6 rounded" />
-        <span className="text-[14px] font-bold">MTM WebTrader</span>
-      </header>
       <Suspense fallback={<div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-[#2962FF]" /></div>}>
         <FundedWebtrader contexto="app" />
       </Suspense>

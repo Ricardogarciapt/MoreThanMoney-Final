@@ -7,6 +7,7 @@ import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
 import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, entrarComCredenciais, usd, COR_ESTADO } from "./api"
 import FundedTrader from "./funded-trader"
 import InstalarWebtrader from "./instalar-webtrader"
+import { InterruptorModo, useModoWebtrader } from "./modo-webtrader"
 import type { Prefill } from "./funded-ticket"
 
 /**
@@ -38,6 +39,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   const [mostrarEntrada, setMostrarEntrada] = useState(false)
   const [seletorAberto, setSeletorAberto] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const { modo } = useModoWebtrader()
 
   const carregar = useCallback(async () => {
     const ss = lerSessoes()
@@ -94,93 +96,82 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
 
   if (contas == null) return <div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" /></div>
 
+  const emTrader = !(mostrarEntrada || todas.length === 0) && Boolean(ativa)
+  // A altura do trader: a app própria usa o ecrã todo menos a barra; embutido na app-mobile há a navegação dela.
+  const altura = contexto === "app"
+    ? "calc(100dvh - 58px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))"
+    : "calc(100dvh - 200px)"
+
   return (
-    <div className="mx-auto max-w-6xl space-y-2 px-2 py-2 text-white">
-      {/* Sempre visível — posicionamento obrigatório (spec §1). */}
-      <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
-        <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
-        <span className="min-w-0 flex-1">Conta simulada educativa · MTM Funded · não é negociação real</span>
-        <InstalarWebtrader contexto={contexto} />
-      </div>
-
-      {todas.length > 0 && (
-        <div className="relative">
-          <button onClick={() => setSeletorAberto((v) => !v)} className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-left text-[12.5px]">
-            {atual ? (
-              <>
-                <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{atual.etiqueta}{atual.segue ? ` · segue ${nomeCurto(atual.segue)}` : ""}</span>
-                <span className="font-mono">{atual.login ?? "—"}</span>
-                <span className="text-zinc-500">{SERVIDOR}</span>
-                {atual.modo === "investor" && <span className="text-[10.5px] text-sky-300">investor</span>}
-              </>
-            ) : <span className="text-zinc-400">Escolhe uma conta</span>}
-            <ChevronDown className="ml-auto h-4 w-4 text-zinc-500" />
-          </button>
-          {seletorAberto && (
-            <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl">
-              {todas.map((t) => (
-                <div key={t.id} className={`flex items-center gap-2 px-3 py-2 text-[12.5px] ${t.id === ativa ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
-                  <button className="flex flex-1 items-center gap-2 text-left" onClick={() => escolher(t.id)}>
-                    <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}{t.segue ? ` · segue ${nomeCurto(t.segue)}` : ""}</span>
-                    <span className="rounded px-1.5 text-[10.5px]" style={{ color: COR_ESTADO[t.estadoCurto] ?? "#a1a1aa" }}>{t.estadoCurto}</span>
-                    <span className="font-mono">{t.login}</span>
-                    {t.saldo != null && <span className="ml-auto font-mono text-zinc-400">{usd(t.equity ?? t.saldo)} $</span>}
-                    {!t.propria && <span className="ml-auto text-[10.5px] text-sky-300">{t.modo}</span>}
-                  </button>
-                  {!t.propria && (
-                    <button aria-label="sair" onClick={() => { apagarSessao(t.id); carregar() }} className="text-zinc-500"><X className="h-3.5 w-3.5" /></button>
-                  )}
-                </div>
-              ))}
-              <button onClick={() => { setMostrarEntrada(true); setSeletorAberto(false) }} className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-[12.5px] text-[#D2A63C]">
-                <LogIn className="h-4 w-4" /> Entrar com credenciais
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Troca rápida: com mais de uma conta, as contas ficam à vista como fichas — trocar é um
-          toque, como os separadores de contas do MetaTrader, sem abrir o menu. */}
-      {todas.length > 1 && !mostrarEntrada && (
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-          {todas.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => escolher(t.id)}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] ${
-                t.id === ativa ? "border-[#D2A63C] bg-[#D2A63C]/15 text-white" : "border-white/10 bg-[#0d0d0d] text-zinc-400"
-              }`}
-            >
-              <span className="font-bold text-[#D2A63C]">{t.etiqueta}{t.segue ? ` · ${nomeCurto(t.segue)}` : ""}</span>
-              <span className="font-mono">{t.login ?? "—"}</span>
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: COR_ESTADO[t.estadoCurto] ?? "#a1a1aa" }} />
+    <div className={`mx-auto text-white ${emTrader && modo === "pro" ? "max-w-none" : "max-w-6xl"}`}>
+      {/* A barra: marca, conta, modo. O aviso de conta simulada fica SEMPRE à vista (spec §1). */}
+      <div className="flex items-center gap-2 border-b border-white/10 bg-[#0d0f15] px-2 py-1.5">
+        {contexto === "app" && <img src="/icon-192x192.png" alt="MTM" className="h-6 w-6 shrink-0 rounded" />}
+        {todas.length > 0 && (
+          <div className="relative min-w-0">
+            <button onClick={() => setSeletorAberto((v) => !v)} aria-expanded={seletorAberto} aria-haspopup="listbox"
+              className="flex min-w-0 items-center gap-1.5 rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-left text-[12px]">
+              {atual ? (
+                <>
+                  <span className="shrink-0 rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{atual.etiqueta}</span>
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: COR_ESTADO[atual.estadoCurto] ?? "#a1a1aa" }} />
+                  <span className="truncate font-mono">{atual.login ?? "—"}</span>
+                  {atual.segue && <span className="hidden truncate text-[10.5px] text-[#D2A63C] sm:inline">· {nomeCurto(atual.segue)}</span>}
+                  {atual.modo === "investor" && <span className="text-[10.5px] text-sky-300">investor</span>}
+                </>
+              ) : <span className="text-zinc-400">Escolhe uma conta</span>}
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
             </button>
-          ))}
-          <button
-            onClick={() => setMostrarEntrada(true)}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-white/15 px-2.5 py-1 text-[11.5px] text-[#D2A63C]"
-          >
-            <LogIn className="h-3.5 w-3.5" /> Outra conta
-          </button>
+            {seletorAberto && (
+              <div role="listbox" className="absolute left-0 z-[950] mt-1 w-[min(92vw,380px)] overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl">
+                <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">Servidor {SERVIDOR}</p>
+                {todas.map((t) => (
+                  <div key={t.id} className={`flex items-center gap-2 px-3 py-2 text-[12.5px] ${t.id === ativa ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
+                    <button role="option" aria-selected={t.id === ativa} className="flex flex-1 items-center gap-2 text-left" onClick={() => escolher(t.id)}>
+                      <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}{t.segue ? ` · ${nomeCurto(t.segue)}` : ""}</span>
+                      <span className="rounded px-1.5 text-[10.5px]" style={{ color: COR_ESTADO[t.estadoCurto] ?? "#a1a1aa" }}>{t.estadoCurto}</span>
+                      <span className="font-mono">{t.login}</span>
+                      {t.saldo != null && <span className="ml-auto font-mono text-zinc-400">{usd(t.equity ?? t.saldo)} $</span>}
+                      {!t.propria && <span className="ml-auto text-[10.5px] text-sky-300">{t.modo}</span>}
+                    </button>
+                    {!t.propria && (
+                      <button aria-label="sair" onClick={() => { apagarSessao(t.id); carregar() }} className="text-zinc-500"><X className="h-3.5 w-3.5" /></button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={() => { setMostrarEntrada(true); setSeletorAberto(false) }} className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-[12.5px] text-[#D2A63C]">
+                  <LogIn className="h-4 w-4" /> Entrar com credenciais
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        <span className="hidden min-w-0 items-center gap-1 truncate text-[10.5px] text-amber-200/90 md:flex">
+          <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> Conta simulada educativa · MTM Funded · não é negociação real
+        </span>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {emTrader && <InterruptorModo compacto={false} />}
+          <InstalarWebtrader contexto={contexto} />
         </div>
-      )}
+      </div>
+      <p className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 text-[10.5px] text-amber-200 md:hidden">
+        <ShieldAlert className="h-3 w-3 shrink-0" /> Conta simulada educativa · não é negociação real
+      </p>
 
-      {erro && <p className="text-[12px] text-rose-300">{erro}</p>}
+      {erro && <p className="px-2 py-1 text-[12px] text-rose-300">{erro}</p>}
 
       {(mostrarEntrada || todas.length === 0) ? (
-        <Entrada
-          contas={contas}
-          onEntrar={(s) => { guardarSessao(s); setSessoes(lerSessoes()); escolher(s.accountId) }}
-          onEscolher={escolher}
-          onFechar={todas.length ? () => setMostrarEntrada(false) : undefined}
-          linkLoginMtm={contexto === "app" && contas.length === 0 ? "/login?redirect=/webtrader" : undefined}
-        />
+        <div className="p-2">
+          <Entrada
+            contas={contas}
+            onEntrar={(s) => { guardarSessao(s); setSessoes(lerSessoes()); escolher(s.accountId) }}
+            onEscolher={escolher}
+            onFechar={todas.length ? () => setMostrarEntrada(false) : undefined}
+            linkLoginMtm={contexto === "app" && contas.length === 0 ? "/login?redirect=/webtrader" : undefined}
+          />
+        </div>
       ) : ativa ? (
-        <FundedTrader
-          key={ativa} accountId={ativa} prefill={prefill} simboloInicial={simboloInicial} onSimbolo={onSimbolo}
-          alturaGrafico={contexto === "app" ? "h-[52vh] min-h-[320px] md:h-[calc(100dvh-330px)]" : undefined}
-        />
+        <FundedTrader key={ativa} accountId={ativa} prefill={prefill} simboloInicial={simboloInicial} onSimbolo={onSimbolo} altura={altura} />
       ) : null}
     </div>
   )

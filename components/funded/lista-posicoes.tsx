@@ -168,7 +168,7 @@ export default function ListaPosicoes(p: Props) {
       {p.posicoes.map((pos) => (
         <LinhaPosicao
           key={pos.id} pos={pos} s={p.simbolos[pos.symbol]} precos={p.precos} denso={p.denso} podeNegociar={p.podeNegociar}
-          ocupado={ocupado} edicao={edicao?.id === pos.id ? edicao.modo : null}
+          ocupado={ocupado} edicao={edicao && edicao.id === pos.id ? edicao.modo : null}
           onEditar={(modo) => { setErro(null); setEdicao(modo ? { id: pos.id, modo } : null) }}
           onSelecionar={() => p.onSelecionarSimbolo(pos.symbol)}
           correr={correr} umCliqueLigado={umClique.ligado}
