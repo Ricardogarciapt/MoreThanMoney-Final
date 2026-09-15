@@ -173,3 +173,55 @@ export function normalizeTrailingDistance(
   }
   return { mode: 'pips', pips: defaultPips }
 }
+
+/** Opções de trailing como a MetaApi as recebe (RPC `modifyPosition` e REST /trade). */
+export type OpcoesTrailingMetaApi = {
+  distance?: { distance: number; units: 'RELATIVE_POINTS' | 'RELATIVE_PIPS' }
+  threshold?: {
+    thresholds: Array<{ threshold: number; stopLoss: number }>
+    units: 'RELATIVE_POINTS' | 'RELATIVE_PIPS'
+    stopPriceBase: 'CURRENT_PRICE' | 'OPEN_PRICE'
+  }
+}
+
+/** Distância de trailing → opções da MetaApi. Pura; vivia em metaapi.ts (que a reexporta). */
+export function buildTrailingOptions(
+  input: TrailingDistance | number | null | undefined,
+): OpcoesTrailingMetaApi | undefined {
+  if (input == null) return undefined
+
+  if (typeof input === 'number') {
+    if (input <= 0) return undefined
+    return { distance: { distance: Math.round(input), units: 'RELATIVE_POINTS' } }
+  }
+
+  if (input.mode === 'pips' && input.pips > 0) {
+    return { distance: { distance: input.pips, units: 'RELATIVE_PIPS' } }
+  }
+
+  if (input.mode === 'points' && input.points > 0) {
+    return { distance: { distance: Math.round(input.points), units: 'RELATIVE_POINTS' } }
+  }
+
+  if (input.mode === 'threshold_pips' && input.activationPips > 0 && input.trailPips > 0) {
+    return {
+      threshold: {
+        thresholds: [{ threshold: input.activationPips, stopLoss: input.trailPips }],
+        units: 'RELATIVE_PIPS',
+        stopPriceBase: 'CURRENT_PRICE',
+      },
+    }
+  }
+
+  if (input.mode === 'threshold_points' && input.activationPoints > 0 && input.trailPoints > 0) {
+    return {
+      threshold: {
+        thresholds: [{ threshold: input.activationPoints, stopLoss: input.trailPoints }],
+        units: 'RELATIVE_POINTS',
+        stopPriceBase: 'CURRENT_PRICE',
+      },
+    }
+  }
+
+  return undefined
+}

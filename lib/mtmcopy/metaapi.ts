@@ -1,5 +1,5 @@
 import type { TrailingDistance } from './pip-points'
-import { convertTrailingToRelativePoints } from './pip-points'
+import { buildTrailingOptions, convertTrailingToRelativePoints, type OpcoesTrailingMetaApi } from './pip-points'
 import { resolveBrokerSymbol, rankedBrokerSymbols } from './symbol-resolver'
 import { orderCommentFor } from '@/lib/mtmcopy/no-comment-accounts'
 import { inicioDaContagem } from './metricas-desde'
@@ -121,14 +121,7 @@ type RpcConnection = {
   close: () => Promise<void>
 }
 
-type TrailingStopLossOptions = {
-  distance?: { distance: number; units: 'RELATIVE_POINTS' | 'RELATIVE_PIPS' }
-  threshold?: {
-    thresholds: Array<{ threshold: number; stopLoss: number }>
-    units: 'RELATIVE_POINTS' | 'RELATIVE_PIPS'
-    stopPriceBase: 'CURRENT_PRICE' | 'OPEN_PRICE'
-  }
-}
+type TrailingStopLossOptions = OpcoesTrailingMetaApi
 
 export interface MetaApiSymbolSpecification {
   point: number
@@ -235,46 +228,7 @@ export interface MetaApiPendingOrder {
   brokerTime?: string
 }
 
-export function buildTrailingOptions(
-  input: TrailingDistance | number | null | undefined,
-): TrailingStopLossOptions | undefined {
-  if (input == null) return undefined
-
-  if (typeof input === 'number') {
-    if (input <= 0) return undefined
-    return { distance: { distance: Math.round(input), units: 'RELATIVE_POINTS' } }
-  }
-
-  if (input.mode === 'pips' && input.pips > 0) {
-    return { distance: { distance: input.pips, units: 'RELATIVE_PIPS' } }
-  }
-
-  if (input.mode === 'points' && input.points > 0) {
-    return { distance: { distance: Math.round(input.points), units: 'RELATIVE_POINTS' } }
-  }
-
-  if (input.mode === 'threshold_pips' && input.activationPips > 0 && input.trailPips > 0) {
-    return {
-      threshold: {
-        thresholds: [{ threshold: input.activationPips, stopLoss: input.trailPips }],
-        units: 'RELATIVE_PIPS',
-        stopPriceBase: 'CURRENT_PRICE',
-      },
-    }
-  }
-
-  if (input.mode === 'threshold_points' && input.activationPoints > 0 && input.trailPoints > 0) {
-    return {
-      threshold: {
-        thresholds: [{ threshold: input.activationPoints, stopLoss: input.trailPoints }],
-        units: 'RELATIVE_POINTS',
-        stopPriceBase: 'CURRENT_PRICE',
-      },
-    }
-  }
-
-  return undefined
-}
+export { buildTrailingOptions }
 
 async function resolveOrderTrailingForSymbol(
   req: OrderRequest,

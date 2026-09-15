@@ -7,7 +7,7 @@ import {
 } from './metaapi'
 import type { TrailingDistance } from './pip-points'
 import { getExecSwitches } from './exec-switches'
-import { CANONICAL_PREMIUM_STRATEGY_ID } from './provider-constants'
+import { contasSubscritoras, decidirSubscritor } from '@/lib/gestao-real/espelho-premium'
 
 /**
  * Espelhagem dos EXITS Premium diretamente em cada conta de subscritor via MetaAPI.
@@ -27,28 +27,6 @@ export type PremiumMirrorAction =
   | { kind: 'close_all' }
   | { kind: 'be_trailing'; beSl: number; trailing: TrailingDistance }
 
-function positionDir(p: MetaApiPosition): 'buy' | 'sell' {
-  return /buy/i.test(p.type) ? 'buy' : 'sell'
-}
-
-function cleanSym(s: string): string {
-  return (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-}
-
-/** Match tolerante a sufixos de corretora; ouro reconhecido por XAU/GOLD. */
-function symbolMatch(posSym: string, target: string): boolean {
-  const a = cleanSym(posSym)
-  const b = cleanSym(target)
-  if (!a || !b) return false
-  const gold = (x: string) => /XAU|GOLD/.test(x)
-  if (gold(a) && gold(b)) return true
-  return a === b || a.startsWith(b) || b.startsWith(a)
-}
-
-function floorLot(n: number): number {
-  return Math.floor((n + 1e-9) * 100) / 100
-}
-
 /** Contas de subscritor que copiam a estratégia Premium por CopyFactory, ativas e ligadas. */
 export async function getPremiumSubscriberAccountIds(): Promise<string[]> {
   const admin = getSupabaseAdmin()
@@ -66,24 +44,8 @@ export async function getPremiumSubscriberAccountIds(): Promise<string[]> {
     copyfactory_strategy_pick?: string | null
     strategy_lots?: Record<string, number> | null
   }>
-  /**
-   * Quem copia o Premium.
-   *
-   * O `copyfactory_strategy_pick` guarda o ID da estratégia ('MxsR') — é isso que o site
-   * escreve quando se liga uma conta. A verificação antiga só aceitava a palavra 'premium' e
-   * uma coluna `copyfactory_strategy_id` que está a null em TODAS as ligações: dava sempre
-   * falso, e o espelho das parciais não encontrava conta nenhuma. O interruptor ficava ligado
-   * e não fazia nada.
-   */
-  const copiesPremium = (r: (typeof rows)[number]): boolean =>
-    r.copyfactory_strategy_id === CANONICAL_PREMIUM_STRATEGY_ID ||
-    r.copyfactory_strategy_pick === CANONICAL_PREMIUM_STRATEGY_ID ||
-    r.copyfactory_strategy_pick === 'premium' ||
-    (r.strategy_lots != null && (CANONICAL_PREMIUM_STRATEGY_ID in r.strategy_lots || 'premium' in r.strategy_lots))
-  const ids = rows
-    .filter((r) => r.copy_method === 'strategy' && r.metaapi_account_id?.trim() && copiesPremium(r))
-    .map((r) => r.metaapi_account_id!.trim())
-  return [...new Set(ids)]
+  // Quem copia o Premium (pick = ID da estratégia, 'premium', strategy_lots): lib/gestao-real/espelho-premium.ts
+  return contasSubscritoras(rows)
 }
 
 export interface MirrorResult {
@@ -124,46 +86,45 @@ export async function mirrorPremiumExit(
       out.detail.push(`${accountId.slice(0, 8)}: sem posições (erro)`)
       continue
     }
-    const matches = positions.filter((p) => symbolMatch(p.symbol, symbol) && positionDir(p) === direction)
-    if (matches.length === 0) {
+    // Casamento, ambiguidade e política de lote: lib/gestao-real/espelho-premium.ts (a mesma decisão
+    // que o motor em tempo real regista em sombra).
+    const d = decidirSubscritor(positions, symbol, direction, action)
+    if (d.tipo === 'sem_posicao') {
       out.skipped++
       continue
     }
-    if (matches.length > 1) {
+    if (d.tipo === 'ambiguo') {
       // Ambíguo → NÃO arrisca fechar a errada.
       out.skipped++
-      out.detail.push(`${accountId.slice(0, 8)}: ${matches.length} posições ${symbol} ${direction} — ambíguo, ignorado`)
+      out.detail.push(`${accountId.slice(0, 8)}: ${d.n} posições ${symbol} ${direction} — ambíguo, ignorado`)
       continue
     }
-    const pos = matches[0]!
-    const vol = pos.volume ?? 0
-    if (vol <= 0) {
+    if (d.tipo === 'sem_volume') {
       out.skipped++
       continue
     }
+    const { pos, vol } = d
 
     try {
-      if (action.kind === 'close_all') {
+      if (d.tipo === 'fechar_tudo') {
         const r = await closePositionById(accountId, pos.id)
         if (r.success) { out.acted++; out.detail.push(`${accountId.slice(0, 8)}: fecha tudo (${vol})`) }
         else if (r.error) out.detail.push(`${accountId.slice(0, 8)}: fecho falhou ${r.error}`)
-      } else if (action.kind === 'be_trailing') {
+      } else if (d.tipo === 'be_trailing' && action.kind === 'be_trailing') {
         const r = await modifyPositionSlTp(accountId, pos.id, action.beSl, pos.takeProfit, action.trailing, pos.symbol)
         if (r.success) { out.acted++; out.detail.push(`${accountId.slice(0, 8)}: BE+trailing`) }
         else if (r.error) out.detail.push(`${accountId.slice(0, 8)}: BE falhou ${r.error}`)
-      } else {
-        // close_frac com política de lote por subscritor
-        const wanted = floorLot(vol * action.frac)
-        if (wanted < 0.01) {
+      } else if (action.kind === 'close_frac') {
+        if (d.tipo === 'segura') {
           out.skipped++
           out.detail.push(`${accountId.slice(0, 8)}: lote ${vol} não escala (${(action.frac * 100).toFixed(0)}%) → segura`)
-        } else if (vol - wanted < 0.01) {
+        } else if (d.tipo === 'fechar_resto') {
           const r = await closePositionById(accountId, pos.id)
           if (r.success) { out.acted++; out.detail.push(`${accountId.slice(0, 8)}: fecha resto (${vol})`) }
           else if (r.error) out.detail.push(`${accountId.slice(0, 8)}: fecho falhou ${r.error}`)
-        } else {
-          const r = await closePositionById(accountId, pos.id, wanted)
-          if (r.success) { out.acted++; out.detail.push(`${accountId.slice(0, 8)}: fecha ${(action.frac * 100).toFixed(0)}% (${wanted})`) }
+        } else if (d.tipo === 'parcial') {
+          const r = await closePositionById(accountId, pos.id, d.volume)
+          if (r.success) { out.acted++; out.detail.push(`${accountId.slice(0, 8)}: fecha ${(action.frac * 100).toFixed(0)}% (${d.volume})`) }
           else if (r.error) out.detail.push(`${accountId.slice(0, 8)}: fecho falhou ${r.error}`)
         }
       }

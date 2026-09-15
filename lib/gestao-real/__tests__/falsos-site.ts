@@ -19,6 +19,12 @@ export async function closePositionById(acc, id, vol) {
   P().log.push({ k: 'close', acc, id, vol: vol ?? null })
   return fecharReal(acc, id, vol) ? { success: true } : { success: false, error: 'falso' }
 }
+export async function listOpenPositions(acc) {
+  P().log.push({ k: 'listar', acc })
+  const l = posicoesDe(acc)
+  if (l == null) throw new Error('falso: ilegível')
+  return l
+}
 export async function readPendingOrders(acc) {
   if (P().ilegivel && P().ilegivel.includes(acc)) return null
   return JSON.parse(JSON.stringify((P().pendentes || {})[acc] || []))
