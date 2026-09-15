@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 /**
- * O LINK SEGURO DAS CREDENCIAIS (migração 084 · lib/mtmfunded/credenciais-link.ts).
+ * O LINK SEGURO DAS CREDENCIAIS (migração 091 · lib/mtmfunded/credenciais-link.ts).
  *
  *   POST { contaId }  → o DONO pede um link novo por email (3 por conta por hora).
  *   PUT  { token }    → abre um link: assinatura, prazo, dono = sessão, uso único. Devolve as

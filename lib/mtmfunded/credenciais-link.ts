@@ -4,7 +4,7 @@ import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from
  * O LINK «VER CREDENCIAIS» — uso único, 24 horas, só o dono.
  *
  * O email da conta leva login e servidor, nunca a password. Leva este link, que abre as passwords
- * UMA vez dentro da app a quem tiver sessão MTM como dono da conta (migração 084).
+ * UMA vez dentro da app a quem tiver sessão MTM como dono da conta (migração 091).
  *
  * Token: `v1.<linkId>.<expiraMs>.<nonce>.<assinatura>` — HMAC-SHA256 com `MTMFUNDED_CRED_KEY`.
  * A assinatura e o prazo verificam-se SEM base de dados (um token forjado ou velho nem chega à
@@ -131,7 +131,7 @@ export async function abrirLink(
   return { ok: true, accountId: linha.account_id, motivo: linha.motivo }
 }
 
-/** O repositório de produção (tabela da 084, service role). */
+/** O repositório de produção (tabela da 091, service role). */
 export function repoSupabase(db: import('@supabase/supabase-js').SupabaseClient): RepoLinks {
   const T = 'mtm_funded_credenciais_links'
   return {

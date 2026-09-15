@@ -12,6 +12,7 @@ import { Contratos, Levantamentos } from '@/components/mtmfunded/contratos-e-lev
 import { useT } from '@/components/i18n-provider'
 import ModalMetricas from '@/components/mtmfunded/modal-metricas'
 import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
+import CredenciaisConta from '@/components/funded/credenciais-conta'
 
 /**
  * O painel de admin aqui é o MESMO componente do /admin, e não uma cópia.
@@ -513,6 +514,8 @@ function Credenciais({ conta, abrirJa }: { conta: Conta; abrirJa?: boolean }) {
   const [visivel, setVisivel] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
+  // Conta simulada: o servidor pede re-autenticação (428) — o componente do WebTrader trata disso.
+  const [reautenticar, setReautenticar] = useState(false)
 
   const mostrar = useCallback(async () => {
     setOcupado(true)
@@ -526,6 +529,7 @@ function Credenciais({ conta, abrirJa }: { conta: Conta; abrirJa?: boolean }) {
         body: JSON.stringify({ contaId: conta.id }),
       })
       const j = await r.json()
+      if (r.status === 428) { setReautenticar(true); return }
       if (!r.ok) throw new Error(j?.error || 'Não foi possível ler as credenciais')
       setDados(j)
       setVisivel(true)
@@ -540,6 +544,14 @@ function Credenciais({ conta, abrirJa }: { conta: Conta; abrirJa?: boolean }) {
   useEffect(() => {
     if (abrirJa) mostrar()
   }, [abrirJa, mostrar])
+
+  if (reautenticar) {
+    return (
+      <div className="mt-4 border-t border-zinc-900 pt-4">
+        <CredenciaisConta contaId={conta.id} login={conta.login ?? null} servidor={conta.servidor ?? null} />
+      </div>
+    )
+  }
 
   return (
     <div className="mt-4 border-t border-zinc-900 pt-4">

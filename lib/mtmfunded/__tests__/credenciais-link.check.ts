@@ -1,5 +1,5 @@
 /**
- * Link seguro das credenciais (084) e o email que o leva — sem base de dados.
+ * Link seguro das credenciais (091) e o email que o leva — sem base de dados.
  *
  *   npx tsx lib/mtmfunded/__tests__/credenciais-link.check.ts
  */

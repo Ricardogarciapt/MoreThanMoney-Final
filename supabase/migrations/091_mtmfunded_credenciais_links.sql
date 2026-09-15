@@ -1,4 +1,4 @@
--- 084 — LINKS SEGUROS DAS CREDENCIAIS MTM FUNDED
+-- 091 — LINKS SEGUROS DAS CREDENCIAIS MTM FUNDED
 --
 -- O email da conta simulada leva o login e o servidor, NUNCA a password. Leva um link «Ver
 -- credenciais» que abre as passwords UMA vez, dentro da app, a quem tiver sessão como DONO da conta.
@@ -31,7 +31,7 @@ create table if not exists public.mtm_funded_credenciais_links (
 );
 
 comment on table public.mtm_funded_credenciais_links is
-  'links de uso único (24 h, só o dono) que revelam as passwords de uma conta MTM Funded simulada — 084; lib/mtmfunded/credenciais-link.ts';
+  'links de uso único (24 h, só o dono) que revelam as passwords de uma conta MTM Funded simulada — 091; lib/mtmfunded/credenciais-link.ts';
 
 -- O envio e o limite de pedidos lêem por conta e por data; o backfill lê «já enviado?» por conta.
 create index if not exists mtm_funded_credenciais_links_conta_idx
