@@ -16,7 +16,6 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getExecSwitches } from './exec-switches'
-import { parseSignal } from './signal-parser'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import {
   readOpenPositions,
@@ -30,72 +29,21 @@ import {
 import { lifecycleMessage, logStatusFor, type SignalEvent } from './signal-lifecycle'
 import { precoParaMonitor } from './metaapi-snapshot'
 import { filtrarContasExistentes } from './metaapi-inexistentes'
-import { pipSizeForSymbol } from './trade-outcome'
 import { t2tUsaTrailing } from './t2t-source'
 import { podeSaltarLeitura } from './market-hours'
+import { configT2TDoAmbiente, gerirPosicaoT2T, tpLevels, type EstadoT2T, type LinhaT2T } from '@/lib/gestao-real/t2t'
+import { contaGeridaPeloMotorReal } from '@/lib/gestao-real/contas-live'
 
 const STATE_KEY = 't2t_monitor_state'
-/** Split dos parciais quando o sinal traz vários TPs. */
-const SPLIT = [50, 30, 20]
-/** BE = entrada + N pips a favor (nunca entrada seca). */
-const BE_BUFFER_PIPS = Number(process.env.T2T_BE_BUFFER_PIPS) || 5
-/** BE protetor cedo: lucro ≥ ratio × risco. */
-const EARLY_BE_RATIO = Number(process.env.T2T_EARLY_BE_RATIO) || 0.4
-
-interface RowState {
-  exitsDone: number
-  beDone: boolean
-  trailing: boolean
-  /** Stop mais alto (compra) / mais baixo (venda) que o motor já colocou — o ratchet. */
-  trailSl?: number
-  /** Já anunciámos o ENTRY HIT? (= a ordem chegou a encher) */
-  announced: boolean
-}
+/** Parciais 50/30/20, BE (+T2T_BE_BUFFER_PIPS, 5) e BE cedo (T2T_EARLY_BE_RATIO, 0.4): lib/gestao-real/t2t.ts */
+const CFG_T2T = configT2TDoAmbiente()
+type RowState = EstadoT2T
 
 /** Horas que uma ordem pendente T2T pode esperar antes de ser considerada ideia morta. */
 const PENDING_MAX_HOURS = Number(process.env.T2T_PENDING_MAX_HOURS) || 24
 type StateMap = Record<string, RowState>
 
-interface LogRow {
-  id: string
-  connection_id: string
-  chat_message_id: string | null
-  channel_key: string | null
-  symbol: string | null
-  direction: string | null
-  entry: number | null
-  sl: number | null
-  tp: number | null
-  lot: number | null
-  raw_message: string | null
-  broker_position_id: string | null
-  created_at?: string | null
-}
-
-function pipSizeFor(symbol: string): number {
-  return pipSizeForSymbol(symbol)
-}
-function roundLot(n: number): number {
-  return Math.max(0.01, Math.round(n * 100) / 100)
-}
-function symMatch(a: string, b: string): boolean {
-  const x = a.toUpperCase().replace(/[^A-Z0-9]/g, '')
-  const y = b.toUpperCase().replace(/[^A-Z0-9]/g, '')
-  return x === y || x.includes(y) || y.includes(x)
-}
-/** BE a favor: entrada ± buffer. */
-function beTarget(entry: number, dir: 'buy' | 'sell', symbol: string): number {
-  const buf = BE_BUFFER_PIPS * pipSizeFor(symbol)
-  return dir === 'buy' ? entry + buf : entry - buf
-}
-/** Lista de TPs do sinal: raw_message (multi-TP) com fallback ao tp da linha. */
-function tpLevels(row: LogRow): number[] {
-  const fromRaw = row.raw_message ? parseSignal(row.raw_message)?.tp ?? [] : []
-  const list = (fromRaw.length ? fromRaw : [row.tp]).filter(
-    (n): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0,
-  )
-  return list.slice(0, 3)
-}
+type LogRow = LinhaT2T
 
 async function loadState(): Promise<StateMap> {
   try {
@@ -347,111 +295,39 @@ export async function runT2TPriceMonitor(): Promise<{
       }
 
       managed++
+      // CONTA GERIDA PELO MOTOR EM TEMPO REAL (live para T2T nesta conta, motor vivo): a decisão por
+      // preço é dele. Enquanto o T2T não estiver em TIPOS_LIVE_SUPORTADOS este guarda devolve sempre
+      // false e nada muda.
+      if (await contaGeridaPeloMotorReal(accountId, 't2t')) continue
       const key = `${accountId}|${row.symbol}`
       if (!priceCache.has(key)) priceCache.set(key, await precoParaMonitor(accountId, row.symbol))
       const price = priceCache.get(key) ?? null
       if (price == null || !(price > 0)) continue
 
-      const entry = row.entry ?? pos.openPrice ?? null
-      const sl = row.sl ?? null
       // Trailing por FONTE: o Forex Swings (James) fica de fora — é swing de vários dias e um
       // stop a seguir o preço tirava-o da trade no primeiro recuo normal.
-      const podeTrailing = t2tUsaTrailing(row.channel_key, row.raw_message)
-      const tps = tpLevels(row)
-      const pip = pipSizeFor(row.symbol)
-
-      // ── ENTRY HIT: 1ª vez que vemos a posição preenchida → confirma no chat.
-      if (!st.announced) {
-        st.announced = true
-        await publishEvent(row, 'entry_hit', { ...evCtx, entry: null, price: entry })
-        actions.push(`entry_hit ${row.symbol}`)
-      }
-
-      // ── PARCIAIS por PREÇO: fecha a % do split ao tocar cada TP.
-      const nextLevel = st.exitsDone + 1
-      const nextTp = tps[nextLevel - 1]
-      const reached = nextTp != null && (dir === 'buy' ? price >= nextTp : price <= nextTp)
-      if (reached && pos.volume && pos.volume > 0) {
-        const pct = SPLIT[nextLevel - 1] ?? 100
-        const isLast = nextLevel >= tps.length
-        const vol = isLast ? pos.volume : roundLot((row.lot ?? pos.volume) * (pct / 100))
-        const closeAll = isLast || vol >= pos.volume
-        const r = await closePositionById(accountId, pos.id, closeAll ? undefined : vol)
-        if (r.success) {
-          st.exitsDone = nextLevel
-          actions.push(`exit${nextLevel} ${row.symbol}`)
-          // Desfecho em pips + % de flutuação no anúncio (pedido Ricardo 2026-08-20).
-          let outcomeTxt: string | null = null
-          if (entry && entry > 0 && nextTp != null) {
-            const move = dir === 'buy' ? nextTp - entry : entry - nextTp
-            const pips = Math.round((move / pip) * 10) / 10
-            const pctMove = Math.round(((move / entry) * 100) * 100) / 100
-            outcomeTxt = `${pips >= 0 ? '+' : ''}${pips} pips (${pctMove >= 0 ? '+' : ''}${pctMove}%).`
-          }
-          await publishEvent(row, closeAll ? 'target_final' : 'partial', { ...evCtx, level: nextLevel, pct, price, reason: outcomeTxt })
-          if (closeAll) {
-            await admin.from('mtmcopy_signal_log').update({ status: 'closed', detail: `Fechada no alvo ${nextLevel}` }).eq('id', row.id)
-            delete state[row.id]
-            continue
-          }
-          // Exit 1 → BE (+buffer) + trailing ancorado ao risco.
-          if (nextLevel === 1 && entry && !st.trailing) {
-            // BREAK-EVEN PARA TODAS AS FONTES, incluindo o James: proteger o risco depois do
-            // primeiro alvo não é trailing, é higiene. O que o James não leva é o RATCHET
-            // (bloco abaixo), que num swing de vários dias o tirava da trade no primeiro recuo.
-            //
-            // E o trailing, quando entra, é do MOTOR e não da corretora: nem todos os brokers o
-            // honram, e o nosso passo é de 1 segundo — seguimos o preço mais de perto que eles.
-            await modifyPositionSlTp(accountId, pos.id, beTarget(entry, dir, row.symbol), undefined,
-              undefined, row.symbol)
-            st.beDone = true
-            st.trailing = podeTrailing
-            st.trailSl = beTarget(entry, dir, row.symbol)
-            await publishEvent(row, 'break_even', evCtx)
-            if (podeTrailing) await publishEvent(row, 'trailing', evCtx)
-            actions.push(`${podeTrailing ? 'be_trail' : 'be'} ${row.symbol}`)
-          }
-          state[row.id] = st
-          continue
-        }
-      }
-
-      // ── BE PROTETOR CEDO (antes do Exit 1): lucro ≥ ratio × risco → SL para entrada +buffer.
-      if (!st.beDone && st.exitsDone === 0 && entry && sl) {
-        const riskDist = Math.abs(entry - sl)
-        const profit = dir === 'buy' ? price - entry : entry - price
-        if (riskDist > 0 && profit >= EARLY_BE_RATIO * riskDist) {
-          const r = await modifyPositionSlTp(accountId, pos.id, beTarget(entry, dir, row.symbol), undefined, undefined, row.symbol)
-          if (r.success) {
-            st.beDone = true
-            actions.push(`early_be ${row.symbol}`)
-            await publishEvent(row, 'break_even', evCtx)
-          }
-        }
-      }
-      // ── TRAILING PELO MOTOR (ratchet a cada passagem) ────────────────────────────
-      // Depois de o stop estar protegido, sobe-o para preço − distância a cada passagem e NUNCA
-      // o desce. É isto que transforma o trailing stop em trailing de LUCRO: o que já foi ganho
-      // fica travado, e num movimento rápido o stop vai atrás do preço em vez de esperar pelo
-      // alvo. O piso é sempre o break-even — nunca volta a ficar abaixo da entrada.
-      if (podeTrailing && st.beDone && entry && sl) {
-        const riskPips = Math.max(1, Math.abs(entry - sl) / pip)
-        const distancia = riskPips * pip
-        const piso = beTarget(entry, dir, row.symbol)
-        const candidato = dir === 'buy' ? price - distancia : price + distancia
-        const alvo = dir === 'buy' ? Math.max(candidato, piso) : Math.min(candidato, piso)
-        const atual = st.trailSl ?? pos.stopLoss ?? null
-        const melhora = atual == null
-          ? true
-          : dir === 'buy' ? alvo > atual + pip * 0.5 : alvo < atual - pip * 0.5
-        if (melhora) {
-          const r = await modifyPositionSlTp(accountId, pos.id, alvo, pos.takeProfit, undefined, row.symbol)
-          if (r.success) {
-            st.trailSl = alvo
-            st.trailing = true
-            actions.push(`trail ${row.symbol} → ${alvo.toFixed(2)}`)
-          }
-        }
+      // As regras (parciais, BE, ratchet) vivem em lib/gestao-real/t2t.ts — a mesma fonte do motor
+      // em tempo real do VPS.
+      const simbolo = row.symbol
+      const fim = await gerirPosicaoT2T(
+        { ...row, symbol: simbolo },
+        pos,
+        price,
+        st,
+        { ...CFG_T2T, podeTrailing: t2tUsaTrailing(row.channel_key, row.raw_message) },
+        {
+          fechar: (volume) => closePositionById(accountId, pos.id, volume),
+          modificar: (sl, tp) => modifyPositionSlTp(accountId, pos.id, sl, tp, undefined, simbolo),
+          publicar: async (event, ctx) => { await publishEvent(row, event, ctx) },
+          encerrar: async (nivel) => {
+            await admin.from('mtmcopy_signal_log').update({ status: 'closed', detail: `Fechada no alvo ${nivel}` }).eq('id', row.id)
+          },
+        },
+        actions,
+      )
+      if (fim === 'apagar') {
+        delete state[row.id]
+        continue
       }
 
       state[row.id] = st

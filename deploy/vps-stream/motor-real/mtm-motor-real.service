@@ -1,0 +1,26 @@
+[Unit]
+Description=MTM motor em tempo real - gestao das contas reais tick a tick (sombra por omissao) + fotografia metaapi_snapshot
+After=network-online.target
+Wants=network-online.target
+# Substitui o mtm-premium-streaming: os dois NUNCA ao mesmo tempo (duas subscricoes pagas a mesma conta).
+Conflicts=mtm-premium-streaming.service
+
+[Service]
+EnvironmentFile=/etc/mtm-motor-real.env
+# O SDK da MetaApi guarda a cache de sincronizacao em ./.metaapi: precisa de uma pasta escrevivel.
+StateDirectory=mtm-motor-real
+WorkingDirectory=/var/lib/mtm-motor-real
+ExecStart=/usr/bin/node --max-old-space-size=512 /opt/mtm/motor-real/motor.js
+Restart=always
+RestartSec=10
+# Ao parar: larga o live (batimento sem contas), grava a sombra pendente, marca as fotografias dessincronizadas.
+TimeoutStopSec=20
+DynamicUser=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=768M
+
+[Install]
+WantedBy=multi-user.target
