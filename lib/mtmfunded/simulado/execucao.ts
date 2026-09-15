@@ -190,7 +190,19 @@ export interface EntradaAbrir {
   comentario?: string | null
 }
 
+/** Pausa do admin (079): as posições existentes continuam geridas, as novas não nascem. */
+async function exigirContaSemPausa(accountId: string) {
+  const { exigirSemPausa, ContaEmPausa } = await import('./pausa')
+  try {
+    await exigirSemPausa(accountId)
+  } catch (e) {
+    if (e instanceof ContaEmPausa) throw new ErroOrdem(e.status, e.message)
+    throw e
+  }
+}
+
 export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
+  await exigirContaSemPausa(conta.id)
   const symbol = String(e.symbol || '').toUpperCase()
   if (e.direcao !== 'buy' && e.direcao !== 'sell') throw new ErroOrdem(400, 'direção inválida')
   const abertas = await posicoesAbertas(conta.id)
@@ -308,6 +320,7 @@ export interface EntradaPendente {
 }
 
 export async function criarPendente(conta: Conta, e: EntradaPendente) {
+  await exigirContaSemPausa(conta.id)
   const symbol = String(e.symbol || '').toUpperCase()
   if (e.direcao !== 'buy' && e.direcao !== 'sell') throw new ErroOrdem(400, 'direção inválida')
   if (e.tipo !== 'limit' && e.tipo !== 'stop') throw new ErroOrdem(400, 'tipo inválido (limit ou stop)')
