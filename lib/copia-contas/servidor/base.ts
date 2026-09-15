@@ -70,7 +70,7 @@ export async function idsMetaApiDeSistema(): Promise<Set<string>> {
       CANONICAL_PREMIUM_ACCOUNT_ID, CANONICAL_GOLDKILLER_ACCOUNT_ID, CANONICAL_BOOSTER_ACCOUNT_ID,
       CANONICAL_COPYTRADER_RG_ACCOUNT_ID, CANONICAL_AURUMFLOW_ACCOUNT_ID, SENSEI_PROVIDER_ACCOUNT_ID,
       ...contasStreaming(process.env.PREMIUM_STREAMING_CONTAS),
-    ].filter(Boolean),
+    ].filter((v): v is string => Boolean(v)),
   )
   const [{ data: provs }, { data: contas }] = await Promise.all([
     db().from('mtmauto_providers').select('metaapi_account_id').not('metaapi_account_id', 'is', null),
