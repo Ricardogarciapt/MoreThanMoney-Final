@@ -33,6 +33,15 @@ import {
   renovarLicencaDaSubscricao,
   revogarLicencaDaSubscricao,
 } from '@/lib/licencas-stripe'
+import {
+  PLANO_ADDON_MTMCOPY,
+  addonPagamento,
+  addonSubscricaoAtualizada,
+  addonSubscricaoCancelada,
+  faturaEhAddon,
+  fimDoPeriodo,
+  subscricaoEhAddon,
+} from '@/lib/mtmcopy/addon-stripe'
 
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
 const SCANNER_PLAN_NAMES: Record<string, string> = {
@@ -264,13 +273,21 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   // Addon MTMcopier (Telegram → MT5) — notificar a equipa para finalizar o onboarding manual
-  if (planId === 'mtmcopy_addon_monthly') {
+  const ehAddonMtmcopy = planId === PLANO_ADDON_MTMCOPY
+  if (ehAddonMtmcopy) {
     try {
       const { activateMtmcopySubscription } = await import('@/lib/mtmcopy/subscription')
-      const periodEnd = session.subscription
-        ? undefined
-        : new Date(Date.now() + 32 * 24 * 60 * 60 * 1000).toISOString()
-      await activateMtmcopySubscription(userId, periodEnd ?? null)
+      // O fim do período vem SEMPRE datado: com a subscrição, é o current_period_end dela;
+      // sem subscrição (pagamento único), 32 dias. Null deixava o acesso legado sem prazo.
+      let periodEnd: string | null = null
+      if (session.subscription) {
+        const subAddon = await getStripeClient().subscriptions.retrieve(session.subscription as string)
+        periodEnd = fimDoPeriodo(subAddon as unknown as Parameters<typeof fimDoPeriodo>[0])
+      }
+      await activateMtmcopySubscription(
+        userId,
+        periodEnd ?? new Date(Date.now() + 32 * 24 * 60 * 60 * 1000).toISOString(),
+      )
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -311,7 +328,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   }
 
-  if (session.mode === 'payment') {
+  if (ehAddonMtmcopy) {
+    // O addon não é o plano principal: não mexe em subscription_plan, member_category,
+    // stripe_subscription_id nem is_active. Só o registo do pagamento, com o plano certo.
+    await supabase.from('payment_history').insert({
+      user_id: userId,
+      stripe_payment_intent_id: (session.payment_intent as string) ?? null,
+      amount: session.amount_total,
+      currency: session.currency,
+      status: 'succeeded',
+      plan: PLANO_ADDON_MTMCOPY,
+      billing_cycle: 'monthly',
+      source: 'stripe',
+    }).then(undefined, () => {})
+  } else if (session.mode === 'payment') {
     const pack = session.metadata?.pack
     const expiresAt = pack === '65'
       ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
@@ -421,12 +451,41 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 }
 
+/**
+ * O addon do MTM Copy às vezes foi pago com OUTRO cliente Stripe (não o do plano principal, que é
+ * o que fica em profiles.stripe_customer_id). Sem isto, os eventos do addon desses clientes caíam
+ * no "perfil não encontrado" e as renovações nunca ficavam registadas. Só para eventos do addon.
+ */
+async function perfilDoAddonPeloEmail(customerId: string): Promise<{ id: string; full_name?: string | null; username?: string | null; mlm_sponsor_username?: string | null } | null> {
+  try {
+    const cliente = await getStripeClient().customers.retrieve(customerId)
+    const email = 'deleted' in cliente && cliente.deleted ? null : (cliente as Stripe.Customer).email
+    if (!email) return null
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, username, mlm_sponsor_username')
+      .ilike('email', email)
+      .limit(1)
+      .maybeSingle()
+    return data ?? null
+  } catch {
+    return null
+  }
+}
+
 async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, email, full_name, username')
     .eq('stripe_customer_id', sub.customer as string)
-    .single()
+    .maybeSingle()
+
+  // Addon do MTM Copy: só os campos do addon. Nunca o plano principal.
+  if (subscricaoEhAddon(sub as unknown as Parameters<typeof subscricaoEhAddon>[0])) {
+    const alvo = profile ?? (await perfilDoAddonPeloEmail(sub.customer as string))
+    if (alvo) await addonSubscricaoAtualizada(supabase, alvo.id, sub as unknown as Parameters<typeof fimDoPeriodo>[0])
+    return
+  }
 
   if (!profile) return
 
@@ -469,7 +528,14 @@ async function handleSubscriptionCanceled(sub: Stripe.Subscription) {
     .from('profiles')
     .select('id, email, full_name, username, member_category, subscription_plan, subscription_platform, checkout_source, stripe_customer_id')
     .eq('stripe_customer_id', sub.customer as string)
-    .single()
+    .maybeSingle()
+
+  // Cancelar o addon do MTM Copy desliga SÓ o addon — o perfil (Premium, Membro…) fica activo.
+  if (subscricaoEhAddon(sub as unknown as Parameters<typeof subscricaoEhAddon>[0])) {
+    const alvo = profile ?? (await perfilDoAddonPeloEmail(sub.customer as string))
+    if (alvo) await addonSubscricaoCancelada(supabase, alvo.id)
+    return
+  }
 
   if (!profile) return
 
@@ -510,7 +576,43 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     .from('profiles')
     .select('id, full_name, username, mlm_sponsor_username, subscription_renewal_count, subscription_plan')
     .eq('stripe_customer_id', invoice.customer as string)
-    .single()
+    .maybeSingle()
+
+  // Renovação do addon do MTM Copy: prolonga o addon e regista com o plano certo. Não reactiva o
+  // perfil, não oferece desafio MTM Funded (é da renovação do plano principal) e não conta como
+  // renovação do plano principal.
+  if (faturaEhAddon(invoice as unknown as Parameters<typeof faturaEhAddon>[0])) {
+    const alvo = profile ?? (await perfilDoAddonPeloEmail(invoice.customer as string))
+    if (!alvo) return
+    await addonPagamento(
+      supabase,
+      alvo.id,
+      invoice as unknown as Parameters<typeof faturaEhAddon>[0] & object,
+      'succeeded',
+      invoice.billing_reason === 'subscription_cycle' ? 'renewal' : 'monthly',
+    )
+    if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0 && invoice.id) {
+      void notifyTeamRenewal({
+        memberUserId: alvo.id,
+        username: alvo.username || alvo.full_name || 'membro',
+        planId: PLANO_ADDON_MTMCOPY,
+        eventId: `renewal_${invoice.id}`,
+      })
+      try {
+        await processMlmSubscriptionRenewal(supabase, {
+          userId: alvo.id,
+          sponsorUsername: alvo.mlm_sponsor_username,
+          paymentReference: invoice.id,
+          amountCents: invoice.amount_paid,
+          currency: invoice.currency?.toUpperCase() || 'EUR',
+          planId: PLANO_ADDON_MTMCOPY,
+        })
+      } catch (mlmErr) {
+        console.error('[MLM] Erro ao criar comissões de renovação (addon MTM Copy):', mlmErr)
+      }
+    }
+    return
+  }
 
   if (!profile) return
 
@@ -616,7 +718,15 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     .from('profiles')
     .select('id, payment_failed_count, subscription_plan')
     .eq('stripe_customer_id', invoice.customer as string)
-    .single()
+    .maybeSingle()
+
+  // Falha do addon do MTM Copy: regista-se, mas o perfil (plano principal) não é tocado.
+  if (faturaEhAddon(invoice as unknown as Parameters<typeof faturaEhAddon>[0])) {
+    const alvo = profile ?? (await perfilDoAddonPeloEmail(invoice.customer as string))
+    if (!alvo) return
+    await addonPagamento(supabase, alvo.id, invoice as unknown as Parameters<typeof faturaEhAddon>[0] & object, 'failed', null)
+    return
+  }
 
   if (!profile) return
 

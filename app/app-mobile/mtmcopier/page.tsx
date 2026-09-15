@@ -1,6 +1,7 @@
 "use client"
 
 import { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-form"
+import { MtmFundedBadge } from "@/components/ligar-mtmfunded/mtmfunded-connect-form"
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -504,6 +505,7 @@ export default function MtmcopierMobilePage() {
                       <p className="font-semibold text-white truncate flex-1">
                         {getClientConnectionTitle(conn, index)}
                         {(conn as { mt5_platform?: string | null }).mt5_platform === "tradelocker" && <TradeLockerBadge className="ml-2 align-middle" />}
+                        {(conn as { mt5_platform?: string | null }).mt5_platform === "mtmfunded" && <MtmFundedBadge className="ml-2 align-middle" />}
                       </p>
                       <button
                         onClick={() => handleToggle(conn)}

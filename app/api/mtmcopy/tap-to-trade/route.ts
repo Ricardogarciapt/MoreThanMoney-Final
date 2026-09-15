@@ -18,6 +18,8 @@ import { sinalJaSaiuDaZona, JANELA_MERCADO_MS } from '@/lib/mtmcopy/t2t-janela'
 import { ehTradeLocker, sessaoDaLigacao } from '@/lib/tradelocker/ligacao'
 import { colocarOrdemTL, contextoTL, loteTL, type ContextoTL } from '@/lib/tradelocker/executor'
 import { executarT2TSimulado, type ResultadoT2TSimulado } from '@/lib/mtmfunded/simulado/t2t-simulado'
+import { destinoDeExecucao } from '@/lib/mtmcopy/destino-execucao'
+import { contasFundedLigadasParaT2T } from '@/lib/mtmfunded/simulado/ligar-conta'
 
 export const dynamic = 'force-dynamic'
 // 60s: uma ligação MetaApi fria pode demorar até ~55s (CONNECT_TIMEOUT_MS). Com 30s a
@@ -248,7 +250,12 @@ export async function POST(request: NextRequest) {
     .eq('user_id', user.id)
     .neq('mt5_status', 'disconnected')
   // Conta com onde executar: MetaApi (MT5) ou TradeLocker (conta escolhida na ligação).
-  const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id || (ehTradeLocker(c) && c.tl_account_id))
+  // Ligações MTM Funded (mt5_platform='mtmfunded') ficam SEMPRE fora deste caminho: executam pelo
+  // motor simulado, abaixo (lib/mtmcopy/destino-execucao).
+  const withAccount = (conns ?? []).filter((c) => {
+    const d = destinoDeExecucao(c)
+    return d === 'metaapi' || d === 'tradelocker'
+  })
   const t2tTargets = withAccount.filter((c) => c.purpose === 'tap_to_trade' || c.t2t_enabled === true)
 
   // Contas SIMULADAS MTM Funded com «aceita Tap to Trade» (migração 070): abrem a ideia ao lado
@@ -257,7 +264,9 @@ export async function POST(request: NextRequest) {
   const { data: simT2T } = await supabase
     .from('mtm_trading_accounts').select('id')
     .eq('user_id', user.id).eq('motor', 'sim').eq('estado', 'ativa').eq('aceita_t2t', true).limit(20)
-  const temSimuladas = Boolean(simT2T?.length)
+  // + contas MTM Funded ligadas pelo cliente no «Ligar conta» (074): dele, não só-leitura, não pausadas.
+  const fundedLigadas = await contasFundedLigadasParaT2T(user.id, (conns ?? []) as Array<Record<string, unknown>>).catch(() => [] as string[])
+  const temSimuladas = Boolean(simT2T?.length) || fundedLigadas.length > 0
 
   // Contas T2T pausadas (is_active=false) ficam ligadas só para estatísticas → não executam.
   let targets = t2tTargets.filter((c) => c.is_active !== false)
@@ -446,7 +455,8 @@ export async function POST(request: NextRequest) {
   // Risco das simuladas = o que o T2T usa na conta real do cliente (fonte → conta), aplicado à
   // equity simulada. Sem conta real: 1%.
   const riscoSimulado = (() => {
-    const c = targets[0]
+    // Sem conta real, vale o risco escolhido na ligação MTM Funded (t2t_lot_value).
+    const c = targets[0] ?? (conns ?? []).find((x) => destinoDeExecucao(x) === 'mtmfunded' && fundedLigadas.includes(String(x.funded_account_id)))
     if (!c) return 1
     const daFonte = (c.t2t_source_risk as Record<string, { riscoPct?: number }> | null)?.[String(message.channel_slug ?? '')]?.riscoPct
     const modo = c.t2t_lot_mode ?? c.lot_mode
@@ -465,6 +475,7 @@ export async function POST(request: NextRequest) {
             tp: signal.tp?.[0] ?? null, zone: signal.zone ?? null,
           },
           riscoPct: riscoSimulado,
+          contasLigadas: fundedLigadas,
         }).catch((e): ResultadoT2TSimulado[] => { console.error('[tap-to-trade] simuladas:', e); return [] })
       : Promise.resolve([] as ResultadoT2TSimulado[]),
   ])

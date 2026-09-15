@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ehMtmFundedLigacao } from '@/lib/mtmcopy/destino-execucao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCopyFactoryEnabled, isMtmTelegramStrategyConfigured } from '@/lib/mtmcopy/copyfactory'
 import { isMetaApiConfigured } from '@/lib/mtmcopy/metaapi'
@@ -7,9 +8,9 @@ import { lotMultiplierFromConnection } from '@/lib/mtmcopy/connection-sync'
 import { runProvisionJob } from '@/lib/mtmcopy/run-provision-job'
 import type { MtmcopyAccountRole, MtmcopySenderMode } from '@/lib/mtmcopy/types'
 import { resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
-import { carregarDireitos, pareceDemo, podeLigarConta, type ContaLigada } from '@/lib/entitlements'
+import { carregarDireitos } from '@/lib/entitlements'
+import { verificarQuotaMetaApi } from '@/lib/contas/quota-metaapi'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
-import { ligacaoEhDemo } from '@/lib/tradelocker/ligacao'
 import { normalizeTelegramGroups, normalizeTelegramChannel, strategyIdsForTelegramGroupsAsync, type MtmcopyCopyMethod } from '@/lib/mtmcopy/copy-methods'
 import {
   canAddConnection,
@@ -136,48 +137,30 @@ export async function POST(request: NextRequest) {
   }
 
   /**
-   * Quantas contas — a regra é UMA, para os três produtos.
+   * Quantas contas — quota de contas METAAPI (lib/contas/quota-metaapi.ts, regra de 2026-09-15).
    *
-   * Antes cada porta tinha o seu limite: aqui o Tap to Trade tinha um tecto de 2 contas, o MTM
-   * Copy contava 4 (5 se VIP) e o MTM Auto uma real e uma demo. Como o cliente é o mesmo, a mais
-   * generosa das três era a que valia na prática: bastava entrar por essa porta. Agora cada
-   * produto inclui uma real e uma demo, e daí em diante é uma conta extra (7 €/mês) vinda de um
-   * saco comum aos três.
+   * Cada conta MT4/MT5 é uma conta paga na MetaApi: grátis 1, Premium/VIP/MTM Auto 2, admin sem
+   * limite, + extras já pagas. Conta-se nos dois produtos (site + MTM Auto). TradeLocker e MTM
+   * Funded não entram. Substitui a regra antiga «1 real + 1 demo por produto» para estas contas.
+   * A cópia automática (fora do Tap to Trade) continua a precisar do direito ao MTM Auto.
    */
   const superficieNova = purpose === 'tap_to_trade' ? ('t2t' as const) : ('mtmcopy' as const)
-  const novaEhDemo = pareceDemo(server)
   const direitos = await carregarDireitos(user.id)
-
-  const [{ data: doSite }, { data: doAuto }] = await Promise.all([
-    supabaseAdmin
-      .from('mtmcopy_connections')
-      // '*' e não a lista de colunas: tl_env só existe depois da migração 069 e um select a uma
-      // coluna em falta devolvia null — e a contagem de contas ficava vazia (limites soltos).
-      .select('*')
-      .eq('user_id', user.id)
-      .neq('mt5_status', 'disconnected'),
-    supabaseAdmin.from('mtmauto_accounts').select('demo').eq('user_id', user.id)
-      // Contas MTM Funded atribuídas pelo admin (plataforma 'mtmfunded') não ocupam vagas.
-      .neq('plataforma', 'mtmfunded'),
-  ])
-
-  const ligadas: ContaLigada[] = [
-    ...(doSite ?? []).map((c) => ({
-      superficie:
-        c.purpose === 'tap_to_trade' || c.t2t_enabled === true ? ('t2t' as const) : ('mtmcopy' as const),
-      // Contas TradeLocker contam pelo ambiente escolhido (lib/tradelocker/ligacao).
-      demo: ligacaoEhDemo(c as { mt5_platform?: string | null; tl_env?: string | null; mt5_server?: string | null }, pareceDemo),
-    })),
-    ...(doAuto ?? []).map((c) => ({ superficie: 'mtmauto' as const, demo: Boolean(c.demo) })),
-  ]
-
-  const veredicto = podeLigarConta(direitos, superficieNova, novaEhDemo, ligadas)
-  if (!veredicto.ok) {
+  if (superficieNova !== 't2t' && !direitos.admin && !direitos.copiaAutomatica) {
     return NextResponse.json(
-      { error: veredicto.erro, code: veredicto.codigo, preco_eur: veredicto.precoEur },
-      // 402 é "falta pagar", e é o que o cliente vê: um botão de comprar a conta extra em vez de
-      // um "não" que não explica nada.
-      { status: veredicto.codigo === 'conta_extra' ? 402 : 403 },
+      {
+        error: 'A cópia automática precisa do MTM Auto (ou de seres Premium/VIP). No Tap to Trade continuas a poder aceitar sinais à mão.',
+        code: 'sem_copia_automatica',
+      },
+      { status: 403 },
+    )
+  }
+  const quota = await verificarQuotaMetaApi(user.id, { login: loginDigits, servidor: server }, direitos)
+  if (!quota.ok) {
+    return NextResponse.json(
+      { error: quota.erro, code: quota.codigo, quota: quota.estado },
+      // 402 = «falta subir de plano»: o ecrã mostra o caminho do upgrade em vez de um erro seco.
+      { status: 402 },
     )
   }
 
@@ -399,6 +382,10 @@ export async function PUT(request: NextRequest) {
 
   if (existing.mt5_status === 'disconnected') {
     return NextResponse.json({ error: 'Conta desligada — cria uma nova ligação' }, { status: 400 })
+  }
+  // MTM Funded / TradeLocker não se religam pela MetaApi.
+  if (ehMtmFundedLigacao(existing) || existing.mt5_platform === 'tradelocker') {
+    return NextResponse.json({ error: 'Esta conta não se religa por password MT5 — remove-a e liga-a de novo.' }, { status: 400 })
   }
 
   const conn = existing as MTMcopierConnection

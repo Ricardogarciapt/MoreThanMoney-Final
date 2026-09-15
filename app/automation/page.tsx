@@ -1,28 +1,13 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, RefreshCw, Bot, Zap, Shield, Clock, CheckCircle, Smartphone, ChevronLeft, ChevronRight, LineChart } from "lucide-react"
+import { RefreshCw, Zap, CheckCircle, Smartphone, LineChart } from "lucide-react"
 import Link from "next/link"
 import ParticleBackground from "@/components/particle-background"
 import Image from "next/image"
 
 export default function AutomationPage() {
-  // Slideshow state for MTM Copy
-  const [autoIndex, setAutoIndex] = useState(0)
-  const autoImages = [
-    "/images/mtm/mtm-copy-1.svg",
-    "/images/mtm/mtm-copy-2.svg"
-  ]
-  
-  const nextAutoSlide = () => {
-    setAutoIndex((autoIndex + 1) % autoImages.length)
-  }
-  
-  const prevAutoSlide = () => {
-    setAutoIndex((autoIndex - 1 + autoImages.length) % autoImages.length)
-  }
   return (
     <main className="min-h-screen bg-black text-white relative overflow-hidden">
       <ParticleBackground />
@@ -35,7 +20,7 @@ export default function AutomationPage() {
             </span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto mb-8">
-            O acesso ao <span className="text-[#D2A63C] font-semibold">MTMcopier</span> — copia as estratégias da MoreThanMoney na tua conta, com controlo total ou 100% automático.
+            O <span className="text-[#D2A63C] font-semibold">MTM Auto</span> copia as estratégias da MoreThanMoney na tua conta — com controlo total ou 100% automático.
           </p>
         </div>
 
@@ -106,64 +91,21 @@ export default function AutomationPage() {
           <div className="h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
         </div>
 
-        {/* Execução automática: dois produtos, dois públicos.
-            Manter os dois debaixo do mesmo nome confundia quem chega — um é o serviço do site
-            para quem já cá está, o outro é uma app que se descarrega e funciona sozinha. */}
+        {/* Execução automática: o MTM Auto (cópia) e as EAs (robô no MetaTrader). */}
         <div className="max-w-7xl mx-auto mb-20">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Execução <span className="bg-gradient-to-r from-purple-400 via-mtm-primary to-amber-400 bg-clip-text text-transparent">automática</span>
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Duas formas de o mesmo motor trabalhar por ti. A diferença não é a tecnologia — é onde
-              estás no teu percurso.
+              A cópia de estratégias e entre contas vive num só sítio: o MTM Auto, dentro das apps
+              MTM System, app-mobile e MTM Auto. Para quem prefere o robô no MetaTrader, há as EAs.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* MTM Copy — o serviço do site, para quem já sabe o que quer */}
-            <Card className="bg-gradient-to-br from-purple-900/40 via-mtm-primary/5 to-pink-900/30 border-2 border-purple-500/30 backdrop-blur-sm flex flex-col">
-              <CardContent className="p-8 flex flex-col flex-1">
-                <div className="flex items-center gap-4 mb-2">
-                  <div className="bg-purple-600/20 rounded-xl p-3 border border-purple-500/40">
-                    <Bot className="w-9 h-9 text-purple-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-white">MTM Copy</h3>
-                    <p className="text-purple-400 font-semibold text-sm">No site · traders intermédios</p>
-                  </div>
-                </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-                <p className="text-gray-300 leading-relaxed mt-4">
-                  Para quem já opera e quer controlo fino: várias contas, lote por estratégia,
-                  filtros de símbolos, contas financiadas e regras de risco por conta. Configura-se
-                  uma vez e fica a correr em segundo plano.
-                </p>
-
-                <ul className="mt-5 space-y-2.5 text-gray-300 text-sm">
-                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />Várias contas MT4/MT5 em simultâneo</li>
-                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />Lote fixo, risco % ou multiplicador, por conta</li>
-                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />Presets para contas financiadas (prop firms)</li>
-                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />Gestão pelo motor: break-even, parciais e trailing</li>
-                </ul>
-
-                <div className="mt-auto pt-6">
-                  <div className="flex items-baseline gap-2 mb-4">
-                    <span className="text-3xl font-black text-white">+20€</span>
-                    <span className="text-gray-400 text-sm">/mês, sobre a tua subscrição MTM</span>
-                  </div>
-                  <Link href="/mtmcopy">
-                    <Button className="w-full bg-gradient-to-r from-purple-600 via-mtm-primary to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-lg px-6 py-6 rounded-xl transition-all duration-300 hover:scale-[1.02]">
-                      <Bot className="w-5 h-5 mr-2" />
-                      Ativar MTM Copy
-                    </Button>
-                  </Link>
-                  <p className="text-xs text-gray-500 mt-3 text-center">Requer conta MTM · pagamento via Stripe</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* MTM Auto — a app, para quem começa ou vem de fora */}
+            {/* MTM Auto — onde vive toda a cópia (o MTM Copy foi descontinuado a 2026-09-15) */}
             <Card className="bg-gradient-to-br from-amber-900/30 via-mtm-primary/10 to-yellow-900/20 border-2 border-mtm-primary/40 backdrop-blur-sm flex flex-col">
               <CardContent className="p-8 flex flex-col flex-1">
                 <div className="flex items-center gap-4 mb-2">
@@ -172,7 +114,7 @@ export default function AutomationPage() {
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-white">MTM Auto</h3>
-                    <p className="text-mtm-primary font-semibold text-sm">App · iniciantes e quem vem de fora</p>
+                    <p className="text-mtm-primary font-semibold text-sm">Apps · MTM System, app-mobile e MTM Auto</p>
                   </div>
                 </div>
 
@@ -185,6 +127,7 @@ export default function AutomationPage() {
                 <ul className="mt-5 space-y-2.5 text-gray-300 text-sm">
                   <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-mtm-primary shrink-0 mt-0.5" />Tap to Trade: aceitas cada sinal com um toque</li>
                   <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-mtm-primary shrink-0 mt-0.5" />Ou cópia automática, se preferires não decidir</li>
+                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-mtm-primary shrink-0 mt-0.5" />Lote fixo, risco % ou multiplicador, por estratégia</li>
                   <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-mtm-primary shrink-0 mt-0.5" />Uma conta real e uma demo incluídas</li>
                   <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-mtm-primary shrink-0 mt-0.5" />iOS, Android e web — notificações a cada sinal</li>
                 </ul>
@@ -205,7 +148,7 @@ export default function AutomationPage() {
                       Conhecer a MTM Auto
                     </Button>
                   </Link>
-                  <p className="text-xs text-gray-500 mt-3 text-center">Sem conta MTM · funciona com qualquer corretora MT4/MT5</p>
+                  <p className="text-xs text-gray-500 mt-3 text-center">Sem conta MTM · MT4, MT5 ou TradeLocker</p>
                 </div>
               </CardContent>
             </Card>
@@ -308,78 +251,6 @@ export default function AutomationPage() {
           </div>
         </div>
 
-        {/* Comparação: a pergunta que fica é "qual é a minha?" — e responde-se com o dia a dia
-            de cada uma, não com listas de funcionalidades. */}
-        <div className="max-w-6xl mx-auto mb-20">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4 text-center">
-            Qual é a <span className="bg-gradient-to-r from-purple-400 via-mtm-primary to-amber-400 bg-clip-text text-transparent">minha?</span>
-          </h2>
-          <p className="text-lg text-gray-400 text-center mb-12 max-w-2xl mx-auto">
-            O motor é o mesmo nas duas. O que muda é quanto queres decidir.
-          </p>
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="bg-gradient-to-br from-purple-900/40 to-pink-900/30 border-2 border-purple-500/30 backdrop-blur-sm">
-              <CardContent className="p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <Bot className="w-10 h-10 text-purple-400" />
-                  <div>
-                    <h3 className="text-2xl font-bold text-white">MTM Copy</h3>
-                    <p className="text-sm text-purple-400 font-semibold">no site · traders intermédios</p>
-                  </div>
-                </div>
-                <div className="space-y-4 text-gray-300">
-                  <div className="flex items-start gap-3">
-                    <Zap className="w-5 h-5 text-purple-400 flex-shrink-0 mt-1" />
-                    <div><strong className="text-white">Controlo fino:</strong> lote, risco e símbolos por conta e por estratégia</div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Shield className="w-5 h-5 text-purple-400 flex-shrink-0 mt-1" />
-                    <div><strong className="text-white">Várias contas:</strong> pessoal, demo e financiadas ao mesmo tempo</div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Clock className="w-5 h-5 text-purple-400 flex-shrink-0 mt-1" />
-                    <div><strong className="text-white">Set-it-once:</strong> configuras uma vez e corre em segundo plano</div>
-                  </div>
-                </div>
-                <div className="mt-6 pt-6 border-t border-purple-500/30 flex items-center justify-between">
-                  <p className="text-sm text-purple-400 font-semibold">Para quem já opera</p>
-                  <p className="text-white font-bold">+20€<span className="text-gray-400 text-sm font-normal">/mês</span></p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-amber-900/30 to-yellow-900/20 border-2 border-mtm-primary/40 backdrop-blur-sm">
-              <CardContent className="p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <Smartphone className="w-10 h-10 text-mtm-primary" />
-                  <div>
-                    <h3 className="text-2xl font-bold text-white">MTM Auto</h3>
-                    <p className="text-sm text-mtm-primary font-semibold">app · iniciantes e quem vem de fora</p>
-                  </div>
-                </div>
-                <div className="space-y-4 text-gray-300">
-                  <div className="flex items-start gap-3">
-                    <Zap className="w-5 h-5 text-mtm-primary flex-shrink-0 mt-1" />
-                    <div><strong className="text-white">Tap to Trade:</strong> o sinal chega, tu tocas, a ordem entra</div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Shield className="w-5 h-5 text-mtm-primary flex-shrink-0 mt-1" />
-                    <div><strong className="text-white">Risco tratado:</strong> o lote sai do teu saldo, com tecto por trade</div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <RefreshCw className="w-5 h-5 text-mtm-primary flex-shrink-0 mt-1" />
-                    <div><strong className="text-white">Sem ecossistema:</strong> não é preciso ser membro MTM</div>
-                  </div>
-                </div>
-                <div className="mt-6 pt-6 border-t border-mtm-primary/30 flex items-center justify-between">
-                  <p className="text-sm text-mtm-primary font-semibold">Para quem está a começar</p>
-                  <p className="text-white font-bold">25€<span className="text-gray-400 text-sm font-normal">/mês</span></p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
         {/* CTA Final */}
         <div className="max-w-4xl mx-auto text-center">
           <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border-2 border-mtm-primary/30 rounded-2xl p-12">
@@ -387,21 +258,14 @@ export default function AutomationPage() {
               Pronto para <span className="text-mtm-primary">Elevar</span> o Teu Trading?
             </h2>
             <p className="text-xl text-gray-300 mb-2 max-w-2xl mx-auto">
-              Duas portas para o mesmo motor. Escolhe pela tua experiência, não pelo preço.
+              Um motor, uma app: liga a tua conta e escolhe quem copias.
             </p>
             {/* Dizer para quem é cada uma poupa o cliente a uma escolha errada — e a nós um
                 reembolso e uma conversa de suporte. */}
             <p className="text-base text-gray-400 mb-8 max-w-2xl mx-auto">
-              Já operas e queres controlo fino sobre várias contas? <b className="text-purple-300">MTM Copy</b>.
-              Estás a começar, ou vens de fora do ecossistema? <b className="text-mtm-primary">MTM Auto</b>.
+              A cópia automática vive agora num só sítio: o <b className="text-mtm-primary">MTM Auto</b>.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/mtmcopy">
-                <Button className="bg-gradient-to-r from-purple-600 via-mtm-primary to-pink-600 hover:from-purple-500 hover:via-mtm-primary hover:to-pink-500 text-white font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105">
-                  <Bot className="w-5 h-5 mr-2" />
-                  MTM Copy · 20€/mês
-                </Button>
-              </Link>
               <Link href="/mtmauto">
                 <Button className="bg-gradient-to-r from-mtm-primary to-amber-500 hover:from-amber-400 hover:to-mtm-primary text-black font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105">
                   <Smartphone className="w-5 h-5 mr-2" />

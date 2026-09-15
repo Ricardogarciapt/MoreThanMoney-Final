@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
 
 async function exigirElegivelEDestino(userId: string, tipo: DestinoTipo, id: string) {
   const { direitos, elegivel, reais } = await elegibilidade(userId)
-  if (!elegivel) throw new ErroOrdem(403, 'A cópia para a tua conta está incluída no MTM Copy ou no MTM Auto.')
+  if (!elegivel) throw new ErroOrdem(403, 'A cópia para a tua conta está incluída no MTM Auto (e no Premium/VIP).')
   const destino = (await destinosDoUtilizador(userId)).find((d) => d.tipo === tipo && d.id === id)
   if (!destino) throw new ErroOrdem(404, 'essa conta de destino não é tua ou já não está ligada')
   const p = destinoPermitido(destino, direitos.admin, reais)

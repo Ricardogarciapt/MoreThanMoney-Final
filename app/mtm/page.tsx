@@ -960,9 +960,9 @@ export default function MTMLandingPage() {
                   size="lg"
                   className="border-2 border-[#D2A63C]/50 text-[#D2A63C] hover:bg-[#D2A63C]/10 font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300"
                 >
-                  <Link href="/mtmcopy">
+                  <Link href="/mtmauto">
                     <Star className="w-5 h-5 mr-2" />
-                    Quero o MTMcopier
+                    Quero o MTM Auto
                   </Link>
                 </Button>
               </div>

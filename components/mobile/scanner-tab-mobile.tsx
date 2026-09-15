@@ -13,12 +13,14 @@ import FundedWebtrader from "@/components/funded/funded-webtrader"
  * depois de ver um sinal: o mesmo gráfico, agora com a conta simulada. `?tab=funded` continua a
  * abrir aqui, com «Web trader» escolhido e os parâmetros do «Negociar» (symbol/dir/sl/tp/origem).
  *
- * O sub-separador vive no URL (`&sub=webtrader`), para o botão «Abrir no Web trader» do scanner
- * e os deep-links funcionarem sem estado escondido. O símbolo é partilhado: o que se escolhe no
- * WebTrader é o que o Scanner mostra ao voltar.
+ * O sub-separador vive no URL (`&sub=webtrader`), para o link «Negociar no Web trader» do scanner
+ * (que leva o símbolo do gráfico) e os deep-links funcionarem sem estado escondido. O símbolo é
+ * partilhado: o que se escolhe no WebTrader é o que o Scanner mostra ao voltar.
  *
- * O Scanner fica sempre montado (como antes); o WebTrader só monta quando está à vista — faz
- * polling de preços e contas.
+ * Negociar vive SÓ no Web trader: o Scanner não monta contas, preços nem polling do MTM Funded.
+ * O Scanner fica sempre montado (só o gráfico TradingView); o WebTrader só monta quando está à
+ * vista (separador Scanner activo + sub «Web trader») e desmonta ao sair — e o polling dele
+ * salta pedidos com a página em segundo plano (document.visibilityState).
  */
 
 export type SubScanner = "scanner" | "webtrader"

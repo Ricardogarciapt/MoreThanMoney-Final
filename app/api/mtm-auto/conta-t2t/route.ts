@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ehMtmFundedLigacao } from '@/lib/mtmcopy/destino-execucao'
+import { juntarSaldosMtmFunded } from '@/lib/mtmfunded/simulado/ligar-conta'
 import { autorizarMtmAuto } from '@/lib/mtm-auto-bridge'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { carregarDireitos, pareceDemo, resumoDeContas, type ContaLigada } from '@/lib/entitlements'
@@ -40,12 +42,14 @@ const CAMPOS_T2T = new Set([
 async function contasT2T(userId: string) {
   const { data } = await getSupabaseAdmin()
     .from('mtmcopy_connections')
-    .select('id, account_label, mt5_login, mt5_login_last4, mt5_server, mt5_platform, mt5_status, metaapi_account_id, purpose, t2t_enabled, t2t_lot_mode, t2t_lot_value, lot_mode, lot_value, max_risk_percent, copy_sl, copy_tp, is_active, copy_method, exit_pct_tp1, exit_pct_tp2, exit_pct_tp3, auto_trailing_stop, trailing_stop_points, symbol_suffix, reverse_signals, prop_firm_type, symbols_whitelist')
+    // '*': funded_account_id/funded_somente_leitura só existem depois da 074.
+    .select('*')
     .eq('user_id', userId)
     .neq('mt5_status', 'disconnected')
     .order('created_at')
 
-  return (data ?? []).map((c) => {
+  const linhas = await juntarSaldosMtmFunded((data ?? []) as Array<Record<string, unknown> & { mt5_platform?: string | null; funded_account_id?: string | null }>)
+  return linhas.map((c) => {
     const riscoPct = Number(c.t2t_lot_value ?? c.lot_value ?? 1)
     const riscoMaxPct = Number(c.max_risk_percent ?? 2)
     const saidasPct = [
@@ -60,7 +64,14 @@ async function contasT2T(userId: string) {
       servidor: (c.mt5_server as string) ?? null,
       plataforma: ((c.mt5_platform as string) ?? 'mt5').toLowerCase(),
       estado: (c.mt5_status as string) ?? 'unknown',
-      demo: pareceDemo(c.mt5_server as string),
+      // MTM Funded nunca é «demo»: as etiquetas são F1/F2/Funded/Torneio + Active/… (lib/mtmfunded/etiquetas).
+      demo: ehMtmFundedLigacao(c) ? false : pareceDemo(c.mt5_server as string),
+      fundedAccountId: ehMtmFundedLigacao(c) ? ((c.funded_account_id as string) ?? null) : null,
+      somenteLeitura: ehMtmFundedLigacao(c) ? c.funded_somente_leitura === true : false,
+      fundedTipo: ehMtmFundedLigacao(c) ? ((c as Record<string, unknown>).funded_tipo ?? null) : null,
+      fundedEstado: ehMtmFundedLigacao(c) ? ((c as Record<string, unknown>).funded_estado ?? null) : null,
+      saldo: ehMtmFundedLigacao(c) ? ((c as Record<string, unknown>).account_balance ?? null) : undefined,
+      equity: ehMtmFundedLigacao(c) ? ((c as Record<string, unknown>).account_equity ?? null) : undefined,
       // Uma ligação de MTM Copy pode ter o T2T ligado por cima: é a mesma conta a fazer as duas
       // coisas, e é por isso que a bandeira é própria e não se deduz do `purpose`.
       t2t: c.purpose === 'tap_to_trade' || c.t2t_enabled === true,
@@ -101,7 +112,8 @@ export async function GET(request: NextRequest) {
   // O resumo conta as contas dos TRÊS produtos — as extras vêm de um saco comum, e mostrar só
   // as de um lado dava um "ainda tens uma incluída" que o servidor depois recusava.
   const ligadas: ContaLigada[] = [
-    ...contas.map((c) => ({ superficie: c.t2t ? ('t2t' as const) : ('mtmcopy' as const), demo: c.demo })),
+    // Contas MTM Funded ligadas (074) não ocupam vagas.
+    ...contas.filter((c) => c.plataforma !== 'mtmfunded').map((c) => ({ superficie: c.t2t ? ('t2t' as const) : ('mtmcopy' as const), demo: c.demo })),
     ...(doAuto ?? []).map((c) => ({ superficie: 'mtmauto' as const, demo: Boolean(c.demo) })),
   ]
 
@@ -134,11 +146,15 @@ export async function PATCH(request: NextRequest) {
   // pedido chegava para lhe mudar o risco.
   const { data: minha } = await db
     .from('mtmcopy_connections')
-    .select('id')
+    .select('*')
     .eq('id', contaId)
     .eq('user_id', userId!)
     .maybeSingle()
   if (!minha) return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
+  // Conta MTM Funded ligada com a password investor: só leitura, nada se muda nela.
+  if (ehMtmFundedLigacao(minha) && minha.funded_somente_leitura === true) {
+    return NextResponse.json({ error: 'Conta ligada só para ver (password investor).' }, { status: 403 })
+  }
 
   const patch: Record<string, unknown> = {}
 

@@ -4,6 +4,8 @@ import { connectionCopyMethod } from '@/lib/mtmcopy/copy-limits'
 import { removeConnectionCopyFactory, syncConnectionCopyFactory, syncMtmStrategyReplication } from '@/lib/mtmcopy/connection-sync'
 import { deleteMetaApiAccount } from '@/lib/mtmcopy/metaapi-provision'
 import { juntarSaldosTradeLocker } from '@/lib/tradelocker/saldos'
+import { juntarSaldosMtmFunded } from '@/lib/mtmfunded/simulado/ligar-conta'
+import { ehMtmFundedLigacao } from '@/lib/mtmcopy/destino-execucao'
 import { removeProviderStrategy } from '@/lib/mtmcopy/copyfactory'
 import { verifyTelegramChannel } from '@/lib/mtmcopy/telegram-bot'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
@@ -49,7 +51,7 @@ export async function GET(request: NextRequest) {
   if (connectionId) {
     const conn = await getOwnedConnection(user.id, connectionId)
     if (!conn) return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
-    const [enriched] = await juntarSaldosTradeLocker(await attachConnectionBalances([conn]))
+    const [enriched] = await juntarSaldosMtmFunded(await juntarSaldosTradeLocker(await attachConnectionBalances([conn])))
     return NextResponse.json({ connection: enriched })
   }
 
@@ -65,7 +67,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao obter configuração' }, { status: 500 })
   }
 
-  const connections = await juntarSaldosTradeLocker(await attachConnectionBalances(data ?? []))
+  const connections = await juntarSaldosMtmFunded(await juntarSaldosTradeLocker(await attachConnectionBalances(data ?? [])))
   const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('full_name, username, email, user_type, member_category')
@@ -75,7 +77,7 @@ export async function GET(request: NextRequest) {
     profile?.full_name || profile?.username || profile?.email || `MTM-${user.id.slice(0, 8)}`
   const repaired = await Promise.all(
     (connections as MTMcopierConnection[]).map((c) =>
-      connectionCopyMethod(c) === 'strategy'
+      connectionCopyMethod(c) === 'strategy' && !ehMtmFundedLigacao(c)
         ? repairStrategyConnectionIfNeeded(supabaseAdmin, c, c.account_label || userLabel)
         : Promise.resolve(sanitizeConnectionForClient(c)),
     ),
@@ -136,6 +138,20 @@ export async function POST(request: NextRequest) {
       { error: 'Contas TradeLocker só copiam por grupos de sinais. Estratégias e copy trader pessoal são só MetaTrader.' },
       { status: 400 },
     )
+  }
+
+  // MTM Funded (074): executa só o motor simulado — nada de CopyFactory/master-slave nem prop firm MetaApi.
+  if (ehMtmFundedLigacao(existing)) {
+    if (body.copy_method === 'strategy' || body.copy_method === 'master_slave' || body.prop_firm_type) {
+      return NextResponse.json(
+        { error: 'Contas MTM Funded só recebem ideias do Tap to Trade. As regras da conta são as do próprio programa MTM Funded.' },
+        { status: 400 },
+      )
+    }
+    // Ligada com a password investor: só leitura, nunca entra no fan-out do T2T.
+    if (existing.funded_somente_leitura === true && body.t2t_enabled === true) {
+      return NextResponse.json({ error: 'Conta ligada só para ver (password investor): não executa ideias.' }, { status: 403 })
+    }
   }
 
   const {
@@ -444,7 +460,7 @@ export async function PATCH(request: NextRequest) {
     const mode = copy_method === 'master_slave' ? 'master_account' : 'telegram'
     const { data: existing } = await supabaseAdmin
       .from('mtmcopy_connections')
-      .select('id, account_role')
+      .select('id, account_role, mt5_platform')
       .eq('user_id', user.id)
       .neq('mt5_status', 'disconnected')
 
@@ -455,7 +471,8 @@ export async function PATCH(request: NextRequest) {
             c.account_role === 'master' || c.account_role === 'slave'
         : (c: { account_role?: string | null }) => (c.account_role ?? 'slave') !== 'master'
 
-    const targets = (existing ?? []).filter(roleFilter)
+    // MTM Funded fica sempre em grupos/T2T (sem CopyFactory) — não entra na mudança em massa.
+    const targets = (existing ?? []).filter((c) => !ehMtmFundedLigacao(c)).filter(roleFilter)
     if (!targets.length) {
       return NextResponse.json({ success: true, copy_method, sender_mode: mode })
     }

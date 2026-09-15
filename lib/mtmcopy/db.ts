@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import type { MTMcopierConnection, SignalLogStatus } from './types'
+import { semMtmFunded } from './destino-execucao'
 
 export async function getActiveConnections(): Promise<MTMcopierConnection[]> {
   const supabase = getSupabaseAdmin()
@@ -12,7 +13,8 @@ export async function getActiveConnections(): Promise<MTMcopierConnection[]> {
     console.error('[mtmcopy] erro ao obter ligações:', error.message)
     return []
   }
-  return (data ?? []) as MTMcopierConnection[]
+  // Ligações MTM Funded nunca entram nos caminhos MetaApi/CopyFactory/TradeLocker (074).
+  return semMtmFunded((data ?? []) as MTMcopierConnection[])
 }
 
 let copyConnectionsCache: { data: MTMcopierConnection[]; at: number } | null = null
@@ -34,7 +36,8 @@ export async function getCopyConnections(): Promise<MTMcopierConnection[]> {
     console.error('[mtmcopy] erro ao obter ligações:', error.message)
     return copyConnectionsCache?.data ?? []
   }
-  const rows = (data ?? []) as MTMcopierConnection[]
+  // Ligações MTM Funded nunca entram no processador de sinais (execução só pelo motor simulado).
+  const rows = semMtmFunded((data ?? []) as MTMcopierConnection[])
   copyConnectionsCache = { data: rows, at: Date.now() }
   return rows
 }

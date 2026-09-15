@@ -214,7 +214,8 @@ export default function RegisterPage() {
             body: JSON.stringify({ code: formData.couponCode.trim().toUpperCase() }),
           }).catch(() => {})
         }
-        window.location.href = '/mtmcopy'
+        // O MTM Copy foi descontinuado: o código de parceria leva agora ao MTM Auto.
+        window.location.href = '/mtmauto'
         return
       } catch {
         setError(t('register.errorCheckout'))

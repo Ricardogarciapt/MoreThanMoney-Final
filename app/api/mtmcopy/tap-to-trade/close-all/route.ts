@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { destinoDeExecucao } from '@/lib/mtmcopy/destino-execucao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { listOpenPositions, closePositionById } from '@/lib/mtmcopy/metaapi'
 import { ehTradeLocker, sessaoDaLigacao } from '@/lib/tradelocker/ligacao'
@@ -29,7 +30,8 @@ export async function POST(request: NextRequest) {
     .select('*') // inclui mt5_platform/tl_* (TradeLocker) sem depender da migração 069
     .eq('user_id', user.id)
     .neq('mt5_status', 'disconnected')
-  const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id || (ehTradeLocker(c) && c.tl_account_id))
+  // MTM Funded fica fora: fecha-se no WebTrader / motor simulado, nunca pela MetaApi.
+  const withAccount = (conns ?? []).filter((c) => { const d = destinoDeExecucao(c); return d === 'metaapi' || d === 'tradelocker' })
   // Emergency stop fecha em TODAS as contas T2T do user (fan-out). Retrocompat: se nenhuma marcada,
   // usa a 1ª conta ligada.
   let targets = withAccount.filter((c) => c.purpose === 'tap_to_trade' || c.t2t_enabled === true)

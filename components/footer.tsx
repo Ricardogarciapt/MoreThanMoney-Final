@@ -73,7 +73,7 @@ export default function Footer() {
             <ul className="space-y-3">
               {[
                 { name: t("navfooter.navHome"), href: "/new-landing" },
-                { name: "MTMcopier", href: "/mtmcopy" },
+                { name: "MTM Auto", href: "/mtmauto" },
                 { name: t("navfooter.subAutomation"), href: "/automation" },
                 { name: "Scanner MTM", href: "/scanner" },
                 { name: "Trading Floor", href: "/tradingfloor" },

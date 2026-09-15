@@ -18,7 +18,6 @@ import TradingJournalCalendar from "@/components/trading-journal-calendar"
 import TradingJournal from "@/components/trading-journal"
 import ScannerMobile from "@/components/mobile/scanner-mobile"
 import AlertasMtm from "@/components/alertas-mtm"
-import dynamic from "next/dynamic"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
@@ -66,13 +65,6 @@ interface ChecklistSection {
   items: ChecklistItem[]
 }
 
-/**
- * Painel «Negociar» (conta simulada MTM Funded) na coluna à direita do gráfico, em ecrãs ≥ lg.
- * Abaixo disso o próprio ScannerMobile põe-no por baixo do gráfico. Carrega à parte e só faz
- * pedidos quando está aberto e à vista.
- */
-const PainelNegociacaoScanner = dynamic(() => import("@/components/funded/painel-negociacao-scanner"), { ssr: false })
-
 export default function ScannerAccessPage() {
   const [mounted, setMounted] = useState(false)
   const isMobile = useIsMobile()
@@ -89,8 +81,6 @@ export default function ScannerAccessPage() {
 
   // Clique num alerta → encaminha o chart do scanner para o símbolo/timeframe/scanner do sinal
   const [scannerSymbol, setScannerSymbol] = useState<string | undefined>()
-  // O símbolo que o gráfico mostra agora (escolhido no scanner ou vindo de um alerta).
-  const [simboloGrafico, setSimboloGrafico] = useState("OANDA:XAUUSD")
   const [scannerInterval, setScannerInterval] = useState<string | undefined>()
   const [scannerStudies, setScannerStudies] = useState<("Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow")[] | undefined>()
   const handleSelectAlert = ({ tvSymbol, interval, scannerKey }: { tvSymbol: string; interval: string; scannerKey: "Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow" }) => {
@@ -596,23 +586,14 @@ export default function ScannerAccessPage() {
                 </Button>
               </div>
             </div>
-            <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-4">
-              <div className="min-w-0">
-                <ScannerMobile
-                  integration="scanner-access"
-                  showScreener={showScreener}
-                  widgetRef={tradingViewWidgetRef as RefObject<TradingViewWidgetRef>}
-                  externalSymbol={scannerSymbol}
-                  externalInterval={scannerInterval}
-                  externalStudies={scannerStudies}
-                  painelNegociacao="abaixo-ate-lg"
-                  onSymbolChange={setSimboloGrafico}
-                />
-              </div>
-              <aside className="hidden lg:sticky lg:top-3 lg:block">
-                <PainelNegociacaoScanner tvSymbol={simboloGrafico} intervalo={scannerInterval} variante="lateral" />
-              </aside>
-            </div>
+            <ScannerMobile
+              integration="scanner-access"
+              showScreener={showScreener}
+              widgetRef={tradingViewWidgetRef as RefObject<TradingViewWidgetRef>}
+              externalSymbol={scannerSymbol}
+              externalInterval={scannerInterval}
+              externalStudies={scannerStudies}
+            />
           </div>
         </div>
 

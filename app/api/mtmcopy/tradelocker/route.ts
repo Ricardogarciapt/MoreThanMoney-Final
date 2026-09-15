@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { carregarDireitos, pareceDemo, podeLigarConta, type ContaLigada } from '@/lib/entitlements'
+import { carregarDireitos } from '@/lib/entitlements'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
 import { resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
 import { canAddConnection } from '@/lib/mtmcopy/user-copy-context'
@@ -14,7 +14,6 @@ import {
   envValido,
   guardarCredenciais,
   lerBilhete,
-  ligacaoEhDemo,
   sessaoDaLigacao,
 } from '@/lib/tradelocker/ligacao'
 
@@ -32,7 +31,7 @@ export const maxDuration = 30
  *
  *   2) POST { ticket, accountId, accNum, purpose: 'tap_to_trade'|'mtmcopy', ...definições }
  *        → { success, connection, balance, equity }
- *      Valida a regra das contas (1 real + 1 demo por produto, extras), testa a conta com /state,
+ *      Não conta para a quota MetaApi (TradeLocker não é MetaApi), testa a conta com /state,
  *      grava a ligação (mt5_platform='tradelocker') e a password cifrada à parte.
  *
  *   GET ?id=<connectionId>  → { balance, equity, positions } (estado ao vivo)
@@ -115,27 +114,20 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Regra das contas — a mesma do MT5 (lib/entitlements), com a demo decidida pelo ambiente.
-  const superficie = purpose === 'tap_to_trade' ? ('t2t' as const) : ('mtmcopy' as const)
-  const [direitos, { data: doSite }, { data: doAuto }] = await Promise.all([
+  // Regra das contas (2026-09-15): TradeLocker NÃO passa pela MetaApi e por isso não conta para a
+  // quota de contas MetaApi (lib/contas/quota-metaapi). A cópia automática (fora do Tap to Trade)
+  // continua a precisar do direito ao MTM Auto.
+  const [direitos, { data: doSite }] = await Promise.all([
     carregarDireitos(user.id),
     supabase.from('mtmcopy_connections').select('*').eq('user_id', user.id).neq('mt5_status', 'disconnected'),
-    supabase.from('mtmauto_accounts').select('demo').eq('user_id', user.id)
-      // Contas MTM Funded atribuídas pelo admin (plataforma 'mtmfunded') não ocupam vagas.
-      .neq('plataforma', 'mtmfunded'),
   ])
-  const ligadas: ContaLigada[] = [
-    ...(doSite ?? []).map((c) => ({
-      superficie: c.purpose === 'tap_to_trade' || c.t2t_enabled === true ? ('t2t' as const) : ('mtmcopy' as const),
-      demo: ligacaoEhDemo(c, pareceDemo),
-    })),
-    ...(doAuto ?? []).map((c) => ({ superficie: 'mtmauto' as const, demo: Boolean(c.demo) })),
-  ]
-  const veredicto = podeLigarConta(direitos, superficie, cred.env === 'demo', ligadas)
-  if (!veredicto.ok) {
+  if (purpose !== 'tap_to_trade' && !direitos.admin && !direitos.copiaAutomatica) {
     return NextResponse.json(
-      { error: veredicto.erro, code: veredicto.codigo, preco_eur: veredicto.precoEur },
-      { status: veredicto.codigo === 'conta_extra' ? 402 : 403 },
+      {
+        error: 'A cópia automática precisa do MTM Auto (ou de seres Premium/VIP). No Tap to Trade continuas a poder aceitar sinais à mão.',
+        code: 'sem_copia_automatica',
+      },
+      { status: 403 },
     )
   }
 

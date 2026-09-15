@@ -1,6 +1,7 @@
 /**
  * Sincronização global MTMcopier: Supabase ↔ MetaAPI ↔ CopyFactory ↔ rotas provider.
  */
+import { semMtmFunded } from './destino-execucao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { connectionCopyMethod } from './copy-limits'
 import { syncConnectionCopyFactory } from './connection-sync'
@@ -145,7 +146,9 @@ export async function runMtmcopySystemSync(opts?: {
   if (opts?.connectionId) connQuery = connQuery.eq('id', opts.connectionId)
   else if (opts?.userId) connQuery = connQuery.eq('user_id', opts.userId)
 
-  const { data: connections } = await connQuery.order('updated_at', { ascending: false })
+  const { data: connectionsTodas } = await connQuery.order('updated_at', { ascending: false })
+  // MTM Funded (074): sem MetaApi nem CopyFactory — a sincronização não lhes toca.
+  const connections = semMtmFunded(connectionsTodas ?? [])
 
   const userIds = [...new Set((connections ?? []).map((c) => c.user_id))]
   const { data: profiles } = await supabase

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { ehMtmFundedLigacao } from "@/lib/mtmcopy/destino-execucao"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { entradaT2T } from '@/lib/mtmcopy/t2t-entry'
 import { parseSignal } from "@/lib/mtmcopy/signal-parser"
@@ -86,8 +87,9 @@ export async function GET(request: NextRequest) {
    * pausa (o caso do Gonçalo, `is_active=false`) ou desligada ficava invisível — e a pessoa
    * concluía, com razão, que "o Tap to Trade não funciona".
    */
+  // Ligações MTM Funded não passam por aqui (sem MetaApi/TradeLocker): abrem pelo motor simulado.
   const candidatas = (conns ?? []).filter(
-    (c) => c.purpose === "tap_to_trade" || c.t2t_enabled === true,
+    (c) => !ehMtmFundedLigacao(c) && (c.purpose === "tap_to_trade" || c.t2t_enabled === true),
   )
   const bloqueadas: Array<{ id: string; label: string; motivo: string; comoResolver: string }> = []
   const alvos = candidatas.filter((c) => {

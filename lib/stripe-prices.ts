@@ -23,6 +23,27 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   elite_annual: 'STRIPE_PRICE_ELITE_ANNUAL',
 }
 
+/**
+ * Planos que já não se vendem. O preço continua no Stripe (as subscrições antigas renovam e o
+ * webhook precisa de o reconhecer), mas nenhum checkout novo o pode abrir.
+ *
+ * MTM Copy (fase 1 da consolidação): descontinuado. Quem já pagava mantém o acesso — com os
+ * mesmos direitos de um subscritor do MTM Auto — até a subscrição acabar.
+ */
+export const PLANOS_DESCONTINUADOS: Record<string, { error: string; code: string; redirect: string }> = {
+  mtmcopy_addon_monthly: {
+    error:
+      'O MTM Copy foi descontinuado e já não aceita novas subscrições. A cópia automática vive agora no MTM Auto — em morethanmoney.pt/mtmauto.',
+    code: 'plano_descontinuado',
+    redirect: '/mtmauto',
+  },
+}
+
+/** Devolve a recusa (para responder com 410) se o plano já não se vende; null caso contrário. */
+export function recusaPlanoDescontinuado(planId: unknown) {
+  return typeof planId === 'string' ? PLANOS_DESCONTINUADOS[planId] ?? null : null
+}
+
 export function getStripePriceId(planId: string): string {
   const envKey = PRICE_ENV_KEYS[planId]
   if (!envKey) return ''

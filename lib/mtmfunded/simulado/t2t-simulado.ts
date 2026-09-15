@@ -74,6 +74,8 @@ export async function executarT2TSimulado(p: {
   fonte: string | null
   sinal: SinalT2T
   riscoPct: number
+  /** Contas ligadas pelo cliente no «Ligar conta» (074) — já verificadas: dele, não só-leitura, não pausadas. */
+  contasLigadas?: string[]
 }): Promise<ResultadoT2TSimulado[]> {
   const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
   const ex = await import('./execucao')
@@ -81,10 +83,18 @@ export async function executarT2TSimulado(p: {
   const { comentarioT2T } = await import('../espelho/calculo')
   const db = getSupabaseAdmin()
 
-  const { data: linhas, error } = await db.from('mtm_trading_accounts')
+  const { data: marcadas, error } = await db.from('mtm_trading_accounts')
     .select('id').eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa').eq('aceita_t2t', true)
   // Antes da 070 a coluna não existe: sem contas simuladas, nada muda no T2T de sempre.
-  if (error || !linhas?.length) return []
+  const ids = new Set((error ? [] : marcadas ?? []).map((l) => String(l.id)))
+  if (p.contasLigadas?.length) {
+    // As ligadas passam pelos MESMOS filtros: do utilizador, motor simulado, conta viva.
+    const { data: ligadas } = await db.from('mtm_trading_accounts')
+      .select('id').in('id', p.contasLigadas).eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa')
+    for (const l of ligadas ?? []) ids.add(String(l.id))
+  }
+  const linhas = [...ids].map((id) => ({ id }))
+  if (!linhas.length) return []
 
   const ref = `t2t:${p.chatMessageId}`
   const comentario = comentarioT2T(p.fonte)

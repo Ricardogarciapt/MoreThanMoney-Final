@@ -9,9 +9,10 @@ export const SCANNER_ADDON_PLANS = [
   { id: 'goldkiller_lifetime', label: 'GoldKiller Vitalício', recurring: false },
 ] as const
 
+/** MTM Copy: descontinuado (fase 1) — já não se vende; fica só para ler/gerir subscrições antigas. */
 export const MTMCOPY_ADDON_PLAN = {
   id: 'mtmcopy_addon_monthly',
-  label: 'MTMcopier Mensal (+20€)',
+  label: 'MTMcopier Mensal (legado, descontinuado)',
 } as const
 
 export type ScannerAddonPlanId = (typeof SCANNER_ADDON_PLANS)[number]['id']

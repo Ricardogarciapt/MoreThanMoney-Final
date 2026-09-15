@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import type { MtmcopyCopyMethod, MtmcopyTelegramGroup } from '@/lib/mtmcopy/copy-methods'
 import { provisionMasterAccount, provisionSlaveAccount } from '@/lib/mtmcopy/metaapi-provision'
-import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
+import { direitoMtmAuto } from '@/lib/entitlements'
 import type { MTMcopierConnection, MtmcopyAccountRole, MtmcopySenderMode } from '@/lib/mtmcopy/types'
 import {
   getMasterConnection,
@@ -56,6 +56,11 @@ export async function runProvisionJob(input: RunProvisionJobInput): Promise<MTMc
     copyfactoryStrategyPick,
     normalizedGroups,
   } = input
+
+  // Segunda tranca: uma ligação MTM Funded nunca é provisionada na MetaApi/CopyFactory.
+  if (String((connection as { mt5_platform?: string | null }).mt5_platform ?? '').toLowerCase() === 'mtmfunded') {
+    throw new Error('ligação MTM Funded não se provisiona na MetaApi')
+  }
 
   const userLabel = `MTMcopier · ${label}`
 
@@ -148,8 +153,8 @@ export async function runProvisionJob(input: RunProvisionJobInput): Promise<MTMc
   if (result.success && result.accountId) {
     patch.metaapi_account_id = result.accountId
     patch.mt5_status = 'connected'
-    const subNow = await getMtmcopySubscription(userId, userType)
-    patch.is_active = subNow.active
+    // A ligação só fica activa (a copiar) para quem tem direito ao MTM Auto — regra única.
+    patch.is_active = (await direitoMtmAuto(userId)).tem
     patch.last_error = null
 
     if (accountRole === 'master' && result.strategyId) {

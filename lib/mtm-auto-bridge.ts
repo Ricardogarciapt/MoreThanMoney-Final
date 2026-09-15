@@ -24,26 +24,11 @@ import { lerInfoContaCache } from '@/lib/mtmcopy/metaapi-cache'
 /** Quem pode ver o MTM Auto dentro da app-mobile. */
 export type NivelMtm = { premium: boolean; vip: boolean; admin: boolean }
 
-export function podeVerMtmAuto(p: {
-  user_type?: string | null
-  member_category?: string | null
-  subscription_plan?: string | null
-  is_active?: boolean | null
-} | null): boolean {
-  if (!p) return false
-  if (p.user_type === 'admin') return true
-  if (!p.is_active) return false
-  return (
-    p.subscription_plan === 'premium' ||
-    p.member_category === 'premium' ||
-    // VIP está marcado em dois campos e o resto do site aceita os dois. Ler só a categoria
-    // deixava de fora quem foi marcado VIP pelo tipo — e o VIP é uma decisão tomada à margem
-    // do pack que a pessoa paga.
-    p.member_category === 'vip' ||
-    p.user_type === 'vip' ||
-    p.member_category === 'iq'
-  )
-}
+/**
+ * Quem pode ver o MTM Auto dentro da app-mobile: quem tem direito ao MTM Auto, pela regra única
+ * (`direitoMtmAuto` → função SQL direito_mtm_auto). Antes havia aqui uma regra própria
+ * (`podeVerMtmAuto`, só Premium/VIP/admin) que discordava da app MTM Auto e do MTM Copy.
+ */
 
 export interface ContaMtmAuto {
   id: string
@@ -300,16 +285,15 @@ export async function autorizarMtmAuto(
   const { data: { user } } = await db.auth.getUser(cabecalho.replace('Bearer ', ''))
   if (!user) return { erro: NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 }) }
 
-  const { data: perfil } = await db
-    .from('profiles')
-    .select('user_type, member_category, subscription_plan, is_active')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (!podeVerMtmAuto(perfil)) {
+  const { direitoMtmAuto } = await import('@/lib/entitlements')
+  const direito = await direitoMtmAuto(user.id)
+  if (!direito.tem) {
     return {
       erro: NextResponse.json(
-        { error: 'O MTM Auto aqui dentro é para membros Premium e VIP.', code: 'sem_acesso' },
+        {
+          error: 'O MTM Auto é para subscritores do MTM Auto e membros Premium e VIP.',
+          code: direito.motivo === 'suspenso' ? 'suspenso' : 'sem_acesso',
+        },
         { status: 403 },
       ),
     }

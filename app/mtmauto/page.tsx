@@ -260,7 +260,7 @@ const PORQUE = [
   { t: "O risco é teu, não do sinal", d: "O lote sai do teu saldo e da distância ao stop. Um tecto de risco por trade que nenhuma estratégia ultrapassa — nem em lote fixo." },
   { t: "Diz-te sempre porque não abriu", d: "Conta sem saldo, cópia em pausa, limite de posições atingido. O motivo fica escrito no histórico em vez de um silêncio." },
   { t: "Break-even e trailing a sério", d: "O break-even mede-se pelo preço a que a tua ordem encheu, não pelo nível escrito no sinal. O trailing sobe e nunca desce." },
-  { t: "Uma conta real e uma demo incluídas", d: "Testa em demo com as mesmas regras da real. As contas seguintes custam 7 €, uma vez." },
+  { t: "Duas contas MetaTrader incluídas", d: "Com o MTM Auto (ou Premium) ligas duas contas MT4/MT5 — real ou demo. Contas TradeLocker e MTM Funded não contam para o limite." },
 ]
 
 export default async function MtmAutoPage() {
@@ -410,6 +410,12 @@ export default async function MtmAutoPage() {
                 className="rounded-xl border border-white/20 px-6 py-3.5 text-sm font-semibold text-white/85"
               >
                 Acede aqui ao MTM Auto
+              </Link>
+              <Link
+                href="/member-area/contas"
+                className="rounded-xl border border-white/20 px-6 py-3.5 text-sm font-semibold text-white/85"
+              >
+                Já és membro? Liga as tuas contas
               </Link>
               <Link
                 href="/automation"

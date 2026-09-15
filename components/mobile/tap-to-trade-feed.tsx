@@ -7,8 +7,9 @@ import { useCallback, useEffect, useState, useRef, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useT } from "@/components/i18n-provider"
 import { supabase } from "@/lib/supabase"
-import { T2T_BROKERS } from "@/lib/mtmcopy/t2t-brokers"
-import TradeLockerConnectForm, { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-form"
+import { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-form"
+import { MtmFundedBadge, SoLeituraBadge } from "@/components/ligar-mtmfunded/mtmfunded-connect-form"
+import { ListaContas, LimitesPlano, useContasLigadas } from "@/components/contas/ligador-contas"
 import { isAllowedT2TSource, matchesT2TPrefs, t2tSourceKey, T2T_SOURCES, T2T_ASSET_CLASSES } from "@/lib/mtmcopy/t2t-source"
 import {
   TrendingUp,
@@ -21,7 +22,6 @@ import {
   ShieldCheck,
   Wallet,
   Clock,
-  Trash2,
 } from "lucide-react"
 import MtmAutoMetricas from "@/components/mobile/mtm-auto-metricas"
 import TapToCopyModal from "@/components/mobile/tap-to-copy-modal"
@@ -240,6 +240,9 @@ interface Conn {
   /** Conta TradeLocker (mt5_platform='tradelocker'): accountId escolhido na ligação. */
   tl_account_id?: string | null
   tl_env?: string | null
+  /** Conta MTM Funded (mt5_platform='mtmfunded', 074): executa pelo motor simulado. */
+  funded_account_id?: string | null
+  funded_somente_leitura?: boolean | null
   mt5_status?: string | null
   last_error?: string | null
   lot_mode?: string | null
@@ -312,6 +315,22 @@ function foraDaZona(
   const idade = Date.now() - new Date(s.created_at).getTime()
   if (!Number.isFinite(idade) || idade <= 5 * 60 * 1000) return false
   return Number(vivo.exits ?? 0) > 0 || vivo.entrou === true
+}
+
+/** Definições de risco/saídas de uma conta, no formato do editor de «Execução». */
+function cfgDaConta(c: Conn) {
+  return {
+    lot_mode: (c.lot_mode === "fixed" ? "fixed" : "risk_percent") as "risk_percent" | "fixed",
+    risk: typeof c.max_risk_percent === "number" ? c.max_risk_percent : 1,
+    lot: typeof c.lot_value === "number" ? c.lot_value : 0.01,
+    copy_sl: c.copy_sl !== false,
+    copy_tp: c.copy_tp !== false,
+    trailing: c.auto_trailing_stop === true,
+    trailingPts: typeof c.trailing_stop_points === "number" ? c.trailing_stop_points : 100,
+    tp1: typeof c.exit_pct_tp1 === "number" ? c.exit_pct_tp1 : 50,
+    tp2: typeof c.exit_pct_tp2 === "number" ? c.exit_pct_tp2 : 30,
+    tp3: typeof c.exit_pct_tp3 === "number" ? c.exit_pct_tp3 : 20,
+  }
 }
 
 export default function TapToTradeFeed() {
@@ -389,14 +408,7 @@ export default function TapToTradeFeed() {
   const [t2tConns, setT2tConns] = useState<Conn[]>([])
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [showConfig, setShowConfig] = useState(false)
-  const [connectOpen, setConnectOpen] = useState(false)
-  const [connForm, setConnForm] = useState<{ broker: string; server: string; login: string; password: string; platform: "mt5" }>({ broker: T2T_BROKERS[0].id, server: T2T_BROKERS[0].servers[0], login: "", password: "", platform: "mt5" })
-  const [connBusy, setConnBusy] = useState(false)
-  /** Plataforma da conta a ligar: MetaTrader 5 (MetaApi) ou TradeLocker. */
-  const [connPlataforma, setConnPlataforma] = useState<"mt5" | "tradelocker">("mt5")
-  const [connError, setConnError] = useState("")
   const [savingConn, setSavingConn] = useState(false)
-  const [removingConn, setRemovingConn] = useState(false)
   // "O que seguir": fontes + classes de ativo + nível de risco (prefs por-user na conta T2T)
   const [follow, setFollow] = useState<{ sources: string[]; assetClasses: string[]; risk: string | null }>({ sources: [], assetClasses: [], risk: null })
   const [savingFollow, setSavingFollow] = useState(false)
@@ -421,6 +433,18 @@ export default function TapToTradeFeed() {
     return getAccessToken()
   }, [])
 
+  /** Ligador único de contas (lista + quota) — o mesmo da área de membro no site. */
+  const ligador = useContasLigadas(token)
+  /** Conta cujo risco/saídas se está a configurar em «Execução». */
+  const contaCfgId = useRef<string | null>(null)
+  const escolherContaCfg = (id: string) => {
+    const c = t2tConns.find((x) => x.id === id)
+    if (!c) return
+    contaCfgId.current = id
+    setConn(c)
+    setCfg(cfgDaConta(c))
+  }
+
   const loadConnection = useCallback(async () => {
     const tok = await token()
     if (!tok) return
@@ -433,21 +457,13 @@ export default function TapToTradeFeed() {
         ? d.t2t_connections
         : (Array.isArray(d.connections) ? d.connections.filter((x: Conn) => x.t2t_enabled === true) : [])
       const c: Conn | null = d.connection ?? (d.connections?.[0] ?? null)
-      setT2tConns(list.length ? list : (c ? [c] : []))
-      setConn(c)
+      const todas = list.length ? list : (c ? [c] : [])
+      setT2tConns(todas)
+      // A conta a configurar mantém-se entre recarregamentos (senão voltava sempre à primeira).
+      const escolhida = todas.find((x) => x.id === contaCfgId.current) ?? c
+      setConn(escolhida)
+      if (escolhida) setCfg(cfgDaConta(escolhida))
       if (c) {
-        setCfg({
-          lot_mode: c.lot_mode === "fixed" ? "fixed" : "risk_percent",
-          risk: typeof c.max_risk_percent === "number" ? c.max_risk_percent : 1,
-          lot: typeof c.lot_value === "number" ? c.lot_value : 0.01,
-          copy_sl: c.copy_sl !== false,
-          copy_tp: c.copy_tp !== false,
-          trailing: c.auto_trailing_stop === true,
-          trailingPts: typeof c.trailing_stop_points === "number" ? c.trailing_stop_points : 100,
-          tp1: typeof c.exit_pct_tp1 === "number" ? c.exit_pct_tp1 : 50,
-          tp2: typeof c.exit_pct_tp2 === "number" ? c.exit_pct_tp2 : 30,
-          tp3: typeof c.exit_pct_tp3 === "number" ? c.exit_pct_tp3 : 20,
-        })
         setFollow({
           sources: Array.isArray(c.t2t_sources) ? c.t2t_sources : [],
           assetClasses: Array.isArray(c.t2t_asset_classes) ? c.t2t_asset_classes : [],
@@ -633,7 +649,7 @@ export default function TapToTradeFeed() {
 
   // Vindo de /automation ("Ativar Tap to Trade") → abre logo a config/ligação da conta
   useEffect(() => {
-    if (searchParams?.get("setup") === "1") setShowConfig(true)
+    if (searchParams?.get("setup") === "1") { setEcra("conta"); setShowConfig(true) }
   }, [searchParams])
 
   // Deep-link: notificação T2T → abrir directamente a confirmação da trade (1× por sinal —
@@ -886,65 +902,6 @@ export default function TapToTradeFeed() {
     }
   }
 
-  const connectAccount = async () => {
-    if (!connForm.server.trim() || !connForm.login.trim() || !connForm.password) {
-      setConnError(t("t2t.fillBrokerServerLogin"))
-      return
-    }
-    setConnBusy(true)
-    setConnError("")
-    try {
-      const tok = await token()
-      if (!tok) { setConnError(t("t2t.sessionUnavailable")); setConnBusy(false); return }
-      const res = await fetch("/api/mtmcopy/provision", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
-        body: JSON.stringify({
-          mt5_server: connForm.server.trim(),
-          mt5_login: connForm.login.trim(),
-          mt5_password: connForm.password,
-          mt5_platform: connForm.platform,
-          copy_method: "telegram_group",
-          purpose: "tap_to_trade",
-          account_label: "T2T",
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setConnError(data.error || t("t2t.linkAccountFailed")); setConnBusy(false); return }
-      setConnBusy(false)
-      setConnectOpen(false)
-      setConnForm({ broker: T2T_BROKERS[0].id, server: T2T_BROKERS[0].servers[0], login: "", password: "", platform: "mt5" })
-      await loadConnection()
-    } catch (e) {
-      setConnError(e instanceof Error ? e.message : t("t2t.unexpectedError"))
-      setConnBusy(false)
-    }
-  }
-
-  const removeAccount = async () => {
-    if (!conn) return
-    if (!window.confirm(t("t2t.confirmRemoveAccount"))) return
-    setRemovingConn(true)
-    setConnError("")
-    try {
-      const tok = await token()
-      if (!tok) { setConnError(t("t2t.sessionUnavailable")); return }
-      const res = await fetch(`/api/mtmcopy/connection?id=${encodeURIComponent(conn.id)}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${tok}` },
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setConnError(data.error || t("t2t.removeAccountFailed")); return }
-      setConnectOpen(false)
-      setConn(null)
-      await loadConnection()
-    } catch (e) {
-      setConnError(e instanceof Error ? e.message : t("t2t.unexpectedError"))
-    } finally {
-      setRemovingConn(false)
-    }
-  }
-
   const emergencyStop = async () => {
     if (!window.confirm(t("t2t.confirmCloseAll"))) return
     setClosingAll(true)
@@ -966,10 +923,8 @@ export default function TapToTradeFeed() {
     }
   }
 
-  // Existe uma ligação (mesmo pendente/erro) → mostrar a conta + estado.
-  const hasAccount = !!conn
   // Pronta a operar (conta MetaApi criada e ligada à corretora).
-  const isReady = (!!conn?.metaapi_account_id || (conn?.mt5_platform === "tradelocker" && !!conn?.tl_account_id)) && conn?.mt5_status === "connected"
+  const isReady = (!!conn?.metaapi_account_id || (conn?.mt5_platform === "tradelocker" && !!conn?.tl_account_id) || (conn?.mt5_platform === "mtmfunded" && !!conn?.funded_account_id && conn?.funded_somente_leitura !== true)) && conn?.mt5_status === "connected"
   const riskLabel = cfg
     ? cfg.lot_mode === "fixed"
       ? `${cfg.lot}${t("t2t.lotFixedSuffix")}`
@@ -1029,281 +984,216 @@ export default function TapToTradeFeed() {
         />
       )}
 
+      {/* ── CONTA ────────────────────────────────────────────────────────────────────────────
+          Três secções, por esta ordem, para os sistemas novos encaixarem sem mexer no resto:
+            1. Contas ligadas — o ligador único (MT5, MT4, TradeLocker, MTM Funded), o mesmo da
+               área de membro no site (components/contas/ligador-contas.tsx).
+            2. Execução — o que cada conta faz com as ideias: Tap to Trade por conta, risco,
+               fontes (nas Estratégias) e as definições das contas MTM Auto.
+            3. Limites e plano — quota de contas MetaTrader e o caminho do upgrade. */}
       {ecra === "conta" && (
-        <>
-          {/* Duas famílias de conta no mesmo ecrã: a do MTM Auto e a do Tap to Trade. Sem um
-              título a separá-las, lia-se tudo como se fosse a mesma conta — e são coisas
-              diferentes, com riscos configurados em sítios diferentes. */}
-          <p className="etiqueta mb-2 mt-1">Conta MTM Auto</p>
+        <div className="space-y-5">
           <MtmAutoMetricas />
-          <MtmAutoPainel apenas="ligacao" />
-          <MtmAutoPainel apenas="definicoes" />
-          <p className="etiqueta mb-2 mt-4">Conta Tap to Trade</p>
-        </>
-      )}
 
-      {/* A configuração da conta Tap to Trade (a que existia antes da MTM Auto entrar aqui) vive
-          agora no ecrã «Conta», ao lado da conta MTM Auto. Duas configurações no mesmo ecrã de
-          sinais era o que tornava este separador confuso. */}
-      {ecra === "conta" && (
-      <div className="cartao mb-3 overflow-hidden">
-        <button
-          onClick={() => setShowConfig((v) => !v)}
-          className="w-full flex items-center gap-2 px-3 py-2.5 text-left"
-        >
-          <Settings className="w-4 h-4 text-[#D2A63C]" />
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-semibold">{t("t2t.myAccount")}</p>
-            <p className="text-[11px] text-zinc-400 truncate">
-              {hasAccount ? (
-                <>{conn?.account_label || t("t2t.mt5Account")} · {riskLabel}</>
-              ) : (
-                t("t2t.noAccountTapConfigure")
-              )}
-            </p>
-          </div>
-          {showConfig ? <ChevronUp className="w-4 h-4 text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-400" />}
-        </button>
+          <section>
+            <ListaContas estado={ligador} onMudou={loadConnection} />
+          </section>
 
-        {showConfig && (
-          <div className="px-3 pb-3 border-t border-zinc-800 pt-3 space-y-3">
-            {/* Contas T2T (fan-out): escolhe UMA ou VÁRIAS. Aceitar um sinal abre em todas as ligadas. */}
-            {t2tConns.length > 0 && (
-              <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 space-y-2">
+          <section className="space-y-3">
+            <p className="etiqueta">Execução</p>
+
+            {t2tConns.length === 0 ? (
+              <p className="cartao p-3 text-[12px] text-zinc-400">{t("t2t.linkOnceHelp")}</p>
+            ) : (
+              <div className="cartao p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-semibold text-white">Contas Tap to Trade</span>
+                  <span className="text-[12px] font-semibold text-white">Contas no Tap to Trade</span>
                   <span className="text-[10px] text-zinc-500">{t2tConns.filter((c) => c.t2t_enabled !== false && c.is_active !== false).length} ativa(s)</span>
                 </div>
-                <p className="text-[10px] leading-snug text-zinc-500">Aceitar um sinal abre em <strong className="text-zinc-300">todas</strong> as contas ligadas, cada uma com o risco pelo seu próprio saldo.</p>
+                <p className="text-[10px] leading-snug text-zinc-500">Aceitar uma ideia abre em <strong className="text-zinc-300">todas</strong> as contas ligadas aqui, cada uma com o risco pelo seu próprio saldo.</p>
                 {t2tConns.map((c) => {
                   const on = c.t2t_enabled !== false
+                  const soLeitura = c.mt5_platform === "mtmfunded" && c.funded_somente_leitura === true
                   return (
                     <div key={c.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-black/30 px-2.5 py-2">
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 text-[12px] font-semibold text-white truncate">
                           <Wallet className="w-3.5 h-3.5 text-[#D2A63C] shrink-0" /> {c.account_label || t("t2t.mt5Account")}
                           {c.mt5_platform === "tradelocker" && <TradeLockerBadge />}
+                          {c.mt5_platform === "mtmfunded" && <MtmFundedBadge />}
+                          {soLeitura && <SoLeituraBadge />}
                         </div>
                         <div className="text-[10px] text-zinc-500 truncate">
                           {c.mt5_login ?? (c.tl_account_id ? `#${c.tl_account_id}` : "—")} · {c.mt5_server || "—"}
-                          {typeof c.balance === "number" ? ` · ${c.balance.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}` : ""}
                         </div>
                       </div>
                       <button
                         type="button"
-                        disabled={togglingId === c.id}
+                        disabled={togglingId === c.id || soLeitura}
                         onClick={() => toggleAccountT2T(c.id, !on)}
                         aria-label={on ? t("t2t.disableT2TAccount") : t("t2t.enableT2TAccount")}
-                        className={`relative ml-2 h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-[#D2A63C]" : "bg-zinc-700"}`}
+                        className={`relative ml-2 h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${on && !soLeitura ? "bg-[#D2A63C]" : "bg-zinc-700"}`}
                       >
-                        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
+                        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${on && !soLeitura ? "left-[22px]" : "left-0.5"}`} />
                       </button>
                     </div>
                   )
                 })}
-                <button
-                  type="button"
-                  onClick={() => { setConnError(""); setConnectOpen(true) }}
-                  className="w-full rounded-lg border border-dashed border-zinc-700 py-2 text-[12px] font-semibold text-zinc-300"
-                >
-                  + Adicionar outra conta
-                </button>
               </div>
             )}
-            {!hasAccount ? (
-              <div className="text-center py-2">
-                <Wallet className="w-8 h-8 mx-auto mb-2 text-zinc-600" />
-                <p className="text-xs text-zinc-400 mb-3">
-                  {t("t2t.linkOnceHelp")}
-                </p>
-                <button
-                  onClick={() => { setConnError(""); setConnectOpen(true) }}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] px-4 py-2"
-                >
-                  <Wallet className="w-4 h-4" /> {t("t2t.linkMt5Account")}
+
+            {conn && cfg && (
+              <div className="cartao overflow-hidden">
+                <button onClick={() => setShowConfig((v) => !v)} className="w-full flex items-center gap-2 px-3 py-2.5 text-left">
+                  <Settings className="w-4 h-4 text-[#D2A63C]" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold">Risco e saídas</p>
+                    <p className="text-[11px] text-zinc-400 truncate">{conn.account_label || t("t2t.mt5Account")} · {riskLabel}</p>
+                  </div>
+                  {showConfig ? <ChevronUp className="w-4 h-4 text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-400" />}
                 </button>
-              </div>
-            ) : cfg ? (
-              <>
-                {/* Dados da conta ligada */}
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-[13px] font-semibold text-white">
-                      <Wallet className="w-4 h-4 text-[#D2A63C]" /> {conn?.account_label || t("t2t.mt5Account")}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      conn?.mt5_status === "connected" ? "bg-emerald-500/15 text-emerald-400"
-                        : conn?.mt5_status === "error" ? "bg-rose-500/15 text-rose-400"
-                        : "bg-zinc-700/60 text-zinc-300"
-                    }`}>
-                      {conn?.mt5_status === "connected" ? t("t2t.statusConnected")
-                        : conn?.mt5_status === "error" ? t("t2t.statusError")
-                        : conn?.mt5_status === "disconnected" ? t("t2t.statusDisconnected")
-                        : t("t2t.statusConnecting")}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-zinc-400">
-                    <span>{t("t2t.loginLabel")} <span className="text-zinc-200">{conn?.mt5_login ?? (conn?.tl_account_id ? `#${conn.tl_account_id}` : "—")}</span></span>
-                    <span>{t("t2t.platformLabel")} {conn?.mt5_platform === "tradelocker" ? <TradeLockerBadge /> : <span className="text-zinc-200 uppercase">{conn?.mt5_platform || "mt5"}</span>}</span>
-                    <span className="col-span-2 truncate">{t("t2t.serverLabel")} <span className="text-zinc-200">{conn?.mt5_server || "—"}</span></span>
-                    {typeof conn?.balance === "number" && (
-                      <span className="col-span-2">{t("t2t.balanceLabel")} <span className="text-white font-semibold">{conn.balance.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}</span></span>
+                {showConfig && (
+                  <div className="px-3 pb-3 border-t border-zinc-800 pt-3 space-y-3">
+                    {t2tConns.length > 1 && (
+                      <label className="block">
+                        <span className="text-[11px] text-zinc-500">Conta a configurar</span>
+                        <select
+                          value={conn.id}
+                          onChange={(e) => escolherContaCfg(e.target.value)}
+                          className="mt-1 w-full rounded-xl bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white"
+                        >
+                          {t2tConns.map((c) => (
+                            <option key={c.id} value={c.id}>{c.account_label || t("t2t.mt5Account")} · {c.mt5_login ?? c.tl_account_id ?? "—"}</option>
+                          ))}
+                        </select>
+                      </label>
                     )}
-                  </div>
-                  {conn?.mt5_status !== "connected" && (
-                    <div className={`mt-1 rounded-lg px-2.5 py-2 text-[11px] leading-snug ${conn?.mt5_status === "error" ? "bg-rose-500/10 text-rose-300" : "bg-amber-500/10 text-amber-300"}`}>
-                      {conn?.mt5_status === "error" ? (
-                        <>⚠️ {conn?.last_error || t("t2t.brokerConnectFailed")} {t("t2t.errorHintBefore")}<strong>{t("t2t.manageAccount")}</strong> → <strong>{t("t2t.remove")}</strong>{t("t2t.errorHintAfter")}</>
-                      ) : (
-                        <>⏳ {t("t2t.validatingBroker")}</>
+
+                    <div>
+                      <p className="text-[11px] text-zinc-500 mb-1.5">{t("t2t.positionSize")}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setCfg({ ...cfg, lot_mode: "risk_percent" })}
+                          className={`rounded-xl border py-2 text-xs font-medium ${cfg.lot_mode === "risk_percent" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
+                        >
+                          {t("t2t.riskPercentMode")}
+                        </button>
+                        <button
+                          onClick={() => setCfg({ ...cfg, lot_mode: "fixed" })}
+                          className={`rounded-xl border py-2 text-xs font-medium ${cfg.lot_mode === "fixed" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
+                        >
+                          {t("t2t.fixedLot")}
+                        </button>
+                      </div>
+                    </div>
+
+                    {cfg.lot_mode === "risk_percent" ? (
+                      <label className="block">
+                        <span className="text-[11px] text-zinc-500">{t("t2t.riskPerTrade")}</span>
+                        <input type="number" step="0.1" min="0.1" max="20" value={cfg.risk}
+                          onChange={(e) => setCfg({ ...cfg, risk: parseFloat(e.target.value) || 0 })}
+                          className="mt-1 w-full rounded-xl bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white" />
+                      </label>
+                    ) : (
+                      <label className="block">
+                        <span className="text-[11px] text-zinc-500">{t("t2t.fixedLot")}</span>
+                        <input type="number" step="0.01" min="0.01" value={cfg.lot}
+                          onChange={(e) => setCfg({ ...cfg, lot: parseFloat(e.target.value) || 0 })}
+                          className="mt-1 w-full rounded-xl bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white" />
+                      </label>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setCfg({ ...cfg, copy_sl: !cfg.copy_sl })}
+                        className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs ${cfg.copy_sl ? "border-emerald-500/40 text-emerald-400" : "border-zinc-700 text-zinc-500"}`}
+                      >
+                        <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> {t("t2t.copySl")}</span>
+                        <span className="font-bold">{cfg.copy_sl ? t("t2t.on") : t("t2t.off")}</span>
+                      </button>
+                      <button
+                        onClick={() => setCfg({ ...cfg, copy_tp: !cfg.copy_tp })}
+                        className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs ${cfg.copy_tp ? "border-emerald-500/40 text-emerald-400" : "border-zinc-700 text-zinc-500"}`}
+                      >
+                        <span className="flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> {t("t2t.copyTp")}</span>
+                        <span className="font-bold">{cfg.copy_tp ? t("t2t.on") : t("t2t.off")}</span>
+                      </button>
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-800 p-2.5">
+                      <button onClick={() => setCfg({ ...cfg, trailing: !cfg.trailing })} className="w-full flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1 text-zinc-300"><ShieldCheck className="w-3.5 h-3.5 text-[#D2A63C]" /> {t("t2t.trailingAuto")}</span>
+                        <span className={`font-bold ${cfg.trailing ? "text-emerald-400" : "text-zinc-500"}`}>{cfg.trailing ? t("t2t.on") : t("t2t.off")}</span>
+                      </button>
+                      {cfg.trailing && (
+                        <label className="block mt-2">
+                          <span className="text-[11px] text-zinc-500">{t("t2t.trailingDistance")}</span>
+                          <input type="number" step="10" min="10" value={cfg.trailingPts}
+                            onChange={(e) => setCfg({ ...cfg, trailingPts: parseInt(e.target.value) || 0 })}
+                            className="mt-1 w-full rounded-xl bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white" />
+                        </label>
                       )}
                     </div>
-                  )}
-                </div>
 
-                {/* modo de risco */}
-                <div>
-                  <p className="text-[11px] text-zinc-500 mb-1.5">{t("t2t.positionSize")}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setCfg({ ...cfg, lot_mode: "risk_percent" })}
-                      className={`rounded-xl border py-2 text-xs font-medium ${cfg.lot_mode === "risk_percent" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
-                    >
-                      {t("t2t.riskPercentMode")}
-                    </button>
-                    <button
-                      onClick={() => setCfg({ ...cfg, lot_mode: "fixed" })}
-                      className={`rounded-xl border py-2 text-xs font-medium ${cfg.lot_mode === "fixed" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
-                    >
-                      {t("t2t.fixedLot")}
-                    </button>
-                  </div>
-                </div>
-
-                {cfg.lot_mode === "risk_percent" ? (
-                  <label className="block">
-                    <span className="text-[11px] text-zinc-500">{t("t2t.riskPerTrade")}</span>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0.1"
-                      max="20"
-                      value={cfg.risk}
-                      onChange={(e) => setCfg({ ...cfg, risk: parseFloat(e.target.value) || 0 })}
-                      className="mt-1 w-full rounded-xl bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white"
-                    />
-                  </label>
-                ) : (
-                  <label className="block">
-                    <span className="text-[11px] text-zinc-500">{t("t2t.fixedLot")}</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={cfg.lot}
-                      onChange={(e) => setCfg({ ...cfg, lot: parseFloat(e.target.value) || 0 })}
-                      className="mt-1 w-full rounded-xl bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white"
-                    />
-                  </label>
-                )}
-
-                {/* SL / TP */}
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setCfg({ ...cfg, copy_sl: !cfg.copy_sl })}
-                    className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs ${cfg.copy_sl ? "border-emerald-500/40 text-emerald-400" : "border-zinc-700 text-zinc-500"}`}
-                  >
-                    <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> {t("t2t.copySl")}</span>
-                    <span className="font-bold">{cfg.copy_sl ? t("t2t.on") : t("t2t.off")}</span>
-                  </button>
-                  <button
-                    onClick={() => setCfg({ ...cfg, copy_tp: !cfg.copy_tp })}
-                    className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs ${cfg.copy_tp ? "border-emerald-500/40 text-emerald-400" : "border-zinc-700 text-zinc-500"}`}
-                  >
-                    <span className="flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> {t("t2t.copyTp")}</span>
-                    <span className="font-bold">{cfg.copy_tp ? t("t2t.on") : t("t2t.off")}</span>
-                  </button>
-                </div>
-
-                {/* Proteção da trade — trailing / breakeven automático */}
-                <div className="rounded-xl border border-zinc-800 p-2.5">
-                  <button
-                    onClick={() => setCfg({ ...cfg, trailing: !cfg.trailing })}
-                    className="w-full flex items-center justify-between text-xs"
-                  >
-                    <span className="flex items-center gap-1 text-zinc-300"><ShieldCheck className="w-3.5 h-3.5 text-[#D2A63C]" /> {t("t2t.trailingAuto")}</span>
-                    <span className={`font-bold ${cfg.trailing ? "text-emerald-400" : "text-zinc-500"}`}>{cfg.trailing ? t("t2t.on") : t("t2t.off")}</span>
-                  </button>
-                  {cfg.trailing && (
-                    <label className="block mt-2">
-                      <span className="text-[11px] text-zinc-500">{t("t2t.trailingDistance")}</span>
-                      <input
-                        type="number"
-                        step="10"
-                        min="10"
-                        value={cfg.trailingPts}
-                        onChange={(e) => setCfg({ ...cfg, trailingPts: parseInt(e.target.value) || 0 })}
-                        className="mt-1 w-full rounded-xl bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white"
-                      />
-                    </label>
-                  )}
-                </div>
-
-                {/* Alocação de Take Profit (parcial por nível) */}
-                <div className="rounded-xl border border-zinc-800 p-2.5">
-                  <p className="text-[11px] text-zinc-500 mb-2">{t("t2t.tpAllocation")}</p>
-                  {([["TP1", "tp1"], ["TP2", "tp2"], ["TP3", "tp3"]] as const).map(([label, key]) => (
-                    <div key={key} className="flex items-center gap-2 mb-1.5">
-                      <span className="text-xs text-zinc-400 w-9">{label}</span>
-                      <input
-                        type="number"
-                        step="5"
-                        min="0"
-                        max="100"
-                        value={cfg[key]}
-                        onChange={(e) => setCfg({ ...cfg, [key]: parseInt(e.target.value) || 0 })}
-                        className="flex-1 rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-sm text-white"
-                      />
-                      <span className="text-xs text-zinc-500">%</span>
+                    <div className="rounded-xl border border-zinc-800 p-2.5">
+                      <p className="text-[11px] text-zinc-500 mb-2">{t("t2t.tpAllocation")}</p>
+                      {([["TP1", "tp1"], ["TP2", "tp2"], ["TP3", "tp3"]] as const).map(([label, key]) => (
+                        <div key={key} className="flex items-center gap-2 mb-1.5">
+                          <span className="text-xs text-zinc-400 w-9">{label}</span>
+                          <input type="number" step="5" min="0" max="100" value={cfg[key]}
+                            onChange={(e) => setCfg({ ...cfg, [key]: parseInt(e.target.value) || 0 })}
+                            className="flex-1 rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-sm text-white" />
+                          <span className="text-xs text-zinc-500">%</span>
+                        </div>
+                      ))}
+                      <div className={`text-[11px] mt-1 ${cfg.tp1 + cfg.tp2 + cfg.tp3 === 100 ? "text-emerald-400" : "text-amber-400"}`}>
+                        {t("t2t.totalLabel")} {cfg.tp1 + cfg.tp2 + cfg.tp3}%{cfg.tp1 + cfg.tp2 + cfg.tp3 !== 100 ? t("t2t.mustSum100") : ""}
+                      </div>
                     </div>
-                  ))}
-                  <div className={`text-[11px] mt-1 ${cfg.tp1 + cfg.tp2 + cfg.tp3 === 100 ? "text-emerald-400" : "text-amber-400"}`}>
-                    {t("t2t.totalLabel")} {cfg.tp1 + cfg.tp2 + cfg.tp3}%{cfg.tp1 + cfg.tp2 + cfg.tp3 !== 100 ? t("t2t.mustSum100") : ""}
+
+                    <button onClick={saveConfig} disabled={savingConn} className="w-full rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2.5 disabled:opacity-60">
+                      {savingConn ? t("t2t.saving") : t("t2t.saveConfig")}
+                    </button>
                   </div>
-                </div>
-
-                <button
-                  onClick={saveConfig}
-                  disabled={savingConn}
-                  className="w-full rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2.5 disabled:opacity-60"
-                >
-                  {savingConn ? t("t2t.saving") : t("t2t.saveConfig")}
-                </button>
-                <button
-                  onClick={() => { setConnError(""); setConnectOpen(true) }}
-                  className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-[#D2A63C]/40 text-[#D2A63C] font-semibold text-[13px] py-2.5"
-                >
-                  <Wallet className="w-4 h-4" /> {t("t2t.manageAccountFull")}
-                </button>
-
-                {/* Zona de risco — fechar tudo de uma vez */}
-                <div className="mt-1 pt-3 border-t border-rose-500/20">
-                  <button
-                    onClick={emergencyStop}
-                    disabled={closingAll}
-                    className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-rose-500/40 text-rose-400 font-semibold text-[13px] py-2.5 disabled:opacity-60"
-                  >
-                    <ShieldCheck className="w-4 h-4" /> {closingAll ? t("t2t.closing") : t("t2t.emergencyStop")}
-                  </button>
-                  <p className="text-[10px] text-zinc-500 mt-1.5 text-center">{t("t2t.emergencyStopHelp")}</p>
-                </div>
-              </>
-            ) : (
-              <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[#D2A63C]" /></div>
+                )}
+              </div>
             )}
-          </div>
-        )}
-      </div>
+
+            {/* Fontes e estratégias: vivem no ecrã Estratégias (interruptores). Aqui só o atalho. */}
+            <button
+              onClick={() => setEcra("estrategias")}
+              className="cartao w-full flex items-center justify-between px-3 py-2.5 text-left text-[12.5px] text-zinc-300"
+            >
+              <span>Fontes e estratégias que recebes</span>
+              <span className="text-[#D2A63C] font-semibold">Estratégias →</span>
+            </button>
+
+            {/* Definições das contas MTM Auto (risco, proteção, limites diários) — só se houver. */}
+            {ligador.contas.some((c) => c.origem === "auto") && (
+              <div>
+                <p className="text-[11px] text-zinc-500 mb-1.5">Contas MTM Auto</p>
+                <MtmAutoPainel apenas="definicoes" />
+              </div>
+            )}
+
+            {t2tConns.length > 0 && (
+              <div className="pt-1">
+                <button
+                  onClick={emergencyStop}
+                  disabled={closingAll}
+                  className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-rose-500/40 text-rose-400 font-semibold text-[13px] py-2.5 disabled:opacity-60"
+                >
+                  <ShieldCheck className="w-4 h-4" /> {closingAll ? t("t2t.closing") : t("t2t.emergencyStop")}
+                </button>
+                <p className="text-[10px] text-zinc-500 mt-1.5 text-center">{t("t2t.emergencyStopHelp")}</p>
+              </div>
+            )}
+          </section>
+
+          <section>
+            <LimitesPlano estado={ligador} />
+          </section>
+        </div>
       )}
 
       {/* O «O que seguir» saiu daqui (27/08). Escolher fontes, ativos e risco por chips era uma
@@ -1626,111 +1516,6 @@ export default function TapToTradeFeed() {
         </div>
       )}
       </>
-      )}
-
-      {connectOpen && (
-        <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center bg-black/70 p-4" onClick={() => !connBusy && setConnectOpen(false)}>
-          <div className="w-full max-w-sm rounded-2xl border border-[#D2A63C]/30 bg-zinc-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2 mb-1">
-              <Wallet className="w-5 h-5 text-[#D2A63C]" />
-              <h3 className="text-base font-bold">{hasAccount ? t("t2t.editMt5Title") : t("t2t.linkMt5Title")}</h3>
-            </div>
-            <p className="text-[11px] text-zinc-400 mb-3">{t("t2t.exclusiveAccountNote")}</p>
-            {hasAccount && (
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 mb-3 text-[11px] text-zinc-400 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-semibold text-white">{conn?.account_label || t("t2t.mt5Account")}</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    conn?.mt5_status === "connected" ? "bg-emerald-500/15 text-emerald-400"
-                      : conn?.mt5_status === "error" ? "bg-rose-500/15 text-rose-400"
-                      : "bg-zinc-700/60 text-zinc-300"
-                  }`}>
-                    {conn?.mt5_status === "connected" ? t("t2t.statusConnected") : conn?.mt5_status === "error" ? t("t2t.statusError") : conn?.mt5_status === "disconnected" ? t("t2t.statusDisconnected") : t("t2t.statusConnecting")}
-                  </span>
-                </div>
-                <div>{t("t2t.loginLabel")} <span className="text-zinc-200">{conn?.mt5_login ?? (conn?.tl_account_id ? `#${conn.tl_account_id}` : "—")}</span> · {conn?.mt5_platform === "tradelocker" ? <TradeLockerBadge /> : (conn?.mt5_platform || "mt5").toUpperCase()}</div>
-                <div className="truncate">{t("t2t.serverLabel")} <span className="text-zinc-200">{conn?.mt5_server || "—"}</span></div>
-                <button
-                  onClick={removeAccount}
-                  disabled={removingConn || connBusy}
-                  className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 text-rose-400 text-[12px] font-semibold px-3 py-1.5 disabled:opacity-60"
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> {removingConn ? t("t2t.removing") : t("t2t.removeAccount")}
-                </button>
-                <p className="text-[10px] text-zinc-500 pt-1">Podes ligar várias contas — aceitar um sinal abre em todas as que tiveres com o Tap to Trade ligado (acima).</p>
-              </div>
-            )}
-            {!hasAccount && (
-              <div className="grid grid-cols-2 gap-2 mb-2.5">
-                {(["mt5", "tradelocker"] as const).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setConnPlataforma(p)}
-                    disabled={connBusy}
-                    className={`rounded-xl border py-2 text-xs font-medium ${connPlataforma === p ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
-                  >
-                    {p === "mt5" ? "MetaTrader 5" : "TradeLocker"}
-                  </button>
-                ))}
-              </div>
-            )}
-            {!hasAccount && connPlataforma === "tradelocker" && (
-              <TradeLockerConnectForm
-                variante="mobile"
-                purpose="tap_to_trade"
-                getToken={token}
-                extraPayload={() => ({ account_label: "T2T" })}
-                onConnected={async () => {
-                  setConnectOpen(false)
-                  setConnPlataforma("mt5")
-                  await loadConnection()
-                }}
-              />
-            )}
-            {!hasAccount && connPlataforma === "mt5" && (
-              <div className="space-y-2.5">
-                {/* Corretora — apenas FTMO, FundedNext, VT Markets */}
-                <div>
-                  <label className="text-[11px] text-zinc-500">{t("t2t.brokerField")}</label>
-                  <div className="grid grid-cols-2 gap-2 mt-1">
-                    {T2T_BROKERS.map((b) => (
-                      <button
-                        key={b.id}
-                        onClick={() => setConnForm({ ...connForm, broker: b.id, server: b.servers[0] })}
-                        className={`rounded-xl border py-2 text-xs font-medium ${connForm.broker === b.id ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
-                      >
-                        {b.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {/* Servidor — apenas os da corretora escolhida */}
-                <div>
-                  <label className="text-[11px] text-zinc-500">{t("t2t.serverField")}</label>
-                  <select
-                    value={connForm.server}
-                    onChange={(e) => setConnForm({ ...connForm, server: e.target.value })}
-                    className="mt-1 w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
-                  >
-                    {(T2T_BROKERS.find((b) => b.id === connForm.broker)?.servers ?? []).map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                {/* Login + password (podes colar) */}
-                <input value={connForm.login} onChange={(e) => setConnForm({ ...connForm, login: e.target.value })} placeholder={t("t2t.loginPlaceholder")} inputMode="numeric" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
-                <input value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} placeholder={t("t2t.passwordPlaceholder")} type="password" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
-              </div>
-            )}
-            {connError && <p className="text-xs text-rose-400 mt-2">{connError}</p>}
-            <div className="flex gap-2 mt-4">
-              <button onClick={() => setConnectOpen(false)} disabled={connBusy} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300">{hasAccount ? t("t2t.close") : t("t2t.cancel")}</button>
-              {!hasAccount && connPlataforma === "mt5" && (
-                <button onClick={connectAccount} disabled={connBusy} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black disabled:opacity-60">{connBusy ? t("t2t.linking") : t("t2t.linkAccount")}</button>
-              )}
-            </div>
-          </div>
-        </div>
       )}
 
       {copySig && <TapToCopyModal content={copySig.content || ""} aoFechar={() => setCopySig(null)} />}

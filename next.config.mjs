@@ -43,6 +43,15 @@ const nextConfig = {
         destination: 'https://mtm-auto.vercel.app/legal/:caminho*',
         permanent: false,
       },
+      // ── MTM Copy descontinuado (fase 1) ─────────────────────────────────────────────────────
+      // As páginas do MTM Copy passam a MTM Auto. 308 (permanente, mantém o método). As rotas
+      // /api/mtmcopy/* NÃO entram aqui — as apps instaladas continuam a chamá-las (o caminho da
+      // API é /api/mtmcopy, que não bate com '/mtmcopy/:caminho*').
+      // As métricas não têm página própria no MTM Auto (o histórico vive dentro da app), por
+      // isso vão também para /mtmauto.
+      { source: '/mtmcopy', destination: '/mtmauto', statusCode: 308 },
+      { source: '/mtmcopy/:caminho*', destination: '/mtmauto', statusCode: 308 },
+      { source: '/app-mobile/mtmcopier', destination: '/mtmauto', statusCode: 308 },
       {
         // Atalho de marca para a app. É um REDIRECT, não um domínio: um domínio na Vercel é um
         // hostname, e um caminho não pode ser um. Para a app viver mesmo em morethanmoney.pt o

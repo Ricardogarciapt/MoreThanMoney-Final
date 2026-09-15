@@ -389,16 +389,8 @@ export default function MobileSidebar({
               </Link>
               )}
 
-              {/* MTMcopier — gestão de contas MT5 */}
-              <Link
-                href="/app-mobile/mtmcopier"
-                onClick={onClose}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
-              >
-                <Send className="w-5 h-5 text-[#D2A63C]" />
-                <span className="flex-1 text-left font-medium">MTMcopier</span>
-                <ChevronRight className="w-4 h-4 text-gray-500" />
-              </Link>
+              {/* MTMcopier removido do menu (fase 1): o MTM Copy foi descontinuado e /app-mobile/mtmcopier
+                  reencaminha para o MTM Auto. As rotas /api/mtmcopy continuam vivas para as apps instaladas. */}
 
               {/* PrimeVerse Hub — abre hub.primeverse.ca DENTRO da app (WebView), sem sair */}
               <Link
@@ -411,7 +403,7 @@ export default function MobileSidebar({
                 <ChevronRight className="w-4 h-4 text-gray-500" />
               </Link>
 
-              {/* Alertas MTM — alertas nativos + gráficos (abaixo de MTMcopier) */}
+              {/* Alertas MTM — alertas nativos + gráficos */}
               <button
                 onClick={() => { handleTabClick("trading-alerts"); onClose() }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"

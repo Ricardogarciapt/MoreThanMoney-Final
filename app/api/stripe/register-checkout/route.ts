@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { opinlyTrack } from '@/lib/opinly/track'
 import { getStripeClient } from '@/lib/stripe-client'
-import { requireStripePriceId } from '@/lib/stripe-prices'
+import { recusaPlanoDescontinuado, requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl, getSiteOrigin } from '@/lib/site-url'
 import { resolveStripePromotionCode } from '@/lib/coupon-stripe-discount'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
@@ -24,6 +24,10 @@ export async function POST(request: NextRequest) {
     if (!planId || !email || !fullName || !username) {
       return NextResponse.json({ error: 'planId, email, fullName e username são obrigatórios' }, { status: 400 })
     }
+
+    // Planos descontinuados (MTM Copy) não abrem checkout novo.
+    const descontinuado = recusaPlanoDescontinuado(planId)
+    if (descontinuado) return NextResponse.json(descontinuado, { status: 410 })
 
     // Trial de 3 dias COM cartão: recolhe o método de pagamento no registo, não cobra
     // nos 3 dias, e ao fim cobra o 1º mês a 34,99€ (intro). Cancela quando quiser.

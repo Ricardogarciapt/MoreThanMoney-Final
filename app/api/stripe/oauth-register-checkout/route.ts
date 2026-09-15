@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { getStripeClient } from "@/lib/stripe-client"
-import { requireStripePriceId } from "@/lib/stripe-prices"
+import { recusaPlanoDescontinuado, requireStripePriceId } from "@/lib/stripe-prices"
 import { buildStripeReturnUrl, getSiteOrigin } from "@/lib/site-url"
 import { isRegisteredMember } from "@/lib/member-access"
 import { buildUsername } from "@/lib/member-profile"
@@ -28,6 +28,10 @@ export async function POST(request: NextRequest) {
     if (!planId || !regToken) {
       return NextResponse.json({ error: "planId e regToken são obrigatórios" }, { status: 400 })
     }
+
+    // Planos descontinuados (MTM Copy) não abrem checkout novo.
+    const descontinuado = recusaPlanoDescontinuado(planId)
+    if (descontinuado) return NextResponse.json(descontinuado, { status: 410 })
 
     let response = NextResponse.next()
     const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
