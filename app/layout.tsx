@@ -17,7 +17,7 @@ import OpinlyIdentify from "@/components/opinly-identify"
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   title: "MoreThanMoney - Plataforma de Trading e Educação Financeira",
-  description: "Plataforma integrada de formação financeira e serviços de automatização com inteligência artificial. Scanners AI, educação financeira, MTM Copy, MTM Auto e muito mais.",
+  description: "Plataforma integrada de formação financeira e serviços de automatização com inteligência artificial. Scanners AI, educação financeira, MTM Auto, MTM Funded e muito mais.",
   keywords: ["trading", "forex", "scanners ai", "educação financeira", "mtmcopier", "tap to trade", "copytrading", "portugal"],
   authors: [{ name: "MoreThanMoney" }],
   creator: "MoreThanMoney",
