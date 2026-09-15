@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase"
 import { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-form"
 import { MtmFundedBadge, SoLeituraBadge } from "@/components/ligar-mtmfunded/mtmfunded-connect-form"
 import { ListaContas, LimitesPlano, useContasLigadas } from "@/components/contas/ligador-contas"
+import CopiasEntreContas from "@/components/contas/copias-entre-contas"
 import { isAllowedT2TSource, matchesT2TPrefs, t2tSourceKey, T2T_SOURCES, T2T_ASSET_CLASSES } from "@/lib/mtmcopy/t2t-source"
 import {
   TrendingUp,
@@ -998,6 +999,8 @@ export default function TapToTradeFeed() {
           <section>
             <ListaContas estado={ligador} onMudou={loadConnection} />
           </section>
+
+          <CopiasEntreContas estado={ligador} />
 
           <section className="space-y-3">
             <p className="etiqueta">Execução</p>

@@ -235,7 +235,7 @@ export function motivoCopiaDoDireito(d: DireitoMtmAuto): MotivoCopia {
   }
 }
 
-function ehPremium(perfil: Record<string, unknown> | null): boolean {
+export function ehPremium(perfil: Record<string, unknown> | null): boolean {
   const nivel = String(perfil?.membership_level ?? '').toLowerCase()
   const categoria = String(perfil?.member_category ?? '').toLowerCase()
   const tipo = String(perfil?.user_type ?? '').toLowerCase()

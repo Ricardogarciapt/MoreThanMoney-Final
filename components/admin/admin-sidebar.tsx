@@ -114,16 +114,16 @@ export default function AdminSidebar({
           )
         })}
         <Link
-          href="/admin/mtmcopy"
+          href="/admin/mtmauto-copia"
           className={cn(
             "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-            pathname === "/admin/mtmcopy" || pathname.startsWith("/admin/mtmcopy/")
+            pathname === "/admin/mtmcopy" || pathname.startsWith("/admin/mtmcopy/") || pathname.startsWith("/admin/mtmauto-copia")
               ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
               : "border-l-2 border-transparent text-gray-400 hover:bg-gray-800/50 hover:text-white"
           )}
         >
           <Send className="w-5 h-5 shrink-0" />
-          MTMcopier
+          MTM Auto · Cópia
         </Link>
         <Link
           href="/admin/social"

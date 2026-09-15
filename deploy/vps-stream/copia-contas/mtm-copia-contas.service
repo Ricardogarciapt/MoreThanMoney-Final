@@ -1,0 +1,22 @@
+[Unit]
+Description=MTM - copia entre contas (MTM Funded / MT4 / MT5 / TradeLocker), em sombra por defeito
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/mtm-copia-contas.env
+# O SDK da MetaApi guarda a cache de sincronizacao em ./.metaapi: precisa de uma pasta escrevivel.
+StateDirectory=mtm-copia-contas
+WorkingDirectory=/var/lib/mtm-copia-contas
+ExecStart=/usr/bin/node --max-old-space-size=512 /opt/mtm/copia-contas/servico.js
+Restart=always
+RestartSec=10
+DynamicUser=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=768M
+
+[Install]
+WantedBy=multi-user.target
