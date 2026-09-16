@@ -23,6 +23,7 @@ import {
   decidirEstadoDaSala,
   podeOperarSala,
   salasOperadasPor,
+  normalizarTituloGravacao,
 } from '../lms-sala-introducao'
 
 let ok = 0
@@ -388,6 +389,30 @@ eq('o on-dvr não põe lá o operador', rotaDvr.includes('operador_educator_id')
 const rotaAdminDvr = readFileSync(join(process.cwd(), 'app/api/admin/live-sessions/dvr/route.ts'), 'utf-8')
 eq('o /admin mostra quem operou', rotaAdminDvr.includes('(operador)'), true)
 eq('o formador continua a ganhar quando existe', /educatorName:\s*\n?\s*j\.educator\?\.display_name \|\|/.test(rotaAdminDvr), true)
+
+
+// ── 7g. TÍTULO DE CADA GRAVAÇÃO (107) ──────────────────────────────────────
+// O YouTube recusa o upload INTEIRO com um título acima de 100 caracteres ou com < >.
+eq('título limpo passa', normalizarTituloGravacao('  Como ligar   a conta  '), 'Como ligar a conta')
+eq('vazio vira null (fica o nome da sala)', normalizarTituloGravacao('   '), null)
+eq('não-texto vira null', normalizarTituloGravacao(42), null)
+eq('< e > saem', normalizarTituloGravacao('Aula <1> de 3'), 'Aula 1 de 3')
+eq('corta a 100', (normalizarTituloGravacao('x'.repeat(150)) || '').length, 100)
+const rotaPresenca107 = readFileSync(join(process.cwd(), 'app/api/live-sessions/educator-auth/presence/route.ts'), 'utf-8')
+eq('o título só se grava ao iniciar numa sala de gravação', /if \(nuncaAoVivo && wantsStart\) updates\.gravacao_titulo = normalizarTituloGravacao\(body\.titulo\)/.test(rotaPresenca107), true)
+const rotaDvr107 = readFileSync(join(process.cwd(), 'app/api/live-sessions/dvr/on-dvr/route.ts'), 'utf-8')
+eq('o on_dvr copia o título para a gravação', /titulo: st\.nunca_ao_vivo \? \(\(st\.gravacao_titulo/.test(rotaDvr107), true)
+const rotaWorker107 = readFileSync(join(process.cwd(), 'app/api/live-sessions/dvr/worker/route.ts'), 'utf-8')
+eq('o worker usa o título da gravação', /const title = \(\(yt\.titulo/.test(rotaWorker107), true)
+eq('a playlist não depende do título da gravação', /tituloDaPlaylist =\s*\n\s*alvoProprio \|\|/.test(rotaWorker107), true)
+const studio107 = readFileSync(join(process.cwd(), 'components/live/educator-studio.tsx'), 'utf-8')
+eq('o studio tem o campo do título', studio107.includes('Título desta sessão'), true)
+eq('o studio envia o título ao iniciar', /setPresence\(sala\.id, true, titulosGravacao\[sala\.id\]/.test(studio107), true)
+
+// ── 7h. O BLOCO DO ONBOARDING VÊ-SE SEM PLAYLIST ───────────────────────────
+const curso107 = readFileSync(join(process.cwd(), 'components/intro/curso-introducao.tsx'), 'utf-8')
+eq('só o bloco aparece sem playlist', curso107.includes('if (!pronto && feitio !== "bloco") return null'), true)
+eq('sem playlist não há leitor', curso107.includes('{pronto && leitor}'), true)
 
 // ── 8. constantes da sala ──────────────────────────────────────────────────
 eq('chave de sistema estável', CHAVE_SALA_INTRODUCAO, 'introducao')

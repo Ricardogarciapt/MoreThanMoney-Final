@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
   //    traduzido). Extraído do master multi-áudio; o master fica no DVR (1 por sala).
   const { data: yt } = await supabase
     .from("lms_dvr_jobs")
-    .select("id, stream_id, stream_key, base_file, multi_file, langs, subtitle_langs, youtube_playlist_id")
+    .select("id, stream_id, stream_key, base_file, multi_file, langs, subtitle_langs, youtube_playlist_id, titulo")
     .eq("youtube_status", "pending")
     .eq("status", "ready")
     .order("updated_at", { ascending: true })
@@ -75,7 +75,9 @@ export async function GET(req: NextRequest) {
       )
       .eq("id", yt.stream_id)
       .maybeSingle()
-    const title = (s?.title as string) || "Sessão MoreThanMoney"
+    // Título próprio da gravação (sala de gravação, escrito no studio) manda sobre o nome da sala.
+    // A playlist não muda: é a da sala.
+    const title = ((yt.titulo as string | null) || "").trim() || (s?.title as string) || "Sessão MoreThanMoney"
     const academy = ((s?.academy as { name?: string } | null)?.name as string) || "MoreThanMoney"
     const srcLang = normalizeCaptionLang((s?.caption_source_language as string) || "pt")
 

@@ -65,6 +65,8 @@ type StreamRow = {
   operador_educator_id?: string | null
   /** A gravar desde quando (null = parada). Nunca é «em direto». */
   gravacao_iniciada_em?: string | null
+  /** Título da gravação em curso (ou da última) numa sala de gravação. */
+  gravacao_titulo?: string | null
 }
 
 const CATEGORIES = [{ value: "", label: "— Categoria —" }, ...LMS_CATEGORY_OPTIONS]
@@ -388,14 +390,17 @@ export default function EducatorStudio() {
     }
   }
 
-  const setPresence = async (streamId: string, isLive: boolean) => {
+  // Título a usar na próxima gravação de cada sala de gravação (só vive no ecrã até carregar em iniciar).
+  const [titulosGravacao, setTitulosGravacao] = useState<Record<string, string>>({})
+
+  const setPresence = async (streamId: string, isLive: boolean, titulo?: string) => {
     setError("")
     try {
       const res = await fetch("/api/live-sessions/educator-auth/presence", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ streamId, action: isLive ? "start" : "pause" }),
+        body: JSON.stringify({ streamId, action: isLive ? "start" : "pause", ...(isLive && titulo !== undefined ? { titulo } : {}) }),
       })
 
       if (!res.ok) {
@@ -741,7 +746,11 @@ export default function EducatorStudio() {
                             size="sm"
                             style={{ backgroundColor: aGravar ? "#b45309" : "#16a34a" }}
                             className="text-white transition-all hover:brightness-110"
-                            onClick={() => setPresence(sala.id, !aGravar)}
+                            onClick={() =>
+                              aGravar
+                                ? setPresence(sala.id, false)
+                                : setPresence(sala.id, true, titulosGravacao[sala.id] ?? "")
+                            }
                           >
                             <Radio className="mr-1 h-3 w-3 text-white" />
                             {aGravar ? "Terminar transmissão" : "Iniciar transmissão"}
@@ -750,6 +759,30 @@ export default function EducatorStudio() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3 p-4">
+                      {/* Um nome por gravação: com várias sessões na mesma playlist deixava de se
+                          saber qual é qual. Só se escreve antes de iniciar; a playlist não muda. */}
+                      <div className="space-y-1.5">
+                        <label htmlFor={`titulo-${sala.id}`} className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                          Título desta sessão
+                        </label>
+                        {aGravar ? (
+                          <p className="rounded-md border border-amber-900/40 bg-black/40 px-3 py-2 text-sm text-white">
+                            {sala.gravacao_titulo || <span className="text-gray-500">Sem título — o vídeo fica com o nome da sala</span>}
+                          </p>
+                        ) : (
+                          <Input
+                            id={`titulo-${sala.id}`}
+                            maxLength={100}
+                            placeholder="Ex.: Como ligar a tua conta ao MTM Auto"
+                            value={titulosGravacao[sala.id] ?? ""}
+                            onChange={(e) => setTitulosGravacao((t) => ({ ...t, [sala.id]: e.target.value }))}
+                            className="border-gray-800 bg-black/40 text-white"
+                          />
+                        )}
+                        <p className="text-xs text-gray-500">
+                          É o nome do vídeo no YouTube. Vai para a mesma playlist, <strong className="text-gray-400">MTM Introdução</strong>.
+                        </p>
+                      </div>
                       <p className="text-xs text-gray-500">
                         Carrega em <strong className="text-gray-400">Iniciar transmissão</strong> e depois liga o OBS com
                         estes dois campos. A gravação começa quando o OBS liga e fecha quando o paras.

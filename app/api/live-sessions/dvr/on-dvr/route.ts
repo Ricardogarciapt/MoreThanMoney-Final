@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     //  3. A mais recentemente atualizada — o que restava antes, agora só como recurso.
     const { data: sts } = await supabase
       .from("lms_streams")
-      .select("id, educator_id, is_live, gravacao_iniciada_em, updated_at")
+      .select("id, educator_id, is_live, gravacao_iniciada_em, gravacao_titulo, nunca_ao_vivo, updated_at")
       .eq("stream_key", streamKey)
       .order("is_live", { ascending: false })
       .order("gravacao_iniciada_em", { ascending: false, nullsFirst: false })
@@ -63,6 +63,9 @@ export async function POST(req: NextRequest) {
           educator_id: st.educator_id,
           stream_key: streamKey,
           base_file: baseFile,
+          // Copiado AGORA, e não lido na hora do upload: se ele iniciar outra gravação com outro
+          // título antes de esta subir, cada vídeo fica com o nome certo.
+          titulo: st.nunca_ao_vivo ? ((st.gravacao_titulo as string | null) ?? null) : null,
           status: auto ? "pending" : "recorded",
           // GRAVAÇÃO SEM DOBRAGEM (decisão Ricardo 2026-08-18): o DVR guarda só o ORIGINAL + CC.
           // A dobragem existe apenas na sessão AO VIVO. Mantemos o campo por retrocompatibilidade

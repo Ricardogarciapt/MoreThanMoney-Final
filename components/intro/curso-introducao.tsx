@@ -29,7 +29,12 @@ export default function CursoIntroducao({
   const [aberto, setAberto] = useState(false)
 
   const curso = config?.curso
-  if (!curso?.playlistUrl) return null
+  if (!curso) return null
+  // Sem playlist, o botão e o cartão não desenham nada (um leitor vazio é pior do que nada). O
+  // BLOCO do onboarding é a excepção pedida pelo dono: o lugar do curso vê-se já, em «preparação»,
+  // e vira leitor quando o DVR criar a playlist na primeira gravação da sala.
+  const pronto = Boolean(curso.playlistUrl)
+  if (!pronto && feitio !== "bloco") return null
 
   const abrir = () => setAberto(true)
   const leitor = (
@@ -38,7 +43,7 @@ export default function CursoIntroducao({
       aoFechar={() => setAberto(false)}
       titulo={curso.titulo}
       descricao={curso.descricao}
-      url={curso.playlistUrl}
+      url={curso.playlistUrl ?? ""}
       tipo="playlist"
     />
   )
@@ -60,29 +65,64 @@ export default function CursoIntroducao({
   }
 
   if (feitio === "bloco") {
+    const corpo = (
+      <>
+        {/* A capa tem o título desenhado: com a proporção dela vê-se inteira. */}
+        <span className="relative block aspect-video w-full shrink-0 overflow-hidden rounded-xl bg-gray-900 sm:w-[42%]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={curso.capa}
+            alt=""
+            className={`h-full w-full object-cover transition duration-300 ${pronto ? "group-hover:scale-[1.03]" : "opacity-40 grayscale"}`}
+          />
+          {pronto && (
+            <span className="absolute inset-0 grid place-items-center bg-black/20">
+              <span className="grid h-14 w-14 place-items-center rounded-full bg-[#D2A63C] text-black shadow-lg">
+                <PlayCircle className="h-7 w-7" />
+              </span>
+            </span>
+          )}
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <span
+            className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+              pronto ? "border-[#D2A63C]/40 text-[#D2A63C]" : "border-gray-700 text-gray-400"
+            }`}
+          >
+            <GraduationCap className="h-3 w-3" />
+            {pronto ? "Curso de introdução" : "Curso em vídeo · em preparação"}
+          </span>
+          <span className="block text-lg font-semibold text-white">{curso.titulo}</span>
+          <span className="block text-[14px] leading-relaxed text-[#b9b9c3]">
+            {pronto
+              ? curso.descricao ||
+                "Vê o percurso inteiro antes de escolher: o que está incluído, por onde se começa e o que fazer a seguir."
+              : "O curso em vídeo está a ser gravado e fica disponível aqui assim que estiver pronto."}
+          </span>
+          {pronto && (
+            <span className="mt-1 inline-flex items-center gap-2 text-[14px] font-semibold text-[#D2A63C]">
+              <PlayCircle className="h-4 w-4" />
+              Ver o curso
+            </span>
+          )}
+        </span>
+      </>
+    )
+    const moldura = "flex w-full flex-col items-start gap-5 rounded-2xl border p-5 text-left sm:flex-row sm:items-center"
     return (
       <section className={className}>
-        <button
-          type="button"
-          onClick={abrir}
-          className="group flex w-full flex-col items-start gap-4 rounded-2xl border border-[#D2A63C]/35 bg-[#D2A63C]/[0.06] p-6 text-left transition hover:border-[#D2A63C]/60 sm:flex-row sm:items-center"
-        >
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#D2A63C]/15 text-[#D2A63C]">
-            <GraduationCap className="h-6 w-6" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[12px] uppercase tracking-[0.18em] text-[#8a8a95]">
-              Curso de introdução
-            </span>
-            <span className="mt-1 block text-lg font-semibold text-white">{curso.titulo}</span>
-            <span className="mt-1 block text-[14px] leading-relaxed text-[#b9b9c3]">
-              {curso.descricao ||
-                "Vê o percurso inteiro antes de escolher: o que está incluído, por onde se começa e o que fazer a seguir."}
-            </span>
-          </span>
-          <span className="shrink-0 text-[14px] font-semibold text-[#D2A63C]">Ver o curso →</span>
-        </button>
-        {leitor}
+        {pronto ? (
+          <button
+            type="button"
+            onClick={abrir}
+            className={`group ${moldura} border-[#D2A63C]/35 bg-[#D2A63C]/[0.06] transition hover:border-[#D2A63C]/60`}
+          >
+            {corpo}
+          </button>
+        ) : (
+          <div className={`${moldura} border-dashed border-[#D2A63C]/25 bg-gray-950/60`}>{corpo}</div>
+        )}
+        {pronto && leitor}
       </section>
     )
   }

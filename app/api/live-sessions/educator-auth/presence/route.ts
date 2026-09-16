@@ -5,7 +5,7 @@ import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-a
 import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
 import { DEFAULT_RESTREAM_INGEST_URL, normalizeRestreamIngestUrl } from "@/lib/lms-restream"
 import { normalizeIngestProvider } from "@/lib/lms-stream-options"
-import { decidirEstadoDaSala, podeOperarSala } from "@/lib/lms-sala-introducao"
+import { decidirEstadoDaSala, normalizarTituloGravacao, podeOperarSala } from "@/lib/lms-sala-introducao"
 
 const supabase = getSupabaseAdmin()
 
@@ -117,6 +117,10 @@ export async function POST(request: NextRequest) {
       querParar: wantsPause,
     })
     Object.assign(updates, campos)
+    // O título da gravação só existe nas salas de gravação e só se escreve ao INICIAR. Não se
+    // apaga ao terminar: o ficheiro chega ao DVR depois do «Terminar», e é nesse momento que o
+    // `on_dvr` o copia para a gravação.
+    if (nuncaAoVivo && wantsStart) updates.gravacao_titulo = normalizarTituloGravacao(body.titulo)
 
     // Ignora tentativa de regenerar chave quando a política é chave fixa.
     if (forceRegenerateKey && wantsGenerate) {

@@ -235,3 +235,19 @@ export function decidirEstadoDaSala(entrada: {
 
   return { campos, notificar: Boolean(entrada.querIniciar) }
 }
+
+/**
+ * Título de UMA gravação da sala de gravação («Introdução»), escrito no studio antes de carregar
+ * em «Iniciar transmissão». Serve para organizar: cada vídeo sobe com o seu nome, sempre para a
+ * mesma playlist.
+ *
+ * O YouTube recusa títulos com mais de 100 caracteres ou com `<`/`>` — e recusa o upload inteiro,
+ * não só o título. Por isso limpa-se aqui, antes de chegar à base. Vazio = null (o vídeo fica com
+ * o nome da sala, como até agora).
+ */
+export function normalizarTituloGravacao(valor: unknown): string | null {
+  if (typeof valor !== 'string') return null
+  const limpo = valor.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim()
+  if (!limpo) return null
+  return limpo.length > 100 ? limpo.slice(0, 100).trimEnd() : limpo
+}
