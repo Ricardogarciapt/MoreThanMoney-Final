@@ -8,7 +8,9 @@ import {
   pickAssetsToRefresh, quoteSourcePlan, refreshDecision,
 } from '@/lib/mtm-terminal-live'
 import { basisAdjust, computeTechnicals, computeTerminalLevels, type Candle } from '@/lib/mtm-terminal-technicals'
-import { isCurrentGenModel, modelCandidates } from '@/lib/mtm-terminal-analysis'
+import {
+  isCurrentGenModel, missingDashboardParts, modelCandidates, modelTuning, normaliseDashboard,
+} from '@/lib/mtm-terminal-analysis'
 
 let ok = 0, ko = 0
 function t(nome: string, real: unknown, esperado: unknown) {
@@ -97,6 +99,53 @@ if (envBackup.a === undefined) delete process.env.ANTHROPIC_MODEL
 if (envBackup.m === undefined) delete process.env.MTM_TERMINAL_MODEL
 t('sonnet-5 sem temperature', isCurrentGenModel('claude-sonnet-5'), true)
 t('sonnet-4-5 com temperature', isCurrentGenModel('claude-sonnet-4-5'), false)
+
+// ─── Regressão 2026-09-16: análises guardadas OCAS (sem veredito nem cenários) ───────────────
+// ANTHROPIC_MODEL=claude-sonnet-4-5 não é da geração atual, e o `format` estava preso ao mesmo
+// teste do `effort`: o modelo ficava sem schema, inventava os nomes das chaves e a página mostrava
+// cartões vazios — sem UM erro nos logs, porque a linha era guardada como sucesso.
+console.log('— parâmetros por modelo —')
+const FMT = { type: 'json_schema' as const, schema: { type: 'object' } }
+t('sonnet-4-5: schema SIM, effort NÃO, temperature SIM',
+  modelTuning('claude-sonnet-4-5', FMT),
+  { output_config: { format: FMT }, temperature: 0.2 })
+t('sonnet-5: schema e effort, sem temperature',
+  modelTuning('claude-sonnet-5', FMT),
+  { output_config: { effort: 'low', format: FMT } })
+t('pesquisa web (sem schema): sonnet-4-5 não leva output_config',
+  modelTuning('claude-sonnet-4-5', null), { temperature: 0.2 })
+
+console.log('— análise incompleta —')
+const entrada = {
+  asset: findTerminalAsset('BTCUSD')!,
+  quote: { price: 75_000, source: 'Binance' },
+  levels: { supports: [74_968], resistances: [77_607] },
+  technicals: null,
+  signals: [],
+} as never
+const semFontes = new Map() as never
+// A forma EXATA que o claude-sonnet-4-5 sem schema devolveu em produção.
+const semSchema = normaliseDashboard({
+  verdict: { bias: 'NEUTRO', conviction: 'Média', summary: 'Consolidação lateral.' },
+  macro: ['fator a'],
+  scenarios: [
+    { name: 'Bull – rutura acima da EMA20', movePct: 4.9, trigger: 'fecho acima de 77607' },
+    { name: 'Base – consolidação', movePct: '0,8 %', trigger: 'mantém o intervalo' },
+    { name: 'Bear – perda do suporte', movePct: -3.7, trigger: 'fecho abaixo de 74968' },
+  ],
+  risks: ['risco a'],
+  recommendation: { bias: 'AGUARDAR', timing: 'esperar', risk: 'stop técnico' },
+} as never, entrada, semFontes, false)
+t('sinónimo bias/summary é aceite', [semSchema.verdict.direction, semSchema.verdict.rationale], ['NEUTRO', 'Consolidação lateral.'])
+t('conviction «Média» → «Médio»', semSchema.verdict.conviction, 'Médio')
+t('kind lido do nome do cenário', semSchema.scenarios.map((s) => s.kind), ['bull', 'base', 'bear'])
+t('movePct em texto («0,8 %») é lido', semSchema.scenarios[1].movePct, 0.8)
+t('triggers lê o sinónimo trigger', semSchema.scenarios[0].triggers, 'fecho acima de 77607')
+t('análise completa não tem partes em falta', missingDashboardParts(semSchema), [])
+
+const oco = normaliseDashboard({ macro: ['só macro'], risks: ['só risco'] } as never, entrada, semFontes, false)
+t('análise oca é detetada (nunca se guarda)', missingDashboardParts(oco),
+  ['leitura do veredito', 'cenários', 'recomendação'])
 
 console.log(`\n${ok} passaram, ${ko} falharam`)
 process.exit(ko ? 1 : 0)
