@@ -41,6 +41,10 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { resolve, join } from 'path'
 import { createRequire } from 'module'
 import { pipSizeForSymbol } from '../../lib/mtmcopy/trade-outcome'
+import {
+  percentil, piorSequencia, replicar as replicarBase,
+  type Direcao, type Perfil, type Resultado, type Sinal, type Vela,
+} from '../../lib/estudos/replay-velas'
 
 const requireCjs = createRequire(__filename)
 
@@ -55,15 +59,6 @@ const TF = process.argv.includes('--tf') ? process.argv[process.argv.indexOf('--
 const SAIDA = resolve(__dirname, `../../docs/analise-perfil-gk-aurum${TF === '15m' ? '' : `-${TF}`}.md`)
 /** 3 dias. O GoldKiller é de 5/15m e o Aurum de 15/60m: o que não resolve em 3 dias já não é o trade. */
 const JANELA_BARRAS = TF === '5m' ? 864 : 288
-/** Taxa da Bybit nos dois lados, em fracção do preço — o «spread» dos perpétuos. */
-const CUSTO_PERP = 0.0005
-
-type Direcao = 'buy' | 'sell'
-interface Vela { t: number; o: number; h: number; l: number; c: number }
-interface Sinal {
-  id: string; em: number; ticker: string; tv: string; direcao: Direcao
-  entrada: number; sl: number; tps: number[]
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Sinais
@@ -176,175 +171,8 @@ async function velasDe(ticker: string, refrescar: boolean): Promise<{ velas: Vel
   return { velas: null, tv: null, erro: ultimoErro }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Replicação de um sinal
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Meio spread, em preço. */
-function meioSpread(ticker: string, preco: number): number {
-  const t = ticker.toUpperCase()
-  if (t === 'XAUUSD') return 0.32 / 2
-  if (t === 'US30') return 3.6 / 2
-  if (/^(USDJPY|USDCAD|EURUSD|GBPUSD|NAS100)$/.test(t)) return pipSizeForSymbol(t) * (t === 'NAS100' ? 20 : 1.5) / 2
-  return (preco * CUSTO_PERP) / 2
-}
-
-/** Os preços de uma vela pela ordem mais desfavorável (reconstituicao.ts → ticksDaVela). */
-const ticksDaVela = (v: Vela, d: Direcao): number[] => (d === 'buy' ? [v.l, v.h, v.c] : [v.h, v.l, v.c])
-
-export interface Perfil {
-  nome: string
-  /** gatilho do break-even, em R (null = sem break-even) */
-  beR: number | null
-  /** lucro fechado pelo break-even, em R */
-  beOffsetR: number
-  /** onde o trailing arranca, em R (null = sem trailing) */
-  trailArranqueR: number | null
-  /** distância do trailing, em R */
-  trailDistanciaR: number
-}
-
-interface Resultado {
-  /** resultado total da posição em R (soma das partes) */
-  R: number
-  motivo: 'sl' | 'tp' | 'be' | 'trailing' | 'aberta'
-  /** maior excursão a favor antes do stop original, em R */
-  mfeR: number
-  /** maior excursão contra, em R */
-  maeR: number
-  /** o baseline (SL original + alvos, sem BE nem trailing) bateu no stop? */
-  barras: number
-}
-
-/**
- * Replica UM sinal sobre as velas com um perfil de gestão. `perfil` a null = baseline: parciais e
- * alvos iguais, sem break-even e sem trailing — é contra isto que se mede o que o BE salvou e o
- * que cortou cedo.
- */
-function replicar(s: Sinal, velas: Vela[], perfil: Perfil | null): Resultado | { erro: string } {
-  const sinal = s.direcao === 'buy' ? 1 : -1
-  const meio = meioSpread(s.ticker, s.entrada)
-  // Entra-se ao preço anunciado, no lado caro do spread.
-  const entrada = s.entrada + sinal * meio
-  const Rp = Math.abs(entrada - s.sl)
-  if (!(Rp > 0)) return { erro: 'risco zero depois do spread' }
-
-  const i0 = velas.findIndex((v) => v.t * 1000 >= s.em)
-  if (i0 < 0) return { erro: 'sinal depois da última vela' }
-  const janela = velas.slice(i0, i0 + JANELA_BARRAS)
-  if (janela.length < 4) return { erro: 'menos de 4 velas depois do sinal' }
-  // Sem vela nos 30 min a seguir ao alerta não se replica (buraco no histórico / mercado fechado).
-  if (janela[0].t * 1000 - s.em > 30 * 60 * 1000) return { erro: 'sem velas no histórico à hora do sinal' }
-
-  const tpFinal = s.tps[s.tps.length - 1]
-  const partes = [
-    { pct: 0.5, preco: s.tps[0], feito: false },
-    { pct: 0.25, preco: s.tps[1] ?? tpFinal, feito: false },
-  ].filter((p) => p.preco != null && (p.preco - entrada) * sinal > 0 && (p.preco - tpFinal) * sinal < 0)
-
-  let sl = s.sl
-  let vivo = 1
-  let R = 0
-  let motivo: Resultado['motivo'] = 'aberta'
-  let mfe = 0
-  let mae = 0
-  let slOriginalTocado = false
-  let barras = 0
-
-  const passo = Math.max(pipSizeForSymbol(s.ticker), perfil ? (perfil.trailDistanciaR * Rp) / 10 : Infinity)
-
-  for (const v of janela) {
-    barras++
-    for (const medio of ticksDaVela(v, s.direcao)) {
-      // Fecha-se no lado barato do spread.
-      const x = medio - sinal * meio
-      const favor = (x - entrada) * sinal
-
-      // MFE/MAE do CAMINHO: até ao stop original, sem gestão pelo meio.
-      if (!slOriginalTocado) {
-        if (favor > mfe) mfe = favor
-        if (favor < mae) mae = favor
-        if ((x - s.sl) * sinal <= 0) slOriginalTocado = true
-      }
-
-      if (motivo !== 'aberta') continue
-
-      // 1) SL primeiro — num salto de preço o stop ganha ao alvo
-      if ((x - sl) * sinal <= 0) {
-        R += (vivo * (sl - entrada) * sinal) / Rp
-        motivo = sl === s.sl ? 'sl' : (perfil?.beR != null && Math.abs(sl - (entrada + sinal * perfil.beOffsetR * Rp)) < 1e-12 ? 'be' : 'trailing')
-        vivo = 0
-        continue
-      }
-
-      // 2) parciais
-      for (const parte of partes) {
-        if (parte.feito) break
-        if ((x - parte.preco) * sinal < 0) break
-        parte.feito = true
-        R += (parte.pct * (parte.preco - entrada) * sinal) / Rp
-        vivo = Math.max(0, vivo - parte.pct)
-      }
-      if (vivo <= 0) { motivo = 'tp'; continue }
-
-      if (perfil) {
-        // 3) break-even (só aperta, e só se ficar do lado certo do preço)
-        if (perfil.beR != null && favor >= perfil.beR * Rp - 1e-12) {
-          const nivel = entrada + sinal * perfil.beOffsetR * Rp
-          if ((nivel - sl) * sinal > 0 && (x - nivel) * sinal > 0) sl = nivel
-        }
-        // 4) trailing
-        if (perfil.trailArranqueR != null && favor >= perfil.trailArranqueR * Rp - 1e-12) {
-          const candidato = x - sinal * perfil.trailDistanciaR * Rp
-          if ((candidato - sl) * sinal >= passo - 1e-12) sl = candidato
-        }
-      }
-
-      // 5) TP final
-      if ((x - tpFinal) * sinal >= 0) {
-        R += (vivo * (tpFinal - entrada) * sinal) / Rp
-        vivo = 0
-        motivo = 'tp'
-      }
-    }
-    // Só se pára quando a posição fechou E o caminho já tocou o stop original (o MFE precisa do resto).
-    if (motivo !== 'aberta' && slOriginalTocado) break
-  }
-
-  if (motivo === 'aberta' && vivo > 0) {
-    // Fica aberta: marca-se a mercado no fim da janela, que é o que o dono veria na conta.
-    const ultimo = janela[janela.length - 1].c - sinal * meio
-    R += (vivo * (ultimo - entrada) * sinal) / Rp
-  }
-
-  return { R, motivo, mfeR: mfe / Rp, maeR: mae / Rp, barras }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Estatística
-// ─────────────────────────────────────────────────────────────────────────────
-
-const percentil = (xs: number[], p: number): number => {
-  if (!xs.length) return NaN
-  const s = [...xs].sort((a, b) => a - b)
-  const i = (s.length - 1) * p
-  const lo = Math.floor(i)
-  const hi = Math.ceil(i)
-  return lo === hi ? s[lo] : s[lo] + (s[hi] - s[lo]) * (i - lo)
-}
-
-/** Pior sequência: a maior queda acumulada em R pela ordem cronológica. */
-function piorSequencia(rs: number[]): number {
-  let pico = 0
-  let acc = 0
-  let pior = 0
-  for (const r of rs) {
-    acc += r
-    if (acc > pico) pico = acc
-    if (acc - pico < pior) pior = acc - pico
-  }
-  return pior
-}
+// Replicação e estatística: lib/estudos/replay-velas.ts (partilhado com a sombra das estratégias).
+const replicar = (s: Sinal, velas: Vela[], perfil: Perfil | null) => replicarBase(s, velas, perfil, { janelaBarras: JANELA_BARRAS })
 
 const f = (x: number, c = 2) => (Number.isFinite(x) ? x.toFixed(c) : 'na')
 

@@ -259,6 +259,11 @@ const pos = (v: unknown): number | null => {
   return v != null && v !== '' && Number.isFinite(n) && n > 0 ? n : null
 }
 
+/**
+ * NOTA: `sinais_config.modo` (ex.: `'sombra'` no MTM Scanner, migração 108) NÃO é lido aqui nem por
+ * nenhum executor — é uma etiqueta para o Centro de Controlo. Quem decide se uma estratégia executa
+ * é `mtmauto_providers.ativo` (e `SLUGS_QUE_NAO_EXECUTAM`). A sombra está em lib/mtmauto/sombra.
+ */
 export function configDoProvider(p: Record<string, unknown> | null | undefined): ConfigSinais {
   const c = { ...CONFIG_PADRAO }
   if (!p) return c

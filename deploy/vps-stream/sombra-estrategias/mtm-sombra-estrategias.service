@@ -1,0 +1,18 @@
+[Unit]
+Description=MTM sombra das estrategias - mede o que uma estrategia DESLIGADA teria feito (MTM Scanner), 1 escrita por dia
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Reutiliza o ficheiro do motor em tempo real: so precisa de SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.
+EnvironmentFile=/etc/mtm-motor-real.env
+ExecStart=/usr/bin/node --max-old-space-size=384 /opt/mtm/sombra-estrategias/sombra.js
+# 15 simbolos x velas M15 do TradingView: ~1 min; o tecto evita um websocket pendurado para sempre.
+TimeoutStartSec=15min
+DynamicUser=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=512M

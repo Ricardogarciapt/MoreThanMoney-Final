@@ -40,10 +40,49 @@ export interface EstrategiaCentro {
   desempenho30d: { sinais: number; fechados: number; incoerentes: number; pips: number; pct: number | null; acerto: number | null; dinheiro: number | null; execucoes: number }
   divergencias: string[]
   ultimoSinal: string | null
+  /**
+   * 'sombra' quando `sinais_config.modo = 'sombra'` e a estratégia NÃO executa (`ativo = false`):
+   * é medida por services/sombra-estrategias sem abrir nada. Etiqueta — quem decide é `ativo`.
+   */
+  modo: 'sombra' | null
 }
 
-export async function carregarEstrategias(): Promise<{ estrategias: EstrategiaCentro[]; veredictoPendente: boolean; fontePendente: boolean; lidaEm: string }> {
+/** Uma linha de `estrategia_sombra_dia` (migração 108), como o painel a usa. */
+export interface DiaSombra {
+  dia: string
+  trades: number
+  vitorias: number
+  r_total: number
+  r_medio: number | null
+  pior_sequencia: number
+  perdas_seguidas: number
+  exposicao_max: number
+  abertas: number
+  definitivo: boolean
+  ideias: number | null
+  passaram_gate: number | null
+  atualizado_em: string | null
+}
+
+export interface SombraCentro {
+  slug: string
+  nome: string
+  /** a estratégia está mesmo desligada? (se não estiver, a sombra é redundante e o painel avisa) */
+  executa: boolean
+  gestao: Record<string, unknown> | null
+  dias: DiaSombra[]
+}
+
+/** Dias de sombra mostrados no cartão. */
+export const DIAS_SOMBRA = 14
+
+export async function carregarEstrategias(): Promise<{ estrategias: EstrategiaCentro[]; sombras: SombraCentro[]; sombraPendente: boolean; veredictoPendente: boolean; fontePendente: boolean; lidaEm: string }> {
   return (await emCache('centro:estrategias', 30_000, lerEstrategias)).v
+}
+
+const modoDe = (p: Linha): 'sombra' | null => {
+  const cfg = p.sinais_config && typeof p.sinais_config === 'object' ? (p.sinais_config as Record<string, unknown>) : {}
+  return cfg.modo === 'sombra' ? 'sombra' : null
 }
 
 async function lerEstrategias() {
@@ -116,11 +155,37 @@ async function lerEstrategias() {
         dinheiro: execP.length ? Math.round(dinheiro * 100) / 100 : null, execucoes: execP.length,
       },
       divergencias, ultimoSinal: txt(sinaisP[0]?.created_at),
+      modo: modoDe(p),
     }
   }).sort((a, b) => Number(a.apagada) - Number(b.apagada) || Number(b.ativa) - Number(a.ativa) || b.seguidores.total - a.seguidores.total)
 
+  // Sombra: só as estratégias marcadas. Uma leitura, ≤ 14 linhas por estratégia.
+  const emSombra = estrategias.filter((e) => e.modo === 'sombra' && !e.apagada)
+  const desde14 = new Date(Date.now() - DIAS_SOMBRA * 86_400_000).toISOString().slice(0, 10)
+  const somb = emSombra.length
+    ? await ler(db().from('estrategia_sombra_dia').select('*').in('estrategia', emSombra.map((e) => e.slug)).gte('dia', desde14).order('dia', { ascending: false }).limit(DIAS_SOMBRA * emSombra.length))
+    : { linhas: [] as Linha[], semTabela: false, erro: null, contagem: null }
+  const sombras: SombraCentro[] = emSombra.map((e) => {
+    const linhas = somb.linhas.filter((l) => String(l.estrategia) === e.slug)
+    return {
+      slug: e.slug, nome: e.nome, executa: e.ativa,
+      gestao: (linhas[0]?.gestao as Record<string, unknown> | undefined) ?? null,
+      dias: linhas.map((l) => {
+        const d = (l.detalhe ?? {}) as Record<string, unknown>
+        return {
+          dia: String(l.dia), trades: num(l.trades) ?? 0, vitorias: num(l.vitorias) ?? 0, r_total: num(l.r_total) ?? 0,
+          r_medio: num(l.r_medio), pior_sequencia: num(l.pior_sequencia) ?? 0, perdas_seguidas: num(l.perdas_seguidas) ?? 0,
+          exposicao_max: num(l.exposicao_max) ?? 0, abertas: num(l.abertas) ?? 0, definitivo: l.definitivo === true,
+          ideias: num(d.ideias), passaram_gate: num(d.passaram_gate), atualizado_em: txt(l.atualizado_em),
+        }
+      }),
+    }
+  })
+
   return {
     estrategias,
+    sombras,
+    sombraPendente: somb.semTabela,
     veredictoPendente: veredito.semTabela,
     fontePendente: !provs.some((p) => 'fonte_execucao' in p),
     lidaEm: new Date().toISOString(),
