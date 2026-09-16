@@ -16,6 +16,15 @@ import {
   CANONICAL_AURUMFLOW_STRATEGY_ID, mesmaConta,
 } from './provider-constants'
 import {
+  SLUG_AURUM,
+  SLUG_GOLDKILLER,
+  SLUG_PREMIUM,
+  SLUG_SENSEI,
+  contaDaEstrategiaEmCache,
+  ehContaDeEstrategia,
+  idDaContaEmCache,
+} from './contas-provider-estrategia'
+import {
   PREMIUM_PROVIDER_EXECUTION,
   SENSEI_PROVIDER_EXECUTION,
   TRADE_IDEAS_PROVIDER_EXECUTION,
@@ -41,8 +50,17 @@ export {
  * `repairProviderRoutes` reconstrói as canónicas a cada leitura e elas voltavam sempre.
  * As rotas removidas ficaram guardadas em site_settings.mtmcopy_rotas_removidas; se as contas
  * forem recriadas, voltam como rotas normais pelo admin, sem tocar neste ficheiro.
+ *
+ * 2026-09-16: a conta de cada rota passou a vir da BASE DE DADOS (as contas provider MT5 que o
+ * agente do VPS criou na The Trading Master, `mtm_trading_accounts.provider_slug`) — ver
+ * ./contas-provider-estrategia.ts. As constantes ficam como último recurso. Foi a falta disto
+ * que deixou Sensei, GoldKiller e Aurum Flow sem conta (e por isso sem execução e sem espelho)
+ * depois de as contas antigas terem sido apagadas na MetaApi. A GoldKiller volta aqui como
+ * canónica: sem rota com a estratégia SDNb, `resolveMtmProviderForStrategyId` devolvia null e o
+ * webhook respondia «Rota MTM Auto GoldKiller não configurada».
  */
 export function buildCanonicalProviderRoutes(): ProviderRoute[] {
+  const goldkiller = idDaContaEmCache(SLUG_GOLDKILLER) || (CANONICAL_GOLDKILLER_ACCOUNT_ID ?? '')
   return [
     {
       id: 'canonical-premium-signals',
@@ -50,7 +68,7 @@ export function buildCanonicalProviderRoutes(): ProviderRoute[] {
       sender_channel: 'premium-signals',
       sender_chat_id: resolvedPremiumSignalsChatId(),
       signal_source: 'telegram',
-      account_id: CANONICAL_PREMIUM_ACCOUNT_ID,
+      account_id: idDaContaEmCache(SLUG_PREMIUM) || CANONICAL_PREMIUM_ACCOUNT_ID,
       strategy_id: CANONICAL_PREMIUM_STRATEGY_ID,
       tag: 'MTM Auto Premium',
       ai_strategy_prompt: null,
@@ -77,7 +95,9 @@ export function buildCanonicalProviderRoutes(): ProviderRoute[] {
       sender_channel: null,
       sender_chat_id: null,
       signal_source: 'webhook',
-      account_id: SENSEI_PROVIDER_ACCOUNT_ID,
+      // A conta do Sensei é a 19037 (The Trading Master), lida da base. O env
+      // METAAPI_PROVIDER_SENSEI_ACCOUNT_ID continua a ganhar quando alguém o definir.
+      account_id: SENSEI_PROVIDER_ACCOUNT_ID || idDaContaEmCache(SLUG_SENSEI),
       strategy_id: CANONICAL_SENSEI_STRATEGY_ID,
       tag: 'MTM Auto Sensei',
       ai_strategy_prompt: null,
@@ -104,8 +124,9 @@ export function buildCanonicalProviderRoutes(): ProviderRoute[] {
       sender_channel: null,
       sender_chat_id: null,
       signal_source: 'webhook',
-      // null = conta a4ea0c45 apagada: rota sem conta não executa (routeMatchesSignal recusa).
-      account_id: CANONICAL_AURUMFLOW_ACCOUNT_ID ?? '',
+      // A a4ea0c45 foi apagada; a conta viva é a 19040 (The Trading Master), lida da base.
+      // Vazio continua a querer dizer «não executa» (routeMatchesSignal recusa).
+      account_id: idDaContaEmCache(SLUG_AURUM) || (CANONICAL_AURUMFLOW_ACCOUNT_ID ?? ''),
       strategy_id: CANONICAL_AURUMFLOW_STRATEGY_ID,
       tag: 'MTM Auto Aurum Flow',
       ai_strategy_prompt: null,
@@ -121,6 +142,36 @@ export function buildCanonicalProviderRoutes(): ProviderRoute[] {
       // aparecer conteúdo num canal que ninguém vê.
       app_channel: null,
       tap_to_trade: false,
+      enabled: true,
+    },
+    /**
+     * MTM Auto GoldKiller — conta 19038 (The Trading Master), estratégia SDNb.
+     *
+     * Saiu daqui a 24/08 porque a conta bddad3b8 tinha sido apagada e o reconcile falhava todos
+     * os dias. Volta agora que existe conta viva: sem uma rota com `strategy_id = SDNb`,
+     * `resolveMtmProviderForStrategyId` devolve null e o webhook `?strategy=goldkiller` responde
+     * «Rota MTM Auto GoldKiller não configurada» — os sinais chegavam e nada abria.
+     *
+     * Sem conta (cache fria ou conta por criar) o `account_id` fica vazio e a rota continua a
+     * alimentar chat e Tap to Trade sem executar, como qualquer outra rota sem mestre.
+     */
+    {
+      id: 'canonical-goldkiller',
+      label: 'MTM Auto Goldkiller',
+      sender_channel: null,
+      sender_chat_id: null,
+      signal_source: 'webhook',
+      account_id: goldkiller,
+      strategy_id: CANONICAL_GOLDKILLER_STRATEGY_ID,
+      tag: 'MTM Auto Goldkiller',
+      ai_strategy_prompt: null,
+      execution: {
+        ...SENSEI_PROVIDER_EXECUTION,
+        lot_value: MTM_DEFAULT_RISK_PERCENT,
+        mt_comment: 'MTM Auto Goldkiller',
+      },
+      app_channel: 'sinais-goldkiller',
+      tap_to_trade: true,
       enabled: true,
     },
   ]
@@ -155,9 +206,20 @@ export function repairProviderRoutes(routes: ProviderRoute[]): ProviderRoute[] {
       porConta && (porConta.id === c.id || !idsCanonicos.has(porConta.id)) ? porConta : undefined
     const saved = savedById.get(c.id) ?? contaSirvePara
     if (!saved) return c
-    // Conta vazia EXPLÍCITA = decisão do admin ("— nenhuma"); contas erradas/trocadas
-    // continuam a ser reparadas para a canónica.
-    const masterNone = typeof saved.account_id === 'string' && saved.account_id.trim() === ''
+    /**
+     * Conta vazia EXPLÍCITA = decisão do admin ("— nenhuma"); contas erradas/trocadas continuam
+     * a ser reparadas para a canónica.
+     *
+     * COM UMA EXCEPÇÃO, e ela é a razão de o Sensei e a Aurum Flow terem passado 24 h sem abrir
+     * um único sinal: o `account_id` delas ficou vazio na configuração porque a canónica também
+     * estava vazia (as contas antigas tinham sido apagadas na MetaApi) — ninguém escolheu
+     * «nenhuma». Agora que a canónica tem uma conta VIVA vinda da base de dados (a conta provider
+     * MT5 que o agente do VPS criou), essa conta ganha ao vazio guardado. Quem quiser mesmo parar
+     * a rota tem o interruptor certo, que é `enabled: false` — esse continua a ser respeitado.
+     */
+    const contaViva = ehContaDeEstrategia(c.account_id)
+    const masterNone =
+      typeof saved.account_id === 'string' && saved.account_id.trim() === '' && !contaViva
     return {
       ...c,
       enabled: saved.enabled !== false,
@@ -195,6 +257,9 @@ function isCanonicalRoute(r: ProviderRoute): boolean {
   // qualquer rota custom sem conta passava a ser tratada como canónica e era engolida pelo
   // repair — o admin perdia rotas que criou à mão.
   if (!r.account_id?.trim() && !r.strategy_id?.trim()) return false
+  // As contas mestre vivas (base de dados) são canónicas por definição — senão a rota guardada
+  // com a conta nova era tratada como custom e ficávamos com duas rotas para a mesma conta.
+  if (ehContaDeEstrategia(r.account_id)) return true
   if (r.account_id === CANONICAL_PREMIUM_ACCOUNT_ID) return true
   if (r.account_id && r.account_id === SENSEI_PROVIDER_ACCOUNT_ID) return true
   if (mesmaConta(r.account_id, CANONICAL_AURUMFLOW_ACCOUNT_ID)) return true
@@ -206,6 +271,12 @@ function isCanonicalRoute(r: ProviderRoute): boolean {
   if (r.strategy_id === CANONICAL_SENSEI_STRATEGY_ID) return true
   if (r.strategy_id === CANONICAL_GOLDKILLER_STRATEGY_ID) return true
   return false
+}
+
+/** A conta mestre viva do Premium (19036 / a21178c2), que já não é a constante antiga. */
+function ehContaDoPremium(accountId: string | null | undefined): boolean {
+  const viva = contaDaEstrategiaEmCache(SLUG_PREMIUM)?.accountId
+  return Boolean(viva && accountId && String(accountId).trim() === viva)
 }
 
 export function routeBelongsToChannel(
@@ -229,13 +300,15 @@ export function routeBelongsToChannel(
     }
     return (
       route.strategy_id === CANONICAL_PREMIUM_STRATEGY_ID ||
-      route.account_id === CANONICAL_PREMIUM_ACCOUNT_ID
+      route.account_id === CANONICAL_PREMIUM_ACCOUNT_ID ||
+      ehContaDoPremium(route.account_id)
     )
   }
 
   if (
     route.strategy_id === CANONICAL_PREMIUM_STRATEGY_ID ||
-    route.account_id === CANONICAL_PREMIUM_ACCOUNT_ID
+    route.account_id === CANONICAL_PREMIUM_ACCOUNT_ID ||
+    ehContaDoPremium(route.account_id)
   ) {
     return false
   }

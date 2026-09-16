@@ -67,6 +67,13 @@ import {
   CANONICAL_GOLDKILLER_ACCOUNT_ID,
 } from './provider-constants'
 import {
+  SLUG_GOLDKILLER,
+  SLUG_SENSEI,
+  carregarContasDeEstrategia,
+  contaDaEstrategiaEmCache,
+  slugDaConta,
+} from './contas-provider-estrategia'
+import {
   applyManagementToAccount,
   applyTrailingToLatestPosition,
   trailingDistanceForConnection,
@@ -1028,6 +1035,7 @@ async function executeViaMtmProvider(
   const isForexSym = clean6.length === 6 && FX_CODES.has(clean6.slice(0, 3)) && FX_CODES.has(clean6.slice(3, 6))
   const isGoldKillerProvider =
     mesmaConta(provider.accountId, CANONICAL_GOLDKILLER_ACCOUNT_ID) ||
+    slugDaConta(provider.accountId) === SLUG_GOLDKILLER ||
     provider.strategyId === CANONICAL_GOLDKILLER_STRATEGY_ID
   const forceRisk05 = channel === 'premium-signals' || isForexSym || isGoldKillerProvider
   const forcedRiskPct = 0.5
@@ -1511,7 +1519,10 @@ async function executeViaMtmProvider(
     } else {
       const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
       if (channel === 'trade-ideas') {
-        const isSensei = mesmaConta(provider.accountId, CANONICAL_SENSEI_ACCOUNT_ID)
+        const isSensei =
+          mesmaConta(provider.accountId, CANONICAL_SENSEI_ACCOUNT_ID) ||
+          slugDaConta(provider.accountId) === SLUG_SENSEI ||
+          provider.strategyId === CANONICAL_SENSEI_STRATEGY_ID
         if (isSensei) {
           // Sensei: abre só com SL — TP/parciais geridos pelos alertas (25% por TP).
           req.takeProfit = null
@@ -1531,7 +1542,11 @@ async function executeViaMtmProvider(
       // conta. Mercado enche na hora. (Sensei abre só com SL; TP/parciais geridos pelos alertas.)
       if (
         mesmaConta(provider.accountId, CANONICAL_GOLDKILLER_ACCOUNT_ID) ||
-        mesmaConta(provider.accountId, CANONICAL_SENSEI_ACCOUNT_ID)
+        mesmaConta(provider.accountId, CANONICAL_SENSEI_ACCOUNT_ID) ||
+        slugDaConta(provider.accountId) === SLUG_GOLDKILLER ||
+        slugDaConta(provider.accountId) === SLUG_SENSEI ||
+        provider.strategyId === CANONICAL_GOLDKILLER_STRATEGY_ID ||
+        provider.strategyId === CANONICAL_SENSEI_STRATEGY_ID
       ) {
         req.orderType = 'market'
         req.openPrice = null
@@ -2066,10 +2081,32 @@ async function rotaPausada(strategyId: string): Promise<boolean> {
   }
 }
 
+/**
+ * A conta do Sensei, pela ordem: env → conta provider MT5 na base (19037, The Trading Master) →
+ * constante. Era só o env, e o env está vazio: `senseiPronto()` dizia que não e o webhook
+ * respondia «Rota provider Sensei não configurada» a todos os sinais, com a conta a existir e
+ * ligada. Quem cria as contas é o agente do VPS, e o que ele grava é a linha na base.
+ */
+function contaSensei(): string {
+  return (
+    process.env.METAAPI_PROVIDER_SENSEI_ACCOUNT_ID?.trim() ||
+    SENSEI_PROVIDER_ACCOUNT_ID ||
+    contaDaEstrategiaEmCache(SLUG_SENSEI)?.accountId ||
+    ''
+  )
+}
+
+/** O Sensei tem conta mestre? (a versão que também olha para a base de dados) */
+async function senseiTemConta(): Promise<boolean> {
+  if (senseiPronto()) return true
+  await carregarContasDeEstrategia().catch(() => undefined)
+  return contaSensei().length > 0
+}
+
 function senseiProvider(): MtmChannelProvider {
   return {
     channel: 'trade-ideas',
-    accountId: process.env.METAAPI_PROVIDER_SENSEI_ACCOUNT_ID?.trim() || SENSEI_PROVIDER_ACCOUNT_ID,
+    accountId: contaSensei(),
     tag: 'Conta Sensei',
     strategyId:
       process.env.METAAPI_COPY_STRATEGY_SENSEI_ID?.trim() || CANONICAL_SENSEI_STRATEGY_ID,
@@ -2104,7 +2141,9 @@ export async function processMtmcopyWebhookSignal(opts: {
           ? // Sem conta mestre não se abre nada: o Sensei foi reformado da 34744071 a 04/09 e
             // espera pela MT5 35044320. Um accountId vazio aqui era mandar a ordem para o
             // vazio — ou pior, para o default de quem estiver a seguir na cadeia.
-            (!senseiPronto() || (await rotaPausada(CANONICAL_SENSEI_STRATEGY_ID)) ? [] : [senseiProvider()])
+            (!(await senseiTemConta()) || (await rotaPausada(CANONICAL_SENSEI_STRATEGY_ID))
+              ? []
+              : [senseiProvider()])
           : await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
   if (!providers.length) {
     return {
