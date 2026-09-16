@@ -59,6 +59,12 @@ type StreamRow = {
   playlist_url?: string | null
   playlist_title?: string | null
   playlist_access_tier?: "all" | "app_member" | "premium" | "vip" | null
+  /** Sala de gravação (ex.: «Introdução»): grava para o DVR mas nunca vai para o ar. */
+  nunca_ao_vivo?: boolean | null
+  /** Quem opera a sala sem ser o educador dela — é por aqui que ela chega a este studio. */
+  operador_educator_id?: string | null
+  /** A gravar desde quando (null = parada). Nunca é «em direto». */
+  gravacao_iniciada_em?: string | null
 }
 
 const CATEGORIES = [{ value: "", label: "— Categoria —" }, ...LMS_CATEGORY_OPTIONS]
@@ -144,6 +150,10 @@ export default function EducatorStudio() {
 
   const liveCount = useMemo(() => streams.filter((s) => s.is_live).length, [streams])
   const liveStreams = useMemo(() => streams.filter((s) => s.is_live), [streams])
+  // As salas de gravação («Introdução») têm um cartão próprio: não se editam aqui (não são deste
+  // educador — ele só as opera) e nada nelas se chama «ao vivo».
+  const salasGravacao = useMemo(() => streams.filter((s) => Boolean(s.nunca_ao_vivo)), [streams])
+  const salasNormais = useMemo(() => streams.filter((s) => !s.nunca_ao_vivo), [streams])
   const [studioPreviewStreamId, setStudioPreviewStreamId] = useState<string | null>(null)
   const [internalStudioStreamId, setInternalStudioStreamId] = useState<string | null>(null)
 
@@ -702,14 +712,71 @@ export default function EducatorStudio() {
             </TabsList>
 
             <TabsContent value="channels" className="mt-0 space-y-4 outline-none">
-              {streams.length === 0 && (
+              {salasGravacao.map((sala) => {
+                const aGravar = Boolean(sala.gravacao_iniciada_em)
+                return (
+                  <Card key={sala.id} className="overflow-hidden border-amber-900/40 bg-gradient-to-br from-amber-950/20 to-black">
+                    <CardHeader className="space-y-3 border-b border-amber-900/30 bg-black/30 py-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <CardTitle className="text-lg text-white">{sala.title}</CardTitle>
+                            <Badge className={aGravar ? "bg-amber-600" : "bg-gray-700"}>
+                              {aGravar ? "A GRAVAR" : "PARADA"}
+                            </Badge>
+                          </div>
+                          {/* A frase que evita o susto: ele tem de perceber, à primeira, que este
+                              botão não o põe em direto à frente de ninguém. */}
+                          <p className="mt-1 text-sm text-amber-200/90">
+                            A gravar para o DVR — esta sala não vai para o ar.
+                          </p>
+                          <p className="mt-1 text-xs text-gray-400">
+                            Ninguém vê esta transmissão no site nem na app: não abre player, não aparece no lobby e não
+                            envia notificação. Fica só a gravação, que sobe à playlist{" "}
+                            <strong className="text-gray-300">MTM Introdução</strong> no YouTube.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 lg:justify-end">
+                          <Button
+                            size="sm"
+                            style={{ backgroundColor: aGravar ? "#b45309" : "#16a34a" }}
+                            className="text-white transition-all hover:brightness-110"
+                            onClick={() => setPresence(sala.id, !aGravar)}
+                          >
+                            <Radio className="mr-1 h-3 w-3 text-white" />
+                            {aGravar ? "Terminar transmissão" : "Iniciar transmissão"}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3 p-4">
+                      <p className="text-xs text-gray-500">
+                        Carrega em <strong className="text-gray-400">Iniciar transmissão</strong> e depois liga o OBS com
+                        estes dois campos. A gravação começa quando o OBS liga e fecha quando o paras.
+                      </p>
+                      <StreamKeyCard
+                        title="Servidor RTMP MTM (OBS)"
+                        hideDeployHint
+                        rtmpUrl={sala.rtmps_url}
+                        streamKey={sala.stream_key}
+                        onGenerateOrRefresh={() => syncMtmIngest(sala.id)}
+                        syncButtonLabel="Preparar servidor e chave"
+                        syncButtonLabelWhenHasKey="Atualizar servidor / chave"
+                        loading={keyOpStreamId === sala.id}
+                      />
+                    </CardContent>
+                  </Card>
+                )
+              })}
+
+              {salasNormais.length === 0 && salasGravacao.length === 0 && (
                 <p className="rounded-xl border border-dashed border-gray-800 p-6 text-center text-sm text-gray-500">
                   Ainda não tens canais. Usa o separador <strong className="text-gray-400">Nova sala</strong> ou pede ao
                   admin para te associar uma academia.
                 </p>
               )}
 
-              {streams.map((stream) => (
+              {salasNormais.map((stream) => (
             <Card key={stream.id} className="overflow-hidden border-gray-800 bg-gradient-to-br from-gray-950 to-black">
               <CardHeader className="space-y-3 border-b border-gray-800/80 bg-black/30 py-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -1261,7 +1328,8 @@ export default function EducatorStudio() {
                 </span>
                 <span className="font-mono text-white">{liveCount}</span>
               </div>
-              {streams.map((s) => (
+              {/* Só as salas normais: uma sala de gravação não tem audiência para medir. */}
+              {salasNormais.map((s) => (
                 <div key={s.id} className="rounded border border-gray-800/80 p-2">
                   <p className="truncate font-medium text-gray-300">{s.title}</p>
                   <p className="mt-1 flex justify-between">

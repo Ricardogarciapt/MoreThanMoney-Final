@@ -14,6 +14,12 @@
  * A trava está na coluna `nunca_ao_vivo` e é aplicada nas três rotas que ligam uma sala (admin,
  * presença do educador, WHIP) — ou seja, a base de dados nunca chega a guardar `is_live = true`.
  * É de propósito: a app iOS nativa lê a tabela diretamente e não passa por nenhuma rota nossa.
+ * Desde a migração 101 há ainda uma CHECK na tabela que recusa `nunca_ao_vivo and is_live`, o que
+ * fecha o último caminho que restava — uma escrita à mão na consola do Supabase.
+ *
+ * E há uma terceira peça, a que faz a sala funcionar: quem a OPERA não é quem nela APARECE. A sala
+ * continua sem educador (é isso que a mantém fora dos cartões e do lobby), e a permissão de a
+ * ligar vive na coluna `operador_educator_id` — ver `podeOperarSala` no fim deste ficheiro.
  */
 
 import { getSupabaseAdmin } from '@/lib/admin-api-helpers'
@@ -117,3 +123,68 @@ export async function salaNuncaVaiAoVivo(streamId: string): Promise<boolean> {
 /** Mensagem única, para não haver duas versões da mesma recusa. */
 export const RECUSA_SALA_NUNCA_AO_VIVO =
   'Esta sala é de gravação (Introdução): nunca pode ficar em direto. A transmissão é gravada e segue para o DVR/YouTube na mesma.'
+
+/**
+ * QUEM OPERA ≠ QUEM APARECE.
+ *
+ * A sala «Introdução» não tem educador de propósito: o dono não quer aparecer como formador dela
+ * nos cartões, no lobby nem na app. Mas alguém tem de a poder ligar. É para isso que existe
+ * `operador_educator_id` (migração 101) — permissão de operação, sem crédito de formador.
+ *
+ * Esta pergunta é feita ANTES de qualquer escrita, e a escrita seguinte fica filtrada só pelo
+ * `id` da sala. A alternativa era um `.or(...)` no próprio update, mas aí a identidade de quem
+ * age passa a viver dentro de uma string de filtro: uma vírgula a mais nessa string e o update
+ * deixa de estar preso a esta pessoa. Preferimos uma leitura a mais (por chave primária, que o
+ * Supabase nem sente) e a regra escrita aqui, em TypeScript, à vista de quem a rever.
+ */
+export function podeOperarSala(
+  sala: { educator_id?: string | null; operador_educator_id?: string | null } | null | undefined,
+  educatorId: string | null | undefined,
+): boolean {
+  // Sem identidade não há autorização — e nunca por comparação de nulos: uma sala sem educador
+  // não pode ser operada por «ninguém».
+  if (!sala || !educatorId) return false
+  return sala.educator_id === educatorId || sala.operador_educator_id === educatorId
+}
+
+/**
+ * O que a presença pode mexer no estado de uma sala.
+ *
+ * Está aqui, numa função pura, porque é o sítio onde a invariante se prova: numa sala de gravação
+ * os campos devolvidos NUNCA contêm `is_live: true` — contêm `is_live: false`, que também repara
+ * uma linha estragada à mão. E `notificar` é falso, porque não há sessão nenhuma para anunciar.
+ */
+export function decidirEstadoDaSala(entrada: {
+  nuncaAoVivo: boolean
+  querIniciar: boolean
+  querParar: boolean
+  agora?: string
+}): { campos: Record<string, unknown>; notificar: boolean } {
+  const agora = entrada.agora || new Date().toISOString()
+  const campos: Record<string, unknown> = {}
+
+  if (entrada.nuncaAoVivo) {
+    // Gravar não é transmitir: o que se liga e desliga é a marca de gravação.
+    if (entrada.querIniciar) {
+      campos.is_live = false
+      campos.gravacao_iniciada_em = agora
+    }
+    if (entrada.querParar) {
+      campos.is_live = false
+      campos.gravacao_iniciada_em = null
+    }
+    return { campos, notificar: false }
+  }
+
+  if (entrada.querIniciar) {
+    campos.is_live = true
+    campos.live_started_at = agora
+    campos.live_ended_at = null
+  }
+  if (entrada.querParar) {
+    campos.is_live = false
+    campos.live_ended_at = agora
+  }
+
+  return { campos, notificar: Boolean(entrada.querIniciar) }
+}

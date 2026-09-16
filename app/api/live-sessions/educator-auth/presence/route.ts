@@ -5,6 +5,7 @@ import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-a
 import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
 import { DEFAULT_RESTREAM_INGEST_URL, normalizeRestreamIngestUrl } from "@/lib/lms-restream"
 import { normalizeIngestProvider } from "@/lib/lms-stream-options"
+import { decidirEstadoDaSala, podeOperarSala } from "@/lib/lms-sala-introducao"
 
 const supabase = getSupabaseAdmin()
 
@@ -28,20 +29,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "streamId é obrigatório" }, { status: 400 })
     }
 
+    // Autorização ANTES da escrita (ver `podeOperarSala`): a sala é lida por chave primária e a
+    // pergunta «esta pessoa pode mexer nisto?» é respondida em código. O update a seguir fica
+    // filtrado só por `id` — encadear `.eq()` no Supabase é AND, e a sala «Introdução» não tem
+    // educador nenhum para casar com o filtro antigo.
     const { data: stream, error: streamError } = await supabase
       .from("lms_streams")
       .select("*")
       .eq("id", streamId)
-      .eq("educator_id", educator.educatorId)
-      .single()
+      .maybeSingle()
 
     if (streamError || !stream) {
+      return NextResponse.json({ error: "Canal não encontrado para este educador" }, { status: 404 })
+    }
+
+    // Mesma resposta de «não existe» para quem não manda nesta sala: quem não a opera também não
+    // precisa de saber que ela existe.
+    if (!podeOperarSala(stream as { educator_id?: string | null; operador_educator_id?: string | null }, educator.educatorId)) {
       return NextResponse.json({ error: "Canal não encontrado para este educador" }, { status: 404 })
     }
 
     const wantsStart = action === "start" || (action === "" && isLive === true)
     const wantsPause = action === "pause" || (action === "" && isLive === false)
     const wantsGenerate = action === "generate"
+
+    // Salas de gravação (ex.: «Introdução») nunca ficam em direto — mas a transmissão não é
+    // bloqueada: as chaves são atribuídas na mesma e o DVR grava. É a diferença entre gravar e
+    // anunciar. A linha já foi lida acima com `*`, por isso isto não custa outra query.
+    const nuncaAoVivo = Boolean((stream as Record<string, unknown>).nunca_ao_vivo)
 
     const updates: Record<string, any> = {}
     const { data: educatorRow } = await supabase
@@ -54,9 +69,12 @@ export async function POST(request: NextRequest) {
     const restreamKey = educatorRow?.restream_stream_key || null
     const restreamEnabled = Boolean(educatorRow?.restream_enabled)
     const ingestProvider = normalizeIngestProvider(stream.ingest_provider)
-    const shouldUseRestream = Boolean(ingestProvider === "restream" && restreamEnabled && restreamKey)
+    // O Restream não serve a uma sala de gravação: o ficheiro tem de cair no NOSSO servidor (SRS)
+    // para o DVR o apanhar e o mandar à playlist própria. Aqui o ingest é sempre MTM direto,
+    // independentemente do que estiver no campo da sala.
+    const shouldUseRestream = Boolean(!nuncaAoVivo && ingestProvider === "restream" && restreamEnabled && restreamKey)
 
-    if (ingestProvider === "restream" && !shouldUseRestream) {
+    if (!nuncaAoVivo && ingestProvider === "restream" && !shouldUseRestream) {
       return NextResponse.json(
         {
           error:
@@ -79,35 +97,34 @@ export async function POST(request: NextRequest) {
     const shouldRefreshIngest = wantsGenerate || needsKey
 
     // Ingestão: Restream (RTMPS + key) quando configurado; caso contrário MTM direto.
-    updates.stream_key = shouldUseRestream ? restreamKey : fixedKey
+    //
+    // Uma sala de gravação tem chave PRÓPRIA (`mtm_introducao_…`) e é por ela que o DVR sabe a que
+    // sala pertence o ficheiro. A chave fixa do educador é partilhada por todas as salas dele: se
+    // a escrevêssemos aqui, a gravação da introdução passava a poder ser atribuída a outra sala —
+    // o `on_dvr` desempata pela sala que está ao vivo, e esta nunca está. Por isso a sala manda.
+    const chaveDaSala = nuncaAoVivo ? (stream.stream_key as string | null) : null
+    updates.stream_key = chaveDaSala || (shouldUseRestream ? restreamKey : fixedKey)
     if (shouldRefreshIngest) updates.rtmps_url = shouldUseRestream ? restreamBase : getLmsIngestServerUrl()
 
-    // Salas de gravação (ex.: «Introdução») nunca ficam em direto — mas a transmissão não é
-    // bloqueada: as chaves são atribuídas na mesma e o DVR grava. É a diferença entre gravar e
-    // anunciar. A linha já foi lida acima com `*`, por isso isto não custa outra query.
-    const nuncaAoVivo = Boolean((stream as Record<string, unknown>).nunca_ao_vivo)
-
-    if (wantsStart && !nuncaAoVivo) {
-      updates.is_live = true
-      updates.live_started_at = new Date().toISOString()
-      updates.live_ended_at = null
-    }
-
-    if (wantsPause) {
-      updates.is_live = false
-      updates.live_ended_at = new Date().toISOString()
-    }
+    // O estado da sala vive numa função pura (lib/lms-sala-introducao.ts) porque é aí que a
+    // invariante se prova: numa sala de gravação nunca sai daqui `is_live: true`.
+    const { campos, notificar } = decidirEstadoDaSala({
+      nuncaAoVivo,
+      querIniciar: wantsStart,
+      querParar: wantsPause,
+    })
+    Object.assign(updates, campos)
 
     // Ignora tentativa de regenerar chave quando a política é chave fixa.
     if (forceRegenerateKey && wantsGenerate) {
       updates.live_ended_at = stream.live_ended_at || null
     }
 
+    // Filtrado só por `id`: a autorização já foi decidida acima, e esta sala pode não ter educador.
     const { data, error } = await supabase
       .from("lms_streams")
       .update(updates)
       .eq("id", streamId)
-      .eq("educator_id", educator.educatorId)
       .select("*")
       .single()
 
@@ -116,7 +133,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Push notification when going live (nunca numa sala de gravação: não há sessão para abrir)
-    if (wantsStart && data && !nuncaAoVivo) {
+    if (data && notificar) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt"
       fetch(`${siteUrl}/api/notifications/send-push`, {
         method: "POST",
