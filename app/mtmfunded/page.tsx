@@ -52,7 +52,7 @@ export default async function MtmFundedPage() {
   const [{ data: programas }, { data: torneio }, { data: emitidos }, promos] = await Promise.all([
     db
       .from('mtm_funded_programs')
-      .select('slug, nome, descricao, fases, saldo, preco_cents, moeda, regras')
+      .select('slug, nome, descricao, fases, saldo, preco_cents, preco_cents_mtmfunded, moeda, regras')
       .eq('ativo', true)
       .order('ordem', { ascending: true }),
     db
@@ -101,6 +101,13 @@ export default async function MtmFundedPage() {
   const regrasNegociacao = (lista[0]?.regras ?? null) as RegrasNegociacao | null
   const euros = (cents: number) =>
     (cents / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })
+  /**
+   * DOIS PREÇOS, lado a lado: a plataforma MTM Funded é mais barata do que a conta na corretora.
+   * Sem preço próprio (ou antes do lançamento), mostra-se só o do MT5 — nunca um preço que o
+   * checkout depois não pratica.
+   */
+  const precoMtmFunded = (p: { preco_cents_mtmfunded?: number | null }) =>
+    config.sim_lancado_em && p.preco_cents_mtmfunded != null ? Number(p.preco_cents_mtmfunded) : null
 
   return (
     <main className="text-white">
@@ -201,8 +208,15 @@ export default async function MtmFundedPage() {
                         <td className="px-5 py-4 text-zinc-400">{r.perda_diaria_pct != null ? `${r.perda_diaria_pct}%` : '—'}</td>
                         <td className="px-5 py-4 text-zinc-400">{r.perda_maxima_pct != null ? `${r.perda_maxima_pct}%` : '—'}</td>
                         <td className="px-5 py-4 text-zinc-400">{r.dias_minimos ?? '—'}</td>
-                        <td className="px-5 py-4 text-right text-lg font-bold text-[#D2A63C]">
-                          {euros(p.preco_cents)}
+                        <td className="px-5 py-4 text-right">
+                          <span className="block text-lg font-bold text-[#D2A63C]">
+                            {euros(precoMtmFunded(p) ?? p.preco_cents)}
+                          </span>
+                          {precoMtmFunded(p) != null && (
+                            <span className="mt-0.5 block text-[11px] text-zinc-500">
+                              MTM Funded · MT5 {euros(p.preco_cents)}
+                            </span>
+                          )}
                         </td>
                         <td className="px-5 py-4 text-right">
                           {config.vendas_abertas ? (
@@ -230,7 +244,14 @@ export default async function MtmFundedPage() {
                       <h3 className="text-lg font-semibold">
                         {Number(p.saldo).toLocaleString('pt-PT')} USD
                       </h3>
-                      <span className="text-2xl font-bold text-[#D2A63C]">{euros(p.preco_cents)}</span>
+                      <span className="text-right">
+                        <span className="block text-2xl font-bold text-[#D2A63C]">
+                          {euros(precoMtmFunded(p) ?? p.preco_cents)}
+                        </span>
+                        {precoMtmFunded(p) != null && (
+                          <span className="block text-[11px] text-zinc-500">MTM Funded · MT5 {euros(p.preco_cents)}</span>
+                        )}
+                      </span>
                     </div>
                     <p className="mt-1 text-xs text-zinc-600">
                       {p.fases}{' '}

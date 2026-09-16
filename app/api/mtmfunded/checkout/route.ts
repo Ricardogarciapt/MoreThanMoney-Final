@@ -4,7 +4,8 @@ import { getStripeClient } from '@/lib/stripe-client'
 import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { isIosAppRequest } from '@/lib/is-native-request'
-import { validarPlataformaDoCheckout, PRAZO_MT5_HORAS } from '@/lib/mtmfunded/plataforma'
+import { PRAZO_MT5_HORAS } from '@/lib/mtmfunded/plataforma'
+import { precoDaPlataforma, validarPlataformaDoPrograma, COLUNAS_PRECOS } from '@/lib/mtmfunded/precos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -50,17 +51,9 @@ export async function POST(request: NextRequest) {
   const slug = String(body?.programa ?? '').trim()
   if (!slug) return NextResponse.json({ error: 'programa em falta' }, { status: 400 })
 
-  /**
-   * A PLATAFORMA — validada aqui, contra o que está à venda agora (lançamento do simulado e
-   * interruptor do MT5). Recusa-se o que não está à venda; nunca se troca em silêncio.
-   */
-  const escolha = validarPlataformaDoCheckout(body?.plataforma, config)
-  if (!escolha.ok) return NextResponse.json({ error: escolha.erro }, { status: 409 })
-  const plataforma = escolha.plataforma
-
   const { data: programa } = await db
     .from('mtm_funded_programs')
-    .select('id, slug, nome, saldo, preco_cents, moeda, stripe_price_id, ativo, regras')
+    .select(`id, slug, nome, saldo, moeda, ativo, regras, ${COLUNAS_PRECOS}`)
     .eq('slug', slug)
     .maybeSingle()
 
@@ -70,6 +63,17 @@ export async function POST(request: NextRequest) {
 
   /** As regras do programa. Mandam no cupão e na protecção de um-por-pessoa. */
   const regras = (programa.regras ?? {}) as Record<string, unknown>
+
+  /**
+   * A PLATAFORMA — validada contra o que está à venda agora (lançamento do simulado, interruptor
+   * do MT5) E contra ESTE programa: sem preço próprio, a MTM Funded não se vende aqui. Recusa-se
+   * o que não está à venda; nunca se troca em silêncio uma escolha explícita.
+   */
+  const escolha = validarPlataformaDoPrograma(body?.plataforma, config, programa)
+  if (!escolha.ok) return NextResponse.json({ error: escolha.erro }, { status: 409 })
+  const plataforma = escolha.plataforma
+  /** O preço e o price id do Stripe da plataforma escolhida — nunca do pedido. */
+  const preco = precoDaPlataforma(programa, plataforma)
 
   /**
    * Os mesmos dados que o torneio pede, e pela mesma razão: são o que a corretora exige no
@@ -102,7 +106,7 @@ export async function POST(request: NextRequest) {
    * descontado era deixar comprar um desafio de 169 € por um cêntimo, e o Stripe cobraria
    * exactamente o que lhe mandássemos, sem se queixar.
    */
-  let cents = Number(programa.preco_cents)
+  let cents = preco.cents
   let cupaoAplicado: string | null = null
   const codigoCupao = String(body?.cupao ?? '').trim()
   if (codigoCupao) {
@@ -190,8 +194,8 @@ export async function POST(request: NextRequest) {
     customer_email: email,
     // Com cupão, o preço é sempre construído aqui: um `price` do Stripe tem valor fixo e
     // ignoraria o desconto.
-    line_items: programa.stripe_price_id && !cupaoAplicado
-      ? [{ price: programa.stripe_price_id, quantity: 1 }]
+    line_items: preco.stripePriceId && !cupaoAplicado
+      ? [{ price: preco.stripePriceId, quantity: 1 }]
       : [
           {
             quantity: 1,
