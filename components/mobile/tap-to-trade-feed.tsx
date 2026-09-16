@@ -2,6 +2,7 @@
 
 import { t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { pipSizeForSymbol, unitFor } from "@/lib/mtmcopy/trade-outcome"
+import { directionLabelFromText, resolveDirectionLabel } from "@/lib/mtmcopy/signal-direction"
 
 import { useCallback, useEffect, useState, useRef, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
@@ -107,17 +108,13 @@ const CHANNEL_LABEL: Record<string, string> = {
   "golden-moves": "Aurum Flow",
 }
 
+/**
+ * Direção lida do texto — PLANO B. Quem manda é a direção gravada pelo servidor
+ * (`mtmcopy_signal_tracking.direction`, servida por `/api/mtmcopy/signal-directions`).
+ * Ver `lib/mtmcopy/signal-direction`.
+ */
 function directionOf(content: string): "BUY" | "SELL" | "" {
-  const c = content.toLowerCase()
-  // PALAVRAS primeiro (a 1ª ocorrência ganha) — só depois emojis. Um "GOLD SELL SETUP"
-  // com marcador 🟢 no texto era classificado BUY porque o emoji era testado primeiro.
-  const buyIdx = c.search(/\b(buy|long|compra)\b/)
-  const sellIdx = c.search(/\b(sell|short|venda)\b/)
-  if (buyIdx >= 0 && (sellIdx < 0 || buyIdx < sellIdx)) return "BUY"
-  if (sellIdx >= 0) return "SELL"
-  if (/🔴/.test(content)) return "SELL"
-  if (/🟢|🔵/.test(content)) return "BUY"
-  return ""
+  return directionLabelFromText(content)
 }
 
 /** Tempo máximo para um sinal estar ativo (5 minutos) — entradas A MERCADO. */
@@ -357,6 +354,12 @@ export default function TapToTradeFeed() {
   const [aoVivo, setAoVivo] = useState<
     Record<string, { pips: number | null; pct: number | null; exits?: number; entrou?: boolean; slBatido?: boolean }>
   >({})
+  /**
+   * A direção com que cada sinal foi mesmo colocado, vinda do servidor
+   * (`mtmcopy_signal_tracking.direction`). É esta que manda no cartão: ler a direção do texto
+   * punha «BUY» em cima de vendas do Premium, por causa do rodapé «…key to long term success».
+   */
+  const [dirServidor, setDirServidor] = useState<Record<string, string>>({})
   /** Lido dentro do `load` sem o tornar dependente do estado — o intervalo de 20s não se recria. */
   const limitModeRef = useRef<"today" | "week">("today")
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
@@ -583,6 +586,17 @@ export default function TapToTradeFeed() {
      * que se passou: fora da zona, terminado com o resultado, ou indisponível.
      */
     setItems(sigs)
+
+    // A direção certa de cada sinal — a do servidor, não a que se adivinha do texto.
+    try {
+      const ids = sigs.map((x) => x.id)
+      if (ids.length) {
+        const rd = await fetch(`/api/mtmcopy/signal-directions?ids=${ids.join(",")}`)
+        if (rd.ok) setDirServidor(((await rd.json()) as { directions?: Record<string, string> }).directions ?? {})
+      }
+    } catch {
+      /* sem direções do servidor — o cartão cai no texto */
+    }
 
     // Assim que a lista chega, abre o sinal que a notificação pediu.
     if (sinalPedido.current && !jaAbriu.current) {
@@ -1284,7 +1298,8 @@ export default function TapToTradeFeed() {
         <div className="space-y-2.5">
           {ecra === "sinais" && shown.map((s) => {
             const f = parseSignalFields(s.content)
-            const dir = f.direction
+            // A direção do SERVIDOR manda; o texto é só o plano B.
+            const dir = resolveDirectionLabel(dirServidor[s.id], s.content) || f.direction
             // Card harmonizado quando conseguimos ler símbolo + direção; senão cai no texto cru.
             const structured = Boolean(f.symbol && dir)
             return (
@@ -1488,14 +1503,17 @@ export default function TapToTradeFeed() {
               <div className="flex flex-col gap-2">
                 {historicoVisivel.map((h) => {
                   const ganhou = h.desfecho.startsWith("+")
+                  // Também aqui manda a direção do servidor: o histórico mostrava «COMPRA» ao
+                  // lado dos pips de vendas do Premium.
+                  const hDir = resolveDirectionLabel(dirServidor[h.id], h.content)
                   return (
                     <div key={h.id} className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-2.5">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[13px] font-semibold text-zinc-300 truncate">
                           {symbolOf(h.content) || h.channel_slug}
-                          {directionOf(h.content) && (
-                            <span className={`ml-1.5 text-[11px] font-bold ${directionOf(h.content) === "BUY" ? "text-emerald-400" : "text-rose-400"}`}>
-                              {directionOf(h.content) === "BUY" ? "COMPRA" : "VENDA"}
+                          {hDir && (
+                            <span className={`ml-1.5 text-[11px] font-bold ${hDir === "BUY" ? "text-emerald-400" : "text-rose-400"}`}>
+                              {hDir === "BUY" ? "COMPRA" : "VENDA"}
                             </span>
                           )}
                         </span>
