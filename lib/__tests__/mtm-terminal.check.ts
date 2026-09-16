@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 /**
  * Terminal MTM — fontes de preço, variação, idade da análise, limite de pedidos, lotes do cron,
  * técnicos. Correr: npx tsx lib/__tests__/mtm-terminal.check.ts
@@ -72,6 +74,16 @@ const gens: Record<string, string | null> = {
 t('sem análise e mais antigos primeiro; hoje fica de fora',
   pickAssetsToRefresh(['XAUUSD', 'XRPUSD', 'NAS100', 'SOLUSD', 'AAPL'], gens, NOW, { batch: 4, minAgeMs: 20 * 3600_000 }), ['AAPL', 'XRPUSD', 'NAS100', 'SOLUSD'])
 t('22 ativos cabem em 12 corridas de 4', Math.ceil(TERMINAL_ASSETS.length / 4) <= 12, true)
+// O caso que partia a 16/09: regeneradas às 17:25 à mão; na manhã seguinte (05:40 UTC) têm ~12 h.
+// Com a idade mínima a 20 h ficavam paradas até ao dia a seguir. A idade mínima só tem de ser
+// maior do que a janela do cron (~4 h); a rota usa 12 h.
+const rota = readFileSync(join(process.cwd(), 'app/api/cron/mtm-terminal-daily/route.ts'), 'utf-8')
+const minAge = Number(/const MIN_AGE_MS = (\d+) \* 3600_000/.exec(rota)?.[1]) * 3600_000
+const manha = Date.parse('2026-09-17T05:40:00Z')
+t('gerada às 17:25 da véspera é refeita na janela da manhã',
+  pickAssetsToRefresh(['XAUUSD'], { XAUUSD: '2026-09-16T17:25:38Z' }, manha, { batch: 4, minAgeMs: minAge }), ['XAUUSD'])
+t('gerada às 05:40 não é refeita na mesma janela (08:40)',
+  pickAssetsToRefresh(['XAUUSD'], { XAUUSD: '2026-09-17T05:40:00Z' }, Date.parse('2026-09-17T08:40:00Z'), { batch: 4, minAgeMs: minAge }), [])
 
 console.log('— técnicos —')
 const candles: Candle[] = Array.from({ length: 80 }, (_, i) => {

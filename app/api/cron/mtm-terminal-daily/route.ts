@@ -22,7 +22,12 @@ export const maxDuration = 300
 
 const BATCH = 4
 const CONCURRENCY = 2
-const MIN_AGE_MS = 20 * 3600_000
+// Só tem de ser MAIOR do que a janela do cron (05:00–08:40 UTC, ~4 h), para não refazer o mesmo
+// ativo duas vezes na mesma manhã. Estava a 20 h, e isso partia-se sempre que um ativo era gerado
+// fora da janela (alguém a abrir a página, ou um ?force= à tarde): na manhã seguinte ainda não
+// tinha 20 h e ficava parado até ao dia a seguir. Com 12 h, qualquer análise feita depois das
+// 17:00 da véspera já é refeita na janela.
+const MIN_AGE_MS = 12 * 3600_000
 /** Não arranca um ativo novo depois disto (deixa ~100 s ao que está a correr). */
 const DEADLINE_MS = 180_000
 
