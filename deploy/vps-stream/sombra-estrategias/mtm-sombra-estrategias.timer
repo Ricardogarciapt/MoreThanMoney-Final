@@ -1,0 +1,13 @@
+[Unit]
+Description=MTM sombra das estrategias - todos os dias as 06:30 UTC
+
+[Timer]
+# 06:30 UTC: o dia de ontem esta fechado e a gestao das trades da madrugada ja teve tempo de correr.
+OnCalendar=*-*-* 06:30:00 UTC
+RandomizedDelaySec=5min
+# Se a VPS estiver em baixo a essa hora, corre quando voltar.
+Persistent=true
+Unit=mtm-sombra-estrategias.service
+
+[Install]
+WantedBy=timers.target

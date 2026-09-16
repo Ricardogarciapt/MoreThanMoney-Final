@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import type { EstrategiaCentro } from "@/lib/admin-centro/servidor/estrategias"
+import type { EstrategiaCentro, SombraCentro } from "@/lib/admin-centro/servidor/estrategias"
+import SombraEstrategias from "../sombra-estrategias"
 import EstrategiasCopia, { Recolhivel } from "@/components/admin/mtmauto-copia/estrategias"
 import ProvidersEquipas from "@/components/admin/mtmauto-copia/providers-equipas"
 import EspelhoProviderRelatorio from "@/components/admin/espelho-provider-relatorio"
@@ -18,7 +19,7 @@ import MtmcopyGlobalPerformance from "@/components/admin/mtmcopy-global-performa
 import { useCentroCtx } from "../contexto"
 import { Aviso, Azulejo, BotaoLer, Chip, Painel, Pilula, Tabela, Vazio, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
 
-export type DadosEstrategias = { estrategias: EstrategiaCentro[]; veredictoPendente: boolean; fontePendente: boolean }
+export type DadosEstrategias = { estrategias: EstrategiaCentro[]; sombras?: SombraCentro[]; sombraPendente?: boolean; veredictoPendente: boolean; fontePendente: boolean }
 
 export default function SeccaoEstrategias() {
   const ctx = useCentroCtx()
@@ -37,6 +38,8 @@ export default function SeccaoEstrategias() {
         <Azulejo rotulo="Em espelho" valor={todas.filter((e) => e.fonteExecucao === "espelho").length} sub={`${todas.filter((e) => e.espelho?.alinhado).length} alinhada(s)`} />
         <Azulejo rotulo="Pips 30 d" valor={fmtNum(todas.reduce((a, e) => a + e.desempenho30d.pips, 0), 1)} sub="sinais fechados MTM Auto" />
       </div>
+
+      {dados?.sombras && dados.sombras.length > 0 && <SombraEstrategias sombras={dados.sombras} pendente={dados.sombraPendente === true} />}
 
       <Painel titulo="Estratégias" sub="Fonte de execução, seguidores por plataforma, desempenho 30 d e divergências. Clica para abrir a gaveta (acções)." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
         <div className="mb-3 flex flex-wrap gap-1.5">
@@ -57,7 +60,9 @@ export default function SeccaoEstrategias() {
                   </td>
                   <td className={td}>
                     <div className="flex flex-wrap gap-1">
-                      <Pilula tom={e.ativa ? "ok" : "neutro"}>{e.ativa ? "activa" : "inactiva"}</Pilula>
+                      {e.modo === "sombra" && !e.ativa
+                        ? <Pilula tom="info" title="Medida todos os dias sem abrir nada (estrategia_sombra_dia). Quem decide a execução é «ativo».">Sombra — não executa</Pilula>
+                        : <Pilula tom={e.ativa ? "ok" : "neutro"}>{e.ativa ? "activa" : "inactiva"}</Pilula>}
                       {e.fonteExecucao && <Pilula tom={e.fonteExecucao === "espelho" ? "info" : "neutro"}>{e.fonteExecucao}</Pilula>}
                       {e.espelho && <Pilula tom={e.espelho.alinhado ? "ok" : "aviso"} title={e.espelho.motivos.join(" · ")}>{e.espelho.alinhado ? "espelho alinhado" : "espelho por alinhar"}</Pilula>}
                     </div>
