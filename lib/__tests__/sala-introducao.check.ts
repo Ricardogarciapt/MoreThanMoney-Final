@@ -16,7 +16,13 @@ import {
   textoAprendeAUsar,
 } from '../navegacao'
 import { classificarUrlIntro, textoBotao } from '../videos-intro'
-import { CAPA_SALA_INTRODUCAO, CHAVE_SALA_INTRODUCAO, PLAYLIST_YOUTUBE_INTRODUCAO } from '../lms-sala-introducao'
+import {
+  CAPA_SALA_INTRODUCAO,
+  CHAVE_SALA_INTRODUCAO,
+  PLAYLIST_YOUTUBE_INTRODUCAO,
+  decidirEstadoDaSala,
+  podeOperarSala,
+} from '../lms-sala-introducao'
 
 let ok = 0
 let mau = 0
@@ -227,7 +233,92 @@ for (const metodo of ['GET', 'PUT']) {
 const rotaPublica = readFileSync(join(process.cwd(), 'app/api/videos-intro/route.ts'), 'utf-8')
 eq('rota pública não escreve', /export async function (POST|PUT|PATCH|DELETE)/.test(rotaPublica), false)
 
-// ── 7. constantes da sala ──────────────────────────────────────────────────
+// ── 7. QUEM OPERA A SALA (sem ser o educador dela) ─────────────────────────
+// A sala «Introdução» não tem educador de propósito. Quem a liga é o `operador_educator_id`.
+// O que não pode acontecer é a porta abrir para mais alguém — em especial por comparação de
+// nulos, que é como uma sala sem dono se torna uma sala de toda a gente.
+const DONO = 'c6e156d5-842d-4aee-855e-d52c63e764c6'
+const OUTRO = '00000000-0000-4000-8000-000000000001'
+
+eq('educador da sala opera a sala', podeOperarSala({ educator_id: DONO }, DONO), true)
+eq('operador opera sala sem educador', podeOperarSala({ educator_id: null, operador_educator_id: DONO }, DONO), true)
+eq('estranho não opera', podeOperarSala({ educator_id: null, operador_educator_id: DONO }, OUTRO), false)
+eq('educador de outra sala não opera esta', podeOperarSala({ educator_id: OUTRO }, DONO), false)
+eq('sala órfã não é de ninguém', podeOperarSala({ educator_id: null, operador_educator_id: null }, DONO), false)
+// Os dois nulos a encontrarem-se: sem identidade não há autorização.
+eq('nulo não casa com nulo', podeOperarSala({ educator_id: null, operador_educator_id: null }, null), false)
+eq('indefinido não casa com indefinido', podeOperarSala({}, undefined), false)
+eq('sala inexistente', podeOperarSala(null, DONO), false)
+
+// ── 7b. A INVARIANTE: a sala de gravação nunca acende ──────────────────────
+// `decidirEstadoDaSala` é a única coisa que decide `is_live` na rota da presença — incluindo pelo
+// caminho novo, o do operador. Se um dia alguém lhe acrescentar um `is_live: true` para as salas
+// de gravação, é aqui que parte.
+const iniciaGravacao = decidirEstadoDaSala({ nuncaAoVivo: true, querIniciar: true, querParar: false, agora: 'AGORA' })
+eq('gravação: iniciar NÃO acende', iniciaGravacao.campos.is_live, false)
+eq('gravação: iniciar marca a gravação', iniciaGravacao.campos.gravacao_iniciada_em, 'AGORA')
+eq('gravação: não toca no live_started_at', 'live_started_at' in iniciaGravacao.campos, false)
+eq('gravação: não notifica ninguém', iniciaGravacao.notificar, false)
+
+const paraGravacao = decidirEstadoDaSala({ nuncaAoVivo: true, querIniciar: false, querParar: true, agora: 'AGORA' })
+eq('gravação: terminar limpa a marca', paraGravacao.campos.gravacao_iniciada_em, null)
+eq('gravação: terminar deixa is_live falso', paraGravacao.campos.is_live, false)
+
+const iniciaNormal = decidirEstadoDaSala({ nuncaAoVivo: false, querIniciar: true, querParar: false, agora: 'AGORA' })
+eq('sala normal: iniciar acende', iniciaNormal.campos.is_live, true)
+eq('sala normal: iniciar notifica', iniciaNormal.notificar, true)
+const paraNormal = decidirEstadoDaSala({ nuncaAoVivo: false, querIniciar: false, querParar: true, agora: 'AGORA' })
+eq('sala normal: parar apaga', paraNormal.campos.is_live, false)
+eq('sala normal: parar não notifica', paraNormal.notificar, false)
+
+// Todas as combinações possíveis de pedido: numa sala de gravação nenhuma produz `true`.
+let acendeuAlguma = false
+for (const querIniciar of [true, false]) {
+  for (const querParar of [true, false]) {
+    const r = decidirEstadoDaSala({ nuncaAoVivo: true, querIniciar, querParar })
+    if (r.campos.is_live === true || r.notificar) acendeuAlguma = true
+  }
+}
+eq('gravação: nenhum pedido a põe em direto', acendeuAlguma, false)
+
+// ── 7c. A ROTA DA PRESENÇA: onde a autorização é feita ─────────────────────
+// A escrita passou a ser filtrada só por `id` (a sala não tem educador para casar com o filtro
+// antigo). Isso só é seguro enquanto a autorização acontecer ANTES — e é isso que se lê aqui.
+const rotaPresenca = readFileSync(
+  join(process.cwd(), 'app/api/live-sessions/educator-auth/presence/route.ts'),
+  'utf-8',
+)
+const iAutoriza = rotaPresenca.indexOf('podeOperarSala(')
+const iEscreve = rotaPresenca.indexOf('.update(updates)')
+eq('a presença pergunta quem pode operar', iAutoriza > 0, true)
+eq('a presença escreve', iEscreve > 0, true)
+eq('autoriza ANTES de escrever', iAutoriza < iEscreve, true)
+// Um `.eq("educator_id", …)` agarrado ao update voltaria a excluir a sala sem educador; um
+// `.or(…)` no update meteria a identidade de quem age dentro de uma string de filtro.
+eq('o update não filtra por educador', /\.update\(updates\)[\s\S]{0,200}educator_id/.test(rotaPresenca), false)
+eq('o update não usa .or()', /\.update\(updates\)[\s\S]{0,200}\.or\(/.test(rotaPresenca), false)
+// E o estado ao vivo não se escreve à mão em lado nenhum da rota.
+eq('a rota não acende salas à mão', /is_live\s*=\s*true/.test(rotaPresenca), false)
+
+// A listagem: a sala operada só aparece a quem está autenticado como o operador. Na página
+// pública do educador continua a não ser dele — operar não é aparecer.
+const rotaLista = readFileSync(join(process.cwd(), 'app/api/live-sessions/streams/route.ts'), 'utf-8')
+eq('a lista só junta as salas operadas na vista autenticada', /canSeeSecrets\s*\n?\s*\?\s*query\.or\(/.test(rotaLista), true)
+eq('o operador entra no filtro', rotaLista.includes('operador_educator_id.eq.'), true)
+eq('a vista pública continua só com o educador', /:\s*query\.eq\("educator_id", educatorId\)/.test(rotaLista), true)
+
+// ── 7d. O QUE ELE VÊ NO STUDIO ─────────────────────────────────────────────
+// O botão existe e o estado que o acompanha diz «gravação», não «direto». Esta é a diferença
+// entre ele carregar à vontade e ele ter medo de carregar.
+const studio = readFileSync(join(process.cwd(), 'components/live/educator-studio.tsx'), 'utf-8')
+eq('há botão de iniciar transmissão', studio.includes('Iniciar transmissão'), true)
+eq('há botão de terminar transmissão', studio.includes('Terminar transmissão'), true)
+eq('o aviso está lá, à letra', studio.includes('A gravar para o DVR — esta sala não vai para o ar'), true)
+eq('o estado é gravação, não direto', studio.includes('"A GRAVAR"'), true)
+// A sala de gravação não se mistura com as normais: nada nela se chama «LIVE».
+eq('o cartão de gravação lê a marca de gravação', studio.includes('sala.gravacao_iniciada_em'), true)
+
+// ── 8. constantes da sala ──────────────────────────────────────────────────
 eq('chave de sistema estável', CHAVE_SALA_INTRODUCAO, 'introducao')
 eq('capa aponta para um sítio só', CAPA_SALA_INTRODUCAO.includes('introducao-capa.png'), true)
 eq('playlist das gravações tem nome próprio', PLAYLIST_YOUTUBE_INTRODUCAO, 'MTM Introdução')

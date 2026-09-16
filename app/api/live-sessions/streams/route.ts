@@ -68,7 +68,12 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies()
     const token = cookieStore.get(getEducatorCookieName())?.value
     const authEducator = token ? verifyEducatorToken(token) : null
-    const canSeeSecrets = Boolean(educatorId && authEducator && authEducator.educatorId === educatorId)
+    // O `.or(...)` abaixo interpola este valor num filtro em texto. Ele vem do nosso próprio token
+    // assinado, mas a forma confirma-se na mesma: uma vírgula aqui mudava o significado do filtro.
+    const ehUuid = (v: string | null) => Boolean(v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v))
+    const canSeeSecrets = Boolean(
+      educatorId && ehUuid(educatorId) && authEducator && authEducator.educatorId === educatorId
+    )
 
     const selectColumns = canSeeSecrets ? STREAM_SELECT_EDUCATOR : STREAM_SELECT_PUBLIC
 
@@ -79,7 +84,15 @@ export async function GET(request: NextRequest) {
       .order("updated_at", { ascending: false })
 
     if (academyId) query = query.eq("academy_id", academyId)
-    if (educatorId) query = query.eq("educator_id", educatorId)
+    if (educatorId) {
+      // QUEM OPERA ≠ QUEM APARECE. Uma sala sem educador (a «Introdução») tem de chegar ao studio
+      // de quem a opera, senão ele não tem onde carregar em «Iniciar transmissão». Mas só na vista
+      // AUTENTICADA: na página pública do educador ela continua a não ser dele — o dono pediu a
+      // sala sem formador, e operar não é aparecer.
+      query = canSeeSecrets
+        ? query.or(`educator_id.eq.${educatorId},operador_educator_id.eq.${educatorId}`)
+        : query.eq("educator_id", educatorId)
+    }
     // Uma sala de gravação («Introdução») nunca entra numa lista de «ao vivo». A trava a sério
     // está na escrita — a base de dados nunca guarda is_live=true para estas salas — mas isto
     // custa nada e protege de linhas antigas ou de uma escrita feita à mão na consola.
