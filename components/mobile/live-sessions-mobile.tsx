@@ -591,7 +591,7 @@ export default function LiveSessionsMobile({
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/75 backdrop-blur-sm">
                       <Lock className="h-6 w-6 text-white/70" />
                       <p className="text-[10px] font-semibold text-white/90 text-center px-2">
-                        {s.access_tier === "premium" ? t("live.packPremiumPrice") : t("live.packMemberPrice")}
+                        {s.access_tier === "vip" ? t("live.packVipAccess") : s.access_tier === "premium" ? t("live.packPremiumPrice") : t("live.packMemberPrice")}
                       </p>
                       <span className="mt-0.5 rounded-full bg-[#D2A63C] px-2 py-0.5 text-[9px] font-bold text-black">
                         {t("live.upgradeCta")}

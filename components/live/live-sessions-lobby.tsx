@@ -603,7 +603,7 @@ function StreamMarketCard({
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/75 backdrop-blur-sm">
             <Lock className="h-8 w-8 text-white/70" />
             <p className="text-xs font-semibold text-white/90 text-center px-4">
-              {stream.access_tier === "premium" ? t("live.packPremiumPrice") : t("live.packMemberPrice")}
+              {stream.access_tier === "vip" ? t("live.packVipAccess") : stream.access_tier === "premium" ? t("live.packPremiumPrice") : t("live.packMemberPrice")}
             </p>
             <Link
               href="/register"
