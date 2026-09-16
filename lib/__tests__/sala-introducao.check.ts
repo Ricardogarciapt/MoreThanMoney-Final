@@ -318,6 +318,21 @@ eq('o estado é gravação, não direto', studio.includes('"A GRAVAR"'), true)
 // A sala de gravação não se mistura com as normais: nada nela se chama «LIVE».
 eq('o cartão de gravação lê a marca de gravação', studio.includes('sala.gravacao_iniciada_em'), true)
 
+// ── 7e. A CHAVE PARTILHADA E O DESEMPATE DO DVR ────────────────────────────
+// Decisão do dono (16/09): a sala de gravação usa a chave fixa do educador, para ele não ter de
+// a trocar no OBS. A chave fixa é partilhada por VÁRIAS salas dele, por isso o `on_dvr` tem de
+// saber a quem pertence o ficheiro — e a sala de gravação nunca está ao vivo, logo nunca ganha
+// pelo critério antigo. Sem a ordenação por `gravacao_iniciada_em`, a gravação da introdução vai
+// parar à playlist do curso de outra sala. Estes três testes são a rede por baixo disso.
+const rotaDvr = readFileSync(join(process.cwd(), 'app/api/live-sessions/dvr/on-dvr/route.ts'), 'utf-8')
+eq('o on-dvr lê a marca de gravação', rotaDvr.includes('gravacao_iniciada_em'), true)
+eq('o on-dvr desempata pela sala a gravar', /\.order\("gravacao_iniciada_em"/.test(rotaDvr), true)
+eq('ao vivo continua a ganhar a quem grava', rotaDvr.indexOf('.order("is_live"') < rotaDvr.indexOf('.order("gravacao_iniciada_em"'), true)
+// E a presença deixa de impor chave própria à sala de gravação: usa a fixa como as outras.
+eq('a sala de gravação usa a chave fixa do educador', /updates\.stream_key = shouldUseRestream \? restreamKey : fixedKey/.test(rotaPresenca), true)
+// O Restream continua fora: o ficheiro tem de cair no NOSSO SRS ou não há gravação nenhuma.
+eq('sala de gravação nunca vai por Restream', /!nuncaAoVivo && ingestProvider === "restream"/.test(rotaPresenca), true)
+
 // ── 8. constantes da sala ──────────────────────────────────────────────────
 eq('chave de sistema estável', CHAVE_SALA_INTRODUCAO, 'introducao')
 eq('capa aponta para um sítio só', CAPA_SALA_INTRODUCAO.includes('introducao-capa.png'), true)

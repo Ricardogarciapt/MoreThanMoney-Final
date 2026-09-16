@@ -98,12 +98,15 @@ export async function POST(request: NextRequest) {
 
     // Ingestão: Restream (RTMPS + key) quando configurado; caso contrário MTM direto.
     //
-    // Uma sala de gravação tem chave PRÓPRIA (`mtm_introducao_…`) e é por ela que o DVR sabe a que
-    // sala pertence o ficheiro. A chave fixa do educador é partilhada por todas as salas dele: se
-    // a escrevêssemos aqui, a gravação da introdução passava a poder ser atribuída a outra sala —
-    // o `on_dvr` desempata pela sala que está ao vivo, e esta nunca está. Por isso a sala manda.
-    const chaveDaSala = nuncaAoVivo ? (stream.stream_key as string | null) : null
-    updates.stream_key = chaveDaSala || (shouldUseRestream ? restreamKey : fixedKey)
+    // Decisão do dono (16/09): a sala de gravação usa a MESMA chave fixa do educador que as
+    // outras salas dele, para ele não ter de trocar a chave no OBS entre uma coisa e outra.
+    //
+    // Isso reintroduz o empate no `on_dvr`, onde várias salas partilham a chave e a de gravação
+    // nunca está ao vivo — antes ganhava outra sala e a gravação ia para a playlist errada. O
+    // desempate passou a ser `gravacao_iniciada_em` (ver a rota on-dvr): enquanto ele carregou em
+    // «Iniciar transmissão», é esta sala que fica com o ficheiro. Por isso é seguro agora, e não
+    // era antes — se alguém desfizer aquela ordenação, isto volta a partir.
+    updates.stream_key = shouldUseRestream ? restreamKey : fixedKey
     if (shouldRefreshIngest) updates.rtmps_url = shouldUseRestream ? restreamBase : getLmsIngestServerUrl()
 
     // O estado da sala vive numa função pura (lib/lms-sala-introducao.ts) porque é aí que a

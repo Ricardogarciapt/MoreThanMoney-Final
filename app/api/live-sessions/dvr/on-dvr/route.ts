@@ -30,13 +30,21 @@ export async function POST(req: NextRequest) {
     const baseFile = filePath.split("/").pop() || `${streamKey}.mp4`
 
     // stream + educador a partir da key. NOTA: várias salas do mesmo educador podem
-    // partilhar o stream_key → NÃO usar maybeSingle (falha com >1). Escolhe a que está
-    // AO VIVO; senão a mais recentemente atualizada (a que acabou de transmitir).
+    // partilhar o stream_key → NÃO usar maybeSingle (falha com >1).
+    //
+    // A ordem de desempate importa e custou uma gravação no sítio errado a descobrir:
+    //  1. AO VIVO — se uma sala está no ar, foi ela que produziu o ficheiro, ponto.
+    //  2. A GRAVAR — as salas de gravação («Introdução») nunca ficam ao vivo, por isso
+    //     nunca ganhavam o critério 1 e a gravação era atribuída a outra sala do mesmo
+    //     educador, indo parar à playlist do curso errado. `gravacao_iniciada_em` só
+    //     está preenchido enquanto o dono carregou em «Iniciar transmissão».
+    //  3. A mais recentemente atualizada — o que restava antes, agora só como recurso.
     const { data: sts } = await supabase
       .from("lms_streams")
-      .select("id, educator_id, is_live, updated_at")
+      .select("id, educator_id, is_live, gravacao_iniciada_em, updated_at")
       .eq("stream_key", streamKey)
       .order("is_live", { ascending: false })
+      .order("gravacao_iniciada_em", { ascending: false, nullsFirst: false })
       .order("updated_at", { ascending: false })
       .limit(1)
     const st = sts?.[0]
