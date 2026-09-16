@@ -1,22 +1,3 @@
-export interface SiteContent {
-  id: string
-  type: 'link' | 'video' | 'file' | 'text' | 'image'
-  category: 'navbar' | 'footer' | 'landing' | 'education' | 'trading' | 'general'
-  title: string
-  description?: string
-  url?: string
-  content?: string
-  file_url?: string
-  file_name?: string
-  file_size?: number
-  is_active: boolean
-  order_index: number
-  metadata?: Record<string, any>
-  created_at: string
-  updated_at: string
-  created_by: string
-}
-
 export interface UserManagement {
   id: string
   email: string
