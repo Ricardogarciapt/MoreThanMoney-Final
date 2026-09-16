@@ -93,9 +93,14 @@ export default function CursoIntroducao({
       <button
         type="button"
         onClick={abrir}
-        className="group flex w-full items-stretch gap-0 overflow-hidden rounded-2xl border border-[#D2A63C]/25 bg-gray-950/90 text-left transition hover:border-[#D2A63C]/50"
+        className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-[#D2A63C]/25 bg-gray-950/90 text-left transition hover:border-[#D2A63C]/50 sm:flex-row sm:items-center"
       >
-        <span className="relative hidden w-56 shrink-0 overflow-hidden bg-gray-900 sm:block">
+        {/*
+          A capa é 16:9 e tem o título desenhado. Numa faixa estreita com recorte, o título ficava
+          cortado a meio («SAR A …ANMONEY»); com a proporção dela, vê-se inteira. No telemóvel vai
+          por cima do texto em vez de desaparecer — é o que diz «isto é um curso» antes de se ler.
+        */}
+        <span className="relative block aspect-video w-full shrink-0 overflow-hidden bg-gray-900 sm:w-[45%]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={curso.capa}

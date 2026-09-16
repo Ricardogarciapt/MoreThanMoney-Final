@@ -7,7 +7,7 @@ export default function LiveSessionsPage() {
     <ProtectedPage redirectPath="/login?redirect=/live-sessions" loadingMessage="A validar acesso às live sessions...">
       <LiveSessionsShell
         title="Lobby ao vivo"
-        subtitle="Marketplace de especialistas — escolhe tema, educador e entra na sala. Academias MTM: Academia, Cripto, Forex, Social Media, Imobiliário, Fitness e Mindset."
+        subtitle="Aulas em direto com os especialistas MTM."
       >
         <LiveSessionsLobby />
       </LiveSessionsShell>

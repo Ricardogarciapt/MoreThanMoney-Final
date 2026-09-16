@@ -7,7 +7,7 @@ export default function LivePage() {
     <ProtectedPage redirectPath="/login?redirect=/live" loadingMessage="A validar acesso às transmissões...">
       <LiveSessionsShell
         title="Ao vivo"
-        subtitle="Mesmo lobby que /live-sessions — todas as salas e educadores."
+        subtitle="Aulas em direto com os especialistas MTM."
       >
         <LiveSessionsLobby />
       </LiveSessionsShell>
