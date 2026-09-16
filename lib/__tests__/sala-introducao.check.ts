@@ -22,6 +22,7 @@ import {
   PLAYLIST_YOUTUBE_INTRODUCAO,
   decidirEstadoDaSala,
   podeOperarSala,
+  salasOperadasPor,
 } from '../lms-sala-introducao'
 
 let ok = 0
@@ -332,6 +333,52 @@ eq('ao vivo continua a ganhar a quem grava', rotaDvr.indexOf('.order("is_live"')
 eq('a sala de gravação usa a chave fixa do educador', /updates\.stream_key = shouldUseRestream \? restreamKey : fixedKey/.test(rotaPresenca), true)
 // O Restream continua fora: o ficheiro tem de cair no NOSSO SRS ou não há gravação nenhuma.
 eq('sala de gravação nunca vai por Restream', /!nuncaAoVivo && ingestProvider === "restream"/.test(rotaPresenca), true)
+
+// ── 7f. O PAINEL DE GRAVAÇÕES: segue a SALA, não o educador ────────────────
+// O painel do studio filtrava por `lms_dvr_jobs.educator_id`, que numa sala de gravação é null.
+// Ele gravava, o vídeo subia ao YouTube, e o painel ficava vazio. Agora a pergunta é «que salas é
+// que esta pessoa opera?» e os jobs procuram-se por `stream_id`.
+const SALAS = [
+  { id: 'live-trading', educator_id: DONO, operador_educator_id: null },
+  { id: 'introducao', educator_id: null, operador_educator_id: DONO },
+  { id: 'sala-de-outro', educator_id: OUTRO, operador_educator_id: null },
+  { id: 'orfa', educator_id: null, operador_educator_id: null },
+]
+eq('a sala de gravação entra na lista dele', salasOperadasPor(SALAS, DONO).join(','), 'live-trading,introducao')
+eq('as salas normais não desaparecem', salasOperadasPor(SALAS, DONO).includes('live-trading'), true)
+eq('a sala de outro fica de fora', salasOperadasPor(SALAS, DONO).includes('sala-de-outro'), false)
+// O caso que dá o painel de toda a gente a toda a gente: uma sala sem dono nenhum.
+eq('a sala órfã não é de ninguém', salasOperadasPor(SALAS, DONO).includes('orfa'), false)
+eq('sem identidade, nenhuma sala', salasOperadasPor(SALAS, null).length, 0)
+eq('sem salas, lista vazia', salasOperadasPor([], DONO).length, 0)
+eq('sem dados, lista vazia', salasOperadasPor(null, DONO).length, 0)
+// A decisão é a MESMA de `podeOperarSala`: se as duas divergirem, uma delas está a mentir.
+for (const sala of SALAS) {
+  eq(`${sala.id}: a lista concorda com podeOperarSala`, salasOperadasPor([sala], DONO).length === 1, podeOperarSala(sala, DONO))
+}
+
+// A rota das gravações: o que se lê aqui é que ela deixou de perguntar pelo educador.
+const rotaGravacoes = readFileSync(join(process.cwd(), 'app/api/live-sessions/dvr/route.ts'), 'utf-8')
+eq('o painel pergunta que salas ele opera', rotaGravacoes.includes('idsDasSalasQueOpera'), true)
+eq('o painel procura os jobs pela sala', /\.in\("stream_id"/.test(rotaGravacoes), true)
+// Isto é a regressão a sério: um `.eq("educator_id", …)` de volta e a sala volta a ficar invisível.
+eq('o painel não filtra gravações por educador', /\.eq\("educator_id"/.test(rotaGravacoes), false)
+// E as ACÇÕES (preparar / YouTube / apagar) autorizam antes de escrever, como a presença.
+const iAutorizaDvr = rotaGravacoes.indexOf('podeOperarSala(')
+const iEscreveDvr = rotaGravacoes.indexOf('.update(')
+eq('as acções perguntam quem pode operar', iAutorizaDvr > 0, true)
+eq('as acções escrevem', iEscreveDvr > 0, true)
+eq('as acções autorizam ANTES de escrever', iAutorizaDvr < iEscreveDvr, true)
+
+// O `on_dvr` continua a copiar o educador da SALA — e não o operador. É isto que mantém o dono
+// fora da lista de formadores no /admin, que agrupa as gravações por educador.
+eq('o on-dvr copia o educador da sala', rotaDvr.includes('educator_id: st.educator_id'), true)
+eq('o on-dvr não põe lá o operador', rotaDvr.includes('operador_educator_id'), false)
+
+// No /admin, quem operou aparece — mas escrito como operador, nunca como formador.
+const rotaAdminDvr = readFileSync(join(process.cwd(), 'app/api/admin/live-sessions/dvr/route.ts'), 'utf-8')
+eq('o /admin mostra quem operou', rotaAdminDvr.includes('(operador)'), true)
+eq('o formador continua a ganhar quando existe', /educatorName:\s*\n?\s*j\.educator\?\.display_name \|\|/.test(rotaAdminDvr), true)
 
 // ── 8. constantes da sala ──────────────────────────────────────────────────
 eq('chave de sistema estável', CHAVE_SALA_INTRODUCAO, 'introducao')

@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
        size_bytes, duration_s, error, updated_at,
        subtitle_langs, subtitle_files, youtube_status, youtube_video_url, youtube_playlist_url, youtube_error,
        educator:lms_educators(display_name, academy_id),
-       stream:lms_streams(id, title, academy_id, academy:lms_academies(name, slug))`,
+       stream:lms_streams(id, title, academy_id, academy:lms_academies(name, slug),
+         operador:lms_educators!lms_streams_operador_educator_id_fkey(display_name))`,
     )
     .order("updated_at", { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -34,7 +35,12 @@ export async function GET(req: NextRequest) {
     return {
       id: j.id,
       educatorId: j.educator_id,
-      educatorName: j.educator?.display_name || "—",
+      // Uma sala de gravação («Introdução») não tem formador de propósito, e sem isto a gravação
+      // dela caía num grupo chamado «—», onde ninguém a procura. Quem a operou aparece, mas
+      // ESCRITO COMO OPERADOR: o grupo dele como formador continua a ser outro, e o dono não
+      // passa a constar como professor de uma sala que fez questão de não ter professor.
+      educatorName:
+        j.educator?.display_name || (j.stream?.operador?.display_name ? `${j.stream.operador.display_name} (operador)` : "—"),
       streamId: j.stream_id,
       streamTitle: j.stream?.title || "Sala",
       academyName: j.stream?.academy?.name || "Sem academia",
