@@ -160,6 +160,33 @@ const DEPOIS_AURUM = {
   console.log('ok  GoldKiller: BE a 0,30R arma aos 30 pips (risco 100) e põe o stop em +0,05R')
 }
 
+// ── 4b. GoldKiller sem trailing (106, decisão do dono) ──────────────────────────────────────
+// O BE sozinho mediu melhor (+0,110R) do que BE + trailing (+0,090R). Com as colunas a null o
+// motor da conta mestre já não armava — mas o cálculo das posições simuladas caía para a
+// distância ao TP1 e ficava ligado. `semTrailing` desliga nos dois.
+{
+  const linha106 = {
+    ...HOJE_GOLDKILLER, trailing_arranca_pips: null, trailing_passo_pips: null,
+    sinais_config: { perfil: 'risco', beFracaoDoRisco: 0.3, beOffsetFracaoDoRisco: 0.05, semTrailing: true },
+  }
+  const cfg = configProviderDaLinha('goldkiller', linha106, 0)
+  assert.deepEqual([cfg.trailingInicioPips, cfg.trailingInicioFracaoDoRisco], [null, null], 'motor real: sem arranque de trailing')
+  const pos: PosicaoProvider = { id: 'g2', symbol: 'XAUUSD', type: 'POSITION_TYPE_BUY', openPrice: 4000, volume: 0.1, stopLoss: 3990 }
+  let e: EstadoProvider = { ...ESTADO_PROVIDER_NOVO }
+  const passo = (preco: number, sl: number) => { const d = decidirProvider({ ...pos, currentPrice: preco, stopLoss: sl }, cfg, e, 1_000); e = d.estado; return d }
+  assert.equal(passo(4003, 3990).sl, 4000.5, 'o BE a 0,30R continua')
+  assert.equal(passo(4050, 4000.5).sl, null, 'a +500 pips nada mais mexe: não há trailing')
+
+  // Posição simulada: sem `semTrailing` o trailing caía para o TP1; com ele não há trailing nenhum.
+  const sinal = { simbolo: XAU, direcao: 'buy' as const, precoExecucao: 4000, volume: 0.1, sl: 3990, tps: [4010, 4020, 4030] }
+  const semFlag = gestaoDoSinal({ ...sinal, cfg: configDoProvider({ ...linha106, sinais_config: { ...linha106.sinais_config, semTrailing: false } }) })
+  assert.notEqual(semFlag.gestao.trailing_distancia ?? null, null, 'sem a flag, o simulado ainda armava trailing (o buraco)')
+  const comFlag = gestaoDoSinal({ ...sinal, cfg: configDoProvider(linha106) })
+  assert.deepEqual([comFlag.gestao.trailing_distancia ?? null, comFlag.gestao.trailing_ativacao ?? null], [null, null], 'simulado: sem trailing')
+  assert.equal(comFlag.gestao.be_gatilho != null, true, 'simulado: o BE fica')
+  console.log('ok  GoldKiller 106: BE a 0,30R e nenhum trailing, nos dois motores')
+}
+
 // ── 5. Aurum Flow: a unidade. A mesma fracção serve ONDO a 0,39 $ e BTC a 120 000 $ ──────────
 {
   const cfgAntes = configProviderDaLinha('aurum-flow', HOJE_AURUM, 0)

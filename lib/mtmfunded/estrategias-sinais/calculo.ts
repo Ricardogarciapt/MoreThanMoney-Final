@@ -224,6 +224,12 @@ export interface ConfigSinais {
   trailingPassoPips: number | null
   /** fração da distância do stop usada como trailing quando não há pips configurados */
   trailingFracaoDoRisco: number
+  /**
+   * Desliga o trailing de vez. Sem isto não havia forma de o tirar: com o arranque vazio, o
+   * trailing cai para a distância ao TP1 e a distância para metade do risco — ficava sempre ligado.
+   * Posto no GoldKiller a 16/09, onde o BE sozinho mediu melhor do que o BE com trailing.
+   */
+  semTrailing: boolean
   /** abrir mesmo que o mesmo trade já esteja aberto nesta conta por outra estratégia */
   permitirDuplicado: boolean
   /** fechar quando o trader fecha («TRADE CLOSED» / «CLOSED») e ir a BE com o «SL → BE» dele */
@@ -243,6 +249,7 @@ export const CONFIG_PADRAO: ConfigSinais = {
   trailingDistanciaPips: null,
   trailingPassoPips: null,
   trailingFracaoDoRisco: 0.5,
+  semTrailing: false,
   permitirDuplicado: false,
   seguirFechosDaFonte: true,
 }
@@ -277,6 +284,7 @@ export function configDoProvider(p: Record<string, unknown> | null | undefined):
   c.trailingDistanciaPips = pos(extra.trailingDistanciaPips) ?? pos(p.trailing_distancia_pips)
   c.trailingPassoPips = pos(extra.trailingPassoPips) ?? pos(p.trailing_passo_pips)
   c.trailingFracaoDoRisco = pos(extra.trailingFracaoDoRisco) ?? c.trailingFracaoDoRisco
+  c.semTrailing = extra.semTrailing === true
   c.permitirDuplicado = extra.permitirDuplicado === true
   if (typeof extra.seguirFechosDaFonte === 'boolean') c.seguirFechosDaFonte = extra.seguirFechosDaFonte
   return c
@@ -393,7 +401,7 @@ export function gestaoDoSinal(p: PedidoGestao): { gestao: Partial<Gestao>; tpFin
   const distancia = p.cfg.trailingDistanciaPips != null
     ? p.cfg.trailingDistanciaPips * pip
     : risco != null ? risco * p.cfg.trailingFracaoDoRisco : null
-  if (distancia != null && distancia >= p.simbolo.pip_size) {
+  if (!p.cfg.semTrailing && distancia != null && distancia >= p.simbolo.pip_size) {
     g.trailing_distancia = arred(distancia)
     // A mesma precedência do BE: fracção do risco → pips → distância ao TP1.
     const inicio = p.cfg.trailingInicioFracaoDoRisco != null && risco != null && risco > 0

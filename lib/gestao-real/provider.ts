@@ -100,8 +100,10 @@ export function configProviderDaLinha(
     beOffsetPips: c.beOffsetPips,
     beFracaoDoRisco: c.beFracaoDoRisco,
     beOffsetFracaoDoRisco: c.beOffsetFracaoDoRisco,
-    trailingInicioPips: c.trailingInicioPips,
-    trailingInicioFracaoDoRisco: c.trailingInicioFracaoDoRisco,
+    // Sem arranque não há trailing neste motor (ver `decidirProvider`), por isso `semTrailing`
+    // basta traduzir-se em arranques vazios.
+    trailingInicioPips: c.semTrailing ? null : c.trailingInicioPips,
+    trailingInicioFracaoDoRisco: c.semTrailing ? null : c.trailingInicioFracaoDoRisco,
     trailingDistanciaPips: c.trailingDistanciaPips,
     trailingPassoPips: c.trailingPassoPips,
     trailingFracaoDoRisco: c.trailingFracaoDoRisco,
