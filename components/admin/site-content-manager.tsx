@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
+import {
   Plus, 
   Trash2, 
   Save, 
@@ -22,8 +21,7 @@ import {
   Image,
   Upload,
   Search,
-  Filter,
-  ArrowUpDown
+  Filter
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { SiteContent } from "@/lib/admin-types"

@@ -221,22 +221,27 @@ export async function PATCH(request: NextRequest) {
   // re-liga a PeerConnection a meio da sessão).
   const { data: before } = await supabase
     .from("lms_streams")
-    .select("is_live, title")
+    .select("is_live, title, nunca_ao_vivo")
     .eq("id", streamId)
     .eq("educator_id", edu.educatorId)
     .maybeSingle()
   const wasLive = Boolean((before as { is_live?: boolean } | null)?.is_live)
   const title = (before as { title?: string } | null)?.title || "Sessão ao vivo"
+  // Sala de gravação (ex.: «Introdução»): o media publica e o DVR grava na mesma, mas a sala não
+  // acende nem notifica. Gravar não é transmitir.
+  const nuncaAoVivo = Boolean((before as { nunca_ao_vivo?: boolean } | null)?.nunca_ao_vivo)
 
-  await supabase
-    .from("lms_streams")
-    .update({ is_live: true, live_started_at: new Date().toISOString(), live_ended_at: null })
-    .eq("id", streamId)
-    .eq("educator_id", edu.educatorId)
+  if (!nuncaAoVivo) {
+    await supabase
+      .from("lms_streams")
+      .update({ is_live: true, live_started_at: new Date().toISOString(), live_ended_at: null })
+      .eq("id", streamId)
+      .eq("educator_id", edu.educatorId)
+  }
 
   // Notificação de início de sessão (mesma do ingest OBS/presence) — o studio do browser também
   // dispara o push "Estamos em Direto!" quando a transmissão arranca de facto.
-  if (!wasLive) {
+  if (!wasLive && !nuncaAoVivo) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt"
     fetch(`${siteUrl}/api/notifications/send-push`, {
       method: "POST",

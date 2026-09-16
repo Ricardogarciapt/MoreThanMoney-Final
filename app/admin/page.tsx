@@ -15,6 +15,7 @@ import AdminOverview from "@/components/admin/admin-overview"
 import UserManagementComponent from "@/components/admin/user-management"
 import SiteContentManager from "@/components/admin/site-content-manager"
 import ContentConfigManager from "@/components/admin/content-config-manager"
+import VideosIntroManager from "@/components/admin/videos-intro-manager"
 import NotificationsManager from "@/components/admin/notifications-manager"
 import ThemeManager from "@/components/admin/theme-manager"
 import SettingsManager from "@/components/admin/settings-manager"
@@ -287,6 +288,20 @@ function AdminPageClient() {
 
           {activeSection === "content" && (
             <div className="space-y-8">
+              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+                <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">
+                    Aprende a usar — vídeo de introdução por destino
+                  </h2>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Um link por secção da navbar. Ligado, o destino mostra o botão «Aprende a usar …»
+                    que abre o leitor com esse vídeo.
+                  </p>
+                </div>
+                <div className="p-6">
+                  <VideosIntroManager />
+                </div>
+              </section>
               <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
                 <div className="border-b border-[#D2A63C]/15 px-6 py-4">
                   <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Conteúdo do site</h2>

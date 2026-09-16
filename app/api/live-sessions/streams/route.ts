@@ -34,6 +34,7 @@ const STREAM_SELECT_PUBLIC = `
   scheduled_start_at,
   viewer_count,
   access_tier,
+  nunca_ao_vivo,
   academy:lms_academies(id, slug, name),
   educator:lms_educators(id, display_name, bio, avatar_url, is_active, specialty, restream_enabled, restream_embed_url)
 `
@@ -79,7 +80,10 @@ export async function GET(request: NextRequest) {
 
     if (academyId) query = query.eq("academy_id", academyId)
     if (educatorId) query = query.eq("educator_id", educatorId)
-    if (onlyLive) query = query.eq("is_live", true)
+    // Uma sala de gravação («Introdução») nunca entra numa lista de «ao vivo». A trava a sério
+    // está na escrita — a base de dados nunca guarda is_live=true para estas salas — mas isto
+    // custa nada e protege de linhas antigas ou de uma escrita feita à mão na consola.
+    if (onlyLive) query = query.eq("is_live", true).eq("nunca_ao_vivo", false)
 
     const { data, error } = await query
     if (error) {
@@ -100,6 +104,9 @@ export async function GET(request: NextRequest) {
       })
       return {
         ...row,
+        // Mesma razão da linha acima: se alguma vez uma destas salas aparecer com is_live=true,
+        // o site não a mostra acesa.
+        is_live: row.nunca_ao_vivo ? false : (row.is_live as boolean),
         playback_url: resolved.playback_url,
         hls_manifest_url: resolved.hls_manifest_url,
       }

@@ -125,21 +125,12 @@ export const defaultContentConfig: ContentConfig = {
     }
   ],
   videos: [
-    // ONBOARDING
-    {
-      id: 'onboarding-playlist',
-      title: 'Fast Start Educativo - Playlist Completa',
-      videoId: 'RQ0CI0jWAnM',
-      playlist: 'PL6XU0y2YUMZK39WNX1ViMzxo6QSx7l-zu',
-      page: '/onboarding',
-      section: 'Video Modal',
-      autoplay: true
-    },
-    
-    // SWIPE TO TRADE
-    
-    // FAST START
-    
+    // 2026-09-16: saiu daqui a entrada `onboarding-playlist` («Fast Start Educativo — Playlist
+    // Completa», secção "Video Modal" do /onboarding). Nenhuma página a lia — o /onboarding nunca
+    // teve modal de vídeo — e o lugar dela é agora da sala «Introdução» do LMS, cuja playlist o
+    // /onboarding abre de facto (components/intro/curso-introducao.tsx). Duas configurações para o
+    // mesmo vídeo de arranque, uma delas invisível, é a receita para se editar a errada.
+
     // MTM PAGE
     {
       id: 'mtm-presentation',

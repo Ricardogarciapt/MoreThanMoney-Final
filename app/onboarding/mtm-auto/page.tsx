@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import CursoIntroducao from '@/components/intro/curso-introducao'
 
 export const metadata: Metadata = {
   title: 'Começar no MTM Auto · MoreThanMoney',
@@ -82,6 +83,14 @@ export default function OnboardingMtmAuto() {
           Ver como funciona
         </Link>
       </div>
+
+      {/*
+        Também para quem só quer a app.
+
+        Os quatro passos dizem o QUE fazer; o curso mostra COMO — e é o mesmo curso do outro
+        caminho, porque quem instala a app hoje pode querer o resto amanhã.
+      */}
+      <CursoIntroducao feitio="bloco" className="mt-10" />
 
       <p className="mt-10 text-[13px] leading-relaxed text-[#7a7a84]">
         Operar com produtos alavancados tem risco elevado de perda. Resultados passados não
