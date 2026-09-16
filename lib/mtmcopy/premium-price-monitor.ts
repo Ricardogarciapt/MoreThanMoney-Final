@@ -14,7 +14,8 @@ import {
   type MetaApiPosition,
 } from './metaapi'
 import { mirrorPremiumExit } from './premium-subscriber-exits'
-import { CANONICAL_PREMIUM_ACCOUNT_ID, CONTAS_MOTOR_TEMPO_REAL, ehContaDeMotor } from './provider-constants'
+import { CANONICAL_PREMIUM_ACCOUNT_ID } from './provider-constants'
+import { contasDoMotorTempoReal, ehContaDeMotorViva, carregarContasDeEstrategia } from './contas-provider-estrategia'
 import { pipSizeForSymbol } from './trade-outcome'
 import { adotarManuais } from './adotar-manuais'
 import { lerPosicoesMotor, precoMotor, sombraSnapshot } from './metaapi-snapshot'
@@ -184,7 +185,10 @@ export async function runPremiumPriceMonitor(): Promise<{
 }> {
   const sw = await getExecSwitches()
   if (!sw.premium_price_monitor) return { ran: false, checked: 0, actions: 0, detail: ['monitor desligado'] }
-  if (!CONTAS_MOTOR_TEMPO_REAL.length) {
+  // As contas mestre vivas vêm da base (contas provider MT5 do VPS) — sem isto o motor só
+  // conhecia os ids escritos à mão e as estratégias novas ficavam sem parciais/BE/trailing.
+  await carregarContasDeEstrategia().catch(() => undefined)
+  if (!contasDoMotorTempoReal().length) {
     return { ran: false, checked: 0, actions: 0, detail: ['sem contas de origem configuradas'] }
   }
 
@@ -242,7 +246,7 @@ export async function runPremiumPriceMonitor(): Promise<{
 
   const saltadas: string[] = []
   for (const accountId of [...byAccount.keys()]) {
-    if (ehContaDeMotor(accountId) || precisamDoMotor.has(accountId)) continue
+    if (ehContaDeMotorViva(accountId) || precisamDoMotor.has(accountId)) continue
     byAccount.delete(accountId)
     saltadas.push(accountId.slice(0, 8))
   }

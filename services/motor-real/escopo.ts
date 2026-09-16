@@ -13,7 +13,8 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getExecSwitches, type ExecSwitches } from '../../lib/mtmcopy/exec-switches'
-import { CANONICAL_PREMIUM_ACCOUNT_ID, ehContaDeMotor } from '../../lib/mtmcopy/provider-constants'
+import { CANONICAL_PREMIUM_ACCOUNT_ID } from '../../lib/mtmcopy/provider-constants'
+import { carregarContasDeEstrategia, ehContaDeMotorViva } from '../../lib/mtmcopy/contas-provider-estrategia'
 import { t2tUsaTrailing } from '../../lib/mtmcopy/t2t-source'
 import { filtrarContasExistentes } from '../../lib/mtmcopy/metaapi-inexistentes'
 import { resolverToken, type TokenResolvido } from '../../lib/copia-contas/tokens'
@@ -45,6 +46,11 @@ const T2T_SEM_GESTAO = new Set(['ideias-e-sinais'])
 
 export async function carregarEscopo(db: SupabaseClient, o: OpcoesEscopo): Promise<Escopo> {
   const switches = await getExecSwitches()
+  // As contas mestre de cada estratégia vêm da base (contas provider MT5 do VPS): sem isto o
+  // motor só conhecia a lista fixa de ids e as posições das estratégias novas ficavam sem
+  // parciais, sem break-even e sem trailing — e o espelho só leva às MTM Funded o que acontece
+  // na mestre, por isso a falta contagiava as seguidoras.
+  await carregarContasDeEstrategia().catch(() => undefined)
   const itens: ItemGestao[] = []
   const pedidos: PedidoConta[] = []
   const tokens = new Map<string, TokenResolvido>()
@@ -67,7 +73,7 @@ export async function carregarEscopo(db: SupabaseClient, o: OpcoesEscopo): Promi
     if (error) throw new Error(`premium_active: ${error.message}`)
     const precisam = new Set((diretas ?? []).map((c) => String(c.metaapi_account_id)))
     for (const r of (rows ?? []) as unknown as LinhaPremium[]) {
-      if (!(ehContaDeMotor(r.account_id) || precisam.has(r.account_id))) continue
+      if (!(ehContaDeMotorViva(r.account_id) || precisam.has(r.account_id))) continue
       const mestre = r.account_id === CANONICAL_PREMIUM_ACCOUNT_ID
       mestreAberto ||= mestre
       itens.push({ tipo: 'premium', conta: r.account_id, ref: r.id, linha: r, espelhar: mestre })

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
 import { buildCanonicalProviderRoutes } from '@/lib/mtmcopy/provider-routes-defaults'
-import { CONTAS_MOTOR_TEMPO_REAL } from '@/lib/mtmcopy/provider-constants'
+import {
+  carregarContasDeEstrategia,
+  contasDeEstrategiaEmCache,
+  contasDoMotorTempoReal,
+  slugDaConta,
+} from '@/lib/mtmcopy/contas-provider-estrategia'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -44,6 +49,9 @@ export async function GET(req: NextRequest) {
     /* sem CopyFactory, mostra-se o resto */
   }
 
+  // As rotas canónicas só sabem a conta de cada estratégia depois de a cache estar quente.
+  await carregarContasDeEstrategia(true).catch(() => undefined)
+  const motor = contasDoMotorTempoReal()
   const rotas = buildCanonicalProviderRoutes()
   const fontes = await Promise.all(
     rotas.map(async (rota) => {
@@ -76,7 +84,9 @@ export async function GET(req: NextRequest) {
         estado: (conta?.state as string) ?? null,
         ligacao: (conta?.connectionStatus as string) ?? null,
         // O motor de preço corre nesta conta? É o que separa "gerido por nós" de "gerido na fonte".
-        motor: CONTAS_MOTOR_TEMPO_REAL.includes(rota.account_id),
+        motor: motor.includes(rota.account_id),
+        // De que estratégia é esta conta, e de onde veio o id (conta do VPS ou provider).
+        slug: slugDaConta(rota.account_id),
         copiadores: rota.strategy_id ? (subsPorEstrategia.get(rota.strategy_id) ?? 0) : 0,
         tapToTrade: rota.tap_to_trade === true,
         origem: rota.signal_source ?? 'telegram',
@@ -124,5 +134,22 @@ export async function GET(req: NextRequest) {
     /* sem config do PrimeVerse, o painel mostra só as rotas */
   }
 
-  return NextResponse.json({ ok: true, fontes, primeverse })
+  /**
+   * AS CONTAS MESTRE, COMO A BASE AS TEM.
+   *
+   * É a resposta à pergunta que custou 24 h de sinais sem execução: «que conta é que esta
+   * estratégia usa?». `divergencia` diz quando `mtmauto_providers.metaapi_account_id` aponta
+   * para outro sítio — a conta do VPS é a que negoceia, mas a discrepância tem de ser visível.
+   */
+  const contasMestre = contasDeEstrategiaEmCache().map((c) => ({
+    slug: c.slug,
+    contaId: c.accountId,
+    login: c.login,
+    servidor: c.servidor,
+    origem: c.origem,
+    divergencia: c.divergencia,
+    motor: motor.includes(c.accountId),
+  }))
+
+  return NextResponse.json({ ok: true, fontes, contasMestre, primeverse })
 }

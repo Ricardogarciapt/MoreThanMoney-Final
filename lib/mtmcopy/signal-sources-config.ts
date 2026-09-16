@@ -8,6 +8,7 @@ import {
   resolvedPremiumSignalsChatId,
   resolvedTradeIdeasChatId,
 } from '@/lib/telegram-channel-ids'
+import { carregarContasDeEstrategia } from './contas-provider-estrategia'
 
 export type MtmcopyTelegramChannelKey = 'trade-ideas' | 'premium-signals'
 
@@ -214,6 +215,13 @@ export function invalidateSignalSourcesCache(): void {
 }
 
 export async function getSignalSourcesConfig(): Promise<MtmcopySignalSourcesConfig> {
+  /**
+   * A conta mestre de cada estratégia vem da base de dados e é lida SÍNCRONA por quem constrói
+   * as rotas (`buildCanonicalProviderRoutes`). Esta é a porta por onde toda a gente passa antes
+   * disso, por isso é aqui que se aquece a cache — com TTL próprio, custa uma leitura por minuto.
+   * Nunca lança: cache fria = comportamento antigo (constantes), nunca uma conta errada.
+   */
+  await carregarContasDeEstrategia().catch(() => undefined)
   if (cache && Date.now() - cache.at < CACHE_MS) return cache.config
 
   const supabase = getSupabaseAdmin()

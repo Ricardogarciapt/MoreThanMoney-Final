@@ -1,4 +1,4 @@
-import { CONTAS_MOTOR_TEMPO_REAL } from './provider-constants'
+import { contasDoMotorTempoReal } from './contas-provider-estrategia'
 
 /**
  * TODAS as ordens abrem como trades MANUAIS: sem comentário e sem magic number.
@@ -24,7 +24,10 @@ export function commentedAccountIds(): string[] {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
-  return [...new Set([...CONTAS_MOTOR_TEMPO_REAL, ...extra].filter(Boolean))]
+  // `contasDoMotorTempoReal()` = a lista fixa + as contas mestre vivas lidas da base (as contas
+  // provider MT5 do VPS). Sem elas, as posições das estratégias novas abriam SEM comentário e o
+  // motor deixava de saber que perna era cada uma.
+  return [...new Set([...contasDoMotorTempoReal(), ...extra].filter(Boolean))]
 }
 
 /** A conta abre trades sem comentário (isto é: todas menos as provedoras). */

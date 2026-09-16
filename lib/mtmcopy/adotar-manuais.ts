@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { lerPosicoesMotor } from './metaapi-snapshot'
 import { fimDeSemanaFx, saltarLeiturasLigado } from './market-hours'
-import { CONTAS_MOTOR_TEMPO_REAL } from './provider-constants'
+import { contasDoMotorTempoReal, carregarContasDeEstrategia } from './contas-provider-estrategia'
 import { symbolMatchesCanonical } from './symbol-resolver'
 
 /**
@@ -64,7 +64,9 @@ export async function adotarManuais(): Promise<{ adotadas: Adotada[]; notas: str
 
   const agora = Date.now()
   const fimDeSemana = saltarLeiturasLigado() && fimDeSemanaFx(new Date(agora))
-  for (const conta of CONTAS_MOTOR_TEMPO_REAL) {
+  // As contas mestre vivas (base de dados) entram na adopção como as fixas.
+  await carregarContasDeEstrategia().catch(() => undefined)
+  for (const conta of contasDoMotorTempoReal()) {
     // Fim de semana: uma trade à mão só pode ser cripto (o resto não negoceia), e para a apanhar
     // chega olhar de minuto a minuto em vez de segundo a segundo. Ver market-hours.ts.
     if (fimDeSemana) {
