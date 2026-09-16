@@ -12,6 +12,7 @@
  */
 import { isTerminal, isOwnLifecycleAnnouncement, type SignalEvent } from './signal-lifecycle'
 import { t2tSourceKey, type T2TSourceKey } from './t2t-source'
+import { directionFromText } from './signal-direction'
 
 /** Etiqueta legível de cada fonte, para o texto que sai ao cliente. */
 export const SOURCE_LABEL: Record<T2TSourceKey, string> = {
@@ -89,12 +90,9 @@ export function symbolFromContent(content: string | null | undefined): string | 
   return m[1].replace('/', '')
 }
 
-/** Direção do texto, quando declarada. */
+/** Direção do texto, quando declarada — leitura única, em `signal-direction`. */
 export function directionFromContent(content: string | null | undefined): 'buy' | 'sell' | null {
-  const c = content ?? ''
-  if (/\b(sell|short|venda)\b|🔴/i.test(c)) return 'sell'
-  if (/\b(buy|long|compra)\b|🔵|🟢/i.test(c)) return 'buy'
-  return null
+  return directionFromText(content)
 }
 
 export interface FollowupResult {

@@ -73,5 +73,38 @@ const mapa = emparelhar(msgs)
 eq("so o setup vivo leva numero", [...mapa.keys()], ["b"])
 eq("numero do setup vivo", mapa.get("b")?.pips, 163)
 
+/**
+ * ——— o rodapé do Premium não é uma direção (16/09/2026)
+ *
+ * O Gold Did assina todos os cartões com «…Money management is key to long term success». O
+ * «long» dessa frase era lido como COMPRA, e um fecho de compra colava os seus pips a um setup
+ * de VENDA — foi assim que o cliente viu «BUY +160 pips» em cima de um «GOLD SELL SETUP».
+ */
+const RODAPE = "🔑 Use suitable lot sizes based on your capital. Money management is key to long term success"
+const cartaoVenda = {
+  id: "v",
+  channel_slug: "premium-ideas",
+  content: `3. GOLD SELL SETUP\nGold Sell Zone 4328 - 4334\nSL : 4339\nTP1 : 4323\nTP2 : 4318\n${RODAPE}`,
+  created_at: "2026-09-16T08:02:53Z",
+}
+const fechoCompra = { id: "f", channel_slug: "premium-ideas", content: "🏁 Posição fechada · 🔵 COMPRA · +160 pips · +0,37%", created_at: "2026-09-16T08:12:44Z" }
+const fechoVenda = { id: "f", channel_slug: "premium-ideas", content: "🏁 Posição fechada · 🔴 VENDA · −50 pips · −0,12%", created_at: "2026-09-16T08:12:44Z" }
+eq("fecho de COMPRA não encerra setup de VENDA", [...emparelhar([cartaoVenda, fechoCompra]).keys()], [])
+const fechoDaVenda = emparelhar([cartaoVenda, fechoVenda])
+eq("fecho de VENDA encerra setup de VENDA", [...fechoDaVenda.keys()], ["v"])
+
+/**
+ * ——— o menos anunciado é uma perda
+ *
+ * Só se olhava para o «SL HIT»/❌, que é como as fontes de fora escrevem uma perda. Os NOSSOS
+ * cartões escrevem-na com um menos, e uma venda fechada a −50 pips ficava gravada como +50
+ * pips GANHOS — a verde, no cartão e nas somas do mês.
+ */
+eq("perda anunciada mantém-se negativa", fechoDaVenda.get("v")?.pips, -50)
+eq("perda anunciada é 'lost'", fechoDaVenda.get("v")?.kind, "lost")
+eq("ganho anunciado continua positivo",
+   calcularDesfecho(cartaoVenda, { id: "g", channel_slug: "premium-ideas", content: "HIT TP3 ✅ +160PIPS\nHIT ALL TP ✅", created_at: "2026-09-16T08:12:44Z" })?.pips,
+   160)
+
 console.log(`\n${ok} ok · ${mau} mau`)
 process.exit(mau === 0 ? 0 : 1)

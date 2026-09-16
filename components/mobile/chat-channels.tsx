@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { isT2TEntrySignal, t2tMode } from "@/lib/mtmcopy/t2t-source"
+import { directionLabelFromText } from "@/lib/mtmcopy/signal-direction"
 import TapToCopyModal from "@/components/mobile/tap-to-copy-modal"
 import { useAuth } from "@/contexts/auth-context"
 import {
@@ -683,17 +684,9 @@ const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|b
  *  'ENTRY HIT' literal (monitor/PrimeVerse) e não 'ativad' — senão as entradas Sensei ("Ideia
  *  Activada"), que SÃO sinais, resolver-se-iam umas às outras. */
 const TAP_TRADE_RESOLVING_RE = /(entry\s*hit|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|posi[çc][aã]o\s*fechada|fechad[ao]|encerrad|cancelad|descartad|invalidad|break\s*even|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
-/** Direção do sinal/follow-up, quando declarada — palavras primeiro (1ª ocorrência ganha), emojis depois. */
+/** Direção do sinal/follow-up, quando declarada — leitura única, em `lib/mtmcopy/signal-direction`. */
 function t2tDirectionOf(content?: string | null): "BUY" | "SELL" | "" {
-  if (!content) return ""
-  const c = content.toLowerCase()
-  const buyIdx = c.search(/\b(buy|long|compra)\b/)
-  const sellIdx = c.search(/\b(sell|short|venda)\b/)
-  if (buyIdx >= 0 && (sellIdx < 0 || buyIdx < sellIdx)) return "BUY"
-  if (sellIdx >= 0) return "SELL"
-  if (/🔴/.test(content)) return "SELL"
-  if (/🔵|🟢/.test(content)) return "BUY"
-  return ""
+  return directionLabelFromText(content)
 }
 /** Símbolo do sinal, para emparelhar follow-ups com a entrada certa (nunca substring cega). */
 function t2tSymbolOf(content?: string | null): string | null {

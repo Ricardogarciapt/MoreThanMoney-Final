@@ -22,6 +22,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { pipSizeForSymbol, unitFor } from './trade-outcome'
 import { isT2TEntrySignal } from './t2t-source'
+import { directionFromText } from './signal-direction'
 /**
  * Um stop ou um alvo a mais de 15% da entrada não é um stop nem um alvo — é um número mal lido.
  * Nesse caso não se grava desfecho nenhum: "não sei" é melhor do que um número errado.
@@ -58,8 +59,6 @@ const ALVO_FINAL_RE = /(alvo\s+final|hit\s+all\s+tp|todos\s+os\s+alvos)/i
 /** Nunca chegou a render: cancelado ou descartado antes de haver posição. */
 const SEM_TRADE_RE = /(cancelad|descartad|invalidad)/i
 const PIPS_RE = /([+\-−]?\s*\d+(?:[.,]\d+)?)\s*pips?/i
-const DIR_BUY_RE = /\b(buy|long|compra)\b|🟢|🔵/i
-const DIR_SELL_RE = /\b(sell|short|venda)\b|🔴/i
 
 export interface SignalOutcome {
   /** Null quando o sinal terminou sem render (cancelado/descartado) ou sem forma de saber. */
@@ -97,10 +96,16 @@ function simbolo(texto: string): string | null {
   return m ? m[0] : null
 }
 
+/**
+ * Direção do cartão ou do follow-up — agora lida por `signal-direction`.
+ *
+ * Era aqui um «testa BUY primeiro»: o rodapé com que o Gold Did assina os cartões Premium
+ * («…key to long term success») casava com `\blong\b` e fazia passar por COMPRA todos os
+ * «GOLD SELL SETUP». Como é por esta direção que os fechos se emparelham com as entradas, um
+ * fecho de compra colava os seus pips a um setup de venda.
+ */
 function direcao(texto: string): 'buy' | 'sell' | null {
-  if (DIR_BUY_RE.test(texto)) return 'buy'
-  if (DIR_SELL_RE.test(texto)) return 'sell'
-  return null
+  return directionFromText(texto)
 }
 
 /**
@@ -183,10 +188,17 @@ export function calcularDesfecho(setup: Msg, fecho: Msg): SignalOutcome | null {
   }
 
   // 1. Número anunciado pela fonte.
+  //
+  // O SINAL do número anunciado conta. Só se olhava para o `PERDA_RE` («SL HIT», ❌), que é como
+  // as fontes de fora escrevem uma perda; os NOSSOS cartões escrevem-na com um menos —
+  // «🏁 Posição fechada · XAUUSD 🔴 VENDA · −50 pips · −0,12%» — e essa perda ficava gravada
+  // como +50 pips GANHOS, em verde, no cartão e nas somas do mês.
   const m = texto.match(PIPS_RE)
   const bruto = m ? numero(m[1]) : null
+  const menosAnunciado = m ? /^\s*[-−]/.test(m[1]) : false
   if (bruto != null && bruto !== 0) {
-    return montar(PERDA_RE.test(texto) ? -Math.abs(bruto) : Math.abs(bruto), 'announced')
+    const perdeu = PERDA_RE.test(texto) || menosAnunciado
+    return montar(perdeu ? -Math.abs(bruto) : Math.abs(bruto), 'announced')
   }
 
   // 2. Sem número: se sabemos ONDE fechou, medimos no próprio setup.
