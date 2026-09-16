@@ -12,7 +12,7 @@
  * quando casam ou quando o monitor não agiu em `esperaMs`; o chamador grava-as em lote.
  */
 
-export type TipoItem = 'premium' | 't2t' | 'mtmauto' | 'subscritor'
+export type TipoItem = 'premium' | 't2t' | 'mtmauto' | 'subscritor' | 'provider'
 export type AcaoIntencao = 'sl' | 'fecho' | 'espelho' | 'encerrar'
 export type EstadoLinha = 'casada' | 'sem_monitor' | 'monitor_sem_sombra' | 'posicao_fechada' | 'espelho' | 'live_ok' | 'live_falhou'
 
