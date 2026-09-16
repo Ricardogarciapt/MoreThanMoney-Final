@@ -55,5 +55,6 @@ export async function precoParaMonitor(acc, sym) { P().log.push({ k: 'preco', ac
   './t2t-lifecycle': `export async function announceAndCloseByMessage(a) { globalThis.__P.log.push({ k: 'announce', ...a }) }`,
   '@/lib/gestao-real/contas-live': `export async function contaGeridaPeloMotorReal(acc, tipo) { return (globalThis.__P.live || []).includes(acc + ':' + tipo) }`,
   '@/lib/telegram-channel-push': `export async function sendTelegramChannelPush(a) { globalThis.__P.log.push({ k: 'push', slug: a.slug, content: a.content }) }`,
-  './metaapi-inexistentes': `export async function filtrarContasExistentes(ids) { return ids.filter(Boolean) }`,
+  './metaapi-inexistentes': `export async function filtrarContasExistentes(ids) { return ids.filter(Boolean) }
+export const CONTAS_METAAPI_APAGADAS = new Set()`,
 }
