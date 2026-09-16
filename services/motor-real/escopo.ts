@@ -9,12 +9,24 @@
  *    (ideias-e-sinais), ligações não desligadas e contas que existem; com `t2t_price_monitor`.
  *  · MTM Auto: execuções `open` em contas MetaApi (TradeLocker/MTM Funded ficam para a fase 2), com a
  *    configuração do provider (ativo+espelhar, não apagado) e a chave da equipa quando existe.
+ *  · Provider: as contas MESTRE das estratégias (`lib/mtmcopy/contas-provider-estrategia.ts`, linhas
+ *    `mtm_trading_accounts` tipo='provider' cruzadas com `mtmauto_providers.metaapi_account_id`).
+ *    Aqui não há linha por posição: o item é a ESTRATÉGIA (ref = slug) e as regras são as dela
+ *    (`sinais_config` + colunas antigas). Só entram estratégias com gestão configurada — ver
+ *    `temGestaoProvider`. O MTM Scanner NUNCA executa: fica de fora da gestão e só é ligado, em modo
+ *    de observação (sem item, logo sem decisão possível), com MOTOR_REAL_PROVIDER_OBSERVAR_SCANNER=1.
  *  · Subscritores do Premium (opcional): só com posição mestre aberta.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getExecSwitches, type ExecSwitches } from '../../lib/mtmcopy/exec-switches'
 import { CANONICAL_PREMIUM_ACCOUNT_ID } from '../../lib/mtmcopy/provider-constants'
-import { carregarContasDeEstrategia, ehContaDeMotorViva } from '../../lib/mtmcopy/contas-provider-estrategia'
+import {
+  carregarContasDeEstrategia,
+  contasDeEstrategiaEmCache,
+  ehContaDeMotorViva,
+  SLUGS_QUE_NAO_EXECUTAM,
+} from '../../lib/mtmcopy/contas-provider-estrategia'
+import { estrategiasGeridas, type EstadoProvider } from '../../lib/gestao-real/provider'
 import { t2tUsaTrailing } from '../../lib/mtmcopy/t2t-source'
 import { filtrarContasExistentes } from '../../lib/mtmcopy/metaapi-inexistentes'
 import { resolverToken, type TokenResolvido } from '../../lib/copia-contas/tokens'
@@ -39,7 +51,11 @@ export interface OpcoesEscopo {
   tokenCasa: string
   contasFotografia: string[]
   subscritores: boolean
-  tipos: { premium: boolean; t2t: boolean; mtmauto: boolean }
+  tipos: { premium: boolean; t2t: boolean; mtmauto: boolean; provider: boolean }
+  /** Ligar (só para ver) a conta do MTM Scanner, que não executa nem é gerida. */
+  observarScanner?: boolean
+  /** Travão de carga das decisões por posição das contas provider (ms). */
+  intervaloProviderMs?: number
 }
 
 const T2T_SEM_GESTAO = new Set(['ideias-e-sinais'])
@@ -179,6 +195,49 @@ export async function carregarEscopo(db: SupabaseClient, o: OpcoesEscopo): Promi
         pedidos.push({ conta: mid, prioridade: 3, chaveToken: tk.chave, motivos: ['mtmauto'] })
         tokens.set(mid, tk)
       }
+    }
+  }
+
+  // ── Provider (contas mestre das estratégias) ───────────────────────────────
+  if (o.tipos.provider) {
+    // Uma consulta por ciclo de escopo (15 s), às linhas das estratégias — nunca por tick.
+    const { data: provs, error } = await db
+      .from('mtmauto_providers')
+      .select('id, slug, metaapi_account_id, ativo, apagado_em, tenant_id, metaapi_chave_equipa, be_gatilho, trailing_arranca_pips, trailing_distancia_pips, trailing_passo_pips, saidas_pct, sinais_config')
+      .limit(500)
+    if (error) throw new Error(`mtmauto_providers: ${error.message}`)
+    const porSlug = new Map((provs ?? []).map((p) => [String(p.slug ?? '').toLowerCase(), p as Linha]))
+    // Só quando alguma estratégia foi criada na chave de uma equipa (as da casa não são).
+    const equipas = [...new Set((provs ?? []).filter((p) => p.metaapi_chave_equipa === true && p.tenant_id).map((p) => String(p.tenant_id)))]
+    const { data: tenants } = equipas.length
+      ? await db.from('mtmauto_tenants').select('id, metaapi_token').in('id', equipas)
+      : { data: [] as Linha[] }
+    const tokenDaEquipaProv = new Map((tenants ?? []).map((t) => [String(t.id), (t.metaapi_token as string | null) ?? null]))
+    const escolha = estrategiasGeridas(contasDeEstrategiaEmCache(), porSlug, {
+      naoExecutam: SLUGS_QUE_NAO_EXECUTAM,
+      observarQuemNaoExecuta: o.observarScanner,
+      intervaloMinimoMs: o.intervaloProviderMs,
+    })
+    notas.push(...escolha.notas)
+    for (const conta of escolha.observar) {
+      pedidos.push({ conta, prioridade: 1, chaveToken: 'casa', motivos: ['provider:observar'] })
+      if (!tokens.has(conta)) tokens.set(conta, casa)
+    }
+    for (const g of escolha.geridas) {
+      const prov = g.provider
+      const tk = prov
+        ? resolverToken({
+            ref: `prov:${prov.id}`,
+            tenantId: (prov.tenant_id as string | null) ?? null,
+            tokenEquipa: prov.tenant_id ? tokenDaEquipaProv.get(String(prov.tenant_id)) ?? null : null,
+            providerNaChaveEquipa: prov.metaapi_chave_equipa === true,
+            tokenCasa: o.tokenCasa,
+          })
+        : casa
+      if (!tk) { notas.push(`provider ${g.slug}: sem chave MetaApi`); continue }
+      itens.push({ tipo: 'provider', conta: g.conta, ref: g.slug, cfg: g.cfg, estados: new Map<string, EstadoProvider>() })
+      pedidos.push({ conta: g.conta, prioridade: 1, chaveToken: tk.chave, motivos: ['provider'] })
+      if (!tokens.has(g.conta)) tokens.set(g.conta, tk)
     }
   }
 

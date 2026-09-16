@@ -8,8 +8,27 @@ dos monitores de hoje:
 | Premium (mestre `530d2e07` + contas por Telegram directo) | `lib/mtmcopy/premium-price-monitor.ts` (loop VPS 1 s) | `lib/gestao-real/premium.ts` + `espelho-premium.ts` |
 | T2T | `lib/mtmcopy/t2t-price-monitor.ts` (5 s) | `lib/gestao-real/t2t.ts` |
 | MTM Auto (contas MetaApi) | mtm-auto `/api/cron/motor` (5 s) | `lib/gestao-real/mtmauto.ts` (cópia byte a byte do mtm-auto) |
+| **Provider** (contas MESTRE das estratégias) | **ninguém** — nunca houve monitor | `lib/gestao-real/provider.ts` |
 
 Os monitores **chamam estas funções** — não há regras copiadas. A prova está nos testes (secção 7).
+
+O tipo **provider** é o que faltava. As posições da conta mestre de uma estratégia não têm linha
+nenhuma na base (não são um sinal copiado — são o ORIGINAL), por isso nenhum monitor as geria: corriam
+sem break-even e sem trailing, e como o espelho (070) só leva às contas MTM Funded o que acontece na
+mestre, a falta contagiava os seguidores. As contas vêm de `lib/mtmcopy/contas-provider-estrategia.ts`
+(linhas `mtm_trading_accounts` tipo=`provider`, cruzadas com `mtmauto_providers.metaapi_account_id`) e
+as regras são as **da estratégia**: `mtmauto_providers.sinais_config` lido pela mesma `configDoProvider`
+que o motor simulado usa, com as colunas antigas (`trailing_arranca_pips`, `trailing_distancia_pips`,
+`trailing_passo_pips`, `saidas_pct`) de recurso — a coluna `be_gatilho` fica de fora de propósito (já
+tem dois sentidos na casa). O item é a ESTRATÉGIA (`ref` da sombra = slug) e cada tick avalia as
+posições dela que ainda não tenham dono (uma posição gerida pela linha Premium/T2T/MTM Auto nunca leva
+decisão do tipo provider). Regras: BE só com `beGatilhoPips`, trailing só com `trailingInicioPips` —
+sem isso a estratégia não tem gestão e o motor fica calado. **Parciais (`saidasPct`) não se fazem**: a
+posição da mestre só traz um `takeProfit`, não uma escada, e cortar meia posição na mestre propaga-se
+pela CopyFactory e pelo espelho — é mudança de comportamento, não medição.
+**Sempre em sombra**: `provider` não está em `TIPOS_LIVE_SUPORTADOS` e nunca toca no executor. O **MTM
+Scanner** não negoceia: nunca é gerido, e só é ligado — para ver — com
+`MOTOR_REAL_PROVIDER_OBSERVAR_SCANNER=1`.
 
 - **SOMBRA** (por omissão, `MOTOR_REAL_ESCRITA=0`): nunca envia ordens. Grava em `gestao_real_sombra`
   UMA linha por decisão (intenções da mesma regra na mesma posição fundem-se em 5 s) e, quando o
@@ -71,7 +90,9 @@ MTM_API_BASE=https://www.morethanmoney.pt
 # (vazias = 0.4 / 12 / 5 · 5 / 0.4 · 5 / 0.4 / 0.5 — o log de arranque imprime as regras em uso)
 
 # opcionais
-# MOTOR_REAL_PREMIUM=1 MOTOR_REAL_T2T=1 MOTOR_REAL_MTMAUTO=1     # 0 desliga um tipo
+# MOTOR_REAL_PREMIUM=1 MOTOR_REAL_T2T=1 MOTOR_REAL_MTMAUTO=1 MOTOR_REAL_PROVIDER=1   # 0 desliga um tipo
+# MOTOR_REAL_PROVIDER_INTERVALO_MS=1000          # travão: intervalo mínimo entre decisões na MESMA posição provider
+# MOTOR_REAL_PROVIDER_OBSERVAR_SCANNER=0         # 1 = liga a conta do MTM Scanner só para ver (nunca é gerida)
 # MOTOR_REAL_SUBSCRITORES=0      # 1 = liga também os subscritores do Premium enquanto há posição mestre (sombra do espelho por conta)
 # MOTOR_REAL_MAX_CONTAS=30  MOTOR_REAL_GRACA_MIN=10  MOTOR_REAL_PAUSA_LIMITE_MIN=15
 # MOTOR_REAL_TICK_MS=250  MOTOR_REAL_COTACOES_MS=500  MOTOR_REAL_ESCOPO_MS=15000
@@ -134,6 +155,15 @@ Leitura:
 - `posicao_fechada`: fechou na corretora (SL/TP/manual) — contexto, não erro.
 - `espelho`: o motor pediria o espelho aos subscritores (com `MOTOR_REAL_SUBSCRITORES=1` aparece
   também uma linha por subscritor).
+- `provider_be` / `provider_trailing` (`tipo='provider'`, `ref` = slug da estratégia): **não têm monitor
+  para casar**, por isso saem sempre como `sem_monitor` — é o esperado, e é a prova de que ninguém
+  estava a gerir estas posições. O que se lê aqui é o COMPORTAMENTO: a que lucro armou o BE, de quanto
+  em quanto andou o trailing, e se o stop alguma vez afrouxou (nunca deve). Nas primeiras horas:
+  ```sql
+  select ref estrategia, regra, count(*) n, min(decidido_em) primeira, max(decidido_em) ultima
+  from gestao_real_sombra where tipo='provider' and decidido_em > now() - interval '24 hours'
+  group by 1,2 order by 1,2;
+  ```
 
 Critério para passar a live (sugestão): ≥30 decisões Premium casadas, divergência 0 em BE/tranca/
 parciais, p95 do trailing ≤3 pips, zero `monitor_sem_sombra` por explicar, zero erros no `[pulso]`.
@@ -152,6 +182,12 @@ parciais, p95 do trailing ≤3 pips, zero `monitor_sem_sombra` por explicar, zer
   ressincronização sem fechos falsos.
 - `planeamento-e-guarda.check.ts`: tecto/prioridade/graça, conta inexistente, pausa por limite, recuo;
   guarda live; cópias byte a byte com o mtm-auto (`MTM_AUTO_DIR=…`).
+- `provider.check.ts`: a configuração lida da estratégia (o jsonb manda, as colunas antigas são
+  recurso, `be_gatilho` fica fora), o perfil «zona» sobre uma posição real (premium-ouro BE 25/+2 e
+  trailing 30 @15 passo 3; sensei 35/2/40/20/4 numa venda), zero decisões sem configuração ou sem
+  preço, a resolução da conta mestre (divergência reportada, Scanner nunca gerido) e o travão das
+  escritas — 400 ticks dão ~58 linhas (uma por movimento de 3 pips), e uma rajada dentro do intervalo
+  mínimo dá uma só.
 
 ## 8. Passar uma conta a LIVE (começar pelo mestre Premium)
 

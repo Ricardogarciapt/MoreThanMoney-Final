@@ -25,6 +25,7 @@ import {
   type SinalMtmAuto,
 } from './mtmauto'
 import { tamanhoPip as pipMtmAuto } from './mtmauto-regras'
+import { decidirProvider, ESTADO_PROVIDER_NOVO, type ConfigProvider, type EstadoProvider } from './provider'
 import { pipSizeForSymbol } from '../mtmcopy/trade-outcome'
 import { decidirSubscritor } from './espelho-premium'
 import { regraDaNota, type AcaoIntencao, type Intencao, type RegistoSombra } from './sombra'
@@ -65,7 +66,17 @@ export interface ItemMtmAuto extends Base {
   /** Conta do educador quando o cliente escolheu espelhar e ela é legível. */
   contaEducador: string | null
 }
-export type ItemGestao = ItemPremium | ItemT2T | ItemMtmAuto
+/**
+ * A conta MESTRE de uma estratégia. Ao contrário dos outros, um item destes não é UMA posição: é a
+ * estratégia inteira (`ref` = slug), e cada tick avalia TODAS as posições abertas da conta com a
+ * configuração dela. É por isso que o estado virtual vive num mapa por posição aqui dentro.
+ */
+export interface ItemProvider extends Base {
+  tipo: 'provider'
+  cfg: ConfigProvider
+  estados: Map<string, EstadoProvider>
+}
+export type ItemGestao = ItemPremium | ItemT2T | ItemMtmAuto | ItemProvider
 
 export interface Configs {
   premium: Omit<ConfigPremium, 'espelhar'>
@@ -94,6 +105,12 @@ export interface ContextoAvaliacao {
   posicoesDe: (conta: string) => PosicaoGestao[] | null
   /** Subscritores do Premium com streaming (sombra do espelho por conta). */
   subscritores: string[]
+  /**
+   * Posições desta conta que já são geridas pela linha que as originou (Premium, T2T, MTM Auto).
+   * O tipo `provider` gere o RESTO — a conta mestre de uma estratégia também executa Premium, e sem
+   * isto a mesma posição levava duas decisões com duas regras diferentes.
+   */
+  posicoesGeridas?: Set<string>
   trailingTempoReal: boolean
   live?: ExecutorLive
 }
@@ -139,7 +156,47 @@ export async function avaliarItem(item: ItemGestao, foto: FotografiaConta, ctx: 
   if (item.terminado || item.ocupado) return []
   if (item.tipo === 'premium') return avaliarPremium(item, foto, ctx)
   if (item.tipo === 't2t') return avaliarT2T(item, foto, ctx)
+  if (item.tipo === 'provider') return avaliarProvider(item, foto, ctx)
   return avaliarMtmAuto(item, foto, ctx)
+}
+
+/**
+ * A conta mestre de uma estratégia: todas as posições abertas, com as regras DA ESTRATÉGIA.
+ *
+ * Sempre em sombra — o tipo `provider` não está em `TIPOS_LIVE_SUPORTADOS` e este caminho nunca toca
+ * no executor. O `ref` da linha da sombra é o slug da estratégia (não há linha de origem na base).
+ */
+function avaliarProvider(item: ItemProvider, foto: FotografiaConta, ctx: ContextoAvaliacao): string[] {
+  const agora = foto.agora
+  const notas: string[] = []
+  const recolha = new Recolha(notas)
+  const vivas = new Set<string>()
+
+  for (const real of foto.posicoes) {
+    const id = String(real.id)
+    if (ctx.posicoesGeridas?.has(id)) continue
+    vivas.add(id)
+    const pos = aplicarSobreposicao(real, ctx.sobreposicoes.get(chaveSob(item.conta, id)), agora)
+    const estado = item.estados.get(id) ?? { ...ESTADO_PROVIDER_NOVO }
+    const vivo = ctx.trailingTempoReal ? foto.precoMedio(real.symbol) : null
+    const d = decidirProvider(pos, item.cfg, estado, agora, vivo)
+    item.estados.set(id, d.estado)
+    if (d.sl == null || d.motivo == null) continue
+    notas.push(d.nota ?? `${real.symbol}: stop → ${d.sl}`)
+    recolha.add({
+      conta: item.conta, tipo: 'provider', ref: item.ref, posicao: id, simbolo: real.symbol,
+      lado: /SELL/i.test(String(real.type)) ? 'sell' : 'buy', tickEm: agora,
+      regra: d.motivo === 'be' ? 'provider_be' : 'provider_trailing',
+      acao: 'sl', sl: d.sl, tp: null, preco: pos.currentPrice ?? null,
+      detalhe: `${item.cfg.slug}${item.cfg.perfil ? ` · perfil ${item.cfg.perfil}` : ''} · ${d.lucroPips.toFixed(1)}p`,
+    })
+    // Em sombra o SL real nunca muda: sem a sobreposição o motor voltaria a pedir o mesmo.
+    sobrepor(ctx, item.conta, id, { sl: d.sl }, agora)
+  }
+
+  for (const id of [...item.estados.keys()]) if (!vivas.has(id)) item.estados.delete(id)
+  recolha.entregar(ctx, agora)
+  return notas
 }
 
 async function avaliarPremium(item: ItemPremium, foto: FotografiaConta, ctx: ContextoAvaliacao): Promise<string[]> {
@@ -305,6 +362,6 @@ async function avaliarMtmAuto(item: ItemMtmAuto, foto: FotografiaConta, ctx: Con
 }
 
 /** Pip para comparar divergências, pelo tipo do item. */
-export function pipDoItem(tipo: 'premium' | 't2t' | 'mtmauto' | 'subscritor', simbolo: string): number {
+export function pipDoItem(tipo: 'premium' | 't2t' | 'mtmauto' | 'subscritor' | 'provider', simbolo: string): number {
   return tipo === 'mtmauto' ? pipMtmAuto(simbolo) : pipSizeForSymbol(simbolo)
 }

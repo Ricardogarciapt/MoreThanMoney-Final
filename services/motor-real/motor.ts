@@ -4,7 +4,9 @@
  * Substitui o `mtm-premium-streaming` (as contas da fotografia continuam a escrever
  * `metaapi_snapshot` igual) e acrescenta a gestão: a cada tick, para cada posição aberta que um
  * monitor gere hoje (Premium, T2T, MTM Auto), corre as MESMAS regras (lib/gestao-real) sobre o preço
- * do streaming.
+ * do streaming. Mais o tipo `provider`: as contas MESTRE das estratégias, cujas posições não têm
+ * linha nenhuma na base e por isso não eram geridas por ninguém — aí as regras são as DA ESTRATÉGIA
+ * (`mtmauto_providers.sinais_config`, lib/gestao-real/provider.ts) e o modo é SEMPRE sombra.
  *
  *  · SOMBRA (por omissão): não envia nada. Regista em `gestao_real_sombra` o que faria e, quando o
  *    monitor actual age (o streaming vê a posição mudar), a latência e a divergência.
@@ -27,7 +29,7 @@ import { contaInexistente, marcarContaInexistente } from '../../lib/mtmcopy/meta
 import { leituraDeFundoBloqueada, registarErroQuota } from '../../lib/mtmcopy/metaapi-quota'
 import { eLimiteDeEquipa, neutralizarErroDeEquipa, RegistoPorToken, type TokenResolvido } from '../../lib/copia-contas/tokens'
 import { avaliarItem, pipDoItem, type ContextoAvaliacao, type ItemGestao, type Sobreposicao } from '../../lib/gestao-real/avaliar'
-import { configPremiumDoAmbiente } from '../../lib/gestao-real/premium'
+import { acharPosicao, configPremiumDoAmbiente } from '../../lib/gestao-real/premium'
 import { configT2TDoAmbiente } from '../../lib/gestao-real/t2t'
 import { configMtmAutoDoAmbiente } from '../../lib/gestao-real/mtmauto'
 import { RegistoSombra, diferencasPosicoes, type LinhaSombra, type PosicaoVista } from '../../lib/gestao-real/sombra'
@@ -50,7 +52,10 @@ const CFG = {
     premium: env('MOTOR_REAL_PREMIUM') !== '0',
     t2t: env('MOTOR_REAL_T2T') !== '0',
     mtmauto: env('MOTOR_REAL_MTMAUTO') !== '0',
+    provider: env('MOTOR_REAL_PROVIDER') !== '0',
   },
+  observarScanner: env('MOTOR_REAL_PROVIDER_OBSERVAR_SCANNER') === '1',
+  intervaloProviderMs: num('MOTOR_REAL_PROVIDER_INTERVALO_MS', 1_000),
   subscritores: env('MOTOR_REAL_SUBSCRITORES') === '1',
   tickMs: num('MOTOR_REAL_TICK_MS', 250),
   escopoMs: num('MOTOR_REAL_ESCOPO_MS', 15_000),
@@ -116,7 +121,9 @@ async function main() {
   })
 
   const norm = (c: string) => c.trim().toLowerCase()
-  const tiposDaConta = (conta: string): Set<TipoGestao> =>
+  // `TipoGestao` é o dos tipos que PODEM ir a live (cópia byte a byte com o mtm-auto, não se mexe);
+  // o motor também gere `provider`, que é sempre sombra.
+  const tiposDaConta = (conta: string): Set<TipoGestao | 'provider'> =>
     new Set([...itens.values()].filter((i) => norm(i.conta) === norm(conta)).map((i) => i.tipo))
   const ligacaoDe = (conta: string) => [...ligacoes.values()].find((l) => norm(l.conta) === norm(conta))
   const contaDaChave = (k: string) => ligacaoDe(k.split(':')[0]!)?.conta ?? k.split(':')[0]!
@@ -174,7 +181,14 @@ async function main() {
     try {
       const { data: s } = await db.from('site_settings').select('value').eq('key', CHAVE_LISTA_LIVE).maybeSingle()
       listaLive = lerListaLive(s?.value)
-      escopo = await carregarEscopo(db, { tokenCasa: CFG.token, contasFotografia: CFG.fotografia, subscritores: CFG.subscritores, tipos: CFG.tipos })
+      escopo = await carregarEscopo(db, {
+        tokenCasa: CFG.token,
+        contasFotografia: CFG.fotografia,
+        subscritores: CFG.subscritores,
+        tipos: CFG.tipos,
+        observarScanner: CFG.observarScanner,
+        intervaloProviderMs: CFG.intervaloProviderMs,
+      })
       tokens = escopo.tokens
       cfgs.premium.trailingTempoReal = escopo.switches.trailing_tempo_real
 
@@ -184,6 +198,10 @@ async function main() {
         vivos.add(k)
         const antigo = itens.get(k)
         if (!antigo || (aResemear.has(novo.conta) && !antigo.ocupado)) itens.set(k, novo)
+        // Provider: o item é a estratégia e vive entre leituras (o estado por posição está nele).
+        // A CONFIGURAÇÃO tem de acompanhar — o dono muda `sinais_config` e isto entra no ciclo
+        // seguinte sem reiniciar o serviço; o estado das posições abertas não se perde.
+        else if (antigo.tipo === 'provider' && novo.tipo === 'provider') antigo.cfg = novo.cfg
       }
       for (const [k, i] of itens) if (!vivos.has(k) && !i.ocupado) itens.delete(k)
       for (const conta of aResemear) {
@@ -297,6 +315,15 @@ async function main() {
         const doConta = [...itens.values()].filter((i) => i.conta === conta && !i.terminado && !i.ocupado)
         if (!doConta.length) continue
         const foto = { conta, posicoes, precoMedio: (s: string) => l.precoMedio(s), agora }
+        // Posições que já têm dono (a linha que as originou). O tipo `provider` é o resto: a conta
+        // mestre de uma estratégia também executa Premium e MTM Auto, e sem isto a mesma posição
+        // seria decidida duas vezes, com duas regras diferentes, e a sombra ficaria ilegível.
+        const geridas = new Set<string>()
+        for (const i of doConta) {
+          if (i.tipo === 't2t') { if (i.linha.broker_position_id) geridas.add(String(i.linha.broker_position_id)) }
+          else if (i.tipo === 'mtmauto') { if (i.execucao.broker_position_id) geridas.add(String(i.execucao.broker_position_id)) }
+          else if (i.tipo === 'premium') { const p = acharPosicao(posicoes, i.linha); if (p) geridas.add(String(p.id)) }
+        }
         for (const item of doConta) {
           const modo = item.tipo === 'premium' ? modoDe(conta, 'premium', agora) : 'sombra'
           const ctx: ContextoAvaliacao = {
@@ -306,6 +333,7 @@ async function main() {
             sobreposicoes,
             posicoesDe: (c) => ligacoes.get(c)?.posicoes() ?? null,
             subscritores: escopo?.subscritores ?? [],
+            posicoesGeridas: geridas,
             trailingTempoReal: cfgs.premium.trailingTempoReal,
             live: modo === 'live' ? executor : undefined,
           }
