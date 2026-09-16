@@ -189,6 +189,14 @@ export interface ConfigSinais {
   saidasPct: number[]
   beNoTp1: boolean
   beOffsetPips: number
+  /**
+   * Break-even a uma distância FIXA em pips, em vez da distância do TP1.
+   *
+   * O TP1 destes sinais fica a 100-150 pips da NOSSA execução (entramos na ponta funda da zona),
+   * mas a reacção da zona só dá 40-60 — o BE ancorado no TP1 nunca arma e a trade devolve tudo ao
+   * stop. Medido em scripts/estudos/perfil-gestao-check.ts. Quando está posto, manda sobre `beNoTp1`.
+   */
+  beGatilhoPips: number | null
   trailingInicioPips: number | null
   trailingDistanciaPips: number | null
   trailingPassoPips: number | null
@@ -205,6 +213,7 @@ export const CONFIG_PADRAO: ConfigSinais = {
   saidasPct: [50, 25],
   beNoTp1: true,
   beOffsetPips: 2,
+  beGatilhoPips: null,
   trailingInicioPips: null,
   trailingDistanciaPips: null,
   trailingPassoPips: null,
@@ -227,6 +236,10 @@ export function configDoProvider(p: Record<string, unknown> | null | undefined):
   if (saidas) c.saidasPct = (saidas as unknown[]).map(Number).filter((n) => n > 0).slice(0, 3)
   if (typeof extra.beNoTp1 === 'boolean') c.beNoTp1 = extra.beNoTp1
   if (extra.beOffsetPips != null && Number(extra.beOffsetPips) >= 0) c.beOffsetPips = Number(extra.beOffsetPips)
+  // Só pelo jsonb: a coluna `be_gatilho` de mtmauto_providers já tem dois sentidos na casa
+  // (pips em lib/mtmauto/reconstruir-desempenho, «BE no TP nº N» em lib/mtm-auto-bridge) e não se
+  // lhe acrescenta um terceiro.
+  c.beGatilhoPips = pos(extra.beGatilhoPips)
   c.trailingInicioPips = pos(p.trailing_arranca_pips) ?? pos(extra.trailingInicioPips)
   c.trailingDistanciaPips = pos(p.trailing_distancia_pips) ?? pos(extra.trailingDistanciaPips)
   c.trailingPassoPips = pos(p.trailing_passo_pips) ?? pos(extra.trailingPassoPips)
@@ -310,7 +323,14 @@ export function gestaoDoSinal(p: PedidoGestao): { gestao: Partial<Gestao>; tpFin
   if (tps.length) g.tps = tps
 
   const offset = arred(p.cfg.beOffsetPips * pip)
-  if (p.cfg.beNoTp1 && tp1 != null) {
+  // BE a uma distância FIXA em pips manda sobre o BE ancorado no TP1 (ver `beGatilhoPips`).
+  if (p.cfg.beGatilhoPips != null) {
+    const gatilho = arred(p.cfg.beGatilhoPips * pip)
+    if (gatilho > 0) {
+      g.be_gatilho = gatilho
+      g.be_offset = offset < gatilho ? offset : 0
+    }
+  } else if (p.cfg.beNoTp1 && tp1 != null) {
     if (tps.length) {
       g.be_no_tp1 = true
       g.be_offset = offset
