@@ -95,9 +95,10 @@ export const simbolosDoEspelho = new Set<string>()
 
 export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<void> } {
   const { db, log } = ctx
-  const seco = (chave: string, ...a: unknown[]) => {
+  const seco = (chave: string, ...a: unknown[]) => secoCada(chave, 60_000, ...a)
+  const secoCada = (chave: string, intervaloMs: number, ...a: unknown[]) => {
     const agora = Date.now()
-    if (agora - (ultimoSeco.get(chave) ?? 0) < 60_000) return
+    if (agora - (ultimoSeco.get(chave) ?? 0) < intervaloMs) return
     ultimoSeco.set(chave, agora)
     log('[espelho][seco]', ...a)
   }
@@ -124,7 +125,7 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
         .eq('motor', 'sim').eq('estado', 'ativa').not('segue_estrategia', 'is', null).limit(2000),
       // Só providers ATIVOS: um provider desligado pode apontar para uma conta apagada na MetaApi
       // (Gold Did Premium 9dfb4df3, 15/09) e o streaming ficava a reconectar a uma conta inexistente.
-      db.from('mtmauto_providers').select('slug, nome, metaapi_account_id').eq('ativo', true),
+      db.from('mtmauto_providers').select('slug, nome, metaapi_account_id, funded_account_id').eq('ativo', true),
     ])
     // Sem conseguir ler, mantém-se o que havia: um erro de rede não desliga as seguidoras.
     if (e1 || e2) { log('[espelho] leitura das seguidoras falhou:', (e1 ?? e2)?.message); return }
@@ -133,8 +134,14 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
     for (const c of contas ?? []) {
       const p = porSlug.get(String(c.segue_estrategia).toLowerCase())
       const id = p?.metaapi_account_id as string | undefined
+      // Estratégia com execução própria (Edge/King/Wolf: o relay abre as posições directamente nas
+      // contas, via /api/telegram/primeverse-exec). Não há conta-mestre MetaApi para espelhar e não
+      // falta nada — antes isto avisava a cada minuto e era metade do log do motor.
+      if (p && !id && p.funded_account_id) continue
       if (!p || !id) {
-        seco(`sem-mestre:${c.segue_estrategia}`, `estratégia «${c.segue_estrategia}» sem conta-mestre — ${String(c.id).slice(0, 8)} não segue nada`)
+        // Isto sim é um problema (conta a seguir uma estratégia desligada ou sem mestre): avisa, mas
+        // de hora a hora.
+        secoCada(`sem-mestre:${c.segue_estrategia}`, 3_600_000, `estratégia «${c.segue_estrategia}» ${p ? 'sem conta-mestre' : 'desligada ou inexistente'} — ${String(c.id).slice(0, 8)} não segue nada`)
         continue
       }
       if (!novos.has(id)) novos.set(id, { metaapiId: id, slug: String(p.slug), nome: String(p.nome ?? p.slug), seguidoras: [] })
