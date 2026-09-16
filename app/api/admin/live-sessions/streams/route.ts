@@ -3,6 +3,7 @@ import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
 import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
 import { DEFAULT_RESTREAM_INGEST_URL, normalizeRestreamIngestUrl } from "@/lib/lms-restream"
 import { normalizeIngestProvider, normalizePlaybackMode } from "@/lib/lms-stream-options"
+import { RECUSA_SALA_NUNCA_AO_VIVO, salaNuncaVaiAoVivo } from "@/lib/lms-sala-introducao"
 
 const supabase = getSupabaseAdmin()
 
@@ -12,7 +13,13 @@ const supabase = getSupabaseAdmin()
  * notificava; o toggle/criação do admin não, por isso nem todas as sessões disparavam.
  * Await (não fire-and-forget) para garantir o envio antes de a função serverless congelar.
  */
-async function sendLiveNotification(stream: { id: string; title?: string | null }): Promise<void> {
+async function sendLiveNotification(stream: {
+  id: string
+  title?: string | null
+  nunca_ao_vivo?: boolean | null
+}): Promise<void> {
+  // Salas de gravação (Introdução) não notificam ninguém: não há sessão para onde ir.
+  if (stream.nunca_ao_vivo) return
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt"
   try {
     await fetch(`${siteUrl}/api/notifications/send-push`, {
@@ -141,6 +148,14 @@ export async function PATCH(request: NextRequest) {
     if (updates.description !== undefined) updates.description = String(updates.description || "").trim() || null
     if (updates.playback_mode !== undefined) updates.playback_mode = normalizePlaybackMode(updates.playback_mode)
     if (updates.ingest_provider !== undefined) updates.ingest_provider = normalizeIngestProvider(updates.ingest_provider)
+
+    // A sala «Introdução» (e qualquer outra marcada `nunca_ao_vivo`) não se liga. É uma sala de
+    // gravação: o ingest continua a ser gravado e a subir ao YouTube, mas ninguém pode ser levado
+    // a pensar que há uma sessão a decorrer. A recusa é explícita — em silêncio, o toggle do admin
+    // parecia estar partido.
+    if (updates.is_live === true && (await salaNuncaVaiAoVivo(id))) {
+      return NextResponse.json({ error: RECUSA_SALA_NUNCA_AO_VIVO }, { status: 400 })
+    }
 
     // Deteta a transição desligado→ligado para notificar só uma vez (não em cada PATCH).
     let wasLive = false

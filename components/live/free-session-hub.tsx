@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import LiveStreamRoom from "@/components/live/live-stream-room"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
+import CursoIntroducao from "@/components/intro/curso-introducao"
 import { useT } from "@/components/i18n-provider"
 import { Loader2, Radio, Users, CalendarClock } from "lucide-react"
 
@@ -80,6 +81,19 @@ export default function FreeSessionHub() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">{t("freesession.title")}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-gray-300 md:text-lg">{t("freesession.subtitle")}</p>
+
+          {/*
+            Esta página é pública: muita gente chega aqui vinda de um anúncio, sem conta e sem
+            saber o que é a MoreThanMoney. Uma sessão ao vivo a meio não explica isso — o curso de
+            introdução explica, e abre aqui mesmo sem tirar ninguém da sessão.
+          */}
+          <div className="mt-7 flex flex-col items-center gap-2">
+            <CursoIntroducao feitio="botao" />
+            <p className="max-w-md text-sm text-gray-400">
+              Primeira vez por aqui? Vê em poucos minutos o que é a MoreThanMoney, o que está
+              incluído e por onde se começa.
+            </p>
+          </div>
         </div>
       </section>
 

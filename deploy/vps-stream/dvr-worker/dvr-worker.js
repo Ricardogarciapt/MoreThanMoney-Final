@@ -287,7 +287,8 @@ async function ffprobeAudioLangs(file) {
 // título traduzido). Extrai cada faixa do master multi-áudio; o master FICA no DVR.
 async function uploadYoutube(job) {
   const master = job.masterFile ? path.join(DVR_DIR, job.masterFile) : null
-  const baseF = job.baseFile ? path.join(DVR_DIR, job.baseFile) : null
+  // Mesma resolução do assemble: o gravador põe sufixo de data no nome (16/09).
+  const baseF = job.baseFile ? resolverBase(job.baseFile) : null
   const src = master && fs.existsSync(master) ? master : baseF
   if (!src || !fs.existsSync(src)) throw new Error("ficheiro em falta p/ youtube")
 

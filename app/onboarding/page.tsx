@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import CursoIntroducao from '@/components/intro/curso-introducao'
 
 export const metadata: Metadata = {
   title: 'Onboarding · MoreThanMoney',
@@ -62,6 +63,15 @@ export default function Onboarding() {
           </Link>
         ))}
       </div>
+
+      {/*
+        Antes de escolher, ver.
+
+        A bifurcação obriga a decidir com informação que muitas pessoas ainda não têm — o que é o
+        ecossistema, e o que a app faz sozinha. O curso de introdução responde a isso num leitor
+        aqui mesmo, sem sair da página e sem perder a escolha de vista.
+      */}
+      <CursoIntroducao feitio="bloco" className="mt-10" />
 
       <p className="mt-10 text-[13px] leading-relaxed text-[#7a7a84]">
         Operar com produtos alavancados tem risco elevado de perda. Conteúdo educativo, não é

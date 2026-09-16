@@ -70,7 +70,9 @@ export async function GET(req: NextRequest) {
     await supabase.from("lms_dvr_jobs").update({ youtube_status: "uploading" }).eq("id", yt.id)
     const { data: s } = await supabase
       .from("lms_streams")
-      .select("title, caption_source_language, playlist_url, playlist_title, academy:lms_academies(name)")
+      .select(
+        "title, caption_source_language, playlist_url, playlist_title, dvr_playlist_title, dvr_playlist_url, academy:lms_academies(name)",
+      )
       .eq("id", yt.stream_id)
       .maybeSingle()
     const title = (s?.title as string) || "Sessão MoreThanMoney"
@@ -107,8 +109,22 @@ export async function GET(req: NextRequest) {
      * como «Império Cripto · Gravações (MoreThanMoney)».
      */
     const idDaPlaylistDaSala = playlistIdFromUrl((s?.playlist_url as string) || null)
+
+    /**
+     * ALVO PRÓPRIO (`dvr_playlist_title`) — a exceção que a sala «Introdução» obrigou a criar.
+     *
+     * Nas salas normais a playlist do curso e a playlist das gravações são a mesma coisa: gravar a
+     * aula É alimentar o curso. Na sala de introdução não: o curso que o aluno vê é «Como usar a
+     * MoreThanMoney», já montado, e as gravações novas vão para uma lista separada («MTM
+     * Introdução») onde o Ricardo as revê antes de decidir o que fazer com elas. Despejá-las no
+     * curso metia material por rever à frente de quem acabou de chegar.
+     *
+     * Quando este campo está vazio — que é o caso de todas as outras salas — nada muda.
+     */
+    const alvoProprio = ((s?.dvr_playlist_title as string) || "").trim()
+    const idDoAlvoProprio = playlistIdFromUrl((s?.dvr_playlist_url as string) || null)
     const tituloDaPlaylist =
-      ((s?.playlist_title as string) || "").trim() || `${title} · Gravações (${academy})`
+      alvoProprio || ((s?.playlist_title as string) || "").trim() || `${title} · Gravações (${academy})`
 
     return NextResponse.json({
       action: "youtube",
@@ -118,7 +134,10 @@ export async function GET(req: NextRequest) {
       baseFile: yt.base_file || null,
       sourceLang: srcLang,
       privacyStatus: "unlisted",
-      playlistId: yt.youtube_playlist_id || idDaPlaylistDaSala || null,
+      playlistId:
+        yt.youtube_playlist_id ||
+        (alvoProprio ? idDoAlvoProprio : idDoAlvoProprio || idDaPlaylistDaSala) ||
+        null,
       playlistTitle: tituloDaPlaylist,
       uploads,
     })
@@ -299,12 +318,19 @@ export async function POST(req: NextRequest) {
       if (streamId) {
         const { data: st } = await supabase
           .from("lms_streams")
-          .select("playlist_url, playlist_title, title")
+          .select("playlist_url, playlist_title, title, dvr_playlist_title, dvr_playlist_url")
           .eq("id", streamId)
           .maybeSingle()
         const patch: Record<string, unknown> = {}
-        if (!st?.playlist_url) patch.playlist_url = playlistUrl
-        if (!st?.playlist_title) patch.playlist_title = `${(st?.title as string) || "Sessões"} · Rever aulas`
+        if (((st?.dvr_playlist_title as string) || "").trim()) {
+          // Sala com alvo próprio (Introdução): a playlist criada é a DELE, não o curso. Guardar o
+          // endereço aqui é o que faz a gravação seguinte cair na mesma lista em vez de criar
+          // outra — e é também o que impede que o curso da sala seja substituído por ela.
+          if (!st?.dvr_playlist_url) patch.dvr_playlist_url = playlistUrl
+        } else {
+          if (!st?.playlist_url) patch.playlist_url = playlistUrl
+          if (!st?.playlist_title) patch.playlist_title = `${(st?.title as string) || "Sessões"} · Rever aulas`
+        }
         if (Object.keys(patch).length) {
           await supabase.from("lms_streams").update(patch).eq("id", streamId)
         }

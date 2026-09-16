@@ -82,7 +82,12 @@ export async function POST(request: NextRequest) {
     updates.stream_key = shouldUseRestream ? restreamKey : fixedKey
     if (shouldRefreshIngest) updates.rtmps_url = shouldUseRestream ? restreamBase : getLmsIngestServerUrl()
 
-    if (wantsStart) {
+    // Salas de gravação (ex.: «Introdução») nunca ficam em direto — mas a transmissão não é
+    // bloqueada: as chaves são atribuídas na mesma e o DVR grava. É a diferença entre gravar e
+    // anunciar. A linha já foi lida acima com `*`, por isso isto não custa outra query.
+    const nuncaAoVivo = Boolean((stream as Record<string, unknown>).nunca_ao_vivo)
+
+    if (wantsStart && !nuncaAoVivo) {
       updates.is_live = true
       updates.live_started_at = new Date().toISOString()
       updates.live_ended_at = null
@@ -110,8 +115,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Push notification when going live
-    if (wantsStart && data) {
+    // Push notification when going live (nunca numa sala de gravação: não há sessão para abrir)
+    if (wantsStart && data && !nuncaAoVivo) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt"
       fetch(`${siteUrl}/api/notifications/send-push`, {
         method: "POST",
