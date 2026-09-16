@@ -3,10 +3,23 @@ import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
 import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-auth"
 import { DVR_DEFAULT_DUB_LANGS, DVR_CAPTION_LANGS, isYoutubeConnectorEnabled } from "@/lib/lms-dvr/config"
+import { idsDasSalasQueOpera, podeOperarSala } from "@/lib/lms-sala-introducao"
 
 const supabase = getSupabaseAdmin()
 
 // Uma gravação por SALA (stream). O educador pode ter várias salas → lista de jobs.
+//
+// O PAINEL SEGUE A SALA, NÃO O EDUCADOR.
+//
+// Isto filtrava por `lms_dvr_jobs.educator_id`, que o `on_dvr` copia da sala. Numa sala de
+// gravação sem formador — a «Introdução» — esse campo é null de propósito, e o painel ficava
+// vazio: o dono gravava, o vídeo subia ao YouTube, e não via a gravação em lado nenhum. As acções
+// (preparar, YouTube, apagar) davam 404 pela mesma razão.
+//
+// A correcção é a mesma separação da migração 101: `educator_id` continua a ser QUEM APARECE, e a
+// pergunta passa a ser QUEM OPERA a sala. Pôr o operador dentro de `lms_dvr_jobs.educator_id` era
+// mais curto, mas esse campo é lido em /admin para dizer de quem é a gravação — o dono apareceria
+// listado como formador de uma sala que fez questão de não ter formador nenhum.
 
 async function authEducator() {
   const cookieStore = await cookies()
@@ -22,11 +35,17 @@ export async function GET() {
   const educator = await authEducator()
   if (!educator) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
 
-  const { data: jobs } = await supabase
-    .from("lms_dvr_jobs")
-    .select(`${JOB_COLS}, stream:lms_streams(id, title)`)
-    .eq("educator_id", educator.educatorId)
-    .order("updated_at", { ascending: false })
+  // As salas dele: as que educa e as que apenas opera (ver `idsDasSalasQueOpera`).
+  const streamIds = await idsDasSalasQueOpera(educator.educatorId)
+
+  // Sem salas não se pergunta nada — um `.in(…, [])` é um pedido inútil à base.
+  const { data: jobs } = streamIds.length
+    ? await supabase
+        .from("lms_dvr_jobs")
+        .select(`${JOB_COLS}, stream:lms_streams(id, title)`)
+        .in("stream_id", streamIds)
+        .order("updated_at", { ascending: false })
+    : { data: [] }
 
   return NextResponse.json(
     {
@@ -48,9 +67,32 @@ export async function POST(req: NextRequest) {
   const streamId = String(body?.streamId || "")
 
   // Alvo: sala específica; retro-compat: se não vier streamId usa a única do educador.
-  let q = supabase.from("lms_dvr_jobs").select("id, status").eq("educator_id", educator.educatorId)
-  if (streamId) q = q.eq("stream_id", streamId)
-  const { data: job } = await q.maybeSingle()
+  //
+  // AUTORIZA PRIMEIRO, ESCREVE DEPOIS — a mesma ordem da rota da presença. A permissão é decidida
+  // aqui, em TypeScript, e só então a query fica presa ao `stream_id` já autorizado. A alternativa
+  // (arrastar a identidade de quem age para dentro dos filtros da escrita) é como se perde o
+  // controlo de a quem uma linha pertence.
+  if (streamId) {
+    const { data: sala } = await supabase
+      .from("lms_streams")
+      .select("id, educator_id, operador_educator_id")
+      .eq("id", streamId)
+      .maybeSingle()
+    if (!podeOperarSala(sala, educator.educatorId)) {
+      return NextResponse.json({ error: "Esta sala não é tua" }, { status: 403 })
+    }
+  }
+
+  const streamIds = streamId ? [streamId] : await idsDasSalasQueOpera(educator.educatorId)
+  if (!streamIds.length) {
+    return NextResponse.json({ error: "Sem gravação disponível para esta sala" }, { status: 404 })
+  }
+
+  const { data: job } = await supabase
+    .from("lms_dvr_jobs")
+    .select("id, status")
+    .in("stream_id", streamIds)
+    .maybeSingle()
   if (!job) return NextResponse.json({ error: "Sem gravação disponível para esta sala" }, { status: 404 })
 
   if (action === "prepare") {

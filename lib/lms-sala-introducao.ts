@@ -147,6 +147,53 @@ export function podeOperarSala(
   return sala.educator_id === educatorId || sala.operador_educator_id === educatorId
 }
 
+/** O que a base devolve quando se pergunta «que salas é que esta pessoa opera?». */
+export type SalaOperavel = { id: string; educator_id?: string | null; operador_educator_id?: string | null }
+
+/**
+ * As salas que esta pessoa opera, de uma lista já lida.
+ *
+ * Separada da leitura de propósito: quem decide é `podeOperarSala`, em TypeScript, e não o filtro
+ * que foi para a base. O filtro serve só para não trazer a tabela inteira; se um dia ficar largo
+ * de mais (uma vírgula a mais no `.or(...)`, o erro clássico), esta passagem corta o que ele
+ * trouxe a mais. A regra está escrita uma vez só e é aplicada duas.
+ */
+export function salasOperadasPor(salas: SalaOperavel[] | null | undefined, educatorId: string | null | undefined): string[] {
+  if (!educatorId) return []
+  return (salas ?? []).filter((s) => podeOperarSala(s, educatorId)).map((s) => s.id)
+}
+
+/**
+ * Os ids das salas que esta pessoa opera — educadas por ela OU operadas por ela.
+ *
+ * Existe para as GRAVAÇÕES. O DVR guarda uma linha por SALA (`lms_dvr_jobs.stream_id` é único) e
+ * copia para lá o `educator_id` da sala. Numa sala de gravação como a «Introdução» esse campo é
+ * null de propósito — ela não tem formador — e por isso o painel do studio, que filtrava por
+ * `educator_id`, nunca lhe mostrava a gravação: ele gravava, o vídeo subia ao YouTube, e o painel
+ * continuava vazio.
+ *
+ * A gravação pertence à SALA, não a um educador. Passar a perguntar «que salas é que esta pessoa
+ * pode operar?» resolve o caso sem mexer no significado de `educator_id`, que continua a querer
+ * dizer QUEM APARECE — e é isso que mantém a sala fora dos cartões, do lobby e da app.
+ *
+ * Duas leituras em vez de uma junção: a primeira é por índice (`lms_streams_operador_idx` e o
+ * educador), a segunda é um `in` sobre uma lista de meia dúzia de ids. O Supabase não sente.
+ */
+export async function idsDasSalasQueOpera(educatorId: string | null | undefined): Promise<string[]> {
+  if (!educatorId) return []
+  try {
+    const supabase = getSupabaseAdmin()
+    const { data } = await supabase
+      .from('lms_streams')
+      .select('id, educator_id, operador_educator_id')
+      .or(`educator_id.eq.${educatorId},operador_educator_id.eq.${educatorId}`)
+    return salasOperadasPor(data as SalaOperavel[] | null, educatorId)
+  } catch {
+    // Coluna ainda não aplicada, ou Supabase em baixo: sem salas em vez de rebentar o painel.
+    return []
+  }
+}
+
 /**
  * O que a presença pode mexer no estado de uma sala.
  *
