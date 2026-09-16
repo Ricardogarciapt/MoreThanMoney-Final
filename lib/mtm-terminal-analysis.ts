@@ -24,7 +24,12 @@ export function modelCandidates(): string[] {
   return [...new Set(list)]
 }
 
-/** Geração 5 / 4.6+: aceitam `effort` e saídas estruturadas e RECUSAM `temperature` (400). */
+/**
+ * Geração 5 / 4.6+: aceitam `effort` e RECUSAM `temperature` (400).
+ * ATENÇÃO: isto diz respeito SÓ ao `effort`/`temperature`. As saídas estruturadas
+ * (`output_config.format`) são aceites por modelos mais antigos (ex.: claude-sonnet-4-5) e têm de
+ * ser enviadas SEMPRE — ver `structuredFormat()`.
+ */
 export function isCurrentGenModel(model: string): boolean {
   return /claude-(sonnet|opus|fable|mythos)-5|claude-opus-4-[678]|claude-sonnet-4-6/.test(model)
 }
@@ -117,6 +122,16 @@ Campos:
 
 Tom: direto e educacional. Nunca prometas lucro nem uses «garantido». Nunca fales em euros; resultados só em pips, pontos ou %.`
 
+/** Forma literal do JSON, para quando não se pode enviar o schema (pesquisa web). */
+const SHAPE_HINT = `{
+  "verdict": { "direction": "BULLISH"|"BEARISH"|"NEUTRO", "conviction": "Alto"|"Médio"|"Baixo", "rationale": "..." },
+  "macro": ["...", "..."],
+  "scenarios": [{ "kind": "bull"|"base"|"bear", "movePct": <número>, "triggers": "..." }],
+  "risks": ["...", "..."],
+  "recommendation": { "bias": "...", "timing": "...", "risk": "..." },
+  "news": [{ "headline": "...", "impact": "alto"|"medio"|"baixo", "source": "<URL exato da pesquisa>" }]
+}`
+
 const WEB_RULES = ` ou em resultados da pesquisa web que fizeres agora. Podes pesquisar notícias dos últimos 7 dias sobre o ativo; cada notícia em «news» tem de ter «source» = URL exato de um resultado da pesquisa. Sem fonte, não entra`
 
 // ─── Contexto ────────────────────────────────────────────────────────────────
@@ -183,6 +198,29 @@ function webSearchEnabled(model: string): boolean {
   return process.env.MTM_TERMINAL_WEB_SEARCH === "1" && isCurrentGenModel(model)
 }
 
+/**
+ * Parâmetros que dependem do modelo. A regra que PARTIU a página: o `format` (saída estruturada)
+ * estava preso ao mesmo teste do `effort`, por isso um modelo da geração anterior
+ * (ANTHROPIC_MODEL=claude-sonnet-4-5) ficava SEM schema e inventava os nomes das chaves
+ * (`bias`/`summary`/`name` em vez de `direction`/`rationale`/`kind`) — a análise era guardada oca.
+ * · `effort`: só na geração atual (sonnet-4-5 → 400 «does not support the effort parameter»).
+ * · `format`: em TODOS os modelos (verificado contra a API em sonnet-4-5 e sonnet-5).
+ * · `temperature`: só fora da geração atual (4.6+ devolve 400).
+ */
+export function modelTuning(
+  model: string,
+  format: { type: "json_schema"; schema: Record<string, unknown> } | null,
+): { output_config?: Record<string, unknown>; temperature?: number } {
+  const current = isCurrentGenModel(model)
+  const output_config: Record<string, unknown> = {}
+  if (current) output_config.effort = "low"
+  if (format) output_config.format = format
+  return {
+    ...(Object.keys(output_config).length ? { output_config } : {}),
+    ...(current ? {} : { temperature: 0.2 }),
+  }
+}
+
 function isModelUnavailable(err: unknown): boolean {
   if (err instanceof Anthropic.NotFoundError) return true
   if (err instanceof Anthropic.BadRequestError) {
@@ -212,6 +250,8 @@ export async function generateTerminalDashboard(
     const current = isCurrentGenModel(model)
     const web = webSearchEnabled(model)
     const system = SYSTEM_PROMPT.replace("{{WEB}}", web ? WEB_RULES : "")
+    // O schema vai SEMPRE que não há pesquisa web (é o que obriga o modelo às chaves certas:
+    // direction/rationale/kind). Só a pesquisa web o dispensa, porque não pode ir com `tools`.
     const format = web
       ? null
       : { type: "json_schema" as const, schema: DASHBOARD_SCHEMA as unknown as Record<string, unknown> }
@@ -222,11 +262,9 @@ export async function generateTerminalDashboard(
           role: "user",
           content:
             userPrompt +
-            (web
-              ? `\n\nResponde no fim APENAS com um objeto JSON com as chaves verdict, macro, scenarios, risks, recommendation e news ([{headline, impact: "alto"|"medio"|"baixo", source: URL}]).`
-              : current
-                ? ""
-                : `\n\nResponde APENAS com o objeto JSON (chaves verdict, macro, scenarios, risks, recommendation).`),
+            // Com pesquisa web não há schema (não pode ir com `tools`), por isso a FORMA tem de ir
+            // escrita — incluindo as sub-chaves. Foi o que faltou e deu veredito e cenários vazios.
+            (web ? `\n\nResponde no fim APENAS com um objeto JSON com esta forma exata:\n${SHAPE_HINT}` : ""),
         },
       ]
       const sources = new Map<string, TerminalSource>()
@@ -241,9 +279,7 @@ export async function generateTerminalDashboard(
             max_tokens: 4_000,
             system,
             messages,
-            ...(current
-              ? { output_config: { effort: "low" as const, ...(format ? { format } : {}) } }
-              : { temperature: 0.2 }),
+            ...modelTuning(model, format),
             ...(web ? { tools: [{ type: "web_search_20260209" as const, name: "web_search" as const, max_uses: 3 }] } : {}),
           },
           { timeout: left },
@@ -265,6 +301,13 @@ export async function generateTerminalDashboard(
 
       const parsed = parseJsonLoose(text) as Partial<TerminalDashboard>
       const data = normaliseDashboard(parsed, input, sources, web)
+      // Uma análise oca (sem leitura nem cenários) NÃO se guarda: era o que enchia a página de
+      // cartões vazios em silêncio. Vale mais tentar o modelo seguinte e, se nenhum servir, falhar.
+      const faltam = missingDashboardParts(data)
+      if (faltam.length) {
+        lastErr = new Error(`o modelo ${model} devolveu uma análise incompleta (${faltam.join(", ")})`)
+        continue
+      }
       return { data, model }
     } catch (err) {
       lastErr = err
@@ -275,6 +318,35 @@ export async function generateTerminalDashboard(
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr))
 }
 
+/**
+ * O que falta a um dashboard para ser mostrável. Vazio = está bom.
+ * Sem isto, um modelo que invente os nomes das chaves passa como sucesso e a página fica oca.
+ */
+export function missingDashboardParts(d: TerminalDashboard): string[] {
+  const faltam: string[] = []
+  if (!d.verdict.rationale.trim()) faltam.push("leitura do veredito")
+  if (!d.scenarios.length) faltam.push("cenários")
+  if (!d.recommendation.bias.trim()) faltam.push("recomendação")
+  return faltam
+}
+
+/** Sinónimos que os modelos sem schema costumam usar em vez das chaves pedidas. */
+const CONVICTION_ALIASES: Record<string, "Alto" | "Médio" | "Baixo"> = {
+  alta: "Alto", alto: "Alto", high: "Alto",
+  média: "Médio", media: "Médio", médio: "Médio", medio: "Médio", medium: "Médio",
+  baixa: "Baixo", baixo: "Baixo", low: "Baixo",
+}
+
+/** Aceita movePct como número ou como texto («+4,9 %», «-3.7%»). */
+function toMovePct(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v
+  if (typeof v === "string") {
+    const n = Number(v.replace(",", ".").replace(/[^0-9.+-]/g, ""))
+    if (Number.isFinite(n)) return n
+  }
+  return null
+}
+
 /** Garante a forma, impõe os níveis calculados e deita fora notícias sem fonte verificada. */
 export function normaliseDashboard(
   p: Partial<TerminalDashboard>,
@@ -283,22 +355,33 @@ export function normaliseDashboard(
   web: boolean,
 ): TerminalDashboard {
   const strArr = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").slice(0, 4) : [])
-  const dir = p.verdict?.direction
-  const conv = p.verdict?.conviction
+  // Sem schema, o modelo escreve `bias`/`summary` em vez de `direction`/`rationale` — aceita-se
+  // o sinónimo em vez de deitar a análise fora.
+  const v = (p.verdict ?? {}) as Record<string, unknown>
+  const dir = String(v.direction ?? v.bias ?? "").toUpperCase()
+  const conv = CONVICTION_ALIASES[String(v.conviction ?? "").trim().toLowerCase()]
   const news = Array.isArray(p.news)
     ? p.news.filter((n) => n && typeof n.headline === "string" && typeof n.source === "string" && sources.has(n.source)).slice(0, 4)
     : []
   return {
     verdict: {
       direction: dir === "BULLISH" || dir === "BEARISH" ? dir : "NEUTRO",
-      conviction: conv === "Alto" || conv === "Baixo" ? conv : "Médio",
-      rationale: String(p.verdict?.rationale ?? ""),
+      conviction: conv ?? "Médio",
+      rationale: String(v.rationale ?? v.summary ?? ""),
     },
     macro: strArr(p.macro),
     scenarios: Array.isArray(p.scenarios)
       ? p.scenarios
-          .filter((s) => s && (s.kind === "bull" || s.kind === "base" || s.kind === "bear") && Number.isFinite(Number(s.movePct)))
-          .map((s) => ({ kind: s.kind, movePct: Number(s.movePct), triggers: String(s.triggers ?? "") }))
+          .map((raw) => {
+            const s = (raw ?? {}) as Record<string, unknown>
+            // `kind` pode vir no próprio nome do cenário («Bull – rutura acima da EMA20»).
+            const label = String(s.kind ?? s.name ?? "").toLowerCase()
+            const kind = (["bull", "base", "bear"] as const).find((k) => label.startsWith(k) || label.includes(k))
+            const movePct = toMovePct(s.movePct ?? s.move_pct)
+            if (!kind || movePct == null) return null
+            return { kind, movePct, triggers: String(s.triggers ?? s.trigger ?? "") }
+          })
+          .filter((s): s is { kind: "bull" | "base" | "bear"; movePct: number; triggers: string } => s !== null)
           .slice(0, 3)
       : [],
     levels: { supports: input.levels?.supports ?? [], resistances: input.levels?.resistances ?? [] },
