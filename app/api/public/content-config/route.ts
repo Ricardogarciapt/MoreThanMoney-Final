@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase"
 import { defaultContentConfig, type ContentConfig } from "@/lib/content-config"
 
 /**
- * A leitura PÚBLICA do que o admin edita em «Vídeos e links (config)».
+ * A leitura PÚBLICA da config de vídeos/links/imagens (admin_settings.site_content).
  *
  * Esta rota estava morta e partida ao mesmo tempo: ninguém a chamava, e a query pedia uma coluna
  * (`content_config`) e uma chave (`key`) que a tabela `admin_settings` nunca teve — dava sempre
@@ -14,8 +14,13 @@ import { defaultContentConfig, type ContentConfig } from "@/lib/content-config"
  * Apagá-la fechava o buraco pelo lado errado — o painel continuaria a escrever para algo que
  * ninguém lê. Foi corrigida (colunas certas) e é agora ela que o `/mtm` consome.
  *
- * Só leitura, e só de conteúdo que já é público (links, vídeos e imagens das páginas). A escrita
- * continua na rota de admin, com `requireAdmin`.
+ * Só leitura, e só de conteúdo que já é público (links, vídeos e imagens das páginas).
+ *
+ * 2026-09-16: o cartão «Vídeos e links (config)» e a rota /api/admin/content-config foram removidos
+ * (nenhuma entrada tinha page='/mtm', por isso nada do que lá estava chegava ao site; cópia em
+ * docs/arquivo/content-config-2026-09-16.json). Esta rota fica porque o /mtm ainda a lê — sem ela o
+ * /mtm só perdia os extras, mas pedia um 404 a cada visita. A única escrita que resta é a da API do
+ * agente (/api/agent/v1/content-config).
  */
 export const revalidate = 60
 

@@ -219,8 +219,8 @@ eq(
 
 // ── 6. AUTENTICAÇÃO: quem pode mexer nisto ─────────────────────────────────
 // A rota que configura os vídeos corre com a service-role. Uma rota assim sem guarda não é «menos
-// protegida», não tem protecção nenhuma — já aconteceu neste repositório (ver o cabeçalho de
-// app/api/admin/content-config/route.ts). Isto lê o ficheiro e confirma que cada método começa
+// protegida», não tem protecção nenhuma — já aconteceu neste repositório (a antiga
+// app/api/admin/content-config/route.ts, removida a 2026-09-16; ver o histórico do git). Isto lê o ficheiro e confirma que cada método começa
 // pela guarda, que é a única forma de o apanhar sem levantar um servidor.
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
