@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
 import FormularioCheckout from './formulario'
-import { plataformasAVenda } from '@/lib/mtmfunded/plataforma'
+import { plataformasDoPrograma, precosLadoALado } from '@/lib/mtmfunded/precos'
 import T from '@/components/mtmfunded/t'
 
 export const dynamic = 'force-dynamic'
@@ -29,7 +29,7 @@ export default async function CheckoutPage({
 
   const { data: programa } = await getSupabaseAdmin()
     .from('mtm_funded_programs')
-    .select('slug, nome, descricao, fases, saldo, preco_cents, regras, ativo')
+    .select('slug, nome, descricao, fases, saldo, preco_cents, preco_cents_mtmfunded, regras, ativo')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -40,7 +40,8 @@ export default async function CheckoutPage({
   const ua = ((await headers()).get('user-agent') || '').toLowerCase()
   const iosNativo = ua.includes('mtmnativeapp') && /iphone|ipad|ipod/.test(ua)
 
-  const plataformas = plataformasAVenda(config)
+  const plataformas = plataformasDoPrograma(config, programa)
+  const precos = precosLadoALado(programa)
 
   const r = (programa.regras ?? {}) as Record<string, number>
 
@@ -51,10 +52,13 @@ export default async function CheckoutPage({
       {programa.descricao && <p className="mt-2 text-zinc-400">{programa.descricao}</p>}
 
       <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-6">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm text-zinc-500">Total</span>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <span className="text-sm text-zinc-500">
+            {plataformas.length > 1 ? <T k="mtmfunded.plataforma.desde" /> : 'Total'}
+          </span>
           <span className="text-3xl font-bold text-[#D2A63C]">
-            {(programa.preco_cents / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}
+            {(Math.min(...[precos.mt5, ...(precos.mtmfunded != null && plataformas.includes('mtmfunded') ? [precos.mtmfunded] : [])]) / 100)
+              .toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}
           </span>
         </div>
         <ul className="mt-5 space-y-1.5 border-t border-zinc-900 pt-5 text-sm text-zinc-400">
@@ -76,7 +80,7 @@ export default async function CheckoutPage({
           <T k="mtmfunded.plataforma.nenhuma" />
         </p>
       ) : (
-        <FormularioCheckout slug={programa.slug} precoCents={programa.preco_cents} plataformas={plataformas} />
+        <FormularioCheckout slug={programa.slug} plataformas={plataformas} precos={precos} />
       )}
     </main>
   )

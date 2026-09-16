@@ -655,6 +655,14 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       )
     }
+    // Preço da plataforma MTM Funded: vazio é «não vender lá»; um número fora de gama é um engano
+    // que não se guarda em silêncio (um zero a mais dava um desafio de 5.000 € por 50 €).
+    const temPrecoSim = !(b?.preco_cents_mtmfunded == null || b?.preco_cents_mtmfunded === '')
+    const precoSim = temPrecoSim ? num(b.preco_cents_mtmfunded, 0, 500_000) : null
+    if (temPrecoSim && precoSim == null) {
+      return NextResponse.json({ error: 'preço MTM Funded entre 0 e 5.000 €' }, { status: 400 })
+    }
+
     const regras: Record<string, number> = { perda_diaria_pct: diaria, perda_maxima_pct: maxima }
     const objetivo = num(r.objetivo_pct, 0.5, 100)
     const dias = num(r.dias_minimos, 0, 90)
@@ -672,6 +680,9 @@ export async function POST(request: NextRequest) {
       preco_cents: preco,
       moeda: 'eur',
       stripe_price_id: b?.stripe_price_id ? String(b.stripe_price_id).trim() : null,
+      // Plataforma MTM Funded: preço próprio (mais barato). Vazio = não se vende nessa plataforma.
+      preco_cents_mtmfunded: precoSim,
+      stripe_price_id_mtmfunded: b?.stripe_price_id_mtmfunded ? String(b.stripe_price_id_mtmfunded).trim() : null,
       regras,
       ativo: b?.ativo !== false,
       ordem: Number.isFinite(Number(b?.ordem)) ? Number(b.ordem) : 0,

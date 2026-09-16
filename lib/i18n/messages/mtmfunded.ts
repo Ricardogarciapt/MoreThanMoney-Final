@@ -356,7 +356,7 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "mtmfunded.plataforma.secSub":
       "Escolhes no checkout. Em ambas a conta é simulada, as regras são as publicadas nesta página e os resultados medem-se em percentagem e pips — não prometemos rendimento.",
     "mtmfunded.plataforma.simT": "MTM Funded",
-    "mtmfunded.plataforma.simX1": "Conta activa assim que o pagamento é confirmado",
+    "mtmfunded.plataforma.simX1": "Conta activa assim que o pagamento é confirmado — e mais barata do que a conta na corretora",
     "mtmfunded.plataforma.simX2": "WebTrader no browser, com as métricas das regras ao vivo",
     "mtmfunded.plataforma.simX3": "Credenciais por link seguro, sem passwords no email",
     "mtmfunded.plataforma.mt5T": "MetaTrader 5",
@@ -364,6 +364,8 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "mtmfunded.plataforma.mt5X2": "Criada em até 24 horas (normalmente menos de uma); credenciais por email",
     "mtmfunded.plataforma.mt5X3": "Métricas lidas periodicamente; as regras são verificadas com mais frequência enquanto houver posições abertas",
     "mtmfunded.plataforma.brevemente": "Brevemente",
+    "mtmfunded.plataforma.desde": "Desde",
+    "mtmfunded.plataforma.maisBarata": "mais barata do que a conta na corretora",
   },
   en: {
     "mtmfunded.nav.programas": "Programs",
@@ -707,7 +709,7 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "mtmfunded.plataforma.secSub":
       "You choose at checkout. On both the account is simulated, the rules are the ones published on this page and results are measured in percent and pips — we do not promise returns.",
     "mtmfunded.plataforma.simT": "MTM Funded",
-    "mtmfunded.plataforma.simX1": "Account active as soon as payment is confirmed",
+    "mtmfunded.plataforma.simX1": "Account active as soon as payment is confirmed — and cheaper than the broker account",
     "mtmfunded.plataforma.simX2": "Browser WebTrader, with live rule metrics",
     "mtmfunded.plataforma.simX3": "Credentials via a secure link, no passwords in email",
     "mtmfunded.plataforma.mt5T": "MetaTrader 5",
@@ -715,5 +717,7 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "mtmfunded.plataforma.mt5X2": "Created within 24 hours (usually under one); credentials by email",
     "mtmfunded.plataforma.mt5X3": "Metrics read periodically; rules are checked more often while positions are open",
     "mtmfunded.plataforma.brevemente": "Coming soon",
+    "mtmfunded.plataforma.desde": "From",
+    "mtmfunded.plataforma.maisBarata": "cheaper than the broker account",
   },
 }

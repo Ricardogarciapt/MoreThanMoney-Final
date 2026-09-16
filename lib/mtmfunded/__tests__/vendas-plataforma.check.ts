@@ -14,6 +14,10 @@ import {
   creditosPorDia, decidirVigia, deveParar, diaDaCorretora, resumirHistorico, QUOTA_6H_POR_CONTA,
   type EntradaVigia, type NegocioMt5,
 } from '../leitura-mt5'
+import {
+  plataformasDoPrograma, precoDaPlataforma, precosLadoALado, temPrecoMtmFunded,
+  validarPlataformaDoPrograma,
+} from '../precos'
 
 let ok = 0
 function t(nome: string, f: () => void) {
@@ -48,7 +52,7 @@ t('rota do checkout: bloqueio iOS, valida a plataforma e envia-a nos metadados d
   const s = fonte('app/api/mtmfunded/checkout/route.ts')
   assert.match(s, /isIosAppRequest\(request\)/)
   assert.ok(s.indexOf('isIosAppRequest(request)') < s.indexOf('stripe.checkout.sessions.create'))
-  assert.match(s, /validarPlataformaDoCheckout\(body\?\.plataforma, config\)/)
+  assert.match(s, /validarPlataformaDoPrograma\(body\?\.plataforma, config, programa\)/)
   assert.match(s, /metadata: \{[\s\S]*?\n\s+plataforma,\n/)
 })
 
@@ -178,6 +182,63 @@ t('só REST: sem RPC, sem streaming, sem getSymbols; cron de 10 min registado', 
   const crons = JSON.parse(fonte('vercel.json')).crons as Array<{ path: string; schedule: string }>
   assert.ok(crons.some((c) => c.path === '/api/cron/mtmfunded-mt5-vigia' && /^3,13,23,33,43,53 /.test(c.schedule)))
   assert.ok(crons.some((c) => c.path === '/api/cron/mtmfunded-metrics'))
+})
+
+// ── preço por plataforma (MTM Funded mais barata) ─────────────────────────────
+const P3K1F = { preco_cents: 6900, preco_cents_mtmfunded: 4500, stripe_price_id: 'price_mt5_3k1f', stripe_price_id_mtmfunded: 'price_sim_3k1f' }
+const SEM_SIM = { preco_cents: 6900, preco_cents_mtmfunded: null, stripe_price_id: 'price_mt5_3k1f' }
+
+t('cada plataforma cobra o seu preço e o seu price id do Stripe', () => {
+  assert.deepEqual(precoDaPlataforma(P3K1F, 'mt5'), { plataforma: 'mt5', cents: 6900, stripePriceId: 'price_mt5_3k1f', proprio: true })
+  assert.deepEqual(precoDaPlataforma(P3K1F, 'mtmfunded'), { plataforma: 'mtmfunded', cents: 4500, stripePriceId: 'price_sim_3k1f', proprio: true })
+  assert.deepEqual(precosLadoALado(P3K1F), { mt5: 6900, mtmfunded: 4500 })
+  assert.ok(precoDaPlataforma(P3K1F, 'mtmfunded').cents < precoDaPlataforma(P3K1F, 'mt5').cents)
+})
+t('sem preço MTM Funded: plataforma escondida e preço do MT5 como recurso', () => {
+  assert.equal(temPrecoMtmFunded(SEM_SIM), false)
+  assert.deepEqual(plataformasDoPrograma(LANCADO, SEM_SIM), ['mt5'])
+  assert.deepEqual(plataformasDoPrograma(LANCADO, P3K1F), ['mtmfunded', 'mt5'])
+  assert.deepEqual(precosLadoALado(SEM_SIM), { mt5: 6900, mtmfunded: null })
+  const r = precoDaPlataforma(SEM_SIM, 'mtmfunded')
+  assert.deepEqual(r, { plataforma: 'mtmfunded', cents: 6900, stripePriceId: 'price_mt5_3k1f', proprio: false })
+})
+t('checkout: MTM Funded pedida sem preço é recusada; sem escolha fica o MT5', () => {
+  assert.equal(validarPlataformaDoPrograma('mtmfunded', LANCADO, SEM_SIM).ok, false)
+  assert.deepEqual(validarPlataformaDoPrograma(undefined, LANCADO, SEM_SIM), { ok: true, plataforma: 'mt5' })
+  assert.deepEqual(validarPlataformaDoPrograma('mtmfunded', LANCADO, P3K1F), { ok: true, plataforma: 'mtmfunded' })
+  assert.deepEqual(validarPlataformaDoPrograma(undefined, LANCADO, P3K1F), { ok: true, plataforma: 'mtmfunded' })
+  assert.deepEqual(validarPlataformaDoPrograma('mt5', POR_LANCAR, P3K1F), { ok: true, plataforma: 'mt5' })
+})
+t('rotas usam o preço da plataforma, nunca o preco_cents à bruta', () => {
+  const c = fonte('app/api/mtmfunded/checkout/route.ts')
+  assert.match(c, /const preco = precoDaPlataforma\(programa, plataforma\)/)
+  assert.match(c, /let cents = preco\.cents/)
+  assert.match(c, /preco\.stripePriceId && !cupaoAplicado/)
+  assert.doesNotMatch(c, /Number\(programa\.preco_cents\)/)
+  const cup = fonte('app/api/mtmfunded/cupao/route.ts')
+  assert.match(cup, /validarPlataformaDoPrograma\(body\?\.plataforma/)
+  assert.doesNotMatch(cup, /Number\(programa\.preco_cents\)/)
+})
+t('a tabela de preços da migração 098 é a decidida pelo dono', () => {
+  const sql = fonte('supabase/migrations/098_mtmfunded_precos_plataforma.sql')
+  for (const [slug, cents] of [
+    ['1k-1f', 1900], ['3k-1f', 4500], ['5k-1f', 6500], ['10k-1f', 10900], ['25k-1f', 19500],
+    ['1k-2f', 1200], ['3k-2f', 2900], ['5k-2f', 3900], ['10k-2f', 6900], ['25k-2f', 12900],
+    ['launch-10k-2f', 1000],
+  ] as Array<[string, number]>) {
+    assert.ok(sql.includes(`('${slug}', ${cents})`), `${slug} → ${cents}`)
+  }
+  // O MT5 não muda: a migração não toca em preco_cents nem em stripe_price_id.
+  assert.doesNotMatch(sql, /set preco_cents =|stripe_price_id\s*=/)
+})
+t('script dos preços: simulação por defeito, nunca apaga nem mexe em subscrições', () => {
+  const s2 = fonte('scripts/mtmfunded-precos-plataforma.ts')
+  assert.match(s2, /const APLICAR = tem\('--aplicar'\)/)
+  assert.match(s2, /if \(!APLICAR\)/)
+  for (const proibido of ['prices.update', 'prices.del', 'products.del', 'subscriptions']) {
+    assert.ok(!s2.includes(proibido), proibido)
+  }
+  assert.match(s2, /stripe\.prices\.create/)
 })
 
 console.log(`vendas-plataforma: ${ok} ok${process.exitCode ? ' — COM FALHAS' : ''}`)

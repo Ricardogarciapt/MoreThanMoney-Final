@@ -19,8 +19,8 @@ import {
  * antes da compra, e é antes da compra que ele muda alguma coisa para quem está a decidir.
  */
 export default function FormularioCheckout({
-  slug, precoCents, plataformas,
-}: { slug: string; precoCents: number; plataformas: Plataforma[] }) {
+  slug, plataformas, precos,
+}: { slug: string; plataformas: Plataforma[]; precos: { mt5: number; mtmfunded: number | null } }) {
   const t = useT()
   // A primeira disponível é a recomendada (MTM Funded, quando lançada). O servidor revalida.
   const [plataforma, setPlataforma] = useState<Plataforma>(plataformas[0] ?? 'mt5')
@@ -39,10 +39,11 @@ export default function FormularioCheckout({
     setErroCupao(null)
     setAVerificar(true)
     try {
+      // A plataforma segue com o pedido: o desconto é sobre o preço dela, não sobre o do MT5.
       const r = await fetch('/api/mtmfunded/cupao', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ programa: slug, codigo: cupao }),
+        body: JSON.stringify({ programa: slug, codigo: cupao, plataforma }),
       })
       const j = await r.json()
       if (!r.ok) throw new Error(j?.error || 'Cupão inválido')
@@ -56,6 +57,10 @@ export default function FormularioCheckout({
   }
 
   const euros = (c: number) => (c / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })
+  // O preço de cada plataforma: sem preço próprio da MTM Funded, ela nem aparece (o servidor
+  // decide o mesmo — lib/mtmfunded/precos.ts).
+  const precoDe = (p: Plataforma) => (p === 'mtmfunded' ? precos.mtmfunded ?? precos.mt5 : precos.mt5)
+  const precoCents = precoDe(plataforma)
   const completo = dadosContaCompletos(dados) && aceita
 
   const pagar = async () => {
@@ -102,7 +107,7 @@ export default function FormularioCheckout({
                   name="plataforma"
                   value={p}
                   checked={ativa}
-                  onChange={() => setPlataforma(p)}
+                  onChange={() => { setPlataforma(p); setDesconto(null) }}
                   className="mt-1 h-4 w-4 shrink-0 accent-[#D2A63C]"
                 />
                 <span className="min-w-0">
@@ -112,6 +117,12 @@ export default function FormularioCheckout({
                       <span className="rounded-full bg-[#D2A63C]/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#D2A63C]">
                         {t('mtmfunded.plataforma.recomendada')}
                       </span>
+                    )}
+                  </span>
+                  <span className="mt-1 block text-lg font-bold text-[#D2A63C]">
+                    {euros(precoDe(p))}
+                    {p === 'mtmfunded' && precos.mtmfunded != null && precos.mtmfunded < precos.mt5 && (
+                      <span className="ml-2 align-middle text-xs font-normal text-zinc-500 line-through">{euros(precos.mt5)}</span>
                     )}
                   </span>
                   <span className="mt-1 block text-xs leading-relaxed text-zinc-400">

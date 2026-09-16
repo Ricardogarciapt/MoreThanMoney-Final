@@ -792,6 +792,9 @@ interface Programa {
   fases: number; saldo: number; preco_cents: number; ativo: boolean; ordem: number
   regras: Record<string, number>
   stripe_price_id?: string | null
+  /** Preço na plataforma MTM Funded (simulada). Nulo = não se vende nessa plataforma. */
+  preco_cents_mtmfunded?: number | null
+  stripe_price_id_mtmfunded?: string | null
 }
 
 const PROGRAMA_NOVO: Programa = {
@@ -860,7 +863,10 @@ function Programas({ accao, ocupado, setAviso, vendasAbertas }: {
                   </span>
                 </p>
                 <p className="mt-0.5 text-xs text-gray-500">
-                  {(p.preco_cents / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })} ·{' '}
+                  MT5 {(p.preco_cents / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })} ·{' '}
+                  {p.preco_cents_mtmfunded != null
+                    ? `MTM Funded ${(p.preco_cents_mtmfunded / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}${p.stripe_price_id_mtmfunded ? '' : ' (sem price id Stripe)'}`
+                    : 'MTM Funded — sem preço (plataforma escondida)'} ·{' '}
                   {Number(p.saldo).toLocaleString('pt-PT')} USD · {p.fases} {p.fases === 1 ? 'fase' : 'fases'} ·{' '}
                   <code className="text-gray-600">{p.slug}</code>
                 </p>
@@ -930,6 +936,10 @@ function EditorPrograma({ programa, ocupado, onGuardar, onCancelar }: {
   // O preço vive aqui em EUROS e vai em cêntimos. É onde os enganos de um zero acontecem.
   const [euros, setEuros] = useState((programa.preco_cents / 100).toString())
   useEffect(() => { setEuros((programa.preco_cents / 100).toString()) }, [programa])
+  const [eurosSim, setEurosSim] = useState(programa.preco_cents_mtmfunded != null ? (programa.preco_cents_mtmfunded / 100).toString() : '')
+  useEffect(() => {
+    setEurosSim(programa.preco_cents_mtmfunded != null ? (programa.preco_cents_mtmfunded / 100).toString() : '')
+  }, [programa])
 
   const texto = (chave: 'slug' | 'nome' | 'descricao', rotulo: string, nota?: string) => (
     <div>
@@ -983,13 +993,25 @@ function EditorPrograma({ programa, ocupado, onGuardar, onCancelar }: {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
-          <label className="text-sm text-gray-300">Preço (€)</label>
-          <p className="mb-1 text-xs text-gray-600">Em euros. Guardado em cêntimos.</p>
+          <label className="text-sm text-gray-300">Preço MT5 (€)</label>
+          <p className="mb-1 text-xs text-gray-600">A conta na corretora. Em euros, guardado em cêntimos.</p>
           <input
             type="number" step="1" value={euros}
             onChange={(e) => {
               setEuros(e.target.value)
               setP({ ...p, preco_cents: Math.round(Number(e.target.value || 0) * 100) })
+            }}
+            className="w-36 rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
+          />
+        </div>
+        <div>
+          <label className="text-sm text-gray-300">Preço MTM Funded (€)</label>
+          <p className="mb-1 text-xs text-gray-600">Mais barato. Vazio = a plataforma MTM Funded não se vende neste programa.</p>
+          <input
+            type="number" step="1" value={eurosSim} placeholder="—"
+            onChange={(e) => {
+              setEurosSim(e.target.value)
+              setP({ ...p, preco_cents_mtmfunded: e.target.value.trim() === '' ? null : Math.round(Number(e.target.value || 0) * 100) })
             }}
             className="w-36 rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
           />
