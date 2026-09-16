@@ -5,27 +5,14 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import EducatorProfileDialog, { type EducatorProfilePublic } from "@/components/live/educator-profile-dialog"
 import CursoIntroducao from "@/components/intro/curso-introducao"
+import { useConfigIntro } from "@/components/intro/usar-intro"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
-import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
-import { useT } from "@/components/i18n-provider"
-import {
-  Radio,
-  Search,
-  Users,
-  Sparkles,
-  GraduationCap,
-  Bell,
-  ArrowRight,
-  Circle,
-  Lock,
-} from "lucide-react"
-import { LMS_CATEGORY_OPTIONS } from "@/lib/lms-categories"
+import { useI18n, useT } from "@/components/i18n-provider"
+import { Radio, Users, GraduationCap, Bell, ArrowRight, Circle, Lock, Compass, CalendarClock } from "lucide-react"
 
-type Academy = { id: string; name: string; slug: string }
 type EducatorPublic = {
   id: string
   display_name: string
@@ -41,10 +28,12 @@ type Stream = {
   description?: string | null
   thumbnail_url?: string | null
   is_live: boolean
+  /** Salas de gravação (a «Introdução»): nunca entram na grelha de salas — o lugar delas é «Por onde começar». */
+  nunca_ao_vivo?: boolean | null
   category?: string | null
   scheduled_start_at?: string | null
   viewer_count?: number | null
-  access_tier?: "all" | "app_member" | "premium" | "vip" | null
+  access_tier?: "free" | "all" | "app_member" | "premium" | "vip" | null
   academy?: { id: string; name: string } | null
   educator?: {
     id: string
@@ -54,14 +43,42 @@ type Stream = {
     specialty?: string | null
   } | null
 }
+type ScheduledSession = {
+  id: string
+  streamId: string
+  title: string
+  educatorName?: string | null
+  language?: string | null
+  scheduledAt: string
+  tier?: string | null
+}
 
-const QUICK_FILTERS = LMS_CATEGORY_OPTIONS.map((c) => ({ id: c.value, label: c.label }))
+/** Os dois caminhos do /onboarding — os mesmos destinos, aqui resumidos para caberem ao lado do curso. */
+const CAMINHOS = [
+  { href: "/onboarding/mtm", titulo: "live.lobby.pathMtmTitle", nota: "live.lobby.pathMtmNote", cta: "live.lobby.pathMtmCta", destaque: true },
+  { href: "/onboarding/mtm-auto", titulo: "live.lobby.pathAutoTitle", nota: "live.lobby.pathAutoNote", cta: "live.lobby.pathAutoCta", destaque: false },
+] as const
 
 function streamVisual(stream: Stream): string | null {
   const thumb = stream.thumbnail_url?.trim()
   if (thumb) return thumb
   const avatar = stream.educator?.avatar_url?.trim()
   return avatar || null
+}
+
+/**
+ * Resumo da bio para o cartão: a primeira frase, cortada a ~110 caracteres.
+ *
+ * Há bios de uma linha e bios de quatro parágrafos (a do Ricardo). Num carrossel de cartões
+ * iguais, a longa enchia o cartão e empurrava o resto para fora da vista. A bio inteira continua
+ * a um toque — o cartão abre o perfil —, por isso aqui basta dizer quem é.
+ */
+function resumoBio(bio: string | null | undefined): string | null {
+  const texto = (bio || "").replace(/\s+/g, " ").trim()
+  if (!texto) return null
+  const fim = texto.search(/[.!?](\s|$)/)
+  const frase = fim > 0 ? texto.slice(0, fim + 1) : texto
+  return frase.length > 110 ? `${frase.slice(0, 107).trimEnd()}…` : frase
 }
 
 function canAccessStream(
@@ -81,35 +98,32 @@ function canAccessStream(
 }
 
 export default function LiveSessionsLobby() {
-  const { toast } = useToast()
   const { user } = useAuth()
-  const t = useT()
-  const [academies, setAcademies] = useState<Academy[]>([])
+  const { t, lang } = useI18n()
+  const configIntro = useConfigIntro()
   const [streams, setStreams] = useState<Stream[]>([])
   const [educators, setEducators] = useState<EducatorPublic[]>([])
-  const [scheduledSessions, setScheduledSessions] = useState<
-    Array<{ id: string; streamId: string; title: string; educatorName?: string | null; language?: string | null; scheduledAt: string; tier?: string | null }>
-  >([])
+  const [scheduledSessions, setScheduledSessions] = useState<ScheduledSession[]>([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState<string>("")
-  const [academyFilter, setAcademyFilter] = useState("")
+  /** Nome da academia escolhida nos chips ("" = todas). Filtra salas E especialistas — um só filtro. */
+  const [academia, setAcademia] = useState("")
 
   const [educatorDialogOpen, setEducatorDialogOpen] = useState(false)
   const [selectedEducator, setSelectedEducator] = useState<EducatorPublic | null>(null)
   const [selectedEducatorStreams, setSelectedEducatorStreams] = useState<Stream[]>([])
   const [selectedEducatorStreamsLoading, setSelectedEducatorStreamsLoading] = useState(false)
 
+  // A lista de academias deixou de ser pedida à parte: a tabela tem academias sem salas
+  // («Introdução», «Network Marketing»…) e um chip que não filtra nada é ruído. Os chips saem
+  // das salas que existem de facto.
   const loadAll = useCallback(async () => {
     setLoading(true)
     try {
-      const [aRes, sRes, eRes, schedRes] = await Promise.all([
-        fetch("/api/live-sessions/academies").then((r) => r.json()),
+      const [sRes, eRes, schedRes] = await Promise.all([
         fetch("/api/live-sessions/streams").then((r) => r.json()),
         fetch("/api/live-sessions/educators-public").then((r) => r.json()),
         fetch("/api/live-sessions/schedule?days=21&limit=12").then((r) => r.json()).catch(() => ({ data: [] })),
       ])
-      setAcademies(Array.isArray(aRes?.data) ? aRes.data : [])
       setStreams(Array.isArray(sRes?.data) ? sRes.data : [])
       setEducators(Array.isArray(eRes?.data) ? eRes.data : [])
       setScheduledSessions(Array.isArray(schedRes?.data) ? schedRes.data : [])
@@ -124,44 +138,61 @@ export default function LiveSessionsLobby() {
     return () => clearInterval(t)
   }, [loadAll])
 
-  const liveStreams = useMemo(() => streams.filter((s) => s.is_live), [streams])
+  // Salas públicas: tudo menos as de gravação. Em direto primeiro — é a razão de estar no lobby.
+  const salas = useMemo(
+    () =>
+      streams
+        .filter((s) => !s.nunca_ao_vivo)
+        .sort((a, b) => Number(b.is_live) - Number(a.is_live)),
+    [streams]
+  )
+  const liveStreams = useMemo(() => salas.filter((s) => s.is_live), [salas])
   const liveCount = liveStreams.length
 
-  const upcoming = useMemo(() => {
+  // Fallback do horário quando a rota de horários não devolve nada: salas com data marcada.
+  const upcoming = useMemo<ScheduledSession[]>(() => {
     const now = Date.now()
-    return streams
+    return salas
       .filter((s) => !s.is_live && s.scheduled_start_at && new Date(s.scheduled_start_at).getTime() > now)
       .sort((a, b) => new Date(a.scheduled_start_at!).getTime() - new Date(b.scheduled_start_at!).getTime())
       .slice(0, 8)
-  }, [streams])
+      .map((s) => ({
+        id: s.id,
+        streamId: s.id,
+        title: s.title,
+        educatorName: s.educator?.display_name ?? null,
+        language: (s.educator as { language?: string | null } | null)?.language ?? null,
+        scheduledAt: s.scheduled_start_at!,
+        tier: s.access_tier ?? null,
+      }))
+  }, [salas])
+  const agenda = scheduledSessions.length > 0 ? scheduledSessions : upcoming
 
-  const filteredGrid = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return streams.filter((s) => {
-      if (academyFilter && s.academy?.id !== academyFilter) return false
-      if (categoryFilter && (s.category || "").toLowerCase() !== categoryFilter) return false
-      if (!q) return true
-      const blob = [
-        s.title,
-        s.description,
-        s.educator?.display_name,
-        s.educator?.specialty,
-        s.educator?.bio,
-        s.academy?.name,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-      return blob.includes(q)
-    })
-  }, [streams, search, categoryFilter, academyFilter])
+  const proxima = useMemo(() => {
+    const now = Date.now()
+    return (
+      [...agenda]
+        .filter((s) => new Date(s.scheduledAt).getTime() > now)
+        .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0] ?? null
+    )
+  }, [agenda])
 
-  const notifySoon = () => {
-    toast({
-      title: t("live.soonTitle"),
-      description: t("live.soonDesc"),
-    })
-  }
+  const academias = useMemo(() => {
+    const nomes = new Set<string>()
+    for (const s of salas) if (s.academy?.name) nomes.add(s.academy.name)
+    // Ordem alfabética: se viesse da ordem das salas, os chips trocavam de lugar sempre que uma
+    // sala entrasse em direto (as em direto sobem para o topo).
+    return [...nomes].sort((a, b) => a.localeCompare(b, "pt"))
+  }, [salas])
+
+  const salasFiltradas = useMemo(
+    () => (academia ? salas.filter((s) => s.academy?.name === academia) : salas),
+    [salas, academia]
+  )
+  const educadoresFiltrados = useMemo(
+    () => (academia ? educators.filter((e) => e.academy?.name === academia) : educators),
+    [educators, academia]
+  )
 
   const openEducatorDialog = async (ed: EducatorProfilePublic) => {
     setSelectedEducator(ed as EducatorPublic)
@@ -209,102 +240,146 @@ export default function LiveSessionsLobby() {
     )
   }
 
+  const locale = lang === "pt" ? "pt-PT" : lang
+  const quando = (iso: string) => {
+    const txt = new Date(iso).toLocaleString(locale, { weekday: "long", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+    // Só a primeira letra: `capitalize` do CSS dava «Quarta-Feira».
+    return txt.charAt(0).toUpperCase() + txt.slice(1)
+  }
+
+  // O curso existe (a sala «Introdução» está semeada) mas ainda não tem playlist: é o estado
+  // «em preparação». Sem sala nenhuma não se promete nada — ficam só os dois caminhos.
+  const curso = configIntro?.curso ?? null
+  const cursoPronto = Boolean(curso?.playlistUrl)
+  const cursoAChegar = Boolean(curso && !curso.playlistUrl)
+
   return (
-    <div className="space-y-10 pb-16">
-      {/* Hero — marketplace */}
-      <section className="relative overflow-hidden rounded-2xl border border-[#D2A63C]/25 bg-gradient-to-br from-[#0a0a0c] via-[#121018] to-black px-5 py-8 md:px-10 md:py-10">
-        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[#D2A63C]/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-amber-600/5 blur-3xl" />
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl space-y-3">
-            <Badge className="border-[#D2A63C]/40 bg-black/50 text-[#D2A63C]">
-              <Sparkles className="mr-1 h-3 w-3" />
-              {t("live.heroBadge")}
-            </Badge>
-            <h2 className="text-2xl font-bold tracking-tight text-white md:text-3xl lg:text-4xl">
-              {t("live.heroTitleBefore")}<span className="text-[#D2A63C]">{t("live.heroTitleHighlight")}</span>{t("live.heroTitleAfter")}
-            </h2>
-            <p className="text-sm text-gray-400 md:text-base leading-relaxed">
-              {t("live.heroSubtitle")}
-            </p>
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              <div className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-950/40 px-4 py-2 text-sm">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-60" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
-                </span>
-                <span className="font-semibold text-white">{t("live.now")}</span>
-                <span className="text-red-200">
-                  {liveCount === 0
-                    ? t("live.noLiveSession")
-                    : `${liveCount} ${liveCount === 1 ? t("live.liveSessionSingular") : t("live.liveSessionPlural")}`}
-                </span>
+    <div className="space-y-12 pb-16">
+      {/*
+        1 · AGORA. Um só estado: em direto › próxima sessão › nada marcado.
+        Antes havia um «Agora: nenhuma sessão» no topo e um «Nenhuma sala em direto» mais abaixo —
+        a mesma notícia dada duas vezes.
+      */}
+      <section
+        aria-live="polite"
+        className={`flex flex-col gap-4 rounded-2xl border px-5 py-5 sm:flex-row sm:items-center sm:justify-between md:px-6 ${
+          liveCount > 0 ? "border-red-500/40 bg-red-950/25" : "border-[#D2A63C]/20 bg-black/40"
+        }`}
+      >
+        {liveCount > 0 ? (
+          <>
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="relative flex h-3 w-3 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-60" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-red-300">{t("live.lobby.statusLive")}</p>
+                <p className="truncate text-lg font-bold text-white">
+                  {liveCount === 1
+                    ? liveStreams[0].title
+                    : t("live.lobby.liveCount").replace("{n}", String(liveCount))}
+                </p>
               </div>
             </div>
-          </div>
-
-          <div className="hidden self-start lg:block">
-            <Link href="/live-sessions/studio" className="shrink-0">
-              <Button className="bg-[#D2A63C] text-black hover:bg-[#BB8525]">
-                {t("live.openStudio")}
+            <a href="#salas" className="shrink-0">
+              <Button className="w-full bg-[#D2A63C] font-semibold text-black hover:bg-[#BB8525] sm:w-auto">
+                {t("live.lobby.seeLiveRooms")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-            </Link>
-          </div>
-        </div>
-
-        <div className="relative mt-8 flex flex-col gap-4 md:flex-row md:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("live.searchPlaceholder")}
-              className="border-gray-700 bg-black/50 pl-10 text-white placeholder:text-gray-500"
-            />
-          </div>
-          <select
-            className="rounded-md border border-gray-700 bg-black/50 px-3 py-2 text-sm text-gray-200 md:min-w-[180px]"
-            value={academyFilter}
-            onChange={(e) => setAcademyFilter(e.target.value)}
-          >
-            <option value="">{t("live.allAcademies")}</option>
-            {academies.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="w-full text-xs font-medium text-gray-500 sm:w-auto sm:mr-2 sm:self-center">{t("live.quickFilters")}</span>
-          {QUICK_FILTERS.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setCategoryFilter((c) => (c === f.id ? "" : f.id))}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                categoryFilter === f.id
-                  ? "border-[#D2A63C] bg-[#D2A63C]/20 text-[#D2A63C]"
-                  : "border-gray-700 bg-black/40 text-gray-300 hover:border-gray-500"
-              }`}
+            </a>
+          </>
+        ) : proxima ? (
+          <>
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#D2A63C]/15 text-[#D2A63C]">
+                <CalendarClock className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#D2A63C]/80">
+                  {t("live.lobby.nothingLiveNext")}
+                </p>
+                <p className="truncate text-lg font-bold text-white">{proxima.title}</p>
+                <p className="truncate text-xs text-gray-400">
+                  {quando(proxima.scheduledAt)}
+                  {proxima.educatorName ? ` · ${proxima.educatorName}` : ""}
+                </p>
+              </div>
+            </div>
+            <a
+              href="#agenda"
+              className="shrink-0 text-sm font-semibold text-[#D2A63C] hover:text-[#e8c46a]"
             >
-              {f.label}
-            </button>
-          ))}
-        </div>
+              {t("live.lobby.seeSchedule")} →
+            </a>
+          </>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Circle className="h-2.5 w-2.5 shrink-0 fill-gray-500 text-gray-500" />
+            <p className="text-sm text-gray-300">{t("live.lobby.nothingScheduled")}</p>
+          </div>
+        )}
       </section>
 
-      {/* CTA educador (aparece no mobile; no desktop o botão está no hero) */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-[#D2A63C]/20 bg-black/40 px-4 py-4 lg:hidden">
-        <Link href="/live-sessions/studio" className="shrink-0">
-          <Button className="w-full bg-[#D2A63C] text-black hover:bg-[#BB8525]">
-            {t("live.openStudio")}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
+      {/*
+        2 · POR ONDE COMEÇAR — antes das salas, porque quem chega pela primeira vez escolhe uma
+        sala sem saber o que é uma sala. A «Introdução» vive aqui e não na lista de academias.
+
+        Dois estados, ambos sem botões mortos:
+        • curso pronto → o cartão com capa, que abre o leitor;
+        • curso por gravar → um aviso discreto (sem botão) e os dois caminhos do onboarding, que já
+          funcionam hoje. O cartão do curso desaparece sozinho enquanto não houver playlist.
+      */}
+      <section aria-labelledby="por-onde-comecar">
+        <div className="mb-4">
+          <h2 id="por-onde-comecar" className="flex items-center gap-2 text-xl font-bold tracking-tight text-white md:text-2xl">
+            <Compass className="h-5 w-5 shrink-0 text-[#D2A63C]" />
+            {t("live.lobby.startHeading")}
+          </h2>
+          <p className="mt-1 text-sm text-gray-400">{t("live.lobby.startIntro")}</p>
+        </div>
+
+        <div className={`grid gap-4 ${cursoPronto || cursoAChegar ? "lg:grid-cols-[1.4fr_1fr]" : ""}`}>
+          {cursoPronto && <CursoIntroducao feitio="cartao" />}
+          {cursoAChegar && curso && (
+            <div className="flex flex-col overflow-hidden rounded-2xl border border-dashed border-[#D2A63C]/25 bg-gray-950/70 sm:flex-row sm:items-center">
+              {/* Mesma moldura do cartão pronto, apagada: o lugar do curso já se vê, sem nada para carregar. */}
+              <div className="relative hidden aspect-video w-[45%] shrink-0 bg-gray-900 sm:block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={curso.capa} alt="" className="h-full w-full object-cover opacity-40 grayscale" />
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 p-5">
+                <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-gray-700 bg-black/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                  <GraduationCap className="h-3 w-3" />
+                  {t("live.lobby.courseSoonBadge")}
+                </span>
+                <p className="text-base font-semibold leading-snug text-white">{curso.titulo}</p>
+                <p className="text-[13px] leading-relaxed text-gray-400">{t("live.lobby.courseSoonText")}</p>
+              </div>
+            </div>
+          )}
+
+          <div className={`grid gap-3 ${cursoPronto || cursoAChegar ? "" : "sm:grid-cols-2"}`}>
+            {CAMINHOS.map((c) => (
+              <Link
+                key={c.href}
+                href={c.href}
+                className={`group flex flex-col rounded-2xl border p-5 transition-colors ${
+                  c.destaque
+                    ? "border-[#D2A63C]/45 bg-[#D2A63C]/[0.06] hover:border-[#D2A63C]/70"
+                    : "border-gray-800 bg-gray-950/80 hover:border-gray-600"
+                }`}
+              >
+                <span className="text-base font-semibold text-white">{t(c.titulo)}</span>
+                <span className="mt-1 flex-1 text-[13px] leading-relaxed text-gray-400">{t(c.nota)}</span>
+                <span className="mt-3 text-[13px] font-semibold text-[#D2A63C]">
+                  {t(c.cta)} <span className="inline-block transition-transform group-hover:translate-x-0.5">→</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <EducatorProfileDialog
         open={educatorDialogOpen}
@@ -315,142 +390,146 @@ export default function LiveSessionsLobby() {
       />
 
       {/*
-        Entre o «escolhe a tua sala» e os especialistas: quem chega ao lobby pela primeira vez
-        escolhe uma sala sem saber o que é uma sala. O curso de introdução vem antes da escolha.
+        3 · SALAS E ESPECIALISTAS, com um filtro só.
+        Antes havia uma caixa de pesquisa, um seletor de academias e uma fila de «filtros rápidos»
+        — e nenhum dos três mexia em nada visível: filtravam uma grelha que já não era desenhada.
+        Ficam chips por academia, tirados das salas que existem, e aplicam-se às duas listas.
       */}
-      <CursoIntroducao feitio="cartao" />
-
-      <div className="space-y-12">
-          {/* Slideshow educadores */}
-          <section>
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold tracking-tight text-white md:text-xl">{t("live.specialistsHeading")}</h3>
-              <span className="text-xs text-gray-500">{t("live.swipeToSeeAll")}</span>
-            </div>
-            <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-[#D2A63C]/30">
-              {educators.length === 0 && <p className="text-sm text-gray-500">{t("live.noPublicEducators")}</p>}
-              {educators.map((ed) => (
+      <section id="salas" aria-labelledby="salas-titulo" className="scroll-mt-6 space-y-6">
+        <div className="space-y-3">
+          <h2 id="salas-titulo" className="text-xl font-bold tracking-tight text-white md:text-2xl">
+            {t("live.lobby.roomsHeading")}
+          </h2>
+          {academias.length > 1 && (
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label={t("live.lobby.roomsHeading")}>
+              {["", ...academias].map((nome) => (
                 <button
-                  key={ed.id}
+                  key={nome || "todas"}
                   type="button"
-                  className="w-[280px] shrink-0 snap-start text-left"
-                  aria-label={`${t("live.viewProfileOf")} ${ed.display_name}`}
-                  onClick={() => void openEducatorDialog(ed)}
+                  aria-pressed={academia === nome}
+                  onClick={() => setAcademia(nome)}
+                  className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition ${
+                    academia === nome
+                      ? "border-[#D2A63C] bg-[#D2A63C]/20 text-[#D2A63C]"
+                      : "border-gray-700 bg-black/40 text-gray-300 hover:border-gray-500"
+                  }`}
                 >
-                  <Card className="w-full overflow-hidden border-[#D2A63C]/20 bg-gradient-to-b from-gray-900/90 to-black/90 backdrop-blur transition hover:border-[#D2A63C]/45">
-                    {/**
-                      * A moldura mostra a imagem INTEIRA, não um recorte dela.
-                      *
-                      * As fotos dos educadores não têm todas o mesmo formato: o Ricardo é quase
-                      * quadrada (992×1056), a do Ruben é vertical de telemóvel (900×1600) e as
-                      * dos canais novos são 16:9 (1920×1071). Uma moldura fixa e baixa com
-                      * `object-cover` recortava uma faixa do meio de cada uma — e nas que são
-                      * cartazes desenhados isso cortava o próprio nome ao meio.
-                      *
-                      * `object-contain` não corta nada. As barras que sobram são preenchidas com
-                      * a mesma imagem desfocada por trás, que é o que evita o efeito de moldura
-                      * vazia sem inventar um recorte.
-                      */}
-                    <div className="relative h-52 w-full overflow-hidden bg-gradient-to-br from-gray-800 to-black">
-                      {ed.avatar_url ? (
-                        <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={ed.avatar_url}
-                            alt=""
-                            aria-hidden="true"
-                            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
-                          />
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={ed.avatar_url} alt="" className="relative h-full w-full object-contain" />
-                        </>
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-gray-600">
-                          <GraduationCap className="h-16 w-16 opacity-40" />
-                        </div>
-                      )}
-                      <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-medium backdrop-blur">
-                        <Circle
-                          className={`h-2 w-2 ${ed.is_live ? "fill-emerald-400 text-emerald-400" : "fill-gray-500 text-gray-500"}`}
-                        />
-                        {ed.is_live ? t("live.online") : t("live.offline")}
-                      </div>
-                    </div>
-                    <CardContent className="p-4 space-y-2">
-                      <p className="font-bold text-white leading-tight">{ed.display_name}</p>
-                      {ed.specialty && (
-                        <Badge variant="outline" className="border-[#D2A63C]/40 text-[#D2A63C] text-[10px]">
-                          {ed.specialty}
-                        </Badge>
-                      )}
-                      <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">
-                        {ed.bio || t("live.bioFallback")}
-                      </p>
-                      {ed.academy?.name && (
-                        <p className="text-[10px] uppercase tracking-wider text-gray-600">{ed.academy.name}</p>
-                      )}
-                    </CardContent>
-                  </Card>
+                  {nome || t("live.lobby.filterAll")}
                 </button>
               ))}
             </div>
-          </section>
+          )}
+        </div>
 
-          {/* Online agora */}
-          <section>
-            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight text-white md:text-xl">
-              <Radio className="h-5 w-5 text-red-500" />
-              {t("live.onlineNow")}
-            </h3>
-            {liveStreams.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-gray-800 bg-black/30 p-8 text-center text-sm text-gray-500">
-                {t("live.noLiveRoom")}
-              </p>
-            ) : (
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {liveStreams.map((stream) => (
-                  <StreamMarketCard
-                    key={stream.id}
-                    stream={stream}
-                    featured
-                    userPlan={user?.subscription_plan}
-                    userType={user?.user_type}
-                    memberCategory={user?.member_category}
-                    onEducatorProfile={() => openEducatorFromStream(stream)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+        {/* Especialistas */}
+        {educadoresFiltrados.length > 0 || educators.length === 0 ? (
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-gray-400">{t("live.specialistsHeading")}</h3>
+              {educadoresFiltrados.length > 1 && <span className="text-xs text-gray-500 md:hidden">{t("live.swipeToSeeAll")}</span>}
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-[#D2A63C]/30">
+              {educators.length === 0 && <p className="text-sm text-gray-500">{t("live.noPublicEducators")}</p>}
+              {educadoresFiltrados.map((ed) => {
+                const resumo = resumoBio(ed.bio)
+                return (
+                  <button
+                    key={ed.id}
+                    type="button"
+                    className="w-[220px] shrink-0 snap-start text-left"
+                    aria-label={`${t("live.viewProfileOf")} ${ed.display_name}`}
+                    onClick={() => void openEducatorDialog(ed)}
+                  >
+                    <Card className="flex h-full w-full flex-col overflow-hidden border-[#D2A63C]/20 bg-gradient-to-b from-gray-900/90 to-black/90 transition hover:border-[#D2A63C]/45">
+                      {/**
+                        * A moldura mostra a imagem INTEIRA, não um recorte dela.
+                        *
+                        * As fotos dos educadores não têm todas o mesmo formato (quase quadrada,
+                        * vertical de telemóvel, 16:9 com o nome desenhado). `object-contain` não
+                        * corta nada; as barras que sobram levam a mesma imagem desfocada por trás.
+                        */}
+                      <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-gray-800 to-black">
+                        {ed.avatar_url ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={ed.avatar_url}
+                              alt=""
+                              aria-hidden="true"
+                              className="absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
+                            />
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={ed.avatar_url} alt="" className="relative h-full w-full object-contain" />
+                          </>
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-gray-600">
+                            <GraduationCap className="h-14 w-14 opacity-40" />
+                          </div>
+                        )}
+                        {ed.is_live && (
+                          <div className="absolute right-2 top-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium backdrop-blur">
+                            <Circle className="h-2 w-2 fill-emerald-400 text-emerald-400" />
+                            {t("live.online")}
+                          </div>
+                        )}
+                      </div>
+                      <CardContent className="flex flex-1 flex-col gap-1.5 p-3.5">
+                        <p className="font-bold leading-tight text-white">{ed.display_name}</p>
+                        {ed.specialty && <p className="line-clamp-1 text-[11px] text-[#D2A63C]/90">{ed.specialty}</p>}
+                        {resumo && <p className="line-clamp-2 text-xs leading-relaxed text-gray-400">{resumo}</p>}
+                        <span className="mt-auto pt-1 text-[11px] font-semibold text-[#D2A63C]">{t("live.lobby.viewProfile")} →</span>
+                      </CardContent>
+                    </Card>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
 
-          {/* Próximas lives — Horário (estilo calendário escolar) */}
-          <section>
-            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight text-white md:text-xl">
-              <Bell className="h-5 w-5 text-[#D2A63C]" />
-              {t("live.scheduleUpcomingLives")}
-            </h3>
-            <SessionsTimetable
-              sessions={(scheduledSessions.length > 0
-                ? scheduledSessions.map((s) => ({
-                    id: s.id,
-                    title: s.title,
-                    educatorName: s.educatorName ?? null,
-                    language: s.language ?? null,
-                    scheduledAt: s.scheduledAt,
-                    tier: s.tier ?? null,
-                  }))
-                : upcoming.map((s) => ({
-                    id: s.id,
-                    title: s.title,
-                    educatorName: s.educator?.display_name ?? null,
-                    language: (s.educator as { language?: string | null } | null)?.language ?? null,
-                    scheduledAt: s.scheduled_start_at!,
-                    tier: (s as { access_tier?: string }).access_tier ?? null,
-                  })))}
-              emptyText={t("live.scheduleEmpty")}
-            />
-          </section>
-      </div>
+        {/* Salas */}
+        <div>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-gray-400">{t("live.lobby.roomsSub")}</h3>
+          {salasFiltradas.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-gray-800 bg-black/30 p-6 text-center text-sm text-gray-500">
+              {t("live.lobby.noRooms")}
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {salasFiltradas.map((stream) => (
+                <StreamMarketCard
+                  key={stream.id}
+                  stream={stream}
+                  featured={stream.is_live}
+                  userPlan={user?.subscription_plan}
+                  userType={user?.user_type}
+                  memberCategory={user?.member_category}
+                  onEducatorProfile={() => openEducatorFromStream(stream)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 4 · AGENDA */}
+      <section id="agenda" className="scroll-mt-6">
+        <h2 className="mb-4 flex items-center gap-2 text-xl font-bold tracking-tight text-white md:text-2xl">
+          <Bell className="h-5 w-5 text-[#D2A63C]" />
+          {t("live.scheduleUpcomingLives")}
+        </h2>
+        <SessionsTimetable
+          sessions={agenda.map((s) => ({
+            id: s.id,
+            title: s.title,
+            educatorName: s.educatorName ?? null,
+            language: s.language ?? null,
+            scheduledAt: s.scheduledAt,
+            tier: s.tier ?? null,
+          }))}
+          emptyText={t("live.scheduleEmpty")}
+        />
+      </section>
     </div>
   )
 }
