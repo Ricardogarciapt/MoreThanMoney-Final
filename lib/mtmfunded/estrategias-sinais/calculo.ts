@@ -197,7 +197,29 @@ export interface ConfigSinais {
    * stop. Medido em scripts/estudos/perfil-gestao-check.ts. Quando está posto, manda sobre `beNoTp1`.
    */
   beGatilhoPips: number | null
+  /**
+   * Break-even a uma FRACÇÃO DO RISCO (0,30 = o preço andou 30% da distância entrada→SL).
+   *
+   * PRECEDÊNCIA, e é a regra desta casa para tudo o que é gestão: **a fracção do risco manda quando
+   * está definida; os pips ficam como recurso** (`beFracaoDoRisco` → `beGatilhoPips` → `beNoTp1`).
+   *
+   * Porque é que um número em pips não chega: (1) o risco do próprio sinal não é estável — no
+   * GoldKiller a mediana passou de 84 pips em Julho para 89 em Agosto e 169 em Setembro, e um
+   * gatilho fixo em pips muda de significado sozinho quando a volatilidade muda de patamar;
+   * (2) `pipSizeForSymbol` devolve 1 para índices e cripto (PONTOS — é a convenção da casa e está
+   * certa), por isso 40 «pips» no Aurum Flow são 40 unidades DE PREÇO: num ONDOUSDT a 0,39 $ nunca
+   * arma, num BTCUSDT a 120 000 $ arma ao primeiro tick. Com ~42 perpétuos de escalas diferentes
+   * nenhum número absoluto serve para todos; a fracção do risco é adimensional e serve para todos.
+   *
+   * Medido em docs/analise-perfil-gk-aurum.md (ver a ressalva: nenhum destes perfis é
+   * estatisticamente distinguível de zero).
+   */
+  beFracaoDoRisco: number | null
+  /** Folga do BE em fracção do risco (0,05 = +5% do risco de lucro fechado). Manda sobre `beOffsetPips`. */
+  beOffsetFracaoDoRisco: number | null
   trailingInicioPips: number | null
+  /** Arranque do trailing em fracção do risco. Manda sobre `trailingInicioPips` (e sobre a distância ao TP1). */
+  trailingInicioFracaoDoRisco: number | null
   trailingDistanciaPips: number | null
   trailingPassoPips: number | null
   /** fração da distância do stop usada como trailing quando não há pips configurados */
@@ -214,7 +236,10 @@ export const CONFIG_PADRAO: ConfigSinais = {
   beNoTp1: true,
   beOffsetPips: 2,
   beGatilhoPips: null,
+  beFracaoDoRisco: null,
+  beOffsetFracaoDoRisco: null,
   trailingInicioPips: null,
+  trailingInicioFracaoDoRisco: null,
   trailingDistanciaPips: null,
   trailingPassoPips: null,
   trailingFracaoDoRisco: 0.5,
@@ -240,9 +265,17 @@ export function configDoProvider(p: Record<string, unknown> | null | undefined):
   // (pips em lib/mtmauto/reconstruir-desempenho, «BE no TP nº N» em lib/mtm-auto-bridge) e não se
   // lhe acrescenta um terceiro.
   c.beGatilhoPips = pos(extra.beGatilhoPips)
-  c.trailingInicioPips = pos(p.trailing_arranca_pips) ?? pos(extra.trailingInicioPips)
-  c.trailingDistanciaPips = pos(p.trailing_distancia_pips) ?? pos(extra.trailingDistanciaPips)
-  c.trailingPassoPips = pos(p.trailing_passo_pips) ?? pos(extra.trailingPassoPips)
+  // Fracção do risco: só pelo jsonb — é configuração nova e não tem coluna antiga nenhuma.
+  c.beFracaoDoRisco = pos(extra.beFracaoDoRisco)
+  c.beOffsetFracaoDoRisco = pos(extra.beOffsetFracaoDoRisco)
+  c.trailingInicioFracaoDoRisco = pos(extra.trailingInicioFracaoDoRisco)
+  // O jsonb MANDA, as colunas antigas são o recurso (era ao contrário até 16/09, e isso queria dizer
+  // que escrever em `sinais_config` não conseguia desligar o que estava na coluna — o caso do Aurum
+  // Flow, preso a `trailing_arranca_pips = 40`). Assim fica como já era para `beGatilhoPips`, para o
+  // resto do jsonb e como o cabeçalho de lib/gestao-real/provider.ts sempre descreveu.
+  c.trailingInicioPips = pos(extra.trailingInicioPips) ?? pos(p.trailing_arranca_pips)
+  c.trailingDistanciaPips = pos(extra.trailingDistanciaPips) ?? pos(p.trailing_distancia_pips)
+  c.trailingPassoPips = pos(extra.trailingPassoPips) ?? pos(p.trailing_passo_pips)
   c.trailingFracaoDoRisco = pos(extra.trailingFracaoDoRisco) ?? c.trailingFracaoDoRisco
   c.permitirDuplicado = extra.permitirDuplicado === true
   if (typeof extra.seguirFechosDaFonte === 'boolean') c.seguirFechosDaFonte = extra.seguirFechosDaFonte
@@ -322,9 +355,23 @@ export function gestaoDoSinal(p: PedidoGestao): { gestao: Partial<Gestao>; tpFin
   const g: Partial<Gestao> = {}
   if (tps.length) g.tps = tps
 
+  // O risco do sinal (entrada→SL) em PREÇO: é a régua das fracções. Sem stop não há risco e as
+  // fracções não se podem resolver — cai-se no que estiver em pips.
+  const risco = p.sl != null ? dist(p.sl) : null
+
   const offset = arred(p.cfg.beOffsetPips * pip)
-  // BE a uma distância FIXA em pips manda sobre o BE ancorado no TP1 (ver `beGatilhoPips`).
-  if (p.cfg.beGatilhoPips != null) {
+  // PRECEDÊNCIA: fracção do risco → pips → TP1 (ver `beFracaoDoRisco`).
+  if (p.cfg.beFracaoDoRisco != null && risco != null && risco > 0) {
+    const gatilho = arred(risco * p.cfg.beFracaoDoRisco)
+    // A folga também em fracção do risco quando está posta; senão fica a que está em pips.
+    const folga = p.cfg.beOffsetFracaoDoRisco != null ? arred(risco * p.cfg.beOffsetFracaoDoRisco) : offset
+    if (gatilho > 0) {
+      g.be_gatilho = gatilho
+      // `validarGestao` (072) exige folga < gatilho: um BE que fechasse acima do gatilho era uma
+      // posição fechada no instante em que o gatilho arma.
+      g.be_offset = folga < gatilho ? folga : 0
+    }
+  } else if (p.cfg.beGatilhoPips != null) {
     const gatilho = arred(p.cfg.beGatilhoPips * pip)
     if (gatilho > 0) {
       g.be_gatilho = gatilho
@@ -343,13 +390,15 @@ export function gestaoDoSinal(p: PedidoGestao): { gestao: Partial<Gestao>; tpFin
     }
   }
 
-  const risco = p.sl != null ? dist(p.sl) : null
   const distancia = p.cfg.trailingDistanciaPips != null
     ? p.cfg.trailingDistanciaPips * pip
     : risco != null ? risco * p.cfg.trailingFracaoDoRisco : null
   if (distancia != null && distancia >= p.simbolo.pip_size) {
     g.trailing_distancia = arred(distancia)
-    const inicio = p.cfg.trailingInicioPips != null ? p.cfg.trailingInicioPips * pip : tp1 != null ? dist(tp1) : null
+    // A mesma precedência do BE: fracção do risco → pips → distância ao TP1.
+    const inicio = p.cfg.trailingInicioFracaoDoRisco != null && risco != null && risco > 0
+      ? risco * p.cfg.trailingInicioFracaoDoRisco
+      : p.cfg.trailingInicioPips != null ? p.cfg.trailingInicioPips * pip : tp1 != null ? dist(tp1) : null
     g.trailing_ativacao = inicio != null && inicio > 0 ? arred(inicio) : null
   }
   return { gestao: g, tpFinal: tpFinal != null ? arred(tpFinal) : null, parciais: tps.length }

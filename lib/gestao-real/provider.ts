@@ -18,6 +18,14 @@
  * a arrancar aos 30 a 15 de distância com passo de 3; sensei 35/2/40/20/4. É exactamente isto que
  * este ficheiro decide sobre a posição real.
  *
+ * Perfil em FRACÇÃO DO RISCO (16/09): `beFracaoDoRisco`, `beOffsetFracaoDoRisco` e
+ * `trailingInicioFracaoDoRisco` medem-se contra o risco da PRÓPRIA posição (|entrada − SL|) e
+ * MANDAM sobre os pips quando estão postos — a regra está escrita em `beFracaoDoRisco`
+ * (estrategias-sinais/calculo.ts). É o que torna configurável o GoldKiller (risco mediano do sinal
+ * a saltar de 84 para 169 pips em três meses) e o Aurum Flow (~42 perpétuos de 0,07 $ a 120 000 $,
+ * onde qualquer número absoluto em «pips» é 40 unidades de preço e não quer dizer nada).
+ * Sem SL na posição não há risco, e a fracção cai para o que estiver em pips.
+ *
  * O QUE ESTE FICHEIRO **NÃO** FAZ, e porquê:
  *  · PARCIAIS (`saidasPct`). Uma parcial precisa de uma escada de alvos e a posição da conta mestre
  *    só traz UM `takeProfit` — inventar níveis fazia a sombra mentir. E fechar meia posição na
@@ -53,7 +61,11 @@ export interface ConfigProvider {
   perfil: string | null
   beGatilhoPips: number | null
   beOffsetPips: number
+  /** Fracção do risco da posição (|entrada − SL|); manda sobre os pips. Ver o cabeçalho. */
+  beFracaoDoRisco: number | null
+  beOffsetFracaoDoRisco: number | null
   trailingInicioPips: number | null
+  trailingInicioFracaoDoRisco: number | null
   trailingDistanciaPips: number | null
   trailingPassoPips: number | null
   trailingFracaoDoRisco: number
@@ -86,7 +98,10 @@ export function configProviderDaLinha(
     perfil: typeof extra.perfil === 'string' && extra.perfil.trim() ? extra.perfil.trim() : null,
     beGatilhoPips: c.beGatilhoPips,
     beOffsetPips: c.beOffsetPips,
+    beFracaoDoRisco: c.beFracaoDoRisco,
+    beOffsetFracaoDoRisco: c.beOffsetFracaoDoRisco,
     trailingInicioPips: c.trailingInicioPips,
+    trailingInicioFracaoDoRisco: c.trailingInicioFracaoDoRisco,
     trailingDistanciaPips: c.trailingDistanciaPips,
     trailingPassoPips: c.trailingPassoPips,
     trailingFracaoDoRisco: c.trailingFracaoDoRisco,
@@ -98,13 +113,18 @@ export function configProviderDaLinha(
 /**
  * Esta estratégia tem gestão para uma posição SOLTA (sem escada de alvos gravada)?
  *
- * Só há decisão quando a estratégia a pediu explicitamente: um gatilho de break-even em pips, ou um
- * arranque de trailing em pips. Sem isso o motor fica calado — `beNoTp1` precisa de um TP1 que a
- * posição da mestre não tem, e a fracção do risco sozinha faria o motor apertar o stop de todas as
- * posições de todas as estratégias sem ninguém o ter pedido.
+ * Só há decisão quando a estratégia a pediu explicitamente: um gatilho de break-even ou um arranque
+ * de trailing, em pips OU em fracção do risco. Sem isso o motor fica calado — `beNoTp1` precisa de
+ * um TP1 que a posição da mestre não tem.
+ *
+ * `trailingFracaoDoRisco` continua de FORA desta conta, e é uma distinção que interessa: essa tem
+ * valor por defeito (0,5) e está posta em toda a gente, por isso nunca é um pedido; só diz a que
+ * distância seguir DEPOIS de alguma coisa arrancar. As fracções novas nascem a null — quando têm
+ * valor, alguém as escreveu de propósito.
  */
 export function temGestaoProvider(cfg: ConfigProvider): boolean {
   return (cfg.beGatilhoPips ?? 0) > 0 || (cfg.trailingInicioPips ?? 0) > 0
+    || (cfg.beFracaoDoRisco ?? 0) > 0 || (cfg.trailingInicioFracaoDoRisco ?? 0) > 0
 }
 
 // ── que estratégias entram na gestão ─────────────────────────────────────────
@@ -160,9 +180,17 @@ export interface EstadoProvider {
   picoPips: number
   /** Hora da última decisão nesta posição (travão de carga). */
   ultimaEm: number
+  /**
+   * O risco ORIGINAL da posição em pips (|entrada − SL do primeiro tick em que havia SL}), fixado
+   * uma vez. É a régua de TODAS as fracções — e tem de ser fixado, porque o SL da corretora é o que
+   * o BE e o trailing vão apertando: medir o risco ao SL de agora fazia «0,30R» encolher a cada
+   * aperto, e depois do break-even o risco passava a ser a folga do BE (um trailing a arrancar a 1R
+   * armava logo a seguir, e a 0,5R de distância colava-se ao preço).
+   */
+  riscoPips: number
 }
 
-export const ESTADO_PROVIDER_NOVO: EstadoProvider = { beFeito: false, slPretendido: null, picoPips: 0, ultimaEm: 0 }
+export const ESTADO_PROVIDER_NOVO: EstadoProvider = { beFeito: false, slPretendido: null, picoPips: 0, ultimaEm: 0, riscoPips: 0 }
 
 export type MotivoProvider = 'be' | 'trailing'
 
@@ -176,6 +204,9 @@ export interface DecisaoProvider {
 }
 
 const compraDoTipo = (tipo: string) => !/SELL/i.test(String(tipo ?? ''))
+
+/** Pips para a NOTA (que é texto para gente ler): a folga em fracção do risco dá dízimas. */
+const arredPips = (p: number) => (Number.isInteger(p) ? String(p) : p.toFixed(1))
 
 /**
  * O que a gestão da estratégia faz a UMA posição com este preço.
@@ -210,6 +241,20 @@ export function decidirProvider(
   // O ratchet mede-se ao MAIOR entre o SL real e o que o motor já pretendeu: em sombra o SL real
   // nunca muda (é o monitor que manda), e sem isto o motor repetia a mesma decisão para sempre.
   const slReal = pos.stopLoss != null && pos.stopLoss > 0 ? pos.stopLoss : null
+
+  // O risco DESTA posição em pips, fixado à primeira vez que há SL (ver `EstadoProvider.riscoPips`).
+  if (!(e.riscoPips > 0) && slReal != null) e.riscoPips = Math.abs(pos.openPrice - slReal) / pip
+  const riscoPips = e.riscoPips
+  const comRisco = riscoPips > 0
+  // PRECEDÊNCIA (a mesma de `gestaoDoSinal`): fracção do risco manda, os pips são o recurso.
+  const beGatilhoPips = cfg.beFracaoDoRisco != null && comRisco ? riscoPips * cfg.beFracaoDoRisco : cfg.beGatilhoPips
+  const beOffsetPips = cfg.beOffsetFracaoDoRisco != null && comRisco && cfg.beFracaoDoRisco != null
+    ? riscoPips * cfg.beOffsetFracaoDoRisco
+    : cfg.beOffsetPips
+  const trailingInicioPips = cfg.trailingInicioFracaoDoRisco != null && comRisco
+    ? riscoPips * cfg.trailingInicioFracaoDoRisco
+    : cfg.trailingInicioPips
+
   const base = [slReal, e.slPretendido].filter((x): x is number => x != null)
   const slBase = base.length ? (compra ? Math.max(...base) : Math.min(...base)) : null
   const aperta = (candidato: number, passo: number) =>
@@ -220,21 +265,20 @@ export function decidirProvider(
   let nota: string | null = null
 
   // ── break-even (uma vez) ───────────────────────────────────────────────────
-  if (!e.beFeito && (cfg.beGatilhoPips ?? 0) > 0 && lucroPips >= cfg.beGatilhoPips! - 1e-9) {
-    const nivel = precoDaCorretora(pos.openPrice + sentido * cfg.beOffsetPips * pip, pos.symbol)!
+  if (!e.beFeito && (beGatilhoPips ?? 0) > 0 && lucroPips >= beGatilhoPips! - 1e-9) {
+    const nivel = precoDaCorretora(pos.openPrice + sentido * beOffsetPips * pip, pos.symbol)!
     e.beFeito = true
     // Só se ainda estiver do lado certo do preço — senão fechava a posição no mesmo instante.
     if (aperta(nivel, 0) && (preco - nivel) * sentido > 0) {
       sl = nivel
       motivo = 'be'
-      nota = `${pos.symbol}: BE (+${cfg.beOffsetPips}p) aos ${lucroPips.toFixed(0)}p · ${cfg.slug}`
+      nota = `${pos.symbol}: BE (+${arredPips(beOffsetPips)}p) aos ${lucroPips.toFixed(0)}p · ${cfg.slug}`
     }
   }
 
   // ── trailing ───────────────────────────────────────────────────────────────
-  const inicio = cfg.trailingInicioPips
+  const inicio = trailingInicioPips
   if (inicio != null && inicio > 0 && lucroPips >= inicio - 1e-9) {
-    const riscoPips = slReal != null ? Math.abs(pos.openPrice - slReal) / pip : 0
     const distanciaPips = cfg.trailingDistanciaPips != null && cfg.trailingDistanciaPips > 0
       ? cfg.trailingDistanciaPips
       : riscoPips > 0 ? riscoPips * cfg.trailingFracaoDoRisco : 0
