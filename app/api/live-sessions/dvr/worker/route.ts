@@ -323,10 +323,14 @@ export async function POST(req: NextRequest) {
           .maybeSingle()
         const patch: Record<string, unknown> = {}
         if (((st?.dvr_playlist_title as string) || "").trim()) {
-          // Sala com alvo próprio (Introdução): a playlist criada é a DELE, não o curso. Guardar o
-          // endereço aqui é o que faz a gravação seguinte cair na mesma lista em vez de criar
-          // outra — e é também o que impede que o curso da sala seja substituído por ela.
+          // Sala com alvo próprio (Introdução): guardar o endereço em dvr_playlist_url é o que faz a
+          // gravação seguinte cair na mesma lista em vez de criar outra.
           if (!st?.dvr_playlist_url) patch.dvr_playlist_url = playlistUrl
+          // Decisão do dono (16/09): o curso da Introdução É a playlist que o DVR cria no primeiro
+          // envio. Só se a sala ainda não tiver curso — um curso colado à mão no admin não é
+          // substituído. É isto que acende o curso no onboarding, no lobby e nas sessões grátis,
+          // que não desenham nada enquanto `playlist_url` estiver vazio.
+          if (!st?.playlist_url) patch.playlist_url = playlistUrl
         } else {
           if (!st?.playlist_url) patch.playlist_url = playlistUrl
           if (!st?.playlist_title) patch.playlist_title = `${(st?.title as string) || "Sessões"} · Rever aulas`

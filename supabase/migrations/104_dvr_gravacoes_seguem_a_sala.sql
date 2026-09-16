@@ -1,4 +1,4 @@
--- 103 — AS GRAVAÇÕES SEGUEM A SALA, NÃO O EDUCADOR
+-- 104 — AS GRAVAÇÕES SEGUEM A SALA, NÃO O EDUCADOR
 --
 -- O painel de gravações do studio (`/api/live-sessions/dvr`) filtrava por
 -- `lms_dvr_jobs.educator_id`, que o `on_dvr` copia da sala quando o ficheiro chega do SRS. Numa

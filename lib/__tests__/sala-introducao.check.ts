@@ -181,6 +181,7 @@ function patchDeVolta(s: { playlist_url?: string | null; playlist_title?: string
   const patch: Record<string, string> = {}
   if ((s.dvr_playlist_title || '').trim()) {
     if (!s.dvr_playlist_url) patch.dvr_playlist_url = novaUrl
+    if (!s.playlist_url) patch.playlist_url = novaUrl
   } else {
     if (!s.playlist_url) patch.playlist_url = novaUrl
     if (!s.playlist_title) patch.playlist_title = `${s.title} · Rever aulas`
@@ -197,6 +198,14 @@ eq(
   patchDeVolta({ title: 'Introdução', playlist_url: 'https://y/?list=PLCURSO', dvr_playlist_title: 'MTM Introdução' }, 'https://y/?list=PLNOVA').playlist_url,
   undefined,
 )
+// Decisão do dono (16/09): sem curso colado, o curso da Introdução É a playlist do DVR.
+eq(
+  'introdução sem curso: o curso passa a ser a playlist do DVR',
+  JSON.stringify(patchDeVolta({ title: 'Introdução', dvr_playlist_title: 'MTM Introdução' }, 'https://y/?list=PLNOVA')),
+  JSON.stringify({ dvr_playlist_url: 'https://y/?list=PLNOVA', playlist_url: 'https://y/?list=PLNOVA' }),
+)
+const rotaWorker = readFileSync(join(process.cwd(), 'app/api/live-sessions/dvr/worker/route.ts'), 'utf-8')
+eq('o worker liga o curso à playlist do DVR quando está vazio', /dvr_playlist_url = playlistUrl[\s\S]{0,600}if \(!st\?\.playlist_url\) patch\.playlist_url = playlistUrl/.test(rotaWorker), true)
 eq(
   'sala normal: continua a receber a playlist',
   patchDeVolta({ title: 'Sensei' }, 'https://y/?list=PLNOVA').playlist_url,
