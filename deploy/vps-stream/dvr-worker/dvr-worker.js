@@ -84,8 +84,25 @@ async function buildTrack(clips, durationS, outFile) {
   ])
 }
 
+/**
+ * O gravador escreve `<base>__<epoch>.mp4` (uma gravação por arranque) mas o trabalho guarda o nome
+ * sem sufixo. Sem isto, uma sessão gravada em duas partes falhava com «base em falta» (16/09).
+ * Escolhe-se a MAIOR das variantes: é a gravação completa da sessão, não um arranque falhado.
+ */
+function resolverBase(baseFile) {
+  const direto = path.join(DVR_DIR, baseFile)
+  if (fs.existsSync(direto)) return direto
+  const semExt = baseFile.replace(/\.mp4$/i, "")
+  const candidatos = fs
+    .readdirSync(DVR_DIR)
+    .filter((f) => f.startsWith(`${semExt}__`) && f.endsWith(".mp4") && !f.includes("-multi"))
+    .map((f) => ({ f: path.join(DVR_DIR, f), size: fs.statSync(path.join(DVR_DIR, f)).size }))
+    .sort((a, b) => b.size - a.size)
+  return candidatos.length ? candidatos[0].f : direto
+}
+
 async function assemble(job) {
-  const base = path.join(DVR_DIR, job.baseFile)
+  const base = resolverBase(job.baseFile)
   if (!fs.existsSync(base)) throw new Error(`base em falta: ${base}`)
   const durationS = await probeDuration(base)
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "dvr-"))
