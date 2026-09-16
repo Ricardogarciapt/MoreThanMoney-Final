@@ -8,21 +8,24 @@ import { usePathname } from "next/navigation"
 import UserDropdown from "@/components/user-dropdown"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
 import { useT } from "@/components/i18n-provider"
-import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap, Brain, MonitorPlay, Radio } from "lucide-react"
+import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Brain, MonitorPlay, Radio } from "lucide-react"
 import { shouldReduceSafariEffects } from "@/lib/supabase-session"
+import { construirNavbar, type ItemNavbar } from "@/lib/navegacao"
 
-type NavSubItem = {
-  name: string
-  href: string
-  external?: boolean
-}
+type NavItem = ItemNavbar & { icon: any }
 
-type NavItem = {
-  name: string
-  href: string
-  icon: any
-  external?: boolean
-  submenu?: NavSubItem[]
+/**
+ * Os ícones ficam aqui e não no registo: o registo é importado também do servidor (o gestor de
+ * vídeos de introdução no /admin lê a mesma lista) e não deve arrastar o lucide-react atrás.
+ */
+const ICONES_NAV: Record<string, any> = {
+  inicio: Home,
+  apresentacao: MonitorPlay,
+  'sessoes-gratuitas': Radio,
+  educacao: GraduationCap,
+  automacao: TrendingUp,
+  onboarding: Rocket,
+  'apps-ia': Brain,
 }
 
 export default function Navbar() {
@@ -44,73 +47,13 @@ export default function Navbar() {
   const navBlur = reduceEffects ? "" : "backdrop-blur-md"
   const overlayBlur = reduceEffects ? "bg-black/85" : "bg-black/70 backdrop-blur-sm"
 
-  const navigation: NavItem[] = [
-    {
-      name: t("navfooter.navHome"),
-      href: "/new-landing",
-      icon: Home,
-    },
-    {
-      name: t("navfooter.navPresentations"),
-      href: "/apresentacao",
-      icon: MonitorPlay,
-      submenu: [
-        { name: t("navfooter.subMtmSystem"), href: "/apresentacao" },
-      ],
-    },
-    {
-      name: t("navfooter.navFreeSessions"),
-      href: "/FreeSession",
-      icon: Radio,
-    },
-    {
-      name: t("navfooter.navEducation"),
-      href: "/mtm",
-      icon: GraduationCap,
-      submenu: [
-        { name: t("navfooter.subMtmEducation"), href: "/mtm" },
-        { name: t("navfooter.subDocs"), href: "/docs" },
-        { name: t("navfooter.subLiveSessions"), href: "/live-sessions" },
-        { name: t("navfooter.subAvaliacoes"), href: "/avaliacoes" },
-      ],
-    },
-    {
-      name: t("navfooter.navTrading"),
-      href: "/automation",
-      icon: TrendingUp,
-      submenu: [
-        { name: t("navfooter.subAutomation"), href: "/automation" },
-        { name: "MTM Auto", href: "/mtmauto" },
-        { name: t("navfooter.subOurScanners"), href: "/scanner" },
-        { name: t("navfooter.subLiveScanner"), href: "/scanner-access" },
-        { name: t("navfooter.subMtmAlerts"), href: "/alertas-mtm" },
-        { name: t("navfooter.subPortfolios"), href: "/portfolios" },
-        { name: t("navfooter.subMtmTerminal"), href: "/mtm-terminal" },
-        { name: t("navfooter.subTradingDesk"), href: "/trading" },
-        { name: "MTM Sensei EA", href: "/sensei-ea" },
-        { name: "Sensei Scalp Edition", href: "/sensei-scalp" },
-        // A entrada para o MTM Funded existe aqui, mas só neste sentido: lá dentro a marca é
-        // outra, com navegação e rodapé próprios e sem caminho de volta. São dois negócios.
-        { name: "MTM Funded", href: "/mtmfunded" },
-      ],
-    },
-    {
-      name: t("navfooter.navOnboarding"),
-      href: "/onboarding",
-      icon: Rocket,
-    },
-    {
-      name: t("navfooter.navAiApps"),
-      href: "/app-mobile?tab=apps",
-      icon: Brain,
-      submenu: [
-        { name: "MTM Social", href: "/mtmsocial", external: false },
-        { name: "MTM Studio", href: "https://mtmbrandbuilder.lovable.app", external: true },
-        { name: "MTM Partnership Engine", href: "https://mtmugcapp.lovable.app", external: true },
-        { name: "MTM AiOS", href: "https://mtmaios.lovable.app", external: true },
-      ],
-    },
-  ]
+  // A lista vem do registo (lib/navegacao.ts) — o mesmo que o /admin usa para saber que destinos
+  // existem. Memorizada porque o `useMemo` de baixo depende dela: um array novo a cada render
+  // nunca deixava o memo acertar.
+  const navigation: NavItem[] = useMemo(
+    () => construirNavbar(t).map((item) => ({ ...item, icon: ICONES_NAV[item.id] ?? Home })),
+    [t]
+  )
 
   const closeMenu = useCallback(() => {
     setIsMenuOpen(false)

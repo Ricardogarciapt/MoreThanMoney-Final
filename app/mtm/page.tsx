@@ -103,7 +103,10 @@ export default function MTMLandingPage() {
 
   const loadContentConfig = async () => {
     try {
-      const response = await fetch("/api/admin/content-config")
+      // Rota PÚBLICA. A de admin exige sessão de administrador desde 2026-08-28: um visitante
+      // levava 403 aqui e a página caía nos valores do código — as edições do painel nunca
+      // chegavam a ninguém de fora.
+      const response = await fetch("/api/public/content-config")
       if (!response.ok) return
 
       let data: Record<string, unknown>

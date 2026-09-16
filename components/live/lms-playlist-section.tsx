@@ -1,27 +1,9 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { carregarApiYouTube as loadYouTubeApi } from "@/lib/youtube-iframe-api"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Carregador único da IFrame Player API do YouTube (partilhado por todos os players da página).
-let ytApiPromise: Promise<any> | null = null
-function loadYouTubeApi(): Promise<any> {
-  if (typeof window === "undefined") return Promise.reject()
-  const w = window as any
-  if (w.YT?.Player) return Promise.resolve(w.YT)
-  if (ytApiPromise) return ytApiPromise
-  ytApiPromise = new Promise((resolve) => {
-    const prev = w.onYouTubeIframeAPIReady
-    w.onYouTubeIframeAPIReady = () => { prev?.(); resolve(w.YT) }
-    if (!document.getElementById("yt-iframe-api")) {
-      const s = document.createElement("script")
-      s.id = "yt-iframe-api"
-      s.src = "https://www.youtube.com/iframe_api"
-      document.head.appendChild(s)
-    }
-  })
-  return ytApiPromise
-}
 
 /** Player de playlist com botões próprios de Anterior/Próximo (via IFrame API). */
 function PlaylistPlayer({ playlistId }: { playlistId: string }) {

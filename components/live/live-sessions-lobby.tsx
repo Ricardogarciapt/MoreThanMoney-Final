@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import EducatorProfileDialog, { type EducatorProfilePublic } from "@/components/live/educator-profile-dialog"
+import CursoIntroducao from "@/components/intro/curso-introducao"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
@@ -312,6 +313,12 @@ export default function LiveSessionsLobby() {
         streams={selectedEducatorStreams}
         streamsLoading={selectedEducatorStreamsLoading}
       />
+
+      {/*
+        Entre o «escolhe a tua sala» e os especialistas: quem chega ao lobby pela primeira vez
+        escolhe uma sala sem saber o que é uma sala. O curso de introdução vem antes da escolha.
+      */}
+      <CursoIntroducao feitio="cartao" />
 
       <div className="space-y-12">
           {/* Slideshow educadores */}

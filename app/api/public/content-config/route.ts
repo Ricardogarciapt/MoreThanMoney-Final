@@ -1,32 +1,39 @@
 import { NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase"
-import { defaultContentConfig } from "@/lib/content-config"
+import { getSupabaseAdmin } from "@/lib/supabase"
+import { defaultContentConfig, type ContentConfig } from "@/lib/content-config"
 
-// GET público - Obter configuração de conteúdo (sem autenticação)
+/**
+ * A leitura PÚBLICA do que o admin edita em «Vídeos e links (config)».
+ *
+ * Esta rota estava morta e partida ao mesmo tempo: ninguém a chamava, e a query pedia uma coluna
+ * (`content_config`) e uma chave (`key`) que a tabela `admin_settings` nunca teve — dava sempre
+ * erro e devolvia sempre o default. Entretanto o `/mtm` lia a rota de ADMIN, que desde 2026-08-28
+ * exige sessão de administrador: um visitante levava 403 e a página caía nos valores do código.
+ * Ou seja, tudo o que era editado naquele painel era invisível para quem visita o site.
+ *
+ * Apagá-la fechava o buraco pelo lado errado — o painel continuaria a escrever para algo que
+ * ninguém lê. Foi corrigida (colunas certas) e é agora ela que o `/mtm` consome.
+ *
+ * Só leitura, e só de conteúdo que já é público (links, vídeos e imagens das páginas). A escrita
+ * continua na rota de admin, com `requireAdmin`.
+ */
+export const revalidate = 60
+
 export async function GET() {
   try {
-    const supabase = createServerClient()
-    
-    // Buscar da tabela admin_settings
+    const supabase = getSupabaseAdmin()
+
     const { data, error } = await supabase
-      .from('admin_settings')
-      .select('content_config')
-      .eq('key', 'site_content')
-      .single()
-    
-    if (error || !data?.content_config) {
-      // Retornar configuração padrão se não existir
-      return NextResponse.json(defaultContentConfig)
-    }
-    
-    return NextResponse.json(data.content_config)
+      .from("admin_settings")
+      .select("setting_value")
+      .eq("setting_key", "site_content")
+      .maybeSingle()
+
+    if (error || !data?.setting_value) return NextResponse.json(defaultContentConfig)
+
+    return NextResponse.json(JSON.parse(data.setting_value as string) as ContentConfig)
   } catch (error) {
-    console.error('[PUBLIC_CONTENT_CONFIG_GET]', error)
-    // Retornar configuração padrão em caso de erro
+    console.error("[PUBLIC_CONTENT_CONFIG_GET]", error)
     return NextResponse.json(defaultContentConfig)
   }
 }
-
-// Configuração de cache
-export const revalidate = 60 // Revalidar a cada 60 segundos
-
