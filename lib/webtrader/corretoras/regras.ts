@@ -16,6 +16,8 @@ import type { PlataformaWT } from './tipos'
 export type RefConta =
   | { plataforma: 'mtmfunded'; id: string }
   | { plataforma: 'tradelocker'; origem: 'site'; id: string }
+  // Conta TradeLocker ligada na app MTM Auto (mtmauto_accounts + tradelocker_credenciais.mtmauto_account_id).
+  | { plataforma: 'tradelocker'; origem: 'auto'; id: string }
   | { plataforma: 'tradelocker'; origem: 'sessao'; id: string }
   | { plataforma: 'mt5'; origem: 'site' | 'auto' | 'wt'; id: string }
 
@@ -28,7 +30,7 @@ export function lerRefConta(plataforma: string, ref: unknown): RefConta | null {
   if (partes.length !== 3) return null
   const [, origem, id] = partes
   if (plataforma === 'tradelocker') {
-    if (origem === 'site' && UUID.test(id)) return { plataforma, origem, id }
+    if ((origem === 'site' || origem === 'auto') && UUID.test(id)) return { plataforma, origem, id }
     // Sessão do WebTrader: o id é o accountId TradeLocker (numérico); a posse vem do bilhete.
     if (origem === 'sessao' && /^\d{1,20}$/.test(id)) return { plataforma, origem, id }
     return null

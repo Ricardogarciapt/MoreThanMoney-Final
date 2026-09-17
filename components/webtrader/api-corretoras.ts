@@ -20,6 +20,7 @@ export interface ContaReal {
   real: boolean
   bloqueada: string | null
   origem: "ligador" | "webtrader" | "sessao"
+  versao?: "mt4" | "mt5"
 }
 
 export interface SessaoTL { ref: string; token: string; expira: string; login: string; servidor: string; demo: boolean; rotulo?: string | null }

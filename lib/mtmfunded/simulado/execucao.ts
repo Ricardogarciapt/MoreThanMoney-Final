@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { lerSessao, type ModoSessao } from './credenciais'
+import { modoFundedPelaLigacao } from '@/lib/webtrader/contas-auto-regras'
 import { tipoCurto, estadoCurto } from '@/lib/mtmfunded/etiquetas'
 import { SERVIDOR_SIMULADO } from './motor'
 import { desempenhoDaConta, type LinhaFechada } from './desempenho'
@@ -64,6 +65,12 @@ export async function autorizarConta(request: Request, accountId: string): Promi
   }
   const userId = await userIdDoPedido(request)
   if (userId && conta.user_id === userId) return { conta, modo: 'master' }
+  // (c) Conta de OUTRA pessoa que este utilizador ligou (site ou app MTM Auto) — só com a password
+  // investor se liga uma conta alheia, por isso abre SEMPRE em leitura (exigirNegociavel recusa ordens).
+  if (userId && !token) {
+    const ligacoes = await ligacoesFundedDoUtilizador(userId, accountId)
+    if (modoFundedPelaLigacao({ accountId, donoId: (conta.user_id as string | null) ?? null, userId, ligacoes }) === 'investor') return { conta, modo: 'investor' }
+  }
   if (token) throw new ErroOrdem(401, 'sessão da conta inválida ou expirada — entra outra vez')
   throw new ErroOrdem(userId ? 403 : 401, userId ? 'esta conta não é tua' : 'sem sessão')
 }
@@ -75,6 +82,17 @@ export function exigirNegociavel(conta: Conta, modo: ModoSessao) {
     const e = estadoCurto(String(conta.estado), conta.metricas as Record<string, unknown>)
     throw new ErroOrdem(409, `conta ${e} — não aceita ordens${conta.quebrou_regra ? ` (${conta.quebrou_regra})` : ''}`)
   }
+}
+
+/** Ligações de uma conta MTM Funded feitas por este utilizador (ligador do site e app MTM Auto). */
+export async function ligacoesFundedDoUtilizador(userId: string, accountId?: string): Promise<Array<{ funded_account_id: unknown; funded_somente_leitura?: unknown }>> {
+  const db = getSupabaseAdmin()
+  let site = db.from('mtmcopy_connections').select('funded_account_id, funded_somente_leitura').eq('user_id', userId).not('funded_account_id', 'is', null).neq('mt5_status', 'disconnected')
+  let auto = db.from('mtmauto_accounts').select('funded_account_id').eq('user_id', userId).not('funded_account_id', 'is', null)
+  if (accountId) { site = site.eq('funded_account_id', accountId); auto = auto.eq('funded_account_id', accountId) }
+  const [a, b] = await Promise.all([site, auto])
+  // Uma tabela sem a coluna (base antiga) não pode impedir a outra de responder.
+  return [...(a.error ? [] : a.data ?? []), ...(b.error ? [] : b.data ?? [])]
 }
 
 export async function lerConta(accountId: string): Promise<Conta | null> {

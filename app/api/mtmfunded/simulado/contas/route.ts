@@ -4,6 +4,8 @@ import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { tipoCurto, estadoCurto } from '@/lib/mtmfunded/etiquetas'
 import { avisoDaConta } from '@/lib/mtmfunded/aviso-conta'
 import { selecionarComOpcionais } from '@/lib/mtmfunded/numeros-conta'
+import { ligacoesFundedDoUtilizador } from '@/lib/mtmfunded/simulado/execucao'
+import { fundedLigadasAlheias } from '@/lib/webtrader/contas-auto-regras'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +34,20 @@ export async function GET(request: NextRequest) {
   )
 
   const leve = request.nextUrl.searchParams.get('leve') === '1'
+  // Contas de OUTRAS pessoas que este utilizador ligou com a password investor (site ou app MTM Auto):
+  // entram SÓ no seletor (`leve=1`) e marcadas `modo: 'investor'` — abrem em leitura, nunca negoceiam.
+  // Fora do seletor a resposta fica como sempre (só as próprias), para ninguém somar saldos alheios.
+  const alheias: Record<string, unknown>[] = []
+  if (leve) {
+    const ids = fundedLigadasAlheias(await ligacoesFundedDoUtilizador(userId), (contas ?? []).map((c) => String(c.id)))
+    if (ids.length) {
+      const { data } = await selecionarComOpcionais<Record<string, unknown>>(
+        'id, tipo, estado, motor, mt5_login, servidor, program_id, saldo_inicial, sim_saldo, sim_equity, metricas, created_at, segue_estrategia',
+        (cols) => db.from('mtm_trading_accounts').select(cols).in('id', ids).eq('motor', 'sim') as never,
+      )
+      for (const c of data ?? []) alheias.push({ ...c, modo: 'investor' })
+    }
+  }
   const ids = (contas ?? []).map((c) => c.id as string)
   const programIds = [...new Set((contas ?? []).map((c) => c.program_id as string | null).filter(Boolean))] as string[]
   const vazio = Promise.resolve({ data: [] as Record<string, unknown>[] })
@@ -59,7 +75,7 @@ export async function GET(request: NextRequest) {
   const programaDe = new Map((programas ?? []).map((p) => [p.id as string, p]))
 
   return NextResponse.json({
-    contas: (contas ?? []).map((c) => {
+    contas: [...(contas ?? []), ...alheias].map((c) => {
       const prog = c.program_id ? programaDe.get(c.program_id as string) : null
       const m = c.metricas as Record<string, unknown> | null
       return {

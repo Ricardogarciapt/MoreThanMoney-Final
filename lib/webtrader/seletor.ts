@@ -24,6 +24,8 @@ export interface FundedDoUtilizador {
   aviso?: string
   programa?: { nome: string } | null
   segueEstrategia?: { slug: string; nome: string } | null
+  /** 'investor' = conta de outra pessoa ligada com a password investor — abre só para ver. */
+  modo?: 'master' | 'investor'
 }
 
 export interface SessaoFunded { accountId: string; login: string; etiqueta?: string; estadoCurto?: string; aviso?: string; modo: 'master' | 'investor' }
@@ -38,6 +40,7 @@ export interface ContaRealSeletor {
   real: boolean
   bloqueada: string | null
   origem: 'ligador' | 'webtrader' | 'sessao'
+  versao?: 'mt4' | 'mt5'
 }
 
 export interface SessaoTLSeletor { ref: string; login: string; servidor: string; demo: boolean; rotulo?: string | null }
@@ -78,7 +81,10 @@ export function montarSeletor(f: {
 
   for (const c of f.funded ?? []) {
     juntar({
-      id: c.id, plataforma: 'mtmfunded', login: c.mt5_login, etiqueta: c.etiqueta, estadoCurto: c.estadoCurto, modo: 'master',
+      id: c.id, plataforma: 'mtmfunded', login: c.mt5_login, etiqueta: c.etiqueta,
+      // Ligada com a investor: diz-se no próprio seletor, antes de abrir, que é só para ver.
+      estadoCurto: c.modo === 'investor' ? `${c.estadoCurto} · só leitura` : c.estadoCurto,
+      modo: c.modo === 'investor' ? 'investor' : 'master',
       saldo: c.sim_saldo, equity: c.sim_equity, propria: true, segue: c.segueEstrategia?.nome ?? null, programa: c.programa?.nome ?? null, aviso: c.aviso ?? null,
     })
   }
@@ -98,7 +104,7 @@ export function montarSeletor(f: {
   }
   for (const r of reais) {
     juntar({
-      id: r.ref, plataforma: r.plataforma, login: r.login, etiqueta: NOME[r.plataforma] ?? r.plataforma,
+      id: r.ref, plataforma: r.plataforma, login: r.login, etiqueta: r.versao === 'mt4' ? 'MT4' : NOME[r.plataforma] ?? r.plataforma,
       estadoCurto: r.bloqueada ? 'Bloqueada' : r.demo ? 'Demo' : 'Real', modo: 'master', propria: r.origem !== 'sessao', real: r,
     })
   }
