@@ -10,14 +10,18 @@ export const metadata = { title: 'Aviso de Risco' }
  */
 export default function AvisoDeRisco() {
   return (
-    <PaginaLegal titulo="Aviso de Risco" atualizado="10 de Setembro de 2026">
-      <Seccao titulo="As contas são simuladas">
+    <PaginaLegal titulo="Aviso de Risco" atualizado="17 de Setembro de 2026">
+      <Seccao titulo="As contas de torneio e de avaliação são simuladas">
         <p>
-          Todas as contas emitidas pelo MTM Funded — de torneio e de avaliação — são contas de
+          As contas de torneio e de avaliação (desafios) emitidas pelo MTM Funded são contas de
           demonstração, com dinheiro virtual. As ordens são executadas contra os preços de
           mercado numa plataforma de simulação e <b className="text-zinc-200">não chegam a nenhum
           mercado real</b>. Nenhum participante deposita fundos numa conta de negociação nossa,
           e o MTM Funded não detém, não movimenta nem gere dinheiro de participantes.
+        </p>
+        <p>
+          A conta Funded é diferente: é negociação de capital patrocinado MTM, explicada mais
+          abaixo.
         </p>
         <p>
           O que se compra num programa de avaliação é o acesso à avaliação e ao acompanhamento
@@ -50,13 +54,13 @@ export default function AvisoDeRisco() {
         </p>
       </Seccao>
 
-      <Seccao titulo="Como funciona a conta financiada">
+      <Seccao titulo="Como funciona a conta Funded">
         <p>
-          A negociação é simulada do princípio ao fim. O que a conta financiada tem de real é o
-          capital que a MTM lhe afecta: o Fundo MTM aloca capital correspondente a{' '}
+          A conta Funded é <b className="text-zinc-200">negociação de capital patrocinado MTM</b>:
+          o Fundo MTM patrocina a conta com capital real correspondente a{' '}
           <b className="text-zinc-200">10% do valor nominal da conta</b> — numa conta de 10.000
-          USD, 1.000 USD reais. É desse capital, e do desempenho que ele produz, que saem os
-          pagamentos ao trader.
+          USD, 1.000 USD reais — e por isso a conta Funded contém negociação real. É desse
+          capital patrocinado, e do desempenho que ele produz, que saem os pagamentos ao trader.
         </p>
         <p>
           A participação nos resultados é de <b className="text-zinc-200">75% para o trader</b> e
