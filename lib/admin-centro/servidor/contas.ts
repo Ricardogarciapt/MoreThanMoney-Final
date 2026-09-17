@@ -155,7 +155,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     const casa = f.conta_casa === true || real
     base.push({
       ref: `funded:${f.id}`, origem: 'funded', plataforma: 'mtmfunded', categoria: casa ? 'casa' : f.segue_estrategia ? 'seguidora' : 'cliente',
-      userId: txt(f.user_id), rotulo: [real ? 'Casa · real' : casa ? 'Casa' : null, txt(f.tipo), f.recolhe_todos_sinais === true ? 'todos os sinais' : null].filter(Boolean).join(' · ') || 'MTM Funded',
+      userId: txt(f.user_id), rotulo: [real ? 'Casa · auditoria' : casa ? 'Casa' : null, txt(f.tipo), f.recolhe_todos_sinais === true ? 'todos os sinais' : null].filter(Boolean).join(' · ') || 'MTM Funded',
       login: txt(f.mt5_login), servidor: txt(f.servidor) ?? 'MTM Funded', estado: String(f.estado ?? '—'), ativa: f.estado === 'ativa', demo: false,
       erro: txt(f.quebrou_regra), erroEstado: f.quebrou_regra ? 'actual' : null, metaapiAccountId: txt(f.metaapi_account_id),
       metaapi: metaapi(txt(f.metaapi_account_id), f.motor === 'sim' ? 'simulada' : null), contaMetaApi: false,

@@ -16,9 +16,11 @@
  *     clientes como o Fábio/Alcy). São `tipo='financiada'` por razões técnicas (sem objectivo nem
  *     fase), mas ninguém as ganhou num desafio e não têm capital patrocinado: continuam simuladas.
  *   · CONTA REAL DA CASA (`conta_real_casa`, 109) — as contas do dono que ele declarou reais a 17/09
- *     (as 1K das estratégias, T2T, «Todos os sinais» e os quatro espelhos de 10K). Continuam sem
- *     regras (`analise`), mas o aviso é o da Funded: «contém negociação real». A marca manda
- *     sobre `analise` porque as duas respondem a perguntas diferentes (ver conta-real-casa.ts).
+ *     (as 1K das estratégias, T2T, «Todos os sinais» e os quatro espelhos de 10K) → AUDITORIA:
+ *     «Conta MTM Funded · Conta de auditoria · negociação real». Não é o aviso da Funded de cliente
+ *     (decisão do dono): negoceiam a sério, mas ninguém as ganhou num desafio — servem para a casa
+ *     auditar as estratégias. Continuam sem regras (`analise`); a marca manda sobre `analise`
+ *     porque as duas respondem a perguntas diferentes (ver conta-real-casa.ts).
  *   · torneio → simulada, com o nome do torneio no lugar da avaliação
  *   · provider (conta-mestre de estratégia) → simulada, conta-mestre
  *   · sem dados (sessão antiga guardada no browser antes deste campo) → a frase neutra
@@ -31,6 +33,7 @@ export type AvisoConta =
   | 'avaliacao_concluida'
   | 'avaliacao_terminada'
   | 'funded'
+  | 'auditoria'
   | 'funded_encerrada'
   | 'analise'
   | 'torneio'
@@ -63,7 +66,7 @@ export function avisoDaConta(c: ContaParaAviso | null | undefined): AvisoConta {
     case 'funded':
       // Fechada primeiro, também na conta real: dizer «contém negociação real» numa conta
       // encerrada convidava a negociar nela.
-      if (c.contaReal === true) return fechada || estado === 'aprovada' ? 'funded_encerrada' : 'funded'
+      if (c.contaReal === true) return fechada || estado === 'aprovada' ? 'funded_encerrada' : 'auditoria'
       if (c.metricas?.analise === true || c.metricas?.analise === 'true') return 'analise'
       if (fechada || estado === 'aprovada') return 'funded_encerrada'
       return 'funded'
@@ -78,10 +81,10 @@ export function avisoDaConta(c: ContaParaAviso | null | undefined): AvisoConta {
 
 /** A chave do dicionário (lib/i18n/messages/mtmfunded.ts) — `.curto` para a faixa do telemóvel. */
 export function chaveDoAviso(a: AvisoConta | string | null | undefined, curto = false): string {
-  const valido: AvisoConta[] = ['avaliacao', 'avaliacao_concluida', 'avaliacao_terminada', 'funded', 'funded_encerrada', 'analise', 'torneio', 'mestre', 'geral']
+  const valido: AvisoConta[] = ['avaliacao', 'avaliacao_concluida', 'avaliacao_terminada', 'funded', 'auditoria', 'funded_encerrada', 'analise', 'torneio', 'mestre', 'geral']
   const k = valido.includes(a as AvisoConta) ? (a as AvisoConta) : 'geral'
   return `mtmfunded.aviso.${k}${curto ? '.curto' : ''}`
 }
 
-/** A conta tem negociação real (pinta a faixa de outra cor). */
-export const avisoReal = (a: AvisoConta | string | null | undefined) => a === 'funded'
+/** A conta tem negociação real (pinta a faixa de outra cor): Funded de cliente e auditoria da casa. */
+export const avisoReal = (a: AvisoConta | string | null | undefined) => a === 'funded' || a === 'auditoria'

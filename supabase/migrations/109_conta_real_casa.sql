@@ -12,7 +12,8 @@
 --     aqui podia perder-se nessa janela. A coluna não passa por lá.
 --
 -- Efeito (código no ramo contas-reais-casa):
---   · aviso do WebTrader e email de entrega → «Conta · MTM Funded · contém negociação real»;
+--   · aviso do WebTrader → «Conta MTM Funded · Conta de auditoria · negociação real»; o email de
+--     entrega trata-a como Funded (real), mas as contas da casa não recebem o email de cliente;
 --   · equidade (lib/equidade-mtm.ts): 1K a 100%; espelho de 10K a 10%; a conta-mestre MetaApi que o
 --     espelho representa passa a 0% (sem dupla contagem).
 --

@@ -124,7 +124,7 @@ export default function ContaModal({ contaId, aoFechar, aoMudar }: {
               <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold" style={{ color: COR_DO_ESTADO[estado], background: `${COR_DO_ESTADO[estado]}1f` }}>{estado}</span>
               <span className={`rounded px-1.5 py-0.5 text-[10px] ${c.motor === 'sim' ? 'bg-[#D2A63C]/15 text-[#D2A63C]' : 'bg-blue-500/15 text-blue-300'}`}>{c.motor === 'sim' ? 'MTM (sim)' : 'MT5'}</span>
               {c.analise && <span className="rounded bg-purple-500/15 px-1.5 py-0.5 text-[10px] text-purple-300">análise</span>}
-              {c.contaReal && <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">real da casa</span>}
+              {c.contaReal && <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">auditoria</span>}
             </>
           )}
           <div className="ml-auto flex items-center gap-1">
@@ -249,7 +249,7 @@ function SeparadorResumo({ r }: { r: Dados }) {
         <Bloco titulo="Segue estratégia"><p className="text-gray-100">{c.segue_estrategia ?? '—'}</p></Bloco>
         <Bloco titulo="Aceita T2T"><p className="text-gray-100">{c.aceita_t2t ? 'Sim' : 'Não'}</p></Bloco>
         <Bloco titulo="Conta de análise"><p className="text-gray-100">{c.analise ? 'Sim — as regras não quebram' : 'Não'}</p></Bloco>
-        <Bloco titulo="Conta real da casa"><p className="text-gray-100">{c.contaReal ? 'Sim — negociação real (equidade: 1K integral; espelho de 10K a 10%)' : 'Não'}</p></Bloco>
+        <Bloco titulo="Conta de auditoria (real da casa)"><p className="text-gray-100">{c.contaReal ? 'Sim — negociação real (equidade: 1K integral; espelho de 10K a 10%)' : 'Não'}</p></Bloco>
       </div>
 
       <Bloco titulo="Destinos ligados">

@@ -187,7 +187,7 @@ t('aviso do WebTrader pela fase real', () => {
   assert.equal(translate(chaveDoAviso('funded'), 'en'), 'Account · MTM Funded · contains real trading')
 })
 t('aviso do WebTrader traduzido nos 21 idiomas (sem cair para PT)', () => {
-  const tipos = ['avaliacao', 'avaliacao_concluida', 'avaliacao_terminada', 'funded', 'funded_encerrada', 'analise', 'torneio', 'mestre', 'geral']
+  const tipos = ['avaliacao', 'avaliacao_concluida', 'avaliacao_terminada', 'funded', 'auditoria', 'funded_encerrada', 'analise', 'torneio', 'mestre', 'geral']
   for (const lang of I18N_LANGS) {
     for (const a of tipos) {
       for (const curto of [false, true]) {
@@ -200,6 +200,8 @@ t('aviso do WebTrader traduzido nos 21 idiomas (sem cair para PT)', () => {
       }
     }
     assert.ok(translate(chaveDoAviso('funded'), lang).includes('MTM Funded'))
+    assert.ok(translate(chaveDoAviso('auditoria'), lang).includes('MTM Funded'))
+    assert.ok(translate(chaveDoAviso('auditoria', true), lang).includes('MTM Funded'))
   }
 })
 t('o aviso chega ao seletor (contas próprias e sessões por credenciais)', () => {

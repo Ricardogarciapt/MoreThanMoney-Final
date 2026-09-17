@@ -1,6 +1,8 @@
 /**
  * Contas reais da casa (109, decisão do dono de 17/09):
- *   · o aviso e o email dizem «contém negociação real» (e as regras continuam desligadas);
+ *   · o aviso diz «Conta MTM Funded · Conta de auditoria · negociação real» (as regras continuam
+ *     desligadas); a análise de cliente continua simulada; a Funded de cliente continua «contém
+ *     negociação real»; o email trata a conta como Funded (real);
  *   · 1K conta 1K; o espelho de 10K conta 1K; a conta-mestre que o espelho representa conta 0;
  *   · no relatório diário entram SÓ pela equidade — nunca no P&L/trades/win rate/profit factor
  *     que a lib/inspiring-metrics.ts publica.
@@ -8,7 +10,8 @@
  *   npx tsx lib/mtmfunded/__tests__/contas-reais-casa.check.ts
  */
 import assert from 'node:assert/strict'
-import { avisoDaConta, avisoReal } from '../aviso-conta'
+import { avisoDaConta, avisoReal, chaveDoAviso } from '../aviso-conta'
+import { translate } from '../../i18n/translate'
 import { tipoDeEntrega, textosDaEntrega } from '../email-tipo-conta'
 import { contaEntregaDaLinha } from '../entrega-conta-dados'
 import { numerosDaConta, selecionarComOpcionais } from '../numeros-conta'
@@ -31,12 +34,24 @@ const clienteAnalise = { ...umK, id: 'c1', conta_casa: false, conta_real_casa: f
 
 async function main() {
   // ── 1. aviso do WebTrader ────────────────────────────────────────────────
-  await t('conta real da casa (1K, 10K, T2T) → «contém negociação real»', () => {
+  await t('conta real da casa (1K, 10K, T2T) → auditoria, negociação real', () => {
     for (const c of [umK, t2t, espelho]) {
       const a = avisoDaConta({ tipo: c.tipo, estado: c.estado, metricas: c.metricas, contaReal: ehContaRealDaCasa(c) })
-      assert.equal(a, 'funded')
+      assert.equal(a, 'auditoria')
       assert.equal(avisoReal(a), true)
     }
+  })
+  await t('textos: auditoria (longo e curto), análise do Fábio e Funded de cliente', () => {
+    assert.equal(translate(chaveDoAviso('auditoria'), 'pt'), 'Conta MTM Funded · Conta de auditoria · negociação real')
+    assert.equal(translate(chaveDoAviso('auditoria', true), 'pt'), 'MTM Funded · Auditoria · real')
+    assert.equal(translate(chaveDoAviso('auditoria'), 'en'), 'MTM Funded account · Audit account · real trading')
+    // contas do Fábio: financiadas de análise sem a marca
+    const fabio = avisoDaConta({ tipo: 'financiada', estado: 'ativa', metricas: { analise: true, estrategia: 'sensei' }, contaReal: false })
+    assert.equal(translate(chaveDoAviso(fabio), 'pt'), 'Conta simulada educativa · MTM Funded · Conta de análise, não é negociação real')
+    assert.equal(avisoReal(fabio), false)
+    // Funded de cliente real (ex.: a MT5 de 3K, sem análise nem marca)
+    const cliente = avisoDaConta({ tipo: 'financiada', estado: 'ativa', metricas: { equity: 3052.37 }, contaReal: false })
+    assert.equal(translate(chaveDoAviso(cliente), 'pt'), 'Conta · MTM Funded · contém negociação real')
   })
   await t('conta de análise de cliente continua simulada', () => {
     assert.equal(avisoDaConta({ tipo: 'financiada', estado: 'ativa', metricas: METRICAS_CASA, contaReal: ehContaRealDaCasa(clienteAnalise) }), 'analise')

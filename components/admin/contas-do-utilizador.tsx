@@ -98,7 +98,7 @@ export default function ContasDoUtilizador({ userId, nome, aoFechar, aoAbrirCont
                             {n.contaCasa && <span className="ml-1 rounded bg-sky-500/15 px-1 text-[10px] text-sky-300">casa</span>}
                             {n.segueEstrategia && <span className="ml-1 text-[10px] text-[#D2A63C]">segue {n.segueEstrategia}</span>}
                             {n.contaReal
-                              ? <span className="ml-1 rounded bg-emerald-500/15 px-1 text-[10px] text-emerald-300">real</span>
+                              ? <span className="ml-1 rounded bg-emerald-500/15 px-1 text-[10px] text-emerald-300">auditoria</span>
                               : n.analise && <span className="ml-1 text-[10px] text-gray-500">análise</span>}
                           </td>
                           <td className="px-2 py-1.5"><span style={{ color: COR_DO_ESTADO[n.estadoCurto] }}>{n.estadoCurto}</span></td>
