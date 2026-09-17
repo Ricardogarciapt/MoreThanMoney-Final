@@ -11,7 +11,7 @@
  * máximo ~1 leitura por símbolo a cada 2 s, e as APIs externas bem menos.
  */
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import type { TerminalAsset } from "@/lib/mtm-terminal-assets"
+import { referencePlan, type ReferenceInstrument, type TerminalAsset } from "@/lib/mtm-terminal-assets"
 import {
   candidateKey,
   chooseQuote,
@@ -144,21 +144,30 @@ async function yahooMeta(sym: string) {
 }
 
 // ─── Referência (variação) ────────────────────────────────────────────────────
-export async function fetchReferenceChange(asset: TerminalAsset): Promise<ReferenceChange | null> {
-  const { kind, symbol } = asset.ref
+async function refChange(ref: ReferenceInstrument): Promise<ReferenceChange | null> {
+  const { kind, symbol } = ref
   if (kind === "binance-spot") {
     const b = await binanceSpot24h(symbol)
-    if (b) return { base: b.open, last: b.last, basis: "24h" }
+    if (b) return { base: b.open, last: b.last, basis: "24h", sameLevel: ref.sameLevel }
     const cg = await coingeckoSpot(symbol)
-    if (cg?.change24h != null) return { base: cg.price / (1 + cg.change24h / 100), last: cg.price, basis: "24h" }
+    if (cg?.change24h != null) return { base: cg.price / (1 + cg.change24h / 100), last: cg.price, basis: "24h", sameLevel: ref.sameLevel }
     return null
   }
   if (kind === "binance-futures") {
     const f = await binanceFutures24h(symbol)
-    return f ? { base: f.open, last: f.last, basis: "24h" } : null
+    return f ? { base: f.open, last: f.last, basis: "24h", sameLevel: ref.sameLevel } : null
   }
   const y = await yahooMeta(symbol)
-  return y ? { base: y.prevClose, last: y.price, basis: "sessão" } : null
+  return y ? { base: y.prevClose, last: y.price, basis: "sessão", sameLevel: ref.sameLevel } : null
+}
+
+/** Variação pela principal e, se falhar (fapi em iad1), pelas de reserva do ativo. */
+export async function fetchReferenceChange(asset: TerminalAsset): Promise<ReferenceChange | null> {
+  for (const ref of referencePlan(asset)) {
+    const r = await refChange(ref).catch(() => null)
+    if (r && r.base != null && r.base > 0) return r
+  }
+  return null
 }
 
 async function loadCandidate(kind: QuoteSourceKind, symbol: string): Promise<QuoteCandidate | null> {
@@ -218,7 +227,7 @@ export async function fetchLiveQuote(asset: TerminalAsset): Promise<LiveQuote> {
     source: step.label,
     sourceKind: step.kind,
     sameLevel: step.sameLevel,
-    changePercent: computeChangePercent(candidate.price, ref, step.sameLevel && asset.ref.sameLevel),
+    changePercent: computeChangePercent(candidate.price, ref, step.sameLevel && (ref?.sameLevel ?? asset.ref.sameLevel)),
     changeBasis: ref?.basis ?? null,
     currency: "USD",
   }

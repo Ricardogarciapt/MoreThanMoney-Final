@@ -16,8 +16,16 @@ import {
   TERMINAL_TYPE_LABELS,
   type TerminalAsset,
   type TerminalAssetType,
+  type ReferenceInstrument,
 } from "@/lib/mtm-terminal-assets"
-import { analysisAgeState, BROKER_FRESH_MS, formatAge, type LiveQuote } from "@/lib/mtm-terminal-live"
+import {
+  analysisAgeState,
+  BROKER_FRESH_MS,
+  formatAge,
+  liveBlockState,
+  type LiveBlockState,
+  type LiveQuote,
+} from "@/lib/mtm-terminal-live"
 import {
   basisAdjust,
   computeTechnicals,
@@ -204,12 +212,17 @@ function useLiveQuote(symbol: string) {
   return { quote, error }
 }
 
+/** Velas + a referência que as deu (o sameLevel é o DELA: as de reserva são reescaladas) + se já respondeu. */
 function useCandles(symbol: string) {
   const [candles, setCandles] = useState<Candle[]>([])
+  const [ref, setRef] = useState<ReferenceInstrument | null>(null)
+  const [loaded, setLoaded] = useState(false)
   const current = useRef(symbol)
   useEffect(() => {
     current.current = symbol
     setCandles([])
+    setRef(null)
+    setLoaded(false)
   }, [symbol])
   useVisibleInterval(
     async () => {
@@ -217,16 +230,20 @@ function useCandles(symbol: string) {
       try {
         const res = await fetch(`/api/mtm-terminal/candles?symbol=${sym}`, { signal: AbortSignal.timeout(10_000) })
         const data = await res.json()
-        if (current.current !== sym || !Array.isArray(data.velas) || !data.velas.length) return
+        if (current.current !== sym) return
+        setLoaded(true)
+        if (!Array.isArray(data.velas) || !data.velas.length) return
         setCandles((data.velas as number[][]).map(([t, o, h, l, c]) => ({ t, o, h, l, c })))
+        if (data.ref && typeof data.ref.sameLevel === "boolean") setRef(data.ref as ReferenceInstrument)
       } catch {
         /* mantém as últimas */
+        if (current.current === sym) setLoaded(true)
       }
     },
     CANDLES_POLL_MS,
     [symbol],
   )
-  return candles
+  return { candles, ref, loaded }
 }
 
 function TerminalContent() {
@@ -242,15 +259,16 @@ function TerminalContent() {
 
   const now = useNow()
   const { quote, error: quoteError } = useLiveQuote(selected.symbol)
-  const candles = useCandles(selected.symbol)
+  const { candles, ref: candlesRef, loaded: candlesLoaded } = useCandles(selected.symbol)
+  const candlesSameLevel = (candlesRef ?? selected.ref).sameLevel
 
   // Números ao vivo: níveis e técnicos recalculados com o preço que está a chegar.
   const live = useMemo(() => {
     const price = quote?.price ?? null
     if (price == null || !candles.length) return { levels: null, technicals: null as TerminalTechnicals | null }
-    const { candles: adj } = basisAdjust(candles, price, selected.ref.sameLevel)
+    const { candles: adj } = basisAdjust(candles, price, candlesSameLevel)
     return { levels: computeTerminalLevels(adj, price), technicals: computeTechnicals(adj, price) }
-  }, [quote?.price, candles, selected.ref.sameLevel])
+  }, [quote?.price, candles, candlesSameLevel])
 
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -539,7 +557,24 @@ function TerminalContent() {
           <TvChartEmbed tvSymbol={selected.tvSymbol} interval="240" height={440} studies={MOMENTUM_STUDIES} />
 
           {/* Técnicos e níveis ao vivo */}
-          <LiveNumbers technicals={live.technicals} levels={live.levels} fallbackLevels={analysis?.dashboard.levels ?? null} />
+          <LiveNumbers
+            technicals={live.technicals}
+            levels={live.levels}
+            fallbackLevels={analysis?.dashboard.levels ?? null}
+            state={liveBlockState({
+              hasTechnicals: live.technicals != null,
+              candlesLoaded,
+              candleCount: candles.length,
+              hasPrice: quote?.price != null,
+              fallbackLevelCount:
+                (analysis?.dashboard.levels?.supports?.length ?? 0) + (analysis?.dashboard.levels?.resistances?.length ?? 0),
+            })}
+            refNote={
+              candlesRef && candlesRef.symbol !== selected.ref.symbol
+                ? `velas de ${candlesRef.symbol} (referência de reserva, ajustadas ao preço atual)`
+                : null
+            }
+          />
 
           {notice && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">{notice}</div>
@@ -568,68 +603,92 @@ function TerminalContent() {
 }
 
 // ─── Números ao vivo ──────────────────────────────────────────────────────────
+const LIVE_STATE_MSG: Record<Exclude<LiveBlockState, "live">, string> = {
+  "levels-only":
+    "Sem velas diárias ao vivo neste momento — regime, RSI, ATR e intervalo ficam em pausa. Os níveis abaixo são os da análise diária.",
+  "waiting-price": "Velas carregadas; à espera do preço ao vivo para calcular os números.",
+  loading: "A carregar velas diárias…",
+  "no-candles":
+    "Sem velas diárias para este ativo neste momento, por isso não há regime, RSI, ATR nem níveis ao vivo. Tentamos de novo a cada minuto.",
+}
+
 function LiveNumbers({
   technicals: t,
   levels,
   fallbackLevels,
+  state,
+  refNote,
 }: {
   technicals: TerminalTechnicals | null
   levels: { supports: number[]; resistances: number[] } | null
   fallbackLevels: { supports: number[]; resistances: number[] } | null
+  state: LiveBlockState
+  refNote: string | null
 }) {
   const lv = levels ?? fallbackLevels
   const regimeColor =
     t?.regime === "tendência de alta" ? "text-green-400" : t?.regime === "tendência de baixa" ? "text-red-400" : "text-gray-200"
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
           <Activity className="h-4 w-4 text-green-400" /> Ao vivo · velas diárias + preço atual
         </p>
-        {!levels && fallbackLevels && <span className="text-[11px] text-amber-300">níveis da análise (sem velas ao vivo)</span>}
+        {state === "live" && refNote && <span className="text-[11px] text-gray-500">{refNote}</span>}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-        <MetricCard title="Regime" icon={<Waves className="h-4 w-4" />}>
-          <p className={`text-sm font-semibold capitalize ${regimeColor}`}>{t?.regime ?? "—"}</p>
-          <p className="mt-1 text-[11px] text-gray-500">
-            EMA20 {fmtPrice(t?.ema20)} · EMA50 {fmtPrice(t?.ema50)}
-          </p>
-        </MetricCard>
-        <MetricCard title="Momentum (RSI 14)" icon={<Gauge className="h-4 w-4" />}>
-          {t?.rsi14 != null ? (
-            <>
-              <Meter value={t.rsi14} leftLabel="Sobrevendido" rightLabel="Sobrecomprado" />
-              <p className="mt-1 text-center text-sm font-semibold text-white">
-                {t.rsi14} · {t.momentum}
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-gray-500">—</p>
-          )}
-        </MetricCard>
-        <MetricCard title="Volatilidade (ATR 14)" icon={<Activity className="h-4 w-4" />}>
-          <p className="text-sm font-semibold text-white">{t?.atr14 != null ? fmtPrice(t.atr14) : "—"}</p>
-          <p className="mt-1 text-[11px] text-gray-500">{t?.atrPct != null ? `${t.atrPct}% do preço por dia` : ""}</p>
-        </MetricCard>
-        <MetricCard title="Intervalo 20 sessões" icon={<Target className="h-4 w-4" />}>
-          {t?.range20Pct != null && t.range20 ? (
-            <>
-              <Meter value={t.range20Pct} leftLabel={fmtPrice(t.range20.l)} rightLabel={fmtPrice(t.range20.h)} />
-              <p className="mt-1 text-center text-sm font-semibold text-white">{t.range20Pct}% do intervalo</p>
-            </>
-          ) : (
-            <p className="text-sm text-gray-500">—</p>
-          )}
-        </MetricCard>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <MetricCard title="Suportes" icon={<TrendingDown className="h-4 w-4 text-green-400" />}>
-          <LevelChips values={lv?.supports ?? []} cls="border-green-500/20 bg-green-500/5 text-green-300" />
-        </MetricCard>
-        <MetricCard title="Resistências" icon={<TrendingUp className="h-4 w-4 text-red-400" />}>
-          <LevelChips values={lv?.resistances ?? []} cls="border-red-500/20 bg-red-500/5 text-red-300" />
-        </MetricCard>
-      </div>
+      {/* Um aviso só, no lugar dos cartões — em vez de seis cartões com «—». */}
+      {state !== "live" && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+          {state === "loading" ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" /> : <Activity className="mt-0.5 h-4 w-4 shrink-0" />}
+          <span>{LIVE_STATE_MSG[state]}</span>
+        </div>
+      )}
+      {state === "live" && t && (
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+          <MetricCard title="Regime" icon={<Waves className="h-4 w-4" />}>
+            <p className={`text-sm font-semibold capitalize ${regimeColor}`}>{t.regime ?? "—"}</p>
+            <p className="mt-1 text-[11px] text-gray-500">
+              EMA20 {fmtPrice(t.ema20)} · EMA50 {fmtPrice(t.ema50)}
+            </p>
+          </MetricCard>
+          <MetricCard title="Momentum (RSI 14)" icon={<Gauge className="h-4 w-4" />}>
+            {t.rsi14 != null ? (
+              <>
+                <Meter value={t.rsi14} leftLabel="Sobrevendido" rightLabel="Sobrecomprado" />
+                <p className="mt-1 text-center text-sm font-semibold text-white">
+                  {t.rsi14} · {t.momentum}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500">—</p>
+            )}
+          </MetricCard>
+          <MetricCard title="Volatilidade (ATR 14)" icon={<Activity className="h-4 w-4" />}>
+            <p className="text-sm font-semibold text-white">{t.atr14 != null ? fmtPrice(t.atr14) : "—"}</p>
+            <p className="mt-1 text-[11px] text-gray-500">{t.atrPct != null ? `${t.atrPct}% do preço por dia` : ""}</p>
+          </MetricCard>
+          <MetricCard title="Intervalo 20 sessões" icon={<Target className="h-4 w-4" />}>
+            {t.range20Pct != null && t.range20 ? (
+              <>
+                <Meter value={t.range20Pct} leftLabel={fmtPrice(t.range20.l)} rightLabel={fmtPrice(t.range20.h)} />
+                <p className="mt-1 text-center text-sm font-semibold text-white">{t.range20Pct}% do intervalo</p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500">—</p>
+            )}
+          </MetricCard>
+        </div>
+      )}
+      {(state === "live" || state === "levels-only") && lv && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <MetricCard title={state === "live" ? "Suportes" : "Suportes (análise)"} icon={<TrendingDown className="h-4 w-4 text-green-400" />}>
+            <LevelChips values={lv.supports ?? []} cls="border-green-500/20 bg-green-500/5 text-green-300" />
+          </MetricCard>
+          <MetricCard title={state === "live" ? "Resistências" : "Resistências (análise)"} icon={<TrendingUp className="h-4 w-4 text-red-400" />}>
+            <LevelChips values={lv.resistances ?? []} cls="border-red-500/20 bg-red-500/5 text-red-300" />
+          </MetricCard>
+        </div>
+      )}
     </div>
   )
 }

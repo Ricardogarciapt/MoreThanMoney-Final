@@ -45,6 +45,14 @@ export interface TerminalAsset {
   ref: ReferenceInstrument
   /** Spot de último recurso para metais (gold-api.com: XAU/XAG). Nunca futuros. */
   metalSpot?: "XAU" | "XAG"
+  /**
+   * Referências de reserva para VELAS e VARIAÇÃO quando a principal não responde. Existem porque as
+   * funções node da Vercel correm em iad1 (EUA) apesar do preferredRegion "fra1", e fapi.binance.com
+   * recusa pedidos dos EUA: o ouro e a prata ficavam sem uma única vela (17/09). Todas levam
+   * sameLevel:false — as velas são reescaladas ao preço ao vivo e a % é a da própria referência —,
+   * por isso nunca mostram o nível dos futuros. Nunca entram no plano do PREÇO (quoteSourcePlan).
+   */
+  refFallbacks?: ReferenceInstrument[]
 }
 
 const y = (symbol: string, sameLevel: boolean): ReferenceInstrument => ({ kind: "yahoo", symbol, sameLevel })
@@ -52,8 +60,12 @@ const bs = (symbol: string): ReferenceInstrument => ({ kind: "binance-spot", sym
 
 export const TERMINAL_ASSETS: TerminalAsset[] = [
   // ─── Metais / Commodities ──────────────────────────────────────────────
-  { symbol: "XAUUSD", name: "Ouro / Gold", type: "commodity", tvSymbol: "OANDA:XAUUSD", priceSource: "yahoo", priceSymbol: "XAUUSD", brokerSymbol: "XAUUSD", ref: { kind: "binance-futures", symbol: "XAUUSDT", sameLevel: true }, metalSpot: "XAU" },
-  { symbol: "XAGUSD", name: "Prata / Silver", type: "commodity", tvSymbol: "OANDA:XAGUSD", priceSource: "yahoo", priceSymbol: "XAGUSD", brokerSymbol: "XAGUSD", ref: { kind: "binance-futures", symbol: "XAGUSDT", sameLevel: true }, metalSpot: "XAG" },
+  { symbol: "XAUUSD", name: "Ouro / Gold", type: "commodity", tvSymbol: "OANDA:XAUUSD", priceSource: "yahoo", priceSymbol: "XAUUSD", brokerSymbol: "XAUUSD", ref: { kind: "binance-futures", symbol: "XAUUSDT", sameLevel: true }, metalSpot: "XAU",
+    // PAXG (1 onça de ouro, espelho spot da Binance que não bloqueia os EUA) segue o spot a décimas de %; GC=F só no fim.
+    refFallbacks: [{ kind: "binance-spot", symbol: "PAXGUSDT", sameLevel: false }, y("GC=F", false)] },
+  { symbol: "XAGUSD", name: "Prata / Silver", type: "commodity", tvSymbol: "OANDA:XAGUSD", priceSource: "yahoo", priceSymbol: "XAGUSD", brokerSymbol: "XAGUSD", ref: { kind: "binance-futures", symbol: "XAGUSDT", sameLevel: true }, metalSpot: "XAG",
+    // Não há prata spot acessível sem chave: futuros SI=F, reescalados ao preço da corretora.
+    refFallbacks: [y("SI=F", false)] },
   { symbol: "USOIL", name: "Petróleo WTI", type: "commodity", tvSymbol: "TVC:USOIL", priceSource: "yahoo", priceSymbol: "CL=F", brokerSymbol: "USOIL", ref: y("CL=F", false) },
 
   // ─── Crypto ────────────────────────────────────────────────────────────
@@ -88,6 +100,11 @@ export const TERMINAL_TYPE_LABELS: Record<TerminalAssetType, string> = {
   forex: "Forex",
   index: "Índices",
   stock: "Ações",
+}
+
+/** Ordem das referências para velas/variação: a principal e depois as de reserva. */
+export function referencePlan(asset: TerminalAsset): ReferenceInstrument[] {
+  return [asset.ref, ...(asset.refFallbacks ?? [])]
 }
 
 export function findTerminalAsset(symbol: string): TerminalAsset | undefined {
