@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isInternalApiRequest } from "@/lib/internal-api"
 import { mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } from "@/lib/mail-transport"
 import { buildRenewalEmail } from "@/lib/renewal-emails"
+import { classificarRenovacao, lerEstadoStripe } from "@/lib/cobranca/renovacao"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -42,7 +43,7 @@ async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
 
   const { data: due } = await supabase
     .from("profiles")
-    .select("id, email, full_name, subscription_expires_at, subscription_plan, subscription_billing_cycle, subscription_auto_renew, profile_data")
+    .select("id, email, full_name, user_type, member_category, subscription_expires_at, subscription_plan, subscription_billing_cycle, subscription_auto_renew, subscription_platform, subscription_status, stripe_subscription_id, profile_data")
     .eq("is_active", true)
     .not("subscription_expires_at", "is", null)
     .gte("subscription_expires_at", windowStart.toISOString())
@@ -71,7 +72,7 @@ async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
     // Já avisado neste ciclo? A marca vive em profiles.profile_data.renewal_notice, ligada à
     // data de expiração: enquanto a subscrição não renovar (data não mudar), não repete.
     const pd = (u.profile_data && typeof u.profile_data === "object" ? u.profile_data : {}) as Record<string, unknown>
-    const marca = pd.renewal_notice as { expires_at?: string } | undefined
+    const marca = pd.renewal_notice as { expires_at?: string; kind?: string } | undefined
     // Normalizado: a mesma data chega em formatos diferentes conforme quem escreveu a marca.
     const mesmaData = (a?: string | null, b?: string | null) => {
       if (!a || !b) return false
@@ -79,11 +80,6 @@ async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
       const tb = new Date(b).getTime()
       return Number.isFinite(ta) && ta === tb
     }
-    if (mesmaData(marca?.expires_at, u.subscription_expires_at as string)) {
-      saltados.push(`${u.email} (já avisado)`)
-      continue
-    }
-
     // Valor do último pagamento — só para dizer o número certo a quem renova sozinho.
     const { data: ultimo } = await supabase
       .from("payment_history")
@@ -94,7 +90,27 @@ async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
       .limit(1)
       .maybeSingle()
 
-    const kind = u.subscription_auto_renew === false ? "manual" : "auto"
+    // «Renova sozinha» só quando há débito real a correr (Stripe/Apple). Antes de 17/09 bastava
+    // o auto_renew por defeito, e contas sem nada para cobrar recebiam «serão cobrados».
+    const stripe = u.stripe_subscription_id ? await lerEstadoStripe(u.stripe_subscription_id) : null
+    if (u.stripe_subscription_id && !stripe) {
+      saltados.push(`${u.email} (Stripe ilegível)`)
+      continue
+    }
+    const classe = classificarRenovacao(u, stripe)
+    if (classe === "isento") {
+      saltados.push(`${u.email} (VIP/admin, não se cobra)`)
+      continue
+    }
+    const kind = classe === "cobrar" ? "manual" : "auto"
+    // Já avisado deste ciclo → não repete. Se o aviso anterior dizia «renova sozinha» e afinal
+    // não renova, sai uma correção (uma vez: a marca nova fica com kind='manual').
+    const jaAvisado = mesmaData(marca?.expires_at, u.subscription_expires_at as string)
+    const correcao = marca?.kind === "auto" && kind === "manual"
+    if (jaAvisado && !correcao) {
+      saltados.push(`${u.email} (já avisado)`)
+      continue
+    }
     const mail = buildRenewalEmail(kind, {
       nome: firstName(u.full_name, u.email as string),
       email: u.email as string,
@@ -103,6 +119,7 @@ async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
       ciclo: u.subscription_billing_cycle,
       ultimoValorCents: (ultimo as { amount?: number } | null)?.amount ?? null,
       moeda: (ultimo as { currency?: string } | null)?.currency ?? null,
+      correcao,
     })
 
     if (transporter) {
@@ -121,7 +138,7 @@ async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
           .update({
             profile_data: {
               ...pd,
-              renewal_notice: { expires_at: u.subscription_expires_at, kind, sent_at: new Date().toISOString() },
+              renewal_notice: { expires_at: u.subscription_expires_at, kind, correcao, sent_at: new Date().toISOString() },
             },
           })
           .eq("id", u.id)
@@ -142,7 +159,7 @@ async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
         continue
       }
     }
-    enviados.push(`${u.email} (${kind})`)
+    enviados.push(`${u.email} (${kind}${correcao ? ", correção" : ""})`)
   }
 
   transporter?.close()

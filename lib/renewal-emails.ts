@@ -40,6 +40,8 @@ export interface RenewalInput {
   ciclo?: string | null
   ultimoValorCents?: number | null
   moeda?: string | null
+  /** Corrige um aviso anterior que dizia, por engano, que a subscrição renovava sozinha. */
+  correcao?: boolean
 }
 
 export function buildRenewalEmail(kind: RenewalKind, i: RenewalInput): RenewalEmail {
@@ -79,9 +81,16 @@ Ricardo Garcia — MoreThanMoney`,
     }
   }
 
+  const correcao = i.correcao
+    ? `<p style="margin:0 0 14px;font-size:15px;line-height:1.7;padding:12px 14px;border-radius:10px;background:#1c1c26"><b>Correção:</b> no último email dissemos que a tua subscrição renovava sozinha. Não é o caso — não tens um pagamento automático associado, por isso <b>nada te foi nem vai ser cobrado</b> sem seres tu a renovar.</p>`
+    : ''
+  const correcaoTxt = i.correcao
+    ? `Correção: no último email dissemos que a tua subscrição renovava sozinha. Não é o caso — não tens um pagamento automático associado, por isso nada te foi nem vai ser cobrado sem seres tu a renovar.\n\n`
+    : ''
   const inner = `
     <h1 style="margin:0 0 16px;font-size:21px;line-height:1.3;color:#D2A63C">${i.nome}, o teu acesso termina a ${dia}</h1>
-    <p style="margin:0 0 14px;font-size:15px;line-height:1.7">Faltam dois dias. O teu <b>${plano}</b> <b>não renova sozinho</b>, por isso a ${dia} o acesso à app, às sessões e aos sinais fecha.</p>
+    ${correcao}
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.7">Faltam poucos dias. O teu <b>${plano}</b> <b>não renova sozinho</b>, por isso a ${dia} o acesso à app, às sessões e aos sinais fecha.</p>
     <p style="margin:0 0 18px;font-size:15px;line-height:1.7">Renovas em dois minutos e fica tudo como está — histórico, ligações e progresso intactos.</p>
     <div style="height:1px;background:#2a2a38;margin:22px 0"></div>
     <h2 style="margin:0 0 12px;font-size:16px;color:#fff">Renovar ou mudar de pack</h2>
@@ -90,11 +99,13 @@ Ricardo Garcia — MoreThanMoney`,
     <p style="margin:0;font-size:14px;line-height:1.7;color:#a9a9b8">Se decidires não continuar, sem problema — responde a dizer e fico a saber porquê. Isso vale-me mais do que uma renovação forçada.</p>
     <p style="margin:18px 0 0;font-size:14px;line-height:1.6">Até já,<br/><b>Ricardo Garcia</b><br/><span style="color:#8a8a9a">MoreThanMoney</span></p>`
   return {
-    subject: `${i.nome}, o teu acesso MoreThanMoney termina a ${dia}`,
+    subject: i.correcao
+      ? `Correção: o teu acesso MoreThanMoney termina a ${dia}`
+      : `${i.nome}, o teu acesso MoreThanMoney termina a ${dia}`,
     html: mtmEmailShell(inner),
     text: `${i.nome},
 
-Faltam dois dias. O teu ${plano} não renova sozinho, por isso a ${dia} o acesso à app, às sessões e aos sinais fecha.
+${correcaoTxt}Faltam poucos dias. O teu ${plano} não renova sozinho, por isso a ${dia} o acesso à app, às sessões e aos sinais fecha.
 
 Renovas em dois minutos e fica tudo como está:
 ${checkoutUrl('premium_monthly', i.email)}

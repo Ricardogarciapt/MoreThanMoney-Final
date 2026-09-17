@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Obter ou criar customer Stripe
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('stripe_customer_id, email, full_name, mlm_sponsor_username, subscription_platform, subscription_status')
+      .select('stripe_customer_id, email, full_name, mlm_sponsor_username, subscription_platform, subscription_status, member_category')
       .eq('id', user.id)
       .single()
 
@@ -106,8 +106,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Intro offer: 1º mês Premium a 34,99€ (desconto único), só no plano premium mensal
-    // e só para quem ainda não é Premium ativo (evita reaplicar a subscritores atuais).
-    if (planId === 'premium_monthly' && profile?.subscription_status !== 'active') {
+    // e só para quem nunca foi Premium: quem renova depois de uma pausa paga o preço normal.
+    if (planId === 'premium_monthly' && profile?.subscription_status !== 'active' &&
+        profile?.member_category !== 'premium' && profile?.member_category !== 'vip') {
       sessionParams.discounts = [{ coupon: 'INTRO_PREMIUM_1M' }]
     }
 
