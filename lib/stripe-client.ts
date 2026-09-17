@@ -26,8 +26,13 @@ export function getStripeClient(): Stripe {
 
 /** Fim do período da subscrição, em segundos epoch. */
 export function stripeSubscriptionPeriodEnd(sub: unknown): number {
-  const v = (sub as { current_period_end?: unknown })?.current_period_end
-  return typeof v === 'number' ? v : 0
+  const s = sub as { current_period_end?: unknown; items?: { data?: { current_period_end?: unknown }[] } } | null
+  const v = s?.current_period_end
+  if (typeof v === 'number' && v > 0) return v
+  // Nas versões novas da API o fim do período vive em cada item. Sem isto devolvia 0 e o
+  // perfil ficava com expiração em 1970 (casos rubensousacaneco/lucasstark83, 17/09).
+  const nosItens = (s?.items?.data ?? []).map((i) => (typeof i.current_period_end === 'number' ? i.current_period_end : 0))
+  return nosItens.length ? Math.max(0, ...nosItens) : 0
 }
 
 /** Preço de uma linha de fatura. */

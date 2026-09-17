@@ -16,7 +16,7 @@ function isAuthorized(request: NextRequest): boolean {
 }
 
 /**
- * Fim de período das subscrições IQ/Skool/Premium (diário, 03:00 UTC).
+ * Fim de período das subscrições IQ/Skool/Premium/Membro (diário, 03:00 UTC).
  *
  * Regra em lib/cobranca/renovacao.ts:
  *  - isento (admin/VIP) → +30/365 dias, como sempre;
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   const { data: due, error: fetchError } = await supabase
     .from("profiles")
     .select("id, email, member_category, subscription_expires_at, subscription_auto_renew, subscription_billing_cycle, subscription_platform, subscription_status, stripe_subscription_id, user_type, profile_data")
-    .in("member_category", ["iq", "skool", "premium", "vip"])
+    .in("member_category", ["iq", "skool", "premium", "vip", "standard"])
     .neq("user_type", "admin")
     .eq("is_active", true)
     .not("subscription_expires_at", "is", null)
