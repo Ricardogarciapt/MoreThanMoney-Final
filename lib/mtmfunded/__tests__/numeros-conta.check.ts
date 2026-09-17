@@ -72,7 +72,7 @@ async function main() {
     assert.equal(x.contaCasa, true); assert.equal(x.segueEstrategia, 'sensei'); assert.equal(x.analise, true)
   })
 
-  await caso('colunas opcionais: sem conta_casa (082) repete sem ela e mantém pausada_em', async () => {
+  await caso('colunas opcionais: sem conta_casa (082) repete sem ela e mantém as outras', async () => {
     const pedidas: string[] = []
     const r = await selecionarComOpcionais<{ id: string }>('id', async (cols) => {
       pedidas.push(cols)
@@ -80,7 +80,7 @@ async function main() {
       return { data: [{ id: 'x' }], error: null }
     })
     assert.deepEqual(r.data, [{ id: 'x' }])
-    assert.equal(pedidas[1], 'id, pausada_em')
+    assert.equal(pedidas[1], 'id, pausada_em, conta_real_casa')
   })
 
   console.log(`\n${n} casos ok`)

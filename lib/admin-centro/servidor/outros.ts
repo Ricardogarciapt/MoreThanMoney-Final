@@ -125,7 +125,7 @@ export async function carregarFunded() {
         contas: casa.length,
         saldo: casa.reduce((a, c) => a + (c.saldo ?? 0), 0),
         equity: casa.reduce((a, c) => a + (c.equity ?? c.saldo ?? 0), 0),
-        nota: casa.length ? 'Soma das contas simuladas da casa (conta_casa).' : colunaCasa ? 'Sem contas marcadas como conta_casa (ramo estrategias-primeverse, migração «contas da casa»).' : 'Coluna conta_casa por aplicar.',
+        nota: casa.length ? 'Soma nominal das contas da casa (conta_casa e reais da casa, 109) — a contribuição oficial está no painel de equidade.' : colunaCasa ? 'Sem contas marcadas como conta_casa (ramo estrategias-primeverse, migração «contas da casa»).' : 'Coluna conta_casa por aplicar.',
       },
       lidaEm: new Date().toISOString(),
     }

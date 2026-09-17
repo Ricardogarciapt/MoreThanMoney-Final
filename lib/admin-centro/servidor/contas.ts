@@ -150,10 +150,12 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     })
   }
   for (const f of funded.linhas) {
-    const casa = f.conta_casa === true
+    // A conta real da casa (109) é da casa mesmo sem `conta_casa` (a de T2T do dono).
+    const real = f.conta_real_casa === true
+    const casa = f.conta_casa === true || real
     base.push({
       ref: `funded:${f.id}`, origem: 'funded', plataforma: 'mtmfunded', categoria: casa ? 'casa' : f.segue_estrategia ? 'seguidora' : 'cliente',
-      userId: txt(f.user_id), rotulo: [casa ? 'Casa' : null, txt(f.tipo), f.recolhe_todos_sinais === true ? 'todos os sinais' : null].filter(Boolean).join(' · ') || 'MTM Funded',
+      userId: txt(f.user_id), rotulo: [real ? 'Casa · auditoria' : casa ? 'Casa' : null, txt(f.tipo), f.recolhe_todos_sinais === true ? 'todos os sinais' : null].filter(Boolean).join(' · ') || 'MTM Funded',
       login: txt(f.mt5_login), servidor: txt(f.servidor) ?? 'MTM Funded', estado: String(f.estado ?? '—'), ativa: f.estado === 'ativa', demo: false,
       erro: txt(f.quebrou_regra), erroEstado: f.quebrou_regra ? 'actual' : null, metaapiAccountId: txt(f.metaapi_account_id),
       metaapi: metaapi(txt(f.metaapi_account_id), f.motor === 'sim' ? 'simulada' : null), contaMetaApi: false,
@@ -182,6 +184,9 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
 /** Contas MTM Funded (simuladas e MT5) — tenta com as colunas da 084 (conta_casa…), cai sem elas. */
 async function lerFunded() {
   const cols = 'id, user_id, tipo, mt5_login, servidor, estado, motor, quebrou_regra, metaapi_account_id, sim_saldo, sim_equity, sim_ultimo_dia, segue_estrategia, aceita_t2t, created_at, updated_at'
+  // 109 (`conta_real_casa`) primeiro; sem ela, como antes — a conta real da casa só não se distingue.
+  const real = await ler(db().from('mtm_trading_accounts').select(`${cols}, conta_casa, recolhe_todos_sinais, conta_real_casa`).order('created_at', { ascending: false }).limit(3000))
+  if (!real.semTabela) return real
   const com = await ler(db().from('mtm_trading_accounts').select(`${cols}, conta_casa, recolhe_todos_sinais`).order('created_at', { ascending: false }).limit(3000))
   if (!com.semTabela) return com
   return ler(db().from('mtm_trading_accounts').select(cols).order('created_at', { ascending: false }).limit(3000))

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ContaEntrega, Idioma } from './email-tipo-conta'
 import { idiomaDoCliente } from './oferta-clientes'
+import { ehContaRealDaCasa } from './conta-real-casa'
 
 /**
  * OS DADOS DE UMA CONTA PARA O EMAIL DE ENTREGA — lidos uma vez, no mesmo formato para todos os
@@ -24,11 +25,13 @@ export interface DadosEntrega {
 const CAMPOS_PERFIL = 'full_name, email, preferred_language, detected_language, country, phone, timezone'
 
 export async function dadosDeEntrega(db: SupabaseClient, contaId: string): Promise<DadosEntrega | null> {
-  const { data: c } = await db
-    .from('mtm_trading_accounts')
-    .select('id, user_id, tipo, estado, saldo_inicial, program_id, tournament_id, metricas')
-    .eq('id', contaId)
-    .maybeSingle()
+  // `conta_real_casa` (109) muda o tipo do email; sem a migração lê-se sem ela.
+  const { selecionarComOpcionais } = await import('./numeros-conta')
+  const { data: linhas } = await selecionarComOpcionais<Record<string, unknown>>(
+    'id, user_id, tipo, estado, saldo_inicial, program_id, tournament_id, metricas',
+    (cols) => db.from('mtm_trading_accounts').select(cols).eq('id', contaId).limit(1) as never,
+  )
+  const c = linhas[0] ?? null
   if (!c) return null
 
   const [{ data: programa }, { data: torneio }, { data: compraOferta }, perfilR] = await Promise.all([
@@ -78,6 +81,7 @@ export function contaEntregaDaLinha(
     ofertaMarca: typeof m.oferta === 'string' ? m.oferta : null,
     ofertaRenovacao,
     analise: m.analise === true || m.analise === 'true',
+    contaReal: ehContaRealDaCasa(c),
     torneioNome: torneio?.nome ?? null,
   }
 }

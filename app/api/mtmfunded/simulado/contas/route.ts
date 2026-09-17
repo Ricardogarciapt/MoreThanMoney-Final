@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'sem sessão' }, { status: 401 })
 
   const db = getSupabaseAdmin()
-  // `pausada_em`/`conta_casa` quando existem (numeros-conta.ts): a pausa do admin lê-se «Pause» aqui como no admin.
+  // `pausada_em`/`conta_casa`/`conta_real_casa` quando existem (numeros-conta.ts): a pausa do admin lê-se «Pause» aqui como no admin.
   const { data: contas } = await selecionarComOpcionais<Record<string, unknown>>(
     'id, tipo, estado, motor, mt5_login, servidor, program_id, tournament_id, saldo_inicial, alavancagem, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_pico_equity, sim_dias_negociados, quebrou_regra, metricas, created_at, segue_estrategia, aceita_t2t',
     (cols) => db.from('mtm_trading_accounts').select(cols).eq('user_id', userId).eq('motor', 'sim').order('created_at', { ascending: false }) as never,
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         etiqueta: tipoCurto(c.tipo as string, m),
         estadoCurto: estadoCurto(c.estado as string, m, (c.pausada_em as string | null) ?? null),
         // A linha fixa do WebTrader (avaliação / Funded real / análise…) decide-se aqui, com a conta inteira à mão.
-        aviso: avisoDaConta({ tipo: c.tipo as string, estado: c.estado as string, metricas: m, pausadaEm: (c.pausada_em as string | null) ?? null }),
+        aviso: avisoDaConta({ tipo: c.tipo as string, estado: c.estado as string, metricas: m, pausadaEm: (c.pausada_em as string | null) ?? null, contaReal: c.conta_real_casa === true }),
         programa: prog ? { slug: prog.slug, nome: prog.nome, fases: prog.fases, regras: prog.regras } : null,
         segueEstrategia: (c as { segue_estrategia?: string | null }).segue_estrategia
           ? { slug: String((c as { segue_estrategia?: string }).segue_estrategia), nome: nomeDe.get(String((c as { segue_estrategia?: string }).segue_estrategia)) ?? String((c as { segue_estrategia?: string }).segue_estrategia) }

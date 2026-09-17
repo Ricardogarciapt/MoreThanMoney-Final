@@ -460,9 +460,10 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
       }
       if (fTipo && tipoCurto(c.tipo as string, metricas) !== fTipo) return false
       if (fEstado && (num(c)?.estadoCurto ?? estadoCurto(c.estado as string, metricas)) !== fEstado) return false
-      if (fGrupo === 'casa' && !num(c)?.contaCasa) return false
+      // A conta real da casa (109) é da casa mesmo sem `conta_casa` (a de T2T do dono).
+      if (fGrupo === 'casa' && !(num(c)?.contaCasa || num(c)?.contaReal)) return false
       if (fGrupo === 'segue' && !num(c)?.segueEstrategia) return false
-      if (fGrupo === 'clientes' && (num(c)?.contaCasa || num(c)?.segueEstrategia)) return false
+      if (fGrupo === 'clientes' && (num(c)?.contaCasa || num(c)?.contaReal || num(c)?.segueEstrategia)) return false
       if (fMotor && (fMotor === 'sim' ? c.motor !== 'sim' : c.motor === 'sim')) return false
       if (fResultado) {
         const { pct } = saldoEPct(c)
@@ -577,6 +578,7 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
                 {num(c)?.estadoCurto ?? estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)}
               </span>
               {num(c)?.contaCasa && <span className="ml-1 rounded bg-sky-500/15 px-1 text-[10px] text-sky-300">casa</span>}
+              {num(c)?.contaReal && <span className="ml-1 rounded bg-emerald-500/15 px-1 text-[10px] text-emerald-300">auditoria</span>}
               {num(c)?.segueEstrategia && <p className="mt-1 text-[10.5px] text-[#D2A63C]">segue {num(c)?.segueEstrategia}</p>}
               {pedido?.erro && <p className="mt-1 max-w-[220px] truncate text-[11px] text-red-400" title={pedido.erro}>{pedido.erro}</p>}
               {Boolean(c.quebrou_regra) && <p className="mt-1 text-[11px] text-red-400">{c.quebrou_regra as string}</p>}

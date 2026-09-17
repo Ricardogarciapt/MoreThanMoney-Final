@@ -18,6 +18,19 @@ import { lerInfoContaCache } from '@/lib/mtmcopy/metaapi-cache'
  * · Contas MESTRE das estratégias contam a 10% pela mesma razão, e por uma segunda: são demo.
  *   O saldo delas existe para dimensionar a cópia, não para ser património.
  *
+ * · CONTAS REAIS DA CASA (`conta_real_casa`, 109 — decisão do dono de 17/09) mandam sobre as duas
+ *   regras de cima:
+ *     – as de 1K (estratégias, T2T, «Todos os sinais») contam pelo valor INTEGRAL: «são mesmo 1K»;
+ *     – as de 10K que são o espelho de uma estratégia (`mtmauto_providers.espelho_funded_account_id`)
+ *       contam a 10% (1K), pela equity delas — que reflecte a conta-mestre pelo espelho do motor;
+ *     – a conta-mestre (provider) dessa estratégia passa a contar 0: o capital dela JÁ está no
+ *       espelho. Contar as duas (10% + 10%) era contar a mesma estratégia duas vezes — e isso já
+ *       acontecia antes da 109 com os espelhos marcados como análise.
+ *   Porque o espelho e não a mestre: o espelho é a conta que o dono declarou real e que negoceia na
+ *   plataforma; a mestre é a demo da MetaApi que lhe dá os sinais, com histórico anterior ao espelho
+ *   (posições abertas antes da ligação não passam), e somá-la contava resultados que a conta real
+ *   não teve.
+ *
  * O factor está aqui e não espalhado por quem soma — é uma regra do negócio, e uma regra
  * escrita em três sítios diverge em dois deles.
  */
@@ -43,6 +56,85 @@ export function factorDaConta(tipo: TipoParaEquidade): number {
   }
 }
 
+/** O que decide o factor de UMA conta — tudo lido da base, nada adivinhado pelo tamanho. */
+export interface ContaParaFactor {
+  tipo: TipoParaEquidade
+  /** `conta_real_casa` (109) */
+  contaReal?: boolean
+  /** a conta é o espelho (`espelho_funded_account_id`) de uma estratégia */
+  espelhoDe?: string | null
+  /** conta-mestre cuja estratégia tem um espelho real da casa a representá-la */
+  representadaPor?: string | null
+}
+
+export function factorNaEquidade(c: ContaParaFactor): number {
+  if (c.tipo === 'provider' && c.representadaPor) return 0
+  if (c.contaReal && c.tipo === 'financiada') return c.espelhoDe ? FACTOR_FUNDED : 1
+  return factorDaConta(c.tipo)
+}
+
+export interface LinhaContaEquidade {
+  id: string
+  tipo: string
+  mt5_login?: string | null
+  provider_slug?: string | null
+  metaapi_account_id?: string | null
+  conta_real_casa?: boolean | null
+}
+
+export interface EstrategiaComEspelho {
+  slug: string
+  metaapi_account_id?: string | null
+  espelho_funded_account_id?: string | null
+}
+
+/**
+ * Puro: o factor e a razão de cada conta ACTIVA, com as ligações espelho↔mestre.
+ * Uma mestre só sai da soma se o espelho dela estiver na lista (activo) E for conta real da casa —
+ * um espelho que não conta como real não pode apagar a mestre.
+ */
+export function planoDaEquidade(
+  contas: LinhaContaEquidade[],
+  estrategias: EstrategiaComEspelho[],
+): Map<string, ContaParaFactor & { factor: number }> {
+  const porId = new Map(contas.map((c) => [c.id, c]))
+  const espelhoDe = new Map<string, string>() // id do espelho → slug
+  const representada = new Map<string, string>() // slug ou metaapi da mestre → login do espelho
+  for (const e of estrategias) {
+    const esp = e.espelho_funded_account_id ? porId.get(e.espelho_funded_account_id) : undefined
+    if (!esp || esp.conta_real_casa !== true || esp.tipo !== 'financiada') continue
+    espelhoDe.set(esp.id, e.slug)
+    const rotulo = esp.mt5_login ?? esp.id
+    representada.set(`slug:${e.slug}`, rotulo)
+    if (e.metaapi_account_id) representada.set(`metaapi:${e.metaapi_account_id}`, rotulo)
+  }
+  const plano = new Map<string, ContaParaFactor & { factor: number }>()
+  for (const c of contas) {
+    const tipo: TipoParaEquidade = c.tipo === 'provider' ? 'provider' : 'financiada'
+    const base: ContaParaFactor = {
+      tipo,
+      contaReal: c.conta_real_casa === true,
+      espelhoDe: espelhoDe.get(c.id) ?? null,
+      representadaPor: tipo === 'provider'
+        ? (c.provider_slug ? representada.get(`slug:${c.provider_slug}`) : undefined)
+          ?? (c.metaapi_account_id ? representada.get(`metaapi:${c.metaapi_account_id}`) : undefined)
+          ?? null
+        : null,
+    }
+    plano.set(c.id, { ...base, factor: factorNaEquidade(base) })
+  }
+  return plano
+}
+
+/** A frase curta que explica o factor (relatório diário e painel de desempenho). */
+export function notaDoFactor(p: ContaParaFactor & { factor: number }, nominal: number): string {
+  const valor = nominal.toLocaleString('pt-PT')
+  if (p.representadaPor) return `0% de ${valor} — representada pelo espelho real ${p.representadaPor}`
+  if (p.contaReal && p.espelhoDe) return `10% de ${valor} — conta real da casa, espelho de ${p.espelhoDe}`
+  if (p.contaReal) return `100% de ${valor} — conta real da casa`
+  return `${Math.round(p.factor * 100)}% de ${valor} — capital real da MTM`
+}
+
 export interface ContaNaEquidade {
   etiqueta: string
   tipo: TipoParaEquidade
@@ -52,6 +144,8 @@ export interface ContaNaEquidade {
   /** O que conta para a equidade da MTM, já com o factor aplicado. */
   contribuicao: number
   factor: number
+  /** Porque é que o factor é este (ver `notaDoFactor`). */
+  nota: string
 }
 
 /**
@@ -64,16 +158,22 @@ export async function contasFundedNaEquidade(): Promise<ContaNaEquidade[]> {
   const db = getSupabaseAdmin()
   const token = process.env.METAAPI_TOKEN
 
-  const { data: contas } = await db
-    .from('mtm_trading_accounts')
-    .select('mt5_login, tipo, provider_slug, saldo_inicial, metaapi_account_id, metricas, motor, sim_equity, sim_saldo')
-    .in('tipo', ['financiada', 'provider'])
-    .eq('estado', 'ativa')
+  // `conta_real_casa` (109) quando existe; sem ela, lê-se sem ela e tudo fica como antes.
+  const { selecionarComOpcionais } = await import('@/lib/mtmfunded/numeros-conta')
+  const [{ data: contas }, { data: estrategias }] = await Promise.all([
+    selecionarComOpcionais<Record<string, unknown>>(
+      'id, mt5_login, tipo, provider_slug, saldo_inicial, metaapi_account_id, metricas, motor, sim_equity, sim_saldo',
+      (cols) => db.from('mtm_trading_accounts').select(cols).in('tipo', ['financiada', 'provider']).eq('estado', 'ativa') as never,
+    ),
+    db.from('mtmauto_providers').select('slug, metaapi_account_id, espelho_funded_account_id'),
+  ])
+  const plano = planoDaEquidade(contas as unknown as LinhaContaEquidade[], (estrategias ?? []) as EstrategiaComEspelho[])
 
   const saida: ContaNaEquidade[] = []
-  for (const c of contas ?? []) {
-    const tipo = (c.tipo as string) === 'provider' ? 'provider' : 'financiada'
-    const factor = factorDaConta(tipo)
+  for (const c of contas) {
+    const p = plano.get(String(c.id))!
+    const tipo = p.tipo
+    const factor = p.factor
 
     /**
      * O valor ao vivo quando a MetaApi responde; o saldo inicial quando não responde.
@@ -105,12 +205,13 @@ export async function contasFundedNaEquidade(): Promise<ContaNaEquidade[]> {
       etiqueta:
         tipo === 'provider'
           ? `Mestre · ${c.provider_slug ?? c.mt5_login}`
-          : `Financiada · ${c.mt5_login ?? '—'}`,
+          : `${p.contaReal ? 'Real da casa' : 'Financiada'} · ${c.mt5_login ?? '—'}`,
       tipo,
       metaapiId: (c.metaapi_account_id as string) ?? null,
       valorNominal: Math.round(nominal * 100) / 100,
       contribuicao: Math.round(nominal * factor * 100) / 100,
       factor,
+      nota: notaDoFactor(p, Math.round(nominal * 100) / 100),
     })
   }
   return saida

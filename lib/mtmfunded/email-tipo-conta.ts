@@ -44,6 +44,8 @@ export interface ContaEntrega {
   ofertaRenovacao?: boolean
   /** `metricas.analise` — conta sem regras de avaliação (acompanhamento de estratégias, T2T, casa) */
   analise?: boolean
+  /** `conta_real_casa` (109) — conta real da casa: é Funded («contém negociação real») mesmo sem regras. */
+  contaReal?: boolean
   torneioNome?: string | null
 }
 
@@ -97,6 +99,8 @@ export function tipoDeEntrega(c: ContaEntrega): TipoEntrega {
       return 'mestre'
     case 'financiada':
     case 'funded':
+      // A conta real da casa também é `analise` (sem regras), mas negoceia a sério: manda a marca.
+      if (c.contaReal) return 'funded'
       return c.analise ? 'analise' : 'funded'
     default:
       // Um desafio oferecido só se anuncia como oferta na 1.ª fase; a F2 já é o desafio a correr.
