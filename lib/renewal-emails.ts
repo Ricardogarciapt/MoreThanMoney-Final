@@ -52,9 +52,12 @@ export function buildRenewalEmail(kind: RenewalKind, i: RenewalInput): RenewalEm
   const gerir = `${site}/member-area?tab=subscription`
 
   if (kind === 'auto') {
-    const linhaValor = valor
-      ? `<b>${valor}</b>, o mesmo do costume`
-      : `o valor do teu plano atual`
+    const gratis = i.ultimoValorCents === 0
+    const linhaValor = gratis
+      ? `<b>0,00€</b> — o teu desconto mantém-se`
+      : valor
+        ? `<b>${valor}</b>, o mesmo do costume`
+        : `o valor do teu plano atual`
     const inner = `
       <h1 style="margin:0 0 16px;font-size:21px;line-height:1.3;color:#D2A63C">${i.nome}, a tua subscrição renova a ${dia}</h1>
       <p style="margin:0 0 14px;font-size:15px;line-height:1.7">Aviso com dois dias de antecedência, para não haver surpresas: o teu <b>${plano}</b> renova automaticamente a <b>${dia}</b> e serão cobrados ${linhaValor}.</p>
@@ -70,7 +73,7 @@ export function buildRenewalEmail(kind: RenewalKind, i: RenewalInput): RenewalEm
       html: mtmEmailShell(inner),
       text: `${i.nome},
 
-Aviso com dois dias de antecedência: o teu ${plano} renova automaticamente a ${dia}${valor ? ` e serão cobrados ${valor}` : ''}.
+Aviso com dois dias de antecedência: o teu ${plano} renova automaticamente a ${dia}${gratis ? ' e serão cobrados 0,00€ (o teu desconto mantém-se)' : valor ? ` e serão cobrados ${valor}` : ''}.
 
 Não tens de fazer nada — o acesso continua sem interrupção. Mando este email porque não gosto de cobrar a ninguém sem avisar primeiro.
 
