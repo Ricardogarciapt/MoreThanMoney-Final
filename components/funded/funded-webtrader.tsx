@@ -17,6 +17,8 @@ import {
 import { contaInicial, montarSeletor } from "@/lib/webtrader/seletor"
 import { getAccessToken } from "@/lib/auth-token"
 import type { PlataformaWT } from "@/lib/webtrader/corretoras/tipos"
+import { useT } from "@/components/i18n-provider"
+import { avisoReal, chaveDoAviso } from "@/lib/mtmfunded/aviso-conta"
 
 /**
  * MTM FUNDED — WEBTRADER. Vive em dois sítios com o mesmo código:
@@ -79,6 +81,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   const [temSessaoMtm, setTemSessaoMtm] = useState(false)
   const [ligarPlataforma, setLigarPlataforma] = useState<PlataformaWT | null>(null)
   const { modo } = useModoWebtrader()
+  const t = useT()
 
   const carregar = useCallback(async () => {
     const ss = lerSessoes()
@@ -250,8 +253,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
             <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> Conta REAL · as ordens são executadas na tua corretora
           </span>
         ) : (
-          <span className="hidden min-w-0 items-center gap-1 truncate text-[10.5px] text-amber-200/90 md:flex">
-            <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> Conta simulada educativa · MTM Funded · não é negociação real
+          // O aviso diz o ponto do caminho da conta ACTIVA (avaliação, Funded, análise…) — lib/mtmfunded/aviso-conta.ts.
+          <span className={`hidden min-w-0 items-center gap-1 truncate text-[10.5px] md:flex ${avisoReal(atual?.aviso) ? "font-semibold text-emerald-300" : "text-amber-200/90"}`}>
+            <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> {t(chaveDoAviso(atual?.aviso))}
           </span>
         )}
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
@@ -264,8 +268,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
           <ShieldAlert className="h-3 w-3 shrink-0" /> Conta REAL · ordens executadas na tua corretora
         </p>
       ) : (
-        <p className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 text-[10.5px] text-amber-200 md:hidden">
-          <ShieldAlert className="h-3 w-3 shrink-0" /> Conta simulada educativa · não é negociação real
+        <p className={`flex items-center gap-1 px-2 py-0.5 text-[10.5px] md:hidden ${avisoReal(atual?.aviso) ? "bg-emerald-500/10 font-semibold text-emerald-300" : "bg-amber-500/10 text-amber-200"}`}>
+          <ShieldAlert className="h-3 w-3 shrink-0" /> {t(chaveDoAviso(atual?.aviso, true))}
         </p>
       )}
 

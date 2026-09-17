@@ -72,15 +72,17 @@ export async function GET(request: NextRequest) {
 
       try {
         const { enviarEmailDaConta } = await import('@/lib/mtmfunded/email-conta')
+        const { dadosDeEntrega } = await import('@/lib/mtmfunded/entrega-conta-dados')
         const { getSiteUrl } = await import('@/lib/mail-transport')
+        const dados = await dadosDeEntrega(db, c.id as string)
+        if (!dados) { falhados++; continue }
         const r = await enviarEmailDaConta({
           para: destino,
-          nome: (perfil?.full_name as string) || destino.split('@')[0],
-          tipo: 'torneio',
-          nomeProva: t.nome as string,
+          nome: String(perfil?.full_name ?? '').split(/\s+/)[0] || destino.split('@')[0],
+          conta: dados.conta,
+          idioma: dados.idioma,
           login: c.mt5_login as string,
           servidor: (c.servidor as string) || 'TheTradingMaster-Live',
-          saldo: Number(c.saldo_inicial ?? 0),
           alavancagem: Number(c.alavancagem ?? 100),
           urlPainel: `${getSiteUrl()}/mtmfunded/tradingtournament/dashboard?conta=${c.id}&credenciais=1`,
           regras: (t.regras ?? null) as Record<string, number | string> | null,

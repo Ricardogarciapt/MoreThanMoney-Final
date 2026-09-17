@@ -7,6 +7,7 @@ import {
   mailFrom,
   prepareBrandedEmailHtml,
 } from '@/lib/mail-transport'
+import { tamanhoCurto, tamanhoLongo } from './email-tipo-conta'
 
 /**
  * DESAFIO OFERECIDO A CADA RENOVAÇÃO DE SUBSCRIÇÃO.
@@ -214,7 +215,10 @@ export async function ofertarDesafioDaRenovacao(
     estado: 'em_fila',
   })
 
-  if (perfil.email) {
+  // Só nas contas da CORRETORA (que demoram a emitir): numa conta simulada a conta já está activa e o
+  // email das credenciais, logo abaixo, já a anuncia como oferta — este dizia «está a ser emitida…
+  // recebes o código QR», o contrário do que acontecia, e a pessoa recebia dois emails.
+  if (perfil.email && motor === 'mt5') {
     await enviarEmailDaOferta({
       para: perfil.email as string,
       nome: partes[0] || 'Trader',
@@ -250,8 +254,7 @@ async function enviarEmailDaOferta(input: {
       <h1 style="margin:0;font-size:22px;color:#111;">O teu desafio deste mês está a caminho</h1>
       <p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#444;">
         Olá ${input.nome}, a tua subscrição renovou — e com ela vem um
-        <strong>${input.programa}</strong>, conta de
-        ${Number(input.saldo).toLocaleString('pt-PT')} USD, sem custo nenhum.
+        <strong>${input.programa}</strong>${tamanhoLongo(input.saldo > 0 ? input.saldo : null, 'pt') ? `, conta de ${tamanhoLongo(input.saldo, 'pt')}` : ''}, sem custo nenhum.
       </p>
 
       <div style="margin:22px 0;padding:16px 18px;background:#faf6ec;border:1px solid #eadcb8;border-radius:10px;">
@@ -281,7 +284,7 @@ async function enviarEmailDaOferta(input: {
   await transporter.sendMail({
     from: mailFrom(),
     to: input.para,
-    subject: `O teu ${input.programa} — oferecido pela renovação`,
+    subject: `Oferta da renovação: o teu Desafio MTM Funded ${tamanhoCurto(input.saldo > 0 ? input.saldo : null) ?? input.programa} está a ser emitido`,
     html: prepareBrandedEmailHtml(html),
     attachments: brandedMailAttachments(),
   })

@@ -129,7 +129,7 @@ async function main() {
     const master = gerarPassword()
     const investor = gerarPassword()
     const dados = {
-      nome: 'Rui Silva', login: '77123456', servidor: 'MTM Funded', etiqueta: 'F1', programa: 'Desafio 10K · 2 fases',
+      nome: 'Rui Silva', login: '77123456', servidor: 'MTM Funded', conta: { tipo: 'desafio', saldoInicial: 10000, fase: 1, fases: 2 },
       motivo: 'criacao', urlLink: urlDoLink('https://www.morethanmoney.pt', token), expiraEm,
       urlWebtrader: 'https://www.morethanmoney.pt/webtrader', siteUrl: 'https://www.morethanmoney.pt',
       // Campos que o tipo NÃO tem — um dia alguém passa a linha da conta inteira:
@@ -149,13 +149,13 @@ async function main() {
       assert.ok(!/€|euros?\b/i.test(e.html), 'sem euros')
     }
     // O tipo de dados não tem sítio para a password (verificação de compilação por negação).
-    const chaves: Array<keyof DadosEmailCredenciais> = ['nome', 'login', 'servidor', 'etiqueta', 'programa', 'motivo', 'urlLink', 'expiraEm', 'urlWebtrader', 'siteUrl']
+    const chaves: Array<keyof DadosEmailCredenciais> = ['nome', 'login', 'servidor', 'conta', 'idioma', 'motivo', 'urlLink', 'expiraEm', 'urlWebtrader', 'siteUrl']
     assert.ok(!chaves.some((k) => /pass/i.test(k)))
   })
 
   await caso('email: nome com HTML é escapado', () => {
     const e = montarEmailCredenciais({
-      nome: '<script>x</script>', login: '77000001', servidor: 'MTM Funded', etiqueta: 'Funded', programa: null,
+      nome: '<script>x</script>', login: '77000001', servidor: 'MTM Funded', conta: { tipo: 'financiada', saldoInicial: 3000 },
       motivo: 'reenvio', urlLink: 'https://x/mtmfunded/credenciais#t=a', expiraEm: new Date(T0).toISOString(), urlWebtrader: 'https://x/webtrader',
     })
     assert.ok(!e.html.includes('<script>x</script>'))

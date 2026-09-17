@@ -9,7 +9,7 @@ import type { Metadata, Viewport } from "next"
  */
 export const metadata: Metadata = {
   title: "MTM WebTrader",
-  description: "WebTrader das contas simuladas educativas MTM Funded — não é negociação real.",
+  description: "WebTrader MTM Funded — desafios de avaliação, contas Funded e contas ligadas (TradeLocker, MT5).",
   manifest: "/webtrader.webmanifest",
   appleWebApp: {
     capable: true,

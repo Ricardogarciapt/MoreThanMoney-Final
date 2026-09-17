@@ -5,7 +5,7 @@ export const metadata = { title: 'Termos e Condições' }
 
 export default function Termos() {
   return (
-    <PaginaLegal titulo="Termos e Condições" atualizado="10 de Setembro de 2026">
+    <PaginaLegal titulo="Termos e Condições" atualizado="17 de Setembro de 2026">
       <Seccao titulo="Quem somos e o que estes termos cobrem">
         <p>
           O MTM Funded é um serviço de avaliação de traders operado pela MoreThanMoney, em
@@ -35,8 +35,10 @@ export default function Termos() {
 
       <Seccao titulo="As contas">
         <p>
-          As contas são de demonstração, emitidas em nome do participante junto do fornecedor da
-          plataforma, e as credenciais são enviadas por email. A password é definida pelo nosso
+          As contas de torneio e de avaliação são de demonstração, com dinheiro virtual. A conta
+          Funded é negociação de capital patrocinado MTM, nos termos do contrato de trader
+          financiado e do Aviso de Risco. As contas são emitidas em nome do participante junto do
+          fornecedor da plataforma, e as credenciais são enviadas por email. A password é definida pelo nosso
           sistema no momento da emissão e pode ser alterada pelo participante na plataforma.
         </p>
         <p>

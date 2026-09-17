@@ -51,7 +51,7 @@ export default function EntrarCredenciais({ onEntrou, onFechar, temSessaoMtm, co
       </div>
       {plataforma === "mtmfunded" ? (
         <>
-          <p className="flex items-center gap-1 text-[11px] text-amber-200/90"><ShieldAlert className="h-3.5 w-3.5" /> Conta simulada educativa. Password master negoceia; investor só vê.</p>
+          <p className="flex items-center gap-1 text-[11px] text-amber-200/90"><ShieldAlert className="h-3.5 w-3.5" /> Conta MTM Funded. Password master negoceia; investor só vê.</p>
           <FormFunded onEntrou={(s) => onEntrou({ plataforma: "mtmfunded", sessao: s })} />
         </>
       ) : (

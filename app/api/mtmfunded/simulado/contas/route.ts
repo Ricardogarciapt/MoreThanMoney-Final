@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { tipoCurto, estadoCurto } from '@/lib/mtmfunded/etiquetas'
+import { avisoDaConta } from '@/lib/mtmfunded/aviso-conta'
 import { selecionarComOpcionais } from '@/lib/mtmfunded/numeros-conta'
 
 export const dynamic = 'force-dynamic'
@@ -66,6 +67,8 @@ export async function GET(request: NextRequest) {
         // As etiquetas vêm prontas: o seletor de contas do WebTrader mostra F1/Active sem reimplementar a regra.
         etiqueta: tipoCurto(c.tipo as string, m),
         estadoCurto: estadoCurto(c.estado as string, m, (c.pausada_em as string | null) ?? null),
+        // A linha fixa do WebTrader (avaliação / Funded real / análise…) decide-se aqui, com a conta inteira à mão.
+        aviso: avisoDaConta({ tipo: c.tipo as string, estado: c.estado as string, metricas: m, pausadaEm: (c.pausada_em as string | null) ?? null }),
         programa: prog ? { slug: prog.slug, nome: prog.nome, fases: prog.fases, regras: prog.regras } : null,
         segueEstrategia: (c as { segue_estrategia?: string | null }).segue_estrategia
           ? { slug: String((c as { segue_estrategia?: string }).segue_estrategia), nome: nomeDe.get(String((c as { segue_estrategia?: string }).segue_estrategia)) ?? String((c as { segue_estrategia?: string }).segue_estrategia) }

@@ -3,7 +3,6 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { cifrar, decifrar } from './credenciais'
 import { emitirLink, repoSupabase, urlDoLink, type MotivoLink } from './credenciais-link'
 import { montarEmailCredenciais } from './email-credenciais'
-import { tipoCurto } from './etiquetas'
 
 /**
  * AS CREDENCIAIS DE UMA CONTA MTM FUNDED, DO LADO DO SERVIDOR — um só sítio para as três portas:
@@ -152,22 +151,22 @@ export async function enviarCredenciaisDaConta(
     if (conta.tipo === 'torneio' && (await portaDoTorneio(db, conta.tournament_id as string | null))) {
       return { enviado: false, motivo: 'torneio: as credenciais só abrem na véspera', login }
     }
-    const [{ data: perfil }, { data: programa }] = await Promise.all([
-      db.from('profiles').select('full_name, email').eq('id', conta.user_id as string).maybeSingle(),
-      conta.program_id ? db.from('mtm_funded_programs').select('nome').eq('id', conta.program_id as string).maybeSingle() : Promise.resolve({ data: null }),
-    ])
-    if (!perfil?.email) return { enviado: false, motivo: 'dono sem email', login }
+    // Tipo, fase, tamanho, oferta e idioma saem da conta real — ./entrega-conta-dados.ts.
+    const { dadosDeEntrega } = await import('./entrega-conta-dados')
+    const dados = await dadosDeEntrega(db, accountId)
+    const perfil = dados?.perfil
+    if (!dados || !perfil?.email) return { enviado: false, motivo: 'dono sem email', login }
     if (opts.simular) return { enviado: false, motivo: 'simulação (nada enviado)', login }
 
     const { getSiteUrl, createMailTransporter, mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } = await import('@/lib/mail-transport')
     const site = getSiteUrl()
     const link = await emitirLink({ accountId, userId: conta.user_id as string, motivo }, repoSupabase(db))
     const email = montarEmailCredenciais({
-      nome: String(perfil.full_name ?? '').split(/\s+/)[0] || 'Trader',
+      nome: perfil.nome.split(/\s+/)[0] || 'Trader',
       login,
       servidor: (conta.servidor as string | null) ?? 'MTM Funded',
-      etiqueta: tipoCurto(String(conta.tipo), conta.metricas as Record<string, unknown> | null),
-      programa: (programa as { nome?: string } | null)?.nome ?? null,
+      conta: dados.conta,
+      idioma: dados.idioma,
       motivo,
       urlLink: urlDoLink(site, link.token),
       expiraEm: link.expiraEm,
@@ -175,7 +174,7 @@ export async function enviarCredenciaisDaConta(
       siteUrl: site,
     })
     await createMailTransporter().sendMail({
-      from: mailFrom(), to: perfil.email as string, subject: email.assunto,
+      from: mailFrom(), to: perfil.email, subject: email.assunto,
       html: prepareBrandedEmailHtml(email.html), text: email.texto, attachments: brandedMailAttachments(),
     })
     await db.from('mtm_funded_credenciais_links').update({ email_enviado_em: new Date().toISOString() }).eq('id', link.linkId)

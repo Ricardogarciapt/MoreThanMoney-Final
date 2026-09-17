@@ -449,38 +449,32 @@ export async function POST(request: NextRequest) {
       const { data: perfil } = conta.user_id
         ? await db.from('profiles').select('full_name, email').eq('id', conta.user_id).maybeSingle()
         : { data: null }
-      const { data: torneio } = conta.tournament_id
-        ? await db.from('mtm_tournaments').select('nome, regras').eq('id', conta.tournament_id).maybeSingle()
-        : { data: null }
+      // Tipo, fase, tamanho, regras e idioma da conta real — lib/mtmfunded/entrega-conta-dados.ts.
+      const { dadosDeEntrega } = await import('@/lib/mtmfunded/entrega-conta-dados')
+      const dados = await dadosDeEntrega(db, conta.id as string)
 
       const destino = perfil?.email ?? (await db
         .from('mtm_account_requests').select('email').eq('id', id).maybeSingle()).data?.email
 
-      if (destino) {
+      if (destino && dados) {
         const { enviarEmailDaConta } = await import('@/lib/mtmfunded/email-conta')
         const { getSiteUrl } = await import('@/lib/mail-transport')
         const r = await enviarEmailDaConta({
           para: destino,
-          nome: (perfil?.full_name as string) || destino.split('@')[0],
-          // O tipo viaja tal e qual: uma conta financiada anunciada como desafio dizia ao
-          // trader que ainda tinha uma prova pela frente.
-          tipo:
-            conta.tipo === 'torneio'
-              ? 'torneio'
-              : conta.tipo === 'financiada' || conta.tipo === 'funded'
-                ? 'financiada'
-                : 'desafio',
-          nomeProva: (torneio?.nome as string) || 'MTM Funded',
+          nome: String(perfil?.full_name ?? '').split(/\s+/)[0] || destino.split('@')[0],
+          // A conta inteira viaja: uma Funded anunciada como desafio dizia ao trader que ainda
+          // tinha uma prova pela frente, e o nome do torneio servia de nome aos desafios.
+          conta: dados.conta,
+          idioma: dados.idioma,
           login,
           servidor: (conta.servidor as string) || 'TheTradingMaster-Live',
-          saldo: Number(conta.saldo_inicial ?? 0),
           alavancagem: Number(conta.alavancagem ?? 100),
           // O link abre o painel JÁ nas credenciais desta conta. Mandá-lo para a raiz do
           // painel obrigava a pessoa a procurar onde estava a password que o email lhe
           // prometeu — e a maior parte não procura, escreve a perguntar.
           urlPainel: `${getSiteUrl()}/mtmfunded/tradingtournament/dashboard?conta=${pedido.account_id}&credenciais=1`,
           qrMetaTrader: (conta.qrcode_url as string) ?? null,
-          regras: (torneio?.regras ?? null) as Record<string, number | string> | null,
+          regras: dados.regras,
         })
         emailEnviado = r.success
       }

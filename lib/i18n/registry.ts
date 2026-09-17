@@ -17,6 +17,7 @@ import { PORTFOLIO_MESSAGES } from "./messages/portfolio"
 import { MTMCOPIER_MESSAGES } from "./messages/mtmcopier"
 import { FREESESSION_MESSAGES } from "./messages/freesession"
 import { MTMFUNDED_MESSAGES } from "./messages/mtmfunded"
+import { MTMFUNDED_AVISO_MESSAGES } from "./messages/mtmfunded-aviso"
 
 type NsSource = Partial<Record<Lang, Record<string, string>>>
 
@@ -51,4 +52,5 @@ export const ALL_MESSAGES = merge(
   MTMCOPIER_MESSAGES,
   FREESESSION_MESSAGES,
   MTMFUNDED_MESSAGES,
+  MTMFUNDED_AVISO_MESSAGES,
 )

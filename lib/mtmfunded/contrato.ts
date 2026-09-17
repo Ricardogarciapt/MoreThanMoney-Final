@@ -8,8 +8,13 @@
  * A versão sobe sempre que o texto mudar. Quem assinou a v1 continua sob a v1 até assinar
  * outra: mudar o acordo por baixo de alguém que já está a negociar não é uma actualização,
  * é outra coisa.
+ *
+ * v3 (2026-09-17, decisão do dono): a conta Funded passa a ser descrita como negociação de
+ * capital patrocinado MTM (contém negociação real); desafio/avaliação e torneio continuam
+ * simulados. Os números (10% do nominal, 75/25, almofada de 3%) não mudaram. As linhas v2 já
+ * assinadas ficam intactas em `mtm_funded_contracts` — a v3 grava-se ao lado (user_id,versao).
  */
-export const CONTRATO_VERSAO = '2026-09-v2'
+export const CONTRATO_VERSAO = '2026-09-v3'
 
 export interface DadosContrato {
   nome: string
@@ -25,8 +30,8 @@ Versão ${CONTRATO_VERSAO}
 Entre a MoreThanMoney, que opera o MTM Funded ("MTM"), e ${nome} ("o Trader").
 
 1. OBJECTO
-A MTM concede ao Trader o acesso a uma conta de negociação SIMULADA, de ${conta} USD em
-dinheiro virtual, para avaliação e demonstração de competência. Não é constituído nenhum
+A MTM concede ao Trader o acesso a uma conta Funded de ${conta} USD de valor nominal, para
+negociação de capital patrocinado MTM nos termos da cláusula 4. Não é constituído nenhum
 depósito do Trader numa conta da MTM, nem a MTM detém ou gere fundos do Trader.
 
 2. NATUREZA DA RELAÇÃO
@@ -43,15 +48,17 @@ mesmo par e direcção, proibição de hedge, restrições ao uso de robôs (EA)
 O incumprimento congela a conta e cessa o direito a qualquer pagamento sobre resultados
 obtidos em incumprimento.
 
-4. COMO A CONTA FINANCIADA FUNCIONA
-A negociação é SIMULADA do princípio ao fim. O que a conta financiada tem de real é o capital
-que a MTM lhe afecta: o Fundo MTM aloca capital real correspondente a 10% do valor nominal da
-conta financiada (numa conta de 10.000 USD, 1.000 USD reais). É desse capital, e do
-desempenho que ele produz, que saem os pagamentos ao Trader.
+4. COMO A CONTA FUNDED FUNCIONA
+As contas de desafio/avaliação e de torneio que antecedem a conta Funded são SIMULADAS, com
+dinheiro virtual. A conta Funded é NEGOCIAÇÃO DE CAPITAL PATROCINADO MTM: o Fundo MTM
+patrocina a conta com capital real correspondente a 10% do valor nominal da conta Funded
+(numa conta de 10.000 USD, 1.000 USD reais), e por isso a conta Funded contém negociação
+real. É desse capital patrocinado, e do desempenho que ele produz, que saem os pagamentos
+ao Trader.
 
 5. PARTICIPAÇÃO NOS RESULTADOS — 75/25
-O Trader recebe 75% do lucro apurado no seu desempenho simulado; os restantes 25% ficam para
-a MTM, que suporta o capital, a infraestrutura e o risco.
+O Trader recebe 75% do lucro apurado no desempenho da sua conta Funded; os restantes 25%
+ficam para a MTM, que suporta o capital, a infraestrutura e o risco.
 
 Só é levantável o que exceder a ALMOFADA DE LEVANTAMENTO de 3% sobre o saldo inicial da
 conta. A almofada não é uma retenção: fica na conta do Trader e continua a ser dele para
@@ -86,7 +93,9 @@ Tratados nos termos da Política de Privacidade do MTM Funded.
 Lei portuguesa.
 
 Ao assinar, o Trader declara ter lido e compreendido este contrato, o Aviso de Risco e os
-Termos e Condições do MTM Funded, e que compreende que as contas são SIMULADAS.`
+Termos e Condições do MTM Funded, e que compreende que as contas de desafio/avaliação e de
+torneio são SIMULADAS e que a conta Funded é negociação de capital patrocinado MTM, nos
+termos da cláusula 4.`
 }
 
 /** A fatia do lucro que é do trader. Os 25% restantes suportam capital e risco. */

@@ -27,12 +27,14 @@ export interface ContaResumo {
   sim_equity: number | null
   etiqueta: string
   estadoCurto: string
+  /** lib/mtmfunded/aviso-conta.ts — calculado no servidor. */
+  aviso?: string
   programa?: { nome: string } | null
   /** A conta segue uma estratégia do MTM Auto (migração 070). */
   segueEstrategia?: { slug: string; nome: string } | null
 }
 
-export interface SessaoConta { accountId: string; token: string; modo: "master" | "investor"; expira: string; login: string; etiqueta?: string; estadoCurto?: string }
+export interface SessaoConta { accountId: string; token: string; modo: "master" | "investor"; expira: string; login: string; etiqueta?: string; estadoCurto?: string; aviso?: string }
 
 const CHAVE_SESSOES = "mtmfunded_sessoes"
 
@@ -78,7 +80,7 @@ export async function entrarComCredenciais(login: string, password: string): Pro
   const info = await fetch("/api/mtmfunded/simulado/entrar", { headers: { Authorization: `Bearer ${d.token}` } }).then((x) => x.json()).catch(() => null)
   return {
     accountId: info?.conta?.id, token: d.token, modo: d.modo, expira: d.expira, login: login.replace(/\D/g, ""),
-    etiqueta: info?.conta?.etiqueta, estadoCurto: info?.conta?.estadoCurto,
+    etiqueta: info?.conta?.etiqueta, estadoCurto: info?.conta?.estadoCurto, aviso: info?.conta?.aviso,
   }
 }
 
