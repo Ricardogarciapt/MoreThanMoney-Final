@@ -130,7 +130,7 @@ async function avisarAlerta(alertaId: string) {
       body: JSON.stringify({
         userIds: [a.user_id],
         title: titulo,
-        body: a.nota ? String(a.nota) : 'Alerta de preço do WebTrader MTM Funded (conta simulada educativa).',
+        body: a.nota ? String(a.nota) : 'Alerta de preço do WebTrader MTM Funded.',
         url,
         data: { type: 'funded_alerta', alerta_id: String(a.id), symbol: String(a.symbol), url },
         tag: `funded_alerta_${a.id}`,

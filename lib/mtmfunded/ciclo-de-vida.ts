@@ -715,7 +715,9 @@ export async function emitirContaFinanciada(userId: string): Promise<ResultadoFi
   // Conta simulada: credenciais por email (login + link seguro, nunca a password) — lib/mtmfunded/credenciais-servico.ts
   if (aprovado.motor === 'sim') {
     const { enviarCredenciaisDaConta } = await import('./credenciais-servico')
-    await enviarCredenciaisDaConta(conta.id, 'fase')
+    // 'criacao', não 'fase': a Funded não é a fase seguinte do desafio. Com 'fase' o email dizia
+    // «A tua nova conta MTM Funded (fase seguinte)» a quem acabava de ser aprovado.
+    await enviarCredenciaisDaConta(conta.id, 'criacao')
   }
 
   return { ok: true, accountId: conta.id }

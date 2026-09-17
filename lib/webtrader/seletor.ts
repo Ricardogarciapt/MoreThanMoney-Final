@@ -21,11 +21,12 @@ export interface FundedDoUtilizador {
   estadoCurto: string
   sim_saldo: number | null
   sim_equity: number | null
+  aviso?: string
   programa?: { nome: string } | null
   segueEstrategia?: { slug: string; nome: string } | null
 }
 
-export interface SessaoFunded { accountId: string; login: string; etiqueta?: string; estadoCurto?: string; modo: 'master' | 'investor' }
+export interface SessaoFunded { accountId: string; login: string; etiqueta?: string; estadoCurto?: string; aviso?: string; modo: 'master' | 'investor' }
 
 export interface ContaRealSeletor {
   ref: string
@@ -54,6 +55,8 @@ export interface EntradaSeletor {
   propria: boolean
   segue?: string | null
   programa?: string | null
+  /** MTM Funded: o aviso fixo da conta (lib/mtmfunded/aviso-conta.ts). */
+  aviso?: string | null
   real?: ContaRealSeletor
 }
 
@@ -76,12 +79,12 @@ export function montarSeletor(f: {
   for (const c of f.funded ?? []) {
     juntar({
       id: c.id, plataforma: 'mtmfunded', login: c.mt5_login, etiqueta: c.etiqueta, estadoCurto: c.estadoCurto, modo: 'master',
-      saldo: c.sim_saldo, equity: c.sim_equity, propria: true, segue: c.segueEstrategia?.nome ?? null, programa: c.programa?.nome ?? null,
+      saldo: c.sim_saldo, equity: c.sim_equity, propria: true, segue: c.segueEstrategia?.nome ?? null, programa: c.programa?.nome ?? null, aviso: c.aviso ?? null,
     })
   }
   for (const s of Object.values(f.sessoesFunded ?? {})) {
     if (!s?.accountId) continue
-    juntar({ id: s.accountId, plataforma: 'mtmfunded', login: s.login, etiqueta: s.etiqueta ?? '—', estadoCurto: s.estadoCurto ?? '—', modo: s.modo, propria: false })
+    juntar({ id: s.accountId, plataforma: 'mtmfunded', login: s.login, etiqueta: s.etiqueta ?? '—', estadoCurto: s.estadoCurto ?? '—', aviso: s.aviso ?? null, modo: s.modo, propria: false })
   }
 
   // Reais: as do ligador primeiro; sessões TradeLocker antigas só se a mesma conta não estiver ligada.

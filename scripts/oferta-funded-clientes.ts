@@ -84,7 +84,7 @@ async function main() {
   const todos = (perfis ?? []) as Array<import('../lib/mtmfunded/oferta-clientes').PerfilOferta>
 
   const { data: ofertas } = await db.from('mtm_trading_accounts')
-    .select('id, user_id, mt5_login, servidor, metricas, estado, created_at').eq('metricas->>oferta', O.MARCA_OFERTA)
+    .select('id, user_id, mt5_login, servidor, saldo_inicial, metricas, estado, created_at').eq('metricas->>oferta', O.MARCA_OFERTA)
     .order('created_at', { ascending: true })
   // A conta da F1 (a primeira): a F2 da oferta herda a marca e não pode receber este email.
   const ofertaDe = new Map<string, NonNullable<typeof ofertas>[number]>()
@@ -139,7 +139,7 @@ async function main() {
   for (const lang of ['pt', 'en'] as const) {
     const e = montarEmailOferta({
       idioma: lang, nome: lang === 'pt' ? 'Joana' : 'Alex', login: '77123456', servidor: 'MTM Funded',
-      saldo: Number(programa.saldo), programa: String(programa.nome), regras: (programa.regras ?? {}) as Record<string, number>,
+      saldo: Number(programa.saldo), programa: String(programa.nome), fases: Number(programa.fases), fase: 1, regras: (programa.regras ?? {}) as Record<string, number>,
       urlLink: `${site}/mtmfunded/credenciais#t=EXEMPLO`, expiraEm: new Date(Date.now() + O.VALIDADE_LINK_OFERTA_MS).toISOString(),
       siteUrl: site, sorteios, premios: premios(lang), logoSrc: `${site}/icon-512x512.png`,
     })
@@ -197,7 +197,9 @@ async function main() {
       const e = montarEmailOferta({
         idioma: lang, nome: String(p.full_name ?? '').trim().split(/\s+/)[0] || 'Trader',
         login: String(conta.mt5_login), servidor: String(conta.servidor ?? 'MTM Funded'),
-        saldo: Number(programa.saldo), programa: String(programa.nome), regras: (programa.regras ?? {}) as Record<string, number>,
+        // O tamanho da CONTA criada (o do programa só se a conta não o tiver).
+        saldo: Number((conta as { saldo_inicial?: number | null }).saldo_inicial ?? programa.saldo), programa: String(programa.nome),
+        fases: Number(programa.fases), fase: Number((conta.metricas as { fase?: number } | null)?.fase ?? 1), regras: (programa.regras ?? {}) as Record<string, number>,
         urlLink: urlDoLink(siteEnvio, link.token), expiraEm: link.expiraEm, siteUrl: siteEnvio, sorteios, premios: premios(lang),
       })
       await transporter.sendMail({ from: mailFrom(), to: String(p.email), subject: e.assunto, html: e.html, text: e.texto, attachments: brandedMailAttachments() })

@@ -15,6 +15,7 @@
  * Puro — sem base nem transporte — para se poder pré-visualizar e testar.
  */
 import type { Idioma } from './oferta-clientes'
+import { tamanhoCurto, tamanhoLongo } from './email-tipo-conta'
 
 export interface RegrasOferta {
   objetivo_pct?: number
@@ -40,8 +41,12 @@ export interface DadosEmailOferta {
   nome: string
   login: string
   servidor: string
+  /** Saldo inicial da CONTA criada (não um número escrito no template). */
   saldo: number
   programa: string
+  /** Fases do programa (`mtm_funded_programs.fases`) e a fase em que a conta nasce. */
+  fases: number
+  fase?: number
   regras: RegrasOferta
   urlLink: string
   expiraEm: string
@@ -104,10 +109,18 @@ export function montarEmailOferta(d: DadosEmailOferta): { assunto: string; html:
   const nome = (d.nome || (pt ? 'Trader' : 'Trader')).trim()
   const expira = dataCurta(d.expiraEm, d.idioma, false)
   const r = d.regras
-  const saldo = num(d.saldo, d.idioma)
+  // Tamanho e fases vêm dos dados da conta/programa: o assunto dizia «10K» e «2 fases» à mão.
+  const K = tamanhoCurto(Number(d.saldo) > 0 ? Number(d.saldo) : null) ?? '—'
+  const saldo = (tamanhoLongo(Number(d.saldo) > 0 ? Number(d.saldo) : null, d.idioma) ?? '—').replace(/ USD$/, '')
+  const fases = Math.max(1, Math.floor(Number(d.fases) || 1))
+  const fase = Math.min(fases, Math.max(1, Math.floor(Number(d.fase) || 1)))
+  const fasesPt = `${fases} ${fases === 1 ? 'fase' : 'fases'}`
+  const fasesEn = `${fases} ${fases === 1 ? 'phase' : 'phases'}`
   const fim = d.sorteios[0]?.acabaEm ? dataCurta(d.sorteios[0].acabaEm, d.idioma) : null
 
-  const assunto = pt ? 'Um presente para ti: a tua conta MTM Funded de 10K' : 'A gift for you: your 10K MTM Funded account'
+  const assunto = pt
+    ? `Um presente para ti: o teu Desafio MTM Funded ${K} (${fasesPt})`
+    : `A gift for you: your MTM Funded ${K} Challenge (${fasesEn})`
   const preheader = pt
     ? 'Obrigado por fazeres parte do crescimento da MoreThanMoney. A tua conta já está ativa.'
     : 'Thank you for being part of MoreThanMoney’s growth. Your account is already active.'
@@ -117,11 +130,13 @@ export function montarEmailOferta(d: DadosEmailOferta): { assunto: string; html:
     p1: 'Quando comecei a MoreThanMoney, o objetivo era construir uma comunidade onde se aprende trading a sério — com método, sem atalhos e sem promessas. Uma parte enorme do que ela é hoje foste tu: cada sessão em que estiveste, cada pergunta que fizeste, cada vez que falaste de nós a alguém.',
     p2: 'Este mês demos um passo grande: a MoreThanMoney tem agora o seu <b>próprio sistema de avaliação de traders, o MTM Funded</b>, e o seu <b>próprio WebTrader</b>. Não queria abrir isto ao mundo sem agradecer primeiro a quem nos trouxe até aqui.',
     presenteT: 'O teu presente',
-    presente: `Um <b>Desafio MTM Funded 10K · 2 fases</b>, criado em teu nome e já ativo. Sem custo, sem cartão, sem letras pequenas.`,
-    login: 'Login', servidor: 'Servidor', tipo: 'Tipo de conta', tipoV: 'F1 · Fase 1 de 2', saldoL: 'Saldo simulado',
+    presente: `Um <b>Desafio MTM Funded ${K} · ${fasesPt}</b>, criado em teu nome e já ativo. Sem custo, sem cartão, sem letras pequenas.`,
+    login: 'Login', servidor: 'Servidor', tipo: 'Tipo de conta', tipoV: fases > 1 ? `F${fase} · Fase ${fase} de ${fases}` : `F1 · Fase única`, saldoL: 'Tamanho da conta (simulado)',
     regrasT: 'Como funciona',
     regrasP: 'É uma <b>conta de avaliação simulada</b>: negoceias com saldo virtual, <b>não há dinheiro real depositado nem em risco</b>. As regras são as de qualquer desafio deste programa:',
-    rObj: `Objetivo de lucro: <b>${num(r.objetivo_pct, 'pt')}%</b> na fase 1 e <b>${num(r.objetivo_fase2_pct, 'pt')}%</b> na fase 2`,
+    rObj: fases > 1 && r.objetivo_fase2_pct != null
+      ? `Objetivo de lucro: <b>${num(r.objetivo_pct, 'pt')}%</b> na fase 1 e <b>${num(r.objetivo_fase2_pct, 'pt')}%</b> na fase 2`
+      : `Objetivo de lucro: <b>${num(r.objetivo_pct, 'pt')}%</b>`,
     rDia: `Perda diária máxima: <b>${num(r.perda_diaria_pct, 'pt')}%</b>`,
     rMax: `Perda máxima total: <b>${num(r.perda_maxima_pct, 'pt')}%</b>`,
     rDias: `Mínimo de <b>${num(r.dias_minimos, 'pt')}</b> dias de negociação`,
@@ -148,11 +163,13 @@ export function montarEmailOferta(d: DadosEmailOferta): { assunto: string; html:
     p1: 'When I started MoreThanMoney, the goal was to build a community where people learn trading properly — with method, no shortcuts and no promises. A huge part of what it is today is you: every session you joined, every question you asked, every time you told someone about us.',
     p2: 'This month we took a big step: MoreThanMoney now has its <b>own trader evaluation system, MTM Funded</b>, and its <b>own WebTrader</b>. I didn’t want to open it to the world without first thanking the people who brought us here.',
     presenteT: 'Your gift',
-    presente: 'A <b>10K MTM Funded Challenge · 2 phases</b>, created in your name and already active. No cost, no card, no fine print.',
-    login: 'Login', servidor: 'Server', tipo: 'Account type', tipoV: 'F1 · Phase 1 of 2', saldoL: 'Simulated balance',
+    presente: `An <b>MTM Funded ${K} Challenge · ${fasesEn}</b>, created in your name and already active. No cost, no card, no fine print.`,
+    login: 'Login', servidor: 'Server', tipo: 'Account type', tipoV: fases > 1 ? `F${fase} · Phase ${fase} of ${fases}` : `F1 · Single phase`, saldoL: 'Account size (simulated)',
     regrasT: 'How it works',
     regrasP: 'This is a <b>simulated evaluation account</b>: you trade a virtual balance, <b>no real money is deposited or at risk</b>. The rules are the same as any challenge in this program:',
-    rObj: `Profit target: <b>${num(r.objetivo_pct, 'en')}%</b> in phase 1 and <b>${num(r.objetivo_fase2_pct, 'en')}%</b> in phase 2`,
+    rObj: fases > 1 && r.objetivo_fase2_pct != null
+      ? `Profit target: <b>${num(r.objetivo_pct, 'en')}%</b> in phase 1 and <b>${num(r.objetivo_fase2_pct, 'en')}%</b> in phase 2`
+      : `Profit target: <b>${num(r.objetivo_pct, 'en')}%</b>`,
     rDia: `Maximum daily loss: <b>${num(r.perda_diaria_pct, 'en')}%</b>`,
     rMax: `Maximum overall loss: <b>${num(r.perda_maxima_pct, 'en')}%</b>`,
     rDias: `At least <b>${num(r.dias_minimos, 'en')}</b> trading days`,

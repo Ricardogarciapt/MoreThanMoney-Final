@@ -33,7 +33,7 @@ export const CHAVE_UM_CLIQUE_ACEITE = (accountId: string) => `mtmfunded_um_cliqu
 export const CHAVE_UM_CLIQUE_ACEITE_UTILIZADOR = "mtmfunded_um_clique_aceite"
 
 export const TEXTO_AVISO_UM_CLIQUE =
-  "Com a negociação num clique, as ordens são enviadas imediatamente, sem janela de confirmação. Um toque por engano abre, fecha ou altera uma posição. Conta simulada educativa."
+  "Com a negociação num clique, as ordens são enviadas imediatamente, sem janela de confirmação. Um toque por engano abre, fecha ou altera uma posição."
 /** Contas TradeLocker/MT5 no WebTrader: dinheiro real. */
 export const TEXTO_AVISO_UM_CLIQUE_REAL =
   "CONTA REAL: com a negociação num clique, as ordens seguem imediatamente para a tua corretora, com dinheiro real, sem janela de confirmação. Um toque por engano abre, fecha ou altera uma posição real."

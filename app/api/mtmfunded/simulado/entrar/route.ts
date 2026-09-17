@@ -51,12 +51,14 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
   if (!conta) return NextResponse.json({ error: 'conta não encontrada' }, { status: 404 })
   const { tipoCurto, estadoCurto } = await import('@/lib/mtmfunded/etiquetas')
+  const { avisoDaConta } = await import('@/lib/mtmfunded/aviso-conta')
   return NextResponse.json({
     modo: sessao.modo,
     conta: {
       ...conta,
       etiqueta: tipoCurto(conta.tipo as string, conta.metricas as Record<string, unknown>),
       estadoCurto: estadoCurto(conta.estado as string, conta.metricas as Record<string, unknown>),
+      aviso: avisoDaConta({ tipo: conta.tipo as string, estado: conta.estado as string, metricas: conta.metricas as Record<string, unknown> }),
     },
   })
 }

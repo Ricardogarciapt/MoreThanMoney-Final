@@ -541,24 +541,24 @@ export async function POST(request: NextRequest) {
       : { data: null }
     if (!perfil?.email) return NextResponse.json({ error: 'sem email do participante' }, { status: 409 })
 
-    const { data: torneio } = conta.tournament_id
-      ? await db.from('mtm_tournaments').select('nome, regras').eq('id', conta.tournament_id).maybeSingle()
-      : { data: null }
+    // Tipo, fase, tamanho, regras e idioma lidos da conta real (a Funded já saiu daqui como «desafio»).
+    const { dadosDeEntrega } = await import('@/lib/mtmfunded/entrega-conta-dados')
+    const dados = await dadosDeEntrega(db, id)
+    if (!dados) return NextResponse.json({ error: 'conta desconhecida' }, { status: 404 })
 
     const { enviarEmailDaConta } = await import('@/lib/mtmfunded/email-conta')
     const { getSiteUrl } = await import('@/lib/mail-transport')
     const r = await enviarEmailDaConta({
       para: perfil.email as string,
-      nome: (perfil.full_name as string) || 'Participante',
-      // Uma Funded reenviada como «desafio» dizia ao trader que ainda tinha uma prova pela frente.
-      tipo: conta.tipo === 'torneio' ? 'torneio' : conta.tipo === 'financiada' || conta.tipo === 'funded' ? 'financiada' : 'desafio',
-      nomeProva: (torneio?.nome as string) || 'MTM Funded',
+      nome: String(perfil.full_name ?? '').split(/\s+/)[0] || 'Trader',
+      conta: dados.conta,
+      idioma: dados.idioma,
+      motivo: 'reenvio',
       login: conta.mt5_login as string,
       servidor: (conta.servidor as string) || 'TheTradingMaster-Live',
-      saldo: Number(conta.saldo_inicial ?? 0),
       alavancagem: Number(conta.alavancagem ?? 100),
-      urlPainel: `${getSiteUrl()}/mtmfunded/tradingtournament/dashboard`,
-      regras: (torneio?.regras ?? null) as Record<string, number | string> | null,
+      urlPainel: `${getSiteUrl()}/mtmfunded/tradingtournament/dashboard?conta=${id}&credenciais=1`,
+      regras: dados.regras,
     })
     return NextResponse.json({ ok: r.success, error: r.success ? undefined : 'o email não saiu' })
   }

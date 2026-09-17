@@ -146,7 +146,7 @@ export default function FundedEstatisticas({ accountId, equity, regras, semRegra
       </div>
 
       <p className="text-[10.5px] leading-snug text-zinc-500">
-        Conta simulada educativa. Uma trade com saídas parciais conta uma vez (o resultado soma as partes). R = resultado ÷ risco até ao SL à abertura. Resultados passados não garantem resultados futuros.
+        Uma trade com saídas parciais conta uma vez (o resultado soma as partes). R = resultado ÷ risco até ao SL à abertura. Resultados passados não garantem resultados futuros.
       </p>
     </div>
   )

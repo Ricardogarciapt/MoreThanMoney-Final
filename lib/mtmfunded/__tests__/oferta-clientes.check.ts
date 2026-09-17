@@ -89,7 +89,7 @@ t('destinos da oferta', () => {
 
 // ── o email nunca leva password ────────────────────────────────────────────
 const base = (idioma: 'pt' | 'en'): DadosEmailOferta => ({
-  idioma, nome: 'Joana', login: '77123456', servidor: 'MTM Funded', saldo: 10000, programa: '10K · 2 fases',
+  idioma, nome: 'Joana', login: '77123456', servidor: 'MTM Funded', saldo: 10000, programa: '10K · 2 fases', fases: 2, fase: 1,
   regras: { objetivo_pct: 8, objetivo_fase2_pct: 5, perda_diaria_pct: 5, perda_maxima_pct: 10, dias_minimos: 5, risco_max_pct: 1.5 },
   urlLink: 'https://www.morethanmoney.pt/mtmfunded/credenciais#t=abc', expiraEm: '2026-09-16T12:00:00Z',
   siteUrl: 'https://www.morethanmoney.pt', premios: ['5× Desafio'],
@@ -112,8 +112,8 @@ t('template sem password (pt e en), mesmo metida à força', () => {
   }
 })
 t('assuntos e regras reais', () => {
-  assert.equal(montarEmailOferta(base('pt')).assunto, 'Um presente para ti: a tua conta MTM Funded de 10K')
-  assert.equal(montarEmailOferta(base('en')).assunto, 'A gift for you: your 10K MTM Funded account')
+  assert.equal(montarEmailOferta(base('pt')).assunto, 'Um presente para ti: o teu Desafio MTM Funded 10K (2 fases)')
+  assert.equal(montarEmailOferta(base('en')).assunto, 'A gift for you: your MTM Funded 10K Challenge (2 phases)')
   const en = montarEmailOferta(base('en')).texto
   assert.ok(en.includes('8% in phase 1') && en.includes('5% in phase 2') && en.includes('Maximum overall loss: 10%'))
 })

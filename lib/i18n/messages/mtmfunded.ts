@@ -92,7 +92,7 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     // ── rodapé ──
     "mtmfunded.rodape.tagline": "Avaliação de traders em contas simuladas. Regras publicadas, métricas à vista.",
     "mtmfunded.rodape.avisoTitulo": "Aviso de risco",
-    "mtmfunded.rodape.aviso": "Todas as contas do MTM Funded — de torneio, de avaliação e financiadas — são contas de demonstração, com dinheiro virtual. Não há execução em mercado real, não são depositados nem geridos fundos de participantes, e nada aqui é aconselhamento financeiro ou de investimento. Nas contas financiadas, o Fundo MTM aloca capital real correspondente a 10% do valor nominal da conta, e a participação nos resultados é de 75% para o trader.",
+    "mtmfunded.rodape.aviso": "As contas de torneio e de avaliação do MTM Funded são contas simuladas, com dinheiro virtual e sem execução em mercado real. As contas Funded são negociação de capital patrocinado MTM: o Fundo MTM patrocina cada conta com capital real correspondente a 10% do valor nominal, e a participação nos resultados é de 75% para o trader. Não são depositados nem geridos fundos de participantes, e nada aqui é aconselhamento financeiro ou de investimento.",
     "mtmfunded.rodape.termos": "Termos e Condições",
     "mtmfunded.rodape.privacidade": "Privacidade",
     "mtmfunded.rodape.reembolsos": "Reembolsos",
@@ -240,7 +240,7 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "faq.subA": "Sobre o MTM Funded e os torneios. Para o resto,",
     "faq.q1p": "O dinheiro das contas é real?",
     "faq.q1r":
-      "Não. Todas as contas do MTM Funded — de torneio e de avaliação — são contas de demonstração, com dinheiro virtual. As ordens não chegam a nenhum mercado real e ninguém deposita fundos numa conta nossa. O que se avalia é a forma como negoceia.",
+      "Nas contas de torneio e de avaliação (desafios), não: são contas simuladas, com dinheiro virtual — as ordens não chegam a nenhum mercado real e ninguém deposita fundos numa conta nossa. O que se avalia é a forma como negoceias. A conta Funded é diferente: quem passa a avaliação e assina o contrato passa a negociar capital patrocinado MTM (explicado mais abaixo).",
     "faq.q2p": "Quanto custa participar no torneio?",
     "faq.q2r": "Nada. Os torneios são gratuitos, com conta emitida por nós.",
     "faq.q3p": "Quando começa o próximo torneio?",
@@ -284,9 +284,9 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "faq.q13p": "Qual é a diferença entre o torneio e um programa de avaliação?",
     "faq.q13r":
       "O torneio é gratuito, trimestral e competitivo: vale a tua posição face aos outros. Um programa de avaliação é pago, individual e sem prazo de competição — vale o cumprimento dos objectivos publicados.",
-    "faq.q14p": "Como funciona uma conta financiada da MTM?",
+    "faq.q14p": "Como funciona uma conta Funded da MTM?",
     "faq.q14r":
-      "A negociação é **simulada do princípio ao fim** — não há ordens tuas a chegar ao mercado. O que é real é o capital que o Fundo MTM afecta à conta: **10% do valor nominal**. Numa conta financiada de 10.000 USD, isso são 1.000 USD reais alocados pela MTM. É desse capital e do desempenho que ele produz que saem os teus pagamentos.",
+      "A conta Funded é **negociação de capital patrocinado MTM**. Quem passa a avaliação e assina o contrato recebe uma conta do tamanho do desafio que provou, e o que lá negoceia conta a sério: o Fundo MTM patrocina a conta com **capital real correspondente a 10% do valor nominal** — numa conta Funded de 10.000 USD, são 1.000 USD da MTM. É desse capital patrocinado e do desempenho que ele produz que saem os teus pagamentos. Não depositas nada: o capital é da MTM.",
     "faq.q15p": "Quanto é que eu recebo do que ganho?",
     "faq.q15r":
       "**75% do lucro é teu**, 25% ficam para a MTM. Os 25% pagam o capital real que a MTM põe, a infraestrutura e o risco — sem isso não haveria conta financiada nenhuma para financiar.",
@@ -445,7 +445,7 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     // ── footer ──
     "mtmfunded.rodape.tagline": "Trader evaluation on simulated accounts. Published rules, visible metrics.",
     "mtmfunded.rodape.avisoTitulo": "Risk warning",
-    "mtmfunded.rodape.aviso": "Every MTM Funded account — tournament, evaluation and funded — is a demo account with virtual money. There is no execution in a real market, no participant funds are deposited or managed, and nothing here is financial or investment advice. On funded accounts, the MTM Fund allocates real capital equal to 10% of the account's nominal value, and the profit split is 75% to the trader.",
+    "mtmfunded.rodape.aviso": "MTM Funded tournament and evaluation accounts are simulated accounts with virtual money and no execution in a real market. Funded accounts are trading of MTM-sponsored capital: the MTM Fund sponsors each account with real capital equal to 10% of its nominal value, and the trader's share of the results is 75%. No participant funds are deposited or managed, and nothing here is financial or investment advice.",
     "mtmfunded.rodape.termos": "Terms and Conditions",
     "mtmfunded.rodape.privacidade": "Privacy",
     "mtmfunded.rodape.reembolsos": "Refunds",
@@ -593,7 +593,7 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "faq.subA": "About MTM Funded and the tournaments. For anything else,",
     "faq.q1p": "Is the money in the accounts real?",
     "faq.q1r":
-      "No. Every MTM Funded account — tournament and evaluation alike — is a demo account with virtual money. Orders never reach a real market and nobody deposits funds into an account of ours. What is evaluated is how you trade.",
+      "On tournament and evaluation (challenge) accounts, no: they are simulated accounts with virtual money — orders never reach a real market and nobody deposits funds into an account of ours. What is evaluated is how you trade. The Funded account is different: once you pass the evaluation and sign the contract, you trade MTM-sponsored capital (explained further down).",
     "faq.q2p": "How much does entering the tournament cost?",
     "faq.q2r": "Nothing. Tournaments are free, with the account issued by us.",
     "faq.q3p": "When does the next tournament start?",
@@ -637,9 +637,9 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "faq.q13p": "What is the difference between the tournament and an evaluation programme?",
     "faq.q13r":
       "The tournament is free, quarterly and competitive: what counts is your position against the others. An evaluation programme is paid, individual and has no competition deadline — what counts is meeting the published targets.",
-    "faq.q14p": "How does an MTM funded account work?",
+    "faq.q14p": "How does an MTM Funded account work?",
     "faq.q14r":
-      "The trading is **simulated from start to finish** — none of your orders reach the market. What is real is the capital the MTM Fund allocates to the account: **10% of the nominal value**. On a 10,000 USD funded account, that is 1,000 USD of real capital allocated by MTM. Your payouts come from that capital and from what it produces.",
+      "An MTM Funded account is **trading of MTM-sponsored capital**. Once you pass the evaluation and sign the contract, you get an account the size of the challenge you proved, and what you trade on it counts for real: the MTM Fund sponsors the account with **real capital equal to 10% of its nominal value** — on a 10,000 USD Funded account, that is 1,000 USD from MTM. Your payouts come from that sponsored capital and from the performance it produces. You deposit nothing: the capital is MTM's.",
     "faq.q15p": "How much of what I make do I get?",
     "faq.q15r":
       "**75% of the profit is yours**, 25% stays with MTM. That 25% pays for the real capital MTM puts up, the infrastructure and the risk — without it there would be no funded account to fund.",
