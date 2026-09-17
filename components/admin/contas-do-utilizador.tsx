@@ -26,6 +26,7 @@ export interface NumerosLinha {
   pausada: boolean
   segueEstrategia: string | null
   contaCasa: boolean
+  contaReal?: boolean
 }
 
 interface Resposta {
@@ -96,7 +97,9 @@ export default function ContasDoUtilizador({ userId, nome, aoFechar, aoAbrirCont
                             <span className="ml-1 text-gray-500">{n.motor === 'sim' ? 'MTM' : c.servidor ?? 'MT5'}</span>
                             {n.contaCasa && <span className="ml-1 rounded bg-sky-500/15 px-1 text-[10px] text-sky-300">casa</span>}
                             {n.segueEstrategia && <span className="ml-1 text-[10px] text-[#D2A63C]">segue {n.segueEstrategia}</span>}
-                            {n.analise && <span className="ml-1 text-[10px] text-gray-500">análise</span>}
+                            {n.contaReal
+                              ? <span className="ml-1 rounded bg-emerald-500/15 px-1 text-[10px] text-emerald-300">real</span>
+                              : n.analise && <span className="ml-1 text-[10px] text-gray-500">análise</span>}
                           </td>
                           <td className="px-2 py-1.5"><span style={{ color: COR_DO_ESTADO[n.estadoCurto] }}>{n.estadoCurto}</span></td>
                           <td className="px-2 py-1.5 text-right font-mono">{f2(n.saldo)}</td>

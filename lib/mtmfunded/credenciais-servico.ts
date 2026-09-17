@@ -188,9 +188,16 @@ export async function enviarCredenciaisDaConta(
   }
 }
 
-/** `conta_casa` chega na migração 082 (outro ramo): sem a coluna, nenhuma conta é da casa. */
+/**
+ * `conta_casa` (082) ou `conta_real_casa` (109): as duas são contas do dono, não de cliente, e não
+ * recebem o email de entrega de cliente (o texto da Funded fala do capital patrocinado a 10%, que
+ * não é a regra de uma conta real da casa de 1K). Sem as colunas, nenhuma conta é da casa.
+ */
 export async function eContaDaCasa(db: SupabaseClient, accountId: string): Promise<boolean> {
-  const { data, error } = await db.from('mtm_trading_accounts').select('conta_casa').eq('id', accountId).maybeSingle()
-  if (error) return false
-  return (data as { conta_casa?: boolean } | null)?.conta_casa === true
+  const { selecionarComOpcionais } = await import('./numeros-conta')
+  const { data, error } = await selecionarComOpcionais<{ conta_casa?: boolean; conta_real_casa?: boolean }>(
+    'id', (cols) => db.from('mtm_trading_accounts').select(cols).eq('id', accountId).limit(1) as never,
+  )
+  if (error || !data[0]) return false
+  return data[0].conta_casa === true || data[0].conta_real_casa === true
 }

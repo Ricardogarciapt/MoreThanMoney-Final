@@ -3,6 +3,8 @@ import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { lerSessao, type ModoSessao } from './credenciais'
 import { modoFundedPelaLigacao } from '@/lib/webtrader/contas-auto-regras'
 import { tipoCurto, estadoCurto } from '@/lib/mtmfunded/etiquetas'
+import { selecionarComOpcionais } from '@/lib/mtmfunded/numeros-conta'
+import { ehContaRealDaCasa } from '@/lib/mtmfunded/conta-real-casa'
 import { SERVIDOR_SIMULADO } from './motor'
 import { desempenhoDaConta, type LinhaFechada } from './desempenho'
 import { type Direcao, type Simbolo, type MapaPrecos, type Preco, estadoDaConta } from './matematica'
@@ -97,12 +99,13 @@ export async function ligacoesFundedDoUtilizador(userId: string, accountId?: str
 
 export async function lerConta(accountId: string): Promise<Conta | null> {
   if (!/^[0-9a-f-]{36}$/i.test(accountId)) return null
-  // `pausada_em` (079) para o estado «Pause» igual ao do admin; sem a coluna, lê-se sem ela.
+  // `pausada_em` (079) para o estado «Pause» igual ao do admin e `conta_real_casa` (109) para o
+  // painel «A minha conta»; sem as colunas, lê-se sem elas (numeros-conta.ts).
   const db = getSupabaseAdmin()
-  const r = await db.from('mtm_trading_accounts').select(`${CAMPOS_CONTA}, pausada_em`).eq('id', accountId).maybeSingle()
-  if (!r.error) return (r.data as Conta | null) ?? null
-  const { data } = await db.from('mtm_trading_accounts').select(CAMPOS_CONTA).eq('id', accountId).maybeSingle()
-  return (data as Conta | null) ?? null
+  const { data } = await selecionarComOpcionais<Conta>(
+    CAMPOS_CONTA, (cols) => db.from('mtm_trading_accounts').select(cols).eq('id', accountId).limit(1) as never,
+  )
+  return data[0] ?? null
 }
 
 // ── leituras de mercado ────────────────────────────────────────────────────
@@ -609,6 +612,8 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao) {
       ancoraDia: conta.sim_ancora_dia == null ? null : Number(conta.sim_ancora_dia),
       fase: Number(metricas.fase ?? 1),
       analise: ehContaDeAnalise(conta),
+      // Conta real da casa (109): sem regras como a de análise, mas com negociação real.
+      contaReal: ehContaRealDaCasa(conta),
       // Para as barras das regras do painel «A minha conta» (consistência) — as mesmas do admin.
       lucroPorDia: (metricas.lucroPorDia ?? null) as Record<string, number> | null,
       tournamentId: (conta.tournament_id as string | null) ?? null,

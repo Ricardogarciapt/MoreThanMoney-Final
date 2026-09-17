@@ -191,6 +191,8 @@ export async function GET(request: NextRequest, { params }: Ctx) {
       etiqueta: tipoCurto(conta.tipo, m),
       estadoCurto: estadoCurto(conta.estado, m, (conta.pausada_em as string | null) ?? null),
       analise,
+      // 109 — conta real da casa (a leitura é `select('*')`: sem a migração vem false).
+      contaReal: num.contaReal,
       fase: Number(m.fase ?? 1),
       temPassword: Boolean(conta.mt5_password_cifrada),
       migracao079: 'pausada_em' in conta,

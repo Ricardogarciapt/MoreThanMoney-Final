@@ -54,7 +54,10 @@ export default function MinhaConta({ t }: { t: Trader }) {
           <span className="font-mono text-[13px] text-white">{String(c.login ?? "—")}</span>
           <span className="text-zinc-500">{String(c.servidor ?? "MTM Funded")} · 1:{c.alavancagem}</span>
           {c.segueEstrategia && <span className="rounded-full border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-2 py-0.5 text-[11px] text-[#D2A63C]">segue {c.segueEstrategia.nome}{c.segueEstrategia.ativa ? "" : " (em pausa)"}</span>}
-          {c.analise && <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300">conta de análise</span>}
+          {/* Conta real da casa (109): sem regras como a de análise, mas negoceia a sério — não se chama «análise». */}
+          {c.contaReal
+            ? <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">conta real · sem regras</span>
+            : c.analise && <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300">conta de análise</span>}
           {c.aceitaT2T && <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300">aceita Tap to Trade</span>}
           {!dono && <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-300">investor · só leitura</span>}
         </div>
@@ -140,7 +143,9 @@ function Resumo({ t }: { t: Trader }) {
           )
         }) : (
           <p className="text-[11.5px] leading-snug text-zinc-400">
-            {c.analise ? "Conta de análise: as regras de programa não se aplicam — acompanha o desempenho em Métricas." : "Esta conta não tem regras de programa."}
+            {c.contaReal
+              ? "Conta real da casa: contém negociação real e não tem regras de programa — acompanha o desempenho em Métricas."
+              : c.analise ? "Conta de análise: as regras de programa não se aplicam — acompanha o desempenho em Métricas." : "Esta conta não tem regras de programa."}
           </p>
         )}
         <p className="text-[10.5px] text-zinc-500">Medido sobre a equity (as posições abertas contam). Os mesmos números que o suporte vê.</p>

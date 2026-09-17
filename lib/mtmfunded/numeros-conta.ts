@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { tipoCurto, estadoCurto, type EstadoCurto, type TipoCurto } from './etiquetas'
 import { barrasDeRegras, type BarraRegra } from './admin-conta'
+import { ehContaRealDaCasa } from './conta-real-casa'
 import { estatisticasDaConta, type Estatisticas, type LinhaTrade, type Snapshot } from './simulado/estatisticas'
 
 /**
@@ -39,6 +40,8 @@ export interface LinhaContaNumeros {
   metricas?: Record<string, unknown> | null
   segue_estrategia?: string | null
   conta_casa?: boolean | null
+  /** 109 — conta real da casa (lib/mtmfunded/conta-real-casa.ts). */
+  conta_real_casa?: boolean | null
 }
 
 export interface NumerosConta {
@@ -60,6 +63,8 @@ export interface NumerosConta {
   lucroPorDia: Record<string, number> | null
   segueEstrategia: string | null
   contaCasa: boolean
+  /** Conta real da casa: negociação real, mesmo sendo `analise` (sem regras). */
+  contaReal: boolean
 }
 
 const n = (v: unknown, d = 0) => { const x = Number(v); return v == null || v === '' || !Number.isFinite(x) ? d : x }
@@ -91,6 +96,7 @@ export function numerosDaConta(c: LinhaContaNumeros): NumerosConta {
     lucroPorDia: (m.lucroPorDia ?? null) as Record<string, number> | null,
     segueEstrategia: c.segue_estrategia ?? null,
     contaCasa: c.conta_casa === true,
+    contaReal: ehContaRealDaCasa(c),
   }
 }
 
@@ -162,27 +168,29 @@ export function reduzirCurva<T extends { ddPct: number }>(pts: T[], max: number)
 export const PONTOS_CURVA = 600
 
 /**
- * Colunas que só existem com migrações que podem ainda não estar aplicadas: `pausada_em` (079) e
- * `conta_casa` (082, outro ramo). Uma coluna em falta num select explícito dá ERRO e lista vazia —
- * o pior modo de falhar (ecrã sem contas). Tenta-se com elas; sem elas, repete-se sem.
+ * Colunas que só existem com migrações que podem ainda não estar aplicadas: `pausada_em` (079),
+ * `conta_casa` (082, outro ramo) e `conta_real_casa` (109). Uma coluna em falta num select explícito
+ * dá ERRO e lista vazia — o pior modo de falhar (ecrã sem contas). Tenta-se com todas; se a base
+ * disser QUAL falta, repete-se sem essa e com as outras (com a 079 e a 082 aplicadas e a 109 por
+ * aplicar, `pausada_em` e `conta_casa` continuam a vir). Se não disser, repete-se sem nenhuma.
  */
-export const COLUNAS_OPCIONAIS = ['pausada_em', 'conta_casa'] as const
+export const COLUNAS_OPCIONAIS = ['pausada_em', 'conta_casa', 'conta_real_casa'] as const
+
+const COLUNA_EM_FALTA = /column\s+(?:"?\w+"?\.)?"?(\w+)"?\s+does not exist/i
 
 export async function selecionarComOpcionais<T>(
   colunas: string,
   consulta: (cols: string) => PromiseLike<{ data: T[] | null; error: { code?: string; message: string } | null }>,
 ): Promise<{ data: T[]; error: { message: string } | null }> {
-  const todas = `${colunas}, ${COLUNAS_OPCIONAIS.join(', ')}`
-  const r = await consulta(todas)
-  if (!r.error) return { data: r.data ?? [], error: null }
-  if (r.error.code === '42703' || /column .* does not exist/i.test(r.error.message)) {
-    // Uma de cada vez: com a 079 e sem a 082, `pausada_em` continua a vir.
-    for (const opc of COLUNAS_OPCIONAIS) {
-      const r1 = await consulta(`${colunas}, ${opc}`)
-      if (!r1.error) return { data: r1.data ?? [], error: null }
-    }
-    const r2_ = await consulta(colunas)
-    return { data: r2_.data ?? [], error: r2_.error }
+  let opcionais: string[] = [...COLUNAS_OPCIONAIS]
+  // No máximo uma volta por coluna opcional + a volta sem nenhuma.
+  for (let volta = 0; volta <= COLUNAS_OPCIONAIS.length; volta++) {
+    const r = await consulta(opcionais.length ? `${colunas}, ${opcionais.join(', ')}` : colunas)
+    if (!r.error) return { data: r.data ?? [], error: null }
+    const faltaColuna = r.error.code === '42703' || /column .* does not exist/i.test(r.error.message)
+    if (!faltaColuna || !opcionais.length) return { data: [], error: r.error }
+    const falta = COLUNA_EM_FALTA.exec(r.error.message)?.[1]
+    opcionais = falta && opcionais.includes(falta) ? opcionais.filter((c) => c !== falta) : []
   }
-  return { data: [], error: r.error }
+  return { data: [], error: { message: 'colunas opcionais: sem resposta' } }
 }

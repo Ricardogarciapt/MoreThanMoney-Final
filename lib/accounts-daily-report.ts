@@ -53,6 +53,50 @@ async function metastats(accountId: string, token: string): Promise<Record<strin
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
+/**
+ * As métricas de PUBLICAÇÃO (lib/inspiring-metrics.ts: dia verde, profit factor, win rate) só
+ * podem vir de ligações a contas MetaApi de corretora. Uma ligação a uma conta MTM Funded
+ * (`funded_account_id` — as contas da casa, incluindo a «Todos os sinais») nunca entra por aqui,
+ * mesmo que um dia ganhe um id MetaApi: essas contas contam só na equidade (ver `linhaDeEquidade`).
+ */
+export function ligacaoEntraNasMetricas(c: { metaapi_account_id?: string | null; funded_account_id?: string | null }): boolean {
+  return Boolean(c.metaapi_account_id) && !c.funded_account_id
+}
+
+/**
+ * Uma conta do MTM Funded no relatório: SÓ equidade. P&L, trades, win rate e profit factor ficam a
+ * zero/nulo de propósito — as contas da casa (reais ou não) não podem pintar o «dia verde» nem o
+ * profit factor publicado. A equity que entra na soma já é a contribuição (factor aplicado); o
+ * valor de face fica em `balance`, e a razão do factor (10%, 100% real da casa, 0% mestre
+ * representada pelo espelho) em `note`.
+ */
+export function linhaDeEquidade(f: { etiqueta: string; metaapiId: string | null; valorNominal: number; contribuicao: number; nota: string }): AccountDay {
+  return {
+    label: f.etiqueta,
+    accountId: f.metaapiId ?? '',
+    balance: f.valorNominal,
+    equity: f.contribuicao,
+    pnlToday: 0,
+    pnlMonth: 0,
+    trades: null,
+    winRatePct: null,
+    profitFactor: null,
+    ok: true,
+    note: f.nota,
+  }
+}
+
+/** Totais do relatório (puro) — o que a lib/inspiring-metrics.ts lê. */
+export function totaisDoRelatorio(accounts: AccountDay[]): DailyReport['totals'] {
+  const live = accounts.filter((a) => a.ok)
+  return {
+    equity: Number(live.reduce((a, x) => a + (x.equity ?? 0), 0).toFixed(2)),
+    pnlToday: Number(live.reduce((a, x) => a + x.pnlToday, 0).toFixed(2)),
+    pnlMonth: Number(live.reduce((a, x) => a + x.pnlMonth, 0).toFixed(2)),
+    trades: live.reduce((a, x) => a + (x.trades ?? 0), 0),
+  }
+}
+
 /** Constrói o relatório do dia a partir das ligações ativas com conta MetaApi. */
 export async function buildDailyReport(): Promise<DailyReport> {
   const token = process.env.METAAPI_TOKEN?.trim() || ''
@@ -62,7 +106,7 @@ export async function buildDailyReport(): Promise<DailyReport> {
 
   const { data: conns } = await admin
     .from('mtmcopy_connections')
-    .select('account_label, metaapi_account_id, is_active')
+    .select('account_label, metaapi_account_id, funded_account_id, is_active')
     .not('metaapi_account_id', 'is', null)
     .eq('is_active', true)
     .neq('mt5_status', 'disconnected')
@@ -75,6 +119,7 @@ export async function buildDailyReport(): Promise<DailyReport> {
   const { filtrarContasExistentes } = await import('@/lib/mtmcopy/metaapi-inexistentes')
   const existentes = new Set(await filtrarContasExistentes((conns ?? []).map((c) => (c as { metaapi_account_id: string }).metaapi_account_id)))
   for (const c of conns ?? []) {
+    if (!ligacaoEntraNasMetricas(c as { metaapi_account_id?: string | null; funded_account_id?: string | null })) continue
     if (!existentes.has((c as { metaapi_account_id: string }).metaapi_account_id)) continue
     const label = (c as { account_label?: string | null }).account_label || 'Conta sem nome'
     const accountId = (c as { metaapi_account_id: string }).metaapi_account_id
@@ -111,34 +156,15 @@ export async function buildDailyReport(): Promise<DailyReport> {
    *
    * Os desafios e os torneios ficam de fora por completo — são provas em dinheiro virtual, e
    * contá-las seria dizer que há capital afecto a uma avaliação que pode acabar amanhã.
+   *
+   * Contas reais da casa (109): as de 1K a 100%, os espelhos de 10K a 10% e a mestre que o espelho
+   * representa a 0% (lib/equidade-mtm.ts). Continuam a entrar SÓ pela equidade.
    */
   const { contasFundedNaEquidade } = await import('@/lib/equidade-mtm')
   const funded = await contasFundedNaEquidade().catch(() => [])
-  for (const f of funded) {
-    accounts.push({
-      label: f.etiqueta,
-      accountId: f.metaapiId ?? '',
-      balance: f.valorNominal,
-      // A equity que entra na soma é JÁ a contribuição — 10% do nominal. O valor de face fica
-      // em `balance`, para quem abrir a linha ver de onde veio.
-      equity: f.contribuicao,
-      pnlToday: 0,
-      pnlMonth: 0,
-      trades: null,
-      winRatePct: null,
-      profitFactor: null,
-      ok: true,
-      note: `${Math.round(f.factor * 100)}% de ${f.valorNominal.toLocaleString('pt-PT')} — capital real da MTM`,
-    })
-  }
+  for (const f of funded) accounts.push(linhaDeEquidade(f))
 
-  const live = accounts.filter((a) => a.ok)
-  const totals = {
-    equity: Number(live.reduce((a, x) => a + (x.equity ?? 0), 0).toFixed(2)),
-    pnlToday: Number(live.reduce((a, x) => a + x.pnlToday, 0).toFixed(2)),
-    pnlMonth: Number(live.reduce((a, x) => a + x.pnlMonth, 0).toFixed(2)),
-    trades: live.reduce((a, x) => a + (x.trades ?? 0), 0),
-  }
+  const totals = totaisDoRelatorio(accounts)
   return { date: today, accounts, totals, generatedAt: new Date().toISOString() }
 }
 
