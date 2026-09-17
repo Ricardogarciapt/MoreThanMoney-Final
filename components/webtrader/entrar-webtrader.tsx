@@ -29,7 +29,8 @@ type Resultado = { plataforma: "mtmfunded"; sessao: SessaoConta } | { plataforma
 
 function ehIosNativo(): boolean {
   if (typeof navigator === "undefined") return false
-  return /MTMNativeApp/i.test(navigator.userAgent) && /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  // MTM System (MTMNativeApp) ou app MTM Auto (MTMAuto-iOS): nenhuma deixa comprar fora da Apple.
+  return /MTMNativeApp|MTMAuto-iOS/i.test(navigator.userAgent) && /iPhone|iPad|iPod/i.test(navigator.userAgent)
 }
 
 function destinoAtual(): string {

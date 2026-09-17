@@ -3,10 +3,12 @@
  *
  * Toda a rota /api/webtrader/[plataforma]/… passa por `resolverAdaptador`:
  *   · mtmfunded   → autorizarConta (sessão MTM do dono ou sessão da conta por login+password).
- *   · tradelocker → ligação do próprio (mtmcopy_connections.user_id) OU sessão do WebTrader presa ao
- *                   utilizador e à conta (lib/webtrader/tradelocker-sessao.ts).
+ *   · tradelocker → ligação do próprio (mtmcopy_connections.user_id), conta TradeLocker ligada na app
+ *                   MTM Auto (mtmauto_accounts.user_id, credenciais em tradelocker_credenciais) OU sessão
+ *                   do WebTrader presa ao utilizador e à conta (lib/webtrader/tradelocker-sessao.ts).
  *   · mt5         → linha do próprio numa das três tabelas (T2T/MTM Copy, MTM Auto, WebTrader) E
- *                   dentro da quota MetaApi do plano (regras.decidirAcessoMt5).
+ *                   dentro da quota MetaApi do plano (regras.decidirAcessoMt5), aberta com a chave MetaApi
+ *                   ONDE a conta vive (casa ou equipa — contas-auto-regras.chaveMetaApiDaConta).
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
@@ -16,7 +18,12 @@ import { carregarDireitos } from '@/lib/entitlements'
 import { estadoDaQuota, contarContasMetaApi, linhasDeContas, mensagemQuota } from '@/lib/contas/quota-metaapi'
 import { adaptadorMtmFunded } from './corretoras/mtmfunded'
 import { adaptadorTradeLocker } from './corretoras/tradelocker'
-import { adaptadorMt5 } from './corretoras/mt5'
+import { DEPS_MT5, adaptadorMt5, restMt5ComToken, type DepsMt5 } from './corretoras/mt5'
+import { decifrar } from '@/lib/mtmfunded/credenciais'
+import { envValido } from '@/lib/tradelocker/ligacao'
+import { TradeLockerSessao } from '@/lib/tradelocker/client'
+import { neutralizarErroDeEquipa, type TokenResolvido } from '@/lib/copia-contas/tokens'
+import { chaveContaTL, chaveMetaApiDaConta, tradeLockerAutoListavel } from './contas-auto-regras'
 import { decidirAcessoMt5, lerRefConta, type ContaMetaApiDoUtilizador } from './corretoras/regras'
 import { ErroCorretora, type AdaptadorCorretora, type PlataformaWT } from './corretoras/tipos'
 import { lerSessaoTL } from './tradelocker-sessao'
@@ -34,6 +41,8 @@ export interface ContaListadaWT {
   real: boolean
   /** Motivo por que não abre no WebTrader (quota), ou null. */
   bloqueada: string | null
+  /** MetaTrader: 'mt4' quando a conta é MT4 (o adaptador é o mesmo, a etiqueta não). */
+  versao?: 'mt4' | 'mt5'
   origem: 'ligador' | 'webtrader'
 }
 
@@ -84,26 +93,36 @@ export async function listarContasReais(userId: string): Promise<ContaListadaWT[
     return d.ok ? null : d.erro
   }
 
+  const tlVistas = new Set<string>()
   for (const c of (site ?? []) as Record<string, unknown>[]) {
     const p = String(c.mt5_platform ?? 'mt5').toLowerCase()
     if (p === 'tradelocker' && c.tl_account_id) {
+      tlVistas.add(chaveContaTL(c.tl_env, c.tl_account_id))
       out.push({ ref: `tradelocker:site:${c.id}`, plataforma: 'tradelocker', rotulo: txt(c.account_label), login: txt(c.tl_acc_num) ?? txt(c.tl_account_id), servidor: txt(c.tl_server), demo: c.tl_env === 'demo', real: true, bloqueada: null, origem: 'ligador' })
     } else if ((p === 'mt5' || p === 'mt4') && c.metaapi_account_id && !vistos.has(String(c.metaapi_account_id))) {
       vistos.add(String(c.metaapi_account_id))
-      out.push({ ref: `mt5:site:${c.id}`, plataforma: 'mt5', rotulo: txt(c.account_label), login: txt(c.mt5_login) ?? (c.mt5_login_last4 ? `••••${c.mt5_login_last4}` : null), servidor: txt(c.mt5_server), demo: demoPeloNome(c.mt5_server), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'ligador' })
+      out.push({ ref: `mt5:site:${c.id}`, plataforma: 'mt5', versao: p === 'mt4' ? 'mt4' : 'mt5', rotulo: txt(c.account_label), login: txt(c.mt5_login) ?? (c.mt5_login_last4 ? `••••${c.mt5_login_last4}` : null), servidor: txt(c.mt5_server), demo: demoPeloNome(c.mt5_server), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'ligador' })
     }
   }
   for (const c of (auto ?? []) as Record<string, unknown>[]) {
     const p = String(c.plataforma ?? 'mt5').toLowerCase()
+    // TradeLocker ligada na app MTM Auto. Se a mesma conta também está no ligador do site, fica a do site.
+    if (tradeLockerAutoListavel(c)) {
+      const chave = chaveContaTL(c.tl_env, c.tl_account_id)
+      if (tlVistas.has(chave)) continue
+      tlVistas.add(chave)
+      out.push({ ref: `tradelocker:auto:${c.id}`, plataforma: 'tradelocker', rotulo: txt(c.rotulo) ?? txt(c.corretora), login: txt(c.tl_acc_num) ?? txt(c.tl_account_id), servidor: txt(c.tl_server) ?? txt(c.servidor), demo: c.tl_env === 'demo' || Boolean(c.demo), real: true, bloqueada: null, origem: 'ligador' })
+      continue
+    }
     if ((p === 'mt5' || p === 'mt4') && c.metaapi_account_id && !vistos.has(String(c.metaapi_account_id))) {
       vistos.add(String(c.metaapi_account_id))
-      out.push({ ref: `mt5:auto:${c.id}`, plataforma: 'mt5', rotulo: txt(c.rotulo) ?? txt(c.corretora), login: txt(c.login), servidor: txt(c.servidor), demo: Boolean(c.demo), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'ligador' })
+      out.push({ ref: `mt5:auto:${c.id}`, plataforma: 'mt5', versao: p === 'mt4' ? 'mt4' : 'mt5', rotulo: txt(c.rotulo) ?? txt(c.corretora), login: txt(c.login), servidor: txt(c.servidor), demo: Boolean(c.demo), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'ligador' })
     }
   }
   for (const c of wt) {
     if (!c.metaapi_account_id || vistos.has(String(c.metaapi_account_id)) || c.estado !== 'connected') continue
     vistos.add(String(c.metaapi_account_id))
-    out.push({ ref: `mt5:wt:${c.id}`, plataforma: 'mt5', rotulo: txt(c.rotulo), login: txt(c.login), servidor: txt(c.servidor), demo: demoPeloNome(c.servidor), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'webtrader' })
+    out.push({ ref: `mt5:wt:${c.id}`, plataforma: 'mt5', versao: c.plataforma === 'mt4' ? 'mt4' : 'mt5', rotulo: txt(c.rotulo), login: txt(c.login), servidor: txt(c.servidor), demo: demoPeloNome(c.servidor), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'webtrader' })
   }
   return out
 }
@@ -149,6 +168,7 @@ export async function resolverAdaptador(request: Request, plataforma: Plataforma
       if (!s) throw new ErroCorretora(401, 'A sessão TradeLocker expirou — entra outra vez.', 'sessao_tl')
       return adaptadorTradeLocker(s.sessao, { podeNegociar: true })
     }
+    if (ref.origem === 'auto') return adaptadorTradeLocker(await sessaoTradeLockerAuto(userId, ref.id), { podeNegociar: true })
     const { data: conn } = await getSupabaseAdmin().from('mtmcopy_connections').select('*').eq('id', ref.id).eq('user_id', userId).eq('mt5_platform', 'tradelocker').neq('mt5_status', 'disconnected').maybeSingle()
     if (!conn) throw new ErroCorretora(404, 'Conta TradeLocker não encontrada.')
     const { sessao, erro } = await sessaoDaLigacao(conn)
@@ -156,15 +176,84 @@ export async function resolverAdaptador(request: Request, plataforma: Plataforma
     return adaptadorTradeLocker(sessao, { podeNegociar: true })
   }
 
-  return adaptadorMt5(await autorizarMt5(userId, ref.origem, ref.id), { podeNegociar: true })
+  const { accountId, deps } = await autorizarMt5(userId, ref.origem, ref.id)
+  return adaptadorMt5(accountId, { podeNegociar: true }, deps)
 }
 
-/** Id MetaApi de uma conta MT5 SÓ se for do utilizador E estiver dentro da quota do plano. */
-export async function autorizarMt5(userId: string, origem: 'site' | 'auto' | 'wt', id: string): Promise<string> {
+// ── TradeLocker ligada no MTM Auto ───────────────────────────────────────────────────────────
+
+/**
+ * Sessão partilhada 10 min por conta: o WebTrader relê posições a cada poucos segundos, e ler e
+ * decifrar as credenciais (e voltar a autenticar na TradeLocker) em cada leitura seria um login por
+ * sondagem. A chave inclui o utilizador — a posse foi verificada quando a sessão entrou na cache.
+ */
+const sessoesTLAuto = new Map<string, { s: TradeLockerSessao; em: number }>()
+
+async function sessaoTradeLockerAuto(userId: string, contaId: string): Promise<TradeLockerSessao> {
+  const k = `${userId}:${contaId}`
+  const c = sessoesTLAuto.get(k)
+  if (c && Date.now() - c.em < 10 * 60_000) return c.s
+  const db = getSupabaseAdmin()
+  const { data: conta } = await db.from('mtmauto_accounts').select('id, plataforma, tl_account_id, tl_acc_num').eq('id', contaId).eq('user_id', userId).maybeSingle()
+  if (!conta || !tradeLockerAutoListavel(conta)) throw new ErroCorretora(404, 'Conta TradeLocker não encontrada.')
+  const { data: cred } = await db.from('tradelocker_credenciais').select('tl_email, tl_password_cifrada, tl_server, tl_env').eq('mtmauto_account_id', contaId).maybeSingle()
+  const password = cred ? decifrar(String(cred.tl_password_cifrada)) : null
+  const env = envValido(cred?.tl_env)
+  if (!cred || !password || !env) throw new ErroCorretora(409, 'Conta TradeLocker sem credenciais — volta a ligá-la na app MTM Auto.')
+  const s = new TradeLockerSessao({ email: String(cred.tl_email), password, server: String(cred.tl_server), env }, String(conta.tl_account_id), String(conta.tl_acc_num))
+  if (sessoesTLAuto.size > 500) sessoesTLAuto.clear()
+  sessoesTLAuto.set(k, { s, em: Date.now() })
+  return s
+}
+
+// ── chave MetaApi da conta ───────────────────────────────────────────────────────────────────
+
+const tokensEquipa = new Map<string, { token: string | null; em: number }>()
+
+/** Equipa do dono (só contas `auto:`) e a chave dessa equipa, 5 min em memória. Nunca vai para logs. */
+async function tokenDaEquipaDoDono(userId: string): Promise<{ tenantId: string | null; token: string | null }> {
+  const db = getSupabaseAdmin()
+  const { data: u } = await db.from('mtmauto_users').select('tenant_id').eq('user_id', userId).maybeSingle()
+  const tenantId = txt(u?.tenant_id)
+  if (!tenantId) return { tenantId: null, token: null }
+  const c = tokensEquipa.get(tenantId)
+  if (c && Date.now() - c.em < 300_000) return { tenantId, token: c.token }
+  const { data } = await db.from('mtmauto_tenants').select('metaapi_token').eq('id', tenantId).maybeSingle()
+  const token = txt(data?.metaapi_token)
+  tokensEquipa.set(tenantId, { token, em: Date.now() })
+  return { tenantId, token }
+}
+
+/** Dependências REST na chave certa. Erros de limite de uma equipa não travam a chave da casa. */
+function depsDaChave(t: TokenResolvido): DepsMt5 {
+  if (t.chave === 'casa') return DEPS_MT5
+  const rest = restMt5ComToken(t.token)
+  return {
+    rest: async (id, caminho, init) => {
+      try { return await rest(id, caminho, init) } catch (e) { throw neutralizarErroDeEquipa(e, t.chave) }
+    },
+    // A fotografia de streaming só existe para contas da casa.
+    snapshot: async () => null,
+  }
+}
+
+async function chaveDaContaMt(userId: string, origem: 'site' | 'auto' | 'wt', id: string): Promise<TokenResolvido> {
+  const equipa = origem === 'auto' ? await tokenDaEquipaDoDono(userId) : { tenantId: null, token: null }
+  const t = chaveMetaApiDaConta({ origem, contaId: id, tenantId: equipa.tenantId, tokenEquipa: equipa.token, tokenCasa: process.env.METAAPI_TOKEN ?? null })
+  if (!t) throw new ErroCorretora(503, 'MetaApi indisponível no servidor.')
+  return t
+}
+
+/**
+ * Id MetaApi de uma conta MT5/MT4 SÓ se for do utilizador E estiver dentro da quota do plano, com a
+ * chave MetaApi onde ela vive. A quota decide-se primeiro e da mesma forma para casa e equipas.
+ */
+export async function autorizarMt5(userId: string, origem: 'site' | 'auto' | 'wt', id: string): Promise<{ accountId: string; token: TokenResolvido; deps: DepsMt5 }> {
   const metaapiId = await metaApiDaRef(userId, origem, id)
   if (!metaapiId) throw new ErroCorretora(404, 'Conta MT5 não encontrada.')
   const [quota, datadas] = await Promise.all([quotaDoUtilizador(userId), contasMetaApiDatadas(userId)])
   const acesso = decidirAcessoMt5(quota, datadas, metaapiId)
   if (!acesso.ok) throw new ErroCorretora(402, acesso.erro, 'quota_metaapi', { quota: { plano: quota.plano, emUso: quota.emUso, limite: Number.isFinite(quota.limite) ? quota.limite : null, mensagem: mensagemQuota(quota) } })
-  return metaapiId
+  const token = await chaveDaContaMt(userId, origem, id)
+  return { accountId: metaapiId, token, deps: depsDaChave(token) }
 }

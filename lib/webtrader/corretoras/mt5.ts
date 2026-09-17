@@ -118,8 +118,9 @@ export const DEPS_MT5: DepsMt5 = { rest: restReal, snapshot: snapshotReal }
  * «Ligar conta» — deploy EXPLÍCITO pedido pelo utilizador (nunca ao abrir a página). Não espera pela
  * ligação: devolve logo; o ecrã volta a ler dali a pouco.
  */
-export async function ligarContaMt5(accountId: string): Promise<{ estado: string }> {
-  const token = process.env.METAAPI_TOKEN
+export async function ligarContaMt5(accountId: string, tokenDaConta?: string): Promise<{ estado: string }> {
+  // Contas de equipas vivem na chave da equipa: com a da casa o deploy dava 404.
+  const token = tokenDaConta ?? process.env.METAAPI_TOKEN
   if (!token) throw new ErroCorretora(503, 'MetaApi indisponível no servidor.')
   const conta = await provisioning(accountId, token)
   const deployed = String(conta.state ?? '').toUpperCase() === 'DEPLOYED'

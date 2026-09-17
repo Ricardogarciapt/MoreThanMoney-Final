@@ -105,7 +105,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       if (plataforma !== 'mt5' || !ref || ref.plataforma !== 'mt5') throw new ErroCorretora(400, 'conta inválida')
       const userId = await userIdDoPedido(request)
       if (!userId) throw new ErroCorretora(401, 'Sem sessão.')
-      return NextResponse.json(await ligarContaMt5(await autorizarMt5(userId, ref.origem, ref.id)))
+      const { accountId, token } = await autorizarMt5(userId, ref.origem, ref.id)
+      return NextResponse.json(await ligarContaMt5(accountId, token.token))
     }
 
     const a = await resolverAdaptador(request, plataforma, b.conta)

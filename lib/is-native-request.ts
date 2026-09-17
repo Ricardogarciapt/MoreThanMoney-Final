@@ -5,7 +5,8 @@
  */
 export function isIosAppRequest(req: Request): boolean {
   const ua = (req.headers.get('user-agent') || '').toLowerCase()
-  return ua.includes('mtmnativeapp') && /iphone|ipad|ipod/.test(ua)
+  // `MTMAuto-iOS` = a app MTM Auto (separador WebTrader): a mesma regra da Apple, a mesma recusa do Stripe.
+  return (ua.includes('mtmnativeapp') || ua.includes('mtmauto-ios')) && /iphone|ipad|ipod/.test(ua)
 }
 
 export const IOS_IAP_REQUIRED = {
