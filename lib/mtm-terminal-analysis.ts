@@ -440,11 +440,13 @@ function parseJsonLoose(text: string): unknown {
 /** Preço ao vivo → velas → níveis/técnicos → sinais → modelo. Devolve a linha pronta a guardar. */
 export async function buildAndGenerate(asset: TerminalAsset, opts: { deadlineMs?: number } = {}) {
   const { fetchLiveQuote } = await import("@/lib/mtm-terminal-quote")
-  const { fetchTerminalCandles } = await import("@/lib/mtm-terminal-levels")
+  const { fetchTerminalCandleSeries } = await import("@/lib/mtm-terminal-levels")
   const { basisAdjust, computeTerminalLevels, computeTechnicals } = await import("@/lib/mtm-terminal-technicals")
   const started = Date.now()
-  const [quote, candles, signals] = await Promise.all([fetchLiveQuote(asset), fetchTerminalCandles(asset), fetchRecentSignals(asset)])
-  const adj = quote.price != null ? basisAdjust(candles, quote.price, asset.ref.sameLevel).candles : candles
+  const [quote, series, signals] = await Promise.all([fetchLiveQuote(asset), fetchTerminalCandleSeries(asset), fetchRecentSignals(asset)])
+  const { candles } = series
+  // sameLevel da referência que DEU as velas (a de reserva do ouro/prata tem de ser reescalada).
+  const adj = quote.price != null ? basisAdjust(candles, quote.price, series.ref.sameLevel).candles : candles
   const levels = quote.price != null ? computeTerminalLevels(adj, quote.price) : null
   const technicals = quote.price != null ? computeTechnicals(adj, quote.price) : null
   const deadlineMs = (opts.deadlineMs ?? 100_000) - (Date.now() - started)

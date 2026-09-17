@@ -114,6 +114,8 @@ export interface ReferenceChange {
   /** Preço atual da referência */
   last: number | null
   basis: "24h" | "sessão"
+  /** Esta referência está ao nível do gráfico? (as de reserva nunca estão). Omisso = a do ativo. */
+  sameLevel?: boolean
 }
 
 /**
@@ -192,4 +194,36 @@ export function pickAssetsToRefresh(
     .sort((a, b) => a.t - b.t)
     .slice(0, opts.batch)
     .map((x) => x.s)
+}
+
+// ─── Velas: cache e estado mostrado ───────────────────────────────────────────
+/** Cabeçalho de cache da rota das velas. Vazio também vai para o CDN (curto) para não martelar as fontes. */
+export function candlesCacheHeader(count: number): string {
+  return count > 0
+    ? "public, max-age=30, s-maxage=60, stale-while-revalidate=120"
+    : "public, max-age=0, s-maxage=30, stale-while-revalidate=30"
+}
+
+/**
+ * O que o bloco «ao vivo» deve mostrar — decidido num sítio só, para não voltar a haver seis cartões
+ * com «—» (queixa de 17/09).
+ * · live: velas + preço → cartões completos.
+ * · levels-only: sem velas mas a análise trouxe níveis → aviso único + suportes/resistências da análise.
+ * · waiting-price: há velas mas ainda não há preço → aviso único.
+ * · loading: o 1.º pedido de velas ainda não respondeu.
+ * · no-candles: nada para mostrar → aviso único, sem cartões.
+ */
+export type LiveBlockState = "live" | "levels-only" | "waiting-price" | "loading" | "no-candles"
+export function liveBlockState(opts: {
+  hasTechnicals: boolean
+  candlesLoaded: boolean
+  candleCount: number
+  hasPrice: boolean
+  fallbackLevelCount: number
+}): LiveBlockState {
+  if (opts.hasTechnicals) return "live"
+  if (opts.fallbackLevelCount > 0) return "levels-only"
+  if (opts.candleCount > 0 && !opts.hasPrice) return "waiting-price"
+  if (!opts.candlesLoaded) return "loading"
+  return "no-candles"
 }
