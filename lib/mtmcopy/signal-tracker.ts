@@ -61,6 +61,10 @@ interface Linha {
   peak_pips: number
   created_at: string
   announce: boolean
+  /** Flutuante já gravado (vem no `select *`) — para não reescrever a linha quando não mexeu. */
+  live_pips?: number | null
+  live_pct?: number | null
+  live_at?: string | null
 }
 
 export interface ResultadoTracker {
@@ -388,11 +392,19 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
       live_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
+    let subiuPico = false
     if (lucroPips > l.peak_pips) {
       patch.peak_pips = lucroPips
       l.peak_pips = lucroPips
+      subiuPico = true
     }
-    await admin.from('mtmcopy_signal_tracking').update(patch).eq('id', l.id)
+    // Só se grava quando o número que o cartão mostra mudou (ou de minuto a minuto): o preço anda
+    // ao tick, mas arredondado a 0,1 pip fica muitas passagens igual. Antes era uma escrita por
+    // linha activa em cada passagem (85 488 em 46 h, medido 15–17/09), a maior parte a repetir o valor.
+    const liveAtMs = l.live_at ? Date.parse(l.live_at) : NaN
+    const igual = !subiuPico && l.live_pips === patch.live_pips && l.live_pct === patch.live_pct
+      && Number.isFinite(liveAtMs) && Date.now() - liveAtMs < 60_000
+    if (!igual) await admin.from('mtmcopy_signal_tracking').update(patch).eq('id', l.id)
 
     const bateuSl = l.sl != null && (compra ? price <= l.sl : price >= l.sl)
     if (bateuSl) {

@@ -66,12 +66,15 @@ export async function adotarManuais(): Promise<{ adotadas: Adotada[]; notas: str
   const fimDeSemana = saltarLeiturasLigado() && fimDeSemanaFx(new Date(agora))
   // As contas mestre vivas (base de dados) entram na adopção como as fixas.
   await carregarContasDeEstrategia().catch(() => undefined)
-  for (const conta of contasDoMotorTempoReal()) {
+  // As contas são independentes (cada uma tem as suas posições e as suas linhas), por isso lêem-se
+  // EM PARALELO. Em série, com quatro contas lidas por RPC à MetaApi, só esta fase levava ~4-5 s
+  // e o loop «de 1 em 1 s» do monitor Premium corria, na prática, de 6 em 6 s (medido 17/09).
+  await Promise.all(contasDoMotorTempoReal().map(async (conta) => {
     // Fim de semana: uma trade à mão só pode ser cripto (o resto não negoceia), e para a apanhar
     // chega olhar de minuto a minuto em vez de segundo a segundo. Ver market-hours.ts.
     if (fimDeSemana) {
       const ultima = ultimaAdopcaoFimDeSemana.get(conta)
-      if (ultima != null && agora - ultima < ADOPCAO_FIM_DE_SEMANA_MS) continue
+      if (ultima != null && agora - ultima < ADOPCAO_FIM_DE_SEMANA_MS) return
       ultimaAdopcaoFimDeSemana.set(conta, agora)
     }
     // Fotografia do streaming quando a conta está em PREMIUM_STREAMING_CONTAS e é de confiança;
@@ -80,11 +83,11 @@ export async function adotarManuais(): Promise<{ adotadas: Adotada[]; notas: str
     // Leitura estrita: uma falha de leitura não pode parecer "não há nada aberto".
     if (posicoes == null) {
       notas.push(`${conta.slice(0, 8)}: ilegível`)
-      continue
+      return
     }
 
     const marcadas = posicoes.filter((p) => pedeGestao(p.comment))
-    if (!marcadas.length) continue
+    if (!marcadas.length) return
 
     const { data: linhas } = await db
       .from('mtmcopy_premium_active')
@@ -132,7 +135,7 @@ export async function adotarManuais(): Promise<{ adotadas: Adotada[]; notas: str
       }
       adotadas.push({ conta, symbol: p.symbol, direction: dir, entrada: Number(p.openPrice) })
     }
-  }
+  }))
 
   return { adotadas, notas }
 }

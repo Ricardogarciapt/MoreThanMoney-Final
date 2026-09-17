@@ -349,6 +349,11 @@ async function consumir(): Promise<void> {
   try {
     do {
       deNovo = false
+      // Fila vazia é o caso normal: um `select … limit 1` pelo índice parcial da fila custa ~0,1 ms,
+      // o RPC (plpgsql + for update + update) custava ~11 ms e corria de 10 em 10 s sem nada para
+      // reclamar (14 801 chamadas em 46 h, medido 15–17/09). Se a leitura falhar, segue para o RPC.
+      const { data: pendente, error: ePend } = await db.from('copia_eventos').select('id').is('processado_em', null).limit(1)
+      if (!ePend && !pendente?.length) break
       const { data, error } = await db.rpc('copia_reclamar', { n: LOTE, p_prazo_s: 180 })
       if (error) { log('[erro] reclamar', error.message); break }
       const eventos = ((data ?? []) as EventoCopia[]).map((e) => ({ ...e, id: Number(e.id) }))

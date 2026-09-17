@@ -19,6 +19,7 @@ import { resolvedPerpsChatId } from '@/lib/telegram-channel-ids'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { getSiteOrigin } from '@/lib/site-url'
 import { lifecycleMessage } from './signal-lifecycle'
+import { estadoMudou, fotografiaEstado } from './estado-monitor'
 
 const PERPS_CHAT_SLUG = 'cripto-perps'
 const STATE_KEY = 'perps_monitor_state'
@@ -131,6 +132,7 @@ export async function runPerpsPositionMonitor(): Promise<{
   if (!ok) return { ran: false, reason: 'getPositions falhou (fra1)', events, open: 0 }
 
   const state = await loadState()
+  const estadoLido = fotografiaEstado(state)
   const live = new Map<string, BybitPosition>()
   for (const p of positions) if (p.symbol && p.side) live.set(keyOf(p), p)
 
@@ -207,6 +209,7 @@ export async function runPerpsPositionMonitor(): Promise<{
     events.push(`close ${k}`)
   }
 
-  await saveState(state)
+  // Só grava se a passagem mudou alguma coisa (ver estado-monitor.ts).
+  if (estadoMudou(estadoLido, state)) await saveState(state)
   return { ran: true, events, open: live.size }
 }

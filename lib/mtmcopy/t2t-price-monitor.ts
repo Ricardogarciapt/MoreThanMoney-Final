@@ -33,6 +33,7 @@ import { t2tUsaTrailing } from './t2t-source'
 import { podeSaltarLeitura } from './market-hours'
 import { configT2TDoAmbiente, gerirPosicaoT2T, tpLevels, type EstadoT2T, type LinhaT2T } from '@/lib/gestao-real/t2t'
 import { contaGeridaPeloMotorReal } from '@/lib/gestao-real/contas-live'
+import { estadoMudou, fotografiaEstado } from './estado-monitor'
 
 const STATE_KEY = 't2t_monitor_state'
 /** Parciais 50/30/20, BE (+T2T_BE_BUFFER_PIPS, 5) e BE cedo (T2T_EARLY_BE_RATIO, 0.4): lib/gestao-real/t2t.ts */
@@ -158,6 +159,7 @@ export async function runT2TPriceMonitor(): Promise<{
   let ilegiveis = 0
   const priceCache = new Map<string, number | null>()
   const state = await loadState()
+  const estadoLido = fotografiaEstado(state)
   let managed = 0
 
   /**
@@ -336,7 +338,8 @@ export async function runT2TPriceMonitor(): Promise<{
     }
   }
 
-  await saveState(state)
+  // Só grava se a passagem mudou alguma coisa (ver estado-monitor.ts).
+  if (estadoMudou(estadoLido, state)) await saveState(state)
   if (ilegiveis) actions.push(`${ilegiveis} conta(s) ilegível(eis) — nada concluído sobre elas`)
   return { ran: true, managed, actions, ilegiveis }
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useEffect, useMemo, useState } from "react"
 import { TrendingUp, TrendingDown, Lock, Zap } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
@@ -10,7 +11,6 @@ import { px } from "./api"
 import { type GraficoProps, type Tf, TIMEFRAMES, TV } from "./grafico-tipos"
 import { bibliotecaTvDisponivel } from "./biblioteca-tv"
 import GraficoLeve from "./grafico-leve"
-import GraficoTradingView from "./grafico-tradingview"
 import { useSinaisEstudos } from "./use-sinais-estudos"
 import { useRascunhoOpcional } from "./rascunho-ordem"
 import { InterruptorUmClique } from "./um-clique"
@@ -22,6 +22,10 @@ import { PopoverInputsMTMScanner, sinalDoMTMScanner, useInputsMTMScanner } from 
 import type { ResultadoMTMScanner } from "@/lib/estudos/mtmscanner/tipos"
 
 export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
+
+// A biblioteca do TradingView está adormecida (só entra se `bibliotecaTvDisponivel()`): o seu
+// componente (~600 linhas) deixa de ir no JS inicial de toda a gente e só se descarrega quando é usado.
+const GraficoTradingView = dynamic(() => import("./grafico-tradingview"), { ssr: false })
 
 /**
  * O GRÁFICO DO WEBTRADER — um só modo, com tudo no mesmo gráfico.

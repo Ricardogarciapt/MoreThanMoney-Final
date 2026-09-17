@@ -39,7 +39,8 @@ export function adaptadorMtmFunded(conta: Conta, modo: ModoSessao): AdaptadorCor
     podeNegociar: negociavel,
 
     conta: () => comErros(async () => {
-      const e = await estadoCompleto((await lerConta(conta.id)) ?? conta, modo)
+      // Só saldo/equity/margem: a leitura leve chega (sem ler até 5 000 fechadas a cada sondagem).
+      const e = await estadoCompleto((await lerConta(conta.id)) ?? conta, modo, { leve: true })
       return {
         saldo: e.estado.saldo, equity: e.estado.equity, margem: e.estado.margem, margemLivre: e.estado.margemLivre,
         flutuante: e.estado.flutuante, moeda: 'USD',

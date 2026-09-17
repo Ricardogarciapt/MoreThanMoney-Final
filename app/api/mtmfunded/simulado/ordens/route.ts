@@ -27,6 +27,7 @@ export const dynamic = 'force-dynamic'
  *   · cancelar_todas { accountId, symbol? }
  *   · inverter  { positionId }                     (fecha e abre o lado contrário, mesmo volume)
  * GET ?accountId= → posições abertas, últimas 100 fechadas, pendentes, estado, limites, etiquetas.
+ *   &leve=1 → o mesmo sem as fechadas nem o desempenho (`parcial: true`) — a releitura de 4 em 4 s.
  *
  * O site executa a MERCADO contra a última linha de `funded_precos` (≤5 s); o resto — pendentes,
  * SL/TP, stop-out — é do motor no VPS. Toda a decisão vem de lib/mtmfunded/simulado/ordens.
@@ -45,7 +46,9 @@ export async function GET(request: NextRequest) {
   try {
     const accountId = request.nextUrl.searchParams.get('accountId') ?? ''
     const { conta, modo } = await autorizarConta(request, accountId)
-    return NextResponse.json(await estadoCompleto(conta, modo), { headers: { 'Cache-Control': 'no-store' } })
+    // ?leve=1 — a releitura periódica do ecrã: sem histórico nem desempenho (ver estadoCompleto).
+    const leve = request.nextUrl.searchParams.get('leve') === '1'
+    return NextResponse.json(await estadoCompleto(conta, modo, { leve }), { headers: { 'Cache-Control': 'no-store' } })
   } catch (e) {
     return falhou(e)
   }

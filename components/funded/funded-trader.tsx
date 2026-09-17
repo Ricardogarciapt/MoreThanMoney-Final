@@ -1,13 +1,14 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { type MapaPrecos, estadoDaConta } from "@/lib/mtmfunded/simulado/matematica"
 import { limitesDaConta, posicaoDaLinha, simbolosParaMedir } from "@/lib/mtmfunded/simulado/ordens"
 import { type SimboloFicha, type PrecoVivo, pedir, ordem, usd } from "./api"
 import { usePrecos } from "./use-precos"
 import { fichaDe } from "./pre-carga"
+import { assinaturaEstado, intervaloDeSondagem, juntarLeve, precisaDeEstadoCheio } from "./estado-leve"
 import type { Prefill } from "./funded-ticket"
 import type { PedidoOrdem } from "./rascunho-ordem"
 import { corpoDoPedido } from "./pedido"
@@ -22,7 +23,7 @@ const LayoutPro = dynamic(() => import("./layout-pro"), { ssr: false })
 /**
  * O WEBTRADER DE UMA CONTA — os dados, num só sítio; a apresentação, em dois modos.
  *
- * Aqui vive tudo o que é da conta: a releitura a cada 4 s (o motor fecha por SL/TP, executa
+ * Aqui vive tudo o que é da conta: a releitura (4 s, leve — estado-leve.ts) (o motor fecha por SL/TP, executa
  * pendentes, move trailings e fecha TPs parciais sem o ecrã saber), os preços ao vivo só dos
  * símbolos à vista, a equity/margem recalculadas a cada preço com a matemática do servidor, os
  * alertas e o diário. O modo (modo-webtrader.tsx) só escolhe COMO se mostra:
@@ -51,9 +52,27 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
   const alertas = useAlertas(accountId)
   const diario = useDiario(accountId)
 
-  const recarregar = useCallback(async () => {
+  /** Última resposta INTEIRA (com histórico e desempenho) — a régua da releitura leve. */
+  const ultimoCheio = useRef<{ em: number; assinatura: string } | null>(null)
+  const dadosRef = useRef<Estado | null>(null)
+
+  /**
+   * `cheio=false` é a sondagem: pede a versão leve e só volta a pedir a inteira quando o saldo, as
+   * posições ou as pendentes mudaram (ver estado-leve.ts). Depois de uma ordem pede-se sempre inteira.
+   */
+  const recarregar = useCallback(async (cheio = true) => {
     try {
-      const d = await pedir<Estado>(`/api/mtmfunded/simulado/ordens?accountId=${accountId}`, {}, accountId)
+      const base = `/api/mtmfunded/simulado/ordens?accountId=${accountId}`
+      let d = await pedir<Estado>(cheio ? base : `${base}&leve=1`, {}, accountId)
+      if (d.parcial) {
+        if (!dadosRef.current || precisaDeEstadoCheio(ultimoCheio.current, assinaturaEstado(d), Date.now())) {
+          d = await pedir<Estado>(base, {}, accountId)
+        } else {
+          d = juntarLeve(dadosRef.current, d)
+        }
+      }
+      if (!d.parcial) ultimoCheio.current = { em: Date.now(), assinatura: assinaturaEstado(d) }
+      dadosRef.current = d
       setDados(d)
       setFichas((f) => {
         const novo = { ...f }
@@ -68,9 +87,21 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
 
   useEffect(() => {
     setDados(null)
+    dadosRef.current = null
+    ultimoCheio.current = null
     void recarregar()
-    const iv = setInterval(() => { if (document.visibilityState !== "hidden") void recarregar() }, 4000)
-    return () => clearInterval(iv)
+    // 4 s com posições/pendentes, 10 s com a conta parada; com o separador escondido não se pede nada.
+    let vivo = true
+    let t: ReturnType<typeof setTimeout>
+    const agendar = () => {
+      t = setTimeout(async () => {
+        if (!vivo) return
+        if (document.visibilityState !== "hidden") await recarregar(false)
+        if (vivo) agendar()
+      }, intervaloDeSondagem(dadosRef.current))
+    }
+    agendar()
+    return () => { vivo = false; clearTimeout(t) }
   }, [recarregar])
 
   /** A ficha COM especificações (sessões incluídas) — pede-se ao catálogo se ainda não houver. */

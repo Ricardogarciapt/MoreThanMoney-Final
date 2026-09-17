@@ -29,6 +29,7 @@ node_modules/.bin/esbuild services/funded-motor/motor.ts --bundle --platform=nod
   --format=cjs --minify-syntax --legal-comments=none --external:bufferutil --external:utf-8-validate \
   --outfile=deploy/vps-stream/funded-motor/dist/motor.js
 npx tsx services/funded-motor/teste-avaliacao.ts   # tem de dizer «todos certos»
+npx tsx services/funded-motor/teste-metricas-escrita.ts   # métricas só se gravam quando mudam (17/09)
 ```
 
 Um só ficheiro (~3 MB, com o SDK da MetaApi e a Supabase lá dentro): o VPS não precisa de

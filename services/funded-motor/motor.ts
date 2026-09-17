@@ -53,6 +53,12 @@ import { iniciarEspelho, latenciaSeguidoras, simbolosDoEspelho } from './espelho
 import { iniciarEspelhoProvider, simbolosDoProvider, type ControloProvider } from './espelho-provider'
 import { feedTradeLockerDoAmbiente, type ComparadorTradeLocker } from './feed-tradelocker'
 import { registarErroMetaApi } from './metaapi-partilhada'
+import {
+  assinaturaMetricas,
+  precisaDeEscreverMetricas,
+  ultimoPontoDoHistorico,
+  type UltimaEscritaMetricas,
+} from './metricas-escrita'
 
 // ── configuração ──────────────────────────────────────────────────────────────
 const env = (k: string, obrigatoria = true) => {
@@ -139,7 +145,7 @@ const sujas = new Set<string>()
 const escritaLocalEm = new Map<string, number>()
 const ultimaEquity = new Map<string, { em: number; equity: number; margem: number }>()
 const ultimoSnapshot = new Map<string, number>()
-const ultimasMetricas = new Map<string, number>()
+const ultimasMetricas = new Map<string, UltimaEscritaMetricas>()
 const fechosDe = new Map<string, FechoHistorico[]>()
 const eventoEnviadoEm = new Map<string, number>()
 const pedidos = new Set<string>()
@@ -865,10 +871,18 @@ async function processarConta(id: string, confirmado = false): Promise<void> {
     if (CFG.escrita) await db.from('funded_equity_snapshots').insert({ account_id: id, saldo: c.sim_saldo, equity: d.estado.equity })
   }
 
-  // Métricas de minuto a minuto (o cron do MT5 fá-lo de hora a hora; aqui é barato).
-  if (agoraMs - (ultimasMetricas.get(id) ?? 0) >= 60_000) {
-    ultimasMetricas.set(id, agoraMs)
+  // Métricas: no máximo de minuto a minuto e SÓ quando mudam (ou quando o gráfico precisa do ponto
+  // da hora, ou de 15 em 15 min). Antes eram lidas e reescritas todos os minutos em todas as contas,
+  // mesmo paradas — a maior fonte de escrita da base (ver metricas-escrita.ts).
+  const assinatura = assinaturaMetricas({
+    equity: d.estado.equity, saldo: c.sim_saldo, margem: d.estado.margem, nivelMargem: d.estado.nivelMargemPct,
+    posicoes: (posicoesDe.get(id) ?? []).length, fechos: (fechosDe.get(id) ?? []).length,
+    ancoraDia: c.sim_ancora_dia, diasNegociados: c.sim_dias_negociados,
+  })
+  if (precisaDeEscreverMetricas(ultimasMetricas.get(id), assinatura, agoraMs)) {
     const m = await construirMetricas(c, d.estado.equity, d.estado.margem, d.estado.nivelMargemPct)
+    // Regista-se antes da escrita e também em modo seco: o ritmo das leituras é o mesmo nos dois.
+    ultimasMetricas.set(id, { em: agoraMs, assinatura, ultimoPontoMs: ultimoPontoDoHistorico(m) })
     if (CFG.escrita) {
       await db.from('mtm_trading_accounts').update({ metricas: m, metricas_lidas_em: new Date().toISOString() }).eq('id', id).eq('estado', 'ativa')
     }

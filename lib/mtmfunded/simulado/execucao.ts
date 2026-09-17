@@ -564,18 +564,27 @@ export async function sincronizarAlvo(conta: Conta, symbol: string, alvo: number
 
 // ── o estado inteiro de uma conta (GET) ──────────────────────────────────
 
-export async function estadoCompleto(conta: Conta, modo: ModoSessao) {
+/**
+ * `leve`: sem o histórico (últimas 100 fechadas, `select *`) e sem o desempenho (até 5 000
+ * fechadas). É o que o WebTrader pede na releitura de 4 em 4 s — posições, pendentes, saldo e
+ * limites continuam completos, que é o que o motor muda sem o ecrã saber. O histórico só muda
+ * quando uma posição fecha, e aí o saldo ou a lista de abertas também mudam: o cliente vê isso e
+ * pede o estado inteiro (components/funded/estado-leve.ts). Resposta leve leva `parcial: true`.
+ */
+export async function estadoCompleto(conta: Conta, modo: ModoSessao, opcoes: { leve?: boolean } = {}) {
   const db = getSupabaseAdmin()
+  const leve = opcoes.leve === true
   const segue = conta.segue_estrategia ? String(conta.segue_estrategia) : null
+  const nada = Promise.resolve({ data: null })
   const [abertas, { data: fechadas }, { data: pendentes }, regras, { data: todasFechadas }, { data: estrategia }] = await Promise.all([
     posicoesAbertas(conta.id),
-    db.from('funded_positions').select('*').eq('account_id', conta.id).eq('estado', 'fechada')
+    leve ? nada : db.from('funded_positions').select('*').eq('account_id', conta.id).eq('estado', 'fechada')
       .order('fechada_em', { ascending: false }).limit(100),
     db.from('funded_orders').select('*').eq('account_id', conta.id).eq('estado', 'pendente')
       .order('criada_em', { ascending: false }),
     regrasDaConta(conta),
     // O desempenho mede a conta INTEIRA, não só as 100 do histórico visível.
-    db.from('funded_positions')
+    leve ? nada : db.from('funded_positions')
       .select('id, mae_id, symbol, direcao, volume, preco_entrada, preco_fecho, pnl, comissao, swap, fechada_em, origem, comentario')
       .eq('account_id', conta.id).eq('estado', 'fechada').order('fechada_em', { ascending: true }).limit(5000),
     segue
@@ -592,6 +601,7 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao) {
     regras, Number(conta.saldo_inicial ?? 0), estado.equity,
     conta.sim_ancora_dia == null ? null : Number(conta.sim_ancora_dia), Number(metricas.fase ?? 1),
   )
+  // Na leve o desempenho sai vazio (e `parcial` diz ao cliente para manter o que já tinha).
   const desempenho = desempenhoDaConta({
     saldoInicial: Number(conta.saldo_inicial ?? 0),
     equity: estado.equity,
@@ -600,6 +610,7 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao) {
   })
   return {
     modo,
+    parcial: leve,
     desempenho,
     conta: {
       id: conta.id, login: conta.mt5_login, servidor: conta.servidor ?? SERVIDOR_SIMULADO,

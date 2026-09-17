@@ -174,16 +174,18 @@ function useVariacoes(symbols: string[]) {
   useEffect(() => {
     if (!chave) return
     let vivo = true
+    // Em paralelo (a rota serve da CDN/cache): em série, 16 símbolos eram 16 idas e voltas seguidas
+    // e os últimos mini-gráficos da lista apareciam segundos depois dos primeiros.
     const ir = async () => {
-      for (const sym of chave.split(",")) {
+      await Promise.all(chave.split(",").map(async (sym) => {
         try {
           const r = await fetch(`/api/mtmfunded/simulado/velas?symbol=${sym}&tf=H1&limit=24`)
           const d = await r.json()
           const velas = (d.velas ?? []) as Array<{ o: number; c: number }>
-          if (!vivo || velas.length < 2) continue
+          if (!vivo || velas.length < 2) return
           setDados((x) => ({ ...x, [sym]: { ref: velas[0].o, pontos: velas.map((v) => v.c) } }))
         } catch { /* sem velas: sem mini-gráfico */ }
-      }
+      }))
     }
     void ir()
     const iv = setInterval(() => { if (document.visibilityState !== "hidden") void ir() }, 10 * 60_000)
