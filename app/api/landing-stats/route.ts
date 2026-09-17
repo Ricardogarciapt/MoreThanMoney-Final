@@ -8,7 +8,10 @@ import { getLandingStats } from '@/lib/landing-stats'
  * Só contagens — nunca valores em euros, nunca dados de utilizador.
  */
 export const runtime = 'nodejs'
-export const revalidate = 3600
+// Pedida em cada visita e servida pela cache do CDN (cabeçalho abaixo). Deixou de ser gerada no
+// build a 17/09: uma leitura lenta do Supabase nesse momento fazia falhar o deploy inteiro
+// («took more than 60 seconds»), por uma rota que só devolve contagens.
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const stats = await getLandingStats()

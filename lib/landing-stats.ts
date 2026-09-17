@@ -51,7 +51,11 @@ export const SNAPSHOT: LandingStats = {
 /** Lê os números publicáveis. Nunca falha: cai no snapshot. */
 export async function getLandingStats(): Promise<LandingStats> {
   try {
-    const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', KEY).maybeSingle()
+    const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', KEY)
+      // 4 s e cai no snapshot: estas páginas também se geram no build, e uma leitura lenta do
+      // Supabase não pode prender o deploy (17/09 falhou por isso).
+      .abortSignal(AbortSignal.timeout(4000))
+      .maybeSingle()
     const v = data?.value as Partial<LandingStats> | null
     if (v && typeof v.trades === 'number' && v.trades > 0) {
       return {
