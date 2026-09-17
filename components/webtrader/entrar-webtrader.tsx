@@ -30,7 +30,9 @@ type Resultado = { plataforma: "mtmfunded"; sessao: SessaoConta } | { plataforma
 function ehIosNativo(): boolean {
   if (typeof navigator === "undefined") return false
   // MTM System (MTMNativeApp) ou app MTM Auto (MTMAuto-iOS): nenhuma deixa comprar fora da Apple.
-  return /MTMNativeApp|MTMAuto-iOS/i.test(navigator.userAgent) && /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  const ua = navigator.userAgent
+  // O iPad dentro de uma app identifica-se como «Macintosh»; nenhum browser de Mac traz estas marcas.
+  return /MTMAuto-iOS/i.test(ua) || (/MTMNativeApp/i.test(ua) && /iPhone|iPad|iPod|Macintosh/i.test(ua))
 }
 
 function destinoAtual(): string {
@@ -176,6 +178,10 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
           </button>
         </form>
 
+        {/* Dentro das apps iOS entra-se com a conta da app (email/password ou a sessão passada pela
+            app). Google e PrimeVerse ficam de fora: a regra 4.8 da Apple obriga a dar o «Iniciar
+            sessão com a Apple» com o mesmo destaque, e na app isso já é feito no ecrã de entrada dela. */}
+        {!iosNativo && (<>
         <div className="flex items-center gap-2 text-[11px] text-zinc-500"><span className="h-px flex-1 bg-white/10" />ou<span className="h-px flex-1 bg-white/10" /></div>
 
         <button type="button" onClick={entrarGoogle} disabled={aEntrar} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-white text-[14px] font-semibold text-zinc-900 disabled:opacity-40">
@@ -202,10 +208,13 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
           </form>
         )}
 
-        <p className="text-center text-[11.5px] text-zinc-500">
-          <a href={`/login?redirect=${encodeURIComponent(destinoAtual())}`} className="hover:text-white">Outras opções de entrada (Apple…)</a>
-          {!iosNativo && <> · <a href="/register" className="text-[#D2A63C]">Criar conta MTM</a></>}
-        </p>
+        </>)}
+        {!iosNativo && (
+          <p className="text-center text-[11.5px] text-zinc-500">
+            <a href={`/login?redirect=${encodeURIComponent(destinoAtual())}`} className="hover:text-white">Outras opções de entrada (Apple…)</a>
+            {" · "}<a href="/register" className="text-[#D2A63C]">Criar conta MTM</a>
+          </p>
+        )}
       </div>
 
       <div className="mt-3 rounded-2xl border border-white/10 bg-[#0d0f15]">

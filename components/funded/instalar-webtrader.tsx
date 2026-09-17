@@ -38,7 +38,7 @@ function jaInstalada() {
 }
 function nativa() {
   try {
-    return isNativeApp() || /MTMNativeApp/i.test(navigator.userAgent)
+    return isNativeApp() || /MTMNativeApp|MTMAuto-(iOS|Android)/i.test(navigator.userAgent)
   } catch {
     return false
   }

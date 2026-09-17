@@ -252,8 +252,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
           <span className="hidden min-w-0 items-center gap-1 truncate text-[10.5px] font-semibold text-rose-300 md:flex">
             <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> Conta REAL · as ordens são executadas na tua corretora
           </span>
-        ) : (
+        ) : !atual ? null : (
           // O aviso diz o ponto do caminho da conta ACTIVA (avaliação, Funded, análise…) — lib/mtmfunded/aviso-conta.ts.
+          // Sem conta aberta (ecrã de entrada) não há nada para avisar.
           <span className={`hidden min-w-0 items-center gap-1 truncate text-[10.5px] md:flex ${avisoReal(atual?.aviso) ? "font-semibold text-emerald-300" : "text-amber-200/90"}`}>
             <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> {t(chaveDoAviso(atual?.aviso))}
           </span>
@@ -267,7 +268,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
         <p className="flex items-center gap-1 bg-rose-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-rose-300 md:hidden">
           <ShieldAlert className="h-3 w-3 shrink-0" /> Conta REAL · ordens executadas na tua corretora
         </p>
-      ) : (
+      ) : !atual ? null : (
         <p className={`flex items-center gap-1 px-2 py-0.5 text-[10.5px] md:hidden ${avisoReal(atual?.aviso) ? "bg-emerald-500/10 font-semibold text-emerald-300" : "bg-amber-500/10 text-amber-200"}`}>
           <ShieldAlert className="h-3 w-3 shrink-0" /> {t(chaveDoAviso(atual?.aviso, true))}
         </p>
