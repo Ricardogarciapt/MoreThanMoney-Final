@@ -8,7 +8,7 @@
  *
  * Agora «renova sozinha» só é verdade quando existe um débito real a correr:
  *  - `isento`       → admin ou VIP. Não se cobra (decisão do dono); o acesso estende-se.
- *  - `stripe`       → subscrição Stripe activa e sem cancelamento marcado. A data vem da Stripe.
+ *  - `stripe`       → subscrição Stripe activa (não past_due) e sem cancelamento marcado. A data vem da Stripe.
  *  - `app_store`    → subscrição Apple activa. As notificações da Apple mantêm a data.
  *  - `cobrar`       → tudo o resto. No fim do período o acesso fica em pausa até pagar pela Stripe.
  */
@@ -32,7 +32,8 @@ export interface EstadoStripe {
   fimPeriodo: string | null
 }
 
-const STRIPE_A_COBRAR = new Set(['active', 'trialing', 'past_due'])
+// past_due fica de fora: o pagamento falhou; o acesso volta quando a Stripe cobrar (webhook).
+const STRIPE_A_COBRAR = new Set(['active', 'trialing'])
 
 export function eIsento(p: PerfilRenovacao): boolean {
   return p.user_type === 'admin' || p.user_type === 'vip' || p.member_category === 'vip'

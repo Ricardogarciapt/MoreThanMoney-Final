@@ -12,7 +12,7 @@ assert.equal(classificarRenovacao({ user_type: 'vip', member_category: 'premium'
 assert.equal(classificarRenovacao({ user_type: 'admin' }, null), 'isento')
 // Stripe a correr = renova sozinha.
 assert.equal(classificarRenovacao({ member_category: 'premium', stripe_subscription_id: 'sub_1' }, ativa), 'stripe')
-assert.equal(classificarRenovacao({ member_category: 'premium', stripe_subscription_id: 'sub_1' }, { ...ativa, status: 'past_due' }), 'stripe')
+assert.equal(classificarRenovacao({ member_category: 'premium', stripe_subscription_id: 'sub_1' }, { ...ativa, status: 'past_due' }), 'cobrar')
 // Stripe cancelada, a cancelar no fim, ou ilegível → cobrar.
 assert.equal(classificarRenovacao({ member_category: 'premium', stripe_subscription_id: 'sub_1' }, { ...ativa, status: 'canceled' }), 'cobrar')
 assert.equal(classificarRenovacao({ member_category: 'premium', stripe_subscription_id: 'sub_1' }, { ...ativa, cancelaNoFim: true }), 'cobrar')
