@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { CONTRATO_VERSAO, textoDoContrato } from '@/lib/mtmfunded/contrato'
+import { CONTRATO_VERSAO, CONTRATO_VERSOES_ACEITES, textoDoContrato } from '@/lib/mtmfunded/contrato'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 20
@@ -43,7 +43,9 @@ export async function GET(request: NextRequest) {
     .from('mtm_funded_contracts')
     .select('id, versao, nome_completo, assinado_em')
     .eq('user_id', user.id)
-    .eq('versao', CONTRATO_VERSAO)
+    .in('versao', [...CONTRATO_VERSOES_ACEITES])
+    .order('assinado_em', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   return NextResponse.json({

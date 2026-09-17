@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { CAPITAL_REAL_PCT, CONTRATO_VERSAO, QUOTA_TRADER, textoDoContrato } from '../contrato'
+import { CAPITAL_REAL_PCT, CONTRATO_VERSAO, CONTRATO_VERSOES_ACEITES, QUOTA_TRADER, textoDoContrato } from '../contrato'
 
 let ok = 0
 function t(nome: string, f: () => void) {
@@ -53,3 +53,14 @@ t('Aviso de Risco e Termos sem «simulada do princípio ao fim»', () => {
 })
 
 console.log(`contrato-textos: ${ok} verificações ${process.exitCode ? 'com FALHAS' : 'ok'}`)
+
+// Decisão do dono (17/09): assinaturas v2 valem como contrato em vigor, sem nova assinatura.
+{
+  assert.deepEqual([...CONTRATO_VERSOES_ACEITES], ['2026-09-v2', '2026-09-v3'])
+  for (const f of ['app/api/mtmfunded/contrato/route.ts', 'app/api/mtmfunded/levantamentos/route.ts']) {
+    const src = readFileSync(f, 'utf8')
+    assert.ok(!src.includes(".eq('versao', CONTRATO_VERSAO)"), `${f} não pode exigir só a versão actual`)
+    assert.ok(src.includes('CONTRATO_VERSOES_ACEITES'), `${f} aceita as versões em vigor`)
+  }
+  console.log('ok  assinaturas v2 continuam válidas')
+}

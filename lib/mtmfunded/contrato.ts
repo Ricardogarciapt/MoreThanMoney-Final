@@ -16,6 +16,14 @@
  */
 export const CONTRATO_VERSAO = '2026-09-v3'
 
+/**
+ * Assinaturas que contam como contrato em vigor. Decisão do dono (17/09): quem assinou a v2 fica
+ * com o contrato por assinado na v3, sem nova assinatura e sem email — a v3 só reescreveu a
+ * descrição da conta Funded; números e cláusulas são os mesmos. Assinaturas NOVAS gravam sempre a
+ * versão actual (`CONTRATO_VERSAO`).
+ */
+export const CONTRATO_VERSOES_ACEITES: readonly string[] = ['2026-09-v2', CONTRATO_VERSAO]
+
 export interface DadosContrato {
   nome: string
   saldo: number

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { CONTRATO_VERSAO, almofadaUsd, levantavelUsd, QUOTA_TRADER } from '@/lib/mtmfunded/contrato'
+import { CONTRATO_VERSAO, CONTRATO_VERSOES_ACEITES, almofadaUsd, levantavelUsd, QUOTA_TRADER } from '@/lib/mtmfunded/contrato'
 import { equityParaLevantamento } from '@/lib/mtmfunded/numeros-conta'
 
 export const dynamic = 'force-dynamic'
@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
     .from('mtm_funded_contracts')
     .select('id, versao, assinado_em, data_nascimento')
     .eq('user_id', user.id)
-    .eq('versao', CONTRATO_VERSAO)
+    .in('versao', [...CONTRATO_VERSOES_ACEITES])
+    .order('assinado_em', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   const { data: contas } = await db
@@ -100,7 +102,9 @@ export async function POST(request: NextRequest) {
     .from('mtm_funded_contracts')
     .select('id, data_nascimento')
     .eq('user_id', user.id)
-    .eq('versao', CONTRATO_VERSAO)
+    .in('versao', [...CONTRATO_VERSOES_ACEITES])
+    .order('assinado_em', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   if (!contrato) {
