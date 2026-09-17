@@ -1,9 +1,9 @@
 "use client"
 
-export type MemberBadgeProfile = {
+import { chavePerfilUi, type ChavePerfil, type PerfilUi } from "@/lib/perfil-ui"
+
+export type MemberBadgeProfile = PerfilUi & {
   full_name?: string | null
-  user_type?: string | null
-  member_category?: string | null
 }
 
 type BadgeStyle = {
@@ -14,7 +14,7 @@ type BadgeStyle = {
   border: string
 }
 
-const BADGE_STYLES: Record<string, BadgeStyle> = {
+const BADGE_STYLES: Record<ChavePerfil, BadgeStyle> = {
   admin: {
     label: "Admin",
     emoji: "🔴",
@@ -50,32 +50,40 @@ const BADGE_STYLES: Record<string, BadgeStyle> = {
     text: "text-cyan-400",
     border: "border-cyan-500/35",
   },
-  standard: {
+  membro: {
     label: "App",
     emoji: "📱",
     bg: "bg-green-500/15",
     text: "text-green-400",
     border: "border-green-500/35",
   },
-  guest: {
+  trial: {
     label: "Trial",
     emoji: "⏳",
     bg: "bg-orange-500/15",
     text: "text-orange-400",
     border: "border-orange-500/35",
   },
+  inativo: {
+    label: "Em pausa",
+    emoji: "⏸",
+    bg: "bg-gray-500/15",
+    text: "text-gray-400",
+    border: "border-gray-500/35",
+  },
 }
 
+/**
+ * O emblema que a comunidade vê ao lado do nome.
+ *
+ * Lia `member_category || user_type` no fim, e daí vinham dois enganos: o trial aparecia como
+ * «💎 Premium» (é um `guest` com a categoria Premium) e quem estava em pausa por pagamento
+ * continuava a exibir o emblema do plano que deixou de pagar. Agora é a mesma leitura de perfil
+ * que o menu e as definições usam.
+ */
 export function resolveMemberBadge(profile?: MemberBadgeProfile | null): BadgeStyle | null {
   if (!profile) return null
-
-  if (profile.user_type === "admin") return BADGE_STYLES.admin
-  if (profile.user_type === "vip" || profile.member_category === "vip") return BADGE_STYLES.vip
-
-  const cat = profile.member_category || profile.user_type
-  if (!cat) return null
-
-  return BADGE_STYLES[cat] ?? null
+  return BADGE_STYLES[chavePerfilUi(profile)] ?? null
 }
 
 export default function MemberBadge({

@@ -47,6 +47,7 @@ import { useT } from "@/components/i18n-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { chavePerfilUi, type ChavePerfil, type PerfilUi } from "@/lib/perfil-ui"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,15 +55,25 @@ function xpProgressInLevel(totalXp: number): number {
   return totalXp % 1000
 }
 
-function planLabel(category: string | undefined | null): { label: string; color: string; bg: string } {
-  const map: Record<string, { label: string; color: string; bg: string }> = {
-    standard: { label: '📱 App Member (€35)', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/30' },
-    premium:  { label: '💎 Premium (€65)',    color: 'text-cyan-400',  bg: 'bg-cyan-500/10 border-cyan-500/30'  },
-    iq:       { label: '🎓 IQ Member',        color: 'text-blue-400',  bg: 'bg-blue-500/10 border-blue-500/30'  },
-    skool:    { label: '📚 Skool Member',     color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/30' },
-    vip:      { label: '⭐ VIP',              color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/30' },
+/**
+ * O plano, como o cliente o vê nas Definições.
+ *
+ * Lia-se só `member_category`: um admin ou um VIP com a categoria em 'standard' liam aqui
+ * «📱 App Member (€35)» e — pior — recebiam o convite para comprar o upgrade logo por baixo.
+ * Quem paga Premium pelo `subscription_plan` via o preço errado pela mesma razão.
+ */
+function planLabel(perfil: PerfilUi | null | undefined): { label: string; color: string; bg: string } {
+  const map: Record<ChavePerfil, { label: string; color: string; bg: string }> = {
+    admin:   { label: '🔴 Admin',            color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/30'    },
+    membro:  { label: '📱 App Member (€35)', color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/30' },
+    premium: { label: '💎 Premium (€65)',    color: 'text-cyan-400',   bg: 'bg-cyan-500/10 border-cyan-500/30'  },
+    iq:      { label: '🎓 IQ Member',        color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/30'  },
+    skool:   { label: '📚 Skool Member',     color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/30' },
+    vip:     { label: '⭐ VIP',              color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/30' },
+    trial:   { label: '⏳ Trial',            color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/30' },
+    inativo: { label: '⏸ Conta em pausa',   color: 'text-gray-400',   bg: 'bg-gray-500/10 border-gray-500/30'  },
   }
-  return map[category ?? ''] ?? { label: '👤 Membro', color: 'text-gray-400', bg: 'bg-gray-500/10 border-gray-500/30' }
+  return map[chavePerfilUi(perfil)]
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -440,8 +451,10 @@ export default function SettingsMobile() {
     loadXp()
   }, [user?.id])
 
-  const isAppOnly = user?.member_category === "standard"
-  const plan = planLabel(user?.member_category)
+  // O convite para fazer upgrade é para quem é mesmo Membro — não para o admin nem para o VIP
+  // que por acaso têm a categoria em 'standard'.
+  const isAppOnly = chavePerfilUi(user) === "membro"
+  const plan = planLabel(user)
 
   // ── Guardar nome ───────────────────────────────────────────────────────────
   const saveName = async () => {

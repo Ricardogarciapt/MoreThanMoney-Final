@@ -31,6 +31,7 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import { LanguageMenuItem } from "@/components/language-menu-item"
+import { chavePerfilUi, ehAdminUi, type ChavePerfil, type PerfilUi } from "@/lib/perfil-ui"
 
 interface UserProfile {
   id: string
@@ -439,21 +440,26 @@ export default function UserDropdown() {
   const displayName = user.full_name || user.username || "Utilizador"
   const displayEmail = user.email || ""
   const avatarUrl = user.avatar_url || null
-  const isAdmin = user.user_type === 'admin'
+  // O link para o painel de administração exigia só `user_type='admin'`; o `AuthContext` exige
+  // também a conta activa. Agora pedem a mesma coisa.
+  const isAdmin = ehAdminUi(user as PerfilUi)
 
-  const userTypeBadge: Record<string, { label: string; color: string }> = {
+  /**
+   * Emblema do menu. Não tinha entrada para Premium e lia só `user_type`, pelo que um Premium ou
+   * um VIP marcado na categoria apareciam aqui como «Membro» e como «⭐ VIP»/«💎 Premium» na app.
+   */
+  const userTypeBadge: Record<ChavePerfil, { label: string; color: string }> = {
     admin: { label: "Admin", color: "bg-red-500/20 text-red-400 border-red-500/30" },
-    member: { label: "Membro", color: "bg-green-500/20 text-green-400 border-green-500/30" },
+    membro: { label: "Membro", color: "bg-green-500/20 text-green-400 border-green-500/30" },
     vip: { label: "VIP", color: "bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30" },
+    premium: { label: "Premium", color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+    iq: { label: "IQ", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+    skool: { label: "Skool", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
     trial: { label: "Trial", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-    guest: { label: "Guest", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
-    presentation: { label: "Apresentação", color: "bg-pink-500/20 text-pink-400 border-pink-500/30" },
-    pending: { label: "Aguardando", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
-    affiliate: { label: "Afiliado", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-    inactive: { label: "Inativo", color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+    inativo: { label: "Inativo", color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
   }
 
-  const badge = userTypeBadge[user.user_type || 'member'] || userTypeBadge.member
+  const badge = userTypeBadge[chavePerfilUi(user as PerfilUi)]
 
   return (
     <DropdownMenu>

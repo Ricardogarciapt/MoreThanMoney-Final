@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
+import { ehAdminUi, ehVipUi } from "@/lib/perfil-ui"
 import {
   CHART_SOCIAL_CATEGORIES,
   inferChartSocialCategory,
@@ -120,12 +121,13 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("user_type, member_category, full_name, username")
+      .select("user_type, member_category, membership_level, subscription_plan, is_active, full_name, username")
       .eq("id", session.user.id)
       .single()
 
-    const canPost =
-      profile?.user_type === "admin" || profile?.member_category === "vip"
+    // Mesma leitura de VIP do resto do site (qualquer um dos campos) — é a que o botão do
+    // scanner passa a usar, para o botão e a rota nunca discordarem.
+    const canPost = ehAdminUi(profile) || ehVipUi(profile)
 
     if (!canPost) {
       return NextResponse.json(

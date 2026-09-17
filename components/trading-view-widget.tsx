@@ -47,6 +47,7 @@ import ScannerScreener from "@/components/scanner-screener"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import ChartSocialShareDialog from "@/components/chart-social-share-dialog"
+import { ehAdminUi, ehVipUi } from "@/lib/perfil-ui"
 import {
   buildChartShareSnapshot,
   captureChartScreenshot,
@@ -301,29 +302,23 @@ export default function TradingViewWidget({
         if (session?.user?.id) {
           setCurrentUserId(session.user.id)
           
-          // Verificar se é admin ou VIP (query resiliente: membership_type pode não existir em todos os ambientes)
-          let profile: { user_type?: string; membership_type?: string } | null = null
-          const { data: profileData, error: profileError } = await supabase
+          /**
+           * Admin e VIP.
+           *
+           * Isto lia `membership_type`, uma coluna que NÃO existe em `profiles`: a query falhava
+           * sempre, caía no ramo de recurso e o campo ficava `undefined` para toda a gente. Na
+           * prática o VIP resumia-se a `member_category` e os grupos de partilha só abriam a
+           * admins. Passa a ler os campos que existem, como o resto do site.
+           */
+          const { data: profile } = await supabase
             .from('profiles')
-            .select('user_type, membership_type, member_category')
+            .select('user_type, member_category, membership_level, subscription_plan, is_active')
             .eq('id', session.user.id)
             .maybeSingle()
-          if (profileError) {
-            const { data: fallback } = await supabase
-              .from('profiles')
-              .select('user_type, member_category')
-              .eq('id', session.user.id)
-              .maybeSingle()
-            profile = fallback ? { ...fallback, membership_type: undefined } : null
-          } else {
-            profile = profileData
-          }
           if (profile) {
-            setIsAdmin(profile.user_type === 'admin')
-            setIsVip(
-              profile.membership_type === 'vip' || (profile as { member_category?: string }).member_category === 'vip'
-            )
-            if ((profile.user_type === 'admin' || profile.membership_type === 'vip') && canShareToGroups) {
+            setIsAdmin(ehAdminUi(profile))
+            setIsVip(ehVipUi(profile))
+            if ((ehAdminUi(profile) || ehVipUi(profile)) && canShareToGroups) {
               loadAvailableGroups()
             }
           }

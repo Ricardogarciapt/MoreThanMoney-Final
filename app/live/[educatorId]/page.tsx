@@ -239,6 +239,7 @@ export default function LiveByEducatorPage() {
               roomCourses={roomCourses}
               userPlan={(user as { subscription_plan?: string })?.subscription_plan}
               userType={(user as { user_type?: string })?.user_type}
+              memberCategory={(user as { member_category?: string })?.member_category}
               defaultOpen={!streamId}
             />
           )}

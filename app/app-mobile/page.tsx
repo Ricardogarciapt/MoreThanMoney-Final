@@ -35,6 +35,7 @@ import SettingsMobile from "@/components/mobile/settings-mobile"
 import OnboardingTutorial, { useOnboarding } from "@/components/mobile/onboarding-tutorial"
 import MlmDashboardTab from "@/components/mobile/mlm-dashboard-tab"
 import { useAuth } from "@/contexts/auth-context"
+import { chavePerfilUi, type PerfilUi } from "@/lib/perfil-ui"
 import { useCapacitor } from "@/hooks/use-capacitor"
 import { usePushNotifications, type ForegroundMessage } from "@/hooks/use-push-notifications"
 import { supabase } from "@/lib/supabase"
@@ -213,15 +214,20 @@ function AppMobileContent() {
       return
     }
 
-    // Determinar plano web do utilizador
-    const category = (user as any).member_category as string | null
-    const appOnly = isAppOnlyUser
-    let plan = 'none'
-    if (category === 'premium' || category === 'vip') {
-      plan = 'premium'
-    } else if (category === 'standard' || category === 'iq' || category === 'skool' || appOnly) {
-      plan = 'app_member'
-    }
+    /**
+     * Plano web do utilizador — é ISTO que o shell nativo usa para decidir se mostra o paywall.
+     *
+     * Lia-se só `member_category`, e por isso um admin ou um VIP marcado em `user_type` saíam
+     * daqui como `none`: a app nativa pedia-lhes para comprar o que já têm. O Premium pago em
+     * `subscription_plan` (com a categoria ainda em 'standard') dava o mesmo resultado.
+     */
+    const chave = chavePerfilUi(user as PerfilUi)
+    const plan =
+      chave === 'admin' || chave === 'vip' || chave === 'premium' || chave === 'trial'
+        ? 'premium'
+        : chave === 'iq' || chave === 'skool' || chave === 'membro'
+          ? 'app_member'
+          : 'none'
 
     window.dispatchEvent(new CustomEvent('mtm-auth-state', {
       detail: {

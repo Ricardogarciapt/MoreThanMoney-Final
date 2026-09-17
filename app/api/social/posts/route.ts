@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { awardXp } from '@/lib/xp-service'
 import { notifyNewSocialPost } from '@/lib/social-push-notify'
+import { ehAdminUi, ehVipUi } from '@/lib/perfil-ui'
 
 export async function GET() {
   try {
@@ -82,11 +83,12 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('user_type, member_category')
+      .select('user_type, member_category, membership_level, subscription_plan, is_active')
       .eq('id', session.user.id)
       .single()
 
-    if (!profile || (profile.user_type !== 'admin' && profile.member_category !== 'vip')) {
+    // Admin ou VIP — e VIP é-o por qualquer dos campos onde a marca vive.
+    if (!ehAdminUi(profile) && !ehVipUi(profile)) {
       return NextResponse.json({ error: 'Sem permissão para criar posts' }, { status: 403 })
     }
 

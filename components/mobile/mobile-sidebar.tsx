@@ -32,6 +32,7 @@ import Image from "next/image"
 import { SiteLogo } from "@/components/site-logo"
 import Link from "next/link"
 import { xpProgressInLevel } from "@/lib/xp-config"
+import { chavePerfilUi, type ChavePerfil } from "@/lib/perfil-ui"
 
 interface UserProfile {
   id: string
@@ -41,6 +42,8 @@ interface UserProfile {
   avatar_url?: string
   user_type?: string
   member_category?: string
+  membership_level?: string | null
+  subscription_plan?: string | null
   is_active?: boolean
 }
 
@@ -50,7 +53,11 @@ interface MobileSidebarProps {
   currentUser: UserProfile | null
   activeTab: string
   onTabChange: (tab: string) => void
-  /** Membros App Only (€35 standard) — não devem navegar fora de /app-mobile */
+  /**
+   * Membros App Only (€35 standard) — não devem navegar fora de /app-mobile.
+   * O menu já não muda por causa disto (os dois ramos eram iguais); fica aceite para não
+   * partir quem o passa, e para o dia em que houver mesmo um item só do site aqui.
+   */
   isAppOnlyUser?: boolean
 }
 
@@ -60,7 +67,6 @@ export default function MobileSidebar({
   currentUser,
   activeTab,
   onTabChange,
-  isAppOnlyUser = false,
 }: MobileSidebarProps) {
   const router = useRouter()
   /**
@@ -181,18 +187,20 @@ export default function MobileSidebar({
   const getUserBadge = () => {
     if (!currentUser) return null
     
-    const category = currentUser.member_category || currentUser.user_type || 'member'
-    const badges: Record<string, { label: string; color: string; bg: string }> = {
+    // A categoria não pode mandar sozinha: há admins e VIPs com `member_category='standard'` e,
+    // com a precedência antiga, apareciam no seu próprio menu como «📱 App Member».
+    const badges: Record<ChavePerfil, { label: string; color: string; bg: string }> = {
       admin: { label: '🔴 Admin', color: 'text-red-400', bg: 'bg-red-500/20' },
       vip: { label: '⭐ VIP', color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
       iq: { label: '🎓 IQ', color: 'text-blue-400', bg: 'bg-blue-500/20' },
       skool: { label: '📚 Skool', color: 'text-purple-400', bg: 'bg-purple-500/20' },
       premium: { label: '💎 Premium', color: 'text-cyan-400', bg: 'bg-cyan-500/20' },
-      standard: { label: '📱 App Member', color: 'text-green-400', bg: 'bg-green-500/20' },
-      member: { label: '👤 Membro', color: 'text-gray-400', bg: 'bg-gray-500/20' },
+      trial: { label: '⏳ Trial', color: 'text-orange-400', bg: 'bg-orange-500/20' },
+      membro: { label: '📱 App Member', color: 'text-green-400', bg: 'bg-green-500/20' },
+      inativo: { label: '⏸ Em pausa', color: 'text-gray-400', bg: 'bg-gray-500/20' },
     }
-    
-    return badges[category] || badges.member
+
+    return badges[chavePerfilUi(currentUser)]
   }
 
   const badge = getUserBadge()
@@ -413,25 +421,17 @@ export default function MobileSidebar({
                 <ChevronRight className="w-4 h-4 text-gray-500" />
               </button>
 
-              {isAppOnlyUser ? (
-                <button
-                  onClick={() => { handleTabClick("settings") }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
-                >
-                  <Settings className="w-5 h-5" />
-                  <span className="flex-1 text-left font-medium">Definições</span>
-                  <ChevronRight className="w-4 h-4 text-gray-500" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => { handleTabClick("settings"); onClose() }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
-                >
-                  <Settings className="w-5 h-5" />
-                  <span className="flex-1 text-left font-medium">Definições</span>
-                  <ChevronRight className="w-4 h-4 text-gray-500" />
-                </button>
-              )}
+              {/* As Definições são iguais para toda a gente. Havia aqui dois ramos por perfil com
+                  o MESMO botão — a única diferença era o menu ficar aberto ao Membro standard,
+                  que parecia uma regra de negócio e era só um `onClose()` esquecido. */}
+              <button
+                onClick={() => { handleTabClick("settings"); onClose() }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
+              >
+                <Settings className="w-5 h-5" />
+                <span className="flex-1 text-left font-medium">Definições</span>
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              </button>
             </div>
           </div>
 
