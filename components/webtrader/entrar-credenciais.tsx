@@ -6,6 +6,13 @@ import { authHeaders } from "@/lib/auth-token"
 import { entrarComCredenciais, SERVIDOR_FUNDED, type SessaoConta } from "@/components/funded/api"
 import type { PlataformaWT } from "@/lib/webtrader/corretoras/tipos"
 import { COR_PLATAFORMA, ErroWT, NOME_PLATAFORMA, guardarSessaoTL, pedirWT } from "./api-corretoras"
+import { useT } from "@/components/i18n-provider"
+
+/** Textos em lib/i18n/messages/webtrader-entrar.ts (prefixo wt.entrar.). */
+function useTextos() {
+  const t = useT()
+  return (n: string) => t(`wt.entrar.${n}`)
+}
 
 /**
  * «ENTRAR COM CREDENCIAIS» — seletor de plataforma (MTM Funded · TradeLocker · MT5).
@@ -35,11 +42,12 @@ export default function EntrarCredenciais({ onEntrou, onFechar, temSessaoMtm, co
   onPedirLoginMtm?: () => void
 }) {
   const [plataforma, setPlataforma] = useState<PlataformaWT>(plataformaInicial)
+  const k = useTextos()
   return (
     <div className="space-y-2 rounded-xl border border-white/10 bg-[#0d0d0d] p-3 text-[12.5px]">
       <div className="flex items-center justify-between">
-        <p className="text-[13px] font-semibold">{titulo ?? "Entrar com credenciais"}</p>
-        {onFechar && <button onClick={onFechar} aria-label="fechar" className="text-zinc-500"><X className="h-4 w-4" /></button>}
+        <p className="text-[13px] font-semibold">{titulo ?? k("credTitulo")}</p>
+        {onFechar && <button onClick={onFechar} aria-label={k("fechar")} className="text-zinc-500"><X className="h-4 w-4" /></button>}
       </div>
       <div role="tablist" className="grid grid-cols-3 gap-1 rounded-lg bg-black/40 p-1">
         {(["mtmfunded", "tradelocker", "mt5"] as PlataformaWT[]).map((p) => (
@@ -52,28 +60,28 @@ export default function EntrarCredenciais({ onEntrou, onFechar, temSessaoMtm, co
       </div>
       {plataforma === "mtmfunded" ? (
         <>
-          <p className="flex items-center gap-1 text-[11px] text-amber-200/90"><ShieldAlert className="h-3.5 w-3.5" /> Conta MTM Funded. Password master negoceia; investor só vê.</p>
+          <p className="flex items-center gap-1 text-[11px] text-amber-200/90"><ShieldAlert className="h-3.5 w-3.5" /> {k("fundedAviso")}</p>
           <FormFunded onEntrou={(s) => onEntrou({ plataforma: "mtmfunded", sessao: s })} />
         </>
       ) : (
         <>
           {plataforma === "tradelocker" && (
-            <p className="text-[12px] leading-snug text-zinc-200">Liga a tua conta TradeLocker da corretora e negoceia-a aqui. As ordens são executadas na tua corretora.</p>
+            <p className="text-[12px] leading-snug text-zinc-200">{k("tlTexto")}</p>
           )}
           <p className="flex items-start gap-1 rounded-lg bg-rose-500/10 px-2 py-1.5 text-[11px] text-rose-200">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             {plataforma === "tradelocker"
-              ? "Conta REAL — as ordens usam dinheiro real. A ligação fica em «As minhas contas», com a password cifrada (a TradeLocker volta a pedi-la quando a sessão expira); remover a conta lá apaga-a."
-              : "Conta REAL na tua corretora — as ordens usam dinheiro real. A password não fica guardada na MTM."}
+              ? k("tlReal")
+              : k("mt5Real")}
           </p>
           {!temSessaoMtm ? (
             <p className="text-[12px] text-zinc-400">
               {plataforma === "tradelocker"
-                ? "Contas TradeLocker precisam da conta MTM: a ligação fica em nome dela, só tu a vês e negoceias."
-                : "Contas MT5 e MT4 precisam da conta MTM: a ligação fica em nome dela e usa uma das contas MetaApi do teu plano."}{" "}
+                ? k("tlPrecisaMtm")
+                : k("mt5PrecisaMtm")}{" "}
               {onPedirLoginMtm
-                ? <button type="button" onClick={onPedirLoginMtm} className="font-semibold text-[#D2A63C]">Entrar com a conta MTM →</button>
-                : <a href="/login?redirect=/webtrader" className="font-semibold text-[#D2A63C]">Entrar com a conta MTM →</a>}
+                ? <button type="button" onClick={onPedirLoginMtm} className="font-semibold text-[#D2A63C]">{k("contaMtm")} →</button>
+                : <a href="/login?redirect=/webtrader" className="font-semibold text-[#D2A63C]">{k("contaMtm")} →</a>}
             </p>
           ) : plataforma === "tradelocker" ? (
             <FormTradeLocker onEntrou={(ref) => onEntrou({ plataforma: "tradelocker", ref })} />
@@ -93,17 +101,18 @@ function FormFunded({ onEntrou }: { onEntrou: (s: SessaoConta) => void }) {
   const [password, setPassword] = useState("")
   const [aEntrar, setAEntrar] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const k = useTextos()
   return (
     <form className="space-y-2" onSubmit={async (e) => {
       e.preventDefault(); setAEntrar(true); setErro(null)
       try { onEntrou(await entrarComCredenciais(login, password)); setPassword("") } catch (err) { setErro((err as Error).message) } finally { setAEntrar(false) }
     }}>
-      <label className="block"><span className="text-zinc-400">Login</span><input inputMode="numeric" autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} className={`${campo} font-mono`} /></label>
-      <label className="block"><span className="text-zinc-400">Password</span><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={campo} /></label>
-      <label className="block"><span className="text-zinc-400">Servidor</span><input value={SERVIDOR_FUNDED} readOnly className={`${campo} bg-zinc-900 text-zinc-400`} /></label>
+      <label className="block"><span className="text-zinc-400">{k("login")}</span><input inputMode="numeric" autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} className={`${campo} font-mono`} /></label>
+      <label className="block"><span className="text-zinc-400">{k("password")}</span><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={campo} /></label>
+      <label className="block"><span className="text-zinc-400">{k("servidor")}</span><input value={SERVIDOR_FUNDED} readOnly className={`${campo} bg-zinc-900 text-zinc-400`} /></label>
       {erro && <p className="text-[11.5px] text-rose-300">{erro}</p>}
       <button disabled={aEntrar || !login || !password} className="flex h-10 w-full items-center justify-center rounded-lg bg-[#D2A63C] font-bold text-black disabled:opacity-40">
-        {aEntrar ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
+        {aEntrar ? <Loader2 className="h-4 w-4 animate-spin" /> : k("entrar")}
       </button>
     </form>
   )
@@ -118,6 +127,7 @@ function FormTradeLocker({ onEntrou }: { onEntrou: (ref: string) => void }) {
   const [contas, setContas] = useState<Array<{ id: string; accNum: string; nome: string; moeda: string; saldo: number | null }>>([])
   const [aEntrar, setAEntrar] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const k = useTextos()
 
   const passo1 = async (e: React.FormEvent) => {
     e.preventDefault(); setAEntrar(true); setErro(null)
@@ -140,7 +150,7 @@ function FormTradeLocker({ onEntrou }: { onEntrou: (ref: string) => void }) {
   if (bilhete) {
     return (
       <div className="space-y-2">
-        <p className="text-zinc-400">Escolhe a conta a ligar e negociar:</p>
+        <p className="text-zinc-400">{k("escolheConta")}</p>
         {contas.map((c) => (
           <button key={c.id} disabled={aEntrar} onClick={() => escolher(c.id)} className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-black/40 p-2.5 text-left hover:border-sky-400/40 disabled:opacity-50">
             <span className="font-mono text-white">#{c.accNum}</span>
@@ -149,15 +159,15 @@ function FormTradeLocker({ onEntrou }: { onEntrou: (ref: string) => void }) {
           </button>
         ))}
         {erro && <p className="text-[11.5px] text-rose-300">{erro}</p>}
-        <button onClick={() => { setBilhete(null); setContas([]) }} className="text-[11.5px] text-zinc-500">← outro login</button>
+        <button onClick={() => { setBilhete(null); setContas([]) }} className="text-[11.5px] text-zinc-500">{k("outroLogin")}</button>
       </div>
     )
   }
   return (
     <form className="space-y-2" onSubmit={passo1}>
-      <label className="block"><span className="text-zinc-400">Email</span><input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className={campo} /></label>
-      <label className="block"><span className="text-zinc-400">Password</span><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={campo} /></label>
-      <label className="block"><span className="text-zinc-400">Servidor (nome da corretora na TradeLocker)</span><input value={servidor} onChange={(e) => setServidor(e.target.value)} placeholder="ex.: OSP, HEROFX…" className={campo} /></label>
+      <label className="block"><span className="text-zinc-400">{k("email")}</span><input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className={campo} /></label>
+      <label className="block"><span className="text-zinc-400">{k("password")}</span><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={campo} /></label>
+      <label className="block"><span className="text-zinc-400">{k("tlServidor")}</span><input value={servidor} onChange={(e) => setServidor(e.target.value)} placeholder={k("tlServidorPh")} className={campo} /></label>
       <div className="grid grid-cols-2 gap-1 rounded-lg bg-black/40 p-1">
         {(["live", "demo"] as const).map((v) => (
           <button type="button" key={v} onClick={() => setEnv(v)} className={`rounded-md py-1.5 text-[12px] font-semibold ${env === v ? "bg-white/10 text-white" : "text-zinc-500"}`}>{v === "live" ? "Live" : "Demo"}</button>
@@ -165,7 +175,7 @@ function FormTradeLocker({ onEntrou }: { onEntrou: (ref: string) => void }) {
       </div>
       {erro && <p className="text-[11.5px] text-rose-300">{erro}</p>}
       <button disabled={aEntrar || !email || !password || !servidor} className="flex h-10 w-full items-center justify-center rounded-lg bg-sky-400 font-bold text-black disabled:opacity-40">
-        {aEntrar ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ver as minhas contas TradeLocker"}
+        {aEntrar ? <Loader2 className="h-4 w-4 animate-spin" /> : k("tlVerContas")}
       </button>
     </form>
   )
@@ -180,6 +190,7 @@ function FormMt5({ onEntrou, compraPermitida }: { onEntrou: (ref: string) => voi
   const [aEntrar, setAEntrar] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [quota, setQuota] = useState<string | null>(null)
+  const k = useTextos()
 
   // Pesquisa de servidores (a mesma do ligador de contas), com pausa entre teclas.
   useEffect(() => {
@@ -208,28 +219,28 @@ function FormMt5({ onEntrou, compraPermitida }: { onEntrou: (ref: string) => voi
       } finally { setAEntrar(false) }
     }}>
       {/* Os servidores MT4 e MT5 de uma corretora têm nomes diferentes — escolher antes de pesquisar. */}
-      <div role="radiogroup" aria-label="Versão do MetaTrader" className="grid grid-cols-2 gap-1 rounded-lg bg-black/40 p-1">
+      <div role="radiogroup" aria-label={k("mtVersao")} className="grid grid-cols-2 gap-1 rounded-lg bg-black/40 p-1">
         {(["mt5", "mt4"] as const).map((v) => (
           <button type="button" role="radio" aria-checked={versao === v} key={v} onClick={() => { setVersao(v); setSugestoes([]) }}
             className={`rounded-md py-1.5 text-[12px] font-semibold ${versao === v ? "bg-white/10 text-white" : "text-zinc-500"}`}>{v.toUpperCase()}</button>
         ))}
       </div>
-      <p className="text-[11px] text-zinc-500">Cada conta MT5 ou MT4 usa uma conta MetaApi do teu plano (grátis 1 · Premium/VIP/MTM Auto 2). Se já a ligaste no Tap to Trade ou no MTM Auto, abre essa — não conta outra vez.</p>
-      <label className="block"><span className="text-zinc-400">Login</span><input inputMode="numeric" autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} className={`${campo} font-mono`} /></label>
-      <label className="block"><span className="text-zinc-400">Password (master)</span><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={campo} /></label>
-      <label className="block"><span className="text-zinc-400">Servidor</span>
-        <input list="webtrader-mt5-servidores" value={servidor} onChange={(e) => setServidor(e.target.value)} placeholder="ex.: PUPrime-Live" className={campo} />
+      <p className="text-[11px] text-zinc-500">{k("mtQuota")}</p>
+      <label className="block"><span className="text-zinc-400">{k("login")}</span><input inputMode="numeric" autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} className={`${campo} font-mono`} /></label>
+      <label className="block"><span className="text-zinc-400">{k("passwordMaster")}</span><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={campo} /></label>
+      <label className="block"><span className="text-zinc-400">{k("servidor")}</span>
+        <input list="webtrader-mt5-servidores" value={servidor} onChange={(e) => setServidor(e.target.value)} placeholder={k("mtServidorPh")} className={campo} />
         <datalist id="webtrader-mt5-servidores">{sugestoes.map((s) => <option key={s} value={s} />)}</datalist>
       </label>
       {erro && <p className="text-[11.5px] text-rose-300">{erro}</p>}
       {quota && (
         <div className="space-y-1.5 rounded-lg border border-[#D2A63C]/30 bg-[#D2A63C]/10 p-2 text-[11.5px] text-zinc-200">
           <p>{quota}</p>
-          {compraPermitida && <a href="/upgrade" className="inline-block font-semibold text-[#D2A63C] underline">Passar a Premium</a>}
+          {compraPermitida && <a href="/upgrade" className="inline-block font-semibold text-[#D2A63C] underline">{k("passarPremium")}</a>}
         </div>
       )}
       <button disabled={aEntrar || !login || !password || !servidor} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-violet-400 font-bold text-black disabled:opacity-40">
-        {aEntrar ? <><Loader2 className="h-4 w-4 animate-spin" /> A ligar à corretora (até 2 min)…</> : `Entrar no ${versao.toUpperCase()}`}
+        {aEntrar ? <><Loader2 className="h-4 w-4 animate-spin" /> {k("aLigar")}</> : k("entrarNo").replace("{plataforma}", versao.toUpperCase())}
       </button>
     </form>
   )

@@ -6,10 +6,11 @@ import { supabase } from "@/lib/supabase"
 import { loadMemberProfile } from "@/lib/member-profile"
 import { isRegisteredMember } from "@/lib/member-access"
 import { needsAccessRevalidation } from "@/lib/access-migration"
-import { buildOAuthCallbackUrl, REGISTER_NOT_FOUND_MESSAGE } from "@/lib/oauth-flow"
+import { buildOAuthCallbackUrl } from "@/lib/oauth-flow"
 import { mensagemErroLogin, redirectWebtrader } from "@/lib/webtrader/entrada"
 import type { SessaoConta } from "@/components/funded/api"
 import EntrarCredenciais from "./entrar-credenciais"
+import { useT } from "@/components/i18n-provider"
 
 /**
  * ENTRAR NO WEBTRADER — quem chega a /webtrader sem sessão MTM.
@@ -59,6 +60,16 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
   const [pvAEntrar, setPvAEntrar] = useState(false)
   const [soCredenciais, setSoCredenciais] = useState(credenciaisAbertas)
   const [iosNativo, setIosNativo] = useState(false)
+  const t = useT()
+  const k = (n: string) => t(`wt.entrar.${n}`)
+  // As mensagens do /login (lib/webtrader/entrada) vêm em PT: traduzem-se aqui; as do Supabase passam tal como vêm.
+  const erroLogin = (msg: string | null | undefined) => {
+    const m = mensagemErroLogin(msg)
+    if (m === mensagemErroLogin("Invalid login credentials")) return k("credIncorretas")
+    if (m === mensagemErroLogin("Email not confirmed")) return k("emailNaoConfirmado")
+    if (m === mensagemErroLogin("")) return k("erroLogin")
+    return m
+  }
 
   useEffect(() => { setIosNativo(ehIosNativo()) }, [])
 
@@ -67,7 +78,7 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
     setAEntrar(true); setErro(null)
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-      if (error || !data.session) { setErro({ texto: mensagemErroLogin(error?.message) }); return }
+      if (error || !data.session) { setErro({ texto: erroLogin(error?.message) }); return }
       setPassword("")
       const { setCachedSession, clearCachedSession } = await import("@/lib/auth-cache")
       setCachedSession(data.session)
@@ -86,13 +97,13 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
           }
           await Promise.race([supabase.auth.signOut(), new Promise((ok) => setTimeout(ok, 2000))]).catch(() => null)
           clearCachedSession()
-          setErro({ texto: REGISTER_NOT_FOUND_MESSAGE, registo: true })
+          setErro({ texto: k("utilizadorNaoEncontrado"), registo: true })
           return
         }
       }
       onEntrouMtm()
     } catch {
-      setErro({ texto: "Erro ao fazer login. Tente novamente." })
+      setErro({ texto: k("erroLogin") })
     } finally {
       setAEntrar(false)
     }
@@ -110,11 +121,11 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
           skipBrowserRedirect: false,
         },
       })
-      if (error) { setErro({ texto: `Erro ao iniciar Google Login: ${error.message}` }); return }
+      if (error) { setErro({ texto: k("erroGoogleIniciar").replace("{erro}", error.message) }); return }
       if (data?.url) window.location.href = data.url
-      else setErro({ texto: "Erro ao gerar URL do Google. Verifica a configuração no Supabase." })
+      else setErro({ texto: k("erroGoogleUrl") })
     } catch {
-      setErro({ texto: "Erro ao iniciar login com Google. Tenta novamente." })
+      setErro({ texto: k("erroGoogle") })
     }
   }
 
@@ -128,13 +139,13 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
         body: JSON.stringify({ username: pvUser.trim(), password: pvPass }),
       })
       const d = await res.json().catch(() => ({}))
-      if (!res.ok || !d.success) { setErro({ texto: d.error || "Falha no login PrimeVerse." }); return }
+      if (!res.ok || !d.success) { setErro({ texto: d.error || k("erroPv") }); return }
       setPvPass("")
       try { (await import("@/lib/auth-cache")).clearCachedSession() } catch { /* ok */ }
       // A sessão PrimeVerse chega em cookies: recarrega o WebTrader (nunca outro destino).
       window.location.replace(`${window.location.origin}${destinoAtual()}`)
     } catch {
-      setErro({ texto: "Erro ao ligar ao PrimeVerse. Tenta novamente." })
+      setErro({ texto: k("erroPvLigar") })
     } finally {
       setPvAEntrar(false)
     }
@@ -145,36 +156,36 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
       <div className="mb-5 flex items-start gap-3">
         <img src="/icon-192x192.png" alt="MTM" className="h-11 w-11 shrink-0 rounded-xl" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-[19px] font-bold leading-tight">Entrar no WebTrader</h1>
-          <p className="mt-0.5 text-[12.5px] text-zinc-400">Entra com a tua conta MTM e as tuas contas aparecem logo: MT5, TradeLocker e MTM Funded.</p>
+          <h1 className="text-[19px] font-bold leading-tight">{k("titulo")}</h1>
+          <p className="mt-0.5 text-[12.5px] text-zinc-400">{k("subtitulo")}</p>
         </div>
-        {onFechar && <button onClick={onFechar} aria-label="fechar" className="text-zinc-500"><X className="h-5 w-5" /></button>}
+        {onFechar && <button onClick={onFechar} aria-label={k("fechar")} className="text-zinc-500"><X className="h-5 w-5" /></button>}
       </div>
 
       <div className="space-y-3 rounded-2xl border border-white/10 bg-[#0d0f15] p-4">
-        <p className="text-[13px] font-semibold">Entrar com a conta MTM</p>
+        <p className="text-[13px] font-semibold">{k("contaMtm")}</p>
         {erro && (
           <p role="alert" className="rounded-lg bg-rose-500/10 px-2.5 py-2 text-[12.5px] text-rose-200">
             {erro.texto}
-            {erro.registo && !iosNativo && <> <a href="/register" className="font-semibold text-[#D2A63C] underline">Registo</a></>}
+            {erro.registo && !iosNativo && <> <a href="/register" className="font-semibold text-[#D2A63C] underline">{k("registo")}</a></>}
           </p>
         )}
         <form onSubmit={entrarEmail} className="space-y-2.5">
           <label className="relative block">
-            <span className="sr-only">Email</span>
+            <span className="sr-only">{k("email")}</span>
             <Mail className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-zinc-500" />
-            <input type="email" autoComplete="username" required placeholder="email@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={aEntrar} className={campo} />
+            <input type="email" autoComplete="username" required placeholder={k("emailPh")} value={email} onChange={(e) => setEmail(e.target.value)} disabled={aEntrar} className={campo} />
           </label>
           <label className="relative block">
-            <span className="sr-only">Password</span>
+            <span className="sr-only">{k("password")}</span>
             <Lock className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-zinc-500" />
-            <input type="password" autoComplete="current-password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={aEntrar} className={campo} />
+            <input type="password" autoComplete="current-password" required placeholder={k("password")} value={password} onChange={(e) => setPassword(e.target.value)} disabled={aEntrar} className={campo} />
           </label>
           <div className="flex justify-end">
-            <a href="/forgot-password" className="text-[11.5px] text-zinc-400 hover:text-white">Esqueci-me da password</a>
+            <a href="/forgot-password" className="text-[11.5px] text-zinc-400 hover:text-white">{k("esqueci")}</a>
           </div>
           <button disabled={aEntrar || !email || !password} className="flex h-11 w-full items-center justify-center rounded-lg bg-[#2962FF] text-[14px] font-bold text-white disabled:opacity-40">
-            {aEntrar ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
+            {aEntrar ? <Loader2 className="h-4 w-4 animate-spin" /> : k("entrar")}
           </button>
         </form>
 
@@ -182,7 +193,7 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
             app). Google e PrimeVerse ficam de fora: a regra 4.8 da Apple obriga a dar o «Iniciar
             sessão com a Apple» com o mesmo destaque, e na app isso já é feito no ecrã de entrada dela. */}
         {!iosNativo && (<>
-        <div className="flex items-center gap-2 text-[11px] text-zinc-500"><span className="h-px flex-1 bg-white/10" />ou<span className="h-px flex-1 bg-white/10" /></div>
+        <div className="flex items-center gap-2 text-[11px] text-zinc-500"><span className="h-px flex-1 bg-white/10" />{k("ou")}<span className="h-px flex-1 bg-white/10" /></div>
 
         <button type="button" onClick={entrarGoogle} disabled={aEntrar} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-white text-[14px] font-semibold text-zinc-900 disabled:opacity-40">
           <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden>
@@ -191,19 +202,19 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
-          Continuar com Google
+          {k("google")}
         </button>
 
         <button type="button" onClick={() => setPvAberto((v) => !v)} className="flex h-10 w-full items-center justify-center rounded-lg border border-cyan-500/40 bg-[#0e2a3a] text-[13px] font-semibold text-white">
-          Entrar com PrimeVerse
+          {k("pvBotao")}
         </button>
         {pvAberto && (
           <form onSubmit={entrarPrimeverse} className="space-y-2 rounded-lg border border-cyan-500/30 bg-black/40 p-3">
-            <p className="text-[11.5px] text-zinc-400">És cliente PrimeVerse? Entra com as credenciais do hub.</p>
-            <input placeholder="Utilizador ou email PrimeVerse" value={pvUser} onChange={(e) => setPvUser(e.target.value)} required disabled={pvAEntrar} className="h-10 w-full rounded-lg border border-white/10 bg-black px-2 text-white" />
-            <input type="password" placeholder="Password PrimeVerse" value={pvPass} onChange={(e) => setPvPass(e.target.value)} required disabled={pvAEntrar} className="h-10 w-full rounded-lg border border-white/10 bg-black px-2 text-white" />
+            <p className="text-[11.5px] text-zinc-400">{k("pvIntro")}</p>
+            <input placeholder={k("pvUser")} value={pvUser} onChange={(e) => setPvUser(e.target.value)} required disabled={pvAEntrar} className="h-10 w-full rounded-lg border border-white/10 bg-black px-2 text-white" />
+            <input type="password" placeholder={k("pvPass")} value={pvPass} onChange={(e) => setPvPass(e.target.value)} required disabled={pvAEntrar} className="h-10 w-full rounded-lg border border-white/10 bg-black px-2 text-white" />
             <button disabled={pvAEntrar} className="flex h-10 w-full items-center justify-center rounded-lg bg-cyan-600 font-semibold text-white disabled:opacity-40">
-              {pvAEntrar ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar via PrimeVerse"}
+              {pvAEntrar ? <Loader2 className="h-4 w-4 animate-spin" /> : k("pvEntrar")}
             </button>
           </form>
         )}
@@ -211,8 +222,8 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
         </>)}
         {!iosNativo && (
           <p className="text-center text-[11.5px] text-zinc-500">
-            <a href={`/login?redirect=${encodeURIComponent(destinoAtual())}`} className="hover:text-white">Outras opções de entrada (Apple…)</a>
-            {" · "}<a href="/register" className="text-[#D2A63C]">Criar conta MTM</a>
+            <a href={`/login?redirect=${encodeURIComponent(destinoAtual())}`} className="hover:text-white">{k("outrasOpcoes")}</a>
+            {" · "}<a href="/register" className="text-[#D2A63C]">{k("criarConta")}</a>
           </p>
         )}
       </div>
@@ -220,12 +231,12 @@ export default function EntrarWebtrader({ onEntrouMtm, onEntrouConta, onFechar, 
       <div className="mt-3 rounded-2xl border border-white/10 bg-[#0d0f15]">
         <button type="button" onClick={() => setSoCredenciais((v) => !v)} aria-expanded={soCredenciais}
           className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13px] font-semibold text-zinc-200">
-          <KeyRound className="h-4 w-4 text-zinc-400" /> Entrar só com credenciais de conta
+          <KeyRound className="h-4 w-4 text-zinc-400" /> {k("soCredenciais")}
           <ChevronDown className={`ml-auto h-4 w-4 text-zinc-500 transition-transform ${soCredenciais ? "rotate-180" : ""}`} />
         </button>
         {soCredenciais && (
           <div className="px-2 pb-2">
-            <p className="px-2 pb-2 text-[11.5px] text-zinc-500">Sem conta MTM: entra numa conta MTM Funded (login 77xxxxxx). Contas TradeLocker e MT5 precisam da conta MTM.</p>
+            <p className="px-2 pb-2 text-[11.5px] text-zinc-500">{k("soCredenciaisTexto")}</p>
             <EntrarCredenciais
               temSessaoMtm={false}
               compraPermitida={compraPermitida && !iosNativo}

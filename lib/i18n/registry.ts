@@ -18,6 +18,7 @@ import { MTMCOPIER_MESSAGES } from "./messages/mtmcopier"
 import { FREESESSION_MESSAGES } from "./messages/freesession"
 import { MTMFUNDED_MESSAGES } from "./messages/mtmfunded"
 import { MTMFUNDED_AVISO_MESSAGES } from "./messages/mtmfunded-aviso"
+import { WEBTRADER_ENTRAR_MESSAGES } from "./messages/webtrader-entrar"
 
 type NsSource = Partial<Record<Lang, Record<string, string>>>
 
@@ -53,4 +54,5 @@ export const ALL_MESSAGES = merge(
   FREESESSION_MESSAGES,
   MTMFUNDED_MESSAGES,
   MTMFUNDED_AVISO_MESSAGES,
+  WEBTRADER_ENTRAR_MESSAGES,
 )
