@@ -14,6 +14,8 @@ export interface ContaReal {
   ref: string
   plataforma: PlataformaWT
   rotulo: string | null
+  /** 113 — a etiqueta que o dono pôs nesta conta. */
+  etiquetaDoDono: string | null
   login: string | null
   servidor: string | null
   demo: boolean

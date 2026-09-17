@@ -26,6 +26,8 @@ export interface ContaResumo {
   sim_saldo: number | null
   sim_equity: number | null
   etiqueta: string
+  /** 113 — a etiqueta do dono (à parte de `etiqueta`, que aqui é a fase F1/F2/Funded/Torneio). */
+  etiquetaDoDono?: string | null
   estadoCurto: string
   /** lib/mtmfunded/aviso-conta.ts — calculado no servidor. */
   aviso?: string
@@ -104,6 +106,17 @@ export async function pedir<T = any>(url: string, init: RequestInit = {}, accoun
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new ErroApi(res.status, data?.error || `erro ${res.status}`)
   return data as T
+}
+
+/**
+ * Grava a ETIQUETA de uma conta (113) — o nome próprio que o dono lhe dá.
+ *
+ * `ref` é a referência do seletor: `mtmfunded:<id>` nas MTM Funded, `mt5:site:<id>` /
+ * `tradelocker:auto:<id>`… nas reais. Uma rota só, as quatro tabelas. `''` apaga a etiqueta.
+ * O servidor volta a normalizar (40 caracteres, sem `<>`) e devolve o que ficou gravado.
+ */
+export function gravarEtiqueta(ref: string, etiqueta: string): Promise<{ ok: true; etiqueta: string | null }> {
+  return pedir("/api/contas/etiqueta", { method: "PATCH", body: JSON.stringify({ ref, etiqueta }) })
 }
 
 export function ordem(accao: string, corpo: Record<string, unknown>, accountId: string) {

@@ -62,10 +62,10 @@ async function main() {
     { id: 'f-estrategia', mt5_login: '77000002', etiqueta: 'Sim', estadoCurto: 'Active', sim_saldo: 5000, sim_equity: 5000, segueEstrategia: { slug: 'aurum', nome: 'MTM Auto Aurum Flow' } },
   ]
   const reais: ContaRealSeletor[] = [
-    { ref: 'tradelocker:site:11111111-1111-1111-1111-111111111111', plataforma: 'tradelocker', rotulo: 'WebTrader', login: '12345', servidor: 'OSP', demo: false, real: true, bloqueada: null, origem: 'ligador' },
-    { ref: 'mt5:site:22222222-2222-2222-2222-222222222222', plataforma: 'mt5', rotulo: 'T2T', login: '24502921', servidor: 'VTMarkets-Live', demo: false, real: true, bloqueada: null, origem: 'ligador' },
-    { ref: 'mt5:auto:33333333-3333-3333-3333-333333333333', plataforma: 'mt5', rotulo: 'PU Prime', login: '986912', servidor: 'PUPrime-Demo', demo: true, real: true, bloqueada: 'Limite de contas MetaTrader do teu plano.', origem: 'ligador' },
-    { ref: 'mt5:wt:44444444-4444-4444-4444-444444444444', plataforma: 'mt5', rotulo: null, login: '555', servidor: 'Broker-Live', demo: false, real: true, bloqueada: null, origem: 'webtrader' },
+    { ref: 'tradelocker:site:11111111-1111-1111-1111-111111111111', plataforma: 'tradelocker', rotulo: 'WebTrader', etiquetaDoDono: null, login: '12345', servidor: 'OSP', demo: false, real: true, bloqueada: null, origem: 'ligador' },
+    { ref: 'mt5:site:22222222-2222-2222-2222-222222222222', plataforma: 'mt5', rotulo: 'T2T', etiquetaDoDono: null, login: '24502921', servidor: 'VTMarkets-Live', demo: false, real: true, bloqueada: null, origem: 'ligador' },
+    { ref: 'mt5:auto:33333333-3333-3333-3333-333333333333', plataforma: 'mt5', rotulo: 'PU Prime', etiquetaDoDono: null, login: '986912', servidor: 'PUPrime-Demo', demo: true, real: true, bloqueada: 'Limite de contas MetaTrader do teu plano.', origem: 'ligador' },
+    { ref: 'mt5:wt:44444444-4444-4444-4444-444444444444', plataforma: 'mt5', rotulo: null, etiquetaDoDono: null, login: '555', servidor: 'Broker-Live', demo: false, real: true, bloqueada: null, origem: 'webtrader' },
   ]
 
   await caso('seletor: MTM Funded (programa e estratégia), TradeLocker, MT5 site/auto/wt', () => {

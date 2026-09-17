@@ -60,7 +60,7 @@ function GavetaConta({ refConta }: { refConta: string }) {
   }
 
   return (
-    <Gaveta aberta titulo={c ? `${c.plataforma.toUpperCase()} ${c.login ?? "—"}` : "Conta"} sub={c ? `${c.servidor ?? "—"} · ${c.ref}` : refConta} aoFechar={ctx.fechar}>
+    <Gaveta aberta titulo={c ? `${c.etiquetaDoDono ? `${c.etiquetaDoDono} · ` : ""}${c.plataforma.toUpperCase()} ${c.login ?? "—"}` : "Conta"} sub={c ? `${c.servidor ?? "—"} · ${c.ref}` : refConta} aoFechar={ctx.fechar}>
       {erro && !c && <Aviso tom="grave">{erro}</Aviso>}
       {!dados ? <Vazio>A ler…</Vazio> : !c ? <Vazio>Conta não encontrada (removida?).</Vazio> : (
         <>

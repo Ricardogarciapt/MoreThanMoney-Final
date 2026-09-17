@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
-import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2 } from "lucide-react"
+import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2, Pencil, Check } from "lucide-react"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
-import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, usd, COR_ESTADO } from "./api"
+import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, gravarEtiqueta, usd, COR_ESTADO } from "./api"
 import InstalarWebtrader from "./instalar-webtrader"
 import PopoverAncorado from "./popover-contas"
 import { preaquecerWebtrader } from "./pre-carga"
@@ -14,7 +14,8 @@ import type { Prefill } from "./funded-ticket"
 import {
   type ContaReal, COR_PLATAFORMA, apagarSessaoTL, ehRefReal, listarContasReais, lerSessoesTL, plataformaDaRef,
 } from "@/components/webtrader/api-corretoras"
-import { contaInicial, montarSeletor } from "@/lib/webtrader/seletor"
+import { contaInicial, montarSeletor, type EntradaSeletor } from "@/lib/webtrader/seletor"
+import { ETIQUETA_MAX, normalizarEtiqueta } from "@/lib/contas/etiqueta"
 import { getAccessToken } from "@/lib/auth-token"
 import type { PlataformaWT } from "@/lib/webtrader/corretoras/tipos"
 import { useT } from "@/components/i18n-provider"
@@ -76,6 +77,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   const botaoSeletor = useRef<HTMLButtonElement>(null)
   const fecharSeletor = useCallback(() => setSeletorAberto(false), [])
   const [erro, setErro] = useState<string | null>(null)
+  // A etiqueta em edição no seletor (113): id da entrada, o que está escrito e o erro de gravação.
+  const [etiquetaEmEdicao, setEtiquetaEmEdicao] = useState<string | null>(null)
+  const [erroEtiqueta, setErroEtiqueta] = useState<string | null>(null)
   const [reais, setReais] = useState<ContaReal[]>([])
   const [compraPermitida, setCompraPermitida] = useState(true)
   const [temSessaoMtm, setTemSessaoMtm] = useState(false)
@@ -132,6 +136,27 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   }, [])
 
   useEffect(() => { carregar() }, [carregar])
+
+  /**
+   * Grava a etiqueta e ACTUALIZA A LISTA no sítio, sem recarregar: o seletor fica aberto e a conta
+   * escolhida não muda. `ref` das MTM Funded é `mtmfunded:<id>`; as reais já são a própria ref.
+   */
+  const guardarEtiqueta = async (entrada: EntradaSeletor, texto: string) => {
+    const ref = entrada.real ? entrada.id : `mtmfunded:${entrada.id}`
+    const antes = entrada.etiquetaDoDono ?? null
+    const nova = normalizarEtiqueta(texto)
+    setErroEtiqueta(null)
+    setEtiquetaEmEdicao(null)
+    if (nova === antes) return
+    try {
+      const r = await gravarEtiqueta(ref, texto)
+      const gravada = r?.etiqueta ?? null
+      if (entrada.real) setReais((rs) => rs.map((x) => (x.ref === ref ? { ...x, etiquetaDoDono: gravada } : x)))
+      else setContas((cs) => (cs ?? []).map((c) => (c.id === entrada.id ? { ...c, etiquetaDoDono: gravada } : c)))
+    } catch (e) {
+      setErroEtiqueta(e instanceof Error ? e.message : "não foi possível gravar a etiqueta")
+    }
+  }
 
   const escolher = (id: string) => {
     setAtiva(id)
@@ -200,6 +225,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                   <span className="shrink-0 rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: atual.real ? COR_PLATAFORMA[atual.real.plataforma] : "#D2A63C" }}>{atual.etiqueta}</span>
                   {atual.real && <span className="shrink-0 text-[10px] font-bold text-rose-300">REAL</span>}
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: COR_ESTADO[atual.estadoCurto] ?? "#a1a1aa" }} />
+                  {atual.etiquetaDoDono && <span className="max-w-[120px] truncate text-[11.5px] font-semibold text-[#E9C46A]">{atual.etiquetaDoDono}</span>}
                   <span className="truncate font-mono">{atual.login ?? "—"}</span>
                   {atual.segue && <span className="hidden truncate text-[10.5px] text-[#D2A63C] sm:inline">· {nomeCurto(atual.segue)}</span>}
                   {atual.modo === "investor" && <span className="text-[10.5px] text-sky-300">investor</span>}
@@ -209,15 +235,25 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
             </button>
             <PopoverAncorado aberto={seletorAberto} ancora={botaoSeletor} onFechar={fecharSeletor} titulo="Escolher conta">
               <div role="listbox">
-                <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">MTM Funded (simuladas) · TradeLocker e MT5 (reais)</p>
+                <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">MTM Funded (simuladas) · TradeLocker e MT5 (reais) — o lápis dá um nome à conta</p>
+                {erroEtiqueta && <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-rose-300">{erroEtiqueta}</p>}
                 {todas.map((t) => t.real ? (
                   <div key={t.id} className={`flex items-center gap-2 px-3 py-2 text-[12.5px] ${t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
                     <button role="option" aria-selected={t.id === ativa} disabled={Boolean(t.real.bloqueada)} title={t.real.bloqueada ?? undefined} className="flex flex-1 items-center gap-2 text-left disabled:opacity-50" onClick={() => escolher(t.id)}>
                       <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[t.real.plataforma] }}>{t.etiqueta}</span>
                       <span className="rounded px-1.5 text-[10.5px] font-bold" style={{ color: t.real.bloqueada ? "#a1a1aa" : t.real.demo ? "#60a5fa" : "#fb7185" }}>{t.estadoCurto}</span>
                       <span className="font-mono">{t.login ?? "—"}</span>
-                      <span className="ml-auto truncate text-[10.5px] text-zinc-500">{t.real.rotulo ?? t.real.servidor ?? ""}</span>
+                      {t.etiquetaDoDono
+                        ? <span className="ml-auto max-w-[130px] truncate text-[11px] font-semibold text-[#E9C46A]" title={t.etiquetaDoDono}>{t.etiquetaDoDono}</span>
+                        : <span className="ml-auto truncate text-[10.5px] text-zinc-500">{t.real.rotulo ?? t.real.servidor ?? ""}</span>}
                     </button>
+                    <CampoEtiqueta
+                      entrada={t}
+                      aEditar={etiquetaEmEdicao === t.id}
+                      abrir={() => setEtiquetaEmEdicao(t.id)}
+                      fechar={() => setEtiquetaEmEdicao(null)}
+                      gravar={(texto) => void guardarEtiqueta(t, texto)}
+                    />
                     {t.real.origem === "sessao" && (
                       <button aria-label="sair" onClick={() => { apagarSessaoTL(t.id); carregar() }} className="text-zinc-500"><X className="h-3.5 w-3.5" /></button>
                     )}
@@ -228,9 +264,17 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                       <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}{t.segue ? ` · ${nomeCurto(t.segue)}` : ""}</span>
                       <span className="rounded px-1.5 text-[10.5px]" style={{ color: COR_ESTADO[t.estadoCurto] ?? "#a1a1aa" }}>{t.estadoCurto}</span>
                       <span className="font-mono">{t.login}</span>
+                      {t.etiquetaDoDono && <span className="max-w-[120px] truncate text-[11px] font-semibold text-[#E9C46A]" title={t.etiquetaDoDono}>{t.etiquetaDoDono}</span>}
                       {t.saldo != null && <span className="ml-auto font-mono text-zinc-400">{usd(t.equity ?? t.saldo)} $</span>}
                       {!t.propria && <span className="ml-auto text-[10.5px] text-sky-300">{t.modo}</span>}
                     </button>
+                    <CampoEtiqueta
+                      entrada={t}
+                      aEditar={etiquetaEmEdicao === t.id}
+                      abrir={() => setEtiquetaEmEdicao(t.id)}
+                      fechar={() => setEtiquetaEmEdicao(null)}
+                      gravar={(texto) => void guardarEtiqueta(t, texto)}
+                    />
                     {!t.propria && (
                       <button aria-label="sair" onClick={() => { apagarSessao(t.id); carregar() }} className="text-zinc-500"><X className="h-3.5 w-3.5" /></button>
                     )}
@@ -321,6 +365,64 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
         <FundedTrader key={ativa} accountId={ativa} prefill={prefill} simboloInicial={simboloInicial} onSimbolo={onSimbolo} altura={altura} />
       ) : null}
     </div>
+  )
+}
+
+/**
+ * A ETIQUETA DE UMA CONTA no seletor (113) — lápis fechado, campo aberto.
+ *
+ * Fechado: o lápis, e a etiqueta em dourado quando existe. Aberto: um campo de 40 caracteres que
+ * grava com Enter ou ao sair, e desiste com Esc. Vazio apaga a etiqueta (é opcional).
+ *
+ * `podeEtiquetar` falso = conta sem linha na base (sessão TradeLocker do separador) ou de outra
+ * pessoa (ligada com a password investor): nem lápis, nem campo.
+ */
+function CampoEtiqueta({ entrada, aEditar, abrir, fechar, gravar }: {
+  entrada: EntradaSeletor
+  aEditar: boolean
+  abrir: () => void
+  fechar: () => void
+  gravar: (texto: string) => void
+}) {
+  const [texto, setTexto] = useState(entrada.etiquetaDoDono ?? "")
+  useEffect(() => { if (aEditar) setTexto(entrada.etiquetaDoDono ?? "") }, [aEditar, entrada.etiquetaDoDono])
+  if (!entrada.podeEtiquetar) return null
+
+  if (aEditar) {
+    return (
+      <span className="flex items-center gap-1">
+        <input
+          autoFocus
+          value={texto}
+          maxLength={ETIQUETA_MAX}
+          placeholder="etiqueta"
+          aria-label="Etiqueta da conta"
+          onChange={(e) => setTexto(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          onBlur={() => gravar(texto)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); gravar(texto) }
+            if (e.key === "Escape") { e.preventDefault(); fechar() }
+          }}
+          className="w-28 rounded border border-[#D2A63C]/40 bg-black/60 px-1.5 py-0.5 text-[11px] text-white placeholder:text-zinc-600"
+        />
+        {/* No toque não há blur antes do clique: este botão grava o que está escrito. */}
+        <button type="button" aria-label="guardar etiqueta" onMouseDown={(e) => e.preventDefault()} onClick={() => gravar(texto)} className="text-[#D2A63C]">
+          <Check className="h-3.5 w-3.5" />
+        </button>
+      </span>
+    )
+  }
+  return (
+    <button
+      type="button"
+      aria-label={entrada.etiquetaDoDono ? `Mudar a etiqueta (${entrada.etiquetaDoDono})` : "Pôr uma etiqueta nesta conta"}
+      title={entrada.etiquetaDoDono ? "Mudar a etiqueta" : "Pôr uma etiqueta"}
+      onClick={(e) => { e.stopPropagation(); abrir() }}
+      className="flex shrink-0 items-center gap-1 text-zinc-500 hover:text-[#D2A63C]"
+    >
+      <Pencil className="h-3 w-3" />
+    </button>
   )
 }
 

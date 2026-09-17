@@ -28,6 +28,8 @@ export interface ContaUnificada {
   origem: "site" | "auto" | "wt"
   plataforma: PlataformaConta
   rotulo: string | null
+  /** 113 — a etiqueta que o dono pôs no WebTrader; manda sobre `rotulo` no nome mostrado. */
+  etiquetaDoDono: string | null
   login: string | null
   servidor: string | null
   estado: "ligada" | "a_ligar" | "erro" | "so_leitura" | "pausada"
@@ -217,12 +219,13 @@ export function ListaContas({ estado, onMudou }: { estado: EstadoLigador; onMudo
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[13px] font-semibold text-white truncate">{c.rotulo || NOME_PLATAFORMA[c.plataforma]}</span>
+                  <span className="text-[13px] font-semibold text-white truncate">{c.etiquetaDoDono || c.rotulo || NOME_PLATAFORMA[c.plataforma]}</span>
                   <BadgePlataforma c={c} />
                   {c.demo && <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">demo</span>}
                 </div>
                 <p className="mt-0.5 text-[11px] text-zinc-400 truncate">
                   <span className="font-mono text-zinc-300">{c.login ?? "—"}</span> · {c.servidor ?? "—"}
+                  {c.etiquetaDoDono && c.rotulo ? ` · ${c.rotulo}` : ""}
                   {typeof c.saldo === "number" ? ` · ${c.saldo.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}` : ""}
                 </p>
               </div>

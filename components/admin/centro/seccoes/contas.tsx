@@ -41,7 +41,7 @@ export default function SeccaoContas() {
       if (problema === "inexistente" && !c.metaapi.inexistente) return false
       if (problema === "1" && tomEstadoConta(c) !== "grave" && !c.quota.acima) return false
       if (problema === "quota" && !c.quota.acima) return false
-      if (t && ![c.email, c.nome, c.login, c.servidor, c.rotulo, c.metaapiAccountId, c.ref].some((x) => x && x.toLowerCase().includes(t))) return false
+      if (t && ![c.email, c.nome, c.login, c.servidor, c.rotulo, c.etiquetaDoDono, c.metaapiAccountId, c.ref].some((x) => x && x.toLowerCase().includes(t))) return false
       return true
     })
   }, [todas, q, plataforma, categoria, problema])
@@ -60,7 +60,7 @@ export default function SeccaoContas() {
 
       <Painel titulo="Todas as contas" sub="T2T/site, MTM Auto, WebTrader e MTM Funded — estado guardado na base, sem chamadas à MetaApi. Clica para abrir a gaveta com acções." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="email, login, servidor, id MetaApi…" className="w-64 rounded-md border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-white placeholder:text-zinc-600" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="email, login, servidor, etiqueta, id MetaApi…" className="w-64 rounded-md border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-white placeholder:text-zinc-600" />
           <Chip activo={!plataforma} onClick={() => setPlataforma("")}>todas</Chip>
           {PLATAFORMAS.map((p) => <Chip key={p} activo={plataforma === p} onClick={() => setPlataforma(p)}>{p}</Chip>)}
           <span className="mx-1 h-4 w-px bg-zinc-800" />
@@ -78,6 +78,7 @@ export default function SeccaoContas() {
                 <tr key={c.ref} className={trClic} onClick={() => ctx.abrir({ tipo: "conta", id: c.ref })}>
                   <td className={td}>
                     <p className="font-mono text-zinc-100">{c.plataforma.toUpperCase()} {c.login ?? "—"}</p>
+                    {c.etiquetaDoDono && <p className="truncate text-[10.5px] text-[#E9C46A]" title="etiqueta do dono">{c.etiquetaDoDono}</p>}
                     <p className="text-[10px] text-zinc-500">{c.servidor ?? "—"}{c.rotulo ? ` · ${c.rotulo}` : ""} · {c.origem} · {c.categoria}{c.demo ? " · demo" : ""}</p>
                   </td>
                   <td className={td}>

@@ -27,6 +27,7 @@ import { chaveContaTL, chaveMetaApiDaConta, tradeLockerAutoListavel } from './co
 import { decidirAcessoMt5, lerRefConta, type ContaMetaApiDoUtilizador } from './corretoras/regras'
 import { ErroCorretora, type AdaptadorCorretora, type PlataformaWT } from './corretoras/tipos'
 import { lerSessaoTL } from './tradelocker-sessao'
+import { etiquetaDaLinha } from '@/lib/contas/etiqueta'
 
 export const CABECALHO_SESSAO_TL = 'x-webtrader-tl'
 
@@ -44,6 +45,8 @@ export interface ContaListadaWT {
   /** MetaTrader: 'mt4' quando a conta é MT4 (o adaptador é o mesmo, a etiqueta não). */
   versao?: 'mt4' | 'mt5'
   origem: 'ligador' | 'webtrader'
+  /** 113 — a etiqueta que o DONO pôs nesta conta (null = sem etiqueta, mostra-se o nome de sempre). */
+  etiquetaDoDono: string | null
 }
 
 const txt = (v: unknown) => (v == null || v === '' ? null : String(v))
@@ -98,10 +101,10 @@ export async function listarContasReais(userId: string): Promise<ContaListadaWT[
     const p = String(c.mt5_platform ?? 'mt5').toLowerCase()
     if (p === 'tradelocker' && c.tl_account_id) {
       tlVistas.add(chaveContaTL(c.tl_env, c.tl_account_id))
-      out.push({ ref: `tradelocker:site:${c.id}`, plataforma: 'tradelocker', rotulo: txt(c.account_label), login: txt(c.tl_acc_num) ?? txt(c.tl_account_id), servidor: txt(c.tl_server), demo: c.tl_env === 'demo', real: true, bloqueada: null, origem: 'ligador' })
+      out.push({ ref: `tradelocker:site:${c.id}`, plataforma: 'tradelocker', etiquetaDoDono: etiquetaDaLinha(c), rotulo: txt(c.account_label), login: txt(c.tl_acc_num) ?? txt(c.tl_account_id), servidor: txt(c.tl_server), demo: c.tl_env === 'demo', real: true, bloqueada: null, origem: 'ligador' })
     } else if ((p === 'mt5' || p === 'mt4') && c.metaapi_account_id && !vistos.has(String(c.metaapi_account_id))) {
       vistos.add(String(c.metaapi_account_id))
-      out.push({ ref: `mt5:site:${c.id}`, plataforma: 'mt5', versao: p === 'mt4' ? 'mt4' : 'mt5', rotulo: txt(c.account_label), login: txt(c.mt5_login) ?? (c.mt5_login_last4 ? `••••${c.mt5_login_last4}` : null), servidor: txt(c.mt5_server), demo: demoPeloNome(c.mt5_server), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'ligador' })
+      out.push({ ref: `mt5:site:${c.id}`, plataforma: 'mt5', versao: p === 'mt4' ? 'mt4' : 'mt5', etiquetaDoDono: etiquetaDaLinha(c), rotulo: txt(c.account_label), login: txt(c.mt5_login) ?? (c.mt5_login_last4 ? `••••${c.mt5_login_last4}` : null), servidor: txt(c.mt5_server), demo: demoPeloNome(c.mt5_server), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'ligador' })
     }
   }
   for (const c of (auto ?? []) as Record<string, unknown>[]) {
@@ -111,18 +114,18 @@ export async function listarContasReais(userId: string): Promise<ContaListadaWT[
       const chave = chaveContaTL(c.tl_env, c.tl_account_id)
       if (tlVistas.has(chave)) continue
       tlVistas.add(chave)
-      out.push({ ref: `tradelocker:auto:${c.id}`, plataforma: 'tradelocker', rotulo: txt(c.rotulo) ?? txt(c.corretora), login: txt(c.tl_acc_num) ?? txt(c.tl_account_id), servidor: txt(c.tl_server) ?? txt(c.servidor), demo: c.tl_env === 'demo' || Boolean(c.demo), real: true, bloqueada: null, origem: 'ligador' })
+      out.push({ ref: `tradelocker:auto:${c.id}`, plataforma: 'tradelocker', etiquetaDoDono: etiquetaDaLinha(c), rotulo: txt(c.rotulo) ?? txt(c.corretora), login: txt(c.tl_acc_num) ?? txt(c.tl_account_id), servidor: txt(c.tl_server) ?? txt(c.servidor), demo: c.tl_env === 'demo' || Boolean(c.demo), real: true, bloqueada: null, origem: 'ligador' })
       continue
     }
     if ((p === 'mt5' || p === 'mt4') && c.metaapi_account_id && !vistos.has(String(c.metaapi_account_id))) {
       vistos.add(String(c.metaapi_account_id))
-      out.push({ ref: `mt5:auto:${c.id}`, plataforma: 'mt5', versao: p === 'mt4' ? 'mt4' : 'mt5', rotulo: txt(c.rotulo) ?? txt(c.corretora), login: txt(c.login), servidor: txt(c.servidor), demo: Boolean(c.demo), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'ligador' })
+      out.push({ ref: `mt5:auto:${c.id}`, plataforma: 'mt5', versao: p === 'mt4' ? 'mt4' : 'mt5', etiquetaDoDono: etiquetaDaLinha(c), rotulo: txt(c.rotulo) ?? txt(c.corretora), login: txt(c.login), servidor: txt(c.servidor), demo: Boolean(c.demo), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'ligador' })
     }
   }
   for (const c of wt) {
     if (!c.metaapi_account_id || vistos.has(String(c.metaapi_account_id)) || c.estado !== 'connected') continue
     vistos.add(String(c.metaapi_account_id))
-    out.push({ ref: `mt5:wt:${c.id}`, plataforma: 'mt5', versao: c.plataforma === 'mt4' ? 'mt4' : 'mt5', rotulo: txt(c.rotulo), login: txt(c.login), servidor: txt(c.servidor), demo: demoPeloNome(c.servidor), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'webtrader' })
+    out.push({ ref: `mt5:wt:${c.id}`, plataforma: 'mt5', versao: c.plataforma === 'mt4' ? 'mt4' : 'mt5', etiquetaDoDono: etiquetaDaLinha(c), rotulo: txt(c.rotulo), login: txt(c.login), servidor: txt(c.servidor), demo: demoPeloNome(c.servidor), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'webtrader' })
   }
   return out
 }

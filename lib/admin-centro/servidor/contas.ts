@@ -8,6 +8,7 @@ import { ehErroDeQuotaTexto } from '@/lib/mtmcopy/erro-historico'
 import { carregarInfra } from './infra'
 import { lerProviders } from './sinais'
 import { db, ler, num, txt, type Linha } from './base'
+import { lerEtiquetas } from '@/lib/contas/etiquetas-servidor'
 
 /**
  * CONTAS — todas as contas numa lista (MT4/MT5/TradeLocker/MTM Funded; cliente, casa, seguidoras,
@@ -30,6 +31,8 @@ export interface ContaCentro {
   motivoDireito: string
   temMtmAuto: boolean
   rotulo: string | null
+  /** 113 — a etiqueta que o DONO da conta escreveu (null = não pôs nenhuma). */
+  etiquetaDoDono: string | null
   login: string | null
   servidor: string | null
   estado: string
@@ -75,6 +78,14 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     lerProviders(),
     carregarInfra(),
   ])
+  // As etiquetas (113) vêm à PARTE e nunca falham a lista: juntá-las aos selects acima faria o
+  // `ler()` tratar a coluna em falta como tabela em falta e o painel aparecia sem contas nenhumas.
+  const [etiqSite, etiqAuto, etiqWt, etiqFunded] = await Promise.all([
+    lerEtiquetas('mtmcopy_connections'),
+    lerEtiquetas('mtmauto_accounts'),
+    lerEtiquetas('webtrader_contas_mt5'),
+    lerEtiquetas('mtm_trading_accounts'),
+  ])
   for (const [n, x] of [['T2T/site', site], ['MTM Auto', auto], ['MTM Funded', funded]] as const) if (x.erro) avisos.push(`${n}: ${x.erro}`)
   if (wt.semTabela) avisos.push('WebTrader MT5 (076) por aplicar')
 
@@ -114,7 +125,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     base.push({
       ref: `site:${c.id}`, origem: 'site', plataforma,
       categoria: c.account_role === 'master' || (acc && contasProvider.has(acc)) ? 'mestre' : 'cliente',
-      userId: txt(c.user_id), rotulo: txt(c.account_label),
+      userId: txt(c.user_id), rotulo: txt(c.account_label), etiquetaDoDono: etiqSite.get(String(c.id)) ?? null,
       login: plataforma === 'tradelocker' ? txt(c.tl_acc_num) : txt(c.mt5_login), servidor: plataforma === 'tradelocker' ? txt(c.tl_server) ?? txt(c.mt5_server) : txt(c.mt5_server),
       estado: String(c.mt5_status ?? '—'), ativa: c.is_active !== false, demo: plataforma === 'tradelocker' ? c.tl_env === 'demo' : demoPeloNome(c.mt5_server),
       erro, erroEstado: erro && ehErroDeQuotaTexto(erro) && c.last_signal_at && Date.parse(String(c.last_signal_at)) > Date.parse(String(c.updated_at ?? 0)) ? 'velho' : erroActual(erro, txt(c.updated_at), agora),
@@ -130,7 +141,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     const erro = txt(c.erro) ?? txt(c.tl_last_error)
     base.push({
       ref: `auto:${c.id}`, origem: 'auto', plataforma, categoria: equipa.has(String(c.user_id)) ? 'equipa' : acc && contasProvider.has(acc) ? 'mestre' : 'cliente',
-      userId: txt(c.user_id), rotulo: txt(c.rotulo) ?? txt(c.corretora), login: txt(c.login), servidor: txt(c.servidor),
+      userId: txt(c.user_id), rotulo: txt(c.rotulo) ?? txt(c.corretora), etiquetaDoDono: etiqAuto.get(String(c.id)) ?? null, login: txt(c.login), servidor: txt(c.servidor),
       estado: String(c.estado ?? '—'), ativa: c.copia_ativa !== false, demo: Boolean(c.demo), erro, erroEstado: erroActual(erro, txt(c.updated_at), agora),
       metaapiAccountId: acc, metaapi: metaapi(acc, txt(c.estado)),
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: acc, login: txt(c.login), plataforma, estado: txt(c.estado) }),
@@ -142,7 +153,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     const acc = txt(c.metaapi_account_id)
     const plataforma = c.plataforma === 'mt4' ? 'mt4' : 'mt5'
     base.push({
-      ref: `wt:${c.id}`, origem: 'wt', plataforma, categoria: 'cliente', userId: txt(c.user_id), rotulo: txt(c.rotulo), login: txt(c.login), servidor: txt(c.servidor),
+      ref: `wt:${c.id}`, origem: 'wt', plataforma, categoria: 'cliente', userId: txt(c.user_id), rotulo: txt(c.rotulo), etiquetaDoDono: etiqWt.get(String(c.id)) ?? null, login: txt(c.login), servidor: txt(c.servidor),
       estado: String(c.estado ?? '—'), ativa: true, demo: demoPeloNome(c.servidor), erro: txt(c.erro), erroEstado: erroActual(txt(c.erro), txt(c.updated_at), agora),
       metaapiAccountId: acc, metaapi: metaapi(acc, txt(c.estado)),
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: acc, login: txt(c.login), plataforma, estado: txt(c.estado) }),
@@ -156,6 +167,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     base.push({
       ref: `funded:${f.id}`, origem: 'funded', plataforma: 'mtmfunded', categoria: casa ? 'casa' : f.segue_estrategia ? 'seguidora' : 'cliente',
       userId: txt(f.user_id), rotulo: [real ? 'Casa · auditoria' : casa ? 'Casa' : null, txt(f.tipo), f.recolhe_todos_sinais === true ? 'todos os sinais' : null].filter(Boolean).join(' · ') || 'MTM Funded',
+      etiquetaDoDono: etiqFunded.get(String(f.id)) ?? null,
       login: txt(f.mt5_login), servidor: txt(f.servidor) ?? 'MTM Funded', estado: String(f.estado ?? '—'), ativa: f.estado === 'ativa', demo: false,
       erro: txt(f.quebrou_regra), erroEstado: f.quebrou_regra ? 'actual' : null, metaapiAccountId: txt(f.metaapi_account_id),
       metaapi: metaapi(txt(f.metaapi_account_id), f.motor === 'sim' ? 'simulada' : null), contaMetaApi: false,

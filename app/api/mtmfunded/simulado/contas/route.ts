@@ -6,6 +6,7 @@ import { avisoDaConta } from '@/lib/mtmfunded/aviso-conta'
 import { selecionarComOpcionais } from '@/lib/mtmfunded/numeros-conta'
 import { ligacoesFundedDoUtilizador } from '@/lib/mtmfunded/simulado/execucao'
 import { fundedLigadasAlheias } from '@/lib/webtrader/contas-auto-regras'
+import { etiquetaDaLinha } from '@/lib/contas/etiqueta'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,6 +83,9 @@ export async function GET(request: NextRequest) {
         ...c,
         // As etiquetas vêm prontas: o seletor de contas do WebTrader mostra F1/Active sem reimplementar a regra.
         etiqueta: tipoCurto(c.tipo as string, m),
+        // 113 — a etiqueta que o DONO escreveu. Nome à parte porque `etiqueta` aqui já é a FASE
+        // (F1/F2/Funded/Torneio) e o seletor conta com isso. Vem `null` sem a 113 aplicada.
+        etiquetaDoDono: etiquetaDaLinha(c),
         estadoCurto: estadoCurto(c.estado as string, m, (c.pausada_em as string | null) ?? null),
         // A linha fixa do WebTrader (avaliação / Funded real / análise…) decide-se aqui, com a conta inteira à mão.
         aviso: avisoDaConta({ tipo: c.tipo as string, estado: c.estado as string, metricas: m, pausadaEm: (c.pausada_em as string | null) ?? null, contaReal: c.conta_real_casa === true }),

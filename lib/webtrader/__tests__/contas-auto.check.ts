@@ -65,9 +65,9 @@ caso('seletor: funded investor marcada só leitura; MT4 com etiqueta MT4', () =>
       { id: V, mt5_login: '77000002', etiqueta: 'F2', estadoCurto: 'Active', sim_saldo: 1, sim_equity: 1, modo: 'investor' },
     ],
     reais: [
-      { ref: `mt5:auto:${U}`, plataforma: 'mt5', rotulo: null, login: '1', servidor: 's', demo: false, real: true, bloqueada: null, origem: 'ligador', versao: 'mt4' },
-      { ref: `mt5:site:${V}`, plataforma: 'mt5', rotulo: null, login: '2', servidor: 's', demo: false, real: true, bloqueada: null, origem: 'ligador' },
-      { ref: `tradelocker:auto:${U}`, plataforma: 'tradelocker', rotulo: null, login: '3', servidor: 'x', demo: true, real: true, bloqueada: null, origem: 'ligador' },
+      { ref: `mt5:auto:${U}`, plataforma: 'mt5', rotulo: null, etiquetaDoDono: null, login: '1', servidor: 's', demo: false, real: true, bloqueada: null, origem: 'ligador', versao: 'mt4' },
+      { ref: `mt5:site:${V}`, plataforma: 'mt5', rotulo: null, etiquetaDoDono: null, login: '2', servidor: 's', demo: false, real: true, bloqueada: null, origem: 'ligador' },
+      { ref: `tradelocker:auto:${U}`, plataforma: 'tradelocker', rotulo: null, etiquetaDoDono: null, login: '3', servidor: 'x', demo: true, real: true, bloqueada: null, origem: 'ligador' },
     ],
   })
   assert.equal(e.find((x) => x.id === U)!.modo, 'master')

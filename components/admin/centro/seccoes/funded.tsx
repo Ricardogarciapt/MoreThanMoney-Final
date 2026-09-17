@@ -29,11 +29,12 @@ export default function SeccaoFunded() {
       <Painel titulo="Contas MTM Funded" sub="Clica para abrir a ficha completa (resumo, métricas, posições, histórico, gestão, levantamentos, auditoria)." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
         {!f ? <Vazio>A ler…</Vazio> : f.contas.length === 0 ? <Vazio>Sem contas.</Vazio> : (
           <Tabela min={820}>
-            <thead><tr><th className={th}>Login</th><th className={th}>Tipo</th><th className={th}>Dono</th><th className={th}>Estado</th><th className={th}>Saldo / equity</th><th className={th}>Usos</th></tr></thead>
+            <thead><tr><th className={th}>Login</th><th className={th}>Etiqueta</th><th className={th}>Tipo</th><th className={th}>Dono</th><th className={th}>Estado</th><th className={th}>Saldo / equity</th><th className={th}>Usos</th></tr></thead>
             <tbody>
               {f.contas.map((c) => (
                 <tr key={c.ref} className={trClic} onClick={() => setModal(c.ref.slice(7))}>
                   <td className={`${td} font-mono text-zinc-100`}>{c.login ?? "por emitir"}</td>
+                  <td className={`${td} text-[#E9C46A]`}>{c.etiquetaDoDono ?? "—"}</td>
                   <td className={td}>{c.rotulo}</td>
                   <td className={td}>{c.userId ? <button type="button" className="hover:text-[#E9C46A]" onClick={(e) => { e.stopPropagation(); ctx.abrir({ tipo: "utilizador", id: c.userId! }) }}>{c.email ?? c.userId.slice(0, 8)}</button> : "—"}</td>
                   <td className={td}><Pilula tom={tomEstadoConta(c)}>{c.estado}</Pilula>{c.erro && <p className="mt-0.5 text-[10px] text-rose-300">{c.erro}</p>}</td>

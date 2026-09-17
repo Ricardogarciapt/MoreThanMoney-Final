@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ehContaMetaApi } from '@/lib/contas/quota-metaapi'
+import { etiquetaDaLinha } from '@/lib/contas/etiqueta'
 
 /**
  * «As minhas contas» — a lista única de contas de um utilizador, dos dois produtos.
@@ -20,6 +21,8 @@ export interface ContaUnificada {
   origem: OrigemConta
   plataforma: PlataformaConta
   rotulo: string | null
+  /** 113 — a etiqueta que o DONO pôs nesta conta (manda sobre `rotulo` no que se mostra). */
+  etiquetaDoDono: string | null
   login: string | null
   servidor: string | null
   estado: EstadoConta
@@ -104,6 +107,7 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
       origem: 'site',
       plataforma,
       rotulo: txt(c.account_label),
+      etiquetaDoDono: etiquetaDaLinha(c),
       login: plataforma === 'tradelocker' ? txt(c.tl_acc_num) ?? txt(c.tl_account_id) : txt(c.mt5_login) ?? (c.mt5_login_last4 ? `••••${c.mt5_login_last4}` : null),
       servidor: plataforma === 'tradelocker' ? txt(c.tl_server) ?? txt(c.mt5_server) : txt(c.mt5_server),
       estado: estadoDe(c.mt5_status, ativa, soLeitura),
@@ -139,6 +143,7 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
       origem: 'auto',
       plataforma,
       rotulo: txt(c.rotulo) ?? txt(c.corretora),
+      etiquetaDoDono: etiquetaDaLinha(c),
       login: plataforma === 'tradelocker' ? txt(c.tl_acc_num) ?? txt(c.login) : txt(c.login),
       servidor: txt(c.servidor),
       estado: estadoDe(c.estado, ativa, soLeitura),
@@ -169,6 +174,7 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
       origem: 'wt',
       plataforma: c.plataforma === 'mt4' ? 'mt4' : 'mt5',
       rotulo: txt(c.rotulo),
+      etiquetaDoDono: etiquetaDaLinha(c),
       login: txt(c.login),
       servidor: txt(c.servidor),
       estado: c.estado === 'error' ? 'erro' : c.estado === 'pending' ? 'a_ligar' : 'ligada',

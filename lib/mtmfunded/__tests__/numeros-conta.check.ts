@@ -80,7 +80,7 @@ async function main() {
       return { data: [{ id: 'x' }], error: null }
     })
     assert.deepEqual(r.data, [{ id: 'x' }])
-    assert.equal(pedidas[1], 'id, pausada_em, conta_real_casa')
+    assert.equal(pedidas[1], 'id, pausada_em, conta_real_casa, etiqueta')
   })
 
   console.log(`\n${n} casos ok`)
