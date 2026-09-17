@@ -10,6 +10,7 @@ import { decidirPassagem, destinoDaEntrada } from "@/lib/webtrader/sessao-app"
  *
  * A casca nativa abre ESTA página no separador WebTrader. A página pede à casca a sessão da app
  * (mensagem `mtmautoWT`), e a casca responde chamando `window.__mtmAutoWTReceber({ token, userId })`
+ * (ou `{ erro: true }` quando a app não soube responder)
  * — o token viaja como ARGUMENTO de função, nunca num URL (ficaria em históricos e logs).
  *
  * Com isso, a página garante que o WebTrader tem a sessão da MESMA pessoa (lib/webtrader/sessao-app
@@ -20,7 +21,8 @@ import { decidirPassagem, destinoDaEntrada } from "@/lib/webtrader/sessao-app"
  * Fora da app (browser normal) não há casca: segue logo para /webtrader.
  */
 
-type Dados = { token?: string | null; userId?: string | null }
+/** `erro`: a app não conseguiu dizer se há sessão (rede) — não se mexe na sessão do WebTrader. */
+type Dados = { token?: string | null; userId?: string | null; erro?: boolean }
 type Ponte = { postMessage: (m: unknown) => void }
 
 declare global {
@@ -62,6 +64,7 @@ export default function EntradaWebtraderApp() {
     window.__mtmAutoWTReceber = async (d: Dados) => {
       // A casca respondeu: a partir daqui manda a passagem, não o relógio (senão saía-se a meio do pedido).
       clearTimeout(espera)
+      if (d?.erro) { seguir(); return "erro" }
       try {
         const { data } = await supabase.auth.getSession()
         const passo = decidirPassagem({ tokenApp: d?.token, userIdApp: d?.userId, userIdAtual: data.session?.user?.id })
