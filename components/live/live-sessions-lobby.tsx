@@ -53,32 +53,11 @@ type ScheduledSession = {
   tier?: string | null
 }
 
-/** Os dois caminhos do /onboarding — os mesmos destinos, aqui resumidos para caberem ao lado do curso. */
-const CAMINHOS = [
-  { href: "/onboarding/mtm", titulo: "live.lobby.pathMtmTitle", nota: "live.lobby.pathMtmNote", cta: "live.lobby.pathMtmCta", destaque: true },
-  { href: "/onboarding/mtm-auto", titulo: "live.lobby.pathAutoTitle", nota: "live.lobby.pathAutoNote", cta: "live.lobby.pathAutoCta", destaque: false },
-] as const
-
 function streamVisual(stream: Stream): string | null {
   const thumb = stream.thumbnail_url?.trim()
   if (thumb) return thumb
   const avatar = stream.educator?.avatar_url?.trim()
   return avatar || null
-}
-
-/**
- * Resumo da bio para o cartão: a primeira frase, cortada a ~110 caracteres.
- *
- * Há bios de uma linha e bios de quatro parágrafos (a do Ricardo). Num carrossel de cartões
- * iguais, a longa enchia o cartão e empurrava o resto para fora da vista. A bio inteira continua
- * a um toque — o cartão abre o perfil —, por isso aqui basta dizer quem é.
- */
-function resumoBio(bio: string | null | undefined): string | null {
-  const texto = (bio || "").replace(/\s+/g, " ").trim()
-  if (!texto) return null
-  const fim = texto.search(/[.!?](\s|$)/)
-  const frase = fim > 0 ? texto.slice(0, fim + 1) : texto
-  return frase.length > 110 ? `${frase.slice(0, 107).trimEnd()}…` : frase
 }
 
 function canAccessStream(
@@ -189,11 +168,6 @@ export default function LiveSessionsLobby() {
     () => (academia ? salas.filter((s) => s.academy?.name === academia) : salas),
     [salas, academia]
   )
-  const educadoresFiltrados = useMemo(
-    () => (academia ? educators.filter((e) => e.academy?.name === academia) : educators),
-    [educators, academia]
-  )
-
   const openEducatorDialog = async (ed: EducatorProfilePublic) => {
     setSelectedEducator(ed as EducatorPublic)
     setSelectedEducatorStreams([])
@@ -330,6 +304,9 @@ export default function LiveSessionsLobby() {
         • curso por gravar → um aviso discreto (sem botão) e os dois caminhos do onboarding, que já
           funcionam hoje. O cartão do curso desaparece sozinho enquanto não houver playlist.
       */}
+      {/* Só o curso. Os dois caminhos do onboarding saíram daqui (16/09, pedido do dono): repetiam o
+          /onboarding e empurravam as salas para baixo. Sem curso, a secção não aparece. */}
+      {(cursoPronto || cursoAChegar) && (
       <section aria-labelledby="por-onde-comecar">
         <div className="mb-4">
           <h2 id="por-onde-comecar" className="flex items-center gap-2 text-xl font-bold tracking-tight text-white md:text-2xl">
@@ -339,7 +316,7 @@ export default function LiveSessionsLobby() {
           <p className="mt-1 text-sm text-gray-400">{t("live.lobby.startIntro")}</p>
         </div>
 
-        <div className={`grid gap-4 ${cursoPronto || cursoAChegar ? "lg:grid-cols-[1.4fr_1fr]" : ""}`}>
+        <div className="grid gap-4">
           {cursoPronto && <CursoIntroducao feitio="cartao" />}
           {cursoAChegar && curso && (
             <div className="flex flex-col overflow-hidden rounded-2xl border border-dashed border-[#D2A63C]/25 bg-gray-950/70 sm:flex-row sm:items-center">
@@ -359,27 +336,9 @@ export default function LiveSessionsLobby() {
             </div>
           )}
 
-          <div className={`grid gap-3 ${cursoPronto || cursoAChegar ? "" : "sm:grid-cols-2"}`}>
-            {CAMINHOS.map((c) => (
-              <Link
-                key={c.href}
-                href={c.href}
-                className={`group flex flex-col rounded-2xl border p-5 transition-colors ${
-                  c.destaque
-                    ? "border-[#D2A63C]/45 bg-[#D2A63C]/[0.06] hover:border-[#D2A63C]/70"
-                    : "border-gray-800 bg-gray-950/80 hover:border-gray-600"
-                }`}
-              >
-                <span className="text-base font-semibold text-white">{t(c.titulo)}</span>
-                <span className="mt-1 flex-1 text-[13px] leading-relaxed text-gray-400">{t(c.nota)}</span>
-                <span className="mt-3 text-[13px] font-semibold text-[#D2A63C]">
-                  {t(c.cta)} <span className="inline-block transition-transform group-hover:translate-x-0.5">→</span>
-                </span>
-              </Link>
-            ))}
-          </div>
         </div>
       </section>
+      )}
 
       <EducatorProfileDialog
         open={educatorDialogOpen}
@@ -421,72 +380,8 @@ export default function LiveSessionsLobby() {
           )}
         </div>
 
-        {/* Especialistas */}
-        {educadoresFiltrados.length > 0 || educators.length === 0 ? (
-          <div>
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-gray-400">{t("live.specialistsHeading")}</h3>
-              {educadoresFiltrados.length > 1 && <span className="text-xs text-gray-500 md:hidden">{t("live.swipeToSeeAll")}</span>}
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-[#D2A63C]/30">
-              {educators.length === 0 && <p className="text-sm text-gray-500">{t("live.noPublicEducators")}</p>}
-              {educadoresFiltrados.map((ed) => {
-                const resumo = resumoBio(ed.bio)
-                return (
-                  <button
-                    key={ed.id}
-                    type="button"
-                    className="w-[220px] shrink-0 snap-start text-left"
-                    aria-label={`${t("live.viewProfileOf")} ${ed.display_name}`}
-                    onClick={() => void openEducatorDialog(ed)}
-                  >
-                    <Card className="flex h-full w-full flex-col overflow-hidden border-[#D2A63C]/20 bg-gradient-to-b from-gray-900/90 to-black/90 transition hover:border-[#D2A63C]/45">
-                      {/**
-                        * A moldura mostra a imagem INTEIRA, não um recorte dela.
-                        *
-                        * As fotos dos educadores não têm todas o mesmo formato (quase quadrada,
-                        * vertical de telemóvel, 16:9 com o nome desenhado). `object-contain` não
-                        * corta nada; as barras que sobram levam a mesma imagem desfocada por trás.
-                        */}
-                      <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-gray-800 to-black">
-                        {ed.avatar_url ? (
-                          <>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={ed.avatar_url}
-                              alt=""
-                              aria-hidden="true"
-                              className="absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
-                            />
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={ed.avatar_url} alt="" className="relative h-full w-full object-contain" />
-                          </>
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-gray-600">
-                            <GraduationCap className="h-14 w-14 opacity-40" />
-                          </div>
-                        )}
-                        {ed.is_live && (
-                          <div className="absolute right-2 top-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium backdrop-blur">
-                            <Circle className="h-2 w-2 fill-emerald-400 text-emerald-400" />
-                            {t("live.online")}
-                          </div>
-                        )}
-                      </div>
-                      <CardContent className="flex flex-1 flex-col gap-1.5 p-3.5">
-                        <p className="font-bold leading-tight text-white">{ed.display_name}</p>
-                        {ed.specialty && <p className="line-clamp-1 text-[11px] text-[#D2A63C]/90">{ed.specialty}</p>}
-                        {resumo && <p className="line-clamp-2 text-xs leading-relaxed text-gray-400">{resumo}</p>}
-                        <span className="mt-auto pt-1 text-[11px] font-semibold text-[#D2A63C]">{t("live.lobby.viewProfile")} →</span>
-                      </CardContent>
-                    </Card>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        ) : null}
-
+        {/* Os especialistas já aparecem no cartão de cada sala (e o perfil abre a partir dele): o
+            carrossel à parte repetia a mesma informação duas vezes. */}
         {/* Salas */}
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-gray-400">{t("live.lobby.roomsSub")}</h3>
