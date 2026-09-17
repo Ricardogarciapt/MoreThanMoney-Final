@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Bell, Check, X, TrendingUp, TrendingDown, Target, Shield, Zap, AlertCircle, CheckCheck, MessageSquare, ExternalLink, Lock, RefreshCw } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/contexts/auth-context"
+import { ehAdminUi, type PerfilUi } from "@/lib/perfil-ui"
 
 interface Notification {
   id: string
@@ -33,6 +35,7 @@ interface NotificationsPanelProps {
 }
 
 export default function NotificationsPanel({ onClose, className, isAppOnlyUser = false }: NotificationsPanelProps = {}) {
+  const { user } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -255,14 +258,21 @@ export default function NotificationsPanel({ onClose, className, isAppOnlyUser =
         return '/member-area?tab=notifications'
       case 'stripe_skool_pending':
       case 'stripe_skool_revoke':
-        return notification.data?.url || '/admin?tab=users'
+        // Estas nascem para o admin. Se chegarem a um cliente — e chegam, porque o painel não
+        // filtra por tipo — mandá-lo para /admin era pô-lo a bater numa porta que não abre.
+        return (
+          notification.data?.url ||
+          (ehAdminUi(user as PerfilUi) ? '/admin?tab=users' : '/member-area?tab=notifications')
+        )
       case 'new_member':
       case 'new_sale':
       case 'new_client':
       case 'new_affiliate':
       case 'team_renewal':
       case 'rank_up':
-        return '/app-mobile?tab=fast-start'
+        // `fast-start` não é um separador que exista (ver `validTabs` em /app-mobile): quem
+        // carregava era despejado no Feed sem perceber porquê. Estas são de rede/afiliados.
+        return '/app-mobile?tab=mlm'
       default:
         return '/member-area?tab=notifications'
     }

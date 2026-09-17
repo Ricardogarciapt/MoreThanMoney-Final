@@ -35,6 +35,7 @@ import NotificationsPanel from "@/components/notifications-panel"
 import { MemberSubscriptionCard } from "@/components/member-subscription-card"
 import { ConversionBanner } from "@/components/conversion-banner"
 import { LicencaSenseiCard } from "@/components/licenca-sensei-card"
+import { chavePerfilUi, type ChavePerfil, type PerfilUi } from "@/lib/perfil-ui"
 
 interface UserProfile {
   id: string
@@ -407,13 +408,21 @@ export default function MemberAreaPage() {
     )
   }
 
-  const userTypeBadge = {
+  /**
+   * O emblema lia só `user_type` e não tinha entrada para VIP nem para Premium: a mesma conta
+   * que na app aparece como «⭐ VIP» era aqui apresentada como «Membro».
+   */
+  const userTypeBadge: Record<ChavePerfil, { label: string; color: string }> = {
     admin: { label: t("memberarea.badgeAdmin"), color: "bg-red-500/20 text-red-400 border-red-500/30" },
+    vip: { label: "⭐ VIP", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
+    premium: { label: "💎 Premium", color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+    iq: { label: "🎓 IQ", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+    skool: { label: "📚 Skool", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
     trial: { label: t("memberarea.badgeTrial"), color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-    guest: { label: t("memberarea.badgeGuest"), color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
-    member: { label: t("memberarea.badgeMember"), color: "bg-green-500/20 text-green-400 border-green-500/30" },
+    membro: { label: t("memberarea.badgeMember"), color: "bg-green-500/20 text-green-400 border-green-500/30" },
+    inativo: { label: t("memberarea.badgeGuest"), color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
   }
-  const badge = userTypeBadge[user.user_type as keyof typeof userTypeBadge] || userTypeBadge.member
+  const badge = userTypeBadge[chavePerfilUi(user as PerfilUi)]
 
   return (
     <main className="min-h-screen bg-gray-950 text-white">

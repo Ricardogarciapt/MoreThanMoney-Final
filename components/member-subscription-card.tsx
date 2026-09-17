@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { chavePerfilUi, type ChavePerfil, type PerfilUi } from "@/lib/perfil-ui"
 
 /**
  * Gestão de subscrição consciente da plataforma (Stripe / Apple / manual).
@@ -23,13 +24,15 @@ export type SubscriptionInfo = {
   hideUpgrade?: boolean
 }
 
-const PLAN_LABEL: Record<string, string> = {
+const PLAN_LABEL: Record<ChavePerfil, string> = {
+  admin: "🔴 Admin",
   premium: "💎 Premium",
-  app_member: "📱 Membro",
-  standard: "📱 Membro",
+  membro: "📱 Membro",
   vip: "⭐ VIP",
   iq: "🎓 IQ",
   skool: "📚 Skool",
+  trial: "⏳ Trial",
+  inativo: "📱 Membro",
 }
 
 const PLATFORM_LABEL: Record<string, string> = {
@@ -51,14 +54,24 @@ export function MemberSubscriptionCard(info: SubscriptionInfo) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  const cat = (info.memberCategory || "standard").toLowerCase()
   const platform = (info.subscriptionPlatform || "manual").toLowerCase()
   const status = (info.subscriptionStatus || "inactive").toLowerCase()
-  const isPremium = cat === "premium" || cat === "vip"
+  /**
+   * O plano lia-se só por `memberCategory`. Como `cat` nunca ficava vazio (tinha 'standard' por
+   * omissão), o recurso ao `subscriptionPlan` da linha seguinte era código morto — e quem paga
+   * Premium com a categoria ainda em 'standard' via-se descrito como «📱 Membro», com o botão
+   * «Fazer upgrade para Premium» a oferecer-lhe o que já tinha comprado.
+   */
+  const perfil: PerfilUi = {
+    member_category: info.memberCategory,
+    subscription_plan: info.subscriptionPlan,
+  }
+  const chave = chavePerfilUi(perfil)
+  const isPremium = chave === "premium" || chave === "vip" || chave === "admin"
   const isApple = platform === "app_store"
   const isPlay = platform === "google_play"
   const isActive = status === "active"
-  const planText = PLAN_LABEL[cat] || PLAN_LABEL[info.subscriptionPlan || ""] || "📱 Membro"
+  const planText = PLAN_LABEL[chave] ?? "📱 Membro"
 
   const openStripePortal = async () => {
     setBusy(true)

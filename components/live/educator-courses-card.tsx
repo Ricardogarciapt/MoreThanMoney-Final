@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { GraduationCap, Lock, PlayCircle, ChevronDown } from "lucide-react"
 import { LmsPlaylistSection } from "@/components/live/lms-playlist-section"
+import { podeAcederAoTier } from "@/lib/perfil-ui"
 
 /**
  * CARD DE CURSOS do educador — junta as playlists PRÓPRIAS do educador
@@ -22,14 +23,23 @@ export interface CourseItem {
   origin: "educator" | "room"
 }
 
-function allows(plan: string | null | undefined, userType: string | null | undefined, tier?: string | null): boolean {
-  if (userType === "admin") return true
-  const t = tier || "all"
-  if (t === "all") return true
-  if (t === "app_member") return plan === "app_member" || plan === "premium"
-  if (t === "premium") return plan === "premium"
-  if (t === "vip") return false
-  return false
+/**
+ * A MESMA regra do lobby e da app (`lib/perfil-ui.ts`).
+ *
+ * A versão que estava aqui negava um curso VIP a toda a gente menos ao admin — nem o próprio VIP
+ * entrava no que era só dele — e nunca recebia a `member_category`, pelo que o VIP marcado nesse
+ * campo também perdia as playlists que via no lobby.
+ */
+function allows(
+  plan: string | null | undefined,
+  userType: string | null | undefined,
+  tier?: string | null,
+  memberCategory?: string | null,
+): boolean {
+  return podeAcederAoTier(
+    { user_type: userType, member_category: memberCategory, subscription_plan: plan },
+    tier,
+  )
 }
 
 function tierLabel(tier: string | null): string | null {
@@ -44,6 +54,7 @@ export default function EducatorCoursesCard({
   roomCourses = [],
   userPlan,
   userType,
+  memberCategory,
   defaultOpen = false,
 }: {
   educatorId: string
@@ -51,6 +62,7 @@ export default function EducatorCoursesCard({
   roomCourses?: CourseItem[]
   userPlan?: string | null
   userType?: string | null
+  memberCategory?: string | null
   defaultOpen?: boolean
 }) {
   const [own, setOwn] = useState<CourseItem[]>([])
@@ -84,7 +96,7 @@ export default function EducatorCoursesCard({
   if (!courses.length) return null
 
   const current = courses[Math.min(idx, courses.length - 1)]
-  const canAccess = allows(userPlan, userType, current.tier)
+  const canAccess = allows(userPlan, userType, current.tier, memberCategory)
 
   return (
     <section className="rounded-2xl border border-[#D2A63C]/25 bg-gradient-to-b from-[#D2A63C]/[0.07] to-transparent p-4">
@@ -99,7 +111,7 @@ export default function EducatorCoursesCard({
       {courses.length > 1 && (
         <div className="mb-3 flex flex-wrap gap-1.5">
           {courses.map((c, i) => {
-            const locked = !allows(userPlan, userType, c.tier)
+            const locked = !allows(userPlan, userType, c.tier, memberCategory)
             return (
               <button
                 key={c.id}

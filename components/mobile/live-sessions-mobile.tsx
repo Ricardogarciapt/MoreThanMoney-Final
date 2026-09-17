@@ -16,6 +16,7 @@ import {
   Lock,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { podeAcederAoTier, type PerfilUi } from "@/lib/perfil-ui"
 import { useT } from "@/components/i18n-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -83,25 +84,16 @@ type LiveSessionsMobileProps = {
   isActive?: boolean
 }
 
+/**
+ * A regra do nível vive em `lib/perfil-ui.ts`, partilhada com o lobby web.
+ * Esta versão lia só `member_category`: quem paga Premium com a categoria ainda em 'standard'
+ * levava cadeado e um convite para comprar o pack que já tinha.
+ */
 function canAccessStream(
-  memberCategory: string | null | undefined,
-  userType: string | null | undefined,
-  tier: "all" | "app_member" | "premium" | "vip" | null | undefined
+  perfil: PerfilUi | null | undefined,
+  tier: "free" | "all" | "app_member" | "premium" | "vip" | null | undefined
 ): boolean {
-  if (!tier || tier === "all") return true
-  if (userType === "admin" || userType === "vip" || memberCategory === "vip") return true
-  // "standard" (€35 app member) e "app_member" têm acesso ao tier app_member
-  if (tier === "app_member") return (
-    memberCategory === "standard" ||
-    memberCategory === "app_member" ||
-    memberCategory === "iq" ||
-    memberCategory === "premium"
-  )
-  if (tier === "premium") return (
-    memberCategory === "iq" ||
-    memberCategory === "premium"
-  )
-  return false
+  return podeAcederAoTier(perfil, tier)
 }
 
 export default function LiveSessionsMobile({
@@ -551,11 +543,7 @@ export default function LiveSessionsMobile({
           liveStreams.map((s) => {
             const img = streamVisualUrl(s)
             const educatorName = s.educator?.display_name || t("live.educatorFallback")
-            const hasAccess = canAccessStream(
-              (user as any)?.member_category,
-              (user as any)?.user_type,
-              s.access_tier
-            )
+            const hasAccess = canAccessStream(user as PerfilUi | null, s.access_tier)
             return (
               <button
                 key={s.id}
@@ -697,11 +685,7 @@ export default function LiveSessionsMobile({
                 defaultOpen={!stream?.is_live}
                 playlistUrl={stream.playlist_url}
                 playlistTitle={stream.playlist_title}
-                canAccess={canAccessStream(
-                  (user as any)?.member_category,
-                  (user as any)?.user_type,
-                  stream.playlist_access_tier,
-                )}
+                canAccess={canAccessStream(user as PerfilUi | null, stream.playlist_access_tier)}
                 tierLabel={
                   stream.playlist_access_tier === "premium"
                     ? t("live.playlistTierPremium")

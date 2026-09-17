@@ -19,7 +19,20 @@ import PostLinkPreview from "./post-link-preview"
 import { getPrimaryUrlFromText } from "@/lib/url-utils"
 import type { LinkPreviewData } from "@/lib/link-preview-types"
 import { useAuth } from "@/contexts/auth-context"
+import { ehAdminUi, ehVipUi, type PerfilUi } from "@/lib/perfil-ui"
 import { notifyXpFromResponse } from "@/lib/xp-client"
+
+/**
+ * Quem escreve no Feed: admin e VIP.
+ *
+ * O VIP está marcado em `user_type` OU em `member_category` — lia-se só a categoria, e por isso
+ * um VIP marcado pelo tipo publicava sinais no Chat (`canPublishSignalChannel`) e não encontrava
+ * o botão de escrever aqui. Faltava também o `is_active`: quem estava em pausa via o compositor,
+ * escrevia, e só levava com o erro da RLS depois de ter escrito o texto todo.
+ */
+function podeEscreverNoFeed(p: PerfilUi | null | undefined): boolean {
+  return ehAdminUi(p) || ehVipUi(p)
+}
 
 interface Post {
   id: string
@@ -108,7 +121,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
   useEffect(() => {
     if (authUser) {
       setCurrentUser(authUser)
-      setCanPost(authUser.user_type === 'admin' || authUser.member_category === 'vip')
+      setCanPost(podeEscreverNoFeed(authUser))
     } else {
       setCurrentUser(null)
       setCanPost(false)
@@ -124,12 +137,12 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
       }
       const { data: profile } = await supabase
         .from('profiles')
-        .select('user_type, member_category, full_name, email, avatar_url, username, id, is_active')
+        .select('user_type, member_category, membership_level, subscription_plan, full_name, email, avatar_url, username, id, is_active')
         .eq('id', session.user.id)
         .single()
       if (profile) {
         setCurrentUser(profile)
-        setCanPost(profile.user_type === 'admin' || profile.member_category === 'vip')
+        setCanPost(podeEscreverNoFeed(profile))
       }
     })
     return () => subscription.unsubscribe()
@@ -1665,8 +1678,9 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                       </div>
                     </div>
                     
-                    {/* Edit/Delete Button (Admin or Post Creator) */}
-                    {(currentUser?.user_type === 'admin' || currentUser?.id === post.user_id) && (
+                    {/* Editar/Apagar — admin ativo, ou o dono da publicação. O `ehAdminUi` traz
+                        o `is_active` que faltava: um admin suspenso mantinha as ferramentas. */}
+                    {(ehAdminUi(currentUser) || currentUser?.id === post.user_id) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button className="ml-auto text-gray-400 hover:text-[#D2A63C] transition-colors">

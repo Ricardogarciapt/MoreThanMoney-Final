@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase"
 import { findTerminalAsset } from "@/lib/mtm-terminal-assets"
 import { buildAndGenerate } from "@/lib/mtm-terminal-analysis"
 import { refreshDecision } from "@/lib/mtm-terminal-live"
+import { podeAcederPremiumUi, type PerfilUi } from "@/lib/perfil-ui"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -33,21 +34,9 @@ async function getAuthedClient() {
   )
 }
 
-/** Acesso: admin, vip ou premium (mesma regra das Apps MTM). */
-function canAccessTerminal(profile: {
-  user_type?: string | null
-  member_category?: string | null
-  subscription_plan?: string | null
-  is_active?: boolean | null
-} | null): boolean {
-  if (!profile || profile.is_active === false) return false
-  if (profile.user_type === "admin") return true
-  if (profile.user_type === "vip" || profile.member_category === "vip") return true
-  return (
-    profile.member_category === "iq" ||
-    profile.member_category === "premium" ||
-    profile.subscription_plan === "premium"
-  )
+/** Acesso: admin, VIP ou Premium — a MESMA regra do ecrã, e agora o mesmo código. */
+function canAccessTerminal(profile: PerfilUi | null): boolean {
+  return podeAcederPremiumUi(profile)
 }
 
 async function requireAccess() {
@@ -59,7 +48,7 @@ async function requireAccess() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("user_type, member_category, subscription_plan, is_active")
+    .select("user_type, member_category, membership_level, subscription_plan, is_active")
     .eq("id", session.user.id)
     .single()
 

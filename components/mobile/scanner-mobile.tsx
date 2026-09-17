@@ -43,6 +43,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import ScannerScreener from "@/components/scanner-screener"
+import { ehAdminUi, ehVipUi } from "@/lib/perfil-ui"
 import { 
   Maximize2, 
   Minimize2, 
@@ -439,12 +440,15 @@ export default function ScannerMobile({
         setCurrentUserId(uid)
         const { data: profile } = await supabase
           .from("profiles")
-          .select("user_type, member_category")
+          .select("user_type, member_category, membership_level, subscription_plan, is_active")
           .eq("id", uid)
           .maybeSingle()
         if (profile) {
-          setIsAdmin(profile.user_type === "admin")
-          setIsVip(profile.user_type === "admin" || profile.member_category === "vip")
+          setIsAdmin(ehAdminUi(profile))
+          // O botão de partilhar nas redes lia só `member_category`, mas a rota que o serve
+          // (/api/social/share-chart) lê agora os dois campos. Sem isto, um VIP marcado em
+          // `user_type` nem sequer via o botão que tinha direito a carregar.
+          setIsVip(ehAdminUi(profile) || ehVipUi(profile))
         }
       } catch (e) {
         console.warn("[scanner-mobile] perfil:", e)

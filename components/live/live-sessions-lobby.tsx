@@ -10,6 +10,7 @@ import CursoIntroducao from "@/components/intro/curso-introducao"
 import { useConfigIntro } from "@/components/intro/usar-intro"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { useAuth } from "@/contexts/auth-context"
+import { podeAcederAoTier } from "@/lib/perfil-ui"
 import { useI18n, useT } from "@/components/i18n-provider"
 import { Radio, Users, GraduationCap, Bell, ArrowRight, Circle, Lock, Compass, CalendarClock } from "lucide-react"
 
@@ -60,20 +61,20 @@ function streamVisual(stream: Stream): string | null {
   return avatar || null
 }
 
+/**
+ * A regra do nível vive em `lib/perfil-ui.ts`, partilhada com a app e com a ficha do educador.
+ * A versão que estava aqui negava ao VIP as salas Premium — que ele já via pela app.
+ */
 function canAccessStream(
   userPlan: "app_member" | "premium" | null | undefined,
   userType: string | undefined,
   streamTier: "free" | "all" | "app_member" | "premium" | "vip" | null | undefined,
   memberCategory?: string | null
 ): boolean {
-  if (userType === "admin") return true
-  const tier = streamTier ?? "all"
-  if (tier === "free" || tier === "all") return true
-  // Tier VIP: exclusivo a membros VIP (e admin, já tratado acima).
-  if (tier === "vip") return userType === "vip" || memberCategory === "vip"
-  if (tier === "app_member") return userPlan === "app_member" || userPlan === "premium"
-  if (tier === "premium") return userPlan === "premium"
-  return false
+  return podeAcederAoTier(
+    { user_type: userType, member_category: memberCategory, subscription_plan: userPlan },
+    streamTier,
+  )
 }
 
 export default function LiveSessionsLobby() {

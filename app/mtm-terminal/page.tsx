@@ -11,6 +11,7 @@ import ProtectedPage from "@/components/protected-page"
 import TvChartEmbed from "@/components/tv-chart-embed"
 import { useAuth } from "@/contexts/auth-context"
 import type { User } from "@/contexts/auth-context"
+import { podeAcederPremiumUi, type PerfilUi } from "@/lib/perfil-ui"
 import {
   TERMINAL_ASSETS,
   TERMINAL_TYPE_LABELS,
@@ -57,21 +58,9 @@ import {
   Clock,
 } from "lucide-react"
 
-/** Acesso: admin, vip ou premium (mesma regra das Apps MTM). */
+/** Acesso: admin, VIP ou Premium — a MESMA regra das Apps MTM, e agora o mesmo código. */
 function canAccessTerminal(user: User | null): boolean {
-  if (!user || user.is_active === false) return false
-  if (user.user_type === "admin") return true
-  if (user.user_type === "vip" || user.member_category === "vip") return true
-  // Free trial (guest Premium): acesso total enquanto is_active (cron fecha ao expirar)
-  if (user.user_type === "guest" && user.member_category === "premium") return true
-  if (user.user_type === "member") {
-    return (
-      user.member_category === "iq" ||
-      user.member_category === "premium" ||
-      user.subscription_plan === "premium"
-    )
-  }
-  return false
+  return podeAcederPremiumUi(user as PerfilUi | null)
 }
 
 interface Dashboard {

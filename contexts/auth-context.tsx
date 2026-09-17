@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase"
 import { isRegisteredMember } from "@/lib/member-access"
 import { loadMemberProfile } from "@/lib/member-profile"
 import { REGISTER_NOT_FOUND_MESSAGE } from "@/lib/oauth-flow"
+import { chavePerfilUi, type PerfilUi } from "@/lib/perfil-ui"
 
 export interface User {
   id: string
@@ -501,8 +502,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: !!user,
         isAdmin: user?.user_type === "admin" && user?.is_active === true,
         isLoading,
-        isAppOnlyUser:
-          user?.member_category === "standard" && user?.user_type !== "admin",
+        /**
+         * «App only» é o Membro de 35 €, e só ele. Lia-se `member_category === 'standard'`, o que
+         * arrastava para aqui os VIPs marcados em `user_type` que têm a categoria em 'standard':
+         * três contas reais que, por causa disto, eram expulsas das páginas do site e recebiam
+         * convites de upgrade para um pack abaixo do que já lhes demos.
+         */
+        isAppOnlyUser: chavePerfilUi(user as PerfilUi | null) === "membro",
         isPrimeverse: user?.login_provider === "primeverse",
         signInWithEmail,
         signUp,

@@ -9,21 +9,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import EducatorFeedbacksList from "@/components/live/educator-feedbacks-list"
 import { LmsPlaylistSection } from "@/components/live/lms-playlist-section"
 import { useAuth } from "@/contexts/auth-context"
+import { podeAcederAoTier } from "@/lib/perfil-ui"
 
-/** Acesso à playlist da sala pelo tier (mesma lógica do lobby). */
+/** Acesso à playlist da sala pelo tier — a MESMA regra do lobby, e agora o mesmo código. */
 function canAccessPlaylist(
   userPlan: string | undefined,
   userType: string | undefined,
   memberCategory: string | undefined,
-  tier: "all" | "app_member" | "premium" | "vip" | null | undefined,
+  tier: "free" | "all" | "app_member" | "premium" | "vip" | null | undefined,
 ): boolean {
-  if (userType === "admin") return true
-  const t = tier ?? "all"
-  if (t === "all") return true
-  if (t === "vip") return userType === "vip" || memberCategory === "vip"
-  if (t === "app_member") return userPlan === "app_member" || userPlan === "premium"
-  if (t === "premium") return userPlan === "premium"
-  return false
+  return podeAcederAoTier(
+    { user_type: userType, member_category: memberCategory, subscription_plan: userPlan },
+    tier,
+  )
 }
 
 export type EducatorProfilePublic = {

@@ -13,27 +13,18 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import type { User } from "@/contexts/auth-context"
+import { podeAcederPremiumUi, type PerfilUi } from "@/lib/perfil-ui"
 
 /**
- * Roles com acesso às Apps MTM:
- * - admin
- * - vip (user_type="vip" ou member_category="vip")
- * - member-iq (cobre member_category="iq" + registo premium 65€)
+ * Quem entra nas Apps MTM: admin, VIP, Premium (o Fundador incluído), IQ e quem está em trial.
+ *
+ * Esta regra estava escrita três vezes — aqui, no MTM Terminal do browser e no MTM Terminal do
+ * servidor — e as três não diziam exactamente o mesmo. A daqui só reconhecia o Premium quando o
+ * `user_type` era exactamente "member": um Premium marcado de outra forma lia «Faz upgrade do teu
+ * plano» diante de uma porta que já tinha pago.
  */
 function canAccessApps(user: User | null): boolean {
-  if (!user || user.is_active === false) return false
-  if (user.user_type === "admin") return true
-  if (user.user_type === "vip" || user.member_category === "vip") return true
-  // Free trial (guest Premium): acesso total enquanto is_active (cron fecha ao expirar)
-  if (user.user_type === "guest" && user.member_category === "premium") return true
-  if (user.user_type === "member") {
-    return (
-      user.member_category === "iq" ||
-      user.member_category === "premium" ||
-      user.subscription_plan === "premium"
-    )
-  }
-  return false
+  return podeAcederPremiumUi(user as PerfilUi | null)
 }
 
 export const MTM_STUDIO_URL = "https://mtmbrandbuilder.lovable.app"

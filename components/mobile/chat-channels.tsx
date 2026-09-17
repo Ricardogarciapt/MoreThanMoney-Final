@@ -2049,11 +2049,11 @@ function ChannelView({
           ) : (
             <>
               <Lock className="w-4 h-4 text-gray-600" />
-              <p className="text-xs text-gray-500">
-                {channel.slug === "trading"
-                  ? t("chat.needMemberOrPremium")
-                  : t("chat.noPermissionPost")}
-              </p>
+              {/* O #trading mostrava «Precisas de 3 meses de membro ou plano Premium» — uma regra
+                  que não existe em lado nenhum do código: o #trading é um canal aberto a todos os
+                  membros activos (OPEN_COMMUNITY_CHANNELS). Quem via aquilo tinha a conta em pausa,
+                  e ia-se embora convencido de que lhe faltava antiguidade. */}
+              <p className="text-xs text-gray-500">{t("chat.noPermissionPost")}</p>
             </>
           )}
         </div>
