@@ -1,8 +1,8 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useEffect, useMemo, useState } from "react"
-import { TrendingUp, TrendingDown, Lock, Zap } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { TrendingUp, TrendingDown, Lock, Zap, Eye, EyeOff, Maximize2, Minimize2 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { scannersPermitidos } from "@/lib/mtmfunded/acesso"
 import { ESTUDOS_WEBTRADER, type ChaveEstudoWebtrader } from "@/lib/scanners/estudos"
@@ -12,6 +12,7 @@ import { type GraficoProps, type Tf, TIMEFRAMES, TV } from "./grafico-tipos"
 import { bibliotecaTvDisponivel } from "./biblioteca-tv"
 import GraficoLeve from "./grafico-leve"
 import { useSinaisEstudos } from "./use-sinais-estudos"
+import { useGraficoVisivel } from "./grafico-visivel"
 import { useRascunhoOpcional } from "./rascunho-ordem"
 import { InterruptorUmClique } from "./um-clique"
 import { PopoverInputsSensei, sinalDoSensei, useInputsSensei } from "./sensei-estudo"
@@ -47,10 +48,60 @@ const GraficoTradingView = dynamic(() => import("./grafico-tradingview"), { ssr:
  *
  * Estudos por perfil (lib/mtmfunded/acesso.ts): membro/admin todos, torneio só GoldKiller, quem
  * entrou só com login+password da conta simulada nenhum.
+ *
+ * «Mostrar gráfico» (grafico-visivel.ts) esconde o corpo do gráfico sem o desmontar (as velas e os
+ * estudos ficam carregados); no SIMPLE o painel das posições fica com o ecrã. ECRÃ INTEIRO (useEcraInteiro):
+ * o contentor passa a ocupar a janela e, onde há Fullscreen API, pede-se o ecrã inteiro ao DOCUMENTO
+ * — não ao contentor, porque as confirmações das ordens (um-clique.tsx) vivem fora dele e ficariam
+ * invisíveis por baixo do ecrã inteiro de um elemento. No iPhone (sem Fullscreen API fora de vídeo)
+ * fica só «ocupar a janela». Sai com Esc ou com o botão; o gráfico redimensiona-se (autoSize).
  */
 
 const CHAVE_ESTUDOS = "mtmfunded_estudos"
 const CHAVE_TF = "mtmfunded_tf"
+
+/** Ecrã inteiro do gráfico: `api` (Fullscreen API do documento + ocupar a janela) ou `janela` (só ocupar a janela). */
+function useEcraInteiro() {
+  const [cheio, setCheio] = useState<false | "api" | "janela">(false)
+  const cheioRef = useRef(cheio)
+  cheioRef.current = cheio
+  const doc = () => document as Document & { webkitFullscreenElement?: Element | null; webkitFullscreenEnabled?: boolean; webkitExitFullscreen?: () => Promise<void> | void }
+  const elementoCheio = () => doc().fullscreenElement ?? doc().webkitFullscreenElement ?? null
+  const sair = useCallback(() => {
+    const d = doc()
+    if (elementoCheio()) { try { void (d.exitFullscreen ? d.exitFullscreen() : d.webkitExitFullscreen?.())?.catch?.(() => {}) } catch { /* ok */ } }
+    setCheio(false)
+  }, [])
+  const entrar = useCallback(async () => {
+    const d = doc()
+    const raiz = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void }
+    const pode = Boolean(d.fullscreenEnabled || d.webkitFullscreenEnabled) && Boolean(raiz.requestFullscreen || raiz.webkitRequestFullscreen)
+    setCheio(pode ? "api" : "janela")
+    if (!pode) return
+    try { await (raiz.requestFullscreen ? raiz.requestFullscreen() : raiz.webkitRequestFullscreen?.()) } catch { setCheio("janela") }
+  }, [])
+  useEffect(() => {
+    if (!cheio) return
+    // Saiu do ecrã inteiro pelo browser (Esc, gesto): sai também de «ocupar a janela».
+    const mudou = () => { if (cheioRef.current === "api" && !elementoCheio()) setCheio(false) }
+    const tecla = (e: KeyboardEvent) => { if (e.key === "Escape" && cheioRef.current === "janela") setCheio(false) }
+    document.addEventListener("fullscreenchange", mudou)
+    document.addEventListener("webkitfullscreenchange", mudou)
+    window.addEventListener("keydown", tecla)
+    // A página por trás não faz scroll enquanto o gráfico ocupa a janela.
+    const antes = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.removeEventListener("fullscreenchange", mudou)
+      document.removeEventListener("webkitfullscreenchange", mudou)
+      window.removeEventListener("keydown", tecla)
+      document.body.style.overflow = antes
+    }
+  }, [cheio])
+  // Desmontar o gráfico em ecrã inteiro (trocar de conta/modo) não deixa o browser preso nele.
+  useEffect(() => () => { if (cheioRef.current === "api" && elementoCheio()) { try { void document.exitFullscreen?.().catch(() => {}) } catch { /* ok */ } } }, [])
+  return { cheio, entrar, sair }
+}
 
 function ler<T>(chave: string, defeito: T): T {
   try { const v = localStorage.getItem(chave); return v == null ? defeito : (JSON.parse(v) as T) } catch { return defeito }
@@ -140,9 +191,19 @@ export default function FundedGrafico(props: GraficoProps) {
   }
 
   const spread = preco ? Math.round((preco.ask - preco.bid) * Math.pow(10, simbolo.digits)) : null
+  const [visivel, setVisivel] = useGraficoVisivel()
+  const { cheio, entrar, sair } = useEcraInteiro()
+  // Em ecrã inteiro o gráfico mostra-se sempre e enche o contentor.
+  const mostrar = visivel || Boolean(cheio)
+  const encher = Boolean(props.preencher || cheio)
+  const botao = "flex shrink-0 items-center gap-1 rounded border px-2 py-1"
 
   return (
-    <div className={`overflow-hidden rounded-md border ${props.preencher ? "flex h-full min-h-0 flex-col" : ""}`} style={{ background: TV.fundo, borderColor: TV.borda, color: TV.texto }}>
+    <div
+      className={`overflow-hidden border ${cheio ? "fixed inset-0 z-[940] flex flex-col rounded-none" : `rounded-md ${props.preencher ? "flex h-full min-h-0 flex-col" : ""}`}`}
+      style={{ background: TV.fundo, borderColor: TV.borda, color: TV.texto, ...(cheio ? { paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)", paddingLeft: "env(safe-area-inset-left, 0px)", paddingRight: "env(safe-area-inset-right, 0px)" } : {}) }}
+      data-grafico-cheio={cheio || undefined}
+    >
       {/* Linha 1 — símbolo, bid/spread/ask, ⚡ */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-2.5 py-1.5" style={{ borderColor: TV.borda }}>
         <div className="flex min-w-0 items-baseline gap-2">
@@ -182,8 +243,21 @@ export default function FundedGrafico(props: GraficoProps) {
             </span>
           )
         })}
+        <div className="ml-auto flex shrink-0 gap-1 pl-2">
+          <button type="button" onClick={() => (cheio ? sair() : void entrar())} className={botao}
+            title={cheio ? "Sair do ecrã inteiro (Esc)" : "Gráfico em ecrã inteiro"} aria-label={cheio ? "sair do ecrã inteiro" : "gráfico em ecrã inteiro"} aria-pressed={Boolean(cheio)}
+            style={cheio ? { borderColor: TV.azul, color: "#fff", background: "rgba(41,98,255,0.2)" } : { borderColor: TV.borda, color: TV.texto }}>
+            {cheio ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+          </button>
+          {!cheio && (
+            <button type="button" onClick={() => setVisivel(!visivel)} className={botao}
+              title={visivel ? "Esconder o gráfico (fica o painel das posições)" : "Mostrar gráfico"} aria-label="mostrar gráfico" aria-pressed={visivel}
+              style={visivel ? { borderColor: TV.borda, color: TV.texto } : { borderColor: TV.azul, color: "#fff", background: "rgba(41,98,255,0.2)" }}>
+              {visivel ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />} <span className="hidden sm:inline">Mostrar gráfico</span>
+            </button>
+          )}
         {podeNegociar && rascunho && (
-          <div className="ml-auto flex shrink-0 gap-1 pl-2">
+          <>
             <button onClick={() => setModo(modo === "buy" ? null : "buy")} className="flex items-center gap-1 rounded border px-2 py-1"
               style={modo === "buy" ? { borderColor: TV.tp, background: "rgba(8,153,129,0.2)", color: "#fff" } : { borderColor: TV.borda, color: TV.tp }}>
               <TrendingUp className="h-3.5 w-3.5" /> Posição longa
@@ -192,8 +266,9 @@ export default function FundedGrafico(props: GraficoProps) {
               style={modo === "sell" ? { borderColor: TV.sl, background: "rgba(242,54,69,0.2)", color: "#fff" } : { borderColor: TV.borda, color: TV.sl }}>
               <TrendingDown className="h-3.5 w-3.5" /> Posição curta
             </button>
-          </div>
+          </>
         )}
+        </div>
       </div>
 
       {ultimoAtivo && rascunho && podeNegociar && (
@@ -209,16 +284,19 @@ export default function FundedGrafico(props: GraficoProps) {
         </div>
       )}
 
+      {/* Escondido fica montado (display:none): velas, estudos e subscrições não se perdem. */}
+      <div className={mostrar ? "contents" : "hidden"}>
       {motor === "a_verificar" ? (
-        <div className={props.preencher ? "min-h-0 flex-1" : props.alturaClasse ?? "h-[400px] md:h-[500px]"} />
+        <div className={encher ? "min-h-0 flex-1" : props.alturaClasse ?? "h-[400px] md:h-[500px]"} />
       ) : motor === "tv" ? (
         // Adormecido: só com a Trading Platform instalada. Sem primitivas de trading ou a falhar → Lightweight.
-        <GraficoTradingView {...props} sinais={sinais} sinalAtivo={ultimoAtivo} modo={modo} setModo={setModo} onFalhou={() => setMotor("leve")} onSemLinhas={() => { setSemTradingPlatform(true); setMotor("leve") }} />
+        <GraficoTradingView {...props} preencher={encher} sinais={sinais} sinalAtivo={ultimoAtivo} modo={modo} setModo={setModo} onFalhou={() => setMotor("leve")} onSemLinhas={() => { setSemTradingPlatform(true); setMotor("leve") }} />
       ) : (
         // A trade ativa do Sensei já tem as linhas ENTRY/SL/EXIT do próprio estudo e o GoldKiller os
         // seus níveis: só o alerta (não o sinal local) leva as linhas ténues de referência.
-        <GraficoLeve {...props} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} tf={tf} modo={modo} setModo={setModo} />
+        <GraficoLeve {...props} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} tf={tf} modo={modo} setModo={setModo} />
       )}
+      </div>
       {semTradingPlatform && (
         <p className="border-t px-2 py-1 text-center text-[10.5px]" style={{ borderColor: TV.borda, color: TV.textoFraco }}>
           A biblioteca TradingView instalada é «Advanced Charts»: linhas de ordens exigem a biblioteca Trading Platform — a usar o gráfico Lightweight.

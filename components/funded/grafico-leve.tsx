@@ -38,7 +38,11 @@ import { AccaoCancelada, useUmClique } from "./um-clique"
  *  · setas com `createSeriesMarkers`, marca de água com `createTextWatermark`;
  *  · as linhas são `createPriceLine` (a linha e a etiqueta no eixo); a etiqueta à TradingView
  *    (corpo | quantidade | ×) é HTML por cima, na mesma coordenada, e o arrasto é nosso (pointer
- *    events na fase de captura — o gráfico não sabe arrastar price lines);
+ *    events na fase de captura — o gráfico não sabe arrastar price lines). O Lightweight ouve RATO
+ *    e TOQUE (não pointer events): durante um arrasto de linha, um ouvinte nativo na fase de
+ *    captura engole mousedown/move/up, touchstart/move/end e wheel antes de chegarem ao canvas
+ *    (o gráfico não faz pan/zoom) e cancela o toque (a página/webview não faz scroll). Além disso
+ *    `handleScroll/handleScale` ficam desligados e a escala congelada até largar ou cancelar;
  *  · as zonas vermelha/verde da ferramenta são uma primitiva de série (`attachPrimitive`), como nos
  *    exemplos oficiais de plugins: desenham-se no canvas do gráfico e acompanham pan e zoom;
  *  · tempo real incremental: `series.update()` a cada preço, nunca `setData` por tick;
@@ -201,6 +205,23 @@ export default function GraficoLeve(props: GraficoProps & {
   const linhasRef = useRef<Linha[]>([])
   const dragRef = useRef<{ chave: string; dono: Dono; y0: number; moveu: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null)
   const toqueRef = useRef<{ x: number; y: number } | null>(null)
+  const zonaRef = useRef<HTMLDivElement>(null)
+
+  // Durante o arrasto de uma linha, nada chega ao Lightweight (ouve rato/toque, não pointer events)
+  // e o toque não vira scroll da página nem gesto da webview. Fase de CAPTURA na caixa: corre antes
+  // do canvas. Os botões das etiquetas («×») nunca começam arrasto, por isso não são afectados.
+  useEffect(() => {
+    const el = zonaRef.current
+    if (!el) return
+    const engolir = (e: Event) => {
+      if (!dragRef.current) return
+      e.stopPropagation()
+      if (e.cancelable && (e.type.startsWith("touch") || e.type === "wheel")) e.preventDefault()
+    }
+    const tipos = ["mousedown", "mousemove", "mouseup", "touchstart", "touchmove", "touchend", "touchcancel", "wheel", "dblclick"]
+    for (const t of tipos) el.addEventListener(t, engolir, { capture: true, passive: false })
+    return () => { for (const t of tipos) el.removeEventListener(t, engolir, { capture: true }) }
+  }, [])
   const larguraEscalaRef = useRef(56)
   // As velas carregadas + a viva, espelho exato da série (o Sensei precisa dos MESMOS tempos).
   const velasRef = useRef<Vela[]>([])
@@ -975,6 +996,16 @@ export default function GraficoLeve(props: GraficoProps & {
     }
   }
 
+  // O browser/webview tirou-nos o ponteiro (gesto do sistema, alerta, troca de app): larga sem gravar.
+  const aoCancelar = () => {
+    const d = dragRef.current
+    if (!d) return
+    if (d.timer) clearTimeout(d.timer)
+    dragRef.current = null
+    bloquearPan(false)
+    if (d.dono.tipo !== "tool") setRascunho((x) => { const c = { ...x }; delete c[d.chave]; return c })
+  }
+
   const aoMenuContexto = (e: React.MouseEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect()
     const y = e.clientY - r.top
@@ -989,10 +1020,13 @@ export default function GraficoLeve(props: GraficoProps & {
   return (
     <div className={props.preencher ? "flex min-h-0 flex-1 flex-col" : undefined} style={{ background: TV.fundo }}>
       <div
+        ref={zonaRef}
         className={`relative touch-pan-y select-none ${props.preencher ? "min-h-0 flex-1" : props.alturaClasse ?? (props.compacto ? "h-[200px] md:h-[240px]" : "h-[400px] md:h-[500px]")} ${modo ? "cursor-crosshair" : ""}`}
         onPointerDownCapture={aoPressionar}
         onPointerMoveCapture={aoMover}
         onPointerUpCapture={aoLargar}
+        onPointerCancelCapture={aoCancelar}
+        onLostPointerCapture={aoCancelar}
         onContextMenu={aoMenuContexto}
       >
         <div ref={caixaRef} className="absolute inset-0" />
