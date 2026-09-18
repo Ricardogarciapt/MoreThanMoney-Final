@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { encaminharSinalParaMestre } from "@/lib/mestres/servidor/sinal-mestre"
 import { canalDeSinaisPago } from "@/lib/direito-sinais"
 import { filtrarComDireitoSinaisPagos } from "@/lib/direito-sinais-servidor"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
@@ -905,14 +906,32 @@ export async function POST(request: NextRequest) {
     // await (não fire-and-forget): no Vercel o trabalho assíncrono é morto após a resposta,
     // o que deixaria a trade por abrir. A latência é cortada dentro do processor (chamadas
     // MetaAPI paralelizadas), não tirando a execução do caminho da resposta.
+    const execTarget = isGoldKiller ? "goldkiller" : assetClass === "forex" ? "forex" : "sensei"
+    // MESTRES NOSSAS (116): o sinal abre também/só na mestre SIM da estratégia. `sinal_modo` desligado
+    // (por omissão) não faz nada; sombra só regista; live abre na SIM e SUBSTITUI a ordem na mestre MT5.
+    let mestreSubstituiMt5 = false
     try {
-      const exec = await processMtmcopyWebhookSignal({
-        raw,
-        signal: parsedForExec as NonNullable<ReturnType<typeof parseSignal>>,
-        validation: v,
-        externalRef: logId,
-        target: isGoldKiller ? "goldkiller" : assetClass === "forex" ? "forex" : "sensei",
+      const sinalExec = parsedForExec as NonNullable<ReturnType<typeof parseSignal>>
+      const tpsExec = (Array.isArray(sinalExec.tp) ? sinalExec.tp : []).filter((t): t is number => typeof t === "number" && t > 0)
+      const m = await encaminharSinalParaMestre({
+        fonte: execTarget, symbol: String(sinalExec.symbol), direcao: sinalExec.direction === "sell" ? "sell" : "buy",
+        entrada: sinalExec.entry ?? price ?? null, sl: sinalExec.sl ?? null, tps: tpsExec, externalRef: String(logId ?? ""),
       })
+      mestreSubstituiMt5 = m.substituiMt5
+      if (m.modo !== "desligado") providerDetail = `mestre SIM ${m.estrategia ?? ""}: ${m.modo}${m.motivo ? ` (${m.motivo})` : ""}`
+    } catch (err) {
+      console.error("[tradingview-webhook] mestre SIM:", err)
+    }
+    try {
+      const exec = mestreSubstituiMt5
+        ? { executed: true, detail: `${providerDetail ?? "mestre SIM"} · mestre MT5 substituída` }
+        : await processMtmcopyWebhookSignal({
+            raw,
+            signal: parsedForExec as NonNullable<ReturnType<typeof parseSignal>>,
+            validation: v,
+            externalRef: logId,
+            target: execTarget,
+          })
       providerExecuted = exec.executed
       providerDetail = exec.detail
       // Marca a ideia como já tendo ordem no provider → o entry_trigger não duplica.

@@ -31,6 +31,16 @@
  *  · Supabase: eventos só nascem de factos de trading (em lote, chave única); sondagem da outbox 10 s;
  *    contas de origem relidas no máximo de 5 em 5 min; pulso 1×/min; limpeza 1×/h.
  *
+ * ── MESTRES NOSSAS (migração 116) ──────────────────────────────────────────
+ *  Rotas `mestres=true`: origem = conta SIM da casa que é a mestre da estratégia (trigger 083), destino =
+ *  contas dos clientes. Decisão própria (lib/mestres/decisao): site_settings.mestres_motor (ligado /
+ *  kill / live_desbloqueado, relido de 2 em 2 s) × mestres_estrategias.modo × mestres_contas.modo ×
+ *  MESTRES_ESCRITA=1 × CopyFactory cortada. Kill-switch: os eventos das mestres ficam na fila (nada é
+ *  enviado, nem saídas) e é verificado outra vez antes de cada escrita. Registo de cada ordem em
+ *  mestres_ordens; falhas seguidas por conta → alerta (MESTRES_FALHAS_ALERTA) e bloqueio das aberturas
+ *  (MESTRES_FALHAS_BLOQUEIO). Concorrência: 1 escrita por conta, ceil(n/5) por servidor da corretora.
+ *  Fila das mestres sondada de MESTRES_SONDAGEM_MS (1 s) em 1 s enquanto o motor está ligado.
+ *
  * Estado reconstruível da base. Reiniciar é seguro: a primeira fotografia de cada fonte é só base.
  */
 import { getSupabaseAdmin } from '../../lib/supabase-admin-client'
@@ -44,15 +54,23 @@ import { INTERRUPTORES_FECHADOS, type Interruptores } from '../../lib/copia-cont
 import { RegistoPorToken, type ChaveToken, type TokenResolvido } from '../../lib/copia-contas/tokens'
 import type { CopiaPosicao, EventoCopia, PosicaoOrigem, RotaCopia } from '../../lib/copia-contas/tipos'
 import { aoLimiteMetaApi, carregarSdk, eLimiteMetaApi, espelhoPausadoAte, metaApiPartilhada, registarErroMetaApi } from '../funded-motor/metaapi-partilhada'
+import { EstadoMestres, type RotaMestres } from '../../lib/mestres/servidor/estado'
+import { criarGanchosMestres } from '../../lib/mestres/servidor/ganchos'
+import { colapsarModificacoesDaFila } from '../../lib/mestres/dedupe'
+import { Limitador, capacidadeDoServidor, servidorDaChave } from '../../lib/mestres/concorrencia'
 
 type Qualquer = any
 
-const VERSAO = 'copia-contas/2'
+const VERSAO = 'copia-contas/3-mestres'
 const ESCRITA = process.env.COPIA_ESCRITA === '1'
 const SONDAGEM_OUTBOX_MS = Math.max(2_000, Number(process.env.COPIA_SONDAGEM_MS || 10_000))
 const LOTE = Number(process.env.COPIA_LOTE || 50)
 const TL_MIN_MS = Math.max(2_000, Number(process.env.COPIA_TL_MIN_MS || 2_000))
 const PAUSA_EQUIPA_MS = 60 * 60_000
+const ESCRITA_MESTRES = process.env.MESTRES_ESCRITA === '1'
+const SONDAGEM_MESTRES_MS = Math.max(500, Number(process.env.MESTRES_SONDAGEM_MS || 1_000))
+const FALHAS_ALERTA = Math.max(1, Number(process.env.MESTRES_FALHAS_ALERTA || 3))
+const FALHAS_BLOQUEIO = Math.max(0, Number(process.env.MESTRES_FALHAS_BLOQUEIO || 6))
 
 if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.error('[copia] falta SUPABASE_SERVICE_ROLE_KEY')
@@ -65,6 +83,21 @@ const stats = { factos: 0, eventos: 0, sombra: 0, ok: 0, recusados: 0, erros: 0,
 
 let interruptores: Interruptores = { ...INTERRUPTORES_FECHADOS }
 let rotas: RotaCopia[] = []
+const mestres = new EstadoMestres(db, ESCRITA_MESTRES, log)
+const statsMestres = { eventos: 0, sombra: 0, ok: 0, recusados: 0, erros: 0, saltados: 0, adiadosKill: 0, substituidos: 0 }
+const ehMestres = (r: RotaCopia | null | undefined): r is RotaMestres => Boolean(r && (r as RotaMestres).mestres)
+
+/** Alerta para fora (Telegram do admin) — só com TELEGRAM_BOT_TOKEN e TELEGRAM_ADMIN_CHAT_ID no env. */
+async function avisarAdmin(texto: string): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chat = process.env.TELEGRAM_ADMIN_CHAT_ID
+  if (!token || !chat) return
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ chat_id: chat, text: texto.slice(0, 3500), disable_web_page_preview: true }),
+    signal: AbortSignal.timeout(8_000),
+  }).catch(() => undefined)
+}
 
 // ── SDK por chave ──────────────────────────────────────────────────────────────
 
@@ -96,10 +129,11 @@ async function recarregar(): Promise<void> {
     liveDesbloqueado: m.get('copia_contas_live_desbloqueado') === true,
     escritaNoProcesso: ESCRITA,
   }
-  if (!interruptores.globalLigado) { rotas = []; return }
+  if (!interruptores.globalLigado && !mestres.global.ligado) { rotas = []; return }
   const { data, error } = await db.from('copia_rotas').select('*').eq('estado', 'aprovada').eq('ativa', true)
   if (error) { log('[erro] ler rotas', error.message); return }
-  rotas = (data ?? []) as unknown as RotaCopia[]
+  // Com o interruptor da cópia desligado, só as rotas das mestres (o motor delas tem o seu).
+  rotas = ((data ?? []) as unknown as RotaCopia[]).filter((r) => interruptores.globalLigado || ehMestres(r))
 }
 
 // ── contas de origem (cache 5 min por ref) ─────────────────────────────────────
@@ -316,6 +350,22 @@ async function escritor(destinoRef: string): Promise<EscritorDestino | null> {
   return e
 }
 
+// Concorrência das mestres: 1 escrita de cada vez por CONTA; ceil(n/5) por SERVIDOR da corretora.
+const porConta = new Limitador(() => 1)
+const porServidor = new Limitador((srv) => capacidadeDoServidor(rotas.filter((r) => ehMestres(r) && servidorDaChave(r.destino_chave) === srv).length))
+function escritorLimitado(e: EscritorDestino, contaChave: string): EscritorDestino {
+  const srv = servidorDaChave(contaChave)
+  const correr = <T>(fn: () => Promise<T>) => porServidor.correr(srv, () => porConta.correr(contaChave, fn))
+  return {
+    contexto: (s, d) => e.contexto(s, d),
+    simbolos: () => e.simbolos(),
+    posicoes: () => e.posicoes(),
+    abrir: (o) => correr(() => e.abrir(o)),
+    modificar: (id, sl, tp) => correr(() => e.modificar(id, sl, tp)),
+    fechar: (id, v) => correr(() => e.fechar(id, v)),
+  }
+}
+
 const loja = (rota: RotaCopia): LojaCopia => ({
   async copia(rotaId, pos) {
     const { data, error } = await db.from('copia_posicoes').select('*').eq('rota_id', rotaId).eq('origem_posicao_id', pos).maybeSingle()
@@ -336,14 +386,31 @@ const loja = (rota: RotaCopia): LojaCopia => ({
     const { count } = await db.from('copia_posicoes').select('id', { count: 'exact', head: true }).eq('rota_id', rotaId).in('estado', ['sombra', 'enviando', 'aberta'])
     return count ?? 0
   },
-  saldoOrigem: () => saldoDaOrigem(rota.origem_ref),
+  saldoOrigem: async () => {
+    if (ehMestres(rota) && rota.origem_chave.startsWith('mtmfunded:')) {
+      const { data } = await db.from('mtm_trading_accounts').select('sim_saldo').eq('id', rota.origem_chave.slice('mtmfunded:'.length)).maybeSingle()
+      return data?.sim_saldo == null ? null : Number(data.sim_saldo)
+    }
+    return saldoDaOrigem(rota.origem_ref)
+  },
 })
+
+/** O próximo evento por processar da mesma posição é outra modificação? Então esta foi substituída. */
+async function modificacaoSubstituida(ev: EventoCopia): Promise<boolean> {
+  if (ev.tipo !== 'modify') return false
+  const { data } = await db.from('copia_eventos').select('id, tipo').eq('rota_id', ev.rota_id).eq('origem_posicao_id', ev.origem_posicao_id)
+    .is('processado_em', null).gt('id', ev.id).order('id', { ascending: true }).limit(1)
+  const seguinte = data?.[0]
+  if (!seguinte) return false
+  const { substituidos } = colapsarModificacoesDaFila([{ id: ev.id, tipo: ev.tipo }, { id: Number(seguinte.id), tipo: seguinte.tipo as EventoCopia['tipo'] }])
+  return substituidos.some((x) => x.id === ev.id)
+}
 
 let aCorrer = false
 let deNovo = false
 
 async function consumir(): Promise<void> {
-  if (!interruptores.globalLigado) return
+  if (!interruptores.globalLigado && !mestres.global.ligado) return
   if (aCorrer) { deNovo = true; return }
   aCorrer = true
   try {
@@ -370,14 +437,46 @@ async function consumir(): Promise<void> {
             const { data: r } = await db.from('copia_rotas').select('*').eq('id', ev.rota_id).maybeSingle()
             rota = (r as unknown as RotaCopia) ?? null
           }
-          const e = rota ? await escritor(rota.destino_ref) : null
-          const d = await processarEventoCopia(ev, rota, rota ? loja(rota) : (null as never), e, { interruptores, log })
-          stats.eventos++
-          if (d.resultado === 'sombra') stats.sombra++
-          else if (d.resultado === 'ok') stats.ok++
-          else if (d.resultado === 'recusado') stats.recusados++
-          else if (d.resultado === 'saltado') stats.saltados++
-          else stats.erros++
+          const daMestre = ehMestres(rota)
+          // Cópia entre contas com o interruptor dela desligado: o evento volta à fila, intacto.
+          if (!daMestre && !interruptores.globalLigado) {
+            for (const x of fila.slice(i)) await db.from('copia_eventos').update({ reclamado_ate: null }).eq('id', x.id)
+            return
+          }
+          // Uma posição que o motor abriu EM LIVE e o processo agora não pode escrever (escrita desligada,
+          // motor desligado): a saída nunca se deita fora — espera até o motor voltar a poder escrever.
+          // (Podendo escrever, o motor gere-a em live mesmo com a estratégia já em sombra/desligada.)
+          if (daMestre && ev.tipo !== 'open' && mestres.modo(rota).modo !== 'live' && !mestres.podeEscrever()) {
+            const { data: c } = await db.from('copia_posicoes').select('estado').eq('rota_id', rota.id).eq('origem_posicao_id', ev.origem_posicao_id).maybeSingle()
+            if (c && (c.estado === 'aberta' || c.estado === 'enviando')) {
+              await db.from('copia_eventos').update({ reclamado_ate: null, proxima_em: new Date(Date.now() + 5_000).toISOString() }).eq('id', ev.id)
+              for (const resto of fila.slice(i + 1)) await db.from('copia_eventos').update({ reclamado_ate: null }).eq('id', resto.id)
+              return
+            }
+          }
+          // KILL-SWITCH das mestres: nada é enviado (nem saídas); o evento espera e a fila da posição também.
+          if (daMestre && mestres.global.kill) {
+            statsMestres.adiadosKill++
+            await db.from('copia_eventos').update({ reclamado_ate: null, proxima_em: new Date(Date.now() + 2_000).toISOString() }).eq('id', ev.id)
+            for (const resto of fila.slice(i + 1)) await db.from('copia_eventos').update({ reclamado_ate: null }).eq('id', resto.id)
+            return
+          }
+          if (daMestre && (await modificacaoSubstituida(ev))) {
+            statsMestres.substituidos++
+            await db.from('copia_eventos').update({ processado_em: new Date().toISOString(), resultado: 'saltado', acao_pretendida: { tipo: 'nada', motivo: 'substituída por uma modificação mais recente' }, tentativas: ev.tentativas + 1, reclamado_ate: null }).eq('id', ev.id)
+            continue
+          }
+          const bruto = rota ? await escritor(rota.destino_ref) : null
+          const e = bruto && daMestre ? escritorLimitado(bruto, rota.destino_chave) : bruto
+          const ganchos = daMestre ? criarGanchosMestres({ db, estado: mestres, log, falhasAlerta: FALHAS_ALERTA, falhasBloqueio: FALHAS_BLOQUEIO, avisar: avisarAdmin }, rota, ev) : undefined
+          const d = await processarEventoCopia(ev, rota, rota ? loja(rota) : (null as never), e, { interruptores, log, ganchos })
+          const alvo = daMestre ? statsMestres : stats
+          alvo.eventos++
+          if (d.resultado === 'sombra') alvo.sombra++
+          else if (d.resultado === 'ok') alvo.ok++
+          else if (d.resultado === 'recusado') alvo.recusados++
+          else if (d.resultado === 'saltado') alvo.saltados++
+          else alvo.erros++
           const agora = Date.now()
           if (d.repetir) {
             const p = proximaTentativa(ev.tentativas)
@@ -391,7 +490,7 @@ async function consumir(): Promise<void> {
             processado_em: new Date(agora).toISOString(), resultado: d.resultado, acao_pretendida: d.acaoPretendida, acao_real: d.acaoReal ?? null,
             latencia_ms: latenciaMs(ev, agora), erro: d.erro ? String(d.erro).slice(0, 500) : null, tentativas: ev.tentativas + 1, reclamado_ate: null,
           }).eq('id', ev.id)
-          if (d.resultado !== 'saltado') log(`[${d.modo}] ${ev.tipo} #${ev.id} rota ${ev.rota_id.slice(0, 8)} → ${d.resultado} ${JSON.stringify(d.acaoPretendida)}${d.erro ? ` · ${d.erro}` : ''}`)
+          if (d.resultado !== 'saltado') log(`[${daMestre ? 'mestres:' : ''}${d.modo}] ${ev.tipo} #${ev.id} rota ${ev.rota_id.slice(0, 8)} → ${d.resultado} ${JSON.stringify(d.acaoPretendida)}${d.erro ? ` · ${d.erro}` : ''}`)
         }
       }))
       if (eventos.length >= LOTE) deNovo = true
@@ -411,6 +510,7 @@ async function pulso(): Promise<void> {
     ligado: interruptores.globalLigado, live_desbloqueado: interruptores.liveDesbloqueado, escrita: ESCRITA,
     rotas: rotas.length, fontes: [...fontes.values()].map((f) => f.resumo()), chaves_sdk: sdks.tamanho,
     pausa_limite_casa_ate: espelhoPausadoAte() || null, equipas_em_pausa: equipasEmPausa, ...stats,
+    mestres: { ...mestres.resumo(), rotas: rotas.filter(ehMestres).length, ...statsMestres },
   }
   log('[pulso]', JSON.stringify(estado))
   await db.from('servicos_pulso').upsert({ servico: 'mtm-copia-contas', host: process.env.HOSTNAME ?? null, versao: VERSAO, estado, em: new Date().toISOString() }, { onConflict: 'servico' })
@@ -423,8 +523,13 @@ async function ciclo(): Promise<void> {
   await acertarFontes().catch((e) => log('[erro] fontes', e instanceof Error ? e.message : e))
 }
 
-log(`[copia] a arrancar — ${VERSAO} escrita=${ESCRITA ? '1' : '0 (sombra)'} sondagem=${SONDAGEM_OUTBOX_MS}ms (sem Realtime: BD frágil)`)
-void ciclo().then(() => consumir())
+log(`[copia] a arrancar — ${VERSAO} escrita=${ESCRITA ? '1' : '0 (sombra)'} sondagem=${SONDAGEM_OUTBOX_MS}ms (sem Realtime: BD frágil) · mestres: escrita=${ESCRITA_MESTRES ? '1 (LIVE PERMITIDO)' : '0 (sombra)'} sondagem=${SONDAGEM_MESTRES_MS}ms falhas alerta/bloqueio=${FALHAS_ALERTA}/${FALHAS_BLOQUEIO}`)
+void mestres.recarregar(true).catch((e) => log('[erro] mestres', e instanceof Error ? e.message : e)).then(() => ciclo()).then(() => consumir())
+// Interruptor das mestres (e kill-switch) relido de 2 em 2 s; as tabelas de 10 em 10 s.
+setInterval(() => { void mestres.recarregar().catch((e) => log('[erro] mestres', e instanceof Error ? e.message : e)) }, 2_000)
+// Fila das mestres sondada depressa enquanto o motor delas está ligado (a consulta vazia custa ~0,1 ms).
+setInterval(() => { if (mestres.global.ligado && !mestres.global.kill) void consumir() }, SONDAGEM_MESTRES_MS)
+setInterval(() => { if (mestres.global.ligado) void db.rpc('mestres_limpar', { p_dias: 30 }).then(({ error }) => { if (error && error.code !== '42883') log('[limpeza mestres]', error.message) }) }, 3_600_000)
 setInterval(() => { void ciclo() }, 30_000)
 setInterval(() => { void consumir() }, SONDAGEM_OUTBOX_MS)
 setInterval(() => { void pulso() }, 60_000)

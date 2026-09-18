@@ -110,3 +110,86 @@ notas). Copiadores com cópias REAIS abertas não se migram (ficavam órfãs num
 4. passadas 2 semanas sem uso: apagar `/opt/mtm/funded-copier` e `/etc/systemd/system/mtm-funded-copier.service`.
 O trigger `funded_copy_emitir` (068) continua a escrever `funded_copy_events` enquanto houver copiadores
 activos; com todos desligados não escreve nada.
+
+## Mestres nossas (migração 116) — o motor envia directamente para as contas dos clientes
+
+Decisão do dono (18/09): a mestre de cada estratégia é uma conta **SIM da casa** (MTM Funded, motor `sim`) e
+este serviço envia cada facto dela — abrir, parcial, SL/BE/trailing, fechar — para as contas dos clientes
+(MT4/MT5 por REST `/trade`, TradeLocker por API), **sem CopyFactory**. Regras em `lib/mestres/`; o motor é o
+da cópia (`lib/copia-contas/motor.ts`) com ganchos. Rotas `copia_rotas.mestres=true` (tipo `estrategia` ou `t2t`).
+
+```
+sinal (TradingView GK/Sensei · pv-relay Edge/King/Wolf) ──▶ mestre SIM (funded_positions, gestão sinais_config)
+                                                             │ trigger 083 → copia_eventos (1 por facto × conta)
+T2T aceite (/api/mtmcopy/tap-to-trade) ── evento «open:aceite» ┤
+                                                             ▼
+             mtm-copia-contas: kill-switch → decisão (global×estratégia×conta×escrita×CF cortada)
+                → guardas de ABERTURA (pausa, exposição, atraso, duplicado entre caminhos, T2T aceite)
+                → 1 escrita/conta, ceil(n/5)/servidor → corretora → re-ancora SL/TP na entrada REAL
+                → mestres_ordens (pedido/resposta/latência) · falhas → mestres_alertas (+Telegram)
+```
+
+### Fechaduras (todas começam fechadas)
+1. `site_settings.mestres_motor = {"ligado":false,"kill":false,"live_desbloqueado":false}` — relido de 2 em 2 s.
+2. `mestres_estrategias.modo` / `t2t_modo` / `sinal_modo`: `desligado | sombra | live` (nascem desligados).
+3. `mestres_contas.modo`: `sombra | live` (conta sem linha = sombra).
+4. `MESTRES_ESCRITA=1` em `/etc/mtm-copia-contas.env`.
+5. Para `modo='live'` a base exige `copyfactory_cortado_em` (script de corte) e, com `incluir_mtmauto`, `mtmauto_cortado_em`.
+
+**Kill-switch** (≤ 2 s; nada é enviado, nem saídas; eventos ficam na fila): `npx tsx scripts/mestres/kill.ts on`
+ou `update site_settings set value = jsonb_set(value,'{kill}','true') where key='mestres_motor';`.
+Levantar: `... kill.ts off` — aberturas mais velhas do que `max_atraso_abertura_s` (30 s) são recusadas; saídas seguem.
+
+### Variáveis novas — `/etc/mtm-copia-contas.env`
+```
+MESTRES_ESCRITA=0              # 1 só na semana do corte (sem isto, tudo é sombra)
+# opcionais
+# MESTRES_SONDAGEM_MS=1000     # fila das mestres sondada de 1 em 1 s enquanto o motor está ligado
+# MESTRES_FALHAS_ALERTA=3      # falhas técnicas seguidas numa conta → alerta
+# MESTRES_FALHAS_BLOQUEIO=6    # → deixa de ABRIR nessa conta (saídas continuam); 0 = nunca
+# TELEGRAM_BOT_TOKEN=… TELEGRAM_ADMIN_CHAT_ID=…   # alertas também para o Telegram do admin
+```
+
+### Construir / instalar (substitui o mesmo serviço)
+```bash
+node_modules/.bin/esbuild services/copia-contas/servico.ts --bundle --platform=node --target=node18 \
+  --format=cjs --minify-syntax --legal-comments=none --external:bufferutil --external:utf-8-validate \
+  --outfile=deploy/vps-stream/copia-contas/dist/servico.js
+npx tsx lib/mestres/__tests__/mestres.check.ts && npx tsx lib/copia-contas/__tests__/copia-contas.check.ts
+npx tsx lib/mestres/__tests__/integracao-sombra.check.ts        # base real, só leitura
+scp deploy/vps-stream/copia-contas/dist/servico.js mtm-stream:/tmp/
+ssh mtm-stream 'sudo mv /tmp/servico.js /opt/mtm/copia-contas/ && sudo systemctl restart mtm-copia-contas'
+ssh mtm-stream 'journalctl -u mtm-copia-contas -f'   # arranque: «mestres: escrita=0 (sombra)»; [pulso] com "mestres":{…}
+```
+
+### Sombra (antes de qualquer live)
+1. Aplicar `116_mestres_nossas.sql`; deploy do site (Vercel) e do serviço.
+2. `npx tsx scripts/mestres/sincronizar-rotas.ts` (seco) → rever → `--aplicar`.
+3. `update site_settings set value = jsonb_set(value,'{ligado}','true') where key='mestres_motor';`
+   `update mestres_estrategias set modo='sombra', t2t_modo='sombra' where slug in ('Goldkiller','sensei','mtm-auto-edge','mtm-auto-king','mtm-auto-wolf');`
+   GK/Sensei: `sinal_modo='sombra'` (regista em `mestres_sinais` o que a SIM abriria pelo sinal directo).
+4. Ler: `select estrategia, tipo, estado, count(*), percentile_cont(.95) within group (order by latencia_total_ms) from mestres_ordens where criado_em > now()-interval '24 hours' group by 1,2,3;`
+
+### Corte para live — por estratégia (começar por UMA conta de teste)
+1. **Sombra limpa ≥ 1 semana**: `mestres_ordens` sem `erro` por explicar; lotes e SL/TP (em pips) certos por conta.
+2. **Sinal directo (só GK/Sensei)**: espelho provider desligado para a estratégia
+   (`update mtmauto_providers set espelho_provider_ativo=false where slug='Goldkiller'`) e `sinal_modo='live'` — a
+   partir daqui o webhook abre na SIM e NÃO manda ordem para a mestre MT5. (Edge/King/Wolf já nascem assim.)
+3. **CopyFactory**: `npx tsx scripts/mestres/cortar-copyfactory.ts --estrategia Goldkiller` (seco) → `--aplicar`
+   (com `--mtmauto` se `incluir_mtmauto`). Só grava `copyfactory_cortado_em` depois de RELER todos os subscritores.
+4. `update site_settings set value = jsonb_set(value,'{live_desbloqueado}','true') where key='mestres_motor';`
+   `MESTRES_ESCRITA=1` no env + `systemctl restart mtm-copia-contas` (o log diz `escrita=1 (LIVE PERMITIDO)`).
+5. Conta a conta: `insert into mestres_contas (conta_chave, conta_ref, modo) values ('mt:<login>@<servidor>', 'site:<id>', 'live') on conflict (conta_chave) do update set modo='live';`
+6. `update mestres_estrategias set modo='live' where slug='Goldkiller';` (e `t2t_modo='live'` quando o T2T também).
+7. Verificar a 1.ª trade: `mestres_ordens` `abrir:enviando→ok` (+ `modificar:ok` com sufixo `:reancorar`), posição na
+   corretora com o SL em pips certos, e nada na CopyFactory (`scripts/mestres/cortar-copyfactory.ts` seco = 0 a cortar).
+
+**Rollback** (qualquer um basta; do mais rápido ao mais lento):
+- `kill.ts on` (≤ 2 s, pára tudo) → depois `update mestres_estrategias set modo='sombra' where slug=…`.
+- Conta: `update mestres_contas set modo='sombra' where conta_chave=…`.
+- Processo: `MESTRES_ESCRITA=0` + restart.
+- Voltar à CopyFactory: `modo='sombra'`, `update mestres_estrategias set copyfactory_cortado_em=null where slug=…`
+  (a re-sincronização do site volta a poder subscrever), e re-subscrever pelo admin «MTM Auto · Cópia › Estratégias»
+  (Re-sync com releitura). GK/Sensei: `sinal_modo='desligado'` + `espelho_provider_ativo=true` repõe a mestre MT5.
+  As posições abertas pelo motor continuam a ser geridas enquanto o motor não estiver `kill`/desligado — fechá-las
+  à mão ou deixar o motor em sombra só depois de fecharem.

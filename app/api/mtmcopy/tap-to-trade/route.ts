@@ -21,6 +21,7 @@ import { colocarOrdemTL, contextoTL, loteTL, type ContextoTL } from '@/lib/trade
 import { executarT2TSimulado, type ResultadoT2TSimulado } from '@/lib/mtmfunded/simulado/t2t-simulado'
 import { destinoDeExecucao } from '@/lib/mtmcopy/destino-execucao'
 import { contasFundedLigadasParaT2T } from '@/lib/mtmfunded/simulado/ligar-conta'
+import { contasJaExecutadasPeloMotor, encaminharT2TParaMotor } from '@/lib/mestres/servidor/t2t'
 
 export const dynamic = 'force-dynamic'
 // 60s: uma ligação MetaApi fria pode demorar até ~55s (CONNECT_TIMEOUT_MS). Com 30s a
@@ -285,6 +286,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Sem conta ligada (ou todas em pausa). Liga/retoma a tua conta MT5 no T2T.', code: 'no_connection' }, { status: 400 })
   }
 
+  // MESTRES NOSSAS (116): com o T2T da estratégia em live, o motor das mestres executa nestas contas
+  // (execução directa, gestão pela mestre SIM da estratégia) e elas saem do caminho de sempre. Em
+  // sombra/desligado não muda nada. E nunca se repete aqui um trade que o motor já executou na conta.
+  const motorT2T = await encaminharT2TParaMotor({
+    userId: user.id, chatMessageId,
+    mensagem: { channel_slug: message.channel_slug ?? null, content: message.content ?? null, created_at: message.created_at ?? null },
+    sinal: { symbol: signal.symbol, direction: signal.direction, entry: signal.entry ?? null },
+    contas: targets as unknown as Array<Record<string, unknown> & { id: string; user_id: string }>,
+  })
+  const tratadasPeloMotor = new Set(motorT2T.tratadas.map((t) => t.connectionId))
+  const jaPeloMotor = await contasJaExecutadasPeloMotor(
+    targets.filter((c) => !tratadasPeloMotor.has(c.id)) as unknown as Array<Record<string, unknown> & { id: string; user_id: string }>,
+    { symbol: signal.symbol, direction: signal.direction, entry: signal.entry ?? null },
+  )
+  targets = targets.filter((c) => !tratadasPeloMotor.has(c.id) && !jaPeloMotor.has(c.id))
+  const resultadosDoMotor = [
+    ...motorT2T.tratadas.map((t) => ({ account: t.account, connectionId: t.connectionId, ok: t.ok, skipped: t.skipped, error: t.error, symbol: signal.symbol ?? undefined })),
+    ...[...jaPeloMotor].map((id) => ({ account: id.slice(0, 6), connectionId: id, ok: false, skipped: true, error: 'já executado nesta conta pelo motor da estratégia' })),
+  ]
+
   const symU = signal.symbol.toUpperCase()
   // Valores já validados (o guard de "sinal incompleto" garante symbol/direction) — capturados
   // aqui porque o narrowing do TS não atravessa a closure executeOnAccount abaixo.
@@ -482,7 +503,7 @@ export async function POST(request: NextRequest) {
         }).catch((e): ResultadoT2TSimulado[] => { console.error('[tap-to-trade] simuladas:', e); return [] })
       : Promise.resolve([] as ResultadoT2TSimulado[]),
   ])
-  const results: AcctResult[] = [...reais, ...simuladas.map((r) => ({ ...r, connectionId: r.accountId }))]
+  const results: AcctResult[] = [...resultadosDoMotor, ...reais, ...simuladas.map((r) => ({ ...r, connectionId: r.accountId }))]
   const opened = results.filter((r) => r.ok)
   const realErrors = results.filter((r) => !r.ok && !r.skipped)
 
