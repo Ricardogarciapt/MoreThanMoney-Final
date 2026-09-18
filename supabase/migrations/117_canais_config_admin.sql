@@ -132,9 +132,16 @@ returns boolean language sql stable security definer set search_path = public as
     select 1 from public.profiles p
      where p.id = auth.uid()
        and p.is_active = true
-       and (p.subscription_plan = 'premium'
-            or p.member_category = any (array['iq', 'vip'])
-            or p.user_type in ('admin', 'vip'))
+       and (
+         -- a mesma regra dos sinais pagos (lib/direito-sinais.ts, migração 115): quem paga Premium
+         -- ou Fundador em qualquer campo, VIP em qualquer campo, IQ, ou direito MTM Auto
+         lower(coalesce(p.user_type, '')) in ('admin', 'vip')
+         or lower(coalesce(p.member_category, '')) in ('vip', 'iq')
+         or lower(coalesce(p.membership_level, '')) = 'vip'
+         or lower(coalesce(p.member_category, '')) like any (array['%premium%', '%fundador%'])
+         or lower(coalesce(p.membership_level, '')) like any (array['%premium%', '%founder%', '%fundador%'])
+         or lower(coalesce(p.subscription_plan, '')) like any (array['%premium%', '%founder%', '%fundador%'])
+         or coalesce((select d.tem from public.direito_mtm_auto(p.id, true) d limit 1), false))
   )
 $$;
 
