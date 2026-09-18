@@ -11,6 +11,7 @@
  * Cada acontecimento vira cartão em thread no sinal e escreve os pips e a percentagem em
  * `chat_messages.outcome`, que é de onde o chat e o Tap to Trade os lêem.
  */
+import { canalPublicadoPelaMestre } from '@/lib/mestres/servidor/canais-publicados'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getExecSwitches } from './exec-switches'
 import { parseSignal } from './signal-parser'
@@ -148,6 +149,8 @@ async function admitirNovos(): Promise<number> {
 /** Publica o cartão em thread no sinal (idempotente pelo prefixo do próprio cartão). */
 async function anunciar(linha: Linha, evento: SignalEvent, ctx: { price?: number | null; level?: number }) {
   if (!linha.announce) return
+  // Canal publicado pela mestre: quem conta o que aconteceu é a conta-mestre, não o preço daqui.
+  if (await canalPublicadoPelaMestre(linha.channel_slug)) return
   const admin = getSupabaseAdmin()
   const { text } = lifecycleMessage(evento, {
     symbol: linha.symbol,
@@ -189,16 +192,21 @@ async function anunciar(linha: Linha, evento: SignalEvent, ctx: { price?: number
 /** Escreve pips e percentagem na mensagem de ENTRADA — é daqui que o cartão os lê. */
 async function gravarDesfecho(linha: Linha, pips: number | null, rotulo: string) {
   const admin = getSupabaseAdmin()
+  // Canal publicado pela mestre: o resultado no cartão é o da mestre (publicar.ts). Aqui só se fecha
+  // a linha de acompanhamento (a janela de aceitação T2T continua a lê-la).
+  const daMestre = await canalPublicadoPelaMestre(linha.channel_slug)
   // `pips` a null = o sinal acabou mas não se soube medi-lo (sem entrada). Grava-se o fecho e o
   // rótulo; o NÚMERO fica vazio, porque um zero no lugar dele é outra medição falsa.
   const p = pips != null ? Math.round(pips * 10) / 10 : null
   const pct = p != null && linha.entry && linha.entry > 0
     ? Math.round(((p * pipSizeForSymbol(linha.symbol)) / linha.entry) * 100 * 100) / 100
     : null
-  await admin
-    .from('chat_messages')
-    .update({ outcome: { label: rotulo, pips: p, pct } })
-    .eq('id', linha.chat_message_id)
+  if (!daMestre) {
+    await admin
+      .from('chat_messages')
+      .update({ outcome: { label: rotulo, pips: p, pct } })
+      .eq('id', linha.chat_message_id)
+  }
   await admin
     .from('mtmcopy_signal_tracking')
     .update({

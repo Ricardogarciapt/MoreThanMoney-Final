@@ -58,6 +58,11 @@ async function mirrorToApp(message: TelegramChannelMessage) {
   }
   const slug = resolveAppChannelSlug(chat)
   if (!slug) return
+  // Canal publicado pela mestre: não se espelha o grupo (ver lib/mestres/servidor/canais-publicados).
+  {
+    const { canalPublicadoPelaMestre } = await import("@/lib/mestres/servidor/canais-publicados")
+    if (await canalPublicadoPelaMestre(slug)) return
+  }
   // RECEÇÃO por canal (admin): desligado → não espelha nem notifica.
   const { intakeKeyForChannelSlug, isIntakeEnabled } = await import("@/lib/telegram-intake-guard")
   const ik = intakeKeyForChannelSlug(slug)

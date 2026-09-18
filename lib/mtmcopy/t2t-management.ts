@@ -7,6 +7,7 @@
  * estende a mesma ação às contas T2T com posição aberta nesse canal+símbolo — desde que a
  * estratégia esteja ATIVA no Tap to Trade.
  */
+import { canalPublicadoPelaMestre } from '@/lib/mestres/servidor/canais-publicados'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
   readOpenPositions,
@@ -283,6 +284,7 @@ export async function reconcileT2TPositionsClosed(rows: OpenT2TPosition[]): Prom
           price: precoFecho,
           reason: 'Encerrada pela gestão da fonte.',
         })
+        if (await canalPublicadoPelaMestre(slug)) continue
         const { data: msg } = await supabase
           .from('chat_messages')
           .insert({ channel_slug: slug, user_id: null, content: text, message_type: 'telegram_forward', notified: true, reply_to_id: msgId })

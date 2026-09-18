@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { buildAppChannelMap, resolveAppChannelSlug } from "@/lib/telegram-app-channels"
+import { canalPublicadoPelaMestre } from "@/lib/mestres/servidor/canais-publicados"
 import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
 
 import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
@@ -129,6 +130,7 @@ export async function POST(_request: NextRequest) {
 
       const slug = resolveAppChannelSlug(post.chat ?? {})
       if (!slug) { stats.skipped++; continue }
+      if (await canalPublicadoPelaMestre(slug)) { stats.skipped++; continue }
 
       const { data: existing } = await supabase
         .from("chat_messages")

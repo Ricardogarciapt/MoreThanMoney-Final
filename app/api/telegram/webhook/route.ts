@@ -24,6 +24,13 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
     return
   }
 
+  // Canal publicado pela mestre (Sensei em live): o chat da app e o Telegram já recebem o MESMO
+  // texto do publicador da mestre; espelhar o grupo punha no chat uma segunda versão das coisas.
+  {
+    const { canalPublicadoPelaMestre } = await import("@/lib/mestres/servidor/canais-publicados")
+    if (await canalPublicadoPelaMestre(slug)) return
+  }
+
   console.log(`[Telegram] Espelhar ${chatId} → ${slug}`)
 
   const telegramMessageId = message.message_id
