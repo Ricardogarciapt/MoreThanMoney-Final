@@ -11,6 +11,7 @@
  * Idempotente por estado guardado em site_settings 'perps_monitor_state'. Switch: perps_position_monitor
  * (default ON). Corre a cada poucos segundos (cron + loop VPS), à imagem do premium-price-monitor.
  */
+import { parseSignal } from './signal-parser'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getExecSwitches } from './exec-switches'
 import { getMtmcopyBotToken } from './telegram-bot'
@@ -67,9 +68,6 @@ type StateMap = Record<string, PosState>
 function keyOf(p: { symbol: string; side: string }): string {
   return `${p.symbol}|${p.side}`
 }
-function dirLabel(side: string): string {
-  return /buy/i.test(side) ? '🔵 COMPRA' : '🔴 VENDA'
-}
 /** SL ≈ entrada (break-even). Tolerância 0.06% do preço (cobre spread/arredondamento). */
 function isBreakEven(sl: number | null, entry: number): boolean {
   if (sl == null || !(entry > 0)) return false
@@ -96,11 +94,36 @@ async function saveState(state: StateMap): Promise<void> {
 
 /** Publica uma linha de acompanhamento: chat da app (cripto-perps) + push + Telegram dos perps.
  *  Concisa e SEM alvo "TP"/🎯 nem marcador PrimeVerse → nunca vira entrada Tap to Trade. */
-async function postPerps(content: string): Promise<void> {
+/**
+ * A ENTRADA deste perpétuo no canal (formato único ou antigo), das últimas 72 h — é a ela que os
+ * seguimentos respondem (thread), como em todos os outros canais de sinais.
+ */
+async function entradaDoPerp(sym: string, dir: 'buy' | 'sell' | null): Promise<string | null> {
   try {
     const { data } = await getSupabaseAdmin()
       .from('chat_messages')
-      .insert({ channel_slug: PERPS_CHAT_SLUG, user_id: null, content, message_type: 'telegram_forward', notified: true })
+      .select('id, content')
+      .eq('channel_slug', PERPS_CHAT_SLUG)
+      .is('reply_to_id', null)
+      .gte('created_at', new Date(Date.now() - 72 * 3600_000).toISOString())
+      .order('created_at', { ascending: false })
+      .limit(40)
+    const base = sym.toUpperCase().replace(/USDT?$|\.P$/g, '')
+    for (const m of (data ?? []) as { id: string; content: string | null }[]) {
+      const p = parseSignal(m.content ?? '')
+      if (!p?.symbol || (dir && p.direction !== dir)) continue
+      if (p.symbol.toUpperCase().replace(/USDT?$|\.P$/g, '').startsWith(base)) return m.id
+    }
+  } catch { /* sem thread */ }
+  return null
+}
+
+async function postPerps(content: string, alvo?: { sym: string; dir: 'buy' | 'sell' | null }): Promise<void> {
+  try {
+    const pai = alvo ? await entradaDoPerp(alvo.sym, alvo.dir) : null
+    const { data } = await getSupabaseAdmin()
+      .from('chat_messages')
+      .insert({ channel_slug: PERPS_CHAT_SLUG, user_id: null, content, message_type: 'telegram_forward', notified: true, ...(pai ? { reply_to_id: pai } : {}) })
       .select('id')
       .single()
     await sendTelegramChannelPush({ slug: PERPS_CHAT_SLUG, content, chatMessageId: data?.id as string }).catch(() => {})
@@ -141,17 +164,10 @@ export async function runPerpsPositionMonitor(): Promise<{
   for (const [k, p] of live) {
     const prev = state[k]
     const sym = p.symbol.replace(/USDT$/, '')
+    const dirP: 'buy' | 'sell' | null = p.side === 'Buy' ? 'buy' : p.side === 'Sell' ? 'sell' : null
     if (!prev) {
-      await postPerps(
-        [
-          `✅ ENTRY HIT · ${sym} ${dirLabel(p.side)}`,
-          `📈 Posição aberta @ ${p.avgPrice}`,
-          p.stopLoss != null ? `🛑 SL: ${p.stopLoss}` : null,
-          `Gestão automática por preço (parciais + break-even).`,
-        ]
-          .filter(Boolean)
-          .join('\n'),
-      )
+      // Vocabulário único (signal-lifecycle), em resposta à entrada.
+      await postPerps(lifecycleMessage('entry_hit', { symbol: sym, direction: dirP, price: p.avgPrice }).text, { sym, dir: dirP })
       state[k] = { size: p.size, sl: p.stopLoss, entry: p.avgPrice, bePosted: isBreakEven(p.stopLoss, p.avgPrice), openedAt: new Date().toISOString() }
       events.push(`open ${k}`)
       continue
@@ -159,13 +175,13 @@ export async function runPerpsPositionMonitor(): Promise<{
     // Parcial: size caiu ≥2% face ao anterior conhecido.
     if (p.size < prev.size * 0.98) {
       const realizedPct = Math.min(99, Math.round((1 - p.size / prev.size) * 100))
-      await postPerps(`🎯 Parcial · ${sym} ${dirLabel(p.side)} — realizado ~${realizedPct}%. O resto corre com stop protegido.`)
+      await postPerps(lifecycleMessage('partial', { symbol: sym, direction: dirP, pct: realizedPct }).text, { sym, dir: dirP })
       prev.size = p.size
       events.push(`partial ${k}`)
     }
     // Break-even: SL passou a ≈ entrada.
     if (!prev.bePosted && isBreakEven(p.stopLoss, prev.entry)) {
-      await postPerps(`🔒 Break-even · ${sym} ${dirLabel(p.side)} — stop movido para a entrada. Risco neutralizado.`)
+      await postPerps(lifecycleMessage('break_even', { symbol: sym, direction: dirP }).text, { sym, dir: dirP })
       prev.bePosted = true
       events.push(`be ${k}`)
     }
@@ -191,7 +207,7 @@ export async function runPerpsPositionMonitor(): Promise<{
       price: fechado?.exit ?? null,
       reason: resultTxt || null,
     })
-    await postPerps(text)
+    await postPerps(text, { sym, dir })
     // Fecha as ordens T2T de quem aceitou este sinal (Aurum Flow). Faltava — os seguidores
     // do scanner de perpétuos ficavam com posições sem quem as encerrasse do lado da fonte.
     try {

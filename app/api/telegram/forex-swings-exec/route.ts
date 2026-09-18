@@ -5,18 +5,24 @@ import { getForexSwingsExecConfig } from '@/lib/mtmcopy/forex-swings-exec'
 import { computeRiskLot } from '@/lib/mtmcopy/risk-sizing'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
+import { formatarSinal } from '@/lib/sinais/formato-sinal'
 
 const FS_CHAT_SLUG = 'ideias-e-sinais'
 
 /** Insere o sinal (formato parseável) no chat da app + dispara push T2T. Independente da execução. */
 async function feedAppChat(symbol: string, direction: 'buy' | 'sell', sl: number | null, tp: number | null) {
   try {
-    const tag = direction === 'buy' ? '🔵' : '🔴'
-    const lines = [`${tag} ${symbol} ${direction.toUpperCase()}`]
-    if (sl != null) lines.push(`SL: ${sl}`)
-    if (tp != null) lines.push(`TP: ${tp}`)
-    lines.push('', '🌊 Forex Swings — set & forget')
-    const content = lines.join('\n')
+    // Formato único (lib/sinais/formato-sinal). «Forex Swings» na etiqueta é a assinatura da fonte
+    // para o T2T (t2tSourceKey → james); entrada a mercado, set & forget.
+    const content = formatarSinal({
+      estrategia: 'MTM Auto Forex Swings',
+      simbolo: symbol,
+      direcao: direction,
+      entrada: null,
+      sl,
+      tps: tp != null ? [tp] : [],
+      extras: ['🌊 Set & forget — sem trailing'],
+    })
     const { data, error } = await getSupabaseAdmin()
       .from('chat_messages')
       .insert({ channel_slug: FS_CHAT_SLUG, user_id: null, content, message_type: 'telegram_forward', notified: true })

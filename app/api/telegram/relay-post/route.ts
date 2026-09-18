@@ -1,3 +1,4 @@
+import { premiumParaFormatoUnico } from '@/lib/sinais/premium-formato'
 import { NextRequest, NextResponse } from 'next/server'
 import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
@@ -323,7 +324,8 @@ export async function POST(req: NextRequest) {
             .insert({
               channel_slug: slug,
               user_id: null,
-              content: execText,
+              // Entradas no formato único (com as notas do trader); o resto fica literal.
+              content: premiumParaFormatoUnico(execText) ?? execText,
               message_type: 'telegram_forward',
               telegram_sender: null,
               telegram_message_id: r.messageId,

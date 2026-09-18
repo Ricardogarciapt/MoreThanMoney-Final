@@ -19,6 +19,7 @@ import { contaMarcadaInexistente } from './metaapi-inexistentes'
 import { closeT2TForSlaves, editT2TForSlaves } from './t2t-management'
 import { syncProviderRouteChannels } from './provider-channels-sync'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
+import { formatarSinal } from '@/lib/sinais/formato-sinal'
 
 const supabase = getSupabaseAdmin()
 
@@ -26,7 +27,19 @@ function directionFromType(type: string | undefined): 'buy' | 'sell' {
   return (type ?? '').toUpperCase().includes('SELL') ? 'sell' : 'buy'
 }
 
-function formatSignalText(p: MetaApiPosition, dir: 'buy' | 'sell'): string {
+function formatSignalText(p: MetaApiPosition, dir: 'buy' | 'sell', estrategia?: string | null): string {
+  // Formato único (lib/sinais/formato-sinal): a posição já está viva no mestre, por isso a entrada
+  // é a MERCADO. Sem SL nem TP não há alvo → o T2T não lhe dá botão (como antes com o «Ref»).
+  if (p.symbol && (p.stopLoss || p.takeProfit)) {
+    return formatarSinal({
+      estrategia: estrategia?.trim() || 'MTM Auto',
+      simbolo: p.symbol,
+      direcao: dir,
+      entrada: null,
+      sl: p.stopLoss ? Number(p.stopLoss) : null,
+      tps: p.takeProfit ? [Number(p.takeProfit)] : [],
+    })
+  }
   // Símbolo + direção na 1.ª linha (parser fiável) e SEM "entrada" → o cliente entra
   // a MERCADO, espelhando a posição já viva do mestre. SL/TP dão o preço (p/ o filtro
   // isEntrySignal). "Ref" só quando não há SL/TP (não é interpretado como entrada).
@@ -143,7 +156,7 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
           'premium-ideas',
         ])
         if (appChannel && !WEBHOOK_FORMATTED.has(appChannel)) {
-          const text = formatSignalText(p, dir)
+          const text = formatSignalText(p, dir, route.label ?? route.tag ?? null)
           const senderLabel = appChannel === 'premium-ideas' ? null : (route.label ?? route.tag ?? 'MTM Provider')
           const { data: msg, error: msgErr } = await supabase
             .from('chat_messages')

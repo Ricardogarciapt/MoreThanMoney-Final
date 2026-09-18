@@ -28,6 +28,7 @@ import { isT2TEntrySignal, t2tMode, t2tSourceKey, t2tAssetClass } from '../../mt
 import { isOwnLifecycleAnnouncement, lifecycleMessage } from '../../mtmcopy/signal-lifecycle'
 import { directionFromText } from '../../mtmcopy/signal-direction'
 import { traderDoConteudo } from '../../mtmfunded/estrategias-sinais/calculo'
+import { premiumParaFormatoUnico } from '../premium-formato'
 
 let ko = 0
 function t(nome: string, f: () => void) {
@@ -257,6 +258,30 @@ t('seguimento leva a etiqueta uma vez só', () => {
   const s1 = formatarSeguimento(base, 'MTM Auto Sensei')
   assert.equal(formatarSeguimento(s1, 'MTM Auto Sensei'), s1)
   assert.match(s1, /\n📌 MTM Auto Sensei$/)
+})
+
+console.log('\n5. Premium no chat (formato único + notas do trader)')
+t('setup real do Premium → formato único, com o rodapé do trader e sem perder níveis', () => {
+  const c = premiumParaFormatoUnico(ANTIGA_PREMIUM, '2026-09-18T08:38:19Z')!
+  assert.ok(c)
+  assert.equal(c.split('\n')[0], '🔴 XAUUSD · VENDA')
+  assert.match(c, /🎯 Zona: 4388 – 4395/)
+  assert.match(c, /✅ TP4: deixar correr/)
+  assert.match(c, /🔑 Use suitable lot sizes/)
+  const a = parseSignal(ANTIGA_PREMIUM)!
+  const n = parseSignal(c)!
+  assert.deepEqual([n.entry, n.sl, n.tp, n.zone, n.zoneFirst], [a.entry, a.sl, a.tp, a.zone, a.zoneFirst])
+})
+t('zona escrita ao contrário (compra) mantém o 1.º nível', () => {
+  const lit = '2. GOLD BUY SETUP\nGold Buy Zone 4643 - 4637\nSL : 4630\nTP1 : 4648\nTP2 : 4653'
+  const c = premiumParaFormatoUnico(lit)!
+  assert.match(c, /🎯 Zona: 4643 – 4637/)
+  assert.equal(parseSignal(c)!.zoneFirst, 4643)
+  assert.equal(parseSignal(c)!.entry, parseSignal(lit)!.entry)
+})
+t('seguimentos e recaps do Premium ficam literais', () => {
+  assert.equal(premiumParaFormatoUnico('HIT TP1 ✅ +50 PIPS'), null)
+  assert.equal(premiumParaFormatoUnico('London Performance\nTotal Net: 120 PIPS'), null)
 })
 
 if (ko) {

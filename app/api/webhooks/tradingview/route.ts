@@ -38,6 +38,7 @@ import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/s
 import { classifyAsset, confirmationsPassed, isCryptoPerpTicker, passesQualityGate, stopsSane, type AssetClass } from "@/lib/mtmcopy/webhook-gates"
 import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
 import { lifecycleMessage, stopFoiProtegido } from "@/lib/mtmcopy/signal-lifecycle"
+import { formatarSeguimento, formatarSinal } from "@/lib/sinais/formato-sinal"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
@@ -120,9 +121,24 @@ function composePost(
   const tps = (ctx?.tp?.length ? ctx.tp : v.tp) ?? []
   const alertType = sensei?.alertType
 
-  // ---- Entrada: Nova Ideia / Entry Alert (Ideia Activada) ----
+  // ---- Entrada: Nova Ideia / Entry Alert (Ideia Activada) — FORMATO ÚNICO ----
+  // «Entrada activada» continua no estado: é por ele que o feed T2T distingue a ideia activada.
   if (alertType === "idea" || alertType === "signal" || alertType === "entry_trigger") {
     const isTrigger = alertType === "entry_trigger"
+    const dirU = direction === "sell" ? "sell" : direction === "buy" ? "buy" : null
+    if (dirU && symbol !== "—") {
+      return formatarSinal({
+        estrategia: "MTM Auto Sensei",
+        simbolo: symbol,
+        direcao: dirU,
+        entrada: entry,
+        sl: v.sl ?? sensei?.sl ?? null,
+        tps: tps.slice(0, 4),
+        timeframe: sensei?.timeframe ?? null,
+        estado: isTrigger ? `Entrada activada${tag} ✅` : `Nova ideia${tag}`,
+        extras: [`🔎 Validação: ${pct}%`],
+      })
+    }
     const title = isTrigger ? "Entry Alert — Ideia Activada" : "Nova Ideia"
     const tpLines = [0, 1, 2, 3]
       .map((i) => (tps[i] != null ? `✅ Take Profit ${i + 1}: ${tps[i]}` : null))
@@ -168,12 +184,12 @@ function composePost(
       price: tpVal ?? null,
       reason: tpVal != null ? `TP${lvl}: ${tpVal}.` : null,
     })
-    return [text, ``, `🧠 Sensei Scanner${tag} · gestão automática por preço.`, DISCLAIMER].join("\n")
+    return [formatarSeguimento(text, "MTM Auto Sensei"), `🧠 Sensei Scanner${tag} · gestão automática por preço.`, DISCLAIMER].join("\n")
   }
 
   if (alertType === "breakeven") {
     const { text } = lifecycleMessage("break_even", { symbol, direction: ctxDir })
-    return [text, ``, `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
+    return [formatarSeguimento(text, "MTM Auto Sensei"), `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
   }
 
   if (alertType === "sl_hit") {
@@ -199,12 +215,12 @@ function composePost(
       price: slPx,
       slOriginal: ctx?.slOriginal ?? null,
     })
-    return [text, ``, `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
+    return [formatarSeguimento(text, "MTM Auto Sensei"), `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
   }
 
   if (alertType === "exit") {
     const { text } = lifecycleMessage("closed", { symbol, direction: ctxDir })
-    return [text, ``, `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
+    return [formatarSeguimento(text, "MTM Auto Sensei"), `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
   }
 
   // fallback genérico
@@ -237,12 +253,36 @@ function resolveRoute(cls: AssetClass): SignalRoute {
   }
 }
 
-/** Card genérico (forex/índices/cripto) — não usa a marca Sensei. */
+/** Etiqueta da estratégia (formato único) a partir do remetente da rota. */
+function estrategiaDoRemetente(sender: string): string {
+  if (/gold\s*killer/i.test(sender)) return "MTM Auto GoldKiller"
+  if (/aurum/i.test(sender)) return "MTM Auto Aurum Flow"
+  if (/mtm\s*scanner/i.test(sender)) return "MTM Scanner"
+  if (/perp/i.test(sender)) return "MTM Perps"
+  if (/sensei/i.test(sender)) return "MTM Auto Sensei"
+  if (/forex/i.test(sender)) return "Ideias de Forex"
+  if (/[íi]ndices/i.test(sender)) return "Ideias de Índices"
+  return sender.replace(/^[^\p{L}]+/u, "").trim() || "MTM"
+}
+
+/** Card genérico (forex/índices/cripto/GoldKiller) — FORMATO ÚNICO (lib/sinais/formato-sinal). */
 function composeGenericPost(
   route: SignalRoute,
   v: { symbol: string | null; direction: "buy" | "sell" | null; entry: number | null; sl: number | null; tp: number[]; confidence: number },
   timeframe: string | null,
 ): string {
+  if (v.symbol && v.direction) {
+    return formatarSinal({
+      estrategia: estrategiaDoRemetente(route.sender),
+      simbolo: v.symbol,
+      direcao: v.direction,
+      entrada: v.entry,
+      sl: v.sl,
+      tps: v.tp ?? [],
+      timeframe,
+      extras: [`🔎 Validação: ${Math.round((v.confidence || 0) * 100)}%`],
+    })
+  }
   const dir = v.direction === "buy" ? "🔵 COMPRA" : v.direction === "sell" ? "🔴 VENDA" : "—"
   const tps = (v.tp ?? []).map((t, i) => `✅ Take Profit ${i + 1}: ${t}`).filter(Boolean)
   return [
