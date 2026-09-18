@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { isT2TEntrySignal, t2tMode } from "@/lib/mtmcopy/t2t-source"
+import { ehSinalDePerpetuo, isT2TEntrySignal, t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { directionLabelFromText } from "@/lib/mtmcopy/signal-direction"
 import TapToCopyModal from "@/components/mobile/tap-to-copy-modal"
 import { useAuth } from "@/contexts/auth-context"
@@ -50,7 +50,7 @@ import MentionText from "./mention-text"
 import MemberBadge from "./member-badge"
 import ChatPinnedInstructions from "./chat-pinned-instructions"
 import {
-  getChannelMeta,
+  metaDoCanal,
   formatPreviewText,
   markChannelRead,
   isChannelUnread,
@@ -71,6 +71,14 @@ interface Channel {
   parent_slug: string | null
   position: number
   children?: Channel[]
+  // Configuração do admin (migração 117) — null/ausente = regra de sempre.
+  icone?: string | null
+  cor?: string | null
+  etiqueta?: string | null
+  regras?: string[] | null
+  leitura?: string | null
+  escrita?: string | null
+  exige_uid_corretora?: boolean | null
 }
 
 interface ChannelPreview {
@@ -1107,7 +1115,7 @@ function MessageBubble({
                   aria-label={t("chat.tapToTradeAria")}
                 >
                   <TrendingUp className="w-4 h-4" />{" "}
-                  {msg.channel_slug === "cripto-perps"
+                  {ehSinalDePerpetuo(msg.channel_slug, msg.content)
                     ? "TAP to Copy"
                     : t2tMode(msg.channel_slug, msg.content) === "follow"
                       ? "Seguir sinal"
@@ -1204,7 +1212,7 @@ function ChannelView({
     }
   }, [])
 
-  const canWrite = canWriteChannel(channel.slug, currentUser)
+  const canWrite = canWriteChannel(channel.slug, currentUser, channel)
   const isAdmin = currentUser?.user_type === "admin"
   const [contextMsg, setContextMsg] = useState<ChatMessage | null>(null)
 
@@ -1764,7 +1772,7 @@ function ChannelView({
             onIrParaOriginal={irParaOriginal}
             onTapToTrade={
               t2tSourceOn
-                ? (m) => (m.channel_slug === "cripto-perps" ? setCopyModalMsg(m) : setTapTrade({ msg: m, status: "confirm" }))
+                ? (m) => (ehSinalDePerpetuo(m.channel_slug, m.content) ? setCopyModalMsg(m) : setTapTrade({ msg: m, status: "confirm" }))
                 : undefined
             }
           />
@@ -1799,13 +1807,13 @@ function ChannelView({
             <p className="text-[11px] text-gray-500 truncate mt-0.5">{channel.description}</p>
           )}
         </div>
-        {isPremiumChannel(channel.slug) && (
+        {isPremiumChannel(channel.slug, channel) && (
           <div className="flex items-center gap-1 text-[#D2A63C] text-[11px]">
             <Lock className="w-3.5 h-3.5" />
             <span>{t("chat.premium")}</span>
           </div>
         )}
-        {isReadOnlyChannel(channel.slug) && (
+        {isReadOnlyChannel(channel.slug, channel) && (
           <TelegramIcon className="w-4 h-4 text-[#26A5E4]" />
         )}
         <button
@@ -1848,7 +1856,7 @@ function ChannelView({
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
-              <span className="text-4xl">{getChannelMeta(channel.slug).emoji}</span>
+              <span className="text-4xl">{metaDoCanal(channel).emoji}</span>
               <p className="text-white font-medium">{t("chat.welcome")} #{channel.name}</p>
               <p className="text-gray-500 text-sm">
                 {channel.description || t("chat.channelReady")}
@@ -2041,7 +2049,7 @@ function ChannelView({
         </div>
       ) : (
         <div className="flex-shrink-0 border-t border-gray-800 bg-gray-900 px-4 py-3 flex items-center gap-2">
-          {isReadOnlyChannel(channel.slug) ? (
+          {isReadOnlyChannel(channel.slug, channel) ? (
             <>
               <TelegramIcon className="w-4 h-4 text-[#26A5E4]" />
               <p className="text-xs text-gray-500">{t("chat.readOnly")}</p>
@@ -2292,7 +2300,7 @@ function ChannelInfoSheet({
   onClose: () => void
 }) {
   const t = useT()
-  const meta = getChannelMeta(channel.slug)
+  const meta = metaDoCanal(channel)
 
   return (
     <div
@@ -2330,7 +2338,7 @@ function ChannelInfoSheet({
                     {meta.tag}
                   </span>
                 )}
-                {isReadOnlyChannel(channel.slug) && (
+                {isReadOnlyChannel(channel.slug, channel) && (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#26A5E4]/15 text-[#26A5E4]">
                     Telegram
                   </span>
@@ -2400,8 +2408,8 @@ function ChannelRow({
   isSubChannel?: boolean
   preview?: ChannelPreview
 }) {
-  const locked = !canReadChannel(channel.slug, user)
-  const meta = getChannelMeta(channel.slug)
+  const locked = !canReadChannel(channel.slug, user, channel)
+  const meta = metaDoCanal(channel)
   const unread = preview ? isChannelUnread(channel.slug, preview.created_at) : false
   const previewText = preview
     ? formatPreviewText(preview.content, preview.image_url, preview.telegram_sender, preview.message_type)
@@ -2567,7 +2575,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
   })
 
   const totalUnread = allFlatChannels.filter(
-    (c) => canReadChannel(c.slug, user) && previews[c.slug] && isChannelUnread(c.slug, previews[c.slug].created_at)
+    (c) => canReadChannel(c.slug, user, c) && previews[c.slug] && isChannelUnread(c.slug, previews[c.slug].created_at)
   ).length
 
   useEffect(() => {
@@ -2584,9 +2592,12 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
         return
       }
 
+      // `*` e não uma lista de colunas: o ícone, a cor, a etiqueta, as regras e as permissões de
+      // cada canal vêm do admin (migração 117). Com a migração por aplicar, `*` não parte e o que
+      // faltar cai nas regras de sempre.
       const { data, error } = await supabase
         .from("chat_channels")
-        .select("id, slug, name, description, parent_slug, position")
+        .select("*")
         // Canais escondidos ficam com o histórico na base de dados mas fora da app — é como se
         // retira uma fonte sem apagar as mensagens que já foram lidas por alguém.
         .eq("hidden", false)
@@ -2657,7 +2668,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
   }, [channels, initialSlug])
 
   const handleChannelSelect = (channel: Channel) => {
-    if (requiresBrokerUidChannel(channel.slug) && !brokerUid) {
+    if (requiresBrokerUidChannel(channel.slug, channel) && !brokerUid) {
       setPendingChannel(channel)
       setBrokerUidModal(true)
       return

@@ -94,6 +94,27 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
     ],
     tips: ["Ativa push para não perder entradas"],
   },
+  "sinais-scanner-mtm": {
+    emoji: "🏆",
+    accent: "#F59E0B",
+    tag: "Estratégias",
+    rules: [
+      "Estratégias MTM Auto Edge, King e Wolf",
+      "Só leitura — os sinais chegam automaticamente",
+      "Tap to Trade: executa na tua conta ligada",
+    ],
+    tips: ["Os seguimentos (TP, break-even, fecho) respondem ao sinal original"],
+  },
+  "aurum-flow": {
+    emoji: "⚡",
+    accent: "#FBBF24",
+    tag: "Aurum Flow",
+    rules: [
+      "Estratégia Aurum Flow — ouro e perpétuos",
+      "Só leitura — os sinais chegam automaticamente",
+      "Perpétuos: TAP to Copy (parâmetros para a exchange)",
+    ],
+  },
   cripto: {
     emoji: "₿",
     accent: "#F59E0B",
@@ -146,6 +167,29 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
     tag: "Aberto",
     rules: ["Aberto a todos os membros ativos", "Liderança, equipas e crescimento profissional"],
   },
+}
+
+/**
+ * O visual de um canal como o ADMIN o configurou (colunas `icone`/`cor`/`etiqueta`/`regras` de
+ * `chat_channels`, migração 117). O que estiver vazio cai no CHANNEL_META de sempre.
+ */
+export function metaDoCanal(canal: {
+  slug: string
+  icone?: string | null
+  cor?: string | null
+  etiqueta?: string | null
+  regras?: string[] | null
+}): ChannelMeta {
+  const base = getChannelMeta(canal.slug)
+  const cor = typeof canal.cor === "string" && /^#[0-9A-Fa-f]{6}$/.test(canal.cor.trim()) ? canal.cor.trim() : null
+  const regras = Array.isArray(canal.regras) ? canal.regras.map((r) => String(r).trim()).filter(Boolean) : []
+  return {
+    ...base,
+    emoji: canal.icone?.trim() || base.emoji,
+    accent: cor ?? base.accent,
+    tag: canal.etiqueta?.trim() || base.tag,
+    rules: regras.length ? regras : base.rules,
+  }
 }
 
 export function getChannelMeta(slug: string): ChannelMeta {
