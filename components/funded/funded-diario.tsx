@@ -66,7 +66,7 @@ export default function FundedDiario({ accountId, historico, podeEscrever, diari
           {podeEscrever && <button onClick={() => onFoco("nova")} className="ml-auto rounded-md border border-white/10 px-2 py-1 text-[11px] text-[#D2A63C]">+ Nota do dia</button>}
         </div>
         {diario.erro && <p className="text-[11px] text-amber-300">{diario.erro}</p>}
-        <div className="max-h-[48vh] divide-y divide-white/5 overflow-y-auto rounded-lg border border-white/5">
+        <div className="max-h-[48dvh] divide-y divide-white/5 overflow-y-auto rounded-lg border border-white/5">
           {soltas.map((n) => (
             <button key={n.id} onClick={() => onFoco(`nota:${n.id}`)} className={`block w-full px-2.5 py-2 text-left hover:bg-white/5 ${focoTrade === `nota:${n.id}` ? "bg-[#D2A63C]/10" : ""}`}>
               <p className="text-zinc-300">📝 {new Date(n.criado_em).toLocaleDateString("pt-PT")} {n.emocao ? `· ${n.emocao}` : ""}</p>
@@ -140,7 +140,7 @@ function Editor({ accountId, trade, nota, podeEscrever, onGuardado, onFechar }: 
       <div className="flex items-center gap-2">
         <p className="font-semibold text-white">{trade ? `${trade.direcao === "buy" ? "BUY" : "SELL"} ${trade.symbol} ${trade.volume}` : "Nota do dia"}</p>
         {trade && <span className={`font-mono ${trade.resultado >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{usd(trade.resultado)} $</span>}
-        {trade && <span className="font-mono text-[10.5px] text-zinc-500">{px(trade.entrada, 5).replace(/0+$/, "")} → {px(trade.fecho, 5).replace(/0+$/, "")}</span>}
+        {trade && <span className="font-mono text-[10.5px] text-zinc-500">{semZerosFinais(px(trade.entrada, 5))} → {semZerosFinais(px(trade.fecho, 5))}</span>}
         <button onClick={onFechar} className="ml-auto text-[11px] text-zinc-500">fechar</button>
       </div>
       <textarea value={texto} onChange={(e) => setTexto(e.target.value)} disabled={!podeEscrever} rows={4} maxLength={4000}
@@ -166,4 +166,9 @@ function Editor({ accountId, trade, nota, podeEscrever, onGuardado, onFechar }: 
       )}
     </div>
   )
+}
+
+/** «2450.50000» → «2450.5», «2450.00000» → «2450» (antes ficava «2450.»). */
+function semZerosFinais(v: string) {
+  return v.includes(".") ? v.replace(/0+$/, "").replace(/\.$/, "") : v
 }

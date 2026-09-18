@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Keyboard, X } from "lucide-react"
 import { useRascunho } from "./rascunho-ordem"
 import { useUmClique } from "./um-clique"
@@ -39,8 +39,10 @@ export default function Atalhos({ podeNegociar, onF9, onLayout }: { podeNegociar
   const [ajuda, setAjuda] = useState(false)
   const [envioPendente, setEnvioPendente] = useState<"buy" | "sell" | null>(null)
 
-  useEffect(() => {
-    const f = (e: KeyboardEvent) => {
+  // O ouvinte liga-se UMA vez e chama sempre a versão mais recente (antes voltava a ligar-se a cada
+  // render — a cada tick de preço).
+  const tratar = useRef<(e: KeyboardEvent) => void>(() => {})
+  tratar.current = (e: KeyboardEvent) => {
       if (e.altKey && /^Digit[1-4]$/.test(e.code)) { e.preventDefault(); onLayout(LAYOUTS[Number(e.code.slice(5)) - 1]); return }
       if (e.altKey && e.code === "KeyM") { e.preventDefault(); definir(modo === "pro" ? "simples" : "pro"); return }
       if (e.key === "F9") { e.preventDefault(); onF9(); return }
@@ -61,10 +63,12 @@ export default function Atalhos({ podeNegociar, onF9, onLayout }: { podeNegociar
         return
       }
       if (e.key === "Enter" && k.r.escolhido && !k.temErros && !k.aEnviar) { e.preventDefault(); void k.enviar() }
-    }
+  }
+  useEffect(() => {
+    const f = (e: KeyboardEvent) => tratar.current(e)
     window.addEventListener("keydown", f)
     return () => window.removeEventListener("keydown", f)
-  })
+  }, [])
 
   // Shift+B/S num clique: o lado muda primeiro (os níveis em pips/$ recalculam-se) e a ordem sai no render seguinte.
   useEffect(() => {

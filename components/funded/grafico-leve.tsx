@@ -233,6 +233,9 @@ export default function GraficoLeve(props: GraficoProps & {
   // O GoldKiller também: os níveis são percentis das pernas passadas — mais velas, mais pernas.
   // O MTM Scanner: DEMA 238 aquece em 474 velas e a estrutura (swings 50) precisa de história.
   const mtmscannerLigado = Boolean(props.mtmscanner)
+  // O histórico falhou por rede/servidor (≠ «não há histórico»): diz-se, com «tentar outra vez».
+  const [falhaHistorico, setFalhaHistorico] = useState(false)
+  const [tentativaHistorico, setTentativaHistorico] = useState(0)
   const [limiteHistorico, setLimiteHistorico] = useState(() => (props.sensei || props.goldkiller || props.mtmscanner ? 3000 : 300))
   useEffect(() => { if (senseiLigado || goldkillerLigado || mtmscannerLigado) setLimiteHistorico(3000) }, [senseiLigado, goldkillerLigado, mtmscannerLigado])
   const senseiRef = useRef<import("@/lib/estudos/sensei/lightweight").SenseiLW | null>(null)
@@ -488,13 +491,14 @@ export default function GraficoLeve(props: GraficoProps & {
         preBuscar(symbol, TF_VIZINHOS[tf] ?? [])
       } catch {
         if (vivo) {
-          if (!velasRef.current.length) { try { serieRef.current?.setData([]) } catch { /* ok */ } setEstadoVelas("ao_vivo") }
+          if (!velasRef.current.length) { try { serieRef.current?.setData([]) } catch { /* ok */ } setEstadoVelas("ao_vivo"); setFalhaHistorico(true) }
           setHistoricoCompleto(true)
         }
       }
     })()
     return () => { vivo = false }
-  }, [pronto, simbolo.symbol, tf, limiteHistorico]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pronto, simbolo.symbol, tf, limiteHistorico, tentativaHistorico]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setFalhaHistorico(false) }, [simbolo.symbol, tf])
 
   // Histórico para trás ao arrastar para a esquerda: perto do início pede-se mais 1000 velas (com
   // `ate`, na CDN 1 h) e cola-se por baixo sem saltar a vista. Pára quando o servidor não tem mais.
@@ -1100,7 +1104,13 @@ export default function GraficoLeve(props: GraficoProps & {
             Toca no gráfico onde queres a entrada ({modo === "buy" ? "Long" : "Short"})
           </div>
         )}
-        {estadoVelas === "ao_vivo" && !ultimaVelaRef.current && (
+        {estadoVelas === "ao_vivo" && falhaHistorico && (
+          <div className="absolute inset-x-0 top-1/3 z-[6] px-4 text-center text-[12px]" style={{ color: TV.texto }}>
+            Não foi possível carregar o histórico de {simbolo.symbol} (sem ligação?).{" "}
+            <button type="button" onClick={() => { setFalhaHistorico(false); setTentativaHistorico((n) => n + 1) }} className="font-semibold underline" style={{ color: TV.azul }}>Tentar outra vez</button>
+          </div>
+        )}
+        {estadoVelas === "ao_vivo" && !falhaHistorico && !ultimaVelaRef.current && (
           <div className="pointer-events-none absolute inset-x-0 top-1/3 text-center text-[12px]" style={{ color: TV.textoFraco }}>
             Sem histórico para {simbolo.symbol} — as velas vão-se formando com os preços ao vivo desde que abriste.
           </div>

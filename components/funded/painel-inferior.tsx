@@ -17,11 +17,13 @@ const FundedEstatisticas = dynamic(() => import("./funded-estatisticas"), { ssr:
 
 export type Separador = "posicoes" | "ordens" | "historico" | "estatisticas" | "diario" | "alertas" | "conta"
 const CHAVE = "mtmfunded_pro_separador"
+const SEPARADORES_VALIDOS: Separador[] = ["posicoes", "ordens", "historico", "estatisticas", "diario", "alertas", "conta"]
 
 export default function PainelInferior({ t, denso = true }: { t: Trader; denso?: boolean }) {
   const [sep, setSep] = useState<Separador>("posicoes")
   const [foco, setFoco] = useState<string | null>(null)
-  useEffect(() => { try { const v = localStorage.getItem(CHAVE) as Separador | null; if (v) setSep(v) } catch { /* ok */ } }, [])
+  // Só um separador que existe (um valor velho ou estragado deixava o painel vazio).
+  useEffect(() => { try { const v = localStorage.getItem(CHAVE) as Separador | null; if (v && SEPARADORES_VALIDOS.includes(v)) setSep(v) } catch { /* ok */ } }, [])
   const escolher = (s: Separador) => { setSep(s); try { localStorage.setItem(CHAVE, s) } catch { /* ok */ } }
 
   const d = t.dados

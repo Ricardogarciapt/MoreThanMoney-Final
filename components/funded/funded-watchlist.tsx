@@ -51,6 +51,8 @@ export default function FundedWatchlist(props: {
   const [pagina, setPagina] = useState(0)
   const [aCarregar, setACarregar] = useState(false)
   const [favoritos, setFavoritos] = useState<string[]>([])
+  const [falhou, setFalhou] = useState(false)
+  const [repetir, setRepetir] = useState(0)
   const pedidoRef = useRef(0)
 
   useEffect(() => { setFavoritos(lerFavoritos()) }, [])
@@ -66,6 +68,7 @@ export default function FundedWatchlist(props: {
           const favs = lerFavoritos()
           if (favs.length) {
             const r = await fetch(`/api/mtmfunded/simulado/precos?symbols=${favs.join(",")}&specs=1`)
+            if (!r.ok) throw new Error(String(r.status))
             const d = await r.json()
             simbolos = favs.map((f) => (d.simbolos ?? []).find((x: SimboloFicha) => x.symbol === f)).filter(Boolean).filter(simboloVisivel)
             tot = simbolos.length
@@ -79,6 +82,7 @@ export default function FundedWatchlist(props: {
           const params = new URLSearchParams({ q, pagina: String(pagina), porPagina: "40" })
           if (classe !== "fav" && classe !== "todas") params.set("classe", classe)
           const r = await fetch(`/api/mtmfunded/simulado/precos?${params}`)
+          if (!r.ok) throw new Error(String(r.status))
           const d = await r.json()
           const novos: SimboloFicha[] = (d.simbolos ?? []).filter(simboloVisivel)
           simbolos = pagina > 0 ? [...lista, ...novos] : novos
@@ -88,14 +92,16 @@ export default function FundedWatchlist(props: {
         if (id !== pedidoRef.current) return
         setLista(simbolos)
         setTotal(tot)
+        setFalhou(false)
       } catch {
-        if (id === pedidoRef.current) setLista([])
+        // Sem rede não é «sem favoritos»: diz-se que falhou, com «tentar outra vez».
+        if (id === pedidoRef.current) { setLista([]); setFalhou(true) }
       } finally {
         if (id === pedidoRef.current) setACarregar(false)
       }
     }, q ? 250 : 0)
     return () => clearTimeout(t)
-  }, [q, classe, pagina, favoritos.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [q, classe, pagina, favoritos.length, repetir]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { setPagina(0) }, [q, classe])
 
@@ -116,7 +122,7 @@ export default function FundedWatchlist(props: {
       <div className="space-y-2 border-b border-white/10 p-2">
         <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black px-2">
           <Search className="h-4 w-4 text-zinc-500" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar símbolo" className="h-9 w-full bg-transparent text-[13px] text-white outline-none" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar símbolo" aria-label="Procurar símbolo" className="h-10 w-full bg-transparent text-[16px] text-white outline-none sm:h-9 sm:text-[13px]" />
           {aCarregar && <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" />}
         </div>
         <div className="flex gap-1 overflow-x-auto text-[11px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -130,17 +136,23 @@ export default function FundedWatchlist(props: {
       <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 px-3 py-1 text-[10px] uppercase text-zinc-500">
         <span>Símbolo</span><span className="text-right">Bid</span><span className="text-right">{props.detalhe ? "24 h" : "Ask"}</span>
       </div>
-      <div className={props.preencher ? "min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#363A45_transparent]" : "max-h-[52vh] overflow-y-auto"}>
-        {lista.length === 0 && !aCarregar && (
+      <div className={props.preencher ? "min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#363A45_transparent]" : "max-h-[52dvh] overflow-y-auto"}>
+        {lista.length === 0 && !aCarregar && (falhou ? (
+          <p className="p-4 text-center text-[12px] text-amber-300">
+            Sem ligação ao servidor. <button type="button" onClick={() => setRepetir((n) => n + 1)} className="font-semibold underline">Tentar outra vez</button>
+          </p>
+        ) : (
           <p className="p-4 text-center text-[12px] text-zinc-500">{classe === "fav" && !q ? "Sem favoritos — procura um símbolo e toca na estrela." : "Nenhum símbolo encontrado."}</p>
-        )}
+        ))}
         {lista.map((s) => {
           const p = props.precos[s.symbol]
           const ativo = props.selecionado === s.symbol
           return (
-            <div key={s.symbol} onClick={() => props.onSelecionar(s)} className={`grid cursor-pointer grid-cols-[auto_1fr_auto_auto] items-center gap-x-2 px-2 py-2 text-[12.5px] ${ativo ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
-              <button onClick={(e) => { e.stopPropagation(); alternarFav(s.symbol) }} aria-label="favorito">
-                <Star className={`h-3.5 w-3.5 ${favoritos.includes(s.symbol) ? "fill-[#D2A63C] text-[#D2A63C]" : "text-zinc-600"}`} />
+            <div key={s.symbol} role="button" tabIndex={0} aria-label={`Escolher ${s.symbol}`} aria-current={ativo || undefined} onClick={() => props.onSelecionar(s)}
+              onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); props.onSelecionar(s) } }}
+              className={`grid min-h-[44px] cursor-pointer grid-cols-[auto_1fr_auto_auto] items-center gap-x-2 px-2 py-2 text-[12.5px] ${ativo ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
+              <button type="button" onClick={(e) => { e.stopPropagation(); alternarFav(s.symbol) }} aria-label={`${s.symbol} nos favoritos`} aria-pressed={favoritos.includes(s.symbol)} className="-m-2 grid h-10 w-10 place-items-center">
+                <Star className={`h-4 w-4 ${favoritos.includes(s.symbol) ? "fill-[#D2A63C] text-[#D2A63C]" : "text-zinc-600"}`} />
               </button>
               <div className="min-w-0">
                 <p className="font-semibold text-white">{s.symbol}</p>

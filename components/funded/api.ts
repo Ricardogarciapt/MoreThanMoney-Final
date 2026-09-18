@@ -61,8 +61,11 @@ export async function entrarComCredenciais(login: string, password: string): Pro
   })
   const d = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(d.error || "não foi possível entrar")
-  // Lê a conta com o token para mostrar etiqueta/estado no seletor.
-  const info = await fetch("/api/mtmfunded/simulado/entrar", { headers: { Authorization: `Bearer ${d.token}` } }).then((x) => x.json()).catch(() => null)
+  // Lê a conta com o token para mostrar etiqueta/estado no seletor. Sem o id da conta não há sessão
+  // (antes guardava-se na chave «undefined» e o ecrã entrava numa conta sem id).
+  const info = await fetch("/api/mtmfunded/simulado/entrar", { headers: { Authorization: `Bearer ${d.token}` } })
+    .then((x) => (x.ok ? x.json() : null)).catch(() => null)
+  if (!info?.conta?.id) throw new Error("Entrou, mas não foi possível ler a conta — tenta outra vez.")
   return {
     accountId: info?.conta?.id, token: d.token, modo: d.modo, expira: d.expira, login: login.replace(/\D/g, ""),
     etiqueta: info?.conta?.etiqueta, estadoCurto: info?.conta?.estadoCurto, aviso: info?.conta?.aviso,

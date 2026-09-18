@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { numeroDoCampo } from "@/lib/webtrader/ticket"
 import { ArrowRight, Copy, Loader2 } from "lucide-react"
 import type { EstadoLigador } from "@/components/contas/ligador-contas"
 
@@ -57,17 +58,28 @@ export default function CopiasEntreContas({ estado }: { estado: EstadoLigador })
   }
 
   const pedir = async () => {
-    setAEnviar(true); setMsg(null)
-    const tok = await getToken()
-    const r = await fetch("/api/contas/copia", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${tok}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ origem_ref: origem, destino_ref: destino, modo_lote: modo, valor: Number(valor) }),
-    }).catch(() => null)
-    const j = r ? await r.json().catch(() => ({})) : {}
-    setAEnviar(false)
-    setMsg(r?.ok ? j.message ?? "Pedido enviado." : j.error ?? "Não foi possível enviar o pedido.")
-    if (r?.ok) { setAberto(false); setOrigem(""); setDestino(""); void carregar() }
+    setMsg(null)
+    // «0,5» é 0,5 (Number dava NaN → null → 400 «valor inválido»); lixo diz-se aqui.
+    const n = numeroDoCampo(valor)
+    if (n == null || !Number.isFinite(n) || !(n > 0)) { setMsg("Indica um valor válido (ex.: 1 ou 0,5)."); return }
+    setAEnviar(true)
+    try {
+      const tok = await getToken()
+      // Sem sessão não se manda «Bearer null».
+      if (!tok) { setMsg("Sessão indisponível. Volta a entrar."); return }
+      const r = await fetch("/api/contas/copia", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${tok}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ origem_ref: origem, destino_ref: destino, modo_lote: modo, valor: n }),
+      }).catch(() => null)
+      const j = r ? await r.json().catch(() => ({})) : {}
+      setMsg(r?.ok ? j.message ?? "Pedido enviado." : r ? j.error ?? "Não foi possível enviar o pedido." : "Sem ligação ao servidor — tenta outra vez.")
+      if (r?.ok) { setAberto(false); setOrigem(""); setDestino(""); void carregar() }
+    } catch {
+      setMsg("Não foi possível enviar o pedido.")
+    } finally {
+      setAEnviar(false)
+    }
   }
 
   const campo = "w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"

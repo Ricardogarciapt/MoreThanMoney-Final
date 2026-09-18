@@ -1,6 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
+import { estadoEmFrase } from "@/lib/webtrader/textos"
 import { useEffect, useState } from "react"
 import { Award, Banknote, BarChart3, BookOpen, History, KeyRound, LayoutGrid, Loader2 } from "lucide-react"
 import { barrasDaConta } from "@/lib/mtmfunded/numeros-conta"
@@ -183,6 +184,8 @@ function Levantamentos({ t }: { t: Trader }) {
   const [erro, setErro] = useState<string | null>(null)
   useEffect(() => {
     let vivo = true
+    // Outra conta: nada da anterior fica à vista (nem os dados, nem um erro antigo).
+    setD(null); setErro(null)
     void (async () => {
       try {
         const r = await fetch("/api/mtmfunded/levantamentos", { cache: "no-store", credentials: "include", headers: await authHeaders() })
@@ -201,7 +204,7 @@ function Levantamentos({ t }: { t: Trader }) {
   const pendentes = t.dados.ordens.length
   const bloqueios = [
     !d.contrato ? "assina o contrato de trader financiado" : null,
-    t.dados.conta.estado !== "ativa" ? `a conta está ${t.dados.conta.estadoCurto}` : null,
+    t.dados.conta.estado !== "ativa" ? `a conta está ${estadoEmFrase(t.dados.conta.estadoCurto)}` : null,
     abertas ? `fecha as ${abertas} posições abertas` : null,
     pendentes ? `cancela as ${pendentes} ordens pendentes` : null,
     conta && conta.levantavel <= 0 ? "o lucro ainda não passou a almofada de 3%" : null,

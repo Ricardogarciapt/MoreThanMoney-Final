@@ -291,7 +291,7 @@ export function PopoverInputsSensei({ inputs, definir, repor, cor }: {
         onClick={() => setAberto((a) => !a)}
         aria-label="Definições do Sensei"
         title="Definições do Sensei"
-        className="grid h-6 w-6 shrink-0 place-items-center rounded border"
+        className="grid h-6 w-6 shrink-0 place-items-center rounded border [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9"
         style={{ borderColor: aberto ? cor : TV.borda, color: aberto ? cor : TV.textoFraco }}
       >
         <Settings2 className="h-3.5 w-3.5" />
@@ -299,8 +299,8 @@ export function PopoverInputsSensei({ inputs, definir, repor, cor }: {
       {aberto && pos && (
         <div
           ref={caixaRef}
-          className="fixed z-[60] max-h-[70vh] w-[288px] overflow-y-auto rounded-md p-2.5 text-[11.5px] shadow-2xl"
-          style={{ top: pos.top, left: pos.left, background: TV.painel, border: `1px solid ${TV.borda}`, color: TV.texto }}
+          className="fixed z-[60] w-[min(288px,calc(100vw-16px))] overflow-y-auto overscroll-contain rounded-md p-2.5 text-[11.5px] shadow-2xl"
+          style={{ top: pos.top, left: pos.left, maxHeight: `min(70dvh, calc(100dvh - ${Math.round(pos.top) + 8}px))`, background: TV.painel, border: `1px solid ${TV.borda}`, color: TV.texto }}
         >
           <div className="mb-1.5 flex items-center justify-between">
             <b style={{ color: cor }}>MTM Sensei · definições</b>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import { Loader2, RefreshCw } from "lucide-react"
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import type { Estatisticas, Grupo } from "@/lib/mtmfunded/simulado/estatisticas"
@@ -36,7 +36,11 @@ export default function FundedEstatisticas({ accountId, equity, regras, semRegra
   const [aCarregar, setACarregar] = useState(false)
   const [grupo, setGrupo] = useState<"porSimbolo" | "porEstrategia" | "porOrigem" | "porDirecao">("porSimbolo")
 
+  // A equity mais recente (o intervalo de 60 s guardava a da primeira volta e pedia sempre essa).
+  const equityRef = useRef(equity)
+  equityRef.current = equity
   const carregar = async () => {
+    const equity = equityRef.current
     setACarregar(true)
     try {
       const d = await pedir<Estatisticas>(`/api/mtmfunded/simulado/estatisticas?accountId=${accountId}${equity ? `&equity=${equity}` : ""}`, {}, accountId)
