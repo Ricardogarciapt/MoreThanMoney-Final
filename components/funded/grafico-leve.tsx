@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { arredAosDigitos } from "@/lib/webtrader/formato"
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react"
 import ChecklistSensei from "@/lib/estudos/sensei/checklist"
 import LegendaGoldKiller from "@/lib/estudos/goldkiller/legenda"
@@ -266,7 +267,7 @@ export default function GraficoLeve(props: GraficoProps & {
 
   useEffect(() => { setRascunho({}); setMenu(null) }, [simbolo.symbol])
 
-  const arred = useCallback((v: number) => Number(v.toFixed(simbolo.digits)), [simbolo.digits])
+  const arred = useCallback((v: number) => arredAosDigitos(v, simbolo.digits), [simbolo.digits])
 
   // ── criar o gráfico ──
   useEffect(() => {

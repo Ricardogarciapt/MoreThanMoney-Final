@@ -289,6 +289,7 @@ function EditorParcial({ pos, s, ocupado, correr, onFechar }: { pos: Linha; s: S
 function EditorGestao({ pos, s, precoFecho, ocupado, correr, onFechar }: { pos: Linha; s: SimboloFicha; precoFecho: number | null; ocupado: boolean; correr: Correr; onFechar: () => void }) {
   const g = gestaoDaLinha(pos)
   const pip = s.pip_size
+  // Com sinal (um offset de BE pode ser negativo) — por isso não é matematica.pips, que é |a − b|.
   const emPips = (x: number | null) => (x == null ? "" : String(Math.round((x / pip) * 10) / 10))
   const [trail, setTrail] = useState(emPips(g.trailing_distancia))
   const [ativ, setAtiv] = useState(emPips(g.trailing_ativacao))

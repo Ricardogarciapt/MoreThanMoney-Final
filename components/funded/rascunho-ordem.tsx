@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { arredAosDigitos } from "@/lib/webtrader/formato"
 import {
   type Direcao, type MapaPrecos, comissaoUsd, lucroUsd, margemUsd, normalizarVolume, pendenteDispara, pips,
   precoDeAbertura, spreadEmPreco, validarNiveis,
@@ -205,7 +206,7 @@ export function RascunhoProvider(props: {
   const [avancado, setAvancadoEstado] = useState<Avancado>(AVANCADO_VAZIO)
   const setAvancado = useCallback((patch: Partial<Avancado>) => setAvancadoEstado((a) => ({ ...a, ...patch })), [])
   const umClique = useUmClique()
-  const arred = useCallback((v: number) => Number(v.toFixed(s.digits)), [s.digits])
+  const arred = useCallback((v: number) => arredAosDigitos(v, s.digits), [s.digits])
   const tolerancia = Math.max(spreadEmPreco(s), 2 * s.pip_size)
 
   // Outro símbolo, outro rascunho: um SL de ouro não serve ao EURUSD. O modo preço/pips fica.

@@ -24,3 +24,10 @@ for (let c = 1; c <= 300; c++) {
 }
 assert.equal(flutuanteDasPosicoes([{ lucro: 10.004, swap: -1.5 }, { lucro: null, swap: 0 }, { lucro: -3 }]), 5.5)
 console.log('  ok  lotes: parcial sem erro de vírgula flutuante; flutuante com swap como o da conta')
+
+import { arredAosDigitos } from '../formato'
+assert.equal(arredAosDigitos(2650.123456, 2), 2650.12)
+assert.equal(arredAosDigitos(1.098768, 5), 1.09877)
+assert.equal(arredAosDigitos(42000.04, 0), 42000)
+assert.equal(arredAosDigitos(1.5, -3), 2, 'dígitos negativos não rebentam o toFixed')
+console.log('  ok  arredAosDigitos: um arredondamento de preço para o gráfico, o rascunho e as avançadas')
