@@ -479,3 +479,13 @@ async function main() {
   console.log(process.exitCode ? `falharam ${casos.length - n} de ${casos.length}` : `mestres: ${n} casos, todos certos`)
 }
 void main()
+
+// Ligação do site a seguir uma estratégia do motor pelo slug (Edge/King/Wolf não têm código CopyFactory).
+{
+  const base = { copy_method: 'strategy', copyfactory_strategy_pick: 'Hvmg' } as never
+  assert.equal(ligacaoSegueEstrategia({ ...(base as object), strategy_lots: { 'mtm-auto-edge': true } } as never, [], 'mtm-auto-edge'), true)
+  assert.equal(ligacaoSegueEstrategia({ ...(base as object), strategy_lots: { 'mtm-auto-edge': true } } as never, ['Hvmg'], 'premium'), false)
+  assert.equal(ligacaoSegueEstrategia(base, ['Hvmg'], 'premium'), true)
+  assert.equal(ligacaoSegueEstrategia(base, [], 'mtm-auto-edge'), false)
+  console.log('mestres: seguir pelo slug — certo')
+}

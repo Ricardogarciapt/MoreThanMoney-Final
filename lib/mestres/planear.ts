@@ -114,10 +114,15 @@ const plataformaAuto = (c: ContaAutoSeguidora): PlataformaCopia | null => {
   return p === 'mt4' ? 'mt4' : 'mt5'
 }
 
-export function ligacaoSegueEstrategia(l: LigacaoSiteSeguidora, ids: string[]): boolean {
-  if (!ids.length) return false
+export function ligacaoSegueEstrategia(l: LigacaoSiteSeguidora, ids: string[], slug?: string | null): boolean {
+  // `strategy_lots` também aceita o SLUG da estratégia do motor (ex.: {"mtm-auto-edge": true}) — é
+  // assim que uma ligação do site segue uma estratégia que não tem código na CopyFactory (Edge/King/Wolf).
+  // Valor numérico = lote fixo; `true` = risco % da ligação (lot_mode/lot_value).
+  const chaves = slug ? [...ids, slug] : ids
+  if (!chaves.length) return false
   const lots = l.strategy_lots && typeof l.strategy_lots === 'object' ? Object.keys(l.strategy_lots) : []
-  if (lots.length) return lots.some((k) => ids.includes(k))
+  if (lots.length) return lots.some((k) => chaves.some((c) => c.toLowerCase() === k.toLowerCase()))
+  if (!ids.length) return false
   return String(l.copy_method ?? '') === 'strategy' && Boolean(l.copyfactory_strategy_pick) && ids.includes(String(l.copyfactory_strategy_pick))
 }
 
@@ -146,7 +151,7 @@ export function planearRotasDaEstrategia(p: {
   }
 
   for (const l of p.site) {
-    if (!ligacaoSegueEstrategia(l, e.copyfactoryIds)) continue
+    if (!ligacaoSegueEstrategia(l, e.copyfactoryIds, e.slug)) continue
     const ref = `site:${l.id}`
     const plataforma = plataformaSite(l)
     if (!plataforma) { ignorados.push({ ref, motivo: 'conta MTM Funded (segue pelo espelho simulado)' }); continue }
@@ -155,7 +160,7 @@ export function planearRotasDaEstrategia(p: {
     const chave = chaveFisica({ plataforma, login: l.mt5_login, servidor: l.mt5_server, tlEnv: l.tl_env, tlAccountId: l.tl_account_id, ref })
     if (!chave) { ignorados.push({ ref, motivo: 'sem identidade física (login/servidor)' }); continue }
     if (vistas.has(chave)) { ignorados.push({ ref, motivo: 'a mesma conta física já segue esta estratégia por outra ligação' }); continue }
-    const lote = loteDaLigacaoSite(l, { idsCopyFactory: e.copyfactoryIds, loteFixoForcado: p.lotesForcados?.[chave] ?? null })
+    const lote = loteDaLigacaoSite(l, { idsCopyFactory: [...e.copyfactoryIds, e.slug], loteFixoForcado: p.lotesForcados?.[chave] ?? null })
     if (!lote.ok) { ignorados.push({ ref, motivo: lote.motivo }); continue }
     vistas.add(chave)
     rotas.push({

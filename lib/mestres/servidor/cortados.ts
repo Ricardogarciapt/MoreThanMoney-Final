@@ -15,9 +15,13 @@ let cache: { ids: Set<string>; em: number } | null = null
 
 export async function idsCopyFactoryServidosPeloMotor(): Promise<Set<string>> {
   if (cache && Date.now() - cache.em < 60_000) return cache.ids
-  const { data, error } = await getSupabaseAdmin().from('mestres_estrategias').select('copyfactory_ids, copyfactory_cortado_em')
+  const { data, error } = await getSupabaseAdmin().from('mestres_estrategias').select('slug, copyfactory_ids, copyfactory_cortado_em')
   if (error?.code === '42P01') { cache = { ids: new Set(), em: Date.now() }; return cache.ids }
   if (error) throw new Error(`mestres_estrategias ilegível: ${error.message}`)
-  cache = { ids: idsServidosPeloMotor(data ?? []), em: Date.now() }
+  const ids = idsServidosPeloMotor(data ?? [])
+  // O SLUG de uma estratégia do motor (ex.: `mtm-auto-edge` em strategy_lots) nunca é um id da
+  // CopyFactory: quem segue por slug é servido só pelo motor, nunca se tenta subscrevê-lo lá.
+  for (const e of data ?? []) if (e.slug) ids.add(String(e.slug))
+  cache = { ids, em: Date.now() }
   return cache.ids
 }
