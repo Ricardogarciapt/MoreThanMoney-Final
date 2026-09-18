@@ -7,6 +7,8 @@ import { gestaoDaLinha, temGestao, type FiltroLote } from "@/lib/mtmfunded/simul
 import { type SimboloFicha, px, usd } from "./api"
 import { AccaoCancelada, useUmClique } from "./um-clique"
 import { numeroDe } from "./avancado"
+import { BotoesGestaoAuto, tituloEtiqueta } from "./gestao-auto"
+import { estadoGestaoAuto, type EstadoGestaoAuto } from "@/lib/mtmfunded/simulado/gestao-auto"
 
 /**
  * POSIÇÕES, ORDENS PENDENTES E HISTÓRICO do WebTrader v2 — tabela densa no PRO, cartões no SIMPLE.
@@ -15,6 +17,7 @@ import { numeroDe } from "./avancado"
  *  · fechar tudo / ganhadoras / perdedoras / do símbolo, cancelar todas as pendentes;
  *  · por posição: SL/TP, fecho parcial («reduce-only»: só reduz, nunca inverte), inverter, e a
  *    GESTÃO automática (trailing, break-even, TPs parciais) que o motor executa;
+ *  · Auto BE / Auto Trailing / Trailing já num toque (gestao-auto.tsx), na linha e no painel da gestão;
  *  · no histórico, a nota do diário de cada trade.
  * O lucro das abertas mexe com os preços ao vivo, com a matemática do servidor.
  * Tudo o que mexe na conta passa pela negociação num clique (um-clique.tsx): confirma ou não.
@@ -51,11 +54,11 @@ export default function ListaPosicoes(p: Props) {
   const [erro, setErro] = useState<string | null>(null)
   const [edicao, setEdicao] = useState<{ id: string; modo: "sltp" | "parcial" | "gestao" } | null>(null)
 
-  const correr = async (descricao: string, accao: string, corpo: Record<string, unknown>, confirmar = true, digitos?: number) => {
+  const correr = async (descricao: string, accao: string, corpo: Record<string, unknown>, confirmar = true, digitos?: number, manterEdicao = false) => {
     setOcupado(true); setErro(null)
     try {
       await umClique.executar(descricao, () => p.executar(accao, corpo), { confirmar, digitos })
-      setEdicao(null)
+      if (!manterEdicao) setEdicao(null)
     } catch (e) {
       if (!(e instanceof AccaoCancelada)) setErro((e as Error).message)
     } finally { setOcupado(false) }
@@ -190,7 +193,7 @@ const LinhaPosicao = memo(function LinhaPosicao({ pos, s, precos, denso, podeNeg
   edicao: "sltp" | "parcial" | "gestao" | null
   onEditar: (m: "sltp" | "parcial" | "gestao" | null) => void
   onSelecionar: () => void
-  correr: (descricao: string, accao: string, corpo: Record<string, unknown>, confirmar?: boolean, digitos?: number) => Promise<void>
+  correr: Correr
   umCliqueLigado: boolean
 }) {
   const d = s?.digits ?? 5
@@ -198,8 +201,10 @@ const LinhaPosicao = memo(function LinhaPosicao({ pos, s, precos, denso, podeNeg
   const atual = preco ? precoDeFecho(pos.direcao, preco) : null
   const pnl = s && atual != null ? lucroUsd(s, pos.direcao, Number(pos.volume), Number(pos.preco_entrada), atual, precos) : null
   const g = gestaoDaLinha(pos)
+  const est = estadoGestaoAuto(g, pos.direcao, Number(pos.preco_entrada), atual)
   const vol = Number(pos.volume)
   const nome = `${pos.symbol} ${vol}`
+  const auto = podeNegociar && s ? <BotoesGestaoAuto pos={pos} s={s} precoFecho={atual} ocupado={ocupado} correr={correr} /> : null
 
   return (
     <div className={`border-t border-white/5 px-3 ${denso ? "py-1.5 text-[12px]" : "py-2.5 text-[12.5px]"}`}>
@@ -208,7 +213,7 @@ const LinhaPosicao = memo(function LinhaPosicao({ pos, s, precos, denso, podeNeg
           <p className="truncate">
             <Lado d={pos.direcao} /> <b className="text-white">{pos.symbol}</b> {vol}
             <span className="ml-1.5 font-mono text-zinc-400">{px(Number(pos.preco_entrada), d)} → {px(atual, d)}</span>
-            {temGestao(g) && <EtiquetasGestao g={g} />}
+            {temGestao(g) && <EtiquetasGestao g={g} est={est} />}
           </p>
           <p className="truncate text-[10.5px] text-zinc-500">
             SL {pos.sl != null ? px(Number(pos.sl), d) : "—"} · TP {pos.tp != null ? px(Number(pos.tp), d) : "—"}
@@ -219,6 +224,7 @@ const LinhaPosicao = memo(function LinhaPosicao({ pos, s, precos, denso, podeNeg
         <span className={`shrink-0 font-mono font-semibold ${denso ? "text-[13px]" : "text-[14px]"} ${pnl == null ? "text-zinc-500" : pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{usd(pnl)}</span>
         {podeNegociar && (
           <div className="flex shrink-0 items-center gap-0.5">
+            {auto && <div className="mr-1 hidden sm:flex">{auto}</div>}
             <IconeAccao rotulo="SL/TP" onClick={() => onEditar(edicao === "sltp" ? null : "sltp")} ativo={edicao === "sltp"}><Pencil className="h-3.5 w-3.5" /></IconeAccao>
             <IconeAccao rotulo="Gestão automática (trailing, break-even, TPs)" onClick={() => onEditar(edicao === "gestao" ? null : "gestao")} ativo={edicao === "gestao"}><Settings2 className="h-3.5 w-3.5" /></IconeAccao>
             <IconeAccao rotulo="Inverter" disabled={ocupado} onClick={() => correr(`Inverter ${nome} (fecha e abre ${pos.direcao === "buy" ? "venda" : "compra"} ${vol})`, "inverter", { positionId: pos.id }, true, d)}><ArrowLeftRight className="h-3.5 w-3.5" /></IconeAccao>
@@ -227,14 +233,20 @@ const LinhaPosicao = memo(function LinhaPosicao({ pos, s, precos, denso, podeNeg
           </div>
         )}
       </div>
+      {/* No telemóvel a gestão automática vai para uma linha própria (a de cima já está cheia). */}
+      {auto && <div className="mt-1.5 flex justify-end sm:hidden">{auto}</div>}
       {edicao === "sltp" && <EditorSlTp pos={pos} d={d} ocupado={ocupado} correr={correr} onFechar={() => onEditar(null)} />}
       {edicao === "parcial" && s && <EditorParcial pos={pos} s={s} ocupado={ocupado} correr={correr} onFechar={() => onEditar(null)} />}
-      {edicao === "gestao" && s && <EditorGestao pos={pos} s={s} ocupado={ocupado} correr={correr} onFechar={() => onEditar(null)} />}
+      {/* A chave muda quando a gestão muda (um botão Auto, o motor): o editor relê em vez de guardar por cima com valores velhos. */}
+      {edicao === "gestao" && s && <EditorGestao key={assinaturaGestao(g)} pos={pos} s={s} precoFecho={atual} ocupado={ocupado} correr={correr} onFechar={() => onEditar(null)} />}
     </div>
   )
 })
 
-type Correr = (descricao: string, accao: string, corpo: Record<string, unknown>, confirmar?: boolean, digitos?: number) => Promise<void>
+type Correr = (descricao: string, accao: string, corpo: Record<string, unknown>, confirmar?: boolean, digitos?: number, manterEdicao?: boolean) => Promise<void>
+
+const assinaturaGestao = (g: ReturnType<typeof gestaoDaLinha>) =>
+  [g.trailing_distancia, g.trailing_ativacao, g.be_gatilho, g.be_offset, g.be_no_tp1, g.be_feito, JSON.stringify(g.tps ?? [])].join("|")
 
 function EditorSlTp({ pos, d, ocupado, correr, onFechar }: { pos: Linha; d: number; ocupado: boolean; correr: Correr; onFechar: () => void }) {
   const [sl, setSl] = useState(pos.sl == null ? "" : String(pos.sl))
@@ -271,7 +283,7 @@ function EditorParcial({ pos, s, ocupado, correr, onFechar }: { pos: Linha; s: S
   )
 }
 
-function EditorGestao({ pos, s, ocupado, correr, onFechar }: { pos: Linha; s: SimboloFicha; ocupado: boolean; correr: Correr; onFechar: () => void }) {
+function EditorGestao({ pos, s, precoFecho, ocupado, correr, onFechar }: { pos: Linha; s: SimboloFicha; precoFecho: number | null; ocupado: boolean; correr: Correr; onFechar: () => void }) {
   const g = gestaoDaLinha(pos)
   const pip = s.pip_size
   const emPips = (x: number | null) => (x == null ? "" : String(Math.round((x / pip) * 10) / 10))
@@ -292,6 +304,10 @@ function EditorGestao({ pos, s, ocupado, correr, onFechar }: { pos: Linha; s: Si
   const campo = "h-8 w-full rounded-md border border-white/10 bg-black px-2 font-mono text-[12px] text-white placeholder:text-zinc-600"
   return (
     <Caixa onFechar={onFechar}>
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 border-b border-white/5 pb-2 text-[11px]">
+        <span className="text-zinc-500">Num toque:</span>
+        <BotoesGestaoAuto pos={pos} s={s} precoFecho={precoFecho} ocupado={ocupado} correr={correr} manterEdicao />
+      </div>
       <div className="grid grid-cols-2 gap-1.5 text-[11px] sm:grid-cols-4">
         <label className="space-y-0.5"><span className="text-zinc-500">Trailing (pips)</span><input inputMode="decimal" value={trail} onChange={(e) => setTrail(e.target.value)} className={campo} /></label>
         <label className="space-y-0.5"><span className="text-zinc-500">Começa a +pips</span><input inputMode="decimal" value={ativ} onChange={(e) => setAtiv(e.target.value)} className={campo} /></label>
@@ -324,14 +340,16 @@ function EditorGestao({ pos, s, ocupado, correr, onFechar }: { pos: Linha; s: Si
 function Lado({ d }: { d: string }) {
   return <span className={`font-semibold ${d === "buy" ? "text-emerald-400" : "text-rose-400"}`}>{d === "buy" ? "BUY" : "SELL"}</span>
 }
-function Etiqueta({ cor, children }: { cor: string; children: React.ReactNode }) {
-  return <span className="ml-1 rounded px-1 py-px align-middle text-[9.5px] font-bold" style={{ color: cor, background: `${cor}22` }}>{children}</span>
+function Etiqueta({ cor, children, titulo }: { cor: string; children: React.ReactNode; titulo?: string }) {
+  return <span title={titulo} className="ml-1 rounded px-1 py-px align-middle text-[9.5px] font-bold" style={{ color: cor, background: `${cor.slice(0, 7)}22` }}>{children}</span>
 }
-function EtiquetasGestao({ g }: { g: ReturnType<typeof gestaoDaLinha> }) {
+function EtiquetasGestao({ g, est }: { g: ReturnType<typeof gestaoDaLinha>; est?: EstadoGestaoAuto }) {
+  // Com o estado (posições): TRAIL à espera da ativação fica esbatido; a seguir o preço, cheio.
+  const esperar = est?.trailing === "a_espera"
   return (
     <>
-      {g.trailing_distancia ? <Etiqueta cor="#a78bfa">TRAIL</Etiqueta> : null}
-      {g.be_gatilho || g.be_no_tp1 ? <Etiqueta cor={g.be_feito ? "#34d399" : "#fbbf24"}>{g.be_feito ? "BE ✓" : "BE"}</Etiqueta> : null}
+      {g.trailing_distancia ? <Etiqueta cor={esperar ? "#a78bfa99" : "#a78bfa"} titulo={tituloEtiqueta(est, "trail")}>{esperar ? "TRAIL ⏸" : "TRAIL"}</Etiqueta> : null}
+      {g.be_gatilho || g.be_no_tp1 ? <Etiqueta cor={g.be_feito ? "#34d399" : "#fbbf24"} titulo={tituloEtiqueta(est, "be")}>{g.be_feito ? "BE ✓" : "BE"}</Etiqueta> : null}
       {g.tps?.length ? <Etiqueta cor="#34d399">{g.tps.filter((t) => t.atingido).length}/{g.tps.length} TP</Etiqueta> : null}
     </>
   )

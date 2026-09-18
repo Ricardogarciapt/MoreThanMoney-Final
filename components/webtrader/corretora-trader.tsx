@@ -13,6 +13,7 @@ import { fichaDe } from "@/components/funded/pre-carga"
 import { AccaoCancelada, InterruptorUmClique, UmCliqueProvider, useUmClique } from "@/components/funded/um-clique"
 import type { Prefill } from "@/components/funded/funded-ticket"
 import { COR_PLATAFORMA, ErroWT, NOME_PLATAFORMA, pedirWT } from "./api-corretoras"
+import { GestaoAutoCorretora } from "@/components/funded/gestao-auto"
 
 /**
  * O WEBTRADER DE UMA CONTA REAL (TradeLocker ou MT5) — só fala com /api/webtrader/{plataforma}/….
@@ -201,7 +202,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
               ))}
             </div>
             <div className="overflow-x-auto">
-              {aba === "posicoes" && <TabelaPosicoes posicoes={posicoes} digitos={digitos} podeNegociar={podeNegociar}
+              {aba === "posicoes" && <TabelaPosicoes posicoes={posicoes} digitos={digitos} podeNegociar={podeNegociar} contaRef={contaRef} mapa={mapa}
                 onFechar={(p, volume) => semCancelar(accao(`Fechar ${volume ? `${volume} de ` : ""}${p.volume} ${p.simboloCorretora}`, "fechar", { positionId: p.id, volume }))}
                 onModificar={(p, sl, tp) => semCancelar(accao(`Mudar SL/TP de ${p.simboloCorretora}`, "modificar", { alvo: "posicao", id: p.id, sl, tp }))} />}
               {aba === "ordens" && <TabelaOrdens ordens={ordens} digitos={digitos} podeNegociar={podeNegociar}
@@ -350,8 +351,8 @@ function CelulaNivel({ valor, digitos, onMudar, podeNegociar }: { valor: number 
   return <input value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={() => { const v = txt.trim() === "" ? null : Number(txt.replace(",", ".")); if (v !== valor && (v == null || Number.isFinite(v))) onMudar(v) }} className="h-7 w-24 rounded border border-white/10 bg-black px-1 font-mono text-[11.5px]" />
 }
 
-function TabelaPosicoes({ posicoes, digitos, podeNegociar, onFechar, onModificar }: {
-  posicoes: PosicaoWT[]; digitos: number; podeNegociar: boolean
+function TabelaPosicoes({ posicoes, digitos, podeNegociar, contaRef, mapa, onFechar, onModificar }: {
+  posicoes: PosicaoWT[]; digitos: number; podeNegociar: boolean; contaRef: string; mapa: MapaPrecos
   onFechar: (p: PosicaoWT, volume: number | null) => Promise<unknown>
   onModificar: (p: PosicaoWT, sl: number | null, tp: number | null) => Promise<unknown>
 }) {
@@ -373,6 +374,8 @@ function TabelaPosicoes({ posicoes, digitos, podeNegociar, onFechar, onModificar
             <td className="whitespace-nowrap pr-2 text-right">
               {podeNegociar && (
                 <span className="inline-flex items-center gap-1">
+                  {/* Gestão automática: aqui só guarda a preferência (não há gestor no servidor para contas da corretora). */}
+                  <GestaoAutoCorretora contaRef={contaRef} symbol={p.symbol} digits={digitos} preco={mapa[p.symbol] ? (p.direcao === "buy" ? mapa[p.symbol].bid : mapa[p.symbol].ask) : null} />
                   <input aria-label="volume a fechar" placeholder="parcial" inputMode="decimal" value={parcial[p.id] ?? ""} onChange={(e) => setParcial((x) => ({ ...x, [p.id]: e.target.value }))} className="h-7 w-16 rounded border border-white/10 bg-black px-1 font-mono" />
                   <button onClick={() => { const v = Number((parcial[p.id] ?? "").replace(",", ".")); void onFechar(p, v > 0 ? v : null).catch(() => {}) }} className="rounded bg-white/10 px-2 py-1">Fechar</button>
                 </span>
