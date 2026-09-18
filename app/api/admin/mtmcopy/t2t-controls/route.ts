@@ -32,9 +32,9 @@ export const maxDuration = 60
 
 /** Fontes T2T sem rota própria que o admin pode ligar/desligar diretamente. */
 const EXTRA_CHANNEL_LABELS: Record<string, string> = {
-  'cripto-perps': 'Perpétuos Cripto (Aurum Flow)',
+  'aurum-flow': 'Aurum Flow & Perpétuos',
   'premium-ideas': 'Premium · Ouro',
-  'sinais-scanner-mtm': 'Sinais Primeverse',
+  'sinais-scanner-mtm': 'MTM Auto Edge/Wolf/King',
   'trade-ideas-setup': 'Ideias de Forex',
   'ideias-e-sinais': 'Ideias e Sinais',
   'sinais-goldkiller': 'GoldKiller',

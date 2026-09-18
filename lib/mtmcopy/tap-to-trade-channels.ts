@@ -13,7 +13,9 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
   // O 'sinais-scanner-mtm' esteve fora durante umas horas por engano meu: o slug lê-se como
   // "sinais scanner MTM", mas o canal chama-se **Sinais PrimeVerse** e é por ele que entram os
   // sinais dos traders de topo do PrimeVerse — que são para aceitar, não para esconder.
-  'trade-ideas': ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'cripto-perps', 'sensei-scanner'],
+  // 18/09: `cripto-perps` fundido em `aurum-flow` (canal «MTM Auto Aurum Flow & Perpétuos»); o
+  // slug antigo fica para as mensagens que ainda lá estejam até correr a migração 118.
+  'trade-ideas': ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'aurum-flow', 'cripto-perps', 'sensei-scanner'],
 }
 
 /**
@@ -25,7 +27,7 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
 // 'cripto-perps' entra aqui para os perpétuos poderem ser SEGUIDOS no T2T (ver t2tMode:
 // nos perpétuos o botão não abre ordem, marca o sinal como seguido). Sem isto o fallback
 // rejeitava-os com 'provider_off' quando a configuração de rotas não estivesse disponível.
-export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'cripto-perps']
+export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'aurum-flow', 'cripto-perps']
 
 /** Slug do canal de chat DEDICADO de uma rota provider (estável, por id da rota). */
 export function deriveProviderChannelSlug(r: ProviderRoute): string {

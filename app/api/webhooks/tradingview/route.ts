@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { encaminharSinalParaMestre } from "@/lib/mestres/servidor/sinal-mestre"
+import { estrategiasPublicadasPelaMestre } from "@/lib/mestres/servidor/canais-publicados"
+import { publicarEntradaDaMestre } from "@/lib/mestres/servidor/publicar"
 import { canalDeSinaisPago } from "@/lib/direito-sinais"
 import { filtrarComDireitoSinaisPagos } from "@/lib/direito-sinais-servidor"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
@@ -228,7 +230,8 @@ function resolveRoute(cls: AssetClass): SignalRoute {
     case "index":
       return { channel: "trade-ideas", telegram: null, sender: "📈 Ideias de Índices", push: true, autoCopy: false }
     case "crypto_perp":
-      return { channel: "cripto-perps", telegram: resolvedPerpsChatId(), sender: "🪙 Perpétuos Cripto", push: true, autoCopy: false }
+      // Fundido com a Aurum Flow a 18/09: um canal só, «MTM Auto Aurum Flow & Perpétuos».
+      return { channel: "aurum-flow", telegram: resolvedPerpsChatId(), sender: "🪙 Perpétuos Cripto", push: true, autoCopy: false }
     default:
       return { channel: null, telegram: null, sender: "", push: false, autoCopy: false }
   }
@@ -511,12 +514,24 @@ export async function POST(request: NextRequest) {
     // Lista única de perps → sempre canal "Ideias de Perpétuos Cripto", em PAPEL.
     // Execução real (Bybit, motor de cópia próprio) fica para a Fase 2, atrás de flag.
     assetClass = "crypto_perp"
-    route.channel = "cripto-perps"
+    // Canal fundido «MTM Auto Aurum Flow & Perpétuos» (18/09). O slug antigo `cripto-perps` fica
+    // escondido com o histórico (migração 118).
+    route.channel = "aurum-flow"
     // Telegram dedicado "Ideias de Perpétuos Cripto" (env TELEGRAM_CHANNEL_PERPS). Enquanto o grupo
     // não existir/estiver por definir → resolvedPerpsChatId()=null → publica só no chat da app (seguro).
     route.telegram = resolvedPerpsChatId()
     // Marca a origem: Aurum Flow ORB vs a dinâmica MTM Perps (Sensei X) — mesmo chat, fontes distintas.
     route.sender = isAurumFlow ? "⚡ Aurum Flow ORB" : "🪙 Perpétuos Cripto"
+    route.push = true
+    route.autoCopy = false
+  } else if (isAurumFlow && !isCryptoPerp) {
+    // Aurum Flow num activo NÃO cripto (ex.: ouro): vai ao MESMO canal da estratégia (fundido com os
+    // perpétuos), com a marca Aurum Flow. Antes caía na rota natural — o ouro ia parar ao Sensei
+    // com a marca do Sensei. No iOS aparece (não é cripto); o cripto do mesmo canal sai mensagem a
+    // mensagem. Não executa na conta Sensei (ver `aurumNaoCripto` no gate de execução).
+    route.channel = "aurum-flow"
+    route.telegram = resolvedPerpsChatId()
+    route.sender = "⚡ Aurum Flow"
     route.push = true
     route.autoCopy = false
   } else if (perpsRequested && !isCryptoPerp) {
@@ -845,7 +860,10 @@ export async function POST(request: NextRequest) {
     Boolean(parsedForExec.symbol) &&
     Boolean(parsedForExec.direction)
 
+  // Aurum Flow fora do cripto não é um sinal do Sensei — não abre na conta/mestre do Sensei.
+  const aurumNaoCripto = isAurumFlow && !isCryptoPerp
   const canExecuteProvider =
+    !aurumNaoCripto &&
     // Master switch = interruptor por-ativo na BD (mtmcopy_exec_switches), afinável sem redeploy.
     // (Antes exigia também o env SENSEI_PROVIDER_EXEC_ENABLED, que mantinha tudo OFF por defeito.)
     execSwitchOn &&
@@ -886,6 +904,17 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  /**
+   * CANAL PUBLICADO PELA MESTRE (18/09, começa pelo «MTM Auto Sensei»): com a estratégia em
+   * `sinal_modo='live'`, o chat e o Telegram deixam de receber o cartão do webhook, os seguimentos
+   * do Pine e o espelho de fecho — passam a contar só o que a conta-mestre abre, gere e fecha.
+   * Reversível pela base (sinal_modo), sem deploy.
+   */
+  const publicacaoMestre = route.channel
+    ? (await estrategiasPublicadasPelaMestre()).find((e) => e.canal === route.channel) ?? null
+    : null
+  let mestrePositionId: string | null = null
+
   let savedIdea: { id: string; tradeNumber: number | null } | null = null
   // Ideia/trade a que esta entrada corresponde (para guardar o message_id da entrada).
   let entryTradeIdea: SenseiTradeIdea | null = pendingIdea
@@ -919,6 +948,12 @@ export async function POST(request: NextRequest) {
       })
       mestreSubstituiMt5 = m.substituiMt5
       if (m.modo !== "desligado") providerDetail = `mestre SIM ${m.estrategia ?? ""}: ${m.modo}${m.motivo ? ` (${m.motivo})` : ""}`
+      // A posição que a MESTRE abriu — é ela (e só ela) que o chat e o Telegram anunciam quando o
+      // canal é publicado pela mestre (lib/mestres/servidor/publicar.ts).
+      if (m.modo === "live" && publicacaoMestre) {
+        const daMestre = (m.contas ?? []).find((c) => c.accountId === publicacaoMestre!.contaMestreId && c.estado === "aberta" && c.positionId)
+        mestrePositionId = daMestre?.positionId ?? null
+      }
     } catch (err) {
       console.error("[tradingview-webhook] mestre SIM:", err)
     }
@@ -1070,7 +1105,7 @@ export async function POST(request: NextRequest) {
       slOriginal: msgCtx?.slOriginal ?? null,
       price: v.sl ?? activeSensei?.sl ?? null,
     })
-  if ((isExitFollowup || isSlFollowup) && t2tCloseSymbol && route.channel) {
+  if ((isExitFollowup || isSlFollowup) && t2tCloseSymbol && route.channel && !publicacaoMestre) {
     try {
       const { closeT2TFollowersForSignal } = await import("@/lib/mtmcopy/t2t-lifecycle")
       await closeT2TFollowersForSignal({
@@ -1097,7 +1132,26 @@ export async function POST(request: NextRequest) {
 
   // Publica no canal de chat correspondente à classe de ativo (só se passar o gate de ruído)
   let chatId: string | null = null
-  if (!alertOk) {
+  if (publicacaoMestre) {
+    // Só a ENTRADA que a mestre abriu, no formato único, no chat E no Telegram (o publicador
+    // trata dos dois). Ideias por activar e seguimentos do Pine não saem — os seguimentos vêm das
+    // posições da mestre, pelo cron /api/cron/mestre-publicar.
+    if (mestrePositionId) {
+      try {
+        chatId = await publicarEntradaDaMestre(publicacaoMestre, mestrePositionId, { forcar: true })
+      } catch (err) {
+        console.error("[tradingview-webhook] publicar entrada da mestre:", err)
+      }
+    }
+    if (logId) {
+      await supabase
+        .from("tradingview_signals")
+        .update(chatId
+          ? { chat_status: "sent", chat_message_id: chatId, telegram_status: "sent" }
+          : { chat_status: "mestre", telegram_status: "mestre", ai_error: "canal publicado pela mestre: a mestre não abriu este sinal" })
+        .eq("id", logId)
+    }
+  } else if (!alertOk) {
     if (logId) await supabase.from("tradingview_signals").update({ chat_status: "suppressed", telegram_status: "suppressed" }).eq("id", logId)
   } else {
     try {
@@ -1130,7 +1184,7 @@ export async function POST(request: NextRequest) {
   // Perpétuos cripto: push/execução em 30m e 1H; outros TF ficam bloqueados (overtrading/ruído).
   // Segue o timeframe do alerta: sem bloqueio por TF nos perps (15m/5m/1H — o que o alarme mandar).
   const cryptoPerpBlocked = false
-  if (alertOk && initSignalKind === "entry" && !cryptoPerpBlocked) {
+  if (alertOk && initSignalKind === "entry" && !cryptoPerpBlocked && (!publicacaoMestre || chatId)) {
     const dir =
       v.direction === "buy"
         ? "COMPRA"
@@ -1287,7 +1341,8 @@ export async function POST(request: NextRequest) {
 
   // Relay Telegram → grupo correspondente à classe (Ouro/BTC: -1003853860780, Forex: -1003716578747)
   const relayChatId = route.telegram
-  const relayOn = Boolean(alertOk && relayChatId && AIBOT_TOKEN && !RELAY_DISABLED)
+  // Canal publicado pela mestre: o Telegram já recebeu o MESMO texto do publicador.
+  const relayOn = Boolean(alertOk && relayChatId && AIBOT_TOKEN && !RELAY_DISABLED && !publicacaoMestre)
   let tgOk = false
   let telegramMid: number | null = null
   if (relayOn && relayChatId) {
@@ -1364,8 +1419,9 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
       if (entryRow?.id) {
         await supabase.from("tradingview_signals").update({ trade_status: tradeStatus }).eq("id", entryRow.id)
-        // Notifica seguidores + quem aceitou no T2T: break-even (proteger), SL ou um TP
-        if (tradeStatus === "loss" || tradeStatus === "be" || tradeStatus.startsWith("exit_")) {
+        // Notifica seguidores + quem aceitou no T2T: break-even (proteger), SL ou um TP.
+        // Canal publicado pela mestre: o desfecho é o da mestre, não o do Pine — não se avisa daqui.
+        if (!publicacaoMestre && (tradeStatus === "loss" || tradeStatus === "be" || tradeStatus.startsWith("exit_"))) {
           try {
             await notifySignalOutcome({
               entryId: entryRow.id,

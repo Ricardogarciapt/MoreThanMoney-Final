@@ -21,7 +21,8 @@ import { getSiteOrigin } from '@/lib/site-url'
 import { lifecycleMessage } from './signal-lifecycle'
 import { estadoMudou, fotografiaEstado } from './estado-monitor'
 
-const PERPS_CHAT_SLUG = 'cripto-perps'
+// Canal fundido «MTM Auto Aurum Flow & Perpétuos» (18/09).
+const PERPS_CHAT_SLUG = 'aurum-flow'
 const STATE_KEY = 'perps_monitor_state'
 
 // A Bybit geo-bloqueia os IPs dos EUA (este cron corre em nodejs/iad1). As LEITURAS Bybit vão às rotas

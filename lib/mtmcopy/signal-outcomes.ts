@@ -41,6 +41,7 @@ export const CANAIS_DE_SINAIS = [
   'sinais-scanner-mtm',
   'sinais-goldkiller',
   'cripto-perps',
+  'aurum-flow',
   'ideias-e-sinais',
   'sinais',
   'aurum-flow',

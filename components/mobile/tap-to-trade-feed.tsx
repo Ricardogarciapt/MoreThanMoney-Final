@@ -1,6 +1,6 @@
 "use client"
 
-import { t2tMode } from "@/lib/mtmcopy/t2t-source"
+import { ehSinalDePerpetuo, t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { pipSizeForSymbol, unitFor } from "@/lib/mtmcopy/trade-outcome"
 import { directionLabelFromText, resolveDirectionLabel } from "@/lib/mtmcopy/signal-direction"
 
@@ -99,11 +99,12 @@ const CHANNEL_LABEL: Record<string, string> = {
   "trade-ideas-setup": "Ideias Forex",
   "trade-ideas": "Trade Ideas",
   "sinais-goldkiller": "GoldKiller",
-  // O slug engana: este é o canal dos traders de topo do PrimeVerse.
-  "sinais-scanner-mtm": "PrimeVerse",
+  // O slug engana: é o canal das estratégias MTM Auto Edge / King / Wolf.
+  "sinais-scanner-mtm": "MTM Auto Edge/Wolf/King",
   "ideias-e-sinais": "Ideias Forex Swings",
-  "cripto-perps": "Perpétuos Cripto",
-  "aurum-flow": "Aurum Flow",
+  // Fundido na Aurum Flow a 18/09 (um canal só); as mensagens antigas ficam com o rótulo novo.
+  "cripto-perps": "Aurum Flow & Perpétuos",
+  "aurum-flow": "Aurum Flow & Perpétuos",
   // Alias do slug antigo da Aurum Flow — remover depois de 2026-10-14 (30 dias após 2026-09-14).
   "golden-moves": "Aurum Flow",
 }
@@ -1466,14 +1467,14 @@ export default function TapToTradeFeed() {
                 ) : (
                   <button
                     onClick={() =>
-                      s.channel_slug === "cripto-perps" ? setCopySig(s) : setTap({ sig: s, status: "confirm" })
+                      ehSinalDePerpetuo(s.channel_slug, s.content) ? setCopySig(s) : setTap({ sig: s, status: "confirm" })
                     }
                     className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2.5 active:scale-[0.98] transition-transform"
                   >
                     <Zap className="w-4 h-4" />
                     {/* Perpétuos: não abre ordem — modal TAP to Copy com os parâmetros, campo a
                         campo, para colar na exchange (pedido Ricardo 2026-09-04). */}
-                    {s.channel_slug === "cripto-perps"
+                    {ehSinalDePerpetuo(s.channel_slug, s.content)
                       ? "TAP to Copy"
                       : t2tMode(s.channel_slug, s.content) === "follow"
                         ? t("t2t.followPosition")

@@ -22,7 +22,8 @@ export const SOURCE_LABEL: Record<T2TSourceKey, string> = {
   mtmscanner: 'MTM Scanner',
   forexideas: 'Ideias de Forex',
   james: 'Forex Swings',
-  primeverse: 'PrimeVerse',
+  // Chave interna antiga; o texto que sai ao cliente é o das estratégias.
+  primeverse: 'MTM Auto Edge/King/Wolf',
   aurum: 'Aurum Flow',
 }
 
