@@ -3,6 +3,7 @@
 // `React` em âmbito: o teste desenha a caixa com `npx tsx` (JSX clássico), sem o compilador do Next.
 import React, { useEffect, useLayoutEffect, useState, type ReactNode, type RefObject } from "react"
 import { createPortal } from "react-dom"
+import { useFolhaArrastavel } from "./use-arrasto"
 
 /**
  * POPOVER ANCORADO — o seletor de contas do WebTrader.
@@ -16,8 +17,15 @@ import { createPortal } from "react-dom"
  *    WebTrader usa (folhas 900, avisos 1000–1002) — nunca é cortado por `overflow` de ninguém;
  *  · a posição calcula-se da âncora (`posicaoDoPopover`, pura e testada): por baixo do botão, dentro
  *    do ecrã, e para cima se não couber; altura limitada com scroll próprio;
- *  · fecha a tocar/clicar fora, com Esc, ao redimensionar e ao fazer scroll da página;
- *  · no telemóvel (< 640 px) é uma FOLHA de baixo com fundo escurecido — não flutua sobre as métricas.
+ *  · fecha a tocar/clicar fora, com Esc e ao fazer scroll da página (só a caixa ANCORADA, e nunca
+ *    enquanto se escreve lá dentro — ver `deveFecharPorScroll`);
+ *  · no telemóvel (< 640 px) é uma FOLHA de baixo com fundo escurecido — não flutua sobre as métricas —
+ *    e fecha a arrastar para baixo (pega ou conteúdo no topo; use-arrasto.ts).
+ *
+ * O erro do lápis da etiqueta (18/09): tocar no lápis abre um campo com foco; no iPhone/Android o
+ * teclado e o zoom do campo fazem SCROLL da página, e o ouvinte de scroll fechava o seletor logo a
+ * seguir — o campo desaparecia sem gravar e o lápis «dava erro». A folha já não fecha por scroll
+ * (não está presa a nada que se mexa) e a caixa ancorada ignora o scroll com o foco lá dentro.
  */
 
 void React
@@ -45,14 +53,27 @@ export function posicaoDoPopover(a: RetanguloAncora, ecra: { largura: number; al
   return { modo: "ancorado", top: Math.max(MARGEM, a.top - 4 - alturaMax), left, largura, alturaMax, acima: true }
 }
 
+/**
+ * Um scroll fecha a caixa? Só a ANCORADA (a âncora mexeu-se e a caixa ficava a flutuar), só se o
+ * scroll não for da própria lista, e nunca com o foco num campo lá dentro — no telemóvel/tablet o
+ * teclado e o zoom do campo fazem scroll da página sozinhos. Puro, testado no .check.
+ */
+export function deveFecharPorScroll(modo: PosicaoPopover["modo"] | null, scrollDentro: boolean, focoDentro: boolean): boolean {
+  return modo === "ancorado" && !scrollDentro && !focoDentro
+}
+
 /** A caixa em si (sem portal nem efeitos) — é esta que o teste desenha no servidor. */
 export function CaixaPopover({ pos, titulo, onFechar, children }: { pos: PosicaoPopover; titulo: string; onFechar: () => void; children: ReactNode }) {
+  const folha = useFolhaArrastavel(onFechar)
   if (pos.modo === "folha") {
     return (
       <div data-popover-contas="folha" className="fixed inset-0 flex flex-col justify-end bg-black/60" style={{ zIndex: Z_POPOVER }} onPointerDown={(e) => { if (e.target === e.currentTarget) onFechar() }}>
-        <div role="dialog" aria-modal="true" aria-label={titulo} className="max-h-[80dvh] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-zinc-950 shadow-2xl" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-          <div className="flex justify-center pt-2"><span className="h-1 w-10 rounded-full bg-white/20" /></div>
-          {children}
+        <div role="dialog" aria-modal="true" aria-label={titulo} className="flex max-h-[85dvh] flex-col rounded-t-2xl border-t border-white/10 bg-zinc-950 shadow-2xl" style={{ ...folha.estilo, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+          {/* A pega: arrastar para baixo fecha (rato e dedo). Toda a faixa conta, não só o traço. */}
+          <div {...folha.pega} aria-hidden="true" className="flex shrink-0 cursor-grab touch-none select-none justify-center py-2.5 active:cursor-grabbing">
+            <span className="h-1 w-10 rounded-full bg-white/20" />
+          </div>
+          <div ref={folha.conteudo} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
         </div>
       </div>
     )
@@ -76,6 +97,9 @@ export default function PopoverAncorado({ aberto, ancora, onFechar, titulo, chil
   children: ReactNode
 }) {
   const [pos, setPos] = useState<PosicaoPopover | null>(null)
+  // O modo actual para o ouvinte de scroll (não se volta a ligar o ouvinte a cada medição).
+  const modoRef = React.useRef<PosicaoPopover["modo"] | null>(null)
+  modoRef.current = pos?.modo ?? null
 
   useLayoutEffect(() => {
     if (!aberto) { setPos(null); return }
@@ -99,9 +123,18 @@ export default function PopoverAncorado({ aberto, ancora, onFechar, titulo, chil
       if ((alvo as Element).closest?.("[data-popover-contas]")) return
       onFechar()
     }
-    const tecla = (e: KeyboardEvent) => { if (e.key === "Escape") { onFechar(); ancora.current?.focus() } }
-    // Scroll da PÁGINA (não o da própria lista) fecha: a âncora mexeu-se e a caixa ficava a flutuar.
-    const rolar = (e: Event) => { if (!(e.target as Element | null)?.closest?.("[data-popover-contas]")) onFechar() }
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      // Esc num campo lá dentro (a etiqueta) só desiste do campo — quem trata é o próprio campo.
+      if ((e.target as Element | null)?.closest?.("[data-popover-contas] input, [data-popover-contas] textarea")) return
+      onFechar(); ancora.current?.focus()
+    }
+    // Scroll da PÁGINA (não o da própria lista) fecha a caixa ancorada — ver `deveFecharPorScroll`.
+    const rolar = (e: Event) => {
+      const dentro = Boolean((e.target as Element | null)?.closest?.("[data-popover-contas]"))
+      const foco = Boolean((document.activeElement as Element | null)?.closest?.("[data-popover-contas]"))
+      if (deveFecharPorScroll(modoRef.current, dentro, foco)) onFechar()
+    }
     document.addEventListener("pointerdown", fora, true)
     document.addEventListener("keydown", tecla)
     window.addEventListener("scroll", rolar, true)

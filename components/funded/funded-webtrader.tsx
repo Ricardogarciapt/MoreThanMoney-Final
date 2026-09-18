@@ -76,7 +76,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   const [seletorAberto, setSeletorAberto] = useState(false)
   // O seletor abre num popover por portal (popover-contas.tsx): não fica por baixo nem por cima das métricas.
   const botaoSeletor = useRef<HTMLButtonElement>(null)
-  const fecharSeletor = useCallback(() => setSeletorAberto(false), [])
+  // Fechar o seletor fecha também o campo da etiqueta (o campo grava o que tiver ao desmontar):
+  // reabrir não volta a pôr o foco num campo que ficou pendurado.
+  const fecharSeletor = useCallback(() => { setSeletorAberto(false); setEtiquetaEmEdicao(null) }, [])
   const [erro, setErro] = useState<string | null>(null)
   // A etiqueta em edição no seletor (113): id da entrada, o que está escrito e o erro de gravação.
   const [etiquetaEmEdicao, setEtiquetaEmEdicao] = useState<string | null>(null)
@@ -223,7 +225,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
         {contexto === "app" && <img src="/icon-192x192.png" alt="MTM" className="h-6 w-6 shrink-0 rounded" />}
         {todas.length > 0 && (
           <div className="relative min-w-0">
-            <button ref={botaoSeletor} onClick={() => setSeletorAberto((v) => !v)} aria-expanded={seletorAberto} aria-haspopup="listbox"
+            <button ref={botaoSeletor} onClick={() => { if (seletorAberto) fecharSeletor(); else { setErroEtiqueta(null); setSeletorAberto(true) } }} aria-expanded={seletorAberto} aria-haspopup="listbox"
               className="flex min-w-0 items-center gap-1.5 rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-left text-[12px]">
               {atual ? (
                 <>
@@ -243,8 +245,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                 <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">MTM Funded (simuladas) · TradeLocker e MT5 (reais) — o lápis dá um nome à conta</p>
                 {erroEtiqueta && <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-rose-300">{erroEtiqueta}</p>}
                 {todas.map((t) => t.real ? (
-                  <div key={t.id} className={`flex items-center gap-2 px-3 py-2 text-[12.5px] ${t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
-                    <button role="option" aria-selected={t.id === ativa} disabled={Boolean(t.real.bloqueada)} title={t.real.bloqueada ?? undefined} className="flex flex-1 items-center gap-2 text-left disabled:opacity-50" onClick={() => escolher(t.id)}>
+                  <div key={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
+                    <button role="option" aria-selected={t.id === ativa} disabled={Boolean(t.real.bloqueada)} title={t.real.bloqueada ?? undefined} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left disabled:opacity-50" onClick={() => escolher(t.id)}>
                       <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[t.real.plataforma] }}>{t.etiqueta}</span>
                       <span className="rounded px-1.5 text-[10.5px] font-bold" style={{ color: t.real.bloqueada ? "#a1a1aa" : t.real.demo ? "#60a5fa" : "#fb7185" }}>{t.estadoCurto}</span>
                       <span className="font-mono">{t.login ?? "—"}</span>
@@ -260,12 +262,12 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                       gravar={(texto) => void guardarEtiqueta(t, texto)}
                     />
                     {t.real.origem === "sessao" && (
-                      <button aria-label="sair" onClick={() => { apagarSessaoTL(t.id); carregar() }} className="text-zinc-500"><X className="h-3.5 w-3.5" /></button>
+                      <button type="button" aria-label="Sair desta conta" title="Sair desta conta" onClick={() => { apagarSessaoTL(t.id); void carregar() }} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-white/5 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"><X className="h-4 w-4" /></button>
                     )}
                   </div>
                 ) : (
-                  <div key={t.id} className={`flex items-center gap-2 px-3 py-2 text-[12.5px] ${t.id === ativa ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
-                    <button role="option" aria-selected={t.id === ativa} className="flex flex-1 items-center gap-2 text-left" onClick={() => escolher(t.id)}>
+                  <div key={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${t.id === ativa ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
+                    <button role="option" aria-selected={t.id === ativa} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left" onClick={() => escolher(t.id)}>
                       <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}{t.segue ? ` · ${nomeCurto(t.segue)}` : ""}</span>
                       <span className="rounded px-1.5 text-[10.5px]" style={{ color: COR_ESTADO[t.estadoCurto] ?? "#a1a1aa" }}>{t.estadoCurto}</span>
                       <span className="font-mono">{t.login}</span>
@@ -281,7 +283,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                       gravar={(texto) => void guardarEtiqueta(t, texto)}
                     />
                     {!t.propria && (
-                      <button aria-label="sair" onClick={() => { apagarSessao(t.id); carregar() }} className="text-zinc-500"><X className="h-3.5 w-3.5" /></button>
+                      <button type="button" aria-label="Sair desta conta" title="Sair desta conta" onClick={() => { apagarSessao(t.id); void carregar() }} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-white/5 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"><X className="h-4 w-4" /></button>
                     )}
                   </div>
                 ))}
@@ -390,30 +392,51 @@ function CampoEtiqueta({ entrada, aEditar, abrir, fechar, gravar }: {
   gravar: (texto: string) => void
 }) {
   const [texto, setTexto] = useState(entrada.etiquetaDoDono ?? "")
-  useEffect(() => { if (aEditar) setTexto(entrada.etiquetaDoDono ?? "") }, [aEditar, entrada.etiquetaDoDono])
+  // Uma edição grava UMA vez: Enter, ✓, sair do campo ou fechar o seletor — o que vier primeiro.
+  // (Enter desmonta o campo e alguns browsers ainda disparam o blur; o ✓ no toque também.)
+  const sessao = useRef({ texto: "", terminada: true })
+  sessao.current.texto = texto
+  const terminar = useCallback((gravarTexto: boolean) => {
+    if (sessao.current.terminada) return
+    sessao.current.terminada = true
+    if (gravarTexto) gravar(sessao.current.texto)
+    else fechar()
+  }, [gravar, fechar])
+  useEffect(() => {
+    if (!aEditar) return
+    setTexto(entrada.etiquetaDoDono ?? "")
+    sessao.current = { texto: entrada.etiquetaDoDono ?? "", terminada: false }
+    // O seletor fechou (toque fora, trocar de conta) com o campo aberto: o que se escreveu grava-se,
+    // como ao sair do campo — não se perde em silêncio.
+    return () => { if (!sessao.current.terminada) { sessao.current.terminada = true; gravar(sessao.current.texto) } }
+  }, [aEditar]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!entrada.podeEtiquetar) return null
 
+  // Alvos de 44 px no toque; no rato ficam compactos. O campo tem 16 px no toque — abaixo disso o
+  // iPhone faz zoom ao focar, e o zoom fazia scroll da página (ver popover-contas.tsx).
+  const alvo = "grid h-8 w-8 shrink-0 place-items-center rounded-md [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
   if (aEditar) {
     return (
-      <span className="flex items-center gap-1">
+      <span className="flex items-center gap-1" data-sem-arrasto>
         <input
           autoFocus
           value={texto}
           maxLength={ETIQUETA_MAX}
           placeholder="etiqueta"
           aria-label="Etiqueta da conta"
+          enterKeyHint="done"
           onChange={(e) => setTexto(e.target.value)}
           onClick={(e) => e.stopPropagation()}
-          onBlur={() => gravar(texto)}
+          onBlur={() => terminar(true)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") { e.preventDefault(); gravar(texto) }
-            if (e.key === "Escape") { e.preventDefault(); fechar() }
+            if (e.key === "Enter") { e.preventDefault(); terminar(true) }
+            if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); terminar(false) }
           }}
-          className="w-28 rounded border border-[#D2A63C]/40 bg-black/60 px-1.5 py-0.5 text-[11px] text-white placeholder:text-zinc-600"
+          className="h-8 w-32 rounded border border-[#D2A63C]/40 bg-black/60 px-1.5 text-[16px] text-white placeholder:text-zinc-600 [@media(pointer:fine)]:h-7 [@media(pointer:fine)]:text-[11px]"
         />
         {/* No toque não há blur antes do clique: este botão grava o que está escrito. */}
-        <button type="button" aria-label="guardar etiqueta" onMouseDown={(e) => e.preventDefault()} onClick={() => gravar(texto)} className="text-[#D2A63C]">
-          <Check className="h-3.5 w-3.5" />
+        <button type="button" aria-label="Guardar etiqueta" onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={(e) => { e.stopPropagation(); terminar(true) }} className={`${alvo} text-[#D2A63C]`}>
+          <Check className="h-4 w-4" />
         </button>
       </span>
     )
@@ -424,9 +447,9 @@ function CampoEtiqueta({ entrada, aEditar, abrir, fechar, gravar }: {
       aria-label={entrada.etiquetaDoDono ? `Mudar a etiqueta (${entrada.etiquetaDoDono})` : "Pôr uma etiqueta nesta conta"}
       title={entrada.etiquetaDoDono ? "Mudar a etiqueta" : "Pôr uma etiqueta"}
       onClick={(e) => { e.stopPropagation(); abrir() }}
-      className="flex shrink-0 items-center gap-1 text-zinc-500 hover:text-[#D2A63C]"
+      className={`${alvo} text-zinc-500 hover:bg-white/5 hover:text-[#D2A63C]`}
     >
-      <Pencil className="h-3 w-3" />
+      <Pencil className="h-3.5 w-3.5" />
     </button>
   )
 }
