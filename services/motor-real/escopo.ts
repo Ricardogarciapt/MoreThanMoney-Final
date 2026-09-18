@@ -31,6 +31,7 @@ import { t2tUsaTrailing } from '../../lib/mtmcopy/t2t-source'
 import { filtrarContasExistentes } from '../../lib/mtmcopy/metaapi-inexistentes'
 import { resolverToken, type TokenResolvido } from '../../lib/copia-contas/tokens'
 import { contasSubscritoras } from '../../lib/gestao-real/espelho-premium'
+import { legadoPremiumCortado, SLUG_PREMIUM } from '../../lib/mestres/premium'
 import type { ItemGestao } from '../../lib/gestao-real/avaliar'
 import type { LinhaPremium } from '../../lib/gestao-real/premium'
 import type { EstadoT2T, LinhaT2T } from '../../lib/gestao-real/t2t'
@@ -78,9 +79,17 @@ export async function carregarEscopo(db: SupabaseClient, o: OpcoesEscopo): Promi
     tokens.set(conta, casa)
   }
 
+  // Premium pelo motor das mestres (mestres_estrategias.sinal_modo='live' do premium-ouro): a gestão é da
+  // mestre SIM e chega às contas pelo serviço mtm-copia-contas. Aqui ficam de fora a conta MT5 mestre, as
+  // contas de execução directa e o espelho aos subscritores — senão duas mãos na mesma posição. Leitura
+  // falhada (tirando a tabela em falta) = cortado: na dúvida não se mexe em contas de clientes.
+  const { data: linhaPremium, error: erroPremium } = await db.from('mestres_estrategias').select('sinal_modo').ilike('slug', SLUG_PREMIUM).maybeSingle()
+  const premiumCortado = erroPremium ? erroPremium.code !== '42P01' : legadoPremiumCortado(linhaPremium)
+  if (premiumCortado) notas.push('premium: executado pelo motor das mestres — legado fora do escopo')
+
   // ── Premium ────────────────────────────────────────────────────────────────
   let mestreAberto = false
-  if (o.tipos.premium && switches.premium_price_monitor) {
+  if (o.tipos.premium && switches.premium_price_monitor && !premiumCortado) {
     const [{ data: rows, error }, { data: diretas }] = await Promise.all([
       db.from('mtmcopy_premium_active').select('*').eq('status', 'open').order('created_at', { ascending: true }).limit(200),
       db.from('mtmcopy_connections').select('metaapi_account_id').eq('is_active', true).eq('copy_method', 'telegram_group')
@@ -224,6 +233,7 @@ export async function carregarEscopo(db: SupabaseClient, o: OpcoesEscopo): Promi
       if (!tokens.has(conta)) tokens.set(conta, casa)
     }
     for (const g of escolha.geridas) {
+      if (premiumCortado && String(g.slug).toLowerCase() === SLUG_PREMIUM) continue
       const prov = g.provider
       const tk = prov
         ? resolverToken({
@@ -243,7 +253,7 @@ export async function carregarEscopo(db: SupabaseClient, o: OpcoesEscopo): Promi
 
   // ── Subscritores do Premium (sombra do espelho por conta) ───────────────────
   let subscritores: string[] = []
-  if (o.subscritores && mestreAberto && switches.premium_subscriber_exits) {
+  if (o.subscritores && mestreAberto && switches.premium_subscriber_exits && !premiumCortado) {
     const { data } = await db
       .from('mtmcopy_connections')
       .select('metaapi_account_id, copy_method, is_active, mt5_status, copyfactory_strategy_id, copyfactory_strategy_pick, strategy_lots')

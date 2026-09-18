@@ -1,5 +1,6 @@
 /**
- * SINAL → MESTRE SIM — GoldKiller e Sensei (webhook TradingView) passam a abrir na conta SIMULADA da
+ * SINAL → MESTRE SIM — GoldKiller e Sensei (webhook TradingView) e o Premium (relay-post, via
+ * lib/mestres/servidor/premium.ts) passam a abrir na conta SIMULADA da
  * casa que é a mestre da estratégia (mestres_estrategias.conta_mestre_id) e nas contas simuladas que a
  * seguem, com a gestão da estratégia (`sinais_config` → lib/mtmfunded/estrategias-sinais: BE, trailing,
  * parciais em PREÇO gravados na posição; o motor simulado do VPS executa-os ao nosso preço). É o mesmo
@@ -18,10 +19,31 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { abrirSinalNaConta, type ResultadoAbrir } from '@/lib/mtmfunded/estrategias-sinais/abrir'
 import { chaveDoSinal, configDoProvider, gestaoDoSinal, impressaoDoTrade, loteParaConta } from '@/lib/mtmfunded/estrategias-sinais/calculo'
 import { lerConfigGlobal, lerEstrategiaMestre, type ModoEstrategia } from '../tipos'
+import { COMENTARIO_PREMIUM, SLUG_PREMIUM } from '../premium'
 
-export const ESTRATEGIA_DO_WEBHOOK: Record<string, { slug: string; comentario: string }> = {
+export interface AlvoDaFonte {
+  slug: string
+  comentario: string
+  /**
+   * Premium: `mtmauto_providers.ativo` do premium-ouro está FALSE de propósito (o dono desligou o MTM Auto
+   * Premium a 17/09 — ligá-lo punha o mtm-auto e o espelho das seguidoras a executar pela conta MT5).
+   * Aqui o interruptor é só `mestres_estrategias.sinal_modo` (+ kill-switch).
+   */
+  ignoraProviderAtivo?: boolean
+  /**
+   * Premium: o SME numera cada setup (1., 2., 3.…) e cada um é uma trade — a chave é o id EXACTO da
+   * mensagem, e a regra «não abrir sem a anterior em BE + parcial» é decidida antes (lib/mestres/premium).
+   */
+  permitirDuplicado?: boolean
+  /** prefixo da referência na chave do sinal ('tv' = registo do webhook; 'tg' = mensagem Telegram) */
+  prefixo?: string
+}
+
+export const ESTRATEGIA_DO_WEBHOOK: Record<string, AlvoDaFonte> = {
   goldkiller: { slug: 'Goldkiller', comentario: 'MTM Auto GoldKiller' },
   sensei: { slug: 'sensei', comentario: 'MTM Auto Sensei' },
+  // Premium (relay-post → processador → lib/mestres/servidor/premium.ts), não o webhook TradingView.
+  premium: { slug: SLUG_PREMIUM, comentario: COMENTARIO_PREMIUM, ignoraProviderAtivo: true, permitirDuplicado: true, prefixo: 'tg' },
 }
 
 const cacheConfig = new Map<string, { linha: Record<string, unknown> | null; global: unknown; em: number }>()
@@ -35,6 +57,11 @@ export interface SinalWebhook {
   tps: number[]
   /** id do registo do webhook (tradingview_signals) — chave de idempotência */
   externalRef: string
+  /**
+   * Premium: entra a MERCADO com os níveis absolutos do trader (`entrada=null` → nada se re-ancora) e a
+   * referência (1.º valor da zona) serve só para o registo e para a gestão calculada em sombra.
+   */
+  entradaReferencia?: number | null
 }
 
 export interface ResultadoSinalMestre {
@@ -69,10 +96,13 @@ export async function encaminharSinalParaMestre(s: SinalWebhook): Promise<Result
     if (global.kill) return { modo: est.sinalModo, substituiMt5, estrategia: est.slug, motivo: 'kill-switch: nada abre' }
 
     const { data: prov } = await db.from('mtmauto_providers').select('*').eq('id', est.providerId).maybeSingle()
-    if (!prov || prov.ativo !== true || prov.apagado_em) return { modo: est.sinalModo, substituiMt5, estrategia: est.slug, motivo: 'estratégia inactiva' }
-    const cfg = configDoProvider(prov as Record<string, unknown>)
-    const chave = chaveDoSinal({ fonte: est.slug, msgId: `tv:${s.externalRef}`, symbol: s.symbol, direcao: s.direcao, entrada: s.entrada, sl: s.sl })
-    const impressao = impressaoDoTrade({ symbol: s.symbol, direcao: s.direcao, entrada: s.entrada })
+    if (!prov || prov.apagado_em || (prov.ativo !== true && !alvo.ignoraProviderAtivo)) return { modo: est.sinalModo, substituiMt5, estrategia: est.slug, motivo: 'estratégia inactiva' }
+    const cfg = { ...configDoProvider(prov as Record<string, unknown>), ...(alvo.permitirDuplicado ? { permitirDuplicado: true } : {}) }
+    const ref = s.entradaReferencia ?? s.entrada
+    // Sem referência (webhook sem registo, mensagem sem id) a chave cai nos níveis + hora — nunca numa
+    // chave fixa `tv:` que juntava sinais diferentes.
+    const chave = chaveDoSinal({ fonte: est.slug, msgId: s.externalRef && s.externalRef !== '0' ? `${alvo.prefixo ?? 'tv'}:${s.externalRef}` : null, symbol: s.symbol, direcao: s.direcao, entrada: ref, sl: s.sl })
+    const impressao = impressaoDoTrade({ symbol: s.symbol, direcao: s.direcao, entrada: ref })
 
     const contas = new Set<string>([est.contaMestreId])
     const { data: seguidoras } = await db.from('mtm_trading_accounts').select('id')
@@ -85,9 +115,9 @@ export async function encaminharSinalParaMestre(s: SinalWebhook): Promise<Result
       const { data: simb } = await db.from('funded_symbols').select('*').eq('symbol', s.symbol.toUpperCase()).maybeSingle()
       const saldo = Number(mestre?.sim_saldo ?? mestre?.saldo_inicial ?? 0)
       const volume = simb ? loteParaConta(saldo, cfg, simb as never) : null
-      const gestao = simb && volume && s.entrada ? gestaoDoSinal({ simbolo: simb as never, direcao: s.direcao, precoExecucao: s.entrada, volume, sl: s.sl, tps: s.tps, cfg }) : null
+      const gestao = simb && volume && ref ? gestaoDoSinal({ simbolo: simb as never, direcao: s.direcao, precoExecucao: ref, volume, sl: s.sl, tps: s.tps, cfg }) : null
       await db.from('mestres_sinais').upsert({
-        estrategia: est.slug, chave, modo: 'sombra', symbol: s.symbol, direcao: s.direcao, entrada: s.entrada, sl: s.sl, tps: s.tps,
+        estrategia: est.slug, chave, modo: 'sombra', symbol: s.symbol, direcao: s.direcao, entrada: ref, sl: s.sl, tps: s.tps,
         resultado: { contas: contas.size, mestre: est.contaMestreId, volumeMestre: volume, gestao: gestao?.gestao ?? null, tpFinal: gestao?.tpFinal ?? null },
       }, { onConflict: 'estrategia,chave,modo', ignoreDuplicates: true })
       return { modo: 'sombra', substituiMt5: false, estrategia: est.slug }
@@ -102,7 +132,7 @@ export async function encaminharSinalParaMestre(s: SinalWebhook): Promise<Result
       })))))
     }
     await db.from('mestres_sinais').upsert({
-      estrategia: est.slug, chave, modo: 'live', symbol: s.symbol, direcao: s.direcao, entrada: s.entrada, sl: s.sl, tps: s.tps,
+      estrategia: est.slug, chave, modo: 'live', symbol: s.symbol, direcao: s.direcao, entrada: ref, sl: s.sl, tps: s.tps,
       resultado: { contas: resultados.map((r) => ({ conta: r.accountId, estado: r.estado, volume: r.volume ?? null, motivo: r.motivo ?? null })) },
     }, { onConflict: 'estrategia,chave,modo', ignoreDuplicates: true })
     return { modo: 'live', substituiMt5: true, estrategia: est.slug, contas: resultados }

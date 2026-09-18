@@ -8,6 +8,10 @@
  *    (`copyfactory_strategy_pick` ou chave de `strategy_lots` ∈ ids CopyFactory da estratégia) — a
  *    MESMA escolha passa a ser servida pelo motor. Contas só de T2T (`purpose='tap_to_trade'`) não
  *    seguem por cópia (a não ser que tenham estratégia escolhida — caso Cayo/Pedro).
+ *  · Premium (lib/mestres/premium.ts SEGUIDORES_EXTRA): também o pick antigo `premium` e as ligações de
+ *    execução DIRECTA por grupo Telegram (`copy_method='telegram_group'`, grupo `premium`, e as antigas
+ *    sem grupo — o default do parseTelegramGroups). Estas só com direito ao MTM Auto, como a
+ *    execução directa exigia (processor.filterEligibleSubscribers).
  *  · MTM Auto (mtmauto_subscriptions ativo + auto_aceitar) — só com `incluir_mtmauto` na estratégia.
  *    Conta: a da subscrição, senão a principal, senão a primeira que não é MTM Funded (a mesma ordem
  *    do executor do mtm-auto).
@@ -31,6 +35,10 @@ export interface EstrategiaParaPlanear {
   contaMestreId: string
   copyfactoryIds: string[]
   incluirMtmauto: boolean
+  /** picks/chaves antigas que também querem dizer «esta estratégia» (Premium: 'premium') */
+  picksExtra?: string[]
+  /** grupos Telegram cuja execução directa passa a ser servida pelo motor (Premium: 'premium') */
+  gruposTelegram?: string[]
 }
 
 export type LigacaoSiteSeguidora = LigacaoSite & {
@@ -49,6 +57,10 @@ export type LigacaoSiteSeguidora = LigacaoSite & {
   tl_account_id?: string | null
   funded_account_id?: string | null
   funded_somente_leitura?: boolean | null
+  telegram_groups?: string[] | null
+  telegram_group?: string | null
+  account_role?: string | null
+  sender_mode?: string | null
 }
 
 export type ContaAutoSeguidora = ContaAuto & {
@@ -126,6 +138,24 @@ export function ligacaoSegueEstrategia(l: LigacaoSiteSeguidora, ids: string[], s
   return String(l.copy_method ?? '') === 'strategy' && Boolean(l.copyfactory_strategy_pick) && ids.includes(String(l.copyfactory_strategy_pick))
 }
 
+/**
+ * Ligação de execução DIRECTA por grupo Telegram (o que processor.processSignalDirect executava): método
+ * `telegram_group` (ou vazio), nunca mestre/master_account, nunca conta só de Tap to Trade. Sem grupos
+ * gravados vale `premium` — o default antigo de parseTelegramGroups (ligações que nunca gravaram grupos).
+ */
+export function ligacaoSegueGrupoTelegram(l: LigacaoSiteSeguidora, grupos: string[] | undefined): boolean {
+  const alvo = (grupos ?? []).map((g) => g.toLowerCase())
+  if (!alvo.length) return false
+  if (l.purpose === 'tap_to_trade') return false
+  if ((l.account_role ?? 'slave') === 'master' || l.sender_mode === 'master_account') return false
+  const metodo = l.copy_method ?? 'telegram_group'
+  if (metodo !== 'telegram_group') return false
+  const gravados = Array.isArray(l.telegram_groups) && l.telegram_groups.length
+    ? l.telegram_groups
+    : l.telegram_group ? [l.telegram_group] : ['premium']
+  return gravados.some((g) => alvo.includes(String(g).toLowerCase().trim()))
+}
+
 export function contaDaSubscricao(s: SubscricaoAutoSeguidora, contasDoUser: ContaAutoSeguidora[]): ContaAutoSeguidora | null {
   if (s.conta_id) return contasDoUser.find((c) => c.id === s.conta_id) ?? null
   const reais = contasDoUser.filter((c) => plataformaAuto(c) != null)
@@ -139,6 +169,8 @@ export function planearRotasDaEstrategia(p: {
   contasAuto: ContaAutoSeguidora[]
   /** conta_chave → lote fixo forçado (mestres_contas) */
   lotesForcados?: Record<string, number>
+  /** utilizadores SEM direito ao MTM Auto (só pesa nos seguidores por grupo Telegram) */
+  semDireito?: Set<string>
 }): { rotas: RotaDesejada[]; ignorados: Ignorado[] } {
   const e = p.estrategia
   const origemChave = `mtmfunded:${e.contaMestreId.toLowerCase()}`
@@ -150,9 +182,13 @@ export function planearRotasDaEstrategia(p: {
     mestres: true as const, tipo_rota: 'estrategia' as const, estrategia_slug: e.slug,
   }
 
+  const ids = [...e.copyfactoryIds, ...(e.picksExtra ?? [])]
   for (const l of p.site) {
-    if (!ligacaoSegueEstrategia(l, e.copyfactoryIds, e.slug)) continue
+    const porEstrategia = ligacaoSegueEstrategia(l, ids, e.slug)
+    const porGrupo = !porEstrategia && ligacaoSegueGrupoTelegram(l, e.gruposTelegram)
+    if (!porEstrategia && !porGrupo) continue
     const ref = `site:${l.id}`
+    if (porGrupo && p.semDireito?.has(l.user_id)) { ignorados.push({ ref, motivo: 'grupo Telegram sem direito ao MTM Auto (a execução directa também não abria)' }); continue }
     const plataforma = plataformaSite(l)
     if (!plataforma) { ignorados.push({ ref, motivo: 'conta MTM Funded (segue pelo espelho simulado)' }); continue }
     if (l.mt5_status === 'disconnected') { ignorados.push({ ref, motivo: 'ligação desligada' }); continue }
@@ -160,14 +196,14 @@ export function planearRotasDaEstrategia(p: {
     const chave = chaveFisica({ plataforma, login: l.mt5_login, servidor: l.mt5_server, tlEnv: l.tl_env, tlAccountId: l.tl_account_id, ref })
     if (!chave) { ignorados.push({ ref, motivo: 'sem identidade física (login/servidor)' }); continue }
     if (vistas.has(chave)) { ignorados.push({ ref, motivo: 'a mesma conta física já segue esta estratégia por outra ligação' }); continue }
-    const lote = loteDaLigacaoSite(l, { idsCopyFactory: [...e.copyfactoryIds, e.slug], loteFixoForcado: p.lotesForcados?.[chave] ?? null })
+    const lote = loteDaLigacaoSite(l, { idsCopyFactory: [...ids, e.slug], loteFixoForcado: p.lotesForcados?.[chave] ?? null })
     if (!lote.ok) { ignorados.push({ ref, motivo: lote.motivo }); continue }
     vistas.add(chave)
     rotas.push({
       ...base, user_id: l.user_id, destino_tipo: plataforma, destino_ref: ref, destino_chave: chave,
       rotulo: `${e.nome} → ${ref.slice(0, 13)}`, ...semOrigem(lote.lote),
       pausada_motivo: l.is_active === false ? 'ligação pausada pelo cliente' : null,
-      notas: `mestres 116 · ${lote.lote.origem}`,
+      notas: `mestres 116 · ${porGrupo ? 'grupo Telegram · ' : ''}${lote.lote.origem}`,
     })
   }
 

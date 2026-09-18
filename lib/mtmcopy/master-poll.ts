@@ -13,6 +13,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getSignalSourcesConfig } from './signal-sources-config'
 import { normalizeProviderRoutes } from './provider-routes'
+import { routeBelongsToChannel } from './provider-routes-defaults'
 import { appChannelsForRoute } from './tap-to-trade-channels'
 import { listOpenPositions, type MetaApiPosition } from './metaapi'
 import { contaMarcadaInexistente } from './metaapi-inexistentes'
@@ -77,9 +78,15 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
     (r) => r.enabled !== false && r.account_id?.trim() && r.tap_to_trade === true,
   )
 
+  // Premium pelo motor das mestres (sinal_modo live): a conta MT5 mestre do Premium deixa de ser vigiada —
+  // fechos/edições dela iam fechar e editar posições T2T de clientes por um caminho que já não manda.
+  const { legadoPremiumDesligado } = await import('@/lib/mestres/servidor/premium')
+  const premiumCortado = await legadoPremiumDesligado()
+
   const seen = new Set<string>()
   for (const route of masters) {
     const accountId = route.account_id.trim()
+    if (premiumCortado && (routeBelongsToChannel(route, 'premium-signals') || route.app_channel === 'premium-ideas' || appChannelsForRoute(route).includes('premium-ideas'))) continue
     // Conta apagada na MetaApi (registo de inexistentes, 15/09): não se vigia.
     if (contaMarcadaInexistente(accountId)) continue
     if (seen.has(accountId)) continue

@@ -22,6 +22,9 @@ async function main() {
   const { getSupabaseAdmin } = await import('../../lib/supabase-admin-client')
   const { planearRotasDaEstrategia, planoDeEscrita } = await import('../../lib/mestres/planear')
   const { lerEstrategiaMestre } = await import('../../lib/mestres/tipos')
+  const { seguidoresExtra } = await import('../../lib/mestres/premium')
+  const { ligacaoSegueGrupoTelegram } = await import('../../lib/mestres/planear')
+  const { direitoMtmAuto } = await import('../../lib/entitlements')
   const db = getSupabaseAdmin()
 
   const { data: ests, error } = await db.from('mestres_estrategias').select('*')
@@ -39,9 +42,23 @@ async function main() {
   for (const linha of ests ?? []) {
     const e = lerEstrategiaMestre(linha)
     if (SO && e.slug.toLowerCase() !== SO.toLowerCase()) continue
+    const extra = seguidoresExtra(e.slug)
+    // Seguidores por grupo Telegram (Premium): só com direito ao MTM Auto, como a execução directa exigia.
+    const semDireito = new Set<string>()
+    if (extra.gruposTelegram.length) {
+      const users = [...new Set(((site.data ?? []) as Array<Record<string, unknown>>)
+        .filter((l) => ligacaoSegueGrupoTelegram(l as never, extra.gruposTelegram)).map((l) => String(l.user_id)))]
+      for (const u of users) {
+        const tem = await direitoMtmAuto(u).then((d) => d.tem).catch(() => false)
+        if (!tem) semDireito.add(u)
+      }
+    }
     const plano = planearRotasDaEstrategia({
-      estrategia: { providerId: e.providerId, slug: e.slug, nome: nomes.get(e.providerId) ?? e.slug, contaMestreId: e.contaMestreId, copyfactoryIds: e.copyfactoryIds, incluirMtmauto: e.incluirMtmauto },
-      site: (site.data ?? []) as never, subsAuto: (subs.data ?? []) as never, contasAuto: (contasAuto.data ?? []) as never, lotesForcados,
+      estrategia: {
+        providerId: e.providerId, slug: e.slug, nome: nomes.get(e.providerId) ?? e.slug, contaMestreId: e.contaMestreId,
+        copyfactoryIds: e.copyfactoryIds, incluirMtmauto: e.incluirMtmauto, picksExtra: extra.picks, gruposTelegram: extra.gruposTelegram,
+      },
+      site: (site.data ?? []) as never, subsAuto: (subs.data ?? []) as never, contasAuto: (contasAuto.data ?? []) as never, lotesForcados, semDireito,
     })
     const { data: existentes } = await db.from('copia_rotas').select('*').eq('mestres', true).eq('tipo_rota', 'estrategia').ilike('estrategia_slug', e.slug).neq('estado', 'recusada')
     const abertas = new Map<string, number>()
