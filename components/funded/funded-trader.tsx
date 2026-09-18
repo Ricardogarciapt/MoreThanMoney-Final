@@ -49,6 +49,11 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
   const [visiveis, setVisiveis] = useState<string[]>([])
   const [extras, setExtras] = useState<string[]>([])
   const [volume, setVolume] = useState(0.01)
+  // A ficha do símbolo inicial não veio (rede/servidor): diz-se, com «tentar outra vez» — antes
+  // ficava o círculo a girar para sempre.
+  const [erroSimbolo, setErroSimbolo] = useState<string | null>(null)
+  const [tentativa, setTentativa] = useState(0)
+  const [avisoSimbolo, setAvisoSimbolo] = useState<string | null>(null)
   const { modo } = useModoWebtrader()
   const alertas = useAlertas(accountId)
   const diario = useDiario(accountId)
@@ -128,11 +133,19 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
         escolhido = await fichaDe("XAUUSD")
         if (!vivo) return
       }
-      if (escolhido) { setSimbolo(escolhido); setVolume(escolhido.volume_min); setFichas((f) => ({ ...f, [escolhido.symbol]: escolhido })) }
-      else if (simboloInicial) setErro(`O símbolo ${simboloInicial.split(",")[0]} não existe no MTM Funded.`)
-    })
+      // O símbolo do link não existe no catálogo: abre no ouro e diz porquê (antes o erro ficava
+      // escondido atrás dos dados da conta e o ecrã girava para sempre).
+      let aviso: string | null = null
+      if (!escolhido && alvo !== "XAUUSD") {
+        aviso = `O símbolo ${alvo.split(",")[0]} não existe no MTM Funded — abriu o XAUUSD.`
+        escolhido = await fichaDe("XAUUSD")
+        if (!vivo) return
+      }
+      if (escolhido) { setSimbolo(escolhido); setVolume(escolhido.volume_min); setFichas((f) => ({ ...f, [escolhido.symbol]: escolhido })); setErroSimbolo(null); setAvisoSimbolo(aviso) }
+      else setErroSimbolo("Não foi possível carregar o símbolo — verifica a ligação.")
+    }).catch(() => { if (vivo) setErroSimbolo("Não foi possível carregar o símbolo — verifica a ligação.") })
     return () => { vivo = false }
-  }, [simboloInicial])
+  }, [simboloInicial, tentativa])
 
   useEffect(() => { if (simbolo) onSimbolo?.(simbolo.symbol) }, [simbolo?.symbol]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -184,7 +197,22 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
     return executar(accao, corpo)
   }, [accountId, executar])
 
-  if (erro && !dados) return <div className="p-6 text-center text-[13px] text-rose-300">{erro}</div>
+  if (erro && !dados) {
+    return (
+      <div className="space-y-2 p-6 text-center text-[13px]">
+        <p className="text-rose-300">{erro}</p>
+        <button type="button" onClick={() => void recarregar()} className="min-h-[44px] rounded-lg border border-white/15 px-4 text-zinc-200">Tentar outra vez</button>
+      </div>
+    )
+  }
+  if (erroSimbolo && !simbolo) {
+    return (
+      <div className="space-y-2 p-6 text-center text-[13px]">
+        <p className="text-amber-300">{erroSimbolo}</p>
+        <button type="button" onClick={() => { setErroSimbolo(null); setTentativa((n) => n + 1) }} className="min-h-[44px] rounded-lg border border-white/15 px-4 text-zinc-200">Tentar outra vez</button>
+      </div>
+    )
+  }
   if (!dados || !vivo) return <div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" /></div>
 
   const metricas: Array<[string, string, string?]> = [
@@ -208,7 +236,14 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
 
   return (
     <UmCliqueProvider accountId={accountId} investor={dados.modo !== "master"}>
-      <div className="relative flex flex-col overflow-hidden bg-[#131722] text-white" style={{ height: altura ?? "calc(100dvh - 120px)", minHeight: 420 }}>
+      {/* minHeight com min(): num telemóvel deitado (~375 px de altura) 420 px obrigava a página a fazer scroll. */}
+      <div className="relative flex flex-col overflow-hidden bg-[#131722] text-white" style={{ height: altura ?? "calc(100dvh - 120px)", minHeight: "min(420px, 100dvh)" }}>
+        {(avisoSimbolo || erro) && (
+          <p role="status" className="flex shrink-0 items-center gap-2 bg-amber-500/10 px-3 py-1 text-[11px] text-amber-200">
+            <span className="min-w-0 flex-1 truncate">{erro ? `Sem ligação ao servidor (${erro}) — a tentar outra vez…` : avisoSimbolo}</span>
+            {!erro && <button type="button" onClick={() => setAvisoSimbolo(null)} aria-label="fechar aviso" className="grid h-8 w-8 place-items-center text-amber-200/70">×</button>}
+          </p>
+        )}
         {modo === "pro" ? <LayoutPro t={t} /> : <LayoutSimples t={t} />}
       </div>
     </UmCliqueProvider>

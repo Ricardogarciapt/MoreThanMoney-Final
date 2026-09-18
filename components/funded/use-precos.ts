@@ -64,8 +64,9 @@ async function correr() {
     ultimaIda = Date.now()
     try {
       const r = await fetch(`/api/mtmfunded/simulado/precos?symbols=${encodeURIComponent(chave)}`, { cache: "no-store" })
-      const d = await r.json()
-      if (!r.ok) throw new Error(d?.error || "preços indisponíveis")
+      // O estado primeiro: uma página de erro em HTML (502) dava um SyntaxError em vez de «indisponíveis».
+      const d = await r.json().catch(() => null)
+      if (!r.ok || !d) throw new Error(d?.error || "preços indisponíveis")
       for (const p of d.precos as PrecoVivo[]) precosGlobais[p.symbol] = p
       ultimoErro = null
     } catch (e) {

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { Download, Share, X } from "lucide-react"
 import { isNativeApp } from "@/hooks/use-capacitor"
+import { ehAppNativaPorUA } from "@/lib/app-nativa"
+import { useEscFecha, useFolhaArrastavel } from "./use-arrasto"
 import { useT } from "@/components/i18n-provider"
 
 /**
@@ -39,7 +41,9 @@ function jaInstalada() {
 }
 function nativa() {
   try {
-    return isNativeApp() || /MTMNativeApp|MTMAuto-(iOS|Android)/i.test(navigator.userAgent)
+    // A ponte (Capacitor / MTMNative) ou a marca no user-agent — regra única em lib/app-nativa.ts
+    // (que conhece também a shell Android do MTM System: lá não há «instalar» do browser).
+    return isNativeApp() || ehAppNativaPorUA()
   } catch {
     return false
   }
@@ -95,27 +99,39 @@ export default function InstalarWebtrader({ contexto }: { contexto: "embutido" |
         <Download className="h-3.5 w-3.5" /> {k("instAdicionar")}
       </button>
       {folha && (
-        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/60 p-3" onClick={() => setFolha(null)}>
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1E222D] p-4 text-[13px] text-zinc-200" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-[15px] font-bold text-white">{k("instTitulo")}</p>
-              <button onClick={() => setFolha(null)} aria-label={k("fechar")} className="text-zinc-400"><X className="h-4 w-4" /></button>
-            </div>
-            {folha === "ios" ? (
-              <ol className="list-decimal space-y-1.5 pl-5">
-                <li>{k("ios1a")} <Share className="inline h-4 w-4 align-text-bottom text-[#2962FF]" /> <b>{k("partilhar")}</b> {k("ios1b")}</li>
-                <li>{k("escolhe")} <b>{k("adicionarCitado")}</b>{k("fimFrase")}</li>
-                <li>{k("confirmaCom")} <b>{k("adicionar")}</b>{k("ios3b")}</li>
-              </ol>
-            ) : (
-              <ol className="list-decimal space-y-1.5 pl-5">
-                <li>{k("menuA")} (<b>⋮</b> {k("ou")} <b>⋯</b>).</li>
-                <li>{k("escolhe")} <b>{k("instalarCitado")}</b> {k("ou")} <b>{k("adicionarCitado")}</b>{k("fimFrase")}</li>
-              </ol>
-            )}
-          </div>
-        </div>
+        <FolhaInstalar titulo={k("instTitulo")} rotuloFechar={k("fechar")} onFechar={() => setFolha(null)}>
+          {folha === "ios" ? (
+            <ol className="list-decimal space-y-1.5 pl-5">
+              <li>{k("ios1a")} <Share className="inline h-4 w-4 align-text-bottom text-[#2962FF]" /> <b>{k("partilhar")}</b> {k("ios1b")}</li>
+              <li>{k("escolhe")} <b>{k("adicionarCitado")}</b>{k("fimFrase")}</li>
+              <li>{k("confirmaCom")} <b>{k("adicionar")}</b>{k("ios3b")}</li>
+            </ol>
+          ) : (
+            <ol className="list-decimal space-y-1.5 pl-5">
+              <li>{k("menuA")} (<b>⋮</b> {k("ou")} <b>⋯</b>).</li>
+              <li>{k("escolhe")} <b>{k("instalarCitado")}</b> {k("ou")} <b>{k("adicionarCitado")}</b>{k("fimFrase")}</li>
+            </ol>
+          )}
+        </FolhaInstalar>
       )}
     </>
+  )
+}
+
+/** As instruções numa folha de baixo: fecha a arrastar para baixo (use-arrasto.ts), com Esc ou a tocar fora. */
+function FolhaInstalar({ titulo, rotuloFechar, onFechar, children }: { titulo: string; rotuloFechar: string; onFechar: () => void; children: React.ReactNode }) {
+  useEscFecha(onFechar)
+  const f = useFolhaArrastavel(onFechar)
+  return (
+    <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/60 px-3 pt-3" style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 0px))" }} onClick={onFechar} role="dialog" aria-modal="true" aria-label={titulo}>
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1E222D] text-[13px] text-zinc-200" style={f.estilo} onClick={(e) => e.stopPropagation()}>
+        <div {...f.pega} className="relative flex cursor-grab touch-none select-none items-center justify-between gap-2 px-4 pb-1 pt-3 active:cursor-grabbing">
+          <span aria-hidden="true" className="absolute left-1/2 top-1.5 h-1 w-10 -translate-x-1/2 rounded-full bg-white/20" />
+          <p className="pt-1 text-[15px] font-bold text-white">{titulo}</p>
+          <button type="button" onClick={onFechar} aria-label={rotuloFechar} className="-mr-2 grid h-11 w-11 place-items-center text-zinc-400"><X className="h-4 w-4" /></button>
+        </div>
+        <div ref={f.conteudo} className="max-h-[70dvh] overflow-y-auto px-4 pb-4">{children}</div>
+      </div>
+    </div>
   )
 }

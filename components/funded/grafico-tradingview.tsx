@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { arredAosDigitos } from "@/lib/webtrader/formato"
 import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import { Loader2 } from "lucide-react"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
@@ -9,6 +10,7 @@ import type { SimboloFicha, PrecoVivo } from "./api"
 import { type GraficoProps, TIMEFRAMES, TV, tfPorResolucaoTv } from "./grafico-tipos"
 import { TV_LIB_PASTA, carregarBibliotecaTv, marcarBibliotecaTvFalhada } from "./biblioteca-tv"
 import PainelFerramenta from "./painel-ferramenta"
+import { fichaDe } from "./pre-carga"
 import { useRascunho, type CampoNivel } from "./rascunho-ordem"
 import { useUmClique } from "./um-clique"
 
@@ -69,10 +71,8 @@ function sessaoTv(f: SimboloFicha): string {
   return `0000-0000:${[...set].sort().join("")}`
 }
 
-async function fichaDe(symbol: string): Promise<SimboloFicha | null> {
-  const d = await fetch(`/api/mtmfunded/simulado/precos?symbols=${encodeURIComponent(symbol)}&specs=1`).then((r) => r.json()).catch(() => null)
-  return (d?.simbolos?.[0] as SimboloFicha) ?? null
-}
+// A ficha vem do mesmo sítio que o resto do WebTrader (pre-carga.ts: cache de 60 s e candidatos) —
+// antes havia aqui uma cópia sem cache.
 
 /** O datafeed (IBasicDataFeed). `precoRef` = o preço ao vivo que o trader já pede de 1,5 em 1,5 s. */
 function criarDatafeed(precoRef: React.MutableRefObject<PrecoVivo | undefined>) {
@@ -233,7 +233,7 @@ export default function GraficoTradingView(props: GraficoProps & {
   const grafico = () => {
     try { return widgetRef.current?.activeChart?.() ?? widgetRef.current?.chart?.() } catch { return null }
   }
-  const arred = (v: number) => Number(v.toFixed(simbolo.digits))
+  const arred = (v: number) => arredAosDigitos(v, simbolo.digits)
 
   // ── o widget ──
   useEffect(() => {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { ehIosNativo } from "@/lib/app-nativa"
 import { Copy as IconCopy, Loader2, Pause, Play, Trash2, AlertTriangle, ChevronLeft } from "lucide-react"
 import { pedir } from "./api"
 
@@ -44,10 +45,8 @@ const MODOS: Array<[Modo, string, string]> = [
 const NOME_MODO = Object.fromEntries(MODOS.map(([m, n]) => [m, n])) as Record<Modo, string>
 const TIPO_EVENTO: Record<string, string> = { open: "Abrir", modify: "SL/TP", partial: "Parcial", close: "Fechar" }
 
-function iosNativo() {
-  if (typeof navigator === "undefined") return false
-  return /MTMNativeApp/i.test(navigator.userAgent) && /iPhone|iPad|iPod/i.test(navigator.userAgent)
-}
+/** A regra única (lib/app-nativa.ts): MTM System, MTM Auto e iPad em modo secretária. */
+const iosNativo = () => ehIosNativo()
 
 const Etiqueta = ({ demo }: { demo: boolean | null }) => (
   <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${demo === true ? "bg-sky-500/15 text-sky-300" : "bg-amber-500/15 text-amber-300"}`}>

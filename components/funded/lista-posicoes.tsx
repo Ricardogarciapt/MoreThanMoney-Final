@@ -9,6 +9,7 @@ import { AccaoCancelada, useUmClique } from "./um-clique"
 import { numeroDe } from "./avancado"
 import { BotoesGestaoAuto, tituloEtiqueta } from "./gestao-auto"
 import { estadoGestaoAuto, type EstadoGestaoAuto } from "@/lib/mtmfunded/simulado/gestao-auto"
+import { flutuanteDasPosicoes, volumeParcial } from "@/lib/webtrader/lote"
 
 /**
  * POSIÇÕES, ORDENS PENDENTES E HISTÓRICO do WebTrader v2 — tabela densa no PRO, cartões no SIMPLE.
@@ -130,7 +131,7 @@ export default function ListaPosicoes(p: Props) {
           const cancelar = () => correr(`Cancelar ${o.direcao} ${o.tipo} ${o.symbol} @ ${px(Number(o.preco), d)}`, "cancelar", { orderId: o.id })
           return (
             <div key={o.id} className={`flex items-center gap-2 border-t border-white/5 px-3 ${p.denso ? "py-1.5 text-[12px]" : "py-2.5 text-[12.5px]"}`}>
-              <div className="min-w-0 flex-1" onClick={() => p.onSelecionarSimbolo(o.symbol)}>
+              <div role="button" tabIndex={0} className="min-w-0 flex-1 cursor-pointer" onClick={() => p.onSelecionarSimbolo(o.symbol)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); p.onSelecionarSimbolo(o.symbol) } }}>
                 <p className="truncate">
                   <span className={o.direcao === "buy" ? "text-emerald-400" : "text-rose-400"}>{String(o.direcao).toUpperCase()} {String(o.tipo).toUpperCase()}</span>{" "}
                   <b className="text-white">{o.symbol}</b> {Number(o.volume)} @ <span className="font-mono">{px(Number(o.preco), d)}</span>
@@ -140,10 +141,10 @@ export default function ListaPosicoes(p: Props) {
                 <p className="truncate text-[10.5px] text-zinc-500">
                   SL {o.sl != null ? px(Number(o.sl), d) : "—"} · TP {o.tp != null ? px(Number(o.tp), d) : "—"}
                   {g.tps?.length ? ` · ${g.tps.map((t, i) => `TP${i + 1} ${px(t.preco, d)} ${t.pct}%`).join(" · ")}` : ""}
-                  {o.expira_em ? ` · expira ${new Date(o.expira_em).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" })}` : " · GTC"}
+                  {o.expira_em ? ` · expira ${new Date(o.expira_em).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" })}` : " · sem expiração"}
                 </p>
               </div>
-              {p.podeNegociar && <button disabled={ocupado} onClick={cancelar} className="rounded-md border border-white/10 px-2 py-1 text-[11px] text-zinc-300 hover:border-rose-500/40 hover:text-rose-300 disabled:opacity-40">Cancelar</button>}
+              {p.podeNegociar && <button type="button" disabled={ocupado} onClick={cancelar} className={`rounded-md border border-white/10 text-[11px] text-zinc-300 hover:border-rose-500/40 hover:text-rose-300 disabled:opacity-40 ${p.denso ? "px-2 py-1" : "min-h-[40px] px-3"}`}>Cancelar</button>}
             </div>
           )
         })}
@@ -152,7 +153,8 @@ export default function ListaPosicoes(p: Props) {
   }
 
   // ── Posições abertas ──
-  const total = p.posicoes.reduce((a, pos) => a + (lucroDe(pos, p.simbolos, p.precos) ?? 0), 0)
+  // Com o swap, como o «Flutuante» da barra da conta (estadoDaConta) — eram dois números diferentes.
+  const total = flutuanteDasPosicoes(p.posicoes.map((pos) => ({ lucro: lucroDe(pos, p.simbolos, p.precos), swap: pos.swap })))
   return (
     <div>
       {p.podeNegociar && p.posicoes.length > 0 && (
@@ -225,11 +227,11 @@ const LinhaPosicao = memo(function LinhaPosicao({ pos, s, precos, denso, podeNeg
         {podeNegociar && (
           <div className="flex shrink-0 items-center gap-0.5">
             {auto && <div className="mr-1 hidden sm:flex">{auto}</div>}
-            <IconeAccao rotulo="SL/TP" onClick={() => onEditar(edicao === "sltp" ? null : "sltp")} ativo={edicao === "sltp"}><Pencil className="h-3.5 w-3.5" /></IconeAccao>
-            <IconeAccao rotulo="Gestão automática (trailing, break-even, TPs)" onClick={() => onEditar(edicao === "gestao" ? null : "gestao")} ativo={edicao === "gestao"}><Settings2 className="h-3.5 w-3.5" /></IconeAccao>
-            <IconeAccao rotulo="Inverter" disabled={ocupado} onClick={() => correr(`Inverter ${nome} (fecha e abre ${pos.direcao === "buy" ? "venda" : "compra"} ${vol})`, "inverter", { positionId: pos.id }, true, d)}><ArrowLeftRight className="h-3.5 w-3.5" /></IconeAccao>
-            <button onClick={() => onEditar(edicao === "parcial" ? null : "parcial")} className={`rounded-md px-1.5 py-1 text-[11px] ${edicao === "parcial" ? "bg-white/10 text-white" : "text-zinc-400 hover:text-white"}`} title="Fecho parcial (só reduz)">½</button>
-            <IconeAccao rotulo="Fechar" perigo disabled={ocupado} onClick={() => correr(`Fechar ${nome}`, "fechar", { positionId: pos.id }, true, d)}><X className="h-3.5 w-3.5" /></IconeAccao>
+            <IconeAccao grande={!denso} rotulo="SL/TP" onClick={() => onEditar(edicao === "sltp" ? null : "sltp")} ativo={edicao === "sltp"}><Pencil className="h-3.5 w-3.5" /></IconeAccao>
+            <IconeAccao grande={!denso} rotulo="Gestão automática (trailing, break-even, TPs)" onClick={() => onEditar(edicao === "gestao" ? null : "gestao")} ativo={edicao === "gestao"}><Settings2 className="h-3.5 w-3.5" /></IconeAccao>
+            <IconeAccao grande={!denso} rotulo="Inverter" disabled={ocupado} onClick={() => correr(`Inverter ${nome} (fecha e abre ${pos.direcao === "buy" ? "venda" : "compra"} ${vol})`, "inverter", { positionId: pos.id }, true, d)}><ArrowLeftRight className="h-3.5 w-3.5" /></IconeAccao>
+            <button type="button" aria-label="Fecho parcial (só reduz)" aria-pressed={edicao === "parcial"} onClick={() => onEditar(edicao === "parcial" ? null : "parcial")} className={`grid place-items-center rounded-md text-[12px] ${denso ? "h-7 w-7" : "h-10 w-9"} ${edicao === "parcial" ? "bg-white/10 text-white" : "text-zinc-400 hover:text-white"}`} title="Fecho parcial (só reduz)">½</button>
+            <IconeAccao grande={!denso} rotulo="Fechar" perigo disabled={ocupado} onClick={() => correr(`Fechar ${nome}`, "fechar", { positionId: pos.id }, true, d)}><X className="h-3.5 w-3.5" /></IconeAccao>
           </div>
         )}
       </div>
@@ -267,12 +269,13 @@ function EditorSlTp({ pos, d, ocupado, correr, onFechar }: { pos: Linha; d: numb
 function EditorParcial({ pos, s, ocupado, correr, onFechar }: { pos: Linha; s: SimboloFicha; ocupado: boolean; correr: Correr; onFechar: () => void }) {
   const vol = Number(pos.volume)
   const [v, setV] = useState("")
-  const escolhas = [25, 50, 75].map((pct) => Math.floor((vol * pct) / 100 / s.volume_step) * s.volume_step).map((x) => Math.round(x * 100) / 100).filter((x) => x >= s.volume_min && vol - x >= s.volume_min)
+  // Para baixo ao passo com margem ε (1,16 × 50 % dava 0,57 em vez de 0,58) — lib/webtrader/lote.ts.
+  const escolhas = [25, 50, 75].map((pct) => ({ pct, x: volumeParcial(vol, pct, s) })).filter((e): e is { pct: number; x: number } => e.x != null)
   const n = numeroDe(v)
   return (
     <Caixa onFechar={onFechar}>
       <div className="flex flex-wrap items-center gap-1.5">
-        {escolhas.map((x, i) => <button key={x} onClick={() => setV(String(x))} className="rounded-md border border-white/10 px-2 py-1 text-[11px] text-zinc-300">{[25, 50, 75][i]}% · {x}</button>)}
+        {escolhas.map(({ pct, x }) => <button key={pct} type="button" onClick={() => setV(String(x))} className="min-h-[32px] rounded-md border border-white/10 px-2 py-1 text-[11px] text-zinc-300">{pct}% · {x}</button>)}
         <input inputMode="decimal" aria-label="volume a fechar" value={v} onChange={(e) => setV(e.target.value)} placeholder={`lotes (< ${vol})`} className="h-8 w-28 rounded-md border border-white/10 bg-black px-2 font-mono text-white" />
         <button disabled={ocupado || n == null || !(n > 0) || n >= vol} onClick={() => correr(`Reduzir ${pos.symbol} em ${n}`, "fechar", { positionId: pos.id, volume: n }, false, s.digits)} className="rounded-md bg-rose-500 px-3 py-1 font-bold text-white disabled:opacity-40">
           {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reduzir"}
@@ -286,6 +289,7 @@ function EditorParcial({ pos, s, ocupado, correr, onFechar }: { pos: Linha; s: S
 function EditorGestao({ pos, s, precoFecho, ocupado, correr, onFechar }: { pos: Linha; s: SimboloFicha; precoFecho: number | null; ocupado: boolean; correr: Correr; onFechar: () => void }) {
   const g = gestaoDaLinha(pos)
   const pip = s.pip_size
+  // Com sinal (um offset de BE pode ser negativo) — por isso não é matematica.pips, que é |a − b|.
   const emPips = (x: number | null) => (x == null ? "" : String(Math.round((x / pip) * 10) / 10))
   const [trail, setTrail] = useState(emPips(g.trailing_distancia))
   const [ativ, setAtiv] = useState(emPips(g.trailing_ativacao))
@@ -324,7 +328,7 @@ function EditorGestao({ pos, s, precoFecho, ocupado, correr, onFechar }: { pos: 
             <span className={t.atingido ? "text-zinc-500 line-through" : "text-emerald-300"}>TP{i + 1}</span>
             <input inputMode="decimal" aria-label={`TP${i + 1} preço`} value={t.preco} disabled={t.atingido} onChange={(e) => setTps(tps.map((x, j) => (j === i ? { ...x, preco: e.target.value } : x)))} className={campo} placeholder="preço" />
             <input inputMode="decimal" aria-label={`TP${i + 1} %`} value={t.pct} disabled={t.atingido} onChange={(e) => setTps(tps.map((x, j) => (j === i ? { ...x, pct: e.target.value } : x)))} className={campo} placeholder="%" />
-            {!t.atingido ? <button aria-label="remover" onClick={() => setTps(tps.filter((_, j) => j !== i))} className="text-zinc-500"><X className="h-3.5 w-3.5" /></button> : <span className="text-emerald-400">✓</span>}
+            {!t.atingido ? <button type="button" aria-label={`remover TP${i + 1}`} onClick={() => setTps(tps.filter((_, j) => j !== i))} className="grid h-8 w-8 place-items-center text-zinc-500"><X className="h-3.5 w-3.5" /></button> : <span className="text-emerald-400">✓</span>}
           </div>
         ))}
         {tps.length < 3 && <button onClick={() => setTps([...tps, { preco: "", pct: "25", atingido: false }])} className="text-[11px] text-[#D2A63C]">+ TP{tps.length + 1}</button>}
@@ -354,10 +358,11 @@ function EtiquetasGestao({ g, est }: { g: ReturnType<typeof gestaoDaLinha>; est?
     </>
   )
 }
-function IconeAccao({ rotulo, onClick, children, disabled, perigo, ativo }: { rotulo: string; onClick: () => void; children: React.ReactNode; disabled?: boolean; perigo?: boolean; ativo?: boolean }) {
+function IconeAccao({ rotulo, onClick, children, disabled, perigo, ativo, grande }: { rotulo: string; onClick: () => void; children: React.ReactNode; disabled?: boolean; perigo?: boolean; ativo?: boolean; grande?: boolean }) {
+  // `grande` = cartões do SIMPLE (dedo): 40 px; a tabela densa do PRO fica com 28 px.
   return (
     <button type="button" aria-label={rotulo} title={rotulo} disabled={disabled} onClick={onClick}
-      className={`grid h-7 w-7 place-items-center rounded-md disabled:opacity-40 ${ativo ? "bg-white/10 text-white" : perigo ? "text-rose-400 hover:bg-rose-500/15" : "text-zinc-400 hover:bg-white/10 hover:text-white"}`}>
+      className={`grid place-items-center rounded-md disabled:opacity-40 ${grande ? "h-10 w-9" : "h-7 w-7"} ${ativo ? "bg-white/10 text-white" : perigo ? "text-rose-400 hover:bg-rose-500/15" : "text-zinc-400 hover:bg-white/10 hover:text-white"}`}>
       {children}
     </button>
   )
@@ -370,8 +375,8 @@ function BotaoLote({ children, onClick, disabled }: { children: React.ReactNode;
 }
 function Caixa({ children, onFechar }: { children: React.ReactNode; onFechar: () => void }) {
   return (
-    <div className="relative mt-2 rounded-lg border border-white/10 bg-black/40 p-2 pr-7">
-      <button aria-label="fechar" onClick={onFechar} className="absolute right-1.5 top-1.5 text-zinc-500 hover:text-white"><X className="h-3.5 w-3.5" /></button>
+    <div className="relative mt-2 rounded-lg border border-white/10 bg-black/40 p-2 pr-9">
+      <button type="button" aria-label="fechar" onClick={onFechar} className="absolute right-0 top-0 grid h-8 w-8 place-items-center text-zinc-500 hover:text-white"><X className="h-3.5 w-3.5" /></button>
       {children}
     </div>
   )

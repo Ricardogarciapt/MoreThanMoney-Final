@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { createElement, type ReactElement } from 'react'
 const h = createElement as unknown as (t: unknown, p?: unknown, ...c: unknown[]) => ReactElement
 import { renderToStaticMarkup } from 'react-dom/server'
-import { CaixaPopover, LARGURA_POPOVER, Z_POPOVER, posicaoDoPopover } from '../popover-contas'
+import { CaixaPopover, LARGURA_POPOVER, Z_POPOVER, deveFecharPorScroll, posicaoDoPopover } from '../popover-contas'
 
 let n = 0
 const caso = (nome: string, f: () => void) => { f(); n++; console.log(`  ok  ${nome}`) }
@@ -65,6 +65,27 @@ caso('render folha: fundo escurecido e diálogo modal', () => {
   assert.match(html, /data-popover-contas="folha"/)
   assert.match(html, /aria-modal="true"/)
   assert.match(html, /bg-black\/60/)
+})
+
+
+caso('render folha: pega arrastável (touch-none) e conteúdo com scroll próprio', () => {
+  const html = renderToStaticMarkup(h(CaixaPopover, { pos: { modo: 'folha' }, titulo: 'Escolher conta', onFechar: () => undefined }, h('p', null, 'x')))
+  assert.match(html, /touch-none/)
+  assert.match(html, /overflow-y-auto/)
+  assert.match(html, /max-h-\[85dvh\]/)
+})
+
+caso('lápis da etiqueta: o scroll do teclado/zoom NÃO fecha o seletor', () => {
+  // Folha (telemóvel): nunca fecha por scroll — era isto que fazia o campo desaparecer.
+  assert.equal(deveFecharPorScroll('folha', false, true), false)
+  assert.equal(deveFecharPorScroll('folha', false, false), false)
+  // Ancorada com o foco no campo da etiqueta: também não.
+  assert.equal(deveFecharPorScroll('ancorado', false, true), false)
+  // Scroll da própria lista: não.
+  assert.equal(deveFecharPorScroll('ancorado', true, false), false)
+  // Scroll da página sem nada a escrever: fecha (a âncora mexeu-se).
+  assert.equal(deveFecharPorScroll('ancorado', false, false), true)
+  assert.equal(deveFecharPorScroll(null, false, false), false)
 })
 
 console.log(`\n${n} verificações OK`)

@@ -116,6 +116,8 @@ export default function FundedGrafico(props: GraficoProps) {
   // A ferramenta Long/Short vive no rascunho (partilhada com o ticket); sem rascunho, fica local.
   const [modoLocal, setModoLocal] = useState<Direcao | null>(null)
   const rascunho = useRascunhoOpcional()
+  // A ferramenta Long/Short e «Usar este sinal» só onde o rascunho É o ticket (contas MTM Funded).
+  const comFerramenta = Boolean(rascunho) && props.ferramenta !== false
   const modo = rascunho ? rascunho.ferramenta : modoLocal
   const setModo = (d: Direcao | null) => (rascunho ? rascunho.setFerramenta(d) : setModoLocal(d))
   const [motor, setMotor] = useState<"a_verificar" | "tv" | "leve">("a_verificar")
@@ -215,7 +217,7 @@ export default function FundedGrafico(props: GraficoProps) {
           <span style={{ color: TV.textoFraco }}>{spread ?? "—"}</span>
           <span className="rounded px-1.5 py-0.5" style={{ color: "#8FA8FF", background: "rgba(41,98,255,0.14)" }}>{px(preco?.ask, simbolo.digits)}</span>
         </div>
-        {podeNegociar && rascunho && <div className="ml-auto h-7"><InterruptorUmClique /></div>}
+        {podeNegociar && rascunho && <div className="ml-auto flex h-7 [@media(pointer:coarse)]:h-auto"><InterruptorUmClique /></div>}
       </div>
 
       {/* Linha 2 — timeframes, estudos (setas), ferramentas */}
@@ -256,7 +258,7 @@ export default function FundedGrafico(props: GraficoProps) {
               {visivel ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />} <span className="hidden sm:inline">Mostrar gráfico</span>
             </button>
           )}
-        {podeNegociar && rascunho && (
+        {podeNegociar && comFerramenta && (
           <>
             <button onClick={() => setModo(modo === "buy" ? null : "buy")} className="flex items-center gap-1 rounded border px-2 py-1"
               style={modo === "buy" ? { borderColor: TV.tp, background: "rgba(8,153,129,0.2)", color: "#fff" } : { borderColor: TV.borda, color: TV.tp }}>
@@ -271,7 +273,7 @@ export default function FundedGrafico(props: GraficoProps) {
         </div>
       </div>
 
-      {ultimoAtivo && rascunho && podeNegociar && (
+      {ultimoAtivo && comFerramenta && podeNegociar && (
         <div className="flex flex-wrap items-center gap-2 border-b px-2.5 py-1.5 text-[11.5px]" style={{ borderColor: TV.borda, background: `${ultimoAtivo.estudo.cor}10` }}>
           <Zap className="h-3.5 w-3.5" style={{ color: ultimoAtivo.estudo.cor }} />
           <span>

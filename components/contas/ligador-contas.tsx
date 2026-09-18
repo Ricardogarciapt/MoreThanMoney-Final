@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { ehIosNativo } from "@/lib/app-nativa"
 import { Loader2, Pause, Play, Plus, Search, Trash2, Wallet, KeyRound, ExternalLink, AlertTriangle, RefreshCw } from "lucide-react"
 import { T2T_BROKERS } from "@/lib/mtmcopy/t2t-brokers"
 import TradeLockerConnectForm, { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-form"
@@ -62,11 +63,8 @@ async function tokenPorDefeito(): Promise<string | null> {
   return getAccessToken()
 }
 
-/** iOS nativo (shell MTMNativeApp): sem compras fora da App Store. */
-function ehIosNativo(): boolean {
-  if (typeof navigator === "undefined") return false
-  return /MTMNativeApp/i.test(navigator.userAgent) && /iPhone|iPad|iPod/i.test(navigator.userAgent)
-}
+// iOS nativo (MTM System, MTM Auto, iPad em modo secretária): sem compras fora da App Store —
+// a regra única de lib/app-nativa.ts (a cópia que aqui estava esquecia o MTM Auto e o iPad).
 
 export function useContasLigadas(getToken: Obter = tokenPorDefeito) {
   const [contas, setContas] = useState<ContaUnificada[]>([])
@@ -391,8 +389,8 @@ function ModalLigar({
   }
 
   return (
-    <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center bg-black/70 p-4" onClick={() => !busy && aoFechar()}>
-      <div className="w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-[#D2A63C]/30 bg-zinc-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center bg-black/70 p-4" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom, 0px))" }} onClick={() => !busy && aoFechar()}>
+      <div className="w-full max-w-sm max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl border border-[#D2A63C]/30 bg-zinc-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 mb-3">
           <Wallet className="w-5 h-5 text-[#D2A63C]" />
           <h3 className="text-base font-bold text-white">Ligar conta</h3>
@@ -520,8 +518,8 @@ function ModalCredenciais({
   }
 
   return (
-    <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center bg-black/70 p-4" onClick={() => !busy && aoFechar()}>
-      <div className="w-full max-w-sm rounded-2xl border border-[#D2A63C]/30 bg-zinc-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center bg-black/70 p-4" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom, 0px))" }} onClick={() => !busy && aoFechar()}>
+      <div className="w-full max-w-sm max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl border border-[#D2A63C]/30 bg-zinc-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-base font-bold text-white mb-1">Password e servidor</h3>
         <p className="text-[11px] text-zinc-400 mb-3">Conta {conta.login ?? ""} · {NOME_PLATAFORMA[conta.plataforma]}</p>
         <label className={rotulo}>Servidor</label>

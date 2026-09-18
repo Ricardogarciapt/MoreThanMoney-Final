@@ -65,6 +65,8 @@ export default function CredenciaisConta({ contaId, login, servidor, podeGerir =
         return
       }
       setErro(d.error || "Não foi possível ler as credenciais")
+    } catch {
+      setErro("Sem ligação ao servidor — tenta outra vez.")
     } finally { setOcupado(null) }
   }
 
@@ -83,6 +85,8 @@ export default function CredenciaisConta({ contaId, login, servidor, podeGerir =
         return
       }
       setErro(d.error || "Não foi possível gerar")
+    } catch {
+      setErro("Sem ligação ao servidor — tenta outra vez.")
     } finally { setOcupado(null) }
   }
 
@@ -92,6 +96,8 @@ export default function CredenciaisConta({ contaId, login, servidor, podeGerir =
       const { ok, d } = await chamar("/api/mtmfunded/conta/credenciais/link", { contaId })
       if (ok) { setAviso("Enviámos-te um email com um link seguro (abre uma vez, válido 24 h)."); setPedirPassword(null) }
       else setErro(d.error || "Não foi possível enviar")
+    } catch {
+      setErro("Sem ligação ao servidor — tenta outra vez.")
     } finally { setOcupado(null) }
   }
 

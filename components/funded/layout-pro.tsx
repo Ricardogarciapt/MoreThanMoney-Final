@@ -11,6 +11,9 @@ import PainelInferior from "./painel-inferior"
 import Atalhos, { type Layout } from "./atalhos"
 import { EstadoMercado, Sentimento } from "./estado-mercado"
 import { AplicarPrefill, AvisosConta, FaixaPrefill, GraficoConta, ProvedorRascunho, type Trader } from "./trader-contexto"
+import { useGraficoVisivel } from "./grafico-visivel"
+import { useMediaQuery } from "./use-media"
+import { MQ_LARGO, MQ_TABLET_OU_MAIS } from "@/lib/webtrader/layout"
 const CalendarioEconomico = dynamic(() => import("./calendario-economico"), { ssr: false })
 
 /**
@@ -27,27 +30,26 @@ const CalendarioEconomico = dynamic(() => import("./calendario-economico"), { ss
  * tamanhos no browser). A lista e o ticket recolhem-se arrastando até ao fim. Abaixo de 768 px o
  * PRO empilha na vertical (gráficos · ticket · painel) — quem escolhe PRO no telemóvel quer tudo,
  * mesmo apertado; o SIMPLE é que é pensado para o dedo.
+ *
+ * TABLET (768–1179 px, lib/webtrader/layout.ts): a lista começa recolhida e o ticket fica mais
+ * largo (tamanhos guardados à parte) — com 22 % de 768 px o ticket tinha 170 px e não cabia.
+ *
+ * «Mostrar gráfico» desligado: a célula dos gráficos encolhe até à barra de ferramentas (em
+ * grelha, cada célula até à sua barra) e o painel de baixo sobe com o espaço todo — nada de um
+ * rectângulo vazio do tamanho do gráfico.
  */
 
 const CHAVE_LAYOUT = "mtmfunded_pro_layout"
-
-function useEstreito() {
-  const [e, setE] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)")
-    const f = () => setE(mq.matches)
-    f()
-    mq.addEventListener("change", f)
-    return () => mq.removeEventListener("change", f)
-  }, [])
-  return e
-}
 
 export default function LayoutPro({ t }: { t: Trader }) {
   const [layout, setLayoutEstado] = useState<Layout>("1")
   const [lateral, setLateral] = useState<"ticket" | "calendario">("ticket")
   const ticketRef = useRef<ImperativePanelHandle>(null)
-  const estreito = useEstreito()
+  const tabletOuMais = useMediaQuery(MQ_TABLET_OU_MAIS, true)
+  const largo = useMediaQuery(MQ_LARGO, true)
+  const estreito = !tabletOuMais
+  const tablet = tabletOuMais && !largo
+  const [graficoVisivel] = useGraficoVisivel()
   useEffect(() => { try { const v = localStorage.getItem(CHAVE_LAYOUT) as Layout | null; if (v && ["1", "2h", "2v", "4"].includes(v)) setLayoutEstado(v) } catch { /* ok */ } }, [])
   const setLayout = (l: Layout) => { setLayoutEstado(l); try { localStorage.setItem(CHAVE_LAYOUT, l) } catch { /* ok */ } }
 
@@ -78,6 +80,11 @@ export default function LayoutPro({ t }: { t: Trader }) {
     </div>
   )
 
+  // Os gráficos (1/2/4). Escondidos: só as barras, sem altura fixa — quem fica com o espaço é o painel.
+  const graficos = (l: Layout) => (
+    <MultiGrafico t={t} layout={l} recolhido={!graficoVisivel} principal={<GraficoConta t={t} ficha={simbolo} preencher={graficoVisivel} />} />
+  )
+
   const puxador = (vertical = false) => (
     <PanelResizeHandle className={`group relative shrink-0 bg-[#2A2E39] transition-colors hover:bg-[#D2A63C]/60 data-[resize-handle-state=drag]:bg-[#D2A63C] ${vertical ? "h-1" : "w-1"}`} />
   )
@@ -90,34 +97,54 @@ export default function LayoutPro({ t }: { t: Trader }) {
       <FaixaPrefill t={t} />
       <div className="min-h-0 flex-1">
         {estreito ? (
-          <PanelGroup direction="vertical" autoSaveId="mtmfunded-pro-estreito">
-            <Panel id="graficos" order={1} defaultSize={50} minSize={20}>
-              <MultiGrafico t={t} layout={layout === "4" ? "2v" : layout} principal={<GraficoConta t={t} ficha={simbolo} preencher />} />
-            </Panel>
-            {puxador(true)}
-            <Panel id="ticket" order={2} defaultSize={25} minSize={8} collapsible ref={ticketRef}>{lateralConteudo}</Panel>
-            {puxador(true)}
-            <Panel id="baixo" order={3} defaultSize={25} minSize={8}><PainelInferior t={t} denso={false} /></Panel>
-          </PanelGroup>
+          graficoVisivel ? (
+            <PanelGroup direction="vertical" autoSaveId="mtmfunded-pro-estreito">
+              <Panel id="graficos" order={1} defaultSize={50} minSize={20}>
+                {graficos(layout === "4" ? "2v" : layout)}
+              </Panel>
+              {puxador(true)}
+              <Panel id="ticket" order={2} defaultSize={25} minSize={8} collapsible ref={ticketRef}>{lateralConteudo}</Panel>
+              {puxador(true)}
+              <Panel id="baixo" order={3} defaultSize={25} minSize={8}><PainelInferior t={t} denso={false} /></Panel>
+            </PanelGroup>
+          ) : (
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="shrink-0">{graficos(layout === "4" ? "2v" : layout)}</div>
+              <div className="min-h-0 flex-1">
+                <PanelGroup direction="vertical" autoSaveId="mtmfunded-pro-estreito-sem-grafico">
+                  <Panel id="ticket" order={1} defaultSize={45} minSize={10} collapsible ref={ticketRef}>{lateralConteudo}</Panel>
+                  {puxador(true)}
+                  <Panel id="baixo" order={2} defaultSize={55} minSize={10}><PainelInferior t={t} denso={false} /></Panel>
+                </PanelGroup>
+              </div>
+            </div>
+          )
         ) : (
-          <PanelGroup direction="horizontal" autoSaveId="mtmfunded-pro-h">
-            <Panel id="lista" order={1} defaultSize={18} minSize={12} maxSize={30} collapsible collapsedSize={0}>
+          <PanelGroup direction="horizontal" autoSaveId={tablet ? "mtmfunded-pro-h-tablet" : "mtmfunded-pro-h"}>
+            <Panel id="lista" order={1} defaultSize={tablet ? 0 : 18} minSize={tablet ? 16 : 12} maxSize={tablet ? 34 : 30} collapsible collapsedSize={0}>
               <div className="h-full p-1"><FundedWatchlist precos={t.vivos} selecionado={simbolo.symbol} onSelecionar={t.selecionar} onVisiveis={t.setVisiveis} detalhe preencher /></div>
             </Panel>
             {puxador()}
-            <Panel id="centro" order={2} defaultSize={60} minSize={30}>
-              <PanelGroup direction="vertical" autoSaveId="mtmfunded-pro-v">
-                <Panel id="graficos" order={1} defaultSize={62} minSize={20}>
-                  <MultiGrafico t={t} layout={layout} principal={<GraficoConta t={t} ficha={simbolo} preencher />} />
-                </Panel>
-                {puxador(true)}
-                <Panel id="baixo" order={2} defaultSize={38} minSize={10} collapsible collapsedSize={4}>
-                  <PainelInferior t={t} />
-                </Panel>
-              </PanelGroup>
+            <Panel id="centro" order={2} defaultSize={tablet ? 63 : 60} minSize={30}>
+              {graficoVisivel ? (
+                <PanelGroup direction="vertical" autoSaveId="mtmfunded-pro-v">
+                  <Panel id="graficos" order={1} defaultSize={62} minSize={20}>
+                    {graficos(layout)}
+                  </Panel>
+                  {puxador(true)}
+                  <Panel id="baixo" order={2} defaultSize={38} minSize={10} collapsible collapsedSize={4}>
+                    <PainelInferior t={t} />
+                  </Panel>
+                </PanelGroup>
+              ) : (
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="shrink-0">{graficos(layout)}</div>
+                  <div className="min-h-0 flex-1 border-t border-[#2A2E39]"><PainelInferior t={t} /></div>
+                </div>
+              )}
             </Panel>
             {puxador()}
-            <Panel id="ticket" order={3} defaultSize={22} minSize={16} maxSize={36} collapsible collapsedSize={0} ref={ticketRef}>
+            <Panel id="ticket" order={3} defaultSize={tablet ? 37 : 22} minSize={tablet ? 28 : 16} maxSize={tablet ? 48 : 36} collapsible collapsedSize={0} ref={ticketRef}>
               {lateralConteudo}
             </Panel>
           </PanelGroup>

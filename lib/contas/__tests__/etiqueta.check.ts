@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { ETIQUETA_MAX, etiquetaDaLinha, nomeMostrado, normalizarEtiqueta, tabelaDaEtiqueta } from '../etiqueta'
+import { ETIQUETA_MAX, erroSemColunaEtiqueta, etiquetaDaLinha, lerPedidoEtiqueta, nomeMostrado, normalizarEtiqueta, tabelaDaEtiqueta } from '../etiqueta'
 
 /**
  * A etiqueta de conta (113): corte a 40, trim, vazio → null, sem `<`/`>`.
@@ -95,6 +95,38 @@ for (const mau of [
   42, {}, [`mt5:site:${U}`], `mt5:site:${U} `,
 ]) {
   assert.equal(tabelaDaEtiqueta(mau as unknown), null, `devia recusar ${JSON.stringify(mau)}`)
+}
+
+
+// ── o pedido do lápis (PATCH /api/contas/etiqueta): o que o seletor manda ─────────────────────
+{
+  const F = '11111111-2222-4333-8444-555555555555'
+  // Exactamente o corpo que components/funded/api.ts::gravarEtiqueta envia para uma MTM Funded…
+  const funded = lerPedidoEtiqueta(JSON.parse(JSON.stringify({ ref: `mtmfunded:${F}`, etiqueta: '  Conta   grande ' })))
+  assert.deepEqual(funded, { ok: true, tabela: 'mtm_trading_accounts', id: F, etiqueta: 'Conta grande' })
+  // …e para as reais (a ref do seletor é a própria ref da conta).
+  assert.deepEqual(lerPedidoEtiqueta({ ref: `mt5:site:${F}`, etiqueta: 'PU' }), { ok: true, tabela: 'mtmcopy_connections', id: F, etiqueta: 'PU' })
+  assert.deepEqual(lerPedidoEtiqueta({ ref: `tradelocker:auto:${F}`, etiqueta: 'TL' }), { ok: true, tabela: 'mtmauto_accounts', id: F, etiqueta: 'TL' })
+  assert.deepEqual(lerPedidoEtiqueta({ ref: `mt5:wt:${F}`, etiqueta: 'WT' }), { ok: true, tabela: 'webtrader_contas_mt5', id: F, etiqueta: 'WT' })
+  // Apagar: '' e null apagam; undefined (campo em falta) é recusado — não apaga por engano.
+  assert.deepEqual(lerPedidoEtiqueta({ ref: `mtmfunded:${F}`, etiqueta: '' }), { ok: true, tabela: 'mtm_trading_accounts', id: F, etiqueta: null })
+  assert.deepEqual(lerPedidoEtiqueta({ ref: `mtmfunded:${F}`, etiqueta: null }), { ok: true, tabela: 'mtm_trading_accounts', id: F, etiqueta: null })
+  const semCampo = lerPedidoEtiqueta({ ref: `mtmfunded:${F}` })
+  assert.equal(semCampo.ok, false)
+  if (!semCampo.ok) assert.equal(semCampo.status, 400)
+  assert.equal(lerPedidoEtiqueta({ ref: `mtmfunded:${F}`, etiqueta: 7 }).ok, false)
+  // Sessão TradeLocker do separador, lixo e corpos que não são objecto: 400, nunca uma excepção.
+  for (const corpo of [{ ref: 'tradelocker:sessao:3', etiqueta: 'x' }, { ref: 'x', etiqueta: 't' }, null, undefined, 'texto', 42, []]) {
+    const r = lerPedidoEtiqueta(corpo as unknown)
+    assert.equal(r.ok, false, `devia recusar ${JSON.stringify(corpo)}`)
+  }
+  // HTML não passa, nem pelo pedido.
+  assert.deepEqual(lerPedidoEtiqueta({ ref: `mtmfunded:${F}`, etiqueta: '<b>x</b>' }), { ok: true, tabela: 'mtm_trading_accounts', id: F, etiqueta: 'bx/b' })
+  // A coluna em falta (113 por aplicar) reconhece-se pelo código e pela mensagem.
+  assert.equal(erroSemColunaEtiqueta({ code: '42703', message: 'x' }), true)
+  assert.equal(erroSemColunaEtiqueta({ code: 'PGRST', message: 'column mtm_trading_accounts.etiqueta does not exist' }), true)
+  assert.equal(erroSemColunaEtiqueta({ code: '23505', message: 'duplicate' }), false)
+  assert.equal(erroSemColunaEtiqueta(null), false)
 }
 
 console.log('  ok  etiqueta de conta (113): corte a 40, trim, vazio→null, sem <>, ref→tabela')

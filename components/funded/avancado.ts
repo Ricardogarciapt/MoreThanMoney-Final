@@ -1,6 +1,7 @@
 "use client"
 
 import type { Direcao, MapaPrecos, Simbolo } from "@/lib/mtmfunded/simulado/matematica"
+import { arredAosDigitos } from "@/lib/webtrader/formato"
 import { distanciaEmPreco, validarGestao, type Gestao, type UnidadeDistancia } from "@/lib/mtmfunded/simulado/avancadas"
 
 /**
@@ -58,7 +59,7 @@ export function gestaoDoAvancado(
       const pct = numeroDe(t.pct)
       if (v == null || !(v > 0) || pct == null || !(pct > 0)) return { gestao: null, erro: `TP${i + 1}: indica ${a.tpsModo === "pips" ? "os pips" : "o preço"} e a %` }
       const preco = a.tpsModo === "pips" ? entrada + sinal * v * s.pip_size : v
-      pedido.tps.push({ preco: Number(preco.toFixed(s.digits)), pct, atingido: false })
+      pedido.tps.push({ preco: arredAosDigitos(preco, s.digits), pct, atingido: false })
     }
     algum = true
   }

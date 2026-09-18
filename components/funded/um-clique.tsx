@@ -93,6 +93,21 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
     setLigadoGuardado(ler(CHAVE_UM_CLIQUE(accountId)) === "1" && ler(CHAVE_UM_CLIQUE_ACEITE(accountId)) != null)
   }, [accountId])
   useEffect(() => { if (!aviso) return; const t = setTimeout(() => setAviso(null), 3500); return () => clearTimeout(t) }, [aviso])
+  // Esc na confirmação = Cancelar (e na janela do aviso, desistir de ligar).
+  useEffect(() => {
+    if (!confirmacao && !aAceitar) return
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      if (confirmacao) confirmacao.nao()
+      else setAAceitar(false)
+    }
+    window.addEventListener("keydown", tecla)
+    return () => window.removeEventListener("keydown", tecla)
+  }, [confirmacao, aAceitar])
+  // Sair da conta com uma confirmação aberta: a promessa de quem pediu não fica pendurada para sempre.
+  const confirmacaoRef = useRef(confirmacao)
+  confirmacaoRef.current = confirmacao
+  useEffect(() => () => { confirmacaoRef.current?.nao() }, [])
 
   // Investor nunca negoceia — o interruptor não tem efeito nenhum aí.
   const ligado = ligadoGuardado && !investor
@@ -221,8 +236,9 @@ export function InterruptorUmClique({ variante = "compacto" }: { variante?: "com
     return (
       <button
         type="button" onClick={alternar} role="switch" aria-checked={u.ligado}
+        aria-label="Negociação num clique"
         title={u.ligado ? "Negociação num clique LIGADA — carregar para desligar" : "Ligar a negociação num clique"}
-        className={`grid w-9 shrink-0 place-items-center rounded-xl border ${u.ligado ? "border-amber-400 bg-amber-400/15 text-amber-300" : "border-white/10 text-zinc-500 hover:text-zinc-300"}`}
+        className={`grid min-h-[28px] w-9 shrink-0 place-items-center rounded-xl border [@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:w-11 ${u.ligado ? "border-amber-400 bg-amber-400/15 text-amber-300" : "border-white/10 text-zinc-500 hover:text-zinc-300"}`}
       >
         <Zap className="h-4 w-4" fill={u.ligado ? "currentColor" : "none"} />
       </button>
@@ -232,7 +248,7 @@ export function InterruptorUmClique({ variante = "compacto" }: { variante?: "com
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-white"><Zap className="h-3.5 w-3.5 text-amber-300" /> Negociação num clique</p>
-        <button type="button" onClick={alternar} role="switch" aria-checked={u.ligado}
+        <button type="button" onClick={alternar} role="switch" aria-checked={u.ligado} aria-label="Negociação num clique"
           className={`relative h-5 w-9 rounded-full transition ${u.ligado ? "bg-amber-400" : "bg-white/15"}`}>
           <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${u.ligado ? "left-[18px]" : "left-0.5"}`} />
         </button>

@@ -105,3 +105,32 @@ export function tabelaDaEtiqueta(ref: unknown): { tabela: TabelaDeConta; id: str
   if (origem === 'wt' && plataforma === 'mt5') return { tabela: 'webtrader_contas_mt5', id }
   return null
 }
+
+// ── o pedido de gravação (PATCH /api/contas/etiqueta), sem base de dados ─────────────────────
+
+export type PedidoEtiqueta =
+  | { ok: true; tabela: TabelaDeConta; id: string; etiqueta: string | null }
+  | { ok: false; status: 400; erro: string }
+
+/**
+ * Valida o corpo do PATCH antes de tocar na base: a referência tem de apontar para uma das quatro
+ * tabelas, e a etiqueta tem de ser texto ou `null` (`undefined` NÃO apaga — quem quer apagar manda
+ * '' ou null). Devolve o texto já normalizado. Puro: a rota só junta a sessão e o UPDATE.
+ */
+export function lerPedidoEtiqueta(corpo: unknown): PedidoEtiqueta {
+  const c = (corpo && typeof corpo === 'object' ? corpo : {}) as Record<string, unknown>
+  const alvo = tabelaDaEtiqueta(c.ref)
+  if (!alvo) {
+    return { ok: false, status: 400, erro: 'Esta conta não guarda etiqueta — só as contas ligadas à tua conta MTM (as abertas com login+password neste separador não).' }
+  }
+  if (c.etiqueta !== null && typeof c.etiqueta !== 'string') {
+    return { ok: false, status: 400, erro: `Escreve a etiqueta (até ${ETIQUETA_MAX} caracteres) ou deixa em branco para a tirar.` }
+  }
+  return { ok: true, ...alvo, etiqueta: normalizarEtiqueta(c.etiqueta) }
+}
+
+/** O erro do PostgREST quer dizer «a coluna `etiqueta` não existe» (113 por aplicar)? */
+export function erroSemColunaEtiqueta(erro: { code?: string | null; message?: string | null } | null | undefined): boolean {
+  if (!erro) return false
+  return erro.code === '42703' || /column .*etiqueta.* does not exist/i.test(erro.message ?? '')
+}

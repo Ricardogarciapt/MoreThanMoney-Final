@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, type ReactNode } from "react"
+import { estadoEmFrase } from "@/lib/webtrader/textos"
 import { AlertTriangle, Eye } from "lucide-react"
 import type { MapaPrecos } from "@/lib/mtmfunded/simulado/matematica"
 import type { LimitesConta } from "@/lib/mtmfunded/simulado/ordens"
@@ -132,7 +133,7 @@ export function FaixaPrefill({ t }: { t: Trader }) {
         {p.origem === "ideia_mtm" ? "Ideia MTM" : "Alerta do scanner"}: <b>{t.simbolo?.symbol}</b> {p.direcao?.toUpperCase()}
         {p.sl ? ` · SL ${p.sl}` : ""}{p.tp ? ` · TP ${p.tp}` : ""} — confirma a conta e o volume no ticket.
       </span>
-      <button onClick={() => setFechada(true)} className="text-zinc-400" aria-label="fechar aviso">×</button>
+      <button type="button" onClick={() => setFechada(true)} className="-my-1.5 grid h-8 w-8 place-items-center text-zinc-400" aria-label="fechar aviso">×</button>
     </div>
   )
 }
@@ -147,7 +148,7 @@ export function AvisosConta({ t }: { t: Trader }) {
       )}
       {c.estado !== "ativa" && (
         <div className="flex items-center gap-1.5 bg-rose-500/10 px-3 py-1 text-[11.5px] text-rose-300">
-          <AlertTriangle className="h-3.5 w-3.5" /> Conta {c.estadoCurto} — só leitura{c.motivo ? `: ${String(c.motivo)}` : ""}.
+          <AlertTriangle className="h-3.5 w-3.5" /> Conta {estadoEmFrase(c.estadoCurto)} — só leitura{c.motivo ? `: ${String(c.motivo)}` : ""}.
         </div>
       )}
       {t.vivo.semPreco.length > 0 && <div className="px-3 py-0.5 text-[10.5px] text-amber-300">Sem preço para {t.vivo.semPreco.join(", ")} — o flutuante dessas posições conta 0.</div>}
