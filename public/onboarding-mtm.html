@@ -911,5 +911,33 @@ var initial = detectLang();
 applyLang(['pt','en','es','de','fr'].indexOf(initial) >= 0 ? initial : 'pt');
 
 </script>
+<script>
+/* App iOS (MTM System): o guia não fala de cripto — Apple 3.1.5(iii). Ver lib/ios-sem-cripto.ts.
+   O site e o Android ficam iguais; só a webview iOS (UA MTMNativeApp + iPhone/iPad) é limpa. */
+(function(){
+  var ua=navigator.userAgent||'';
+  if(!(/MTMNativeApp/i.test(ua)&&/iPhone|iPad|iPod|Macintosh/i.test(ua)&&!/Android/i.test(ua)))return;
+  var FORA=['s4.c1.i4','s7.c1.i2','s7.lwe.i1'];
+  var CAIXAS={'s6.c3.h':'.card','s6.fig':'figure'};
+  var TROCAS=[
+    [/,\s*(la\s+)?(cripto|crypto|krypto)\s*\(BTC, ETH, SOL…\)/gi,''],
+    [/\((cripto|crypto|krypto),\s*/gi,'('],
+    [/—\s*(cripto|crypto|krypto),\s*/gi,'— '],
+    [/\/(cripto|crypto|krypto)\//gi,'/']
+  ];
+  var CRIPTO=/cript|crypto|krypto|BTC|₿/i;
+  function limpar(){
+    FORA.forEach(function(k){document.querySelectorAll('[data-t="'+k+'"]').forEach(function(e){e.style.display='none';});});
+    Object.keys(CAIXAS).forEach(function(k){document.querySelectorAll('[data-t="'+k+'"]').forEach(function(e){var c=e.closest(CAIXAS[k]);(c||e).style.display='none';});});
+    document.querySelectorAll('[data-t]').forEach(function(e){
+      if(!CRIPTO.test(e.innerHTML))return;
+      var h=e.innerHTML;TROCAS.forEach(function(t){h=h.replace(t[0],t[1]);});
+      if(h!==e.innerHTML)e.innerHTML=h;
+    });
+  }
+  function iniciar(){limpar();try{new MutationObserver(function(){clearTimeout(window.__mtmLimpar);window.__mtmLimpar=setTimeout(limpar,30);}).observe(document.body,{childList:true,subtree:true,characterData:true});}catch(e){}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',iniciar);else iniciar();
+})();
+</script>
 </body>
 </html>

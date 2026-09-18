@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AlertTriangle, Info, Loader2, Search, X } from "lucide-react"
+import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import type { PlataformaWT, CapacidadesWT, ContaWT, NegocioWT, OrdemWT, PosicaoWT, SimboloWT } from "@/lib/webtrader/corretoras/tipos"
 import type { MapaPrecos } from "@/lib/mtmfunded/simulado/matematica"
 import FundedGrafico from "@/components/funded/funded-grafico"
@@ -50,7 +51,11 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   const [historico, setHistorico] = useState<NegocioWT[] | null>(null)
   const [aba, setAba] = useState<Aba>("posicoes")
   const [ficha, setFicha] = useState<SimboloFicha | null>(null)
-  const [symbol, setSymbol] = useState<string>(() => simboloInicial?.split(",")[0] || "XAUUSD")
+  // App iOS: nunca abre num símbolo cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
+  const [symbol, setSymbol] = useState<string>(() => {
+    const s = simboloInicial?.split(",")[0]
+    return (s && !(semCripto() && ehSimboloCripto(s)) ? s : "") || "XAUUSD"
+  })
   const [pedeAceite, setPedeAceite] = useState<null | { ok: () => void; nao: () => void }>(null)
   const intervalo = plataforma === "mt5" ? 5000 : 3000
 
@@ -262,7 +267,11 @@ function PesquisaSimbolo({ plataforma, contaRef, atual, onEscolher }: { platafor
     if (!aberta) return
     if (t.current) clearTimeout(t.current)
     t.current = setTimeout(async () => {
-      try { setLista((await pedirWT<{ simbolos: SimboloWT[] }>(plataforma, "simbolos", { conta: contaRef, query: { q } })).simbolos) } catch { setLista([]) }
+      try {
+        const r = (await pedirWT<{ simbolos: SimboloWT[] }>(plataforma, "simbolos", { conta: contaRef, query: { q } })).simbolos
+        // App iOS: a pesquisa na corretora não lista cripto (Apple 3.1.5(iii)).
+        setLista(semCripto() ? r.filter((x) => !ehSimboloCripto(x.symbol) && !ehSimboloCripto(x.simboloCorretora)) : r)
+      } catch { setLista([]) }
     }, 350)
   }, [q, aberta, plataforma, contaRef])
   return (

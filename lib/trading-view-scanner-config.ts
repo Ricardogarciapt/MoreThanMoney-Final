@@ -99,6 +99,8 @@ export type BuildScannerWidgetOptionsInput = {
   studies: string[]
   containerId: string
   userId?: string | null
+  /** App iOS: sem pesquisa de símbolos no gráfico (a pesquisa do TradingView lista cripto — Apple 3.1.5(iii)). */
+  semPesquisaSimbolo?: boolean
   /** scanner-access: dimensões explícitas (toolbar nativa dentro do iframe) */
   width?: number
   height?: number
@@ -118,14 +120,18 @@ export function buildTradingViewScannerOptions(input: BuildScannerWidgetOptionsI
       locale: "br",
       toolbar_bg: "#1E1E1E",
       enable_publishing: false,
-      allow_symbol_change: true,
+      allow_symbol_change: !input.semPesquisaSimbolo,
       hide_side_toolbar: false,
       hide_top_toolbar: false,
       withdateranges: true,
       container_id: input.containerId,
       studies: input.studies,
-      disabled_features: [...TV_VOLUME_DISABLED],
-      enabled_features: [...TV_MOBILE_ENABLED],
+      disabled_features: input.semPesquisaSimbolo
+        ? [...TV_VOLUME_DISABLED, "header_symbol_search", "symbol_search_hot_key"]
+        : [...TV_VOLUME_DISABLED],
+      enabled_features: input.semPesquisaSimbolo
+        ? TV_MOBILE_ENABLED.filter((f) => f !== "header_symbol_search" && f !== "symbol_search_hot_key")
+        : [...TV_MOBILE_ENABLED],
       loading_screen: { backgroundColor: "#1E1E1E", foregroundColor: "#f9b208" },
       overrides: {
         "mainSeriesProperties.showCountdown": true,

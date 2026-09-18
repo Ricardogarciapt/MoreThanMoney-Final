@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { semCripto } from "@/lib/ios-sem-cripto"
 import { Bell, X } from "lucide-react"
 
 /**
@@ -63,7 +64,8 @@ export default function AvisoNotificacoes({ onAbrirDefinicoes }: { onAbrirDefini
           {[
             ["⚡", "Sinais que podes aceitar num toque"],
             ["🔴", "Sessões ao vivo, quando começam"],
-            ["₿", "Oportunidades de DCA no portefólio"],
+            // App iOS: sem o ₿ (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
+            [semCripto() ? "📊" : "₿", "Oportunidades de DCA no portefólio"],
           ].map(([emoji, texto]) => (
             <li key={texto} className="flex items-start gap-2 text-[13px] text-gray-200">
               <span className="mt-0.5">{emoji}</span>

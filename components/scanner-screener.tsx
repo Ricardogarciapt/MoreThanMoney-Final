@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ZoomIn, ZoomOut, Minimize, BarChart3, Coins } from "lucide-react"
+import { semCripto } from "@/lib/ios-sem-cripto"
 
 type AssetCategoryKey = "crypto" | "indices"
 
@@ -33,7 +34,13 @@ interface ScannerScreenerProps {
 }
 
 export default function ScannerScreener({ mode = "desktop" }: ScannerScreenerProps) {
-  const [selectedCategory, setSelectedCategory] = useState<AssetCategoryKey>("crypto")
+  // App iOS: sem o mapa de bolhas cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
+  // Só monta no cliente (a app-mobile espera pelo `mounted`), por isso ler o UA aqui é seguro.
+  const [iosSemCripto] = useState(() => semCripto())
+  const categorias = (Object.keys(assetCategories) as AssetCategoryKey[]).filter(
+    (k) => !(iosSemCripto && k === "crypto"),
+  )
+  const [selectedCategory, setSelectedCategory] = useState<AssetCategoryKey>(() => (semCripto() ? "indices" : "crypto"))
   const [screenerZoom, setScreenerZoom] = useState(1)
   const [screenerPosition, setScreenerPosition] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
@@ -110,7 +117,7 @@ export default function ScannerScreener({ mode = "desktop" }: ScannerScreenerPro
   return (
     <div className="bg-gradient-to-br from-[#111111] to-[#050505] border border-[#D2A63C]/40 rounded-lg p-3 md:p-4 shadow-[0_0_25px_rgba(210,166,60,0.15)]">
       <div className="flex gap-2 overflow-x-auto pb-1 mb-3">
-        {(Object.keys(assetCategories) as AssetCategoryKey[]).map((key) => {
+        {categorias.map((key) => {
           const CatIcon = assetCategories[key].icon
           const isActive = selectedCategory === key
           return (

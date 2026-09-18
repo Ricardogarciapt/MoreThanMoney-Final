@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useId } from "react"
+import { semCripto } from "@/lib/ios-sem-cripto"
 import {
   ArrowRight,
   ArrowLeft,
@@ -323,6 +324,14 @@ const STEPS: TutorialStep[] = [
   },
 ]
 
+/** App iOS: os textos do tutorial não falam de cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts. */
+function semCriptoNoPasso(p: TutorialStep): TutorialStep {
+  if (!semCripto()) return p
+  const limpar = (t: string) =>
+    t.replace(/,\s*cripto\b/gi, "").replace(/\s+e\s+#Cripto\b/g, "").replace(/\bem cripto e ETFs\b/g, "em ETFs")
+  return { ...p, body: limpar(p.body), tips: p.tips?.map(limpar), hint: p.hint ? limpar(p.hint) : p.hint }
+}
+
 const QUICK_START = [
   "Activa push nas Definições",
   "Segue o Feed e o Chat diariamente",
@@ -350,7 +359,7 @@ export default function OnboardingTutorial({
   const [highlightRects, setHighlightRects] = useState<HighlightRect[]>([])
   const maskId = useId().replace(/:/g, "")
 
-  const current = STEPS[step]
+  const current = semCriptoNoPasso(STEPS[step])
   const isFirst = step === 0
   const isLast = step === STEPS.length - 1
   const progress = ((step + 1) / STEPS.length) * 100

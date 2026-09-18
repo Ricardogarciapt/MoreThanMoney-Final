@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { semCripto } from "@/lib/ios-sem-cripto"
 import { useTheme } from "next-themes"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
@@ -1080,7 +1081,8 @@ export default function SettingsMobile() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white font-medium">{meta.title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{meta.description}</p>
+                    {/* App iOS: sem «Cripto» na lista de canais (Apple 3.1.5(iii)). */}
+                    <p className="text-xs text-gray-500 mt-0.5">{semCripto() ? meta.description.replace(/,?\s*Cripto\b/, "") : meta.description}</p>
                   </div>
                   <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5 ${
                     enabled ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"

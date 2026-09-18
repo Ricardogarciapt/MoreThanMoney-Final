@@ -25,6 +25,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useT } from "@/components/i18n-provider"
 import { isNativeApp } from "@/hooks/use-capacitor"
+import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import { scannerOrder, scannerStudies, scannerLabels, type ScannerKey } from "@/lib/scanners/estudos"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -228,7 +229,11 @@ export default function ScannerMobile({
   const [widgetLoaded, setWidgetLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [selectedSymbol, setSelectedSymbol] = useState(externalSymbol || "OANDA:XAUUSD")
+  // App iOS: sem cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts. Este componente só monta
+  // no cliente (a app-mobile espera pelo `mounted`), por isso o UA já se lê no primeiro render.
+  const [iosSemCripto] = useState(() => semCripto())
+  const semCriptoNoIos = (s?: string) => (s && iosSemCripto && ehSimboloCripto(s) ? "OANDA:XAUUSD" : s)
+  const [selectedSymbol, setSelectedSymbol] = useState(semCriptoNoIos(externalSymbol) || "OANDA:XAUUSD")
   const [selectedInterval, setSelectedInterval] = useState(externalInterval || "15")
   const [selectedStudies, setSelectedStudies] = useState<ScannerKey[]>(() => {
     if (externalStudies?.length) return externalStudies
@@ -242,7 +247,7 @@ export default function ScannerMobile({
   })
 
   // Controlo externo (ex.: clique num alerta → símbolo/timeframe/scanner do sinal)
-  useEffect(() => { if (externalSymbol) setSelectedSymbol(externalSymbol) }, [externalSymbol])
+  useEffect(() => { if (externalSymbol) setSelectedSymbol(semCriptoNoIos(externalSymbol)!) }, [externalSymbol]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (externalInterval) setSelectedInterval(externalInterval) }, [externalInterval])
   useEffect(() => { if (externalStudies?.length) setSelectedStudies(externalStudies) }, [externalStudies])
   useEffect(() => { onSymbolChange?.(selectedSymbol) }, [selectedSymbol]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -692,6 +697,7 @@ export default function ScannerMobile({
           studies: studiesToApply,
           containerId: tvContainerId,
           userId: currentUserId,
+          semPesquisaSimbolo: iosSemCripto,
         })
       )
 
@@ -1029,7 +1035,7 @@ export default function ScannerMobile({
       >
         {/* Top Row - Category Selection */}
         <div className={`flex gap-2 pb-1 ${isDesktop ? "flex-wrap overflow-visible" : "overflow-x-auto"}`}>
-          {Object.entries(assetCategories).map(([key, category]) => {
+          {Object.entries(assetCategories).filter(([key]) => !(iosSemCripto && key === "crypto")).map(([key, category]) => {
             const Icon = category.icon
             const isSelected = selectedCategory === key
             

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useId, useRef, useEffect, DragEvent } from "react"
+import { semCripto } from "@/lib/ios-sem-cripto"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -116,7 +117,9 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
   const imgInputId = useId()
 
   const [method, setMethod] = useState<Method>("manual")
-  const [portfolioType, setPortfolioType] = useState<PortfolioType>("crypto")
+  // App iOS: sem a opção cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
+  const [iosSemCripto] = useState(() => semCripto())
+  const [portfolioType, setPortfolioType] = useState<PortfolioType>(() => (semCripto() ? "etf" : "crypto"))
   const [rows, setRows] = useState<ManualRow[]>(() => [newRow(), newRow(), newRow()])
   const [csvText, setCsvText] = useState("")
   const [csvName, setCsvName] = useState<string | null>(null)
@@ -434,7 +437,7 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
         </div>
 
         <div className="flex gap-1.5">
-          {(["crypto", "etf", "mixed"] as const).map((t) => (
+          {(iosSemCripto ? (["etf"] as const) : (["crypto", "etf", "mixed"] as const)).map((t) => (
             <button
               key={t}
               type="button"

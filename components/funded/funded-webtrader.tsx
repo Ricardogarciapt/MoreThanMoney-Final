@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { semCripto, ehSimboloCripto, SIMBOLO_SEM_CRIPTO } from "@/lib/ios-sem-cripto"
 import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
 import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2, Pencil, Check } from "lucide-react"
@@ -171,6 +172,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     const dir = sp.get("dir")?.toLowerCase()
     const n = (v: string | null) => { const x = Number(v); return v && Number.isFinite(x) && x > 0 ? x : null }
     if (!sp.get("symbol") && !dir) return null
+    // App iOS: um «Negociar» num par cripto não traz direção/SL/TP (abre no ouro — Apple 3.1.5(iii)).
+    if (semCripto() && ehSimboloCripto(sp.get("symbol"))) return null
     return {
       direcao: dir === "buy" || dir === "sell" ? dir : undefined,
       sl: n(sp.get("sl")), tp: n(sp.get("tp")),
@@ -180,6 +183,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   }, [sp])
   const simboloInicial = useMemo(() => {
     const s = sp.get("symbol")
+    // App iOS: ?symbol= cripto cai para o ouro (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
+    if (s && semCripto() && ehSimboloCripto(s)) return SIMBOLO_SEM_CRIPTO
     return s ? candidatosDeTicker(s).join(",") : null
   }, [sp])
   // Deep link (scanner/ideia): a ficha, o primeiro preço e as velas do símbolo do link pedem-se no
