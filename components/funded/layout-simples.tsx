@@ -219,10 +219,9 @@ function Conteudo({ t }: { t: Trader }) {
 
   const gavetaEl = (
       /* A gaveta: pega (arrasta-se) + separadores; o conteúdo desliza para o lado */
-      <div
-        className={`${cheia ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} ${aoLado ? "border-l" : "border-t"} border-[#2A2E39] bg-[#1E222D]`}
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-      >
+      // Sem safe-area aqui: quem está na borda do ecrã já a reserva (o <main> do /webtrader, a barra
+      // da app-mobile) — com as duas, o iPhone perdia ~34 px por baixo dos separadores.
+      <div className={`${cheia ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} ${aoLado ? "border-l" : "border-t"} border-[#2A2E39] bg-[#1E222D]`}>
         {!cheia && <PegaGaveta gav={gav} />}
         <div role="tablist" className="flex shrink-0">
           {SEPARADORES.map((nome, i) => {

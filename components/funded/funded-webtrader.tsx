@@ -213,15 +213,21 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   }
   const ativaReal = ehRefReal(ativa)
   const plataformaAtiva = ativa ? plataformaDaRef(ativa) : null
-  // A altura do trader: a app própria usa o ecrã todo menos a barra; embutido na app-mobile há a navegação dela.
-  const altura = contexto === "app"
-    ? "calc(100dvh - 58px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))"
-    : "calc(100dvh - 200px)"
+  // A altura do trader. Na app própria (/webtrader) o ecrã é uma coluna com a altura exacta do ecrã
+  // (menos as safe areas, que o <main> já reserva): a barra e os avisos ficam com o que precisam e o
+  // trader com o RESTO («100%» do espaço que sobra) — antes era 100dvh − 58 px à mão, que sobrava
+  // 18 px no tablet/secretária (sem a linha do aviso) e cortava quando aparecia um erro.
+  // Embutido na app-mobile há a navegação dela à volta.
+  const app = contexto === "app"
+  const altura = app ? "100%" : "calc(100dvh - 200px)"
 
   return (
-    <div className={`mx-auto text-white ${emTrader && modo === "pro" ? "max-w-none" : "max-w-6xl"}`}>
+    <div
+      className={`mx-auto text-white ${emTrader && modo === "pro" ? "max-w-none" : "max-w-6xl"} ${app ? "flex flex-col" : ""}`}
+      style={app ? { height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))" } : undefined}
+    >
       {/* A barra: marca, conta, modo. O aviso de conta simulada fica SEMPRE à vista (spec §1). */}
-      <div className="flex items-center gap-2 border-b border-white/10 bg-[#0d0f15] px-2 py-1.5">
+      <div className="flex shrink-0 items-center gap-2 border-b border-white/10 bg-[#0d0f15] px-2 py-1.5">
         {contexto === "app" && <img src="/icon-192x192.png" alt="MTM" className="h-6 w-6 shrink-0 rounded" />}
         {todas.length > 0 && (
           <div className="relative min-w-0">
@@ -316,17 +322,18 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
         </div>
       </div>
       {emTrader && ativaReal ? (
-        <p className="flex items-center gap-1 bg-rose-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-rose-300 md:hidden">
+        <p className="flex shrink-0 items-center gap-1 bg-rose-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-rose-300 md:hidden">
           <ShieldAlert className="h-3 w-3 shrink-0" /> Conta REAL · ordens executadas na tua corretora
         </p>
       ) : !atual ? null : (
-        <p className={`flex items-center gap-1 px-2 py-0.5 text-[10.5px] md:hidden ${avisoReal(atual?.aviso) ? "bg-emerald-500/10 font-semibold text-emerald-300" : "bg-amber-500/10 text-amber-200"}`}>
+        <p className={`flex shrink-0 items-center gap-1 px-2 py-0.5 text-[10.5px] md:hidden ${avisoReal(atual?.aviso) ? "bg-emerald-500/10 font-semibold text-emerald-300" : "bg-amber-500/10 text-amber-200"}`}>
           <ShieldAlert className="h-3 w-3 shrink-0" /> {t(chaveDoAviso(atual?.aviso, true))}
         </p>
       )}
 
-      {erro && <p className="px-2 py-1 text-[12px] text-rose-300">{erro}</p>}
+      {erro && <p className="shrink-0 px-2 py-1 text-[12px] text-rose-300">{erro}</p>}
 
+      <div className={app ? "flex min-h-0 flex-1 flex-col overflow-y-auto" : undefined}>
       {ecraLogin ? (
         <EntrarWebtrader
           compraPermitida={compraPermitida}
@@ -371,6 +378,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
       ) : ativa ? (
         <FundedTrader key={ativa} accountId={ativa} prefill={prefill} simboloInicial={simboloInicial} onSimbolo={onSimbolo} altura={altura} />
       ) : null}
+      </div>
     </div>
   )
 }
