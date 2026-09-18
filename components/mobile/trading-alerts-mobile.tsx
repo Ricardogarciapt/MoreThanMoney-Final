@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import { TERMINAL_ASSETS, type TerminalAssetType } from "@/lib/mtm-terminal-assets"
+import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import {
   Bell,
   BellRing,
@@ -187,6 +188,15 @@ const ASSET_CLASSES: { key: TerminalAssetType; label: string }[] = [
   { key: "crypto", label: "Cripto" },
   { key: "stock", label: "Ações" },
 ]
+
+/**
+ * App iOS: os MTM Alerts não mostram alertas cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
+ * Filtra-se aqui, na interface; a rota /api/mtm-alerts fica igual para o site e o Android.
+ */
+const alertaCripto = (a: { ticker?: string | null; tvSymbol?: string | null; crypto?: unknown }) =>
+  a.crypto != null || ehSimboloCripto(a.ticker) || ehSimboloCripto(a.tvSymbol)
+const semAlertasCripto = <T extends { ticker?: string | null; tvSymbol?: string | null; crypto?: unknown }>(lista: T[]): T[] =>
+  semCripto() ? lista.filter((a) => !alertaCripto(a)) : lista
 
 const DIR = {
   buy: { label: "COMPRA", cls: "border-green-500/40 bg-green-500/15 text-green-400", Icon: TrendingUp },
@@ -577,7 +587,7 @@ export default function TradingAlertsMobile() {
     try {
       const res = await fetch("/api/mtm-alerts?limit=40", { credentials: "include", cache: "no-store", headers: await authHeaders() })
       const data = await res.json()
-      setAlerts(data.alerts || [])
+      setAlerts(semAlertasCripto(data.alerts || []))
     } catch {
       setAlerts([])
     } finally {
@@ -603,7 +613,7 @@ export default function TradingAlertsMobile() {
       try {
         const res = await fetch(`/api/mtm-alerts?id=${encodeURIComponent(sigId)}`, { credentials: "include", cache: "no-store", headers: await authHeaders() })
         const data = await res.json()
-        if (!cancelled && data.alerts?.[0]) setFocusAlert(data.alerts[0] as MtmAlert)
+        if (!cancelled && data.alerts?.[0] && semAlertasCripto([data.alerts[0] as MtmAlert]).length) setFocusAlert(data.alerts[0] as MtmAlert)
       } catch {
         /* ignora */
       }
@@ -775,8 +785,8 @@ export default function TradingAlertsMobile() {
               Ativos ({sub.symbols.length || "todos"})
             </p>
             <div className="space-y-1.5">
-              {ASSET_CLASSES.map((cls) => {
-                const assets = TERMINAL_ASSETS.filter((a) => a.type === cls.key)
+              {ASSET_CLASSES.filter((cls) => !(cls.key === "crypto" && semCripto())).map((cls) => {
+                const assets = TERMINAL_ASSETS.filter((a) => a.type === cls.key && !(semCripto() && ehSimboloCripto(a.symbol)))
                 if (assets.length === 0) return null
                 const selected = assets.filter((a) => sub.symbols.includes(a.symbol)).length
                 return (

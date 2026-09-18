@@ -1,6 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
+import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { type MapaPrecos, estadoDaConta } from "@/lib/mtmfunded/simulado/matematica"
@@ -116,10 +117,17 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
   // WebTrader (pre-carga.ts) enquanto as contas carregavam — aqui apanha-se a mesma promessa.
   useEffect(() => {
     let vivo = true
-    const alvo = simboloInicial || "XAUUSD"
+    // App iOS: nunca abre num símbolo cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
+    const iosSemCripto = semCripto()
+    const alvo = (iosSemCripto && simboloInicial?.split(",").some((c) => ehSimboloCripto(c)) ? null : simboloInicial) || "XAUUSD"
     // O link pode trazer vários candidatos (OANDA:XAUUSD → XAUUSD, …): vale o primeiro que existe.
-    fichaDe(alvo).then((escolhido) => {
+    fichaDe(alvo).then(async (achado) => {
       if (!vivo) return
+      let escolhido = achado
+      if (escolhido && iosSemCripto && (escolhido.classe === "cripto" || ehSimboloCripto(escolhido.symbol))) {
+        escolhido = await fichaDe("XAUUSD")
+        if (!vivo) return
+      }
       if (escolhido) { setSimbolo(escolhido); setVolume(escolhido.volume_min); setFichas((f) => ({ ...f, [escolhido.symbol]: escolhido })) }
       else if (simboloInicial) setErro(`O símbolo ${simboloInicial.split(",")[0]} não existe no MTM Funded.`)
     })

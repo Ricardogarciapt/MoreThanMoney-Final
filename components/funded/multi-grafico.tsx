@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Loader2, Maximize2 } from "lucide-react"
 import type { SimboloFicha } from "./api"
 import { lerFavoritos } from "./funded-watchlist"
+import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import { GraficoConta, ProvedorRascunho, type Trader } from "./trader-contexto"
 import type { Layout } from "./atalhos"
 
@@ -19,11 +20,25 @@ import type { Layout } from "./atalhos"
 
 const CHAVE_CELULAS = "mtmfunded_pro_celulas"
 const PADRAO = ["EURUSD", "US30", "BTCUSD"]
+/** App iOS: nenhuma célula em cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts. */
+const SUBSTITUTOS = ["GBPUSD", "NAS100", "USDJPY"]
+const semCriptoNasCelulas = (v: string[]) => {
+  if (!semCripto()) return v
+  let k = 0
+  return v.map((c) => {
+    if (!ehSimboloCripto(c)) return c
+    while (k < SUBSTITUTOS.length - 1 && v.includes(SUBSTITUTOS[k])) k++
+    return SUBSTITUTOS[k++] ?? "XAUUSD"
+  })
+}
 
 export default function MultiGrafico({ t, layout, principal }: { t: Trader; layout: Layout; principal: React.ReactNode }) {
-  const [celulas, setCelulas] = useState<string[]>(PADRAO)
+  const [celulas, setCelulas] = useState<string[]>(() => semCriptoNasCelulas(PADRAO))
   useEffect(() => {
-    try { const v = JSON.parse(localStorage.getItem(CHAVE_CELULAS) || "null"); if (Array.isArray(v) && v.length === 3) setCelulas(v) } catch { /* ok */ }
+    try {
+      const v = JSON.parse(localStorage.getItem(CHAVE_CELULAS) || "null")
+      setCelulas(semCriptoNasCelulas(Array.isArray(v) && v.length === 3 ? v : PADRAO))
+    } catch { setCelulas(semCriptoNasCelulas(PADRAO)) }
   }, [])
   const n = layout === "1" ? 0 : layout === "4" ? 3 : 1
   const visiveis = useMemo(() => celulas.slice(0, n), [celulas, n])
@@ -65,6 +80,7 @@ function Celula({ t, symbol, indice, onMudar, onPromover }: { t: Trader; symbol:
   }, [symbol]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const opcoes = [...new Set([symbol, ...favoritos, ...t.dados.posicoes.map((p) => String(p.symbol))])]
+    .filter((o) => !semCripto() || !ehSimboloCripto(o))
   return (
     <div className="flex min-h-0 min-w-0 flex-col">
       <div className="flex shrink-0 items-center gap-1 pb-0.5">

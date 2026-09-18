@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import { Loader2 } from "lucide-react"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
 import { usd } from "./api"
@@ -93,7 +94,9 @@ function criarDatafeed(precoRef: React.MutableRefObject<PrecoVivo | undefined>) 
     async searchSymbols(texto: string, _bolsa: string, _tipo: string, onResult: (r: any[]) => void) {
       try {
         const d = await fetch(`/api/mtmfunded/simulado/precos?q=${encodeURIComponent(texto)}&porPagina=30`).then((r) => r.json())
-        onResult((d.simbolos ?? []).map((s: SimboloFicha) => ({
+        // App iOS: a pesquisa do gráfico não devolve cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
+        const semCriptoIos = semCripto()
+        onResult((d.simbolos ?? []).filter((s: SimboloFicha) => !semCriptoIos || (s.classe !== "cripto" && !ehSimboloCripto(s.symbol))).map((s: SimboloFicha) => ({
           symbol: s.symbol, full_name: s.symbol, description: s.nome ?? s.symbol,
           exchange: "MTM Funded", ticker: s.symbol, type: TIPO_TV[s.classe] ?? "cfd",
         })))

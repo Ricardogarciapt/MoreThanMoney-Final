@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { supabase } from "@/lib/supabase"
 import { getAccessToken } from "@/lib/auth-token"
+import { semCripto } from "@/lib/ios-sem-cripto"
 import Image from "next/image"
 import {
   TrendingUp,
@@ -267,7 +268,8 @@ export default function PortfolioMobile() {
       // Buscar dados do portfólio MTM (já inclui preços atualizados da API)
       // Buscar preços CoinGecko em paralelo para máxima velocidade
       const [portfolioResponse, pricesResponse] = await Promise.all([
-        fetch('/api/portfolio/mtm?type=all'),
+        // App iOS: só a parte ETF do portefólio MTM (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
+        fetch(semCripto() ? '/api/portfolio/mtm?type=etf' : '/api/portfolio/mtm?type=all'),
         // Preparar symbols para buscar preços em paralelo
         (async () => {
           // Pequeno delay para garantir que temos os symbols após primeiro fetch
@@ -285,7 +287,8 @@ export default function PortfolioMobile() {
         })
         
         // Combinar crypto e ETF assets
-        const cryptoAssets = (result.data.crypto?.assets || []).map((asset: any) => {
+        const fonteCripto: any = semCripto() ? [] : (result.data.crypto?.assets || [])
+        const cryptoAssets = fonteCripto.map((asset: any) => {
           // Calcular performance real baseada em preços atuais
           const entryPrice = asset.entry_price || asset.current_price || 0
           const currentPrice = asset.current_price || entryPrice
@@ -1183,7 +1186,7 @@ www.morethanmoney.com`
                         <div>
                           <Label>{t("portfolio.symbol")}</Label>
                           <Input
-                            placeholder={t("portfolio.symbolPlaceholder")}
+                            placeholder={semCripto() ? "Ex: SPY" : t("portfolio.symbolPlaceholder")}
                             value={newAsset.symbol}
                             onChange={(e) => setNewAsset({ ...newAsset, symbol: e.target.value })}
                             className="bg-gray-800 border-gray-700 text-white"
@@ -1192,7 +1195,7 @@ www.morethanmoney.com`
                         <div>
                           <Label>{t("portfolio.name")}</Label>
                           <Input
-                            placeholder={t("portfolio.namePlaceholder")}
+                            placeholder={semCripto() ? "Ex: S&P 500" : t("portfolio.namePlaceholder")}
                             value={newAsset.name}
                             onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
                             className="bg-gray-800 border-gray-700 text-white"

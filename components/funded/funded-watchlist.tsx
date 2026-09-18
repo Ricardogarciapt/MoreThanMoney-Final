@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Search, Star, Loader2 } from "lucide-react"
 import { type SimboloFicha, type PrecoVivo, px, NOME_CLASSE } from "./api"
+import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
+
+/** App iOS: sem cripto na lista, na pesquisa nem nas classes (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts. */
+const simboloVisivel = (s: { symbol: string; classe?: string | null }) =>
+  !semCripto() || (s.classe !== "cripto" && !ehSimboloCripto(s.symbol))
+const classeVisivel = (c: string) => !semCripto() || c !== "cripto"
 
 /**
  * A LISTA DE SÍMBOLOS — pesquisa, classes e favoritos.
@@ -20,9 +26,10 @@ const FAV_INICIAIS = ["XAUUSD", "EURUSD", "GBPUSD", "US30", "NAS100", "BTCUSD"]
 export function lerFavoritos(): string[] {
   try {
     const f = JSON.parse(localStorage.getItem(CHAVE_FAV) || "null")
-    return Array.isArray(f) ? f : FAV_INICIAIS
+    const lista: string[] = Array.isArray(f) ? f : FAV_INICIAIS
+    return semCripto() ? lista.filter((x) => !ehSimboloCripto(x)) : lista
   } catch {
-    return FAV_INICIAIS
+    return semCripto() ? FAV_INICIAIS.filter((x) => !ehSimboloCripto(x)) : FAV_INICIAIS
   }
 }
 
@@ -60,22 +67,23 @@ export default function FundedWatchlist(props: {
           if (favs.length) {
             const r = await fetch(`/api/mtmfunded/simulado/precos?symbols=${favs.join(",")}&specs=1`)
             const d = await r.json()
-            simbolos = favs.map((f) => (d.simbolos ?? []).find((x: SimboloFicha) => x.symbol === f)).filter(Boolean)
+            simbolos = favs.map((f) => (d.simbolos ?? []).find((x: SimboloFicha) => x.symbol === f)).filter(Boolean).filter(simboloVisivel)
             tot = simbolos.length
           }
           if (!classes.length) {
             const r2 = await fetch(`/api/mtmfunded/simulado/precos?porPagina=1`)
             const d2 = await r2.json()
-            if (id === pedidoRef.current) setClasses(d2.classes ?? [])
+            if (id === pedidoRef.current) setClasses((d2.classes ?? []).filter(classeVisivel))
           }
         } else {
           const params = new URLSearchParams({ q, pagina: String(pagina), porPagina: "40" })
           if (classe !== "fav" && classe !== "todas") params.set("classe", classe)
           const r = await fetch(`/api/mtmfunded/simulado/precos?${params}`)
           const d = await r.json()
-          simbolos = pagina > 0 ? [...lista, ...(d.simbolos ?? [])] : (d.simbolos ?? [])
+          const novos: SimboloFicha[] = (d.simbolos ?? []).filter(simboloVisivel)
+          simbolos = pagina > 0 ? [...lista, ...novos] : novos
           tot = d.total ?? 0
-          if (d.classes) setClasses(d.classes)
+          if (d.classes) setClasses(d.classes.filter(classeVisivel))
         }
         if (id !== pedidoRef.current) return
         setLista(simbolos)
