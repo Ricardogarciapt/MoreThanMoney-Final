@@ -55,7 +55,7 @@ export default function SeccaoContas() {
         <Azulejo rotulo="Com problema" valor={graves} tom={graves ? "grave" : "ok"} onClick={() => setProblema("1")} />
         <Azulejo rotulo="MetaApi inexistente" valor={todas.filter((c) => c.metaapi.inexistente).length} tom={todas.some((c) => c.metaapi.inexistente) ? "aviso" : "ok"} onClick={() => setProblema("inexistente")} />
         <Azulejo rotulo="Acima da quota" valor={todas.filter((c) => c.quota.acima).length} tom={todas.some((c) => c.quota.acima) ? "aviso" : "neutro"} onClick={() => setProblema("quota")} />
-        <Azulejo rotulo="MTM Funded" valor={todas.filter((c) => c.plataforma === "mtmfunded").length} sub={`${todas.filter((c) => c.categoria === "casa").length} da casa`} />
+        <Azulejo rotulo="MTM Funded" valor={todas.filter((c) => c.plataforma === "mtmfunded").length} sub={`${todas.filter((c) => c.categoria === "casa").length} da casa · ${todas.filter((c) => c.mestreDe).length} mestres de estratégia`} />
       </div>
 
       <Painel titulo="Todas as contas" sub="T2T/site, MTM Auto, WebTrader e MTM Funded — estado guardado na base, sem chamadas à MetaApi. Clica para abrir a gaveta com acções." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>

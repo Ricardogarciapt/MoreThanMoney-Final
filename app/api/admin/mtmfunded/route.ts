@@ -94,9 +94,15 @@ export async function GET(request: NextRequest) {
       .select('id, account_id, estado, erro, tentativas, created_at')
       .in('estado', ['em_fila', 'reclamado', 'erro'])
 
+    // As contas que são MESTRES de estratégia (116): contas SIM da casa que o motor copia para os
+    // clientes. O painel mostra-as com o emblema «Mestre · <estratégia>» e tira-as dos «Clientes».
+    const { lerMestresPorConta } = await import('@/lib/mestres/servidor/painel-leitura')
+    const mestres = await lerMestresPorConta().catch(() => new Map())
+
     return NextResponse.json({
       contas: data.map((c) => ({
         ...c,
+        mestre: mestres.get(String(c.id)) ?? null,
         dono: c.user_id ? nomes.get(c.user_id as string) ?? null : null,
         // A password NUNCA sai daqui. O admin vê que ela existe, não qual é: um painel que
         // a mostra é um painel que a deixa num screenshot, num ecrã partilhado, num print.
@@ -285,6 +291,16 @@ export async function GET(request: NextRequest) {
   const { count: contasSimuladas } = await db
     .from('mtm_trading_accounts').select('id', { count: 'exact', head: true }).eq('motor', 'sim')
 
+  // Contas ACTIVAS de clientes: sem as da casa (conta_casa / conta_real_casa, 109) nem as mestres de
+  // estratégia (116) — essas não são clientes e inflacionavam o cartão. Tolerante a colunas em falta.
+  const { lerMestresPorConta } = await import('@/lib/mestres/servidor/painel-leitura')
+  const mestres = await lerMestresPorConta().catch(() => new Map())
+  const idsMestres = [...mestres.keys()]
+  const { data: ativasLinhas, error: eAtivas } = await db
+    .from('mtm_trading_accounts').select('id, conta_casa, conta_real_casa').eq('estado', 'ativa').limit(5000)
+  const clientesAtivas = eAtivas ? null : (ativasLinhas ?? []).filter((c) => c.conta_casa !== true && c.conta_real_casa !== true && !idsMestres.includes(String(c.id))).length
+  const casaAtivas = eAtivas ? null : (ativasLinhas ?? []).filter((c) => (c.conta_casa === true || c.conta_real_casa === true) && !idsMestres.includes(String(c.id))).length
+
   return NextResponse.json({
     config,
     simulado: { ...simulado, contas: contasSimuladas ?? 0 },
@@ -294,6 +310,9 @@ export async function GET(request: NextRequest) {
       porEmitir: await contar('mtm_trading_accounts', 'estado', 'pedida'),
       ativas: await contar('mtm_trading_accounts', 'estado', 'ativa'),
       quebradas: await contar('mtm_trading_accounts', 'estado', 'quebrada'),
+      clientesAtivas,
+      casaAtivas,
+      mestres: [...mestres.entries()].map(([id, m]) => ({ id, ...m })),
     },
     fila: {
       emFila: await contar('mtm_account_requests', 'estado', 'em_fila'),

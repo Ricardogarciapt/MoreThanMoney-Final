@@ -125,6 +125,8 @@ export default function ContaModal({ contaId, aoFechar, aoMudar }: {
               <span className={`rounded px-1.5 py-0.5 text-[10px] ${c.motor === 'sim' ? 'bg-[#D2A63C]/15 text-[#D2A63C]' : 'bg-blue-500/15 text-blue-300'}`}>{c.motor === 'sim' ? 'MTM (sim)' : 'MT5'}</span>
               {c.analise && <span className="rounded bg-purple-500/15 px-1.5 py-0.5 text-[10px] text-purple-300">análise</span>}
               {c.contaReal && <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">auditoria</span>}
+              {c.mestre && <span className="rounded bg-[#D2A63C]/20 px-1.5 py-0.5 text-[10px] font-semibold text-[#E9C46A]" title={`Conta SIM da casa: o motor das mestres copia-a para os clientes (${c.mestre.modo}). Não é conta de cliente.`}>{c.mestre.rotulo}</span>}
+              {c.etiquetaDoDono && <span className="rounded border border-[#D2A63C]/30 px-1.5 py-0.5 text-[10px] text-[#E9C46A]" title="etiqueta do dono da conta">{c.etiquetaDoDono}</span>}
             </>
           )}
           <div className="ml-auto flex items-center gap-1">

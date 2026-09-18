@@ -185,10 +185,17 @@ export async function GET(request: NextRequest, { params }: Ctx) {
   const limpar = (linhas: Array<Record<string, unknown>> | null) =>
     (linhas ?? []).map((l) => Object.fromEntries(Object.entries(l).filter(([k]) => !/password|token|secret|cifrad/i.test(k))))
 
+  // 116 — esta conta é a MESTRE de uma estratégia do motor das mestres? (emblema «Mestre · Sensei»)
+  const { lerMestresPorConta } = await import('@/lib/mestres/servidor/painel-leitura')
+  const mestre = (await lerMestresPorConta().catch(() => new Map())).get(id) ?? null
+
   return NextResponse.json({
     conta: {
       ...SEM_PASSWORDS(conta),
+      // `etiqueta` aqui é o TIPO curto (F1/F2/Funded…); a etiqueta que o dono escreveu (113) vai à parte.
       etiqueta: tipoCurto(conta.tipo, m),
+      etiquetaDoDono: typeof conta.etiqueta === 'string' && conta.etiqueta ? conta.etiqueta : null,
+      mestre,
       estadoCurto: estadoCurto(conta.estado, m, (conta.pausada_em as string | null) ?? null),
       analise,
       // 109 — conta real da casa (a leitura é `select('*')`: sem a migração vem false).

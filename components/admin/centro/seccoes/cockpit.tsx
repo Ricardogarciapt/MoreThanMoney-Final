@@ -6,6 +6,7 @@ import type { cockpit } from "@/lib/admin-centro/servidor/cockpit"
 import { CONFIRMACOES, tomIdade, type AcaoRunbook, type Alerta } from "@/lib/admin-centro/regras"
 import { useCentroCtx } from "../contexto"
 import MotorRealSombra from "../motor-real-sombra"
+import MotorMestresCentro from "../motor-mestres"
 import {
   Aviso, Azulejo, BotaoLer, Botao, Faixa, Painel, Pilula, Sparkline, Tabela, Vazio, curto, fmtIdade, fmtMs, fmtNum, fmtQuando,
   idadeDe, pedirCentro, pedirPalavra, td, th, useCentro,
@@ -50,7 +51,8 @@ export default function SeccaoCockpit() {
         <Pilula tom={graves ? "grave" : c.alertas.length ? "aviso" : "ok"} vivo>{graves ? `${graves} grave(s)` : c.alertas.length ? `${c.alertas.length} aviso(s)` : "sistema nominal"}</Pilula>
         <Pilula tom={c.supabase.latenciaMs == null ? "grave" : c.supabase.latenciaMs > 800 ? "aviso" : "ok"}>Supabase {fmtMs(c.supabase.latenciaMs)}</Pilula>
         <Pilula tom={quotaActiva ? "aviso" : "ok"}>MetaApi {quotaActiva ? `travão ${fmtIdade(Math.round((quotaAte - Date.now()) / 1000))}` : "sem travão"}</Pilula>
-        <Pilula tom={c.copia.live ? "grave" : c.copia.motorLigado ? "info" : "neutro"}>cópia {c.copia.live ? "LIVE" : c.copia.motorLigado ? "sombra" : "desligada"}</Pilula>
+        <Pilula tom={c.copia.live ? "grave" : c.copia.motorLigado ? "info" : "neutro"} title="Cópia entre contas (rotas conta → conta, 078)">cópia conta→conta {c.copia.live ? "LIVE" : c.copia.motorLigado ? "sombra" : "desligada"}</Pilula>
+        {c.mestres && <Pilula tom={c.mestres.estado === "kill" || c.mestres.estado === "sem-pulso" ? "grave" : c.mestres.estado === "live" ? "ok" : c.mestres.estado === "sombra" ? "info" : "neutro"}>mestres {c.mestres.estado === "kill" ? "KILL" : c.mestres.estado === "sem-pulso" ? "sem batimento" : c.mestres.estado}</Pilula>}
         <div className="ml-auto flex items-center gap-2">
           <Botao onClick={() => correr({ tipo: "pausar_monitores", minutos: 10 }, undefined, "pausa-topo")} disabled={Boolean(aCorrer)} title="Travão global de leituras de fundo (as ordens nunca param)">
             <Clock className="h-3 w-3" /> Pausar monitores 10 min
@@ -173,6 +175,8 @@ export default function SeccaoCockpit() {
           </div>
         </Painel>
       </div>
+
+      <MotorMestresCentro versao={ctx.versao} />
 
       <MotorRealSombra versao={ctx.versao} />
 

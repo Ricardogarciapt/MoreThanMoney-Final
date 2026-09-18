@@ -31,6 +31,7 @@ import CopiaEntreContas from "@/components/admin/mtmauto-copia/copia-entre-conta
 import EventosCopia from "@/components/admin/mtmauto-copia/eventos"
 import SincronizacaoCopia from "@/components/admin/mtmauto-copia/sincronizacao"
 import ProvidersEquipas from "@/components/admin/mtmauto-copia/providers-equipas"
+import MotorMestres from "@/components/admin/mtmauto-copia/motor-mestres"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ArrowLeftRight, Copy, LayoutDashboard, ListTree, Loader2, RefreshCcw, ScrollText, Wallet } from "lucide-react"
 
@@ -59,7 +60,7 @@ const ICONE = { visao: LayoutDashboard, contas: Wallet, estrategias: ListTree, c
 const DESCRICAO: Record<MtmcopyAdminTab, string> = {
   visao: "Entrega aos subscritores, reconciliação CopyFactory, custo MetaApi, serviços do VPS e últimos erros.",
   contas: "Todas as contas ligadas nos produtos (T2T/site, MTM Auto, WebTrader, MTM Funded): dono, plano, quota MetaApi, estado e para que servem.",
-  estrategias: "Estratégias e quem as segue em cada plataforma, com as divergências que custam dinheiro — e as afinações de sempre.",
+  estrategias: "Motor das mestres (quem executa cada estratégia, sombra/live, contas, ordens, kill-switch), seguidores por plataforma com as divergências — e as afinações.",
   copia: "Rotas conta → conta entre MTM Funded, MT4, MT5 e TradeLocker. Nesta entrega o motor corre só em sombra.",
   eventos: "Registo unificado: o que aconteceu na origem, o que o motor quis fazer no destino, o resultado e a latência.",
   sincronizacao: "«Sincronizar tudo»: pré-visualiza órfãs, estratégias mortas, duplicados e quota; aplica só o que escolheres.",
@@ -162,6 +163,7 @@ function PaginaAdminCopia() {
 
             {activeTab === "estrategias" && (
               <EstrategiasCopia
+                topo={<MotorMestres />}
                 afinacoes={
                   <div className="space-y-3 pt-2">
                     <Recolhivel titulo="Providers por equipa (MTM Auto)" descricao="Contas de estratégia de cada equipa — MT4/MT5 na chave certa, MTM Funded e TradeLocker — e as rotas de cópia que as usam como fonte.">
@@ -170,7 +172,7 @@ function PaginaAdminCopia() {
                     <Recolhivel titulo="Fontes · estado real" descricao="Cada estratégia, a conta que a publica e o que a MetaApi diz sobre ela.">
                       <MtmcopyFontesVivas />
                     </Recolhivel>
-                    <Recolhivel titulo="Controlo das estratégias" descricao="On/off por estratégia, modos PrimeVerse/Forex Swings, limites dos perps, trailing e desempenho.">
+                    <Recolhivel titulo="Controlo das estratégias" descricao="On/off por estratégia (com o estado no motor das mestres), modo Forex Swings, limites dos perps, trailing e desempenho.">
                       <div className="space-y-6"><MtmcopyStrategyControl /><EstrategiasDesempenho /><EquidadeCasaCard /><TrailingEstrategias /></div>
                     </Recolhivel>
                     <Recolhivel titulo="Saúde das ligações (regras de risco)" descricao="Multiplicador sem risco, T2T com grupos, sem baseline, MT5 em erro.">

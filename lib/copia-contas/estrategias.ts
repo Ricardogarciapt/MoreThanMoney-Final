@@ -39,7 +39,7 @@ export interface SubAutoSeguidor {
 
 export interface ContaFundedSeguidora { id: string; user_id: string; segue_estrategia: string; estado?: string | null; mt5_login?: string | null }
 
-export type FlagDivergencia = 'devia_copiar_nao_copia' | 'copia_estrategia_morta' | 'pausada_mas_copia' | 'conta_auto_parada' | 'sem_estrategia_cf'
+export type FlagDivergencia = 'devia_copiar_nao_copia' | 'copia_estrategia_morta' | 'pausada_mas_copia' | 'conta_auto_parada' | 'sem_estrategia_cf' | 'copia_cortada'
 
 export const TEXTO_FLAG: Record<FlagDivergencia, string> = {
   devia_copiar_nao_copia: 'devia copiar e não está subscrita na CopyFactory',
@@ -47,6 +47,7 @@ export const TEXTO_FLAG: Record<FlagDivergencia, string> = {
   pausada_mas_copia: 'pausada no site mas ainda subscrita na CopyFactory',
   conta_auto_parada: 'subscrição activa numa conta MTM Auto parada ou em erro',
   sem_estrategia_cf: 'estratégia sem estratégia CopyFactory viva',
+  copia_cortada: 'ainda subscrita na CopyFactory a uma estratégia cortada (o motor das mestres já a serve: ordens em dobro)',
 }
 
 export interface Seguidor {
@@ -70,6 +71,8 @@ export interface LinhaEstrategia {
   viva: boolean
   seguidores: Seguidor[]
   flags: FlagDivergencia[]
+  /** CopyFactory cortada: quem executa é o motor das mestres (116) */
+  servidaPeloMotor?: boolean
 }
 
 const riscoSite = (l: LinhaSiteSeguidor, sid: string) => {
@@ -105,7 +108,16 @@ export function montarEstrategias(f: {
   funded: ContaFundedSeguidora[]
   /** conta (mtmauto_accounts) parada? copia_ativa=false ou estado=error */
   contaAutoParada?: (id: string) => boolean
+  /**
+   * Motor das mestres (116): ids CopyFactory CORTADOS (servidos pelo motor) e slugs das estratégias que
+   * estão no motor. Uma ligação que pede um id cortado não «devia copiar» na CopyFactory; uma que
+   * ainda lá está subscrita copia em dobro; uma estratégia do motor sem CopyFactory não é divergência.
+   */
+  motor?: { idsCortados: Set<string>; slugs: Set<string>; slugsLive: Set<string> }
 }): LinhaEstrategia[] {
+  const cortado = (sid: string) => f.motor?.idsCortados.has(sid) === true
+  const doMotor = (slug: string | null | undefined) => Boolean(slug && f.motor?.slugs.has(String(slug).toLowerCase()))
+  const liveNoMotor = (slug: string | null | undefined) => Boolean(slug && f.motor?.slugsLive.has(String(slug).toLowerCase()))
   const cfListada = f.estrategiasCf != null
   const estrategias = new Map((f.estrategiasCf ?? []).map((s) => [s.id, s]))
   const subsCf = new Map((f.subscritoresCf ?? []).map((s) => [s.id, new Set(s.subscriptions.map((x) => x.strategyId))]))
@@ -127,11 +139,14 @@ export function montarEstrategias(f: {
     return l
   }
 
+  const inactivasSemCf = new Set<string>()
   for (const s of estrategias.values()) obter(s.id)
   for (const p of f.providers) {
     const s = [...estrategias.values()].find((x) => x.accountId && x.accountId === p.metaapi_account_id)
     const l = obter(s?.id ?? null, p)
-    if (!s && cfListada && p.ativo !== false) l.flags.push('sem_estrategia_cf')
+    // Estratégia inactiva sem CopyFactory e sem ninguém a segui-la (ex.: Gold Did, abandonado): não aparece.
+    if (!s && p.ativo === false) inactivasSemCf.add(l.chave)
+    if (!s && cfListada && p.ativo !== false && !doMotor(p.slug)) l.flags.push('sem_estrategia_cf')
   }
 
   for (const c of f.site) {
@@ -142,7 +157,10 @@ export function montarEstrategias(f: {
     for (const sid of new Set([...pedidas, ...subscritas])) {
       const l = obter(sid)
       const flags: FlagDivergencia[] = []
-      if (cfListada && f.subscritoresCf) {
+      if (cortado(sid) || doMotor(sid)) {
+        if (cortado(sid) || liveNoMotor(sid)) l.servidaPeloMotor = true
+        if (cfListada && f.subscritoresCf && subscritas.has(sid)) flags.push('copia_cortada')
+      } else if (cfListada && f.subscritoresCf) {
         if (ativa && pedidas.includes(sid) && !subscritas.has(sid)) flags.push('devia_copiar_nao_copia')
         if (!ativa && subscritas.has(sid)) flags.push('pausada_mas_copia')
         if (!estrategias.has(sid) && (subscritas.has(sid) || pedidas.includes(sid))) flags.push('copia_estrategia_morta')
@@ -151,7 +169,7 @@ export function montarEstrategias(f: {
         plataforma: 'copyfactory', ref: `site:${c.id}`, userId: c.user_id,
         conta: `${c.account_label ? `${c.account_label} · ` : ''}${c.mt5_login ?? '?'} @ ${c.mt5_server ?? '?'}`,
         risco: riscoSite(c, sid), estado: ativa ? (subscritas.has(sid) ? 'a copiar' : 'activa') : 'pausada', flags,
-        reparavelSiteId: flags.some((x) => x === 'devia_copiar_nao_copia' || x === 'pausada_mas_copia' || x === 'copia_estrategia_morta') ? c.id : undefined,
+        reparavelSiteId: flags.some((x) => x === 'devia_copiar_nao_copia' || x === 'pausada_mas_copia' || x === 'copia_estrategia_morta' || x === 'copia_cortada') ? c.id : undefined,
       })
     }
   }
@@ -182,9 +200,10 @@ export function montarEstrategias(f: {
   }
 
   for (const l of linhas.values()) {
+    if (liveNoMotor(l.slug) || (l.strategyId && cortado(l.strategyId))) l.servidaPeloMotor = true
     for (const s of l.seguidores) for (const x of s.flags) if (!l.flags.includes(x)) l.flags.push(x)
   }
   return [...linhas.values()]
-    .filter((l) => l.seguidores.length || l.viva)
+    .filter((l) => l.seguidores.length || (l.viva && !inactivasSemCf.has(l.chave)))
     .sort((a, b) => b.flags.length - a.flags.length || b.seguidores.length - a.seguidores.length || a.nome.localeCompare(b.nome))
 }

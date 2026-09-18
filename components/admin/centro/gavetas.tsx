@@ -68,6 +68,7 @@ function GavetaConta({ refConta }: { refConta: string }) {
             <Pilula tom={tomEstadoConta(c)}>{c.estado}</Pilula>
             <Pilula tom={c.ativa ? "ok" : "neutro"}>{c.ativa ? "activa" : "pausada"}</Pilula>
             <Pilula>{c.categoria}</Pilula>
+            {c.mestreDe && <Pilula tom="info" title="Conta SIM da casa: o motor das mestres copia-a para os clientes">{c.mestreDe.rotulo} · motor {c.mestreDe.modo}</Pilula>}
             {c.demo && <Pilula tom="info">demo</Pilula>}
             {c.metaapi.inexistente && <Pilula tom="grave">MetaApi inexistente</Pilula>}
             {c.metaapi.motorTempoReal && <Pilula tom="info">motor tempo real</Pilula>}
@@ -175,8 +176,16 @@ function GavetaEstrategia({ id }: { id: string }) {
             <Pilula tom={e.ativa ? "ok" : "neutro"}>{e.ativa ? "activa" : "inactiva"}</Pilula>
             {e.apagada && <Pilula tom="grave">apagada</Pilula>}
             <Pilula tom={e.fonteExecucao === "espelho" ? "info" : "neutro"}>fonte {e.fonteExecucao ?? "mestre (084 por aplicar)"}</Pilula>
-            {e.estrategiaCf && <Pilula>CopyFactory {e.estrategiaCf}</Pilula>}
+            {e.estrategiaCf && <Pilula>CopyFactory {e.mestres?.cfIds.length ? `${e.mestres.cfIds.join(",")} ${e.mestres.cfCortado ? "cortada" : "por cortar"}` : e.estrategiaCf}</Pilula>}
           </div>
+          {e.mestres && (
+            <div className="rounded-xl border border-[#D2A63C]/20 p-3 text-xs">
+              <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">Motor das mestres</p>
+              <p>Executa hoje: <b>{e.mestres.executor === "motor" ? "motor das mestres" : e.mestres.executor === "copyfactory" ? "CopyFactory" : "legado"}</b> — {e.mestres.executorNota}.</p>
+              <p className="text-zinc-400">Propagação {e.mestres.modo} · sinal {e.mestres.sinalModo} · T2T {e.mestres.t2tModo} · {e.mestres.rotuloMestre} {e.mestres.contaMestreLogin ?? ""} · {e.mestres.nRotasLive}/{e.mestres.nRotas} rotas live</p>
+              <a href="/admin/centro?s=estrategias" className="text-[#D2A63C] hover:underline">Mudar modos / contas / kill-switch →</a>
+            </div>
+          )}
           {msg && <Aviso tom={msg.ok ? "info" : "grave"}>{msg.texto}</Aviso>}
           <div className="grid grid-cols-2 gap-3 rounded-xl border border-white/[0.06] p-3 sm:grid-cols-3">
             <Campo rotulo="Conta mestre"><span className="font-mono">{e.metaapiAccountId ?? "—"}</span></Campo>
@@ -199,8 +208,9 @@ function GavetaEstrategia({ id }: { id: string }) {
             ) : <p className="text-xs text-zinc-500">Sem conta espelho.</p>}
             <div className="mt-2 flex gap-1.5">
               <Botao onClick={() => trocar("mestre")} disabled={e.fonteExecucao === "mestre" || e.apagada}>Usar mestre</Botao>
-              <Botao tom="ouro" onClick={() => trocar("espelho")} disabled={!e.espelho?.alinhado || e.fonteExecucao === "espelho" || e.apagada} title={e.espelho?.alinhado ? "" : "Só com veredicto alinhado"}>Usar espelho</Botao>
+              {!e.mestres && <Botao tom="ouro" onClick={() => trocar("espelho")} disabled={!e.espelho?.alinhado || e.fonteExecucao === "espelho" || e.apagada} title={e.espelho?.alinhado ? "" : "Só com veredicto alinhado"}>Usar espelho</Botao>}
             </div>
+            {e.mestres && <p className="mt-1 text-[10.5px] text-zinc-500">Esta estratégia está no motor das mestres: a conta SIM é a mestre e o motor copia-a directamente. A troca para «espelho» (084) é do caminho antigo e fica escondida aqui.</p>}
           </div>
 
           <div className="flex flex-wrap gap-1.5">

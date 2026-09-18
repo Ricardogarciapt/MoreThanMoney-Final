@@ -33,7 +33,7 @@ interface Resumo {
     prontidao: { simbolos: number; precosFrescos: number; webtrader: boolean; pronto: boolean; faltas: string[] } | null
   }
   torneios: Torneio[]
-  contas: { total: number; porEmitir: number; ativas: number; quebradas: number }
+  contas: { total: number; porEmitir: number; ativas: number; quebradas: number; clientesAtivas?: number | null; casaAtivas?: number | null; mestres?: { id: string; slug: string; rotulo: string; modo: string }[] }
   fila: { emFila: number; erro: number }
   certificados: number
 }
@@ -165,7 +165,11 @@ function Resumo({ dados, accao, ocupado }: { dados: Resumo; accao: Accao; ocupad
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Cartao icone={Users} titulo="Participantes" valor={dados.torneios.reduce((a, t) => a + t.participantes, 0)} />
-        <Cartao icone={Wallet} titulo="Contas activas" valor={dados.contas.ativas} />
+        <Cartao
+          icone={Wallet}
+          titulo={dados.contas.clientesAtivas != null ? `Contas activas de clientes (${dados.contas.casaAtivas ?? 0} da casa · ${dados.contas.mestres?.length ?? 0} mestres à parte)` : 'Contas activas'}
+          valor={dados.contas.clientesAtivas ?? dados.contas.ativas}
+        />
         <Cartao icone={AlertTriangle} titulo="Por emitir" valor={dados.contas.porEmitir} alerta={dados.contas.porEmitir > 0} />
         <Cartao icone={Award} titulo="Certificados" valor={dados.certificados} />
       </div>
@@ -455,7 +459,7 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
       const dono = c.dono as { nome?: string; email?: string; username?: string | null } | null
       const metricas = c.metricas as Record<string, unknown> | null
       if (q) {
-        const texto = [dono?.nome, dono?.email, dono?.username, c.mt5_login, c.servidor, c.id].map((v) => String(v ?? '').toLowerCase()).join(' ')
+        const texto = [dono?.nome, dono?.email, dono?.username, c.mt5_login, c.servidor, c.id, c.etiqueta, (c.mestre as { rotulo?: string } | null)?.rotulo].map((v) => String(v ?? '').toLowerCase()).join(' ')
         if (!texto.includes(q)) return false
       }
       if (fTipo && tipoCurto(c.tipo as string, metricas) !== fTipo) return false
@@ -463,7 +467,8 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
       // A conta real da casa (109) é da casa mesmo sem `conta_casa` (a de T2T do dono).
       if (fGrupo === 'casa' && !(num(c)?.contaCasa || num(c)?.contaReal)) return false
       if (fGrupo === 'segue' && !num(c)?.segueEstrategia) return false
-      if (fGrupo === 'clientes' && (num(c)?.contaCasa || num(c)?.contaReal || num(c)?.segueEstrategia)) return false
+      if (fGrupo === 'clientes' && (num(c)?.contaCasa || num(c)?.contaReal || num(c)?.segueEstrategia || c.mestre)) return false
+      if (fGrupo === 'mestres' && !c.mestre) return false
       if (fMotor && (fMotor === 'sim' ? c.motor !== 'sim' : c.motor === 'sim')) return false
       if (fResultado) {
         const { pct } = saldoEPct(c)
@@ -489,7 +494,7 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
       <input
         value={busca}
         onChange={(e) => setBusca(e.target.value)}
-        placeholder="Pesquisar nome, username, email, login ou servidor…"
+        placeholder="Pesquisar nome, username, email, login, servidor ou etiqueta…"
         className={`${seletor} min-w-[260px] flex-1`}
         aria-label="Pesquisar contas"
       />
@@ -511,6 +516,7 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
         <option value="clientes">Clientes (sem casa nem estratégia)</option>
         <option value="segue">Seguem uma estratégia</option>
         <option value="casa">Contas da casa</option>
+        <option value="mestres">Mestres de estratégia (motor)</option>
       </select>
       <select value={fResultado} onChange={(e) => setFResultado(e.target.value)} className={seletor} aria-label="Resultado">
         <option value="">Qualquer resultado</option>
@@ -548,6 +554,11 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
             </td>
             <td className="px-3 py-2 font-mono text-xs text-gray-300">
               {(c.mt5_login as string) ?? <span className="text-amber-400">—</span>}
+              {typeof c.etiqueta === 'string' && c.etiqueta && <p className="font-sans text-[10.5px] text-[#E9C46A]" title="etiqueta do dono da conta">{c.etiqueta}</p>}
+              {Boolean(c.mestre) && (() => {
+                const m = c.mestre as { rotulo: string; modo: string }
+                return <p className="mt-0.5 font-sans"><span className="rounded bg-[#D2A63C]/20 px-1.5 py-0.5 text-[10px] font-semibold text-[#E9C46A]" title={`Conta SIM da casa: o motor das mestres copia-a para os clientes (${m.modo}). Não é conta de cliente.`}>{m.rotulo}</span></p>
+              })()}
             </td>
             <td className="px-3 py-2 text-xs text-gray-500">{(c.servidor as string) ?? '—'}</td>
             <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">

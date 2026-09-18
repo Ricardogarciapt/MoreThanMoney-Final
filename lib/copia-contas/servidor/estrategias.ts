@@ -6,6 +6,7 @@ import { invalidateCopyConnectionsCache } from '@/lib/mtmcopy/db'
 import { estrategiasPedidas, montarEstrategias, type LinhaEstrategia } from '../estrategias'
 import { db, esquecerFotografiaMetaApi, metaApiFotografia } from './base'
 import { direitosEmLote } from './direitos-lote'
+import { idsServidosPeloMotor } from '@/lib/mestres/copyfactory-corte'
 
 /** ESTRATÉGIAS (admin) — fotografias + tabela pura + re-sync com releitura. */
 
@@ -18,6 +19,7 @@ export async function lerEstrategias(): Promise<{ estrategias: LinhaEstrategia[]
     db().from('mtmauto_providers').select('id, slug, nome, ativo, metaapi_account_id'),
     db().from('mtm_trading_accounts').select('id, user_id, segue_estrategia, estado, mt5_login').eq('motor', 'sim').not('segue_estrategia', 'is', null).limit(1000),
   ])
+  const motor = await lerMotorParaReconciliacao()
   const parada = new Map((auto.data ?? []).map((a) => [String(a.id), a.copia_ativa === false || String(a.estado ?? '').toLowerCase() === 'error']))
   const estrategias = montarEstrategias({
     estrategiasCf: meta.cfFalhou ? null : meta.strategies,
@@ -28,10 +30,22 @@ export async function lerEstrategias(): Promise<{ estrategias: LinhaEstrategia[]
     subsAuto: (subs.data ?? []) as never,
     funded: ((funded.data ?? []) as Record<string, unknown>[]).filter((f) => f.user_id) as never,
     contaAutoParada: (id) => parada.get(id) === true,
+    motor,
   })
   const users = [...new Set(estrategias.flatMap((e) => e.seguidores.map((s) => s.userId)))]
   const d = await direitosEmLote(users)
   return { estrategias, emails: Object.fromEntries(users.map((u) => [u, d.get(u)?.email ?? null])), metaapiFalhou: meta.falhou, lidaEm: meta.lidaEm }
+}
+
+/** Motor das mestres (116): ids CopyFactory cortados e slugs no motor. Sem a 116 → vazio. */
+async function lerMotorParaReconciliacao(): Promise<{ idsCortados: Set<string>; slugs: Set<string>; slugsLive: Set<string> }> {
+  const { data, error } = await db().from('mestres_estrategias').select('slug, modo, copyfactory_ids, copyfactory_cortado_em')
+  if (error || !data) return { idsCortados: new Set(), slugs: new Set(), slugsLive: new Set() }
+  return {
+    idsCortados: idsServidosPeloMotor(data),
+    slugs: new Set(data.map((e) => String(e.slug).toLowerCase())),
+    slugsLive: new Set(data.filter((e) => e.modo === 'live').map((e) => String(e.slug).toLowerCase())),
+  }
 }
 
 /**

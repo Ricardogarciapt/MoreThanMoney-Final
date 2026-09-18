@@ -12,6 +12,8 @@ interface ContaAdmin {
   email: string | null
   nome: string | null
   rotulo: string | null
+  etiqueta?: string | null
+  mestre?: string | null
   login: string | null
   servidor: string | null
   estado: string
@@ -53,7 +55,7 @@ export default function ContasCopia({ userIdInicial, extraPorUtilizador }: { use
     return (dados?.contas ?? []).filter((c) =>
       (!plataforma || c.plataforma === plataforma) &&
       (!soProblemas || problema(c)) &&
-      (!t || [c.email, c.nome, c.login, c.servidor, c.rotulo, c.metaapiAccountId, c.ref].some((x) => String(x ?? "").toLowerCase().includes(t))),
+      (!t || [c.email, c.nome, c.login, c.servidor, c.rotulo, c.etiqueta, c.mestre, c.metaapiAccountId, c.ref].some((x) => String(x ?? "").toLowerCase().includes(t))),
     )
   }, [dados, busca, plataforma, soProblemas])
 
@@ -139,6 +141,8 @@ export default function ContasCopia({ userIdInicial, extraPorUtilizador }: { use
                     {c.soLeitura && <Etiqueta>só leitura</Etiqueta>}
                   </div>
                   <span className="mt-0.5 block text-zinc-200">{c.rotulo ? `${c.rotulo} · ` : ""}{c.login ?? "—"}</span>
+                  {c.etiqueta && <span className="block text-[10.5px] text-[#E9C46A]" title="etiqueta do dono da conta">«{c.etiqueta}»</span>}
+                  {c.mestre && <span className="mt-0.5 inline-block"><Etiqueta tom="ouro">{c.mestre}</Etiqueta></span>}
                   <span className="text-[11px] text-zinc-500">{c.servidor ?? ""}</span>
                 </td>
                 <td className={td}>

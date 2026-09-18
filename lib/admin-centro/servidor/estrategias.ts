@@ -5,6 +5,8 @@ import { emCache } from '../cache'
 import { carregarContas } from './contas'
 import { lerProviders } from './sinais'
 import { db, ler, num, txt, type Linha } from './base'
+import { carregarPainelMestres } from '@/lib/mestres/servidor/painel-leitura'
+import type { Executor } from '@/lib/mestres/painel'
 
 /**
  * ESTRATÉGIAS — MTM Auto Premium, Sensei, Aurum Flow, GoldKiller, Edge/King/Wolf, providers das
@@ -45,6 +47,23 @@ export interface EstrategiaCentro {
    * é medida por services/sombra-estrategias sem abrir nada. Etiqueta — quem decide é `ativo`.
    */
   modo: 'sombra' | null
+  /** Motor das mestres (116): quem executa, modos, mestre SIM, rotas em live. null = estratégia fora do motor. */
+  mestres: {
+    executor: Executor
+    executorNota: string
+    modo: string
+    sinalModo: string
+    t2tModo: string
+    rotuloMestre: string
+    contaMestreLogin: string | null
+    nRotas: number
+    nRotasLive: number
+    nContasLive: number
+    cfIds: string[]
+    cfCortado: boolean
+  } | null
+  /** inactiva, fora do motor, sem sombra e sem ninguém a seguir (ex.: Gold Did) — escondida por omissão */
+  abandonada: boolean
 }
 
 /** Uma linha de `estrategia_sombra_dia` (migração 108), como o painel a usa. */
@@ -87,7 +106,7 @@ const modoDe = (p: Linha): 'sombra' | null => {
 
 async function lerEstrategias() {
   const desde30 = new Date(Date.now() - 30 * 86_400_000).toISOString()
-  const [provs, subs, sinais, execs, veredito, tenants, contas] = await Promise.all([
+  const [provs, subs, sinais, execs, veredito, tenants, contas, painel] = await Promise.all([
     lerProviders(),
     ler(db().from('mtmauto_subscriptions').select('provider_id, conta_id, user_id, ativo, auto_aceitar').eq('ativo', true).limit(5000)),
     ler(db().from('mtmauto_signals').select('id, provider_id, estado, resultado_pips, resultado_pct, created_at').gte('created_at', desde30).order('created_at', { ascending: false }).limit(3000)),
@@ -95,6 +114,7 @@ async function lerEstrategias() {
     ler(db().from('espelho_veredito').select('*').limit(100)),
     ler(db().from('mtmauto_tenants').select('id, nome').limit(200)),
     carregarContas(),
+    carregarPainelMestres().catch(() => null),
   ])
   const sinalProv = new Map<string, string>()
   for (const s of sinais.linhas) sinalProv.set(String(s.id), String(s.provider_id))
@@ -105,8 +125,12 @@ async function lerEstrategias() {
     const id = String(p.id)
     const slug = String(p.slug ?? '')
     const subsP = subs.linhas.filter((s) => String(s.provider_id) === id)
-    const cf = CF_POR_SLUG[slug.toLowerCase()] ?? null
-    const siteSeg = cf ? contas.contas.filter((c) => c.origem === 'site' && c.estrategias.includes(cf)) : []
+    const m = painel?.estrategias.find((x) => x.providerId === id) ?? null
+    // As estratégias CopyFactory vêm do motor das mestres quando lá está (Premium Hvmg/MxsR/9gsL,
+    // GoldKiller Wl1B/SDNb, Sensei hbKq/Oca7); senão, a constante de sempre.
+    const cfs = m?.cf.ids.length ? m.cf.ids : CF_POR_SLUG[slug.toLowerCase()] ? [CF_POR_SLUG[slug.toLowerCase()]] : []
+    const cf = cfs[0] ?? null
+    const siteSeg = cfs.length ? contas.contas.filter((c) => c.origem === 'site' && c.estrategias.some((x) => cfs.includes(x))) : []
     const fundedSeg = contas.contas.filter((c) => c.origem === 'funded' && c.estrategias.some((e) => e.toLowerCase() === slug.toLowerCase()))
     const sinaisP = sinais.linhas.filter((s) => String(s.provider_id) === id)
     // Resultados incoerentes (ex.: +409 950 pips / +923 % a 31/08, stop mal lido) não entram na soma:
@@ -125,10 +149,17 @@ async function lerEstrategias() {
     if (subsP.some((s) => !s.conta_id)) divergencias.push(`${subsP.filter((s) => !s.conta_id).length} subscrição(ões) sem conta`)
     const paradas = contasSub.filter((c) => c && (!c.ativa || /error|erro/i.test(c.estado))).length
     if (paradas) divergencias.push(`${paradas} conta(s) MTM Auto parada(s)/em erro a seguir`)
-    const naoSub = siteSeg.filter((c) => c.usos.some((u) => u.includes('não subscrita')) && c.ativa).length
+    const naoSub = m?.cf.cortado ? 0 : siteSeg.filter((c) => c.usos.some((u) => u.includes('não subscrita')) && c.ativa).length
     if (naoSub) divergencias.push(`${naoSub} ligação(ões) do site activas mas não subscritas na CopyFactory`)
-    const pausadasSub = siteSeg.filter((c) => !c.ativa && !c.usos.some((u) => u.includes('não subscrita'))).length
-    if (pausadasSub) divergencias.push(`${pausadasSub} ligação(ões) pausada(s) ainda marcadas como subscritas`)
+    if (m?.cf.cortado) {
+      // CopyFactory cortada: quem ainda lá está subscrito recebe a trade duas vezes (CopyFactory + motor).
+      const ainda = siteSeg.filter((c) => c.usos.some((u) => /^CopyFactory /.test(u) && !u.includes('não subscrita'))).length
+      if (ainda) divergencias.push(`${ainda} ligação(ões) ainda marcadas como subscritas na CopyFactory cortada (ordens em dobro com o motor)`)
+    } else {
+      const pausadasSub = siteSeg.filter((c) => !c.ativa && !c.usos.some((u) => u.includes('não subscrita'))).length
+      if (pausadasSub) divergencias.push(`${pausadasSub} ligação(ões) pausada(s) ainda marcadas como subscritas`)
+    }
+    for (const a of m?.avisos ?? []) divergencias.push(`motor das mestres: ${a}`)
     if (p.metaapi_account_id && contas.contas.some((c) => c.metaapiAccountId === p.metaapi_account_id && c.metaapi.inexistente)) divergencias.push('conta mestre no registo de inexistentes')
     if (fechadosTodos.length > fechados.length) divergencias.push(`${fechadosTodos.length - fechados.length} resultado(s) incoerente(s) excluído(s) do desempenho`)
     if (p.fonte_execucao === 'espelho' && v && v.alinhado !== true) divergencias.push('fonte espelho sem veredicto alinhado')
@@ -156,6 +187,12 @@ async function lerEstrategias() {
       },
       divergencias, ultimoSinal: txt(sinaisP[0]?.created_at),
       modo: modoDe(p),
+      mestres: m ? {
+        executor: m.executor, executorNota: m.executorNota, modo: m.modo, sinalModo: m.sinalModo, t2tModo: m.t2tModo,
+        rotuloMestre: m.rotuloMestre, contaMestreLogin: m.contaMestre?.login ?? null,
+        nRotas: m.nRotas, nRotasLive: m.nRotasLive, nContasLive: m.nContasLive, cfIds: m.cf.ids, cfCortado: m.cf.cortado,
+      } : null,
+      abandonada: p.ativo === false && !m && modoDe(p) !== 'sombra' && subsP.length + siteSeg.length + fundedSeg.length === 0,
     }
   }).sort((a, b) => Number(a.apagada) - Number(b.apagada) || Number(b.ativa) - Number(a.ativa) || b.seguidores.total - a.seguidores.total)
 

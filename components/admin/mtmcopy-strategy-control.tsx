@@ -63,9 +63,10 @@ const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: str
   {
     group: "Estratégias",
     items: [
-      { key: "premium", label: "MTM Auto Premium", hint: "MxsR · conta 530d2e07 (MT5 700160095) · motor de preço" },
-      { key: "premium_master_exec", label: "Premium · fluxo p/ conta MESTRE", hint: "OFF = semi-automático: o sinal vai direto às contas dos subscritores (sem conta mestre nem CopyFactory)" },
-      { key: "sensei", label: "MTM Auto Sensei", hint: "Oca7 · conta 16f4f233 (MT5 34744071) · motor de preço (parciais, BE, trailing)" },
+      { key: "premium", label: "MTM Auto Premium · caminho antigo", hint: "Execução do Premium pelo processador de sinais (grupo Telegram → conta MESTRE MT5 Hvmg a21178c2 + CopyFactory). Com o sinal do Premium em LIVE no motor das mestres este caminho cala-se sozinho — ver o topo da tab." },
+      { key: "premium_master_exec", label: "Premium · fluxo p/ conta MESTRE (caminho antigo)", hint: "OFF = semi-automático: o sinal vai direto às contas dos subscritores (sem conta mestre nem CopyFactory)" },
+      { key: "sensei", label: "MTM Auto Sensei · entrada do sinal", hint: "Deixa o sinal do TradingView do Sensei seguir para execução — hoje para a mestre SIM do motor das mestres (CopyFactory hbKq/Oca7 cortada a 18/09). OFF também corta a entrada na mestre." },
+      { key: "goldkiller", label: "MTM Auto GoldKiller · entrada do sinal", hint: "Deixa o sinal do TradingView do GoldKiller seguir para execução (CopyFactory Wl1B enquanto não for cortada; mestre SIM no motor das mestres). OFF corta os dois." },
       { key: "sensei_entries", label: "Sensei · entradas novas", hint: "OFF pausa entradas e MANTÉM a gestão das posições abertas" },
     ],
   },
@@ -95,7 +96,10 @@ const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: str
  * aqui de propósito: não há motor nosso a geri-lo — a gestão vem da própria fonte.
  */
 const RETIRADAS = [
-  "GoldKiller (SDNb) · conta apagada na MetaApi",
+  "Premium MxsR (conta 530d2e07) · apagada na MetaApi — o Premium passa pela mestre SIM do motor das mestres",
+  "PrimeVerse · execução directa numa conta MT5 (12862cb4, apagada na MetaApi) — Edge/King/Wolf seguem pelas mestres SIM; o modo saiu deste painel",
+  "Espelho provider como FONTE de execução (082/084) · substituído pelo motor das mestres nas estratégias que lá estão",
+  "GoldKiller (SDNb) · conta apagada na MetaApi (a GoldKiller actual é Wl1B)",
   "MTM Auto Forex / Trade Ideas (5IHE) · conta apagada",
   "20X Booster (pIrJ) · conta apagada",
   "Gold Did (e68I) · conta apagada",
@@ -127,7 +131,24 @@ function Toggle({ on, onClick, disabled }: { on: boolean; onClick?: () => void; 
   )
 }
 
+/** Interruptor → estratégia no motor das mestres (116), para mostrar o modo de lá ao lado. */
+const MOTOR_POR_SWITCH: Partial<Record<keyof Switches, string>> = {
+  premium: "premium-ouro", premium_master_exec: "premium-ouro", sensei: "sensei", sensei_entries: "sensei", goldkiller: "goldkiller",
+}
+
 export default function MtmcopyStrategyControl() {
+  const [motor, setMotor] = useState<Record<string, string>>({})
+  useEffect(() => {
+    // Só leitura, e falhar aqui não esconde nada: os interruptores funcionam sem isto.
+    fetch("/api/admin/mtmauto-copia/mestres", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { estrategias?: { slug: string; modo: string; sinalModo: string; executor: string }[] } | null) => {
+        const m: Record<string, string> = {}
+        for (const e of d?.estrategias ?? []) m[e.slug.toLowerCase()] = `propagação ${e.modo} · sinal ${e.sinalModo} · executa ${e.executor}`
+        setMotor(m)
+      })
+      .catch(() => undefined)
+  }, [])
   const [cfg, setCfg] = useState<Config | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -233,7 +254,14 @@ export default function MtmcopyStrategyControl() {
                 {items.map(({ key, label, hint }) => (
                   <div key={key} className="flex items-center justify-between gap-4 py-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-white">{label}</p>
+                      <p className="text-sm font-medium text-white">
+                        {label}
+                        {motor[MOTOR_POR_SWITCH[key] ?? ""] && (
+                          <span className="ml-2 rounded bg-[#D2A63C]/15 px-1.5 py-0.5 text-[10px] font-medium text-[#D2A63C]" title="Estado no motor das mestres (topo da tab Estratégias)">
+                            motor: {motor[MOTOR_POR_SWITCH[key]!]}
+                          </span>
+                        )}
+                      </p>
                       <p className="text-xs text-zinc-500">{hint}</p>
                     </div>
                     <Toggle on={cfg.switches[key]} onClick={() => setSwitch(key, !cfg.switches[key])} disabled={saving} />
@@ -360,10 +388,10 @@ export default function MtmcopyStrategyControl() {
         </Card>
       )}
 
-      {/* Modos de execução PrimeVerse / Forex Swings */}
+      {/* Modo de execução Forex Swings. O do PrimeVerse saiu (18/09): executava directamente numa conta
+          MT5 (12862cb4) que já não existe na MetaApi — Edge/King/Wolf seguem pelas mestres SIM do motor. */}
       <div className="grid sm:grid-cols-2 gap-4">
         {([
-          { k: "primeverse", label: "PrimeVerse", cur: cfg.primeverse.mode, field: "primeverse_mode" },
           { k: "forexSwings", label: "Forex Swings (James)", cur: cfg.forexSwings.mode, field: "forex_swings_mode" },
         ] as const).map(({ k, label, cur, field }) => (
           <Card key={k} className="bg-zinc-900/60 border-zinc-800">

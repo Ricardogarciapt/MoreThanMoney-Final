@@ -4,17 +4,18 @@ import { useMemo, useState, type ReactNode } from "react"
 import { ChevronDown, Loader2 } from "lucide-react"
 import { Aviso, BotaoRecarregar, Etiqueta, Tabela, pedirAdmin, quando, td, th, useDadosAdmin } from "./comum"
 
-type Flag = "devia_copiar_nao_copia" | "copia_estrategia_morta" | "pausada_mas_copia" | "conta_auto_parada" | "sem_estrategia_cf"
+type Flag = "devia_copiar_nao_copia" | "copia_estrategia_morta" | "pausada_mas_copia" | "conta_auto_parada" | "sem_estrategia_cf" | "copia_cortada"
 const TEXTO_FLAG: Record<Flag, string> = {
   devia_copiar_nao_copia: "devia copiar e não copia",
   copia_estrategia_morta: "estratégia morta",
   pausada_mas_copia: "pausada mas a copiar",
   conta_auto_parada: "conta MTM Auto parada",
   sem_estrategia_cf: "sem estratégia CopyFactory",
+  copia_cortada: "subscrita a estratégia cortada (dobro)",
 }
 
 interface Seguidor { plataforma: "copyfactory" | "mtmauto" | "mtmfunded"; ref: string; userId: string; conta: string; risco: string; estado: string; flags: Flag[]; reparavelSiteId?: string }
-interface Linha { chave: string; nome: string; slug: string | null; strategyId: string | null; accountId: string | null; viva: boolean; seguidores: Seguidor[]; flags: Flag[] }
+interface Linha { chave: string; nome: string; slug: string | null; strategyId: string | null; accountId: string | null; viva: boolean; seguidores: Seguidor[]; flags: Flag[]; servidaPeloMotor?: boolean }
 
 const NOME_PLAT = { copyfactory: "CopyFactory (MT4/MT5)", mtmauto: "MTM Auto", mtmfunded: "MTM Funded" }
 
@@ -35,7 +36,7 @@ export function Recolhivel({ titulo, descricao, children, aberto = false }: { ti
   )
 }
 
-export default function EstrategiasCopia({ afinacoes }: { afinacoes?: ReactNode }) {
+export default function EstrategiasCopia({ afinacoes, topo }: { afinacoes?: ReactNode; topo?: ReactNode }) {
   const { dados, erro, aCarregar, recarregar } = useDadosAdmin<{ estrategias: Linha[]; emails: Record<string, string | null>; metaapiFalhou: boolean; lidaEm: string }>("/api/admin/mtmauto-copia/estrategias")
   const [aberta, setAberta] = useState<string | null>(null)
   const [soDivergencias, setSoDivergencias] = useState(false)
@@ -59,6 +60,14 @@ export default function EstrategiasCopia({ afinacoes }: { afinacoes?: ReactNode 
 
   return (
     <div className="space-y-4">
+      {topo}
+      <div>
+        <h3 className="text-sm font-semibold text-zinc-200">Seguidores por plataforma · reconciliação CopyFactory</h3>
+        <p className="text-[11px] text-zinc-500">
+          Quem segue cada estratégia na CopyFactory, no MTM Auto e no MTM Funded, com as divergências da CopyFactory. As estratégias
+          servidas pelo motor das mestres (CopyFactory cortada) aparecem marcadas e já não contam «devia copiar e não copia».
+        </p>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1.5 text-xs text-zinc-400"><input type="checkbox" checked={soDivergencias} onChange={(e) => setSoDivergencias(e.target.checked)} /> só com divergências</label>
         <button type="button" disabled={aSync || !reparaveis.length} onClick={() => resync(reparaveis)} className="rounded-lg border border-[#D2A63C]/40 px-3 py-1.5 text-xs text-[#D2A63C] hover:bg-[#D2A63C]/10 disabled:opacity-40">
@@ -90,6 +99,7 @@ export default function EstrategiasCopia({ afinacoes }: { afinacoes?: ReactNode 
                 <span className="text-sm font-semibold text-zinc-100">{l.nome}</span>
                 {l.strategyId && <Etiqueta tom={l.viva ? "ouro" : "grave"}>{l.strategyId}{l.viva ? "" : " · não existe"}</Etiqueta>}
                 {l.slug && <Etiqueta>{l.slug}</Etiqueta>}
+                {l.servidaPeloMotor && <Etiqueta tom="ouro" title="CopyFactory cortada: quem executa é o motor das mestres">servida pelo motor das mestres</Etiqueta>}
                 <span className="text-[11px] text-zinc-500">{Object.entries(porPlat).map(([k, n]) => `${NOME_PLAT[k as keyof typeof NOME_PLAT]}: ${n}`).join(" · ") || "sem seguidores"}</span>
                 <span className="ml-auto flex flex-wrap gap-1">{l.flags.map((f) => <Etiqueta key={f} tom="aviso">{TEXTO_FLAG[f]}</Etiqueta>)}</span>
                 <ChevronDown className={`h-4 w-4 text-zinc-500 transition-transform ${abertaAgora ? "rotate-180" : ""}`} />

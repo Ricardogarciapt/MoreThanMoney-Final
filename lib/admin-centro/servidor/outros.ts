@@ -111,7 +111,8 @@ export async function carregarFunded() {
       carregarContas(),
     ])
     const funded = contas.contas.filter((c) => c.origem === 'funded')
-    const casa = funded.filter((c) => c.categoria === 'casa')
+    // As mestres de estratégia (116) são contas da casa: entram na soma da casa, nunca como clientes.
+    const casa = funded.filter((c) => c.categoria === 'casa' || c.mestreDe)
     const porEstado: Record<string, number> = {}
     for (const c of funded) porEstado[c.estado] = (porEstado[c.estado] ?? 0) + 1
     const colunaCasa = !contas.avisos.some((a) => /conta_casa/.test(a))
@@ -120,6 +121,8 @@ export async function carregarFunded() {
       contas: funded,
       porEstado,
       seguidoras: funded.filter((c) => c.categoria === 'seguidora').length,
+      mestres: funded.filter((c) => c.mestreDe).map((c) => ({ login: c.login, rotulo: c.mestreDe!.rotulo, modo: c.mestreDe!.modo })),
+      clientes: funded.filter((c) => c.categoria === 'cliente').length,
       equidadeCasa: {
         pendente: casa.length === 0,
         contas: casa.length,

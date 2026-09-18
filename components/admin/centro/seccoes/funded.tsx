@@ -19,9 +19,10 @@ export default function SeccaoFunded() {
   return (
     <div className="space-y-4">
       {erro && <Aviso tom="grave">{erro}</Aviso>}
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
         <Azulejo rotulo="Equidade MTM (casa)" valor={f?.equidadeCasa.pendente ? "—" : `$${fmtNum(f?.equidadeCasa.equity, 0)}`} sub={f?.equidadeCasa.nota} tom={f?.equidadeCasa.pendente ? "neutro" : "ok"} className="md:col-span-2" />
-        <Azulejo rotulo="Contas" valor={f?.contas.length ?? "—"} sub={Object.entries(f?.porEstado ?? {}).map(([k, v]) => `${k} ${v}`).join(" · ")} />
+        <Azulejo rotulo="Contas de clientes" valor={f?.clientes ?? "—"} sub={`${f?.contas.length ?? "—"} no total · ${Object.entries(f?.porEstado ?? {}).map(([k, v]) => `${k} ${v}`).join(" · ")}`} />
+        <Azulejo rotulo="Mestres de estratégia" valor={f?.mestres.length ?? "—"} sub={(f?.mestres ?? []).map((m) => `${m.rotulo.replace("Mestre · ", "")} ${m.login ?? ""} (${m.modo})`).join(" · ") || "contas SIM da casa que o motor copia"} />
         <Azulejo rotulo="Seguem estratégia" valor={f?.seguidoras ?? "—"} />
         <Azulejo rotulo="Programas" valor={f?.programas.length ?? "—"} sub={`${(f?.programas ?? []).filter((p) => p.ativo === true).length} à venda`} />
       </div>
@@ -35,7 +36,10 @@ export default function SeccaoFunded() {
                 <tr key={c.ref} className={trClic} onClick={() => setModal(c.ref.slice(7))}>
                   <td className={`${td} font-mono text-zinc-100`}>{c.login ?? "por emitir"}</td>
                   <td className={`${td} text-[#E9C46A]`}>{c.etiquetaDoDono ?? "—"}</td>
-                  <td className={td}>{c.rotulo}</td>
+                  <td className={td}>
+                    {c.mestreDe && <span className="mr-1"><Pilula tom="info" title={`Conta SIM da casa: o motor das mestres copia-a para os clientes (${c.mestreDe.modo}). Não é conta de cliente.`}>{c.mestreDe.rotulo}</Pilula></span>}
+                    {c.mestreDe ? c.rotulo?.replace(`${c.mestreDe.rotulo} · `, "") : c.rotulo}
+                  </td>
                   <td className={td}>{c.userId ? <button type="button" className="hover:text-[#E9C46A]" onClick={(e) => { e.stopPropagation(); ctx.abrir({ tipo: "utilizador", id: c.userId! }) }}>{c.email ?? c.userId.slice(0, 8)}</button> : "—"}</td>
                   <td className={td}><Pilula tom={tomEstadoConta(c)}>{c.estado}</Pilula>{c.erro && <p className="mt-0.5 text-[10px] text-rose-300">{c.erro}</p>}</td>
                   <td className={`${td} font-mono`}>{fmtNum(c.saldo, 2)} / {fmtNum(c.equity, 2)}</td>

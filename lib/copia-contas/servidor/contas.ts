@@ -12,6 +12,8 @@ import type { PlataformaCopia } from '../tipos'
 import { db, esquecerFotografiaMetaApi, metaApiFotografia } from './base'
 import { direitosEmLote } from './direitos-lote'
 import { lerContaPorRef } from './refs'
+import { lerEtiquetas } from '@/lib/contas/etiquetas-servidor'
+import { lerMestresPorConta } from '@/lib/mestres/servidor/painel-leitura'
 
 export { lerContaPorRef }
 
@@ -32,6 +34,10 @@ export interface ContaAdmin {
   email: string | null
   nome: string | null
   rotulo: string | null
+  /** 113 — a etiqueta que o DONO escreveu (null = nenhuma) */
+  etiqueta: string | null
+  /** 116 — conta SIM mestre de uma estratégia do motor («Mestre · Sensei») */
+  mestre: string | null
   login: string | null
   servidor: string | null
   estado: string
@@ -70,7 +76,7 @@ export async function listarContasAdmin(filtro: { userId?: string | null } = {})
     porUser(db().from('webtrader_contas_mt5').select('id, user_id, metaapi_account_id, plataforma, login, servidor, rotulo, estado, erro, created_at')),
     porUser(db().from('mtmauto_subscriptions').select('conta_id, provider_id, user_id').eq('ativo', true)),
     porUser(db().from('funded_copiers').select('account_id, destino_tipo, destino_id, user_id, ativo')),
-    porUser(db().from('copia_rotas').select('origem_ref, destino_ref, user_id, estado').neq('estado', 'recusada')),
+    porUser(db().from('copia_rotas').select('origem_ref, destino_ref, user_id, estado, mestres, estrategia_slug').neq('estado', 'recusada')),
     metaApiFotografia(),
   ])) as [Linhas, Linhas, Linhas, Linhas, Linhas, Linhas, Awaited<ReturnType<typeof metaApiFotografia>>]
 
@@ -80,8 +86,17 @@ export async function listarContasAdmin(filtro: { userId?: string | null } = {})
   const comEquipa = new Set((tenants ?? []).map((t) => String(t.user_id)))
   const { data: provs } = await db().from('mtmauto_providers').select('id, nome, slug')
   const nomeProv = new Map((provs ?? []).map((p) => [String(p.id), String(p.nome ?? p.slug)]))
+  // Etiquetas (113) à parte: uma coluna em falta num select escolhido deixava a lista vazia.
+  const [etSite, etAuto, etWt, etFunded, mestres] = await Promise.all([
+    lerEtiquetas('mtmcopy_connections'), lerEtiquetas('mtmauto_accounts'), lerEtiquetas('webtrader_contas_mt5'), lerEtiquetas('mtm_trading_accounts'),
+    lerMestresPorConta().catch(() => new Map<string, { rotulo: string }>()),
+  ])
   const usosRota = new Map<string, string[]>()
   for (const r of rotas.data ?? []) {
+    if (r.mestres === true) {
+      usosRota.set(String(r.destino_ref), [...(usosRota.get(String(r.destino_ref)) ?? []), `Motor das mestres · ${r.estrategia_slug ?? '?'}`])
+      continue
+    }
     usosRota.set(String(r.origem_ref), [...(usosRota.get(String(r.origem_ref)) ?? []), 'Origem de cópia'])
     usosRota.set(String(r.destino_ref), [...(usosRota.get(String(r.destino_ref)) ?? []), 'Destino de cópia'])
   }
@@ -123,7 +138,7 @@ export async function listarContasAdmin(filtro: { userId?: string | null } = {})
     usos.push(...(usosRota.get(`site:${c.id}`) ?? []))
     const ref = `site:${c.id}`
     contas.push({
-      ref, origem: 'site', plataforma, userId: String(c.user_id), rotulo: txt(c.account_label),
+      ref, origem: 'site', plataforma, userId: String(c.user_id), rotulo: txt(c.account_label), etiqueta: etSite.get(String(c.id)) ?? null, mestre: null,
       login: plataforma === 'tradelocker' ? txt(c.tl_acc_num) ?? txt(c.tl_account_id) : txt(c.mt5_login),
       servidor: plataforma === 'tradelocker' ? txt(c.tl_server) ?? txt(c.mt5_server) : txt(c.mt5_server),
       estado: String(c.mt5_status ?? '—'), ativa: c.is_active !== false, erro: txt(c.last_error),
@@ -141,7 +156,7 @@ export async function listarContasAdmin(filtro: { userId?: string | null } = {})
     const plataforma = plat(c.plataforma)
     const ref = `auto:${c.id}`
     contas.push({
-      ref, origem: 'auto', plataforma, userId: String(c.user_id), rotulo: txt(c.rotulo) ?? txt(c.corretora),
+      ref, origem: 'auto', plataforma, userId: String(c.user_id), rotulo: txt(c.rotulo) ?? txt(c.corretora), etiqueta: etAuto.get(String(c.id)) ?? null, mestre: null,
       login: plataforma === 'tradelocker' ? txt(c.tl_acc_num) ?? txt(c.login) : txt(c.login), servidor: txt(c.servidor),
       estado: String(c.estado ?? '—'), ativa: c.copia_ativa !== false, erro: txt(c.erro) ?? txt(c.tl_last_error), demo: Boolean(c.demo),
       soLeitura: c.funded_somente_leitura === true,
@@ -156,7 +171,7 @@ export async function listarContasAdmin(filtro: { userId?: string | null } = {})
     const ref = `wt:${c.id}`
     const plataforma = c.plataforma === 'mt4' ? 'mt4' : 'mt5'
     contas.push({
-      ref, origem: 'wt', plataforma, userId: String(c.user_id), rotulo: txt(c.rotulo), login: txt(c.login), servidor: txt(c.servidor),
+      ref, origem: 'wt', plataforma, userId: String(c.user_id), rotulo: txt(c.rotulo), etiqueta: etWt.get(String(c.id)) ?? null, mestre: null, login: txt(c.login), servidor: txt(c.servidor),
       estado: String(c.estado ?? '—'), ativa: true, erro: txt(c.erro), demo: demoPeloNome(c.servidor), soLeitura: false,
       metaapiAccountId: txt(c.metaapi_account_id), ...metaInfo(c.metaapi_account_id),
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: txt(c.metaapi_account_id), login: txt(c.login), plataforma, estado: txt(c.estado) }),
@@ -168,6 +183,7 @@ export async function listarContasAdmin(filtro: { userId?: string | null } = {})
     const ref = `funded:${f.id}`
     contas.push({
       ref, origem: 'funded', plataforma: 'mtmfunded', userId: String(f.user_id), rotulo: f.tipo ? `MTM Funded · ${f.tipo}` : 'MTM Funded',
+      etiqueta: etFunded.get(String(f.id)) ?? null, mestre: mestres.get(String(f.id))?.rotulo ?? null,
       login: txt(f.mt5_login), servidor: 'MTM Funded', estado: String(f.estado ?? '—'), ativa: f.estado === 'ativa', erro: null, demo: false, soLeitura: false,
       metaapiAccountId: null, metaapiEstado: null, metaapiLigacao: null, chaveEquipa: false, contaMetaApi: false,
       chaveFisica: `mtmfunded:${String(f.id).toLowerCase()}`,

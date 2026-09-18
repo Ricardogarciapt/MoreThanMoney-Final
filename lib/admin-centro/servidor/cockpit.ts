@@ -2,6 +2,7 @@ import { derivarAlertas, FONTES, idadeS, mercadoAberto, percentil, serieTemporal
 import { carregarContas } from './contas'
 import { carregarInfra } from './infra'
 import { carregarJanela } from './sinais'
+import { carregarPainelMestres } from '@/lib/mestres/servidor/painel-leitura'
 
 /**
  * COCKPIT — compõe os loaders em cache (janela de sinais 20 s, infra 15 s, contas 30 s). Não faz
@@ -9,7 +10,7 @@ import { carregarJanela } from './sinais'
  */
 export async function cockpit() {
   const agora = Date.now()
-  const [janela, infra, contas] = await Promise.all([carregarJanela(), carregarInfra(), carregarContas()])
+  const [janela, infra, contas, painelMestres] = await Promise.all([carregarJanela(), carregarInfra(), carregarContas(), carregarPainelMestres().catch(() => null)])
 
   const fontes = FONTES.map((f) => {
     const s = janela.sinais.filter((x) => x.fonte === f.chave)
@@ -65,6 +66,12 @@ export async function cockpit() {
     premiumUltimoS: premium?.idadeS ?? null,
     mercadoAberto: mercadoAberto(new Date(agora)),
   })
+  // Motor das mestres (116): kill, serviço calado, falhas, contas bloqueadas, avisos por estratégia.
+  for (const m of painelMestres?.alertas ?? []) {
+    alertas.push({ id: m.id, severidade: m.severidade, titulo: m.titulo, detalhe: m.detalhe, acoes: [{ rotulo: 'Ver estratégias', acao: { tipo: 'ir', seccao: 'estrategias' } }] })
+  }
+  const ordemSev = { grave: 0, aviso: 1, info: 2 } as const
+  alertas.sort((x, y) => ordemSev[x.severidade] - ordemSev[y.severidade])
 
   return {
     lidaEm: new Date().toISOString(),
@@ -85,6 +92,10 @@ export async function cockpit() {
     crons: infra.crons,
     cronsPendente: infra.cronsPendente,
     copia: infra.copia,
+    mestres: painelMestres && !painelMestres.pendente ? {
+      estado: painelMestres.global.estado, ligado: painelMestres.global.ligado, kill: painelMestres.global.kill,
+      liveDesbloqueado: painelMestres.global.liveDesbloqueado, escritaVps: painelMestres.global.escritaVps, pulsoIdadeS: painelMestres.global.pulsoIdadeS,
+    } : null,
     avisos: [...janela.avisos, ...contas.avisos],
   }
 }
