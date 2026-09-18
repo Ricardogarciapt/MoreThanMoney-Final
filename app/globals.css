@@ -57,6 +57,26 @@
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
 }
 
+/*
+ * Barra de separadores NATIVA (liquid glass) das apps iOS — MTM System e MTM Auto.
+ * A app escreve no <html> quanto do viewport a barra tapa: `--mtm-barra-nativa` (px em baixo,
+ * desde o fundo da página, home indicator incluído), `--mtm-barra-nativa-direita` (paisagem, barra
+ * à direita) e `data-mtm-barra="baixo|direita|nenhuma"`. No browser não existem → 0.
+ *
+ * Hoje as webviews das apps já ACABAM onde a barra começa (o valor é 0 e `bottom: 0` / `100dvh`
+ * caem acima dela). O contrato fica para qualquer contentor que volte a pôr a página por baixo do
+ * vidro: o que é fixo em baixo (barras de envio, tickets, folhas, toasts, botões flutuantes) usa
+ * `--mtm-fundo-livre` em vez de `env(safe-area-inset-bottom)` — é o maior dos dois, por isso no
+ * browser dá exactamente o de antes e nunca soma a safe area à barra.
+ */
+:root {
+  --mtm-fundo-livre: max(env(safe-area-inset-bottom, 0px), var(--mtm-barra-nativa, 0px));
+  --mtm-direita-livre: max(env(safe-area-inset-right, 0px), var(--mtm-barra-nativa-direita, 0px));
+}
+.mtm-pb-livre { padding-bottom: var(--mtm-fundo-livre); }
+.mtm-pr-livre { padding-right: var(--mtm-direita-livre); }
+.mtm-bottom-livre { bottom: var(--mtm-fundo-livre); }
+
 /* Altura reservada à tab bar fixa da app-mobile (Dialog em portal usa variável no body) */
 body.app-mobile-route,
 body.mobile-route {
