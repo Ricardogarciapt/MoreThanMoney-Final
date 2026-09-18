@@ -79,7 +79,10 @@ export function loteDaLigacaoSite(l: LigacaoSite, opts: { idsCopyFactory?: strin
 
   if (!opts.t2t && l.strategy_lots && typeof l.strategy_lots === 'object') {
     for (const id of opts.idsCopyFactory ?? []) {
-      const v = pos((l.strategy_lots as Record<string, unknown>)[id])
+      // Só um NÚMERO é lote fixo. `true` (seguir pelo slug) cai para o risco % da ligação —
+      // Number(true) = 1 dava 1 lote fixo (apanhado no ensaio de 18/09 em contas financiadas).
+      const bruto = (l.strategy_lots as Record<string, unknown>)[id]
+      const v = typeof bruto === 'number' || typeof bruto === 'string' ? pos(bruto) : null
       if (v) return { ok: true, lote: { ...base, modo_lote: 'fixo', valor: Math.min(v, 50), origem: `strategy_lots[${id}]` } }
     }
   }
