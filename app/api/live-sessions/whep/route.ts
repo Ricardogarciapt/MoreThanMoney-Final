@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
+import { podeVerReproducaoDaSala } from "@/lib/perfil-ui"
+import { criarLeitorDeEspectador } from "@/lib/live-acesso-servidor"
 
 /**
  * Proxy de signaling WHEP (WebRTC egress / playback tipo "chamada Zoom") para os espectadores WEB.
@@ -29,15 +31,15 @@ function whepBases(): string[] {
 }
 
 /** Resolve a stream_key a partir do streamId (só streams ao vivo). Não expõe a chave ao cliente. */
-async function resolveStreamKey(streamId: string): Promise<string | null> {
+async function resolveStreamKey(streamId: string): Promise<{ key: string; tier: string | null } | null> {
   const { data } = await supabase
     .from("lms_streams")
-    .select("stream_key, is_live")
+    .select("stream_key, is_live, access_tier")
     .eq("id", streamId)
     .maybeSingle()
-  const row = data as { stream_key?: string | null; is_live?: boolean | null } | null
+  const row = data as { stream_key?: string | null; is_live?: boolean | null; access_tier?: string | null } | null
   if (!row?.stream_key?.trim()) return null
-  return row.stream_key.trim()
+  return { key: row.stream_key.trim(), tier: row.access_tier ?? null }
 }
 
 export async function POST(request: NextRequest) {
@@ -49,8 +51,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid_offer" }, { status: 400 })
   }
 
-  const key = await resolveStreamKey(streamId)
-  if (!key) return NextResponse.json({ error: "stream_not_found_or_offline" }, { status: 404 })
+  const sala = await resolveStreamKey(streamId)
+  if (!sala) return NextResponse.json({ error: "stream_not_found_or_offline" }, { status: 404 })
+  // O WHEP é reprodução como o HLS: mesma regra (sala `free` pública; o resto por nível; equipa vê).
+  if (!podeVerReproducaoDaSala(null, sala.tier)) {
+    const quem = await criarLeitorDeEspectador(request)()
+    if (!podeVerReproducaoDaSala(quem.perfil, sala.tier, { equipa: quem.equipa })) {
+      return NextResponse.json({ error: "sem_acesso_a_sala" }, { status: 403 })
+    }
+  }
+  const key = sala.key
 
   const q = `/rtc/v1/whep/?app=live&stream=${encodeURIComponent(key)}`
   const errors: string[] = []

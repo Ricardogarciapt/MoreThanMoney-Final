@@ -1,5 +1,6 @@
 "use client"
 
+import { authHeaders } from "@/lib/auth-token"
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import {
@@ -68,7 +69,7 @@ export default function LiveStreamRoom({ streamId }: Props) {
 
   const load = async () => {
     const [streamRes, msgRes] = await Promise.all([
-      fetch(`/api/live-sessions/streams/${streamId}`, { credentials: "same-origin" }).then((r) => r.json()),
+      fetch(`/api/live-sessions/streams/${streamId}`, { credentials: "same-origin", headers: await authHeaders() }).then((r) => r.json()),
       fetch(`/api/live-sessions/streams/${streamId}/messages`, { credentials: "same-origin" }).then((r) =>
         r.json()
       ),
@@ -310,8 +311,10 @@ export default function LiveStreamRoom({ streamId }: Props) {
                 allowFullScreen
               />
             ) : (
-              <div className="h-[420px] rounded-lg border border-gray-700 bg-black flex items-center justify-center text-gray-400">
-                Nenhum playback definido. Configura playback no admin ou HLS no servidor de stream.
+              <div className="h-[420px] rounded-lg border border-gray-700 bg-black flex items-center justify-center px-6 text-center text-gray-400">
+                {(stream as { reproducao_bloqueada?: boolean } | null)?.reproducao_bloqueada
+                  ? "🔒 Esta sala é de um nível de acesso acima do teu (ou precisa de sessão iniciada). Faz upgrade para assistir."
+                  : "Nenhum playback definido. Configura playback no admin ou HLS no servidor de stream."}
               </div>
             )}
             {/* Legendas ao vivo + seletor de idioma (só HLS) */}

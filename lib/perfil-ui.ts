@@ -123,6 +123,30 @@ export function podeAcederAoTier(p: PerfilUi | null | undefined, tier?: string |
   return false
 }
 
+/**
+ * O SERVIDOR entrega a reprodução (playback_url, HLS, WHEP, legendas/dobragem) desta sala?
+ *
+ * O cadeado das salas Premium/VIP era só visual: /api/live-sessions/streams mandava o endereço
+ * de reprodução a qualquer pessoa, com ou sem sessão, e o cadeado vivia no ecrã. Aqui fica a
+ * decisão do servidor, com a MESMA regra do ecrã (`podeAcederAoTier`) e duas diferenças:
+ *
+ *   • `free` é público mesmo SEM conta — é a /FreeSession, que não pede login;
+ *   • a equipa (admin do site, educador autenticado, operador da sala) vê sempre: é quem
+ *     transmite, testa e acompanha a sala, e não pode ficar com o próprio player às escuras.
+ *
+ * Sem perfil (visitante anónimo) só entra no `free`.
+ */
+export function podeVerReproducaoDaSala(
+  p: PerfilUi | null | undefined,
+  tier?: string | null,
+  opcoes: { equipa?: boolean } = {},
+): boolean {
+  if (opcoes.equipa) return true
+  if (minusculas(tier) === 'free') return true
+  if (!p) return false
+  return podeAcederAoTier(p, tier)
+}
+
 export type ChavePerfil =
   | 'admin'
   | 'vip'

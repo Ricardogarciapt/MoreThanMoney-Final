@@ -3,6 +3,10 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/supabase"
 import { modelCandidates } from "@/lib/mtm-terminal-analysis"
+import { userIdDoPedido } from "@/lib/sessao-do-pedido"
+import { alertaDeSinalPago } from "@/lib/direito-sinais"
+import { temDireitoSinaisPagosUtilizador } from "@/lib/direito-sinais-servidor"
+import { classifyAssetClass } from "@/lib/mtm-alerts/asset-class"
 
 /**
  * Gestão da trade (IA) a pedido — está SEMPRE disponível em cada alerta.
@@ -98,7 +102,8 @@ async function generate(prompt: string): Promise<{ text: string; model: string }
 }
 
 export async function POST(request: NextRequest) {
-  const userId = await getSessionUserId()
+  // Token OU cookie: a app-mobile manda Bearer (ver lib/sessao-do-pedido); o cookie fica de reserva.
+  const userId = (await userIdDoPedido(request)) ?? (await getSessionUserId())
   if (!userId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
 
   const body = await request.json().catch(() => ({}))
@@ -114,6 +119,25 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (error || !row) return NextResponse.json({ error: "Sinal não encontrado" }, { status: 404 })
+
+    // A gestão da IA de um sinal pago É o sinal (entrada, stop, alvos, onde mexer no stop).
+    // Mesma regra do chat e da lista de alertas: sem direito, não sai — nem se gasta uma chamada.
+    const raw = (row.raw_payload && typeof row.raw_payload === "object" ? row.raw_payload : {}) as Record<string, unknown>
+    const pago = alertaDeSinalPago({
+      // As mesmas chaves que /api/mtm-alerts lê para a estratégia.
+      strategy:
+        (["strategy", "strategy_name", "scanner", "estrategia"]
+          .map((k) => raw[k])
+          .find((v) => typeof v === "string" && v.trim()) as string | undefined) ?? null,
+      alertName: row.alert_name,
+      assetClass: classifyAssetClass(row.ticker),
+    })
+    if (pago && !(await temDireitoSinaisPagosUtilizador(userId))) {
+      return NextResponse.json(
+        { error: "A gestão deste sinal é exclusiva Premium.", codigo: "premium" },
+        { status: 403 },
+      )
+    }
 
     // Gestão guardada para o ESTADO ATUAL da trade e sem refresh → devolve-a.
     // Re-gera quando o estado muda (ativa→BE→TP→SL) → fica sempre sincronizada.

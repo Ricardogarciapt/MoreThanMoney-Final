@@ -1,5 +1,6 @@
 "use client"
 
+import { authHeaders } from "@/lib/auth-token"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
@@ -155,8 +156,8 @@ export default function LiveSessionsMobile({
     setLoading(true)
     try {
       const [liveRes, allRes, schedRes] = await Promise.all([
-        fetch("/api/live-sessions/streams?live=true").then((r) => r.json()),
-        fetch("/api/live-sessions/streams").then((r) => r.json()),
+        fetch("/api/live-sessions/streams?live=true", { headers: await authHeaders() }).then((r) => r.json()),
+        fetch("/api/live-sessions/streams", { headers: await authHeaders() }).then((r) => r.json()),
         fetch("/api/live-sessions/schedule?days=21&limit=14").then((r) => r.json()).catch(() => ({ data: [] })),
       ])
       setLiveStreams(liveRes.data || [])
@@ -225,7 +226,7 @@ export default function LiveSessionsMobile({
       })
 
       try {
-        const streamRes = await fetch(`/api/live-sessions/streams/${id}`).then((r) => r.json())
+        const streamRes = await fetch(`/api/live-sessions/streams/${id}`, { headers: await authHeaders() }).then((r) => r.json())
         if (!streamRes?.success || !streamRes.data) {
           toast({
             title: t("live.roomUnavailableTitle"),
@@ -342,7 +343,7 @@ export default function LiveSessionsMobile({
   const refreshModal = useCallback(async () => {
     if (!selectedId) return
     const [streamRes, msgRes] = await Promise.all([
-      fetch(`/api/live-sessions/streams/${selectedId}`).then((r) => r.json()),
+      fetch(`/api/live-sessions/streams/${selectedId}`, { headers: await authHeaders() }).then((r) => r.json()),
       fetch(`/api/live-sessions/streams/${selectedId}/messages`).then((r) => r.json()),
     ])
     setStream(streamRes.data || null)

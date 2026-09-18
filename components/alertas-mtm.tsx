@@ -1,6 +1,7 @@
 "use client"
 
 import { aquecerWebtrader } from "@/components/funded/pre-carga"
+import { SinalPremiumBloqueado } from "@/components/sinal-premium-bloqueado"
 import { linkWebtrader, estaNaAppMobile } from "@/lib/mtmfunded/link-webtrader"
 import { usePathname } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -71,6 +72,8 @@ interface MtmAlert {
   outcomePips: number | null
   outcomePct: number | null
   outcomeUnit: "pips" | "pontos"
+  /** Sinal pago sem direito: a API não mandou o conteúdo (lib/direito-sinais). */
+  bloqueado?: boolean
 }
 
 const TRADE_STATE_META: Record<string, { label: string; cls: string }> = {
@@ -463,7 +466,10 @@ function AlertCard({
           </a>
         ) : null}
 
-        {/* Níveis */}
+        {/* Níveis — num sinal pago sem direito, o convite em vez de uma fila de «—» */}
+        {alert.bloqueado ? (
+          <SinalPremiumBloqueado />
+        ) : (
         <div className="mt-3 rounded-lg bg-black/30 px-3">
           <LevelRow label="Entrada" value={alert.entry} icon={<Pin className="h-3.5 w-3.5 text-[#D2A63C]" />} />
           <LevelRow
@@ -482,6 +488,7 @@ function AlertCard({
             />
           ))}
         </div>
+        )}
 
         {/* SL em pips/pontos + alavancagem/tamanho (cripto perp) */}
         {(alert.slPips != null || alert.crypto) && (
@@ -564,6 +571,7 @@ function AlertCard({
               {showChart ? "Ver imagem do sinal" : "Gráfico ao vivo"}
             </Button>
           )}
+          {!alert.bloqueado && (
           <Button
             size="sm"
             variant="outline"
@@ -579,6 +587,7 @@ function AlertCard({
             )}
             Gestão da trade (IA)
           </Button>
+          )}
           {/* Negociar este sinal numa conta simulada MTM Funded: só pré-preenche o ticket. */}
           {alert.direction !== "neutral" && (alert.tvSymbol || alert.ticker) && (
             <Button asChild size="sm" variant="outline" className="border-[#2962FF]/50 text-[#8FA8FF] hover:bg-[#2962FF]/10">
@@ -593,6 +602,7 @@ function AlertCard({
               </a>
             </Button>
           )}
+          {!alert.bloqueado && (
           <Button
             size="sm"
             variant="outline"
@@ -606,9 +616,10 @@ function AlertCard({
             <Radio className="mr-1 h-3 w-3" />
             {following ? "A seguir ✓" : "Seguir sinal"}
           </Button>
+          )}
         </div>
 
-        {following && (
+        {following && !alert.bloqueado && (
           <SignalTracker
             ticker={alert.ticker}
             entry={alert.entry}

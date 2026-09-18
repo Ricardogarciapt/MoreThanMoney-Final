@@ -1,5 +1,6 @@
 "use client"
 
+import { authHeaders } from "@/lib/auth-token"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Subtitles, Check, ChevronDown } from "lucide-react"
 import {
@@ -78,6 +79,8 @@ export default function LiveCaptions({
       try {
         const r = await fetch(
           `/api/live-sessions/streams/${streamId}/captions?since=${seqRef.current}&limit=15&lang=${encodeURIComponent(lang)}`,
+          // A sala pode ser paga: o servidor precisa de saber quem pede (token nas apps, cookie no browser).
+          { headers: await authHeaders() },
         )
         if (!r.ok) return
         const d = await r.json()
@@ -98,7 +101,7 @@ export default function LiveCaptions({
         try {
           let s = 0
           for (let i = 0; i < 50 && active; i++) {
-            const r = await fetch(`/api/live-sessions/streams/${streamId}/captions?since=${s}&limit=100`)
+            const r = await fetch(`/api/live-sessions/streams/${streamId}/captions?since=${s}&limit=100`, { headers: await authHeaders() })
             if (!r.ok) break
             const d = await r.json()
             const cues = d?.captions ?? []

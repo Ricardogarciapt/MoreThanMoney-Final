@@ -1,6 +1,7 @@
 "use client"
 
 import { aquecerWebtrader } from "@/components/funded/pre-carga"
+import { SinalPremiumBloqueado } from "@/components/sinal-premium-bloqueado"
 import { linkWebtrader } from "@/lib/mtmfunded/link-webtrader"
 import { useSearchParams } from "next/navigation"
 
@@ -150,6 +151,8 @@ interface MtmAlert {
   outcomePips: number | null
   outcomePct: number | null
   outcomeUnit: "pips" | "pontos"
+  /** Sinal pago sem direito: a API não mandou o conteúdo (lib/direito-sinais). */
+  bloqueado?: boolean
 }
 
 const TRADE_STATE_META: Record<string, { label: string; cls: string }> = {
@@ -390,6 +393,9 @@ function MobileAlertCard({
         <LazyAlertChart tvSymbol={alert.tvSymbol} timeframe={alert.timeframe} strategy={alert.strategy} />
       ) : null}
 
+      {alert.bloqueado ? (
+        <SinalPremiumBloqueado compacto />
+      ) : (
       <div className="mt-2 space-y-1 rounded-lg bg-black/30 p-2 text-xs">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1 text-gray-400"><Pin className="h-3 w-3 text-[#D2A63C]" /> Entrada</span>
@@ -406,6 +412,7 @@ function MobileAlertCard({
           </div>
         ))}
       </div>
+      )}
 
       {/* SL em pips/pontos + alavancagem/tamanho (cripto perp) para $10 */}
       {(alert.slPips != null || alert.crypto) && (
@@ -448,7 +455,8 @@ function MobileAlertCard({
         </div>
       )}
 
-      {/* Ações: Gestão IA + Seguir sinal */}
+      {/* Ações: Gestão IA + Seguir sinal (não num sinal pago sem direito — não há o que gerir) */}
+      {!alert.bloqueado && (
       <div className="mt-2 grid grid-cols-2 gap-2">
         <button
           onClick={toggleAnalysis}
@@ -467,6 +475,7 @@ function MobileAlertCard({
           {following ? "A seguir ✓" : "Seguir sinal"}
         </button>
       </div>
+      )}
       {/* Negociar numa conta simulada MTM Funded: abre o WebTrader com o ticket pré-preenchido.
           Não envia nada — o trader escolhe a conta, o volume e confirma. */}
       {alert.direction !== "neutral" && (alert.ticker || alert.tvSymbol) && (
@@ -492,7 +501,7 @@ function MobileAlertCard({
           {showChart ? "Ver imagem do sinal" : "Gráfico ao vivo"}
         </button>
       )}
-      {following && <MobileSignalTracker alert={alert} />}
+      {following && !alert.bloqueado && <MobileSignalTracker alert={alert} />}
       {showAnalysis && (
         <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-2 text-xs">
           {loadingAnalysis ? (

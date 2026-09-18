@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { canalDeSinaisPago } from "@/lib/direito-sinais"
+import { filtrarComDireitoSinaisPagos } from "@/lib/direito-sinais-servidor"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import {
   parseSenseiTradingViewAlert,
@@ -280,9 +282,14 @@ const ALERT_DEFAULT_SYMBOLS = ["XAUUSD", "EURUSD", "GBPUSD", "USDCAD", "USDJPY",
  */
 async function pushSignalSubscribers(
   supabase: SupabaseClient,
-  opts: { ticker: string | null; timeframe: string | null; title: string; body: string; url: string; signalId?: string; category?: string; messageId?: string | null }
+  opts: {
+    ticker: string | null; timeframe: string | null; title: string; body: string; url: string; signalId?: string; category?: string; messageId?: string | null
+    /** Sinal de scanner pago (Sensei/GoldKiller): só vai a quem tem direito (lib/direito-sinais). */
+    pago?: boolean
+    channel?: string | null
+  }
 ): Promise<number> {
-  const { ticker, timeframe, title, body, url, signalId, category, messageId } = opts
+  const { ticker, timeframe, title, body, url, signalId, category, messageId, pago, channel } = opts
   if (!ticker) return 0
   const norm = ticker.toUpperCase().replace(/[^A-Z0-9]/g, "")
 
@@ -318,6 +325,12 @@ async function pushSignalSubscribers(
     if (Array.isArray(s.timeframes) && s.timeframes.length && timeframe && !s.timeframes.includes(timeframe)) continue
     targets.push(uid)
   }
+  // O corpo leva direção e preço («Sensei · XAUUSD · COMPRA · @ 2345»): num sinal pago, só a quem
+  // tem direito. O send-push volta a filtrar pela marca `sinal_pago` — duas guardas, a mesma regra.
+  if (pago && targets.length) {
+    const comDireito = new Set(await filtrarComDireitoSinaisPagos(targets))
+    for (let i = targets.length - 1; i >= 0; i--) if (!comDireito.has(targets[i])) targets.splice(i, 1)
+  }
   if (!targets.length) return 0
 
   await fetch(`${getSiteOrigin()}/api/notifications/send-push`, {
@@ -335,6 +348,8 @@ async function pushSignalSubscribers(
         url,
         ...(messageId ? { message_id: messageId } : {}),
         ...(category ? { category } : {}),
+        ...(channel ? { channel } : {}),
+        ...(pago ? { sinal_pago: "1" } : {}),
       },
       tag: `mtm_alert_${norm}`,
     }),
@@ -1134,6 +1149,9 @@ export async function POST(request: NextRequest) {
         url: pushUrl,
         signalId: logId,
         messageId: chatId,
+        channel: route.channel,
+        // Pago = o canal é pago (o mesmo do chat); sem canal, o scanner Premium (Sensei/GoldKiller).
+        pago: route.channel ? canalDeSinaisPago(route.channel) : isGoldKiller || scannerKey === "sensei" || scannerKey === "goldkiller",
       })
       pushOk = n > 0
     } catch (e) {

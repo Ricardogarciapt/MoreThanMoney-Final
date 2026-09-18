@@ -5,6 +5,9 @@ import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/supabase"
 import { TERMINAL_ASSETS } from "@/lib/mtm-terminal-assets"
 import { userIdDoPedido } from "@/lib/sessao-do-pedido"
+import { alertaDeSinalPago, ocultarConteudoDoAlerta } from "@/lib/direito-sinais"
+import { classifyAssetClass, type AlertAssetClass as MtmAlertAssetClass } from "@/lib/mtm-alerts/asset-class"
+import { temDireitoSinaisPagosUtilizador } from "@/lib/direito-sinais-servidor"
 
 /**
  * Alertas MTM — lê os sinais gerados pelo webhook TradingView existente
@@ -49,6 +52,9 @@ export interface MtmAlert {
   outcomePips: number | null
   outcomePct: number | null
   outcomeUnit: "pips" | "pontos"
+  /** Sinal pago visto por quem não tem direito: a linha fica, o conteúdo não (ver lib/direito-sinais). */
+  bloqueado?: boolean
+  motivoBloqueio?: "premium"
 }
 
 function num(v: unknown): number | null {
@@ -65,19 +71,7 @@ function resolveDirection(action: string | null): "buy" | "sell" | "neutral" {
   return "neutral"
 }
 
-type AlertAssetClass = "gold_btc" | "forex" | "index" | "crypto_perp" | "other"
-const FX_CODES = new Set(["EUR", "USD", "GBP", "JPY", "CHF", "AUD", "NZD", "CAD", "SGD", "SEK", "NOK", "MXN", "ZAR"])
-const IDX_SET = new Set(["UK100", "US30", "US100", "US500", "SPX500", "SPX", "NAS100", "NAS", "NDX", "DJI", "GER40", "DE40", "DE30", "DAX", "JP225", "JPN225", "FRA40", "EU50", "US2000", "HK50", "AUS200", "ESP35", "IT40"])
-function classifyAssetClass(ticker: string | null): AlertAssetClass {
-  if (!ticker) return "other"
-  const norm = ticker.toUpperCase().replace(/[^A-Z0-9.]/g, "").replace(/^[A-Z]+:/, "")
-  if (/XAUUSD/.test(norm) || /^BTCUSD$/.test(norm)) return "gold_btc"
-  if (/\.P$/.test(norm) || /USDT/.test(norm) || /PERP/.test(norm)) return "crypto_perp"
-  const letters = norm.replace(/[^A-Z]/g, "")
-  if (letters.length === 6 && FX_CODES.has(letters.slice(0, 3)) && FX_CODES.has(letters.slice(3, 6))) return "forex"
-  if (IDX_SET.has(norm) || IDX_SET.has(letters)) return "index"
-  return "other"
-}
+type AlertAssetClass = MtmAlertAssetClass
 
 /** Distância de SL em pips (forex) ou pontos + %. */
 function slInfo(ticker: string | null, entry: number | null, sl: number | null, cls: AlertAssetClass) {
@@ -379,7 +373,20 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ success: true, alerts }, { headers: { "Cache-Control": "no-store" } })
+    // SINAIS PAGOS (Sensei, GoldKiller) só com direito — a mesma regra do chat desses canais.
+    // Quem não o tem continua a ver a linha (ativo, scanner, hora, desfecho), sem entrada/stop/alvos.
+    // O direito só se pergunta se houver algum sinal pago na resposta.
+    const algumPago = alerts.some((a) => alertaDeSinalPago(a))
+    const acessoSinaisPagos = algumPago ? await temDireitoSinaisPagosUtilizador(userId) : true
+    const entregues = acessoSinaisPagos
+      ? alerts
+      : alerts.map((a) => (alertaDeSinalPago(a) ? ocultarConteudoDoAlerta(a) : a))
+
+    return NextResponse.json(
+      // `acessoSinaisPagos` só vai quando foi perguntado (havia sinais pagos na resposta).
+      { success: true, alerts: entregues, ...(algumPago ? { acessoSinaisPagos } : {}) },
+      { headers: { "Cache-Control": "no-store" } },
+    )
   } catch (err) {
     console.error("[MTM ALERTS] erro:", err)
     return NextResponse.json({ error: "Erro ao carregar alertas" }, { status: 500 })

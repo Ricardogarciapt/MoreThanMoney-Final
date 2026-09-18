@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { getSupabaseAdmin, verifyAdminAccess } from "@/lib/admin-api-helpers"
 import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-auth"
 import { resolveViewerPlayback } from "@/lib/lms-playback"
+import { aplicarAcessoAReproducao, criarLeitorDeEspectador } from "@/lib/live-acesso-servidor"
 
 const supabase = getSupabaseAdmin()
 
@@ -63,7 +64,7 @@ function applyPlaybackForClient(
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -108,7 +109,11 @@ export async function GET(
         : null,
     }
 
-    const dataPublic = applyPlaybackForClient(rowPublic, { publicViewer: true })
+    // Espectador: a reprodução só com acesso ao nível da sala (ver lib/live-acesso-servidor).
+    const [dataPublic] = await aplicarAcessoAReproducao(
+      [applyPlaybackForClient(rowPublic, { publicViewer: true })],
+      criarLeitorDeEspectador(request),
+    )
     return NextResponse.json({
       success: true,
       data: { ...dataPublic, viewer_can_clear_chat: viewerCanClearChat },

@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
 import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-auth"
 import { resolveViewerPlayback } from "@/lib/lms-playback"
+import { aplicarAcessoAReproducao, criarLeitorDeEspectador } from "@/lib/live-acesso-servidor"
 
 const supabase = getSupabaseAdmin()
 
@@ -126,7 +127,14 @@ export async function GET(request: NextRequest) {
     })
 
     const safeMapped = canSeeSecrets ? mapped : mapped.map(sanitizePublicRow)
-    return NextResponse.json({ success: true, data: safeMapped })
+
+    // O CADEADO A SÉRIO. A reprodução (playback_url / HLS, que leva a chave da sala) só vai a quem
+    // tem acesso ao nível da sala — `free` é público, o resto segue podeAcederAoTier; a equipa
+    // (educador autenticado, admin) vê sempre. A lista continua completa: é a montra das salas.
+    const entregues = canSeeSecrets
+      ? safeMapped
+      : await aplicarAcessoAReproducao(safeMapped as Record<string, unknown>[], criarLeitorDeEspectador(request))
+    return NextResponse.json({ success: true, data: entregues })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })
   }

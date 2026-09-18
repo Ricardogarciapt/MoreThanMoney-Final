@@ -3,6 +3,8 @@ import { getSupabaseAdmin } from '@/lib/admin-api-helpers'
 import { translateCaption } from '@/lib/lms-captions/translate'
 import { synthesizeToStorage } from '@/lib/lms-captions/tts'
 import { normalizeCaptionLang } from '@/lib/lms-captions/constants'
+import { podeVerReproducaoDaSala } from '@/lib/perfil-ui'
+import { criarLeitorDeEspectador } from '@/lib/live-acesso-servidor'
 
 // GET /api/live-sessions/streams/[id]/captions?since=<seq>&limit=<n>&lang=<code>
 // Devolve cues após `since`. Se `lang` for pedido e faltar a tradução nesse idioma,
@@ -23,6 +25,27 @@ export async function GET(
     const langRaw = url.searchParams.get('lang') || ''
     const lang = langRaw ? normalizeCaptionLang(langRaw) : ''
     const wantAudio = url.searchParams.get('audio') === '1' // dobragem na voz clonada
+
+    // As legendas e a dobragem SÃO a aula (texto e áudio na voz do educador): mesma regra da
+    // reprodução — `free` pública, o resto pelo nível da sala, a equipa vê sempre. Sem isto a sala
+    // Premium ficava legível e audível por quem nem tem conta (e cada pedido gastava tradução/TTS).
+    //
+    // O caption-worker do VPS lê esta rota SEM sessão, só para saber o último `seq` (e continuar a
+    // numeração depois de um reinício). Para não o partir, quem não tem acesso e não pede idioma
+    // recebe a numeração sem conteúdo nenhum. Com o segredo do worker conta como equipa.
+    const { data: sala } = await supabase.from('lms_streams').select('access_tier').eq('id', id).maybeSingle()
+    const tier = (sala as { access_tier?: string | null } | null)?.access_tier ?? null
+    const segredoWorker = process.env.LMS_CAPTION_WORKER_SECRET?.trim()
+    let permitido =
+      podeVerReproducaoDaSala(null, tier) ||
+      Boolean(segredoWorker && req.headers.get('x-caption-secret') === segredoWorker)
+    if (!permitido) {
+      const quem = await criarLeitorDeEspectador(req)()
+      permitido = podeVerReproducaoDaSala(quem.perfil, tier, { equipa: quem.equipa })
+    }
+    if (!permitido && (lang || wantAudio)) {
+      return NextResponse.json({ error: 'Sem acesso a esta sala', captions: [], latestSeq: since }, { status: 403 })
+    }
 
     const { data, error } = await supabase
       .from('lms_stream_captions')
@@ -48,6 +71,15 @@ export async function GET(
       is_final: boolean
       created_at: string
     }>
+
+    // Sem acesso: só a numeração (é o que o caption-worker precisa), sem texto nem áudio.
+    if (!permitido) {
+      const latestSeq = cues.length ? cues[cues.length - 1].seq : since
+      return NextResponse.json(
+        { captions: cues.map((c) => ({ seq: c.seq })), latestSeq },
+        { headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
 
     // Tradução on-demand do idioma pedido (só cues finais que ainda não o têm).
     if (lang) {

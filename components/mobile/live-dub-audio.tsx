@@ -1,5 +1,6 @@
 "use client"
 
+import { authHeaders } from "@/lib/auth-token"
 import { useEffect, useRef, useState } from "react"
 import { Volume2, ChevronDown, Check } from "lucide-react"
 
@@ -131,6 +132,7 @@ export default function LiveDubAudio({
         enforceMute()
         const r = await fetch(
           `/api/live-sessions/streams/${streamId}/captions?since=${sinceRef.current}&limit=8&audio=1&lang=${lang}`,
+          { headers: await authHeaders() },
         )
         if (!r.ok || !running) return
         const d = await r.json()
@@ -151,7 +153,7 @@ export default function LiveDubAudio({
       try {
         let s = 0
         for (let i = 0; i < 50 && running; i++) {
-          const r = await fetch(`/api/live-sessions/streams/${streamId}/captions?since=${s}&limit=100&lang=${lang}`)
+          const r = await fetch(`/api/live-sessions/streams/${streamId}/captions?since=${s}&limit=100&lang=${lang}`, { headers: await authHeaders() })
           if (!r.ok) break
           const d = await r.json()
           const cues = d?.captions ?? []

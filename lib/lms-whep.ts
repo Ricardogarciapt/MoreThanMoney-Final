@@ -1,5 +1,6 @@
 "use client"
 
+import { authHeaders } from "@/lib/auth-token"
 import { useEffect, useRef, useState, type RefObject } from "react"
 
 /**
@@ -91,7 +92,7 @@ export function useLmsWhepVideo(
 
         const res = await fetch(`/api/live-sessions/whep?streamId=${encodeURIComponent(streamId)}`, {
           method: "POST",
-          headers: { "Content-Type": "application/sdp" },
+          headers: await authHeaders({ "Content-Type": "application/sdp" }),
           body: pc.localDescription?.sdp || offer.sdp || "",
           credentials: "same-origin",
           cache: "no-store",

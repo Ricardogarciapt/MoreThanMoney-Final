@@ -6,6 +6,8 @@ import {
   normalizeNotificationPreferences,
   resolveNotificationCategory,
 } from '@/lib/notification-preferences'
+import { canalDeSinaisPago } from '@/lib/direito-sinais'
+import { filtrarComDireitoSinaisPagos } from '@/lib/direito-sinais-servidor'
 
 const supabase = getSupabaseAdmin()
 
@@ -163,6 +165,30 @@ export async function POST(request: NextRequest) {
     }
 
     targetUserIds = await filterUsersByPreferences(targetUserIds, category)
+
+    /**
+     * SINAL PAGO → SÓ A QUEM TEM DIREITO A ELE.
+     *
+     * Os canais de sinais pagos (Premium · Ouro, Sensei Scanner, GoldKiller) mandavam a notificação
+     * a TODAS as contas activas, com as primeiras linhas do sinal no corpo: quem não pagava lia no
+     * ecrã bloqueado o que o chat lhe fechava. Filtra-se aqui, no ponto por onde todos os envios
+     * passam (Telegram→app, chat, T2T, webhook TradingView), com a regra única de
+     * lib/direito-sinais — a mesma do chat e dos Alertas MTM.
+     *
+     * Quem não tem direito NÃO recebe nada (nem um texto genérico): é o mais simples e o mais seguro
+     * — o corpo nunca chega a existir para ele, nem no push nem no sino (notifications), que se
+     * cria mais abaixo com a mesma lista. E evita voltar ao ruído de «600 avisos por pessoa».
+     *
+     * O canal vem em `data.channel` (todos os envios de canal já o mandam); o webhook do TradingView
+     * marca os alertas pagos sem canal com `data.sinal_pago = '1'`.
+     */
+    if (canalDeSinaisPago(payload.data?.channel) || payload.data?.sinal_pago === '1') {
+      const antes = targetUserIds.length
+      targetUserIds = await filtrarComDireitoSinaisPagos(targetUserIds)
+      if (antes !== targetUserIds.length) {
+        console.log(`🔒 [SEND PUSH] sinal pago (${payload.data?.channel ?? 'alerta'}): ${antes - targetUserIds.length} sem direito ficaram de fora`)
+      }
+    }
 
     console.log('📤 [SEND PUSH]', {
       title: payload.title,
