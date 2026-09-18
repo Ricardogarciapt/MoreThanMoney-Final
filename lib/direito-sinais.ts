@@ -23,7 +23,9 @@ import { scannerKeyFromStrategy } from '@/lib/mtm-alerts/scanners'
  */
 
 /** Os canais cujo conteúdo é pago. É a lista do `canReadChannel` (lib/chat-channel-permissions). */
-export const CANAIS_SINAIS_PAGOS = ['premium-ideas', 'sensei-scanner', 'sinais-goldkiller'] as const
+// O canal Premium (premium-ideas) abriu aos membros por decisão do dono (18/09): a leitura vem de
+// chat_channels.leitura='membros'; aqui deixa de contar como canal pago para os avisos.
+export const CANAIS_SINAIS_PAGOS = ['sensei-scanner', 'sinais-goldkiller'] as const
 
 export function canalDeSinaisPago(slug?: string | null): boolean {
   return (CANAIS_SINAIS_PAGOS as readonly string[]).includes(String(slug ?? '').trim())

@@ -80,7 +80,7 @@ for (const [nome, perfil] of casosSemDireito) {
 }
 
 // ── 3. Que sinais são pagos ────────────────────────────────────────────────────────────────
-assert.equal(canalDeSinaisPago('premium-ideas'), true)
+assert.equal(canalDeSinaisPago('premium-ideas'), false) // aberto aos membros (18/09)
 assert.equal(canalDeSinaisPago('sensei-scanner'), true)
 assert.equal(canalDeSinaisPago('sinais-goldkiller'), true)
 for (const aberto of ['trade-ideas', 'trade-ideas-setup', 'sinais-scanner-mtm', 'cripto-perps', 'geral', '', null]) {
