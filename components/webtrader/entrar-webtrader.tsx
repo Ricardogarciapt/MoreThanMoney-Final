@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { ehIosNativo } from "@/lib/app-nativa"
 import { ChevronDown, KeyRound, Loader2, Lock, Mail, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { loadMemberProfile } from "@/lib/member-profile"
@@ -28,13 +29,6 @@ import { useT } from "@/components/i18n-provider"
 
 type Resultado = { plataforma: "mtmfunded"; sessao: SessaoConta } | { plataforma: "tradelocker" | "mt5"; ref: string }
 
-function ehIosNativo(): boolean {
-  if (typeof navigator === "undefined") return false
-  // MTM System (MTMNativeApp) ou app MTM Auto (MTMAuto-iOS): nenhuma deixa comprar fora da Apple.
-  const ua = navigator.userAgent
-  // O iPad dentro de uma app identifica-se como «Macintosh»; nenhum browser de Mac traz estas marcas.
-  return /MTMAuto-iOS/i.test(ua) || (/MTMNativeApp/i.test(ua) && /iPhone|iPad|iPod|Macintosh/i.test(ua))
-}
 
 function destinoAtual(): string {
   if (typeof window === "undefined") return "/webtrader"

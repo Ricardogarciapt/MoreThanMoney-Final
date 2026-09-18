@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { ehIosNativo } from "@/lib/app-nativa"
 import { Loader2, Pause, Play, Plus, Search, Trash2, Wallet, KeyRound, ExternalLink, AlertTriangle, RefreshCw } from "lucide-react"
 import { T2T_BROKERS } from "@/lib/mtmcopy/t2t-brokers"
 import TradeLockerConnectForm, { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-form"
@@ -62,11 +63,8 @@ async function tokenPorDefeito(): Promise<string | null> {
   return getAccessToken()
 }
 
-/** iOS nativo (shell MTMNativeApp): sem compras fora da App Store. */
-function ehIosNativo(): boolean {
-  if (typeof navigator === "undefined") return false
-  return /MTMNativeApp/i.test(navigator.userAgent) && /iPhone|iPad|iPod/i.test(navigator.userAgent)
-}
+// iOS nativo (MTM System, MTM Auto, iPad em modo secretária): sem compras fora da App Store —
+// a regra única de lib/app-nativa.ts (a cópia que aqui estava esquecia o MTM Auto e o iPad).
 
 export function useContasLigadas(getToken: Obter = tokenPorDefeito) {
   const [contas, setContas] = useState<ContaUnificada[]>([])

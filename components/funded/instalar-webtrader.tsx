@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Download, Share, X } from "lucide-react"
 import { isNativeApp } from "@/hooks/use-capacitor"
+import { ehAppNativaPorUA } from "@/lib/app-nativa"
 import { useEscFecha, useFolhaArrastavel } from "./use-arrasto"
 import { useT } from "@/components/i18n-provider"
 
@@ -40,7 +41,9 @@ function jaInstalada() {
 }
 function nativa() {
   try {
-    return isNativeApp() || /MTMNativeApp|MTMAuto-(iOS|Android)/i.test(navigator.userAgent)
+    // A ponte (Capacitor / MTMNative) ou a marca no user-agent — regra única em lib/app-nativa.ts
+    // (que conhece também a shell Android do MTM System: lá não há «instalar» do browser).
+    return isNativeApp() || ehAppNativaPorUA()
   } catch {
     return false
   }

@@ -1,6 +1,7 @@
 "use client"
 
 import { authHeaders } from "@/lib/auth-token"
+import { armazemDeSessoes } from "@/lib/webtrader/sessoes-separador"
 import type { Simbolo } from "@/lib/mtmfunded/simulado/matematica"
 
 /**
@@ -40,29 +41,11 @@ export interface SessaoConta { accountId: string; token: string; modo: "master" 
 
 const CHAVE_SESSOES = "mtmfunded_sessoes"
 
-export function lerSessoes(): Record<string, SessaoConta> {
-  try {
-    const raw = JSON.parse(sessionStorage.getItem(CHAVE_SESSOES) || "{}") as Record<string, SessaoConta>
-    // Sessões expiradas saem logo: mostrar uma conta que depois dá 401 é pior do que não a mostrar.
-    return Object.fromEntries(Object.entries(raw).filter(([, s]) => new Date(s.expira).getTime() > Date.now()))
-  } catch {
-    return {}
-  }
-}
-export function guardarSessao(s: SessaoConta) {
-  try {
-    const todas = lerSessoes()
-    todas[s.accountId] = s
-    sessionStorage.setItem(CHAVE_SESSOES, JSON.stringify(todas))
-  } catch { /* modo privado: fica só em memória */ }
-}
-export function apagarSessao(accountId: string) {
-  try {
-    const todas = lerSessoes()
-    delete todas[accountId]
-    sessionStorage.setItem(CHAVE_SESSOES, JSON.stringify(todas))
-  } catch { /* nada */ }
-}
+// O armazém é o mesmo das sessões TradeLocker (lib/webtrader/sessoes-separador.ts).
+const sessoesFunded = armazemDeSessoes<SessaoConta>(CHAVE_SESSOES, (s) => s.accountId)
+export const lerSessoes = sessoesFunded.ler
+export const guardarSessao = sessoesFunded.guardar
+export const apagarSessao = sessoesFunded.apagar
 
 /** Servidor único das contas simuladas (o que o trader escreve no campo «Servidor»). */
 export const SERVIDOR_FUNDED = "MTM Funded"

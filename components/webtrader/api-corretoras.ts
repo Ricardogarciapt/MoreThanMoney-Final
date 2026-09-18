@@ -1,6 +1,7 @@
 "use client"
 
 import { authHeaders } from "@/lib/auth-token"
+import { armazemDeSessoes } from "@/lib/webtrader/sessoes-separador"
 import type { PlataformaWT } from "@/lib/webtrader/corretoras/tipos"
 
 /**
@@ -29,28 +30,11 @@ export interface SessaoTL { ref: string; token: string; expira: string; login: s
 
 const CHAVE_TL = "webtrader_tl_sessoes"
 
-export function lerSessoesTL(): Record<string, SessaoTL> {
-  try {
-    const raw = JSON.parse(sessionStorage.getItem(CHAVE_TL) || "{}") as Record<string, SessaoTL>
-    return Object.fromEntries(Object.entries(raw).filter(([, s]) => new Date(s.expira).getTime() > Date.now()))
-  } catch {
-    return {}
-  }
-}
-export function guardarSessaoTL(s: SessaoTL) {
-  try {
-    const todas = lerSessoesTL()
-    todas[s.ref] = s
-    sessionStorage.setItem(CHAVE_TL, JSON.stringify(todas))
-  } catch { /* modo privado */ }
-}
-export function apagarSessaoTL(ref: string) {
-  try {
-    const todas = lerSessoesTL()
-    delete todas[ref]
-    sessionStorage.setItem(CHAVE_TL, JSON.stringify(todas))
-  } catch { /* nada */ }
-}
+// O mesmo armazém das sessões MTM Funded (lib/webtrader/sessoes-separador.ts), outra chave.
+const sessoesTL = armazemDeSessoes<SessaoTL>(CHAVE_TL, (s) => s.ref)
+export const lerSessoesTL = sessoesTL.ler
+export const guardarSessaoTL = sessoesTL.guardar
+export const apagarSessaoTL = sessoesTL.apagar
 
 export const plataformaDaRef = (ref: string): PlataformaWT | null => {
   const p = ref.split(":")[0]
