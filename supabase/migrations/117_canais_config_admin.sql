@@ -178,8 +178,8 @@ create policy chat_messages_select on public.chat_messages
   for select using (
     (is_deleted = false) and
     case
-      when channel_slug = any ((select public.chat_canais_com_leitura('premium'))) then (select public.chat_eh_premium())
-      when channel_slug = any ((select public.chat_canais_com_leitura('admin'))) then (select public.chat_eh_admin())
+      when channel_slug = any (coalesce((select public.chat_canais_com_leitura('premium')), '{}'::text[])) then (select public.chat_eh_premium())
+      when channel_slug = any (coalesce((select public.chat_canais_com_leitura('admin')), '{}'::text[])) then (select public.chat_eh_admin())
       else (select public.is_active_member())
     end
   );
@@ -198,13 +198,13 @@ create policy chat_messages_insert on public.chat_messages
     and coalesce(message_type, 'text') in ('text', 'image', 'video', 'link', 'document')
     -- quem não lê o canal também não escreve nele
     and case
-      when channel_slug = any ((select public.chat_canais_com_leitura('premium'))) then (select public.chat_eh_premium())
-      when channel_slug = any ((select public.chat_canais_com_leitura('admin'))) then (select public.chat_eh_admin())
+      when channel_slug = any (coalesce((select public.chat_canais_com_leitura('premium')), '{}'::text[])) then (select public.chat_eh_premium())
+      when channel_slug = any (coalesce((select public.chat_canais_com_leitura('admin')), '{}'::text[])) then (select public.chat_eh_admin())
       else (select public.is_active_member())
     end
     and case
-      when channel_slug = any ((select public.chat_canais_com_escrita('vip'))) then (select public.chat_eh_vip_ou_admin())
-      when channel_slug = any ((select public.chat_canais_com_escrita('ninguem'))) then false
+      when channel_slug = any (coalesce((select public.chat_canais_com_escrita('vip')), '{}'::text[])) then (select public.chat_eh_vip_ou_admin())
+      when channel_slug = any (coalesce((select public.chat_canais_com_escrita('ninguem')), '{}'::text[])) then false
       else true
     end
   );
