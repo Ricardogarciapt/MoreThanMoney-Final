@@ -34,6 +34,11 @@ export interface GraficoProps {
   posicoes: PosicaoGrafico[]
   ordens: OrdemGrafico[]
   podeNegociar: boolean
+  /**
+   * false = sem a ferramenta Long/Short nem «Usar este sinal» (contas reais: o ticket delas não é o
+   * rascunho partilhado). Arrastar SL/TP/pendentes e fechar no gráfico continuam.
+   */
+  ferramenta?: boolean
   ferramentaInicial?: Ferramenta | null
   /** Classe Tailwind da altura da área do gráfico (a app standalone usa quase o ecrã inteiro). */
   alturaClasse?: string

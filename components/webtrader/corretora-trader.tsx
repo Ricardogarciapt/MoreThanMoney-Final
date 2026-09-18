@@ -11,6 +11,8 @@ import { usd } from "@/components/funded/api"
 import { usePrecos } from "@/components/funded/use-precos"
 import { fichaDe } from "@/components/funded/pre-carga"
 import { AccaoCancelada, InterruptorUmClique, UmCliqueProvider, useUmClique } from "@/components/funded/um-clique"
+import { RascunhoProvider } from "@/components/funded/rascunho-ordem"
+import { validarTicketReal } from "@/lib/webtrader/ticket"
 import type { Prefill } from "@/components/funded/funded-ticket"
 import { COR_PLATAFORMA, ErroWT, NOME_PLATAFORMA, pedirWT } from "./api-corretoras"
 import { GestaoAutoCorretora } from "@/components/funded/gestao-auto"
@@ -90,7 +92,8 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     }
     const desligar = () => { if (iv1) clearInterval(iv1); if (iv2) clearInterval(iv2); iv1 = iv2 = null }
     const mudou = () => (document.visibilityState === "hidden" ? desligar() : ligar())
-    ligar()
+    // Aberto num separador escondido (pré-carga, app em segundo plano): só lê quando se vê.
+    if (document.visibilityState !== "hidden") ligar()
     document.addEventListener("visibilitychange", mudou)
     return () => { desligar(); document.removeEventListener("visibilitychange", mudou) }
   }, [lerConta, lerPosicoes, intervalo])
@@ -125,6 +128,17 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     void lerPosicoes(); void lerConta()
     return r
   }, [u, plataforma, contaRef, garantirAceite, lerPosicoes, lerConta])
+  /**
+   * O pedido sem passar pela negociação num clique — para o GRÁFICO, que já passa as acções dele por
+   * `executar` (grafico-leve: confirmação, protecção contra repetidos, aviso). Com `accao` havia dois
+   * `executar` encaixados: dois avisos «feito» e a contagem de «a enviar» a dobrar.
+   */
+  const chamar = useCallback(async (acao: string, corpo: Record<string, unknown>) => {
+    await garantirAceite()
+    const r = await pedirWT(plataforma, acao, { conta: contaRef, metodo: "POST", corpo })
+    void lerPosicoes(); void lerConta()
+    return r
+  }, [plataforma, contaRef, garantirAceite, lerPosicoes, lerConta])
   /** Deploy de uma conta MT5 desligada — só por clique, com confirmação (pode demorar ~1 min). */
   const ligarConta = async () => {
     if (!window.confirm("Ligar esta conta MT5 à corretora? Pode demorar cerca de 1 minuto. Depois de algum tempo parada, a MetaApi volta a desligá-la.")) return
@@ -175,7 +189,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
         <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[plataforma] }}>{NOME_PLATAFORMA[plataforma]}</span>
         <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10.5px] font-bold text-rose-300">CONTA REAL</span>
         {metricas.map(([k, v, cor]) => <span key={k} className="whitespace-nowrap"><span className="text-zinc-500">{k} </span><span className={`font-mono ${cor ?? ""}`}>{v}{c.moeda ? ` ${c.moeda}` : ""}</span></span>)}
-        {podeNegociar && <span className="ml-auto h-7"><InterruptorUmClique /></span>}
+        {podeNegociar && <span className="ml-auto flex h-7 [@media(pointer:coarse)]:h-auto"><InterruptorUmClique /></span>}
       </div>
       {erro && <p className="flex items-center gap-2 px-3 py-1 text-[11.5px] text-amber-300">{erro.texto} {botaoLigar}</p>}
 
@@ -183,15 +197,25 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
         <div className="min-w-0 space-y-2">
           <PesquisaSimbolo plataforma={plataforma} contaRef={contaRef} atual={symbol} onEscolher={setSymbol} />
           {ficha ? (
-            <FundedGrafico
-              simbolo={ficha} preco={vivos[symbol]} precos={mapa} volume={ficha.volume_min}
-              posicoes={posicoesGrafico} ordens={ordensGrafico} podeNegociar={podeNegociar} alturaClasse="h-[360px] md:h-[460px]"
-              onModificarPosicao={(id, sl, tp) => accao(`Mudar SL/TP da posição`, "modificar", { alvo: "posicao", id, sl, tp }, false)}
-              onModificarPendente={(id, preco, sl, tp) => accao(`Mover ordem pendente`, "modificar", { alvo: "ordem", id, preco, sl, tp }, false)}
-              onFecharPosicao={(id) => accao(`Fechar posição`, "fechar", { positionId: id }, false)}
-              onCancelarPendente={(id) => accao(`Cancelar ordem`, "cancelar", { orderId: id }, false)}
-              onMudarSimbolo={setSymbol}
-            />
+            // O gráfico (leve e TradingView) lê o rascunho da ordem: sem este provedor rebentava com
+            // «useRascunho fora do RascunhoProvider» mal a ficha do símbolo chegava — o ecrã das
+            // contas REAIS caía inteiro. Aqui o rascunho só serve o gráfico: a ferramenta Long/Short
+            // fica escondida (`ferramenta={false}`) porque o ticket das reais é o de baixo.
+            <RascunhoProvider
+              simbolo={ficha} preco={vivos[symbol]} precos={mapa} volume={ficha.volume_min} setVolume={() => {}}
+              alavancagem={ficha.alavancagem_max || 100} margemLivre={null} saldo={c.saldo ?? null}
+              onEnviar={() => Promise.reject(new Error("Nesta conta as ordens saem pelo ticket."))}
+            >
+              <FundedGrafico
+                simbolo={ficha} preco={vivos[symbol]} precos={mapa} volume={ficha.volume_min} ferramenta={false}
+                posicoes={posicoesGrafico} ordens={ordensGrafico} podeNegociar={podeNegociar} alturaClasse="h-[45dvh] min-h-[260px] md:h-[460px]"
+                onModificarPosicao={(id, sl, tp) => chamar("modificar", { alvo: "posicao", id, sl, tp })}
+                onModificarPendente={(id, preco, sl, tp) => chamar("modificar", { alvo: "ordem", id, preco, sl, tp })}
+                onFecharPosicao={(id) => chamar("fechar", { positionId: id })}
+                onCancelarPendente={(id) => chamar("cancelar", { orderId: id })}
+                onMudarSimbolo={setSymbol}
+              />
+            </RascunhoProvider>
           ) : (
             <p className="rounded-lg border border-white/10 p-4 text-center text-[12px] text-zinc-500">Sem gráfico MTM para {symbol} — podes negociar na mesma pelo ticket.</p>
           )}
@@ -309,14 +333,15 @@ function Ticket({ symbol, digitos, volumeMin, passo, bid, ask, podeNegociar, cap
   const [aEnviar, setAEnviar] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   useEffect(() => { setVolume(String(volumeMin)) }, [symbol, volumeMin])
-  const n = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".")))
+  const u = useUmClique()
   const enviar = async (direcao: "buy" | "sell") => {
     setErro(null)
-    const v = n(volume)
-    if (!v || !(v > 0)) return setErro("Volume inválido.")
-    if (tipo !== "mercado" && !(n(preco) ?? 0)) return setErro("Indica o preço da ordem pendente.")
+    // Números com vírgula ou ponto; lixo («abc», «1,2,3») dá erro aqui em vez de seguir como null
+    // (um SL mal escrito saía SEM SL para a corretora). Lote no passo e acima do mínimo.
+    const v = validarTicketReal({ tipo, volume, preco, sl, tp, volumeMin, passo })
+    if (!v.ok) return setErro(v.erro)
     setAEnviar(true)
-    try { await onEnviar({ direcao, tipo, volume: v, preco: tipo === "mercado" ? null : n(preco), sl: n(sl), tp: n(tp) }) } catch (e) { setErro((e as Error).message) } finally { setAEnviar(false) }
+    try { await onEnviar({ direcao, tipo, volume: v.volume, preco: v.preco, sl: v.sl, tp: v.tp }) } catch (e) { setErro((e as Error).message) } finally { setAEnviar(false) }
   }
   const input = "h-9 w-full rounded-md border border-white/10 bg-black px-2 font-mono text-[12.5px] text-white"
   return (
@@ -328,27 +353,27 @@ function Ticket({ symbol, digitos, volumeMin, passo, bid, ask, podeNegociar, cap
         ))}
       </div>
       <div className="grid grid-cols-2 gap-1.5">
-        <label>Volume (lotes)<input inputMode="decimal" step={passo} value={volume} onChange={(e) => setVolume(e.target.value)} className={input} /></label>
-        {tipo !== "mercado" && <label>Preço<input inputMode="decimal" value={preco} onChange={(e) => setPreco(e.target.value)} className={input} /></label>}
-        <label>SL<input inputMode="decimal" value={sl} onChange={(e) => setSl(e.target.value)} className={input} /></label>
-        <label>TP<input inputMode="decimal" value={tp} onChange={(e) => setTp(e.target.value)} className={input} /></label>
+        <label className="text-zinc-400">Volume (lotes)<input inputMode="decimal" value={volume} onChange={(e) => setVolume(e.target.value)} className={input} /></label>
+        {tipo !== "mercado" && <label className="text-zinc-400">Preço<input inputMode="decimal" value={preco} onChange={(e) => setPreco(e.target.value)} className={input} /></label>}
+        <label className="text-zinc-400">SL<input inputMode="decimal" value={sl} onChange={(e) => setSl(e.target.value)} placeholder="opcional" className={input} /></label>
+        <label className="text-zinc-400">TP<input inputMode="decimal" value={tp} onChange={(e) => setTp(e.target.value)} placeholder="opcional" className={input} /></label>
       </div>
       {erro && <p className="text-[11px] text-rose-300">{erro}</p>}
       {podeNegociar ? (
         <div className="grid grid-cols-2 gap-1.5">
-          <button disabled={aEnviar} onClick={() => enviar("sell")} className="rounded-md bg-[#F7525F] py-2 font-bold text-white disabled:opacity-40">SELL<br /><span className="font-mono text-[11px] font-normal">{bid != null ? bid.toFixed(digitos) : "—"}</span></button>
-          <button disabled={aEnviar} onClick={() => enviar("buy")} className="rounded-md bg-[#2962FF] py-2 font-bold text-white disabled:opacity-40">BUY<br /><span className="font-mono text-[11px] font-normal">{ask != null ? ask.toFixed(digitos) : "—"}</span></button>
+          <button disabled={aEnviar || u.ocupado} onClick={() => void enviar("sell")} aria-label={`Vender ${volume} ${symbol}${u.ligado ? " (num clique)" : ""}`} className="min-h-[48px] rounded-md bg-[#F7525F] py-2 font-bold text-white disabled:opacity-40">SELL<br /><span className="font-mono text-[11px] font-normal">{bid != null ? bid.toFixed(digitos) : "—"}</span></button>
+          <button disabled={aEnviar || u.ocupado} onClick={() => void enviar("buy")} aria-label={`Comprar ${volume} ${symbol}${u.ligado ? " (num clique)" : ""}`} className="min-h-[48px] rounded-md bg-[#2962FF] py-2 font-bold text-white disabled:opacity-40">BUY<br /><span className="font-mono text-[11px] font-normal">{ask != null ? ask.toFixed(digitos) : "—"}</span></button>
         </div>
       ) : <p className="text-zinc-500">Conta só em leitura.</p>}
     </div>
   )
 }
 
-function CelulaNivel({ valor, digitos, onMudar, podeNegociar }: { valor: number | null; digitos: number; onMudar: (v: number | null) => void; podeNegociar: boolean }) {
+function CelulaNivel({ valor, digitos, onMudar, podeNegociar, rotulo }: { valor: number | null; digitos: number; onMudar: (v: number | null) => void; podeNegociar: boolean; rotulo: string }) {
   const [txt, setTxt] = useState(valor == null ? "" : String(valor))
   useEffect(() => { setTxt(valor == null ? "" : valor.toFixed(digitos)) }, [valor, digitos])
   if (!podeNegociar) return <span className="font-mono">{valor == null ? "—" : valor.toFixed(digitos)}</span>
-  return <input value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={() => { const v = txt.trim() === "" ? null : Number(txt.replace(",", ".")); if (v !== valor && (v == null || Number.isFinite(v))) onMudar(v) }} className="h-7 w-24 rounded border border-white/10 bg-black px-1 font-mono text-[11.5px]" />
+  return <input aria-label={rotulo} inputMode="decimal" value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={() => { const v = txt.trim() === "" ? null : Number(txt.replace(",", ".")); if (v !== valor && (v == null || Number.isFinite(v))) onMudar(v); else if (v != null && !Number.isFinite(v)) setTxt(valor == null ? "" : valor.toFixed(digitos)) }} className="h-8 w-24 rounded border border-white/10 bg-black px-1 font-mono text-[11.5px]" />
 }
 
 function TabelaPosicoes({ posicoes, digitos, podeNegociar, contaRef, mapa, onFechar, onModificar }: {
@@ -368,8 +393,8 @@ function TabelaPosicoes({ posicoes, digitos, podeNegociar, contaRef, mapa, onFec
             <td className={p.direcao === "buy" ? "text-sky-300" : "text-rose-300"}>{p.direcao.toUpperCase()}</td>
             <td className="font-mono">{p.volume}</td>
             <td className="font-mono">{p.precoEntrada.toFixed(digitos)}</td>
-            <td><CelulaNivel valor={p.sl} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(p, v, p.tp).catch(() => {})} /></td>
-            <td><CelulaNivel valor={p.tp} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(p, p.sl, v).catch(() => {})} /></td>
+            <td><CelulaNivel rotulo={`SL de ${p.symbol}`} valor={p.sl} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(p, v, p.tp).catch(() => {})} /></td>
+            <td><CelulaNivel rotulo={`TP de ${p.symbol}`} valor={p.tp} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(p, p.sl, v).catch(() => {})} /></td>
             <td className={`font-mono ${(p.lucro ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{usd(p.lucro)}</td>
             <td className="whitespace-nowrap pr-2 text-right">
               {podeNegociar && (
@@ -403,9 +428,9 @@ function TabelaOrdens({ ordens, digitos, podeNegociar, onCancelar, onModificar }
             <td className="px-2 py-1"><b>{o.symbol}</b> <span className="font-mono text-zinc-500">{o.simboloCorretora}</span></td>
             <td>{o.direcao.toUpperCase()} {o.tipo}</td>
             <td className="font-mono">{o.volume}</td>
-            <td><CelulaNivel valor={o.preco} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(o, v, o.sl, o.tp).catch(() => {})} /></td>
-            <td><CelulaNivel valor={o.sl} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(o, o.preco, v, o.tp).catch(() => {})} /></td>
-            <td><CelulaNivel valor={o.tp} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(o, o.preco, o.sl, v).catch(() => {})} /></td>
+            <td><CelulaNivel rotulo={`Preço da ordem ${o.symbol}`} valor={o.preco} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(o, v, o.sl, o.tp).catch(() => {})} /></td>
+            <td><CelulaNivel rotulo={`SL da ordem ${o.symbol}`} valor={o.sl} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(o, o.preco, v, o.tp).catch(() => {})} /></td>
+            <td><CelulaNivel rotulo={`TP da ordem ${o.symbol}`} valor={o.tp} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(o, o.preco, o.sl, v).catch(() => {})} /></td>
             <td className="pr-2 text-right">{podeNegociar && <button onClick={() => void onCancelar(o).catch(() => {})} className="rounded bg-white/10 px-2 py-1">Cancelar</button>}</td>
           </tr>
         ))}

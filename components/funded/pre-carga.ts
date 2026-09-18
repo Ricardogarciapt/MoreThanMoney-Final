@@ -35,7 +35,9 @@ export function pedirFichas(csv: string): Promise<RespostaFichas> {
   // O script do HTML de /webtrader pode já ter este pedido a caminho (lib/webtrader/pre-carga-inline.ts).
   const url = URL_FICHAS(chave)
   const doHtml = tirarPreCarga<RespostaFichas>(url)
-  const p = (doHtml ? doHtml.catch(() => fetch(url).then((r) => r.json() as Promise<RespostaFichas>)) : fetch(url).then((r) => r.json() as Promise<RespostaFichas>))
+  // Uma resposta de erro (500, 502 em HTML) não fica 60 s em cache como «símbolo sem ficha».
+  const rede = () => fetch(url).then((r) => { if (!r.ok) throw new Error(`fichas ${r.status}`); return r.json() as Promise<RespostaFichas> })
+  const p = (doHtml ? doHtml.catch(rede) : rede())
     .then((d) => {
       // O primeiro preço vem nesta mesma resposta: o bid/ask aparece antes do primeiro poll.
       if (d.precos?.length) semearPrecos(d.precos)

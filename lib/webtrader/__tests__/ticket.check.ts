@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { modoNiveisEfectivo, modoNiveisPermitido } from '../ticket'
+import { modoNiveisEfectivo, modoNiveisPermitido, numeroDoCampo, validarTicketReal } from '../ticket'
 import { volumePorRisco } from '@/lib/mtmfunded/simulado/niveis-financeiros'
 import type { MapaPrecos, Simbolo } from '@/lib/mtmfunded/simulado/matematica'
 
@@ -68,6 +68,26 @@ caso('sem SL ou sem risco: diz porquê (sem lote inventado)', () => {
   assert.equal(volumePorRisco(OURO, 2650, null, 10, precos).motivo, 'sem_sl')
   assert.equal(volumePorRisco(OURO, 2650, 2645, null, precos).motivo, 'sem_risco')
   assert.equal(volumePorRisco(OURO, 2650, 2650, 10, precos).motivo, 'sem_sl')
+})
+
+
+caso('conta real: números com vírgula, lixo é erro (não «sem SL»)', () => {
+  assert.equal(numeroDoCampo(''), null)
+  assert.equal(numeroDoCampo(' 0,05 '), 0.05)
+  assert.equal(numeroDoCampo('2650.5'), 2650.5)
+  assert.equal(numeroDoCampo('.5'), 0.5)
+  assert.ok(Number.isNaN(numeroDoCampo('abc') as number))
+  assert.ok(Number.isNaN(numeroDoCampo('1,2,3') as number))
+  const base = { tipo: 'mercado' as const, volume: '0,05', preco: '', sl: '', tp: '', volumeMin: 0.01, passo: 0.01 }
+  assert.deepEqual(validarTicketReal(base), { ok: true, volume: 0.05, preco: null, sl: null, tp: null })
+  assert.equal(validarTicketReal({ ...base, sl: 'x' }).ok, false, 'SL mal escrito não sai sem SL')
+  assert.equal(validarTicketReal({ ...base, tp: '-3' }).ok, false)
+  assert.equal(validarTicketReal({ ...base, volume: '0' }).ok, false)
+  assert.equal(validarTicketReal({ ...base, volume: '0,015' }).ok, false, 'fora do passo')
+  assert.equal(validarTicketReal({ ...base, volume: '0,001', volumeMin: 0.01 }).ok, false, 'abaixo do mínimo')
+  assert.deepEqual(validarTicketReal({ ...base, volume: '0.3', passo: 0.1, volumeMin: 0.1 }), { ok: true, volume: 0.3, preco: null, sl: null, tp: null }, '0,3 em passos de 0,1 (sem erro de vírgula flutuante)')
+  assert.equal(validarTicketReal({ ...base, tipo: 'limit' }).ok, false, 'pendente sem preço')
+  assert.deepEqual(validarTicketReal({ ...base, tipo: 'limit', preco: '2640,5', sl: '2630', tp: '2660' }), { ok: true, volume: 0.05, preco: 2640.5, sl: 2630, tp: 2660 })
 })
 
 console.log(`\n${n} verificações OK`)
