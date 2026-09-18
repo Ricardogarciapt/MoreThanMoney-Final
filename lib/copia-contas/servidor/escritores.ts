@@ -11,6 +11,8 @@ import { adaptadorMtmFunded } from '@/lib/webtrader/corretoras/mtmfunded'
 import { adaptadorTradeLocker } from '@/lib/webtrader/corretoras/tradelocker'
 import type { AdaptadorCorretora } from '@/lib/webtrader/corretoras/tipos'
 import { lerRef } from '../regras'
+import { escolherNegociavel } from '../calculo'
+import { valorPorPrecoDoTick } from '../../mestres/lote'
 import { neutralizarErroDeEquipa, type TokenResolvido } from '../tokens'
 import {
   TTL_DETALHE_TL_MS, TTL_INSTRUMENTOS_TL_MS, cacheComPrazo, contextoTradeLocker, nomesNegociaveis, resolverInstrumentoDestino,
@@ -69,21 +71,32 @@ function escritorMt(accountId: string, t: TokenResolvido): EscritorDestino {
   }, serve)
   const spec = (s: string) => specPartilhada<MetaApiSymbolSpecification & { contractSize?: number; profitCurrency?: string }>(accountId, s, async () =>
     (await deps.rest(accountId, `/symbols/${encodeURIComponent(s)}/specification`)) as never)
-  const preco = async (s: string) => (await deps.rest(accountId, `/symbols/${encodeURIComponent(s)}/current-price`).catch(() => null)) as { bid?: number; ask?: number } | null
+  const preco = async (s: string) => (await deps.rest(accountId, `/symbols/${encodeURIComponent(s)}/current-price`).catch(() => null)) as { bid?: number; ask?: number; profitTickValue?: number; lossTickValue?: number } | null
 
   return {
     simbolos: async () => (await simbolos().catch(() => [])) || null,
-    async contexto(simbolo) {
+    async contexto(simbolo, direcao) {
       const lista = await simbolos((l) => l.includes(simbolo) || rankedBrokerSymbols(simbolo, l).length > 0)
-      const s = lista.includes(simbolo) ? simbolo : rankedBrokerSymbols(simbolo, lista)[0]
-      if (!s) return null
-      const [sp, info, q] = await Promise.all([spec(s), infoMt(accountId, deps), preco(s)])
+      const ranked = lista.includes(simbolo) ? [simbolo, ...rankedBrokerSymbols(simbolo, lista).filter((x) => x !== simbolo)] : rankedBrokerSymbols(simbolo, lista)
+      // Escolha fina pelo tradeMode (VT Markets: EURUSD «bare» DISABLED, EURUSD-STD FULL): o primeiro
+      // candidato que a spec deixa ABRIR nesta direcção; spec desconhecida só se nenhum for definitivo.
+      const candidatos = ranked.slice(0, 4)
+      const specs = await Promise.all(candidatos.map((c) => spec(c).catch(() => null)))
+      const i = escolherNegociavel(candidatos.map((c, k) => ({ simbolo: c, tradeMode: specs[k]?.tradeMode })), direcao)
+      if (i < 0) return null
+      const s = candidatos[i]
+      const sp = specs[i]
+      const [info, q] = await Promise.all([infoMt(accountId, deps), preco(s)])
       const mesmaMoeda = sp?.profitCurrency && info.moeda && sp.profitCurrency.toUpperCase() === info.moeda.toUpperCase()
+      // Valor de 1,0 de preço por lote na moeda da conta: pelo contrato quando a moeda do lucro é a da
+      // conta; senão pelo valor do tick da corretora (lossTickValue / tickSize) — é o que faz o risco %
+      // funcionar em USDJPY, cruzados e índices (a spec partilhada não guarda profitCurrency).
+      const porTick = valorPorPrecoDoTick(q?.lossTickValue ?? q?.profitTickValue, (sp as { tickSize?: number } | null)?.tickSize ?? sp?.point ?? null)
       return {
         simbolo: s,
         regra: { min: sp?.minVolume ?? 0.01, max: sp?.maxVolume ?? null, step: sp?.volumeStep ?? 0.01 },
         equity: info.equity, saldo: info.saldo,
-        valorPorPrecoPorLote: mesmaMoeda && sp?.contractSize ? Number(sp.contractSize) : null,
+        valorPorPrecoPorLote: mesmaMoeda && sp?.contractSize ? Number(sp.contractSize) : porTick,
         bid: q?.bid ?? null, ask: q?.ask ?? null, digits: sp?.digits ?? null,
       } satisfies ContextoDestino
     },
@@ -115,7 +128,15 @@ function escritorMt(accountId: string, t: TokenResolvido): EscritorDestino {
           ...(isNoCommentAccount(accountId) ? {} : { clientId: o.clientId }),
         },
       }))
-      return { positionId: r.positionId ?? r.orderId, simbolo: o.simbolo }
+      const positionId = r.positionId ?? r.orderId ?? null
+      // Preço REAL de enchimento (para os stops em pips a partir da entrada do cliente). Uma leitura
+      // REST barata; falhar aqui não desfaz nada — fica sem re-ancoragem.
+      let precoReal: number | null = null
+      if (positionId) {
+        const pos = (await deps.rest(accountId, `/positions/${encodeURIComponent(String(positionId))}`).catch(() => null)) as { openPrice?: number } | null
+        precoReal = pos?.openPrice != null && Number(pos.openPrice) > 0 ? Number(pos.openPrice) : null
+      }
+      return { positionId, simbolo: o.simbolo, preco: precoReal }
     },
     async modificar(positionId, sl, tp) { await adaptador.modificar({ alvo: 'posicao', id: positionId, sl, tp }) },
     async fechar(positionId, volume) { await adaptador.fechar(positionId, volume ?? null) },
