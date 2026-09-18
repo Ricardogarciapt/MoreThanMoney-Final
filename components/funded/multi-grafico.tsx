@@ -32,7 +32,7 @@ const semCriptoNasCelulas = (v: string[]) => {
   })
 }
 
-export default function MultiGrafico({ t, layout, principal }: { t: Trader; layout: Layout; principal: React.ReactNode }) {
+export default function MultiGrafico({ t, layout, principal, recolhido = false }: { t: Trader; layout: Layout; principal: React.ReactNode; recolhido?: boolean }) {
   const [celulas, setCelulas] = useState<string[]>(() => semCriptoNasCelulas(PADRAO))
   useEffect(() => {
     try {
@@ -58,17 +58,20 @@ export default function MultiGrafico({ t, layout, principal }: { t: Trader; layo
   }
 
   const grelha = layout === "1" ? "grid-cols-1 grid-rows-1" : layout === "2h" ? "grid-cols-2 grid-rows-1" : layout === "2v" ? "grid-cols-1 grid-rows-2" : "grid-cols-2 grid-rows-2"
+  // Gráficos escondidos («Mostrar gráfico»): cada célula fica só com a sua barra — linhas à medida
+  // do conteúdo e sem `h-full`, para quem está à volta (o painel de baixo) ficar com o espaço.
+  const colunas = layout === "2h" || layout === "4" ? "grid-cols-2" : "grid-cols-1"
   return (
-    <div className={`grid h-full min-h-0 gap-1 p-1 ${grelha}`}>
+    <div className={recolhido ? `grid content-start gap-1 p-1 ${colunas}` : `grid h-full min-h-0 gap-1 p-1 ${grelha}`}>
       <div className="min-h-0 min-w-0">{principal}</div>
       {visiveis.map((sym, i) => (
-        <Celula key={i} indice={i} t={t} symbol={sym} onMudar={(s) => mudar(i, s)} onPromover={() => promover(i)} />
+        <Celula key={i} indice={i} t={t} symbol={sym} recolhido={recolhido} onMudar={(s) => mudar(i, s)} onPromover={() => promover(i)} />
       ))}
     </div>
   )
 }
 
-function Celula({ t, symbol, indice, onMudar, onPromover }: { t: Trader; symbol: string; indice: number; onMudar: (s: string) => void; onPromover: () => void }) {
+function Celula({ t, symbol, indice, recolhido, onMudar, onPromover }: { t: Trader; symbol: string; indice: number; recolhido: boolean; onMudar: (s: string) => void; onPromover: () => void }) {
   const [ficha, setFicha] = useState<SimboloFicha | null>(null)
   const [volume, setVolume] = useState(0.01)
   const [favoritos, setFavoritos] = useState<string[]>([])
@@ -82,7 +85,7 @@ function Celula({ t, symbol, indice, onMudar, onPromover }: { t: Trader; symbol:
   const opcoes = [...new Set([symbol, ...favoritos, ...t.dados.posicoes.map((p) => String(p.symbol))])]
     .filter((o) => !semCripto() || !ehSimboloCripto(o))
   return (
-    <div className="flex min-h-0 min-w-0 flex-col">
+    <div className={`flex min-w-0 flex-col ${recolhido ? "" : "min-h-0"}`}>
       <div className="flex shrink-0 items-center gap-1 pb-0.5">
         <select aria-label={`símbolo do gráfico ${indice + 2}`} value={symbol} onChange={(e) => onMudar(e.target.value)}
           className="h-6 rounded border border-[#2A2E39] bg-[#1E222D] px-1 text-[11px] text-white">
@@ -94,13 +97,13 @@ function Celula({ t, symbol, indice, onMudar, onPromover }: { t: Trader; symbol:
         <span className="text-[10px] text-zinc-500">gráfico {indice + 2}</span>
       </div>
       {ficha && ficha.symbol === symbol ? (
-        <div className="min-h-0 flex-1">
+        <div className={recolhido ? "" : "min-h-0 flex-1"}>
           <ProvedorRascunho t={t} ficha={ficha} volume={volume} setVolume={setVolume}>
-            <GraficoConta t={t} ficha={ficha} chaveTf={`:celula${indice + 1}`} preencher />
+            <GraficoConta t={t} ficha={ficha} chaveTf={`:celula${indice + 1}`} preencher={!recolhido} />
           </ProvedorRascunho>
         </div>
       ) : (
-        <div className="grid h-full place-items-center rounded-md border border-[#2A2E39]"><Loader2 className="h-5 w-5 animate-spin text-zinc-500" /></div>
+        <div className={`grid place-items-center rounded-md border border-[#2A2E39] ${recolhido ? "h-10" : "h-full"}`}><Loader2 className="h-5 w-5 animate-spin text-zinc-500" /></div>
       )}
     </div>
   )

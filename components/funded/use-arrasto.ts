@@ -157,7 +157,14 @@ export function useFolhaArrastavel(onFechar: () => void) {
         const el = conteudoEl.current
         if (!el || e.touches.length !== 1) { toque.current = null; return }
         const t = e.touches[0]
-        toque.current = { x0: t.clientX, y0: t.clientY, ativo: false, desistiu: el.scrollTop > 0, amostras: [{ y: t.clientY, t: e.timeStamp }] }
+        // Uma lista com scroll próprio DENTRO do conteúdo (o Mercado, o histórico) que não está no
+        // topo manda: o dedo para baixo é scroll dela, não fechar a folha.
+        let rolado = false
+        for (let n = e.target as HTMLElement | null; n; n = n.parentElement) {
+          if (n.scrollTop > 0) { rolado = true; break }
+          if (n === el) break
+        }
+        toque.current = { x0: t.clientX, y0: t.clientY, ativo: false, desistiu: rolado, amostras: [{ y: t.clientY, t: e.timeStamp }] }
       },
       mover: (e) => {
         const g = toque.current

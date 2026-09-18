@@ -15,6 +15,9 @@ import { EstadoMercado, Sentimento } from "./estado-mercado"
 import { useRascunho } from "./rascunho-ordem"
 import { useUmClique } from "./um-clique"
 import { useGraficoVisivel } from "./grafico-visivel"
+import { useArrastoVertical, useEscFecha, useFolhaArrastavel } from "./use-arrasto"
+import { useMediaQuery } from "./use-media"
+import { MQ_PAINEL_AO_LADO } from "@/lib/webtrader/layout"
 import { AplicarPrefill, AvisosConta, FaixaPrefill, GraficoConta, ProvedorRascunho, type Trader } from "./trader-contexto"
 const CalendarioEconomico = dynamic(() => import("./calendario-economico"), { ssr: false })
 const FundedEstatisticas = dynamic(() => import("./funded-estatisticas"), { ssr: false })
@@ -29,8 +32,11 @@ const FundedEstatisticas = dynamic(() => import("./funded-estatisticas"), { ssr:
  *    ARRASTA-SE (rato e dedo): para cima aumenta, para baixo encolhe até ficar só a barra dos
  *    separadores; um toque na pega abre/fecha. O gráfico fica com o espaço que sobra. A altura
  *    escolhida fica guardada (useGaveta);
- *  · «Mostrar gráfico» desligado (barra do gráfico): a gaveta fica com o ecrã todo.
- * As folhas fecham-se a arrastar para baixo, com Esc, ou a tocar fora.
+ *  · «Mostrar gráfico» desligado (barra do gráfico): a gaveta fica com o ecrã todo;
+ *  · tablet deitado (≥ 900 px em paisagem, lib/webtrader/layout.ts): a gaveta passa para o LADO do
+ *    gráfico, com a altura toda — o gráfico fica com a largura que sobra.
+ * As folhas fecham-se a arrastar para baixo (pega, cabeçalho ou conteúdo no topo — use-arrasto.ts),
+ * com Esc, ou a tocar fora.
  */
 
 type FolhaAberta = null | "ticket" | "mercado" | "conta"
@@ -107,8 +113,10 @@ function Conteudo({ t }: { t: Trader }) {
   const [foco, setFoco] = useState<string | null>(null)
   const [envio, setEnvio] = useState<"buy" | "sell" | null>(null)
   const faixa = useRef<HTMLDivElement>(null)
-  // Gráfico escondido: a gaveta fica aberta e com o ecrã todo (sem pega — não há para onde arrastar).
-  const cheia = !graficoVisivel
+  // Tablet deitado: a gaveta vai para o lado, com a altura toda (só com o gráfico à vista).
+  const aoLado = useMediaQuery(MQ_PAINEL_AO_LADO) && graficoVisivel
+  // Gráfico escondido (ou gaveta ao lado): a gaveta fica aberta e com o espaço todo (sem pega).
+  const cheia = !graficoVisivel || aoLado
 
   // Um alerta/ideia com direção abre logo o ticket (o resumo já vem escolhido).
   useEffect(() => { if (k.r.escolhido) setFolha("ticket") }, [k.r.escolhido])
@@ -132,7 +140,7 @@ function Conteudo({ t }: { t: Trader }) {
   }
   const carregar = (lado: "buy" | "sell") => {
     if (umClique.ligado) {
-      if (k.aEnviar || umClique.ocupado) return
+      if (k.aEnviar || umClique.ocupado || envio) return
       k.set({ lado, visivel: true })
       setEnvio(lado)
       return
@@ -159,11 +167,13 @@ function Conteudo({ t }: { t: Trader }) {
   )
   const semPreco = !preco?.fresco
 
-  return (
+  const ocupado = umClique.ligado && (k.aEnviar || umClique.ocupado || envio != null)
+
+  const topo = (
     <>
       {/* Topo: símbolo (→ lista) · preço · estado · equity (→ conta) */}
       <div className="flex shrink-0 items-center gap-2 border-b border-[#2A2E39] bg-[#131722] px-2.5 py-1.5">
-        <button onClick={() => setFolha("mercado")} className="flex min-w-0 items-center gap-1 rounded-lg px-1 py-0.5 text-left active:bg-white/5" aria-label="escolher símbolo">
+        <button onClick={() => setFolha("mercado")} className="flex min-h-[44px] min-w-0 items-center gap-1 rounded-lg px-1 py-0.5 text-left active:bg-white/5" aria-label="escolher símbolo">
           <span className="text-[16px] font-bold text-white">{s.symbol}</span>
           <ChevronDown className="h-4 w-4 text-zinc-500" />
         </button>
@@ -171,40 +181,48 @@ function Conteudo({ t }: { t: Trader }) {
           <span className="font-mono text-[12px] text-zinc-300">{px(preco?.bid, s.digits)}</span>
           <EstadoMercado simbolo={s} compacto />
         </div>
-        <button onClick={() => setFolha("conta")} className="ml-auto flex flex-col items-end rounded-lg px-2 py-0.5 leading-tight active:bg-white/5" aria-label="ver conta">
+        <button onClick={() => setFolha("conta")} className="ml-auto flex min-h-[44px] flex-col items-end justify-center rounded-lg px-2 py-0.5 leading-tight active:bg-white/5" aria-label="ver conta">
           <span className="text-[9.5px] uppercase tracking-wide text-zinc-500">Equity</span>
           <span className={`font-mono text-[13px] font-semibold ${t.vivo.flutuante >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{usd(t.vivo.equity)} $</span>
         </button>
       </div>
       <AvisosConta t={t} />
       <FaixaPrefill t={t} />
+    </>
+  )
 
-      {/* O gráfico, em ecrã inteiro (escondido: fica só a barra dele, e a gaveta ocupa o resto) */}
-      <div className={graficoVisivel ? "min-h-0 flex-1" : "shrink-0"}>
-        <GraficoConta t={t} ficha={s} preencher={graficoVisivel} />
+  const grafico = (
+    // O gráfico, em ecrã inteiro (escondido: fica só a barra dele, e a gaveta ocupa o resto)
+    <div className={graficoVisivel ? "min-h-0 flex-1" : "shrink-0"}>
+      <GraficoConta t={t} ficha={s} preencher={graficoVisivel} />
+    </div>
+  )
+
+  const botoes = t.podeNegociar && (
+    // SELL | volume | BUY — 44 px de altura no mínimo (dedo)
+    <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-stretch gap-1.5 border-t border-[#2A2E39] bg-[#131722] px-2 py-1.5">
+      <button disabled={semPreco || ocupado} onClick={() => carregar("sell")} aria-label={`Vender ${t.volume} ${s.symbol}${umClique.ligado ? " (num clique)" : ""}`} className="min-h-[48px] rounded-xl bg-[#F23645] py-2 text-white active:brightness-90 disabled:opacity-40">
+        <span className="block text-[11px] font-bold tracking-wide">SELL</span>
+        <span className="block font-mono text-[15px] font-semibold">{px(preco?.bid, s.digits)}</span>
+      </button>
+      <div className="flex items-center gap-0.5 rounded-xl bg-white/5 px-1">
+        <button onClick={() => mudarVolume(-passo)} aria-label="menos volume" className="grid h-11 w-10 place-items-center text-zinc-300"><Minus className="h-4 w-4" /></button>
+        <span className="min-w-[3.2rem] text-center font-mono text-[13px] text-white" aria-label="volume em lotes">{t.volume}</span>
+        <button onClick={() => mudarVolume(passo)} aria-label="mais volume" className="grid h-11 w-10 place-items-center text-zinc-300"><Plus className="h-4 w-4" /></button>
       </div>
+      <button disabled={semPreco || ocupado} onClick={() => carregar("buy")} aria-label={`Comprar ${t.volume} ${s.symbol}${umClique.ligado ? " (num clique)" : ""}`} className="min-h-[48px] rounded-xl bg-[#089981] py-2 text-white active:brightness-90 disabled:opacity-40">
+        <span className="block text-[11px] font-bold tracking-wide">BUY</span>
+        <span className="block font-mono text-[15px] font-semibold">{px(preco?.ask, s.digits)}</span>
+      </button>
+    </div>
+  )
 
-      {/* SELL | volume | BUY */}
-      {t.podeNegociar && (
-        <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-stretch gap-1.5 border-t border-[#2A2E39] bg-[#131722] px-2 py-1.5">
-          <button disabled={semPreco} onClick={() => carregar("sell")} className="rounded-xl bg-[#F23645] py-2 text-white active:brightness-90 disabled:opacity-40">
-            <span className="block text-[11px] font-bold tracking-wide">SELL</span>
-            <span className="block font-mono text-[15px] font-semibold">{px(preco?.bid, s.digits)}</span>
-          </button>
-          <div className="flex items-center gap-0.5 rounded-xl bg-white/5 px-1">
-            <button onClick={() => mudarVolume(-passo)} aria-label="menos volume" className="grid h-9 w-8 place-items-center text-zinc-300"><Minus className="h-4 w-4" /></button>
-            <span className="min-w-[3.2rem] text-center font-mono text-[13px] text-white">{t.volume}</span>
-            <button onClick={() => mudarVolume(passo)} aria-label="mais volume" className="grid h-9 w-8 place-items-center text-zinc-300"><Plus className="h-4 w-4" /></button>
-          </div>
-          <button disabled={semPreco} onClick={() => carregar("buy")} className="rounded-xl bg-[#089981] py-2 text-white active:brightness-90 disabled:opacity-40">
-            <span className="block text-[11px] font-bold tracking-wide">BUY</span>
-            <span className="block font-mono text-[15px] font-semibold">{px(preco?.ask, s.digits)}</span>
-          </button>
-        </div>
-      )}
-
-      {/* A gaveta: pega (arrasta-se) + separadores; o conteúdo desliza para o lado */}
-      <div className={`${cheia ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} border-t border-[#2A2E39] bg-[#1E222D]`} style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+  const gavetaEl = (
+      /* A gaveta: pega (arrasta-se) + separadores; o conteúdo desliza para o lado */
+      <div
+        className={`${cheia ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} ${aoLado ? "border-l" : "border-t"} border-[#2A2E39] bg-[#1E222D]`}
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      >
         {!cheia && <PegaGaveta gav={gav} />}
         <div role="tablist" className="flex shrink-0">
           {SEPARADORES.map((nome, i) => {
@@ -212,7 +230,7 @@ function Conteudo({ t }: { t: Trader }) {
             const ativo = (gaveta || cheia) && sep === i
             return (
               <button key={nome} role="tab" aria-selected={ativo} onClick={() => (ativo ? (cheia ? undefined : setGaveta(false)) : irPara(i))}
-                className={`flex flex-1 items-center justify-center gap-1 border-b-2 py-2 text-[12.5px] ${ativo ? "border-[#D2A63C] text-white" : "border-transparent text-zinc-400"}`}>
+                className={`flex min-h-[44px] flex-1 items-center justify-center gap-1 border-b-2 py-2 text-[12.5px] ${ativo ? "border-[#D2A63C] text-white" : "border-transparent text-zinc-400"}`}>
                 {nome}{n > 0 && <span className="rounded bg-[#D2A63C] px-1 text-[10px] font-bold text-black">{n}</span>}
               </button>
             )
@@ -229,7 +247,7 @@ function Conteudo({ t }: { t: Trader }) {
             <div className="h-full w-full shrink-0 snap-start overflow-y-auto">
               <div className="sticky top-0 z-10 flex gap-1 overflow-x-auto bg-[#1E222D] px-2 py-1.5">
                 {([["estatisticas", "Estatísticas"], ["alertas", "Alertas"], ["diario", "Diário"], ["calendario", "Calendário"], ["conta", "Conta"]] as const).map(([v, nome]) => (
-                  <button key={v} onClick={() => setMais(v)} className={`shrink-0 rounded-full border px-2.5 py-1 text-[11.5px] ${mais === v ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-white/10 text-zinc-400"}`}>{nome}</button>
+                  <button key={v} onClick={() => setMais(v)} aria-pressed={mais === v} className={`min-h-[36px] shrink-0 rounded-full border px-3 py-1 text-[11.5px] ${mais === v ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-white/10 text-zinc-400"}`}>{nome}</button>
                 ))}
               </div>
               {sep === 3 && (gaveta || cheia) && (
@@ -245,6 +263,19 @@ function Conteudo({ t }: { t: Trader }) {
           </div>
         </div>
       </div>
+  )
+
+  return (
+    <>
+      {topo}
+      {aoLado ? (
+        <div className="flex min-h-0 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col">{grafico}{botoes}</div>
+          <div className="flex w-[min(400px,40%)] shrink-0 flex-col">{gavetaEl}</div>
+        </div>
+      ) : (
+        <>{grafico}{botoes}{gavetaEl}</>
+      )}
 
       {folha === "ticket" && (
         <Folha titulo="Nova ordem" onFechar={() => { setFolha(null); k.limpar(); k.setFerramenta(null) }}>
@@ -267,64 +298,35 @@ function Conteudo({ t }: { t: Trader }) {
 }
 
 /**
- * A pega da gaveta. Arrasto com Pointer Events + captura (rato, dedo, caneta):
- *  · `touch-action: none` e um `touchmove` não-passivo com preventDefault — senão, no Safari/iOS e
- *    nas webviews das apps, arrastar a pega fazia scroll/«bounce» da página ou trocava de separador
- *    nativo em vez de mexer na gaveta;
- *  · a altura segue o dedo sem transição e é aplicada uma vez por frame (o gráfico redimensiona-se);
- *  · largar abaixo de MIN_ABERTA fecha; um toque sem arrastar alterna; ↑/↓ no teclado mexem 40 px.
+ * A pega da gaveta — o arrasto é o hook único use-arrasto.ts (rato, dedo, caneta; `touch-action:
+ * none` + touchmove não-passivo para não fazer scroll/«bounce» na webview; um valor por frame):
+ *  · a altura segue o dedo sem transição; largar abaixo de MIN_ABERTA fecha;
+ *  · um sacudir rápido para baixo (≥ 1 px/ms) também fecha;
+ *  · um toque sem arrastar alterna; ↑/↓ no teclado mexem 40 px.
  */
 function PegaGaveta({ gav }: { gav: ReturnType<typeof useGaveta> }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const arrasto = useRef<{ y0: number; h0: number; moveu: boolean; ultima: number } | null>(null)
-  const frame = useRef<number | null>(null)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const travar = (e: TouchEvent) => { if (e.cancelable) e.preventDefault() }
-    el.addEventListener("touchmove", travar, { passive: false })
-    el.addEventListener("touchstart", travar, { passive: false })
-    return () => { el.removeEventListener("touchmove", travar); el.removeEventListener("touchstart", travar) }
-  }, [])
-  useEffect(() => () => { if (frame.current != null) cancelAnimationFrame(frame.current) }, [])
-
+  const h0 = useRef(0)
   const alturaAgora = () => (gav.aberta ? gav.altura : 0)
-  const terminar = (e: React.PointerEvent<HTMLDivElement>, cancelado: boolean) => {
-    const a = arrasto.current
-    arrasto.current = null
-    if (frame.current != null) { cancelAnimationFrame(frame.current); frame.current = null }
-    try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ok */ }
-    gav.setAoVivo(null)
-    if (!a || cancelado) return
-    if (!a.moveu) return gav.setAberta((x) => !x)
-    gav.fixar(a.h0 - (e.clientY - a.y0))
-  }
+  const arrasto = useArrastoVertical({
+    aoComecar: () => { h0.current = alturaAgora() },
+    aoMover: (dy) => gav.setAoVivo(limitar(h0.current - dy)),
+    aoLargar: ({ dy, velocidade, moveu }) => {
+      gav.setAoVivo(null)
+      if (!moveu) return gav.setAberta((x) => !x)
+      if (dy > 0 && velocidade >= 1) return gav.setAberta(false)
+      gav.fixar(h0.current - dy)
+    },
+    aoCancelar: () => gav.setAoVivo(null),
+  })
 
   return (
     <div
-      ref={ref}
+      ref={arrasto.ref}
+      {...arrasto.handlers}
       role="separator" aria-orientation="horizontal" tabIndex={0}
       aria-label={gav.aberta ? "arrastar para redimensionar o painel, tocar para fechar" : "arrastar ou tocar para abrir o painel"}
       aria-expanded={gav.aberta} aria-valuenow={alturaAgora()} aria-valuemin={0}
-      className="flex h-4 cursor-row-resize touch-none select-none items-center justify-center [overscroll-behavior:contain] focus:outline-none focus-visible:bg-white/5"
-      onPointerDown={(e) => {
-        if (e.button !== 0 && e.pointerType === "mouse") return
-        e.preventDefault()
-        arrasto.current = { y0: e.clientY, h0: alturaAgora(), moveu: false, ultima: alturaAgora() }
-        try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ok */ }
-      }}
-      onPointerMove={(e) => {
-        const a = arrasto.current
-        if (!a) return
-        const dy = e.clientY - a.y0
-        if (!a.moveu && Math.abs(dy) < 5) return
-        a.moveu = true
-        a.ultima = limitar(a.h0 - dy)
-        if (frame.current == null) frame.current = requestAnimationFrame(() => { frame.current = null; if (arrasto.current) gav.setAoVivo(arrasto.current.ultima) })
-      }}
-      onPointerUp={(e) => terminar(e, false)}
-      onPointerCancel={(e) => terminar(e, true)}
+      className="flex h-6 cursor-row-resize touch-none select-none items-center justify-center [overscroll-behavior:contain] focus:outline-none focus-visible:bg-white/5"
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); gav.setAberta((x) => !x) }
         else if (e.key === "ArrowUp") { e.preventDefault(); gav.fixar(gav.aberta ? gav.altura + 40 : gav.altura) }
@@ -336,33 +338,26 @@ function PegaGaveta({ gav }: { gav: ReturnType<typeof useGaveta> }) {
   )
 }
 
-/** Folha que sobe de baixo. Fecha a arrastar a pega para baixo, com Esc, ou a tocar fora. */
+/**
+ * Folha que sobe de baixo. Fecha a arrastar para baixo (pega/cabeçalho, ou o conteúdo quando já está
+ * no topo — sem roubar o scroll), com Esc, ou a tocar fora. Arrasto: use-arrasto.ts.
+ */
 function Folha({ titulo, onFechar, children }: { titulo: string; onFechar: () => void; children: ReactNode }) {
-  const [dy, setDy] = useState(0)
-  const y0 = useRef<number | null>(null)
-  useEffect(() => {
-    const f = (e: KeyboardEvent) => { if (e.key === "Escape") onFechar() }
-    window.addEventListener("keydown", f)
-    return () => window.removeEventListener("keydown", f)
-  }, [onFechar])
+  useEscFecha(onFechar)
+  const f = useFolhaArrastavel(onFechar)
   return (
     <div className="fixed inset-0 z-[900] flex flex-col justify-end bg-black/50" onClick={onFechar} role="dialog" aria-modal="true" aria-label={titulo}>
       <div
-        className="relative max-h-[90dvh] overflow-hidden rounded-t-2xl border-t border-white/10 bg-[#131722] shadow-2xl"
-        style={{ transform: `translateY(${Math.max(0, dy)}px)`, transition: y0.current == null ? "transform .18s" : "none", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        className="relative flex max-h-[90dvh] flex-col overflow-hidden rounded-t-2xl border-t border-white/10 bg-[#131722] shadow-2xl"
+        style={{ ...f.estilo, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="flex touch-none items-center gap-2 px-3 pb-1 pt-2"
-          onPointerDown={(e) => { y0.current = e.clientY; (e.target as HTMLElement).setPointerCapture?.(e.pointerId) }}
-          onPointerMove={(e) => { if (y0.current != null) setDy(e.clientY - y0.current) }}
-          onPointerUp={() => { const fechar = dy > 80; y0.current = null; setDy(0); if (fechar) onFechar() }}
-        >
+        <div {...f.pega} className="flex shrink-0 cursor-grab touch-none select-none items-center gap-2 px-3 pb-1 pt-2 active:cursor-grabbing">
           <span className="absolute left-1/2 top-1.5 h-1 w-10 -translate-x-1/2 rounded-full bg-white/20" />
           <p className="mt-2 text-[13px] font-semibold text-white">{titulo}</p>
-          <button onClick={onFechar} aria-label="fechar" className="ml-auto mt-2 text-zinc-400"><X className="h-5 w-5" /></button>
+          <button type="button" onClick={onFechar} aria-label="Fechar" className="-mr-2 ml-auto mt-1 grid h-11 w-11 place-items-center text-zinc-400"><X className="h-5 w-5" /></button>
         </div>
-        <div className="max-h-[calc(90dvh-44px)] overflow-y-auto px-2 pb-3">{children}</div>
+        <div ref={f.conteudo} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">{children}</div>
       </div>
     </div>
   )
