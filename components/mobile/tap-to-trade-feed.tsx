@@ -1,6 +1,7 @@
 "use client"
 
-import { t2tMode } from "@/lib/mtmcopy/t2t-source"
+import { lerSinal } from "@/lib/sinais/formato-sinal"
+import { ehSinalDePerpetuo, t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { pipSizeForSymbol, unitFor } from "@/lib/mtmcopy/trade-outcome"
 import { directionLabelFromText, resolveDirectionLabel } from "@/lib/mtmcopy/signal-direction"
 
@@ -31,7 +32,7 @@ import MtmAutoPainel from "@/components/mobile/mtm-auto-painel"
 import MtmAutoEstrategias from "@/components/mobile/mtm-auto-estrategias"
 import MtmAutoHistorico from "@/components/mobile/mtm-auto-historico"
 
-const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|entry\s*hit|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
+const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break[\s-]*even|stop\s+protegido|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|entry\s*hit|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 /**
  * Um preço como se escreve — nunca com a precisão inventada de um indicador.
  *
@@ -51,7 +52,7 @@ function precoLegivel(v: number | string | null | undefined, symbol: string): st
 }
 
 /** Encerra mesmo a ideia (ao contrário de um BE ou de um TP1, que a deixam a correr). */
-const TERMINAL_RE = /(posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|alvo\s+final|close\s+all|hit\s*tp\s*[3-9])/i
+const TERMINAL_RE = /(posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|stop\s+(?:loss|protegido)\s*·|cancelad|encerrad|descartad|invalidad|alvo\s+final|close\s+all|hit\s*tp\s*[3-9])/i
 const DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴)/i
 /** Sensei: só a "Entry Alert / Ideia Activada" (entrada activada) é um sinal válido. */
 const SENSEI_ACTIVE_RE = /(entrada\s+activ|entrada\s+ativ|ideia\s+activ|ideia\s+ativ|entry\s+alert)/i
@@ -99,11 +100,12 @@ const CHANNEL_LABEL: Record<string, string> = {
   "trade-ideas-setup": "Ideias Forex",
   "trade-ideas": "Trade Ideas",
   "sinais-goldkiller": "GoldKiller",
-  // O slug engana: este é o canal dos traders de topo do PrimeVerse.
-  "sinais-scanner-mtm": "PrimeVerse",
+  // O slug engana: é o canal das estratégias MTM Auto Edge / King / Wolf.
+  "sinais-scanner-mtm": "MTM Auto Edge/Wolf/King",
   "ideias-e-sinais": "Ideias Forex Swings",
-  "cripto-perps": "Perpétuos Cripto",
-  "aurum-flow": "Aurum Flow",
+  // Fundido na Aurum Flow a 18/09 (um canal só); as mensagens antigas ficam com o rótulo novo.
+  "cripto-perps": "Aurum Flow & Perpétuos",
+  "aurum-flow": "Aurum Flow & Perpétuos",
   // Alias do slug antigo da Aurum Flow — remover depois de 2026-10-14 (30 dias após 2026-09-14).
   "golden-moves": "Aurum Flow",
 }
@@ -165,6 +167,19 @@ interface SignalFields {
   tps: string[]
 }
 function parseSignalFields(content: string): SignalFields {
+  // Formato único (lib/sinais/formato-sinal): lê-se exacto, sem adivinhar.
+  const unico = lerSinal(content)
+  if (unico) {
+    return {
+      symbol: unico.simbolo,
+      direction: unico.direcao === "buy" ? "BUY" : "SELL",
+      entry: unico.zona
+        ? `${unico.zonaPrimeiro ?? unico.zona[0]} – ${unico.zonaPrimeiro === unico.zona[0] ? unico.zona[1] : unico.zona[0]}`
+        : unico.entrada != null ? String(unico.entrada) : "Mercado",
+      sl: unico.sl != null ? String(unico.sl) : null,
+      tps: unico.tps.map(String),
+    }
+  }
   const numRe = "(\\d+(?:[.,]\\d+)?)"
   const entryM = content.match(new RegExp(`(?:entrada|entry|entrar)\\s*[:=]?\\s*${numRe}`, "i"))
   const marketM = /(?:entrada|entry)\s*[:=]?\s*(mercado|market)/i.test(content)
@@ -1352,7 +1367,7 @@ export default function TapToTradeFeed() {
                     <div className="mt-2.5 flex gap-1.5">
                       <div className="nivel min-w-0">
                         <p className="etiqueta">{t("t2t.entry")}</p>
-                        <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums">{f.entry != null ? precoLegivel(f.entry, f.symbol || "") : t("t2t.market")}</p>
+                        <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums">{f.entry == null || f.entry === "Mercado" ? t("t2t.market") : Number.isFinite(Number(f.entry)) ? precoLegivel(f.entry, f.symbol || "") : f.entry}</p>
                       </div>
                       <div className="nivel min-w-0">
                         <p className="etiqueta">{t("t2t.stopLoss")}</p>
@@ -1466,14 +1481,14 @@ export default function TapToTradeFeed() {
                 ) : (
                   <button
                     onClick={() =>
-                      s.channel_slug === "cripto-perps" ? setCopySig(s) : setTap({ sig: s, status: "confirm" })
+                      ehSinalDePerpetuo(s.channel_slug, s.content) ? setCopySig(s) : setTap({ sig: s, status: "confirm" })
                     }
                     className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2.5 active:scale-[0.98] transition-transform"
                   >
                     <Zap className="w-4 h-4" />
                     {/* Perpétuos: não abre ordem — modal TAP to Copy com os parâmetros, campo a
                         campo, para colar na exchange (pedido Ricardo 2026-09-04). */}
-                    {s.channel_slug === "cripto-perps"
+                    {ehSinalDePerpetuo(s.channel_slug, s.content)
                       ? "TAP to Copy"
                       : t2tMode(s.channel_slug, s.content) === "follow"
                         ? t("t2t.followPosition")

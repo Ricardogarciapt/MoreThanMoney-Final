@@ -43,6 +43,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/cron/mestre-publicar",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/nightly-tp-sl",
       "schedule": "*/15 * * * *"
     },

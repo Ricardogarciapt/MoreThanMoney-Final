@@ -56,7 +56,9 @@ export interface Janela {
 }
 
 const JANELA_MS = 24 * 3600_000
-const SLUGS_PRIMEVERSE = ['premium-ideas', 'sensei-scanner', 'trade-ideas-setup', 'ideias-e-sinais', 'cripto-perps', 'sinais-goldkiller']
+// Desde 18/09 as estratégias Edge/King/Wolf publicam no `sinais-scanner-mtm`, com a etiqueta da
+// estratégia (formato único) e sem o nome da fonte; as mensagens antigas trazem «PrimeVerse».
+const SLUGS_PRIMEVERSE = ['sinais-scanner-mtm', 'trade-ideas', 'premium-ideas', 'sensei-scanner', 'trade-ideas-setup', 'ideias-e-sinais', 'cripto-perps', 'aurum-flow', 'sinais-goldkiller']
 
 function contar(f: LinhaFanout[]) {
   return {
@@ -82,7 +84,7 @@ async function lerJanela(): Promise<Janela> {
     ler(db().from('tradingview_signals').select('id, received_at, alert_name, ticker, action, price, sl, tp, signal_kind, trade_status, ai_status, telegram_status, chat_status, ai_error, telegram_error, bybit_exec_detail').gte('received_at', desde).order('received_at', { ascending: false, nullsFirst: false }).limit(800)),
     ler(db().from('mtmauto_signals').select('id, provider_id, ref_externa, symbol, direction, entry, sl, estado, resultado_pips, created_at').gte('created_at', desde).order('created_at', { ascending: false }).limit(400)),
     lerProviders(),
-    ler(db().from('chat_messages').select('id, channel_slug, content, created_at').in('channel_slug', SLUGS_PRIMEVERSE).gte('created_at', desde).ilike('content', '%PrimeVerse%').order('created_at', { ascending: false }).limit(200)),
+    ler(db().from('chat_messages').select('id, channel_slug, content, created_at').in('channel_slug', SLUGS_PRIMEVERSE).gte('created_at', desde).is('reply_to_id', null).or('content.ilike.%PrimeVerse%,content.ilike.%📌 MTM Auto Edge ·%,content.ilike.%📌 MTM Auto King ·%,content.ilike.%📌 MTM Auto Wolf ·%').order('created_at', { ascending: false }).limit(200)),
   ])
   for (const [nome, x] of [['sinais do site', log], ['TradingView', tv], ['MTM Auto', auto], ['PrimeVerse (chat)', pv]] as const) {
     if (x.erro) avisos.push(`${nome}: ${x.erro}`)
@@ -175,10 +177,10 @@ async function lerJanela(): Promise<Janela> {
   // ── PrimeVerse (chat) ──
   for (const c of pv.linhas) {
     const primeira = String(c.content ?? '').split('\n')[0] ?? ''
-    const m = primeira.match(/([A-Z0-9.]{3,12})\s+(BUY|SELL)/i)
+    const m = primeira.match(/([A-Z0-9.]{3,12})\s+(?:·\s+)?(BUY|SELL|COMPRA|VENDA)/i)
     sinais.push({
       id: `pv:${c.id}`, sistema: 'primeverse', fonte: 'primeverse', origem: `chat ${c.channel_slug}`,
-      simbolo: m?.[1] ?? null, direcao: m?.[2]?.toLowerCase() ?? null, entrada: null, sl: null, tp: null,
+      simbolo: m?.[1] ?? null, direcao: m?.[2] ? (/buy|compra/i.test(m[2]) ? 'buy' : 'sell') : null, entrada: null, sl: null, tp: null,
       em: String(c.created_at), estado: 'publicado', resumo: String(c.content ?? '').split('\n').filter(Boolean).slice(-1)[0]?.slice(0, 120) ?? null,
       fanout: { total: 0, executado: 0, saltado: 0, erro: 0, errosSistema: 0, pendente: 0 }, latenciaP50Ms: null, latenciaP95Ms: null, estrategiaId: null,
     })

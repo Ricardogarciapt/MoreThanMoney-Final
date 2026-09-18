@@ -6,77 +6,68 @@ import { getSiteOrigin } from '@/lib/site-url'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { handlePrimeverseCancelClose } from '@/lib/mtmcopy/primeverse-lifecycle'
+import { estrategiaDoTrader, formatarSeguimento, formatarSinal, lerSinal } from '@/lib/sinais/formato-sinal'
+import { lifecycleMessage } from '@/lib/mtmcopy/signal-lifecycle'
+import { normalizeSymbol } from '@/lib/mtmcopy/signal-parser'
 import { encaminharPrimeverseParaEstrategia, type KindPrimeverse } from '@/lib/mtmfunded/estrategias-sinais/executar'
 
-/** Classe de ativo → chat existente da app (reutilizados). */
-function chatForSymbol(s: string): string | null {
-  if (/XAU|GOLD|XAG|SILVER|OIL|WTI|BRENT|NAT.?GAS|NGAS|COPPER/i.test(s)) return 'sinais-scanner-mtm' // ouro/comodities
-  if (/BTC|ETH|SOL|XRP|DOGE|BNB|ADA|LTC|USDT|USDC/i.test(s)) return 'cripto-perps'                    // cripto
-  if (/NAS100|US30|US500|US100|SPX|SP500|GER40|DAX|UK100|JP225|NDX|DJI|NIKKEI|DOW/i.test(s)) return 'trade-ideas' // índices
-  if (/^[A-Z]{6}$/.test(s) || /[A-Z]{3}\/[A-Z]{3}/.test(s)) return 'trade-ideas-setup'                // forex
+/**
+ * CANAL «MTM Auto Edge/Wolf/King» (slug `sinais-scanner-mtm`, 18/09).
+ *
+ * Os sinais dos traders fxedge / kingfkg / g_wolf são as estratégias MTM Auto Edge / King / Wolf
+ * (migração 092) e publicam-se TODOS aqui, seja qual for o activo — ouro, índices, forex ou cripto
+ * (no iOS o cripto sai mensagem a mensagem, pelo texto). Os outros traders da fonte deixam de ir ao
+ * chat. O nome da fonte externa não aparece em lado nenhum: nem no texto, nem no remetente.
+ *
+ * Antes cada activo ia para o chat da sua classe (ouro → sinais-scanner-mtm, índices →
+ * trade-ideas, forex → trade-ideas-setup, cripto → cripto-perps) com a assinatura da fonte; o canal
+ * «Sinais PrimeVerse» deixou de existir.
+ */
+const CANAL_EKW = 'sinais-scanner-mtm'
+
+/** Procura a mensagem do SETUP desta estratégia/par/direcção nas últimas 48 h (para a thread). */
+async function acharSetup(estrategia: string, symbol: string, direction: 'buy' | 'sell'): Promise<string | null> {
+  try {
+    const desde = new Date(Date.now() - 48 * 3600_000).toISOString()
+    const { data } = await getSupabaseAdmin()
+      .from('chat_messages')
+      .select('id, content')
+      .eq('channel_slug', CANAL_EKW)
+      .is('reply_to_id', null)
+      .gte('created_at', desde)
+      .ilike('content', `%${estrategia} ·%`)
+      .order('created_at', { ascending: false })
+      .limit(30)
+    for (const m of (data ?? []) as { id: string; content: string | null }[]) {
+      const lido = lerSinal(m.content)
+      if (lido && lido.estrategia === estrategia && lido.direcao === direction && normalizeSymbol(lido.simbolo) === normalizeSymbol(symbol)) {
+        return m.id
+      }
+    }
+  } catch { /* sem thread */ }
   return null
 }
 
-/**
- * ACOMPANHAMENTO da posição no chat (sem thread, sem duplicar o card). Uma linha concisa por evento
- * do ciclo de vida (ENTRY HIT = ordem ativada, e no futuro TP/BE/fecho). NÃO inclui alvo "TP"/🎯 nem o
- * marcador "PrimeVerse" → `isT2TEntrySignal`/`t2tSourceKey` devolvem false, logo NUNCA vira nova
- * entrada Tap to Trade. Serve só para o seguidor manual gerir a posição que abriu no SETUP.
- */
-async function postPrimeverseFollowup(slug: string, content: string) {
+/** Insere no canal Edge/King/Wolf + push. Devolve o id da mensagem. */
+async function publicarNoCanal(content: string, estrategia: string, replyTo: string | null): Promise<string | null> {
   try {
-    const { data } = await getSupabaseAdmin()
-      .from('chat_messages')
-      .insert({ channel_slug: slug, user_id: null, content, message_type: 'telegram_forward', notified: true })
-      .select('id').single()
-    await sendTelegramChannelPush({ slug, content, chatMessageId: data?.id as string }).catch(() => {})
-  } catch (e) {
-    console.warn('[primeverse] followup erro:', e instanceof Error ? e.message : String(e))
-  }
-}
-
-/** Insere o sinal (formato parseável) no chat da classe + dispara push T2T. */
-async function feedPrimeverseChat(slug: string, symbol: string, direction: 'buy' | 'sell', sl: number | null, tp: number | null, trader?: string, timeframe?: string | null, entry?: number | null, tps?: number[]) {
-  try {
-    const tpList = (tps && tps.length ? tps : tp != null ? [tp] : []).filter((n) => n != null && n > 0)
-    let content: string
-    if (slug === 'cripto-perps') {
-      // PERPS: formato padrão MTM ("— Novo Sinal"), fonte PrimeVerse OCULTA (pedido Ricardo).
-      // Perps são executados via Bybit (não T2T) → não precisam do marcador no texto.
-      const dir = direction === 'buy' ? '🔵 COMPRA' : '🔴 VENDA'
-      content = [
-        `🪙 Perpétuos Cripto — Novo Sinal`,
-        ``,
-        `📊 ${symbol}   ${dir}`,
-        timeframe ? `⏱ Timeframe: ${timeframe}` : null,
-        `🎯 Entrada: ${entry != null && entry > 0 ? entry : 'Mercado'}`,
-        sl != null ? `🛑 Stop Loss: ${sl}` : null,
-        ...tpList.map((t, i) => `✅ Take Profit ${i + 1}: ${t}`),
-        ``,
-        `🔎 Validação: 100%`,
-        `⚠️ Não é aconselhamento financeiro.`,
-      ].filter(Boolean).join('\n')
-    } else {
-      // OURO/FOREX/ÍNDICES: traz TODOS os dados do sinal (entrada, timeframe, SL, todos os TPs) ao chat
-      // + T2T. MANTÉM a 1.ª linha `emoji SÍMBOLO DIREÇÃO` (o parser T2T lê símbolo/direção daqui) e o
-      // marcador "📡 PrimeVerse" (o T2T depende dele para reconhecer a fonte). O parser aceita TP1/TP2/TP3
-      // e "Entrada:" — logo o enriquecimento não parte a deteção.
-      const tag = direction === 'buy' ? '🔵' : '🔴'
-      const lines = [`${tag} ${symbol} ${direction.toUpperCase()}`]
-      if (timeframe) lines.push(`⏱ Timeframe: ${timeframe}`)
-      lines.push(`🎯 Entrada: ${entry != null && entry > 0 ? entry : 'Mercado'}`)
-      if (sl != null) lines.push(`🛑 SL: ${sl}`)
-      tpList.forEach((t, i) => lines.push(`✅ TP${i + 1}: ${t}`))
-      lines.push('', `📡 PrimeVerse${trader ? ` · ${trader}` : ''}`)
-      content = lines.join('\n')
+    const insert: Record<string, unknown> = {
+      channel_slug: CANAL_EKW,
+      user_id: null,
+      content,
+      message_type: 'telegram_forward',
+      // Remetente = a estratégia. Sem remetente o chat mostrava «Telegram» com o ícone do Telegram.
+      telegram_sender: estrategia,
+      notified: true,
     }
-    const { data } = await getSupabaseAdmin()
-      .from('chat_messages')
-      .insert({ channel_slug: slug, user_id: null, content, message_type: 'telegram_forward', notified: true })
-      .select('id').single()
-    await sendTelegramChannelPush({ slug, content, chatMessageId: data?.id as string }).catch(() => {})
+    if (replyTo) insert.reply_to_id = replyTo
+    const { data } = await getSupabaseAdmin().from('chat_messages').insert(insert).select('id').single()
+    const id = (data?.id as string | undefined) ?? null
+    await sendTelegramChannelPush({ slug: CANAL_EKW, content, chatMessageId: id ?? undefined }).catch(() => {})
+    return id
   } catch (e) {
-    console.warn('[primeverse] feedChat erro:', e instanceof Error ? e.message : String(e))
+    console.warn('[ekw] chat erro:', e instanceof Error ? e.message : String(e))
+    return null
   }
 }
 
@@ -167,17 +158,31 @@ export async function POST(req: NextRequest) {
   // SETUP (alerta pendente): só MOSTRA o sinal no chat da classe de ativo (de TODOS os traders) e
   // NÃO executa nada — o Entry do kingfkg é um nível pendente; entrar a mercado aqui poria o SL
   // enorme (preço longe do Entry). A execução acontece SÓ quando chega o "🟢 ENTRY HIT".
-  const chatSlug = chatForSymbol(symbol)
+  // Só as estratégias Edge / King / Wolf vão ao chat.
+  const nomeEstrategia = estrategiaDoTrader(trader)
+  const chatSlug = nomeEstrategia ? CANAL_EKW : null
   if (kind === 'setup') {
-    if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null, trader, timeframe, entry, tps)
+    if (nomeEstrategia) {
+      const texto = formatarSinal({
+        estrategia: nomeEstrategia,
+        simbolo: symbol,
+        direcao: direction,
+        entrada: entry,
+        sl,
+        tps,
+        timeframe,
+        estado: 'Novo sinal',
+      })
+      await publicarNoCanal(texto, nomeEstrategia, null)
+    }
     return NextResponse.json({ ok: true, routed: chatSlug, kind, exec: 'aguarda_entry_hit', estrategia })
   }
 
   // ── kind === 'cancel' | 'close' ── o trader cancelou a ordem pendente ou fechou a posição →
   // thread no chat do setup + AUTO apaga/fecha as ordens T2T dos seguidores desse setup.
   if (kind === 'cancel' || kind === 'close') {
-    if (!chatSlug) return NextResponse.json({ ok: true, routed: null, kind, exec: 'sem_chat' })
-    const r = await handlePrimeverseCancelClose({ kind, chatSlug, symbol, direction })
+    if (!chatSlug || !nomeEstrategia) return NextResponse.json({ ok: true, routed: null, kind, exec: 'sem_chat', estrategia })
+    const r = await handlePrimeverseCancelClose({ kind, chatSlug, symbol, direction, estrategia: nomeEstrategia })
     return NextResponse.json({ ok: true, routed: chatSlug, kind, ...r, estrategia })
   }
 
@@ -185,14 +190,25 @@ export async function POST(req: NextRequest) {
   // Não re-mostra o card (já foi mostrado no setup) para não duplicar no chat, MAS acompanha a posição:
   // uma linha concisa a confirmar a ATIVAÇÃO, para o seguidor manual (Tap to Trade) gerir a partir daqui.
   // Postado para TODOS os traders do setup (não só os executados), antes do gate de execução.
-  if (chatSlug) {
-    const dirTxt = direction === 'buy' ? '🔵 COMPRA' : '🔴 VENDA'
-    const line = [
-      `✅ ENTRY HIT · ${symbol} ${dirTxt}${trader ? ` · ${trader}` : ''}`,
-      sl != null ? `🛑 SL: ${sl}` : null,
-      `Ordem ativada — gere a posição pelos alvos definidos no sinal.`,
-    ].filter(Boolean).join('\n')
-    await postPrimeverseFollowup(chatSlug, line)
+  if (chatSlug && nomeEstrategia) {
+    // Seguimento em THREAD no sinal (formato único): o mesmo texto canónico do motor de preço.
+    // Uma vez por sinal — o tracker também anuncia a entrada quando a mede pelo preço.
+    const setupId = await acharSetup(nomeEstrategia, symbol, direction)
+    let jaAnunciado = false
+    if (setupId) {
+      const { data: dup } = await getSupabaseAdmin()
+        .from('chat_messages')
+        .select('id')
+        .eq('reply_to_id', setupId)
+        .ilike('content', '✅ ENTRY HIT%')
+        .limit(1)
+        .maybeSingle()
+      jaAnunciado = !!dup
+    }
+    if (!jaAnunciado) {
+      const { text } = lifecycleMessage('entry_hit', { symbol, direction, price: entry })
+      await publicarNoCanal(formatarSeguimento(text, nomeEstrategia), nomeEstrategia, setupId)
+    }
   }
 
   // EXECUÇÃO: só o(s) trader(s) escolhido(s) (cfg.traders) — os outros ficam só no chat.
@@ -232,7 +248,8 @@ export async function POST(req: NextRequest) {
       openPrice: orderType === 'limit' ? entry : null,
       stopLoss: sl,
       takeProfit: tp, // tpLevel=1 → TP1 → posição fecha 100% no Exit 1
-      comment: `PV ${trader}`.slice(0, 31),
+      // Sem o nome da fonte externa: o comentário chega às contas copiadoras.
+      comment: (nomeEstrategia ?? 'MTM Auto').slice(0, 31),
     }
     const r = await placeOrder(orderReq)
     out.sensei = { ok: r.success, orderId: r.orderId, error: r.error }

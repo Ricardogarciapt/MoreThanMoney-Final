@@ -37,9 +37,9 @@ export interface FonteSinal {
  * noutro — que é exactamente o que acontecia antes de esta lista existir.
  */
 const EXTERNAS: Array<Omit<FonteSinal, 'temEstrategia' | 'slugProvider'>> = [
-  { chave: 'primeverse', nome: 'PrimeVerse', ativa: true, t2t: true },
+  { chave: 'primeverse', nome: 'MTM Auto Edge/King/Wolf', ativa: true, t2t: true },
   { chave: 'james', nome: 'Forex Swings', ativa: true, t2t: false },
-  { chave: 'perps', nome: 'Perpétuos Cripto', ativa: true, t2t: true },
+  { chave: 'perps', nome: 'Aurum Flow & Perpétuos', ativa: true, t2t: true },
 ]
 
 /** @deprecated nome antigo — o mapa vive agora em `chaves-de-fonte`. */

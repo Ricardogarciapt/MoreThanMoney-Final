@@ -34,6 +34,7 @@ export function intakeKeyForChannelSlug(slug: string | null | undefined): Intake
     case "trade-ideas-setup": return "forex_ideas"
     case "ideias-e-sinais": return "forex_swings"
     case "cripto-perps": return "perps"
+    case "aurum-flow": return "perps"
     default: return null
   }
 }

@@ -14,6 +14,7 @@
  * Estado em site_settings 't2t_monitor_state' (sem migração de schema). Idempotente.
  * Switch: exec-switch `t2t_price_monitor` (default ON). Corre no mesmo loop ~1s do VPS.
  */
+import { canalPublicadoPelaMestre } from '@/lib/mestres/servidor/canais-publicados'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getExecSwitches } from './exec-switches'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
@@ -67,6 +68,8 @@ async function saveState(state: StateMap): Promise<void> {
 /** Publica no chat do sinal (thread na entrada) + push. Concisa e sem alvo/TP → nunca vira entrada T2T. */
 async function postToChat(chatMessageId: string | null, slug: string | null, content: string): Promise<void> {
   if (!slug) return
+  // Canal publicado pela mestre: a gestão da posição do cliente continua, o anúncio não (é da mestre).
+  if (await canalPublicadoPelaMestre(slug)) return
   try {
     const insert: Record<string, unknown> = {
       channel_slug: slug, user_id: null, content, message_type: 'telegram_forward', notified: true,

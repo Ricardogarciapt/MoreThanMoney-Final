@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { canWriteChannel } from '@/lib/chat-channel-permissions'
+import { canWriteChannel, type ChatChannelConfig } from '@/lib/chat-channel-permissions'
 import { getSiteOrigin } from '@/lib/site-url'
 
 const supabase = getSupabaseAdmin()
@@ -42,7 +42,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'channel_slug obrigatório' }, { status: 400 })
     }
 
-    if (!canWriteChannel(channelSlug, profile)) {
+    const { data: cfgCanal } = await supabase.from('chat_channels').select('*').eq('slug', channelSlug).maybeSingle()
+    if (!canWriteChannel(channelSlug, profile, (cfgCanal as ChatChannelConfig | null) ?? null)) {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
 

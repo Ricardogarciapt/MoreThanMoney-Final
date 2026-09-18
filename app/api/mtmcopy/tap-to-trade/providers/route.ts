@@ -11,12 +11,13 @@ export const dynamic = 'force-dynamic'
 /** Nome legível das fontes SEM conta provedora nossa — senão aparece o slug cru na app. */
 const T2T_EXTRA_LABELS: Record<string, string> = {
   'trade-ideas-setup': 'Ideias de Forex',
-  // O slug lê-se como "scanner MTM", mas o canal é o dos traders de topo do PrimeVerse.
-  'sinais-scanner-mtm': 'PrimeVerse',
+  // O slug lê-se como "scanner MTM", mas o canal é o das estratégias MTM Auto Edge/King/Wolf.
+  'sinais-scanner-mtm': 'MTM Auto Edge/Wolf/King',
+  'aurum-flow': 'Aurum Flow & Perpétuos',
   // Swings: entram e ficam. Vão para T2T sem motor de gestão — só se acompanha o desfecho.
   'ideias-e-sinais': 'Ideias Forex Swings',
   // Perpétuos (Aurum Flow & MTM Perps): fonte TAP to Copy — copiar parâmetros, sem ordem MT5.
-  'cripto-perps': 'Perpétuos Cripto',
+  'cripto-perps': 'Aurum Flow & Perpétuos',
 }
 
 const supabase = getSupabaseAdmin()

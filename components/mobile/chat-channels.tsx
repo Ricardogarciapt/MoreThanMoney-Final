@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { isT2TEntrySignal, t2tMode } from "@/lib/mtmcopy/t2t-source"
+import { ehSinalDePerpetuo, isT2TEntrySignal, t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { directionLabelFromText } from "@/lib/mtmcopy/signal-direction"
 import TapToCopyModal from "@/components/mobile/tap-to-copy-modal"
 import { useAuth } from "@/contexts/auth-context"
@@ -50,7 +51,7 @@ import MentionText from "./mention-text"
 import MemberBadge from "./member-badge"
 import ChatPinnedInstructions from "./chat-pinned-instructions"
 import {
-  getChannelMeta,
+  metaDoCanal,
   formatPreviewText,
   markChannelRead,
   isChannelUnread,
@@ -71,6 +72,14 @@ interface Channel {
   parent_slug: string | null
   position: number
   children?: Channel[]
+  // Configuração do admin (migração 117) — null/ausente = regra de sempre.
+  icone?: string | null
+  cor?: string | null
+  etiqueta?: string | null
+  regras?: string[] | null
+  leitura?: string | null
+  escrita?: string | null
+  exige_uid_corretora?: boolean | null
 }
 
 interface ChannelPreview {
@@ -683,7 +692,7 @@ const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|b
 /** Um follow-up POSTERIOR com isto RESOLVE o sinal (ativou/fechou/morreu) → o botão T2T esconde-se.
  *  'ENTRY HIT' literal (monitor/PrimeVerse) e não 'ativad' — senão as entradas Sensei ("Ideia
  *  Activada"), que SÃO sinais, resolver-se-iam umas às outras. */
-const TAP_TRADE_RESOLVING_RE = /(entry\s*hit|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|posi[çc][aã]o\s*fechada|fechad[ao]|encerrad|cancelad|descartad|invalidad|break\s*even|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
+const TAP_TRADE_RESOLVING_RE = /(entry\s*hit|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|posi[çc][aã]o\s*fechada|fechad[ao]|encerrad|cancelad|descartad|invalidad|break[\s-]*even|stop\s+protegido|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 /** Direção do sinal/follow-up, quando declarada — leitura única, em `lib/mtmcopy/signal-direction`. */
 function t2tDirectionOf(content?: string | null): "BUY" | "SELL" | "" {
   return directionLabelFromText(content)
@@ -707,6 +716,11 @@ function computeResolvedSignalIds(messages: ChatMessage[]): Set<string> {
   const resolved = new Set<string>()
   const followups = messages.filter((m) => m.content && TAP_TRADE_RESOLVING_RE.test(m.content))
   if (!followups.length) return resolved
+  // Seguimento em RESPOSTA ao sinal (formato único: sempre em thread) → resolve exactamente esse.
+  for (const f of followups) {
+    const pai = (f as { reply_to_id?: string | null }).reply_to_id
+    if (pai) resolved.add(pai)
+  }
   for (const m of messages) {
     if (!m.content || !looksLikeTradeSignal(m.channel_slug, m.content)) continue
     const sym = t2tSymbolOf(m.content)
@@ -752,6 +766,21 @@ function hasEntryLevel(content?: string | null): boolean {
   return /^\s*\d{2,7}(?:[.,]\d+)?\s*[-–—]\s*\d{2,7}(?:[.,]\d+)?\s*$/m.test(content)
 }
 
+/** O que o motor mede de um sinal a correr (ver /api/mtmcopy/signal-live). */
+type AoVivo = { pips: number | null; pct: number | null; exits?: number; entrou?: boolean; slBatido?: boolean }
+
+/**
+ * A MESMA janela do separador T2T e da app MTM Auto (lib/mtmcopy/t2t-janela, lib/janela-t2t):
+ * stop já tocado → nunca; passados os 5 minutos, entrada tocada ou parcial feita → fora da zona.
+ * Sem isto o botão do chat ficava vivo até 24 h num setup que já tinha arrancado.
+ */
+function foraDaJanela(createdAt: string | null | undefined, v?: AoVivo): boolean {
+  if (!v) return false
+  if (v.slBatido) return true
+  const idade = createdAt ? Date.now() - new Date(createdAt).getTime() : 0
+  return idade > TAP_TRADE_MAX_AGE_MS && (Boolean(v.entrou) || Number(v.exits ?? 0) > 0)
+}
+
 /** Sinal ainda aceitável? Setup pendente → 24h; entrada a mercado → 5 min. */
 function isSignalActive(createdAt?: string | null, content?: string | null): boolean {
   if (!createdAt) return true
@@ -787,7 +816,7 @@ function MessageBubble({
   /** Sinal já resolvido por follow-up posterior (ativado/fechado/descartado) → sem botão T2T. */
   resolved?: boolean
   /** Resultado a correr deste sinal (pips e %), calculado pelo motor. */
-  aoVivo?: { pips: number | null; pct: number | null }
+  aoVivo?: AoVivo
 }) {
   const t = useT()
   const tradeable =
@@ -795,7 +824,8 @@ function MessageBubble({
     !!onTapToTrade &&
     !resolved &&
     looksLikeTradeSignal(msg.channel_slug, msg.content) &&
-    isSignalActive(msg.created_at, msg.content)
+    isSignalActive(msg.created_at, msg.content) &&
+    !foraDaJanela(msg.created_at, aoVivo)
   const isTelegram = msg.message_type === "telegram_forward"
   const isVideo    = msg.message_type === "video"
   const isDocument = msg.message_type === "document"
@@ -1107,7 +1137,7 @@ function MessageBubble({
                   aria-label={t("chat.tapToTradeAria")}
                 >
                   <TrendingUp className="w-4 h-4" />{" "}
-                  {msg.channel_slug === "cripto-perps"
+                  {ehSinalDePerpetuo(msg.channel_slug, msg.content)
                     ? "TAP to Copy"
                     : t2tMode(msg.channel_slug, msg.content) === "follow"
                       ? "Seguir sinal"
@@ -1179,7 +1209,7 @@ function ChannelView({
   const [sendError, setSendError] = useState<string | null>(null)
   const [messagesError, setMessagesError] = useState<string | null>(null)
   /** Resultado FLUTUANTE por sinal, feito pelo motor. Ver /api/mtmcopy/signal-live. */
-  const [aoVivo, setAoVivo] = useState<Record<string, { pips: number | null; pct: number | null }>>({})
+  const [aoVivo, setAoVivo] = useState<Record<string, AoVivo>>({})
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -1204,7 +1234,7 @@ function ChannelView({
     }
   }, [])
 
-  const canWrite = canWriteChannel(channel.slug, currentUser)
+  const canWrite = canWriteChannel(channel.slug, currentUser, channel)
   const isAdmin = currentUser?.user_type === "admin"
   const [contextMsg, setContextMsg] = useState<ChatMessage | null>(null)
 
@@ -1262,6 +1292,15 @@ function ChannelView({
   >(null)
   /** Perpétuos: em vez de abrir ordem, modal TAP to Copy com os parâmetros. */
   const [copyModalMsg, setCopyModalMsg] = useState<ChatMessage | null>(null)
+  const router = useRouter()
+  /**
+   * Aceitar a partir do chat = o MESMO fluxo do separador Tap to Trade (e da app MTM Auto):
+   * pré-visualização por conta (lote e risco reais), todas as contas T2T do cliente e a janela
+   * de aceitação. O modal antigo do chat só mostrava o texto e abria sem pré-visualização.
+   */
+  const abrirNoTapToTrade = (m: ChatMessage) => {
+    router.push(`/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(m.id)}`)
+  }
   /** Fontes T2T ativas no sistema (admin liga/desliga). null = ainda a carregar → não esconder. */
   const [t2tActiveChannels, setT2tActiveChannels] = useState<Set<string> | null>(null)
 
@@ -1685,7 +1724,7 @@ function ChannelView({
       try {
         const r = await fetch(`/api/mtmcopy/signal-live?ids=${ids.slice(0, 200).join(",")}`)
         if (!r.ok) return
-        const j = (await r.json()) as { live?: Record<string, { pips: number | null; pct: number | null }> }
+        const j = (await r.json()) as { live?: Record<string, AoVivo> }
         if (!cancelado) setAoVivo(j.live ?? {})
       } catch {
         /* sem números — as bolhas continuam a funcionar */
@@ -1764,7 +1803,7 @@ function ChannelView({
             onIrParaOriginal={irParaOriginal}
             onTapToTrade={
               t2tSourceOn
-                ? (m) => (m.channel_slug === "cripto-perps" ? setCopyModalMsg(m) : setTapTrade({ msg: m, status: "confirm" }))
+                ? (m) => (ehSinalDePerpetuo(m.channel_slug, m.content) ? setCopyModalMsg(m) : abrirNoTapToTrade(m))
                 : undefined
             }
           />
@@ -1799,13 +1838,13 @@ function ChannelView({
             <p className="text-[11px] text-gray-500 truncate mt-0.5">{channel.description}</p>
           )}
         </div>
-        {isPremiumChannel(channel.slug) && (
+        {isPremiumChannel(channel.slug, channel) && (
           <div className="flex items-center gap-1 text-[#D2A63C] text-[11px]">
             <Lock className="w-3.5 h-3.5" />
             <span>{t("chat.premium")}</span>
           </div>
         )}
-        {isReadOnlyChannel(channel.slug) && (
+        {isReadOnlyChannel(channel.slug, channel) && (
           <TelegramIcon className="w-4 h-4 text-[#26A5E4]" />
         )}
         <button
@@ -1848,7 +1887,7 @@ function ChannelView({
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
-              <span className="text-4xl">{getChannelMeta(channel.slug).emoji}</span>
+              <span className="text-4xl">{metaDoCanal(channel).emoji}</span>
               <p className="text-white font-medium">{t("chat.welcome")} #{channel.name}</p>
               <p className="text-gray-500 text-sm">
                 {channel.description || t("chat.channelReady")}
@@ -2041,7 +2080,7 @@ function ChannelView({
         </div>
       ) : (
         <div className="flex-shrink-0 border-t border-gray-800 bg-gray-900 px-4 py-3 flex items-center gap-2">
-          {isReadOnlyChannel(channel.slug) ? (
+          {isReadOnlyChannel(channel.slug, channel) ? (
             <>
               <TelegramIcon className="w-4 h-4 text-[#26A5E4]" />
               <p className="text-xs text-gray-500">{t("chat.readOnly")}</p>
@@ -2292,7 +2331,7 @@ function ChannelInfoSheet({
   onClose: () => void
 }) {
   const t = useT()
-  const meta = getChannelMeta(channel.slug)
+  const meta = metaDoCanal(channel)
 
   return (
     <div
@@ -2330,7 +2369,7 @@ function ChannelInfoSheet({
                     {meta.tag}
                   </span>
                 )}
-                {isReadOnlyChannel(channel.slug) && (
+                {isReadOnlyChannel(channel.slug, channel) && (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#26A5E4]/15 text-[#26A5E4]">
                     Telegram
                   </span>
@@ -2400,8 +2439,8 @@ function ChannelRow({
   isSubChannel?: boolean
   preview?: ChannelPreview
 }) {
-  const locked = !canReadChannel(channel.slug, user)
-  const meta = getChannelMeta(channel.slug)
+  const locked = !canReadChannel(channel.slug, user, channel)
+  const meta = metaDoCanal(channel)
   const unread = preview ? isChannelUnread(channel.slug, preview.created_at) : false
   const previewText = preview
     ? formatPreviewText(preview.content, preview.image_url, preview.telegram_sender, preview.message_type)
@@ -2567,7 +2606,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
   })
 
   const totalUnread = allFlatChannels.filter(
-    (c) => canReadChannel(c.slug, user) && previews[c.slug] && isChannelUnread(c.slug, previews[c.slug].created_at)
+    (c) => canReadChannel(c.slug, user, c) && previews[c.slug] && isChannelUnread(c.slug, previews[c.slug].created_at)
   ).length
 
   useEffect(() => {
@@ -2584,9 +2623,12 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
         return
       }
 
+      // `*` e não uma lista de colunas: o ícone, a cor, a etiqueta, as regras e as permissões de
+      // cada canal vêm do admin (migração 117). Com a migração por aplicar, `*` não parte e o que
+      // faltar cai nas regras de sempre.
       const { data, error } = await supabase
         .from("chat_channels")
-        .select("id, slug, name, description, parent_slug, position")
+        .select("*")
         // Canais escondidos ficam com o histórico na base de dados mas fora da app — é como se
         // retira uma fonte sem apagar as mensagens que já foram lidas por alguém.
         .eq("hidden", false)
@@ -2657,7 +2699,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
   }, [channels, initialSlug])
 
   const handleChannelSelect = (channel: Channel) => {
-    if (requiresBrokerUidChannel(channel.slug) && !brokerUid) {
+    if (requiresBrokerUidChannel(channel.slug, channel) && !brokerUid) {
       setPendingChannel(channel)
       setBrokerUidModal(true)
       return

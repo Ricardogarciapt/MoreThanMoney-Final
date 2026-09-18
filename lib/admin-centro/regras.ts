@@ -63,7 +63,7 @@ export const FONTES: { chave: ChaveFonte; nome: string; nota: string; limiteSile
 /** De onde veio uma linha do mtmcopy_signal_log (channel_key) ou um chat (channel_slug). */
 export function fonteDoCanal(canal: string | null | undefined, texto?: string | null): ChaveFonte {
   const c = String(canal ?? '').toLowerCase()
-  if (texto && /PrimeVerse/i.test(texto)) return 'primeverse'
+  if (texto && (/PrimeVerse/i.test(texto) || /MTM\s+Auto\s+(Edge|King|Wolf)\b/i.test(texto))) return 'primeverse'
   if (!c && texto && /premium/i.test(texto)) return 'premium'
   if (c === 'premium-signals' || c === 'premium-ideas' || c === 'premium') return 'premium'
   if (c.includes('primeverse')) return 'primeverse'

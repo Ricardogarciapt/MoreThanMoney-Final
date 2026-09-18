@@ -9,6 +9,7 @@
  * MANUAL da fonte. Usado por PrimeVerse (relay), Premium (mensagem de gestão), Sensei (follow-up do
  * webhook), Forex Swings e GoldKiller. Idempotente por status do log.
  */
+import { canalPublicadoPelaMestre } from '@/lib/mestres/servidor/canais-publicados'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { cancelPendingOrdersForSymbol, listOpenPositions, closePositionById } from './metaapi'
@@ -160,7 +161,9 @@ export async function closeT2TFollowersForSignal(opts: {
       .gte('created_at', sinceIso)
       .limit(1)
       .maybeSingle()
-    if (!dup) {
+    // Canal publicado pela mestre: as ordens dos seguidores tratam-se na mesma (passo 2), mas o
+    // anúncio é o da mestre.
+    if (!dup && !(await canalPublicadoPelaMestre(chatSlug))) {
       const insert: Record<string, unknown> = { channel_slug: chatSlug, user_id: null, content: line, message_type: 'telegram_forward', notified: true }
       if (entry?.id) insert.reply_to_id = entry.id
       const { data } = await supabase.from('chat_messages').insert(insert).select('id').single()
@@ -269,7 +272,7 @@ export async function announceAndCloseByMessage(opts: {
       .ilike('content', `${textPrefix}%`)
       .limit(1)
       .maybeSingle()
-    if (!dup) {
+    if (!dup && !(await canalPublicadoPelaMestre(opts.chatSlug))) {
       const { data } = await supabase
         .from('chat_messages')
         .insert({

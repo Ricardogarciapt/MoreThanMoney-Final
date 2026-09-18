@@ -125,9 +125,11 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
     position: 14,
   },
   {
-    slug: 'cripto-perps',
-    name: 'Ideias de Perpetuos Cripto',
-    description: 'Sinais de perpétuos cripto (webhook TradingView)',
+    // Fundido com os Perpétuos de Cripto a 18/09 (o slug antigo `cripto-perps` fica escondido com o
+    // histórico). No iOS o cripto sai mensagem a mensagem e o nome aparece sem «& Perpétuos».
+    slug: 'aurum-flow',
+    name: 'MTM Auto Aurum Flow & Perpétuos',
+    description: 'Estratégia Aurum Flow — ouro e perpétuos — Tap to Trade',
     parent_slug: 'sinais',
     position: 15,
   },
@@ -139,9 +141,10 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
     position: 16,
   },
   {
+    // O slug é histórico: o canal é o das estratégias MTM Auto Edge / King / Wolf.
     slug: 'sinais-scanner-mtm',
-    name: 'Sinais Primeverse',
-    description: 'Sinais PrimeVerse (Forex) — tap-to-trade',
+    name: 'MTM Auto Edge/Wolf/King',
+    description: 'Estratégias MTM Auto Edge, King e Wolf — Tap to Trade',
     parent_slug: 'sinais',
     position: 17,
   },

@@ -44,7 +44,8 @@ export function buildAppChannelMap(): Map<string, AppChatChannelSlug> {
   registerChatId(resolvedPremiumSignalsChatId(), 'premium-ideas')
   // Grupo dos Perpétuos (reaproveitado). Mapeia por ID → cripto-perps, ANTES do título (o título
   // "Ideias de Perpétuos Cripto" senão cairia no fallback 'ideias'→Forex). Evita a notif trocada.
-  registerChatId(resolvedPerpsChatId() ?? undefined, 'cripto-perps')
+  // Desde 18/09 o canal da app é o fundido «MTM Auto Aurum Flow & Perpétuos» (`aurum-flow`).
+  registerChatId(resolvedPerpsChatId() ?? undefined, 'aurum-flow')
   // O chat Aurum Flow foi RETIRADO das apps a 2026-08-27. Já estava escondido; o que faltava era
   // parar de lhe escrever — continuava a receber mensagens (97, a última nesse mesmo dia) para um
   // canal que ninguém via. Escrever para um sítio invisível não é inofensivo: enche a tabela de
@@ -63,7 +64,7 @@ export function detectSlugFromChannelTitle(title: string | null | undefined): Ap
   if (t.includes('premium') || t.includes('mtmgold')) return 'premium-ideas'
   // Perpétuos ANTES do fallback genérico 'ideias'/'scanner' (o título "Ideias de Perpétuos Cripto"
   // senão cairia em Forex). Cobre perp/perpétuo/perpetuo.
-  if (t.includes('perp')) return 'cripto-perps'
+  if (t.includes('perp')) return 'aurum-flow'
   // A Aurum Flow já NÃO tem chat na app: a estratégia continua (copia-se por
   // vT8w no MTM Auto), o canal de conversa é que deixou de existir para o cliente.
   // GoldKiller ANTES de "scanner" genérico (o título GoldKiller também contém "scanner").

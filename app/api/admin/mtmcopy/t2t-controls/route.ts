@@ -32,9 +32,9 @@ export const maxDuration = 60
 
 /** Fontes T2T sem rota própria que o admin pode ligar/desligar diretamente. */
 const EXTRA_CHANNEL_LABELS: Record<string, string> = {
-  'cripto-perps': 'Perpétuos Cripto (Aurum Flow)',
+  'aurum-flow': 'Aurum Flow & Perpétuos',
   'premium-ideas': 'Premium · Ouro',
-  'sinais-scanner-mtm': 'Sinais Primeverse',
+  'sinais-scanner-mtm': 'MTM Auto Edge/Wolf/King',
   'trade-ideas-setup': 'Ideias de Forex',
   'ideias-e-sinais': 'Ideias e Sinais',
   'sinais-goldkiller': 'GoldKiller',
@@ -71,8 +71,14 @@ async function buildState() {
   })
 
   const extrasActive = new Set(config.t2t_extra_channels ?? [])
+  // Fontes abandonadas saem do painel: canal ESCONDIDO no chat e fonte desligada (ex.: Ideias de
+  // Forex desde 27/08). Se alguém a religar à mão continua a aparecer — só se esconde o que está
+  // morto dos dois lados.
+  const { data: escondidos } = await supabase.from('chat_channels').select('slug').eq('hidden', true)
+  const canalEscondido = new Set((escondidos ?? []).map((c) => String(c.slug)))
   const extras = Object.entries(EXTRA_CHANNEL_LABELS)
     .filter(([ch]) => !routeChannels.has(ch)) // canais já governados por rota ficam do lado das rotas
+    .filter(([ch]) => extrasActive.has(ch) || !canalEscondido.has(ch))
     .map(([channel, label]) => ({ channel, label, active: extrasActive.has(channel) }))
 
   return { strategies, extras }

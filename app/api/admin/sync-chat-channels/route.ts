@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin, requireAdmin } from '@/lib/admin-api-helpers'
 import { DEFAULT_CHAT_CHANNELS } from '@/lib/default-chat-channels'
+import { NIVEIS_ESCRITA, NIVEIS_LEITURA } from '@/lib/chat-channel-permissions'
 
 /**
  * Sincroniza chat_channels com a estrutura oficial da app-mobile.
@@ -24,22 +25,9 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
 
       if (existing) {
-        const { error } = await supabase
-          .from('chat_channels')
-          .update({
-            name: channel.name,
-            description: channel.description,
-            parent_slug: channel.parent_slug,
-            position: channel.position,
-          })
-          .eq('slug', channel.slug)
-
-        if (error) {
-          return NextResponse.json(
-            { success: false, error: `Erro ao actualizar ${channel.slug}: ${error.message}` },
-            { status: 500 },
-          )
-        }
+        // Um canal que já existe NÃO é reescrito a partir da lista do código: o nome, a descrição
+        // e a ordem são do admin. Antes, «Sincronizar» repunha os nomes de fábrica e desfazia o
+        // que alguém tinha mudado no painel (ex.: o canal renomeado para «MTM Auto Edge/Wolf/King»).
         updated.push(channel.slug)
       } else {
         const { error } = await supabase.from('chat_channels').insert({
@@ -99,7 +87,7 @@ export async function GET(request: NextRequest) {
   try {
     const { data, error } = await supabase
       .from('chat_channels')
-      .select('id, slug, name, description, parent_slug, position, hidden')
+      .select('*')
       .order('position', { ascending: true })
 
     if (error) {
@@ -131,7 +119,8 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Editar um canal — nome, descrição, ordem e visibilidade.
+ * Editar um canal — nome, descrição, ordem, visibilidade, ícone, cor, etiqueta, regras e
+ * permissões (quem lê / quem escreve / pede UID da corretora). Tudo isto é lido pelas três apps.
  *
  * Até aqui o painel só sabia CRIAR os canais em falta a partir da lista por omissão. Renomear um
  * canal, corrigir a descrição ou tirá-lo das apps obrigava a ir à base de dados — e o que não se
@@ -154,11 +143,50 @@ export async function PATCH(request: NextRequest) {
   if (typeof body.description === 'string') patch.description = body.description.trim().slice(0, 300) || null
   if (body.position != null && Number.isFinite(Number(body.position))) patch.position = Number(body.position)
   if (typeof body.hidden === 'boolean') patch.hidden = body.hidden
+  // Configuração visual e permissões (migração 117). String vazia = voltar à regra de sempre.
+  const textoOuNull = (v: unknown, max: number) =>
+    typeof v === 'string' ? (v.trim() ? v.trim().slice(0, max) : null) : undefined
+  const icone = textoOuNull(body.icone, 16)
+  if (icone !== undefined) patch.icone = icone
+  const etiqueta = textoOuNull(body.etiqueta, 24)
+  if (etiqueta !== undefined) patch.etiqueta = etiqueta
+  if (typeof body.cor === 'string') {
+    const cor = body.cor.trim()
+    if (cor && !/^#[0-9A-Fa-f]{6}$/.test(cor)) {
+      return NextResponse.json({ success: false, error: 'cor inválida (usar #RRGGBB)' }, { status: 400 })
+    }
+    patch.cor = cor || null
+  }
+  if (Array.isArray(body.regras)) {
+    const regras = body.regras.map((r) => String(r).trim()).filter(Boolean).slice(0, 8).map((r) => r.slice(0, 200))
+    patch.regras = regras.length ? regras : null
+  }
+  if (typeof body.leitura === 'string') {
+    if (body.leitura && !(NIVEIS_LEITURA as readonly string[]).includes(body.leitura)) {
+      return NextResponse.json({ success: false, error: 'leitura inválida' }, { status: 400 })
+    }
+    patch.leitura = body.leitura || null
+  }
+  if (typeof body.escrita === 'string') {
+    if (body.escrita && !(NIVEIS_ESCRITA as readonly string[]).includes(body.escrita)) {
+      return NextResponse.json({ success: false, error: 'escrita inválida' }, { status: 400 })
+    }
+    patch.escrita = body.escrita || null
+  }
+  if (typeof body.exige_uid_corretora === 'boolean' || body.exige_uid_corretora === null) {
+    patch.exige_uid_corretora = body.exige_uid_corretora
+  }
   if (!Object.keys(patch).length) {
     return NextResponse.json({ success: false, error: 'nada para alterar' }, { status: 400 })
   }
 
   const { error } = await getSupabaseAdmin().from('chat_channels').update(patch).eq('slug', slug)
-  if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  if (error) {
+    const semColunas = /column .* does not exist|schema cache/i.test(error.message)
+    return NextResponse.json(
+      { success: false, error: semColunas ? 'Falta aplicar a migração 117 (ícone, cor, regras e permissões dos canais).' : error.message },
+      { status: 500 },
+    )
+  }
   return NextResponse.json({ success: true })
 }

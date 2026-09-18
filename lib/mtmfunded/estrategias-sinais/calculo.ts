@@ -509,6 +509,16 @@ export function comentarioDaFonte(p: { sourceKey?: string | null; channelSlug?: 
 
 /** O trader PrimeVerse escrito na entrada do chat («📡 PrimeVerse · fxedge»). */
 export function traderDoConteudo(content: string | null | undefined): string | null {
-  const m = /PrimeVerse\s*[·•-]\s*([A-Za-z0-9_\-.]+)/i.exec(String(content ?? ''))
-  return m ? normalizarTrader(m[1]) : null
+  const c = String(content ?? '')
+  const m = /PrimeVerse\s*[·•-]\s*([A-Za-z0-9_\-.]+)/i.exec(c)
+  if (m) return normalizarTrader(m[1])
+  // Formato único (18/09): a entrada traz a ESTRATÉGIA («📌 MTM Auto Edge · …»), não o trader.
+  const e = /📌\s*MTM\s+Auto\s+(Edge|King|Wolf)\b/i.exec(c)
+  if (e) return traderDaEstrategiaEkw(e[1])
+  return null
+}
+
+function traderDaEstrategiaEkw(nome: string): string | null {
+  const n = nome.toLowerCase()
+  return n === 'edge' ? 'fxedge' : n === 'king' ? 'kingfkg' : n === 'wolf' ? 'g_wolf' : null
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import { canWriteChannel } from "@/lib/chat-channel-permissions"
+import { canWriteChannel, type ChatChannelConfig } from "@/lib/chat-channel-permissions"
 import { awardXp } from "@/lib/xp-service"
 import { getSiteOrigin } from "@/lib/site-url"
 
@@ -81,7 +81,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Canal em falta" }, { status: 400 })
     }
 
-    if (!canWriteChannel(channelSlug, profile)) {
+    // Permissões do canal como o admin as configurou (migração 117); sem config → regra de sempre.
+    const { data: cfgCanal } = await getSupabaseAdmin()
+      .from("chat_channels")
+      .select("*")
+      .eq("slug", channelSlug)
+      .maybeSingle()
+    if (!canWriteChannel(channelSlug, profile, (cfgCanal as ChatChannelConfig | null) ?? null)) {
       return NextResponse.json({ error: "Sem permissão para publicar neste canal" }, { status: 403 })
     }
 

@@ -15,6 +15,7 @@
  * `t2tSourceKey()` devolve a chave da fonte para casar com essas prefs; `T2T_SOURCES` é o catálogo p/ a UI.
  */
 import { isOwnLifecycleAnnouncement } from './signal-lifecycle'
+import { RE_ESTRATEGIAS_EKW } from '../sinais/formato-sinal'
 export type T2TSourceKey =
   | 'premium'
   | 'sensei'
@@ -34,8 +35,10 @@ export const T2T_SOURCES: { key: T2TSourceKey; label: string; hint: string }[] =
   { key: 'mtmscanner', label: 'MTM Scanner', hint: 'Scanner geral MTM' },
   { key: 'forexideas', label: 'Ideias de Forex', hint: 'Sinais do canal Ideias de Forex' },
   { key: 'james', label: 'Forex Swings', hint: 'Swings de forex (James)' },
-  { key: 'primeverse', label: 'PrimeVerse', hint: 'Reencaminhados PrimeVerse' },
-  { key: 'aurum', label: 'Aurum Flow', hint: 'Scanner ORB — ouro e perpétuos' },
+  // A chave interna continua 'primeverse' (gravada em t2t_sources dos clientes); o que se MOSTRA
+  // são as estratégias MTM Auto — o nome da fonte externa não aparece em lado nenhum.
+  { key: 'primeverse', label: 'MTM Auto Edge/King/Wolf', hint: 'Estratégias Edge, King e Wolf' },
+  { key: 'aurum', label: 'Aurum Flow & Perpétuos', hint: 'Scanner ORB — ouro e perpétuos' },
 ]
 
 /** Catálogo de classes de ativo para a UI. */
@@ -58,6 +61,9 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
     if (/XAU|GOLD|OURO|XAG|SILVER|\bBTC\b|BITCOIN/i.test(c)) return null
     return 'mtmscanner'
   }
+  // Estratégias MTM Auto Edge / King / Wolf (formato único, canal `sinais-scanner-mtm`). Vem
+  // antes das regras por canal: a etiqueta da estratégia é a assinatura da fonte.
+  if (RE_ESTRATEGIAS_EKW.test(c)) return 'primeverse'
   if (channelSlug === 'premium-ideas') return 'premium'
   // Chat da Aurum Flow (slug `aurum-flow` desde 2026-09-14). Alias do slug antigo da Aurum Flow — remover depois de 2026-10-14 (30 dias após 2026-09-14).
   if (channelSlug === 'aurum-flow' || channelSlug === 'golden-moves') return 'aurum'
@@ -71,6 +77,9 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
     channelSlug === 'trade-ideas-setup'
   ) {
     if (/primeverse/i.test(c)) return 'primeverse'
+    // O canal `sinais-scanner-mtm` é agora o «MTM Auto Edge/Wolf/King»: tudo o que lá cai é dessas
+    // estratégias (as mensagens antigas trazem o marcador antigo, apanhado acima).
+    if (channelSlug === 'sinais-scanner-mtm') return 'primeverse'
     // Perpétuos cripto (Aurum Flow ORB / MTM Perps): passam a gerar botão no T2T. O botão
     // NÃO abre ordem na conta do cliente — ver `t2tMode`: nos perps é SEGUIR a posição, com a
     // gestão a correr no motor real sobre a ordem-mestre da Bybit.
@@ -177,9 +186,34 @@ export type T2TMode = 'execute' | 'follow'
  */
 const CRIPTO_NO_MT5 = /\b(BTC|ETH|LTC|XRP|SOL|ADA|DOT|BCH|BNB|DOGE)(USD|USDT)?(\.P)?\b/i
 
+/** Perpétuo (USDT / .P / PERP) que NÃO existe nas contas MT5 dos clientes? */
+const PERP_RE = /\b[A-Z0-9]{2,12}(USDT|USDC)(\.P)?\b|\b[A-Z0-9]{2,12}\.P\b|\bPERP\b/
+
+/**
+ * Canais onde vivem os perpétuos. Desde a fusão (18/09) o «Perpétuos de Cripto» e a Aurum Flow são
+ * um canal só (`aurum-flow`), com ouro E cripto — por isso aqui decide o SÍMBOLO, não o canal: o
+ * ouro da Aurum Flow executa; o perpétuo sem instrumento MT5 segue.
+ */
+const CANAIS_PERPS = new Set(['cripto-perps', 'aurum-flow'])
+
+/**
+ * Mensagem de PERPÉTUO (cripto) num canal de perpétuos? É o que decide o botão «TAP to Copy»
+ * (copiar os parâmetros para a exchange) em vez do Tap to Trade. No canal fundido Aurum Flow &
+ * Perpétuos o ouro tem Tap to Trade normal.
+ */
+export function ehSinalDePerpetuo(channelSlug?: string | null, content?: string | null): boolean {
+  if (!CANAIS_PERPS.has(String(channelSlug ?? ''))) return false
+  if (channelSlug === 'cripto-perps') return true
+  const c = content ?? ''
+  return PERP_RE.test(c) || CRIPTO_NO_MT5.test(c)
+}
+
 export function t2tMode(channelSlug?: string | null, content?: string | null): T2TMode {
-  if (channelSlug !== 'cripto-perps') return 'execute'
-  return CRIPTO_NO_MT5.test(content ?? '') ? 'execute' : 'follow'
+  if (!CANAIS_PERPS.has(String(channelSlug ?? ''))) return 'execute'
+  const c = content ?? ''
+  if (CRIPTO_NO_MT5.test(c)) return 'execute'
+  if (channelSlug === 'cripto-perps') return 'follow'
+  return PERP_RE.test(c) ? 'follow' : 'execute'
 }
 
 /** Rótulo do botão, para o chat e para a notificação não prometerem coisas diferentes. */

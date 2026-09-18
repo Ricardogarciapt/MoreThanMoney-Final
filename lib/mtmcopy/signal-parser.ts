@@ -1,4 +1,5 @@
 import type { MtmcopyChannelKey } from './channel-context'
+import { lerSinal } from '../sinais/formato-sinal'
 import {
   isPremiumHoldRemainderAtBE,
   isPremiumTp1CloseAllNowMessage,
@@ -767,6 +768,26 @@ export function senseiAlertTypeLabel(type: SenseiAlertType): string {
 
 export function parseSignal(text: string): ParsedSignal | null {
   if (!text || text.length > 4000) return null
+
+  // FORMATO ÚNICO (lib/sinais/formato-sinal.ts) primeiro: é exacto — não adivinha. As mensagens
+  // antigas (e as fontes que ainda escrevem à sua maneira) caem nos leitores de sempre, abaixo.
+  const unico = lerSinal(text)
+  if (unico) {
+    const symbol = normalizeSymbol(unico.simbolo)
+    if (!isValidTradingSymbol(symbol) && !/^[A-Z0-9]{3,12}$/.test(symbol)) return null
+    return {
+      symbol,
+      direction: unico.direcao,
+      entry: unico.entrada,
+      sl: unico.sl,
+      tp: unico.tps,
+      orderType: 'market',
+      raw: text.trim(),
+      zone: unico.zona,
+      zoneFirst: unico.zonaPrimeiro,
+    }
+  }
+
   if (isRecapOrAnnouncement(text)) return null
 
   const symbol = extractSymbol(text)

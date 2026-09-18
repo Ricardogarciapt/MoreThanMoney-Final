@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { lerSinal } from '@/lib/sinais/formato-sinal'
 
 /**
  * Traduz o REPLY do Telegram para o threading do chat da app.
@@ -57,6 +58,11 @@ interface SetupParsed {
 
 /** Lê "Gold Buy Zone 4489 - 4483 … TP1 : 4494 TP2 : 4499 …" de uma mensagem de setup. */
 function parseSetup(id: string, content: string): SetupParsed | null {
+  // Formato único (lib/sinais/formato-sinal): «🎯 Zona: a – b» + «✅ TPn: x».
+  const unico = lerSinal(content)
+  if (unico?.zona && unico.tps.length) {
+    return { id, zoneLow: unico.zona[0], zoneHigh: unico.zona[1], tps: unico.tps, pip: pipSize(unico.simbolo) }
+  }
   const zona = content.match(/zone\s*([\d.]+)\s*[-–]\s*([\d.]+)/i)
   if (!zona) return null
   const a = Number(zona[1])
