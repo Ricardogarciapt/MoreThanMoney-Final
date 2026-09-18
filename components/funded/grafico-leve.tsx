@@ -26,7 +26,8 @@ import { AccaoCancelada, useUmClique } from "./um-clique"
  * npm `lightweight-charts`) vestido com a paleta e a mecânica do paper trading do TradingView:
  * linha da posição com quantidade e lucro ao vivo, SL/TP arrastáveis com «×» para remover,
  * pendentes arrastáveis com «×» para cancelar, a ferramenta Long/Short com as zonas de risco e
- * alvo, as setas dos sinais dos estudos, e um painel de volume por baixo.
+ * alvo e as setas dos sinais dos estudos. Sem painel de volume (pedido do dono, 18/09): o gráfico fica
+ * com a altura toda para as velas, em todos os modos.
  *
  * É O gráfico dos web traders, num modo só (WebTrader e faixa do dock do scanner). A biblioteca
  * licenciada (grafico-tradingview.tsx) fica adormecida: só entra se estiver instalada com as
@@ -34,7 +35,7 @@ import { AccaoCancelada, useUmClique } from "./um-clique"
  *
  * Como está feito, peça a peça (API v5, https://tradingview.github.io/lightweight-charts/):
  *  · a biblioteca importa-se DINAMICAMENTE no cliente (não entra no bundle do servidor nem no SSR);
- *  · velas com `addSeries(CandlestickSeries)`, volume com `addSeries(HistogramSeries, …, 1)` (pane 1);
+ *  · velas com `addSeries(CandlestickSeries)` (um só painel — o de volume saiu a 18/09);
  *  · setas com `createSeriesMarkers`, marca de água com `createTextWatermark`;
  *  · as linhas são `createPriceLine` (a linha e a etiqueta no eixo); a etiqueta à TradingView
  *    (corpo | quantidade | ×) é HTML por cima, na mesma coordenada, e o arrasto é nosso (pointer
@@ -196,7 +197,6 @@ export default function GraficoLeve(props: GraficoProps & {
   const caixaRef = useRef<HTMLDivElement>(null)
   const graficoRef = useRef<any>(null)
   const serieRef = useRef<any>(null)
-  const volumeRef = useRef<any>(null)
   const marcasRef = useRef<any>(null)
   const marcaAguaRef = useRef<any>(null)
   const zonasRef = useRef<ZonasFerramenta | null>(null)
@@ -316,14 +316,6 @@ export default function GraficoLeve(props: GraficoProps & {
       const zonas = new ZonasFerramenta()
       serie.attachPrimitive(zonas as any)
       zonasRef.current = zonas
-      if (!props.compacto) {
-        // Volume (ticks) num painel próprio por baixo, como no TradingView.
-        const vol = chart.addSeries(LW.HistogramSeries, {
-          priceFormat: { type: "volume" }, priceLineVisible: false, lastValueVisible: false, color: "rgba(120,123,134,0.35)",
-        }, 1)
-        try { chart.panes()[1]?.setHeight(64) } catch { /* ok */ }
-        volumeRef.current = vol
-      }
       graficoRef.current = chart
       serieRef.current = serie
       etiquetasEixoRef.current = new Map()
@@ -336,7 +328,6 @@ export default function GraficoLeve(props: GraficoProps & {
       try { graficoRef.current?.remove() } catch { /* já removido */ }
       graficoRef.current = null
       serieRef.current = null
-      volumeRef.current = null
       marcasRef.current = null
       marcaAguaRef.current = null
       zonasRef.current = null
@@ -408,7 +399,6 @@ export default function GraficoLeve(props: GraficoProps & {
       const cor = cores.size ? cores.get(c.time) : undefined
       return cor ? { ...c, color: cor, wickColor: cor, borderColor: cor } : c
     }))
-    volumeRef.current?.setData(velas.map((v) => ({ time: v.time, value: v.volume, color: v.close >= v.open ? "rgba(38,166,154,0.35)" : "rgba(239,83,80,0.35)" })))
     ultimaVelaRef.current = velas.length ? velas[velas.length - 1] : null
     vivaDoPrecoRef.current = Boolean(viva && ultimaVelaRef.current && viva.time === ultimaVelaRef.current.time)
     velasRef.current = velas.map((v) => ({ t: v.time, o: v.open, h: v.high, l: v.low, c: v.close, v: v.volume }))
@@ -448,7 +438,7 @@ export default function GraficoLeve(props: GraficoProps & {
         aplicarVelas(derivado, false, "derivado")
         mostrado = true
       } else {
-        try { serieRef.current?.setData([]); volumeRef.current?.setData([]) } catch { /* ok */ }
+        try { serieRef.current?.setData([]) } catch { /* ok */ }
       }
       setEstadoVelas(mostrado ? "historico" : "a_carregar")
     }
@@ -498,7 +488,7 @@ export default function GraficoLeve(props: GraficoProps & {
         preBuscar(symbol, TF_VIZINHOS[tf] ?? [])
       } catch {
         if (vivo) {
-          if (!velasRef.current.length) { try { serieRef.current?.setData([]); volumeRef.current?.setData([]) } catch { /* ok */ } setEstadoVelas("ao_vivo") }
+          if (!velasRef.current.length) { try { serieRef.current?.setData([]) } catch { /* ok */ } setEstadoVelas("ao_vivo") }
           setHistoricoCompleto(true)
         }
       }
@@ -548,9 +538,8 @@ export default function GraficoLeve(props: GraficoProps & {
     else if (!u || t > u.time) nova = { time: t, open: u?.close ?? v, high: Math.max(v, u?.close ?? v), low: Math.min(v, u?.close ?? v), close: v, volume: 1 }
     else return
     try {
-      const { volume: vol, ...vela } = nova
-      serie.update(vela)
-      volumeRef.current?.update({ time: t, value: vol, color: vela.close >= vela.open ? "rgba(38,166,154,0.35)" : "rgba(239,83,80,0.35)" })
+      // O volume de ticks continua a contar (os estudos usam-no — o POC do MTM Scanner); só não se desenha.
+      serie.update({ time: nova.time, open: nova.open, high: nova.high, low: nova.low, close: nova.close })
       const abriuVela = !u || t > u.time
       ultimaVelaRef.current = nova
       vivaDoPrecoRef.current = true
