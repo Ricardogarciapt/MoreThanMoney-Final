@@ -49,7 +49,7 @@ for (const [, perfil] of casosComDireito) {
 }
 // E o caso que o chat cortava por engano (Premium só na categoria) passa a ler.
 const premiumSoCategoria = { is_active: true, user_type: 'member', member_category: 'premium', subscription_plan: 'app_member' }
-assert.equal(canReadChannel('sensei-scanner', premiumSoCategoria as never), false, 'premissa: o chat cortava-o')
+assert.equal(canReadChannel('sensei-scanner', premiumSoCategoria as never), true, 'o chat já lê com a regra dos sinais pagos (18/09)')
 assert.equal(temDireitoSinaisPagos(premiumSoCategoria), true)
 
 // MTM Auto com direito: lê mesmo sem ser Premium no site (e mesmo com o site em pausa).

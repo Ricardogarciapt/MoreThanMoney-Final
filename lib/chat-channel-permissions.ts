@@ -1,8 +1,10 @@
+import { temDireitoSinaisPagos, type PerfilSinais } from "@/lib/direito-sinais"
 export type ChatChannelUser = {
   id?: string
   user_type?: string | null
   member_category?: string | null
   subscription_plan?: string | null
+  membership_level?: string | null
   is_active?: boolean
   created_at?: string | null
 }
@@ -122,13 +124,10 @@ function ehVip(user: ChatChannelUser): boolean {
   return user.user_type === "vip" || user.member_category === "vip"
 }
 
+// A mesma regra dos sinais pagos (lib/direito-sinais.ts, RLS 115/117): Premium/Fundador em qualquer
+// campo, VIP em qualquer campo, IQ, admin. O direito MTM Auto só a RLS e o servidor o vêem.
 function ehPremium(user: ChatChannelUser): boolean {
-  return (
-    user.subscription_plan === "premium" ||
-    user.member_category === "iq" ||
-    ehVip(user) ||
-    user.user_type === "admin"
-  )
+  return user.user_type === "admin" || temDireitoSinaisPagos(user as PerfilSinais)
 }
 
 export function canReadChannel(
