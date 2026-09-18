@@ -2,13 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { autorizarMtmAuto } from '@/lib/mtm-auto-bridge'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { PRESETS, preset } from '@/lib/risk-presets'
-import { lerHistorico } from '@/lib/mtmcopy/metaapi'
-import {
-  CANONICAL_AURUMFLOW_ACCOUNT_ID,
-  CANONICAL_PREMIUM_ACCOUNT_ID,
-  SENSEI_PROVIDER_ACCOUNT_ID,
-} from '@/lib/mtmcopy/provider-constants'
 import { chavesDaFonte } from '@/lib/mtmauto/chaves-de-fonte'
+import { desempenhoDoCatalogo, lerCatalogoMtmAuto, SEM_HISTORICO } from '@/lib/mtmauto/desempenho-do-catalogo'
 
 export const dynamic = 'force-dynamic'
 // Ler o histórico da conta provider na corretora demora — e é o que dá os números verdadeiros.
@@ -18,9 +13,10 @@ export const maxDuration = 40
  * O retrato de uma estratégia — e são DUAS coisas diferentes.
  *
  * ── Estratégias MTM Auto (`?providerId=`) ─────────────────────────────────────────────────────
- * Têm conta de execução própria. Os números são os dela: fechos reais na corretora, com as
- * parciais como aconteceram. É a pergunta "esta estratégia ganha dinheiro?" e a resposta é o
- * dinheiro.
+ * Os números são EXACTAMENTE os da app MTM Auto (`/api/auto/providers`, lido com o token do
+ * cliente) — taxa de acerto, trades, fator de lucro e a curva em pips. Nada se recalcula deste
+ * lado: duas contas da mesma estratégia acabam sempre a discordar. Sem histórico medido lá,
+ * aqui diz-se «Sem histórico suficiente».
  *
  * ── Fontes Tap to Trade (`?fonte=`) ───────────────────────────────────────────────────────────
  * NÃO executam em conta nenhuma — só dão sinais. Perguntar-lhes "quanto ganhaste" não faz
@@ -39,27 +35,9 @@ export const maxDuration = 40
  */
 
 /**
- * A conta PROVIDER de cada estratégia.
- *
- * Estes números são os da conta que produz a estratégia — dinheiro real, com as parciais como
- * aconteceram. Não são os do cliente: esses estão no separador Histórico, que soma as contas
- * dele. Misturar os dois respondia à pergunta errada — quem abre uma estratégia quer saber se
- * ELA ganha, não como lhe correu a ele a segui-la meio mês.
- *
- * Antes lia-se `mtmcopy_signal_tracking`, que mede cada sinal como uma trade única,
- * tudo-ou-nada: um sinal que chega ao primeiro alvo, tira parcial e volta ao stop com o resto
- * contava como PERDA inteira. Dava 9% de acerto no Premium — um número que não é o de ninguém.
- *
  * Fontes de ideias (Forex Swings, PrimeVerse) não têm conta provider: não se inventam números
  * para elas, mostram-se os alvos que os sinais atingiram, que é um facto.
  */
-/** A conta de execução de cada estratégia MTM Auto que não a tem guardada na tabela. */
-const CONTA_POR_FONTE_MTM: Record<string, string | null> = {
-  premium: CANONICAL_PREMIUM_ACCOUNT_ID,
-  sensei: SENSEI_PROVIDER_ACCOUNT_ID,
-  aurum: CANONICAL_AURUMFLOW_ACCOUNT_ID,
-}
-
 interface Desempenho {
   /** De onde vieram os números: a conta que produz a estratégia, ou os sinais dela. */
   origem: 'provider' | 'sinais'
@@ -84,62 +62,6 @@ interface Desempenho {
   alvos: { alvo: string; acertos: number }[]
   medicaoFiavel: boolean
   porqueNaoFiavel: string | null
-}
-
-/** O que a conta provider fez mesmo: fechos reais, na corretora. */
-async function desempenhoDoProvider(contaId: string, nome: string, dias: number): Promise<Desempenho | null> {
-  const deals = await lerHistorico(contaId, new Date(Date.now() - dias * 86_400_000))
-  // `null` = não se conseguiu ler. Devolver zeros seria dizer que a estratégia não fez nada.
-  if (!deals) return null
-
-  /**
-   * Uma trade é uma POSIÇÃO, não um fecho.
-   *
-   * Estas estratégias saem por partes: uma posição fecha no TP1, depois no TP2, depois o resto.
-   * Contar cada fecho como uma trade dava 21 "trades" onde houve sete, e inflava a taxa de
-   * acerto — as duas parciais boas contavam como duas vitórias e o resto ao stop como uma só
-   * derrota, quando aquilo foi UMA trade com um resultado só.
-   *
-   * Somam-se por posição, e o sinal do total é que diz se ganhou ou perdeu.
-   */
-  const porPosicao = new Map<string, number>()
-  for (const d of deals) {
-    if (d.entryType !== 'DEAL_ENTRY_OUT' && d.entryType !== 'DEAL_ENTRY_INOUT') continue
-    if (d.type !== 'DEAL_TYPE_BUY' && d.type !== 'DEAL_TYPE_SELL') continue
-    // Sem positionId não se pode agrupar — conta-se à parte, uma por fecho, que é o melhor que
-    // se consegue dizer com verdade sobre ela.
-    const chave = String(d.positionId ?? d.orderId ?? d.id ?? Math.random())
-    const valor = Number(d.profit ?? 0) + Number(d.commission ?? 0) + Number(d.swap ?? 0)
-    porPosicao.set(chave, (porPosicao.get(chave) ?? 0) + valor)
-  }
-
-  const fechos = [...porPosicao.values()].map((v) => Math.round(v * 100) / 100)
-  const ganhos = fechos.filter((v) => v > 0).length
-  const perdas = fechos.filter((v) => v < 0).length
-  const breakeven = fechos.filter((v) => v === 0).length
-
-  const somaGanhos = fechos.filter((v) => v > 0).reduce((a, b) => a + b, 0)
-  const somaPerdas = Math.abs(fechos.filter((v) => v < 0).reduce((a, b) => a + b, 0))
-
-  return {
-    origem: 'provider',
-    contaProvider: nome,
-    sinais: fechos.length,
-    fechados: fechos.length,
-    ganhos,
-    perdas,
-    breakeven,
-    winrate: fechos.length ? Math.round((ganhos / fechos.length) * 1000) / 10 : null,
-    // Sem perdas não há fator de lucro — dividir por zero daria "infinito", que num ecrã de
-    // trading se lê como promessa.
-    fatorLucro: somaPerdas > 0 ? Math.round((somaGanhos / somaPerdas) * 100) / 100 : null,
-    // Os pips não se leem de um fecho — vêm do preço, e a conta não os guarda.
-    pips: null,
-    esteveEmLucro: ganhos,
-    alvos: [],
-    medicaoFiavel: true,
-    porqueNaoFiavel: null,
-  }
 }
 
 /**
@@ -212,49 +134,32 @@ export async function GET(request: NextRequest) {
 
   const db = getSupabaseAdmin()
 
-  // ── Estratégia MTM Auto: os números da conta que a executa ──────────────────────────────────
+  // ── Estratégia MTM Auto: os MESMOS números que a app MTM Auto mostra ─────────────────────────
+  // Não se recalcula nada aqui. Recalcular deste lado (com outro mapa de contas e outra fórmula)
+  // é o que fazia a mesma estratégia dizer 71% na MTM Auto e 35% na MTM System — ver
+  // lib/mtmauto/desempenho-do-catalogo.ts.
   if (providerId) {
-    const { data: prov } = await db
-      .from('mtmauto_providers')
-      .select('nome, metaapi_account_id, fonte_mtm')
-      .eq('id', providerId)
-      .maybeSingle()
-
-    const conta =
-      (prov?.metaapi_account_id as string | null) ??
-      CONTA_POR_FONTE_MTM[String(prov?.fonte_mtm ?? '')] ??
-      null
-
-    const dados = conta
-      ? await desempenhoDoProvider(conta, String(prov?.nome ?? 'Estratégia'), dias)
-      : null
-
+    const token = (request.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+    const catalogo = await lerCatalogoMtmAuto(token)
+    if (!catalogo) {
+      // Não se conseguiu ler é diferente de não ter feito nada: `ok: false` e o ecrã diz isso.
+      return NextResponse.json(
+        { ok: false, providerId, error: 'Não deu para ler os números desta estratégia agora. Volta daqui a pouco.' },
+        { status: 502 },
+      )
+    }
+    const linha = catalogo.find((p) => String(p.id) === providerId)
+    const desempenho = linha
+      ? desempenhoDoCatalogo(linha)
+      : {
+          ...desempenhoDoCatalogo({ id: providerId }),
+          porqueNaoFiavel: `${SEM_HISTORICO}: esta estratégia não está no teu catálogo MTM Auto.`,
+        }
     return NextResponse.json({
       ok: true,
       providerId,
       dias,
-      desempenho:
-        dados ??
-        {
-          origem: 'provider' as const,
-          contaProvider: (prov?.nome as string) ?? null,
-          sinais: 0,
-          fechados: 0,
-          ganhos: 0,
-          perdas: 0,
-          breakeven: 0,
-          winrate: null,
-          fatorLucro: null,
-          pips: null,
-          esteveEmLucro: 0,
-          alvos: [],
-          medicaoFiavel: false,
-          // Não se conseguiu ler é diferente de não ter feito nada, e dizer zeros seria a pior
-          // das duas mentiras: parece uma estratégia parada.
-          porqueNaoFiavel: conta
-            ? 'Não deu para ler a conta desta estratégia na corretora agora. Volta daqui a pouco.'
-            : 'Esta estratégia ainda não tem conta de execução ligada.',
-        },
+      desempenho,
       // O risco por estratégia é do Tap to Trade — uma estratégia MTM Auto configura-se na app
       // MTM Auto, onde se paga por ela.
       contas: [],

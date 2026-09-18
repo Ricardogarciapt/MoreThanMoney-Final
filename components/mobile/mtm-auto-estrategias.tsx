@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Loader2, Settings2, TrendingUp } from "lucide-react"
+import { resumoDoCartao, temHistorico, type ProvedorMtmAuto } from "@/lib/mtmauto/desempenho-do-catalogo"
 
 /**
  * O que seguir — igual ao ecrã de Estratégias da app MTM Auto.
@@ -11,8 +12,8 @@ import { Loader2, Settings2, TrendingUp } from "lucide-react"
  * ao lado da que já existia na MTM Auto, e duas telas a decidir a mesma coisa acabam sempre por
  * discordar — normalmente no dia em que um sinal não abre e ninguém percebe qual das duas mandou.
  *
- * Cada estratégia mostra o histórico REAL dela, calculado no MTM Auto a partir dos sinais deste
- * produto. Seguir aqui é seguir lá: é a mesma subscrição, na mesma tabela.
+ * Cada estratégia mostra o histórico que a app MTM Auto mostra — a MESMA percentagem, da mesma
+ * rota (`/api/auto/providers`). Seguir aqui é seguir lá: é a mesma subscrição, na mesma tabela.
  *
  * O que NÃO se faz aqui é ligar a cópia automática — a rota força `autoAceitar: false`. Seguir
  * é escolher o que se quer VER para aceitar à mão; a cópia automática é a parte paga.
@@ -23,33 +24,11 @@ type Provedor = {
   descricao: string | null
   segue: boolean
   automatico?: boolean
-  sinais?: number
-  acerto?: number | null
-  pips?: number | null
-  /** Desde quando há sinais medidos desta estratégia. */
-  desde?: string | null
-  /** Os números vêm da reposição contra o preço real (com parciais)? */
-  reposto?: boolean
-}
-
-/**
- * O DESEMPENHO, da mesma função que serve o admin.
- *
- * `/api/mtm-auto/desempenho` é `desempenhoDeTodas()` sem `admin: true` — a mesma soma, as mesmas
- * chaves, sem saldos. Antes estes números vinham da app MTM Auto externa, que contava à maneira
- * dela: a mesma estratégia dizia uma coisa aqui e outra no painel.
- *
- * O CARTÃO mostra quantos sinais e desde quando — factos. A taxa de acerto fica para o modal,
- * porque a medição de hoje é tudo-ou-nada (não conta parciais) e sub-avalia o resultado real;
- * um número desses num cartão não tem onde levar a ressalva atrás, e sem ela é falso.
- */
-type Desempenho = {
-  sinais: number
-  desde: string | null
-  /** Reposto contra o preço real, com parciais. É o que se mostra quando existe. */
-  trades: number | null
-  acertoPct: number | null
-  pipsTotal: number | null
+  /**
+   * A linha tal e qual veio da MTM Auto. O cartão lê a percentagem DAQUI — antes vinha da
+   * reposição (`/api/mtm-auto/desempenho`) e a mesma estratégia dizia 35% aqui e 71% na MTM Auto.
+   */
+  catalogo: ProvedorMtmAuto
 }
 
 /** Estado dos controlos admin (GET/POST /api/admin/mtmcopy/t2t-controls). */
@@ -160,8 +139,8 @@ function ModalEstrategia({
             </p>
             {(d.desempenho as { contaProvider?: string }).contaProvider && (
               <p className="mb-2 text-[11.5px] leading-snug text-zinc-500">
-                Da conta que executa a {(d.desempenho as { contaProvider?: string }).contaProvider}. O teu
-                resultado está no separador Histórico.
+                Da conta que executa a {(d.desempenho as { contaProvider?: string }).contaProvider} — os
+                mesmos números da app MTM Auto. O teu resultado está no separador Histórico.
               </p>
             )}
             {/* A taxa de acerto e os pips só aparecem quando a medição os merece. Hoje o desfecho
@@ -169,7 +148,12 @@ function ModalEstrategia({
                 chega ao primeiro alvo, tira parcial e depois volta ao stop com o resto conta como
                 perda inteira. Quem o seguiu ficou com lucro; a tabela diz que perdeu. Mostrar isso
                 era anunciar contra nós próprios um resultado que nem sequer é o real. */}
-            {(d.desempenho as { medicaoFiavel?: boolean }).medicaoFiavel ? (
+            {providerId && desempenho.winrate == null ? (
+              // Estratégia MTM Auto sem histórico medido lá: diz-se isso, sem caixas a zeros.
+              <p className="rounded-2xl border p-3 text-[13px] leading-snug text-zinc-400" style={{ borderColor: "#23262F", background: "#12141A" }}>
+                {(d.desempenho as { porqueNaoFiavel?: string }).porqueNaoFiavel ?? "Sem histórico suficiente."}
+              </p>
+            ) : (d.desempenho as { medicaoFiavel?: boolean }).medicaoFiavel ? (
               <div className="grid grid-cols-2 gap-2">
                 {caixa(
                   "Taxa de acerto",
@@ -188,6 +172,17 @@ function ModalEstrategia({
                   desempenho.fatorLucro != null ? Number(desempenho.fatorLucro).toFixed(2) : "—",
                   "ganho por cada 1 perdido",
                   Number(desempenho.fatorLucro ?? 0) >= 1 ? "#28C878" : "#FF4D4D",
+                )}
+                {/* Os pips da curva da MTM Auto — o mesmo total que a app MTM Auto mostra. */}
+                {desempenho.pips != null && (
+                  <div className="col-span-2">
+                    {caixa(
+                      "Pips",
+                      `${Number(desempenho.pips) >= 0 ? "+" : ""}${desempenho.pips}`,
+                      `acumulados em ${desempenho.fechados ?? 0} trades`,
+                      Number(desempenho.pips) >= 0 ? "#28C878" : "#FF4D4D",
+                    )}
+                  </div>
                 )}
               </div>
             ) : (
@@ -408,48 +403,21 @@ export default function MtmAutoEstrategias({
       const j = await r.json()
 
       /**
-       * O desempenho vem da NOSSA função, não do catálogo.
+       * O desempenho vem do CATÁLOGO da MTM Auto — o mesmo número que a app MTM Auto mostra.
        *
-       * O catálogo (`/api/mtm-auto/estrategias`) é um proxy para a app MTM Auto externa e traz
-       * `sinais/acerto/pips` contados por ela. A soma é outra — outro filtro, outra janela — e a
-       * mesma estratégia aparecia com números diferentes conforme o ecrã. O catálogo fica a dizer
-       * QUEM existe e quem se segue; quanto produziu vem daqui.
-       *
-       * Falhar isto não parte o ecrã: perde-se a linha dos sinais, mantém-se a lista e o seguir.
+       * Houve aqui uma terceira fonte (a reposição contra velas, `/api/mtm-auto/desempenho`), e o
+       * resultado foi o cliente ver 35% neste ecrã e 71% na MTM Auto para a mesma estratégia. A
+       * fonte é uma só: lib/mtmauto/desempenho-do-catalogo.ts.
        */
-      const porNome = new Map<string, Desempenho>()
-      try {
-        const rd = await fetch("/api/mtm-auto/desempenho", { cache: "no-store" })
-        const jd = await rd.json()
-        for (const e of (jd.estrategias ?? []) as Array<Record<string, unknown>>) {
-          const t = (e.total ?? {}) as Record<string, unknown>
-          const rec = e.reconstruido as Record<string, unknown> | null
-          porNome.set(String(e.nome ?? "").toLowerCase(), {
-            sinais: Number(t.sinais ?? 0),
-            desde: (rec?.desde as string) ?? (t.desde as string) ?? null,
-            trades: rec ? Number(rec.trades) : null,
-            acertoPct: rec ? Number(rec.acertoPct) : null,
-            pipsTotal: rec ? Number(rec.pipsTotal) : null,
-          })
-        }
-      } catch {
-        /* sem desempenho, a lista continua a servir para seguir */
-      }
-
       setProvs(
         (j.providers ?? []).map((p: Record<string, unknown>) => {
-          const d = porNome.get(String(p.nome ?? "").toLowerCase())
           return {
             id: String(p.id),
             nome: String(p.nome ?? ""),
             descricao: (p.descricao as string) ?? null,
             segue: p.segue === true || p.seguido === true,
             automatico: p.automatico === true || p.autoAceitar === true,
-            sinais: d?.trades ?? d?.sinais ?? Number(p.sinais ?? p.total ?? 0),
-            desde: d?.desde ?? null,
-            acerto: d?.acertoPct ?? null,
-            pips: d?.pipsTotal ?? null,
-            reposto: d?.trades != null,
+            catalogo: p as unknown as ProvedorMtmAuto,
           }
         }),
       )
@@ -622,31 +590,21 @@ export default function MtmAutoEstrategias({
             <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setAberta({ providerId: p.id, nome: p.nome })}>
               <p className="text-[14px] font-semibold text-white">{p.nome}</p>
               {p.descricao && <p className="mt-0.5 text-[12px] leading-snug text-zinc-400">{p.descricao}</p>}
-              {/* Com a reposição há números para mostrar — foram medidos com os parciais
-                  contados, que é a única forma de a conta bater certo. Sem ela, mostra-se o que
-                  é verdade sem os parciais: quantos sinais e desde quando. */}
-              {p.reposto && p.sinais ? (
-                <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-zinc-500">
-                  <TrendingUp className="h-3 w-3" />
-                  <span>{p.sinais} trades</span>
-                  {p.acerto != null && <span>· {p.acerto}% de acerto</span>}
-                  {p.pips != null && (
-                    <span className={p.pips >= 0 ? "text-[#28C878]" : "text-[#FF6B6B]"}>
-                      · {p.pips >= 0 ? "+" : ""}
-                      {Math.round(p.pips)} pips
-                    </span>
-                  )}
-                </p>
-              ) : (
-                Boolean(p.sinais) && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-zinc-500">
-                    <TrendingUp className="h-3 w-3" />
-                    {p.sinais} sinais
-                    {p.desde && ` desde ${new Date(p.desde).toLocaleDateString("pt-PT", { month: "short", year: "numeric" })}`}
-                    {" · toca para ver os números"}
-                  </p>
-                )
-              )}
+              {/* A MESMA linha do cartão da app MTM Auto: taxa de acerto · trades · G/P. Sem
+                  histórico medido lá, diz-se isso — nunca um número inventado. */}
+              <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-zinc-500">
+                <TrendingUp className="h-3 w-3" />
+                {temHistorico(p.catalogo) ? (
+                  <>
+                    <span className="font-semibold text-[#D2A63C]">{resumoDoCartao(p.catalogo)}</span>
+                    <span className="text-[#28C878]">· {Number(p.catalogo.ganhos ?? 0)}G</span>
+                    <span className="text-[#FF6B6B]">{Number(p.catalogo.perdas ?? 0)}P</span>
+                    <span>· toca para ver os números</span>
+                  </>
+                ) : (
+                  <span>{resumoDoCartao(p.catalogo)}</span>
+                )}
+              </p>
               {p.automatico && (
                 <p className="mt-1 text-[11.5px] text-[#D2A63C]">Cópia automática ligada na app MTM Auto</p>
               )}
