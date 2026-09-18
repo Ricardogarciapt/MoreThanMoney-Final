@@ -48,6 +48,15 @@ update public.chat_messages m
     or (m.channel_slug in ('trade-ideas', 'trade-ideas-setup', 'cripto-perps')
         and m.content ~ '^✅ ENTRY HIT · \S+ \S+ \S+ · [A-Za-z0-9_.-]+\n');
 
+-- As descrições das estratégias (mostradas no MTM Auto e na app-mobile) também nomeavam a fonte.
+update public.mtmauto_providers set descricao = case slug
+    when 'mtm-auto-edge' then 'Estratégia Edge — ouro e índices, gerida com trailing stop e trailing profit.'
+    when 'mtm-auto-king' then 'Estratégia King — ouro, índices e BTC, gerida com trailing stop e trailing profit.'
+    when 'mtm-auto-wolf' then 'Estratégia Wolf — ouro e índices, gerida com trailing stop e trailing profit.'
+  end
+ where slug in ('mtm-auto-edge', 'mtm-auto-king', 'mtm-auto-wolf')
+   and descricao ilike '%primeverse%';
+
 update public.chat_channels
    set name = 'MTM Auto Edge/Wolf/King',
        description = 'Estratégias MTM Auto Edge, King e Wolf — Tap to Trade',

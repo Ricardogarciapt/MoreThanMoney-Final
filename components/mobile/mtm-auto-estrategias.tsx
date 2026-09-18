@@ -37,6 +37,29 @@ type AdminControls = {
   extras: { channel: string; label: string; active: boolean }[]
 }
 
+/**
+ * A curva de pips da estratégia — a MESMA que a app MTM Auto desenha (`curva` do catálogo:
+ * acumulado por trade fechada). Linha do zero a tracejado; verde acima, vermelho abaixo do fim.
+ */
+function CurvaPips({ curva, altura = 56, mini = false }: { curva: { acumulado: number }[]; altura?: number; mini?: boolean }) {
+  const pts = curva.map((c) => Number(c.acumulado)).filter((v) => Number.isFinite(v))
+  if (pts.length < 2) return null
+  const serie = [0, ...pts]
+  const min = Math.min(...serie)
+  const max = Math.max(...serie)
+  const amp = max - min || 1
+  const w = 100
+  const y = (v: number) => altura - ((v - min) / amp) * (altura - 4) - 2
+  const d = serie.map((v, i) => `${i === 0 ? "M" : "L"}${((i / (serie.length - 1)) * w).toFixed(2)},${y(v).toFixed(2)}`).join(" ")
+  const cor = serie[serie.length - 1]! >= 0 ? "#28C878" : "#FF4D4D"
+  return (
+    <svg viewBox={`0 0 ${w} ${altura}`} preserveAspectRatio="none" className="w-full" style={{ height: mini ? 28 : altura }} aria-hidden>
+      <line x1="0" x2={w} y1={y(0)} y2={y(0)} stroke="#3f3f46" strokeWidth="0.6" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+      <path d={d} fill="none" stroke={cor} strokeWidth={mini ? 1.5 : 2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 /** Um interruptor que diz o estado pela COR: verde a seguir, vermelho a não seguir. */
 /**
  * O retrato de uma estratégia: como correu, e quanto se arrisca nela.
@@ -184,6 +207,14 @@ function ModalEstrategia({
                     )}
                   </div>
                 )}
+                {/* A curva que a app MTM Auto desenha — o mesmo acumulado, trade a trade. */}
+                {Array.isArray((d.desempenho as { curva?: unknown[] }).curva) &&
+                  ((d.desempenho as { curva: { acumulado: number }[] }).curva.length > 1) && (
+                    <div className="col-span-2 rounded-2xl border p-3" style={{ borderColor: "#23262F", background: "#12141A" }}>
+                      <p className="mb-1 text-[10.5px] uppercase tracking-wider text-zinc-500">Curva de pips</p>
+                      <CurvaPips curva={(d.desempenho as { curva: { acumulado: number }[] }).curva} altura={72} />
+                    </div>
+                  )}
               </div>
             ) : (
               <>
@@ -473,64 +504,64 @@ export default function MtmAutoEstrategias({
     <div className="space-y-2">
       <p className="px-1 text-[12px] leading-snug text-zinc-400">
         Escolhe o que queres seguir. Verde é a receber; vermelho é parado. Os sinais do que segues
-        aparecem no separador Sinais, para aceitares um a um. Ligar a cópia automática faz-se na
-        app MTM Auto.
+        aparecem no separador Sinais, para aceitares um a um. O automático liga-se na app MTM Auto.
       </p>
 
       {/* CONTROLO ADMIN — só o admin vê. Pausar a cópia pára a execução automática da
           estratégia (CopyFactory + MTM Auto, mesma tabela) até religar; desligar uma fonte
           T2T esconde-a dos clientes e tira o botão de aceitar dos chats. */}
       {isAdmin && adminCtl && (
-        <div className="rounded-2xl border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-3 space-y-2">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[#D2A63C]">Controlo Admin</p>
-
-          <p className="text-[11px] uppercase tracking-wider text-zinc-500">Cópia automática por estratégia</p>
-          {adminCtl.strategies.map((s) => (
-            <div key={s.routeId} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-[#12141A] p-2.5">
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-semibold text-white">{s.label}</p>
-                <p className="text-[11px] text-zinc-500">
-                  {s.copyEnabled ? "Cópia automática ativa" : "Cópia PAUSADA até religar"}
-                  {!s.hasAccount && " · sem conta mestre"}
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Interruptor
-                  ligado={s.copyEnabled}
-                  ocupado={adminBusy === `copy:${s.routeId}`}
-                  rotulos={["Cópia", "Pausa"]}
-                  onClick={() => adminAction(`copy:${s.routeId}`, { action: "route_copy", routeId: s.routeId, value: !s.copyEnabled })}
-                />
-                <Interruptor
-                  ligado={s.tapToTrade}
-                  ocupado={adminBusy === `t2t:${s.routeId}`}
-                  rotulos={["T2T", "T2T"]}
-                  onClick={() => adminAction(`t2t:${s.routeId}`, { action: "route_t2t", routeId: s.routeId, value: !s.tapToTrade })}
-                />
-              </div>
-            </div>
-          ))}
-
-          {adminCtl.extras.length > 0 && (
-            <>
-              <p className="pt-1 text-[11px] uppercase tracking-wider text-zinc-500">Fontes Tap to Trade extra</p>
-              {adminCtl.extras.map((x) => (
-                <div key={x.channel} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-[#12141A] p-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-semibold text-white">{x.label}</p>
-                    <p className="text-[11px] text-zinc-500">{x.active ? "Visível aos clientes no T2T" : "Oculta — clientes não aceitam"}</p>
-                  </div>
+        <details className="group rounded-2xl border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#D2A63C]">
+            <span>Admin · estratégias e fontes</span>
+            <span className="text-[10px] font-semibold normal-case tracking-normal text-zinc-500 group-open:hidden">mostrar</span>
+          </summary>
+          <div className="mt-2 space-y-1.5">
+            {/* Uma linha por estratégia: execução automática (a estratégia a abrir sozinha nas
+                contas dos subscritores — CopyFactory/MTM Auto/mestre) e Tap to Trade (o botão de
+                aceitar nos chats). São dois interruptores porque são duas coisas: pausar a execução
+                não tira às pessoas a hipótese de aceitarem à mão. */}
+            {adminCtl.strategies.map((s) => (
+              <div key={s.routeId} className="rounded-xl border border-zinc-800 bg-[#12141A] p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="min-w-0 truncate text-[13px] font-semibold text-white">{s.label}</p>
+                  {!s.hasAccount && <span className="shrink-0 text-[10px] text-zinc-500">sem conta mestre</span>}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
                   <Interruptor
-                    ligado={x.active}
-                    ocupado={adminBusy === `extra:${x.channel}`}
-                    rotulos={["Ativa", "Oculta"]}
-                    onClick={() => adminAction(`extra:${x.channel}`, { action: "extra_channel", channel: x.channel, value: !x.active })}
+                    ligado={s.copyEnabled}
+                    ocupado={adminBusy === `copy:${s.routeId}`}
+                    rotulos={["Execução", "Pausada"]}
+                    onClick={() => adminAction(`copy:${s.routeId}`, { action: "route_copy", routeId: s.routeId, value: !s.copyEnabled })}
+                  />
+                  <Interruptor
+                    ligado={s.tapToTrade}
+                    ocupado={adminBusy === `t2t:${s.routeId}`}
+                    rotulos={["Tap to Trade", "Sem T2T"]}
+                    onClick={() => adminAction(`t2t:${s.routeId}`, { action: "route_t2t", routeId: s.routeId, value: !s.tapToTrade })}
                   />
                 </div>
-              ))}
-            </>
-          )}
-        </div>
+              </div>
+            ))}
+
+            {adminCtl.extras.length > 0 && (
+              <>
+                <p className="pt-1 text-[10.5px] uppercase tracking-wider text-zinc-500">Fontes sem conta própria</p>
+                {adminCtl.extras.map((x) => (
+                  <div key={x.channel} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-[#12141A] p-2.5">
+                    <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white">{x.label}</p>
+                    <Interruptor
+                      ligado={x.active}
+                      ocupado={adminBusy === `extra:${x.channel}`}
+                      rotulos={["Tap to Trade", "Sem T2T"]}
+                      onClick={() => adminAction(`extra:${x.channel}`, { action: "extra_channel", channel: x.channel, value: !x.active })}
+                    />
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </details>
       )}
 
       {/* AS FONTES TAP TO TRADE ATIVAS.
@@ -605,8 +636,30 @@ export default function MtmAutoEstrategias({
                   <span>{resumoDoCartao(p.catalogo)}</span>
                 )}
               </p>
+              {/* Alvos batidos e stops — as mesmas contagens do cartão da app MTM Auto. */}
+              {temHistorico(p.catalogo) && (
+                <p className="mt-1 flex flex-wrap gap-1 text-[10.5px] font-semibold">
+                  {(["tp1", "tp2", "tp3"] as const).map((k) =>
+                    Number((p.catalogo as unknown as Record<string, unknown>)[k] ?? 0) > 0 ? (
+                      <span key={k} className="rounded-md bg-[#28C878]/10 px-1.5 py-0.5 text-[#28C878]">
+                        {k.toUpperCase()}×{Number((p.catalogo as unknown as Record<string, unknown>)[k])}
+                      </span>
+                    ) : null,
+                  )}
+                  {Number((p.catalogo as unknown as Record<string, unknown>).sl ?? 0) > 0 && (
+                    <span className="rounded-md bg-[#FF4D4D]/10 px-1.5 py-0.5 text-[#FF6B6B]">
+                      SL×{Number((p.catalogo as unknown as Record<string, unknown>).sl)}
+                    </span>
+                  )}
+                </p>
+              )}
+              {temHistorico(p.catalogo) && Array.isArray(p.catalogo.curva) && p.catalogo.curva.length > 1 && (
+                <div className="mt-1.5 opacity-90">
+                  <CurvaPips curva={p.catalogo.curva} mini />
+                </div>
+              )}
               {p.automatico && (
-                <p className="mt-1 text-[11.5px] text-[#D2A63C]">Cópia automática ligada na app MTM Auto</p>
+                <p className="mt-1 text-[11.5px] text-[#D2A63C]">Automático ligado na app MTM Auto</p>
               )}
             </button>
             <Interruptor ligado={p.segue} ocupado={aMudar === p.id} onClick={() => alternar(p)} />

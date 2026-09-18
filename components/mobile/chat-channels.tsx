@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { ehSinalDePerpetuo, isT2TEntrySignal, t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { directionLabelFromText } from "@/lib/mtmcopy/signal-direction"
@@ -691,7 +692,7 @@ const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|b
 /** Um follow-up POSTERIOR com isto RESOLVE o sinal (ativou/fechou/morreu) → o botão T2T esconde-se.
  *  'ENTRY HIT' literal (monitor/PrimeVerse) e não 'ativad' — senão as entradas Sensei ("Ideia
  *  Activada"), que SÃO sinais, resolver-se-iam umas às outras. */
-const TAP_TRADE_RESOLVING_RE = /(entry\s*hit|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|posi[çc][aã]o\s*fechada|fechad[ao]|encerrad|cancelad|descartad|invalidad|break\s*even|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
+const TAP_TRADE_RESOLVING_RE = /(entry\s*hit|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|posi[çc][aã]o\s*fechada|fechad[ao]|encerrad|cancelad|descartad|invalidad|break[\s-]*even|stop\s+protegido|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 /** Direção do sinal/follow-up, quando declarada — leitura única, em `lib/mtmcopy/signal-direction`. */
 function t2tDirectionOf(content?: string | null): "BUY" | "SELL" | "" {
   return directionLabelFromText(content)
@@ -715,6 +716,11 @@ function computeResolvedSignalIds(messages: ChatMessage[]): Set<string> {
   const resolved = new Set<string>()
   const followups = messages.filter((m) => m.content && TAP_TRADE_RESOLVING_RE.test(m.content))
   if (!followups.length) return resolved
+  // Seguimento em RESPOSTA ao sinal (formato único: sempre em thread) → resolve exactamente esse.
+  for (const f of followups) {
+    const pai = (f as { reply_to_id?: string | null }).reply_to_id
+    if (pai) resolved.add(pai)
+  }
   for (const m of messages) {
     if (!m.content || !looksLikeTradeSignal(m.channel_slug, m.content)) continue
     const sym = t2tSymbolOf(m.content)
@@ -760,6 +766,21 @@ function hasEntryLevel(content?: string | null): boolean {
   return /^\s*\d{2,7}(?:[.,]\d+)?\s*[-–—]\s*\d{2,7}(?:[.,]\d+)?\s*$/m.test(content)
 }
 
+/** O que o motor mede de um sinal a correr (ver /api/mtmcopy/signal-live). */
+type AoVivo = { pips: number | null; pct: number | null; exits?: number; entrou?: boolean; slBatido?: boolean }
+
+/**
+ * A MESMA janela do separador T2T e da app MTM Auto (lib/mtmcopy/t2t-janela, lib/janela-t2t):
+ * stop já tocado → nunca; passados os 5 minutos, entrada tocada ou parcial feita → fora da zona.
+ * Sem isto o botão do chat ficava vivo até 24 h num setup que já tinha arrancado.
+ */
+function foraDaJanela(createdAt: string | null | undefined, v?: AoVivo): boolean {
+  if (!v) return false
+  if (v.slBatido) return true
+  const idade = createdAt ? Date.now() - new Date(createdAt).getTime() : 0
+  return idade > TAP_TRADE_MAX_AGE_MS && (Boolean(v.entrou) || Number(v.exits ?? 0) > 0)
+}
+
 /** Sinal ainda aceitável? Setup pendente → 24h; entrada a mercado → 5 min. */
 function isSignalActive(createdAt?: string | null, content?: string | null): boolean {
   if (!createdAt) return true
@@ -795,7 +816,7 @@ function MessageBubble({
   /** Sinal já resolvido por follow-up posterior (ativado/fechado/descartado) → sem botão T2T. */
   resolved?: boolean
   /** Resultado a correr deste sinal (pips e %), calculado pelo motor. */
-  aoVivo?: { pips: number | null; pct: number | null }
+  aoVivo?: AoVivo
 }) {
   const t = useT()
   const tradeable =
@@ -803,7 +824,8 @@ function MessageBubble({
     !!onTapToTrade &&
     !resolved &&
     looksLikeTradeSignal(msg.channel_slug, msg.content) &&
-    isSignalActive(msg.created_at, msg.content)
+    isSignalActive(msg.created_at, msg.content) &&
+    !foraDaJanela(msg.created_at, aoVivo)
   const isTelegram = msg.message_type === "telegram_forward"
   const isVideo    = msg.message_type === "video"
   const isDocument = msg.message_type === "document"
@@ -1187,7 +1209,7 @@ function ChannelView({
   const [sendError, setSendError] = useState<string | null>(null)
   const [messagesError, setMessagesError] = useState<string | null>(null)
   /** Resultado FLUTUANTE por sinal, feito pelo motor. Ver /api/mtmcopy/signal-live. */
-  const [aoVivo, setAoVivo] = useState<Record<string, { pips: number | null; pct: number | null }>>({})
+  const [aoVivo, setAoVivo] = useState<Record<string, AoVivo>>({})
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -1270,6 +1292,15 @@ function ChannelView({
   >(null)
   /** Perpétuos: em vez de abrir ordem, modal TAP to Copy com os parâmetros. */
   const [copyModalMsg, setCopyModalMsg] = useState<ChatMessage | null>(null)
+  const router = useRouter()
+  /**
+   * Aceitar a partir do chat = o MESMO fluxo do separador Tap to Trade (e da app MTM Auto):
+   * pré-visualização por conta (lote e risco reais), todas as contas T2T do cliente e a janela
+   * de aceitação. O modal antigo do chat só mostrava o texto e abria sem pré-visualização.
+   */
+  const abrirNoTapToTrade = (m: ChatMessage) => {
+    router.push(`/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(m.id)}`)
+  }
   /** Fontes T2T ativas no sistema (admin liga/desliga). null = ainda a carregar → não esconder. */
   const [t2tActiveChannels, setT2tActiveChannels] = useState<Set<string> | null>(null)
 
@@ -1693,7 +1724,7 @@ function ChannelView({
       try {
         const r = await fetch(`/api/mtmcopy/signal-live?ids=${ids.slice(0, 200).join(",")}`)
         if (!r.ok) return
-        const j = (await r.json()) as { live?: Record<string, { pips: number | null; pct: number | null }> }
+        const j = (await r.json()) as { live?: Record<string, AoVivo> }
         if (!cancelado) setAoVivo(j.live ?? {})
       } catch {
         /* sem números — as bolhas continuam a funcionar */
@@ -1772,7 +1803,7 @@ function ChannelView({
             onIrParaOriginal={irParaOriginal}
             onTapToTrade={
               t2tSourceOn
-                ? (m) => (ehSinalDePerpetuo(m.channel_slug, m.content) ? setCopyModalMsg(m) : setTapTrade({ msg: m, status: "confirm" }))
+                ? (m) => (ehSinalDePerpetuo(m.channel_slug, m.content) ? setCopyModalMsg(m) : abrirNoTapToTrade(m))
                 : undefined
             }
           />

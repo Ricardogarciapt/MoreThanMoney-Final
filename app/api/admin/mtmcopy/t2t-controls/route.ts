@@ -71,8 +71,14 @@ async function buildState() {
   })
 
   const extrasActive = new Set(config.t2t_extra_channels ?? [])
+  // Fontes abandonadas saem do painel: canal ESCONDIDO no chat e fonte desligada (ex.: Ideias de
+  // Forex desde 27/08). Se alguém a religar à mão continua a aparecer — só se esconde o que está
+  // morto dos dois lados.
+  const { data: escondidos } = await supabase.from('chat_channels').select('slug').eq('hidden', true)
+  const canalEscondido = new Set((escondidos ?? []).map((c) => String(c.slug)))
   const extras = Object.entries(EXTRA_CHANNEL_LABELS)
     .filter(([ch]) => !routeChannels.has(ch)) // canais já governados por rota ficam do lado das rotas
+    .filter(([ch]) => extrasActive.has(ch) || !canalEscondido.has(ch))
     .map(([channel, label]) => ({ channel, label, active: extrasActive.has(channel) }))
 
   return { strategies, extras }
