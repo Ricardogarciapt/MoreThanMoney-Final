@@ -9,6 +9,7 @@ import {
   resumoDoCartao,
   SEM_HISTORICO,
   temHistorico,
+  simuladasDoCatalogo,
   type ProvedorMtmAuto,
 } from '../desempenho-do-catalogo'
 
@@ -129,6 +130,68 @@ ok('linha vazia (estratégia fora do catálogo do cliente) → sem histórico, n
   assert.equal(d.sinais, 0)
   assert.equal(d.pips, null)
   assert.equal(resumoDoCartao(null), SEM_HISTORICO)
+})
+
+// ── 90 dias de todas as contas reais (MTM Auto, 2026-09-18) ────────────────────────────────────
+// Linha real depois da mudança: Sensei com as contas-mestre anteriores (143 trades do plano) +
+// copiadoras + execuções da app + conta actual.
+const SENSEI_90D: ProvedorMtmAuto = {
+  id: '6de49c92-1849-43c9-9ddd-1e45fcd57f63', nome: 'MTM Auto Sensei',
+  sinais: 150, fechados: 150, ganhos: 89, perdas: 61, breakeven: 0, winrate: 59.3, fatorLucro: 1.73,
+  daContaProvider: true,
+  curva: [{ quando: '2026-09-18T12:11:27.540Z', pips: -81.8, acumulado: 2729.9 }],
+  historico90d: { contas: 7, porFonte: { 'plano-mestre': 143, copiadoras: 3, 'execucoes-app': 3, 'conta-provider': 1 }, desde: '2026-06-20T12:00:00.000Z' },
+  simuladas: null,
+}
+// Edge: só contas simuladas em 90 dias → principal sem histórico, simuladas à parte.
+const EDGE_SIM: ProvedorMtmAuto = {
+  ...EDGE,
+  simuladas: {
+    origem: 'simulada', trades: 17, ganhos: 15, perdas: 2, breakeven: 0, winrate: 88.2, fatorLucro: 2.4,
+    pips: 280, curva: [{ quando: '2026-09-18T18:05:46.475Z', pips: 5, acumulado: 280 }], contas: 2,
+    desde: '2026-06-20T12:00:00.000Z',
+  },
+}
+
+ok('90 dias: o Sensei passa a ter histórico (contas anteriores) e a MTM System lê o mesmo', () => {
+  const d = desempenhoDoCatalogo(SENSEI_90D)
+  assert.equal(d.winrate, 59.3)
+  assert.equal(d.fechados, 150)
+  assert.equal(d.fatorLucro, 1.73)
+  assert.equal(d.pips, 2729.9)
+  assert.equal(d.simuladas, null)
+  assert.equal(resumoDoCartao(SENSEI_90D), '59,3% de acerto · 150 trades')
+})
+
+ok('só simuladas: o principal fica «sem histórico» e as simuladas vêm à parte, marcadas', () => {
+  const d = desempenhoDoCatalogo(EDGE_SIM)
+  assert.equal(d.winrate, null)
+  assert.equal(d.fechados, 0)
+  assert.equal(d.pips, null)
+  assert.equal(resumoDoCartao(EDGE_SIM), SEM_HISTORICO)
+  assert.equal(d.simuladas?.origem, 'simulada')
+  assert.equal(d.simuladas?.trades, 17)
+  assert.equal(d.simuladas?.winrate, 88.2)
+  assert.equal(d.simuladas?.pips, 280)
+})
+
+ok('simuladas NUNCA ao lado de histórico real (mesmo que a linha as traga)', () => {
+  const d = desempenhoDoCatalogo({ ...SENSEI_90D, simuladas: EDGE_SIM.simuladas })
+  assert.equal(d.winrate, 59.3)
+  assert.equal(d.simuladas, null)
+})
+
+ok('simuladas inválidas ou sem origem marcada não passam', () => {
+  assert.equal(simuladasDoCatalogo({ id: 'x', simuladas: { ...EDGE_SIM.simuladas!, trades: 0 } }), null)
+  assert.equal(simuladasDoCatalogo({ id: 'x', simuladas: { ...EDGE_SIM.simuladas!, origem: 'real' as 'simulada' } }), null)
+  assert.equal(simuladasDoCatalogo(null), null)
+})
+
+ok('simuladas também sem dinheiro', () => {
+  const s = simuladasDoCatalogo({ id: 'x', simuladas: { ...EDGE_SIM.simuladas!, resultado: 99, saldo: 1000 } as never })!
+  for (const proibida of ['resultado', 'saldo', 'equity', 'balance', 'lucro', 'profit']) {
+    assert.ok(!Object.keys(s).includes(proibida), `não pode sair «${proibida}»`)
+  }
 })
 
 console.log(`\n${n} verificações ok`)

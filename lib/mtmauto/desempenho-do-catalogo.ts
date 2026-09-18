@@ -14,6 +14,16 @@
  * token do cliente) e esta função só TRADUZ a linha dela para o formato dos ecrãs da MTM System.
  * Não recalcula nada: recalcular é exactamente o que fez os números divergirem.
  *
+ * ── Os 90 dias (desde 2026-09-18) ─────────────────────────────────────────────────────────────
+ * A linha da MTM Auto já não é só a conta de execução actual: são as trades REAIS fechadas nos
+ * últimos 90 dias de TODAS as contas que executaram a estratégia (actual + anteriores + copiadoras
+ * + execuções da app), sem duplicados, parciais pesadas (mtm-auto `lib/desempenho-90d.ts`). Para
+ * aqui não muda nada: continua-se a traduzir, não a recalcular.
+ * As contas SIMULADAS nunca vêm nos números principais. Quando uma estratégia só tem simuladas
+ * em 90 dias, a MTM Auto manda-as em `simuladas` e o principal fica «sem histórico»; aqui passam
+ * tal e qual no campo `simuladas` do retrato — os ecrãs NÃO as mostram (decisão de apresentação
+ * por tomar com o dono).
+ *
  * ── O que nunca sai daqui ─────────────────────────────────────────────────────────────────────
  * Dinheiro. Só percentagem, contagens, fator de lucro e pips (a curva da MTM Auto já vem em pips).
  * O campo `pips` do catálogo NÃO se usa: é a soma de `mtmauto_signals` (tudo-ou-nada, sem
@@ -33,6 +43,25 @@ export interface ProvedorMtmAuto {
   fatorLucro?: number | null
   daContaProvider?: boolean | null
   curva?: Array<{ quando: string; pips: number; acumulado: number }> | null
+  /** De onde vieram os números principais (contas reais, 90 dias). Informação, não se mostra. */
+  historico90d?: { contas: number; porFonte: Record<string, number>; desde: string } | null
+  /** Só contas SIMULADAS, e só quando não há nenhuma trade real em 90 dias. */
+  simuladas?: MetricasSimuladas | null
+}
+
+/** Métricas de contas SIMULADAS (motor sim). Nunca juntas às reais. Nunca dinheiro. */
+export interface MetricasSimuladas {
+  origem: 'simulada'
+  trades: number
+  ganhos: number
+  perdas: number
+  breakeven: number
+  winrate: number | null
+  fatorLucro: number | null
+  pips: number
+  curva: Array<{ quando: string; pips: number; acumulado: number }>
+  contas: number
+  desde: string
 }
 
 /** O retrato que os ecrãs da MTM System (webview e nativo iOS) desenham. */
@@ -62,6 +91,31 @@ export interface DesempenhoEstrategia {
   porqueNaoFiavel: string | null
   /** Veio do catálogo da MTM Auto — para quem quiser verificar a origem. */
   fonte: 'mtm-auto'
+  /**
+   * Métricas de contas SIMULADAS, só quando a estratégia não tem trades reais em 90 dias. Os
+   * números acima continuam «sem histórico» — estas NUNCA se somam a eles. `null` = nenhuma.
+   */
+  simuladas?: MetricasSimuladas | null
+}
+
+/** A parte simulada da linha, validada (só números; nunca dinheiro). */
+export function simuladasDoCatalogo(p: ProvedorMtmAuto | null | undefined): MetricasSimuladas | null {
+  const s = p?.simuladas
+  if (!s || s.origem !== 'simulada' || !(num(s.trades) > 0)) return null
+  const fin = (v: unknown) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null)
+  return {
+    origem: 'simulada',
+    trades: num(s.trades),
+    ganhos: num(s.ganhos),
+    perdas: num(s.perdas),
+    breakeven: num(s.breakeven),
+    winrate: fin(s.winrate),
+    fatorLucro: fin(s.fatorLucro),
+    pips: num(s.pips),
+    curva: Array.isArray(s.curva) ? s.curva.filter((x) => x && Number.isFinite(Number(x.acumulado))) : [],
+    contas: num(s.contas),
+    desde: String(s.desde ?? ''),
+  }
 }
 
 export const SEM_HISTORICO = 'Sem histórico suficiente'
@@ -111,6 +165,8 @@ export function desempenhoDoCatalogo(p: ProvedorMtmAuto): DesempenhoEstrategia {
       ? null
       : `${SEM_HISTORICO}: esta estratégia ainda não tem trades fechadas medidas na app MTM Auto.`,
     fonte: 'mtm-auto',
+    // Só quando NÃO há histórico real (é o que a MTM Auto garante; aqui repete-se a guarda).
+    simuladas: com ? null : simuladasDoCatalogo(p),
   }
 }
 
