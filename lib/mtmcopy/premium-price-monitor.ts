@@ -185,6 +185,10 @@ export async function runPremiumPriceMonitor(): Promise<{
 }> {
   const sw = await getExecSwitches()
   if (!sw.premium_price_monitor) return { ran: false, checked: 0, actions: 0, detail: ['monitor desligado'] }
+  // Premium pelo motor das mestres (sinal_modo live): a gestão é da mestre SIM (sinais_config) e chega às
+  // contas pelo motor. Este monitor gere a conta MT5 mestre e as contas de execução directa — legado.
+  const { legadoPremiumDesligado } = await import('@/lib/mestres/servidor/premium')
+  if (await legadoPremiumDesligado()) return { ran: false, checked: 0, actions: 0, detail: ['Premium pelo motor das mestres — legado cortado'] }
   // As contas mestre vivas vêm da base (contas provider MT5 do VPS) — sem isto o motor só
   // conhecia os ids escritos à mão e as estratégias novas ficavam sem parciais/BE/trailing.
   await carregarContasDeEstrategia().catch(() => undefined)

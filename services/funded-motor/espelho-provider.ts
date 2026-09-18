@@ -36,6 +36,7 @@ import {
 } from '../../lib/mtmfunded/espelho/provider'
 import { LeitorMestre, sdkMetaApi, type SdkEspelho } from './espelho-leitor'
 import { espelhoPausadoAte, registarErroMetaApi } from './metaapi-partilhada'
+import { espelhoSubstituidoPelaMestre } from '../../lib/mestres/premium'
 
 export interface ContextoProvider {
   db: SupabaseClient
@@ -153,6 +154,13 @@ export function iniciarEspelhoProvider(ctx: ContextoProvider): ControloProvider 
       return
     }
     semColunas = false
+    // Conta SIM que passou a MESTRE alimentada directamente pelo sinal (mestres_estrategias.sinal_modo=
+    // 'live' — Premium, GoldKiller, Sensei): o espelho da conta MT5 para ela desliga-se sozinho, senão a
+    // mesma trade entrava duas vezes na SIM e daí nas contas dos clientes. Leitura falhada (tirando a
+    // tabela em falta) = mantém o que estava ligado da última vez: não se liga nada novo às cegas.
+    const { data: mestres, error: eMestres } = await db.from('mestres_estrategias').select('sinal_modo, conta_mestre_id')
+    if (eMestres && eMestres.code !== '42P01') { log('[provider] mestres_estrategias ilegível — sem mudanças neste ciclo:', eMestres.message); return }
+    const linhasMestres = mestres ?? []
     const ids = (data ?? []).map((r) => String(r.espelho_funded_account_id))
     const { data: contas } = ids.length
       ? await db.from('mtm_trading_accounts').select('id, sim_saldo, sim_equity, alavancagem, motor, estado').in('id', ids)
@@ -165,6 +173,7 @@ export function iniciarEspelhoProvider(ctx: ContextoProvider): ControloProvider 
       const c = contaPor.get(String(r.espelho_funded_account_id))
       if (!mestreId) { seco(`sem-mestre:${slug}`, `${slug}: sem conta-mestre MetaApi`); continue }
       if (!c || c.motor !== 'sim' || c.estado !== 'ativa') { seco(`sem-conta:${slug}`, `${slug}: conta espelho não é simulada activa`); continue }
+      if (espelhoSubstituidoPelaMestre(linhasMestres, String(c.id))) { seco(`mestre-sinal:${slug}`, `${slug}: a conta ${String(c.id).slice(0, 8)} é a mestre alimentada pelo sinal (sinal_modo live) — espelho da MT5 desligado`); continue }
       vistos.add(slug)
       const existente = providers.get(slug)
       const conta = { sim_saldo: Number(c.sim_saldo ?? 0), sim_equity: c.sim_equity == null ? null : Number(c.sim_equity), alavancagem: Number(c.alavancagem ?? 100) }

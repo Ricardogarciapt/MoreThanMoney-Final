@@ -101,6 +101,18 @@ export async function firePendingEntry(
     return { ok: true, detail: `shadow ${source} @ ${price}` }
   }
 
+  // PREMIUM PELO MOTOR DAS MESTRES (sinal_modo live): a rota antiga não abre nada — nem pendentes que
+  // já estavam à espera antes do corte (seriam ordens em dobro com a mestre SIM).
+  const { legadoPremiumDesligado } = await import("@/lib/mestres/servidor/premium")
+  if (await legadoPremiumDesligado()) {
+    await supabase
+      .from("mtmcopy_premium_pending")
+      .update({ status: "cancelled", note: "Premium executado pelo motor das mestres — legado cortado" })
+      .eq("id", row.id)
+      .eq("status", "pending")
+    return { ok: false, detail: "legado Premium cortado (motor das mestres)" }
+  }
+
   // LIMITE DIÁRIO DE SL (guia GMI: max 2–3 SL/dia → para). Gate config-driven, default off.
   const { isPremiumPausedToday, getPremiumExecConfig } = await import("./premium-daily-stop")
   const dailyStop = await isPremiumPausedToday()

@@ -344,6 +344,33 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
   const text = ctx.text
   if (!text) return
 
+  // PREMIUM PELA MESTRE SIM (lib/mestres/servidor/premium.ts). Antes da allowlist dos canais do MTM Copy:
+  // essa lista é do legado, e desligar lá o Premium não pode calar a mestre. Com `sinal_modo='live'` o
+  // legado INTEIRO do Premium fica de fora — execução na conta MT5 mestre (CopyFactory Hvmg), execução
+  // directa por grupo Telegram, gestão por mensagem, edição de SL na mestre MT5 —, senão ordens em dobro.
+  if (channel === 'premium-signals') {
+    const { premiumPeloMotor } = await import('@/lib/mestres/servidor/premium')
+    const gestao = looksLikeManagementOrReplyInstruction(text, channel, ctx)
+    const viaMotor = await premiumPeloMotor({
+      texto: text,
+      messageId: message.message_id,
+      gestao,
+      ignorar: shouldIgnoreChannelMessage(text),
+      sinal: gestao ? null : parseSignal(text),
+    })
+    if (viaMotor.modo !== 'desligado') console.log(`[mtmcopy] Premium → mestre SIM (${viaMotor.modo}): ${viaMotor.detalhe}`)
+    if (viaMotor.legadoCortado) {
+      await logProviderSignalEvent({
+        channel,
+        raw: text,
+        telegramMessageId: message.message_id,
+        status: 'skipped',
+        detail: `Premium pelo motor das mestres (legado cortado) · ${viaMotor.detalhe}`,
+      }).catch(() => undefined)
+      return
+    }
+  }
+
   if (!isMetaApiConfigured()) {
     console.warn('[mtmcopy] METAAPI_TOKEN em falta — sinais não serão executados no MT5')
   }

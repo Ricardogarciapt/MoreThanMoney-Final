@@ -193,3 +193,21 @@ ssh mtm-stream 'journalctl -u mtm-copia-contas -f'   # arranque: «mestres: escr
   (Re-sync com releitura). GK/Sensei: `sinal_modo='desligado'` + `espelho_provider_ativo=true` repõe a mestre MT5.
   As posições abertas pelo motor continuam a ser geridas enquanto o motor não estiver `kill`/desligado — fechá-las
   à mão ou deixar o motor em sombra só depois de fecharem.
+
+### Premium pela mestre SIM (18/09)
+
+Mestre = `1c6a3789` (espelho Premium 10K, SIM da casa). Sinal: Signal Master Elite → gmi-relay → `/api/telegram/relay-post`
+→ processador → `lib/mestres/servidor/premium.ts` (só ouro, 08–22 Londres, limite diário de SL, não abre sem a anterior em
+BE + 1.º parcial) → `sinal-mestre.ts`. Gestão na mestre = `sinais_config` do `premium-ouro`. O chat/Telegram continuam com o
+literal (o relay-post não mudou). Com `sinal_modo='live'` NADA do legado executa: processador (MT5 a21178c2/CopyFactory
+Hvmg, execução directa por grupo Telegram, gestão por mensagem), monitor de preço, espelho de saídas aos subscritores,
+pendentes de zona, master-poll, motor-real (Premium/subscritores/provider) e o espelho MT5→SIM do funded-motor.
+
+```bash
+psql … -f scripts/mestres/premium-ligar.sql                                   # linha em sombra (ou colar no SQL editor)
+npx tsx scripts/mestres/sincronizar-rotas.ts --estrategia premium-ouro         # SECO → rever → --aplicar
+npx tsx lib/mestres/__tests__/premium.check.ts
+# próximo sinal: select * from mestres_sinais where estrategia='premium-ouro' order by criado_em desc limit 5;
+npx tsx scripts/mestres/cortar-copyfactory.ts --estrategia premium-ouro        # SECO → --aplicar (Hvmg/MxsR/9gsL)
+# live: bloco (A) no fim de scripts/mestres/premium-ligar.sql · rollback: bloco (B)
+```

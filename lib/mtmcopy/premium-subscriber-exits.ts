@@ -73,6 +73,13 @@ export async function mirrorPremiumExit(
     out.detail.push('premium_subscriber_exits OFF')
     return out
   }
+  // Premium pelo motor das mestres: as saídas chegam às contas pelo motor (parcial/BE/trailing/fecho da
+  // mestre SIM). Espelhar aqui também era fechar duas vezes.
+  const { legadoPremiumDesligado } = await import('@/lib/mestres/servidor/premium')
+  if (await legadoPremiumDesligado()) {
+    out.detail.push('Premium pelo motor das mestres — legado cortado')
+    return out
+  }
 
   const accountIds = await getPremiumSubscriberAccountIds()
   out.accounts = accountIds.length
