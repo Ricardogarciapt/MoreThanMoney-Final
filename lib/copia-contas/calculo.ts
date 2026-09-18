@@ -116,6 +116,30 @@ export function mapearSimbolo(
   return { simbolo: escolhido, canonico, via: escolhido ? 'corretora' : 'nenhum' }
 }
 
+/**
+ * O tradeMode do MT5 deixa ABRIR nesta direcção? (DISABLED/CLOSEONLY não; LONG/SHORTONLY conforme;
+ * desconhecido = null). Igual a lib/mtmcopy/metaapi.tradeModeAllowsOpen, sem o SDK.
+ */
+export function tradeModeDeixaAbrir(tradeMode: string | null | undefined, direcao: Direcao): boolean | null {
+  if (!tradeMode) return null
+  const t = String(tradeMode).toUpperCase()
+  if (t.includes('DISABLED') || t.includes('CLOSE')) return false
+  if (t.includes('LONGONLY') || t.includes('LONG_ONLY')) return direcao === 'buy'
+  if (t.includes('SHORTONLY') || t.includes('SHORT_ONLY')) return direcao === 'sell'
+  return true
+}
+
+/**
+ * Índice do primeiro candidato NEGOCIÁVEL (lista já ordenada pelo ranking). Duas passagens: primeiro
+ * um tradeMode que definitivamente deixa abrir; só sem nenhum, o primeiro de tradeMode desconhecido;
+ * nunca um DISABLED/CLOSEONLY explícito. -1 = nenhum.
+ */
+export function escolherNegociavel(candidatos: Array<{ simbolo: string; tradeMode?: string | null }>, direcao: Direcao): number {
+  const i = candidatos.findIndex((c) => tradeModeDeixaAbrir(c.tradeMode, direcao) === true)
+  if (i >= 0) return i
+  return candidatos.findIndex((c) => tradeModeDeixaAbrir(c.tradeMode, direcao) === null)
+}
+
 // ── filtros ──────────────────────────────────────────────────────────────────
 
 export function motivoFiltro(
@@ -150,6 +174,11 @@ export function stopsNoDestino(p: {
   digits?: number | null
   copiarSl: boolean
   copiarTp: boolean
+  /**
+   * Modificações: o SL pode estar do lado do LUCRO (break-even, tranca de lucro, trailing). Sem isto
+   * um BE da origem (SL acima da entrada numa compra) era descartado e nunca chegava ao destino.
+   */
+  permitirSlNoLucro?: boolean
 }): { sl: number | null; tp: number | null } {
   const r = (x: number) => (p.digits != null ? Number(x.toFixed(p.digits)) : Number(x.toFixed(8)))
   const sinal = p.direcao === 'buy' ? 1 : -1
@@ -160,7 +189,8 @@ export function stopsNoDestino(p: {
     if (!porDistancia) sl = r(p.slOrigem)
     else {
       const d = (p.entradaOrigem! - p.slOrigem) * sinal
-      if (d > 0) sl = r(p.precoDestino! - d * sinal)
+      if (d > 0 || (p.permitirSlNoLucro && d !== 0 && Number.isFinite(d))) sl = r(p.precoDestino! - d * sinal)
+      else if (p.permitirSlNoLucro && d === 0) sl = r(p.precoDestino!)
     }
   }
   if (p.copiarTp && p.tpOrigem != null && p.tpOrigem > 0) {

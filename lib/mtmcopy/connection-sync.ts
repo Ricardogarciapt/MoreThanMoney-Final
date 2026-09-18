@@ -253,6 +253,26 @@ export async function syncMtmStrategyReplication(
     /* se a config falhar, segue e tenta subscrever normalmente */
   }
 
+  // Estratégias servidas pelo MOTOR DAS MESTRES (migração 116, corte feito e relido): nunca voltam a
+  // ser subscritas na CopyFactory — senão a mesma trade entrava pela CopyFactory e pelo motor. Aqui a
+  // leitura falhada NÃO segue às cegas: devolve erro e o próximo ciclo tenta outra vez.
+  try {
+    const { idsCopyFactoryServidosPeloMotor } = await import('../mestres/servidor/cortados')
+    const cortados = await idsCopyFactoryServidosPeloMotor()
+    if (cortados.size) {
+      strategyIds = strategyIds.filter((id) => !cortados.has(id))
+      if (!strategyIds.length) {
+        const parou = await unsubscribeFromStrategy(conn.metaapi_account_id).catch(
+          (e: unknown) => ({ ok: false, error: e instanceof Error ? e.message : String(e) }),
+        )
+        if (!parou.ok) console.error(`[mtmcopy] NÃO se conseguiu parar a cópia de ${conn.metaapi_account_id}: ${parou.error ?? '?'}`)
+        return { ok: false, error: 'Estratégia servida pelo motor das mestres (sem CopyFactory)' }
+      }
+    }
+  } catch (e) {
+    return { ok: false, error: `motor das mestres ilegível — não se subscreve às cegas: ${e instanceof Error ? e.message : String(e)}` }
+  }
+
   const name =
     userLabel ||
     conn.account_label ||
