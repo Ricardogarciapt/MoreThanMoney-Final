@@ -13,6 +13,7 @@ import type { SimboloFicha, PrecoVivo } from "./api"
 import { AccaoCancelada, useUmClique } from "./um-clique"
 import { AVANCADO_VAZIO, type Avancado, expiracaoDe, gestaoDoAvancado, numeroDe } from "./avancado"
 import type { Gestao } from "@/lib/mtmfunded/simulado/avancadas"
+import { emModoRisco, modoNiveisEfectivo } from "@/lib/webtrader/ticket"
 
 /**
  * O RASCUNHO DA ORDEM — UM só estado para o ticket e para o gráfico, como no painel de ordens do
@@ -194,7 +195,8 @@ export function RascunhoProvider(props: {
   useEffect(() => {
     const n = lerModo(CHAVE_MODO_NIVEIS, MODOS_NIVEIS)
     const v = lerModo(CHAVE_MODO_VOLUME, MODOS_VOLUME)
-    if (n) setR((x) => ({ ...x, modoNiveis: n }))
+    // Risco + SL em $/% guardados da última vez seria o círculo «Define o SL» (lib/webtrader/ticket.ts).
+    if (n) setR((x) => ({ ...x, modoNiveis: modoNiveisEfectivo(v ?? "lote", n) }))
     if (v) setDim((d) => ({ ...d, modo: v }))
   }, [])
   const [aEnviar, setAEnviar] = useState(false)
@@ -249,7 +251,7 @@ export function RascunhoProvider(props: {
   const erros = useMemo<ErrosRascunho>(() => {
     const e: ErrosRascunho = {}
     if (dimensionamento && dimensionamento.volume == null) {
-      e.volume = dimensionamento.motivo === "sem_sl" ? "Define o SL para calcular o lote"
+      e.volume = dimensionamento.motivo === "sem_sl" ? "Define o SL (em preço ou pips, ou arrasta a linha) para calcular o lote"
         : dimensionamento.motivo === "sem_risco" ? (dim.modo === "risco_pct" && saldo == null ? "sem saldo para calcular a %" : "indica o risco para calcular o lote")
           : "sem preço de conversão para calcular o lote"
     } else if (normalizarVolume(s, volume) == null) e.volume = `volume fora dos limites (${s.volume_min}–${s.volume_max}, passo ${s.volume_step})`
@@ -340,9 +342,11 @@ export function RascunhoProvider(props: {
   }, [])
 
   const definirModoNiveis = useCallback((m: ModoNiveis) => {
-    setR((x) => ({ ...x, modoNiveis: m }))
-    guardarModo(CHAVE_MODO_NIVEIS, m)
-  }, [])
+    // No modo risco o SL escreve-se em distância (preço/pips): «$»/«%» não se escolhem aí.
+    const efectivo = modoNiveisEfectivo(dim.modo, m)
+    setR((x) => ({ ...x, modoNiveis: efectivo }))
+    if (efectivo === m) guardarModo(CHAVE_MODO_NIVEIS, m)
+  }, [dim.modo])
 
   const definirModoVolume = (m: ModoVolume) => {
     guardarModo(CHAVE_MODO_VOLUME, m)
@@ -358,7 +362,10 @@ export function RascunhoProvider(props: {
         : m === "risco_usd" ? (dim.modo === "risco_pct" && alvoRisco != null ? Math.round(alvoRisco * 100) / 100 : riscoAgora != null ? Math.round(riscoAgora * 100) / 100 : null)
           : (dim.modo === "risco_usd" && dim.valor != null ? percentagemDeUsd(dim.valor, saldo) : percentagemDeUsd(riscoAgora, saldo))
     setDim({ modo: m, valor })
-    setR((x) => ({ ...x, visivel: true }))
+    // Entrar no modo risco com SL/TP em «$»/«%»: passam a Pips (o SL em dinheiro seria o próprio
+    // risco e o lote nunca sairia). O que já estava escrito não se perde: o SL em $ acabou de passar
+    // a preço, e um TP em $ continua fixo ao dinheiro.
+    setR((x) => ({ ...x, visivel: true, modoNiveis: emModoRisco(m) ? modoNiveisEfectivo(m, x.modoNiveis) : x.modoNiveis }))
   }
   const definirRisco = useCallback((valor: number | null) => setDim((d) => ({ ...d, valor })), [])
 
@@ -425,7 +432,7 @@ export function RascunhoProvider(props: {
     }
     const descricao = r.tipo === "mercado"
       ? `${r.lado === "buy" ? "Compra" : "Venda"} ${v} ${s.symbol}`
-      : `${r.lado === "buy" ? "Buy" : "Sell"} ${r.tipo} ${v} ${s.symbol} @ ${r.entrada!.toFixed(s.digits)}`
+      : `${r.lado === "buy" ? "Compra" : "Venda"} ${r.tipo} ${v} ${s.symbol} @ ${r.entrada!.toFixed(s.digits)}`
     try {
       // Quem chega aqui já confirmou (resumo do ticket, «Confirmar» da ferramenta) ou tem o
       // «num clique» ligado — por isso não se pede outra confirmação; só a protecção contra repetidos.

@@ -8,6 +8,7 @@ import { px, usd } from "./api"
 import { type ModoNiveis, type ModoVolume, useRascunho } from "./rascunho-ordem"
 import { EtiquetaUmClique, InterruptorUmClique, useUmClique } from "./um-clique"
 import OrdensAvancadas from "./ordens-avancadas"
+import { modoNiveisPermitido } from "@/lib/webtrader/ticket"
 
 /**
  * O TICKET — comprar/vender com tudo à vista ANTES de confirmar: margem, comissão e valor do pip.
@@ -38,6 +39,7 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
   const slPeloRisco = emRisco && (modo === "usd" || modo === "pct")
   const [edicao, setEdicao] = useState<{ campo: "entrada" | "sl" | "tp"; texto: string } | null>(null)
   const [textoRisco, setTextoRisco] = useState<string | null>(null)
+  const [textoVolume, setTextoVolume] = useState<string | null>(null)
   const segurou = useRef(false)
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -167,9 +169,11 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
           <button onClick={() => mudarVolume(-passo)} aria-label="menos volume" className="grid h-9 w-9 place-items-center rounded-lg bg-white/5"><Minus className="h-4 w-4" /></button>
           <input
             inputMode="decimal" aria-label="volume em lotes"
-            value={volume}
-            onChange={(e) => { const v = Number(e.target.value.replace(",", ".")); if (Number.isFinite(v)) { setVolume(v); k.set({ visivel: true }) } }}
-            onBlur={() => { const v = normalizarVolume(s, volume); setVolume(v ?? s.volume_min) }}
+            value={textoVolume ?? String(volume)}
+            // O texto escrito fica no campo enquanto se escreve: com `value={volume}` numérico, «0,» ou
+            // «0.0» viravam 0 e não se conseguia escrever 0,05 à mão.
+            onChange={(e) => { setTextoVolume(e.target.value); const v = numero(e.target.value); if (v != null) { setVolume(v); k.set({ visivel: true }) } }}
+            onBlur={() => { setTextoVolume(null); const v = normalizarVolume(s, volume); setVolume(v ?? s.volume_min) }}
             className={`h-9 w-full rounded-lg border bg-black text-center font-mono text-white ${erros.volume ? "border-rose-500" : "border-white/10"}`}
           />
           <button onClick={() => mudarVolume(passo)} aria-label="mais volume" className="grid h-9 w-9 place-items-center rounded-lg bg-white/5"><Plus className="h-4 w-4" /></button>
@@ -246,7 +250,8 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
 
       <div className="flex items-center justify-between">
         <span className="text-zinc-400">SL / TP</span>
-        <Segmentos opcoes={NOMES_NIVEIS} ativo={modo} onEscolher={(m) => { setEdicao(null); k.definirModoNiveis(m) }} rotulo="modo do SL e TP" />
+        <Segmentos opcoes={NOMES_NIVEIS} ativo={modo} onEscolher={(m) => { setEdicao(null); k.definirModoNiveis(m) }} rotulo="modo do SL e TP"
+          desactivado={(m) => (modoNiveisPermitido(k.modoVolume, m) ? null : "No modo Risco o SL escreve-se em preço ou pips — o risco já é o dinheiro")} />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
@@ -341,15 +346,22 @@ const PLACEHOLDER: Record<ModoNiveis, { sl: string; tp: string }> = {
   pct: { sl: "SL (% do saldo)", tp: "TP (% do saldo)" },
 }
 
-function Segmentos<T extends string>({ opcoes, ativo, onEscolher, rotulo }: { opcoes: Array<[T, string]>; ativo: T; onEscolher: (v: T) => void; rotulo: string }) {
+function Segmentos<T extends string>({ opcoes, ativo, onEscolher, rotulo, desactivado }: {
+  opcoes: Array<[T, string]>; ativo: T; onEscolher: (v: T) => void; rotulo: string
+  /** Motivo (texto) quando a opção não se pode escolher agora; null = pode. */
+  desactivado?: (v: T) => string | null
+}) {
   return (
     <div role="radiogroup" aria-label={rotulo} className="flex gap-0.5 rounded-lg bg-white/5 p-0.5 text-[11px]">
-      {opcoes.map(([v, nome]) => (
-        <button key={v} type="button" role="radio" aria-checked={ativo === v} onClick={() => onEscolher(v)}
-          className={`rounded-md px-2 py-0.5 ${ativo === v ? "bg-white/15 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
-          {nome}
-        </button>
-      ))}
+      {opcoes.map(([v, nome]) => {
+        const motivo = desactivado?.(v) ?? null
+        return (
+          <button key={v} type="button" role="radio" aria-checked={ativo === v} disabled={motivo != null} title={motivo ?? undefined} onClick={() => onEscolher(v)}
+            className={`min-h-[28px] rounded-md px-2 py-0.5 disabled:cursor-not-allowed disabled:opacity-30 ${ativo === v ? "bg-white/15 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+            {nome}
+          </button>
+        )
+      })}
     </div>
   )
 }
