@@ -511,7 +511,10 @@ function AppMobileContent() {
         {/* Área de conteúdo com scroll controlado */}
         <div
           ref={contentRef}
-          className="app-mobile-scroll-area flex-1 overflow-y-auto pb-24 min-h-0"
+          className="app-mobile-scroll-area flex-1 overflow-y-auto min-h-0"
+          // 6rem = barra de separadores WEB (no browser/PWA). Nas apps a barra é nativa; se ela
+          // tapar a página, o fim da lista sobe acima dela (--mtm-fundo-livre, globals.css).
+          style={{ paddingBottom: "max(6rem, calc(var(--mtm-fundo-livre) + 1.5rem))" }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -726,7 +729,7 @@ function AppMobileContent() {
         {showPermissionPrompt && !isNative && (
           <div
             className="fixed left-3 right-3 z-[180] bg-black/70 backdrop-blur-xl border border-white/12 rounded-2xl p-4 shadow-2xl animate-in slide-in-from-bottom-2 duration-300"
-            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 84px)' }}
+            style={{ bottom: 'calc(var(--mtm-fundo-livre) + 84px)' }}
           >
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#D2A63C]/15 border border-[#D2A63C]/25 flex items-center justify-center flex-shrink-0 mt-0.5">

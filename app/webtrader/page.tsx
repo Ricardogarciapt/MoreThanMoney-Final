@@ -26,7 +26,7 @@ export default function WebtraderPage() {
   return (
     <main
       className="min-h-[100dvh] bg-[#131722] text-white"
-      style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "var(--mtm-fundo-livre)" }}
     >
       <script dangerouslySetInnerHTML={{ __html: PRE_CARGA }} />
       <Suspense fallback={<div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-[#2962FF]" /></div>}>
