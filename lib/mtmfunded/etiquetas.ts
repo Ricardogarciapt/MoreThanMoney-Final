@@ -7,12 +7,14 @@
  * conta é simulada, o que interessa é EM QUE PONTO do caminho está.
  */
 
-export type TipoCurto = 'F1' | 'F2' | 'Funded' | 'Torneio'
+export type TipoCurto = 'F1' | 'F2' | 'Funded' | 'Torneio' | 'Real'
 export type EstadoCurto = 'Active' | 'Breached' | 'Pause' | 'Closed' | 'Pending'
 
 export function tipoCurto(tipo: string, metricas?: Record<string, unknown> | null): TipoCurto {
   if (tipo === 'torneio') return 'Torneio'
   if (tipo === 'financiada' || tipo === 'funded') return 'Funded'
+  // Conta Real: dinheiro depositado pelo cliente, sem fases nem regras de desafio.
+  if (tipo === 'real') return 'Real'
   // A fase vive nas métricas (`fase`), escrita quando a fase seguinte é emitida; sem ela é a 1.ª.
   return Number(metricas?.fase ?? 1) >= 2 ? 'F2' : 'F1'
 }

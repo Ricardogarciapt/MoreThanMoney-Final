@@ -142,6 +142,7 @@ export interface FaseDoDesafio {
 export function etiquetaDoTipo(tipo: TipoConta, f?: FaseDoDesafio): string {
   if (tipo === 'torneio') return 'Torneio'
   if (tipo === 'funded' || tipo === 'financiada') return 'Funded'
+  if (tipo === 'real') return 'Real'
   if (tipo === 'desafio') {
     const fases = Number(f?.fases ?? 0)
     // Uma fase: «Desafio 1 fase» — diz-se o formato, porque é o que o distingue do outro.
