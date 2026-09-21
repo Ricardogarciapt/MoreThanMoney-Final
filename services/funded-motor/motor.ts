@@ -55,6 +55,7 @@ import { feedTradeLockerDoAmbiente, type ComparadorTradeLocker } from './feed-tr
 import { registarErroMetaApi } from './metaapi-partilhada'
 import { iniciarWsPrecos, type WsPrecos } from './ws-precos'
 import { iniciarFonteBinance, type FonteBinance } from './fonte-binance'
+import { iniciarFonteYahoo, type FonteYahoo } from './fonte-yahoo'
 import {
   assinaturaMetricas,
   precisaDeEscreverMetricas,
@@ -140,6 +141,7 @@ let provider: ControloProvider | null = null
 let feedTl: ComparadorTradeLocker | null = null
 let wsPrecos: WsPrecos | null = null
 let fonteBinance: FonteBinance | null = null
+let fonteYahoo: FonteYahoo | null = null
 
 const contas = new Map<string, ContaLinha>()
 const posicoesDe = new Map<string, PosicaoSim[]>()
@@ -498,7 +500,8 @@ async function carregarPedidos(): Promise<void> {
   for (const r of data ?? []) pedidos.add(r.symbol as string)
 }
 
-function simbolosDesejados(): Set<string> {
+/** Os símbolos CANÓNICOS que o motor quer agora (a fonte-yahoo pede por estes). */
+function canonicosDesejados(): Set<string> {
   const canon = new Set<string>(BASE)
   for (const s of interessados.keys()) canon.add(s)
   for (const s of simbolosDoEspelho) canon.add(s)
@@ -510,6 +513,11 @@ function simbolosDesejados(): Set<string> {
     const conv = sm ? simboloDeConversao(moedaDe(sm)) : null
     if (conv) canon.add(conv)
   }
+  return canon
+}
+
+function simbolosDesejados(): Set<string> {
+  const canon = canonicosDesejados()
   const fontes = new Set<string>()
   for (const s of canon) {
     const sm = simbolos.get(s)
@@ -1109,6 +1117,31 @@ async function main(): Promise<void> {
   // MetaApi em baixo é o pulso que mantém o motor e o WS vivos. BINANCE_FEED=0 desliga.
   fonteBinance = iniciarFonteBinance({ precisa: principalVelho, injetar: aoTickRecurso, log })
 
+  // Forex (Yahoo, ~3 s) e metais à vista (gold-api) — só o que chega FRESCO (futuros atrasados 10 min
+  // nunca entram), só quando o principal está velho. YAHOO_FEED=0 desliga (fonte-yahoo.ts).
+  const ancoras = new Map<string, { em: number; a: { preco: number; emSeg: number } | null }>()
+  fonteYahoo = iniciarFonteYahoo({
+    simbolos: canonicosDesejados,
+    info: (sym) => {
+      const sm = simbolos.get(sym)
+      return sm ? { classe: sm.classe, digits: sm.digits, spread_pontos: sm.spread_pontos, moeda_lucro: sm.moeda_lucro ?? null } : null
+    },
+    precisa: principalVelho,
+    ultimo: (sym) => precos[sym] ?? null,
+    // Âncora da reescala (só classes fora do nosso nível, opt-in): uma leitura por símbolo a cada 30 min.
+    ancora: async (sym) => {
+      const g = ancoras.get(sym)
+      if (g && Date.now() - g.em < 30 * 60_000) return g.a
+      const { data } = await db.from('funded_precos').select('bid, ask, em').eq('symbol', sym).maybeSingle()
+      const bid = Number(data?.bid), ask = Number(data?.ask), em = data?.em ? Date.parse(String(data.em)) : NaN
+      const a = bid > 0 && ask > 0 && Number.isFinite(em) ? { preco: (bid + ask) / 2, emSeg: Math.floor(em / 1000) } : null
+      ancoras.set(sym, { em: Date.now(), a })
+      return a
+    },
+    injetar: aoTickRecurso,
+    log,
+  })
+
   await carregarAlertas()
   repetir('avaliar', 250, cicloDeAvaliacao)
   repetir('alertas', 5000, carregarAlertas)
@@ -1135,6 +1168,7 @@ async function main(): Promise<void> {
       ticksMin: ticksNoMinuto, contas: contas.size, feed: fonte.nome, semTicksMs: ultimoTickEm ? Date.now() - ultimoTickEm : null,
       escrita: CFG.escrita, tem072, simbolosRapidos: simbolosDoProvider.size, wsClientes: wsPrecos?.clientes() ?? null,
       binance: fonteBinance?.resumo() ?? null,
+      yahoo: fonteYahoo?.resumo() ?? null,
       espelhoSeguidoras: { latenciaEventoEscrita: latenciaSeguidoras.resumo() },
       espelhoProvider: estadoProvider,
       feedTradeLocker: feedTl?.resumo() ?? null,
@@ -1160,6 +1194,7 @@ async function main(): Promise<void> {
     log('[motor] a parar')
     wsPrecos?.parar()
     fonteBinance?.parar()
+    fonteYahoo?.parar()
     await escreverPrecos().catch(() => undefined)
     await espelho?.parar().catch(() => undefined)
     await provider?.parar().catch(() => undefined)

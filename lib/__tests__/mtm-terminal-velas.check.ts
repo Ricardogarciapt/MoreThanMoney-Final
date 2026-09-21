@@ -78,6 +78,8 @@ async function main() {
   t('ouro: tentou a fapi primeiro', pedidos.some((u) => u.includes('fapi.binance.com') && u.includes('XAUUSDT')), true)
   t('ouro: velas vêm do PAXG', [sOuro.ref.symbol, sOuro.ref.sameLevel, sOuro.candles.length], ['PAXGUSDT', false, 260])
   paxgEmBaixo = true
+  // As velas de referência ficam uns segundos em cache (lib/mercado/velas-referencia.ts): a queda simula-se sem ela.
+  ;(await import('@/lib/mercado/velas-referencia')).limparCacheReferencias()
   const sOuro2 = await fetchTerminalCandleSeries(gold)
   t('ouro: PAXG em baixo → GC=F', [sOuro2.ref.symbol, sOuro2.candles.length >= MIN_CANDLES], ['GC=F', true])
   paxgEmBaixo = false

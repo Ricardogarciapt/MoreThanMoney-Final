@@ -19,8 +19,11 @@ export const dynamic = 'force-dynamic'
  * Toda a lógica (resolução do nome do símbolo na conta de leitura, paginação, cache LRU + pedidos
  * em curso partilhados) está em lib/mtmfunded/simulado/velas.ts — ver lá o porquê do XAUUSD.s.
  *
- * Falhar é normal (MetaApi a desligar contas ociosas, símbolo sem histórico): devolve lista vazia
- * e o gráfico constrói-se pelos preços ao vivo, dizendo-o.
+ * Sem MetaApi (2026-09-21: conta de leitura UNDEPLOYED, sem créditos) as velas vêm das reservas
+ * públicas — Binance spot (cripto, PAXG para o ouro) e Yahoo (forex, metais, índices, energia,
+ * acções) — reescaladas ao nosso nível; `fonte`/`simboloFonte`/`reescala` dizem de onde e quanto.
+ * A MetaApi tem 3 s e corre em PARALELO com a reserva (VELAS_METAAPI=0 tira-a de todo).
+ * Só sem nenhuma das duas vem a lista vazia e o gráfico constrói-se pelos preços ao vivo.
  *
  * Cache (2026-09, «rápido como o TradingView»): as velas são do mercado, iguais para toda a gente,
  * por isso servem-se da CDN — `s-maxage` curto conforme o timeframe (uma vela de M1 muda a cada

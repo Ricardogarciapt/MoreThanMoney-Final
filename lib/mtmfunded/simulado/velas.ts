@@ -2,6 +2,9 @@ import { simbolosPartilhados } from '@/lib/mtmcopy/metaapi-simbolos-partilhados'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { rankedBrokerSymbols } from '@/lib/mtmcopy/symbol-resolver'
 import { candidatosDeTicker } from './ordens'
+import { isMarketOpen } from '@/lib/mtmcopy/market-hours'
+import { fatorAncorado, fatorValido, referenciasPara, reescalar, soAberto, type Ancora, type RefMercado } from '@/lib/mercado/referencias'
+import { buscarVelasRef, velasAVoltaDe } from '@/lib/mercado/velas-referencia'
 
 /**
  * VELAS HISTÓRICAS (servidor) — o helper por trás de /api/mtmfunded/simulado/velas.
@@ -32,6 +35,14 @@ import { candidatosDeTicker } from './ordens'
  * ── Cache ─────────────────────────────────────────────────────────────────────────────────────
  * LRU em memória por instância (30 s) + pedidos em curso partilhados: dez pessoas no ouro com o
  * Sensei ligado não são trinta pedidos. A rota junta `Cache-Control` de 30 s para a CDN.
+ *
+ * ── Reservas SEM MetaApi (2026-09-21, doutrina «MetaApi é secundário») ─────────────────────────
+ * A conta de leitura ficou UNDEPLOYED por falta de créditos e o gráfico abria vazio. Agora a MetaApi
+ * tem 3 s — ou 1 s depois de a reserva estar pronta — e um disjuntor (3 falhas seguidas → 2 min sem
+ * a tentar); corre em paralelo com as
+ * referências públicas de lib/mercado (Binance spot para cripto e PAXG para o ouro; Yahoo para
+ * forex, metais, índices, energia e acções), reescaladas ao nosso nível por um fator ancorado no
+ * último preço conhecido em funded_precos. `fonte` diz de onde vieram; `reescala` o fator aplicado.
  */
 
 export const TF_METAAPI: Record<string, string> = { M1: '1m', M5: '5m', M15: '15m', H1: '1h', H4: '4h', D1: '1d' }
@@ -58,9 +69,11 @@ export interface RespostaVelas {
   symbol: string
   tf: string
   velas: VelaOHLCV[]
-  fonte: 'metaapi' | null
-  /** o nome que efetivamente serviu na conta de leitura (ex.: XAUUSD em vez de XAUUSD.s) */
+  fonte: 'metaapi' | 'binance' | 'yahoo' | null
+  /** o nome que efetivamente serviu (XAUUSD em vez de XAUUSD.s na MetaApi; GC=F/PAXGUSDT nas reservas) */
   simboloFonte?: string
+  /** fator aplicado às velas da reserva para as pôr ao nosso nível (1 = mesmo nível) */
+  reescala?: number
   motivo?: string
 }
 
@@ -290,6 +303,8 @@ export async function obterVelas(symbol: string, tf: string, limite: number, ate
     ])
     if (!corpo.velas.length) return cauda.velas.length ? cauda : corpo
     if (!cauda.velas.length) return corpo
+    // Fontes diferentes (corpo da MetaApi, cauda da reserva) não se colam: níveis podem não bater.
+    if (corpo.fonte !== cauda.fonte || corpo.simboloFonte !== cauda.simboloFonte) return corpo
     return { ...corpo, velas: colarVelas(corpo.velas, cauda.velas, lim) }
   }
   return comCache(CACHE_RESPOSTAS, symbol, tf, lim, ate)
@@ -306,6 +321,126 @@ export function colarVelas(antiga: VelaOHLCV[], nova: VelaOHLCV[], limite: numbe
   return antiga.filter((v) => v.t < primeiraNova).concat(nova).slice(-limite)
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MetaApi com prazo e disjuntor
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** A MetaApi tem isto para dar velas; depois disso segue-se para as reservas (ela acaba por trás e fica em cache). */
+export const PRAZO_METAAPI_MS = 3_000
+let falhasMetaSeguidas = 0
+let metaPausadaAte = 0
+
+async function velasMetaApi(symbol: string, tf: string, lim: number, ate: number | null): Promise<RespostaVelas> {
+  const vazio = (motivo: string): RespostaVelas => ({ symbol, tf, velas: [], fonte: null, motivo })
+  const token = process.env.METAAPI_TOKEN
+  if (!token) return vazio('sem histórico MetaApi configurado')
+  let fonte = await resolverFonteHistorico(symbol, tf)
+  if (!fonte) return vazio('histórico MetaApi indisponível')
+  let velas = await recolher(fonte.conta, fonte.nome, tf, lim, ate, token)
+  if (velas == null) {
+    // O nome em cache deixou de servir (conta desligada, símbolo retirado): resolve outra vez, uma vez.
+    RESOLVIDOS.delete(symbol)
+    fonte = await resolverFonteHistorico(symbol, tf, { ignorarCache: true })
+    velas = fonte ? await recolher(fonte.conta, fonte.nome, tf, lim, ate, token) : null
+  }
+  if (!fonte || velas == null) return vazio('histórico MetaApi indisponível')
+  return { symbol, tf, velas, fonte: 'metaapi', simboloFonte: fonte.nome }
+}
+
+/** Com a reserva já pronta, a MetaApi só tem mais isto (a frio, a resolução dela pendurava os 3 s todos). */
+export const FOLGA_APOS_RESERVA_MS = 1_000
+
+async function velasMetaApiComPrazo(symbol: string, tf: string, lim: number, ate: number | null, reserva?: Promise<RespostaVelas>): Promise<RespostaVelas | null> {
+  // VELAS_METAAPI=0 tira a MetaApi do caminho das velas (conta de leitura desligada, sem créditos).
+  if (!process.env.METAAPI_TOKEN || process.env.VELAS_METAAPI === '0') return null
+  if (Date.now() < metaPausadaAte) return { symbol, tf, velas: [], fonte: null, motivo: 'MetaApi em pausa (falhas seguidas)' }
+  let prazo: ReturnType<typeof setTimeout> | undefined
+  let folga: ReturnType<typeof setTimeout> | undefined
+  const r = await Promise.race([
+    velasMetaApi(symbol, tf, lim, ate).catch(() => null),
+    new Promise<null>((res) => { prazo = setTimeout(() => res(null), PRAZO_METAAPI_MS) }),
+    ...(reserva ? [reserva.then((x) => new Promise<null>((res) => {
+      if (!x.velas.length) return // reserva vazia: a MetaApi fica com o prazo inteiro
+      folga = setTimeout(() => res(null), FOLGA_APOS_RESERVA_MS)
+    }))] : []),
+  ])
+  if (prazo) clearTimeout(prazo)
+  if (folga) clearTimeout(folga)
+  if (r?.velas.length) { falhasMetaSeguidas = 0; return r }
+  if (++falhasMetaSeguidas >= 3) { metaPausadaAte = Date.now() + 2 * 60_000; falhasMetaSeguidas = 0 }
+  return r ?? { symbol, tf, velas: [], fonte: null, motivo: 'MetaApi sem resposta em 3 s' }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reservas públicas (Binance/Yahoo) — lib/mercado
+// ─────────────────────────────────────────────────────────────────────────────
+
+const INFO_CATALOGO = new LRU<{ classe: string | null; moeda: string | null; digits: number | null }>(2048, 6 * 3600_000)
+async function infoCatalogo(symbol: string) {
+  const g = INFO_CATALOGO.get(symbol)
+  if (g) return g
+  const { data } = await getSupabaseAdmin().from('funded_symbols').select('classe, moeda_lucro, digits').eq('symbol', symbol).maybeSingle()
+  const info = { classe: data?.classe ? String(data.classe) : null, moeda: data?.moeda_lucro ? String(data.moeda_lucro) : null, digits: data?.digits != null ? Number(data.digits) : null }
+  INFO_CATALOGO.set(symbol, info)
+  return info
+}
+
+/** O último preço nosso (meio do spread) e quando — a âncora da reescala. 60 s por instância. */
+const ANCORAS = new LRU<Ancora | 'nada'>(512, 60_000)
+async function ancoraDe(symbol: string): Promise<Ancora | null> {
+  const g = ANCORAS.get(symbol)
+  if (g) return g === 'nada' ? null : g
+  const { data } = await getSupabaseAdmin().from('funded_precos').select('bid, ask, em').eq('symbol', symbol).maybeSingle()
+  const bid = Number(data?.bid), ask = Number(data?.ask), em = data?.em ? Date.parse(String(data.em)) : NaN
+  const a = bid > 0 && ask > 0 && Number.isFinite(em) ? { preco: (bid + ask) / 2, emSeg: Math.floor(em / 1000) } : null
+  ANCORAS.set(symbol, a ?? 'nada')
+  return a
+}
+
+/** Fator da âncora para esta referência: primeiro pelas próprias velas; se não a cobrirem, um pedido à volta dela. */
+async function fatorPara(ref: RefMercado, velas: VelaOHLCV[], ancora: Ancora | null, tfSeg: number): Promise<number | null> {
+  if (!ancora) return null
+  const f = fatorAncorado(velas, ancora, Math.max(3 * tfSeg, 20 * 60))
+  if (f != null) return f
+  const volta = await velasAVoltaDe(ref, ancora.emSeg)
+  return fatorAncorado(volta.velas, ancora, 3 * 3600)
+}
+
+/**
+ * Velas de reserva sem MetaApi. Tenta as referências do plano por ordem; uma referência fora do
+ * nosso nível só serve reescalada (fator válido), e uma «ao mesmo nível» cujo fator saia dos ±10 %
+ * é outro instrumento e salta-se. Sem âncora nenhuma, a primeira série serve tal como vem (dito em `motivo`).
+ */
+export async function velasDeReserva(symbol: string, tf: string, lim: number, ate: number | null): Promise<RespostaVelas> {
+  const vazio = (motivo: string): RespostaVelas => ({ symbol, tf, velas: [], fonte: null, motivo })
+  const [info, ancora] = await Promise.all([
+    infoCatalogo(symbol).catch(() => ({ classe: null, moeda: null, digits: null })),
+    ancoraDe(symbol).catch(() => null),
+  ])
+  const plano = referenciasPara(symbol, info.classe, info.moeda)
+  if (!plano.length) return vazio('sem referência pública para este símbolo')
+  const tfSeg = TF_SEG[tf] ?? 300
+  let semAncora: RespostaVelas | null = null
+  for (const ref of plano) {
+    // Referência 24/7 (PAXG) para um mercado com fim de semana: pede-se a mais o que o filtro vai tirar.
+    const pedir = ref.soHorasMercado && tf !== 'D1' ? Math.min(MAX_VELAS, Math.min(lim * 3, Math.ceil(lim * 1.45) + Math.ceil(2 * 86400 / tfSeg))) : lim
+    let velas: VelaOHLCV[] = await buscarVelasRef(ref, tf, pedir, ate)
+    if (ref.soHorasMercado) velas = soAberto(velas, (t) => isMarketOpen(symbol, new Date(t * 1000)).open).slice(-lim)
+    if (velas.length < Math.min(20, lim)) continue
+    const fonte = ref.kind === 'yahoo' ? 'yahoo' as const : 'binance' as const
+    const f = await fatorPara(ref, velas, ancora, tfSeg)
+    if (ref.sameLevel) {
+      if (f != null && !fatorValido(f)) continue // o nível não bate: instrumento errado
+      return { symbol, tf, velas: reescalar(velas, 1, info.digits ?? undefined), fonte, simboloFonte: ref.symbol, reescala: 1 }
+    }
+    if (fatorValido(f)) {
+      return { symbol, tf, velas: reescalar(velas, f, info.digits ?? undefined), fonte, simboloFonte: ref.symbol, reescala: Number(f.toFixed(6)) }
+    }
+    if (f == null && !semAncora) semAncora = { symbol, tf, velas: reescalar(velas, 1, info.digits ?? undefined), fonte, simboloFonte: ref.symbol, reescala: 1, motivo: 'nível da referência (sem preço nosso para reescalar)' }
+  }
+  return semAncora ?? vazio('reservas sem velas')
+}
+
 async function comCache(cache: LRU<RespostaVelas>, symbol: string, tf: string, lim: number, ate: number | null): Promise<RespostaVelas> {
   const chave = `${cache === CACHE_CORPO ? 'corpo' : 'r'}:${symbol}:${tf}:${lim}:${ate ?? 'agora'}`
   // Um corpo vazio fica na cache curta (ver abaixo).
@@ -315,22 +450,15 @@ async function comCache(cache: LRU<RespostaVelas>, symbol: string, tf: string, l
   if (emCurso) return emCurso
 
   const trabalho = (async (): Promise<RespostaVelas> => {
-    const vazio = (motivo: string): RespostaVelas => ({ symbol, tf, velas: [], fonte: null, motivo })
-    const token = process.env.METAAPI_TOKEN
-    if (!token) return vazio('sem histórico configurado')
-    if (!TF_METAAPI[tf]) return vazio('timeframe inválido')
-
-    let fonte = await resolverFonteHistorico(symbol, tf)
-    if (!fonte) return vazio('histórico indisponível')
-    let velas = await recolher(fonte.conta, fonte.nome, tf, lim, ate, token)
-    if (velas == null) {
-      // O nome em cache deixou de servir (conta desligada, símbolo retirado): resolve outra vez, uma vez.
-      RESOLVIDOS.delete(symbol)
-      fonte = await resolverFonteHistorico(symbol, tf, { ignorarCache: true })
-      velas = fonte ? await recolher(fonte.conta, fonte.nome, tf, lim, ate, token) : null
-    }
-    if (!fonte || velas == null) return vazio('histórico indisponível')
-    return { symbol, tf, velas, fonte: 'metaapi', simboloFonte: fonte.nome }
+    if (!TF_METAAPI[tf]) return { symbol, tf, velas: [], fonte: null, motivo: 'timeframe inválido' }
+    // As duas em paralelo: a MetaApi (se ligada) ganha quando responde dentro do prazo; senão a
+    // reserva já está pronta — o gráfico nunca espera pela MetaApi e depois ainda pela reserva.
+    const reservaP = velasDeReserva(symbol, tf, lim, ate).catch((): RespostaVelas => ({ symbol, tf, velas: [], fonte: null, motivo: 'reservas falharam' }))
+    const meta = await velasMetaApiComPrazo(symbol, tf, lim, ate, reservaP)
+    if (meta?.velas.length) return meta
+    const reserva = await reservaP
+    if (reserva.velas.length) return reserva
+    return { ...reserva, motivo: meta?.motivo ? `${meta.motivo}; ${reserva.motivo ?? 'sem reserva'}` : reserva.motivo }
   })()
 
   EM_CURSO.set(chave, trabalho)
