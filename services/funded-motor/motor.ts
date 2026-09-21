@@ -1023,13 +1023,14 @@ async function ligarFonte(): Promise<FontePrecos> {
   } catch (e) {
     registarErroMetaApi(e, 'feed:streaming')
     log('[feed] streaming não ligou, passo a RPC:', e instanceof Error ? e.message : e)
-    await principal.parar()
+    // O fecho também pode ficar pendurado com a MetaApi em baixo — nunca bloqueia o arranque.
+    await comPrazo(principal.parar(), 5_000, 'fechar streaming').catch(() => {})
     try {
       const recurso = new FonteRpc(CFG.metaapiToken, CFG.contaPrecos, CFG.intervaloMs)
       try {
         await comPrazo(recurso.iniciar(aoTick), PRAZO_FONTE_MS, 'MetaApi RPC')
       } catch (e3) {
-        await recurso.parar().catch(() => {})
+        await comPrazo(recurso.parar(), 5_000, 'fechar RPC').catch(() => {})
         throw e3
       }
       return recurso
