@@ -1123,11 +1123,11 @@ async function main(): Promise<void> {
   // Ouro ao segundo sem MetaApi: PAXGUSDT (Binance) × k, com k = spot da gold-api ÷ PAXG no instante
   // em que a gold-api MUDA (~45 s). Sem mudança da âncora em 10 min (fim de semana, gold-api em baixo)
   // o PAXG deixa de entrar — nunca se inventa preço de um mercado fechado.
-  const refBruta = new Map<string, { meio: number; em: number }>()
+  const refBruta = new Map<string, { meio: number; em: number; bid: number; ask: number }>()
   const ancoraSpot = new Map<string, { k: number; meio: number; em: number }>()
-  const aoReferencia = (sym: string, bid: number, ask: number) => {
+  const aoReferencia = (sym: string, bid: number, ask: number, batimento = false) => {
     const meioRef = (bid + ask) / 2
-    refBruta.set(sym, { meio: meioRef, em: Date.now() })
+    if (!batimento) refBruta.set(sym, { meio: meioRef, em: Date.now(), bid, ask })
     const a = ancoraSpot.get(sym)
     const s = simbolos.get(sym)
     if (!a || !s || Date.now() - a.em > 10 * 60_000 || !principalVelho(sym)) return
@@ -1152,6 +1152,14 @@ async function main(): Promise<void> {
     aoTickRecurso(sym, bid, ask, em)
   }
   fonteBinance = iniciarFonteBinance({ precisa: principalVelho, injetar: aoTickRecurso, referencia: aoReferencia, log })
+  // O PAXG é pouco líquido: o livro fica 5-12 s sem mexer e o ouro parecia velho à guarda de 5 s.
+  // Com a ligação viva e PAXG visto há < 30 s, o preço de agora é o mesmo — volta a ser carimbado.
+  setInterval(() => {
+    if (!fonteBinance?.resumo().ligada) return
+    for (const [sym, r] of refBruta) {
+      if (Date.now() - r.em < 30_000) aoReferencia(sym, r.bid, r.ask, true)
+    }
+  }, 1000)
 
   // Forex (Yahoo, ~3 s) e metais à vista (gold-api) — só o que chega FRESCO (futuros atrasados 10 min
   // nunca entram), só quando o principal está velho. YAHOO_FEED=0 desliga (fonte-yahoo.ts).
