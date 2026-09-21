@@ -1115,7 +1115,38 @@ async function main(): Promise<void> {
 
   // Cripto direto da Binance (grátis, 24/7) — injeta só quando o principal está velho; com a
   // MetaApi em baixo é o pulso que mantém o motor e o WS vivos. BINANCE_FEED=0 desliga.
-  fonteBinance = iniciarFonteBinance({ precisa: principalVelho, injetar: aoTickRecurso, log })
+  // Ouro ao segundo sem MetaApi: PAXGUSDT (Binance) × k, com k = spot da gold-api ÷ PAXG no instante
+  // em que a gold-api MUDA (~45 s). Sem mudança da âncora em 10 min (fim de semana, gold-api em baixo)
+  // o PAXG deixa de entrar — nunca se inventa preço de um mercado fechado.
+  const refBruta = new Map<string, { meio: number; em: number }>()
+  const ancoraSpot = new Map<string, { k: number; meio: number; em: number }>()
+  const aoReferencia = (sym: string, bid: number, ask: number) => {
+    const meioRef = (bid + ask) / 2
+    refBruta.set(sym, { meio: meioRef, em: Date.now() })
+    const a = ancoraSpot.get(sym)
+    const s = simbolos.get(sym)
+    if (!a || !s || Date.now() - a.em > 10 * 60_000 || !principalVelho(sym)) return
+    const passo = 10 ** -Number(s.digits ?? 2)
+    const meia = Math.max(1, Number(s.spread_pontos) || 0) * passo / 2
+    const meio = meioRef * a.k
+    const r = (x: number) => Number(x.toFixed(Number(s.digits ?? 2)))
+    aoTickRecurso(sym, r(meio - meia), r(meio + meia), Date.now())
+  }
+  const aoRecursoSpot = (sym: string, bid: number, ask: number, em: number) => {
+    const meio = (bid + ask) / 2
+    const ref = refBruta.get(sym)
+    const a = ancoraSpot.get(sym)
+    if (ref && Date.now() - ref.em < 10_000 && (!a || a.meio !== meio)) {
+      const k = meio / ref.meio
+      if (Math.abs(k - 1) < 0.03) ancoraSpot.set(sym, { k, meio, em: Date.now() })
+    }
+    // Com âncora viva e PAXG a ticar, o spot só recalibra: re-injectá-lo a cada poll (mesmo valor)
+    // puxava o preço para trás de 5 em 5 s.
+    const viva = ancoraSpot.get(sym)
+    if (viva && ref && Date.now() - ref.em < 10_000 && Date.now() - viva.em < 10 * 60_000) return
+    aoTickRecurso(sym, bid, ask, em)
+  }
+  fonteBinance = iniciarFonteBinance({ precisa: principalVelho, injetar: aoTickRecurso, referencia: aoReferencia, log })
 
   // Forex (Yahoo, ~3 s) e metais à vista (gold-api) — só o que chega FRESCO (futuros atrasados 10 min
   // nunca entram), só quando o principal está velho. YAHOO_FEED=0 desliga (fonte-yahoo.ts).
@@ -1138,7 +1169,7 @@ async function main(): Promise<void> {
       ancoras.set(sym, { em: Date.now(), a })
       return a
     },
-    injetar: aoTickRecurso,
+    injetar: aoRecursoSpot,
     log,
   })
 
