@@ -50,27 +50,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: true, motor: 'vivo', idadeSeg: Math.round(idadeMs / 1000) })
     }
 
-    // Feed parado → cotações pelo MetaApi para os símbolos ativos com mercado aberto.
-    const { data: simbolos } = await db.from('funded_symbols').select('symbol').eq('ativo', true).order('ordem').limit(25)
-    const abertos = (simbolos ?? []).map((s) => String(s.symbol)).filter((s) => isMarketOpen(s).open)
-    const conta = process.env.FUNDED_VIGIA_METAAPI_ACCOUNT?.trim() || CANONICAL_PREMIUM_ACCOUNT_ID
-    const quotes = await getMarketQuotes(conta, abertos)
-    const linhas = Object.entries(quotes).map(([symbol, q]) => ({ symbol, bid: q.bid, ask: q.ask, em: new Date().toISOString() }))
-    let escritos = 0
-    if (linhas.length) {
-      const { error } = await db.from('funded_precos').upsert(linhas, { onConflict: 'symbol' })
-      if (!error) escritos = linhas.length
-    }
-
+    // O ALERTA sai PRIMEIRO — as cotações podem falhar ou esgotar o tempo (se a própria MetaApi
+    // estiver em baixo, como a 21/09, é garantido), e um vigia que morre calado não vigia nada.
     if (!alertado) {
       await db.from('site_settings').upsert({ key: FLAG, value: { alertado_em: new Date().toISOString() } }, { onConflict: 'key' })
       const min = Number.isFinite(idadeMs) ? Math.round(idadeMs / 60_000) : '?'
       await sendTelegramChannelMessage(
         ADMIN_CHAT(),
         `🚨 MTM Funded: o feed de preços do motor está PARADO há ${min} min.\n` +
-          `O vigia da Vercel assumiu em modo degradado (${escritos} símbolos a ~1 tick/min via MetaApi).\n` +
-          `Reiniciar no VPS: sudo systemctl restart funded-motor funded-copier`,
+          `O vigia da Vercel vai tentar modo degradado via MetaApi (~1 tick/min).\n` +
+          `Reiniciar no VPS: sudo systemctl restart funded-motor funded-copier\n` +
+          `Se persistir, verificar a MetaApi (créditos/estado das contas): app.metaapi.cloud`,
       ).catch(() => undefined)
+    }
+
+    // Cotações com TETO de tempo: a ligação RPC tem retries de 55s cada — sem teto, a função
+    // morre aos 60s (504) sem escrever nada.
+    const { data: simbolos } = await db.from('funded_symbols').select('symbol').eq('ativo', true).order('ordem').limit(25)
+    const abertos = (simbolos ?? []).map((s) => String(s.symbol)).filter((s) => isMarketOpen(s).open)
+    const conta = process.env.FUNDED_VIGIA_METAAPI_ACCOUNT?.trim() || CANONICAL_PREMIUM_ACCOUNT_ID
+    const quotes = await Promise.race([
+      getMarketQuotes(conta, abertos),
+      new Promise<Record<string, { bid: number; ask: number }>>((res) => setTimeout(() => res({}), 40_000)),
+    ])
+    const linhas = Object.entries(quotes).map(([symbol, q]) => ({ symbol, bid: q.bid, ask: q.ask, em: new Date().toISOString() }))
+    let escritos = 0
+    if (linhas.length) {
+      const { error } = await db.from('funded_precos').upsert(linhas, { onConflict: 'symbol' })
+      if (!error) escritos = linhas.length
     }
     return NextResponse.json({ ok: true, motor: 'parado', idadeSeg: Number.isFinite(idadeMs) ? Math.round(idadeMs / 1000) : null, simbolosAbertos: abertos.length, escritos })
   } catch (err) {
