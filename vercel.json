@@ -1,6 +1,8 @@
 {
   "installCommand": "npm install --legacy-peer-deps",
-  "regions": ["arn1"],
+  "regions": [
+    "arn1"
+  ],
   "crons": [
     {
       "path": "/api/notifications/check-alerts",
@@ -193,6 +195,10 @@
     {
       "path": "/api/cron/content-draft",
       "schedule": "20 4 * * *"
+    },
+    {
+      "path": "/api/cron/funded-precos-vigia",
+      "schedule": "* * * * *"
     }
   ]
 }

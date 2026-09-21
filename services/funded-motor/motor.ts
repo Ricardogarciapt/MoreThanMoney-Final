@@ -444,6 +444,12 @@ function negociavel(sym: string, agora: Date): boolean {
   return true
 }
 
+// O watchdog do [pulso] vigia os ticks que CHEGAM; este vigia as escritas que SAEM. Sem ele,
+// uma base a recusar escritas (egress da Supabase esgotado, 2026-09-19) deixa o processo zombie:
+// feed vivo, preços parados, e o systemd sem razão para o renascer.
+let ultimaEscritaOkEm = Date.now()
+let escritasFalhadasSeguidas = 0
+
 async function escreverPrecos(): Promise<void> {
   if (!precosPorEscrever.size) return
   const linhas = [...precosPorEscrever].map((s) => ({
@@ -452,7 +458,13 @@ async function escreverPrecos(): Promise<void> {
   precosPorEscrever.clear()
   if (!CFG.escrita) return
   const { error } = await db.from('funded_precos').upsert(linhas, { onConflict: 'symbol' })
-  if (error) log('[precos] escrita falhou:', error.message)
+  if (error) {
+    escritasFalhadasSeguidas++
+    log('[precos] escrita falhou:', error.message)
+  } else {
+    escritasFalhadasSeguidas = 0
+    ultimaEscritaOkEm = Date.now()
+  }
 }
 
 async function carregarPedidos(): Promise<void> {
@@ -1057,6 +1069,13 @@ async function main(): Promise<void> {
     ticksNoMinuto = 0
     if (ultimoTickEm && semTicks > 180_000) {
       log('[pulso] feed mudo há 3 min — a sair para o systemd reiniciar')
+      process.exit(1)
+    }
+    // Escritas a falhar em série com feed vivo = base inalcançável (quota/egress/rede). Sair
+    // também: o systemd insiste a cada 10s e o motor volta sozinho no instante em que a base
+    // aceitar escritas — sem esperar que alguém repare no WebTrader congelado.
+    if (CFG.escrita && escritasFalhadasSeguidas >= 10 && Date.now() - ultimaEscritaOkEm > 180_000) {
+      log(`[pulso] ${escritasFalhadasSeguidas} escritas de preços falhadas seguidas há 3+ min — a sair para o systemd reiniciar`)
       process.exit(1)
     }
   }, 60_000)

@@ -1584,6 +1584,39 @@ export async function getMarketPrice(accountId: string, canonicalSymbol: string)
   }
 }
 
+/**
+ * Cotações bid/ask ao vivo de VÁRIOS símbolos numa só ligação RPC — o caminho barato para o vigia
+ * de preços do MTM Funded (uma ligação por corrida, não uma por símbolo). Um símbolo indisponível
+ * não trava os outros; devolve só os que responderam com preço válido.
+ */
+export async function getMarketQuotes(
+  accountId: string,
+  canonicalSymbols: string[],
+): Promise<Record<string, { bid: number; ask: number }>> {
+  const out: Record<string, { bid: number; ask: number }> = {}
+  if (!canonicalSymbols.length) return out
+  let close: (() => Promise<void>) | undefined
+  try {
+    const { connection, close: closeFn } = await getRpcConnection(accountId)
+    close = closeFn
+    if (!connection.getSymbolPrice) return out
+    const symbols = await simbolosDaConta(accountId, connection, canonicalSymbols)
+    for (const canon of canonicalSymbols) {
+      try {
+        const q = await connection.getSymbolPrice(resolveBrokerSymbol(canon, symbols))
+        if (q?.bid != null && q?.ask != null && q.bid > 0 && q.ask > 0) out[canon] = { bid: q.bid, ask: q.ask }
+      } catch {
+        // símbolo que a conta não tem — segue para o próximo
+      }
+    }
+    return out
+  } catch {
+    return out
+  } finally {
+    if (close) await close()
+  }
+}
+
 /** Lista de símbolos pelo REST (500 créditos) — só para o refrescador da cache partilhada. */
 async function lerSimbolosRest(accountId: string, regiao: string, token: string): Promise<string[]> {
   const r = await fetch(`https://mt-client-api-v1.${regiao}.agiliumtrade.ai/users/current/accounts/${accountId}/symbols`, {
