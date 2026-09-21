@@ -53,6 +53,7 @@ import { iniciarEspelho, latenciaSeguidoras, simbolosDoEspelho } from './espelho
 import { iniciarEspelhoProvider, simbolosDoProvider, type ControloProvider } from './espelho-provider'
 import { feedTradeLockerDoAmbiente, type ComparadorTradeLocker } from './feed-tradelocker'
 import { registarErroMetaApi } from './metaapi-partilhada'
+import { iniciarWsPrecos, type WsPrecos } from './ws-precos'
 import {
   assinaturaMetricas,
   precisaDeEscreverMetricas,
@@ -82,6 +83,8 @@ const CFG = {
   intervaloRapidoMs: Number(env('MOTOR_INTERVALO_RAPIDO_MS', false) || 250),
   /** Desvio da hora do servidor da corretora até o primeiro tick o dizer (PU Prime: UTC+3 no verão). */
   desvioInicialMin: Number(env('MOTOR_DESVIO_CORRETORA_MIN', false) || 180),
+  /** Porta do WS de preços para os browsers (nginx /precos → aqui). 0 desliga. */
+  wsPrecosPorta: Number(env('WS_PRECOS_PORTA', false) || 8787),
 }
 
 /** Símbolos sempre subscritos: o WebTrader abre neles, e o BTC (24/7) é o pulso do feed. */
@@ -134,6 +137,7 @@ let ultimoTickEm = 0
 let ticksNoMinuto = 0
 let provider: ControloProvider | null = null
 let feedTl: ComparadorTradeLocker | null = null
+let wsPrecos: WsPrecos | null = null
 
 const contas = new Map<string, ContaLinha>()
 const posicoesDe = new Map<string, PosicaoSim[]>()
@@ -419,6 +423,8 @@ function aoTick(t: Tick): void {
   precos[sym] = { symbol: sym, bid: t.bid, ask: t.ask }
   precoEm.set(sym, t.em.getTime())
   precosPorEscrever.add(sym)
+  // Distribuição direta aos browsers (ws-precos.ts) — a Supabase fica fora do caminho quente.
+  wsPrecos?.publicar(sym, t.bid, t.ask, t.em.getTime())
   if (t.desvioMin != null) desvioMin = t.desvioMin
   ultimoTickEm = Date.now()
   ticksNoMinuto++
@@ -987,6 +993,12 @@ async function ligarFonte(): Promise<FontePrecos> {
 
 async function main(): Promise<void> {
   log(`[motor] arranque · escrita=${CFG.escrita ? 'LIGADA' : 'desligada (seco)'} · conta de preços ${CFG.contaPrecos.slice(0, 8)}…`)
+  // O WS abre ANTES do feed: quem se ligar cedo recebe o snapshot vazio e os ticks ao chegarem.
+  try {
+    wsPrecos = iniciarWsPrecos(CFG.wsPrecosPorta, log)
+  } catch (e) {
+    log('[ws-precos] não abriu (porta ocupada?):', e instanceof Error ? e.message : e)
+  }
   await carregarCatalogo()
   log(`[motor] ${simbolos.size} símbolos no catálogo`)
   await carregarContas()
@@ -1058,7 +1070,7 @@ async function main(): Promise<void> {
     const estadoProvider = provider?.estado() ?? null
     const estado = {
       ticksMin: ticksNoMinuto, contas: contas.size, feed: fonte.nome, semTicksMs: ultimoTickEm ? Date.now() - ultimoTickEm : null,
-      escrita: CFG.escrita, tem072, simbolosRapidos: simbolosDoProvider.size,
+      escrita: CFG.escrita, tem072, simbolosRapidos: simbolosDoProvider.size, wsClientes: wsPrecos?.clientes() ?? null,
       espelhoSeguidoras: { latenciaEventoEscrita: latenciaSeguidoras.resumo() },
       espelhoProvider: estadoProvider,
       feedTradeLocker: feedTl?.resumo() ?? null,
@@ -1082,6 +1094,7 @@ async function main(): Promise<void> {
 
   const sair = async () => {
     log('[motor] a parar')
+    wsPrecos?.parar()
     await escreverPrecos().catch(() => undefined)
     await espelho?.parar().catch(() => undefined)
     await provider?.parar().catch(() => undefined)

@@ -154,3 +154,15 @@ Testes: `npx tsx lib/mtmfunded/__tests__/espelho-provider.check.ts` (ticks grava
 - Stop-out abaixo de 50% de nível de margem: fecha a pior posição, uma de cada vez.
 - Fora da sessão da corretora não há fills; o último preço fica.
 - Swap ainda não é cobrado (as colunas existem; falta a regra de rollover).
+
+## WS de preços (2026-09-21 — preços sempre funcionais, sem egress Supabase)
+
+O motor abre um WebSocket na porta `WS_PRECOS_PORTA` (default 8787, `0` desliga) e o nginx
+publica-o em `wss://stream.morethanmoney.pt/precos` (bloco `location /precos` — reaplica o
+conf deste repo e `sudo nginx -t && sudo systemctl reload nginx`).
+
+O WebTrader liga-se lá quando a Vercel tiver `NEXT_PUBLIC_FUNDED_WS_URL=wss://stream.morethanmoney.pt/precos`
+(+ redeploy). Sem a env, ou com a WS em baixo, o poll clássico continua a funcionar sozinho.
+
+Teste rápido no VPS: `journalctl -u funded-motor | grep ws-precos` deve mostrar
+«a ouvir na porta 8787»; o [pulso] passa a incluir `wsClientes`.
