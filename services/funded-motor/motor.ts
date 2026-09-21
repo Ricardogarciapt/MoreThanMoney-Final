@@ -433,7 +433,12 @@ function aoTick(t: Tick): void {
   if (!sym) return
   if (!injecaoDeRecurso) principalEm.set(sym, Date.now())
   const antes = precos[sym]
-  if (antes && antes.bid === t.bid && antes.ask === t.ask) return
+  if (antes && antes.bid === t.bid && antes.ask === t.ask) {
+    // Livro parado com a fonte viva: o preço continua a ser o de agora. Sem voltar a carimbar,
+    // um ouro calmo parecia ter 6-10 s e a guarda de 5 s recusava a entrada (21/09).
+    if (t.em.getTime() - (precoEm.get(sym) ?? 0) > 2000) { precoEm.set(sym, t.em.getTime()); precosPorEscrever.add(sym) }
+    return
+  }
   precos[sym] = { symbol: sym, bid: t.bid, ask: t.ask }
   precoEm.set(sym, t.em.getTime())
   precosPorEscrever.add(sym)
