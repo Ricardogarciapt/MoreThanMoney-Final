@@ -2,6 +2,7 @@
 
 import { lerSinal } from "@/lib/sinais/formato-sinal"
 import { ehSinalDePerpetuo, t2tMode } from "@/lib/mtmcopy/t2t-source"
+import { mensagemCripto, useSemCripto } from "@/lib/ios-sem-cripto"
 import { pipSizeForSymbol, unitFor } from "@/lib/mtmcopy/trade-outcome"
 import { directionLabelFromText, resolveDirectionLabel } from "@/lib/mtmcopy/signal-direction"
 
@@ -759,7 +760,10 @@ export default function TapToTradeFeed() {
   // "Últimos 5" = os cinco sinais MAIS RECENTES, seja qual for o estado deles. Antes só contava
   // os ainda aceitáveis, e como um setup expira em minutos o separador aparecia vazio a quem
   // vinha ver o que tinha saído.
+  const semCriptoAqui = useSemCripto()
   const shown = filtered.filter(naJanela).filter((x) => !fonteVista || x.channel_slug === fonteVista)
+    // App iOS: sem sinais de cripto nem «TAP to Copy» (Guideline 3.1.5 — lib/ios-sem-cripto.ts).
+    .filter((x) => !semCriptoAqui || !mensagemCripto(x.channel_slug, x.content))
   const historicoVisivel = historicoFiltrado.filter(naJanela)
 
   const runTap = async () => {

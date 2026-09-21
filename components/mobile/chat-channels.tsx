@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase"
 import { ehSinalDePerpetuo, isT2TEntrySignal, t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { directionLabelFromText } from "@/lib/mtmcopy/signal-direction"
 import TapToCopyModal from "@/components/mobile/tap-to-copy-modal"
+import { CANAIS_SO_CRIPTO, mensagemCripto, semCripto } from "@/lib/ios-sem-cripto"
 import { useAuth } from "@/contexts/auth-context"
 import {
   canReadChannel,
@@ -1776,7 +1777,9 @@ function ChannelView({
   const renderMessages = () => {
     let lastDay = ""
     const resolvedIds = computeResolvedSignalIds(messages)
-    return messages.map((msg) => {
+    // App iOS: sem sinais/mensagens de cripto (Guideline 3.1.5 — ver lib/ios-sem-cripto.ts).
+    const semCriptoAqui = semCripto()
+    return messages.filter((m) => !semCriptoAqui || !mensagemCripto(m.channel_slug, m.content)).map((msg) => {
       const day = formatDay(msg.created_at, t)
       const showDay = day !== lastDay
       lastDay = day
@@ -2641,7 +2644,8 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
         return
       }
 
-      const all: Channel[] = (data || []) as Channel[]
+      const semCriptoAqui = semCripto()
+      const all: Channel[] = ((data || []) as Channel[]).filter((c) => !semCriptoAqui || !CANAIS_SO_CRIPTO.has(c.slug))
       const parents = all.filter((c) => !c.parent_slug)
       const tree = parents.map((p) => ({
         ...p,

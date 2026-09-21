@@ -82,3 +82,15 @@ export function mencionaCripto(texto?: string | null): boolean {
 
 /** Símbolo por defeito quando o pedido era cripto. */
 export const SIMBOLO_SEM_CRIPTO = "XAUUSD"
+
+/** Canais de chat que são só cripto: fora da app iOS (Guideline 3.1.5, rejeição 21/09). */
+export const CANAIS_SO_CRIPTO = new Set(["cripto", "cripto-perps"])
+
+/**
+ * Esta mensagem de chat / sinal T2T é cripto? Os perpétuos (Aurum Flow & Perpétuos) têm o botão
+ * «TAP to Copy» para copy trading numa bolsa — foi isso que a Apple leu como «serviço de câmbio de
+ * criptomoedas» na 3.7.6 (79). Na app iOS não aparecem nem o sinal nem o botão.
+ */
+export function mensagemCripto(canal?: string | null, texto?: string | null): boolean {
+  return CANAIS_SO_CRIPTO.has(String(canal ?? "")) || mencionaCripto(texto)
+}
