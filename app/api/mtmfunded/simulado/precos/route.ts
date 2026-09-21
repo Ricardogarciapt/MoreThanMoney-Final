@@ -57,6 +57,25 @@ async function lerFichas(db: ReturnType<typeof getSupabaseAdmin>, symbols: strin
   return symbols.map((s) => cacheFichas.get(s)?.linha).filter(Boolean) as Array<Record<string, unknown>>
 }
 
+/**
+ * As classes vêm do catálogo e não de uma lista fixa (quando entram energia ou acções, o filtro
+ * aparece sozinho) — mas eram ~1000 linhas lidas a CADA pesquisa/página do catálogo. Mudam quase
+ * nunca: 10 min por instância, paginado (o PostgREST corta a 1000 e já há 1026 símbolos).
+ */
+let cacheClasses: { em: number; lista: string[] } | null = null
+async function lerClasses(db: ReturnType<typeof getSupabaseAdmin>): Promise<string[]> {
+  if (cacheClasses && Date.now() - cacheClasses.em < 10 * 60_000) return cacheClasses.lista
+  const todas = new Set<string>()
+  for (let de = 0; de < 10_000; de += 1000) {
+    const { data, error } = await db.from('funded_symbols').select('classe').eq('ativo', true).order('symbol').range(de, de + 999)
+    if (error) return cacheClasses?.lista ?? []
+    for (const c of data ?? []) todas.add(String(c.classe))
+    if (!data || data.length < 1000) break
+  }
+  cacheClasses = { em: Date.now(), lista: [...todas].sort() }
+  return cacheClasses.lista
+}
+
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams
   const db = getSupabaseAdmin()
@@ -97,18 +116,16 @@ export async function GET(request: NextRequest) {
     .eq('ativo', true)
   if (classe) query = query.eq('classe', classe)
   if (q) query = query.or(`symbol.ilike.%${q}%,nome.ilike.%${q}%`)
-  const [{ data, count, error }, { data: todasClasses }] = await Promise.all([
+  const [{ data, count, error }, classes] = await Promise.all([
     query.order('ordem').order('symbol').range(pagina * porPagina, pagina * porPagina + porPagina - 1),
-    // As classes vêm do catálogo e não de uma lista fixa: quando entrarem energia ou ações, o
-    // filtro aparece sozinho.
-    db.from('funded_symbols').select('classe').eq('ativo', true),
+    lerClasses(db),
   ])
   if (error) return NextResponse.json({ error: 'catálogo indisponível' }, { status: 500 })
   return NextResponse.json(
     {
       simbolos: (data ?? []).map((r) => ({ ...simboloDaLinha(r), nome: r.nome, horario: r.horario })),
       total: count ?? 0, pagina, porPagina,
-      classes: [...new Set((todasClasses ?? []).map((c) => String(c.classe)))].sort(),
+      classes,
     },
     { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } },
   )

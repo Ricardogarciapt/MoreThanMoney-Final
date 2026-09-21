@@ -127,6 +127,7 @@ async function correr() {
   // WS viva → zero polls; fica só um batimento a verificar que ela continua a dar sinal.
   if (wsVivo()) {
     wsSincronizar()
+    tapaBuracos(escondido)
     if (!escondido && !temporizador) temporizador = setTimeout(correr, 5000)
     return
   }
@@ -150,6 +151,29 @@ async function correr() {
   }
   // Escondido: não se agenda — o visibilitychange acorda o fio.
   if (subscritores.size && !escondido && !temporizador) temporizador = setTimeout(correr, intervaloGlobal())
+}
+
+/**
+ * WS viva mas o motor não publica um símbolo (21/09: sem MetaApi, só o cripto e o que os recursos
+ * cobrem): sem isto esse símbolo ficava SEM preço nenhum no ecrã, nem o último guardado. Pede-se
+ * à rota só o que falta ou está velho, no máximo de 20 em 20 s — nunca o poll inteiro de volta.
+ */
+const BURACO_MS = 20_000
+let ultimoBuraco = 0
+function tapaBuracos(escondido: boolean) {
+  if (escondido || emCurso || Date.now() - ultimoBuraco < BURACO_MS) return
+  const agora = Date.now()
+  const faltam = chaveGlobal().split(",").filter((s) => {
+    if (!s) return false
+    const p = precosGlobais[s]
+    return !p || agora - Date.parse(p.em) > 30_000
+  })
+  if (!faltam.length) return
+  ultimoBuraco = agora
+  void fetch(`/api/mtmfunded/simulado/precos?symbols=${encodeURIComponent(faltam.join(","))}`, { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => { if (d?.precos) semearPrecos(d.precos as PrecoVivo[]) })
+    .catch(() => { /* a WS continua; volta-se a tentar no próximo buraco */ })
 }
 
 function pedirJa() {
@@ -218,7 +242,9 @@ export function usePrecos(symbols: string[], intervaloMs = 1500) {
       void fetch(`/api/mtmfunded/simulado/precos?symbols=${encodeURIComponent(chave)}`, { cache: "no-store" })
         .then((r) => r.json()).then((d) => semearPrecos((d?.precos ?? []) as PrecoVivo[])).catch(() => {})
     } else if (chaveGlobal() !== antes || !temporizador) {
-      // Símbolo novo → pede já, sem esperar pelo próximo ciclo (com WS viva, o correr só sincroniza).
+      // Símbolo novo → pede já, sem esperar pelo próximo ciclo (com WS viva, o correr sincroniza e
+      // tapa logo os buracos do símbolo novo, sem esperar os 20 s).
+      if (chaveGlobal() !== antes) ultimoBuraco = 0
       pedirJa()
     }
     return () => {
