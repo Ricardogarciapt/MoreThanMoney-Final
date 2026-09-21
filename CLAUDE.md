@@ -596,6 +596,31 @@ Cada agente tem contexto isolado mas pode passar outputs para o próximo.
 
 ## PENDENTES (memória entre sessões)
 
+### 📋 CHECKLIST DO RICARDO — Mac mini, 2026-09-22 (apagar quando concluído)
+**1. VPS · motor novo (fonte nula + Binance + WS + watchdogs) — ~10 min**
+```bash
+cd "/Users/ricardogarcia/Documents/Repositório SITE/SITE-MORETHANMONEY-FINAL-39aae3022258dec0b1e9cce3dc39489035c05b36"
+git pull origin main && npm install   # npm install: dependência nova "ws"
+node_modules/.bin/esbuild services/funded-motor/motor.ts --bundle --platform=node --target=node18 --outfile=/tmp/motor.js
+scp /tmp/motor.js deploy/vps-stream/nginx-mtm-stream-https.conf.example deploy/vps-stream/funded-motor/mtm-funded-motor.service ubuntu@13.62.134.34:/tmp/
+ssh ubuntu@13.62.134.34
+  systemctl list-units | grep -i -E 'funded|motor'      # confirmar o NOME real do serviço
+  sudo cp /tmp/motor.js /opt/mtm/funded-motor/motor.js
+  sudo cp /tmp/mtm-funded-motor.service /etc/systemd/system/  # garante Restart=always
+  sudo cp /tmp/nginx-mtm-stream-https.conf.example /etc/nginx/sites-available/mtm-stream  # novo bloco /precos
+  sudo nginx -t && sudo systemctl reload nginx
+  # OPCIONAL forex sem MetaApi — acrescentar ao /etc/mtm-funded-motor.env:
+  #   ESPELHO_FEED_TL=1  ESPELHO_FEED_TL_RECURSO=1
+  #   TL_FEED_EMAIL=…  TL_FEED_PASSWORD=…  TL_FEED_SERVER=…  TL_FEED_ENV=demo  TL_FEED_ACCOUNT_ID=…  TL_FEED_ACCNUM=…
+  sudo systemctl daemon-reload && sudo systemctl restart mtm-funded-motor funded-copier
+  journalctl -u mtm-funded-motor -f   # esperar: "[binance] feed cripto ligado" + "[ws-precos] a ouvir na porta 8787"
+```
+**2. Vercel — env do WebTrader→WS**: Settings → Environment Variables → `NEXT_PUBLIC_FUNDED_WS_URL=wss://stream.morethanmoney.pt/precos` (Production) → Redeploy.
+**3. VPS · gmi-relay (GOLD DID→Premium, pendente desde 09/09)**: copiar `services/gmi-relay/relay.py`+`make_session.py` p/ `/opt/gmi-relay/`, correr `make_session.py` (interativo, código Telegram), `.env`: `GMI_SESSION_STRING` + `RELAY_ROUTES=[{"name":"gold-did","source":-1003452689502,"dest":"-1002424441843","filter":"gold"}]` + `GMI_DRY_RUN=0`, `sudo systemctl restart gmi-relay`.
+**4. MetaApi (quando decidires)**: créditos em app.metaapi.cloud → verificar contas DEPLOYED → o streaming reassume sozinho como fonte principal. Aproveitar e apagar no painel a conta órfã 111c8463/estratégia YMEE (resto do Golden Moves).
+**5. Ulisses (se ainda não feito)**: abrir logado como admin: `https://www.morethanmoney.pt/api/admin/mtmfunded/conta-emitir-credenciais?account=4e2978b7-75c5-4954-90e5-d2275c1672e5` → gera credenciais e envia o email oficial (esperado: `{"ok":true,"emailAoDono":true}`).
+**6. Verificação final**: WebTrader com preços a mexer (cripto já; forex se TL configurado ou MetaApi com créditos); alerta/recuperação do vigia no Telegram; `servicos_pulso` no admin com `wsClientes` e `binance`.
+
 ### ⚖️ DOUTRINA — MetaApi é SECUNDÁRIO (ordem do Ricardo, 2026-09-21)
 - **As mestres são as contas MTM Funded (sim)**: sinais abrem lá, e o NOSSO motor gere (trailing, auto-BE, parciais) ao nosso preço. A cópia mestre→slaves (MT5 via MetaApi, TradeLocker via API) sai de `copia_rotas` (078, sombra→live por interruptor; escritores mt5+TL implementados).
 - **MetaApi serve APENAS**: (1) slaves MT5 de clientes como destino de cópia; (2) fonte de preços preferencial — substituída automaticamente por Binance (cripto, `fonte-binance.ts`) e TradeLocker (`ESPELHO_FEED_TL_RECURSO=1`) quando falha; o motor arranca sem MetaApi (fonte nula). NUNCA voltar a desenhar nada que dependa do MetaApi para o sistema interno funcionar.
