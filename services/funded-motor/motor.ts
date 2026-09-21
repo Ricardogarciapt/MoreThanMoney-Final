@@ -1002,10 +1002,23 @@ const FONTE_NULA: FontePrecos = {
   async parar() { /* nada a fechar */ },
 }
 
+/**
+ * Limite de tempo para ligar à MetaApi. Com a conta UNDEPLOYED (créditos esgotados, 21/09) o SDK
+ * repete a subscrição para sempre sem rejeitar — o motor ficava preso aqui e nunca arrancava a
+ * Binance nem os ciclos. Passado o prazo, conta como falha e segue para o recurso seguinte.
+ */
+function comPrazo<T>(p: Promise<T>, ms: number, oque: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`${oque}: sem resposta em ${Math.round(ms / 1000)} s`)), ms)),
+  ])
+}
+const PRAZO_FONTE_MS = Number(process.env.MOTOR_PRAZO_FONTE_MS || 45_000)
+
 async function ligarFonte(): Promise<FontePrecos> {
   const principal = new FonteStreaming(CFG.metaapiToken, CFG.contaPrecos, CFG.intervaloMs, CFG.intervaloRapidoMs)
   try {
-    await principal.iniciar(aoTick)
+    await comPrazo(principal.iniciar(aoTick), PRAZO_FONTE_MS, 'MetaApi streaming')
     return principal
   } catch (e) {
     registarErroMetaApi(e, 'feed:streaming')
@@ -1013,7 +1026,12 @@ async function ligarFonte(): Promise<FontePrecos> {
     await principal.parar()
     try {
       const recurso = new FonteRpc(CFG.metaapiToken, CFG.contaPrecos, CFG.intervaloMs)
-      await recurso.iniciar(aoTick)
+      try {
+        await comPrazo(recurso.iniciar(aoTick), PRAZO_FONTE_MS, 'MetaApi RPC')
+      } catch (e3) {
+        await recurso.parar().catch(() => {})
+        throw e3
+      }
       return recurso
     } catch (e2) {
       // Sem MetaApi de todo (créditos esgotados, 2026-09-21): o motor NÃO morre — arranca com a
