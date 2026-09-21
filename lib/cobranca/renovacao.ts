@@ -78,3 +78,52 @@ export async function lerEstadoStripe(subscriptionId: string | null | undefined)
     return null
   }
 }
+
+export interface SubscricaoEncontrada {
+  subscriptionId: string
+  customerId: string
+  estado: EstadoStripe
+}
+
+/**
+ * Antes de pausar alguém: procura pelo EMAIL em todos os clientes Stripe (21/09).
+ *
+ * O perfil só guarda um `stripe_customer_id`/`stripe_subscription_id`, e há quem tenha dois
+ * clientes com o mesmo email — o Fábio Henriques pagou o Premium anual (312€) num cliente novo e o
+ * perfil ficou a apontar para o do addon MTM Copy; o cron pausou-o com o ano pago. Conta como pack
+ * uma subscrição active/trialing, que NÃO seja só o addon, com o período pago ainda por acabar
+ * (mesmo com cancelamento marcado: pagou até lá). Fica a de fim mais tarde.
+ *
+ * `'erro'` = não foi possível ler a Stripe → o chamador não fecha o acesso.
+ */
+export async function procurarSubscricaoPorEmail(email: string | null | undefined): Promise<SubscricaoEncontrada | null | 'erro'> {
+  const key = process.env.STRIPE_SECRET_KEY?.trim()
+  const mail = String(email ?? '').trim().replace(/['\\]/g, '')
+  if (!key || !mail) return null
+  const { subscricaoEhAddon } = await import('@/lib/mtmcopy/addon-stripe')
+  const pedir = async (path: string) => {
+    const r = await fetch(`https://api.stripe.com/v1/${path}`, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000) })
+    if (!r.ok) throw new Error(`stripe ${r.status}`)
+    return r.json() as Promise<{ data?: Record<string, unknown>[] }>
+  }
+  try {
+    const clientes = await pedir(`customers/search?query=${encodeURIComponent(`email:'${mail}'`)}&limit=10`)
+    let melhor: SubscricaoEncontrada | null = null
+    for (const c of clientes.data ?? []) {
+      const subs = await pedir(`subscriptions?customer=${encodeURIComponent(String(c.id))}&status=all&limit=20`)
+      for (const s of (subs.data ?? []) as Parameters<typeof subscricaoEhAddon>[0][]) {
+        const sub = s as { id?: string; status?: string; cancel_at_period_end?: boolean; current_period_end?: number; items?: { data?: { current_period_end?: number }[] } }
+        if (!sub?.id || !STRIPE_A_COBRAR.has(String(sub.status)) || subscricaoEhAddon(s)) continue
+        const fim = sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end ?? null
+        if (!fim || fim * 1000 <= Date.now()) continue
+        const estado: EstadoStripe = { status: sub.status ?? null, cancelaNoFim: sub.cancel_at_period_end === true, fimPeriodo: new Date(fim * 1000).toISOString() }
+        if (!melhor || (melhor.estado.fimPeriodo ?? '') < (estado.fimPeriodo ?? '')) {
+          melhor = { subscriptionId: sub.id, customerId: String(c.id), estado }
+        }
+      }
+    }
+    return melhor
+  } catch {
+    return 'erro'
+  }
+}

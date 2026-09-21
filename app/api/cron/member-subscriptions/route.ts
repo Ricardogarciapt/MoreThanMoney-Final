@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { addDays } from "@/lib/member-subscription"
 import { isInternalApiRequest } from "@/lib/internal-api"
 import { activationPatch } from "@/lib/member-activation"
-import { classificarRenovacao, lerEstadoStripe } from "@/lib/cobranca/renovacao"
+import { classificarRenovacao, lerEstadoStripe, procurarSubscricaoPorEmail } from "@/lib/cobranca/renovacao"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -93,7 +93,32 @@ export async function GET(request: NextRequest) {
       continue
     }
 
-    // cobrar
+    // cobrar — mas antes procura pelo email em todos os clientes Stripe: o perfil pode estar a
+    // apontar para o cliente errado (caso Fábio Henriques, 21/09: anual pago noutro cliente).
+    const achada = await procurarSubscricaoPorEmail(row.email)
+    if (achada === "erro") {
+      saltadas.push(`${quem} (Stripe ilegível na procura por email)`)
+      continue
+    }
+    if (achada?.estado.fimPeriodo) {
+      if (!dryRun) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            subscription_expires_at: achada.estado.fimPeriodo,
+            stripe_subscription_id: achada.subscriptionId,
+            stripe_customer_id: achada.customerId,
+            subscription_status: "active",
+            user_type: row.user_type === "inactive" ? "member" : row.user_type,
+            updated_at: nowIso,
+          })
+          .eq("id", row.id)
+        if (error) { saltadas.push(`${quem}: ${error.message}`); continue }
+      }
+      renovadas.push(`${quem} (stripe por email ${achada.subscriptionId} → ${achada.estado.fimPeriodo.slice(0, 10)})`)
+      continue
+    }
+
     if (!dryRun) {
       const { error } = await supabase
         .from("profiles")
