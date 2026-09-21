@@ -596,6 +596,11 @@ Cada agente tem contexto isolado mas pode passar outputs para o próximo.
 
 ## PENDENTES (memória entre sessões)
 
+### ⚖️ DOUTRINA — MetaApi é SECUNDÁRIO (ordem do Ricardo, 2026-09-21)
+- **As mestres são as contas MTM Funded (sim)**: sinais abrem lá, e o NOSSO motor gere (trailing, auto-BE, parciais) ao nosso preço. A cópia mestre→slaves (MT5 via MetaApi, TradeLocker via API) sai de `copia_rotas` (078, sombra→live por interruptor; escritores mt5+TL implementados).
+- **MetaApi serve APENAS**: (1) slaves MT5 de clientes como destino de cópia; (2) fonte de preços preferencial — substituída automaticamente por Binance (cripto, `fonte-binance.ts`) e TradeLocker (`ESPELHO_FEED_TL_RECURSO=1`) quando falha; o motor arranca sem MetaApi (fonte nula). NUNCA voltar a desenhar nada que dependa do MetaApi para o sistema interno funcionar.
+- Feed aos browsers: WS do motor (`wss://stream.morethanmoney.pt/precos`, `ws-precos.ts` + `NEXT_PUBLIC_FUNDED_WS_URL`); Supabase fora do caminho quente (o poll por cliente esgotou o egress a 19/09). Vigia Vercel `funded-precos-vigia` (1 min) alerta o admin por Telegram e escreve preços degradados (MetaApi→Binance fallback).
+
 ### 🏆 MTM FUNDED — Fase 1 aprovada em conceito (2026-09-13)
 - **Spec completo: `docs/mtm-funded-fase1-spec.md`** — motor de contas SIMULADAS (desafios/torneios) + WebTrader próprio no app-mobile. NÃO é prop firm: fase "funded" = **Patrocínio de Desempenho MTM** (recompensa p/ aluno abrir conta própria na PU Prime regulada; MTM nunca custodia nem executa real por clientes).
 - Estratégia de custos: MetaApi fica SÓ no MTM Auto + T2T (assinatura cobre a ligação); desafios simulados = custo marginal ~0/conta (um feed de ticks serve todas — providers streaming já pagos). Roadmap geral anti-MetaApi: (0) fechar 7 bypasses REST + interface TradingDriver; (1) MTM Funded próprio; (2) driver TradeLocker direto (API pública grátis — app TradeLocker exigiria brand partnership, rejeitado p/ Fase 1); (3) piloto MT5 self-hosted no mtmcopy-engine (bridge de 80 linhas, fala só via Supabase); (4) CopyFactory própria (últimO — maior risco; custódia de credenciais tem de ser resolvida antes). White label MT5 rejeitado ($7.5k-25k setup + $2.7k-11k/mês + licença de corretora).
