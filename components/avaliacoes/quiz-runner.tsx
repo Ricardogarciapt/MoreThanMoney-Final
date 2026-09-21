@@ -21,6 +21,7 @@ type AssessmentMeta = {
   title: string
   subtitle: string | null
   intro: string | null
+  material_url?: string | null
   kind: string
   pass_mark: number
   grade_display: "none" | "percent" | "valores20"
@@ -223,6 +224,16 @@ export default function QuizRunner({ slug }: { slug: string }) {
         <h1 className="text-2xl font-bold md:text-3xl">{meta?.title}</h1>
         {meta?.subtitle && <p className="mt-1 text-[#D2A63C]/80">{meta.subtitle}</p>}
         {meta?.intro && <p className="mt-3 text-sm leading-relaxed text-gray-400">{meta.intro}</p>}
+        {meta?.material_url && (
+          <a
+            href={meta.material_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-[#D2A63C]/40 px-3 py-2 text-sm font-semibold text-[#D2A63C] hover:bg-[#D2A63C]/10"
+          >
+            Material de apoio →
+          </a>
+        )}
       </header>
 
       {/* Identificação */}

@@ -41,6 +41,12 @@ const TEMPLATES: Record<CertTemplate, TemplateConfig> = {
     grade: { cx: 716, baselineY: 548, maxW: 170, size: 19, color: "#d8a441" },
     footerColor: "#c8c8c8",
   },
+  "academia-ib": {
+    bg: "academia-ib-bg.png",
+    name: { cx: 560, baselineY: 378, maxW: 840, size: 70, color: "#d8a441" },
+    grade: { cx: 741, baselineY: 548, maxW: 150, size: 19, color: "#d8a441" },
+    footerColor: "#c8c8c8",
+  },
   "teste-final": {
     bg: "teste-final-bg.png",
     name: { cx: 575, baselineY: 388, maxW: 840, size: 43, color: "#a86a22" },

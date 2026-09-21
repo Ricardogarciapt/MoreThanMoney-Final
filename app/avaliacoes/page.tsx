@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { getAuthenticatedUser } from "@/lib/admin-api-helpers"
-import { Award, Rocket, GraduationCap, ShieldCheck, ArrowRight, CheckCircle2, Download } from "lucide-react"
+import { Award, Rocket, GraduationCap, ShieldCheck, ArrowRight, CheckCircle2, Download, Handshake, BookOpen } from "lucide-react"
 import CertifiedShowcase from "@/components/avaliacoes/certified-showcase"
 import CertificateRender from "@/components/avaliacoes/certificate-render"
 import type { CertTemplate } from "@/lib/avaliacoes/config"
@@ -12,13 +12,13 @@ export const metadata = {
   description: "Valida os teus conhecimentos e recebe o teu certificado oficial da MoreThanMoney.",
 }
 
-const ICONS: Record<string, any> = { fast_start: Rocket, bootcamp: GraduationCap, teste_final: Award }
+const ICONS: Record<string, any> = { fast_start: Rocket, bootcamp: GraduationCap, teste_final: Award, ib: Handshake }
 
 export default async function AvaliacoesPage() {
   const supabase = getSupabaseAdmin()
   const { data: assessments } = await supabase
     .from("assessments")
-    .select("id, slug, title, subtitle, kind, intro, pass_mark, grade_display, active, sort")
+    .select("id, slug, title, subtitle, kind, intro, pass_mark, grade_display, active, sort, material_url")
     .eq("active", true)
     .order("sort", { ascending: true })
 
@@ -70,12 +70,12 @@ export default async function AvaliacoesPage() {
       </section>
 
       {/* Cards */}
-      <section className="mx-auto max-w-5xl px-4 py-12">
+      <section className="mx-auto max-w-7xl px-4 py-12">
         <div className="mb-6 text-center">
           <h2 className="text-xl font-bold text-white md:text-2xl">Escolhe a tua avaliação e começa</h2>
           <p className="mt-1 text-sm text-gray-400">Responde ao quiz e recebe o certificado no teu email — leva poucos minutos.</p>
         </div>
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {list.map((a: any, i: number) => {
             const Icon = ICONS[a.kind] || GraduationCap
             const total = counts[a.id] || 0
@@ -94,6 +94,17 @@ export default async function AvaliacoesPage() {
                 <h2 className="text-lg font-bold leading-tight">{a.title}</h2>
                 {a.subtitle && <p className="mt-1 text-sm text-[#D2A63C]/80">{a.subtitle}</p>}
                 <p className="mt-3 flex-1 text-sm leading-relaxed text-gray-400">{a.intro}</p>
+
+                {a.material_url && (
+                  <a
+                    href={a.material_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[#D2A63C] hover:underline"
+                  >
+                    <BookOpen className="h-4 w-4" /> Material de apoio
+                  </a>
+                )}
 
                 <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-gray-400">
                   <span className="rounded-md bg-white/5 px-2 py-1">{total} perguntas</span>

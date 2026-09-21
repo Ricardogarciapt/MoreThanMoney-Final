@@ -42,6 +42,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ slug: stri
         title: assessment.title,
         subtitle: assessment.subtitle,
         intro: assessment.intro,
+        material_url: assessment.material_url ?? null,
         kind: assessment.kind,
         pass_mark: assessment.pass_mark,
         grade_display: assessment.grade_display,

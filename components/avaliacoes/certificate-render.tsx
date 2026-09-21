@@ -10,6 +10,7 @@ const LABEL: Record<CertTemplate, string> = {
   "fast-start": "Certificado de Conclusão",
   bootcamp: "Certificado · Bootcamp de Trading",
   "teste-final": "Certificado Final · Junior Trader",
+  "academia-ib": "Certificado · IB MTM × PU Prime",
 }
 
 export default function CertificateRender({

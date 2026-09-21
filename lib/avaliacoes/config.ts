@@ -1,8 +1,8 @@
 // Motor de Avaliações / Certificados MTM — tipos e helpers partilhados.
 
-export type AssessmentKind = "fast_start" | "bootcamp" | "teste_final"
+export type AssessmentKind = "fast_start" | "bootcamp" | "teste_final" | "ib"
 export type GradeDisplay = "none" | "percent" | "valores20"
-export type CertTemplate = "fast-start" | "bootcamp" | "teste-final"
+export type CertTemplate = "fast-start" | "bootcamp" | "teste-final" | "academia-ib"
 
 export type Assessment = {
   id: string
@@ -16,6 +16,7 @@ export type Assessment = {
   cert_template: CertTemplate
   active: boolean
   sort: number
+  material_url?: string | null // material de apoio (ex.: aula na Skool)
 }
 
 export type Question = {
@@ -94,6 +95,7 @@ const CODE_PREFIX: Record<CertTemplate, string> = {
   "fast-start": "FS",
   bootcamp: "BC",
   "teste-final": "JT",
+  "academia-ib": "IB",
 }
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // sem I,O,0,1

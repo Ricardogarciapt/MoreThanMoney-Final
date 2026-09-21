@@ -19,6 +19,11 @@ const CFG: Record<CertTemplate, Cfg> = {
     name: { left: 49.87, bottom: 52.39, font: 6.23, color: "#d8a441" },
     grade: { left: 63.76, bottom: 30.98, font: 1.69, color: "#d8a441" },
   },
+  "academia-ib": {
+    bg: "/certificados/academia-ib-bg.png",
+    name: { left: 49.87, bottom: 52.39, font: 6.23, color: "#d8a441" },
+    grade: { left: 65.98, bottom: 30.98, font: 1.69, color: "#d8a441" },
+  },
   "teste-final": {
     bg: "/certificados/teste-final-bg.png",
     name: { left: 51.2, bottom: 51.13, font: 3.83, color: "#a86a22" },
