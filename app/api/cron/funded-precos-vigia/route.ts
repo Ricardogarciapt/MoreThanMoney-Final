@@ -73,6 +73,26 @@ export async function GET(request: NextRequest) {
       getMarketQuotes(conta, abertos),
       new Promise<Record<string, { bid: number; ask: number }>>((res) => setTimeout(() => res({}), 40_000)),
     ])
+    // Cripto que a MetaApi não deu vem da Binance (REST público, sem chave) — com a MetaApi E o
+    // VPS em baixo ao mesmo tempo (2026-09-21), BTC/ETH continuam vivos no site.
+    const CRIPTO_BINANCE: Record<string, string> = { BTCUSD: 'BTCUSDT', ETHUSD: 'ETHUSDT' }
+    const emFalta = Object.entries(CRIPTO_BINANCE).filter(([canon]) => abertos.includes(canon) && !quotes[canon])
+    if (emFalta.length) {
+      try {
+        const r = await fetch(
+          `https://api.binance.com/api/v3/ticker/bookTicker?symbols=${encodeURIComponent(JSON.stringify(emFalta.map(([, b]) => b)))}`,
+          { cache: 'no-store', signal: AbortSignal.timeout(8000) },
+        )
+        const lista = (await r.json()) as Array<{ symbol: string; bidPrice: string; askPrice: string }>
+        for (const [canon, binance] of emFalta) {
+          const t = Array.isArray(lista) ? lista.find((x) => x.symbol === binance) : null
+          const bid = Number(t?.bidPrice), ask = Number(t?.askPrice)
+          if (bid > 0 && ask > 0) quotes[canon] = { bid, ask }
+        }
+      } catch {
+        // Binance indisponível não estraga o resto da corrida
+      }
+    }
     const linhas = Object.entries(quotes).map(([symbol, q]) => ({ symbol, bid: q.bid, ask: q.ask, em: new Date().toISOString() }))
     let escritos = 0
     if (linhas.length) {

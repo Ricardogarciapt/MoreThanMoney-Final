@@ -54,6 +54,7 @@ import { iniciarEspelhoProvider, simbolosDoProvider, type ControloProvider } fro
 import { feedTradeLockerDoAmbiente, type ComparadorTradeLocker } from './feed-tradelocker'
 import { registarErroMetaApi } from './metaapi-partilhada'
 import { iniciarWsPrecos, type WsPrecos } from './ws-precos'
+import { iniciarFonteBinance, type FonteBinance } from './fonte-binance'
 import {
   assinaturaMetricas,
   precisaDeEscreverMetricas,
@@ -138,6 +139,7 @@ let ticksNoMinuto = 0
 let provider: ControloProvider | null = null
 let feedTl: ComparadorTradeLocker | null = null
 let wsPrecos: WsPrecos | null = null
+let fonteBinance: FonteBinance | null = null
 
 const contas = new Map<string, ContaLinha>()
 const posicoesDe = new Map<string, PosicaoSim[]>()
@@ -415,9 +417,19 @@ async function carregarFechos(): Promise<void> {
 }
 
 // ── preços ────────────────────────────────────────────────────────────────────
+/**
+ * Idade do preço do feed PRINCIPAL, por símbolo — separada de `precoEm`, que os recursos
+ * (Binance, TradeLocker) também refrescam. Sem esta separação, a primeira injeção de recurso
+ * «rejuvenescia» o símbolo e o guard de 5 s sufocava o próprio recurso a 1 tick/5 s.
+ */
+const principalEm = new Map<string, number>()
+let injecaoDeRecurso = false
+const principalVelho = (sym: string) => Date.now() - (principalEm.get(sym) ?? 0) > 5000
+
 function aoTick(t: Tick): void {
   const sym = canonicoDaFonte.get(t.fonte)
   if (!sym) return
+  if (!injecaoDeRecurso) principalEm.set(sym, Date.now())
   const antes = precos[sym]
   if (antes && antes.bid === t.bid && antes.ask === t.ask) return
   precos[sym] = { symbol: sym, bid: t.bid, ask: t.ask }
@@ -437,7 +449,12 @@ function aoTick(t: Tick): void {
 function aoTickRecurso(sym: string, bid: number, ask: number, em: number): void {
   if (!simbolos.has(sym)) return
   const s = simbolos.get(sym)!
-  aoTick({ fonte: s.simbolo_fonte, bid, ask, em: new Date(em), desvioMin: null })
+  injecaoDeRecurso = true
+  try {
+    aoTick({ fonte: s.simbolo_fonte, bid, ask, em: new Date(em), desvioMin: null })
+  } finally {
+    injecaoDeRecurso = false
+  }
 }
 
 /** Há fills neste símbolo agora? Precisa de preço e de mercado aberto (sessão da corretora). */
@@ -976,6 +993,15 @@ function rapidos(): Set<string> {
   return out
 }
 
+/** Fonte vazia: o motor arranca sem MetaApi e vive dos recursos (Binance cripto, TradeLocker). */
+const FONTE_NULA: FontePrecos = {
+  nome: 'nenhuma (MetaApi indisponível)',
+  async iniciar() { /* nada a ligar */ },
+  async definirSimbolos() { /* nada a subscrever */ },
+  simbolosDaCorretora: () => [],
+  async parar() { /* nada a fechar */ },
+}
+
 async function ligarFonte(): Promise<FontePrecos> {
   const principal = new FonteStreaming(CFG.metaapiToken, CFG.contaPrecos, CFG.intervaloMs, CFG.intervaloRapidoMs)
   try {
@@ -985,9 +1011,18 @@ async function ligarFonte(): Promise<FontePrecos> {
     registarErroMetaApi(e, 'feed:streaming')
     log('[feed] streaming não ligou, passo a RPC:', e instanceof Error ? e.message : e)
     await principal.parar()
-    const recurso = new FonteRpc(CFG.metaapiToken, CFG.contaPrecos, CFG.intervaloMs)
-    await recurso.iniciar(aoTick)
-    return recurso
+    try {
+      const recurso = new FonteRpc(CFG.metaapiToken, CFG.contaPrecos, CFG.intervaloMs)
+      await recurso.iniciar(aoTick)
+      return recurso
+    } catch (e2) {
+      // Sem MetaApi de todo (créditos esgotados, 2026-09-21): o motor NÃO morre — arranca com a
+      // fonte nula e o cripto vem da Binance (fonte-binance.ts) e o forex do recurso TradeLocker
+      // (ESPELHO_FEED_TL_RECURSO=1). Quando a MetaApi voltar, o restart do systemd religa-a.
+      registarErroMetaApi(e2, 'feed:rpc')
+      log('[feed] MetaApi indisponível — a arrancar SEM fonte principal (recursos apenas):', e2 instanceof Error ? e2.message : e2)
+      return FONTE_NULA
+    }
   }
 }
 
@@ -1038,13 +1073,22 @@ async function main(): Promise<void> {
 
   // Feed secundário TradeLocker (comparação; recurso só com ESPELHO_FEED_TL_RECURSO=1).
   feedTl = feedTradeLockerDoAmbiente({
-    simbolos: () => new Set([...simbolosDoProvider, ...simbolosDoEspelho, 'XAUUSD', 'EURUSD', 'BTCUSD']),
-    principal: (sym) => (precos[sym] ? { bid: precos[sym].bid, ask: precos[sym].ask, em: precoEm.get(sym) ?? 0 } : null),
+    // Sem MetaApi (fonte nula), a TradeLocker cobre TODOS os símbolos desejados — é o feed.
+    simbolos: () => (fonte === FONTE_NULA
+      ? simbolosDesejados()
+      : new Set([...simbolosDoProvider, ...simbolosDoEspelho, 'XAUUSD', 'EURUSD', 'BTCUSD'])),
+    // A idade é a do PRINCIPAL (principalEm): medir por precoEm — que as injeções do próprio
+    // recurso refrescam — sufocava o recurso a 1 tick/5 s.
+    principal: (sym) => (precos[sym] ? { bid: precos[sym].bid, ask: precos[sym].ask, em: principalEm.get(sym) ?? 0 } : null),
     pip: (sym) => simbolos.get(sym)?.pip_size ?? null,
     aoRecurso: (sym, c) => aoTickRecurso(sym, c.bid, c.ask, c.em),
     log,
   })
   feedTl?.iniciar()
+
+  // Cripto direto da Binance (grátis, 24/7) — injeta só quando o principal está velho; com a
+  // MetaApi em baixo é o pulso que mantém o motor e o WS vivos. BINANCE_FEED=0 desliga.
+  fonteBinance = iniciarFonteBinance({ precisa: principalVelho, injetar: aoTickRecurso, log })
 
   await carregarAlertas()
   repetir('avaliar', 250, cicloDeAvaliacao)
@@ -1071,6 +1115,7 @@ async function main(): Promise<void> {
     const estado = {
       ticksMin: ticksNoMinuto, contas: contas.size, feed: fonte.nome, semTicksMs: ultimoTickEm ? Date.now() - ultimoTickEm : null,
       escrita: CFG.escrita, tem072, simbolosRapidos: simbolosDoProvider.size, wsClientes: wsPrecos?.clientes() ?? null,
+      binance: fonteBinance?.resumo() ?? null,
       espelhoSeguidoras: { latenciaEventoEscrita: latenciaSeguidoras.resumo() },
       espelhoProvider: estadoProvider,
       feedTradeLocker: feedTl?.resumo() ?? null,
@@ -1095,6 +1140,7 @@ async function main(): Promise<void> {
   const sair = async () => {
     log('[motor] a parar')
     wsPrecos?.parar()
+    fonteBinance?.parar()
     await escreverPrecos().catch(() => undefined)
     await espelho?.parar().catch(() => undefined)
     await provider?.parar().catch(() => undefined)

@@ -166,3 +166,16 @@ O WebTrader liga-se lá quando a Vercel tiver `NEXT_PUBLIC_FUNDED_WS_URL=wss://s
 
 Teste rápido no VPS: `journalctl -u funded-motor | grep ws-precos` deve mostrar
 «a ouvir na porta 8787»; o [pulso] passa a incluir `wsClientes`.
+
+## Operar SEM MetaApi (2026-09-21 — créditos esgotados não param o sistema interno)
+
+O motor arranca mesmo com a MetaApi em baixo (fonte nula) e vive de dois recursos:
+- **Binance (cripto, default LIGADO)**: BTCUSD/ETHUSD por WebSocket público, tick a tick.
+  `BINANCE_FEED=0` desliga; pares em `BINANCE_PARES` (`BTCUSD:btcusdt,ETHUSD:ethusdt`).
+- **TradeLocker (forex/ouro/índices)**: pôr no `/etc/mtm-funded-motor.env`:
+  `ESPELHO_FEED_TL=1`, `ESPELHO_FEED_TL_RECURSO=1`, `TL_FEED_EMAIL/PASSWORD/SERVER/ENV/ACCOUNT_ID/ACCNUM`
+  (uma conta TradeLocker demo serve). Sem MetaApi, a ronda TL cobre TODOS os símbolos desejados.
+
+Os recursos só injetam quando o preço do feed principal tem >5 s — com a MetaApi viva não há
+duas fontes a lutar; morta, assumem sozinhos. Quando a MetaApi voltar, `systemctl restart
+funded-motor` devolve o streaming como principal.
