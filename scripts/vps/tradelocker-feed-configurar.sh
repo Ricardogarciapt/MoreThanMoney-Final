@@ -20,11 +20,14 @@ login() { # $1=base $2=servidor → imprime o accessToken (vazio se falhar)
 import json, os, sys, urllib.request
 req = urllib.request.Request(sys.argv[1] + "/auth/jwt/token", method="POST",
     data=json.dumps({"email": os.environ["TL_EMAIL"], "password": os.environ["TL_PASS"], "server": os.environ["TL_SERVER"]}).encode(),
-    headers={"Content-Type": "application/json"})
+    headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (compatible; MTM-Funded-Motor/1.0)", "Accept": "application/json"})
 try:
     print(json.load(urllib.request.urlopen(req, timeout=20)).get("accessToken", ""))
-except Exception:
+except urllib.error.HTTPError as e:
+    sys.stderr.write(f"  · {sys.argv[1].split('//')[1].split('.')[0]} / {os.environ['TL_SERVER']}: HTTP {e.code} {e.read()[:120].decode(errors='ignore')}\n")
     print("")
+except Exception as e:
+    sys.stderr.write(f"  · erro de rede: {e}\n"); print("")
 PY2
 }
 AMBIENTES=${TL_ENV:-"live demo"}
@@ -42,7 +45,7 @@ echo "✓ Login TradeLocker OK · ambiente ${TL_ENV} · servidor ${TL_SERVER}"
 
 CONTAS=$(TOKEN="$TOKEN" python3 - "$BASE" <<'PY2'
 import json, os, sys, urllib.request
-req = urllib.request.Request(sys.argv[1] + "/auth/jwt/all-accounts", headers={"Authorization": "Bearer " + os.environ["TOKEN"]})
+req = urllib.request.Request(sys.argv[1] + "/auth/jwt/all-accounts", headers={"Authorization": "Bearer " + os.environ["TOKEN"], "User-Agent": "Mozilla/5.0 (compatible; MTM-Funded-Motor/1.0)", "Accept": "application/json"})
 for a in json.load(urllib.request.urlopen(req, timeout=20)).get("accounts", []):
     print(f'{a.get("id")}\t{a.get("accNum")}\t{a.get("name","")}\t{a.get("currency","")}\t{a.get("status","")}')
 PY2
