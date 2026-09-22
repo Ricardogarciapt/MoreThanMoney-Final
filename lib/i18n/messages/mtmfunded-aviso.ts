@@ -74,7 +74,8 @@ export function frasesDoAviso(p: Pecas): Record<string, string> {
     [k("avaliacao_terminada.curto")]: `${p.simC} · ${p.term}`,
     [k("funded")]: `${p.conta} · ${F} · ${p.real}`,
     [k("funded.curto")]: `${p.fundedC} · ${p.real}`,
-    [k("real")]: `${p.conta} · ${F} · ${p.real}`,
+    // Conta real: sem «MTM Funded» pelo meio — «Conta · contém negociação real», nas duas larguras.
+    [k("real")]: `${p.conta} · ${p.real}`,
     [k("real.curto")]: `${p.conta} · ${p.real}`,
     [k("auditoria")]: `${p.contaF} · ${p.aud} · ${p.negReal}`,
     [k("auditoria.curto")]: `${F} · ${p.audC} · ${p.realC}`,

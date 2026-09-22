@@ -73,7 +73,8 @@ export function avisoDaConta(c: ContaParaAviso | null | undefined): AvisoConta {
       return 'funded'
     // Conta tipo `real` (19/09): capital do cliente ou do Fundo MTM, sem fases nem regras. Caía no
     // `geral` e o WebTrader dizia-lhe «Conta simulada educativa · MTM Funded» — o contrário do que
-    // a conta é. Fechada, vale o mesmo aviso das outras contas fechadas.
+    // a conta é. Passa a dizer «Conta · contém negociação real» (escolha do dono, 22/09, a ver a
+    // faixa estreita). Fechada, vale o aviso das outras contas fechadas.
     case 'real':
       return fechada || estado === 'aprovada' ? 'funded_encerrada' : 'real'
     case 'torneio':
