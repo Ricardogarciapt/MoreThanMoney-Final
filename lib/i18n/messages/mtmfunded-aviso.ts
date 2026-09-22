@@ -74,6 +74,8 @@ export function frasesDoAviso(p: Pecas): Record<string, string> {
     [k("avaliacao_terminada.curto")]: `${p.simC} · ${p.term}`,
     [k("funded")]: `${p.conta} · ${F} · ${p.real}`,
     [k("funded.curto")]: `${p.fundedC} · ${p.real}`,
+    [k("real")]: `${p.conta} · ${F} · ${p.real}`,
+    [k("real.curto")]: `${p.conta} · ${p.real}`,
     [k("auditoria")]: `${p.contaF} · ${p.aud} · ${p.negReal}`,
     [k("auditoria.curto")]: `${F} · ${p.audC} · ${p.realC}`,
     [k("funded_encerrada")]: `${p.conta} · ${F} · ${p.enc}`,

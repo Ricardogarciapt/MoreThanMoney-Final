@@ -33,6 +33,7 @@ export type AvisoConta =
   | 'avaliacao_concluida'
   | 'avaliacao_terminada'
   | 'funded'
+  | 'real'
   | 'auditoria'
   | 'funded_encerrada'
   | 'analise'
@@ -70,6 +71,11 @@ export function avisoDaConta(c: ContaParaAviso | null | undefined): AvisoConta {
       if (c.metricas?.analise === true || c.metricas?.analise === 'true') return 'analise'
       if (fechada || estado === 'aprovada') return 'funded_encerrada'
       return 'funded'
+    // Conta tipo `real` (19/09): capital do cliente ou do Fundo MTM, sem fases nem regras. Caía no
+    // `geral` e o WebTrader dizia-lhe «Conta simulada educativa · MTM Funded» — o contrário do que
+    // a conta é. Fechada, vale o mesmo aviso das outras contas fechadas.
+    case 'real':
+      return fechada || estado === 'aprovada' ? 'funded_encerrada' : 'real'
     case 'torneio':
       return 'torneio'
     case 'provider':
@@ -81,10 +87,10 @@ export function avisoDaConta(c: ContaParaAviso | null | undefined): AvisoConta {
 
 /** A chave do dicionário (lib/i18n/messages/mtmfunded.ts) — `.curto` para a faixa do telemóvel. */
 export function chaveDoAviso(a: AvisoConta | string | null | undefined, curto = false): string {
-  const valido: AvisoConta[] = ['avaliacao', 'avaliacao_concluida', 'avaliacao_terminada', 'funded', 'auditoria', 'funded_encerrada', 'analise', 'torneio', 'mestre', 'geral']
+  const valido: AvisoConta[] = ['avaliacao', 'avaliacao_concluida', 'avaliacao_terminada', 'funded', 'real', 'auditoria', 'funded_encerrada', 'analise', 'torneio', 'mestre', 'geral']
   const k = valido.includes(a as AvisoConta) ? (a as AvisoConta) : 'geral'
   return `mtmfunded.aviso.${k}${curto ? '.curto' : ''}`
 }
 
 /** A conta tem negociação real (pinta a faixa de outra cor): Funded de cliente e auditoria da casa. */
-export const avisoReal = (a: AvisoConta | string | null | undefined) => a === 'funded' || a === 'auditoria'
+export const avisoReal = (a: AvisoConta | string | null | undefined) => a === 'funded' || a === 'real' || a === 'auditoria'
