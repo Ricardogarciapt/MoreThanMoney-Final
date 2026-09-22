@@ -51,6 +51,9 @@ export interface ContaCentro {
   usos: string[]
   estrategias: string[]
   saldo: number | null
+  /** De onde vem o saldo: `atual` (motor MTM Funded), `referencia` (baseline_balance da ligação,
+   *  guardado ao ligar) ou `maximo` (o mais alto já visto — MTM Auto, serve para a isenção). */
+  saldoFonte: 'atual' | 'referencia' | 'maximo' | null
   equity: number | null
   ultimaActividade: string | null
   criadaEm: string | null
@@ -68,11 +71,17 @@ export async function carregarContas(): Promise<{ contas: ContaCentro[]; avisos:
   return { ...r.v, avisos: r.velho ? [...r.v.avisos, 'leitura nova falhou — a mostrar a última boa'] : r.v.avisos }
 }
 
+function saldoAuto(funded: number | undefined, site: number | undefined, maximo: number | null): { saldo: number | null; saldoFonte: ContaCentro['saldoFonte'] } {
+  if (funded != null) return { saldo: funded, saldoFonte: 'atual' }
+  if (site != null) return { saldo: site, saldoFonte: 'referencia' }
+  return { saldo: maximo, saldoFonte: maximo == null ? null : 'maximo' }
+}
+
 async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; lidaEm: string }> {
   const avisos: string[] = []
   const agora = Date.now()
   const [site, auto, wt, funded, subs, rotas, tenants, providers, infra] = await Promise.all([
-    ler(db().from('mtmcopy_connections').select('id, user_id, account_label, mt5_login, mt5_server, mt5_platform, mt5_status, is_active, last_error, last_signal_at, metaapi_account_id, purpose, t2t_enabled, account_role, copyfactory_strategy_pick, copyfactory_subscribed, copy_method, balance, tl_env, tl_acc_num, tl_server, tl_last_error, funded_account_id, created_at, updated_at').neq('mt5_status', 'disconnected').limit(3000)),
+    ler(db().from('mtmcopy_connections').select('id, user_id, account_label, mt5_login, mt5_server, mt5_platform, mt5_status, is_active, last_error, last_signal_at, metaapi_account_id, purpose, t2t_enabled, account_role, copyfactory_strategy_pick, copyfactory_subscribed, copy_method, baseline_balance, tl_env, tl_acc_num, tl_server, tl_last_error, funded_account_id, created_at, updated_at').neq('mt5_status', 'disconnected').limit(3000)),
     ler(db().from('mtmauto_accounts').select('id, user_id, metaapi_account_id, login, servidor, corretora, plataforma, estado, erro, tl_last_error, copia_ativa, rotulo, demo, saldo_maximo, saldo_visto_em, funded_account_id, created_at, updated_at').limit(3000)),
     ler(db().from('webtrader_contas_mt5').select('id, user_id, metaapi_account_id, plataforma, login, servidor, rotulo, estado, erro, created_at, updated_at').limit(3000)),
     lerFunded(),
@@ -129,6 +138,17 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     }
   }
 
+  // Saldos conhecidos por conta ligada — para as contas MTM Auto que não guardam o seu.
+  const saldoSitePorMetaApi = new Map<string, number>()
+  for (const c of site.linhas) { const acc = txt(c.metaapi_account_id); const s = num(c.baseline_balance); if (acc && s != null) saldoSitePorMetaApi.set(acc, s) }
+  const saldoFunded = new Map<string, number>()
+  const equityFunded = new Map<string, number>()
+  for (const f of funded.linhas) {
+    const s = num(f.sim_saldo); const e = num(f.sim_equity)
+    if (s != null) saldoFunded.set(String(f.id), s)
+    if (e != null) equityFunded.set(String(f.id), e)
+  }
+
   const base: Omit<ContaCentro, 'email' | 'nome' | 'plano' | 'motivoDireito' | 'temMtmAuto' | 'quota'>[] = []
   for (const c of site.linhas) {
     const plataforma = plat(c.mt5_platform)
@@ -148,7 +168,9 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
       metaapiAccountId: acc, metaapi: metaapi(acc, txt(c.mt5_status)),
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: acc, login: txt(c.mt5_login), plataforma, estado: txt(c.mt5_status) }),
       usos, estrategias: c.copyfactory_strategy_pick ? [String(c.copyfactory_strategy_pick)] : [],
-      saldo: num(c.balance), equity: null, ultimaActividade: txt(c.last_signal_at), criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
+      // `balance` nunca existiu nesta tabela: pedi-la fazia o select inteiro falhar e as contas
+      // T2T/site desapareciam do painel. O saldo guardado é o `baseline_balance`.
+      saldo: num(c.baseline_balance), saldoFonte: num(c.baseline_balance) == null ? null : 'referencia', equity: null, ultimaActividade: txt(c.last_signal_at), criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
     })
   }
   for (const c of auto.linhas) {
@@ -162,7 +184,10 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
       metaapiAccountId: acc, metaapi: metaapi(acc, txt(c.estado)),
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: acc, login: txt(c.login), plataforma, estado: txt(c.estado) }),
       usos: ['MTM Auto', ...(usosRota.get(`auto:${c.id}`) ?? [])], estrategias: estrategiasConta.get(String(c.id)) ?? [],
-      saldo: num(c.saldo_maximo), equity: null, ultimaActividade: txt(c.saldo_visto_em), criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
+      // Saldo actual da MTM Funded por trás, se houver; senão a referência da ligação do site com o
+      // mesmo id MetaApi; em último caso o `saldo_maximo` (o mais alto visto, não o actual).
+      ...saldoAuto(c.funded_account_id ? saldoFunded.get(String(c.funded_account_id)) : undefined, acc ? saldoSitePorMetaApi.get(acc) : undefined, num(c.saldo_maximo)),
+      equity: c.funded_account_id ? equityFunded.get(String(c.funded_account_id)) ?? null : null, ultimaActividade: txt(c.saldo_visto_em), criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
     })
   }
   for (const c of wt.linhas) {
@@ -173,7 +198,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
       estado: String(c.estado ?? '—'), ativa: true, demo: demoPeloNome(c.servidor), erro: txt(c.erro), erroEstado: erroActual(txt(c.erro), txt(c.updated_at), agora),
       metaapiAccountId: acc, metaapi: metaapi(acc, txt(c.estado)),
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: acc, login: txt(c.login), plataforma, estado: txt(c.estado) }),
-      usos: ['WebTrader', ...(usosRota.get(`wt:${c.id}`) ?? [])], estrategias: [], saldo: null, equity: null, ultimaActividade: null, criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
+      usos: ['WebTrader', ...(usosRota.get(`wt:${c.id}`) ?? [])], estrategias: [], saldo: null, saldoFonte: null, equity: null, ultimaActividade: null, criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
     })
   }
   for (const f of funded.linhas) {
@@ -190,7 +215,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
       erro: txt(f.quebrou_regra), erroEstado: f.quebrou_regra ? 'actual' : null, metaapiAccountId: txt(f.metaapi_account_id),
       metaapi: metaapi(txt(f.metaapi_account_id), f.motor === 'sim' ? 'simulada' : null), contaMetaApi: false,
       usos: [f.motor === 'sim' ? 'Simulada' : 'MT5', ...(mestre ? [`${mestre.rotulo} (motor: ${mestre.modo})`] : []), ...(f.segue_estrategia ? [`Segue ${f.segue_estrategia}`] : []), ...(f.aceita_t2t ? ['Aceita T2T'] : []), ...(usosRota.get(`funded:${f.id}`) ?? [])],
-      estrategias: f.segue_estrategia ? [String(f.segue_estrategia)] : [], saldo: num(f.sim_saldo), equity: num(f.sim_equity),
+      estrategias: f.segue_estrategia ? [String(f.segue_estrategia)] : [], saldo: num(f.sim_saldo), saldoFonte: num(f.sim_saldo) == null ? null : 'atual', equity: num(f.sim_equity),
       ultimaActividade: txt(f.sim_ultimo_dia), criadaEm: txt(f.created_at), atualizadaEm: txt(f.updated_at),
     })
   }

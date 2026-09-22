@@ -23,6 +23,72 @@ export function tomEstadoConta(c: ContaCentro) {
   return "ok" as const
 }
 
+/**
+ * Conta que segue o MTM Auto Premium, venha de onde vier: subscrição MTM Auto («MTM Auto Premium»),
+ * conta MTM Funded a seguir `premium-ouro`, rota do motor das mestres `premium-ouro`, ou a ligação
+ * do site subscrita à estratégia CopyFactory do Premium (MxsR).
+ */
+export function ehPremium(c: ContaCentro) {
+  return [...c.usos, ...c.estrategias].some((x) => /premium-ouro|MTM Auto Premium|\bMxsR\b/i.test(x))
+}
+
+const FONTE_SALDO: Record<string, { curto: string; titulo: string }> = {
+  atual: { curto: "", titulo: "saldo actual (motor MTM Funded)" },
+  referencia: { curto: "ref.", titulo: "saldo de referência guardado ao ligar a conta — não é o actual" },
+  maximo: { curto: "máx.", titulo: "o saldo mais alto já visto (MTM Auto) — não é o actual" },
+}
+
+export function SaldoCel({ c }: { c: ContaCentro }) {
+  if (c.saldo == null) return <span className="text-zinc-600">—</span>
+  const f = c.saldoFonte ? FONTE_SALDO[c.saldoFonte] : null
+  return <span title={f?.titulo}>{fmtNum(c.saldo, 2)}{f?.curto ? <span className="ml-1 text-[9.5px] text-zinc-500">{f.curto}</span> : null}</span>
+}
+
+/** A mesma conta pode vir de duas origens (a linha MTM Auto de uma MTM Funded e a própria MTM Funded). */
+function semRepetidas(contas: ContaCentro[]) {
+  const vistas = new Map<string, ContaCentro>()
+  const peso = (c: ContaCentro) => (c.origem === "funded" ? 3 : c.origem === "site" ? 2 : 1)
+  for (const c of contas) {
+    const chave = c.login ? `${c.plataforma}:${c.login}` : c.ref
+    const ja = vistas.get(chave)
+    if (!ja || peso(c) > peso(ja)) vistas.set(chave, c)
+  }
+  return [...vistas.values()]
+}
+
+function SubscritorasPremium({ contas, abrir }: { contas: ContaCentro[]; abrir: (ref: string) => void }) {
+  const lista = semRepetidas(contas.filter(ehPremium).filter((c) => c.categoria !== "mestre"))
+    .sort((a, b) => (b.saldo ?? -1) - (a.saldo ?? -1))
+  const comSaldo = lista.filter((c) => c.saldo != null)
+  const total = comSaldo.reduce((s, c) => s + (c.saldo ?? 0), 0)
+  const soActual = comSaldo.filter((c) => c.saldoFonte === "atual").length
+  const activas = lista.filter((c) => c.ativa).length
+  return (
+    <Painel titulo="Subscritoras do MTM Premium" sub={`${lista.length} contas · ${activas} activas · saldo somado ${fmtNum(total, 2)} · ${comSaldo.length} com saldo (${soActual} actuais; «ref.» = ao ligar, «máx.» = o mais alto visto)`}>
+      {lista.length === 0 ? <Vazio>Nenhuma conta a seguir o Premium.</Vazio> : (
+        <Tabela min={760}>
+          <thead><tr><th className={th}>Conta</th><th className={th}>Dono</th><th className={th}>Como segue</th><th className={th}>Estado</th><th className={th}>Saldo</th><th className={th}>Equity</th></tr></thead>
+          <tbody>
+            {lista.map((c) => (
+              <tr key={c.ref} className={trClic} onClick={() => abrir(c.ref)}>
+                <td className={td}>
+                  <p className="font-mono text-zinc-100">{c.plataforma.toUpperCase()} {c.login ?? "—"}</p>
+                  <p className="text-[10px] text-zinc-500">{c.servidor ?? "—"} · {c.origem} · {c.categoria}{c.demo ? " · demo" : ""}</p>
+                </td>
+                <td className={td}><p className="text-zinc-200">{c.nome ?? c.email ?? "—"}</p><p className="text-[10px] text-zinc-500">{c.email ?? ""}</p></td>
+                <td className={`${td} max-w-[260px] text-[10.5px] text-zinc-400`}>{[...c.usos, ...c.estrategias].filter((x) => /premium|MxsR/i.test(x)).join(" · ")}</td>
+                <td className={td}><Pilula tom={tomEstadoConta(c)}>{c.ativa ? c.estado : `${c.estado} · pausada`}</Pilula></td>
+                <td className={`${td} font-mono`}><SaldoCel c={c} /></td>
+                <td className={`${td} font-mono`}>{c.equity == null ? "—" : fmtNum(c.equity, 2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Tabela>
+      )}
+    </Painel>
+  )
+}
+
 export default function SeccaoContas() {
   const ctx = useCentroCtx()
   const { dados, erro, aCarregar, recarregar, lidoEm } = useCentro<DadosContas>(`/api/admin/centro/contas?v=${ctx.versao}`, 30_000)
@@ -57,6 +123,8 @@ export default function SeccaoContas() {
         <Azulejo rotulo="Acima da quota" valor={todas.filter((c) => c.quota.acima).length} tom={todas.some((c) => c.quota.acima) ? "aviso" : "neutro"} onClick={() => setProblema("quota")} />
         <Azulejo rotulo="MTM Funded" valor={todas.filter((c) => c.plataforma === "mtmfunded").length} sub={`${todas.filter((c) => c.categoria === "casa").length} da casa · ${todas.filter((c) => c.mestreDe).length} mestres de estratégia`} />
       </div>
+
+      {dados && <SubscritorasPremium contas={todas} abrir={(ref) => ctx.abrir({ tipo: "conta", id: ref })} />}
 
       <Painel titulo="Todas as contas" sub="T2T/site, MTM Auto, WebTrader e MTM Funded — estado guardado na base, sem chamadas à MetaApi. Clica para abrir a gaveta com acções." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
@@ -103,7 +171,7 @@ export default function SeccaoContas() {
                   </td>
                   <td className={`${td} font-mono`}>{c.contaMetaApi ? <span className={c.quota.acima ? "text-amber-300" : ""}>{c.quota.emUso}/{c.quota.limite ?? "∞"}</span> : <span className="text-zinc-600">n/a</span>}</td>
                   <td className={`${td} max-w-[240px] text-[10.5px] text-zinc-400`}>{[...c.usos, ...c.estrategias.filter((e) => !c.usos.some((u) => u.includes(e)))].join(" · ")}</td>
-                  <td className={`${td} font-mono`}>{c.saldo == null ? "—" : fmtNum(c.saldo, 2)}</td>
+                  <td className={`${td} font-mono`}><SaldoCel c={c} /></td>
                   <td className={`${td} font-mono`}>{c.ultimaActividade ? fmtIdade(idadeDe(c.ultimaActividade)) : "—"}</td>
                 </tr>
               ))}
