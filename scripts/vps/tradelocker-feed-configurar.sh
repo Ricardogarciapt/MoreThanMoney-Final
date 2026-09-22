@@ -8,40 +8,59 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-read -rp "Email da conta TradeLocker: " TL_EMAIL
-read -rsp "Password TradeLocker (não aparece): " TL_PASS; echo
-read -rp "Servidor TradeLocker (o que aparece no login, ex.: PUPrime-Demo): " TL_SERVER
-read -rp "Ambiente — demo ou live [demo]: " TL_ENV; TL_ENV=${TL_ENV:-demo}
-[[ "$TL_ENV" == "demo" || "$TL_ENV" == "live" ]] || { echo "Ambiente tem de ser demo ou live"; exit 1; }
-BASE="https://${TL_ENV}.tradelocker.com/backend-api"
+# Pré-preenchimento opcional: TL_EMAIL, TL_SERVER, TL_ENV (demo|live), TL_CONTA (ex.: L#853778)
+[ -n "${TL_EMAIL:-}" ] || read -rp "Email da conta TradeLocker: " TL_EMAIL
+read -rsp "Password TradeLocker de ${TL_EMAIL} (não aparece): " TL_PASS; echo
+[ -n "${TL_SERVER:-}" ] || read -rp "Servidor TradeLocker (o que aparece no login): " TL_SERVER
+CONTA_ALVO=$(printf '%s' "${TL_CONTA:-}" | sed -E 's/^[LlDd]#//')
 
-# login (credenciais passam por variáveis de ambiente, nunca por argumentos visíveis no ps)
-TOKEN=$(TL_EMAIL="$TL_EMAIL" TL_PASS="$TL_PASS" TL_SERVER="$TL_SERVER" python3 - "$BASE" <<'PY'
+# login: tenta o ambiente pedido (ou live e depois demo) e variantes do nome do servidor
+login() { # $1=base $2=servidor → imprime o accessToken (vazio se falhar)
+  TL_EMAIL="$TL_EMAIL" TL_PASS="$TL_PASS" TL_SERVER="$2" python3 - "$1" <<'PY2'
 import json, os, sys, urllib.request
 req = urllib.request.Request(sys.argv[1] + "/auth/jwt/token", method="POST",
     data=json.dumps({"email": os.environ["TL_EMAIL"], "password": os.environ["TL_PASS"], "server": os.environ["TL_SERVER"]}).encode(),
     headers={"Content-Type": "application/json"})
 try:
     print(json.load(urllib.request.urlopen(req, timeout=20)).get("accessToken", ""))
-except Exception as e:
-    print("", end=""); sys.stderr.write(f"login falhou: {e}\n")
-PY
-)
-[ -n "$TOKEN" ] || { echo "✗ Login TradeLocker falhou — confirma email, password, servidor e ambiente."; exit 1; }
-echo "✓ Login TradeLocker OK"
+except Exception:
+    print("")
+PY2
+}
+AMBIENTES=${TL_ENV:-"live demo"}
+SERVIDORES="$TL_SERVER $(printf '%s' "$TL_SERVER" | tr '[:lower:]' '[:upper:]') HeroFX"
+TOKEN=""
+for AMB in $AMBIENTES; do
+  for SRV in $SERVIDORES; do
+    T=$(login "https://${AMB}.tradelocker.com/backend-api" "$SRV")
+    if [ -n "$T" ]; then TOKEN=$T; TL_ENV=$AMB; TL_SERVER=$SRV; break 2; fi
+  done
+done
+[ -n "$TOKEN" ] || { echo "✗ Login TradeLocker falhou (tentei ${AMBIENTES} × ${SERVIDORES}) — confirma a password e o servidor."; exit 1; }
+BASE="https://${TL_ENV}.tradelocker.com/backend-api"
+echo "✓ Login TradeLocker OK · ambiente ${TL_ENV} · servidor ${TL_SERVER}"
 
-CONTAS=$(TOKEN="$TOKEN" python3 - "$BASE" <<'PY'
+CONTAS=$(TOKEN="$TOKEN" python3 - "$BASE" <<'PY2'
 import json, os, sys, urllib.request
 req = urllib.request.Request(sys.argv[1] + "/auth/jwt/all-accounts", headers={"Authorization": "Bearer " + os.environ["TOKEN"]})
 for a in json.load(urllib.request.urlopen(req, timeout=20)).get("accounts", []):
     print(f'{a.get("id")}\t{a.get("accNum")}\t{a.get("name","")}\t{a.get("currency","")}\t{a.get("status","")}')
-PY
+PY2
 )
 [ -n "$CONTAS" ] || { echo "✗ A conta não tem contas de negociação"; exit 1; }
-echo; echo "Contas disponíveis:"; echo "$CONTAS" | awk -F'\t' '{printf "  %d) id %s · accNum %s · %s %s %s\n", NR, $1, $2, $3, $4, $5}'
-read -rp "Qual usar para os preços [1]: " N; N=${N:-1}
-LINHA=$(echo "$CONTAS" | sed -n "${N}p"); [ -n "$LINHA" ] || { echo "Escolha inválida"; exit 1; }
+LINHA=""
+if [ -n "$CONTA_ALVO" ]; then
+  LINHA=$(echo "$CONTAS" | awk -F'\t' -v c="$CONTA_ALVO" '$1==c || $2==c || index($3,c)>0' | head -1)
+fi
+if [ -z "$LINHA" ]; then
+  echo; echo "Contas disponíveis:"; echo "$CONTAS" | awk -F'\t' '{printf "  %d) id %s · accNum %s · %s %s %s\n", NR, $1, $2, $3, $4, $5}'
+  read -rp "Qual usar para os preços [1]: " N; N=${N:-1}
+  LINHA=$(echo "$CONTAS" | sed -n "${N}p"); [ -n "$LINHA" ] || { echo "Escolha inválida"; exit 1; }
+fi
 TL_ACCOUNT_ID=$(echo "$LINHA" | cut -f1); TL_ACCNUM=$(echo "$LINHA" | cut -f2)
+echo; echo "Conta escolhida: id ${TL_ACCOUNT_ID} · accNum ${TL_ACCNUM} · $(echo "$LINHA" | cut -f3-4) (só leitura de preços, nunca ordens)"
+read -rp "Confirmar e ligar o feed na VPS? [S/n]: " OK; OK=${OK:-S}
+[[ "$OK" =~ ^[SsYy]$ ]] || { echo "Cancelado — nada foi alterado."; exit 0; }
 
 esc() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
 BLOCO=$(cat <<EOF
