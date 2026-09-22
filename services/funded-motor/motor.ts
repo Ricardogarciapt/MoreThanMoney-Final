@@ -1008,7 +1008,7 @@ function rapidos(): Set<string> {
 
 /** Fonte vazia: o motor arranca sem MetaApi e vive dos recursos (Binance cripto, TradeLocker). */
 const FONTE_NULA: FontePrecos = {
-  nome: 'nenhuma (MetaApi indisponível)',
+  nome: 'fontes próprias (sem MetaApi)',
   async iniciar() { /* nada a ligar */ },
   async definirSimbolos() { /* nada a subscrever */ },
   simbolosDaCorretora: () => [],
@@ -1028,7 +1028,20 @@ function comPrazo<T>(p: Promise<T>, ms: number, oque: string): Promise<T> {
 }
 const PRAZO_FONTE_MS = Number(process.env.MOTOR_PRAZO_FONTE_MS || 45_000)
 
+/**
+ * Doutrina do dono (21–22/09): a MetaApi serve SÓ para entregar ordens às contas MetaTrader dos
+ * clientes (slaves). Os preços do sistema interno vêm das fontes próprias (Binance, PAXG+gold-api,
+ * Yahoo, TradeLocker). Por defeito o motor nem tenta a MetaApi — mesmo com créditos carregados —
+ * e arranca logo (antes esperava 2 × 45 s pela MetaApi a cada arranque). MOTOR_PRECOS_METAAPI=1
+ * repõe o comportamento antigo (MetaApi como fonte principal, recursos como reserva).
+ */
+const PRECOS_METAAPI = process.env.MOTOR_PRECOS_METAAPI === '1'
+
 async function ligarFonte(): Promise<FontePrecos> {
+  if (!PRECOS_METAAPI) {
+    log('[feed] preços por fontes próprias (Binance · PAXG+gold-api · Yahoo · TradeLocker) — MetaApi só para entrega às contas dos clientes')
+    return FONTE_NULA
+  }
   const principal = new FonteStreaming(CFG.metaapiToken, CFG.contaPrecos, CFG.intervaloMs, CFG.intervaloRapidoMs)
   try {
     await comPrazo(principal.iniciar(aoTick), PRAZO_FONTE_MS, 'MetaApi streaming')
@@ -1104,10 +1117,24 @@ async function main(): Promise<void> {
     : null
 
   // Feed secundário TradeLocker (comparação; recurso só com ESPELHO_FEED_TL_RECURSO=1).
+  // Sem MetaApi (fonte nula) a TradeLocker cobre SÓ as classes sem outra fonte (índices, energia,
+  // matérias-primas, ações): ouro/prata já vêm do PAXG+gold-api, forex do Yahoo, cripto da Binance —
+  // duas corretoras a injetar o mesmo símbolo faziam o preço saltar. Os índices principais entram
+  // sempre (TL_FEED_SIMBOLOS), senão um sinal de US30 chegava sem preço por ninguém o estar a ver.
+  // Nomes CANÓNICOS (US30), não os da fonte (DJ30.s): é o que o aoTickRecurso aceita.
+  const tlClasses = new Set((process.env.TL_FEED_CLASSES || 'indice,energia,commodity,acao,etf,obrigacao').split(',').map((c) => c.trim()))
+  const tlFixos = (process.env.TL_FEED_SIMBOLOS || 'US30,NAS100,US500,GER40,UK100,USOIL,UKOIL').split(',').map((s) => s.trim()).filter(Boolean)
+  const tlSimbolosRecurso = (): Set<string> => {
+    const out = new Set<string>()
+    for (const s of [...tlFixos, ...canonicosDesejados()]) {
+      const sm = simbolos.get(s)
+      if (sm && tlClasses.has(String(sm.classe))) out.add(s)
+    }
+    return out
+  }
   feedTl = feedTradeLockerDoAmbiente({
-    // Sem MetaApi (fonte nula), a TradeLocker cobre TODOS os símbolos desejados — é o feed.
     simbolos: () => (fonte === FONTE_NULA
-      ? simbolosDesejados()
+      ? tlSimbolosRecurso()
       : new Set([...simbolosDoProvider, ...simbolosDoEspelho, 'XAUUSD', 'EURUSD', 'BTCUSD'])),
     // A idade é a do PRINCIPAL (principalEm): medir por precoEm — que as injeções do próprio
     // recurso refrescam — sufocava o recurso a 1 tick/5 s.

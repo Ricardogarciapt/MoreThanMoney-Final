@@ -14,7 +14,9 @@
  *    SL/TP de TODAS as contas simuladas com esse preço. Por defeito desligado.
  *
  * Variáveis: TL_FEED_EMAIL, TL_FEED_PASSWORD, TL_FEED_SERVER, TL_FEED_ENV (demo|live),
- * TL_FEED_ACCOUNT_ID, TL_FEED_ACCNUM, ESPELHO_FEED_TL_MS (intervalo entre rondas, defeito 2000).
+ * TL_FEED_ACCOUNT_ID, TL_FEED_ACCNUM, ESPELHO_FEED_TL_MS (intervalo entre rondas, defeito 2000),
+ * TL_FEED_PARALELO (pedidos em simultâneo por ronda, defeito 4 — com a ronda em série, cada índice
+ * só se refrescava a cada N × RTT e ficava acima dos 5 s que a execução exige).
  */
 import { TradeLockerSessao, type TLEnv } from '../../lib/tradelocker/client'
 import { rankedBrokerSymbols } from '../../lib/mtmcopy/symbol-resolver'
@@ -43,7 +45,8 @@ export function feedTradeLockerDoAmbiente(o: OpcoesFeedTL): ComparadorTradeLocke
   }
   const env: TLEnv = process.env.TL_FEED_ENV === 'live' ? 'live' : 'demo'
   const sessao = new TradeLockerSessao({ email, password, server, env }, accountId, accNum)
-  return new ComparadorTradeLocker(sessao, o, Number(process.env.ESPELHO_FEED_TL_MS || 2000), process.env.ESPELHO_FEED_TL_RECURSO === '1')
+  return new ComparadorTradeLocker(sessao, o, Number(process.env.ESPELHO_FEED_TL_MS || 2000), process.env.ESPELHO_FEED_TL_RECURSO === '1',
+    Math.max(1, Number(process.env.TL_FEED_PARALELO || 4)))
 }
 
 export class ComparadorTradeLocker {
@@ -59,6 +62,7 @@ export class ComparadorTradeLocker {
     private o: OpcoesFeedTL,
     private intervaloMs: number,
     private recurso: boolean,
+    private paralelo = 1,
   ) {}
 
   iniciar(): void {
@@ -82,36 +86,42 @@ export class ComparadorTradeLocker {
   private async ciclo(): Promise<void> {
     while (this.ativo) {
       const inicio = Date.now()
-      for (const sym of [...this.o.simbolos()]) {
-        if (!this.ativo) break
-        try {
-          const inst = await this.instrumento(sym)
-          if (!inst) continue
-          const t0 = Date.now()
-          const q = await this.sessao.cotacao(inst.id, inst.rotaInfo)
-          const rtt = Date.now() - t0
-          if (!(q.bid && q.ask)) continue
-          const c: Cotacao = { bid: q.bid, ask: q.ask, em: Date.now() }
-          this.ultimo.set(sym, c)
-          const principal = this.o.principal(sym)
-          const pip = this.o.pip(sym)
-          const a = pip ? amostraFeed(principal, c, pip, rtt) : null
-          if (a) {
-            const l = this.amostras.get(sym) ?? []
-            l.push(a)
-            if (l.length > 300) l.shift()
-            this.amostras.set(sym, l)
-          }
-          if (this.recurso && this.o.aoRecurso && usarRecurso(principal ? Date.now() - principal.em : null, true)) {
-            this.recursos++
-            this.o.aoRecurso(sym, c)
-          }
-        } catch (e) {
-          this.falhas++
-          if (this.falhas % 20 === 1) this.o.log(`[feed-tl] ${sym}:`, e instanceof Error ? e.message : e)
-        }
+      const lista = [...this.o.simbolos()]
+      let proximo = 0
+      const trabalhador = async () => {
+        while (this.ativo && proximo < lista.length) await this.umSimbolo(lista[proximo++])
       }
+      await Promise.all(Array.from({ length: Math.min(this.paralelo, lista.length) }, trabalhador))
       await new Promise((r) => setTimeout(r, Math.max(250, this.intervaloMs - (Date.now() - inicio))))
+    }
+  }
+
+  private async umSimbolo(sym: string): Promise<void> {
+    try {
+      const inst = await this.instrumento(sym)
+      if (!inst) return
+      const t0 = Date.now()
+      const q = await this.sessao.cotacao(inst.id, inst.rotaInfo)
+      const rtt = Date.now() - t0
+      if (!(q.bid && q.ask)) return
+      const c: Cotacao = { bid: q.bid, ask: q.ask, em: Date.now() }
+      this.ultimo.set(sym, c)
+      const principal = this.o.principal(sym)
+      const pip = this.o.pip(sym)
+      const a = pip ? amostraFeed(principal, c, pip, rtt) : null
+      if (a) {
+        const l = this.amostras.get(sym) ?? []
+        l.push(a)
+        if (l.length > 300) l.shift()
+        this.amostras.set(sym, l)
+      }
+      if (this.recurso && this.o.aoRecurso && usarRecurso(principal ? Date.now() - principal.em : null, true)) {
+        this.recursos++
+        this.o.aoRecurso(sym, c)
+      }
+    } catch (e) {
+      this.falhas++
+      if (this.falhas % 20 === 1) this.o.log(`[feed-tl] ${sym}:`, e instanceof Error ? e.message : e)
     }
   }
 
