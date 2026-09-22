@@ -88,11 +88,21 @@ export function normalizeNotificationPreferences(
   return base
 }
 
+// Canais de SINAIS (secção «Sinais & Ideias» do admin). Até 22/09 faltavam os canais novos
+// (Sensei, GoldKiller, Aurum Flow, Edge/Wolf/King, Forex Swings) e as mensagens deles contavam
+// como «Chat» — desligar Trade Ideas não os calava e desligar Chat calava sinais.
 const TRADE_IDEAS_CHANNELS = new Set([
   'trade_ideas',
   'trade-ideas',
   'trade-ideas-setup',
   'tradeideas',
+  'ideias-e-sinais',
+  'sensei-scanner',
+  'sinais-goldkiller',
+  'sinais-scanner-mtm',
+  'aurum-flow',
+  'cripto-perps',
+  'golden-moves',
 ])
 
 const TELEGRAM_GROUP_CHANNELS = new Set([
@@ -111,6 +121,13 @@ const APP_CHAT_CHANNELS = new Set([
   'etf-stocks',
   'general',
   'crypto',
+  'torneio',
+  'social-ugc',
+  'ia',
+  'fitness',
+  'mindset',
+  'lideranca',
+  'comunidade',
 ])
 
 export function resolveNotificationCategory(
@@ -124,7 +141,11 @@ export function resolveNotificationCategory(
   if (type === 'live_session') return 'live_sessions'
   if (type === 'dca_daily' || type === 'dca_opportunity' || type === 'price_alert') return 'dca'
   if (type === 'telegram_forward' || type === 'telegram_signal') return 'telegram_groups'
-  if (type === 'trade_ideas' || type === 'mtmcopy_signal') return 'trade_ideas'
+  // alertas de entrada/saída das ideias (TP, SL, BE) e alertas do TradingView: são Trade Ideas —
+  // sem categoria iam a toda a gente, com o interruptor desligado
+  if (type === 'trade_ideas' || type === 'mtmcopy_signal' || type === 'trade_outcome' || type === 'trade_alert') return 'trade_ideas'
+  // mensagens diretas e de grupo: «Chat da App — mensagens e menções»
+  if (type === 'message' || type === 'group_message') return 'chat'
   if (type === 'social_interaction' || type === 'social_mention') return null
 
   if (type === 'chat_message' || type === 'social_post') {
