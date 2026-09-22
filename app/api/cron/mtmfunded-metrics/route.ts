@@ -237,8 +237,18 @@ export async function GET(request: NextRequest) {
         continue
       }
 
+      /**
+       * CONTA MT5 LIDA PELO VPS (leitor-torneios.py, 22/09): sem MetaApi, quem lê é o terminal
+       * leitor do VPS de hora a hora e grava em `metricas` (fonte `leitor-mt5`). O snapshot vem
+       * daí em vez da MetaApi — daqui para baixo é tudo igual, incluindo as regras do torneio e a
+       * quebra. Sem este ramo, estas contas caíam no «sem conta emitida» e ficavam a 0% na
+       * classificação, com a conta a render 8% no MetaTrader.
+       */
+      const guardadoVps = (conta?.metricas ?? {}) as Record<string, unknown>
+      const doVps = !metaapiId && guardadoVps.fonte === 'leitor-mt5' && typeof guardadoVps.equity === 'number'
+
       // Sem conta emitida ainda: fica no fundo, sem resultado. Não é quebra.
-      if (!conta || !metaapiId || conta.estado !== 'ativa') {
+      if (!conta || (!metaapiId && !doVps) || conta.estado !== 'ativa') {
         linhas.push({
           participanteId: p.id, accountId: p.account_id, resultadoPct: 0,
           elegivel: false, quebrou: false, veredicto: null,
@@ -246,7 +256,16 @@ export async function GET(request: NextRequest) {
         continue
       }
 
-      const snap = await lerConta(metaapiId)
+      const num = (x: unknown) => (typeof x === 'number' ? x : undefined)
+      const snap = doVps
+        ? {
+            equity: Number(guardadoVps.equity),
+            saldo: Number(guardadoVps.saldo ?? guardadoVps.equity),
+            margem: num(guardadoVps.margemUsada) ?? num(guardadoVps.margem),
+            margemLivre: num(guardadoVps.margemLivre),
+            nivelMargem: num(guardadoVps.nivelMargem),
+          }
+        : await lerConta(metaapiId as string)
       if (!snap) {
         semResposta++
         // Mantém-se o que se sabia da última leitura. Uma leitura falhada não é uma perda.
