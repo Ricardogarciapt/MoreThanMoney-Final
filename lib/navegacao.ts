@@ -42,6 +42,15 @@ export type DestinoNavegacao = {
   /** Link para fora do site — não recebe vídeo de introdução. */
   externo?: boolean
   /**
+   * Cabeçalho da secção dentro do submenu (só nos menus grandes).
+   *
+   * O menu de Trading tem doze destinos: uma lista de doze linhas iguais obriga a pessoa a ler
+   * tudo de cima a baixo e a decidir por eliminação. Agrupados pelo que a pessoa quer FAZER
+   * («Negociar», «Sinais e análise», «Ferramentas»), encontra-se pelo sítio onde se olha — é o que
+   * distingue um menu que se lê de um que se percorre. Itens sem secção ficam soltos, como antes.
+   */
+  seccaoPt?: string
+  /**
    * Como o botão se lê neste destino: «Aprende a usar » + isto.
    * O admin pode reescrever por destino; isto é só o que aparece por omissão.
    */
@@ -68,23 +77,34 @@ export const DESTINOS_NAVEGACAO: DestinoNavegacao[] = [
   { id: 'live-sessions', href: '/live-sessions', chave: 'navfooter.subLiveSessions', rotuloPt: 'Live Sessions', grupo: 'educacao', comoUsar: 'as sessões ao vivo' },
   { id: 'avaliacoes', href: '/avaliacoes', chave: 'navfooter.subAvaliacoes', rotuloPt: 'Avaliações', grupo: 'educacao', comoUsar: 'as avaliações e certificados' },
 
+  /**
+   * TRADING — arrumado pelo que a pessoa vem fazer, e não pela ordem em que as páginas nasceram.
+   *
+   * Eram doze linhas iguais: para encontrar o WebTrader era preciso ler as doze. Agora abre-se em
+   * «Negociar» (onde se abre uma posição), «Sinais e análise» (onde se decide) e «Ferramentas e
+   * programas» (o que se instala ou se compra). Quem vem negociar vê o WebTrader na primeira linha.
+   */
   {
     id: 'automacao', href: '/automation', chave: 'navfooter.navTrading', rotuloPt: 'Trading',
     grupo: 'trading', topo: true, comoUsar: 'a automatização',
     chaveSubmenu: 'navfooter.subAutomation', rotuloSubmenuPt: 'Automatização',
+    seccaoPt: 'Ferramentas e programas',
   },
-  { id: 'mtmauto', href: '/mtmauto', rotuloPt: 'MTM Auto', grupo: 'trading', comoUsar: 'o MTM Auto' },
-  { id: 'scanners', href: '/scanner', chave: 'navfooter.subOurScanners', rotuloPt: 'Os nossos Scanners', grupo: 'trading', comoUsar: 'os nossos scanners' },
-  { id: 'scanner-ao-vivo', href: '/scanner-access', chave: 'navfooter.subLiveScanner', rotuloPt: 'Scanner ao Vivo', grupo: 'trading', comoUsar: 'o nosso scanner ao vivo' },
-  { id: 'alertas-mtm', href: '/alertas-mtm', chave: 'navfooter.subMtmAlerts', rotuloPt: 'Alertas MTM', grupo: 'trading', comoUsar: 'os alertas MTM' },
-  { id: 'portfolios', href: '/portfolios', chave: 'navfooter.subPortfolios', rotuloPt: 'Portefólios', grupo: 'trading', comoUsar: 'os portefólios' },
-  { id: 'mtm-terminal', href: '/mtm-terminal', chave: 'navfooter.subMtmTerminal', rotuloPt: 'Terminal MTM', grupo: 'trading', comoUsar: 'o Terminal MTM' },
-  { id: 'trading-desk', href: '/trading', chave: 'navfooter.subTradingDesk', rotuloPt: 'Trading Desk', grupo: 'trading', comoUsar: 'o Trading Desk' },
-  { id: 'sensei-ea', href: '/sensei-ea', rotuloPt: 'MTM Sensei EA', grupo: 'trading', comoUsar: 'o MTM Sensei EA' },
-  { id: 'sensei-scalp', href: '/sensei-scalp', rotuloPt: 'Sensei Scalp Edition', grupo: 'trading', comoUsar: 'o Sensei Scalp Edition' },
+  { id: 'webtrader', href: '/webtrader', rotuloPt: 'WebTrader', grupo: 'trading', seccaoPt: 'Negociar', comoUsar: 'o WebTrader' },
+  { id: 'mtmauto', href: '/mtmauto', rotuloPt: 'MTM Auto', grupo: 'trading', seccaoPt: 'Negociar', comoUsar: 'o MTM Auto' },
+  { id: 'trading-desk', href: '/trading', chave: 'navfooter.subTradingDesk', rotuloPt: 'Trading Desk', grupo: 'trading', seccaoPt: 'Negociar', comoUsar: 'o Trading Desk' },
+  { id: 'mtm-terminal', href: '/mtm-terminal', chave: 'navfooter.subMtmTerminal', rotuloPt: 'Terminal MTM', grupo: 'trading', seccaoPt: 'Negociar', comoUsar: 'o Terminal MTM' },
+
+  { id: 'alertas-mtm', href: '/alertas-mtm', chave: 'navfooter.subMtmAlerts', rotuloPt: 'Alertas MTM', grupo: 'trading', seccaoPt: 'Sinais e análise', comoUsar: 'os alertas MTM' },
+  { id: 'scanner-ao-vivo', href: '/scanner-access', chave: 'navfooter.subLiveScanner', rotuloPt: 'Scanner ao Vivo', grupo: 'trading', seccaoPt: 'Sinais e análise', comoUsar: 'o nosso scanner ao vivo' },
+  { id: 'scanners', href: '/scanner', chave: 'navfooter.subOurScanners', rotuloPt: 'Os nossos Scanners', grupo: 'trading', seccaoPt: 'Sinais e análise', comoUsar: 'os nossos scanners' },
+  { id: 'portfolios', href: '/portfolios', chave: 'navfooter.subPortfolios', rotuloPt: 'Portefólios', grupo: 'trading', seccaoPt: 'Sinais e análise', comoUsar: 'os portefólios' },
+
+  { id: 'sensei-ea', href: '/sensei-ea', rotuloPt: 'MTM Sensei EA', grupo: 'trading', seccaoPt: 'Ferramentas e programas', comoUsar: 'o MTM Sensei EA' },
+  { id: 'sensei-scalp', href: '/sensei-scalp', rotuloPt: 'Sensei Scalp Edition', grupo: 'trading', seccaoPt: 'Ferramentas e programas', comoUsar: 'o Sensei Scalp Edition' },
   // A entrada para o MTM Funded existe aqui, mas só neste sentido: lá dentro a marca é outra, com
   // navegação e rodapé próprios e sem caminho de volta. São dois negócios.
-  { id: 'mtmfunded', href: '/mtmfunded', rotuloPt: 'MTM Funded', grupo: 'trading', comoUsar: 'o MTM Funded' },
+  { id: 'mtmfunded', href: '/mtmfunded', rotuloPt: 'MTM Funded', grupo: 'trading', seccaoPt: 'Ferramentas e programas', comoUsar: 'o MTM Funded' },
 
   { id: 'onboarding', href: '/onboarding', chave: 'navfooter.navOnboarding', rotuloPt: 'Onboarding', grupo: 'topo', topo: true, comoUsar: 'o arranque' },
 
@@ -100,7 +120,7 @@ export type ItemNavbar = {
   name: string
   href: string
   external?: boolean
-  submenu?: Array<{ id: string; name: string; href: string; external?: boolean }>
+  submenu?: Array<{ id: string; name: string; href: string; external?: boolean; seccao?: string }>
 }
 
 /**
@@ -128,12 +148,27 @@ export function construirNavbar(traduzir: (chave: string) => string): ItemNavbar
           id: cabeca.id,
           name: rotulo(cabeca.chaveSubmenu, cabeca.rotuloSubmenuPt || cabeca.rotuloPt),
           href: cabeca.href,
+          seccao: cabeca.seccaoPt,
         }]
       : []
-    const submenu = [
+    // Com secções, a entrada da própria cabeça entra na secção dela (a «Automatização» é uma
+    // ferramenta, não o primeiro sítio onde se vai negociar); sem secções, fica à frente como
+    // sempre esteve.
+    const tudo = [
       ...proprio,
-      ...filhos.map((f) => ({ id: f.id, name: rotulo(f.chave, f.rotuloPt), href: f.href, external: f.externo })),
+      ...filhos.map((f) => ({ id: f.id, name: rotulo(f.chave, f.rotuloPt), href: f.href, external: f.externo, seccao: f.seccaoPt })),
     ]
+    const temSeccoes = tudo.some((x) => x.seccao)
+    // A ordem das secções é a do REGISTO (os filhos), não a da cabeça: senão «Automatização» —
+    // que é uma ferramenta — puxava a secção dela para cima e o WebTrader deixava de ser a
+    // primeira linha de quem vem negociar.
+    const ordem = [...new Set([
+      ...filhos.map((f) => f.seccaoPt ?? ''),
+      ...proprio.map((x) => x.seccao ?? ''),
+    ])]
+    const submenu = temSeccoes
+      ? ordem.flatMap((sec) => tudo.filter((x) => (x.seccao ?? '') === sec))
+      : tudo
     return {
       id: cabeca.id,
       name: rotulo(cabeca.chave, cabeca.rotuloPt),

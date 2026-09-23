@@ -28,6 +28,23 @@ const ICONES_NAV: Record<string, any> = {
   'apps-ia': Brain,
 }
 
+/**
+ * Cabeçalho de uma secção dentro de um submenu — «Negociar», «Sinais e análise»…
+ *
+ * Só aparece quando o item começa uma secção nova. Um menu de doze linhas iguais lê-se de cima a
+ * baixo; agrupado pelo que a pessoa quer fazer, encontra-se pelo sítio onde se olha.
+ */
+function CabecalhoSeccao({ texto, primeiro }: { texto: string; primeiro: boolean }) {
+  return (
+    <p
+      role="presentation"
+      className={`px-4 pb-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-mtm-primary/70 ${primeiro ? "pt-1.5" : "pt-3 mt-1 border-t border-white/5"}`}
+    >
+      {texto}
+    </p>
+  )
+}
+
 export default function Navbar() {
   const t = useT()
   const pathname = usePathname()
@@ -346,7 +363,11 @@ export default function Navbar() {
                       </button>
                       {openMobileSubmenu === item.name && (
                         <div className="pl-4 space-y-1 border-l-2 border-mtm-primary/30 ml-4">
-                          {item.submenu.map((subitem) => (
+                          {item.submenu.map((subitem, i) => (
+                            <div key={subitem.id || subitem.name}>
+                            {subitem.seccao && subitem.seccao !== item.submenu?.[i - 1]?.seccao && (
+                              <CabecalhoSeccao texto={subitem.seccao} primeiro={i === 0} />
+                            )}
                             <Link
                               key={subitem.name}
                               href={subitem.href}
@@ -361,6 +382,7 @@ export default function Navbar() {
                             >
                               {subitem.name}
                             </Link>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -413,7 +435,11 @@ export default function Navbar() {
             >
               <div className="rounded-xl border border-mtm-primary/30 bg-gradient-to-b from-black via-gray-950 to-black shadow-2xl shadow-black/50 ring-1 ring-mtm-primary/10 backdrop-blur-lg">
                 <div className="py-1.5">
-                  {openDesktopItem.submenu.map((subitem) => (
+                  {openDesktopItem.submenu.map((subitem, i) => (
+                    <div key={subitem.id || subitem.name}>
+                    {subitem.seccao && subitem.seccao !== openDesktopItem.submenu?.[i - 1]?.seccao && (
+                      <CabecalhoSeccao texto={subitem.seccao} primeiro={i === 0} />
+                    )}
                     <Link
                       key={subitem.name}
                       href={subitem.href}
@@ -427,6 +453,7 @@ export default function Navbar() {
                     >
                       {subitem.name}
                     </Link>
+                    </div>
                   ))}
                 </div>
               </div>
