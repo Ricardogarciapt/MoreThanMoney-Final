@@ -179,7 +179,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     const marcar = favorita !== entrada.id
     setFavorita(marcar ? entrada.id : null)
     try {
-      await gravarContaFavorita(marcar ? `mtmfunded:${entrada.id}` : null)
+      await gravarContaFavorita(marcar ? (entrada.real ? entrada.id : `mtmfunded:${entrada.id}`) : null)
     } catch (e) {
       setFavorita(favorita)
       setErroEtiqueta(e instanceof Error ? e.message : "não foi possível marcar a favorita")
@@ -302,6 +302,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                         ? <span className="ml-auto max-w-[130px] truncate text-[11px] font-semibold text-[#E9C46A]" title={t.etiquetaDoDono}>{t.etiquetaDoDono}</span>
                         : <span className="ml-auto truncate text-[10.5px] text-zinc-500">{t.real.rotulo ?? t.real.servidor ?? ""}</span>}
                     </button>
+                    {t.podeEtiquetar && <Estrela marcada={favorita === t.id} alternar={() => void alternarFavorita(t)} />}
                     <CampoEtiqueta
                       entrada={t}
                       aEditar={etiquetaEmEdicao === t.id}
@@ -324,14 +325,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                       {t.saldo != null && <span className="ml-auto font-mono text-zinc-400">{usd(t.equity ?? t.saldo)} $</span>}
                       {!t.propria && <span className="ml-auto text-[10.5px] text-sky-300">{t.modo}</span>}
                     </button>
-                    {t.propria && (
-                      <button type="button" aria-label={favorita === t.id ? "Tirar dos favoritos" : "Marcar como favorita"} aria-pressed={favorita === t.id}
-                        title={favorita === t.id ? "Favorita — abre primeiro" : "Marcar como favorita"}
-                        onClick={() => void alternarFavorita(t)}
-                        className="grid h-8 w-8 shrink-0 place-items-center rounded-md hover:bg-white/5 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11">
-                        <Star className={`h-4 w-4 ${favorita === t.id ? "fill-[#D2A63C] text-[#D2A63C]" : "text-zinc-600"}`} />
-                      </button>
-                    )}
+                    {t.propria && <Estrela marcada={favorita === t.id} alternar={() => void alternarFavorita(t)} />}
                     <CampoEtiqueta
                       entrada={t}
                       aEditar={etiquetaEmEdicao === t.id}
@@ -450,6 +444,17 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
  * `touch-action: none` é obrigatório — sem isso o telemóvel trata o gesto como scroll da lista e
  * o arrasto nunca chega a começar.
  */
+/** A estrela da conta favorita — a mesma nas MTM Funded e nas reais (o seletor mistura-as). */
+function Estrela({ marcada, alternar }: { marcada: boolean; alternar: () => void }) {
+  return (
+    <button type="button" aria-label={marcada ? "Tirar dos favoritos" : "Marcar como favorita"} aria-pressed={marcada}
+      title={marcada ? "Favorita — é esta que abre" : "Marcar como favorita"} onClick={alternar}
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-md hover:bg-white/5 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11">
+      <Star className={`h-4 w-4 ${marcada ? "fill-[#D2A63C] text-[#D2A63C]" : "text-zinc-600"}`} />
+    </button>
+  )
+}
+
 function Pega({ id, arrasto }: { id: string; arrasto: ArrastoLista }) {
   return (
     <span

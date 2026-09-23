@@ -318,6 +318,12 @@ export async function POST(request: NextRequest) {
   // tipo de ordem + SL/TP re-ancorados → placeOrder). Nunca lança (devolve o resultado agregável).
   const executeOnAccount = async (conn: (typeof targets)[number]): Promise<AcctResult> => {
     const label = conn.account_label || (conn.mt5_login_last4 ? `••${conn.mt5_login_last4}` : conn.id.slice(0, 6))
+    // QUANTO DEMOROU, por conta. «Tap to Trade sem atrasos» era uma queixa sem número: a ligação
+    // MetaApi fria chega a 55 s (CONNECT_TIMEOUT_MS) e não havia como distinguir isso de um
+    // mercado lento ou de um erro. Estes dois relógios ficam no registo de cada ordem e é com eles
+    // que se mede a passagem para o motor das mestres (que executa com a ligação já quente).
+    const t0 = Date.now()
+    let tPreparado = 0
     try {
       // Whitelist de símbolos por conta (match por FAMÍLIA — tolera sufixo da corretora).
       if (Array.isArray(conn.symbols_whitelist) && conn.symbols_whitelist.length) {
@@ -457,8 +463,11 @@ export async function POST(request: NextRequest) {
         return { account: label, connectionId: conn.id, ok: false, symbol: sSymbol, error: `mercado fechado (${mh.reason})` }
       }
       const orderReq: OrderRequest = { accountId: conn.metaapi_account_id ?? '', symbol: sSymbol, direction: sDirection, volume: lotFinal, orderType, openPrice, stopLoss: orderSl, takeProfit: orderTp, comment: 'TapToTrade MTM' }
+      tPreparado = Date.now() - t0
       const tlResult = tl?.sessao && tlCtx ? await colocarOrdemTL(tl.sessao, orderReq, tlCtx) : null
       const result = tlResult ?? (await placeOrder(orderReq))
+      // preparar = whitelist, claim, saldo, spec, sizing, níveis · corretora = a ordem em si
+      const tempos = `${(tPreparado / 1000).toFixed(1)}s+${((Date.now() - t0 - tPreparado) / 1000).toFixed(1)}s`
       if (tlResult?.qty) lotFinal = tlResult.qty
       const plataforma = tlResult ? ' [TradeLocker]' : ''
       await supabase.from('mtmcopy_signal_log').update({
@@ -467,8 +476,8 @@ export async function POST(request: NextRequest) {
         // TradeLocker: guarda o positionId (é por ele que a gestão fecha/move SL); sem ele, o orderId.
         broker_position_id: result.success ? ((tlResult?.positionId ?? result.orderId) ?? null) : null,
         detail: result.success
-          ? `Tap to Trade${plataforma} · ordem ${orderReq.orderType} · ${result.orderId ?? ''}${adjustedStops ? ' · SL/TP ajustado ao lado correto' : ''}`.trim()
-          : `Tap to Trade${plataforma} falhou: ${result.error ?? 'erro'}`,
+          ? `Tap to Trade${plataforma} · ordem ${orderReq.orderType} · ${result.orderId ?? ''}${adjustedStops ? ' · SL/TP ajustado ao lado correto' : ''} · ${tempos}`.trim()
+          : `Tap to Trade${plataforma} falhou: ${result.error ?? 'erro'} · ${tempos}`,
       }).eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id).then(undefined, (e) => console.error('[tap-to-trade] update log error:', e))
       return { account: label, connectionId: conn.id, ok: result.success, orderId: result.orderId, lot: lotFinal, symbol: result.brokerSymbol ?? sSymbol, sl: orderReq.stopLoss, tp: orderReq.takeProfit, error: result.success ? undefined : (result.error ?? 'erro') }
     } catch (e) {
