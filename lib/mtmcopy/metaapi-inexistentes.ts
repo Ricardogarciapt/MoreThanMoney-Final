@@ -38,6 +38,10 @@ export const CONTAS_METAAPI_APAGADAS: ReadonlySet<string> = new Set([
   'bd421604-2c44-4b31-bfa0-e7ef20c53fc3',
   // mtmauto_providers inativo (Gold Did Premium)
   '9dfb4df3-112d-4c7b-8d7d-b8cf97ca6fa6',
+  // mtmauto_accounts ATIVA a apontar para uma conta que já não existe (Alcy Landim, 26421512):
+  // 404 confirmado a 2026-09-23, e com rota de cópia viva a bater-lhe à porta a cada sinal. É este
+  // padrão — pedidos repetidos a contas apagadas — que estrangulou o token inteiro a 15/09.
+  'f6ac75f0-0c74-4ab2-8629-6c68d1e7e77d',
   // constantes antigas do código
   '0f38257a-ba12-4f6c-b20c-9139693b3674', // Copy Trader Ricardo Garcia (su0a)
   'a4ea0c45-3dd1-4b55-bd2a-7f44d8d6884b', // Aurum Flow (vT8w)
