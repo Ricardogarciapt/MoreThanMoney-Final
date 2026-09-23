@@ -201,7 +201,7 @@ async function lerEstrategias() {
   const desde14 = new Date(Date.now() - DIAS_SOMBRA * 86_400_000).toISOString().slice(0, 10)
   const somb = emSombra.length
     ? await ler(db().from('estrategia_sombra_dia').select('*').in('estrategia', emSombra.map((e) => e.slug)).gte('dia', desde14).order('dia', { ascending: false }).limit(DIAS_SOMBRA * emSombra.length))
-    : { linhas: [] as Linha[], semTabela: false, erro: null, contagem: null }
+    : { linhas: [] as Linha[], semTabela: false, semColuna: false, erro: null, contagem: null }
   const sombras: SombraCentro[] = emSombra.map((e) => {
     const linhas = somb.linhas.filter((l) => String(l.estrategia) === e.slug)
     return {

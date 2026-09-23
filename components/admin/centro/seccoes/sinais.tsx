@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from "react"
 import type { Sinal } from "@/lib/admin-centro/servidor/sinais"
 import { FONTES } from "@/lib/admin-centro/regras"
 import MtmcopySenderLog from "@/components/admin/mtmcopy-sender-log"
-import { Recolhivel } from "@/components/admin/mtmauto-copia/estrategias"
+
 import { useCentroCtx } from "../contexto"
-import { Aviso, Azulejo, BotaoLer, Chip, Painel, Tabela, Vazio, fmtIdade, fmtMs, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
+import { Azulejo, BotaoLer, Chip, Lista, Painel, Recolhivel, Tabela, fmtIdade, fmtMs, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
 
 const ESTADOS = [
   { id: "", nome: "Todos" },
@@ -64,9 +64,7 @@ export default function SeccaoSinais() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar no detalhe…" className="w-48 rounded-md border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-white placeholder:text-zinc-600" />
           {ctx.filtro.estrategia && <Chip activo onClick={() => ctx.irPara("sinais", {})}>estratégia ✕</Chip>}
         </div>
-        {erro && <Aviso tom="grave">{erro}</Aviso>}
-        {dados?.avisos?.length ? <div className="mb-2"><Aviso>{dados.avisos.join(" · ")}</Aviso></div> : null}
-        {!dados ? <Vazio>A ler…</Vazio> : s.length === 0 ? <Vazio>Nenhum sinal com estes filtros.</Vazio> : (
+        <Lista dados={dados} erro={erro} avisos={dados?.avisos} vazio={dados?.total === 0} textoVazio="Nenhum sinal nas últimas 24 h em nenhuma fonte." filtrada={s.length === 0}>
           <Tabela min={900}>
             <thead><tr><th className={th}>Há</th><th className={th}>Fonte</th><th className={th}>Símbolo</th><th className={th}>Estado</th><th className={th}>Fan-out</th><th className={th}>Latência p95</th><th className={th}>Resumo</th></tr></thead>
             <tbody>
@@ -99,7 +97,7 @@ export default function SeccaoSinais() {
               })}
             </tbody>
           </Tabela>
-        )}
+        </Lista>
       </Painel>
 
       <Recolhivel titulo="Log de sinais dos providers (clássico)" descricao="O registo de sempre por canal/estado, com a mensagem bruta.">

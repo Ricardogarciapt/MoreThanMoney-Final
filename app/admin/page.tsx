@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, Suspense } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
@@ -355,8 +356,21 @@ function AdminPageClient() {
                   (publicar, abrir inscrições, começar, terminar) e emitir os certificados. Com o
                   produto desligado, o /mtmfunded encaminha para os torneios e não mostra preços.
                 </p>
+                {/* O MESMO gestor vive também no Centro de Controlo, mas lá com a lista de contas,
+                    a equidade da casa e as ligações para o dono, a estratégia e as rotas. Quem
+                    procura uma conta deve ir para lá; aqui é o produto (vendas, torneios, regras). */}
+                <p className="text-sm text-gray-400 mt-2">
+                  À procura de uma <strong className="text-gray-300">conta</strong> (estado, saldo, dono, ficha)?{" "}
+                  <Link href="/admin/centro?s=funded" className="text-[#D2A63C] hover:underline">
+                    Centro de Controlo › MTM Funded
+                  </Link>{" "}
+                  tem a lista completa e a ficha de cada uma.
+                </p>
               </div>
               <MtmFundedManager />
+              {/* O relatório do espelho provider é de ESTRATÉGIAS, não do produto financiado — vive
+                  no Centro › Estratégias. Fica aqui enquanto o dono estiver habituado a encontrá-lo
+                  neste sítio; é o mesmo componente e os mesmos dados. */}
               <EspelhoProviderRelatorio />
             </div>
           )}

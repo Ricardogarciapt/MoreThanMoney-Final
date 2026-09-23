@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import type { UtilizadorCentro } from "@/lib/admin-centro/servidor/outros"
 import { nomeMotivo, type Tom } from "@/lib/admin-centro/regras"
 import { useCentroCtx } from "../contexto"
-import { Aviso, Azulejo, BotaoLer, Chip, Painel, Pilula, Tabela, Vazio, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
+import { Azulejo, BotaoLer, Chip, Filtros, Lista, Painel, Pilula, Tabela, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
 
 export type DadosUtilizadores = {
   utilizadores: UtilizadorCentro[]
@@ -58,14 +59,11 @@ export default function SeccaoUtilizadores() {
       </Painel>
 
       <Painel titulo="Utilizadores" accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
-        <div className="mb-3 flex flex-wrap items-center gap-1.5">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="email, nome, id…" className="w-56 rounded-md border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-white placeholder:text-zinc-600" />
+        <Filtros q={q} aoMudarQ={setQ} exemplo="email, nome, id…" contagem={lista.length} total={dados?.utilizadores.length}>
           {[["", "todos"], ["contas", "com contas"], ["semacesso", "contas sem direito"], ["legado", "legado MTM Copy"], ["quota", "acima da quota"], ["t2t", "com T2T"]].map(([id, nome]) => <Chip key={id} activo={so === id} onClick={() => setSo(id)}>{nome}</Chip>)}
           {motivo && <Chip activo onClick={() => setMotivo("")}>{nomeMotivo(motivo)} ✕</Chip>}
-          <span className="ml-auto text-[11px] text-zinc-500">{lista.length}</span>
-        </div>
-        {erro && <Aviso tom="grave">{erro}</Aviso>}
-        {!dados ? <Vazio>A ler…</Vazio> : lista.length === 0 ? <Vazio>Ninguém com estes filtros.</Vazio> : (
+        </Filtros>
+        <Lista dados={dados} erro={erro} vazio={dados?.utilizadores.length === 0} textoVazio="Nenhum utilizador." filtrada={lista.length === 0}>
           <Tabela min={960}>
             <thead><tr><th className={th}>Utilizador</th><th className={th}>Direito</th><th className={th}>MTM Auto</th><th className={th}>Legado</th><th className={th}>Contas · quota</th><th className={th}>T2T</th><th className={th}>Último login</th></tr></thead>
             <tbody>
@@ -82,7 +80,13 @@ export default function SeccaoUtilizadores() {
               ))}
             </tbody>
           </Tabela>
-        )}
+        </Lista>
+        {lista.length > 400 && <p className="mt-2 text-[11px] text-zinc-500">A mostrar os primeiros 400 — filtra para ver os restantes {fmtNum(lista.length - 400)}.</p>}
+        {/* Esta secção é de LEITURA (direitos, quota, contas, T2T). Aprovar, mudar categoria ou
+            plano continua a ser no gestor de utilizadores — e até aqui não se dizia onde era. */}
+        <p className="mt-3 text-[11px] text-zinc-500">
+          Aprovar, mudar tipo/categoria, packs e acessos: <Link href="/admin?tab=users" className="text-[#E9C46A] hover:underline">gestor de utilizadores</Link>.
+        </p>
       </Painel>
     </div>
   )

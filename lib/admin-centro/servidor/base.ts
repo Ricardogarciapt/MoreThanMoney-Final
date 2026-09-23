@@ -15,28 +15,64 @@ export const db = () => getSupabaseAdmin()
 
 export type Linha = Record<string, unknown>
 
-export function tabelaEmFalta(err: { code?: string; message?: string } | null | undefined): boolean {
-  if (!err) return false
+/**
+ * Tabela em falta e COLUNA em falta são coisas diferentes, e confundi-las já custou caro:
+ * pedir `balance` em `mtmcopy_connections` (coluna que nunca existiu) devolvia o mesmo que uma
+ * migração por aplicar — lista vazia, sem erro nenhum — e TODAS as contas T2T/site desapareciam
+ * do painel sem ninguém perceber porquê.
+ *
+ *  · `'tabela'` = migração por aplicar → o painel diz «pendente» e segue (não é avaria nossa).
+ *  · `'coluna'` = BUG NOSSO no select → tem de gritar, com a mensagem da base à frente.
+ */
+export type FalhaEsquema = 'tabela' | 'coluna' | null
+
+export function falhaDeEsquema(err: { code?: string; message?: string } | null | undefined): FalhaEsquema {
+  if (!err) return null
   const c = String(err.code ?? '')
-  if (c === 'PGRST205' || c === '42P01' || c === '42703' || c === 'PGRST204' || c === 'PGRST200') return true
-  return /does not exist|could not find|schema cache/i.test(String(err.message ?? ''))
+  const m = String(err.message ?? '')
+  // A coluna vem PRIMEIRO: as duas mensagens do PostgREST acabam em «schema cache» e a regra
+  // genérica de baixo apanharia as duas.
+  if (c === '42703' || c === 'PGRST204') return 'coluna'
+  if (/column .* does not exist|could not find the '[^']*' column/i.test(m)) return 'coluna'
+  if (c === 'PGRST205' || c === '42P01' || c === 'PGRST200') return 'tabela'
+  if (/relation .* does not exist|could not find the table|schema cache/i.test(m)) return 'tabela'
+  return null
+}
+
+/** Compatibilidade: só «tabela» conta como tabela em falta. */
+export function tabelaEmFalta(err: { code?: string; message?: string } | null | undefined): boolean {
+  return falhaDeEsquema(err) === 'tabela'
 }
 
 export interface Resultado<T = Linha> {
   linhas: T[]
   semTabela: boolean
+  /** O select pediu uma coluna que a base não tem — bug nosso, visível em `erro`. */
+  semColuna: boolean
   erro: string | null
   contagem: number | null
 }
+
+/** Tabela OU coluna em falta — para quem tenta um select mais rico e cai para um mais pobre. */
+export const semEsquema = (r: Resultado<unknown>): boolean => r.semTabela || r.semColuna
 
 /** Corre uma consulta PostgREST sem nunca lançar. */
 export async function ler<T = Linha>(q: PromiseLike<{ data: unknown; error: { code?: string; message?: string } | null; count?: number | null }>): Promise<Resultado<T>> {
   try {
     const r = await q
-    if (r.error) return { linhas: [], semTabela: tabelaEmFalta(r.error), erro: tabelaEmFalta(r.error) ? null : String(r.error.message ?? 'erro'), contagem: null }
-    return { linhas: (Array.isArray(r.data) ? r.data : r.data ? [r.data] : []) as T[], semTabela: false, erro: null, contagem: r.count ?? null }
+    if (r.error) {
+      const f = falhaDeEsquema(r.error)
+      return {
+        linhas: [],
+        semTabela: f === 'tabela',
+        semColuna: f === 'coluna',
+        erro: f === 'tabela' ? null : `${f === 'coluna' ? 'coluna inexistente no select: ' : ''}${String(r.error.message ?? 'erro')}`,
+        contagem: null,
+      }
+    }
+    return { linhas: (Array.isArray(r.data) ? r.data : r.data ? [r.data] : []) as T[], semTabela: false, semColuna: false, erro: null, contagem: r.count ?? null }
   } catch (e) {
-    return { linhas: [], semTabela: false, erro: e instanceof Error ? e.message : String(e), contagem: null }
+    return { linhas: [], semTabela: false, semColuna: false, erro: e instanceof Error ? e.message : String(e), contagem: null }
   }
 }
 

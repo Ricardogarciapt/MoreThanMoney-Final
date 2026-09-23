@@ -3,6 +3,9 @@
 import { useMemo, useState, type ReactNode } from "react"
 import { ChevronDown, Loader2 } from "lucide-react"
 import { Aviso, BotaoRecarregar, Etiqueta, Tabela, pedirAdmin, quando, td, th, useDadosAdmin } from "./comum"
+// O `Recolhivel` vivia AQUI e era importado por cinco secções do Centro — apagar esta página (que é
+// a antiga) partia o Centro inteiro. Mudou-se para components/admin/centro/ui.tsx, que é o sítio
+// das peças partilhadas; esta página importa-o de lá como toda a gente.
 
 type Flag = "devia_copiar_nao_copia" | "copia_estrategia_morta" | "pausada_mas_copia" | "conta_auto_parada" | "sem_estrategia_cf" | "copia_cortada"
 const TEXTO_FLAG: Record<Flag, string> = {
@@ -18,23 +21,6 @@ interface Seguidor { plataforma: "copyfactory" | "mtmauto" | "mtmfunded"; ref: s
 interface Linha { chave: string; nome: string; slug: string | null; strategyId: string | null; accountId: string | null; viva: boolean; seguidores: Seguidor[]; flags: Flag[]; servidaPeloMotor?: boolean }
 
 const NOME_PLAT = { copyfactory: "CopyFactory (MT4/MT5)", mtmauto: "MTM Auto", mtmfunded: "MTM Funded" }
-
-/** Secção recolhível para os painéis de afinação que já existiam. */
-export function Recolhivel({ titulo, descricao, children, aberto = false }: { titulo: string; descricao?: string; children: ReactNode; aberto?: boolean }) {
-  const [a, setA] = useState(aberto)
-  return (
-    <section className="rounded-xl border border-zinc-800">
-      <button type="button" onClick={() => setA(!a)} className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left">
-        <span>
-          <span className="block text-sm font-semibold text-zinc-200">{titulo}</span>
-          {descricao && <span className="block text-[11px] text-zinc-500">{descricao}</span>}
-        </span>
-        <ChevronDown className={`h-4 w-4 text-zinc-500 transition-transform ${a ? "rotate-180" : ""}`} />
-      </button>
-      {a && <div className="border-t border-zinc-800 p-4">{children}</div>}
-    </section>
-  )
-}
 
 export default function EstrategiasCopia({ afinacoes, topo }: { afinacoes?: ReactNode; topo?: ReactNode }) {
   const { dados, erro, aCarregar, recarregar } = useDadosAdmin<{ estrategias: Linha[]; emails: Record<string, string | null>; metaapiFalhou: boolean; lidaEm: string }>("/api/admin/mtmauto-copia/estrategias")

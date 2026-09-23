@@ -5,9 +5,9 @@ import type { ContaCentro } from "@/lib/admin-centro/servidor/contas"
 import { nomeMotivo } from "@/lib/admin-centro/regras"
 import ContasCopia from "@/components/admin/mtmauto-copia/contas"
 import MTMcopierManager from "@/components/admin/mtmcopier-manager"
-import { Recolhivel } from "@/components/admin/mtmauto-copia/estrategias"
+
 import { useCentroCtx } from "../contexto"
-import { Aviso, Azulejo, BotaoLer, Chip, Painel, Pilula, Tabela, Vazio, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
+import { Azulejo, BotaoLer, Chip, Filtros, Grupo, Lista, Painel, Pilula, Recolhivel, Tabela, Vazio, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
 
 export type DadosContas = { contas: ContaCentro[]; avisos: string[]; lidaEm: string }
 
@@ -127,18 +127,14 @@ export default function SeccaoContas() {
       {dados && <SubscritorasPremium contas={todas} abrir={(ref) => ctx.abrir({ tipo: "conta", id: ref })} />}
 
       <Painel titulo="Todas as contas" sub="T2T/site, MTM Auto, WebTrader e MTM Funded — estado guardado na base, sem chamadas à MetaApi. Clica para abrir a gaveta com acções." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
-        <div className="mb-3 flex flex-wrap items-center gap-1.5">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="email, login, servidor, etiqueta, id MetaApi…" className="w-64 rounded-md border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-white placeholder:text-zinc-600" />
+        <Filtros q={q} aoMudarQ={setQ} exemplo="email, login, servidor, etiqueta, id MetaApi…" contagem={lista.length} total={todas.length}>
           <Chip activo={!plataforma} onClick={() => setPlataforma("")}>todas</Chip>
           {PLATAFORMAS.map((p) => <Chip key={p} activo={plataforma === p} onClick={() => setPlataforma(p)}>{p}</Chip>)}
           <span className="mx-1 h-4 w-px bg-zinc-800" />
           {CATEGORIAS.map((c) => <Chip key={c} activo={categoria === c} onClick={() => setCategoria(categoria === c ? "" : c)}>{c}</Chip>)}
           {problema && <Chip activo onClick={() => setProblema("")}>filtro: {problema === "1" ? "com problema" : problema} ✕</Chip>}
-          <span className="ml-auto text-[11px] text-zinc-500">{lista.length} de {todas.length}</span>
-        </div>
-        {erro && <Aviso tom="grave">{erro}</Aviso>}
-        {dados?.avisos?.length ? <div className="mb-2"><Aviso>{dados.avisos.join(" · ")}</Aviso></div> : null}
-        {!dados ? <Vazio>A ler…</Vazio> : lista.length === 0 ? <Vazio>Nenhuma conta.</Vazio> : (
+        </Filtros>
+        <Lista dados={dados} erro={erro} avisos={dados?.avisos} vazio={todas.length === 0} textoVazio="Nenhuma conta ligada em nenhum produto." filtrada={lista.length === 0}>
           <Tabela min={1100}>
             <thead><tr><th className={th}>Conta</th><th className={th}>Dono · direito</th><th className={th}>Estado</th><th className={th}>MetaApi</th><th className={th}>Quota</th><th className={th}>Usos</th><th className={th}>Saldo</th><th className={th}>Actividade</th></tr></thead>
             <tbody>
@@ -177,15 +173,18 @@ export default function SeccaoContas() {
               ))}
             </tbody>
           </Tabela>
-        )}
+        </Lista>
+        {lista.length > 500 && <p className="mt-2 text-[11px] text-zinc-500">A mostrar as primeiras 500 — filtra para ver as restantes {fmtNum(lista.length - 500)}.</p>}
       </Painel>
 
-      <Recolhivel titulo="Contas com MetaApi ao vivo (clássico)" descricao="Lista com a fotografia da MetaApi (60 s), vista de posições e acções — lê a MetaApi, abrir só quando preciso.">
-        <ContasCopia />
-      </Recolhivel>
-      <Recolhivel titulo="Gestor detalhado por utilizador (clássico)" descricao="Lotes, prop firm, trailing, auditoria de risco, re-sync, testar MT5, últimos sinais.">
-        <MTMcopierManager highlightUserId={ctx.filtro.userId ?? null} />
-      </Recolhivel>
+      <Grupo titulo="Painéis clássicos" nota="Lêem a MetaApi ou fazem escritas — por isso ficam fechados; abre só quando precisares.">
+        <Recolhivel titulo="Contas com MetaApi ao vivo" descricao="Fotografia da MetaApi (60 s), vista de posições e acções.">
+          <ContasCopia />
+        </Recolhivel>
+        <Recolhivel titulo="Gestor detalhado por utilizador" descricao="Lotes, prop firm, trailing, auditoria de risco, re-sync, testar MT5, últimos sinais." aberto={Boolean(ctx.filtro.userId)}>
+          <MTMcopierManager highlightUserId={ctx.filtro.userId ?? null} />
+        </Recolhivel>
+      </Grupo>
     </div>
   )
 }

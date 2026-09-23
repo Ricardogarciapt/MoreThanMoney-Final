@@ -3,10 +3,10 @@
 import type { carregarCopia } from "@/lib/admin-centro/servidor/outros"
 import CopiaEntreContas from "@/components/admin/mtmauto-copia/copia-entre-contas"
 import EventosCopia from "@/components/admin/mtmauto-copia/eventos"
-import { Recolhivel } from "@/components/admin/mtmauto-copia/estrategias"
+
 import { CONFIRMACOES } from "@/lib/admin-centro/regras"
 import { useCentroCtx } from "../contexto"
-import { Aviso, Azulejo, BotaoLer, Botao, Painel, Pilula, fmtMs, fmtNum, pedirCentro, pedirPalavra, useCentro } from "../ui"
+import { Aviso, Azulejo, BotaoLer, Botao, Painel, Pilula, Recolhivel, fmtMs, fmtNum, pedirCentro, pedirPalavra, useCentro } from "../ui"
 
 type Copia = Awaited<ReturnType<typeof carregarCopia>>
 

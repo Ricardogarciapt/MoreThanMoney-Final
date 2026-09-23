@@ -3,7 +3,7 @@
 import { useState } from "react"
 import type { EstrategiaCentro, SombraCentro } from "@/lib/admin-centro/servidor/estrategias"
 import SombraEstrategias from "../sombra-estrategias"
-import EstrategiasCopia, { Recolhivel } from "@/components/admin/mtmauto-copia/estrategias"
+import EstrategiasCopia from "@/components/admin/mtmauto-copia/estrategias"
 import ProvidersEquipas from "@/components/admin/mtmauto-copia/providers-equipas"
 import MotorMestres from "@/components/admin/mtmauto-copia/motor-mestres"
 import EspelhoProviderRelatorio from "@/components/admin/espelho-provider-relatorio"
@@ -19,7 +19,7 @@ import MtmcopyTestPanel from "@/components/admin/mtmcopy-test-panel"
 import MtmcopyGlobalPerformance from "@/components/admin/mtmcopy-global-performance"
 import { useCentroCtx } from "../contexto"
 import { textoResumo90d, type Resumo90d } from "@/lib/mestres/painel"
-import { Aviso, Azulejo, BotaoLer, Chip, Painel, Pilula, Tabela, Vazio, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
+import { Aviso, Azulejo, BotaoLer, Chip, Filtros, Grupo, Lista, Painel, Pilula, Recolhivel, Tabela, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
 
 export type DadosEstrategias = { estrategias: EstrategiaCentro[]; sombras?: SombraCentro[]; sombraPendente?: boolean; veredictoPendente: boolean; fontePendente: boolean }
 
@@ -55,13 +55,12 @@ export default function SeccaoEstrategias() {
       {dados?.sombras && dados.sombras.length > 0 && <SombraEstrategias sombras={dados.sombras} pendente={dados.sombraPendente === true} />}
 
       <Painel titulo="Estratégias" sub="Quem executa (motor das mestres / CopyFactory / legado), seguidores por plataforma, métricas 90 d publicadas, ideias 30 d e divergências. Clica para abrir a gaveta." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
-        <div className="mb-3 flex flex-wrap gap-1.5">
+        <Filtros contagem={lista.length} total={todas.length}>
           <Chip activo={soDiv} onClick={() => setSoDiv(!soDiv)}>só com divergências</Chip>
           <Chip activo={verApagadas} onClick={() => setVerApagadas(!verApagadas)}>mostrar apagadas e abandonadas{abandonadas.length ? ` (${abandonadas.map((e) => e.nome).join(", ")})` : ""}</Chip>
-        </div>
-        {erro && <Aviso tom="grave">{erro}</Aviso>}
+        </Filtros>
         {dados?.veredictoPendente && <div className="mb-2"><Aviso tom="info">Veredicto do espelho (082) indisponível nesta base.</Aviso></div>}
-        {!dados ? <Vazio>A ler…</Vazio> : lista.length === 0 ? <Vazio>Nada a mostrar.</Vazio> : (
+        <Lista dados={dados} erro={erro} vazio={todas.length === 0} textoVazio="Nenhuma estratégia registada." filtrada={lista.length === 0}>
           <Tabela min={1120}>
             <thead><tr><th className={th}>Estratégia</th><th className={th}>Execução</th><th className={th}>Seguidores</th><th className={th} title="Catálogo da MTM Auto: trades reais fechadas em 90 dias, parciais pesadas — o número que os clientes vêem">90 d · publicado</th><th className={th} title="mtmauto_signals: tudo-ou-nada, sem parciais — sub-avalia. Diagnóstico interno, não publicar.">Ideias 30 d</th><th className={th}>Último sinal</th><th className={th}>Divergências</th></tr></thead>
             <tbody>
@@ -114,30 +113,37 @@ export default function SeccaoEstrategias() {
               ))}
             </tbody>
           </Tabela>
-        )}
+        </Lista>
       </Painel>
 
-      <div className="space-y-2">
-        <Recolhivel titulo="Reconciliação CopyFactory (lê a MetaApi)" descricao="Seguidores reais na CopyFactory, divergências e re-sync em lote com releitura — acção explícita, não corre sozinha.">
-          <EstrategiasCopia />
-        </Recolhivel>
-        <Recolhivel titulo="Espelho provider (caminho antigo) · relatório" descricao="Mestre MetaApi vs conta SIM trade a trade. Só enquanto a estratégia não passa o sinal directo à mestre SIM do motor (sinal em live desliga-o).">
-          <EspelhoProviderRelatorio />
-        </Recolhivel>
-        <Recolhivel titulo="Providers das equipas" descricao="Contas de estratégia agrupadas por equipa MTM Auto.">
-          <ProvidersEquipas />
-        </Recolhivel>
-        <Recolhivel titulo="Fontes · estado real"><MtmcopyFontesVivas /></Recolhivel>
+      {/* Eram doze acordeões seguidos, pela ordem em que foram sendo acrescentados: para achar um
+          lia-se a lista toda. Agora vão por PERGUNTA — o que ligo/desligo, de onde vêm os sinais,
+          para onde vão, e o que confiro — que é o que se sabe antes de clicar. */}
+      <Grupo titulo="Afinar" nota="Mexem no que a estratégia faz.">
         <Recolhivel titulo="Controlo das estratégias" descricao="Interruptores (com o estado no motor das mestres), receção por canal, modo Forex Swings, perps, trailing e desempenho.">
           <div className="space-y-6"><MtmcopyStrategyControl /><EstrategiasDesempenho /><TrailingEstrategias /></div>
         </Recolhivel>
-        <Recolhivel titulo="Saúde das ligações (regras de risco)"><MtmcopySubscriberHealth /></Recolhivel>
-        <Recolhivel titulo="Senders · Telegram e chats"><MtmcopyTelegramSenders /></Recolhivel>
-        <Recolhivel titulo="Rotas provider" aberto={Boolean(ctx.filtro.routeId)}><MtmcopyProviderPipeline initialRouteId={ctx.filtro.routeId ?? null} /></Recolhivel>
-        <Recolhivel titulo="Contas provider (mestre)"><MtmcopyProviderAccounts /></Recolhivel>
-        <Recolhivel titulo="Testes · provider e Telegram"><MtmcopyTestPanel /></Recolhivel>
+        <Recolhivel titulo="Testes · provider e Telegram" descricao="Ordem de teste na conta provider e mensagem de teste nos canais."><MtmcopyTestPanel /></Recolhivel>
+      </Grupo>
+
+      <Grupo titulo="De onde vêm os sinais" nota="As contas e os canais que produzem cada estratégia.">
+        <Recolhivel titulo="Fontes · estado real" descricao="Cada estratégia, a conta que a publica e o que a MetaApi diz sobre ela."><MtmcopyFontesVivas /></Recolhivel>
+        <Recolhivel titulo="Contas provider (mestre)" descricao="As contas de origem de cada estratégia."><MtmcopyProviderAccounts /></Recolhivel>
+        <Recolhivel titulo="Providers das equipas" descricao="Contas de estratégia agrupadas por equipa MTM Auto."><ProvidersEquipas /></Recolhivel>
+        <Recolhivel titulo="Senders · Telegram e chats" descricao="Para que canal sai cada estratégia."><MtmcopyTelegramSenders /></Recolhivel>
+        <Recolhivel titulo="Rotas provider" descricao="O caminho de cada rota, da origem ao canal." aberto={Boolean(ctx.filtro.routeId)}><MtmcopyProviderPipeline initialRouteId={ctx.filtro.routeId ?? null} /></Recolhivel>
+      </Grupo>
+
+      <Grupo titulo="Conferir" nota="Só leitura — nenhum destes painéis muda alguma coisa (o de cima lê a MetaApi quando lho pedes).">
+        <Recolhivel titulo="Reconciliação CopyFactory (lê a MetaApi)" descricao="Seguidores reais na CopyFactory, divergências e re-sync em lote com releitura — acção explícita, não corre sozinha.">
+          <EstrategiasCopia />
+        </Recolhivel>
+        <Recolhivel titulo="Saúde das ligações (regras de risco)" descricao="Multiplicador sem risco, T2T com grupos, sem baseline, MT5 em erro."><MtmcopySubscriberHealth /></Recolhivel>
+        <Recolhivel titulo="Espelho provider (caminho antigo) · relatório" descricao="Mestre MetaApi vs conta SIM trade a trade. Só enquanto a estratégia não passa o sinal directo à mestre SIM do motor (sinal em live desliga-o).">
+          <EspelhoProviderRelatorio />
+        </Recolhivel>
         <Recolhivel titulo="Visão global do sistema" descricao="Performance agregada (só admin)."><MtmcopyGlobalPerformance /></Recolhivel>
-      </div>
+      </Grupo>
     </div>
   )
 }

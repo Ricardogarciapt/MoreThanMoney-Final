@@ -7,7 +7,7 @@ import { CONTAS_METAAPI_APAGADAS } from '@/lib/mtmcopy/metaapi-inexistentes'
 import { ehErroDeQuotaTexto } from '@/lib/mtmcopy/erro-historico'
 import { carregarInfra } from './infra'
 import { lerProviders } from './sinais'
-import { db, ler, num, txt, type Linha } from './base'
+import { db, ler, num, semEsquema, txt, type Linha } from './base'
 import { lerEtiquetas } from '@/lib/contas/etiquetas-servidor'
 import { carregarPainelMestres } from '@/lib/mestres/servidor/painel-leitura'
 import { mestresPorConta } from '@/lib/mestres/painel'
@@ -105,7 +105,13 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
   const mestres = mestresPorConta((painel?.estrategias ?? []).map((e) => ({ conta_mestre_id: e.contaMestre?.id, slug: e.slug, nome: e.nome, modo: e.modo })))
   const rotasMotor = new Map<string, { slug: string; efectivo: string; tipo: string }>()
   for (const e of painel?.estrategias ?? []) for (const r of e.rotas) rotasMotor.set(r.id, { slug: e.slug, efectivo: r.efectivo, tipo: r.tipo })
-  for (const [n, x] of [['T2T/site', site], ['MTM Auto', auto], ['MTM Funded', funded]] as const) if (x.erro) avisos.push(`${n}: ${x.erro}`)
+  // Nenhuma lista desaparece em silêncio: toda a leitura que falhe diz o nome e o erro. A coluna
+  // inexistente entra aqui com «coluna inexistente no select: …» — era exactamente isto que faltava
+  // no dia em que as contas T2T/site sumiram.
+  for (const [n, x] of [
+    ['T2T/site', site], ['MTM Auto', auto], ['WebTrader', wt], ['MTM Funded', funded],
+    ['subscrições', subs], ['rotas de cópia', rotas], ['equipas', tenants],
+  ] as const) if (x.erro) avisos.push(`${n}: ${x.erro}`)
   if (wt.semTabela) avisos.push('WebTrader MT5 (076) por aplicar')
 
   const nomeProv = new Map(providers.map((p) => [String(p.id), String(p.nome ?? p.slug ?? '—')]))
@@ -236,14 +242,18 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
   return { contas, avisos, lidaEm: new Date().toISOString() }
 }
 
-/** Contas MTM Funded (simuladas e MT5) — tenta com as colunas da 084 (conta_casa…), cai sem elas. */
+/**
+ * Contas MTM Funded (simuladas e MT5) — tenta com as colunas da 084 (conta_casa…), cai sem elas.
+ * Aqui o degrau é DE PROPÓSITO por coluna (migração noutro ramo), por isso usa `semEsquema` e não
+ * `semTabela`: em toda a outra leitura do Centro uma coluna em falta é bug e tem de gritar.
+ */
 async function lerFunded() {
   const cols = 'id, user_id, tipo, mt5_login, servidor, estado, motor, quebrou_regra, metaapi_account_id, sim_saldo, sim_equity, sim_ultimo_dia, segue_estrategia, aceita_t2t, created_at, updated_at'
   // 109 (`conta_real_casa`) primeiro; sem ela, como antes — a conta real da casa só não se distingue.
   const real = await ler(db().from('mtm_trading_accounts').select(`${cols}, conta_casa, recolhe_todos_sinais, conta_real_casa`).order('created_at', { ascending: false }).limit(3000))
-  if (!real.semTabela) return real
+  if (!semEsquema(real)) return real
   const com = await ler(db().from('mtm_trading_accounts').select(`${cols}, conta_casa, recolhe_todos_sinais`).order('created_at', { ascending: false }).limit(3000))
-  if (!com.semTabela) return com
+  if (!semEsquema(com)) return com
   return ler(db().from('mtm_trading_accounts').select(cols).order('created_at', { ascending: false }).limit(3000))
 }
 

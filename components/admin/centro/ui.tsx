@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
-import { Loader2, RefreshCw, X } from "lucide-react"
+import { ChevronDown, Loader2, RefreshCw, X } from "lucide-react"
 import { adminApiCall } from "@/lib/admin-helpers"
 import { cn } from "@/lib/utils"
 import type { Tom } from "@/lib/admin-centro/regras"
@@ -287,5 +287,102 @@ export function Campo({ rotulo, children }: { rotulo: string; children: ReactNod
       <p className="text-[10px] uppercase tracking-wider text-zinc-500">{rotulo}</p>
       <div className="mt-0.5 break-words text-xs text-zinc-200">{children}</div>
     </div>
+  )
+}
+
+/**
+ * Secção recolhível dos painéis clássicos embebidos. Vivia em mtmauto-copia/estrategias.tsx e era
+ * importada por CINCO secções do Centro: apagar a página antiga partia o Centro inteiro. A peça
+ * partilhada tem de viver no sítio partilhado — a página antiga passa a importá-la daqui.
+ */
+export function Recolhivel({ titulo, descricao, children, aberto = false, etiqueta }: {
+  titulo: string; descricao?: string; children: ReactNode; aberto?: boolean; etiqueta?: ReactNode
+}) {
+  const [a, setA] = useState(aberto)
+  return (
+    <section className="rounded-xl border border-zinc-800">
+      <button type="button" onClick={() => setA(!a)} aria-expanded={a} className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left">
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-zinc-200">{titulo}</span>
+          {descricao && <span className="block text-[11px] text-zinc-500">{descricao}</span>}
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
+          {etiqueta}
+          <ChevronDown className={cn("h-4 w-4 text-zinc-500 transition-transform", a && "rotate-180")} />
+        </span>
+      </button>
+      {a && <div className="border-t border-zinc-800 p-4">{children}</div>}
+    </section>
+  )
+}
+
+/** Grupo de recolhíveis com um título de secção — para não deixar doze acordeões seguidos. */
+export function Grupo({ titulo, nota, children }: { titulo: string; nota?: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-baseline gap-2 px-1">
+        <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D2A63C]/80">{titulo}</h4>
+        {nota && <p className="text-[11px] text-zinc-500">{nota}</p>}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+// ── lista comum ─────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Barra de filtros das listas (pesquisa + filtros + contagem + botão de reler). Contas,
+ * Utilizadores e MTM Funded escreviam esta mesma barra cada uma à sua maneira, e a contagem
+ * aparecia em sítios diferentes.
+ */
+export function Filtros({ q, aoMudarQ, exemplo, children, contagem, total, accao }: {
+  q?: string; aoMudarQ?: (v: string) => void; exemplo?: string; children?: ReactNode
+  contagem?: number; total?: number; accao?: ReactNode
+}) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-1.5">
+      {aoMudarQ && (
+        <input
+          value={q ?? ""} onChange={(e) => aoMudarQ(e.target.value)} placeholder={exemplo ?? "Procurar…"}
+          className="w-60 rounded-md border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-white placeholder:text-zinc-600 focus:border-[#D2A63C]/50 focus:outline-none"
+        />
+      )}
+      {children}
+      <span className="ml-auto flex items-center gap-2 text-[11px] text-zinc-500">
+        {contagem != null && <span>{total != null && total !== contagem ? `${fmtNum(contagem)} de ${fmtNum(total)}` : fmtNum(contagem)}</span>}
+        {accao}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * Corpo de uma lista, com os MESMOS quatro estados em todo o Centro: a ler · erro · sem dados ·
+ * filtro sem resultados. Antes cada secção decidia a sua ordem, e havia listas que mostravam
+ * «Nenhuma conta» quando o que tinha acontecido era a leitura falhar.
+ */
+export function Lista({ dados, erro, avisos, vazio, textoVazio, filtrada, children }: {
+  /** `null`/`undefined` = ainda não chegou nada da API. */
+  dados: unknown
+  erro?: string | null
+  avisos?: string[] | null
+  /** Não há mesmo nada na base. */
+  vazio?: boolean
+  textoVazio?: ReactNode
+  /** Há linhas, mas os filtros deixaram zero — é MUITO diferente de «não há nada». */
+  filtrada?: boolean
+  children: ReactNode
+}) {
+  return (
+    <>
+      {erro && <div className="mb-2"><Aviso tom="grave">{erro}</Aviso></div>}
+      {avisos?.length ? <div className="mb-2"><Aviso>{avisos.join(" · ")}</Aviso></div> : null}
+      {dados == null
+        ? <Vazio>{erro ? "Sem dados para mostrar — corrige o erro acima e volta a ler." : "A ler…"}</Vazio>
+        : vazio ? <Vazio>{textoVazio ?? "Não há nada aqui."}</Vazio>
+        : filtrada ? <Vazio>Nada com estes filtros. Limpa-os para ver tudo.</Vazio>
+        : children}
+    </>
   )
 }
