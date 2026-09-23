@@ -13,6 +13,8 @@
  *    TradeLocker é fresco, injecta-o no motor (`aoRecurso`). ATENÇÃO: é outra corretora — fecha
  *    SL/TP de TODAS as contas simuladas com esse preço. Por defeito desligado.
  *
+ * TL_FEED_LIMITE_MS baixa o limite a partir do qual a cotação da TradeLocker entra (defeito 5000).
+ *
  * Variáveis: TL_FEED_EMAIL, TL_FEED_PASSWORD, TL_FEED_SERVER, TL_FEED_ENV (demo|live),
  * TL_FEED_ACCOUNT_ID, TL_FEED_ACCNUM, ESPELHO_FEED_TL_MS (intervalo entre rondas, defeito 2000),
  * TL_FEED_PARALELO (pedidos em simultâneo por ronda, defeito 4 — com a ronda em série, cada índice
@@ -46,7 +48,8 @@ export function feedTradeLockerDoAmbiente(o: OpcoesFeedTL): ComparadorTradeLocke
   const env: TLEnv = process.env.TL_FEED_ENV === 'live' ? 'live' : 'demo'
   const sessao = new TradeLockerSessao({ email, password, server, env }, accountId, accNum)
   return new ComparadorTradeLocker(sessao, o, Number(process.env.ESPELHO_FEED_TL_MS || 2000), process.env.ESPELHO_FEED_TL_RECURSO === '1',
-    Math.max(1, Number(process.env.TL_FEED_PARALELO || 4)))
+    Math.max(1, Number(process.env.TL_FEED_PARALELO || 4)),
+    Math.max(0, Number(process.env.TL_FEED_LIMITE_MS || 5000)))
 }
 
 export class ComparadorTradeLocker {
@@ -63,6 +66,15 @@ export class ComparadorTradeLocker {
     private intervaloMs: number,
     private recurso: boolean,
     private paralelo = 1,
+    /**
+     * A partir de que idade do preço PRINCIPAL é que o da TradeLocker entra.
+     *
+     * Estava fixo em 5 s e era isso que deixava o forex lento: o Yahoo entrega EURUSD a cada ~4 s,
+     * nunca passava dos 5, e a cotação da TradeLocker — que chega em menos de 2 — era medida e
+     * deitada fora. Com um limite mais baixo entra a mais fresca. ATENÇÃO: é outra corretora, e o
+     * preço dela fecha SL/TP nas contas simuladas; por isso é uma variável, não uma decisão minha.
+     */
+    private limiteRecursoMs = 5000,
   ) {}
 
   iniciar(): void {
@@ -115,7 +127,7 @@ export class ComparadorTradeLocker {
         if (l.length > 300) l.shift()
         this.amostras.set(sym, l)
       }
-      if (this.recurso && this.o.aoRecurso && usarRecurso(principal ? Date.now() - principal.em : null, true)) {
+      if (this.recurso && this.o.aoRecurso && usarRecurso(principal ? Date.now() - principal.em : null, true, this.limiteRecursoMs)) {
         this.recursos++
         this.o.aoRecurso(sym, c)
       }
