@@ -57,11 +57,17 @@ export async function encaminharPrimeverseParaEstrategia(s: SinalPrimeverse): Pr
     }
 
     if (s.kind === 'entry_hit') {
-      const contas = new Set<string>()
-      if (prov.funded_account_id) contas.add(String(prov.funded_account_id))
-      const { data: seguidoras } = await db.from('mtm_trading_accounts').select('id')
+      // conta → lote fixo (null = pelo saldo, lotePor1000 da estratégia).
+      const contas = new Map<string, number | null>()
+      if (prov.funded_account_id) contas.set(String(prov.funded_account_id), null)
+      const { data: seguidoras } = await db.from('mtm_trading_accounts').select('id, lote_fixo:metricas->>lote_fixo')
         .eq('motor', 'sim').eq('estado', 'ativa').ilike('segue_estrategia', est.slug).limit(2000)
-      for (const c of seguidoras ?? []) contas.add(String(c.id))
+      // `metricas.lote_fixo` é o lote que ESTA conta usa, venha o sinal com que tamanho vier: uma
+      // conta com capital da casa pode seguir a estratégia a 0,01 enquanto o saldo diria 0,06.
+      for (const c of seguidoras ?? []) {
+        const fixo = Number(c.lote_fixo)
+        contas.set(String(c.id), Number.isFinite(fixo) && fixo > 0 ? fixo : null)
+      }
       if (!contas.size) return { estrategia: est.slug, accao: 'entry_hit', skipped: 'sem_contas' }
 
       const chave = chaveDoSinal({ fonte: est.slug, msgId: s.setupMsgId, symbol: s.symbol, direcao: s.direction, entrada: s.entry, sl: s.sl })
@@ -70,9 +76,9 @@ export async function encaminharPrimeverseParaEstrategia(s: SinalPrimeverse): Pr
       // Em lotes de 10: mestre e seguidoras abrem no mesmo segundo, sem esgotar ligações à base.
       const ids = [...contas]
       for (let i = 0; i < ids.length; i += 10) {
-        resultados.push(...(await Promise.all(ids.slice(i, i + 10).map((accountId) => abrirSinalNaConta({
+        resultados.push(...(await Promise.all(ids.slice(i, i + 10).map(([accountId, loteFixo]) => abrirSinalNaConta({
           accountId, estrategia: est.slug, chave, impressao, fonte: est.slug, comentario: est.comentario,
-          symbol: s.symbol, direcao: s.direction, entrada: s.entry, sl: s.sl, tps: s.tps, cfg,
+          symbol: s.symbol, direcao: s.direction, entrada: s.entry, sl: s.sl, tps: s.tps, cfg, loteFixo,
         })))))
       }
       return { estrategia: est.slug, accao: 'entry_hit', contas: resultados }
