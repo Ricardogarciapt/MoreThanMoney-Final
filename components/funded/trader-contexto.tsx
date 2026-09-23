@@ -11,6 +11,7 @@ import FundedGrafico from "./funded-grafico"
 import type { Prefill } from "./funded-ticket"
 import type { OrdemGrafico, PosicaoGrafico } from "./grafico-tipos"
 import { RascunhoProvider, useRascunho, type PedidoOrdem } from "./rascunho-ordem"
+import ModalSinal from "./modal-sinal"
 import type { useAlertas } from "./funded-alertas"
 import type { useDiario } from "./funded-diario"
 
@@ -78,6 +79,9 @@ export function ProvedorRascunho({ t, ficha, volume, setVolume, children }: { t:
       onEnviar={(p) => t.enviarPedido(p, ficha.symbol)}
     >
       {children}
+      {/* A folha de confirmação de um sinal (scanner/ideia) vive aqui, dentro do rascunho: é dele
+          que tira os números que mostra — os mesmos do ticket, não uma segunda conta. */}
+      <ModalSinal nomeConta={t.dados?.conta?.login ? `Conta ${String(t.dados.conta.login)}` : null} />
     </RascunhoProvider>
   )
 }
