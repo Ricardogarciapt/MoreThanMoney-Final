@@ -285,6 +285,34 @@ caso('MTM Auto só entra com incluir_mtmauto; conta = a da subscrição, senão 
   assert.equal(r.rotas[0].destino_ref, 'auto:a2')
   assert.equal(r.rotas[0].pausada_motivo, 'cópia pausada na conta MTM Auto')
 })
+caso('sem direito ao MTM Auto não há rota — venha a pessoa por onde vier', () => {
+  // 23/09: três clientes com subscrição cancelada ou expirada estavam a executar em LIVE porque o
+  // direito só era verificado a quem seguia por GRUPO de Telegram. O mesmo cliente chegava a ter a
+  // mesma conta física bloqueada num caminho e aberta no outro.
+  const site = [
+    { id: 's1', user_id: 'sem-direito', copy_method: 'strategy', copyfactory_strategy_pick: 'Wl1B', lot_mode: 'risk_percent', lot_value: 0.5, mt5_login: '111', mt5_server: 'S' },
+    { id: 's2', user_id: 'paga', copy_method: 'strategy', copyfactory_strategy_pick: 'Wl1B', lot_mode: 'risk_percent', lot_value: 0.5, mt5_login: '222', mt5_server: 'S' },
+  ]
+  const subs = [
+    { id: 'sub1', user_id: 'sem-direito', provider_id: 'prov-gk', ativo: true, auto_aceitar: true, risco_pct: 1 },
+    { id: 'sub2', user_id: 'paga', provider_id: 'prov-gk', ativo: true, auto_aceitar: true, risco_pct: 1 },
+  ]
+  const contas = [
+    { id: 'a1', user_id: 'sem-direito', plataforma: 'mt5', login: '333', servidor: 'S', principal: true },
+    { id: 'a2', user_id: 'paga', plataforma: 'mt5', login: '444', servidor: 'S', principal: true },
+  ]
+  const r = planearRotasDaEstrategia({
+    estrategia: { ...ESTR, incluirMtmauto: true }, site: site as never, subsAuto: subs as never, contasAuto: contas as never,
+    semDireito: new Set(['sem-direito']),
+  })
+  const refs = r.rotas.map((x) => x.destino_ref)
+  assert.ok(refs.includes('site:s2'), 'quem paga continua a ter rota pela escolha da estratégia')
+  assert.ok(refs.includes('auto:a2'), 'quem paga continua a ter rota pela subscrição')
+  assert.ok(!refs.includes('site:s1'), 'sem direito: a escolha da estratégia não abre rota')
+  assert.ok(!refs.includes('auto:a1'), 'sem direito: a subscrição do MTM Auto não abre rota')
+  assert.ok(r.ignorados.some((i) => i.ref === 'site:s1' && /sem direito/.test(i.motivo)))
+  assert.ok(r.ignorados.some((i) => i.ref === 'sub:sub1' && /sem direito/.test(i.motivo)))
+})
 caso('escrita das rotas: cria, actualiza o que mudou, retira sem perder posições abertas', () => {
   const des = planearRotasDaEstrategia({ estrategia: ESTR, site: [{ id: 's1', user_id: 'u1', copy_method: 'strategy', copyfactory_strategy_pick: 'Wl1B', lot_mode: 'risk_percent', lot_value: 0.5, mt5_login: '111', mt5_server: 'S' }] as never, subsAuto: [], contasAuto: [] }).rotas
   const exist = (x: Partial<RotaExistente>): RotaExistente => ({ id: 'r', destino_chave: 'mt:111@s', destino_ref: 'site:s1', ativa: true, modo_lote: 'risco_pct', valor: 0.5, copiar_sl: true, copiar_tp: true, filtro_simbolos: [], max_abertas: null, pausada_motivo: null, abertas: 0, ...x })

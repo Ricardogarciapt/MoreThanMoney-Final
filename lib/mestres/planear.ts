@@ -188,7 +188,16 @@ export function planearRotasDaEstrategia(p: {
     const porGrupo = !porEstrategia && ligacaoSegueGrupoTelegram(l, e.gruposTelegram)
     if (!porEstrategia && !porGrupo) continue
     const ref = `site:${l.id}`
-    if (porGrupo && p.semDireito?.has(l.user_id)) { ignorados.push({ ref, motivo: 'grupo Telegram sem direito ao MTM Auto (a execução directa também não abria)' }); continue }
+    // SEM DIREITO NÃO SE ABRE — venha a pessoa por onde vier.
+    //
+    // Esta verificação só se aplicava a quem seguia por GRUPO de Telegram. Quem entrava pela
+    // escolha da estratégia (copyfactory_strategy_pick) ou por subscrição do MTM Auto passava ao
+    // lado dela, e a 23/09 havia três clientes com subscrição cancelada ou expirada a executar em
+    // LIVE — um deles com a MESMA conta física bloqueada num caminho e aberta no outro.
+    if (p.semDireito?.has(l.user_id)) {
+      ignorados.push({ ref, motivo: porGrupo ? 'grupo Telegram sem direito ao MTM Auto (a execução directa também não abria)' : 'sem direito ao MTM Auto (subscrição cancelada ou expirada)' })
+      continue
+    }
     const plataforma = plataformaSite(l)
     if (!plataforma) { ignorados.push({ ref, motivo: 'conta MTM Funded (segue pelo espelho simulado)' }); continue }
     if (l.mt5_status === 'disconnected') { ignorados.push({ ref, motivo: 'ligação desligada' }); continue }
@@ -214,6 +223,9 @@ export function planearRotasDaEstrategia(p: {
       if (s.provider_id !== e.providerId || s.auto_aceitar !== true) continue
       const conta = contaDaSubscricao(s, porUser.get(s.user_id) ?? [])
       const refSub = `sub:${s.id}`
+      // `mtmauto_subscriptions.ativo` é o que a pessoa escolheu; o DIREITO é o que ela paga. Uma
+      // subscrição que ficou `ativo=true` depois de o pagamento cair não pode abrir ordens.
+      if (p.semDireito?.has(s.user_id)) { ignorados.push({ ref: refSub, motivo: 'sem direito ao MTM Auto (subscrição cancelada ou expirada)' }); continue }
       if (!conta) { ignorados.push({ ref: refSub, motivo: 'subscrição sem conta real' }); continue }
       const ref = `auto:${conta.id}`
       const plataforma = plataformaAuto(conta)

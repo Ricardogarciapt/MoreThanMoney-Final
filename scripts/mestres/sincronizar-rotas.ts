@@ -23,7 +23,7 @@ async function main() {
   const { planearRotasDaEstrategia, planoDeEscrita } = await import('../../lib/mestres/planear')
   const { lerEstrategiaMestre } = await import('../../lib/mestres/tipos')
   const { seguidoresExtra } = await import('../../lib/mestres/premium')
-  const { ligacaoSegueGrupoTelegram } = await import('../../lib/mestres/planear')
+  const { ligacaoSegueGrupoTelegram, ligacaoSegueEstrategia } = await import('../../lib/mestres/planear')
   const { direitoMtmAuto } = await import('../../lib/entitlements')
   const db = getSupabaseAdmin()
 
@@ -43,16 +43,24 @@ async function main() {
     const e = lerEstrategiaMestre(linha)
     if (SO && e.slug.toLowerCase() !== SO.toLowerCase()) continue
     const extra = seguidoresExtra(e.slug)
-    // Seguidores por grupo Telegram (Premium): só com direito ao MTM Auto, como a execução directa exigia.
-    const semDireito = new Set<string>()
-    if (extra.gruposTelegram.length) {
-      const users = [...new Set(((site.data ?? []) as Array<Record<string, unknown>>)
-        .filter((l) => ligacaoSegueGrupoTelegram(l as never, extra.gruposTelegram)).map((l) => String(l.user_id)))]
-      for (const u of users) {
-        const tem = await direitoMtmAuto(u).then((d) => d.tem).catch(() => false)
-        if (!tem) semDireito.add(u)
+    // O DIREITO verifica-se a TODOS os candidatos a seguidor — não só aos do grupo de Telegram.
+    // Antes só se perguntava por quem entrava por grupo, e por isso quem entrava pela escolha da
+    // estratégia ou por subscrição do MTM Auto continuava a abrir ordens depois de a subscrição
+    // cair (três casos reais a 23/09). Uma pergunta por utilizador, em paralelo.
+    const candidatos = new Set<string>()
+    for (const l of (site.data ?? []) as Array<Record<string, unknown>>) {
+      if (ligacaoSegueGrupoTelegram(l as never, extra.gruposTelegram) || ligacaoSegueEstrategia(l as never, [...e.copyfactoryIds, ...extra.picks], e.slug)) {
+        candidatos.add(String(l.user_id))
       }
     }
+    for (const s of (subs.data ?? []) as Array<Record<string, unknown>>) {
+      if (String(s.provider_id) === e.providerId && s.ativo !== false) candidatos.add(String(s.user_id))
+    }
+    const semDireito = new Set<string>()
+    await Promise.all([...candidatos].map(async (u) => {
+      const tem = await direitoMtmAuto(u).then((d) => d.tem).catch(() => true) // erro de rede não corta ninguém
+      if (!tem) semDireito.add(u)
+    }))
     const plano = planearRotasDaEstrategia({
       estrategia: {
         providerId: e.providerId, slug: e.slug, nome: nomes.get(e.providerId) ?? e.slug, contaMestreId: e.contaMestreId,
