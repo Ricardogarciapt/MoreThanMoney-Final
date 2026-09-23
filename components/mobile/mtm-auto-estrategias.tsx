@@ -24,6 +24,8 @@ type Provedor = {
   descricao: string | null
   segue: boolean
   automatico?: boolean
+  /** A mesma configuração de risco do modal da app MTM Auto (a rota já a devolve). */
+  config?: { modoRisco: string; riscoPct: number | null } | null
   /**
    * A linha tal e qual veio da MTM Auto. O cartão lê a percentagem DAQUI — antes vinha da
    * reposição (`/api/mtm-auto/desempenho`) e a mesma estratégia dizia 35% aqui e 71% na MTM Auto.
@@ -356,6 +358,55 @@ function Interruptor({
   )
 }
 
+/**
+ * A FOLHA DO RISCO — o essencial do modal de configuração da app MTM Auto.
+ *
+ * Três modos, como lá: o risco da conta (o que estiver definido na conta), uma percentagem por
+ * sinal, ou lote fixo. Guardar aqui escreve na MESMA subscrição que a MTM Auto lê — não há uma
+ * segunda configuração a discordar da primeira. Ligar o automático continua a ser só na MTM Auto.
+ */
+function FolhaRisco({ config, ocupado, aoGuardar }: {
+  config: { modoRisco: string; riscoPct: number | null } | null
+  ocupado: boolean
+  aoGuardar: (modoRisco: string, riscoPct: number | null) => void
+}) {
+  const [modo, setModo] = useState(config?.modoRisco ?? "conta")
+  const [pct, setPct] = useState(config?.riscoPct == null ? "" : String(config.riscoPct))
+  const modos: Array<[string, string]> = [["conta", "Risco da conta"], ["percent", "% por sinal"], ["lote", "Lote fixo"]]
+  const valor = Number(pct.replace(",", "."))
+  const pctInvalida = modo === "percent" && (!Number.isFinite(valor) || valor < 0.1 || valor > 5)
+  return (
+    <div className="mt-2 rounded-xl border border-zinc-800 bg-black/30 p-2.5">
+      <div className="flex gap-1">
+        {modos.map(([m, rot]) => (
+          <button key={m} type="button" onClick={() => setModo(m)}
+            className={`flex-1 rounded-lg px-2 py-1.5 text-[11.5px] font-semibold ${modo === m ? "bg-[#D2A63C] text-black" : "text-zinc-300"}`}>
+            {rot}
+          </button>
+        ))}
+      </div>
+      {modo === "percent" && (
+        <div className="mt-2 flex items-center gap-2">
+          <input inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} placeholder="1"
+            aria-label="risco por sinal em percentagem"
+            className="w-full rounded-lg border border-zinc-800 bg-black/40 px-2.5 py-2 text-right font-mono text-[14px] text-white outline-none focus:border-[#D2A63C]" />
+          <span className="w-4 text-[12px] text-zinc-500">%</span>
+        </div>
+      )}
+      <p className="mt-1.5 text-[11px] leading-snug text-zinc-500">
+        {modo === "conta" && "Cada sinal usa o risco definido na conta que executa."}
+        {modo === "percent" && "Cada sinal arrisca esta percentagem do saldo (entre 0,1% e 5%)."}
+        {modo === "lote" && "Cada sinal abre com o lote fixo definido na conta."}
+      </p>
+      <button type="button" disabled={ocupado || pctInvalida}
+        onClick={() => aoGuardar(modo, modo === "percent" ? valor : null)}
+        className="mt-2 w-full rounded-xl bg-[#D2A63C] py-2 text-[12.5px] font-bold text-black disabled:opacity-40">
+        {ocupado ? "A guardar…" : "Guardar risco"}
+      </button>
+    </div>
+  )
+}
+
 export default function MtmAutoEstrategias({
   fontes = [],
   onToggleFonte,
@@ -378,6 +429,10 @@ export default function MtmAutoEstrategias({
   const [aviso, setAviso] = useState<string | null>(null)
 
   // ── Controlo ADMIN (pausar cópia por estratégia · ligar/desligar fontes T2T) ──
+  /** A estratégia cujo risco se está a afinar (folha em baixo), como no modal da MTM Auto. */
+  const [aRiscar, setARiscar] = useState<string | null>(null)
+  /** Porque é que a lista veio vazia: sem direito, ou a leitura falhou. Não é a mesma coisa. */
+  const [semEstrategias, setSemEstrategias] = useState<{ motivo: string; erro: boolean } | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminCtl, setAdminCtl] = useState<AdminControls | null>(null)
   const [adminBusy, setAdminBusy] = useState<string | null>(null)
@@ -432,6 +487,13 @@ export default function MtmAutoEstrategias({
         cache: "no-store",
       })
       const j = await r.json()
+      // Distinguir «não tens direito» de «não consegui ler»: dizer Premium/VIP a quem JÁ é VIP
+      // manda a pessoa comprar o que já comprou, e esconde uma avaria nossa.
+      if (!r.ok || j?.error) {
+        setSemEstrategias({ motivo: String(j?.error ?? `a leitura falhou (${r.status})`), erro: r.status >= 500 || !j?.error })
+      } else {
+        setSemEstrategias((j.providers ?? []).length === 0 ? { motivo: "Sem estratégias disponíveis para esta conta.", erro: false } : null)
+      }
 
       /**
        * O desempenho vem do CATÁLOGO da MTM Auto — o mesmo número que a app MTM Auto mostra.
@@ -448,6 +510,7 @@ export default function MtmAutoEstrategias({
             descricao: (p.descricao as string) ?? null,
             segue: p.segue === true || p.seguido === true,
             automatico: p.automatico === true || p.autoAceitar === true,
+            config: (p.config as Provedor["config"]) ?? null,
             catalogo: p as unknown as ProvedorMtmAuto,
           }
         }),
@@ -476,6 +539,28 @@ export default function MtmAutoEstrategias({
       setProvs((xs) => xs.map((x) => (x.id === p.id ? { ...x, segue: !p.segue } : x)))
     } catch (e) {
       setAviso(e instanceof Error ? e.message : "Não foi possível guardar.")
+    } finally {
+      setAMudar(null)
+    }
+  }
+
+  /** Guardar o risco desta estratégia — a mesma rota do seguir, com os campos do modal da MTM Auto. */
+  const guardarRisco = async (p: Provedor, modoRisco: string, riscoPct: number | null) => {
+    setAMudar(p.id)
+    setAviso(null)
+    try {
+      const tok = await token()
+      const r = await fetch("/api/mtm-auto/estrategias", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${tok}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ providerId: p.id, seguir: true, modoRisco, riscoPct }),
+      })
+      const j = await r.json()
+      if (j.error) throw new Error(j.error)
+      setProvs((xs) => xs.map((x) => (x.id === p.id ? { ...x, segue: true, config: { modoRisco, riscoPct } } : x)))
+      setARiscar(null)
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : "Não foi possível guardar o risco.")
     } finally {
       setAMudar(null)
     }
@@ -604,13 +689,16 @@ export default function MtmAutoEstrategias({
       )}
 
       {provs.length === 0 && fontes.length > 0 && (
-        <p className="px-1 py-2 text-[12px] leading-snug text-zinc-500">
-          As estratégias do MTM Auto são para membros Premium e VIP. As fontes acima continuam
-          tuas e a funcionar no Tap to Trade.
+        <p className={`px-1 py-2 text-[12px] leading-snug ${semEstrategias?.erro ? "text-rose-400" : "text-zinc-500"}`}>
+          {semEstrategias?.erro
+            ? `Não consegui ler as estratégias do MTM Auto: ${semEstrategias.motivo}. As fontes acima continuam a funcionar no Tap to Trade.`
+            : semEstrategias?.motivo && !/Premium/i.test(semEstrategias.motivo)
+              ? `${semEstrategias.motivo} As fontes acima continuam tuas e a funcionar no Tap to Trade.`
+              : "As estratégias do MTM Auto são para membros Premium e VIP. As fontes acima continuam tuas e a funcionar no Tap to Trade."}
         </p>
       )}
 
-      {provs.map((p) => (
+      {[...provs].sort((a, b) => Number(b.segue) - Number(a.segue)).map((p) => (
         <div
           key={p.id}
           className="rounded-2xl border p-3"
@@ -658,12 +746,45 @@ export default function MtmAutoEstrategias({
                   <CurvaPips curva={p.catalogo.curva} mini />
                 </div>
               )}
-              {p.automatico && (
-                <p className="mt-1 text-[11.5px] text-[#D2A63C]">Automático ligado na app MTM Auto</p>
-              )}
+              {/* O ESTADO, dito por extenso — era o que faltava para este ecrã ser o da MTM Auto.
+                  «Automático» abre sozinho; «Manual» é seguir para aceitar no Tap to Trade; e o
+                  automático só se liga lá, que é a parte paga. */}
+              <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
+                {p.automatico ? (
+                  <span className="rounded-md bg-[#D2A63C]/15 px-1.5 py-0.5 text-[#D2A63C]">Automático · abre sozinho</span>
+                ) : p.segue ? (
+                  <span className="rounded-md bg-[#28C878]/10 px-1.5 py-0.5 text-[#28C878]">Manual · aceitas no Tap to Trade</span>
+                ) : (
+                  <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-zinc-400">Não segues</span>
+                )}
+                {p.segue && (
+                  <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-zinc-300">
+                    {p.config?.modoRisco === "percent" && p.config?.riscoPct != null
+                      ? `Risco ${p.config.riscoPct}% por sinal`
+                      : p.config?.modoRisco === "lote" ? "Lote fixo"
+                      : p.config?.modoRisco === "multiplicador" ? "Múltiplo da mestre"
+                      : "Risco da conta"}
+                  </span>
+                )}
+              </p>
             </button>
             <Interruptor ligado={p.segue} ocupado={aMudar === p.id} onClick={() => alternar(p)} />
           </div>
+
+          {/* AFINAR O RISCO aqui, como no modal da MTM Auto — sem obrigar a sair da app. */}
+          {p.segue && (
+            <button type="button" onClick={() => setARiscar(aRiscar === p.id ? null : p.id)}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-800 py-2 text-[12px] font-semibold text-zinc-300">
+              <Settings2 className="h-3.5 w-3.5" /> {aRiscar === p.id ? "Fechar" : "Risco desta estratégia"}
+            </button>
+          )}
+          {aRiscar === p.id && (
+            <FolhaRisco
+              config={p.config ?? null}
+              ocupado={aMudar === p.id}
+              aoGuardar={(modo, pct) => guardarRisco(p, modo, pct)}
+            />
+          )}
         </div>
       ))}
 
