@@ -100,8 +100,11 @@ const COR_TOM: Record<Tom, { texto: string; fundo: string; borda: string; ponto:
   neutro: { texto: "text-zinc-300", fundo: "bg-zinc-800/60", borda: "border-zinc-700/60", ponto: "bg-zinc-500", traco: OURO },
 }
 
-export function Pilula({ tom = "neutro", vivo, children, title }: { tom?: Tom; vivo?: boolean; children: ReactNode; title?: string }) {
-  const c = COR_TOM[tom]
+/** «ouro» = nosso / em destaque (a fonte de cópia, a estratégia da casa) — não é um estado de saúde. */
+const COR_OURO = { texto: "text-[#E9C46A]", fundo: "bg-[#D2A63C]/12", borda: "border-[#D2A63C]/40", ponto: "bg-[#D2A63C]", traco: OURO }
+
+export function Pilula({ tom = "neutro", vivo, children, title }: { tom?: Tom | "ouro"; vivo?: boolean; children: ReactNode; title?: string }) {
+  const c = tom === "ouro" ? COR_OURO : COR_TOM[tom]
   return (
     <span title={title} className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10.5px] font-medium uppercase tracking-wide whitespace-nowrap", c.texto, c.fundo, c.borda)}>
       <span className="relative flex h-1.5 w-1.5">

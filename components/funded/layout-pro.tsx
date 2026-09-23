@@ -4,13 +4,12 @@ import dynamic from "next/dynamic"
 import { useEffect, useRef, useState } from "react"
 import { Panel, PanelGroup, PanelResizeHandle, type ImperativePanelHandle } from "react-resizable-panels"
 import { CalendarDays, Columns2, Loader2, Rows2, Square, Grid2x2, Receipt } from "lucide-react"
-import FundedTicket from "./funded-ticket"
 import FundedWatchlist from "./funded-watchlist"
 import MultiGrafico from "./multi-grafico"
 import PainelInferior from "./painel-inferior"
 import Atalhos, { type Layout } from "./atalhos"
 import { EstadoMercado, Sentimento } from "./estado-mercado"
-import { AplicarPrefill, AvisosConta, FaixaPrefill, GraficoConta, ProvedorRascunho, type Trader } from "./trader-contexto"
+import { AplicarPrefill, FaixaPrefill, GraficoConta, ProvedorRascunho, type TraderBase } from "./trader-contexto"
 import { useGraficoVisivel } from "./grafico-visivel"
 import { useMediaQuery } from "./use-media"
 import { MQ_LARGO, MQ_TABLET_OU_MAIS } from "@/lib/webtrader/layout"
@@ -41,7 +40,7 @@ const CalendarioEconomico = dynamic(() => import("./calendario-economico"), { ss
 
 const CHAVE_LAYOUT = "mtmfunded_pro_layout"
 
-export default function LayoutPro({ t }: { t: Trader }) {
+export default function LayoutPro({ t }: { t: TraderBase }) {
   const [layout, setLayoutEstado] = useState<Layout>("1")
   const [lateral, setLateral] = useState<"ticket" | "calendario">("ticket")
   const ticketRef = useRef<ImperativePanelHandle>(null)
@@ -73,9 +72,7 @@ export default function LayoutPro({ t }: { t: Trader }) {
         ))}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-1.5 [scrollbar-width:thin] [scrollbar-color:#363A45_transparent]">
-        {lateral === "calendario" ? <CalendarioEconomico altura="100%" /> : t.podeNegociar ? <FundedTicket margemLivre={t.vivo.margemLivre} /> : (
-          <p className="p-4 text-center text-[12px] text-zinc-500">{t.dados.modo === "investor" ? "Sessão investor — só leitura." : "Conta sem negociação."}</p>
-        )}
+        {lateral === "calendario" ? <CalendarioEconomico altura="100%" /> : t.ticket}
       </div>
     </div>
   )
@@ -93,7 +90,7 @@ export default function LayoutPro({ t }: { t: Trader }) {
     <ProvedorRascunho t={t} ficha={simbolo} volume={t.volume} setVolume={t.setVolume}>
       <AplicarPrefill prefill={t.prefill} simboloInicial={t.simboloInicial} />
       <BarraPro t={t} layout={layout} setLayout={setLayout} onF9={abrirTicket} />
-      <AvisosConta t={t} />
+      {t.avisos}
       <FaixaPrefill t={t} />
       <div className="min-h-0 flex-1">
         {estreito ? (
@@ -105,7 +102,7 @@ export default function LayoutPro({ t }: { t: Trader }) {
               {puxador(true)}
               <Panel id="ticket" order={2} defaultSize={25} minSize={8} collapsible ref={ticketRef}>{lateralConteudo}</Panel>
               {puxador(true)}
-              <Panel id="baixo" order={3} defaultSize={25} minSize={8}><PainelInferior t={t} denso={false} /></Panel>
+              <Panel id="baixo" order={3} defaultSize={25} minSize={8}><PainelInferior paineis={t.paineis} chaveGuardar={t.chavePaineis} denso={false} /></Panel>
             </PanelGroup>
           ) : (
             <div className="flex h-full min-h-0 flex-col">
@@ -114,7 +111,7 @@ export default function LayoutPro({ t }: { t: Trader }) {
                 <PanelGroup direction="vertical" autoSaveId="mtmfunded-pro-estreito-sem-grafico">
                   <Panel id="ticket" order={1} defaultSize={45} minSize={10} collapsible ref={ticketRef}>{lateralConteudo}</Panel>
                   {puxador(true)}
-                  <Panel id="baixo" order={2} defaultSize={55} minSize={10}><PainelInferior t={t} denso={false} /></Panel>
+                  <Panel id="baixo" order={2} defaultSize={55} minSize={10}><PainelInferior paineis={t.paineis} chaveGuardar={t.chavePaineis} denso={false} /></Panel>
                 </PanelGroup>
               </div>
             </div>
@@ -133,13 +130,13 @@ export default function LayoutPro({ t }: { t: Trader }) {
                   </Panel>
                   {puxador(true)}
                   <Panel id="baixo" order={2} defaultSize={38} minSize={10} collapsible collapsedSize={4}>
-                    <PainelInferior t={t} />
+                    <PainelInferior paineis={t.paineis} chaveGuardar={t.chavePaineis} />
                   </Panel>
                 </PanelGroup>
               ) : (
                 <div className="flex h-full min-h-0 flex-col">
                   <div className="shrink-0">{graficos(layout)}</div>
-                  <div className="min-h-0 flex-1 border-t border-[#2A2E39]"><PainelInferior t={t} /></div>
+                  <div className="min-h-0 flex-1 border-t border-[#2A2E39]"><PainelInferior paineis={t.paineis} chaveGuardar={t.chavePaineis} /></div>
                 </div>
               )}
             </Panel>
@@ -154,7 +151,7 @@ export default function LayoutPro({ t }: { t: Trader }) {
   )
 }
 
-function BarraPro({ t, layout, setLayout, onF9 }: { t: Trader; layout: Layout; setLayout: (l: Layout) => void; onF9: () => void }) {
+function BarraPro({ t, layout, setLayout, onF9 }: { t: TraderBase; layout: Layout; setLayout: (l: Layout) => void; onF9: () => void }) {
   const escolhidas = t.metricas.filter(([k]) => ["Saldo", "Equity", "Flutuante", "Margem livre", "Nível margem", "Perda diária restante", "Perda máx. restante", "Objetivo"].includes(k))
   const layouts: Array<[Layout, string, typeof Square]> = [["1", "1 gráfico (Alt+1)", Square], ["2h", "2 lado a lado (Alt+2)", Columns2], ["2v", "2 em pilha (Alt+3)", Rows2], ["4", "4 gráficos (Alt+4)", Grid2x2]]
   return (

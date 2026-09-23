@@ -362,7 +362,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
           </span>
         )}
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          {emTrader && !ativaReal && <InterruptorModo compacto={false} />}
+          {/* O SIMPLE/PRO já vale para as contas reais: desenham-se com os mesmos layouts. */}
+          {emTrader && <InterruptorModo compacto={false} />}
           <InstalarWebtrader contexto={contexto} />
         </div>
       </div>
