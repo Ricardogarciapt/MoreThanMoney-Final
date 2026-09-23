@@ -206,12 +206,26 @@ function FormMt5({ onEntrou, compraPermitida }: { onEntrou: (ref: string) => voi
   useEffect(() => {
     let vivo = true
     const t = setTimeout(async () => {
+      const semLista = () => {
+        if (!vivo) return
+        setGrupos([])
+        // SEM LISTA NÃO SE PRENDE NINGUÉM.
+        //
+        // A lista vem da MetaApi; se ela não responder (ou não estiver configurada), o seletor
+        // ficava vazio e não havia onde escrever o servidor — o botão de entrar ficava morto e a
+        // ligação da conta MT5/MT4 deixava de ser possível. Foi o que aconteceu a 23/09. A lista é
+        // uma conveniência: quando falta, volta o campo livre, que sempre funcionou.
+        setEscrever(true)
+      }
       try {
         const q = procura.trim()
         const r = await fetch(`/api/mtmcopy/brokers?platform=${versao}${q ? `&q=${encodeURIComponent(q)}` : ""}&limit=60`, { headers: await authHeaders() })
         const j = await r.json()
-        if (vivo) setGrupos((j.brokers ?? []).filter((g: { servers?: string[] }) => (g.servers ?? []).length))
-      } catch { if (vivo) setGrupos([]) }
+        const gs = (j.brokers ?? []).filter((g: { servers?: string[] }) => (g.servers ?? []).length)
+        if (!vivo) return
+        if (!gs.length && !procura.trim()) { semLista(); return }
+        setGrupos(gs)
+      } catch { semLista() }
     }, procura.trim() ? 400 : 0)
     return () => { vivo = false; clearTimeout(t) }
   }, [procura, versao])
@@ -254,7 +268,7 @@ function FormMt5({ onEntrou, compraPermitida }: { onEntrou: (ref: string) => voi
             </select>
           </>
         )}
-        <button type="button" onClick={() => { setEscrever((x) => !x); setServidor("") }} className="mt-1 text-[11px] text-[#D2A63C] underline">
+        <button type="button" onClick={() => setEscrever((x) => !x)} className="mt-1 text-[11px] text-[#D2A63C] underline">
           {escrever ? k("mtServidorDaLista") : k("mtServidorNaoEsta")}
         </button>
       </label>
