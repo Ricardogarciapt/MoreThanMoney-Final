@@ -21,10 +21,14 @@
  */
 import { useEffect, useState } from "react"
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, Loader2, X } from "lucide-react"
-import { useRascunho } from "./rascunho-ordem"
+import { useRascunho, type ModoVolume } from "./rascunho-ordem"
+import { numeroDe } from "./avancado"
 
 const fmt = (n: number | null | undefined, casas = 2) =>
   n == null || !Number.isFinite(n) ? "—" : n.toLocaleString("pt-PT", { minimumFractionDigits: casas, maximumFractionDigits: casas })
+
+/** O mesmo vocabulário do ticket: ou se escreve o lote, ou o risco em dinheiro, ou em % do saldo. */
+const MODOS: Array<[ModoVolume, string]> = [["lote", "Lote"], ["risco_usd", "Risco $"], ["risco_pct", "Risco %"]]
 
 const NOME_ORIGEM: Record<string, string> = {
   scanner: "Sinal do scanner",
@@ -39,6 +43,8 @@ export default function ModalSinal({ nomeConta }: { nomeConta?: string | null })
   const chave = r.ideiaRef ?? (r.origem !== "manual" ? `${simbolo?.symbol ?? ""}:${r.lado}:${r.sl ?? ""}:${r.tp ?? ""}` : null)
   const [tratadas, setTratadas] = useState<string[]>([])
   const [aberto, setAberto] = useState(false)
+  // O que está escrito na caixa, tal como foi escrito (senão «0,» vira 0 a meio de uma tecla).
+  const [texto, setTexto] = useState<string | null>(null)
 
   const deSinal = r.origem === "scanner" || r.origem === "ideia_mtm"
   const pronto = Boolean(simbolo) && entrada != null
@@ -106,6 +112,44 @@ export default function ModalSinal({ nomeConta }: { nomeConta?: string | null })
             {linha("Distância", `${resumo.pipsSl == null ? "—" : `${fmt(resumo.pipsSl, 1)} pips`}${resumo.pipsTp == null ? "" : ` → ${fmt(resumo.pipsTp, 1)} pips`}`)}
             {linha("Margem", resumo.margem == null ? "—" : `${fmt(resumo.margem)} USD`)}
             {linha("Comissão", `${fmt(resumo.comissao)} USD`)}
+          </div>
+
+          {/* DIMENSIONAR AQUI. Um sinal vem com níveis, não com o tamanho da posição — e é o
+              tamanho que decide quanto se perde. Os mesmos três modos do ticket, a mexer no mesmo
+              rascunho: o que se muda aqui é o que vai na ordem. */}
+          <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+            <div className="flex gap-1">
+              {MODOS.map(([m, rot]) => (
+                <button key={m} type="button"
+                  onClick={() => { setTexto(null); k.definirModoVolume(m) }}
+                  className={`flex-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold ${k.modoVolume === m ? "bg-[#D2A63C] text-black" : "text-zinc-300 hover:bg-white/5"}`}>
+                  {rot}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                inputMode="decimal"
+                aria-label={k.modoVolume === "lote" ? "lote" : k.modoVolume === "risco_usd" ? "risco em dólares" : "risco em % do saldo"}
+                value={texto ?? (k.modoVolume === "lote" ? String(volume) : k.riscoEscrito == null ? "" : String(k.riscoEscrito))}
+                onChange={(e) => {
+                  setTexto(e.target.value)
+                  const n = numeroDe(e.target.value)
+                  if (k.modoVolume === "lote") { if (n != null) k.setVolume(n) } else k.definirRisco(n)
+                }}
+                className="w-full rounded-lg border border-white/10 bg-black/40 px-2.5 py-2 text-right font-mono text-[15px] tabular-nums text-white outline-none focus:border-[#D2A63C]"
+              />
+              <span className="w-8 text-[13px] text-zinc-500">{k.modoVolume === "lote" ? "lot" : k.modoVolume === "risco_usd" ? "$" : "%"}</span>
+            </div>
+            {k.modoVolume !== "lote" && (
+              <p className="mt-1.5 text-[11.5px] text-zinc-400">
+                Dá <span className="font-mono text-zinc-200">{fmt(volume, 2)}</span> lotes
+                {k.dimensionamento?.limitado === "min" && " — preso ao lote mínimo, o risco real fica acima do pedido"}
+                {k.dimensionamento?.limitado === "max" && " — preso ao lote máximo do símbolo"}
+                {k.dimensionamento?.motivo === "sem_sl" && " — sem stop não há risco que se calcule"}
+                {k.saldo != null && ` · saldo ${fmt(k.saldo)} USD`}
+              </p>
+            )}
           </div>
 
           {sl == null && (
