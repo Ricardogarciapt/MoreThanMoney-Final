@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import type { ContaCentro } from "@/lib/admin-centro/servidor/contas"
+import { appDaConta } from "@/lib/admin-centro/ligacoes"
 import { nomeMotivo } from "@/lib/admin-centro/regras"
 import ContasCopia from "@/components/admin/mtmauto-copia/contas"
 import MTMcopierManager from "@/components/admin/mtmcopier-manager"
@@ -73,7 +74,7 @@ function SubscritorasPremium({ contas, abrir }: { contas: ContaCentro[]; abrir: 
               <tr key={c.ref} className={trClic} onClick={() => abrir(c.ref)}>
                 <td className={td}>
                   <p className="font-mono text-zinc-100">{c.plataforma.toUpperCase()} {c.login ?? "—"}</p>
-                  <p className="text-[10px] text-zinc-500">{c.servidor ?? "—"} · {c.origem} · {c.categoria}{c.demo ? " · demo" : ""}</p>
+                  <p className="text-[10px] text-zinc-500">{c.servidor ?? "—"} · {appDaConta(c.origem).nome} · {c.categoria}{c.demo ? " · demo" : ""}</p>
                 </td>
                 <td className={td}><p className="text-zinc-200">{c.nome ?? c.email ?? "—"}</p><p className="text-[10px] text-zinc-500">{c.email ?? ""}</p></td>
                 <td className={`${td} max-w-[260px] text-[10.5px] text-zinc-400`}>{[...c.usos, ...c.estrategias].filter((x) => /premium|MxsR/i.test(x)).join(" · ")}</td>
@@ -143,7 +144,7 @@ export default function SeccaoContas() {
                   <td className={td}>
                     <p className="font-mono text-zinc-100">{c.plataforma.toUpperCase()} {c.login ?? "—"}</p>
                     {c.etiquetaDoDono && <p className="truncate text-[10.5px] text-[#E9C46A]" title="etiqueta do dono">{c.etiquetaDoDono}</p>}
-                    <p className="text-[10px] text-zinc-500">{c.servidor ?? "—"}{c.rotulo ? ` · ${c.rotulo}` : ""} · {c.origem} · {c.categoria}{c.demo ? " · demo" : ""}</p>
+                    <p className="text-[10px] text-zinc-500">{c.servidor ?? "—"}{c.rotulo ? ` · ${c.rotulo}` : ""} · {appDaConta(c.origem).nome} · {c.categoria}{c.demo ? " · demo" : ""}</p>
                   </td>
                   <td className={td}>
                     {c.userId ? (
