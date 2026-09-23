@@ -278,6 +278,8 @@ interface Conn {
   t2t_asset_classes?: string[] | null
   t2t_risk_level?: string | null
   t2t_enabled?: boolean | null
+  /** 'tap_to_trade' = conta dedicada ao T2T (nasce ligada). */
+  purpose?: string | null
 }
 
 /** Preset de risco → risco por trade (%). */
@@ -428,6 +430,14 @@ export default function TapToTradeFeed() {
   // Multi-conta: todas as contas T2T do user (fan-out). O user escolhe uma ou várias ligando o T2T
   // por conta. `conn` acima é a primária (para a config detalhada existente).
   const [t2tConns, setT2tConns] = useState<Conn[]>([])
+  /**
+   * TODAS as contas ligadas da pessoa — não só as que já estão no Tap to Trade.
+   *
+   * O painel «Contas no Tap to Trade» só mostrava as que já lá estavam, e por isso uma conta
+   * ligada para cópia (MT5, MT4 ou TradeLocker) não tinha onde ser ligada ao T2T: ou já lá
+   * estava, ou era invisível. É o cliente que decide qual das suas contas aceita sinais à mão.
+   */
+  const [todasConns, setTodasConns] = useState<Conn[]>([])
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [showConfig, setShowConfig] = useState(false)
   const [savingConn, setSavingConn] = useState(false)
@@ -481,6 +491,7 @@ export default function TapToTradeFeed() {
       const c: Conn | null = d.connection ?? (d.connections?.[0] ?? null)
       const todas = list.length ? list : (c ? [c] : [])
       setT2tConns(todas)
+      setTodasConns(Array.isArray(d.connections) && d.connections.length ? d.connections : todas)
       // A conta a configurar mantém-se entre recarregamentos (senão voltava sempre à primeira).
       const escolhida = todas.find((x) => x.id === contaCfgId.current) ?? c
       setConn(escolhida)
@@ -921,6 +932,13 @@ export default function TapToTradeFeed() {
     setFollowLocal({ ...follow, [kind]: nextArr })
   }
 
+  /**
+   * Esta conta está no Tap to Trade? A MESMA regra do servidor (lib/mtmcopy/alvo-t2t.ts::recebeT2T):
+   * marcada à mão, ou dedicada ao T2T e não desligada. Escrita aqui para o ecrã não inventar uma
+   * segunda versão da regra — se divergirem, o interruptor mente sobre o que vai acontecer.
+   */
+  const noT2T = (c: Conn) => c.t2t_enabled === true || (c.purpose === "tap_to_trade" && c.t2t_enabled !== false)
+
   // Liga/desliga o T2T (fan-out) numa conta. Aceitar um sinal abre em TODAS as contas ligadas.
   const toggleAccountT2T = async (id: string, enabled: boolean) => {
     setTogglingId(id)
@@ -1046,11 +1064,11 @@ export default function TapToTradeFeed() {
               <div className="cartao p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[12px] font-semibold text-white">Contas no Tap to Trade</span>
-                  <span className="text-[10px] text-zinc-500">{t2tConns.filter((c) => c.t2t_enabled !== false && c.is_active !== false).length} ativa(s)</span>
+                  <span className="text-[10px] text-zinc-500">{todasConns.filter((c) => noT2T(c) && c.is_active !== false).length} de {todasConns.length} ativa(s)</span>
                 </div>
                 <p className="text-[10px] leading-snug text-zinc-500">Aceitar uma ideia abre em <strong className="text-zinc-300">todas</strong> as contas ligadas aqui, cada uma com o risco pelo seu próprio saldo.</p>
-                {t2tConns.map((c) => {
-                  const on = c.t2t_enabled !== false
+                {todasConns.map((c) => {
+                  const on = noT2T(c)
                   const soLeitura = c.mt5_platform === "mtmfunded" && c.funded_somente_leitura === true
                   return (
                     <div key={c.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-black/30 px-2.5 py-2">
