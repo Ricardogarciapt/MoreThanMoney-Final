@@ -57,6 +57,7 @@ import { iniciarWsPrecos, type WsPrecos } from './ws-precos'
 import { iniciarFonteBinance, type FonteBinance } from './fonte-binance'
 import { iniciarFonteYahoo, type FonteYahoo } from './fonte-yahoo'
 import { iniciarFonteConectorMt5, type FonteConectorTicks } from './fonte-conector-mt5'
+import { cruzadosCalculaveis } from '../../lib/mtmfunded/precos/cruzados'
 import {
   assinaturaMetricas,
   precisaDeEscreverMetricas,
@@ -1213,6 +1214,23 @@ async function main(): Promise<void> {
   // Sem CONECTOR_TICKS_RAIZES no ambiente devolve null e nada muda.
   fonteConector = iniciarFonteConectorMt5({ precisa: principalVelho, injetar: aoTickRecurso, log })
   fonteBinance = iniciarFonteBinance({ precisa: principalVelho, injetar: aoTickRecurso, referencia: aoReferencia, log })
+  /**
+   * OS CRUZADOS DE CRIPTO — 18 símbolos do catálogo que fonte nenhuma cota (BTCJPY, BTCEUR, BTCXAU,
+   * BTCETH…) e que se calculam das pernas que já temos ao vivo. Antes ficavam com o preço do último
+   * dia em que alguém os viu: o ticket dimensionava a trade com ele e o gráfico desenhava uma recta.
+   * Só entram enquanto as duas pernas estiverem frescas (lib/mtmfunded/precos/cruzados.ts).
+   */
+  setInterval(() => {
+    const agora = Date.now()
+    const ler = (sym: string) => {
+      const p = precos[sym]
+      return p ? { bid: p.bid, ask: p.ask, em: precoEm.get(sym) ?? 0 } : null
+    }
+    for (const c of cruzadosCalculaveis(ler, agora)) {
+      if (!simbolos.has(c.symbol)) continue
+      aoTickRecurso(c.symbol, c.bid, c.ask, c.em)
+    }
+  }, Number(process.env.CRUZADOS_MS ?? 500)).unref?.()
   // O PAXG é pouco líquido: o livro fica 5-12 s sem mexer e o ouro parecia velho à guarda de 5 s.
   // Com a ligação viva e PAXG visto há < 30 s, o preço de agora é o mesmo — volta a ser carimbado.
   setInterval(() => {
