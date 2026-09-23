@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react"
 import { Loader2, Zap } from "lucide-react"
+import { gravarUmClique, gravarUmCliqueAceite, lerPreferenciasUmClique } from "./api"
 
 /**
  * NEGOCIAÇÃO NUM CLIQUE — como o «One Click Trading» do MetaTrader 5 e o «One-click trading» do
@@ -15,8 +16,13 @@ import { Loader2, Zap } from "lucide-react"
  *  · uma conta em modo investor nunca negoceia (os botões nem aparecem: `podeNegociar`);
  *  · «Usar este sinal» só pré-preenche — nunca envia.
  *
- * Ligar pela primeira vez pede que se aceite o aviso. A aceitação e o estado ficam no browser
- * (localStorage) com o id da conta na chave: ligar numa conta não liga as outras.
+ * Ligar pela primeira vez pede que se aceite o aviso. O aviso aceita-se UMA VEZ por pessoa e fica
+ * na CONTA MTM dela (pedido do dono, 23/09): aceitar no computador e voltar a ser interrogado no
+ * telemóvel fazia isto parecer partido. O interruptor continua a ser por conta de negociação —
+ * ligar numa conta não liga as outras — mas também segue a pessoa entre dispositivos.
+ *
+ * O localStorage fica como cache: pinta o primeiro ecrã sem esperar pela rede, e é o que vale para
+ * quem entrou com login+password sem sessão MTM. O servidor, quando responde, manda.
  *
  * Os componentes chamam `executar(descricao, fn, { confirmar })`:
  *  · `confirmar: true` — a acção ainda não teve confirmação na interface (arrastar uma linha, «×»,
@@ -91,6 +97,19 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
 
   useEffect(() => {
     setLigadoGuardado(ler(CHAVE_UM_CLIQUE(accountId)) === "1" && ler(CHAVE_UM_CLIQUE_ACEITE(accountId)) != null)
+    // …e o que a conta MTM guardou, que é o que vale entre dispositivos. Sem sessão (ou sem rede)
+    // fica o que estava no browser: nada se perde, só não viaja.
+    let vivo = true
+    void lerPreferenciasUmClique().then((p) => {
+      if (!vivo || !p) return
+      if (p.umCliqueAceite) escrever(CHAVE_UM_CLIQUE_ACEITE(accountId), p.umCliqueAceite)
+      const ligadoNoServidor = p.umClique?.[accountId]
+      if (ligadoNoServidor === true && p.umCliqueAceite) {
+        escrever(CHAVE_UM_CLIQUE(accountId), "1")
+        setLigadoGuardado(true)
+      }
+    })
+    return () => { vivo = false }
   }, [accountId])
   useEffect(() => { if (!aviso) return; const t = setTimeout(() => setAviso(null), 3500); return () => clearTimeout(t) }, [aviso])
   // Esc na confirmação = Cancelar (e na janela do aviso, desistir de ligar).
@@ -117,11 +136,13 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
     if (ler(CHAVE_UM_CLIQUE_ACEITE(accountId)) != null) {
       escrever(CHAVE_UM_CLIQUE(accountId), "1")
       setLigadoGuardado(true)
+      void gravarUmClique(accountId, true).catch(() => undefined)
     } else setAAceitar(true)
   }, [accountId, investor])
   const desligar = useCallback(() => {
     escrever(CHAVE_UM_CLIQUE(accountId), "0")
     setLigadoGuardado(false)
+    void gravarUmClique(accountId, false).catch(() => undefined)
   }, [accountId])
   const aceitar = () => {
     const agora = new Date().toISOString()
@@ -130,6 +151,9 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
     escrever(CHAVE_UM_CLIQUE(accountId), "1")
     setLigadoGuardado(true)
     setAAceitar(false)
+    // Fica gravado na conta da pessoa: não se volta a perguntar, em dispositivo nenhum.
+    void gravarUmCliqueAceite().catch(() => undefined)
+    void gravarUmClique(accountId, true).catch(() => undefined)
   }
 
   const executar = useCallback(<T,>(descricao: string, fn: () => Promise<T>, opcoes: { confirmar: boolean; digitos?: number }): Promise<T> => {

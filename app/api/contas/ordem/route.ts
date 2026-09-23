@@ -9,9 +9,11 @@ export const dynamic = 'force-dynamic'
 /**
  * A ORDEM DAS CONTAS NO SELETOR, e qual delas é a FAVORITA (pedido do dono, 23/09).
  *
- *   GET                              →  { ordem: string[], favorita: string | null }
- *   PATCH { ordem: string[] }        →  grava a ordem que a pessoa arrastou
- *   PATCH { favorita: ref | null }   →  marca (ou desmarca) a conta que abre primeiro
+ *   GET                                  →  { ordem, favorita, umCliqueAceite, umClique }
+ *   PATCH { ordem: string[] }            →  grava a ordem que a pessoa arrastou
+ *   PATCH { favorita: ref | null }       →  marca (ou desmarca) a conta que abre primeiro
+ *   PATCH { umCliqueAceite: true }       →  a pessoa leu e aceitou o aviso da negociação num clique
+ *   PATCH { umClique: {conta, ligado} }  →  a negociação num clique, ligada ou desligada NAQUELA conta
  *
  * A ORDEM é uma lista de referências do seletor, guardada em `profiles.profile_data.webtrader`.
  * Fica na CONTA da pessoa e não no dispositivo: quem arruma as contas no computador encontra-as
@@ -39,7 +41,15 @@ export async function GET(request: NextRequest) {
   // sobra de uma conta marcada pelo admin — por isso é a alternativa, não a primeira escolha.
   const escolhida = typeof wt.favorita === 'string' && wt.favorita ? wt.favorita : (fav?.id ?? null)
   return NextResponse.json(
-    { ordem: normalizarOrdem(wt.ordem_contas), favorita: escolhida },
+    {
+      ordem: normalizarOrdem(wt.ordem_contas),
+      favorita: escolhida,
+      // Negociação num clique: o aviso aceita-se UMA vez (fica na conta da pessoa, não no
+      // dispositivo — aceitar no computador e voltar a ser interrogado no telemóvel era o que
+      // fazia isto parecer partido) e o interruptor é por conta.
+      umCliqueAceite: typeof wt.um_clique_aceite === 'string' ? wt.um_clique_aceite : null,
+      umClique: (wt.um_clique ?? {}) as Record<string, boolean>,
+    },
     { headers: { 'Cache-Control': 'private, no-store' } },
   )
 }
@@ -79,6 +89,29 @@ export async function PATCH(request: NextRequest) {
     const guardado = await guardarNoPerfil(db, userId, (wt) => ({ ...wt, favorita: idNoSeletor }))
     if (!guardado) return NextResponse.json({ error: 'Não foi possível gravar a favorita.' }, { status: 500 })
     return NextResponse.json({ ok: true, favorita: idNoSeletor }, { headers: { 'Cache-Control': 'no-store' } })
+  }
+
+  // ── negociação num clique: o aviso aceite (uma vez por pessoa) ───────────
+  if (corpo.umCliqueAceite === true) {
+    const agora = new Date().toISOString()
+    const ok = await guardarNoPerfil(db, userId, (wt) => ({ ...wt, um_clique_aceite: wt.um_clique_aceite ?? agora }))
+    if (!ok) return NextResponse.json({ error: 'Não foi possível gravar.' }, { status: 500 })
+    return NextResponse.json({ ok: true, umCliqueAceite: agora }, { headers: { 'Cache-Control': 'no-store' } })
+  }
+
+  // ── negociação num clique: ligada/desligada numa conta ───────────────────
+  if (corpo.umClique && typeof corpo.umClique === 'object') {
+    const { conta, ligado } = corpo.umClique as { conta?: unknown; ligado?: unknown }
+    const id = String(conta ?? '').trim()
+    if (!id || id.length > 200) return NextResponse.json({ error: 'Falta a conta.' }, { status: 400 })
+    const ok = await guardarNoPerfil(db, userId, (wt) => {
+      const mapa = { ...((wt.um_clique ?? {}) as Record<string, boolean>) }
+      if (ligado === true) mapa[id] = true
+      else delete mapa[id]
+      return { ...wt, um_clique: mapa }
+    })
+    if (!ok) return NextResponse.json({ error: 'Não foi possível gravar.' }, { status: 500 })
+    return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
   // ── a ordem arrastada ────────────────────────────────────────────────────

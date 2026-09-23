@@ -289,7 +289,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
             </button>
             <PopoverAncorado aberto={seletorAberto} ancora={botaoSeletor} onFechar={fecharSeletor} titulo="Escolher conta">
               <div role="listbox">
-                <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">MTM Funded (simuladas) · TradeLocker e MT5 (reais) — arrasta pela pega para arrumar, a estrela abre primeiro, o lápis dá um nome</p>
+                <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">MTM Funded (simuladas) · TradeLocker e MT5 (reais) — mantém a pega premida 1s e arrasta para arrumar, a estrela abre primeiro, o lápis dá um nome</p>
                 {erroEtiqueta && <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-rose-300">{erroEtiqueta}</p>}
                 {todas.map((t) => t.real ? (
                   <div key={t.id} data-conta-id={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${arrasto.aArrastar === t.id ? "bg-white/15 opacity-70" : t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
@@ -456,14 +456,20 @@ function Estrela({ marcada, alternar }: { marcada: boolean; alternar: () => void
 }
 
 function Pega({ id, arrasto }: { id: string; arrasto: ArrastoLista }) {
+  const aEsperar = arrasto.aEsperar === id
   return (
     <span
       role="button"
-      aria-label="Arrastar para arrumar"
-      title="Arrastar para arrumar"
+      aria-label="Manter premido para arrumar"
+      title="Manter premido 1 segundo para arrastar"
       onPointerDown={(e) => arrasto.aoPegar(e, id)}
-      style={{ touchAction: "none" }}
-      className="grid h-8 w-6 shrink-0 cursor-grab place-items-center text-zinc-600 hover:text-zinc-300 active:cursor-grabbing [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-8"
+      // `pan-y` e não `none`: enquanto se espera pelo segundo, o dedo ainda pode fazer SCROLL da
+      // lista (era isso que estava a trocar contas por engano). Depois de a linha levantar, o
+      // `preventDefault` no movimento é que segura o gesto.
+      style={{ touchAction: "pan-y" }}
+      className={`grid h-8 w-6 shrink-0 cursor-grab place-items-center transition-colors active:cursor-grabbing [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-8 ${
+        aEsperar ? "animate-pulse text-[#D2A63C]" : "text-zinc-600 hover:text-zinc-300"
+      }`}
     >
       <GripVertical className="h-4 w-4" />
     </span>

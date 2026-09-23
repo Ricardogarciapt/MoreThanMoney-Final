@@ -117,6 +117,30 @@ export function gravarOrdemContas(ordem: string[]): Promise<{ ok: true; ordem: s
   return pedir("/api/contas/ordem", { method: "PATCH", body: JSON.stringify({ ordem }) })
 }
 
+/**
+ * As preferências do WebTrader desta pessoa, lidas UMA vez por página (o provedor do um-clique
+ * monta-se por conta; três contas abertas não são três pedidos iguais).
+ */
+let prefsEmCurso: Promise<{ umCliqueAceite: string | null; umClique: Record<string, boolean> } | null> | null = null
+export function lerPreferenciasUmClique() {
+  if (!prefsEmCurso) {
+    prefsEmCurso = pedir<{ umCliqueAceite: string | null; umClique: Record<string, boolean> }>("/api/contas/ordem")
+      .catch(() => null)
+    // Uma preferência muda raramente: 30 s de memória chegam para não repetir o pedido ao trocar de conta.
+    setTimeout(() => { prefsEmCurso = null }, 30_000)
+  }
+  return prefsEmCurso
+}
+
+/** Negociação num clique: o aviso aceite (uma vez por pessoa) e o interruptor por conta. */
+export function gravarUmCliqueAceite(): Promise<{ ok: true }> {
+  return pedir("/api/contas/ordem", { method: "PATCH", body: JSON.stringify({ umCliqueAceite: true }) })
+}
+
+export function gravarUmClique(conta: string, ligado: boolean): Promise<{ ok: true }> {
+  return pedir("/api/contas/ordem", { method: "PATCH", body: JSON.stringify({ umClique: { conta, ligado } }) })
+}
+
 /** `ref` = `mtmfunded:<id>`; `null` desmarca a que estiver marcada. */
 export function gravarContaFavorita(ref: string | null): Promise<{ ok: true; favorita: string | null }> {
   return pedir("/api/contas/ordem", { method: "PATCH", body: JSON.stringify({ favorita: ref }) })
