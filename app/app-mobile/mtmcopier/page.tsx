@@ -13,7 +13,8 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useT } from "@/components/i18n-provider"
-import SetupModal, { type MTMcopierConnection, type MtmcopySenderMode } from "@/components/mtmcopy/setup-modal"
+import SetupModal, { type MtmcopySenderMode } from "@/components/mtmcopy/setup-modal"
+import type { MTMcopierConnectionEnriquecida } from "@/lib/mtmcopy/types"
 import {
   StatusPill, SignalCard, EmptySignals, ModeBanner, CopyTraderBanner, StrategyMtmBanner,
   formatRelative, formatMt5Money,
@@ -44,13 +45,9 @@ const isIosNativeApp = () =>
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ConnRow = MTMcopierConnection & {
-  last_signal_at: string | null
-  last_error: string | null
-  account_balance?: number | null
-  account_equity?: number | null
-  copyfactory_subscribed?: boolean
-}
+// Era uma interseccao que voltava a declarar campos que o tipo canonico ja tem.
+// `MTMcopierConnectionEnriquecida` = colunas da BD + saldos vivos da MetaApi.
+type ConnRow = MTMcopierConnectionEnriquecida
 
 interface SignalLog {
   id: string

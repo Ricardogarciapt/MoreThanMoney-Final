@@ -31,48 +31,23 @@ import TradeLockerConnectForm, { TradeLockerBadge } from "@/components/tradelock
 
 const MODAL_Z = 2147483647
 
-export type MtmcopySenderMode = "telegram" | "master_account"
-export type MtmcopyAccountRole = "slave" | "master"
+// Os tipos da ligacao vivem em lib/mtmcopy/types.ts. Este ficheiro chegou a ter
+// uma copia propria de `MTMcopierConnection` que tinha divergido do canonico
+// (sem user_id/last_signal_at/last_error), o que obrigava a casts em todo o lado.
+// Re-exporta-se aqui so para nao partir os imports existentes.
+export type {
+  MtmcopySenderMode,
+  MtmcopyAccountRole,
+  MTMcopierConnection,
+} from "@/lib/mtmcopy/types"
+import type {
+  MtmcopySenderMode,
+  MtmcopyAccountRole,
+  MTMcopierConnectionEnriquecida,
+} from "@/lib/mtmcopy/types"
 
-export interface MTMcopierConnection {
-  id: string
-  account_role?: MtmcopyAccountRole
-  sender_mode?: MtmcopySenderMode
-  copyfactory_strategy_id?: string | null
-  telegram_channel: string | null
-  copy_method?: MtmcopyCopyMethod | null
-  telegram_group?: MtmcopyTelegramGroup | null
-  telegram_groups?: MtmcopyTelegramGroup[] | null
-  copyfactory_strategy_pick?: string | null
-  exit_pct_tp1?: number | null
-  exit_pct_tp2?: number | null
-  exit_pct_tp3?: number | null
-  telegram_status: "pending" | "connected" | "error" | "disconnected"
-  mt5_login_last4: string | null
-  mt5_server: string | null
-  mt5_status: "pending" | "connected" | "error" | "disconnected"
-  lot_mode: "fixed" | "risk_percent" | "multiplier"
-  lot_value: number
-  max_risk_percent: number | null
-  symbols_whitelist: string[] | null
-  copy_sl: boolean
-  copy_tp: boolean
-  auto_trailing_stop: boolean
-  trailing_stop_points: number
-  reverse_signals: boolean
-  is_active: boolean
-  account_label?: string | null
-  is_audited?: boolean
-  audit_label?: string | null
-  account_balance?: number | null
-  account_equity?: number | null
-  metaapi_account_id?: string | null
-  copyfactory_subscribed?: boolean
-  prop_firm_type?: PropFirmType | null
-  copy_as_manual?: boolean
-  /** 'tradelocker' = conta TradeLocker (sem MetaApi/CopyFactory). */
-  mt5_platform?: "mt4" | "mt5" | "tradelocker" | null
-}
+/** O modal mostra saldo/equity, por isso trabalha com a ligacao enriquecida. */
+type MTMcopierConnection = MTMcopierConnectionEnriquecida
 
 type Selection = "new" | string
 
