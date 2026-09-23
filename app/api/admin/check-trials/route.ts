@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const supabase = getSupabaseClient()
+  const supabase = getSupabaseAdmin()
   try {
     // Apenas retornar informações dos trials ativos
     const { data: trialUsers, error } = await supabase
