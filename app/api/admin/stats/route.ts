@@ -46,25 +46,23 @@ export async function GET(request: NextRequest) {
         .eq('user_type', 'member'),
       
       // Conteúdo (com fallback se tabela não existir)
-      supabase
-        .from('site_content')
-        .select('id, is_active, created_at')
-        .then(result => result)
-        .catch(() => ({ data: null, error: { message: 'Table does not exist' } })),
+      Promise.resolve(
+        supabase.from('site_content').select('id, is_active, created_at'),
+      ).catch(() => ({ data: null, error: { message: 'Table does not exist' } })),
       
       // Atividade recente (últimos 7 dias)
       (async () => {
         const sevenDaysAgo = new Date()
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
         
-        return supabase
-          .from('activity_logs')
-          .select('*')
-          .gte('timestamp', sevenDaysAgo.toISOString())
-          .order('timestamp', { ascending: false })
-          .limit(50)
-          .then(result => result)
-          .catch(() => ({ data: null, error: { message: 'Table does not exist' } }))
+        return Promise.resolve(
+          supabase
+            .from('activity_logs')
+            .select('*')
+            .gte('timestamp', sevenDaysAgo.toISOString())
+            .order('timestamp', { ascending: false })
+            .limit(50),
+        ).catch(() => ({ data: null, error: { message: 'Table does not exist' } }))
       })(),
 
       supabase

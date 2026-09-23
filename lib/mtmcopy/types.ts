@@ -60,6 +60,16 @@ export interface MTMcopierConnection {
   baseline_balance?: number | null
 }
 
+/**
+ * A ligacao tal como chega ao cliente: as colunas da BD mais os saldos que
+ * `lib/mtmcopy/connection-balances.ts` enriquece ao vivo a partir da MetaApi.
+ * NAO sao colunas — por isso sao opcionais e vivem so aqui, fora do tipo da linha.
+ */
+export interface MTMcopierConnectionEnriquecida extends MTMcopierConnection {
+  account_balance?: number | null
+  account_equity?: number | null
+}
+
 export type TradingTradeSource = 'manual' | 'copy' | 'audited'
 export type TradingExecutionMode = 'executed' | 'analysis'
 

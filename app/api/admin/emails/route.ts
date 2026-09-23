@@ -23,24 +23,21 @@ export async function GET(request: NextRequest) {
       { data: activeEnrollments },
       { count: pendingSequences },
     ] = await Promise.all([
-      supabase
-        .from('email_sends')
-        .select('status, created_at')
-        .gte('created_at', thirtyDaysAgo.toISOString())
-        .then((r) => r)
-        .catch(() => ({ data: [] as { status: string; created_at: string }[] })),
-      supabase
-        .from('email_sequence_enrollments')
-        .select('id')
-        .eq('status', 'active')
-        .then((r) => r)
-        .catch(() => ({ data: [] as { id: string }[] })),
-      supabase
-        .from('email_sequence_enrollments')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .then((r) => r)
-        .catch(() => ({ count: 0 })),
+      Promise.resolve(
+        supabase
+          .from('email_sends')
+          .select('status, created_at')
+          .gte('created_at', thirtyDaysAgo.toISOString()),
+      ).catch(() => ({ data: [] as { status: string; created_at: string }[] })),
+      Promise.resolve(
+        supabase.from('email_sequence_enrollments').select('id').eq('status', 'active'),
+      ).catch(() => ({ data: [] as { id: string }[] })),
+      Promise.resolve(
+        supabase
+          .from('email_sequence_enrollments')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'active'),
+      ).catch(() => ({ count: 0 })),
     ])
 
     const sends = recentSends || []

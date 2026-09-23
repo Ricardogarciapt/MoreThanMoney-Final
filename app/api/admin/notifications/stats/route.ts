@@ -22,22 +22,22 @@ export async function GET(request: NextRequest) {
         .from('email_campaigns')
         .select('emails_sent, emails_opened, emails_clicked, emails_bounced, status')
         .not('emails_sent', 'is', null),
-      supabase
-        .from('email_sends')
-        .select('status')
-        .gte('created_at', thirtyDaysAgo.toISOString())
-        .then((r) => r)
-        .catch(() => ({ data: [] as { status: string }[] })),
+      Promise.resolve(
+        supabase
+          .from('email_sends')
+          .select('status')
+          .gte('created_at', thirtyDaysAgo.toISOString()),
+      ).catch(() => ({ data: [] as { status: string }[] })),
       supabase
         .from('notification_configs')
         .select('id, status')
         .eq('status', 'draft'),
-      supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', thirtyDaysAgo.toISOString())
-        .then((r) => r)
-        .catch(() => ({ count: 0 })),
+      Promise.resolve(
+        supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', thirtyDaysAgo.toISOString()),
+      ).catch(() => ({ count: 0 })),
     ])
 
     const campaignSent = emailCampaigns?.reduce((sum, c) => sum + (c.emails_sent || 0), 0) || 0
