@@ -3,6 +3,7 @@
 import { lerSinal } from "@/lib/sinais/formato-sinal"
 import { ehSinalDePerpetuo, t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { mensagemCripto, useSemCripto } from "@/lib/ios-sem-cripto"
+import { apareceNoT2T, recebeT2T } from "@/lib/mtmcopy/alvo-t2t"
 import { pipSizeForSymbol, unitFor } from "@/lib/mtmcopy/trade-outcome"
 import { directionLabelFromText, resolveDirectionLabel } from "@/lib/mtmcopy/signal-direction"
 
@@ -487,7 +488,9 @@ export default function TapToTradeFeed() {
       // Contas T2T do user (fan-out). Se a API ainda não devolver a lista, cai para a conta única.
       const list: Conn[] = Array.isArray(d.t2t_connections) && d.t2t_connections.length
         ? d.t2t_connections
-        : (Array.isArray(d.connections) ? d.connections.filter((x: Conn) => x.t2t_enabled === true) : [])
+        // A MESMA regra do servidor: a conta dedicada (sem bandeira) também está no T2T, e a
+        // desligada nela aparece para se poder voltar a ligar (lib/mtmcopy/alvo-t2t.ts).
+        : (Array.isArray(d.connections) ? d.connections.filter((x: Conn) => apareceNoT2T(x)) : [])
       const c: Conn | null = d.connection ?? (d.connections?.[0] ?? null)
       const todas = list.length ? list : (c ? [c] : [])
       setT2tConns(todas)
@@ -933,11 +936,10 @@ export default function TapToTradeFeed() {
   }
 
   /**
-   * Esta conta está no Tap to Trade? A MESMA regra do servidor (lib/mtmcopy/alvo-t2t.ts::recebeT2T):
-   * marcada à mão, ou dedicada ao T2T e não desligada. Escrita aqui para o ecrã não inventar uma
-   * segunda versão da regra — se divergirem, o interruptor mente sobre o que vai acontecer.
+   * Esta conta está no Tap to Trade? A MESMA função do servidor — importada, não copiada: a regra
+   * estava aqui escrita à mão e o interruptor podia passar a mentir sobre o que ia acontecer.
    */
-  const noT2T = (c: Conn) => c.t2t_enabled === true || (c.purpose === "tap_to_trade" && c.t2t_enabled !== false)
+  const noT2T = (c: Conn) => recebeT2T(c)
 
   // Liga/desliga o T2T (fan-out) numa conta. Aceitar um sinal abre em TODAS as contas ligadas.
   const toggleAccountT2T = async (id: string, enabled: boolean) => {

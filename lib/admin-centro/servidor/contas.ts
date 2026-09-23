@@ -11,6 +11,7 @@ import { db, ler, num, semEsquema, txt, type Linha } from './base'
 import { lerEtiquetas } from '@/lib/contas/etiquetas-servidor'
 import { carregarPainelMestres } from '@/lib/mestres/servidor/painel-leitura'
 import { mestresPorConta } from '@/lib/mestres/painel'
+import { rotuloUsoT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 /**
  * CONTAS — todas as contas numa lista (MT4/MT5/TradeLocker/MTM Funded; cliente, casa, seguidoras,
@@ -160,7 +161,9 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     const plataforma = plat(c.mt5_platform)
     const acc = txt(c.metaapi_account_id)
     const usos: string[] = []
-    if (c.purpose === 'tap_to_trade' || c.t2t_enabled === true) usos.push('Tap to Trade')
+    // O MESMO rótulo do ligador do site e do painel da app (lib/mtmcopy/alvo-t2t).
+    const usoT2T = rotuloUsoT2T(c)
+    if (usoT2T) usos.push(usoT2T)
     if (c.purpose !== 'tap_to_trade' && plataforma !== 'mtmfunded') usos.push(c.copyfactory_strategy_pick ? `CopyFactory ${c.copyfactory_strategy_pick}${c.copyfactory_subscribed ? '' : ' (não subscrita)'}` : `Cópia (${c.copy_method ?? '—'})`)
     usos.push(...(usosRota.get(`site:${c.id}`) ?? []))
     const erro = txt(c.last_error) ?? txt(c.tl_last_error)
