@@ -212,6 +212,8 @@ interface TapPreviewAccount {
   realRiskPct?: number | null
   /** Tecto configurado, quando o risco real o ultrapassa. */
   overCap?: number | null
+  /** Esta conta já copia esta estratégia sozinha — aceitar à mão seria a mesma trade duas vezes. */
+  jaCopia?: boolean
   available: boolean
 }
 
@@ -1616,7 +1618,10 @@ export default function TapToTradeFeed() {
                     <div className="flex flex-col gap-2">
                       {preview.accounts.map((a) => (
                         <div key={a.id} className="flex items-baseline justify-between gap-3">
-                          <span className="text-[12px] text-zinc-300 truncate">{a.label}</span>
+                          <span className="text-[12px] text-zinc-300 truncate">
+                            {a.label}
+                            {a.jaCopia && <span className="ml-1.5 rounded bg-sky-500/15 px-1.5 py-0.5 text-[9.5px] font-semibold text-sky-300">já copia</span>}
+                          </span>
                           {a.available ? (
                             <span className="text-[12px] font-mono tabular-nums text-right">
                               <span className="text-white font-semibold">{a.lot != null ? `${a.lot} lote${a.lot === 1 ? "" : "s"}` : "—"}</span>
@@ -1635,6 +1640,14 @@ export default function TapToTradeFeed() {
                         </div>
                       ))}
                     </div>
+                    {/* A conta já recebe este trade pela cópia automática: dizê-lo ANTES do clique.
+                        O sistema não abre duas vezes (o T2T salta as contas onde o motor já
+                        executou o mesmo trade), mas saltar em silêncio parece uma avaria. */}
+                    {preview.accounts.some((a) => a.jaCopia) && (
+                      <p className="text-[10px] text-sky-300 mt-2 leading-snug">
+                        ℹ️ {preview.accounts.filter((a) => a.jaCopia).map((a) => a.label).join(", ")} já {preview.accounts.filter((a) => a.jaCopia).length === 1 ? "copia" : "copiam"} esta estratégia automaticamente — este sinal entra aí sozinho. Aceitar aqui não abre uma segunda posição nessa conta.
+                      </p>
+                    )}
                     {preview.accounts.some((a) => a.overCap != null) && (
                       <p className="text-[10px] text-amber-400 mt-2 leading-snug">
                         ⚠️ O lote mínimo da corretora arrisca mais do que o tecto que escolheste

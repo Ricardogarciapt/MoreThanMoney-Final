@@ -9,6 +9,7 @@ import { computeLotSize, riscoEfetivoPct, signalForRiskSizing } from "@/lib/mtmc
 import { getAccountSnapshot } from "@/lib/mtmcopy/metaapi"
 import { ehTradeLocker, sessaoDaLigacao } from "@/lib/tradelocker/ligacao"
 import { pipSizeForSymbol } from "@/lib/mtmcopy/trade-outcome"
+import { estrategiaDoSinalT2T } from "@/lib/mestres/t2t"
 
 /**
  * PRÉ-VISUALIZAÇÃO de um sinal antes de o aceitar.
@@ -79,6 +80,32 @@ export async function GET(request: NextRequest) {
     // "*" para incluir as colunas tl_* (TradeLocker, migração 069) sem partir antes de a aplicar.
     .select("*")
     .eq("user_id", user.id)
+
+  /**
+   * «ESTA CONTA JÁ COPIA ESTA ESTRATÉGIA SOZINHA.»
+   *
+   * Uma conta com a cópia automática ligada vai receber este mesmo trade pelo motor. Aceitar o
+   * sinal à mão na MESMA conta abria a posição duas vezes — e quem carrega no botão não tem como
+   * saber disso. O sistema já não deixa que aconteça (o T2T salta as contas onde o motor executou
+   * o mesmo trade), mas saltar em silêncio parece uma avaria. Aqui diz-se ANTES de carregar.
+   *
+   * A fonte é a mesma que vai abrir: as rotas vivas do motor para a estratégia deste sinal.
+   */
+  const slugDoSinal = estrategiaDoSinalT2T(message.channel_slug, message.content)
+  const jaCopiam = new Set<string>()
+  if (slugDoSinal) {
+    const { data: rotas } = await supabase
+      .from("copia_rotas")
+      .select("destino_ref")
+      .eq("estrategia_slug", slugDoSinal)
+      .eq("ativa", true)
+      .eq("estado", "aprovada")
+      .eq("tipo_rota", "estrategia")
+    for (const r of rotas ?? []) {
+      const ref = String(r.destino_ref ?? "")
+      if (ref.startsWith("site:")) jaCopiam.add(ref.slice(5))
+    }
+  }
 
   /**
    * DIZER PORQUE É QUE A CONTA NÃO SERVE, em vez de a esconder.
@@ -157,13 +184,14 @@ export async function GET(request: NextRequest) {
         const tecto = Number(conn.max_risk_percent) || null
         return {
           id: conn.id, label, equity, balance, lot,
+          jaCopia: jaCopiam.has(conn.id),
           lotMode: sizing.lot_mode, riskPct: riscoPct, riskAmount: riscoValor,
           realRiskPct: riscoReal,
           overCap: riscoReal != null && tecto != null && riscoReal > tecto ? tecto : null,
           available: equity != null,
         }
       } catch {
-        return { id: conn.id, label, equity: null, balance: null, lot: null, lotMode: sizing.lot_mode, riskPct: null, riskAmount: null, available: false }
+        return { id: conn.id, label, jaCopia: jaCopiam.has(conn.id), equity: null, balance: null, lot: null, lotMode: sizing.lot_mode, riskPct: null, riskAmount: null, available: false }
       }
     }),
   )
