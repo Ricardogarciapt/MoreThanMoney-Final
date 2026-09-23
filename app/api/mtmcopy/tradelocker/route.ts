@@ -92,6 +92,13 @@ export async function POST(request: NextRequest) {
   if (!cred) {
     return NextResponse.json({ error: 'A sessão de ligação expirou. Volta a introduzir o login TradeLocker.', code: 'ticket_expired' }, { status: 400 })
   }
+  // `accountId: 'todas'` → liga de uma vez todas as contas deste login (a maioria das pessoas tem
+  // mais do que uma, e repetir o login por cada uma era o que fazia ficarem por ligar).
+  if (accountId === 'todas') {
+    const { ligarTodasAsContasTradeLocker } = await import('@/lib/tradelocker/ligar-conta')
+    const r = await ligarTodasAsContasTradeLocker(user.id, cred, body)
+    return NextResponse.json(r.corpo, { status: r.status })
+  }
   // Passo 2 partilhado com o WebTrader (lib/tradelocker/ligar-conta): uma linha por conta.
   const r = await ligarContaTradeLocker(user.id, cred, accountId, body)
   return NextResponse.json(r.corpo, { status: r.status })

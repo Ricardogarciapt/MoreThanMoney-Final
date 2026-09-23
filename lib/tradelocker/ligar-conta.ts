@@ -23,6 +23,63 @@ import { ligacaoTradeLockerRepetida, type LinhaTradeLocker } from '@/lib/webtrad
 
 export type ResultadoLigarTL = { status: number; corpo: Record<string, unknown> }
 
+export interface ResultadoLigarTodas {
+  ligadas: Array<{ accountId: string; accNum: string; nome: string; connectionId?: string }>
+  jaLigadas: Array<{ accountId: string; accNum: string }>
+  falhadas: Array<{ accountId: string; accNum: string; erro: string }>
+}
+
+/**
+ * LIGAR TODAS AS CONTAS DE UM LOGIN TRADELOCKER, de uma vez.
+ *
+ * Um login TradeLocker costuma ter várias contas (a real, a demo, as da prop firm), e até aqui
+ * ligava-se uma de cada vez: escolher a conta, voltar a entrar, escolher outra. Quem tem seis
+ * repetia o login seis vezes — e quem não repetia ficava a ver só uma no WebTrader e na MTM Auto.
+ *
+ * Isto não precisa de chave de programador nenhuma: as contas vêm do `GET /auth/jwt/all-accounts`
+ * da API pública, com o mesmo token do login que a pessoa acabou de fazer. Cada conta passa pelo
+ * MESMO caminho de sempre (`ligarContaTradeLocker`), por isso os limites do plano, a regra do
+ * «já ligada» e as credenciais cifradas continuam a ser decididos num sítio só.
+ *
+ * Nunca lança: o que não deu vem em `falhadas` com o motivo, e as que ligaram ficam ligadas —
+ * bater com o limite do plano à quinta conta não desfaz as quatro anteriores.
+ */
+export async function ligarTodasAsContasTradeLocker(
+  userId: string,
+  cred: TLCredenciais,
+  body: Record<string, unknown>,
+): Promise<{ status: number; corpo: Record<string, unknown> }> {
+  let contas
+  try {
+    const tokens = await autenticar(cred)
+    contas = await listarContas(cred.env, tokens.accessToken)
+  } catch (e) {
+    return erroTradeLocker(e)
+  }
+  if (!contas.length) {
+    return { status: 404, corpo: { error: 'Login aceite, mas este utilizador não tem contas neste servidor/ambiente.' } }
+  }
+
+  const r: ResultadoLigarTodas = { ligadas: [], jaLigadas: [], falhadas: [] }
+  // Uma a uma, de propósito: as regras de limite lêem as ligações que já existem, e em paralelo
+  // duas contas veriam o mesmo «ainda cabe» e passariam as duas.
+  for (const c of contas) {
+    const out = await ligarContaTradeLocker(userId, cred, c.id, { ...body, accNum: c.accNum })
+    if (out.status >= 200 && out.status < 300) {
+      r.ligadas.push({ accountId: c.id, accNum: c.accNum, nome: c.name, connectionId: out.corpo.connection_id as string | undefined })
+    } else if (out.corpo.code === 'ja_ligada') {
+      r.jaLigadas.push({ accountId: c.id, accNum: c.accNum })
+    } else {
+      r.falhadas.push({ accountId: c.id, accNum: c.accNum, erro: String(out.corpo.error ?? `erro ${out.status}`) })
+    }
+  }
+  // Nenhuma ligou e nenhuma já estava: o pedido falhou inteiro, e o motivo é o da primeira.
+  if (!r.ligadas.length && !r.jaLigadas.length) {
+    return { status: 400, corpo: { error: r.falhadas[0]?.erro ?? 'Não foi possível ligar nenhuma conta.', ...r } }
+  }
+  return { status: 200, corpo: { ok: true, ...r } }
+}
+
 /**
  * Grava a ligação (mt5_platform='tradelocker') + a password cifrada à parte e testa a conta.
  * Devolve o estado HTTP e o corpo da resposta do ligador — as duas rotas respondem igual.

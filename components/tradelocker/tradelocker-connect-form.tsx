@@ -103,6 +103,39 @@ export default function TradeLockerConnectForm({
     }
   }
 
+  /**
+   * LIGAR TODAS as contas deste login de uma vez. Quem tem seis contas TradeLocker no mesmo login
+   * (a real, a demo, as da prop firm) tinha de repetir o login por cada uma — e as que ficavam por
+   * ligar não apareciam no WebTrader nem na MTM Auto. As contas já ligadas são saltadas, e o que
+   * não der vem dito conta a conta.
+   */
+  const ligarTodas = async () => {
+    setErro("")
+    if (!ticket) { setErro("A sessão de ligação expirou."); return }
+    const invalido = validar?.()
+    if (invalido) { setErro(invalido); return }
+    setBusy(true)
+    try {
+      const data = await pedir({ ...(extraPayload?.() ?? {}), ticket, accountId: "todas", purpose, copy_method: "telegram_group" })
+      setPassword("")
+      const ligadas = (data.ligadas ?? []) as Array<{ accNum: string }>
+      const jaLigadas = (data.jaLigadas ?? []) as Array<{ accNum: string }>
+      const falhadas = (data.falhadas ?? []) as Array<{ accNum: string; erro: string }>
+      if (falhadas.length) {
+        setErro(`Ligadas ${ligadas.length}${jaLigadas.length ? ` (${jaLigadas.length} já estavam)` : ""}. Não deu em ${falhadas.length}: ${falhadas.map((f) => `${f.accNum} — ${f.erro}`).join(" · ")}`)
+      }
+      const r = { connection: data.connection, balance: null, equity: null }
+      setLigada(r)
+      onConnected(r)
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "Erro inesperado"
+      if (/expirou/i.test(m)) { setTicket(null); setContas([]) }
+      setErro(m)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const ligar = async () => {
     setErro("")
     const conta = contas.find((c) => c.id === escolhida)
@@ -212,6 +245,11 @@ export default function TradeLockerConnectForm({
               {busy ? "A ligar…" : "Ligar conta"}
             </button>
           </div>
+          {contas.length > 1 && (
+            <button type="button" onClick={ligarTodas} disabled={busy} className="w-full rounded-lg border border-[#D2A63C]/40 py-2 text-xs font-semibold text-[#D2A63C] disabled:opacity-60">
+              Ligar as {contas.length} contas deste login
+            </button>
+          )}
         </>
       )}
       {erro && <p className="text-xs text-rose-400">{erro}</p>}
