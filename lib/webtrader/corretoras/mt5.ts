@@ -237,6 +237,7 @@ export function adaptadorMt5(accountId: string, opcoes: { podeNegociar: boolean 
       const equity = numOuNull(i?.equity)
       return {
         saldo, equity, margem: numOuNull(i?.margin), margemLivre: numOuNull(i?.freeMargin),
+        nivelMargem: numOuNull(i?.marginLevel),
         flutuante: saldo != null && equity != null ? Number((equity - saldo).toFixed(2)) : null, moeda: (i?.currency as string) ?? null,
       }
     },

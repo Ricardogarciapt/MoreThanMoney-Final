@@ -181,6 +181,8 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     ["Saldo", usd(c.saldo)], ["Equity", usd(c.equity)],
     ["Flutuante", usd(c.flutuante), (c.flutuante ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"],
     ["Margem", usd(c.margem)], ["Margem livre", usd(c.margemLivre)],
+    // Mesma linha, mesma ordem que no trader das contas MTM Funded (funded-trader.tsx).
+    ["Nível margem", c.nivelMargem == null ? "—" : `${c.nivelMargem.toFixed(0)}%`],
   ]
 
   return (

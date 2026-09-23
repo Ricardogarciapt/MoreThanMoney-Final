@@ -23,6 +23,12 @@ export interface ContaWT {
   equity: number | null
   margem: number | null
   margemLivre: number | null
+  /**
+   * Equity ÷ margem usada, em %. Estava só no trader das contas MTM Funded, e é o número que diz
+   * o quão perto se está da chamada de margem — não ter simetria aqui era a mesma conta a mostrar
+   * mais ou menos coisas consoante a corretora. `null` quando não há margem usada (nada aberto).
+   */
+  nivelMargem: number | null
   flutuante: number | null
   moeda: string | null
 }

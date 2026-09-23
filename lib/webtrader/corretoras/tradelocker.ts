@@ -86,9 +86,12 @@ export function adaptadorTradeLocker(sessao: TradeLockerSessao, opcoes: { podeNe
 
     conta: () => comErros(async () => {
       const e = await limitador.ler(`${k}estado`, intervalo, () => sessao.estado())
+      const margem = numOuNull(e.bruto.initialMarginReq)
       return {
         saldo: e.balance, equity: e.equity, margemLivre: e.availableFunds,
-        margem: numOuNull(e.bruto.initialMarginReq), flutuante: numOuNull(e.bruto.openNetPnL ?? e.bruto.openGrossPnL), moeda: null,
+        margem, flutuante: numOuNull(e.bruto.openNetPnL ?? e.bruto.openGrossPnL), moeda: null,
+        // A TradeLocker não dá a percentagem: sai da mesma conta que o MetaTrader faz.
+        nivelMargem: margem && margem > 0 && e.equity != null ? Math.round((e.equity / margem) * 100) : null,
       }
     }),
     posicoes: () => comErros(async () => (await leitura()).posicoes),

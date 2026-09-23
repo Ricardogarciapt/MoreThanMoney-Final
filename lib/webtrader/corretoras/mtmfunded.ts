@@ -43,6 +43,7 @@ export function adaptadorMtmFunded(conta: Conta, modo: ModoSessao): AdaptadorCor
       const e = await estadoCompleto((await lerConta(conta.id)) ?? conta, modo, { leve: true })
       return {
         saldo: e.estado.saldo, equity: e.estado.equity, margem: e.estado.margem, margemLivre: e.estado.margemLivre,
+        nivelMargem: e.estado.nivelMargemPct ?? null,
         flutuante: e.estado.flutuante, moeda: 'USD',
       }
     }),
