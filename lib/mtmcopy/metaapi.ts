@@ -4,6 +4,7 @@ import { resolveBrokerSymbol, rankedBrokerSymbols } from './symbol-resolver'
 import { orderCommentFor } from '@/lib/mtmcopy/no-comment-accounts'
 import { inicioDaContagem } from './metricas-desde'
 import { invalidarLeiturasDeSimbolos } from './metaapi-cache'
+import { contaRest, especificacaoRest, ordemRest, precoRest as bidAskRest } from './metaapi-rest'
 import { simbolosPartilhados, specPartilhada, esquecerPartilhado } from './metaapi-simbolos-partilhados'
 import { ehErroDeQuota, ehSegundoPlano, leituraDeFundoBloqueada, registarErroQuota } from './metaapi-quota'
 import {
@@ -916,6 +917,10 @@ export interface AccountSnapshot {
 }
 
 export async function getAccountSnapshot(accountId: string): Promise<AccountSnapshot | null> {
+  if (process.env.METAAPI_ORDENS_REST !== '0') {
+    const c = await contaRest(accountId)
+    if (c && (c.balance != null || c.equity != null)) return { balance: c.balance, equity: c.equity }
+  }
   let close: (() => Promise<void>) | undefined
   try {
     const rpc = await getRpcConnection(accountId)
@@ -984,6 +989,19 @@ export async function fetchLotSizingContext(
   symbol: string,
   direction: 'buy' | 'sell',
 ): Promise<LotSizingMarketContext> {
+  // Pelo REST primeiro (saldo + preço numa ida e volta cada, menos de 1 s). É o que faz o Tap to
+  // Trade deixar de esperar pela ligação RPC fria — ver ordemPeloRest e metaapi-rest.ts. Só conta
+  // quando traz as DUAS coisas: um saldo sem preço (ou o contrário) dimensionava a trade pela
+  // metade da informação, e isso é pior do que esperar.
+  if (process.env.METAAPI_ORDENS_REST !== '0') {
+    const [conta, preco] = await Promise.all([contaRest(accountId), bidAskRest(accountId, symbol)])
+    const saldo = conta?.balance ?? conta?.equity ?? null
+    const mercado = direction === 'buy' ? preco?.ask ?? null : preco?.bid ?? null
+    if (saldo != null && mercado != null) {
+      cacheBalance(accountId, saldo)
+      return { balance: saldo, marketPrice: mercado }
+    }
+  }
   let close: (() => Promise<void>) | undefined
   try {
     const rpc = await getRpcConnection(accountId)
@@ -1029,7 +1047,53 @@ export async function fetchLotSizingContext(
   }
 }
 
+/**
+ * A ORDEM PELO REST, quando der — o caminho curto (ver metaapi-rest.ts).
+ *
+ * A ligação RPC do SDK tem de `connect()` e `waitSynchronized()` antes de mandar seja o que for, e
+ * numa função sem estado isso é quase sempre a frio: até 55 s com o cliente a olhar para o ecrã.
+ * O REST responde em menos de um segundo (medido: 0,7 s na conta 8049310).
+ *
+ * Só se usa quando o símbolo que nos deram É o símbolo da corretora — confirma-se pedindo a
+ * especificação dele, que é também o que diz o lote mínimo e o passo. Se a corretora usa sufixo
+ * («XAUUSD.s») e nos deram o nome canónico, a especificação vem vazia e devolve-se `null`: quem
+ * resolve nomes é o caminho de sempre, com a lista de símbolos da conta. Nunca se ADIVINHA um nome.
+ *
+ * Devolver `null` quer dizer «não deu, segue pelo SDK». Uma RECUSA da corretora (sem dinheiro,
+ * stops inválidos, mercado fechado) NÃO devolve `null` — é uma resposta, e repeti-la por outro cano
+ * seria arriscar uma segunda ordem.
+ */
+async function ordemPeloRest(req: OrderRequest, tipo: 'market' | 'limit' | 'stop'): Promise<OrderResult | null> {
+  if (process.env.METAAPI_ORDENS_REST === '0') return null
+  if (!req.accountId?.trim() || !req.symbol?.trim()) return null
+  const spec = await especificacaoRest(req.accountId, req.symbol)
+  if (!spec || !(spec.volumeMin && spec.volumeMin > 0)) return null
+  const volume = clampVolume(req.volume, {
+    point: spec.tickSize ?? 0,
+    digits: spec.digits ?? undefined,
+    stopsLevel: spec.stopsLevel ?? undefined,
+    minVolume: spec.volumeMin ?? undefined,
+    maxVolume: spec.volumeMax ?? undefined,
+    volumeStep: spec.volumeStep ?? undefined,
+  })
+  const r = await ordemRest({
+    accountId: req.accountId, symbol: req.symbol, direcao: req.direction, tipo, volume,
+    preco: tipo === 'market' ? null : req.openPrice ?? null,
+    sl: req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : null,
+    tp: req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : null,
+    comentario: req.comment ?? null,
+  })
+  if (!r.ok && r.tentarSdk) return null
+  if (!r.ok) {
+    await depoisDeOrdemFalhada(req.accountId, [r.erro ?? ''])
+    return { success: false, error: r.erro, brokerSymbol: req.symbol }
+  }
+  return { success: true, orderId: r.orderId ?? undefined, positionId: r.positionId ?? undefined, brokerSymbol: req.symbol }
+}
+
 export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> {
+  const rapido = await ordemPeloRest(req, 'market')
+  if (rapido) return rapido
   let close: (() => Promise<void>) | undefined
   try {
     const { connection, close: closeFn } = await getRpcConnection(req.accountId)
@@ -1084,6 +1148,8 @@ export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> 
 }
 
 export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
+  const rapido = await ordemPeloRest(req, 'limit')
+  if (rapido) return rapido
   let close: (() => Promise<void>) | undefined
   try {
     const openPrice = req.openPrice
@@ -1147,6 +1213,8 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
 }
 
 export async function placeStopOrder(req: OrderRequest): Promise<OrderResult> {
+  const rapido = await ordemPeloRest(req, 'stop')
+  if (rapido) return rapido
   let close: (() => Promise<void>) | undefined
   try {
     const openPrice = req.openPrice

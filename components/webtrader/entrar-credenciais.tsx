@@ -186,25 +186,35 @@ function FormMt5({ onEntrou, compraPermitida }: { onEntrou: (ref: string) => voi
   const [password, setPassword] = useState("")
   const [servidor, setServidor] = useState("")
   const [versao, setVersao] = useState<"mt5" | "mt4">("mt5")
-  const [sugestoes, setSugestoes] = useState<string[]>([])
+  // Servidores por corretora (grupos), para o dropdown. Com a caixa vazia vêm as corretoras mais
+  // usadas; a escrever, pesquisa-se na lista da MetaApi (é a mesma lista que o ligador de contas usa).
+  const [grupos, setGrupos] = useState<Array<{ broker: string; servers: string[] }>>([])
+  const [escrever, setEscrever] = useState(false)
+  const [procura, setProcura] = useState("")
   const [aEntrar, setAEntrar] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [quota, setQuota] = useState<string | null>(null)
   const k = useTextos()
 
-  // Pesquisa de servidores (a mesma do ligador de contas), com pausa entre teclas.
+  /**
+   * A LISTA DE SERVIDORES, como era no ligador de contas: um dropdown com as corretoras e os seus
+   * servidores, e não uma caixa em branco onde é preciso saber de cor que se escreve «PUPrime-Live».
+   * Abre já com as corretoras mais usadas (pedido sem termo); escrever no campo de procura vai
+   * buscar as outras. Quem tiver um servidor que não esteja na lista escreve-o à mão — nenhuma
+   * lista de corretoras está alguma vez completa.
+   */
   useEffect(() => {
-    const q = servidor.trim()
-    if (q.length < 3) { setSugestoes([]); return }
+    let vivo = true
     const t = setTimeout(async () => {
       try {
-        const r = await fetch(`/api/mtmcopy/brokers?platform=${versao}&q=${encodeURIComponent(q)}&limit=20`, { headers: await authHeaders() })
+        const q = procura.trim()
+        const r = await fetch(`/api/mtmcopy/brokers?platform=${versao}${q ? `&q=${encodeURIComponent(q)}` : ""}&limit=60`, { headers: await authHeaders() })
         const j = await r.json()
-        setSugestoes((j.brokers ?? []).flatMap((g: { servers?: string[] }) => g.servers ?? []).slice(0, 20))
-      } catch { setSugestoes([]) }
-    }, 400)
-    return () => clearTimeout(t)
-  }, [servidor, versao])
+        if (vivo) setGrupos((j.brokers ?? []).filter((g: { servers?: string[] }) => (g.servers ?? []).length))
+      } catch { if (vivo) setGrupos([]) }
+    }, procura.trim() ? 400 : 0)
+    return () => { vivo = false; clearTimeout(t) }
+  }, [procura, versao])
 
   return (
     <form className="space-y-2" onSubmit={async (e) => {
@@ -221,7 +231,7 @@ function FormMt5({ onEntrou, compraPermitida }: { onEntrou: (ref: string) => voi
       {/* Os servidores MT4 e MT5 de uma corretora têm nomes diferentes — escolher antes de pesquisar. */}
       <div role="radiogroup" aria-label={k("mtVersao")} className="grid grid-cols-2 gap-1 rounded-lg bg-black/40 p-1">
         {(["mt5", "mt4"] as const).map((v) => (
-          <button type="button" role="radio" aria-checked={versao === v} key={v} onClick={() => { setVersao(v); setSugestoes([]) }}
+          <button type="button" role="radio" aria-checked={versao === v} key={v} onClick={() => { setVersao(v); setServidor(""); setGrupos([]) }}
             className={`rounded-md py-1.5 text-[12px] font-semibold ${versao === v ? "bg-white/10 text-white" : "text-zinc-500"}`}>{v.toUpperCase()}</button>
         ))}
       </div>
@@ -229,8 +239,24 @@ function FormMt5({ onEntrou, compraPermitida }: { onEntrou: (ref: string) => voi
       <label className="block"><span className="text-zinc-400">{k("login")}</span><input inputMode="numeric" autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} className={`${campo} font-mono`} /></label>
       <label className="block"><span className="text-zinc-400">{k("passwordMaster")}</span><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={campo} /></label>
       <label className="block"><span className="text-zinc-400">{k("servidor")}</span>
-        <input list="webtrader-mt5-servidores" value={servidor} onChange={(e) => setServidor(e.target.value)} placeholder={k("mtServidorPh")} className={campo} />
-        <datalist id="webtrader-mt5-servidores">{sugestoes.map((s) => <option key={s} value={s} />)}</datalist>
+        {escrever ? (
+          <input value={servidor} onChange={(e) => setServidor(e.target.value)} placeholder={k("mtServidorPh")} className={campo} autoFocus />
+        ) : (
+          <>
+            <input value={procura} onChange={(e) => setProcura(e.target.value)} placeholder={k("mtServidorProcura")} className={`${campo} mb-1`} />
+            <select value={servidor} onChange={(e) => setServidor(e.target.value)} className={campo}>
+              <option value="">{grupos.length ? k("mtServidorEscolher") : k("mtServidorACarregar")}</option>
+              {grupos.map((g) => (
+                <optgroup key={g.broker} label={g.broker}>
+                  {g.servers.map((sv) => <option key={`${g.broker}:${sv}`} value={sv}>{sv}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </>
+        )}
+        <button type="button" onClick={() => { setEscrever((x) => !x); setServidor("") }} className="mt-1 text-[11px] text-[#D2A63C] underline">
+          {escrever ? k("mtServidorDaLista") : k("mtServidorNaoEsta")}
+        </button>
       </label>
       {erro && <p className="text-[11.5px] text-rose-300">{erro}</p>}
       {quota && (
