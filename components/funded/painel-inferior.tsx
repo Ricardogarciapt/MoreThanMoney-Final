@@ -1,67 +1,45 @@
 "use client"
 
-import dynamic from "next/dynamic"
-import { useEffect, useState } from "react"
-import { BarChart3, Bell, BookOpen, History, ListOrdered, User, Wallet } from "lucide-react"
-import ListaPosicoes from "./lista-posicoes"
-import FundedDiario from "./funded-diario"
-import FundedAlertas from "./funded-alertas"
-import PainelConta from "./painel-conta"
-import type { Trader } from "./trader-contexto"
-const FundedEstatisticas = dynamic(() => import("./funded-estatisticas"), { ssr: false })
+import { useEffect, useRef, useState } from "react"
+import type { PainelTrader } from "./trader-contexto"
 
 /**
- * O PAINEL DE BAIXO (PRO) — Posições | Ordens | Histórico | Estatísticas | Diário | Alertas | Conta.
- * O separador escolhido fica guardado. O histórico abre a nota da trade no Diário (📖).
+ * O PAINEL DE BAIXO (PRO) — a barra de separadores e o painel escolhido, seja qual for a conta.
+ *
+ * Não sabe o que são posições, diários ou regras: recebe a lista de painéis que a conta tem
+ * (`PainelTrader[]`) e arruma-os. Uma conta MTM Funded traz sete; uma conta real da corretora traz
+ * três — e é por isso que lá não aparece um separador «Diário» vazio.
+ *
+ * O separador escolhido fica guardado POR TIPO de conta (`chaveGuardar`): a simulada e a real não
+ * se pisam uma à outra, e um valor velho que já não existe volta ao primeiro em vez de deixar o
+ * painel em branco.
  */
 
-export type Separador = "posicoes" | "ordens" | "historico" | "estatisticas" | "diario" | "alertas" | "conta"
-const CHAVE = "mtmfunded_pro_separador"
-const SEPARADORES_VALIDOS: Separador[] = ["posicoes", "ordens", "historico", "estatisticas", "diario", "alertas", "conta"]
+export default function PainelInferior({ paineis, denso = true, chaveGuardar }: { paineis: PainelTrader[]; denso?: boolean; chaveGuardar: string }) {
+  const [sep, setSep] = useState<string>(() => paineis[0]?.chave ?? "")
+  const paineisRef = useRef(paineis)
+  paineisRef.current = paineis
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(chaveGuardar)
+      if (v && paineisRef.current.some((p) => p.chave === v)) setSep(v)
+    } catch { /* ok */ }
+  }, [chaveGuardar])
+  const escolher = (s: string) => { setSep(s); try { localStorage.setItem(chaveGuardar, s) } catch { /* ok */ } }
 
-export default function PainelInferior({ t, denso = true }: { t: Trader; denso?: boolean }) {
-  const [sep, setSep] = useState<Separador>("posicoes")
-  const [foco, setFoco] = useState<string | null>(null)
-  // Só um separador que existe (um valor velho ou estragado deixava o painel vazio).
-  useEffect(() => { try { const v = localStorage.getItem(CHAVE) as Separador | null; if (v && SEPARADORES_VALIDOS.includes(v)) setSep(v) } catch { /* ok */ } }, [])
-  const escolher = (s: Separador) => { setSep(s); try { localStorage.setItem(CHAVE, s) } catch { /* ok */ } }
-
-  const d = t.dados
-  const ativos = (t.alertas.alertas ?? []).filter((a) => a.ativo).length
-  const separadores: Array<[Separador, string, typeof Wallet, number?]> = [
-    ["posicoes", "Posições", Wallet, d.posicoes.length], ["ordens", "Ordens", ListOrdered, d.ordens.length], ["historico", "Histórico", History],
-    ["estatisticas", "Estatísticas", BarChart3], ["diario", "Diário", BookOpen], ["alertas", "Alertas", Bell, ativos], ["conta", "A minha conta", User],
-  ]
-  const lista = (vista: "posicoes" | "ordens" | "historico") => (
-    <ListaPosicoes
-      vista={vista} posicoes={d.posicoes} ordens={d.ordens} historico={d.historico} simbolos={t.fichas} precos={t.mapa}
-      podeNegociar={t.podeNegociar} denso={denso} accountId={t.accountId} simboloAtual={t.simbolo?.symbol}
-      executar={t.executar} onSelecionarSimbolo={(s) => void t.selecionarPorNome(s)}
-      onNota={(id) => { setFoco(id); escolher("diario") }} notas={t.diario.comTrade}
-    />
-  )
-
+  const activo = paineis.find((p) => p.chave === sep) ?? paineis[0]
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#131722]">
       <div role="tablist" aria-label="Painel da conta" className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-[#2A2E39] px-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {separadores.map(([s, nome, Icone, n]) => (
-          <button key={s} role="tab" aria-selected={sep === s} onClick={() => escolher(s)}
-            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-1.5 text-[12px] ${sep === s ? "border-[#D2A63C] text-white" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}>
-            <Icone className="h-3.5 w-3.5" /> {nome}{n ? <span className="rounded bg-white/10 px-1 text-[10px]">{n}</span> : null}
+        {paineis.map(({ chave, nome, icone: Icone, contagem }) => (
+          <button key={chave} role="tab" aria-selected={activo?.chave === chave} onClick={() => escolher(chave)}
+            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-1.5 text-[12px] ${activo?.chave === chave ? "border-[#D2A63C] text-white" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}>
+            <Icone className="h-3.5 w-3.5" /> {nome}{contagem ? <span className="rounded bg-white/10 px-1 text-[10px]">{contagem}</span> : null}
           </button>
         ))}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#363A45_transparent]">
-        {sep === "posicoes" && lista("posicoes")}
-        {sep === "ordens" && lista("ordens")}
-        {sep === "historico" && lista("historico")}
-        {sep === "estatisticas" && (
-          <FundedEstatisticas accountId={t.accountId} equity={t.vivo.equity}
-            regras={{ limites: t.vivo.limites, regras: d.regras, saldoInicial: d.conta.saldoInicial, equity: t.vivo.equity, diasNegociados: d.conta.diasNegociados }} />
-        )}
-        {sep === "diario" && <FundedDiario accountId={t.accountId} historico={d.historico} podeEscrever={d.modo === "master"} diario={t.diario} focoTrade={foco} onFoco={setFoco} />}
-        {sep === "alertas" && <FundedAlertas accountId={t.accountId} simbolo={t.simbolo} preco={t.simbolo ? t.vivos[t.simbolo.symbol] : undefined} podeCriar={d.modo === "master"} estado={t.alertas} onSelecionarSimbolo={(s) => void t.selecionarPorNome(s)} />}
-        {sep === "conta" && <PainelConta t={t} />}
+        {activo?.conteudo({ irPara: escolher, denso, fechar: () => {} })}
       </div>
     </div>
   )
