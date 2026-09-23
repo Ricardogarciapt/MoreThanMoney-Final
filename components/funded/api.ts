@@ -105,6 +105,23 @@ export function gravarEtiqueta(ref: string, etiqueta: string): Promise<{ ok: tru
   return pedir("/api/contas/etiqueta", { method: "PATCH", body: JSON.stringify({ ref, etiqueta }) })
 }
 
+/**
+ * A ORDEM das contas no seletor (o que a pessoa arrastou) e a FAVORITA (a que abre primeiro).
+ * Guardadas na conta MTM, não no dispositivo — ver app/api/contas/ordem/route.ts.
+ */
+export function lerOrdemContas(): Promise<{ ordem: string[]; favorita: string | null }> {
+  return pedir("/api/contas/ordem")
+}
+
+export function gravarOrdemContas(ordem: string[]): Promise<{ ok: true; ordem: string[] }> {
+  return pedir("/api/contas/ordem", { method: "PATCH", body: JSON.stringify({ ordem }) })
+}
+
+/** `ref` = `mtmfunded:<id>`; `null` desmarca a que estiver marcada. */
+export function gravarContaFavorita(ref: string | null): Promise<{ ok: true; favorita: string | null }> {
+  return pedir("/api/contas/ordem", { method: "PATCH", body: JSON.stringify({ favorita: ref }) })
+}
+
 export function ordem(accao: string, corpo: Record<string, unknown>, accountId: string) {
   return pedir("/api/mtmfunded/simulado/ordens", { method: "POST", body: JSON.stringify({ accao, ...corpo }) }, accountId)
 }

@@ -3,6 +3,18 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CONTRATO_VERSAO, CONTRATO_VERSOES_ACEITES, almofadaUsd, levantavelUsd, QUOTA_TRADER } from '@/lib/mtmfunded/contrato'
 import { equityParaLevantamento } from '@/lib/mtmfunded/numeros-conta'
 
+/**
+ * Capital com prazo: uma conta aberta com capital da casa (compensação de 10/09, transição do PAMM
+ * de 23/09) fica um ano sem levantamentos — é a condição do juro composto que a acompanha. A data
+ * vive em `metricas.bloqueio_levantamento_ate`; sem ela, nada muda.
+ */
+function bloqueadoAte(metricas: unknown): string | null {
+  const d = (metricas as Record<string, unknown> | null)?.bloqueio_levantamento_ate
+  if (typeof d !== 'string' || !d) return null
+  const t = Date.parse(d)
+  return Number.isFinite(t) && t > Date.now() ? d : null
+}
+
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
@@ -84,7 +96,8 @@ export async function GET(request: NextRequest) {
         equity,
         almofada: almofadaUsd(Number(c.saldo_inicial ?? 0)),
         jaPago,
-        levantavel: levantavelUsd(Number(c.saldo_inicial ?? 0), equity, jaPago),
+        bloqueadoAte: bloqueadoAte(c.metricas),
+        levantavel: bloqueadoAte(c.metricas) ? 0 : levantavelUsd(Number(c.saldo_inicial ?? 0), equity, jaPago),
       }
     }),
     pedidos: pedidos ?? [],
@@ -156,6 +169,15 @@ export async function POST(request: NextRequest) {
   // Um desafio ou um torneio não se levanta — o que se paga é o desempenho da conta Funded.
   if (!['financiada', 'funded'].includes(String(conta.tipo)) || conta.estado !== 'ativa') {
     return NextResponse.json({ error: 'Só se pode levantar de uma conta Funded activa' }, { status: 403 })
+  }
+
+  // ── porta 3b: capital com prazo ───────────────────────────────────────────
+  const ate = bloqueadoAte(conta.metricas)
+  if (ate) {
+    return NextResponse.json(
+      { error: `O capital desta conta não é levantável até ${new Date(ate).toLocaleDateString('pt-PT')}.`, bloqueadoAte: ate },
+      { status: 403 },
+    )
   }
 
   // ── porta 4: SEM posições abertas nem ordens pendentes ─────────────────────

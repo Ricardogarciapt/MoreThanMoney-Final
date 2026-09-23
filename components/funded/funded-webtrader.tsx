@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { semCripto, ehSimboloCripto, SIMBOLO_SEM_CRIPTO } from "@/lib/ios-sem-cripto"
 import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
-import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2, Pencil, Check } from "lucide-react"
+import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2, Pencil, Check, GripVertical, Star } from "lucide-react"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
-import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, gravarEtiqueta, usd, COR_ESTADO } from "./api"
+import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, gravarEtiqueta, lerOrdemContas, gravarOrdemContas, gravarContaFavorita, usd, COR_ESTADO } from "./api"
 import InstalarWebtrader from "./instalar-webtrader"
 import PopoverAncorado from "./popover-contas"
 import { preaquecerWebtrader } from "./pre-carga"
@@ -16,6 +16,8 @@ import {
   type ContaReal, COR_PLATAFORMA, apagarSessaoTL, ehRefReal, listarContasReais, lerSessoesTL, plataformaDaRef,
 } from "@/components/webtrader/api-corretoras"
 import { contaInicial, montarSeletor, type EntradaSeletor } from "@/lib/webtrader/seletor"
+import { moverConta, ordenarEntradas } from "@/lib/webtrader/ordem-contas"
+import { useArrastoLista, type ArrastoLista } from "./use-arrasto-lista"
 import { ETIQUETA_MAX, normalizarEtiqueta } from "@/lib/contas/etiqueta"
 import { getAccessToken } from "@/lib/auth-token"
 import type { PlataformaWT } from "@/lib/webtrader/corretoras/tipos"
@@ -84,6 +86,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   const [etiquetaEmEdicao, setEtiquetaEmEdicao] = useState<string | null>(null)
   const [erroEtiqueta, setErroEtiqueta] = useState<string | null>(null)
   const [reais, setReais] = useState<ContaReal[]>([])
+  // 122 — a ordem em que o dono arrumou as contas (arrastando) e qual delas abre primeiro.
+  const [ordem, setOrdem] = useState<string[]>([])
+  const [favorita, setFavorita] = useState<string | null>(null)
   const [compraPermitida, setCompraPermitida] = useState(true)
   const [temSessaoMtm, setTemSessaoMtm] = useState(false)
   const [ligarPlataforma, setLigarPlataforma] = useState<PlataformaWT | null>(null)
@@ -140,6 +145,14 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
 
   useEffect(() => { carregar() }, [carregar])
 
+  // A ordem e a favorita vivem na conta MTM (seguem para o telemóvel). Sem sessão, a lista fica
+  // pela ordem natural — não é erro nenhum, e não se avisa ninguém disso.
+  useEffect(() => {
+    let vivo = true
+    void lerOrdemContas().then((r) => { if (vivo) { setOrdem(r.ordem ?? []); setFavorita(r.favorita ?? null) } }).catch(() => undefined)
+    return () => { vivo = false }
+  }, [])
+
   /**
    * Grava a etiqueta e ACTUALIZA A LISTA no sítio, sem recarregar: o seletor fica aberto e a conta
    * escolhida não muda. `ref` das MTM Funded é `mtmfunded:<id>`; as reais já são a própria ref.
@@ -158,6 +171,18 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
       else setContas((cs) => (cs ?? []).map((c) => (c.id === entrada.id ? { ...c, etiquetaDoDono: gravada } : c)))
     } catch (e) {
       setErroEtiqueta(e instanceof Error ? e.message : "não foi possível gravar a etiqueta")
+    }
+  }
+
+  /** A estrela: esta conta passa a abrir primeiro. Tocar outra vez tira a marca. */
+  const alternarFavorita = async (entrada: EntradaSeletor) => {
+    const marcar = favorita !== entrada.id
+    setFavorita(marcar ? entrada.id : null)
+    try {
+      await gravarContaFavorita(marcar ? `mtmfunded:${entrada.id}` : null)
+    } catch (e) {
+      setFavorita(favorita)
+      setErroEtiqueta(e instanceof Error ? e.message : "não foi possível marcar a favorita")
     }
   }
 
@@ -197,7 +222,23 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     void carregarFundedTrader()
   }, [simboloInicial])
 
-  const todas = useMemo(() => montarSeletor({ funded: contas, sessoesFunded: sessoes, reais: reais as ContaReal[] }), [contas, sessoes, reais])
+  const todas = useMemo(() => {
+    const entradas = montarSeletor({ funded: contas, sessoesFunded: sessoes, reais: reais as ContaReal[] })
+    return ordenarEntradas(entradas.map((e) => ({ ...e, favorita: e.id === favorita })), ordem)
+  }, [contas, sessoes, reais, ordem, favorita])
+  /**
+   * Arrastar arruma JÁ na lista (o dedo manda) e grava no fim; se a gravação falhar, a ordem que
+   * se vê continua a ser a que a pessoa fez — só não sobrevive ao próximo carregamento, e dizê-lo
+   * num aviso vermelho a meio de um arrasto era pior do que a própria falha.
+   */
+  const trocarOrdem = useCallback((id: string, alvoId: string) => {
+    const nova = moverConta(todas, id, alvoId)
+    setOrdem(nova)
+    return nova
+  }, [todas])
+  const gravarOrdem = useCallback((nova: string[]) => { void gravarOrdemContas(nova).catch(() => undefined) }, [])
+  const arrasto = useArrastoLista(todas.map((t) => t.id), trocarOrdem, gravarOrdem)
+
   const atual = todas.find((t) => t.id === ativa)
 
   if (contas == null) return <Girar />
@@ -248,10 +289,11 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
             </button>
             <PopoverAncorado aberto={seletorAberto} ancora={botaoSeletor} onFechar={fecharSeletor} titulo="Escolher conta">
               <div role="listbox">
-                <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">MTM Funded (simuladas) · TradeLocker e MT5 (reais) — o lápis dá um nome à conta</p>
+                <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">MTM Funded (simuladas) · TradeLocker e MT5 (reais) — arrasta pela pega para arrumar, a estrela abre primeiro, o lápis dá um nome</p>
                 {erroEtiqueta && <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-rose-300">{erroEtiqueta}</p>}
                 {todas.map((t) => t.real ? (
-                  <div key={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
+                  <div key={t.id} data-conta-id={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${arrasto.aArrastar === t.id ? "bg-white/15 opacity-70" : t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
+                    <Pega id={t.id} arrasto={arrasto} />
                     <button role="option" aria-selected={t.id === ativa} disabled={Boolean(t.real.bloqueada)} title={t.real.bloqueada ?? undefined} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left disabled:opacity-50" onClick={() => escolher(t.id)}>
                       <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[t.real.plataforma] }}>{t.etiqueta}</span>
                       <span className="rounded px-1.5 text-[10.5px] font-bold" style={{ color: t.real.bloqueada ? "#a1a1aa" : t.real.demo ? "#60a5fa" : "#fb7185" }}>{t.estadoCurto}</span>
@@ -272,7 +314,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                     )}
                   </div>
                 ) : (
-                  <div key={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${t.id === ativa ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
+                  <div key={t.id} data-conta-id={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${arrasto.aArrastar === t.id ? "bg-white/15 opacity-70" : t.id === ativa ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
+                    <Pega id={t.id} arrasto={arrasto} />
                     <button role="option" aria-selected={t.id === ativa} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left" onClick={() => escolher(t.id)}>
                       <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}{t.segue ? ` · ${nomeCurto(t.segue)}` : ""}</span>
                       <span className="rounded px-1.5 text-[10.5px]" style={{ color: COR_ESTADO[t.estadoCurto] ?? "#a1a1aa" }}>{t.estadoCurto}</span>
@@ -281,6 +324,14 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                       {t.saldo != null && <span className="ml-auto font-mono text-zinc-400">{usd(t.equity ?? t.saldo)} $</span>}
                       {!t.propria && <span className="ml-auto text-[10.5px] text-sky-300">{t.modo}</span>}
                     </button>
+                    {t.propria && (
+                      <button type="button" aria-label={favorita === t.id ? "Tirar dos favoritos" : "Marcar como favorita"} aria-pressed={favorita === t.id}
+                        title={favorita === t.id ? "Favorita — abre primeiro" : "Marcar como favorita"}
+                        onClick={() => void alternarFavorita(t)}
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-md hover:bg-white/5 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11">
+                        <Star className={`h-4 w-4 ${favorita === t.id ? "fill-[#D2A63C] text-[#D2A63C]" : "text-zinc-600"}`} />
+                      </button>
+                    )}
                     <CampoEtiqueta
                       entrada={t}
                       aEditar={etiquetaEmEdicao === t.id}
@@ -392,6 +443,28 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
  * `podeEtiquetar` falso = conta sem linha na base (sessão TradeLocker do separador) ou de outra
  * pessoa (ligada com a password investor): nem lápis, nem campo.
  */
+/**
+ * A pega de arrastar. É ela que recebe o gesto (e não a linha inteira): assim tocar na conta
+ * continua a ESCOLHER a conta, que é o que 99% dos toques quer fazer.
+ *
+ * `touch-action: none` é obrigatório — sem isso o telemóvel trata o gesto como scroll da lista e
+ * o arrasto nunca chega a começar.
+ */
+function Pega({ id, arrasto }: { id: string; arrasto: ArrastoLista }) {
+  return (
+    <span
+      role="button"
+      aria-label="Arrastar para arrumar"
+      title="Arrastar para arrumar"
+      onPointerDown={(e) => arrasto.aoPegar(e, id)}
+      style={{ touchAction: "none" }}
+      className="grid h-8 w-6 shrink-0 cursor-grab place-items-center text-zinc-600 hover:text-zinc-300 active:cursor-grabbing [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-8"
+    >
+      <GripVertical className="h-4 w-4" />
+    </span>
+  )
+}
+
 function CampoEtiqueta({ entrada, aEditar, abrir, fechar, gravar }: {
   entrada: EntradaSeletor
   aEditar: boolean
