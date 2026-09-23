@@ -27,3 +27,25 @@ export function recebeT2T(c: LigacaoT2T | null | undefined): boolean {
 export function t2tDesligadoNaConta(c: LigacaoT2T | null | undefined): boolean {
   return Boolean(c && c.purpose === 'tap_to_trade' && c.t2t_enabled === false)
 }
+
+/**
+ * A conta APARECE no Tap to Trade (com o interruptor), mesmo quando está desligada nela.
+ *
+ * `recebeT2T` responde «executa?»; esta responde «mostra-se?». Eram a mesma pergunta até as contas
+ * TradeLocker ligadas no WebTrader (2026-09) passarem a nascer dedicadas mas DESLIGADAS: sem esta
+ * distinção, ou desapareciam do painel (e não havia onde as ligar), ou apareciam como se fossem
+ * receber ordens. Dez sítios escreviam esta regra à mão como
+ * `purpose === 'tap_to_trade' || t2t_enabled === true` — que é exactamente esta.
+ */
+export function apareceNoT2T(c: LigacaoT2T | null | undefined): boolean {
+  return recebeT2T(c) || t2tDesligadoNaConta(c)
+}
+
+/**
+ * O rótulo do uso «Tap to Trade» de uma conta — a MESMA frase no ligador do site, no painel da
+ * app e no admin. Devolve `null` quando a conta não tem nada que ver com o T2T.
+ */
+export function rotuloUsoT2T(c: LigacaoT2T | null | undefined): string | null {
+  if (!apareceNoT2T(c)) return null
+  return t2tDesligadoNaConta(c) ? 'Tap to Trade (desligado nesta conta)' : 'Tap to Trade'
+}

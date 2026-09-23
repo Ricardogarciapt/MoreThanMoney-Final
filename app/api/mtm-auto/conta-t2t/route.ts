@@ -5,6 +5,7 @@ import { autorizarMtmAuto } from '@/lib/mtm-auto-bridge'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { carregarDireitos, pareceDemo, resumoDeContas, type ContaLigada } from '@/lib/entitlements'
 import { PRESETS, preset, presetDosValores, presetParaLigacao } from '@/lib/risk-presets'
+import { recebeT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 20
@@ -74,7 +75,7 @@ async function contasT2T(userId: string) {
       equity: ehMtmFundedLigacao(c) ? ((c as Record<string, unknown>).account_equity ?? null) : undefined,
       // Uma ligação de MTM Copy pode ter o T2T ligado por cima: é a mesma conta a fazer as duas
       // coisas, e é por isso que a bandeira é própria e não se deduz do `purpose`.
-      t2t: c.purpose === 'tap_to_trade' || c.t2t_enabled === true,
+      t2t: recebeT2T(c as { purpose?: string | null; t2t_enabled?: boolean | null }),
       ehMtmCopy: c.purpose !== 'tap_to_trade',
       // O sizing do T2T é o dele; só cai no da cópia quando não foi definido.
       modoLote: (c.t2t_lot_mode as string) ?? (c.lot_mode as string) ?? 'risk_percent',

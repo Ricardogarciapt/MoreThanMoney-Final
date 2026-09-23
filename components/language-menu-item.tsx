@@ -47,7 +47,7 @@ export function LanguageMenuItem() {
     <DropdownMenuSub>
       <DropdownMenuSubTrigger className="cursor-pointer text-gray-300 hover:text-white hover:bg-[#D2A63C]/10 focus:bg-[#D2A63C]/10 focus:text-white data-[state=open]:bg-[#D2A63C]/10">
         <Globe className="mr-3 h-4 w-4" />
-        <span className="flex-1">{t("common.language") || "Idioma"}</span>
+        <span className="flex-1">{t("nav.language")}</span>
         <span className="ml-2 text-base leading-none">{current.flag}</span>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="max-h-[320px] overflow-y-auto bg-black/95 border-[#D2A63C]/20">

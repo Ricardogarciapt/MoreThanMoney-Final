@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-api-helpers"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { adminBroadcastEmailTemplate } from "@/lib/email-templates"
 import { internalApiHeaders } from "@/lib/internal-api"
+import { recebeT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 const supabase = getSupabaseAdmin()
 
@@ -84,7 +85,7 @@ export async function POST(
           .eq('is_active', true)
         apenasEstes = new Set(
           (data ?? [])
-            .filter((r) => r.purpose === 'tap_to_trade' || r.t2t_enabled === true)
+            .filter((r) => recebeT2T(r))
             .map((r) => r.user_id as string),
         )
       }

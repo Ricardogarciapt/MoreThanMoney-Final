@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { lerHistorico } from '@/lib/mtmcopy/metaapi'
 import { contasDoUtilizador } from '@/lib/mtm-auto-bridge'
 import { lerInfoContaCache } from '@/lib/mtmcopy/metaapi-cache'
+import { recebeT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 export const dynamic = 'force-dynamic'
 // Ler o histórico fechado de várias contas na MetaAPI demora — e é isso que dá a curva de cada
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest) {
       const deals = await lerHistorico(String(c.metaapi_account_id), desdeData)
       if (!deals) return [] // null = não se conseguiu ler; [] = leu e não havia nada
       const rotulo = contaDe.get(String(c.metaapi_account_id)) ?? 'Conta'
-      const t2tPorDefeito = c.purpose === 'tap_to_trade' || c.t2t_enabled === true
+      const t2tPorDefeito = recebeT2T(c)
       return deals
         // Só os fechos: a abertura não tem resultado, e contá-la duplicava cada trade.
         .filter((d) => d.entryType === 'DEAL_ENTRY_OUT' || d.entryType === 'DEAL_ENTRY_INOUT')

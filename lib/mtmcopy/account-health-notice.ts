@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { apareceNoT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 /**
  * Avisa o CLIENTE quando a conta dele deixou de poder aceitar sinais.
@@ -50,7 +51,7 @@ export async function scanContasBloqueadas(): Promise<ContaBloqueada[]> {
   const out: ContaBloqueada[] = []
   for (const c of data ?? []) {
     // Só interessa quem CONTAVA operar: T2T ligado ou uma ligação de cópia.
-    const usaT2T = c.purpose === 'tap_to_trade' || c.t2t_enabled === true
+    const usaT2T = apareceNoT2T(c)
     const usaCopia = c.purpose === 'mtmcopy' || c.purpose === 'copy'
     if (!usaT2T && !usaCopia) continue
 
