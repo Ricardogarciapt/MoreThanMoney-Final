@@ -56,6 +56,7 @@ import { registarErroMetaApi } from './metaapi-partilhada'
 import { iniciarWsPrecos, type WsPrecos } from './ws-precos'
 import { iniciarFonteBinance, type FonteBinance } from './fonte-binance'
 import { iniciarFonteYahoo, type FonteYahoo } from './fonte-yahoo'
+import { iniciarFonteConectorMt5, type FonteConectorTicks } from './fonte-conector-mt5'
 import {
   assinaturaMetricas,
   precisaDeEscreverMetricas,
@@ -142,6 +143,7 @@ let feedTl: ComparadorTradeLocker | null = null
 let wsPrecos: WsPrecos | null = null
 let fonteBinance: FonteBinance | null = null
 let fonteYahoo: FonteYahoo | null = null
+let fonteConector: FonteConectorTicks | null = null
 
 const contas = new Map<string, ContaLinha>()
 const posicoesDe = new Map<string, PosicaoSim[]>()
@@ -480,12 +482,40 @@ function negociavel(sym: string, agora: Date): boolean {
 let ultimaEscritaOkEm = Date.now()
 let escritasFalhadasSeguidas = 0
 
+/**
+ * A BASE É UM RETRATO, NÃO UM FIO — quantas vezes por segundo se escreve cada símbolo.
+ *
+ * O caminho vivo dos preços é o WS (ws-precos.ts): o browser recebe cada tick em ~27 ms sem tocar
+ * na Supabase. A tabela `funded_precos` serve os fills do lado serverless, a vigia e a auditoria —
+ * e para isso não precisa de cada tick. Escrevia-se TUDO o que mudasse, de segundo a segundo: com
+ * as fontes lentas eram poucas linhas, mas com a cripto (36 símbolos) e os ticks do terminal MT5
+ * (dezenas por segundo) seria multiplicar a escrita por dez sem nada a ganhar — e foi escrita a
+ * mais que esgotou o egress a 19/09.
+ *
+ * Por isso: cada símbolo entra no retrato no máximo de `ESCRITA_PRECOS_MIN_MS` em `ESCRITA_PRECOS_MIN_MS`
+ * (5 s por omissão). Os RÁPIDOS — os que o espelho provider gere a cada tick — não esperam: aí a
+ * base é lida por quem decide SL e parciais, e meio segundo de atraso é um preço errado.
+ */
+const ESCRITA_MIN_MS = Number(process.env.ESCRITA_PRECOS_MIN_MS ?? 5000)
+const escritoEm = new Map<string, number>()
+
 async function escreverPrecos(): Promise<void> {
   if (!precosPorEscrever.size) return
-  const linhas = [...precosPorEscrever].map((s) => ({
+  const agora = Date.now()
+  const rapidosAgora = simbolosDoProvider
+  const aEscrever: string[] = []
+  for (const s of precosPorEscrever) {
+    if (!precos[s]) continue
+    if (rapidosAgora.has(s) || agora - (escritoEm.get(s) ?? 0) >= ESCRITA_MIN_MS) aEscrever.push(s)
+  }
+  const linhas = aEscrever.map((s) => ({
     symbol: s, bid: precos[s].bid, ask: precos[s].ask, em: new Date(precoEm.get(s) ?? Date.now()).toISOString(),
   }))
+  // Os que ficaram de fora saem da fila na mesma: o preço deles já está em memória e no WS, e o
+  // próximo tick volta a pô-los cá. Guardar a fila a crescer era só memória sem uso.
   precosPorEscrever.clear()
+  if (!linhas.length) return
+  for (const s of aEscrever) escritoEm.set(s, agora)
   if (!CFG.escrita) return
   const { error } = await db.from('funded_precos').upsert(linhas, { onConflict: 'symbol' })
   if (error) {
@@ -1178,6 +1208,10 @@ async function main(): Promise<void> {
     if (viva && ref && Date.now() - ref.em < 10_000 && Date.now() - viva.em < 10 * 60_000) return
     aoTickRecurso(sym, bid, ask, em)
   }
+  // O terminal MT5 do conector é a fonte mais fresca que temos (p50 ~94 ms contra 2–4 s das
+  // fontes REST) e entra PRIMEIRO de propósito: o preço dele é o da corretora onde a ordem entra.
+  // Sem CONECTOR_TICKS_RAIZES no ambiente devolve null e nada muda.
+  fonteConector = iniciarFonteConectorMt5({ precisa: principalVelho, injetar: aoTickRecurso, log })
   fonteBinance = iniciarFonteBinance({ precisa: principalVelho, injetar: aoTickRecurso, referencia: aoReferencia, log })
   // O PAXG é pouco líquido: o livro fica 5-12 s sem mexer e o ouro parecia velho à guarda de 5 s.
   // Com a ligação viva e PAXG visto há < 30 s, o preço de agora é o mesmo — volta a ser carimbado.
@@ -1240,6 +1274,7 @@ async function main(): Promise<void> {
       escrita: CFG.escrita, tem072, simbolosRapidos: simbolosDoProvider.size, wsClientes: wsPrecos?.clientes() ?? null,
       binance: fonteBinance?.resumo() ?? null,
       yahoo: fonteYahoo?.resumo() ?? null,
+      conectorMt5: fonteConector?.resumo() ?? null,
       espelhoSeguidoras: { latenciaEventoEscrita: latenciaSeguidoras.resumo() },
       espelhoProvider: estadoProvider,
       feedTradeLocker: feedTl?.resumo() ?? null,
@@ -1266,6 +1301,7 @@ async function main(): Promise<void> {
     wsPrecos?.parar()
     fonteBinance?.parar()
     fonteYahoo?.parar()
+    fonteConector?.parar()
     await escreverPrecos().catch(() => undefined)
     await espelho?.parar().catch(() => undefined)
     await provider?.parar().catch(() => undefined)
