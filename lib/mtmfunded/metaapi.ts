@@ -1,4 +1,5 @@
 import { findExistingAccount, formatMetaApiProvisionError } from '@/lib/mtmcopy/metaapi-provision'
+import { tipoCurto } from './etiquetas'
 
 /**
  * Liga uma conta do MTM Funded à MetaApi — para ser LIDA, e mais nada.
@@ -140,17 +141,18 @@ export interface FaseDoDesafio {
 }
 
 export function etiquetaDoTipo(tipo: TipoConta, f?: FaseDoDesafio): string {
+  // As MESMAS palavras que o cliente vê no WebTrader e no painel (lib/mtmfunded/etiquetas.ts).
+  //
+  // Isto escrevia «Desafio 1 fase» e «Desafio fase 2» enquanto a fonte única dizia F1 e F2 — e
+  // como este texto vai para o NOME DA CONTA na corretora, a mesma conta tinha um nome no ecrã e
+  // outro na lista da MetaApi. Quem comparava os dois não sabia se estava a ver a mesma coisa.
+  // Decisão do dono (24/09): alinhar pelas etiquetas do cliente.
   if (tipo === 'torneio') return 'Torneio'
   if (tipo === 'funded' || tipo === 'financiada') return 'Funded'
   if (tipo === 'real') return 'Real'
   if (tipo === 'desafio') {
-    const fases = Number(f?.fases ?? 0)
-    // Uma fase: «Desafio 1 fase» — diz-se o formato, porque é o que o distingue do outro.
-    if (fases === 1) return 'Desafio 1 fase'
-    // Duas fases: diz-se em QUAL se está, que é a informação que muda ao longo do caminho.
-    if (fases >= 2) return `Desafio fase ${Number(f?.fase ?? 1) >= 2 ? 2 : 1}`
-    // Programa desconhecido: fica a etiqueta genérica, que ainda distingue o tipo de conta.
-    return 'Desafio'
+    // A fase é o que muda ao longo do caminho; o número de fases do programa não entra no nome.
+    return tipoCurto('desafio', { fase: Number(f?.fase ?? 1) })
   }
   return 'MTM'
 }

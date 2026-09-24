@@ -1,12 +1,17 @@
 /**
- * Sem cripto na app iOS (MTM System) — o espelho web do `enum MTMCripto` da app nativa.
+ * Cripto na app iOS (MTM System) — o espelho web do `enum MTMCripto` da app nativa.
  *
- * Porquê: a Apple rejeitou a 3.7.2 (build 67) e a 3.7.6 (build 75) ao abrigo da Guideline
- * 3.1.5(iii) («cryptocurrency exchange services»). Na 75 o revisor, num iPad, viu cripto nas
- * páginas web que a app carrega (Scanner com o mapa de bolhas cripto por defeito, MTM Alerts,
- * WebTrader com BTCUSD nos favoritos e no gráfico PRO). A decisão (09/09) é tirar o cripto do
- * iOS; o site e o Android ficam iguais. Tudo o que é deste assunto na web passa por aqui, para
- * se poder voltar atrás num sítio só.
+ * Histórico: a Apple rejeitou a 3.7.2 (build 67) e a 3.7.6 (build 75) ao abrigo da Guideline
+ * 3.1.5(iii) («cryptocurrency exchange services»), e a 09/09 escondeu-se o cripto todo do iOS.
+ *
+ * **24/09: o dono reabriu.** A leitura dele da regra é que o que a Apple bloqueia é *ser* ou *ter
+ * parceria com* uma exchange — não mostrar o preço de um par de cripto que se negoceia por CFD,
+ * como qualquer corretora faz. Os activos voltam ao WebTrader e os sinais de cripto voltam ao Tap
+ * to Trade, no iOS como no resto.
+ *
+ * O mecanismo FICA todo de pé: muda-se `CRIPTO_NO_IOS` para `false` e volta a fechar-se tudo num
+ * sítio só. Se vier outra rejeição por 3.1.5(iii), é essa a linha a mexer — e depois uma build
+ * nova, porque a app nativa tem a sua cópia da regra (`MTMCripto` em MTMModels.swift).
  *
  * Deteção pelo user-agent da webview nativa (`MTMNativeApp` + iPhone/iPad; o iPad em modo
  * secretária anuncia-se como «Macintosh»). O Android usa `MTMSystemAndroid` e não entra.
@@ -14,8 +19,8 @@
 
 import { useEffect, useState } from "react"
 
-/** Única fonte de verdade na web. `false` = a app iOS não mostra cripto. */
-export const CRIPTO_NO_IOS = false
+/** Única fonte de verdade na web. `true` = a app iOS mostra cripto (reaberto a 24/09). */
+export const CRIPTO_NO_IOS = true
 
 export function ehAppIos(ua?: string | null): boolean {
   const u = ua ?? (typeof navigator !== "undefined" ? navigator.userAgent : "")

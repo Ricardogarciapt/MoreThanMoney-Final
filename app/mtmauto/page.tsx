@@ -9,7 +9,11 @@ export const metadata: Metadata = {
     "Os sinais MTM abrem na tua conta, com o teu risco, geridos do início ao fim. Web app, Android e iOS.",
 }
 
-export const revalidate = 300
+// Cache curta de propósito: esta página anuncia as versões das apps e os números vivos, e o dono
+// partilha o link logo a seguir a publicar uma build. Com 5 minutos, quem clicava no link mal
+// saído via a versão anterior. 60 segundos chega para aguentar uma rajada de cliques sem deixar
+// a página a mentir sobre o que já está publicado.
+export const revalidate = 60
 
 // O link que se dá a clientes é do DOMÍNIO DA MARCA. /mtmautoapp reencaminha para a app (com a
 // query intacta) — a app continua a viver na Vercel, mas quem partilha o link partilha a MTM.
