@@ -47,6 +47,11 @@ const COPIAS: { site: string; auto: string; porque: string }[] = [
     porque: 'os dois ecrãs de Estratégias desenham o mesmo cartão',
   },
   {
+    site: 'lib/mtmfunded/historico-parciais.ts',
+    auto: 'lib/mtmfunded/historico-parciais.ts',
+    porque: 'os dois separadores de Histórico juntam os parciais na mesma trade',
+  },
+  {
     site: 'lib/mtmauto/desempenho-do-catalogo.ts',
     auto: 'lib/mtmauto/desempenho-do-catalogo.ts',
     porque: 'o histórico de uma estratégia conta-se da mesma maneira nos dois',

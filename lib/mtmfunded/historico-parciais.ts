@@ -18,6 +18,9 @@
  *  · só conta para a taxa de acerto quando a RAIZ já fechou. Um parcial com o resto aberto já
  *    mexeu no saldo (e por isso entra no dinheiro e na curva) mas ainda não ganhou nem perdeu.
  *
+ * IGUAL nos dois repositórios (o separador de Histórico da MTM Auto tem exactamente o mesmo
+ * defeito e a mesma correcção) — verificado por `lib/__tests__/paridade-repositorios.check.ts`.
+ *
  * Puro de propósito: o teste chama-o com linhas à mão, sem base de dados.
  */
 
