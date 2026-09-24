@@ -15,24 +15,13 @@ import { montarPerfil, textoPerfil, type FontesDoPerfil, type LinhaLead } from '
 const AGORA = Date.parse('2026-09-24T12:00:00Z')
 const hDias = (n: number) => new Date(AGORA - n * 86_400_000).toISOString()
 
-const lead = (m: Partial<LinhaLead>): LinhaLead => ({
-  chat_id: '2139490282',
-  first_name: 'MJ',
-  stage: 'new',
-  created_at: hDias(20),
-  updated_at: hDias(2),
-  ...m,
-})
+function lead(m: Partial<LinhaLead>): LinhaLead {
+  return { chat_id: '2139490282', first_name: 'MJ', stage: 'new', created_at: hDias(20), updated_at: hDias(2), ...m }
+}
 
-const fontes = (m: Partial<FontesDoPerfil>): FontesDoPerfil => ({
-  lead: lead({}),
-  corretora: null,
-  perfil: null,
-  cupao: null,
-  contaACopiar: null,
-  agoraMs: AGORA,
-  ...m,
-})
+function fontes(m: Partial<FontesDoPerfil>): FontesDoPerfil {
+  return { lead: lead({}), corretora: null, perfil: null, cupao: null, contaACopiar: null, agoraMs: AGORA, ...m }
+}
 
 // ── 1. «Não sabemos» é dito em voz alta, e nunca se disfarça de «não tem» ──
 {

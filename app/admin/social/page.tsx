@@ -43,6 +43,7 @@ import { MapaFunis } from "@/components/admin/mapa-funis"
 import { PainelAutomacoes } from "@/components/admin/painel-automacoes"
 import { TokensInstagram } from "@/components/admin/tokens-instagram"
 import { RadarLeads } from "@/components/admin/radar-leads"
+import { ProspecaoTelegram } from "@/components/admin/prospecao-telegram"
 import { ConversasBot } from "@/components/admin/conversas-bot"
 import { EstudioCartoes } from "@/components/admin/estudio-cartoes"
 
@@ -133,7 +134,7 @@ export default function AdminSocialPage() {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   /** Separador aberto: a fila, os factos que vão nos cartões, ou o funil. */
-  const [aba, setAba] = useState<"fila" | "factos" | "funil" | "mensagens" | "mapa" | "automacoes" | "ligacoes" | "radar" | "cartoes" | "conversas">("fila")
+  const [aba, setAba] = useState<"fila" | "factos" | "funil" | "mensagens" | "mapa" | "automacoes" | "ligacoes" | "radar" | "prospecao" | "cartoes" | "conversas">("fila")
   const [mensagens, setMensagens] = useState<MensagemFunil[] | null>(null)
   /** O post a ser editado. As legendas eram só de leitura: para mudar uma vírgula apagava-se e
    *  criava-se outro, e perdia-se a imagem já gerada. */
@@ -367,6 +368,7 @@ export default function AdminSocialPage() {
             ["automacoes", "Automações"],
             ["cartoes", "Estúdio de cartões"],
             ["radar", "Radar de leads"],
+            ["prospecao", "Prospeção Telegram"],
             ["conversas", "Conversas do bot"],
             ["ligacoes", "Ligações"],
           ] as const).map(([id, rotulo]) => (
@@ -392,6 +394,7 @@ export default function AdminSocialPage() {
             aqui ao lado e não escondido nas variáveis da Vercel. */}
         {aba === "cartoes" && <EstudioCartoes />}
         {aba === "radar" && <RadarLeads />}
+        {aba === "prospecao" && <ProspecaoTelegram />}
         {aba === "conversas" && <ConversasBot />}
         {aba === "ligacoes" && <TokensInstagram />}
 

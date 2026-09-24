@@ -25,14 +25,9 @@ import {
 const AGORA = Date.parse('2026-09-24T12:00:00Z')
 const hDias = (n: number) => new Date(AGORA - n * 86_400_000).toISOString()
 
-const d = (m: Partial<Dialogo>): Dialogo => ({
-  chatId: '-100',
-  titulo: 'grupo',
-  tipo: 'supergroup',
-  souAdmin: false,
-  membros: 100,
-  ...m,
-})
+function d(m: Partial<Dialogo>): Dialogo {
+  return { chatId: '-100', titulo: 'grupo', tipo: 'supergroup', souAdmin: false, membros: 100, ...m }
+}
 
 // ── 1. O formato real do serviço: id · titulo · tipo · sou_admin · membros ──
 // São estes cinco campos e mais nenhum. Se o serviço deixar de mandar `sou_admin`, todos os

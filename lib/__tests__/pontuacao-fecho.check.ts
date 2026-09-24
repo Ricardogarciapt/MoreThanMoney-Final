@@ -32,7 +32,9 @@ const ZERO: DadosDeFecho = {
   seguimentosSemResposta: 0,
 }
 
-const com = (mudanca: Partial<DadosDeFecho>): DadosDeFecho => ({ ...ZERO, ...mudanca })
+function com(mudanca: Partial<DadosDeFecho>): DadosDeFecho {
+  return { ...ZERO, ...mudanca }
+}
 
 // ── 1. O número explica-se: é a soma dos critérios e nada mais ──
 {

@@ -24,19 +24,21 @@ import {
 const AGORA = Date.parse('2026-09-24T12:00:00Z')
 const hDias = (n: number) => new Date(AGORA - n * 86_400_000).toISOString()
 
-const base = (m: Partial<ContactoVisto>): ContactoVisto => ({
-  tgUserId: '1',
-  username: null,
-  firstName: null,
-  grupos: ['-1004352255256'],
-  mensagens: 0,
-  entradas: 1,
-  saidas: 0,
-  primeiroVistoIso: hDias(1),
-  ultimoVistoIso: hDias(1),
-  estado: 'novo',
-  ...m,
-})
+function base(m: Partial<ContactoVisto>): ContactoVisto {
+  return {
+    tgUserId: '1',
+    username: null,
+    firstName: null,
+    grupos: ['-1004352255256'],
+    mensagens: 0,
+    entradas: 1,
+    saidas: 0,
+    primeiroVistoIso: hDias(1),
+    ultimoVistoIso: hDias(1),
+    estado: 'novo',
+    ...m,
+  }
+}
 
 // ── 1. Falar vale mais do que estar ──
 // Quem escreveu uma pergunta expôs-se: tem uma dúvida com nome e um fio onde a resposta cabe.

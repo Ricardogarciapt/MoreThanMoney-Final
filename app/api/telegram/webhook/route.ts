@@ -180,6 +180,66 @@ export async function POST(request: NextRequest) {
 
     if (body.message?.chat?.type === "supergroup" || body.message?.chat?.type === "group") {
       after(() => handleTelegramChannelMessage(supabase, body.message).catch((e) => console.error("[tg group]", e)))
+
+      /**
+       * RADAR DE PROSPEÇÃO — apanhar quem nos toca e não chega ao funil.
+       *
+       * O funil só conhece quem escreve ao bot em PRIVADO. Toda a gente que fala num grupo nosso,
+       * que entra, que sai, passava por aqui e desaparecia — e é por isso que `telegram_leads`
+       * tem cinco linhas, das quais duas são testes.
+       *
+       * Guarda-se o identificador, o nome público e a contagem do que fez; nunca o que escreveu.
+       * E não desencadeia envio nenhum: um bot não pode escrever a quem nunca lhe escreveu, por
+       * isso o que sai daqui é uma LISTA para o dono decidir (ver `lib/prospecao/radar-contactos`).
+       *
+       * Em `after()` e a falhar em silêncio: o radar nunca pode atrasar nem partir o relay de
+       * sinais, que é o que corre por este mesmo webhook.
+       */
+      after(async () => {
+        try {
+          const { registarContacto } = await import("@/lib/prospecao/radar-contactos")
+          const chatDoGrupo = body.message.chat.id
+          const quemEscreveu = body.message.from
+          if (quemEscreveu && !quemEscreveu.is_bot && !body.message.new_chat_members && !body.message.left_chat_member) {
+            await registarContacto(supabase, {
+              tgUserId: quemEscreveu.id,
+              username: quemEscreveu.username ?? null,
+              firstName: quemEscreveu.first_name ?? null,
+              chatId: chatDoGrupo,
+              motivo: "escreveu",
+            })
+          }
+          for (const m of body.message.new_chat_members ?? []) {
+            if (m?.is_bot) continue
+            await registarContacto(supabase, {
+              tgUserId: m.id,
+              username: m.username ?? null,
+              firstName: m.first_name ?? null,
+              chatId: chatDoGrupo,
+              motivo: "entrou",
+            })
+          }
+          /**
+           * Quem sai é o mais valioso da lista e o que se perdia por completo.
+           *
+           * Não é um lead perdido: é o único sítio onde se aprende o que está a afastar as
+           * pessoas. Até hoje esta informação passava no webhook e ia para o lixo.
+           */
+          const saiu = body.message.left_chat_member
+          if (saiu && !saiu.is_bot) {
+            await registarContacto(supabase, {
+              tgUserId: saiu.id,
+              username: saiu.username ?? null,
+              firstName: saiu.first_name ?? null,
+              chatId: chatDoGrupo,
+              motivo: "saiu",
+            })
+          }
+        } catch (e) {
+          console.error("[prospecao-radar]", e)
+        }
+      })
+
       // Descobrir o grupo de leads (regista os grupos vistos) + boas-vindas a novos membros
       try {
         const { recordTelegramGroup, handleLeadsGroupNewMembers } = await import("@/lib/telegram-lead-funnel")
@@ -603,6 +663,32 @@ export async function POST(request: NextRequest) {
           await sendMessage(TEXTO_PAINEL, adminPanelKeyboard())
         } else {
           await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.")
+        }
+      }
+
+      /**
+       * /quem <chat_id | @username | UID> — a folha de uma pessoa, no telemóvel.
+       *
+       * Responde num ecrã a «este quem é?»: por onde entrou, que passos deu, se o UID bate certo
+       * com a lista da corretora, se já paga, o que lhe foi prometido e qual é o próximo passo.
+       * Sem isto era preciso abrir quatro sítios — e responder com meia informação a um lead
+       * quente é a forma mais rápida de o perder.
+       *
+       * Só o dono: a folha tem UID, email e depósito lá dentro.
+       */
+      else if (text.startsWith("/quem")) {
+        const { ehChatDeAdmin } = await import("@/lib/telegram-admin-menu")
+        if (!(await ehChatDeAdmin(supabase, chatId))) {
+          await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.")
+        } else {
+          const chave = text.slice(5).trim()
+          if (!chave) {
+            await sendMessage("Escreve <code>/quem &lt;chat_id | @username | UID da corretora&gt;</code>.")
+          } else {
+            const { carregarPerfil, textoPerfil } = await import("@/lib/prospecao/perfil-lead")
+            const p = await carregarPerfil(supabase, chave)
+            await sendMessage(p ? textoPerfil(p) : "🤷 Não encontrei ninguém com essa chave.")
+          }
         }
       }
 
