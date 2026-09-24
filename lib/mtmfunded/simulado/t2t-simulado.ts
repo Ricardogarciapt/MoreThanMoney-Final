@@ -141,7 +141,14 @@ export async function executarT2TSimulado(p: {
       if (jaPos?.length || jaOrd?.length) return { ...base, ok: false, skipped: true, error: 'já aceite' }
 
       const s = simbolos[symbol]
-      const { precos, em } = await ex.carregarPrecos([symbol, 'USDJPY', 'USDCHF', 'USDCAD', 'EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD'])
+      // O tick do símbolo vem do motor (memória) e não do retrato: aqui o preço não decide só o
+      // preenchimento — decide se a ordem é a MERCADO ou pendente, e se o `entry` do sinal cabe na
+      // banda dos 0,03 % que o torna referência. Com um retrato de 3-4 s, uma ordem de mercado
+      // vira pendente (ou perde a referência, e com ela a guarda do pior-dos-dois) por causa de
+      // movimento que já aconteceu. As conversões de moeda continuam a vir do retrato.
+      const { precos, em } = await ex.carregarPrecos(
+        [symbol, 'USDJPY', 'USDCHF', 'USDCAD', 'EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD'], [symbol],
+      )
       const px = precos[symbol]
       if (!px || !precoFresco(em[symbol])) return { ...base, ok: false, error: `sem preço ao vivo para ${symbol}` }
       const mercado = p.sinal.direction === 'buy' ? px.ask : px.bid

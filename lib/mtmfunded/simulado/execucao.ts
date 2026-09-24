@@ -17,6 +17,7 @@ import {
   type Gestao, type FiltroLote, validarGestao, gestaoDaLinha, riscoInicialUsd, selecionarParaFecho,
 } from './avancadas'
 import { precoDePreenchimento } from '../precos/preenchimento'
+import { ticksDoMotor, maisFresco, type TickDoMotor, type LinhaRetrato } from '../precos/tick-motor'
 
 /**
  * A EXECUÇÃO DAS ORDENS SIMULADAS — o lado que toca na base de dados.
@@ -130,17 +131,39 @@ export async function carregarSimbolos(symbols: string[], soAtivos = true): Prom
  */
 export async function carregarPrecos(
   symbols: string[],
+  /**
+   * Os símbolos que vão ser NEGOCIADOS agora — para esses pergunta-se ao motor o tick em memória
+   * (~100 ms) em vez de aceitar o retrato (até 5 s). Ver ../precos/tick-motor.ts. Os outros, os
+   * que só convertem o lucro para a moeda da conta, não precisam: 3 s de idade ali mudam
+   * cêntimos, não o preço a que se entra.
+   */
+  frescos?: string[],
 ): Promise<{ precos: MapaPrecos; em: Record<string, string>; emMercado: Record<string, string | null> }> {
   const lista = [...new Set(symbols.filter(Boolean))]
   const precos: MapaPrecos = {}
   const em: Record<string, string> = {}
   const emMercado: Record<string, string | null> = {}
   if (!lista.length) return { precos, em, emMercado }
-  const { data } = await getSupabaseAdmin().from('funded_precos').select('symbol, bid, ask, em, em_mercado').in('symbol', lista)
+  const querFrescos = [...new Set((frescos ?? []).filter((s) => lista.includes(s)))]
+  // As duas leituras em paralelo: o motor não entra no caminho crítico do que a base já faz.
+  const [{ data }, doMotor] = await Promise.all([
+    getSupabaseAdmin().from('funded_precos').select('symbol, bid, ask, em, em_mercado').in('symbol', lista),
+    querFrescos.length ? ticksDoMotor(querFrescos) : Promise.resolve(new Map<string, TickDoMotor>()),
+  ])
+  const doRetrato = new Map<string, LinhaRetrato>()
   for (const r of data ?? []) {
-    precos[String(r.symbol)] = { symbol: String(r.symbol), bid: Number(r.bid), ask: Number(r.ask) }
-    em[String(r.symbol)] = String(r.em)
-    emMercado[String(r.symbol)] = r.em_mercado == null ? null : String(r.em_mercado)
+    doRetrato.set(String(r.symbol), {
+      bid: Number(r.bid), ask: Number(r.ask), em: Date.parse(String(r.em)),
+      emMercado: r.em_mercado == null ? null : Date.parse(String(r.em_mercado)),
+    })
+  }
+  for (const symbol of new Set([...doRetrato.keys(), ...doMotor.keys()])) {
+    const escolhido = maisFresco(doRetrato.get(symbol) ?? null, doMotor.get(symbol) ?? null)
+    if (!escolhido || !Number.isFinite(escolhido.escolha.em)) continue
+    const { escolha } = escolhido
+    precos[symbol] = { symbol, bid: escolha.bid, ask: escolha.ask }
+    em[symbol] = new Date(escolha.em).toISOString()
+    emMercado[symbol] = escolha.emMercado == null ? null : new Date(escolha.emMercado).toISOString()
   }
   return { precos, em, emMercado }
 }
@@ -308,7 +331,7 @@ export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
   const simbolos = await carregarSimbolos([symbol, ...abertas.map((p) => String(p.symbol))])
   const simbolo = simbolos[symbol]
   if (!simbolo) throw new ErroOrdem(400, `símbolo ${symbol} não disponível`)
-  const { precos, em, emMercado } = await carregarPrecos(simbolosParaMedir(Object.values(simbolos)))
+  const { precos, em, emMercado } = await carregarPrecos(simbolosParaMedir(Object.values(simbolos)), [symbol])
   const preco = precoParaOrdem(symbol, e.direcao, precos, em, e.referencia, simbolo.digits, emMercado)
   const regras = ehContaDeAnalise(conta) ? null : ((await regrasDaConta(conta)) as RegrasDeOrdem | null)
 
