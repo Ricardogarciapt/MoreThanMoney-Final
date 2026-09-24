@@ -18,16 +18,19 @@ export async function getSponsorChainUserIds(
 
   while (currentId && depth < maxDepth) {
     depth++
-    const { data: profile } = await supabase
+    // Anotacao explicita: sem ela o TS entra em inferencia circular (TS7022) —
+    // o tipo da linha vem da query, e a query depende de `currentId`, que acaba
+    // por ser atribuido a partir dela.
+    const { data: profile }: { data: { mlm_sponsor_username: string | null } | null } = await supabase
       .from('profiles')
       .select('mlm_sponsor_username')
       .eq('id', currentId)
       .maybeSingle()
 
-    const sponsorUsername = profile?.mlm_sponsor_username?.trim()
+    const sponsorUsername: string | undefined = profile?.mlm_sponsor_username?.trim()
     if (!sponsorUsername) break
 
-    const { data: sponsor } = await supabase
+    const { data: sponsor }: { data: { id: string } | null } = await supabase
       .from('profiles')
       .select('id')
       .eq('username', sponsorUsername)

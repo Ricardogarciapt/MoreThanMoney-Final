@@ -28,7 +28,20 @@ async function correr(m: Monitor, c: Cenario, extra: Partial<Mundo> = {}): Promi
     w.log.push({ k: 'fim', managed: r.managed, actions: r.actions })
   }
   w.log.push({ k: 'estado', db: w.db.site_settings })
-  return normalizar(w.log)
+  // O original (8a81044) gravava `t2t_monitor_state` em TODAS as passagens; desde o
+  // commit 9043c1f7 («menos escritas na base») so se grava quando o estado muda.
+  // A diferenca e intencional e tem teste proprio (estado-monitor), por isso a
+  // paridade ignora as escritas INTERMEDIAS deste estado — o estado FINAL continua
+  // a ser comparado no registo `estado` acima, que e o que de facto importa.
+  const semEstadoIntermedio = w.log.filter(
+    (r) =>
+      !(
+        r.k === 'db' &&
+        r.t === 'site_settings' &&
+        (r.p as { key?: string } | undefined)?.key === 't2t_monitor_state'
+      ),
+  )
+  return normalizar(semEstadoIntermedio)
 }
 
 async function main() {

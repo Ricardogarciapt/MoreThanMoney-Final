@@ -14,7 +14,7 @@ import { avisoDaConta, avisoReal, chaveDoAviso } from '../aviso-conta'
 import { translate } from '../../i18n/translate'
 import { tipoDeEntrega, textosDaEntrega } from '../email-tipo-conta'
 import { contaEntregaDaLinha } from '../entrega-conta-dados'
-import { numerosDaConta, selecionarComOpcionais } from '../numeros-conta'
+import { numerosDaConta, selecionarComOpcionais, COLUNAS_OPCIONAIS } from '../numeros-conta'
 import { ehContaRealDaCasa } from '../conta-real-casa'
 import { factorNaEquidade, planoDaEquidade, notaDoFactor, FACTOR_FUNDED } from '../../equidade-mtm'
 import { agregarEquidadeCasa } from '../../equidade-casa'
@@ -92,7 +92,11 @@ async function main() {
       return { data: [{ id: 'x' }], error: null }
     })
     assert.deepEqual(r.data, [{ id: 'x' }])
-    assert.equal(pedidas[1], 'id, pausada_em, conta_casa')
+    // Derivado de COLUNAS_OPCIONAIS em vez de escrito a mao: a expectativa estava
+    // presa a 'id, pausada_em, conta_casa' e a migracao 113 acrescentou `etiqueta`,
+    // o que punha o teste a falhar por estar desactualizado — nao por haver defeito.
+    const esperado = `id, ${COLUNAS_OPCIONAIS.filter((c) => c !== 'conta_real_casa').join(', ')}`
+    assert.equal(pedidas[1], esperado)
   })
 
   // ── 4. equidade ───────────────────────────────────────────────────────────
