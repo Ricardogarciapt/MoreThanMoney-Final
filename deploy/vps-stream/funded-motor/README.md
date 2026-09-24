@@ -157,15 +157,22 @@ Testes: `npx tsx lib/mtmfunded/__tests__/espelho-provider.check.ts` (ticks grava
 
 ## WS de preços (2026-09-21 — preços sempre funcionais, sem egress Supabase)
 
-O motor abre um WebSocket na porta `WS_PRECOS_PORTA` (default 8787, `0` desliga) e o nginx
+O motor abre um WebSocket na porta `WS_PRECOS_PORTA` (default 8788, `0` desliga) e o nginx
 publica-o em `wss://stream.morethanmoney.pt/precos` (bloco `location /precos` — reaplica o
 conf deste repo e `sudo nginx -t && sudo systemctl reload nginx`).
+
+**Porquê a 8788 e não a 8787:** a 8787 é do serviço `mtm-dialogos` (MTProto só-leitura,
+/opt/mtm-dialogos/dialogos.py, publicado em `/telegram-dialogos/`). Os dois defaults eram
+iguais e quem fizesse deploy partia um dos serviços sem dar por isso — ou o motor não
+arrancava, ou os diálogos deixavam de responder. Não voltar a pôr 8787.
 
 O WebTrader liga-se lá quando a Vercel tiver `NEXT_PUBLIC_FUNDED_WS_URL=wss://stream.morethanmoney.pt/precos`
 (+ redeploy). Sem a env, ou com a WS em baixo, o poll clássico continua a funcionar sozinho.
 
 Teste rápido no VPS: `journalctl -u funded-motor | grep ws-precos` deve mostrar
-«a ouvir na porta 8787»; o [pulso] passa a incluir `wsClientes`.
+«a ouvir na porta 8788»; o [pulso] passa a incluir `wsClientes`.
+Para confirmar que ninguém pisou ninguém: `ss -ltnp | grep -E '878[0-9]'` deve dar
+a 8787 ao python (`mtm-dialogos`) e a 8788 ao node (motor).
 
 ## Operar SEM MetaApi (2026-09-21 — créditos esgotados não param o sistema interno)
 
