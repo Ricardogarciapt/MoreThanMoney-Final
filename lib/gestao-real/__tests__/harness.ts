@@ -41,6 +41,30 @@ class Q {
   limit() { return this }
   eq(c, v) { this.f.push((r) => r[c] === v); this.fs = [...(this.fs || []), ['eq', c, v]]; return this }
   neq(c, v) { this.f.push((r) => r[c] !== v); return this }
+  ilike(c, v) {
+    // Faltava: lib/mestres chama .ilike() e o falso rebentava («ilike is not a function»).
+    // O erro era apanhado pelo catch de quem chama, que so registava «leitura de
+    // mestres_estrategias falhou» — ou seja, o teste corria com esse caminho morto.
+    const alvo = String(v).toLowerCase()
+    const partes = alvo.split('%')
+    this.f.push((r) => {
+      if (r[c] == null) return false
+      const txt = String(r[c]).toLowerCase()
+      let i = 0
+      for (let k = 0; k < partes.length; k++) {
+        const parte = partes[k]
+        if (parte === '') continue
+        const j = txt.indexOf(parte, i)
+        if (j < 0) return false
+        if (k === 0 && !alvo.startsWith('%') && j !== 0) return false
+        i = j + parte.length
+      }
+      if (!alvo.endsWith('%') && i !== txt.length) return false
+      return true
+    })
+    this.fs = [...(this.fs || []), ['ilike', c, v]]
+    return this
+  }
   in(c, vs) { this.f.push((r) => vs.includes(r[c])); return this }
   gte(c, v) { this.f.push((r) => r[c] == null || String(r[c]) >= String(v)); return this }
   not(c, op, v) { this.f.push((r) => !(op === 'is' && v === null ? r[c] == null : r[c] === v)); return this }

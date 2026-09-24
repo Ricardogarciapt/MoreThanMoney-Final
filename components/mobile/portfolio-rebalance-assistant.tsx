@@ -193,7 +193,10 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
     list.forEach((f) => {
       const r = new FileReader()
       r.onload = () => {
-        if (typeof r.result === "string") setImagePreviews((p) => [...p, r.result])
+        // Por um local: dentro do callback do setState o TS volta a ler `r.result`
+        // (string | ArrayBuffer | null) e perde o estreitamento do typeof.
+        const dados = r.result
+        if (typeof dados === "string") setImagePreviews((p) => [...p, dados])
       }
       r.readAsDataURL(f)
     })

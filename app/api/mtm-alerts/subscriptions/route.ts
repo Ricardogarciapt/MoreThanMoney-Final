@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { userIdDoPedido } from "@/lib/sessao-do-pedido"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { DEFAULT_ALERT_SYMBOLS } from "@/lib/mtm-alerts/defaults"
 
 /**
  * Preferências de Trading Alerts do utilizador (símbolos/estratégias/timeframes).
@@ -26,9 +27,6 @@ async function getClient() {
     }
   )
 }
-
-/** Ativos que cada utilizador recebe por defeito nos Alertas MTM (o resto liga nos settings). */
-export const DEFAULT_ALERT_SYMBOLS = ["XAUUSD", "EURUSD", "GBPUSD", "USDCAD", "USDJPY", "BTCUSD", "US30"]
 
 const DEFAULT_SUB = {
   enabled: true,

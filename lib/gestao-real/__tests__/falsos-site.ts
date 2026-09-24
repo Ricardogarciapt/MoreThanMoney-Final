@@ -30,6 +30,15 @@ export async function readPendingOrders(acc) {
   return JSON.parse(JSON.stringify((P().pendentes || {})[acc] || []))
 }
 export async function cancelPendingOrdersForSymbol(acc, sym) { P().log.push({ k: 'cancel', acc, sym }); return { cancelled: 1, errors: [] } }
+// A especificacao do simbolo alimenta o riskAnchoredTrailing (distancias de trailing).
+// Faltava aqui, e por isso os dois testes de paridade Premium nem chegavam a compilar:
+// «No matching export in "falso:./metaapi" for import "getSymbolSpecification"».
+// Devolve o que o cenario puser em __P.specs; sem isso, null — que e exactamente o
+// que a funcao real devolve quando a corretora nao responde.
+export async function getSymbolSpecification(acc, sym) {
+  P().log.push({ k: 'spec', acc, sym })
+  return (P().specs || {})[sym] ?? null
+}
 `,
   './premium-subscriber-exits': `
 export async function mirrorPremiumExit(symbol, direction, action) {

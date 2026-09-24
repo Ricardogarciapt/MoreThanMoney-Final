@@ -15,6 +15,9 @@ interface N8nStatus {
   diskUsage: string
   allContainers: string
   vpsHost: string
+  /** O /api/admin/n8n-vps?cmd=status devolve-o; faltava aqui e o painel nunca
+   *  chegava a usar o endereco real — caia sempre no `https://${VPS_HOST}`. */
+  n8nUrl?: string
   error?: string
 }
 

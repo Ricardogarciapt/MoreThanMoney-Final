@@ -7,7 +7,17 @@ import {
 } from '@/lib/notifications-sales'
 import { sendNewMemberEmailToUplinesAndAdmin } from '@/lib/new-member-email'
 
-export type WelcomeEmailSource = 'stripe' | 'app_store' | 'google_play' | 'admin' | 'manual'
+// 'primeverse' e 'trial' acrescentados: as rotas de login PrimeVerse e de registo
+// de teste chamavam isto SEM `source`, e o campo ficava por gravar (vai para o
+// profile_data.welcome_email_source, que e JSONB e nao tem enum).
+export type WelcomeEmailSource =
+  | 'stripe'
+  | 'app_store'
+  | 'google_play'
+  | 'admin'
+  | 'manual'
+  | 'primeverse'
+  | 'trial'
 
 export interface SendNewMemberWelcomeParams {
   userId: string

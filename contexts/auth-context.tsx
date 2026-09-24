@@ -22,6 +22,13 @@ export interface User {
   created_at?: string
   phone?: string
   whatsapp?: string
+  /** Campos do formulario de /perfil. Sao colunas reais e o /api/profile/update
+   *  ja os grava — faltava traze-los de volta para a sessao. */
+  social_media?: string
+  jifu_id?: string
+  jifu_affiliate_link?: string
+  birth_date?: string
+  country?: string
   subscription_expires_at?: string | null
   /** origem do login — "primeverse" = cliente PrimeVerse tratado como Member sem upsell */
   login_provider?: string | null
@@ -65,6 +72,11 @@ function profileToUser(
       created_at: p.created_at as string | undefined,
       phone: p.phone as string | undefined,
       whatsapp: p.whatsapp as string | undefined,
+      social_media: p.social_media as string | undefined,
+      jifu_id: p.jifu_id as string | undefined,
+      jifu_affiliate_link: p.jifu_affiliate_link as string | undefined,
+      birth_date: p.birth_date as string | undefined,
+      country: p.country as string | undefined,
       subscription_expires_at: (p.subscription_expires_at as string | null) ?? null,
       login_provider: (p.login_provider as string | null) ?? null,
       preferred_language: (p.preferred_language as string | null) ?? null,
@@ -258,12 +270,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(session)
 
-        supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .maybeSingle()
-          .then(async ({ data: profile }: { data: any }) => {
+        Promise.resolve(
+          supabase.from("profiles").select("*").eq("id", session.user.id).maybeSingle(),
+        )
+          .then(async ({ data: profile }) => {
             const p = profile ?? (await loadMemberProfile(supabase, session.user.id))
             if (p && isRegisteredMember(p) && mounted) {
               const normalized = await enforceTrialExpiry(p)
@@ -273,7 +283,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
             }
           })
-          .catch(() => {})
+          .catch((erro) => {
+            // Era um catch vazio: qualquer falha a carregar o perfil depois do
+            // SIGNED_IN desaparecia sem deixar rasto. O fluxo continua igual
+            // (nao se bloqueia o login), mas agora fica registado.
+            console.warn('[auth] falha a carregar o perfil apos SIGNED_IN:', erro)
+          })
       } else if (event === 'SIGNED_OUT') {
         const { clearCachedSession } = await import('@/lib/auth-cache')
         clearCachedSession()

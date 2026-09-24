@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Email de boas-vindas (best-effort — não bloqueia o registo).
-    try { await sendNewMemberWelcomeIfEligible({ userId }) } catch { /* silencioso */ }
+    try { await sendNewMemberWelcomeIfEligible({ userId, source: 'trial' }) } catch { /* silencioso */ }
 
     // Atribuição Opinly: sign_up + start_trial (best-effort, dedup por userId).
     try {

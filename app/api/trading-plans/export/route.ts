@@ -64,7 +64,9 @@ export async function GET(request: NextRequest) {
 
     const pdfBuffer = await generatePlanPDF(plan, metrics)
 
-    return new NextResponse(pdfBuffer, {
+    // Uint8Array em vez do Buffer do Node: o Buffer nao e um BodyInit valido
+    // (partilham memoria, portanto nao ha copia).
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': 'attachment; filename="plano-trading.pdf"'

@@ -287,8 +287,25 @@ export default function PortfolioMobile() {
         })
         
         // Combinar crypto e ETF assets
-        const fonteCripto: any = semCripto() ? [] : (result.data.crypto?.assets || [])
-        const cryptoAssets = fonteCripto.map((asset: any) => {
+        // Era `any`, e por isso `cryptoAssets` tambem ficava `any` — os .filter()/.map()
+        // mais abaixo deixavam de ser verificados. Declara-se o que de facto se le.
+        type AtivoCripto = {
+          symbol?: string
+          criptomoeda?: string
+          etf?: string
+          entry_price?: number
+          current_price?: number
+          pnl_percent?: number
+          crescimento_esperado_percent?: number
+          potencial_crescimento_percent?: number
+          tp1_price?: number
+          tp2_price?: number
+          tp3_price?: number
+          stop_loss_price?: number
+          ai_validated?: boolean
+        }
+        const fonteCripto: AtivoCripto[] = semCripto() ? [] : (result.data.crypto?.assets || [])
+        const cryptoAssets = fonteCripto.map((asset: AtivoCripto) => {
           // Calcular performance real baseada em preços atuais
           const entryPrice = asset.entry_price || asset.current_price || 0
           const currentPrice = asset.current_price || entryPrice

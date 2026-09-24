@@ -80,17 +80,22 @@ export async function fetchMetaApiOverview(): Promise<MetaApiOverview> {
     }
   }
 
+  // A REST da MetaApi devolve sempre objectos JSON — ou em lista, ou dentro de
+  // `items`. Estava declarado `unknown[]`, o que punha os `.map((a: Record<...>))`
+  // a seguir todos em erro; e `unknown` nao descreve melhor a realidade do que isto.
+  type LinhasMetaApi = { items?: Record<string, unknown>[] } | Record<string, unknown>[]
+
   const [accountsRaw, profilesRaw, strategiesRaw, subscribersRaw, regionsRaw] = await Promise.all([
-    metaapiFetch<{ items?: unknown[] } | unknown[]>(PROVISIONING_BASE, '/users/current/accounts?limit=1000').catch(() => []),
-    metaapiFetch<{ items?: unknown[] } | unknown[]>(
+    metaapiFetch<LinhasMetaApi>(PROVISIONING_BASE, '/users/current/accounts?limit=1000').catch(() => []),
+    metaapiFetch<LinhasMetaApi>(
       PROVISIONING_BASE,
       '/users/current/provisioning-profiles?limit=200&type=mtTerminal',
     ).catch(() => []),
-    metaapiFetch<{ items?: unknown[] } | unknown[]>(
+    metaapiFetch<LinhasMetaApi>(
       COPYFACTORY_BASE,
       '/users/current/configuration/strategies?limit=200',
     ).catch(() => []),
-    metaapiFetch<{ items?: unknown[] } | unknown[]>(
+    metaapiFetch<LinhasMetaApi>(
       COPYFACTORY_BASE,
       '/users/current/configuration/subscribers?limit=200',
     ).catch(() => []),

@@ -39,6 +39,7 @@ import { scannerLabel } from "@/lib/mtm-alerts/scanners"
 // Dentro das apps nativas a sessão NÃO viaja em cookie — vai no cabeçalho. Sem isto, o
 // servidor respondia 401 e o ecrã mostrava zeros com o nome da pessoa no topo.
 import { authHeaders } from "@/lib/auth-token"
+import { DEFAULT_ALERT_SYMBOLS } from "@/lib/mtm-alerts/defaults"
 
 /** Normaliza o timeframe do alerta para um intervalo TradingView válido. */
 function tvInterval(tf: string | null): string {
@@ -175,7 +176,7 @@ interface Subscription {
   timeframes: string[]
 }
 
-const DEFAULT_ALERT_SYMBOLS = ["XAUUSD", "EURUSD", "GBPUSD", "USDCAD", "USDJPY", "BTCUSD", "US30"]
+// A lista vive em lib/mtm-alerts/defaults.ts — era mantida a dobrar.
 /**
  * App iOS: a subscrição por defeito não nasce com BTCUSD. Os alertas cripto já eram escondidos da
  * lista, mas o símbolo ficava na subscrição guardada — e voltava pelo push. O mesmo que a watchlist

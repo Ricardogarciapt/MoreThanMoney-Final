@@ -37,7 +37,9 @@ async function getAuthedSupabase() {
 }
 
 function dataUrlToBuffer(dataUrl: string): Buffer | null {
-  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/s)
+  // `[\s\S]` em vez de `.` com a flag `s` (que exigia alvo ES2018 ou superior) —
+  // faz exactamente o mesmo e compila com o alvo actual do projecto.
+  const match = dataUrl.match(/^data:([^;]+);base64,([\s\S]+)$/)
   if (!match?.[2]) return null
   try {
     return Buffer.from(match[2], "base64")

@@ -124,8 +124,19 @@ export async function GET(request: NextRequest) {
     console.log('📊 Database ID:', DATABASE_ID)
 
     // Buscar dados do Notion
-    const response = await notion.databases.query({
-      database_id: DATABASE_ID,
+    // O SDK 5 do Notion (API 2025-09-03) deixou de ter `databases.query`: uma base
+    // pode ter varias FONTES DE DADOS e e a fonte que se consulta. Esta chamada
+    // rebentava em runtime («notion.databases.query is not a function»).
+    const base = await notion.databases.retrieve({ database_id: DATABASE_ID })
+    const fonteId = (base as { data_sources?: Array<{ id: string }> }).data_sources?.[0]?.id
+    if (!fonteId) {
+      return NextResponse.json(
+        { success: false, error: 'A base do Notion nao tem nenhuma fonte de dados acessivel.' },
+        { status: 502 },
+      )
+    }
+    const response = await notion.dataSources.query({
+      data_source_id: fonteId,
       page_size: 100
     })
 

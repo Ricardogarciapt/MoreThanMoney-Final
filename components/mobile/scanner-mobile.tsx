@@ -795,7 +795,12 @@ export default function ScannerMobile({
 
         if (screen.orientation) {
           try {
-            await screen.orientation.lock?.('landscape')
+            // `lock()` existe na Screen Orientation API mas nao na lib DOM do TS.
+            // Declara-se o que se usa, em vez de calar o erro.
+            const orientacao = screen.orientation as ScreenOrientation & {
+              lock?: (orientacao: string) => Promise<void>
+            }
+            await orientacao.lock?.('landscape')
           } catch (e) {}
         }
         setIsFullscreen(true)
