@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CAPTION_INTERNAL_MARK, uploadBufferToBucket } from '@/lib/instagram/publish'
 import { renderSocialCardBuffer } from '@/lib/social-card'
-import { factoDoDia, getPipsProof } from '@/lib/pips-proof'
+import { factoDoDia, getPipsProof, notaViesPreco } from '@/lib/pips-proof'
 import { canvaAutofillImage } from '@/lib/canva-connect'
 
 /**
@@ -16,6 +16,13 @@ async function buildCardImage(
   handle: string,
   /** O facto que vai no cartão. Vem vivo dos pips e roda por dia — ver `factoDoDia()`. */
   facto: string | null,
+  /**
+   * A ressalva que tem de sair com o número — hoje a nota do defeito de preço de 24/09.
+   *
+   * Um cartão é a peça que mais viaja sozinha: quem o reencaminha não leva a legenda. Por isso o
+   * número nunca pode aparecer nu enquanto houver algo a ressalvar.
+   */
+  nota: string | null,
 ): Promise<string | null> {
   /**
    * O `handle` já cá estava — é a conta para quem é o post. Passa a decidir o TEMPLATE, e não só
@@ -25,10 +32,16 @@ async function buildCardImage(
    * Sem template para a conta, `canvaAutofillImage` devolve null e cai-se no cartão nosso — que
    * é o que já acontecia e continua a funcionar.
    */
-  const viaCanva = await canvaAutofillImage(hook, cta, facto ?? undefined, handle)
+  /**
+   * O template do Canva só tem três campos (gancho, CTA e prova) e não há um para a ressalva —
+   * o desenho vive lá, não aqui. Por isso, quando há nota, ela vai dentro do MESMO campo da
+   * prova: o número não sai nu nem sequer no caminho que não controlamos.
+   */
+  const provaCanva = facto ? (nota ? `${facto} — ${nota}` : facto) : undefined
+  const viaCanva = await canvaAutofillImage(hook, cta, provaCanva, handle)
   if (viaCanva) return viaCanva
   try {
-    const buf = await renderSocialCardBuffer({ hook, cta, handle, proof: facto ?? false })
+    const buf = await renderSocialCardBuffer({ hook, cta, handle, proof: facto ?? false, proofNota: nota })
     return await uploadBufferToBucket(buf, 'image/png', 'auto')
   } catch (e) {
     console.error('[content-draft] card falhou:', e instanceof Error ? e.message : e)
@@ -224,6 +237,9 @@ export async function GET(req: NextRequest) {
   // A prova viva, lida uma vez para todo o lote: são os pips da conta-espelho, não a linha
   // congelada de 30/06 que andava nos cartões.
   const prova = await getPipsProof()
+  // A ressalva do defeito de preço de 24/09. É `null` assim que a amostra deixar de o atravessar —
+  // e nesse dia os cartões e as legendas voltam sozinhos ao que eram, sem ninguém ter de se lembrar.
+  const notaProva = notaViesPreco(prova)
 
   const { data: apRow } = await supabase.from('site_settings').select('value').eq('key', 'content_autopilot').maybeSingle()
   const autopilot = Boolean((apRow?.value as { morethanmoney?: boolean } | null)?.morethanmoney)
@@ -238,11 +254,15 @@ export async function GET(req: NextRequest) {
       // Gera o card de marca (imagem) para publicação sem toque.
       // Um facto por post, rodando: publicar todos os dias a mesma frase treina o leitor a
       // saltá-la. O deslocamento pelo índice dá factos diferentes no mesmo lote.
-      const card = await buildCardImage(d.hook, cta, 'morethanmoney.pt', factoDoDia(prova, i))
+      const facto = factoDoDia(prova, i)
+      const card = await buildCardImage(d.hook, cta, 'morethanmoney.pt', facto, notaProva)
       // Só auto-publica se o autopilot estiver ligado E houver imagem; senão fica rascunho.
       const status = autopilot && card ? 'approved' : 'draft'
+      // A legenda repete a ressalva. Não é redundância: o cartão pode ser cortado, recomprimido ou
+      // visto em miniatura, e a legenda é o único sítio onde a frase se lê sempre inteira.
+      const ressalva = facto && notaProva ? `\n\n${notaProva}` : ''
       const caption =
-        `${(d.caption || '').trim()}\n\n${CAPTION_INTERNAL_MARK}\n` +
+        `${(d.caption || '').trim()}${ressalva}\n\n${CAPTION_INTERNAL_MARK}\n` +
         `🎨 Visual sugerido: ${d.visual_brief || '—'}\n` +
         `🔑 CTA: comentário "${cta}" → funil automático\n` +
         `🤖 ${status === 'approved' ? 'Auto-publicado pela máquina de vendas (card de marca gerado).' : 'Rascunho da máquina — revê/troca a imagem e aprova.'}`

@@ -92,6 +92,8 @@ interface Painel {
     pips: number | null
     atualizadoEm: string | null
     ressalva: string
+    /** A ressalva datada do defeito de preço de 24/09. `null` = a amostra já é toda limpa. */
+    notaVies: string | null
   }
   conteudo: {
     total: number
@@ -815,6 +817,13 @@ function PainelFactos({
               </li>
             ))}
           </ul>
+          {/* A ressalva datada fica ao lado dos próprios factos, e não no rodapé legal: quem
+              copiar um chip daqui para um cartão tem de a ver no mesmo olhar. */}
+          {f.notaVies && (
+            <p className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs leading-relaxed text-neutral-600">
+              {f.notaVies} <span className="text-neutral-400">Sai com estes números em todo o lado, e deixa de sair sozinha quando a amostra for toda posterior à correcção.</span>
+            </p>
+          )}
         </div>
       )}
 

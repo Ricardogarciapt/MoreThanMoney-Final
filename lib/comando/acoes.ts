@@ -72,15 +72,18 @@ export const ACOES: Acao[] = [
     rotulo: 'Recalcular a prova',
     confirmacao: 'Volta a ler o histórico da conta-espelho e refaz os números de pips. Só lê.',
     correr: async () => {
-      const { savePipsProof, publicavel } = await import('@/lib/pips-proof')
+      const { savePipsProof, notaViesPreco, publicavel } = await import('@/lib/pips-proof')
       const r = await savePipsProof()
       const n = r.executado?.trades ?? 0
+      // Enquanto a amostra apanhar trades abertas antes da correcção de preço de 24/09, quem
+      // carrega no botão tem de saber que os números que vai publicar saem com ressalva.
+      const vies = notaViesPreco(r) ? ' · sai com a nota do defeito de preço de 24/09' : ''
       return {
         ok: true,
         // Dizer se dá para publicar é metade da informação: o número sozinho não diz se hoje se
         // pode ou não pôr prova num cartão.
         nota: publicavel(r)
-          ? `${n} trades · ${r.executado.pips.toFixed(0)} pips — dá para publicar`
+          ? `${n} trades · ${r.executado.pips.toFixed(0)} pips — dá para publicar${vies}`
           : `${n} trades — ainda não chega para publicar`,
       }
     },
