@@ -31,7 +31,7 @@ export default function ConditionalNavbarFooter({ children }: { children: React.
   // FAQ e políticas próprias, sem caminho de regresso a morethanmoney.pt. Herdar a navbar
   // global misturava as duas marcas — e, num produto financiado, misturar quem responde
   // pelo quê não é uma questão de estética.
-  const standalonePaths = ["/iqcharts2", "/charts-primeverse", "/app-mobile", "/work", "/tradingfloor", "/apresentacao", "/FreeSession", "/mtmfunded", "/webtrader"]
+  const standalonePaths = ["/charts-primeverse", "/app-mobile", "/work", "/tradingfloor", "/apresentacao", "/FreeSession", "/mtmfunded", "/webtrader"]
   const isStandalonePage = standalonePaths.some(isExactOrChildPath)
 
   /**
@@ -43,7 +43,7 @@ export default function ConditionalNavbarFooter({ children }: { children: React.
    * lado. Fica de fora das superfícies que têm barras próprias coladas ao fundo (a PWA, o
    * webtrader, os charts) e da app nativa, onde um botão flutuante taparia a navegação.
    */
-  const semBotaoIntro = ["/app-mobile", "/webtrader", "/iqcharts2", "/charts-primeverse"].some(isExactOrChildPath)
+  const semBotaoIntro = ["/app-mobile", "/webtrader", "/charts-primeverse"].some(isExactOrChildPath)
   const botaoIntro = !isNativeApp && !semBotaoIntro ? <BotaoAprendeAUsar /> : null
 
   // In the native app every route is standalone — hide Navbar & Footer site-wide
