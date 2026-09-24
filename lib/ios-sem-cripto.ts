@@ -24,8 +24,10 @@
  * │ nas builds publicadas — reactivar o lado nativo obriga a build e a revisão novas.          │
  * └───────────────────────────────────────────────────────────────────────────────────────────┘
  *
- * Deteção pelo user-agent da webview nativa (`MTMNativeApp` + iPhone/iPad; o iPad em modo
- * secretária anuncia-se como «Macintosh»). O Android usa `MTMSystemAndroid` e não entra.
+ * Deteção pelo user-agent das webviews nativas: `MTMNativeApp` (MTM System) + iPhone/iPad — o
+ * iPad em modo secretária anuncia-se como «Macintosh» — e `MTMAuto-iOS` (app MTM Auto, separador
+ * WebTrader). O Android usa `MTMSystemAndroid`/`MTMAuto-Android` e não entra: a regra é da loja
+ * da Apple, não do produto.
  */
 
 import { useEffect, useState } from "react"
@@ -38,10 +40,21 @@ import { useEffect, useState } from "react"
  */
 export const CRIPTO_NO_IOS = false
 
+/**
+ * A app MTM Auto entra por aqui desde 24/09.
+ *
+ * Ficava de fora porque esta regra nasceu só para o MTM System — mas a MTM Auto tem um separador
+ * WebTrader que carrega `www.morethanmoney.pt/webtrader`, a MESMA página: watchlist a abrir com
+ * BTCUSD, terceira célula do multi-gráfico em BTCUSD, pesquisa de símbolos com cripto. Ou seja,
+ * a app que está a ser resubmetida depois de uma rejeição mostrava exactamente o que a Apple
+ * citou na rejeição do MTM System. Uma marca de UA a menos não é uma decisão de produto.
+ */
 export function ehAppIos(ua?: string | null): boolean {
   const u = ua ?? (typeof navigator !== "undefined" ? navigator.userAgent : "")
   if (!u) return false
-  return /MTMNativeApp/i.test(u) && /iPhone|iPad|iPod|Macintosh/i.test(u) && !/Android/i.test(u)
+  if (/Android/i.test(u)) return false
+  if (/MTMAuto-iOS/i.test(u)) return true
+  return /MTMNativeApp/i.test(u) && /iPhone|iPad|iPod|Macintosh/i.test(u)
 }
 
 /** Esconder cripto neste ecrã? (só no cliente; no servidor devolve false). */
