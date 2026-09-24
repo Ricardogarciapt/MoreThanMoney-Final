@@ -18,10 +18,17 @@
  * Não há pacote partilhado entre eles; mudar um obriga a copiar para o outro, senão volta a
  * haver duas versões da mesma regra — que é exactamente o que isto veio resolver.
  */
-import { SEM_HISTORICO, resumoDoCartao, temHistorico, type ProvedorMtmAuto } from './desempenho-do-catalogo'
+import {
+  CHAVE_ORIGEM_SIMULADA, CHAVE_VIES_PRECO_SIM, SEM_HISTORICO,
+  resumoDoCartao, retratoSimulado, temHistorico, viesDePrecoSim,
+  type ProvedorMtmAuto, type RetratoSimulado,
+} from './desempenho-do-catalogo'
 
-export { SEM_HISTORICO, resumoDoCartao, temHistorico }
-export type { ProvedorMtmAuto }
+export {
+  CHAVE_ORIGEM_SIMULADA, CHAVE_VIES_PRECO_SIM, SEM_HISTORICO,
+  resumoDoCartao, retratoSimulado, temHistorico, viesDePrecoSim,
+}
+export type { ProvedorMtmAuto, RetratoSimulado }
 
 // ── estado: seguir e copiar automaticamente são coisas diferentes ────────────────────────────
 
@@ -187,6 +194,11 @@ export const TEXTO_PT: Record<string, string> = {
   'estrategias.manual': 'A seguir · manual',
   'estrategias.naoSegue': 'Não segues',
   'estrategias.semHistorico': SEM_HISTORICO,
+  // A origem vem antes do número, não depois: quem lê «78,6% de acerto» e só encontra a palavra
+  // «simulado» a seguir já leu o número como real.
+  [CHAVE_ORIGEM_SIMULADA]: 'Simulado · conta da casa, sem dinheiro real',
+  [CHAVE_VIES_PRECO_SIM]:
+    'Os preços de entrada deste período tinham um defeito, já corrigido a 24/09 — o resultado até aí pode estar inflacionado.',
   'risco.conta': 'Risco da conta',
   'risco.percent': 'Risco %',
   'risco.lote': 'Lote fixo',
