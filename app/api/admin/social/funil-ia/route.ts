@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { CAMPOS_POR_TIPO, problemasDoFunil } from "@/lib/funis-campos"
 import type { Funil, NoDoFunil, TipoDeNo } from "@/lib/funis"
+// Os preços e a regra do bónus vêm da fonte única. Este ficheiro ainda dizia «300 $» meses
+// depois de o depósito mínimo ter passado a 350 — e a IA desenhava funis com o número errado.
+import { escadaNumaLinha, bonusNumaLinha } from "@/lib/escada-precos"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -62,7 +65,8 @@ export async function POST(req: NextRequest) {
     `· x avança 290 por coluna, y avança 120 por linha. Não sobreponhas blocos.\n` +
     `· ids curtos, sem espaços, únicos.\n\n` +
     `Regras da MoreThanMoney:\n` +
-    `· A escada é Membro 35€/mês → conta PU Prime com 300$ (dá os grupos e o Premium sem custo).\n` +
+    `· A escada é: ${escadaNumaLinha()}.\n` +
+    `· ${bonusNumaLinha()}\n` +
     `· NÃO lideres com o grátis. O teste de 14 dias só se oferece a quem diz que não quer pagar nem depositar agora.\n` +
     `· NUNCA inventes números de resultados, percentagens ou promessas de lucro. Não os tens.\n` +
     `· Português de Portugal, tratamento por tu.`

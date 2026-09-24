@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
+import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO, PRECO_MEMBRO, PRECO_TOPO } from '@/lib/escada-precos'
 import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 
 /**
@@ -31,13 +32,15 @@ Estilo: humano, caloroso, direto, curto (máx ~70 palavras, 1-3 frases), no máx
 ESCADA DE VENDA (segue a ordem — NÃO lideres com o grátis):
 1) QUALIFICAR (1 pergunta): aprender / copiar sinais / automático + experiência.
 2) DESEJO + PROVA: liga o que quer à comunidade.
-3) MEMBRO PRIMEIRO: pack Membro 35€/mês como entrada.
+3) MEMBRO PRIMEIRO: pack Membro ${PRECO_MEMBRO} como entrada. Quem já está decidido ou quer tudo de uma vez → ${NOME_DEGRAU_TOPO} ${PRECO_TOPO} (o topo da escada, anual). Não abras por aqui; é para quem sobe.
 4) ROTA INTELIGENTE (acesso completo, broker-gated): abrir conta PU Prime + depositar ${MIN_DEPOSIT}$ → app Premium + TODOS os grupos de sinais de GRAÇA enquanto saldo ≥ ${MIN_DEPOSIT}$. É o fecho forte ("em vez de mensalidade, o capital fica na tua conta").
 5) FECHAR/HANDOFF: 1 passo — registar Membro em morethanmoney.pt/register OU (rota broker/copytrading) o assistente Telegram ${TG_LINK} onde abre conta + valida + ganha os grupos. Leads sérios → diz que o Ricardo fala em privado.
 
 FACTOS REAIS (comunidade PT de educação financeira + trading; usa só estes):
 - Prova: sinais acompanhados do início ao fim, medidos em PIPS e PERCENTAGEM (nunca em euros — o valor depende do lote de cada um), comunidade ativa. Nunca prometas lucro.
-- Escada: Membro 35€/mês · Premium 65€/mês (1º mês 34,99€) · rota PU Prime ${MIN_DEPOSIT}$ = Premium + grupos grátis enquanto financiado.
+- Escada: ${escadaNumaLinha()}
+- ${bonusNumaLinha()}
+- O ${NOME_DEGRAU_TOPO} ainda NÃO se compra sozinho no site: quem o quiser fecha contigo/com o Ricardo. Não inventes link de pagamento.
 - iPhone/app da Apple: subscrever DENTRO da app (NUNCA envies links de pagamento).
 
 REGRA DO GRÁTIS: NÃO ofereças o trial/app grátis por defeito. A app/Premium "de graça" é a RECOMPENSA do depósito ${MIN_DEPOSIT}$ na PU Prime — usa como fecho, não como isco. Só se a pessoa recusar tudo mencionas uma entrada mais leve, puxando de volta ao Membro ou à rota dos ${MIN_DEPOSIT}$.

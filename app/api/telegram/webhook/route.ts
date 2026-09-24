@@ -545,19 +545,16 @@ export async function POST(request: NextRequest) {
       else if (text === "/premium") {
         /**
          * A escada, pela ordem em que se vende (docs/mtm-sales-brain.md): Membro primeiro,
-         * Premium a seguir, e a rota da corretora como o fecho — não como isco. O texto antigo
-         * abria com «1º mês 34,99€» e não dizia sequer que existe um pack Membro.
+         * Premium, o Elite anual no topo, e só depois a rota da corretora — que é o fecho, não
+         * o isco. O texto antigo abria com «1º mês 34,99€» e não dizia sequer que existe um
+         * pack Membro.
+         *
+         * O texto deixou de viver aqui: é a mensagem `escada_precos`, editável no /admin/social,
+         * com os preços a entrarem de `lib/escada-precos.ts`. Um comando que escreve o seu
+         * próprio preço é mais uma fonte a divergir — e esta era a quinta.
          */
-        const { MIN_DEPOSIT, PUPRIME_LINK } = await import("@/lib/telegram-broker-gate")
-        await sendMessage(
-          "👑 <b>MoreThanMoney — como se entra</b>\n\n" +
-          "🥉 <b>Membro · 35€/mês</b> — comunidade, sinais base e formação. É a porta de entrada.\n" +
-          "👑 <b>Premium · 65€/mês</b> (1º mês 34,99€) — Scanner, Trading Alerts, Tap to Trade, salas Premium e aulas.\n" +
-          `💎 <b>Ou sem mensalidade:</b> conta na PU Prime com ≥ ${MIN_DEPOSIT}$ e o Premium + todos os grupos ficam sem custo enquanto mantiveres o saldo. O dinheiro fica na TUA conta.\n\n` +
-          "▶️ <a href='https://www.morethanmoney.pt/upgrade'>Subscrever</a>\n" +
-          `🏦 <a href='${PUPRIME_LINK}'>Abrir conta na corretora</a> — depois escreve /acesso\n` +
-          "🆓 Ou experimenta a app primeiro: /app"
-        )
+        const { lerMensagem } = await import("@/lib/mensagens-funil")
+        await sendMessage(await lerMensagem("escada_precos"))
       }
 
       // /corretora — abrir conta PU Prime
