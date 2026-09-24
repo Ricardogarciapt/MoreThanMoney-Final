@@ -5,6 +5,7 @@ import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
 import { isT2TEntrySignal, t2tMode, matchesT2TPrefs, isManagementFollowup } from '@/lib/mtmcopy/t2t-source'
 import { T2T_SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
 
+import { urlDoChat, urlDoTapToTrade } from '@/lib/notificacao-destino'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { atualizarDesfechosDoCanal } from '@/lib/mtmcopy/signal-outcomes'
 
@@ -106,7 +107,9 @@ export async function sendTelegramChannelPush(opts: {
   const body =
     (opts.content ?? '').slice(0, 120) ||
     (opts.imageUrl ? 'Nova imagem no canal' : 'Nova mensagem recebida')
-  const chatUrl = `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}`
+  // Acompanhamento e abertura de sinal abrem o CHAT **na mensagem** (regra do dono, 24/09): é lá
+  // que vive o fio da trade. O `&msg=` é lido pelo chat, que salta e realça a mensagem.
+  const chatUrl = urlDoChat(slug, opts.chatMessageId)
   const tag = opts.telegramMessageId ? `chat_${slug}_${opts.telegramMessageId}` : `chat_${slug}`
 
   // É uma ENTRADA T2T? Só entradas negociáveis geram a notificação "⚡ Tap to Trade".
@@ -128,7 +131,7 @@ export async function sendTelegramChannelPush(opts: {
 
   // Perpétuo seguível: UMA audiência só, toda a gente com a notificação de seguir.
   if (opts.chatMessageId && modoSeguir && isT2TEntrySignal(slug, opts.content)) {
-    const seguirUrl = `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(opts.chatMessageId)}`
+    const seguirUrl = urlDoTapToTrade(opts.chatMessageId)
     const r = await postPush({
       all: true,
       title: `⚡ Seguir posição: ${firstLine.slice(0, 44) || slug}`,
@@ -150,7 +153,7 @@ export async function sendTelegramChannelPush(opts: {
 
   // Sinal T2T → 2 audiências (prioriza T2T para quem tem conta)
   if (opts.chatMessageId && t2tUsers.length) {
-    const t2tUrl = `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(opts.chatMessageId)}`
+    const t2tUrl = urlDoTapToTrade(opts.chatMessageId)
     // 1) Clientes COM conta T2T → "Tap to Trade" → tab T2T (categoria tap_to_trade)
     const r1 = await postPush({
       userIds: t2tUsers,

@@ -1,11 +1,14 @@
 import { getSiteOrigin } from '@/lib/site-url'
 import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
+import { destinoDaMensagem } from '@/lib/notificacao-destino'
 
 type ChatChannelNotifyOptions = {
   channelSlug: string
   title: string
   body: string
   messageId?: string
+  /** Texto publicado — é ele que diz se isto é uma ENTRADA (aceitar) ou não. */
+  content?: string | null
   /** Por omissão usa chat_message (categoria Chat nas preferências) */
   notificationType?: string
   excludeUserId?: string
@@ -16,33 +19,25 @@ export async function notifyChatChannelMessage(
   options: ChatChannelNotifyOptions,
 ): Promise<{ ok: boolean; status: number; data?: Record<string, unknown> }> {
   const siteUrl = getSiteOrigin()
-  // Sinais com canal de chat abrem o CHAT (o cliente toca no botão T2T na mensagem).
-  // Providers sem canal de chat enviam push próprio com url ?tab=tap-to-trade.
+  // Mensagens normais abrem o CHAT. Sinais abrem o separador Tap to Trade — desde 24/09 o chat
+  // é só de leitura/acompanhamento, a aceitação vive lá (e na app MTM Auto).
   const type = options.notificationType ?? 'chat_message'
   const tag = `chat_${options.channelSlug}`
 
-  // Se o sinal vem de um provider ativo no T2T, anexamos a ação "Tap to Trade"
-  // (botão na notificação — aparece no iPhone E no Apple Watch).
-  let t2tCategory: string | undefined
-  if (options.messageId) {
-    const enabled = await tapToTradeEnabledChannels()
-    if (enabled?.has(options.channelSlug)) t2tCategory = 'T2T_SIGNAL'
-  }
-
   /**
-   * Para onde o toque leva.
-   *
-   * Levava sempre ao CHAT do canal, e a partir daí era preciso encontrar a mensagem no meio das
-   * outras e carregar no botão. Quem toca numa notificação de SINAL quer o sinal — e o preço não
-   * espera por essa procura.
-   *
-   * Sinal com Tap to Trade → abre o modal de aceitação directamente. Mensagem de chat normal →
-   * continua a abrir o chat, que é onde ela faz sentido.
+   * O DESTINO segue o TIPO da notificação — a regra vive em `lib/notificacao-destino`, que é a
+   * mesma peça que o push do Telegram e o webhook do TradingView usam.
    */
-  const url =
-    t2tCategory && options.messageId
-      ? `/app-mobile?tab=tap-to-trade&sinal=${encodeURIComponent(options.messageId)}`
-      : `/app-mobile?tab=chat&channel=${encodeURIComponent(options.channelSlug)}`
+  const destino = destinoDaMensagem({
+    channelSlug: options.channelSlug,
+    content: options.content,
+    messageId: options.messageId,
+    t2tLigado: options.messageId
+      ? Boolean((await tapToTradeEnabledChannels())?.has(options.channelSlug))
+      : false,
+  })
+  const url = destino.url
+  const t2tCategory = destino.category
 
   const res = await fetch(`${siteUrl}/api/notifications/send-push`, {
     method: 'POST',

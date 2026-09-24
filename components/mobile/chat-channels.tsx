@@ -3,9 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { ehSinalDePerpetuo, isT2TEntrySignal, t2tMode } from "@/lib/mtmcopy/t2t-source"
-import { directionLabelFromText } from "@/lib/mtmcopy/signal-direction"
-import TapToCopyModal from "@/components/mobile/tap-to-copy-modal"
+import { isT2TEntrySignal } from "@/lib/mtmcopy/t2t-source"
 import { CANAIS_SO_CRIPTO, mensagemCripto, semCripto } from "@/lib/ios-sem-cripto"
 import { useAuth } from "@/contexts/auth-context"
 import {
@@ -686,108 +684,22 @@ function AttachSheet({
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 
-// ── Tap to Trade MTM — deteção de mensagens negociáveis ───────────────────────
-// O âmbito das FONTES vive numa só peça — lib/mtmcopy/t2t-source. Havia aqui uma lista de canais
-// à parte que era preciso lembrar de atualizar a par do /admin; foi removida por isso mesmo.
-const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
-/** Um follow-up POSTERIOR com isto RESOLVE o sinal (ativou/fechou/morreu) → o botão T2T esconde-se.
- *  'ENTRY HIT' literal (monitor/PrimeVerse) e não 'ativad' — senão as entradas Sensei ("Ideia
- *  Activada"), que SÃO sinais, resolver-se-iam umas às outras. */
-const TAP_TRADE_RESOLVING_RE = /(entry\s*hit|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|posi[çc][aã]o\s*fechada|fechad[ao]|encerrad|cancelad|descartad|invalidad|break[\s-]*even|stop\s+protegido|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
-/** Direção do sinal/follow-up, quando declarada — leitura única, em `lib/mtmcopy/signal-direction`. */
-function t2tDirectionOf(content?: string | null): "BUY" | "SELL" | "" {
-  return directionLabelFromText(content)
-}
-/** Símbolo do sinal, para emparelhar follow-ups com a entrada certa (nunca substring cega). */
-function t2tSymbolOf(content?: string | null): string | null {
-  if (!content) return null
-  const c = content.toUpperCase()
-  const m =
-    c.match(/\b(XAUUSD|XAGUSD|NAS100|US30|US500|GER40|UK100|JP225|SPX500|BTCUSD|ETHUSD|SOLUSD|XRPUSD)\b/) ||
-    c.match(/\b[A-Z]{3}(USD|EUR|GBP|JPY|AUD|CAD|CHF|NZD)\b/) ||
-    c.match(/\bXAU\b|\bGOLD\b/)
-  return m ? m[0] : null
-}
-/**
- * IDs dos sinais já RESOLVIDOS por um follow-up posterior (mesmo canal + mesmo símbolo).
- * Pedido Ricardo 2026-08-20: o botão T2T fica visível enquanto a ideia estiver VÁLIDA/pendente
- * e esconde-se ao descarte/ativação/fecho — não por idade cega.
- */
-function computeResolvedSignalIds(messages: ChatMessage[]): Set<string> {
-  const resolved = new Set<string>()
-  const followups = messages.filter((m) => m.content && TAP_TRADE_RESOLVING_RE.test(m.content))
-  if (!followups.length) return resolved
-  // Seguimento em RESPOSTA ao sinal (formato único: sempre em thread) → resolve exactamente esse.
-  for (const f of followups) {
-    const pai = (f as { reply_to_id?: string | null }).reply_to_id
-    if (pai) resolved.add(pai)
-  }
-  for (const m of messages) {
-    if (!m.content || !looksLikeTradeSignal(m.channel_slug, m.content)) continue
-    const sym = t2tSymbolOf(m.content)
-    const t0 = m.created_at ? new Date(m.created_at).getTime() : 0
-    const dir = t2tDirectionOf(m.content)
-    const hit = followups.some((f) => {
-      if (f.id === m.id || f.channel_slug !== m.channel_slug) return false
-      const t1 = f.created_at ? new Date(f.created_at).getTime() : 0
-      if (t1 <= t0) return false
-      const fsym = t2tSymbolOf(f.content)
-      if (sym && fsym && fsym !== sym) return false
-      // Direção tem de casar quando ambas são conhecidas — um fecho SELL não resolve um setup BUY.
-      const fdir = t2tDirectionOf(f.content)
-      return !dir || !fdir || fdir === dir
-    })
-    if (hit) resolved.add(m.id)
-  }
-  return resolved
-}
-/** Tempo máximo para um sinal estar ativo / clicável (5 minutos). */
-const TAP_TRADE_MAX_AGE_MS = 5 * 60 * 1000
+// ── Sinais no chat — só leitura ───────────────────────────────────────────────
+// Decisão do dono (24/09): o chat deixa de ter botão de aceitar. Fica com o texto do sinal e o
+// acompanhamento (entrada tocada, parciais, break-even, fecho). A aceitação vive no separador
+// Tap to Trade e na app MTM Auto (/sinais) — um sítio só, sem poluição por mensagem.
 
 /**
- * É um sinal de ENTRADA negociável?
- *
- * Chama a MESMA função que o servidor usa a aceitar (`isT2TEntrySignal`). Enquanto isto foi uma
- * cópia local, as duas divergiam: o chat mostrava o botão e o accept respondia «sinal incompleto»,
- * que é a pior combinação possível — o cliente carrega e leva com um erro.
+ * É um sinal de ENTRADA? Serve apenas para saber a que mensagens pedir os números a correr
+ * (/api/mtmcopy/signal-live). Chama a MESMA função do servidor (`isT2TEntrySignal`).
  */
 function looksLikeTradeSignal(channelSlug?: string | null, content?: string | null): boolean {
   return isT2TEntrySignal(channelSlug, content)
 }
 
-/** Setups PENDENTES (entrada por zona/limite por tocar) ficam aceitáveis até 24h — o backend valida
- *  se já foram ativados/fechados. Entradas A MERCADO mantêm os 5 min. Pedido Ricardo 2026-08-18. */
-const TAP_TRADE_PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000
-/** O sinal traz um NÍVEL de entrada? ("Entrada: 4398", "Gold Sell Zone 4398 - 4403", "Entry: …") */
-function hasEntryLevel(content?: string | null): boolean {
-  if (!content) return false
-  // A etiqueta nem sempre encosta ao número («Entrada activada: 4637.54») e nem sempre existe
-  // (a Aurum Flow escreve a zona a seco, «4606-4602»). Espelha o feed do T2T.
-  if (/(entrada|entry|zona|zone)[^\n\d]{0,20}[0-9]+[.,]?[0-9]*/i.test(content)) return true
-  return /^\s*\d{2,7}(?:[.,]\d+)?\s*[-–—]\s*\d{2,7}(?:[.,]\d+)?\s*$/m.test(content)
-}
-
 /** O que o motor mede de um sinal a correr (ver /api/mtmcopy/signal-live). */
 type AoVivo = { pips: number | null; pct: number | null; exits?: number; entrou?: boolean; slBatido?: boolean }
 
-/**
- * A MESMA janela do separador T2T e da app MTM Auto (lib/mtmcopy/t2t-janela, lib/janela-t2t):
- * stop já tocado → nunca; passados os 5 minutos, entrada tocada ou parcial feita → fora da zona.
- * Sem isto o botão do chat ficava vivo até 24 h num setup que já tinha arrancado.
- */
-function foraDaJanela(createdAt: string | null | undefined, v?: AoVivo): boolean {
-  if (!v) return false
-  if (v.slBatido) return true
-  const idade = createdAt ? Date.now() - new Date(createdAt).getTime() : 0
-  return idade > TAP_TRADE_MAX_AGE_MS && (Boolean(v.entrou) || Number(v.exits ?? 0) > 0)
-}
-
-/** Sinal ainda aceitável? Setup pendente → 24h; entrada a mercado → 5 min. */
-function isSignalActive(createdAt?: string | null, content?: string | null): boolean {
-  if (!createdAt) return true
-  const max = hasEntryLevel(content) ? TAP_TRADE_PENDING_MAX_AGE_MS : TAP_TRADE_MAX_AGE_MS
-  return Date.now() - new Date(createdAt).getTime() <= max
-}
 
 function MessageBubble({
   msg,
@@ -798,9 +710,7 @@ function MessageBubble({
   onDelete,
   onLongPress,
   onOpenActions,
-  onTapToTrade,
   onIrParaOriginal,
-  resolved = false,
   aoVivo,
 }: {
   msg: ChatMessage
@@ -811,22 +721,12 @@ function MessageBubble({
   onDelete: (msgId: string) => void
   onLongPress: (msg: ChatMessage) => void
   onOpenActions: (msg: ChatMessage) => void
-  onTapToTrade?: (msg: ChatMessage) => void
   /** Levar o ecrã até à mensagem que esta responde. */
   onIrParaOriginal?: (id: string) => void
-  /** Sinal já resolvido por follow-up posterior (ativado/fechado/descartado) → sem botão T2T. */
-  resolved?: boolean
   /** Resultado a correr deste sinal (pips e %), calculado pelo motor. */
   aoVivo?: AoVivo
 }) {
   const t = useT()
-  const tradeable =
-    !isOwn &&
-    !!onTapToTrade &&
-    !resolved &&
-    looksLikeTradeSignal(msg.channel_slug, msg.content) &&
-    isSignalActive(msg.created_at, msg.content) &&
-    !foraDaJanela(msg.created_at, aoVivo)
   const isTelegram = msg.message_type === "telegram_forward"
   const isVideo    = msg.message_type === "video"
   const isDocument = msg.message_type === "document"
@@ -1130,21 +1030,6 @@ function MessageBubble({
                   <span className="text-[10px] text-gray-500">a correr</span>
                 </div>
               )}
-              {tradeable && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onTapToTrade!(msg) }}
-                  className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2 active:scale-[0.98] transition-transform"
-                  aria-label={t("chat.tapToTradeAria")}
-                >
-                  <TrendingUp className="w-4 h-4" />{" "}
-                  {ehSinalDePerpetuo(msg.channel_slug, msg.content)
-                    ? "TAP to Copy"
-                    : t2tMode(msg.channel_slug, msg.content) === "follow"
-                      ? "Seguir sinal"
-                      : "Tap to Trade MTM"}
-                </button>
-              )}
               <p className={`text-[10px] mt-0.5 text-right leading-none ${isOwn ? "text-black/40" : "text-gray-600"}`}>
                 {formatTime(msg.created_at)}
               </p>
@@ -1186,10 +1071,13 @@ function ChannelView({
   channel,
   onBack,
   currentUser,
+  focarMensagemId,
 }: {
   channel: Channel
   onBack: () => void
   currentUser: any
+  /** Mensagem a abrir (deep-link `&msg=` de uma notificação de acompanhamento). */
+  focarMensagemId?: string | null
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
@@ -1287,22 +1175,13 @@ function ChannelView({
     setMessages((prev) => prev.filter((m) => m.id !== msgId))
   }
 
-  // ── Tap to Trade MTM ────────────────────────────────────────────────────────
-  const [tapTrade, setTapTrade] = useState<
-    { msg: ChatMessage; status: "confirm" | "loading" | "done" | "error"; message?: string } | null
-  >(null)
-  /** Perpétuos: em vez de abrir ordem, modal TAP to Copy com os parâmetros. */
-  const [copyModalMsg, setCopyModalMsg] = useState<ChatMessage | null>(null)
+  // ── Aceitação vive fora do chat ─────────────────────────────────────────────
+  // O chat é para ler e acompanhar. Quem quiser aceitar vai ao separador Tap to Trade (ou à app
+  // MTM Auto, /sinais). Aqui fica só uma linha no TOPO do canal — uma por canal, nunca por
+  // mensagem, que era isso que poluía a conversa.
   const router = useRouter()
-  /**
-   * Aceitar a partir do chat = o MESMO fluxo do separador Tap to Trade (e da app MTM Auto):
-   * pré-visualização por conta (lote e risco reais), todas as contas T2T do cliente e a janela
-   * de aceitação. O modal antigo do chat só mostrava o texto e abria sem pré-visualização.
-   */
-  const abrirNoTapToTrade = (m: ChatMessage) => {
-    router.push(`/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(m.id)}`)
-  }
-  /** Fontes T2T ativas no sistema (admin liga/desliga). null = ainda a carregar → não esconder. */
+
+  /** Fontes T2T ativas no sistema (admin liga/desliga). null = ainda a carregar. */
   const [t2tActiveChannels, setT2tActiveChannels] = useState<Set<string> | null>(null)
 
   useEffect(() => {
@@ -1320,35 +1199,9 @@ function ChannelView({
     return () => { cancel = true }
   }, [])
 
-  /** Fonte desligada pelo admin → o botão de aceitar desaparece deste chat. */
-  const t2tSourceOn = t2tActiveChannels === null || t2tActiveChannels.has(channel.slug)
+  /** Este canal é fonte T2T ligada? Só então se mostra o atalho (enquanto carrega, não pisca). */
+  const canalEFonteT2T = t2tActiveChannels !== null && t2tActiveChannels.has(channel.slug)
 
-  const runTapTrade = async () => {
-    if (!tapTrade) return
-    const target = tapTrade.msg
-    setTapTrade({ msg: target, status: "loading" })
-    try {
-      const { getAccessToken } = await import("@/lib/auth-token")
-      const token = await getAccessToken()
-      if (!token) {
-        setTapTrade({ msg: target, status: "error", message: t("chat.sessionRelogin") })
-        return
-      }
-      const res = await fetch("/api/mtmcopy/tap-to-trade", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ chat_message_id: target.id }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setTapTrade({ msg: target, status: "error", message: data.error || t("chat.tradeOpenFailed") })
-        return
-      }
-      setTapTrade({ msg: target, status: "done", message: data.message || t("chat.tradeOpened") })
-    } catch (e) {
-      setTapTrade({ msg: target, status: "error", message: e instanceof Error ? e.message : t("chat.unexpectedError") })
-    }
-  }
 
   // ── Fetch messages ────────────────────────────────────────────────────────
 
@@ -1774,9 +1627,31 @@ function ChannelView({
     [],
   )
 
+  /**
+   * Notificação de acompanhamento (alvo, break-even, fecho) → abre o chat NA mensagem.
+   *
+   * O `&msg=` já era emitido nos pushes mas ninguém o lia deste lado: a pessoa caía no fundo do
+   * canal e tinha de procurar a trade à mão. Reutiliza o mesmo salto das citações, que carrega
+   * para trás quando a mensagem ainda não está na janela.
+   */
+  const jaFocado = useRef<string | null>(null)
+  useEffect(() => {
+    if (!focarMensagemId || loading) return
+    if (jaFocado.current === focarMensagemId) return
+    jaFocado.current = focarMensagemId
+    void irParaOriginal(focarMensagemId)
+    // Tirar o parâmetro do URL: sem isto, voltar ao chat repetia o salto.
+    try {
+      const u = new URL(window.location.href)
+      u.searchParams.delete("msg")
+      window.history.replaceState({}, "", u.toString())
+    } catch {
+      /* sem URL, sem limpeza — o salto já aconteceu */
+    }
+  }, [focarMensagemId, loading, irParaOriginal])
+
   const renderMessages = () => {
     let lastDay = ""
-    const resolvedIds = computeResolvedSignalIds(messages)
     // App iOS: sem sinais/mensagens de cripto (Guideline 3.1.5 — ver lib/ios-sem-cripto.ts).
     const semCriptoAqui = semCripto()
     return messages.filter((m) => !semCriptoAqui || !mensagemCripto(m.channel_slug, m.content)).map((msg) => {
@@ -1797,18 +1672,12 @@ function ChannelView({
             isOwn={msg.user_id === currentUser?.id}
             canWrite={canWrite}
             isAdmin={isAdmin}
-            resolved={resolvedIds.has(msg.id)}
             aoVivo={aoVivo[msg.id]}
             onReply={setReplyTo}
             onDelete={handleDelete}
             onLongPress={setContextMsg}
             onOpenActions={setContextMsg}
             onIrParaOriginal={irParaOriginal}
-            onTapToTrade={
-              t2tSourceOn
-                ? (m) => (ehSinalDePerpetuo(m.channel_slug, m.content) ? setCopyModalMsg(m) : abrirNoTapToTrade(m))
-                : undefined
-            }
           />
         </div>
       )
@@ -1861,6 +1730,18 @@ function ChannelView({
 
       {/* Card FIXO: como seguir os sinais (só canais de sinais com instruções configuradas) */}
       <ChatPinnedInstructions slug={channel.slug} />
+
+      {/* Onde se aceita. Uma linha por CANAL — a aceitação saiu das mensagens (decisão 24/09). */}
+      {canalEFonteT2T && (
+        <button
+          type="button"
+          onClick={() => router.push("/app-mobile?tab=tap-to-trade")}
+          className="mx-3 mt-1.5 mb-0.5 flex items-center gap-1.5 self-start text-[11.5px] text-[#D2A63C]/80 active:text-[#D2A63C]"
+        >
+          <span>Aceitar no Tap to Trade</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      )}
 
       {/* Messages */}
       <div className="relative flex-1" style={{ minHeight: 0 }}>
@@ -2122,78 +2003,6 @@ function ChannelView({
           onDelete={() => { handleDelete(contextMsg.id); setContextMsg(null) }}
           onShare={() => shareMessage(contextMsg)}
         />
-      )}
-
-      {copyModalMsg && (
-        <TapToCopyModal content={copyModalMsg.content || ""} aoFechar={() => setCopyModalMsg(null)} />
-      )}
-
-      {tapTrade && (
-        <div
-          className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/70 p-4"
-          onClick={() => tapTrade.status !== "loading" && setTapTrade(null)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl border border-[#D2A63C]/30 bg-zinc-950 p-5 text-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-5 h-5 text-[#D2A63C]" />
-              <h3 className="text-base font-bold">Tap to Trade MTM</h3>
-            </div>
-
-            {tapTrade.status === "confirm" && (
-              <>
-                <p className="text-sm text-zinc-300 mb-3">
-                  {t("chat.tapConfirm1")} <strong className="text-white">{t("chat.tapConfirmMt5")}</strong>{t("chat.tapConfirm2")}{" "}
-                  <strong className="text-white">{t("chat.tapConfirmRisk")}</strong> {t("chat.tapConfirm3")}
-                </p>
-                <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3 text-xs text-zinc-400 max-h-28 overflow-y-auto whitespace-pre-wrap mb-4">
-                  {tapTrade.msg.content}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setTapTrade(null)}
-                    className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95"
-                  >
-                    {t("chat.cancel")}
-                  </button>
-                  <button
-                    onClick={runTapTrade}
-                    className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95"
-                  >
-                    {t("chat.confirmOpen")}
-                  </button>
-                </div>
-              </>
-            )}
-            {tapTrade.status === "loading" && (
-              <p className="text-sm text-zinc-300 py-6 text-center">{t("chat.openingTrade")}</p>
-            )}
-            {tapTrade.status === "done" && (
-              <>
-                <p className="text-sm text-emerald-400 py-4 text-center">✅ {tapTrade.message}</p>
-                <button
-                  onClick={() => setTapTrade(null)}
-                  className="w-full rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95"
-                >
-                  {t("chat.close")}
-                </button>
-              </>
-            )}
-            {tapTrade.status === "error" && (
-              <>
-                <p className="text-sm text-rose-400 py-4 text-center">⚠️ {tapTrade.message}</p>
-                <button
-                  onClick={() => setTapTrade(null)}
-                  className="w-full rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95"
-                >
-                  {t("chat.close")}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
       )}
     </div>
   )
@@ -2516,7 +2325,14 @@ interface EducatorProfile {
   member_category?: string | null
 }
 
-export default function ChatChannels({ initialSlug }: { initialSlug?: string | null }) {
+export default function ChatChannels({
+  initialSlug,
+  initialMessageId,
+}: {
+  initialSlug?: string | null
+  /** `&msg=` do deep-link: mensagem a abrir dentro do canal. */
+  initialMessageId?: string | null
+}) {
   const t = useT()
   const { user, isLoading: authLoading } = useAuth()
   const [channels, setChannels] = useState<Channel[]>([])
@@ -2751,6 +2567,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
         channel={activeChannel}
         onBack={() => setActiveChannel(null)}
         currentUser={user}
+        focarMensagemId={activeChannel.slug === initialSlug ? initialMessageId : null}
       />
     )
   }
