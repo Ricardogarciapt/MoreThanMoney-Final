@@ -8,9 +8,10 @@
  *
  * TRÊS REGRAS, e nenhuma delas é negociável:
  *
- *  1. SÓ O ADMIN. A validação é a mesma que o resto do sistema usa — o chat gravado em
- *     `site_settings.telegram_admin_chat_id`, com o `TELEGRAM_ADMIN_CHAT_ID` do ambiente como a
- *     segunda chave (é o que seis crons já usam). Ver `ehChatDeAdmin`.
+ *  1. SÓ O DONO, E MAIS NINGUÉM. Pedido dele a 24/09: «permite-me apenas a mim como admin».
+ *     A autoridade vem de UM sítio só — `TELEGRAM_ADMIN_CHAT_ID` (ou o valor por defeito, que é
+ *     o chat dele). O que está gravado em `site_settings.telegram_admin_chat_id` diz apenas PARA
+ *     ONDE se manda um aviso; **não dá acesso a nada**. Ver `ehChatDeAdmin`.
  *
  *  2. O QUE MEXE EM DINHEIRO OU EM EXECUÇÃO PEDE DOIS TOQUES. Desligar a execução do Premium com
  *     o polegar a passar pelo ecrã é um acidente à espera de acontecer; o primeiro toque pergunta,
@@ -55,18 +56,20 @@ async function chatDeAdminGravado(supabase: Supa): Promise<string | null> {
 }
 
 /**
- * É o chat do dono?
+ * É o chat do dono? **Um só chat, e vem do ambiente.**
  *
- * Aceita o gravado OU o do ambiente. Os dois, e não só o gravado, porque o gravado pode não
- * existir (instalação nova, base reposta) e nessa altura o painel ficava inacessível a quem é
- * dono e acessível a quem escrevesse /admin primeiro.
+ * Aceitava também o valor gravado em `site_settings`. Deixou de aceitar (24/09, pedido do dono).
+ * A razão é que esse valor é ESCRITO pelo sistema, e um valor escrito não pode ser a fonte de
+ * quem manda: foi exactamente por aí que o `/admin` passou meses a dar o painel a quem o
+ * escrevesse primeiro. Corrigiu-se o upsert de manhã — isto fecha a porta do outro lado, para
+ * que nem um upsert errado, nem uma base reposta, nem uma linha mexida à mão dêem acesso.
+ *
+ * Quem é dono passa a mudar-se num sítio só: a variável `TELEGRAM_ADMIN_CHAT_ID` na Vercel.
+ * `chatDeAdminGravado` continua a existir, mas só responde à pergunta «para onde mando o aviso».
  */
-export async function ehChatDeAdmin(supabase: Supa, chatId: string | number | null | undefined): Promise<boolean> {
+export async function ehChatDeAdmin(_supabase: Supa, chatId: string | number | null | undefined): Promise<boolean> {
   if (chatId == null) return false
-  const id = String(chatId)
-  if (id === chatDeAdminDoAmbiente()) return true
-  const gravado = await chatDeAdminGravado(supabase)
-  return !!gravado && id === gravado
+  return String(chatId) === chatDeAdminDoAmbiente()
 }
 
 /**

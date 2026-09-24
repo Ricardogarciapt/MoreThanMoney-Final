@@ -48,15 +48,26 @@ function baseFalsa(gravado: string | null) {
   {
     const { db } = baseFalsa('222')
     assert.equal(await ehChatDeAdmin(db, '111'), true, 'o chat do ambiente é admin')
-    assert.equal(await ehChatDeAdmin(db, '222'), true, 'o chat gravado é admin')
+    // 24/09: o gravado deixou de ser admin — ver o caso dedicado mais abaixo.
+    assert.equal(await ehChatDeAdmin(db, '222'), false, 'o chat gravado NÃO é admin')
     assert.equal(await ehChatDeAdmin(db, '999'), false, 'um estranho não é admin')
     assert.equal(await ehChatDeAdmin(db, null), false)
   }
-  // Sem nada gravado (base nova), o ambiente continua a abrir a porta ao dono — e só a ele.
+  // Sem nada gravado (base nova), o ambiente abre a porta ao dono — e só a ele.
   {
     const { db } = baseFalsa(null)
     assert.equal(await ehChatDeAdmin(db, '111'), true)
     assert.equal(await ehChatDeAdmin(db, '999'), false)
+  }
+
+  // 24/09 — SÓ O DONO. Um chat gravado em site_settings já NÃO dá acesso: o valor é escrito pelo
+  // sistema, e um valor escrito não pode decidir quem manda. Foi por aí que o buraco do /admin
+  // passou meses aberto; fechá-lo no upsert não chegava, porque uma linha mexida à mão na base
+  // voltava a abri-lo.
+  {
+    const { db } = baseFalsa('999')
+    assert.equal(await ehChatDeAdmin(db, '999'), false, 'o gravado não manda — só o ambiente')
+    assert.equal(await ehChatDeAdmin(db, '111'), true, 'e o dono continua a entrar')
   }
 
   // ── O /admin já não se auto-regista ──
