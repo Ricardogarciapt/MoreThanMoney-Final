@@ -135,7 +135,10 @@ export async function abrirSinalNaConta(p: PedidoAbrir): Promise<ResultadoAbrir>
     const symbol = candidatos.find((c) => simbolos[c])
     if (!symbol) throw new Error(`${p.symbol} não existe no MTM Funded`)
     const s = simbolos[symbol]
-    const { precos, em, emMercado } = await ex.carregarPrecos([symbol])
+    // O tick vem do motor (memória, ~100 ms) e não do retrato da base (até 5 s) — é aqui que a
+    // entrada é ancorada, e um preço de 3-4 s cai sempre do lado bom da casa. Ver
+    // ../precos/tick-motor.ts; o motor em baixo devolve o retrato e nada disto muda.
+    const { precos, em, emMercado } = await ex.carregarPrecos([symbol], [symbol])
     const px = precos[symbol]
     if (!px || !precoFresco(em[symbol])) throw new Error(`sem preço ao vivo para ${symbol}`)
     // O preço do sinal é o do mercado no instante da decisão: com ele, o preenchimento nunca pode
