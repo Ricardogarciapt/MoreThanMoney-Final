@@ -77,8 +77,22 @@ async function mapearGrupos(db: Supa): Promise<{ mapa: ReturnType<typeof resumoD
     ? leitura.dialogos
     : await (async () => {
         const { data } = await db.from('mtmcopy_telegram_discovered').select('chat_id, title, chat_type')
-        return ((data ?? []) as Array<{ chat_id: string; title: string | null; chat_type: string | null }>)
-          .filter((r) => String(r.chat_id).startsWith('-'))
+        const linhas = ((data ?? []) as Array<{ chat_id: string; title: string | null; chat_type: string | null }>).filter(
+          (r) => String(r.chat_id).startsWith('-'),
+        )
+        /**
+         * Um grupo promovido a supergrupo deixa atrás o id antigo.
+         *
+         * O Telegram dá-lhe um chat_id novo e o velho fica morto, mas a tabela do bot guarda os
+         * dois — e o mapa aparecia com o «Goldkiller Scanner» duas vezes, as duas paradas há 60
+         * dias. Não é um grupo esquecido: é o fantasma do mesmo. Quando há um supergrupo com o
+         * mesmo título, o `group` antigo não entra.
+         */
+        const titulosDeSupergrupo = new Set(
+          linhas.filter((r) => r.chat_type === 'supergroup' && r.title).map((r) => String(r.title)),
+        )
+        return linhas
+          .filter((r) => !(r.chat_type === 'group' && r.title && titulosDeSupergrupo.has(String(r.title))))
           .map((r) => ({
             chatId: String(r.chat_id),
             titulo: r.title ?? 'sem título',
@@ -93,6 +107,7 @@ async function mapearGrupos(db: Supa): Promise<{ mapa: ReturnType<typeof resumoD
 
   if (classificados.length) {
     const agora = new Date().toISOString()
+    const fonte = leitura.ok ? 'mtproto' : 'bot'
     await db.from('prospecao_grupos').upsert(
       classificados.map((g) => ({
         chat_id: g.chatId,
@@ -101,12 +116,25 @@ async function mapearGrupos(db: Supa): Promise<{ mapa: ReturnType<typeof resumoD
         membros: g.membros,
         nosso: g.papel === 'nosso',
         ultima_atividade: g.diasParado != null ? new Date(Date.now() - g.diasParado * 86_400_000).toISOString() : null,
-        fonte: leitura.ok ? 'mtproto' : 'bot',
+        fonte,
         nota: g.leitura,
         atualizado_at: agora,
       })),
       { onConflict: 'chat_id' },
     )
+
+    /**
+     * Varrer o que esta passagem já não viu.
+     *
+     * Sem isto o mapa só cresce: um grupo de que se sai, ou o id morto de um grupo promovido a
+     * supergrupo, ficam lá para sempre a dizer que estão parados há sessenta dias. Um mapa que
+     * acumula fantasmas deixa de se acreditar, e a lista de «grupos a esfriar» — que é a parte
+     * accionável — enche-se de coisas que não existem.
+     *
+     * Só se apaga o que veio da MESMA fonte: num dia em que o MTProto não responda e se caia para
+     * o mapa do bot, os grupos de terceiros ficam onde estão em vez de desaparecerem e voltarem.
+     */
+    await db.from('prospecao_grupos').delete().eq('fonte', fonte).lt('atualizado_at', agora)
   }
 
   return {

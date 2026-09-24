@@ -214,6 +214,15 @@ export async function textoProspecao(supabase: unknown, quantos = 6): Promise<st
   const todos = (contactos ?? []) as Array<{ estado: string }>
   const gs = (grupos ?? []) as Array<{ nosso: boolean; ultima_atividade: string | null; titulo: string | null; fonte: string }>
   const semBot = gs.filter((g) => g.nosso && g.fonte === 'mtproto' && !g.ultima_atividade)
+  /**
+   * Grupos nossos calados.
+   *
+   * Vale a pena dizê-lo aqui e não só no mapa: audiência que custou a juntar e está a esfriar é
+   * prospeção tanto como uma pessoa nova. A diferença é que estas já nos conhecem.
+   */
+  const parados = gs
+    .filter((g) => g.nosso && g.ultima_atividade && Date.now() - Date.parse(g.ultima_atividade) > 7 * 86_400_000)
+    .sort((a, b) => String(a.ultima_atividade).localeCompare(String(b.ultima_atividade)))
 
   const linhas = lista.map((c) => {
     const quem = c.firstName ?? 'sem nome'
@@ -225,6 +234,16 @@ export async function textoProspecao(supabase: unknown, quantos = 6): Promise<st
     `🧲 <b>Prospeção</b> — ${todos.filter((c) => c.estado === 'novo').length} por tratar de ${todos.length}`,
     `Grupos no mapa: ${gs.length} (${gs.filter((g) => g.nosso).length} nossos)`,
     semBot.length ? `\n🚨 <b>${semBot.length} grupo(s) teus SEM o bot lá dentro</b> — sem boas-vindas, sem radar, sem leads.\n<code>t.me/morethanmoneypt_bot?startgroup=true</code>` : '',
+    parados.length
+      ? `\n😴 <b>${parados.length} grupo(s) teus sem uma mensagem há mais de uma semana</b>:\n` +
+        parados
+          .slice(0, 4)
+          .map(
+            (g) =>
+              `   · ${esc(g.titulo ?? '?')} — ${Math.floor((Date.now() - Date.parse(String(g.ultima_atividade))) / 86_400_000)} dias`,
+          )
+          .join('\n')
+      : '',
     '',
     linhas.length ? linhas.join('\n\n') : 'Ninguém por tratar. O radar só conta a partir de agora — não vê o passado.',
     '',
