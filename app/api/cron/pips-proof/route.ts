@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { savePipsProof, blocoPips, publicavel } from '@/lib/pips-proof'
+import { savePipsProof, blocoPips, notaViesPreco, publicavel } from '@/lib/pips-proof'
 
 /**
  * CRON: recalcula a prova em pips a partir do histórico do broker da conta-espelho.
@@ -24,6 +24,9 @@ export async function GET(request: NextRequest) {
       success: true,
       publicavel: publicavel(p),
       previsualizacao: publicavel(p) ? blocoPips(p) : null,
+      // Sai já dentro da pré-visualização; fica também à parte para se ver, de relance, se a
+      // amostra ainda atravessa a correcção de preço de 24/09 — ou se já se calou sozinha.
+      notaVies: notaViesPreco(p),
       prova: p,
     })
   } catch (e) {

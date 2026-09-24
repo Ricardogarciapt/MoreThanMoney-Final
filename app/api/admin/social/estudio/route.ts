@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { factosParaCartao, getPipsProof, publicavel, RESSALVA_LEGAL } from '@/lib/pips-proof'
+import { factosParaCartao, getPipsProof, notaViesPreco, publicavel, RESSALVA_LEGAL } from '@/lib/pips-proof'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -70,9 +70,14 @@ async function contextoDeFactos(): Promise<string> {
     )
   }
   const factos = factosParaCartao(prova)
+  // A nota do defeito de preço de 24/09 entra como REGRA, não como sugestão: o modelo escreve o
+  // texto que sai, e um número destes sem a ressalva é o mesmo que não a ter. Desaparece sozinha
+  // quando a amostra deixar de atravessar a correcção — e o prompt volta ao que era.
+  const nota = notaViesPreco(prova)
   return (
     'FACTOS REAIS (os ÚNICOS números que podes usar, tal como estão):\n' +
     factos.map((f) => `- ${f}`).join('\n') +
+    (nota ? `\n\nOBRIGATÓRIO: sempre que usares um destes números, escreve a seguir, tal e qual: "${nota}"` : '') +
     `\n\nRessalva legal obrigatória sempre que usares um número: "${RESSALVA_LEGAL}"`
   )
 }
@@ -153,7 +158,13 @@ export async function POST(request: NextRequest) {
           `Feitio pedido: ${pedido || 'diretos, para caber num cartão'}`,
       )
       const linhas = texto.split('\n').map((l) => l.replace(/^[-•\d.\s]+/, '').trim()).filter(Boolean)
-      return NextResponse.json({ ok: true, factos: linhas.slice(0, 8), originais: base })
+      return NextResponse.json({
+        ok: true,
+        factos: linhas.slice(0, 8),
+        originais: base,
+        // Quem copiar um destes factos para um cartão leva a ressalva com ele.
+        notaVies: notaViesPreco(prova),
+      })
     }
 
     // ── Testemunhos: nunca inventados ───────────────────────────────────────────────────────
