@@ -45,7 +45,7 @@ export async function registarTentativa(userId: string, login: string, ok: boole
   }
 }
 
-const CAMPOS = 'id, user_id, motor, mt5_login, tipo, estado, metricas, saldo_inicial, sim_saldo, sim_equity, mt5_password_cifrada, mt5_investor_cifrada'
+const CAMPOS = 'id, user_id, motor, mt5_login, tipo, estado, metricas, pausada_em, saldo_inicial, sim_saldo, sim_equity, mt5_password_cifrada, mt5_investor_cifrada'
 
 export type ContaFundedLida = {
   id: string
@@ -54,6 +54,8 @@ export type ContaFundedLida = {
   tipo: string
   estado: string
   metricas: Record<string, unknown> | null
+  /** `pausada_em` (migração 079): pausa do admin — a conta continua `ativa` para o motor gerir SL/TP. */
+  pausada_em: string | null
   saldo_inicial: number | null
   sim_saldo: number | null
   sim_equity: number | null
@@ -93,14 +95,20 @@ export async function lerContaFunded(id: string): Promise<ContaFundedLida | null
 
 const numero = (v: unknown): number | null => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v))
 
-/** O que o dono da ligação vê da conta. Etiquetas F1/F2/Funded/Torneio + Active/…; nunca «demo». */
+/**
+ * O que o dono da ligação vê da conta. Etiquetas F1/F2/Funded/Torneio/Real + Active/…; nunca «demo».
+ *
+ * Tem de dizer o MESMO que o WebTrader diz da mesma conta — a referência é `numerosDaConta`
+ * (lib/mtmfunded/numeros-conta.ts). É por isso que o `pausada_em` entra: sem ele, uma conta
+ * pausada pelo admin aparecia «Active» aqui e «Pause» no WebTrader, para a mesma conta.
+ */
 export function resumoDaConta(c: ContaFundedLida) {
   return {
     funded_account_id: c.id,
     login: c.mt5_login,
     servidor: SERVIDOR_SIMULADO,
     tipo: tipoCurto(c.tipo, c.metricas),
-    estado: estadoCurto(c.estado, c.metricas),
+    estado: estadoCurto(c.estado, c.metricas, c.pausada_em ?? null),
     saldo: numero(c.sim_saldo),
     equity: numero(c.sim_equity ?? c.sim_saldo),
     saldo_inicial: numero(c.saldo_inicial),

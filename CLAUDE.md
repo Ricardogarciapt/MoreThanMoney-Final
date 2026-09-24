@@ -613,7 +613,9 @@ ssh ubuntu@13.62.134.34
   #   ESPELHO_FEED_TL=1  ESPELHO_FEED_TL_RECURSO=1
   #   TL_FEED_EMAIL=…  TL_FEED_PASSWORD=…  TL_FEED_SERVER=…  TL_FEED_ENV=demo  TL_FEED_ACCOUNT_ID=…  TL_FEED_ACCNUM=…
   sudo systemctl daemon-reload && sudo systemctl restart mtm-funded-motor funded-copier
-  journalctl -u mtm-funded-motor -f   # esperar: "[binance] feed cripto ligado" + "[ws-precos] a ouvir na porta 8787"
+  # A porta é 8788, não 8787: a 8787 está ocupada pela ponte do conector MT5 (ver
+  # deploy/vps-stream/nginx-mtm-stream.conf e WS_PRECOS_PORTA em /etc/mtm-funded-motor.env).
+  journalctl -u mtm-funded-motor -f   # esperar: "[binance] feed cripto ligado" + "[ws-precos] a ouvir na porta 8788"
 ```
 **2. Vercel — env do WebTrader→WS**: Settings → Environment Variables → `NEXT_PUBLIC_FUNDED_WS_URL=wss://stream.morethanmoney.pt/precos` (Production) → Redeploy.
 **3. ~~gmi-relay GOLD DID~~ — TERMINADO (decisão do dono 21/09)**: o relay correcto é o do Signal Master Elite (rota única `signal-master-elite` → Premium, já activa no `/opt/gmi-relay/.env`, `GMI_DRY_RUN=0`). As posições Premium da sessão de Londres abrem na conta-mestre MTM Funded (espelho Premium 10K, `1c6a3789`) e o motor propaga aos clientes. Não configurar a rota gold-did.
