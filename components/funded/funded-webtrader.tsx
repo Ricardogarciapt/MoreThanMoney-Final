@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { semCripto, ehSimboloCripto, SIMBOLO_SEM_CRIPTO } from "@/lib/ios-sem-cripto"
 import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
-import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2, Pencil, Check, GripVertical, Star } from "lucide-react"
+import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2, Pencil, Check, GripVertical, Star, Eye, EyeOff, ArrowUpDown } from "lucide-react"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
-import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, gravarEtiqueta, lerOrdemContas, gravarOrdemContas, gravarContaFavorita, gravarFiltroContas, usd, COR_ESTADO, corDoEstado } from "./api"
+import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, gravarEtiqueta, lerOrdemContas, gravarOrdemContas, gravarContaFavorita, gravarFiltroContas, gravarContasOcultas, usd, COR_ESTADO, corDoEstado } from "./api"
 import InstalarWebtrader from "./instalar-webtrader"
 import PopoverAncorado from "./popover-contas"
 import { preaquecerWebtrader } from "./pre-carga"
@@ -21,6 +21,9 @@ import {
   contarPorTipo, filtrarEntradas, juntarOrdemFiltrada, normalizarFiltro, temDoisTipos,
   FILTRO_POR_OMISSAO, type FiltroContas,
 } from "@/lib/webtrader/filtro-contas"
+import {
+  alternarOculta as esconderOuRepor, aplicarOcultas, contarOcultas, estaOculta, normalizarOcultas,
+} from "@/lib/webtrader/ocultar-contas"
 import { useArrastoLista, type ArrastoLista } from "./use-arrasto-lista"
 import { ETIQUETA_MAX, normalizarEtiqueta } from "@/lib/contas/etiqueta"
 import { getAccessToken } from "@/lib/auth-token"
@@ -84,7 +87,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   const botaoSeletor = useRef<HTMLButtonElement>(null)
   // Fechar o seletor fecha também o campo da etiqueta (o campo grava o que tiver ao desmontar):
   // reabrir não volta a pôr o foco num campo que ficou pendurado.
-  const fecharSeletor = useCallback(() => { setSeletorAberto(false); setEtiquetaEmEdicao(null) }, [])
+  // Fechar o seletor sai também do MODO ORGANIZAR: ele é um modo de arrumar, não um estado em que
+  // a pessoa fica — quem volta ao seletor quer trocar de conta, e vê a lista já arrumada.
+  const fecharSeletor = useCallback(() => { setSeletorAberto(false); setEtiquetaEmEdicao(null); setOrganizar(false) }, [])
   const [erro, setErro] = useState<string | null>(null)
   // A etiqueta em edição no seletor (113): id da entrada, o que está escrito e o erro de gravação.
   const [etiquetaEmEdicao, setEtiquetaEmEdicao] = useState<string | null>(null)
@@ -96,6 +101,10 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   // 24/09 — «As minhas» / «Mestres» / «Todas». As mestres do MTM Auto começam escondidas; só quem
   // tem contas dos dois tipos vê os botões (lib/webtrader/filtro-contas.ts).
   const [filtro, setFiltro] = useState<FiltroContas>(FILTRO_POR_OMISSAO)
+  // 24/09 — as contas escondidas e o MODO ORGANIZAR (o botão do seletor). As escondidas ficam na
+  // conta MTM, como a ordem; o modo é só desta abertura do seletor (lib/webtrader/ocultar-contas.ts).
+  const [ocultas, setOcultas] = useState<string[]>([])
+  const [organizar, setOrganizar] = useState(false)
   const [compraPermitida, setCompraPermitida] = useState(true)
   const [temSessaoMtm, setTemSessaoMtm] = useState(false)
   const [ligarPlataforma, setLigarPlataforma] = useState<PlataformaWT | null>(null)
@@ -161,6 +170,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
       setOrdem(r.ordem ?? [])
       setFavorita(r.favorita ?? null)
       setFiltro(normalizarFiltro(r.filtroContas))
+      setOcultas(normalizarOcultas(r.ocultas))
     }).catch(() => undefined)
     return () => { vivo = false }
   }, [])
@@ -243,9 +253,27 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
    * ABERTA fica sempre na lista, mesmo que o filtro a escondesse: ninguém pode ficar a negociar
    * numa conta que não vê no seletor.
    */
-  const comFiltro = useMemo(() => temDoisTipos(todas), [todas])
-  const contagem = useMemo(() => contarPorTipo(todas), [todas])
-  const visiveis = useMemo(() => filtrarEntradas(todas, filtro, ativa), [todas, filtro, ativa])
+  /**
+   * Primeiro tiram-se as ESCONDIDAS, só depois se filtra — uma conta escondida à mão continua
+   * escondida com o filtro em «Todas». No modo organizar não se esconde nada (aparecem todas,
+   * esbatidas, para se poderem repor), e por isso os números do filtro também passam a contar
+   * tudo: o que os botões dizem é sempre o que a lista tem.
+   */
+  const aVista = useMemo(() => aplicarOcultas(todas, ocultas, ativa, organizar), [todas, ocultas, ativa, organizar])
+  const comFiltro = useMemo(() => temDoisTipos(aVista), [aVista])
+  const contagem = useMemo(() => contarPorTipo(aVista), [aVista])
+  const visiveis = useMemo(() => filtrarEntradas(aVista, filtro, ativa), [aVista, filtro, ativa])
+  const quantasOcultas = useMemo(() => contarOcultas(todas, ocultas), [todas, ocultas])
+  /**
+   * O olho de uma linha. Grava logo (é uma decisão, não um rascunho); falhar a gravação não
+   * desfaz o que a pessoa fez no ecrã — só não segue para o telemóvel, e um aviso vermelho por
+   * causa de um olho era pior do que isso. A conta ABERTA não se esconde (ocultar-contas.ts).
+   */
+  const alternarOcultaConta = useCallback((id: string) => {
+    const nova = esconderOuRepor(ocultas, id, ativa)
+    setOcultas(nova)
+    void gravarContasOcultas(nova).catch(() => undefined)
+  }, [ocultas, ativa])
   const trocarFiltro = useCallback((novo: FiltroContas) => {
     setFiltro(novo)
     // Falhar a gravação não desfaz a escolha: o filtro vale para esta sessão à mesma, e um aviso
@@ -266,7 +294,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     return nova
   }, [todas, visiveis])
   const gravarOrdem = useCallback((nova: string[]) => { void gravarOrdemContas(nova).catch(() => undefined) }, [])
-  const arrasto = useArrastoLista(visiveis.map((t) => t.id), trocarOrdem, gravarOrdem)
+  // No modo organizar o arrasto é imediato: o segundo de espera só existe para quem está a passar
+  // o dedo pela lista à procura de uma conta, e nesse modo ninguém está.
+  const arrasto = useArrastoLista(visiveis.map((t) => t.id), trocarOrdem, gravarOrdem, organizar)
 
   const atual = todas.find((t) => t.id === ativa)
 
@@ -319,12 +349,30 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
             </button>
             <PopoverAncorado aberto={seletorAberto} ancora={botaoSeletor} onFechar={fecharSeletor} titulo="Escolher conta">
               <div role="listbox">
-                <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">MTM Funded (simuladas) · TradeLocker e MT5 (reais) — mantém a pega premida 1s e arrasta para arrumar, a estrela abre primeiro, o lápis dá um nome</p>
+                <div data-sem-arrasto className="flex items-start gap-2 border-b border-white/5 px-3 py-1.5">
+                  <p className="min-w-0 flex-1 text-[10.5px] text-zinc-500">
+                    {organizar
+                      ? "Arrasta pela pega (já sem esperar) e usa o olho para esconder ou repor. A conta aberta não se esconde."
+                      : "MTM Funded (simuladas) · TradeLocker e MT5 (reais) — «Organizar» arruma e esconde contas, a estrela abre primeiro, o lápis dá um nome"}
+                  </p>
+                  {/* O modo organizar: uma decisão explícita em vez de um segundo de dedo premido. */}
+                  <button type="button" aria-pressed={organizar} onClick={() => setOrganizar((v) => !v)}
+                    title={organizar ? "Sair do modo organizar" : "Arrumar e esconder contas"}
+                    className={`flex min-h-[28px] shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors [@media(pointer:coarse)]:min-h-[36px] ${
+                      organizar ? "bg-[#D2A63C] text-black" : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                    }`}>
+                    {organizar ? <Check className="h-3.5 w-3.5" /> : <ArrowUpDown className="h-3.5 w-3.5" />}
+                    {organizar ? "Concluído" : "Organizar"}
+                    {/* Fora do modo, o número diz que há contas escondidas — senão elas desapareciam sem explicação. */}
+                    {!organizar && quantasOcultas > 0 && <span className="text-zinc-600">{quantasOcultas} oculta{quantasOcultas === 1 ? "" : "s"}</span>}
+                  </button>
+                </div>
                 {comFiltro && <BarraFiltro filtro={filtro} contagem={contagem} escolher={trocarFiltro} />}
                 {erroEtiqueta && <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-rose-300">{erroEtiqueta}</p>}
                 {visiveis.map((t) => t.real ? (
-                  <div key={t.id} data-conta-id={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${arrasto.aArrastar === t.id ? "bg-white/15 opacity-70" : t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
+                  <div key={t.id} data-conta-id={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${organizar && estaOculta(ocultas, t.id) ? "opacity-40" : ""} ${arrasto.aArrastar === t.id ? "bg-white/15 opacity-70" : t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
                     <Pega id={t.id} arrasto={arrasto} />
+                    {organizar && <Olho oculta={estaOculta(ocultas, t.id)} aberta={t.id === ativa} alternar={() => alternarOcultaConta(t.id)} />}
                     <button role="option" aria-selected={t.id === ativa} disabled={Boolean(t.real.bloqueada)} title={t.real.bloqueada ?? undefined} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left disabled:opacity-50" onClick={() => escolher(t.id)}>
                       <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[t.real.plataforma] }}>{t.etiqueta}</span>
                       <span className="rounded px-1.5 text-[10.5px] font-bold" style={{ color: corDoEstado(t.estadoCurto) }}>{t.estadoCurto}</span>
@@ -346,8 +394,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                     )}
                   </div>
                 ) : (
-                  <div key={t.id} data-conta-id={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${arrasto.aArrastar === t.id ? "bg-white/15 opacity-70" : t.id === ativa ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
+                  <div key={t.id} data-conta-id={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${organizar && estaOculta(ocultas, t.id) ? "opacity-40" : ""} ${arrasto.aArrastar === t.id ? "bg-white/15 opacity-70" : t.id === ativa ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
                     <Pega id={t.id} arrasto={arrasto} />
+                    {organizar && <Olho oculta={estaOculta(ocultas, t.id)} aberta={t.id === ativa} alternar={() => alternarOcultaConta(t.id)} />}
                     <button role="option" aria-selected={t.id === ativa} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left" onClick={() => escolher(t.id)}>
                       <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}{t.segue ? ` · ${nomeCurto(t.segue)}` : ""}</span>
                       {/* A mestre diz-se na própria linha: em «As minhas» só aparece a que está aberta, e tem de se perceber porquê. */}
@@ -516,6 +565,30 @@ function BarraFiltro({ filtro, contagem, escolher }: {
   )
 }
 
+/**
+ * O OLHO DE ESCONDER, só no modo organizar (pedido do dono, 24/09).
+ *
+ * Esconder não é apagar: a conta continua ligada, continua a negociar-se, só deixa de ocupar uma
+ * linha no seletor de quem não a usa. Por isso o olho fechado fica SEMPRE à vista aqui dentro — é
+ * por ele que se repõe a conta, e uma coisa que se esconde sem forma de voltar não se experimenta.
+ *
+ * Na conta ABERTA o olho está desligado, com o porquê no título: ninguém pode ficar a negociar
+ * numa conta que não vê no seletor (é a mesma regra do filtro, lib/webtrader/filtro-contas.ts).
+ */
+function Olho({ oculta, aberta, alternar }: { oculta: boolean; aberta: boolean; alternar: () => void }) {
+  // Oculta e aberta ao mesmo tempo (escondeu-se e depois abriu-se): repor continua a poder fazer-se.
+  const travado = aberta && !oculta
+  return (
+    <button type="button" data-sem-arrasto disabled={travado} aria-pressed={oculta}
+      aria-label={oculta ? "Voltar a mostrar esta conta" : "Esconder esta conta do seletor"}
+      title={travado ? "A conta aberta não se esconde" : oculta ? "Voltar a mostrar (esconder não apaga nada)" : "Esconder do seletor — volta por aqui"}
+      onClick={alternar}
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-md hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11">
+      {oculta ? <EyeOff className="h-4 w-4 text-zinc-500" /> : <Eye className="h-4 w-4 text-[#D2A63C]" />}
+    </button>
+  )
+}
+
 /** A estrela da conta favorita — a mesma nas MTM Funded e nas reais (o seletor mistura-as). */
 function Estrela({ marcada, alternar }: { marcada: boolean; alternar: () => void }) {
   return (
@@ -532,15 +605,17 @@ function Pega({ id, arrasto }: { id: string; arrasto: ArrastoLista }) {
   return (
     <span
       role="button"
-      aria-label="Manter premido para arrumar"
-      title="Manter premido 1 segundo para arrastar"
+      aria-label={arrasto.imediato ? "Arrastar para arrumar" : "Manter premido para arrumar"}
+      title={arrasto.imediato ? "Arrasta para mudar a conta de lugar" : "Manter premido 1 segundo para arrastar"}
       onPointerDown={(e) => arrasto.aoPegar(e, id)}
       // `pan-y` e não `none`: enquanto se espera pelo segundo, o dedo ainda pode fazer SCROLL da
       // lista (era isso que estava a trocar contas por engano). Depois de a linha levantar, o
       // `preventDefault` no movimento é que segura o gesto.
-      style={{ touchAction: "pan-y" }}
+      // No MODO ORGANIZAR é `none`: não há espera para proteger, e deixar o scroll ligado roubava
+      // o gesto ao arrasto a meio (era o que obrigava ao segundo parado).
+      style={{ touchAction: arrasto.imediato ? "none" : "pan-y" }}
       className={`grid h-8 w-6 shrink-0 cursor-grab place-items-center transition-colors active:cursor-grabbing [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-8 ${
-        aEsperar ? "animate-pulse text-[#D2A63C]" : "text-zinc-600 hover:text-zinc-300"
+        aEsperar ? "animate-pulse text-[#D2A63C]" : arrasto.imediato ? "text-[#D2A63C]" : "text-zinc-600 hover:text-zinc-300"
       }`}
     >
       <GripVertical className="h-4 w-4" />
