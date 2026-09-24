@@ -1,18 +1,21 @@
 /**
- * Funil IA de leads no Telegram (@MoreThanMoney_aibot) — conversa em DM.
+ * Funil IA de leads no Telegram (@morethanmoneypt_bot) — conversa em DM.
  * Descobre o INTERESSE do lead (sinais manuais / tap to trade / automático) e
  * encaminha-o para o produto+grupo certo. Persona = mesma "alma" do closer
  * (docs/mtm-sales-brain.md): provas reais, sem promessas de lucro.
  *
  * Estado + histórico em `telegram_leads`. Não é aconselhamento financeiro.
  */
-import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
+import { getMtmcopyBotToken, MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 import { getProofStats } from '@/lib/proof-stats'
 import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
-const FOREX_LINK = 'https://t.me/+cVcMbCRt2rlmNzg0'
-const SENSEI_LINK = 'https://t.me/+mbqBggXniu5lNTBk'
+// Os links dos grupos NÃO vivem aqui: quem os liberta é o `telegram-broker-gate`, com convites
+// pessoais, e só depois de a corretora estar validada. As duas constantes que aqui estavam eram
+// links estáticos que ninguém usava — e um link de grupo à solta num ficheiro é um link que
+// acaba por sair numa mensagem a quem não passou pelo gate.
+import { TRIAL_CODE } from '@/lib/telegram-broker-gate'
 
 function buildSystem(PROOF: string): string { return `És um CLOSER humano da MoreThanMoney a conversar EM PRIVADO (Telegram/WhatsApp/IG) com um lead. Caloroso, seguro, direto. Curto: máx ~60 palavras, 1–3 frases, no máx 1 emoji. Uma pergunta de cada vez. O teu trabalho é QUALIFICAR e FECHAR — não és um FAQ.
 
@@ -27,7 +30,7 @@ function buildSystem(PROOF: string): string { return `És um CLOSER humano da Mo
    Se não quiser depositar agora → fecha no Membro 35€/mês (ou Premium 65€, 1º mês 34,99€).
 
 ═══ REGRA DA APP GRÁTIS ═══
-NÃO lideres com a app grátis nem a ofereças por defeito. A app/Premium "de graça" é a RECOMPENSA de abrir conta + depositar ${MIN_DEPOSIT}$ na PU Prime (broker-gate) — usa-a como fecho, não como isco. Só se a pessoa recusar tudo e insistir em "grátis" é que mencionas o teste de 3 dias — e mesmo aí puxas de volta para o Membro ou para a rota dos ${MIN_DEPOSIT}$.
+NÃO lideres com a app grátis nem a ofereças por defeito. A app/Premium "de graça" é a RECOMPENSA de abrir conta + depositar ${MIN_DEPOSIT}$ na PU Prime (broker-gate) — usa-a como fecho, não como isco. Só se a pessoa recusar tudo e insistir em "grátis" é que mencionas o teste de 14 dias (código ${TRIAL_CODE}, sem cartão) — e mesmo aí puxas de volta para o Membro ou para a rota dos ${MIN_DEPOSIT}$.
 
 FACTOS REAIS (só estes; MTM = educação financeira + trading, comunidade PT):
 - Prova: ${PROOF}
@@ -247,7 +250,8 @@ export async function handleLeadsGroupNewMembers(
   if (!leadsId || String(chat.id) !== String(leadsId)) return
 
   const token = getMtmcopyBotToken()
-  const botUser = process.env.TELEGRAM_BOT_USERNAME?.replace(/^@/, '') || 'MoreThanMoney_aibot'
+  // Uma fonte para o nome do bot — o link do botão é a coisa que mais custa ter errada.
+  const botUser = MTMCOPY_BOT_USERNAME()
   if (!token) return
   // A primeira coisa que um lead lê. O texto é editável no /admin/social — mudar uma vírgula
   // aqui obrigava a um commit e a um deploy, e por isso ninguém o mudava.
