@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { recebeT2T, t2tDesligadoNaConta } from '@/lib/mtmcopy/alvo-t2t'
+import { aplicarEscolha, escolhaGuardada, normalizarEscolha, separarEscolha } from '@/lib/mtmcopy/escolha-contas-t2t'
+import { ehContaMestre } from '@/lib/webtrader/filtro-contas'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { entradaT2T } from '@/lib/mtmcopy/t2t-entry'
 import { parseSignal, type ParsedSignal } from '@/lib/mtmcopy/signal-parser'
@@ -102,6 +104,28 @@ function signalFromIdea(idea: {
     tp,
     orderType: idea.entry != null ? 'limit' : 'market',
     raw: 'sensei_trade_idea',
+  }
+}
+
+/**
+ * LEMBRAR ONDE A PESSOA ESCOLHEU ABRIR — `profiles.profile_data.t2t.contas`.
+ *
+ * Fica na CONTA e não no dispositivo (escolher no computador e ser outra vez interrogado no
+ * telemóvel era o que fazia isto parecer partido), ao lado do que o WebTrader já guarda em
+ * `profile_data.webtrader`. Lê-se antes de escrever para não levar o resto do `profile_data` à
+ * frente: ali dentro vive também o estado de activação do membro, e um `update` cego apagava-o.
+ *
+ * É uma preferência de apresentação: não dá acesso a nada. Quem a lê (a pré-visualização) só a
+ * usa para pré-marcar caixas, e quem abre ordens volta a validar cada conta do zero.
+ */
+async function guardarEscolhaT2T(userId: string, contas: string[]): Promise<void> {
+  try {
+    const { data: perfil } = await supabase.from('profiles').select('profile_data').eq('id', userId).maybeSingle()
+    const dados = (perfil?.profile_data ?? {}) as Record<string, unknown>
+    const t2t = { ...((dados.t2t ?? {}) as Record<string, unknown>), contas }
+    await supabase.from('profiles').update({ profile_data: { ...dados, t2t } }).eq('id', userId)
+  } catch (e) {
+    console.error('[tap-to-trade] guardar escolha de contas falhou:', e)
   }
 }
 
@@ -264,12 +288,15 @@ export async function POST(request: NextRequest) {
   // Contas SIMULADAS MTM Funded com «aceita Tap to Trade» (migração 070): abrem a ideia ao lado
   // das reais. Um utilizador só com simuladas também pode aceitar — daí contarem para os guardas
   // abaixo. Antes da 070 a coluna não existe, a leitura dá erro e isto fica a false.
-  const { data: simT2T } = await supabase
-    .from('mtm_trading_accounts').select('id')
+  const { data: simT2Tbruto } = await supabase
+    .from('mtm_trading_accounts').select('id, tipo')
     .eq('user_id', user.id).eq('motor', 'sim').eq('estado', 'ativa').eq('aceita_t2t', true).limit(20)
+  // As mestres da casa (`tipo = 'provider'`) nunca são destino de uma aceitação — são conduzidas
+  // pelo motor da estratégia. Mesmo critério do filtro «As minhas / Mestres» do WebTrader.
+  const simT2T = (simT2Tbruto ?? []).filter((c) => !ehContaMestre(c))
   // + contas MTM Funded ligadas pelo cliente no «Ligar conta» (074): dele, não só-leitura, não pausadas.
   const fundedLigadas = await contasFundedLigadasParaT2T(user.id, (conns ?? []) as Array<Record<string, unknown>>).catch(() => [] as string[])
-  const temSimuladas = Boolean(simT2T?.length) || fundedLigadas.length > 0
+  let temSimuladas = Boolean(simT2T.length) || fundedLigadas.length > 0
 
   // Contas T2T pausadas (is_active=false) ficam ligadas só para estatísticas → não executam.
   let targets = t2tTargets.filter((c) => c.is_active !== false)
@@ -284,6 +311,84 @@ export async function POST(request: NextRequest) {
   }
   if (!targets.length && !temSimuladas) {
     return NextResponse.json({ error: 'Sem conta ligada (ou todas em pausa). Liga/retoma a tua conta MT5 no T2T.', code: 'no_connection' }, { status: 400 })
+  }
+
+  /**
+   * 3b. ONDE ABRE — a escolha de quem aceita (2026-09-24).
+   *
+   * O leque continua a existir; deixa é de ser o que acontece por omissão a quem não disse nada.
+   * Quem manda `contas` abre SÓ nas que mandou. Quem NÃO manda — a app iOS antiga, a MTM Auto,
+   * qualquer cliente por actualizar — herda a preferência guardada, se a pessoa tiver feito
+   * alguma escolha em qualquer superfície; e quem nunca escolheu nada cai exactamente no caminho
+   * de sempre, o leque por todas as contas elegíveis.
+   *
+   * A escolha é um FILTRO sobre o que já era elegível (lib/mtmcopy/escolha-contas-t2t): nunca
+   * acrescenta uma conta, nunca salta um portão, e não toca no sizing — o lote e o risco de cada
+   * conta que fica são os mesmos que seriam.
+   */
+  const escolha = normalizarEscolha((body as Record<string, unknown>).contas)
+  const { reais: escolhaReais, simuladas: escolhaSimuladas } = separarEscolha(escolha)
+  let simuladasPedidas: string[] | undefined
+  /**
+   * PEDIDAS MAS RECUSADAS. A lista no ecrã é conveniência; quem decide é o servidor. Uma conta
+   * pedida que não esteja no conjunto elegível — de outra pessoa, mestre da casa, em pausa, com o
+   * T2T desligado, sem a ligação concluída — não abre, e não se cala sobre isso: vai no `recusadas`
+   * da resposta para a app poder dizer PORQUÊ em vez de a saltar em silêncio.
+   */
+  let recusadas: string[] = []
+
+  /**
+   * QUEM NÃO PERGUNTA, HERDA A ESCOLHA — mas nunca fica sem abrir por causa dela.
+   *
+   * A MTM Auto aceita com um toque e não tem folha de confirmação; uma app iOS antiga também não
+   * manda `contas`. Se a pessoa já escolheu onde quer abrir (no site ou na app), ignorar isso
+   * nesses caminhos era manter lá dentro exactamente a surpresa que isto veio corrigir. Por isso
+   * a preferência guardada vale também aqui.
+   *
+   * A diferença face a uma escolha EXPLÍCITA: esta é uma preferência, não uma ordem. Se ela já não
+   * casar com nenhuma conta elegível — contas apagadas, desligadas, trocadas — não se recusa a
+   * aceitação num cliente que não tem ecrã para a corrigir: volta ao caminho de sempre.
+   */
+  if (!escolha.length) {
+    const { data: perfil } = await supabase.from('profiles').select('profile_data').eq('id', user.id).maybeSingle()
+    const preferida = escolhaGuardada(perfil?.profile_data)
+    if (preferida.length) {
+      const { reais: prefReais, simuladas: prefSim } = separarEscolha(preferida)
+      const elegiveisSim = new Set<string>([...simT2T.map((c) => String(c.id)), ...fundedLigadas])
+      const alvosPref = prefReais.length ? aplicarEscolha(targets, (c) => String(c.id), prefReais).contas : []
+      const simPref = prefSim.filter((id) => elegiveisSim.has(id))
+      // Só se aplica a preferência se ela ainda apanhar ALGUMA conta: uma preferência que ficou
+      // sem destinos não pode transformar uma aceitação numa ordem que não abre em lado nenhum.
+      if (alvosPref.length || (simPref.length && temSimuladas)) {
+        targets = alvosPref
+        simuladasPedidas = simPref
+        temSimuladas = temSimuladas && simPref.length > 0
+      }
+    }
+  }
+
+  if (escolha.length) {
+    const elegiveisSim = new Set<string>([...simT2T.map((c) => String(c.id)), ...fundedLigadas])
+    const filtro = aplicarEscolha(targets, (c) => String(c.id), escolhaReais)
+    const permitidas = new Set<string>([
+      ...filtro.contas.map((c) => String(c.id)),
+      ...escolhaSimuladas.filter((id) => elegiveisSim.has(id)).map((id) => `sim:${id}`),
+    ])
+    recusadas = escolha.filter((ref) => !permitidas.has(ref))
+    targets = escolhaReais.length ? filtro.contas : []
+    simuladasPedidas = escolhaSimuladas.filter((id) => elegiveisSim.has(id))
+    temSimuladas = temSimuladas && simuladasPedidas.length > 0
+    if (!targets.length && !temSimuladas) {
+      // Nunca se volta ao leque por a escolha ter envelhecido: quem escreveu «só nesta» não pode
+      // acabar com doze posições porque a conta que escolheu deixou de servir.
+      return NextResponse.json(
+        {
+          error: 'As contas que escolheste já não estão disponíveis para este sinal. Escolhe outra vez onde queres abrir.',
+          code: 'no_chosen_account',
+        },
+        { status: 400 },
+      )
+    }
   }
 
   // MESTRES NOSSAS (116): com o T2T da estratégia em live, o motor das mestres executa nestas contas
@@ -509,6 +614,8 @@ export async function POST(request: NextRequest) {
           },
           riscoPct: riscoSimulado,
           contasLigadas: fundedLigadas,
+          // Escolheu onde abrir? Então só estas simuladas — as outras ficam de fora como as reais.
+          apenas: simuladasPedidas,
         }).catch((e): ResultadoT2TSimulado[] => { console.error('[tap-to-trade] simuladas:', e); return [] })
       : Promise.resolve([] as ResultadoT2TSimulado[]),
   ])
@@ -524,10 +631,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: realErrors[0]?.error || 'Falha ao abrir a ordem', accounts: results }, { status: 502 })
   }
 
+  // A escolha só se guarda depois de ter servido para alguma coisa: uma aceitação que falhou
+  // toda não é uma preferência. Fire-and-forget — gravar a preferência nunca atrasa nem parte a
+  // resposta de uma trade que já está aberta no mercado.
+  if (escolha.length) void guardarEscolhaT2T(user.id, escolha.filter((ref) => !recusadas.includes(ref)))
+
   return NextResponse.json({
     success: true,
     accounts: results,
     opened: opened.length,
+    escolhidas: escolha.length ? escolha : undefined,
+    recusadas: recusadas.length ? recusadas : undefined,
     total: results.length,
     // Compat com a UI de conta-única: 1.º sucesso no topo.
     orderId: opened[0].orderId,

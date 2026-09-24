@@ -245,8 +245,58 @@ interface TapPreview {
     channel: string
   }
   accounts: TapPreviewAccount[]
+  /** Contas simuladas MTM Funded onde a aceitação também abre (sem lote/risco: não há dinheiro). */
+  simuladas?: Array<{ id: string; ref: string; label: string }>
   /** Contas que NÃO podem aceitar, com o motivo — ver a rota de preview. */
   blocked?: Array<{ id: string; label: string; motivo: string; comoResolver: string }>
+  /** Há mais do que um destino possível → vale a pena perguntar onde abrir. */
+  escolhaPossivel?: boolean
+  /** O que a pessoa escolheu da última vez (`profile_data.t2t.contas`), já filtrado pelo que existe. */
+  escolhidas?: string[]
+}
+
+/** Marca/desmarca uma conta na lista de «onde abrir» (mantém a ordem em que apareceram). */
+function alternarConta(atual: string[] | null, ref: string): string[] {
+  const lista = atual ?? []
+  return lista.includes(ref) ? lista.filter((x) => x !== ref) : [...lista, ref]
+}
+
+/**
+ * Uma linha da lista «onde abrir».
+ *
+ * Com UM destino só (`escolhivel = false`) é exactamente a linha de sempre: o que vai acontecer,
+ * sem caixa nenhuma para tocar. Não se acrescenta um toque a quem não tem decisão para tomar.
+ * Com dois ou mais, a linha inteira passa a ser o alvo do toque — uma caixa de 16px no telemóvel
+ * é um convite a falhar.
+ */
+function ContaEscolhivel({
+  escolhivel,
+  marcada,
+  alternar,
+  children,
+}: {
+  escolhivel: boolean
+  marcada: boolean
+  alternar: () => void
+  children: React.ReactNode
+}) {
+  if (!escolhivel) return <div className="flex items-baseline justify-between gap-3">{children}</div>
+  return (
+    <button
+      type="button"
+      onClick={alternar}
+      aria-pressed={marcada}
+      className={`flex w-full items-baseline justify-between gap-2 rounded-lg px-2 py-1.5 text-left transition-colors active:scale-[0.99] ${marcada ? "bg-[#D2A63C]/10" : "opacity-50"}`}
+    >
+      <span
+        aria-hidden
+        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold ${marcada ? "border-[#D2A63C] bg-[#D2A63C] text-black" : "border-zinc-600 text-transparent"}`}
+      >
+        ✓
+      </span>
+      <span className="flex flex-1 items-baseline justify-between gap-3 min-w-0">{children}</span>
+    </button>
+  )
 }
 
 interface Sig {
@@ -407,6 +457,14 @@ export default function TapToTradeFeed() {
    */
   const [preview, setPreview] = useState<TapPreview | null>(null)
   const [previewBusy, setPreviewBusy] = useState(false)
+  /**
+   * ONDE ABRIR (2026-09-24). Antes, aceitar abria em TODAS as contas com o T2T ligado — com doze
+   * contas isso deixou de ser conveniência e passou a ser uma surpresa cara. O leque continua
+   * possível (dá para marcar duas das doze), mas passa a ser uma escolha.
+   *
+   * `null` enquanto a pré-visualização não chega. Com UMA só conta ninguém vê pergunta nenhuma.
+   */
+  const [ondeAbrir, setOndeAbrir] = useState<string[] | null>(null)
   const [providers, setProviders] = useState<{ label: string; strategy: string }[]>([])
   /** Os canais que o servidor diz estarem ATIVOS no Tap to Trade — é a lista que o filtro usa. */
   const [canaisAtivos, setCanaisAtivos] = useState<string[]>([])
@@ -748,7 +806,7 @@ export default function TapToTradeFeed() {
   // Pré-visualização: corre quando o modal abre. Se falhar, o modal continua a funcionar com
   // o texto do sinal — nunca bloqueia a aceitação por causa de números que não chegaram.
   useEffect(() => {
-    if (!tap || tap.status !== "confirm") { setPreview(null); return }
+    if (!tap || tap.status !== "confirm") { setPreview(null); setOndeAbrir(null); return }
     let cancelado = false
     setPreviewBusy(true)
     ;(async () => {
@@ -760,7 +818,13 @@ export default function TapToTradeFeed() {
         })
         if (!r.ok) return
         const j = (await r.json()) as TapPreview
-        if (!cancelado) setPreview(j)
+        if (cancelado) return
+        setPreview(j)
+        // Pré-marcar: a escolha da vez passada, se ainda fizer sentido; senão TODAS — que é o
+        // comportamento de sempre para quem nunca escolheu, e nunca uma surpresa ao contrário
+        // (ninguém fica sem abrir numa conta por não ter reparado numa caixa).
+        const todas = [...j.accounts.map((a) => a.id), ...(j.simuladas ?? []).map((x) => x.ref)]
+        setOndeAbrir(j.escolhidas?.length ? j.escolhidas.filter((ref) => todas.includes(ref)) : todas)
       } catch {
         /* fica sem números — o texto do sinal chega para decidir */
       } finally {
@@ -810,7 +874,11 @@ export default function TapToTradeFeed() {
       const res = await fetch("/api/mtmcopy/tap-to-trade", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
-        body: JSON.stringify({ chat_message_id: sig.id }),
+        // `contas` só segue quando houve mesmo uma escolha a fazer (mais do que um destino). Sem
+        // ela, a rota faz o que sempre fez — abre em todas as contas elegíveis.
+        body: JSON.stringify(
+          preview?.escolhaPossivel && ondeAbrir ? { chat_message_id: sig.id, contas: ondeAbrir } : { chat_message_id: sig.id },
+        ),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -824,7 +892,15 @@ export default function TapToTradeFeed() {
         return
       }
       setAccepted((a) => ({ ...a, [sig.id]: "open" }))
-      setTap({ sig, status: "done", message: data.message || t("t2t.tradeOpened") })
+      // Contas pedidas que o SERVIDOR recusou (mestre da casa, em pausa, T2T desligado, de outra
+      // pessoa). Saltá-las em silêncio parecia uma avaria — e esconder uma recusa é pior do que a
+      // recusa. A lista no ecrã é conveniência; quem decide onde abre é sempre o servidor.
+      const recusadas: string[] = Array.isArray(data.recusadas) ? data.recusadas : []
+      setTap({
+        sig,
+        status: "done",
+        message: `${data.message || t("t2t.tradeOpened")}${recusadas.length ? ` · ${recusadas.length} conta${recusadas.length === 1 ? "" : "s"} que escolheste já não podia receber este sinal.` : ""}`,
+      })
     } catch (e) {
       setTap({ sig, status: "error", message: e instanceof Error ? e.message : t("t2t.unexpectedError") })
     }
@@ -1679,12 +1755,36 @@ export default function TapToTradeFeed() {
                 )}
 
                 {/* Quanto se arrisca, por conta. É a pergunta que o cliente faz antes de tocar. */}
-                {preview?.mode === "execute" && preview.accounts.length > 0 && (
+                {preview?.mode === "execute" && (preview.accounts.length > 0 || (preview.simuladas?.length ?? 0) > 0) && (
                   <div className="rounded-lg border border-[#D2A63C]/25 bg-[#D2A63C]/5 p-3 mb-3">
-                    <p className="text-[10px] uppercase tracking-wider text-[#D2A63C] mb-2">{t("t2t.inYourAccounts")}</p>
+                    {/* ONDE ABRIR. Com um destino só isto é o cartão de sempre (o que vai acontecer,
+                        sem pergunta nenhuma). Com dois ou mais, cada linha passa a ser uma caixa —
+                        o leque continua a caber (dá para marcar duas das doze), mas escolhido. */}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <p className="text-[10px] uppercase tracking-wider text-[#D2A63C]">
+                        {preview.escolhaPossivel ? "Onde queres abrir" : t("t2t.inYourAccounts")}
+                      </p>
+                      {preview.escolhaPossivel && ondeAbrir && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const todas = [...preview.accounts.map((a) => a.id), ...(preview.simuladas ?? []).map((x) => x.ref)]
+                            setOndeAbrir(ondeAbrir.length === todas.length ? [] : todas)
+                          }}
+                          className="text-[10px] font-semibold text-[#D2A63C] underline underline-offset-2 active:scale-95"
+                        >
+                          {ondeAbrir.length === preview.accounts.length + (preview.simuladas?.length ?? 0) ? "Nenhuma" : "Todas"}
+                        </button>
+                      )}
+                    </div>
                     <div className="flex flex-col gap-2">
                       {preview.accounts.map((a) => (
-                        <div key={a.id} className="flex items-baseline justify-between gap-3">
+                        <ContaEscolhivel
+                          key={a.id}
+                          escolhivel={Boolean(preview.escolhaPossivel)}
+                          marcada={!preview.escolhaPossivel || !!ondeAbrir?.includes(a.id)}
+                          alternar={() => setOndeAbrir((atual) => alternarConta(atual, a.id))}
+                        >
                           <span className="text-[12px] text-zinc-300 truncate">
                             {a.label}
                             {a.jaCopia && <span className="ml-1.5 rounded bg-sky-500/15 px-1.5 py-0.5 text-[9.5px] font-semibold text-sky-300">já copia</span>}
@@ -1704,9 +1804,34 @@ export default function TapToTradeFeed() {
                           ) : (
                             <span className="text-[11px] text-zinc-600">{t("t2t.accountNoAnswer")}</span>
                           )}
-                        </div>
+                        </ContaEscolhivel>
+                      ))}
+                      {/* As simuladas MTM Funded abriam sem nunca aparecerem aqui. Entram sem
+                          números — são simuladas, não há dinheiro em risco para contar. */}
+                      {(preview.simuladas ?? []).map((sc) => (
+                        <ContaEscolhivel
+                          key={sc.ref}
+                          escolhivel={Boolean(preview.escolhaPossivel)}
+                          marcada={!preview.escolhaPossivel || !!ondeAbrir?.includes(sc.ref)}
+                          alternar={() => setOndeAbrir((atual) => alternarConta(atual, sc.ref))}
+                        >
+                          <span className="text-[12px] text-zinc-300 truncate">
+                            {sc.label}
+                            <span className="ml-1.5 rounded bg-zinc-500/15 px-1.5 py-0.5 text-[9.5px] font-semibold text-zinc-400">simulada</span>
+                          </span>
+                          <span className="text-[11px] text-zinc-500">sem risco real</span>
+                        </ContaEscolhivel>
                       ))}
                     </div>
+                    {preview.escolhaPossivel && ondeAbrir?.length === 0 && (
+                      <p className="text-[10px] text-amber-400 mt-2">Escolhe pelo menos uma conta para abrir.</p>
+                    )}
+                    {preview.escolhaPossivel && (
+                      <p className="text-[10px] text-zinc-500 mt-2">
+                        A tua escolha fica guardada para a próxima — podes mudá-la aqui sempre que aceitares.
+                        {(preview.escolhidas?.length ?? 0) > 0 && " Uma conta que ligues de novo aparece DESMARCADA: só recebe se a marcares."}
+                      </p>
+                    )}
                     {/* A conta já recebe este trade pela cópia automática: dizê-lo ANTES do clique.
                         O sistema não abre duas vezes (o T2T salta as contas onde o motor já
                         executou o mesmo trade), mas saltar em silêncio parece uma avaria. */}
@@ -1748,7 +1873,11 @@ export default function TapToTradeFeed() {
                 <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3 text-xs text-zinc-400 max-h-24 overflow-y-auto whitespace-pre-wrap mb-4">{tap.sig.content}</div>
                 <div className="flex gap-2">
                   <button onClick={() => setTap(null)} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95">{t("t2t.cancel")}</button>
-                  <button onClick={runTap} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95">
+                  <button
+                    onClick={runTap}
+                    disabled={Boolean(preview?.escolhaPossivel) && ondeAbrir?.length === 0}
+                    className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95 disabled:opacity-40 disabled:active:scale-100"
+                  >
                     {preview?.mode === "follow" ? t("t2t.followPositionBtn") : t("t2t.confirmOpen")}
                   </button>
                 </div>
