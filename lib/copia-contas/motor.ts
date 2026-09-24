@@ -222,6 +222,11 @@ async function abrir(
   // Símbolo: o mapa manual manda; senão o que o destino escolheu com as specs (salta DISABLED/CLOSEONLY).
   const simboloFinal = mapa.via === 'mapa' ? simboloDestino : ctx?.simbolo ?? simboloDestino
   const acao: AcaoAbrir = { tipo: 'abrir', simbolo: simboloFinal ?? mapa.canonico, direcao, volume: lote.volume, sl: stops.sl, tp: stops.tp, clientId }
+  // Lote subido ao mínimo da corretora (o risco configurado dava menos): fica dito na linha da
+  // cópia. Sem isto, o cliente via um lote maior do que o risco dele e não tinha como saber porquê.
+  const notaLote = lote.subiuAoMinimo
+    ? `lote subido ao mínimo da corretora (${lote.bruto.toFixed(4)} → ${lote.volume})`
+    : null
   const pedido = { ...acao, precoReferencia: ctx ? precoDeReferencia(ctx, direcao) : null, entradaMestre: num(p.preco), slMestre: num(p.sl), tpMestre: num(p.tp), equity: ctx?.equity ?? null }
 
   // Guardas do motor das mestres: só impedem ABRIR (pausa, exposição, atraso, duplicado, T2T sem aceite).
@@ -240,7 +245,7 @@ async function abrir(
       rota_id: rota.id, origem_posicao_id: ev.origem_posicao_id, volume_origem_abertura: volumeOrigem,
       volume_destino_abertura: lote.volume, destino_simbolo: acao.simbolo, direcao, estado: 'sombra', client_id: clientId,
       preco_origem: num(p.preco), preco_destino: ctx ? precoDeReferencia(ctx, direcao) : null,
-      erro: ctx ? null : 'contexto do destino indisponível (sombra calculou com a regra de lote por omissão)',
+      erro: ctx ? notaLote : 'contexto do destino indisponível (sombra calculou com a regra de lote por omissão)',
     })
     await registar(op, { rota, ev, tipo: 'abrir', modo, estado: 'sombra', pedido })
     return { resultado: 'sombra', acaoPretendida: acao, modo }
@@ -251,7 +256,7 @@ async function abrir(
   const inserida = await loja.inserirCopia({
     rota_id: rota.id, origem_posicao_id: ev.origem_posicao_id, volume_origem_abertura: volumeOrigem,
     volume_destino_abertura: lote.volume, destino_simbolo: acao.simbolo, direcao, estado: 'enviando', client_id: clientId,
-    preco_origem: num(p.preco), enviado_em: new Date(agora).toISOString(),
+    preco_origem: num(p.preco), enviado_em: new Date(agora).toISOString(), erro: notaLote,
   })
   if (!inserida) return { resultado: 'saltado', acaoPretendida: nada('outro processo já está a enviar'), modo }
   const gravada = await loja.copia(rota.id, ev.origem_posicao_id)

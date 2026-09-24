@@ -39,7 +39,11 @@ export interface EntradaLote {
   valorPorPrecoPorLote?: number | null
 }
 
-export type Lote = { ok: true; volume: number; bruto: number } | { ok: false; motivo: string }
+export type Lote =
+  /** `subiuAoMinimo`: o cálculo dava menos do que o mínimo da corretora e abriu-se no mínimo — o
+   *  risco real desta ordem é maior do que o configurado, e quem a regista tem de o poder dizer. */
+  | { ok: true; volume: number; bruto: number; subiuAoMinimo?: boolean }
+  | { ok: false; motivo: string }
 
 /**
  * Lote no destino. Nunca se sobe um lote minúsculo até ao mínimo da corretora quando isso passa do
@@ -79,15 +83,34 @@ export function calcularLote(e: EntradaLote): Lote {
 
   const r = e.regra
   const min = r.min > 0 ? r.min : 0.01
-  if (bruto < min / 2) return { ok: false, motivo: `lote ${bruto.toFixed(4)} abaixo de metade do mínimo ${min}` }
+  /**
+   * LOTE ABAIXO DO MÍNIMO: abre no mínimo (decisão do dono, 23/09).
+   *
+   * Antes recusava-se, para nunca abrir mais risco do que o cliente escolheu — e o resultado era
+   * pior do que o problema: o Rúben (0,4 %) e o Mário (0,25 %) davam 0,0039 e 0,0024 lotes numa
+   * corretora com mínimo de 0,01, e por isso **não recebiam trade nenhuma**. Pagavam e ficavam a
+   * ver. Entre não copiar nada e copiar no lote mais pequeno que a corretora aceita, o dono
+   * escolheu o lote mínimo.
+   *
+   * Fica dito em `subiuAoMinimo`: quem regista a ordem sabe que o risco real é maior do que o
+   * configurado, e o cliente pode ver porquê em vez de adivinhar. Os tectos continuam todos a
+   * valer — `lote_max` da rota e o máximo da corretora cortam a seguir.
+   */
+  const abaixoDoMinimo = bruto < min
   // Risco %: arredonda PARA BAIXO — um arredondamento nunca pode subir o risco escolhido.
+  // (Excepto quando o próprio mínimo da corretora obriga a subir: ver acima.)
   let v = Math.max(min, arredondarAoStep(bruto, r, e.modo === 'risco_pct' ? 'baixo' : 'perto'))
   if (r.max != null && r.max > 0 && v > r.max) v = arredondarAoStep(r.max, r, 'baixo')
   if (e.loteMax != null && e.loteMax > 0 && v > e.loteMax) {
     v = arredondarAoStep(e.loteMax, r, 'baixo')
     if (v < min) return { ok: false, motivo: `lote máximo ${e.loteMax} abaixo do mínimo da corretora ${min}` }
   }
-  return { ok: true, volume: Number(v.toFixed(casasDo(r.step > 0 ? r.step : 0.01))), bruto }
+  return {
+    ok: true,
+    volume: Number(v.toFixed(casasDo(r.step > 0 ? r.step : 0.01))),
+    bruto,
+    ...(abaixoDoMinimo ? { subiuAoMinimo: true } : {}),
+  }
 }
 
 // ── símbolo ──────────────────────────────────────────────────────────────────

@@ -16,7 +16,11 @@ import { lucroUsd, type MapaPrecos, type Simbolo } from './matematica'
  * que toca na base importa-se à vez, para o teste não precisar do Next.
  */
 
-export type LoteT2T = { ok: true; volume: number; riscoUsd: number | null } | { ok: false; motivo: string }
+export type LoteT2T =
+  /** `subiuAoMinimo`: o risco pedido dava menos do que o lote mínimo do símbolo e abriu-se no
+   *  mínimo; nesse caso `riscoUsd` é o risco REAL do lote enviado, não o da percentagem. */
+  | { ok: true; volume: number; riscoUsd: number | null; subiuAoMinimo?: boolean }
+  | { ok: false; motivo: string }
 
 export function loteT2TSimulado(e: {
   equity: number
@@ -35,10 +39,14 @@ export function loteT2TSimulado(e: {
   if (!Number.isFinite(perdaPorLote) || perdaPorLote <= 0) return { ok: false, motivo: `sem conversão para USD em ${s.symbol}` }
   const riscoUsd = Math.round(e.equity * e.riscoPct) / 100
   const ideal = riscoUsd / perdaPorLote
-  // A mesma regra da cópia para contas reais: subir ao mínimo só até ao DOBRO do risco pedido.
-  if (ideal < s.volume_min / 2) return { ok: false, motivo: `lote ${ideal.toFixed(4)} abaixo de metade do mínimo ${s.volume_min} — o stop é largo demais para esta conta` }
+  // A mesma regra da cópia para contas reais (lib/copia-contas/calculo.ts, decisão do dono a
+  // 23/09): abaixo do mínimo abre-se NO MÍNIMO em vez de não abrir nada. O risco real fica acima
+  // do pedido e isso diz-se — `riscoUsd` continua a ser o RISCO REAL do lote enviado, não o
+  // configurado, para o cliente ver o que está mesmo em jogo.
+  const subiuAoMinimo = ideal < s.volume_min
   const volume = Math.round(Math.min(s.volume_max, Math.max(s.volume_min, Math.floor(ideal / step + 1e-6) * step)) * 100) / 100
-  return { ok: true, volume, riscoUsd }
+  // Com o lote subido ao mínimo, o risco que o cliente corre é o do LOTE, não o da percentagem.
+  return { ok: true, volume, riscoUsd: subiuAoMinimo ? Math.round(volume * perdaPorLote * 100) / 100 : riscoUsd, ...(subiuAoMinimo ? { subiuAoMinimo: true } : {}) }
 }
 
 export interface SinalT2T {

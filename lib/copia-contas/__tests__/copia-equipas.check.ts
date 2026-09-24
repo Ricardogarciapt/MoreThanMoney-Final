@@ -88,12 +88,16 @@ caso('TL risco: US30 com mínimo 0,1 e passo 0,1 — 1% de 10k, SL 50 pontos a 4
   const r = calcularLote({ modo: 'risco_pct', valor: 1, volumeOrigem: 1, saldoOrigem: null, equityDestino: c.equity, loteMax: null, regra: c.regra, distanciaSl: 50, valorPorPrecoPorLote: c.valorPorPrecoPorLote })
   assert.equal(r.ok && r.volume, 2)
 })
-caso('TL risco: acima do maxLot corta ao máximo; conta pequena abaixo de metade do mínimo recusa', () => {
+caso('TL risco: acima do maxLot corta ao máximo; conta pequena abre no mínimo (23/09)', () => {
   const c = contextoTradeLocker({ instrumento: inst('US30'), detalhe: US30, equity: 10_000_000, saldo: null, moedaConta: 'USD', bid: 42_000, ask: 42_000 })
   const alto = calcularLote({ modo: 'risco_pct', valor: 1, volumeOrigem: 1, saldoOrigem: null, equityDestino: c.equity, loteMax: null, regra: c.regra, distanciaSl: 50, valorPorPrecoPorLote: c.valorPorPrecoPorLote })
   assert.equal(alto.ok && alto.volume, 20)
+  // Uma conta de 200 USD com risco 0,1 % dá muito menos do que o mínimo do índice: abre no mínimo
+  // e diz-se que subiu, em vez de a conta nunca receber nada.
   const pequena = calcularLote({ modo: 'risco_pct', valor: 0.1, volumeOrigem: 1, saldoOrigem: null, equityDestino: 200, loteMax: null, regra: c.regra, distanciaSl: 50, valorPorPrecoPorLote: c.valorPorPrecoPorLote })
-  assert.equal(pequena.ok, false)
+  assert.equal(pequena.ok, true)
+  assert.equal(pequena.ok && pequena.volume, c.regra.min)
+  assert.equal(pequena.ok && pequena.subiuAoMinimo, true)
 })
 caso('TL risco: sem valor de tick (moeda diferente) → recusa em vez de inventar', () => {
   const c = contextoTradeLocker({ instrumento: inst('XAUUSD'), detalhe: SEM_TICKS, equity: 10_000, saldo: 10_000, moedaConta: 'EUR', bid: 2000, ask: 2000 })

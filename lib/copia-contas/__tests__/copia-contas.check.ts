@@ -37,8 +37,21 @@ caso('proporcional: 1 lote em 100k → 0,05 em 5k', () => {
   const r = calcularLote({ modo: 'proporcional_saldo', valor: 1, volumeOrigem: 1, saldoOrigem: 100_000, equityDestino: 5_000, loteMax: null, regra: FX })
   assert.equal(r.ok && r.volume, 0.05)
 })
-caso('proporcional abaixo de metade do mínimo → recusa (não abre 4× o risco)', () => {
+caso('lote abaixo do mínimo → abre no MÍNIMO e diz que subiu (decisão do dono, 23/09)', () => {
+  // Recusar era pior do que o problema: clientes com risco pequeno (0,25 %) não recebiam trade
+  // nenhuma e pagavam para ver. Abre-se no lote mais pequeno que a corretora aceita, e regista-se
+  // que o risco real ficou acima do configurado.
   const r = calcularLote({ modo: 'proporcional_saldo', valor: 1, volumeOrigem: 0.05, saldoOrigem: 100_000, equityDestino: 5_000, loteMax: null, regra: FX })
+  assert.equal(r.ok, true)
+  assert.equal(r.ok && r.volume, FX.min)
+  assert.equal(r.ok && r.subiuAoMinimo, true)
+})
+caso('lote acima do mínimo NÃO leva a marca de subida', () => {
+  const r = calcularLote({ modo: 'proporcional_saldo', valor: 1, volumeOrigem: 1, saldoOrigem: 100_000, equityDestino: 5_000, loteMax: null, regra: FX })
+  assert.equal(r.ok && r.subiuAoMinimo, undefined)
+})
+caso('o tecto do lote continua a mandar: lote_max abaixo do mínimo recusa na mesma', () => {
+  const r = calcularLote({ modo: 'fixo', valor: 1, volumeOrigem: 1, saldoOrigem: null, equityDestino: null, loteMax: 0.005, regra: FX })
   assert.equal(r.ok, false)
 })
 caso('proporcional sem equity do destino → recusa', () => {
