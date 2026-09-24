@@ -44,7 +44,14 @@ export interface OpcoesYahoo {
   ultimo: (sym: string) => { bid: number; ask: number } | null
   /** último preço nosso com instante — só para classes fora do nosso nível */
   ancora?: (sym: string) => Promise<Ancora | null>
-  injetar: (sym: string, bid: number, ask: number, emMs: number) => void
+  /**
+   * `emMercado` = o instante que a própria cotação declara (`regularMarketTime` no Yahoo,
+   * `updatedAt` na gold-api). É a hora do MERCADO e pode ser muito mais velha do que a leitura —
+   * um EURUSD calmo passa um minuto com a mesma hora. É precisamente isso que quem lê precisa de
+   * saber: antes disto o tick entrava carimbado a `Date.now()` e parecia fresco estando parado.
+   * Reescalado por âncora (fora do nosso nível) → NULO: o factor vem de velas de outra hora.
+   */
+  injetar: (sym: string, bid: number, ask: number, emMs: number, emMercado: number | null, origem: string) => void
   log: (...a: unknown[]) => void
 }
 
@@ -139,17 +146,22 @@ export function iniciarFonteYahoo(o: OpcoesYahoo): FonteYahoo | null {
       }
       atrasadoAte.delete(sym)
       let meio = c.preco
+      // A cotação declara a sua hora: é essa que vale como hora de mercado.
+      let emMercado: number | null = c.emSeg * 1000
       if (plano.tipo === 'yahoo' && !plano.sameLevel) {
         const f = await fator(sym, plano.ticker)
         if (f == null) return // fora do nosso nível e sem âncora: melhor nada
         meio *= f
+        // Preço reescalado por um factor tirado de velas de outra hora: já não é o preço que o
+        // mercado fez naquele instante, e dizer que é seria inventar. Fica sem hora de mercado.
+        emMercado = null
       }
       if (!o.precisa(sym)) return
       const u = o.ultimo(sym)
       const { bid, ask } = bidAsk(meio, info.digits, u ? u.ask - u.bid : null, info.spread_pontos)
       ultimaCotacao.set(sym, c.emSeg)
       injetados++
-      o.injetar(sym, bid, ask, Date.now())
+      o.injetar(sym, bid, ask, Date.now(), emMercado, plano.tipo === 'metal' ? 'gold-api' : 'yahoo')
     } catch {
       // uma cotação má não derruba o recurso
     } finally {

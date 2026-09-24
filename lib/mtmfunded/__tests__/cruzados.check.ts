@@ -45,6 +45,23 @@ function main() {
     assert.equal(p?.em, AGORA - 8_000)
   })
 
+  caso('a hora do MERCADO do cruzado é a da perna mais velha — e nula se uma não a provar', () => {
+    const c = { symbol: 'BTCETH', a: 'BTCUSD', b: 'ETHUSD', operacao: 'dividir' } as const
+    const ambas = precoCruzado(c, mapa({
+      BTCUSD: { bid: 100_000, ask: 100_010, em: AGORA, emMercado: AGORA - 300 },
+      ETHUSD: { bid: 3_000, ask: 3_001, em: AGORA, emMercado: AGORA - 900 },
+    }), AGORA)
+    assert.equal(ambas?.emMercado, AGORA - 900)
+
+    // A Binance não declara hora no bookTicker: meio cruzado sem hora de mercado não é um
+    // cruzado com hora — senão o preenchimento acreditava numa frescura que ninguém provou.
+    const meia = precoCruzado(c, mapa({
+      BTCUSD: { bid: 100_000, ask: 100_010, em: AGORA, emMercado: AGORA - 300 },
+      ETHUSD: { bid: 3_000, ask: 3_001, em: AGORA },
+    }), AGORA)
+    assert.equal(meia?.emMercado, null)
+  })
+
   caso('perna velha = sem cruzado (não se arrasta meio preço)', () => {
     const ler = mapa({ BTCUSD: { bid: 100_000, ask: 100_010, em: AGORA }, USDJPY: { bid: 150, ask: 150.02, em: AGORA - 60_000 } })
     assert.equal(precoCruzado({ symbol: 'BTCJPY', a: 'BTCUSD', b: 'USDJPY', operacao: 'multiplicar' }, ler, AGORA), null)

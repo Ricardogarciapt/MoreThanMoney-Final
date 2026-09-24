@@ -122,17 +122,27 @@ export async function carregarSimbolos(symbols: string[], soAtivos = true): Prom
   return out
 }
 
-export async function carregarPrecos(symbols: string[]): Promise<{ precos: MapaPrecos; em: Record<string, string> }> {
+/**
+ * `em` é a hora a que o MOTOR carimbou o preço; `emMercado` é a hora a que o MERCADO o fez, quando
+ * a fonte a declara (migração 123) e nula quando não. Só a segunda prova frescura — a primeira
+ * prova que o motor está vivo, e foi por se confundirem as duas que entradas abriram a preços que
+ * o mercado não ofereceu (ver ../precos/preenchimento.ts).
+ */
+export async function carregarPrecos(
+  symbols: string[],
+): Promise<{ precos: MapaPrecos; em: Record<string, string>; emMercado: Record<string, string | null> }> {
   const lista = [...new Set(symbols.filter(Boolean))]
   const precos: MapaPrecos = {}
   const em: Record<string, string> = {}
-  if (!lista.length) return { precos, em }
-  const { data } = await getSupabaseAdmin().from('funded_precos').select('symbol, bid, ask, em').in('symbol', lista)
+  const emMercado: Record<string, string | null> = {}
+  if (!lista.length) return { precos, em, emMercado }
+  const { data } = await getSupabaseAdmin().from('funded_precos').select('symbol, bid, ask, em, em_mercado').in('symbol', lista)
   for (const r of data ?? []) {
     precos[String(r.symbol)] = { symbol: String(r.symbol), bid: Number(r.bid), ask: Number(r.ask) }
     em[String(r.symbol)] = String(r.em)
+    emMercado[String(r.symbol)] = r.em_mercado == null ? null : String(r.em_mercado)
   }
-  return { precos, em }
+  return { precos, em, emMercado }
 }
 
 /** O preço para EXECUTAR: tem de existir e ter menos de 5 s. Senão, 409 e nada acontece. */
@@ -155,12 +165,16 @@ function precoParaExecutar(symbol: string, precos: MapaPrecos, em: Record<string
  */
 function precoParaOrdem(
   symbol: string, direcao: Direcao, precos: MapaPrecos, em: Record<string, string>,
-  referencia: number | null | undefined, digits: number,
+  referencia: number | null | undefined, digits: number, emMercado?: Record<string, string | null>,
 ): Preco {
   const p = precoParaExecutar(symbol, precos, em)
   if (!(typeof referencia === 'number' && referencia > 0)) return p
+  const mercado = emMercado?.[symbol]
   const fill = precoDePreenchimento({
-    direcao, tick: { bid: p.bid, ask: p.ask, em: Date.parse(em[symbol]) },
+    direcao,
+    // A porta que o `preenchimento.ts` deixou aberta: com a hora do MERCADO provada, o tick vale
+    // sozinho; sem ela (fonte que não a declara) fica o caminho pessimista, que é o de hoje.
+    tick: { bid: p.bid, ask: p.ask, em: Date.parse(em[symbol]), emMercado: mercado ? Date.parse(mercado) : null },
     referencia: { preco: referencia }, digits,
   })
   if (!fill.ok) throw new ErroOrdem(409, `${symbol}: ${fill.erro}`)
@@ -294,8 +308,8 @@ export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
   const simbolos = await carregarSimbolos([symbol, ...abertas.map((p) => String(p.symbol))])
   const simbolo = simbolos[symbol]
   if (!simbolo) throw new ErroOrdem(400, `símbolo ${symbol} não disponível`)
-  const { precos, em } = await carregarPrecos(simbolosParaMedir(Object.values(simbolos)))
-  const preco = precoParaOrdem(symbol, e.direcao, precos, em, e.referencia, simbolo.digits)
+  const { precos, em, emMercado } = await carregarPrecos(simbolosParaMedir(Object.values(simbolos)))
+  const preco = precoParaOrdem(symbol, e.direcao, precos, em, e.referencia, simbolo.digits, emMercado)
   const regras = ehContaDeAnalise(conta) ? null : ((await regrasDaConta(conta)) as RegrasDeOrdem | null)
 
   const plano = planearAbertura({

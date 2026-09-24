@@ -46,6 +46,10 @@ export interface ContextoProvider {
   simbolos: Map<string, Simbolo>
   precos: MapaPrecos
   precoEm: Map<string, number>
+  /** Hora a que o MERCADO fez o preço, quando a fonte a declara (migração 123). Nula se não a dá. */
+  precoEmMercado: Map<string, number | null>
+  /** Quem deu mesmo o último tick de cada símbolo — o que vai para `tick_entrada.fonte`. */
+  precoFonte: Map<string, string>
   negociavel: (sym: string) => boolean
   marcarSuja: (accountId: string) => void
   sdk?: SdkEspelho
@@ -414,6 +418,22 @@ export function iniciarEspelhoProvider(ctx: ContextoProvider): ControloProvider 
     return { preco: pr, em }
   }
 
+  /**
+   * O tick que fica gravado com a posição. A `fonte` é a que deu MESMO este preço — estava fixa em
+   * `'metaapi:puprime'` e é mentira desde que o motor vive sem MetaApi. `em_mercado` é a hora do
+   * mercado quando a fonte a declara, e nula quando não (migração 123).
+   */
+  function tickGravado(sym: string, em: number, extra?: Record<string, unknown>) {
+    const mercado = ctx.precoEmMercado.get(sym) ?? null
+    return {
+      bid: ctx.precos[sym]?.bid, ask: ctx.precos[sym]?.ask,
+      em: new Date(em).toISOString(),
+      em_mercado: mercado == null ? null : new Date(mercado).toISOString(),
+      fonte: ctx.precoFonte.get(sym) ?? 'desconhecida',
+      ...(extra ?? {}),
+    }
+  }
+
   async function abrirEspelho(p: Provider, mp: PosicaoMestre, recebidoEm: number): Promise<void> {
     const symbol = simboloDoCatalogo(mp.symbol, ctx.simbolos)
     const t = p.trades.get(mp.id)
@@ -474,7 +494,7 @@ export function iniciarEspelhoProvider(ctx: ContextoProvider): ControloProvider 
       master_aberta_em: mp.time, estado: 'aberta',
     }).select('id').single()
     if (ePonte || !ponte) { if (ePonte?.code !== '23505') log(`${curto(p)} ponte:`, ePonte?.message); return }
-    const tick = { bid: vivo.preco.bid, ask: vivo.preco.ask, em: new Date(vivo.em).toISOString(), fonte: 'metaapi:puprime' }
+    const tick = tickGravado(symbol, vivo.em)
     const { data: pos, error: ePos } = await db.from('funded_positions').insert({
       account_id: p.contaId, symbol, direcao: mp.direcao, volume: plano.volume, preco_entrada: px, sl, tp,
       comissao: plano.comissao, estado: 'aberta', origem: 'estrategia', comentario: `${comentarioEstrategia(p.slug, p.nome)} EP`.slice(0, 31),
@@ -558,7 +578,8 @@ export function iniciarEspelhoProvider(ctx: ContextoProvider): ControloProvider 
   }
 
   async function aplicarGestao(p: Provider, masterId: string, esp: PosEspelho, s: Simbolo, d: ReturnType<typeof decidirGestaoProvider>, tickEm: number): Promise<void> {
-    const tickJson = (motivo?: string) => ({ bid: ctx.precos[s.symbol]?.bid, ask: ctx.precos[s.symbol]?.ask, em: new Date(tickEm).toISOString(), fonte: 'metaapi:puprime', espelho_provider: true, decidido_em: new Date().toISOString(), ...(motivo ? { motivo } : {}) })
+    const tickJson = (motivo?: string) =>
+      tickGravado(s.symbol, tickEm, { espelho_provider: true, decidido_em: new Date().toISOString(), ...(motivo ? { motivo } : {}) })
     for (const x of d.parciais) {
       if (!ctx.escrita) { seco(`parcial:${esp.positionId}:${x.indice}`, `${p.slug} TP${x.indice + 1} fecharia ${x.volume} ${s.symbol} @${x.preco} pnl ${x.pnl}${x.fechaTudo ? ' (tudo)' : ''}`); return }
       if (x.fechaTudo) {

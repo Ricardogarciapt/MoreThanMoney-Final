@@ -20,6 +20,12 @@ export interface PrecoPerna {
   ask: number
   /** ms desde a época — a hora do tick, não a da leitura. */
   em: number
+  /**
+   * Hora a que o MERCADO fez a perna (ms), quando a fonte a sabe dizer. Um cruzado não pode
+   * provar-se mais fresco do que a perna que não se prova: basta uma NULA para o cruzado ficar
+   * nulo também.
+   */
+  emMercado?: number | null
 }
 
 export type Operacao = 'multiplicar' | 'dividir'
@@ -92,7 +98,10 @@ export function precoCruzado(
   if (!Number.isFinite(bid) || !Number.isFinite(ask) || bid <= 0 || ask <= 0) return null
   // Um cruzado com o ask abaixo do bid é conta mal feita — não sai daqui.
   if (ask < bid) return null
-  return { bid, ask, em: Math.min(a.em, b.em) }
+  // A hora de mercado segue a mesma regra do `em`: a da perna mais velha, e NULA se alguma das
+  // duas não a souber provar. Meio cruzado sem hora de mercado não é um cruzado com hora.
+  const emMercado = a.emMercado != null && b.emMercado != null ? Math.min(a.emMercado, b.emMercado) : null
+  return { bid, ask, em: Math.min(a.em, b.em), emMercado }
 }
 
 /** Todos os cruzados que se conseguem calcular agora. Nunca lança. */
@@ -101,11 +110,11 @@ export function cruzadosCalculaveis(
   agora: number,
   cruzados: readonly Cruzado[] = CRUZADOS_CRIPTO,
   frescuraMaxMs = FRESCURA_MAX_MS,
-): Array<{ symbol: string; bid: number; ask: number; em: number }> {
-  const out: Array<{ symbol: string; bid: number; ask: number; em: number }> = []
+): Array<{ symbol: string; bid: number; ask: number; em: number; emMercado: number | null }> {
+  const out: Array<{ symbol: string; bid: number; ask: number; em: number; emMercado: number | null }> = []
   for (const c of cruzados) {
     const p = precoCruzado(c, ler, agora, frescuraMaxMs)
-    if (p) out.push({ symbol: c.symbol, bid: p.bid, ask: p.ask, em: p.em })
+    if (p) out.push({ symbol: c.symbol, bid: p.bid, ask: p.ask, em: p.em, emMercado: p.emMercado ?? null })
   }
   return out
 }

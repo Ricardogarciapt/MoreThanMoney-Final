@@ -133,6 +133,19 @@ const simbolos = new Map<string, SimboloMotor>()
 const canonicoDaFonte = new Map<string, string>()
 const precos: MapaPrecos = {}
 const precoEm = new Map<string, number>()
+/**
+ * A HORA DO MERCADO, por símbolo — o que `precoEm` nunca foi.
+ *
+ * `precoEm` é a hora a que o MOTOR tocou no preço: prova que o motor está vivo, não que o preço
+ * é de agora. Ao vivo a 24/09/2026, o `em` do XAUUSD avançou 19 vezes com o bid parado num
+ * minuto (maior congelamento carimbado como fresco: 7,5 s). Aqui fica só o que a FONTE declarou:
+ * o `time_msc` do conector MT5, o `updatedAt` da gold-api, o `regularMarketTime` do Yahoo. Onde a
+ * fonte não dá hora (Binance bookTicker, ouro derivado do PAXG, TradeLocker) fica NULO — não se
+ * inventa. Vai para `funded_precos.em_mercado` (migração 123) e é quem lê que decide.
+ */
+const precoEmMercado = new Map<string, number | null>()
+/** Quem deu mesmo o último tick de cada símbolo — o que se grava em `tick_entrada.fonte`. */
+const precoFonte = new Map<string, string>()
 const precosPorEscrever = new Set<string>()
 let desvioMin = CFG.desvioInicialMin
 /** Símbolos negociáveis da corretora, lidos do feed — para corrigir `simbolo_fonte` que não exista. */
@@ -436,14 +449,24 @@ function aoTick(t: Tick): void {
   if (!sym) return
   if (!injecaoDeRecurso) principalEm.set(sym, Date.now())
   const antes = precos[sym]
+  const emMercado = t.emMercado?.getTime() ?? null
   if (antes && antes.bid === t.bid && antes.ask === t.ask) {
-    // Livro parado com a fonte viva: o preço continua a ser o de agora. Sem voltar a carimbar,
-    // um ouro calmo parecia ter 6-10 s e a guarda de 5 s recusava a entrada (21/09).
-    if (t.em.getTime() - (precoEm.get(sym) ?? 0) > 2000) { precoEm.set(sym, t.em.getTime()); precosPorEscrever.add(sym) }
+    // Livro parado com a fonte viva: o preço continua a ser o de agora, e um carimbo novo é
+    // honesto DESDE QUE a fonte tenha mesmo dado um tick novo — `t.em` tem de avançar sozinho.
+    // Quem re-servia uma leitura antiga com `Date.now()` (o batimento do PAXG) deixou de o fazer:
+    // é daí que vinham os 7,5 s de ouro parado carimbados como frescos.
+    if (t.em.getTime() - (precoEm.get(sym) ?? 0) > 2000) {
+      precoEm.set(sym, t.em.getTime())
+      precoEmMercado.set(sym, emMercado)
+      precoFonte.set(sym, t.origem)
+      precosPorEscrever.add(sym)
+    }
     return
   }
   precos[sym] = { symbol: sym, bid: t.bid, ask: t.ask }
   precoEm.set(sym, t.em.getTime())
+  precoEmMercado.set(sym, emMercado)
+  precoFonte.set(sym, t.origem)
   precosPorEscrever.add(sym)
   // Distribuição direta aos browsers (ws-precos.ts) — a Supabase fica fora do caminho quente.
   wsPrecos?.publicar(sym, t.bid, t.ask, t.em.getTime())
@@ -455,13 +478,21 @@ function aoTick(t: Tick): void {
   provider?.aoTick(sym, t.em.getTime())
 }
 
-/** Preço de recurso (feed secundário) já em símbolo canónico: só entra se o principal estiver velho. */
-function aoTickRecurso(sym: string, bid: number, ask: number, em: number): void {
+/**
+ * Preço de recurso (feed secundário) já em símbolo canónico: só entra se o principal estiver velho.
+ *
+ * `emMercado` é a hora que a FONTE declarou para este preço, ou `null` quando ela não a dá. Nunca
+ * se passa `Date.now()` aqui a fingir de hora de mercado: `em` já diz quando é que nós o vimos.
+ */
+function aoTickRecurso(sym: string, bid: number, ask: number, em: number, emMercado: number | null, origem: string): void {
   if (!simbolos.has(sym)) return
   const s = simbolos.get(sym)!
   injecaoDeRecurso = true
   try {
-    aoTick({ fonte: s.simbolo_fonte, bid, ask, em: new Date(em), desvioMin: null })
+    aoTick({
+      fonte: s.simbolo_fonte, bid, ask, em: new Date(em),
+      emMercado: emMercado == null ? null : new Date(emMercado), origem, desvioMin: null,
+    })
   } finally {
     injecaoDeRecurso = false
   }
@@ -509,9 +540,16 @@ async function escreverPrecos(): Promise<void> {
     if (!precos[s]) continue
     if (rapidosAgora.has(s) || agora - (escritoEm.get(s) ?? 0) >= ESCRITA_MIN_MS) aEscrever.push(s)
   }
-  const linhas = aEscrever.map((s) => ({
-    symbol: s, bid: precos[s].bid, ask: precos[s].ask, em: new Date(precoEm.get(s) ?? Date.now()).toISOString(),
-  }))
+  const linhas = aEscrever.map((s) => {
+    const mercado = precoEmMercado.get(s) ?? null
+    return {
+      symbol: s, bid: precos[s].bid, ask: precos[s].ask,
+      em: new Date(precoEm.get(s) ?? Date.now()).toISOString(),
+      // Migração 123. Nulo quando a fonte não declara hora de mercado — é a verdade, e é o que
+      // faz o preenchimento cair no caminho pessimista em vez de acreditar num preço parado.
+      em_mercado: mercado == null ? null : new Date(mercado).toISOString(),
+    }
+  })
   // Os que ficaram de fora saem da fila na mesma: o preço deles já está em memória e no WS, e o
   // próximo tick volta a pô-los cá. Guardar a fila a crescer era só memória sem uso.
   precosPorEscrever.clear()
@@ -662,9 +700,22 @@ function contaSim(c: ContaLinha): ContaSim {
 }
 
 // ── aplicar as decisões ───────────────────────────────────────────────────────
+/**
+ * O tick que fica gravado com a posição. A `fonte` é a que deu MESMO este preço: estava fixa em
+ * `'metaapi:puprime'` e era mentira desde que o motor passou a viver sem MetaApi (o próprio pulso
+ * diz «fontes próprias (sem MetaApi)»). Uma auditoria feita sobre uma etiqueta errada não audita
+ * nada.
+ */
 function tickJson(sym: string) {
   const p = precos[sym]
-  return p ? { bid: p.bid, ask: p.ask, em: new Date(precoEm.get(sym) ?? Date.now()).toISOString(), fonte: 'metaapi:puprime' } : null
+  if (!p) return null
+  const mercado = precoEmMercado.get(sym) ?? null
+  return {
+    bid: p.bid, ask: p.ask,
+    em: new Date(precoEm.get(sym) ?? Date.now()).toISOString(),
+    em_mercado: mercado == null ? null : new Date(mercado).toISOString(),
+    fonte: precoFonte.get(sym) ?? 'desconhecida',
+  }
 }
 
 async function aplicar(c: ContaLinha, d: Decisoes): Promise<void> {
@@ -1128,7 +1179,7 @@ async function main(): Promise<void> {
     ? null
     : iniciarEspelho({
         db, metaapiToken: CFG.metaapiToken, escrita: CFG.escrita, log,
-        simbolos, precos, precoEm,
+        simbolos, precos, precoEm, precoEmMercado, precoFonte,
         negociavel: (sym) => negociavel(sym, new Date()),
         marcarSuja: (id) => { escritaLocalEm.set(id, 0); sujas.add(id) },
       })
@@ -1141,7 +1192,7 @@ async function main(): Promise<void> {
   provider = env('ESPELHO_PROVIDER', false) === '1'
     ? iniciarEspelhoProvider({
         db, metaapiToken: CFG.metaapiToken, escrita: CFG.escrita, log,
-        simbolos, precos, precoEm,
+        simbolos, precos, precoEm, precoEmMercado, precoFonte,
         negociavel: (sym) => negociavel(sym, new Date()),
         marcarSuja: (id) => { escritaLocalEm.set(id, 0); sujas.add(id) },
       })
@@ -1171,7 +1222,8 @@ async function main(): Promise<void> {
     // recurso refrescam — sufocava o recurso a 1 tick/5 s.
     principal: (sym) => (precos[sym] ? { bid: precos[sym].bid, ask: precos[sym].ask, em: principalEm.get(sym) ?? 0 } : null),
     pip: (sym) => simbolos.get(sym)?.pip_size ?? null,
-    aoRecurso: (sym, c) => aoTickRecurso(sym, c.bid, c.ask, c.em),
+    // A resposta de `/trade/quotes` traz `ap`/`bp` e mais nada: sem hora de mercado a declarar.
+    aoRecurso: (sym, c) => aoTickRecurso(sym, c.bid, c.ask, c.em, null, 'tradelocker'),
     log,
   })
   feedTl?.iniciar()
@@ -1183,6 +1235,14 @@ async function main(): Promise<void> {
   // o PAXG deixa de entrar — nunca se inventa preço de um mercado fechado.
   const refBruta = new Map<string, { meio: number; em: number; bid: number; ask: number }>()
   const ancoraSpot = new Map<string, { k: number; meio: number; em: number }>()
+  /**
+   * O OURO DERIVADO DO PAXG NÃO TEM HORA DE MERCADO — e é por não a ter que estragou entradas.
+   *
+   * Tem duas pernas e nenhuma a sabe provar: o `@bookTicker` da Binance não traz hora nenhuma
+   * (medido) e o factor `k` vem de uma âncora que pode ter 10 minutos. O `em` que sai daqui é o
+   * da leitura MAIS VELHA das duas (a mesma regra dos cruzados), nunca `Date.now()`: um preço
+   * derivado não fica novo por o olharmos outra vez.
+   */
   const aoReferencia = (sym: string, bid: number, ask: number, batimento = false) => {
     const meioRef = (bid + ask) / 2
     if (!batimento) refBruta.set(sym, { meio: meioRef, em: Date.now(), bid, ask })
@@ -1193,9 +1253,10 @@ async function main(): Promise<void> {
     const meia = Math.max(1, Number(s.spread_pontos) || 0) * passo / 2
     const meio = meioRef * a.k
     const r = (x: number) => Number(x.toFixed(Number(s.digits ?? 2)))
-    aoTickRecurso(sym, r(meio - meia), r(meio + meia), Date.now())
+    const emPerna = Math.min(refBruta.get(sym)?.em ?? Date.now(), a.em)
+    aoTickRecurso(sym, r(meio - meia), r(meio + meia), emPerna, null, 'binance:paxg+gold-api')
   }
-  const aoRecursoSpot = (sym: string, bid: number, ask: number, em: number) => {
+  const aoRecursoSpot = (sym: string, bid: number, ask: number, em: number, emMercado: number | null, origem: string) => {
     const meio = (bid + ask) / 2
     const ref = refBruta.get(sym)
     const a = ancoraSpot.get(sym)
@@ -1207,7 +1268,7 @@ async function main(): Promise<void> {
     // puxava o preço para trás de 5 em 5 s.
     const viva = ancoraSpot.get(sym)
     if (viva && ref && Date.now() - ref.em < 10_000 && Date.now() - viva.em < 10 * 60_000) return
-    aoTickRecurso(sym, bid, ask, em)
+    aoTickRecurso(sym, bid, ask, em, emMercado, origem)
   }
   // O terminal MT5 do conector é a fonte mais fresca que temos (p50 ~94 ms contra 2–4 s das
   // fontes REST) e entra PRIMEIRO de propósito: o preço dele é o da corretora onde a ordem entra.
@@ -1224,15 +1285,17 @@ async function main(): Promise<void> {
     const agora = Date.now()
     const ler = (sym: string) => {
       const p = precos[sym]
-      return p ? { bid: p.bid, ask: p.ask, em: precoEm.get(sym) ?? 0 } : null
+      return p ? { bid: p.bid, ask: p.ask, em: precoEm.get(sym) ?? 0, emMercado: precoEmMercado.get(sym) ?? null } : null
     }
     for (const c of cruzadosCalculaveis(ler, agora)) {
       if (!simbolos.has(c.symbol)) continue
-      aoTickRecurso(c.symbol, c.bid, c.ask, c.em)
+      aoTickRecurso(c.symbol, c.bid, c.ask, c.em, c.emMercado, 'cruzado')
     }
   }, Number(process.env.CRUZADOS_MS ?? 500)).unref?.()
-  // O PAXG é pouco líquido: o livro fica 5-12 s sem mexer e o ouro parecia velho à guarda de 5 s.
-  // Com a ligação viva e PAXG visto há < 30 s, o preço de agora é o mesmo — volta a ser carimbado.
+  // O PAXG é pouco líquido: o livro fica 5-12 s sem mexer. Isto existia para o RE-CARIMBAR com
+  // `Date.now()` e enganar a guarda de 5 s — era a raiz do problema. Agora o batimento continua,
+  // mas o tick que sai leva o instante da leitura VELHA (ver `aoReferencia`): serve para apanhar
+  // um `k` novo da gold-api, e um ouro genuinamente parado envelhece como deve ser.
   setInterval(() => {
     if (!fonteBinance?.resumo().ligada) return
     for (const [sym, r] of refBruta) {

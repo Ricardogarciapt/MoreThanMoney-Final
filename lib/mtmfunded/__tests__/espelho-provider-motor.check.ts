@@ -164,13 +164,22 @@ async function main() {
 
   const precos: Record<string, { symbol: string; bid: number; ask: number }> = {}
   const precoEm = new Map<string, number>()
-  const px = (bid: number) => { precos.XAUUSD = { symbol: 'XAUUSD', bid, ask: Math.round((bid + 0.2) * 100) / 100 }; precoEm.set('XAUUSD', Date.now()) }
+  // A fonte aqui é o conector MT5, que declara a hora da corretora: `em` e `em_mercado` iguais.
+  const precoEmMercado = new Map<string, number | null>()
+  const precoFonte = new Map<string, string>()
+  const px = (bid: number) => {
+    precos.XAUUSD = { symbol: 'XAUUSD', bid, ask: Math.round((bid + 0.2) * 100) / 100 }
+    precoEm.set('XAUUSD', Date.now())
+    precoEmMercado.set('XAUUSD', Date.now())
+    precoFonte.set('XAUUSD', 'conector-mt5')
+  }
   px(2500)
   const sdk = new SdkFalso()
   const logs: string[] = []
   const ctl = iniciarEspelhoProvider({
     db: db as never, metaapiToken: 'x', escrita: true, log: (...a) => logs.push(a.map(String).join(' ')),
-    simbolos: new Map([['XAUUSD', XAU]]), precos, precoEm, negociavel: () => true, marcarSuja: () => undefined, sdk,
+    simbolos: new Map([['XAUUSD', XAU]]), precos, precoEm, precoEmMercado, precoFonte,
+    negociavel: () => true, marcarSuja: () => undefined, sdk,
   })
   await dormir(30)
   const c = sdk.ligacoes[0]

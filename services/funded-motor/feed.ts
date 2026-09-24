@@ -24,8 +24,16 @@ export interface Tick {
   fonte: string
   bid: number
   ask: number
-  /** Instante do tick (UTC). */
+  /** Instante em que o MOTOR carimbou o tick (UTC). Prova que o motor está vivo. */
   em: Date
+  /**
+   * Instante em que o MERCADO fez este preço (UTC), quando a fonte o sabe dizer — e só isto prova
+   * que o preço é fresco. NULO quando a fonte não o dá: não se inventa uma hora de mercado, que é
+   * exactamente como o ouro derivado do PAXG parecia fresco estando parado há dezenas de segundos.
+   */
+  emMercado: Date | null
+  /** Quem deu mesmo este tick ('metaapi:puprime', 'conector-mt5', 'binance:bookticker'…). */
+  origem: string
   /** Desvio da hora do servidor da corretora face a UTC, em minutos, quando o tick o traz. */
   desvioMin: number | null
 }
@@ -74,7 +82,9 @@ export class FonteStreaming implements FontePrecos {
     class Ouvinte extends Base {
       onSymbolPriceUpdated(_i: string, p: Qualquer) {
         if (!p?.symbol || !(p.bid > 0) || !(p.ask > 0)) return
-        aoTick({ fonte: p.symbol, bid: p.bid, ask: p.ask, em: p.time ? new Date(p.time) : new Date(), desvioMin: desvioDe(p) })
+        // `p.time` é a hora do tick na CORRETORA: é hora de mercado a sério, não o instante da leitura.
+        const mercado = p.time ? new Date(p.time) : null
+        aoTick({ fonte: p.symbol, bid: p.bid, ask: p.ask, em: mercado ?? new Date(), emMercado: mercado, origem: 'metaapi:puprime', desvioMin: desvioDe(p) })
       }
       // A MetaApi pode baixar a frequência pedida (carga/plano): fica no log para as latências se lerem bem.
       onSubscriptionDowngraded(_i: string, symbol: string, updates: Qualquer) {
@@ -140,7 +150,8 @@ export class FonteRpc implements FontePrecos {
           try {
             const p = await this.ligacao.getSymbolPrice(s)
             if (p?.bid > 0 && p?.ask > 0) {
-              aoTick({ fonte: s, bid: p.bid, ask: p.ask, em: p.time ? new Date(p.time) : new Date(), desvioMin: desvioDe(p) })
+              const mercado = p.time ? new Date(p.time) : null
+              aoTick({ fonte: s, bid: p.bid, ask: p.ask, em: mercado ?? new Date(), emMercado: mercado, origem: 'metaapi:puprime', desvioMin: desvioDe(p) })
             }
           } catch (e) {
             /* um símbolo que falha não pára os outros */

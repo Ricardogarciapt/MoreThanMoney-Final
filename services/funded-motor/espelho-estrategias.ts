@@ -59,6 +59,10 @@ export interface ContextoEspelho {
   simbolos: Map<string, Simbolo>
   precos: MapaPrecos
   precoEm: Map<string, number>
+  /** Hora a que o MERCADO fez o preço, quando a fonte a declara (migração 123). Nula se não a dá. */
+  precoEmMercado: Map<string, number | null>
+  /** Quem deu mesmo o último tick de cada símbolo — o que vai para `tick_entrada.fonte`. */
+  precoFonte: Map<string, string>
   /** Há fills neste símbolo agora (preço + sessão)? — a mesma regra do motor. */
   negociavel: (sym: string) => boolean
   /** A conta mudou por fora: o motor reavalia-a no próximo ciclo. */
@@ -291,7 +295,17 @@ export function iniciarEspelho(ctx: ContextoEspelho): { parar: () => Promise<voi
     const p = ctx.precos[sym]
     const em = ctx.precoEm.get(sym)
     if (!p || !em || !precoFresco(new Date(em)) || !ctx.negociavel(sym)) return null
-    return { preco: p, tick: { bid: p.bid, ask: p.ask, em: new Date(em).toISOString(), fonte: 'metaapi:puprime' } }
+    // A `fonte` é a que deu MESMO este preço: estava fixa em `'metaapi:puprime'` e é mentira desde
+    // que o motor vive sem MetaApi. `em_mercado` é nulo quando a fonte não declara hora (123).
+    const mercado = ctx.precoEmMercado.get(sym) ?? null
+    return {
+      preco: p,
+      tick: {
+        bid: p.bid, ask: p.ask, em: new Date(em).toISOString(),
+        em_mercado: mercado == null ? null : new Date(mercado).toISOString(),
+        fonte: ctx.precoFonte.get(sym) ?? 'desconhecida',
+      },
+    }
   }
 
   async function marcarPonte(id: string, patch: Record<string, unknown>) {
