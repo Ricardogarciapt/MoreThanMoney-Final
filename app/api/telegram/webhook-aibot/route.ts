@@ -6,7 +6,15 @@ import { resolveAppChannelSlug } from "@/lib/telegram-app-channels"
 import { sendTelegramChannelPush } from "@/lib/telegram-channel-push"
 import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
 
-type TelegramChannelMessage = Parameters<typeof processMtmcopyTelegramMessage>[0]
+/**
+ * O `TelegramMessage` do processor so declara o que o processor usa. Este webhook
+ * tambem espelha para a app, e para isso precisa de campos que o Telegram manda
+ * mas aquele tipo nao lista: a fotografia e o `sender_chat` dos posts de canal.
+ */
+type TelegramChannelMessage = Parameters<typeof processMtmcopyTelegramMessage>[0] & {
+  photo?: Array<{ file_id: string }>
+  sender_chat?: { title?: string }
+}
 
 async function runMtmcopy(message: TelegramChannelMessage) {
   try {
@@ -102,7 +110,10 @@ async function mirrorToApp(message: TelegramChannelMessage) {
       telegram_sender: senderName,
       telegram_message_id: telegramMessageId,
       ...(replyToId ? { reply_to_id: replyToId } : {}),
-      created_at: new Date(message.date * 1000).toISOString(),
+      // `date` e opcional no tipo (e o Telegram pode nao o mandar em casos raros).
+      // Sem guarda, `new Date(undefined * 1000)` da Invalid Date e o .toISOString()
+      // lanca RangeError — o espelho da mensagem rebentava em vez de gravar.
+      created_at: new Date((message.date ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
     })
     .select("id")
     .single()
@@ -134,7 +145,7 @@ export async function POST(request: NextRequest) {
 
     const chat = message.chat ?? {}
     const isGroupMessage =
-      chat.type === "supergroup" || chat.type === "group" || chat.type === "channel" || chat.id < 0
+      chat.type === "supergroup" || chat.type === "group" || chat.type === "channel" || (chat.id ?? 0) < 0
 
     if (isGroupMessage) {
       await Promise.all([

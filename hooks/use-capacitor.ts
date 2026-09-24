@@ -72,7 +72,7 @@ export function useCapacitor(options: UseCapacitorOptions = {}) {
     if (!isCapacitor()) return  // Só Capacitor tem StatusBar/SplashScreen plugins
 
     try {
-      const { StatusBar, Style } = await import(/* webpackIgnore: true */ "@capacitor/status-bar" as any)
+      const { StatusBar, Style } = await import(/* webpackIgnore: true */ "@capacitor/status-bar")
       await StatusBar.setStyle({ style: Style.Dark })
       await StatusBar.setBackgroundColor({ color: "#000000" })
       await StatusBar.show()
@@ -81,7 +81,7 @@ export function useCapacitor(options: UseCapacitorOptions = {}) {
     }
 
     try {
-      const { SplashScreen } = await import(/* webpackIgnore: true */ "@capacitor/splash-screen" as any)
+      const { SplashScreen } = await import(/* webpackIgnore: true */ "@capacitor/splash-screen")
       await SplashScreen.hide({ fadeOutDuration: 300 })
     } catch (e) {
       console.warn("[CAP] SplashScreen:", e)
@@ -93,7 +93,7 @@ export function useCapacitor(options: UseCapacitorOptions = {}) {
     if (!isCapacitor() || !options.userId) return
 
     try {
-      const { PushNotifications } = await import(/* webpackIgnore: true */ "@capacitor/push-notifications" as any)
+      const { PushNotifications } = await import(/* webpackIgnore: true */ "@capacitor/push-notifications")
 
       let permStatus = await PushNotifications.checkPermissions()
 
@@ -187,7 +187,7 @@ export function useCapacitor(options: UseCapacitorOptions = {}) {
     if (!isAndroid()) return
 
     try {
-      const { App } = await import(/* webpackIgnore: true */ "@capacitor/app" as any)
+      const { App } = await import(/* webpackIgnore: true */ "@capacitor/app")
 
       const listener = await App.addListener("backButton", ({ canGoBack }) => {
         const intercepted = options.onBackButton?.()
@@ -211,7 +211,7 @@ export function useCapacitor(options: UseCapacitorOptions = {}) {
     if (!isCapacitor()) return
 
     try {
-      const { App } = await import(/* webpackIgnore: true */ "@capacitor/app" as any)
+      const { App } = await import(/* webpackIgnore: true */ "@capacitor/app")
 
       const navigateToAppUrl = (url: string) => {
         try {
@@ -287,7 +287,7 @@ export function useCapacitor(options: UseCapacitorOptions = {}) {
 export async function hapticLight() {
   if (!isCapacitor()) return
   try {
-    const { Haptics, ImpactStyle } = await import(/* webpackIgnore: true */ "@capacitor/haptics" as any)
+    const { Haptics, ImpactStyle } = await import(/* webpackIgnore: true */ "@capacitor/haptics")
     await Haptics.impact({ style: ImpactStyle.Light })
   } catch {}
 }
@@ -295,7 +295,7 @@ export async function hapticLight() {
 export async function hapticMedium() {
   if (!isCapacitor()) return
   try {
-    const { Haptics, ImpactStyle } = await import(/* webpackIgnore: true */ "@capacitor/haptics" as any)
+    const { Haptics, ImpactStyle } = await import(/* webpackIgnore: true */ "@capacitor/haptics")
     await Haptics.impact({ style: ImpactStyle.Medium })
   } catch {}
 }
@@ -303,7 +303,7 @@ export async function hapticMedium() {
 export async function hapticHeavy() {
   if (!isCapacitor()) return
   try {
-    const { Haptics, ImpactStyle } = await import(/* webpackIgnore: true */ "@capacitor/haptics" as any)
+    const { Haptics, ImpactStyle } = await import(/* webpackIgnore: true */ "@capacitor/haptics")
     await Haptics.impact({ style: ImpactStyle.Heavy })
   } catch {}
 }
@@ -311,7 +311,7 @@ export async function hapticHeavy() {
 export async function hapticSuccess() {
   if (!isCapacitor()) return
   try {
-    const { Haptics, NotificationType } = await import(/* webpackIgnore: true */ "@capacitor/haptics" as any)
+    const { Haptics, NotificationType } = await import(/* webpackIgnore: true */ "@capacitor/haptics")
     await Haptics.notification({ type: NotificationType.Success })
   } catch {}
 }
