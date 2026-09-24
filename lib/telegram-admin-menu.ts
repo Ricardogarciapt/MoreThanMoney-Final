@@ -142,6 +142,15 @@ export function adminPanelKeyboard() {
         { text: '👥 Leads e funil', callback_data: 'admin:funil' },
         { text: '👑 Subscritores', callback_data: 'admin:subs' },
       ],
+      // As três perguntas que ele faz todos os dias e que obrigavam a abrir o portátil.
+      [
+        { text: '🎯 Fecho', callback_data: 'admin:fecho' },
+        { text: '🧲 Prospeção', callback_data: 'admin:prosp' },
+      ],
+      [
+        { text: '🚨 O que precisa de mim', callback_data: 'admin:falhas' },
+        { text: '⏱️ Correr um cron', callback_data: 'admin:crons' },
+      ],
       [
         { text: '🤖 Falar com a IA do site', callback_data: 'admin:ai_help' },
         { text: '🔗 Links do /admin', callback_data: 'admin:links' },
@@ -153,7 +162,8 @@ export function adminPanelKeyboard() {
 export const TEXTO_PAINEL =
   '🛠️ <b>Painel MTM</b>\n\n' +
   'Aprovador registado ✅ — os pedidos de acesso (UID + print) chegam aqui com botões.\n' +
-  'Escreve-me em linguagem natural para falar com a IA do site, ou escolhe:'
+  'Escreve-me em linguagem natural para falar com a IA do site, ou escolhe:\n\n' +
+  '<i>Atalho: <code>/quem &lt;chat_id | @user | UID&gt;</code> abre a folha de uma pessoa.</i>'
 
 // ─────────────────────────────── EXECUÇÃO ───────────────────────────────
 
@@ -400,6 +410,36 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
     return
   }
 
+  // ── Crons: cr?<chave> pergunta (os que mandam coisas para fora), cr!<chave> corre ──
+  if (action.startsWith('cr?') || action.startsWith('cr!')) {
+    const { confirmacaoCron, dispararCron, tecladoCrons } = await import('@/lib/telegram-admin-extra')
+    const chave = action.slice(3)
+    if (action.startsWith('cr?')) {
+      const c = confirmacaoCron(chave)
+      if (!c) {
+        await enviar(chatId, `⚠️ Cron desconhecido: <code>${chave}</code>`, { inline_keyboard: [VOLTAR] })
+        return
+      }
+      await enviar(chatId, c.texto, c.teclado)
+      return
+    }
+    await enviar(chatId, '⏳ A correr…')
+    await enviar(chatId, await dispararCron(chave, SITE), tecladoCrons(VOLTAR))
+    return
+  }
+
+  // ── A folha de uma pessoa: quem é, que passos deu, o que falta ──
+  if (action.startsWith('quem:')) {
+    const { carregarPerfil, textoPerfil } = await import('@/lib/prospecao/perfil-lead')
+    const p = await carregarPerfil(supabase, action.slice(5))
+    await enviar(
+      chatId,
+      p ? textoPerfil(p) : '🤷 Não encontrei ninguém com essa chave.',
+      { inline_keyboard: [[{ text: '🎯 Voltar ao fecho', callback_data: 'admin:fecho' }], VOLTAR] },
+    )
+    return
+  }
+
   // ── Interruptores de execução: ex?<chave> pergunta, ex!<chave> faz ──
   if (action.startsWith('ex?') || action.startsWith('ex!')) {
     const { getExecSwitches, setExecSwitches } = await import('@/lib/mtmcopy/exec-switches')
@@ -451,6 +491,44 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
     case 'sm':
       await enviar(chatId, '🧲 <b>Máquina de vendas</b>\n\nO que queres fazer?', tecladoMaquinaVendas())
       return
+    case 'fecho': {
+      const { textoFecho } = await import('@/lib/telegram-admin-extra')
+      await enviar(chatId, await textoFecho(supabase), {
+        inline_keyboard: [
+          [{ text: '🔓 Pendentes de aprovação', callback_data: 'admin:pending' }],
+          [{ text: '🌐 Conversas no /admin', url: `${SITE}/admin/social` }],
+          VOLTAR,
+        ],
+      })
+      return
+    }
+    case 'prosp': {
+      const { textoProspecao } = await import('@/lib/telegram-admin-extra')
+      await enviar(chatId, await textoProspecao(supabase), {
+        inline_keyboard: [
+          [{ text: '🔄 Arrumar agora', callback_data: 'admin:cr!prosp' }],
+          [{ text: '🌐 Prospeção no /admin', url: `${SITE}/admin/social` }],
+          VOLTAR,
+        ],
+      })
+      return
+    }
+    case 'falhas': {
+      const { textoFalhas } = await import('@/lib/telegram-admin-extra')
+      await enviar(chatId, await textoFalhas(supabase), {
+        inline_keyboard: [[{ text: '🔓 Pendentes', callback_data: 'admin:pending' }], VOLTAR],
+      })
+      return
+    }
+    case 'crons': {
+      const { tecladoCrons } = await import('@/lib/telegram-admin-extra')
+      await enviar(
+        chatId,
+        '⏱️ <b>Correr um cron</b>\n\nOs marcados com ⚠️ mandam coisas para fora (mensagens, cobranças) — esses pedem confirmação.',
+        tecladoCrons(VOLTAR),
+      )
+      return
+    }
     case 'ai_help':
       await enviar(
         chatId,
@@ -493,17 +571,35 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
       .limit(20)
     if (!data?.length) {
       await enviar(chatId, '🔓 Sem pedidos pendentes de aprovação. ✅', { inline_keyboard: [VOLTAR] })
-    } else {
-      const linhas = data
-        .map(
-          (l) =>
-            `• ${(l as { first_name?: string }).first_name ?? '?'} — UID <code>${(l as { broker_uid?: string }).broker_uid}</code> (chat ${(l as { chat_id?: string }).chat_id})`,
-        )
-        .join('\n')
+      return
+    }
+    /**
+     * Uma mensagem por pedido, com os botões de decidir.
+     *
+     * Antes isto era uma lista de texto: para aprovar era preciso ir procurar a mensagem original
+     * com a foto, que pode estar a centenas de mensagens de distância. Um pedido que só se aprova
+     * depois de o encontrar é um pedido que fica dias parado — e foi o que aconteceu.
+     *
+     * Os botões são os MESMOS do gate (`bkapprove:` / `bkreject:`), não uma segunda via: aprovar
+     * daqui faz exactamente o que aprovar de lá faz. A única diferença é que a legenda da foto
+     * original não se altera (esta mensagem não tem foto) — a confirmação chega pela mensagem que
+     * o lead recebe.
+     */
+    await enviar(chatId, `🔓 <b>Pendentes de aprovação (${data.length})</b>`, { inline_keyboard: [VOLTAR] })
+    for (const l of data) {
+      const x = l as { first_name?: string; broker_uid?: string; chat_id?: string }
       await enviar(
         chatId,
-        `🔓 <b>Pendentes de aprovação (${data.length})</b>\n\n${linhas}\n\nOs pedidos com foto + botões chegam aqui automaticamente.`,
-        { inline_keyboard: [VOLTAR] },
+        `• <b>${x.first_name ?? '?'}</b> — UID <code>${x.broker_uid ?? '?'}</code>`,
+        {
+          inline_keyboard: [
+            [
+              { text: '✅ Aprovar', callback_data: `bkapprove:${x.chat_id}` },
+              { text: '❌ Rejeitar', callback_data: `bkreject:${x.chat_id}` },
+            ],
+            [{ text: '🔎 Ver a folha desta pessoa', callback_data: `admin:quem:${x.chat_id}` }],
+          ],
+        },
       )
     }
     return
