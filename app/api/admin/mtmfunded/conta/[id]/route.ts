@@ -156,6 +156,20 @@ export async function GET(request: NextRequest, { params }: Ctx) {
     }, semCache)
   }
 
+  // ── apagar: o que desaparece com a conta (só leitura — nada é apagado aqui) ──
+  if (vista === 'apagar') {
+    const { recolherPendurados } = await import('@/lib/mtmfunded/apagar-conta-servidor')
+    const { decisao, dados } = await recolherPendurados(db, conta)
+    return NextResponse.json({
+      conta: {
+        login: dados.conta.login, tipo: tipoCurto(conta.tipo, (conta.metricas ?? {}) as Record<string, unknown>), estado: dados.conta.estado,
+        saldo: dados.conta.saldo, saldoInicial: dados.conta.saldoInicial,
+        etiquetaDoDono: typeof conta.etiqueta === 'string' && conta.etiqueta ? conta.etiqueta : null,
+      },
+      ...decisao,
+    }, semCache)
+  }
+
   // ── auditoria ────────────────────────────────────────────────────────────
   if (vista === 'auditoria') {
     const { data, error } = await db.from('mtm_funded_admin_audit')
