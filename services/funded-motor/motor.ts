@@ -444,18 +444,50 @@ const principalEm = new Map<string, number>()
 let injecaoDeRecurso = false
 const principalVelho = (sym: string) => Date.now() - (principalEm.get(sym) ?? 0) > 5000
 
+/**
+ * Quanto tempo é que uma hora de mercado PROVADA defende o símbolo de um preço que não se prova.
+ * É o mesmo limite da execução (5 s): passado isso, o que está guardado já não serve para abrir
+ * nada, e qualquer preço novo é melhor do que ficar preso a um congelado. `PRECO_MERCADO_DEFENDE_MS=0`
+ * desliga a defesa e devolve o comportamento de antes (última fonte a escrever ganha).
+ */
+const MERCADO_DEFENDE_MS = Number(process.env.PRECO_MERCADO_DEFENDE_MS ?? 5000)
+
 function aoTick(t: Tick): void {
   const sym = canonicoDaFonte.get(t.fonte)
   if (!sym) return
   if (!injecaoDeRecurso) principalEm.set(sym, Date.now())
   const antes = precos[sym]
   const emMercado = t.emMercado?.getTime() ?? null
+
+  /**
+   * O TEMPO NÃO ANDA PARA TRÁS, E O QUE SE PROVA NÃO CEDE AO QUE NÃO SE PROVA.
+   *
+   * Com várias fontes a cotar o mesmo símbolo ganhava a última a escrever, e a última era quase
+   * sempre a pior: o Yahoo entregava um EURUSD calmo com a hora de há 49 s por cima do tick do
+   * conector MT5 que tinha 1 s, e o ouro derivado do PAXG (sem hora nenhuma) apagava o XAUUSD que
+   * vinha da corretora com 0,3 s. Ficava guardada a pior das verdades disponíveis.
+   *
+   * Por isso, enquanto a hora de mercado guardada estiver PROVADA e fresca (< MERCADO_DEFENDE_MS),
+   * não entra um tick que traga hora ANTERIOR nem um que não traga hora nenhuma. Passado esse
+   * prazo a defesa cai sozinha e voltam todas as fontes — este é um desempate entre fontes, não
+   * um silenciador: um símbolo nunca fica preso a um preço parado.
+   */
+  const mercadoGuardado = precoEmMercado.get(sym) ?? null
+  if (
+    mercadoGuardado != null && (emMercado == null || emMercado < mercadoGuardado) &&
+    Date.now() - mercadoGuardado <= MERCADO_DEFENDE_MS
+  ) return
   if (antes && antes.bid === t.bid && antes.ask === t.ask) {
     // Livro parado com a fonte viva: o preço continua a ser o de agora, e um carimbo novo é
     // honesto DESDE QUE a fonte tenha mesmo dado um tick novo — `t.em` tem de avançar sozinho.
     // Quem re-servia uma leitura antiga com `Date.now()` (o batimento do PAXG) deixou de o fazer:
     // é daí que vinham os 7,5 s de ouro parado carimbados como frescos.
-    if (t.em.getTime() - (precoEm.get(sym) ?? 0) > 2000) {
+    // Carimba-se de novo quando passaram 2 s OU quando a fonte confirma o MESMO preço num
+    // instante de mercado NOVO — isso é informação nova (o mercado esteve lá e o preço aguentou),
+    // ao contrário de re-servir uma leitura antiga. A escrita continua travada em
+    // `ESCRITA_PRECOS_MIN_MS`, por isso isto não faz uma única escrita a mais.
+    const mercadoNovo = emMercado != null && emMercado > (mercadoGuardado ?? 0)
+    if (mercadoNovo || t.em.getTime() - (precoEm.get(sym) ?? 0) > 2000) {
       precoEm.set(sym, t.em.getTime())
       precoEmMercado.set(sym, emMercado)
       precoFonte.set(sym, t.origem)
@@ -1235,6 +1267,8 @@ async function main(): Promise<void> {
   // o PAXG deixa de entrar — nunca se inventa preço de um mercado fechado.
   const refBruta = new Map<string, { meio: number; em: number; bid: number; ask: number }>()
   const ancoraSpot = new Map<string, { k: number; meio: number; em: number }>()
+  /** Último preço derivado que entrou, por símbolo — para o mesmo não entrar duas vezes. */
+  const ultimoDerivado = new Map<string, number>()
   /**
    * O OURO DERIVADO DO PAXG NÃO TEM HORA DE MERCADO — e é por não a ter que estragou entradas.
    *
@@ -1253,8 +1287,15 @@ async function main(): Promise<void> {
     const meia = Math.max(1, Number(s.spread_pontos) || 0) * passo / 2
     const meio = meioRef * a.k
     const r = (x: number) => Number(x.toFixed(Number(s.digits ?? 2)))
-    const emPerna = Math.min(refBruta.get(sym)?.em ?? Date.now(), a.em)
-    aoTickRecurso(sym, r(meio - meia), r(meio + meia), emPerna, null, 'binance:paxg+gold-api')
+    // O MESMO PREÇO DERIVADO NÃO ENTRA DUAS VEZES. Era isto que re-carimbava o ouro congelado:
+    // o batimento de 1 s voltava a injectar o mesmo PAXG × o mesmo k com a hora de agora, e um
+    // ouro parado há 7,5 s parecia ter menos de um segundo. Agora só entra quando o PAXG ou a
+    // âncora da gold-api mexem de facto — e, quando nenhum mexe, o ouro envelhece como deve.
+    if (ultimoDerivado.get(sym) === meio) return
+    ultimoDerivado.set(sym, meio)
+    // `em` é honesto (é mesmo agora que o motor fez esta conta); `emMercado` é NULO porque nenhuma
+    // das duas pernas sabe dizer a hora do mercado — e é isso que quem lê precisa de saber.
+    aoTickRecurso(sym, r(meio - meia), r(meio + meia), Date.now(), null, 'binance:paxg+gold-api')
   }
   const aoRecursoSpot = (sym: string, bid: number, ask: number, em: number, emMercado: number | null, origem: string) => {
     const meio = (bid + ask) / 2

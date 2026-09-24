@@ -113,8 +113,13 @@ export function iniciarFonteConectorMt5(o: OpcoesConectorTicks): FonteConectorTi
           if (!prioritario && !o.precisa(t.sym)) continue
           ticks++
           if (idades.length < 5000) idades.push(Date.now() - t.em)
-          // `t.em` é o `time_msc` do tick na corretora: serve de carimbo E de hora de mercado.
-          o.injetar(t.sym, t.bid, t.ask, t.em, t.em, 'conector-mt5')
+          // `em` = quando NÓS o vimos; `emMercado` = o `time_msc` do tick na corretora.
+          //
+          // Os dois carimbos têm de viver na mesma escala para as fontes se poderem comparar: ao
+          // pôr o `time_msc` (uns centos de ms no passado) em `em`, este tick — o melhor que
+          // temos — perdia para um do Yahoo carimbado a `Date.now()`, e o EURUSD ficava com a
+          // hora de mercado do Yahoo (medido: 65 s) em vez da da corretora (1,2 s).
+          o.injetar(t.sym, t.bid, t.ask, Date.now(), t.em, 'conector-mt5')
         }
       }
     })()

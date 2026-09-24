@@ -157,6 +157,11 @@ export function iniciarFonteYahoo(o: OpcoesYahoo): FonteYahoo | null {
         emMercado = null
       }
       if (!o.precisa(sym)) return
+      // A MESMA COTAÇÃO NÃO ENTRA DUAS VEZES. O instante do Yahoo só avança quando o preço muda:
+      // um EURUSD calmo passa um minuto com a mesma hora, e re-injectá-lo de 5 em 5 s carimbava
+      // `em` de novo — o preço parecia fresco tendo 56 s (medido a 24/09). Agora só entra
+      // cotação nova, e um mercado parado envelhece como deve.
+      if (ultimaCotacao.get(sym) === c.emSeg) return
       const u = o.ultimo(sym)
       const { bid, ask } = bidAsk(meio, info.digits, u ? u.ask - u.bid : null, info.spread_pontos)
       ultimaCotacao.set(sym, c.emSeg)
