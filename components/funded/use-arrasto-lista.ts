@@ -11,17 +11,15 @@
  * que linha está debaixo do dedo (`elementFromPoint` + `data-conta-id`) e, se for outra, troca-se
  * JÁ — a lista mexe-se debaixo do dedo em vez de esperar pelo fim. Ao largar, grava-se uma vez.
  *
- * NO DEDO, O ARRASTO PEDE UM SEGUNDO PARADO (pedido do dono, 23/09). A lista tem scroll; quem
- * tocava na pega a passar o dedo para baixo arrastava a conta sem querer, e ficava com as contas
- * trocadas por ter tentado ver a de baixo. Agora: toca-se, espera-se **1 s** com o dedo quieto, e
- * só aí a linha «levanta». Se o dedo se mexer mais de 10 px antes disso, não há arrasto nenhum —
- * o gesto é o scroll de sempre. Com RATO não há espera: um rato não faz scroll por engano.
+ * SÓ SE ARRASTA NO MODO ORGANIZAR (pedido do dono, 24/09: «tens dois modos de arrastar, mantém
+ * apenas o de organizar»). Fora dele a pega não faz nada.
  *
- * NO MODO ORGANIZAR NÃO HÁ ESPERA NENHUMA (pedido do dono, 24/09). O segundo existe para proteger
- * quem está a passar o dedo pela lista à procura de uma conta — e nesse modo ninguém está: quem
- * carregou em «Organizar» foi lá para arrumar. A lista deixa de fazer scroll com o dedo na pega
- * (`touch-action: none`, ver a Pega em funded-webtrader.tsx) e a linha levanta ao primeiro toque.
- * FORA do modo, a espera de 1 s fica exactamente como estava.
+ * O caminho até aqui vale a pena ficar escrito, porque explica porque é que a solução é esta e
+ * não outra. Primeiro arrastava-se sempre, e quem passava o dedo pela pega a fazer scroll trocava
+ * contas sem querer. Depois exigiu-se **um segundo com o dedo parado** para a linha levantar — o
+ * engano acabou, mas ficaram dois gestos para a mesma coisa e ninguém adivinha que tem de manter
+ * premido. O modo organizar resolve os dois problemas de uma vez: é uma decisão explícita, e
+ * dentro dele o dedo levanta a linha ao primeiro toque, como o rato sempre fez.
  *
  * Dois cuidados que a folha do telemóvel obriga:
  *  · `touch-action: none` na pega (o CSS está em quem a desenha) — sem isso o browser rouba o
@@ -34,66 +32,40 @@ import { useCallback, useRef, useState } from "react"
 export interface ArrastoLista {
   /** id da linha que está a ser arrastada (para a desenhar levantada), ou null. */
   aArrastar: string | null
-  /** id da linha com o dedo em cima à espera do segundo (para a desenhar a «carregar»), ou null. */
-  aEsperar: string | null
   /** pôr na PEGA de cada linha: `onPointerDown={(e) => aoPegar(e, id)}`. */
   aoPegar: (e: React.PointerEvent, id: string) => void
-  /** true = modo organizar: a linha levanta ao primeiro toque (a pega desenha-se e diz-se assim). */
-  imediato: boolean
+  /** true = modo organizar ligado; fora dele a pega está inerte e desenha-se apagada. */
+  activo: boolean
 }
-
-/** Quanto tempo o dedo fica parado antes de a linha levantar. */
-export const ESPERA_DEDO_MS = 1000
-/** Mexer mais do que isto antes do tempo = é scroll, não é arrasto. */
-const TOLERANCIA_PX = 10
 
 /**
  * @param idsVisiveis  os ids pela ordem em que estão no ecrã (o `sort` já aplicado)
  * @param trocar       (id, alvoId) → a nova ordem; é chamado a cada troca, ao vivo
  * @param gravar       chamado UMA vez ao largar, com a ordem final
- * @param imediato     modo organizar: sem o segundo de espera, no dedo também
+ * @param activo       modo organizar; a `false` não se arrasta nada
  */
 export function useArrastoLista(
   idsVisiveis: string[],
   trocar: (id: string, alvoId: string) => string[],
   gravar: (ordem: string[]) => void,
-  imediato = false,
+  activo = false,
 ): ArrastoLista {
   const [aArrastar, setAArrastar] = useState<string | null>(null)
-  const [aEsperar, setAEsperar] = useState<string | null>(null)
   // A ordem mais recente vive numa ref: o `pointerup` chega depois do último `pointermove` e tem de
   // gravar o que a lista ficou, não o que ela era quando o gesto começou.
   const ultima = useRef<string[]>(idsVisiveis)
 
   const aoPegar = useCallback((e: React.PointerEvent, id: string) => {
+    // Fora do modo organizar a pega não arrasta — o gesto fica para o browser (scroll da lista).
+    if (!activo) return
     // Botão do meio/direito não arrastam.
     if (e.button !== 0 && e.pointerType === "mouse") return
-    // No modo organizar o dedo é tratado como o rato: levanta já.
-    const comDedo = e.pointerType !== "mouse" && !imediato
     const alvo = e.currentTarget as HTMLElement
     const ponteiro = e.pointerId
-    const partida = { x: e.clientX, y: e.clientY }
-    let aArrastarMesmo = false
     let mexeu = false
-    let espera: ReturnType<typeof setTimeout> | null = null
     ultima.current = idsVisiveis
 
-    const comecar = () => {
-      aArrastarMesmo = true
-      espera = null
-      setAEsperar(null)
-      setAArrastar(id)
-      try { alvo.setPointerCapture(ponteiro) } catch { /* sem captura, o mover ainda funciona */ }
-      // Vibração curta: o dedo fica a saber que a linha levantou, sem ter de olhar.
-      try { navigator.vibrate?.(15) } catch { /* nem todos os aparelhos têm */ }
-    }
-
     const mover = (ev: PointerEvent) => {
-      if (!aArrastarMesmo) {
-        // Ainda no segundo de espera: se o dedo anda, era scroll — desiste-se sem fazer nada.
-        if (Math.hypot(ev.clientX - partida.x, ev.clientY - partida.y) > TOLERANCIA_PX) largar()
-        return
-      }
       ev.preventDefault()
       const sob = document.elementFromPoint(ev.clientX, ev.clientY)
       const linha = sob?.closest?.("[data-conta-id]") as HTMLElement | null
@@ -103,11 +75,9 @@ export function useArrastoLista(
       ultima.current = trocar(id, outro)
     }
     const largar = () => {
-      if (espera) { clearTimeout(espera); espera = null }
       window.removeEventListener("pointermove", mover)
       window.removeEventListener("pointerup", largar)
       window.removeEventListener("pointercancel", largar)
-      setAEsperar(null)
       setAArrastar(null)
       if (mexeu) gravar(ultima.current)
     }
@@ -115,16 +85,13 @@ export function useArrastoLista(
     window.addEventListener("pointerup", largar)
     window.addEventListener("pointercancel", largar)
 
-    if (comDedo) {
-      // O gesto ainda pode ser scroll: não se rouba nada ao browser até o segundo passar.
-      setAEsperar(id)
-      espera = setTimeout(comecar, ESPERA_DEDO_MS)
-    } else {
-      e.preventDefault()
-      e.stopPropagation()
-      comecar()
-    }
-  }, [idsVisiveis, trocar, gravar, imediato])
+    e.preventDefault()
+    e.stopPropagation()
+    setAArrastar(id)
+    try { alvo.setPointerCapture(ponteiro) } catch { /* sem captura, o mover ainda funciona */ }
+    // Vibração curta: o dedo fica a saber que a linha levantou, sem ter de olhar.
+    try { navigator.vibrate?.(15) } catch { /* nem todos os aparelhos têm */ }
+  }, [idsVisiveis, trocar, gravar, activo])
 
-  return { aArrastar, aEsperar, aoPegar, imediato }
+  return { aArrastar, aoPegar, activo }
 }

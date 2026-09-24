@@ -294,8 +294,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     return nova
   }, [todas, visiveis])
   const gravarOrdem = useCallback((nova: string[]) => { void gravarOrdemContas(nova).catch(() => undefined) }, [])
-  // No modo organizar o arrasto é imediato: o segundo de espera só existe para quem está a passar
-  // o dedo pela lista à procura de uma conta, e nesse modo ninguém está.
+  // Só se arrasta dentro do modo organizar (24/09). Havia dois gestos para a mesma coisa — manter
+  // o dedo premido um segundo, e o modo — e ninguém adivinha o primeiro. Ficou o que se vê.
   const arrasto = useArrastoLista(visiveis.map((t) => t.id), trocarOrdem, gravarOrdem, organizar)
 
   const atual = todas.find((t) => t.id === ativa)
@@ -352,10 +352,10 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                 <div data-sem-arrasto className="flex items-start gap-2 border-b border-white/5 px-3 py-1.5">
                   <p className="min-w-0 flex-1 text-[10.5px] text-zinc-500">
                     {organizar
-                      ? "Arrasta pela pega (já sem esperar) e usa o olho para esconder ou repor. A conta aberta não se esconde."
+                      ? "Arrasta pela pega para mudar de lugar e usa o olho para esconder ou repor. A conta aberta não se esconde."
                       : "MTM Funded (simuladas) · TradeLocker e MT5 (reais) — «Organizar» arruma e esconde contas, a estrela abre primeiro, o lápis dá um nome"}
                   </p>
-                  {/* O modo organizar: uma decisão explícita em vez de um segundo de dedo premido. */}
+                  {/* O modo organizar: a ÚNICA porta para arrastar e esconder. Fora dele a lista só se lê. */}
                   <button type="button" aria-pressed={organizar} onClick={() => setOrganizar((v) => !v)}
                     title={organizar ? "Sair do modo organizar" : "Arrumar e esconder contas"}
                     className={`flex min-h-[28px] shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors [@media(pointer:coarse)]:min-h-[36px] ${
@@ -601,21 +601,18 @@ function Estrela({ marcada, alternar }: { marcada: boolean; alternar: () => void
 }
 
 function Pega({ id, arrasto }: { id: string; arrasto: ArrastoLista }) {
-  const aEsperar = arrasto.aEsperar === id
   return (
     <span
-      role="button"
-      aria-label={arrasto.imediato ? "Arrastar para arrumar" : "Manter premido para arrumar"}
-      title={arrasto.imediato ? "Arrasta para mudar a conta de lugar" : "Manter premido 1 segundo para arrastar"}
+      role={arrasto.activo ? "button" : undefined}
+      aria-hidden={arrasto.activo ? undefined : true}
+      aria-label={arrasto.activo ? "Arrastar para arrumar" : undefined}
+      title={arrasto.activo ? "Arrasta para mudar a conta de lugar" : undefined}
       onPointerDown={(e) => arrasto.aoPegar(e, id)}
-      // `pan-y` e não `none`: enquanto se espera pelo segundo, o dedo ainda pode fazer SCROLL da
-      // lista (era isso que estava a trocar contas por engano). Depois de a linha levantar, o
-      // `preventDefault` no movimento é que segura o gesto.
-      // No MODO ORGANIZAR é `none`: não há espera para proteger, e deixar o scroll ligado roubava
-      // o gesto ao arrasto a meio (era o que obrigava ao segundo parado).
-      style={{ touchAction: arrasto.imediato ? "none" : "pan-y" }}
-      className={`grid h-8 w-6 shrink-0 cursor-grab place-items-center transition-colors active:cursor-grabbing [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-8 ${
-        aEsperar ? "animate-pulse text-[#D2A63C]" : arrasto.imediato ? "text-[#D2A63C]" : "text-zinc-600 hover:text-zinc-300"
+      // Fora do modo organizar a pega é um enfeite: `pan-y` deixa o dedo fazer scroll da lista por
+      // cima dela. Dentro do modo é `none`, senão o browser rouba o gesto a meio do arrasto.
+      style={{ touchAction: arrasto.activo ? "none" : "pan-y" }}
+      className={`grid h-8 w-6 shrink-0 place-items-center transition-colors [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-8 ${
+        arrasto.activo ? "cursor-grab text-[#D2A63C] active:cursor-grabbing" : "text-zinc-700"
       }`}
     >
       <GripVertical className="h-4 w-4" />
