@@ -415,6 +415,126 @@ function FolhaRisco({ config, ocupado, aoGuardar }: {
   )
 }
 
+/**
+ * O CARTÃO de uma estratégia — o mesmo retrato do ecrã Estratégias da MTM Auto: avatar com as
+ * iniciais, a frase do histórico, os alvos batidos, a curva, o estado e o risco. Todas essas
+ * decisões vêm de `lib/mtmauto/cartao-estrategia.ts`; aqui só se desenha.
+ *
+ * Vive FORA do ecrã de propósito. Definido lá dentro, cada render do ecrã criava um componente
+ * novo e a folha do risco aberta remontava — quem estivesse a escrever a percentagem perdia-a.
+ */
+function Cartao({ p, aMudar, aRiscar, setARiscar, setAberta, alternar, guardarRisco }: {
+  p: Provedor
+  aMudar: string | null
+  aRiscar: string | null
+  setARiscar: (id: string | null) => void
+  setAberta: (a: { fonte?: string; providerId?: string; nome: string } | null) => void
+  alternar: (p: Provedor) => void
+  guardarRisco: (p: Provedor, modo: string, pct: number | null) => void
+}) {
+  const estado = estadoDeSeguir(p)
+  const risco = etiquetaRisco(p.config)
+  const alvos = alvosDoCartao(p.catalogo)
+  const funded = contasFundedDoCartao(p.catalogo)
+  return (
+    <div
+      className="rounded-2xl border p-3"
+      style={{ borderColor: p.segue ? "rgba(40,200,120,0.30)" : "#23262F", background: "#12141A" }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        {/* O toque no corpo abre os números da conta que EXECUTA esta estratégia. */}
+        <button type="button" className="flex min-w-0 flex-1 items-start gap-2.5 text-left" onClick={() => setAberta({ providerId: p.id, nome: p.nome })}>
+          <span
+            aria-hidden
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[13.5px] font-bold"
+            style={{ background: "rgba(210,166,60,0.14)", color: "#D2A63C" }}
+          >
+            {iniciais(p.nome)}
+          </span>
+          <span className="min-w-0 flex-1">
+            <p className="text-[14px] font-semibold text-white">{p.nome}</p>
+            {p.descricao && <p className="mt-0.5 text-[12px] leading-snug text-zinc-400">{p.descricao}</p>}
+            {/* A MESMA linha do cartão da app MTM Auto: taxa de acerto · trades · G/P. Sem
+                histórico medido lá, diz-se isso — nunca um número inventado. */}
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-zinc-500">
+              <TrendingUp className="h-3 w-3" />
+              {temHistorico(p.catalogo) ? (
+                <>
+                  <span className="font-semibold text-[#D2A63C]">{resumoDoCartao(p.catalogo)}</span>
+                  <span className="text-[#28C878]">· {Number(p.catalogo.ganhos ?? 0)}G</span>
+                  <span className="text-[#FF6B6B]">{Number(p.catalogo.perdas ?? 0)}P</span>
+                  <span>· toca para ver os números</span>
+                </>
+              ) : (
+                <span>{resumoDoCartao(p.catalogo)}</span>
+              )}
+            </p>
+            {/* Alvos batidos e stops — as mesmas contagens do cartão da app MTM Auto. */}
+            {alvos.length > 0 && (
+              <p className="mt-1 flex flex-wrap gap-1 text-[10.5px] font-semibold">
+                {alvos.map((a) => (
+                  <span
+                    key={a.rotulo}
+                    className={`rounded-md px-1.5 py-0.5 ${a.perda ? "bg-[#FF4D4D]/10 text-[#FF6B6B]" : "bg-[#28C878]/10 text-[#28C878]"}`}
+                  >
+                    {a.rotulo}×{a.n}
+                  </span>
+                ))}
+              </p>
+            )}
+            {temHistorico(p.catalogo) && Array.isArray(p.catalogo.curva) && p.catalogo.curva.length > 1 && (
+              <div className="mt-1.5 opacity-90">
+                <CurvaPips curva={p.catalogo.curva} mini />
+              </div>
+            )}
+            {/* As contas MTM Funded atribuídas a esta estratégia — o mesmo fio que a MTM Auto
+                mostra: da estratégia para as contas que a seguem. */}
+            {funded.length > 0 && (
+              <p className="mt-1 text-[11px] font-semibold text-[#D2A63C]">
+                MTM Funded · {funded.map((c) => c.rotulo || "MTM Funded").join(", ")}
+              </p>
+            )}
+            {/* O ESTADO, dito por extenso e com as MESMAS palavras da MTM Auto (o dicionário dela
+                está na biblioteca do cartão). O automático só se liga lá, que é a parte paga. */}
+            <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
+              <span
+                className={`rounded-md px-1.5 py-0.5 ${
+                  estado === "automatico" ? "bg-[#D2A63C]/15 text-[#D2A63C]"
+                    : estado === "manual" ? "bg-[#28C878]/10 text-[#28C878]"
+                    : "bg-white/5 text-zinc-400"
+                }`}
+              >
+                {pt(CHAVE_ESTADO[estado])}
+              </span>
+              {p.segue && (
+                <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-zinc-300">
+                  {pt(risco.chave)}{risco.pct != null ? ` ${risco.pct}% por sinal` : ""}
+                </span>
+              )}
+            </p>
+          </span>
+        </button>
+        <Interruptor ligado={p.segue} ocupado={aMudar === p.id} onClick={() => alternar(p)} />
+      </div>
+
+      {/* AFINAR O RISCO aqui, como no modal da MTM Auto — sem obrigar a sair da app. */}
+      {p.segue && (
+        <button type="button" onClick={() => setARiscar(aRiscar === p.id ? null : p.id)}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-800 py-2 text-[12px] font-semibold text-zinc-300">
+          <Settings2 className="h-3.5 w-3.5" /> {aRiscar === p.id ? "Fechar" : "Risco desta estratégia"}
+        </button>
+      )}
+      {aRiscar === p.id && (
+        <FolhaRisco
+          config={p.config ?? null}
+          ocupado={aMudar === p.id}
+          aoGuardar={(modo, pct) => guardarRisco(p, modo, pct)}
+        />
+      )}
+    </div>
+  )
+}
+
 export default function MtmAutoEstrategias({
   fontes = [],
   onToggleFonte,
@@ -596,115 +716,6 @@ export default function MtmAutoEstrategias({
   /** Os mesmos três grupos do ecrã da MTM Auto — a repartição é da biblioteca, não deste ecrã. */
   const grupos: Record<GrupoEstrategia, Provedor[]> = agruparEstrategias(provs)
 
-  /**
-   * O CARTÃO de uma estratégia — o mesmo retrato do ecrã Estratégias da MTM Auto: avatar com as
-   * iniciais, a frase do histórico, os alvos batidos, a curva, o estado e o risco. Todas essas
-   * decisões vêm de `lib/mtmauto/cartao-estrategia.ts`; aqui só se desenha.
-   */
-  const Cartao = ({ p }: { p: Provedor }) => {
-    const estado = estadoDeSeguir(p)
-    const risco = etiquetaRisco(p.config)
-    const alvos = alvosDoCartao(p.catalogo)
-    const funded = contasFundedDoCartao(p.catalogo)
-    return (
-      <div
-        className="rounded-2xl border p-3"
-        style={{ borderColor: p.segue ? "rgba(40,200,120,0.30)" : "#23262F", background: "#12141A" }}
-      >
-        <div className="flex items-start justify-between gap-3">
-          {/* O toque no corpo abre os números da conta que EXECUTA esta estratégia. */}
-          <button type="button" className="flex min-w-0 flex-1 items-start gap-2.5 text-left" onClick={() => setAberta({ providerId: p.id, nome: p.nome })}>
-            <span
-              aria-hidden
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[13.5px] font-bold"
-              style={{ background: "rgba(210,166,60,0.14)", color: "#D2A63C" }}
-            >
-              {iniciais(p.nome)}
-            </span>
-            <span className="min-w-0 flex-1">
-              <p className="text-[14px] font-semibold text-white">{p.nome}</p>
-              {p.descricao && <p className="mt-0.5 text-[12px] leading-snug text-zinc-400">{p.descricao}</p>}
-              {/* A MESMA linha do cartão da app MTM Auto: taxa de acerto · trades · G/P. Sem
-                  histórico medido lá, diz-se isso — nunca um número inventado. */}
-              <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-zinc-500">
-                <TrendingUp className="h-3 w-3" />
-                {temHistorico(p.catalogo) ? (
-                  <>
-                    <span className="font-semibold text-[#D2A63C]">{resumoDoCartao(p.catalogo)}</span>
-                    <span className="text-[#28C878]">· {Number(p.catalogo.ganhos ?? 0)}G</span>
-                    <span className="text-[#FF6B6B]">{Number(p.catalogo.perdas ?? 0)}P</span>
-                    <span>· toca para ver os números</span>
-                  </>
-                ) : (
-                  <span>{resumoDoCartao(p.catalogo)}</span>
-                )}
-              </p>
-              {/* Alvos batidos e stops — as mesmas contagens do cartão da app MTM Auto. */}
-              {alvos.length > 0 && (
-                <p className="mt-1 flex flex-wrap gap-1 text-[10.5px] font-semibold">
-                  {alvos.map((a) => (
-                    <span
-                      key={a.rotulo}
-                      className={`rounded-md px-1.5 py-0.5 ${a.perda ? "bg-[#FF4D4D]/10 text-[#FF6B6B]" : "bg-[#28C878]/10 text-[#28C878]"}`}
-                    >
-                      {a.rotulo}×{a.n}
-                    </span>
-                  ))}
-                </p>
-              )}
-              {temHistorico(p.catalogo) && Array.isArray(p.catalogo.curva) && p.catalogo.curva.length > 1 && (
-                <div className="mt-1.5 opacity-90">
-                  <CurvaPips curva={p.catalogo.curva} mini />
-                </div>
-              )}
-              {/* As contas MTM Funded atribuídas a esta estratégia — o mesmo fio que a MTM Auto
-                  mostra: da estratégia para as contas que a seguem. */}
-              {funded.length > 0 && (
-                <p className="mt-1 text-[11px] font-semibold text-[#D2A63C]">
-                  MTM Funded · {funded.map((c) => c.rotulo || "MTM Funded").join(", ")}
-                </p>
-              )}
-              {/* O ESTADO, dito por extenso e com as MESMAS palavras da MTM Auto (o dicionário dela
-                  está na biblioteca do cartão). O automático só se liga lá, que é a parte paga. */}
-              <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
-                <span
-                  className={`rounded-md px-1.5 py-0.5 ${
-                    estado === "automatico" ? "bg-[#D2A63C]/15 text-[#D2A63C]"
-                      : estado === "manual" ? "bg-[#28C878]/10 text-[#28C878]"
-                      : "bg-white/5 text-zinc-400"
-                  }`}
-                >
-                  {pt(CHAVE_ESTADO[estado])}
-                </span>
-                {p.segue && (
-                  <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-zinc-300">
-                    {pt(risco.chave)}{risco.pct != null ? ` ${risco.pct}% por sinal` : ""}
-                  </span>
-                )}
-              </p>
-            </span>
-          </button>
-          <Interruptor ligado={p.segue} ocupado={aMudar === p.id} onClick={() => alternar(p)} />
-        </div>
-
-        {/* AFINAR O RISCO aqui, como no modal da MTM Auto — sem obrigar a sair da app. */}
-        {p.segue && (
-          <button type="button" onClick={() => setARiscar(aRiscar === p.id ? null : p.id)}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-800 py-2 text-[12px] font-semibold text-zinc-300">
-            <Settings2 className="h-3.5 w-3.5" /> {aRiscar === p.id ? "Fechar" : "Risco desta estratégia"}
-          </button>
-        )}
-        {aRiscar === p.id && (
-          <FolhaRisco
-            config={p.config ?? null}
-            ocupado={aMudar === p.id}
-            aoGuardar={(modo, pct) => guardarRisco(p, modo, pct)}
-          />
-        )}
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-2">
       <p className="px-1 text-[12px] leading-snug text-zinc-400">
@@ -831,7 +842,10 @@ export default function MtmAutoEstrategias({
               {g === "automaticas" && <span className="h-1.5 w-1.5 rounded-full bg-[#28C878]" />}
               {pt(CHAVE_GRUPO[g])} · {doGrupo.length}
             </p>
-            {doGrupo.map((p) => <Cartao key={p.id} p={p} />)}
+            {doGrupo.map((p) => (
+              <Cartao key={p.id} p={p} aMudar={aMudar} aRiscar={aRiscar} setARiscar={setARiscar}
+                setAberta={setAberta} alternar={alternar} guardarRisco={guardarRisco} />
+            ))}
           </div>
         )
       })}
