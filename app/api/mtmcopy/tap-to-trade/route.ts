@@ -317,9 +317,10 @@ export async function POST(request: NextRequest) {
    * 3b. ONDE ABRE — a escolha de quem aceita (2026-09-24).
    *
    * O leque continua a existir; deixa é de ser o que acontece por omissão a quem não disse nada.
-   * Quem manda `contas` abre SÓ nas que mandou; quem NÃO manda `contas` — a app iOS antiga, a MTM
-   * Auto, qualquer cliente por actualizar — cai exactamente no caminho de sempre, o leque por
-   * todas as contas elegíveis. Não há mudança de comportamento sem um pedido explícito.
+   * Quem manda `contas` abre SÓ nas que mandou. Quem NÃO manda — a app iOS antiga, a MTM Auto,
+   * qualquer cliente por actualizar — herda a preferência guardada, se a pessoa tiver feito
+   * alguma escolha em qualquer superfície; e quem nunca escolheu nada cai exactamente no caminho
+   * de sempre, o leque por todas as contas elegíveis.
    *
    * A escolha é um FILTRO sobre o que já era elegível (lib/mtmcopy/escolha-contas-t2t): nunca
    * acrescenta uma conta, nunca salta um portão, e não toca no sizing — o lote e o risco de cada
@@ -354,10 +355,12 @@ export async function POST(request: NextRequest) {
     if (preferida.length) {
       const { reais: prefReais, simuladas: prefSim } = separarEscolha(preferida)
       const elegiveisSim = new Set<string>([...simT2T.map((c) => String(c.id)), ...fundedLigadas])
-      const alvosPref = aplicarEscolha(targets, (c) => String(c.id), prefReais).contas
+      const alvosPref = prefReais.length ? aplicarEscolha(targets, (c) => String(c.id), prefReais).contas : []
       const simPref = prefSim.filter((id) => elegiveisSim.has(id))
-      if (alvosPref.length || simPref.length) {
-        targets = prefReais.length ? alvosPref : []
+      // Só se aplica a preferência se ela ainda apanhar ALGUMA conta: uma preferência que ficou
+      // sem destinos não pode transformar uma aceitação numa ordem que não abre em lado nenhum.
+      if (alvosPref.length || (simPref.length && temSimuladas)) {
+        targets = alvosPref
         simuladasPedidas = simPref
         temSimuladas = temSimuladas && simPref.length > 0
       }
