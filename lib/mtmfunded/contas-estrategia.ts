@@ -25,7 +25,22 @@ import { camposDeContaSimulada, SERVIDOR_SIMULADO } from '@/lib/mtmfunded/simula
  * O aviso ao utilizador está em ./aviso-contas-estrategia e só corre com `notificar: true`.
  */
 
-export const ESTRATEGIAS_PADRAO = ['premium-ouro', 'Goldkiller', 'sensei', 'aurum-flow', 'mtm-scanner']
+/**
+ * Por omissão, as estratégias que EXISTEM HOJE — lidas de `mtmauto_providers`, não escritas aqui.
+ *
+ * Esta lista era fixa e ficou para trás do negócio: tinha `mtm-scanner`, que foi desligado como
+ * provider, e não tinha Edge, King nem Wolf, que entretanto passaram a live. Quem carregasse em
+ * «criar contas de acompanhamento» abria uma conta para uma estratégia morta e nenhuma para as três
+ * vivas. O admin continua a poder pedir uma lista à mão (`p.estrategias`).
+ */
+export function estrategiasAtivas(
+  provs: Array<{ slug?: unknown; ativo?: unknown; apagado_em?: unknown }> | null | undefined,
+): string[] {
+  return (provs ?? [])
+    .filter((x) => x.ativo !== false && x.apagado_em == null)
+    .map((x) => String(x.slug ?? '').trim())
+    .filter(Boolean)
+}
 
 export interface ContaCriada {
   estrategia: string
@@ -54,16 +69,16 @@ export async function criarContasDeEstrategia(p: {
 }): Promise<ResultadoUtilizador[]> {
   const db = getSupabaseAdmin()
   const saldo = p.saldo && p.saldo > 0 ? p.saldo : 1000
-  const pedidas = (p.estrategias?.length ? p.estrategias : ESTRATEGIAS_PADRAO).map((s) => String(s).trim()).filter(Boolean)
-
   const [{ data: provs }, { data: progs }] = await Promise.all([
-    db.from('mtmauto_providers').select('id, slug, nome'),
+    db.from('mtmauto_providers').select('id, slug, nome, ativo, apagado_em'),
     db.from('mtm_funded_programs').select('id, slug, saldo, fases'),
   ])
   const programa = (progs ?? []).find((x) => x.slug === `${Math.round(saldo / 1000)}k-1f`)
     ?? (progs ?? []).find((x) => Number(x.saldo) === saldo && Number(x.fases) === 1)
     ?? null
   const provPorSlug = new Map((provs ?? []).map((x) => [String(x.slug).toLowerCase(), x]))
+  // Sem lista pedida, valem as estratégias vivas de hoje — não uma lista escrita no código.
+  const pedidas = (p.estrategias?.length ? p.estrategias : estrategiasAtivas(provs)).map((s) => String(s).trim()).filter(Boolean)
 
   const saida: ResultadoUtilizador[] = []
   for (const userId of [...new Set(p.userIds)]) {
