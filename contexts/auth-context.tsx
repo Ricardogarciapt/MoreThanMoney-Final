@@ -258,12 +258,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(session)
 
-        supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .maybeSingle()
-          .then(async ({ data: profile }: { data: any }) => {
+        Promise.resolve(
+          supabase.from("profiles").select("*").eq("id", session.user.id).maybeSingle(),
+        )
+          .then(async ({ data: profile }) => {
             const p = profile ?? (await loadMemberProfile(supabase, session.user.id))
             if (p && isRegisteredMember(p) && mounted) {
               const normalized = await enforceTrialExpiry(p)
@@ -273,7 +271,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
             }
           })
-          .catch(() => {})
+          .catch((erro) => {
+            // Era um catch vazio: qualquer falha a carregar o perfil depois do
+            // SIGNED_IN desaparecia sem deixar rasto. O fluxo continua igual
+            // (nao se bloqueia o login), mas agora fica registado.
+            console.warn('[auth] falha a carregar o perfil apos SIGNED_IN:', erro)
+          })
       } else if (event === 'SIGNED_OUT') {
         const { clearCachedSession } = await import('@/lib/auth-cache')
         clearCachedSession()
