@@ -32,8 +32,14 @@ type Curva = {
   /** O mesmo total em percentagem da conta. Nulo quando não se soube o saldo de partida. */
   totalPct?: number | null
 }
+type Escopo = "minhas" | "casa" | "todas"
+
 type Dados = {
   linhas: Linha[]
+  /** O escopo que o servidor usou — pode não ser o pedido, se vier lixo no pedido. */
+  escopo?: Escopo
+  /** Há contas dos dois lados? Sem isso, o filtro é uma pergunta sem resposta possível. */
+  podeFiltrar?: boolean
   /** A ressalva do preço viciado, em português, tal como `lib/pips-proof.ts` a escreve. */
   notaVies?: string | null
   /** A data da ressalva (dd/mm), para a dizer na língua do cliente. */
@@ -93,6 +99,21 @@ const CORES: Record<string, string> = {
  */
 const JANELAS = [7, 30, 90] as const
 
+/**
+ * As contas da CASA ficam de fora por omissão.
+ *
+ * O dono é dono das mestres, da conta-espelho de 10 000 e da «Todos os sinais» — instrumentos de
+ * medição, não contas dele para negociar. Somadas aqui, o separador respondia a «como é que a
+ * casa mediu o mês» em vez de «como é que a minha conta correu», e uma perda de −548 numa conta
+ * de medição enterrava tudo o resto. Não desaparecem: mudam de lado neste botão. Quem não tem
+ * contas da casa (toda a gente menos o dono e os educadores) nunca vê este filtro.
+ */
+const ESCOPOS: { id: Escopo; chave: string }[] = [
+  { id: "minhas", chave: "t2t.histMine" },
+  { id: "casa", chave: "t2t.histHouse" },
+  { id: "todas", chave: "t2t.histAll" },
+]
+
 export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
   const t = useT()
   /**
@@ -102,6 +123,7 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
    * quem manda 1 está a falar de sinais de hoje, não do histórico das contas.
    */
   const [janela, setJanela] = useState<number>(() => JANELAS.find((j) => j >= dias) ?? JANELAS[0])
+  const [escopo, setEscopo] = useState<Escopo>("minhas")
   const [d, setD] = useState<Dados | null>(null)
   const [aLer, setALer] = useState(true)
   /**
@@ -119,7 +141,7 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
     try {
       const tok = (await supabase.auth.getSession()).data.session?.access_token
       if (!tok) return
-      const r = await fetch(`/api/mtm-auto/historico?dias=${janela}`, {
+      const r = await fetch(`/api/mtm-auto/historico?dias=${janela}&escopo=${escopo}`, {
         headers: { Authorization: `Bearer ${tok}` },
         cache: "no-store",
       })
@@ -130,7 +152,7 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
     } finally {
       setALer(false)
     }
-  }, [janela])
+  }, [janela, escopo])
 
   useEffect(() => { carregar() }, [carregar])
 
@@ -138,19 +160,39 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
    * O seletor de janela. Aparece SEMPRE — incluindo no ecrã vazio, que é onde mais faz falta:
    * um «não há trades» sem maneira de alargar a janela lê-se como «não tens histórico».
    */
+  const pilula = (ativo: boolean) => ({
+    border: `1px solid ${ativo ? "var(--destaque)" : "var(--borda)"}`,
+    background: ativo ? "var(--destaque)" : "transparent",
+    color: ativo ? "#000" : "var(--texto-fraco)",
+  })
+
   const seletor = (
-    <div className="flex justify-end gap-1.5">
+    <div className="flex flex-wrap items-center justify-end gap-1.5">
+      {/* O filtro das contas da casa só existe para quem tem dos dois lados — e mantém-se no
+          ecrã vazio, que é onde mais falta faz: um «não há trades» sem maneira de alargar
+          lê-se como «não tens histórico». */}
+      {d?.podeFiltrar && (
+        <div className="mr-auto flex gap-1.5">
+          {ESCOPOS.map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => setEscopo(e.id)}
+              className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+              style={pilula(escopo === e.id)}
+            >
+              {t(e.chave)}
+            </button>
+          ))}
+        </div>
+      )}
       {JANELAS.map((j) => (
         <button
           key={j}
           type="button"
           onClick={() => setJanela(j)}
           className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-          style={{
-            border: `1px solid ${janela === j ? "var(--destaque)" : "var(--borda)"}`,
-            background: janela === j ? "var(--destaque)" : "transparent",
-            color: janela === j ? "#000" : "var(--texto-fraco)",
-          }}
+          style={pilula(janela === j)}
         >
           {j}d
         </button>

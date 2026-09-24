@@ -4,8 +4,8 @@
  */
 import assert from 'node:assert/strict'
 import {
-  contarPorTipo, ehContaMestre, filtrarEntradas, juntarOrdemFiltrada, normalizarFiltro,
-  temDoisTipos, FILTRO_POR_OMISSAO,
+  contarPorTipo, ehContaDaCasa, ehContaMestre, filtrarEntradas, juntarOrdemFiltrada,
+  normalizarEscopo, normalizarFiltro, temDoisTipos, ESCOPO_POR_OMISSAO, FILTRO_POR_OMISSAO,
 } from '../filtro-contas'
 import { moverConta, ordenarEntradas } from '../ordem-contas'
 
@@ -157,6 +157,35 @@ function main() {
     assert.deepEqual(ids(ordenarEntradas(entradas, gravada)), ['c', 'm1', 'a', 'm2', 'b'])
     // E com o filtro de volta a «As minhas», é exactamente o que o dedo fez.
     assert.deepEqual(ids(filtrarEntradas(ordenarEntradas(entradas, gravada), 'minhas', 'a')), ['c', 'a', 'b'])
+  })
+
+  // ── contas da casa (histórico) ────────────────────────────────────────────
+  caso('a mestre é da casa — é a MESMA regra, não uma segunda', () => {
+    assert.equal(ehContaDaCasa({ tipo: 'provider' }), true)
+    assert.equal(ehContaDaCasa({ tipo: 'PROVIDER' }), true)
+  })
+  caso('a conta de estratégia é da casa pela marca que já traz', () => {
+    assert.equal(ehContaDaCasa({ tipo: 'financiada', conta_casa: true }), true)
+  })
+  caso('a conta-espelho e a «Todos os sinais» são da casa por recolherem tudo', () => {
+    // 77661181 (10 000) e 77549217 (1 000): NÃO são `provider`, e é por isso que o `tipo`
+    // sozinho não chegava.
+    assert.equal(ehContaDaCasa({ tipo: 'financiada', recolhe_todos_sinais: true }), true)
+    assert.equal(ehContaDaCasa({ tipo: 'real', recolhe_todos_sinais: true }), true)
+  })
+  caso('a conta de uma pessoa NUNCA é da casa', () => {
+    assert.equal(ehContaDaCasa({ tipo: 'financiada' }), false)
+    assert.equal(ehContaDaCasa({ tipo: 'real', conta_casa: false, recolhe_todos_sinais: false }), false)
+    assert.equal(ehContaDaCasa({}), false)
+    assert.equal(ehContaDaCasa(null), false)
+    assert.equal(ehContaDaCasa(undefined), false)
+  })
+  caso('o escopo do pedido: lixo cai em «As minhas»', () => {
+    assert.equal(normalizarEscopo('casa'), 'casa')
+    assert.equal(normalizarEscopo(' TODAS '), 'todas')
+    assert.equal(normalizarEscopo('mestres'), ESCOPO_POR_OMISSAO)
+    assert.equal(normalizarEscopo(null), 'minhas')
+    assert.equal(ESCOPO_POR_OMISSAO, 'minhas')
   })
 
   console.log(`\nfiltro-contas: ${n} verificações certas`)

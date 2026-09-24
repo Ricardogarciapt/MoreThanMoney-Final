@@ -1,3 +1,5 @@
+import { ehContaMestre } from '../mtmfunded/contas-da-casa'
+
 /**
  * AS CONTAS MESTRE À PARTE DAS DO DONO, no seletor do WebTrader (pedido do dono, 24/09).
  *
@@ -34,14 +36,18 @@ export interface EntradaFiltravel {
 }
 
 /**
- * Uma conta é MESTRE quando `tipo === 'provider'` — as mestres das estratégias do MTM Auto foram
- * todas uniformizadas para esse tipo (24/09). É o mesmo critério de lib/mtmfunded/aviso-conta.ts
- * (que lhes põe o aviso «mestre») e de estrategia-mestre.ts; não há segundo sítio a adivinhar.
- * Contas reais (TradeLocker, MT5) nunca são mestres: não têm `tipo`.
+ * O que é uma conta MESTRE, e o que é uma conta DA CASA, mora em `lib/mtmfunded/contas-da-casa.ts`
+ * — o mesmo ficheiro que a app MTM Auto tem (guardado por `paridade-repositorios.check.ts`).
+ * Aqui só se reexporta: o seletor do WebTrader e o separador de Histórico têm de responder à
+ * mesma pergunta com a mesma resposta, e uma segunda cópia da regra divergia no primeiro dia.
  */
-export function ehContaMestre(conta: { tipo?: string | null } | null | undefined): boolean {
-  return String(conta?.tipo ?? '').trim().toLowerCase() === 'provider'
-}
+export {
+  ehContaDaCasa,
+  ehContaMestre,
+  normalizarEscopo,
+  ESCOPO_POR_OMISSAO,
+  type EscopoContas,
+} from '../mtmfunded/contas-da-casa'
 
 /** O filtro vindo da base/do corpo de um pedido, limpo. Qualquer lixo cai no de partida. */
 export function normalizarFiltro(bruto: unknown): FiltroContas {

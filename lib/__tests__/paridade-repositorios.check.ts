@@ -52,6 +52,11 @@ const COPIAS: { site: string; auto: string; porque: string }[] = [
     porque: 'os dois separadores de Histórico juntam os parciais na mesma trade',
   },
   {
+    site: 'lib/mtmfunded/contas-da-casa.ts',
+    auto: 'lib/mtmfunded/contas-da-casa.ts',
+    porque: 'os dois separadores de Histórico deixam de fora as MESMAS contas da casa',
+  },
+  {
     site: 'lib/mtmauto/desempenho-do-catalogo.ts',
     auto: 'lib/mtmauto/desempenho-do-catalogo.ts',
     porque: 'o histórico de uma estratégia conta-se da mesma maneira nos dois',

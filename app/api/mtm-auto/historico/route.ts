@@ -5,6 +5,7 @@ import { lerHistorico } from '@/lib/mtmcopy/metaapi'
 import { contasDoUtilizador } from '@/lib/mtm-auto-bridge'
 import { lerInfoContaCache } from '@/lib/mtmcopy/metaapi-cache'
 import { recebeT2T } from '@/lib/mtmcopy/alvo-t2t'
+import { ehContaDaCasa, normalizarEscopo } from '@/lib/mtmfunded/contas-da-casa'
 import {
   agruparParciais,
   entradaMaisAntiga,
@@ -57,11 +58,25 @@ export async function GET(request: NextRequest) {
   if (erro) return erro
 
   const dias = Math.min(365, Math.max(1, Number(request.nextUrl.searchParams.get('dias')) || 30))
+  /**
+   * De QUEM são as contas que este histórico soma — a mesma pergunta do seletor do WebTrader.
+   *
+   * O dono é dono das mestres, da conta-espelho de 10 000 e da «Todos os sinais», e por isso o
+   * histórico dele somava instrumentos de medição da casa ao lado das trades dele. Por omissão
+   * conta-se só o que é DELE para negociar; as da casa continuam na base e a um toque de
+   * distância (`ehContaDaCasa`, em lib/webtrader/filtro-contas.ts — uma regra, não duas).
+   */
+  const escopo = normalizarEscopo(request.nextUrl.searchParams.get('escopo'))
   const desde = new Date(Date.now() - dias * 86_400_000).toISOString()
   const db = getSupabaseAdmin()
   const token = (request.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
 
   const linhas: Linha[] = []
+  /**
+   * As linhas que a app MTM Auto devolve ficam AQUI, e só entram depois de se saber quais são as
+   * contas MTM Funded — ver `// ── As contas MTM Funded` mais abaixo, que explica porquê.
+   */
+  const linhasDoAuto: Record<string, unknown>[] = []
 
   // ── MTM Auto: o histórico que a própria app calcula (mesmos números, mesma origem) ──────────
   try {
@@ -72,18 +87,7 @@ export async function GET(request: NextRequest) {
     })
     if (r.ok) {
       const j = (await r.json()) as { linhas?: Record<string, unknown>[] }
-      for (const l of j.linhas ?? []) {
-        linhas.push({
-          quando: String(l.quando ?? l.created_at ?? ''),
-          origem: 'MTM Auto',
-          conta: (l.conta as string) ?? null,
-          symbol: String(l.symbol ?? ''),
-          direction: (l.direction as string) ?? null,
-          estado: String(l.estado ?? ''),
-          resultado: l.resultado != null ? Number(l.resultado) : null,
-          pips: l.resultadoPips != null ? Number(l.resultadoPips) : l.pips != null ? Number(l.pips) : null,
-        })
-      }
+      linhasDoAuto.push(...(j.linhas ?? []))
     }
   } catch {
     /* sem MTM Auto, mostram-se as outras origens */
@@ -164,18 +168,51 @@ export async function GET(request: NextRequest) {
   // UMA TRADE = a raiz mais as filhas dos parciais — ver `lib/mtmfunded/historico-parciais.ts`,
   // que explica porque é que este ecrã dizia 3 trades onde o Diário dizia 1.
   const { data: doFunded } = await db
-    .from('mtmauto_accounts').select('rotulo, funded_account_id')
+    .from('mtmauto_accounts').select('id, rotulo, funded_account_id')
     .eq('user_id', userId!).eq('plataforma', 'mtmfunded').not('funded_account_id', 'is', null)
+  /** O rótulo de cada conta do MTM Auto, para as linhas de lá deixarem de ser anónimas. */
+  const rotuloNoAuto = new Map((doFunded ?? []).map((c) => [String(c.id), String(c.rotulo ?? 'MTM Funded')]))
   let entradaFunded: string | null = null
   let houveFunded = false
+  /** Quantas contas MEXERAM na janela de cada lado — é isto que decide se o filtro aparece. */
+  const comTrades = { minhas: 0, casa: 0 }
+  /** As contas MTM Funded da casa, pelo id da app MTM Auto — para filtrar o que vem de lá. */
+  const casaNoAuto = new Set<string>()
   if (doFunded?.length) {
     const rotuloDe = new Map(doFunded.map((c) => [String(c.funded_account_id), String(c.rotulo ?? 'MTM Funded')]))
+
+    /**
+     * QUAIS destas contas são da casa — a ficha está em `mtm_trading_accounts`, não no MTM Auto.
+     *
+     * `mtmauto_accounts` só guarda o rótulo e o ponteiro; quem sabe se a conta é uma mestre, uma
+     * conta de estratégia ou a espelho de 10 000 é a ficha da conta. Sem ir lá, o rótulo era a
+     * única pista — e adivinhar pela palavra «espelho» no nome seria uma segunda regra a
+     * divergir da do WebTrader na primeira vez que alguém renomeasse uma conta.
+     */
+    const { data: fichas } = await db
+      .from('mtm_trading_accounts')
+      .select('id, tipo, conta_casa, recolhe_todos_sinais')
+      .in('id', [...rotuloDe.keys()])
+    const daCasa = new Set((fichas ?? []).filter((f) => ehContaDaCasa(f)).map((f) => String(f.id)))
+    for (const c of doFunded) {
+      if (daCasa.has(String(c.funded_account_id))) casaNoAuto.add(String(c.id))
+    }
+    const escondida = (accountId: string) =>
+      escopo === 'todas' ? false : daCasa.has(accountId) !== (escopo === 'casa')
+
     const { data: fechadas } = await db
       .from('funded_positions')
       .select('id, mae_id, account_id, symbol, direcao, volume, preco_entrada, preco_fecho, pnl, comissao, swap, aberta_em, fechada_em')
       .in('account_id', [...rotuloDe.keys()]).eq('estado', 'fechada').gte('fechada_em', desde)
       .order('fechada_em', { ascending: false }).limit(2000)
-    const partes = (fechadas ?? []) as unknown as ParteFechada[]
+    const todasAsPartes = (fechadas ?? []) as unknown as ParteFechada[]
+    for (const lado of [...new Set(todasAsPartes.map((p) => String(p.account_id)))]) {
+      if (daCasa.has(lado)) comTrades.casa += 1
+      else comTrades.minhas += 1
+    }
+    // Filtra-se ANTES de agrupar: assim a ressalva do preço, a taxa de acerto e a contagem falam
+    // todas do que está no ecrã, e não de contas que o ecrã não mostra.
+    const partes = todasAsPartes.filter((p) => !escondida(String(p.account_id)))
     houveFunded = partes.length > 0
 
     // A mãe de um parcial pode ter fechado FORA da janela, ou ainda estar aberta: nesse caso não
@@ -212,6 +249,39 @@ export async function GET(request: NextRequest) {
         contaParaTaxa: tr.terminada,
       })
     }
+  }
+
+  /**
+   * AS LINHAS DA APP MTM AUTO — sem as trades MTM Funded, que já vieram acima.
+   *
+   * A app MTM Auto lê as MESMAS `funded_positions` destas mesmas contas. Empurrar o que ela
+   * devolve ao lado do que se acabou de ler aqui contava cada trade DUAS VEZES: uma com o rótulo
+   * da conta e outra num balde sem nome (as linhas de lá não trazem `conta`, e caíam todas em
+   * «MTM Auto»). Era por isso que esse balde valia exactamente a soma de todas as outras linhas
+   * — e que o resultado do período aparecia a dobrar, com o dobro das trades.
+   *
+   * Fica o que só a app MTM Auto sabe: as execuções das contas de corretora dela e as posições
+   * MTM Funded ainda ABERTAS (que não têm resultado e por isso não somam nada, mas dizem ao
+   * cliente o que está a acontecer agora).
+   */
+  for (const l of linhasDoAuto) {
+    const id = String(l.id ?? '')
+    const estado = String(l.estado ?? '')
+    const doFundedLido = id.startsWith('funded:')
+    if (doFundedLido && (estado === 'closed' || estado === 'partial')) continue
+    const contaId = l.contaId ? String(l.contaId) : null
+    // Uma posição aberta numa conta da casa segue a mesma regra do resto do ecrã.
+    if (contaId && escopo !== 'todas' && casaNoAuto.has(contaId) !== (escopo === 'casa')) continue
+    linhas.push({
+      quando: String(l.quando ?? l.created_at ?? ''),
+      origem: 'MTM Auto',
+      conta: (l.conta as string) ?? (contaId ? (rotuloNoAuto.get(contaId) ?? null) : null),
+      symbol: String(l.symbol ?? ''),
+      direction: (l.direction as string) ?? null,
+      estado,
+      resultado: l.resultado != null ? Number(l.resultado) : null,
+      pips: l.resultadoPips != null ? Number(l.resultadoPips) : l.pips != null ? Number(l.pips) : null,
+    })
   }
 
   // ── E o que ainda está aberto ou por abrir: sem resultado, mas com estado ───────────────────
@@ -340,6 +410,13 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     dias,
+    escopo,
+    /**
+     * Mostra-se o filtro «As minhas / Da casa»? Só a quem tem dos DOIS lados — é a mesma regra
+     * do `temDoisTipos` do WebTrader: uma barra a dizer «As minhas» a quem só tem as suas é uma
+     * pergunta sem resposta possível.
+     */
+    podeFiltrar: comTrades.casa > 0 && comTrades.minhas + contas.length > 0,
     notaVies,
     // A data sozinha, para o ecrã poder dizer a ressalva na língua do cliente sem a reescrever.
     notaViesAte: notaVies ? NOTA_VIES_ATE_DDMM : null,
