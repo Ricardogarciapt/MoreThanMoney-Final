@@ -8,6 +8,7 @@ import type { LinhaFanout, Sinal } from "@/lib/admin-centro/servidor/sinais"
 import { FONTES, nomeMotivo } from "@/lib/admin-centro/regras"
 import { appDaConta, contasDaEstrategia, estrategiasDaConta, estrategiasSemFicha } from "@/lib/admin-centro/ligacoes"
 import ContaModal from "@/components/admin/mtmfunded-conta-modal"
+import OpcoesEstrategia from "./opcoes-estrategia"
 import { useCentroCtx, type Alvo } from "./contexto"
 import { tomEstadoConta, type DadosContas } from "./seccoes/contas"
 import type { DadosEstrategias } from "./seccoes/estrategias"
@@ -231,6 +232,12 @@ function GavetaEstrategia({ id }: { id: string }) {
             <Campo rotulo="Resultado € (admin)">{e.desempenho30d.dinheiro == null ? "—" : fmtNum(e.desempenho30d.dinheiro, 2)} em {e.desempenho30d.execucoes} execuções</Campo>
           </div>
           {e.divergencias.length > 0 && <Aviso>{e.divergencias.map((d) => <p key={d}>• {d}</p>)}</Aviso>}
+
+          {/* O que a estratégia FAZ — listada, a executar, risco por omissão, stop mínimo, trailing,
+              break-even, tecto de trades e símbolos. Isto só se escrevia no admin da MTM Auto e o
+              Centro mandava o admin para lá; agora escreve-se aqui, na mesma tabela e pela mesma
+              regra (lib/estrategias-admin/opcoes.ts). */}
+          {!e.apagada && <OpcoesEstrategia providerId={e.id} versao={ctx.versao} aoGravar={() => { ctx.depoisDeAcao(); void recarregar() }} />}
 
           <div className="rounded-xl border border-white/[0.06] p-3">
             <p className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">Fonte de execução</p>
