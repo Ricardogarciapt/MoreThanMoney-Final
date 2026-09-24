@@ -22,6 +22,9 @@
  * │                                                                                           │
  * │ A gémea nativa (`MTMCripto.disponivel` em MTMModels.swift) está `false` e SEMPRE esteve    │
  * │ nas builds publicadas — reactivar o lado nativo obriga a build e a revisão novas.          │
+ * │                                                                                           │
+ * │ **O procedimento está escrito: `docs/cripto-ios-reactivacao.md`.** Diz o que volta com um  │
+ * │ deploy, o que só volta com build, e o que nenhuma das duas flags cobre. Lê antes de mexer. │
  * └───────────────────────────────────────────────────────────────────────────────────────────┘
  *
  * Deteção pelo user-agent das webviews nativas: `MTMNativeApp` (MTM System) + iPhone/iPad — o
