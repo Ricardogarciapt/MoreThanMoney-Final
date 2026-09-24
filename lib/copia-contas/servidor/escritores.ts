@@ -74,7 +74,11 @@ function escritorMt(accountId: string, t: TokenResolvido): EscritorDestino {
   const preco = async (s: string) => (await deps.rest(accountId, `/symbols/${encodeURIComponent(s)}/current-price`).catch(() => null)) as { bid?: number; ask?: number; profitTickValue?: number; lossTickValue?: number } | null
 
   return {
-    simbolos: async () => (await simbolos().catch(() => [])) || null,
+    // Falhar a leitura NÃO é «a conta não tem símbolos»: devolve-se `null` (= não sei) e o motor
+    // repete (`decidirSimboloDestino`). `[]` fica reservado para a conta que RESPONDEU sem símbolos
+    // (undeployada / por sincronizar) — que também manda repetir, mas com outro motivo no registo.
+    // O `.catch(() => [])` que aqui estava colava os dois casos e alimentava o defeito de 24/09.
+    simbolos: async () => await simbolos().catch(() => null),
     async contexto(simbolo, direcao) {
       const lista = await simbolos((l) => l.includes(simbolo) || rankedBrokerSymbols(simbolo, l).length > 0)
       const ranked = lista.includes(simbolo) ? [simbolo, ...rankedBrokerSymbols(simbolo, lista).filter((x) => x !== simbolo)] : rankedBrokerSymbols(simbolo, lista)
@@ -241,6 +245,8 @@ export async function escritorPara(destinoRef: string): Promise<EscritorDestino 
   if (!c) return null
   const adaptador = adaptadorMtmFunded(c, 'master')
   return escritorAdaptador(adaptador, {
+    // MTM Funded resolve pelo catálogo canónico: o motor trata `destino_tipo === 'mtmfunded'` como
+    // leitura DISPENSADA e nunca chega a olhar para este `null`.
     simbolos: async () => null,
     async contexto(simbolo, direcao: Direcao) {
       const s = (await carregarSimbolos([simbolo]))[simbolo]

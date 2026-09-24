@@ -147,6 +147,63 @@ export function mapearSimbolo(
 }
 
 /**
+ * O QUE A LISTA DE SÍMBOLOS DO DESTINO DIZ. Três respostas, não duas.
+ *
+ *  · `lida`           — a conta respondeu e sabemos o que tem. Sem candidato = o símbolo não existe mesmo.
+ *  · `porSincronizar` — respondeu com a lista VAZIA: conta MetaApi undeployada, ou ainda sem o primeiro
+ *                       getSymbols (`metaapi_simbolos_cache` com `atualizado_em` a NULL). Vazio não é
+ *                       uma resposta sobre o símbolo — é a ausência de resposta.
+ *  · `falhou`         — não respondeu (excepção, timeout, quota bloqueada e sem lista guardada).
+ *  · `dispensada`     — não há lista a consultar e isso está certo: MTM Funded resolve pelo catálogo
+ *                       canónico, e em sombra sem escritor não há a quem perguntar.
+ */
+export type LeituraSimbolosDestino =
+  | { tipo: 'lida'; simbolos: string[] }
+  | { tipo: 'porSincronizar' }
+  | { tipo: 'falhou' }
+  | { tipo: 'dispensada' }
+
+export type DecisaoSimboloDestino =
+  | { decisao: 'seguir' }
+  | { decisao: 'recusar'; motivo: string }
+  | { decisao: 'repetir'; motivo: string }
+
+/**
+ * Abrir, recusar em definitivo, ou voltar a tentar? (função pura — teste em
+ * `__tests__/copia-contas.check.ts`)
+ *
+ * DEFEITO CORRIGIDO A 24/09. O motor decidia com `if (!simboloDestino && lista)`, e em JavaScript
+ * `[]` é truthy: uma lista VAZIA passava por «a conta respondeu e não tem o símbolo» e a cópia era
+ * RECUSADA em definitivo, sem repetir. Só uma excepção (que dava `null`) levava ao caminho da
+ * repetição. Medido: as duas rotas do Sensei para contas VT Markets com sufixo `-VIP` tentaram 12
+ * vezes e falharam 12, entre 21 e 23/09, sempre com «XAUUSD não existe no destino» — quando o
+ * símbolo lá se chama `XAUUSD-VIP` e o resolver o apanha sem problema. O que faltava era a lista:
+ * as duas contas tinham a linha da cache partilhada com zero símbolos e `atualizado_em` a NULL.
+ *
+ * Agora só se recusa com a lista NA MÃO. Sem lista repete-se, e o serviço trata do resto (backoff
+ * de `proximaTentativa`, que desiste sozinho ao fim de 4 tentativas — não há ciclo infinito).
+ */
+export function decidirSimboloDestino(
+  simboloDestino: string | null,
+  canonico: string,
+  leitura: LeituraSimbolosDestino,
+): DecisaoSimboloDestino {
+  if (simboloDestino) return { decisao: 'seguir' }
+  switch (leitura.tipo) {
+    // A única recusa legítima: perguntou-se, respondeu, e não há candidato nenhum.
+    case 'lida':
+      return { decisao: 'recusar', motivo: `${canonico} não existe no destino` }
+    case 'porSincronizar':
+      return { decisao: 'repetir', motivo: `${canonico}: a conta de destino ainda não deu a lista de símbolos (undeployada ou por sincronizar)` }
+    case 'falhou':
+      return { decisao: 'repetir', motivo: `${canonico}: a conta de destino não respondeu à lista de símbolos` }
+    // Sem lista por desenho (MTM Funded, sombra sem escritor): segue com o canónico, como sempre.
+    case 'dispensada':
+      return { decisao: 'seguir' }
+  }
+}
+
+/**
  * O tradeMode do MT5 deixa ABRIR nesta direcção? (DISABLED/CLOSEONLY não; LONG/SHORTONLY conforme;
  * desconhecido = null). Igual a lib/mtmcopy/metaapi.tradeModeAllowsOpen, sem o SDK.
  */

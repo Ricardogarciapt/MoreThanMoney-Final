@@ -14,8 +14,8 @@
  *  4. SAÍDAS PASSAM SEMPRE. Rota em pausa, filtros ou máximo de abertas só impedem ABRIR.
  */
 import {
-  calcularLote, chaveEvento, clientIdDaCopia, distanciaDoSl, mapearSimbolo, motivoFiltro, pctDoEvento,
-  planoParcial, precoDeReferencia, REGRA_POR_OMISSAO, stopsNoDestino,
+  calcularLote, chaveEvento, clientIdDaCopia, decidirSimboloDestino, distanciaDoSl, mapearSimbolo, motivoFiltro, pctDoEvento,
+  planoParcial, precoDeReferencia, REGRA_POR_OMISSAO, stopsNoDestino, type LeituraSimbolosDestino,
 } from './calculo'
 import { modoEfectivo, type Interruptores } from './regras'
 import { digitosSeguros, reancorar } from '../mestres/pips'
@@ -191,14 +191,27 @@ async function abrir(
     return { resultado: 'recusado', acaoPretendida: nada(filtro), modo }
   }
 
-  // Leituras (permitidas em sombra). Uma leitura que falha em sombra não repete: regista-se.
-  const lista = rota.destino_tipo === 'mtmfunded' ? null : escritor ? await escritor.simbolos().catch(() => null) : null
+  // Leituras (permitidas em sombra). A lista do destino tem TRÊS respostas possíveis, não duas —
+  // ver `decidirSimboloDestino` (24/09). `[]` = a conta ainda não disse o que tem; `null` = não
+  // respondeu. Nenhuma das duas é «o símbolo não existe».
+  const leitura: LeituraSimbolosDestino = rota.destino_tipo === 'mtmfunded' || !escritor
+    ? { tipo: 'dispensada' }
+    : await escritor.simbolos().then(
+        (l): LeituraSimbolosDestino => (l == null ? { tipo: 'falhou' } : l.length ? { tipo: 'lida', simbolos: l } : { tipo: 'porSincronizar' }),
+        (): LeituraSimbolosDestino => ({ tipo: 'falhou' }),
+      )
+  const lista = leitura.tipo === 'lida' ? leitura.simbolos : null
   const mapa = mapearSimbolo(symbol, rota.destino_tipo, rota.mapa_simbolos, lista)
   const simboloDestino = mapa.simbolo ?? (rota.destino_tipo === 'mtmfunded' ? mapa.canonico : null)
-  if (!simboloDestino && lista) {
-    const motivo = `${mapa.canonico} não existe no destino`
-    await loja.inserirCopia({ rota_id: rota.id, origem_posicao_id: ev.origem_posicao_id, volume_origem_abertura: volumeOrigem, direcao, estado: 'recusada', erro: motivo })
-    return { resultado: 'recusado', acaoPretendida: nada(motivo), modo }
+  const decisaoSimbolo = decidirSimboloDestino(simboloDestino, mapa.canonico, leitura)
+  if (decisaoSimbolo.decisao === 'recusar') {
+    await loja.inserirCopia({ rota_id: rota.id, origem_posicao_id: ev.origem_posicao_id, volume_origem_abertura: volumeOrigem, direcao, estado: 'recusada', erro: decisaoSimbolo.motivo })
+    return { resultado: 'recusado', acaoPretendida: nada(decisaoSimbolo.motivo), modo }
+  }
+  if (decisaoSimbolo.decisao === 'repetir') {
+    // De propósito SEM `inserirCopia`: gravar a linha 'recusada' fechava a porta em definitivo (a
+    // abertura seguinte via `copia.estado !== 'enviando'` e saltava). O evento volta pelo backoff.
+    return { resultado: 'erro', acaoPretendida: nada(decisaoSimbolo.motivo), erro: decisaoSimbolo.motivo, repetir: true, modo }
   }
   const ctx: ContextoDestino | null = escritor ? await escritor.contexto(simboloDestino ?? mapa.canonico, direcao).catch(() => null) : null
   if (!ctx && modo === 'live') return { resultado: 'erro', acaoPretendida: nada('contexto do destino indisponível'), erro: 'contexto do destino indisponível', repetir: true, modo }

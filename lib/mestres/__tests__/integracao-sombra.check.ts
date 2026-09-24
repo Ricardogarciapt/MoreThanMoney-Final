@@ -121,7 +121,10 @@ async function main() {
       }
       const escritor = {
         async contexto(simbolo: string, _d: string) { return { simbolo, regra: { min: 0.01, max: 100, step: 0.01 }, equity: 10_000, saldo: 10_000, valorPorPrecoPorLote: /XAU/.test(simbolo) ? 100 : /JPY/.test(simbolo) ? 666.7 : /^(US30|NAS|SPX|GER)/.test(simbolo) ? 1 : 100_000, bid: null, ask: null, digits: null } },
-        async simbolos() { return null },
+        // A corretora de teste TEM os símbolos das mestres. Isto é uma lista LIDA, não um `null`:
+        // desde 24/09 `null`/`[]` querem dizer «ainda não sei» e mandam repetir (era o defeito —
+        // lista vazia lida como «o símbolo não existe»). Ver `decidirSimboloDestino`.
+        async simbolos() { return [...new Set(maes.map((m) => String(m.symbol).toUpperCase()))] },
         async posicoes() { return [] },
         async abrir() { escritas++; throw new Error('ESCREVEU') },
         async modificar() { escritas++; throw new Error('ESCREVEU') },

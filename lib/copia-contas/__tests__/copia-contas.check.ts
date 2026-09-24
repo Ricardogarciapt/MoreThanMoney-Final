@@ -6,7 +6,8 @@
  */
 import assert from 'node:assert/strict'
 import {
-  calcularLote, chaveEvento, clientIdDaCopia, mapearSimbolo, motivoFiltro, pctDoEvento, planoParcial, stopsNoDestino,
+  calcularLote, chaveEvento, clientIdDaCopia, decidirSimboloDestino, mapearSimbolo, motivoFiltro, pctDoEvento, planoParcial,
+  stopsNoDestino,
 } from '../calculo'
 import { colapsarModificacoes, diffPosicoes, proximaSondagemMs, proximaTentativa, reconciliarArranque } from '../diff'
 import { processarEventoCopia, type EscritorDestino, type LojaCopia } from '../motor'
@@ -114,6 +115,36 @@ caso('MTM Funded destino: canónico', () => {
 })
 caso('símbolo que não existe no destino → null', () => {
   assert.equal(mapearSimbolo('BTCUSD', 'tradelocker', {}, ['EURUSD', 'XAUUSD']).simbolo, null)
+})
+
+// ── lista vazia ≠ símbolo inexistente (defeito de 24/09) ─────────────────────
+// As duas rotas do Sensei recusaram XAUUSD 12 vezes em 12 para contas VT Markets `-VIP` porque a
+// lista da conta vinha VAZIA e `[]` (truthy) era lido como «a conta respondeu e não tem».
+caso('sufixo -VIP da VT Markets resolve-se QUANDO a lista existe', () => {
+  assert.equal(mapearSimbolo('XAUUSD', 'mt5', {}, ['EURUSD-VIP', 'XAUUSD-VIP', 'US30-VIP']).simbolo, 'XAUUSD-VIP')
+})
+caso('lista lida sem candidato → recusar (a única recusa legítima)', () => {
+  const r = mapearSimbolo('BTCUSD', 'mt5', {}, ['EURUSD-VIP', 'XAUUSD-VIP'])
+  assert.deepEqual(decidirSimboloDestino(r.simbolo, r.canonico, { tipo: 'lida', simbolos: ['EURUSD-VIP', 'XAUUSD-VIP'] }), {
+    decisao: 'recusar', motivo: 'BTCUSD não existe no destino',
+  })
+})
+caso('lista VAZIA → repetir, nunca recusar', () => {
+  const r = mapearSimbolo('XAUUSD', 'mt5', {}, [])
+  const d = decidirSimboloDestino(r.simbolo, r.canonico, { tipo: 'porSincronizar' })
+  assert.equal(d.decisao, 'repetir')
+  assert.match(d.decisao === 'repetir' ? d.motivo : '', /por sincronizar/)
+})
+caso('conta que não respondeu → repetir, com motivo próprio', () => {
+  const d = decidirSimboloDestino(null, 'XAUUSD', { tipo: 'falhou' })
+  assert.equal(d.decisao, 'repetir')
+  assert.match(d.decisao === 'repetir' ? d.motivo : '', /não respondeu/)
+})
+caso('lista dispensada (MTM Funded / sombra sem escritor) → seguir', () => {
+  assert.deepEqual(decidirSimboloDestino(null, 'XAUUSD', { tipo: 'dispensada' }), { decisao: 'seguir' })
+})
+caso('símbolo resolvido → seguir, seja qual for a leitura', () => {
+  assert.deepEqual(decidirSimboloDestino('XAUUSD-VIP', 'XAUUSD', { tipo: 'porSincronizar' }), { decisao: 'seguir' })
 })
 
 // ── filtros e stops ──────────────────────────────────────────────────────────
@@ -343,6 +374,39 @@ caso('interruptor global desligado → saltado sem ler nada', async () => {
   assert.equal(r.resultado, 'saltado')
   assert.equal(chamadas.leituras + chamadas.escritas, 0)
 })
+// Ponta-a-ponta do defeito de 24/09: a conta de destino ainda não deu a lista.
+caso('destino com lista VAZIA → repetir SEM gravar cópia recusada', async () => {
+  const { loja, copias } = lojaMemoria()
+  const e: EscritorDestino = { ...escritorQueRebentaAoEscrever().e, async simbolos() { return [] } }
+  const rota: RotaCopia = { ...rotaBase, destino_tipo: 'mt5' }
+  const r = await processarEventoCopia(ev(1, 'open', { symbol: 'XAUUSD', direcao: 'buy', volume: 1, preco: 2000 }), rota, loja, e, { interruptores: ligadoSemLive })
+  assert.equal(r.resultado, 'erro')
+  assert.equal(r.repetir, true)
+  // A linha 'recusada' é que fechava a porta: sem cópia, a tentativa seguinte volta a tentar.
+  assert.equal(copias.size, 0)
+})
+caso('destino que não respondeu (null) → repetir SEM gravar cópia recusada', async () => {
+  const { loja, copias } = lojaMemoria()
+  const e: EscritorDestino = { ...escritorQueRebentaAoEscrever().e, async simbolos() { return null } }
+  const r = await processarEventoCopia(ev(1, 'open', { symbol: 'XAUUSD', direcao: 'buy', volume: 1, preco: 2000 }), { ...rotaBase, destino_tipo: 'mt5' }, loja, e, { interruptores: ligadoSemLive })
+  assert.equal(r.repetir, true)
+  assert.equal(copias.size, 0)
+})
+caso('destino com lista NA MÃO e sem o símbolo → continua a recusar, e grava a recusa', async () => {
+  const { loja, copias } = lojaMemoria()
+  const e: EscritorDestino = { ...escritorQueRebentaAoEscrever().e, async simbolos() { return ['EURUSD-VIP', 'US30-VIP'] } }
+  const r = await processarEventoCopia(ev(1, 'open', { symbol: 'BTCUSD', direcao: 'buy', volume: 1, preco: 60_000 }), { ...rotaBase, destino_tipo: 'mt5' }, loja, e, { interruptores: ligadoSemLive })
+  assert.equal(r.resultado, 'recusado')
+  assert.equal([...copias.values()][0].estado, 'recusada')
+})
+caso('destino com lista `-VIP`: XAUUSD abre como XAUUSD-VIP (o que as 12 tentativas deviam ter feito)', async () => {
+  const { loja } = lojaMemoria()
+  const e: EscritorDestino = { ...escritorQueRebentaAoEscrever().e, async simbolos() { return ['EURUSD-VIP', 'XAUUSD-VIP'] } }
+  const r = await processarEventoCopia(ev(1, 'open', { symbol: 'XAUUSD', direcao: 'buy', volume: 1, preco: 2000, sl: 1990 }), { ...rotaBase, destino_tipo: 'mt5' }, loja, e, { interruptores: ligadoSemLive })
+  assert.equal(r.resultado, 'sombra')
+  assert.equal(r.acaoPretendida.tipo === 'abrir' ? r.acaoPretendida.simbolo : null, 'XAUUSD-VIP')
+})
+
 caso('live (as três fechaduras abertas): abre uma vez, com a cópia gravada ANTES da ordem', async () => {
   const { loja, copias } = lojaMemoria()
   let estadoNoEnvio: string | null = null
