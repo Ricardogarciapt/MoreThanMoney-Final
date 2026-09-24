@@ -4,14 +4,25 @@
  * Histórico: a Apple rejeitou a 3.7.2 (build 67) e a 3.7.6 (build 75) ao abrigo da Guideline
  * 3.1.5(iii) («cryptocurrency exchange services»), e a 09/09 escondeu-se o cripto todo do iOS.
  *
- * **24/09: o dono reabriu.** A leitura dele da regra é que o que a Apple bloqueia é *ser* ou *ter
- * parceria com* uma exchange — não mostrar o preço de um par de cripto que se negoceia por CFD,
- * como qualquer corretora faz. Os activos voltam ao WebTrader e os sinais de cripto voltam ao Tap
- * to Trade, no iOS como no resto.
+ * **24/09, manhã: o dono reabriu.** A leitura dele da regra é que o que a Apple bloqueia é *ser* ou
+ * *ter parceria com* uma exchange — não mostrar o preço de um par de cripto que se negoceia por
+ * CFD, como qualquer corretora faz.
  *
- * O mecanismo FICA todo de pé: muda-se `CRIPTO_NO_IOS` para `false` e volta a fechar-se tudo num
- * sítio só. Se vier outra rejeição por 3.1.5(iii), é essa a linha a mexer — e depois uma build
- * nova, porque a app nativa tem a sua cópia da regra (`MTMCripto` em MTMModels.swift).
+ * ┌───────────────────────────────────────────────────────────────────────────────────────────┐
+ * │ **24/09, tarde: ESTÁ A `false` SÓ PARA PASSAR A REVISÃO. ISTO É TEMPORÁRIO.**              │
+ * │                                                                                           │
+ * │ Não é uma decisão de produto — é uma decisão de revisão. O dono quer o cripto de volta     │
+ * │ («esconder para a revisão, activar depois de publicada»), e a linha de baixo é o           │
+ * │ interruptor: `true` + deploy e volta tudo, sem build nova.                                 │
+ * │                                                                                           │
+ * │ ANTES DE A PÔR A `true`, LER ISTO: reactivar uma funcionalidade escondida durante a        │
+ * │ revisão é exactamente o que a Guideline 2.3.1 proíbe («hidden or undocumented features»).  │
+ * │ A sanção não é a rejeição da versão — é a remoção da app e, no limite, da conta de         │
+ * │ programador. Quem reactivar isto assume esse risco com o dono, por escrito.                │
+ * │                                                                                           │
+ * │ A gémea nativa (`MTMCripto.disponivel` em MTMModels.swift) está `false` e SEMPRE esteve    │
+ * │ nas builds publicadas — reactivar o lado nativo obriga a build e a revisão novas.          │
+ * └───────────────────────────────────────────────────────────────────────────────────────────┘
  *
  * Deteção pelo user-agent da webview nativa (`MTMNativeApp` + iPhone/iPad; o iPad em modo
  * secretária anuncia-se como «Macintosh»). O Android usa `MTMSystemAndroid` e não entra.
@@ -19,8 +30,13 @@
 
 import { useEffect, useState } from "react"
 
-/** Única fonte de verdade na web. `true` = a app iOS mostra cripto (reaberto a 24/09). */
-export const CRIPTO_NO_IOS = true
+/**
+ * Única fonte de verdade na web. `false` = a app iOS não mostra cripto.
+ *
+ * TEMPORÁRIO (24/09): a `false` para a revisão da Apple. Ver a caixa no topo do ficheiro antes de
+ * voltar a pôr `true` — a reactivação tem um risco de conta que não se decide num commit.
+ */
+export const CRIPTO_NO_IOS = false
 
 export function ehAppIos(ua?: string | null): boolean {
   const u = ua ?? (typeof navigator !== "undefined" ? navigator.userAgent : "")
