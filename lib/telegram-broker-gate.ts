@@ -6,6 +6,7 @@
  * Ao validar: gera links pessoais (Forex/Sensei) + cupão Premium individual (ativa app + onboarding).
  * Sem promessas de lucro. Estado em telegram_leads.
  */
+import { avaliarUidLead, validarUidBroker } from '@/lib/broker/dados-corretora'
 import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
@@ -70,10 +71,17 @@ async function tg(method: string, body: Record<string, unknown>) {
 const send = (chatId: string | number, text: string, extra: Record<string, unknown> = {}) =>
   tg('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true, ...extra })
 
-/** Um UID de corretora = número com 5–12 dígitos. */
+/**
+ * Um UID de corretora = número com 5–12 dígitos.
+ *
+ * A regra vive em `validarUidBroker` e é a MESMA que o importador do export usa. Estavam
+ * escritas duas vezes, e duas regras que se podem afastar são pessoas em limbo: um número que o
+ * bot aceita mas o importador rejeita (ou ao contrário) é um lead que fica a meio do funil sem
+ * que apareça erro nenhum a ninguém.
+ */
 export function looksLikeBrokerUid(text: string): string | null {
-  const m = text.replace(/\s/g, '').match(/^#?(\d{5,12})$/)
-  return m ? m[1] : null
+  const v = validarUidBroker(text)
+  return v.ok ? v.uid : null
 }
 
 async function getAdminChatId(supabase: Supa): Promise<string | null> {
@@ -97,6 +105,39 @@ async function autoValidated(supabase: Supa, uid: string): Promise<boolean> {
   return Number(data.deposits_usd ?? 0) >= MIN_DEPOSIT && Number(data.balance_usd ?? 0) >= MIN_DEPOSIT
 }
 
+/**
+ * O UID que o lead enviou não existe em `broker_clients` — diz-se ao admin, em vez de deixar a
+ * pessoa a apodrecer em grace.
+ *
+ * A 2026-09-24 os dois únicos leads com acesso tinham UIDs que não existiam na tabela: um com 7
+ * dígitos (os nossos têm 8 ou 9 — engano a escrever) e outro só inexistente. Nenhum dos dois
+ * podia ser validado por mérito nem revogado, e ninguém sabia. Não muda o funil: o lead continua
+ * a seguir pelo print screen, como antes. Só deixa de ser invisível.
+ */
+async function avisarAdminSeUidNaoCasa(
+  supabase: Supa,
+  chatId: string,
+  uid: string,
+  firstName?: string | null,
+): Promise<void> {
+  try {
+    const { data: existe } = await supabase.from('broker_clients').select('uid').eq('uid', uid).maybeSingle()
+    if (existe) return
+    const { data: todos } = await supabase.from('broker_clients').select('uid')
+    const { aviso } = avaliarUidLead(uid, (todos ?? []).map((c) => String(c.uid)))
+    if (!aviso) return
+    const adminChat = await getAdminChatId(supabase)
+    if (!adminChat) return
+    await send(
+      adminChat,
+      `🔗 <b>UID sem correspondência</b>\n${firstName ?? chatId} (chat <code>${chatId}</code>)\n\n${aviso}\n\n` +
+        `Ou os dados da corretora estão velhos (importa o export em /admin/sales-machine), ou o UID está mal escrito.`,
+    )
+  } catch {
+    /* o funil não pode parar por causa de um aviso */
+  }
+}
+
 /** Lead enviou o UID. Guarda; se auto-validado liberta, senão pede o print screen. */
 export async function handleBrokerUid(
   supabase: Supa,
@@ -118,6 +159,7 @@ export async function handleBrokerUid(
     await grantBrokerAccess(supabase, chatId)
     return
   }
+  await avisarAdminSeUidNaoCasa(supabase, chatId, uid, firstName)
   await send(
     chatId,
     `✅ Recebi o teu UID <b>${uid}</b>.\n\n` +
