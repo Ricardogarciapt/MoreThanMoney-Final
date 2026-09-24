@@ -95,7 +95,9 @@ export async function GET(request: NextRequest) {
     .select(CONNECTION_FIELDS)
     .in('user_id', userIds)
 
-  const connByUser = new Map<string, (typeof connections)[0][]>()
+  // `connections` e `T[] | null`, por isso `(typeof connections)[0]` nao indexa nada.
+  // O NonNullable<...>[number] da a linha de facto.
+  const connByUser = new Map<string, NonNullable<typeof connections>[number][]>()
   for (const c of connections ?? []) {
     const list = connByUser.get(c.user_id) ?? []
     list.push(c)

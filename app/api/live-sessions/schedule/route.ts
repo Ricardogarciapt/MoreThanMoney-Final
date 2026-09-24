@@ -46,10 +46,14 @@ export async function GET(req: NextRequest) {
           "stream:lms_streams(id, title, access_tier, educator_id, educator:lms_educators(id, display_name, language))",
       )
       .eq("is_active", true)
+      // O select e montado com `+`, por isso o analisador de tipos do postgrest-js
+      // nao consegue ler a lista de colunas e devolvia GenericStringError. O select
+      // esta correcto — as linhas sao lidas campo a campo logo a seguir.
+      .overrideTypes<Record<string, unknown>[], { merge: false }>()
 
     const streamById = new Map<string, StreamMini>()
     const slots: ScheduleSlot[] = []
-    for (const r of (slotRows ?? []) as Array<Record<string, unknown>>) {
+    for (const r of slotRows ?? []) {
       const stream = (Array.isArray(r.stream) ? r.stream[0] : r.stream) as StreamMini | undefined
       if (!stream) continue
       streamById.set(stream.id, stream)

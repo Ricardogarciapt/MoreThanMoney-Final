@@ -64,7 +64,16 @@ export async function GET(
       count > 0 ? Math.round((list.reduce((s, r) => s + Number(r.rating), 0) / count) * 10) / 10 : null
 
     const session = await getSessionUser()
-    let mine: (typeof list)[0] | null = null
+    // Era `(typeof list)[0]`, ou seja, a linha completa da lista (com user_name,
+    // stream_id e stream). Mas a consulta abaixo so traz cinco colunas — o tipo
+    // prometia campos que nunca vinham.
+    let mine: {
+      id: string
+      rating: number
+      comment: string | null
+      created_at: string
+      updated_at: string
+    } | null = null
     if (session?.user?.id) {
       const { data: myRow } = await supabaseAdmin
         .from("lms_educator_ratings")

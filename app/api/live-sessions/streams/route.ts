@@ -99,7 +99,11 @@ export async function GET(request: NextRequest) {
     // custa nada e protege de linhas antigas ou de uma escrita feita à mão na consola.
     if (onlyLive) query = query.eq("is_live", true).eq("nunca_ao_vivo", false)
 
-    const { data, error } = await query
+    // `overrideTypes` porque o analisador de tipos do postgrest-js nao aguenta uma
+    // lista de colunas deste tamanho (rebenta no limite de instanciacao do TS e
+    // devolve ParserError). O select esta correcto — em runtime o PostgREST le-o
+    // sem problema. As linhas sao lidas campo a campo mais abaixo.
+    const { data, error } = await query.overrideTypes<Record<string, unknown>[], { merge: false }>()
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }

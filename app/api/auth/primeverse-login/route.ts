@@ -60,7 +60,11 @@ export async function POST(req: NextRequest) {
       })
       if (cErr || !created?.user) {
         // Corrida: pode ter sido criado entretanto
-        const { data: again } = await admin.from("profiles").select("id").eq("email", email).maybeSingle()
+        // Anotado: sem tipo, a linha vem como `any`, e atribuir `any` a `userId`
+        // repoe-lhe o tipo declarado (string | undefined) — o TS deixava de saber
+        // que, depois deste bloco, o userId esta sempre preenchido.
+        const { data: again }: { data: { id: string } | null } =
+          await admin.from("profiles").select("id").eq("email", email).maybeSingle()
         if (!again?.id) return NextResponse.json({ error: cErr?.message || "Erro ao criar conta." }, { status: 500 })
         userId = again.id
       } else {
@@ -95,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     if (isNew) {
       try {
-        await sendNewMemberWelcomeIfEligible({ userId })
+        await sendNewMemberWelcomeIfEligible({ userId, source: 'primeverse' })
       } catch {
         /* best-effort */
       }

@@ -180,9 +180,9 @@ export async function PUT(request: NextRequest) {
       )
     : current.enabled_channels
 
-  const chatIdSet = new Set(
+  const chatIdSet = new Set<string>(
     Array.isArray(body.enabled_chat_ids)
-      ? body.enabled_chat_ids.map(String)
+      ? body.enabled_chat_ids.map((id: unknown) => String(id))
       : current.enabled_chat_ids,
   )
   const channels = enabled_channels.length ? enabled_channels : current.enabled_channels
