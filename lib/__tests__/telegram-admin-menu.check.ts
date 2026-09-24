@@ -79,6 +79,27 @@ function baseFalsa(gravado: string | null) {
   const textos = painel.inline_keyboard.flat().map((b) => b.text.toLowerCase()).join(' ')
   assert.ok(!/apagar|eliminar|remover/.test(textos), 'o painel não pode ter botões que apaguem')
 
+  /**
+   * Os atalhos têm de apontar para páginas que existem.
+   *
+   * O painel antigo tinha um botão para `/admin/telegram-sources`, que não existe: abria um 404.
+   * Esta lista é a de `app/admin/` — quando uma página mudar de sítio, este teste avisa antes de
+   * o botão o fazer.
+   */
+  const { readdirSync } = await import('node:fs')
+  const paginas = new Set(
+    readdirSync(new URL('../../app/admin', import.meta.url), { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => `/admin/${d.name}`),
+  )
+  paginas.add('/admin')
+  for (const url of [
+    '/admin', '/admin/mtmcopy', '/admin/mtmauto-copia', '/admin?tab=mtmfunded',
+    '/admin/sales-machine', '/admin/social', '/admin?tab=users', '/admin/coupons',
+  ]) {
+    assert.ok(paginas.has(url.split('?')[0]), `o atalho ${url} aponta para uma página que não existe`)
+  }
+
   // ── Execução: o primeiro toque PERGUNTA ──
   const estado = { sensei: true, premium: false, forex: true }
   const teclado = tecladoExecucao(estado)

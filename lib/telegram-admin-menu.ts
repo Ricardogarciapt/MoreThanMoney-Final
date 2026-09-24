@@ -331,7 +331,7 @@ function tecladoFunil() {
   return {
     inline_keyboard: [
       [{ text: '🔓 Pendentes de aprovação', callback_data: 'admin:pending' }],
-      [{ text: '🌐 Abrir leads no /admin', url: `${SITE}/admin/social` }],
+      [{ text: '🌐 Conversas e funis no /admin', url: `${SITE}/admin/social` }],
       VOLTAR,
     ],
   }
@@ -349,12 +349,19 @@ function tecladoMaquinaVendas() {
         { text: '✍️ Gerar conteúdo', callback_data: 'admin:sm_generate' },
         { text: '📨 Digest de vendas', callback_data: 'admin:sm_digest' },
       ],
-      [{ text: '🌐 Máquina de vendas no site', url: `${SITE}/admin/social` }],
+      [{ text: '🌐 Máquina de vendas no site', url: `${SITE}/admin/sales-machine` }],
       VOLTAR,
     ],
   }
 }
 
+/**
+ * Os atalhos do /admin — e só para páginas que EXISTEM.
+ *
+ * O painel antigo tinha um botão «Grupo de leads (conteúdo)» para `/admin/telegram-sources`, uma
+ * rota que não existe: o botão abria um 404. Um atalho que dá 404 é pior do que não ter atalho —
+ * faz duvidar do resto do painel. Estes foram todos confirmados contra `app/admin/`.
+ */
 function tecladoLinks() {
   return {
     inline_keyboard: [
@@ -363,12 +370,16 @@ function tecladoLinks() {
         { text: '🛰️ MTM Copy', url: `${SITE}/admin/mtmcopy` },
       ],
       [
-        { text: '🤖 MTM Auto', url: `${SITE}/admin/mtmauto` },
-        { text: '🏦 MTM Funded', url: `${SITE}/admin/mtmfunded` },
+        { text: '🤖 MTM Auto (cópia)', url: `${SITE}/admin/mtmauto-copia` },
+        { text: '🏦 MTM Funded', url: `${SITE}/admin?tab=mtmfunded` },
       ],
       [
-        { text: '📈 Fontes de sinais', url: `${SITE}/admin/telegram-sources` },
-        { text: '🧲 Social e funis', url: `${SITE}/admin/social` },
+        { text: '🧲 Máquina de vendas', url: `${SITE}/admin/sales-machine` },
+        { text: '📣 Social e funis', url: `${SITE}/admin/social` },
+      ],
+      [
+        { text: '👤 Utilizadores', url: `${SITE}/admin?tab=users` },
+        { text: '🎟️ Cupões', url: `${SITE}/admin/coupons` },
       ],
       VOLTAR,
     ],
@@ -414,12 +425,12 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
       return
     case 'contas':
       await enviar(chatId, await contasEEquidade(), {
-        inline_keyboard: [[{ text: '🌐 Contas no /admin', url: `${SITE}/admin/mtmfunded` }], VOLTAR],
+        inline_keyboard: [[{ text: '🌐 Contas no /admin', url: `${SITE}/admin?tab=mtmfunded` }], VOLTAR],
       })
       return
     case 'sinais':
       await enviar(chatId, await sinaisDeHoje(supabase), {
-        inline_keyboard: [[{ text: '🌐 Fontes de sinais', url: `${SITE}/admin/telegram-sources` }], VOLTAR],
+        inline_keyboard: [[{ text: '🌐 MTM Copy (fontes)', url: `${SITE}/admin/mtmcopy` }], VOLTAR],
       })
       return
     case 'exec': {
@@ -511,7 +522,7 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
     await enviar(
       chatId,
       `👑 <b>Subscrições</b>\n\nPremium ativos: <b>${premium ?? 0}</b>\nSubscrições ativas (todas): <b>${ativas ?? 0}</b>\nLeads com acesso broker: <b>${libertados ?? 0}</b>`,
-      { inline_keyboard: [[{ text: '🌐 Utilizadores no /admin', url: `${SITE}/admin` }], VOLTAR] },
+      { inline_keyboard: [[{ text: '🌐 Utilizadores no /admin', url: `${SITE}/admin?tab=users` }], VOLTAR] },
     )
     return
   }
