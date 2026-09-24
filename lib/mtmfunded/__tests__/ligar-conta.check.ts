@@ -95,8 +95,9 @@ tem('ligação não grava password', 'app/api/mtmfunded/ligar-conta/route.ts', /
  * dono abriu ONZE posições simuladas. E as mestres da casa (`tipo='provider'`) nunca são destino.
  */
 tem('ligadas T2T respeitam o interruptor por conta', 'lib/mtmfunded/simulado/ligar-conta.ts', /\.filter\(\(c\) => recebeT2T\(/)
-tem('ligadas T2T não incluem mestres da casa', 'lib/mtmfunded/simulado/ligar-conta.ts', /\.filter\(\(c\) => !ehContaMestre\(c\)\)/)
-tem('simuladas marcadas não incluem mestres da casa', 'lib/mtmfunded/simulado/t2t-simulado.ts', /filter\(\(l\) => !ehContaMestre\(l\)\)/)
+tem('ligadas T2T não incluem contas da casa', 'lib/mtmfunded/simulado/ligar-conta.ts', /\.filter\(\(c\) => !ehContaDaCasa\(c\)\)/)
+tem('simuladas marcadas não incluem contas da casa', 'lib/mtmfunded/simulado/t2t-simulado.ts', /filter\(\(l\) => !ehContaDaCasa\(l\)\)/)
+tem('pré-visualização T2T não lista contas da casa', 'app/api/mtmcopy/tap-to-trade/preview/route.ts', /if \(ehContaDaCasa\(c\)\) casa\.add\(id\)/)
 tem('T2T: escolha de contas filtra os alvos', 'app/api/mtmcopy/tap-to-trade/route.ts', /aplicarEscolha\(targets, \(c\) => String\(c\.id\), escolhaReais\)/)
 
 eq('ligação não grava password (nenhum campo password no insert)', /mt5_password|password_cifrada|password:\s*password/.test(ler('app/api/mtmfunded/ligar-conta/route.ts')), false)

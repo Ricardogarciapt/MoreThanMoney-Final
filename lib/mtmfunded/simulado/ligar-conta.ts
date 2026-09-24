@@ -9,7 +9,7 @@ import { decifrar } from '@/lib/mtmfunded/credenciais'
 import { estadoCurto, tipoCurto } from '@/lib/mtmfunded/etiquetas'
 import { ehMtmFundedLigacao } from '@/lib/mtmcopy/destino-execucao'
 import { recebeT2T } from '@/lib/mtmcopy/alvo-t2t'
-import { ehContaMestre } from '@/lib/webtrader/filtro-contas'
+import { ehContaDaCasa } from '@/lib/mtmfunded/contas-da-casa'
 import {
   decidirLigacao,
   tentativasEsgotadas,
@@ -169,9 +169,10 @@ export async function contasFundedLigadasParaT2T(userId: string, ligacoes?: Arra
     .map((c) => String(c.funded_account_id))
   if (!candidatas.length) return []
   // Segunda verificação de dono no momento de executar (a conta pode ter mudado de mãos).
-  const { data } = await db.from('mtm_trading_accounts').select('id, tipo').in('id', candidatas).eq('user_id', userId).eq('motor', 'sim')
-  // AS MESTRES DA CASA NÃO SÃO DESTINO DE NINGUÉM (`tipo = 'provider'`, o mesmo critério do
-  // filtro «As minhas / Mestres» do WebTrader): quem as tem na conta é a casa, e elas são
-  // conduzidas pelo motor da estratégia — nunca por um toque numa aceitação.
-  return (data ?? []).filter((c) => !ehContaMestre(c)).map((c) => String(c.id))
+  const { data } = await db.from('mtm_trading_accounts')
+    .select('id, tipo, conta_casa, recolhe_todos_sinais').in('id', candidatas).eq('user_id', userId).eq('motor', 'sim')
+  // AS CONTAS DA CASA NÃO SÃO DESTINO DE NINGUÉM (lib/mtmfunded/contas-da-casa, a mesma regra do
+  // Histórico e do WebTrader): as mestres são conduzidas pelo motor da estratégia, e a
+  // conta-espelho e a «Todos os sinais» existem para MEDIR — nunca para receber um toque.
+  return (data ?? []).filter((c) => !ehContaDaCasa(c)).map((c) => String(c.id))
 }

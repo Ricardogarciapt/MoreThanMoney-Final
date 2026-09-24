@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { recebeT2T, t2tDesligadoNaConta } from '@/lib/mtmcopy/alvo-t2t'
 import { aplicarEscolha, escolhaGuardada, normalizarEscolha, separarEscolha } from '@/lib/mtmcopy/escolha-contas-t2t'
-import { ehContaMestre } from '@/lib/webtrader/filtro-contas'
+import { ehContaDaCasa } from '@/lib/mtmfunded/contas-da-casa'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { entradaT2T } from '@/lib/mtmcopy/t2t-entry'
 import { parseSignal, type ParsedSignal } from '@/lib/mtmcopy/signal-parser'
@@ -289,11 +289,11 @@ export async function POST(request: NextRequest) {
   // das reais. Um utilizador só com simuladas também pode aceitar — daí contarem para os guardas
   // abaixo. Antes da 070 a coluna não existe, a leitura dá erro e isto fica a false.
   const { data: simT2Tbruto } = await supabase
-    .from('mtm_trading_accounts').select('id, tipo')
+    .from('mtm_trading_accounts').select('id, tipo, conta_casa, recolhe_todos_sinais')
     .eq('user_id', user.id).eq('motor', 'sim').eq('estado', 'ativa').eq('aceita_t2t', true).limit(20)
-  // As mestres da casa (`tipo = 'provider'`) nunca são destino de uma aceitação — são conduzidas
-  // pelo motor da estratégia. Mesmo critério do filtro «As minhas / Mestres» do WebTrader.
-  const simT2T = (simT2Tbruto ?? []).filter((c) => !ehContaMestre(c))
+  // As contas da casa nunca são destino de uma aceitação (lib/mtmfunded/contas-da-casa): mestres,
+  // conta-espelho e «Todos os sinais» são instrumentos de medição, não contas para negociar.
+  const simT2T = (simT2Tbruto ?? []).filter((c) => !ehContaDaCasa(c))
   // + contas MTM Funded ligadas pelo cliente no «Ligar conta» (074): dele, não só-leitura, não pausadas.
   const fundedLigadas = await contasFundedLigadasParaT2T(user.id, (conns ?? []) as Array<Record<string, unknown>>).catch(() => [] as string[])
   let temSimuladas = Boolean(simT2T.length) || fundedLigadas.length > 0

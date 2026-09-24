@@ -1,4 +1,4 @@
-import { ehContaMestre } from '@/lib/webtrader/filtro-contas'
+import { ehContaDaCasa } from '@/lib/mtmfunded/contas-da-casa'
 import { lucroUsd, type MapaPrecos, type Simbolo } from './matematica'
 
 /**
@@ -116,17 +116,17 @@ export async function executarT2TSimulado(p: {
   const db = getSupabaseAdmin()
 
   const { data: marcadas, error } = await db.from('mtm_trading_accounts')
-    .select('id, tipo').eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa').eq('aceita_t2t', true)
-  // AS MESTRES DA CASA (`tipo = 'provider'`) NUNCA são destino de uma aceitação: são conduzidas
-  // pelo motor da estratégia. Filtra-se aqui e não na consulta porque um `tipo` a null faria um
-  // `neq` deixar a linha de fora — e as contas normais podem não ter tipo.
+    .select('id, tipo, conta_casa, recolhe_todos_sinais').eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa').eq('aceita_t2t', true)
+  // AS CONTAS DA CASA nunca são destino de uma aceitação (lib/mtmfunded/contas-da-casa): mestres,
+  // conta-espelho e «Todos os sinais» são instrumentos de medição. Filtra-se aqui e não na
+  // consulta porque um `tipo` a null faria um `neq` deixar a linha de fora.
   // Antes da 070 a coluna não existe: sem contas simuladas, nada muda no T2T de sempre.
-  const ids = new Set((error ? [] : marcadas ?? []).filter((l) => !ehContaMestre(l)).map((l) => String(l.id)))
+  const ids = new Set((error ? [] : marcadas ?? []).filter((l) => !ehContaDaCasa(l)).map((l) => String(l.id)))
   if (p.contasLigadas?.length) {
     // As ligadas passam pelos MESMOS filtros: do utilizador, motor simulado, conta viva.
     const { data: ligadas } = await db.from('mtm_trading_accounts')
-      .select('id, tipo').in('id', p.contasLigadas).eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa')
-    for (const l of ligadas ?? []) if (!ehContaMestre(l)) ids.add(String(l.id))
+      .select('id, tipo, conta_casa, recolhe_todos_sinais').in('id', p.contasLigadas).eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa')
+    for (const l of ligadas ?? []) if (!ehContaDaCasa(l)) ids.add(String(l.id))
   }
   if (p.apenas) {
     const querido = new Set(p.apenas)

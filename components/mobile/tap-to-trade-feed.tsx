@@ -470,6 +470,8 @@ export default function TapToTradeFeed() {
    * `null` enquanto a pré-visualização não chega. Com UMA só conta ninguém vê pergunta nenhuma.
    */
   const [ondeAbrir, setOndeAbrir] = useState<string[] | null>(null)
+  /** As contas que não podem aceitar começam RECOLHIDAS — o motivo não pode ser o ecrã todo. */
+  const [bloqueadasAbertas, setBloqueadasAbertas] = useState(false)
   const [providers, setProviders] = useState<{ label: string; strategy: string }[]>([])
   /** Os canais que o servidor diz estarem ATIVOS no Tap to Trade — é a lista que o filtro usa. */
   const [canaisAtivos, setCanaisAtivos] = useState<string[]>([])
@@ -817,7 +819,7 @@ export default function TapToTradeFeed() {
   // Pré-visualização: corre quando o modal abre. Se falhar, o modal continua a funcionar com
   // o texto do sinal — nunca bloqueia a aceitação por causa de números que não chegaram.
   useEffect(() => {
-    if (!tap || tap.status !== "confirm") { setPreview(null); setOndeAbrir(null); return }
+    if (!tap || tap.status !== "confirm") { setPreview(null); setOndeAbrir(null); setBloqueadasAbertas(false); return }
     let cancelado = false
     setPreviewBusy(true)
     ;(async () => {
@@ -1858,25 +1860,52 @@ export default function TapToTradeFeed() {
                     <p className="text-[10px] text-zinc-500 mt-2">{t("t2t.equityNote")}</p>
                   </div>
                 )}
-                {/* DIZER PORQUE É QUE NÃO DÁ. Uma conta em pausa, desligada ou sem saldo era
-                    simplesmente omitida: o cliente via a lista vazia, carregava em aceitar e
-                    apanhava um erro opaco. Agora o motivo aparece ANTES do clique. */}
-                {preview?.mode === "execute" && (preview.blocked?.length ?? 0) > 0 && (
-                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 mb-3">
-                    <p className="text-[10px] uppercase tracking-wider text-amber-400 mb-2">
-                      {preview!.accounts.length > 0 ? t("t2t.accountsLeftOut") : t("t2t.noAccountCanAccept")}
-                    </p>
-                    <div className="flex flex-col gap-2">
-                      {preview!.blocked!.map((b) => (
-                        <div key={`${b.id}-${b.motivo}`} className="text-[11px] leading-snug">
-                          <span className="text-zinc-300 font-medium">{b.label}</span>
-                          <span className="text-amber-300"> — {b.motivo}</span>
-                          <span className="text-zinc-500"> {b.comoResolver}</span>
+                {/* DIZER PORQUE É QUE NÃO DÁ — SEM SER O ECRÃ TODO.
+                    Uma conta em pausa, desligada ou sem saldo era simplesmente omitida: o cliente
+                    via a lista vazia, carregava em aceitar e apanhava um erro opaco. O motivo
+                    passou a aparecer antes do clique — e passou a ser o ecrã: o dono abriu isto e
+                    encontrou UMA conta escolhível debaixo de treze parágrafos vermelhos.
+                    Agora recolhe-se atrás de uma linha discreta. Nada desaparece sem explicação,
+                    mas a explicação deixa de tapar aquilo que se veio aqui fazer.
+                    A excepção: sem NENHUMA conta escolhível, o motivo é a mensagem que interessa
+                    — aí abre logo, porque não há mais nada para ver. */}
+                {preview?.mode === "execute" && (preview.blocked?.length ?? 0) > 0 && (() => {
+                  const n = preview.blocked!.length
+                  const semAlternativa = preview.accounts.length === 0 && (preview.simuladas?.length ?? 0) === 0
+                  const aberto = semAlternativa || bloqueadasAbertas
+                  return (
+                    <div className="mb-3">
+                      {!semAlternativa && (
+                        <button
+                          type="button"
+                          onClick={() => setBloqueadasAbertas((v) => !v)}
+                          className="flex w-full items-center justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-left active:scale-[0.99]"
+                        >
+                          <span className="text-[11px] text-zinc-400">
+                            {n} {n === 1 ? "conta não pode" : "contas não podem"} aceitar
+                          </span>
+                          <span className={`text-[11px] text-zinc-500 transition-transform ${aberto ? "rotate-90" : ""}`}>›</span>
+                        </button>
+                      )}
+                      {aberto && (
+                        <div className={`rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 ${semAlternativa ? "" : "mt-2"}`}>
+                          {semAlternativa && (
+                            <p className="text-[10px] uppercase tracking-wider text-amber-400 mb-2">{t("t2t.noAccountCanAccept")}</p>
+                          )}
+                          <div className="flex flex-col gap-2">
+                            {preview.blocked!.map((b) => (
+                              <div key={`${b.id}-${b.motivo}`} className="text-[11px] leading-snug">
+                                <span className="text-zinc-300 font-medium">{b.label}</span>
+                                <span className="text-amber-300"> — {b.motivo}</span>
+                                <span className="text-zinc-500"> {b.comoResolver}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
                 {previewBusy && !preview && <p className="text-[11px] text-zinc-500 mb-3">{t("t2t.calculatingRisk")}</p>}
 
                 <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3 text-xs text-zinc-400 max-h-24 overflow-y-auto whitespace-pre-wrap mb-4">{tap.sig.content}</div>
