@@ -17,6 +17,12 @@
  * só aí a linha «levanta». Se o dedo se mexer mais de 10 px antes disso, não há arrasto nenhum —
  * o gesto é o scroll de sempre. Com RATO não há espera: um rato não faz scroll por engano.
  *
+ * NO MODO ORGANIZAR NÃO HÁ ESPERA NENHUMA (pedido do dono, 24/09). O segundo existe para proteger
+ * quem está a passar o dedo pela lista à procura de uma conta — e nesse modo ninguém está: quem
+ * carregou em «Organizar» foi lá para arrumar. A lista deixa de fazer scroll com o dedo na pega
+ * (`touch-action: none`, ver a Pega em funded-webtrader.tsx) e a linha levanta ao primeiro toque.
+ * FORA do modo, a espera de 1 s fica exactamente como estava.
+ *
  * Dois cuidados que a folha do telemóvel obriga:
  *  · `touch-action: none` na pega (o CSS está em quem a desenha) — sem isso o browser rouba o
  *    gesto a meio, já depois de a linha ter levantado;
@@ -32,6 +38,8 @@ export interface ArrastoLista {
   aEsperar: string | null
   /** pôr na PEGA de cada linha: `onPointerDown={(e) => aoPegar(e, id)}`. */
   aoPegar: (e: React.PointerEvent, id: string) => void
+  /** true = modo organizar: a linha levanta ao primeiro toque (a pega desenha-se e diz-se assim). */
+  imediato: boolean
 }
 
 /** Quanto tempo o dedo fica parado antes de a linha levantar. */
@@ -43,11 +51,13 @@ const TOLERANCIA_PX = 10
  * @param idsVisiveis  os ids pela ordem em que estão no ecrã (o `sort` já aplicado)
  * @param trocar       (id, alvoId) → a nova ordem; é chamado a cada troca, ao vivo
  * @param gravar       chamado UMA vez ao largar, com a ordem final
+ * @param imediato     modo organizar: sem o segundo de espera, no dedo também
  */
 export function useArrastoLista(
   idsVisiveis: string[],
   trocar: (id: string, alvoId: string) => string[],
   gravar: (ordem: string[]) => void,
+  imediato = false,
 ): ArrastoLista {
   const [aArrastar, setAArrastar] = useState<string | null>(null)
   const [aEsperar, setAEsperar] = useState<string | null>(null)
@@ -58,7 +68,8 @@ export function useArrastoLista(
   const aoPegar = useCallback((e: React.PointerEvent, id: string) => {
     // Botão do meio/direito não arrastam.
     if (e.button !== 0 && e.pointerType === "mouse") return
-    const comDedo = e.pointerType !== "mouse"
+    // No modo organizar o dedo é tratado como o rato: levanta já.
+    const comDedo = e.pointerType !== "mouse" && !imediato
     const alvo = e.currentTarget as HTMLElement
     const ponteiro = e.pointerId
     const partida = { x: e.clientX, y: e.clientY }
@@ -113,7 +124,7 @@ export function useArrastoLista(
       e.stopPropagation()
       comecar()
     }
-  }, [idsVisiveis, trocar, gravar])
+  }, [idsVisiveis, trocar, gravar, imediato])
 
-  return { aArrastar, aEsperar, aoPegar }
+  return { aArrastar, aEsperar, aoPegar, imediato }
 }
