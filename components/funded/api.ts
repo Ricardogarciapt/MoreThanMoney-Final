@@ -111,8 +111,13 @@ export function gravarEtiqueta(ref: string, etiqueta: string): Promise<{ ok: tru
  * A ORDEM das contas no seletor (o que a pessoa arrastou) e a FAVORITA (a que abre primeiro).
  * Guardadas na conta MTM, não no dispositivo — ver app/api/contas/ordem/route.ts.
  */
-export function lerOrdemContas(): Promise<{ ordem: string[]; favorita: string | null; filtroContas?: FiltroContas }> {
+export function lerOrdemContas(): Promise<{ ordem: string[]; favorita: string | null; filtroContas?: FiltroContas; ocultas?: string[] }> {
   return pedir("/api/contas/ordem")
+}
+
+/** As contas escondidas no modo organizar do seletor — ficam na conta, não no dispositivo. */
+export function gravarContasOcultas(ocultas: string[]): Promise<{ ok: true; ocultas: string[] }> {
+  return pedir("/api/contas/ordem", { method: "PATCH", body: JSON.stringify({ ocultas }) })
 }
 
 /** O filtro do seletor («As minhas» / «Mestres» / «Todas») — fica na conta, não no dispositivo. */

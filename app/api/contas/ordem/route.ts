@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { normalizarOrdem } from '@/lib/webtrader/ordem-contas'
 import { normalizarFiltro } from '@/lib/webtrader/filtro-contas'
+import { normalizarOcultas } from '@/lib/webtrader/ocultar-contas'
 import { tabelaDaEtiqueta } from '@/lib/contas/etiqueta'
 
 export const dynamic = 'force-dynamic'
@@ -10,8 +11,9 @@ export const dynamic = 'force-dynamic'
 /**
  * A ORDEM DAS CONTAS NO SELETOR, e qual delas é a FAVORITA (pedido do dono, 23/09).
  *
- *   GET                                  →  { ordem, favorita, filtroContas, umCliqueAceite, umClique }
+ *   GET                                  →  { ordem, favorita, filtroContas, ocultas, umCliqueAceite, umClique }
  *   PATCH { ordem: string[] }            →  grava a ordem que a pessoa arrastou
+ *   PATCH { ocultas: string[] }          →  as contas escondidas no modo organizar do seletor
  *   PATCH { favorita: ref | null }       →  marca (ou desmarca) a conta que abre primeiro
  *   PATCH { filtroContas: 'minhas' … }   →  «As minhas» / «Mestres» / «Todas» no seletor
  *   PATCH { umCliqueAceite: true }       →  a pessoa leu e aceitou o aviso da negociação num clique
@@ -29,13 +31,19 @@ export const dynamic = 'force-dynamic'
  * UPDATE leva sempre `user_id = quem pede`: ninguém marca a conta de outra pessoa, e uma conta
  * ligada com a password investor (que é de outro dono) fica de fora.
  *
+ * As OCULTAS (24/09) são a lista de contas que a pessoa escondeu no modo organizar do seletor.
+ * Vivem ao lado da ordem (`profile_data.webtrader.contas_ocultas`) porque são a mesma natureza de
+ * coisa: uma preferência de apresentação, uma lista de referências do seletor, que segue para o
+ * telemóvel. ESCONDER NÃO É APAGAR e não tira acesso a nada — a conta continua lá, continua a
+ * poder ser negociada, e volta ao ecrã pelo mesmo olho que a escondeu (lib/webtrader/ocultar-contas.ts).
+ *
  * O FILTRO (24/09) é só isso: qual dos três botões do seletor está premido. Vive ao lado da ordem
  * (`profile_data.webtrader.filtro_contas`) para seguir para o telemóvel, e não decide acesso
  * nenhum — quem não tem contas mestre não ganha nenhuma por gravar «mestres» aqui.
  */
 export async function GET(request: NextRequest) {
   const userId = await userIdDoPedido(request)
-  if (!userId) return NextResponse.json({ ordem: [], favorita: null, filtroContas: normalizarFiltro(null) }, { headers: { 'Cache-Control': 'no-store' } })
+  if (!userId) return NextResponse.json({ ordem: [], favorita: null, filtroContas: normalizarFiltro(null), ocultas: [] }, { headers: { 'Cache-Control': 'no-store' } })
   const db = getSupabaseAdmin()
   const [{ data: perfil }, { data: fav }] = await Promise.all([
     db.from('profiles').select('profile_data').eq('id', userId).maybeSingle(),
@@ -51,6 +59,7 @@ export async function GET(request: NextRequest) {
       ordem: normalizarOrdem(wt.ordem_contas),
       favorita: escolhida,
       filtroContas: normalizarFiltro(wt.filtro_contas),
+      ocultas: normalizarOcultas(wt.contas_ocultas),
       // Negociação num clique: o aviso aceita-se UMA vez (fica na conta da pessoa, não no
       // dispositivo — aceitar no computador e voltar a ser interrogado no telemóvel era o que
       // fazia isto parecer partido) e o interruptor é por conta.
@@ -104,6 +113,17 @@ export async function PATCH(request: NextRequest) {
     const ok = await guardarNoPerfil(db, userId, (wt) => ({ ...wt, filtro_contas: filtro }))
     if (!ok) return NextResponse.json({ error: 'Não foi possível gravar o filtro.' }, { status: 500 })
     return NextResponse.json({ ok: true, filtroContas: filtro }, { headers: { 'Cache-Control': 'no-store' } })
+  }
+
+  // ── as contas escondidas no modo organizar ───────────────────────────────
+  if ('ocultas' in corpo) {
+    if (!Array.isArray(corpo.ocultas)) return NextResponse.json({ error: 'Falta a lista das contas escondidas.' }, { status: 400 })
+    // Não se valida contra a base a quem pertence cada id: esconder é uma preferência de vista, e
+    // esconder a conta de outra pessoa na SUA lista não lhe faz nada a ela — nem lhe dá acesso.
+    const ocultas = normalizarOcultas(corpo.ocultas)
+    const ok = await guardarNoPerfil(db, userId, (wt) => ({ ...wt, contas_ocultas: ocultas }))
+    if (!ok) return NextResponse.json({ error: 'Não foi possível gravar as contas escondidas.' }, { status: 500 })
+    return NextResponse.json({ ok: true, ocultas }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
   // ── negociação num clique: o aviso aceite (uma vez por pessoa) ───────────
