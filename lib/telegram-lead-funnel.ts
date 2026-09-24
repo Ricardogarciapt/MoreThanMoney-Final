@@ -8,14 +8,12 @@
  */
 import { getMtmcopyBotToken, MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 import { getProofStats } from '@/lib/proof-stats'
-import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
-import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-
 // Os links dos grupos NÃO vivem aqui: quem os liberta é o `telegram-broker-gate`, com convites
-// pessoais, e só depois de a corretora estar validada. As duas constantes que aqui estavam eram
-// links estáticos que ninguém usava — e um link de grupo à solta num ficheiro é um link que
-// acaba por sair numa mensagem a quem não passou pelo gate.
-import { TRIAL_CODE } from '@/lib/telegram-broker-gate'
+// pessoais, e só depois de a corretora estar validada. As duas constantes que aqui estavam
+// (FOREX_LINK, SENSEI_LINK) eram links estáticos que ninguém usava — e um link de grupo à solta
+// num ficheiro é um link que acaba por sair numa mensagem a quem não passou pelo gate.
+import { MIN_DEPOSIT, TRIAL_CODE } from '@/lib/telegram-broker-gate'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 function buildSystem(PROOF: string): string { return `És um CLOSER humano da MoreThanMoney a conversar EM PRIVADO (Telegram/WhatsApp/IG) com um lead. Caloroso, seguro, direto. Curto: máx ~60 palavras, 1–3 frases, no máx 1 emoji. Uma pergunta de cada vez. O teu trabalho é QUALIFICAR e FECHAR — não és um FAQ.
 
@@ -273,29 +271,12 @@ export async function handleLeadsGroupNewMembers(
   }
 }
 
-/** Mensagem de boas-vindas do funil (novo membro / primeiro contacto). */
 /**
- * As boas-vindas — editáveis no /admin/social.
+ * As boas-vindas do funil NÃO vivem aqui.
  *
- * `leadWelcomeMessageEditavel()` devolve o texto que o Ricardo escreveu, se escreveu algum. Esta
- * função fica como o DEFEITO: quem nunca editou recebe sempre a versão nova quando o produto
- * muda, em vez de uma cópia congelada no dia em que foi feita.
+ * Viviam em duas funções exportadas (`leadWelcomeMessage`, `leadWelcomeMessageEditavel`) que
+ * ninguém chamava desde que a mensagem passou a ser editável: o texto real está em
+ * `lib/mensagens-funil.ts` (`boas_vindas` / `boas_vindas_grupo`) e sai por `lerMensagem`. Duas
+ * cópias de uma mensagem de vendas é uma cópia a mais — é a que alguém corrige sem que o lead
+ * veja a diferença.
  */
-export async function leadWelcomeMessageEditavel(firstName?: string | null): Promise<string> {
-  const { lerMensagem } = await import('@/lib/mensagens-funil')
-  return lerMensagem('boas_vindas', { nome: firstName ? ` ${firstName}` : '' })
-}
-
-export function leadWelcomeMessage(firstName?: string | null): string {
-  const nome = firstName ? ` ${firstName}` : ''
-  return (
-    `👋 Olá${nome}, bem-vindo à MoreThanMoney!\n\n` +
-    `Comunidade PT de trading: sinais acompanhados do início ao fim, medidos em pips e percentagem. ` +
-    `Para te ajudar melhor — o que procuras: **sinais para copiar à mão**, ` +
-    `**Tap to Trade** (1 toque na app) ou **algo automático**? 🙂\n\n` +
-    // Dica de tradução — o lead pode escrever no seu idioma (respondo nele) e usar o
-    // "Traduzir" nativo do Telegram (toque longo na mensagem) para ler em qualquer língua.
-    `🌐 Fala no teu idioma — respondo-te nele. (Para traduzir qualquer mensagem: toque longo → Traduzir.)\n` +
-    `Write in your own language — I'll reply in it. (Long-press any message → Translate.)`
-  )
-}

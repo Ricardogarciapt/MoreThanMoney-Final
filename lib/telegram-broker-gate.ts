@@ -305,43 +305,17 @@ export const APP_REGISTER_LINK = 'https://www.morethanmoney.pt/register'
 export const APP_ANDROID_LINK = 'https://www.morethanmoney.pt/downloads/MoreThanMoney.apk'
 export const TRIAL_CODE = '14DayTrial'
 
-/**
- * Porta suave: experimentar a app GRÁTIS 14 dias (sem depósito).
- *
- * O texto vive agora em `lib/mensagens-funil.ts` e é editável no /admin/social. Esta função fica
- * como o DEFEITO — quem nunca editou recebe sempre a versão nova quando o produto muda.
- */
-export function trialStepMessage(): string {
-  return (
-    `🎁 <b>Começa GRÁTIS — sem depositar nada:</b>\n\n` +
-    `1️⃣ Descarrega a app MTM (iOS: App Store "MTM System" · Android: ${APP_ANDROID_LINK})\n` +
-    `2️⃣ Cria conta em ${APP_REGISTER_LINK}\n` +
-    `3️⃣ Em <b>Mais → Definições → Resgatar código</b>, usa <code>${TRIAL_CODE}</code> → <b>14 dias Premium grátis</b> 🚀\n\n` +
-    `Vês por dentro os sinais, o Tap-to-Trade e as sessões ao vivo. Quando quiseres os <b>grupos de sinais + copytrading</b>, é só o passo da corretora (escreve /acesso). 💪`
-  )
-}
-
-/**
- * O passo da corretora. O texto é editável no /admin/social; isto é o defeito.
- *
- * `brokerStepMessageEditavel()` é o que se deve chamar em código novo — devolve o texto que o
- * Ricardo escreveu, se escreveu algum.
- */
+/** O passo da corretora, como ele vai mesmo sair (editado no /admin/social ou o do código). */
 export async function brokerStepMessageEditavel(): Promise<string> {
   const { lerMensagem } = await import('@/lib/mensagens-funil')
   return lerMensagem('passo_corretora')
 }
 
-export function brokerStepMessage(): string {
-  return (
-    `🔓 <b>Duas formas de entrar:</b>\n\n` +
-    `🎁 <b>A) Experimenta GRÁTIS já</b> — sem depositar:\n` +
-    `Descarrega a app, cria conta em ${APP_REGISTER_LINK} e usa o código <code>${TRIAL_CODE}</code> (Mais → Definições → Resgatar código) → <b>14 dias Premium grátis</b>.\n\n` +
-    `💎 <b>B) Grupos de sinais + copytrading</b> (acesso completo):\n` +
-    `1️⃣ Abre conta na PU Prime: ${PUPRIME_LINK}\n` +
-    `2️⃣ Deposita no mínimo <b>$${MIN_DEPOSIT}</b>\n` +
-    `3️⃣ Envia-me o teu <b>UID</b> da PU Prime (só o número)\n` +
-    `4️⃣ Envia um <b>print screen</b> do depósito\n\n` +
-    `Assim que validar, liberto os grupos + cupão Premium. Começa pela A se quiseres testar primeiro. 🚀`
-  )
-}
+/**
+ * Os TEXTOS por defeito destas mensagens vivem em `lib/mensagens-funil.ts` (`MENSAGENS`), e é de
+ * lá que saem — editados no /admin/social ou, quando ninguém os editou, do código.
+ *
+ * Havia aqui uma segunda cópia de cada um (`trialStepMessage`, `brokerStepMessage`) que já
+ * ninguém enviava. Um texto duplicado que não se envia não é código morto inofensivo: é a
+ * versão que alguém vai encontrar primeiro e corrigir, convencido de que corrigiu a mensagem.
+ */

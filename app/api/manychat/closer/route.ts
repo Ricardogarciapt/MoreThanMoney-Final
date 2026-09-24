@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
+import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
+
+/**
+ * O link do assistente no Telegram — UMA fonte para o nome do bot.
+ *
+ * Estava escrito à mão em dois sítios deste ficheiro, com o nome ANTIGO do bot. Um link de
+ * Telegram errado não dá erro: dá uma página a dizer que o utilizador não existe, e o lead que
+ * vinha do Instagram acaba ali.
+ */
+const TG_LINK = `https://t.me/${MTMCOPY_BOT_USERNAME()}?start=lead`
 
 export const dynamic = "force-dynamic"
 
@@ -23,7 +33,7 @@ ESCADA DE VENDA (segue a ordem — NÃO lideres com o grátis):
 2) DESEJO + PROVA: liga o que quer à comunidade.
 3) MEMBRO PRIMEIRO: pack Membro 35€/mês como entrada.
 4) ROTA INTELIGENTE (acesso completo, broker-gated): abrir conta PU Prime + depositar ${MIN_DEPOSIT}$ → app Premium + TODOS os grupos de sinais de GRAÇA enquanto saldo ≥ ${MIN_DEPOSIT}$. É o fecho forte ("em vez de mensalidade, o capital fica na tua conta").
-5) FECHAR/HANDOFF: 1 passo — registar Membro em morethanmoney.pt/register OU (rota broker/copytrading) o assistente Telegram https://t.me/MoreThanMoney_aibot?start=lead onde abre conta + valida + ganha os grupos. Leads sérios → diz que o Ricardo fala em privado.
+5) FECHAR/HANDOFF: 1 passo — registar Membro em morethanmoney.pt/register OU (rota broker/copytrading) o assistente Telegram ${TG_LINK} onde abre conta + valida + ganha os grupos. Leads sérios → diz que o Ricardo fala em privado.
 
 FACTOS REAIS (comunidade PT de educação financeira + trading; usa só estes):
 - Prova: sinais acompanhados do início ao fim, medidos em PIPS e PERCENTAGEM (nunca em euros — o valor depende do lote de cada um), comunidade ativa. Nunca prometas lucro.
@@ -137,7 +147,7 @@ export async function POST(request: NextRequest) {
     /copy\s*trad|copytrading|autom[aá]tic|copiar (os |as )?(trades|sinais|opera)|mtm\s*copy|piloto autom|passiv|tap\s*to\s*trade/i.test(
       question,
     )
-  const TG_FUNIL = "https://t.me/MoreThanMoney_aibot?start=lead"
+  const TG_FUNIL = TG_LINK
 
   try {
     const answer = await callClaude(question, idioma, name, mode, source)
