@@ -11,7 +11,9 @@ import { join } from 'node:path'
 import { ESTRATEGIA_DO_WEBHOOK } from '../../mestres/servidor/sinal-mestre'
 import { T2T_SENDER_TO_CHAT, T2T_SIGNAL_CHANNELS } from '../tap-to-trade-channels'
 
-import { confirmationsPassed } from '../webhook-gates'
+import { classifyAsset, confirmationsPassed, stopsSane } from '../webhook-gates'
+import { parseSenseiTradingViewAlert, parseSignal } from '../signal-parser'
+import { decidirScannerParaMestre } from '../scanner-para-mestre'
 import {
   CHAVES_CONFIRMACOES_SCANNER,
   lerConfirmacoes,
@@ -98,5 +100,86 @@ assert.equal(ESTRATEGIA_DO_WEBHOOK.mtmscanner?.ignoraProviderAtivo, undefined,
 //    Isto é sobre a conta mestre, não sobre o botão de aceitar dos clientes.
 assert.ok(!T2T_SIGNAL_CHANNELS.includes('trade-ideas-setup'), 'trade-ideas-setup não volta ao T2T')
 assert.ok(!Object.values(T2T_SENDER_TO_CHAT).flat().includes('trade-ideas-setup'))
+
+// 5. As duas condições que mataram o desvio no dia em que nasceu não podem voltar.
+//    `!isIdeaAlert`/`!activeSensei` vieram do `canExecuteProvider` e são SEMPRE falsas nos alertas do
+//    scanner (o parser do Sensei monta um alerta a partir de ticker+action e infere `idea`).
+assert.ok(
+  !/decidirScannerParaMestre\(\{[\s\S]{0,600}?(isIdeaAlert|activeSensei)/.test(webhook),
+  'a decisão do scanner não pode voltar a depender de isIdeaAlert/activeSensei',
+)
+assert.match(webhook, /decidirScannerParaMestre\(/, 'a decisão vive na função pura, com testes')
+// 6. Não abrir deixa rasto na linha do sinal — a resposta a «porque é que este não abriu?».
+assert.match(webhook, /registarMotivoScanner/, 'o motivo tem de ir para tradingview_signals.ai_error')
+
+// ── A DECISÃO, com os alertas REAIS de 24/09 ─────────────────────────────────
+// Linhas literais de `tradingview_signals` (as três que passaram todas as confirmações e que, mesmo
+// assim, não abriram uma única posição na mestre 77696002).
+const alertasReais = [
+  { id: 'f3025af7 EURCHF buy 14:30', p: { sl: 0.94169, tp1: 0.94357, tp2: 0.94483, tp3: 0.94608, entry: 0.94232, action: 'buy', ticker: 'EURCHF', exchange: 'BLACKBULL', strategy: 'MTMScanner', timeframe: '15', order_type: 'MARKET', confirmations: conf(true, true, true) } },
+  { id: '96f08fed GBPUSD sell 14:30', p: { sl: 1.32225, tp1: 1.31965, tp2: 1.31791, tp3: 1.31618, entry: 1.32139, action: 'sell', ticker: 'GBPUSD', exchange: 'BLACKBULL', strategy: 'MTMScanner', timeframe: '15', order_type: 'MARKET', confirmations: conf(false, false, false) } },
+  { id: '187de921 GBPCHF buy 14:15', p: { sl: 1.09382, tp1: 1.09617, tp2: 1.09774, tp3: 1.09931, entry: 1.09461, action: 'buy', ticker: 'GBPCHF', exchange: 'BLACKBULL', strategy: 'MTMScanner', timeframe: '15', order_type: 'MARKET', confirmations: conf(true, true, true) } },
+]
+
+/** O caminho do webhook até `parsedForExec`, com o MESMO parser (é aqui que estava o defeito). */
+function comoOWebhookLe(p: (typeof alertasReais)[number]['p']) {
+  const campos = {
+    ticker: p.ticker, action: p.action, price: null, entry: p.entry, sl: p.sl,
+    tp: [p.tp1, p.tp2, p.tp3], tp1: p.tp1, tp2: p.tp2, tp3: p.tp3, tp4: null,
+    timeframe: p.timeframe, exchange: p.exchange, alertName: p.strategy, state: null,
+  }
+  // buildRawSignal do webhook: o alerta do scanner não traz texto reconhecível.
+  const acao = p.action === 'buy' ? '🔵 Buy 🔵' : '🔴 Sell 🔴'
+  const raw = `Moeda: ${p.ticker}\nAção:   ${acao}\nStoploss: ${p.sl}\nTakeprofit: ${p.tp1}`
+  const activeSensei = parseSenseiTradingViewAlert(raw, campos)
+  return { activeSensei, parsedForExec: activeSensei ?? parseSignal(raw) }
+}
+
+for (const { id, p } of alertasReais) {
+  const { activeSensei, parsedForExec } = comoOWebhookLe(p)
+  // A prova do defeito: o parser do Sensei devolve SEMPRE um alerta, e classifica-o como `idea`.
+  assert.ok(activeSensei, `${id}: o parser do Sensei devolve sempre um alerta (era isto que travava)`)
+  assert.equal(activeSensei!.alertType, 'idea', `${id}: e classifica-o como ideia`)
+
+  const d = decidirScannerParaMestre({
+    scanner: 'mtmscanner',
+    tipoSinal: 'entry',
+    classe: classifyAsset(p.ticker),
+    simbolo: parsedForExec?.symbol ?? null,
+    direcao: parsedForExec?.direction ?? null,
+    confirmacoes: temTodasAsConfirmacoes(p, parsedForExec?.direction ?? null),
+    stopsSaos: stopsSane(parsedForExec?.entry ?? null, parsedForExec?.sl ?? null),
+    gateExec: { ok: true },
+    podeExecutarProvider: false,
+  })
+  assert.equal(d.vai, true, `${id}: tinha de ir à mestre — ${d.motivo ?? ''}`)
+  assert.equal(d.candidato, true)
+}
+
+// ── E o que continua a NÃO ir (com motivo escrito) ───────────────────────────
+const base = {
+  scanner: 'mtmscanner' as const, tipoSinal: 'entry' as const, classe: classifyAsset('EURCHF'),
+  simbolo: 'EURCHF', direcao: 'buy', confirmacoes: temTodasAsConfirmacoes(compraCheia, 'buy'),
+  stopsSaos: true, gateExec: { ok: true }, podeExecutarProvider: false,
+}
+assert.equal(decidirScannerParaMestre({ ...base, scanner: 'sensei' }).vai, false)
+assert.equal(decidirScannerParaMestre({ ...base, scanner: 'sensei' }).candidato, false, 'outro scanner não enche o ai_error')
+const seguimento = decidirScannerParaMestre({ ...base, tipoSinal: 'followup' })
+assert.equal(seguimento.vai, false)
+assert.match(seguimento.motivo ?? '', /seguimento/)
+const semConf = decidirScannerParaMestre({ ...base, confirmacoes: temTodasAsConfirmacoes(compraIncompleta, 'buy') })
+assert.equal(semConf.vai, false)
+assert.equal(semConf.candidato, false, 'os ~95% que o filtro corta não escrevem motivo nenhum')
+const indice = decidirScannerParaMestre({ ...base, classe: classifyAsset('GER40'), simbolo: 'GER40' })
+assert.equal(indice.vai, false)
+assert.equal(indice.candidato, true, 'um índice com 3/3 merece explicação')
+assert.match(indice.motivo ?? '', /fora do âmbito da mestre/)
+const stopLixo = decidirScannerParaMestre({ ...base, stopsSaos: false })
+assert.match(stopLixo.motivo ?? '', /stop fora de escala/)
+const gateFora = decidirScannerParaMestre({ ...base, gateExec: { ok: false, reason: 'EURCHF fora da whitelist de execução' } })
+assert.match(gateFora.motivo ?? '', /gate de execução: EURCHF fora da whitelist/)
+assert.equal(gateFora.candidato, true)
+// E se o sinal já vai pelo caminho normal, não há desvio nenhum a fazer (nunca dois executores).
+assert.equal(decidirScannerParaMestre({ ...base, podeExecutarProvider: true }).vai, false)
 
 console.log('scanner-confirmacoes.check: ok')
