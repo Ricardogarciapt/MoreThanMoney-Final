@@ -67,11 +67,18 @@ async function main() {
   })
 
   // ── 2. email de entrega ─────────────────────────────────────────────────
-  await t('email: conta real da casa é Funded (real), mesmo com `analise`', () => {
+  /**
+   * 24/09: era `'funded'`, e o email dizia a estas contas o mesmo que diz à Funded de um cliente —
+   * «capital patrocinado MTM, 75% dos resultados são teus». O WebTrader já lhes dizia outra coisa
+   * («Conta de auditoria»), por decisão do dono em aviso-conta.ts: negoceiam a sério, mas ninguém
+   * as ganhou num desafio — servem para a casa auditar as estratégias. Agora as duas superfícies
+   * respondem pela mesma função. O que NÃO muda é `real`: continua a conter negociação real.
+   */
+  await t('email: conta real da casa é de AUDITORIA (real), mesmo com `analise`', () => {
     const c = contaEntregaDaLinha(umK, null, null, false)
     assert.equal(c.analise, true)
     assert.equal(c.contaReal, true)
-    assert.equal(tipoDeEntrega(c), 'funded')
+    assert.equal(tipoDeEntrega(c), 'auditoria')
     assert.equal(textosDaEntrega(c, 'criacao', 'pt').real, true)
     assert.equal(tipoDeEntrega(contaEntregaDaLinha(clienteAnalise, null, null, false)), 'analise')
   })

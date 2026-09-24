@@ -38,12 +38,49 @@ export function useSemCripto(): boolean {
   return v
 }
 
+/**
+ * As moedas do catálogo (`funded_symbols.classe = 'cripto'`) e as dos canais/scanners.
+ *
+ * A PU Prime abrevia a três letras — ALG (Algorand), ATM (Cosmos), AVA (Avalanche), DOG
+ * (Dogecoin), LNK (Chainlink), NER (Near), SAN (Sandbox), SHB (Shiba), SUS (Sushi) — e a lista
+ * antiga só conhecia os nomes por extenso. Ver __tests__/cripto-catalogo.check.ts, que prende esta
+ * lista ao catálogo real.
+ */
 const BASES = new Set([
-  "BTC", "ETH", "SOL", "XRP", "BNB", "DOGE", "ADA", "AVAX", "LINK", "DOT", "MATIC", "LTC",
-  "HYPE", "SUI", "APT", "ARB", "OP", "TON", "TRX", "NEAR", "INJ", "SEI", "TIA", "ATOM",
-  "FIL", "ETC", "BCH", "UNI", "AAVE", "PEPE", "WIF", "BONK", "SHIB", "FTM", "RNDR", "TAO",
-  "XLM", "XMR", "KAS", "JUP", "IMX", "HBAR", "VET", "ICP", "POL",
+  // catálogo MTM Funded / PU Prime
+  "ADA", "ALG", "ATM", "AVA", "BAT", "BCH", "BNB", "BTC", "CRO", "CRV", "DOG", "DOT", "EOS",
+  "ETC", "ETH", "FIL", "GRT", "HYPE", "INC", "IOT", "LNK", "LRC", "LTC", "NEO", "NER", "NXPC",
+  "OKB", "SAN", "SHB", "SKY", "SOL", "SUS", "TRUMP", "TRX", "UNI", "USDT", "WLD", "WLFI",
+  "XLM", "XRP", "XTZ", "ZEC",
+  // nomes por extenso (scanners, chat, alertas, links de fora)
+  "DOGE", "AVAX", "LINK", "MATIC", "SUI", "APT", "ARB", "OP", "TON", "NEAR", "INJ", "SEI",
+  "TIA", "ATOM", "AAVE", "PEPE", "WIF", "BONK", "SHIB", "FTM", "RNDR", "TAO", "XMR", "KAS",
+  "JUP", "IMX", "HBAR", "VET", "ICP", "POL", "ALGO", "SAND", "SUSHI", "WLFI",
 ])
+
+/**
+ * As moedas de cotação que o catálogo usa. Uma cripto não se cota só em dólares: XRPJPY, ADAJPY,
+ * BTCXAU, ETHLTC e BTCBCH são símbolos nossos, e com a lista antiga (só USD/EUR/USDT/USDC/BTC/ETH)
+ * ficavam de fora — XRPJPY não era lido como cripto nenhuma.
+ */
+const COTACOES = /(USDT|USDC|USD|EUR|JPY|XAU|BTC|ETH|BCH|LTC)$/
+
+/**
+ * Símbolos que a app JÁ VIU o catálogo marcar como cripto (`classe = 'cripto'`).
+ *
+ * A lista acima é um palpite; isto é a verdade. Quem carrega fichas do catálogo
+ * (components/funded/pre-carga.ts, a watchlist) semeia-o, e a partir daí um símbolo novo fica
+ * bloqueado em todo o lado — nos favoritos guardados, no multi-gráfico, num deep link — sem
+ * ninguém ter de se lembrar de o acrescentar aqui.
+ */
+const VISTOS_CRIPTO = new Set<string>()
+
+/** O catálogo diz que estes são cripto. Chamar sempre que chegam fichas com `classe`. */
+export function registarSimbolosCripto(simbolos: Array<{ symbol?: string | null; classe?: string | null }>): void {
+  for (const s of simbolos) {
+    if (s?.classe === "cripto" && s.symbol) VISTOS_CRIPTO.add(String(s.symbol).trim().toUpperCase())
+  }
+}
 const BOLSAS_CRIPTO = /^(BINANCE|BYBIT|COINBASE|KRAKEN|BITSTAMP|BITFINEX|OKX|KUCOIN|BITGET|MEXC|GATEIO|CRYPTO|CRYPTOCAP|HTX|HUOBI|POLONIEX|GEMINI|DERIBIT|PHEMEX|BINGX):/i
 
 /**
@@ -54,13 +91,21 @@ export function ehSimboloCripto(simbolo?: string | null): boolean {
   if (!simbolo) return false
   const bruto = String(simbolo).trim().toUpperCase()
   if (!bruto) return false
+  if (VISTOS_CRIPTO.has(bruto)) return true
   if (BOLSAS_CRIPTO.test(bruto)) return true
   const s = bruto.replace(/^[A-Z0-9_]+:/, "").replace(/\s+/g, "")
-  // USDTRY, USDCAD, USDCHF e USDCNH são forex, não stablecoins.
-  if (/\.P$/.test(s) || /USDT(?!RY)|USDC(?!AD|HF|NH)|PERP/.test(s)) return true
+  if (VISTOS_CRIPTO.has(s)) return true
+  if (/\.P$/.test(s) || /PERP/.test(s)) return true
   if (/^(XAU|XAG|XPT|XPD)/.test(s)) return false
   const letras = s.replace(/[^A-Z]/g, "")
-  const base = letras.replace(/(USD|EUR|USDT|USDC|BTC|ETH)$/, "")
+  /**
+   * Stablecoin só no FIM. A regra antiga procurava «USDT»/«USDC» em qualquer sítio, com uma lista
+   * de excepções (USDTRY, USDCAD, USDCHF, USDCNH) — e deixava de fora USDCLP, USDCOP, USDCZK,
+   * USDTHB e USDTWD: cinco pares de forex a mais escondidos da app iOS como se fossem cripto.
+   * O par USDT/JPY, esse, é cripto e entra pela lista de moedas (USDT), não por aqui.
+   */
+  if (/(USDT|USDC)$/.test(letras)) return true
+  const base = letras.replace(COTACOES, "")
   if (BASES.has(base) || BASES.has(letras)) return true
   for (const b of ["BTC", "ETH"]) if (letras.startsWith(b)) return true
   return false

@@ -3,6 +3,7 @@
 import { authHeaders } from "@/lib/auth-token"
 import { armazemDeSessoes } from "@/lib/webtrader/sessoes-separador"
 import type { Simbolo } from "@/lib/mtmfunded/simulado/matematica"
+import { COR_DO_ESTADO } from "@/lib/mtmfunded/etiquetas"
 
 /**
  * O CLIENTE DO WEBTRADER — todas as chamadas passam por aqui.
@@ -156,9 +157,24 @@ export const usd = (n: number | null | undefined) =>
 export const px = (n: number | null | undefined, digits = 2) =>
   n == null || !Number.isFinite(n) ? "—" : n.toFixed(digits)
 
+/**
+ * A COR DE UM ESTADO DE CONTA — uma tabela só.
+ *
+ * Os cinco estados MTM Funded vêm de lib/mtmfunded/etiquetas (`COR_DO_ESTADO`); esta tabela era uma
+ * cópia byte a byte deles, e duas tabelas com a mesma verdade acabam sempre por divergir.
+ *
+ * Os outros três não são estados MTM Funded: o seletor do WebTrader (lib/webtrader/seletor.ts)
+ * põe «Bloqueada», «Demo» e «Real» no mesmo campo para as contas de corretora. As cores deles
+ * estavam escritas à mão no meio do JSX (#fb7185 para «Real», que não existe em tabela nenhuma) —
+ * ficam aqui, ao lado das outras, para se verem todas de uma vez.
+ */
 export const COR_ESTADO: Record<string, string> = {
-  Active: "#34d399", Breached: "#f87171", Pause: "#fbbf24", Closed: "#a1a1aa", Pending: "#60a5fa",
+  ...COR_DO_ESTADO,
+  Bloqueada: "#a1a1aa", Demo: "#60a5fa", Real: "#fb7185",
 }
+
+/** A cor de um estado; o que não se conhece fica cinzento, em vez de fingir que é «Closed». */
+export const corDoEstado = (e: string | null | undefined) => COR_ESTADO[String(e ?? "")] ?? "#a1a1aa"
 
 /** Símbolo para o widget do TradingView (só visualização). */
 const TV_INDICES: Record<string, string> = {

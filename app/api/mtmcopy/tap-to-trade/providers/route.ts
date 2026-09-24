@@ -3,22 +3,10 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getSignalSourcesConfig } from '@/lib/mtmcopy/signal-sources-config'
 import { normalizeProviderRoutes } from '@/lib/mtmcopy/provider-routes'
 import { mtmStrategyPublicLabel } from '@/lib/mtmcopy/provider-constants'
-import { appChannelsForRoute } from '@/lib/mtmcopy/tap-to-trade-channels'
+import { appChannelsForRoute, rotuloCanalT2T } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 export const dynamic = 'force-dynamic'
 
-/** Nome público das fontes T2T sem conta provedora. */
-/** Nome legível das fontes SEM conta provedora nossa — senão aparece o slug cru na app. */
-const T2T_EXTRA_LABELS: Record<string, string> = {
-  'trade-ideas-setup': 'Ideias de Forex',
-  // O slug lê-se como "scanner MTM", mas o canal é o das estratégias MTM Auto Edge/King/Wolf.
-  'sinais-scanner-mtm': 'MTM Auto Edge/Wolf/King',
-  'aurum-flow': 'Aurum Flow & Perpétuos',
-  // Swings: entram e ficam. Vão para T2T sem motor de gestão — só se acompanha o desfecho.
-  'ideias-e-sinais': 'Ideias Forex Swings',
-  // Perpétuos (Aurum Flow & MTM Perps): fonte TAP to Copy — copiar parâmetros, sem ordem MT5.
-  'cripto-perps': 'Aurum Flow & Perpétuos',
-}
 
 const supabase = getSupabaseAdmin()
 
@@ -85,8 +73,8 @@ export async function GET(request: NextRequest) {
   const providersComExtras = [
     ...providers,
     ...extras.map((ch) => ({
-      label: T2T_EXTRA_LABELS[ch] ?? ch,
-      strategy: T2T_EXTRA_LABELS[ch] ?? ch,
+      label: rotuloCanalT2T(ch),
+      strategy: rotuloCanalT2T(ch),
       sender_channel: ch,
     })),
   ]

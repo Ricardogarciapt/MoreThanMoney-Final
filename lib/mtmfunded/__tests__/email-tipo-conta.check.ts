@@ -45,6 +45,61 @@ t('tipo vem da conta', () => {
   assert.equal(tipoDeEntrega({ tipo: 'provider', saldoInicial: 10000 }), 'mestre')
 })
 
+/**
+ * Os três casos que faltavam ao email (24/09). `tipoDeEntrega` era uma segunda versão, escrita à
+ * mão, do `avisoDaConta` que decide a faixa do WebTrader — e nesses três casos as duas superfícies
+ * diziam coisas diferentes da MESMA conta.
+ */
+t('Conta Real recebe email de Conta Real, não de desafio', () => {
+  const real: ContaEntrega = { tipo: 'real', saldoInicial: 5000, estado: 'ativa' }
+  assert.equal(tipoDeEntrega(real), 'real')
+  const txt = textosDaEntrega(real, 'criacao', 'pt')
+  assert.equal(txt.real, true)
+  // O que estava mal: caía no `default` e a tabela dizia «F1 · Fase 1» a quem pôs dinheiro dele.
+  assert.equal(txt.linhas[0][1], 'Real')
+  assert.ok(!txt.assunto.toLowerCase().includes('desafio'), txt.assunto)
+  assert.ok(txt.aviso.includes('negociação real'), txt.aviso)
+})
+
+t('conta fechada não promete negociação real — nem diz que era simulada', () => {
+  for (const estado of ['quebrada', 'cancelada', 'expirada']) {
+    const fechada: ContaEntrega = { tipo: 'financiada', saldoInicial: 10000, estado }
+    assert.equal(tipoDeEntrega(fechada), 'encerrada', estado)
+    const txt = textosDaEntrega(fechada, 'criacao', 'pt')
+    assert.equal(txt.real, false, estado)
+    assert.ok(txt.aviso.includes('encerrada'), txt.aviso)
+    // O erro que isto evita: «contém negociação real de capital patrocinado» numa conta rebentada.
+    assert.ok(!txt.aviso.includes('capital patrocinado'), txt.aviso)
+    assert.ok(!txt.aviso.includes('simulada'), txt.aviso)
+  }
+  // A Funded a correr continua a dizer o que dizia.
+  assert.equal(tipoDeEntrega({ tipo: 'financiada', saldoInicial: 10000, estado: 'ativa' }), 'funded')
+})
+
+t('desafio fechado continua a ser o desafio de quem o recebeu', () => {
+  // `avisoDaConta` distingue avaliação concluída/terminada; para o email é sempre o desafio dele.
+  for (const estado of ['aprovada', 'quebrada', 'expirada']) {
+    assert.equal(tipoDeEntrega({ ...desafio2fF1, estado }), 'desafio', estado)
+  }
+})
+
+t('o email diz o mesmo que a faixa do WebTrader', () => {
+  const casos: Array<[ContaEntrega, string]> = [
+    [{ tipo: 'real', saldoInicial: 5000, estado: 'ativa' }, 'real'],
+    [{ tipo: 'financiada', saldoInicial: 1000, estado: 'ativa', contaReal: true, analise: true }, 'auditoria'],
+    [{ tipo: 'financiada', saldoInicial: 1000, estado: 'ativa', analise: true }, 'analise'],
+    [{ tipo: 'financiada', saldoInicial: 10000, estado: 'ativa' }, 'funded'],
+    [{ tipo: 'torneio', saldoInicial: 10000, estado: 'ativa' }, 'torneio'],
+    [{ tipo: 'provider', saldoInicial: 10000, estado: 'ativa' }, 'mestre'],
+  ]
+  for (const [c, esperado] of casos) {
+    assert.equal(tipoDeEntrega(c), esperado, esperado)
+    // A mesma conta, pela função da faixa: as duas respondem ao mesmo.
+    const aviso = avisoDaConta({ tipo: c.tipo, estado: c.estado ?? null, metricas: c.analise ? { analise: true } : null, contaReal: c.contaReal ?? null })
+    assert.equal(aviso, esperado === 'funded' ? 'funded' : aviso, esperado)
+  }
+})
+
 // ── assunto e texto por tipo ────────────────────────────────────────────────
 t('desafio 1 fase', () => {
   const e = textosDaEntrega(desafio1f, 'criacao', 'pt')

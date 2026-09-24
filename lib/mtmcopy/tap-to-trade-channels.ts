@@ -29,6 +29,39 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
 // rejeitava-os com 'provider_off' quando a configuração de rotas não estivesse disponível.
 export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'aurum-flow', 'cripto-perps']
 
+/**
+ * O NOME DE UMA FONTE T2T — o mesmo no painel do admin, na app e no chat.
+ *
+ * Havia dois mapas, um em cada ponta, e não diziam o mesmo do mesmo canal:
+ *   · `ideias-e-sinais` era «Ideias e Sinais» no admin e «Ideias Forex Swings» na app;
+ *   · o mapa da app não conhecia `premium-ideas`, `sinais-goldkiller` nem `sensei-scanner`, e
+ *     nesses o cliente via o slug cru no seletor de fontes.
+ * Nenhum dos dois batia certo com o nome do canal no chat, que é o que a pessoa lê a seguir.
+ *
+ * Os nomes abaixo são os de `chat_channels.name` (24/09). Quem tiver a linha do canal à mão deve
+ * passar o nome vivo a `rotuloCanalT2T` — esta tabela é a rede de segurança, não a verdade.
+ */
+export const ROTULOS_CANAIS_T2T: Record<string, string> = {
+  'premium-ideas': 'MTM Auto Premium',
+  'sensei-scanner': 'MTM Auto Sensei',
+  'sinais-goldkiller': 'Sinais Scanner Gold Killer',
+  'sinais-scanner-mtm': 'MTM Auto Edge/Wolf/King',
+  'aurum-flow': 'MTM Auto Aurum Flow & Perpétuos',
+  // 18/09: `cripto-perps` fundido em `aurum-flow`; o slug antigo fica até correr a migração 118.
+  'cripto-perps': 'MTM Auto Aurum Flow & Perpétuos',
+  'trade-ideas-setup': 'Ideias de Forex',
+  'trade-ideas': 'Ideias de Índices',
+  // Swings: entram e ficam. Vão para T2T sem motor de gestão — só se acompanha o desfecho.
+  'ideias-e-sinais': 'Ideias e Sinais',
+}
+
+/** O nome a mostrar: o do canal no chat se o tivermos, senão o canónico, senão o slug. */
+export function rotuloCanalT2T(slug: string, nomeDoChat?: string | null): string {
+  const s = String(slug ?? '').trim()
+  const vivo = String(nomeDoChat ?? '').trim()
+  return vivo || ROTULOS_CANAIS_T2T[s] || s
+}
+
 /** Slug do canal de chat DEDICADO de uma rota provider (estável, por id da rota). */
 export function deriveProviderChannelSlug(r: ProviderRoute): string {
   return `t2t-${r.id}`

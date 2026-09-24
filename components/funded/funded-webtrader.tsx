@@ -6,7 +6,7 @@ import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
 import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2, Pencil, Check, GripVertical, Star } from "lucide-react"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
-import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, gravarEtiqueta, lerOrdemContas, gravarOrdemContas, gravarContaFavorita, usd, COR_ESTADO } from "./api"
+import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, gravarEtiqueta, lerOrdemContas, gravarOrdemContas, gravarContaFavorita, usd, COR_ESTADO, corDoEstado } from "./api"
 import InstalarWebtrader from "./instalar-webtrader"
 import PopoverAncorado from "./popover-contas"
 import { preaquecerWebtrader } from "./pre-carga"
@@ -278,7 +278,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                 <>
                   <span className="shrink-0 rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: atual.real ? COR_PLATAFORMA[atual.real.plataforma] : "#D2A63C" }}>{atual.etiqueta}</span>
                   {atual.real && <span className="shrink-0 text-[10px] font-bold text-rose-300">REAL</span>}
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: COR_ESTADO[atual.estadoCurto] ?? "#a1a1aa" }} />
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: corDoEstado(atual.estadoCurto) }} />
                   {atual.etiquetaDoDono && <span className="max-w-[120px] truncate text-[11.5px] font-semibold text-[#E9C46A]">{atual.etiquetaDoDono}</span>}
                   <span className="truncate font-mono">{atual.login ?? "—"}</span>
                   {atual.segue && <span className="hidden truncate text-[10.5px] text-[#D2A63C] sm:inline">· {nomeCurto(atual.segue)}</span>}
@@ -296,7 +296,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                     <Pega id={t.id} arrasto={arrasto} />
                     <button role="option" aria-selected={t.id === ativa} disabled={Boolean(t.real.bloqueada)} title={t.real.bloqueada ?? undefined} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left disabled:opacity-50" onClick={() => escolher(t.id)}>
                       <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[t.real.plataforma] }}>{t.etiqueta}</span>
-                      <span className="rounded px-1.5 text-[10.5px] font-bold" style={{ color: t.real.bloqueada ? "#a1a1aa" : t.real.demo ? "#60a5fa" : "#fb7185" }}>{t.estadoCurto}</span>
+                      <span className="rounded px-1.5 text-[10.5px] font-bold" style={{ color: corDoEstado(t.estadoCurto) }}>{t.estadoCurto}</span>
                       <span className="font-mono">{t.login ?? "—"}</span>
                       {t.etiquetaDoDono
                         ? <span className="ml-auto max-w-[130px] truncate text-[11px] font-semibold text-[#E9C46A]" title={t.etiquetaDoDono}>{t.etiquetaDoDono}</span>
@@ -319,7 +319,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                     <Pega id={t.id} arrasto={arrasto} />
                     <button role="option" aria-selected={t.id === ativa} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left" onClick={() => escolher(t.id)}>
                       <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}{t.segue ? ` · ${nomeCurto(t.segue)}` : ""}</span>
-                      <span className="rounded px-1.5 text-[10.5px]" style={{ color: COR_ESTADO[t.estadoCurto] ?? "#a1a1aa" }}>{t.estadoCurto}</span>
+                      <span className="rounded px-1.5 text-[10.5px]" style={{ color: corDoEstado(t.estadoCurto) }}>{t.estadoCurto}</span>
                       <span className="font-mono">{t.login}</span>
                       {t.etiquetaDoDono && <span className="max-w-[120px] truncate text-[11px] font-semibold text-[#E9C46A]" title={t.etiquetaDoDono}>{t.etiquetaDoDono}</span>}
                       {t.saldo != null && <span className="ml-auto font-mono text-zinc-400">{usd(t.equity ?? t.saldo)} $</span>}
@@ -571,7 +571,7 @@ function Entrada({ contas, onEscolher, onFechar, formulario }: {
           {contas.map((c) => (
             <button key={c.id} onClick={() => onEscolher(c.id)} className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-black/40 p-2.5 text-left text-[12px] hover:border-[#D2A63C]/40">
               <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{c.etiqueta}{c.segueEstrategia ? ` · segue ${nomeCurto(c.segueEstrategia.nome)}` : ""}</span>
-              <span className="rounded px-1.5 py-0.5 text-[10.5px] font-semibold" style={{ color: COR_ESTADO[c.estadoCurto], background: `${COR_ESTADO[c.estadoCurto]}22` }}>{c.estadoCurto}</span>
+              <span className="rounded px-1.5 py-0.5 text-[10.5px] font-semibold" style={{ color: corDoEstado(c.estadoCurto), background: `${corDoEstado(c.estadoCurto)}22` }}>{c.estadoCurto}</span>
               <div className="min-w-0">
                 <p className="font-mono text-white">{c.mt5_login ?? "—"}</p>
                 <p className="text-[10.5px] text-zinc-500">{c.servidor ?? SERVIDOR}{c.programa?.nome ? ` · ${c.programa.nome}` : ""}</p>

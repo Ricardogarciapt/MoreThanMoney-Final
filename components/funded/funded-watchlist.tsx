@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Search, Star, Loader2 } from "lucide-react"
 import { type SimboloFicha, type PrecoVivo, px, NOME_CLASSE } from "./api"
-import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
+import { semCripto, ehSimboloCripto, registarSimbolosCripto } from "@/lib/ios-sem-cripto"
 
 /** App iOS: sem cripto na lista, na pesquisa nem nas classes (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts. */
 const simboloVisivel = (s: { symbol: string; classe?: string | null }) =>
@@ -70,6 +70,7 @@ export default function FundedWatchlist(props: {
             const r = await fetch(`/api/mtmfunded/simulado/precos?symbols=${favs.join(",")}&specs=1`)
             if (!r.ok) throw new Error(String(r.status))
             const d = await r.json()
+            registarSimbolosCripto(d.simbolos ?? [])
             simbolos = favs.map((f) => (d.simbolos ?? []).find((x: SimboloFicha) => x.symbol === f)).filter(Boolean).filter(simboloVisivel)
             tot = simbolos.length
           }
@@ -84,6 +85,8 @@ export default function FundedWatchlist(props: {
           const r = await fetch(`/api/mtmfunded/simulado/precos?${params}`)
           if (!r.ok) throw new Error(String(r.status))
           const d = await r.json()
+          // O catálogo é quem sabe o que é cripto: cada página vista fecha a gate noutros ecrãs.
+          registarSimbolosCripto(d.simbolos ?? [])
           const novos: SimboloFicha[] = (d.simbolos ?? []).filter(simboloVisivel)
           simbolos = pagina > 0 ? [...lista, ...novos] : novos
           tot = d.total ?? 0
