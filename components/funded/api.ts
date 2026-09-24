@@ -4,6 +4,7 @@ import { authHeaders } from "@/lib/auth-token"
 import { armazemDeSessoes } from "@/lib/webtrader/sessoes-separador"
 import type { Simbolo } from "@/lib/mtmfunded/simulado/matematica"
 import { COR_DO_ESTADO } from "@/lib/mtmfunded/etiquetas"
+import type { FiltroContas } from "@/lib/webtrader/filtro-contas"
 
 /**
  * O CLIENTE DO WEBTRADER — todas as chamadas passam por aqui.
@@ -110,8 +111,13 @@ export function gravarEtiqueta(ref: string, etiqueta: string): Promise<{ ok: tru
  * A ORDEM das contas no seletor (o que a pessoa arrastou) e a FAVORITA (a que abre primeiro).
  * Guardadas na conta MTM, não no dispositivo — ver app/api/contas/ordem/route.ts.
  */
-export function lerOrdemContas(): Promise<{ ordem: string[]; favorita: string | null }> {
+export function lerOrdemContas(): Promise<{ ordem: string[]; favorita: string | null; filtroContas?: FiltroContas }> {
   return pedir("/api/contas/ordem")
+}
+
+/** O filtro do seletor («As minhas» / «Mestres» / «Todas») — fica na conta, não no dispositivo. */
+export function gravarFiltroContas(filtroContas: FiltroContas): Promise<{ ok: true; filtroContas: FiltroContas }> {
+  return pedir("/api/contas/ordem", { method: "PATCH", body: JSON.stringify({ filtroContas }) })
 }
 
 export function gravarOrdemContas(ordem: string[]): Promise<{ ok: true; ordem: string[] }> {
