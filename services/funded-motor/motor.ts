@@ -57,7 +57,7 @@ import { iniciarWsPrecos, type WsPrecos } from './ws-precos'
 import { iniciarFonteBinance, type FonteBinance } from './fonte-binance'
 import { iniciarFonteYahoo, type FonteYahoo } from './fonte-yahoo'
 import { iniciarFonteConectorMt5, type FonteConectorTicks } from './fonte-conector-mt5'
-import { cruzadosCalculaveis } from '../../lib/mtmfunded/precos/cruzados'
+import { CRUZADOS_FOREX, FRESCURA_FOREX_MS, cruzadosCalculaveis } from '../../lib/mtmfunded/precos/cruzados'
 import {
   assinaturaMetricas,
   precisaDeEscreverMetricas,
@@ -1331,6 +1331,25 @@ async function main(): Promise<void> {
     for (const c of cruzadosCalculaveis(ler, agora)) {
       if (!simbolos.has(c.symbol)) continue
       aoTickRecurso(c.symbol, c.bid, c.ask, c.em, c.emMercado, 'cruzado')
+    }
+    /**
+     * OS CRUZADOS DE FOREX — os pares da whitelist de execução que a corretora não põe no Market
+     * Watch do conector (EURCHF, GBPCHF, EURGBP, EURCAD, GBPCAD, CADCHF, EURAUD, GBPJPY, CADJPY,
+     * NZDUSD). Saem das pernas que o terminal já publica, portanto trazem o preço e a hora de
+     * mercado da corretora onde a ordem entra — ao contrário do Yahoo, que os deixava a dias de
+     * idade e a execução recusava (`abrirSinalNaConta` exige menos de 5 s).
+     *
+     * Limite de frescura mais apertado do que o da cripto e pela mesma razão que estes existem: um
+     * cruzado com pernas de 20 s entra com a idade verdadeira, mas ao entrar apaga um preço mais
+     * fresco que outra fonte tenha posto lá — e o símbolo ficava pior do que estava.
+     * `CRUZADOS_FOREX=0` desliga-os e devolve o comportamento de antes.
+     */
+    if (process.env.CRUZADOS_FOREX !== '0') {
+      const limite = Number(process.env.CRUZADOS_FOREX_MS ?? FRESCURA_FOREX_MS)
+      for (const c of cruzadosCalculaveis(ler, agora, CRUZADOS_FOREX, limite)) {
+        if (!simbolos.has(c.symbol)) continue
+        aoTickRecurso(c.symbol, c.bid, c.ask, c.em, c.emMercado, 'cruzado-fx')
+      }
     }
   }, Number(process.env.CRUZADOS_MS ?? 500)).unref?.()
   // O PAXG é pouco líquido: o livro fica 5-12 s sem mexer. Isto existia para o RE-CARIMBAR com

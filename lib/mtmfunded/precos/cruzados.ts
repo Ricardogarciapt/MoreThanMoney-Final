@@ -72,8 +72,55 @@ export const CRUZADOS_CRIPTO: readonly Cruzado[] = [
   { symbol: 'ETHLTC', a: 'ETHUSD', b: 'LTCUSD', operacao: 'dividir' },
 ]
 
+/**
+ * OS CRUZADOS DE FOREX — os pares que a mestre negoceia e que a corretora não nos põe no ecrã.
+ *
+ * O terminal do conector só publica o que está no Market Watch, e lá dentro estão onze símbolos:
+ * EURUSD, GBPUSD, USDCHF, USDJPY, USDCAD, AUDUSD, AUDNZD, AUDCAD, AUDCHF, AUDJPY e XAUUSD. Da
+ * whitelist de execução isso cobre quatro — e os outros onze ficavam com o Yahoo de há uma semana,
+ * que a execução (5 s) recusa. A estratégia aceitava o sinal e depois não abria nada.
+ *
+ * Estes onze pares fazem-se todos das onze pernas que já lá estão, pela mesma conta que a corretora
+ * faz por dentro: EURCHF = EURUSD × USDCHF, EURGBP = EURUSD ÷ GBPUSD, CADJPY = USDJPY ÷ USDCAD.
+ * Não é um preço inventado — são os DOIS preços da corretora onde a ordem vai entrar, com a hora de
+ * mercado provada nas duas pernas e o spread somado (comprar uma e vender a outra custa os dois).
+ *
+ * Isto NÃO substitui ter o par no Market Watch: o preço directo da corretora tem o spread real do
+ * par, não a soma de dois. É o que se tem enquanto o par não lá estiver — e é muito melhor do que o
+ * nada que havia antes.
+ *
+ * NZDCHF fica de fora de propósito: precisava de TRÊS pernas (AUDUSD ÷ AUDNZD × USDCHF), e a regra
+ * desta casa é que um cruzado nunca se faz de outro cruzado — herdava-lhe o erro e o spread. Esse
+ * par só se resolve pondo-o no Market Watch.
+ */
+export const CRUZADOS_FOREX: readonly Cruzado[] = [
+  // … contra o franco: par/USD × USD/CHF
+  { symbol: 'EURCHF', a: 'EURUSD', b: 'USDCHF', operacao: 'multiplicar' },
+  { symbol: 'GBPCHF', a: 'GBPUSD', b: 'USDCHF', operacao: 'multiplicar' },
+  // CADCHF = USD/CHF ÷ USD/CAD (o dólar corta-se dos dois lados)
+  { symbol: 'CADCHF', a: 'USDCHF', b: 'USDCAD', operacao: 'dividir' },
+  // … contra o dólar canadiano: par/USD × USD/CAD
+  { symbol: 'EURCAD', a: 'EURUSD', b: 'USDCAD', operacao: 'multiplicar' },
+  { symbol: 'GBPCAD', a: 'GBPUSD', b: 'USDCAD', operacao: 'multiplicar' },
+  // … contra o iene
+  { symbol: 'GBPJPY', a: 'GBPUSD', b: 'USDJPY', operacao: 'multiplicar' },
+  { symbol: 'CADJPY', a: 'USDJPY', b: 'USDCAD', operacao: 'dividir' },
+  // … entre pares cotados em dólar: divide-se um pelo outro
+  { symbol: 'EURGBP', a: 'EURUSD', b: 'GBPUSD', operacao: 'dividir' },
+  { symbol: 'EURAUD', a: 'EURUSD', b: 'AUDUSD', operacao: 'dividir' },
+  { symbol: 'NZDUSD', a: 'AUDUSD', b: 'AUDNZD', operacao: 'dividir' },
+]
+
 /** Uma perna com mais do que isto não serve para calcular nada. */
 export const FRESCURA_MAX_MS = 30_000
+
+/**
+ * O MESMO, MAS PARA QUEM ABRE ORDENS: as pernas de um cruzado de forex têm de ter menos do que a
+ * própria execução exige (5 s), senão o cruzado entrava com a idade verdadeira, empurrava para fora
+ * um preço mais fresco de outra fonte e o símbolo acabava PIOR do que estava. Trinta segundos
+ * servem para desenhar um gráfico de cripto; não servem para dimensionar uma trade.
+ */
+export const FRESCURA_FOREX_MS = 5_000
 
 /**
  * O preço de um cruzado, ou `null` se alguma perna faltar, estiver velha ou for absurda.
