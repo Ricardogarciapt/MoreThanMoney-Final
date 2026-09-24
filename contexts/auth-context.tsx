@@ -457,8 +457,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  // Login com IQONIC
-
   // Logout
   const logout = async () => {
     try {
