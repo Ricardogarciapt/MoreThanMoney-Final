@@ -6,7 +6,7 @@ import { AlertTriangle, Eye, type LucideIcon } from "lucide-react"
 import type { MapaPrecos } from "@/lib/mtmfunded/simulado/matematica"
 import type { LimitesConta } from "@/lib/mtmfunded/simulado/ordens"
 import { gestaoDaLinha } from "@/lib/mtmfunded/simulado/avancadas"
-import { type PrecoVivo, type SimboloFicha, COR_ESTADO, usd } from "./api"
+import { type PrecoVivo, type SimboloFicha, corDoEstado, usd } from "./api"
 import FundedGrafico from "./funded-grafico"
 import type { Prefill } from "./funded-ticket"
 import type { AlertaGrafico, OrdemGrafico, PosicaoGrafico } from "./grafico-tipos"
@@ -228,7 +228,7 @@ export function EtiquetaConta({ t }: { t: Trader }) {
   return (
     <span className="flex shrink-0 items-center gap-1">
       <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{c.etiqueta}</span>
-      <span className="rounded px-1 py-0.5 text-[10.5px] font-semibold" style={{ color: COR_ESTADO[c.estadoCurto], background: `${COR_ESTADO[c.estadoCurto]}22` }}>{c.estadoCurto}</span>
+      <span className="rounded px-1 py-0.5 text-[10.5px] font-semibold" style={{ color: corDoEstado(c.estadoCurto), background: `${corDoEstado(c.estadoCurto)}22` }}>{c.estadoCurto}</span>
     </span>
   )
 }

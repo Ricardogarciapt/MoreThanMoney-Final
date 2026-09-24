@@ -21,9 +21,10 @@
  * Puro: sem base de dados nem transporte — os dados lêem-se em ./entrega-conta-dados.ts.
  */
 import type { MotivoLink } from './credenciais-link'
+import { avisoDaConta } from './aviso-conta'
 
 export type Idioma = 'pt' | 'en'
-export type TipoEntrega = 'desafio' | 'oferta' | 'funded' | 'analise' | 'torneio' | 'mestre'
+export type TipoEntrega = 'desafio' | 'oferta' | 'funded' | 'real' | 'auditoria' | 'encerrada' | 'analise' | 'torneio' | 'mestre'
 
 export interface ContaEntrega {
   /** `mtm_trading_accounts.tipo` */
@@ -91,21 +92,35 @@ export function fasesDoPrograma(c: Pick<ContaEntrega, 'fases'>): number | null {
   return Number.isFinite(f) && f >= 1 ? Math.floor(f) : null
 }
 
+/**
+ * O que a conta É, para o email — pela MESMA função que decide a faixa do WebTrader.
+ *
+ * Isto era um segundo `avisoDaConta()` escrito à mão, e faltavam-lhe três casos com consequências:
+ *   · `tipo = 'real'` (capital do cliente, 19/09) caía no `default` e o dono de uma Conta Real
+ *     recebia um email de DESAFIO, com «F1 · Fase 1» na tabela;
+ *   · os estados fechados não existiam: uma Funded QUEBRADA recebia «contém negociação real de
+ *     capital patrocinado» — um convite a negociar numa conta que já não negoceia;
+ *   · a conta de auditoria da casa (`conta_real_casa`) dizia-se Funded de cliente.
+ * Agora a pergunta faz-se uma vez, em ./aviso-conta.ts, e o email só traduz a resposta.
+ */
 export function tipoDeEntrega(c: ContaEntrega): TipoEntrega {
-  switch (c.tipo) {
-    case 'torneio':
-      return 'torneio'
-    case 'provider':
-      return 'mestre'
-    case 'financiada':
-    case 'funded':
-      // A conta real da casa também é `analise` (sem regras), mas negoceia a sério: manda a marca.
-      if (c.contaReal) return 'funded'
-      return c.analise ? 'analise' : 'funded'
-    default:
-      // Um desafio oferecido só se anuncia como oferta na 1.ª fase; a F2 já é o desafio a correr.
-      if ((c.ofertaMarca || c.ofertaRenovacao) && faseDaConta(c) === 1) return 'oferta'
-      return 'desafio'
+  // Um desafio oferecido só se anuncia como oferta na 1.ª fase; a F2 já é o desafio a correr.
+  const ofertaNaPrimeira = (c.ofertaMarca || c.ofertaRenovacao) && faseDaConta(c) === 1
+  switch (avisoDaConta({
+    tipo: c.tipo,
+    estado: c.estado ?? null,
+    metricas: c.analise ? { analise: true } : null,
+    contaReal: c.contaReal ?? null,
+  })) {
+    case 'torneio': return 'torneio'
+    case 'mestre': return 'mestre'
+    case 'funded': return 'funded'
+    case 'real': return 'real'
+    case 'auditoria': return 'auditoria'
+    case 'funded_encerrada': return 'encerrada'
+    case 'analise': return 'analise'
+    // Avaliação a correr, concluída ou terminada: para quem recebe o email é sempre o desafio dele.
+    default: return ofertaNaPrimeira ? 'oferta' : 'desafio'
   }
 }
 
@@ -168,6 +183,20 @@ export function textosDaEntrega(c: ContaEntrega, motivo: MotivoLink, idioma: Idi
       rotulo = 'Funded'
       produtoCurto = pt ? `Funded MTM${K ? ` ${K}` : ''}` : `MTM Funded${K ? ` ${K}` : ''} account`
       break
+    // Conta Real: dinheiro do cliente, sem fases nem regras (lib/mtmfunded/etiquetas::tipoCurto).
+    case 'real':
+      rotulo = 'Real'
+      produtoCurto = pt ? `Real${K ? ` ${K}` : ''}` : `Real${K ? ` ${K}` : ''} account`
+      break
+    // Conta da casa que negoceia a sério para auditar as estratégias (conta_real_casa, 109).
+    case 'auditoria':
+      rotulo = pt ? 'Conta de auditoria' : 'Audit account'
+      produtoCurto = pt ? `de auditoria MTM Funded${paren}` : `MTM Funded audit account${paren}`
+      break
+    case 'encerrada':
+      rotulo = pt ? 'Encerrada' : 'Closed'
+      produtoCurto = pt ? `MTM Funded${K ? ` ${K}` : ''} (encerrada)` : `MTM Funded${K ? ` ${K}` : ''} account (closed)`
+      break
     case 'analise':
       rotulo = pt ? 'Conta de análise' : 'Analysis account'
       produtoCurto = pt ? `de análise MTM Funded${paren}` : `MTM Funded analysis account${paren}`
@@ -227,6 +256,27 @@ export function textosDaEntrega(c: ContaEntrega, motivo: MotivoLink, idioma: Idi
           ? `A tua conta Funded MTM${deTam} está activa. Já não é uma prova: não há objectivo a atingir nem fase a passar. É negociação de capital patrocinado MTM — 75% dos resultados são teus.`
           : `Your${deTam} MTM Funded account is active. It is no longer a test: there is no target to hit and no phase to pass. It is trading of MTM-sponsored capital — 75% of the results are yours.`
         break
+      case 'real':
+        assunto = pt ? `A tua conta Real${deTam} está activa` : `Your${deTam} Real account is active`
+        cabecalho = pt ? 'A tua conta Real está activa' : 'Your Real account is active'
+        frase = pt
+          ? `A tua conta Real${deTam} está activa. Não é um desafio nem uma simulação: não há objectivo a atingir nem fase a passar, e contém negociação real.`
+          : `Your${deTam} Real account is active. It is not a challenge and not a simulation: there is no target to hit and no phase to pass, and it contains real trading.`
+        break
+      case 'auditoria':
+        assunto = pt ? `A conta de auditoria${deTam} está pronta` : `The${deTam} audit account is ready`
+        cabecalho = pt ? 'Conta de auditoria pronta' : 'Audit account ready'
+        frase = pt
+          ? `Esta conta de auditoria${deTam} está pronta. Negoceia a sério, não tem regras de programa e serve para a casa medir as estratégias.`
+          : `This${deTam} audit account is ready. It trades for real, has no programme rules, and exists for the house to measure the strategies.`
+        break
+      case 'encerrada':
+        assunto = pt ? `Os dados da tua conta ${produtoCurto}` : `The details of your ${produtoCurto}`
+        cabecalho = pt ? 'Conta encerrada' : 'Account closed'
+        frase = pt
+          ? 'Esta conta está encerrada e já não negoceia. Os dados de acesso ficam aqui para consultares o histórico.'
+          : 'This account is closed and no longer trades. The access details are here so you can review the history.'
+        break
       case 'analise':
         assunto = pt ? `A tua conta de análise MTM Funded${paren} está pronta` : `Your MTM Funded analysis account${paren} is ready`
         cabecalho = pt ? 'A tua conta de análise está pronta' : 'Your analysis account is ready'
@@ -274,14 +324,31 @@ export function textosDaEntrega(c: ContaEntrega, motivo: MotivoLink, idioma: Idi
   }
   if (tipo === 'torneio') linhas.push([pt ? 'Torneio' : 'Tournament', torneio])
 
-  const real = tipo === 'funded'
-  const aviso = real
+  /**
+   * O aviso do rodapé. São TRÊS casos, não dois: dizer «conta simulada educativa» numa conta
+   * encerrada que negociou a sério é falso, e dizer-lhe «contém negociação real» é um convite a
+   * negociar nela. `real` = tem negociação real (o mesmo critério de aviso-conta::avisoReal).
+   */
+  const real = tipo === 'funded' || tipo === 'real' || tipo === 'auditoria'
+  const aviso = tipo === 'encerrada'
     ? (pt
-      ? 'Conta Funded MTM: contém negociação real de capital patrocinado MTM (o Fundo MTM afecta à conta capital real correspondente a 10% do valor nominal). Trading envolve risco de perda; resultados passados não garantem resultados futuros.'
-      : 'MTM Funded account: contains real trading of MTM-sponsored capital (the MTM Fund allocates real capital equal to 10% of the nominal value). Trading involves risk of loss; past results do not guarantee future results.')
-    : (pt
-      ? 'Conta simulada educativa: a negociação não é real. Resultados passados não garantem resultados futuros.'
-      : 'Educational simulated account: trading is not real. Past results do not guarantee future results.')
+      ? 'Esta conta está encerrada e já não negoceia. Trading envolve risco de perda; resultados passados não garantem resultados futuros.'
+      : 'This account is closed and no longer trades. Trading involves risk of loss; past results do not guarantee future results.')
+    : tipo === 'auditoria'
+      ? (pt
+        ? 'Conta de auditoria da MoreThanMoney: contém negociação real, sem regras de programa, e serve para medir as estratégias. Trading envolve risco de perda; resultados passados não garantem resultados futuros.'
+        : 'MoreThanMoney audit account: contains real trading, with no programme rules, used to measure the strategies. Trading involves risk of loss; past results do not guarantee future results.')
+      : tipo === 'real'
+        ? (pt
+          ? 'Conta Real: contém negociação real. Trading envolve risco de perda; resultados passados não garantem resultados futuros.'
+          : 'Real account: contains real trading. Trading involves risk of loss; past results do not guarantee future results.')
+        : real
+          ? (pt
+            ? 'Conta Funded MTM: contém negociação real de capital patrocinado MTM (o Fundo MTM afecta à conta capital real correspondente a 10% do valor nominal). Trading envolve risco de perda; resultados passados não garantem resultados futuros.'
+            : 'MTM Funded account: contains real trading of MTM-sponsored capital (the MTM Fund allocates real capital equal to 10% of the nominal value). Trading involves risk of loss; past results do not guarantee future results.')
+          : (pt
+            ? 'Conta simulada educativa: a negociação não é real. Resultados passados não garantem resultados futuros.'
+            : 'Educational simulated account: trading is not real. Past results do not guarantee future results.')
 
   const subtitulo = tipo === 'desafio' || tipo === 'oferta'
     ? `F${fase} · ${desafioNome}`
