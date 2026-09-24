@@ -19,9 +19,24 @@ server {
     }
 
 
+    # Diálogos do Telegram (MTProto, só leitura) — serviço `mtm-dialogos`, /opt/mtm-dialogos/dialogos.py.
+    # É ELE o dono da porta 8787 nesta VPS. O segredo viaja no Authorization e é o serviço
+    # que o confere — o nginx só encaminha e trata do TLS. A barra final no proxy_pass é
+    # precisa: tira o prefixo /telegram-dialogos/ do caminho.
+    location /telegram-dialogos/ {
+        proxy_pass http://127.0.0.1:8787/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Authorization $http_authorization;
+        proxy_read_timeout 120s;
+    }
+
     # WS de preços do MTM Funded (funded-motor, ws-precos.ts) — wss://stream.morethanmoney.pt/precos
+    # PORTA 8788, não 8787: a 8787 está ocupada pelo `mtm-dialogos` (bloco acima). Foi essa a
+    # razão da mudança — não voltar a pôr 8787 só porque era o que estava no código. Tem de
+    # bater certo com o WS_PRECOS_PORTA do /etc/mtm-funded-motor.env e com o default do motor.
     location /precos {
-        proxy_pass http://127.0.0.1:8787;
+        proxy_pass http://127.0.0.1:8788;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -79,9 +94,24 @@ server {
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
 
+    # Diálogos do Telegram (MTProto, só leitura) — serviço `mtm-dialogos`, /opt/mtm-dialogos/dialogos.py.
+    # É ELE o dono da porta 8787 nesta VPS. O segredo viaja no Authorization e é o serviço
+    # que o confere — o nginx só encaminha e trata do TLS. A barra final no proxy_pass é
+    # precisa: tira o prefixo /telegram-dialogos/ do caminho.
+    location /telegram-dialogos/ {
+        proxy_pass http://127.0.0.1:8787/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Authorization $http_authorization;
+        proxy_read_timeout 120s;
+    }
+
     # WS de preços do MTM Funded (funded-motor, ws-precos.ts) — wss://stream.morethanmoney.pt/precos
+    # PORTA 8788, não 8787: a 8787 está ocupada pelo `mtm-dialogos` (bloco acima). Foi essa a
+    # razão da mudança — não voltar a pôr 8787 só porque era o que estava no código. Tem de
+    # bater certo com o WS_PRECOS_PORTA do /etc/mtm-funded-motor.env e com o default do motor.
     location /precos {
-        proxy_pass http://127.0.0.1:8787;
+        proxy_pass http://127.0.0.1:8788;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
