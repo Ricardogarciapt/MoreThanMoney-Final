@@ -72,7 +72,8 @@ caso('sem histórico medido não há alvos nem percentagem inventada', () => {
   assert.deepEqual(alvosDoCartao(com), [
     { rotulo: 'TP1', n: 4, perda: false },
     { rotulo: 'TP2', n: 2, perda: false },
-    { rotulo: 'SL', n: 1, perda: true },
+    // «Stop» e neutro: o balde mistura stop inicial (perda) com stop trailado (lucro).
+    { rotulo: 'Stop', n: 1, perda: false },
   ])
   assert.equal(resumoDoCartao(com), '71,4% de acerto · 7 trades')
 })

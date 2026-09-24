@@ -147,7 +147,21 @@ export function alvosDoCartao(p: ProvedorMtmAuto | null | undefined): AlvoCartao
     { rotulo: 'TP1', n: n('tp1'), perda: false },
     { rotulo: 'TP2', n: n('tp2'), perda: false },
     { rotulo: 'TP3', n: n('tp3'), perda: false },
-    { rotulo: 'SL', n: n('sl'), perda: true },
+    /**
+     * «Stop» e NÃO «SL vermelho» (24/09). O balde do stop mistura duas coisas opostas: o stop
+     * inicial, que é perda, e o stop TRAILADO, que fecha em lucro depois de o preço ter corrido
+     * a favor. Medido nas oito mestres: 61 posições fecharam no stop **em lucro** (+1 039) e 27
+     * **em perda** (−1 862).
+     *
+     * Pintá-lo todo de vermelho mentia, e mentia mais onde a estratégia é melhor: o Sensei tem
+     * 10 saídas em 10 pelo stop e fez **+167** — o cartão mostrava-lhe «SL×10» a vermelho, como
+     * se fossem dez perdas. Foi essa leitura que me levou a dizer ao dono que «a perna do
+     * trailing é a que perde», o que era falso.
+     *
+     * Enquanto o catálogo não separar o stop em lucro do stop em perda, a cor honesta é neutra:
+     * o número é verdadeiro, o juízo é que não se pode fazer daqui.
+     */
+    { rotulo: 'Stop', n: n('sl'), perda: false },
   ]
   return alvos.filter((a) => a.n > 0)
 }
