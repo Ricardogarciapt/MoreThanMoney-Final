@@ -4,7 +4,7 @@ import { isRegisteredMember } from "@/lib/member-access"
 import { isMemberProtectedPath, registerRedirectUrl } from "@/lib/member-route-guard"
 import { isExpiredTrial } from "@/lib/trial-access"
 import { activationRedirectPath, requiresActivation } from "@/lib/member-activation"
-import { needsAccessRevalidation } from "@/lib/access-migration"
+import { needsAccessRevalidation } from "@/lib/access-migration-regras"
 
 // Cache para rate limiting
 const rateLimit = new Map<string, { count: number; timestamp: number }>()
