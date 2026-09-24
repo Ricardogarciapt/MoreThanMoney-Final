@@ -86,8 +86,17 @@ const CFG = {
   intervaloRapidoMs: Number(env('MOTOR_INTERVALO_RAPIDO_MS', false) || 250),
   /** Desvio da hora do servidor da corretora até o primeiro tick o dizer (PU Prime: UTC+3 no verão). */
   desvioInicialMin: Number(env('MOTOR_DESVIO_CORRETORA_MIN', false) || 180),
-  /** Porta do WS de preços para os browsers (nginx /precos → aqui). 0 desliga. */
-  wsPrecosPorta: Number(env('WS_PRECOS_PORTA', false) || 8787),
+  /**
+   * Porta do WS de preços para os browsers (nginx /precos → aqui). 0 desliga.
+   *
+   * 8788 e NÃO 8787: na VPS (stream.morethanmoney.pt) a 8787 é do serviço `mtm-dialogos`
+   * — MTProto só-leitura, /opt/mtm-dialogos/dialogos.py, publicado pelo nginx em
+   * `location /telegram-dialogos/`. Quem arranque o motor com o default antigo rouba-lhe
+   * a porta, e a avaria é silenciosa: ou o motor não arranca (EADDRINUSE engolido no log),
+   * ou são os diálogos que deixam de responder. Não voltar a pôr 8787 só porque era
+   * "o que estava no código".
+   */
+  wsPrecosPorta: Number(env('WS_PRECOS_PORTA', false) || 8788),
 }
 
 /** Símbolos sempre subscritos: o WebTrader abre neles, e o BTC (24/7) é o pulso do feed. */
