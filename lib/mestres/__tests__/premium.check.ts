@@ -86,6 +86,23 @@ t('sem SL / sem TP / SL do lado errado → não abre', () => {
   assert.equal(decidirSinalPremium({ sinal: { symbol: 'XAUUSD', direction: 'sell', entry: 4390, sl: 4380, tp: [4370] }, agora: DENTRO }).abrir, false)
   assert.equal(decidirSinalPremium({ sinal: { symbol: 'GOLD', direction: 'buy', entry: 4300, sl: 4295, tp: [4290] }, agora: DENTRO }).abrir, false, 'TP1 do lado errado')
 })
+t('stop absurdo → não abre (os dois sinais reais de 22/09 com um dígito perdido)', () => {
+  // «🎯 Zona: 4332 – 4227 | 🛑 SL: 4222» e «🎯 Zona: 4330 – 4225 | 🛑 SL: 4220»: 1100 pips de stop
+  // em vez de 100. Ambos abriram na mestre nesse dia — com esta guarda não voltam a abrir.
+  const a = decidirSinalPremium({ sinal: { symbol: 'XAUUSD', direction: 'buy', entry: 4332, sl: 4222, tp: [4337, 4342, 4347] }, agora: DENTRO })
+  assert.ok(!a.abrir && /1100 pips/.test(a.motivo), !a.abrir ? a.motivo : 'abriu com 1100 pips de stop')
+  const b = decidirSinalPremium({ sinal: { symbol: 'XAUUSD', direction: 'buy', entry: 4330, sl: 4220, tp: [4335, 4340, 4345] }, agora: DENTRO })
+  assert.equal(b.abrir, false)
+  // …e um stop colado à entrada (0 pips) também não é um sinal.
+  assert.equal(decidirSinalPremium({ sinal: { symbol: 'XAUUSD', direction: 'buy', entry: 4330, sl: 4329.95, tp: [4335] }, agora: DENTRO }).abrir, false)
+})
+t('os stops REAIS do SME continuam a passar (50 a 130 pips)', () => {
+  // zona 4387–4395, SL 4400: 130 pips da referência (4387) — a ponta larga do que é são.
+  assert.equal(decidirSinalPremium({ sinal: parseSignal(SME_SELL), agora: DENTRO }).abrir, true)
+  assert.equal(decidirSinalPremium({ sinal: parseSignal(SME_BUY), agora: DENTRO }).abrir, true)
+  // e o caso mediano medido: 100 pips.
+  assert.equal(decidirSinalPremium({ sinal: { symbol: 'XAUUSD', direction: 'sell', entry: 4320, sl: 4330, tp: [4315, 4310, 4305] }, agora: DENTRO }).abrir, true)
+})
 t('mensagens de seguimento não são entradas', () => {
   assert.equal(decidirSinalPremium({ sinal: parseSignal('HIT TP1 ✅ +50PIPS'), agora: DENTRO }).abrir, false)
   assert.equal(decidirSinalPremium({ sinal: null, agora: DENTRO }).abrir, false)
