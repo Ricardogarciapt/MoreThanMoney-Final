@@ -1071,10 +1071,13 @@ function ChannelView({
   channel,
   onBack,
   currentUser,
+  focarMensagemId,
 }: {
   channel: Channel
   onBack: () => void
   currentUser: any
+  /** Mensagem a abrir (deep-link `&msg=` de uma notificação de acompanhamento). */
+  focarMensagemId?: string | null
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
@@ -1623,6 +1626,29 @@ function ChannelView({
     },
     [],
   )
+
+  /**
+   * Notificação de acompanhamento (alvo, break-even, fecho) → abre o chat NA mensagem.
+   *
+   * O `&msg=` já era emitido nos pushes mas ninguém o lia deste lado: a pessoa caía no fundo do
+   * canal e tinha de procurar a trade à mão. Reutiliza o mesmo salto das citações, que carrega
+   * para trás quando a mensagem ainda não está na janela.
+   */
+  const jaFocado = useRef<string | null>(null)
+  useEffect(() => {
+    if (!focarMensagemId || loading) return
+    if (jaFocado.current === focarMensagemId) return
+    jaFocado.current = focarMensagemId
+    void irParaOriginal(focarMensagemId)
+    // Tirar o parâmetro do URL: sem isto, voltar ao chat repetia o salto.
+    try {
+      const u = new URL(window.location.href)
+      u.searchParams.delete("msg")
+      window.history.replaceState({}, "", u.toString())
+    } catch {
+      /* sem URL, sem limpeza — o salto já aconteceu */
+    }
+  }, [focarMensagemId, loading, irParaOriginal])
 
   const renderMessages = () => {
     let lastDay = ""
@@ -2299,7 +2325,14 @@ interface EducatorProfile {
   member_category?: string | null
 }
 
-export default function ChatChannels({ initialSlug }: { initialSlug?: string | null }) {
+export default function ChatChannels({
+  initialSlug,
+  initialMessageId,
+}: {
+  initialSlug?: string | null
+  /** `&msg=` do deep-link: mensagem a abrir dentro do canal. */
+  initialMessageId?: string | null
+}) {
   const t = useT()
   const { user, isLoading: authLoading } = useAuth()
   const [channels, setChannels] = useState<Channel[]>([])
@@ -2534,6 +2567,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
         channel={activeChannel}
         onBack={() => setActiveChannel(null)}
         currentUser={user}
+        focarMensagemId={activeChannel.slug === initialSlug ? initialMessageId : null}
       />
     )
   }

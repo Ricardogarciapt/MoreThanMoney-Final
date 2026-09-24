@@ -48,6 +48,10 @@ export async function POST(request: NextRequest) {
     }
 
     const siteUrl = getSiteOrigin()
+    // Abre o chat NA mensagem quando ela é conhecida — regra do dono, 24/09.
+    const chatUrl =
+      `/app-mobile?tab=chat&channel=${encodeURIComponent(channelSlug)}` +
+      (messageId ? `&msg=${encodeURIComponent(messageId)}` : '')
     const pushRes = await fetch(`${siteUrl}/api/notifications/send-push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -56,11 +60,11 @@ export async function POST(request: NextRequest) {
         excludeUserId: authData.user.id,
         title,
         body: messageBody,
-        url: `/app-mobile?tab=chat&channel=${encodeURIComponent(channelSlug)}`,
+        url: chatUrl,
         data: {
           type: 'chat_message',
           channel: channelSlug,
-          url: `/app-mobile?tab=chat&channel=${encodeURIComponent(channelSlug)}`,
+          url: chatUrl,
           ...(messageId ? { message_id: messageId } : {}),
         },
         tag: `chat_${channelSlug}`,

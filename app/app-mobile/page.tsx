@@ -528,7 +528,7 @@ function AppMobileContent() {
             </TabsContent>
 
             <TabsContent value="chat" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
-              {activeTab === "chat" && <ChatChannels initialSlug={channelFromUrl} />}
+              {activeTab === "chat" && <ChatChannels initialSlug={channelFromUrl} initialMessageId={searchParams.get("msg")} />}
             </TabsContent>
 
             <TabsContent value="tap-to-trade" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">

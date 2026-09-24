@@ -1,11 +1,14 @@
 import { getSiteOrigin } from '@/lib/site-url'
 import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
+import { isT2TEntrySignal } from '@/lib/mtmcopy/t2t-source'
 
 type ChatChannelNotifyOptions = {
   channelSlug: string
   title: string
   body: string
   messageId?: string
+  /** Texto publicado — é ele que diz se isto é uma ENTRADA (aceitar) ou não. */
+  content?: string | null
   /** Por omissão usa chat_message (categoria Chat nas preferências) */
   notificationType?: string
   excludeUserId?: string
@@ -21,28 +24,27 @@ export async function notifyChatChannelMessage(
   const type = options.notificationType ?? 'chat_message'
   const tag = `chat_${options.channelSlug}`
 
-  // Se o sinal vem de um provider ativo no T2T, anexamos a ação "Tap to Trade"
-  // (botão na notificação — aparece no iPhone E no Apple Watch).
-  let t2tCategory: string | undefined
-  if (options.messageId) {
-    const enabled = await tapToTradeEnabledChannels()
-    if (enabled?.has(options.channelSlug)) t2tCategory = 'T2T_SIGNAL'
-  }
-
   /**
-   * Para onde o toque leva.
+   * O DESTINO segue o tipo da notificação (regra do dono, 24/09):
+   *  - ENTRADA para aceitar → separador Tap to Trade, já no sinal (é lá que se aceita; desde
+   *    24/09 o chat não tem botão, por isso uma entrada que aterrasse no chat ficava sem saída);
+   *  - tudo o resto (abertura, acompanhamento, conversa) → o CHAT, na mensagem respectiva, que
+   *    é onde vive o fio da trade.
    *
-   * Levava sempre ao CHAT do canal, e a partir daí era preciso encontrar a mensagem no meio das
-   * outras e carregar no botão. Quem toca numa notificação de SINAL quer o sinal — e o preço não
-   * espera por essa procura.
-   *
-   * Sinal com Tap to Trade → abre o modal de aceitação directamente. Mensagem de chat normal →
-   * continua a abrir o chat, que é onde ela faz sentido.
+   * A categoria `T2T_SIGNAL` (que dá a ação "⚡ Aceitar trade" no iPhone e no Watch) segue a
+   * mesma regra: só vai em entradas. Antes bastava o canal estar ligado ao T2T — um "TP1 hit"
+   * chegava com botão de aceitar e levava ao separador errado.
    */
-  const url =
-    t2tCategory && options.messageId
-      ? `/app-mobile?tab=tap-to-trade&sinal=${encodeURIComponent(options.messageId)}`
-      : `/app-mobile?tab=chat&channel=${encodeURIComponent(options.channelSlug)}`
+  const ehEntradaT2T =
+    Boolean(options.messageId) &&
+    isT2TEntrySignal(options.channelSlug, options.content ?? null) &&
+    Boolean((await tapToTradeEnabledChannels())?.has(options.channelSlug))
+  const t2tCategory = ehEntradaT2T ? 'T2T_SIGNAL' : undefined
+
+  const url = ehEntradaT2T
+    ? `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(options.messageId as string)}`
+    : `/app-mobile?tab=chat&channel=${encodeURIComponent(options.channelSlug)}` +
+      (options.messageId ? `&msg=${encodeURIComponent(options.messageId)}` : '')
 
   const res = await fetch(`${siteUrl}/api/notifications/send-push`, {
     method: 'POST',

@@ -87,6 +87,8 @@ export async function POST(request: NextRequest) {
         title: pushTitle,
         body: pushBody,
         messageId: message.id,
+        // O texto publicado decide o destino: entrada → Tap to Trade; o resto → chat na mensagem.
+        content,
       })
       pushResult = { ok: result.ok, status: result.status, ...(result.data ?? {}) }
     }

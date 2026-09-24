@@ -106,7 +106,11 @@ export async function sendTelegramChannelPush(opts: {
   const body =
     (opts.content ?? '').slice(0, 120) ||
     (opts.imageUrl ? 'Nova imagem no canal' : 'Nova mensagem recebida')
-  const chatUrl = `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}`
+  // Acompanhamento e abertura de sinal abrem o CHAT **na mensagem** (regra do dono, 24/09): é lá
+  // que vive o fio da trade. O `&msg=` é lido pelo chat, que salta e realça a mensagem.
+  const chatUrl =
+    `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}` +
+    (opts.chatMessageId ? `&msg=${encodeURIComponent(opts.chatMessageId)}` : '')
   const tag = opts.telegramMessageId ? `chat_${slug}_${opts.telegramMessageId}` : `chat_${slug}`
 
   // É uma ENTRADA T2T? Só entradas negociáveis geram a notificação "⚡ Tap to Trade".
