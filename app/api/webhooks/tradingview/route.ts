@@ -37,6 +37,7 @@ import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/s
 // tem de decidir «teria executado?» com EXACTAMENTE o mesmo código que este webhook.
 import { classifyAsset, confirmationsPassed, isCryptoPerpTicker, passesQualityGate, stopsSane, type AssetClass } from "@/lib/mtmcopy/webhook-gates"
 import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
+import { urlDoChat, urlDoTapToTrade } from "@/lib/notificacao-destino"
 import { lifecycleMessage, stopFoiProtegido } from "@/lib/mtmcopy/signal-lifecycle"
 import { formatarSeguimento, formatarSinal } from "@/lib/sinais/formato-sinal"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -1248,9 +1249,9 @@ export async function POST(request: NextRequest) {
     const T2T_NOTIF_CHANNELS = new Set(["trade-ideas-setup", "sinais-scanner-mtm", "trade-ideas", "sinais-goldkiller", "sensei-scanner"])
     const isT2TNotif = Boolean(route.channel && chatId && T2T_NOTIF_CHANNELS.has(route.channel))
     const pushUrl = isT2TNotif
-      ? `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(chatId as string)}`
+      ? urlDoTapToTrade(chatId as string)
       : route.channel
-        ? `/app-mobile?tab=chat&channel=${encodeURIComponent(route.channel)}${chatId ? `&msg=${encodeURIComponent(chatId)}` : ""}`
+        ? urlDoChat(route.channel, chatId)
         : "/app-mobile?tab=trading-alerts"
     try {
       const n = await pushSignalSubscribers(supabase, {

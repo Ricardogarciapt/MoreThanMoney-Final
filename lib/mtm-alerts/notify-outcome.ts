@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { outcomeFrom } from "@/lib/mtmcopy/trade-outcome"
+import { urlDoChat } from "@/lib/notificacao-destino"
 
 /**
  * Notifica o desfecho de uma trade (SL/TP/BE/fecho) APENAS a:
@@ -115,11 +116,7 @@ export async function notifySignalOutcome(opts: {
         .eq("id", opts.chatMessageId)
         .maybeSingle()
       const slug = (msg as { channel_slug?: string | null } | null)?.channel_slug
-      if (slug) {
-        url =
-          `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}` +
-          `&msg=${encodeURIComponent(opts.chatMessageId)}`
-      }
+      if (slug) url = urlDoChat(slug, opts.chatMessageId)
     } catch {
       /* sem canal — segue o destino antigo */
     }

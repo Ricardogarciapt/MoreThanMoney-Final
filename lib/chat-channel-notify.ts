@@ -1,6 +1,6 @@
 import { getSiteOrigin } from '@/lib/site-url'
 import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
-import { isT2TEntrySignal } from '@/lib/mtmcopy/t2t-source'
+import { destinoDaMensagem } from '@/lib/notificacao-destino'
 
 type ChatChannelNotifyOptions = {
   channelSlug: string
@@ -25,26 +25,19 @@ export async function notifyChatChannelMessage(
   const tag = `chat_${options.channelSlug}`
 
   /**
-   * O DESTINO segue o tipo da notificação (regra do dono, 24/09):
-   *  - ENTRADA para aceitar → separador Tap to Trade, já no sinal (é lá que se aceita; desde
-   *    24/09 o chat não tem botão, por isso uma entrada que aterrasse no chat ficava sem saída);
-   *  - tudo o resto (abertura, acompanhamento, conversa) → o CHAT, na mensagem respectiva, que
-   *    é onde vive o fio da trade.
-   *
-   * A categoria `T2T_SIGNAL` (que dá a ação "⚡ Aceitar trade" no iPhone e no Watch) segue a
-   * mesma regra: só vai em entradas. Antes bastava o canal estar ligado ao T2T — um "TP1 hit"
-   * chegava com botão de aceitar e levava ao separador errado.
+   * O DESTINO segue o TIPO da notificação — a regra vive em `lib/notificacao-destino`, que é a
+   * mesma peça que o push do Telegram e o webhook do TradingView usam.
    */
-  const ehEntradaT2T =
-    Boolean(options.messageId) &&
-    isT2TEntrySignal(options.channelSlug, options.content ?? null) &&
-    Boolean((await tapToTradeEnabledChannels())?.has(options.channelSlug))
-  const t2tCategory = ehEntradaT2T ? 'T2T_SIGNAL' : undefined
-
-  const url = ehEntradaT2T
-    ? `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(options.messageId as string)}`
-    : `/app-mobile?tab=chat&channel=${encodeURIComponent(options.channelSlug)}` +
-      (options.messageId ? `&msg=${encodeURIComponent(options.messageId)}` : '')
+  const destino = destinoDaMensagem({
+    channelSlug: options.channelSlug,
+    content: options.content,
+    messageId: options.messageId,
+    t2tLigado: options.messageId
+      ? Boolean((await tapToTradeEnabledChannels())?.has(options.channelSlug))
+      : false,
+  })
+  const url = destino.url
+  const t2tCategory = destino.category
 
   const res = await fetch(`${siteUrl}/api/notifications/send-push`, {
     method: 'POST',
