@@ -4,7 +4,9 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 /**
  * Webhook do WhatsApp (Meta Cloud API) — funil de vendas MTM no WhatsApp, reutilizando o MESMO
- * cérebro closer do Telegram (runLeadFunnelReply): escada Membro → PU Prime 300$ → Premium grátis.
+ * cérebro closer do Telegram (runLeadFunnelReply), e por isso a escada que anuncia é sempre a de
+ * `lib/escada-precos.ts`. Este comentário dizia «PU Prime 300$» muito depois de o mínimo ter
+ * passado a 350 — um comentário errado é a próxima pessoa a escrever o número errado.
  *
  * PREPARADO mas inerte até configurares no VPS/Meta:
  *  - WHATSAPP_VERIFY_TOKEN     → token de verificação do webhook (GET hub.verify_token)
