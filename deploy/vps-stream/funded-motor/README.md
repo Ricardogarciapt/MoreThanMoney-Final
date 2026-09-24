@@ -46,6 +46,8 @@ LMS_CAPTION_WORKER_SECRET=…                                   # o mesmo dos ou
 MTM_API_BASE=https://www.morethanmoney.pt
 MOTOR_ESCRITA=0          # 0 = só decide e escreve no log; 1 = a sério
 # opcionais: MOTOR_INTERVALO_MS=1000 · MOTOR_DESVIO_CORRETORA_MIN=180
+# PRECO_MERCADO_DEFENDE_MS=5000   # quanto tempo uma hora de mercado PROVADA defende o símbolo de
+#                                 # um preço sem hora ou mais velho (0 = desliga, última fonte ganha)
 ```
 
 Copiar segredos sem os mostrar:
