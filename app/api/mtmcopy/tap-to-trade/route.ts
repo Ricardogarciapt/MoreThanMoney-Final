@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { recebeT2T, t2tDesligadoNaConta } from '@/lib/mtmcopy/alvo-t2t'
-import { aplicarEscolha, normalizarEscolha, separarEscolha } from '@/lib/mtmcopy/escolha-contas-t2t'
+import { aplicarEscolha, escolhaGuardada, normalizarEscolha, separarEscolha } from '@/lib/mtmcopy/escolha-contas-t2t'
 import { ehContaMestre } from '@/lib/webtrader/filtro-contas'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { entradaT2T } from '@/lib/mtmcopy/t2t-entry'
@@ -335,6 +335,35 @@ export async function POST(request: NextRequest) {
    * da resposta para a app poder dizer PORQUÊ em vez de a saltar em silêncio.
    */
   let recusadas: string[] = []
+
+  /**
+   * QUEM NÃO PERGUNTA, HERDA A ESCOLHA — mas nunca fica sem abrir por causa dela.
+   *
+   * A MTM Auto aceita com um toque e não tem folha de confirmação; uma app iOS antiga também não
+   * manda `contas`. Se a pessoa já escolheu onde quer abrir (no site ou na app), ignorar isso
+   * nesses caminhos era manter lá dentro exactamente a surpresa que isto veio corrigir. Por isso
+   * a preferência guardada vale também aqui.
+   *
+   * A diferença face a uma escolha EXPLÍCITA: esta é uma preferência, não uma ordem. Se ela já não
+   * casar com nenhuma conta elegível — contas apagadas, desligadas, trocadas — não se recusa a
+   * aceitação num cliente que não tem ecrã para a corrigir: volta ao caminho de sempre.
+   */
+  if (!escolha.length) {
+    const { data: perfil } = await supabase.from('profiles').select('profile_data').eq('id', user.id).maybeSingle()
+    const preferida = escolhaGuardada(perfil?.profile_data)
+    if (preferida.length) {
+      const { reais: prefReais, simuladas: prefSim } = separarEscolha(preferida)
+      const elegiveisSim = new Set<string>([...simT2T.map((c) => String(c.id)), ...fundedLigadas])
+      const alvosPref = aplicarEscolha(targets, (c) => String(c.id), prefReais).contas
+      const simPref = prefSim.filter((id) => elegiveisSim.has(id))
+      if (alvosPref.length || simPref.length) {
+        targets = prefReais.length ? alvosPref : []
+        simuladasPedidas = simPref
+        temSimuladas = temSimuladas && simPref.length > 0
+      }
+    }
+  }
+
   if (escolha.length) {
     const elegiveisSim = new Set<string>([...simT2T.map((c) => String(c.id)), ...fundedLigadas])
     const filtro = aplicarEscolha(targets, (c) => String(c.id), escolhaReais)
