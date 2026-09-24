@@ -27,7 +27,7 @@ const PLANS = {
   premium: {
     name: 'Pack Premium',
     description: 'App + Site MTM · Skool · Ferramentas avançadas · Live Premium · Cursos',
-    features: ['Tudo do Pack Membro', 'Acesso completo ao site MTM', 'Comunidade Skool MTM', 'Ferramentas avançadas', 'Live Sessions Premium', 'Cursos de Forex, Criptomoedas, Marketing Digital e AI', 'Suporte prioritário'],
+    features: ['Tudo do Pack Membro', 'Acesso completo ao site MTM', 'Comunidade Skool MTM', 'Ferramentas avançadas', 'Live Sessions Premium', 'Cursos de Forex, Marketing Digital e AI', 'Suporte prioritário'],
     color: '#7C3AED',
     monthly: { price: 65, label: '65€/mês', id: 'premium_monthly' as PlanId },
     annual:  { price: 52, label: '52€/mês · 624€/ano', id: 'premium_annual' as PlanId },

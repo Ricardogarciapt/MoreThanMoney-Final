@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
+import { useSemCripto, mencionaCripto } from "@/lib/ios-sem-cripto"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2, Heart, MessageCircle, Share2, Send, User, Plus, X, MoreVertical, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
@@ -77,6 +78,7 @@ const CATEGORIES = [
 
 export default function SocialFeed({ initialCategory }: { initialCategory?: string | null }) {
   const { user: authUser } = useAuth()
+  const semCriptoNoFeed = useSemCripto()
   const [mounted, setMounted] = useState(false)
   const [posts, setPosts] = useState<Post[]>([])
   const [newPost, setNewPost] = useState("")
@@ -1252,9 +1254,19 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
     }
   }
 
-  const filteredPosts = activeCategory
+  /**
+   * O Feed é o SEPARADOR 0 — o primeiro ecrã que um revisor da Apple vê.
+   *
+   * A categoria «Criptomoedas» (₿) e os posts dela não passavam por guarda nenhuma: ficavam à
+   * vista mesmo com o interruptor central fechado. Aqui saem os três sítios onde apareciam —
+   * os chips de categoria, o selector ao publicar e os próprios posts.
+   */
+  const categoriasVisiveis = semCriptoNoFeed ? CATEGORIES.filter((c) => c.id !== "crypto") : CATEGORIES
+
+  const filteredPosts = (activeCategory
     ? posts.filter((p) => p.category === activeCategory)
     : posts
+  ).filter((p) => !(semCriptoNoFeed && (p.category === "crypto" || mencionaCripto(p.content))))
 
   const formatTimeAgo = (date: string) => {
     const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
@@ -1305,7 +1317,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
           e.stopPropagation()
         }}
       >
-        {CATEGORIES.map((cat) => {
+        {categoriasVisiveis.map((cat) => {
           const preview = storyPreviews.get(cat.id)
           const isActive = activeCategory === cat.id
           const postCount = preview?.post_count || 0
@@ -1590,7 +1602,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                   className="flex-1 bg-gray-800 border border-[#D2A63C]/30 text-gray-300 rounded-lg p-2 text-sm focus:border-[#D2A63C] outline-none transition-colors"
                 >
                   <option value="">Seleciona categoria</option>
-                  {CATEGORIES.map((cat) => (
+                  {categoriasVisiveis.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.icon} {cat.label}
                     </option>
