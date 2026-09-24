@@ -32,7 +32,7 @@ const dados = join(raiz, 'scripts', 'dados')
 
 const { data: sinais, error: e1 } = await sb
   .from('tradingview_signals')
-  .select('id, received_at, ticker, timeframe, action, price, sl, tp, signal_kind, alert_name')
+  .select('id, received_at, ticker, timeframe, action, price, sl, tp, signal_kind, alert_name, raw_payload')
   .eq('alert_name', 'MTM Sensei X')
   .eq('ticker', 'XAUUSD')
   .eq('signal_kind', 'entry')
