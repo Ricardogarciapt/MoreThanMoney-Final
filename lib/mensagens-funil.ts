@@ -28,13 +28,16 @@ export interface DefinicaoMensagem {
 }
 
 export const PUPRIME_LINK = 'https://www.puprime.com/campaign?cs=morethanmoney'
-export const APP_REGISTER_LINK = 'https://www.morethanmoney.pt/register'
-export const APP_ANDROID_LINK = 'https://www.morethanmoney.pt/downloads/MoreThanMoney.apk'
-export const TRIAL_CODE = '14DayTrial'
-// Reexportado, não repetido: duas constantes com o mesmo nome divergem no dia em que alguém
-// muda uma delas — foi o que aconteceu com os 300/350.
-import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
-export { MIN_DEPOSIT }
+/**
+ * Reexportados, não repetidos: duas constantes com o mesmo nome divergem no dia em que alguém
+ * muda uma delas — foi o que aconteceu com os 300/350.
+ *
+ * O código de teste e os links da app estavam escritos NOS DOIS ficheiros, com os mesmos nomes e
+ * os mesmos valores: exactamente a armadilha que este comentário já avisava, e a dois metros
+ * dele. Mudar o código do teste num deles deixava o outro a anunciar o antigo.
+ */
+import { MIN_DEPOSIT, APP_REGISTER_LINK, APP_ANDROID_LINK, TRIAL_CODE } from '@/lib/telegram-broker-gate'
+export { MIN_DEPOSIT, APP_REGISTER_LINK, APP_ANDROID_LINK, TRIAL_CODE }
 
 export const MENSAGENS: DefinicaoMensagem[] = [
   {

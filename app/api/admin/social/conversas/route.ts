@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,6 +73,6 @@ export async function GET(req: NextRequest) {
     conversas: filtrada,
     total: lista.length,
     // O bot é este — dizê-lo evita a dúvida de se estamos a ver as conversas do bot certo.
-    bot: '@MoreThanMoney_aibot',
+    bot: `@${MTMCOPY_BOT_USERNAME()}`,
   })
 }

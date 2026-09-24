@@ -290,165 +290,32 @@ export async function handleBrokerApproval(
   return true
 }
 
-// ============================ PAINEL DE ADMIN (só o aprovador vê) ============================
+// ============================ PAINEL DE ADMIN ============================
+//
+// O painel vive em `lib/telegram-admin-menu.ts`. Este ficheiro é o funil da corretora; ter aqui
+// os botões do dono era juntar duas coisas que mudam por razões diferentes.
 
 /** É o chat do admin (Ricardo)? Só ele vê/usa o painel e a máquina de vendas. */
 export async function isAdminChat(supabase: Supa, chatId: string | number | null | undefined): Promise<boolean> {
-  if (chatId == null) return false
-  const adminId = await getAdminChatId(supabase)
-  return !!adminId && String(chatId) === String(adminId)
-}
-
-export function adminPanelKeyboard() {
-  return {
-    inline_keyboard: [
-      [
-        { text: "📊 Performance 30d", callback_data: "admin:perf" },
-        { text: "👥 Leads", callback_data: "admin:leads" },
-      ],
-      [
-        { text: "🔓 Pendentes", callback_data: "admin:pending" },
-        { text: "👑 Premium ativos", callback_data: "admin:subs" },
-      ],
-      // ── Máquina de Vendas (só admin) ──
-      [
-        { text: "⚙️ Estado Máquina Vendas", callback_data: "admin:sm_state" },
-      ],
-      [
-        { text: "🟢 Ativar Máquina", callback_data: "admin:sm_on" },
-        { text: "🔴 Desativar", callback_data: "admin:sm_off" },
-      ],
-      [
-        { text: "✍️ Gerar conteúdo", callback_data: "admin:sm_generate" },
-        { text: "📨 Digest de vendas", callback_data: "admin:sm_digest" },
-      ],
-      [{ text: "🤖 Falar com a IA do site", callback_data: "admin:ai_help" }],
-      [
-        { text: "🌐 Painel admin", url: "https://www.morethanmoney.pt/admin" },
-        { text: "🛰️ MTM Copy", url: "https://www.morethanmoney.pt/admin/mtmcopy" },
-      ],
-      [{ text: "📈 Grupo de leads (conteúdo)", url: "https://www.morethanmoney.pt/admin/telegram-sources" }],
-    ],
-  }
-}
-
-/** Executa uma ação do painel de admin (callback admin:*) — só para o chat aprovador. */
-export async function handleAdminAction(supabase: Supa, action: string, chatId: string): Promise<void> {
-  const adminId = await getAdminChatId(supabase)
-  if (!adminId || String(chatId) !== String(adminId)) {
-    await send(chatId, "⛔ Sem permissão.")
-    return
-  }
-  const since = new Date(Date.now() - 30 * 864e5).toISOString()
-  if (action === "perf") {
-    const { data } = await supabase
-      .from("trading_plan_trades")
-      .select("pnl")
-      .eq("trade_source", "strategy")
-      .not("pnl", "is", null)
-      .gte("opened_at", since)
-      .limit(3000)
-    const n = data?.length ?? 0
-    const wins = (data ?? []).filter((t) => Number(t.pnl) > 0).length
-    const pnl = (data ?? []).reduce((s, t) => s + Number(t.pnl ?? 0), 0)
-    await send(
-      chatId,
-      `📊 <b>Performance (executado, 30d)</b>\n\nTrades: <b>${n}</b>\nWin rate: <b>${n ? Math.round((wins / n) * 1000) / 10 : 0}%</b>\nResultado: <b>${Math.round(pnl)}€</b>`,
-    )
-  } else if (action === "leads") {
-    const { data } = await supabase.from("telegram_leads").select("stage")
-    const by: Record<string, number> = {}
-    for (const l of data ?? []) by[(l as { stage?: string }).stage ?? "?"] = (by[(l as { stage?: string }).stage ?? "?"] ?? 0) + 1
-    const lines = Object.entries(by).map(([k, v]) => `• ${k}: <b>${v}</b>`).join("\n") || "sem leads"
-    await send(chatId, `👥 <b>Leads Telegram</b> (total ${data?.length ?? 0})\n\n${lines}`)
-  } else if (action === "pending") {
-    const { data } = await supabase
-      .from("telegram_leads")
-      .select("chat_id, broker_uid, first_name")
-      .eq("stage", "pending_review")
-      .limit(20)
-    if (!data?.length) {
-      await send(chatId, "🔓 Sem pedidos pendentes de aprovação. ✅")
-    } else {
-      const lines = data.map((l) => `• ${(l as { first_name?: string }).first_name ?? "?"} — UID <code>${(l as { broker_uid?: string }).broker_uid}</code> (chat ${(l as { chat_id?: string }).chat_id})`).join("\n")
-      await send(chatId, `🔓 <b>Pendentes de aprovação (${data.length})</b>\n\n${lines}\n\nOs pedidos com foto + botões chegam aqui automaticamente.`)
-    }
-  } else if (action === "subs") {
-    const { count: prem } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("member_category", "premium").eq("is_active", true)
-    const { count: granted } = await supabase.from("telegram_leads").select("chat_id", { count: "exact", head: true }).eq("stage", "granted")
-    await send(chatId, `👑 <b>Subscrições</b>\n\nPremium ativos (app): <b>${prem ?? 0}</b>\nLeads com acesso broker: <b>${granted ?? 0}</b>`)
-  } else if (action.startsWith("sm_")) {
-    // ── Máquina de Vendas (só admin) ──
-    const { buildSalesState, runSalesCommand, salesStateSummary } = await import("@/lib/sales-machine")
-    if (action === "sm_state") {
-      const s = await buildSalesState()
-      await send(chatId, `⚙️ <b>Máquina de Vendas</b>\n\n${salesStateSummary(s)}`)
-    } else if (action === "sm_on") {
-      await runSalesCommand({ action: "set_autopilot", account: "morethanmoney", on: true })
-      await runSalesCommand({ action: "set_autopilot", account: "ricardo", on: true })
-      await send(chatId, "🟢 <b>Máquina de Vendas ATIVADA</b> — autopilot de conteúdo ligado (marca + Ricardo). Vou gerar/agendar conteúdo e preparar tudo para aprovação.")
-    } else if (action === "sm_off") {
-      await runSalesCommand({ action: "set_autopilot", account: "morethanmoney", on: false })
-      await runSalesCommand({ action: "set_autopilot", account: "ricardo", on: false })
-      await send(chatId, "🔴 <b>Máquina de Vendas DESATIVADA</b> — autopilot de conteúdo desligado.")
-    } else if (action === "sm_generate") {
-      await send(chatId, "✍️ A gerar conteúdo…")
-      const r = await runSalesCommand({ action: "generate_now" })
-      await send(chatId, r.ok ? "✅ Conteúdo gerado — vai a rascunhos para aprovares." : `⚠️ Falhou: ${r.error ?? "erro"}`)
-    } else if (action === "sm_digest") {
-      await send(chatId, "📨 A preparar o digest de vendas…")
-      const r = await runSalesCommand({ action: "digest_now" })
-      await send(chatId, r.ok ? "✅ Digest de vendas gerado." : `⚠️ Falhou: ${r.error ?? "erro"}`)
-    }
-  } else if (action === "ai_help") {
-    await send(
-      chatId,
-      "🤖 <b>IA do site</b> — escreve-me aqui em linguagem natural (só tu, admin). Consigo consultar o negócio e arrancar tarefas do site.\n\nEx.: <i>“como está o funil hoje?”</i>, <i>“cria uma tarefa para rever os rascunhos”</i>, <i>“gera conteúdo para a marca”</i>.",
-    )
-  }
+  const { ehChatDeAdmin } = await import('@/lib/telegram-admin-menu')
+  return ehChatDeAdmin(supabase, chatId)
 }
 
 export const APP_REGISTER_LINK = 'https://www.morethanmoney.pt/register'
 export const APP_ANDROID_LINK = 'https://www.morethanmoney.pt/downloads/MoreThanMoney.apk'
 export const TRIAL_CODE = '14DayTrial'
 
-/**
- * Porta suave: experimentar a app GRÁTIS 14 dias (sem depósito).
- *
- * O texto vive agora em `lib/mensagens-funil.ts` e é editável no /admin/social. Esta função fica
- * como o DEFEITO — quem nunca editou recebe sempre a versão nova quando o produto muda.
- */
-export function trialStepMessage(): string {
-  return (
-    `🎁 <b>Começa GRÁTIS — sem depositar nada:</b>\n\n` +
-    `1️⃣ Descarrega a app MTM (iOS: App Store "MTM System" · Android: ${APP_ANDROID_LINK})\n` +
-    `2️⃣ Cria conta em ${APP_REGISTER_LINK}\n` +
-    `3️⃣ Em <b>Mais → Definições → Resgatar código</b>, usa <code>${TRIAL_CODE}</code> → <b>14 dias Premium grátis</b> 🚀\n\n` +
-    `Vês por dentro os sinais, o Tap-to-Trade e as sessões ao vivo. Quando quiseres os <b>grupos de sinais + copytrading</b>, é só o passo da corretora (escreve /acesso). 💪`
-  )
-}
-
-/**
- * O passo da corretora. O texto é editável no /admin/social; isto é o defeito.
- *
- * `brokerStepMessageEditavel()` é o que se deve chamar em código novo — devolve o texto que o
- * Ricardo escreveu, se escreveu algum.
- */
+/** O passo da corretora, como ele vai mesmo sair (editado no /admin/social ou o do código). */
 export async function brokerStepMessageEditavel(): Promise<string> {
   const { lerMensagem } = await import('@/lib/mensagens-funil')
   return lerMensagem('passo_corretora')
 }
 
-export function brokerStepMessage(): string {
-  return (
-    `🔓 <b>Duas formas de entrar:</b>\n\n` +
-    `🎁 <b>A) Experimenta GRÁTIS já</b> — sem depositar:\n` +
-    `Descarrega a app, cria conta em ${APP_REGISTER_LINK} e usa o código <code>${TRIAL_CODE}</code> (Mais → Definições → Resgatar código) → <b>14 dias Premium grátis</b>.\n\n` +
-    `💎 <b>B) Grupos de sinais + copytrading</b> (acesso completo):\n` +
-    `1️⃣ Abre conta na PU Prime: ${PUPRIME_LINK}\n` +
-    `2️⃣ Deposita no mínimo <b>$${MIN_DEPOSIT}</b>\n` +
-    `3️⃣ Envia-me o teu <b>UID</b> da PU Prime (só o número)\n` +
-    `4️⃣ Envia um <b>print screen</b> do depósito\n\n` +
-    `Assim que validar, liberto os grupos + cupão Premium. Começa pela A se quiseres testar primeiro. 🚀`
-  )
-}
+/**
+ * Os TEXTOS por defeito destas mensagens vivem em `lib/mensagens-funil.ts` (`MENSAGENS`), e é de
+ * lá que saem — editados no /admin/social ou, quando ninguém os editou, do código.
+ *
+ * Havia aqui uma segunda cópia de cada um (`trialStepMessage`, `brokerStepMessage`) que já
+ * ninguém enviava. Um texto duplicado que não se envia não é código morto inofensivo: é a
+ * versão que alguém vai encontrar primeiro e corrigir, convencido de que corrigiu a mensagem.
+ */
