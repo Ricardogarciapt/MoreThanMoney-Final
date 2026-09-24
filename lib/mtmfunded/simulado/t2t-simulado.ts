@@ -149,9 +149,13 @@ export async function executarT2TSimulado(p: {
       // Tipo de ordem: a mesma regra do caminho MT5 da rota (0,03% ou dentro da zona = mercado).
       let tipo: 'mercado' | 'limit' | 'stop' = 'mercado'
       const entrada = p.sinal.entry && p.sinal.entry > 0 ? p.sinal.entry : null
+      // Só quando o `entry` do sinal É o preço do mercado (a banda dos 0,03 %) serve de referência
+      // para o preenchimento: o limite de um setup pendente, ou uma zona larga, não é preço de agora.
+      let referencia: number | null = null
       if (entrada) {
         const dentro = p.sinal.zone ? mercado >= p.sinal.zone[0] && mercado <= p.sinal.zone[1] : false
-        if (!(Math.abs(entrada - mercado) / mercado < 0.0003 || dentro)) {
+        if (Math.abs(entrada - mercado) / mercado < 0.0003) referencia = entrada
+        else if (!dentro) {
           tipo = p.sinal.direction === 'buy' ? (entrada > mercado ? 'stop' : 'limit') : (entrada < mercado ? 'stop' : 'limit')
         }
       }
@@ -172,7 +176,7 @@ export async function executarT2TSimulado(p: {
       if (!lote.ok) return { ...base, ok: false, symbol, error: lote.motivo }
 
       if (tipo === 'mercado') {
-        const r = await ex.abrirPosicao(conta, { symbol, direcao: p.sinal.direction, volume: lote.volume, sl, tp, origem: 'ideia_mtm', ideiaRef: ref, comentario })
+        const r = await ex.abrirPosicao(conta, { symbol, direcao: p.sinal.direction, volume: lote.volume, sl, tp, origem: 'ideia_mtm', ideiaRef: ref, comentario, referencia })
         return { ...base, ok: true, lot: lote.volume, symbol, sl, tp, orderId: String((r.posicao as { id?: string }).id ?? '') }
       }
       const r = await ex.criarPendente(conta, {

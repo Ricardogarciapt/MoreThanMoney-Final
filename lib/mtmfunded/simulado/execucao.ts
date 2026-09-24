@@ -16,6 +16,7 @@ import {
 import {
   type Gestao, type FiltroLote, validarGestao, gestaoDaLinha, riscoInicialUsd, selecionarParaFecho,
 } from './avancadas'
+import { precoDePreenchimento } from '../precos/preenchimento'
 
 /**
  * A EXECUÇÃO DAS ORDENS SIMULADAS — o lado que toca na base de dados.
@@ -143,6 +144,29 @@ function precoParaExecutar(symbol: string, precos: MapaPrecos, em: Record<string
   return p
 }
 
+/**
+ * O PREÇO A QUE UMA ORDEM NOVA ABRE.
+ *
+ * Igual ao de cima quando não há mais nada a dizer. Mas quando quem pede traz uma REFERÊNCIA — o
+ * preço que o sinal declarou, que é o do mercado no instante da decisão — o preenchimento passa
+ * pela regra de `../precos/preenchimento`: entre o nosso tick e o do sinal, a conta fica com o
+ * pior. Foi por não haver esta regra que 6 de 7 entradas da mestre do Sensei (21-24/09) bateram
+ * a favor da casa, 3 delas a preços fora da vela M5 real.
+ */
+function precoParaOrdem(
+  symbol: string, direcao: Direcao, precos: MapaPrecos, em: Record<string, string>,
+  referencia: number | null | undefined, digits: number,
+): Preco {
+  const p = precoParaExecutar(symbol, precos, em)
+  if (!(typeof referencia === 'number' && referencia > 0)) return p
+  const fill = precoDePreenchimento({
+    direcao, tick: { bid: p.bid, ask: p.ask, em: Date.parse(em[symbol]) },
+    referencia: { preco: referencia }, digits,
+  })
+  if (!fill.ok) throw new ErroOrdem(409, `${symbol}: ${fill.erro}`)
+  return { symbol, bid: fill.bid, ask: fill.ask }
+}
+
 /** Conta de análise (segue uma estratégia): as regras do programa não se aplicam — ver motor.ts, contaSim. */
 export function ehContaDeAnalise(conta: Record<string, unknown>): boolean {
   const m = conta.metricas as Record<string, unknown> | null | undefined
@@ -218,6 +242,12 @@ export interface EntradaAbrir {
   comentario?: string | null
   /** Trailing, break-even e TPs parciais (distâncias em preço, migração 072). */
   gestao?: Partial<Gestao> | null
+  /**
+   * O preço que a outra ponta diz ser o do mercado agora (o `entry` do sinal). Só o servidor o
+   * passa, e só quando é MESMO um preço de mercado — nunca o limite de um setup pendente. Com
+   * ele, a entrada nunca pode ser melhor do que o mercado ofereceu (ver `precoParaOrdem`).
+   */
+  referencia?: number | null
 }
 
 /** As colunas da gestão para gravar — só as que a trade pediu (o resto fica no default da base). */
@@ -265,7 +295,7 @@ export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
   const simbolo = simbolos[symbol]
   if (!simbolo) throw new ErroOrdem(400, `símbolo ${symbol} não disponível`)
   const { precos, em } = await carregarPrecos(simbolosParaMedir(Object.values(simbolos)))
-  const preco = precoParaExecutar(symbol, precos, em)
+  const preco = precoParaOrdem(symbol, e.direcao, precos, em, e.referencia, simbolo.digits)
   const regras = ehContaDeAnalise(conta) ? null : ((await regrasDaConta(conta)) as RegrasDeOrdem | null)
 
   const plano = planearAbertura({
