@@ -3,6 +3,7 @@
 import type { PrecoVivo, SimboloFicha } from "./api"
 import { bibliotecaTvDisponivel } from "./biblioteca-tv"
 import { semearPrecos } from "./use-precos"
+import { registarSimbolosCripto } from "@/lib/ios-sem-cripto"
 import { buscarRecentes, lerDisco, lerMemoria } from "./armazem-velas"
 import { URL_FICHAS, tirarPreCarga } from "@/lib/webtrader/velas"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
@@ -41,6 +42,9 @@ export function pedirFichas(csv: string): Promise<RespostaFichas> {
     .then((d) => {
       // O primeiro preço vem nesta mesma resposta: o bid/ask aparece antes do primeiro poll.
       if (d.precos?.length) semearPrecos(d.precos)
+      // E o catálogo diz quais destes são cripto — é o que fecha a gate da Apple nos sítios que só
+      // têm o símbolo e não a ficha (favoritos, multi-gráfico, deep links). Ver lib/ios-sem-cripto.
+      if (d.simbolos?.length) registarSimbolosCripto(d.simbolos)
       return d
     })
     .catch(() => { fichas.delete(chave); return {} as RespostaFichas })

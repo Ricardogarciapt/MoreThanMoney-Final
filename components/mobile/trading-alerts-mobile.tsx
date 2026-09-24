@@ -176,6 +176,12 @@ interface Subscription {
 }
 
 const DEFAULT_ALERT_SYMBOLS = ["XAUUSD", "EURUSD", "GBPUSD", "USDCAD", "USDJPY", "BTCUSD", "US30"]
+/**
+ * App iOS: a subscrição por defeito não nasce com BTCUSD. Os alertas cripto já eram escondidos da
+ * lista, mas o símbolo ficava na subscrição guardada — e voltava pelo push. O mesmo que a watchlist
+ * faz aos favoritos (components/funded/funded-watchlist.tsx::lerFavoritos).
+ */
+const simbolosIniciais = () => (semCripto() ? DEFAULT_ALERT_SYMBOLS.filter((s) => !ehSimboloCripto(s)) : DEFAULT_ALERT_SYMBOLS)
 // Estratégias MTM que geram alertas (inclui Aurum Flow — scanner de perpétuos cripto).
 const STRATEGIES = ["Sensei", "Goldkiller", "MTMScanner", "Aurum Flow"]
 const TIMEFRAMES = ["5", "15", "30", "60", "240", "D"]
@@ -533,7 +539,7 @@ export default function TradingAlertsMobile() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [sub, setSub] = useState<Subscription>({
-    enabled: true, push_enabled: true, symbols: DEFAULT_ALERT_SYMBOLS, strategies: [], timeframes: [],
+    enabled: true, push_enabled: true, symbols: simbolosIniciais(), strategies: [], timeframes: [],
   })
   const [alerts, setAlerts] = useState<MtmAlert[]>([])
   const [loading, setLoading] = useState(true)
