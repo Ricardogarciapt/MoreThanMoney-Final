@@ -5,8 +5,11 @@ import { tipoCurto, estadoCurto, COR_DO_ESTADO } from '@/lib/mtmfunded/etiquetas
 import Link from 'next/link'
 import {
   LayoutDashboard, Wallet, FileText, Trophy, ListOrdered,
-  LineChart, Award, MessageSquare, Bot, ShieldAlert, Banknote, Settings,
+  LineChart, Award, MessageSquare, Bot, ShieldAlert, Banknote, Settings, Pencil, Check,
 } from 'lucide-react'
+// 113 — a etiqueta do dono: a MESMA normalização e o MESMO limite do lápis do WebTrader.
+import { ETIQUETA_MAX, normalizarEtiqueta } from '@/lib/contas/etiqueta'
+import { PALAVRA_SEM_LOGIN } from '@/lib/mtmfunded/apagar-conta'
 import dynamic from 'next/dynamic'
 import { Contratos, Levantamentos } from '@/components/mtmfunded/contratos-e-levantamentos'
 import { useT } from '@/components/i18n-provider'
@@ -54,6 +57,13 @@ interface Conta {
   metricas: Record<string, unknown>; quebrouRegra: string | null
   /** O QR do MetaTrader, em data URI. Entra na app com um toque. */
   qrcode: string | null
+  /**
+   * 113 — A ETIQUETA DO DONO: o nome que ele deu à conta. É a MESMA coluna
+   * (`mtm_trading_accounts.etiqueta`) e a MESMA rota (PATCH /api/contas/etiqueta) do lápis do
+   * WebTrader, para uma etiqueta posta lá aparecer aqui e ao contrário. `null` = sem etiqueta,
+   * e então mostra-se o que este painel sempre mostrou (tipo · login).
+   */
+  etiquetaDoDono: string | null
 }
 interface Certificado { codigo: string; tipo: string; posicao: number | null; emitidoEm: string }
 interface LinhaTabela { posicao: number | null; nome: string; resultadoPct: number | null; estado: string; elegivel: boolean }
@@ -167,7 +177,7 @@ export default function PainelParticipante(props: {
 
         <main className="min-w-0 flex-1">
           {seccao === 'dashboard' && <Dashboard {...{ torneio, participante, contas }} nome={props.nome} perfil={props.perfil} />}
-          {seccao === 'contas' && <Contas contas={contas} abrir={contaAberta} />}
+          {seccao === 'contas' && <Contas contas={contas} abrir={contaAberta} ehAdmin={props.ehAdmin === true} />}
           {seccao === 'contratos' && <Contratos />}
           {seccao === 'levantamentos' && <Levantamentos irParaContrato={() => setSeccao('contratos')} />}
           {seccao === 'competicoes' && <Competicoes torneio={torneio} participante={participante} onInscrever={() => setSeccao('dashboard')} />}
@@ -450,7 +460,7 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
   )
 }
 
-function Contas({ contas, abrir }: { contas: Conta[]; abrir?: string | null }) {
+function Contas({ contas, abrir, ehAdmin }: { contas: Conta[]; abrir?: string | null; ehAdmin?: boolean }) {
   /**
    * O modal do DESEMPENHO, aberto uma conta de cada vez.
    *
@@ -459,20 +469,52 @@ function Contas({ contas, abrir }: { contas: Conta[]; abrir?: string | null }) {
    * uma impossibilidade em vez de uma convenção.
    */
   const [metricasDe, setMetricasDe] = useState<string | null>(null)
+  /** A conta que o admin pediu para apagar — o diálogo vive aqui pela mesma razão. */
+  const [apagarDe, setApagarDe] = useState<Conta | null>(null)
+  /**
+   * As etiquetas gravadas nesta visita. A página é um Server Component: sem isto, mudar a
+   * etiqueta só aparecia depois de recarregar, e a pessoa escrevia outra vez a pensar que falhou.
+   */
+  const [etiquetas, setEtiquetas] = useState<Record<string, string | null>>({})
+  /** A lista sem as contas que o admin apagou nesta visita (não se recarrega a página por baixo dele). */
+  const [apagadas, setApagadas] = useState<string[]>([])
 
-  if (!contas.length) return <Caixa titulo="Contas de Trading"><Vazio>Ainda não tens contas.</Vazio></Caixa>
+  const lista = contas.filter((c) => !apagadas.includes(c.id))
+  if (!lista.length) return <Caixa titulo="Contas de Trading"><Vazio>Ainda não tens contas.</Vazio></Caixa>
   return (
     <div className="space-y-4">
       {metricasDe && <ModalMetricas contaId={metricasDe} aoFechar={() => setMetricasDe(null)} />}
-      {contas.map((c) => (
-        <Caixa key={c.id} titulo={`${tipoCurto(c.tipo, c.metricas)} · ${c.login ?? 'a emitir'}`}>
-          <div className="mb-2 flex items-center gap-2">
+      {apagarDe && (
+        <ModalApagarConta
+          conta={{ ...apagarDe, etiquetaDoDono: apagarDe.id in etiquetas ? etiquetas[apagarDe.id] : apagarDe.etiquetaDoDono }}
+          aoFechar={() => setApagarDe(null)}
+          aoApagar={() => { setApagadas((xs) => [...xs, apagarDe.id]); setApagarDe(null) }}
+        />
+      )}
+      {lista.map((c) => {
+        const etiqueta = c.id in etiquetas ? etiquetas[c.id] : c.etiquetaDoDono
+        return (
+        <Caixa
+          key={c.id}
+          // A etiqueta do dono MANDA no título; sem ela, o título é o de sempre (tipo · login).
+          titulo={etiqueta ?? `${tipoCurto(c.tipo, c.metricas)} · ${c.login ?? 'a emitir'}`}
+        >
+          <div className="mb-2 flex flex-wrap items-center gap-2">
             <span
               className="rounded-md px-2 py-0.5 text-xs font-semibold"
               style={{ color: COR_DO_ESTADO[estadoCurto(c.estado, c.metricas)], background: `${COR_DO_ESTADO[estadoCurto(c.estado, c.metricas)]}1f` }}
             >
               {estadoCurto(c.estado, c.metricas)}
             </span>
+            {/* Com etiqueta, o tipo e o login passam para aqui — continuam à vista, só deixam de ser o nome. */}
+            {etiqueta && (
+              <span className="text-xs text-zinc-500">{tipoCurto(c.tipo, c.metricas)} · {c.login ?? 'a emitir'}</span>
+            )}
+            <CampoEtiquetaConta
+              contaId={c.id}
+              etiqueta={etiqueta}
+              aoGravar={(nova) => setEtiquetas((e) => ({ ...e, [c.id]: nova }))}
+            />
           </div>
           <Linha rotulo="Servidor" valor={c.servidor ?? '—'} />
           <Linha rotulo="Saldo inicial" valor={c.saldoInicial ? `${c.saldoInicial.toLocaleString('pt-PT')} USD` : '—'} />
@@ -492,8 +534,290 @@ function Contas({ contas, abrir }: { contas: Conta[]; abrir?: string | null }) {
           )}
 
           {c.login && <Credenciais conta={c} abrirJa={abrir === c.id} />}
+
+          {/* Apagar é só do admin, e quem manda nisso é o SERVIDOR: esconder o botão é
+              conveniência, não segurança — a rota volta a verificar a sessão e o papel. */}
+          {ehAdmin && (
+            <button
+              onClick={() => setApagarDe(c)}
+              className="mt-3 w-full rounded-lg border border-red-500/30 py-2.5 text-sm text-red-400 transition hover:border-red-500 hover:bg-red-500/[0.06]"
+            >
+              Apagar esta conta
+            </button>
+          )}
         </Caixa>
-      ))}
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * O LÁPIS DA ETIQUETA — o mesmo gesto do WebTrader, no cartão da conta.
+ *
+ * Grava pela MESMA rota (PATCH /api/contas/etiqueta, `ref = mtmfunded:<id>`) e na MESMA coluna
+ * (`mtm_trading_accounts.etiqueta`), para uma etiqueta posta aqui aparecer no seletor do
+ * WebTrader e ao contrário. `''` apaga. O servidor volta a normalizar (40 caracteres, sem `<>`)
+ * e devolve o que ficou gravado — é esse valor que se mostra, não o que se escreveu.
+ */
+function CampoEtiquetaConta({ contaId, etiqueta, aoGravar }: {
+  contaId: string
+  etiqueta: string | null
+  aoGravar: (nova: string | null) => void
+}) {
+  const [aEditar, setAEditar] = useState(false)
+  const [texto, setTexto] = useState(etiqueta ?? '')
+  const [ocupado, setOcupado] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+
+  const gravar = async () => {
+    if (ocupado) return
+    // Sem mudança não se gasta um pedido (Enter seguido de blur passava aqui duas vezes).
+    if (normalizarEtiqueta(texto) === etiqueta) { setAEditar(false); setErro(null); return }
+    setOcupado(true)
+    setErro(null)
+    try {
+      const { getAccessToken } = await import('@/lib/auth-token')
+      const tok = await getAccessToken()
+      const r = await fetch('/api/contas/etiqueta', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ ref: `mtmfunded:${contaId}`, etiqueta: texto }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(j?.error || 'Não foi possível gravar a etiqueta')
+      aoGravar(j?.etiqueta ?? null)
+      setAEditar(false)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível gravar a etiqueta')
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  if (!aEditar) {
+    return (
+      <button
+        type="button"
+        onClick={() => { setTexto(etiqueta ?? ''); setErro(null); setAEditar(true) }}
+        aria-label={etiqueta ? `Mudar a etiqueta (${etiqueta})` : 'Pôr uma etiqueta nesta conta'}
+        title={etiqueta ? 'Mudar a etiqueta' : 'Pôr uma etiqueta'}
+        className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-zinc-500 transition hover:bg-white/5 hover:text-[#D2A63C]"
+      >
+        <Pencil className="h-3.5 w-3.5" />
+        {!etiqueta && <span>etiqueta</span>}
+      </button>
+    )
+  }
+  return (
+    <span className="flex items-center gap-1">
+      <input
+        autoFocus
+        value={texto}
+        maxLength={ETIQUETA_MAX}
+        placeholder="etiqueta"
+        aria-label="Etiqueta da conta"
+        enterKeyHint="done"
+        disabled={ocupado}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={() => void gravar()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); void gravar() }
+          // Escape desiste sem gravar — e o blur que vem a seguir já não encontra mudança.
+          if (e.key === 'Escape') { e.preventDefault(); setTexto(etiqueta ?? ''); setAEditar(false) }
+        }}
+        // 16 px no toque: abaixo disso o iPhone faz zoom ao focar o campo.
+        className="h-8 w-40 rounded border border-[#D2A63C]/40 bg-black/60 px-2 text-[16px] text-white outline-none placeholder:text-zinc-600 sm:text-xs"
+      />
+      {/* No toque não há blur antes do clique: este botão grava o que está escrito. */}
+      <button
+        type="button"
+        aria-label="Guardar etiqueta"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => void gravar()}
+        className="grid h-8 w-8 place-items-center rounded-md text-[#D2A63C] hover:bg-white/5"
+      >
+        <Check className="h-4 w-4" />
+      </button>
+      {erro && <span className="text-xs text-red-400">{erro}</span>}
+    </span>
+  )
+}
+
+/**
+ * APAGAR UMA CONTA — o diálogo que diz o que vai desaparecer antes de deixar apagar.
+ *
+ * Não é um `confirm()`. Primeiro pergunta-se ao servidor o que está pendurado na conta
+ * (GET ?vista=apagar, que não apaga nada) e mostra-se: os bloqueios, o que vai junto e o que
+ * fica. O botão só destranca depois de o admin escrever o LOGIN da conta à mão — escrever o
+ * login é o que separa «carreguei sem ler» de «quis mesmo esta conta». Havendo bloqueios, não há
+ * botão nenhum: recusa-se e explica-se, em vez de apagar meio.
+ *
+ * O admin é verificado no SERVIDOR (verifyAdminAccess na rota), nunca por este componente.
+ */
+function ModalApagarConta({ conta, aoFechar, aoApagar }: {
+  conta: Conta
+  aoFechar: () => void
+  aoApagar: () => void
+}) {
+  const [plano, setPlano] = useState<{
+    pode: boolean; bloqueios: string[]; avisos: string[]
+    arrasta: Array<{ tabela: string; quantas: number; nota: string }>
+    confirmacaoEsperada: string
+  } | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  const [escrito, setEscrito] = useState('')
+  const [aApagar, setAApagar] = useState(false)
+  /**
+   * A chave de idempotência, UMA por abertura do diálogo.
+   *
+   * Duplo clique ou rede que repete: a segunda tentativa devolve o que a primeira fez, em vez de
+   * apagar duas vezes. Fixa por conta não servia — uma tentativa recusada (conta ainda viva) fica
+   * gravada como «falhou» e a mesma chave nunca mais passava, nem depois de o bloqueio ser
+   * resolvido. Abrir o diálogo outra vez é o que dá uma chave nova.
+   */
+  const [chave] = useState(() => `apagar-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`)
+
+  useEffect(() => {
+    let vivo = true
+    ;(async () => {
+      try {
+        const { getAccessToken } = await import('@/lib/auth-token')
+        const tok = await getAccessToken()
+        const r = await fetch(`/api/admin/mtmfunded/conta/${conta.id}?vista=apagar`, {
+          headers: { Authorization: `Bearer ${tok}` }, cache: 'no-store',
+        })
+        const j = await r.json().catch(() => ({}))
+        if (!vivo) return
+        if (!r.ok) throw new Error(j?.error || 'Não foi possível ler o que está ligado a esta conta')
+        setPlano(j)
+      } catch (e) {
+        if (vivo) setErro(e instanceof Error ? e.message : 'Não foi possível ler o que está ligado a esta conta')
+      }
+    })()
+    return () => { vivo = false }
+  }, [conta.id])
+
+  const esperado = plano?.confirmacaoEsperada || PALAVRA_SEM_LOGIN
+  const destrancado = plano?.pode === true && escrito.trim() === esperado && !aApagar
+
+  const apagar = async () => {
+    if (!destrancado) return
+    setAApagar(true)
+    setErro(null)
+    try {
+      const { getAccessToken } = await import('@/lib/auth-token')
+      const tok = await getAccessToken()
+      const r = await fetch(`/api/admin/mtmfunded/conta/${conta.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({
+          accao: 'apagar_conta',
+          confirmacao: escrito.trim(),
+          motivo: `apagada no painel do torneio${conta.etiquetaDoDono ? ` (${conta.etiquetaDoDono})` : ''}`,
+          chave,
+        }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(j?.error || 'Não foi possível apagar a conta')
+      aoApagar()
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível apagar a conta')
+      setAApagar(false)
+    }
+  }
+
+  const nome = conta.etiquetaDoDono ?? `${tipoCurto(conta.tipo, conta.metricas)} · ${conta.login ?? 'a emitir'}`
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-4 sm:items-center">
+      <div className="w-full max-w-lg rounded-2xl border border-red-500/30 bg-[#0A0B0E] p-5">
+        <div className="flex items-start gap-3">
+          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+          <div className="min-w-0">
+            <h3 className="font-semibold text-red-400">Apagar esta conta</h3>
+            <p className="mt-0.5 truncate text-sm text-zinc-300">{nome}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-1">
+          <Linha rotulo="Login" valor={conta.login ?? 'a emitir'} />
+          <Linha rotulo="Servidor" valor={conta.servidor ?? '—'} />
+          <Linha rotulo="Saldo inicial" valor={conta.saldoInicial ? `${conta.saldoInicial.toLocaleString('pt-PT')} USD` : '—'} />
+          {typeof conta.metricas.equity === 'number' && (
+            <Linha rotulo="Equity" valor={`${(conta.metricas.equity as number).toLocaleString('pt-PT')} USD`} />
+          )}
+        </div>
+
+        {!plano && !erro && <p className="mt-4 text-sm text-zinc-500">A ver o que está ligado a esta conta…</p>}
+
+        {plano && plano.bloqueios.length > 0 && (
+          <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/[0.05] p-3">
+            <p className="text-sm font-semibold text-amber-400">Esta conta não pode ser apagada agora</p>
+            <ul className="mt-2 space-y-1.5 text-sm text-zinc-300">
+              {plano.bloqueios.map((b, i) => <li key={i}>· {b}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {plano && plano.pode && (
+          <>
+            <div className="mt-4">
+              <p className="text-xs uppercase tracking-widest text-zinc-600">Desaparece com a conta</p>
+              {plano.arrasta.length ? (
+                <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+                  {plano.arrasta.map((a) => (
+                    <li key={a.tabela}>· <span className="font-mono text-zinc-400">{a.quantas}</span> · {a.nota}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-zinc-500">Nada mais está ligado a esta conta.</p>
+              )}
+            </div>
+
+            {plano.avisos.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs uppercase tracking-widest text-zinc-600">Fica como está</p>
+                <ul className="mt-2 space-y-1 text-sm text-zinc-400">
+                  {plano.avisos.map((a, i) => <li key={i}>· {a}</li>)}
+                </ul>
+              </div>
+            )}
+
+            <label className="mt-5 block">
+              <span className="text-sm text-zinc-300">
+                Escreve <span className="font-mono text-white">{esperado}</span> para destrancar
+              </span>
+              <input
+                value={escrito}
+                onChange={(e) => setEscrito(e.target.value)}
+                autoComplete="off"
+                className="mt-1.5 w-full rounded-lg border border-zinc-800 bg-black/40 px-3 py-2.5 font-mono text-sm text-white outline-none focus:border-red-500"
+              />
+            </label>
+          </>
+        )}
+
+        {erro && <p className="mt-4 text-sm text-red-400">{erro}</p>}
+
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <button onClick={aoFechar} disabled={aApagar} className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 disabled:opacity-40">
+            Cancelar
+          </button>
+          {plano?.pode && (
+            <button
+              onClick={apagar}
+              disabled={!destrancado}
+              className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-30"
+            >
+              {aApagar ? 'A apagar…' : 'Apagar para sempre'}
+            </button>
+          )}
+        </div>
+        <p className="mt-3 text-xs text-zinc-600">
+          Isto não tem volta, e fica registado na auditoria (quem apagou, o quê e quando). Para tirar
+          a conta da frente sem a perder, usa «Fechar conta» no painel de admin.
+        </p>
+      </div>
     </div>
   )
 }

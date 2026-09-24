@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { papelMtmFunded, SCANNERS_TORNEIO } from '@/lib/mtmfunded/acesso'
+import { etiquetaDaLinha } from '@/lib/contas/etiqueta'
 import PainelParticipante from './painel'
 
 export const dynamic = 'force-dynamic'
@@ -72,7 +73,8 @@ export default async function DashboardTorneioPage() {
 
   const { data: contas } = await db
     .from('mtm_trading_accounts')
-    .select('id, tipo, mt5_login, servidor, saldo_inicial, alavancagem, estado, metricas, quebrou_regra, quebrada_em, qrcode_url, created_at')
+    // `etiqueta` (113) = a etiqueta do DONO, a mesma coluna que o lápis do WebTrader grava.
+    .select('id, tipo, mt5_login, servidor, saldo_inicial, alavancagem, estado, metricas, quebrou_regra, quebrada_em, qrcode_url, etiqueta, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -141,6 +143,8 @@ export default async function DashboardTorneioPage() {
         // O QR do MetaTrader vai INTEIRO para o painel — não é segredo maior do que o
         // login que já está ali ao lado, e é o que faz a app entrar com um toque.
         qrcode: (c.qrcode_url as string) ?? null,
+        // A etiqueta passa pela MESMA normalização de todos os ecrãs (113): vazio vira null.
+        etiquetaDoDono: etiquetaDaLinha(c),
       }))}
       certificados={(certificados ?? []).map((c) => ({
         codigo: c.codigo as string,
