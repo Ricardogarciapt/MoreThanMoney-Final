@@ -85,10 +85,25 @@ export async function renderSignalChartPng(sig: ChartImgSignal): Promise<ArrayBu
   return (await renderSignalChart(sig)).png
 }
 
+/**
+ * Disjuntor da quota. O chart-img tem um tecto DIÁRIO por plano (BASIC 50/dia, PRO 500/dia) e
+ * responde 429 «Limit Exceeded» quando se esgota. Com ~300 entradas por dia isso acontece todos os
+ * dias: sem disjuntor, cada cartão de alerta pagava uma ida de rede só para levar 429. Guarda-se o
+ * instante até quando não vale a pena tentar (por instância da função; é de graça e chega).
+ */
+let quotaEsgotadaAte = 0
+const QUOTA_ESPERA_MS = 30 * 60_000
+
+/** O chart-img está de quarentena por quota esgotada? (usado pela rota da imagem do sinal) */
+export function chartImgEmQuarentena(): boolean {
+  return Date.now() < quotaEsgotadaAte
+}
+
 /** Igual, mas devolve também o erro/body para debug. */
 export async function renderSignalChart(sig: ChartImgSignal): Promise<{ png: ArrayBuffer | null; error?: string; body?: unknown }> {
   const key = process.env.CHARTIMG_API_KEY
   if (!key) return { png: null, error: "sem CHARTIMG_API_KEY" }
+  if (chartImgEmQuarentena()) return { png: null, error: "quota esgotada (429) — em quarentena" }
 
   // Só o gráfico real + linhas Entry/SL/Exits com etiqueta de texto (sem studies).
   // 5 linhas cabem no limite de drawings do PRO.
@@ -121,9 +136,11 @@ export async function renderSignalChart(sig: ChartImgSignal): Promise<{ png: Arr
     })
     if (!res.ok) {
       const t = (await res.text()).slice(0, 400)
+      if (res.status === 429) quotaEsgotadaAte = Date.now() + QUOTA_ESPERA_MS
       console.error("[chart-image] chart-img erro", res.status, t)
       return { png: null, error: `${res.status} ${t}`, body }
     }
+    quotaEsgotadaAte = 0
     const ct = res.headers.get("content-type") || ""
     if (!ct.startsWith("image/")) {
       return { png: null, error: `content-type ${ct}`, body }
