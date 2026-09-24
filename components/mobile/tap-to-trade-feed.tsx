@@ -5,6 +5,7 @@ import { ehSinalDePerpetuo, t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { mensagemCripto, useSemCripto } from "@/lib/ios-sem-cripto"
 import { apareceNoT2T, recebeT2T } from "@/lib/mtmcopy/alvo-t2t"
 import { pipSizeForSymbol, unitFor } from "@/lib/mtmcopy/trade-outcome"
+import { precoLegivel, textoParaColar, type ParametrosSinal } from "@/lib/mtmcopy/t2t-copiar"
 import { directionLabelFromText, resolveDirectionLabel } from "@/lib/mtmcopy/signal-direction"
 
 import { useCallback, useEffect, useState, useRef, useMemo } from "react"
@@ -27,6 +28,7 @@ import {
   ShieldCheck,
   Wallet,
   Clock,
+  Copy,
 } from "lucide-react"
 import MtmAutoMetricas from "@/components/mobile/mtm-auto-metricas"
 import TapToCopyModal from "@/components/mobile/tap-to-copy-modal"
@@ -36,22 +38,10 @@ import MtmAutoHistorico from "@/components/mobile/mtm-auto-historico"
 
 const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break[\s-]*even|stop\s+protegido|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|entry\s*hit|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 /**
- * Um preço como se escreve — nunca com a precisão inventada de um indicador.
- *
- * Os scanners calculam stops a partir do ATR: o GoldKiller chegou a mandar 4452.9733242788, que
- * não é um preço que exista no ouro. Assim escrito, o número saía fora da caixa e tapava o TP ao
- * lado, e prometia uma precisão que é falsa. A origem já arredonda; isto cobre o que ficou
- * gravado antes e qualquer fonte nova que volte a fazê-lo.
+ * O preço legível é agora o de `lib/mtmcopy/t2t-copiar` — o MESMO módulo que escreve o texto do
+ * «Tap to copy» e que o /sinais da app MTM Auto usa. O que se lê no cartão tem de ser, à casa
+ * decimal, o que se copia para o MT5; enquanto havia duas cópias da regra, podiam divergir.
  */
-function precoLegivel(v: number | string | null | undefined, symbol: string): string {
-  const n = Number(v)
-  if (v == null || !Number.isFinite(n)) return "—"
-  const casas = /JPY|XAG|SILVER/i.test(symbol) ? 3
-    : /XAU|GOLD|BTC|ETH|SOL|XRP|NAS|US30|US500|GER|SPX|DOW/i.test(symbol) ? 2
-    : 5
-  // `parseFloat` para não pôr zeros que ninguém escreveu: 4435.80 lê-se 4435.8.
-  return String(parseFloat(n.toFixed(casas)))
-}
 
 /** Encerra mesmo a ideia (ao contrário de um BE ou de um TP1, que a deixam a correr). */
 const TERMINAL_RE = /(posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|stop\s+(?:loss|protegido)\s*·|cancelad|encerrad|descartad|invalidad|alvo\s+final|close\s+all|hit\s*tp\s*[3-9])/i
@@ -198,6 +188,31 @@ function parseSignalFields(content: string): SignalFields {
     entry: entryM ? entryM[1] : marketM ? "Mercado" : null,
     sl: slM ? slM[1] : null,
     tps,
+  }
+}
+
+/**
+ * Os campos do cartão, prontos para o «Tap to copy».
+ *
+ * A entrada do cartão pode vir como zona («4388 – 4395»): copia-se o PRIMEIRO valor, que é o
+ * primeiro a ser tocado — é o que o trader escreveu como entrada. E a direcção é a do servidor
+ * (`dir`), não a que se adivinha do texto: o rodapé «…key to long term success» do Premium punha
+ * «BUY» em cima de vendas, e copiado para uma ordem isso é a trade ao contrário.
+ */
+function parametrosParaCopiar(f: SignalFields, dir: string): ParametrosSinal {
+  const primeiroNumero = (v: string | null): number | null => {
+    const m = String(v ?? "").match(/-?\d+(?:[.,]\d+)?/)
+    if (!m) return null
+    const n = Number(m[0].replace(",", "."))
+    return Number.isFinite(n) ? n : null
+  }
+  return {
+    simbolo: f.symbol ?? "",
+    direcao: dir || f.direction || null,
+    entrada: primeiroNumero(f.entry),
+    mercado: f.entry == null || /mercado|market/i.test(String(f.entry)),
+    sl: primeiroNumero(f.sl),
+    tps: f.tps.map(primeiroNumero),
   }
 }
 
@@ -1506,19 +1521,35 @@ export default function TapToTradeFeed() {
                   </div>
                 ) : (
                   <button
-                    onClick={() =>
-                      ehSinalDePerpetuo(s.channel_slug, s.content) ? setCopySig(s) : setTap({ sig: s, status: "confirm" })
-                    }
+                    onClick={() => setTap({ sig: s, status: "confirm" })}
                     className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2.5 active:scale-[0.98] transition-transform"
                   >
                     <Zap className="w-4 h-4" />
-                    {/* Perpétuos: não abre ordem — modal TAP to Copy com os parâmetros, campo a
-                        campo, para colar na exchange (pedido Ricardo 2026-09-04). */}
-                    {ehSinalDePerpetuo(s.channel_slug, s.content)
-                      ? "TAP to Copy"
-                      : t2tMode(s.channel_slug, s.content) === "follow"
-                        ? t("t2t.followPosition")
-                        : "Tap to Trade"}
+                    {/* QUEM DECIDE É `t2tMode` — a regra está em lib/mtmcopy/t2t-source e é a
+                        mesma que a rota de aceitação aplica: os perpétuos que não existem nas
+                        contas MT5 dos clientes marcam-se como SEGUIDOS (a gestão chega por
+                        notificação, sem ordem aberta); a cripto que existe lá (BTC, ETH, SOL,
+                        XRP…) abre ordem como qualquer outro sinal.
+                        Antes o botão era decidido por `ehSinalDePerpetuo`, que diz «isto é
+                        cripto/perpétuo» e não «isto executa»: por causa disso o BTCUSD — que a
+                        regra manda EXECUTAR — abria o modal de copiar e nunca chegava a abrir
+                        ordem nenhuma. O copiar não desapareceu: passou a botão próprio, em TODOS
+                        os sinais, aqui em baixo. */}
+                    {t2tMode(s.channel_slug, s.content) === "follow" ? t("t2t.followPosition") : "Tap to Trade"}
+                  </button>
+                )}
+
+                {/* TAP TO COPY — em QUALQUER sinal, aceite ou não, cripto e perpétuos incluídos.
+                    É para quem não quer executar connosco e quer replicar a trade à mão: os
+                    parâmetros saem em texto que se cola no MT5, em vez de se transcreverem
+                    preços do ecrã. Secundário de propósito: o primário continua a ser executar. */}
+                {structured && textoParaColar(parametrosParaCopiar(f, dir)) !== "" && (
+                  <button
+                    onClick={() => setCopySig(s)}
+                    className="mt-1.5 w-full flex items-center justify-center gap-1.5 rounded-xl border border-[#D2A63C]/40 text-[#D2A63C] font-semibold text-[12.5px] py-2 active:scale-[0.98] transition-transform"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    Tap to copy
                   </button>
                 )}
               </div>
@@ -1580,7 +1611,23 @@ export default function TapToTradeFeed() {
       </>
       )}
 
-      {copySig && <TapToCopyModal content={copySig.content || ""} aoFechar={() => setCopySig(null)} />}
+      {/* Os parâmetros vão JÁ interpretados (os mesmos que o cartão mostra), e não o texto cru:
+          o modal deixa de ter de adivinhar o formato de cada fonte — e copia o que se está a ver. */}
+      {copySig && (
+        <TapToCopyModal
+          parametros={parametrosParaCopiar(
+            parseSignalFields(copySig.content),
+            resolveDirectionLabel(dirServidor[copySig.id], copySig.content),
+          )}
+          content={copySig.content || ""}
+          titulo={
+            ehSinalDePerpetuo(copySig.channel_slug, copySig.content)
+              ? "Tap to copy · Perpétuos"
+              : "Tap to copy"
+          }
+          aoFechar={() => setCopySig(null)}
+        />
+      )}
 
       {tap && (
         <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/70 p-4" onClick={() => tap.status !== "loading" && setTap(null)}>

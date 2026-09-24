@@ -170,17 +170,17 @@ export async function sendTelegramChannelPush(opts: {
       },
       tag: `t2t_${slug}_${opts.chatMessageId}`,
     })
-    // 2) Restantes → "ideia" → chat (exclui os que já receberam a T2T)
+    // 2) Restantes → "ideia" → TAMBÉM no sinal (exclui os que já receberam a T2T)
     const r2 = await postPush({
       all: true,
       excludeUserIds: t2tUsers,
       title: ideaTitle,
       body,
-      url: chatUrl,
+      url: t2tUrl,
       data: {
         type: 'trade_ideas',
         channel: slug,
-        url: chatUrl,
+        url: t2tUrl,
         message_id: opts.chatMessageId,
         signal_id: opts.chatMessageId,
       },
@@ -203,16 +203,29 @@ export async function sendTelegramChannelPush(opts: {
     return { ok: true, status: 0 }
   }
 
-  // Canal normal (ou T2T sem clientes com conta) → 1 push de chat/ideia
+  /**
+   * Canal normal (ou T2T sem clientes com conta) → 1 push de chat/ideia.
+   *
+   * Uma ENTRADA negociável aterra no SINAL, não no chat — mesmo para quem ainda não tem conta
+   * ligada. Desde que o botão de aceitar saiu das mensagens do chat, mandar lá quem acabou de ler
+   * «⚡ novo sinal» era mandá-lo para um sítio onde não há nada a fazer com ele; e no separador
+   * T2T há sempre o «Tap to copy», mesmo sem conta. Tudo o resto — conversa, imagens e as
+   * mensagens de ACOMPANHAMENTO (entrada tocada, parciais, break-even, fecho) — continua a levar
+   * ao chat, que é onde essa história se lê.
+   */
+  const urlDaIdeia =
+    opts.chatMessageId && isT2TEntrySignal(slug, opts.content)
+      ? `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(opts.chatMessageId)}`
+      : chatUrl
   return postPush({
     all: true,
     title: ideaTitle,
     body,
-    url: chatUrl,
+    url: urlDaIdeia,
     data: {
       type: slug.includes('trade') ? 'trade_ideas' : 'chat_message',
       channel: slug,
-      url: chatUrl,
+      url: urlDaIdeia,
       ...(opts.chatMessageId
         ? { message_id: opts.chatMessageId, signal_id: opts.chatMessageId }
         : {}),
