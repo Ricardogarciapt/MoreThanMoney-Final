@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { normalizarOrdem } from '@/lib/webtrader/ordem-contas'
+import { normalizarFiltro } from '@/lib/webtrader/filtro-contas'
 import { tabelaDaEtiqueta } from '@/lib/contas/etiqueta'
 
 export const dynamic = 'force-dynamic'
@@ -9,9 +10,10 @@ export const dynamic = 'force-dynamic'
 /**
  * A ORDEM DAS CONTAS NO SELETOR, e qual delas é a FAVORITA (pedido do dono, 23/09).
  *
- *   GET                                  →  { ordem, favorita, umCliqueAceite, umClique }
+ *   GET                                  →  { ordem, favorita, filtroContas, umCliqueAceite, umClique }
  *   PATCH { ordem: string[] }            →  grava a ordem que a pessoa arrastou
  *   PATCH { favorita: ref | null }       →  marca (ou desmarca) a conta que abre primeiro
+ *   PATCH { filtroContas: 'minhas' … }   →  «As minhas» / «Mestres» / «Todas» no seletor
  *   PATCH { umCliqueAceite: true }       →  a pessoa leu e aceitou o aviso da negociação num clique
  *   PATCH { umClique: {conta, ligado} }  →  a negociação num clique, ligada ou desligada NAQUELA conta
  *
@@ -26,10 +28,14 @@ export const dynamic = 'force-dynamic'
  * `favorita` (122), que é por onde o resto do sistema a lê. Como em toda a família destas rotas, o
  * UPDATE leva sempre `user_id = quem pede`: ninguém marca a conta de outra pessoa, e uma conta
  * ligada com a password investor (que é de outro dono) fica de fora.
+ *
+ * O FILTRO (24/09) é só isso: qual dos três botões do seletor está premido. Vive ao lado da ordem
+ * (`profile_data.webtrader.filtro_contas`) para seguir para o telemóvel, e não decide acesso
+ * nenhum — quem não tem contas mestre não ganha nenhuma por gravar «mestres» aqui.
  */
 export async function GET(request: NextRequest) {
   const userId = await userIdDoPedido(request)
-  if (!userId) return NextResponse.json({ ordem: [], favorita: null }, { headers: { 'Cache-Control': 'no-store' } })
+  if (!userId) return NextResponse.json({ ordem: [], favorita: null, filtroContas: normalizarFiltro(null) }, { headers: { 'Cache-Control': 'no-store' } })
   const db = getSupabaseAdmin()
   const [{ data: perfil }, { data: fav }] = await Promise.all([
     db.from('profiles').select('profile_data').eq('id', userId).maybeSingle(),
@@ -44,6 +50,7 @@ export async function GET(request: NextRequest) {
     {
       ordem: normalizarOrdem(wt.ordem_contas),
       favorita: escolhida,
+      filtroContas: normalizarFiltro(wt.filtro_contas),
       // Negociação num clique: o aviso aceita-se UMA vez (fica na conta da pessoa, não no
       // dispositivo — aceitar no computador e voltar a ser interrogado no telemóvel era o que
       // fazia isto parecer partido) e o interruptor é por conta.
@@ -89,6 +96,14 @@ export async function PATCH(request: NextRequest) {
     const guardado = await guardarNoPerfil(db, userId, (wt) => ({ ...wt, favorita: idNoSeletor }))
     if (!guardado) return NextResponse.json({ error: 'Não foi possível gravar a favorita.' }, { status: 500 })
     return NextResponse.json({ ok: true, favorita: idNoSeletor }, { headers: { 'Cache-Control': 'no-store' } })
+  }
+
+  // ── o filtro do seletor: as minhas / as mestres / todas ──────────────────
+  if ('filtroContas' in corpo) {
+    const filtro = normalizarFiltro(corpo.filtroContas)
+    const ok = await guardarNoPerfil(db, userId, (wt) => ({ ...wt, filtro_contas: filtro }))
+    if (!ok) return NextResponse.json({ error: 'Não foi possível gravar o filtro.' }, { status: 500 })
+    return NextResponse.json({ ok: true, filtroContas: filtro }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
   // ── negociação num clique: o aviso aceite (uma vez por pessoa) ───────────

@@ -83,6 +83,16 @@ async function main() {
     assert.ok(e.slice(2).every((x) => x.real && x.propria && x.modo === 'master'))
     assert.ok(e.slice(0, 2).every((x) => !x.real))
   })
+  await caso('seletor: a conta MESTRE (tipo provider) vem marcada, as outras não', () => {
+    // O filtro do seletor (filtro-contas.ts) esconde as mestres por omissão — é este campo que lho diz.
+    const e = montarSeletor({
+      funded: [...funded, { id: 'f-mestre', tipo: 'provider', mt5_login: '77000003', etiqueta: 'F1', estadoCurto: 'Active', sim_saldo: 10000, sim_equity: 10000 }],
+      reais,
+    })
+    assert.deepEqual(e.filter((x) => x.mestre).map((x) => x.id), ['f-mestre'])
+    // Contas reais (TradeLocker/MT5) nunca são mestres.
+    assert.ok(e.filter((x) => x.real).every((x) => !x.mestre))
+  })
   await caso('seletor: sessões deste separador (MTM Funded investor, TradeLocker antiga) e sem duplicados', () => {
     const e = montarSeletor({
       funded,

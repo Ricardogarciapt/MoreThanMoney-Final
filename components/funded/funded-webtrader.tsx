@@ -6,7 +6,7 @@ import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
 import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2, Pencil, Check, GripVertical, Star } from "lucide-react"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
-import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, gravarEtiqueta, lerOrdemContas, gravarOrdemContas, gravarContaFavorita, usd, COR_ESTADO, corDoEstado } from "./api"
+import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, gravarEtiqueta, lerOrdemContas, gravarOrdemContas, gravarContaFavorita, gravarFiltroContas, usd, COR_ESTADO, corDoEstado } from "./api"
 import InstalarWebtrader from "./instalar-webtrader"
 import PopoverAncorado from "./popover-contas"
 import { preaquecerWebtrader } from "./pre-carga"
@@ -17,6 +17,10 @@ import {
 } from "@/components/webtrader/api-corretoras"
 import { contaInicial, montarSeletor, type EntradaSeletor } from "@/lib/webtrader/seletor"
 import { moverConta, ordenarEntradas } from "@/lib/webtrader/ordem-contas"
+import {
+  contarPorTipo, filtrarEntradas, juntarOrdemFiltrada, normalizarFiltro, temDoisTipos,
+  FILTRO_POR_OMISSAO, type FiltroContas,
+} from "@/lib/webtrader/filtro-contas"
 import { useArrastoLista, type ArrastoLista } from "./use-arrasto-lista"
 import { ETIQUETA_MAX, normalizarEtiqueta } from "@/lib/contas/etiqueta"
 import { getAccessToken } from "@/lib/auth-token"
@@ -89,6 +93,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   // 122 — a ordem em que o dono arrumou as contas (arrastando) e qual delas abre primeiro.
   const [ordem, setOrdem] = useState<string[]>([])
   const [favorita, setFavorita] = useState<string | null>(null)
+  // 24/09 — «As minhas» / «Mestres» / «Todas». As mestres do MTM Auto começam escondidas; só quem
+  // tem contas dos dois tipos vê os botões (lib/webtrader/filtro-contas.ts).
+  const [filtro, setFiltro] = useState<FiltroContas>(FILTRO_POR_OMISSAO)
   const [compraPermitida, setCompraPermitida] = useState(true)
   const [temSessaoMtm, setTemSessaoMtm] = useState(false)
   const [ligarPlataforma, setLigarPlataforma] = useState<PlataformaWT | null>(null)
@@ -149,7 +156,12 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   // pela ordem natural — não é erro nenhum, e não se avisa ninguém disso.
   useEffect(() => {
     let vivo = true
-    void lerOrdemContas().then((r) => { if (vivo) { setOrdem(r.ordem ?? []); setFavorita(r.favorita ?? null) } }).catch(() => undefined)
+    void lerOrdemContas().then((r) => {
+      if (!vivo) return
+      setOrdem(r.ordem ?? [])
+      setFavorita(r.favorita ?? null)
+      setFiltro(normalizarFiltro(r.filtroContas))
+    }).catch(() => undefined)
     return () => { vivo = false }
   }, [])
 
@@ -227,17 +239,34 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     return ordenarEntradas(entradas.map((e) => ({ ...e, favorita: e.id === favorita })), ordem)
   }, [contas, sessoes, reais, ordem, favorita])
   /**
+   * O filtro só existe para quem tem contas dos dois tipos (o dono e os educadores). A conta
+   * ABERTA fica sempre na lista, mesmo que o filtro a escondesse: ninguém pode ficar a negociar
+   * numa conta que não vê no seletor.
+   */
+  const comFiltro = useMemo(() => temDoisTipos(todas), [todas])
+  const contagem = useMemo(() => contarPorTipo(todas), [todas])
+  const visiveis = useMemo(() => filtrarEntradas(todas, filtro, ativa), [todas, filtro, ativa])
+  const trocarFiltro = useCallback((novo: FiltroContas) => {
+    setFiltro(novo)
+    // Falhar a gravação não desfaz a escolha: o filtro vale para esta sessão à mesma, e um aviso
+    // vermelho por causa de um botão de vista era pior do que ele não seguir para o telemóvel.
+    void gravarFiltroContas(novo).catch(() => undefined)
+  }, [])
+  /**
    * Arrastar arruma JÁ na lista (o dedo manda) e grava no fim; se a gravação falhar, a ordem que
    * se vê continua a ser a que a pessoa fez — só não sobrevive ao próximo carregamento, e dizê-lo
    * num aviso vermelho a meio de um arrasto era pior do que a própria falha.
+   *
+   * Com o filtro ligado arrasta-se dentro do que está à vista, mas grava-se a ordem INTEIRA: as
+   * contas escondidas ficam no lugar onde estavam em vez de caírem da lista guardada.
    */
   const trocarOrdem = useCallback((id: string, alvoId: string) => {
-    const nova = moverConta(todas, id, alvoId)
+    const nova = juntarOrdemFiltrada(todas.map((t) => t.id), moverConta(visiveis, id, alvoId))
     setOrdem(nova)
     return nova
-  }, [todas])
+  }, [todas, visiveis])
   const gravarOrdem = useCallback((nova: string[]) => { void gravarOrdemContas(nova).catch(() => undefined) }, [])
-  const arrasto = useArrastoLista(todas.map((t) => t.id), trocarOrdem, gravarOrdem)
+  const arrasto = useArrastoLista(visiveis.map((t) => t.id), trocarOrdem, gravarOrdem)
 
   const atual = todas.find((t) => t.id === ativa)
 
@@ -278,6 +307,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                 <>
                   <span className="shrink-0 rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: atual.real ? COR_PLATAFORMA[atual.real.plataforma] : "#D2A63C" }}>{atual.etiqueta}</span>
                   {atual.real && <span className="shrink-0 text-[10px] font-bold text-rose-300">REAL</span>}
+                  {atual.mestre && <span className="shrink-0 text-[10px] font-bold text-sky-300">MESTRE</span>}
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: corDoEstado(atual.estadoCurto) }} />
                   {atual.etiquetaDoDono && <span className="max-w-[120px] truncate text-[11.5px] font-semibold text-[#E9C46A]">{atual.etiquetaDoDono}</span>}
                   <span className="truncate font-mono">{atual.login ?? "—"}</span>
@@ -290,8 +320,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
             <PopoverAncorado aberto={seletorAberto} ancora={botaoSeletor} onFechar={fecharSeletor} titulo="Escolher conta">
               <div role="listbox">
                 <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-zinc-500">MTM Funded (simuladas) · TradeLocker e MT5 (reais) — mantém a pega premida 1s e arrasta para arrumar, a estrela abre primeiro, o lápis dá um nome</p>
+                {comFiltro && <BarraFiltro filtro={filtro} contagem={contagem} escolher={trocarFiltro} />}
                 {erroEtiqueta && <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-rose-300">{erroEtiqueta}</p>}
-                {todas.map((t) => t.real ? (
+                {visiveis.map((t) => t.real ? (
                   <div key={t.id} data-conta-id={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${arrasto.aArrastar === t.id ? "bg-white/15 opacity-70" : t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
                     <Pega id={t.id} arrasto={arrasto} />
                     <button role="option" aria-selected={t.id === ativa} disabled={Boolean(t.real.bloqueada)} title={t.real.bloqueada ?? undefined} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left disabled:opacity-50" onClick={() => escolher(t.id)}>
@@ -319,6 +350,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                     <Pega id={t.id} arrasto={arrasto} />
                     <button role="option" aria-selected={t.id === ativa} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left" onClick={() => escolher(t.id)}>
                       <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}{t.segue ? ` · ${nomeCurto(t.segue)}` : ""}</span>
+                      {/* A mestre diz-se na própria linha: em «As minhas» só aparece a que está aberta, e tem de se perceber porquê. */}
+                      {t.mestre && <span className="shrink-0 rounded border border-sky-400/40 px-1 text-[9.5px] font-bold text-sky-300">MESTRE</span>}
                       <span className="rounded px-1.5 text-[10.5px]" style={{ color: corDoEstado(t.estadoCurto) }}>{t.estadoCurto}</span>
                       <span className="font-mono">{t.login}</span>
                       {t.etiquetaDoDono && <span className="max-w-[120px] truncate text-[11px] font-semibold text-[#E9C46A]" title={t.etiquetaDoDono}>{t.etiquetaDoDono}</span>}
@@ -445,6 +478,44 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
  * `touch-action: none` é obrigatório — sem isso o telemóvel trata o gesto como scroll da lista e
  * o arrasto nunca chega a começar.
  */
+/**
+ * OS TRÊS BOTÕES DO FILTRO — «As minhas», «Mestres», «Todas» (pedido do dono, 24/09).
+ *
+ * Só se desenha a quem tem contas dos DOIS tipos (`temDoisTipos`): a toda a gente menos ao dono e
+ * aos educadores, esta barra seria um botão «As minhas» sem alternativa nenhuma.
+ *
+ * O número ao lado de cada nome é o que lá está — é ele que responde a «e as mestres, sumiram?»
+ * sem obrigar ninguém a carregar para ver. `radiogroup` porque é uma escolha de um entre três, e
+ * é assim que um leitor de ecrã o anuncia.
+ */
+function BarraFiltro({ filtro, contagem, escolher }: {
+  filtro: FiltroContas
+  contagem: { minhas: number; mestres: number; todas: number }
+  escolher: (f: FiltroContas) => void
+}) {
+  const botoes: Array<{ chave: FiltroContas; nome: string; quantas: number }> = [
+    { chave: "minhas", nome: "As minhas", quantas: contagem.minhas },
+    { chave: "mestres", nome: "Mestres", quantas: contagem.mestres },
+    { chave: "todas", nome: "Todas", quantas: contagem.todas },
+  ]
+  return (
+    <div role="radiogroup" aria-label="Que contas mostrar" data-sem-arrasto
+      className="flex items-center gap-1 border-b border-white/5 px-3 py-1.5">
+      {botoes.map((b) => {
+        const premido = filtro === b.chave
+        return (
+          <button key={b.chave} type="button" role="radio" aria-checked={premido} onClick={() => escolher(b.chave)}
+            className={`min-h-[28px] rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors ${
+              premido ? "bg-[#D2A63C] text-black" : "text-zinc-400 hover:bg-white/5 hover:text-white"
+            }`}>
+            {b.nome} <span className={premido ? "text-black/60" : "text-zinc-600"}>{b.quantas}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 /** A estrela da conta favorita — a mesma nas MTM Funded e nas reais (o seletor mistura-as). */
 function Estrela({ marcada, alternar }: { marcada: boolean; alternar: () => void }) {
   return (
