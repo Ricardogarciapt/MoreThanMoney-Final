@@ -306,6 +306,8 @@ export async function executarAccao(ctx: ContextoAccao, p: PedidoAccao): Promise
           tipo: conta.tipo, estado: conta.estado, motor: conta.motor, saldo_inicial: Number(conta.saldo_inicial ?? 0),
           sim_saldo: conta.sim_saldo == null ? null : Number(conta.sim_saldo),
           equityMetricas: typeof m.equity === 'number' ? m.equity : null,
+          // Capital da casa com prazo: a guarda recusa e diz a data (ver bloqueioDeLevantamento).
+          metricas: m,
         },
         abertas, pendentes,
         jaPagoOutros: (outros ?? []).reduce((t, x) => t + Number(x.valor_usd ?? 0), 0),

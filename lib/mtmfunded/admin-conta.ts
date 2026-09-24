@@ -159,8 +159,25 @@ export function podeAvancarFase(conta: ContaParaTransicao, abertas: number, pend
 
 // ── levantamentos ────────────────────────────────────────────────────────────
 
+/**
+ * Capital com prazo: uma conta aberta com capital da casa (compensação de 10/09, transição do PAMM
+ * de 23/09) fica um ano sem levantamentos — é a condição do juro composto que a acompanha. A data
+ * vive em `metricas.bloqueio_levantamento_ate`; sem ela, nada muda.
+ *
+ * Estava só na rota do TRADER (app/api/mtmfunded/levantamentos): o cliente via a regra, mas quem
+ * aprovava do lado do admin não — nem o /admin, nem (agora) o bot. Uma regra que só o lado que não
+ * decide conhece não é uma regra: é um aviso. Passa a viver aqui, com `guardaLevantamento`, para
+ * que os três lados leiam a mesma coisa.
+ */
+export function bloqueioDeLevantamento(metricas: unknown, agoraMs: number = Date.now()): string | null {
+  const d = (metricas as Record<string, unknown> | null)?.bloqueio_levantamento_ate
+  if (typeof d !== 'string' || !d) return null
+  const t = Date.parse(d)
+  return Number.isFinite(t) && t > agoraMs ? d : null
+}
+
 export interface ContextoLevantamento {
-  conta: { tipo: string; estado: string; motor: string; saldo_inicial: number; sim_saldo: number | null; equityMetricas: number | null }
+  conta: { tipo: string; estado: string; motor: string; saldo_inicial: number; sim_saldo: number | null; equityMetricas: number | null; metricas?: unknown }
   abertas: number | null
   pendentes: number | null
   /** Pago + aprovado das OUTRAS linhas desta conta. */
@@ -169,6 +186,8 @@ export interface ContextoLevantamento {
   estadoAtual: string
   novoEstado: 'em_analise' | 'aprovado' | 'pago' | 'recusado'
   motivo?: string
+  /** Para o teste não depender do relógio. */
+  agoraMs?: number
 }
 
 /**
@@ -184,6 +203,10 @@ export function guardaLevantamento(c: ContextoLevantamento): string | null {
   if (c.novoEstado === 'recusado') return c.motivo && c.motivo.trim().length >= 3 ? null : 'escreve o motivo da recusa'
   if (c.novoEstado === 'em_analise') return c.estadoAtual === 'pedido' ? null : 'só um pedido novo passa a «em análise»'
   if (c.novoEstado === 'pago' && c.estadoAtual !== 'aprovado') return 'aprova primeiro — pagar sem aprovação salta a revisão'
+  const preso = bloqueioDeLevantamento(conta.metricas, c.agoraMs)
+  if (preso) {
+    return `o capital desta conta não é levantável até ${new Date(preso).toLocaleDateString('pt-PT')} (capital da casa, 12 meses) — recusa com este motivo em vez de aprovar`
+  }
   if (!['financiada', 'funded'].includes(conta.tipo)) return 'só contas Funded levantam'
   if (conta.estado !== 'ativa') return `a conta está ${conta.estado} — só uma Funded activa levanta`
   if (c.abertas == null || c.pendentes == null) return 'não foi possível confirmar as posições da conta — tenta daqui a um minuto'

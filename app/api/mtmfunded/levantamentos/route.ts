@@ -2,18 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CONTRATO_VERSAO, CONTRATO_VERSOES_ACEITES, almofadaUsd, levantavelUsd, QUOTA_TRADER } from '@/lib/mtmfunded/contrato'
 import { equityParaLevantamento } from '@/lib/mtmfunded/numeros-conta'
-
-/**
- * Capital com prazo: uma conta aberta com capital da casa (compensação de 10/09, transição do PAMM
- * de 23/09) fica um ano sem levantamentos — é a condição do juro composto que a acompanha. A data
- * vive em `metricas.bloqueio_levantamento_ate`; sem ela, nada muda.
- */
-function bloqueadoAte(metricas: unknown): string | null {
-  const d = (metricas as Record<string, unknown> | null)?.bloqueio_levantamento_ate
-  if (typeof d !== 'string' || !d) return null
-  const t = Date.parse(d)
-  return Number.isFinite(t) && t > Date.now() ? d : null
-}
+// A MESMA regra que o /admin e o bot de Telegram lêem ao decidir (lib/mtmfunded/admin-conta.ts).
+// Estava aqui em cópia, e por isso quem aprovava do outro lado não a via.
+import { bloqueioDeLevantamento as bloqueadoAte } from '@/lib/mtmfunded/admin-conta'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
