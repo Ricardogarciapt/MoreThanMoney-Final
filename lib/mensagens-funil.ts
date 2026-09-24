@@ -113,9 +113,10 @@ export const MENSAGENS: DefinicaoMensagem[] = [
       `{{bonusPuPrime}}\n\n` +
       `▶️ <a href='https://www.morethanmoney.pt/upgrade'>Subscrever</a>\n` +
       `🏦 <a href='{{linkCorretora}}'>Abrir conta na corretora</a> — depois escreve /acesso\n` +
-      // O degrau de cima não está no /upgrade (saiu em f36aeeb8), por isso não há link para dar.
-      // Mandar o lead para uma página onde o pacote não aparece é pior do que o fecho à mão.
-      `🏆 Para o <b>{{nomeTopo}}</b>: responde-me aqui que trato da adesão contigo.\n` +
+      // O «Subscrever» acima já leva ao /upgrade, onde o degrau de cima voltou a ter coluna
+      // (24/09). Aqui só se diz que também se fecha por aqui, para quem prefere falar — o que
+      // não se faz é obrigar ao fecho à mão um pacote que já se compra sozinho.
+      `🏆 Para o <b>{{nomeTopo}}</b>: está no link acima, ou responde-me aqui que trato disso contigo.\n` +
       `🆓 Ou experimenta a app primeiro: /app`,
   },
 ]

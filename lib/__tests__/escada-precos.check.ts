@@ -47,9 +47,13 @@ for (const texto of [escadaEmLinhas(), escadaNumaLinha()]) {
   assert.ok(!/fundador/i.test(texto), 'o degrau de cima não se chama Fundador')
 }
 
-// Não há página onde o comprar. Enquanto isto for null, os textos fecham à mão — e nenhum deles
-// pode inventar um URL.
-assert.equal(TOPO_LINK_PAGAMENTO, null)
+// Onde se compra o degrau de cima. Esteve `null` de 20/08 a 24/09, enquanto a coluna esteve fora
+// do /upgrade; voltou com ela. O que este teste prende é que seja SEMPRE uma página nossa — um URL
+// inventado manda o lead para onde o pacote não está, no momento em que ele já decidiu pagar.
+assert.ok(
+  TOPO_LINK_PAGAMENTO === null || TOPO_LINK_PAGAMENTO.startsWith('/'),
+  'o link do degrau de cima é uma página nossa, ou não existe',
+)
 
 // ── A regra do bónus: acumula, e tem exactamente dois caminhos ───────────────────────────────
 //

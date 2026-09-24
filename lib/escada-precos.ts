@@ -80,15 +80,22 @@ export const BONUS_PUPRIME_TITULO = `Bónus PU Prime — ${BONUS_PUPRIME_PCT}% s
 export const TOPO_PLAN_ID = 'elite_annual'
 
 /**
- * A página onde o cliente compra o degrau de cima — NÃO HÁ NENHUMA, ainda.
+ * A página onde o cliente compra o degrau de cima.
  *
- * O checkout existe (POST /api/stripe/create-checkout-session com `planId: 'elite_annual'`), mas
- * exige sessão iniciada e um botão que o chame, e a coluna que o chamava saiu do /upgrade em
- * f36aeeb8. Enquanto não voltar, não há URL nenhum para dar: um link inventado mandava o lead
- * para uma página onde o pacote não está, no único momento em que ele já tinha decidido pagar.
- * Até lá o fecho é à mão — e é isso que os textos dizem.
+ * A coluna do Elite tinha saído do /upgrade em f36aeeb8 (20/08, «Elite retirado da oferta») e,
+ * enquanto esteve fora, este valor era `null` de propósito: dar um link para uma página onde o
+ * pacote não está é perder o lead no único momento em que ele já tinha decidido pagar. **Voltou a
+ * 24/09** (pedido do dono), com o preço a vir daqui em vez de escrito no JSX — que foi o que fez
+ * a página anunciar 50€/mês para um pacote de 597€/ano até 21/07.
+ *
+ * O checkout é o mesmo dos outros packs: POST /api/stripe/create-checkout-session com
+ * `planId: 'elite_annual'`. Exige sessão iniciada, por isso o /upgrade trata do resto.
+ *
+ * Se `STRIPE_PRICE_ELITE_ANNUAL` faltar, a coluna não se desenha e este link leva a uma página
+ * sem ela — mas essa variável está em Production e em Preview, e a página é `force-dynamic` para
+ * a ler a cada pedido em vez de a congelar no build.
  */
-export const TOPO_LINK_PAGAMENTO: string | null = null
+export const TOPO_LINK_PAGAMENTO: string | null = '/upgrade'
 
 // ───────────────────────── a escada escrita, para os guiões ─────────────────────────
 
