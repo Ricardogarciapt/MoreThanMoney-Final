@@ -255,7 +255,7 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
                   <YAxis stroke="#9ca3af" />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #D2A63C' }}
-                    formatter={(value: number) => `€${value.toFixed(0)}`}
+                    formatter={(value?: number) => `€${(value ?? 0).toFixed(0)}`}
                   />
                   <Legend />
                   <Area type="monotone" dataKey="investido" stroke="#D2A63C" fillOpacity={1} fill="url(#colorInvestido)" name="Investido" />
@@ -301,7 +301,7 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
                   <YAxis stroke="#9ca3af" />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #D2A63C' }}
-                    formatter={(value: number) => `€${value}`}
+                    formatter={(value?: number) => `€${value ?? 0}`}
                   />
                   <Legend />
                   <Bar dataKey="reforco" fill="#D2A63C" name="Reforço Mensal" />
@@ -344,7 +344,7 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
                   <YAxis stroke="#9ca3af" />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #D2A63C' }}
-                    formatter={(value: number) => `€${value.toFixed(0)}`}
+                    formatter={(value?: number) => `€${(value ?? 0).toFixed(0)}`}
                   />
                   <Legend />
                   <Area type="monotone" dataKey="investido" stroke="#D2A63C" fillOpacity={1} fill="url(#colorInvestidoETF)" name="Investido" />
@@ -390,7 +390,7 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
                   <YAxis stroke="#9ca3af" />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #D2A63C' }}
-                    formatter={(value: number) => `€${value}`}
+                    formatter={(value?: number) => `€${value ?? 0}`}
                   />
                   <Legend />
                   <Line type="monotone" dataKey="acumulado" stroke="#3b82f6" strokeWidth={3} name="Total Acumulado" />

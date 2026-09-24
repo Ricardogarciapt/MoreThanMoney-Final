@@ -1454,7 +1454,8 @@ export default function TradingViewWidget({
             userSelect: "auto",
             WebkitUserSelect: "auto",
             MozUserSelect: "auto",
-            msUserSelect: "auto",
+            // `msUserSelect: "auto"` foi retirado: o -ms-user-select so aceita
+            // none | text | element, logo "auto" era CSS invalido (e so servia o IE).
             pointerEvents: widgetLoaded ? "auto" : "none",
           }}
         />

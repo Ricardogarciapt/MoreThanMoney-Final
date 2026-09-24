@@ -537,11 +537,16 @@ export default function AgentChat({ agent }: { agent: NavItem }) {
             <div className="flex flex-col items-center justify-center h-full text-center py-12">
               <div
                 className="flex h-16 w-16 items-center justify-center rounded-2xl mb-4 ring-1"
-                style={{
-                  background: `${agent.color}12`,
-                  ringColor: `${agent.color}25`,
-                  border: `1px solid ${agent.color}20`,
-                }}
+                style={
+                  {
+                    background: `${agent.color}12`,
+                    // `ringColor` nao e propriedade CSS nenhuma: nao fazia nada e o
+                    // anel do `ring-1` ficava sempre na cor por omissao. A variavel
+                    // que o Tailwind le para a cor do anel e esta.
+                    "--tw-ring-color": `${agent.color}25`,
+                    border: `1px solid ${agent.color}20`,
+                  } as React.CSSProperties
+                }
               >
                 <Icon className="h-8 w-8" style={{ color: agent.color }} />
               </div>
