@@ -16,6 +16,7 @@ export const dynamic = 'force-dynamic'
  *   PATCH { ocultas: string[] }          →  as contas escondidas no modo organizar do seletor
  *   PATCH { favorita: ref | null }       →  marca (ou desmarca) a conta que abre primeiro
  *   PATCH { filtroContas: 'minhas' … }   →  «As minhas» / «Mestres» / «Todas» no seletor
+ *   PATCH { filtroContasTorneio: … }     →  o mesmo filtro, mas o do painel do torneio
  *   PATCH { umCliqueAceite: true }       →  a pessoa leu e aceitou o aviso da negociação num clique
  *   PATCH { umClique: {conta, ligado} }  →  a negociação num clique, ligada ou desligada NAQUELA conta
  *
@@ -40,10 +41,17 @@ export const dynamic = 'force-dynamic'
  * O FILTRO (24/09) é só isso: qual dos três botões do seletor está premido. Vive ao lado da ordem
  * (`profile_data.webtrader.filtro_contas`) para seguir para o telemóvel, e não decide acesso
  * nenhum — quem não tem contas mestre não ganha nenhuma por gravar «mestres» aqui.
+ *
+ * O painel do torneio tem o MESMO filtro e a MESMA regra (lib/webtrader/filtro-contas.ts), mas
+ * chave PRÓPRIA (`filtro_contas_torneio`). As duas listas não são a mesma: o seletor do WebTrader
+ * mostra também as contas da corretora e as sessões do separador, o painel do torneio mostra só
+ * as contas MTM Funded da pessoa. Partilhar o valor queria dizer que pôr «Mestres» no WebTrader
+ * para espreitar uma estratégia abria o painel do torneio só com as contas da casa — exactamente
+ * o contrário do que o dono pediu para este ecrã.
  */
 export async function GET(request: NextRequest) {
   const userId = await userIdDoPedido(request)
-  if (!userId) return NextResponse.json({ ordem: [], favorita: null, filtroContas: normalizarFiltro(null), ocultas: [] }, { headers: { 'Cache-Control': 'no-store' } })
+  if (!userId) return NextResponse.json({ ordem: [], favorita: null, filtroContas: normalizarFiltro(null), filtroContasTorneio: normalizarFiltro(null), ocultas: [] }, { headers: { 'Cache-Control': 'no-store' } })
   const db = getSupabaseAdmin()
   const [{ data: perfil }, { data: fav }] = await Promise.all([
     db.from('profiles').select('profile_data').eq('id', userId).maybeSingle(),
@@ -59,6 +67,7 @@ export async function GET(request: NextRequest) {
       ordem: normalizarOrdem(wt.ordem_contas),
       favorita: escolhida,
       filtroContas: normalizarFiltro(wt.filtro_contas),
+      filtroContasTorneio: normalizarFiltro(wt.filtro_contas_torneio),
       ocultas: normalizarOcultas(wt.contas_ocultas),
       // Negociação num clique: o aviso aceita-se UMA vez (fica na conta da pessoa, não no
       // dispositivo — aceitar no computador e voltar a ser interrogado no telemóvel era o que
@@ -113,6 +122,14 @@ export async function PATCH(request: NextRequest) {
     const ok = await guardarNoPerfil(db, userId, (wt) => ({ ...wt, filtro_contas: filtro }))
     if (!ok) return NextResponse.json({ error: 'Não foi possível gravar o filtro.' }, { status: 500 })
     return NextResponse.json({ ok: true, filtroContas: filtro }, { headers: { 'Cache-Control': 'no-store' } })
+  }
+
+  // ── o mesmo filtro, no painel do torneio (chave própria: ver o cabeçalho) ─
+  if ('filtroContasTorneio' in corpo) {
+    const filtro = normalizarFiltro(corpo.filtroContasTorneio)
+    const ok = await guardarNoPerfil(db, userId, (wt) => ({ ...wt, filtro_contas_torneio: filtro }))
+    if (!ok) return NextResponse.json({ error: 'Não foi possível gravar o filtro.' }, { status: 500 })
+    return NextResponse.json({ ok: true, filtroContasTorneio: filtro }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
   // ── as contas escondidas no modo organizar ───────────────────────────────

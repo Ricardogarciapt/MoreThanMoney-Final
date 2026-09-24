@@ -10,6 +10,14 @@ import {
 // 113 — a etiqueta do dono: a MESMA normalização e o MESMO limite do lápis do WebTrader.
 import { ETIQUETA_MAX, normalizarEtiqueta } from '@/lib/contas/etiqueta'
 import { PALAVRA_SEM_LOGIN } from '@/lib/mtmfunded/apagar-conta'
+/**
+ * O filtro «As minhas / Mestres / Todas» é o MESMO do seletor do WebTrader — mesma regra de
+ * mestre (`tipo === 'provider'`), mesmos três estados, mesmas duas garantias (só aparece com
+ * contas dos dois tipos; a conta escolhida nunca desaparece). Só de leitura: não se duplica.
+ */
+import {
+  contarPorTipo, filtrarEntradas, temDoisTipos, type FiltroContas,
+} from '@/lib/webtrader/filtro-contas'
 import dynamic from 'next/dynamic'
 import { Contratos, Levantamentos } from '@/components/mtmfunded/contratos-e-levantamentos'
 import { useT } from '@/components/i18n-provider'
@@ -64,6 +72,12 @@ interface Conta {
    * e então mostra-se o que este painel sempre mostrou (tipo · login).
    */
   etiquetaDoDono: string | null
+  /**
+   * Conta MESTRE de uma estratégia do MTM Auto (`tipo === 'provider'`, decidido no servidor por
+   * `ehContaMestre`): é da casa, não é para a pessoa negociar aqui. O filtro esconde-as por
+   * omissão, e a que fique à vista leva a marca «MESTRE».
+   */
+  mestre: boolean
 }
 interface Certificado { codigo: string; tipo: string; posicao: number | null; emitidoEm: string }
 interface LinhaTabela { posicao: number | null; nome: string; resultadoPct: number | null; estado: string; elegivel: boolean }
@@ -95,6 +109,8 @@ export default function PainelParticipante(props: {
   torneio: Torneio | null
   participante: Participante | null
   contas: Conta[]
+  /** «As minhas» / «Mestres» / «Todas» — lido do perfil no servidor (ver page.tsx). */
+  filtroContas: FiltroContas
   certificados: Certificado[]
   classificacao: LinhaTabela[]
 }) {
@@ -177,7 +193,7 @@ export default function PainelParticipante(props: {
 
         <main className="min-w-0 flex-1">
           {seccao === 'dashboard' && <Dashboard {...{ torneio, participante, contas }} nome={props.nome} perfil={props.perfil} />}
-          {seccao === 'contas' && <Contas contas={contas} abrir={contaAberta} ehAdmin={props.ehAdmin === true} />}
+          {seccao === 'contas' && <Contas contas={contas} abrir={contaAberta} ehAdmin={props.ehAdmin === true} filtroInicial={props.filtroContas} />}
           {seccao === 'contratos' && <Contratos />}
           {seccao === 'levantamentos' && <Levantamentos irParaContrato={() => setSeccao('contratos')} />}
           {seccao === 'competicoes' && <Competicoes torneio={torneio} participante={participante} onInscrever={() => setSeccao('dashboard')} />}
@@ -360,7 +376,10 @@ function Dashboard({ torneio, participante, contas, nome, perfil }: {
   torneio: Torneio | null; participante: Participante | null; contas: Conta[]; nome: string
   perfil?: { telefone: string | null; dataNascimento: string | null; pais: string | null }
 }) {
-  const conta = contas.find((c) => c.tipo === 'torneio') ?? contas[0]
+  // «A tua conta» é a do torneio; não havendo, a primeira que seja DELE. Uma conta mestre nunca
+  // serve de recurso aqui — é da casa, e aparecer no Dashboard como «a tua conta» era mentira.
+  const minhas = contas.filter((c) => !c.mestre)
+  const conta = minhas.find((c) => c.tipo === 'torneio') ?? minhas[0]
   const m = participante?.metricas ?? {}
   const margemDiaria = typeof m.margemDiaria === 'number' ? m.margemDiaria : null
   const margemTotal = typeof m.margemTotal === 'number' ? m.margemTotal : null
@@ -460,7 +479,9 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
   )
 }
 
-function Contas({ contas, abrir, ehAdmin }: { contas: Conta[]; abrir?: string | null; ehAdmin?: boolean }) {
+function Contas({ contas, abrir, ehAdmin, filtroInicial }: {
+  contas: Conta[]; abrir?: string | null; ehAdmin?: boolean; filtroInicial: FiltroContas
+}) {
   /**
    * O modal do DESEMPENHO, aberto uma conta de cada vez.
    *
@@ -469,6 +490,16 @@ function Contas({ contas, abrir, ehAdmin }: { contas: Conta[]; abrir?: string | 
    * uma impossibilidade em vez de uma convenção.
    */
   const [metricasDe, setMetricasDe] = useState<string | null>(null)
+  /**
+   * O FILTRO (pedido do dono, 24/09): «As minhas» · «Mestres» · «Todas».
+   *
+   * A conta dele tem sete contas MESTRE das estratégias do MTM Auto no meio das de torneio —
+   * são da casa, não são para negociar aqui, e enterravam o resto. Começa em «As minhas», que é
+   * o que quer dizer «esconde as contas mestre».
+   *
+   * Vem do servidor já escolhido (o valor guardado no perfil), para o primeiro pixel sair certo.
+   */
+  const [filtro, setFiltro] = useState<FiltroContas>(filtroInicial)
   /** A conta que o admin pediu para apagar — o diálogo vive aqui pela mesma razão. */
   const [apagarDe, setApagarDe] = useState<Conta | null>(null)
   /**
@@ -479,11 +510,56 @@ function Contas({ contas, abrir, ehAdmin }: { contas: Conta[]; abrir?: string | 
   /** A lista sem as contas que o admin apagou nesta visita (não se recarrega a página por baixo dele). */
   const [apagadas, setApagadas] = useState<string[]>([])
 
-  const lista = contas.filter((c) => !apagadas.includes(c.id))
-  if (!lista.length) return <Caixa titulo="Contas de Trading"><Vazio>Ainda não tens contas.</Vazio></Caixa>
+  const trocarFiltro = (novo: FiltroContas) => {
+    setFiltro(novo)
+    // A escolha segue para a conta da pessoa (e daí para o telemóvel), como a do WebTrader. Se a
+    // gravação falhar, o ecrã fica no que ela escolheu — é uma preferência de vista, não um dado.
+    void (async () => {
+      try {
+        const { getAccessToken } = await import('@/lib/auth-token')
+        const tok = await getAccessToken()
+        await fetch('/api/contas/ordem', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+          body: JSON.stringify({ filtroContasTorneio: novo }),
+        })
+      } catch { /* silencioso: o filtro já mudou no ecrã */ }
+    })()
+  }
+
+  const todas = contas.filter((c) => !apagadas.includes(c.id))
+  if (!todas.length) return <Caixa titulo="Contas de Trading"><Vazio>Ainda não tens contas.</Vazio></Caixa>
+  // `abrir` é a conta que o link do email pediu: é a ESCOLHIDA, e o filtro nunca a esconde —
+  // o email prometia as credenciais dela, e uma barra de filtro não pode desmentir um email.
+  const lista = filtrarEntradas(todas, filtro, abrir ?? null)
+  const contagem = contarPorTipo(todas)
   return (
     <div className="space-y-4">
       {metricasDe && <ModalMetricas contaId={metricasDe} aoFechar={() => setMetricasDe(null)} />}
+      {/* A barra só existe para quem tem contas dos dois tipos: a quem só tem as suas, um filtro
+          é uma pergunta sem resposta possível (a mesma regra do seletor do WebTrader). */}
+      {temDoisTipos(todas) && (
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filtrar contas">
+          {([
+            { id: 'minhas' as const, nome: 'As minhas', quantas: contagem.minhas },
+            { id: 'mestres' as const, nome: 'Mestres', quantas: contagem.mestres },
+            { id: 'todas' as const, nome: 'Todas', quantas: contagem.todas },
+          ]).map((b) => (
+            <button
+              key={b.id}
+              onClick={() => trocarFiltro(b.id)}
+              aria-pressed={filtro === b.id}
+              className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                filtro === b.id
+                  ? 'border-[#4B8BFF]/40 bg-[#4B8BFF]/10 text-[#4B8BFF]'
+                  : 'border-zinc-800 text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              {b.nome} <span className="font-mono text-xs opacity-70">{b.quantas}</span>
+            </button>
+          ))}
+        </div>
+      )}
       {apagarDe && (
         <ModalApagarConta
           conta={{ ...apagarDe, etiquetaDoDono: apagarDe.id in etiquetas ? etiquetas[apagarDe.id] : apagarDe.etiquetaDoDono }}
@@ -506,6 +582,11 @@ function Contas({ contas, abrir, ehAdmin }: { contas: Conta[]; abrir?: string | 
             >
               {estadoCurto(c.estado, c.metricas)}
             </span>
+            {/* A MESTRE diz-se na própria linha: em «As minhas» só aparece a que o email abriu,
+                e tem de se perceber porque é que aquela ficou. */}
+            {c.mestre && (
+              <span className="rounded border border-sky-400/40 px-1.5 py-0.5 text-[10.5px] font-bold text-sky-300">MESTRE</span>
+            )}
             {/* Com etiqueta, o tipo e o login passam para aqui — continuam à vista, só deixam de ser o nome. */}
             {etiqueta && (
               <span className="text-xs text-zinc-500">{tipoCurto(c.tipo, c.metricas)} · {c.login ?? 'a emitir'}</span>
