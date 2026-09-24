@@ -42,6 +42,14 @@ export interface AlvoDaFonte {
 export const ESTRATEGIA_DO_WEBHOOK: Record<string, AlvoDaFonte> = {
   goldkiller: { slug: 'Goldkiller', comentario: 'MTM Auto GoldKiller' },
   sensei: { slug: 'sensei', comentario: 'MTM Auto Sensei' },
+  /**
+   * MTM Scanner (24/09, pedido do dono: «as entradas de mtm scanner devem ser passadas para a conta
+   * que criaste de 10k mas apenas as que tiverem todas as confirmações»). A mestre é a conta 77696002
+   * («Mestre · MTM Auto Scanner»); o filtro das confirmações está em lib/mtmcopy/scanner-confirmacoes
+   * e é aplicado no webhook ANTES de chegar aqui. O scanner continua a NÃO executar em contas MT5 —
+   * `canExecuteProvider` exclui-o de propósito desde 18/08, e isso não muda.
+   */
+  mtmscanner: { slug: 'mtm-scanner', comentario: 'MTM Auto Scanner' },
   // Premium (relay-post → processador → lib/mestres/servidor/premium.ts), não o webhook TradingView.
   premium: { slug: SLUG_PREMIUM, comentario: COMENTARIO_PREMIUM, ignoraProviderAtivo: true, permitirDuplicado: true, prefixo: 'tg' },
 }

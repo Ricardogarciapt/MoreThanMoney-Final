@@ -33,6 +33,7 @@ import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId, resolvedGoldkillerS
 import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
 import { evaluatePerpsSignalGate } from "@/lib/mtmcopy/perps-signal-gate"
 import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/signal-rules"
+import { temTodasAsConfirmacoes } from "@/lib/mtmcopy/scanner-confirmacoes"
 // Classificação do ativo e gates locais vivem em lib: a sombra das estratégias (lib/mtmauto/sombra)
 // tem de decidir «teria executado?» com EXACTAMENTE o mesmo código que este webhook.
 import { classifyAsset, confirmationsPassed, isCryptoPerpTicker, passesQualityGate, stopsSane, type AssetClass } from "@/lib/mtmcopy/webhook-gates"
@@ -1018,6 +1019,75 @@ export async function POST(request: NextRequest) {
       console.error("[tradingview-webhook] provider exec error:", err)
     }
     if (pendingIdeaId) await activateSenseiTradeIdea(supabase, pendingIdeaId, logId)
+  }
+
+  /**
+   * MTM SCANNER → A SUA MESTRE, E SÓ AS ENTRADAS COM TODAS AS CONFIRMAÇÕES (24/09).
+   *
+   * Pedido do dono: «as entradas de mtm scanner devem ser passadas para a conta que criaste de 10k
+   * mas apenas as que tiverem todas as confirmações».
+   *
+   * Porque é um bloco à parte e não uma linha a menos no `canExecuteProvider`: aquele portão comanda
+   * DUAS coisas ao mesmo tempo — a mestre SIM e o `processMtmcopyWebhookSignal`, que abre ordens nas
+   * contas MT5 dos clientes. Tirar de lá o `scannerKey !== "mtmscanner"` punha o scanner a executar
+   * nas contas das pessoas, que não é o que foi pedido e que é exactamente a porta que o dono fechou
+   * a 18/08. Por isso o portão fica intacto e o scanner ganha um desvio só para a mestre, pelo MESMO
+   * `encaminharSinalParaMestre` que as outras seis estratégias usam — não há segundo executor.
+   *
+   * O filtro: `temTodasAsConfirmacoes` (lib/mtmcopy/scanner-confirmacoes) — o Pine v3.5 manda sempre
+   * três confirmações e exigem-se as três A FAVOR do lado do sinal (numa venda, as três a `false`).
+   * Nos 60 dias medidos isto tira ~95% do que o scanner grita: de ~304 alertas/dia para ~21/dia, e
+   * ~9,5/dia depois da whitelist de execução e de não repetir o mesmo par/direcção em 4 h.
+   *
+   * Continua a passar pelas regras de sempre (qualidade, stops sãos, whitelist/exclusões do
+   * `passesExecGate`) — ao gate de execução entra a contagem A FAVOR, porque é essa a leitura que
+   * este caminho usa; para as compras dá o mesmo número de sempre.
+   *
+   * NASCE MUDO: `mestres_estrategias.sinal_modo` está em `desligado` e `mtmauto_providers.ativo` em
+   * `false` — `encaminharSinalParaMestre` devolve `desligado` e não escreve nada. Ligar é decisão do
+   * dono, no admin, e vê-se primeiro em sombra.
+   */
+  const confirmacoesScanner =
+    scannerKey === "mtmscanner" ? temTodasAsConfirmacoes(payload, execDirForGate) : null
+  const scannerParaMestre =
+    !canExecuteProvider &&
+    scannerKey === "mtmscanner" &&
+    !isIdeaAlert &&
+    !activeSensei &&
+    (assetClass === "gold_btc" || assetClass === "forex") &&
+    Boolean(parsedForExec.symbol) &&
+    Boolean(parsedForExec.direction) &&
+    confirmacoesScanner?.ok === true &&
+    stopsSane(parsedForExec.entry ?? price, parsedForExec.sl) &&
+    passesExecGate(
+      signalRules,
+      execSymbolForGate,
+      execDirForGate,
+      confirmacoesScanner.leitura?.aFavor ?? null,
+      scannerKey,
+      assetClass,
+    ).ok
+  if (scannerParaMestre) {
+    try {
+      const tpsScanner = (Array.isArray(parsedForExec.tp) ? parsedForExec.tp : []).filter(
+        (t): t is number => typeof t === "number" && t > 0,
+      )
+      const m = await encaminharSinalParaMestre({
+        fonte: "mtmscanner",
+        symbol: String(parsedForExec.symbol),
+        direcao: parsedForExec.direction === "sell" ? "sell" : "buy",
+        entrada: parsedForExec.entry ?? price ?? null,
+        sl: parsedForExec.sl ?? null,
+        tps: tpsScanner,
+        externalRef: String(logId ?? ""),
+      })
+      if (m.modo !== "desligado") {
+        providerDetail = `mestre SIM ${m.estrategia ?? "mtm-scanner"}: ${m.modo}${m.motivo ? ` (${m.motivo})` : ""}`
+      }
+    } catch (err) {
+      // Nunca pode partir o webhook: o scanner PUBLICA, e a publicação é o principal aqui.
+      console.error("[tradingview-webhook] mestre MTM Scanner:", err)
+    }
   }
 
   // Follow-up (TP/BE/SL/Saída): liga à entrada correspondente para responder em thread
