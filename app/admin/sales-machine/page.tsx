@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { BrokerDadosPanel } from "@/components/admin/broker-dados-panel"
 import { BrokerLinksPanel } from "@/components/admin/broker-links-panel"
 
 /**
@@ -119,6 +120,10 @@ export default function SalesMachinePage() {
         <Metric label="Conversões pagas 24h" value={state.conversions_24h} />
         <Metric label="Corretora validada" value={state.broker_clients} />
       </div>
+
+      {/* Os dados da corretora — a métrica «Corretora validada» aqui em cima não vale nada se
+          ninguém souber que idade têm os números que a produzem. */}
+      <BrokerDadosPanel />
 
       {/* Os andares, por ordem, com a queda entre cada um.
           A contagem por etapa que estava aqui em baixo diz quantos estão em cada estado; não diz
