@@ -20,14 +20,20 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  * humor ("Exit 1 hit", "TP1 ✅", "+40 pips first layer"), e uma expressão nova a mais fazia a
  * guarda falhar em silêncio.
  */
-export interface EstadoDaJanela {
-  aceitavel: boolean
-  /** Porquê, em linguagem que se possa mostrar a quem tocou no botão. */
-  motivo?: string
-  code?: 'expired' | 'out_of_zone' | 'closed'
-}
-
-export const JANELA_MERCADO_MS = 5 * 60 * 1000
+/**
+ * A REGRA vive em `./t2t-janela-regra` — pura, e por isso partilhável com o ecrã e com o
+ * mtm-auto. Aqui fica só o que precisa da base de dados. Reexporta-se para quem já importava
+ * daqui continuar a importar daqui: o que não pode haver são dois valores para a mesma coisa.
+ */
+export {
+  JANELA_MERCADO_MS,
+  JANELA_PENDENTE_MS,
+  MOTIVOS,
+  stopJaBatido,
+  tamanhoDoPip,
+  vereditoDaJanela,
+} from './t2t-janela-regra'
+export type { CodigoDaJanela, EstadoDaJanela, LinhaDeAcompanhamento } from './t2t-janela-regra'
 
 /**
  * O sinal já saiu da zona de entrada?
