@@ -72,6 +72,16 @@ const COPIAS: { site: string; auto: string; porque: string }[] = [
     porque: 'o texto do «Tap to copy» tem de dar os mesmos números pela mesma ordem',
   },
   {
+    site: 'lib/mtmcopy/t2t-janela-regra.ts',
+    auto: 'lib/t2t-janela-regra.ts',
+    porque: 'a janela de aceitação decide o botão nos dois ecrãs — e com as mesmas palavras',
+  },
+  {
+    site: 'lib/mtmcopy/rotulos-canais.ts',
+    auto: 'lib/rotulos-canais.ts',
+    porque: 'o nome de um canal é um só: o do admin, o do chat e o das duas apps',
+  },
+  {
     site: 'lib/mtmfunded/etiquetas.ts',
     auto: 'lib/mtmfunded/etiquetas.ts',
     porque: 'F1/F2/Funded/Torneio/Real e Active/Pause/… querem dizer o mesmo nos dois',
