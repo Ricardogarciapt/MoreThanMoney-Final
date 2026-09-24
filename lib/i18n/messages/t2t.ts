@@ -6,6 +6,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   pt: {
     "t2t.histSumming": "A somar as tuas contas…",
     "t2t.histEmpty": "Ainda não há trades nas tuas contas nesta janela.",
+    "t2t.histBias": "Os resultados até {d} podem estar inflacionados por um defeito de preço já corrigido.",
+    "t2t.stPartial": "Parcial",
     "t2t.histResult": "Resultado",
     "t2t.histDays": "dias",
     "t2t.histClosed": "fechadas",
@@ -145,6 +147,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   en: {
     "t2t.histSumming": "Adding up your accounts…",
     "t2t.histEmpty": "No trades in your accounts in this window yet.",
+    "t2t.histBias": "Results up to {d} may be inflated by a pricing defect that has since been fixed.",
+    "t2t.stPartial": "Partial",
     "t2t.histResult": "Result",
     "t2t.histDays": "days",
     "t2t.histClosed": "closed",
@@ -284,6 +288,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   es: {
     "t2t.histSumming": "Sumando tus cuentas…",
     "t2t.histEmpty": "Todavía no hay trades en tus cuentas en esta ventana.",
+    "t2t.histBias": "Los resultados hasta {d} pueden estar inflados por un defecto de precio ya corregido.",
+    "t2t.stPartial": "Parcial",
     "t2t.histResult": "Resultado",
     "t2t.histDays": "días",
     "t2t.histClosed": "cerradas",
@@ -423,6 +429,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   fr: {
     "t2t.histSumming": "Addition de tes comptes…",
     "t2t.histEmpty": "Pas encore de trades sur tes comptes dans cette fenêtre.",
+    "t2t.histBias": "Les résultats jusqu’au {d} peuvent être gonflés par un défaut de prix depuis corrigé.",
+    "t2t.stPartial": "Partielle",
     "t2t.histResult": "Résultat",
     "t2t.histDays": "jours",
     "t2t.histClosed": "clôturées",
@@ -562,6 +570,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   de: {
     "t2t.histSumming": "Deine Konten werden summiert…",
     "t2t.histEmpty": "Noch keine Trades auf deinen Konten in diesem Zeitraum.",
+    "t2t.histBias": "Ergebnisse bis {d} können durch einen inzwischen behobenen Preisfehler überhöht sein.",
+    "t2t.stPartial": "Teilweise",
     "t2t.histResult": "Ergebnis",
     "t2t.histDays": "Tage",
     "t2t.histClosed": "geschlossen",
@@ -701,6 +711,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   it: {
     "t2t.histSumming": "Sto sommando i tuoi conti…",
     "t2t.histEmpty": "Ancora nessun trade sui tuoi conti in questa finestra.",
+    "t2t.histBias": "I risultati fino al {d} possono essere gonfiati da un difetto di prezzo già corretto.",
+    "t2t.stPartial": "Parziale",
     "t2t.histResult": "Risultato",
     "t2t.histDays": "giorni",
     "t2t.histClosed": "chiuse",
@@ -840,6 +852,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   nl: {
     "t2t.histSumming": "Je accounts worden opgeteld…",
     "t2t.histEmpty": "Nog geen trades op je accounts in dit venster.",
+    "t2t.histBias": "Resultaten tot {d} kunnen opgeblazen zijn door een inmiddels verholpen prijsfout.",
+    "t2t.stPartial": "Gedeeltelijk",
     "t2t.histResult": "Resultaat",
     "t2t.histDays": "dagen",
     "t2t.histClosed": "gesloten",
@@ -979,6 +993,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   "zh-CN": {
     "t2t.histSumming": "正在汇总你的账户…",
     "t2t.histEmpty": "此期间你的账户还没有任何交易。",
+    "t2t.histBias": "{d} 之前的结果可能因已修复的价格缺陷而被高估。",
+    "t2t.stPartial": "部分平仓",
     "t2t.histResult": "结果",
     "t2t.histDays": "天",
     "t2t.histClosed": "已平仓",
@@ -1118,6 +1134,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   ja: {
     "t2t.histSumming": "口座を集計しています…",
     "t2t.histEmpty": "この期間、あなたの口座に取引はまだありません。",
+    "t2t.histBias": "{d} までの結果は、修正済みの価格の不具合により過大になっている可能性があります。",
+    "t2t.stPartial": "一部決済",
     "t2t.histResult": "結果",
     "t2t.histDays": "日",
     "t2t.histClosed": "決済済み",
@@ -1257,6 +1275,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   ar: {
     "t2t.histSumming": "يتم جمع حساباتك…",
     "t2t.histEmpty": "لا توجد صفقات في حساباتك خلال هذه الفترة بعد.",
+    "t2t.histBias": "قد تكون النتائج حتى {d} مبالغًا فيها بسبب خلل في التسعير تم إصلاحه.",
+    "t2t.stPartial": "جزئي",
     "t2t.histResult": "النتيجة",
     "t2t.histDays": "أيام",
     "t2t.histClosed": "مغلقة",
@@ -1396,6 +1416,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   ru: {
     "t2t.histSumming": "Складываем ваши счета…",
     "t2t.histEmpty": "В этом периоде на ваших счетах ещё нет сделок.",
+    "t2t.histBias": "Результаты до {d} могут быть завышены из-за уже исправленной ошибки цены.",
+    "t2t.stPartial": "Частично",
     "t2t.histResult": "Результат",
     "t2t.histDays": "дней",
     "t2t.histClosed": "закрытых",
@@ -1535,6 +1557,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   hi: {
     "t2t.histSumming": "आपके खाते जोड़े जा रहे हैं…",
     "t2t.histEmpty": "इस अवधि में आपके खातों में अभी कोई ट्रेड नहीं है।",
+    "t2t.histBias": "{d} तक के परिणाम एक अब ठीक की जा चुकी मूल्य त्रुटि के कारण बढ़े हुए हो सकते हैं।",
+    "t2t.stPartial": "आंशिक",
     "t2t.histResult": "परिणाम",
     "t2t.histDays": "दिन",
     "t2t.histClosed": "बंद",
@@ -1674,6 +1698,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   sr: {
     "t2t.histSumming": "Sabiram tvoje račune…",
     "t2t.histEmpty": "Još nema trgovina na tvojim računima u ovom periodu.",
+    "t2t.histBias": "Rezultati do {d} mogu biti uvećani zbog greške u ceni koja je već ispravljena.",
+    "t2t.stPartial": "Delimično",
     "t2t.histResult": "Rezultat",
     "t2t.histDays": "dana",
     "t2t.histClosed": "zatvorenih",
@@ -1813,6 +1839,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   hr: {
     "t2t.histSumming": "Zbrajam tvoje račune…",
     "t2t.histEmpty": "Još nema trgovina na tvojim računima u ovom razdoblju.",
+    "t2t.histBias": "Rezultati do {d} mogu biti uvećani zbog greške u cijeni koja je već ispravljena.",
+    "t2t.stPartial": "Djelomično",
     "t2t.histResult": "Rezultat",
     "t2t.histDays": "dana",
     "t2t.histClosed": "zatvorenih",
@@ -1952,6 +1980,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   bs: {
     "t2t.histSumming": "Sabiram tvoje račune…",
     "t2t.histEmpty": "Još nema trgovina na tvojim računima u ovom periodu.",
+    "t2t.histBias": "Rezultati do {d} mogu biti uvećani zbog greške u cijeni koja je već ispravljena.",
+    "t2t.stPartial": "Djelimično",
     "t2t.histResult": "Rezultat",
     "t2t.histDays": "dana",
     "t2t.histClosed": "zatvorenih",
@@ -2091,6 +2121,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   sq: {
     "t2t.histSumming": "Po mbledh llogaritë e tua…",
     "t2t.histEmpty": "Ende s’ka tregti në llogaritë e tua në këtë periudhë.",
+    "t2t.histBias": "Rezultatet deri më {d} mund të jenë të fryra nga një defekt çmimi tashmë i rregulluar.",
+    "t2t.stPartial": "Pjesore",
     "t2t.histResult": "Rezultati",
     "t2t.histDays": "ditë",
     "t2t.histClosed": "të mbyllura",
@@ -2230,6 +2262,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   bg: {
     "t2t.histSumming": "Сумирам сметките ти…",
     "t2t.histEmpty": "Още няма сделки по сметките ти в този период.",
+    "t2t.histBias": "Резултатите до {d} може да са завишени заради вече отстранен дефект в цената.",
+    "t2t.stPartial": "Частично",
     "t2t.histResult": "Резултат",
     "t2t.histDays": "дни",
     "t2t.histClosed": "затворени",
@@ -2369,6 +2403,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   ro: {
     "t2t.histSumming": "Îți însumez conturile…",
     "t2t.histEmpty": "Încă nu există tranzacții în conturile tale în această perioadă.",
+    "t2t.histBias": "Rezultatele până la {d} pot fi umflate de un defect de preț deja corectat.",
+    "t2t.stPartial": "Parțial",
     "t2t.histResult": "Rezultat",
     "t2t.histDays": "zile",
     "t2t.histClosed": "închise",
@@ -2508,6 +2544,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   pl: {
     "t2t.histSumming": "Sumuję twoje konta…",
     "t2t.histEmpty": "W tym okresie nie ma jeszcze transakcji na twoich kontach.",
+    "t2t.histBias": "Wyniki do {d} mogą być zawyżone przez usterkę cenową, która została już naprawiona.",
+    "t2t.stPartial": "Częściowe",
     "t2t.histResult": "Wynik",
     "t2t.histDays": "dni",
     "t2t.histClosed": "zamkniętych",
@@ -2647,6 +2685,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   uk: {
     "t2t.histSumming": "Додаю твої рахунки…",
     "t2t.histEmpty": "У цьому періоді на твоїх рахунках ще немає угод.",
+    "t2t.histBias": "Результати до {d} можуть бути завищені через уже виправлену помилку ціни.",
+    "t2t.stPartial": "Частково",
     "t2t.histResult": "Результат",
     "t2t.histDays": "днів",
     "t2t.histClosed": "закритих",
@@ -2786,6 +2826,8 @@ export const T2T_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   tr: {
     "t2t.histSumming": "Hesapların toplanıyor…",
     "t2t.histEmpty": "Bu dönemde hesaplarında henüz işlem yok.",
+    "t2t.histBias": "{d} tarihine kadarki sonuçlar, giderilmiş bir fiyat hatası nedeniyle şişkin olabilir.",
+    "t2t.stPartial": "Kısmi",
     "t2t.histResult": "Sonuç",
     "t2t.histDays": "gün",
     "t2t.histClosed": "kapalı",

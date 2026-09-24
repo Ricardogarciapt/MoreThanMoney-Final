@@ -34,6 +34,10 @@ type Curva = {
 }
 type Dados = {
   linhas: Linha[]
+  /** A ressalva do preço viciado, em português, tal como `lib/pips-proof.ts` a escreve. */
+  notaVies?: string | null
+  /** A data da ressalva (dd/mm), para a dizer na língua do cliente. */
+  notaViesAte?: string | null
   serie: { quando: string; valor: number }[]
   curvas: Curva[]
   resumo: {
@@ -64,6 +68,9 @@ const CHAVE_DO_ESTADO: Record<string, string> = {
   failed: "t2t.stFailed",
   error: "t2t.stFailed",
   cancelled: "t2t.stCancelled",
+  // Uma saída parcial com o resto ainda aberto. Dizer-lhe «fechada» mandava o cliente procurar
+  // no WebTrader uma posição que ainda lá está.
+  parcial: "t2t.stPartial",
   canceled: "t2t.stCancelled",
   executed: "t2t.stExecuted",
   filled: "t2t.stExecuted",
@@ -76,8 +83,25 @@ const CORES: Record<string, string> = {
   "MTM Copy": "#7aa2f7",
 }
 
+/**
+ * As janelas que este separador oferece.
+ *
+ * NÃO inclui «hoje». O separador herdava o filtro Hoje/Semana do feed dos sinais e pedia 1 dia:
+ * quem tinha 29 trades fechadas na semana e nenhuma hoje via «ainda não há trades nas tuas
+ * contas» — o ecrã dizia que não havia histórico quando o que não havia era dia. Um filtro que
+ * faz sentido numa lista de sinais do dia não faz sentido nenhum numa curva de resultado.
+ */
+const JANELAS = [7, 30, 90] as const
+
 export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
   const t = useT()
+  /**
+   * O período é DESTE separador, não do feed.
+   *
+   * O que vem de fora serve só de ponto de partida, e nunca abaixo da janela mais curta daqui:
+   * quem manda 1 está a falar de sinais de hoje, não do histórico das contas.
+   */
+  const [janela, setJanela] = useState<number>(() => JANELAS.find((j) => j >= dias) ?? JANELAS[0])
   const [d, setD] = useState<Dados | null>(null)
   const [aLer, setALer] = useState(true)
   /**
@@ -95,7 +119,7 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
     try {
       const tok = (await supabase.auth.getSession()).data.session?.access_token
       if (!tok) return
-      const r = await fetch(`/api/mtm-auto/historico?dias=${dias}`, {
+      const r = await fetch(`/api/mtm-auto/historico?dias=${janela}`, {
         headers: { Authorization: `Bearer ${tok}` },
         cache: "no-store",
       })
@@ -106,19 +130,51 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
     } finally {
       setALer(false)
     }
-  }, [dias])
+  }, [janela])
 
   useEffect(() => { carregar() }, [carregar])
 
+  /**
+   * O seletor de janela. Aparece SEMPRE — incluindo no ecrã vazio, que é onde mais faz falta:
+   * um «não há trades» sem maneira de alargar a janela lê-se como «não tens histórico».
+   */
+  const seletor = (
+    <div className="flex justify-end gap-1.5">
+      {JANELAS.map((j) => (
+        <button
+          key={j}
+          type="button"
+          onClick={() => setJanela(j)}
+          className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          style={{
+            border: `1px solid ${janela === j ? "var(--destaque)" : "var(--borda)"}`,
+            background: janela === j ? "var(--destaque)" : "transparent",
+            color: janela === j ? "#000" : "var(--texto-fraco)",
+          }}
+        >
+          {j}d
+        </button>
+      ))}
+    </div>
+  )
+
   if (aLer && !d) {
     return (
-      <p className="flex items-center justify-center gap-2 py-10 text-[13px] texto-fraco">
-        <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--destaque)" }} /> {t("t2t.histSumming")}
-      </p>
+      <div className="space-y-3">
+        {seletor}
+        <p className="flex items-center justify-center gap-2 py-10 text-[13px] texto-fraco">
+          <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--destaque)" }} /> {t("t2t.histSumming")}
+        </p>
+      </div>
     )
   }
   if (!d || !d.linhas.length) {
-    return <p className="py-10 text-center text-[13px] texto-fraco">{t("t2t.histEmpty")}</p>
+    return (
+      <div className="space-y-3">
+        {seletor}
+        <p className="py-10 text-center text-[13px] texto-fraco">{t("t2t.histEmpty")}</p>
+      </div>
+    )
   }
 
   const { serie, resumo } = d
@@ -137,11 +193,31 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
   const fmt = (v: number | null) =>
     v == null ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(2)}${emPct ? "%" : ""}`
 
+  /**
+   * A ressalva do preço viciado — a mesma regra de `lib/pips-proof.ts`, dita na língua do cliente.
+   *
+   * O servidor é que decide SE aparece (mede a entrada mais antiga contra a fronteira) e manda a
+   * data; aqui só se escolhe a língua. Se a tradução faltar, fica a frase que veio de lá — uma
+   * ressalva em português é melhor do que ressalva nenhuma.
+   */
+  const nota = d.notaVies
+    ? (d.notaViesAte ? t("t2t.histBias").replace("{d}", d.notaViesAte) : d.notaVies)
+    : null
+
   return (
     <div className="space-y-3">
+      {seletor}
+      {nota && (
+        <p
+          className="rounded-lg px-3 py-2 text-[11.5px] leading-snug"
+          style={{ border: "1px solid var(--borda)", color: "var(--texto-fraco)" }}
+        >
+          {nota}
+        </p>
+      )}
       <div className="cartao p-3.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="etiqueta">{t("t2t.histResult")} · {dias} {t("t2t.histDays")}</span>
+          <span className="etiqueta">{t("t2t.histResult")} · {janela} {t("t2t.histDays")}</span>
           <div className="flex items-center gap-2">
             <span
               className="text-[19px] font-bold tabular-nums"
@@ -235,6 +311,10 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
               <p className="mt-0.5 text-[11.5px] texto-mais-fraco">
                 {new Date(l.quando).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                 {l.conta && ` · ${l.conta}`}
+                {/* Uma saída parcial TEM resultado, por isso a etiqueta de estado lá em baixo
+                    (que só aparece sem resultado) nunca a mostrava: ficava indistinguível de uma
+                    trade acabada, com o resto da posição ainda aberto e ninguém a saber. */}
+                {l.estado === "parcial" && ` · ${t("t2t.stPartial")}`}
               </p>
             </div>
             <div className="shrink-0 text-right">

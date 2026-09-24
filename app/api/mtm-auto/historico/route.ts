@@ -5,6 +5,12 @@ import { lerHistorico } from '@/lib/mtmcopy/metaapi'
 import { contasDoUtilizador } from '@/lib/mtm-auto-bridge'
 import { lerInfoContaCache } from '@/lib/mtmcopy/metaapi-cache'
 import { recebeT2T } from '@/lib/mtmcopy/alvo-t2t'
+import {
+  agruparParciais,
+  entradaMaisAntiga,
+  raizesPorConfirmar,
+  type ParteFechada,
+} from '@/lib/mtmfunded/historico-parciais'
 
 export const dynamic = 'force-dynamic'
 // Ler o histórico fechado de várias contas na MetaAPI demora — e é isso que dá a curva de cada
@@ -22,6 +28,17 @@ interface Linha {
   estado: string
   resultado: number | null
   pips: number | null
+  /**
+   * Esta linha é uma TRADE terminada, e por isso conta para a taxa de acerto?
+   *
+   * Uma saída parcial com o resto ainda aberto já mexeu no saldo — entra no dinheiro e na curva —
+   * mas ainda não ganhou nem perdeu nada: contá-la como trade dava um ganho hoje e uma perda
+   * amanhã pela mesma posição. É a convenção de `lib/mtmfunded/simulado/estatisticas.ts`, e é por
+   * isso que este ecrã dizia 3 trades onde o WebTrader e as Estatísticas diziam 1.
+   *
+   * Omitido (undefined) = conta, que é o caso de tudo o que vem da corretora.
+   */
+  contaParaTaxa?: boolean
 }
 
 /**
@@ -142,32 +159,57 @@ export async function GET(request: NextRequest) {
   for (const lote of fechos) linhas.push(...lote)
 
   // ── Contas MTM Funded no MTM Auto (plataforma 'mtmfunded', migração 070) ───────────────────
-  // Negoceiam no nosso motor, não numa corretora: o resultado lê-se das posições simuladas. Uma
-  // linha por saída (os parciais também são dinheiro realizado), com o rótulo da conta.
+  //
+  // Negoceiam no nosso motor, não numa corretora: o resultado lê-se das posições simuladas.
+  // UMA TRADE = a raiz mais as filhas dos parciais — ver `lib/mtmfunded/historico-parciais.ts`,
+  // que explica porque é que este ecrã dizia 3 trades onde o Diário dizia 1.
   const { data: doFunded } = await db
     .from('mtmauto_accounts').select('rotulo, funded_account_id')
     .eq('user_id', userId!).eq('plataforma', 'mtmfunded').not('funded_account_id', 'is', null)
+  let entradaFunded: string | null = null
+  let houveFunded = false
   if (doFunded?.length) {
     const rotuloDe = new Map(doFunded.map((c) => [String(c.funded_account_id), String(c.rotulo ?? 'MTM Funded')]))
     const { data: fechadas } = await db
       .from('funded_positions')
-      .select('account_id, symbol, direcao, preco_entrada, preco_fecho, pnl, comissao, swap, fechada_em, estado')
+      .select('id, mae_id, account_id, symbol, direcao, volume, preco_entrada, preco_fecho, pnl, comissao, swap, aberta_em, fechada_em')
       .in('account_id', [...rotuloDe.keys()]).eq('estado', 'fechada').gte('fechada_em', desde)
       .order('fechada_em', { ascending: false }).limit(2000)
+    const partes = (fechadas ?? []) as unknown as ParteFechada[]
+    houveFunded = partes.length > 0
+
+    // A mãe de um parcial pode ter fechado FORA da janela, ou ainda estar aberta: nesse caso não
+    // vem no lote acima. Sem esta pergunta, um parcial de uma posição ainda viva passava por
+    // trade terminada só porque a mãe não estava à vista.
+    const { conhecidas, emFalta } = raizesPorConfirmar(partes)
+    if (emFalta.length) {
+      const { data: maes } = await db
+        .from('funded_positions').select('id, estado, aberta_em').in('id', emFalta)
+      for (const m of maes ?? []) {
+        if (String(m.estado) === 'fechada') conhecidas.add(String(m.id))
+        const t = m.aberta_em ? String(m.aberta_em) : null
+        if (t && (!entradaFunded || t < entradaFunded)) entradaFunded = t
+      }
+    }
+
     const { pipSizeForSymbol } = await import('@/lib/mtmcopy/trade-outcome')
-    for (const f of fechadas ?? []) {
-      const pip = pipSizeForSymbol(String(f.symbol))
-      const d = f.preco_fecho == null ? null
-        : (f.direcao === 'buy' ? Number(f.preco_fecho) - Number(f.preco_entrada) : Number(f.preco_entrada) - Number(f.preco_fecho))
+    const trades = agruparParciais(partes, conhecidas, pipSizeForSymbol)
+    const maisAntiga = entradaMaisAntiga(trades)
+    if (maisAntiga && (!entradaFunded || maisAntiga < entradaFunded)) entradaFunded = maisAntiga
+
+    for (const tr of trades) {
       linhas.push({
-        quando: String(f.fechada_em),
+        quando: tr.quando,
         origem: 'MTM Auto',
-        conta: rotuloDe.get(String(f.account_id)) ?? 'MTM Funded',
-        symbol: String(f.symbol),
-        direction: (f.direcao as string) ?? null,
-        estado: 'fechada',
-        resultado: Math.round((Number(f.pnl ?? 0) + Number(f.swap ?? 0) - Number(f.comissao ?? 0)) * 100) / 100,
-        pips: d == null ? null : Math.round((d / pip) * 10) / 10,
+        conta: rotuloDe.get(tr.accountId) ?? 'MTM Funded',
+        symbol: tr.symbol,
+        direction: tr.direcao,
+        // Um parcial com o resto aberto não é uma trade fechada, e chamar-lhe «fechada» mandava o
+        // cliente procurar no WebTrader uma posição que ainda lá está.
+        estado: tr.terminada ? 'fechada' : 'parcial',
+        resultado: tr.resultado,
+        pips: tr.pips,
+        contaParaTaxa: tr.terminada,
       })
     }
   }
@@ -275,12 +317,32 @@ export async function GET(request: NextRequest) {
     })
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
-  const fechadas = comResultado.length
-  const ganhas = comResultado.filter((l) => Number(l.resultado ?? 0) > 0).length
+  // A taxa de acerto conta TRADES TERMINADAS, não saídas. Um parcial com o resto aberto já entrou
+  // na curva (é dinheiro realizado) mas não é uma trade ganha — ainda não acabou.
+  const terminadas = comResultado.filter((l) => l.contaParaTaxa !== false)
+  const fechadas = terminadas.length
+  const ganhas = terminadas.filter((l) => Number(l.resultado ?? 0) > 0).length
+
+  /**
+   * A ressalva do preço viciado — a MESMA de `lib/pips-proof.ts`, não uma cópia.
+   *
+   * As contas MTM Funded negoceiam no nosso motor `sim`, que até 24/09 preenchia as entradas
+   * melhor do que o mercado dava. Tudo o que abriu antes de `FRONTEIRA_VIES_PRECO` está
+   * inflacionado. Não se reescreve o passado: assinala-se, e quem lê desconta.
+   *
+   * Só aparece quando há linhas dessas na janela — as trades que vêm da corretora (MetaAPI)
+   * nunca passaram por este motor, e uma ressalva que também aparece onde não se aplica ensina o
+   * leitor a saltá-la. Some sozinha quando a janela deixar de apanhar o período.
+   */
+  const { notaViesPrecoDesdeEntrada, NOTA_VIES_ATE_DDMM } = await import('@/lib/pips-proof')
+  const notaVies = houveFunded ? notaViesPrecoDesdeEntrada(entradaFunded) : null
 
   return NextResponse.json({
     ok: true,
     dias,
+    notaVies,
+    // A data sozinha, para o ecrã poder dizer a ressalva na língua do cliente sem a reescrever.
+    notaViesAte: notaVies ? NOTA_VIES_ATE_DDMM : null,
     linhas: linhas.slice(0, 300),
     serie,
     curvas,

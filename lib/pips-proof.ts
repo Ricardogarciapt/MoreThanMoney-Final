@@ -675,7 +675,43 @@ export function amostraAtravessaViesDePreco(p: PipsProof | null | undefined): bo
  */
 export function notaViesPreco(p: PipsProof | null | undefined): string | null {
   if (!amostraAtravessaViesDePreco(p)) return null
-  return `Nota: os resultados até ${diaMes(FRONTEIRA_VIES_PRECO)} podem estar inflacionados por um defeito de preço já corrigido.`
+  return TEXTO_NOTA_VIES_PRECO
+}
+
+/**
+ * A MESMA frase, uma vez só.
+ *
+ * O histórico das apps precisa dela e não tem um `PipsProof` para dar — tem uma data de entrada.
+ * Duplicar a frase lá dava duas ressalvas com palavras diferentes para o mesmo defeito, e a
+ * segunda envelheceria sozinha no dia em que alguém afinasse a primeira.
+ */
+/**
+ * A data da fronteira em dd/mm — para as superfícies que traduzem a ressalva em vez de a citar.
+ *
+ * O histórico das apps fala 21 línguas e a frase em português ficaria em português em todas elas.
+ * A data sai daqui, do mesmo `FRONTEIRA_VIES_PRECO`, e por isso não há um dia escrito à mão dentro
+ * de 21 traduções à espera de envelhecer.
+ */
+export const NOTA_VIES_ATE_DDMM = diaMes(FRONTEIRA_VIES_PRECO)
+
+export const TEXTO_NOTA_VIES_PRECO =
+  `Nota: os resultados até ${diaMes(FRONTEIRA_VIES_PRECO)} podem estar inflacionados por um defeito de preço já corrigido.`
+
+/**
+ * A nota para quem só tem a ENTRADA mais antiga da amostra — o caso do histórico das apps.
+ *
+ * Mede-se pela entrada, e não pelo fecho, porque era na entrada que o defeito batia: uma trade
+ * aberta a 23/09 e fechada a 25/09 entrou ao preço viciado. Sem entrada conhecida devolve a nota
+ * à mesma, que é o mesmo lado para que {@link amostraAtravessaViesDePreco} erra — na dúvida sobre
+ * se a amostra está limpa, avisa-se.
+ *
+ * Desaparece sozinha, pela mesma razão: quando a entrada mais antiga da janela passar a fronteira,
+ * isto devolve `null` sem ninguém lhe mexer.
+ */
+export function notaViesPrecoDesdeEntrada(entradaMaisAntiga: string | null | undefined): string | null {
+  const t = entradaMaisAntiga ? Date.parse(entradaMaisAntiga) : NaN
+  if (Number.isFinite(t) && t >= Date.parse(FRONTEIRA_VIES_PRECO)) return null
+  return TEXTO_NOTA_VIES_PRECO
 }
 
 /**
