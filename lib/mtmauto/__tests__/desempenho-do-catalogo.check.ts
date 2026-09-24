@@ -7,11 +7,17 @@ import assert from 'node:assert/strict'
 import {
   desempenhoDoCatalogo,
   resumoDoCartao,
+  retratoSimulado,
+  CHAVE_ORIGEM_SIMULADA,
+  CHAVE_VIES_PRECO_SIM,
+  FRONTEIRA_VIES_PRECO_SIM,
   SEM_HISTORICO,
   temHistorico,
   simuladasDoCatalogo,
   type ProvedorMtmAuto,
 } from '../desempenho-do-catalogo'
+import { pt } from '../cartao-estrategia'
+import { FRONTEIRA_VIES_PRECO } from '../../pips-proof'
 
 let n = 0
 const ok = (nome: string, f: () => void) => { f(); n++; console.log(`  ✓ ${nome}`) }
@@ -192,6 +198,53 @@ ok('simuladas também sem dinheiro', () => {
   for (const proibida of ['resultado', 'saldo', 'equity', 'balance', 'lucro', 'profit']) {
     assert.ok(!Object.keys(s).includes(proibida), `não pode sair «${proibida}»`)
   }
+})
+
+// ── o histórico simulado à vista (decisão do dono, 24/09) ─────────────────────────────────────
+
+ok('sem histórico real, o retrato simulado aparece — com a origem e a ressalva do preço', () => {
+  const r = retratoSimulado(EDGE_SIM)!
+  assert.equal(r.resumo, '88,2% de acerto · 17 trades')
+  assert.equal(r.chaveEtiqueta, CHAVE_ORIGEM_SIMULADA)
+  // A amostra fecha a 18/09, antes da correcção de 24/09: leva a nota.
+  assert.equal(r.chaveNota, CHAVE_VIES_PRECO_SIM)
+  assert.equal(r.metricas.trades, 17)
+})
+
+ok('havendo histórico REAL, o simulado não aparece — nunca soma nem faz média', () => {
+  assert.equal(retratoSimulado(SENSEI_90D), null)
+  assert.equal(retratoSimulado({ ...SENSEI_90D, simuladas: EDGE_SIM.simuladas }), null)
+})
+
+ok('sem simuladas nenhumas continua a ser «sem histórico»', () => {
+  assert.equal(retratoSimulado(EDGE), null)
+  assert.equal(retratoSimulado(null), null)
+})
+
+ok('amostra toda POSTERIOR à correcção não leva a nota do preço', () => {
+  const limpa = {
+    ...EDGE_SIM,
+    simuladas: {
+      ...EDGE_SIM.simuladas!,
+      curva: [{ quando: '2026-09-25T09:00:00.000Z', pips: 5, acumulado: 280 }],
+    },
+  }
+  assert.equal(retratoSimulado(limpa)?.chaveNota, null)
+})
+
+ok('sem curva não se consegue verificar — e então avisa-se à mesma', () => {
+  const semCurva = { ...EDGE_SIM, simuladas: { ...EDGE_SIM.simuladas!, curva: [] } }
+  assert.equal(retratoSimulado(semCurva)?.chaveNota, CHAVE_VIES_PRECO_SIM)
+})
+
+ok('a fronteira do viés é a MESMA de lib/pips-proof.ts — se uma mudar, isto parte', () => {
+  assert.equal(FRONTEIRA_VIES_PRECO_SIM, FRONTEIRA_VIES_PRECO)
+})
+
+ok('as duas chaves novas têm texto em português (senão o ecrã mostrava a chave)', () => {
+  assert.notEqual(pt(CHAVE_ORIGEM_SIMULADA), CHAVE_ORIGEM_SIMULADA)
+  assert.notEqual(pt(CHAVE_VIES_PRECO_SIM), CHAVE_VIES_PRECO_SIM)
+  assert.match(pt(CHAVE_ORIGEM_SIMULADA), /[Ss]imulado/)
 })
 
 console.log(`\n${n} verificações ok`)

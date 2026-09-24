@@ -3,10 +3,14 @@
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Loader2, Settings2, TrendingUp } from "lucide-react"
-import { resumoDoCartao, temHistorico, type ProvedorMtmAuto } from "@/lib/mtmauto/desempenho-do-catalogo"
+import {
+  resumoDoCartao, retratoSimulado, temHistorico,
+  type MetricasSimuladas, type ProvedorMtmAuto,
+} from "@/lib/mtmauto/desempenho-do-catalogo"
 import {
   agruparEstrategias, alvosDoCartao, contasFundedDoCartao, estadoDeSeguir, etiquetaRisco, iniciais, pt,
-  modoDeRisco, riscoPctValido, CHAVE_ESTADO, CHAVE_GRUPO, CHAVE_MODO_RISCO, GRUPOS, MODOS_RISCO,
+  modoDeRisco, riscoPctValido, viesDePrecoSim, CHAVE_ESTADO, CHAVE_GRUPO, CHAVE_MODO_RISCO,
+  CHAVE_ORIGEM_SIMULADA, CHAVE_VIES_PRECO_SIM, GRUPOS, MODOS_RISCO,
   RISCO_PCT_MAX, RISCO_PCT_MIN, type GrupoEstrategia,
 } from "@/lib/mtmauto/cartao-estrategia"
 
@@ -65,6 +69,71 @@ function CurvaPips({ curva, altura = 56, mini = false }: { curva: { acumulado: n
       <line x1="0" x2={w} y1={y(0)} y2={y(0)} stroke="#3f3f46" strokeWidth="0.6" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
       <path d={d} fill="none" stroke={cor} strokeWidth={mini ? 1.5 : 2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
     </svg>
+  )
+}
+
+/**
+ * O retrato de uma estratégia que só tem histórico SIMULADO.
+ *
+ * As mesmas caixas do lado real — a forma não muda, porque a medição é a mesma (posições
+ * fechadas, parciais pesadas). O que muda é o que está escrito por cima e por baixo: de onde
+ * vêm os números, e a ressalva dos preços de entrada viciados enquanto a amostra os apanhar.
+ * O porquê inteiro está em `lib/mtmauto/desempenho-do-catalogo.ts`.
+ */
+function RetratoSimuladas({
+  m,
+  caixa,
+}: {
+  m: MetricasSimuladas
+  caixa: (t: string, valor: string, sub: string, cor: string) => React.ReactElement
+}) {
+  const nota = viesDePrecoSim(m) ? pt(CHAVE_VIES_PRECO_SIM) : null
+  return (
+    <>
+      <div className="mb-2 rounded-2xl border p-3" style={{ borderColor: "rgba(210,166,60,0.28)", background: "rgba(210,166,60,0.06)" }}>
+        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#D2A63C" }}>
+          {pt(CHAVE_ORIGEM_SIMULADA)}
+        </p>
+        <p className="mt-1 text-[12px] leading-snug text-zinc-400">
+          Esta estratégia ainda não tem nenhuma conta real a executá-la. Os números abaixo são das
+          contas simuladas da casa — medidos trade a trade, como os das outras, mas sem dinheiro a
+          sério. Não se somam a histórico real nenhum.
+        </p>
+        {nota && <p className="mt-1.5 text-[12px] leading-snug" style={{ color: "rgba(210,166,60,0.9)" }}>{nota}</p>}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {caixa(
+          "Taxa de acerto",
+          m.winrate != null ? `${m.winrate}%` : "—",
+          `${m.ganhos}G / ${m.perdas}P`,
+          m.winrate == null ? "#a1a1aa" : m.winrate >= 50 ? "#28C878" : "#FF4D4D",
+        )}
+        {caixa("Trades", String(m.trades), "fechadas no período", "#ffffff")}
+        {caixa("Ganhos", String(m.ganhos), "trades ganhas", "#28C878")}
+        {caixa("Perdas", String(m.perdas), "trades perdidas", "#FF4D4D")}
+        {caixa("Break-even", String(m.breakeven), "saiu à entrada", "#D2A63C")}
+        {caixa(
+          "Fator de lucro",
+          m.fatorLucro != null ? m.fatorLucro.toFixed(2) : "—",
+          "ganho por cada 1 perdido",
+          (m.fatorLucro ?? 0) >= 1 ? "#28C878" : "#FF4D4D",
+        )}
+        <div className="col-span-2">
+          {caixa(
+            "Pips",
+            `${m.pips >= 0 ? "+" : ""}${m.pips}`,
+            `acumulados em ${m.trades} trades`,
+            m.pips >= 0 ? "#28C878" : "#FF4D4D",
+          )}
+        </div>
+        {m.curva.length > 1 && (
+          <div className="col-span-2 rounded-2xl border p-3" style={{ borderColor: "#23262F", background: "#12141A" }}>
+            <p className="mb-1 text-[10.5px] uppercase tracking-wider text-zinc-500">Curva de pips · simulada</p>
+            <CurvaPips curva={m.curva} altura={72} />
+          </div>
+        )}
+      </div>
+    </>
   )
 }
 
@@ -136,6 +205,8 @@ function ModalEstrategia({
   const presets = (d?.presets ?? []) as Record<string, unknown>[]
   const alvos = ((d?.desempenho as { alvos?: { alvo: string; acertos: number }[] })?.alvos) ?? []
   const sinais = Number(desempenho.sinais ?? 0)
+  // Só vem preenchido quando NÃO há histórico real (a rota garante-o). Nunca se soma ao de cima.
+  const simuladas = (d?.desempenho as { simuladas?: MetricasSimuladas | null })?.simuladas ?? null
 
   const caixa = (t: string, valor: string, sub: string, cor: string) => (
     <div className="rounded-2xl border p-3" style={{ borderColor: "#23262F", background: "#12141A" }}>
@@ -179,7 +250,10 @@ function ModalEstrategia({
                 chega ao primeiro alvo, tira parcial e depois volta ao stop com o resto conta como
                 perda inteira. Quem o seguiu ficou com lucro; a tabela diz que perdeu. Mostrar isso
                 era anunciar contra nós próprios um resultado que nem sequer é o real. */}
-            {providerId && desempenho.winrate == null ? (
+            {providerId && desempenho.winrate == null && simuladas ? (
+              // Sem histórico real, mostra-se o simulado — medido, à parte e com a origem dita.
+              <RetratoSimuladas m={simuladas} caixa={caixa} />
+            ) : providerId && desempenho.winrate == null ? (
               // Estratégia MTM Auto sem histórico medido lá: diz-se isso, sem caixas a zeros.
               <p className="rounded-2xl border p-3 text-[13px] leading-snug text-zinc-400" style={{ borderColor: "#23262F", background: "#12141A" }}>
                 {(d.desempenho as { porqueNaoFiavel?: string }).porqueNaoFiavel ?? "Sem histórico suficiente."}
@@ -436,6 +510,9 @@ function Cartao({ p, aMudar, aRiscar, setARiscar, setAberta, alternar, guardarRi
   const risco = etiquetaRisco(p.config)
   const alvos = alvosDoCartao(p.catalogo)
   const funded = contasFundedDoCartao(p.catalogo)
+  // Sem histórico real, o que há é o simulado — medido, separado e com a origem dita. Ver o
+  // porquê em lib/mtmauto/desempenho-do-catalogo.ts (`retratoSimulado`).
+  const simulado = retratoSimulado(p.catalogo)
   return (
     <div
       className="rounded-2xl border p-3"
@@ -465,10 +542,25 @@ function Cartao({ p, aMudar, aRiscar, setARiscar, setAberta, alternar, guardarRi
                   <span className="text-[#FF6B6B]">{Number(p.catalogo.perdas ?? 0)}P</span>
                   <span>· toca para ver os números</span>
                 </>
+              ) : simulado ? (
+                <>
+                  {/* A etiqueta ANTES do número: quem lê «78,6% de acerto» e só encontra a
+                      palavra «simulado» a seguir já leu o número como real. */}
+                  <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-300">
+                    {pt(simulado.chaveEtiqueta)}
+                  </span>
+                  <span className="font-semibold text-zinc-300">{simulado.resumo}</span>
+                  <span className="text-[#28C878]">· {simulado.metricas.ganhos}G</span>
+                  <span className="text-[#FF6B6B]">{simulado.metricas.perdas}P</span>
+                </>
               ) : (
                 <span>{resumoDoCartao(p.catalogo)}</span>
               )}
             </p>
+            {/* A ressalva viaja COLADA ao número, nunca num rodapé — quem cita o cartão leva-a. */}
+            {simulado?.chaveNota && (
+              <p className="mt-1 text-[10.5px] leading-snug text-zinc-500">{pt(simulado.chaveNota)}</p>
+            )}
             {/* Alvos batidos e stops — as mesmas contagens do cartão da app MTM Auto. */}
             {alvos.length > 0 && (
               <p className="mt-1 flex flex-wrap gap-1 text-[10.5px] font-semibold">
@@ -485,6 +577,13 @@ function Cartao({ p, aMudar, aRiscar, setARiscar, setAberta, alternar, guardarRi
             {temHistorico(p.catalogo) && Array.isArray(p.catalogo.curva) && p.catalogo.curva.length > 1 && (
               <div className="mt-1.5 opacity-90">
                 <CurvaPips curva={p.catalogo.curva} mini />
+              </div>
+            )}
+            {/* A curva simulada desenha-se igual, mas apagada: a forma é informação, e o tom
+                lembra que não é a mesma coisa que a do lado real. */}
+            {!temHistorico(p.catalogo) && simulado && simulado.metricas.curva.length > 1 && (
+              <div className="mt-1.5 opacity-60">
+                <CurvaPips curva={simulado.metricas.curva} mini />
               </div>
             )}
             {/* As contas MTM Funded atribuídas a esta estratégia — o mesmo fio que a MTM Auto

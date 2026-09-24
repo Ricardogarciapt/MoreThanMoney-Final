@@ -21,8 +21,9 @@
  * aqui não muda nada: continua-se a traduzir, não a recalcular.
  * As contas SIMULADAS nunca vêm nos números principais. Quando uma estratégia só tem simuladas
  * em 90 dias, a MTM Auto manda-as em `simuladas` e o principal fica «sem histórico»; aqui passam
- * tal e qual no campo `simuladas` do retrato — os ecrãs NÃO as mostram (decisão de apresentação
- * por tomar com o dono).
+ * tal e qual no campo `simuladas` do retrato. Desde 24/09 os ecrãs MOSTRAM-nas — separadas, com a
+ * etiqueta da origem e a ressalva do preço, nunca somadas ao real. O porquê e as regras estão em
+ * `retratoSimulado`, mais abaixo.
  *
  * ── O que nunca sai daqui ─────────────────────────────────────────────────────────────────────
  * Dinheiro. Só percentagem, contagens, fator de lucro e pips (a curva da MTM Auto já vem em pips).
@@ -121,6 +122,89 @@ export function simuladasDoCatalogo(p: ProvedorMtmAuto | null | undefined): Metr
 export const SEM_HISTORICO = 'Sem histórico suficiente'
 
 const num = (v: unknown): number => (Number.isFinite(Number(v)) ? Number(v) : 0)
+
+// ── histórico SIMULADO: quando é que aparece, e com que ressalva ──────────────────────────────
+
+/**
+ * ── Porque é que as simuladas passaram a aparecer (decisão do dono, 24/09) ────────────────────
+ * As contas-mestre das estratégias próprias da MTM Auto (Edge, King, Wolf, Scanner) nasceram a
+ * 15/09 já como contas MTM Funded SIMULADAS. Pela regra acima — «as simuladas nunca vêm nos
+ * números principais» — essas estratégias ficavam com «sem histórico» e ficariam assim para
+ * sempre: não há nenhuma conta real a executá-las, e não vai passar a haver.
+ *
+ * Havia duas saídas e nenhuma terceira: ou «sem histórico» até ao fim dos tempos, ou o número
+ * simulado à vista. O dono escolheu a segunda. O que NÃO muda é o que o número é:
+ *
+ *  1. continua MEDIDO — são as posições fechadas que o motor `sim` abriu e fechou, com as
+ *     parciais pesadas, tal como no lado real. Nenhum valor fixo, nenhuma média construída;
+ *  2. continua SEPARADO — nunca se soma ao histórico real nem lhe faz média. Quem tem os dois
+ *     vê os dois, com a etiqueta de cada um, pela mesma razão por que o `historico-auditado.ts`
+ *     põe «conta pessoal com gestão manual» ao lado do regime de hoje em vez de os misturar;
+ *  3. continua DITO — o cartão e o retrato escrevem de onde vem. Um número simulado sem a
+ *     palavra «simulado» ao lado é um número real aos olhos de quem o lê.
+ */
+
+/**
+ * Até quando é que os preços de entrada do motor `sim` estavam viciados a favor da casa.
+ *
+ * O defeito vivia no preenchimento das contas em motor `sim` (`lib/mtmfunded/precos/*`): a
+ * entrada saía melhor do que o mercado dava, em 6 de cada 7 trades. Tudo o que o motor abriu
+ * ANTES desta hora está inflacionado — e é justamente o caso de todo o histórico simulado que
+ * hoje existe (as mestres abriram a 15/09).
+ *
+ * O valor é o mesmo de `FRONTEIRA_VIES_PRECO` em `lib/pips-proof.ts`, onde a nota da prova já
+ * nasceu; está repetido aqui porque este ficheiro vive nos dois repositórios e o outro não. O
+ * teste ao lado (`__tests__/desempenho-do-catalogo.check.ts`) compara os dois para não divergirem.
+ */
+export const FRONTEIRA_VIES_PRECO_SIM = '2026-09-24T14:23:58.000Z'
+
+/**
+ * Esta amostra simulada apanha o período dos preços viciados?
+ *
+ * Mede-se pelo fecho mais antigo da curva: um fecho anterior à correcção só pode vir de uma
+ * entrada anterior a ela. Sem curva não há como verificar — e então avisa-se à mesma, que é o
+ * mesmo lado para que `pips-proof.ts` erra: na dúvida sobre se a amostra está limpa, avisa-se.
+ */
+export function viesDePrecoSim(s: MetricasSimuladas | null | undefined): boolean {
+  if (!s) return false
+  const quandos = s.curva.map((c) => Date.parse(String(c.quando))).filter((t) => Number.isFinite(t))
+  if (!quandos.length) return true
+  return Math.min(...quandos) < Date.parse(FRONTEIRA_VIES_PRECO_SIM)
+}
+
+/** O que o cartão e o retrato desenham quando o histórico que há é simulado. */
+export interface RetratoSimulado {
+  /** «78,6% de acerto · 56 trades» — a mesma frase do lado real, para não haver duas gramáticas. */
+  resumo: string
+  /** Chave do dicionário para a etiqueta de origem. A MTM Auto traduz; a app-mobile usa `pt()`. */
+  chaveEtiqueta: string
+  /** Chave da ressalva do preço viciado, ou `null` se a amostra não apanha esse período. */
+  chaveNota: string | null
+  metricas: MetricasSimuladas
+}
+
+export const CHAVE_ORIGEM_SIMULADA = 'estrategias.origemSimulada'
+export const CHAVE_VIES_PRECO_SIM = 'estrategias.viesPrecoSim'
+
+/**
+ * O retrato simulado de uma linha do catálogo — `null` quando não há nenhum a mostrar.
+ *
+ * Só devolve alguma coisa quando NÃO há histórico real: a MTM Auto já só manda `simuladas` nesse
+ * caso, e a guarda repete-se aqui para que uma mudança lá não passe a somar os dois sem se dar
+ * por ela.
+ */
+export function retratoSimulado(p: ProvedorMtmAuto | null | undefined): RetratoSimulado | null {
+  if (!p || temHistorico(p)) return null
+  const s = simuladasDoCatalogo(p)
+  if (!s || s.winrate == null || !(s.trades > 0)) return null
+  const pct = String(s.winrate).replace('.', ',')
+  return {
+    resumo: `${pct}% de acerto · ${s.trades} ${s.trades === 1 ? 'trade' : 'trades'}`,
+    chaveEtiqueta: CHAVE_ORIGEM_SIMULADA,
+    chaveNota: viesDePrecoSim(s) ? CHAVE_VIES_PRECO_SIM : null,
+    metricas: s,
+  }
+}
 
 /**
  * Tem histórico medido? Exactamente a condição da MTM Auto: há percentagem e há trades fechadas.
