@@ -44,6 +44,16 @@ export function loteT2TSimulado(e: {
   // do pedido e isso diz-se — `riscoUsd` continua a ser o RISCO REAL do lote enviado, não o
   // configurado, para o cliente ver o que está mesmo em jogo.
   const subiuAoMinimo = ideal < s.volume_min
+  // O ÚNICO travão que fica: quando o lote mínimo arrisca MAIS DO QUE A CONTA INTEIRA.
+  //
+  // Subir ao mínimo é a decisão do dono e vale mesmo quando o risco real fica várias vezes acima
+  // do configurado — é isso ou o cliente não receber trade nenhuma. Mas uma conta de 200 USD cujo
+  // lote mínimo arrisca 300 não «arrisca mais do que queria»: perde a conta numa trade, e a
+  // corretora recusaria de qualquer maneira por margem. Aí diz-se porquê.
+  const riscoDoMinimo = s.volume_min * perdaPorLote
+  if (subiuAoMinimo && riscoDoMinimo > e.equity) {
+    return { ok: false, motivo: `o lote mínimo (${s.volume_min}) arrisca ${riscoDoMinimo.toFixed(0)} USD e a conta tem ${e.equity.toFixed(0)} — o stop é largo demais para esta conta` }
+  }
   const volume = Math.round(Math.min(s.volume_max, Math.max(s.volume_min, Math.floor(ideal / step + 1e-6) * step)) * 100) / 100
   // Com o lote subido ao mínimo, o risco que o cliente corre é o do LOTE, não o da percentagem.
   return { ok: true, volume, riscoUsd: subiuAoMinimo ? Math.round(volume * perdaPorLote * 100) / 100 : riscoUsd, ...(subiuAoMinimo ? { subiuAoMinimo: true } : {}) }
