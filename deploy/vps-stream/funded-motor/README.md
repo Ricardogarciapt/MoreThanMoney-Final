@@ -159,15 +159,51 @@ Testes: `npx tsx lib/mtmfunded/__tests__/espelho-provider.check.ts` (ticks grava
 
 ## WS de preços (2026-09-21 — preços sempre funcionais, sem egress Supabase)
 
-O motor abre um WebSocket na porta `WS_PRECOS_PORTA` (default 8787, `0` desliga) e o nginx
-publica-o em `wss://stream.morethanmoney.pt/precos` (bloco `location /precos` — reaplica o
-conf deste repo e `sudo nginx -t && sudo systemctl reload nginx`).
+O motor abre um WebSocket na porta `WS_PRECOS_PORTA` (`0` desliga) e o nginx publica-o em
+`wss://stream.morethanmoney.pt/precos` (bloco `location /precos` — reaplica o conf deste repo e
+`sudo nginx -t && sudo systemctl reload nginx`). **Na VPS a porta é 8788**, não o 8787 do
+default: a 8787 está ocupada pela ponte do conector MT5. O conf do repo já diz 8788.
 
 O WebTrader liga-se lá quando a Vercel tiver `NEXT_PUBLIC_FUNDED_WS_URL=wss://stream.morethanmoney.pt/precos`
 (+ redeploy). Sem a env, ou com a WS em baixo, o poll clássico continua a funcionar sozinho.
 
 Teste rápido no VPS: `journalctl -u funded-motor | grep ws-precos` deve mostrar
-«a ouvir na porta 8787»; o [pulso] passa a incluir `wsClientes`.
+«a ouvir na porta 8788»; o [pulso] passa a incluir `wsClientes`.
+
+## Tick síncrono para a abertura (2026-09-24 — tirar a fotografia velha do caminho)
+
+`GET https://stream.morethanmoney.pt/precos/tick?symbols=XAUUSD&esperaMs=700&idadeMaxMs=1500`
+(cabeçalho `x-caption-secret`, o mesmo `LMS_CAPTION_WORKER_SECRET`). Serve o tick que o motor tem
+**em memória**, pelo mesmo `location /precos` do WS — sem bloco de nginx novo, sem porta nova e
+**sem uma única escrita na Supabase**.
+
+Existe porque a abertura de ordens corre em serverless e ia ler `funded_precos`, que por desenho
+tem até `ESCRITA_PRECOS_MIN_MS` (5 s) de idade — o mesmo valor a que a execução recusa, sem folga
+nenhuma. Medido a 24/09 com o mercado aberto, idade mediana do que a abertura via:
+
+| símbolo | retrato (base) | tick do motor | recusas (>5 s) antes → depois |
+|---|---|---|---|
+| XAUUSD | 0,9 s | **0,31 s** | 0 % → 0 % |
+| EURUSD | 3,3 s | **0,58 s** | 13 % → **0 %** |
+| GBPUSD | 3,2 s | **0,40 s** | 13 % → **0 %** |
+| GBPJPY | 3,3 s | **0,77 s** | 15 % → **0 %** |
+| NAS100 | 4,4 s | **0,80 s** | 35 % → **0 %** |
+| US30 | 4,0 s | **1,26 s** | 35 % → 5 % |
+| USOIL | 10,1 s | 9,1 s | 75 % → 70 % (a fonte é que é lenta, ver abaixo) |
+
+Símbolo fresco responde em ~10 ms; símbolo velho entra nos pedidos e espera-se por ele até
+`esperaMs` (tecto de 2 s). **Não chegando tick, devolve-se o que há com a idade VERDADEIRA** e o
+nome em `faltam` — quem recebe é que decide, e `lib/mtmfunded/precos/preenchimento.ts` recusa
+acima de 5 s. Nunca se re-carimba um preço aqui: foi isso que causou o incidente do ouro de
+21-24/09.
+
+Do lado do site: `lib/mtmfunded/precos/tick-motor.ts`, ligado por `carregarPrecos(symbols,
+frescos)`. Fica com o mais fresco dos dois pelo carimbo do motor, nunca com o mais velho. Com o
+motor em baixo, três falhas seguidas desligam o atalho 30 s e volta-se ao retrato — o pior caso
+é o comportamento de antes. `FUNDED_TICK_SINCRONO=0` desliga; `FUNDED_TICK_URL`,
+`FUNDED_TICK_ESPERA_MS` (700), `FUNDED_TICK_IDADE_MS` (1500) e `FUNDED_TICK_MEMO_MS` (300) afinam.
+
+O `[pulso]` passa a trazer `tickEmEspera`. Teste: `npx tsx lib/mtmfunded/__tests__/tick-motor.check.ts`.
 
 ## Operar SEM MetaApi (2026-09-21 — créditos esgotados não param o sistema interno)
 

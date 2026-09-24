@@ -19,9 +19,13 @@ server {
     }
 
 
-    # WS de preços do MTM Funded (funded-motor, ws-precos.ts) — wss://stream.morethanmoney.pt/precos
+    # Preços do MTM Funded (funded-motor, ws-precos.ts). O prefixo serve os dois:
+    #   wss://…/precos       → WS dos browsers (WebTrader)
+    #   https://…/precos/tick → tick síncrono para a abertura de ordens (x-caption-secret)
+    # A porta é a de `WS_PRECOS_PORTA` no /etc/mtm-funded-motor.env: na VPS é 8788 (a 8787 está
+    # ocupada pela ponte do conector MT5). Trocá-la aqui sem trocar lá parte as duas coisas.
     location /precos {
-        proxy_pass http://127.0.0.1:8787;
+        proxy_pass http://127.0.0.1:8788;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -79,9 +83,13 @@ server {
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
 
-    # WS de preços do MTM Funded (funded-motor, ws-precos.ts) — wss://stream.morethanmoney.pt/precos
+    # Preços do MTM Funded (funded-motor, ws-precos.ts). O prefixo serve os dois:
+    #   wss://…/precos       → WS dos browsers (WebTrader)
+    #   https://…/precos/tick → tick síncrono para a abertura de ordens (x-caption-secret)
+    # A porta é a de `WS_PRECOS_PORTA` no /etc/mtm-funded-motor.env: na VPS é 8788 (a 8787 está
+    # ocupada pela ponte do conector MT5). Trocá-la aqui sem trocar lá parte as duas coisas.
     location /precos {
-        proxy_pass http://127.0.0.1:8787;
+        proxy_pass http://127.0.0.1:8788;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
