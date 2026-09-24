@@ -10,6 +10,9 @@ import { getAccountSnapshot } from "@/lib/mtmcopy/metaapi"
 import { ehTradeLocker, sessaoDaLigacao } from "@/lib/tradelocker/ligacao"
 import { pipSizeForSymbol } from "@/lib/mtmcopy/trade-outcome"
 import { estrategiaDoSinalT2T } from "@/lib/mestres/t2t"
+import { contasFundedLigadasParaT2T } from "@/lib/mtmfunded/simulado/ligar-conta"
+import { escolhaGuardada, refSimulada } from "@/lib/mtmcopy/escolha-contas-t2t"
+import { ehContaMestre } from "@/lib/webtrader/filtro-contas"
 
 /**
  * PRÉ-VISUALIZAÇÃO de um sinal antes de o aceitar.
@@ -209,5 +212,69 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ mode, trade, accounts, blocked: bloqueadas })
+  /**
+   * AS CONTAS SIMULADAS MTM FUNDED também são sítios onde a aceitação abre — e até agora não
+   * apareciam aqui. Ficavam de fora da lista, abriam à mesma, e quem escolhesse «só nesta conta»
+   * ficaria com posições num sítio que o modal nunca mostrou. Entram sem números: são contas
+   * simuladas, não há dinheiro em risco para contar, e o sizing delas não muda por causa disto.
+   */
+  const simuladas: Array<{ id: string; ref: string; label: string }> = []
+  try {
+    const { data: marcadas } = await supabase
+      .from("mtm_trading_accounts").select("id, mt5_login, tipo")
+      .eq("user_id", user.id).eq("motor", "sim").eq("estado", "ativa").eq("aceita_t2t", true).limit(20)
+    const ids = new Map<string, string | null>()
+    // As mestres da casa (`tipo = 'provider'`) não são destino de ninguém — nem aparecem.
+    for (const c of (marcadas ?? []).filter((c) => !ehContaMestre(c))) ids.set(String(c.id), (c as { mt5_login?: string | null }).mt5_login ?? null)
+    const ligadas = await contasFundedLigadasParaT2T(user.id, (conns ?? []) as Array<Record<string, unknown>>).catch(() => [] as string[])
+    if (ligadas.length) {
+      const { data: extra } = await supabase
+        .from("mtm_trading_accounts").select("id, mt5_login, tipo")
+        .in("id", ligadas).eq("user_id", user.id).eq("motor", "sim").eq("estado", "ativa")
+      for (const c of (extra ?? []).filter((c) => !ehContaMestre(c))) ids.set(String(c.id), (c as { mt5_login?: string | null }).mt5_login ?? null)
+    }
+    for (const [id, login] of ids) {
+      simuladas.push({ id, ref: refSimulada(id), label: login ? `MTM Funded ${login}` : `MTM Funded ${id.slice(0, 6)}` })
+    }
+  } catch {
+    /* sem a 070/074 aplicada não há simuladas — o T2T de sempre não muda */
+  }
+
+  /**
+   * AS LIGAÇÕES MTM FUNDED COM O T2T DESLIGADO também têm direito a um motivo. Até 24/09 este
+   * caminho nem sequer olhava para o interruptor (abria na mesma, onze de uma vez); agora que
+   * olha, a conta deixa de abrir — e desaparecer sem explicação seria a mesma avaria aparente que
+   * a lista de contas vazia era antes.
+   */
+  for (const c of conns ?? []) {
+    if (!ehMtmFundedLigacao(c) || recebeT2T(c) || simuladas.some((s) => s.id === String(c.funded_account_id ?? ""))) continue
+    bloqueadas.push({
+      id: String(c.id),
+      label: c.account_label || `MTM Funded ${String(c.id).slice(0, 6)}`,
+      motivo: "O Tap to Trade está desligado nesta conta.",
+      comoResolver: "Liga-o na lista de contas do Tap to Trade ou em «As minhas contas».",
+    })
+  }
+
+  /**
+   * A ESCOLHA DA VEZ PASSADA, para o modal já vir marcado (`profile_data.t2t.contas`). É só uma
+   * sugestão: o que manda na aceitação é o que vier no pedido, e cada conta é validada do zero.
+   */
+  const { data: perfil } = await supabase.from("profiles").select("profile_data").eq("id", user.id).maybeSingle()
+  const guardada = escolhaGuardada(perfil?.profile_data)
+  // Uma preferência só vale para as contas que ainda existem e ainda servem.
+  const disponiveis = new Set<string>([...accounts.map((a) => a.id), ...simuladas.map((s) => s.ref)])
+  const escolhidas = guardada.filter((ref) => disponiveis.has(ref))
+
+  return NextResponse.json({
+    mode,
+    trade,
+    accounts,
+    simuladas,
+    blocked: bloqueadas,
+    // Há decisão para tomar? Só com mais do que um destino possível. Com um só, o modal não
+    // pergunta nada — não se acrescenta um toque a quem não tem escolha.
+    escolhaPossivel: disponiveis.size > 1,
+    escolhidas,
+  })
 }

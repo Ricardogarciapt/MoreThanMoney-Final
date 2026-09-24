@@ -8,6 +8,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { decifrar } from '@/lib/mtmfunded/credenciais'
 import { estadoCurto, tipoCurto } from '@/lib/mtmfunded/etiquetas'
 import { ehMtmFundedLigacao } from '@/lib/mtmcopy/destino-execucao'
+import { recebeT2T } from '@/lib/mtmcopy/alvo-t2t'
+import { ehContaMestre } from '@/lib/webtrader/filtro-contas'
 import {
   decidirLigacao,
   tentativasEsgotadas,
@@ -154,9 +156,22 @@ export async function contasFundedLigadasParaT2T(userId: string, ligacoes?: Arra
   const candidatas = linhas
     .filter((c) => ehMtmFundedLigacao(c as { mt5_platform?: string | null }))
     .filter((c) => c.user_id === userId && c.funded_account_id && c.funded_somente_leitura !== true && c.is_active !== false)
+    /**
+     * O INTERRUPTOR POR CONTA VALE AQUI TAMBÉM (24/09).
+     *
+     * Este caminho não passava por `recebeT2T`: uma ligação MTM Funded com o Tap to Trade
+     * DESLIGADO (`t2t_enabled = false`) — o interruptor que a pessoa desligou na lista de contas —
+     * continuava a receber a aceitação na mesma. Foi isso que abriu ONZE posições simuladas numa
+     * só aceitação do dono: as onze ligações «MTM Funded · MTM Auto …» estavam todas desligadas,
+     * e abriram todas. A regra é a mesma do resto do T2T e vive num sítio só (lib/mtmcopy/alvo-t2t).
+     */
+    .filter((c) => recebeT2T(c as { purpose?: string | null; t2t_enabled?: boolean | null }))
     .map((c) => String(c.funded_account_id))
   if (!candidatas.length) return []
   // Segunda verificação de dono no momento de executar (a conta pode ter mudado de mãos).
-  const { data } = await db.from('mtm_trading_accounts').select('id').in('id', candidatas).eq('user_id', userId).eq('motor', 'sim')
-  return (data ?? []).map((c) => String(c.id))
+  const { data } = await db.from('mtm_trading_accounts').select('id, tipo').in('id', candidatas).eq('user_id', userId).eq('motor', 'sim')
+  // AS MESTRES DA CASA NÃO SÃO DESTINO DE NINGUÉM (`tipo = 'provider'`, o mesmo critério do
+  // filtro «As minhas / Mestres» do WebTrader): quem as tem na conta é a casa, e elas são
+  // conduzidas pelo motor da estratégia — nunca por um toque numa aceitação.
+  return (data ?? []).filter((c) => !ehContaMestre(c)).map((c) => String(c.id))
 }

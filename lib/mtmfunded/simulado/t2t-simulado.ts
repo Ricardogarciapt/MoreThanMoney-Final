@@ -1,3 +1,4 @@
+import { ehContaMestre } from '@/lib/webtrader/filtro-contas'
 import { lucroUsd, type MapaPrecos, type Simbolo } from './matematica'
 
 /**
@@ -101,6 +102,12 @@ export async function executarT2TSimulado(p: {
   riscoPct: number
   /** Contas ligadas pelo cliente no «Ligar conta» (074) — já verificadas: dele, não só-leitura, não pausadas. */
   contasLigadas?: string[]
+  /**
+   * A pessoa escolheu ONDE abrir (2026-09-24): só estas contas simuladas entram. É um FILTRO sobre
+   * as que já eram elegíveis — um id que não esteja na lista de cima continua a não abrir nada.
+   * `undefined` = ninguém escolheu → tudo como sempre foi.
+   */
+  apenas?: string[]
 }): Promise<ResultadoT2TSimulado[]> {
   const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
   const ex = await import('./execucao')
@@ -109,14 +116,21 @@ export async function executarT2TSimulado(p: {
   const db = getSupabaseAdmin()
 
   const { data: marcadas, error } = await db.from('mtm_trading_accounts')
-    .select('id').eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa').eq('aceita_t2t', true)
+    .select('id, tipo').eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa').eq('aceita_t2t', true)
+  // AS MESTRES DA CASA (`tipo = 'provider'`) NUNCA são destino de uma aceitação: são conduzidas
+  // pelo motor da estratégia. Filtra-se aqui e não na consulta porque um `tipo` a null faria um
+  // `neq` deixar a linha de fora — e as contas normais podem não ter tipo.
   // Antes da 070 a coluna não existe: sem contas simuladas, nada muda no T2T de sempre.
-  const ids = new Set((error ? [] : marcadas ?? []).map((l) => String(l.id)))
+  const ids = new Set((error ? [] : marcadas ?? []).filter((l) => !ehContaMestre(l)).map((l) => String(l.id)))
   if (p.contasLigadas?.length) {
     // As ligadas passam pelos MESMOS filtros: do utilizador, motor simulado, conta viva.
     const { data: ligadas } = await db.from('mtm_trading_accounts')
-      .select('id').in('id', p.contasLigadas).eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa')
-    for (const l of ligadas ?? []) ids.add(String(l.id))
+      .select('id, tipo').in('id', p.contasLigadas).eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa')
+    for (const l of ligadas ?? []) if (!ehContaMestre(l)) ids.add(String(l.id))
+  }
+  if (p.apenas) {
+    const querido = new Set(p.apenas)
+    for (const id of [...ids]) if (!querido.has(id)) ids.delete(id)
   }
   const linhas = [...ids].map((id) => ({ id }))
   if (!linhas.length) return []
