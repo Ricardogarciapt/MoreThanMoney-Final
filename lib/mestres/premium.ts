@@ -36,6 +36,29 @@ export const PREMIUM_SIMBOLOS = ['XAUUSD'] as const
 export const PREMIUM_JANELA = { inicio: 8, fim: 22, fuso: 'Europe/London' } as const
 
 /**
+ * SANIDADE DO STOP — a distância entrada→SL tem de ser plausível para um sinal do SME.
+ *
+ * Medido a 24/09 nos 250 sinais Premium de 25/08 a 24/09: a zona do SME tem 50 pips de largura, o
+ * stop fica 50–120 pips da referência (mediana 100) e NENHUM sinal são passa dos 120. Dois passaram
+ * dos 1100 — e ambos abriram na mestre:
+ *
+ *   «🎯 Zona: 4332 – 4227 | 🛑 SL: 4222»   (22/09 11:03, devia ser 4327 / 4322)
+ *   «🎯 Zona: 4330 – 4225 | 🛑 SL: 4220»   (22/09 11:15, devia ser 4325 / 4320)
+ *
+ * Um dígito perdido no caminho e o stop passa de 100 para 1100 pips. O lote NÃO é calculado pelo
+ * risco (`loteParaConta` é por saldo), por isso um stop 11× maior é uma perda 11× maior: na mestre
+ * de 11 000 a 0,11 lotes são ~1 210 $, 11 % da conta numa trade — e o mesmo em cada conta que a
+ * segue. As duas escaparam por sorte (fecharam em lucro); a próxima não tem de escapar.
+ *
+ * A porta que existia («SL do lado certo») deixa passar qualquer distância. Esta fecha-a pelos dois
+ * lados, com folga larga de propósito: 300 pips é 2,5× o pior sinal são que se viu em 250.
+ */
+export const PREMIUM_SL_MIN_PIPS = 10
+export const PREMIUM_SL_MAX_PIPS = 300
+/** Ouro: 1 pip = 0,1 (convenção da casa, lib/mtmcopy/trade-outcome). */
+const PIP_OURO = 0.1
+
+/**
  * Quem segue o Premium além das escolhas CopyFactory (lib/mestres/planear.ts):
  *  · `copyfactory_strategy_pick = 'premium'` (formato antigo, lido também por lib/gestao-real/espelho-premium);
  *  · execução directa por grupo Telegram (`copy_method='telegram_group'`, grupo `premium`) — hoje abrem pela
@@ -137,6 +160,11 @@ export function decidirSinalPremium(p: { sinal: SinalLido | null; agora: Date; p
     const lado = s.direction === 'buy' ? 1 : -1
     if ((ref - sl) * lado <= 0) return { abrir: false, motivo: `SL do lado errado (${sl} vs ${ref})` }
     if ((tps[0] - ref) * lado <= 0) return { abrir: false, motivo: `TP1 do lado errado (${tps[0]} vs ${ref})` }
+    // Distância do stop plausível (ver PREMIUM_SL_MAX_PIPS): um dígito perdido no sinal vale 11× o risco.
+    const distancia = Math.abs(ref - sl) / PIP_OURO
+    if (distancia > PREMIUM_SL_MAX_PIPS || distancia < PREMIUM_SL_MIN_PIPS) {
+      return { abrir: false, motivo: `SL a ${Math.round(distancia)} pips da referência, fora do plausível (${PREMIUM_SL_MIN_PIPS}–${PREMIUM_SL_MAX_PIPS}): sinal provavelmente mal lido` }
+    }
   }
   if (!dentroDaJanelaPremium(p.agora)) return { abrir: false, motivo: `fora da janela ${PREMIUM_JANELA.inicio}h–${PREMIUM_JANELA.fim}h ${PREMIUM_JANELA.fuso}` }
   if (p.pausadoHoje) return { abrir: false, motivo: 'limite diário de SL atingido (premium_daily_stop)' }
