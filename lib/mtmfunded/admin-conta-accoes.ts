@@ -244,6 +244,37 @@ export async function executarAccao(ctx: ContextoAccao, p: PedidoAccao): Promise
       }
     }
 
+    /**
+     * APAGAR A CONTA — irreversível, e por isso a acção mais fechada do ficheiro.
+     *
+     * Três fechaduras, por esta ordem: o login escrito à mão, a decisão pura (que recusa se a
+     * conta estiver viva para alguém) e a limpeza do que a base não vê. A auditoria já ficou
+     * escrita pela rota ANTES de chegarmos aqui — `mtm_funded_admin_audit` não tem FK para a
+     * conta, por isso o registo sobrevive à linha que descreve.
+     */
+    case 'apagar_conta': {
+      const { confirmacaoApagarValida } = await import('./apagar-conta')
+      const { recolherPendurados, apagarContaComTudo } = await import('./apagar-conta-servidor')
+      const login = (conta.mt5_login as string) ?? null
+      if (!confirmacaoApagarValida(p.confirmacao, login)) {
+        throw new ErroAdmin(400, login ? 'escreve o login da conta para confirmar' : 'escreve APAGAR para confirmar')
+      }
+      const pendurados = await recolherPendurados(db, conta)
+      if (!pendurados.decisao.pode) {
+        // Recusa-se e explica-se. Nunca se apaga meia conta.
+        throw new ErroAdmin(409, pendurados.decisao.bloqueios.join(' · '))
+      }
+      const r = await apagarContaComTudo(db, pendurados)
+      return {
+        resposta: { ...r },
+        // A fotografia do «antes» já vai na auditoria; aqui fica o que levou consigo.
+        auditoria: {
+          login: r.login, limpou: r.limpou, emCascata: r.emCascata,
+          metaapiPorTocar: r.metaapiPorTocar, arrasta: pendurados.decisao.arrasta,
+        },
+      }
+    }
+
     case 'notificar': {
       if (!conta.user_id) throw new ErroAdmin(409, 'conta sem dono')
       const { notificarDono } = await import('./admin-conta-avisos')

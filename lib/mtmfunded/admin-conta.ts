@@ -44,6 +44,8 @@ export const PedidoAccao = z.discriminatedUnion('accao', [
   z.object({ accao: z.literal('definir_aceita_t2t'), valor: z.boolean(), motivo }),
   z.object({ accao: z.literal('definir_estrategia'), slug: z.string().trim().max(80).nullable(), motivo }),
   z.object({ accao: z.literal('regenerar_credenciais'), novoLogin: z.boolean().default(false), motivo }),
+  // APAGAR: irreversível. O `confirmacao` é o login escrito à mão (ver lib/mtmfunded/apagar-conta.ts).
+  z.object({ accao: z.literal('apagar_conta'), confirmacao: z.string(), motivo }),
   z.object({ accao: z.literal('notificar'), modelo: z.enum(['pausa', 'retoma', 'aviso_regras', 'conta_revista', 'livre']), texto: z.string().trim().max(800).optional(), email: z.boolean().default(true), push: z.boolean().default(true) }),
   // Levantamentos
   z.object({ accao: z.literal('levantamento'), levantamentoId: uuid, estado: z.enum(['em_analise', 'aprovado', 'pago', 'recusado']), motivo: z.string().trim().max(400).optional() }),
@@ -57,7 +59,7 @@ export const CorpoPost = z.object({ chave })
 
 /** As que mexem em dinheiro ou fecham posições: sem chave não correm (a UI gera-a ao abrir a confirmação). */
 export const ACCOES_DE_DINHEIRO: ReadonlySet<NomeAccao> = new Set([
-  'fechar_posicao', 'fechar_tudo', 'reset', 'ajustar_saldo', 'levantamento', 'avancar_fase',
+  'fechar_posicao', 'fechar_tudo', 'reset', 'ajustar_saldo', 'levantamento', 'avancar_fase', 'apagar_conta',
 ])
 
 export function validarPedido(corpo: unknown):
