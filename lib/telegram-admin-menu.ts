@@ -22,6 +22,8 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
+import { abrirPorta, portaAberta } from '@/lib/telegram-admin-porta'
+
 
 type Supa = ReturnType<typeof getSupabaseAdmin>
 
@@ -103,6 +105,16 @@ async function tg(method: string, body: Record<string, unknown>) {
   }
 }
 
+/** A prova de um depósito é uma FOTO. Mostrá-la aqui poupa ir procurá-la centenas de mensagens acima. */
+const enviarFoto = (chatId: string | number, fotoId: string, legenda: string, teclado?: unknown) =>
+  tg('sendPhoto', {
+    chat_id: chatId,
+    photo: fotoId,
+    caption: legenda.slice(0, 1000),
+    parse_mode: 'HTML',
+    ...(teclado ? { reply_markup: teclado } : {}),
+  })
+
 const enviar = (chatId: string | number, text: string, teclado?: unknown) =>
   tg('sendMessage', {
     chat_id: chatId,
@@ -126,18 +138,28 @@ const VOLTAR: Botao[] = [{ text: '⬅️ Painel', callback_data: 'admin:menu' }]
 export function adminPanelKeyboard() {
   return {
     inline_keyboard: [
+      // A primeira linha é a primeira pergunta do dia — e a que decide, que é onde há dinheiro parado.
       [
-        { text: '🩺 Estado do sistema', callback_data: 'admin:sys' },
-        { text: '💰 Contas e equidade', callback_data: 'admin:contas' },
+        { text: '🧠 Hoje', callback_data: 'admin:hoje' },
+        { text: '🙋 A decidir', callback_data: 'admin:decidir' },
       ],
       [
-        { text: '📡 Sinais de hoje', callback_data: 'admin:sinais' },
+        { text: '🔎 Cliente', callback_data: 'admin:cliente' },
+        { text: '🩺 Estado do sistema', callback_data: 'admin:sys' },
+      ],
+      [
+        { text: '💵 Depósitos', callback_data: 'admin:dep' },
+        { text: '🏧 Levantamentos', callback_data: 'admin:lev' },
+      ],
+      [
+        { text: '💰 Contas e equidade', callback_data: 'admin:contas' },
         { text: '📊 Desempenho 30d', callback_data: 'admin:perf' },
       ],
       [
+        { text: '📡 Sinais de hoje', callback_data: 'admin:sinais' },
         { text: '⚙️ Execução', callback_data: 'admin:exec' },
-        { text: '🧲 Máquina de vendas', callback_data: 'admin:sm' },
       ],
+      [{ text: '🧲 Máquina de vendas', callback_data: 'admin:sm' }],
       [
         { text: '👥 Leads e funil', callback_data: 'admin:funil' },
         { text: '👑 Subscritores', callback_data: 'admin:subs' },
@@ -410,6 +432,133 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
     return
   }
 
+  /*
+   * ── O QUE MEXE EM DINHEIRO OU EM ACESSOS ────────────────────────────────────────────────────
+   *
+   * Três regras, e são as mesmas para os três blocos abaixo (depósitos, levantamentos, ofertas):
+   *
+   *  · a porta reabre-se aqui, no servidor, e traz a identidade que vai assinar o registo — o
+   *    `ehChatDeAdmin` de cima diz QUEM é, `abrirPorta` diz EM NOME DE QUEM fica escrito;
+   *  · `?` pergunta e `!` faz, sempre, sem excepção;
+   *  · nada disto move dinheiro. Muda registos nossos e manda mensagens nossas.
+   */
+
+  // ── Depósitos: dep?ok|no:<chat> pergunta, dep!ok|no:<chat> faz ──
+  if (action.startsWith('dep?') || action.startsWith('dep!')) {
+    const m = action.match(/^dep([?!])(ok|no):(.+)$/)
+    if (!m) {
+      await enviar(chatId, '🤔 Esse botão já não existe.', adminPanelKeyboard())
+      return
+    }
+    const [, modo, decisao, leadChat] = m
+    const dinheiro = await import('@/lib/telegram-admin-dinheiro')
+    if (modo === '?') {
+      const fila = await dinheiro.carregarPendentesDeDeposito(supabase, 30)
+      const pedido = fila.find((x) => x.chatId === leadChat)
+      const c = dinheiro.confirmacaoDeposito({
+        aprovar: decisao === 'ok',
+        chatIdLead: leadChat,
+        nome: pedido?.nome ?? leadChat,
+        leitura: pedido?.leitura ?? { certeza: 'nao_sei', valorUsd: null, frase: '', automatico: false },
+      })
+      await enviar(chatId, c.texto, c.teclado)
+      return
+    }
+    const porta = await abrirPorta(supabase, chatId)
+    if (!portaAberta(porta)) {
+      await enviar(chatId, porta.fechada)
+      return
+    }
+    const texto = decisao === 'ok'
+      ? await dinheiro.aprovarDeposito(supabase, porta, leadChat)
+      : await dinheiro.recusarDeposito(supabase, porta, leadChat)
+    await enviar(chatId, texto, { inline_keyboard: [[{ text: '💵 Voltar aos depósitos', callback_data: 'admin:dep' }], VOLTAR] })
+    return
+  }
+
+  // ── Levantamentos: lv?<letra>:<id> pergunta, lv!<letra>:<id>[:<motivo>] faz ──
+  if (action.startsWith('lv?') || action.startsWith('lv!')) {
+    const m = action.match(/^lv([?!])([eapr]):([0-9a-f-]{36})(?::([a-z]))?$/i)
+    if (!m) {
+      await enviar(chatId, '🤔 Esse botão já não existe.', adminPanelKeyboard())
+      return
+    }
+    const [, modo, letra, id, chaveMotivo] = m
+    const dinheiro = await import('@/lib/telegram-admin-dinheiro')
+    const para = dinheiro.DESTINOS[letra]
+    const pedido = await dinheiro.carregarPedidoDeLevantamento(supabase, id)
+    if (!pedido) {
+      await enviar(chatId, '🤷 Não encontrei esse pedido.', { inline_keyboard: [VOLTAR] })
+      return
+    }
+    if (modo === '?') {
+      // Recusar não precisa de guarda: é sempre permitido, e é o que se faz quando uma regra trava.
+      if (para !== 'recusado') {
+        const v = dinheiro.avaliarLevantamento(pedido, para)
+        if (!v.pode) {
+          await enviar(
+            chatId,
+            `🚫 <b>Não posso ${para === 'pago' ? 'marcar como pago' : 'aprovar'}.</b>\n\n${v.porque}` +
+              (v.regra ? `\n\n<b>A regra:</b> ${v.regra}` : ''),
+            { inline_keyboard: [[{ text: '❌ Recusar com este motivo', callback_data: `admin:lv?r:${id}` }], [{ text: '🏧 Voltar', callback_data: 'admin:lev' }], VOLTAR] },
+          )
+          return
+        }
+      }
+      const c = dinheiro.confirmacaoLevantamento(pedido, para)
+      await enviar(chatId, c.texto, c.teclado)
+      return
+    }
+    const porta = await abrirPorta(supabase, chatId)
+    if (!portaAberta(porta)) {
+      await enviar(chatId, porta.fechada)
+      return
+    }
+    const motivo = para === 'recusado'
+      ? dinheiro.MOTIVOS_DE_RECUSA[chaveMotivo ?? 'o'] ?? dinheiro.MOTIVOS_DE_RECUSA.o
+      : `decidido no Telegram pelo admin (${porta.adminEmail})`
+    const texto = await dinheiro.aplicarLevantamento(porta, id, para, motivo)
+    await enviar(chatId, texto, { inline_keyboard: [[{ text: '🏧 Voltar aos levantamentos', callback_data: 'admin:lev' }], VOLTAR] })
+    return
+  }
+
+  // ── Oferta de venda: of?<chat> pergunta, of!<chat> manda ──
+  if (action.startsWith('of?') || action.startsWith('of!')) {
+    const leadChat = action.slice(3)
+    const { estadoDeVenda, mandarOferta } = await import('@/lib/telegram-admin-vendas')
+    const { ofertaMostravel, textoOferta } = await import('@/lib/telegram-admin-oferta')
+    const e = await estadoDeVenda(supabase, leadChat)
+    if (!e) {
+      await enviar(chatId, '🤷 Não encontrei essa pessoa.', { inline_keyboard: [VOLTAR] })
+      return
+    }
+    const o = ofertaMostravel(e.estado)
+    if (action.startsWith('of?')) {
+      if (!o.mensagem) {
+        await enviar(chatId, textoOferta(e.nome, e.estado, o), { inline_keyboard: [VOLTAR] })
+        return
+      }
+      const { pedirConfirmacao } = await import('@/lib/telegram-admin-porta')
+      const c = pedirConfirmacao({
+        titulo: `Mandar a ${e.nome}: ${o.titulo}`,
+        vaiAcontecer: ['A pessoa recebe esta mensagem no Telegram, agora.', 'Fica registado em teu nome.'],
+        naoVaiAcontecer: ['Não cobra nada nem emite cupão nenhum — é só a mensagem.'],
+        fazer: `admin:of!${leadChat}`,
+        voltar: 'admin:fecho',
+        rotuloSim: '📨 Sim, mandar',
+      })
+      await enviar(chatId, `${textoOferta(e.nome, e.estado, o)}\n\n${c.texto}`, c.teclado)
+      return
+    }
+    const porta = await abrirPorta(supabase, chatId)
+    if (!portaAberta(porta)) {
+      await enviar(chatId, porta.fechada)
+      return
+    }
+    await enviar(chatId, await mandarOferta(porta, leadChat), { inline_keyboard: [[{ text: '🎯 Voltar ao fecho', callback_data: 'admin:fecho' }], VOLTAR] })
+    return
+  }
+
   // ── Crons: cr?<chave> pergunta (os que mandam coisas para fora), cr!<chave> corre ──
   if (action.startsWith('cr?') || action.startsWith('cr!')) {
     const { confirmacaoCron, dispararCron, tecladoCrons } = await import('@/lib/telegram-admin-extra')
@@ -431,12 +580,30 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
   // ── A folha de uma pessoa: quem é, que passos deu, o que falta ──
   if (action.startsWith('quem:')) {
     const { carregarPerfil, textoPerfil } = await import('@/lib/prospecao/perfil-lead')
-    const p = await carregarPerfil(supabase, action.slice(5))
+    const chave = action.slice(5)
+    const p = await carregarPerfil(supabase, chave)
     await enviar(
       chatId,
       p ? textoPerfil(p) : '🤷 Não encontrei ninguém com essa chave.',
-      { inline_keyboard: [[{ text: '🎯 Voltar ao fecho', callback_data: 'admin:fecho' }], VOLTAR] },
+      {
+        inline_keyboard: [
+          // A folha diz quem é e o que falta; a oferta é o passo a seguir, e estava a um portátil
+          // de distância. `of?` só pergunta — mandar é o segundo toque.
+          ...(p ? [[{ text: '🧲 Oferta para esta pessoa', callback_data: `admin:of?${chave}` }]] : []),
+          ...(p ? [[{ text: '💰 O que tem connosco', callback_data: `admin:cli:${chave}` }]] : []),
+          [{ text: '🎯 Voltar ao fecho', callback_data: 'admin:fecho' }],
+          VOLTAR,
+        ],
+      },
     )
+    return
+  }
+
+  // ── A folha de saldos de uma pessoa (o mesmo que /cliente, mas a um toque) ──
+  if (action.startsWith('cli:')) {
+    const { carregarFolhaDeCliente, textoFolha } = await import('@/lib/telegram-admin-cliente')
+    const f = await carregarFolhaDeCliente(supabase, action.slice(4))
+    await enviar(chatId, f ? textoFolha(f) : '🤷 Não encontrei ninguém com essa chave.', { inline_keyboard: [VOLTAR] })
     return
   }
 
@@ -463,6 +630,102 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
     case 'menu':
       await enviar(chatId, TEXTO_PAINEL, adminPanelKeyboard())
       return
+    case 'hoje': {
+      const { carregarHoje, textoHoje, tecladoHoje } = await import('@/lib/telegram-admin-hoje')
+      const h = await carregarHoje(supabase)
+      await enviar(chatId, textoHoje(h), tecladoHoje(h, VOLTAR))
+      return
+    }
+    /**
+     * A fila de tudo o que está à espera de uma decisão dele, num sítio só.
+     *
+     * Depósitos e levantamentos vivem em tabelas diferentes e chegam por caminhos diferentes, mas
+     * a pergunta é a mesma — «tenho alguma coisa parada à minha espera?». Duas listas separadas
+     * respondem-lhe duas vezes; uma responde-lhe uma.
+     */
+    case 'decidir': {
+      const { carregarPendentesDeDeposito, carregarLevantamentosAbertos } = await import('@/lib/telegram-admin-dinheiro')
+      const [deps, levs] = await Promise.all([
+        carregarPendentesDeDeposito(supabase, 10),
+        carregarLevantamentosAbertos(supabase, 10),
+      ])
+      if (!deps.length && !levs.length) {
+        await enviar(chatId, '✅ <b>Nada à tua espera.</b>\n\nSem pedidos de acesso e sem levantamentos por decidir.', {
+          inline_keyboard: [[{ text: '🚨 O que precisa de mim', callback_data: 'admin:falhas' }], VOLTAR],
+        })
+        return
+      }
+      const linhas = [
+        '🙋 <b>À tua espera</b>',
+        '',
+        deps.length ? `💵 <b>${deps.length} pedido(s) de acesso</b> — depósito por validar` : '',
+        ...deps.slice(0, 5).map((d) => `   • ${d.nome}${d.uid ? ` · UID ${d.uid}` : ''}`),
+        levs.length ? `\n🏧 <b>${levs.length} levantamento(s)</b> por decidir` : '',
+        ...levs.slice(0, 5).map((l) => `   • ${l.quem} — ${l.valorUsd} USD (${l.estado})`),
+      ].filter(Boolean)
+      const botoes: Botao[][] = []
+      if (deps.length) botoes.push([{ text: `💵 Ver os ${deps.length} depósitos`, callback_data: 'admin:dep' }])
+      if (levs.length) botoes.push([{ text: `🏧 Ver os ${levs.length} levantamentos`, callback_data: 'admin:lev' }])
+      botoes.push(VOLTAR)
+      await enviar(chatId, linhas.join('\n'), { inline_keyboard: botoes })
+      return
+    }
+    case 'cliente':
+      await enviar(
+        chatId,
+        '🔎 <b>A folha de um cliente</b>\n\n' +
+          'Escreve <code>/cliente &lt;chave&gt;</code>. A chave é o que tiveres à mão:\n' +
+          '• email · <code>/cliente joao@exemplo.pt</code>\n' +
+          '• login MT5 · <code>/cliente 1234567</code>\n' +
+          '• UID da corretora, id do perfil, chat do Telegram ou @username\n\n' +
+          'Respondo com a assinatura, o que a corretora diz e o saldo de <b>todas</b> as contas que essa pessoa tem connosco — ' +
+          'e digo sempre quando um número é velho ou não existe.',
+        { inline_keyboard: [[{ text: '🎯 Quem está a fechar', callback_data: 'admin:fecho' }], VOLTAR] },
+      )
+      return
+    /**
+     * A fila dos depósitos — uma mensagem POR pedido, com a foto da prova.
+     *
+     * Em texto corrido era preciso ir procurar a foto original, que pode estar a centenas de
+     * mensagens de distância; um pedido que só se aprova depois de o encontrar é um pedido que
+     * fica dias parado. Os botões são os do painel novo, que passam pelo mesmo `grantBrokerAccess`
+     * dos botões da foto original.
+     */
+    case 'dep': {
+      const { carregarPendentesDeDeposito, textoDeposito, tecladoDeposito } = await import('@/lib/telegram-admin-dinheiro')
+      const fila = await carregarPendentesDeDeposito(supabase, 10)
+      if (!fila.length) {
+        await enviar(chatId, '💵 <b>Depósitos</b>\n\nSem pedidos à espera. ✅', { inline_keyboard: [VOLTAR] })
+        return
+      }
+      await enviar(chatId, `💵 <b>Depósitos por validar (${fila.length})</b>`, { inline_keyboard: [VOLTAR] })
+      for (const d of fila) {
+        const teclado = tecladoDeposito(d.chatId, VOLTAR)
+        if (d.fotoId) await enviarFoto(chatId, d.fotoId, textoDeposito(d), teclado)
+        else await enviar(chatId, `${textoDeposito(d)}\n\n<i>Esta pessoa não enviou print — foi validada pela lista da corretora ou está a meio.</i>`, teclado)
+      }
+      return
+    }
+    case 'lev': {
+      const { carregarLevantamentosAbertos, carregarPedidoDeLevantamento, textoLevantamento, tecladoLevantamento } =
+        await import('@/lib/telegram-admin-dinheiro')
+      const fila = await carregarLevantamentosAbertos(supabase, 6)
+      if (!fila.length) {
+        await enviar(
+          chatId,
+          '🏧 <b>Levantamentos</b>\n\nNenhum por decidir.\n\n<i>Nunca houve nenhum pedido até hoje — quando houver, aparece aqui.</i>',
+          { inline_keyboard: [VOLTAR] },
+        )
+        return
+      }
+      await enviar(chatId, `🏧 <b>Levantamentos por decidir (${fila.length})</b>`, { inline_keyboard: [VOLTAR] })
+      for (const l of fila) {
+        const p = await carregarPedidoDeLevantamento(supabase, l.id)
+        if (!p) continue
+        await enviar(chatId, `<b>${l.quem}</b>\n${textoLevantamento(p)}`, tecladoLevantamento(p, VOLTAR))
+      }
+      return
+    }
     case 'sys':
       await enviar(chatId, await estadoDoSistema(supabase), { inline_keyboard: [VOLTAR] })
       return
