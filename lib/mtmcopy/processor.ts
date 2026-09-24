@@ -861,8 +861,11 @@ function subscriberLogAfterProviderExecution(
     tgRef: string
     resultError?: string
   },
-): {
-  status: 'received' | 'error'
+) : {
+  // Inclui 'skipped': a funcao devolve-o quando a falha e da conta mestre da
+  // CopyFactory e o subscriber fica intacto. A declaracao dizia so
+  // 'received' | 'error' e estava a mentir sobre o proprio retorno.
+  status: 'received' | 'skipped' | 'error'
   detail: string
   connectionPatch: Record<string, unknown>
 } {

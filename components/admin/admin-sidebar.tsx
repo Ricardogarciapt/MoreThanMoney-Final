@@ -234,7 +234,7 @@ export default function AdminSidebar({
     const badge = item.tipo === "tab" && item.id === "users" ? skoolPendingCount : 0
     return (
       <>
-        <Icone className={cn("shrink-0", item.secundaria ? "h-4 w-4" : "h-5 w-5")} />
+        <Icone className={cn("shrink-0", item.tipo === "link" && item.secundaria ? "h-4 w-4" : "h-5 w-5")} />
         <span className="flex-1 truncate text-left">{item.rotulo}</span>
         {badge > 0 && (
           <span
@@ -310,7 +310,7 @@ export default function AdminSidebar({
                       key={item.href}
                       href={item.href}
                       onClick={() => setAbertoMobile(false)}
-                      className={classesItem(ativo, item.secundaria)}
+                      className={classesItem(ativo, item.tipo === "link" ? item.secundaria : false)}
                       title={item.nota}
                     >
                       {conteudoItem(item, ativo)}

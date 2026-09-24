@@ -120,7 +120,10 @@ export async function colocarOrdemTL(
     // aparece no histórico, a gestão procura depois por instrumento.
     let positionId: string | null = null
     if (tipo === 'market') positionId = await sessao.posicaoDaOrdem(orderId).catch(() => null)
-    return { success: true, orderId, positionId, qty, brokerSymbol: c.instrumento.instrumento.name }
+    // `?? undefined`: o OrderResult declara `positionId?: string`, portanto «nao sei»
+    // escreve-se undefined, nao null (o & { positionId?: string | null } do
+    // ResultadoOrdemTL nao alarga nada — a interseccao continua a dar string | undefined).
+    return { success: true, orderId, positionId: positionId ?? undefined, qty, brokerSymbol: c.instrumento.instrumento.name }
   } catch (e) {
     return { success: false, error: e instanceof TradeLockerError ? e.message : `TradeLocker: ${msg(e)}` }
   }

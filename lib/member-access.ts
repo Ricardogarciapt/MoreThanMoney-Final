@@ -61,7 +61,9 @@ export function isRegisteredMember(profile: UserProfile | null | undefined): boo
   }
 
   if (profile.user_type === "presentation" || profile.user_type === "member") {
-    return profile.is_active !== false
+    // `is_active === false` ja devolveu false la em cima, por isso aqui a
+    // comparacao era sempre verdadeira (o TS apontava-a como impossivel).
+    return true
   }
 
   return false
