@@ -173,6 +173,12 @@ const ultimasMetricas = new Map<string, UltimaEscritaMetricas>()
 const fechosDe = new Map<string, FechoHistorico[]>()
 const eventoEnviadoEm = new Map<string, number>()
 const pedidos = new Set<string>()
+/**
+ * Re-subscrever a fonte fora do ciclo de 10 s — para quando um pedido SÍNCRONO (`/precos/tick`)
+ * traz um símbolo que o motor ainda não segue. Só existe depois de `ligarFonte()`; antes disso
+ * quem pedir fica à espera do ciclo, que é o comportamento de sempre.
+ */
+let resubscrever: (() => void) | null = null
 const ultimoTrailingEm = new Map<string, number>()
 /** Alertas de preço activos (funded_alertas), por símbolo. */
 const alertasPorSimbolo = new Map<string, Array<AlertaPreco & { user_id: string }>>()
@@ -501,7 +507,7 @@ function aoTick(t: Tick): void {
   precoFonte.set(sym, t.origem)
   precosPorEscrever.add(sym)
   // Distribuição direta aos browsers (ws-precos.ts) — a Supabase fica fora do caminho quente.
-  wsPrecos?.publicar(sym, t.bid, t.ask, t.em.getTime())
+  wsPrecos?.publicar(sym, t.bid, t.ask, t.em.getTime(), emMercado, t.origem)
   if (t.desvioMin != null) desvioMin = t.desvioMin
   ultimoTickEm = Date.now()
   ticksNoMinuto++
@@ -1189,7 +1195,18 @@ async function main(): Promise<void> {
   log(`[motor] arranque · escrita=${CFG.escrita ? 'LIGADA' : 'desligada (seco)'} · conta de preços ${CFG.contaPrecos.slice(0, 8)}…`)
   // O WS abre ANTES do feed: quem se ligar cedo recebe o snapshot vazio e os ticks ao chegarem.
   try {
-    wsPrecos = iniciarWsPrecos(CFG.wsPrecosPorta, log)
+    wsPrecos = iniciarWsPrecos({
+      porta: CFG.wsPrecosPorta,
+      log,
+      segredo: CFG.segredo,
+      // Quem pede um tick síncrono de um símbolo que o motor não segue mete-o nos desejados JÁ:
+      // a ronda de `funded_precos_pedidos` é de 5 em 5 s e uma abertura não espera tanto.
+      pedir: (sym) => {
+        if (!simbolos.has(sym) || pedidos.has(sym)) return
+        pedidos.add(sym)
+        resubscrever?.()
+      },
+    })
   } catch (e) {
     log('[ws-precos] não abriu (porta ocupada?):', e instanceof Error ? e.message : e)
   }
@@ -1205,6 +1222,7 @@ async function main(): Promise<void> {
   if (daCorretora.length) await carregarCatalogo()
   await carregarPedidos()
   await fonte.definirSimbolos(simbolosDesejados(), rapidos())
+  resubscrever = () => { void fonte.definirSimbolos(simbolosDesejados(), rapidos()).catch(() => undefined) }
 
   // Contas que seguem estratégias do MTM Auto (migração 070). ESPELHO_ATIVO=0 desliga só isto.
   const espelho = env('ESPELHO_ATIVO', false) === '0'
@@ -1412,7 +1430,7 @@ async function main(): Promise<void> {
     const estadoProvider = provider?.estado() ?? null
     const estado = {
       ticksMin: ticksNoMinuto, contas: contas.size, feed: fonte.nome, semTicksMs: ultimoTickEm ? Date.now() - ultimoTickEm : null,
-      escrita: CFG.escrita, tem072, simbolosRapidos: simbolosDoProvider.size, wsClientes: wsPrecos?.clientes() ?? null,
+      escrita: CFG.escrita, tem072, simbolosRapidos: simbolosDoProvider.size, wsClientes: wsPrecos?.clientes() ?? null, tickEmEspera: wsPrecos?.emEspera() ?? null,
       binance: fonteBinance?.resumo() ?? null,
       yahoo: fonteYahoo?.resumo() ?? null,
       conectorMt5: fonteConector?.resumo() ?? null,
