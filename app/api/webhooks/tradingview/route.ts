@@ -34,6 +34,7 @@ import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
 import { evaluatePerpsSignalGate } from "@/lib/mtmcopy/perps-signal-gate"
 import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/signal-rules"
 import { temTodasAsConfirmacoes } from "@/lib/mtmcopy/scanner-confirmacoes"
+import { decidirScannerParaMestre } from "@/lib/mtmcopy/scanner-para-mestre"
 // Classificação do ativo e gates locais vivem em lib: a sombra das estratégias (lib/mtmauto/sombra)
 // tem de decidir «teria executado?» com EXACTAMENTE o mesmo código que este webhook.
 import { classifyAsset, confirmationsPassed, isCryptoPerpTicker, passesQualityGate, stopsSane, type AssetClass } from "@/lib/mtmcopy/webhook-gates"
@@ -1057,28 +1058,47 @@ export async function POST(request: NextRequest) {
    * NASCE MUDO: `mestres_estrategias.sinal_modo` está em `desligado` e `mtmauto_providers.ativo` em
    * `false` — `encaminharSinalParaMestre` devolve `desligado` e não escreve nada. Ligar é decisão do
    * dono, no admin, e vê-se primeiro em sombra.
+   *
+   * A DECISÃO VIVE EM lib/mtmcopy/scanner-para-mestre (pura, com testes). Ficou lá depois do defeito
+   * do próprio dia 24/09: escrita aqui à mão, a lista trazia `!isIdeaAlert && !activeSensei` copiados
+   * do `canExecuteProvider` — e nos alertas do scanner essas duas são SEMPRE falsas (o parser do
+   * Sensei monta um alerta a partir de ticker+action e infere `idea`). O desvio nunca correu uma
+   * única vez. A pergunta certa é `initSignalKind === "entry"`, a mesma que fica em `signal_kind`.
    */
   const confirmacoesScanner =
     scannerKey === "mtmscanner" ? temTodasAsConfirmacoes(payload, execDirForGate) : null
-  const scannerParaMestre =
-    !canExecuteProvider &&
-    scannerKey === "mtmscanner" &&
-    !isIdeaAlert &&
-    !activeSensei &&
-    (assetClass === "gold_btc" || assetClass === "forex") &&
-    Boolean(parsedForExec.symbol) &&
-    Boolean(parsedForExec.direction) &&
-    confirmacoesScanner?.ok === true &&
-    stopsSane(parsedForExec.entry ?? price, parsedForExec.sl) &&
-    passesExecGate(
-      signalRules,
-      execSymbolForGate,
-      execDirForGate,
-      confirmacoesScanner.leitura?.aFavor ?? null,
-      scannerKey,
-      assetClass,
-    ).ok
-  if (scannerParaMestre) {
+  const gateScanner =
+    scannerKey === "mtmscanner"
+      ? passesExecGate(
+          signalRules,
+          execSymbolForGate,
+          execDirForGate,
+          confirmacoesScanner?.leitura?.aFavor ?? null,
+          scannerKey,
+          assetClass,
+        )
+      : { ok: false as const, reason: "não é o MTM Scanner" }
+  const decisaoScanner = decidirScannerParaMestre({
+    scanner: scannerKey,
+    tipoSinal: initSignalKind === "entry" ? "entry" : "followup",
+    classe: assetClass,
+    simbolo: parsedForExec.symbol ?? null,
+    direcao: parsedForExec.direction ?? null,
+    confirmacoes: confirmacoesScanner,
+    stopsSaos: stopsSane(parsedForExec.entry ?? price, parsedForExec.sl),
+    gateExec: gateScanner,
+    podeExecutarProvider: Boolean(canExecuteProvider),
+  })
+  /** Deixa dito, na linha do sinal, porque é que a mestre do scanner não o abriu. */
+  const registarMotivoScanner = async (motivo: string) => {
+    if (!logId) return
+    await supabase
+      .from("tradingview_signals")
+      .update({ ai_error: `mestre scanner: ${motivo}`.slice(0, 300) })
+      .eq("id", logId)
+      .then(undefined, (e) => console.error("[tradingview-webhook] motivo mestre scanner:", e))
+  }
+  if (decisaoScanner.vai) {
     try {
       const tpsScanner = (Array.isArray(parsedForExec.tp) ? parsedForExec.tp : []).filter(
         (t): t is number => typeof t === "number" && t > 0,
@@ -1095,10 +1115,22 @@ export async function POST(request: NextRequest) {
       if (m.modo !== "desligado") {
         providerDetail = `mestre SIM ${m.estrategia ?? "mtm-scanner"}: ${m.modo}${m.motivo ? ` (${m.motivo})` : ""}`
       }
+      // O motivo de não ter aberto (estratégia desligada, kill-switch, a mestre recusou) tem de
+      // sobreviver à resposta HTTP: é isto que responde «porque é que este sinal não abriu?».
+      mestreMotivo = m.motivo ?? mestreMotivo
+      if (m.motivo) await registarMotivoScanner(m.motivo)
     } catch (err) {
-      // Nunca pode partir o webhook: o scanner PUBLICA, e a publicação é o principal aqui.
+      // Nunca pode partir o webhook: o scanner PUBLICA, e a publicação é o principal aqui. Mas
+      // engolir o erro sem rasto foi metade do problema de 24/09 — fica escrito.
       console.error("[tradingview-webhook] mestre MTM Scanner:", err)
+      const motivo = `erro ao encaminhar: ${err instanceof Error ? err.message : String(err)}`
+      mestreMotivo = motivo
+      await registarMotivoScanner(motivo)
     }
+  } else if (decisaoScanner.candidato && decisaoScanner.motivo) {
+    // Passou o filtro das confirmações e mesmo assim não foi: é uma pergunta que alguém vai fazer.
+    // (Os ~95% que o filtro corta não escrevem nada — isto são ~21 linhas/dia, não 300.)
+    await registarMotivoScanner(decisaoScanner.motivo)
   }
 
   // Follow-up (TP/BE/SL/Saída): liga à entrada correspondente para responder em thread
