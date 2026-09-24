@@ -6,6 +6,7 @@ import {
   buildChartImgSymbol,
   tfToChartImgInterval,
 } from "@/lib/chart-image"
+import { VELAS_MINIMAS, svgVelasSinal, velasDoSinal } from "@/lib/sinais/grafico-velas"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 30
@@ -32,9 +33,17 @@ function fmt(v: number | null): string {
 
 /**
  * GET /api/signals/chart-image?id=<signalId>
- * Compõe: gráfico TradingView real (chart-img, com as linhas Entry/SL/TP) como fundo +
- * rodapé com o TEXTO dos parâmetros (valores + distâncias %) e marca MTM. PNG cacheado por
- * sinal na CDN. Em falha do chart-img → 302 para o card sintético /api/og/signal.
+ *
+ * Escada de três degraus para a imagem do alerta, sempre com a MESMA composição (gráfico +
+ * rodapé com os parâmetros e a marca MTM):
+ *   1. gráfico TradingView real (chart-img) — o melhor, mas tem quota diária por plano;
+ *   2. gráfico de VELAS nosso (lib/sinais/grafico-velas) a partir das referências públicas
+ *      Binance/Yahoo — é o que garante que há sempre velas, sem quota nem chave;
+ *   3. só se nem houver velas: 302 para o cartão sintético /api/og/signal.
+ *
+ * O degrau 2 nasceu de uma regressão: o chart-img esgota a quota diária (429 «Limit Exceeded»)
+ * quase todos os dias com o volume de sinais que temos, e a partir daí TODOS os alertas ficavam
+ * com o cartão do degrau 3 — sem uma única vela.
  */
 export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id")
@@ -43,7 +52,7 @@ export async function GET(req: NextRequest) {
 
   const { data: sig } = await supabase
     .from("tradingview_signals")
-    .select("ticker, exchange, timeframe, action, price, sl, raw_payload, alert_name")
+    .select("ticker, exchange, timeframe, action, price, sl, raw_payload, alert_name, received_at")
     .eq("id", id)
     .maybeSingle()
   if (!sig?.ticker) return NextResponse.json({ error: "sinal não encontrado" }, { status: 404 })
@@ -79,10 +88,41 @@ export async function GET(req: NextRequest) {
     height: 620,
   })
 
+  // Degrau 2: velas nossas. Só se pedem quando o chart-img não serviu (poupa a ida de rede).
+  const emSeg = Math.floor(new Date(String(sig.received_at ?? Date.now())).getTime() / 1000)
+  const velas = r.png
+    ? []
+    : await velasDoSinal({
+        ticker: sig.ticker,
+        timeframe: sig.timeframe,
+        direcao: dir,
+        entry,
+        sl: slv,
+        tps,
+        emSeg,
+        alertName: sig.alert_name,
+      }).catch(() => [])
+
   if (req.nextUrl.searchParams.get("debug") === "1") {
-    return NextResponse.json({ ok: !!r.png, error: r.error, body: r.body })
+    return NextResponse.json({ ok: !!r.png, error: r.error, velas: velas.length, body: r.body })
   }
   if (!r.png) {
+    if (velas.length >= VELAS_MINIMAS) {
+      const svg = svgVelasSinal(
+        { ticker: sig.ticker, timeframe: sig.timeframe, direcao: dir, entry, sl: slv, tps, emSeg, alertName: sig.alert_name },
+        velas,
+      )
+      // Um sinal com mais de dois dias já não muda; um fresco ainda ganha velas novas.
+      const velho = Date.now() / 1000 - emSeg > 2 * 86400
+      return new NextResponse(svg, {
+        headers: {
+          "Content-Type": "image/svg+xml; charset=utf-8",
+          "Cache-Control": velho
+            ? "public, s-maxage=31536000, max-age=86400, immutable"
+            : "public, s-maxage=600, max-age=300, stale-while-revalidate=86400",
+        },
+      })
+    }
     return NextResponse.redirect(ogUrl, { status: 302, headers: { "Cache-Control": "public, max-age=120" } })
   }
 
