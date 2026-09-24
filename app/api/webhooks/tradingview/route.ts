@@ -814,6 +814,8 @@ export async function POST(request: NextRequest) {
 
   let providerExecuted = false
   let providerDetail: string | undefined
+  /** Porque é que a mestre não abriu este sinal — vai para `tradingview_signals.ai_error`. */
+  let mestreMotivo: string | null = null
   const isIdeaAlert = activeSensei?.alertType === "idea" || activeSensei?.alertType === "signal"
   // Auto-copy CopyFactory: Ouro/BTC → conta Sensei; Forex → conta MTM Auto Forex (5IHE).
   // Master switch SENSEI_PROVIDER_EXEC_ENABLED + interruptor por-execução (runtime, DB).
@@ -989,6 +991,14 @@ export async function POST(request: NextRequest) {
         entrada: sinalExec.entry ?? price ?? null, sl: sinalExec.sl ?? null, tps: tpsExec, externalRef: String(logId ?? ""),
       })
       mestreSubstituiMt5 = m.substituiMt5
+      // O motivo tem de sobreviver até à gravação do registo do sinal: `providerDetail` só saía na
+      // resposta HTTP, e era por isso que uma entrada que não abriu não deixava rasto nenhum (24/09).
+      mestreMotivo = m.motivo ?? null
+      // «Não abri E o MT5 também não abre» é o caso que ficava em silêncio total: grava-se JÁ, sem
+      // esperar pelo ramo da publicação pela mestre (que só existe para algumas estratégias).
+      if (logId && m.substituiMt5 && m.motivo) {
+        await supabase.from("tradingview_signals").update({ ai_error: `mestre: ${m.motivo}` }).eq("id", logId)
+      }
       if (m.modo !== "desligado") providerDetail = `mestre SIM ${m.estrategia ?? ""}: ${m.modo}${m.motivo ? ` (${m.motivo})` : ""}`
       // A posição que a MESTRE abriu — é ela (e só ela) que o chat e o Telegram anunciam quando o
       // canal é publicado pela mestre (lib/mestres/servidor/publicar.ts).
@@ -998,6 +1008,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (err) {
       console.error("[tradingview-webhook] mestre SIM:", err)
+      mestreMotivo = `erro ao encaminhar para a mestre: ${err instanceof Error ? err.message : String(err)}`
     }
     try {
       const exec = mestreSubstituiMt5
@@ -1259,7 +1270,14 @@ export async function POST(request: NextRequest) {
         .from("tradingview_signals")
         .update(chatId
           ? { chat_status: "sent", chat_message_id: chatId, telegram_status: "sent" }
-          : { chat_status: "mestre", telegram_status: "mestre", ai_error: "canal publicado pela mestre: a mestre não abriu este sinal" })
+          : {
+              chat_status: "mestre",
+              telegram_status: "mestre",
+              // O MOTIVO, não a frase genérica: «a mestre não abriu este sinal» não dizia porquê, e
+              // 3 das 14 entradas do Sensei em 7 dias ficaram assim, sem linha em `mestres_sinais`
+              // nem em `funded_sinal_posicoes` (auditoria de 24/09).
+              ai_error: `canal publicado pela mestre: ${mestreMotivo ?? "a mestre não abriu este sinal (sem motivo registado)"}`,
+            })
         .eq("id", logId)
     }
   } else if (!alertOk) {

@@ -17,6 +17,7 @@ import { aberturaAtrasada, aposResultado, decidirModo, eFalhaTecnica, motivoExpo
 import { colapsarModificacoesDaFila, conflitoEntreCaminhos, impressaoParaConta } from '../dedupe'
 import { loteDaLigacaoSite, loteDaSubscricaoAuto, valorPorPrecoDoTick } from '../lote'
 import { digitosSeguros, niveisEmPips, niveisNaConta, reancorar } from '../pips'
+import { travarOrdemMt5 } from '../servidor/sinal-mestre'
 import { stopsNoDestino } from '../../copia-contas/calculo'
 import { ligacaoSegueEstrategia, planearRotasDaEstrategia, planoDeEscrita, type RotaExistente } from '../planear'
 import { escolherPosicaoMestre, estrategiaDoSinalT2T } from '../t2t'
@@ -492,6 +493,27 @@ caso('motor: estratégia voltou a SOMBRA — a posição aberta em live continua
   const nova = await processarEventoCopia({ ...evt(3, 'open', ABRIR), origem_posicao_id: 'M9' }, ROTA, loja, c.e, { interruptores: LIVE, ganchos: emSombra })
   assert.equal(nova.resultado, 'sombra')
   assert.equal(c.log.filter((x) => x.startsWith('abrir')).length, 1)
+})
+
+// ── mestre que não abre: quem trava a ordem MT5 (defeito 2 de 24/09) ─────────
+caso('kill-switch em live trava a MT5 (senão o espelho provider contornava o kill)', () => {
+  assert.equal(travarOrdemMt5('kill-switch', 'live'), true)
+})
+caso('kill-switch em sombra NÃO trava: em sombra a MT5 é o executor normal', () => {
+  assert.equal(travarOrdemMt5('kill-switch', 'sombra'), false)
+})
+caso('estratégia inactiva em live trava: abrir na MT5 contrariava o dono', () => {
+  assert.equal(travarOrdemMt5('estrategia-inactiva', 'live'), true)
+})
+caso('estratégia inactiva em sombra NÃO trava', () => {
+  assert.equal(travarOrdemMt5('estrategia-inactiva', 'sombra'), false)
+})
+caso('erro ANTES de abrir NÃO trava: o sinal não pode ficar sem execução nenhuma', () => {
+  assert.equal(travarOrdemMt5('erro-antes-de-abrir', 'live'), false)
+})
+caso('erro DEPOIS de abrir trava sempre: a MT5 duplicaria a trade já enviada', () => {
+  assert.equal(travarOrdemMt5('erro-depois-de-abrir', 'live'), true)
+  assert.equal(travarOrdemMt5('erro-depois-de-abrir', 'sombra'), true)
 })
 
 async function main() {
