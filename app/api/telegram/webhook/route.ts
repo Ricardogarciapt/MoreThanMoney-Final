@@ -641,7 +641,11 @@ export async function POST(request: NextRequest) {
           "/status — Estado da tua ligação\n" +
           // O painel só se anuncia a quem o pode abrir. Anunciá-lo a toda a gente era convidar
           // estranhos a escrever /admin — que era precisamente como se tomava o painel.
-          (await ehChatDeAdmin(supabase, chatId) ? "/admin — Painel de administração 🛠️\n" : "") +
+          (await ehChatDeAdmin(supabase, chatId)
+            ? "/admin — Painel de administração 🛠️\n" +
+              "/quem &lt;chave&gt; — a folha de um lead 🔎\n" +
+              "/cliente &lt;chave&gt; — saldos e assinatura de um cliente 💰\n"
+            : "") +
           "\n💬 Ou escreve-me em linguagem natural — respondo no teu idioma.\n" +
           "🌐 <a href='https://www.morethanmoney.pt/new-landing'>Conhece a MTM</a>"
         )
@@ -688,6 +692,34 @@ export async function POST(request: NextRequest) {
             const { carregarPerfil, textoPerfil } = await import("@/lib/prospecao/perfil-lead")
             const p = await carregarPerfil(supabase, chave)
             await sendMessage(p ? textoPerfil(p) : "🤷 Não encontrei ninguém com essa chave.")
+          }
+        }
+      }
+
+      /**
+       * /cliente <email | login MT5 | UID | id | chat | @user> — «o que é que esta pessoa tem connosco».
+       *
+       * O `/quem` responde a «este quem é» do lado do funil: por onde entrou, que passos deu, o
+       * que falta. Isto responde à outra metade, a do DINHEIRO: assinatura, o que a corretora diz
+       * e o saldo de todas as contas — MTM Funded, MTM Copy e MTM Auto — numa folha só.
+       *
+       * Só o dono: a folha tem email, UID e saldos lá dentro.
+       */
+      else if (text.startsWith("/cliente") || text.startsWith("/saldo")) {
+        const { ehChatDeAdmin } = await import("@/lib/telegram-admin-menu")
+        if (!(await ehChatDeAdmin(supabase, chatId))) {
+          await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.")
+        } else {
+          const chave = text.replace(/^\/(cliente|saldo)/, "").trim()
+          if (!chave) {
+            await sendMessage(
+              "Escreve <code>/cliente &lt;email | login MT5 | UID | id do perfil | chat | @username&gt;</code>.\n\n" +
+              "Respondo com a assinatura, o que a corretora diz e o saldo de todas as contas dessa pessoa.",
+            )
+          } else {
+            const { carregarFolhaDeCliente, textoFolha } = await import("@/lib/telegram-admin-cliente")
+            const f = await carregarFolhaDeCliente(supabase, chave)
+            await sendMessage(f ? textoFolha(f) : "🤷 Não encontrei ninguém com essa chave.")
           }
         }
       }

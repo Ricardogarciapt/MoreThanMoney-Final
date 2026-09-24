@@ -83,8 +83,40 @@ function baseFalsa(gravado: string | null) {
   // ── O painel ──
   const painel = adminPanelKeyboard()
   const acoes = painel.inline_keyboard.flat().map((b) => (b as { callback_data?: string }).callback_data)
-  for (const esperada of ['admin:sys', 'admin:contas', 'admin:sinais', 'admin:exec', 'admin:sm', 'admin:funil', 'admin:subs']) {
+  for (const esperada of [
+    'admin:sys', 'admin:contas', 'admin:sinais', 'admin:exec', 'admin:sm', 'admin:funil', 'admin:subs',
+    // 24/09: o painel passou a decidir dinheiro. Estes quatro são o pedido do dono.
+    'admin:hoje', 'admin:decidir', 'admin:dep', 'admin:lev', 'admin:cliente',
+  ]) {
     assert.ok(acoes.includes(esperada), `falta o botão ${esperada}`)
+  }
+
+  /**
+   * Nenhum botão do painel pode FAZER à primeira.
+   *
+   * O painel é uma lista de destinos, não de acções: tudo o que escreve chega-se por um `?` que
+   * pergunta. Um `!` aqui seria uma acção a um toque de distância de um polegar distraído.
+   */
+  for (const a of acoes) {
+    assert.ok(!String(a).includes('!'), `o botão ${a} executa a partir do painel — tem de perguntar primeiro`)
+  }
+
+  /**
+   * Cada botão do painel tem de ter resposta no despachante.
+   *
+   * Um botão sem `case` cai no «esse botão já não existe», que é a pior resposta possível: parece
+   * uma avaria do bot quando é só uma linha por escrever.
+   */
+  {
+    const { readFileSync } = await import('node:fs')
+    const fonte = readFileSync(new URL('../telegram-admin-menu.ts', import.meta.url), 'utf8')
+    for (const a of acoes) {
+      const chave = String(a).slice('admin:'.length)
+      assert.ok(
+        fonte.includes(`case '${chave}'`) || fonte.includes(`action === '${chave}'`) || fonte.includes(`action.startsWith('${chave}`),
+        `o botão admin:${chave} não tem resposta no despachante`,
+      )
+    }
   }
   // Nada de apagar por botão.
   const textos = painel.inline_keyboard.flat().map((b) => b.text.toLowerCase()).join(' ')
@@ -135,5 +167,5 @@ function baseFalsa(gravado: string | null) {
   assert.equal(Object.keys(tecladoExecucao({ inventado: true } as Record<string, boolean>).inline_keyboard).length, 1, 'só a linha de voltar')
   assert.ok(Object.keys(NOMES_EXEC).includes('funded_copier'))
 
-  console.log('painel de admin do bot: 20 ok')
+  console.log('painel de admin do bot: ok')
 })()

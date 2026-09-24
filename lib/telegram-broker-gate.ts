@@ -311,6 +311,19 @@ export async function grantBrokerAccess(supabase: Supa, chatId: string): Promise
   }
 }
 
+/**
+ * RECUSAR um pedido de acesso — marca o lead e avisa-o, sem mais nada.
+ *
+ * Saiu de dentro do `handleBrokerApproval` porque o painel do bot (24/09) passou a poder recusar
+ * a partir da lista de pendentes, onde não há foto para editar. O que a pessoa recebe tem de ser
+ * exactamente o mesmo nos dois caminhos: se divergirem, a mesma recusa explica-se de duas maneiras
+ * e ninguém sabe qual delas o cliente leu.
+ */
+export async function rejeitarPedidoDeAcesso(supabase: Supa, leadChat: string): Promise<void> {
+  await supabase.from('telegram_leads').update({ stage: 'rejected', updated_at: new Date().toISOString() }).eq('chat_id', leadChat)
+  await send(leadChat, `Não consegui confirmar o depósito de ≥ $${MIN_DEPOSIT}. Verifica e reenvia o print screen, ou fala comigo. 🙏`)
+}
+
 /** Callback dos botões Aprovar/Rejeitar do admin. Devolve texto p/ editar a caption. */
 export async function handleBrokerApproval(
   supabase: Supa,
@@ -325,8 +338,7 @@ export async function handleBrokerApproval(
     await grantBrokerAccess(supabase, leadChat)
     await tg('editMessageCaption', { chat_id: adminChatId, message_id: messageId, caption: `✅ APROVADO (chat ${leadChat})`, parse_mode: 'HTML' })
   } else {
-    await supabase.from('telegram_leads').update({ stage: 'rejected', updated_at: new Date().toISOString() }).eq('chat_id', leadChat)
-    await send(leadChat, `Não consegui confirmar o depósito de ≥ $${MIN_DEPOSIT}. Verifica e reenvia o print screen, ou fala comigo. 🙏`)
+    await rejeitarPedidoDeAcesso(supabase, leadChat)
     await tg('editMessageCaption', { chat_id: adminChatId, message_id: messageId, caption: `❌ REJEITADO (chat ${leadChat})`, parse_mode: 'HTML' })
   }
   return true
