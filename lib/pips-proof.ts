@@ -94,6 +94,15 @@ export interface PipsProof {
    *  operação real da conta — e o texto tem de dizer o período que os dados cobrem, não o que
    *  foi pedido. */
   desdeReal?: string | null
+  /**
+   * O instante da ENTRADA mais antiga da amostra — a abertura, não o fecho.
+   *
+   * Existe por causa do defeito de preço de 24/09 (ver `FRONTEIRA_VIES_PRECO`): o que ele
+   * estragava era o preenchimento, ou seja o preço a que a posição ABRIU. Uma trade que abriu às
+   * 10h e fechou às 20h leva o viés com ela, e `desdeReal` — que é um fecho — deixá-la-ia passar
+   * por limpa. Só a conta-espelho simulada sabe dizer isto; nas outras fontes fica nulo.
+   */
+  entradaMaisAntiga?: string | null
   /** O que foi mesmo executado, com parciais contados. É isto que se publica. */
   executado: ProvaExecutada
   /** O que as ideias publicadas fizeram. Contexto interno — nunca se mistura com o de cima. */
@@ -305,8 +314,10 @@ async function computeIdeias(dias: number): Promise<ProvaIdeias | null> {
  * A fonte de cada trade (Premium, Scanner Sensei, Scanner MTM…) vem da ponte `funded_sinal_posicoes`,
  * que o próprio sistema escreve ao abrir — não de adivinhar pelo comentário.
  */
-async function computeExecutadasDoEspelhoSim(dias: number): Promise<{ trades: TradeExecutada[]; abertas: number; desdeReal: string | null }> {
-  const vazio = { trades: [] as TradeExecutada[], abertas: 0, desdeReal: null as string | null }
+async function computeExecutadasDoEspelhoSim(
+  dias: number,
+): Promise<{ trades: TradeExecutada[]; abertas: number; desdeReal: string | null; entradaMaisAntiga: string | null }> {
+  const vazio = { trades: [] as TradeExecutada[], abertas: 0, desdeReal: null as string | null, entradaMaisAntiga: null as string | null }
   try {
     const db = getSupabaseAdmin()
     const desde = new Date(Date.now() - dias * 86_400_000).toISOString()
@@ -316,7 +327,7 @@ async function computeExecutadasDoEspelhoSim(dias: number): Promise<{ trades: Tr
     if (!ids.length) return vazio
 
     const { data: linhas } = await db.from('funded_positions')
-      .select('id, mae_id, symbol, direcao, volume, volume_inicial, preco_entrada, preco_fecho, estado, fechada_em')
+      .select('id, mae_id, symbol, direcao, volume, volume_inicial, preco_entrada, preco_fecho, estado, aberta_em, fechada_em')
       .in('account_id', ids).gte('fechada_em', desde).eq('estado', 'fechada').limit(5000)
     if (!linhas?.length) return vazio
 
@@ -325,7 +336,7 @@ async function computeExecutadasDoEspelhoSim(dias: number): Promise<{ trades: Tr
       .in('account_id', ids).eq('estado', 'aberta').limit(2000)
     const aindaAbertas = new Set((vivas ?? []).map((v) => String(v.id)))
 
-    type Parte = { id: string; raiz: string; symbol: string; dir: 1 | -1; volume: number; volumeInicial: number | null; entrada: number; fecho: number | null; fechadaEm: string | null }
+    type Parte = { id: string; raiz: string; symbol: string; dir: 1 | -1; volume: number; volumeInicial: number | null; entrada: number; fecho: number | null; abertaEm: string | null; fechadaEm: string | null }
     const partes: Parte[] = linhas.map((l) => ({
       id: String(l.id),
       raiz: String(l.mae_id ?? l.id),
@@ -335,6 +346,7 @@ async function computeExecutadasDoEspelhoSim(dias: number): Promise<{ trades: Tr
       volumeInicial: l.volume_inicial == null ? null : Number(l.volume_inicial),
       entrada: Number(l.preco_entrada) || 0,
       fecho: l.preco_fecho == null ? null : Number(l.preco_fecho),
+      abertaEm: (l.aberta_em as string) ?? null,
       fechadaEm: (l.fechada_em as string) ?? null,
     }))
 
@@ -351,6 +363,10 @@ async function computeExecutadasDoEspelhoSim(dias: number): Promise<{ trades: Tr
     const trades: TradeExecutada[] = []
     let abertas = 0
     let maisAntigo: number | null = null
+    // A ENTRADA mais antiga, e não só o fecho: o defeito de preço de 24/09 batia no preenchimento,
+    // ou seja no instante em que a posição ABRIU. Uma trade que abriu de manhã e fechou à noite
+    // leva o viés com ela — medir a amostra pelo fecho deixaria-a passar por limpa.
+    let entradaMaisAntiga: number | null = null
     for (const [raiz, ps] of porRaiz) {
       if (aindaAbertas.has(raiz)) { abertas++; continue }
       const mae = ps.find((p) => p.id === raiz)
@@ -372,6 +388,8 @@ async function computeExecutadasDoEspelhoSim(dias: number): Promise<{ trades: Tr
       const fechadaEm = ps.map((p) => p.fechadaEm).filter(Boolean).sort().pop() ?? null
       const t = ps.map((p) => (p.fechadaEm ? Date.parse(p.fechadaEm) : NaN)).filter(Number.isFinite)
       if (t.length) maisAntigo = maisAntigo == null ? Math.min(...t) : Math.min(maisAntigo, ...t)
+      const abriu = mae.abertaEm ? Date.parse(mae.abertaEm) : NaN
+      if (Number.isFinite(abriu)) entradaMaisAntiga = entradaMaisAntiga == null ? abriu : Math.min(entradaMaisAntiga, abriu)
       trades.push({
         positionId: raiz,
         symbol: mae.symbol,
@@ -382,7 +400,12 @@ async function computeExecutadasDoEspelhoSim(dias: number): Promise<{ trades: Tr
         fechadaEm,
       })
     }
-    return { trades, abertas, desdeReal: maisAntigo ? new Date(maisAntigo).toISOString() : null }
+    return {
+      trades,
+      abertas,
+      desdeReal: maisAntigo ? new Date(maisAntigo).toISOString() : null,
+      entradaMaisAntiga: entradaMaisAntiga ? new Date(entradaMaisAntiga).toISOString() : null,
+    }
   } catch {
     return vazio
   }
@@ -468,13 +491,14 @@ export async function computePipsProof(dias = 30): Promise<PipsProof> {
   //  3. `mtmcopy_trade_exits`, que é só de vencedoras e por isso NÃO se publica (`publicavel`).
   let fonte: PipsProof['fonte'] = 'espelho_sim'
   let erro: string | undefined
-  let { trades, abertas, desdeReal } = await computeExecutadasDoEspelhoSim(dias)
+  let { trades, abertas, desdeReal, entradaMaisAntiga } = await computeExecutadasDoEspelhoSim(dias)
   if (!trades.length) {
     const broker = await computeExecutadas(dias)
     fonte = 'broker'
     trades = broker.trades
     abertas = broker.abertas
     desdeReal = broker.desdeReal
+    entradaMaisAntiga = null
     erro = broker.erro
   }
   if (!trades.length) {
@@ -484,6 +508,7 @@ export async function computePipsProof(dias = 30): Promise<PipsProof> {
       trades = registo.trades
       abertas = registo.abertas
       desdeReal = registo.trades.map((t) => t.fechadaEm).filter(Boolean).sort()[0] ?? null
+      entradaMaisAntiga = null
       erro = undefined
     }
   }
@@ -503,6 +528,7 @@ export async function computePipsProof(dias = 30): Promise<PipsProof> {
   return {
     dias,
     desdeReal,
+    entradaMaisAntiga,
     executado: {
       trades: trades.length,
       winRatePct: win(trades),
@@ -565,6 +591,92 @@ export const RESSALVA_LEGAL =
   'Valores brutos, sem spread, comissões nem swap, e antes de impostos. ' +
   'Resultados passados não garantem resultados futuros. Operar com produtos alavancados tem risco ' +
   'elevado de perda. Isto não é aconselhamento financeiro.'
+
+/**
+ * ── A NOTA DO VIÉS DE PREÇO (24/09/2026) ──────────────────────────────────────────────────────
+ *
+ * O QUE ACONTECEU. As contas MTM Funded simuladas abriam a preços que o mercado não ofereceu, e
+ * sempre para o mesmo lado — o da casa. Nas 7 trades ao vivo da mestre do Sensei a entrada bateu
+ * a favor em 6 (média +1,79 USD por trade) e três delas caíram FORA do intervalo da vela de 5
+ * minutos; uma ficou 1,37 acima do máximo. Refeitas as contas ao preço certo, +222,2 USD passam a
+ * +84,8: desaparecem 62 % do lucro.
+ *
+ * PORQUÊ. O campo `funded_precos.em` era a hora a que o MOTOR tocou no preço, não a hora a que o
+ * MERCADO o fez, e as fontes de recurso (Yahoo com até 240 s de atraso, ouro derivado do PAXG)
+ * entravam com `Date.now()`. A guarda de frescura media a nossa vivacidade, não a idade do preço.
+ *
+ * O QUE SE FAZ COM ISSO AQUI. Assinala-se; não se corrige o passado. Reescrever os números
+ * antigos seria inventar um histórico que ninguém viu — e a nota existe exactamente para quem
+ * lê poder descontar sozinho.
+ */
+
+/**
+ * A FRONTEIRA: o instante a partir do qual um preenchimento já é de confiança.
+ *
+ * É a hora do commit `a4b3909e` («motor: a fonte provada manda, e o preço congelado envelhece»),
+ * 2026-09-24T15:23:58+01:00, e não a meia-noite de 24/09. Arredondar para o dia marcaria como
+ * suspeitas horas que já estavam corrigidas, e — pior — deixaria passar por limpas as trades da
+ * manhã de 24/09, que são as MAIS viciadas de todas: foram elas que se mediram.
+ *
+ * Porquê este commit e não a migração 123 (14:54) nem a regra de preenchimento (14:02): a
+ * correcção só fica inteira quando a ÚLTIMA peça entra. Até `a4b3909e`, um preço congelado ainda
+ * podia ser lido como fresco. A fronteira é a última peça, pela mesma razão por que uma corrente
+ * vale o elo mais fraco.
+ */
+export const FRONTEIRA_VIES_PRECO = '2026-09-24T14:23:58.000Z'
+
+/**
+ * Que fontes é que o defeito tocou.
+ *
+ * SÓ a conta-espelho simulada (`espelho_sim`): o viés estava no preenchimento das contas MTM
+ * Funded em motor `sim` (lib/mtmfunded/precos/preenchimento.ts). O histórico `broker` vem de uma
+ * conta MT5 na corretora, preenchida pela corretora, e o `registo` vem de saídas em contas reais
+ * — nenhum dos dois passou por este motor. Pôr a nota neles seria ruído: uma ressalva que também
+ * aparece onde não se aplica ensina o leitor a saltá-la, que é o contrário do que se quer.
+ */
+const FONTES_COM_VIES_DE_PRECO = new Set<PipsProof['fonte']>(['espelho_sim'])
+
+/** dd/mm, como o resto do funil escreve as datas. */
+function diaMes(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/**
+ * A amostra inclui trades abertas ANTES da correcção?
+ *
+ * Mede-se pela ENTRADA mais antiga, que é onde o defeito batia. Quando a prova gravada não a
+ * traz — provas guardadas antes de este campo existir — cai-se para o fecho mais antigo e, à
+ * falta dele, para o início da janela pedida. Os dois fallbacks erram para o lado de pôr a nota:
+ * na dúvida sobre se a amostra está limpa, avisa-se. O contrário seria esconder por descuido.
+ */
+export function amostraAtravessaViesDePreco(p: PipsProof | null | undefined): boolean {
+  if (!p || !p.executado?.trades) return false
+  if (!FONTES_COM_VIES_DE_PRECO.has(p.fonte)) return false
+  const fronteira = Date.parse(FRONTEIRA_VIES_PRECO)
+  const candidatos = [p.entradaMaisAntiga, p.desdeReal]
+  for (const c of candidatos) {
+    const t = c ? Date.parse(c) : NaN
+    if (Number.isFinite(t)) return t < fronteira
+  }
+  const asOf = Date.parse(`${p.asOf}T23:59:59Z`)
+  if (!Number.isFinite(asOf)) return true
+  return asOf - (p.dias ?? 30) * 86_400_000 < fronteira
+}
+
+/**
+ * A nota, na voz do resto do funil: curta, sem rodeios e com a data lá dentro.
+ *
+ * DESAPARECE SOZINHA. Não há interruptor para desligar, nem data escrita à mão num template:
+ * assim que a trade mais antiga da amostra for posterior à fronteira — o que acontece por si à
+ * medida que a janela de 30 dias anda para a frente — `amostraAtravessaViesDePreco` passa a dar
+ * falso e isto devolve `null`. Uma ressalva que fica para sempre deixa de ser lida, e daqui a
+ * duas semanas já nem seria verdade.
+ */
+export function notaViesPreco(p: PipsProof | null | undefined): string | null {
+  if (!amostraAtravessaViesDePreco(p)) return null
+  return `Nota: os resultados até ${diaMes(FRONTEIRA_VIES_PRECO)} podem estar inflacionados por um defeito de preço já corrigido.`
+}
 
 /**
  * Há amostra que chegue para publicar? Abaixo disto é ruído com ar de prova.
@@ -636,6 +748,8 @@ export function provaParaLead(p: PipsProof | null | undefined): string | null {
       `1,0 → ${usd(e.ouro.pips * VALOR_PIP_OURO['1'])} (bruto)`,
     )
   }
+  const nota = notaViesPreco(p)
+  if (nota) partes.push(nota)
   return partes.join(' · ')
 }
 
@@ -645,14 +759,18 @@ export function linhaPips(p: PipsProof, opts?: { comExemplos?: boolean }): strin
   const e = p.executado
   const parciais = e.comParciais ? ` (${e.comParciais} com saídas parciais)` : ''
   const base = `No total ${periodoReal(p)}: ${e.trades} trades executadas${parciais} · ${e.winRatePct}% de acerto · ${sinal(e.pips)} pips`
-  if (opts?.comExemplos === false || !e.ouro) return base
+  // A nota do viés viaja COLADA ao número, nunca num rodapé à parte: quem cita a linha leva-a.
+  const nota = notaViesPreco(p)
+  const fim = nota ? `\n${nota}` : ''
+  if (opts?.comExemplos === false || !e.ouro) return base + fim
   const g = e.ouro.pips
   const usd = (n: number) => `${n >= 0 ? '+' : '−'}${nf.format(Math.abs(Math.round(n)))} $`
   return (
     `${base}\n` +
     `Só em ouro: ${e.ouro.trades} trades, ${e.ouro.winRatePct}% de acerto, ${sinal(g)} pips. ` +
     `O que isso vale depende do teu lote — 0,01 → ${usd(g * VALOR_PIP_OURO['0.01'])} · ` +
-    `0,1 → ${usd(g * VALOR_PIP_OURO['0.1'])} · 1,0 → ${usd(g * VALOR_PIP_OURO['1'])}.`
+    `0,1 → ${usd(g * VALOR_PIP_OURO['0.1'])} · 1,0 → ${usd(g * VALOR_PIP_OURO['1'])}.` +
+    fim
   )
 }
 
