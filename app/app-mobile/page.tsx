@@ -136,7 +136,10 @@ function AppMobileContent() {
             !n.read &&
             typeof n?.data?.url === "string" &&
             n.data.url.includes("tab=tap-to-trade") &&
-            n.data.url.includes("signal=") &&
+            // Há dois emissores e dois nomes para o mesmo parâmetro (`signal=` e `sinal=`).
+            // Ler só um deixava metade das notificações de sinal a abrir o separador T2T em
+            // branco — e agora, sem botão no chat, não há segunda via para aceitar.
+            (n.data.url.includes("signal=") || n.data.url.includes("sinal=")) &&
             n.created_at != null &&
             Date.now() - new Date(n.created_at).getTime() < 3 * 60_000,
         )

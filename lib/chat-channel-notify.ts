@@ -16,8 +16,8 @@ export async function notifyChatChannelMessage(
   options: ChatChannelNotifyOptions,
 ): Promise<{ ok: boolean; status: number; data?: Record<string, unknown> }> {
   const siteUrl = getSiteOrigin()
-  // Sinais com canal de chat abrem o CHAT (o cliente toca no botão T2T na mensagem).
-  // Providers sem canal de chat enviam push próprio com url ?tab=tap-to-trade.
+  // Mensagens normais abrem o CHAT. Sinais abrem o separador Tap to Trade — desde 24/09 o chat
+  // é só de leitura/acompanhamento, a aceitação vive lá (e na app MTM Auto).
   const type = options.notificationType ?? 'chat_message'
   const tag = `chat_${options.channelSlug}`
 
