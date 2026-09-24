@@ -46,6 +46,19 @@ caso('lote abaixo do mínimo → abre no MÍNIMO e diz que subiu (decisão do do
   assert.equal(r.ok && r.volume, FX.min)
   assert.equal(r.ok && r.subiuAoMinimo, true)
 })
+caso('subir ao mínimo vai só até 0,01: num símbolo de mínimo 0,1 recusa', () => {
+  // «O lote mínimo que falei era 0,01 lotes» (dono, 24/09). Há símbolos — índices — cujo mínimo da
+  // corretora é 0,1 ou 1: subir até lá multiplicaria o risco por dez ou por cem.
+  const INDICE = { min: 0.1, max: 20, step: 0.1 }
+  const r = calcularLote({ modo: 'proporcional_saldo', valor: 1, volumeOrigem: 0.05, saldoOrigem: 100_000, equityDestino: 5_000, loteMax: null, regra: INDICE })
+  assert.equal(r.ok, false)
+  assert.match(!r.ok ? r.motivo : '', /só vai até 0\.01/)
+})
+caso('… mas entre metade e o mínimo continua a subir, como sempre fez', () => {
+  const INDICE = { min: 0.1, max: 20, step: 0.1 }
+  const r = calcularLote({ modo: 'proporcional_saldo', valor: 1, volumeOrigem: 1.4, saldoOrigem: 100_000, equityDestino: 5_000, loteMax: null, regra: INDICE })
+  assert.equal(r.ok && r.volume, 0.1)
+})
 caso('lote acima do mínimo NÃO leva a marca de subida', () => {
   const r = calcularLote({ modo: 'proporcional_saldo', valor: 1, volumeOrigem: 1, saldoOrigem: 100_000, equityDestino: 5_000, loteMax: null, regra: FX })
   assert.equal(r.ok && r.subiuAoMinimo, undefined)

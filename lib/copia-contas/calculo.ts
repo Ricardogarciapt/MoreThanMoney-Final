@@ -84,19 +84,26 @@ export function calcularLote(e: EntradaLote): Lote {
   const r = e.regra
   const min = r.min > 0 ? r.min : 0.01
   /**
-   * LOTE ABAIXO DO MÍNIMO: abre no mínimo (decisão do dono, 23/09).
+   * LOTE ABAIXO DO MÍNIMO: abre no mínimo — mas só quando o mínimo é 0,01 (dono, 23-24/09).
    *
    * Antes recusava-se, para nunca abrir mais risco do que o cliente escolheu — e o resultado era
    * pior do que o problema: o Rúben (0,4 %) e o Mário (0,25 %) davam 0,0039 e 0,0024 lotes numa
    * corretora com mínimo de 0,01, e por isso **não recebiam trade nenhuma**. Pagavam e ficavam a
-   * ver. Entre não copiar nada e copiar no lote mais pequeno que a corretora aceita, o dono
-   * escolheu o lote mínimo.
+   * ver. Entre não copiar nada e copiar 0,01, o dono escolheu 0,01.
+   *
+   * O tecto da subida é esse: **0,01 lotes**. Há símbolos cujo mínimo da corretora é 0,1 ou 1 lote
+   * (índices) — aí subir ao mínimo multiplicaria o risco por dez ou por cem, e não é disso que se
+   * falava. Nesses, mantém-se o comportamento de sempre: até metade do mínimo sobe, abaixo disso
+   * recusa e diz porquê.
    *
    * Fica dito em `subiuAoMinimo`: quem regista a ordem sabe que o risco real é maior do que o
-   * configurado, e o cliente pode ver porquê em vez de adivinhar. Os tectos continuam todos a
-   * valer — `lote_max` da rota e o máximo da corretora cortam a seguir.
+   * configurado. Os tectos continuam todos a valer — `lote_max` da rota e o máximo da corretora.
    */
+  const SUBIDA_ATE = 0.01
   const abaixoDoMinimo = bruto < min
+  if (abaixoDoMinimo && min > SUBIDA_ATE && bruto < min / 2) {
+    return { ok: false, motivo: `lote ${bruto.toFixed(4)} abaixo de metade do mínimo ${min} (subir ao mínimo só vai até ${SUBIDA_ATE})` }
+  }
   // Risco %: arredonda PARA BAIXO — um arredondamento nunca pode subir o risco escolhido.
   // (Excepto quando o próprio mínimo da corretora obriga a subir: ver acima.)
   let v = Math.max(min, arredondarAoStep(bruto, r, e.modo === 'risco_pct' ? 'baixo' : 'perto'))

@@ -43,7 +43,14 @@ export function loteT2TSimulado(e: {
   // 23/09): abaixo do mínimo abre-se NO MÍNIMO em vez de não abrir nada. O risco real fica acima
   // do pedido e isso diz-se — `riscoUsd` continua a ser o RISCO REAL do lote enviado, não o
   // configurado, para o cliente ver o que está mesmo em jogo.
+  // A subida ao mínimo vai até **0,01 lotes** (dono, 24/09): é o mínimo de que se falava. Um
+  // símbolo cujo mínimo é 0,1 ou 1 (índices) multiplicaria o risco por dez ou por cem — aí
+  // mantém-se a recusa de sempre.
+  const SUBIDA_ATE = 0.01
   const subiuAoMinimo = ideal < s.volume_min
+  if (subiuAoMinimo && s.volume_min > SUBIDA_ATE && ideal < s.volume_min / 2) {
+    return { ok: false, motivo: `lote ${ideal.toFixed(4)} abaixo de metade do mínimo ${s.volume_min} (subir ao mínimo só vai até ${SUBIDA_ATE}) — o stop é largo demais para esta conta` }
+  }
   // O ÚNICO travão que fica: quando o lote mínimo arrisca MAIS DO QUE A CONTA INTEIRA.
   //
   // Subir ao mínimo é a decisão do dono e vale mesmo quando o risco real fica várias vezes acima
