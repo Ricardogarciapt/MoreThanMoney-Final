@@ -11,6 +11,7 @@
  */
 
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   MIN_DEPOSIT,
   NOME_DEGRAU_TOPO,
@@ -94,5 +95,47 @@ assert.ok(
   saida.indexOf(PRECO_TOPO) < saida.indexOf('sem mensalidade'),
   'o degrau de cima é o topo da escada paga, não vem depois do grátis',
 )
+
+// ── O guião de vendas não pode voltar a guardar números ──────────────────────────────────────
+//
+// `docs/mtm-sales-brain.md` é citado como autoridade por seis ficheiros de runtime, e durante um
+// mês inteiro (20/08 → 24/09) disse o contrário do código: a tabela de preços dele anunciava que o
+// degrau de topo tinha sido «retirado da oferta — não o oferecer nem o mencionar», enquanto os
+// quatro closers de IA já o vendiam a partir daqui. Ninguém reparou porque um documento errado não
+// dá erro; só dá um lead a ouvir uma coisa e a pagar outra.
+//
+// A correcção foi tirar os números ao documento, e é isso que estas duas asserções prendem. Não
+// verificam o texto — verificam que ele não tem nada para envelhecer.
+const guiao = readFileSync(
+  new URL('../../docs/mtm-sales-brain.md', import.meta.url),
+  'utf-8',
+)
+
+// Um valor monetário escrito à mão — «65€», «597 €», «350$». Os nomes das constantes passam
+// (`PRECO_TOPO`), as percentagens passam, os ids de produto passam: só o dinheiro é que não.
+const VALOR_A_OLHO = /(?:\d[\d.,]*\s*(?:€|\$)|(?:€|\$)\s*\d)/
+const linhasComValor = guiao
+  .split('\n')
+  .map((l, i) => [i + 1, l] as const)
+  .filter(([, l]) => VALOR_A_OLHO.test(l))
+assert.equal(
+  linhasComValor.length,
+  0,
+  `o guião não pode ter preços escritos à mão — vêm de escada-precos.ts. Linhas: ${linhasComValor
+    .map(([n, l]) => `${n}: ${l.trim()}`)
+    .join(' | ')}`,
+)
+
+// E não pode voltar a mandar esconder o degrau de topo enquanto ele estiver à venda. O sintoma de
+// 20/08 foi exactamente esta frase, deixada para trás quando o pacote voltou.
+const MANDA_ESCONDER = /(retirado da oferta|n(ã|a)o o (oferecer|mencionar))/i
+for (const [n, linha] of guiao.split('\n').map((l, i) => [i + 1, l] as const)) {
+  // A secção 0 conta a história do incidente e cita a frase — é o único sítio onde ela pode estar.
+  if (linha.trimStart().startsWith('passou a dizer')) continue
+  assert.ok(
+    !MANDA_ESCONDER.test(linha),
+    `o guião manda esconder o degrau de topo (linha ${n}) e ele está à venda: ${linha.trim()}`,
+  )
+}
 
 console.log('escada-precos: ok')
