@@ -123,6 +123,26 @@ const ZW = '\u200b'
   sim('0,01 passa a validação', validarGestao(XAU, 'sell', 4418, 0.01, 4428, s1.tpFinal, s1.gestao).ok)
 
   // Índices e cripto em PONTOS (trade-outcome): 25 «pips» de trailing em US30 = 25 pontos
+  // ── parciais ancoradas na FRACÇÃO DO RISCO (aditivo: nulo por defeito) ────
+  {
+    const cfgR = { ...CONFIG_PADRAO, saidasFracaoDoRisco: [{ r: 1, pct: 50 }, { r: 2, pct: 25 }] }
+    // venda a 4418 com SL 4428 → risco 10,00. 1R = 4408,00 · 2R = 4398,00. TP final = 4409 (o
+    // último alvo do trader), por isso a parcial de 1R fica ALÉM dele e nenhuma se grava.
+    const curto = gestaoDoSinal({ simbolo: XAU, direcao: 'sell', precoExecucao: 4418, volume: 0.1, sl: 4428, tps: [4415, 4412, 4409], cfg: cfgR })
+    eq('parciais em R além do TP final não se gravam', [curto.parciais, curto.gestao.tps], [0, undefined])
+    // com alvos largos (TP final 4390) já cabem as duas, e o BE fica à distância do TP1 (3,00)
+    const largo = gestaoDoSinal({ simbolo: XAU, direcao: 'sell', precoExecucao: 4418, volume: 0.1, sl: 4428, tps: [4415, 4400, 4390], cfg: cfgR })
+    eq('parciais a 1R e 2R, pelo NOSSO risco e não pelos alvos do trader', largo.gestao.tps?.map((t) => [t.preco, t.pct]), [[4408, 50], [4398, 25]])
+    eq('o BE não migra para a 1.ª parcial: fica no gatilho da distância ao TP1', [largo.gestao.be_no_tp1, largo.gestao.be_gatilho, largo.gestao.be_offset], [undefined, 3, 0.2])
+    sim('passa a validação do ticket', validarGestao(XAU, 'sell', 4418, 0.1, 4428, largo.tpFinal, largo.gestao).ok)
+    // sem stop não há régua: volta às saídas pelos alvos do trader
+    const semSl = gestaoDoSinal({ simbolo: XAU, direcao: 'sell', precoExecucao: 4418, volume: 0.1, sl: null, tps: [4415, 4400, 4390], cfg: cfgR })
+    eq('sem SL não há fracção do risco: as parciais voltam aos alvos do trader', semSl.gestao.tps?.map((t) => t.preco), [4415, 4400])
+    // e o botão é opt-in: o que não o tem não muda de comportamento
+    eq('config padrão continua a ignorar as parciais em R', CONFIG_PADRAO.saidasFracaoDoRisco, null)
+    eq('lê-se do jsonb, ordenado e no máximo 3', configDoProvider({ sinais_config: { saidasFracaoDoRisco: [{ r: 2, pct: 25 }, { r: 1, pct: 50 }, { r: 0, pct: 10 }, { r: 3, pct: 10 }, { r: 4, pct: 5 }] } }).saidasFracaoDoRisco, [{ r: 1, pct: 50 }, { r: 2, pct: 25 }, { r: 3, pct: 10 }])
+  }
+
   const ind = gestaoDoSinal({ simbolo: US30, direcao: 'buy', precoExecucao: 52020, volume: 0.1, sl: 51920, tps: [52050, 52120], cfg: { ...CONFIG_PADRAO, trailingDistanciaPips: 25, trailingInicioPips: 40 } })
   eq('US30 em pontos', [ind.gestao.trailing_distancia, ind.gestao.trailing_ativacao, ind.gestao.be_offset], [25, 40, 2])
   const btc = gestaoDoSinal({ simbolo: BTC, direcao: 'buy', precoExecucao: 60000, volume: 0.1, sl: 59500, tps: [60300, 61000], cfg: { ...CONFIG_PADRAO, trailingDistanciaPips: 200 } })

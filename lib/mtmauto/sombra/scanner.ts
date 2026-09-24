@@ -185,7 +185,11 @@ export function perfilParaSinal(cfg: ConfigSinais, s: Sinal, meio: number): Perf
 /** A gestão legível, para o relatório e para `estrategia_sombra_dia.gestao`. */
 export function descreverGestao(cfg: ConfigSinais, slMinimo = true): Record<string, unknown> {
   return {
-    saidas_pct: cfg.saidasPct,
+    // Com as parciais ancoradas no risco, dizer `saidas_pct` seria mentira: elas já não saem nos
+    // alvos do trader.
+    saidas_pct: cfg.saidasFracaoDoRisco
+      ? cfg.saidasFracaoDoRisco.map((n) => `${n.pct}% @ ${n.r}R`)
+      : cfg.saidasPct,
     break_even: cfg.beFracaoDoRisco != null ? `${cfg.beFracaoDoRisco}R`
       : cfg.beGatilhoPips != null ? `${cfg.beGatilhoPips} pips`
       : cfg.beNoTp1 ? `no TP1 (+${cfg.beOffsetPips} pips)` : 'sem',
