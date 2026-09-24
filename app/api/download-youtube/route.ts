@@ -174,13 +174,18 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // Aqui você verificaria o status na fila/banco de dados
-  return NextResponse.json({
-    jobId,
-    status: 'completed',
-    progress: 100,
-    downloadUrl: '/downloads/exemplo.mp4',
-    note: 'Esta é uma resposta simulada'
-  })
+  // A fila de downloads nunca chegou a ser construida (ver o docblock acima).
+  // Ate la, esta rota respondia `status: 'completed'` com um `downloadUrl` a
+  // apontar para /downloads/exemplo.mp4 — um ficheiro que nao existe em /public.
+  // Qualquer cliente que acreditasse na resposta ia bater num 404. Mais vale
+  // dizer a verdade: o trabalho nao existe.
+  return NextResponse.json(
+    {
+      jobId,
+      status: 'not_implemented',
+      error: 'A fila de downloads ainda nao esta implementada.',
+    },
+    { status: 501 },
+  )
 }
 
