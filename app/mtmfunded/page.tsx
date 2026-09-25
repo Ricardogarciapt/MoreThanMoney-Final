@@ -7,6 +7,7 @@ import T from '@/components/mtmfunded/t'
 import SplashPromos from '@/components/mtmfunded/splash-promos'
 import { promosAtivas } from '@/lib/mtmfunded/promos'
 import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
+import { comTecto, TECTO_PAGINA_MS } from '@/lib/com-tecto'
 
 // Cache de 60s em vez de render por pedido: a classificação actualiza de hora a hora e os
 // programas mudam raramente. Sem isto, cada visita esperava pela base de dados antes do
@@ -49,26 +50,36 @@ export default async function MtmFundedPage() {
    * servidor somadas antes de o primeiro pixel aparecer. Não dependem umas das outras; não
    * há razão para esperarem umas pelas outras.
    */
-  const [{ data: programas }, { data: torneio }, { data: emitidos }, promos] = await Promise.all([
+  // TECTO: sem resposta a página desenha-se com as listas vazias — o mesmo que já fazia quando
+  // uma destas leituras falhava. Sem ele, a geração estática estoirava aos 60s e levava o deploy
+  // do site inteiro atrás (foi o que aconteceu a 25/09 na /new-landing).
+  const [{ data: programas }, { data: torneio }, { data: emitidos }, promos] = await comTecto(
+    Promise.all([
     db
       .from('mtm_funded_programs')
       .select('slug, nome, descricao, fases, saldo, preco_cents, preco_cents_mtmfunded, moeda, regras')
       .eq('ativo', true)
-      .order('ordem', { ascending: true }),
+      .order('ordem', { ascending: true })
+      .then((r) => ({ data: r.data })),
     db
       .from('mtm_tournaments')
       .select('nome, estado, comeca_em, saldo_inicial')
       .eq('publicado', true)
       .order('comeca_em', { ascending: false })
       .limit(1)
-      .maybeSingle(),
+      .maybeSingle()
+      .then((r) => ({ data: r.data })),
     db
       .from('mtm_certificates')
       .select('codigo, tipo, nome, emitido_em')
       .order('emitido_em', { ascending: false })
-      .limit(6),
+      .limit(6)
+      .then((r) => ({ data: r.data })),
     promosAtivas(),
-  ])
+    ]),
+    [{ data: null }, { data: null }, { data: null }, []],
+    TECTO_PAGINA_MS,
+  )
 
   /**
    * Os certificados da vitrine: os últimos SEIS emitidos de verdade.

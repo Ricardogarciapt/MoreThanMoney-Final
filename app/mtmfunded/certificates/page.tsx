@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import VitrineCertificados, { type CertificadoVitrine } from '@/components/mtmfunded/vitrine-certificados'
 import ProcurarCertificado from './procurar'
+import { comTecto, TECTO_PAGINA_MS } from '@/lib/com-tecto'
 
 export const revalidate = 60
 export const metadata = { title: 'Certificados' }
@@ -14,11 +15,18 @@ export const metadata = { title: 'Certificados' }
  * página que só validasse códigos era uma página em branco para quase toda a gente que a abre.
  */
 export default async function CertificadosPage() {
-  const { data: emitidos } = await getSupabaseAdmin()
-    .from('mtm_certificates')
-    .select('codigo, tipo, nome, emitido_em')
-    .order('emitido_em', { ascending: false })
-    .limit(6)
+  // TECTO: sem resposta a vitrine enche-se com os exemplares marcados como tal — o caminho que já
+  // existia para quando não há certificados emitidos que cheguem.
+  const { data: emitidos } = await comTecto(
+    getSupabaseAdmin()
+      .from('mtm_certificates')
+      .select('codigo, tipo, nome, emitido_em')
+      .order('emitido_em', { ascending: false })
+      .limit(6)
+      .then((r) => ({ data: r.data })),
+    { data: null },
+    TECTO_PAGINA_MS,
+  )
 
   const vitrine: CertificadoVitrine[] = (emitidos ?? []).map((c) => ({
     codigo: c.codigo as string,

@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { comTecto, TECTO_PAGINA_MS } from '@/lib/com-tecto'
 
 /**
  * O interruptor do MTM Funded.
@@ -46,8 +47,22 @@ export const MTMFUNDED_DEFAULT: MtmFundedConfig = {
 
 export async function getMtmFundedConfig(): Promise<MtmFundedConfig> {
   try {
-    const { data } = await getSupabaseAdmin()
-      .from('site_settings').select('value').eq('key', CHAVE).maybeSingle()
+    /**
+     * TECTO. O recuo é o MESMO do `catch` aqui abaixo — `MTMFUNDED_DEFAULT`, que tem `ativo:
+     * false` — por isso não há comportamento novo: sem resposta comporta-se como já se comportava
+     * com erro, e falha fechada. O que muda é não ficar à espera.
+     *
+     * Isto é partilhado pelas quatro páginas /mtmfunded, e uma delas decide um redireccionamento
+     * a partir desta configuração. Ganhou tecto aqui, e não em cada página, precisamente por isso:
+     * a decisão de falhar fechada é uma só e fica escrita num sítio só.
+     */
+    const { data } = await comTecto(
+      getSupabaseAdmin()
+        .from('site_settings').select('value').eq('key', CHAVE).maybeSingle()
+        .then((r) => ({ data: r.data })),
+      { data: null },
+      TECTO_PAGINA_MS,
+    )
     const v = (data?.value ?? {}) as Partial<MtmFundedConfig>
     return {
       // Falha fechada: sem valor guardado, o funded fica desligado.

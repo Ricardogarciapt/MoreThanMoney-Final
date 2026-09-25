@@ -21,7 +21,11 @@
  * NÃO cancela o trabalho que está por baixo — nada em HTTP se desfaz por deixarmos de esperar. Só
  * deixa de se esperar.
  */
-export async function comTecto<T>(promessa: Promise<T>, aoEsgotar: T, ms: number): Promise<T> {
+// `PromiseLike` e não `Promise`: os construtores de consulta do Supabase são «thenables» — têm
+// `.then` e comportam-se como promessas, mas não são instâncias de Promise. Exigir `Promise` aqui
+// obrigava quem chama a fazer um `as unknown as Promise<...>`, e essa conversão apaga os tipos
+// reais da consulta — que é exactamente onde os enganos passam despercebidos.
+export async function comTecto<T>(promessa: PromiseLike<T>, aoEsgotar: T, ms: number): Promise<T> {
   let temporizador: ReturnType<typeof setTimeout> | undefined
   try {
     return await Promise.race([

@@ -588,6 +588,29 @@ let escritasFalhadasSeguidas = 0
 const ESCRITA_MIN_MS = Number(process.env.ESCRITA_PRECOS_MIN_MS ?? 5000)
 const escritoEm = new Map<string, number>()
 
+/**
+ * O QUE JÁ FOI GRAVADO, por símbolo — para não voltar a gravar o mesmo.
+ *
+ * 25/09: 3 498 270 UPDATEs numa tabela de 194 linhas. Não havia detecção de mudança nenhuma: os
+ * símbolos do provider eram reescritos A CADA SEGUNDO, mesmo com o mercado fechado e sem um único
+ * tick novo. Isso consumia o CPU da instância do Supabase sem parar, e o site acabava a devolver
+ * 504 por causa disso.
+ *
+ * PORQUE É QUE SALTAR A ESCRITA NÃO PERDE NADA — e isto não é opinião:
+ * `em` é a hora do TICK (vem de `precoEm`), não a hora da escrita. Sem tick novo, `em` também não
+ * avança. Gravar outra vez a linha escreveria exactamente os mesmos valores nas mesmas colunas —
+ * não há leitor, em lado nenhum, que consiga distinguir a linha gravada da não gravada. A frescura
+ * que o webtrader avalia lê `em`, e `em` fica igual nos dois casos.
+ *
+ * Um preço que não mudou não tem nada para contar a ninguém.
+ */
+const gravado = new Map<string, string>()
+
+/** A linha, reduzida ao que distingue uma gravação da seguinte. */
+function assinaturaLinha(l: { bid: number; ask: number; em: string; em_mercado: string | null }): string {
+  return `${l.bid}|${l.ask}|${l.em}|${l.em_mercado ?? ''}`
+}
+
 async function escreverPrecos(): Promise<void> {
   if (!precosPorEscrever.size) return
   const agora = Date.now()
@@ -610,16 +633,22 @@ async function escreverPrecos(): Promise<void> {
   // Os que ficaram de fora saem da fila na mesma: o preço deles já está em memória e no WS, e o
   // próximo tick volta a pô-los cá. Guardar a fila a crescer era só memória sem uso.
   precosPorEscrever.clear()
-  if (!linhas.length) return
-  for (const s of aEscrever) escritoEm.set(s, agora)
+
+  // Fora as que gravariam exactamente o que já lá está.
+  const novas = linhas.filter((l) => gravado.get(l.symbol) !== assinaturaLinha(l))
+  if (!novas.length) return
+  for (const l of novas) escritoEm.set(l.symbol, agora)
   if (!CFG.escrita) return
-  const { error } = await db.from('funded_precos').upsert(linhas, { onConflict: 'symbol' })
+  const { error } = await db.from('funded_precos').upsert(novas, { onConflict: 'symbol' })
   if (error) {
     escritasFalhadasSeguidas++
     log('[precos] escrita falhou:', error.message)
+    // A assinatura SÓ se guarda quando a gravação correu bem. Guardá-la aqui fazia o motor julgar
+    // que a linha está na base quando não está, e o símbolo ficava parado até mudar de preço.
   } else {
     escritasFalhadasSeguidas = 0
     ultimaEscritaOkEm = Date.now()
+    for (const l of novas) gravado.set(l.symbol, assinaturaLinha(l))
   }
 }
 

@@ -3,6 +3,7 @@ import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
 import T from '@/components/mtmfunded/t'
 import Acordeao, { type Entrada } from './acordeao'
 import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
+import { comTecto, TECTO_PAGINA_MS } from '@/lib/com-tecto'
 
 // Cache de 60s em vez de render por pedido: as regras e as datas mudam raramente, e numa
 // página que se lê antes de comprar cada espera é uma visita perdida.
@@ -22,13 +23,19 @@ export const metadata = { title: 'Perguntas Frequentes' }
  */
 export default async function FaqFunded() {
   const config = await getMtmFundedConfig()
-  const { data: torneio } = await getSupabaseAdmin()
+  // TECTO: sem torneio a FAQ desenha-se na mesma (`torneio?.regras ?? {}` logo abaixo).
+  const { data: torneio } = await comTecto(
+    getSupabaseAdmin()
     .from('mtm_tournaments')
     .select('nome, estado, comeca_em, acaba_em, saldo_inicial, regras, inscricoes_fecham_em')
     .eq('publicado', true)
     .order('comeca_em', { ascending: false })
     .limit(1)
     .maybeSingle()
+    .then((r) => ({ data: r.data })),
+    { data: null },
+    TECTO_PAGINA_MS,
+  )
 
   const r = (torneio?.regras ?? {}) as Record<string, number>
   // As datas viajam em ISO. Formatá-las aqui dava «14 de setembro de 2026» no meio de uma
