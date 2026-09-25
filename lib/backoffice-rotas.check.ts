@@ -112,6 +112,8 @@ const PAGINAS: Array<[string, string]> = [
   ['app/backoffice/extracto/page.tsx', 'bo.extracto_proprio'],
   ['app/backoffice/pipeline/page.tsx', 'bo.pipeline_proprio'],
   ['app/backoffice/tarefas/page.tsx', 'bo.tarefas_proprias'],
+  ['app/backoffice/equipa/page.tsx', 'bo.extracto_equipa'],
+  ['app/backoffice/material/page.tsx', 'bo.material'],
 ]
 for (const [caminho, capacidade] of PAGINAS) {
   const src = ler(caminho)
@@ -149,6 +151,27 @@ for (const [caminho] of PAGINAS) {
   const nome = caminho.split('/').slice(-2)[0]
   teste(`página ${nome}: não escreve na base`, !/\.update\(|\.insert\(|\.upsert\(|\.delete\(/.test(src))
 }
+// A página dos materiais é a excepção declarada: cria o código de referral da PRÓPRIA pessoa se ele
+// ainda não existir. É na linha dela, com a id da sessão, e sem isso a página que existe para lhe
+// dar o link seria a página que lhe diz que não tem link.
+const material = ler('app/backoffice/material/page.tsx')
+teste('materiais: o código é o do próprio, pela id da sessão', /getOrCreateReferralCode\(getSupabaseAdmin\(\), ctx\.userId\)/.test(material))
+teste('materiais: não inventa um segundo código de afiliado', !/randomCode|novo_codigo/.test(material))
+
+// ── O gerador de materiais: a revisão manda, e mora no servidor ──────────────
+//
+// As regras da marca postas no cliente seriam regras que qualquer pessoa lê no JavaScript da página
+// e contorna com um pedido à mão. E a revisão tem de RECUSAR: mostrar o texto reprovado <<para a
+// pessoa decidir>> transforma a guarda num aviso, e um aviso resolve-se com um copiar-colar.
+const rotaMaterial = ler('app/api/backoffice/material/route.ts')
+teste('gerador: passa pelo portão das capacidades', /exigirCapacidade\(request, 'bo\.material'\)/.test(rotaMaterial))
+teste('gerador: revê o que o modelo escreveu', /revistarMaterial\(/.test(rotaMaterial))
+teste('gerador: texto reprovado não é devolvido', /status: 422/.test(rotaMaterial) && !/texto,\s*problemas/.test(rotaMaterial))
+teste('gerador: a prova só entra se for publicável', /publicavel\(prova\)/.test(rotaMaterial))
+teste('gerador: não escreve na base', !/\.update\(|\.insert\(|\.upsert\(|\.delete\(/.test(rotaMaterial))
+teste('gerador: tem travão por pessoa', /status: 429/.test(rotaMaterial))
+const geradorCliente = ler('app/backoffice/material/gerador.tsx')
+teste('gerador: o cliente não conhece preços nem regras de marca', !/escada-precos|pips-proof|NUNCA/.test(geradorCliente))
 
 if (falhas.length) {
   console.error(`backoffice-rotas: ${falhas.length} falha(s)`)
