@@ -57,6 +57,8 @@ interface MlmAffiliate {
   rank_color: string | null
   rank_icon: string | null
   rank_id?: number
+  /** Por que escada é pago (migração 130). «casa_valor_fixo» = manteve os valores em euros. */
+  plano_rank?: string | null
   left_count: number
   right_count: number
   total_earned: number
@@ -122,6 +124,28 @@ const STATUS_COLORS: Record<string, string> = {
 
 function formatEur(v: number) {
   return `${(v ?? 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+}
+
+/**
+ * A ESCADA DA CASA. Duas pessoas com o mesmo rank podem ser pagas de forma diferente: as que já lá
+ * estavam a 25/09/2026 mantêm os valores fixos em euros com que entraram (`casa_valor_fixo`), e as
+ * restantes são pagas pela percentagem do volume da perna menor.
+ *
+ * Sem esta marca no ecrã, «Distribuidor» parece uma coisa só — e é sobre isto que alguém vai
+ * perguntar porque é que recebeu diferente de um colega com o mesmo rank.
+ */
+const PLANO_RANK_CASA = 'casa_valor_fixo'
+
+function EscadaBadge({ plano }: { plano?: string | null }) {
+  if (plano !== PLANO_RANK_CASA) return null
+  return (
+    <span
+      className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 whitespace-nowrap"
+      title="Mantém os valores fixos em euros com que entrou (decisão do dono, 25/09/2026). Não é pago pela percentagem."
+    >
+      casa · € fixo
+    </span>
+  )
 }
 
 // ─── Rank Modal ───────────────────────────────────────────────────────────────
@@ -201,8 +225,10 @@ function RankModal({
               <Input type="number" min="0" value={form.direct_requirement ?? 0} onChange={handle('direct_requirement')} className="bg-gray-800 border-gray-700 text-white text-sm" />
             </div>
             <div>
-              <Label className="text-gray-300 text-xs">Bónus Rank (€)</Label>
-              <Input type="number" min="0" step="0.01" value={form.residual_pct ?? 0} onChange={handle('residual_pct')} className="bg-gray-800 border-gray-700 text-white text-sm" />
+              {/* A etiqueta dizia «Bónus Rank (€)» em cima do campo da PERCENTAGEM: quem editasse a
+                  escada escrevia euros onde a base guarda %. Ver migração 130. */}
+              <Label className="text-gray-300 text-xs">{TYPE_LABELS.residual_pct}</Label>
+              <Input type="number" min="0" max="100" step="0.01" value={form.residual_pct ?? 0} onChange={handle('residual_pct')} className="bg-gray-800 border-gray-700 text-white text-sm" />
             </div>
             <div>
               <Label className="text-gray-400 text-xs">{TYPE_LABELS.bonus_unico}</Label>
@@ -213,7 +239,7 @@ function RankModal({
               <Input type="number" min="0" step="0.01" value={form.rank_bonus ?? 0} onChange={handle('rank_bonus')} className="bg-gray-800 border-gray-700 text-white text-sm" />
             </div>
             <div>
-              <Label className="text-gray-300 text-xs">Residual Mensal (€)</Label>
+              <Label className="text-gray-400 text-xs">{TYPE_LABELS.monthly_residual}</Label>
               <Input type="number" min="0" step="0.01" value={form.monthly_residual ?? 0} onChange={handle('monthly_residual')} className="bg-gray-800 border-gray-700 text-white text-sm" />
             </div>
             <div>
@@ -511,6 +537,9 @@ export default function MlmManager({
     count: treeMembers.filter((a) => a.rank_id === r.id).length,
   }))
   const noRankCount = treeMembers.filter((a) => !a.rank_id || a.rank_id === 0).length
+  // Quantos ficaram na escada antiga. Conta-se do que a rede já devolveu — não se assume «são dois»,
+  // que era verdade em 25/09 e deixa de ser no dia em que o dono mover alguém de plano.
+  const casaCount = affiliates.filter((a) => a.plano_rank === PLANO_RANK_CASA).length
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -680,6 +709,25 @@ export default function MlmManager({
               </Button>
             </div>
 
+            {/* DUAS ESCADAS AO MESMO TEMPO, e o ecrã tem de o dizer. A percentagem é a que vale hoje;
+                os valores fixos continuam a pagar quem já cá estava. Ao olhar para a tabela sem esta
+                nota, o dono não tem como saber que «Distribuidor» custa coisas diferentes a pessoas
+                diferentes — e é isso que vai ser perguntado. */}
+            <div className="rounded-xl border border-[#D2A63C]/25 bg-[#D2A63C]/5 p-4 text-sm text-gray-300">
+              <p className="mb-1 font-semibold text-[#D2A63C]">Há duas escadas a pagar ao mesmo tempo.</p>
+              <p>
+                A escada viva é a <strong className="text-gray-100">percentagem do volume da perna menor, com
+                diferencial</strong> — é a coluna «Residual». O total pago sobre um dado volume nunca passa da
+                percentagem do topo, porque cada upline recebe a sua menos a maior já paga abaixo dele na mesma perna.
+              </p>
+              <p className="mt-1">
+                Quem já tinha rank a 25/09/2026 mantém os <strong className="text-amber-300">valores fixos em euros</strong>
+                {' '}com que entrou (marcados <span className="text-amber-300">casa · € fixo</span> na Rede de Afiliados).
+                {casaCount > 0 ? ` Hoje são ${casaCount} pessoa(s).` : ''} Mexer na tabela de cima não lhes toca: o plano
+                está gravado na pessoa, não numa data no código.
+              </p>
+            </div>
+
             {loadingRanks ? (
               <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" /></div>
             ) : (
@@ -688,7 +736,10 @@ export default function MlmManager({
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-800">
-                        {['', 'Nome', 'Req. Direta', 'Esq. / Dir.', 'Bónus Rank', 'Residual Mensal', 'Pack Grátis', ''].map((h, i) => (
+                        {/* Os cabeçalhos estavam trocados com as células: a coluna «Bónus Rank»
+                            mostrava a percentagem residual e a «Residual Mensal» mostrava o bónus
+                            único. Uma tabela que diz euros onde estão % é pior do que não a ter. */}
+                        {['', 'Nome', 'Req. Direta', 'Esq. / Dir.', 'Residual (perna menor)', 'Bónus ao alcançar', 'Pack Grátis', ''].map((h, i) => (
                           <th key={i} className="px-4 py-3 text-left text-gray-400 text-xs font-medium whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -706,11 +757,21 @@ export default function MlmManager({
                               ? `${rank.left_requirement} / ${rank.right_requirement}`
                               : '—'}
                           </td>
+                          {/* A escada viva é a percentagem. O valor em euros só aparece como queda, e
+                              marcado, porque só paga os nós «da casa» (mlm_nodes.plano_rank). */}
                           <td className="px-4 py-3 text-[#D2A63C]">
-                            {(rank.residual_pct ?? 0) > 0 ? `${rank.residual_pct}%` : (rank.rank_bonus > 0 ? formatEur(rank.rank_bonus) : '—')}
+                            {(rank.residual_pct ?? 0) > 0 ? (
+                              `${rank.residual_pct}%`
+                            ) : rank.monthly_residual > 0 ? (
+                              <span className="text-amber-400/80">{formatEur(rank.monthly_residual)}/mês <span className="text-[10px] text-gray-500">· fixo, só «casa»</span></span>
+                            ) : '—'}
                           </td>
                           <td className="px-4 py-3 text-green-400">
-                            {(rank.bonus_unico ?? 0) > 0 ? formatEur(rank.bonus_unico ?? 0) : (rank.monthly_residual > 0 ? formatEur(rank.monthly_residual) : '—')}
+                            {(rank.bonus_unico ?? 0) > 0 ? (
+                              formatEur(rank.bonus_unico ?? 0)
+                            ) : rank.rank_bonus > 0 ? (
+                              <span className="text-amber-400/80">{formatEur(rank.rank_bonus)} <span className="text-[10px] text-gray-500">· antigo</span></span>
+                            ) : '—'}
                           </td>
                           <td className="px-4 py-3 text-purple-400">
                             {rank.free_pack_months > 0 ? `${rank.free_pack_months} mês/meses` : '—'}
@@ -888,8 +949,11 @@ export default function MlmManager({
                               </td>
                               <td className="px-4 py-3">
                                 {aff.rank_name ? (
-                                  <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${aff.rank_color}25`, color: aff.rank_color ?? '#D2A63C' }}>
-                                    {aff.rank_icon} {aff.rank_name}
+                                  <span className="inline-flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${aff.rank_color}25`, color: aff.rank_color ?? '#D2A63C' }}>
+                                      {aff.rank_icon} {aff.rank_name}
+                                    </span>
+                                    <EscadaBadge plano={aff.plano_rank} />
                                   </span>
                                 ) : <span className="text-gray-600 text-xs">Sem rank</span>}
                               </td>
@@ -1007,8 +1071,11 @@ export default function MlmManager({
                             </td>
                             <td className="px-4 py-3">
                               {aff.rank_name ? (
-                                <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${aff.rank_color}25`, color: aff.rank_color ?? '#D2A63C' }}>
-                                  {aff.rank_icon} {aff.rank_name}
+                                <span className="inline-flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${aff.rank_color}25`, color: aff.rank_color ?? '#D2A63C' }}>
+                                    {aff.rank_icon} {aff.rank_name}
+                                  </span>
+                                  <EscadaBadge plano={aff.plano_rank} />
                                 </span>
                               ) : <span className="text-gray-600 text-xs">—</span>}
                             </td>

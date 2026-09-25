@@ -41,6 +41,18 @@ teste('o admin edita o bónus único', /bonus_unico/.test(painel))
 const rota = readFileSync('app/api/admin/mlm/ranks/route.ts', 'utf8')
 teste('a rota grava os campos novos', /residual_pct/.test(rota) && /bonus_unico/.test(rota))
 
+// O ecrã tem de dizer a VERDADE sobre o campo que se está a editar. A etiqueta «Bónus Rank (€)»
+// estava em cima do campo da percentagem: quem editasse a escada escrevia euros onde a base guarda
+// %, e o erro só aparecia no extracto de alguém.
+teste('a etiqueta do campo da % não diz euros', !/Bónus Rank \(€\)[\s\S]{0,200}residual_pct/.test(painel))
+teste('a coluna da % não se chama «Bónus Rank»', !/'Bónus Rank'/.test(painel))
+
+// Duas pessoas com o mesmo rank podem ser pagas de forma diferente. Se o admin não mostrar qual é a
+// escada de cada uma, o dono não tem como responder a «porque é que recebi menos do que ele».
+teste('o admin mostra quem está na escada antiga', /plano_rank/.test(painel) && /casa_valor_fixo/.test(painel))
+const rotaRede = readFileSync('app/api/admin/mlm/affiliates/route.ts', 'utf8')
+teste('a rede entrega o plano de cada pessoa', /plano_rank/.test(rotaRede))
+
 if (falhas.length) {
   console.error(`escada-ranks: ${falhas.length} falha(s)`)
   for (const f of falhas) console.error('  · ' + f)
