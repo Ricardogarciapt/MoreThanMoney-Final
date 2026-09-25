@@ -19,6 +19,7 @@ import {
   notifyAdminsStripeSkoolAction,
 } from '@/lib/stripe-skool-admin'
 import { processMlmCheckoutCommission } from '@/lib/mlm-checkout-commission'
+import { estornarVenda, registarVendaConfirmada } from '@/lib/vendas/livro'
 import { subscriptionPlatformForStripeCheckout } from '@/lib/stripe-profile-sync'
 import { processMlmSubscriptionRenewal } from '@/lib/mlm-subscription-integration'
 import { upsertSponsorNode } from '@/lib/mlm-tree'
@@ -140,6 +141,35 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object as Stripe.Invoice)
         break
+      /**
+       * DEVOLUÇÃO E CHARGEBACK — o dinheiro volta para o cliente.
+       *
+       * Até aqui o sistema só sabia somar: um reembolso deixava de pé a comissão do patrocinador
+       * (e, agora, as da equipa) sobre dinheiro que já não é nosso. Estes dois eventos são o
+       * único sítio onde o Stripe nos diz isso, e é aqui que se reverte.
+       *
+       * O chargeback trata-se como devolução no momento em que é ABERTO, e não no fim da
+       * disputa, de propósito: é melhor ter uma comissão suspensa que se volta a aprovar do que
+       * pagar sobre dinheiro que está em disputa. Se a disputa for ganha, o admin reaprova.
+       */
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge
+        await estornarCobranca(charge, `Reembolso Stripe (charge ${charge.id})`, charge.amount_refunded ?? null)
+        break
+      }
+      case 'charge.dispute.created': {
+        const disputa = event.data.object as Stripe.Dispute
+        const chargeId = typeof disputa.charge === 'string' ? disputa.charge : disputa.charge?.id
+        if (chargeId) {
+          try {
+            const charge = await stripe.charges.retrieve(chargeId)
+            await estornarCobranca(charge, `Chargeback aberto no Stripe (disputa ${disputa.id})`, disputa.amount ?? null)
+          } catch (err) {
+            console.error('[VENDAS] não foi possível ler a cobrança da disputa:', err)
+          }
+        }
+        break
+      }
     }
   } catch (err) {
     console.error(`Error processing ${event.type}:`, err)
@@ -164,6 +194,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (session.metadata?.source === 'mtmfunded_program') {
     const { emitirContaDoProgramaPago } = await import('@/lib/mtmfunded/compra')
     await emitirContaDoProgramaPago(session)
+    // Mas a venda conta para o livro da equipa: um desafio vendido por um closer paga-lhe, com o
+    // tecto de 15 % que o dono definiu para o Funded. O pack é um só ('mtmfunded') porque o tecto
+    // é do produto e não do tamanho da conta; qual foi o programa fica na nota.
+    await registarVendaDaEquipa({
+      referencia: session.id,
+      compradorId: session.metadata?.user_id ?? null,
+      pack: 'mtmfunded',
+      valorCents: session.amount_total ?? 0,
+      moeda: session.currency ?? 'eur',
+      tipo: 'primeira',
+      nota: `MTM Funded — programa ${session.metadata?.program_id ?? 'desconhecido'}`,
+    })
     return
   }
 
@@ -424,6 +466,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   } catch (mlmErr) {
     console.error('[MLM] Erro ao processar MLM:', mlmErr)
   }
+
+  // A VENDA, para o livro da equipa. Só aqui: este é o sítio onde se sabe que o dinheiro entrou.
+  // Se o negócio tiver papéis atribuídos, é esta chamada que cria as comissões deles — e é por
+  // isso que o MLM acima já não cria a sua (ver `lib/vendas/exclusividade.ts`).
+  await registarVendaDaEquipa({
+    referencia: session.id,
+    compradorId: userId,
+    pack: planId,
+    valorCents: session.amount_total ?? 0,
+    moeda: session.currency ?? 'eur',
+    tipo: 'primeira',
+  })
 
   // Notificar VIP/Admin + organização ascendente (fire-and-forget)
   try {
@@ -710,6 +764,102 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     } catch (mlmErr) {
       console.error('[MLM] Erro ao criar comissões de renovação:', mlmErr)
     }
+
+    // A renovação também é uma venda confirmada: é dela que sai o residual da equipa. O livro
+    // trata do resto (o residual só conta do 2.º pagamento em diante).
+    if (invoice.id) {
+      await registarVendaDaEquipa({
+        referencia: invoice.id,
+        compradorId: profile.id,
+        pack: planoPago,
+        valorCents: invoice.amount_paid,
+        moeda: invoice.currency ?? 'eur',
+        tipo: 'renovacao',
+        pagoEm: invoice.created ? new Date(invoice.created * 1000).toISOString() : undefined,
+      })
+    }
+  }
+}
+
+/**
+ * Registar uma venda confirmada no livro da equipa, sem nunca fazer falhar o webhook.
+ *
+ * O dinheiro já entrou e o acesso já foi dado quando isto corre: um erro a calcular comissões não
+ * pode devolver 500 ao Stripe e fazê-lo repetir o evento inteiro. O que falhar fica no log e a
+ * venda pode ser relançada à mão no admin — a referência é única, por isso relançar não duplica.
+ */
+async function registarVendaDaEquipa(params: {
+  referencia: string
+  compradorId: string | null
+  pack: string | null
+  valorCents: number
+  moeda: string
+  tipo: 'primeira' | 'renovacao'
+  pagoEm?: string
+  nota?: string
+}): Promise<void> {
+  try {
+    const r = await registarVendaConfirmada(supabase, {
+      fonte: 'stripe',
+      referencia: params.referencia,
+      compradorId: params.compradorId,
+      pack: params.pack,
+      valorCents: params.valorCents,
+      moeda: params.moeda,
+      tipo: params.tipo,
+      pagoEm: params.pagoEm,
+      nota: params.nota,
+    })
+    if (r.resultado?.semRegra.length) {
+      // Isto é para ser visto: alguém trabalhou a venda e não há percentagem definida para lhe
+      // pagar. Silenciar era deixar uma dívida a acumular sem ninguém saber.
+      console.warn('[VENDAS] venda sem regra de comissão para alguns papéis', {
+        venda: r.vendaId,
+        faltam: r.resultado.semRegra.map((s) => `${s.papel}: ${s.motivo}`),
+      })
+    }
+  } catch (err) {
+    console.error('[VENDAS] não foi possível registar a venda no livro da equipa:', err)
+  }
+}
+
+/**
+ * Uma cobrança devolvida (ou em disputa) → reverter o que ela pagou.
+ *
+ * As REFERÊNCIAS de uma venda nossa podem ser duas: o id da factura (renovações) e o id da sessão
+ * de checkout (primeira compra). Uma `charge` do Stripe traz a factura, mas não a sessão — essa
+ * procura-se pelo `payment_intent`. Sem isto, uma devolução de uma primeira compra não encontrava
+ * a venda e não revertia nada.
+ */
+async function estornarCobranca(charge: Stripe.Charge, motivo: string, cents: number | null): Promise<void> {
+  const referencias: string[] = []
+
+  // `invoice` saiu dos tipos da Charge nesta versão da biblioteca, mas continua a vir no payload
+  // do Stripe — é a mesma leitura por cast que o resto deste ficheiro já faz para `subscription`.
+  const facturaBruta = (charge as unknown as { invoice?: string | { id?: string } }).invoice
+  const facturaId = typeof facturaBruta === 'string' ? facturaBruta : facturaBruta?.id
+  if (facturaId) referencias.push(facturaId)
+
+  const intencao = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
+  if (intencao) {
+    try {
+      const sessoes = await stripe.checkout.sessions.list({ payment_intent: intencao, limit: 5 })
+      for (const sessao of sessoes.data) referencias.push(sessao.id)
+    } catch (err) {
+      console.error('[VENDAS] não foi possível encontrar a sessão de checkout da cobrança:', err)
+    }
+  }
+
+  if (referencias.length === 0) {
+    console.warn('[VENDAS] devolução sem referência utilizável — nada revertido:', charge.id)
+    return
+  }
+
+  try {
+    const r = await estornarVenda(supabase, { fonte: 'stripe', referencias, motivo, cents })
+    console.log('[VENDAS] devolução processada', { charge: charge.id, ...r })
+  } catch (err) {
+    console.error('[VENDAS] falhou a reversão da devolução:', err)
   }
 }
 
