@@ -92,11 +92,12 @@ const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: str
 /**
  * O que saiu, e porquê — para não se procurar o interruptor que já não existe.
  *
- * Estas contas foram apagadas na MetaApi (404). O Aurum Flow está vivo mas não tem interruptor
- * aqui de propósito: não há motor nosso a geri-lo — a gestão vem da própria fonte.
+ * Quase todas foram apagadas na MetaApi (404) — mas não todas: o Premium (530d2e07) e o Aurum Flow
+ * continuam vivos lá. Saíram daqui por deixarem de executar, não por terem desaparecido. Cada linha
+ * diz qual é o caso, porque «apagada» e «reformada» pedem acções diferentes de quem lê o painel.
  */
 const RETIRADAS = [
-  "Premium MxsR (conta 530d2e07) · apagada na MetaApi — o Premium passa pela mestre SIM do motor das mestres",
+  "Premium MxsR (conta 530d2e07) · a conta CONTINUA viva na MetaApi (é a fonte de preços do motor simulado), mas já não executa: o Premium passa pela mestre SIM do motor das mestres",
   "PrimeVerse · execução directa numa conta MT5 (12862cb4, apagada na MetaApi) — Edge/King/Wolf seguem pelas mestres SIM; o modo saiu deste painel",
   "Espelho provider como FONTE de execução (082/084) · substituído pelo motor das mestres nas estratégias que lá estão",
   "GoldKiller (SDNb) · conta apagada na MetaApi (a GoldKiller actual é Wl1B)",

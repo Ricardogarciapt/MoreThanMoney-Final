@@ -29,6 +29,17 @@ export interface OpcoesFeedTL {
   principal: (sym: string) => Cotacao | null
   pip: (sym: string) => number | null
   aoRecurso?: (sym: string, c: Cotacao) => void
+  /**
+   * Limite de idade, POR SÍMBOLO, a partir do qual a cotação da TradeLocker entra (ms).
+   *
+   * 25/09: o forex passou a poder entrar por aqui, porque nesse dia as três fontes dele caíram ao
+   * mesmo tempo (conector MT5 pendurado no limite de 100 gráficos, Yahoo a devolver 429 à VPS,
+   * MetaApi desligada por decisão) e o webtrader ficou 4h20 com o EURUSD parado. Mas a TradeLocker
+   * é OUTRA corretora: se entrasse ao mesmo ritmo dos índices (1,2 s) andaria a discutir o preço
+   * com o conector (~95 ms) e o par saltava entre os dois. Para essas classes devolve-se um limite
+   * folgado — só entra quando NÃO há mais nada. `null` = o limite geral (TL_FEED_LIMITE_MS).
+   */
+  limitePara?: (sym: string) => number | null
   log: (...a: unknown[]) => void
 }
 
@@ -59,6 +70,18 @@ export class ComparadorTradeLocker {
   private falhas = 0
   private ultimo = new Map<string, Cotacao>()
   private recursos = 0
+  /**
+   * TRAVÃO AUTOMÁTICO — a TradeLocker limita o ritmo e responde «Too many requests».
+   *
+   * 25/09: com 5 símbolos e TL_FEED_PARALELO=3 o limite aparecia de meio em meio minuto, e a partir
+   * daqui a lista cresce (o forex passou a ser coberto como último recurso). Bater sempre na mesma
+   * parede não serve: a cada limite recua-se um paralelo e espaça-se a ronda, e volta-se a apertar
+   * devagar depois de um minuto limpo. Assim o feed encontra sozinho o ritmo que a corretora aceita.
+   */
+  private paraleloVivo = 0
+  private folgaMs = 0
+  private limitadas = 0
+  private ultimoLimite = 0
 
   constructor(
     private sessao: Pick<TradeLockerSessao, 'instrumentos' | 'cotacao'>,
@@ -100,11 +123,13 @@ export class ComparadorTradeLocker {
       const inicio = Date.now()
       const lista = [...this.o.simbolos()]
       let proximo = 0
+      if (!this.paraleloVivo) this.paraleloVivo = this.paralelo
       const trabalhador = async () => {
         while (this.ativo && proximo < lista.length) await this.umSimbolo(lista[proximo++])
       }
-      await Promise.all(Array.from({ length: Math.min(this.paralelo, lista.length) }, trabalhador))
-      await new Promise((r) => setTimeout(r, Math.max(250, this.intervaloMs - (Date.now() - inicio))))
+      await Promise.all(Array.from({ length: Math.min(this.paraleloVivo, lista.length) }, trabalhador))
+      this.ajustarRitmo()
+      await new Promise((r) => setTimeout(r, Math.max(250, this.intervaloMs + this.folgaMs - (Date.now() - inicio))))
     }
   }
 
@@ -127,14 +152,38 @@ export class ComparadorTradeLocker {
         if (l.length > 300) l.shift()
         this.amostras.set(sym, l)
       }
-      if (this.recurso && this.o.aoRecurso && usarRecurso(principal ? Date.now() - principal.em : null, true, this.limiteRecursoMs)) {
+      const limite = this.o.limitePara?.(sym) ?? this.limiteRecursoMs
+      if (this.recurso && this.o.aoRecurso && usarRecurso(principal ? Date.now() - principal.em : null, true, limite)) {
         this.recursos++
         this.o.aoRecurso(sym, c)
       }
     } catch (e) {
       this.falhas++
-      if (this.falhas % 20 === 1) this.o.log(`[feed-tl] ${sym}:`, e instanceof Error ? e.message : e)
+      const msg = e instanceof Error ? e.message : String(e)
+      // O travão só reage ao LIMITE; um símbolo que não existe, ou a rede, não devem abrandar a ronda.
+      if (/demasiados pedidos|too many requests|\b429\b/i.test(msg)) this.limitadas++
+      if (this.falhas % 20 === 1) this.o.log(`[feed-tl] ${sym}:`, msg)
     }
+  }
+
+  /** Apertar ou aliviar conforme a corretora aceitou a ronda anterior. */
+  private ajustarRitmo(): void {
+    if (this.limitadas > 0) {
+      this.limitadas = 0
+      this.ultimoLimite = Date.now()
+      const antes = `${this.paraleloVivo}×+${this.folgaMs}ms`
+      if (this.paraleloVivo > 1) this.paraleloVivo--
+      else this.folgaMs = Math.min(5000, this.folgaMs + 500)
+      this.o.log(`[feed-tl] limite da corretora — a recuar ${antes} → ${this.paraleloVivo}×+${this.folgaMs}ms`)
+      return
+    }
+    // Um minuto inteiro sem levar limite: devolve-se um passo do que se tirou.
+    if (!this.ultimoLimite || Date.now() - this.ultimoLimite < 60_000) return
+    if (this.folgaMs > 0) this.folgaMs = Math.max(0, this.folgaMs - 500)
+    else if (this.paraleloVivo < this.paralelo) this.paraleloVivo++
+    else return
+    this.ultimoLimite = Date.now()
+    this.o.log(`[feed-tl] um minuto sem limites — a apertar para ${this.paraleloVivo}×+${this.folgaMs}ms`)
   }
 
   /** Resumo para o pulso (e reinicia as falhas/recursos do minuto). */

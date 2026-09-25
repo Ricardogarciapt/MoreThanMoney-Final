@@ -54,8 +54,19 @@ function avisarBreve() {
   avisoTimer = setTimeout(() => { avisoTimer = null; avisar() }, 80)
 }
 
+/**
+ * Fresco é sempre a IDADE do tick, nunca «chegou pela WS».
+ *
+ * 25/09: o `snap` que a WS manda ao subscrever traz o último preço guardado de cada símbolo, por
+ * velho que seja. Vinha marcado `fresco: true` e o ecrã pintava um EURUSD de 5 minutos a branco,
+ * com o bilhete activo — o trader via preços «congelados» sem nada a dizer-lho. O mesmo limite da
+ * execução (PRECO_FRESCO_MS, 5 s): o que não serve para executar não serve para mostrar como vivo.
+ */
+const FRESCO_MS = 5_000
+function ehFresco(emMs: number) { return Date.now() - emMs <= FRESCO_MS }
+
 function wsAoPreco(p: { s: string; b: number; a: number; t: number }) {
-  const vivo: PrecoVivo = { symbol: p.s, bid: p.b, ask: p.a, em: new Date(p.t).toISOString(), fresco: true }
+  const vivo: PrecoVivo = { symbol: p.s, bid: p.b, ask: p.a, em: new Date(p.t).toISOString(), fresco: ehFresco(p.t) }
   const antes = precosGlobais[p.s]
   if (!antes || Date.parse(vivo.em) >= Date.parse(antes.em)) precosGlobais[p.s] = vivo
 }
@@ -109,6 +120,24 @@ export function semearPrecos(lista: PrecoVivo[]) {
   if (mudou) avisar()
 }
 
+/**
+ * Um símbolo que deixa de tiquetaquear não gera mensagem nenhuma — sem isto ficava para sempre
+ * branco e «fresco» com o último valor. De segundo a segundo reavalia-se a idade de todos e só se
+ * avisa quando algum muda de estado.
+ */
+let relogioFrescura: ReturnType<typeof setInterval> | null = null
+function ligarRelogioFrescura() {
+  if (relogioFrescura || typeof window === "undefined") return
+  relogioFrescura = setInterval(() => {
+    let mudou = false
+    for (const [sym, p] of Object.entries(precosGlobais)) {
+      const agora = ehFresco(Date.parse(p.em))
+      if (agora !== p.fresco) { precosGlobais[sym] = { ...p, fresco: agora }; mudou = true }
+    }
+    if (mudou) avisar()
+  }, 1000)
+}
+
 function chaveGlobal() {
   const todos = new Set<string>()
   for (const s of subscritores.values()) s.symbols.forEach((x) => todos.add(x))
@@ -128,7 +157,9 @@ async function correr() {
   if (wsVivo()) {
     wsSincronizar()
     tapaBuracos(escondido)
-    if (!escondido && !temporizador) temporizador = setTimeout(correr, 5000)
+    // 2 s (era 5): é este batimento que dá ritmo ao tapaBuracos — com 5 s um símbolo parado só
+    // voltava a ser pedido de 5 em 5 s. Não gasta rede: o tapaBuracos só vai à rota se faltar algo.
+    if (!escondido && !temporizador) temporizador = setTimeout(correr, 2000)
     return
   }
   const chave = chaveGlobal()
@@ -158,7 +189,11 @@ async function correr() {
  * cobrem): sem isto esse símbolo ficava SEM preço nenhum no ecrã, nem o último guardado. Pede-se
  * à rota só o que falta ou está velho, no máximo de 20 em 20 s — nunca o poll inteiro de volta.
  */
-const BURACO_MS = 20_000
+// 25/09: eram 20 s entre tentativas e só se pedia um símbolo com mais de 30 s. Com a WS viva a
+// publicar cripto e o forex em baixo (conector pendurado), o EURUSD ficava minutos sem uma única
+// ida buscá-lo. Passa a ser o limite da execução (5 s) e uma tentativa a cada 3 s.
+const BURACO_MS = 3_000
+const BURACO_IDADE_MS = FRESCO_MS
 let ultimoBuraco = 0
 function tapaBuracos(escondido: boolean) {
   if (escondido || emCurso || Date.now() - ultimoBuraco < BURACO_MS) return
@@ -166,7 +201,7 @@ function tapaBuracos(escondido: boolean) {
   const faltam = chaveGlobal().split(",").filter((s) => {
     if (!s) return false
     const p = precosGlobais[s]
-    return !p || agora - Date.parse(p.em) > 30_000
+    return !p || agora - Date.parse(p.em) > BURACO_IDADE_MS
   })
   if (!faltam.length) return
   ultimoBuraco = agora
@@ -236,6 +271,7 @@ export function usePrecos(symbols: string[], intervaloMs = 1500) {
     if (Object.keys(novo).length) setPrecos((a) => ({ ...a, ...novo }))
     wsLigar()
     wsSincronizar()
+    ligarRelogioFrescura()
     const escondido = typeof document !== "undefined" && document.visibilityState === "hidden"
     if (escondido) {
       // Um ecrã aberto em segundo plano não deve voltar sem preços: uma ida, sem agendar.
@@ -251,6 +287,7 @@ export function usePrecos(symbols: string[], intervaloMs = 1500) {
       subscritores.delete(id)
       if (!subscritores.size) {
         if (temporizador) { clearTimeout(temporizador); temporizador = null }
+        if (relogioFrescura) { clearInterval(relogioFrescura); relogioFrescura = null }
         wsFechar()
       }
     }

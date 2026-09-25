@@ -1162,12 +1162,23 @@ async function main(): Promise<void> {
   // sempre (TL_FEED_SIMBOLOS), senão um sinal de US30 chegava sem preço por ninguém o estar a ver.
   // Nomes CANÓNICOS (US30), não os da fonte (DJ30.s): é o que o aoTickRecurso aceita.
   const tlClasses = new Set((process.env.TL_FEED_CLASSES || 'indice,energia,commodity,acao,etf,obrigacao').split(',').map((c) => c.trim()))
+  /**
+   * CLASSES DE ÚLTIMO RECURSO — a TradeLocker cobre-as, mas só quando não há mais nada.
+   *
+   * 25/09: o forex tinha três fontes (conector MT5, Yahoo, MetaApi) e caíram TODAS ao mesmo tempo
+   * — o terminal do conector pendurado no limite de 100 gráficos do MT5, o Yahoo a responder 429 à
+   * VPS, a MetaApi desligada por decisão. Resultado: 4h20 com o EURUSD parado no webtrader. Agora
+   * a TradeLocker também cobre o forex, mas com o limite folgado abaixo: com o conector vivo
+   * (~95 ms) nunca entra, e só assume quando o símbolo passa de TL_FEED_LIMITE_ULTIMO_MS sem preço.
+   */
+  const tlUltimo = new Set((process.env.TL_FEED_CLASSES_ULTIMO || 'forex').split(',').map((c) => c.trim()).filter(Boolean))
+  const tlLimiteUltimo = Math.max(0, Number(process.env.TL_FEED_LIMITE_ULTIMO_MS || 5000))
   const tlFixos = (process.env.TL_FEED_SIMBOLOS || 'US30,NAS100,US500,GER40,UK100,USOIL,UKOIL').split(',').map((s) => s.trim()).filter(Boolean)
   const tlSimbolosRecurso = (): Set<string> => {
     const out = new Set<string>()
     for (const s of [...tlFixos, ...canonicosDesejados()]) {
       const sm = simbolos.get(s)
-      if (sm && tlClasses.has(String(sm.classe))) out.add(s)
+      if (sm && (tlClasses.has(String(sm.classe)) || tlUltimo.has(String(sm.classe)))) out.add(s)
     }
     return out
   }
@@ -1180,6 +1191,8 @@ async function main(): Promise<void> {
     principal: (sym) => (precos[sym] ? { bid: precos[sym].bid, ask: precos[sym].ask, em: principalEm.get(sym) ?? 0 } : null),
     pip: (sym) => simbolos.get(sym)?.pip_size ?? null,
     aoRecurso: (sym, c) => aoTickRecurso(sym, c.bid, c.ask, c.em),
+    // Classes com fonte própria mais rápida: a TradeLocker só entra se essa fonte tiver desaparecido.
+    limitePara: (sym) => (tlUltimo.has(String(simbolos.get(sym)?.classe ?? '')) ? tlLimiteUltimo : null),
     log,
   })
   feedTl?.iniciar()
