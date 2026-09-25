@@ -19,6 +19,18 @@ import { centimosEmEuros } from './calculo'
 export type LinhaExtracto = {
   id: string
   origem: 'papel' | 'mlm'
+  /**
+   * De QUEM é esta linha. Opcional porque quem lê o extracto de uma pessoa só já sabe de quem é;
+   * quem lê o de várias (um responsável de equipa, o dono) precisa da coluna para não somar o
+   * dinheiro de duas pessoas na mesma conta.
+   */
+  pessoa_id?: string
+  /**
+   * −1 quando a comissão foi paga e DEPOIS devolvida pelo cliente, +1 no resto (ver a vista, na
+   * migração 128). Quem soma deduz o mesmo de `paga_em` + `estornada_em`; quem MOSTRA usa isto,
+   * porque uma devolução tem de aparecer a negativo na lista e não só no total.
+   */
+  sinal?: number
   detalhe: string
   valor_cents: number
   moeda: string
@@ -29,6 +41,10 @@ export type LinhaExtracto = {
   pack: string | null
   referencia: string | null
 }
+
+/** As colunas que se pedem à vista. Numa constante para as duas leituras não divergirem. */
+const COLUNAS =
+  'id, origem, detalhe, pessoa_id, valor_cents, moeda, estado, em, paga_em, estornada_em, sinal, pack, referencia'
 
 export type Extracto = {
   pessoaId: string
@@ -128,7 +144,7 @@ export async function extractoDaPessoa(
 ): Promise<Extracto> {
   let query = supabase
     .from('vendas_extracto')
-    .select('id, origem, detalhe, valor_cents, moeda, estado, em, paga_em, estornada_em, pack, referencia')
+    .select(COLUNAS)
     .eq('pessoa_id', pessoaId)
     .order('em', { ascending: false })
     .limit(2000)
@@ -147,4 +163,34 @@ export async function extractoDaPessoa(
     totaisLegiveis: Object.fromEntries(Object.entries(totais).map(([k, v]) => [k, centimosEmEuros(v)])),
     porOrigem,
   }
+}
+
+
+/**
+ * O extracto de UM CONJUNTO de pessoas — o que a página do backoffice precisa.
+ *
+ * PORQUE É QUE ISTO RECEBE UMA LISTA E NÃO UM BOOLEANO «vê a equipa»
+ * A lista vem de `ambitoDeLeitura` (`lib/backoffice-papeis.ts`) e é ela que entra no `.in(...)`.
+ * Uma consulta que filtra por uma lista não tem como esquecer-se do filtro; um `if (é responsável)
+ * lê tudo` antes da consulta esquece-se — e o que se esquece aqui é o dinheiro dos colegas.
+ *
+ * `todos` só é verdade para o dono (`bo.extracto_todos`). Nesse caso não há filtro nenhum, e é a
+ * única maneira de não haver: não existe caminho em que uma lista vazia signifique «tudo».
+ */
+export async function extractoDoAmbito(
+  supabase: SupabaseClient,
+  ambito: { ids: string[]; todos: boolean },
+  opcoes: { desde?: string | null } = {},
+): Promise<LinhaExtracto[]> {
+  // Sem âmbito nenhum não se lê nada. Isto é a diferença entre uma falha que fecha e uma que abre:
+  // um `.in('pessoa_id', [])` devolveria vazio, mas confiar nisso deixava o caso ao PostgREST.
+  if (!ambito.todos && ambito.ids.length === 0) return []
+
+  let query = supabase.from('vendas_extracto').select(COLUNAS).order('em', { ascending: false }).limit(2000)
+  if (!ambito.todos) query = query.in('pessoa_id', ambito.ids)
+  if (opcoes.desde) query = query.gte('em', opcoes.desde)
+
+  const { data, error } = await query
+  if (error) throw new Error(`Não foi possível ler o extracto: ${error.message}`)
+  return (data ?? []) as unknown as LinhaExtracto[]
 }

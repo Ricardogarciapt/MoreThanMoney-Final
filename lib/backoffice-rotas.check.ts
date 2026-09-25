@@ -103,9 +103,79 @@ teste('painel: mostra o erro de leitura', /setErro\(res\.error/.test(painel))
 // Tirar um papel pede confirmação: um clique distraído numa lista comprida fecha o acesso ao dinheiro.
 teste('painel: confirma antes de tirar papel', /confirm\(/.test(painel))
 
+// ── As PÁGINAS do backoffice usam a mesma fechadura das rotas ────────────────
+//
+// Uma página que decidisse com um `if (pode(...))` escrito à mão criava uma SEGUNDA definição de
+// «pode entrar» — e a que fosse corrigida um dia seria uma só. Por isso todas passam por
+// `abrirPagina`, que chama o mesmo `exigirCapacidade`.
+const PAGINAS: Array<[string, string]> = [
+  ['app/backoffice/extracto/page.tsx', 'bo.extracto_proprio'],
+  ['app/backoffice/pipeline/page.tsx', 'bo.pipeline_proprio'],
+  ['app/backoffice/tarefas/page.tsx', 'bo.tarefas_proprias'],
+  ['app/backoffice/equipa/page.tsx', 'bo.extracto_equipa'],
+  ['app/backoffice/material/page.tsx', 'bo.material'],
+]
+for (const [caminho, capacidade] of PAGINAS) {
+  const src = ler(caminho)
+  const nome = caminho.split('/').slice(-2)[0]
+  teste(`página ${nome}: exige a capacidade ${capacidade}`, src.includes(`abrirPagina('${capacidade}')`))
+  // E RECUSA. Uma página que chama a fechadura e ignora o resultado parece protegida e não está.
+  teste(`página ${nome}: recusa quem não pode`, /if \(!acesso\.ok\)/.test(src) && /<SemAcesso/.test(src))
+  // O âmbito é uma LISTA, e é essa lista que filtra. Um `if (é team leader)` esquece-se do filtro.
+  if (['extracto', 'pipeline', 'tarefas'].includes(nome)) {
+    teste(`página ${nome}: filtra pelo âmbito de leitura`, /ambitoDeLeitura\(/.test(src))
+    teste(`página ${nome}: não adivinha a equipa`, !/mlm_tree|team_leader_id.*===.*userId/.test(src))
+  }
+}
+
+// ── A única escrita do backoffice ────────────────────────────────────────────
+//
+// Marcar a própria tarefa como feita. O dono verifica-se NA CONSULTA e com a id da sessão: um
+// `if (tarefa.responsavel_id !== ctx.userId)` faz o mesmo até alguém reordenar o código.
+const tarefas = ler('app/api/backoffice/tarefas/route.ts')
+teste('tarefas: passa pelo portão das capacidades', /exigirCapacidade\(request, 'bo\.tarefas_proprias'\)/.test(tarefas))
+teste('tarefas: recusa devolvendo a resposta do portão', /if \(ctx instanceof NextResponse\) return ctx/.test(tarefas))
+teste('tarefas: o dono entra na consulta', /\.eq\('responsavel_id', ctx\.userId\)/.test(tarefas))
+teste('tarefas: nada de dono vindo do corpo', !/body\.responsavel|body\.user_id|body\.pessoa/.test(tarefas))
+// Só o estado da tarefa se toca. Uma rota do backoffice que escrevesse noutra tabela era uma porta
+// nova no meio do dinheiro.
+teste('tarefas: só escreve em vendas_tarefas', [...tarefas.matchAll(/\.from\('([^']+)'\)/g)].every((m) => m[1] === 'vendas_tarefas'))
+teste('tarefas: nunca apaga', !/\.delete\(\)/.test(tarefas))
+// Id de outra pessoa dá 404 e não 403: 403 confirmava que a tarefa existe.
+teste('tarefas: tarefa alheia dá 404', /status: 404/.test(tarefas) && !/status: 403/.test(tarefas))
+
+// ── E as páginas NÃO escrevem ────────────────────────────────────────────────
+// O que é dinheiro mostra-se; aprovar e pagar é um acto humano e faz-se no admin.
+for (const [caminho] of PAGINAS) {
+  const src = ler(caminho)
+  const nome = caminho.split('/').slice(-2)[0]
+  teste(`página ${nome}: não escreve na base`, !/\.update\(|\.insert\(|\.upsert\(|\.delete\(/.test(src))
+}
+// A página dos materiais é a excepção declarada: cria o código de referral da PRÓPRIA pessoa se ele
+// ainda não existir. É na linha dela, com a id da sessão, e sem isso a página que existe para lhe
+// dar o link seria a página que lhe diz que não tem link.
+const material = ler('app/backoffice/material/page.tsx')
+teste('materiais: o código é o do próprio, pela id da sessão', /getOrCreateReferralCode\(getSupabaseAdmin\(\), ctx\.userId\)/.test(material))
+teste('materiais: não inventa um segundo código de afiliado', !/randomCode|novo_codigo/.test(material))
+
+// ── O gerador de materiais: a revisão manda, e mora no servidor ──────────────
+//
+// As regras da marca postas no cliente seriam regras que qualquer pessoa lê no JavaScript da página
+// e contorna com um pedido à mão. E a revisão tem de RECUSAR: mostrar o texto reprovado <<para a
+// pessoa decidir>> transforma a guarda num aviso, e um aviso resolve-se com um copiar-colar.
+const rotaMaterial = ler('app/api/backoffice/material/route.ts')
+teste('gerador: passa pelo portão das capacidades', /exigirCapacidade\(request, 'bo\.material'\)/.test(rotaMaterial))
+teste('gerador: revê o que o modelo escreveu', /revistarMaterial\(/.test(rotaMaterial))
+teste('gerador: texto reprovado não é devolvido', /status: 422/.test(rotaMaterial) && !/texto,\s*problemas/.test(rotaMaterial))
+teste('gerador: a prova só entra se for publicável', /publicavel\(prova\)/.test(rotaMaterial))
+teste('gerador: não escreve na base', !/\.update\(|\.insert\(|\.upsert\(|\.delete\(/.test(rotaMaterial))
+teste('gerador: tem travão por pessoa', /status: 429/.test(rotaMaterial))
+const geradorCliente = ler('app/backoffice/material/gerador.tsx')
+teste('gerador: o cliente não conhece preços nem regras de marca', !/escada-precos|pips-proof|NUNCA/.test(geradorCliente))
+
 if (falhas.length) {
   console.error(`backoffice-rotas: ${falhas.length} falha(s)`)
   for (const f of falhas) console.error('  · ' + f)
   process.exit(1)
 }
-console.log('backoffice-rotas: só admin escreve, retirar deixa rasto, e nenhuma password passa por aqui ✓')
+console.log('backoffice-rotas: só admin escreve, as páginas usam a mesma fechadura e filtram pelo âmbito, e a única escrita da equipa é a própria tarefa ✓')

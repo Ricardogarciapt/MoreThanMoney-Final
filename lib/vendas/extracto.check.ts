@@ -11,7 +11,7 @@
  *
  *   npx tsx lib/vendas/extracto.check.ts
  */
-import { somarExtracto, type LinhaExtracto } from './extracto'
+import { extractoDoAmbito, somarExtracto, type LinhaExtracto } from './extracto'
 
 const falhas: string[] = []
 const teste = (nome: string, ok: boolean) => {
@@ -76,6 +76,45 @@ const linha = (p: Partial<LinhaExtracto>): LinhaExtracto => ({
   teste('cancelada não conta para nada', totais.ganho_cents === 0 && totais.cancelado_cents === 1300)
 }
 
+// ── QUEM VÊ O QUÊ: o filtro do âmbito não se esquece ──
+//
+// Isto não é um teste de soma, é um teste de separação. A página do backoffice lê o extracto por uma
+// LISTA de ids (a que `ambitoDeLeitura` devolve). Se a consulta perdesse o `.in('pessoa_id', …)`,
+// um setter passava a ver o dinheiro dos colegas e nada no ecrã o denunciava.
+async function guardaDoAmbito() {
+  const pedidos: Array<{ metodo: string; args: unknown[] }> = []
+  // Um cliente de faz-de-conta que grava o que lhe pediram em vez de ir à base.
+  const falso = () => {
+    const q: Record<string, (...a: unknown[]) => unknown> = {}
+    for (const m of ['select', 'order', 'limit', 'in', 'gte', 'eq']) {
+      q[m] = (...args: unknown[]) => {
+        pedidos.push({ metodo: m, args })
+        return q
+      }
+    }
+    ;(q as { then?: unknown }).then = (resolve: (v: unknown) => void) => resolve({ data: [], error: null })
+    return { from: (t: string) => { pedidos.push({ metodo: 'from', args: [t] }); return q } }
+  }
+
+  const cliente = falso() as unknown as Parameters<typeof extractoDoAmbito>[0]
+
+  await extractoDoAmbito(cliente, { ids: ['pessoa-a'], todos: false })
+  const filtro = pedidos.find((p) => p.metodo === 'in')
+  teste('lê a vista do extracto', pedidos.some((p) => p.metodo === 'from' && p.args[0] === 'vendas_extracto'))
+  teste('filtra por pessoa_id, pela lista do âmbito', !!filtro && filtro.args[0] === 'pessoa_id' && JSON.stringify(filtro.args[1]) === '["pessoa-a"]')
+
+  // O dono (e só ele) lê sem filtro. Tem de ser um caminho explícito: se uma lista vazia pudesse
+  // significar «tudo», um erro de leitura dos liderados abria a casa a quem não é dono.
+  pedidos.length = 0
+  await extractoDoAmbito(cliente, { ids: [], todos: true })
+  teste('só o âmbito «todos» lê sem filtro', !pedidos.some((p) => p.metodo === 'in'))
+
+  // E um âmbito vazio não lê NADA — nem sequer chega à base.
+  pedidos.length = 0
+  const nada = await extractoDoAmbito(cliente, { ids: [], todos: false })
+  teste('âmbito vazio não consulta a base', pedidos.length === 0 && nada.length === 0)
+}
+
 // ── fronteiras ──
 teste('extracto vazio é zero em tudo', somarExtracto([]).totais.saldo_cents === 0)
 teste(
@@ -87,9 +126,14 @@ teste(
   somarExtracto([linha({ valor_cents: 1 }), linha({ valor_cents: 2 }), linha({ valor_cents: 4 })]).totais.ganho_cents === 7,
 )
 
-if (falhas.length) {
-  console.error(`vendas/extracto: ${falhas.length} falha(s)`)
-  for (const f of falhas) console.error('  · ' + f)
-  process.exit(1)
-}
-console.log('vendas/extracto: as duas origens num só extracto, o vocabulário é um, e o que foi devolvido desconta ✓')
+// A guarda do âmbito é assíncrona (finge uma consulta), por isso o relatório espera por ela.
+void guardaDoAmbito().then(() => {
+  if (falhas.length) {
+    console.error(`vendas/extracto: ${falhas.length} falha(s)`)
+    for (const f of falhas) console.error('  · ' + f)
+    process.exit(1)
+  }
+  console.log(
+    'vendas/extracto: as duas origens num só extracto, o vocabulário é um, o que foi devolvido desconta, e o filtro por pessoa não se esquece ✓',
+  )
+})
