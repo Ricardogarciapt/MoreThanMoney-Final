@@ -105,9 +105,22 @@ testeAsync('closer só se vê a si, mesmo liderando uma equipa', async () => {
 })
 // E por família: quem tem equipa no extracto mas não nas leads não vê as leads dos outros. Aqui o
 // team_leader tem as duas, por isso o teste é o inverso — que a família certa é consultada.
+// Sem a capacidade não se PERGUNTA. Provar isto com uma base que rebenta não provava nada — o
+// `catch` de `lideradosDe` devolvia `[]` e o teste passava mesmo com a verificação removida. Por
+// isso conta-se quem tocou na tabela: é a única forma de a guarda morder se alguém tirar o
+// pré-teste e ficar só com a defesa de `ambitoDeLeitura` a segurar tudo sozinha.
 testeAsync('sem capacidade da família não vai sequer à base', async () => {
-  const a = await ambitoDaEquipa(fake(BASE, { rebenta: true }), { userId: 'lider', capacidades: closer }, 'leads')
-  return a.ids.length === 1
+  const tocadas: string[] = []
+  const espia = { from: (t: string) => { tocadas.push(t); return (fake(BASE) as any).from(t) } }
+  const a = await ambitoDaEquipa(espia, { userId: 'lider', capacidades: closer }, 'leads')
+  return a.ids.length === 1 && a.ids[0] === 'lider' && tocadas.length === 0
+})
+// E com a capacidade, pergunta — senão o teste de cima passava por a função não fazer nada.
+testeAsync('com a capacidade, vai à base', async () => {
+  const tocadas: string[] = []
+  const espia = { from: (t: string) => { tocadas.push(t); return (fake(BASE) as any).from(t) } }
+  await ambitoDaEquipa(espia, { userId: 'lider', capacidades: lider }, 'leads')
+  return tocadas.includes('backoffice_equipas')
 })
 testeAsync('avaria da base → só se vê a si (não rebenta a página)', async () => {
   const a = await ambitoDaEquipa(fake(BASE, { rebenta: true }), { userId: 'lider', capacidades: lider }, 'extracto')
