@@ -65,7 +65,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   const [posicoes, setPosicoes] = useState<PosicaoWT[]>([])
   const [ordens, setOrdens] = useState<OrdemWT[]>([])
   const [gestaoAuto, setGestaoAuto] = useState<EstadoGestaoCorretora[]>([])
-  const [historico, setHistorico] = useState<NegocioWT[] | null>(null)
+  const [historico, setHistorico] = useState<{ dias: number; linhas: NegocioWT[] } | null>(null)
   const [fichas, setFichas] = useState<Record<string, SimboloFicha>>({})
   const [visiveis, setVisiveis] = useState<string[]>([])
   const [extras, setExtras] = useState<string[]>([])
@@ -95,8 +95,14 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
       setGestaoAuto(d.gestaoAuto ?? [])
     } catch { /* o erro da conta já aparece em cima */ }
   }, [plataforma, contaRef])
-  const lerHistorico = useCallback(async () => {
-    try { setHistorico((await pedirWT<{ historico: NegocioWT[] }>(plataforma, "historico", { conta: contaRef, query: { dias: 30 } })).historico) } catch (e) { setHistorico([]); setErro({ texto: (e as Error).message, status: 0 }) }
+  const lerHistorico = useCallback(async (dias: number) => {
+    try {
+      const r = await pedirWT<{ historico: NegocioWT[] }>(plataforma, "historico", { conta: contaRef, query: { dias } })
+      setHistorico({ dias, linhas: r.historico })
+    } catch (e) {
+      setHistorico({ dias, linhas: [] })
+      setErro({ texto: (e as Error).message, status: 0 })
+    }
   }, [plataforma, contaRef])
 
   // Leituras só com o separador visível; pára escondido e retoma ao voltar.
@@ -298,7 +304,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     },
     {
       chave: "historico", nome: "Histórico", icone: History, principal: true,
-      conteudo: () => <PainelHistorico linhas={historico} ler={lerHistorico} />,
+      conteudo: () => <PainelHistorico estado={historico} ler={lerHistorico} />,
     },
     {
       chave: "simbolos", nome: "Símbolos da corretora", icone: Search,
@@ -400,11 +406,66 @@ function AceiteReal({ onOk, onNao, plataforma }: { onOk: () => void; onNao: () =
   )
 }
 
-/** O histórico é caro: só se lê quando o painel aparece pela primeira vez. */
-function PainelHistorico({ linhas, ler }: { linhas: NegocioWT[] | null; ler: () => Promise<void> }) {
-  useEffect(() => { if (linhas == null) void ler() }, [linhas, ler])
-  if (linhas == null) return <Loader2 className="m-4 h-4 w-4 animate-spin" />
-  return <div className="overflow-x-auto"><TabelaHistorico linhas={linhas} /></div>
+/**
+ * PERÍODOS DO HISTÓRICO.
+ *
+ * `dias` é o que se pede ao servidor (a rota aceita 1 a 90). O «Hoje» pede as últimas 24 h e depois
+ * corta na meia-noite LOCAL — senão «hoje», às 9 da manhã, trazia metade de ontem, que é tudo menos
+ * o que quem carrega no botão espera ver. Semana e Mês são janelas a rolar (7 e 30 dias), como é
+ * hábito num histórico de trading; o título de cada botão di-lo, para não restar dúvida.
+ */
+const PERIODOS_HISTORICO = [
+  { chave: 'hoje', nome: 'Hoje', dias: 1, desdeMeiaNoite: true, titulo: 'Desde a meia-noite de hoje', vazio: 'Sem negócios hoje.' },
+  { chave: 'semana', nome: 'Semana', dias: 7, desdeMeiaNoite: false, titulo: 'Últimos 7 dias', vazio: 'Sem negócios nos últimos 7 dias.' },
+  { chave: 'mes', nome: 'Mês', dias: 30, desdeMeiaNoite: false, titulo: 'Últimos 30 dias', vazio: 'Sem negócios nos últimos 30 dias.' },
+  { chave: 'trimestre', nome: '90 dias', dias: 90, desdeMeiaNoite: false, titulo: 'Últimos 90 dias (o máximo que a corretora dá)', vazio: 'Sem negócios nos últimos 90 dias.' },
+] as const
+
+/** O histórico é caro: só se lê quando o painel aparece, e depois a cada mudança de período. */
+function PainelHistorico({ estado, ler }: {
+  estado: { dias: number; linhas: NegocioWT[] } | null
+  ler: (dias: number) => Promise<void>
+}) {
+  const [periodo, setPeriodo] = useState<(typeof PERIODOS_HISTORICO)[number]>(PERIODOS_HISTORICO[2])
+  useEffect(() => { if (estado?.dias !== periodo.dias) void ler(periodo.dias) }, [periodo.dias, estado?.dias, ler])
+
+  const linhas = useMemo(() => {
+    if (!estado) return null
+    if (!periodo.desdeMeiaNoite) return estado.linhas
+    const meiaNoite = new Date(); meiaNoite.setHours(0, 0, 0, 0)
+    // Sem data não se pode afirmar que é de hoje — e no «Hoje» é melhor faltar do que mentir.
+    return estado.linhas.filter((l) => l.em != null && new Date(l.em).getTime() >= meiaNoite.getTime())
+  }, [estado, periodo.desdeMeiaNoite])
+
+  // O total do que está à vista: a pergunta seguinte a «mostra-me hoje» é sempre «quanto deu».
+  const total = useMemo(() => {
+    if (!linhas?.length) return null
+    const comLucro = linhas.filter((l) => l.lucro != null)
+    return comLucro.length ? comLucro.reduce((a, l) => a + (l.lucro ?? 0), 0) : null
+  }, [linhas])
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-1 border-b border-white/5 px-2 py-1.5">
+        {PERIODOS_HISTORICO.map((p) => (
+          <button key={p.chave} onClick={() => setPeriodo(p)} title={p.titulo}
+            aria-pressed={p.chave === periodo.chave}
+            className={`rounded px-2 py-1 text-[11px] ${p.chave === periodo.chave ? 'bg-white/15 text-white' : 'text-zinc-400 hover:bg-white/5'}`}>
+            {p.nome}
+          </button>
+        ))}
+        {total != null && (
+          <span className="ml-auto pr-1 font-mono text-[11px]">
+            <span className="text-zinc-500">Total </span>
+            <span className={total >= 0 ? 'text-emerald-300' : 'text-rose-300'}>{usd(total)}</span>
+          </span>
+        )}
+      </div>
+      {linhas == null
+        ? <Loader2 className="m-4 h-4 w-4 animate-spin" />
+        : <div className="overflow-x-auto"><TabelaHistorico linhas={linhas} vazio={periodo.vazio} /></div>}
+    </div>
+  )
 }
 
 function PesquisaSimbolo({ plataforma, contaRef, atual, onEscolher }: { plataforma: PlataformaWT; contaRef: string; atual: string; onEscolher: (s: string) => void }) {
@@ -592,8 +653,8 @@ function TabelaOrdens({ ordens, digitos, podeNegociar, onCancelar, onModificar }
   )
 }
 
-function TabelaHistorico({ linhas }: { linhas: NegocioWT[] }) {
-  if (!linhas.length) return <p className="p-3 text-[12px] text-zinc-500">Sem negócios nos últimos 30 dias.</p>
+function TabelaHistorico({ linhas, vazio }: { linhas: NegocioWT[]; vazio: string }) {
+  if (!linhas.length) return <p className="p-3 text-[12px] text-zinc-500">{vazio}</p>
   return (
     <table className="w-full min-w-[560px] text-[11.5px]">
       <thead className="text-zinc-500"><tr className="text-left"><th className="px-2 py-1">Quando</th><th>Símbolo</th><th>Lado</th><th>Vol.</th><th>Preço</th><th>Lucro</th><th>Estado</th></tr></thead>
