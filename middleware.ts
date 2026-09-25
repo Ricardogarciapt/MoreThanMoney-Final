@@ -47,6 +47,60 @@ function isRateLimited(ip: string): boolean {
   return false
 }
 
+/**
+ * NENHUMA ESPERA PELO SUPABASE FICA SEM TECTO.
+ *
+ * 25/09: o site devolveu `MIDDLEWARE_INVOCATION_TIMEOUT` (504) em páginas normais. Medido no
+ * momento, contra o projecto: `/auth/v1/user` respondeu em 33s numa chamada de cinco (as outras em
+ * 0,14s) e o PostgREST em 126s — com a base de dados a ter 14 ligações e 2 consultas activas. Ou
+ * seja, não era carga de pedidos: era a instância sem CPU para responder. O middleware esperava por
+ * essas respostas SEM limite, e o tecto da Vercel (25s) chegava primeiro — uma base de dados lenta
+ * passava a ser um site em baixo.
+ *
+ * Este tecto não conserta a base de dados. Serve para o site DEGRADAR em vez de cair.
+ */
+const LIMITE_SUPABASE_MS = 2500
+
+async function comTecto<T>(promessa: Promise<T>, aoEsgotar: T, ms = LIMITE_SUPABASE_MS): Promise<T> {
+  let temporizador: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      promessa,
+      new Promise<T>((resolve) => {
+        temporizador = setTimeout(() => resolve(aoEsgotar), ms)
+      }),
+    ])
+  } finally {
+    if (temporizador) clearTimeout(temporizador)
+  }
+}
+
+/**
+ * Este pedido TRAZ cookie de sessão do Supabase?
+ *
+ * Não prova que a sessão é válida — prova que quem pede não é um visitante anónimo. É essa
+ * distinção que permite, quando o auth não responde a tempo, deixar passar quem já tinha sessão em
+ * vez de o atirar para o /login. Quem não traz cookie continua a ser tratado como quem não tem
+ * sessão, que é a decisão certa e não custa nada.
+ */
+function trazCookieDeSessao(request: NextRequest): boolean {
+  return request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token"))
+}
+
+/**
+ * Restrições de área em memória, por pessoa.
+ *
+ * A tabela `backoffice_acessos_site` tem hoje ZERO linhas: ninguém está restringido. Mesmo assim,
+ * cada abertura de `/member-area`, `/app-mobile`, `/alertas-mtm`, `/mtmauto`, `/scanner`… pagava uma
+ * ida completa à base de dados para o descobrir, dentro do middleware e no caminho crítico. Guardar
+ * a resposta um minuto tira esse custo de cima da navegação sem tirar o controlo ao Ricardo: uma
+ * restrição que ele escreva no admin passa a valer no minuto seguinte, não instantaneamente.
+ */
+const cacheAreas = new Map<string, { areas: string[]; validoAte: number }>()
+const CACHE_AREAS_MS = 60 * 1000
+
 export async function middleware(request: NextRequest) {
   // Criar cliente Supabase com cookies apropriados para middleware
   let response = NextResponse.next({
@@ -97,13 +151,27 @@ export async function middleware(request: NextRequest) {
   }
 
   let userFetched = false
+  // «Não sei quem é» NÃO é o mesmo que «não tem sessão». Esta bandeira guarda a diferença, e é o
+  // bloco mais abaixo que decide o que fazer com ela — com o cookie na mão.
+  let autenticacaoIndecisa = false
   let cachedUser: Awaited<ReturnType<ReturnType<typeof createServerClient>["auth"]["getUser"]>>["data"]["user"] = null
   const getCachedUser = async () => {
     if (!hasSupabaseEnv) return null
     if (!userFetched) {
       userFetched = true
-      const { data } = await getSupabase().auth.getUser()
-      cachedUser = data.user
+      const pedidoAuth = getSupabase().auth.getUser() as Promise<{
+        data: { user: typeof cachedUser }
+      }>
+      const resposta = await comTecto<{ user: typeof cachedUser } | null>(
+        pedidoAuth.then((r) => ({ user: r.data.user })).catch(() => null),
+        null,
+      )
+      if (resposta === null) {
+        autenticacaoIndecisa = true
+        cachedUser = null
+      } else {
+        cachedUser = resposta.user
+      }
     }
     return cachedUser
   }
@@ -307,6 +375,22 @@ export async function middleware(request: NextRequest) {
   // ── /mtmcopy: descontinuado (fase 1). As páginas reencaminham para /mtmauto no next.config.mjs
   // (308), antes de chegarem aqui; as rotas /api/mtmcopy/* continuam vivas para as apps instaladas.
 
+  /**
+   * O AUTH NÃO RESPONDEU, MAS A PESSOA TRAZ SESSÃO.
+   *
+   * Aqui já passaram as páginas públicas e o backoffice. O que vem a seguir são as guardas de
+   * membro, e todas elas perguntam «quem é?». Sem resposta do auth há três saídas possíveis: cair
+   * em 504 (era o que acontecia), atirar para o /login quem estava validamente ligado, ou servir a
+   * página. Serve-se a página: os dados dela vêm de rotas de `/api/*` que se autenticam sozinhas,
+   * por isso quem não tiver direito continua a não ver nada — o que se evita é castigar a pessoa
+   * por uma lentidão que não é dela. Quem NÃO traz cookie não entra por aqui e segue as guardas
+   * normais como visitante.
+   */
+  if (autenticacaoIndecisa && trazCookieDeSessao(request)) {
+    response.headers.set("X-MTM-Auth", "sem-resposta")
+    return response
+  }
+
   // ── Membros sem perfil (OAuth backdoor) → /register ───────────────────────
   if (isMemberProtectedPath(pathname) && hasSupabaseEnv) {
     const memberUser = await getCachedUser()
@@ -368,13 +452,32 @@ export async function middleware(request: NextRequest) {
   if (areaPedida && hasSupabaseEnv && !isApiRoute) {
     const areaUser = await getCachedUser()
     if (areaUser) {
-      const { data: restricaoRow } = await getSupabase()
-        .from("backoffice_acessos_site")
-        .select("areas")
-        .eq("user_id", areaUser.id)
-        .maybeSingle()
+      const agora = Date.now()
+      const guardado = cacheAreas.get(areaUser.id)
+      let restricao: string[]
 
-      const restricao = normalizarAreas((restricaoRow as { areas?: unknown } | null)?.areas)
+      if (guardado && guardado.validoAte > agora) {
+        restricao = guardado.areas
+      } else {
+        // Tecto curto e falha para o lado aberto: sem resposta, o acesso é o normal de membro — que
+        // é exactamente o que uma lista vazia já significava. Ninguém fica fechado por lentidão.
+        const pedidoAreas = getSupabase()
+          .from("backoffice_acessos_site")
+          .select("areas")
+          .eq("user_id", areaUser.id)
+          .maybeSingle() as unknown as Promise<{ data: { areas?: unknown } | null }>
+        const restricaoRow = await comTecto<{ areas?: unknown } | null>(
+          pedidoAreas.then((r) => r.data ?? {}).catch(() => ({})),
+          null,
+        )
+        restricao = normalizarAreas(restricaoRow?.areas)
+        // Só se guarda o que foi realmente lido. Guardar um tecto esgotado ensinava a cache a
+        // mentir durante um minuto.
+        if (restricaoRow !== null) {
+          cacheAreas.set(areaUser.id, { areas: restricao, validoAte: agora + CACHE_AREAS_MS })
+        }
+      }
+
       // Lista vazia = sem restrição. Só quem tem uma lista escrita é que é filtrado, e nunca se
       // fecha uma porta por a leitura ter falhado: sem linha, o acesso é o normal de membro.
       if (restricao.length > 0 && !restricao.includes(areaPedida)) {
