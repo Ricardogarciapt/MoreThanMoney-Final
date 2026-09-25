@@ -47,6 +47,23 @@ const TRANSLATE_BLOCKED_PREFIXES = [
   // rules, in Portuguese», que traduzem a letra e perdem o sentido. O que ainda não tem chave
   // fica em português, que é preferível a ficar errado.
   "/mtmfunded",
+  /**
+   * AS PÁGINAS LEGAIS NÃO SE TRADUZEM À MÁQUINA (25/09).
+   *
+   * Passavam pelo Google Translate em 21 idiomas, e nenhuma delas diz qual versão prevalece. Um
+   * documento que vincula não pode depender de uma tradução automática que ninguém reviu: foi por
+   * produzir frases como «The rules, in Portuguese» que o /mtmfunded saiu daqui acima, e essas
+   * eram justamente as páginas legais do outro negócio.
+   *
+   * Ficam em português. Um termo que o leitor tenha de traduzir por si é melhor do que um termo
+   * que a máquina traduziu ao contrário — e o risco não é simétrico: uma frase legal errada num
+   * idioma que não falamos não se descobre até alguém a invocar.
+   *
+   * Isto NÃO substitui a cláusula de língua autoritativa, que é trabalho de jurista.
+   */
+  "/terms",
+  "/privacidade",
+  "/privacy-policy",
 ]
 
 function isTranslateBlocked(path: string): boolean {
