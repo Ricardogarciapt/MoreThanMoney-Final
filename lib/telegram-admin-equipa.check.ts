@@ -280,12 +280,38 @@ const PESSOA: PessoaDaEquipa = {
   sim('cêntimos mostram-se como euros', eur(12_345).includes('123,45'))
 }
 
-// ════════════════ 8. O PAINEL EXPÕE ISTO ════════════════
+// ════════════════ 8. O PAINEL E OS COMANDOS EXPÕEM ISTO ════════════════
 {
   sim('o painel tem o botão da equipa', /callback_data: 'admin:eq'/.test(MENU))
   for (const caso of ['eq_equipa', 'eq_pipe', 'eq_com', 'eq_mlm', 'eq_papeis']) {
     sim(`o painel trata «${caso}»`, new RegExp(`case '${caso}'`).test(MENU))
   }
+
+  /*
+   * Os comandos de texto são a outra porta para a mesma casa — e é a porta mais fácil de deixar
+   * aberta, porque não tem botão nenhum a lembrar que é do dono. Três coisas se provam aqui:
+   * que o comando verifica quem é, que a quem não é responde como a um comando que não existe
+   * (confirmar que existe já é dizer que há um painel), e que não lê a equipa por uma segunda via.
+   */
+  const WEBHOOK = ler('app/api/telegram/webhook/route.ts')
+  const inicio = WEBHOOK.indexOf('/^\\/(equipa|pipeline|comissoes')
+  sim('os comandos da equipa existem', inicio > 0)
+  const bloco = WEBHOOK.slice(inicio, inicio + 1800)
+  sim('os comandos verificam se é o dono', /await ehChatDeAdmin\(supabase, chatId\)/.test(bloco))
+  sim('a quem não é, não se confirma que o comando existe', /Não conheço esse comando/.test(bloco))
+  sim('os comandos entram pelo mesmo painel', /handleAdminAction\(supabase, accao, chatId\)/.test(bloco))
+  sim('os comandos não leem a equipa por outra via', !/telegram-admin-equipa/.test(bloco))
+  for (const cmd of ['equipa', 'pipeline', 'comissoes', 'mlm']) {
+    sim(`/${cmd} é um comando`, new RegExp(`\\b${cmd}\\b`).test(bloco))
+  }
+  // O regex do comando tem de bater com o texto como ele chega: já sem o @nomedobot, mas com
+  // maiúsculas e acentos como a pessoa os escreveu.
+  const padrao = /^\/(equipa|pipeline|comissoes|comissões|mlm)\b/
+  for (const escrito of ['/equipa', '/pipeline', '/comissoes', '/comissões', '/mlm']) {
+    sim(`«${escrito}» é reconhecido`, padrao.test(escrito))
+  }
+  sim('«/equipas» não é confundido com /equipa', !padrao.test('/equipas'))
+  sim('«/mlmqualquer» não passa', !padrao.test('/mlmqualquer'))
 }
 
 if (falhas.length) {

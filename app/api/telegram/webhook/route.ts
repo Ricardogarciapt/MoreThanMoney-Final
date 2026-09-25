@@ -644,7 +644,11 @@ export async function POST(request: NextRequest) {
           (await ehChatDeAdmin(supabase, chatId)
             ? "/admin — Painel de administração 🛠️\n" +
               "/quem &lt;chave&gt; — a folha de um lead 🔎\n" +
-              "/cliente &lt;chave&gt; — saldos e assinatura de um cliente 💰\n"
+              "/cliente &lt;chave&gt; — saldos e assinatura de um cliente 💰\n" +
+              "/equipa — quem está na equipa e com que papéis 👔\n" +
+              "/pipeline — negócios por estado, e os parados 📋\n" +
+              "/comissoes — o que está à espera de aprovação 💸\n" +
+              "/mlm — nós, ranks e escadas 🌳\n"
             : "") +
           "\n💬 Ou escreve-me em linguagem natural — respondo no teu idioma.\n" +
           "🌐 <a href='https://www.morethanmoney.pt/new-landing'>Conhece a MTM</a>"
@@ -721,6 +725,34 @@ export async function POST(request: NextRequest) {
             const f = await carregarFolhaDeCliente(supabase, chave)
             await sendMessage(f ? textoFolha(f) : "🤷 Não encontrei ninguém com essa chave.")
           }
+        }
+      }
+
+      /**
+       * /equipa · /pipeline · /comissoes · /mlm — os quatro ecrãs da equipa, sem tocar em menus.
+       *
+       * O painel já tem tudo isto atrás do botão «👔 Equipa e MLM», e isso chega para quem está
+       * sentado. Não chega para quem vai a andar: três toques para saber quanto está à espera de
+       * um sim é o suficiente para não se perguntar. Um comando é um toque.
+       *
+       * Só o dono, pela mesma porta de sempre (`ehChatDeAdmin`), e com a MESMA resposta a quem não
+       * é: «não conheço esse comando». A quem não tem acesso não se confirma que o comando existe.
+       */
+      else if (/^\/(equipa|pipeline|comissoes|comissões|mlm)\b/.test(text)) {
+        const { ehChatDeAdmin, handleAdminAction } = await import("@/lib/telegram-admin-menu")
+        if (!(await ehChatDeAdmin(supabase, chatId))) {
+          await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.")
+        } else {
+          // Não há aqui uma segunda via para ler a equipa: o comando entra pelo MESMO painel, na
+          // mesma acção que o botão dispara. Duas leituras da mesma coisa eram duas verdades.
+          const accao = text.startsWith("/equipa")
+            ? "eq_equipa"
+            : text.startsWith("/pipeline")
+              ? "eq_pipe"
+              : text.startsWith("/mlm")
+                ? "eq_mlm"
+                : "eq_com"
+          await handleAdminAction(supabase, accao, chatId)
         }
       }
 
