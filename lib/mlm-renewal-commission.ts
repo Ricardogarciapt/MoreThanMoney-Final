@@ -102,6 +102,18 @@ async function processDirectSponsorResidual(
   await incrementPendingCommissions(supabase, sponsor.id, commissionAmount)
 }
 
+/**
+ * O residual de rank À MEDIDA QUE AS RENOVAÇÕES ENTRAM — e só para quem está na escada ANTIGA.
+ *
+ * A escada antiga era um valor FIXO por mês (`mlm_ranks.monthly_residual`), e um valor fixo pode ser
+ * pago à primeira renovação do mês, com uma deduplicação por mês. Foi assim que isto sempre
+ * funcionou, e é assim que continua a funcionar para os nós `casa_valor_fixo` — os dois
+ * Distribuidores que o dono decidiu manter no valor com que entraram.
+ *
+ * A escada NOVA (migração 130) é uma percentagem do volume da perna menor, e esse número só existe
+ * quando o mês está medido: quem está em `escada_pct_2026_09` é pago pelo fecho mensal
+ * (`lib/vendas/fecho-ranks.ts`), não aqui. Pagar as duas coisas era pagar o residual a dobrar.
+ */
 async function processRankMonthlyResiduals(
   supabase: MlmSupabase,
   params: MlmRenewalCommissionParams,
@@ -131,7 +143,7 @@ async function processRankMonthlyResiduals(
 
     const { data: ancestor } = await supabase
       .from('mlm_nodes')
-      .select('id, user_id, parent_node_id, rank_id')
+      .select('id, user_id, parent_node_id, rank_id, plano_rank')
       .eq('id', parentNodeId)
       .maybeSingle()
 
@@ -140,7 +152,13 @@ async function processRankMonthlyResiduals(
     const rankId = Number(ancestor.rank_id) || 0
     const residualAmount = rankResidualMap.get(rankId) ?? 0
 
-    if (rankId > 0 && residualAmount > 0 && !paidThisRun.has(ancestor.user_id)) {
+    // Só a escada ANTIGA se paga por evento. Quem está na escada em percentagem espera pelo fecho do
+    // mês — e se a coluna ainda não existir (migração 130 não aplicada), o valor é vazio e ninguém
+    // recebe por aqui: na dúvida não se paga a dobrar.
+    const planoDoNo = (ancestor as { plano_rank?: string | null }).plano_rank ?? null
+    const ehDaCasa = planoDoNo === 'casa_valor_fixo'
+
+    if (ehDaCasa && rankId > 0 && residualAmount > 0 && !paidThisRun.has(ancestor.user_id)) {
       const { data: existing } = await supabase
         .from('mlm_commissions')
         .select('id')
@@ -161,7 +179,7 @@ async function processRankMonthlyResiduals(
           stripe_invoice_id: params.paymentReference,
           status: 'pending',
           payout_status: 'pending',
-          notes: `Residual mensal de rank (${monthLabel})`,
+          notes: `Residual mensal de rank (${monthLabel}) — escada antiga, nó da casa (valor fixo).`,
         })
 
         await incrementPendingCommissions(supabase, ancestor.user_id, residualAmount)
