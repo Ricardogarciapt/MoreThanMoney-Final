@@ -177,18 +177,29 @@ export async function extractoDaPessoa(
  * `todos` só é verdade para o dono (`bo.extracto_todos`). Nesse caso não há filtro nenhum, e é a
  * única maneira de não haver: não existe caminho em que uma lista vazia signifique «tudo».
  */
+/**
+ * O TECTO de linhas que se lê de uma vez. Está exportado de propósito: a página compara o número
+ * de linhas que recebeu com este número e AVISA quando bate no tecto. Um limite silencioso num
+ * extracto é a pior espécie de mentira — os totais fecham ao cêntimo sobre metade dos movimentos,
+ * e quem os lê não tem como saber. Com o aviso, a resposta é «aperta o filtro por data».
+ */
+export const LIMITE_EXTRACTO = 2000
+
 export async function extractoDoAmbito(
   supabase: SupabaseClient,
   ambito: { ids: string[]; todos: boolean },
-  opcoes: { desde?: string | null } = {},
+  opcoes: { desde?: string | null; ate?: string | null } = {},
 ): Promise<LinhaExtracto[]> {
   // Sem âmbito nenhum não se lê nada. Isto é a diferença entre uma falha que fecha e uma que abre:
   // um `.in('pessoa_id', [])` devolveria vazio, mas confiar nisso deixava o caso ao PostgREST.
   if (!ambito.todos && ambito.ids.length === 0) return []
 
-  let query = supabase.from('vendas_extracto').select(COLUNAS).order('em', { ascending: false }).limit(2000)
+  let query = supabase.from('vendas_extracto').select(COLUNAS).order('em', { ascending: false }).limit(LIMITE_EXTRACTO)
   if (!ambito.todos) query = query.in('pessoa_id', ambito.ids)
   if (opcoes.desde) query = query.gte('em', opcoes.desde)
+  // O «até» é o FIM do dia pedido (ver `fimDoDia`): um `lte` sobre a meia-noite escondia o dia
+  // inteiro e o filtro parecia estar a perder linhas por avaria.
+  if (opcoes.ate) query = query.lte('em', opcoes.ate)
 
   const { data, error } = await query
   if (error) throw new Error(`Não foi possível ler o extracto: ${error.message}`)

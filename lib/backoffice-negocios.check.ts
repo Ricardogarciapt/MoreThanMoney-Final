@@ -23,6 +23,7 @@ import {
   type NegocioLinha,
 } from './backoffice-negocios'
 import { ambitoDeLeitura, capacidadesDe } from './backoffice-papeis'
+import { lerPagina } from './backoffice-paginacao'
 
 const falhas: string[] = []
 const teste = (nome: string, ok: boolean) => {
@@ -62,7 +63,7 @@ teste('ids repetidos não repetem o filtro', (filtroDeParticipacao([A, A]) ?? ''
 function clienteFalso() {
   const pedidos: Array<{ metodo: string; args: unknown[] }> = []
   const q: Record<string, (...a: unknown[]) => unknown> = {}
-  for (const m of ['select', 'order', 'limit', 'in', 'or', 'gte', 'eq']) {
+  for (const m of ['select', 'order', 'limit', 'range', 'in', 'or', 'gte', 'lte', 'eq', 'ilike']) {
     q[m] = (...args: unknown[]) => {
       pedidos.push({ metodo: m, args })
       return q
@@ -108,10 +109,10 @@ async function guardaDasLeituras() {
   {
     const { pedidos, cliente } = clienteFalso()
     const r = await negociosDoAmbito(cliente, { proprioId: A, ids: [], todos: false })
-    teste('âmbito vazio não consulta negócios', pedidos.length === 0 && r.length === 0)
+    teste('âmbito vazio não consulta negócios', pedidos.length === 0 && r.linhas.length === 0)
     const { pedidos: p2, cliente: c2 } = clienteFalso()
     const t = await tarefasDoAmbito(c2, { proprioId: A, ids: [], todos: false })
-    teste('âmbito vazio não consulta tarefas', p2.length === 0 && t.length === 0)
+    teste('âmbito vazio não consulta tarefas', p2.length === 0 && t.linhas.length === 0)
   }
 
   // O dono lê sem filtro, e só ele.
@@ -129,6 +130,48 @@ async function guardaDasLeituras() {
     teste('as tarefas filtram por responsavel_id', !!filtro && JSON.stringify(filtro.args[1]) === JSON.stringify([A]))
     // As canceladas ficam de fora: uma lista de trabalho com histórico dentro não se usa.
     teste('as canceladas não entram na lista', pedidos.some((p) => p.metodo === 'in' && p.args[0] === 'estado' && !JSON.stringify(p.args[1]).includes('cancelada')))
+  }
+
+  // ── Paginação: a consulta pede um intervalo, e não um limite cego ─────────
+  //
+  // Um `.limit(500)` sem paginação mostra 500 linhas na linha 501 com o mesmo aspecto de estar
+  // completo. Aqui prova-se que o intervalo chega à base e que o filtro de segurança continua lá:
+  // paginar e esquecer o `or` da participação dava a segunda página da casa inteira.
+  {
+    const { pedidos, cliente } = clienteFalso()
+    await negociosDoAmbito(cliente, { proprioId: A, ids: [A], todos: false }, { pagina: lerPagina({ pagina: '2', por_pagina: '10' }) })
+    const range = pedidos.find((p) => p.metodo === 'range')
+    teste('os negócios pedem um intervalo', !!range && range.args[0] === 10)
+    teste('e pedem uma linha a mais do que mostram', !!range && range.args[1] === 20)
+    teste('nunca um limite cego', !pedidos.some((p) => p.metodo === 'limit'))
+    teste('⭐ paginar não perde o filtro de participação', pedidos.some((p) => p.metodo === 'or'))
+  }
+  {
+    const { pedidos, cliente } = clienteFalso()
+    await tarefasDoAmbito(cliente, { proprioId: A, ids: [A], todos: false }, { pagina: lerPagina({ pagina: '2', por_pagina: '10' }) })
+    const range = pedidos.find((p) => p.metodo === 'range')
+    teste('as tarefas pedem um intervalo', !!range && range.args[0] === 10 && range.args[1] === 20)
+    teste('⭐ paginar não perde o filtro do responsável', pedidos.some((p) => p.metodo === 'in' && p.args[0] === 'responsavel_id'))
+  }
+
+  // ── Filtros: entram na consulta, e o que não é do catálogo não entra ──────
+  {
+    const { pedidos, cliente } = clienteFalso()
+    await negociosDoAmbito(cliente, { proprioId: A, ids: [A], todos: false }, { estado: 'marcado', procura: 'João' })
+    teste('o estado filtra na base', pedidos.some((p) => p.metodo === 'eq' && p.args[0] === 'estado' && p.args[1] === 'marcado'))
+    teste('a procura filtra pelo nome', pedidos.some((p) => p.metodo === 'ilike' && p.args[0] === 'nome'))
+  }
+  {
+    const { pedidos, cliente } = clienteFalso()
+    await negociosDoAmbito(cliente, { proprioId: A, ids: [A], todos: false }, { estado: 'fechadinho' as never })
+    teste('um estado fora do catálogo não filtra nada', !pedidos.some((p) => p.metodo === 'eq' && p.args[0] === 'estado'))
+  }
+  {
+    // Uma lista de estados vazia é um pedido impossível, não «todos»: responde-se vazio e não se
+    // pergunta nada à base. O contrário devolvia a lista inteira a quem pediu nenhuma.
+    const { pedidos, cliente } = clienteFalso()
+    const r = await tarefasDoAmbito(cliente, { proprioId: A, ids: [A], todos: false }, { estados: [] })
+    teste('⭐ nenhum estado pedido não é «todos»', r.linhas.length === 0 && pedidos.length === 0)
   }
 }
 

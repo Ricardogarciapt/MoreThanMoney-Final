@@ -15,22 +15,37 @@
  * promessas de rendimento que tivemos de ir tirar de texto público. Quando o passo precisa de
  * preços, eles vêm por função de `lib/escada-precos.ts`, nunca escritos à mão.
  *
- * SÓ LEITURA. Mover um negócio de estado é um acto com consequências (dispara comissões a jusante)
- * e faz-se no admin. Esta página mostra e aconselha.
+ * A LISTA É PAGINADA, e isso não é uma melhoria de conforto: o `.limit(500)` que aqui estava
+ * mostrava 500 negócios com o mesmo aspecto de estar completo, e o 501.º não dava erro nenhum —
+ * desaparecia. Agora pede-se sempre uma linha a mais do que se mostra e a página DIZ que há mais.
+ * Os filtros (estado, nome) vivem no endereço para o servidor já receber a pergunta certa.
+ *
+ * MOVER UM NEGÓCIO FAZ-SE AQUI, desde 2026-09-25 — mas o dinheiro continua de fora: marcar «ganho»
+ * muda três campos do negócio e não cria venda nem comissão. A venda nasce do pagamento confirmado.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ambitoDeLeitura, pode } from '@/lib/backoffice-papeis'
 import { lideradosDe, AVISO_EQUIPA_POR_CONFIGURAR } from '@/lib/backoffice-equipa'
 import { negociosDoAmbito, papeisNoNegocio, type NegocioLinha } from '@/lib/backoffice-negocios'
+import { COLUNA_DO_PAPEL } from '@/lib/backoffice-escrita'
+import { PAPEIS, type Papel } from '@/lib/backoffice-papeis'
 import { ESTADOS_PIPELINE, ESTADO_PIPELINE_NOME, dataCurta, ehEstadoFechado, ehEstadoPipeline } from '@/lib/backoffice-vista'
 import { avisoParado, diasParado, sugestaoPara } from '@/lib/backoffice-playbook'
+import { lerDoCatalogo, lerPagina, lerProcura } from '@/lib/backoffice-paginacao'
 import { abrirPagina, SemAcesso } from '../_partes/acesso'
 import { Aviso, Cabecalho, Etiqueta, Falhou, Vazio } from '../_partes/blocos'
+import { Campo, ESTILO_CAMPO, Filtros, Paginacao, type Params } from '../_partes/navegar'
+import { NegocioNovo } from './novo'
+import { Mover } from './mover'
+import { Trabalhar } from './trabalhar'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Pipeline · Backoffice MTM' }
 
-export default async function PipelinePage() {
+const BASE = '/backoffice/pipeline'
+
+export default async function PipelinePage({ searchParams }: { searchParams: Promise<Params> }) {
+  const params = await searchParams
   const acesso = await abrirPagina('bo.pipeline_proprio')
   if (!acesso.ok) {
     return (
@@ -46,9 +61,20 @@ export default async function PipelinePage() {
   const ambito = ambitoDeLeitura(ctx.capacidades, ctx.userId, 'pipeline', liderados)
   const veEquipa = pode(ctx.capacidades, 'bo.pipeline_equipa')
 
+  // Os filtros vêm do endereço e passam por catálogo e limpeza antes de chegarem à consulta: o
+  // estado só pode ser um dos oito, e a procura perde os caracteres que têm significado nos
+  // filtros do PostgREST.
+  const estadoFiltro = lerDoCatalogo(params.estado, ESTADOS_PIPELINE)
+  const procura = lerProcura(params.procura)
+  const pagina = lerPagina(params)
+  const filtrado = !!estadoFiltro || !!procura
+
   let negocios: NegocioLinha[]
+  let haMais = false
   try {
-    negocios = await negociosDoAmbito(getSupabaseAdmin(), ambito)
+    const lista = await negociosDoAmbito(getSupabaseAdmin(), ambito, { estado: estadoFiltro, procura, pagina })
+    negocios = lista.linhas
+    haMais = lista.haMais
   } catch (e) {
     return (
       <div className="space-y-6">
@@ -82,10 +108,32 @@ export default async function PipelinePage() {
 
       {veEquipa && <Aviso>Tens o papel que dá acesso ao pipeline da tua equipa. {AVISO_EQUIPA_POR_CONFIGURAR}</Aviso>}
 
+      <NegocioNovo papeis={ctx.papeis} ehDono={ctx.admin} />
+
+      <Filtros base={BASE} activo={filtrado}>
+        <Campo nome="Estado">
+          <select name="estado" defaultValue={estadoFiltro ?? ''} className={ESTILO_CAMPO}>
+            <option value="">Todos</option>
+            {ESTADOS_PIPELINE.map((e) => (
+              <option key={e} value={e}>
+                {ESTADO_PIPELINE_NOME[e]}
+              </option>
+            ))}
+          </select>
+        </Campo>
+        <Campo nome="Nome do contacto">
+          <input name="procura" defaultValue={procura ?? ''} placeholder="parte do nome" className={ESTILO_CAMPO} />
+        </Campo>
+      </Filtros>
+
       {negocios.length === 0 ? (
         <Vazio
-          titulo="Não tens negócios atribuídos."
-          seguinte="Um negócio aparece aqui quando o teu nome está numa das atribuições dele (prospector, setter, closer, responsável ou afiliado). Se andas a trabalhar contactos que não estão aqui, é porque ainda não foram lançados — diz ao Ricardo."
+          titulo={filtrado ? 'Nenhum negócio com este filtro.' : 'Não tens negócios atribuídos.'}
+          seguinte={
+            filtrado
+              ? 'O filtro está apertado, não é a lista que está vazia. Limpa-o para voltares a ver tudo o que é teu.'
+              : 'Um negócio aparece aqui quando o teu nome está numa das atribuições dele (prospector, setter, closer, responsável ou afiliado). Cria-o em cima — quem cria fica atribuído, senão ele nascia sem dono e desaparecia.'
+          }
         />
       ) : (
         <>
@@ -107,10 +155,12 @@ export default async function PipelinePage() {
             })}
           </div>
 
+          {/* A contagem é DESTA PÁGINA e diz-se que é: um total que na verdade conta 50 linhas de
+              300 é o mesmo erro do limite silencioso, agora escrito por extenso. */}
           <p className="text-sm text-gray-400">
             {emAberto === 0
-              ? 'Não tens nenhum negócio em aberto — todos os teus estão ganhos ou perdidos.'
-              : `Tens ${emAberto} negócio${emAberto === 1 ? '' : 's'} em aberto.`}
+              ? 'Nada em aberto nesta página — o que aqui está está ganho ou perdido.'
+              : `${emAberto} negócio${emAberto === 1 ? '' : 's'} em aberto ${haMais || pagina.pagina > 1 ? 'nesta página' : 'em total'}.`}
           </p>
 
           {[...vivos, ...fechados].map((estado) => {
@@ -169,6 +219,17 @@ export default async function PipelinePage() {
                         )}
                         {n.nota && <p className="mt-2 text-xs leading-relaxed text-gray-400">{n.nota}</p>}
                         {parado && <p className="mt-2 text-xs font-medium text-amber-400/90">{parado}</p>}
+                        {/* Mover é um acto com autor: o evento que fica na base diz quem o fez. */}
+                        <Mover id={n.id} estado={estado} nome={n.nome} />
+                        {/* Os lugares que esta pessoa pode ocupar sozinha: vagos E de um papel que
+                            ela tem. Oferecer um papel que ela não tem era oferecer um botão que o
+                            servidor recusa — e a recusa parece avaria. */}
+                        <Trabalhar
+                          id={n.id}
+                          nota={n.nota}
+                          vagos={papeisQuePodeOcupar(n, ctx.papeis, ctx.admin)}
+                          meus={papeisQueOcupa(n, ctx.userId)}
+                        />
                       </div>
                     )
                   })}
@@ -176,6 +237,8 @@ export default async function PipelinePage() {
               </section>
             )
           })}
+
+          <Paginacao base={BASE} params={params} pagina={pagina} mostradas={negocios.length} haMais={haMais} />
 
           {/* Um estado que não está no catálogo não se esconde: significa que alguém escreveu na
               base um valor que o código não conhece, e esconder isso fazia desaparecer negócios. */}
@@ -195,4 +258,20 @@ export default async function PipelinePage() {
       </p>
     </div>
   )
+}
+
+/**
+ * Os papéis que esta pessoa pode ocupar NESTE negócio sozinha: os que estão vagos e que ela tem.
+ *
+ * O dono não tem papéis atribuídos (tem tudo por ser dono) e por isso pode ocupar qualquer um dos
+ * cinco — é a mesma excepção que a criação de negócios faz, e pela mesma razão.
+ */
+function papeisQuePodeOcupar(negocio: NegocioLinha, papeis: Papel[], ehDono: boolean): Papel[] {
+  const seus = ehDono ? [...PAPEIS] : papeis
+  return seus.filter((p) => negocio[COLUNA_DO_PAPEL[p]] === null)
+}
+
+/** Os papéis que ela ocupa neste negócio — os que pode largar sem pedir a ninguém. */
+function papeisQueOcupa(negocio: NegocioLinha, pessoaId: string): Papel[] {
+  return PAPEIS.filter((p) => negocio[COLUNA_DO_PAPEL[p]] === pessoaId)
 }

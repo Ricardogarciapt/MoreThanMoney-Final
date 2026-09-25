@@ -128,18 +128,44 @@ for (const [caminho, capacidade] of PAGINAS) {
   }
 }
 
-// ── A única escrita do backoffice ────────────────────────────────────────────
+// ── As escritas das tarefas ──────────────────────────────────────────────────
 //
-// Marcar a própria tarefa como feita. O dono verifica-se NA CONSULTA e com a id da sessão: um
-// `if (tarefa.responsavel_id !== ctx.userId)` faz o mesmo até alguém reordenar o código.
+// Criar, riscar, reabrir, cancelar e mudar o prazo. O dono verifica-se NA CONSULTA e pela LISTA do
+// âmbito (`.in('responsavel_id', ids)`), não por um `if (tarefa.responsavel_id !== ctx.userId)` —
+// que faria o mesmo até alguém reordenar o código — e não por um `.eq(ctx.userId)`, que fechava o
+// responsável de equipa fora das tarefas da equipa dele.
 const tarefas = ler('app/api/backoffice/tarefas/route.ts')
 teste('tarefas: passa pelo portão das capacidades', /exigirCapacidade\(request, 'bo\.tarefas_proprias'\)/.test(tarefas))
 teste('tarefas: recusa devolvendo a resposta do portão', /if \(ctx instanceof NextResponse\) return ctx/.test(tarefas))
-teste('tarefas: o dono entra na consulta', /\.eq\('responsavel_id', ctx\.userId\)/.test(tarefas))
-teste('tarefas: nada de dono vindo do corpo', !/body\.responsavel|body\.user_id|body\.pessoa/.test(tarefas))
+teste('tarefas: o âmbito vem da equipa, não de um `if`', /ambitoDaEquipa\(supabase, ctx, 'tarefas'\)/.test(tarefas))
+teste('tarefas: o dono entra na consulta pela lista', /\.in\('responsavel_id', ids\)/.test(tarefas))
+// A lista entra na LEITURA e na ESCRITA. Filtrar só a leitura deixava o update a confiar no id do
+// corpo, e um id de outra pessoa passava.
+teste('tarefas: a lista filtra leitura e escrita', (tarefas.match(/\.in\('responsavel_id', ids\)/g) ?? []).length >= 2)
+// Um âmbito vazio não pergunta nada à base: `.in(..., [])` devolveria vazio, mas essa decisão é
+// nossa e não do PostgREST.
+teste('tarefas: âmbito vazio não consulta', /!ambito\.todos && ids\.length === 0/.test(tarefas))
+// Dar trabalho a outra pessoa é de quem responde pela equipa, e a regra vive na lib (testável sem
+// base). A rota tem de a chamar, e passar-lhe a capacidade — não decidir por si.
+teste('tarefas: quem é responsável decide-se na lib', /validarTarefaNova\(/.test(tarefas))
+teste('tarefas: a rota não aceita o responsável às cegas', /temAmbitoEquipa: pode\(ctx\.capacidades, 'bo\.tarefas_equipa'\)/.test(tarefas))
+teste('tarefas: nada de dono vindo do corpo', !/body\.user_id|body\.pessoa|body\.criado_por/.test(tarefas))
+// Ligar uma tarefa a um negócio prova-se contra o âmbito do PIPELINE: pendurar tarefas em negócios
+// alheios fazia aparecer trabalho no ecrã de quem os trabalha.
+teste('tarefas: o negócio ligado é do âmbito de quem cria', /podeMexerNoNegocio\(/.test(tarefas))
 // Só o estado da tarefa se toca. Uma rota do backoffice que escrevesse noutra tabela era uma porta
 // nova no meio do dinheiro.
-teste('tarefas: só escreve em vendas_tarefas', [...tarefas.matchAll(/\.from\('([^']+)'\)/g)].every((m) => m[1] === 'vendas_tarefas'))
+{
+  const tabelas = [...new Set([...tarefas.matchAll(/\.from\('([^']+)'\)/g)].map((m) => m[1]))]
+  // `vendas_negocios` entra aqui, mas só para LER: é a prova de que o negócio a que se pendura a
+  // tarefa é do âmbito de quem a cria.
+  teste('tarefas: só fala com as tabelas das tarefas e dos negócios', tabelas.every((t) => t === 'vendas_tarefas' || t === 'vendas_negocios'))
+  const negocioSoLeitura = tarefas
+    .split("from('vendas_negocios')")
+    .slice(1)
+    .every((depois) => /^\s*\.select\(/.test(depois) && !/\.(update|insert|upsert|delete)\(/.test(depois.slice(0, 400)))
+  teste('tarefas: nunca escreve no negócio', negocioSoLeitura)
+}
 teste('tarefas: nunca apaga', !/\.delete\(\)/.test(tarefas))
 // Id de outra pessoa dá 404 e não 403: 403 confirmava que a tarefa existe.
 teste('tarefas: tarefa alheia dá 404', /status: 404/.test(tarefas) && !/status: 403/.test(tarefas))
@@ -178,4 +204,4 @@ if (falhas.length) {
   for (const f of falhas) console.error('  · ' + f)
   process.exit(1)
 }
-console.log('backoffice-rotas: só admin escreve, as páginas usam a mesma fechadura e filtram pelo âmbito, e a única escrita da equipa é a própria tarefa ✓')
+console.log('backoffice-rotas: só admin dá papéis, as páginas usam a mesma fechadura, e a equipa só escreve no que o âmbito dela contém ✓')
