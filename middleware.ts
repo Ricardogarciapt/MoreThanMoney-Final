@@ -117,6 +117,22 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  /**
+   * O MANIFESTO E OS SERVICE WORKERS TAMBÉM NÃO DEPENDEM DE QUEM ESTÁ LIGADO.
+   *
+   * 25/09, nos registos da Vercel: `/manifest.json` e `/firebase-messaging-sw.js` a devolverem 504
+   * porque esperavam pela autenticação. Nenhum dos dois muda conforme a pessoa — e o service worker
+   * é justamente o que ainda funciona quando o resto está mal. Deixá-lo preso ao auth era garantir
+   * que, num mau momento do Supabase, até as notificações deixavam de poder registar-se.
+   */
+  if (
+    pathname === "/manifest.json" ||
+    pathname === "/sw.js" ||
+    pathname.endsWith("-sw.js")
+  ) {
+    return response
+  }
+
   // /.well-known/* (ex.: assetlinks.json p/ Android App Links, apple-app-site-association)
   // tem de ser servido cru, sem auth/headers/redirects, senão a verificação falha.
   if (pathname.startsWith('/.well-known/')) {
@@ -176,12 +192,23 @@ export async function middleware(request: NextRequest) {
     return cachedUser
   }
 
-  // Refrescar a sessão (cookie) apenas em PÁGINAS. Em /api/* cada rota autentica-se
-  // sozinha, por isso evitamos o round-trip de auth em cada chamada de API (chat,
-  // preços, polling…). Estáticos já saíram acima.
-  if (hasSupabaseEnv && !isApiRoute) {
-    await getCachedUser()
-  }
+  /**
+   * A AUTENTICAÇÃO É PEDIDA POR QUEM DECIDE COM ELA, E MAIS NINGUÉM.
+   *
+   * Até 25/09 havia aqui um `await getCachedUser()` incondicional, para refrescar o cookie de
+   * sessão em todas as páginas. O custo disso só se viu quando o Supabase se engasgou: os registos
+   * da Vercel mostram 504 em `/login`, `/new-landing`, `/FreeSession` e `/manifest.json` — páginas
+   * que não perguntam a ninguém quem é, mas que esperavam à mesma pela resposta do auth. Uma
+   * página pública ficava refém de um serviço de que não precisa.
+   *
+   * `getCachedUser` já é preguiçoso e memorizado: os blocos abaixo que precisam de saber quem é
+   * chamam-no, e continua a haver no máximo UMA chamada de rede por pedido. O que muda é que quem
+   * não precisa deixa de pagar — e deixa de cair quando o auth cai.
+   *
+   * O que se perde: o refrescamento do cookie em páginas sem guardas. É aceitável — o cliente
+   * Supabase no browser refresca a sessão sozinho, e as páginas com guardas continuam a refrescá-la
+   * como sempre.
+   */
 
   /**
    * ── BACKOFFICE (backoffice.morethanmoney.pt) ────────────────────────────────
@@ -241,14 +268,29 @@ export async function middleware(request: NextRequest) {
        * é fechar a porta, nunca abri-la.
        */
       const supabaseBo = getSupabase()
-      const [atribuicoes, perfilBoRes] = await Promise.all([
-        papeisActivosDe(supabaseBo as never, boUser.id),
-        supabaseBo.from("profiles").select("user_type, is_active").eq("id", boUser.id).maybeSingle(),
+      // Tecto: sem resposta, entra-se sem papéis nenhuns — e `bo.entrar` fecha a porta logo abaixo.
+      // Fechar por lentidão é chato; deixar o pedido pendurado até ao 504 da Vercel é pior, e era o
+      // que fazia a raiz de backoffice.morethanmoney.pt cair (registos da Vercel, 25/09).
+      const [atribuicoes, perfilBo] = await Promise.all([
+        comTecto<Array<{ papel: unknown }>>(
+          papeisActivosDe(supabaseBo as never, boUser.id).catch(() => []),
+          [],
+        ),
+        comTecto<{ user_type?: string; is_active?: boolean } | null>(
+          (supabaseBo
+            .from("profiles")
+            .select("user_type, is_active")
+            .eq("id", boUser.id)
+            .maybeSingle() as unknown as Promise<{
+            data: { user_type?: string; is_active?: boolean } | null
+          }>)
+            .then((r) => r.data)
+            .catch(() => null),
+          null,
+        ),
       ])
-
-      const perfilBo = perfilBoRes.data as { user_type?: string; is_active?: boolean } | null
       const capacidades = capacidadesDe(
-        atribuicoes.map((a) => a.papel),
+        atribuicoes.map((a) => a.papel as never),
         { admin: perfilBo?.user_type === "admin" && perfilBo?.is_active === true },
       )
 
@@ -375,34 +417,56 @@ export async function middleware(request: NextRequest) {
   // ── /mtmcopy: descontinuado (fase 1). As páginas reencaminham para /mtmauto no next.config.mjs
   // (308), antes de chegarem aqui; as rotas /api/mtmcopy/* continuam vivas para as apps instaladas.
 
-  /**
-   * O AUTH NÃO RESPONDEU, MAS A PESSOA TRAZ SESSÃO.
-   *
-   * Aqui já passaram as páginas públicas e o backoffice. O que vem a seguir são as guardas de
-   * membro, e todas elas perguntam «quem é?». Sem resposta do auth há três saídas possíveis: cair
-   * em 504 (era o que acontecia), atirar para o /login quem estava validamente ligado, ou servir a
-   * página. Serve-se a página: os dados dela vêm de rotas de `/api/*` que se autenticam sozinhas,
-   * por isso quem não tiver direito continua a não ver nada — o que se evita é castigar a pessoa
-   * por uma lentidão que não é dela. Quem NÃO traz cookie não entra por aqui e segue as guardas
-   * normais como visitante.
-   */
-  if (autenticacaoIndecisa && trazCookieDeSessao(request)) {
-    response.headers.set("X-MTM-Auth", "sem-resposta")
-    return response
-  }
-
   // ── Membros sem perfil (OAuth backdoor) → /register ───────────────────────
   if (isMemberProtectedPath(pathname) && hasSupabaseEnv) {
     const memberUser = await getCachedUser()
 
+    /**
+     * O AUTH NÃO RESPONDEU, MAS A PESSOA TRAZ SESSÃO.
+     *
+     * Sem resposta do auth há três saídas: cair em 504 (era o que acontecia), atirar para o /login
+     * quem estava validamente ligado, ou servir a página. Serve-se a página — os dados dela vêm de
+     * rotas `/api/*` que se autenticam sozinhas, por isso quem não tem direito continua a não ver
+     * nada. O que se evita é castigar a pessoa por uma lentidão que não é dela. Quem NÃO traz
+     * cookie não entra por aqui e segue as guardas normais, como visitante.
+     */
+    if (autenticacaoIndecisa && trazCookieDeSessao(request)) {
+      response.headers.set("X-MTM-Auth", "sem-resposta")
+      return response
+    }
+
     if (memberUser) {
-      const { data: memberProfile } = await getSupabase()
+      /**
+       * A LEITURA DO PERFIL TAMBÉM TEM TECTO — e falhar não pode custar o acesso.
+       *
+       * `maybeSingle()` devolve `data: null` tanto para «não existe perfil» como para uma leitura
+       * que correu mal. As duas coisas caíam no mesmo sítio, e mais abaixo `isRegisteredMember`
+       * trata `null` como «não é membro»: bastava o PostgREST engasgar-se para um membro pago ser
+       * atirado para o /register. Por isso a falha distingue-se do vazio, e quando a base não
+       * responde serve-se a página em vez de decidir com informação que não temos.
+       */
+      const pedidoPerfil = getSupabase()
         .from("profiles")
         .select(
           "id, email, user_type, member_category, is_active, subscription_plan, subscription_platform, subscription_status, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired, profile_data"
         )
         .eq("id", memberUser.id)
-        .maybeSingle()
+        .maybeSingle() as unknown as Promise<{ data: unknown; error: unknown }>
+
+      const LEITURA_FALHOU = Symbol("leitura-falhou")
+      const lido = await comTecto<unknown>(
+        pedidoPerfil
+          .then((r) => (r.error ? LEITURA_FALHOU : r.data))
+          .catch(() => LEITURA_FALHOU),
+        LEITURA_FALHOU,
+      )
+
+      if (lido === LEITURA_FALHOU) {
+        response.headers.set("X-MTM-Perfil", "sem-resposta")
+        return response
+      }
+
+      const memberProfile = lido as Parameters<typeof isRegisteredMember>[0]
 
       if (memberProfile && needsAccessRevalidation(memberProfile)) {
         return NextResponse.redirect(new URL("/access-migration", request.url))
@@ -496,11 +560,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?redirect=/aios', request.url))
     }
 
-    const { data: aiosProfile } = await getSupabase()
-      .from('profiles')
-      .select('user_type')
-      .eq('id', aiosUser.id)
-      .single()
+    // Tecto: sem resposta não é admin, e /aios fecha. É a decisão certa para uma porta de admin —
+    // e devolve-a num instante, em vez de deixar o pedido a contar até ao 504.
+    const aiosProfile = await comTecto<{ user_type?: string } | null>(
+      (getSupabase()
+        .from('profiles')
+        .select('user_type')
+        .eq('id', aiosUser.id)
+        .single() as unknown as Promise<{ data: { user_type?: string } | null }>)
+        .then((r) => r.data)
+        .catch(() => null),
+      null,
+    )
 
     if (aiosProfile?.user_type !== 'admin') {
       return NextResponse.redirect(new URL('/', request.url))
