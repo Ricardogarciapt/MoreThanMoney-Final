@@ -3,7 +3,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export function isPremiumStripePlan(planId?: string | null): boolean {
   if (!planId) return false
   const p = planId.toLowerCase()
-  return p === 'premium' || p.startsWith('premium_')
+  // Os packs de fundador (Premium a preço de fundação) são Premium para todos os efeitos: quem os
+  // deixasse de fora ficava sem o acesso que lhe foi vendido, e sem ninguém dar por isso.
+  return p === 'premium' || p.startsWith('premium_') || p.startsWith('founder')
 }
 
 /** Marca perfil como pendente de acesso manual no Skool. Devolve true se era novo. */

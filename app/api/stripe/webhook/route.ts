@@ -43,6 +43,7 @@ import {
   fimDoPeriodo,
   subscricaoEhAddon,
 } from '@/lib/mtmcopy/addon-stripe'
+import { planoIncluiScanners, scannerDoPackFundador } from '@/lib/packs-fundador'
 
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
 const SCANNER_PLAN_NAMES: Record<string, string> = {
@@ -565,6 +566,17 @@ async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
     payment_failed_count: 0,
   }).eq('id', profile.id)
 
+  // Packs de fundador prometem Premium E o pack de scanners. O Premium ficou na escrita acima; o
+  // scanner vive noutro sítio (`profile_data.addons.scanner`) porque se compra e cancela sozinho,
+  // e sem esta parte a pessoa pagava e recebia só metade, sem ninguém dar por isso.
+  if (planoIncluiScanners(planId) && (sub.status === 'active' || sub.status === 'trialing')) {
+    try {
+      await concederScannerDoPack(supabase, profile.id, periodEnd)
+    } catch (err) {
+      console.error('[pack-fundador] falhou conceder o scanner:', err)
+    }
+  }
+
   if (
     isPremiumStripePlan(planId) &&
     (sub.status === 'active' || sub.status === 'trialing')
@@ -575,6 +587,34 @@ async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
       console.error('[SKOOL-ADMIN] Erro no alerta subscription.updated:', err)
     }
   }
+}
+
+/**
+ * Concede o pack de scanners a quem comprou um pack de fundador. Segue a validade da SUBSCRIÇÃO:
+ * quando ela acaba, o scanner acaba com ela — dar validade maior era oferecer o que não foi vendido.
+ */
+async function concederScannerDoPack(
+  db: typeof supabase,
+  userId: string,
+  validoAte: string,
+): Promise<void> {
+  const { data } = await db.from('profiles').select('profile_data').eq('id', userId).maybeSingle()
+  const dados = (data?.profile_data ?? {}) as Record<string, unknown>
+  const addons = (dados.addons ?? {}) as Record<string, unknown>
+  await db.from('profiles').update({
+    profile_data: {
+      ...dados,
+      addons: {
+        ...addons,
+        scanner: {
+          plan_id: scannerDoPackFundador(),
+          active: true,
+          expires_at: validoAte,
+          granted_by: 'stripe',
+        },
+      },
+    },
+  }).eq('id', userId)
 }
 
 async function handleSubscriptionCanceled(sub: Stripe.Subscription) {
