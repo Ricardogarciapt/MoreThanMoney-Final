@@ -11,6 +11,7 @@
  *                   ONDE a conta vive (casa ou equipa — contas-auto-regras.chaveMetaApiDaConta).
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { ligarCofreTradeLocker, semearDoCofre } from '@/lib/tradelocker/cofre-tokens'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { autorizarConta, ErroOrdem } from '@/lib/mtmfunded/simulado/execucao'
 import { sessaoDaLigacao } from '@/lib/tradelocker/ligacao'
@@ -238,7 +239,11 @@ async function sessaoTradeLockerAuto(userId: string, contaId: string): Promise<T
   const password = cred ? decifrar(String(cred.tl_password_cifrada)) : null
   const env = envValido(cred?.tl_env)
   if (!cred || !password || !env) throw new ErroCorretora(409, 'Conta TradeLocker sem credenciais — volta a ligá-la na app MTM Auto.')
-  const s = new TradeLockerSessao({ email: String(cred.tl_email), password, server: String(cred.tl_server), env }, String(conta.tl_account_id), String(conta.tl_acc_num))
+  // Mesmo cofre das contas ligadas no site: um login, depois só renovações (ver cofre-tokens.ts).
+  const credTL = { email: String(cred.tl_email), password, server: String(cred.tl_server), env }
+  ligarCofreTradeLocker()
+  await semearDoCofre(credTL)
+  const s = new TradeLockerSessao(credTL, String(conta.tl_account_id), String(conta.tl_acc_num))
   if (sessoesTLAuto.size > 500) sessoesTLAuto.clear()
   sessoesTLAuto.set(k, { s, em: Date.now() })
   return s

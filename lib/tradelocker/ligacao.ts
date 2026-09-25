@@ -9,6 +9,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { cifrar, decifrar } from '@/lib/mtmfunded/credenciais'
 import { TradeLockerSessao, type TLCredenciais, type TLEnv } from './client'
+import { ligarCofreTradeLocker, semearDoCofre } from './cofre-tokens'
 
 export const PLATAFORMA_TRADELOCKER = 'tradelocker'
 
@@ -89,12 +90,13 @@ export async function sessaoDaLigacao(
   if (!password || !env) {
     return { sessao: null, erro: 'Não foi possível ler as credenciais TradeLocker — volta a ligar a conta.' }
   }
+  // Cofre das fichas: sem isto cada instância nova da Vercel fazia um LOGIN COMPLETO, e a
+  // TradeLocker (uma sessão por utilizador) expulsava o dono da sessão dele. Ver cofre-tokens.ts.
+  const cred = { email: data.tl_email as string, password, server: data.tl_server as string, env }
+  ligarCofreTradeLocker()
+  await semearDoCofre(cred)
   return {
-    sessao: new TradeLockerSessao(
-      { email: data.tl_email as string, password, server: data.tl_server as string, env },
-      String(conn.tl_account_id),
-      String(conn.tl_acc_num),
-    ),
+    sessao: new TradeLockerSessao(cred, String(conn.tl_account_id), String(conn.tl_acc_num)),
   }
 }
 

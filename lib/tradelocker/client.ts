@@ -503,6 +503,23 @@ export function semearTokensTradeLocker(c: Pick<TLCredenciais, 'email' | 'server
   if (!tokensEmCache.has(chave)) tokensEmCache.set(chave, { tokens, em: Date.now() })
 }
 
+/**
+ * O COFRE — onde a ficha de sessão sobrevive ao fim do processo.
+ *
+ * 25/09: o Ricardo foi expulso da TradeLocker dele. A causa: a cache acima vive na MEMÓRIA, e na
+ * Vercel cada execução pode cair numa instância nova — o cron da gestão automática fazia, de minuto
+ * a minuto, um LOGIN COMPLETO com as credenciais do dono. A TradeLocker, com uma sessão por
+ * utilizador, deitava abaixo a sessão que ele tinha aberta.
+ *
+ * Com um cofre, o login completo passa a ser raro: carrega-se a ficha guardada, e quando ela
+ * caduca usa-se o `refreshToken` (que já era o caminho preferido do `obterToken`) em vez de voltar
+ * a autenticar. Quem guarda é o servidor — este ficheiro não sabe de bases de dados nem de cifras,
+ * só avisa que há ficha nova.
+ */
+type AoGuardarTokens = (c: Pick<TLCredenciais, 'email' | 'server' | 'env'>, t: TLTokens) => void
+let cofre: AoGuardarTokens | null = null
+export function definirCofreTradeLocker(fn: AoGuardarTokens | null): void { cofre = fn }
+
 /** Tokens actuais em cache (para renovar a sessão do WebTrader do lado do cliente). */
 export function tokensTradeLockerEmCache(c: Pick<TLCredenciais, 'email' | 'server' | 'env'>): TLTokens | null {
   return tokensEmCache.get(`${c.env}|${c.server.toLowerCase()}|${c.email.toLowerCase()}`)?.tokens ?? null
@@ -549,6 +566,10 @@ export class TradeLockerSessao {
         const novo = await refrescar(this.cred.env, atual.tokens.refreshToken, this.fetchImpl)
         if (novo?.accessToken) {
           tokensEmCache.set(this.chave, { tokens: novo, em: Date.now() })
+          // A TradeLocker pode devolver um refreshToken novo e queimar o anterior: guardar SEMPRE
+          // depois de renovar, senão a próxima instância pegava num refresh já gasto e caía no
+          // login completo — que é exactamente o que se está a evitar.
+          try { cofre?.(this.cred, novo) } catch { /* o cofre nunca trava a sessão */ }
           return novo.accessToken
         }
       } catch {
@@ -557,6 +578,7 @@ export class TradeLockerSessao {
     }
     const tokens = await autenticar(this.cred, this.fetchImpl)
     tokensEmCache.set(this.chave, { tokens, em: Date.now() })
+    try { cofre?.(this.cred, tokens) } catch { /* o cofre nunca trava a sessão */ }
     return tokens.accessToken
   }
 
