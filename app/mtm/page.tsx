@@ -728,8 +728,25 @@ export default function MTMLandingPage() {
               <p className="text-xl text-gray-300 mb-4 text-center">
                 Na <span className="text-[#D2A63C] font-bold">MoreThanMoney</span>, acreditamos na <span className="text-purple-400 font-bold">elevação</span>. Além de investidor, podes tornar-te um embaixador do ecossistema.
               </p>
+              {/* Dizia «constrói uma fonte de rendimento residual ajudando outros a atingirem a
+                  liberdade financeira». Uma frase assim promete duas coisas que não podemos
+                  prometer: que há rendimento, e que a outra pessoa chega à liberdade financeira.
+                  O que a substitui é o mecanismo real — comissão por venda feita, residual
+                  enquanto o cliente ficar — que é mais concreto e argumenta melhor. As
+                  percentagens ficam de fora de propósito: vivem em `vendas_regras_comissao` e
+                  mudam, e esta página não é o sítio onde se lê o número em vigor. */}
               <p className="text-xl text-gray-300 mb-4 text-center">
-                A Jornada: Começa como um aluno, torna-te um <span className="text-cyan-400 font-bold">Rising Star</span> e constrói uma fonte de rendimento residual ajudando outros a atingirem a liberdade financeira.
+                A Jornada: começas como aluno e, se quiseres, passas a{" "}
+                <span className="text-cyan-400 font-bold">Rising Star</span> — recebes uma comissão por
+                cada subscrição que vendas, e uma parte das renovações enquanto essa pessoa se
+                mantiver. Não é salário nem rendimento garantido: sem vendas, não há comissão.
+              </p>
+              <p className="text-base text-gray-400 mb-4 text-center">
+                As percentagens em vigor, os papéis da equipa e o que se paga em cada um estão nas{" "}
+                <Link href="/faq" className="text-[#D2A63C] hover:underline">
+                  perguntas frequentes
+                </Link>
+                .
               </p>
               <p className="text-2xl font-semibold text-white text-center">
                 "O dinheiro é uma ferramenta; o verdadeiro ativo é quem te tornas no processo."
