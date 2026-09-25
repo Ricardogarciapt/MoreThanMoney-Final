@@ -86,6 +86,10 @@ export async function GET(request: NextRequest) {
       rank_color: rank?.color ?? null,
       rank_icon: rank?.icon ?? null,
       rank_id: node.rank_id ?? 0,
+      // Por que ESCADA esta pessoa é paga (migração 130). Vai para o painel porque, ao olhar para a
+      // rede, o dono tem de conseguir ver quem ficou com os valores fixos «da casa» — sem isto, duas
+      // pessoas com o mesmo rank parecem receber o mesmo e não recebem.
+      plano_rank: (node.plano_rank as string) ?? 'escada_pct_2026_09',
       left_count: node.left_count ?? 0,
       right_count: node.right_count ?? 0,
       total_earned: node.total_earned ?? 0,

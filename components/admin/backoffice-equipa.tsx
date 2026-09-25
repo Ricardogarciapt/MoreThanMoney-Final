@@ -1,22 +1,38 @@
 'use client'
 
 /**
- * EQUIPA & ACESSOS — o painel onde o Ricardo dá papéis, cria afiliados e escolhe o que cada pessoa
- * vê no site.
+ * EQUIPA & ACESSOS — o painel onde o Ricardo dá papéis, monta as equipas, escolhe o plano de
+ * comissão de cada pessoa, mexe nas percentagens e decide o que cada um vê no site.
  *
  * Componente novo em vez de mais um separador dentro do `mlm-manager.tsx` (1259 linhas): o MLM
  * binário que já PAGA hoje não se toca. O que se acrescenta fica ao lado, e uma avaria aqui não põe
  * em causa a árvore nem as comissões que já correm.
  *
+ * TUDO O QUE É «quem é da equipa e quanto recebe» VIVE AQUI, em separadores deste mesmo painel — e
+ * não em ecrãs novos espalhados pelo admin. Dois sítios para a mesma definição é como se perde uma
+ * definição: muda-se num, lê-se do outro, e ninguém percebe porque é que não fez efeito.
+ *
  * Nada aqui é uma fechadura. Todas as operações passam por `/api/admin/backoffice/*`, que exigem
  * admin do lado do servidor — esconder um botão nunca protegeu nada.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { adminApiCall } from '@/lib/admin-helpers'
 import { PAPEIS, PAPEL_NOME, type Papel } from '@/lib/backoffice-papeis'
 import { AREAS_SITE, AREA_NOME, type AreaSite } from '@/lib/backoffice-acessos-site'
-import { Loader2, ShieldCheck, UserPlus, X } from 'lucide-react'
+import BackofficeEquipasMontar, { type CandidatoLider } from '@/components/admin/backoffice-equipas-montar'
+import BackofficePlanosComissao from '@/components/admin/backoffice-planos-comissao'
+import BackofficeRegrasComissao from '@/components/admin/backoffice-regras-comissao'
+import { Loader2, Percent, ShieldCheck, UserPlus, Users, UserCog, Wallet, X } from 'lucide-react'
+
+/** Os separadores do painel. O primeiro é o de sempre, para quem já conhece o ecrã não se perder. */
+const ABAS = [
+  { id: 'papeis', label: 'Papéis & Acessos', icon: UserCog },
+  { id: 'equipas', label: 'Equipas', icon: Users },
+  { id: 'planos', label: 'Planos por pessoa', icon: Wallet },
+  { id: 'percentagens', label: 'Percentagens', icon: Percent },
+] as const
+type Aba = (typeof ABAS)[number]['id']
 
 interface PapelLinha {
   id: string
@@ -39,6 +55,7 @@ interface Pessoa {
 }
 
 export default function BackofficeEquipa() {
+  const [aba, setAba] = useState<Aba>('papeis')
   const [pessoas, setPessoas] = useState<Pessoa[]>([])
   const [aCarregar, setACarregar] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
@@ -171,6 +188,23 @@ export default function BackofficeEquipa() {
     return [p.email, p.username, p.full_name].some((v) => v?.toLowerCase().includes(q))
   })
 
+  /**
+   * Quem pode ser líder de equipa, e quem pode receber um plano de comissão: a mesma lista de
+   * pessoas COM PAPÉIS que este painel já carregou. Reaproveitá-la em vez de cada separador ir
+   * buscar a sua garante que o Ricardo vê os mesmos nomes em todos — e evita a pergunta «porque é
+   * que ela aparece num sítio e não no outro».
+   */
+  const candidatos = useMemo<CandidatoLider[]>(
+    () =>
+      pessoas.map((p) => ({
+        user_id: p.user_id,
+        nome: p.full_name || p.username || p.email || p.user_id.slice(0, 8),
+        email: p.email,
+        tem_papel_lider: p.papeis.some((l) => l.papel === 'team_leader' && !l.retirado_at),
+      })),
+    [pessoas],
+  )
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -178,20 +212,28 @@ export default function BackofficeEquipa() {
         <span className="rounded-full border border-[#D2A63C]/30 px-2 py-0.5 text-xs text-[#D2A63C]">
           {pessoas.length} pessoa(s) com papéis
         </span>
-        <input
-          value={pesquisa}
-          onChange={(e) => setPesquisa(e.target.value)}
-          placeholder="Procurar por nome ou email"
-          className="ml-auto w-64 rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm text-white placeholder:text-gray-600"
-        />
-        <button
-          type="button"
-          onClick={() => setNovoAberto((v) => !v)}
-          className="flex items-center gap-2 rounded-lg bg-[#D2A63C]/15 px-3 py-1.5 text-sm text-[#D2A63C] ring-1 ring-[#D2A63C]/30"
-        >
-          <UserPlus className="h-4 w-4" />
-          Criar afiliado de raiz
-        </button>
+      </div>
+
+      {/* Os separadores. Tudo o que é «quem é da equipa e quanto recebe» está aqui dentro. */}
+      <div className="flex flex-wrap gap-1 border-b border-gray-800">
+        {ABAS.map((a) => {
+          const Icon = a.icon
+          return (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => setAba(a.id)}
+              className={
+                aba === a.id
+                  ? 'flex items-center gap-2 border-b-2 border-[#D2A63C] px-3 py-2 text-sm font-medium text-[#D2A63C]'
+                  : 'flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm text-gray-400 hover:text-white'
+              }
+            >
+              <Icon className="h-4 w-4" />
+              {a.label}
+            </button>
+          )
+        })}
       </div>
 
       {erro && (
@@ -205,6 +247,29 @@ export default function BackofficeEquipa() {
       {aviso && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">{aviso}</div>
       )}
+
+      {aba === 'equipas' && <BackofficeEquipasMontar candidatos={candidatos} />}
+      {aba === 'planos' && <BackofficePlanosComissao candidatos={candidatos} />}
+      {aba === 'percentagens' && <BackofficeRegrasComissao />}
+
+      {aba === 'papeis' && (
+        <>
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          value={pesquisa}
+          onChange={(e) => setPesquisa(e.target.value)}
+          placeholder="Procurar por nome ou email"
+          className="w-64 rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm text-white placeholder:text-gray-600"
+        />
+        <button
+          type="button"
+          onClick={() => setNovoAberto((v) => !v)}
+          className="ml-auto flex items-center gap-2 rounded-lg bg-[#D2A63C]/15 px-3 py-1.5 text-sm text-[#D2A63C] ring-1 ring-[#D2A63C]/30"
+        >
+          <UserPlus className="h-4 w-4" />
+          Criar afiliado de raiz
+        </button>
+      </div>
 
       {novoAberto && (
         <div className="space-y-3 rounded-xl border border-gray-800 bg-gray-900/40 p-4">
@@ -399,6 +464,8 @@ export default function BackofficeEquipa() {
             </div>
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   )
