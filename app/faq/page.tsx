@@ -310,6 +310,119 @@ export default function FAQPage() {
               </Accordion>
             </section>
 
+            {/* Afiliados e equipa de vendas. Esta secção passou a existir porque o plano de
+                compensação mudou (Setembro de 2026) e não havia nenhuma página pública a
+                explicá-lo — quem perguntava recebia a resposta por mensagem, e cada resposta
+                era um número ligeiramente diferente. Os números aqui têm de bater com as regras
+                gravadas em `vendas_regras_comissao` e com a escada de `lib/vendas/escada-ranks.ts`;
+                se mudarem lá, mudam aqui. A SALVAGUARDA é mencionada em todas as respostas onde há
+                um número novo: quem entrou com o plano antigo mantém-no, e omitir isso faz parecer
+                que se cortou rendimento a quem já cá estava. */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
+                Afiliados e Equipa de Vendas
+              </h2>
+              <Accordion type="single" collapsible className="space-y-3">
+                <AccordionItem value="afil-1" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Quanto recebo por cada pessoa que trago?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    <p className="mb-3">
+                      Recebes <strong className="text-[#D2A63C]">30% da primeira mensalidade</strong> e{" "}
+                      <strong className="text-[#D2A63C]">10% de cada renovação</strong>, enquanto a pessoa se
+                      mantiver subscritora. O residual conta a partir do segundo pagamento.
+                    </p>
+                    <p>
+                      <strong className="text-white">Se já eras afiliado antes desta alteração, mantém-se o teu
+                      plano:</strong> continuas com os 50% recorrentes com que entraste. A condição está gravada
+                      na tua conta, não numa data no código — ninguém te muda a percentagem por mudarmos a
+                      tabela geral.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="afil-2" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Que papéis existem na equipa de vendas, e quanto paga cada um?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    <p className="mb-3">
+                      Uma venda pode passar por várias mãos, e cada mão tem a sua parte:
+                    </p>
+                    <ul className="space-y-2 mb-3">
+                      <li><strong className="text-white">Prospector — 5%.</strong> Gera a oportunidade.</li>
+                      <li><strong className="text-white">Setter — 10%.</strong> Fala com o interessado e marca a call.</li>
+                      <li>
+                        <strong className="text-white">Closer — 20% a 30%.</strong> Fecha a venda. A percentagem
+                        sobe com o volume do mês. Tem ainda 5% residual nas renovações dos clientes que fechou.
+                      </li>
+                      <li><strong className="text-white">Team leader — 5% residual</strong> sobre a equipa que acompanha.</li>
+                    </ul>
+                    <p className="mb-3">
+                      Numa venda única, o total pago a toda a cadeia não passa de{" "}
+                      <strong className="text-white">40%</strong>. No MTM Funded o tecto é mais baixo —{" "}
+                      <strong className="text-white">15%</strong> — porque o produto suporta capital e risco
+                      próprios.
+                    </p>
+                    <p>
+                      Uma pessoa pode ter mais do que um papel na mesma venda, e nesse caso recebe por cada um.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="afil-3" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Como funciona a escada de ranks?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    <p className="mb-3">
+                      O residual de rank é uma <strong className="text-white">percentagem do volume mensal da tua
+                      perna menor</strong>, e sobe a cada degrau: 6%, 9%, 12%, 15% e 18%. Ao alcançar cada rank
+                      pela primeira vez há um bónus único de 100€, 250€, 750€, 2.000€ e 5.000€.
+                    </p>
+                    <p className="mb-3">
+                      A escada funciona por <strong className="text-white">diferencial</strong>: cada pessoa recebe
+                      a sua percentagem menos a maior já paga abaixo dela na mesma perna. É isso que garante que o
+                      plano fecha — o total pago sobre um dado volume nunca passa dos 18%.
+                    </p>
+                    <p>
+                      <strong className="text-white">Quem já estava na escada antiga continua lá:</strong> os
+                      Distribuidores activos mantêm o valor fixo mensal com que entraram. Só quem entra de novo
+                      entra na escada em percentagem.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="afil-4" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Onde vejo o que tenho a receber?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    No backoffice, em{" "}
+                    <a href="https://backoffice.morethanmoney.pt" className="text-[#D2A63C] hover:underline">
+                      backoffice.morethanmoney.pt
+                    </a>
+                    . Entras com o mesmo login do site e vês o teu percurso, as tuas vendas e o teu extracto — o
+                    teu, e só o teu. O acesso depende dos papéis que tens atribuídos; se a tua conta não tiver
+                    nenhum, a página diz-te isso e com quem falar.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="afil-5" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Ser afiliado ou entrar na equipa de vendas dá-me rendimento garantido?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Não. As percentagens acima são o que se paga <em>por venda feita</em> — se não houver vendas,
+                    não há comissão. Não há salário fixo, não há mínimo garantido e não prometemos nenhum valor
+                    por mês. Quanto recebes depende inteiramente de quantas pessoas trouxeres e de quantas se
+                    mantiverem.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </section>
+
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
                 Suporte
