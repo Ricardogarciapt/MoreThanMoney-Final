@@ -211,6 +211,10 @@
     {
       "path": "/api/cron/prospecao-radar",
       "schedule": "15 6 * * *"
+    },
+    {
+      "path": "/api/cron/activacao-vigia",
+      "schedule": "0 9 * * *"
     }
   ]
 }

@@ -25,12 +25,24 @@ export interface ActivationState {
   /** Membro que nunca pagou → tratado como nova inscrição (escolhe pack de raiz). */
   newMember: boolean
   campaign: string | null
+  /**
+   * Quando é que esta pessoa foi AVISADA de que ficou bloqueada. `null` = nunca.
+   *
+   * 25/09: fomos ver quem estava bloqueado e encontrámos 48 pessoas, todas desde 19/08 — e ZERO
+   * com registo de aviso. Dessas, 17 não tinham recebido comunicação nenhuma, nem de bloqueio nem
+   * de fim de subscrição. Só 5 voltaram a tentar entrar em 30 dias; as outras 43 desapareceram sem
+   * saber porquê, e nós não tínhamos como saber que não lhes tínhamos dito.
+   *
+   * Bloquear é uma decisão legítima. Bloquear em silêncio não é, e era indistinguível de um bug.
+   * Por isso o aviso passa a deixar rasto — e a falta dele é detectável (ver `avisoEmFalta`).
+   */
+  notifiedAt: string | null
 }
 
 export function readActivation(profile: { profile_data?: unknown } | null | undefined): ActivationState {
   const a = readProfileData(profile).activation
   if (!a || typeof a !== 'object') {
-    return { required: false, since: null, decision: null, newMember: false, campaign: null }
+    return { required: false, since: null, decision: null, newMember: false, campaign: null, notifiedAt: null }
   }
   const o = a as Record<string, unknown>
   const d = o.decision
@@ -40,7 +52,36 @@ export function readActivation(profile: { profile_data?: unknown } | null | unde
     decision: d === 'pay' || d === 'free' || d === 'partner' || d === 'off' ? d : null,
     newMember: o.new_member === true,
     campaign: typeof o.campaign === 'string' ? o.campaign : null,
+    notifiedAt: typeof o.notified_at === 'string' ? o.notified_at : null,
   }
+}
+
+/**
+ * Esta pessoa está bloqueada há quanto tempo SEM ter sido avisada?
+ *
+ * Devolve as horas, ou `null` se não está bloqueada ou já foi avisada. É isto que permite a um
+ * vigia gritar em vez de deixar alguém de fora em silêncio — que foi o que aconteceu a 43 pessoas
+ * entre agosto e setembro de 2026.
+ */
+export function avisoEmFalta(
+  profile: { profile_data?: unknown } | null | undefined,
+  agora = Date.now(),
+): number | null {
+  const a = readActivation(profile)
+  if (!a.required || a.notifiedAt) return null
+  const desde = a.since ? Date.parse(a.since) : NaN
+  if (!Number.isFinite(desde)) return 0 // bloqueado sem sequer saber desde quando: é o pior caso
+  return Math.max(0, Math.round((agora - desde) / 3_600_000))
+}
+
+/** Marca que o aviso saiu. Chamar SEMPRE a seguir a enviar, nunca antes. */
+export function activationNotifiedPatch(
+  profile: { profile_data?: unknown } | null | undefined,
+  quando = new Date().toISOString(),
+): Record<string, unknown> {
+  const dados = readProfileData(profile)
+  const a = (dados.activation && typeof dados.activation === 'object' ? dados.activation : {}) as Record<string, unknown>
+  return { ...dados, activation: { ...a, notified_at: quando } }
 }
 
 export function requiresActivation(profile: { profile_data?: unknown } | null | undefined): boolean {
@@ -60,6 +101,9 @@ export function activationPatch(
       decision: opts.decision,
       new_member: opts.newMember,
       campaign: opts.campaign,
+      // Explícito, e não ausente: «ainda não foi avisado» tem de ser um facto gravado, senão um
+      // campo em falta confunde-se com um registo antigo e ninguém sabe o que aconteceu.
+      notified_at: null,
     },
   }
 }
