@@ -11,7 +11,7 @@
  *
  *   npx tsx lib/vendas/extracto.check.ts
  */
-import { extractoDoAmbito, somarExtracto, type LinhaExtracto } from './extracto'
+import { LIMITE_EXTRACTO, extractoDoAmbito, somarExtracto, type LinhaExtracto } from './extracto'
 
 const falhas: string[] = []
 const teste = (nome: string, ok: boolean) => {
@@ -86,7 +86,7 @@ async function guardaDoAmbito() {
   // Um cliente de faz-de-conta que grava o que lhe pediram em vez de ir à base.
   const falso = () => {
     const q: Record<string, (...a: unknown[]) => unknown> = {}
-    for (const m of ['select', 'order', 'limit', 'in', 'gte', 'eq']) {
+    for (const m of ['select', 'order', 'limit', 'in', 'gte', 'lte', 'eq']) {
       q[m] = (...args: unknown[]) => {
         pedidos.push({ metodo: m, args })
         return q
@@ -113,6 +113,19 @@ async function guardaDoAmbito() {
   pedidos.length = 0
   const nada = await extractoDoAmbito(cliente, { ids: [], todos: false })
   teste('âmbito vazio não consulta a base', pedidos.length === 0 && nada.length === 0)
+
+  // ── O filtro por data. Sem ele, um extracto com anos de movimentos batia no tecto de linhas e
+  // os totais fechavam ao cêntimo sobre metade deles, sem ninguém saber.
+  pedidos.length = 0
+  await extractoDoAmbito(cliente, { ids: ['pessoa-a'], todos: false }, { desde: '2026-01-01T00:00:00.000Z', ate: '2026-09-25T23:59:59.999Z' })
+  teste('o «desde» filtra na base', pedidos.some((p) => p.metodo === 'gte' && p.args[0] === 'em'))
+  teste('o «até» filtra na base', pedidos.some((p) => p.metodo === 'lte' && p.args[0] === 'em'))
+  // ⭐ E o filtro por data não substitui o filtro de quem: uma data no endereço não pode abrir
+  // linhas de terceiros.
+  teste('⭐ filtrar por data não perde o filtro da pessoa', pedidos.some((p) => p.metodo === 'in' && p.args[0] === 'pessoa_id'))
+  // O tecto está exportado para a página o poder comparar e avisar. Um limite silencioso num
+  // extracto é a pior espécie de mentira.
+  teste('o tecto de linhas é público', LIMITE_EXTRACTO > 0 && pedidos.some((p) => p.metodo === 'limit' && p.args[0] === LIMITE_EXTRACTO))
 }
 
 // ── fronteiras ──

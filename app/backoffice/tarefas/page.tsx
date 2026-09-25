@@ -10,22 +10,48 @@
  * QUEM VÊ O QUÊ: o responsável da tarefa é um campo só, e o filtro é a lista de ids do âmbito. Uma
  * pessoa vê as suas; um responsável de equipa veria as dos liderados, quando esse modelo existir.
  *
- * A ÚNICA ESCRITA DO BACKOFFICE está aqui: marcar a própria tarefa como feita. Quem é o dono
- * verifica-se no servidor, na consulta (`.eq('responsavel_id', …)` com o id da sessão).
+ * AS ESCRITAS: criar, riscar, reabrir, cancelar e mudar o prazo. Quem é o dono verifica-se no
+ * servidor, na consulta, pela LISTA do âmbito (`.in('responsavel_id', ids)`) — nunca por um `if`
+ * depois de ler, e nunca por um `.eq(userId)`, que fechava o responsável fora da equipa dele.
+ *
+ * A LISTA É PAGINADA e filtrável pelo endereço. O `.limit(500)` que aqui estava mostrava 500
+ * tarefas com o mesmo aspecto de estar completo — a 501.ª desaparecia sem dar erro.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ambitoDeLeitura, pode } from '@/lib/backoffice-papeis'
 import { lideradosDe, AVISO_EQUIPA_POR_CONFIGURAR } from '@/lib/backoffice-equipa'
 import { tarefasDoAmbito, type TarefaLinha } from '@/lib/backoffice-negocios'
 import { PESO_PRAZO, SITUACAO_PRAZO_NOME, dataCurta, situacaoDoPrazo } from '@/lib/backoffice-vista'
+import { lerDoCatalogo, lerPagina } from '@/lib/backoffice-paginacao'
 import { abrirPagina, SemAcesso } from '../_partes/acesso'
 import { Aviso, Cabecalho, Etiqueta, Falhou, Vazio } from '../_partes/blocos'
+import { Campo, ESTILO_CAMPO, Filtros, Paginacao, type Params } from '../_partes/navegar'
 import { Marcar } from './marcar'
+import { TarefaNova } from './nova'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Tarefas · Backoffice MTM' }
 
-export default async function TarefasPage() {
+const BASE = '/backoffice/tarefas'
+
+/**
+ * As vistas da lista. «Canceladas» é uma vista à parte de propósito: uma lista de trabalho com
+ * histórico dentro deixa de se conseguir usar como lista de trabalho, mas o histórico não se apaga.
+ */
+const VISTAS = ['trabalho', 'canceladas', 'tudo'] as const
+const ESTADOS_DA_VISTA: Record<(typeof VISTAS)[number], readonly string[]> = {
+  trabalho: ['aberta', 'feita'],
+  canceladas: ['cancelada'],
+  tudo: ['aberta', 'feita', 'cancelada'],
+}
+const VISTA_NOME: Record<(typeof VISTAS)[number], string> = {
+  trabalho: 'Por fazer e feitas',
+  canceladas: 'Canceladas',
+  tudo: 'Tudo',
+}
+
+export default async function TarefasPage({ searchParams }: { searchParams: Promise<Params> }) {
+  const params = await searchParams
   const acesso = await abrirPagina('bo.tarefas_proprias')
   if (!acesso.ok) {
     return (
@@ -41,9 +67,15 @@ export default async function TarefasPage() {
   const ambito = ambitoDeLeitura(ctx.capacidades, ctx.userId, 'tarefas', liderados)
   const veEquipa = pode(ctx.capacidades, 'bo.tarefas_equipa')
 
+  const vista = lerDoCatalogo(params.vista, VISTAS) ?? 'trabalho'
+  const pagina = lerPagina(params)
+
   let tarefas: TarefaLinha[]
+  let haMais = false
   try {
-    tarefas = await tarefasDoAmbito(getSupabaseAdmin(), ambito)
+    const lista = await tarefasDoAmbito(getSupabaseAdmin(), ambito, { estados: ESTADOS_DA_VISTA[vista], pagina })
+    tarefas = lista.linhas
+    haMais = lista.haMais
   } catch (e) {
     return (
       <div className="space-y-6">
@@ -55,6 +87,7 @@ export default async function TarefasPage() {
 
   const abertas = tarefas.filter((t) => t.estado === 'aberta')
   const feitas = tarefas.filter((t) => t.estado === 'feita')
+  const canceladas = tarefas.filter((t) => t.estado === 'cancelada')
 
   // A ordem de leitura: o que já falhou primeiro, o que não tem prazo no fim. Ordenar por data
   // pura punha as sem-prazo num extremo arbitrário e o atraso perdia-se no meio.
@@ -77,6 +110,20 @@ export default async function TarefasPage() {
 
       {veEquipa && <Aviso>Tens o papel que dá acesso às tarefas da tua equipa. {AVISO_EQUIPA_POR_CONFIGURAR}</Aviso>}
 
+      <TarefaNova />
+
+      <Filtros base={BASE} activo={vista !== 'trabalho'}>
+        <Campo nome="A mostrar">
+          <select name="vista" defaultValue={vista} className={ESTILO_CAMPO}>
+            {VISTAS.map((v) => (
+              <option key={v} value={v}>
+                {VISTA_NOME[v]}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      </Filtros>
+
       {abertas.length > 0 && (
         <p className="text-sm text-gray-400">
           {abertas.length} por fazer
@@ -87,8 +134,8 @@ export default async function TarefasPage() {
 
       {abertas.length === 0 ? (
         <Vazio
-          titulo="Não tens nada por fazer."
-          seguinte="As tuas tarefas aparecem aqui quando alguém as criar — normalmente ligadas a um negócio que estás a trabalhar. Se combinaste fazer alguma coisa e ela não está aqui, não está no sistema."
+          titulo={vista === 'canceladas' ? 'Nenhuma tarefa cancelada nesta página.' : 'Não tens nada por fazer.'}
+          seguinte="Cria em cima o que combinaste fazer. Se ficou só na cabeça de alguém, não está no sistema — e o que não está no sistema não aparece a ninguém."
         />
       ) : (
         <ul className="space-y-2">
@@ -111,11 +158,31 @@ export default async function TarefasPage() {
                 {/* Só o próprio risca a sua tarefa. Quando um responsável estiver a ver as dos
                     liderados, o botão não aparece nas que não são dele — e o servidor recusa na
                     mesma, porque é lá que a regra vive. */}
-                {t.responsavel_id === ctx.userId && <Marcar id={t.id} feita={false} />}
+                {/* Riscar, cancelar ou mudar o prazo. O servidor recusa na mesma o que não for do
+                    âmbito desta pessoa — é lá que a regra vive. */}
+                <Marcar id={t.id} feita={false} estado={t.estado} prazo={t.prazo} />
               </li>
             )
           })}
         </ul>
+      )}
+
+      <Paginacao base={BASE} params={params} pagina={pagina} mostradas={tarefas.length} haMais={haMais} />
+
+      {canceladas.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Canceladas ({canceladas.length})</h2>
+          <ul className="space-y-1.5">
+            {canceladas.map((t) => (
+              <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-800/60 bg-gray-900/20 px-4 py-2.5">
+                <span className="text-sm text-gray-500">{t.titulo}</span>
+                {/* Uma cancelada não se reabre daqui: se voltou a ser precisa, cria-se outra, e
+                    assim fica rasto de que houve uma decisão. */}
+                <span className="text-xs text-gray-600">cancelada</span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {feitas.length > 0 && (
@@ -127,7 +194,7 @@ export default async function TarefasPage() {
                 <span className="text-sm text-gray-500 line-through">{t.titulo}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-600">{dataCurta(t.feita_em)}</span>
-                  {t.responsavel_id === ctx.userId && <Marcar id={t.id} feita={true} />}
+                  <Marcar id={t.id} feita={true} estado={t.estado} prazo={t.prazo} />
                 </div>
               </li>
             ))}

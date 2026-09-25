@@ -22,12 +22,20 @@
  * o valor a vermelho e a menos, e desconta no saldo. Um extracto que só soma acaba a mandar pagar
  * outra vez sobre dinheiro que voltou para trás.
  *
+ * O FILTRO POR DATA NÃO É CONFORTO. A leitura tem um tecto de linhas (`LIMITE_EXTRACTO`), e um
+ * tecto silencioso num extracto é a pior espécie de mentira: os totais fechavam ao cêntimo sobre
+ * metade dos movimentos e ninguém tinha como saber. Por isso a página compara o que recebeu com o
+ * tecto e, quando bate nele, DIZ que está a ver uma parte e manda apertar as datas.
+ *
+ * A tabela pagina-se em memória, e de propósito: os totais em cima têm de somar o PERÍODO todo e
+ * não a página. Uma paginação na base dava quatro números que mudavam ao virar a página.
+ *
  * SÓ LEITURA. Aprovar e pagar comissões é um acto do dono, e faz-se no admin.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ambitoDeLeitura, pode } from '@/lib/backoffice-papeis'
 import { lideradosDe, AVISO_EQUIPA_POR_CONFIGURAR } from '@/lib/backoffice-equipa'
-import { extractoDoAmbito, somarExtracto, type LinhaExtracto } from '@/lib/vendas/extracto'
+import { LIMITE_EXTRACTO, extractoDoAmbito, somarExtracto, type LinhaExtracto } from '@/lib/vendas/extracto'
 import { centimosEmEuros } from '@/lib/vendas/calculo'
 import {
   ESTADO_COMISSAO_NOME,
@@ -36,8 +44,10 @@ import {
   estadoComissao,
   valorComSinal,
 } from '@/lib/backoffice-vista'
+import { fatiar, fimDoDia, inicioDoDia, lerDia, lerPagina } from '@/lib/backoffice-paginacao'
 import { abrirPagina, SemAcesso } from '../_partes/acesso'
 import { Aviso, Cabecalho, Etiqueta, Falhou, Numero, Vazio } from '../_partes/blocos'
+import { Campo, ESTILO_CAMPO, Filtros, Paginacao, type Params } from '../_partes/navegar'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'O meu extracto · Backoffice MTM' }
@@ -51,7 +61,10 @@ const TOM_ESTADO: Record<string, 'neutro' | 'bom' | 'mau' | 'aviso'> = {
   outro: 'neutro',
 }
 
-export default async function ExtractoPage() {
+const BASE = '/backoffice/extracto'
+
+export default async function ExtractoPage({ searchParams }: { searchParams: Promise<Params> }) {
+  const params = await searchParams
   const acesso = await abrirPagina('bo.extracto_proprio')
   if (!acesso.ok) {
     return <SemAcesso motivo={acesso.motivo} oQue="O extracto é de quem recebe comissões: afiliados, setters, closers, prospectores e responsáveis de equipa." />
@@ -62,9 +75,18 @@ export default async function ExtractoPage() {
   const ambito = ambitoDeLeitura(ctx.capacidades, ctx.userId, 'extracto', liderados)
   const veEquipa = pode(ctx.capacidades, 'bo.extracto_equipa')
 
+  const desde = lerDia(params.desde)
+  const ate = lerDia(params.ate)
+  const pagina = lerPagina(params)
+
   let linhas: LinhaExtracto[]
   try {
-    linhas = await extractoDoAmbito(getSupabaseAdmin(), ambito)
+    linhas = await extractoDoAmbito(getSupabaseAdmin(), ambito, {
+      desde: inicioDoDia(desde),
+      // O «até» é o fim do dia: um `lte` sobre a meia-noite escondia o dia inteiro, e o filtro
+      // parecia estar a perder linhas por avaria.
+      ate: fimDoDia(ate),
+    })
   } catch (e) {
     return (
       <div className="space-y-6">
@@ -75,6 +97,10 @@ export default async function ExtractoPage() {
   }
 
   const { totais, porOrigem } = somarExtracto(linhas)
+  // Bateu no tecto? Então isto é uma PARTE do extracto, e os totais também. Dizê-lo é a diferença
+  // entre um número explicado e um número errado.
+  const noTecto = linhas.length >= LIMITE_EXTRACTO
+  const daPagina = fatiar(linhas, pagina)
 
   // Os nomes só se leem quando há mais do que uma pessoa na lista — e quando há, sem eles a tabela
   // seria uma coluna de uuids. Para uma pessoa só, o nome dela não acrescenta nada ao seu extracto.
@@ -119,6 +145,29 @@ export default async function ExtractoPage() {
         </Aviso>
       )}
 
+      <Filtros base={BASE} activo={!!desde || !!ate}>
+        <Campo nome="De">
+          <input name="desde" type="date" defaultValue={desde ?? ''} className={ESTILO_CAMPO} />
+        </Campo>
+        <Campo nome="Até">
+          <input name="ate" type="date" defaultValue={ate ?? ''} className={ESTILO_CAMPO} />
+        </Campo>
+      </Filtros>
+
+      {noTecto && (
+        <Falhou
+          oQue={`Estás a ver as ${LIMITE_EXTRACTO} linhas mais recentes — e os totais em cima são só destas.`}
+          detalhe="Aperta as datas para os números passarem a fechar sobre um período inteiro."
+        />
+      )}
+
+      {(desde || ate) && (
+        <p className="text-xs text-gray-500">
+          Os totais em cima contam só os movimentos deste período. Limpa o filtro para verem o
+          extracto inteiro.
+        </p>
+      )}
+
       {/* De onde vem o dinheiro. Duas origens que não se misturam: o trabalho na equipa e a rede.
           Somadas sem se distinguirem, a pessoa não saberia qual das duas vale a pena trabalhar. */}
       <section className="space-y-3">
@@ -151,10 +200,14 @@ export default async function ExtractoPage() {
           Movimentos {linhas.length > 0 && <span className="text-gray-600">({linhas.length})</span>}
         </h2>
 
-        {linhas.length === 0 ? (
+        {daPagina.linhas.length === 0 ? (
           <Vazio
-            titulo="Ainda não tens movimentos."
-            seguinte="As comissões aparecem aqui quando uma venda é confirmada — o pagamento tem de entrar primeiro. Se fechaste uma venda e ela não está aqui, diz ao Ricardo para a lançar no livro."
+            titulo={desde || ate ? 'Nenhum movimento neste período.' : 'Ainda não tens movimentos.'}
+            seguinte={
+              desde || ate
+                ? 'É o filtro de datas que está a fechar a lista, não o extracto que está vazio. Limpa-o para ver tudo.'
+                : 'As comissões aparecem aqui quando uma venda é confirmada — o pagamento tem de entrar primeiro. Se fechaste uma venda e ela não está aqui, diz ao Ricardo para a lançar no livro.'
+            }
           />
         ) : (
           <div className="overflow-x-auto rounded-lg border border-gray-800">
@@ -171,7 +224,7 @@ export default async function ExtractoPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800/70">
-                {linhas.map((l) => {
+                {daPagina.linhas.map((l) => {
                   const valor = valorComSinal(l)
                   const estado = estadoComissao(String(l.estado))
                   return (
@@ -200,6 +253,8 @@ export default async function ExtractoPage() {
             </table>
           </div>
         )}
+
+        <Paginacao base={BASE} params={params} pagina={pagina} mostradas={daPagina.linhas.length} haMais={daPagina.haMais} />
 
         {totais.cancelado_cents > 0 && (
           <p className="text-xs leading-relaxed text-gray-500">
