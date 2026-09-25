@@ -31,6 +31,9 @@ interface MlmRank {
   direct_requirement: number
   rank_bonus: number
   monthly_residual: number
+  /** A escada VIVA, em percentagem do volume da perna menor (migração 130). */
+  residual_pct?: number
+  bonus_unico?: number
   free_pack_months: number
   color: string
   icon: string
@@ -102,8 +105,10 @@ interface MlmCommission {
 
 const TYPE_LABELS: Record<string, string> = {
   direct_referral: 'Referência Direta',
-  rank_bonus: 'Bónus de Rank',
-  monthly_residual: 'Residual Mensal',
+  residual_pct: 'Residual (% da perna menor)',
+  bonus_unico: 'Bónus único (€)',
+  rank_bonus: 'Bónus antigo (€, só «casa»)',
+  monthly_residual: 'Residual antigo (€/mês, só «casa»)',
   rank_residual: 'Residual de Rank',
   free_pack: 'Pack Grátis',
 }
@@ -132,7 +137,7 @@ function RankModal({
 }) {
   const [form, setForm] = useState<Partial<MlmRank>>(rank ?? {
     name: '', slug: '', left_requirement: 0, right_requirement: 0,
-    direct_requirement: 0, rank_bonus: 0, monthly_residual: 0,
+    direct_requirement: 0, residual_pct: 0, bonus_unico: 0, rank_bonus: 0, monthly_residual: 0,
     free_pack_months: 0, color: '#D2A63C', icon: '⭐', sort_order: 0,
   })
   const [saving, setSaving] = useState(false)
@@ -197,6 +202,14 @@ function RankModal({
             </div>
             <div>
               <Label className="text-gray-300 text-xs">Bónus Rank (€)</Label>
+              <Input type="number" min="0" step="0.01" value={form.residual_pct ?? 0} onChange={handle('residual_pct')} className="bg-gray-800 border-gray-700 text-white text-sm" />
+            </div>
+            <div>
+              <Label className="text-gray-400 text-xs">{TYPE_LABELS.bonus_unico}</Label>
+              <Input type="number" min="0" step="0.01" value={form.bonus_unico ?? 0} onChange={handle('bonus_unico')} className="bg-gray-800 border-gray-700 text-white text-sm" />
+            </div>
+            <div>
+              <Label className="text-gray-400 text-xs">{TYPE_LABELS.rank_bonus}</Label>
               <Input type="number" min="0" step="0.01" value={form.rank_bonus ?? 0} onChange={handle('rank_bonus')} className="bg-gray-800 border-gray-700 text-white text-sm" />
             </div>
             <div>
@@ -694,10 +707,10 @@ export default function MlmManager({
                               : '—'}
                           </td>
                           <td className="px-4 py-3 text-[#D2A63C]">
-                            {rank.rank_bonus > 0 ? formatEur(rank.rank_bonus) : '—'}
+                            {(rank.residual_pct ?? 0) > 0 ? `${rank.residual_pct}%` : (rank.rank_bonus > 0 ? formatEur(rank.rank_bonus) : '—')}
                           </td>
                           <td className="px-4 py-3 text-green-400">
-                            {rank.monthly_residual > 0 ? formatEur(rank.monthly_residual) : '—'}
+                            {(rank.bonus_unico ?? 0) > 0 ? formatEur(rank.bonus_unico ?? 0) : (rank.monthly_residual > 0 ? formatEur(rank.monthly_residual) : '—')}
                           </td>
                           <td className="px-4 py-3 text-purple-400">
                             {rank.free_pack_months > 0 ? `${rank.free_pack_months} mês/meses` : '—'}

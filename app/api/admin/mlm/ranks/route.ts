@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const {
     name, slug, left_requirement, right_requirement, direct_requirement,
-    rank_bonus, monthly_residual, free_pack_months, color, icon, sort_order
+    rank_bonus, monthly_residual, residual_pct, bonus_unico, free_pack_months, color, icon, sort_order
   } = body
 
   if (!name || !slug) {
@@ -40,6 +40,10 @@ export async function POST(request: NextRequest) {
       left_requirement: left_requirement ?? 0,
       right_requirement: right_requirement ?? 0,
       direct_requirement: direct_requirement ?? 0,
+      // A escada VIVA é a de percentagem (migração 130). Os campos em euros ficam porque é por
+      // eles que os nós «da casa» continuam a ser pagos — ver mlm_nodes.plano_rank.
+      residual_pct: residual_pct ?? 0,
+      bonus_unico: bonus_unico ?? 0,
       rank_bonus: rank_bonus ?? 0,
       monthly_residual: monthly_residual ?? 0,
       free_pack_months: free_pack_months ?? 0,

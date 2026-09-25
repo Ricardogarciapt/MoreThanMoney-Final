@@ -18,6 +18,9 @@ interface MlmRank {
   direct_requirement: number
   rank_bonus: number
   monthly_residual: number
+  /** A escada VIVA, em percentagem do volume da perna menor (migração 130). */
+  residual_pct?: number
+  bonus_unico?: number
 }
 
 interface MlmNode {
@@ -175,6 +178,8 @@ const TYPE_LABELS: Record<string, string> = {
   direct_referral: 'Referência Direta',
   rank_bonus: 'Bónus Rank',
   monthly_residual: 'Residual Mensal',
+  residual_pct: 'Residual',
+  bonus_unico: 'Bónus único',
   rank_residual: 'Residual de Rank',
   free_pack: 'Pack Grátis',
 }
@@ -358,12 +363,23 @@ export default function MlmDashboardTab() {
                 {rank.name}
               </div>
             </div>
-            {rank.monthly_residual > 0 && (
+            {/*
+              A escada em percentagem manda (migração 130). O valor fixo em euros só se mostra a
+              quem ficou na escada antiga — mostrar os dois lado a lado fazia a pessoa somar-los, e
+              não se somam: ou se é pago por um, ou pelo outro.
+            */}
+            {(rank.residual_pct ?? 0) > 0 ? (
+              <div className="ml-auto text-right">
+                <div className="text-gray-500 text-xs">Residual</div>
+                <div className="text-[#D2A63C] font-bold">{rank.residual_pct}%</div>
+                <div className="text-gray-500 text-[10px]">da perna menor</div>
+              </div>
+            ) : rank.monthly_residual > 0 ? (
               <div className="ml-auto text-right">
                 <div className="text-gray-500 text-xs">Residual</div>
                 <div className="text-[#D2A63C] font-bold">{formatEur(rank.monthly_residual)}/mês</div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}
