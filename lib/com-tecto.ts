@@ -44,3 +44,21 @@ export const TECTO_PAGINA_MS = 5_000
 
 /** O tecto dentro do middleware. Curto: o que está em jogo é a primeira resposta ao browser. */
 export const TECTO_MIDDLEWARE_MS = 2_500
+
+/**
+ * ESTAMOS DENTRO DE UM `next build`?
+ *
+ * Porque isto foi preciso, escrito para não se repetir: um tecto de tempo NÃO chega para proteger
+ * a compilação. O `comTecto` devolve o recuo aos 5s, mas o pedido à base continua no ar — e o Next
+ * não dá uma página por terminada enquanto houver um `fetch` dela pendente (ele intercepta o fetch
+ * para a cache do ISR). A página ficava «a gerar» até aos 60s do Next, três vezes, e o deploy do
+ * site inteiro abortava. Foi isso que aconteceu a 25/09, duas vezes seguidas, e que impediu a
+ * correcção do 504 de chegar a produção enquanto membros com conta eram mandados registar-se.
+ *
+ * A regra que fica: uma compilação não pergunta nada à base de dados. Constrói-se com os valores
+ * de recuo, e o conteúdo real entra na primeira revalidação — que com `revalidate = 60` é um
+ * minuto depois. Publicar o site nunca mais depende de a base estar boa.
+ */
+export function ehCompilacao(): boolean {
+  return process.env.NEXT_PHASE === 'phase-production-build'
+}

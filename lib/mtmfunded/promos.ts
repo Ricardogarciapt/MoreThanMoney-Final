@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import type { Promo } from '@/components/mtmfunded/splash-promos'
-import { comTecto, TECTO_PAGINA_MS } from '@/lib/com-tecto'
+import { comTecto, ehCompilacao, TECTO_PAGINA_MS } from '@/lib/com-tecto'
 
 /**
  * AS PROMOÇÕES A DECORRER, lidas da base de dados.
@@ -14,6 +14,10 @@ import { comTecto, TECTO_PAGINA_MS } from '@/lib/com-tecto'
  * mesma condição que o faz falhar na compra.
  */
 export async function promosAtivas(): Promise<Promo[]> {
+  // Durante o `next build` não se pergunta nada à base (ver `ehCompilacao`). Sem campanhas é o
+  // estado normal do splash — não desenha nada — e as verdadeiras entram na revalidação seguinte.
+  if (ehCompilacao()) return []
+
   const db = getSupabaseAdmin()
   const agora = new Date().toISOString()
 

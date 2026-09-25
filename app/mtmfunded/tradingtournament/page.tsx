@@ -9,8 +9,22 @@ import { comTecto, TECTO_PAGINA_MS } from "@/lib/com-tecto"
 // Cache de 60s em vez de render por pedido: a classificação actualiza de hora a hora e os
 // programas mudam raramente. Sem isto, cada visita esperava pela base de dados antes do
 // primeiro pixel — e numa página de vendas isso são visitas perdidas.
-export const revalidate = 60
-
+/**
+ * FORA DA PRÉ-GERAÇÃO, de propósito.
+ *
+ * Estas páginas lêem a base de dados, e uma compilação não pode depender de a base estar boa —
+ * a 25/09 dois deploys seguidos abortaram por isso, e a correcção do 504 ficou retida enquanto
+ * membros com conta eram mandados registar-se.
+ *
+ * Aqui não se usa o truque das outras páginas (construir com valores de recuo e deixar a
+ * revalidação preencher): a /mtmfunded decide um REDIRECCIONAMENTO a partir da configuração, e
+ * construí-la sem poder lê-la deixaria esse redireccionamento cozido no ficheiro gerado. Uma
+ * página que redirecciona para o torneio porque a base estava lenta durante o build é pior do
+ * que uma página que demora um pouco mais a abrir.
+ *
+ * As leituras têm tecto (ver `comTecto`), por isso uma base lenta atrasa-as — não as pendura.
+ */
+export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Trading Tournament · More Than Money',
   description: 'Torneio trimestral de trading da More Than Money. Trade · Evolve · Earn.',

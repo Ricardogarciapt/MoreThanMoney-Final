@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase"
 import { defaultContentConfig, type ContentConfig } from "@/lib/content-config"
-import { comTecto, TECTO_PAGINA_MS } from "@/lib/com-tecto"
+import { comTecto, ehCompilacao, TECTO_PAGINA_MS } from "@/lib/com-tecto"
 
 /**
  * A leitura PÚBLICA da config de vídeos/links/imagens (admin_settings.site_content).
@@ -26,6 +26,10 @@ import { comTecto, TECTO_PAGINA_MS } from "@/lib/com-tecto"
 export const revalidate = 60
 
 export async function GET() {
+  // Foi esta rota que derrubou um dos deploys de 25/09. Na compilação devolve o que já devolvia
+  // quando a leitura falhava; o conteúdo real entra na revalidação seguinte.
+  if (ehCompilacao()) return NextResponse.json(defaultContentConfig)
+
   try {
     const supabase = getSupabaseAdmin()
 

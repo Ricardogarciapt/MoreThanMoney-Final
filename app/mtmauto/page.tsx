@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import { comTecto, TECTO_PAGINA_MS } from "@/lib/com-tecto"
+import { comTecto, ehCompilacao, TECTO_PAGINA_MS } from "@/lib/com-tecto"
 
 export const metadata: Metadata = {
   title: "MTM Auto — copy trading no teu telemóvel | MoreThanMoney",
@@ -25,6 +25,7 @@ const APP_URL = "https://www.morethanmoney.pt/mtmautoapp"
  * deploy do site sempre que sai um build novo.
  */
 async function linksDeDescarga() {
+  if (ehCompilacao()) return { apk: "/downloads/MTMAuto.apk", testflight: null }
   try {
     const { data } = await getSupabaseAdmin()
       .from("site_settings")
@@ -51,6 +52,7 @@ async function linksDeDescarga() {
  * mesmas descrições, e a página revalida de 5 em 5 minutos.
  */
 async function estrategiasVivas(): Promise<Array<{ slug: string; nome: string; descricao: string }>> {
+  if (ehCompilacao()) return []
   try {
     const { data } = await getSupabaseAdmin()
       .from("mtmauto_providers")
