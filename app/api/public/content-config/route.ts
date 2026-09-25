@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase"
 import { defaultContentConfig, type ContentConfig } from "@/lib/content-config"
+import { comTecto, TECTO_PAGINA_MS } from "@/lib/com-tecto"
 
 /**
  * A leitura PÚBLICA da config de vídeos/links/imagens (admin_settings.site_content).
@@ -28,11 +29,27 @@ export async function GET() {
   try {
     const supabase = getSupabaseAdmin()
 
-    const { data, error } = await supabase
-      .from("admin_settings")
-      .select("setting_value")
-      .eq("setting_key", "site_content")
-      .maybeSingle()
+    /**
+     * TECTO. Com `revalidate = 60` esta rota é pré-gerada DURANTE A COMPILAÇÃO — e a 25/09 foi ela
+     * que fez o deploy do site inteiro falhar:
+     *
+     *   Failed to build /api/public/content-config after 3 attempts (>60s cada)
+     *   Export encountered an error, exiting the build.
+     *
+     * Com a base de dados lenta, a leitura não voltava, o Next desistia aos 60s e não havia forma
+     * de publicar nada — nem as correcções para o próprio problema. O recuo é o mesmo que já
+     * existia para erro e para linha vazia: a configuração por omissão.
+     */
+    const { data, error } = await comTecto(
+      supabase
+        .from("admin_settings")
+        .select("setting_value")
+        .eq("setting_key", "site_content")
+        .maybeSingle()
+        .then((r) => ({ data: r.data, error: r.error })),
+      { data: null, error: null },
+      TECTO_PAGINA_MS,
+    )
 
     if (error || !data?.setting_value) return NextResponse.json(defaultContentConfig)
 

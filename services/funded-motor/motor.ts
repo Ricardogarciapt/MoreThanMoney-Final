@@ -28,6 +28,7 @@
  *
  * Estado reconstruível 100% da base: o que está em memória é cache. Reiniciar é seguro.
  */
+import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { isMarketOpen } from '../../lib/mtmcopy/market-hours'
 import { rankedBrokerSymbols } from '../../lib/mtmcopy/symbol-resolver'
@@ -1551,7 +1552,66 @@ process.on('unhandledRejection', (e) => {
   log(`[motor] promessa rejeitada sem catch${limite ? ' (LIMITE da MetaApi — espelho em pausa)' : ''}:`, e instanceof Error ? e.message : e)
 })
 
-main().catch((e) => {
+/**
+ * RECUO PROGRESSIVO QUANDO O ARRANQUE FALHA.
+ *
+ * 25/09, o que se viu no servidor: `restart counter is at 132`. A base de dados deixou de
+ * responder, o motor não conseguiu sequer ler `funded_symbols`, saiu — e o systemd relançou-o 10
+ * segundos depois. Cada arranque volta a ligar-se a tudo e a pedir tudo outra vez. Durante horas.
+ *
+ * Isso deixou de ser uma reacção a uma avaria e passou a ser parte dela: uma base já sem CPU a
+ * levar uma martelada de 10 em 10 segundos nunca tem folga para se levantar. Sair depressa é bom
+ * para uma falha passageira; para uma avaria prolongada é atacarmo-nos a nós próprios.
+ *
+ * Agora a espera duplica a cada falha seguida — 10s, 20s, 40s… até um tecto de 5 minutos — e o
+ * contador zera assim que o motor se aguenta de pé um minuto. Uma falha isolada continua a ser
+ * recuperada em segundos, como antes; o que muda é o caso em que a avaria não passa.
+ *
+ * O contador vive num ficheiro porque tem de sobreviver ao processo: é precisamente entre um
+ * processo e o seguinte que esta informação faz falta. Falhar a lê-lo ou a gravá-lo não pode
+ * impedir o motor de arrancar, por isso qualquer erro aqui vale zero.
+ */
+const FICHEIRO_FALHAS = 'falhas-arranque'
+const ESPERA_BASE_MS = 10_000
+const ESPERA_MAX_MS = 300_000
+
+function falhasSeguidas(): number {
+  try {
+    const n = Number(readFileSync(FICHEIRO_FALHAS, 'utf8').trim())
+    return Number.isFinite(n) && n > 0 ? n : 0
+  } catch {
+    return 0
+  }
+}
+
+function guardarFalhas(n: number): void {
+  try {
+    writeFileSync(FICHEIRO_FALHAS, String(n))
+  } catch {
+    // Sem sítio para escrever, o recuo não acontece — mas o motor arranca à mesma. Perder o recuo
+    // é mau; não arrancar por causa dele seria pior.
+  }
+}
+
+/**
+ * De pé há um minuto = o arranque correu. O contador zera aqui, e não quando o `main()` devolve,
+ * porque o `main()` pode nunca devolver — e nesse caso o motor ficaria eternamente a achar que
+ * está a falhar, com esperas de 5 minutos para sempre.
+ */
+setTimeout(() => {
+  try {
+    unlinkSync(FICHEIRO_FALHAS)
+  } catch {
+    // Já não existia. É o caso normal.
+  }
+}, 60_000).unref()
+
+main().catch(async (e) => {
   console.error('[motor] falhou no arranque:', e instanceof Error ? e.message : e)
+  const n = falhasSeguidas() + 1
+  guardarFalhas(n)
+  const espera = Math.min(ESPERA_BASE_MS * 2 ** (n - 1), ESPERA_MAX_MS)
+  console.error(`[motor] ${n}.ª falha de arranque seguida — a esperar ${Math.round(espera / 1000)}s antes de sair, para não martelar a base`)
+  await new Promise((r) => setTimeout(r, espera))
   process.exit(1)
 })

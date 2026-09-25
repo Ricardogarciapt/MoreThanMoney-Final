@@ -4,6 +4,7 @@ import { censurarEmail } from '@/lib/mtmfunded/acesso'
 import T from '@/components/mtmfunded/t'
 import DataLocal from '@/components/mtmfunded/data-local'
 import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
+import { comTecto, TECTO_PAGINA_MS } from "@/lib/com-tecto"
 
 // Cache de 60s em vez de render por pedido: a classificação actualiza de hora a hora e os
 // programas mudam raramente. Sem isto, cada visita esperava pela base de dados antes do
@@ -25,21 +26,33 @@ export const metadata = {
 export default async function TradingTournamentPage() {
   const db = getSupabaseAdmin()
 
-  const { data: torneio } = await db
-    .from('mtm_tournaments')
-    .select('id, slug, nome, estado, comeca_em, acaba_em, inscricoes_fecham_em, saldo_inicial, regras, premios')
-    .eq('publicado', true)
-    .order('comeca_em', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  // TECTO: sem torneio a página desenha-se na mesma (`torneio?.regras ?? {}` mais abaixo). Sem ele,
+  // uma base lenta fazia a geração estática estoirar aos 60s e derrubava o deploy do site.
+  const { data: torneio } = await comTecto(
+    db
+      .from('mtm_tournaments')
+      .select('id, slug, nome, estado, comeca_em, acaba_em, inscricoes_fecham_em, saldo_inicial, regras, premios')
+      .eq('publicado', true)
+      .order('comeca_em', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then((r) => ({ data: r.data })),
+    { data: null },
+    TECTO_PAGINA_MS,
+  )
 
   const { data: linhas } = torneio
-    ? await db
-        .from('mtm_tournament_participants')
-        .select('nome_publico, email, estado, posicao, resultado_pct, metricas, updated_at')
-        .eq('tournament_id', torneio.id)
-        .order('posicao', { ascending: true, nullsFirst: false })
-        .limit(100)
+    ? await comTecto(
+        db
+          .from('mtm_tournament_participants')
+          .select('nome_publico, email, estado, posicao, resultado_pct, metricas, updated_at')
+          .eq('tournament_id', torneio.id)
+          .order('posicao', { ascending: true, nullsFirst: false })
+          .limit(100)
+          .then((r) => ({ data: r.data })),
+        { data: null },
+        TECTO_PAGINA_MS,
+      )
     : { data: null }
 
   const regras = (torneio?.regras ?? {}) as Record<string, number | string>
