@@ -1280,7 +1280,16 @@ async function main(): Promise<void> {
     const out = new Set<string>()
     for (const s of [...tlFixos, ...canonicosDesejados()]) {
       const sm = simbolos.get(s)
-      if (sm && (tlClasses.has(String(sm.classe)) || tlUltimo.has(String(sm.classe)))) out.add(s)
+      if (!sm) continue
+      if (tlClasses.has(String(sm.classe))) { out.add(s); continue }
+      // Classe de último recurso: só se PEDE quando já não há preço de mais lado nenhum.
+      //
+      // Medido a 25/09: pôr o forex nesta lista à cabeça fez a ronda passar de 5 para 13 símbolos
+      // e, como a TradeLocker limita o ritmo (o travão desce a 1 pedido de cada vez), os índices —
+      // que só daqui vêm — caíram de ~2 s para 8-9 s. O `limitePara` travava a ENTRADA do preço
+      // mas não o PEDIDO, e era o pedido que gastava a ronda. Com o conector vivo o forex nunca
+      // chega aqui; se ele cair, estes símbolos voltam à ronda dentro de tlLimiteUltimo.
+      if (tlUltimo.has(String(sm.classe)) && Date.now() - (precoEm.get(s) ?? 0) > tlLimiteUltimo) out.add(s)
     }
     return out
   }
