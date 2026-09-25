@@ -11,7 +11,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { capacidadesDe } from './backoffice-papeis'
-import { ambitoDaEquipa, equipaDoMembro, equipasQueLidera, lideradosDe } from './backoffice-equipas'
+import { ambitoDaEquipa, equipaDoMembro, equipasQueLidera, lideradosDe, membrosDasEquipas } from './backoffice-equipas'
 
 const falhas: string[] = []
 const teste = (nome: string, ok: boolean) => { if (!ok) falhas.push(nome) }
@@ -114,6 +114,20 @@ testeAsync('avaria da base → só se vê a si (não rebenta a página)', async 
   return a.ids.length === 1 && a.ids[0] === 'lider'
 })
 
+// ── A PERTENÇA, para o ecrã da equipa ────────────────────────────────────────
+//
+// `lideradosDe` achata; esta devolve quem pertence a QUE equipa. Um líder com duas equipas tem de
+// as ver separadas, e quem já saiu continua a não aparecer — histórico não é permissão.
+testeAsync('os membros vêm com a equipa a que pertencem', async () => {
+  const ms = await membrosDasEquipas(fake(BASE), ['e1'])
+  return ms.length === 2 && ms.every((m) => m.equipaId === 'e1') && !ms.some((m) => m.membroId === 'carla')
+})
+testeAsync('sem equipas não se lê pertença nenhuma', async () => (await membrosDasEquipas(fake(BASE), [])).length === 0)
+testeAsync('erro a ler pertenças → vazio', async () =>
+  (await membrosDasEquipas(fake(BASE, { erroEm: 'backoffice_equipa_membros' }), ['e1'])).length === 0)
+testeAsync('excepção a ler pertenças → vazio, não lança', async () =>
+  (await membrosDasEquipas(fake(BASE, { rebenta: true }), ['e1'])).length === 0)
+
 // ── COM EQUIPA LIGADA: o líder vê os liderados, o setter continua fechado ────
 //
 // Isto é a prova de que as duas peças se encontraram. Não chega o modelo estar certo: o que abre
@@ -159,6 +173,11 @@ testeAsync('nem pelo âmbito — que é o que a página usa', async () => {
   const a = await ambitoDaEquipa(fake(CADEIA), { userId: 'chefe', capacidades: lider }, 'extracto')
   return a.ids.length === 2 && a.ids.includes('chefe') && a.ids.includes('lider2') && !a.ids.includes('neto')
 })
+// A pertença NÃO atravessa a cadeia: pedir as equipas de cima não traz os membros das de baixo.
+testeAsync('a pertença não traz os netos', async () => {
+  const ms = await membrosDasEquipas(fake(CADEIA), ['e1'])
+  return ms.length === 1 && ms[0].membroId === 'lider2'
+})
 testeAsync('e o líder do meio vê o SEU liderado, não o de cima', async () => {
   const a = await ambitoDaEquipa(fake(CADEIA), { userId: 'lider2', capacidades: lider }, 'extracto')
   return a.ids.length === 2 && a.ids.includes('lider2') && a.ids.includes('neto') && !a.ids.includes('chefe')
@@ -190,6 +209,13 @@ teste('o backoffice lê o âmbito com a equipa', /ambitoDaEquipa\(/.test(eu))
 const ponte = readFileSync('lib/backoffice-equipa.ts', 'utf8')
 teste('a ponte das páginas usa o âmbito das equipas', /ambitoDaEquipa\(/.test(ponte))
 teste('a ponte não inventa liderados fora do âmbito', !/EQUIPA_POR_CONFIGURAR/.test(ponte))
+const paginaEquipa = readFileSync('app/backoffice/equipa/page.tsx', 'utf8')
+teste('a página da equipa lê os membros do modelo', /membrosDasEquipas\(/.test(paginaEquipa))
+// O dono quis LINHAS, não totais: uma página que só somasse fechava a conversa antes de começar.
+teste('a página da equipa mostra as linhas do extracto dos liderados', /extractoDoAmbito\(/.test(paginaEquipa))
+teste('e mostra-as pelo âmbito, não por uma lista de ids solta', /ambitoDaPagina\(/.test(paginaEquipa))
+// O texto de «ainda não existe modelo» não pode voltar: é uma mentira desde a migração 131.
+teste('a página da equipa já não diz que a ligação não existe', !/ainda não está configurada/i.test(paginaEquipa))
 for (const pagina of ['extracto', 'pipeline', 'tarefas']) {
   const src = readFileSync(`app/backoffice/${pagina}/page.tsx`, 'utf8')
   teste(`a página do ${pagina} filtra pelo âmbito da equipa`, /ambitoDaPagina\(/.test(src))

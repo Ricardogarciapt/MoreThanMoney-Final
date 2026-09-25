@@ -63,6 +63,42 @@ export async function papeisActivosDe(
   }
 }
 
+/**
+ * OS PAPÉIS ACTIVOS DE VÁRIAS PESSOAS, numa leitura só.
+ *
+ * Existe para o ecrã da equipa: com uma chamada de `papeisActivosDe` por membro, uma equipa de dez
+ * eram dez idas à base para desenhar dez etiquetas — e uma delas a falhar deixava um membro sem
+ * papel nenhum no ecrã, que se lê como «não tem papéis» em vez de «não consegui ler».
+ *
+ * Devolve um mapa id→papéis. Quem não tiver papéis não aparece no mapa. Falha → mapa vazio, e o
+ * ecrã mostra as pessoas sem etiquetas: nunca mostra pessoas a mais.
+ */
+export async function papeisActivosDeVarios(
+  supabase: ClienteLeitura,
+  userIds: readonly string[],
+): Promise<Record<string, Papel[]>> {
+  const ids = [...new Set(userIds.filter((id) => typeof id === 'string' && id.length > 0))]
+  if (ids.length === 0) return {}
+  try {
+    const { data, error } = await (supabase as any)
+      .from('backoffice_papeis')
+      .select('user_id, papel, retirado_at')
+      .in('user_id', ids)
+      .is('retirado_at', null)
+
+    if (error || !Array.isArray(data)) return {}
+    const out: Record<string, Papel[]> = {}
+    for (const r of data as Array<Record<string, unknown>>) {
+      const uid = typeof r.user_id === 'string' ? r.user_id : null
+      if (!uid || !ehPapel(r.papel)) continue
+      ;(out[uid] ??= []).push(r.papel as Papel)
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
 /** A restrição de áreas do site guardada para esta pessoa. Vazio = sem restrição. */
 export async function areasRestritasDe(supabase: ClienteLeitura, userId: string): Promise<AreaSite[]> {
   try {

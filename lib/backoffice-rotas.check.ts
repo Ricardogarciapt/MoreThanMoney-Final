@@ -112,7 +112,9 @@ const PAGINAS: Array<[string, string]> = [
   ['app/backoffice/extracto/page.tsx', 'bo.extracto_proprio'],
   ['app/backoffice/pipeline/page.tsx', 'bo.pipeline_proprio'],
   ['app/backoffice/tarefas/page.tsx', 'bo.tarefas_proprias'],
-  ['app/backoffice/equipa/page.tsx', 'bo.extracto_equipa'],
+  // A equipa abre com `bo.equipa_ver` — a MESMA capacidade com que o menu mostra o link. Abrir
+  // com outra deixava no menu um link para uma página que recusa.
+  ['app/backoffice/equipa/page.tsx', 'bo.equipa_ver'],
   ['app/backoffice/material/page.tsx', 'bo.material'],
 ]
 for (const [caminho, capacidade] of PAGINAS) {
@@ -123,7 +125,11 @@ for (const [caminho, capacidade] of PAGINAS) {
   teste(`página ${nome}: recusa quem não pode`, /if \(!acesso\.ok\)/.test(src) && /<SemAcesso/.test(src))
   // O âmbito é uma LISTA, e é essa lista que filtra. Um `if (é team leader)` esquece-se do filtro.
   if (['extracto', 'pipeline', 'tarefas'].includes(nome)) {
-    teste(`página ${nome}: filtra pelo âmbito de leitura`, /ambitoDeLeitura\(/.test(src))
+    // O âmbito vem por `ambitoDaPagina`, que resolve a equipa e a capacidade na ordem certa. Uma
+    // página que voltasse a chamar `ambitoDeLeitura` à mão passava ao lado dos liderados — que é
+    // exactamente o estado em que isto esteve depois da migração 131.
+    teste(`página ${nome}: filtra pelo âmbito da equipa`, /ambitoDaPagina\(/.test(src))
+    teste(`página ${nome}: não monta o âmbito à mão`, !/ambitoDeLeitura\(/.test(src))
     teste(`página ${nome}: não adivinha a equipa`, !/mlm_tree|team_leader_id.*===.*userId/.test(src))
   }
 }
