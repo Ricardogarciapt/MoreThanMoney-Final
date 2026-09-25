@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { cupaoEsgotado } from '@/lib/cupoes-usos'
 import { signPromotionalOffer, resolveAppleOfferForCoupon } from '@/lib/apple-iap'
 
 const supabase = getSupabaseAdmin()
@@ -36,7 +37,9 @@ export async function POST(req: NextRequest) {
     if (coupon.valid_until && new Date(coupon.valid_until) < now) {
       return NextResponse.json({ valid: false, error: 'Cupão expirado' })
     }
-    if (coupon.max_uses !== null && coupon.used_count >= coupon.max_uses) {
+    // Contado em `coupon_usages`, não no `used_count` — esse nunca subia e o limite nunca
+    // disparava, o que deixava um cupão de uso único ser resgatado sem limite. Ver lib/cupoes-usos.ts.
+    if (await cupaoEsgotado(supabase, coupon)) {
       return NextResponse.json({ valid: false, error: 'Cupão esgotado' })
     }
 

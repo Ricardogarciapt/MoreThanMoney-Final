@@ -28,7 +28,24 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ data: data || [] })
+    /**
+     * O painel mostra os usos REAIS, contados em `coupon_usages`.
+     *
+     * A coluna `used_count` nunca subiu (ver lib/cupoes-usos.ts), por isso o painel dizia «0 usos»
+     * em cupões já resgatados — e era com esse zero que se decidia se um cupão ainda tinha vida.
+     * Devolve-se o valor contado no MESMO campo que o ecrã já lê: não há ecrã novo a fazer, e o
+     * que lá está passa a ser verdade.
+     */
+    const cupoes = data || []
+    const { data: usos } = await supabase.from('coupon_usages').select('coupon_id')
+    const contagem = new Map<string, number>()
+    for (const u of usos ?? []) {
+      const k = String((u as { coupon_id?: unknown }).coupon_id ?? '')
+      if (k) contagem.set(k, (contagem.get(k) ?? 0) + 1)
+    }
+    return NextResponse.json({
+      data: cupoes.map((c) => ({ ...c, used_count: contagem.get(String(c.id)) ?? 0 })),
+    })
   } catch (error: any) {
     console.error("❌ [ADMIN COUPONS GET] Erro:", error)
     return NextResponse.json(

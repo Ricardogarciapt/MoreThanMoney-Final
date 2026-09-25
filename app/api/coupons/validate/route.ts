@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { cupaoEsgotado } from "@/lib/cupoes-usos"
 
 export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin()
@@ -71,8 +72,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verificar limite de usos
-    if (coupon.max_uses !== null && coupon.used_count >= coupon.max_uses) {
+    // Verificar limite de usos — contado em `coupon_usages`, não no `used_count`, que nunca subia
+    // (ver lib/cupoes-usos.ts). Enquanto se lia o contador, nenhum limite travava coisa nenhuma.
+    if (await cupaoEsgotado(supabase, coupon)) {
       return NextResponse.json({
         valid: false,
         type: coupon.type,
