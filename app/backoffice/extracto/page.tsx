@@ -26,7 +26,7 @@
  * SÓ LEITURA. Aprovar e pagar comissões é um acto do dono, e faz-se no admin.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { ambitoDaPagina } from '@/lib/backoffice-equipa'
+import { ambitoDaPagina, nomesDe } from '@/lib/backoffice-equipa'
 import { extractoDoAmbito, somarExtracto, type LinhaExtracto } from '@/lib/vendas/extracto'
 import { centimosEmEuros } from '@/lib/vendas/calculo'
 import {
@@ -79,11 +79,7 @@ export default async function ExtractoPage() {
   // Os nomes só se leem quando há mais do que uma pessoa na lista — e quando há, sem eles a tabela
   // seria uma coluna de uuids. Para uma pessoa só, o nome dela não acrescenta nada ao seu extracto.
   const pessoas = [...new Set(linhas.map((l) => l.pessoa_id).filter((v): v is string => !!v))]
-  let nomes: Record<string, string> = {}
-  if (pessoas.length > 1) {
-    const { data } = await getSupabaseAdmin().from('profiles').select('id, full_name, email').in('id', pessoas)
-    nomes = Object.fromEntries((data ?? []).map((p) => [p.id, (p.full_name as string) || (p.email as string) || '—']))
-  }
+  const nomes = pessoas.length > 1 ? await nomesDe(pessoas) : {}
 
   return (
     <div className="space-y-8">

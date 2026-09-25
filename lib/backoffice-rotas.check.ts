@@ -131,6 +131,13 @@ for (const [caminho, capacidade] of PAGINAS) {
     teste(`página ${nome}: filtra pelo âmbito da equipa`, /ambitoDaPagina\(/.test(src))
     teste(`página ${nome}: não monta o âmbito à mão`, !/ambitoDeLeitura\(/.test(src))
     teste(`página ${nome}: não adivinha a equipa`, !/mlm_tree|team_leader_id.*===.*userId/.test(src))
+    // DE QUEM É A LINHA. Com a equipa ligada, estas páginas passaram a mostrar linhas de outras
+    // pessoas — e uma lista dessas sem nome é uma lista que o responsável não consegue usar: vê
+    // que há trabalho, não sabe a quem ir falar. Os nomes vêm por `nomesDe`, que só resolve os ids
+    // que já estão no âmbito; uma página a ler `profiles` por sua conta acabava, um dia, a resolver
+    // um id vindo de outro sítio.
+    teste(`página ${nome}: diz de quem é a linha`, /nomesDe\(/.test(src))
+    teste(`página ${nome}: não lê profiles por sua conta`, !/from\('profiles'\)/.test(src))
   }
 }
 

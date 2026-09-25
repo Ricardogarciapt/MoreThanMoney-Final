@@ -27,7 +27,7 @@ import { PAPEL_NOME, pode } from '@/lib/backoffice-papeis'
 import { ambitoDaPagina } from '@/lib/backoffice-equipa'
 import { equipasQueLidera, membrosDasEquipas, equipaDoMembro } from '@/lib/backoffice-equipas'
 import { papeisActivosDeVarios, type ClienteLeitura } from '@/lib/backoffice-papeis-leitura'
-import { negociosDoAmbito, tarefasDoAmbito, type NegocioLinha, type TarefaLinha } from '@/lib/backoffice-negocios'
+import { negociosDoAmbito, participaNoNegocio, tarefasDoAmbito, type NegocioLinha, type TarefaLinha } from '@/lib/backoffice-negocios'
 import { extractoDoAmbito, somarExtracto, type LinhaExtracto } from '@/lib/vendas/extracto'
 import { centimosEmEuros } from '@/lib/vendas/calculo'
 import {
@@ -131,7 +131,7 @@ export default async function EquipaPage() {
 
   const doEcra: MembroNoEcra[] = membros.map((m) => {
     const id = m.membroId
-    const seus = (negocios ?? []).filter((n) => ehDele(n, id))
+    const seus = (negocios ?? []).filter((n) => participaNoNegocio(n, id))
     const suasTarefas = (tarefas ?? []).filter((t) => t.responsavel_id === id && t.estado === 'aberta')
     const linhas = extractoEquipa.filter((l) => l.pessoa_id === id)
     const { totais } = somarExtracto(linhas)
@@ -347,16 +347,5 @@ export default async function EquipaPage() {
         gente que nunca conheceu. Esta página mostra; montar equipas faz-se no admin.
       </p>
     </div>
-  )
-}
-
-/** O negócio é desta pessoa se o id dela estiver em qualquer uma das cinco atribuições. */
-function ehDele(n: NegocioLinha, id: string): boolean {
-  return (
-    n.prospector_id === id ||
-    n.setter_id === id ||
-    n.closer_id === id ||
-    n.team_leader_id === id ||
-    n.afiliado_id === id
   )
 }

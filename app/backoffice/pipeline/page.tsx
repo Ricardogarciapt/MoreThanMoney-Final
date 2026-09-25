@@ -19,8 +19,8 @@
  * e faz-se no admin. Esta página mostra e aconselha.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { ambitoDaPagina } from '@/lib/backoffice-equipa'
-import { negociosDoAmbito, papeisNoNegocio, type NegocioLinha } from '@/lib/backoffice-negocios'
+import { ambitoDaPagina, nomesDe } from '@/lib/backoffice-equipa'
+import { negociosDoAmbito, papeisNoNegocio, participaNoNegocio, type NegocioLinha } from '@/lib/backoffice-negocios'
 import { ESTADOS_PIPELINE, ESTADO_PIPELINE_NOME, dataCurta, ehEstadoFechado, ehEstadoPipeline } from '@/lib/backoffice-vista'
 import { avisoParado, diasParado, sugestaoPara } from '@/lib/backoffice-playbook'
 import { abrirPagina, SemAcesso } from '../_partes/acesso'
@@ -54,6 +54,11 @@ export default async function PipelinePage() {
       </div>
     )
   }
+
+  // DE QUEM É O NEGÓCIO, quando não é meu. A etiqueta «Da equipa» diz que não é dela mas não diz
+  // de quem — e um responsável com quinze negócios da equipa não consegue trabalhar assim.
+  const outros = ambito.ids.filter((id) => id !== ctx.userId)
+  const nomes = outros.length > 0 ? await nomesDe(outros) : {}
 
   // Agrupar pela ordem do funil, e não pela ordem em que as linhas vieram: a página desenha-se pela
   // lista de estados, por isso um estado sem negócios continua a existir como coluna vazia — é
@@ -153,7 +158,13 @@ export default async function PipelinePage() {
                               </Etiqueta>
                             ))
                           ) : (
-                            <Etiqueta>Da equipa</Etiqueta>
+                            <Etiqueta>
+                              {outros
+                                .filter((id) => participaNoNegocio(n, id))
+                                .map((id) => nomes[id])
+                                .filter(Boolean)
+                                .join(', ') || 'Da equipa'}
+                            </Etiqueta>
                           )}
                           {n.pack_previsto && <Etiqueta>{n.pack_previsto}</Etiqueta>}
                           {n.origem && <Etiqueta>via {n.origem}</Etiqueta>}

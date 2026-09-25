@@ -22,7 +22,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import type { AmbitoLeitura, FamiliaAmbito } from '@/lib/backoffice-papeis'
 import { pode } from '@/lib/backoffice-papeis'
-import { ambitoDaEquipa, lideradosDe as lideradosNaBase } from '@/lib/backoffice-equipas'
+import { ambitoDaEquipa } from '@/lib/backoffice-equipas'
 import { avisoDeEquipa, situacaoDaEquipa, type SituacaoEquipa } from '@/lib/backoffice-vista'
 import type { ContextoBackoffice } from '@/lib/backoffice-sessao'
 
@@ -67,11 +67,28 @@ export async function ambitoDaPagina(
 }
 
 /**
- * Os ids que esta pessoa lidera, sem passar pelo âmbito. Só para quem precisa da LISTA em si — a
- * página da equipa, que desenha as pessoas. Quem vai consultar linhas usa `ambitoDaPagina`: uma
- * lista sem âmbito é uma lista sem o filtro da capacidade, e esse é o filtro que separa colegas.
+ * OS NOMES das pessoas que aparecem numa página — e só delas.
+ *
+ * As páginas mostram ids quando não têm nomes, e uma coluna de uuids não se lê. Está aqui, e não em
+ * cada página, porque a regra de PRIVACIDADE é uma: só se pedem os nomes dos ids que JÁ estão no
+ * âmbito. Uma página que resolvesse nomes por sua conta acabava, um dia, a resolver um id que veio
+ * de outro sítio — e a devolver o nome de alguém que aquela pessoa não podia ver.
+ *
+ * Falha → mapa vazio, e o ecrã mostra «—». Nunca lança: um nome em falta não vale uma página em
+ * baixo, e mostrar «—» é honesto.
  */
-export async function lideradosDe(ctx: ContextoBackoffice): Promise<string[]> {
-  if (!pode(ctx.capacidades, 'bo.equipa_ver')) return []
-  return lideradosNaBase(getSupabaseAdmin(), ctx.userId)
+export async function nomesDe(ids: readonly string[]): Promise<Record<string, string>> {
+  const limpos = [...new Set(ids.filter((id) => typeof id === 'string' && id.length > 0))]
+  if (limpos.length === 0) return {}
+  try {
+    const { data } = await getSupabaseAdmin().from('profiles').select('id, full_name, email').in('id', limpos)
+    return Object.fromEntries(
+      ((data ?? []) as Array<Record<string, unknown>>).map((p) => [
+        String(p.id),
+        (p.full_name as string) || (p.email as string) || '—',
+      ]),
+    )
+  } catch {
+    return {}
+  }
 }

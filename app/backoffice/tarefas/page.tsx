@@ -15,7 +15,7 @@
  * verifica-se no servidor, na consulta (`.eq('responsavel_id', …)` com o id da sessão).
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { ambitoDaPagina } from '@/lib/backoffice-equipa'
+import { ambitoDaPagina, nomesDe } from '@/lib/backoffice-equipa'
 import { tarefasDoAmbito, type TarefaLinha } from '@/lib/backoffice-negocios'
 import { PESO_PRAZO, SITUACAO_PRAZO_NOME, dataCurta, situacaoDoPrazo } from '@/lib/backoffice-vista'
 import { abrirPagina, SemAcesso } from '../_partes/acesso'
@@ -50,6 +50,12 @@ export default async function TarefasPage() {
       </div>
     )
   }
+
+  // DE QUEM É CADA TAREFA. Só se pergunta quando o âmbito tem mais do que uma pessoa: numa lista
+  // só dela, o nome dela não acrescenta nada — e num responsável a ver a equipa, uma lista sem
+  // nomes é uma lista que ele não consegue usar (não sabe a quem ir falar).
+  const outros = [...new Set(tarefas.map((t) => t.responsavel_id).filter((id) => id && id !== ctx.userId))]
+  const nomes = outros.length > 0 ? await nomesDe(outros) : {}
 
   const abertas = tarefas.filter((t) => t.estado === 'aberta')
   const feitas = tarefas.filter((t) => t.estado === 'feita')
@@ -102,6 +108,9 @@ export default async function TarefasPage() {
                       {SITUACAO_PRAZO_NOME[situacao]}
                       {t.prazo ? ` · ${dataCurta(t.prazo)}` : ''}
                     </Etiqueta>
+                    {t.responsavel_id !== ctx.userId && (
+                      <Etiqueta tom="aviso">{nomes[t.responsavel_id] ?? 'Da equipa'}</Etiqueta>
+                    )}
                     {t.papel && <Etiqueta>como {t.papel}</Etiqueta>}
                     {t.negocio_id && <Etiqueta>de um negócio</Etiqueta>}
                   </div>
@@ -122,7 +131,12 @@ export default async function TarefasPage() {
           <ul className="space-y-1.5">
             {feitas.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-800/60 bg-gray-900/20 px-4 py-2.5">
-                <span className="text-sm text-gray-500 line-through">{t.titulo}</span>
+                <span className="text-sm text-gray-500 line-through">
+                  {t.titulo}
+                  {t.responsavel_id !== ctx.userId && (
+                    <span className="ml-2 no-underline">— {nomes[t.responsavel_id] ?? 'da equipa'}</span>
+                  )}
+                </span>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-600">{dataCurta(t.feita_em)}</span>
                   {t.responsavel_id === ctx.userId && <Marcar id={t.id} feita={true} />}
