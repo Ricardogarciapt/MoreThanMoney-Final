@@ -144,7 +144,22 @@ export async function aplicarGestaoAutoNaConta(
   const posicoes = posicoesDadas ?? (await adaptador.posicoes())
   const porId = new Map(posicoes.map((p) => [p.id, p]))
 
-  const fechadas = linhas.filter((l) => !porId.has(l.position_id)).map((l) => l.position_id)
+  /**
+   * APAGAR SÓ COM PROVA DE QUE A LEITURA FUNCIONOU.
+   *
+   * Uma lista vazia tanto pode significar «não há posições abertas» como «a corretora respondeu mal
+   * agora». Como aqui se APAGA a configuração do dono, tratar as duas da mesma maneira era perder
+   * em silêncio, num soluço de rede, o trailing que ele ligou à mão — e ele só daria por isso
+   * quando o SL não se mexesse.
+   *
+   * Por isso só se limpa quando a leitura trouxe pelo menos UMA posição: isso prova que ela
+   * funcionou, e o que não está lá está mesmo fechado. Se a conta chegar de facto a zero posições,
+   * as linhas ficam mais um bocado — não fazem mal nenhum (o laço abaixo salta-as) e desaparecem na
+   * primeira passagem em que haja alguma posição aberta.
+   */
+  const fechadas = posicoes.length
+    ? linhas.filter((l) => !porId.has(l.position_id)).map((l) => l.position_id)
+    : []
   if (fechadas.length) {
     const { error } = await db.from(TABELA).delete().eq('user_id', ctx.userId).eq('conta_ref', ctx.contaRef).in('position_id', fechadas)
     if (!error) out.limpas = fechadas.length
@@ -175,7 +190,25 @@ export async function aplicarGestaoAutoNaConta(
       }
       // O TP vai como está: nenhuma plataforma mexe num TP que chega null (ver os adaptadores), e
       // assim o trailing nunca apaga o alvo que o trader pôs.
-      await adaptador.modificar({ alvo: 'posicao', id: pos.id, sl: d.sl, tp: pos.tp })
+      /**
+       * «Nothing to change» não é uma falha — é o SL já estar onde o queremos pôr.
+       *
+       * 25/09, primeiro teste real do Ricardo: uma das três posições devolveu «Reason for
+       * rejection: Nothing to change.» e a linha ficou com um erro vermelho a dizer que a corretora
+       * recusou, quando na verdade estava tudo certo. Acontece porque a TradeLocker entrega o SL
+       * como uma ORDEM ligada à posição: se essa ordem não vier na lista, `pos.sl` chega a `null`,
+       * o travão do «já está igual ou melhor» não tem com que comparar, e manda-se à cega.
+       *
+       * Tratar isto como sucesso resolve as duas metades: o alarme falso desaparece e o
+       * `sl_aplicado` fica gravado, por isso a passagem seguinte já tem com que comparar e não
+       * volta a bater à porta da corretora de graça.
+       */
+      try {
+        await adaptador.modificar({ alvo: 'posicao', id: pos.id, sl: d.sl, tp: pos.tp })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        if (!/nothing to change/i.test(msg)) throw e
+      }
       out.movidos++
       linha.sl_aplicado = d.sl
       await db.from(TABELA).update({

@@ -183,6 +183,24 @@ verificar('as contas MTM Funded não passam pelo executor novo (dois motores no 
   assert.match(rota, /plataforma === 'mtmfunded'\) throw new ErroCorretora\(400, 'A gestão das contas MTM Funded/)
 })
 
+
+
+// ── o que o primeiro teste real do Ricardo ensinou (25/09) ─────────────────
+const executor = readFileSync(join(RAIZ, 'lib/webtrader/gestao-auto-servidor.ts'), 'utf8')
+verificar('«nothing to change» conta como aplicado', () => {
+  // A TradeLocker responde assim quando o SL JÁ está onde o queremos pôr — acontece sempre que não
+  // conseguimos ler o SL actual (na TradeLocker ele vem como ordem ligada e pode não vir na lista).
+  // Mostrar isso ao trader como «a corretora recusou» é assustá-lo por nada, a cada passagem.
+  if (!/nothing to change/i.test(executor)) throw new Error('a recusa benigna voltou a contar como erro')
+})
+verificar('não apaga a configuração com uma leitura vazia', () => {
+  // Uma lista de posições vazia tanto é «não há nada aberto» como «a corretora respondeu mal».
+  // Como aqui se APAGA o que o dono configurou, só se limpa com prova de que a leitura funcionou.
+  if (!/const fechadas = posicoes\.length/.test(executor)) {
+    throw new Error('voltou a apagar configuração sem provar que a leitura das posições funcionou')
+  }
+})
+
 if (falhas.length) {
   console.error(`gestao-auto-real: ${falhas.length} falha(s)`)
   for (const f of falhas) console.error('  · ' + f)
