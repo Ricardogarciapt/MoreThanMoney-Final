@@ -126,9 +126,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const atribuicoes = body.atribuicoes
   if (atribuicoes && typeof atribuicoes === 'object' && !Array.isArray(atribuicoes)) {
     const temEquipa = pode(ctx.capacidades, 'bo.pipeline_equipa')
-    const nomes = await nomesDe(supabase, Object.values(atribuicoes as Record<string, unknown>))
+    const nomes = await nomesDe(supabase, [
+      ...Object.values(atribuicoes as Record<string, unknown>),
+      ctx.userId,
+    ])
 
-    for (const [papel, novoId] of Object.entries(atribuicoes as Record<string, unknown>)) {
+    for (const [papel, pedido] of Object.entries(atribuicoes as Record<string, unknown>)) {
+      // `'eu'` é o único atalho que esta rota aceita, e existe para o cliente NUNCA ter de mandar
+      // um id: quem se põe a si próprio num lugar vago manda a palavra, e quem decide quem é «eu» é
+      // a sessão. Assim não há sequer um caminho em que o id de quem entra venha do browser.
+      const novoId = pedido === 'eu' ? ctx.userId : pedido
       const validada = validarAtribuicao({
         papel,
         ocupanteActual: (negocio as unknown as Record<string, string | null>)[`${papel}_id`] ?? null,

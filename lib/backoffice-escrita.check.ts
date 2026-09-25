@@ -249,6 +249,9 @@ const ambitoDe = (papel: 'setter' | 'closer' | 'team_leader', liderados: string[
   teste('negócios: o filtro vem do âmbito', /ambitoDaEquipa\(/.test(negocios))
   teste('⭐ negócios: quem não participa não move', /podeMexerNoNegocio\(/.test(negocios))
   teste('negócios: toda a mudança de estado grava evento', /vendas_negocio_eventos/.test(negocios))
+  // Pôr-se a si próprio num papel manda a palavra `'eu'`, não um id: quem decide quem é «eu» é a
+  // sessão. Assim não existe caminho nenhum em que o id de quem entra na atribuição venha do browser.
+  teste('⭐ negócios: «eu» resolve-se na sessão, não no cliente', /=== 'eu' \? ctx\.userId/.test(negocios))
 }
 
 if (falhas.length) {

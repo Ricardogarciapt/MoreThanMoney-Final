@@ -27,6 +27,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ambitoDeLeitura, pode } from '@/lib/backoffice-papeis'
 import { lideradosDe, AVISO_EQUIPA_POR_CONFIGURAR } from '@/lib/backoffice-equipa'
 import { negociosDoAmbito, papeisNoNegocio, type NegocioLinha } from '@/lib/backoffice-negocios'
+import { COLUNA_DO_PAPEL } from '@/lib/backoffice-escrita'
+import { PAPEIS, type Papel } from '@/lib/backoffice-papeis'
 import { ESTADOS_PIPELINE, ESTADO_PIPELINE_NOME, dataCurta, ehEstadoFechado, ehEstadoPipeline } from '@/lib/backoffice-vista'
 import { avisoParado, diasParado, sugestaoPara } from '@/lib/backoffice-playbook'
 import { lerDoCatalogo, lerPagina, lerProcura } from '@/lib/backoffice-paginacao'
@@ -35,6 +37,7 @@ import { Aviso, Cabecalho, Etiqueta, Falhou, Vazio } from '../_partes/blocos'
 import { Campo, ESTILO_CAMPO, Filtros, Paginacao, type Params } from '../_partes/navegar'
 import { NegocioNovo } from './novo'
 import { Mover } from './mover'
+import { Trabalhar } from './trabalhar'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Pipeline · Backoffice MTM' }
@@ -218,6 +221,15 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                         {parado && <p className="mt-2 text-xs font-medium text-amber-400/90">{parado}</p>}
                         {/* Mover é um acto com autor: o evento que fica na base diz quem o fez. */}
                         <Mover id={n.id} estado={estado} nome={n.nome} />
+                        {/* Os lugares que esta pessoa pode ocupar sozinha: vagos E de um papel que
+                            ela tem. Oferecer um papel que ela não tem era oferecer um botão que o
+                            servidor recusa — e a recusa parece avaria. */}
+                        <Trabalhar
+                          id={n.id}
+                          nota={n.nota}
+                          vagos={papeisQuePodeOcupar(n, ctx.papeis, ctx.admin)}
+                          meus={papeisQueOcupa(n, ctx.userId)}
+                        />
                       </div>
                     )
                   })}
@@ -246,4 +258,20 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
       </p>
     </div>
   )
+}
+
+/**
+ * Os papéis que esta pessoa pode ocupar NESTE negócio sozinha: os que estão vagos e que ela tem.
+ *
+ * O dono não tem papéis atribuídos (tem tudo por ser dono) e por isso pode ocupar qualquer um dos
+ * cinco — é a mesma excepção que a criação de negócios faz, e pela mesma razão.
+ */
+function papeisQuePodeOcupar(negocio: NegocioLinha, papeis: Papel[], ehDono: boolean): Papel[] {
+  const seus = ehDono ? [...PAPEIS] : papeis
+  return seus.filter((p) => negocio[COLUNA_DO_PAPEL[p]] === null)
+}
+
+/** Os papéis que ela ocupa neste negócio — os que pode largar sem pedir a ninguém. */
+function papeisQueOcupa(negocio: NegocioLinha, pessoaId: string): Papel[] {
+  return PAPEIS.filter((p) => negocio[COLUNA_DO_PAPEL[p]] === pessoaId)
 }
