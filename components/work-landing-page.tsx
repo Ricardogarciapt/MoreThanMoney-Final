@@ -349,7 +349,23 @@ export default function WorkLandingPage() {
             Junta-te à equipa de crescimento.
           </p>
           <div className="mt-16 grid gap-8 lg:grid-cols-3">
+            {/* As percentagens têm de ser as que o sistema PAGA, não as que a página herdou.
+                Estavam aqui «5%–10%» no Setter e «15%–30%» no Closer, de uma versão anterior do
+                plano; as regras vivas (vendas_regras_comissao) dizem prospector 5%, setter 10%,
+                closer 20%–30% conforme o volume do mês, e team leader 5% residual. Um candidato
+                que decide com um número e recebe outro é uma discussão garantida à primeira
+                comissão. */}
             {[
+              {
+                title: "Prospector",
+                desc: "Responsável por gerar novas oportunidades e abrir conversas com potenciais membros.",
+                responsibilities: [
+                  "Prospectar novos interessados",
+                  "Abrir conversas",
+                  "Criar oportunidades",
+                ],
+                compensation: "5% por venda fechada a partir da tua oportunidade",
+              },
               {
                 title: "Setter",
                 desc: "Responsável por iniciar conversas com potenciais membros e qualificar interessados.",
@@ -358,7 +374,7 @@ export default function WorkLandingPage() {
                   "Qualificar interessados",
                   "Marcar calls com closers",
                 ],
-                compensation: "5%–10% por cliente fechado · possibilidade de rendimento recorrente",
+                compensation: "10% por venda fechada",
               },
               {
                 title: "Closer",
@@ -368,17 +384,7 @@ export default function WorkLandingPage() {
                   "Explicar o sistema",
                   "Converter leads",
                 ],
-                compensation: "15%–30% por venda fechada",
-              },
-              {
-                title: "Growth Partner",
-                desc: "Responsável por gerar novas oportunidades e ajudar a expandir a comunidade globalmente.",
-                responsibilities: [
-                  "Prospectar novos interessados",
-                  "Expandir rede",
-                  "Criar oportunidades",
-                ],
-                compensation: "Comissões por cliente e possibilidade de criar equipa.",
+                compensation: "20%–30% por venda fechada, conforme o volume do mês · 5% residual nas renovações",
               },
             ].map((role) => (
               <div
@@ -416,6 +422,42 @@ export default function WorkLandingPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* O que os cartões sozinhos não dizem: o tecto, onde se vê o extracto, e que isto não
+              é salário. Sem esta nota, três percentagens lado a lado leem-se como uma promessa
+              mensal — e não são: são o que se paga por venda feita. */}
+          <div
+            data-reveal
+            className="mx-auto mt-14 max-w-3xl space-y-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-8 text-sm leading-relaxed text-zinc-400"
+          >
+            <p>
+              Numa venda única, o total pago a toda a cadeia não passa de{" "}
+              <strong className="text-zinc-200">40%</strong>. No MTM Funded o tecto é de{" "}
+              <strong className="text-zinc-200">15%</strong>, porque o produto suporta capital e risco
+              próprios. Há ainda a escada de ranks, que paga uma percentagem do volume mensal da perna
+              menor — 6% a 18%, por diferencial — mais um bónus único em cada degrau.
+            </p>
+            <p>
+              As vendas, as comissões e o extracto vivem no backoffice, em{" "}
+              <a
+                href="https://backoffice.morethanmoney.pt"
+                className="text-amber-400 hover:underline"
+              >
+                backoffice.morethanmoney.pt
+              </a>
+              , com o mesmo login do site.
+            </p>
+            <p>
+              <strong className="text-zinc-200">Quem já trabalhava connosco mantém o plano com que
+              entrou:</strong> os afiliados antigos continuam com os 50% recorrentes e os Distribuidores
+              activos com o valor fixo mensal. A condição está gravada na conta de cada um — mudar a
+              tabela geral não mexe em quem já cá estava.
+            </p>
+            <p className="text-zinc-500">
+              Não há salário fixo nem mínimo garantido. As percentagens são por venda feita: sem vendas,
+              não há comissão. Nada aqui é uma promessa de rendimento.
+            </p>
           </div>
         </div>
       </section>

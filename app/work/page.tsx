@@ -4,10 +4,10 @@ import WorkLandingPage from "@/components/work-landing-page"
 export const metadata: Metadata = {
   title: "Trabalha Connosco | MoreThanMoney — Equipa de Crescimento",
   description:
-    "Junta-te à equipa global da MoreThanMoney. Vagas para Setters, Closers e Growth Partners. Modelo remoto, formação interna e comissões recorrentes.",
+    "Junta-te à equipa global da MoreThanMoney. Vagas para Prospectores, Setters e Closers. Modelo remoto, formação interna e comissões recorrentes.",
   openGraph: {
     title: "Trabalha Connosco | MoreThanMoney",
-    description: "Recrutamento: Setters, Closers e Growth Partners. Equipa de crescimento global.",
+    description: "Recrutamento: Prospectores, Setters e Closers. Equipa de crescimento global.",
     locale: "pt_PT",
   },
 }
