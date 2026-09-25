@@ -39,8 +39,8 @@ export default function PrivacidadePage() {
                 >
                   morethanmoney.pt
                 </a>
-                ) e a aplicação móvel MTM System (pt.morethanmoney.app), disponível no Google Play
-                Store.
+                ) e as aplicações móveis MTM System e MTM Auto — no Google Play
+                (pt.morethanmoney.app) e na App Store da Apple.
               </p>
             </section>
 
@@ -66,11 +66,33 @@ export default function PrivacidadePage() {
                   Dados de análise anónimos via Firebase Analytics (eventos de navegação, cliques)
                 </li>
               </ul>
+              {/* Isto dizia «não recolhemos dados financeiros (cartões, contas bancárias)», e era
+                  falso: há Stripe Connect a pagar comissões a afiliados e à equipa de vendas, há
+                  contas de corretora ligadas à execução automática, e há documentos enviados pelo
+                  próprio utilizador. Uma política de privacidade que nega recolher o que recolhe é
+                  pior do que uma que não fala do assunto. Os dados de CARTÃO continuam a não passar
+                  por aqui — esses ficam na Stripe — e é essa a afirmação que se pode fazer.
+                  O inventário completo de dados e subcontratantes precisa de revisão por jurista. */}
+              <p className="font-medium text-white mb-2">Dados financeiros e de negociação:</p>
+              <ul className="list-disc pl-5 space-y-1 mb-4">
+                <li>
+                  Identificador de cliente e de subscrição na Stripe (o pagamento é processado pela
+                  Stripe — os dados do cartão não passam por nós nem são guardados por nós)
+                </li>
+                <li>
+                  Número e métricas das contas de corretora que o utilizador escolha ligar à execução
+                  automática (MTM Copy, MTM Auto, Tap to Trade)
+                </li>
+                <li>
+                  Para quem recebe comissões: os dados de pagamento tratados pela Stripe Connect, e os
+                  documentos que o próprio envie quando lhe sejam pedidos
+                </li>
+              </ul>
               <p className="font-medium text-white mb-2">Não recolhemos:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Dados de saúde ou biométricos</li>
                 <li>Dados de localização GPS</li>
-                <li>Dados financeiros (cartões, contas bancárias)</li>
+                <li>Números de cartão de crédito ou débito</li>
               </ul>
             </section>
 
@@ -115,12 +137,65 @@ export default function PrivacidadePage() {
                 Partilhamos dados apenas com os seguintes prestadores de serviço, necessários para
                 o funcionamento da plataforma:
               </p>
+              {/* A lista dizia que a autenticação e o armazenamento eram Firebase Authentication e
+                  Firestore. Não são, e nunca foram nesta versão da plataforma: a base de dados e a
+                  autenticação são Supabase, e o Firebase só serve as notificações push e a análise
+                  de uso. Nomear o subcontratante errado numa política de privacidade é um erro de
+                  facto com consequência — é a ele que o titular dos dados iria pedir contas. */}
               <ul className="list-disc pl-5 space-y-3">
                 <li>
-                  <strong className="text-white">Google Firebase</strong> (Firebase Authentication,
-                  Firestore, Analytics, Cloud Messaging) — armazenamento de dados e análise.{" "}
+                  <strong className="text-white">Supabase</strong> — base de dados, autenticação e
+                  armazenamento de ficheiros da plataforma.{" "}
+                  <a
+                    href="https://supabase.com/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#D2A63C] hover:underline"
+                  >
+                    Política de privacidade
+                  </a>
+                </li>
+                <li>
+                  <strong className="text-white">Google</strong> (Firebase Analytics e Firebase Cloud
+                  Messaging para notificações push; Gmail para o envio de emails de serviço).{" "}
                   <a
                     href="https://policies.google.com/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#D2A63C] hover:underline"
+                  >
+                    Política de privacidade
+                  </a>
+                </li>
+                <li>
+                  <strong className="text-white">Stripe</strong> — processamento de pagamentos e, para
+                  quem recebe comissões, dos respectivos pagamentos (Stripe Connect).{" "}
+                  <a
+                    href="https://stripe.com/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#D2A63C] hover:underline"
+                  >
+                    Política de privacidade
+                  </a>
+                </li>
+                <li>
+                  <strong className="text-white">MetaApi</strong> — ligação às contas de corretora que o
+                  utilizador escolha ligar à execução automática.{" "}
+                  <a
+                    href="https://metaapi.cloud/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#D2A63C] hover:underline"
+                  >
+                    Política de privacidade
+                  </a>
+                </li>
+                <li>
+                  <strong className="text-white">Anthropic</strong> — processa as mensagens enviadas ao
+                  Mentor AI para gerar a resposta.{" "}
+                  <a
+                    href="https://www.anthropic.com/legal/privacy"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[#D2A63C] hover:underline"
@@ -217,7 +292,7 @@ export default function PrivacidadePage() {
               </h2>
               <p>
                 Implementamos medidas técnicas e organizacionais para proteger os seus dados,
-                incluindo encriptação em trânsito (HTTPS/TLS), autenticação segura via Firebase Auth
+                incluindo encriptação em trânsito (HTTPS/TLS), autenticação segura via Supabase Auth
                 e controlos de acesso restritos.
               </p>
             </section>
@@ -238,11 +313,12 @@ export default function PrivacidadePage() {
 
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
-                9. Aplicação móvel MTM System
+                9. Aplicações móveis
               </h2>
               <p className="mb-4">
-                A app MTM System (Android — pt.morethanmoney.app) acede à mesma plataforma e está
-                sujeita a esta mesma Política de Privacidade. A app utiliza:
+                As apps MTM System e MTM Auto — Android (pt.morethanmoney.app) e iOS (App Store) —
+                acedem à mesma plataforma e estão sujeitas a esta mesma Política de Privacidade. As
+                apps utilizam:
               </p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Firebase Analytics para análise de uso anónimo</li>

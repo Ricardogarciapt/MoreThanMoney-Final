@@ -97,7 +97,7 @@ export default function TermsPage() {
               <h2>10. Contato</h2>
               <p>
                 Se você tiver dúvidas sobre estes Termos de Uso, entre em contato conosco através do e-mail:
-                legal@morethanmoney.com
+                suporte@morethanmoney.pt
               </p>
 
               <p className="text-sm text-gray-400 mt-8">Última atualização: 15 de Maio de 2025</p>
