@@ -428,7 +428,7 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
               <div className="text-3xl font-bold text-green-400">
                 €{((cryptoGrowthData[cryptoGrowthData.length - 1]?.valor || 0) + (etfGrowthData[etfGrowthData.length - 1]?.valor || 0)).toLocaleString('pt-PT')}
               </div>
-              <div className="text-xs text-gray-500 mt-1">Projeção baseada em dados reais</div>
+              <div className="text-xs text-gray-500 mt-1">Simulação — não é uma previsão</div>
             </div>
             
             <div className="text-center p-4 bg-gray-800/50 rounded-lg border border-gray-700">
@@ -437,14 +437,23 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
                 ~{((((cryptoGrowthData[cryptoGrowthData.length - 1]?.valor || 0) + (etfGrowthData[etfGrowthData.length - 1]?.valor || 0)) / 
                    ((cryptoGrowthData[cryptoGrowthData.length - 1]?.investido || 1) + (etfGrowthData[etfGrowthData.length - 1]?.investido || 1))).toFixed(1))}x
               </div>
-              <div className="text-xs text-gray-500 mt-1">Em 5 anos</div>
+              <div className="text-xs text-gray-500 mt-1">Em 5 anos, na simulação</div>
             </div>
           </div>
 
+          {/* Isto dizia «seguindo o plano com disciplina, esta projeção aproxima-nos do objetivo de
+              liberdade financeira compartilhada» — uma promessa de destino colada a um multiplicador
+              a três dígitos. O multiplicador pode ficar; o que não pode é ser lido como previsão.
+              A taxa que o gera é composta e, quando a API não devolve nada, cai num valor fixo de
+              30%/ano na cripto e 25% nos ETF (ver cryptoPotentialRate e etfPotentialRate acima) —
+              ou seja, é uma simulação, e é isso que a caixa passa a dizer. */}
           <div className="mt-6 bg-[#D2A63C]/10 p-4 rounded-lg border border-[#D2A63C]/30">
             <p className="text-sm text-gray-300 text-center">
               <strong className="text-[#D2A63C]">Together we go further.</strong><br />
-              Seguindo o plano com disciplina, esta projeção aproxima-nos do objetivo de liberdade financeira compartilhada.
+              Os números acima são uma <strong className="text-white">simulação</strong>: aplicam uma
+              taxa de crescimento estimada ao reforço periódico do plano. Não são uma previsão nem uma
+              promessa de resultado — o mercado pode cair, e nesse caso o valor da carteira cai com ele.
+              Resultados passados não garantem resultados futuros.
             </p>
           </div>
         </CardContent>

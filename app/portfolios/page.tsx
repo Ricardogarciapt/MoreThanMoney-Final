@@ -862,10 +862,17 @@ export default function PortfoliosPage() {
                   evitando compras em topos e maximizando o aproveitamento de correções.
                 </p>
 
+                {/* «Seguindo o plano com disciplina, esta estratégia aproxima-nos do objetivo de
+                    liberdade financeira compartilhada» prometia o destino. O que a estratégia
+                    realmente faz — reforçar nas correções em vez de nos topos — é o que fica, e é
+                    verificável. O DCA reduz o preço médio de entrada; não elimina o risco de
+                    perder dinheiro, e dizê-lo aqui custa uma linha. */}
                 <div className="bg-[#D2A63C]/10 border border-[#D2A63C]/30 rounded-lg p-4 mb-4">
                   <p className="text-sm text-gray-200 italic leading-relaxed">
-                    💡 <strong className="text-[#D2A63C]">Filosofia MTM:</strong> Seguindo o plano com disciplina, 
-                    esta estratégia aproxima-nos do objetivo de liberdade financeira compartilhada.
+                    💡 <strong className="text-[#D2A63C]">Filosofia MTM:</strong> reforçar com método,
+                    nas correções e não nos topos, para baixar o preço médio de entrada ao longo do tempo.
+                    Baixar o preço médio não elimina o risco: uma carteira de cripto e ETF pode valer menos
+                    do que o investido, e não há resultado garantido.
                   </p>
                 </div>
 
