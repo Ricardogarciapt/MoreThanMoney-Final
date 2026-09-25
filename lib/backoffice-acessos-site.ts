@@ -57,7 +57,14 @@ export function ehAreaSite(valor: unknown): valor is AreaSite {
   return typeof valor === 'string' && (AREAS_SITE as readonly string[]).includes(valor)
 }
 
-/** O caminho pelo qual cada área se reconhece num pedido. Serve o middleware e as rotas. */
+/**
+ * O caminho pelo qual cada área se reconhece num pedido.
+ *
+ * Os prefixos `/api/*` estão aqui de propósito, mas o MIDDLEWARE não os usa: em `/api/*` ele não
+ * autentica nada (cada rota autentica-se sozinha, para não pagar um round-trip de auth por chamada
+ * de sinais ou de preços). Quem quiser aplicar a restrição numa rota de API chama `areaDoCaminho`
+ * lá dentro. Escrevo-o aqui para ninguém concluir que a API está coberta só por ver o prefixo.
+ */
 const PREFIXOS: Record<AreaSite, readonly string[]> = {
   member_area: ['/member-area'],
   app_mobile: ['/app-mobile'],
