@@ -507,6 +507,16 @@ function aoTick(t: Tick): void {
       precoEmMercado.set(sym, emMercado)
       precoFonte.set(sym, t.origem)
       precosPorEscrever.add(sym)
+      // E O BROWSER TAMBÉM PRECISA DE SABER. A reconfirmação ia para a base e ficava por aí: os
+      // clientes do WS só ouviam MUDANÇAS de preço. Um livro parado — o BTCUSD passa 11 s sem
+      // mexer, medido a 25/09 — aparecia no WebTrader com a idade da última mudança, enquanto a
+      // execução, que lê o carimbo reconfirmado, o considerava fresco. O ecrã dizia «sem preço ao
+      // vivo» e desligava o bilhete num símbolo perfeitamente negociável.
+      //
+      // Publicar aqui é honesto pela mesma razão que o carimbo é: só se chega a este ponto porque
+      // a FONTE deu um tick novo com o mesmo preço. Se ela calar, não há reconfirmação nenhuma e o
+      // símbolo envelhece no ecrã como deve. Custo: uma mensagem a cada 2 s por símbolo parado.
+      wsPrecos?.publicar(sym, t.bid, t.ask, t.em.getTime(), emMercado, t.origem)
     }
     return
   }
