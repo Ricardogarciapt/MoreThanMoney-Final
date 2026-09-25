@@ -127,7 +127,9 @@ export async function adotarManuais(): Promise<{ adotadas: Adotada[]; notas: str
         tp1: p.takeProfit ? Number(p.takeProfit) : null,
         original_lot: Number(p.volume) || 0,
         status: 'open',
-        comment: p.comment ?? MARCA_GERIR,
+        // Sem 'comment': a coluna não existe em mtmcopy_premium_active e o insert falhava sempre,
+        // por isso NENHUMA ordem manual chegava a ser adoptada. O comentário do MetaTrader
+        // continua a ser lido da posição (ehGerida), que é onde a marca vive.
       })
       if (error) {
         notas.push(`${p.symbol}: ${error.message.slice(0, 60)}`)

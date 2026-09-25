@@ -72,7 +72,7 @@ export async function listarContasAdmin(filtro: { userId?: string | null } = {})
   const porUser = (q: any) => (filtro.userId ? q.eq('user_id', filtro.userId) : q)
   type Linhas = { data: Record<string, unknown>[] | null; error?: unknown }
   const [site, auto, wt, subs, copiadores, rotas, meta] = (await Promise.all([
-    porUser(db().from('mtmcopy_connections').select('id, user_id, account_label, mt5_login, mt5_server, mt5_platform, mt5_status, is_active, last_error, metaapi_account_id, purpose, t2t_enabled, copyfactory_strategy_pick, copyfactory_subscribed, copy_method, balance, funded_account_id, funded_somente_leitura, tl_env, tl_account_id, tl_acc_num, tl_server, created_at').neq('mt5_status', 'disconnected')),
+    porUser(db().from('mtmcopy_connections').select('id, user_id, account_label, mt5_login, mt5_server, mt5_platform, mt5_status, is_active, last_error, metaapi_account_id, purpose, t2t_enabled, copyfactory_strategy_pick, copyfactory_subscribed, copy_method, funded_account_id, funded_somente_leitura, tl_env, tl_account_id, tl_acc_num, tl_server, created_at').neq('mt5_status', 'disconnected')),
     porUser(db().from('mtmauto_accounts').select('*')),
     porUser(db().from('webtrader_contas_mt5').select('id, user_id, metaapi_account_id, plataforma, login, servidor, rotulo, estado, erro, created_at')),
     porUser(db().from('mtmauto_subscriptions').select('conta_id, provider_id, user_id').eq('ativo', true)),
@@ -150,7 +150,9 @@ export async function listarContasAdmin(filtro: { userId?: string | null } = {})
       metaapiAccountId: txt(c.metaapi_account_id), ...metaInfo(c.metaapi_account_id),
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: txt(c.metaapi_account_id), login: txt(c.mt5_login), plataforma, estado: txt(c.mt5_status) }),
       chaveFisica: chaveFisica({ ref, plataforma, login: txt(c.mt5_login), servidor: txt(c.mt5_server), tlEnv: txt(c.tl_env), tlAccountId: txt(c.tl_account_id), fundedAccountId: txt(c.funded_account_id) }),
-      usos, saldo: typeof c.balance === 'number' ? c.balance : null, criadaEm: txt(c.created_at),
+      // Saldo: a coluna 'balance' nunca existiu nesta tabela e o select inteiro falhava,
+      // deixando a lista VAZIA. Fica null, como no ramo 'auto' — um número inventado era pior.
+      usos, saldo: null, criadaEm: txt(c.created_at),
     })
   }
   const subsPorConta = new Map<string, string[]>()
