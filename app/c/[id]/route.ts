@@ -43,8 +43,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     })
   }
 
+  // Link partilhado sem media → abre o chat NA mensagem partilhada, não no fundo do canal.
   const fallback = match?.channel_slug
-    ? `/app-mobile?tab=chat&channel=${encodeURIComponent(match.channel_slug)}`
+    ? `/app-mobile?tab=chat&channel=${encodeURIComponent(match.channel_slug)}&msg=${encodeURIComponent(match.id)}`
     : '/app-mobile?tab=chat'
 
   return NextResponse.redirect(new URL(fallback, getSiteOrigin()))

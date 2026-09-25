@@ -214,8 +214,9 @@ export default function DGSidebar({
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeSection === item.id
-          const isOverview = item.id === "overview"
-          const isMetrics = item.id === "metrics"
+          // Aqui havia tambem `isOverview` e `isMetrics`, a comparar item.id com
+          // "overview" e "metrics" — duas seccoes que ja nao existem em DGSection.
+          // Eram sempre falsas e so entravam na margem de cima, que se mantem igual.
           const isCalendly = item.id === "calendly"
           const isStreamVps = item.id === "stream_vps"
           const isN8nVps = item.id === "n8n_vps"
@@ -229,7 +230,7 @@ export default function DGSidebar({
                 isActive
                   ? "bg-[#D2A63C]/15 text-white"
                   : "text-gray-400 hover:text-white hover:bg-white/5",
-                (isOverview || isMetrics || isCalendly || isStreamVps || isN8nVps) && !isActive && "mt-1"
+                (isCalendly || isStreamVps || isN8nVps) && !isActive && "mt-1"
               )}
             >
               <div

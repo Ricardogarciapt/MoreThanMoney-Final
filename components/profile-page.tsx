@@ -26,7 +26,7 @@ interface RoleRequest {
 }
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, isAdmin, updateUser } = useAuth()
+  const { user, isAuthenticated, isAdmin, refreshUser } = useAuth()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("account")
   const [formData, setFormData] = useState({
@@ -121,10 +121,10 @@ export default function ProfilePage() {
 
       if (data.success) {
         setSaveMessage(data.message)
-        // Atualizar contexto do usuário
-        if (updateUser) {
-          updateUser(data.user)
-        }
+        // Recarregar o contexto a partir da BD. Aqui chamava-se um `updateUser`
+        // que o AuthContext nunca expos: o `if` era sempre falso e o perfil em
+        // memoria ficava desactualizado ate ao proximo refresh da pagina.
+        await refreshUser()
       } else {
         setError(data.error)
       }

@@ -5,7 +5,7 @@ import { Loader2, Maximize2 } from "lucide-react"
 import type { SimboloFicha } from "./api"
 import { lerFavoritos } from "./funded-watchlist"
 import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
-import { GraficoConta, ProvedorRascunho, type Trader } from "./trader-contexto"
+import { GraficoConta, ProvedorRascunho, type TraderBase } from "./trader-contexto"
 import type { Layout } from "./atalhos"
 
 /**
@@ -32,7 +32,7 @@ const semCriptoNasCelulas = (v: string[]) => {
   })
 }
 
-export default function MultiGrafico({ t, layout, principal, recolhido = false }: { t: Trader; layout: Layout; principal: React.ReactNode; recolhido?: boolean }) {
+export default function MultiGrafico({ t, layout, principal, recolhido = false }: { t: TraderBase; layout: Layout; principal: React.ReactNode; recolhido?: boolean }) {
   const [celulas, setCelulas] = useState<string[]>(() => semCriptoNasCelulas(PADRAO))
   useEffect(() => {
     try {
@@ -71,7 +71,7 @@ export default function MultiGrafico({ t, layout, principal, recolhido = false }
   )
 }
 
-function Celula({ t, symbol, indice, recolhido, onMudar, onPromover }: { t: Trader; symbol: string; indice: number; recolhido: boolean; onMudar: (s: string) => void; onPromover: () => void }) {
+function Celula({ t, symbol, indice, recolhido, onMudar, onPromover }: { t: TraderBase; symbol: string; indice: number; recolhido: boolean; onMudar: (s: string) => void; onPromover: () => void }) {
   const [ficha, setFicha] = useState<SimboloFicha | null>(null)
   const [indisponivel, setIndisponivel] = useState(false)
   const [volume, setVolume] = useState(0.01)
@@ -87,7 +87,7 @@ function Celula({ t, symbol, indice, recolhido, onMudar, onPromover }: { t: Trad
     return () => { vivo = false }
   }, [symbol]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const opcoes = [...new Set([symbol, ...favoritos, ...t.dados.posicoes.map((p) => String(p.symbol))])]
+  const opcoes = [...new Set([symbol, ...favoritos, ...t.posicoes.map((p) => p.symbol)])]
     .filter((o) => !semCripto() || !ehSimboloCripto(o))
   return (
     <div className={`flex min-w-0 flex-col ${recolhido ? "" : "min-h-0"}`}>

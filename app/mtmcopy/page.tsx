@@ -36,7 +36,8 @@ import {
   telegramGroupsLabel,
   type MtmcopyCopyMethod,
 } from "@/lib/mtmcopy/copy-methods"
-import SetupModal, { type MTMcopierConnection, type MtmcopySenderMode } from "@/components/mtmcopy/setup-modal"
+import SetupModal, { type MtmcopySenderMode } from "@/components/mtmcopy/setup-modal"
+import type { MTMcopierConnectionEnriquecida } from "@/lib/mtmcopy/types"
 import {
   getClientConnectionTitle,
   isMasterConnection,
@@ -48,13 +49,9 @@ import {
 } from "@/lib/mtmcopy/copy-limits"
 import { isMasterReadyForCopySlaves } from "@/lib/mtmcopy/user-copy-context"
 
-type MTMcopierConnectionRow = MTMcopierConnection & {
-  last_signal_at: string | null
-  last_error: string | null
-  account_balance?: number | null
-  account_equity?: number | null
-  copyfactory_subscribed?: boolean
-}
+// Era uma interseccao que voltava a declarar campos que o tipo canonico ja tem.
+// `MTMcopierConnectionEnriquecida` = colunas da BD + saldos vivos da MetaApi.
+type MTMcopierConnectionRow = MTMcopierConnectionEnriquecida
 
 interface SignalLog {
   id: string

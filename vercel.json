@@ -113,6 +113,10 @@
       "schedule": "0 11,18 * * *"
     },
     {
+      "path": "/api/cron/broker-dados-frescura",
+      "schedule": "0 7 * * *"
+    },
+    {
       "path": "/api/cron/broker-gate-renew",
       "schedule": "0 6 * * *"
     },
@@ -199,6 +203,10 @@
     {
       "path": "/api/cron/funded-precos-vigia",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/prospecao-radar",
+      "schedule": "15 6 * * *"
     }
   ]
 }

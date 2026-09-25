@@ -281,7 +281,7 @@ class ProductsService {
             "Análises de mercado diárias",
             "Comunidade VIP",
           ],
-          images: ["/logo-official.png"],
+          images: ["/logo-mtm-transparent.png"],
           tags: ["membership", "vip", "acesso-completo"],
           metadata: {
             duration: "Mensal",

@@ -27,14 +27,18 @@ export interface DefinicaoMensagem {
   padrao: string
 }
 
-export const PUPRIME_LINK = 'https://www.puprime.com/campaign?cs=morethanmoney'
-export const APP_REGISTER_LINK = 'https://www.morethanmoney.pt/register'
-export const APP_ANDROID_LINK = 'https://www.morethanmoney.pt/downloads/MoreThanMoney.apk'
-export const TRIAL_CODE = '14DayTrial'
-// Reexportado, não repetido: duas constantes com o mesmo nome divergem no dia em que alguém
-// muda uma delas — foi o que aconteceu com os 300/350.
-import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
-export { MIN_DEPOSIT }
+/**
+ * Reexportados, não repetidos: duas constantes com o mesmo nome divergem no dia em que alguém
+ * muda uma delas — foi o que aconteceu com os 300/350.
+ *
+ * O código de teste e os links da app estavam escritos NOS DOIS ficheiros, com os mesmos nomes e
+ * os mesmos valores: exactamente a armadilha que este comentário já avisava, e a dois metros
+ * dele. Mudar o código do teste num deles deixava o outro a anunciar o antigo.
+ */
+import { MIN_DEPOSIT, APP_REGISTER_LINK, APP_ANDROID_LINK, TRIAL_CODE, PUPRIME_LINK } from '@/lib/telegram-broker-gate'
+export { MIN_DEPOSIT, APP_REGISTER_LINK, APP_ANDROID_LINK, TRIAL_CODE, PUPRIME_LINK }
+/** Os preços dos degraus vivem em `lib/escada-precos.ts` — aqui só se leem. */
+import { escadaEmLinhas, bonusEmLinhas, NOME_DEGRAU_TOPO } from '@/lib/escada-precos'
 
 export const MENSAGENS: DefinicaoMensagem[] = [
   {
@@ -86,6 +90,35 @@ export const MENSAGENS: DefinicaoMensagem[] = [
       `4️⃣ Envia um <b>print screen</b> do depósito\n\n` +
       `Assim que validar, liberto os grupos + cupão Premium. Começa pela A se quiseres testar primeiro. 🚀`,
   },
+  {
+    chave: 'escada_precos',
+    titulo: 'A escada de preços (packs)',
+    quando: 'Resposta a /premium no bot, e sempre que alguém pergunta quanto custa.',
+    variaveis: ['{{degraus}}', '{{bonusPuPrime}}', '{{nomeTopo}}', '{{depositoMinimo}}', '{{linkCorretora}}'],
+    /*
+     * Os degraus e o bónus entram por variável, não escritos aqui.
+     *
+     * O texto é editável no /admin/social, e um preço escrito à mão dentro dele voltava a ser
+     * uma segunda fonte — a mesma armadilha dos 300/350, agora com a agravante de viver na base
+     * de dados, onde nem uma pesquisa no código a encontra. Assim, mudar o preço num sítio
+     * chega, mesmo para quem já editou esta mensagem.
+     *
+     * A ORDEM é a da venda: os degraus pagos primeiro, a rota sem mensalidade depois e o bónus
+     * no fim. Abrir com o grátis é a regra que se perdeu uma vez e custou o funil todo.
+     */
+    padrao:
+      `👑 <b>MoreThanMoney — como se entra</b>\n\n` +
+      `{{degraus}}\n\n` +
+      `💎 <b>Ou sem mensalidade:</b> conta na PU Prime com ≥ {{depositoMinimo}}$ e o Premium + todos os grupos ficam sem custo enquanto mantiveres o saldo. O dinheiro fica na TUA conta.\n\n` +
+      `{{bonusPuPrime}}\n\n` +
+      `▶️ <a href='https://www.morethanmoney.pt/upgrade'>Subscrever</a>\n` +
+      `🏦 <a href='{{linkCorretora}}'>Abrir conta na corretora</a> — depois escreve /acesso\n` +
+      // O «Subscrever» acima já leva ao /upgrade, onde o degrau de cima voltou a ter coluna
+      // (24/09). Aqui só se diz que também se fecha por aqui, para quem prefere falar — o que
+      // não se faz é obrigar ao fecho à mão um pacote que já se compra sozinho.
+      `🏆 Para o <b>{{nomeTopo}}</b>: está no link acima, ou responde-me aqui que trato disso contigo.\n` +
+      `🆓 Ou experimenta a app primeiro: /app`,
+  },
 ]
 
 /** As variáveis que o sistema sabe preencher, e o que valem hoje. */
@@ -96,6 +129,9 @@ export function valoresPadrao(): Record<string, string> {
     linkRegisto: APP_REGISTER_LINK,
     codigoTrial: TRIAL_CODE,
     depositoMinimo: String(MIN_DEPOSIT),
+    degraus: escadaEmLinhas(),
+    bonusPuPrime: bonusEmLinhas(),
+    nomeTopo: NOME_DEGRAU_TOPO,
     nome: '',
   }
 }

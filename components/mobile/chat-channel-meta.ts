@@ -16,9 +16,9 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
     rules: [
       "Canal de leitura — sinais swing de forex (MTM Auto FOREX Swings)",
       "Set & forget com trailing automático",
-      "Tap to Trade: executa na tua conta ligada",
+      "Aceitar: no separador Tap to Trade (aqui é só leitura)",
     ],
-    tips: ["Toca em ⚡ para executar o sinal na tua conta"],
+    tips: ["Este canal é para ler e acompanhar — a aceitação faz-se no separador T2T"],
   },
   geral: {
     emoji: "💬",
@@ -90,7 +90,7 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
     rules: [
       "Sinais automáticos do scanner GoldKiller (XAUUSD)",
       "Só leitura — as entradas chegam automaticamente",
-      "Podes usar em Tap to Trade para executar na tua conta",
+      "Aceitar: no separador Tap to Trade (aqui é só leitura)",
     ],
     tips: ["Ativa push para não perder entradas"],
   },
@@ -101,7 +101,7 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
     rules: [
       "Estratégias MTM Auto Edge, King e Wolf",
       "Só leitura — os sinais chegam automaticamente",
-      "Tap to Trade: executa na tua conta ligada",
+      "Aceitar: no separador Tap to Trade (aqui é só leitura)",
     ],
     tips: ["Os seguimentos (TP, break-even, fecho) respondem ao sinal original"],
   },
@@ -112,7 +112,7 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
     rules: [
       "Estratégia Aurum Flow — ouro e perpétuos",
       "Só leitura — os sinais chegam automaticamente",
-      "Perpétuos: TAP to Copy (parâmetros para a exchange)",
+      "Perpétuos: seguir/copiar no separador Tap to Trade",
     ],
   },
   cripto: {

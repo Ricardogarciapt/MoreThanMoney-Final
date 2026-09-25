@@ -12,10 +12,10 @@ let supabaseInstance: SupabaseClient | null = null
 // Cliente público do Supabase (para uso no frontend)
 // Usa createBrowserClient do @supabase/ssr para PKCE correto com Next.js
 // O createBrowserClient gerencia automaticamente os cookies para o code verifier
-export const supabase = (() => {
+export const supabase: SupabaseClient = (() => {
   if (typeof window === 'undefined') {
     // No servidor, retornar null (não deve ser usado)
-    return null as any
+    return null as unknown as SupabaseClient
   }
   
   if (!supabaseInstance) {

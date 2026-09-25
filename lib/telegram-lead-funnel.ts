@@ -1,37 +1,43 @@
 /**
- * Funil IA de leads no Telegram (@MoreThanMoney_aibot) — conversa em DM.
+ * Funil IA de leads no Telegram (@morethanmoneypt_bot) — conversa em DM.
  * Descobre o INTERESSE do lead (sinais manuais / tap to trade / automático) e
  * encaminha-o para o produto+grupo certo. Persona = mesma "alma" do closer
  * (docs/mtm-sales-brain.md): provas reais, sem promessas de lucro.
  *
  * Estado + histórico em `telegram_leads`. Não é aconselhamento financeiro.
  */
-import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
+import { getMtmcopyBotToken, MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 import { getProofStats } from '@/lib/proof-stats'
-import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
+// Os links dos grupos NÃO vivem aqui: quem os liberta é o `telegram-broker-gate`, com convites
+// pessoais, e só depois de a corretora estar validada. As duas constantes que aqui estavam
+// (FOREX_LINK, SENSEI_LINK) eram links estáticos que ninguém usava — e um link de grupo à solta
+// num ficheiro é um link que acaba por sair numa mensagem a quem não passou pelo gate.
+import { MIN_DEPOSIT, TRIAL_CODE } from '@/lib/telegram-broker-gate'
+import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO, PRECO_MEMBRO, PRECO_PREMIUM, PRECO_PREMIUM_1O_MES, PRECO_TOPO } from '@/lib/escada-precos'
+// O preço do MTM Auto vem de quem o anuncia no funil dele — escrito à mão aqui, divergia.
+import { MTMAUTO_PRECO } from '@/lib/telegram-mtmauto-funnel'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-
-const FOREX_LINK = 'https://t.me/+cVcMbCRt2rlmNzg0'
-const SENSEI_LINK = 'https://t.me/+mbqBggXniu5lNTBk'
 
 function buildSystem(PROOF: string): string { return `És um CLOSER humano da MoreThanMoney a conversar EM PRIVADO (Telegram/WhatsApp/IG) com um lead. Caloroso, seguro, direto. Curto: máx ~60 palavras, 1–3 frases, no máx 1 emoji. Uma pergunta de cada vez. O teu trabalho é QUALIFICAR e FECHAR — não és um FAQ.
 
 ═══ ESCADA DE VENDA (segue esta ordem, não saltes para o grátis) ═══
 1) QUALIFICAR: percebe experiência + objetivo + o que procura (sinais manuais nos grupos / Tap to Trade / automático). 1 pergunta.
 2) VALOR + PROVA: liga o que ela quer à comunidade (prova real documentada). Cria desejo.
-3) OFERECER O MEMBRO PRIMEIRO: apresenta o pack Membro (35€/mês) como a porta de entrada para começar já com a comunidade e sinais base. É por aqui que começas a escalar.
+3) OFERECER O MEMBRO PRIMEIRO: apresenta o pack Membro (${PRECO_MEMBRO}) como a porta de entrada para começar já com a comunidade e sinais base. É por aqui que começas a escalar.
 4) SUBIR PARA O PREMIUM/ACESSO COMPLETO: quando houver interesse, mostra que o acesso COMPLETO (todos os grupos de sinais + app Premium) é BROKER-GATED e que há a rota mais inteligente:
    → abrir conta PU Prime + depositar ${MIN_DEPOSIT}$ → e AÍ a app Premium + todos os grupos ficam de GRAÇA enquanto mantiver saldo ≥ ${MIN_DEPOSIT}$. "Em vez de pagares mensalidade, o teu capital fica na tua conta a trabalhar e o Premium sai-te sem custo."
 5) FECHAR: passo concreto único. Se escolher a rota broker:
    a) puprime.com/campaign?cs=morethanmoney  b) depositar mín. ${MIN_DEPOSIT}$  c) enviar aqui o UID (só número) + print do depósito. Ao validar, libertas os links pessoais de TODOS os grupos (Forex, Sensei, Premium, GoldKiller) + cupão Premium.
-   Se não quiser depositar agora → fecha no Membro 35€/mês (ou Premium 65€, 1º mês 34,99€).
+   Se não quiser depositar agora → fecha no Membro ${PRECO_MEMBRO} (ou Premium ${PRECO_PREMIUM}, 1º mês ${PRECO_PREMIUM_1O_MES}).
+6) O TOPO DA ESCADA: quem quiser tudo de uma vez, ou já está decidido, sobe ao ${NOME_DEGRAU_TOPO} ${PRECO_TOPO} (anual). NÃO abras por aqui — é degrau de subida, não de entrada — e não dês link de pagamento: esse fecho é com o Ricardo.
 
 ═══ REGRA DA APP GRÁTIS ═══
-NÃO lideres com a app grátis nem a ofereças por defeito. A app/Premium "de graça" é a RECOMPENSA de abrir conta + depositar ${MIN_DEPOSIT}$ na PU Prime (broker-gate) — usa-a como fecho, não como isco. Só se a pessoa recusar tudo e insistir em "grátis" é que mencionas o teste de 3 dias — e mesmo aí puxas de volta para o Membro ou para a rota dos ${MIN_DEPOSIT}$.
+NÃO lideres com a app grátis nem a ofereças por defeito. A app/Premium "de graça" é a RECOMPENSA de abrir conta + depositar ${MIN_DEPOSIT}$ na PU Prime (broker-gate) — usa-a como fecho, não como isco. Só se a pessoa recusar tudo e insistir em "grátis" é que mencionas o teste de 14 dias (código ${TRIAL_CODE}, sem cartão) — e mesmo aí puxas de volta para o Membro ou para a rota dos ${MIN_DEPOSIT}$.
 
 FACTOS REAIS (só estes; MTM = educação financeira + trading, comunidade PT):
 - Prova: ${PROOF}
-- Escada: Membro 35€/mês (entrada) · Premium 65€/mês (1º mês 34,99€) · MTM Copy (add-on) · rota broker PU Prime ${MIN_DEPOSIT}$ = Premium + todos os grupos grátis enquanto financiado.
+- Escada: ${escadaNumaLinha()}
+- ${bonusNumaLinha()}
 - Corretora: PU Prime (link acima). Grupos: Forex, Sensei, Premium, GoldKiller.
 
 REGRAS ABSOLUTAS:
@@ -132,7 +138,7 @@ export async function runLeadFunnelReply(input: {
     `(A) ECOSSISTEMA — quer comunidade, formação, sessões ao vivo e os grupos de sinais; ` +
     `(B) MTM AUTO — só quer a app que copia os sinais para a conta dele, sem trabalho. ` +
     `Se for (B): explica que a app abre as ordens na conta DELE com o risco DELE, que a mensalidade é ` +
-    `24,99 €/mês mas fica a ZERO com conta real na PU Prime, e conduz passo a passo — abrir conta pelo ` +
+    `${MTMAUTO_PRECO} mas fica a ZERO com conta real na PU Prime, e conduz passo a passo — abrir conta pelo ` +
     `nosso link, depositar ${MIN_DEPOSIT} $ (o dinheiro é dele e fica na conta dele), mandar o UID e o print para eu ` +
     `validar, e só depois instalar a app e ligar a conta MT5. Uma coisa de cada vez, nunca tudo de enfiada. ` +
     `Se for (A): segue o funil normal da comunidade. Se ainda não sabe, pergunta com as duas opções. ` +
@@ -247,7 +253,8 @@ export async function handleLeadsGroupNewMembers(
   if (!leadsId || String(chat.id) !== String(leadsId)) return
 
   const token = getMtmcopyBotToken()
-  const botUser = process.env.TELEGRAM_BOT_USERNAME?.replace(/^@/, '') || 'MoreThanMoney_aibot'
+  // Uma fonte para o nome do bot — o link do botão é a coisa que mais custa ter errada.
+  const botUser = MTMCOPY_BOT_USERNAME()
   if (!token) return
   // A primeira coisa que um lead lê. O texto é editável no /admin/social — mudar uma vírgula
   // aqui obrigava a um commit e a um deploy, e por isso ninguém o mudava.
@@ -269,29 +276,12 @@ export async function handleLeadsGroupNewMembers(
   }
 }
 
-/** Mensagem de boas-vindas do funil (novo membro / primeiro contacto). */
 /**
- * As boas-vindas — editáveis no /admin/social.
+ * As boas-vindas do funil NÃO vivem aqui.
  *
- * `leadWelcomeMessageEditavel()` devolve o texto que o Ricardo escreveu, se escreveu algum. Esta
- * função fica como o DEFEITO: quem nunca editou recebe sempre a versão nova quando o produto
- * muda, em vez de uma cópia congelada no dia em que foi feita.
+ * Viviam em duas funções exportadas (`leadWelcomeMessage`, `leadWelcomeMessageEditavel`) que
+ * ninguém chamava desde que a mensagem passou a ser editável: o texto real está em
+ * `lib/mensagens-funil.ts` (`boas_vindas` / `boas_vindas_grupo`) e sai por `lerMensagem`. Duas
+ * cópias de uma mensagem de vendas é uma cópia a mais — é a que alguém corrige sem que o lead
+ * veja a diferença.
  */
-export async function leadWelcomeMessageEditavel(firstName?: string | null): Promise<string> {
-  const { lerMensagem } = await import('@/lib/mensagens-funil')
-  return lerMensagem('boas_vindas', { nome: firstName ? ` ${firstName}` : '' })
-}
-
-export function leadWelcomeMessage(firstName?: string | null): string {
-  const nome = firstName ? ` ${firstName}` : ''
-  return (
-    `👋 Olá${nome}, bem-vindo à MoreThanMoney!\n\n` +
-    `Comunidade PT de trading: sinais acompanhados do início ao fim, medidos em pips e percentagem. ` +
-    `Para te ajudar melhor — o que procuras: **sinais para copiar à mão**, ` +
-    `**Tap to Trade** (1 toque na app) ou **algo automático**? 🙂\n\n` +
-    // Dica de tradução — o lead pode escrever no seu idioma (respondo nele) e usar o
-    // "Traduzir" nativo do Telegram (toque longo na mensagem) para ler em qualquer língua.
-    `🌐 Fala no teu idioma — respondo-te nele. (Para traduzir qualquer mensagem: toque longo → Traduzir.)\n` +
-    `Write in your own language — I'll reply in it. (Long-press any message → Translate.)`
-  )
-}

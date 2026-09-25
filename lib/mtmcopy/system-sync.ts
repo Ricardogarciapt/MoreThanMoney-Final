@@ -18,6 +18,7 @@ import {
 } from './signal-sources-config'
 import type { MTMcopierConnection } from './types'
 import { contasComLinhasAbertas, deveSaltarLeitura, lerEstadosMetaApi, type EstadoMetaApi } from './contas-ociosas'
+import { ehTradeLocker } from '@/lib/tradelocker/ligacao'
 
 export interface ConnectionSyncResult {
   connection_id: string
@@ -311,8 +312,22 @@ export async function runMtmcopySystemSync(opts?: {
       // --- Reconciliação de estado (aditiva, conservadora): BD ↔ realidade ---
       const recPatch: Record<string, unknown> = {}
 
-      // (a) Linha-fantasma: marcada como ligada mas sem conta MetaAPI associada.
-      if (!conn.metaapi_account_id && conn.mt5_status === 'connected') {
+      /**
+       * (a) Linha-fantasma: marcada como ligada mas sem conta MetaAPI associada.
+       *
+       * A TRADELOCKER NÃO TEM CONTA METAAPI, e isto pausava-a sempre (24/09). Uma ligação
+       * TradeLocker identifica-se por `tl_account_id` + `tl_acc_num` e fala directamente com a
+       * corretora — nunca houve nem haverá `metaapi_account_id` nela. O resultado era uma
+       * ligação ligada à mão de manhã e pausada pelo sync a seguir, com o erro «Ligação
+       * incompleta — sem conta MT5 associada» a reaparecer sozinho. A primeira conta
+       * TradeLocker do dono esteve morta assim desde 23/09 sem ninguém perceber porquê.
+       *
+       * Uma linha TradeLocker só é fantasma se lhe faltar a CONTA DELA — é isso que se verifica.
+       */
+      const semContaLigada = ehTradeLocker(conn as { mt5_platform?: string | null })
+        ? !conn.tl_account_id || !conn.tl_acc_num
+        : !conn.metaapi_account_id
+      if (semContaLigada && conn.mt5_status === 'connected') {
         recPatch.mt5_status = 'pending'
         recPatch.is_active = false
         if (!conn.last_error) {

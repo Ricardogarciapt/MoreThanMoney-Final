@@ -1,3 +1,4 @@
+import { ehContaDaCasa } from '@/lib/mtmfunded/contas-da-casa'
 import { lucroUsd, type MapaPrecos, type Simbolo } from './matematica'
 
 /**
@@ -16,7 +17,11 @@ import { lucroUsd, type MapaPrecos, type Simbolo } from './matematica'
  * que toca na base importa-se à vez, para o teste não precisar do Next.
  */
 
-export type LoteT2T = { ok: true; volume: number; riscoUsd: number | null } | { ok: false; motivo: string }
+export type LoteT2T =
+  /** `subiuAoMinimo`: o risco pedido dava menos do que o lote mínimo do símbolo e abriu-se no
+   *  mínimo; nesse caso `riscoUsd` é o risco REAL do lote enviado, não o da percentagem. */
+  | { ok: true; volume: number; riscoUsd: number | null; subiuAoMinimo?: boolean }
+  | { ok: false; motivo: string }
 
 export function loteT2TSimulado(e: {
   equity: number
@@ -35,10 +40,31 @@ export function loteT2TSimulado(e: {
   if (!Number.isFinite(perdaPorLote) || perdaPorLote <= 0) return { ok: false, motivo: `sem conversão para USD em ${s.symbol}` }
   const riscoUsd = Math.round(e.equity * e.riscoPct) / 100
   const ideal = riscoUsd / perdaPorLote
-  // A mesma regra da cópia para contas reais: subir ao mínimo só até ao DOBRO do risco pedido.
-  if (ideal < s.volume_min / 2) return { ok: false, motivo: `lote ${ideal.toFixed(4)} abaixo de metade do mínimo ${s.volume_min} — o stop é largo demais para esta conta` }
+  // A mesma regra da cópia para contas reais (lib/copia-contas/calculo.ts, decisão do dono a
+  // 23/09): abaixo do mínimo abre-se NO MÍNIMO em vez de não abrir nada. O risco real fica acima
+  // do pedido e isso diz-se — `riscoUsd` continua a ser o RISCO REAL do lote enviado, não o
+  // configurado, para o cliente ver o que está mesmo em jogo.
+  // A subida ao mínimo vai até **0,01 lotes** (dono, 24/09): é o mínimo de que se falava. Um
+  // símbolo cujo mínimo é 0,1 ou 1 (índices) multiplicaria o risco por dez ou por cem — aí
+  // mantém-se a recusa de sempre.
+  const SUBIDA_ATE = 0.01
+  const subiuAoMinimo = ideal < s.volume_min
+  if (subiuAoMinimo && s.volume_min > SUBIDA_ATE && ideal < s.volume_min / 2) {
+    return { ok: false, motivo: `lote ${ideal.toFixed(4)} abaixo de metade do mínimo ${s.volume_min} (subir ao mínimo só vai até ${SUBIDA_ATE}) — o stop é largo demais para esta conta` }
+  }
+  // O ÚNICO travão que fica: quando o lote mínimo arrisca MAIS DO QUE A CONTA INTEIRA.
+  //
+  // Subir ao mínimo é a decisão do dono e vale mesmo quando o risco real fica várias vezes acima
+  // do configurado — é isso ou o cliente não receber trade nenhuma. Mas uma conta de 200 USD cujo
+  // lote mínimo arrisca 300 não «arrisca mais do que queria»: perde a conta numa trade, e a
+  // corretora recusaria de qualquer maneira por margem. Aí diz-se porquê.
+  const riscoDoMinimo = s.volume_min * perdaPorLote
+  if (subiuAoMinimo && riscoDoMinimo > e.equity) {
+    return { ok: false, motivo: `o lote mínimo (${s.volume_min}) arrisca ${riscoDoMinimo.toFixed(0)} USD e a conta tem ${e.equity.toFixed(0)} — o stop é largo demais para esta conta` }
+  }
   const volume = Math.round(Math.min(s.volume_max, Math.max(s.volume_min, Math.floor(ideal / step + 1e-6) * step)) * 100) / 100
-  return { ok: true, volume, riscoUsd }
+  // Com o lote subido ao mínimo, o risco que o cliente corre é o do LOTE, não o da percentagem.
+  return { ok: true, volume, riscoUsd: subiuAoMinimo ? Math.round(volume * perdaPorLote * 100) / 100 : riscoUsd, ...(subiuAoMinimo ? { subiuAoMinimo: true } : {}) }
 }
 
 export interface SinalT2T {
@@ -76,6 +102,12 @@ export async function executarT2TSimulado(p: {
   riscoPct: number
   /** Contas ligadas pelo cliente no «Ligar conta» (074) — já verificadas: dele, não só-leitura, não pausadas. */
   contasLigadas?: string[]
+  /**
+   * A pessoa escolheu ONDE abrir (2026-09-24): só estas contas simuladas entram. É um FILTRO sobre
+   * as que já eram elegíveis — um id que não esteja na lista de cima continua a não abrir nada.
+   * `undefined` = ninguém escolheu → tudo como sempre foi.
+   */
+  apenas?: string[]
 }): Promise<ResultadoT2TSimulado[]> {
   const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
   const ex = await import('./execucao')
@@ -84,14 +116,21 @@ export async function executarT2TSimulado(p: {
   const db = getSupabaseAdmin()
 
   const { data: marcadas, error } = await db.from('mtm_trading_accounts')
-    .select('id').eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa').eq('aceita_t2t', true)
+    .select('id, tipo, conta_casa, recolhe_todos_sinais').eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa').eq('aceita_t2t', true)
+  // AS CONTAS DA CASA nunca são destino de uma aceitação (lib/mtmfunded/contas-da-casa): mestres,
+  // conta-espelho e «Todos os sinais» são instrumentos de medição. Filtra-se aqui e não na
+  // consulta porque um `tipo` a null faria um `neq` deixar a linha de fora.
   // Antes da 070 a coluna não existe: sem contas simuladas, nada muda no T2T de sempre.
-  const ids = new Set((error ? [] : marcadas ?? []).map((l) => String(l.id)))
+  const ids = new Set((error ? [] : marcadas ?? []).filter((l) => !ehContaDaCasa(l)).map((l) => String(l.id)))
   if (p.contasLigadas?.length) {
     // As ligadas passam pelos MESMOS filtros: do utilizador, motor simulado, conta viva.
     const { data: ligadas } = await db.from('mtm_trading_accounts')
-      .select('id').in('id', p.contasLigadas).eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa')
-    for (const l of ligadas ?? []) ids.add(String(l.id))
+      .select('id, tipo, conta_casa, recolhe_todos_sinais').in('id', p.contasLigadas).eq('user_id', p.userId).eq('motor', 'sim').eq('estado', 'ativa')
+    for (const l of ligadas ?? []) if (!ehContaDaCasa(l)) ids.add(String(l.id))
+  }
+  if (p.apenas) {
+    const querido = new Set(p.apenas)
+    for (const id of [...ids]) if (!querido.has(id)) ids.delete(id)
   }
   const linhas = [...ids].map((id) => ({ id }))
   if (!linhas.length) return []
@@ -116,7 +155,14 @@ export async function executarT2TSimulado(p: {
       if (jaPos?.length || jaOrd?.length) return { ...base, ok: false, skipped: true, error: 'já aceite' }
 
       const s = simbolos[symbol]
-      const { precos, em } = await ex.carregarPrecos([symbol, 'USDJPY', 'USDCHF', 'USDCAD', 'EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD'])
+      // O tick do símbolo vem do motor (memória) e não do retrato: aqui o preço não decide só o
+      // preenchimento — decide se a ordem é a MERCADO ou pendente, e se o `entry` do sinal cabe na
+      // banda dos 0,03 % que o torna referência. Com um retrato de 3-4 s, uma ordem de mercado
+      // vira pendente (ou perde a referência, e com ela a guarda do pior-dos-dois) por causa de
+      // movimento que já aconteceu. As conversões de moeda continuam a vir do retrato.
+      const { precos, em } = await ex.carregarPrecos(
+        [symbol, 'USDJPY', 'USDCHF', 'USDCAD', 'EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD'], [symbol],
+      )
       const px = precos[symbol]
       if (!px || !precoFresco(em[symbol])) return { ...base, ok: false, error: `sem preço ao vivo para ${symbol}` }
       const mercado = p.sinal.direction === 'buy' ? px.ask : px.bid
@@ -124,9 +170,13 @@ export async function executarT2TSimulado(p: {
       // Tipo de ordem: a mesma regra do caminho MT5 da rota (0,03% ou dentro da zona = mercado).
       let tipo: 'mercado' | 'limit' | 'stop' = 'mercado'
       const entrada = p.sinal.entry && p.sinal.entry > 0 ? p.sinal.entry : null
+      // Só quando o `entry` do sinal É o preço do mercado (a banda dos 0,03 %) serve de referência
+      // para o preenchimento: o limite de um setup pendente, ou uma zona larga, não é preço de agora.
+      let referencia: number | null = null
       if (entrada) {
         const dentro = p.sinal.zone ? mercado >= p.sinal.zone[0] && mercado <= p.sinal.zone[1] : false
-        if (!(Math.abs(entrada - mercado) / mercado < 0.0003 || dentro)) {
+        if (Math.abs(entrada - mercado) / mercado < 0.0003) referencia = entrada
+        else if (!dentro) {
           tipo = p.sinal.direction === 'buy' ? (entrada > mercado ? 'stop' : 'limit') : (entrada < mercado ? 'stop' : 'limit')
         }
       }
@@ -147,7 +197,7 @@ export async function executarT2TSimulado(p: {
       if (!lote.ok) return { ...base, ok: false, symbol, error: lote.motivo }
 
       if (tipo === 'mercado') {
-        const r = await ex.abrirPosicao(conta, { symbol, direcao: p.sinal.direction, volume: lote.volume, sl, tp, origem: 'ideia_mtm', ideiaRef: ref, comentario })
+        const r = await ex.abrirPosicao(conta, { symbol, direcao: p.sinal.direction, volume: lote.volume, sl, tp, origem: 'ideia_mtm', ideiaRef: ref, comentario, referencia })
         return { ...base, ok: true, lot: lote.volume, symbol, sl, tp, orderId: String((r.posicao as { id?: string }).id ?? '') }
       }
       const r = await ex.criarPendente(conta, {

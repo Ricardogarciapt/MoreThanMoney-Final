@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Loader2, Settings2, TrendingUp } from "lucide-react"
-import { resumoDoCartao, temHistorico, type ProvedorMtmAuto } from "@/lib/mtmauto/desempenho-do-catalogo"
+import {
+  resumoDoCartao, retratoSimulado, temHistorico,
+  type MetricasSimuladas, type ProvedorMtmAuto,
+} from "@/lib/mtmauto/desempenho-do-catalogo"
+import {
+  agruparEstrategias, alvosDoCartao, contasFundedDoCartao, estadoDeSeguir, etiquetaRisco, iniciais, pt,
+  modoDeRisco, riscoPctValido, viesDePrecoSim, CHAVE_ESTADO, CHAVE_GRUPO, CHAVE_MODO_RISCO,
+  CHAVE_ORIGEM_SIMULADA, CHAVE_VIES_PRECO_SIM, GRUPOS, MODOS_RISCO,
+  RISCO_PCT_MAX, RISCO_PCT_MIN, type GrupoEstrategia,
+} from "@/lib/mtmauto/cartao-estrategia"
 
 /**
  * O que seguir — igual ao ecrã de Estratégias da app MTM Auto.
@@ -23,7 +32,8 @@ type Provedor = {
   nome: string
   descricao: string | null
   segue: boolean
-  automatico?: boolean
+  /** Copia sozinha na conta. É o mesmo campo da MTM Auto — o estado sai de `estadoDeSeguir`. */
+  autoAceitar?: boolean
   /** A mesma configuração de risco do modal da app MTM Auto (a rota já a devolve). */
   config?: { modoRisco: string; riscoPct: number | null } | null
   /**
@@ -59,6 +69,71 @@ function CurvaPips({ curva, altura = 56, mini = false }: { curva: { acumulado: n
       <line x1="0" x2={w} y1={y(0)} y2={y(0)} stroke="#3f3f46" strokeWidth="0.6" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
       <path d={d} fill="none" stroke={cor} strokeWidth={mini ? 1.5 : 2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
     </svg>
+  )
+}
+
+/**
+ * O retrato de uma estratégia que só tem histórico SIMULADO.
+ *
+ * As mesmas caixas do lado real — a forma não muda, porque a medição é a mesma (posições
+ * fechadas, parciais pesadas). O que muda é o que está escrito por cima e por baixo: de onde
+ * vêm os números, e a ressalva dos preços de entrada viciados enquanto a amostra os apanhar.
+ * O porquê inteiro está em `lib/mtmauto/desempenho-do-catalogo.ts`.
+ */
+function RetratoSimuladas({
+  m,
+  caixa,
+}: {
+  m: MetricasSimuladas
+  caixa: (t: string, valor: string, sub: string, cor: string) => React.ReactElement
+}) {
+  const nota = viesDePrecoSim(m) ? pt(CHAVE_VIES_PRECO_SIM) : null
+  return (
+    <>
+      <div className="mb-2 rounded-2xl border p-3" style={{ borderColor: "rgba(210,166,60,0.28)", background: "rgba(210,166,60,0.06)" }}>
+        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#D2A63C" }}>
+          {pt(CHAVE_ORIGEM_SIMULADA)}
+        </p>
+        <p className="mt-1 text-[12px] leading-snug text-zinc-400">
+          Esta estratégia ainda não tem nenhuma conta real a executá-la. Os números abaixo são das
+          contas simuladas da casa — medidos trade a trade, como os das outras, mas sem dinheiro a
+          sério. Não se somam a histórico real nenhum.
+        </p>
+        {nota && <p className="mt-1.5 text-[12px] leading-snug" style={{ color: "rgba(210,166,60,0.9)" }}>{nota}</p>}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {caixa(
+          "Taxa de acerto",
+          m.winrate != null ? `${m.winrate}%` : "—",
+          `${m.ganhos}G / ${m.perdas}P`,
+          m.winrate == null ? "#a1a1aa" : m.winrate >= 50 ? "#28C878" : "#FF4D4D",
+        )}
+        {caixa("Trades", String(m.trades), "fechadas no período", "#ffffff")}
+        {caixa("Ganhos", String(m.ganhos), "trades ganhas", "#28C878")}
+        {caixa("Perdas", String(m.perdas), "trades perdidas", "#FF4D4D")}
+        {caixa("Break-even", String(m.breakeven), "saiu à entrada", "#D2A63C")}
+        {caixa(
+          "Fator de lucro",
+          m.fatorLucro != null ? m.fatorLucro.toFixed(2) : "—",
+          "ganho por cada 1 perdido",
+          (m.fatorLucro ?? 0) >= 1 ? "#28C878" : "#FF4D4D",
+        )}
+        <div className="col-span-2">
+          {caixa(
+            "Pips",
+            `${m.pips >= 0 ? "+" : ""}${m.pips}`,
+            `acumulados em ${m.trades} trades`,
+            m.pips >= 0 ? "#28C878" : "#FF4D4D",
+          )}
+        </div>
+        {m.curva.length > 1 && (
+          <div className="col-span-2 rounded-2xl border p-3" style={{ borderColor: "#23262F", background: "#12141A" }}>
+            <p className="mb-1 text-[10.5px] uppercase tracking-wider text-zinc-500">Curva de pips · simulada</p>
+            <CurvaPips curva={m.curva} altura={72} />
+          </div>
+        )}
+      </div>
+    </>
   )
 }
 
@@ -130,6 +205,8 @@ function ModalEstrategia({
   const presets = (d?.presets ?? []) as Record<string, unknown>[]
   const alvos = ((d?.desempenho as { alvos?: { alvo: string; acertos: number }[] })?.alvos) ?? []
   const sinais = Number(desempenho.sinais ?? 0)
+  // Só vem preenchido quando NÃO há histórico real (a rota garante-o). Nunca se soma ao de cima.
+  const simuladas = (d?.desempenho as { simuladas?: MetricasSimuladas | null })?.simuladas ?? null
 
   const caixa = (t: string, valor: string, sub: string, cor: string) => (
     <div className="rounded-2xl border p-3" style={{ borderColor: "#23262F", background: "#12141A" }}>
@@ -173,7 +250,10 @@ function ModalEstrategia({
                 chega ao primeiro alvo, tira parcial e depois volta ao stop com o resto conta como
                 perda inteira. Quem o seguiu ficou com lucro; a tabela diz que perdeu. Mostrar isso
                 era anunciar contra nós próprios um resultado que nem sequer é o real. */}
-            {providerId && desempenho.winrate == null ? (
+            {providerId && desempenho.winrate == null && simuladas ? (
+              // Sem histórico real, mostra-se o simulado — medido, à parte e com a origem dita.
+              <RetratoSimuladas m={simuladas} caixa={caixa} />
+            ) : providerId && desempenho.winrate == null ? (
               // Estratégia MTM Auto sem histórico medido lá: diz-se isso, sem caixas a zeros.
               <p className="rounded-2xl border p-3 text-[13px] leading-snug text-zinc-400" style={{ borderColor: "#23262F", background: "#12141A" }}>
                 {(d.desempenho as { porqueNaoFiavel?: string }).porqueNaoFiavel ?? "Sem histórico suficiente."}
@@ -370,18 +450,20 @@ function FolhaRisco({ config, ocupado, aoGuardar }: {
   ocupado: boolean
   aoGuardar: (modoRisco: string, riscoPct: number | null) => void
 }) {
-  const [modo, setModo] = useState(config?.modoRisco ?? "conta")
+  const [modo, setModo] = useState<string>(modoDeRisco(config))
   const [pct, setPct] = useState(config?.riscoPct == null ? "" : String(config.riscoPct))
-  const modos: Array<[string, string]> = [["conta", "Risco da conta"], ["percent", "% por sinal"], ["lote", "Lote fixo"]]
+  // Os modos e os limites são os da MTM Auto (lib/mtmauto/cartao-estrategia.ts): dois ecrãs com
+  // limites diferentes davam um «guardar» que a rota recusava sem ninguém perceber porquê.
+  const modos = MODOS_RISCO
   const valor = Number(pct.replace(",", "."))
-  const pctInvalida = modo === "percent" && (!Number.isFinite(valor) || valor < 0.1 || valor > 5)
+  const pctInvalida = modo === "percent" && !riscoPctValido(valor)
   return (
     <div className="mt-2 rounded-xl border border-zinc-800 bg-black/30 p-2.5">
       <div className="flex gap-1">
-        {modos.map(([m, rot]) => (
+        {modos.map((m) => (
           <button key={m} type="button" onClick={() => setModo(m)}
             className={`flex-1 rounded-lg px-2 py-1.5 text-[11.5px] font-semibold ${modo === m ? "bg-[#D2A63C] text-black" : "text-zinc-300"}`}>
-            {rot}
+            {pt(CHAVE_MODO_RISCO[m])}
           </button>
         ))}
       </div>
@@ -395,7 +477,7 @@ function FolhaRisco({ config, ocupado, aoGuardar }: {
       )}
       <p className="mt-1.5 text-[11px] leading-snug text-zinc-500">
         {modo === "conta" && "Cada sinal usa o risco definido na conta que executa."}
-        {modo === "percent" && "Cada sinal arrisca esta percentagem do saldo (entre 0,1% e 5%)."}
+        {modo === "percent" && `Cada sinal arrisca esta percentagem do saldo (entre ${String(RISCO_PCT_MIN).replace(".", ",")}% e ${RISCO_PCT_MAX}%).`}
         {modo === "lote" && "Cada sinal abre com o lote fixo definido na conta."}
       </p>
       <button type="button" disabled={ocupado || pctInvalida}
@@ -403,6 +485,151 @@ function FolhaRisco({ config, ocupado, aoGuardar }: {
         className="mt-2 w-full rounded-xl bg-[#D2A63C] py-2 text-[12.5px] font-bold text-black disabled:opacity-40">
         {ocupado ? "A guardar…" : "Guardar risco"}
       </button>
+    </div>
+  )
+}
+
+/**
+ * O CARTÃO de uma estratégia — o mesmo retrato do ecrã Estratégias da MTM Auto: avatar com as
+ * iniciais, a frase do histórico, os alvos batidos, a curva, o estado e o risco. Todas essas
+ * decisões vêm de `lib/mtmauto/cartao-estrategia.ts`; aqui só se desenha.
+ *
+ * Vive FORA do ecrã de propósito. Definido lá dentro, cada render do ecrã criava um componente
+ * novo e a folha do risco aberta remontava — quem estivesse a escrever a percentagem perdia-a.
+ */
+function Cartao({ p, aMudar, aRiscar, setARiscar, setAberta, alternar, guardarRisco }: {
+  p: Provedor
+  aMudar: string | null
+  aRiscar: string | null
+  setARiscar: (id: string | null) => void
+  setAberta: (a: { fonte?: string; providerId?: string; nome: string } | null) => void
+  alternar: (p: Provedor) => void
+  guardarRisco: (p: Provedor, modo: string, pct: number | null) => void
+}) {
+  const estado = estadoDeSeguir(p)
+  const risco = etiquetaRisco(p.config)
+  const alvos = alvosDoCartao(p.catalogo)
+  const funded = contasFundedDoCartao(p.catalogo)
+  // Sem histórico real, o que há é o simulado — medido, separado e com a origem dita. Ver o
+  // porquê em lib/mtmauto/desempenho-do-catalogo.ts (`retratoSimulado`).
+  const simulado = retratoSimulado(p.catalogo)
+  return (
+    <div
+      className="rounded-2xl border p-3"
+      style={{ borderColor: p.segue ? "rgba(40,200,120,0.30)" : "#23262F", background: "#12141A" }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        {/* O toque no corpo abre os números da conta que EXECUTA esta estratégia. */}
+        <button type="button" className="flex min-w-0 flex-1 items-start gap-2.5 text-left" onClick={() => setAberta({ providerId: p.id, nome: p.nome })}>
+          <span
+            aria-hidden
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[13.5px] font-bold"
+            style={{ background: "rgba(210,166,60,0.14)", color: "#D2A63C" }}
+          >
+            {iniciais(p.nome)}
+          </span>
+          <span className="min-w-0 flex-1">
+            <p className="text-[14px] font-semibold text-white">{p.nome}</p>
+            {p.descricao && <p className="mt-0.5 text-[12px] leading-snug text-zinc-400">{p.descricao}</p>}
+            {/* A MESMA linha do cartão da app MTM Auto: taxa de acerto · trades · G/P. Sem
+                histórico medido lá, diz-se isso — nunca um número inventado. */}
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-zinc-500">
+              <TrendingUp className="h-3 w-3" />
+              {temHistorico(p.catalogo) ? (
+                <>
+                  <span className="font-semibold text-[#D2A63C]">{resumoDoCartao(p.catalogo)}</span>
+                  <span className="text-[#28C878]">· {Number(p.catalogo.ganhos ?? 0)}G</span>
+                  <span className="text-[#FF6B6B]">{Number(p.catalogo.perdas ?? 0)}P</span>
+                  <span>· toca para ver os números</span>
+                </>
+              ) : simulado ? (
+                <>
+                  {/* A etiqueta ANTES do número: quem lê «78,6% de acerto» e só encontra a
+                      palavra «simulado» a seguir já leu o número como real. */}
+                  <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-300">
+                    {pt(simulado.chaveEtiqueta)}
+                  </span>
+                  <span className="font-semibold text-zinc-300">{simulado.resumo}</span>
+                  <span className="text-[#28C878]">· {simulado.metricas.ganhos}G</span>
+                  <span className="text-[#FF6B6B]">{simulado.metricas.perdas}P</span>
+                </>
+              ) : (
+                <span>{resumoDoCartao(p.catalogo)}</span>
+              )}
+            </p>
+            {/* A ressalva viaja COLADA ao número, nunca num rodapé — quem cita o cartão leva-a. */}
+            {simulado?.chaveNota && (
+              <p className="mt-1 text-[10.5px] leading-snug text-zinc-500">{pt(simulado.chaveNota)}</p>
+            )}
+            {/* Alvos batidos e stops — as mesmas contagens do cartão da app MTM Auto. */}
+            {alvos.length > 0 && (
+              <p className="mt-1 flex flex-wrap gap-1 text-[10.5px] font-semibold">
+                {alvos.map((a) => (
+                  <span
+                    key={a.rotulo}
+                    className={`rounded-md px-1.5 py-0.5 ${a.perda ? "bg-[#FF4D4D]/10 text-[#FF6B6B]" : "bg-[#28C878]/10 text-[#28C878]"}`}
+                  >
+                    {a.rotulo}×{a.n}
+                  </span>
+                ))}
+              </p>
+            )}
+            {temHistorico(p.catalogo) && Array.isArray(p.catalogo.curva) && p.catalogo.curva.length > 1 && (
+              <div className="mt-1.5 opacity-90">
+                <CurvaPips curva={p.catalogo.curva} mini />
+              </div>
+            )}
+            {/* A curva simulada desenha-se igual, mas apagada: a forma é informação, e o tom
+                lembra que não é a mesma coisa que a do lado real. */}
+            {!temHistorico(p.catalogo) && simulado && simulado.metricas.curva.length > 1 && (
+              <div className="mt-1.5 opacity-60">
+                <CurvaPips curva={simulado.metricas.curva} mini />
+              </div>
+            )}
+            {/* As contas MTM Funded atribuídas a esta estratégia — o mesmo fio que a MTM Auto
+                mostra: da estratégia para as contas que a seguem. */}
+            {funded.length > 0 && (
+              <p className="mt-1 text-[11px] font-semibold text-[#D2A63C]">
+                MTM Funded · {funded.map((c) => c.rotulo || "MTM Funded").join(", ")}
+              </p>
+            )}
+            {/* O ESTADO, dito por extenso e com as MESMAS palavras da MTM Auto (o dicionário dela
+                está na biblioteca do cartão). O automático só se liga lá, que é a parte paga. */}
+            <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
+              <span
+                className={`rounded-md px-1.5 py-0.5 ${
+                  estado === "automatico" ? "bg-[#D2A63C]/15 text-[#D2A63C]"
+                    : estado === "manual" ? "bg-[#28C878]/10 text-[#28C878]"
+                    : "bg-white/5 text-zinc-400"
+                }`}
+              >
+                {pt(CHAVE_ESTADO[estado])}
+              </span>
+              {p.segue && (
+                <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-zinc-300">
+                  {pt(risco.chave)}{risco.pct != null ? ` ${risco.pct}% por sinal` : ""}
+                </span>
+              )}
+            </p>
+          </span>
+        </button>
+        <Interruptor ligado={p.segue} ocupado={aMudar === p.id} onClick={() => alternar(p)} />
+      </div>
+
+      {/* AFINAR O RISCO aqui, como no modal da MTM Auto — sem obrigar a sair da app. */}
+      {p.segue && (
+        <button type="button" onClick={() => setARiscar(aRiscar === p.id ? null : p.id)}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-800 py-2 text-[12px] font-semibold text-zinc-300">
+          <Settings2 className="h-3.5 w-3.5" /> {aRiscar === p.id ? "Fechar" : "Risco desta estratégia"}
+        </button>
+      )}
+      {aRiscar === p.id && (
+        <FolhaRisco
+          config={p.config ?? null}
+          ocupado={aMudar === p.id}
+          aoGuardar={(modo, pct) => guardarRisco(p, modo, pct)}
+        />
+      )}
     </div>
   )
 }
@@ -509,7 +736,7 @@ export default function MtmAutoEstrategias({
             nome: String(p.nome ?? ""),
             descricao: (p.descricao as string) ?? null,
             segue: p.segue === true || p.seguido === true,
-            automatico: p.automatico === true || p.autoAceitar === true,
+            autoAceitar: p.automatico === true || p.autoAceitar === true,
             config: (p.config as Provedor["config"]) ?? null,
             catalogo: p as unknown as ProvedorMtmAuto,
           }
@@ -584,6 +811,9 @@ export default function MtmAutoEstrategias({
   if (!provs.length && !fontes.length) {
     return <p className="py-10 text-center text-[13px] text-zinc-500">Sem fontes nem estratégias disponíveis.</p>
   }
+
+  /** Os mesmos três grupos do ecrã da MTM Auto — a repartição é da biblioteca, não deste ecrã. */
+  const grupos: Record<GrupoEstrategia, Provedor[]> = agruparEstrategias(provs)
 
   return (
     <div className="space-y-2">
@@ -698,95 +928,26 @@ export default function MtmAutoEstrategias({
         </p>
       )}
 
-      {[...provs].sort((a, b) => Number(b.segue) - Number(a.segue)).map((p) => (
-        <div
-          key={p.id}
-          className="rounded-2xl border p-3"
-          style={{ borderColor: p.segue ? "rgba(40,200,120,0.30)" : "#23262F", background: "#12141A" }}
-        >
-          <div className="flex items-start justify-between gap-3">
-            {/* O toque no corpo abre os números da conta que EXECUTA esta estratégia. */}
-            <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setAberta({ providerId: p.id, nome: p.nome })}>
-              <p className="text-[14px] font-semibold text-white">{p.nome}</p>
-              {p.descricao && <p className="mt-0.5 text-[12px] leading-snug text-zinc-400">{p.descricao}</p>}
-              {/* A MESMA linha do cartão da app MTM Auto: taxa de acerto · trades · G/P. Sem
-                  histórico medido lá, diz-se isso — nunca um número inventado. */}
-              <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-zinc-500">
-                <TrendingUp className="h-3 w-3" />
-                {temHistorico(p.catalogo) ? (
-                  <>
-                    <span className="font-semibold text-[#D2A63C]">{resumoDoCartao(p.catalogo)}</span>
-                    <span className="text-[#28C878]">· {Number(p.catalogo.ganhos ?? 0)}G</span>
-                    <span className="text-[#FF6B6B]">{Number(p.catalogo.perdas ?? 0)}P</span>
-                    <span>· toca para ver os números</span>
-                  </>
-                ) : (
-                  <span>{resumoDoCartao(p.catalogo)}</span>
-                )}
-              </p>
-              {/* Alvos batidos e stops — as mesmas contagens do cartão da app MTM Auto. */}
-              {temHistorico(p.catalogo) && (
-                <p className="mt-1 flex flex-wrap gap-1 text-[10.5px] font-semibold">
-                  {(["tp1", "tp2", "tp3"] as const).map((k) =>
-                    Number((p.catalogo as unknown as Record<string, unknown>)[k] ?? 0) > 0 ? (
-                      <span key={k} className="rounded-md bg-[#28C878]/10 px-1.5 py-0.5 text-[#28C878]">
-                        {k.toUpperCase()}×{Number((p.catalogo as unknown as Record<string, unknown>)[k])}
-                      </span>
-                    ) : null,
-                  )}
-                  {Number((p.catalogo as unknown as Record<string, unknown>).sl ?? 0) > 0 && (
-                    <span className="rounded-md bg-[#FF4D4D]/10 px-1.5 py-0.5 text-[#FF6B6B]">
-                      SL×{Number((p.catalogo as unknown as Record<string, unknown>).sl)}
-                    </span>
-                  )}
-                </p>
-              )}
-              {temHistorico(p.catalogo) && Array.isArray(p.catalogo.curva) && p.catalogo.curva.length > 1 && (
-                <div className="mt-1.5 opacity-90">
-                  <CurvaPips curva={p.catalogo.curva} mini />
-                </div>
-              )}
-              {/* O ESTADO, dito por extenso — era o que faltava para este ecrã ser o da MTM Auto.
-                  «Automático» abre sozinho; «Manual» é seguir para aceitar no Tap to Trade; e o
-                  automático só se liga lá, que é a parte paga. */}
-              <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
-                {p.automatico ? (
-                  <span className="rounded-md bg-[#D2A63C]/15 px-1.5 py-0.5 text-[#D2A63C]">Automático · abre sozinho</span>
-                ) : p.segue ? (
-                  <span className="rounded-md bg-[#28C878]/10 px-1.5 py-0.5 text-[#28C878]">Manual · aceitas no Tap to Trade</span>
-                ) : (
-                  <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-zinc-400">Não segues</span>
-                )}
-                {p.segue && (
-                  <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-zinc-300">
-                    {p.config?.modoRisco === "percent" && p.config?.riscoPct != null
-                      ? `Risco ${p.config.riscoPct}% por sinal`
-                      : p.config?.modoRisco === "lote" ? "Lote fixo"
-                      : p.config?.modoRisco === "multiplicador" ? "Múltiplo da mestre"
-                      : "Risco da conta"}
-                  </span>
-                )}
-              </p>
-            </button>
-            <Interruptor ligado={p.segue} ocupado={aMudar === p.id} onClick={() => alternar(p)} />
+      {/* AS ESTRATÉGIAS, nos MESMOS três grupos do ecrã Estratégias da MTM Auto: o que copia
+          sozinho primeiro, depois o que se segue à mão, e por fim o resto. Antes era só uma lista
+          ordenada por «segue» — a mesma estratégia aparecia num sítio aqui e noutro lá.
+          Quem decide o grupo é lib/mtmauto/cartao-estrategia.ts, o modelo que os dois ecrãs usam. */}
+      {GRUPOS.map((g) => {
+        const doGrupo = grupos[g]
+        if (!doGrupo.length) return null
+        return (
+          <div key={g} className="space-y-2">
+            <p className="flex items-center gap-1.5 px-1 pt-1 text-[11px] uppercase tracking-wider text-zinc-500">
+              {g === "automaticas" && <span className="h-1.5 w-1.5 rounded-full bg-[#28C878]" />}
+              {pt(CHAVE_GRUPO[g])} · {doGrupo.length}
+            </p>
+            {doGrupo.map((p) => (
+              <Cartao key={p.id} p={p} aMudar={aMudar} aRiscar={aRiscar} setARiscar={setARiscar}
+                setAberta={setAberta} alternar={alternar} guardarRisco={guardarRisco} />
+            ))}
           </div>
-
-          {/* AFINAR O RISCO aqui, como no modal da MTM Auto — sem obrigar a sair da app. */}
-          {p.segue && (
-            <button type="button" onClick={() => setARiscar(aRiscar === p.id ? null : p.id)}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-800 py-2 text-[12px] font-semibold text-zinc-300">
-              <Settings2 className="h-3.5 w-3.5" /> {aRiscar === p.id ? "Fechar" : "Risco desta estratégia"}
-            </button>
-          )}
-          {aRiscar === p.id && (
-            <FolhaRisco
-              config={p.config ?? null}
-              ocupado={aMudar === p.id}
-              aoGuardar={(modo, pct) => guardarRisco(p, modo, pct)}
-            />
-          )}
-        </div>
-      ))}
+        )
+      })}
 
       {aviso && <p className="rounded-xl border border-zinc-800 p-2.5 text-[12.5px] text-rose-400">{aviso}</p>}
 

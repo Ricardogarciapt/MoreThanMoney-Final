@@ -4,6 +4,10 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { papelMtmFunded, SCANNERS_TORNEIO } from '@/lib/mtmfunded/acesso'
+import { etiquetaDaLinha } from '@/lib/contas/etiqueta'
+// A MESMA regra do seletor do WebTrader — uma conta mestre é `tipo === 'provider'` e o filtro tem
+// os mesmos três estados. Só de leitura: não se duplica a regra, reaproveita-se.
+import { ehContaMestre, normalizarFiltro } from '@/lib/webtrader/filtro-contas'
 import PainelParticipante from './painel'
 
 export const dynamic = 'force-dynamic'
@@ -47,7 +51,7 @@ export default async function DashboardTorneioPage() {
   const db = getSupabaseAdmin()
   const { data: perfil } = await db
     .from('profiles')
-    .select('id, full_name, email, user_type, member_category, subscription_plan, is_active, phone, birth_date, country')
+    .select('id, full_name, email, user_type, member_category, subscription_plan, is_active, phone, birth_date, country, profile_data')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -72,7 +76,8 @@ export default async function DashboardTorneioPage() {
 
   const { data: contas } = await db
     .from('mtm_trading_accounts')
-    .select('id, tipo, mt5_login, servidor, saldo_inicial, alavancagem, estado, metricas, quebrou_regra, quebrada_em, qrcode_url, created_at')
+    // `etiqueta` (113) = a etiqueta do DONO, a mesma coluna que o lápis do WebTrader grava.
+    .select('id, tipo, mt5_login, servidor, saldo_inicial, alavancagem, estado, metricas, quebrou_regra, quebrada_em, qrcode_url, etiqueta, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -103,6 +108,12 @@ export default async function DashboardTorneioPage() {
       }}
       papel={papel}
       ehAdmin={papel === 'admin'}
+      // O filtro das contas («As minhas» / «Mestres» / «Todas») lido AQUI, no servidor: vindo
+      // como prop, o primeiro pixel já sai com o filtro certo. Buscá-lo no cliente mostrava as
+      // contas mestre durante um instante a quem as mandou esconder.
+      filtroContas={normalizarFiltro(
+        ((perfil?.profile_data as Record<string, unknown> | null)?.webtrader as Record<string, unknown> | undefined)?.filtro_contas_torneio,
+      )}
       scannersPermitidos={papel === 'torneio' ? [...SCANNERS_TORNEIO] : null}
       torneio={
         torneio
@@ -141,6 +152,10 @@ export default async function DashboardTorneioPage() {
         // O QR do MetaTrader vai INTEIRO para o painel — não é segredo maior do que o
         // login que já está ali ao lado, e é o que faz a app entrar com um toque.
         qrcode: (c.qrcode_url as string) ?? null,
+        // A etiqueta passa pela MESMA normalização de todos os ecrãs (113): vazio vira null.
+        etiquetaDoDono: etiquetaDaLinha(c),
+        // Conta MESTRE de uma estratégia do MTM Auto: é da casa, não é para negociar aqui.
+        mestre: ehContaMestre(c),
       }))}
       certificados={(certificados ?? []).map((c) => ({
         codigo: c.codigo as string,

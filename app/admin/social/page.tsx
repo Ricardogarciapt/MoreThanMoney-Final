@@ -43,6 +43,7 @@ import { MapaFunis } from "@/components/admin/mapa-funis"
 import { PainelAutomacoes } from "@/components/admin/painel-automacoes"
 import { TokensInstagram } from "@/components/admin/tokens-instagram"
 import { RadarLeads } from "@/components/admin/radar-leads"
+import { ProspecaoTelegram } from "@/components/admin/prospecao-telegram"
 import { ConversasBot } from "@/components/admin/conversas-bot"
 import { EstudioCartoes } from "@/components/admin/estudio-cartoes"
 
@@ -92,6 +93,8 @@ interface Painel {
     pips: number | null
     atualizadoEm: string | null
     ressalva: string
+    /** A ressalva datada do defeito de preço de 24/09. `null` = a amostra já é toda limpa. */
+    notaVies: string | null
   }
   conteudo: {
     total: number
@@ -133,7 +136,7 @@ export default function AdminSocialPage() {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   /** Separador aberto: a fila, os factos que vão nos cartões, ou o funil. */
-  const [aba, setAba] = useState<"fila" | "factos" | "funil" | "mensagens" | "mapa" | "automacoes" | "ligacoes" | "radar" | "cartoes" | "conversas">("fila")
+  const [aba, setAba] = useState<"fila" | "factos" | "funil" | "mensagens" | "mapa" | "automacoes" | "ligacoes" | "radar" | "prospecao" | "cartoes" | "conversas">("fila")
   const [mensagens, setMensagens] = useState<MensagemFunil[] | null>(null)
   /** O post a ser editado. As legendas eram só de leitura: para mudar uma vírgula apagava-se e
    *  criava-se outro, e perdia-se a imagem já gerada. */
@@ -367,6 +370,7 @@ export default function AdminSocialPage() {
             ["automacoes", "Automações"],
             ["cartoes", "Estúdio de cartões"],
             ["radar", "Radar de leads"],
+            ["prospecao", "Prospeção Telegram"],
             ["conversas", "Conversas do bot"],
             ["ligacoes", "Ligações"],
           ] as const).map(([id, rotulo]) => (
@@ -392,6 +396,7 @@ export default function AdminSocialPage() {
             aqui ao lado e não escondido nas variáveis da Vercel. */}
         {aba === "cartoes" && <EstudioCartoes />}
         {aba === "radar" && <RadarLeads />}
+        {aba === "prospecao" && <ProspecaoTelegram />}
         {aba === "conversas" && <ConversasBot />}
         {aba === "ligacoes" && <TokensInstagram />}
 
@@ -815,6 +820,13 @@ function PainelFactos({
               </li>
             ))}
           </ul>
+          {/* A ressalva datada fica ao lado dos próprios factos, e não no rodapé legal: quem
+              copiar um chip daqui para um cartão tem de a ver no mesmo olhar. */}
+          {f.notaVies && (
+            <p className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs leading-relaxed text-neutral-600">
+              {f.notaVies} <span className="text-neutral-400">Sai com estes números em todo o lado, e deixa de sair sozinha quando a amostra for toda posterior à correcção.</span>
+            </p>
+          )}
         </div>
       )}
 

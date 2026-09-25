@@ -117,7 +117,16 @@ eq(
   navbar.find((i) => i.id === 'educacao')?.submenu?.[0]?.name,
   'Educação MTM',
 )
-eq('trading tem as 11 entradas', navbar.find((i) => i.id === 'automacao')?.submenu?.length, 11)
+eq('trading tem as 12 entradas (com o WebTrader)', navbar.find((i) => i.id === 'automacao')?.submenu?.length, 12)
+// O menu de Trading está arrumado pelo que a pessoa vem fazer: quem vem negociar encontra o
+// WebTrader na PRIMEIRA linha, e não depois de ler doze rótulos iguais.
+eq('trading abre no WebTrader', navbar.find((i) => i.id === 'automacao')?.submenu?.[0]?.name, 'WebTrader')
+eq('… e a primeira secção é «Negociar»', navbar.find((i) => i.id === 'automacao')?.submenu?.[0]?.seccao, 'Negociar')
+eq(
+  'a «Automatização» desceu para as ferramentas, onde pertence',
+  navbar.find((i) => i.id === 'automacao')?.submenu?.find((s) => s.id === 'automacao')?.seccao,
+  'Ferramentas e programas',
+)
 eq('apps IA não se repete no submenu', navbar.find((i) => i.id === 'apps-ia')?.submenu?.[0]?.name, 'MTM Social')
 eq('onboarding não tem submenu', navbar.find((i) => i.id === 'onboarding')?.submenu, undefined)
 eq('links externos ficam marcados', navbar.find((i) => i.id === 'apps-ia')?.submenu?.[3]?.external, true)

@@ -1,38 +1,48 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { AlertTriangle, Info, Loader2, Search, X } from "lucide-react"
+import { AlertTriangle, History, Info, ListOrdered, Loader2, Search, User, Wallet, X } from "lucide-react"
 import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import type { PlataformaWT, CapacidadesWT, ContaWT, NegocioWT, OrdemWT, PosicaoWT, SimboloWT } from "@/lib/webtrader/corretoras/tipos"
 import type { MapaPrecos } from "@/lib/mtmfunded/simulado/matematica"
-import FundedGrafico from "@/components/funded/funded-grafico"
 import type { SimboloFicha } from "@/components/funded/api"
 import { usd } from "@/components/funded/api"
 import { usePrecos } from "@/components/funded/use-precos"
 import { fichaDe } from "@/components/funded/pre-carga"
 import { AccaoCancelada, InterruptorUmClique, UmCliqueProvider, useUmClique } from "@/components/funded/um-clique"
-import { RascunhoProvider } from "@/components/funded/rascunho-ordem"
+import { useRascunhoOpcional } from "@/components/funded/rascunho-ordem"
+import { useModoWebtrader } from "@/components/funded/modo-webtrader"
+import LayoutSimples from "@/components/funded/layout-simples"
+import type { PainelTrader, TraderBase } from "@/components/funded/trader-contexto"
 import { validarTicketReal } from "@/lib/webtrader/ticket"
+import { ordemParaCorretora } from "@/lib/webtrader/pedido-real"
 import type { Prefill } from "@/components/funded/funded-ticket"
 import { COR_PLATAFORMA, ErroWT, NOME_PLATAFORMA, pedirWT } from "./api-corretoras"
 import { GestaoAutoCorretora } from "@/components/funded/gestao-auto"
+const LayoutPro = dynamic(() => import("@/components/funded/layout-pro"), { ssr: false })
 
 /**
  * O WEBTRADER DE UMA CONTA REAL (TradeLocker ou MT5) — só fala com /api/webtrader/{plataforma}/….
  *
+ * Desenha-se com os MESMOS layouts das contas MTM Funded (SIMPLE e PRO): monta um `TraderBase`
+ * (components/funded/trader-contexto.tsx) a partir de ContaWT/PosicaoWT/OrdemWT e entrega-o ao
+ * layout. Ganha de graça a lista de símbolos, o multi-gráfico, os painéis arrumáveis e os atalhos —
+ * sem herdar nada do motor simulado. O que esta conta não tem (regras de prop firm, diário,
+ * alertas, bracket TP1-3, trailing, OCO) simplesmente NÃO entra na lista de painéis, em vez de
+ * aparecer vazio.
+ *
  * Custo e limites (o servidor limita por conta; o ecrã não gasta mais do que precisa):
  *  · posições+pendentes: MT5 de 5 em 5 s, TradeLocker de 3 em 3 s — SÓ com o separador visível;
- *  · saldo/equity de 10 em 10 s; histórico só quando se abre o separador;
+ *  · saldo/equity de 10 em 10 s; histórico só quando se abre o painel;
  *  · preço do gráfico e do ticket: o feed MTM (grátis, indicativo). A ordem executa na corretora.
  *
- * Segurança da negociação real: aviso fixo «Conta REAL», confirmação obrigatória na PRIMEIRA ordem
- * de cada conta («Conta real — as ordens são executadas na tua corretora») e negociação num clique
- * desligada por defeito (cada ordem/fecho/arrasto pede confirmação).
- *
- * Bracket TP1-3, trailing, OCO, regras/barras de quebra, diário e alertas: só nas contas MTM Funded.
+ * Segurança da negociação real (nada disto mudou): aviso fixo «Conta REAL», confirmação obrigatória
+ * na PRIMEIRA ordem de cada conta e negociação num clique desligada por defeito — cada ordem,
+ * fecho ou arrasto pede confirmação. Toda a saída de ordens passa por `accao`, e a tradução do
+ * rascunho para o corpo da ordem é pura e testada (lib/webtrader/pedido-real.ts): o que a corretora
+ * não sabe fazer é recusado em voz alta, nunca reduzido a uma ordem mais simples.
  */
-
-type Aba = "posicoes" | "ordens" | "historico"
 
 const CHAVE_ACEITE_REAL = (ref: string) => `webtrader_real_aceite:${ref}`
 
@@ -46,14 +56,17 @@ export default function CorretoraTrader(props: { contaRef: string; plataforma: P
 
 function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraPermitida }: { contaRef: string; plataforma: PlataformaWT; altura?: string; prefill: Prefill | null; simboloInicial: string | null; compraPermitida: boolean }) {
   const u = useUmClique()
+  const { modo } = useModoWebtrader()
   const [info, setInfo] = useState<{ conta: ContaWT; podeNegociar: boolean; capacidades: CapacidadesWT } | null>(null)
   const [erro, setErro] = useState<{ texto: string; status: number; codigo?: string } | null>(null)
   const [aLigar, setALigar] = useState(false)
   const [posicoes, setPosicoes] = useState<PosicaoWT[]>([])
   const [ordens, setOrdens] = useState<OrdemWT[]>([])
   const [historico, setHistorico] = useState<NegocioWT[] | null>(null)
-  const [aba, setAba] = useState<Aba>("posicoes")
-  const [ficha, setFicha] = useState<SimboloFicha | null>(null)
+  const [fichas, setFichas] = useState<Record<string, SimboloFicha>>({})
+  const [visiveis, setVisiveis] = useState<string[]>([])
+  const [extras, setExtras] = useState<string[]>([])
+  const [volume, setVolume] = useState(0.01)
   // App iOS: nunca abre num símbolo cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
   const [symbol, setSymbol] = useState<string>(() => {
     const s = simboloInicial?.split(",")[0]
@@ -97,17 +110,24 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     document.addEventListener("visibilitychange", mudou)
     return () => { desligar(); document.removeEventListener("visibilitychange", mudou) }
   }, [lerConta, lerPosicoes, intervalo])
-  useEffect(() => { if (aba === "historico" && historico == null) void lerHistorico() }, [aba, historico, lerHistorico])
 
-  // Ficha do catálogo MTM (para o gráfico e as casas decimais). Símbolo fora do catálogo → sem gráfico.
-  useEffect(() => {
-    let vivo = true
-    // A mesma promessa da pré-carga do WebTrader (pre-carga.ts): o símbolo do link já vem a caminho.
-    fichaDe(symbol).then((s) => { if (vivo) setFicha(s) }).catch(() => vivo && setFicha(null))
-    return () => { vivo = false }
-  }, [symbol])
+  /** A ficha do catálogo MTM (gráfico, casas decimais, lote mínimo) — a mesma promessa da pré-carga. */
+  const obterFicha = useCallback(async (nome: string): Promise<SimboloFicha | null> => {
+    const s = await fichaDe(nome)
+    if (s) setFichas((f) => (f[s.symbol] ? f : { ...f, [s.symbol]: s }))
+    return s
+  }, [])
+  useEffect(() => { void obterFicha(symbol) }, [symbol, obterFicha])
+  const ficha = fichas[symbol] ?? null
+  useEffect(() => { if (ficha) setVolume((v) => Math.max(ficha.volume_min, Math.min(v, ficha.volume_max))) }, [ficha?.symbol]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const precisos = useMemo(() => [...new Set([symbol, ...posicoes.map((p) => p.symbol), ...ordens.map((o) => o.symbol)])].slice(0, 30), [symbol, posicoes, ordens])
+  const selecionar = useCallback((s: SimboloFicha) => { setFichas((f) => ({ ...f, [s.symbol]: s })); setSymbol(s.symbol) }, [])
+  const selecionarPorNome = useCallback(async (nome: string) => { const s = await obterFicha(nome); if (s) selecionar(s) }, [obterFicha, selecionar])
+
+  const precisos = useMemo(
+    () => [...new Set([symbol, ...visiveis, ...extras, ...posicoes.map((p) => p.symbol), ...ordens.map((o) => o.symbol)])].slice(0, 40),
+    [symbol, visiveis, extras, posicoes, ordens],
+  )
   const { precos: vivos } = usePrecos(precisos, 2000)
   const mapa: MapaPrecos = useMemo(() => Object.fromEntries(Object.entries(vivos).map(([s, p]) => [s, { symbol: s, bid: p.bid, ask: p.ask }])), [vivos])
 
@@ -139,6 +159,14 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     void lerPosicoes(); void lerConta()
     return r
   }, [plataforma, contaRef, garantirAceite, lerPosicoes, lerConta])
+
+  /** As acções do gráfico falam a língua do trader das contas MTM Funded; aqui traduzem-se. */
+  const executar = useCallback((acao: string, corpo: Record<string, unknown>) => {
+    if (acao === "modificar") return chamar("modificar", { alvo: "posicao", id: corpo.positionId, sl: corpo.sl, tp: corpo.tp })
+    if (acao === "modificar_pendente") return chamar("modificar", { alvo: "ordem", id: corpo.orderId, preco: corpo.preco, sl: corpo.sl, tp: corpo.tp })
+    return chamar(acao, corpo)
+  }, [chamar])
+
   /** Deploy de uma conta MT5 desligada — só por clique, com confirmação (pode demorar ~1 min). */
   const ligarConta = async () => {
     if (!window.confirm("Ligar esta conta MT5 à corretora? Pode demorar cerca de 1 minuto. Depois de algum tempo parada, a MetaApi volta a desligá-la.")) return
@@ -173,89 +201,125 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   if (!info) return <div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin" style={{ color: COR_PLATAFORMA[plataforma] }} /></div>
 
   const podeNegociar = info.podeNegociar
+  const capacidades = info.capacidades
   const digitos = ficha?.digits ?? 5
-  const posicoesGrafico = posicoes.filter((p) => p.symbol === symbol).map((p) => ({ id: p.id, direcao: p.direcao, volume: p.volume, preco_entrada: p.precoEntrada, sl: p.sl, tp: p.tp }))
-  const ordensGrafico = ordens.filter((o) => o.symbol === symbol).map((o) => ({ id: o.id, direcao: o.direcao, tipo: o.tipo, volume: o.volume, preco: o.preco, sl: o.sl, tp: o.tp }))
   const c = info.conta
+  const moeda = c.moeda ? ` ${c.moeda}` : ""
   const metricas: Array<[string, string, string?]> = [
-    ["Saldo", usd(c.saldo)], ["Equity", usd(c.equity)],
-    ["Flutuante", usd(c.flutuante), (c.flutuante ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"],
-    ["Margem", usd(c.margem)], ["Margem livre", usd(c.margemLivre)],
+    ["Saldo", `${usd(c.saldo)}${moeda}`], ["Equity", `${usd(c.equity)}${moeda}`],
+    ["Flutuante", `${usd(c.flutuante)}${moeda}`, (c.flutuante ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"],
+    ["Margem", `${usd(c.margem)}${moeda}`], ["Margem livre", `${usd(c.margemLivre)}${moeda}`],
     // Mesma linha, mesma ordem que no trader das contas MTM Funded (funded-trader.tsx).
     ["Nível margem", c.nivelMargem == null ? "—" : `${c.nivelMargem.toFixed(0)}%`],
   ]
 
-  return (
-    <div className="relative flex flex-col overflow-y-auto bg-[#131722] text-white" style={{ height: altura ?? "calc(100dvh - 120px)", minHeight: 420 }}>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-white/10 px-3 py-1.5 text-[11.5px]">
-        <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[plataforma] }}>{NOME_PLATAFORMA[plataforma]}</span>
-        <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10.5px] font-bold text-rose-300">CONTA REAL</span>
-        {metricas.map(([k, v, cor]) => <span key={k} className="whitespace-nowrap"><span className="text-zinc-500">{k} </span><span className={`font-mono ${cor ?? ""}`}>{v}{c.moeda ? ` ${c.moeda}` : ""}</span></span>)}
-        {podeNegociar && <span className="ml-auto flex h-7 [@media(pointer:coarse)]:h-auto"><InterruptorUmClique /></span>}
-      </div>
-      {erro && <p className="flex items-center gap-2 px-3 py-1 text-[11.5px] text-amber-300">{erro.texto} {botaoLigar}</p>}
+  /**
+   * A ordem vinda do rascunho partilhado (os botões grandes do SIMPLE, a ferramenta do gráfico):
+   * traduz-se com a função pura e testada, e sai pelo MESMO `accao` do ticket — aceite da conta
+   * real primeiro, confirmação depois.
+   */
+  const enviarPedido = async (p: Parameters<TraderBase["enviarPedido"]>[0], sym: string) => {
+    const r = ordemParaCorretora(p as never, sym, capacidades)
+    if (!r.ok) throw new Error(r.erro)
+    return accao(r.descricao, "ordem", { ...r.corpo })
+  }
 
-      <div className="grid min-h-0 flex-1 gap-2 p-2 lg:grid-cols-[1fr_320px]">
-        <div className="min-w-0 space-y-2">
-          <PesquisaSimbolo plataforma={plataforma} contaRef={contaRef} atual={symbol} onEscolher={setSymbol} />
-          {ficha ? (
-            // O gráfico (leve e TradingView) lê o rascunho da ordem: sem este provedor rebentava com
-            // «useRascunho fora do RascunhoProvider» mal a ficha do símbolo chegava — o ecrã das
-            // contas REAIS caía inteiro. Aqui o rascunho só serve o gráfico: a ferramenta Long/Short
-            // fica escondida (`ferramenta={false}`) porque o ticket das reais é o de baixo.
-            <RascunhoProvider
-              simbolo={ficha} preco={vivos[symbol]} precos={mapa} volume={ficha.volume_min} setVolume={() => {}}
-              alavancagem={ficha.alavancagem_max || 100} margemLivre={null} saldo={c.saldo ?? null}
-              onEnviar={() => Promise.reject(new Error("Nesta conta as ordens saem pelo ticket."))}
-            >
-              <FundedGrafico
-                simbolo={ficha} preco={vivos[symbol]} precos={mapa} volume={ficha.volume_min} ferramenta={false}
-                posicoes={posicoesGrafico} ordens={ordensGrafico} podeNegociar={podeNegociar} alturaClasse="h-[45dvh] min-h-[260px] md:h-[460px]"
-                onModificarPosicao={(id, sl, tp) => chamar("modificar", { alvo: "posicao", id, sl, tp })}
-                onModificarPendente={(id, preco, sl, tp) => chamar("modificar", { alvo: "ordem", id, preco, sl, tp })}
-                onFecharPosicao={(id) => chamar("fechar", { positionId: id })}
-                onCancelarPendente={(id) => chamar("cancelar", { orderId: id })}
-                onMudarSimbolo={setSymbol}
-              />
-            </RascunhoProvider>
-          ) : (
-            <p className="rounded-lg border border-white/10 p-4 text-center text-[12px] text-zinc-500">Sem gráfico MTM para {symbol} — podes negociar na mesma pelo ticket.</p>
-          )}
-          <div className="rounded-lg border border-white/10 bg-[#0d0f15]">
-            <div role="tablist" className="flex gap-1 border-b border-white/10 px-2 text-[12px]">
-              {([["posicoes", `Posições (${posicoes.length})`], ["ordens", `Pendentes (${ordens.length})`], ["historico", "Histórico"]] as Array<[Aba, string]>).map(([k, r]) => (
-                <button key={k} role="tab" aria-selected={aba === k} onClick={() => setAba(k)} className={`px-2 py-1.5 ${aba === k ? "border-b-2 border-[#2962FF] text-white" : "text-zinc-500"}`}>{r}</button>
-              ))}
-            </div>
-            <div className="overflow-x-auto">
-              {aba === "posicoes" && <TabelaPosicoes posicoes={posicoes} digitos={digitos} podeNegociar={podeNegociar} contaRef={contaRef} mapa={mapa}
-                onFechar={(p, volume) => semCancelar(accao(`Fechar ${volume ? `${volume} de ` : ""}${p.volume} ${p.simboloCorretora}`, "fechar", { positionId: p.id, volume }))}
-                onModificar={(p, sl, tp) => semCancelar(accao(`Mudar SL/TP de ${p.simboloCorretora}`, "modificar", { alvo: "posicao", id: p.id, sl, tp }))} />}
-              {aba === "ordens" && <TabelaOrdens ordens={ordens} digitos={digitos} podeNegociar={podeNegociar}
-                onCancelar={(o) => semCancelar(accao(`Cancelar ${o.tipo} ${o.simboloCorretora}`, "cancelar", { orderId: o.id }))}
-                onModificar={(o, preco, sl, tp) => semCancelar(accao(`Mover ${o.tipo} ${o.simboloCorretora}`, "modificar", { alvo: "ordem", id: o.id, preco, sl, tp }))} />}
-              {aba === "historico" && (historico == null ? <Loader2 className="m-4 h-4 w-4 animate-spin" /> : <TabelaHistorico linhas={historico} />)}
-            </div>
-          </div>
+  const paineis: PainelTrader[] = [
+    {
+      chave: "posicoes", nome: "Posições", icone: Wallet, contagem: posicoes.length, principal: true,
+      conteudo: () => (
+        <div className="overflow-x-auto">
+          <TabelaPosicoes posicoes={posicoes} digitos={digitos} podeNegociar={podeNegociar} contaRef={contaRef} mapa={mapa}
+            onFechar={(p, v) => semCancelar(accao(`Fechar ${v ? `${v} de ` : ""}${p.volume} ${p.simboloCorretora}`, "fechar", { positionId: p.id, volume: v }))}
+            onModificar={(p, sl, tp) => semCancelar(accao(`Mudar SL/TP de ${p.simboloCorretora}`, "modificar", { alvo: "posicao", id: p.id, sl, tp }))} />
         </div>
-
-        <div className="space-y-2">
-          <Ticket
-            symbol={symbol} digitos={digitos} volumeMin={ficha?.volume_min ?? 0.01} passo={ficha?.volume_step ?? 0.01}
-            bid={vivos[symbol]?.bid} ask={vivos[symbol]?.ask} podeNegociar={podeNegociar} capacidades={info.capacidades} prefill={prefill}
-            onEnviar={(p) => semCancelar(accao(
-              `${p.direcao === "buy" ? "Comprar" : "Vender"} ${p.volume} ${symbol}${p.tipo !== "mercado" ? ` ${p.tipo} @ ${p.preco}` : " a mercado"}`,
-              "ordem", { symbol, ...p },
+      ),
+    },
+    {
+      chave: "ordens", nome: "Pendentes", icone: ListOrdered, contagem: ordens.length, principal: true,
+      conteudo: () => (
+        <div className="overflow-x-auto">
+          <TabelaOrdens ordens={ordens} digitos={digitos} podeNegociar={podeNegociar}
+            onCancelar={(o) => semCancelar(accao(`Cancelar ${o.tipo} ${o.simboloCorretora}`, "cancelar", { orderId: o.id }))}
+            onModificar={(o, preco, sl, tp) => semCancelar(accao(`Mover ${o.tipo} ${o.simboloCorretora}`, "modificar", { alvo: "ordem", id: o.id, preco, sl, tp }))} />
+        </div>
+      ),
+    },
+    {
+      chave: "historico", nome: "Histórico", icone: History, principal: true,
+      conteudo: () => <PainelHistorico linhas={historico} ler={lerHistorico} />,
+    },
+    {
+      chave: "simbolos", nome: "Símbolos da corretora", icone: Search,
+      conteudo: () => <div className="p-2"><PesquisaSimbolo plataforma={plataforma} contaRef={contaRef} atual={symbol} onEscolher={(s) => void selecionarPorNome(s)} /></div>,
+    },
+    {
+      chave: "conta", nome: "A minha conta", icone: User,
+      conteudo: () => (
+        <div className="space-y-2 p-2 text-[12px]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[plataforma] }}>{NOME_PLATAFORMA[plataforma]}</span>
+            <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10.5px] font-bold text-rose-300">CONTA REAL</span>
+            {botaoLigar}
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-white/10 bg-[#0d0f15] p-2">
+            {metricas.map(([k, v, cor]) => (
+              <span key={k} className="flex flex-col leading-tight">
+                <span className="text-[9.5px] uppercase tracking-wide text-zinc-500">{k}</span>
+                <span className={`font-mono ${cor ?? "text-white"}`}>{v}</span>
+              </span>
             ))}
-          />
+          </div>
+          {podeNegociar && <div className="rounded-lg border border-white/10 bg-[#0d0f15] p-2"><InterruptorUmClique variante="cartao" /></div>}
           <p className="flex items-start gap-1.5 rounded-lg border border-white/10 bg-[#0d0f15] p-2 text-[11px] leading-snug text-zinc-400">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             Nesta conta {NOME_PLATAFORMA[plataforma]}: ordens a mercado, limit e stop com SL/TP nativos, fecho parcial e mover pendentes.
             TP1-3 em bracket, trailing, OCO, regras, diário e alertas só existem nas contas MTM Funded. Preço no ecrã é indicativo (feed MTM); a execução é ao preço da corretora.
           </p>
         </div>
-      </div>
+      ),
+    },
+  ]
 
+  const t: TraderBase = {
+    accountId: `wt:${contaRef}`,
+    posicoes: posicoes.map((p) => ({ id: p.id, symbol: p.symbol, direcao: p.direcao, volume: p.volume, preco_entrada: p.precoEntrada, sl: p.sl, tp: p.tp })),
+    ordens: ordens.map((o) => ({ id: o.id, symbol: o.symbol, direcao: o.direcao, tipo: o.tipo, volume: o.volume, preco: o.preco, sl: o.sl, tp: o.tp })),
+    mapa, vivos, fichas, simbolo: ficha, volume, setVolume, podeNegociar,
+    selecionar, selecionarPorNome, obterFicha, executar, enviarPedido, setVisiveis, setExtras,
+    prefill, simboloInicial, metricas,
+    carteira: {
+      nome: `${NOME_PLATAFORMA[plataforma]} · conta real`,
+      alavancagem: ficha?.alavancagem_max || 100, margemLivre: c.margemLivre, saldo: c.saldo,
+      equity: c.equity, flutuante: c.flutuante,
+    },
+    // Regras de prop firm, diário e alertas não existem nesta conta: nada a desenhar no gráfico.
+    alertasGrafico: () => [],
+    avisos: (
+      <>
+        <div className="flex flex-wrap items-center gap-2 bg-rose-500/10 px-3 py-1 text-[11px]">
+          <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[plataforma] }}>{NOME_PLATAFORMA[plataforma]}</span>
+          <span className="font-bold text-rose-300">CONTA REAL</span>
+          <span className="min-w-0 truncate text-rose-200/80">as ordens são executadas na tua corretora</span>
+        </div>
+        {erro && <p className="flex items-center gap-2 px-3 py-1 text-[11.5px] text-amber-300">{erro.texto} {botaoLigar}</p>}
+      </>
+    ),
+    paineis, chavePaineis: "webtrader_real_separador",
+    ticket: <TicketReal
+      symbol={symbol} digitos={digitos} volumeMin={ficha?.volume_min ?? 0.01} passo={ficha?.volume_step ?? 0.01}
+      bid={vivos[symbol]?.bid} ask={vivos[symbol]?.ask} podeNegociar={podeNegociar} capacidades={capacidades} prefill={prefill}
+      onEnviar={(p) => semCancelar(accao(
+        `${p.direcao === "buy" ? "Comprar" : "Vender"} ${p.volume} ${symbol}${p.tipo !== "mercado" ? ` ${p.tipo} @ ${p.preco}` : " a mercado"}`,
+        "ordem", { symbol, ...p },
+      ))}
+    />,
+    ferramentaGrafico: true,
+  }
+
+  return (
+    <div className="relative flex flex-col overflow-hidden bg-[#131722] text-white" style={{ height: altura ?? "calc(100dvh - 120px)", minHeight: "min(420px, 100dvh)" }}>
+      {modo === "pro" ? <LayoutPro t={t} /> : <LayoutSimples t={t} />}
       {pedeAceite && (
         <div className="fixed inset-0 z-[1002] grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Conta real">
           <div className="w-full max-w-sm rounded-xl border border-rose-500/40 bg-[#131722] p-4 text-[12.5px] shadow-2xl">
@@ -285,10 +349,17 @@ function AceiteReal({ onOk, onNao, plataforma }: { onOk: () => void; onNao: () =
   )
 }
 
+/** O histórico é caro: só se lê quando o painel aparece pela primeira vez. */
+function PainelHistorico({ linhas, ler }: { linhas: NegocioWT[] | null; ler: () => Promise<void> }) {
+  useEffect(() => { if (linhas == null) void ler() }, [linhas, ler])
+  if (linhas == null) return <Loader2 className="m-4 h-4 w-4 animate-spin" />
+  return <div className="overflow-x-auto"><TabelaHistorico linhas={linhas} /></div>
+}
+
 function PesquisaSimbolo({ plataforma, contaRef, atual, onEscolher }: { plataforma: PlataformaWT; contaRef: string; atual: string; onEscolher: (s: string) => void }) {
   const [q, setQ] = useState("")
   const [lista, setLista] = useState<SimboloWT[]>([])
-  const [aberta, setAberta] = useState(false)
+  const [aberta, setAberta] = useState(true)
   const t = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     if (!aberta) return
@@ -302,27 +373,30 @@ function PesquisaSimbolo({ plataforma, contaRef, atual, onEscolher }: { platafor
     }, 350)
   }, [q, aberta, plataforma, contaRef])
   return (
-    <div className="relative">
+    <div className="space-y-1">
       <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-2">
         <Search className="h-3.5 w-3.5 text-zinc-500" />
         <input value={q} onFocus={() => setAberta(true)} onChange={(e) => setQ(e.target.value)} placeholder={`${atual} — procurar símbolo da corretora`} className="h-9 flex-1 bg-transparent text-[12.5px] text-white outline-none" />
-        {aberta && <button onClick={() => setAberta(false)} aria-label="fechar"><X className="h-3.5 w-3.5 text-zinc-500" /></button>}
+        {q && <button onClick={() => setQ("")} aria-label="limpar"><X className="h-3.5 w-3.5 text-zinc-500" /></button>}
       </div>
-      {aberta && lista.length > 0 && (
-        <div className="absolute z-[900] mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-white/10 bg-zinc-950 shadow-2xl">
-          {lista.map((s) => (
-            <button key={s.simboloCorretora} onClick={() => { onEscolher(s.symbol); setAberta(false); setQ("") }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] hover:bg-white/5">
-              <span className="font-semibold">{s.symbol}</span><span className="font-mono text-zinc-500">{s.simboloCorretora}</span>
-              {s.nome && <span className="ml-auto truncate text-zinc-500">{s.nome}</span>}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="max-h-[50dvh] overflow-y-auto rounded-lg border border-white/10">
+        {lista.length === 0 ? <p className="p-3 text-[12px] text-zinc-500">Escreve para procurar nos símbolos desta corretora.</p> : lista.map((s) => (
+          <button key={s.simboloCorretora} onClick={() => onEscolher(s.symbol)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] hover:bg-white/5">
+            <span className="font-semibold">{s.symbol}</span><span className="font-mono text-zinc-500">{s.simboloCorretora}</span>
+            {s.nome && <span className="ml-auto truncate text-zinc-500">{s.nome}</span>}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
 
-function Ticket({ symbol, digitos, volumeMin, passo, bid, ask, podeNegociar, capacidades, prefill, onEnviar }: {
+/**
+ * O TICKET DA CONTA REAL — campos escritos à mão, validados em lib/webtrader/ticket.ts.
+ * Lê o LADO do rascunho partilhado (quando existe): tocar em SELL no SIMPLE abre o ticket já no
+ * lado certo, como nas contas MTM Funded. Quem envia continua a ser este formulário.
+ */
+function TicketReal({ symbol, digitos, volumeMin, passo, bid, ask, podeNegociar, capacidades, prefill, onEnviar }: {
   symbol: string; digitos: number; volumeMin: number; passo: number; bid?: number; ask?: number; podeNegociar: boolean; capacidades: CapacidadesWT
   prefill: Prefill | null
   onEnviar: (p: { direcao: "buy" | "sell"; tipo: "mercado" | "limit" | "stop"; volume: number; preco: number | null; sl: number | null; tp: number | null }) => Promise<unknown>
@@ -336,6 +410,8 @@ function Ticket({ symbol, digitos, volumeMin, passo, bid, ask, podeNegociar, cap
   const [erro, setErro] = useState<string | null>(null)
   useEffect(() => { setVolume(String(volumeMin)) }, [symbol, volumeMin])
   const u = useUmClique()
+  const k = useRascunhoOpcional()
+  const lado = k?.r.lado ?? null
   const enviar = async (direcao: "buy" | "sell") => {
     setErro(null)
     // Números com vírgula ou ponto; lixo («abc», «1,2,3») dá erro aqui em vez de seguir como null
@@ -346,16 +422,17 @@ function Ticket({ symbol, digitos, volumeMin, passo, bid, ask, podeNegociar, cap
     try { await onEnviar({ direcao, tipo, volume: v.volume, preco: v.preco, sl: v.sl, tp: v.tp }) } catch (e) { setErro((e as Error).message) } finally { setAEnviar(false) }
   }
   const input = "h-9 w-full rounded-md border border-white/10 bg-black px-2 font-mono text-[12.5px] text-white"
+  const realce = (l: "buy" | "sell") => (lado === l ? " ring-2 ring-white/70" : "")
   return (
     <div className="space-y-2 rounded-lg border border-white/10 bg-[#0d0f15] p-2.5 text-[12px]">
       <div className="flex items-center justify-between"><span className="font-semibold">{symbol}</span><span className="text-[10.5px] text-rose-300">ordem real</span></div>
       <div className="grid grid-cols-3 gap-1 rounded-md bg-black/40 p-0.5">
-        {(["mercado", "limit", "stop"] as const).filter((t) => (t === "mercado" ? capacidades.mercado : capacidades[t])).map((t) => (
-          <button key={t} onClick={() => setTipo(t)} className={`rounded py-1 ${tipo === t ? "bg-white/10 text-white" : "text-zinc-500"}`}>{t === "mercado" ? "Mercado" : t === "limit" ? "Limit" : "Stop"}</button>
+        {(["mercado", "limit", "stop"] as const).filter((x) => (x === "mercado" ? capacidades.mercado : capacidades[x])).map((x) => (
+          <button key={x} onClick={() => setTipo(x)} className={`rounded py-1 ${tipo === x ? "bg-white/10 text-white" : "text-zinc-500"}`}>{x === "mercado" ? "Mercado" : x === "limit" ? "Limit" : "Stop"}</button>
         ))}
       </div>
       <div className="grid grid-cols-2 gap-1.5">
-        <label className="text-zinc-400">Volume (lotes)<input inputMode="decimal" value={volume} onChange={(e) => setVolume(e.target.value)} className={input} /></label>
+        <label className="text-zinc-400">Volume (lotes)<input inputMode="decimal" value={volume} onChange={(e) => setVolume(e.target.value)} aria-label="volume em lotes" className={input} /></label>
         {tipo !== "mercado" && <label className="text-zinc-400">Preço<input inputMode="decimal" value={preco} onChange={(e) => setPreco(e.target.value)} className={input} /></label>}
         <label className="text-zinc-400">SL<input inputMode="decimal" value={sl} onChange={(e) => setSl(e.target.value)} placeholder="opcional" className={input} /></label>
         <label className="text-zinc-400">TP<input inputMode="decimal" value={tp} onChange={(e) => setTp(e.target.value)} placeholder="opcional" className={input} /></label>
@@ -363,8 +440,8 @@ function Ticket({ symbol, digitos, volumeMin, passo, bid, ask, podeNegociar, cap
       {erro && <p className="text-[11px] text-rose-300">{erro}</p>}
       {podeNegociar ? (
         <div className="grid grid-cols-2 gap-1.5">
-          <button disabled={aEnviar || u.ocupado} onClick={() => void enviar("sell")} aria-label={`Vender ${volume} ${symbol}${u.ligado ? " (num clique)" : ""}`} className="min-h-[48px] rounded-md bg-[#F7525F] py-2 font-bold text-white disabled:opacity-40">SELL<br /><span className="font-mono text-[11px] font-normal">{bid != null ? bid.toFixed(digitos) : "—"}</span></button>
-          <button disabled={aEnviar || u.ocupado} onClick={() => void enviar("buy")} aria-label={`Comprar ${volume} ${symbol}${u.ligado ? " (num clique)" : ""}`} className="min-h-[48px] rounded-md bg-[#2962FF] py-2 font-bold text-white disabled:opacity-40">BUY<br /><span className="font-mono text-[11px] font-normal">{ask != null ? ask.toFixed(digitos) : "—"}</span></button>
+          <button disabled={aEnviar || u.ocupado} onClick={() => void enviar("sell")} aria-label={`Vender ${volume} ${symbol}${u.ligado ? " (num clique)" : ""}`} className={`min-h-[48px] rounded-md bg-[#F7525F] py-2 font-bold text-white disabled:opacity-40${realce("sell")}`}>SELL<br /><span className="font-mono text-[11px] font-normal">{bid != null ? bid.toFixed(digitos) : "—"}</span></button>
+          <button disabled={aEnviar || u.ocupado} onClick={() => void enviar("buy")} aria-label={`Comprar ${volume} ${symbol}${u.ligado ? " (num clique)" : ""}`} className={`min-h-[48px] rounded-md bg-[#2962FF] py-2 font-bold text-white disabled:opacity-40${realce("buy")}`}>BUY<br /><span className="font-mono text-[11px] font-normal">{ask != null ? ask.toFixed(digitos) : "—"}</span></button>
         </div>
       ) : <p className="text-zinc-500">Conta só em leitura.</p>}
     </div>

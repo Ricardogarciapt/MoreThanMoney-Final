@@ -19,6 +19,7 @@ import { mtmcopyLimitsLabel, resolveMtmcopyUserLimits } from '@/lib/mtmcopy/acco
 import { carregarDireitos } from '@/lib/entitlements'
 import { deriveSenderMode } from '@/lib/mtmcopy/user-copy-context'
 import type { MTMcopierConnection, MtmcopySenderMode } from '@/lib/mtmcopy/types'
+import { apareceNoT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
   // Contas T2T do user (fan-out): dedicadas (purpose) + marcadas (t2t_enabled). Para a UI listar
   // e o user escolher "uma ou várias" (liga/desliga o T2T por conta).
   const t2tIds = new Set(
-    (data ?? []).filter((c) => (c.purpose ?? 'mtmcopy') === 'tap_to_trade' || (c as { t2t_enabled?: boolean }).t2t_enabled === true).map((c) => c.id),
+    (data ?? []).filter((c) => apareceNoT2T(c as { purpose?: string | null; t2t_enabled?: boolean | null })).map((c) => c.id),
   )
   const t2t_connections = repaired.filter((c) => t2tIds.has((c as { id: string }).id))
 

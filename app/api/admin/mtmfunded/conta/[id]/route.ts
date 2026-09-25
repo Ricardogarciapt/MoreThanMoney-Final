@@ -4,7 +4,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
   decisaoDeAcesso, validarPedido, paraCsv, fotografia, ACCOES_DE_DINHEIRO,
 } from '@/lib/mtmfunded/admin-conta'
-import { ErroAdmin, executarAccao, contarAbertas } from '@/lib/mtmfunded/admin-conta-accoes'
+import { contarAbertas } from '@/lib/mtmfunded/admin-conta-accoes'
+import { executarComAuditoria, lerContaFunded } from '@/lib/mtmfunded/admin-conta-executar'
 import { tipoCurto, estadoCurto } from '@/lib/mtmfunded/etiquetas'
 
 export const dynamic = 'force-dynamic'
@@ -41,10 +42,8 @@ async function guarda() {
   return { adminId: a.userId as string, adminEmail: a.email ?? null } as const
 }
 
-async function lerConta(id: string) {
-  const { data } = await getSupabaseAdmin().from('mtm_trading_accounts').select('*').eq('id', id).maybeSingle()
-  return data as (Record<string, unknown> & { id: string; estado: string; motor: string; tipo: string }) | null
-}
+/** A mesma leitura do bot de Telegram (lib/mtmfunded/admin-conta-executar.ts). */
+const lerConta = lerContaFunded
 
 export async function GET(request: NextRequest, { params }: Ctx) {
   const g = await guarda()
@@ -156,6 +155,20 @@ export async function GET(request: NextRequest, { params }: Ctx) {
     }, semCache)
   }
 
+  // ── apagar: o que desaparece com a conta (só leitura — nada é apagado aqui) ──
+  if (vista === 'apagar') {
+    const { recolherPendurados } = await import('@/lib/mtmfunded/apagar-conta-servidor')
+    const { decisao, dados } = await recolherPendurados(db, conta)
+    return NextResponse.json({
+      conta: {
+        login: dados.conta.login, tipo: tipoCurto(conta.tipo, (conta.metricas ?? {}) as Record<string, unknown>), estado: dados.conta.estado,
+        saldo: dados.conta.saldo, saldoInicial: dados.conta.saldoInicial,
+        etiquetaDoDono: typeof conta.etiqueta === 'string' && conta.etiqueta ? conta.etiqueta : null,
+      },
+      ...decisao,
+    }, semCache)
+  }
+
   // ── auditoria ────────────────────────────────────────────────────────────
   if (vista === 'auditoria') {
     const { data, error } = await db.from('mtm_funded_admin_audit')
@@ -236,73 +249,18 @@ export async function POST(request: NextRequest, { params }: Ctx) {
   if (!v.ok) return NextResponse.json({ error: v.erro }, { status: 400 })
   const { pedido, chave } = v
 
-  const db = getSupabaseAdmin()
   const conta = await lerConta(id)
   if (!conta) return NextResponse.json({ error: 'conta não encontrada' }, { status: 404 })
 
-  // ── 1. a intenção na auditoria, com a chave (única) ──────────────────────
-  const pedidoAuditado = Object.fromEntries(Object.entries(pedido).filter(([k]) => k !== 'confirmacao'))
-  const { data: linha, error: erroAudit } = await db.from('mtm_funded_admin_audit').insert({
-    account_id: id,
-    admin_id: g.adminId,
-    admin_email: g.adminEmail,
-    accao: pedido.accao,
-    motivo: 'motivo' in pedido ? pedido.motivo ?? null : null,
-    pedido: pedidoAuditado,
-    antes: fotografia(conta),
-    chave_idempotencia: chave,
-  }).select('id').single()
-
-  if (erroAudit) {
-    if (erroAudit.code === '23505') {
-      const { data: anterior } = await db.from('mtm_funded_admin_audit')
-        .select('account_id, accao, estado, resultado').eq('chave_idempotencia', chave).maybeSingle()
-      if (!anterior || anterior.account_id !== id || anterior.accao !== pedido.accao) {
-        return NextResponse.json({ error: 'chave de idempotência já usada noutra acção' }, { status: 409 })
-      }
-      if (anterior.estado === 'em_curso') return NextResponse.json({ error: 'esta acção ainda está a correr' }, { status: 409 })
-      if (anterior.estado === 'falhou') {
-        return NextResponse.json({ error: `já falhou antes: ${(anterior.resultado as { erro?: string } | null)?.erro ?? '—'} (abre a confirmação outra vez para repetir)` }, { status: 409 })
-      }
-      // Regenerar credenciais não devolve as passwords da primeira vez: não foram guardadas.
-      return NextResponse.json({ ok: true, repetido: true, resultado: anterior.resultado })
-    }
-    // Sem auditoria não se age: uma acção de admin sem registo é uma acção que ninguém pode explicar.
-    const falta = /42P01|PGRST205|mtm_funded_admin_audit/i.test(`${erroAudit.code} ${erroAudit.message}`)
-    return NextResponse.json(
-      { error: falta ? 'auditoria indisponível — aplica a migração 079 antes de gerir contas' : `auditoria falhou: ${erroAudit.message}` },
-      { status: 503 },
-    )
-  }
-
-  // ── 2. a acção ───────────────────────────────────────────────────────────
-  const agora = new Date().toISOString()
-  let status = 200
-  let resposta: Record<string, unknown>
-  let paraAuditoria: Record<string, unknown>
-  let estado: 'ok' | 'falhou' = 'ok'
-  try {
-    const r = await executarAccao({ db, adminId: g.adminId, adminEmail: g.adminEmail, conta, agora }, pedido)
-    resposta = { ok: true, ...r.resposta }
-    paraAuditoria = r.auditoria ?? r.resposta
-  } catch (e) {
-    estado = 'falhou'
-    status = e instanceof ErroAdmin ? e.status : typeof (e as { status?: number }).status === 'number' ? (e as { status: number }).status : 500
-    const erro = e instanceof Error ? e.message : String(e)
-    if (status === 500) console.error('[admin/mtmfunded/conta]', pedido.accao, id, e)
-    resposta = { error: erro }
-    paraAuditoria = { erro }
-  }
-
-  // ── 3. o depois ──────────────────────────────────────────────────────────
-  const depois = estado === 'ok' ? fotografia(await lerConta(id)) : null
-  const { error: erroFecho } = await db.from('mtm_funded_admin_audit').update({
-    depois, resultado: paraAuditoria, estado, concluido_em: new Date().toISOString(),
-  }).eq('id', linha.id)
-  if (erroFecho) console.error('[admin/mtmfunded/conta] auditoria não fechou', linha.id, erroFecho.message)
+  /*
+   * Auditar → executar → fechar o registo. O corpo vive em `lib/mtmfunded/admin-conta-executar.ts`
+   * porque o bot de Telegram decide levantamentos pelo MESMO caminho (24/09): duas cópias desta
+   * sequência divergiriam no dia em que alguém corrigisse só uma delas.
+   */
+  const r = await executarComAuditoria({ adminId: g.adminId, adminEmail: g.adminEmail, conta, pedido, chave })
 
   return NextResponse.json(
-    { ...resposta, dinheiro: ACCOES_DE_DINHEIRO.has(pedido.accao) || undefined },
-    { status, headers: { 'Cache-Control': 'no-store' } },
+    { ...r.resposta, dinheiro: ACCOES_DE_DINHEIRO.has(pedido.accao) || undefined },
+    { status: r.status, headers: { 'Cache-Control': 'no-store' } },
   )
 }

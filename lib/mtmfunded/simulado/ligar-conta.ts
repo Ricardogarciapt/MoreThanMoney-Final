@@ -8,6 +8,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { decifrar } from '@/lib/mtmfunded/credenciais'
 import { estadoCurto, tipoCurto } from '@/lib/mtmfunded/etiquetas'
 import { ehMtmFundedLigacao } from '@/lib/mtmcopy/destino-execucao'
+import { recebeT2T } from '@/lib/mtmcopy/alvo-t2t'
+import { ehContaDaCasa } from '@/lib/mtmfunded/contas-da-casa'
 import {
   decidirLigacao,
   tentativasEsgotadas,
@@ -45,7 +47,7 @@ export async function registarTentativa(userId: string, login: string, ok: boole
   }
 }
 
-const CAMPOS = 'id, user_id, motor, mt5_login, tipo, estado, metricas, saldo_inicial, sim_saldo, sim_equity, mt5_password_cifrada, mt5_investor_cifrada'
+const CAMPOS = 'id, user_id, motor, mt5_login, tipo, estado, metricas, pausada_em, saldo_inicial, sim_saldo, sim_equity, mt5_password_cifrada, mt5_investor_cifrada'
 
 export type ContaFundedLida = {
   id: string
@@ -54,6 +56,8 @@ export type ContaFundedLida = {
   tipo: string
   estado: string
   metricas: Record<string, unknown> | null
+  /** `pausada_em` (migração 079): pausa do admin — a conta continua `ativa` para o motor gerir SL/TP. */
+  pausada_em: string | null
   saldo_inicial: number | null
   sim_saldo: number | null
   sim_equity: number | null
@@ -93,14 +97,20 @@ export async function lerContaFunded(id: string): Promise<ContaFundedLida | null
 
 const numero = (v: unknown): number | null => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v))
 
-/** O que o dono da ligação vê da conta. Etiquetas F1/F2/Funded/Torneio + Active/…; nunca «demo». */
+/**
+ * O que o dono da ligação vê da conta. Etiquetas F1/F2/Funded/Torneio/Real + Active/…; nunca «demo».
+ *
+ * Tem de dizer o MESMO que o WebTrader diz da mesma conta — a referência é `numerosDaConta`
+ * (lib/mtmfunded/numeros-conta.ts). É por isso que o `pausada_em` entra: sem ele, uma conta
+ * pausada pelo admin aparecia «Active» aqui e «Pause» no WebTrader, para a mesma conta.
+ */
 export function resumoDaConta(c: ContaFundedLida) {
   return {
     funded_account_id: c.id,
     login: c.mt5_login,
     servidor: SERVIDOR_SIMULADO,
     tipo: tipoCurto(c.tipo, c.metricas),
-    estado: estadoCurto(c.estado, c.metricas),
+    estado: estadoCurto(c.estado, c.metricas, c.pausada_em ?? null),
     saldo: numero(c.sim_saldo),
     equity: numero(c.sim_equity ?? c.sim_saldo),
     saldo_inicial: numero(c.saldo_inicial),
@@ -146,9 +156,23 @@ export async function contasFundedLigadasParaT2T(userId: string, ligacoes?: Arra
   const candidatas = linhas
     .filter((c) => ehMtmFundedLigacao(c as { mt5_platform?: string | null }))
     .filter((c) => c.user_id === userId && c.funded_account_id && c.funded_somente_leitura !== true && c.is_active !== false)
+    /**
+     * O INTERRUPTOR POR CONTA VALE AQUI TAMBÉM (24/09).
+     *
+     * Este caminho não passava por `recebeT2T`: uma ligação MTM Funded com o Tap to Trade
+     * DESLIGADO (`t2t_enabled = false`) — o interruptor que a pessoa desligou na lista de contas —
+     * continuava a receber a aceitação na mesma. Foi isso que abriu ONZE posições simuladas numa
+     * só aceitação do dono: as onze ligações «MTM Funded · MTM Auto …» estavam todas desligadas,
+     * e abriram todas. A regra é a mesma do resto do T2T e vive num sítio só (lib/mtmcopy/alvo-t2t).
+     */
+    .filter((c) => recebeT2T(c as { purpose?: string | null; t2t_enabled?: boolean | null }))
     .map((c) => String(c.funded_account_id))
   if (!candidatas.length) return []
   // Segunda verificação de dono no momento de executar (a conta pode ter mudado de mãos).
-  const { data } = await db.from('mtm_trading_accounts').select('id').in('id', candidatas).eq('user_id', userId).eq('motor', 'sim')
-  return (data ?? []).map((c) => String(c.id))
+  const { data } = await db.from('mtm_trading_accounts')
+    .select('id, tipo, conta_casa, recolhe_todos_sinais').in('id', candidatas).eq('user_id', userId).eq('motor', 'sim')
+  // AS CONTAS DA CASA NÃO SÃO DESTINO DE NINGUÉM (lib/mtmfunded/contas-da-casa, a mesma regra do
+  // Histórico e do WebTrader): as mestres são conduzidas pelo motor da estratégia, e a
+  // conta-espelho e a «Todos os sinais» existem para MEDIR — nunca para receber um toque.
+  return (data ?? []).filter((c) => !ehContaDaCasa(c)).map((c) => String(c.id))
 }

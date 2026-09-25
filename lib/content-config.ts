@@ -76,7 +76,7 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'mtm-ecossistema',
       title: 'O Ecossistema',
-      url: '/MTM/Ecossistema.png',
+      url: '/MTM/ecossistema-mtm.svg',
       alt: 'O Ecossistema',
       page: '/mtm',
       section: 'EARN WHILE YOU LEARN',
@@ -106,7 +106,7 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'mtm-escolha-caminho',
       title: 'Escolhe o Teu Caminho',
-      url: '/MTM/Escolha de Caminho.png',
+      url: '/MTM/escolha-caminho-mtm.svg',
       alt: 'Escolhe o Teu Caminho',
       page: '/mtm',
       section: 'As Soluções Tecnológicas',

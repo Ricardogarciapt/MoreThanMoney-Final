@@ -180,6 +180,66 @@ export async function POST(request: NextRequest) {
 
     if (body.message?.chat?.type === "supergroup" || body.message?.chat?.type === "group") {
       after(() => handleTelegramChannelMessage(supabase, body.message).catch((e) => console.error("[tg group]", e)))
+
+      /**
+       * RADAR DE PROSPEÇÃO — apanhar quem nos toca e não chega ao funil.
+       *
+       * O funil só conhece quem escreve ao bot em PRIVADO. Toda a gente que fala num grupo nosso,
+       * que entra, que sai, passava por aqui e desaparecia — e é por isso que `telegram_leads`
+       * tem cinco linhas, das quais duas são testes.
+       *
+       * Guarda-se o identificador, o nome público e a contagem do que fez; nunca o que escreveu.
+       * E não desencadeia envio nenhum: um bot não pode escrever a quem nunca lhe escreveu, por
+       * isso o que sai daqui é uma LISTA para o dono decidir (ver `lib/prospecao/radar-contactos`).
+       *
+       * Em `after()` e a falhar em silêncio: o radar nunca pode atrasar nem partir o relay de
+       * sinais, que é o que corre por este mesmo webhook.
+       */
+      after(async () => {
+        try {
+          const { registarContacto } = await import("@/lib/prospecao/radar-contactos")
+          const chatDoGrupo = body.message.chat.id
+          const quemEscreveu = body.message.from
+          if (quemEscreveu && !quemEscreveu.is_bot && !body.message.new_chat_members && !body.message.left_chat_member) {
+            await registarContacto(supabase, {
+              tgUserId: quemEscreveu.id,
+              username: quemEscreveu.username ?? null,
+              firstName: quemEscreveu.first_name ?? null,
+              chatId: chatDoGrupo,
+              motivo: "escreveu",
+            })
+          }
+          for (const m of body.message.new_chat_members ?? []) {
+            if (m?.is_bot) continue
+            await registarContacto(supabase, {
+              tgUserId: m.id,
+              username: m.username ?? null,
+              firstName: m.first_name ?? null,
+              chatId: chatDoGrupo,
+              motivo: "entrou",
+            })
+          }
+          /**
+           * Quem sai é o mais valioso da lista e o que se perdia por completo.
+           *
+           * Não é um lead perdido: é o único sítio onde se aprende o que está a afastar as
+           * pessoas. Até hoje esta informação passava no webhook e ia para o lixo.
+           */
+          const saiu = body.message.left_chat_member
+          if (saiu && !saiu.is_bot) {
+            await registarContacto(supabase, {
+              tgUserId: saiu.id,
+              username: saiu.username ?? null,
+              firstName: saiu.first_name ?? null,
+              chatId: chatDoGrupo,
+              motivo: "saiu",
+            })
+          }
+        } catch (e) {
+          console.error("[prospecao-radar]", e)
+        }
+      })
+
       // Descobrir o grupo de leads (regista os grupos vistos) + boas-vindas a novos membros
       try {
         const { recordTelegramGroup, handleLeadsGroupNewMembers } = await import("@/lib/telegram-lead-funnel")
@@ -292,7 +352,8 @@ export async function POST(request: NextRequest) {
         }
 
         if (typeof cq.data === "string" && cq.data.startsWith("admin:")) {
-          await bg.handleAdminAction(supabase, cq.data.slice(6), String(cq.from?.id ?? cq.message?.chat?.id ?? ""))
+          const { handleAdminAction } = await import("@/lib/telegram-admin-menu")
+          await handleAdminAction(supabase, cq.data.slice(6), String(cq.from?.id ?? cq.message?.chat?.id ?? ""))
         } else {
           await bg.handleBrokerApproval(supabase, cq.data, String(cq.message?.chat?.id ?? ""), Number(cq.message?.message_id ?? 0))
         }
@@ -326,7 +387,13 @@ export async function POST(request: NextRequest) {
       body.message?.chat?.id &&
       typeof body.message?.text === "string"
     ) {
-      const text: string = body.message.text.trim()
+      /**
+       * `/comando@qualquer_bot` é a forma que o Telegram usa quando há mais do que um bot à
+       * conversa. O código comparava com `@MoreThanMoney_aibot` escrito à mão — bastou o bot
+       * mudar de nome para NENHUM comando com sufixo responder. Tira-se o sufixo e compara-se o
+       * comando, seja qual for o nome do bot hoje.
+       */
+      const text: string = body.message.text.trim().replace(/^(\/[a-z_]+)@[A-Za-z0-9_]+/i, "$1")
       const chatId = String(body.message.chat.id)
       const botToken = getMtmcopyBotToken()
 
@@ -360,22 +427,34 @@ export async function POST(request: NextRequest) {
       }
 
       // Boas-vindas (reutilizada por /start e por deep-links de funil)
+      /**
+       * As boas-vindas NÃO abrem com o grátis.
+       *
+       * Abriam — «🎁 /app — 14 dias Premium GRÁTIS» era a primeira linha da lista. É o contrário
+       * da escada que o closer segue (lib/telegram-lead-funnel.ts: Membro → Premium → rota da
+       * corretora, com o grátis como recompensa e não como isco). Quem entra pelo grátis compara
+       * tudo com zero a partir daí. O teste continua lá, no fim, para quem o procura.
+       */
       const welcomeMsg =
         "👋 <b>Bem-vindo à MoreThanMoney!</b>\n\n" +
         "O ecossistema português de trading: scanner, alertas, comunidade e app. " +
         "Sinais acompanhados do início ao fim, medidos em pips e percentagem.\n\n" +
         "Por onde queres começar?\n" +
-        "🎁 /app — 14 dias Premium GRÁTIS (código 14DayTrial, sem cartão)\n" +
+        "👑 /premium — Packs, preços e como entrar\n" +
         "💬 /grupos — Entrar nos grupos de sinais\n" +
         "📊 /sinais — Ver os últimos sinais\n" +
+        "🤖 /mtmauto — Só a app que copia os sinais por ti\n" +
         "🏦 /corretora — Abrir conta (PU Prime)\n" +
-        "👑 /premium — Ser Premium\n" +
+        "🎁 /app — Experimentar a app primeiro\n" +
         "ℹ️ /ajuda — Todos os comandos"
 
       // Tokens reservados dos deep-links de captação — NÃO são tokens de mentor.
       const RESERVED_START = new Set([
         "lead", "leads", "funnel", "funil", "broker",
         "premium", "app", "sinais", "grupos", "corretora", "start",
+        // `mtmauto`/`auto` são deep-links do funil da app e eram procurados como token de mentor:
+        // uma consulta à toa e, no pior caso, um mentor com esse token a ficar ligado ao lead.
+        "mtmauto", "auto",
       ])
 
       // /start <token> — token de mentor OU deep-link de funil
@@ -450,41 +529,62 @@ export async function POST(request: NextRequest) {
       }
 
       // /sinais — últimos sinais
-      else if (text === "/sinais" || text === "/sinais@MoreThanMoney_aibot") {
+      else if (text === "/sinais") {
+        /**
+         * Os sinais vivem em `tradingview_signals`, e sempre viveram.
+         *
+         * Isto lia `telegram_signals` — uma tabela que existe e está VAZIA (0 linhas). O comando
+         * respondia «Sem sinais recentes» todos os dias, com 25 mil sinais na base ao lado.
+         */
         const { data: signals } = await supabase
-          .from("telegram_signals")
-          .select("*")
-          .order("created_at", { ascending: false })
+          .from("tradingview_signals")
+          .select("ticker, action, price, received_at")
+          .order("received_at", { ascending: false })
           .limit(5)
 
         if (!signals || signals.length === 0) {
           await sendMessage("📊 Sem sinais recentes. Aguarda o próximo sinal!")
         } else {
           const lines = signals.map((s: any, i: number) => {
-            const date = new Date(s.created_at).toLocaleDateString("pt-PT")
-            return `${i + 1}. <b>${s.symbol || "N/A"}</b> — ${s.direction || ""} ${s.entry_price ? `@ ${s.entry_price}` : ""} <i>(${date})</i>`
+            const quando = s.received_at
+              ? new Date(s.received_at).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+              : ""
+            return `${i + 1}. <b>${s.ticker || "N/A"}</b> — ${s.action || ""} ${s.price ? `@ ${s.price}` : ""} <i>(${quando})</i>`
           })
-          await sendMessage("📊 <b>Últimos sinais MTM:</b>\n\n" + lines.join("\n"))
+          await sendMessage(
+            "📊 <b>Últimos sinais MTM:</b>\n\n" + lines.join("\n") +
+            "\n\n<i>O acompanhamento completo (entradas, parciais e fecho) é nos grupos: /grupos</i>",
+          )
         }
       }
 
-      // /status
-      else if (text === "/status" || text === "/status@MoreThanMoney_aibot") {
-        const { data: mentor } = await supabase
-          .from("mentor_profiles")
-          .select("user_id, telegram_chat_id")
-          .eq("telegram_chat_id", chatId)
-          .maybeSingle()
-
-        if (mentor) {
-          await sendMessage("✅ <b>Telegram ligado à plataforma MTM</b>\n\nTudopronto! Vais receber notificações por aqui.")
-        } else {
-          await sendMessage("⚠️ <b>Telegram não ligado</b>\n\nVai à plataforma MTM e liga o teu Telegram na área do mentor.")
-        }
+      // /status — o que ESTA conversa tem ligado (mentor, funil, admin)
+      else if (text === "/status") {
+        const { ehChatDeAdmin } = await import("@/lib/telegram-admin-menu")
+        const [{ data: mentor }, { data: lead }, admin] = await Promise.all([
+          supabase.from("mentor_profiles").select("user_id").eq("telegram_chat_id", chatId).maybeSingle(),
+          supabase.from("telegram_leads").select("stage, interesse, broker_uid").eq("chat_id", chatId).maybeSingle(),
+          ehChatDeAdmin(supabase, chatId),
+        ])
+        const l = lead as { stage?: string; interesse?: string; broker_uid?: string } | null
+        const linhas = [
+          "ℹ️ <b>Estado da tua ligação</b>",
+          "",
+          mentor ? "✅ Telegram ligado à plataforma MTM (mentor)" : "⚪ Telegram ainda não ligado ao teu perfil MTM",
+          l?.broker_uid ? `🏦 Corretora: UID <code>${l.broker_uid}</code>` : "⚪ Corretora por validar — /corretora",
+          l?.stage === "granted"
+            ? "🔓 Acesso aos grupos LIBERTADO"
+            : l?.stage === "pending_review"
+              ? "⏳ Pedido de acesso em validação"
+              : "",
+          l?.interesse ? `🎯 Caminho: ${l.interesse}` : "",
+          admin ? "\n🛠️ És admin — escreve /admin para o painel." : "",
+        ].filter(Boolean)
+        await sendMessage(linhas.join("\n"))
       }
 
       // /app — teste grátis + descarregar app
-      else if (text === "/app" || text === "/app@MoreThanMoney_aibot" || text === "/teste" || text === "/trial") {
+      else if (text === "/app" || text === "/teste" || text === "/trial") {
         await sendMessage(
           "📲 <b>Testa a MoreThanMoney grátis</b>\n\n" +
           "🎁 <b>14 dias Premium grátis</b> com o código <code>14DayTrial</code> — sem cartão. Vê os sinais, o Tap-to-Trade e as sessões ao vivo por dentro.\n\n" +
@@ -496,24 +596,29 @@ export async function POST(request: NextRequest) {
       }
 
       // /grupos — acesso aos grupos é BROKER-GATED (conta PU Prime + depósito $300)
-      else if (text === "/grupos" || text === "/grupos@MoreThanMoney_aibot" || text === "/sinal" || text === "/acesso") {
+      else if (text === "/grupos" || text === "/sinal" || text === "/acesso") {
         const { brokerStepMessageEditavel } = await import("@/lib/telegram-broker-gate")
         await sendMessage(await brokerStepMessageEditavel())
       }
 
       // /premium — ser Premium
-      else if (text === "/premium" || text === "/premium@MoreThanMoney_aibot") {
-        await sendMessage(
-          "👑 <b>MoreThanMoney Premium</b>\n\n" +
-          "Scanner, Trading Alerts, Tap to Trade, salas Premium, aulas e comunidade.\n\n" +
-          "🎁 <b>1º mês 34,99€</b> (depois 65€/mês)\n" +
-          "▶️ <a href='https://www.morethanmoney.pt/upgrade'>Subscrever Premium</a>\n" +
-          "🆓 Ou testa grátis primeiro: /app"
-        )
+      else if (text === "/premium") {
+        /**
+         * A escada, pela ordem em que se vende (docs/mtm-sales-brain.md): Membro primeiro,
+         * Premium, o Elite anual no topo, e só depois a rota da corretora — que é o fecho, não
+         * o isco. O texto antigo abria com «1º mês 34,99€» e não dizia sequer que existe um
+         * pack Membro.
+         *
+         * O texto deixou de viver aqui: é a mensagem `escada_precos`, editável no /admin/social,
+         * com os preços a entrarem de `lib/escada-precos.ts`. Um comando que escreve o seu
+         * próprio preço é mais uma fonte a divergir — e esta era a quinta.
+         */
+        const { lerMensagem } = await import("@/lib/mensagens-funil")
+        await sendMessage(await lerMensagem("escada_precos"))
       }
 
       // /corretora — abrir conta PU Prime
-      else if (text === "/corretora" || text === "/corretora@MoreThanMoney_aibot" || text === "/conta") {
+      else if (text === "/corretora" || text === "/conta") {
         await sendMessage(
           "🏦 <b>Abrir conta na corretora (PU Prime)</b>\n\n" +
           "É a corretora que usamos para copiar os sinais no MT5.\n\n" +
@@ -523,37 +628,99 @@ export async function POST(request: NextRequest) {
       }
 
       // /ajuda
-      else if (text === "/ajuda" || text === "/ajuda@MoreThanMoney_aibot" || text === "/help") {
+      else if (text === "/ajuda" || text === "/help" || text === "/comandos") {
+        const { ehChatDeAdmin } = await import("@/lib/telegram-admin-menu")
         await sendMessage(
           "ℹ️ <b>Comandos MoreThanMoney</b>\n\n" +
           "/app — Teste grátis da app 📲\n" +
+          "/mtmauto — Só a app que copia os sinais 🤖\n" +
           "/sinais — Últimos sinais 📊\n" +
           "/grupos — Grupos de sinais 💬\n" +
-          "/premium — Ser Premium 👑\n" +
+          "/premium — Packs e preços 👑\n" +
           "/corretora — Abrir conta (PU Prime) 🏦\n" +
-          "/status — Estado da ligação\n\n" +
+          "/status — Estado da tua ligação\n" +
+          // O painel só se anuncia a quem o pode abrir. Anunciá-lo a toda a gente era convidar
+          // estranhos a escrever /admin — que era precisamente como se tomava o painel.
+          (await ehChatDeAdmin(supabase, chatId)
+            ? "/admin — Painel de administração 🛠️\n" +
+              "/quem &lt;chave&gt; — a folha de um lead 🔎\n" +
+              "/cliente &lt;chave&gt; — saldos e assinatura de um cliente 💰\n"
+            : "") +
+          "\n💬 Ou escreve-me em linguagem natural — respondo no teu idioma.\n" +
           "🌐 <a href='https://www.morethanmoney.pt/new-landing'>Conhece a MTM</a>"
         )
       }
 
-      // /admin ou /painel — regista aprovador + mostra o painel de admin (só o admin vê)
+      // /admin ou /painel — o painel do dono. Só ele.
       else if (text === "/admin" || text === "/painel") {
-        await supabase.from("site_settings").upsert(
-          { key: "telegram_admin_chat_id", value: { chat_id: chatId }, updated_at: new Date().toISOString() },
-          { onConflict: "key" },
-        )
-        const { adminPanelKeyboard } = await import("@/lib/telegram-broker-gate")
-        if (botToken) {
-          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              chat_id: chatId,
-              text: "🛠️ <b>Painel de Admin MTM</b>\n\nAprovador registado ✅. Recebes aqui os pedidos de acesso (UID + print) com botões. Escolhe:",
-              parse_mode: "HTML",
-              reply_markup: adminPanelKeyboard(),
-            }),
-          })
+        /**
+         * Isto gravava `telegram_admin_chat_id` a QUEM ESCREVESSE O COMANDO.
+         *
+         * Qualquer pessoa que experimentasse /admin passava a ser o aprovador: recebia os pedidos
+         * de acesso com foto e os botões de aprovar, via o painel todo e tinha o texto livre a ser
+         * encaminhado para a IA do site com os dados do negócio. `registarChatDeAdmin` só grava
+         * quem já é admin (chat gravado ou TELEGRAM_ADMIN_CHAT_ID), e a quem não é responde nada
+         * — um comando desconhecido não confirma que existe um painel.
+         */
+        const { registarChatDeAdmin, adminPanelKeyboard, TEXTO_PAINEL } = await import("@/lib/telegram-admin-menu")
+        if (await registarChatDeAdmin(supabase, chatId)) {
+          await sendMessage(TEXTO_PAINEL, adminPanelKeyboard())
+        } else {
+          await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.")
+        }
+      }
+
+      /**
+       * /quem <chat_id | @username | UID> — a folha de uma pessoa, no telemóvel.
+       *
+       * Responde num ecrã a «este quem é?»: por onde entrou, que passos deu, se o UID bate certo
+       * com a lista da corretora, se já paga, o que lhe foi prometido e qual é o próximo passo.
+       * Sem isto era preciso abrir quatro sítios — e responder com meia informação a um lead
+       * quente é a forma mais rápida de o perder.
+       *
+       * Só o dono: a folha tem UID, email e depósito lá dentro.
+       */
+      else if (text.startsWith("/quem")) {
+        const { ehChatDeAdmin } = await import("@/lib/telegram-admin-menu")
+        if (!(await ehChatDeAdmin(supabase, chatId))) {
+          await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.")
+        } else {
+          const chave = text.slice(5).trim()
+          if (!chave) {
+            await sendMessage("Escreve <code>/quem &lt;chat_id | @username | UID da corretora&gt;</code>.")
+          } else {
+            const { carregarPerfil, textoPerfil } = await import("@/lib/prospecao/perfil-lead")
+            const p = await carregarPerfil(supabase, chave)
+            await sendMessage(p ? textoPerfil(p) : "🤷 Não encontrei ninguém com essa chave.")
+          }
+        }
+      }
+
+      /**
+       * /cliente <email | login MT5 | UID | id | chat | @user> — «o que é que esta pessoa tem connosco».
+       *
+       * O `/quem` responde a «este quem é» do lado do funil: por onde entrou, que passos deu, o
+       * que falta. Isto responde à outra metade, a do DINHEIRO: assinatura, o que a corretora diz
+       * e o saldo de todas as contas — MTM Funded, MTM Copy e MTM Auto — numa folha só.
+       *
+       * Só o dono: a folha tem email, UID e saldos lá dentro.
+       */
+      else if (text.startsWith("/cliente") || text.startsWith("/saldo")) {
+        const { ehChatDeAdmin } = await import("@/lib/telegram-admin-menu")
+        if (!(await ehChatDeAdmin(supabase, chatId))) {
+          await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.")
+        } else {
+          const chave = text.replace(/^\/(cliente|saldo)/, "").trim()
+          if (!chave) {
+            await sendMessage(
+              "Escreve <code>/cliente &lt;email | login MT5 | UID | id do perfil | chat | @username&gt;</code>.\n\n" +
+              "Respondo com a assinatura, o que a corretora diz e o saldo de todas as contas dessa pessoa.",
+            )
+          } else {
+            const { carregarFolhaDeCliente, textoFolha } = await import("@/lib/telegram-admin-cliente")
+            const f = await carregarFolhaDeCliente(supabase, chave)
+            await sendMessage(f ? textoFolha(f) : "🤷 Não encontrei ninguém com essa chave.")
+          }
         }
       }
 
@@ -645,6 +812,17 @@ export async function POST(request: NextRequest) {
         } catch (e) {
           console.error("[telegram-funnel] erro:", e)
         }
+      }
+
+      /**
+       * Um comando que não existe deixava de ter resposta — nada, silêncio.
+       *
+       * Do lado de quem escreve isso não se distingue de o bot estar em baixo, e é a altura em
+       * que se fecha a conversa. Responder com a ajuda custa uma mensagem e devolve a pessoa ao
+       * funil.
+       */
+      else {
+        await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer. 🙂")
       }
     }
 

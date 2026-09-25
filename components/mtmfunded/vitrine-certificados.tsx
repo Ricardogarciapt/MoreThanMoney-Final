@@ -55,9 +55,15 @@ export default function VitrineCertificados({ certificados }: { certificados: Ce
       onFocus={() => setParado(true)}
     >
       <div className="overflow-hidden rounded-2xl">
+        {/* A curva de animacao vem pelo `style` e nao por uma classe arbitraria de
+            easing: em classe, o Tailwind avisava em cada build que era ambigua.
+            Como ja havia aqui um `style`, o resultado e o mesmo e o build fica limpo. */}
         <div
-          className="flex transition-transform duration-700 ease-[cubic-bezier(.16,.7,.3,1)]"
-          style={{ transform: `translateX(-${i * 100}%)` }}
+          className="flex transition-transform duration-700"
+          style={{
+            transform: `translateX(-${i * 100}%)`,
+            transitionTimingFunction: "cubic-bezier(0.16, 0.7, 0.3, 1)",
+          }}
         >
           {certificados.map((c) => (
             <article key={c.codigo} className="w-full shrink-0 px-1">

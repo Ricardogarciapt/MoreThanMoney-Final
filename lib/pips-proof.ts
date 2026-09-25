@@ -30,9 +30,13 @@ import { pipSizeForSymbol, unitFor } from '@/lib/mtmcopy/trade-outcome'
 const KEY = 'pips_proof'
 
 /**
- * A conta-espelho «All tap to trade Signals» (PU Prime DEMO) — abre todos os sinais publicados.
- * É demo de propósito: serve para medir os sinais, não para render dinheiro, e isso é dito a
- * quem lê os números.
+ * A conta-espelho ANTIGA — «All tap to trade Signals» (PU Prime DEMO, login 700163127), na MetaApi.
+ *
+ * ESTÁ MORTA desde 2026-08-26: a conta foi apagada na MetaApi (hoje responde 404) e vive no registo
+ * de contas inexistentes (lib/mtmcopy/metaapi-inexistentes.ts). Fica aqui porque as trades de 25 e
+ * 26/08 ainda contam para janelas longas se algum dia o histórico voltar a ler-se — e porque o id
+ * explica de onde vêm os números antigos. A conta-espelho VIVA é outra: ver
+ * `computeExecutadasDoEspelhoSim`.
  */
 const CONTA_ESPELHO = process.env.METAAPI_T2T_MIRROR_ACCOUNT_ID?.trim() || '6014b4fc-3ed3-458a-8cea-7099cf29b51f'
 /** Lote da conta-espelho — é o que transforma os pips em dólares nos exemplos. */
@@ -90,10 +94,33 @@ export interface PipsProof {
    *  operação real da conta — e o texto tem de dizer o período que os dados cobrem, não o que
    *  foi pedido. */
   desdeReal?: string | null
+  /**
+   * O instante da ENTRADA mais antiga da amostra — a abertura, não o fecho.
+   *
+   * Existe por causa do defeito de preço de 24/09 (ver `FRONTEIRA_VIES_PRECO`): o que ele
+   * estragava era o preenchimento, ou seja o preço a que a posição ABRIU. Uma trade que abriu às
+   * 10h e fechou às 20h leva o viés com ela, e `desdeReal` — que é um fecho — deixá-la-ia passar
+   * por limpa. Só a conta-espelho simulada sabe dizer isto; nas outras fontes fica nulo.
+   */
+  entradaMaisAntiga?: string | null
   /** O que foi mesmo executado, com parciais contados. É isto que se publica. */
   executado: ProvaExecutada
   /** O que as ideias publicadas fizeram. Contexto interno — nunca se mistura com o de cima. */
   ideias: ProvaIdeias | null
+  /**
+   * DE ONDE saiu `executado`. Não é telemetria: é o que decide se a amostra se pode publicar.
+   *
+   *  · `espelho_sim` — a conta-espelho viva (MTM Funded simulado). Tem ganhos E perdas, com os
+   *    parciais pesados. É a fonte boa.
+   *  · `broker`      — histórico da conta-espelho antiga na MetaApi. Também completo.
+   *  · `registo`     — `mtmcopy_trade_exits`. NÃO SE PUBLICA: esse registo só recebe linha quando o
+   *    motor faz uma SAÍDA nos alvos (lib/gestao-real/premium.ts); um stop não escreve lá nada, e
+   *    por isso a amostra é estruturalmente só de vencedoras. A 24/09 dava «20 trades · 100 % de
+   *    acerto · +2 225 pips» — aritmeticamente certo e uma mentira na mesma. Serve para pesar
+   *    parciais de posições que conhecemos por outra via, não para medir acerto.
+   *  · `nenhuma`     — não há nada medido. Diz-se isso; não se inventa.
+   */
+  fonte: 'espelho_sim' | 'broker' | 'registo' | 'nenhuma'
   loteEspelho: number
   asOf: string
   /** Falha na leitura do broker → `erro` preenchido e nada se publica. */
@@ -267,6 +294,145 @@ async function computeIdeias(dias: number): Promise<ProvaIdeias | null> {
 }
 
 /**
+ * A CONTA-ESPELHO VIVA — a conta MTM Funded simulada que abre todos os sinais publicados
+ * (`mtm_trading_accounts.recolhe_todos_sinais`, migração 092; quem lá abre é
+ * lib/mtmfunded/estrategias-sinais/todos-os-sinais.ts, chamado pelo signal-tracker).
+ *
+ * Porque é ESTA a fonte certa da prova, e não a das ideias: aqui uma posição que fecha 50 % no TP1,
+ * 25 % no TP2 e o resto no break-even vale a média PESADA das três saídas. Em
+ * `mtmcopy_signal_tracking` a mesma trade conta como «Stop loss» e deita fora o que já estava
+ * embolsado — é esse erro que a conta-espelho existe para não cometer.
+ *
+ * Como se lê uma trade: no motor simulado, um parcial não altera a posição — cria uma FILHA fechada
+ * com `mae_id` a apontar à mãe (funded_fechar_parcial, migração 072), com a mesma entrada e o seu
+ * volume. Logo:
+ *   uma TRADE  = a raiz + as filhas dela;
+ *   os pips    = Σ (volume da parte ÷ volume inicial) × pips dessa parte;
+ *   e só entram as trades cuja RAIZ já fechou — uma posição a meio ainda pode acabar de qualquer
+ *   maneira, e contá-la agora era escolher o momento que mais convém.
+ *
+ * A fonte de cada trade (Premium, Scanner Sensei, Scanner MTM…) vem da ponte `funded_sinal_posicoes`,
+ * que o próprio sistema escreve ao abrir — não de adivinhar pelo comentário.
+ */
+async function computeExecutadasDoEspelhoSim(
+  dias: number,
+): Promise<{ trades: TradeExecutada[]; abertas: number; desdeReal: string | null; entradaMaisAntiga: string | null }> {
+  const vazio = { trades: [] as TradeExecutada[], abertas: 0, desdeReal: null as string | null, entradaMaisAntiga: null as string | null }
+  try {
+    const db = getSupabaseAdmin()
+    const desde = new Date(Date.now() - dias * 86_400_000).toISOString()
+    const { data: contas } = await db.from('mtm_trading_accounts').select('id')
+      .eq('recolhe_todos_sinais', true).eq('motor', 'sim').limit(20)
+    const ids = (contas ?? []).map((c) => String(c.id))
+    if (!ids.length) return vazio
+
+    const { data: linhas } = await db.from('funded_positions')
+      .select('id, mae_id, symbol, direcao, volume, volume_inicial, preco_entrada, preco_fecho, estado, aberta_em, fechada_em')
+      .in('account_id', ids).gte('fechada_em', desde).eq('estado', 'fechada').limit(5000)
+    if (!linhas?.length) return vazio
+
+    // A raiz ainda aberta = trade por acabar. Lê-se à parte porque as abertas não têm `fechada_em`.
+    const { data: vivas } = await db.from('funded_positions').select('id')
+      .in('account_id', ids).eq('estado', 'aberta').limit(2000)
+    const aindaAbertas = new Set((vivas ?? []).map((v) => String(v.id)))
+
+    type Parte = { id: string; raiz: string; symbol: string; dir: 1 | -1; volume: number; volumeInicial: number | null; entrada: number; fecho: number | null; abertaEm: string | null; fechadaEm: string | null }
+    const partes: Parte[] = linhas.map((l) => ({
+      id: String(l.id),
+      raiz: String(l.mae_id ?? l.id),
+      symbol: limparSimbolo(l.symbol as string),
+      dir: l.direcao === 'sell' ? -1 : 1,
+      volume: Number(l.volume) || 0,
+      volumeInicial: l.volume_inicial == null ? null : Number(l.volume_inicial),
+      entrada: Number(l.preco_entrada) || 0,
+      fecho: l.preco_fecho == null ? null : Number(l.preco_fecho),
+      abertaEm: (l.aberta_em as string) ?? null,
+      fechadaEm: (l.fechada_em as string) ?? null,
+    }))
+
+    const porRaiz = new Map<string, Parte[]>()
+    for (const p of partes) porRaiz.set(p.raiz, [...(porRaiz.get(p.raiz) ?? []), p])
+
+    // fonte por raiz (a ponte guarda o rótulo que foi para o comentário da posição)
+    const { data: pontes } = await db.from('funded_sinal_posicoes')
+      .select('funded_position_id, fonte').in('account_id', ids)
+      .in('funded_position_id', [...porRaiz.keys()].slice(0, 1000)).limit(1000)
+    const fonteDaRaiz = new Map<string, string>()
+    for (const p of pontes ?? []) if (p.funded_position_id) fonteDaRaiz.set(String(p.funded_position_id), String(p.fonte ?? ''))
+
+    const trades: TradeExecutada[] = []
+    let abertas = 0
+    let maisAntigo: number | null = null
+    // A ENTRADA mais antiga, e não só o fecho: o defeito de preço de 24/09 batia no preenchimento,
+    // ou seja no instante em que a posição ABRIU. Uma trade que abriu de manhã e fechou à noite
+    // leva o viés com ela — medir a amostra pelo fecho deixaria-a passar por limpa.
+    let entradaMaisAntiga: number | null = null
+    for (const [raiz, ps] of porRaiz) {
+      if (aindaAbertas.has(raiz)) { abertas++; continue }
+      const mae = ps.find((p) => p.id === raiz)
+      // Sem a raiz na janela a trade abriu antes dela: as filhas sozinhas não dizem o resultado.
+      if (!mae || !mae.entrada) continue
+      // `volume_inicial` só é preenchido quando houve parcial; sem parciais é o volume da própria raiz.
+      const volInicial = mae.volumeInicial && mae.volumeInicial > 0 ? mae.volumeInicial : ps.reduce((a, p) => a + p.volume, 0)
+      if (!(volInicial > 0)) continue
+      const tamanhoPip = pipSizeForSymbol(mae.symbol)
+      let pips = 0
+      let completo = true
+      for (const p of ps) {
+        if (p.fecho == null) { completo = false; break }
+        pips += (((p.fecho - p.entrada) * p.dir) / tamanhoPip) * (p.volume / volInicial)
+      }
+      if (!completo) continue
+      pips = Math.round(pips * 10) / 10
+      if (!Number.isFinite(pips) || Math.abs(pips) > tectoDePips(mae.symbol)) continue
+      const fechadaEm = ps.map((p) => p.fechadaEm).filter(Boolean).sort().pop() ?? null
+      const t = ps.map((p) => (p.fechadaEm ? Date.parse(p.fechadaEm) : NaN)).filter(Number.isFinite)
+      if (t.length) maisAntigo = maisAntigo == null ? Math.min(...t) : Math.min(maisAntigo, ...t)
+      const abriu = mae.abertaEm ? Date.parse(mae.abertaEm) : NaN
+      if (Number.isFinite(abriu)) entradaMaisAntiga = entradaMaisAntiga == null ? abriu : Math.min(entradaMaisAntiga, abriu)
+      trades.push({
+        positionId: raiz,
+        symbol: mae.symbol,
+        fonte: chaveDaFonteDoEspelho(fonteDaRaiz.get(raiz)),
+        pips,
+        dinheiro: 0, // o dinheiro depende do lote de cada conta — aqui só se mede o movimento
+        saidas: ps.length,
+        fechadaEm,
+      })
+    }
+    return {
+      trades,
+      abertas,
+      desdeReal: maisAntigo ? new Date(maisAntigo).toISOString() : null,
+      entradaMaisAntiga: entradaMaisAntiga ? new Date(entradaMaisAntiga).toISOString() : null,
+    }
+  } catch {
+    return vazio
+  }
+}
+
+/**
+ * O rótulo que a conta-espelho escreve no comentário («Premium», «Scanner MTM», «PrimeVerse fxedge»)
+ * → a chave das fontes que o resto deste ficheiro usa («premium», «mtmscanner», «primeverse»).
+ *
+ * É o inverso de `comentarioDaFonte` (lib/mtmfunded/estrategias-sinais/calculo.ts). Fica aqui, e não
+ * importado de lá, porque o que se inverte é a tabela de rótulos — se ela mudar, isto tem de mudar
+ * com ela, e uma correspondência falhada devolve `null` (trade sem fonte) em vez de uma fonte errada.
+ */
+function chaveDaFonteDoEspelho(rotulo: string | undefined | null): string | null {
+  const r = String(rotulo ?? '').trim().toLowerCase()
+  if (!r) return null
+  if (r.startsWith('primeverse')) return 'primeverse'
+  if (r === 'premium') return 'premium'
+  if (r === 'scanner sensei' || r === 'sensei') return 'sensei'
+  if (r === 'goldkiller') return 'goldkiller'
+  if (r === 'scanner mtm') return 'mtmscanner'
+  if (r === 'aurum flow') return 'goldenmoves'
+  if (r === 'perps') return 'perps'
+  return null
+}
+
+/**
  * As saídas registadas pelo motor (`mtmcopy_trade_exits`) — a fonte que não depende de ninguém.
  *
  * O histórico do broker é a verdade última, mas a leitura dele a partir das funções serverless é
@@ -319,18 +485,34 @@ async function computeExecutadasDoRegisto(dias: number): Promise<{ trades: Trade
 }
 
 export async function computePipsProof(dias = 30): Promise<PipsProof> {
-  // Primeiro o broker (verdade última). Se não responder, o registo do motor — que tem a mesma
-  // informação, gravada no instante de cada saída.
-  let { trades, abertas, desdeReal, erro } = await computeExecutadas(dias)
+  // Pela ordem em que as fontes merecem confiança (ver o campo `fonte` de PipsProof):
+  //  1. a conta-espelho VIVA, que é onde os sinais abrem hoje e onde as parciais existem;
+  //  2. o histórico do broker da conta-espelho antiga — só serve enquanto ela responder;
+  //  3. `mtmcopy_trade_exits`, que é só de vencedoras e por isso NÃO se publica (`publicavel`).
+  let fonte: PipsProof['fonte'] = 'espelho_sim'
+  let erro: string | undefined
+  let { trades, abertas, desdeReal, entradaMaisAntiga } = await computeExecutadasDoEspelhoSim(dias)
+  if (!trades.length) {
+    const broker = await computeExecutadas(dias)
+    fonte = 'broker'
+    trades = broker.trades
+    abertas = broker.abertas
+    desdeReal = broker.desdeReal
+    entradaMaisAntiga = null
+    erro = broker.erro
+  }
   if (!trades.length) {
     const registo = await computeExecutadasDoRegisto(dias)
     if (registo.trades.length) {
+      fonte = 'registo'
       trades = registo.trades
       abertas = registo.abertas
       desdeReal = registo.trades.map((t) => t.fechadaEm).filter(Boolean).sort()[0] ?? null
+      entradaMaisAntiga = null
       erro = undefined
     }
   }
+  if (!trades.length) fonte = 'nenhuma'
   const emPips = trades.filter((t) => unitFor(t.symbol) === 'pips')
   const ouro = trades.filter((t) => pipSizeForSymbol(t.symbol) === 0.1)
   const soma = (xs: TradeExecutada[]) => Math.round(xs.reduce((a, b) => a + b.pips, 0) * 10) / 10
@@ -346,6 +528,7 @@ export async function computePipsProof(dias = 30): Promise<PipsProof> {
   return {
     dias,
     desdeReal,
+    entradaMaisAntiga,
     executado: {
       trades: trades.length,
       winRatePct: win(trades),
@@ -364,6 +547,7 @@ export async function computePipsProof(dias = 30): Promise<PipsProof> {
       aindaAbertas: abertas,
     },
     ideias: await computeIdeias(dias),
+    fonte,
     loteEspelho: LOTE_ESPELHO,
     asOf: new Date().toISOString().slice(0, 10),
     ...(erro ? { erro } : {}),
@@ -408,9 +592,139 @@ export const RESSALVA_LEGAL =
   'Resultados passados não garantem resultados futuros. Operar com produtos alavancados tem risco ' +
   'elevado de perda. Isto não é aconselhamento financeiro.'
 
-/** Há amostra que chegue para publicar? Abaixo disto é ruído com ar de prova. */
+/**
+ * ── A NOTA DO VIÉS DE PREÇO (24/09/2026) ──────────────────────────────────────────────────────
+ *
+ * O QUE ACONTECEU. As contas MTM Funded simuladas abriam a preços que o mercado não ofereceu, e
+ * sempre para o mesmo lado — o da casa. Nas 7 trades ao vivo da mestre do Sensei a entrada bateu
+ * a favor em 6 (média +1,79 USD por trade) e três delas caíram FORA do intervalo da vela de 5
+ * minutos; uma ficou 1,37 acima do máximo. Refeitas as contas ao preço certo, +222,2 USD passam a
+ * +84,8: desaparecem 62 % do lucro.
+ *
+ * PORQUÊ. O campo `funded_precos.em` era a hora a que o MOTOR tocou no preço, não a hora a que o
+ * MERCADO o fez, e as fontes de recurso (Yahoo com até 240 s de atraso, ouro derivado do PAXG)
+ * entravam com `Date.now()`. A guarda de frescura media a nossa vivacidade, não a idade do preço.
+ *
+ * O QUE SE FAZ COM ISSO AQUI. Assinala-se; não se corrige o passado. Reescrever os números
+ * antigos seria inventar um histórico que ninguém viu — e a nota existe exactamente para quem
+ * lê poder descontar sozinho.
+ */
+
+/**
+ * A FRONTEIRA: o instante a partir do qual um preenchimento já é de confiança.
+ *
+ * É a hora do commit `a4b3909e` («motor: a fonte provada manda, e o preço congelado envelhece»),
+ * 2026-09-24T15:23:58+01:00, e não a meia-noite de 24/09. Arredondar para o dia marcaria como
+ * suspeitas horas que já estavam corrigidas, e — pior — deixaria passar por limpas as trades da
+ * manhã de 24/09, que são as MAIS viciadas de todas: foram elas que se mediram.
+ *
+ * Porquê este commit e não a migração 123 (14:54) nem a regra de preenchimento (14:02): a
+ * correcção só fica inteira quando a ÚLTIMA peça entra. Até `a4b3909e`, um preço congelado ainda
+ * podia ser lido como fresco. A fronteira é a última peça, pela mesma razão por que uma corrente
+ * vale o elo mais fraco.
+ */
+export const FRONTEIRA_VIES_PRECO = '2026-09-24T14:23:58.000Z'
+
+/**
+ * Que fontes é que o defeito tocou.
+ *
+ * SÓ a conta-espelho simulada (`espelho_sim`): o viés estava no preenchimento das contas MTM
+ * Funded em motor `sim` (lib/mtmfunded/precos/preenchimento.ts). O histórico `broker` vem de uma
+ * conta MT5 na corretora, preenchida pela corretora, e o `registo` vem de saídas em contas reais
+ * — nenhum dos dois passou por este motor. Pôr a nota neles seria ruído: uma ressalva que também
+ * aparece onde não se aplica ensina o leitor a saltá-la, que é o contrário do que se quer.
+ */
+const FONTES_COM_VIES_DE_PRECO = new Set<PipsProof['fonte']>(['espelho_sim'])
+
+/** dd/mm, como o resto do funil escreve as datas. */
+function diaMes(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/**
+ * A amostra inclui trades abertas ANTES da correcção?
+ *
+ * Mede-se pela ENTRADA mais antiga, que é onde o defeito batia. Quando a prova gravada não a
+ * traz — provas guardadas antes de este campo existir — cai-se para o fecho mais antigo e, à
+ * falta dele, para o início da janela pedida. Os dois fallbacks erram para o lado de pôr a nota:
+ * na dúvida sobre se a amostra está limpa, avisa-se. O contrário seria esconder por descuido.
+ */
+export function amostraAtravessaViesDePreco(p: PipsProof | null | undefined): boolean {
+  if (!p || !p.executado?.trades) return false
+  if (!FONTES_COM_VIES_DE_PRECO.has(p.fonte)) return false
+  const fronteira = Date.parse(FRONTEIRA_VIES_PRECO)
+  const candidatos = [p.entradaMaisAntiga, p.desdeReal]
+  for (const c of candidatos) {
+    const t = c ? Date.parse(c) : NaN
+    if (Number.isFinite(t)) return t < fronteira
+  }
+  const asOf = Date.parse(`${p.asOf}T23:59:59Z`)
+  if (!Number.isFinite(asOf)) return true
+  return asOf - (p.dias ?? 30) * 86_400_000 < fronteira
+}
+
+/**
+ * A nota, na voz do resto do funil: curta, sem rodeios e com a data lá dentro.
+ *
+ * DESAPARECE SOZINHA. Não há interruptor para desligar, nem data escrita à mão num template:
+ * assim que a trade mais antiga da amostra for posterior à fronteira — o que acontece por si à
+ * medida que a janela de 30 dias anda para a frente — `amostraAtravessaViesDePreco` passa a dar
+ * falso e isto devolve `null`. Uma ressalva que fica para sempre deixa de ser lida, e daqui a
+ * duas semanas já nem seria verdade.
+ */
+export function notaViesPreco(p: PipsProof | null | undefined): string | null {
+  if (!amostraAtravessaViesDePreco(p)) return null
+  return TEXTO_NOTA_VIES_PRECO
+}
+
+/**
+ * A MESMA frase, uma vez só.
+ *
+ * O histórico das apps precisa dela e não tem um `PipsProof` para dar — tem uma data de entrada.
+ * Duplicar a frase lá dava duas ressalvas com palavras diferentes para o mesmo defeito, e a
+ * segunda envelheceria sozinha no dia em que alguém afinasse a primeira.
+ */
+/**
+ * A data da fronteira em dd/mm — para as superfícies que traduzem a ressalva em vez de a citar.
+ *
+ * O histórico das apps fala 21 línguas e a frase em português ficaria em português em todas elas.
+ * A data sai daqui, do mesmo `FRONTEIRA_VIES_PRECO`, e por isso não há um dia escrito à mão dentro
+ * de 21 traduções à espera de envelhecer.
+ */
+export const NOTA_VIES_ATE_DDMM = diaMes(FRONTEIRA_VIES_PRECO)
+
+export const TEXTO_NOTA_VIES_PRECO =
+  `Nota: os resultados até ${diaMes(FRONTEIRA_VIES_PRECO)} podem estar inflacionados por um defeito de preço já corrigido.`
+
+/**
+ * A nota para quem só tem a ENTRADA mais antiga da amostra — o caso do histórico das apps.
+ *
+ * Mede-se pela entrada, e não pelo fecho, porque era na entrada que o defeito batia: uma trade
+ * aberta a 23/09 e fechada a 25/09 entrou ao preço viciado. Sem entrada conhecida devolve a nota
+ * à mesma, que é o mesmo lado para que {@link amostraAtravessaViesDePreco} erra — na dúvida sobre
+ * se a amostra está limpa, avisa-se.
+ *
+ * Desaparece sozinha, pela mesma razão: quando a entrada mais antiga da janela passar a fronteira,
+ * isto devolve `null` sem ninguém lhe mexer.
+ */
+export function notaViesPrecoDesdeEntrada(entradaMaisAntiga: string | null | undefined): string | null {
+  const t = entradaMaisAntiga ? Date.parse(entradaMaisAntiga) : NaN
+  if (Number.isFinite(t) && t >= Date.parse(FRONTEIRA_VIES_PRECO)) return null
+  return TEXTO_NOTA_VIES_PRECO
+}
+
+/**
+ * Há amostra que chegue para publicar? Abaixo disto é ruído com ar de prova.
+ *
+ * Duas condições, e a segunda é tão importante como a primeira: a amostra tem de vir de uma fonte
+ * que consiga medir PERDAS. `mtmcopy_trade_exits` não consegue — só lá entra linha quando o motor
+ * sai nos alvos, um stop não escreve nada, e o que sobra é uma lista de vencedoras. Foi assim que a
+ * prova esteve a dar «20 trades · 100 % de acerto» durante quase um mês depois de a conta-espelho
+ * ter morrido (26/08). Um número impossível de defender é pior do que não ter número nenhum.
+ */
 export function publicavel(p: PipsProof | null): p is PipsProof {
-  return Boolean(p && p.executado.trades >= 20)
+  return Boolean(p && p.executado.trades >= 20 && p.fonte !== 'registo')
 }
 
 /**
@@ -470,6 +784,8 @@ export function provaParaLead(p: PipsProof | null | undefined): string | null {
       `1,0 → ${usd(e.ouro.pips * VALOR_PIP_OURO['1'])} (bruto)`,
     )
   }
+  const nota = notaViesPreco(p)
+  if (nota) partes.push(nota)
   return partes.join(' · ')
 }
 
@@ -479,14 +795,18 @@ export function linhaPips(p: PipsProof, opts?: { comExemplos?: boolean }): strin
   const e = p.executado
   const parciais = e.comParciais ? ` (${e.comParciais} com saídas parciais)` : ''
   const base = `No total ${periodoReal(p)}: ${e.trades} trades executadas${parciais} · ${e.winRatePct}% de acerto · ${sinal(e.pips)} pips`
-  if (opts?.comExemplos === false || !e.ouro) return base
+  // A nota do viés viaja COLADA ao número, nunca num rodapé à parte: quem cita a linha leva-a.
+  const nota = notaViesPreco(p)
+  const fim = nota ? `\n${nota}` : ''
+  if (opts?.comExemplos === false || !e.ouro) return base + fim
   const g = e.ouro.pips
   const usd = (n: number) => `${n >= 0 ? '+' : '−'}${nf.format(Math.abs(Math.round(n)))} $`
   return (
     `${base}\n` +
     `Só em ouro: ${e.ouro.trades} trades, ${e.ouro.winRatePct}% de acerto, ${sinal(g)} pips. ` +
     `O que isso vale depende do teu lote — 0,01 → ${usd(g * VALOR_PIP_OURO['0.01'])} · ` +
-    `0,1 → ${usd(g * VALOR_PIP_OURO['0.1'])} · 1,0 → ${usd(g * VALOR_PIP_OURO['1'])}.`
+    `0,1 → ${usd(g * VALOR_PIP_OURO['0.1'])} · 1,0 → ${usd(g * VALOR_PIP_OURO['1'])}.` +
+    fim
   )
 }
 

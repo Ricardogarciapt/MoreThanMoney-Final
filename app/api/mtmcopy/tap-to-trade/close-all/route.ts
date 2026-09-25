@@ -3,6 +3,7 @@ import { destinoDeExecucao } from '@/lib/mtmcopy/destino-execucao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { listOpenPositions, closePositionById } from '@/lib/mtmcopy/metaapi'
 import { ehTradeLocker, sessaoDaLigacao } from '@/lib/tradelocker/ligacao'
+import { apareceNoT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
   const withAccount = (conns ?? []).filter((c) => { const d = destinoDeExecucao(c); return d === 'metaapi' || d === 'tradelocker' })
   // Emergency stop fecha em TODAS as contas T2T do user (fan-out). Retrocompat: se nenhuma marcada,
   // usa a 1ª conta ligada.
-  let targets = withAccount.filter((c) => c.purpose === 'tap_to_trade' || c.t2t_enabled === true)
+  let targets = withAccount.filter((c) => apareceNoT2T(c))
   if (!targets.length && withAccount[0]) targets = [withAccount[0]]
 
   if (!targets.length) {

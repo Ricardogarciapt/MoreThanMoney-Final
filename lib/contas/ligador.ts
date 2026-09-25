@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ehContaMetaApi } from '@/lib/contas/quota-metaapi'
 import { etiquetaDaLinha } from '@/lib/contas/etiqueta'
+import { rotuloUsoT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 /**
  * «As minhas contas» — a lista única de contas de um utilizador, dos dois produtos.
@@ -86,9 +87,9 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
     const plataforma = plataformaDe(c.mt5_platform)
     const soLeitura = plataforma === 'mtmfunded' && c.funded_somente_leitura === true
     const ativa = c.is_active !== false
-    const t2t = c.purpose === 'tap_to_trade' || c.t2t_enabled === true
     const usos: string[] = []
-    if (t2t) usos.push(c.t2t_enabled === false ? 'Tap to Trade (desligado nesta conta)' : 'Tap to Trade')
+    const usoT2T = rotuloUsoT2T(c as { purpose?: string | null; t2t_enabled?: boolean | null })
+    if (usoT2T) usos.push(usoT2T)
     if (c.purpose !== 'tap_to_trade') {
       usos.push(c.copyfactory_strategy_pick ? `MTM Auto · estratégia ${String(c.copyfactory_strategy_pick)}` : 'MTM Auto (cópia)')
     }

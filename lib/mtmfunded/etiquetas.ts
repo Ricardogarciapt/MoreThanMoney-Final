@@ -1,10 +1,19 @@
 /**
  * AS ETIQUETAS CURTAS DE UMA CONTA — o que o trader lê à primeira.
  *
- * Tipo: F1 / F2 (fase do desafio), Funded, Torneio. Estado: Active, Breached, Pause, Closed,
+ * Tipo: F1 / F2 (fase do desafio), Funded, Torneio, Real. Estado: Active, Breached, Pause, Closed,
  * Pending. Iguais no painel, no admin, no WebTrader e nas credenciais — é assim que as prop firms
  * as mostram, e é a língua que quem vem de lá já sabe ler. «Demo» não diz nada a ninguém: toda a
- * conta é simulada, o que interessa é EM QUE PONTO do caminho está.
+ * conta de desafio é simulada, o que interessa é EM QUE PONTO do caminho está.
+ *
+ * ── Cópia entre repositórios ────────────────────────────────────────────────────────────────
+ * Este ficheiro existe IGUAL nos dois repositórios (site morethanmoney e app mtm-auto). Não há
+ * pacote partilhado entre eles; mudar um obriga a copiar para o outro.
+ *
+ * Já se pagou por não o fazer: a cópia do mtm-auto ficou sem o tipo `Real` e sem a pausa, e
+ * durante esse tempo uma conta REAL — dinheiro depositado pelo cliente — aparecia na app
+ * etiquetada «F1», ou seja como um desafio simulado, e uma conta pausada pelo admin aparecia
+ * «Active». A guarda está em lib/__tests__/paridade-repositorios.check.ts (no site).
  */
 
 export type TipoCurto = 'F1' | 'F2' | 'Funded' | 'Torneio' | 'Real'
@@ -13,7 +22,8 @@ export type EstadoCurto = 'Active' | 'Breached' | 'Pause' | 'Closed' | 'Pending'
 export function tipoCurto(tipo: string, metricas?: Record<string, unknown> | null): TipoCurto {
   if (tipo === 'torneio') return 'Torneio'
   if (tipo === 'financiada' || tipo === 'funded') return 'Funded'
-  // Conta Real: dinheiro depositado pelo cliente, sem fases nem regras de desafio.
+  // Conta Real: dinheiro depositado pelo cliente, sem fases nem regras de desafio. NUNCA cai no
+  // ramo das fases — rotular dinheiro real como «F1» é a pior direcção possível para este erro.
   if (tipo === 'real') return 'Real'
   // A fase vive nas métricas (`fase`), escrita quando a fase seguinte é emitida; sem ela é a 1.ª.
   return Number(metricas?.fase ?? 1) >= 2 ? 'F2' : 'F1'

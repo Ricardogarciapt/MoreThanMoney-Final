@@ -14,8 +14,8 @@
  *  4. SAÍDAS PASSAM SEMPRE. Rota em pausa, filtros ou máximo de abertas só impedem ABRIR.
  */
 import {
-  calcularLote, chaveEvento, clientIdDaCopia, distanciaDoSl, mapearSimbolo, motivoFiltro, pctDoEvento,
-  planoParcial, precoDeReferencia, REGRA_POR_OMISSAO, stopsNoDestino,
+  calcularLote, chaveEvento, clientIdDaCopia, decidirSimboloDestino, distanciaDoSl, mapearSimbolo, motivoFiltro, pctDoEvento,
+  planoParcial, precoDeReferencia, REGRA_POR_OMISSAO, stopsNoDestino, type LeituraSimbolosDestino,
 } from './calculo'
 import { modoEfectivo, type Interruptores } from './regras'
 import { digitosSeguros, reancorar } from '../mestres/pips'
@@ -191,14 +191,27 @@ async function abrir(
     return { resultado: 'recusado', acaoPretendida: nada(filtro), modo }
   }
 
-  // Leituras (permitidas em sombra). Uma leitura que falha em sombra não repete: regista-se.
-  const lista = rota.destino_tipo === 'mtmfunded' ? null : escritor ? await escritor.simbolos().catch(() => null) : null
+  // Leituras (permitidas em sombra). A lista do destino tem TRÊS respostas possíveis, não duas —
+  // ver `decidirSimboloDestino` (24/09). `[]` = a conta ainda não disse o que tem; `null` = não
+  // respondeu. Nenhuma das duas é «o símbolo não existe».
+  const leitura: LeituraSimbolosDestino = rota.destino_tipo === 'mtmfunded' || !escritor
+    ? { tipo: 'dispensada' }
+    : await escritor.simbolos().then(
+        (l): LeituraSimbolosDestino => (l == null ? { tipo: 'falhou' } : l.length ? { tipo: 'lida', simbolos: l } : { tipo: 'porSincronizar' }),
+        (): LeituraSimbolosDestino => ({ tipo: 'falhou' }),
+      )
+  const lista = leitura.tipo === 'lida' ? leitura.simbolos : null
   const mapa = mapearSimbolo(symbol, rota.destino_tipo, rota.mapa_simbolos, lista)
   const simboloDestino = mapa.simbolo ?? (rota.destino_tipo === 'mtmfunded' ? mapa.canonico : null)
-  if (!simboloDestino && lista) {
-    const motivo = `${mapa.canonico} não existe no destino`
-    await loja.inserirCopia({ rota_id: rota.id, origem_posicao_id: ev.origem_posicao_id, volume_origem_abertura: volumeOrigem, direcao, estado: 'recusada', erro: motivo })
-    return { resultado: 'recusado', acaoPretendida: nada(motivo), modo }
+  const decisaoSimbolo = decidirSimboloDestino(simboloDestino, mapa.canonico, leitura)
+  if (decisaoSimbolo.decisao === 'recusar') {
+    await loja.inserirCopia({ rota_id: rota.id, origem_posicao_id: ev.origem_posicao_id, volume_origem_abertura: volumeOrigem, direcao, estado: 'recusada', erro: decisaoSimbolo.motivo })
+    return { resultado: 'recusado', acaoPretendida: nada(decisaoSimbolo.motivo), modo }
+  }
+  if (decisaoSimbolo.decisao === 'repetir') {
+    // De propósito SEM `inserirCopia`: gravar a linha 'recusada' fechava a porta em definitivo (a
+    // abertura seguinte via `copia.estado !== 'enviando'` e saltava). O evento volta pelo backoff.
+    return { resultado: 'erro', acaoPretendida: nada(decisaoSimbolo.motivo), erro: decisaoSimbolo.motivo, repetir: true, modo }
   }
   const ctx: ContextoDestino | null = escritor ? await escritor.contexto(simboloDestino ?? mapa.canonico, direcao).catch(() => null) : null
   if (!ctx && modo === 'live') return { resultado: 'erro', acaoPretendida: nada('contexto do destino indisponível'), erro: 'contexto do destino indisponível', repetir: true, modo }
@@ -222,6 +235,11 @@ async function abrir(
   // Símbolo: o mapa manual manda; senão o que o destino escolheu com as specs (salta DISABLED/CLOSEONLY).
   const simboloFinal = mapa.via === 'mapa' ? simboloDestino : ctx?.simbolo ?? simboloDestino
   const acao: AcaoAbrir = { tipo: 'abrir', simbolo: simboloFinal ?? mapa.canonico, direcao, volume: lote.volume, sl: stops.sl, tp: stops.tp, clientId }
+  // Lote subido ao mínimo da corretora (o risco configurado dava menos): fica dito na linha da
+  // cópia. Sem isto, o cliente via um lote maior do que o risco dele e não tinha como saber porquê.
+  const notaLote = lote.subiuAoMinimo
+    ? `lote subido ao mínimo da corretora (${lote.bruto.toFixed(4)} → ${lote.volume})`
+    : null
   const pedido = { ...acao, precoReferencia: ctx ? precoDeReferencia(ctx, direcao) : null, entradaMestre: num(p.preco), slMestre: num(p.sl), tpMestre: num(p.tp), equity: ctx?.equity ?? null }
 
   // Guardas do motor das mestres: só impedem ABRIR (pausa, exposição, atraso, duplicado, T2T sem aceite).
@@ -240,7 +258,7 @@ async function abrir(
       rota_id: rota.id, origem_posicao_id: ev.origem_posicao_id, volume_origem_abertura: volumeOrigem,
       volume_destino_abertura: lote.volume, destino_simbolo: acao.simbolo, direcao, estado: 'sombra', client_id: clientId,
       preco_origem: num(p.preco), preco_destino: ctx ? precoDeReferencia(ctx, direcao) : null,
-      erro: ctx ? null : 'contexto do destino indisponível (sombra calculou com a regra de lote por omissão)',
+      erro: ctx ? notaLote : 'contexto do destino indisponível (sombra calculou com a regra de lote por omissão)',
     })
     await registar(op, { rota, ev, tipo: 'abrir', modo, estado: 'sombra', pedido })
     return { resultado: 'sombra', acaoPretendida: acao, modo }
@@ -251,7 +269,7 @@ async function abrir(
   const inserida = await loja.inserirCopia({
     rota_id: rota.id, origem_posicao_id: ev.origem_posicao_id, volume_origem_abertura: volumeOrigem,
     volume_destino_abertura: lote.volume, destino_simbolo: acao.simbolo, direcao, estado: 'enviando', client_id: clientId,
-    preco_origem: num(p.preco), enviado_em: new Date(agora).toISOString(),
+    preco_origem: num(p.preco), enviado_em: new Date(agora).toISOString(), erro: notaLote,
   })
   if (!inserida) return { resultado: 'saltado', acaoPretendida: nada('outro processo já está a enviar'), modo }
   const gravada = await loja.copia(rota.id, ev.origem_posicao_id)

@@ -39,6 +39,7 @@ import { scannerLabel } from "@/lib/mtm-alerts/scanners"
 // Dentro das apps nativas a sessão NÃO viaja em cookie — vai no cabeçalho. Sem isto, o
 // servidor respondia 401 e o ecrã mostrava zeros com o nome da pessoa no topo.
 import { authHeaders } from "@/lib/auth-token"
+import { DEFAULT_ALERT_SYMBOLS } from "@/lib/mtm-alerts/defaults"
 
 /** Normaliza o timeframe do alerta para um intervalo TradingView válido. */
 function tvInterval(tf: string | null): string {
@@ -175,7 +176,13 @@ interface Subscription {
   timeframes: string[]
 }
 
-const DEFAULT_ALERT_SYMBOLS = ["XAUUSD", "EURUSD", "GBPUSD", "USDCAD", "USDJPY", "BTCUSD", "US30"]
+// A lista vive em lib/mtm-alerts/defaults.ts — era mantida a dobrar.
+/**
+ * App iOS: a subscrição por defeito não nasce com BTCUSD. Os alertas cripto já eram escondidos da
+ * lista, mas o símbolo ficava na subscrição guardada — e voltava pelo push. O mesmo que a watchlist
+ * faz aos favoritos (components/funded/funded-watchlist.tsx::lerFavoritos).
+ */
+const simbolosIniciais = () => (semCripto() ? DEFAULT_ALERT_SYMBOLS.filter((s) => !ehSimboloCripto(s)) : DEFAULT_ALERT_SYMBOLS)
 // Estratégias MTM que geram alertas (inclui Aurum Flow — scanner de perpétuos cripto).
 const STRATEGIES = ["Sensei", "Goldkiller", "MTMScanner", "Aurum Flow"]
 const TIMEFRAMES = ["5", "15", "30", "60", "240", "D"]
@@ -533,7 +540,7 @@ export default function TradingAlertsMobile() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [sub, setSub] = useState<Subscription>({
-    enabled: true, push_enabled: true, symbols: DEFAULT_ALERT_SYMBOLS, strategies: [], timeframes: [],
+    enabled: true, push_enabled: true, symbols: simbolosIniciais(), strategies: [], timeframes: [],
   })
   const [alerts, setAlerts] = useState<MtmAlert[]>([])
   const [loading, setLoading] = useState(true)

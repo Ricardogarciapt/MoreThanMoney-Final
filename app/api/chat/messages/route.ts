@@ -21,7 +21,8 @@ function dispatchChatPush(
 ) {
   const meta = CHANNEL_META[channelSlug] ?? { emoji: "💬", display: `#${channelSlug}` }
   const preview = content?.substring(0, 100) || (imageUrl ? "🖼️ Imagem partilhada" : "📎 Ficheiro")
-  const url = `/app-mobile?tab=chat&channel=${encodeURIComponent(channelSlug)}`
+  // Abre o chat NA mensagem (o `&msg=` faz o salto e o realce) — regra do dono, 24/09.
+  const url = `/app-mobile?tab=chat&channel=${encodeURIComponent(channelSlug)}&msg=${encodeURIComponent(messageId)}`
 
   fetch(`${getSiteOrigin()}/api/notifications/send-push`, {
     method: "POST",

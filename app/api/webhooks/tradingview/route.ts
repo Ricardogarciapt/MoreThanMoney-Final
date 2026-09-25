@@ -33,10 +33,13 @@ import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId, resolvedGoldkillerS
 import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
 import { evaluatePerpsSignalGate } from "@/lib/mtmcopy/perps-signal-gate"
 import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/signal-rules"
+import { temTodasAsConfirmacoes } from "@/lib/mtmcopy/scanner-confirmacoes"
+import { decidirScannerParaMestre } from "@/lib/mtmcopy/scanner-para-mestre"
 // Classificação do ativo e gates locais vivem em lib: a sombra das estratégias (lib/mtmauto/sombra)
 // tem de decidir «teria executado?» com EXACTAMENTE o mesmo código que este webhook.
 import { classifyAsset, confirmationsPassed, isCryptoPerpTicker, passesQualityGate, stopsSane, type AssetClass } from "@/lib/mtmcopy/webhook-gates"
 import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
+import { urlDoChat, urlDoTapToTrade } from "@/lib/notificacao-destino"
 import { lifecycleMessage, stopFoiProtegido } from "@/lib/mtmcopy/signal-lifecycle"
 import { formatarSeguimento, formatarSinal } from "@/lib/sinais/formato-sinal"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -812,6 +815,8 @@ export async function POST(request: NextRequest) {
 
   let providerExecuted = false
   let providerDetail: string | undefined
+  /** Porque é que a mestre não abriu este sinal — vai para `tradingview_signals.ai_error`. */
+  let mestreMotivo: string | null = null
   const isIdeaAlert = activeSensei?.alertType === "idea" || activeSensei?.alertType === "signal"
   // Auto-copy CopyFactory: Ouro/BTC → conta Sensei; Forex → conta MTM Auto Forex (5IHE).
   // Master switch SENSEI_PROVIDER_EXEC_ENABLED + interruptor por-execução (runtime, DB).
@@ -987,6 +992,14 @@ export async function POST(request: NextRequest) {
         entrada: sinalExec.entry ?? price ?? null, sl: sinalExec.sl ?? null, tps: tpsExec, externalRef: String(logId ?? ""),
       })
       mestreSubstituiMt5 = m.substituiMt5
+      // O motivo tem de sobreviver até à gravação do registo do sinal: `providerDetail` só saía na
+      // resposta HTTP, e era por isso que uma entrada que não abriu não deixava rasto nenhum (24/09).
+      mestreMotivo = m.motivo ?? null
+      // «Não abri E o MT5 também não abre» é o caso que ficava em silêncio total: grava-se JÁ, sem
+      // esperar pelo ramo da publicação pela mestre (que só existe para algumas estratégias).
+      if (logId && m.substituiMt5 && m.motivo) {
+        await supabase.from("tradingview_signals").update({ ai_error: `mestre: ${m.motivo}` }).eq("id", logId)
+      }
       if (m.modo !== "desligado") providerDetail = `mestre SIM ${m.estrategia ?? ""}: ${m.modo}${m.motivo ? ` (${m.motivo})` : ""}`
       // A posição que a MESTRE abriu — é ela (e só ela) que o chat e o Telegram anunciam quando o
       // canal é publicado pela mestre (lib/mestres/servidor/publicar.ts).
@@ -996,6 +1009,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (err) {
       console.error("[tradingview-webhook] mestre SIM:", err)
+      mestreMotivo = `erro ao encaminhar para a mestre: ${err instanceof Error ? err.message : String(err)}`
     }
     try {
       const exec = mestreSubstituiMt5
@@ -1017,6 +1031,106 @@ export async function POST(request: NextRequest) {
       console.error("[tradingview-webhook] provider exec error:", err)
     }
     if (pendingIdeaId) await activateSenseiTradeIdea(supabase, pendingIdeaId, logId)
+  }
+
+  /**
+   * MTM SCANNER → A SUA MESTRE, E SÓ AS ENTRADAS COM TODAS AS CONFIRMAÇÕES (24/09).
+   *
+   * Pedido do dono: «as entradas de mtm scanner devem ser passadas para a conta que criaste de 10k
+   * mas apenas as que tiverem todas as confirmações».
+   *
+   * Porque é um bloco à parte e não uma linha a menos no `canExecuteProvider`: aquele portão comanda
+   * DUAS coisas ao mesmo tempo — a mestre SIM e o `processMtmcopyWebhookSignal`, que abre ordens nas
+   * contas MT5 dos clientes. Tirar de lá o `scannerKey !== "mtmscanner"` punha o scanner a executar
+   * nas contas das pessoas, que não é o que foi pedido e que é exactamente a porta que o dono fechou
+   * a 18/08. Por isso o portão fica intacto e o scanner ganha um desvio só para a mestre, pelo MESMO
+   * `encaminharSinalParaMestre` que as outras seis estratégias usam — não há segundo executor.
+   *
+   * O filtro: `temTodasAsConfirmacoes` (lib/mtmcopy/scanner-confirmacoes) — o Pine v3.5 manda sempre
+   * três confirmações e exigem-se as três A FAVOR do lado do sinal (numa venda, as três a `false`).
+   * Nos 60 dias medidos isto tira ~95% do que o scanner grita: de ~304 alertas/dia para ~21/dia, e
+   * ~9,5/dia depois da whitelist de execução e de não repetir o mesmo par/direcção em 4 h.
+   *
+   * Continua a passar pelas regras de sempre (qualidade, stops sãos, whitelist/exclusões do
+   * `passesExecGate`) — ao gate de execução entra a contagem A FAVOR, porque é essa a leitura que
+   * este caminho usa; para as compras dá o mesmo número de sempre.
+   *
+   * NASCE MUDO: `mestres_estrategias.sinal_modo` está em `desligado` e `mtmauto_providers.ativo` em
+   * `false` — `encaminharSinalParaMestre` devolve `desligado` e não escreve nada. Ligar é decisão do
+   * dono, no admin, e vê-se primeiro em sombra.
+   *
+   * A DECISÃO VIVE EM lib/mtmcopy/scanner-para-mestre (pura, com testes). Ficou lá depois do defeito
+   * do próprio dia 24/09: escrita aqui à mão, a lista trazia `!isIdeaAlert && !activeSensei` copiados
+   * do `canExecuteProvider` — e nos alertas do scanner essas duas são SEMPRE falsas (o parser do
+   * Sensei monta um alerta a partir de ticker+action e infere `idea`). O desvio nunca correu uma
+   * única vez. A pergunta certa é `initSignalKind === "entry"`, a mesma que fica em `signal_kind`.
+   */
+  const confirmacoesScanner =
+    scannerKey === "mtmscanner" ? temTodasAsConfirmacoes(payload, execDirForGate) : null
+  const gateScanner =
+    scannerKey === "mtmscanner"
+      ? passesExecGate(
+          signalRules,
+          execSymbolForGate,
+          execDirForGate,
+          confirmacoesScanner?.leitura?.aFavor ?? null,
+          scannerKey,
+          assetClass,
+        )
+      : { ok: false as const, reason: "não é o MTM Scanner" }
+  const decisaoScanner = decidirScannerParaMestre({
+    scanner: scannerKey,
+    tipoSinal: initSignalKind === "entry" ? "entry" : "followup",
+    classe: assetClass,
+    simbolo: parsedForExec.symbol ?? null,
+    direcao: parsedForExec.direction ?? null,
+    confirmacoes: confirmacoesScanner,
+    stopsSaos: stopsSane(parsedForExec.entry ?? price, parsedForExec.sl),
+    gateExec: gateScanner,
+    podeExecutarProvider: Boolean(canExecuteProvider),
+  })
+  /** Deixa dito, na linha do sinal, porque é que a mestre do scanner não o abriu. */
+  const registarMotivoScanner = async (motivo: string) => {
+    if (!logId) return
+    await supabase
+      .from("tradingview_signals")
+      .update({ ai_error: `mestre scanner: ${motivo}`.slice(0, 300) })
+      .eq("id", logId)
+      .then(undefined, (e) => console.error("[tradingview-webhook] motivo mestre scanner:", e))
+  }
+  if (decisaoScanner.vai) {
+    try {
+      const tpsScanner = (Array.isArray(parsedForExec.tp) ? parsedForExec.tp : []).filter(
+        (t): t is number => typeof t === "number" && t > 0,
+      )
+      const m = await encaminharSinalParaMestre({
+        fonte: "mtmscanner",
+        symbol: String(parsedForExec.symbol),
+        direcao: parsedForExec.direction === "sell" ? "sell" : "buy",
+        entrada: parsedForExec.entry ?? price ?? null,
+        sl: parsedForExec.sl ?? null,
+        tps: tpsScanner,
+        externalRef: String(logId ?? ""),
+      })
+      if (m.modo !== "desligado") {
+        providerDetail = `mestre SIM ${m.estrategia ?? "mtm-scanner"}: ${m.modo}${m.motivo ? ` (${m.motivo})` : ""}`
+      }
+      // O motivo de não ter aberto (estratégia desligada, kill-switch, a mestre recusou) tem de
+      // sobreviver à resposta HTTP: é isto que responde «porque é que este sinal não abriu?».
+      mestreMotivo = m.motivo ?? mestreMotivo
+      if (m.motivo) await registarMotivoScanner(m.motivo)
+    } catch (err) {
+      // Nunca pode partir o webhook: o scanner PUBLICA, e a publicação é o principal aqui. Mas
+      // engolir o erro sem rasto foi metade do problema de 24/09 — fica escrito.
+      console.error("[tradingview-webhook] mestre MTM Scanner:", err)
+      const motivo = `erro ao encaminhar: ${err instanceof Error ? err.message : String(err)}`
+      mestreMotivo = motivo
+      await registarMotivoScanner(motivo)
+    }
+  } else if (decisaoScanner.candidato && decisaoScanner.motivo) {
+    // Passou o filtro das confirmações e mesmo assim não foi: é uma pergunta que alguém vai fazer.
+    // (Os ~95% que o filtro corta não escrevem nada — isto são ~21 linhas/dia, não 300.)
+    await registarMotivoScanner(decisaoScanner.motivo)
   }
 
   // Follow-up (TP/BE/SL/Saída): liga à entrada correspondente para responder em thread
@@ -1188,7 +1302,14 @@ export async function POST(request: NextRequest) {
         .from("tradingview_signals")
         .update(chatId
           ? { chat_status: "sent", chat_message_id: chatId, telegram_status: "sent" }
-          : { chat_status: "mestre", telegram_status: "mestre", ai_error: "canal publicado pela mestre: a mestre não abriu este sinal" })
+          : {
+              chat_status: "mestre",
+              telegram_status: "mestre",
+              // O MOTIVO, não a frase genérica: «a mestre não abriu este sinal» não dizia porquê, e
+              // 3 das 14 entradas do Sensei em 7 dias ficaram assim, sem linha em `mestres_sinais`
+              // nem em `funded_sinal_posicoes` (auditoria de 24/09).
+              ai_error: `canal publicado pela mestre: ${mestreMotivo ?? "a mestre não abriu este sinal (sem motivo registado)"}`,
+            })
         .eq("id", logId)
     }
   } else if (!alertOk) {
@@ -1248,9 +1369,9 @@ export async function POST(request: NextRequest) {
     const T2T_NOTIF_CHANNELS = new Set(["trade-ideas-setup", "sinais-scanner-mtm", "trade-ideas", "sinais-goldkiller", "sensei-scanner"])
     const isT2TNotif = Boolean(route.channel && chatId && T2T_NOTIF_CHANNELS.has(route.channel))
     const pushUrl = isT2TNotif
-      ? `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(chatId as string)}`
+      ? urlDoTapToTrade(chatId as string)
       : route.channel
-        ? `/app-mobile?tab=chat&channel=${encodeURIComponent(route.channel)}${chatId ? `&msg=${encodeURIComponent(chatId)}` : ""}`
+        ? urlDoChat(route.channel, chatId)
         : "/app-mobile?tab=trading-alerts"
     try {
       const n = await pushSignalSubscribers(supabase, {

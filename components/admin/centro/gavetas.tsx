@@ -6,7 +6,9 @@ import { ExternalLink, Loader2 } from "lucide-react"
 import type { ContaCentro } from "@/lib/admin-centro/servidor/contas"
 import type { LinhaFanout, Sinal } from "@/lib/admin-centro/servidor/sinais"
 import { FONTES, nomeMotivo } from "@/lib/admin-centro/regras"
+import { appDaConta, contasDaEstrategia, estrategiasDaConta, estrategiasSemFicha } from "@/lib/admin-centro/ligacoes"
 import ContaModal from "@/components/admin/mtmfunded-conta-modal"
+import OpcoesEstrategia from "./opcoes-estrategia"
 import { useCentroCtx, type Alvo } from "./contexto"
 import { tomEstadoConta, type DadosContas } from "./seccoes/contas"
 import type { DadosEstrategias } from "./seccoes/estrategias"
@@ -32,6 +34,8 @@ export default function Gavetas({ alvo }: { alvo: Alvo | null }) {
 function GavetaConta({ refConta }: { refConta: string }) {
   const ctx = useCentroCtx()
   const { dados, erro, recarregar } = useCentro<{ conta: ContaCentro | null; mesmoDono: ContaCentro[] }>(`/api/admin/centro/contas?ref=${encodeURIComponent(refConta)}&v=${ctx.versao}`, 30_000)
+  // As estratégias vêm por causa das PASTILHAS: sem elas não há como saber qual é a ficha a abrir.
+  const estrategias = useCentro<DadosEstrategias>(`/api/admin/centro/estrategias?v=${ctx.versao}`, 60_000)
   const [aCorrer, setACorrer] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null)
   const [vista, setVista] = useState<Record<string, unknown> | null | "a-ler">(null)
@@ -79,6 +83,11 @@ function GavetaConta({ refConta }: { refConta: string }) {
           <div className="grid grid-cols-2 gap-3 rounded-xl border border-white/[0.06] p-3 sm:grid-cols-3">
             <Campo rotulo="Dono">{c.userId ? <button type="button" className="text-left text-[#E9C46A] hover:underline" onClick={() => ctx.abrir({ tipo: "utilizador", id: c.userId! })}>{c.email ?? c.userId.slice(0, 8)}</button> : "—"}</Campo>
             <Campo rotulo="Plano · direito">{c.plano} · {nomeMotivo(c.motivoDireito)}</Campo>
+            <Campo rotulo="Onde está ligada">
+              <a href={appDaConta(c.origem).url} target="_blank" rel="noreferrer" title={appDaConta(c.origem).nota} className="inline-flex items-center gap-1 text-[#E9C46A] hover:underline">
+                {appDaConta(c.origem).nome} <ExternalLink className="h-3 w-3" />
+              </a>
+            </Campo>
             <Campo rotulo="Quota MetaApi">{c.contaMetaApi ? `${c.quota.emUso}/${c.quota.limite ?? "∞"}${c.quota.acima ? " (acima)" : ""}` : "não conta"}</Campo>
             <Campo rotulo="Conta MetaApi"><span className="font-mono">{c.metaapiAccountId ?? "—"}</span></Campo>
             <Campo rotulo="Estado guardado">{c.metaapi.guardado ?? "—"} {c.metaapi.streaming ? `· streaming ${c.metaapi.streaming}` : ""}</Campo>
@@ -88,9 +97,35 @@ function GavetaConta({ refConta }: { refConta: string }) {
             <Campo rotulo="Actualizada">{fmtQuando(c.atualizadaEm)}</Campo>
           </div>
           <div>
-            <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">Usos e estratégias</p>
-            <div className="flex flex-wrap gap-1">{[...c.usos, ...c.estrategias].map((u, i) => <Pilula key={i}>{u}</Pilula>)}</div>
+            <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">Usos</p>
+            <div className="flex flex-wrap gap-1">{c.usos.map((u, i) => <Pilula key={i}>{u}</Pilula>)}</div>
           </div>
+          {(c.estrategias.length > 0 || c.mestreDe) && (
+            <div>
+              <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">Estratégias (clica para abrir a ficha)</p>
+              <div className="flex flex-wrap gap-1">
+                {/* Isto era uma lista de pastilhas mortas: os dados estavam cá, o caminho é que não. */}
+                {estrategiasDaConta(c, estrategias.dados?.estrategias ?? []).map((e) => (
+                  <button key={e.id} type="button" onClick={() => ctx.abrir({ tipo: "estrategia", id: e.id })} title="Abrir a ficha da estratégia">
+                    <Pilula tom="ouro">{e.nome} →</Pilula>
+                  </button>
+                ))}
+                {c.mestreDe && (() => {
+                  // Esta conta É a mestre desta estratégia: vale a ficha dela, não a lista.
+                  const ficha = estrategias.dados?.estrategias.find((x) => x.slug === c.mestreDe!.slug)
+                  const etiqueta = <Pilula tom="info">mestre de {c.mestreDe!.rotulo}{ficha ? " →" : ""}</Pilula>
+                  return ficha
+                    ? <button type="button" onClick={() => ctx.abrir({ tipo: "estrategia", id: ficha.id })} title="Abrir a ficha da estratégia que esta conta serve">{etiqueta}</button>
+                    : etiqueta
+                })()}
+                {/* Sem ficha: um provider apagado ou uma estratégia CopyFactory antiga — diz-se em vez de ficar muda. */}
+                {estrategias.dados && estrategiasSemFicha(c, estrategias.dados.estrategias).map((x) => (
+                  <Pilula key={x} title="Sem ficha no Centro (provider apagado ou estratégia CopyFactory antiga)">{x}</Pilula>
+                ))}
+                {!estrategias.dados && c.estrategias.map((x, i) => <Pilula key={i}>{x}</Pilula>)}
+              </div>
+            </div>
+          )}
 
           <div>
             <p className="mb-1.5 text-[10px] uppercase tracking-wider text-zinc-500">Acções (caminhos guardados, auditadas)</p>
@@ -157,7 +192,8 @@ function GavetaEstrategia({ id }: { id: string }) {
   const contas = useCentro<DadosContas>(`/api/admin/centro/contas?v=${ctx.versao}`, 30_000)
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null)
   const e = dados?.estrategias.find((x) => x.id === id)
-  const seguidores = (contas.dados?.contas ?? []).filter((c) => e && (c.estrategias.some((s) => s.startsWith(e.nome) || s === e.estrategiaCf || s.toLowerCase() === e.slug.toLowerCase())))
+  // A mesma regra da ficha da conta, lida ao contrário (lib/admin-centro/ligacoes.ts).
+  const seguidores = e ? contasDaEstrategia(e, contas.dados?.contas ?? []) : []
 
   const trocar = async (fonte: "mestre" | "espelho") => {
     if (!e) return
@@ -196,6 +232,12 @@ function GavetaEstrategia({ id }: { id: string }) {
             <Campo rotulo="Resultado € (admin)">{e.desempenho30d.dinheiro == null ? "—" : fmtNum(e.desempenho30d.dinheiro, 2)} em {e.desempenho30d.execucoes} execuções</Campo>
           </div>
           {e.divergencias.length > 0 && <Aviso>{e.divergencias.map((d) => <p key={d}>• {d}</p>)}</Aviso>}
+
+          {/* O que a estratégia FAZ — listada, a executar, risco por omissão, stop mínimo, trailing,
+              break-even, tecto de trades e símbolos. Isto só se escrevia no admin da MTM Auto e o
+              Centro mandava o admin para lá; agora escreve-se aqui, na mesma tabela e pela mesma
+              regra (lib/estrategias-admin/opcoes.ts). */}
+          {!e.apagada && <OpcoesEstrategia providerId={e.id} versao={ctx.versao} aoGravar={() => { ctx.depoisDeAcao(); void recarregar() }} />}
 
           <div className="rounded-xl border border-white/[0.06] p-3">
             <p className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">Fonte de execução</p>

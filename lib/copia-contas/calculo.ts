@@ -39,7 +39,11 @@ export interface EntradaLote {
   valorPorPrecoPorLote?: number | null
 }
 
-export type Lote = { ok: true; volume: number; bruto: number } | { ok: false; motivo: string }
+export type Lote =
+  /** `subiuAoMinimo`: o cálculo dava menos do que o mínimo da corretora e abriu-se no mínimo — o
+   *  risco real desta ordem é maior do que o configurado, e quem a regista tem de o poder dizer. */
+  | { ok: true; volume: number; bruto: number; subiuAoMinimo?: boolean }
+  | { ok: false; motivo: string }
 
 /**
  * Lote no destino. Nunca se sobe um lote minúsculo até ao mínimo da corretora quando isso passa do
@@ -79,15 +83,41 @@ export function calcularLote(e: EntradaLote): Lote {
 
   const r = e.regra
   const min = r.min > 0 ? r.min : 0.01
-  if (bruto < min / 2) return { ok: false, motivo: `lote ${bruto.toFixed(4)} abaixo de metade do mínimo ${min}` }
+  /**
+   * LOTE ABAIXO DO MÍNIMO: abre no mínimo — mas só quando o mínimo é 0,01 (dono, 23-24/09).
+   *
+   * Antes recusava-se, para nunca abrir mais risco do que o cliente escolheu — e o resultado era
+   * pior do que o problema: o Rúben (0,4 %) e o Mário (0,25 %) davam 0,0039 e 0,0024 lotes numa
+   * corretora com mínimo de 0,01, e por isso **não recebiam trade nenhuma**. Pagavam e ficavam a
+   * ver. Entre não copiar nada e copiar 0,01, o dono escolheu 0,01.
+   *
+   * O tecto da subida é esse: **0,01 lotes**. Há símbolos cujo mínimo da corretora é 0,1 ou 1 lote
+   * (índices) — aí subir ao mínimo multiplicaria o risco por dez ou por cem, e não é disso que se
+   * falava. Nesses, mantém-se o comportamento de sempre: até metade do mínimo sobe, abaixo disso
+   * recusa e diz porquê.
+   *
+   * Fica dito em `subiuAoMinimo`: quem regista a ordem sabe que o risco real é maior do que o
+   * configurado. Os tectos continuam todos a valer — `lote_max` da rota e o máximo da corretora.
+   */
+  const SUBIDA_ATE = 0.01
+  const abaixoDoMinimo = bruto < min
+  if (abaixoDoMinimo && min > SUBIDA_ATE && bruto < min / 2) {
+    return { ok: false, motivo: `lote ${bruto.toFixed(4)} abaixo de metade do mínimo ${min} (subir ao mínimo só vai até ${SUBIDA_ATE})` }
+  }
   // Risco %: arredonda PARA BAIXO — um arredondamento nunca pode subir o risco escolhido.
+  // (Excepto quando o próprio mínimo da corretora obriga a subir: ver acima.)
   let v = Math.max(min, arredondarAoStep(bruto, r, e.modo === 'risco_pct' ? 'baixo' : 'perto'))
   if (r.max != null && r.max > 0 && v > r.max) v = arredondarAoStep(r.max, r, 'baixo')
   if (e.loteMax != null && e.loteMax > 0 && v > e.loteMax) {
     v = arredondarAoStep(e.loteMax, r, 'baixo')
     if (v < min) return { ok: false, motivo: `lote máximo ${e.loteMax} abaixo do mínimo da corretora ${min}` }
   }
-  return { ok: true, volume: Number(v.toFixed(casasDo(r.step > 0 ? r.step : 0.01))), bruto }
+  return {
+    ok: true,
+    volume: Number(v.toFixed(casasDo(r.step > 0 ? r.step : 0.01))),
+    bruto,
+    ...(abaixoDoMinimo ? { subiuAoMinimo: true } : {}),
+  }
 }
 
 // ── símbolo ──────────────────────────────────────────────────────────────────
@@ -114,6 +144,63 @@ export function mapearSimbolo(
   if (!simbolosDestino) return { simbolo: null, canonico, via: 'nenhum' }
   const escolhido = rankedBrokerSymbols(canonico, simbolosDestino)[0] ?? null
   return { simbolo: escolhido, canonico, via: escolhido ? 'corretora' : 'nenhum' }
+}
+
+/**
+ * O QUE A LISTA DE SÍMBOLOS DO DESTINO DIZ. Três respostas, não duas.
+ *
+ *  · `lida`           — a conta respondeu e sabemos o que tem. Sem candidato = o símbolo não existe mesmo.
+ *  · `porSincronizar` — respondeu com a lista VAZIA: conta MetaApi undeployada, ou ainda sem o primeiro
+ *                       getSymbols (`metaapi_simbolos_cache` com `atualizado_em` a NULL). Vazio não é
+ *                       uma resposta sobre o símbolo — é a ausência de resposta.
+ *  · `falhou`         — não respondeu (excepção, timeout, quota bloqueada e sem lista guardada).
+ *  · `dispensada`     — não há lista a consultar e isso está certo: MTM Funded resolve pelo catálogo
+ *                       canónico, e em sombra sem escritor não há a quem perguntar.
+ */
+export type LeituraSimbolosDestino =
+  | { tipo: 'lida'; simbolos: string[] }
+  | { tipo: 'porSincronizar' }
+  | { tipo: 'falhou' }
+  | { tipo: 'dispensada' }
+
+export type DecisaoSimboloDestino =
+  | { decisao: 'seguir' }
+  | { decisao: 'recusar'; motivo: string }
+  | { decisao: 'repetir'; motivo: string }
+
+/**
+ * Abrir, recusar em definitivo, ou voltar a tentar? (função pura — teste em
+ * `__tests__/copia-contas.check.ts`)
+ *
+ * DEFEITO CORRIGIDO A 24/09. O motor decidia com `if (!simboloDestino && lista)`, e em JavaScript
+ * `[]` é truthy: uma lista VAZIA passava por «a conta respondeu e não tem o símbolo» e a cópia era
+ * RECUSADA em definitivo, sem repetir. Só uma excepção (que dava `null`) levava ao caminho da
+ * repetição. Medido: as duas rotas do Sensei para contas VT Markets com sufixo `-VIP` tentaram 12
+ * vezes e falharam 12, entre 21 e 23/09, sempre com «XAUUSD não existe no destino» — quando o
+ * símbolo lá se chama `XAUUSD-VIP` e o resolver o apanha sem problema. O que faltava era a lista:
+ * as duas contas tinham a linha da cache partilhada com zero símbolos e `atualizado_em` a NULL.
+ *
+ * Agora só se recusa com a lista NA MÃO. Sem lista repete-se, e o serviço trata do resto (backoff
+ * de `proximaTentativa`, que desiste sozinho ao fim de 4 tentativas — não há ciclo infinito).
+ */
+export function decidirSimboloDestino(
+  simboloDestino: string | null,
+  canonico: string,
+  leitura: LeituraSimbolosDestino,
+): DecisaoSimboloDestino {
+  if (simboloDestino) return { decisao: 'seguir' }
+  switch (leitura.tipo) {
+    // A única recusa legítima: perguntou-se, respondeu, e não há candidato nenhum.
+    case 'lida':
+      return { decisao: 'recusar', motivo: `${canonico} não existe no destino` }
+    case 'porSincronizar':
+      return { decisao: 'repetir', motivo: `${canonico}: a conta de destino ainda não deu a lista de símbolos (undeployada ou por sincronizar)` }
+    case 'falhou':
+      return { decisao: 'repetir', motivo: `${canonico}: a conta de destino não respondeu à lista de símbolos` }
+    // Sem lista por desenho (MTM Funded, sombra sem escritor): segue com o canónico, como sempre.
+    case 'dispensada':
+      return { decisao: 'seguir' }
+  }
 }
 
 /**

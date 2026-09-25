@@ -140,7 +140,18 @@ async function propagateCounts(
 
   while (currentId && depth < 20) {
     depth++
-    const { data: node } = await supabase
+    // Anotacao explicita: sem ela o TS entra em inferencia circular (TS7022) —
+    // o tipo da linha vem da query, e a query depende de `currentId`, que e
+    // atribuido a partir da propria linha.
+    const { data: node }: {
+      data: {
+        id: string
+        parent_node_id: string | null
+        position: string | null
+        left_count: number | null
+        right_count: number | null
+      } | null
+    } = await supabase
       .from('mlm_nodes')
       .select('id, parent_node_id, position, left_count, right_count')
       .eq('id', currentId)
@@ -174,7 +185,18 @@ async function recalculateRanksUpwards(supabase: MlmSupabase, nodeId: string) {
 
   while (currentId && depth < 20) {
     depth++
-    const { data: node } = await supabase
+    // Idem: anotacao explicita para quebrar a inferencia circular (TS7022).
+    const { data: node }: {
+      data: {
+        id: string
+        user_id: string
+        parent_node_id: string | null
+        left_count: number | null
+        right_count: number | null
+        total_direct: number | null
+        rank_id: number | null
+      } | null
+    } = await supabase
       .from('mlm_nodes')
       .select('id, user_id, parent_node_id, left_count, right_count, total_direct, rank_id')
       .eq('id', currentId)

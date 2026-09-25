@@ -5,12 +5,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { ChevronDown, Loader2, Minus, Plus, X } from "lucide-react"
 import { normalizarVolume } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
-import FundedTicket from "./funded-ticket"
 import FundedWatchlist from "./funded-watchlist"
-import ListaPosicoes from "./lista-posicoes"
-import FundedAlertas from "./funded-alertas"
-import FundedDiario from "./funded-diario"
-import PainelConta from "./painel-conta"
 import { EstadoMercado, Sentimento } from "./estado-mercado"
 import { useRascunho } from "./rascunho-ordem"
 import { useUmClique } from "./um-clique"
@@ -18,9 +13,8 @@ import { useGraficoVisivel } from "./grafico-visivel"
 import { useArrastoVertical, useEscFecha, useFolhaArrastavel } from "./use-arrasto"
 import { useMediaQuery } from "./use-media"
 import { MQ_PAINEL_AO_LADO } from "@/lib/webtrader/layout"
-import { AplicarPrefill, AvisosConta, FaixaPrefill, GraficoConta, ProvedorRascunho, type Trader } from "./trader-contexto"
+import { AplicarPrefill, FaixaPrefill, GraficoConta, ProvedorRascunho, type TraderBase } from "./trader-contexto"
 const CalendarioEconomico = dynamic(() => import("./calendario-economico"), { ssr: false })
-const FundedEstatisticas = dynamic(() => import("./funded-estatisticas"), { ssr: false })
 
 /**
  * O MODO SIMPLE — telemóvel primeiro, sem ruído.
@@ -40,7 +34,8 @@ const FundedEstatisticas = dynamic(() => import("./funded-estatisticas"), { ssr:
  */
 
 type FolhaAberta = null | "ticket" | "mercado" | "conta"
-const SEPARADORES = ["Posições", "Ordens", "Histórico", "Mais"] as const
+/** O calendário não é da conta (é do mercado): o SIMPLE junta-o sempre aos painéis «Mais». */
+const CALENDARIO = "__calendario"
 
 const CHAVE_GAVETA = "mtmfunded_simples_gaveta"
 /** Abaixo disto, largar a pega fecha a gaveta (fica só a barra dos separadores). */
@@ -88,7 +83,7 @@ function useGaveta() {
   return { aberta, setAberta, altura, aoVivo, setAoVivo, fixar }
 }
 
-export default function LayoutSimples({ t }: { t: Trader }) {
+export default function LayoutSimples({ t }: { t: TraderBase }) {
   if (!t.simbolo) return <div className="grid flex-1 place-items-center"><Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" /></div>
   return (
     <ProvedorRascunho t={t} ficha={t.simbolo} volume={t.volume} setVolume={t.setVolume}>
@@ -98,7 +93,7 @@ export default function LayoutSimples({ t }: { t: Trader }) {
   )
 }
 
-function Conteudo({ t }: { t: Trader }) {
+function Conteudo({ t }: { t: TraderBase }) {
   const k = useRascunho()
   const umClique = useUmClique()
   const s = t.simbolo!
@@ -109,8 +104,9 @@ function Conteudo({ t }: { t: Trader }) {
   const setGaveta = gav.setAberta
   const [graficoVisivel] = useGraficoVisivel()
   const [sep, setSep] = useState(0)
-  const [mais, setMais] = useState<"estatisticas" | "alertas" | "diario" | "calendario" | "conta">("estatisticas")
-  const [foco, setFoco] = useState<string | null>(null)
+  const principais = t.paineis.filter((x) => x.principal)
+  const extras = [...t.paineis.filter((x) => !x.principal), { chave: CALENDARIO, nome: "Calendário" }]
+  const [mais, setMais] = useState<string>(extras[0].chave)
   const [envio, setEnvio] = useState<"buy" | "sell" | null>(null)
   const faixa = useRef<HTMLDivElement>(null)
   // Tablet deitado: a gaveta vai para o lado, com a altura toda (só com o gráfico à vista).
@@ -125,6 +121,14 @@ function Conteudo({ t }: { t: Trader }) {
     setSep(i)
     setGaveta(true)
     faixa.current?.scrollTo({ left: i * (faixa.current.clientWidth || 1), behavior: "smooth" })
+  }
+  /** O painel que o toque na equity abre — cada conta tem o seu resumo, com a chave «conta». */
+  const painelConta = t.paineis.find((x) => x.chave === "conta")
+  /** Um painel saltar para outro pela CHAVE (o histórico abre a nota no diário) — principal ou «Mais». */
+  const irParaChave = (chave: string) => {
+    const i = principais.findIndex((x) => x.chave === chave)
+    if (i >= 0) return irPara(i)
+    if (extras.some((x) => x.chave === chave)) { setMais(chave); irPara(principais.length) }
   }
   const aoDeslizar = () => {
     const el = faixa.current
@@ -156,15 +160,6 @@ function Conteudo({ t }: { t: Trader }) {
     else void k.enviar()
   }, [envio, k.r.lado]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const d = t.dados
-  const lista = (vista: "posicoes" | "ordens" | "historico") => (
-    <ListaPosicoes
-      vista={vista} posicoes={d.posicoes} ordens={d.ordens} historico={d.historico} simbolos={t.fichas} precos={t.mapa}
-      podeNegociar={t.podeNegociar} denso={false} accountId={t.accountId} simboloAtual={s.symbol}
-      executar={t.executar} onSelecionarSimbolo={(x) => { void t.selecionarPorNome(x); setGaveta(false) }}
-      onNota={(id) => { setFoco(id); setMais("diario"); irPara(3) }} notas={t.diario.comTrade}
-    />
-  )
   const semPreco = !preco?.fresco
 
   const ocupado = umClique.ligado && (k.aEnviar || umClique.ocupado || envio != null)
@@ -183,10 +178,10 @@ function Conteudo({ t }: { t: Trader }) {
         </div>
         <button onClick={() => setFolha("conta")} className="ml-auto flex min-h-[44px] flex-col items-end justify-center rounded-lg px-2 py-0.5 leading-tight active:bg-white/5" aria-label="ver conta">
           <span className="text-[9.5px] uppercase tracking-wide text-zinc-500">Equity</span>
-          <span className={`font-mono text-[13px] font-semibold ${t.vivo.flutuante >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{usd(t.vivo.equity)} $</span>
+          <span className={`font-mono text-[13px] font-semibold ${(t.carteira.flutuante ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{usd(t.carteira.equity)} $</span>
         </button>
       </div>
-      <AvisosConta t={t} />
+      {t.avisos}
       <FaixaPrefill t={t} />
     </>
   )
@@ -224,8 +219,7 @@ function Conteudo({ t }: { t: Trader }) {
       <div className={`${cheia ? "flex min-h-0 flex-1 flex-col" : "shrink-0"} ${aoLado ? "border-l" : "border-t"} border-[#2A2E39] bg-[#1E222D]`}>
         {!cheia && <PegaGaveta gav={gav} />}
         <div role="tablist" className="flex shrink-0">
-          {SEPARADORES.map((nome, i) => {
-            const n = i === 0 ? d.posicoes.length : i === 1 ? d.ordens.length : 0
+          {[...principais.map((x) => [x.nome, x.contagem ?? 0] as const), ["Mais", 0] as const].map(([nome, n], i) => {
             const ativo = (gaveta || cheia) && sep === i
             return (
               <button key={nome} role="tab" aria-selected={ativo} onClick={() => (ativo ? (cheia ? undefined : setGaveta(false)) : irPara(i))}
@@ -240,23 +234,21 @@ function Conteudo({ t }: { t: Trader }) {
           style={cheia ? undefined : { height: gav.aoVivo ?? (gaveta ? Math.min(gav.altura, alturaMaxima()) : 0) }}
         >
           <div ref={faixa} onScroll={aoDeslizar} className="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
-            {[lista("posicoes"), lista("ordens"), lista("historico")].map((c, i) => (
-              <div key={i} className="h-full w-full shrink-0 snap-start overflow-y-auto">{c}</div>
+            {principais.map((x) => (
+              <div key={x.chave} className="h-full w-full shrink-0 snap-start overflow-y-auto">
+                {x.conteudo({ irPara: irParaChave, denso: false, fechar: () => setGaveta(false) })}
+              </div>
             ))}
             <div className="h-full w-full shrink-0 snap-start overflow-y-auto">
               <div className="sticky top-0 z-10 flex gap-1 overflow-x-auto bg-[#1E222D] px-2 py-1.5">
-                {([["estatisticas", "Estatísticas"], ["alertas", "Alertas"], ["diario", "Diário"], ["calendario", "Calendário"], ["conta", "Conta"]] as const).map(([v, nome]) => (
-                  <button key={v} onClick={() => setMais(v)} aria-pressed={mais === v} className={`min-h-[36px] shrink-0 rounded-full border px-3 py-1 text-[11.5px] ${mais === v ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-white/10 text-zinc-400"}`}>{nome}</button>
+                {extras.map((x) => (
+                  <button key={x.chave} onClick={() => setMais(x.chave)} aria-pressed={mais === x.chave} className={`min-h-[36px] shrink-0 rounded-full border px-3 py-1 text-[11.5px] ${mais === x.chave ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-white/10 text-zinc-400"}`}>{x.nome}</button>
                 ))}
               </div>
-              {sep === 3 && (gaveta || cheia) && (
-                <>
-                  {mais === "estatisticas" && <FundedEstatisticas accountId={t.accountId} equity={t.vivo.equity} regras={{ limites: t.vivo.limites, regras: d.regras, saldoInicial: d.conta.saldoInicial, equity: t.vivo.equity, diasNegociados: d.conta.diasNegociados }} />}
-                  {mais === "alertas" && <FundedAlertas accountId={t.accountId} simbolo={s} preco={preco} podeCriar={d.modo === "master"} estado={t.alertas} onSelecionarSimbolo={(x) => void t.selecionarPorNome(x)} />}
-                  {mais === "diario" && <FundedDiario accountId={t.accountId} historico={d.historico} podeEscrever={d.modo === "master"} diario={t.diario} focoTrade={foco} onFoco={setFoco} />}
-                  {mais === "calendario" && <CalendarioEconomico altura="42dvh" />}
-                  {mais === "conta" && <PainelConta t={t} />}
-                </>
+              {sep === principais.length && (gaveta || cheia) && (
+                mais === CALENDARIO
+                  ? <CalendarioEconomico altura="42dvh" />
+                  : t.paineis.find((x) => x.chave === mais)?.conteudo({ irPara: irParaChave, denso: false, fechar: () => setGaveta(false) })
               )}
             </div>
           </div>
@@ -278,7 +270,7 @@ function Conteudo({ t }: { t: Trader }) {
 
       {folha === "ticket" && (
         <Folha titulo="Nova ordem" onFechar={() => { setFolha(null); k.limpar(); k.setFerramenta(null) }}>
-          <FundedTicket margemLivre={t.vivo.margemLivre} />
+          {t.ticket}
         </Folha>
       )}
       {folha === "mercado" && (
@@ -287,9 +279,9 @@ function Conteudo({ t }: { t: Trader }) {
         </Folha>
       )}
       {folha === "conta" && (
-        <Folha titulo="A minha conta" onFechar={() => setFolha(null)}>
+        <Folha titulo={painelConta?.nome ?? "A minha conta"} onFechar={() => setFolha(null)}>
           <div className="mb-2 flex items-center gap-2 px-1 text-[11.5px]"><span className="text-zinc-500">Sentimento {s.symbol}</span><Sentimento symbol={s.symbol} /></div>
-          <PainelConta t={t} />
+          {painelConta?.conteudo({ irPara: irParaChave, denso: false, fechar: () => setGaveta(false) })}
         </Folha>
       )}
     </>

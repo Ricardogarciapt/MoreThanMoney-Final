@@ -29,6 +29,13 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
 // rejeitava-os com 'provider_off' quando a configuração de rotas não estivesse disponível.
 export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'aurum-flow', 'cripto-perps']
 
+/**
+ * Os NOMES vivem em `./rotulos-canais` — módulo puro, para as duas apps e o admin poderem usar a
+ * MESMA tabela (este ficheiro fala com a base de dados e não entra num componente de cliente).
+ * Reexporta-se para quem já importava daqui não ter de mudar.
+ */
+export { ROTULOS_CANAIS_T2T, rotuloCanalT2T } from './rotulos-canais'
+
 /** Slug do canal de chat DEDICADO de uma rota provider (estável, por id da rota). */
 export function deriveProviderChannelSlug(r: ProviderRoute): string {
   return `t2t-${r.id}`

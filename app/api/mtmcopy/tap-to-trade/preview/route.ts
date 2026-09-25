@@ -10,6 +10,9 @@ import { getAccountSnapshot } from "@/lib/mtmcopy/metaapi"
 import { ehTradeLocker, sessaoDaLigacao } from "@/lib/tradelocker/ligacao"
 import { pipSizeForSymbol } from "@/lib/mtmcopy/trade-outcome"
 import { estrategiaDoSinalT2T } from "@/lib/mestres/t2t"
+import { contasFundedLigadasParaT2T } from "@/lib/mtmfunded/simulado/ligar-conta"
+import { escolhaGuardada, refSimulada } from "@/lib/mtmcopy/escolha-contas-t2t"
+import { ehContaDaCasa } from "@/lib/mtmfunded/contas-da-casa"
 
 /**
  * PRÉ-VISUALIZAÇÃO de um sinal antes de o aceitar.
@@ -209,5 +212,95 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ mode, trade, accounts, blocked: bloqueadas })
+  /**
+   * AS CONTAS SIMULADAS MTM FUNDED também são sítios onde a aceitação abre — e até agora não
+   * apareciam aqui. Ficavam de fora da lista, abriam à mesma, e quem escolhesse «só nesta conta»
+   * ficaria com posições num sítio que o modal nunca mostrou. Entram sem números: são contas
+   * simuladas, não há dinheiro em risco para contar, e o sizing delas não muda por causa disto.
+   */
+  const CAMPOS_CASA = "id, mt5_login, tipo, conta_casa, recolhe_todos_sinais"
+
+  /**
+   * AS CONTAS DA CASA NÃO ENTRAM AQUI — nem como escolha, nem como motivo (24/09).
+   *
+   * O dono abriu o modal e viu UMA conta escolhível e TREZE parágrafos vermelhos a explicar-lhe
+   * treze vezes que o Tap to Trade está desligado em contas que ele nunca quis usar para isto:
+   * as mestres das estratégias, a «Todos os sinais», a conta-espelho de 10 000. São instrumentos
+   * de MEDIÇÃO da casa e só lhe aparecem por ele ser o dono delas. Uma conta da casa não é uma
+   * conta bloqueada à espera de ser destrancada: não é destino nenhum, e o sítio certo para ela é
+   * fora da lista.
+   *
+   * A regra é a que já existe e é partilhada com o Histórico e com o WebTrader
+   * (`lib/mtmfunded/contas-da-casa`): mestre, `conta_casa` ou `recolhe_todos_sinais`. Não há aqui
+   * uma segunda definição de «conta da casa» — a paridade entre repositórios está presa a testes.
+   */
+  const casa = new Set<string>()
+  const simuladas: Array<{ id: string; ref: string; label: string }> = []
+  try {
+    const ligadas = await contasFundedLigadasParaT2T(user.id, (conns ?? []) as Array<Record<string, unknown>>).catch(() => [] as string[])
+    // Uma leitura só, que serve as duas perguntas: quais são escolhíveis e quais são da casa
+    // (para nem sequer aparecerem como bloqueadas mais abaixo).
+    const referidas = [...new Set([...ligadas, ...(conns ?? []).map((c) => String(c.funded_account_id ?? "")).filter(Boolean)])]
+    const [{ data: marcadas }, { data: referenciadas }] = await Promise.all([
+      supabase.from("mtm_trading_accounts").select(CAMPOS_CASA)
+        .eq("user_id", user.id).eq("motor", "sim").eq("estado", "ativa").eq("aceita_t2t", true).limit(20),
+      referidas.length
+        ? supabase.from("mtm_trading_accounts").select(CAMPOS_CASA).in("id", referidas).eq("user_id", user.id)
+        : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    ])
+    const porId = new Map<string, Record<string, unknown>>()
+    for (const c of [...(marcadas ?? []), ...(referenciadas ?? [])]) porId.set(String(c.id), c as Record<string, unknown>)
+    for (const [id, c] of porId) if (ehContaDaCasa(c)) casa.add(id)
+
+    const escolhiveis = new Set<string>()
+    for (const c of marcadas ?? []) escolhiveis.add(String(c.id))
+    for (const id of ligadas) escolhiveis.add(id)
+    for (const id of escolhiveis) {
+      if (casa.has(id)) continue
+      const login = porId.get(id)?.mt5_login as string | null | undefined
+      simuladas.push({ id, ref: refSimulada(id), label: login ? `MTM Funded ${login}` : `MTM Funded ${id.slice(0, 6)}` })
+    }
+  } catch {
+    /* sem a 070/074 aplicada não há simuladas — o T2T de sempre não muda */
+  }
+
+  /**
+   * AS LIGAÇÕES MTM FUNDED COM O T2T DESLIGADO têm direito a um motivo. Até 24/09 este caminho
+   * nem sequer olhava para o interruptor (abria na mesma, onze de uma vez); agora que olha, a
+   * conta deixa de abrir — e desaparecer sem explicação seria a mesma avaria aparente que a
+   * lista de contas vazia era antes. As da CASA são a excepção: essas não têm motivo nenhum para
+   * estar no ecrã dele.
+   */
+  for (const c of conns ?? []) {
+    const fundedId = String(c.funded_account_id ?? "")
+    if (!ehMtmFundedLigacao(c) || recebeT2T(c) || casa.has(fundedId) || simuladas.some((s) => s.id === fundedId)) continue
+    bloqueadas.push({
+      id: String(c.id),
+      label: c.account_label || `MTM Funded ${String(c.id).slice(0, 6)}`,
+      motivo: "O Tap to Trade está desligado nesta conta.",
+      comoResolver: "Liga-o na lista de contas do Tap to Trade ou em «As minhas contas».",
+    })
+  }
+
+  /**
+   * A ESCOLHA DA VEZ PASSADA, para o modal já vir marcado (`profile_data.t2t.contas`). É só uma
+   * sugestão: o que manda na aceitação é o que vier no pedido, e cada conta é validada do zero.
+   */
+  const { data: perfil } = await supabase.from("profiles").select("profile_data").eq("id", user.id).maybeSingle()
+  const guardada = escolhaGuardada(perfil?.profile_data)
+  // Uma preferência só vale para as contas que ainda existem e ainda servem.
+  const disponiveis = new Set<string>([...accounts.map((a) => a.id), ...simuladas.map((s) => s.ref)])
+  const escolhidas = guardada.filter((ref) => disponiveis.has(ref))
+
+  return NextResponse.json({
+    mode,
+    trade,
+    accounts,
+    simuladas,
+    blocked: bloqueadas,
+    // Há decisão para tomar? Só com mais do que um destino possível. Com um só, o modal não
+    // pergunta nada — não se acrescenta um toque a quem não tem escolha.
+    escolhaPossivel: disponiveis.size > 1,
+    escolhidas,
+  })
 }

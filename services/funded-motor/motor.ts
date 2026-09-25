@@ -57,6 +57,7 @@ import { iniciarWsPrecos, type WsPrecos } from './ws-precos'
 import { iniciarFonteBinance, type FonteBinance } from './fonte-binance'
 import { iniciarFonteYahoo, type FonteYahoo } from './fonte-yahoo'
 import { iniciarFonteConectorMt5, type FonteConectorTicks } from './fonte-conector-mt5'
+import { CRUZADOS_FOREX, FRESCURA_FOREX_MS, cruzadosCalculaveis } from '../../lib/mtmfunded/precos/cruzados'
 import {
   assinaturaMetricas,
   precisaDeEscreverMetricas,
@@ -141,6 +142,19 @@ const simbolos = new Map<string, SimboloMotor>()
 const canonicoDaFonte = new Map<string, string>()
 const precos: MapaPrecos = {}
 const precoEm = new Map<string, number>()
+/**
+ * A HORA DO MERCADO, por símbolo — o que `precoEm` nunca foi.
+ *
+ * `precoEm` é a hora a que o MOTOR tocou no preço: prova que o motor está vivo, não que o preço
+ * é de agora. Ao vivo a 24/09/2026, o `em` do XAUUSD avançou 19 vezes com o bid parado num
+ * minuto (maior congelamento carimbado como fresco: 7,5 s). Aqui fica só o que a FONTE declarou:
+ * o `time_msc` do conector MT5, o `updatedAt` da gold-api, o `regularMarketTime` do Yahoo. Onde a
+ * fonte não dá hora (Binance bookTicker, ouro derivado do PAXG, TradeLocker) fica NULO — não se
+ * inventa. Vai para `funded_precos.em_mercado` (migração 123) e é quem lê que decide.
+ */
+const precoEmMercado = new Map<string, number | null>()
+/** Quem deu mesmo o último tick de cada símbolo — o que se grava em `tick_entrada.fonte`. */
+const precoFonte = new Map<string, string>()
 const precosPorEscrever = new Set<string>()
 let desvioMin = CFG.desvioInicialMin
 /** Símbolos negociáveis da corretora, lidos do feed — para corrigir `simbolo_fonte` que não exista. */
@@ -168,6 +182,12 @@ const ultimasMetricas = new Map<string, UltimaEscritaMetricas>()
 const fechosDe = new Map<string, FechoHistorico[]>()
 const eventoEnviadoEm = new Map<string, number>()
 const pedidos = new Set<string>()
+/**
+ * Re-subscrever a fonte fora do ciclo de 10 s — para quando um pedido SÍNCRONO (`/precos/tick`)
+ * traz um símbolo que o motor ainda não segue. Só existe depois de `ligarFonte()`; antes disso
+ * quem pedir fica à espera do ciclo, que é o comportamento de sempre.
+ */
+let resubscrever: (() => void) | null = null
 const ultimoTrailingEm = new Map<string, number>()
 /** Alertas de preço activos (funded_alertas), por símbolo. */
 const alertasPorSimbolo = new Map<string, Array<AlertaPreco & { user_id: string }>>()
@@ -439,22 +459,64 @@ const principalEm = new Map<string, number>()
 let injecaoDeRecurso = false
 const principalVelho = (sym: string) => Date.now() - (principalEm.get(sym) ?? 0) > 5000
 
+/**
+ * Quanto tempo é que uma hora de mercado PROVADA defende o símbolo de um preço que não se prova.
+ * É o mesmo limite da execução (5 s): passado isso, o que está guardado já não serve para abrir
+ * nada, e qualquer preço novo é melhor do que ficar preso a um congelado. `PRECO_MERCADO_DEFENDE_MS=0`
+ * desliga a defesa e devolve o comportamento de antes (última fonte a escrever ganha).
+ */
+const MERCADO_DEFENDE_MS = Number(process.env.PRECO_MERCADO_DEFENDE_MS ?? 5000)
+
 function aoTick(t: Tick): void {
   const sym = canonicoDaFonte.get(t.fonte)
   if (!sym) return
   if (!injecaoDeRecurso) principalEm.set(sym, Date.now())
   const antes = precos[sym]
+  const emMercado = t.emMercado?.getTime() ?? null
+
+  /**
+   * O TEMPO NÃO ANDA PARA TRÁS, E O QUE SE PROVA NÃO CEDE AO QUE NÃO SE PROVA.
+   *
+   * Com várias fontes a cotar o mesmo símbolo ganhava a última a escrever, e a última era quase
+   * sempre a pior: o Yahoo entregava um EURUSD calmo com a hora de há 49 s por cima do tick do
+   * conector MT5 que tinha 1 s, e o ouro derivado do PAXG (sem hora nenhuma) apagava o XAUUSD que
+   * vinha da corretora com 0,3 s. Ficava guardada a pior das verdades disponíveis.
+   *
+   * Por isso, enquanto a hora de mercado guardada estiver PROVADA e fresca (< MERCADO_DEFENDE_MS),
+   * não entra um tick que traga hora ANTERIOR nem um que não traga hora nenhuma. Passado esse
+   * prazo a defesa cai sozinha e voltam todas as fontes — este é um desempate entre fontes, não
+   * um silenciador: um símbolo nunca fica preso a um preço parado.
+   */
+  const mercadoGuardado = precoEmMercado.get(sym) ?? null
+  if (
+    mercadoGuardado != null && (emMercado == null || emMercado < mercadoGuardado) &&
+    Date.now() - mercadoGuardado <= MERCADO_DEFENDE_MS
+  ) return
   if (antes && antes.bid === t.bid && antes.ask === t.ask) {
-    // Livro parado com a fonte viva: o preço continua a ser o de agora. Sem voltar a carimbar,
-    // um ouro calmo parecia ter 6-10 s e a guarda de 5 s recusava a entrada (21/09).
-    if (t.em.getTime() - (precoEm.get(sym) ?? 0) > 2000) { precoEm.set(sym, t.em.getTime()); precosPorEscrever.add(sym) }
+    // Livro parado com a fonte viva: o preço continua a ser o de agora, e um carimbo novo é
+    // honesto DESDE QUE a fonte tenha mesmo dado um tick novo — `t.em` tem de avançar sozinho.
+    // Quem re-servia uma leitura antiga com `Date.now()` (o batimento do PAXG) deixou de o fazer:
+    // é daí que vinham os 7,5 s de ouro parado carimbados como frescos.
+    // Carimba-se de novo quando passaram 2 s OU quando a fonte confirma o MESMO preço num
+    // instante de mercado NOVO — isso é informação nova (o mercado esteve lá e o preço aguentou),
+    // ao contrário de re-servir uma leitura antiga. A escrita continua travada em
+    // `ESCRITA_PRECOS_MIN_MS`, por isso isto não faz uma única escrita a mais.
+    const mercadoNovo = emMercado != null && emMercado > (mercadoGuardado ?? 0)
+    if (mercadoNovo || t.em.getTime() - (precoEm.get(sym) ?? 0) > 2000) {
+      precoEm.set(sym, t.em.getTime())
+      precoEmMercado.set(sym, emMercado)
+      precoFonte.set(sym, t.origem)
+      precosPorEscrever.add(sym)
+    }
     return
   }
   precos[sym] = { symbol: sym, bid: t.bid, ask: t.ask }
   precoEm.set(sym, t.em.getTime())
+  precoEmMercado.set(sym, emMercado)
+  precoFonte.set(sym, t.origem)
   precosPorEscrever.add(sym)
   // Distribuição direta aos browsers (ws-precos.ts) — a Supabase fica fora do caminho quente.
-  wsPrecos?.publicar(sym, t.bid, t.ask, t.em.getTime())
+  wsPrecos?.publicar(sym, t.bid, t.ask, t.em.getTime(), emMercado, t.origem)
   if (t.desvioMin != null) desvioMin = t.desvioMin
   ultimoTickEm = Date.now()
   ticksNoMinuto++
@@ -463,13 +525,21 @@ function aoTick(t: Tick): void {
   provider?.aoTick(sym, t.em.getTime())
 }
 
-/** Preço de recurso (feed secundário) já em símbolo canónico: só entra se o principal estiver velho. */
-function aoTickRecurso(sym: string, bid: number, ask: number, em: number): void {
+/**
+ * Preço de recurso (feed secundário) já em símbolo canónico: só entra se o principal estiver velho.
+ *
+ * `emMercado` é a hora que a FONTE declarou para este preço, ou `null` quando ela não a dá. Nunca
+ * se passa `Date.now()` aqui a fingir de hora de mercado: `em` já diz quando é que nós o vimos.
+ */
+function aoTickRecurso(sym: string, bid: number, ask: number, em: number, emMercado: number | null, origem: string): void {
   if (!simbolos.has(sym)) return
   const s = simbolos.get(sym)!
   injecaoDeRecurso = true
   try {
-    aoTick({ fonte: s.simbolo_fonte, bid, ask, em: new Date(em), desvioMin: null })
+    aoTick({
+      fonte: s.simbolo_fonte, bid, ask, em: new Date(em),
+      emMercado: emMercado == null ? null : new Date(emMercado), origem, desvioMin: null,
+    })
   } finally {
     injecaoDeRecurso = false
   }
@@ -517,9 +587,16 @@ async function escreverPrecos(): Promise<void> {
     if (!precos[s]) continue
     if (rapidosAgora.has(s) || agora - (escritoEm.get(s) ?? 0) >= ESCRITA_MIN_MS) aEscrever.push(s)
   }
-  const linhas = aEscrever.map((s) => ({
-    symbol: s, bid: precos[s].bid, ask: precos[s].ask, em: new Date(precoEm.get(s) ?? Date.now()).toISOString(),
-  }))
+  const linhas = aEscrever.map((s) => {
+    const mercado = precoEmMercado.get(s) ?? null
+    return {
+      symbol: s, bid: precos[s].bid, ask: precos[s].ask,
+      em: new Date(precoEm.get(s) ?? Date.now()).toISOString(),
+      // Migração 123. Nulo quando a fonte não declara hora de mercado — é a verdade, e é o que
+      // faz o preenchimento cair no caminho pessimista em vez de acreditar num preço parado.
+      em_mercado: mercado == null ? null : new Date(mercado).toISOString(),
+    }
+  })
   // Os que ficaram de fora saem da fila na mesma: o preço deles já está em memória e no WS, e o
   // próximo tick volta a pô-los cá. Guardar a fila a crescer era só memória sem uso.
   precosPorEscrever.clear()
@@ -670,9 +747,22 @@ function contaSim(c: ContaLinha): ContaSim {
 }
 
 // ── aplicar as decisões ───────────────────────────────────────────────────────
+/**
+ * O tick que fica gravado com a posição. A `fonte` é a que deu MESMO este preço: estava fixa em
+ * `'metaapi:puprime'` e era mentira desde que o motor passou a viver sem MetaApi (o próprio pulso
+ * diz «fontes próprias (sem MetaApi)»). Uma auditoria feita sobre uma etiqueta errada não audita
+ * nada.
+ */
 function tickJson(sym: string) {
   const p = precos[sym]
-  return p ? { bid: p.bid, ask: p.ask, em: new Date(precoEm.get(sym) ?? Date.now()).toISOString(), fonte: 'metaapi:puprime' } : null
+  if (!p) return null
+  const mercado = precoEmMercado.get(sym) ?? null
+  return {
+    bid: p.bid, ask: p.ask,
+    em: new Date(precoEm.get(sym) ?? Date.now()).toISOString(),
+    em_mercado: mercado == null ? null : new Date(mercado).toISOString(),
+    fonte: precoFonte.get(sym) ?? 'desconhecida',
+  }
 }
 
 async function aplicar(c: ContaLinha, d: Decisoes): Promise<void> {
@@ -1114,7 +1204,18 @@ async function main(): Promise<void> {
   log(`[motor] arranque · escrita=${CFG.escrita ? 'LIGADA' : 'desligada (seco)'} · conta de preços ${CFG.contaPrecos.slice(0, 8)}…`)
   // O WS abre ANTES do feed: quem se ligar cedo recebe o snapshot vazio e os ticks ao chegarem.
   try {
-    wsPrecos = iniciarWsPrecos(CFG.wsPrecosPorta, log)
+    wsPrecos = iniciarWsPrecos({
+      porta: CFG.wsPrecosPorta,
+      log,
+      segredo: CFG.segredo,
+      // Quem pede um tick síncrono de um símbolo que o motor não segue mete-o nos desejados JÁ:
+      // a ronda de `funded_precos_pedidos` é de 5 em 5 s e uma abertura não espera tanto.
+      pedir: (sym) => {
+        if (!simbolos.has(sym) || pedidos.has(sym)) return
+        pedidos.add(sym)
+        resubscrever?.()
+      },
+    })
   } catch (e) {
     log('[ws-precos] não abriu (porta ocupada?):', e instanceof Error ? e.message : e)
   }
@@ -1130,13 +1231,14 @@ async function main(): Promise<void> {
   if (daCorretora.length) await carregarCatalogo()
   await carregarPedidos()
   await fonte.definirSimbolos(simbolosDesejados(), rapidos())
+  resubscrever = () => { void fonte.definirSimbolos(simbolosDesejados(), rapidos()).catch(() => undefined) }
 
   // Contas que seguem estratégias do MTM Auto (migração 070). ESPELHO_ATIVO=0 desliga só isto.
   const espelho = env('ESPELHO_ATIVO', false) === '0'
     ? null
     : iniciarEspelho({
         db, metaapiToken: CFG.metaapiToken, escrita: CFG.escrita, log,
-        simbolos, precos, precoEm,
+        simbolos, precos, precoEm, precoEmMercado, precoFonte,
         negociavel: (sym) => negociavel(sym, new Date()),
         marcarSuja: (id) => { escritaLocalEm.set(id, 0); sujas.add(id) },
       })
@@ -1149,7 +1251,7 @@ async function main(): Promise<void> {
   provider = env('ESPELHO_PROVIDER', false) === '1'
     ? iniciarEspelhoProvider({
         db, metaapiToken: CFG.metaapiToken, escrita: CFG.escrita, log,
-        simbolos, precos, precoEm,
+        simbolos, precos, precoEm, precoEmMercado, precoFonte,
         negociavel: (sym) => negociavel(sym, new Date()),
         marcarSuja: (id) => { escritaLocalEm.set(id, 0); sujas.add(id) },
       })
@@ -1190,7 +1292,8 @@ async function main(): Promise<void> {
     // recurso refrescam — sufocava o recurso a 1 tick/5 s.
     principal: (sym) => (precos[sym] ? { bid: precos[sym].bid, ask: precos[sym].ask, em: principalEm.get(sym) ?? 0 } : null),
     pip: (sym) => simbolos.get(sym)?.pip_size ?? null,
-    aoRecurso: (sym, c) => aoTickRecurso(sym, c.bid, c.ask, c.em),
+    // A resposta de `/trade/quotes` traz `ap`/`bp` e mais nada: sem hora de mercado a declarar.
+    aoRecurso: (sym, c) => aoTickRecurso(sym, c.bid, c.ask, c.em, null, 'tradelocker'),
     // Classes com fonte própria mais rápida: a TradeLocker só entra se essa fonte tiver desaparecido.
     limitePara: (sym) => (tlUltimo.has(String(simbolos.get(sym)?.classe ?? '')) ? tlLimiteUltimo : null),
     log,
@@ -1204,6 +1307,16 @@ async function main(): Promise<void> {
   // o PAXG deixa de entrar — nunca se inventa preço de um mercado fechado.
   const refBruta = new Map<string, { meio: number; em: number; bid: number; ask: number }>()
   const ancoraSpot = new Map<string, { k: number; meio: number; em: number }>()
+  /** Último preço derivado que entrou, por símbolo — para o mesmo não entrar duas vezes. */
+  const ultimoDerivado = new Map<string, number>()
+  /**
+   * O OURO DERIVADO DO PAXG NÃO TEM HORA DE MERCADO — e é por não a ter que estragou entradas.
+   *
+   * Tem duas pernas e nenhuma a sabe provar: o `@bookTicker` da Binance não traz hora nenhuma
+   * (medido) e o factor `k` vem de uma âncora que pode ter 10 minutos. O `em` que sai daqui é o
+   * da leitura MAIS VELHA das duas (a mesma regra dos cruzados), nunca `Date.now()`: um preço
+   * derivado não fica novo por o olharmos outra vez.
+   */
   const aoReferencia = (sym: string, bid: number, ask: number, batimento = false) => {
     const meioRef = (bid + ask) / 2
     if (!batimento) refBruta.set(sym, { meio: meioRef, em: Date.now(), bid, ask })
@@ -1214,9 +1327,17 @@ async function main(): Promise<void> {
     const meia = Math.max(1, Number(s.spread_pontos) || 0) * passo / 2
     const meio = meioRef * a.k
     const r = (x: number) => Number(x.toFixed(Number(s.digits ?? 2)))
-    aoTickRecurso(sym, r(meio - meia), r(meio + meia), Date.now())
+    // O MESMO PREÇO DERIVADO NÃO ENTRA DUAS VEZES. Era isto que re-carimbava o ouro congelado:
+    // o batimento de 1 s voltava a injectar o mesmo PAXG × o mesmo k com a hora de agora, e um
+    // ouro parado há 7,5 s parecia ter menos de um segundo. Agora só entra quando o PAXG ou a
+    // âncora da gold-api mexem de facto — e, quando nenhum mexe, o ouro envelhece como deve.
+    if (ultimoDerivado.get(sym) === meio) return
+    ultimoDerivado.set(sym, meio)
+    // `em` é honesto (é mesmo agora que o motor fez esta conta); `emMercado` é NULO porque nenhuma
+    // das duas pernas sabe dizer a hora do mercado — e é isso que quem lê precisa de saber.
+    aoTickRecurso(sym, r(meio - meia), r(meio + meia), Date.now(), null, 'binance:paxg+gold-api')
   }
-  const aoRecursoSpot = (sym: string, bid: number, ask: number, em: number) => {
+  const aoRecursoSpot = (sym: string, bid: number, ask: number, em: number, emMercado: number | null, origem: string) => {
     const meio = (bid + ask) / 2
     const ref = refBruta.get(sym)
     const a = ancoraSpot.get(sym)
@@ -1228,15 +1349,53 @@ async function main(): Promise<void> {
     // puxava o preço para trás de 5 em 5 s.
     const viva = ancoraSpot.get(sym)
     if (viva && ref && Date.now() - ref.em < 10_000 && Date.now() - viva.em < 10 * 60_000) return
-    aoTickRecurso(sym, bid, ask, em)
+    aoTickRecurso(sym, bid, ask, em, emMercado, origem)
   }
   // O terminal MT5 do conector é a fonte mais fresca que temos (p50 ~94 ms contra 2–4 s das
   // fontes REST) e entra PRIMEIRO de propósito: o preço dele é o da corretora onde a ordem entra.
   // Sem CONECTOR_TICKS_RAIZES no ambiente devolve null e nada muda.
   fonteConector = iniciarFonteConectorMt5({ precisa: principalVelho, injetar: aoTickRecurso, log })
   fonteBinance = iniciarFonteBinance({ precisa: principalVelho, injetar: aoTickRecurso, referencia: aoReferencia, log })
-  // O PAXG é pouco líquido: o livro fica 5-12 s sem mexer e o ouro parecia velho à guarda de 5 s.
-  // Com a ligação viva e PAXG visto há < 30 s, o preço de agora é o mesmo — volta a ser carimbado.
+  /**
+   * OS CRUZADOS DE CRIPTO — 18 símbolos do catálogo que fonte nenhuma cota (BTCJPY, BTCEUR, BTCXAU,
+   * BTCETH…) e que se calculam das pernas que já temos ao vivo. Antes ficavam com o preço do último
+   * dia em que alguém os viu: o ticket dimensionava a trade com ele e o gráfico desenhava uma recta.
+   * Só entram enquanto as duas pernas estiverem frescas (lib/mtmfunded/precos/cruzados.ts).
+   */
+  setInterval(() => {
+    const agora = Date.now()
+    const ler = (sym: string) => {
+      const p = precos[sym]
+      return p ? { bid: p.bid, ask: p.ask, em: precoEm.get(sym) ?? 0, emMercado: precoEmMercado.get(sym) ?? null } : null
+    }
+    for (const c of cruzadosCalculaveis(ler, agora)) {
+      if (!simbolos.has(c.symbol)) continue
+      aoTickRecurso(c.symbol, c.bid, c.ask, c.em, c.emMercado, 'cruzado')
+    }
+    /**
+     * OS CRUZADOS DE FOREX — os pares da whitelist de execução que a corretora não põe no Market
+     * Watch do conector (EURCHF, GBPCHF, EURGBP, EURCAD, GBPCAD, CADCHF, EURAUD, GBPJPY, CADJPY,
+     * NZDUSD). Saem das pernas que o terminal já publica, portanto trazem o preço e a hora de
+     * mercado da corretora onde a ordem entra — ao contrário do Yahoo, que os deixava a dias de
+     * idade e a execução recusava (`abrirSinalNaConta` exige menos de 5 s).
+     *
+     * Limite de frescura mais apertado do que o da cripto e pela mesma razão que estes existem: um
+     * cruzado com pernas de 20 s entra com a idade verdadeira, mas ao entrar apaga um preço mais
+     * fresco que outra fonte tenha posto lá — e o símbolo ficava pior do que estava.
+     * `CRUZADOS_FOREX=0` desliga-os e devolve o comportamento de antes.
+     */
+    if (process.env.CRUZADOS_FOREX !== '0') {
+      const limite = Number(process.env.CRUZADOS_FOREX_MS ?? FRESCURA_FOREX_MS)
+      for (const c of cruzadosCalculaveis(ler, agora, CRUZADOS_FOREX, limite)) {
+        if (!simbolos.has(c.symbol)) continue
+        aoTickRecurso(c.symbol, c.bid, c.ask, c.em, c.emMercado, 'cruzado-fx')
+      }
+    }
+  }, Number(process.env.CRUZADOS_MS ?? 500)).unref?.()
+  // O PAXG é pouco líquido: o livro fica 5-12 s sem mexer. Isto existia para o RE-CARIMBAR com
+  // `Date.now()` e enganar a guarda de 5 s — era a raiz do problema. Agora o batimento continua,
+  // mas o tick que sai leva o instante da leitura VELHA (ver `aoReferencia`): serve para apanhar
+  // um `k` novo da gold-api, e um ouro genuinamente parado envelhece como deve ser.
   setInterval(() => {
     if (!fonteBinance?.resumo().ligada) return
     for (const [sym, r] of refBruta) {
@@ -1293,7 +1452,7 @@ async function main(): Promise<void> {
     const estadoProvider = provider?.estado() ?? null
     const estado = {
       ticksMin: ticksNoMinuto, contas: contas.size, feed: fonte.nome, semTicksMs: ultimoTickEm ? Date.now() - ultimoTickEm : null,
-      escrita: CFG.escrita, tem072, simbolosRapidos: simbolosDoProvider.size, wsClientes: wsPrecos?.clientes() ?? null,
+      escrita: CFG.escrita, tem072, simbolosRapidos: simbolosDoProvider.size, wsClientes: wsPrecos?.clientes() ?? null, tickEmEspera: wsPrecos?.emEspera() ?? null,
       binance: fonteBinance?.resumo() ?? null,
       yahoo: fonteYahoo?.resumo() ?? null,
       conectorMt5: fonteConector?.resumo() ?? null,

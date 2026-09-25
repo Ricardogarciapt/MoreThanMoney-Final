@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { factosParaCartao, getPipsProof, publicavel, RESSALVA_LEGAL } from '@/lib/pips-proof'
+import { factosParaCartao, getPipsProof, notaViesPreco, publicavel, RESSALVA_LEGAL } from '@/lib/pips-proof'
 import { buildSalesState, salesStateSummary } from '@/lib/sales-machine'
 
 export const dynamic = 'force-dynamic'
@@ -117,6 +117,9 @@ export async function GET(request: NextRequest) {
       pips: prova?.executado.pips ?? null,
       atualizadoEm: prova?.asOf ?? null,
       ressalva: RESSALVA_LEGAL,
+      // A ressalva DATADA — o defeito de preço de 24/09. `null` quando a amostra já é toda
+      // posterior à correcção, e aí o painel deixa de a mostrar sem ninguém lhe tocar.
+      notaVies: notaViesPreco(prova),
     },
 
     // ── O conteúdo em fila ────────────────────────────────────────────────────────────────

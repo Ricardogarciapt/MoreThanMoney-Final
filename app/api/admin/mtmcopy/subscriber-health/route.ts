@@ -222,8 +222,19 @@ export async function POST(request: NextRequest) {
       copyfactory = r?.ok === false ? 'unsubscribe_failed' : 'unsubscribed'
     } else {
       const { syncConnectionCopyFactory } = await import('@/lib/mtmcopy/connection-sync')
-      const r = await syncConnectionCopyFactory({ ...conn, is_active: true } as never)
-      copyfactory = (r as { ok?: boolean } | undefined)?.ok === false ? 'sync_failed' : 'synced'
+      // O `userLabel` dá o nome ao subscritor na CopyFactory. Sem ele caía-se no
+      // rótulo genérico («MTMcopier · ****1234») e a conta deixava de ser
+      // identificável no painel da MetaApi — ao contrário do que fazem os
+      // restantes sítios que re-sincronizam (admin/mtmcopy/subscriber, set-sizing).
+      const { data: perfil } = await admin
+        .from('profiles')
+        .select('full_name, username, email')
+        .eq('id', conn.user_id)
+        .maybeSingle()
+      const userLabel =
+        perfil?.full_name || perfil?.username || perfil?.email || `MTM-${String(conn.user_id ?? '').slice(0, 8)}`
+      const r = await syncConnectionCopyFactory({ ...conn, is_active: true }, userLabel)
+      copyfactory = r?.ok === false ? 'sync_failed' : 'synced'
     }
   } catch (e) {
     copyfactory = `error: ${e instanceof Error ? e.message : String(e)}`

@@ -1,8 +1,25 @@
 /**
- * CONTA «TODOS OS SINAIS» — uma conta MTM Funded simulada (mtm_trading_accounts.recolhe_todos_sinais,
- * 092) que abre CADA sinal que passa pelo sistema a 0,01 lotes, com a fonte no comentário
- * («Premium», «Scanner Sensei», «GoldKiller», «Scanner MTM», «MTM Alertas», «PrimeVerse fxedge»…).
- * Existe para recolher dados continuamente — ninguém a copia.
+ * CONTA «TODOS OS SINAIS» — a CONTA-ESPELHO. Uma conta MTM Funded simulada
+ * (mtm_trading_accounts.recolhe_todos_sinais, 092) que abre CADA sinal que passa pelo sistema, com a
+ * fonte no comentário («Premium», «Scanner Sensei», «GoldKiller», «Scanner MTM», «MTM Alertas»,
+ * «PrimeVerse fxedge»…). Existe para recolher dados continuamente — ninguém a copia.
+ *
+ * ── PORQUE É QUE O LOTE DEIXOU DE SER FIXO (24/09) ───────────────────────────────────────────────
+ *
+ * A conta-espelho existe para uma coisa só: medir os sinais COM AS PARCIAIS. As estatísticas
+ * publicadas vêm de `mtmcopy_signal_tracking`, que mede ideias tudo-ou-nada — um sinal que fez TP1 e
+ * TP2 e voltou ao stop conta lá como perda inteira, e por isso o acerto medido dá sempre abaixo do
+ * real. Só uma conta com lote suficiente para partir a posição desfaz esse erro.
+ *
+ * Esta conta nasceu a 0,01 lotes fixos, que é o lote MÍNIMO: não se parte em três, e portanto nunca
+ * houve uma parcial para contar. Media melhor do que as ideias (o motor faz BE e trailing a sério),
+ * mas continuava a fechar tudo de uma vez — o mesmo defeito, noutro sítio.
+ *
+ * Agora o lote sai do SALDO da conta (`loteParaConta`, 0,01 por cada 1 000 USD) e a gestão leva as
+ * parciais do padrão (50 % / 25 %). O efeito é o pedido do dono a 24/09:
+ *   ·  1 000 USD → 0,01 lote → `volumeDaParte` devolve null e não há parciais (igual ao que era);
+ *   · 10 000 USD → 0,10 lote → TP1 fecha 0,05, TP2 fecha 0,02 e o resto anda no trailing.
+ * Nenhuma conta antiga muda de comportamento; a conta nova de 10 K é que passa a medir a sério.
  *
  * ONDE ENTRA: no signal-tracker (lib/mtmcopy/signal-tracker.ts), no instante em que um sinal de
  * QUALQUER canal do Tap to Trade enche a entrada — é o único ponto por onde passam todas as fontes
@@ -22,10 +39,15 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { abrirSinalNaConta, aplicarNasPontes, type PonteViva, type ResultadoAbrir } from './abrir'
 import { CONFIG_PADRAO, comentarioDaFonte, impressaoDoTrade, traderDoConteudo, type ConfigSinais } from './calculo'
 
-export const LOTE_TODOS_OS_SINAIS = 0.01
-
-/** 0,01 não dá parciais: stop para a entrada no TP1 + trailing, TP final como rede. */
-export const CONFIG_TODOS_OS_SINAIS: ConfigSinais = { ...CONFIG_PADRAO, saidasPct: [], permitirDuplicado: false }
+/**
+ * A gestão da conta-espelho: as parciais do padrão (50 % no TP1, 25 % no TP2), BE no TP1 e trailing.
+ *
+ * As parciais são PEDIDAS, não garantidas — `gestaoDoSinal` só grava a que der lote mínimo
+ * (`volumeDaParte`). Numa conta de 1 000 USD (0,01 lote) nenhuma dá, e a posição comporta-se
+ * exactamente como antes; numa de 10 000 USD (0,10) dão as duas. É esta a razão de o lote vir do
+ * saldo e não de uma constante.
+ */
+export const CONFIG_TODOS_OS_SINAIS: ConfigSinais = { ...CONFIG_PADRAO, permitirDuplicado: false }
 
 export interface LinhaTracker {
   chat_message_id: string
@@ -63,7 +85,8 @@ export async function abrirNaContaTodosOsSinais(l: LinhaTracker): Promise<Result
     return await Promise.all(contas.map((accountId) => abrirSinalNaConta({
       accountId, estrategia: 'todos', chave: `chat:${l.chat_message_id}`, impressao, fonte, comentario: fonte,
       chatMessageId: l.chat_message_id, symbol: l.symbol, direcao: l.direction, entrada: l.entry, sl: l.sl,
-      tps: l.tps, cfg: CONFIG_TODOS_OS_SINAIS, loteFixo: LOTE_TODOS_OS_SINAIS,
+      // Sem `loteFixo`: o lote sai do saldo da conta (ver cabeçalho) — é o que dá parciais na de 10 K.
+      tps: l.tps, cfg: CONFIG_TODOS_OS_SINAIS,
     })))
   } catch (e) {
     console.warn('[todos-os-sinais] abrir falhou:', e instanceof Error ? e.message : String(e))

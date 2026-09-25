@@ -1,19 +1,31 @@
 "use client"
 
 /**
- * TAP to Copy — modal dos sinais de Perpétuos Cripto (Aurum Flow & afins).
+ * TAP to Copy — os PARÂMETROS do sinal, para replicar a trade à mão.
  *
- * Nos perpétuos não abrimos ordem MT5: o cliente copia os parâmetros para a
- * corretora dele. Cada campo (entrada, SL, exits) tem o SEU botão de copiar —
- * pedido Ricardo 2026-09-04 — porque nas exchanges os campos preenchem-se um a um.
+ * Nasceu para os perpétuos (Aurum Flow & afins), onde não abrimos ordem MT5 e o cliente copia os
+ * parâmetros para a corretora dele. Desde 2026-09-24 é para QUALQUER sinal, cripto e perpétuos
+ * incluídos: há quem não queira executar connosco e queira na mesma replicar o sinal no MT5 — e
+ * até aqui a única maneira era transcrever preços à mão de um cartão, com os erros que isso dá.
+ *
+ * Cada campo tem o SEU botão de copiar — pedido Ricardo 2026-09-04 — porque nas exchanges os
+ * campos preenchem-se um a um; e há um «Copiar tudo» por cima, para quem cola o bloco inteiro.
+ * O texto sai de `lib/mtmcopy/t2t-copiar`, o mesmo módulo que o /sinais da MTM Auto usa: os dois
+ * ecrãs copiam os mesmos números pela mesma ordem.
  */
 
 import { useState } from "react"
 import { X, Copy, Check } from "lucide-react"
+import { camposDoSinal, copiarTexto, type CampoCopiavel, type ParametrosSinal } from "@/lib/mtmcopy/t2t-copiar"
 
-type Campo = { rotulo: string; valor: string }
+type Campo = CampoCopiavel
 
-/** Extrai os parâmetros do texto canónico do sinal (webhook TradingView). */
+/**
+ * Extrai os parâmetros do texto canónico do sinal (webhook TradingView).
+ *
+ * Plano B: quem tem os parâmetros já interpretados (o feed, que lê `lerSinal`) passa-os em
+ * `campos` e não passa por aqui. Fica para o chat, que só tem o texto.
+ */
 export function parseCamposDoSinal(content: string): Campo[] {
   const campos: Campo[] = []
   const sym = content.match(/📊\s*([A-Z0-9.\-/]+)/i)?.[1]
@@ -34,18 +46,34 @@ export function parseCamposDoSinal(content: string): Campo[] {
   return campos
 }
 
-export default function TapToCopyModal({ content, aoFechar }: { content: string; aoFechar: () => void }) {
-  const campos = parseCamposDoSinal(content)
+export default function TapToCopyModal({
+  content,
+  parametros,
+  titulo,
+  aoFechar,
+}: {
+  content?: string
+  /** Parâmetros JÁ interpretados. Quando existem mandam eles — não se volta a ler o texto. */
+  parametros?: ParametrosSinal | null
+  titulo?: string
+  aoFechar: () => void
+}) {
+  const campos = parametros ? camposDoSinal(parametros) : parseCamposDoSinal(content ?? "")
   const [copiado, setCopiado] = useState<string | null>(null)
 
+  const marcar = (chave: string) => {
+    setCopiado(chave)
+    setTimeout(() => setCopiado((v) => (v === chave ? null : v)), 1500)
+  }
+
   const copiar = async (c: Campo) => {
-    try {
-      await navigator.clipboard.writeText(c.valor)
-      setCopiado(c.rotulo)
-      setTimeout(() => setCopiado((v) => (v === c.rotulo ? null : v)), 1500)
-    } catch {
-      /* clipboard bloqueado — o valor está visível para copiar à mão */
-    }
+    // Falhar em silêncio é o comportamento certo: o valor está à vista para se copiar à mão.
+    if (await copiarTexto(c.valor)) marcar(c.rotulo)
+  }
+
+  const copiarTudo = async () => {
+    const bloco = campos.map((c) => `${c.rotulo}: ${c.valor}`).join("\n")
+    if (await copiarTexto(bloco)) marcar("__tudo__")
   }
 
   return (
@@ -55,35 +83,45 @@ export default function TapToCopyModal({ content, aoFechar }: { content: string;
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-[15px] font-bold text-white">TAP to Copy · Perpétuos</h3>
+          <h3 className="text-[15px] font-bold text-white">{titulo ?? "Tap to copy"}</h3>
           <button onClick={aoFechar} aria-label="Fechar" className="rounded-full p-1.5 text-zinc-400 hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
         <p className="mb-3 text-[12px] leading-snug text-zinc-400">
-          Copia cada parâmetro para a tua corretora. Conteúdo educativo — gere o risco e o lote.
+          Copia os parâmetros para o MT5 ou para a tua corretora. Conteúdo educativo — o risco e o lote
+          são teus.
         </p>
 
         {campos.length === 0 ? (
           <p className="py-6 text-center text-[13px] text-zinc-500">Não consegui ler os parâmetros deste sinal.</p>
         ) : (
-          <div className="space-y-2">
-            {campos.map((c) => (
-              <div key={c.rotulo} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-black/40 px-3 py-2.5">
-                <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-wider text-zinc-500">{c.rotulo}</p>
-                  <p className="truncate font-mono text-[15px] font-semibold text-white">{c.valor}</p>
+          <>
+            <button
+              onClick={copiarTudo}
+              className="mb-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] py-2.5 text-[13px] font-bold text-black active:scale-[0.98]"
+            >
+              {copiado === "__tudo__" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copiado === "__tudo__" ? "Copiado" : "Copiar tudo"}
+            </button>
+            <div className="space-y-2">
+              {campos.map((c) => (
+                <div key={c.rotulo} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-black/40 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-[11px] uppercase tracking-wider text-zinc-500">{c.rotulo}</p>
+                    <p className="truncate font-mono text-[15px] font-semibold text-white">{c.valor}</p>
+                  </div>
+                  <button
+                    onClick={() => copiar(c)}
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#D2A63C]/40 px-3 py-2 text-[12px] font-bold text-[#D2A63C] active:scale-95"
+                  >
+                    {copiado === c.rotulo ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copiado === c.rotulo ? "Copiado" : "Copy"}
+                  </button>
                 </div>
-                <button
-                  onClick={() => copiar(c)}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#D2A63C] px-3 py-2 text-[12px] font-bold text-black active:scale-95"
-                >
-                  {copiado === c.rotulo ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copiado === c.rotulo ? "Copiado" : "Copy"}
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

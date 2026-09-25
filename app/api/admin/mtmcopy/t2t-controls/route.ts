@@ -26,20 +26,16 @@ import {
 import { normalizeProviderRoutes, syncChannelProvidersFromRoutes } from '@/lib/mtmcopy/provider-routes'
 import { appChannelsForRoute } from '@/lib/mtmcopy/tap-to-trade-channels'
 import { ROTA_PARA_SLUGS_MTMAUTO } from '@/lib/mtmauto/espelho-interruptores'
+import { rotuloCanalT2T } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-/** Fontes T2T sem rota própria que o admin pode ligar/desligar diretamente. */
-const EXTRA_CHANNEL_LABELS: Record<string, string> = {
-  'aurum-flow': 'Aurum Flow & Perpétuos',
-  'premium-ideas': 'Premium · Ouro',
-  'sinais-scanner-mtm': 'MTM Auto Edge/Wolf/King',
-  'trade-ideas-setup': 'Ideias de Forex',
-  'ideias-e-sinais': 'Ideias e Sinais',
-  'sinais-goldkiller': 'GoldKiller',
-  'sensei-scanner': 'Sensei Scanner',
-}
+/**
+ * Fontes T2T sem rota própria que o admin pode ligar/desligar diretamente. Os NOMES vêm de
+ * lib/mtmcopy/tap-to-trade-channels — os mesmos que a app mostra ao cliente no seletor de fontes.
+ */
+const EXTRA_CHANNELS = ['aurum-flow', 'premium-ideas', 'sinais-scanner-mtm', 'trade-ideas-setup', 'ideias-e-sinais', 'sinais-goldkiller', 'sensei-scanner']
 
 
 async function buildState() {
@@ -74,12 +70,14 @@ async function buildState() {
   // Fontes abandonadas saem do painel: canal ESCONDIDO no chat e fonte desligada (ex.: Ideias de
   // Forex desde 27/08). Se alguém a religar à mão continua a aparecer — só se esconde o que está
   // morto dos dois lados.
-  const { data: escondidos } = await supabase.from('chat_channels').select('slug').eq('hidden', true)
-  const canalEscondido = new Set((escondidos ?? []).map((c) => String(c.slug)))
-  const extras = Object.entries(EXTRA_CHANNEL_LABELS)
-    .filter(([ch]) => !routeChannels.has(ch)) // canais já governados por rota ficam do lado das rotas
-    .filter(([ch]) => extrasActive.has(ch) || !canalEscondido.has(ch))
-    .map(([channel, label]) => ({ channel, label, active: extrasActive.has(channel) }))
+  const { data: canais } = await supabase.from('chat_channels').select('slug, name, hidden')
+  const canalEscondido = new Set((canais ?? []).filter((c) => c.hidden === true).map((c) => String(c.slug)))
+  // O nome vivo do canal ganha ao canónico: o admin vê o mesmo que o cliente vê no chat.
+  const nomeDoChat = new Map((canais ?? []).map((c) => [String(c.slug), String(c.name ?? '')]))
+  const extras = EXTRA_CHANNELS
+    .filter((ch) => !routeChannels.has(ch)) // canais já governados por rota ficam do lado das rotas
+    .filter((ch) => extrasActive.has(ch) || !canalEscondido.has(ch))
+    .map((channel) => ({ channel, label: rotuloCanalT2T(channel, nomeDoChat.get(channel)), active: extrasActive.has(channel) }))
 
   return { strategies, extras }
 }
@@ -103,7 +101,7 @@ export async function POST(request: NextRequest) {
 
   if (action === 'extra_channel') {
     const channel = String(body.channel ?? '').trim()
-    if (!channel || !EXTRA_CHANNEL_LABELS[channel]) {
+    if (!channel || !EXTRA_CHANNELS.includes(channel)) {
       return NextResponse.json({ error: 'canal inválido' }, { status: 400 })
     }
     const set = new Set(config.t2t_extra_channels ?? [])

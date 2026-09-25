@@ -20,7 +20,13 @@ type Qualquer = any // eslint-disable-line @typescript-eslint/no-explicit-any
 export interface OpcoesBinance {
   /** o preço do principal para este símbolo está velho? (só então se injeta) */
   precisa: (sym: string) => boolean
-  injetar: (sym: string, bid: number, ask: number, em: number) => void
+  /**
+   * SEM HORA DE MERCADO, de propósito. Medido a 24/09/2026 no stream combinado: o payload do
+   * `@bookTicker` traz `u/s/b/B/a/A` e mais nada — nem `E` nem `T`. Como é um stream de EMPURRO,
+   * o instante da chegada anda perto do do mercado, mas «perto» não é «declarado»: passa-se
+   * `emMercado` a NULO e quem lê cai no caminho pessimista, que é a verdade.
+   */
+  injetar: (sym: string, bid: number, ask: number, em: number, emMercado: number | null, origem: string) => void
   /** tick bruto de uma referência ancorada (o motor decide se e como injeta) */
   referencia?: (sym: string, bid: number, ask: number) => void
   log: (...a: unknown[]) => void
@@ -71,7 +77,7 @@ export function iniciarFonteBinance(o: OpcoesBinance): FonteBinance | null {
         if (ancorados.has(stream)) { ticks++; o.referencia?.(canon, bid, ask); return }
         if (!o.precisa(canon)) return
         ticks++
-        o.injetar(canon, bid, ask, Date.now())
+        o.injetar(canon, bid, ask, Date.now(), null, 'binance:bookticker')
       } catch {
         // uma mensagem má não derruba o feed
       }

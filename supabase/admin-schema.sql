@@ -66,26 +66,25 @@ INSERT INTO admin_settings (setting_key, setting_value, description) VALUES
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- Inserir conteúdo inicial do site
+--
+-- 2026-09-24: saíram daqui as entradas do IQONIC (menu «Educação» e «Apresentação IQONIC» para
+-- /iqonic, «IQonic Academy» para iqonic.vip, «BackOffice IQ» para user.iqonic.life) e as do
+-- /swipetotrade, que foi removido com ele. O IQONIC saiu do site a 2026-06-26; se este seed
+-- voltasse a correr, o menu ressuscitava — com links para páginas que já não existem e para um
+-- produto que já não é nosso.
 INSERT INTO site_content (type, category, title, description, url, order_index) VALUES
 ('link', 'navbar', 'Início', 'Link para página inicial', '/new-landing', 1),
-('link', 'navbar', 'Educação', 'Menu de educação com submenu', '/iqonic', 2),
-('link', 'navbar', 'Trading', 'Menu de trading com submenu', '/swipetotrade', 3),
 ('link', 'navbar', 'Onboarding', 'Processo de onboarding', '/onboarding', 4),
 ('link', 'navbar', 'Início Rápido', 'Fast start para novos membros', '/fast-start', 5),
-('link', 'education', 'Apresentação IQONIC', 'Link para apresentação IQONIC', '/iqonic', 1),
-('link', 'education', 'IQonic Academy', 'Link para IQonic Academy', 'https://iqonic.vip', 2),
 ('link', 'education', 'Educação MTM', 'Link para cursos MoreThanMoney', 'https://www.skool.com/morethanmoney-1132/about', 3),
 ('link', 'education', 'AI Com Os Gemeos', 'Link para comunidade AI', 'https://www.skool.com/ai-com-osgemeos/about?ref=bc17a1ec65954570926520a936f7355b', 4),
-('link', 'education', 'BackOffice IQ', 'Link para backoffice IQONIC', 'https://user.iqonic.life', 5),
-('link', 'trading', 'IQ Sync - Configurar', 'Configuração do IQ Sync', '/swipetotrade', 1),
 ('link', 'trading', 'Os nossos Scanners', 'Página dos scanners', '/scanner', 2),
 ('link', 'trading', 'Scanner ao Vivo', 'Acesso aos scanners ao vivo', '/scanner-access', 3),
 ('link', 'trading', 'Automatização', 'Página de automatização', '/automation', 4),
 ('link', 'trading', 'Portefólios', 'Portefólios inteligentes', '/portfolios', 5),
 ('video', 'landing', 'Vídeo de Apresentação', 'Vídeo principal da landing page', 'https://youtu.be/dgd0-mLIrMw', 1),
 ('video', 'onboarding', 'Vídeo de Onboarding', 'Vídeo do processo de onboarding', 'https://youtu.be/w8y_wzJGTcA', 1),
-('video', 'fast-start', 'Sistema MoreThanMoney', 'Vídeo explicativo do sistema', 'https://youtu.be/TJ_1rvK-DgY', 1),
-('video', 'swipetotrade', 'Como Aceitar Trade', 'Vídeo explicativo de como aceitar trades', 'https://youtu.be/TxQS2GW5NkE', 1)
+('video', 'fast-start', 'Sistema MoreThanMoney', 'Vídeo explicativo do sistema', 'https://youtu.be/TJ_1rvK-DgY', 1)
 ON CONFLICT DO NOTHING;
 
 -- Políticas de segurança (RLS)

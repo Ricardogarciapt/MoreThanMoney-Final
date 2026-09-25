@@ -3,7 +3,9 @@
 import { lerSinal } from "@/lib/sinais/formato-sinal"
 import { ehSinalDePerpetuo, t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { mensagemCripto, useSemCripto } from "@/lib/ios-sem-cripto"
+import { apareceNoT2T, recebeT2T } from "@/lib/mtmcopy/alvo-t2t"
 import { pipSizeForSymbol, unitFor } from "@/lib/mtmcopy/trade-outcome"
+import { precoLegivel, textoParaColar, type ParametrosSinal } from "@/lib/mtmcopy/t2t-copiar"
 import { directionLabelFromText, resolveDirectionLabel } from "@/lib/mtmcopy/signal-direction"
 
 import { useCallback, useEffect, useState, useRef, useMemo } from "react"
@@ -14,7 +16,9 @@ import { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-f
 import { MtmFundedBadge, SoLeituraBadge } from "@/components/ligar-mtmfunded/mtmfunded-connect-form"
 import { ListaContas, LimitesPlano, useContasLigadas } from "@/components/contas/ligador-contas"
 import CopiasEntreContas from "@/components/contas/copias-entre-contas"
-import { isAllowedT2TSource, matchesT2TPrefs, t2tSourceKey, T2T_SOURCES, T2T_ASSET_CLASSES } from "@/lib/mtmcopy/t2t-source"
+import { isT2TEntrySignal, matchesT2TPrefs, t2tSourceKey, T2T_SOURCES, T2T_ASSET_CLASSES } from "@/lib/mtmcopy/t2t-source"
+import { vereditoDaJanela, type CodigoDaJanela } from "@/lib/mtmcopy/t2t-janela-regra"
+import { iniciaisDaFonte, ROTULOS_CANAIS_T2T } from "@/lib/mtmcopy/rotulos-canais"
 import {
   TrendingUp,
   RefreshCw,
@@ -26,6 +30,7 @@ import {
   ShieldCheck,
   Wallet,
   Clock,
+  Copy,
 } from "lucide-react"
 import MtmAutoMetricas from "@/components/mobile/mtm-auto-metricas"
 import TapToCopyModal from "@/components/mobile/tap-to-copy-modal"
@@ -33,58 +38,29 @@ import MtmAutoPainel from "@/components/mobile/mtm-auto-painel"
 import MtmAutoEstrategias from "@/components/mobile/mtm-auto-estrategias"
 import MtmAutoHistorico from "@/components/mobile/mtm-auto-historico"
 
-const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break[\s-]*even|stop\s+protegido|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|entry\s*hit|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 /**
- * Um preço como se escreve — nunca com a precisão inventada de um indicador.
+ * Encerra mesmo a ideia (ao contrário de um BE ou de um TP1, que a deixam a correr).
  *
- * Os scanners calculam stops a partir do ATR: o GoldKiller chegou a mandar 4452.9733242788, que
- * não é um preço que exista no ouro. Assim escrito, o número saía fora da caixa e tapava o TP ao
- * lado, e prometia uma precisão que é falsa. A origem já arredonda; isto cobre o que ficou
- * gravado antes e qualquer fonte nova que volte a fazê-lo.
+ * Fica como REDE, e só para isso: o desfecho de um sinal seguido pelo motor vem do servidor
+ * (`outcome_label`). Esta leitura das mensagens de fecho serve os sinais que o motor não segue.
  */
-function precoLegivel(v: number | string | null | undefined, symbol: string): string {
-  const n = Number(v)
-  if (v == null || !Number.isFinite(n)) return "—"
-  const casas = /JPY|XAG|SILVER/i.test(symbol) ? 3
-    : /XAU|GOLD|BTC|ETH|SOL|XRP|NAS|US30|US500|GER|SPX|DOW/i.test(symbol) ? 2
-    : 5
-  // `parseFloat` para não pôr zeros que ninguém escreveu: 4435.80 lê-se 4435.8.
-  return String(parseFloat(n.toFixed(casas)))
-}
-
-/** Encerra mesmo a ideia (ao contrário de um BE ou de um TP1, que a deixam a correr). */
 const TERMINAL_RE = /(posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|stop\s+(?:loss|protegido)\s*·|cancelad|encerrad|descartad|invalidad|alvo\s+final|close\s+all|hit\s*tp\s*[3-9])/i
-const DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴)/i
-/** Sensei: só a "Entry Alert / Ideia Activada" (entrada activada) é um sinal válido. */
-const SENSEI_ACTIVE_RE = /(entrada\s+activ|entrada\s+ativ|ideia\s+activ|ideia\s+ativ|entry\s+alert)/i
-/** Mensagens de performance/resumo/saída — não são sinais negociáveis. */
-const PERF_RE = /(performance|resultado\s+do\s+dia|resumo|recap|relat[óo]rio|estat[íi]stic|balan[çc]o|total\s+de\s+pips|pips\s+(de\s+)?(hoje|esta\s+semana|do\s+dia)|fecho\s+do\s+dia|lucro\s+do\s+dia)/i
 
-/** Só sinais de ENTRADA válidos passam (saídas/performance/incompletos são excluídos). */
-function isEntrySignal(channelSlug: string, content?: string | null): boolean {
-  if (!content) return false
-  if (!isAllowedT2TSource(channelSlug, content)) return false // só Premium/Sensei/James/PrimeVerse
-  if (FOLLOWUP_RE.test(content)) return false // saídas / TP hit / fecho / SL / cancelado
-  if (PERF_RE.test(content)) return false // performance / resumo do dia
-  if (!DIR_RE.test(content)) return false // precisa de direção
-  if (!/\d{2,}/.test(content)) return false // precisa de preço
-  // Entrada COMPLETA: exige TP (alvo). Exclui updates só-SL / "Ref:" → não são negociáveis.
-  if (!/\btp\s*\d|\btp\s*:|take\s*profit|🎯/i.test(content)) return false
-  // Sensei: exige o alerta de entrada activada COMPLETO (entrada + SL + TP)
-  if (channelSlug === "sensei-scanner") {
-    const activated = SENSEI_ACTIVE_RE.test(content)
-    const hasSL = /stop\s*loss|🛑/i.test(content)
-    const hasTP = /take\s*profit|tp\s*\d/i.test(content)
-    if (!(activated && hasSL && hasTP)) return false
-  }
-  return true
-}
-
-/** Iniciais da fonte — o avatar redondo do cartão, igual ao da app MTM Auto. */
-function iniciaisDaFonte(nome: string): string {
-  const p = nome.replace(/[^A-Za-zÀ-ú0-9 ]/g, "").split(/\s+/).filter(Boolean)
-  return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? p[0]?.[1] ?? "")).toUpperCase()
-}
+/**
+ * O que é um SINAL DE ENTRADA decide-se em `lib/mtmcopy/t2t-source` — `isT2TEntrySignal`.
+ *
+ * Havia aqui uma segunda regra, escrita à mão, com os seus próprios `FOLLOWUP_RE`, `PERF_RE`,
+ * `DIR_RE` e um portão só para o Sensei. Enquanto as duas concordaram, ninguém reparou. A 21/09
+ * a mestre do Sensei passou a escrever «Entrada executada» em vez de «Entrada activada», e o
+ * portão daqui — que exigia a palavra «activada» — deixou de a reconhecer: SETE sinais do Sensei
+ * em três semanas desapareceram deste separador, enquanto o motor os seguia, a conta-espelho os
+ * abria e o /sinais da MTM Auto os mostrava. O cliente do site não teve como aceitar um único.
+ *
+ * A regra da `lib` é a que o `signal-tracker` usa para admitir sinais, e é por isso a que decide
+ * o que existe. O portão do Sensei também não se perdeu: quem o aplica é o servidor, em
+ * `/api/mtmcopy/tap-to-trade/providers` (`senseiSignalIds`, só as ideias ACTIVADAS), e é esse que
+ * continua a filtrar mais abaixo. Uma regra, num sítio.
+ */
 
 /** "3m", "2h", "1d" — a idade do sinal, curta, como na MTM Auto. */
 function idadeCurta(iso: string): string {
@@ -95,21 +71,12 @@ function idadeCurta(iso: string): string {
   return `${Math.round(s / 86400)}d`
 }
 
-const CHANNEL_LABEL: Record<string, string> = {
-  "sensei-scanner": "Sensei Scanner",
-  "premium-ideas": "Premium · Ouro",
-  "trade-ideas-setup": "Ideias Forex",
-  "trade-ideas": "Trade Ideas",
-  "sinais-goldkiller": "GoldKiller",
-  // O slug engana: é o canal das estratégias MTM Auto Edge / King / Wolf.
-  "sinais-scanner-mtm": "MTM Auto Edge/Wolf/King",
-  "ideias-e-sinais": "Ideias Forex Swings",
-  // Fundido na Aurum Flow a 18/09 (um canal só); as mensagens antigas ficam com o rótulo novo.
-  "cripto-perps": "Aurum Flow & Perpétuos",
-  "aurum-flow": "Aurum Flow & Perpétuos",
-  // Alias do slug antigo da Aurum Flow — remover depois de 2026-10-14 (30 dias após 2026-09-14).
-  "golden-moves": "Aurum Flow",
-}
+/**
+ * Os NOMES dos canais vêm de `lib/mtmcopy/rotulos-canais` — a MESMA tabela do admin e do /sinais
+ * da MTM Auto. Havia aqui uma cópia que chamava «Premium · Ouro» ao canal que o painel do admin
+ * (e o chat) chamam «MTM Auto Premium»: quem ligava a fonte no painel não a reconhecia na app.
+ */
+const CHANNEL_LABEL = ROTULOS_CANAIS_T2T
 
 /**
  * Direção lida do texto — PLANO B. Quem manda é a direção gravada pelo servidor
@@ -200,6 +167,31 @@ function parseSignalFields(content: string): SignalFields {
   }
 }
 
+/**
+ * Os campos do cartão, prontos para o «Tap to copy».
+ *
+ * A entrada do cartão pode vir como zona («4388 – 4395»): copia-se o PRIMEIRO valor, que é o
+ * primeiro a ser tocado — é o que o trader escreveu como entrada. E a direcção é a do servidor
+ * (`dir`), não a que se adivinha do texto: o rodapé «…key to long term success» do Premium punha
+ * «BUY» em cima de vendas, e copiado para uma ordem isso é a trade ao contrário.
+ */
+function parametrosParaCopiar(f: SignalFields, dir: string): ParametrosSinal {
+  const primeiroNumero = (v: string | null): number | null => {
+    const m = String(v ?? "").match(/-?\d+(?:[.,]\d+)?/)
+    if (!m) return null
+    const n = Number(m[0].replace(",", "."))
+    return Number.isFinite(n) ? n : null
+  }
+  return {
+    simbolo: f.symbol ?? "",
+    direcao: dir || f.direction || null,
+    entrada: primeiroNumero(f.entry),
+    mercado: f.entry == null || /mercado|market/i.test(String(f.entry)),
+    sl: primeiroNumero(f.sl),
+    tps: f.tps.map(primeiroNumero),
+  }
+}
+
 interface TapPreviewAccount {
   id: string
   label: string
@@ -229,8 +221,58 @@ interface TapPreview {
     channel: string
   }
   accounts: TapPreviewAccount[]
+  /** Contas simuladas MTM Funded onde a aceitação também abre (sem lote/risco: não há dinheiro). */
+  simuladas?: Array<{ id: string; ref: string; label: string }>
   /** Contas que NÃO podem aceitar, com o motivo — ver a rota de preview. */
   blocked?: Array<{ id: string; label: string; motivo: string; comoResolver: string }>
+  /** Há mais do que um destino possível → vale a pena perguntar onde abrir. */
+  escolhaPossivel?: boolean
+  /** O que a pessoa escolheu da última vez (`profile_data.t2t.contas`), já filtrado pelo que existe. */
+  escolhidas?: string[]
+}
+
+/** Marca/desmarca uma conta na lista de «onde abrir» (mantém a ordem em que apareceram). */
+function alternarConta(atual: string[] | null, ref: string): string[] {
+  const lista = atual ?? []
+  return lista.includes(ref) ? lista.filter((x) => x !== ref) : [...lista, ref]
+}
+
+/**
+ * Uma linha da lista «onde abrir».
+ *
+ * Com UM destino só (`escolhivel = false`) é exactamente a linha de sempre: o que vai acontecer,
+ * sem caixa nenhuma para tocar. Não se acrescenta um toque a quem não tem decisão para tomar.
+ * Com dois ou mais, a linha inteira passa a ser o alvo do toque — uma caixa de 16px no telemóvel
+ * é um convite a falhar.
+ */
+function ContaEscolhivel({
+  escolhivel,
+  marcada,
+  alternar,
+  children,
+}: {
+  escolhivel: boolean
+  marcada: boolean
+  alternar: () => void
+  children: React.ReactNode
+}) {
+  if (!escolhivel) return <div className="flex items-baseline justify-between gap-3">{children}</div>
+  return (
+    <button
+      type="button"
+      onClick={alternar}
+      aria-pressed={marcada}
+      className={`flex w-full items-baseline justify-between gap-2 rounded-lg px-2 py-1.5 text-left transition-colors active:scale-[0.99] ${marcada ? "bg-[#D2A63C]/10" : "opacity-50"}`}
+    >
+      <span
+        aria-hidden
+        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold ${marcada ? "border-[#D2A63C] bg-[#D2A63C] text-black" : "border-zinc-600 text-transparent"}`}
+      >
+        ✓
+      </span>
+      <span className="flex flex-1 items-baseline justify-between gap-3 min-w-0">{children}</span>
+    </button>
+  )
 }
 
 interface Sig {
@@ -315,24 +357,37 @@ function desfechoDoSinal(setup: Sig, fecho: Sig | undefined): string {
 }
 
 /**
- * O sinal já saiu da zona de entrada?
+ * A JANELA DE ACEITAÇÃO já não se decide aqui.
  *
- * Só conta passados os cinco minutos: nos primeiros minutos um "entry hit" é o normal — o preço
- * tocou a zona e quem aceita ainda entra praticamente ao mesmo preço. É depois disso que a
- * entrada tocada deixa de ser uma boa notícia e passa a ser um comboio perdido.
+ * Havia `foraDaZona()` mais uma idade calculada à parte, e do outro lado do ecrã a rota que abre
+ * a ordem decidia à sua maneira — com outras frases. Um botão que convida para uma trade que a
+ * rota vai recusar é uma promessa que o produto não cumpre. Agora quem responde é o servidor, em
+ * `/api/mtmcopy/signal-live`, com `vereditoDaJanela` de `lib/mtmcopy/t2t-janela-regra`: a mesma
+ * resposta, com as mesmas palavras, que o /sinais da MTM Auto mostra do mesmo sinal.
  */
-function foraDaZona(
-  s: { created_at: string },
-  vivo?: { exits?: number; entrou?: boolean; slBatido?: boolean },
-): boolean {
-  if (!vivo) return false
-  // O stop já batido fecha o sinal a QUALQUER altura — um sinal pode bater no stop em trinta
-  // segundos, e aceitar então é abrir uma posição já perdida, sem stop a defendê-la. A regra
-  // dos cinco minutos não apanhava este caso.
-  if (vivo.slBatido === true) return true
-  const idade = Date.now() - new Date(s.created_at).getTime()
-  if (!Number.isFinite(idade) || idade <= 5 * 60 * 1000) return false
-  return Number(vivo.exits ?? 0) > 0 || vivo.entrou === true
+
+/** A etiqueta curta de cada recusa. O código vem da `lib`; a palavra é a deste catálogo. */
+const ETIQUETA_DA_RECUSA: Record<CodigoDaJanela, string> = {
+  closed: "t2t.reasonResolved",
+  stop_hit: "t2t.stopHit",
+  out_of_zone: "t2t.outOfZone",
+  expired: "t2t.signalUnavailable",
+}
+
+/**
+ * Porque é que este cartão não se aceita — ou `null` se ainda se aceita.
+ *
+ * Manda o veredito do servidor, que é o mesmo que a rota vai aplicar. O `s.expired` local fica
+ * como REDE para os sinais que o motor não segue (os perpétuos que se SEGUEM em vez de abrir não
+ * entram no acompanhamento): sem linha não há veredito, e aí vale a idade lida do texto.
+ */
+function vereditoDoCartao(
+  s: { expired?: boolean },
+  vivo?: { janela?: { aceitavel: boolean; code: CodigoDaJanela | null } },
+): CodigoDaJanela | null {
+  const j = vivo?.janela
+  if (j) return j.aceitavel ? null : (j.code ?? "expired")
+  return s.expired ? "expired" : null
 }
 
 /** Definições de risco/saídas de uma conta, no formato do editor de «Execução». */
@@ -371,8 +426,24 @@ export default function TapToTradeFeed() {
   const [alvosAbertos, setAlvosAbertos] = useState<Record<string, boolean>>({})
   /** Fonte escolhida só para VER. Null = todas. Não mexe no que se recebe. */
   const [fonteVista, setFonteVista] = useState<string | null>(null)
+  /**
+   * O que o SERVIDOR sabe de cada sinal: os números ao vivo, o desfecho e o veredito da janela de
+   * aceitação. Tudo já decidido lá — este ecrã desenha, não calcula.
+   */
   const [aoVivo, setAoVivo] = useState<
-    Record<string, { pips: number | null; pct: number | null; exits?: number; entrou?: boolean; slBatido?: boolean }>
+    Record<
+      string,
+      {
+        pips: number | null
+        pct: number | null
+        exits?: number
+        entrou?: boolean
+        slBatido?: boolean
+        estado?: string
+        desfecho?: string | null
+        janela?: { aceitavel: boolean; motivo: string | null; code: CodigoDaJanela | null }
+      }
+    >
   >({})
   /**
    * A direção com que cada sinal foi mesmo colocado, vinda do servidor
@@ -391,6 +462,16 @@ export default function TapToTradeFeed() {
    */
   const [preview, setPreview] = useState<TapPreview | null>(null)
   const [previewBusy, setPreviewBusy] = useState(false)
+  /**
+   * ONDE ABRIR (2026-09-24). Antes, aceitar abria em TODAS as contas com o T2T ligado — com doze
+   * contas isso deixou de ser conveniência e passou a ser uma surpresa cara. O leque continua
+   * possível (dá para marcar duas das doze), mas passa a ser uma escolha.
+   *
+   * `null` enquanto a pré-visualização não chega. Com UMA só conta ninguém vê pergunta nenhuma.
+   */
+  const [ondeAbrir, setOndeAbrir] = useState<string[] | null>(null)
+  /** As contas que não podem aceitar começam RECOLHIDAS — o motivo não pode ser o ecrã todo. */
+  const [bloqueadasAbertas, setBloqueadasAbertas] = useState(false)
   const [providers, setProviders] = useState<{ label: string; strategy: string }[]>([])
   /** Os canais que o servidor diz estarem ATIVOS no Tap to Trade — é a lista que o filtro usa. */
   const [canaisAtivos, setCanaisAtivos] = useState<string[]>([])
@@ -487,7 +568,9 @@ export default function TapToTradeFeed() {
       // Contas T2T do user (fan-out). Se a API ainda não devolver a lista, cai para a conta única.
       const list: Conn[] = Array.isArray(d.t2t_connections) && d.t2t_connections.length
         ? d.t2t_connections
-        : (Array.isArray(d.connections) ? d.connections.filter((x: Conn) => x.t2t_enabled === true) : [])
+        // A MESMA regra do servidor: a conta dedicada (sem bandeira) também está no T2T, e a
+        // desligada nela aparece para se poder voltar a ligar (lib/mtmcopy/alvo-t2t.ts).
+        : (Array.isArray(d.connections) ? d.connections.filter((x: Conn) => apareceNoT2T(x)) : [])
       const c: Conn | null = d.connection ?? (d.connections?.[0] ?? null)
       const todas = list.length ? list : (c ? [c] : [])
       setT2tConns(todas)
@@ -563,7 +646,7 @@ export default function TapToTradeFeed() {
       .filter((m) => TERMINAL_RE.test(m.content))
       .sort((a, b) => a.created_at.localeCompare(b.created_at))
     const entradasAsc = all
-      .filter((m) => isEntrySignal(m.channel_slug, m.content))
+      .filter((m) => isT2TEntrySignal(m.channel_slug, m.content))
       .sort((a, b) => a.created_at.localeCompare(b.created_at))
     const fechoDe = new Map<string, Sig | undefined>()
     for (const f of terminais) {
@@ -588,7 +671,7 @@ export default function TapToTradeFeed() {
     }
     const now = Date.now()
     const sigs = all
-      .filter((m) => isEntrySignal(m.channel_slug, m.content))
+      .filter((m) => isT2TEntrySignal(m.channel_slug, m.content))
       // Sensei: só ideias activadas (abrem na conta provider = aparecem no chat)
       .filter((m) => m.channel_slug !== "sensei-scanner" || !senseiFilterOn || senseiIds.has(m.id))
       .map((m) => {
@@ -641,9 +724,15 @@ export default function TapToTradeFeed() {
         window.history.replaceState({}, "", u.toString())
       }
     }
-    // Resultado ao vivo dos que estão a correr: uma chamada por refrescar, números já feitos.
+    /**
+     * O que o servidor sabe de cada sinal — de TODOS, não só dos que a régua local achava vivos.
+     *
+     * Um sinal fechado precisa de veredito («Este sinal já fechou.») tanto como um a correr, e
+     * era precisamente nos que a régua local dava por expirados que as duas apps divergiam: uma
+     * perguntava ao servidor, a outra respondia sozinha.
+     */
     try {
-      const vivos = sigs.filter((x) => !x.expired).map((x) => x.id)
+      const vivos = sigs.map((x) => x.id)
       if (vivos.length) {
         const rl = await fetch(`/api/mtmcopy/signal-live?ids=${vivos.join(",")}`)
         if (rl.ok) setAoVivo(((await rl.json()) as { live?: typeof aoVivo }).live ?? {})
@@ -730,7 +819,7 @@ export default function TapToTradeFeed() {
   // Pré-visualização: corre quando o modal abre. Se falhar, o modal continua a funcionar com
   // o texto do sinal — nunca bloqueia a aceitação por causa de números que não chegaram.
   useEffect(() => {
-    if (!tap || tap.status !== "confirm") { setPreview(null); return }
+    if (!tap || tap.status !== "confirm") { setPreview(null); setOndeAbrir(null); setBloqueadasAbertas(false); return }
     let cancelado = false
     setPreviewBusy(true)
     ;(async () => {
@@ -742,7 +831,13 @@ export default function TapToTradeFeed() {
         })
         if (!r.ok) return
         const j = (await r.json()) as TapPreview
-        if (!cancelado) setPreview(j)
+        if (cancelado) return
+        setPreview(j)
+        // Pré-marcar: a escolha da vez passada, se ainda fizer sentido; senão TODAS — que é o
+        // comportamento de sempre para quem nunca escolheu, e nunca uma surpresa ao contrário
+        // (ninguém fica sem abrir numa conta por não ter reparado numa caixa).
+        const todas = [...j.accounts.map((a) => a.id), ...(j.simuladas ?? []).map((x) => x.ref)]
+        setOndeAbrir(j.escolhidas?.length ? j.escolhidas.filter((ref) => todas.includes(ref)) : todas)
       } catch {
         /* fica sem números — o texto do sinal chega para decidir */
       } finally {
@@ -792,7 +887,11 @@ export default function TapToTradeFeed() {
       const res = await fetch("/api/mtmcopy/tap-to-trade", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
-        body: JSON.stringify({ chat_message_id: sig.id }),
+        // `contas` só segue quando houve mesmo uma escolha a fazer (mais do que um destino). Sem
+        // ela, a rota faz o que sempre fez — abre em todas as contas elegíveis.
+        body: JSON.stringify(
+          preview?.escolhaPossivel && ondeAbrir ? { chat_message_id: sig.id, contas: ondeAbrir } : { chat_message_id: sig.id },
+        ),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -806,7 +905,15 @@ export default function TapToTradeFeed() {
         return
       }
       setAccepted((a) => ({ ...a, [sig.id]: "open" }))
-      setTap({ sig, status: "done", message: data.message || t("t2t.tradeOpened") })
+      // Contas pedidas que o SERVIDOR recusou (mestre da casa, em pausa, T2T desligado, de outra
+      // pessoa). Saltá-las em silêncio parecia uma avaria — e esconder uma recusa é pior do que a
+      // recusa. A lista no ecrã é conveniência; quem decide onde abre é sempre o servidor.
+      const recusadas: string[] = Array.isArray(data.recusadas) ? data.recusadas : []
+      setTap({
+        sig,
+        status: "done",
+        message: `${data.message || t("t2t.tradeOpened")}${recusadas.length ? ` · ${recusadas.length} conta${recusadas.length === 1 ? "" : "s"} que escolheste já não podia receber este sinal.` : ""}`,
+      })
     } catch (e) {
       setTap({ sig, status: "error", message: e instanceof Error ? e.message : t("t2t.unexpectedError") })
     }
@@ -933,11 +1040,10 @@ export default function TapToTradeFeed() {
   }
 
   /**
-   * Esta conta está no Tap to Trade? A MESMA regra do servidor (lib/mtmcopy/alvo-t2t.ts::recebeT2T):
-   * marcada à mão, ou dedicada ao T2T e não desligada. Escrita aqui para o ecrã não inventar uma
-   * segunda versão da regra — se divergirem, o interruptor mente sobre o que vai acontecer.
+   * Esta conta está no Tap to Trade? A MESMA função do servidor — importada, não copiada: a regra
+   * estava aqui escrita à mão e o interruptor podia passar a mentir sobre o que ia acontecer.
    */
-  const noT2T = (c: Conn) => c.t2t_enabled === true || (c.purpose === "tap_to_trade" && c.t2t_enabled !== false)
+  const noT2T = (c: Conn) => recebeT2T(c)
 
   // Liga/desliga o T2T (fan-out) numa conta. Aceitar um sinal abre em TODAS as contas ligadas.
   const toggleAccountT2T = async (id: string, enabled: boolean) => {
@@ -1345,7 +1451,7 @@ export default function TapToTradeFeed() {
               /* O cartão é o da app MTM Auto, à letra: moldura em gradiente, iniciais da fonte,
                  direção e idade à esquerda, par e estado à direita, e a linha ENTRY / STOP / TP1
                  que se lê de relance antes de decidir. */
-              <div key={s.id} className="moldura-brilho" style={{ opacity: s.expired ? 0.62 : 1 }}>
+              <div key={s.id} className="moldura-brilho" style={{ opacity: vereditoDoCartao(s, aoVivo[s.id]) ? 0.62 : 1 }}>
               <div className="p-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2.5">
@@ -1376,12 +1482,12 @@ export default function TapToTradeFeed() {
                       style={
                         accepted[s.id]
                           ? { background: "var(--sucesso-suave)", color: "var(--sucesso)" }
-                          : s.expired
+                          : vereditoDoCartao(s, aoVivo[s.id])
                             ? { background: "var(--perigo-suave)", color: "var(--perigo)" }
                             : { background: "var(--destaque-suave)", color: "var(--destaque)" }
                       }
                     >
-                      {accepted[s.id] ? t("t2t.statusAccepted") : s.expired ? t("t2t.expired") : t("t2t.statusActive")}
+                      {accepted[s.id] ? t("t2t.statusAccepted") : vereditoDoCartao(s, aoVivo[s.id]) ? t("t2t.expired") : t("t2t.statusActive")}
                     </span>
                   </div>
                 </div>
@@ -1429,7 +1535,7 @@ export default function TapToTradeFeed() {
                     )}
 
                     {/* Ideia MTM → conta simulada MTM Funded. Só pré-preenche: a conta e a confirmação são do trader. */}
-                    {f.symbol && dir && !s.expired && (
+                    {f.symbol && dir && !vereditoDoCartao(s, aoVivo[s.id]) && (
                       <a
                         href={`/app-mobile?${new URLSearchParams({
                           tab: "funded", symbol: f.symbol, dir: dir === "BUY" ? "buy" : "sell",
@@ -1478,45 +1584,59 @@ export default function TapToTradeFeed() {
                       : accepted[s.id] === "error" ? t("t2t.acceptedError")
                       : t("t2t.alreadyAccepted")}
                   </div>
-                ) : s.desfecho ? (
-                  // Sinal terminado: o que interessa saber é quanto rendeu, não que expirou.
+                ) : (aoVivo[s.id]?.desfecho ?? s.desfecho) ? (
+                  /* Sinal terminado: o que interessa saber é quanto rendeu, não que expirou. O
+                     número é o do servidor (`outcome_label`) — o MESMO que o cartão do /sinais da
+                     MTM Auto mostra. Neste separador o desfecho nunca chegava a aparecer na lista
+                     (só no bloco do histórico), e o mesmo sinal fechado dizia «+163 pips» numa app
+                     e «Sinal indisponível» na outra. */
                   <div className={`mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl font-semibold text-[12px] py-2.5 ${
-                    s.desfecho.startsWith("+") ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+                    (aoVivo[s.id]?.desfecho ?? s.desfecho ?? "").startsWith("+") ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
                   }`}>
-                    🏁 {t("t2t.reasonResolved")} · {s.desfecho}
+                    🏁 {t("t2t.reasonResolved")} · {aoVivo[s.id]?.desfecho ?? s.desfecho}
                   </div>
-                ) : foraDaZona(s, aoVivo[s.id]) ? (
-                  /* A trade já saiu da zona: a entrada foi tocada, ou já houve um parcial. O
-                     botão desaparece porque aceitar agora não é aceitar este sinal — é entrar a
-                     meio do movimento com o stop do princípio, a arriscar várias vezes o
-                     previsto para apanhar o que resta do alvo. */
-                  <div className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-zinc-800/70 text-zinc-500 font-semibold text-[12px] py-2.5 cursor-not-allowed">
-                    <Clock className="w-4 h-4" /> {t("t2t.outOfZone")}
-                  </div>
-                ) : s.expired ? (
-                  /* Continua na lista, mas já não se aceita. A menção é a que interessa a quem
-                     olha: o sinal está lá, e está indisponível. */
+                ) : vereditoDoCartao(s, aoVivo[s.id]) ? (
+                  /* NÃO se aceita — e o motivo é o do SERVIDOR, o mesmo que o /sinais da MTM Auto
+                     mostra deste sinal e o mesmo que a rota responderia se o botão fosse tocado.
+                     O código é partilhado (`lib/mtmcopy/t2t-janela-regra`); a frase curta é a
+                     deste catálogo, para cada pessoa continuar a lê-la na sua língua. */
                   <div
                     className="mt-2.5 flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] font-semibold"
                     style={{ background: "color-mix(in srgb, var(--fundo) 60%, transparent)", color: "color-mix(in srgb, var(--texto) 45%, transparent)" }}
                   >
-                    <Clock className="w-4 h-4" /> {t("t2t.signalUnavailable")}
+                    <Clock className="w-4 h-4" /> {t(ETIQUETA_DA_RECUSA[vereditoDoCartao(s, aoVivo[s.id])!])}
                   </div>
                 ) : (
                   <button
-                    onClick={() =>
-                      ehSinalDePerpetuo(s.channel_slug, s.content) ? setCopySig(s) : setTap({ sig: s, status: "confirm" })
-                    }
+                    onClick={() => setTap({ sig: s, status: "confirm" })}
                     className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2.5 active:scale-[0.98] transition-transform"
                   >
                     <Zap className="w-4 h-4" />
-                    {/* Perpétuos: não abre ordem — modal TAP to Copy com os parâmetros, campo a
-                        campo, para colar na exchange (pedido Ricardo 2026-09-04). */}
-                    {ehSinalDePerpetuo(s.channel_slug, s.content)
-                      ? "TAP to Copy"
-                      : t2tMode(s.channel_slug, s.content) === "follow"
-                        ? t("t2t.followPosition")
-                        : "Tap to Trade"}
+                    {/* QUEM DECIDE É `t2tMode` — a regra está em lib/mtmcopy/t2t-source e é a
+                        mesma que a rota de aceitação aplica: os perpétuos que não existem nas
+                        contas MT5 dos clientes marcam-se como SEGUIDOS (a gestão chega por
+                        notificação, sem ordem aberta); a cripto que existe lá (BTC, ETH, SOL,
+                        XRP…) abre ordem como qualquer outro sinal.
+                        Antes o botão era decidido por `ehSinalDePerpetuo`, que diz «isto é
+                        cripto/perpétuo» e não «isto executa»: por causa disso o BTCUSD — que a
+                        regra manda EXECUTAR — abria o modal de copiar e nunca chegava a abrir
+                        ordem nenhuma. O copiar não desapareceu: passou a botão próprio, em TODOS
+                        os sinais, aqui em baixo. */}
+                    {t2tMode(s.channel_slug, s.content) === "follow" ? t("t2t.followPosition") : "Tap to Trade"}
+                  </button>
+                )}
+
+                {/* TAP TO COPY — em QUALQUER sinal, aceite ou não, cripto e perpétuos incluídos.
+                    É para quem não quer executar connosco e quer replicar a trade à mão: os
+                    parâmetros saem em texto que se cola no MT5, em vez de se transcreverem
+                    preços do ecrã. Secundário de propósito: o primário continua a ser executar. */}
+                {structured && textoParaColar(parametrosParaCopiar(f, dir)) !== "" && (
+                  <button
+                    onClick={() => setCopySig(s)}
+                    className="mt-1.5 w-full flex items-center justify-center gap-1.5 rounded-xl border border-[#D2A63C]/40 text-[#D2A63C] font-semibold text-[12.5px] py-2 active:scale-[0.98] transition-transform"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    Tap to copy
                   </button>
                 )}
               </div>
@@ -1578,7 +1698,23 @@ export default function TapToTradeFeed() {
       </>
       )}
 
-      {copySig && <TapToCopyModal content={copySig.content || ""} aoFechar={() => setCopySig(null)} />}
+      {/* Os parâmetros vão JÁ interpretados (os mesmos que o cartão mostra), e não o texto cru:
+          o modal deixa de ter de adivinhar o formato de cada fonte — e copia o que se está a ver. */}
+      {copySig && (
+        <TapToCopyModal
+          parametros={parametrosParaCopiar(
+            parseSignalFields(copySig.content),
+            resolveDirectionLabel(dirServidor[copySig.id], copySig.content),
+          )}
+          content={copySig.content || ""}
+          titulo={
+            ehSinalDePerpetuo(copySig.channel_slug, copySig.content)
+              ? "Tap to copy · Perpétuos"
+              : "Tap to copy"
+          }
+          aoFechar={() => setCopySig(null)}
+        />
+      )}
 
       {tap && (
         <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/70 p-4" onClick={() => tap.status !== "loading" && setTap(null)}>
@@ -1630,12 +1766,36 @@ export default function TapToTradeFeed() {
                 )}
 
                 {/* Quanto se arrisca, por conta. É a pergunta que o cliente faz antes de tocar. */}
-                {preview?.mode === "execute" && preview.accounts.length > 0 && (
+                {preview?.mode === "execute" && (preview.accounts.length > 0 || (preview.simuladas?.length ?? 0) > 0) && (
                   <div className="rounded-lg border border-[#D2A63C]/25 bg-[#D2A63C]/5 p-3 mb-3">
-                    <p className="text-[10px] uppercase tracking-wider text-[#D2A63C] mb-2">{t("t2t.inYourAccounts")}</p>
+                    {/* ONDE ABRIR. Com um destino só isto é o cartão de sempre (o que vai acontecer,
+                        sem pergunta nenhuma). Com dois ou mais, cada linha passa a ser uma caixa —
+                        o leque continua a caber (dá para marcar duas das doze), mas escolhido. */}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <p className="text-[10px] uppercase tracking-wider text-[#D2A63C]">
+                        {preview.escolhaPossivel ? "Onde queres abrir" : t("t2t.inYourAccounts")}
+                      </p>
+                      {preview.escolhaPossivel && ondeAbrir && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const todas = [...preview.accounts.map((a) => a.id), ...(preview.simuladas ?? []).map((x) => x.ref)]
+                            setOndeAbrir(ondeAbrir.length === todas.length ? [] : todas)
+                          }}
+                          className="text-[10px] font-semibold text-[#D2A63C] underline underline-offset-2 active:scale-95"
+                        >
+                          {ondeAbrir.length === preview.accounts.length + (preview.simuladas?.length ?? 0) ? "Nenhuma" : "Todas"}
+                        </button>
+                      )}
+                    </div>
                     <div className="flex flex-col gap-2">
                       {preview.accounts.map((a) => (
-                        <div key={a.id} className="flex items-baseline justify-between gap-3">
+                        <ContaEscolhivel
+                          key={a.id}
+                          escolhivel={Boolean(preview.escolhaPossivel)}
+                          marcada={!preview.escolhaPossivel || !!ondeAbrir?.includes(a.id)}
+                          alternar={() => setOndeAbrir((atual) => alternarConta(atual, a.id))}
+                        >
                           <span className="text-[12px] text-zinc-300 truncate">
                             {a.label}
                             {a.jaCopia && <span className="ml-1.5 rounded bg-sky-500/15 px-1.5 py-0.5 text-[9.5px] font-semibold text-sky-300">já copia</span>}
@@ -1655,9 +1815,34 @@ export default function TapToTradeFeed() {
                           ) : (
                             <span className="text-[11px] text-zinc-600">{t("t2t.accountNoAnswer")}</span>
                           )}
-                        </div>
+                        </ContaEscolhivel>
+                      ))}
+                      {/* As simuladas MTM Funded abriam sem nunca aparecerem aqui. Entram sem
+                          números — são simuladas, não há dinheiro em risco para contar. */}
+                      {(preview.simuladas ?? []).map((sc) => (
+                        <ContaEscolhivel
+                          key={sc.ref}
+                          escolhivel={Boolean(preview.escolhaPossivel)}
+                          marcada={!preview.escolhaPossivel || !!ondeAbrir?.includes(sc.ref)}
+                          alternar={() => setOndeAbrir((atual) => alternarConta(atual, sc.ref))}
+                        >
+                          <span className="text-[12px] text-zinc-300 truncate">
+                            {sc.label}
+                            <span className="ml-1.5 rounded bg-zinc-500/15 px-1.5 py-0.5 text-[9.5px] font-semibold text-zinc-400">simulada</span>
+                          </span>
+                          <span className="text-[11px] text-zinc-500">sem risco real</span>
+                        </ContaEscolhivel>
                       ))}
                     </div>
+                    {preview.escolhaPossivel && ondeAbrir?.length === 0 && (
+                      <p className="text-[10px] text-amber-400 mt-2">Escolhe pelo menos uma conta para abrir.</p>
+                    )}
+                    {preview.escolhaPossivel && (
+                      <p className="text-[10px] text-zinc-500 mt-2">
+                        A tua escolha fica guardada para a próxima — podes mudá-la aqui sempre que aceitares.
+                        {(preview.escolhidas?.length ?? 0) > 0 && " Uma conta que ligues de novo aparece DESMARCADA: só recebe se a marcares."}
+                      </p>
+                    )}
                     {/* A conta já recebe este trade pela cópia automática: dizê-lo ANTES do clique.
                         O sistema não abre duas vezes (o T2T salta as contas onde o motor já
                         executou o mesmo trade), mas saltar em silêncio parece uma avaria. */}
@@ -1675,31 +1860,62 @@ export default function TapToTradeFeed() {
                     <p className="text-[10px] text-zinc-500 mt-2">{t("t2t.equityNote")}</p>
                   </div>
                 )}
-                {/* DIZER PORQUE É QUE NÃO DÁ. Uma conta em pausa, desligada ou sem saldo era
-                    simplesmente omitida: o cliente via a lista vazia, carregava em aceitar e
-                    apanhava um erro opaco. Agora o motivo aparece ANTES do clique. */}
-                {preview?.mode === "execute" && (preview.blocked?.length ?? 0) > 0 && (
-                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 mb-3">
-                    <p className="text-[10px] uppercase tracking-wider text-amber-400 mb-2">
-                      {preview!.accounts.length > 0 ? t("t2t.accountsLeftOut") : t("t2t.noAccountCanAccept")}
-                    </p>
-                    <div className="flex flex-col gap-2">
-                      {preview!.blocked!.map((b) => (
-                        <div key={`${b.id}-${b.motivo}`} className="text-[11px] leading-snug">
-                          <span className="text-zinc-300 font-medium">{b.label}</span>
-                          <span className="text-amber-300"> — {b.motivo}</span>
-                          <span className="text-zinc-500"> {b.comoResolver}</span>
+                {/* DIZER PORQUE É QUE NÃO DÁ — SEM SER O ECRÃ TODO.
+                    Uma conta em pausa, desligada ou sem saldo era simplesmente omitida: o cliente
+                    via a lista vazia, carregava em aceitar e apanhava um erro opaco. O motivo
+                    passou a aparecer antes do clique — e passou a ser o ecrã: o dono abriu isto e
+                    encontrou UMA conta escolhível debaixo de treze parágrafos vermelhos.
+                    Agora recolhe-se atrás de uma linha discreta. Nada desaparece sem explicação,
+                    mas a explicação deixa de tapar aquilo que se veio aqui fazer.
+                    A excepção: sem NENHUMA conta escolhível, o motivo é a mensagem que interessa
+                    — aí abre logo, porque não há mais nada para ver. */}
+                {preview?.mode === "execute" && (preview.blocked?.length ?? 0) > 0 && (() => {
+                  const n = preview.blocked!.length
+                  const semAlternativa = preview.accounts.length === 0 && (preview.simuladas?.length ?? 0) === 0
+                  const aberto = semAlternativa || bloqueadasAbertas
+                  return (
+                    <div className="mb-3">
+                      {!semAlternativa && (
+                        <button
+                          type="button"
+                          onClick={() => setBloqueadasAbertas((v) => !v)}
+                          className="flex w-full items-center justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-left active:scale-[0.99]"
+                        >
+                          <span className="text-[11px] text-zinc-400">
+                            {n} {n === 1 ? "conta não pode" : "contas não podem"} aceitar
+                          </span>
+                          <span className={`text-[11px] text-zinc-500 transition-transform ${aberto ? "rotate-90" : ""}`}>›</span>
+                        </button>
+                      )}
+                      {aberto && (
+                        <div className={`rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 ${semAlternativa ? "" : "mt-2"}`}>
+                          {semAlternativa && (
+                            <p className="text-[10px] uppercase tracking-wider text-amber-400 mb-2">{t("t2t.noAccountCanAccept")}</p>
+                          )}
+                          <div className="flex flex-col gap-2">
+                            {preview.blocked!.map((b) => (
+                              <div key={`${b.id}-${b.motivo}`} className="text-[11px] leading-snug">
+                                <span className="text-zinc-300 font-medium">{b.label}</span>
+                                <span className="text-amber-300"> — {b.motivo}</span>
+                                <span className="text-zinc-500"> {b.comoResolver}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
                 {previewBusy && !preview && <p className="text-[11px] text-zinc-500 mb-3">{t("t2t.calculatingRisk")}</p>}
 
                 <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3 text-xs text-zinc-400 max-h-24 overflow-y-auto whitespace-pre-wrap mb-4">{tap.sig.content}</div>
                 <div className="flex gap-2">
                   <button onClick={() => setTap(null)} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95">{t("t2t.cancel")}</button>
-                  <button onClick={runTap} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95">
+                  <button
+                    onClick={runTap}
+                    disabled={Boolean(preview?.escolhaPossivel) && ondeAbrir?.length === 0}
+                    className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95 disabled:opacity-40 disabled:active:scale-100"
+                  >
                     {preview?.mode === "follow" ? t("t2t.followPositionBtn") : t("t2t.confirmOpen")}
                   </button>
                 </div>

@@ -9,7 +9,11 @@ export const metadata: Metadata = {
     "Os sinais MTM abrem na tua conta, com o teu risco, geridos do início ao fim. Web app, Android e iOS.",
 }
 
-export const revalidate = 300
+// Cache curta de propósito: esta página anuncia as versões das apps e os números vivos, e o dono
+// partilha o link logo a seguir a publicar uma build. Com 5 minutos, quem clicava no link mal
+// saído via a versão anterior. 60 segundos chega para aguentar uma rajada de cliques sem deixar
+// a página a mentir sobre o que já está publicado.
+export const revalidate = 60
 
 // O link que se dá a clientes é do DOMÍNIO DA MARCA. /mtmautoapp reencaminha para a app (com a
 // query intacta) — a app continua a viver na Vercel, mas quem partilha o link partilha a MTM.
@@ -34,6 +38,40 @@ async function linksDeDescarga() {
   } catch {
     return { apk: "/downloads/MTMAuto.apk", testflight: null }
   }
+}
+
+/**
+ * AS ESTRATÉGIAS DA MONTRA — as mesmas de `mtmauto_providers`, não uma lista à mão.
+ *
+ * Esta lista estava escrita no código e ficou para trás do negócio: mostrava «MTM Scanner · Forex»,
+ * que entretanto foi desligado como provider, e escondia GoldKiller, Aurum Flow, Edge, King e Wolf,
+ * que estão live. Uma montra que anuncia o que já não existe e cala o que existe custa mais do que
+ * não ter montra. Agora vem da mesma tabela que a app Estratégias lê, pelos mesmos nomes e com as
+ * mesmas descrições, e a página revalida de 5 em 5 minutos.
+ */
+async function estrategiasVivas(): Promise<Array<{ slug: string; nome: string; descricao: string }>> {
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from("mtmauto_providers")
+      .select("slug, nome, descricao, ativo, apagado_em")
+      .eq("ativo", true)
+      .is("apagado_em", null)
+      .order("slug")
+    return (data ?? []).map((r) => ({
+      slug: String(r.slug ?? ""),
+      nome: String(r.nome ?? r.slug ?? ""),
+      descricao: String(r.descricao ?? "").trim(),
+    })).filter((r) => r.slug && r.nome)
+  } catch {
+    return []
+  }
+}
+
+/** As iniciais do cartão: «MTM Auto GoldKiller» → «GK», «MTM Auto Premium» → «PR». */
+function iniciais(nome: string): string {
+  const palavras = nome.replace(/^MTM\s+Auto\s+/i, "").trim().split(/[\s·]+/).filter(Boolean)
+  if (palavras.length >= 2) return (palavras[0][0] + palavras[1][0]).toUpperCase()
+  return (palavras[0] ?? nome).slice(0, 2).toUpperCase()
 }
 
 /** Moldura de telemóvel. O conteúdo é HTML a sério — fica nítido em qualquer ecrã. */
@@ -109,27 +147,21 @@ function EcraSinais() {
  * explicar. Quando houver desempenho por estratégia medido a sério — com os parciais contados —
  * entra aqui vindo da mesma função que alimenta a app e o admin, e não de uma lista escrita à mão.
  */
-function EcraEstrategias() {
-  const linhas = [
-    { i: "PO", n: "Premium · Gold", d: "Fully managed, entry to exit", w: "Gold" },
-    { i: "SS", n: "Sensei Scanner", d: "Gold and Bitcoin, confirmed only", w: "Gold · BTC" },
-    { i: "MS", n: "MTM Scanner · Forex", d: "Stops widened to 20 pips", w: "Forex" },
-  ]
+function EcraEstrategias({ linhas }: { linhas: Array<{ slug: string; nome: string; descricao: string }> }) {
   return (
     <div className="space-y-2">
       <p className="text-[15px] font-bold text-white">Strategies</p>
       <p className="text-[10.5px] text-white/45">Choose who you copy. You can follow several.</p>
       {linhas.map((l) => (
-        <Cartao key={l.i}>
+        <Cartao key={l.slug}>
           <div className="flex items-center gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#D2A63C]/15 text-[10px] font-bold text-[#D2A63C]">
-              {l.i}
+              {iniciais(l.nome)}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-semibold text-white">{l.n}</p>
-              <p className="truncate text-[9.5px] text-white/40">{l.d}</p>
+              <p className="truncate text-[12px] font-semibold text-white">{l.nome}</p>
+              {l.descricao && <p className="truncate text-[9.5px] text-white/40">{l.descricao}</p>}
             </div>
-            <span className="shrink-0 text-[9.5px] font-semibold text-white/45">{l.w}</span>
           </div>
         </Cartao>
       ))}
@@ -264,7 +296,7 @@ const PORQUE = [
 ]
 
 export default async function MtmAutoPage() {
-  const links = await linksDeDescarga()
+  const [links, estrategias] = await Promise.all([linksDeDescarga(), estrategiasVivas()])
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -341,7 +373,7 @@ export default async function MtmAutoPage() {
           <h2 className="text-center text-2xl font-bold md:text-3xl">A app, por dentro</h2>
           <div className="mt-10 flex flex-wrap justify-center gap-6">
             <Telemovel legenda="Sinais — aceitar com um toque"><EcraSinais /></Telemovel>
-            <Telemovel legenda="Estratégias — segue quem quiseres"><EcraEstrategias /></Telemovel>
+            <Telemovel legenda="Estratégias — segue quem quiseres"><EcraEstrategias linhas={estrategias} /></Telemovel>
             <Telemovel legenda="Risco — por estratégia"><EcraRisco /></Telemovel>
             <Telemovel legenda="Ligação — a tua conta de corretora"><EcraLigacao /></Telemovel>
             <Telemovel legenda="Histórico — o que cada trade deu"><EcraHistorico /></Telemovel>

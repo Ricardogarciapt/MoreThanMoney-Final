@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic"
 import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { BarChart3, Bell, BookOpen, History, ListOrdered, Loader2, User, Wallet } from "lucide-react"
 import { type MapaPrecos, estadoDaConta } from "@/lib/mtmfunded/simulado/matematica"
 import { limitesDaConta, posicaoDaLinha, simbolosParaMedir } from "@/lib/mtmfunded/simulado/ordens"
 import { type SimboloFicha, type PrecoVivo, pedir, ordem, usd } from "./api"
@@ -17,9 +17,15 @@ import { UmCliqueProvider } from "./um-clique"
 import { useModoWebtrader } from "./modo-webtrader"
 import { useAlertas } from "./funded-alertas"
 import { useDiario } from "./funded-diario"
-import type { Estado, Trader } from "./trader-contexto"
+import { AvisosConta, ordensSimuladas, posicoesSimuladas, type Estado, type PainelTrader, type Trader } from "./trader-contexto"
+import FundedTicket from "./funded-ticket"
+import ListaPosicoes from "./lista-posicoes"
+import FundedDiario from "./funded-diario"
+import FundedAlertas from "./funded-alertas"
+import PainelConta from "./painel-conta"
 import LayoutSimples from "./layout-simples"
 const LayoutPro = dynamic(() => import("./layout-pro"), { ssr: false })
+const FundedEstatisticas = dynamic(() => import("./funded-estatisticas"), { ssr: false })
 
 /**
  * O WEBTRADER DE UMA CONTA — os dados, num só sítio; a apresentação, em dois modos.
@@ -57,6 +63,8 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
   const { modo } = useModoWebtrader()
   const alertas = useAlertas(accountId)
   const diario = useDiario(accountId)
+  /** A trade cuja nota o Diário abre quando se vem do histórico (📖). */
+  const [focoDiario, setFocoDiario] = useState<string | null>(null)
 
   /** Última resposta INTEIRA (com histórico e desempenho) — a régua da releitura leve. */
   const ultimoCheio = useRef<{ em: number; assinatura: string } | null>(null)
@@ -227,11 +235,57 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
     ...(vivo.limites.objetivoValor ? [["Objetivo", `${vivo.limites.progressoObjetivoPct ?? 0}% de ${vivo.limites.objetivoPct}%`] as [string, string]] : []),
   ]
 
+  const podeNegociar = dados.modo === "master" && dados.conta.estado === "ativa"
+
+  /**
+   * OS PAINÉIS DESTA CONTA — é aqui que se diz o que uma conta MTM Funded tem; o layout só arruma.
+   * Sete: os três da gaveta (posições, ordens, histórico) e os quatro que só existem no simulado
+   * (estatísticas com as regras da prop firm, diário, alertas e o resumo da conta).
+   */
+  const lista = (vista: "posicoes" | "ordens" | "historico", denso: boolean, irPara: (c: string) => void, fechar: () => void) => (
+    <ListaPosicoes
+      vista={vista} posicoes={dados.posicoes} ordens={dados.ordens} historico={dados.historico} simbolos={fichas} precos={mapa}
+      podeNegociar={podeNegociar} denso={denso} accountId={accountId} simboloAtual={simbolo?.symbol}
+      executar={executar} onSelecionarSimbolo={(x) => { void selecionarPorNome(x); fechar() }}
+      onNota={(id) => { setFocoDiario(id); irPara("diario") }} notas={diario.comTrade}
+    />
+  )
+  const paineis: PainelTrader[] = [
+    { chave: "posicoes", nome: "Posições", icone: Wallet, contagem: dados.posicoes.length, principal: true, conteudo: ({ denso, irPara, fechar }) => lista("posicoes", denso, irPara, fechar) },
+    { chave: "ordens", nome: "Ordens", icone: ListOrdered, contagem: dados.ordens.length, principal: true, conteudo: ({ denso, irPara, fechar }) => lista("ordens", denso, irPara, fechar) },
+    { chave: "historico", nome: "Histórico", icone: History, principal: true, conteudo: ({ denso, irPara, fechar }) => lista("historico", denso, irPara, fechar) },
+    {
+      chave: "estatisticas", nome: "Estatísticas", icone: BarChart3,
+      conteudo: () => <FundedEstatisticas accountId={accountId} equity={vivo.equity} regras={{ limites: vivo.limites, regras: dados.regras, saldoInicial: dados.conta.saldoInicial, equity: vivo.equity, diasNegociados: dados.conta.diasNegociados }} />,
+    },
+    {
+      chave: "diario", nome: "Diário", icone: BookOpen,
+      conteudo: () => <FundedDiario accountId={accountId} historico={dados.historico} podeEscrever={dados.modo === "master"} diario={diario} focoTrade={focoDiario} onFoco={setFocoDiario} />,
+    },
+    {
+      chave: "alertas", nome: "Alertas", icone: Bell, contagem: (alertas.alertas ?? []).filter((a) => a.ativo).length,
+      conteudo: () => <FundedAlertas accountId={accountId} simbolo={simbolo} preco={simbolo ? vivos[simbolo.symbol] : undefined} podeCriar={dados.modo === "master"} estado={alertas} onSelecionarSimbolo={(x) => void selecionarPorNome(x)} />,
+    },
+    { chave: "conta", nome: "A minha conta", icone: User, conteudo: () => <PainelConta t={t} /> },
+  ]
+
   const t: Trader = {
-    accountId, dados, vivo, mapa, vivos, fichas, simbolo, volume, setVolume,
-    podeNegociar: dados.modo === "master" && dados.conta.estado === "ativa",
+    accountId, dados, vivo, mapa, vivos, fichas, simbolo, volume, setVolume, podeNegociar,
+    posicoes: posicoesSimuladas(dados), ordens: ordensSimuladas(dados),
     selecionar, selecionarPorNome, obterFicha, executar, enviarPedido, setVisiveis, setExtras,
     prefill, simboloInicial, alertas, diario, metricas,
+    carteira: {
+      nome: dados.conta?.login ? `Conta ${String(dados.conta.login)}` : null,
+      alavancagem: dados.conta.alavancagem, margemLivre: vivo.margemLivre, saldo: dados.estado.saldo,
+      equity: vivo.equity, flutuante: vivo.flutuante,
+    },
+    alertasGrafico: (symbol) => (alertas.alertas ?? []).filter((a) => a.ativo && a.symbol === symbol).map((a) => ({ id: a.id, preco: a.preco, nota: a.nota })),
+    avisos: <AvisosConta dados={dados} vivo={vivo} />,
+    paineis, chavePaineis: "mtmfunded_pro_separador",
+    ticket: podeNegociar ? <FundedTicket margemLivre={vivo.margemLivre} /> : (
+      <p className="p-4 text-center text-[12px] text-zinc-500">{dados.modo === "investor" ? "Sessão investor — só leitura." : "Conta sem negociação."}</p>
+    ),
+    ferramentaGrafico: true,
   }
 
   return (

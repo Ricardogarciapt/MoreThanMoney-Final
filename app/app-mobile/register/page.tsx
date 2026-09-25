@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertCircle, Eye, EyeOff, Smartphone, Globe, Check, Loader2, CheckCircle2, XCircle, ChevronLeft, Tag } from 'lucide-react'
 import Link from 'next/link'
 import { buildOAuthCallbackUrl, OAUTH_PENDING_REG_KEY } from '@/lib/oauth-flow'
+import { useT } from '@/components/i18n-provider'
 
 type PlanId = 'app_member_monthly' | 'app_member_annual' | 'premium_monthly' | 'premium_annual'
 type BillingCycle = 'monthly' | 'annual'
@@ -26,7 +27,7 @@ const PLANS = {
   premium: {
     name: 'Pack Premium',
     description: 'App + Site MTM · Skool · Ferramentas avançadas · Live Premium · Cursos',
-    features: ['Tudo do Pack Membro', 'Acesso completo ao site MTM', 'Comunidade Skool MTM', 'Ferramentas avançadas', 'Live Sessions Premium', 'Cursos de Forex, Criptomoedas, Marketing Digital e AI', 'Suporte prioritário'],
+    features: ['Tudo do Pack Membro', 'Acesso completo ao site MTM', 'Comunidade Skool MTM', 'Ferramentas avançadas', 'Live Sessions Premium', 'Cursos de Forex, Marketing Digital e AI', 'Suporte prioritário'],
     color: '#7C3AED',
     monthly: { price: 65, label: '65€/mês', id: 'premium_monthly' as PlanId },
     annual:  { price: 52, label: '52€/mês · 624€/ano', id: 'premium_annual' as PlanId },
@@ -34,6 +35,10 @@ const PLANS = {
 }
 
 export default function AppMobileRegisterPage() {
+  // O MESMO formulário do site (app/register/page.tsx) e as MESMAS mensagens, nos 21 idiomas: as
+  // validações estavam aqui escritas em português, e quem se registava pela app lia-as em
+  // português fosse qual fosse o idioma escolhido.
+  const t = useT()
   const [selectedPlan, setSelectedPlan] = useState<'app_member' | 'premium'>('app_member')
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
   const [formData, setFormData] = useState({
@@ -96,13 +101,13 @@ export default function AppMobileRegisterPage() {
     e.preventDefault()
     setError('')
 
-    if (!formData.full_name.trim()) { setError('Nome completo é obrigatório'); return }
-    if (!formData.email.trim()) { setError('Email é obrigatório'); return }
-    if (!formData.username.trim()) { setError('Nome de utilizador é obrigatório'); return }
+    if (!formData.full_name.trim()) { setError(t('register.errorFullNameRequired')); return }
+    if (!formData.email.trim()) { setError(t('register.errorEmailRequired')); return }
+    if (!formData.username.trim()) { setError(t('register.errorUsernameRequired')); return }
     // Telemóvel obrigatório: sem ele não há follow-up por WhatsApp nem recuperação de conta.
-    if (!formData.phone.trim()) { setError('Telemóvel é obrigatório'); return }
-    if (formData.password.length < 6) { setError('A palavra-passe deve ter pelo menos 6 carateres'); return }
-    if (formData.password !== formData.confirmPassword) { setError('As palavras-passe não coincidem'); return }
+    if (!formData.phone.trim()) { setError(t('register.errorPhoneRequired')); return }
+    if (formData.password.length < 6) { setError(t('register.errorPasswordShort')); return }
+    if (formData.password !== formData.confirmPassword) { setError(t('register.errorPasswordMismatch')); return }
 
     setIsLoading(true)
 
@@ -194,9 +199,9 @@ export default function AppMobileRegisterPage() {
       if (!checkoutRes.ok) {
         const err = await checkoutRes.json().catch(() => ({}))
         if (err.error?.includes('não encontrado') || err.error?.includes('não configurado')) {
-          setError('Este plano ainda não está disponível para pagamento online. Por favor contacta-nos em suporte@morethanmoney.pt')
+          setError(t('register.errorPlanUnavailable'))
         } else {
-          setError(err.error || 'Erro ao iniciar checkout. Tenta novamente.')
+          setError(err.error || t('register.errorCheckout'))
         }
         localStorage.removeItem(`mtm_pending_reg_${regToken}`)
         setIsLoading(false)
@@ -205,7 +210,7 @@ export default function AppMobileRegisterPage() {
 
       const { url } = await checkoutRes.json()
       if (!url) {
-        setError('Não foi possível redirecionar para pagamento. Tenta novamente.')
+        setError(t('register.errorRedirect'))
         localStorage.removeItem(`mtm_pending_reg_${regToken}`)
         setIsLoading(false)
         return

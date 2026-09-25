@@ -21,7 +21,15 @@ import { precoParaMonitor } from './metaapi-snapshot'
 import { filtrarContasExistentes } from './metaapi-inexistentes'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 
-const supabase = getSupabaseAdmin()
+// Cliente criado a pedido, nao no topo do modulo. Antes, importar este ficheiro
+// exigia ja as credenciais do Supabase (o getSupabaseAdmin() lanca sem elas), o que
+// fazia rebentar quem so queria uma funcao pura de quem o importa — era por isso que
+// lib/mtmcopy/__tests__/ordem-retentativa.check.ts nao conseguia sequer arrancar.
+let clienteAdmin: ReturnType<typeof getSupabaseAdmin> | null = null
+function db(): ReturnType<typeof getSupabaseAdmin> {
+  if (!clienteAdmin) clienteAdmin = getSupabaseAdmin()
+  return clienteAdmin
+}
 
 function normSym(s: string | null | undefined): string {
   return (s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
@@ -62,7 +70,7 @@ export async function openT2TRowsForManagement(
   const activeSlugs = enabled ? slugs.filter((s) => enabled.has(s)) : slugs
   if (!activeSlugs.length) return []
 
-  const { data: rows } = await supabase
+  const { data: rows } = await db()
     .from('mtmcopy_signal_log')
     .select('id, connection_id, symbol, broker_position_id')
     .eq('status', 'open')
@@ -77,7 +85,7 @@ export async function openT2TRowsForManagement(
   if (!matched.length) return []
 
   const connIds = [...new Set(matched.map((r) => r.connection_id as string))]
-  const { data: conns } = await supabase
+  const { data: conns } = await db()
     .from('mtmcopy_connections')
     .select('id, metaapi_account_id')
     .in('id', connIds)
@@ -111,7 +119,7 @@ async function resolveOpenT2TByChannelSlug(
   channelSlug: string,
   symbol?: string | null,
 ): Promise<OpenT2TPosition[]> {
-  const { data: rows } = await supabase
+  const { data: rows } = await db()
     .from('mtmcopy_signal_log')
     .select('id, connection_id, symbol, broker_position_id')
     .eq('status', 'open')
@@ -126,7 +134,7 @@ async function resolveOpenT2TByChannelSlug(
   if (!matched.length) return []
 
   const connIds = [...new Set(matched.map((r) => r.connection_id as string))]
-  const { data: conns } = await supabase
+  const { data: conns } = await db()
     .from('mtmcopy_connections')
     .select('id, metaapi_account_id')
     .in('id', connIds)
@@ -163,7 +171,7 @@ export async function closeT2TForSlaves(channelSlug: string, symbol: string): Pr
     if (!r.brokerPositionId) continue
     try {
       await closePositionById(r.accountId, r.brokerPositionId)
-      await supabase
+      await db()
         .from('mtmcopy_signal_log')
         .update({ status: 'closed' })
         .eq('id', r.rowId)
@@ -243,12 +251,12 @@ export async function reconcileT2TPositionsClosed(rows: OpenT2TPosition[]): Prom
     // Antes de marcar, guardar a que SINAL pertencem: o fecho tem de ser anunciado ao cliente.
     // Sem isto, uma posição T2T encerrada pela gestão do mestre era fechada em silêncio — e o
     // monitor de preço já não a via (deixa de estar 'open'), por isso ninguém a anunciava.
-    const { data: fechadas } = await supabase
+    const { data: fechadas } = await db()
       .from('mtmcopy_signal_log')
       .select('id, chat_message_id, channel_key, symbol, direction, entry')
       .in('id', closedRowIds)
 
-    await supabase
+    await db()
       .from('mtmcopy_signal_log')
       .update({ status: 'closed' })
       .in('id', closedRowIds)
@@ -285,7 +293,7 @@ export async function reconcileT2TPositionsClosed(rows: OpenT2TPosition[]): Prom
           reason: 'Encerrada pela gestão da fonte.',
         })
         if (await canalPublicadoPelaMestre(slug)) continue
-        const { data: msg } = await supabase
+        const { data: msg } = await db()
           .from('chat_messages')
           .insert({ channel_slug: slug, user_id: null, content: text, message_type: 'telegram_forward', notified: true, reply_to_id: msgId })
           .select('id')

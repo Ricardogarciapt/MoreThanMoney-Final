@@ -14,7 +14,7 @@ import { avisoDaConta, avisoReal, chaveDoAviso } from '../aviso-conta'
 import { translate } from '../../i18n/translate'
 import { tipoDeEntrega, textosDaEntrega } from '../email-tipo-conta'
 import { contaEntregaDaLinha } from '../entrega-conta-dados'
-import { numerosDaConta, selecionarComOpcionais } from '../numeros-conta'
+import { numerosDaConta, selecionarComOpcionais, COLUNAS_OPCIONAIS } from '../numeros-conta'
 import { ehContaRealDaCasa } from '../conta-real-casa'
 import { factorNaEquidade, planoDaEquidade, notaDoFactor, FACTOR_FUNDED } from '../../equidade-mtm'
 import { agregarEquidadeCasa } from '../../equidade-casa'
@@ -67,11 +67,18 @@ async function main() {
   })
 
   // ── 2. email de entrega ─────────────────────────────────────────────────
-  await t('email: conta real da casa é Funded (real), mesmo com `analise`', () => {
+  /**
+   * 24/09: era `'funded'`, e o email dizia a estas contas o mesmo que diz à Funded de um cliente —
+   * «capital patrocinado MTM, 75% dos resultados são teus». O WebTrader já lhes dizia outra coisa
+   * («Conta de auditoria»), por decisão do dono em aviso-conta.ts: negoceiam a sério, mas ninguém
+   * as ganhou num desafio — servem para a casa auditar as estratégias. Agora as duas superfícies
+   * respondem pela mesma função. O que NÃO muda é `real`: continua a conter negociação real.
+   */
+  await t('email: conta real da casa é de AUDITORIA (real), mesmo com `analise`', () => {
     const c = contaEntregaDaLinha(umK, null, null, false)
     assert.equal(c.analise, true)
     assert.equal(c.contaReal, true)
-    assert.equal(tipoDeEntrega(c), 'funded')
+    assert.equal(tipoDeEntrega(c), 'auditoria')
     assert.equal(textosDaEntrega(c, 'criacao', 'pt').real, true)
     assert.equal(tipoDeEntrega(contaEntregaDaLinha(clienteAnalise, null, null, false)), 'analise')
   })
@@ -92,7 +99,11 @@ async function main() {
       return { data: [{ id: 'x' }], error: null }
     })
     assert.deepEqual(r.data, [{ id: 'x' }])
-    assert.equal(pedidas[1], 'id, pausada_em, conta_casa')
+    // Derivado de COLUNAS_OPCIONAIS em vez de escrito a mao: a expectativa estava
+    // presa a 'id, pausada_em, conta_casa' e a migracao 113 acrescentou `etiqueta`,
+    // o que punha o teste a falhar por estar desactualizado — nao por haver defeito.
+    const esperado = `id, ${COLUNAS_OPCIONAIS.filter((c) => c !== 'conta_real_casa').join(', ')}`
+    assert.equal(pedidas[1], esperado)
   })
 
   // ── 4. equidade ───────────────────────────────────────────────────────────

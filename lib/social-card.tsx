@@ -13,6 +13,15 @@ export interface SocialCardParams {
   handle?: string
   /** `false` esconde a linha de prova. Uma string escreve ESSE facto. */
   proof?: boolean | string
+  /**
+   * A ressalva que tem de viajar COLADA ao facto — hoje a nota do defeito de preço de 24/09
+   * (`notaViesPreco()` em lib/pips-proof.ts).
+   *
+   * Vive num campo próprio, e não coscida ao `proof`, porque o facto é cortado aos 90 caracteres:
+   * enfiada lá dentro, a ressalva seria a primeira coisa a desaparecer — exactamente ao contrário
+   * do que se quer. Sem nota para dar, o cartão fica como sempre foi.
+   */
+  proofNota?: string | null
   kicker?: string
   /**
    * O formato. Um capa de reel é vertical; um post do feed é 4:5.
@@ -146,6 +155,8 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
   const [cima, baixo] = duasFaixas(hook)
   const cta = (params.cta || '').toUpperCase().slice(0, 16)
   const facto = typeof params.proof === 'string' ? params.proof.slice(0, 90) : null
+  // A ressalva só faz sentido a acompanhar um número: sem facto no cartão não há nada a ressalvar.
+  const notaProva = facto ? (params.proofNota || '').trim() || null : null
 
   /**
    * O tamanho sai da LARGURA que há, não do número de caracteres.
@@ -373,6 +384,11 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
         {facto && (
           <div style={{ display: 'flex', color: ACENTO, fontSize: 34, fontWeight: 700, marginTop: 28 }}>{facto}</div>
         )}
+        {notaProva && (
+          <div style={{ display: 'flex', color: '#ffffff', opacity: 0.7, fontSize: 20, fontWeight: 500, lineHeight: 1.25, marginTop: 10 }}>
+            {notaProva}
+          </div>
+        )}
 
         <div
           style={{
@@ -440,6 +456,7 @@ export function socialCardElement(params: SocialCardParams) {
    */
   const factoProva = typeof params.proof === 'string' ? params.proof.slice(0, 90) : null
   const showProof = params.proof !== false && Boolean(factoProva)
+  const notaProva = showProof && factoProva ? (params.proofNota || '').trim() || null : null
   const v = variantFor(cta)
   const GOLD = params.handle && params.handle.includes("ricardo") ? "#D2A63C" : v.accent
   const kicker = (params.kicker || v.eyebrow).toUpperCase().slice(0, 40)
@@ -473,8 +490,22 @@ export function socialCardElement(params: SocialCardParams) {
 
       <div style={{ display: "flex", flexDirection: "column" }}>
         {showProof && factoProva && (
-          <div style={{ display: "flex", alignItems: "center", color: GOLD, fontSize: 30, fontWeight: 600, marginBottom: 34 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              color: GOLD,
+              fontSize: 30,
+              fontWeight: 600,
+              marginBottom: notaProva ? 10 : 34,
+            }}
+          >
             {factoProva}
+          </div>
+        )}
+        {notaProva && (
+          <div style={{ display: "flex", color: MUTED, fontSize: 20, fontWeight: 500, lineHeight: 1.25, marginBottom: 34 }}>
+            {notaProva}
           </div>
         )}
         {cta ? (

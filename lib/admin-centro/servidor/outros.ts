@@ -5,6 +5,7 @@ import { carregarContas } from './contas'
 import { carregarEstrategias } from './estrategias'
 import { carregarInfra } from './infra'
 import { db, ehUuid, ler, num, txt, type Linha } from './base'
+import { apareceNoT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 // ── CÓPIA ───────────────────────────────────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ export async function carregarUtilizadores() {
     const contasDe = new Map<string, typeof contas.contas>()
     for (const c of contas.contas) if (c.userId) contasDe.set(c.userId, [...(contasDe.get(c.userId) ?? []), c])
     const t2tDe = new Map<string, Linha[]>()
-    for (const l of t2t.linhas) if (l.purpose === 'tap_to_trade' || l.t2t_enabled === true) t2tDe.set(String(l.user_id), [...(t2tDe.get(String(l.user_id)) ?? []), l])
+    for (const l of t2t.linhas) if (apareceNoT2T(l)) t2tDe.set(String(l.user_id), [...(t2tDe.get(String(l.user_id)) ?? []), l])
 
     // utilizadores = perfis + quem só existe no MTM Auto
     const ids = new Set<string>([...perfis.linhas.map((p) => String(p.id)), ...autos.linhas.map((a) => String(a.user_id))])

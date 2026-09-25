@@ -28,8 +28,11 @@ export async function getMtmSystemUserId(): Promise<string> {
     .limit(1)
     .maybeSingle()
 
-  cachedSystemUserId = data?.id ?? '00000000-0000-0000-0000-000000000000'
-  return cachedSystemUserId
+  // Por um local: o `let` de modulo e `string | null` e o TS nao o estreita ate ao
+  // return, por isso a funcao (que promete `string`) nao compilava.
+  const idSistema: string = data?.id ?? '00000000-0000-0000-0000-000000000000'
+  cachedSystemUserId = idSistema
+  return idSistema
 }
 
 export async function logProviderSignalEvent(opts: {

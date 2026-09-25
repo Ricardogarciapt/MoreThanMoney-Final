@@ -14,6 +14,7 @@ import { direitosEmLote } from './direitos-lote'
 import { lerContaPorRef } from './refs'
 import { lerEtiquetas } from '@/lib/contas/etiquetas-servidor'
 import { lerMestresPorConta } from '@/lib/mestres/servidor/painel-leitura'
+import { rotuloUsoT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 export { lerContaPorRef }
 
@@ -132,7 +133,9 @@ export async function listarContasAdmin(filtro: { userId?: string | null } = {})
   for (const c of site.data ?? []) {
     const plataforma = plat(c.mt5_platform)
     const usos: string[] = []
-    if (c.purpose === 'tap_to_trade' || c.t2t_enabled === true) usos.push('Tap to Trade')
+    // O MESMO rótulo do ligador do site, do painel da app e do admin (lib/mtmcopy/alvo-t2t).
+    const usoT2T = rotuloUsoT2T(c)
+    if (usoT2T) usos.push(usoT2T)
     if (c.purpose !== 'tap_to_trade' && plataforma !== 'mtmfunded') usos.push(c.copyfactory_strategy_pick ? `CopyFactory · ${c.copyfactory_strategy_pick}${c.copyfactory_subscribed ? '' : ' (não subscrita)'}` : `Cópia (${connectionCopyMethod(c as never)})`)
     if (destinoCopiador.has(`mtmcopy:${c.id}`)) usos.push('Destino copiador MTM Funded')
     usos.push(...(usosRota.get(`site:${c.id}`) ?? []))

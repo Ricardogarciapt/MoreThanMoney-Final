@@ -1,5 +1,13 @@
-/** Bot admin MTMcopier + descoberta de canais Telegram: @MoreThanMoney_aibot */
-export const MTMCOPY_BOT_USERNAME_DEFAULT = 'MoreThanMoney_aibot'
+/**
+ * Bot admin MTMcopier + descoberta de canais Telegram: @morethanmoneypt_bot.
+ *
+ * O defeito era `MoreThanMoney_aibot`, que é o nome ANTIGO. Onde este valor aparece num link
+ * (`https://t.me/<bot>?start=lead`, nas boas-vindas do grupo de leads e no closer do ManyChat), um
+ * nome errado não dá erro nenhum: dá uma página do Telegram a dizer que o utilizador não existe.
+ *
+ * `TELEGRAM_BOT_USERNAME` continua a mandar sobre isto — mas tem de estar certo no ambiente.
+ */
+export const MTMCOPY_BOT_USERNAME_DEFAULT = 'morethanmoneypt_bot'
 
 /** Token canónico: TELEGRAM_AIBOT_TOKEN (não usar @MoreThanMoney_Copierbot). */
 export function getMtmcopyBotToken(): string {

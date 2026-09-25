@@ -4,7 +4,7 @@
  * Correr: npx tsx lib/webtrader/__tests__/rapido.check.ts
  */
 import assert from 'node:assert/strict'
-import { recebeT2T, t2tDesligadoNaConta } from '../../mtmcopy/alvo-t2t'
+import { apareceNoT2T, recebeT2T, rotuloUsoT2T, t2tDesligadoNaConta } from '../../mtmcopy/alvo-t2t'
 import { colarVelas, type VelaOHLCV } from '../../mtmfunded/simulado/velas'
 import { APELIDOS, candidatosDeTicker } from '../../mtmfunded/simulado/ordens'
 import { acrescentarAntigas, agregarVelas, colar, deColunas, fontesDerivacao, paraColunas, URL_VELAS } from '../velas'
@@ -45,6 +45,28 @@ caso('T2T: TradeLocker ligada no WebTrader (dedicada, t2t_enabled=false) NÃO re
   assert.equal(t2tDesligadoNaConta(doWebtrader), true)
   assert.equal(recebeT2T({ ...doWebtrader, t2t_enabled: true }), true)
   assert.equal(t2tDesligadoNaConta({ ...doWebtrader, t2t_enabled: true }), false)
+})
+
+caso('T2T: «executa» e «mostra-se» só diferem na conta dedicada desligada nela', () => {
+  const doWebtrader = { purpose: 'tap_to_trade', t2t_enabled: false }
+  // A única conta que aparece no painel sem receber ordens.
+  assert.equal(apareceNoT2T(doWebtrader), true)
+  assert.equal(recebeT2T(doWebtrader), false)
+  // Em tudo o resto as duas respondem o mesmo — é o que os dez sítios escreviam à mão.
+  for (const c of [
+    { purpose: 'tap_to_trade', t2t_enabled: null },
+    { purpose: 'tap_to_trade', t2t_enabled: true },
+    { purpose: 'mtmcopy', t2t_enabled: true },
+    { purpose: 'mtmcopy', t2t_enabled: null },
+    { purpose: 'mtmcopy', t2t_enabled: false },
+  ]) assert.equal(apareceNoT2T(c), recebeT2T(c))
+  assert.equal(apareceNoT2T(null), false)
+})
+caso('T2T: o rótulo do uso é o mesmo no site, na app e no admin', () => {
+  assert.equal(rotuloUsoT2T({ purpose: 'tap_to_trade', t2t_enabled: null }), 'Tap to Trade')
+  assert.equal(rotuloUsoT2T({ purpose: 'mtmcopy', t2t_enabled: true }), 'Tap to Trade')
+  assert.equal(rotuloUsoT2T({ purpose: 'tap_to_trade', t2t_enabled: false }), 'Tap to Trade (desligado nesta conta)')
+  assert.equal(rotuloUsoT2T({ purpose: 'mtmcopy', t2t_enabled: null }), null)
 })
 
 // ── WebTrader «como o TradingView» (2026-09): armazém de velas do cliente ──

@@ -88,12 +88,15 @@ caso('TL risco: US30 com mínimo 0,1 e passo 0,1 — 1% de 10k, SL 50 pontos a 4
   const r = calcularLote({ modo: 'risco_pct', valor: 1, volumeOrigem: 1, saldoOrigem: null, equityDestino: c.equity, loteMax: null, regra: c.regra, distanciaSl: 50, valorPorPrecoPorLote: c.valorPorPrecoPorLote })
   assert.equal(r.ok && r.volume, 2)
 })
-caso('TL risco: acima do maxLot corta ao máximo; conta pequena abaixo de metade do mínimo recusa', () => {
+caso('TL risco: acima do maxLot corta ao máximo; num índice de mínimo 0,1 continua a recusar', () => {
   const c = contextoTradeLocker({ instrumento: inst('US30'), detalhe: US30, equity: 10_000_000, saldo: null, moedaConta: 'USD', bid: 42_000, ask: 42_000 })
   const alto = calcularLote({ modo: 'risco_pct', valor: 1, volumeOrigem: 1, saldoOrigem: null, equityDestino: c.equity, loteMax: null, regra: c.regra, distanciaSl: 50, valorPorPrecoPorLote: c.valorPorPrecoPorLote })
   assert.equal(alto.ok && alto.volume, 20)
+  // A subida ao mínimo vai só até 0,01 lotes (o que o dono pediu). Aqui o mínimo do índice é 0,1:
+  // subir multiplicaria o risco por dez, e por isso continua a recusar, dizendo porquê.
   const pequena = calcularLote({ modo: 'risco_pct', valor: 0.1, volumeOrigem: 1, saldoOrigem: null, equityDestino: 200, loteMax: null, regra: c.regra, distanciaSl: 50, valorPorPrecoPorLote: c.valorPorPrecoPorLote })
   assert.equal(pequena.ok, false)
+  assert.match(!pequena.ok ? pequena.motivo : '', /só vai até 0\.01/)
 })
 caso('TL risco: sem valor de tick (moeda diferente) → recusa em vez de inventar', () => {
   const c = contextoTradeLocker({ instrumento: inst('XAUUSD'), detalhe: SEM_TICKS, equity: 10_000, saldo: 10_000, moedaConta: 'EUR', bid: 2000, ask: 2000 })

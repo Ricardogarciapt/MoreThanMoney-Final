@@ -7,6 +7,7 @@ import assert from 'node:assert/strict'
 import { barrasDaConta, equityParaLevantamento, numerosDaConta, selecionarComOpcionais } from '../numeros-conta'
 import { barrasDeRegras } from '../admin-conta'
 import { estadoCurto } from '../etiquetas'
+import { resumoDaConta } from '../simulado/ligar-conta'
 import { limitesDaConta } from '../simulado/ordens'
 
 let n = 0
@@ -24,6 +25,38 @@ async function main() {
     assert.equal(p.estadoCurto, 'Pause')
     assert.equal(p.estadoCurto, estadoCurto('ativa', sim.metricas, '2026-09-15T10:00:00Z'))
     assert.equal(numerosDaConta(sim).estadoCurto, 'Active')
+  })
+
+  /**
+   * «Deve mostrar o que tem o WebTrader — se diz real é porque é real» (o dono, 24/09).
+   *
+   * A mesma conta é etiquetada em dois sítios: o WebTrader (`numerosDaConta`, a referência) e a
+   * resposta de ligar uma conta (`resumoDaConta`), que é o que a app MTM Auto desenha. Estavam a
+   * discordar em dois casos, os dois na direcção errada:
+   *
+   *   · uma conta REAL — dinheiro depositado pelo cliente — saía «F1», como um desafio simulado;
+   *   · uma conta pausada pelo admin saía «Active», porque o `pausada_em` não era passado.
+   *
+   * Uma etiqueta que diz «desafio» a dinheiro real não é um detalhe de interface.
+   */
+  await caso('a etiqueta do ligador é a mesma do WebTrader para a mesma conta', () => {
+    const contas = [
+      { ...sim, tipo: 'real', estado: 'ativa', pausada_em: null },
+      { ...sim, tipo: 'real', estado: 'ativa', pausada_em: '2026-09-20T10:00:00Z' },
+      { ...sim, tipo: 'desafio', estado: 'ativa', pausada_em: '2026-09-20T10:00:00Z' },
+      { ...sim, tipo: 'financiada', estado: 'ativa', pausada_em: null },
+      { ...sim, tipo: 'torneio', estado: 'quebrada', pausada_em: null },
+      { ...sim, tipo: 'desafio', estado: 'ativa', pausada_em: null, metricas: { ...sim.metricas, fase: 2 } },
+    ]
+    for (const c of contas) {
+      const wt = numerosDaConta(c)
+      const lig = resumoDaConta({ ...c, user_id: null, mt5_login: '1', metricas: c.metricas } as never)
+      assert.equal(lig.tipo, wt.etiqueta, `tipo: ligador diz ${lig.tipo}, WebTrader diz ${wt.etiqueta} (tipo=${c.tipo})`)
+      assert.equal(lig.estado, wt.estadoCurto, `estado: ligador diz ${lig.estado}, WebTrader diz ${wt.estadoCurto} (pausada_em=${c.pausada_em})`)
+    }
+    // E o caso que motivou tudo, escrito sem rodeios.
+    assert.equal(numerosDaConta({ ...sim, tipo: 'real' }).etiqueta, 'Real')
+    assert.equal(resumoDaConta({ ...sim, tipo: 'real', user_id: null, mt5_login: '1' } as never).tipo, 'Real')
   })
 
   await caso('simulada: saldo/equity/flutuante/% a partir das colunas sim_* (não das métricas velhas)', () => {

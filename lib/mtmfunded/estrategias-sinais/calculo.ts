@@ -187,6 +187,21 @@ export function accaoDoSeguimento(tipo: TipoMensagemPv | 'cancel' | 'close' | 't
 export interface ConfigSinais {
   lotePor1000: number
   saidasPct: number[]
+  /**
+   * Parciais ancoradas na FRACÇÃO DO RISCO, em vez de nos alvos do trader: `[{ r: 1, pct: 50 }]`
+   * tira 50% quando o preço andou 1× a distância entrada→SL. Manda sobre `saidasPct` quando está
+   * posta e a trade tem stop. Vazia/nula = nada muda (é aditiva; ninguém a tem por defeito).
+   *
+   * PORQUÊ. `saidasPct` sai NO TP1 DO TRADER, e o TP1 não está no mesmo sítio em traders
+   * diferentes: medido a 24/09, o TP1 está a 0,30R no Edge, 0,50R no King e 0,80R no Wolf. Ou
+   * seja: a mesma configuração dá três gestões diferentes, e quem manda na nossa gestão acaba por
+   * ser o alvo do trader. Uma parcial a 1R sai no mesmo sítio seja qual for o trader — e é a
+   * mesma razão pela qual o BE e o trailing desta casa já preferem a fracção do risco aos pips.
+   *
+   * Vale para o Edge/King/Wolf, mas o botão é geral: qualquer estratégia que passe por
+   * `gestaoDoSinal` pode usá-lo pondo-o em `sinais_config`.
+   */
+  saidasFracaoDoRisco: { r: number; pct: number }[] | null
   beNoTp1: boolean
   beOffsetPips: number
   /**
@@ -239,6 +254,7 @@ export interface ConfigSinais {
 export const CONFIG_PADRAO: ConfigSinais = {
   lotePor1000: 0.01,
   saidasPct: [50, 25],
+  saidasFracaoDoRisco: null,
   beNoTp1: true,
   beOffsetPips: 2,
   beGatilhoPips: null,
@@ -271,6 +287,15 @@ export function configDoProvider(p: Record<string, unknown> | null | undefined):
   c.lotePor1000 = pos(extra.lotePor1000) ?? c.lotePor1000
   const saidas = Array.isArray(p.saidas_pct) && p.saidas_pct.length ? p.saidas_pct : Array.isArray(extra.saidasPct) ? extra.saidasPct : null
   if (saidas) c.saidasPct = (saidas as unknown[]).map(Number).filter((n) => n > 0).slice(0, 3)
+  // Só pelo jsonb, como todas as fracções do risco: é configuração nova e não tem coluna antiga.
+  if (Array.isArray(extra.saidasFracaoDoRisco)) {
+    const niveis = (extra.saidasFracaoDoRisco as unknown[])
+      .map((x) => (typeof x === 'object' && x ? { r: Number((x as Record<string, unknown>).r), pct: Number((x as Record<string, unknown>).pct) } : { r: NaN, pct: NaN }))
+      .filter((x) => Number.isFinite(x.r) && x.r > 0 && Number.isFinite(x.pct) && x.pct > 0)
+      .sort((a, b) => a.r - b.r)
+      .slice(0, 3)
+    c.saidasFracaoDoRisco = niveis.length ? niveis : null
+  }
   if (typeof extra.beNoTp1 === 'boolean') c.beNoTp1 = extra.beNoTp1
   if (extra.beOffsetPips != null && Number(extra.beOffsetPips) >= 0) c.beOffsetPips = Number(extra.beOffsetPips)
   // Só pelo jsonb: a coluna `be_gatilho` de mtmauto_providers já tem dois sentidos na casa
@@ -304,7 +329,7 @@ export function loteParaConta(saldo: number, cfg: Pick<ConfigSinais, 'lotePor100
   return Math.min(s.volume_max, Math.max(s.volume_min, v))
 }
 
-// ── níveis e gestão ──────────────────────────────────────────────────────────
+// ── niveis e gestão ──────────────────────────────────────────────────────────
 
 export interface NiveisSinal {
   direcao: Direcao
@@ -315,7 +340,7 @@ export interface NiveisSinal {
 }
 
 /**
- * Os níveis ao preço a que NÓS entrámos, mantendo as distâncias do sinal (o ENTRY HIT chega com o
+ * Os niveis ao preço a que NÓS entrámos, mantendo as distâncias do sinal (o ENTRY HIT chega com o
  * preço já ao lado da entrada, mas nunca exactamente nela). Alvos que ficariam do lado errado saem.
  */
 export function niveisAncorados(n: NiveisSinal, precoExecucao: number, digits: number): { sl: number | null; tps: number[] } {
@@ -357,20 +382,33 @@ export function gestaoDoSinal(p: PedidoGestao): { gestao: Partial<Gestao>; tpFin
   const tp1 = p.tps[0] ?? null
   const tpFinal = p.tps.length ? p.tps[p.tps.length - 1] : null
 
-  // parciais: só as que dão lote mínimo, só em TPs antes do último (o último é o TP normal)
-  const tps: TpParcial[] = []
-  for (const [i, pct] of p.cfg.saidasPct.entries()) {
-    const preco = p.tps[i]
-    if (preco == null || i >= p.tps.length - 1 || tps.length >= 3) break
-    if (volumeDaParte(p.simbolo, p.volume, pct) == null) break
-    tps.push({ preco: arred(preco), pct, atingido: false })
-  }
-  const g: Partial<Gestao> = {}
-  if (tps.length) g.tps = tps
-
   // O risco do sinal (entrada→SL) em PREÇO: é a régua das fracções. Sem stop não há risco e as
   // fracções não se podem resolver — cai-se no que estiver em pips.
   const risco = p.sl != null ? dist(p.sl) : null
+  const sentido = p.direcao === 'buy' ? 1 : -1
+
+  // parciais: só as que dão lote mínimo, só ANTES do TP final (é lá que a posição fecha)
+  const tps: TpParcial[] = []
+  if (p.cfg.saidasFracaoDoRisco && risco != null && risco > 0) {
+    // Ancoradas no risco: o alvo é o nosso, não o do trader. Uma que caia em cima ou além do TP
+    // final não se grava — fecharia junto com a posição e não seria parcial nenhuma.
+    for (const n of p.cfg.saidasFracaoDoRisco) {
+      if (tps.length >= 3) break
+      const preco = arred(p.precoExecucao + sentido * risco * n.r)
+      if (tpFinal != null && (preco - tpFinal) * sentido >= 0) break
+      if (volumeDaParte(p.simbolo, p.volume, n.pct) == null) break
+      tps.push({ preco, pct: n.pct, atingido: false })
+    }
+  } else {
+    for (const [i, pct] of p.cfg.saidasPct.entries()) {
+      const preco = p.tps[i]
+      if (preco == null || i >= p.tps.length - 1 || tps.length >= 3) break
+      if (volumeDaParte(p.simbolo, p.volume, pct) == null) break
+      tps.push({ preco: arred(preco), pct, atingido: false })
+    }
+  }
+  const g: Partial<Gestao> = {}
+  if (tps.length) g.tps = tps
 
   const offset = arred(p.cfg.beOffsetPips * pip)
   // PRECEDÊNCIA: fracção do risco → pips → TP1 (ver `beFracaoDoRisco`).
@@ -391,7 +429,11 @@ export function gestaoDoSinal(p: PedidoGestao): { gestao: Partial<Gestao>; tpFin
       g.be_offset = offset < gatilho ? offset : 0
     }
   } else if (p.cfg.beNoTp1 && tp1 != null) {
-    if (tps.length) {
+    // `be_no_tp1` quer dizer, no motor, «BE quando a PRIMEIRA PARCIAL for atingida» — e com as
+    // parciais ancoradas no risco isso mudava o BE de sítio sem ninguém pedir (no Edge saltava de
+    // 0,30R para 1R e desaparecia a protecção que faz os 82% de vitórias). Nesse caso o BE fica
+    // onde sempre esteve, à distância do TP1, mas dito pelo gatilho — as duas decisões separadas.
+    if (tps.length && !p.cfg.saidasFracaoDoRisco) {
       g.be_no_tp1 = true
       g.be_offset = offset
     } else {
@@ -426,7 +468,7 @@ export function horaDoSinal(em: Date | string | number = Date.now()): string {
 
 /**
  * Chave de idempotência de UM sinal de UMA fonte. Com o id da mensagem do Telegram (relay novo) é
- * exacta; sem ele, os níveis do sinal + a hora — o relay reenvia um ENTRY HIT que deu timeout e
+ * exacta; sem ele, os niveis do sinal + a hora — o relay reenvia um ENTRY HIT que deu timeout e
  * sem isto abria-se duas vezes.
  */
 export function chaveDoSinal(p: { fonte: string; msgId?: string | number | null; symbol: string; direcao: Direcao; entrada: number | null; sl: number | null; hora?: string }): string {

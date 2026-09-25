@@ -15,11 +15,14 @@
  *
  * Puro: sem React, sem browser — testado em lib/webtrader/__tests__/entrada.check.ts.
  */
+import { ehContaMestre } from './filtro-contas'
 
 export type PlataformaSeletor = 'mtmfunded' | 'tradelocker' | 'mt5'
 
 export interface FundedDoUtilizador {
   id: string
+  /** O tipo da conta na base (desafio/financiada/torneio/real/provider) — `provider` = mestre. */
+  tipo?: string | null
   mt5_login: string | null
   etiqueta: string
   /** 113 — a etiqueta que o dono pôs (não confundir com `etiqueta`, que aqui é a fase F1/F2/Funded). */
@@ -76,6 +79,11 @@ export interface EntradaSeletor {
   etiquetaDoDono: string | null
   /** false = esta conta não guarda etiqueta (sessão TradeLocker do separador, sem linha na base). */
   podeEtiquetar: boolean
+  /**
+   * 24/09 — conta MESTRE de uma estratégia do MTM Auto (`tipo = 'provider'`): é da casa, não é
+   * para a pessoa negociar. O filtro do seletor esconde-as por omissão (lib/webtrader/filtro-contas.ts).
+   */
+  mestre: boolean
   real?: ContaRealSeletor
 }
 
@@ -103,12 +111,12 @@ export function montarSeletor(f: {
       modo: c.modo === 'investor' ? 'investor' : 'master',
       saldo: c.sim_saldo, equity: c.sim_equity, propria: true, segue: c.segueEstrategia?.nome ?? null, programa: c.programa?.nome ?? null, aviso: c.aviso ?? null,
       // Só o DONO etiqueta: uma conta ligada com a password investor é de outra pessoa.
-      etiquetaDoDono: c.etiquetaDoDono ?? null, podeEtiquetar: c.modo !== 'investor',
+      etiquetaDoDono: c.etiquetaDoDono ?? null, podeEtiquetar: c.modo !== 'investor', mestre: ehContaMestre(c),
     })
   }
   for (const s of Object.values(f.sessoesFunded ?? {})) {
     if (!s?.accountId) continue
-    juntar({ id: s.accountId, plataforma: 'mtmfunded', login: s.login, etiqueta: s.etiqueta ?? '—', estadoCurto: s.estadoCurto ?? '—', aviso: s.aviso ?? null, modo: s.modo, propria: false, etiquetaDoDono: null, podeEtiquetar: false })
+    juntar({ id: s.accountId, plataforma: 'mtmfunded', login: s.login, etiqueta: s.etiqueta ?? '—', estadoCurto: s.estadoCurto ?? '—', aviso: s.aviso ?? null, modo: s.modo, propria: false, etiquetaDoDono: null, podeEtiquetar: false, mestre: false })
   }
 
   // Reais: as do ligador primeiro; sessões TradeLocker antigas só se a mesma conta não estiver ligada.
@@ -126,6 +134,8 @@ export function montarSeletor(f: {
       estadoCurto: r.bloqueada ? 'Bloqueada' : r.demo ? 'Demo' : 'Real', modo: 'master', propria: r.origem !== 'sessao', real: r,
       // A sessão do separador não tem linha na base — não há onde guardar a etiqueta.
       etiquetaDoDono: r.etiquetaDoDono ?? null, podeEtiquetar: r.origem !== 'sessao',
+      // Uma conta na corretora da pessoa nunca é mestre — as mestres são MTM Funded da casa.
+      mestre: false,
     })
   }
   return out

@@ -127,6 +127,7 @@ export async function abrirSinalNaConta(p: PedidoAbrir): Promise<ResultadoAbrir>
     // 3. conta, símbolo e preço
     const ex = await import('../simulado/execucao')
     const { candidatosDeTicker, precoFresco } = await import('../simulado/ordens')
+    const { precoDePreenchimento } = await import('../precos/preenchimento')
     const conta = await ex.lerConta(p.accountId)
     if (!conta || conta.motor !== 'sim' || conta.estado !== 'ativa') throw new Error('conta simulada inactiva ou inexistente')
     const candidatos = candidatosDeTicker(p.symbol)
@@ -134,10 +135,28 @@ export async function abrirSinalNaConta(p: PedidoAbrir): Promise<ResultadoAbrir>
     const symbol = candidatos.find((c) => simbolos[c])
     if (!symbol) throw new Error(`${p.symbol} não existe no MTM Funded`)
     const s = simbolos[symbol]
-    const { precos, em } = await ex.carregarPrecos([symbol])
+    // O tick vem do motor (memória, ~100 ms) e não do retrato da base (até 5 s) — é aqui que a
+    // entrada é ancorada, e um preço de 3-4 s cai sempre do lado bom da casa. Ver
+    // ../precos/tick-motor.ts; o motor em baixo devolve o retrato e nada disto muda.
+    const { precos, em, emMercado } = await ex.carregarPrecos([symbol], [symbol])
     const px = precos[symbol]
     if (!px || !precoFresco(em[symbol])) throw new Error(`sem preço ao vivo para ${symbol}`)
-    const precoExec = p.direcao === 'buy' ? px.ask : px.bid
+    // O preço do sinal é o do mercado no instante da decisão: com ele, o preenchimento nunca pode
+    // ser melhor do que o mercado ofereceu (../precos/preenchimento). `abrirPosicao` aplica a
+    // mesma regra ao preço com que abre de facto — aqui é só para ancorar SL e TPs no mesmo sítio.
+    const referencia = p.entrada != null && p.entrada > 0 ? p.entrada : null
+    const fill = precoDePreenchimento({
+      direcao: p.direcao,
+      // Com a hora do MERCADO provada (migração 123), o tick vale sozinho; sem ela, caminho
+      // pessimista — o mesmo que `abrirPosicao` aplica ao preço com que a trade abre de facto.
+      tick: {
+        bid: px.bid, ask: px.ask, em: Date.parse(em[symbol]),
+        emMercado: emMercado[symbol] ? Date.parse(emMercado[symbol]!) : null,
+      },
+      referencia: referencia == null ? null : { preco: referencia }, digits: s.digits,
+    })
+    if (!fill.ok) throw new Error(`${symbol}: ${fill.erro}`)
+    const precoExec = fill.preco
 
     // 4. lote, níveis ao nosso preço e gestão
     const volume = p.loteFixo && p.loteFixo > 0
@@ -146,7 +165,7 @@ export async function abrirSinalNaConta(p: PedidoAbrir): Promise<ResultadoAbrir>
     const niveis = niveisAncorados({ direcao: p.direcao, entrada: p.entrada, sl: p.sl, tps: p.tps }, precoExec, s.digits)
     const { gestao, tpFinal } = gestaoDoSinal({ simbolo: s, direcao: p.direcao, precoExecucao: precoExec, volume, sl: niveis.sl, tps: niveis.tps, cfg: p.cfg })
 
-    const entrada = { symbol, direcao: p.direcao, volume, sl: niveis.sl, tp: tpFinal, ideiaRef: `sinal:${p.chave}`, comentario: p.comentario }
+    const entrada = { symbol, direcao: p.direcao, volume, sl: niveis.sl, tp: tpFinal, ideiaRef: `sinal:${p.chave}`, comentario: p.comentario, referencia }
     let semGestao = false
     let aberta: { posicao: Record<string, unknown> }
     try {

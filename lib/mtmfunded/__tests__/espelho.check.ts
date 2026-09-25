@@ -155,8 +155,15 @@ const ETH = { ...XAU, symbol: 'ETHUSD', classe: 'cripto' as const, contract_size
   eq('2% de 10k com SL a 5 USD → 0,4', r2.ok && r2.volume, 0.4)
   const r3 = loteT2TSimulado({ equity: 1000, riscoPct: 1, entrada: 2500, sl: null, simbolo: XAU, precos: {} })
   eq('sem SL → o mínimo, dito', r3, { ok: true, volume: 0.01, riscoUsd: null })
+  // 23/09, decisão do dono: abaixo do mínimo abre-se NO MÍNIMO em vez de não abrir nada — e o
+  // risco que se mostra passa a ser o do lote enviado (aqui 100 USD), não o 1 USD configurado.
   const r4 = loteT2TSimulado({ equity: 1000, riscoPct: 0.1, entrada: 2500, sl: 2400, simbolo: XAU, precos: {} })
-  eq('risco abaixo do mínimo → recusa (não abre 100× o risco)', r4.ok, false)
+  eq('risco abaixo do mínimo → abre no mínimo', r4.ok && r4.volume, 0.01)
+  eq('… e diz que subiu', r4.ok && r4.subiuAoMinimo, true)
+  eq('… com o risco REAL do lote, não o configurado', r4.ok && r4.riscoUsd, 100)
+  // O travão que fica: o lote mínimo a arriscar mais do que a conta inteira.
+  const r5 = loteT2TSimulado({ equity: 50, riscoPct: 1, entrada: 2500, sl: 2400, simbolo: XAU, precos: {} })
+  eq('lote mínimo arrisca mais do que a conta → recusa', r5.ok, false)
 }
 
 // ── leitura por streaming (eventos) ────────────────────────────────────────

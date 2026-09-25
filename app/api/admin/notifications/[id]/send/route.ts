@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-api-helpers"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { adminBroadcastEmailTemplate } from "@/lib/email-templates"
 import { internalApiHeaders } from "@/lib/internal-api"
+import { recebeT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 const supabase = getSupabaseAdmin()
 
@@ -84,7 +85,7 @@ export async function POST(
           .eq('is_active', true)
         apenasEstes = new Set(
           (data ?? [])
-            .filter((r) => r.purpose === 'tap_to_trade' || r.t2t_enabled === true)
+            .filter((r) => recebeT2T(r))
             .map((r) => r.user_id as string),
         )
       }
@@ -174,7 +175,10 @@ export async function POST(
             if (notification.type === 'push') sentCount++
             console.log(`[NOTIFICATION_SEND] ✅ Push enviado para ${user.id}`)
             // Criar entrada na tabela notifications para o utilizador poder ver/marcar como lida
-            await supabase
+            // O supabase-js NAO rejeita quando o insert falha — devolve `{ error }`.
+            // O `.catch()` que aqui estava nunca chegava a disparar, por isso as
+            // falhas a criar a entrada em `notifications` passavam em silencio.
+            const { error: erroNotificacao } = await supabase
               .from('notifications')
               .insert({
                 user_id: user.id,
@@ -184,10 +188,9 @@ export async function POST(
                 data: { notificationId, notificationConfigId: notification.id },
                 read: false
               })
-              .then(() => {})
-              .catch((err: any) => {
-                console.warn(`[NOTIFICATION_SEND] ⚠️ Falha ao criar entrada em notifications para ${user.id}:`, err?.message || err)
-              })
+            if (erroNotificacao) {
+              console.warn(`[NOTIFICATION_SEND] ⚠️ Falha ao criar entrada em notifications para ${user.id}:`, erroNotificacao.message)
+            }
           } else {
             if (notification.type === 'push') {
               failedCount++

@@ -366,7 +366,9 @@ async function isDescendant(
   let depth = 0
   while (currentId && depth < 50) {
     if (currentId === ancestorId) return true
-    const { data } = await supabase
+    // Anotacao explicita: quebra a inferencia circular (TS7022) entre o tipo da
+    // linha e o `currentId` que a query usa e que e reatribuido a partir dela.
+    const { data }: { data: { parent_node_id: string | null } | null } = await supabase
       .from('mlm_nodes')
       .select('parent_node_id')
       .eq('id', currentId)

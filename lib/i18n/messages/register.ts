@@ -157,6 +157,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Error starting registration with Google",
   },
   es: {
+    "register.labelCountry": "País",
+    "register.placeholderCountry": "Selecciona tu país",
     "register.back": "Volver",
     "register.title": "Crear cuenta MTM",
     "register.subtitleTrial": "Prueba Premium 3 días gratis — sin cargo durante los 3 días",
@@ -230,6 +232,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Error al iniciar el registro con Google",
   },
   fr: {
+    "register.labelCountry": "Pays",
+    "register.placeholderCountry": "Sélectionne ton pays",
     "register.back": "Retour",
     "register.title": "Créer un compte MTM",
     "register.subtitleTrial": "Essaie Premium gratuitement 3 jours — sans frais pendant les 3 jours",
@@ -303,6 +307,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Erreur lors du démarrage de l'inscription avec Google",
   },
   de: {
+    "register.labelCountry": "Land",
+    "register.placeholderCountry": "Wähle dein Land",
     "register.back": "Zurück",
     "register.title": "MTM-Konto erstellen",
     "register.subtitleTrial": "Teste Premium 3 Tage kostenlos — keine Abbuchung in den 3 Tagen",
@@ -376,6 +382,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Fehler beim Starten der Registrierung mit Google",
   },
   it: {
+    "register.labelCountry": "Paese",
+    "register.placeholderCountry": "Seleziona il tuo paese",
     "register.back": "Indietro",
     "register.title": "Crea account MTM",
     "register.subtitleTrial": "Prova Premium gratis per 3 giorni — nessun addebito nei 3 giorni",
@@ -449,6 +457,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Errore nell'avvio della registrazione con Google",
   },
   nl: {
+    "register.labelCountry": "Land",
+    "register.placeholderCountry": "Kies je land",
     "register.back": "Terug",
     "register.title": "MTM-account aanmaken",
     "register.subtitleTrial": "Probeer Premium 3 dagen gratis — geen kosten tijdens de 3 dagen",
@@ -522,6 +532,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Fout bij het starten van de registratie met Google",
   },
   "zh-CN": {
+    "register.labelCountry": "国家/地区",
+    "register.placeholderCountry": "选择你的国家或地区",
     "register.back": "返回",
     "register.title": "创建 MTM 账户",
     "register.subtitleTrial": "免费试用 Premium 3 天 — 这 3 天内不收费",
@@ -595,6 +607,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "使用 Google 开始注册时出错",
   },
   ja: {
+    "register.labelCountry": "国",
+    "register.placeholderCountry": "国を選択してください",
     "register.back": "戻る",
     "register.title": "MTM アカウントを作成",
     "register.subtitleTrial": "Premium を 3 日間無料でお試し — 3 日間は課金なし",
@@ -668,6 +682,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Google での登録開始中にエラーが発生しました",
   },
   ar: {
+    "register.labelCountry": "الدولة",
+    "register.placeholderCountry": "اختر دولتك",
     "register.back": "رجوع",
     "register.title": "إنشاء حساب MTM",
     "register.subtitleTrial": "جرّب Premium مجانًا لمدة 3 أيام — بدون رسوم خلال الأيام الثلاثة",
@@ -741,6 +757,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "خطأ في بدء التسجيل باستخدام Google",
   },
   ru: {
+    "register.labelCountry": "Страна",
+    "register.placeholderCountry": "Выбери свою страну",
     "register.back": "Назад",
     "register.title": "Создать аккаунт MTM",
     "register.subtitleTrial": "Попробуйте Premium бесплатно 3 дня — без списаний в течение 3 дней",
@@ -814,6 +832,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Ошибка при запуске регистрации через Google",
   },
   hi: {
+    "register.labelCountry": "देश",
+    "register.placeholderCountry": "अपना देश चुनें",
     "register.back": "वापस",
     "register.title": "MTM खाता बनाएं",
     "register.subtitleTrial": "Premium को 3 दिन मुफ़्त आज़माएं — इन 3 दिनों में कोई शुल्क नहीं",
@@ -887,6 +907,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Google से रजिस्ट्रेशन शुरू करने में त्रुटि",
   },
   sr: {
+    "register.labelCountry": "Država",
+    "register.placeholderCountry": "Izaberi svoju državu",
     "register.back": "Назад",
     "register.title": "Направи MTM налог",
     "register.subtitleTrial": "Испробај Premium бесплатно 3 дана — без наплате током 3 дана",
@@ -960,6 +982,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Грешка при покретању регистрације помоћу Google-а",
   },
   hr: {
+    "register.labelCountry": "Država",
+    "register.placeholderCountry": "Odaberi svoju državu",
     "register.back": "Natrag",
     "register.title": "Izradi MTM račun",
     "register.subtitleTrial": "Isprobaj Premium besplatno 3 dana — bez naplate tijekom 3 dana",
@@ -1033,6 +1057,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Pogreška pri pokretanju registracije pomoću Googlea",
   },
   bs: {
+    "register.labelCountry": "Država",
+    "register.placeholderCountry": "Odaberi svoju državu",
     "register.back": "Nazad",
     "register.title": "Napravi MTM račun",
     "register.subtitleTrial": "Isprobaj Premium besplatno 3 dana — bez naplate tokom 3 dana",
@@ -1106,6 +1132,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Greška pri pokretanju registracije pomoću Googlea",
   },
   sq: {
+    "register.labelCountry": "Shteti",
+    "register.placeholderCountry": "Zgjidh shtetin tënd",
     "register.back": "Prapa",
     "register.title": "Krijo llogari MTM",
     "register.subtitleTrial": "Provo Premium falas për 3 ditë — pa asnjë tarifë gjatë 3 ditëve",
@@ -1179,6 +1207,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Gabim gjatë fillimit të regjistrimit me Google",
   },
   bg: {
+    "register.labelCountry": "Държава",
+    "register.placeholderCountry": "Избери своята държава",
     "register.back": "Назад",
     "register.title": "Създай MTM акаунт",
     "register.subtitleTrial": "Изпробвай Premium безплатно 3 дни — без таксуване през 3-те дни",
@@ -1252,6 +1282,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Грешка при стартиране на регистрацията с Google",
   },
   ro: {
+    "register.labelCountry": "Țara",
+    "register.placeholderCountry": "Alege-ți țara",
     "register.back": "Înapoi",
     "register.title": "Creează cont MTM",
     "register.subtitleTrial": "Încearcă Premium gratuit 3 zile — fără taxare în cele 3 zile",
@@ -1325,6 +1357,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Eroare la inițierea înregistrării cu Google",
   },
   pl: {
+    "register.labelCountry": "Kraj",
+    "register.placeholderCountry": "Wybierz swój kraj",
     "register.back": "Wstecz",
     "register.title": "Utwórz konto MTM",
     "register.subtitleTrial": "Wypróbuj Premium za darmo przez 3 dni — bez opłat przez 3 dni",
@@ -1398,6 +1432,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Błąd podczas rozpoczynania rejestracji przez Google",
   },
   uk: {
+    "register.labelCountry": "Країна",
+    "register.placeholderCountry": "Обери свою країну",
     "register.back": "Назад",
     "register.title": "Створити акаунт MTM",
     "register.subtitleTrial": "Спробуйте Premium безкоштовно 3 дні — без списань протягом 3 днів",
@@ -1471,6 +1507,8 @@ export const REGISTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "register.errorGoogle": "Помилка під час запуску реєстрації через Google",
   },
   tr: {
+    "register.labelCountry": "Ülke",
+    "register.placeholderCountry": "Ülkeni seç",
     "register.back": "Geri",
     "register.title": "MTM Hesabı Oluştur",
     "register.subtitleTrial": "Premium'u 3 gün ücretsiz dene — 3 gün boyunca ücret yok",

@@ -20,7 +20,12 @@ import path from 'node:path'
 export interface OpcoesConectorTicks {
   /** o preço do principal para este símbolo está velho? (só então se injeta) */
   precisa: (sym: string) => boolean
-  injetar: (sym: string, bid: number, ask: number, em: number) => void
+  /**
+   * `emMercado` é a HORA DA CORRETORA (`time_msc` do tick), não a da leitura: esta é a única das
+   * nossas fontes de recurso que a sabe dizer ao milissegundo, e é por isso que é ela que abre o
+   * caminho rápido do preenchimento (lib/mtmfunded/precos/preenchimento.ts).
+   */
+  injetar: (sym: string, bid: number, ask: number, em: number, emMercado: number | null, origem: string) => void
   log: (...a: unknown[]) => void
 }
 
@@ -108,7 +113,13 @@ export function iniciarFonteConectorMt5(o: OpcoesConectorTicks): FonteConectorTi
           if (!prioritario && !o.precisa(t.sym)) continue
           ticks++
           if (idades.length < 5000) idades.push(Date.now() - t.em)
-          o.injetar(t.sym, t.bid, t.ask, t.em)
+          // `em` = quando NÓS o vimos; `emMercado` = o `time_msc` do tick na corretora.
+          //
+          // Os dois carimbos têm de viver na mesma escala para as fontes se poderem comparar: ao
+          // pôr o `time_msc` (uns centos de ms no passado) em `em`, este tick — o melhor que
+          // temos — perdia para um do Yahoo carimbado a `Date.now()`, e o EURUSD ficava com a
+          // hora de mercado do Yahoo (medido: 65 s) em vez da da corretora (1,2 s).
+          o.injetar(t.sym, t.bid, t.ask, Date.now(), t.em, 'conector-mt5')
         }
       }
     })()

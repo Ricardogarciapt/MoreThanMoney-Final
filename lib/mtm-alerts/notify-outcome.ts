@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { outcomeFrom } from "@/lib/mtmcopy/trade-outcome"
+import { urlDoChat } from "@/lib/notificacao-destino"
 
 /**
  * Notifica o desfecho de uma trade (SL/TP/BE/fecho) APENAS a:
@@ -99,8 +100,27 @@ export async function notifySignalOutcome(opts: {
     exit: opts.exit,
   })
   const title = `${meta.emoji} ${meta.label} — ${opts.ticker ?? "Sinal"}${desfecho ? ` · ${desfecho}` : ""}`
-  // Deep-link ao SINAL específico (a app abre o modal do alerta com o gráfico ao vivo).
-  const url = `/app-mobile?tab=trading-alerts&signal=${opts.entryId}`
+  /**
+   * ACOMPANHAMENTO abre o CHAT, na mensagem da trade (regra do dono, 24/09).
+   *
+   * Um alvo, um break-even ou um fecho é o fio da trade a andar — e o fio vive no chat, em
+   * thread no sinal. Levava ao separador de alertas, que mostra o gráfico mas não a conversa.
+   * Sem mensagem de chat (sinal só do scanner) mantém-se o destino antigo.
+   */
+  let url = `/app-mobile?tab=trading-alerts&signal=${opts.entryId}`
+  if (opts.chatMessageId) {
+    try {
+      const { data: msg } = await supabase
+        .from("chat_messages")
+        .select("channel_slug")
+        .eq("id", opts.chatMessageId)
+        .maybeSingle()
+      const slug = (msg as { channel_slug?: string | null } | null)?.channel_slug
+      if (slug) url = urlDoChat(slug, opts.chatMessageId)
+    } catch {
+      /* sem canal — segue o destino antigo */
+    }
+  }
   try {
     await fetch(`${siteOrigin()}/api/notifications/send-push`, {
       method: "POST",
@@ -110,7 +130,14 @@ export async function notifySignalOutcome(opts: {
         title,
         body: meta.body,
         url,
-        data: { type: "trade_outcome", signal_id: opts.entryId, status: opts.status, ticker: opts.ticker, url },
+        data: {
+          type: "trade_outcome",
+          signal_id: opts.entryId,
+          status: opts.status,
+          ticker: opts.ticker,
+          url,
+          ...(opts.chatMessageId ? { message_id: opts.chatMessageId } : {}),
+        },
         tag: `mtm_outcome_${opts.entryId}_${opts.status}`,
       }),
     })

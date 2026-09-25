@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { parseSignal } from '@/lib/mtmcopy/signal-parser'
 import { isT2TEntrySignal, matchesT2TPrefs } from '@/lib/mtmcopy/t2t-source'
 import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
+import { apareceNoT2T } from '@/lib/mtmcopy/alvo-t2t'
 
 /**
  * Sinais T2T ATIVOS do utilizador — fonte única para o Apple Watch (e reutilizável pelas apps
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
   const withAccount = (conns ?? []).filter((c) =>
     ehMtmFundedLigacao(c) ? c.t2t_enabled === true && c.mt5_status === 'connected' : Boolean(c.metaapi_account_id))
   // Contas T2T (fan-out): dedicadas (purpose) + marcadas (t2t_enabled). Retrocompat: 1ª ligada.
-  let t2tAccounts = withAccount.filter((c) => c.purpose === 'tap_to_trade' || c.t2t_enabled === true)
+  let t2tAccounts = withAccount.filter((c) => apareceNoT2T(c))
   if (!t2tAccounts.length && withAccount[0]) t2tAccounts = [withAccount[0]]
   const activeAccounts = t2tAccounts.filter((c) => c.is_active !== false)
   const t2tConn = t2tAccounts.find((c) => c.purpose === 'tap_to_trade') ?? t2tAccounts[0] ?? null

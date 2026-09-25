@@ -16,6 +16,8 @@ import {
 import {
   type Gestao, type FiltroLote, validarGestao, gestaoDaLinha, riscoInicialUsd, selecionarParaFecho,
 } from './avancadas'
+import { precoDePreenchimento } from '../precos/preenchimento'
+import { ticksDoMotor, maisFresco, type TickDoMotor, type LinhaRetrato } from '../precos/tick-motor'
 
 /**
  * A EXECUÇÃO DAS ORDENS SIMULADAS — o lado que toca na base de dados.
@@ -121,17 +123,49 @@ export async function carregarSimbolos(symbols: string[], soAtivos = true): Prom
   return out
 }
 
-export async function carregarPrecos(symbols: string[]): Promise<{ precos: MapaPrecos; em: Record<string, string> }> {
+/**
+ * `em` é a hora a que o MOTOR carimbou o preço; `emMercado` é a hora a que o MERCADO o fez, quando
+ * a fonte a declara (migração 123) e nula quando não. Só a segunda prova frescura — a primeira
+ * prova que o motor está vivo, e foi por se confundirem as duas que entradas abriram a preços que
+ * o mercado não ofereceu (ver ../precos/preenchimento.ts).
+ */
+export async function carregarPrecos(
+  symbols: string[],
+  /**
+   * Os símbolos que vão ser NEGOCIADOS agora — para esses pergunta-se ao motor o tick em memória
+   * (~100 ms) em vez de aceitar o retrato (até 5 s). Ver ../precos/tick-motor.ts. Os outros, os
+   * que só convertem o lucro para a moeda da conta, não precisam: 3 s de idade ali mudam
+   * cêntimos, não o preço a que se entra.
+   */
+  frescos?: string[],
+): Promise<{ precos: MapaPrecos; em: Record<string, string>; emMercado: Record<string, string | null> }> {
   const lista = [...new Set(symbols.filter(Boolean))]
   const precos: MapaPrecos = {}
   const em: Record<string, string> = {}
-  if (!lista.length) return { precos, em }
-  const { data } = await getSupabaseAdmin().from('funded_precos').select('symbol, bid, ask, em').in('symbol', lista)
+  const emMercado: Record<string, string | null> = {}
+  if (!lista.length) return { precos, em, emMercado }
+  const querFrescos = [...new Set((frescos ?? []).filter((s) => lista.includes(s)))]
+  // As duas leituras em paralelo: o motor não entra no caminho crítico do que a base já faz.
+  const [{ data }, doMotor] = await Promise.all([
+    getSupabaseAdmin().from('funded_precos').select('symbol, bid, ask, em, em_mercado').in('symbol', lista),
+    querFrescos.length ? ticksDoMotor(querFrescos) : Promise.resolve(new Map<string, TickDoMotor>()),
+  ])
+  const doRetrato = new Map<string, LinhaRetrato>()
   for (const r of data ?? []) {
-    precos[String(r.symbol)] = { symbol: String(r.symbol), bid: Number(r.bid), ask: Number(r.ask) }
-    em[String(r.symbol)] = String(r.em)
+    doRetrato.set(String(r.symbol), {
+      bid: Number(r.bid), ask: Number(r.ask), em: Date.parse(String(r.em)),
+      emMercado: r.em_mercado == null ? null : Date.parse(String(r.em_mercado)),
+    })
   }
-  return { precos, em }
+  for (const symbol of new Set([...doRetrato.keys(), ...doMotor.keys()])) {
+    const escolhido = maisFresco(doRetrato.get(symbol) ?? null, doMotor.get(symbol) ?? null)
+    if (!escolhido || !Number.isFinite(escolhido.escolha.em)) continue
+    const { escolha } = escolhido
+    precos[symbol] = { symbol, bid: escolha.bid, ask: escolha.ask }
+    em[symbol] = new Date(escolha.em).toISOString()
+    emMercado[symbol] = escolha.emMercado == null ? null : new Date(escolha.emMercado).toISOString()
+  }
+  return { precos, em, emMercado }
 }
 
 /** O preço para EXECUTAR: tem de existir e ter menos de 5 s. Senão, 409 e nada acontece. */
@@ -141,6 +175,33 @@ function precoParaExecutar(symbol: string, precos: MapaPrecos, em: Record<string
     throw new ErroOrdem(409, `sem preço ao vivo para ${symbol} — mercado fechado ou motor parado`)
   }
   return p
+}
+
+/**
+ * O PREÇO A QUE UMA ORDEM NOVA ABRE.
+ *
+ * Igual ao de cima quando não há mais nada a dizer. Mas quando quem pede traz uma REFERÊNCIA — o
+ * preço que o sinal declarou, que é o do mercado no instante da decisão — o preenchimento passa
+ * pela regra de `../precos/preenchimento`: entre o nosso tick e o do sinal, a conta fica com o
+ * pior. Foi por não haver esta regra que 6 de 7 entradas da mestre do Sensei (21-24/09) bateram
+ * a favor da casa, 3 delas a preços fora da vela M5 real.
+ */
+function precoParaOrdem(
+  symbol: string, direcao: Direcao, precos: MapaPrecos, em: Record<string, string>,
+  referencia: number | null | undefined, digits: number, emMercado?: Record<string, string | null>,
+): Preco {
+  const p = precoParaExecutar(symbol, precos, em)
+  if (!(typeof referencia === 'number' && referencia > 0)) return p
+  const mercado = emMercado?.[symbol]
+  const fill = precoDePreenchimento({
+    direcao,
+    // A porta que o `preenchimento.ts` deixou aberta: com a hora do MERCADO provada, o tick vale
+    // sozinho; sem ela (fonte que não a declara) fica o caminho pessimista, que é o de hoje.
+    tick: { bid: p.bid, ask: p.ask, em: Date.parse(em[symbol]), emMercado: mercado ? Date.parse(mercado) : null },
+    referencia: { preco: referencia }, digits,
+  })
+  if (!fill.ok) throw new ErroOrdem(409, `${symbol}: ${fill.erro}`)
+  return { symbol, bid: fill.bid, ask: fill.ask }
 }
 
 /** Conta de análise (segue uma estratégia): as regras do programa não se aplicam — ver motor.ts, contaSim. */
@@ -218,6 +279,12 @@ export interface EntradaAbrir {
   comentario?: string | null
   /** Trailing, break-even e TPs parciais (distâncias em preço, migração 072). */
   gestao?: Partial<Gestao> | null
+  /**
+   * O preço que a outra ponta diz ser o do mercado agora (o `entry` do sinal). Só o servidor o
+   * passa, e só quando é MESMO um preço de mercado — nunca o limite de um setup pendente. Com
+   * ele, a entrada nunca pode ser melhor do que o mercado ofereceu (ver `precoParaOrdem`).
+   */
+  referencia?: number | null
 }
 
 /** As colunas da gestão para gravar — só as que a trade pediu (o resto fica no default da base). */
@@ -264,8 +331,8 @@ export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
   const simbolos = await carregarSimbolos([symbol, ...abertas.map((p) => String(p.symbol))])
   const simbolo = simbolos[symbol]
   if (!simbolo) throw new ErroOrdem(400, `símbolo ${symbol} não disponível`)
-  const { precos, em } = await carregarPrecos(simbolosParaMedir(Object.values(simbolos)))
-  const preco = precoParaExecutar(symbol, precos, em)
+  const { precos, em, emMercado } = await carregarPrecos(simbolosParaMedir(Object.values(simbolos)), [symbol])
+  const preco = precoParaOrdem(symbol, e.direcao, precos, em, e.referencia, simbolo.digits, emMercado)
   const regras = ehContaDeAnalise(conta) ? null : ((await regrasDaConta(conta)) as RegrasDeOrdem | null)
 
   const plano = planearAbertura({

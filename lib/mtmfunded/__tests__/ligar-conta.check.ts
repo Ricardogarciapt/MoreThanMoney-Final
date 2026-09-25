@@ -89,6 +89,17 @@ tem('sincronização MetaApi/CopyFactory sem mtmfunded', 'lib/mtmcopy/system-syn
 tem('provisão MetaApi recusa mtmfunded', 'lib/mtmcopy/run-provision-job.ts', /=== 'mtmfunded'\) \{\s*throw new Error/)
 tem('cópia funded→conta não usa ligação mtmfunded como destino', 'lib/mtmfunded/copia/elegibilidade.ts', /=== 'mtmfunded'\) continue/)
 tem('ligação não grava password', 'app/api/mtmfunded/ligar-conta/route.ts', /funded_account_id: conta\.id/)
+/**
+ * O INTERRUPTOR POR CONTA VALE NO CAMINHO DAS LIGADAS (24/09). Sem isto, uma ligação MTM Funded
+ * com o Tap to Trade desligado recebia a aceitação na mesma — foi assim que uma só aceitação do
+ * dono abriu ONZE posições simuladas. E as mestres da casa (`tipo='provider'`) nunca são destino.
+ */
+tem('ligadas T2T respeitam o interruptor por conta', 'lib/mtmfunded/simulado/ligar-conta.ts', /\.filter\(\(c\) => recebeT2T\(/)
+tem('ligadas T2T não incluem contas da casa', 'lib/mtmfunded/simulado/ligar-conta.ts', /\.filter\(\(c\) => !ehContaDaCasa\(c\)\)/)
+tem('simuladas marcadas não incluem contas da casa', 'lib/mtmfunded/simulado/t2t-simulado.ts', /filter\(\(l\) => !ehContaDaCasa\(l\)\)/)
+tem('pré-visualização T2T não lista contas da casa', 'app/api/mtmcopy/tap-to-trade/preview/route.ts', /if \(ehContaDaCasa\(c\)\) casa\.add\(id\)/)
+tem('T2T: escolha de contas filtra os alvos', 'app/api/mtmcopy/tap-to-trade/route.ts', /aplicarEscolha\(targets, \(c\) => String\(c\.id\), escolhaReais\)/)
+
 eq('ligação não grava password (nenhum campo password no insert)', /mt5_password|password_cifrada|password:\s*password/.test(ler('app/api/mtmfunded/ligar-conta/route.ts')), false)
 
 console.log(`${ok} ok, ${mau} falhas`)

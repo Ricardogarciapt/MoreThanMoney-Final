@@ -1,0 +1,505 @@
+[
+ {
+  "id": "2301a126-1849-4f71-9033-be1153945596",
+  "symbol": "XAUUSD",
+  "direcao": "buy",
+  "volume": 0.06,
+  "preco_entrada": 4379.53,
+  "sl": 4382.55,
+  "tp": null,
+  "preco_fecho": 4382.55,
+  "pnl": 18.12,
+  "motivo_fecho": "sl",
+  "origem": "estrategia",
+  "ideia_ref": "espelho-provider:sensei:9202926",
+  "aberta_em": "2026-09-18T10:15:08.494167+00:00",
+  "fechada_em": "2026-09-18T11:05:34.355377+00:00",
+  "trailing_distancia": null,
+  "trailing_ativacao": null,
+  "be_gatilho": null,
+  "be_offset": 0,
+  "be_no_tp1": false,
+  "be_feito": false,
+  "tps": null,
+  "risco_inicial": null,
+  "comentario": "MTM Auto Sensei EP",
+  "tick_entrada": {
+   "em": "2026-09-18T10:15:05.279Z",
+   "ask": 4379.53,
+   "bid": 4379.21,
+   "fonte": "metaapi:puprime",
+   "mestre": {
+    "conta": "78066d2d-3851-4865-a32f-b35bd48f117c",
+    "preco": 4379.17,
+    "equity": 9998.74,
+    "volume": 0.06,
+    "posicao": "9202926",
+    "simbolo": "XAUUSD",
+    "aberta_em": "2026-09-18T10:15:08.209Z"
+   },
+   "sl_inicial": 4371.52,
+   "decidido_em": "2026-09-18T10:15:08.308Z",
+   "espelho_provider": true,
+   "evento_recebido_em": "2026-09-18T10:15:08.275Z"
+  },
+  "tick_fecho": {
+   "em": "2026-09-18T11:05:33.388Z",
+   "ask": 4381.2,
+   "bid": 4380.88,
+   "fonte": "metaapi:puprime"
+  }
+ },
+ {
+  "id": "657ba3dd-9884-470c-ab74-8745da07e4fc",
+  "symbol": "XAUUSD",
+  "direcao": "buy",
+  "volume": 0.1,
+  "preco_entrada": 4383.51,
+  "sl": 4375.93,
+  "tp": 4428.99,
+  "preco_fecho": 4375.93,
+  "pnl": -75.8,
+  "motivo_fecho": "sl",
+  "origem": "estrategia",
+  "ideia_ref": "recon:correcao-21-09:sensei:msg:tv:7dabf03d-bf70-4e15-8a08-f3caf8fb7545",
+  "aberta_em": "2026-09-21T01:16:00+00:00",
+  "fechada_em": "2026-09-21T01:21:00+00:00",
+  "trailing_distancia": 2,
+  "trailing_ativacao": 4,
+  "be_gatilho": 3.5,
+  "be_offset": 0.2,
+  "be_no_tp1": false,
+  "be_feito": false,
+  "tps": [
+   {
+    "pct": 50,
+    "preco": 4394.88,
+    "atingido": false
+   },
+   {
+    "pct": 25,
+    "preco": 4402.46,
+    "atingido": false
+   }
+  ],
+  "risco_inicial": 75.8,
+  "comentario": "RECONST · correção 21/09 — sinal sem preço ao vivo (MetaApi) · Sensei · tv:7dabf03d",
+  "tick_entrada": {
+   "ask": 4383.51,
+   "bid": 4383.19,
+   "nota": "histórico reconstituído — correção 21/09 — sinal sem preço ao vivo (MetaApi); não é uma execução real",
+   "chave": "sensei:msg:tv:7dabf03d-bf70-4e15-8a08-f3caf8fb7545",
+   "regra": "entrada = abertura da vela M1 seguinte ao minuto do sinal (ask, compra); extremo adverso primeiro; SL→parciais→BE→trailing→TP",
+   "spread": 0.32,
+   "sinal_em": "2026-09-21T01:15:07.277Z",
+   "estrategia": "sensei",
+   "fonte_precos": "TradingView OANDA:XAUUSD M1",
+   "vela_entrada": {
+    "low": 4379.965,
+    "high": 4383.35,
+    "open": 4383.35,
+    "time": 1789953360,
+    "close": 4381.855
+   },
+   "reconstituido": true
+  },
+  "tick_fecho": {
+   "minuto": "2026-09-21T01:21:00.000Z",
+   "sl_no_fecho": 4375.93,
+   "fonte_precos": "TradingView OANDA:XAUUSD M1",
+   "reconstituido": true,
+   "motivo_detalhe": "sl"
+  }
+ },
+ {
+  "id": "b4e62ab5-d7ec-4115-ae82-00339b3130d8",
+  "symbol": "XAUUSD",
+  "direcao": "buy",
+  "volume": 0.1,
+  "preco_entrada": 4379.27,
+  "sl": 4371.63,
+  "tp": 4425.1,
+  "preco_fecho": 4379.47,
+  "pnl": 2,
+  "motivo_fecho": "sl",
+  "origem": "estrategia",
+  "ideia_ref": "recon:correcao-21-09:sensei:msg:tv:e701c528-dd86-4fa3-b2fe-8a157b3a4774",
+  "aberta_em": "2026-09-21T01:46:00+00:00",
+  "fechada_em": "2026-09-21T01:49:00+00:00",
+  "trailing_distancia": 2,
+  "trailing_ativacao": 4,
+  "be_gatilho": 3.5,
+  "be_offset": 0.2,
+  "be_no_tp1": false,
+  "be_feito": true,
+  "tps": [
+   {
+    "pct": 50,
+    "preco": 4390.73,
+    "atingido": false
+   },
+   {
+    "pct": 25,
+    "preco": 4398.37,
+    "atingido": false
+   }
+  ],
+  "risco_inicial": 76.4,
+  "comentario": "RECONST · correção 21/09 — sinal sem preço ao vivo (MetaApi) · Sensei · tv:e701c528",
+  "tick_entrada": {
+   "ask": 4379.27,
+   "bid": 4378.96,
+   "nota": "histórico reconstituído — correção 21/09 — sinal sem preço ao vivo (MetaApi); não é uma execução real",
+   "chave": "sensei:msg:tv:e701c528-dd86-4fa3-b2fe-8a157b3a4774",
+   "regra": "entrada = abertura da vela M1 seguinte ao minuto do sinal (ask, compra); extremo adverso primeiro; SL→parciais→BE→trailing→TP",
+   "spread": 0.32,
+   "sinal_em": "2026-09-21T01:45:05.472Z",
+   "estrategia": "sensei",
+   "fonte_precos": "TradingView OANDA:XAUUSD M1",
+   "vela_entrada": {
+    "low": 4379.115,
+    "high": 4381.675,
+    "open": 4379.115,
+    "time": 1789955160,
+    "close": 4381.525
+   },
+   "reconstituido": true
+  },
+  "tick_fecho": {
+   "minuto": "2026-09-21T01:49:00.000Z",
+   "sl_no_fecho": 4379.47,
+   "fonte_precos": "TradingView OANDA:XAUUSD M1",
+   "reconstituido": true,
+   "motivo_detalhe": "break_even"
+  }
+ },
+ {
+  "id": "780b4ee7-f5e3-463f-a64e-3eed59d4f345",
+  "symbol": "XAUUSD",
+  "direcao": "sell",
+  "volume": 0.1,
+  "preco_entrada": 4351.49,
+  "sl": 4345.76,
+  "tp": 4306.7,
+  "preco_fecho": 4345.76,
+  "pnl": 57.3,
+  "motivo_fecho": "sl",
+  "origem": "estrategia",
+  "ideia_ref": "sinal:sensei:msg:tv:1a3c34c8-9f07-4323-9af8-a6b3a6fba333",
+  "aberta_em": "2026-09-21T10:30:05.005+00:00",
+  "fechada_em": "2026-09-21T11:05:02.542878+00:00",
+  "trailing_distancia": 2,
+  "trailing_ativacao": 4,
+  "be_gatilho": 3.5,
+  "be_offset": 0.2,
+  "be_no_tp1": false,
+  "be_feito": true,
+  "tps": [
+   {
+    "pct": 50,
+    "preco": 4340.29,
+    "atingido": false
+   },
+   {
+    "pct": 25,
+    "preco": 4332.83,
+    "atingido": false
+   }
+  ],
+  "risco_inicial": 74.6,
+  "comentario": "MTM Auto Sensei",
+  "tick_entrada": {
+   "em": "2026-09-21T10:30:03.925+00:00",
+   "ask": 4351.81,
+   "bid": 4351.49
+  },
+  "tick_fecho": {
+   "em": "2026-09-21T11:05:02.472Z",
+   "ask": 4346.29,
+   "bid": 4345.97,
+   "fonte": "metaapi:puprime"
+  }
+ },
+ {
+  "id": "4bc7d910-6309-41eb-99e6-ebcd306e2b55",
+  "symbol": "XAUUSD",
+  "direcao": "buy",
+  "volume": 0.1,
+  "preco_entrada": 4360.3,
+  "sl": 4365.29,
+  "tp": 4414.5,
+  "preco_fecho": 4365.29,
+  "pnl": 49.9,
+  "motivo_fecho": "sl",
+  "origem": "estrategia",
+  "ideia_ref": "sinal:sensei:msg:tv:f448a8b7-618f-4c59-b660-6b994ede12ec",
+  "aberta_em": "2026-09-21T13:30:34.177+00:00",
+  "fechada_em": "2026-09-21T13:31:37.437485+00:00",
+  "trailing_distancia": 2,
+  "trailing_ativacao": 4,
+  "be_gatilho": 3.5,
+  "be_offset": 0.2,
+  "be_no_tp1": false,
+  "be_feito": true,
+  "tps": [
+   {
+    "pct": 50,
+    "preco": 4373.85,
+    "atingido": false
+   },
+   {
+    "pct": 25,
+    "preco": 4382.88,
+    "atingido": false
+   }
+  ],
+  "risco_inicial": 90.3,
+  "comentario": "MTM Auto Sensei",
+  "tick_entrada": {
+   "em": "2026-09-21T13:30:32.192+00:00",
+   "ask": 4360.3,
+   "bid": 4359.98
+  },
+  "tick_fecho": {
+   "em": "2026-09-21T13:31:37.194Z",
+   "ask": 4360.66,
+   "bid": 4360.34,
+   "fonte": "metaapi:puprime"
+  }
+ },
+ {
+  "id": "8a9603b8-4b68-4b4e-a570-3017dfc5793b",
+  "symbol": "XAUUSD",
+  "direcao": "sell",
+  "volume": 0.1,
+  "preco_entrada": 4319.54,
+  "sl": 4315.89,
+  "tp": 4249.51,
+  "preco_fecho": 4315.89,
+  "pnl": 36.5,
+  "motivo_fecho": "sl",
+  "origem": "estrategia",
+  "ideia_ref": "sinal:sensei:msg:tv:a4f1a78d-2c62-42d0-8ad1-e3523b019f4c",
+  "aberta_em": "2026-09-22T09:15:03.396+00:00",
+  "fechada_em": "2026-09-22T09:30:57.718134+00:00",
+  "trailing_distancia": 2,
+  "trailing_ativacao": 4,
+  "be_gatilho": 3.5,
+  "be_offset": 0.2,
+  "be_no_tp1": false,
+  "be_feito": true,
+  "tps": [
+   {
+    "pct": 50,
+    "preco": 4302.03,
+    "atingido": false
+   },
+   {
+    "pct": 25,
+    "preco": 4290.36,
+    "atingido": false
+   }
+  ],
+  "risco_inicial": 116.7,
+  "comentario": "MTM Auto Sensei",
+  "tick_entrada": {
+   "em": "2026-09-22T09:15:02.147+00:00",
+   "ask": 4319.86,
+   "bid": 4319.54
+  },
+  "tick_fecho": {
+   "em": "2026-09-22T09:30:57.595Z",
+   "ask": 4315.92,
+   "bid": 4315.6,
+   "fonte": "metaapi:puprime"
+  }
+ },
+ {
+  "id": "afa90888-53d1-4ccd-82d1-2db6bc951b65",
+  "symbol": "XAUUSD",
+  "direcao": "sell",
+  "volume": 0.1,
+  "preco_entrada": 4330.67,
+  "sl": 4325.33,
+  "tp": 4265.05,
+  "preco_fecho": 4325.33,
+  "pnl": 53.4,
+  "motivo_fecho": "sl",
+  "origem": "estrategia",
+  "ideia_ref": "sinal:sensei:msg:tv:3333cea2-f1cf-4894-9548-9da625682822",
+  "aberta_em": "2026-09-22T14:30:32.137+00:00",
+  "fechada_em": "2026-09-22T14:36:33.432542+00:00",
+  "trailing_distancia": 2,
+  "trailing_ativacao": 4,
+  "be_gatilho": 3.5,
+  "be_offset": 0.2,
+  "be_no_tp1": false,
+  "be_feito": true,
+  "tps": [
+   {
+    "pct": 50,
+    "preco": 4314.74,
+    "atingido": false
+   },
+   {
+    "pct": 25,
+    "preco": 4303.69,
+    "atingido": false
+   }
+  ],
+  "risco_inicial": 116.7,
+  "comentario": "MTM Auto Sensei",
+  "tick_entrada": {
+   "em": "2026-09-22T14:30:31.643+00:00",
+   "ask": 4330.99,
+   "bid": 4330.67
+  },
+  "tick_fecho": {
+   "em": "2026-09-22T14:36:33.278Z",
+   "ask": 4325.46,
+   "bid": 4325.14,
+   "fonte": "metaapi:puprime"
+  }
+ },
+ {
+  "id": "525c5e11-88d2-43f4-a3f9-b31fdc7ad9fc",
+  "symbol": "XAUUSD",
+  "direcao": "sell",
+  "volume": 0.1,
+  "preco_entrada": 4304.5,
+  "sl": 4312,
+  "tp": 4259.49,
+  "preco_fecho": 4312,
+  "pnl": -75,
+  "motivo_fecho": "sl",
+  "origem": "estrategia",
+  "ideia_ref": "sinal:sensei:msg:tv:56efe477-b38e-4e9f-b210-9e0875d7ad2a",
+  "aberta_em": "2026-09-23T13:15:08.365+00:00",
+  "fechada_em": "2026-09-23T13:29:00.805168+00:00",
+  "trailing_distancia": 2,
+  "trailing_ativacao": 4,
+  "be_gatilho": 3.5,
+  "be_offset": 0.2,
+  "be_no_tp1": false,
+  "be_feito": false,
+  "tps": [
+   {
+    "pct": 50,
+    "preco": 4293.25,
+    "atingido": false
+   },
+   {
+    "pct": 25,
+    "preco": 4285.75,
+    "atingido": false
+   }
+  ],
+  "risco_inicial": 75,
+  "comentario": "MTM Auto Sensei",
+  "tick_entrada": {
+   "em": "2026-09-23T13:15:07.303+00:00",
+   "ask": 4304.82,
+   "bid": 4304.5
+  },
+  "tick_fecho": {
+   "em": "2026-09-23T13:29:00.641Z",
+   "ask": 4312.39,
+   "bid": 4312.07,
+   "fonte": "metaapi:puprime"
+  }
+ },
+ {
+  "id": "43340f82-ea7d-4ebf-af42-4213c3c89b71",
+  "symbol": "XAUUSD",
+  "direcao": "sell",
+  "volume": 0.1,
+  "preco_entrada": 4292.43,
+  "sl": 4285.88,
+  "tp": 4237.69,
+  "preco_fecho": 4285.88,
+  "pnl": 65.5,
+  "motivo_fecho": "sl",
+  "origem": "estrategia",
+  "ideia_ref": "sinal:sensei:msg:tv:b742c47f-0271-43a5-b796-974a79637a21",
+  "aberta_em": "2026-09-23T13:45:21.022+00:00",
+  "fechada_em": "2026-09-23T13:47:43.549904+00:00",
+  "trailing_distancia": 2,
+  "trailing_ativacao": 4,
+  "be_gatilho": 3.5,
+  "be_offset": 0.2,
+  "be_no_tp1": false,
+  "be_feito": true,
+  "tps": [
+   {
+    "pct": 50,
+    "preco": 4278.75,
+    "atingido": false
+   },
+   {
+    "pct": 25,
+    "preco": 4269.62,
+    "atingido": false
+   }
+  ],
+  "risco_inicial": 91.2,
+  "comentario": "MTM Auto Sensei",
+  "tick_entrada": {
+   "em": "2026-09-23T13:45:20.314+00:00",
+   "ask": 4292.75,
+   "bid": 4292.43
+  },
+  "tick_fecho": {
+   "em": "2026-09-23T13:47:43.381Z",
+   "ask": 4285.89,
+   "bid": 4285.57,
+   "fonte": "metaapi:puprime"
+  }
+ },
+ {
+  "id": "d5bab38d-e3da-46a5-8336-41b093436c38",
+  "symbol": "XAUUSD",
+  "direcao": "sell",
+  "volume": 0.1,
+  "preco_entrada": 4281.01,
+  "sl": 4277.55,
+  "tp": 4235.81,
+  "preco_fecho": 4277.55,
+  "pnl": 34.6,
+  "motivo_fecho": "sl",
+  "origem": "estrategia",
+  "ideia_ref": "sinal:sensei:msg:tv:8806ca19-3430-4af4-8eec-07cd3b077ee5",
+  "aberta_em": "2026-09-24T02:00:12.95+00:00",
+  "fechada_em": "2026-09-24T02:00:27.439016+00:00",
+  "trailing_distancia": 2,
+  "trailing_ativacao": 4,
+  "be_gatilho": 3.5,
+  "be_offset": 0.2,
+  "be_no_tp1": false,
+  "be_feito": true,
+  "tps": [
+   {
+    "pct": 50,
+    "preco": 4269.71,
+    "atingido": false
+   },
+   {
+    "pct": 25,
+    "preco": 4262.17,
+    "atingido": false
+   }
+  ],
+  "risco_inicial": 75.3,
+  "comentario": "MTM Auto Sensei",
+  "tick_entrada": {
+   "em": "2026-09-24T02:00:08.998+00:00",
+   "ask": 4281.33,
+   "bid": 4281.01
+  },
+  "tick_fecho": {
+   "em": "2026-09-24T02:00:27.242Z",
+   "ask": 4278.08,
+   "bid": 4277.76,
+   "fonte": "metaapi:puprime"
+  }
+ }
+]

@@ -47,7 +47,16 @@ eq('isAdmin sem userId não passa', decisaoDeAcesso({ isAdmin: true })?.status, 
     sim(`${metodo}: guarda antes de ler a base ou o corpo`, guarda > 0 && negado > guarda && negado < primeiraLeitura)
   }
   sim('guarda usa verifyAdminAccess + decisaoDeAcesso', /verifyAdminAccess\(\)[\s\S]{0,80}decisaoDeAcesso\(a\)/.test(rota))
-  sim('POST audita antes de executar', rota.indexOf("from('mtm_funded_admin_audit').insert") < rota.indexOf('executarAccao({'))
+  /*
+   * A sequência auditar→executar saiu da rota para `admin-conta-executar.ts` (24/09), porque o
+   * bot de Telegram decide levantamentos pelo mesmo caminho. O teste segue-a para lá: o que não
+   * pode acontecer é a acção correr antes de a intenção ficar escrita.
+   */
+  sim('POST passa pelo executor auditado', rota.includes('executarComAuditoria({'))
+  sim('POST não executa por fora do executor', !rota.includes('executarAccao({'))
+  const exec = ler('lib/mtmfunded/admin-conta-executar.ts')
+  sim('o executor audita antes de executar', exec.indexOf("from('mtm_funded_admin_audit').insert") < exec.indexOf('executarAccao({'))
+  sim('o executor fecha o registo com o depois', /from\('mtm_funded_admin_audit'\)\.update\(\{\s*\n?\s*depois/.test(exec))
 }
 
 // ── 2. pausa ───────────────────────────────────────────────────────────────

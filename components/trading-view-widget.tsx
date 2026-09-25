@@ -1,6 +1,7 @@
 "use client"
 
 import { TV_STUDY_LEGEND_OVERRIDES } from "@/lib/trading-view-scanner-config"
+import { useSemCripto } from "@/lib/ios-sem-cripto"
 import { Fragment, useEffect, useRef, useState, useImperativeHandle } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -935,8 +936,24 @@ export default function TradingViewWidget({
   // Blindagem: evita crash se selectedCategory vier inválido em runtime.
   const selectedCategoryAssets = assetCategories[selectedCategory] ?? assetCategories.forex
 
+  /**
+   * Na app iOS não há separador «Crypto» no selector de activos.
+   *
+   * Este dropdown traz 20 pares `BINANCE:*USDT` com os nomes por extenso («Bitcoin (BTC)»…), e o
+   * scanner da app (components/mobile/scanner-mobile.tsx) monta este widget — ou seja, isto
+   * estava à vista de um revisor apesar de a guarda central existir. A rejeição da 3.7.2 cita
+   * precisamente gráficos apontados a `BINANCE:BTCUSDT`.
+   */
+  const semCriptoAqui = useSemCripto()
+  const categorias = (Object.keys(assetCategories) as Array<keyof typeof assetCategories>).filter(
+    (c) => !(semCriptoAqui && c === "crypto"),
+  )
+  // O separador desaparece a meio da sessão (o hook só acerta depois de montar): quem já lá
+  // estivesse ficaria a ver a lista de cripto sem separador que a explique.
+  const assetsVisiveis = semCriptoAqui && selectedCategory === "crypto" ? assetCategories.forex : selectedCategoryAssets
+
   // Filtrar ativos por categoria e busca
-  const filteredAssets = selectedCategoryAssets.filter((asset) =>
+  const filteredAssets = assetsVisiveis.filter((asset) =>
     asset.label.toLowerCase().includes(assetSearchTerm.toLowerCase()) ||
     asset.value.toLowerCase().includes(assetSearchTerm.toLowerCase())
   )
@@ -988,7 +1005,7 @@ export default function TradingViewWidget({
 
                 {/* Categorias */}
                 <div className="flex border-b border-gray-700">
-                  {(Object.keys(assetCategories) as Array<keyof typeof assetCategories>).map((cat) => (
+                  {categorias.map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
@@ -1454,7 +1471,8 @@ export default function TradingViewWidget({
             userSelect: "auto",
             WebkitUserSelect: "auto",
             MozUserSelect: "auto",
-            msUserSelect: "auto",
+            // `msUserSelect: "auto"` foi retirado: o -ms-user-select so aceita
+            // none | text | element, logo "auto" era CSS invalido (e so servia o IE).
             pointerEvents: widgetLoaded ? "auto" : "none",
           }}
         />
