@@ -1,0 +1,252 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { EstadoPipeline } from '@/lib/backoffice-vista'
+
+/**
+ * A INGESTÃO — pôr no pipeline quem já está à espera e ninguém está a trabalhar.
+ *
+ * O QUE ISTO VEIO RESOLVER
+ * Em 25/09 a contagem era esta: pipeline com ZERO negócios e ZERO tarefas, e ao lado, na mesma
+ * base de dados, 96 perfis inactivos (gente que se registou e nunca chegou a nada), 5 leads do
+ * Telegram, 5 do Instagram e 1 do ManyChat. Cerca de cem pessoas paradas — algumas há meses — não
+ * por falta de equipa, mas porque nunca ninguém as passou do sítio onde caíram para o sítio onde
+ * se trabalha.
+ *
+ * Esta função é essa passagem, e corre sozinha todas as manhãs.
+ *
+ * DUAS REGRAS QUE MANDAM AQUI
+ *
+ * 1. NUNCA DUPLICAR. Cada lead traz uma `chave_origem` estável (migração 135). Correr isto dez
+ *    vezes seguidas dá exactamente o mesmo pipeline que correr uma vez. Um pipeline com a mesma
+ *    pessoa cinco vezes não é um pipeline — é a razão pela qual a equipa deixa de o abrir.
+ *
+ * 2. NUNCA DESPEJAR. Há um tecto diário por fonte. Meter 96 reactivações de uma vez em cima de um
+ *    setter não dá 96 conversas: dá uma pessoa a olhar para uma parede e a não começar nenhuma.
+ *    Entram aos poucos, todos os dias, e os mais recentes primeiro — porque quem se registou
+ *    ontem ainda se lembra de nós e quem se registou em Março já não.
+ *
+ * O QUE ESTA FUNÇÃO NÃO FAZ
+ * Não fala com ninguém. Cria a linha no pipeline e nada mais. Quem escreve à pessoa é a pessoa da
+ * equipa, a partir da tarefa que o motor prepara.
+ */
+
+/** Quantos negócios novos, no máximo, cada fonte pode trazer por dia. */
+export const TECTO_POR_FONTE: Record<string, number> = {
+  telegram: 15,
+  instagram: 15,
+  base: 10,
+}
+
+export interface Ingerido {
+  fonte: string
+  criados: number
+  jaExistiam: number
+  erro?: string
+}
+
+interface Candidato {
+  chave_origem: string
+  nome: string
+  email: string | null
+  telefone: string | null
+  telegram_id: string | null
+  origem: string
+  estado: EstadoPipeline
+  nota: string
+}
+
+/** Um nome apresentável a partir do que a fonte deu. Nunca vazio — uma linha sem nome não se trabalha. */
+function nomeUtil(...tentativas: Array<string | null | undefined>): string {
+  for (const t of tentativas) {
+    const s = (t ?? '').toString().trim()
+    if (s) return s.slice(0, 120)
+  }
+  return 'Sem nome'
+}
+
+/**
+ * Onde é que este lead entra no funil.
+ *
+ * Um lead do Telegram que já respondeu a perguntas não é um lead cru — pô-lo em `lead` obrigava o
+ * prospector a repetir uma conversa que já aconteceu, e a pessoa do outro lado a responder duas
+ * vezes ao mesmo. O estado tem de reflectir o que já se sabe dela.
+ */
+function estadoDoLeadTelegram(stage: string | null): EstadoPipeline {
+  switch ((stage ?? '').toLowerCase()) {
+    case 'granted':
+    case 'pending_review':
+      return 'qualificado'
+    case 'qualifying':
+      return 'contactado'
+    default:
+      return 'lead'
+  }
+}
+
+async function jaNoPipeline(db: SupabaseClient, chaves: string[]): Promise<Set<string>> {
+  if (!chaves.length) return new Set()
+  const { data } = await db.from('vendas_negocios').select('chave_origem').in('chave_origem', chaves)
+  return new Set((data ?? []).map((r) => String((r as { chave_origem: string }).chave_origem)))
+}
+
+/**
+ * Grava os que faltam.
+ *
+ * `ignoreDuplicates` e não um erro: entre a leitura e a escrita pode entrar alguém pela mão de uma
+ * pessoa, e nesse caso a linha dela é que vale. A ingestão nunca atropela trabalho humano.
+ */
+async function gravar(db: SupabaseClient, novos: Candidato[]): Promise<number> {
+  if (!novos.length) return 0
+  const { error, count } = await db
+    .from('vendas_negocios')
+    .upsert(novos, { onConflict: 'chave_origem', ignoreDuplicates: true, count: 'exact' })
+  if (error) throw new Error(error.message)
+  return count ?? novos.length
+}
+
+async function ingerir(
+  db: SupabaseClient,
+  fonte: string,
+  candidatos: Candidato[],
+): Promise<Ingerido> {
+  const tecto = TECTO_POR_FONTE[fonte] ?? 10
+  const existentes = await jaNoPipeline(db, candidatos.map((c) => c.chave_origem))
+  const novos = candidatos.filter((c) => !existentes.has(c.chave_origem)).slice(0, tecto)
+  const criados = await gravar(db, novos)
+  return { fonte, criados, jaExistiam: existentes.size }
+}
+
+// ── As fontes ────────────────────────────────────────────────────────────────
+
+/** Telegram: o funil do bot. Quem já falou connosco e ficou a meio. */
+async function doTelegram(db: SupabaseClient): Promise<Ingerido> {
+  const { data } = await db
+    .from('telegram_leads')
+    .select('chat_id, username, first_name, stage, interesse, interest, source, updated_at')
+    .order('updated_at', { ascending: false })
+    .limit(200)
+
+  const candidatos: Candidato[] = (data ?? []).map((r) => {
+    const l = r as Record<string, unknown>
+    const interesse = nomeUtil(l.interesse as string, l.interest as string, 'sem interesse declarado')
+    return {
+      chave_origem: `telegram:${String(l.chat_id)}`,
+      nome: nomeUtil(l.first_name as string, l.username as string, `Telegram ${String(l.chat_id)}`),
+      email: null,
+      telefone: null,
+      telegram_id: String(l.chat_id),
+      origem: 'telegram',
+      estado: estadoDoLeadTelegram(l.stage as string),
+      nota: `Veio do Telegram (${nomeUtil(l.source as string, 'bot')}). Interesse: ${interesse}.`,
+    }
+  })
+  return ingerir(db, 'telegram', candidatos)
+}
+
+/** Instagram: quem comentou com intenção. O `commenter` é uma pessoa, e é isso que faz disto um lead. */
+async function doInstagram(db: SupabaseClient): Promise<Ingerido> {
+  const [comentarios, manychat] = await Promise.all([
+    db
+      .from('ig_leads')
+      .select('comment_id, commenter, keyword, intent, comment_text, created_at')
+      .order('created_at', { ascending: false })
+      .limit(200),
+    db
+      .from('mtm_leads')
+      .select('id, instagram_handle, full_name, email, score, stage, source, last_interaction')
+      .order('last_interaction', { ascending: false })
+      .limit(200),
+  ])
+
+  const candidatos: Candidato[] = []
+
+  for (const r of comentarios.data ?? []) {
+    const l = r as Record<string, unknown>
+    const quem = nomeUtil(l.commenter as string)
+    if (quem === 'Sem nome') continue // sem pessoa não há negócio
+    candidatos.push({
+      chave_origem: `ig-comentario:${String(l.comment_id)}`,
+      nome: quem,
+      email: null,
+      telefone: null,
+      telegram_id: null,
+      origem: 'instagram',
+      estado: 'lead',
+      nota: `Comentou no Instagram${l.keyword ? ` («${String(l.keyword)}»)` : ''}: ${nomeUtil(l.comment_text as string, 'sem texto')}`,
+    })
+  }
+
+  for (const r of manychat.data ?? []) {
+    const l = r as Record<string, unknown>
+    candidatos.push({
+      chave_origem: `mtm-lead:${String(l.id)}`,
+      nome: nomeUtil(l.full_name as string, l.instagram_handle as string),
+      email: (l.email as string) || null,
+      telefone: null,
+      telegram_id: null,
+      origem: 'instagram',
+      // `warm` e acima já falaram connosco: entram como contactados para não repetir a abordagem.
+      estado: ['warm', 'hot', 'qualified'].includes(String(l.stage ?? '').toLowerCase()) ? 'contactado' : 'lead',
+      nota: `Lead do Instagram (${nomeUtil(l.source as string, 'manychat')}), score ${String(l.score ?? '—')}.`,
+    })
+  }
+
+  return ingerir(db, 'instagram', candidatos)
+}
+
+/**
+ * A BASE — quem já cá está e nunca chegou a nada.
+ *
+ * São 96 pessoas que se registaram e ficaram por ali. É a fonte mais barata que existe: já sabem
+ * quem somos, já deram o email, e alguma coisa as trouxe cá. Custa zero em publicidade e é a
+ * primeira coisa que qualquer operação séria trabalha antes de ir comprar tráfego novo.
+ *
+ * Entram os mais recentes primeiro, e nunca mais de dez por dia — reactivação feita à pressa lê-se
+ * como spam, e queimava a lista que se queria recuperar.
+ */
+async function daBase(db: SupabaseClient): Promise<Ingerido> {
+  const { data } = await db
+    .from('profiles')
+    .select('id, full_name, email, created_at, is_active')
+    .not('is_active', 'is', true)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  const candidatos: Candidato[] = (data ?? []).map((r) => {
+    const p = r as Record<string, unknown>
+    return {
+      chave_origem: `perfil:${String(p.id)}`,
+      nome: nomeUtil(p.full_name as string, p.email as string),
+      email: (p.email as string) || null,
+      telefone: null,
+      telegram_id: null,
+      origem: 'base',
+      estado: 'lead',
+      nota: `Registou-se em ${String(p.created_at ?? '').slice(0, 10)} e nunca activou. Reactivação.`,
+    }
+  })
+  return ingerir(db, 'base', candidatos)
+}
+
+/**
+ * Corre todas as fontes.
+ *
+ * Uma fonte que rebente não pode levar as outras atrás: o Instagram fica sem quota de API com
+ * frequência, e não é razão para o Telegram e a base ficarem por trabalhar nesse dia.
+ */
+export async function ingerirLeads(db: SupabaseClient): Promise<Ingerido[]> {
+  const fontes: Array<[string, () => Promise<Ingerido>]> = [
+    ['telegram', () => doTelegram(db)],
+    ['instagram', () => doInstagram(db)],
+    ['base', () => daBase(db)],
+  ]
+
+  const resultados: Ingerido[] = []
+  for (const [nome, correr] of fontes) {
+    try {
+      resultados.push(await correr())
+    } catch (e) {
+      resultados.push({ fonte: nome, criados: 0, jaExistiam: 0, erro: e instanceof Error ? e.message : String(e) })
+    }
+  }
+  return resultados
+}
