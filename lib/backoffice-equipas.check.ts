@@ -129,6 +129,12 @@ teste('o admin monta equipas', /equipas/i.test(painel))
 const rota = readFileSync('app/api/admin/backoffice/equipas/route.ts', 'utf8')
 teste('a rota das equipas exige admin', /verifyAdminAccess/.test(rota))
 
+// E o backoffice tem de CONSUMIR isto. Enquanto `/api/backoffice/eu` chamava `ambitoDeLeitura` sem
+// liderados, o modelo podia estar perfeito e um team leader continuava a ver-se só a si — uma
+// avaria que não dá erro nenhum, só uma página com menos linhas do que devia.
+const eu = readFileSync('app/api/backoffice/eu/route.ts', 'utf8')
+teste('o backoffice lê o âmbito com a equipa', /ambitoDaEquipa\(/.test(eu))
+
 void (async () => {
   await Promise.all(espera)
   if (falhas.length) {
