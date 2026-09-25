@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
 import MlmManager from '@/components/admin/mlm-manager'
 import MlmTreeEditor from '@/components/admin/mlm-tree-editor'
+import BackofficeEquipa from '@/components/admin/backoffice-equipa'
 import {
   LayoutDashboard,
   Award,
@@ -17,6 +18,7 @@ import {
   Shield,
   Loader2,
   Users,
+  UserCog,
   ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -27,6 +29,9 @@ const sidebarItems = [
   { id: 'ranks',        label: 'Plano de Compensação',  icon: Award },
   { id: 'affiliates',   label: 'Rede de Afiliados',     icon: Network },
   { id: 'commissions',  label: 'Comissões',             icon: Coins },
+  // A equipa de vendas fica ao LADO do MLM binário, não dentro dele: são dois sistemas de pagamento
+  // distintos (papéis vs árvore) e a mesma pessoa pode ganhar pelos dois.
+  { id: 'equipa',       label: 'Equipa & Acessos',      icon: UserCog },
   { id: 'settings',     label: 'Definições',            icon: Settings },
 ]
 
@@ -144,7 +149,9 @@ export default function BackofficePage() {
 
       {/* Main Content */}
       <main className="flex-1 ml-60 min-h-screen overflow-y-auto">
-        {activeSection === 'tree' ? (
+        {activeSection === 'equipa' ? (
+          <BackofficeEquipa />
+        ) : activeSection === 'tree' ? (
           <div className="p-6">
             <MlmTreeEditor />
           </div>
