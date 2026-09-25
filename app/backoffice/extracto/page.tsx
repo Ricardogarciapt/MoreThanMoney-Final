@@ -8,8 +8,9 @@
  * Não com um `if`. O âmbito de leitura (`ambitoDeLeitura`) devolve uma LISTA de ids, e é essa lista
  * que entra no `.in('pessoa_id', …)` da consulta. Uma consulta filtrada por lista não tem como
  * esquecer-se do filtro; um `if (é responsável) lê tudo` colocado antes da consulta esquece-se — e
- * o que se esquece aqui é o dinheiro dos colegas. Hoje, sem modelo de equipa, essa lista tem um id
- * só: o da própria pessoa (ver `lib/backoffice-equipa.ts`).
+ * o que se esquece aqui é o dinheiro dos colegas. A lista tem o próprio e, quando há equipa montada
+ * E o papel que a abre, os liderados directos (ver `lib/backoffice-equipa.ts`). Em qualquer falha
+ * fica só o próprio.
  *
  * UMA SÓ LISTA, DUAS ORIGENS
  * A vista `vendas_extracto` junta as comissões da equipa de vendas e o residual da rede binária.
@@ -25,8 +26,7 @@
  * SÓ LEITURA. Aprovar e pagar comissões é um acto do dono, e faz-se no admin.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { ambitoDeLeitura, pode } from '@/lib/backoffice-papeis'
-import { lideradosDe, AVISO_EQUIPA_POR_CONFIGURAR } from '@/lib/backoffice-equipa'
+import { ambitoDaPagina } from '@/lib/backoffice-equipa'
 import { extractoDoAmbito, somarExtracto, type LinhaExtracto } from '@/lib/vendas/extracto'
 import { centimosEmEuros } from '@/lib/vendas/calculo'
 import {
@@ -58,9 +58,9 @@ export default async function ExtractoPage() {
   }
   const { ctx } = acesso
 
-  const liderados = await lideradosDe(ctx)
-  const ambito = ambitoDeLeitura(ctx.capacidades, ctx.userId, 'extracto', liderados)
-  const veEquipa = pode(ctx.capacidades, 'bo.extracto_equipa')
+  // O âmbito e a frase que o explica vêm da mesma chamada, para não haver hipótese de a página
+  // filtrar por uma lista e dizer à pessoa que está a ver outra.
+  const { ambito, aviso } = await ambitoDaPagina(ctx, 'extracto')
 
   let linhas: LinhaExtracto[]
   try {
@@ -113,11 +113,7 @@ export default async function ExtractoPage() {
         />
       </div>
 
-      {veEquipa && (
-        <Aviso>
-          Tens o papel que dá acesso ao extracto da tua equipa. {AVISO_EQUIPA_POR_CONFIGURAR}
-        </Aviso>
-      )}
+      {aviso && <Aviso>{aviso}</Aviso>}
 
       {/* De onde vem o dinheiro. Duas origens que não se misturam: o trabalho na equipa e a rede.
           Somadas sem se distinguirem, a pessoa não saberia qual das duas vale a pena trabalhar. */}

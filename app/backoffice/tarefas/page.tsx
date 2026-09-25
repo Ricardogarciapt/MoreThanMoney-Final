@@ -8,14 +8,14 @@
  * entre a meia-noite e a uma da manhã as tarefas de hoje apareciam atrasadas.
  *
  * QUEM VÊ O QUÊ: o responsável da tarefa é um campo só, e o filtro é a lista de ids do âmbito. Uma
- * pessoa vê as suas; um responsável de equipa veria as dos liderados, quando esse modelo existir.
+ * pessoa vê as suas; um responsável de equipa vê também as dos liderados directos (migração 131).
+ * Um líder de líderes NÃO vê os netos — a cadeia não se atravessa, por decisão do dono.
  *
  * A ÚNICA ESCRITA DO BACKOFFICE está aqui: marcar a própria tarefa como feita. Quem é o dono
  * verifica-se no servidor, na consulta (`.eq('responsavel_id', …)` com o id da sessão).
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { ambitoDeLeitura, pode } from '@/lib/backoffice-papeis'
-import { lideradosDe, AVISO_EQUIPA_POR_CONFIGURAR } from '@/lib/backoffice-equipa'
+import { ambitoDaPagina } from '@/lib/backoffice-equipa'
 import { tarefasDoAmbito, type TarefaLinha } from '@/lib/backoffice-negocios'
 import { PESO_PRAZO, SITUACAO_PRAZO_NOME, dataCurta, situacaoDoPrazo } from '@/lib/backoffice-vista'
 import { abrirPagina, SemAcesso } from '../_partes/acesso'
@@ -37,9 +37,7 @@ export default async function TarefasPage() {
   }
   const { ctx } = acesso
 
-  const liderados = await lideradosDe(ctx)
-  const ambito = ambitoDeLeitura(ctx.capacidades, ctx.userId, 'tarefas', liderados)
-  const veEquipa = pode(ctx.capacidades, 'bo.tarefas_equipa')
+  const { ambito, aviso } = await ambitoDaPagina(ctx, 'tarefas')
 
   let tarefas: TarefaLinha[]
   try {
@@ -75,7 +73,7 @@ export default async function TarefasPage() {
         sub="O que tens para fazer, o mais urgente primeiro. «Atrasada» é uma conta feita agora contra a data de hoje — não é um estado que alguém tenha de vir pôr."
       />
 
-      {veEquipa && <Aviso>Tens o papel que dá acesso às tarefas da tua equipa. {AVISO_EQUIPA_POR_CONFIGURAR}</Aviso>}
+      {aviso && <Aviso>{aviso}</Aviso>}
 
       {abertas.length > 0 && (
         <p className="text-sm text-gray-400">
@@ -108,9 +106,9 @@ export default async function TarefasPage() {
                     {t.negocio_id && <Etiqueta>de um negócio</Etiqueta>}
                   </div>
                 </div>
-                {/* Só o próprio risca a sua tarefa. Quando um responsável estiver a ver as dos
-                    liderados, o botão não aparece nas que não são dele — e o servidor recusa na
-                    mesma, porque é lá que a regra vive. */}
+                {/* Só o próprio risca a sua tarefa: num responsável a ver as dos liderados, o
+                    botão não aparece nas que não são dele — e o servidor recusa na mesma, porque é
+                    lá que a regra vive. */}
                 {t.responsavel_id === ctx.userId && <Marcar id={t.id} feita={false} />}
               </li>
             )

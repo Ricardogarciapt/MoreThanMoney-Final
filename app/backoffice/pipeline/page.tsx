@@ -5,8 +5,8 @@
  * Um negócio tem cinco atribuições possíveis (prospector, setter, closer, team leader, afiliado) e
  * nenhuma é obrigatória. «Os meus negócios» é, literalmente, aqueles em que o meu id está em
  * qualquer uma delas — e é isso que `negociosDoAmbito` faz, filtrando pela LISTA de ids do âmbito.
- * Sem modelo de equipa, essa lista tem um id só e um responsável vê os dele; a página diz-lhe isso
- * com palavras, para ele não concluir que a equipa não tem trabalho.
+ * Um responsável de equipa tem na lista os liderados directos; sem equipa montada a lista tem um id
+ * só e a página diz-lhe isso com palavras, para ele não concluir que a equipa não tem trabalho.
  *
  * O PASSO SEGUINTE VEM DE UM GUIÃO, NÃO DE UM MODELO
  * Cada negócio traz o movimento seguinte escrito (`lib/backoffice-playbook.ts`), lido da memória de
@@ -19,8 +19,7 @@
  * e faz-se no admin. Esta página mostra e aconselha.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { ambitoDeLeitura, pode } from '@/lib/backoffice-papeis'
-import { lideradosDe, AVISO_EQUIPA_POR_CONFIGURAR } from '@/lib/backoffice-equipa'
+import { ambitoDaPagina } from '@/lib/backoffice-equipa'
 import { negociosDoAmbito, papeisNoNegocio, type NegocioLinha } from '@/lib/backoffice-negocios'
 import { ESTADOS_PIPELINE, ESTADO_PIPELINE_NOME, dataCurta, ehEstadoFechado, ehEstadoPipeline } from '@/lib/backoffice-vista'
 import { avisoParado, diasParado, sugestaoPara } from '@/lib/backoffice-playbook'
@@ -42,9 +41,7 @@ export default async function PipelinePage() {
   }
   const { ctx } = acesso
 
-  const liderados = await lideradosDe(ctx)
-  const ambito = ambitoDeLeitura(ctx.capacidades, ctx.userId, 'pipeline', liderados)
-  const veEquipa = pode(ctx.capacidades, 'bo.pipeline_equipa')
+  const { ambito, aviso } = await ambitoDaPagina(ctx, 'pipeline')
 
   let negocios: NegocioLinha[]
   try {
@@ -80,7 +77,7 @@ export default async function PipelinePage() {
         sub="Os negócios em que participas, por estado, com o passo seguinte de cada um. Mover um negócio faz-se no admin — aqui vês onde ele está e o que falta fazer."
       />
 
-      {veEquipa && <Aviso>Tens o papel que dá acesso ao pipeline da tua equipa. {AVISO_EQUIPA_POR_CONFIGURAR}</Aviso>}
+      {aviso && <Aviso>{aviso}</Aviso>}
 
       {negocios.length === 0 ? (
         <Vazio

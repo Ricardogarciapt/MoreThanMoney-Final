@@ -16,7 +16,7 @@
  * falta é a informação.
  */
 import { pode, PAPEL_NOME, capacidadesDoPapel } from '@/lib/backoffice-papeis'
-import { lideradosDe, AVISO_EQUIPA_POR_CONFIGURAR } from '@/lib/backoffice-equipa'
+import { lideradosDe } from '@/lib/backoffice-equipa'
 import { abrirPagina, SemAcesso } from '../_partes/acesso'
 import { Aviso, Cabecalho, Etiqueta } from '../_partes/blocos'
 
@@ -45,9 +45,13 @@ export default async function EquipaPage() {
         sub="Quem responde a ti, o que cada um está a trabalhar, e o que cada um ganhou."
       />
 
-      <Aviso>
-        <strong className="text-[#D2A63C]">Ainda não está ligado.</strong> {AVISO_EQUIPA_POR_CONFIGURAR}
-      </Aviso>
+      {liderados.length === 0 && (
+        <Aviso>
+          <strong className="text-[#D2A63C]">Ainda não tens equipa montada.</strong> O sistema não tem
+          ninguém registado como teu liderado. Não quer dizer que a tua equipa não tenha resultados —
+          quer dizer que ela ainda não foi montada no admin. Fala com o Ricardo.
+        </Aviso>
+      )}
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">O que já se sabe</h2>

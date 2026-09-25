@@ -163,23 +163,30 @@ export interface AmbitoLeitura {
   todos: boolean
 }
 
+/**
+ * AS QUATRO FAMÍLIAS de leitura do backoffice — uma por página. Tem nome porque é repetida em cinco
+ * ficheiros (aqui, nas equipas, na vista, nas páginas) e uma união escrita à mão em cinco sítios é
+ * uma união que um dia deixa de ser a mesma nos cinco.
+ */
+export type FamiliaAmbito = 'extracto' | 'leads' | 'pipeline' | 'tarefas'
+
 export function ambitoDeLeitura(
   capacidades: ReadonlySet<Capacidade>,
   proprioId: string,
-  familia: 'extracto' | 'leads' | 'pipeline' | 'tarefas',
+  familia: FamiliaAmbito,
   liderados: readonly string[] = [],
 ): AmbitoLeitura {
   if (familia === 'extracto' && pode(capacidades, 'bo.extracto_todos')) {
     return { proprioId, ids: [], todos: true }
   }
 
-  const proprias: Record<typeof familia, Capacidade> = {
+  const proprias: Record<FamiliaAmbito, Capacidade> = {
     extracto: 'bo.extracto_proprio',
     leads: 'bo.leads_proprias',
     pipeline: 'bo.pipeline_proprio',
     tarefas: 'bo.tarefas_proprias',
   }
-  const equipa: Record<typeof familia, Capacidade> = {
+  const equipa: Record<FamiliaAmbito, Capacidade> = {
     extracto: 'bo.extracto_equipa',
     leads: 'bo.leads_equipa',
     pipeline: 'bo.pipeline_equipa',

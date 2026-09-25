@@ -114,6 +114,56 @@ testeAsync('avaria da base → só se vê a si (não rebenta a página)', async 
   return a.ids.length === 1 && a.ids[0] === 'lider'
 })
 
+// ── COM EQUIPA LIGADA: o líder vê os liderados, o setter continua fechado ────
+//
+// Isto é a prova de que as duas peças se encontraram. Não chega o modelo estar certo: o que abre
+// (ou não abre) o dinheiro de alguém é o âmbito que a página usa. As duas afirmações têm de ser
+// verdade AO MESMO TEMPO, senão ou o líder não vê a equipa ou o setter vê a dos outros.
+const setter = capacidadesDe(['setter'])
+testeAsync('com equipa ligada, o team leader vê os liderados no âmbito', async () => {
+  const a = await ambitoDaEquipa(fake(BASE), { userId: 'lider', capacidades: lider }, 'tarefas')
+  return a.ids.includes('ana') && a.ids.includes('bruno') && a.ids.includes('lider') && !a.todos
+})
+testeAsync('e o setter, na mesma base, continua a ver só o dele', async () => {
+  // O setter até é membro de uma equipa — ser liderado não dá acesso nenhum, só ser líder dá.
+  const a = await ambitoDaEquipa(fake(BASE), { userId: 'ana', capacidades: setter }, 'pipeline')
+  return a.ids.length === 1 && a.ids[0] === 'ana' && !a.todos
+})
+testeAsync('um setter que (por engano) liderasse uma equipa continuava fechado', async () => {
+  const a = await ambitoDaEquipa(fake(BASE), { userId: 'lider', capacidades: setter }, 'pipeline')
+  return a.ids.length === 1 && a.ids[0] === 'lider'
+})
+
+// ── UM NÍVEL, SEM CADEIA: o líder de líderes NÃO vê os netos ─────────────────
+//
+// Decisão explícita do dono (migração 131, decisão 2). É a regra mais fácil de atravessar sem
+// querer — bastava expandir a lista em cinco linhas — e a que dá acesso a linhas de gente que o
+// líder de cima nunca conheceu. Por isso tem guarda própria.
+const CADEIA = {
+  backoffice_equipas: [
+    { id: 'e1', nome: 'Chefes', lider_id: 'chefe', criada_em: '2026-09-01', arquivada_em: null, nota: null },
+    { id: 'e2', nome: 'Campo', lider_id: 'lider2', criada_em: '2026-09-01', arquivada_em: null, nota: null },
+  ],
+  backoffice_equipa_membros: [
+    { id: 'm1', equipa_id: 'e1', membro_id: 'lider2', desde: '2026-09-01', ate: null, nota: null },
+    { id: 'm2', equipa_id: 'e2', membro_id: 'neto', desde: '2026-09-01', ate: null, nota: null },
+  ],
+}
+testeAsync('o chefe vê o líder abaixo dele', async () => {
+  const ids = await lideradosDe(fake(CADEIA), 'chefe')
+  return ids.length === 1 && ids[0] === 'lider2'
+})
+testeAsync('o chefe NÃO vê o neto (a cadeia não se atravessa)', async () =>
+  !(await lideradosDe(fake(CADEIA), 'chefe')).includes('neto'))
+testeAsync('nem pelo âmbito — que é o que a página usa', async () => {
+  const a = await ambitoDaEquipa(fake(CADEIA), { userId: 'chefe', capacidades: lider }, 'extracto')
+  return a.ids.length === 2 && a.ids.includes('chefe') && a.ids.includes('lider2') && !a.ids.includes('neto')
+})
+testeAsync('e o líder do meio vê o SEU liderado, não o de cima', async () => {
+  const a = await ambitoDaEquipa(fake(CADEIA), { userId: 'lider2', capacidades: lider }, 'extracto')
+  return a.ids.length === 2 && a.ids.includes('lider2') && a.ids.includes('neto') && !a.ids.includes('chefe')
+})
+
 // ── O que a MIGRAÇÃO tem de continuar a garantir ─────────────────────────────
 const sql = readFileSync('supabase/migrations/131_backoffice_equipas.sql', 'utf8')
 teste('retirar é um facto, não um delete', /\bate\b[\s\S]*timestamptz/.test(sql) && !/delete from public\.backoffice_equipa_membros/i.test(sql))
@@ -134,6 +184,18 @@ teste('a rota das equipas exige admin', /verifyAdminAccess/.test(rota))
 // avaria que não dá erro nenhum, só uma página com menos linhas do que devia.
 const eu = readFileSync('app/api/backoffice/eu/route.ts', 'utf8')
 teste('o backoffice lê o âmbito com a equipa', /ambitoDaEquipa\(/.test(eu))
+
+// E as PÁGINAS também. A rota `/eu` estar ligada e as páginas não é exactamente o estado em que
+// isto esteve: modelo aplicado, admin a montar equipas, e um team leader a ver-se só a si.
+const ponte = readFileSync('lib/backoffice-equipa.ts', 'utf8')
+teste('a ponte das páginas usa o âmbito das equipas', /ambitoDaEquipa\(/.test(ponte))
+teste('a ponte não inventa liderados fora do âmbito', !/EQUIPA_POR_CONFIGURAR/.test(ponte))
+for (const pagina of ['extracto', 'pipeline', 'tarefas']) {
+  const src = readFileSync(`app/backoffice/${pagina}/page.tsx`, 'utf8')
+  teste(`a página do ${pagina} filtra pelo âmbito da equipa`, /ambitoDaPagina\(/.test(src))
+  // Uma página que voltasse a montar o âmbito à mão deixava de passar pela capacidade de equipa.
+  teste(`a página do ${pagina} não monta o âmbito à mão`, !/ambitoDeLeitura\(/.test(src))
+}
 
 void (async () => {
   await Promise.all(espera)
