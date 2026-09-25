@@ -186,13 +186,13 @@ export async function POST(req: NextRequest) {
             { coupon_id: coupon.id, user_id: resolvedUserId, context: 'apple_iap' },
             { onConflict: 'coupon_id,user_id' }
           )
-          await supabase.rpc('increment_coupon_usage', { coupon_id: coupon.id }).then(() => {})
-          // Fallback manual se RPC não existir
-          await supabase
-            .from('coupons')
-            .update({ used_count: supabase.rpc as unknown as number })
-            .eq('id', coupon.id)
-            .then(() => {}) // fire-and-forget
+          // NAO se incrementa aqui o coupons.used_count. O que estava neste sitio nao funcionava
+          // de duas maneiras: a RPC `increment_coupon_usage` nao existe na base, e o "fallback"
+          // gravava `used_count: supabase.rpc as unknown as number` — uma funcao passada como
+          // numero, que o JSON.stringify deixa cair. Resultado: o contador ficou sempre a 0, e
+          // por isso o limite `max_uses` verificado em /api/apple/iap/sign-offer NUNCA dispara.
+          // O uso real fica registado acima em coupon_usages (unico por cupao+utilizador).
+          // Falta decidir como contar: criar a RPC atomica, ou passar a contar coupon_usages.
         }
       } catch (couponErr) {
         console.error('[APPLE-IAP] Erro ao registar cupão:', couponErr)
