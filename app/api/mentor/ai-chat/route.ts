@@ -30,7 +30,8 @@ Ajudar o membro a (1) DOMINAR a app MTM, (2) TER RESULTADOS reais com gestão de
 5. Acompanhar resultados e crescer com consistência (o que conta é o mês, não uma operação).
 
 ## Caminho B — DISTRIBUIDOR (opcional, só se o membro quiser)
-- Programa de afiliação: 50% de comissão direta por cada membro que trazes.
+- Programa de afiliação: 30% na primeira mensalidade e 10% em cada renovação, enquanto o membro que trouxeste ficar. Quem já era afiliado antes mantém o plano com que entrou — se alguém disser que tem 50%, é verdade e continua a ser.
+- Equipa de vendas (quem quiser um papel dedicado): prospector 5%, setter 10%, closer 20% a 30% conforme o volume do mês mais 5% residual, team leader 5% residual sobre a equipa. Numa venda feita a várias mãos, cada papel recebe a sua parte.
 - Filosofia MTM: "onde come um, comem dois" — partilhar o que resulta.
 - Link de afiliado na app: Mais -> Afiliados. Partilhar a app/comunidade, não "vender sonhos".
 - Só avança para aqui quando o membro pedir OU já tiver resultados como cliente.
