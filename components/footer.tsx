@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { SiteLogo } from "@/components/site-logo"
-import { Facebook, Instagram, Twitter, Youtube, Mail, MapPin, FileText, Lock, ExternalLink } from "lucide-react"
+import { Facebook, Instagram, Twitter, Youtube, Mail, MapPin, FileText, Lock, ExternalLink, Briefcase } from "lucide-react"
 import { useT } from "@/components/i18n-provider"
 
 export default function Footer() {
@@ -175,6 +175,24 @@ export default function Footer() {
                 <FileText className="h-4 w-4 group-hover:scale-110 transition-transform" />
                 <span>{t("navfooter.footerTerms")}</span>
               </Link>
+              {/*
+                Backoffice da equipa. É OUTRO domínio, por isso é uma âncora e não um <Link> do
+                Next: o router não conhece o subdomínio e um <Link> ficaria a tentar navegar dentro
+                da app. `rel="noopener"` porque abre noutro separador.
+
+                Fica no rodapé público de propósito: quem trabalha connosco precisa de uma porta
+                visível, e quem não tem papel leva com o ecrã de acesso restrito — não há nada a
+                proteger por esconder o endereço.
+              */}
+              <a
+                href="https://backoffice.morethanmoney.pt"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-mtm-primary transition-colors flex items-center gap-2 group"
+              >
+                <Briefcase className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                <span>Backoffice</span>
+              </a>
             </div>
           </div>
         </div>
