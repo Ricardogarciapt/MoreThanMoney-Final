@@ -8,7 +8,8 @@
  * entre a meia-noite e a uma da manhã as tarefas de hoje apareciam atrasadas.
  *
  * QUEM VÊ O QUÊ: o responsável da tarefa é um campo só, e o filtro é a lista de ids do âmbito. Uma
- * pessoa vê as suas; um responsável de equipa veria as dos liderados, quando esse modelo existir.
+ * pessoa vê as suas; um responsável de equipa vê também as dos liderados directos (migração 131).
+ * Um líder de líderes NÃO vê os netos — a cadeia não se atravessa, por decisão do dono.
  *
  * AS ESCRITAS: criar, riscar, reabrir, cancelar e mudar o prazo. Quem é o dono verifica-se no
  * servidor, na consulta, pela LISTA do âmbito (`.in('responsavel_id', ids)`) — nunca por um `if`
@@ -18,8 +19,7 @@
  * tarefas com o mesmo aspecto de estar completo — a 501.ª desaparecia sem dar erro.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { ambitoDeLeitura, pode } from '@/lib/backoffice-papeis'
-import { lideradosDe, AVISO_EQUIPA_POR_CONFIGURAR } from '@/lib/backoffice-equipa'
+import { ambitoDaPagina, nomesDe } from '@/lib/backoffice-equipa'
 import { tarefasDoAmbito, type TarefaLinha } from '@/lib/backoffice-negocios'
 import { PESO_PRAZO, SITUACAO_PRAZO_NOME, dataCurta, situacaoDoPrazo } from '@/lib/backoffice-vista'
 import { lerDoCatalogo, lerPagina } from '@/lib/backoffice-paginacao'
@@ -63,9 +63,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
   }
   const { ctx } = acesso
 
-  const liderados = await lideradosDe(ctx)
-  const ambito = ambitoDeLeitura(ctx.capacidades, ctx.userId, 'tarefas', liderados)
-  const veEquipa = pode(ctx.capacidades, 'bo.tarefas_equipa')
+  const { ambito, aviso } = await ambitoDaPagina(ctx, 'tarefas')
 
   const vista = lerDoCatalogo(params.vista, VISTAS) ?? 'trabalho'
   const pagina = lerPagina(params)
@@ -84,6 +82,12 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
       </div>
     )
   }
+
+  // DE QUEM É CADA TAREFA. Só se pergunta quando o âmbito tem mais do que uma pessoa: numa lista
+  // só dela, o nome dela não acrescenta nada — e num responsável a ver a equipa, uma lista sem
+  // nomes é uma lista que ele não consegue usar (não sabe a quem ir falar).
+  const outros = [...new Set(tarefas.map((t) => t.responsavel_id).filter((id) => id && id !== ctx.userId))]
+  const nomes = outros.length > 0 ? await nomesDe(outros) : {}
 
   const abertas = tarefas.filter((t) => t.estado === 'aberta')
   const feitas = tarefas.filter((t) => t.estado === 'feita')
@@ -108,7 +112,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
         sub="O que tens para fazer, o mais urgente primeiro. «Atrasada» é uma conta feita agora contra a data de hoje — não é um estado que alguém tenha de vir pôr."
       />
 
-      {veEquipa && <Aviso>Tens o papel que dá acesso às tarefas da tua equipa. {AVISO_EQUIPA_POR_CONFIGURAR}</Aviso>}
+      {aviso && <Aviso>{aviso}</Aviso>}
 
       <TarefaNova />
 
@@ -151,16 +155,19 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
                       {SITUACAO_PRAZO_NOME[situacao]}
                       {t.prazo ? ` · ${dataCurta(t.prazo)}` : ''}
                     </Etiqueta>
+                    {t.responsavel_id !== ctx.userId && (
+                      <Etiqueta tom="aviso">{nomes[t.responsavel_id] ?? 'Da equipa'}</Etiqueta>
+                    )}
                     {t.papel && <Etiqueta>como {t.papel}</Etiqueta>}
                     {t.negocio_id && <Etiqueta>de um negócio</Etiqueta>}
                   </div>
                 </div>
-                {/* Só o próprio risca a sua tarefa. Quando um responsável estiver a ver as dos
-                    liderados, o botão não aparece nas que não são dele — e o servidor recusa na
-                    mesma, porque é lá que a regra vive. */}
-                {/* Riscar, cancelar ou mudar o prazo. O servidor recusa na mesma o que não for do
-                    âmbito desta pessoa — é lá que a regra vive. */}
-                <Marcar id={t.id} feita={false} estado={t.estado} prazo={t.prazo} />
+                {/* Riscar, cancelar ou mudar o prazo — mas só nas SUAS. Num responsável a ver as
+                    dos liderados o botão não aparece nas que não são dele, e o servidor recusa na
+                    mesma: é lá que a regra vive, aqui é só não mostrar o que não se pode fazer. */}
+                {t.responsavel_id === ctx.userId && (
+                  <Marcar id={t.id} feita={false} estado={t.estado} prazo={t.prazo} />
+                )}
               </li>
             )
           })}
@@ -191,7 +198,12 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
           <ul className="space-y-1.5">
             {feitas.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-800/60 bg-gray-900/20 px-4 py-2.5">
-                <span className="text-sm text-gray-500 line-through">{t.titulo}</span>
+                <span className="text-sm text-gray-500 line-through">
+                  {t.titulo}
+                  {t.responsavel_id !== ctx.userId && (
+                    <span className="ml-2 no-underline">— {nomes[t.responsavel_id] ?? 'da equipa'}</span>
+                  )}
+                </span>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-600">{dataCurta(t.feita_em)}</span>
                   <Marcar id={t.id} feita={true} estado={t.estado} prazo={t.prazo} />

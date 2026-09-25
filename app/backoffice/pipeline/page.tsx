@@ -5,8 +5,8 @@
  * Um negócio tem cinco atribuições possíveis (prospector, setter, closer, team leader, afiliado) e
  * nenhuma é obrigatória. «Os meus negócios» é, literalmente, aqueles em que o meu id está em
  * qualquer uma delas — e é isso que `negociosDoAmbito` faz, filtrando pela LISTA de ids do âmbito.
- * Sem modelo de equipa, essa lista tem um id só e um responsável vê os dele; a página diz-lhe isso
- * com palavras, para ele não concluir que a equipa não tem trabalho.
+ * Um responsável de equipa tem na lista os liderados directos; sem equipa montada a lista tem um id
+ * só e a página diz-lhe isso com palavras, para ele não concluir que a equipa não tem trabalho.
  *
  * O PASSO SEGUINTE VEM DE UM GUIÃO, NÃO DE UM MODELO
  * Cada negócio traz o movimento seguinte escrito (`lib/backoffice-playbook.ts`), lido da memória de
@@ -24,9 +24,10 @@
  * muda três campos do negócio e não cria venda nem comissão. A venda nasce do pagamento confirmado.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { ambitoDeLeitura, pode } from '@/lib/backoffice-papeis'
-import { lideradosDe, AVISO_EQUIPA_POR_CONFIGURAR } from '@/lib/backoffice-equipa'
-import { negociosDoAmbito, papeisNoNegocio, type NegocioLinha } from '@/lib/backoffice-negocios'
+// O âmbito vem do modelo de equipas (`ambitoDaPagina`) e já não do stub que devolvia lista vazia:
+// sem isto, um responsável podia MEXER num negócio do liderado e não o VIA na lista.
+import { ambitoDaPagina, nomesDe } from '@/lib/backoffice-equipa'
+import { negociosDoAmbito, papeisNoNegocio, participaNoNegocio, type NegocioLinha } from '@/lib/backoffice-negocios'
 import { COLUNA_DO_PAPEL } from '@/lib/backoffice-escrita'
 import { PAPEIS, type Papel } from '@/lib/backoffice-papeis'
 import { ESTADOS_PIPELINE, ESTADO_PIPELINE_NOME, dataCurta, ehEstadoFechado, ehEstadoPipeline } from '@/lib/backoffice-vista'
@@ -57,9 +58,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
   }
   const { ctx } = acesso
 
-  const liderados = await lideradosDe(ctx)
-  const ambito = ambitoDeLeitura(ctx.capacidades, ctx.userId, 'pipeline', liderados)
-  const veEquipa = pode(ctx.capacidades, 'bo.pipeline_equipa')
+  const { ambito, aviso } = await ambitoDaPagina(ctx, 'pipeline')
 
   // Os filtros vêm do endereço e passam por catálogo e limpeza antes de chegarem à consulta: o
   // estado só pode ser um dos oito, e a procura perde os caracteres que têm significado nos
@@ -84,6 +83,11 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
     )
   }
 
+  // DE QUEM É O NEGÓCIO, quando não é meu. A etiqueta «Da equipa» diz que não é dela mas não diz
+  // de quem — e um responsável com quinze negócios da equipa não consegue trabalhar assim.
+  const outros = ambito.ids.filter((id) => id !== ctx.userId)
+  const nomes = outros.length > 0 ? await nomesDe(outros) : {}
+
   // Agrupar pela ordem do funil, e não pela ordem em que as linhas vieram: a página desenha-se pela
   // lista de estados, por isso um estado sem negócios continua a existir como coluna vazia — é
   // informação saber que não há ninguém em «qualificado».
@@ -106,7 +110,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
         sub="Os negócios em que participas, por estado, com o passo seguinte de cada um. Mover um negócio faz-se no admin — aqui vês onde ele está e o que falta fazer."
       />
 
-      {veEquipa && <Aviso>Tens o papel que dá acesso ao pipeline da tua equipa. {AVISO_EQUIPA_POR_CONFIGURAR}</Aviso>}
+      {aviso && <Aviso>{aviso}</Aviso>}
 
       <NegocioNovo papeis={ctx.papeis} ehDono={ctx.admin} />
 
@@ -206,7 +210,13 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                               </Etiqueta>
                             ))
                           ) : (
-                            <Etiqueta>Da equipa</Etiqueta>
+                            <Etiqueta>
+                              {outros
+                                .filter((id) => participaNoNegocio(n, id))
+                                .map((id) => nomes[id])
+                                .filter(Boolean)
+                                .join(', ') || 'Da equipa'}
+                            </Etiqueta>
                           )}
                           {n.pack_previsto && <Etiqueta>{n.pack_previsto}</Etiqueta>}
                           {n.origem && <Etiqueta>via {n.origem}</Etiqueta>}

@@ -1,46 +1,94 @@
 /**
- * QUEM LIDERA QUEM — e a razão de este ficheiro ser, hoje, uma lista vazia.
+ * O ÂMBITO DE UMA PÁGINA do backoffice — a ponte entre o modelo de equipas e o que o ecrã desenha.
  *
- * O modelo de equipa (a ligação entre um team leader e os seus liderados) está a ser construído no
- * admin, noutra frente. Enquanto não existir, as páginas do backoffice TÊM de decidir o que fazem
- * com um team leader: ou lhe mostram a equipa que não sabem qual é, ou fecham no próprio.
+ * ESTE FICHEIRO ERA UMA LISTA VAZIA. Até à migração 131 não havia modelo de «quem lidera quem», e
+ * `lideradosDe` devolvia sempre `[]` de propósito: sem saber quem é a equipa, fechar no próprio era
+ * a única resposta honesta. O modelo aterrou, e aterrou em `lib/backoffice-equipas.ts` — este
+ * ficheiro passa a ser o que sempre prometeu ser: A FUNÇÃO QUE SE MUDA para as quatro páginas
+ * passarem a ver a equipa sem se lhes tocar.
  *
- * Fecham no próprio. E fecham AQUI, num sítio só, por três razões:
+ * O QUE ELE FAZ, E O QUE NÃO FAZ
+ * Faz três coisas numa chamada: resolve o âmbito (via `ambitoDaEquipa`, que é quem decide), conta
+ * quantos liderados entraram nele, e escolhe a frase que explica à pessoa de quem é o que ela vê.
+ * NÃO decide nada sobre permissões — isso é `lib/backoffice-papeis.ts` — e não tem um único `if`
+ * que alargue o âmbito. Alargar só acontece de uma maneira: a capacidade existe E a base devolveu
+ * liderados. Qualquer outra coisa (falha, equipa arquivada, papel em falta) fecha no próprio,
+ * porque é assim que `lib/backoffice-equipas.ts` está escrito e este ficheiro não o contorna.
  *
- * 1. `ambitoDeLeitura` já foi escrito para isto: sem liderados, o âmbito é `[proprioId]`. A falha
- *    não mostra nada em vez de mostrar tudo. Se cada página adivinhasse a sua própria lista, a que
- *    se esquecesse do filtro abria o dinheiro dos colegas.
- * 2. Quando o modelo aterrar, muda-se UMA função. Nenhuma página precisa de saber que mudou.
- * 3. A pessoa tem de ser avisada. Um team leader que veja um extracto com uma linha só e ninguém
- *    lhe diga porquê conclui que a equipa dele não vendeu nada — que é o contrário da verdade.
- *    É `EQUIPA_POR_CONFIGURAR` que as páginas usam para o dizer com palavras.
- *
- * NÃO SE INVENTA A LIGAÇÃO. Havia dois atalhos à mão — a árvore binária do MLM (`mlm_tree`) e o
- * `team_leader_id` que cada negócio já traz — e os dois estão errados de maneiras diferentes:
- * o patrocinador de alguém na árvore não é o responsável de equipa dele (a colocação faz-se por
- * spillover, não por hierarquia de trabalho), e ler os liderados dos negócios faria a lista
- * depender de quem por acaso já apareceu num negócio — quem lidera alguém que ainda não vendeu
- * não existiria. Uma das duas leituras daria dinheiro de estranhos a ver.
+ * UM NÍVEL, SEM CADEIA. Os liderados são os membros DIRECTOS das equipas que a pessoa lidera. Se um
+ * deles for ele próprio líder, a equipa dele NÃO sobe — decisão do dono, escrita na migração 131 e
+ * garantida em `lideradosDe`. Este ficheiro não expande listas: recebe a que lhe dão e conta-a.
  */
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import type { AmbitoLeitura, FamiliaAmbito } from '@/lib/backoffice-papeis'
+import { pode } from '@/lib/backoffice-papeis'
+import { ambitoDaEquipa } from '@/lib/backoffice-equipas'
+import { avisoDeEquipa, situacaoDaEquipa, type SituacaoEquipa } from '@/lib/backoffice-vista'
 import type { ContextoBackoffice } from '@/lib/backoffice-sessao'
 
-/**
- * Verdadeiro enquanto não houver modelo de equipa. As páginas leem isto para explicarem o vazio
- * em vez de o deixarem parecer um resultado.
- */
-export const EQUIPA_POR_CONFIGURAR = true
+const CAPACIDADE_EQUIPA: Record<FamiliaAmbito, 'bo.extracto_equipa' | 'bo.leads_equipa' | 'bo.pipeline_equipa' | 'bo.tarefas_equipa'> = {
+  extracto: 'bo.extracto_equipa',
+  leads: 'bo.leads_equipa',
+  pipeline: 'bo.pipeline_equipa',
+  tarefas: 'bo.tarefas_equipa',
+}
 
-/** A frase que se diz à pessoa. Uma só, para as quatro páginas dizerem o mesmo. */
-export const AVISO_EQUIPA_POR_CONFIGURAR =
-  'A composição das equipas ainda não está configurada no sistema, por isso ainda só vês o que é teu. ' +
-  'Não quer dizer que a tua equipa não tenha resultados — quer dizer que o sistema ainda não sabe quem ela é.'
+export interface AmbitoDaPagina {
+  /** A lista de ids por que a consulta filtra. É isto que protege o dinheiro dos colegas. */
+  ambito: AmbitoLeitura
+  /** Os ids dos liderados que entraram no âmbito — sem o próprio. Vazio quando não há equipa. */
+  liderados: string[]
+  /** Tem o papel que abre a equipa nesta família? (Ter o papel não é ter equipa montada.) */
+  veEquipa: boolean
+  situacao: SituacaoEquipa
+  /** A frase a mostrar, ou `null` quando não há nada a explicar. */
+  aviso: string | null
+}
 
 /**
- * Os liderados de uma pessoa. Hoje: nenhum, sempre — e de propósito (ver o topo do ficheiro).
+ * ⭐ O que as páginas chamam. Uma linha, e o âmbito vem resolvido e explicado.
  *
- * É `async` porque a versão verdadeira vai ler a base, e mudar a assinatura depois obrigava a
- * mexer em todas as chamadas. O `ctx` entra pela mesma razão.
+ *   const { ambito, aviso } = await ambitoDaPagina(ctx, 'extracto')
+ *   const linhas = await extractoDoAmbito(getSupabaseAdmin(), ambito)
+ *
+ * O `liderados` é recontado a partir do âmbito (e não da leitura da base) porque é o âmbito que
+ * manda: se a pessoa tiver liderados na base mas não tiver a capacidade, `ambitoDaEquipa` deixa-os
+ * de fora — e a frase tem de contar o que a pessoa VÊ, não o que a tabela diz.
  */
-export async function lideradosDe(_ctx: ContextoBackoffice): Promise<string[]> {
-  return []
+export async function ambitoDaPagina(
+  ctx: ContextoBackoffice,
+  familia: FamiliaAmbito,
+): Promise<AmbitoDaPagina> {
+  const ambito = await ambitoDaEquipa(getSupabaseAdmin(), ctx, familia)
+  const liderados = ambito.ids.filter((id) => id !== ctx.userId)
+  const veEquipa = pode(ctx.capacidades, CAPACIDADE_EQUIPA[familia])
+  const situacao = situacaoDaEquipa({ veEquipa, liderados: liderados.length, todos: ambito.todos })
+  return { ambito, liderados, veEquipa, situacao, aviso: avisoDeEquipa(situacao, familia, liderados.length) }
+}
+
+/**
+ * OS NOMES das pessoas que aparecem numa página — e só delas.
+ *
+ * As páginas mostram ids quando não têm nomes, e uma coluna de uuids não se lê. Está aqui, e não em
+ * cada página, porque a regra de PRIVACIDADE é uma: só se pedem os nomes dos ids que JÁ estão no
+ * âmbito. Uma página que resolvesse nomes por sua conta acabava, um dia, a resolver um id que veio
+ * de outro sítio — e a devolver o nome de alguém que aquela pessoa não podia ver.
+ *
+ * Falha → mapa vazio, e o ecrã mostra «—». Nunca lança: um nome em falta não vale uma página em
+ * baixo, e mostrar «—» é honesto.
+ */
+export async function nomesDe(ids: readonly string[]): Promise<Record<string, string>> {
+  const limpos = [...new Set(ids.filter((id) => typeof id === 'string' && id.length > 0))]
+  if (limpos.length === 0) return {}
+  try {
+    const { data } = await getSupabaseAdmin().from('profiles').select('id, full_name, email').in('id', limpos)
+    return Object.fromEntries(
+      ((data ?? []) as Array<Record<string, unknown>>).map((p) => [
+        String(p.id),
+        (p.full_name as string) || (p.email as string) || '—',
+      ]),
+    )
+  } catch {
+    return {}
+  }
 }

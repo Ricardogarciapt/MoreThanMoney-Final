@@ -193,6 +193,17 @@ export async function tarefasDoAmbito(
 }
 
 /**
+ * ESTE NEGÓCIO É DESTA PESSOA? — o id dela em qualquer uma das cinco atribuições.
+ *
+ * É a mesma pergunta que `filtroDeParticipacao` faz à base, só que em memória. Existe porque as
+ * páginas precisam dela para dizer DE QUEM é cada linha quando um responsável está a ver a equipa,
+ * e escrevê-la duas vezes (uma por página) garantia que um dia as duas deixavam de concordar.
+ */
+export function participaNoNegocio(negocio: NegocioLinha, pessoaId: string): boolean {
+  return COLUNAS_DE_PARTICIPACAO.some((c) => negocio[c] === pessoaId)
+}
+
+/**
  * Que papéis é que esta pessoa tem NESTE negócio. É o que lhe diz porque é que o negócio aparece
  * na lista dela — e, quando é um responsável a olhar, de quem é o negócio.
  */

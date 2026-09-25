@@ -8,8 +8,9 @@
  * Não com um `if`. O âmbito de leitura (`ambitoDeLeitura`) devolve uma LISTA de ids, e é essa lista
  * que entra no `.in('pessoa_id', …)` da consulta. Uma consulta filtrada por lista não tem como
  * esquecer-se do filtro; um `if (é responsável) lê tudo` colocado antes da consulta esquece-se — e
- * o que se esquece aqui é o dinheiro dos colegas. Hoje, sem modelo de equipa, essa lista tem um id
- * só: o da própria pessoa (ver `lib/backoffice-equipa.ts`).
+ * o que se esquece aqui é o dinheiro dos colegas. A lista tem o próprio e, quando há equipa montada
+ * E o papel que a abre, os liderados directos (ver `lib/backoffice-equipa.ts`). Em qualquer falha
+ * fica só o próprio.
  *
  * UMA SÓ LISTA, DUAS ORIGENS
  * A vista `vendas_extracto` junta as comissões da equipa de vendas e o residual da rede binária.
@@ -33,8 +34,10 @@
  * SÓ LEITURA. Aprovar e pagar comissões é um acto do dono, e faz-se no admin.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { ambitoDeLeitura, pode } from '@/lib/backoffice-papeis'
-import { lideradosDe, AVISO_EQUIPA_POR_CONFIGURAR } from '@/lib/backoffice-equipa'
+// O âmbito vem do modelo de equipas; o tecto de linhas vem do extracto. As duas coisas são
+// precisas ao mesmo tempo: o âmbito diz DE QUEM são as linhas, o tecto diz quando o total em cima
+// deixou de ser o do período inteiro.
+import { ambitoDaPagina, nomesDe } from '@/lib/backoffice-equipa'
 import { LIMITE_EXTRACTO, extractoDoAmbito, somarExtracto, type LinhaExtracto } from '@/lib/vendas/extracto'
 import { centimosEmEuros } from '@/lib/vendas/calculo'
 import {
@@ -71,9 +74,9 @@ export default async function ExtractoPage({ searchParams }: { searchParams: Pro
   }
   const { ctx } = acesso
 
-  const liderados = await lideradosDe(ctx)
-  const ambito = ambitoDeLeitura(ctx.capacidades, ctx.userId, 'extracto', liderados)
-  const veEquipa = pode(ctx.capacidades, 'bo.extracto_equipa')
+  // O âmbito e a frase que o explica vêm da mesma chamada, para não haver hipótese de a página
+  // filtrar por uma lista e dizer à pessoa que está a ver outra.
+  const { ambito, aviso } = await ambitoDaPagina(ctx, 'extracto')
 
   const desde = lerDia(params.desde)
   const ate = lerDia(params.ate)
@@ -105,11 +108,7 @@ export default async function ExtractoPage({ searchParams }: { searchParams: Pro
   // Os nomes só se leem quando há mais do que uma pessoa na lista — e quando há, sem eles a tabela
   // seria uma coluna de uuids. Para uma pessoa só, o nome dela não acrescenta nada ao seu extracto.
   const pessoas = [...new Set(linhas.map((l) => l.pessoa_id).filter((v): v is string => !!v))]
-  let nomes: Record<string, string> = {}
-  if (pessoas.length > 1) {
-    const { data } = await getSupabaseAdmin().from('profiles').select('id, full_name, email').in('id', pessoas)
-    nomes = Object.fromEntries((data ?? []).map((p) => [p.id, (p.full_name as string) || (p.email as string) || '—']))
-  }
+  const nomes = pessoas.length > 1 ? await nomesDe(pessoas) : {}
 
   return (
     <div className="space-y-8">
@@ -139,11 +138,7 @@ export default async function ExtractoPage({ searchParams }: { searchParams: Pro
         />
       </div>
 
-      {veEquipa && (
-        <Aviso>
-          Tens o papel que dá acesso ao extracto da tua equipa. {AVISO_EQUIPA_POR_CONFIGURAR}
-        </Aviso>
-      )}
+      {aviso && <Aviso>{aviso}</Aviso>}
 
       <Filtros base={BASE} activo={!!desde || !!ate}>
         <Campo nome="De">

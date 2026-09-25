@@ -189,3 +189,69 @@ export function dataCurta(iso: string | null | undefined): string {
   if (!a || !m || !d) return '—'
   return `${d}/${m}/${a}`
 }
+
+// ═══════════════════════ ÂMBITO DE EQUIPA ═══════════════════════
+//
+// As quatro páginas têm de dizer à pessoa DE QUEM é o que ela está a ver. Enquanto não havia modelo
+// de equipa diziam todas a mesma frase («ainda não está configurado»); agora que há (migração 131),
+// há três situações possíveis e só uma delas é a antiga. Se cada página escrevesse a sua frase, a
+// que ficasse esquecida continuava a dizer a um team leader com equipa montada que o sistema não
+// sabe quem ela é — e ele acreditava.
+//
+// É PURO de propósito: a frase depende de dois factos (tem a capacidade? quantos liderados?) e de
+// mais nada. Assim prova-se sem base e sem sessão, em `lib/backoffice-vista.check.ts`.
+
+import type { FamiliaAmbito } from '@/lib/backoffice-papeis'
+
+/** O que está a acontecer ao âmbito desta pessoa, nesta família. */
+export type SituacaoEquipa =
+  /** Não tem o papel que abre a equipa — vê o seu e pronto. Não há nada a explicar. */
+  | 'so_proprio'
+  /** Tem o papel, mas o sistema não conhece nenhum liderado dela. É preciso dizer porquê. */
+  | 'equipa_vazia'
+  /** Tem o papel e tem equipa: está a ver linhas de outras pessoas, e tem de saber disso. */
+  | 'com_equipa'
+  /** Vê a casa toda (só o dono). */
+  | 'todos'
+
+export function situacaoDaEquipa(opts: {
+  veEquipa: boolean
+  liderados: number
+  todos?: boolean
+}): SituacaoEquipa {
+  if (opts.todos) return 'todos'
+  if (!opts.veEquipa) return 'so_proprio'
+  return opts.liderados > 0 ? 'com_equipa' : 'equipa_vazia'
+}
+
+/** Como se chama, em português, aquilo que cada página mostra. */
+export const FAMILIA_NOME: Record<FamiliaAmbito, string> = {
+  extracto: 'extracto',
+  leads: 'leads',
+  pipeline: 'pipeline',
+  tarefas: 'tarefas',
+}
+
+/**
+ * A FRASE que a página mostra sobre o âmbito — ou `null` quando não há nada a dizer.
+ *
+ * `equipa_vazia` é o caso delicado: uma lista curta lê-se como «a minha equipa não vendeu nada»,
+ * que é o contrário da verdade e é a pior coisa que se pode dizer a um responsável. A frase tem de
+ * separar «não há resultados» de «o sistema não sabe quem é a tua equipa» — e dizer o que fazer.
+ */
+export function avisoDeEquipa(situacao: SituacaoEquipa, familia: FamiliaAmbito, liderados = 0): string | null {
+  switch (situacao) {
+    case 'com_equipa':
+      return `Estás a ver o teu ${FAMILIA_NOME[familia]} e o de ${liderados} pessoa${liderados === 1 ? '' : 's'} da tua equipa.`
+    case 'equipa_vazia':
+      return (
+        `Tens o papel que dá acesso ao ${FAMILIA_NOME[familia]} da tua equipa, mas o sistema não tem ninguém ` +
+        'registado como teu liderado — por isso só vês o que é teu. Não quer dizer que a tua equipa não tenha ' +
+        'resultados: quer dizer que a equipa ainda não foi montada no admin. Fala com o Ricardo.'
+      )
+    case 'todos':
+      return `Como dono, este ${FAMILIA_NOME[familia]} é o da casa toda, não só o teu.`
+    default:
+      return null
+  }
+}

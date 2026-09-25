@@ -11,7 +11,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { capacidadesDe } from './backoffice-papeis'
-import { ambitoDaEquipa, equipaDoMembro, equipasQueLidera, lideradosDe } from './backoffice-equipas'
+import { ambitoDaEquipa, equipaDoMembro, equipasQueLidera, lideradosDe, membrosDasEquipas } from './backoffice-equipas'
 
 const falhas: string[] = []
 const teste = (nome: string, ok: boolean) => { if (!ok) falhas.push(nome) }
@@ -105,13 +105,95 @@ testeAsync('closer só se vê a si, mesmo liderando uma equipa', async () => {
 })
 // E por família: quem tem equipa no extracto mas não nas leads não vê as leads dos outros. Aqui o
 // team_leader tem as duas, por isso o teste é o inverso — que a família certa é consultada.
+// Sem a capacidade não se PERGUNTA. Provar isto com uma base que rebenta não provava nada — o
+// `catch` de `lideradosDe` devolvia `[]` e o teste passava mesmo com a verificação removida. Por
+// isso conta-se quem tocou na tabela: é a única forma de a guarda morder se alguém tirar o
+// pré-teste e ficar só com a defesa de `ambitoDeLeitura` a segurar tudo sozinha.
 testeAsync('sem capacidade da família não vai sequer à base', async () => {
-  const a = await ambitoDaEquipa(fake(BASE, { rebenta: true }), { userId: 'lider', capacidades: closer }, 'leads')
-  return a.ids.length === 1
+  const tocadas: string[] = []
+  const espia = { from: (t: string) => { tocadas.push(t); return (fake(BASE) as any).from(t) } }
+  const a = await ambitoDaEquipa(espia, { userId: 'lider', capacidades: closer }, 'leads')
+  return a.ids.length === 1 && a.ids[0] === 'lider' && tocadas.length === 0
+})
+// E com a capacidade, pergunta — senão o teste de cima passava por a função não fazer nada.
+testeAsync('com a capacidade, vai à base', async () => {
+  const tocadas: string[] = []
+  const espia = { from: (t: string) => { tocadas.push(t); return (fake(BASE) as any).from(t) } }
+  await ambitoDaEquipa(espia, { userId: 'lider', capacidades: lider }, 'leads')
+  return tocadas.includes('backoffice_equipas')
 })
 testeAsync('avaria da base → só se vê a si (não rebenta a página)', async () => {
   const a = await ambitoDaEquipa(fake(BASE, { rebenta: true }), { userId: 'lider', capacidades: lider }, 'extracto')
   return a.ids.length === 1 && a.ids[0] === 'lider'
+})
+
+// ── A PERTENÇA, para o ecrã da equipa ────────────────────────────────────────
+//
+// `lideradosDe` achata; esta devolve quem pertence a QUE equipa. Um líder com duas equipas tem de
+// as ver separadas, e quem já saiu continua a não aparecer — histórico não é permissão.
+testeAsync('os membros vêm com a equipa a que pertencem', async () => {
+  const ms = await membrosDasEquipas(fake(BASE), ['e1'])
+  return ms.length === 2 && ms.every((m) => m.equipaId === 'e1') && !ms.some((m) => m.membroId === 'carla')
+})
+testeAsync('sem equipas não se lê pertença nenhuma', async () => (await membrosDasEquipas(fake(BASE), [])).length === 0)
+testeAsync('erro a ler pertenças → vazio', async () =>
+  (await membrosDasEquipas(fake(BASE, { erroEm: 'backoffice_equipa_membros' }), ['e1'])).length === 0)
+testeAsync('excepção a ler pertenças → vazio, não lança', async () =>
+  (await membrosDasEquipas(fake(BASE, { rebenta: true }), ['e1'])).length === 0)
+
+// ── COM EQUIPA LIGADA: o líder vê os liderados, o setter continua fechado ────
+//
+// Isto é a prova de que as duas peças se encontraram. Não chega o modelo estar certo: o que abre
+// (ou não abre) o dinheiro de alguém é o âmbito que a página usa. As duas afirmações têm de ser
+// verdade AO MESMO TEMPO, senão ou o líder não vê a equipa ou o setter vê a dos outros.
+const setter = capacidadesDe(['setter'])
+testeAsync('com equipa ligada, o team leader vê os liderados no âmbito', async () => {
+  const a = await ambitoDaEquipa(fake(BASE), { userId: 'lider', capacidades: lider }, 'tarefas')
+  return a.ids.includes('ana') && a.ids.includes('bruno') && a.ids.includes('lider') && !a.todos
+})
+testeAsync('e o setter, na mesma base, continua a ver só o dele', async () => {
+  // O setter até é membro de uma equipa — ser liderado não dá acesso nenhum, só ser líder dá.
+  const a = await ambitoDaEquipa(fake(BASE), { userId: 'ana', capacidades: setter }, 'pipeline')
+  return a.ids.length === 1 && a.ids[0] === 'ana' && !a.todos
+})
+testeAsync('um setter que (por engano) liderasse uma equipa continuava fechado', async () => {
+  const a = await ambitoDaEquipa(fake(BASE), { userId: 'lider', capacidades: setter }, 'pipeline')
+  return a.ids.length === 1 && a.ids[0] === 'lider'
+})
+
+// ── UM NÍVEL, SEM CADEIA: o líder de líderes NÃO vê os netos ─────────────────
+//
+// Decisão explícita do dono (migração 131, decisão 2). É a regra mais fácil de atravessar sem
+// querer — bastava expandir a lista em cinco linhas — e a que dá acesso a linhas de gente que o
+// líder de cima nunca conheceu. Por isso tem guarda própria.
+const CADEIA = {
+  backoffice_equipas: [
+    { id: 'e1', nome: 'Chefes', lider_id: 'chefe', criada_em: '2026-09-01', arquivada_em: null, nota: null },
+    { id: 'e2', nome: 'Campo', lider_id: 'lider2', criada_em: '2026-09-01', arquivada_em: null, nota: null },
+  ],
+  backoffice_equipa_membros: [
+    { id: 'm1', equipa_id: 'e1', membro_id: 'lider2', desde: '2026-09-01', ate: null, nota: null },
+    { id: 'm2', equipa_id: 'e2', membro_id: 'neto', desde: '2026-09-01', ate: null, nota: null },
+  ],
+}
+testeAsync('o chefe vê o líder abaixo dele', async () => {
+  const ids = await lideradosDe(fake(CADEIA), 'chefe')
+  return ids.length === 1 && ids[0] === 'lider2'
+})
+testeAsync('o chefe NÃO vê o neto (a cadeia não se atravessa)', async () =>
+  !(await lideradosDe(fake(CADEIA), 'chefe')).includes('neto'))
+testeAsync('nem pelo âmbito — que é o que a página usa', async () => {
+  const a = await ambitoDaEquipa(fake(CADEIA), { userId: 'chefe', capacidades: lider }, 'extracto')
+  return a.ids.length === 2 && a.ids.includes('chefe') && a.ids.includes('lider2') && !a.ids.includes('neto')
+})
+// A pertença NÃO atravessa a cadeia: pedir as equipas de cima não traz os membros das de baixo.
+testeAsync('a pertença não traz os netos', async () => {
+  const ms = await membrosDasEquipas(fake(CADEIA), ['e1'])
+  return ms.length === 1 && ms[0].membroId === 'lider2'
+})
+testeAsync('e o líder do meio vê o SEU liderado, não o de cima', async () => {
+  const a = await ambitoDaEquipa(fake(CADEIA), { userId: 'lider2', capacidades: lider }, 'extracto')
+  return a.ids.length === 2 && a.ids.includes('lider2') && a.ids.includes('neto') && !a.ids.includes('chefe')
 })
 
 // ── O que a MIGRAÇÃO tem de continuar a garantir ─────────────────────────────
@@ -134,6 +216,25 @@ teste('a rota das equipas exige admin', /verifyAdminAccess/.test(rota))
 // avaria que não dá erro nenhum, só uma página com menos linhas do que devia.
 const eu = readFileSync('app/api/backoffice/eu/route.ts', 'utf8')
 teste('o backoffice lê o âmbito com a equipa', /ambitoDaEquipa\(/.test(eu))
+
+// E as PÁGINAS também. A rota `/eu` estar ligada e as páginas não é exactamente o estado em que
+// isto esteve: modelo aplicado, admin a montar equipas, e um team leader a ver-se só a si.
+const ponte = readFileSync('lib/backoffice-equipa.ts', 'utf8')
+teste('a ponte das páginas usa o âmbito das equipas', /ambitoDaEquipa\(/.test(ponte))
+teste('a ponte não inventa liderados fora do âmbito', !/EQUIPA_POR_CONFIGURAR/.test(ponte))
+const paginaEquipa = readFileSync('app/backoffice/equipa/page.tsx', 'utf8')
+teste('a página da equipa lê os membros do modelo', /membrosDasEquipas\(/.test(paginaEquipa))
+// O dono quis LINHAS, não totais: uma página que só somasse fechava a conversa antes de começar.
+teste('a página da equipa mostra as linhas do extracto dos liderados', /extractoDoAmbito\(/.test(paginaEquipa))
+teste('e mostra-as pelo âmbito, não por uma lista de ids solta', /ambitoDaPagina\(/.test(paginaEquipa))
+// O texto de «ainda não existe modelo» não pode voltar: é uma mentira desde a migração 131.
+teste('a página da equipa já não diz que a ligação não existe', !/ainda não está configurada/i.test(paginaEquipa))
+for (const pagina of ['extracto', 'pipeline', 'tarefas']) {
+  const src = readFileSync(`app/backoffice/${pagina}/page.tsx`, 'utf8')
+  teste(`a página do ${pagina} filtra pelo âmbito da equipa`, /ambitoDaPagina\(/.test(src))
+  // Uma página que voltasse a montar o âmbito à mão deixava de passar pela capacidade de equipa.
+  teste(`a página do ${pagina} não monta o âmbito à mão`, !/ambitoDeLeitura\(/.test(src))
+}
 
 void (async () => {
   await Promise.all(espera)

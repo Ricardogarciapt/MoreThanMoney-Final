@@ -22,6 +22,8 @@ import {
   diaLocal,
   PESO_PRAZO,
   dataCurta,
+  situacaoDaEquipa,
+  avisoDeEquipa,
 } from './backoffice-vista'
 
 const falhas: string[] = []
@@ -82,6 +84,24 @@ teste('o atraso lê-se primeiro e o sem-prazo no fim', PESO_PRAZO.atrasada < PES
 // ── Datas ───────────────────────────────────────────────────────────────────
 teste('a data sai à portuguesa', dataCurta('2026-09-25T10:00:00.000Z') === '25/09/2026')
 teste('sem data não se inventa uma', dataCurta(null) === '—')
+
+// ── De quem é o que estou a ver ─────────────────────────────────────────────
+//
+// O caso que importa é o do MEIO: ter o papel de equipa e não ter equipa montada. Uma página que
+// não distinga isso de «a equipa não vendeu nada» faz um responsável concluir o contrário da
+// verdade — e foi para isso que esta frase existe.
+teste('sem o papel de equipa não há nada a explicar', situacaoDaEquipa({ veEquipa: false, liderados: 0 }) === 'so_proprio')
+teste('sem o papel de equipa não há frase', avisoDeEquipa(situacaoDaEquipa({ veEquipa: false, liderados: 0 }), 'extracto') === null)
+teste('papel de equipa sem liderados é equipa_vazia', situacaoDaEquipa({ veEquipa: true, liderados: 0 }) === 'equipa_vazia')
+teste('papel de equipa com liderados é com_equipa', situacaoDaEquipa({ veEquipa: true, liderados: 2 }) === 'com_equipa')
+teste('o dono vê tudo e sabe-o', situacaoDaEquipa({ veEquipa: true, liderados: 0, todos: true }) === 'todos')
+{
+  const vazio = avisoDeEquipa('equipa_vazia', 'pipeline') ?? ''
+  teste('a equipa vazia não se confunde com falta de resultados', /não tenha resultados/.test(vazio) && /admin/.test(vazio))
+  const cheio = avisoDeEquipa('com_equipa', 'extracto', 3) ?? ''
+  teste('com equipa, a frase diz QUANTAS pessoas entram na conta', /3 pessoas/.test(cheio))
+  teste('uma pessoa só não leva plural', /1 pessoa\b/.test(avisoDeEquipa('com_equipa', 'tarefas', 1) ?? ''))
+}
 
 if (falhas.length) {
   console.error(`backoffice/vista: ${falhas.length} falha(s)`)

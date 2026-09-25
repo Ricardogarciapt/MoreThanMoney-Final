@@ -141,6 +141,45 @@ export async function lideradosDe(supabase: ClienteEquipas, liderId: string): Pr
 }
 
 /**
+ * OS MEMBROS ACTIVOS de um conjunto de equipas — com a equipa a que cada um pertence.
+ *
+ * `lideradosDe` achata tudo numa lista de ids, que é o que o âmbito precisa. Esta devolve a
+ * PERTENÇA, que é o que o ecrã da equipa precisa: um líder com duas equipas tem de as ver
+ * separadas, senão os dois grupos aparecem como um só e ele deixa de saber quem responde a quê.
+ *
+ * Não verifica capacidades e não verifica de quem são as equipas — quem chama já resolveu as duas
+ * coisas ao obter os ids por `equipasQueLidera`. Mesma regra da casa: qualquer falha devolve `[]`.
+ */
+export async function membrosDasEquipas(
+  supabase: ClienteEquipas,
+  equipaIds: readonly string[],
+): Promise<MembroLinha[]> {
+  const ids = [...new Set(equipaIds.filter((id) => typeof id === 'string' && id.length > 0))]
+  if (ids.length === 0) return []
+  try {
+    const { data, error } = await supabase
+      .from(T_MEMBROS)
+      .select('id, equipa_id, membro_id, desde, ate, nota')
+      .in('equipa_id', ids)
+      .is('ate', null)
+
+    if (error || !Array.isArray(data)) return []
+    return (data as Array<Record<string, unknown>>)
+      .filter((r) => texto(r.membro_id))
+      .map((r) => ({
+        id: String(r.id),
+        equipaId: String(r.equipa_id),
+        membroId: String(r.membro_id),
+        desde: texto(r.desde),
+        ate: null,
+        nota: texto(r.nota),
+      }))
+  } catch {
+    return []
+  }
+}
+
+/**
  * A EQUIPA DE UMA PESSOA — a quem é que ela responde. Serve o ecrã dela («o teu responsável é…») e
  * serve o admin, que precisa de saber se já está noutra equipa antes de a mover.
  *
