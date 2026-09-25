@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { vendaPagaPelaEquipa } from '@/lib/vendas/exclusividade'
 
 type MlmSupabase = SupabaseClient
 
@@ -184,6 +185,14 @@ export async function processMlmRenewalCommissions(
     .single()
 
   if (!mlmSettings?.is_active) return
+
+  // O MESMO EURO NÃO PAGA DUAS VEZES — ver `lib/vendas/exclusividade.ts`. Vale para os DOIS
+  // residuais desta função (o do patrocinador directo e o de rank): se a venda é de equipa, é a
+  // tabela de papéis que paga a renovação, e a árvore não volta a cobrar por cima.
+  if (await vendaPagaPelaEquipa(supabase, params.renewingUserId)) {
+    console.log('[MLM] renovação de venda com equipa atribuída — residuais binários não criados')
+    return
+  }
 
   const directPct = Number(mlmSettings.direct_commission_pct) || DEFAULT_DIRECT_RESIDUAL_PCT
 

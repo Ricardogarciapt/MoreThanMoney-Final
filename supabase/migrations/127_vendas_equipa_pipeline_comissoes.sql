@@ -52,8 +52,8 @@ begin;
 -- ═══════════════════════════ 1. O NEGÓCIO (pipeline) ═══════════════════════════
 --
 -- Um negócio é o percurso de uma pessoa do lead ao fecho, e sobretudo QUEM fez o quê — é esta
--- atribuição que depois paga. Os quatro papéis ficam em colunas e não numa tabela-ponte porque
--- são exactamente quatro, um de cada, e a pergunta que se faz é sempre "quem fechou este".
+-- atribuição que depois paga. Os cinco papéis ficam em colunas e não numa tabela-ponte porque
+-- são exactamente cinco, um de cada, e a pergunta que se faz é sempre "quem fechou este".
 
 create table if not exists public.vendas_negocios (
   id            uuid primary key default gen_random_uuid(),
@@ -82,6 +82,11 @@ create table if not exists public.vendas_negocios (
   setter_id      uuid references public.profiles(id) on delete set null,
   closer_id      uuid references public.profiles(id) on delete set null,
   team_leader_id uuid references public.profiles(id) on delete set null,
+  -- O afiliado é o quinto papel e vive aqui pelo mesmo motivo dos outros: quem trouxe o lead com
+  -- o seu link tem direito à sua percentagem por pack, e isso é diferente do patrocinador da
+  -- árvore binária (que continua a ser pago pelo MLM). A mesma pessoa pode ser as duas coisas e
+  -- receber pelas duas — o extracto único mostra as duas linhas com a origem à vista.
+  afiliado_id    uuid references public.profiles(id) on delete set null,
 
   -- O ESTADO, por ordem de avanço. 'ganho' NÃO significa que entrou dinheiro — significa que o
   -- closer diz que fechou. O dinheiro é `vendas_vendas`.

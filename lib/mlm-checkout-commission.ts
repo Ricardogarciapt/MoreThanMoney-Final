@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type Stripe from 'stripe'
 import { placeBuyerInMlmTree, upsertSponsorNode } from '@/lib/mlm-tree'
+import { vendaPagaPelaEquipa } from '@/lib/vendas/exclusividade'
 
 type MlmSupabase = SupabaseClient
 
@@ -22,6 +23,15 @@ export async function processMlmCheckoutCommission(
   }
 
   if (!sponsorUsername) return
+
+  // O MESMO EURO NÃO PAGA DUAS VEZES. Se esta venda tem equipa atribuída, quem paga é a tabela de
+  // papéis (`lib/vendas/livro.ts`) e não o binário — senão o primeiro mês de um Premium saía a
+  // 35 % + 50 % antes de Stripe e da entrega. O porquê, e a razão de viver num sítio só, está em
+  // `lib/vendas/exclusividade.ts`.
+  if (await vendaPagaPelaEquipa(supabase, userId)) {
+    console.log('[MLM] venda com equipa atribuída — comissão binária não criada (paga a tabela de papéis)')
+    return
+  }
 
   const { data: existing } = await supabase
     .from('mlm_commissions')

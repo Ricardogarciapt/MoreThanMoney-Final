@@ -15,13 +15,17 @@
 import { readFileSync } from 'node:fs'
 import {
   PACK_TODOS,
+  PLANO_PADRAO,
   calcularComissoes,
   centimosEmEuros,
   comissaoEmCentimos,
+  degrauDeRank,
   regraEmVigor,
   totalCentimos,
   type RegraComissao,
+  type RegraRank,
 } from './calculo'
+import { arrastaEstornoTotal } from './livro'
 
 const falhas: string[] = []
 const teste = (nome: string, ok: boolean) => {
@@ -221,9 +225,190 @@ teste(
   teste('o cálculo não fala com a base de dados', !/supabase|createClient/i.test(src))
 }
 
+// ───────────────────────── o plano de cada pessoa (a salvaguarda dos 50 %) ─────────────────────────
+//
+// Cortar rendimento a quem já cá está não se desfaz. O plano é da PESSOA e não uma data no código:
+// mexer na tabela geral não pode tocar em ninguém que tenha plano próprio.
+
+const TABELA_GERAL = [
+  regra({ id: 'r-afil-nova-1a', papel: 'afiliado', pct: 30, aplica_a: 'primeira' }),
+  regra({ id: 'r-afil-nova-renov', papel: 'afiliado', pct: 10, aplica_a: 'renovacao' }),
+]
+const PLANO_LEGADO = [
+  regra({ id: 'r-afil-legado', papel: 'afiliado', pack: PACK_TODOS, pct: 50, aplica_a: 'ambos', plano: 'afiliado_legado_50' }),
+]
+const TODAS = [...TABELA_GERAL, ...PLANO_LEGADO]
+
+teste(
+  'afiliado NOVO recebe 30 % na primeira mensalidade',
+  (() => {
+    const r = calcularComissoes(venda(), { afiliado: 'u-nova' }, TODAS, AGORA, { planoPorPessoa: {} })
+    return r.linhas[0]?.pct === 30 && r.linhas[0]?.valor_cents === 1950
+  })(),
+)
+teste(
+  'afiliado NOVO recebe 10 % na renovação',
+  (() => {
+    const r = calcularComissoes(venda({ tipo: 'renovacao' }), { afiliado: 'u-nova' }, TODAS, AGORA, {
+      numeroDoPagamento: 2,
+    })
+    return r.linhas[0]?.pct === 10 && r.linhas[0]?.valor_cents === 650
+  })(),
+)
+teste(
+  'afiliado ANTIGO mantém 50 % numa renovação DEPOIS da mudança da tabela',
+  (() => {
+    const r = calcularComissoes(venda({ tipo: 'renovacao' }), { afiliado: 'u-antiga' }, TODAS, AGORA, {
+      numeroDoPagamento: 2,
+      planoPorPessoa: { 'u-antiga': 'afiliado_legado_50' },
+    })
+    return r.linhas[0]?.pct === 50 && r.linhas[0]?.valor_cents === 3250 && r.linhas[0]?.plano === 'afiliado_legado_50'
+  })(),
+)
+teste(
+  'mudar a tabela GERAL não toca em quem tem plano próprio',
+  (() => {
+    const tabelaMudada = [
+      ...TODAS,
+      regra({ id: 'r-afil-mais-baixa', papel: 'afiliado', pct: 5, aplica_a: 'renovacao', valido_de: '2026-09-20T00:00:00.000Z' }),
+    ]
+    const antiga = calcularComissoes(venda({ tipo: 'renovacao' }), { afiliado: 'u-antiga' }, tabelaMudada, AGORA, {
+      numeroDoPagamento: 2,
+      planoPorPessoa: { 'u-antiga': 'afiliado_legado_50' },
+    })
+    const nova = calcularComissoes(venda({ tipo: 'renovacao' }), { afiliado: 'u-nova' }, tabelaMudada, AGORA, {
+      numeroDoPagamento: 2,
+    })
+    return antiga.linhas[0]?.pct === 50 && nova.linhas[0]?.pct === 5
+  })(),
+)
+teste(
+  'o plano da pessoa só manda no que o plano dele define — o resto vem da tabela geral',
+  (() => {
+    const r = calcularComissoes(
+      venda(),
+      { closer: 'u-antiga', afiliado: 'u-antiga' },
+      [...TODAS, regra({ id: 'r-closer', papel: 'closer', pct: 20 })],
+      AGORA,
+      { planoPorPessoa: { 'u-antiga': 'afiliado_legado_50' } },
+    )
+    return (
+      r.linhas.find((l) => l.papel === 'afiliado')?.pct === 50 &&
+      r.linhas.find((l) => l.papel === 'closer')?.pct === 20
+    )
+  })(),
+)
+teste('sem plano gravado usa-se o plano geral', calcularComissoes(venda(), { afiliado: 'x' }, TODAS, AGORA).linhas[0]?.plano === PLANO_PADRAO)
+
+// ───────────────────────── o residual só do 2.º pagamento em diante ─────────────────────────
+
+teste(
+  'residual NÃO paga no 1.º pagamento',
+  (() => {
+    const r = calcularComissoes(venda({ tipo: 'renovacao' }), { closer: 'u-c' }, [regra({ id: 'r', pct: 5, aplica_a: 'renovacao' })], AGORA, {
+      numeroDoPagamento: 1,
+    })
+    return r.linhas.length === 0 && r.avisos.some((a) => /segundo em diante/.test(a))
+  })(),
+)
+teste(
+  'residual paga no 2.º pagamento',
+  calcularComissoes(venda({ tipo: 'renovacao' }), { closer: 'u-c' }, [regra({ id: 'r', pct: 5, aplica_a: 'renovacao' })], AGORA, {
+    numeroDoPagamento: 2,
+  }).linhas.length === 1,
+)
+teste(
+  'sem saber contar pagamentos não se corta o residual a ninguém',
+  calcularComissoes(venda({ tipo: 'renovacao' }), { closer: 'u-c' }, [regra({ id: 'r', pct: 5, aplica_a: 'renovacao' })], AGORA)
+    .linhas.length === 1,
+)
+
+// ───────────────────────── os degraus de rank ─────────────────────────
+//
+// O degrau sobe a percentagem DELE e não acrescenta níveis a pagar. E entra como PROPORÇÃO sobre o
+// degrau base, para não furar o tecto de 15 % do MTM Funded — ver o comentário em `degrauDeRank`.
+
+const DEGRAUS: RegraRank[] = [
+  { id: 'd-0', papel: 'closer', min_vendas: 0, pct: 20, valido_de: '2026-01-01T00:00:00.000Z', valido_ate: null },
+  { id: 'd-6', papel: 'closer', min_vendas: 6, pct: 25, valido_de: '2026-01-01T00:00:00.000Z', valido_ate: null },
+  { id: 'd-11', papel: 'closer', min_vendas: 11, pct: 30, valido_de: '2026-01-01T00:00:00.000Z', valido_ate: null },
+]
+
+teste('5 vendas no mês → degrau base', degrauDeRank(DEGRAUS, 'closer', 5, AGORA)?.regra.id === 'd-0')
+teste('6 vendas no mês → degrau dos 6', degrauDeRank(DEGRAUS, 'closer', 6, AGORA)?.regra.id === 'd-6')
+teste('10 vendas no mês → ainda o degrau dos 6', degrauDeRank(DEGRAUS, 'closer', 10, AGORA)?.regra.id === 'd-6')
+teste('11 vendas no mês → degrau do topo', degrauDeRank(DEGRAUS, 'closer', 11, AGORA)?.regra.id === 'd-11')
+teste('o setter não tem degraus definidos', degrauDeRank(DEGRAUS, 'setter', 30, AGORA) === null)
+teste('o factor do degrau do topo é ×1,5', degrauDeRank(DEGRAUS, 'closer', 12, AGORA)?.fator === 1.5)
+
+const comDegrau = (vendasNoMes: number, pct = 20) =>
+  calcularComissoes(venda(), { closer: 'u-c' }, [regra({ id: 'r-c', pct })], AGORA, {
+    regrasRank: DEGRAUS,
+    vendasNoMes: { 'closer:u-c': vendasNoMes },
+  }).linhas[0]
+
+teste('closer no degrau base: 20 % de 65,00 € = 13,00 €', comDegrau(3)?.valor_cents === 1300)
+teste('closer na 6.ª venda do mês: 25 % = 16,25 €', comDegrau(6)?.valor_cents === 1625)
+teste('closer acima de 10: 30 % = 19,50 €', comDegrau(12)?.valor_cents === 1950)
+teste('o degrau aplicado fica gravado na linha', comDegrau(12)?.rank_min_vendas === 11 && comDegrau(12)?.vendas_no_mes === 12)
+teste('a percentagem ANTES do degrau também fica gravada', comDegrau(12)?.pct_base === 20)
+// O TECTO DO FUNDED: 7,5 % no degrau base → ×1,5 = 11,25 %, e não 30 % (que seria quatro vezes
+// mais e furava os 15 % do produto inteiro).
+teste('o degrau é proporcional e não fura o tecto do Funded', comDegrau(12, 7.5)?.pct === 11.25)
+teste(
+  'o degrau não paga a quem não tem regra no pack',
+  calcularComissoes(venda(), { closer: 'u-c' }, [], AGORA, {
+    regrasRank: DEGRAUS,
+    vendasNoMes: { 'closer:u-c': 30 },
+  }).linhas.length === 0,
+)
+teste(
+  'o degrau NÃO se aplica ao residual',
+  calcularComissoes(venda({ tipo: 'renovacao' }), { closer: 'u-c' }, [regra({ id: 'r', pct: 5, aplica_a: 'renovacao' })], AGORA, {
+    numeroDoPagamento: 2,
+    regrasRank: DEGRAUS,
+    vendasNoMes: { 'closer:u-c': 30 },
+  }).linhas[0]?.pct === 5,
+)
+
+// ───────────────────────── cêntimos partidos do mundo real ─────────────────────────
+//
+// O 1.º mês do Premium é 34,99 € — de propósito um valor que parte cêntimos em quase todas as
+// percentagens da tabela.
+teste('34,99 € × 5 % (prospector) = 1,75 € (174,95 → 175)', comissaoEmCentimos(3499, 5) === 175)
+teste('34,99 € × 10 % (setter) = 3,50 € (349,9 → 350)', comissaoEmCentimos(3499, 10) === 350)
+teste('34,99 € × 20 % (closer) = 7,00 € (699,8 → 700)', comissaoEmCentimos(3499, 20) === 700)
+teste('34,99 € × 1,875 % (Funded prospector) = 0,66 € (65,606 → 66)', comissaoEmCentimos(3499, 1.875) === 66)
+teste(
+  'a soma da equipa no 1.º mês a 34,99 € dá 12,25 € e não 12,24 €',
+  (() => {
+    const r = calcularComissoes(
+      venda({ valor_cents: 3499 }),
+      { prospector: 'p', setter: 's', closer: 'c' },
+      [
+        regra({ id: 'r-p', papel: 'prospector', pct: 5 }),
+        regra({ id: 'r-s', papel: 'setter', pct: 10 }),
+        regra({ id: 'r-c', papel: 'closer', pct: 20 }),
+      ],
+      AGORA,
+    )
+    return totalCentimos(r.linhas) === 1225
+  })(),
+)
+
+// ───────────────────────── a janela da devolução ─────────────────────────
+
+teste('devolução ao dia 20 arrasta tudo', arrastaEstornoTotal('2026-09-01T00:00:00.000Z', '2026-09-21T00:00:00.000Z'))
+teste('devolução ao dia 30 ainda arrasta', arrastaEstornoTotal('2026-09-01T00:00:00.000Z', '2026-10-01T00:00:00.000Z'))
+teste('devolução ao dia 31 já não arrasta', !arrastaEstornoTotal('2026-09-01T00:00:00.000Z', '2026-10-02T00:00:00.000Z'))
+teste('devolução ao dia 200 só reverte a venda devolvida', !arrastaEstornoTotal('2026-01-01T00:00:00.000Z', AGORA))
+
 if (falhas.length) {
   console.error(`vendas/calculo: ${falhas.length} falha(s)`)
   for (const f of falhas) console.error('  · ' + f)
   process.exit(1)
 }
-console.log('vendas/calculo: sem regra não paga, arredonda para cima ao cêntimo, e o histórico não se reescreve ✓')
+console.log(
+  'vendas/calculo: sem regra não paga, arredonda para cima ao cêntimo, o residual só do 2.º pagamento,\n' +
+    '  o degrau sobe a percentagem sem furar tectos, e quem entrou com 50 % mantém 50 % ✓',
+)
