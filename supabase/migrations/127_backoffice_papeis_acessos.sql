@@ -38,6 +38,19 @@ create table if not exists public.backoffice_papeis (
   -- parceria) não tem uma pessoa por trás, e mentir «foi o Ricardo» era pior do que não saber.
   atribuido_por uuid        references public.profiles(id) on delete set null,
   atribuido_at  timestamptz not null default now(),
+  -- O RANK É POR PAPEL, e não por pessoa: alguém pode ser closer avançado e setter iniciante.
+  -- Por isso vive aqui, na linha do papel, e não em `profiles`.
+  --
+  -- Decisão do dono (25/09): os ranks são DEGRAUS NA PERCENTAGEM DO PRÓPRIO — um closer ganha 20%
+  -- até 5 vendas no mês, 25% das 6 às 10, 30% acima disso. NÃO é o modelo clássico em que subir de
+  -- rank acrescenta mais um nível de descendência a pagar; esse multiplica o custo sem multiplicar
+  -- a receita.
+  --
+  -- Fica `text` e sem chave estrangeira DE PROPÓSITO: a tabela dos ranks por papel é construída do
+  -- lado das comissões e ainda não existe. Uma FK para uma tabela futura não se escreve; um espaço
+  -- para a chave dela escreve-se. `mlm_ranks` (8 linhas) serve o MLM binário e NÃO se reaproveita
+  -- aqui — são duas coisas diferentes e misturá-las confundia quem lê a base.
+  rank_key      text,
   -- RETIRAR É UM FACTO, NÃO UM DELETE.
   -- Isto governa quem vê dinheiro. Quando alguém reclamar «eu era closer em Outubro», a resposta
   -- tem de estar na base, com data e com nome de quem retirou. Uma linha apagada não responde a

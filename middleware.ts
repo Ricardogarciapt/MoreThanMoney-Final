@@ -5,6 +5,18 @@ import { isMemberProtectedPath, registerRedirectUrl } from "@/lib/member-route-g
 import { isExpiredTrial } from "@/lib/trial-access"
 import { activationRedirectPath, requiresActivation } from "@/lib/member-activation"
 import { needsAccessRevalidation } from "@/lib/access-migration-regras"
+import {
+  CAMINHO_ENTRADA_BACKOFFICE,
+  caminhoInternoBackoffice,
+  dispensaPapeis,
+  ehAnfitriaoBackoffice,
+  ehPedidoBackoffice,
+} from "@/lib/backoffice-dominio"
+// A leitura vem do ficheiro SÓ-LEITURA, nunca de `backoffice-sessao`: esse importa `next/headers`,
+// que não existe no edge onde o middleware corre.
+import { papeisActivosDe } from "@/lib/backoffice-papeis-leitura"
+import { capacidadesDe, pode } from "@/lib/backoffice-papeis"
+import { areaDoCaminho, normalizarAreas } from "@/lib/backoffice-acessos-site"
 
 // Cache para rate limiting
 const rateLimit = new Map<string, { count: number; timestamp: number }>()
@@ -99,6 +111,79 @@ export async function middleware(request: NextRequest) {
   // preços, polling…). Estáticos já saíram acima.
   if (hasSupabaseEnv && !isApiRoute) {
     await getCachedUser()
+  }
+
+  /**
+   * ── BACKOFFICE (backoffice.morethanmoney.pt) ────────────────────────────────
+   *
+   * Vem ANTES do bloco de saída antecipada abaixo porque a raiz do subdomínio (`/`) tem de ser
+   * reescrita para `/backoffice`, e ali `pathname === "/"` sai sem passar por mais nada.
+   *
+   * REESCREVER e não redireccionar: a barra de endereço fica em `backoffice.morethanmoney.pt/x`.
+   * Redireccionar para `/backoffice/x` no domínio normal deitava fora a razão de ter subdomínio.
+   *
+   * O portão é o mesmo do resto do código: `bo.entrar`, que só existe com papéis activos. Não há
+   * `if (é admin)` aqui — o dono recebe as capacidades por `capacidadesDe`, pelo mesmo caminho.
+   */
+  if (ehPedidoBackoffice(request.headers.get("host"), pathname)) {
+    const noSubdominio = ehAnfitriaoBackoffice(request.headers.get("host"))
+    const interno = noSubdominio ? caminhoInternoBackoffice(pathname) ?? pathname : pathname
+    // No subdomínio a entrada é a raiz. Mandar alguém para `/backoffice` aí punha
+    // `backoffice.morethanmoney.pt/backoffice` na barra de endereço — funciona, mas parece avaria.
+    const entrada = noSubdominio ? "/" : CAMINHO_ENTRADA_BACKOFFICE
+
+    // A explicação de «não tens acesso» tem de ser visível a quem não tem acesso. Se ela própria
+    // exigisse papéis, o encaminhamento andava à roda e a pessoa ficava sem saber porquê — foi o
+    // silêncio de agosto, em que 43 pessoas ficaram de fora sem nunca lhes ser dito nada.
+    if (!dispensaPapeis(interno)) {
+      if (!hasSupabaseEnv) {
+        // Sem configuração não se adivinha quem é. Fechar, e dizer que está fechado.
+        return NextResponse.redirect(new URL(entrada, request.url))
+      }
+
+      const boUser = await getCachedUser()
+      if (!boUser) {
+        const destino = encodeURIComponent(pathname + request.nextUrl.search)
+        return NextResponse.redirect(new URL(`/login?redirect=${destino}`, request.url))
+      }
+
+      /**
+       * Os papéis lêem-se com a chave anon e a sessão da própria pessoa. A RLS da migração 127 diz
+       * «cada um vê os seus», que é exactamente a pergunta feita aqui — e no edge não há service
+       * role. Uma falha de leitura devolve lista vazia (ver `papeisActivosDe`), por isso o pior caso
+       * é fechar a porta, nunca abri-la.
+       */
+      const supabaseBo = getSupabase()
+      const [atribuicoes, perfilBoRes] = await Promise.all([
+        papeisActivosDe(supabaseBo as never, boUser.id),
+        supabaseBo.from("profiles").select("user_type, is_active").eq("id", boUser.id).maybeSingle(),
+      ])
+
+      const perfilBo = perfilBoRes.data as { user_type?: string; is_active?: boolean } | null
+      const capacidades = capacidadesDe(
+        atribuicoes.map((a) => a.papel),
+        { admin: perfilBo?.user_type === "admin" && perfilBo?.is_active === true },
+      )
+
+      if (!pode(capacidades, "bo.entrar")) {
+        return NextResponse.redirect(new URL(entrada, request.url))
+      }
+    }
+
+    if (noSubdominio && interno !== pathname) {
+      const url = request.nextUrl.clone()
+      url.pathname = interno
+      const reescrito = NextResponse.rewrite(url)
+      // Os cookies que o `setAll` do Supabase escreveu vivem na resposta criada no topo. Perdê-los
+      // aqui equivalia a nunca refrescar a sessão no subdomínio: a pessoa entrava e era expulsa
+      // uns minutos depois, sem erro nenhum a dizer porquê.
+      for (const cookie of response.cookies.getAll()) reescrito.cookies.set(cookie)
+      reescrito.headers.set("X-Frame-Options", "DENY")
+      reescrito.headers.set("X-Content-Type-Options", "nosniff")
+      reescrito.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
+      reescrito.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+      return reescrito
+    }
   }
 
   if (
@@ -246,6 +331,39 @@ export async function middleware(request: NextRequest) {
       const loginPath = pathname.startsWith("/app-mobile") ? "/app-mobile/login" : "/login"
       const redirect = encodeURIComponent(pathname + request.nextUrl.search)
       return NextResponse.redirect(new URL(`${loginPath}?redirect=${redirect}`, request.url))
+    }
+  }
+
+  /**
+   * ── Restrição de áreas DO SITE, por pessoa ──────────────────────────────────
+   *
+   * Quem o Ricardo criou só para o backoffice (um afiliado que não é cliente), ou a quem limitou o
+   * acesso, não tem que entrar nas áreas de produto. A lista só APERTA: nunca dá acesso a quem o
+   * `is_active` ou o portão de activação já bloqueiam — isso continua a ser decidido nos blocos
+   * acima, como sempre foi. Ver `lib/backoffice-acessos-site.ts`.
+   *
+   * A consulta só acontece em caminhos que esta lista governa (`areaDoCaminho`), para não pôr uma
+   * ida à base em cada navegação do site inteiro.
+   */
+  const areaPedida = areaDoCaminho(pathname)
+  if (areaPedida && hasSupabaseEnv && !isApiRoute) {
+    const areaUser = await getCachedUser()
+    if (areaUser) {
+      const { data: restricaoRow } = await getSupabase()
+        .from("backoffice_acessos_site")
+        .select("areas")
+        .eq("user_id", areaUser.id)
+        .maybeSingle()
+
+      const restricao = normalizarAreas((restricaoRow as { areas?: unknown } | null)?.areas)
+      // Lista vazia = sem restrição. Só quem tem uma lista escrita é que é filtrado, e nunca se
+      // fecha uma porta por a leitura ter falhado: sem linha, o acesso é o normal de membro.
+      if (restricao.length > 0 && !restricao.includes(areaPedida)) {
+        const url = request.nextUrl.clone()
+        url.pathname = "/acesso-restrito"
+        url.search = `?area=${encodeURIComponent(areaPedida)}`
+        return NextResponse.rewrite(url)
+      }
     }
   }
 
