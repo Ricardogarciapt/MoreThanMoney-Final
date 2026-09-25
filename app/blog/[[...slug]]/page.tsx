@@ -255,7 +255,7 @@ export default async function BlogPage({ params }: { params: Promise<RouteParams
     <PostGrid
       posts={list.data}
       title="Blog MoreThanMoney"
-      description="Trading consciente, liberdade financeira e o ecossistema MTM — artigos e guias da equipa."
+      description="Trading consciente, literacia financeira e o ecossistema MTM — artigos e guias da equipa."
     />
   )
 }

@@ -200,9 +200,12 @@ export default function WorkLandingPage() {
               <CheckCircle2 className="h-4 w-4 text-amber-500/80" />
               Sistema já validado
             </li>
+            {/* «Comissões recorrentes», sozinho num herói, lê-se como rendimento recorrente
+                garantido. O que é recorrente é a COMISSÃO enquanto o cliente se mantiver — a
+                palavra que faltava é a condição, e cabe na mesma linha. */}
             <li className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-amber-500/80" />
-              Comissões recorrentes
+              Comissão por venda, com residual enquanto o cliente ficar
             </li>
           </ul>
           <div data-reveal className="delay-4 mt-14">
@@ -277,8 +280,9 @@ export default function WorkLandingPage() {
             className="delay-1 mt-8 text-lg leading-relaxed text-zinc-400"
           >
             Democratizar o acesso à educação financeira e às oportunidades digitais.
-            Acreditamos que qualquer pessoa, em qualquer parte do mundo, deve ter
-            acesso às ferramentas necessárias para construir independência financeira.
+            Acreditamos que qualquer pessoa, em qualquer parte do mundo, deve ter acesso à
+            formação e às ferramentas para tomar as suas próprias decisões financeiras — com
+            o risco explicado antes, e não depois.
           </p>
           <p
             data-reveal
