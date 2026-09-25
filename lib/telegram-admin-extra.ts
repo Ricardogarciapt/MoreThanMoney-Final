@@ -50,6 +50,9 @@ export const CRONS_DO_PAINEL: CronDoPainel[] = [
   { chave: 'pips', rota: 'pips-proof', nome: '📈 Prova em pips', mexe: false, oQueFaz: 'Recalcula a prova pública.' },
   { chave: 'broker', rota: 'broker-dados-frescura', nome: '🏦 Frescura da corretora', mexe: false, oQueFaz: 'Verifica se os dados da corretora estão velhos.' },
   { chave: 'stats', rota: 'landing-stats', nome: '🔢 Números da landing', mexe: false, oQueFaz: 'Actualiza os números da página inicial.' },
+  // Não está marcado como «mexe» porque não sai daqui para fora: as mensagens que manda são para
+  // o chat DELE, e mais nenhum. Não escreve em comissões, negócios nem ranks — só lê e avisa.
+  { chave: 'equipa', rota: 'equipa-vigia', nome: '👔 Vigia da equipa', mexe: false, oQueFaz: 'Procura comissões novas, negócios parados e subidas de rank, e avisa-te a ti.' },
   { chave: 'digest', rota: 'sales-digest', nome: '📨 Digest de vendas', mexe: true, oQueFaz: 'Gera e ENVIA o resumo de vendas.' },
   { chave: 'follow', rota: 'lead-followup', nome: '📣 Seguimentos aos leads', mexe: true, oQueFaz: 'ENVIA mensagens de reactivação a até 50 leads.' },
   { chave: 'renova', rota: 'broker-gate-renew', nome: '🔁 Renovar acessos', mexe: true, oQueFaz: 'Renova e REVOGA acessos conforme o saldo na corretora.' },
