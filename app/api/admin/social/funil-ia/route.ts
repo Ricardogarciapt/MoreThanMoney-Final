@@ -5,6 +5,7 @@ import type { Funil, NoDoFunil, TipoDeNo } from "@/lib/funis"
 // Os preços e a regra do bónus vêm da fonte única. Este ficheiro ainda dizia «300 $» meses
 // depois de o depósito mínimo ter passado a 350 — e a IA desenhava funis com o número errado.
 import { escadaNumaLinha, bonusNumaLinha } from "@/lib/escada-precos"
+import { modeloClaude } from '@/lib/modelo-claude'
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
-        model: process.env.CONTENT_DRAFT_MODEL?.trim() || "claude-sonnet-4-5",
+        model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
         max_tokens: 4000,
         system: sistema,
         messages: [{ role: "user", content: utilizador }],

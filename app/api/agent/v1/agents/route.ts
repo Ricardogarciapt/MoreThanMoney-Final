@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import { agentError, agentOk, requireAgentAccess } from "@/lib/agent-site-api"
+import { modeloClaude } from '@/lib/modelo-claude'
 
 /**
  * POST /api/agent/v1/agents  { agent, message, context? }
@@ -15,7 +16,7 @@ const PERSONAS: Record<string, string> = {
 async function callAnthropic(system: string, userMessage: string): Promise<string | null> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) return null
-  const model = process.env.ANTHROPIC_MODEL?.trim() || "claude-3-5-haiku-20241022"
+  const model = modeloClaude()
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },

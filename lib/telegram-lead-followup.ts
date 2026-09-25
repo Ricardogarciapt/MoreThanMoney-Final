@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
+import { modeloClaude } from '@/lib/modelo-claude'
 
 /**
  * FOLLOW-UP de reativação de leads mornos no funil do Telegram (ManyChat Essential — nativo).
@@ -37,7 +38,7 @@ async function draftFollowup(lead: Lead, touch: number): Promise<string> {
   }
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) return fallback[touch] || fallback[1]
-  const model = process.env.MANYCHAT_CLOSER_MODEL?.trim() || process.env.ANTHROPIC_MODEL?.trim() || 'claude-3-5-haiku-20241022'
+  const model = modeloClaude(process.env.MANYCHAT_CLOSER_MODEL)
   const ctx = `Lead: ${name || '(sem nome)'} · interesse: ${lead.interest || 'desconhecido'} · etapa: ${lead.stage || 'qualifying'}. Este é o TOQUE ${touch} de ${MAX_TOUCHES}.`
   try {
     const ctrl = new AbortController()

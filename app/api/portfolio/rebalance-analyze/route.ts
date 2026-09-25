@@ -1,28 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { modeloClaude } from '@/lib/modelo-claude'
 
 const ANTHROPIC_VERSION = "2023-06-01"
 
 function visionModel(): string {
-  return (
-    process.env.ANTHROPIC_VISION_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "claude-3-5-sonnet-20241022"
-  )
+  return modeloClaude(process.env.ANTHROPIC_VISION_MODEL)
 }
 
 function textModel(): string {
-  return process.env.ANTHROPIC_MODEL?.trim() || "claude-3-5-haiku-20241022"
+  return modeloClaude()
 }
 
 /** Modelo preferido para análise completa de portefólio (maior qualidade JSON + raciocínio). */
 function portfolioAnalysisModel(): string {
-  return (
-    process.env.ANTHROPIC_PORTFOLIO_MODEL?.trim() ||
-    process.env.ANTHROPIC_VISION_MODEL?.trim() ||
-    "claude-3-5-sonnet-20241022"
-  )
+  // Mantém a cadeia das duas variáveis; o que deixa de ser escrito à mão é o recurso.
+  return modeloClaude(process.env.ANTHROPIC_PORTFOLIO_MODEL || process.env.ANTHROPIC_VISION_MODEL)
 }
 
 type ImagePart = { media_type: string; data: string }

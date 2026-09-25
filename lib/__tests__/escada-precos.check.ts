@@ -15,6 +15,7 @@ import { readFileSync } from 'node:fs'
 import {
   MIN_DEPOSIT,
   NOME_DEGRAU_TOPO,
+  ondeComprarTopoNumaLinha,
   PRECO_MEMBRO,
   PRECO_PREMIUM,
   PRECO_PREMIUM_1O_MES,
@@ -135,6 +136,51 @@ for (const [n, linha] of guiao.split('\n').map((l, i) => [i + 1, l] as const)) {
   assert.ok(
     !MANDA_ESCONDER.test(linha),
     `o guião manda esconder o degrau de topo (linha ${n}) e ele está à venda: ${linha.trim()}`,
+  )
+}
+
+// ── E os GUIÕES DE RUNTIME também não ─────────────────────────────────────────────────────────
+//
+// O bloco de cima só olhava para o documento. Foi por isso que a mesma frase sobreviveu onde
+// custa dinheiro: a 25/09 o closer das DMs do Instagram já dizia que o degrau de topo se compra
+// no site, e o do funil do Telegram ainda dizia «não dês link de pagamento: esse fecho é com o
+// Ricardo» — os dois a ler os preços daqui, os dois a contradizerem-se na única frase que fecha
+// a venda. Um closer que recusa fechar não dá erro: dá um lead que já tinha decidido pagar e
+// fica à espera de um humano.
+//
+// A frase passou a ser UMA (`ondeComprarTopoNumaLinha`), e é isso que estas asserções prendem.
+
+assert.equal(
+  ondeComprarTopoNumaLinha().includes('/'),
+  TOPO_LINK_PAGAMENTO !== null,
+  'a frase tem de dar o link quando ele existe, e não o inventar quando não existe',
+)
+if (TOPO_LINK_PAGAMENTO) {
+  assert.ok(
+    ondeComprarTopoNumaLinha().includes(TOPO_LINK_PAGAMENTO),
+    'com o pacote à venda, a frase leva o link onde se paga',
+  )
+  assert.ok(
+    !/fecho é com o Ricardo|não inventes link de pagamento/i.test(ondeComprarTopoNumaLinha()),
+    'com o pacote à venda, a frase não pode mandar o closer esperar por um humano',
+  )
+}
+
+// Nenhum guião pode voltar a escrever a frase à mão — é assim que um deles fica para trás.
+const GUIOES = [
+  '../instagram/dm-closer.ts',
+  '../telegram-lead-funnel.ts',
+  '../../app/api/manychat/closer/route.ts',
+]
+for (const rel of GUIOES) {
+  const texto = readFileSync(new URL(rel, import.meta.url), 'utf-8')
+  assert.ok(
+    texto.includes('ondeComprarTopoNumaLinha()'),
+    `${rel} tem de ler a frase do degrau de topo da fonte única`,
+  )
+  assert.ok(
+    !/fecho é com o Ricardo|n(ã|a)o d(ê|e)s link de pagamento|n(ã|a)o se compra sozinho|ainda N(Ã|A)O se compra|n(ã|a)o inventes link de pagamento/i.test(texto),
+    `${rel} ainda diz que o degrau de topo não se vende, e ele está à venda`,
   )
 }
 

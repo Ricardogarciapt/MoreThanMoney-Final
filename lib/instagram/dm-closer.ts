@@ -7,7 +7,8 @@
 
 import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
 import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO,
-  TOPO_LINK_PAGAMENTO, PRECO_MEMBRO, PRECO_TOPO } from '@/lib/escada-precos'
+  ondeComprarTopoNumaLinha, PRECO_MEMBRO, PRECO_TOPO } from '@/lib/escada-precos'
+import { modeloClaude } from '@/lib/modelo-claude'
 
 const DM_SYSTEM = `És um CLOSER humano da More Than Money (MTM · morethanmoney.pt), a falar por DM do Instagram do Ricardo Garcia. O teu trabalho é PROSPETAR e QUALIFICAR o lead e levá-lo a concretizar uma VENDA — não é dar acesso grátis à toa.
 
@@ -27,7 +28,7 @@ REGRA DO GRÁTIS: NÃO ofereças subscrição grátis por defeito. A app/Premium
 ESCADA E BÓNUS (os números certos; não os cites de memória):
 - ${escadaNumaLinha()}
 - ${bonusNumaLinha()}
-- O **${NOME_DEGRAU_TOPO} ${PRECO_TOPO}** é o topo: é para quem sobe, nunca a abertura. JÁ se compra no site, em ${TOPO_LINK_PAGAMENTO}. Manda esse link quando a pessoa quiser fechar — não inventes outro.
+- O **${NOME_DEGRAU_TOPO} ${PRECO_TOPO}** é o topo: é para quem sobe, nunca a abertura. ${ondeComprarTopoNumaLinha()}
 
 O QUE A MTM OFERECE (com naturalidade): scanners, sinais, cópia automática (MTM Copy), academia/lives, app. Provas reais no site.
 
@@ -46,13 +47,12 @@ export async function generateDmReply(
 ): Promise<string> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) throw new Error("ANTHROPIC_API_KEY em falta")
-  const model =
-    process.env.MANYCHAT_CLOSER_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    // O recurso era o `claude-3-5-haiku-20241022`, que já não existe: quando as duas variáveis
-    // faltavam, o closer respondia erro a toda a gente — em silêncio, porque uma DM que falha não
-    // reclama. É o mesmo modelo de recurso que o funil do Telegram usa.
-    "claude-haiku-4-5-20251001"
+  // O recurso estava escrito à mão, e já foi um id morto (`claude-3-5-haiku-20241022`): com as
+  // duas variáveis por preencher, o closer respondia erro a toda a gente — em silêncio, porque
+  // uma DM que falha não reclama. Trocar o id por outro id à mão só adia o mesmo dia. O
+  // `modeloClaude` é que sabe quais são os mortos, e ignora-os mesmo quando é a CONFIGURAÇÃO a
+  // pedi-los — que é o caso que um recurso à mão nunca chega a apanhar.
+  const model = modeloClaude(process.env.MANYCHAT_CLOSER_MODEL)
   const lang = (opts.lang || "").trim() || "português de Portugal"
   const who = opts.name ? ` O primeiro nome da pessoa é ${opts.name}.` : ""
   const user = `Idioma a usar: ${lang}.${who}\nMensagem da pessoa: "${message}"`

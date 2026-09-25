@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { buildLocalMtmCoachReply } from "@/lib/mtm-ai-coach-fallback"
+import { modeloClaude } from '@/lib/modelo-claude'
 
 type ChatContext = {
   pathname?: string
@@ -15,8 +16,7 @@ async function callAnthropic(system: string, userMessage: string): Promise<strin
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) return null
 
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || "claude-3-5-haiku-20241022"
+  const model = modeloClaude()
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",

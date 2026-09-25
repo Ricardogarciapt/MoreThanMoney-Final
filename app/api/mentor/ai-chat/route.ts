@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import Anthropic from "@anthropic-ai/sdk"
+import { modeloClaude } from '@/lib/modelo-claude'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
       async start(controller) {
         try {
           const anthropicStream = await anthropic.messages.stream({
-            model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5",
+            model: modeloClaude(),
             max_tokens: 1024,
             system: systemPrompt,
             messages: messages.map((m) => ({

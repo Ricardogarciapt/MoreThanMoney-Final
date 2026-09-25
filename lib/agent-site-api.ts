@@ -8,6 +8,7 @@ import { verifyAdminAccess, checkRateLimit, validateRequiredFields } from "@/lib
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { defaultContentConfig, type ContentConfig } from "@/lib/content-config"
 import { buildLocalMtmCoachReply } from "@/lib/mtm-ai-coach-fallback"
+import { modeloClaude } from '@/lib/modelo-claude'
 
 export type AgentAuth = {
   actor: "agent" | "admin"
@@ -264,7 +265,7 @@ export async function buildSiteContextSnapshot(): Promise<Record<string, unknown
 async function callAnthropic(system: string, userMessage: string): Promise<string | null> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) return null
-  const model = process.env.ANTHROPIC_MODEL?.trim() || "claude-3-5-haiku-20241022"
+  const model = modeloClaude()
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {

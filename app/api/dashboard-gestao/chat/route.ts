@@ -10,6 +10,7 @@ import { createClient } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { FERRAMENTAS, ferramentaPorNome } from "@/lib/mcp/ferramentas"
+import { modeloClaude } from '@/lib/modelo-claude'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -566,15 +567,23 @@ async function executeTool(
   }
 }
 
+/**
+ * Os recursos, quando o primeiro modelo não responde.
+ *
+ * Esta lista já foi TODA de ids mortos (`claude-sonnet-4-5`, `claude-3-5-sonnet-20241022`): o
+ * dashboard só não morria porque tenta os candidatos por ordem e apanha o 404 — mas gastava três
+ * chamadas para chegar a lado nenhum, e depois mandava o admin configurar, à mão, mais um id
+ * morto. Quem sabe quais são os mortos é o `lib/modelo-claude.ts`; aqui ficam só os vivos.
+ */
 const ANTHROPIC_FALLBACK_MODELS = [
-  "claude-sonnet-4-5",
-  "claude-3-5-sonnet-20241022",
-  "claude-opus-4-5",
+  "claude-sonnet-5",
+  "claude-opus-5-5",
 ]
 
 function getAnthropicModelCandidates() {
-  const configured = process.env.ANTHROPIC_MODEL?.trim()
-  return [...new Set([configured, ...ANTHROPIC_FALLBACK_MODELS].filter(Boolean) as string[])]
+  // O 1.º candidato passa pelo `modeloClaude`, que limpa o valor configurado e descarta um id
+  // morto vindo da configuração — o caso que esta lista de recursos nunca chegava a apanhar.
+  return [...new Set([modeloClaude(), ...ANTHROPIC_FALLBACK_MODELS])]
 }
 
 function isAnthropicModelUnavailableError(err: unknown) {
@@ -764,10 +773,10 @@ export async function POST(req: NextRequest) {
               `Nenhum modelo Anthropic compatível ficou disponível para o dashboard.\n\n` +
               `Modelos tentados automaticamente: ${modelCandidates.join(", ")}\n\n` +
               `No Vercel → Settings → Environment Variables, define por exemplo:\n` +
-              `ANTHROPIC_MODEL = claude-sonnet-4-5\n\n` +
+              `ANTHROPIC_MODEL = claude-sonnet-5\n\n` +
               `Alternativas disponíveis:\n` +
-              `ANTHROPIC_MODEL = claude-3-5-sonnet-20241022\n` +
-              `ANTHROPIC_MODEL = claude-opus-4-5`,
+              `ANTHROPIC_MODEL = claude-opus-5-5\n` +
+              `ANTHROPIC_MODEL = claude-haiku-4-5-20251001`,
           })
         } else if (isAnthropicModelUnavailableError(err)) {
           send({
@@ -776,7 +785,7 @@ export async function POST(req: NextRequest) {
               `O modelo Anthropic configurado não está disponível.\n\n` +
               `Modelos tentados automaticamente: ${modelCandidates.join(", ")}\n\n` +
               `No Vercel → Settings → Environment Variables, define:\n` +
-              `ANTHROPIC_MODEL = claude-sonnet-4-5`,
+              `ANTHROPIC_MODEL = claude-sonnet-5`,
           })
         } else if (errStr.includes("credit balance") || errStr.includes("insufficient")) {
           send({

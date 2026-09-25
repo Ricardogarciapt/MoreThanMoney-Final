@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { modeloClaude } from '@/lib/modelo-claude'
 
 /**
  * As nossas automações — o que hoje se paga ao ManyChat.
@@ -172,7 +173,7 @@ export async function textoDaResposta(a: Automacao, doCliente: string): Promise<
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: process.env.CONTENT_DRAFT_MODEL?.trim() || 'claude-sonnet-4-5',
+        model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
         max_tokens: 400,
         system:
           'Respondes em nome da MoreThanMoney, comunidade portuguesa de trading. Português de ' +

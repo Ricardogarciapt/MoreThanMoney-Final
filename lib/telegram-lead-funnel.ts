@@ -13,7 +13,7 @@ import { getProofStats } from '@/lib/proof-stats'
 // (FOREX_LINK, SENSEI_LINK) eram links estáticos que ninguém usava — e um link de grupo à solta
 // num ficheiro é um link que acaba por sair numa mensagem a quem não passou pelo gate.
 import { MIN_DEPOSIT, TRIAL_CODE } from '@/lib/telegram-broker-gate'
-import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO, PRECO_MEMBRO, PRECO_PREMIUM, PRECO_PREMIUM_1O_MES, PRECO_TOPO } from '@/lib/escada-precos'
+import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO, ondeComprarTopoNumaLinha, PRECO_MEMBRO, PRECO_PREMIUM, PRECO_PREMIUM_1O_MES, PRECO_TOPO } from '@/lib/escada-precos'
 // O preço do MTM Auto vem de quem o anuncia no funil dele — escrito à mão aqui, divergia.
 import { MTMAUTO_PRECO } from '@/lib/telegram-mtmauto-funnel'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
@@ -29,7 +29,7 @@ function buildSystem(PROOF: string): string { return `És um CLOSER humano da Mo
 5) FECHAR: passo concreto único. Se escolher a rota broker:
    a) puprime.com/campaign?cs=morethanmoney  b) depositar mín. ${MIN_DEPOSIT}$  c) enviar aqui o UID (só número) + print do depósito. Ao validar, libertas os links pessoais de TODOS os grupos (Forex, Sensei, Premium, GoldKiller) + cupão Premium.
    Se não quiser depositar agora → fecha no Membro ${PRECO_MEMBRO} (ou Premium ${PRECO_PREMIUM}, 1º mês ${PRECO_PREMIUM_1O_MES}).
-6) O TOPO DA ESCADA: quem quiser tudo de uma vez, ou já está decidido, sobe ao ${NOME_DEGRAU_TOPO} ${PRECO_TOPO} (anual). NÃO abras por aqui — é degrau de subida, não de entrada — e não dês link de pagamento: esse fecho é com o Ricardo.
+6) O TOPO DA ESCADA: quem quiser tudo de uma vez, ou já está decidido, sobe ao ${NOME_DEGRAU_TOPO} ${PRECO_TOPO} (anual). NÃO abras por aqui — é degrau de subida, não de entrada. ${ondeComprarTopoNumaLinha()}
 
 ═══ REGRA DA APP GRÁTIS ═══
 NÃO lideres com a app grátis nem a ofereças por defeito. A app/Premium "de graça" é a RECOMPENSA de abrir conta + depositar ${MIN_DEPOSIT}$ na PU Prime (broker-gate) — usa-a como fecho, não como isco. Só se a pessoa recusar tudo e insistir em "grátis" é que mencionas o teste de 14 dias (código ${TRIAL_CODE}, sem cartão) — e mesmo aí puxas de volta para o Membro ou para a rota dos ${MIN_DEPOSIT}$.

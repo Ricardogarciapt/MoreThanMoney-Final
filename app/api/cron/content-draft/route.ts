@@ -5,6 +5,7 @@ import { CAPTION_INTERNAL_MARK, uploadBufferToBucket } from '@/lib/instagram/pub
 import { renderSocialCardBuffer } from '@/lib/social-card'
 import { factoDoDia, getPipsProof, notaViesPreco } from '@/lib/pips-proof'
 import { canvaAutofillImage } from '@/lib/canva-connect'
+import { modeloClaude } from '@/lib/modelo-claude'
 
 /**
  * Imagem do post: 1º tenta o Canva Connect (teus templates reais, se configurado + plano pago);
@@ -138,7 +139,7 @@ async function draftBatch(
 ): Promise<Array<{ hook: string; caption: string; cta_keyword: string; visual_brief: string }>> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) throw new Error('ANTHROPIC_API_KEY em falta')
-  const model = process.env.CONTENT_DRAFT_MODEL?.trim() || process.env.ANTHROPIC_MODEL?.trim() || 'claude-3-5-haiku-20241022'
+  const model = modeloClaude(process.env.CONTENT_DRAFT_MODEL)
   const user =
     `Gera ${BATCH} posts distintos (temas variados: mentalidade/disciplina, prova social, educação de trading, bastidores da comunidade, sessões ao vivo).\n` +
     `Atribui a cada post, por ordem, esta palavra-chave de CTA: ${assigned.join(', ')}.\n` +

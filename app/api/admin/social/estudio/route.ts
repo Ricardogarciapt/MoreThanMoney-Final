@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { factosParaCartao, getPipsProof, notaViesPreco, publicavel, RESSALVA_LEGAL } from '@/lib/pips-proof'
+import { modeloClaude } from '@/lib/modelo-claude'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -32,7 +33,7 @@ async function ehAdmin(request: NextRequest): Promise<boolean> {
 async function pedirAoModelo(sistema: string, pedido: string, maxTokens = 1400): Promise<string> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) throw new Error('ANTHROPIC_API_KEY em falta')
-  const model = process.env.CONTENT_DRAFT_MODEL?.trim() || 'claude-sonnet-4-5'
+  const model = modeloClaude(process.env.CONTENT_DRAFT_MODEL)
 
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 45_000)

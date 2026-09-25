@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
-import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO, PRECO_MEMBRO, PRECO_TOPO } from '@/lib/escada-precos'
+import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO, ondeComprarTopoNumaLinha, PRECO_MEMBRO, PRECO_TOPO } from '@/lib/escada-precos'
 import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
+import { modeloClaude } from '@/lib/modelo-claude'
 
 /**
  * O link do assistente no Telegram — UMA fonte para o nome do bot.
@@ -40,7 +41,7 @@ FACTOS REAIS (comunidade PT de educação financeira + trading; usa só estes):
 - Prova: sinais acompanhados do início ao fim, medidos em PIPS e PERCENTAGEM (nunca em euros — o valor depende do lote de cada um), comunidade ativa. Nunca prometas lucro.
 - Escada: ${escadaNumaLinha()}
 - ${bonusNumaLinha()}
-- O ${NOME_DEGRAU_TOPO} ainda NÃO se compra sozinho no site: quem o quiser fecha contigo/com o Ricardo. Não inventes link de pagamento.
+- O ${NOME_DEGRAU_TOPO} ${ondeComprarTopoNumaLinha()}
 - iPhone/app da Apple: subscrever DENTRO da app (NUNCA envies links de pagamento).
 
 REGRA DO GRÁTIS: NÃO ofereças o trial/app grátis por defeito. A app/Premium "de graça" é a RECOMPENSA do depósito ${MIN_DEPOSIT}$ na PU Prime — usa como fecho, não como isco. Só se a pessoa recusar tudo mencionas uma entrada mais leve, puxando de volta ao Membro ou à rota dos ${MIN_DEPOSIT}$.
@@ -75,10 +76,8 @@ async function callClaude(
 ): Promise<string> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) throw new Error("ANTHROPIC_API_KEY em falta")
-  const model =
-    process.env.MANYCHAT_CLOSER_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "claude-3-5-haiku-20241022"
+  // Mesmo recurso morto que o closer das DMs tinha: ver lib/modelo-claude.ts.
+  const model = modeloClaude(process.env.MANYCHAT_CLOSER_MODEL)
 
   const system = (mode || "").trim().toLowerCase() === "personal_router" ? PERSONAL_SYSTEM : CLOSER_SYSTEM
   const lang = (idioma || "").trim() || "português de Portugal"

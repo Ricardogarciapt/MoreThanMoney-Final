@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CAPTION_INTERNAL_MARK, publicCaption } from '@/lib/instagram/publish'
+import { modeloClaude } from '@/lib/modelo-claude'
 
 /**
  * REPOST / AMPLIFICAÇÃO: @ricardogarciapt republica (com VOZ PESSOAL do Ricardo) os posts que
@@ -34,7 +35,7 @@ async function authorized(req: NextRequest): Promise<boolean> {
 async function personalCaption(brandCaption: string): Promise<string> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) throw new Error('ANTHROPIC_API_KEY em falta')
-  const model = process.env.CONTENT_DRAFT_MODEL?.trim() || process.env.ANTHROPIC_MODEL?.trim() || 'claude-3-5-haiku-20241022'
+  const model = modeloClaude(process.env.CONTENT_DRAFT_MODEL)
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 25000)
   try {

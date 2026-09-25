@@ -2,6 +2,7 @@ import type { ParsedSignal, SenseiAlertType, SenseiParsedAlert } from './signal-
 import { isSenseiTradingViewFormat, senseiAlertTypeLabel } from './signal-parser'
 import type { MtmcopyChannelKey } from './channel-context'
 import { resolvePremiumAiStrategyPrompt } from './premium-ai-guideline'
+import { modeloClaude } from '@/lib/modelo-claude'
 
 export const MTMCOPY_AI_MIN_CONFIDENCE = Number(
   process.env.MTMCOPY_AI_MIN_CONFIDENCE ?? '0.35',
@@ -334,10 +335,7 @@ async function callHaikuValidator(
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) return null
 
-  const model =
-    process.env.MTMCOPY_AI_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    'claude-3-5-haiku-20241022'
+  const model = modeloClaude(process.env.MTMCOPY_AI_MODEL)
 
   const system = `És um validador de sinais de trading MTM para copy trading MT5.
 Analisa formato, zonas de entrada, SL e TP. Responde APENAS com JSON válido (sem markdown):

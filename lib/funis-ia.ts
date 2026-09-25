@@ -11,6 +11,8 @@
  * que só se descobre quando já foi dita a trezentas pessoas.
  */
 
+import { modeloClaude } from '@/lib/modelo-claude'
+
 export interface PedidoIA {
   objetivo: string
   modo: 'responder' | 'classificar' | 'ambos'
@@ -59,7 +61,7 @@ export async function pensar(p: PedidoIA): Promise<RespostaIA> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: process.env.CONTENT_DRAFT_MODEL?.trim() || 'claude-sonnet-4-5',
+        model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
         max_tokens: 500,
         system: sistema,
         messages: [{ role: 'user', content: (p.doCliente || '(a pessoa ainda não disse nada)').slice(0, 2000) }],

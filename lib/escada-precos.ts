@@ -150,3 +150,23 @@ export function bonusEmLinhas(): string {
     `link) com <b>depósito mínimo de ${MIN_DEPOSIT}$</b>.`
   )
 }
+
+/**
+ * A frase que um closer diz sobre ONDE se compra o degrau de cima.
+ *
+ * Existe por causa de um desencontro que durou até 25/09: o closer das DMs do Instagram e o do
+ * funil do Telegram traziam os preços daqui, mas escreviam à mão a parte que decide a venda — e
+ * escreviam-na ao contrário um do outro. O do Telegram ainda dizia «não dês link de pagamento:
+ * esse fecho é com o Ricardo», herdado dos 35 dias (20/08→24/09) em que o pacote esteve mesmo
+ * fora do /upgrade. Recusar fechar uma venda que já se pode fechar não dá erro nenhum: dá um
+ * lead que já tinha decidido pagar e fica à espera de um humano que pode nunca aparecer.
+ *
+ * Por isso a frase vive aqui, ao lado do {@link TOPO_LINK_PAGAMENTO} que a decide. Quando o link
+ * é `null` — o pacote está fora de venda, como esteve — a frase diz-se sozinha ao contrário, e
+ * os dois guiões mudam juntos em vez de um deles ficar para trás.
+ */
+export function ondeComprarTopoNumaLinha(): string {
+  return TOPO_LINK_PAGAMENTO
+    ? `JÁ se compra no site, em ${TOPO_LINK_PAGAMENTO} — manda esse link quando a pessoa quiser fechar, e não inventes outro.`
+    : `NÃO se compra sozinho no site neste momento: esse fecho é com o Ricardo. Não inventes link de pagamento.`
+}
