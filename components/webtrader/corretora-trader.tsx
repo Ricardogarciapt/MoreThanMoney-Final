@@ -9,6 +9,7 @@ import type { MapaPrecos } from "@/lib/mtmfunded/simulado/matematica"
 import type { SimboloFicha } from "@/components/funded/api"
 import { usd } from "@/components/funded/api"
 import { usePrecos } from "@/components/funded/use-precos"
+import { calibrar, lucroAoVivo, equityAoVivo, type Calibracao } from "@/components/webtrader/pnl-ao-vivo"
 import { fichaDe } from "@/components/funded/pre-carga"
 import { AccaoCancelada, InterruptorUmClique, UmCliqueProvider, useUmClique } from "@/components/funded/um-clique"
 import { useRascunhoOpcional } from "@/components/funded/rascunho-ordem"
@@ -136,6 +137,42 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   const { precos: vivos } = usePrecos(precisos, 2000)
   const mapa: MapaPrecos = useMemo(() => Object.fromEntries(Object.entries(vivos).map(([s, p]) => [s, { symbol: s, bid: p.bid, ask: p.ask }])), [vivos])
 
+  /**
+   * P&L AO VIVO — o lucro deixa de esperar pela corretora para se mexer.
+   *
+   * As posições vêm de 3 em 3 s (mais a cache do servidor) e o saldo de 10 em 10, enquanto os
+   * preços chegam a este mesmo ecrã a ~135 ms. Era isso a «diferença enorme» para a plataforma da
+   * corretora: ela calcula o número, nós esperávamos por ele.
+   *
+   * Calibra-se a cada sondagem — `posicoes` só muda de referência quando a resposta nova chega —
+   * e entre sondagens aplica-se o factor ao preço novo. Nada disto decide ordens: é só o que se vê.
+   */
+  const calibracoes = useRef<Record<string, Calibracao>>({})
+  useEffect(() => {
+    const novas: Record<string, Calibracao> = {}
+    for (const p of posicoes) {
+      // Sem calibrar agora (posição em cima da entrada, preço velho), mantém-se a anterior se a
+      // houver: ela vale CALIBRACAO_VALIDA_MS e o módulo trata de a deixar cair sozinha.
+      const c = calibrar(p, vivos[p.symbol]) ?? calibracoes.current[p.id]
+      if (c) novas[p.id] = c
+    }
+    calibracoes.current = novas
+    // De propósito só em `posicoes`: é a chegada da sondagem que recalibra, não cada tick.
+  }, [posicoes]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Flutuante de agora: a soma do que se está a mostrar em cada linha. */
+  const flutuanteAoVivo = useMemo(() => {
+    let total = 0
+    let algumAoVivo = false
+    for (const p of posicoes) {
+      const { valor, aoVivo } = lucroAoVivo(p, vivos[p.symbol], calibracoes.current[p.id])
+      if (valor == null) return null
+      total += valor
+      if (aoVivo) algumAoVivo = true
+    }
+    return algumAoVivo ? total : null
+  }, [posicoes, vivos])
+
   /** A primeira ordem de cada conta real exige aceitar o aviso, sempre, com ou sem um clique. */
   const garantirAceite = useCallback(() => new Promise<void>((ok, falha) => {
     let aceite = false
@@ -210,9 +247,14 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   const digitos = ficha?.digits ?? 5
   const c = info.conta
   const moeda = c.moeda ? ` ${c.moeda}` : ""
+  // O saldo só muda quando uma posição FECHA — e aí a sondagem trá-lo. O que se mexe entre
+  // sondagens é o flutuante, e com ele a equity. Se não der para calcular, fica o número da
+  // corretora: mais vale atrasado do que inventado.
+  const flutuanteMostrado = flutuanteAoVivo ?? c.flutuante
+  const equityMostrada = (flutuanteAoVivo != null ? equityAoVivo(c.saldo, flutuanteAoVivo) : null) ?? c.equity
   const metricas: Array<[string, string, string?]> = [
-    ["Saldo", `${usd(c.saldo)}${moeda}`], ["Equity", `${usd(c.equity)}${moeda}`],
-    ["Flutuante", `${usd(c.flutuante)}${moeda}`, (c.flutuante ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"],
+    ["Saldo", `${usd(c.saldo)}${moeda}`], ["Equity", `${usd(equityMostrada)}${moeda}`],
+    ["Flutuante", `${usd(flutuanteMostrado)}${moeda}`, (flutuanteMostrado ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"],
     ["Margem", `${usd(c.margem)}${moeda}`], ["Margem livre", `${usd(c.margemLivre)}${moeda}`],
     // Mesma linha, mesma ordem que no trader das contas MTM Funded (funded-trader.tsx).
     ["Nível margem", c.nivelMargem == null ? "—" : `${c.nivelMargem.toFixed(0)}%`],
@@ -235,6 +277,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
       conteudo: () => (
         <div className="overflow-x-auto">
           <TabelaPosicoes posicoes={posicoes} digitos={digitos} podeNegociar={podeNegociar} mapa={mapa} gestaoAuto={gestaoAuto}
+            vivos={vivos} calibracoes={calibracoes.current}
             onFechar={(p, v) => semCancelar(accao(`Fechar ${v ? `${v} de ` : ""}${p.volume} ${p.simboloCorretora}`, "fechar", { positionId: p.id, volume: v }))}
             onModificar={(p, sl, tp) => semCancelar(accao(`Mudar SL/TP de ${p.simboloCorretora}`, "modificar", { alvo: "posicao", id: p.id, sl, tp }))}
             /* Ligar gestão automática é autorizar o servidor a mexer neste SL: passa pelo MESMO caminho
@@ -463,9 +506,28 @@ function CelulaNivel({ valor, digitos, onMudar, podeNegociar, rotulo }: { valor:
   return <input aria-label={rotulo} inputMode="decimal" value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={() => { const v = txt.trim() === "" ? null : Number(txt.replace(",", ".")); if (v !== valor && (v == null || Number.isFinite(v))) onMudar(v); else if (v != null && !Number.isFinite(v)) setTxt(valor == null ? "" : valor.toFixed(digitos)) }} className="h-8 w-24 rounded border border-white/10 bg-black px-1 font-mono text-[11.5px]" />
 }
 
-function TabelaPosicoes({ posicoes, digitos, podeNegociar, mapa, gestaoAuto, onFechar, onModificar, onGestaoAuto }: {
+/**
+ * O lucro da linha. Move-se com o preço quando dá para o calcular; quando não dá, mostra o número
+ * que a corretora mandou — e o título diz qual dos dois está a ser mostrado, para quem olha saber
+ * se está a ver o instante ou a última sondagem.
+ */
+function CelulaLucro({ pos, preco, cal }: {
+  pos: PosicaoWT; preco?: { bid: number; ask: number; fresco: boolean }; cal?: Calibracao
+}) {
+  const { valor, aoVivo } = lucroAoVivo(pos, preco, cal)
+  return (
+    <td className={`font-mono ${(valor ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}
+      title={aoVivo ? "ao preço de agora" : "último valor da corretora"}>
+      {usd(valor)}{!aoVivo && <span className="ml-1 text-[9px] text-zinc-600">·</span>}
+    </td>
+  )
+}
+
+function TabelaPosicoes({ posicoes, digitos, podeNegociar, mapa, gestaoAuto, vivos, calibracoes, onFechar, onModificar, onGestaoAuto }: {
   posicoes: PosicaoWT[]; digitos: number; podeNegociar: boolean; mapa: MapaPrecos
   gestaoAuto: EstadoGestaoCorretora[]
+  vivos: Record<string, { bid: number; ask: number; fresco: boolean }>
+  calibracoes: Record<string, Calibracao>
   onFechar: (p: PosicaoWT, volume: number | null) => Promise<unknown>
   onModificar: (p: PosicaoWT, sl: number | null, tp: number | null) => Promise<unknown>
   onGestaoAuto: (p: PosicaoWT, descricao: string, pedido: PedidoGestao, confirmar: boolean) => Promise<unknown>
@@ -484,7 +546,7 @@ function TabelaPosicoes({ posicoes, digitos, podeNegociar, mapa, gestaoAuto, onF
             <td className="font-mono">{p.precoEntrada.toFixed(digitos)}</td>
             <td><CelulaNivel rotulo={`SL de ${p.symbol}`} valor={p.sl} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(p, v, p.tp).catch(() => {})} /></td>
             <td><CelulaNivel rotulo={`TP de ${p.symbol}`} valor={p.tp} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(p, p.sl, v).catch(() => {})} /></td>
-            <td className={`font-mono ${(p.lucro ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{usd(p.lucro)}</td>
+            <CelulaLucro pos={p} preco={vivos[p.symbol]} cal={calibracoes[p.id]} />
             <td className="whitespace-nowrap pr-2 text-right">
               {podeNegociar && (
                 <span className="inline-flex items-center gap-1">

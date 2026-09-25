@@ -50,6 +50,18 @@ teste('equity = saldo + flutuante', equityAoVivo(1000, 30) === 1030)
 teste('sem saldo não há equity', equityAoVivo(null, 30) === null)
 teste('sem flutuante não há equity', equityAoVivo(1000, null) === null)
 
+// ── a LIGAÇÃO ao ecrã ──────────────────────────────────────────────────────
+// O módulo pode estar perfeito e não servir de nada se ninguém o chamar: foi exactamente assim
+// que a gestão automática viveu meses só no localStorage. A guarda verifica que o trader o usa.
+import { readFileSync } from 'node:fs'
+const trader = readFileSync('components/webtrader/corretora-trader.tsx', 'utf8')
+teste('o trader calibra a cada sondagem', /calibrar\(/.test(trader))
+teste('o trader mostra o lucro ao vivo', /lucroAoVivo\(/.test(trader))
+teste('o trader recalcula a equity', /equityAoVivo\(/.test(trader))
+// O cálculo precisa de saber se o preço é fresco — com `mapa` (que não traz `fresco`) devolvia
+// sempre o número da corretora e ninguém dava por isso.
+teste('o trader passa os preços com frescura à tabela', /vivos=\{vivos\}/.test(trader))
+
 if (falhas.length) {
   console.error(`pnl-ao-vivo: ${falhas.length} falha(s)`)
   for (const f of falhas) console.error('  · ' + f)
