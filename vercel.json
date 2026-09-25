@@ -41,6 +41,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/cron/webtrader-gestao-auto",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/signal-tracker",
       "schedule": "* * * * *"
     },

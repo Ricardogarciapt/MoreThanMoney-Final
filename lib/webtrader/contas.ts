@@ -149,13 +149,24 @@ export async function metaApiDaRef(userId: string, origem: 'site' | 'auto' | 'wt
 }
 
 export async function resolverAdaptador(request: Request, plataforma: PlataformaWT, refBruta: unknown): Promise<AdaptadorCorretora> {
+  return (await resolverAdaptadorComDono(request, plataforma, refBruta)).adaptador
+}
+
+/**
+ * O MESMO adaptador, mais o dono já resolvido. A gestão automática das posições precisa de saber de
+ * quem é a conta para gravar a configuração na linha certa — e pedir a sessão outra vez só para
+ * descobrir o user_id era um `getUser` a mais em cada leitura do WebTrader.
+ */
+export async function resolverAdaptadorComDono(
+  request: Request, plataforma: PlataformaWT, refBruta: unknown,
+): Promise<{ adaptador: AdaptadorCorretora; userId: string | null }> {
   const ref = lerRefConta(plataforma, refBruta)
   if (!ref) throw new ErroCorretora(400, 'conta inválida')
 
   if (ref.plataforma === 'mtmfunded') {
     try {
       const { conta, modo } = await autorizarConta(request, ref.id)
-      return adaptadorMtmFunded(conta, modo)
+      return { adaptador: adaptadorMtmFunded(conta, modo), userId: (conta as { user_id?: string | null }).user_id ?? null }
     } catch (e) {
       if (e instanceof ErroOrdem) throw new ErroCorretora(e.status, e.message)
       throw e
@@ -164,22 +175,46 @@ export async function resolverAdaptador(request: Request, plataforma: Plataforma
 
   const userId = await userIdDoPedido(request)
   if (!userId) throw new ErroCorretora(401, 'Entra com a tua conta MTM para usar contas reais no WebTrader.')
+  return { adaptador: await adaptadorReal(userId, ref, request), userId }
+}
 
-  if (ref.plataforma === 'tradelocker') {
-    if (ref.origem === 'sessao') {
-      const s = lerSessaoTL(request.headers.get(CABECALHO_SESSAO_TL), userId, ref.id)
+/**
+ * O adaptador de uma conta de corretora SEM pedido — para quem corre em segundo plano (o executor da
+ * gestão automática). A posse verifica-se exactamente da mesma maneira: o `userId` entra nos filtros
+ * das tabelas, como quando vem de uma sessão.
+ *
+ * A única conta que não abre por aqui é a TradeLocker por SESSÃO do separador: as credenciais nunca
+ * chegam ao servidor (o bilhete vive no separador), e por isso ela só se gere com o WebTrader aberto.
+ */
+export async function adaptadorDoDono(userId: string, plataforma: PlataformaWT, refBruta: unknown): Promise<AdaptadorCorretora> {
+  const ref = lerRefConta(plataforma, refBruta)
+  if (!ref) throw new ErroCorretora(400, 'conta inválida')
+  if (ref.plataforma === 'mtmfunded') throw new ErroCorretora(400, 'Contas MTM Funded abrem pelo motor simulado.')
+  return adaptadorReal(userId, ref, null)
+}
+
+type RefReal = Extract<Exclude<ReturnType<typeof lerRefConta>, null>, { plataforma: 'tradelocker' | 'mt5' }>
+
+async function adaptadorReal(userId: string, ref: Exclude<ReturnType<typeof lerRefConta>, null>, request: Request | null): Promise<AdaptadorCorretora> {
+  if (ref.plataforma === 'mtmfunded') throw new ErroCorretora(400, 'conta inválida')
+  const r = ref as RefReal
+
+  if (r.plataforma === 'tradelocker') {
+    if (r.origem === 'sessao') {
+      if (!request) throw new ErroCorretora(409, 'Esta conta TradeLocker só abre com o WebTrader aberto (entrou por sessão do separador).', 'sessao_tl')
+      const s = lerSessaoTL(request.headers.get(CABECALHO_SESSAO_TL), userId, r.id)
       if (!s) throw new ErroCorretora(401, 'A sessão TradeLocker expirou — entra outra vez.', 'sessao_tl')
       return adaptadorTradeLocker(s.sessao, { podeNegociar: true })
     }
-    if (ref.origem === 'auto') return adaptadorTradeLocker(await sessaoTradeLockerAuto(userId, ref.id), { podeNegociar: true })
-    const { data: conn } = await getSupabaseAdmin().from('mtmcopy_connections').select('*').eq('id', ref.id).eq('user_id', userId).eq('mt5_platform', 'tradelocker').neq('mt5_status', 'disconnected').maybeSingle()
+    if (r.origem === 'auto') return adaptadorTradeLocker(await sessaoTradeLockerAuto(userId, r.id), { podeNegociar: true })
+    const { data: conn } = await getSupabaseAdmin().from('mtmcopy_connections').select('*').eq('id', r.id).eq('user_id', userId).eq('mt5_platform', 'tradelocker').neq('mt5_status', 'disconnected').maybeSingle()
     if (!conn) throw new ErroCorretora(404, 'Conta TradeLocker não encontrada.')
     const { sessao, erro } = await sessaoDaLigacao(conn)
     if (!sessao) throw new ErroCorretora(409, erro ?? 'Conta TradeLocker sem sessão.')
     return adaptadorTradeLocker(sessao, { podeNegociar: true })
   }
 
-  const { accountId, deps } = await autorizarMt5(userId, ref.origem, ref.id)
+  const { accountId, deps } = await autorizarMt5(userId, r.origem, r.id)
   return adaptadorMt5(accountId, { podeNegociar: true }, deps)
 }
 

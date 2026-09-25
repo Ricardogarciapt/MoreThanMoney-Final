@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { isIosAppRequest } from '@/lib/is-native-request'
-import { autorizarMt5, resolverAdaptador } from '@/lib/webtrader/contas'
+import { autorizarMt5, resolverAdaptadorComDono } from '@/lib/webtrader/contas'
+import { gestaoAutoAoLerPosicoes, guardarGestaoAuto } from '@/lib/webtrader/gestao-auto-servidor'
 import { ligarContaMt5 } from '@/lib/webtrader/corretoras/mt5'
 import { lerRefConta } from '@/lib/webtrader/corretoras/regras'
 import { entrarMt5, entrarTradeLocker } from '@/lib/webtrader/entrar'
@@ -20,6 +21,8 @@ export const maxDuration = 120
  *   POST /api/webtrader/{plataforma}/modificar  { conta, alvo: posicao|ordem, id, sl?, tp?, preco? }
  *   POST /api/webtrader/{plataforma}/fechar     { conta, positionId, volume? }
  *   POST /api/webtrader/{plataforma}/cancelar   { conta, orderId }
+ *   POST /api/webtrader/{tradelocker|mt5}/gestao-auto { conta, positionId, digits, gestao } — Auto BE /
+ *        trailing de uma posição de corretora (executado em lib/webtrader/gestao-auto-servidor.ts)
  *   POST /api/webtrader/mt5/ligar            { conta } — deploy EXPLÍCITO de uma conta desligada (botão «Ligar conta»)
  *   POST /api/webtrader/{tradelocker|mt5}/entrar  (login com credenciais; MTM Funded usa /api/mtmfunded/simulado/entrar)
  *
@@ -50,7 +53,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { plataforma, acao } = await plataformaDe(params)
     const sp = request.nextUrl.searchParams
-    const a = await resolverAdaptador(request, plataforma, sp.get('conta'))
+    const { adaptador: a, userId } = await resolverAdaptadorComDono(request, plataforma, sp.get('conta'))
     let dados: unknown
     switch (acao) {
       case 'conta':
@@ -59,7 +62,11 @@ export async function GET(request: NextRequest, { params }: Params) {
       case 'posicoes': {
         // Posições e pendentes numa só ida: é o que o ecrã refresca.
         const [posicoes, ordens] = await Promise.all([a.posicoes(), a.ordens()])
-        dados = { posicoes, ordens }
+        // A gestão automática (Auto BE / trailing) das contas de corretora corre AQUI, à conta destas
+        // posições que já foram lidas: é o que lhe dá reacção a segundos enquanto o separador está
+        // aberto. A cron de 1 min é a rede quando ele se fecha. Nunca falha a leitura por causa disto.
+        const gestaoAuto = await gestaoAutoAoLerPosicoes(a, { userId, contaRef: String(sp.get('conta') ?? '') }, posicoes)
+        dados = { posicoes, ordens, gestaoAuto }
         break
       }
       case 'ordens':
@@ -109,9 +116,35 @@ export async function POST(request: NextRequest, { params }: Params) {
       return NextResponse.json(await ligarContaMt5(accountId, token.token))
     }
 
-    const a = await resolverAdaptador(request, plataforma, b.conta)
+    const { adaptador: a, userId: dono } = await resolverAdaptadorComDono(request, plataforma, b.conta)
     const numero = (v: unknown) => (v == null || v === '' ? null : Number(v))
     switch (acao) {
+      case 'gestao-auto': {
+        /**
+         * Liga/desliga o Auto BE e o Auto Trailing de UMA posição de corretora — o que antes só ficava
+         * no localStorage e nunca era executado por ninguém. Gravar aqui é o que autoriza o executor a
+         * mexer no SL desta posição; sem isto, ele não toca em nada.
+         *
+         * As contas MTM Funded NÃO passam por aqui de propósito: a gestão delas já vive em
+         * funded_positions e é o motor do VPS que a corre a cada tick (/api/mtmfunded/simulado/ordens,
+         * acção `gestao`). Dois motores a mexer no mesmo SL era pior do que um motor a menos.
+         */
+        if (plataforma === 'mtmfunded') throw new ErroCorretora(400, 'A gestão das contas MTM Funded grava-se em /api/mtmfunded/simulado/ordens (acção gestao).')
+        if (!dono) throw new ErroCorretora(401, 'Sem sessão.')
+        if (!a.podeNegociar) throw new ErroCorretora(403, 'Esta conta está só em leitura no WebTrader.')
+        const id = String(b.positionId ?? '')
+        if (!id || id.length > 64) throw new ErroCorretora(400, 'posição inválida')
+        const pedido = (b.gestao ?? {}) as Record<string, unknown>
+        try {
+          return NextResponse.json(await guardarGestaoAuto({
+            userId: dono, contaRef: String(b.conta ?? ''), plataforma, positionId: id,
+            pedido: { ...pedido, digits: b.digits }, adaptador: a,
+          }))
+        } catch (e) {
+          const st = (e as { status?: number }).status
+          throw st ? new ErroCorretora(st, (e as Error).message) : e
+        }
+      }
       case 'ordem':
         return NextResponse.json(await a.enviarOrdem({
           symbol: String(b.symbol ?? ''), direcao: b.direcao as 'buy' | 'sell', tipo: (b.tipo as 'mercado' | 'limit' | 'stop') ?? 'mercado',

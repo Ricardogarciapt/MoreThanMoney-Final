@@ -19,7 +19,8 @@ import { validarTicketReal } from "@/lib/webtrader/ticket"
 import { ordemParaCorretora } from "@/lib/webtrader/pedido-real"
 import type { Prefill } from "@/components/funded/funded-ticket"
 import { COR_PLATAFORMA, ErroWT, NOME_PLATAFORMA, pedirWT } from "./api-corretoras"
-import { GestaoAutoCorretora } from "@/components/funded/gestao-auto"
+import { GestaoAutoCorretora, type EstadoGestaoCorretora } from "@/components/funded/gestao-auto"
+import type { PedidoGestao } from "@/lib/mtmfunded/simulado/gestao-auto"
 const LayoutPro = dynamic(() => import("@/components/funded/layout-pro"), { ssr: false })
 
 /**
@@ -62,6 +63,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   const [aLigar, setALigar] = useState(false)
   const [posicoes, setPosicoes] = useState<PosicaoWT[]>([])
   const [ordens, setOrdens] = useState<OrdemWT[]>([])
+  const [gestaoAuto, setGestaoAuto] = useState<EstadoGestaoCorretora[]>([])
   const [historico, setHistorico] = useState<NegocioWT[] | null>(null)
   const [fichas, setFichas] = useState<Record<string, SimboloFicha>>({})
   const [visiveis, setVisiveis] = useState<string[]>([])
@@ -85,8 +87,11 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   }, [plataforma, contaRef])
   const lerPosicoes = useCallback(async () => {
     try {
-      const d = await pedirWT<{ posicoes: PosicaoWT[]; ordens: OrdemWT[] }>(plataforma, "posicoes", { conta: contaRef })
+      const d = await pedirWT<{ posicoes: PosicaoWT[]; ordens: OrdemWT[]; gestaoAuto?: EstadoGestaoCorretora[] }>(plataforma, "posicoes", { conta: contaRef })
       setPosicoes(d.posicoes); setOrdens(d.ordens)
+      // O estado da gestão automática vem do SERVIDOR na mesma leitura: um botão aceso significa «o
+      // servidor está a gerir esta posição», nunca «este browser gostaria de gerir».
+      setGestaoAuto(d.gestaoAuto ?? [])
     } catch { /* o erro da conta já aparece em cima */ }
   }, [plataforma, contaRef])
   const lerHistorico = useCallback(async () => {
@@ -229,9 +234,12 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
       chave: "posicoes", nome: "Posições", icone: Wallet, contagem: posicoes.length, principal: true,
       conteudo: () => (
         <div className="overflow-x-auto">
-          <TabelaPosicoes posicoes={posicoes} digitos={digitos} podeNegociar={podeNegociar} contaRef={contaRef} mapa={mapa}
+          <TabelaPosicoes posicoes={posicoes} digitos={digitos} podeNegociar={podeNegociar} mapa={mapa} gestaoAuto={gestaoAuto}
             onFechar={(p, v) => semCancelar(accao(`Fechar ${v ? `${v} de ` : ""}${p.volume} ${p.simboloCorretora}`, "fechar", { positionId: p.id, volume: v }))}
-            onModificar={(p, sl, tp) => semCancelar(accao(`Mudar SL/TP de ${p.simboloCorretora}`, "modificar", { alvo: "posicao", id: p.id, sl, tp }))} />
+            onModificar={(p, sl, tp) => semCancelar(accao(`Mudar SL/TP de ${p.simboloCorretora}`, "modificar", { alvo: "posicao", id: p.id, sl, tp }))}
+            /* Ligar gestão automática é autorizar o servidor a mexer neste SL: passa pelo MESMO caminho
+               de uma ordem (aceite da conta real + confirmação), nunca em silêncio. */
+            onGestaoAuto={(p, descricao, pedido, confirmar) => accao(descricao, "gestao-auto", { positionId: p.id, digits: digitos, gestao: pedido }, confirmar)} />
         </div>
       ),
     },
@@ -455,10 +463,12 @@ function CelulaNivel({ valor, digitos, onMudar, podeNegociar, rotulo }: { valor:
   return <input aria-label={rotulo} inputMode="decimal" value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={() => { const v = txt.trim() === "" ? null : Number(txt.replace(",", ".")); if (v !== valor && (v == null || Number.isFinite(v))) onMudar(v); else if (v != null && !Number.isFinite(v)) setTxt(valor == null ? "" : valor.toFixed(digitos)) }} className="h-8 w-24 rounded border border-white/10 bg-black px-1 font-mono text-[11.5px]" />
 }
 
-function TabelaPosicoes({ posicoes, digitos, podeNegociar, contaRef, mapa, onFechar, onModificar }: {
-  posicoes: PosicaoWT[]; digitos: number; podeNegociar: boolean; contaRef: string; mapa: MapaPrecos
+function TabelaPosicoes({ posicoes, digitos, podeNegociar, mapa, gestaoAuto, onFechar, onModificar, onGestaoAuto }: {
+  posicoes: PosicaoWT[]; digitos: number; podeNegociar: boolean; mapa: MapaPrecos
+  gestaoAuto: EstadoGestaoCorretora[]
   onFechar: (p: PosicaoWT, volume: number | null) => Promise<unknown>
   onModificar: (p: PosicaoWT, sl: number | null, tp: number | null) => Promise<unknown>
+  onGestaoAuto: (p: PosicaoWT, descricao: string, pedido: PedidoGestao, confirmar: boolean) => Promise<unknown>
 }) {
   const [parcial, setParcial] = useState<Record<string, string>>({})
   if (!posicoes.length) return <p className="p-3 text-[12px] text-zinc-500">Sem posições abertas.</p>
@@ -478,8 +488,10 @@ function TabelaPosicoes({ posicoes, digitos, podeNegociar, contaRef, mapa, onFec
             <td className="whitespace-nowrap pr-2 text-right">
               {podeNegociar && (
                 <span className="inline-flex items-center gap-1">
-                  {/* Gestão automática: aqui só guarda a preferência (não há gestor no servidor para contas da corretora). */}
-                  <GestaoAutoCorretora contaRef={contaRef} symbol={p.symbol} digits={digitos} preco={mapa[p.symbol] ? (p.direcao === "buy" ? mapa[p.symbol].bid : mapa[p.symbol].ask) : null} />
+                  {/* Gestão automática a sério: grava no servidor, que é quem move o SL na corretora. */}
+                  <GestaoAutoCorretora pos={p} digits={digitos} estado={gestaoAuto.find((g) => g.position_id === p.id) ?? null}
+                    preco={mapa[p.symbol] ? (p.direcao === "buy" ? mapa[p.symbol].bid : mapa[p.symbol].ask) : null}
+                    onGuardar={(descricao, pedido, confirmar) => onGestaoAuto(p, descricao, pedido, confirmar)} />
                   <input aria-label="volume a fechar" placeholder="parcial" inputMode="decimal" value={parcial[p.id] ?? ""} onChange={(e) => setParcial((x) => ({ ...x, [p.id]: e.target.value }))} className="h-7 w-16 rounded border border-white/10 bg-black px-1 font-mono" />
                   <button onClick={() => { const v = Number((parcial[p.id] ?? "").replace(",", ".")); void onFechar(p, v > 0 ? v : null).catch(() => {}) }} className="rounded bg-white/10 px-2 py-1">Fechar</button>
                 </span>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Lock, SlidersHorizontal } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import type { Direcao } from "@/lib/mtmfunded/simulado/matematica"
-import { gestaoDaLinha } from "@/lib/mtmfunded/simulado/avancadas"
+import { type Gestao, gestaoDaLinha } from "@/lib/mtmfunded/simulado/avancadas"
 import {
   type EstadoGestaoAuto, type PedidoGestao, type SimboloGestao, type ValoresGestao,
   distanciaTrailing, emPreco, estadoGestaoAuto, nivelBreakEven, pedidoAutoBe, pedidoAutoTrailing,
@@ -19,9 +19,10 @@ import { px } from "./api"
  * verificado) com a gestão INTEIRA da posição, mexendo só no seu bloco; quem executa é o motor do
  * VPS, a cada preço. A lógica está em lib/mtmfunded/simulado/gestao-auto.ts (testada).
  *
- * Contas da corretora (MT5/MT4/TradeLocker): não há gestor no servidor que siga uma posição aberta
- * no WebTrader, e o browser não move SLs de dinheiro real sozinho (fecha-se o separador e a
- * «gestão» pára a meio). Aí os botões só guardam a preferência e dizem-no — `GestaoAutoCorretora`.
+ * Contas da corretora (MT5/MT4/TradeLocker): os MESMOS botões, com o mesmo significado, gravados na
+ * tabela `webtrader_gestao_auto` e executados no servidor (lib/webtrader/gestao-auto-servidor.ts) —
+ * ver `GestaoAutoCorretora`. O browser nunca move um SL de dinheiro real: fechava-se o separador e a
+ * gestão parava a meio. O ritmo é que difere (segundos com o WebTrader aberto, 1 min pela cron).
  *
  * Os valores (pips/pontos) são por SÍMBOLO, guardados neste dispositivo; sem nada guardado valem
  * os da classe do activo (ouro, forex, índices, cripto).
@@ -204,52 +205,115 @@ function textos(v: ValoresGestao): Record<keyof ValoresGestao, string> {
 
 // ── contas da corretora (MT5/MT4/TradeLocker) ────────────────────────────────
 
-const CHAVE_PREF_REAL = (ref: string) => `webtrader_gestao_auto_real:${ref}`
-type PrefReal = { autoBe: boolean; autoTrailing: boolean }
-
-function lerPref(ref: string): PrefReal {
-  try { const v = JSON.parse(localStorage.getItem(CHAVE_PREF_REAL(ref)) || "{}"); return { autoBe: v?.autoBe === true, autoTrailing: v?.autoTrailing === true } } catch { return { autoBe: false, autoTrailing: false } }
+/**
+ * OS MESMOS BOTÕES NUMA CONTA DE CORRETORA — e agora a MEXER a sério na posição.
+ *
+ * O que estava aqui antes: três botões «bloqueados» e dois visto-de-preferência gravados no
+ * localStorage (`webtrader_gestao_auto_real:<ref>`). Não havia ninguém a ler aquilo, por isso uma
+ * posição da TradeLocker com «Auto BE» ligado ficava exactamente como estava — o defeito que isto
+ * resolve. A preferência por conta desapareceu porque era uma promessa falsa: a gestão é POR POSIÇÃO,
+ * como nas contas MTM Funded, e quem a executa é lib/webtrader/gestao-auto-servidor.ts.
+ *
+ * O ESTADO vem SEMPRE do servidor (a linha de `webtrader_gestao_auto` que a leitura de posições
+ * traz), nunca do browser: um botão aceso tem de significar «o servidor está a gerir isto».
+ */
+export interface EstadoGestaoCorretora {
+  position_id: string
+  trailing_distancia: number | null
+  trailing_ativacao: number | null
+  be_gatilho: number | null
+  be_offset: number | null
+  be_feito: boolean
+  sl_aplicado: number | null
+  ultimo_erro: string | null
+  so_com_separador: boolean
 }
 
-export const AVISO_GESTAO_REAL = "A gestão automática (Auto BE e trailing) está disponível nas contas MTM Funded. Nas contas da corretora chega com o motor novo — por agora fica só guardada a tua preferência."
+/** A linha do servidor → a mesma `Gestao` que os botões das contas MTM Funded usam. */
+function gestaoDoEstado(e: EstadoGestaoCorretora | null | undefined): Gestao {
+  return {
+    trailing_distancia: e?.trailing_distancia ?? null,
+    trailing_ativacao: e?.trailing_ativacao ?? null,
+    be_gatilho: e?.be_gatilho ?? null,
+    be_offset: e?.be_offset ?? 0,
+    be_no_tp1: false,
+    be_feito: e?.be_feito === true,
+    tps: null,
+    volume_inicial: null,
+  }
+}
 
-/**
- * Os mesmos botões numa conta da corretora: NÃO mexem na posição. Guardam a preferência da conta
- * (e os valores por símbolo) neste dispositivo e explicam porquê.
- */
-export function GestaoAutoCorretora({ contaRef, symbol, digits, preco }: { contaRef: string; symbol: string; digits: number; preco: number | null }) {
-  const [pref, setPref] = useState<PrefReal>({ autoBe: false, autoTrailing: false })
-  useEffect(() => { setPref(lerPref(contaRef)) }, [contaRef])
-  const mudar = (p: PrefReal) => { setPref(p); try { localStorage.setItem(CHAVE_PREF_REAL(contaRef), JSON.stringify(p)) } catch { /* ok */ } }
-  const s: SimboloGestao = { symbol, digits }
-  const { valores, guardar, repor, personalizado } = useValoresGestao(s, preco)
-  const [aviso, setAviso] = useState(false)
-  if (!valores) return null
+export function GestaoAutoCorretora({ pos, digits, preco, estado, ocupado, onGuardar }: {
+  pos: { id: string; symbol: string; direcao: Direcao; precoEntrada: number; sl: number | null }
+  digits: number
+  preco: number | null
+  estado: EstadoGestaoCorretora | null
+  ocupado?: boolean
+  /** Envia a gestão INTEIRA desta posição para o servidor (acção `gestao-auto` da rota do WebTrader). */
+  onGuardar: (descricao: string, pedido: PedidoGestao, confirmar: boolean) => Promise<unknown>
+}) {
+  const s: SimboloGestao = { symbol: pos.symbol, digits }
+  const { valores: v, guardar, repor, personalizado } = useValoresGestao(s, preco ?? pos.precoEntrada)
+  const [erro, setErro] = useState<string | null>(null)
+  if (!v) return null
+  const g = gestaoDoEstado(estado)
+  const est = estadoGestaoAuto(g, pos.direcao, pos.precoEntrada, preco)
+  const d = digits
+  const u = unidadeGestao(s)
+  const pip = Number(unidadeGestao(s).tamanho)
+  const enviar = (descricao: string, pedido: PedidoGestao, confirmar = false) => {
+    setErro(null)
+    // «cancelado» é o trader a recusar a confirmação — não é um erro para mostrar em vermelho.
+    return onGuardar(descricao, pedido, confirmar).catch((e: Error) => { if (e.message !== "cancelado") setErro(e.message) })
+  }
+
+  const beLigado = est.be !== "off"
+  const trLigado = est.trailingModo !== "off"
+  const nivelBe = nivelBreakEven(pos.direcao, pos.precoEntrada, emPreco(s, v.beOffset), d)
+  const gatilhoBe = precoDoGatilho(pos.direcao, pos.precoEntrada, emPreco(s, v.beGatilho), d)
+  const dist = distanciaTrailing({ ...s, pip_size: pip }, v)
+  const prev = preco == null ? null : previsaoTrailingJa(pos.direcao, preco, pos.sl, dist, d, pip)
+
+  // A honestidade do rótulo é metade da funcionalidade: o trader tem de saber a QUE RITMO isto corre.
+  const ritmo = estado?.so_com_separador
+    ? " Esta conta entrou por sessão do separador: só é gerida com o WebTrader aberto."
+    : " Corre com o WebTrader aberto (segundos) e por cron quando ele está fechado (1 min)."
+  const tituloBe = est.be === "feito" ? "Break-even já aplicado pelo servidor." : beLigado && g.be_gatilho != null
+    ? `Auto BE ligado — a ${px(precoDoGatilho(pos.direcao, pos.precoEntrada, g.be_gatilho, d), d)} o SL passa para ${px(nivelBreakEven(pos.direcao, pos.precoEntrada, g.be_offset, d), d)}. Toca para desligar.`
+    : `Ligar Auto BE: a +${v.beGatilho} ${u.nome} (${px(gatilhoBe, d)}) o SL passa para ${px(nivelBe, d)} (+${v.beOffset} ${u.nome}).${ritmo}`
+  const tituloTr = trLigado
+    ? `Trailing ${est.trailing === "ativo" ? "a seguir" : "à espera"} — distância ${px(g.trailing_distancia, d)}${g.trailing_ativacao ? `, arranca a +${px(g.trailing_ativacao, d)} de preço` : ""}. Toca para desligar.`
+    : `Ligar Auto Trailing: arranca a +${v.trailAtivacao} ${u.nome} e segue a ${v.trailDistancia} ${u.nome}.${ritmo}`
+  const tituloJa = est.trailingModo === "ja" ? "O trailing já está a seguir o preço." : prev == null ? "Sem preço ao vivo." : prev.mexe
+    ? `Ativar trailing já: o SL passa para ${px(prev.nivel, d)} e segue a ${v.trailDistancia} ${u.nome}.`
+    : `Ativar trailing já a ${v.trailDistancia} ${u.nome}: o SL actual já está mais apertado — mexe quando o preço andar.`
+
   return (
     <span className="inline-flex items-center gap-1">
-      <Popover open={aviso} onOpenChange={setAviso}>
-        <PopoverTrigger asChild>
-          <span className="inline-flex items-center gap-1">
-            <Chip bloqueado ligado={pref.autoBe} cor={COR_BE} title={AVISO_GESTAO_REAL}>Auto BE</Chip>
-            <Chip bloqueado ligado={pref.autoTrailing} cor={COR_TRAIL} title={AVISO_GESTAO_REAL}>Auto TS</Chip>
-            <Chip bloqueado ligado={false} cor={COR_TRAIL} title={AVISO_GESTAO_REAL}>TS já</Chip>
-          </span>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="z-[960] w-72 border-white/10 bg-[#1E222D] p-2.5 text-[11.5px] text-white">
-          <p className="mb-1 flex items-center gap-1.5 font-semibold"><Lock className="h-3.5 w-3.5 text-zinc-400" /> Gestão automática</p>
-          <p className="leading-snug text-zinc-300">{AVISO_GESTAO_REAL}</p>
-          <label className="mt-2 flex items-center gap-1.5 text-zinc-200">
-            <input type="checkbox" checked={pref.autoBe} onChange={(e) => mudar({ ...pref, autoBe: e.target.checked })} className="h-3.5 w-3.5 accent-[#D2A63C]" />
-            Quero Auto BE nesta conta
-          </label>
-          <label className="mt-1 flex items-center gap-1.5 text-zinc-200">
-            <input type="checkbox" checked={pref.autoTrailing} onChange={(e) => mudar({ ...pref, autoTrailing: e.target.checked })} className="h-3.5 w-3.5 accent-[#D2A63C]" />
-            Quero Auto Trailing nesta conta
-          </label>
-          <p className="mt-1.5 text-[10px] text-zinc-500">Nada é enviado à corretora. Move o SL à mão (lápis ou arrastando a linha no gráfico).</p>
-        </PopoverContent>
-      </Popover>
-      <PopoverValores s={s} valores={valores} personalizado={personalizado} repor={repor} onGuardar={guardar} />
+      <Chip ligado={beLigado} cor={est.be === "feito" ? COR_BE_FEITO : COR_BE} disabled={ocupado || est.be === "feito"} title={tituloBe}
+        onClick={() => void enviar(beLigado ? `Desligar Auto BE em ${pos.symbol}` : `Auto BE em ${pos.symbol}: a ${px(gatilhoBe, d)} o SL vai para ${px(nivelBe, d)}`, pedidoAutoBe(g, !beLigado, s, v), true)}>
+        {est.be === "feito" ? "BE ✓" : "Auto BE"}
+      </Chip>
+      <Chip ligado={trLigado} cor={COR_TRAIL} disabled={ocupado} title={tituloTr}
+        onClick={() => void enviar(trLigado ? `Desligar trailing em ${pos.symbol}` : `Auto trailing em ${pos.symbol}: arranca a +${v.trailAtivacao} ${u.nome}, segue a ${v.trailDistancia}`, pedidoAutoTrailing(g, !trLigado, s, v), true)}>
+        Auto TS{est.trailingModo === "auto" && est.trailing === "a_espera" ? " ⏸" : ""}
+      </Chip>
+      <Chip ligado={est.trailingModo === "ja"} cor={COR_TRAIL} disabled={ocupado || est.trailingModo === "ja" || prev == null} title={tituloJa}
+        onClick={() => prev && void enviar(`Ativar trailing em ${pos.symbol}: segue a ${v.trailDistancia} ${u.nome}`, pedidoTrailingJa(g, s, v), true)}>
+        {est.trailingModo === "ja" ? "TS activo" : "TS já"}
+      </Chip>
+      <PopoverValores s={s} valores={v} personalizado={personalizado} repor={repor} disabled={ocupado}
+        rodape={(erro || estado?.ultimo_erro) ? <p className="mt-1 text-[10.5px] text-rose-300">{erro ?? `A corretora recusou a última mudança de SL: ${estado?.ultimo_erro}`}</p> : undefined}
+        onGuardar={(novo) => {
+          guardar(novo)
+          // Já ligado nesta posição? Passa a usar os valores novos (o outro bloco fica como estava).
+          let p: PedidoGestao | null = null
+          if (est.be === "armado" && g.be_gatilho) p = pedidoAutoBe(g, true, s, novo)
+          const g2 = p ? { ...g, be_gatilho: p.be_gatilho, be_offset: p.be_offset } : g
+          if (est.trailingModo === "auto") p = pedidoAutoTrailing(g2, true, s, novo)
+          else if (est.trailingModo === "ja") p = pedidoTrailingJa(g2, s, novo)
+          if (p) void enviar(`Actualizar a gestão automática de ${pos.symbol}`, p, true)
+        }} />
     </span>
   )
 }
