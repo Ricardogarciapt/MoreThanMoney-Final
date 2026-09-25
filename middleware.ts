@@ -11,6 +11,8 @@ import {
   dispensaPapeis,
   ehAnfitriaoBackoffice,
   ehPedidoBackoffice,
+  devolverAoSitePrincipal,
+  urlNoSitePrincipal,
 } from "@/lib/backoffice-dominio"
 // A leitura vem do ficheiro SÓ-LEITURA, nunca de `backoffice-sessao`: esse importa `next/headers`,
 // que não existe no edge onde o middleware corre.
@@ -125,6 +127,23 @@ export async function middleware(request: NextRequest) {
    * O portão é o mesmo do resto do código: `bo.entrar`, que só existe com papéis activos. Não há
    * `if (é admin)` aqui — o dono recebe as capacidades por `capacidadesDe`, pelo mesmo caminho.
    */
+  /**
+   * O SUBDOMÍNIO SÓ SERVE O QUE É DELE.
+   *
+   * 25/09: os atalhos do site (`/admin`, `/mtm`, e o que mais vem de componentes partilhados)
+   * ficavam em `backoffice.morethanmoney.pt/admin`, porque o subdomínio reclamava qualquer
+   * caminho. Por dentro isso virava `/backoffice/admin`, que não existe — a pessoa clicava num
+   * link conhecido e caía num 404 no sítio errado.
+   *
+   * Agora o que não é do backoffice volta ao site principal, no MESMO caminho e com a mesma
+   * query. É um redireccionamento e não uma reescrita de propósito: a barra de endereço tem de
+   * passar a dizer `www`, senão a pessoa fica a navegar o site inteiro debaixo de um subdomínio
+   * que não é o dele — e o próximo link relativo repetia o problema.
+   */
+  if (devolverAoSitePrincipal(request.headers.get("host"), pathname)) {
+    return NextResponse.redirect(urlNoSitePrincipal(pathname, request.nextUrl.search), 308)
+  }
+
   if (ehPedidoBackoffice(request.headers.get("host"), pathname)) {
     const noSubdominio = ehAnfitriaoBackoffice(request.headers.get("host"))
     const interno = noSubdominio ? caminhoInternoBackoffice(pathname) ?? pathname : pathname

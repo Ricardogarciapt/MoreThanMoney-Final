@@ -18,6 +18,9 @@ import {
   ehAnfitriaoBackoffice,
   ehPedidoBackoffice,
   passaDireto,
+  devolverAoSitePrincipal,
+  urlNoSitePrincipal,
+  SECCOES_BACKOFFICE,
 } from './backoffice-dominio'
 
 const falhas: string[] = []
@@ -54,7 +57,48 @@ teste('caminhos fundos levam prefixo', caminhoInternoBackoffice('/equipa/ana') =
 // ── Nunca prefixar duas vezes ───────────────────────────────────────────────
 teste('quem já tem prefixo não leva outro', caminhoInternoBackoffice('/backoffice') === null)
 teste('nem nos caminhos de dentro', caminhoInternoBackoffice('/backoffice/extracto') === null)
-teste('prefixo parcial ainda leva', caminhoInternoBackoffice('/backoffice-antigo') === '/backoffice/backoffice-antigo')
+// `/backoffice-antigo` NÃO é `/backoffice/` — e, não sendo uma secção, também não é do backoffice:
+// volta ao site principal. Antes era prefixado às cegas, que é o mesmo defeito que engolia `/admin`.
+teste('prefixo parcial não se confunde com o real', caminhoInternoBackoffice('/backoffice-antigo') === null)
+
+// ── O SUBDOMÍNIO SÓ SERVE O QUE É DELE (25/09) ──────────────────────────────
+//
+// Os atalhos do site ficavam em `backoffice.morethanmoney.pt/admin`, que por dentro virava
+// `/backoffice/admin` e dava 404. Quem clicava num link conhecido caía no sítio errado.
+{
+  const SUB = 'backoffice.morethanmoney.pt'
+  for (const fora of ['/admin', '/mtm', '/member-area', '/upgrade', '/faq', '/admin/backoffice']) {
+    teste(`${fora} volta ao site principal`, devolverAoSitePrincipal(SUB, fora))
+    teste(`${fora} não é reescrito para dentro`, caminhoInternoBackoffice(fora) === null)
+  }
+  for (const dentro of ['/', '/extracto', '/pipeline', '/tarefas', '/equipa', '/material', '/backoffice', '/backoffice/extracto']) {
+    teste(`${dentro} fica no backoffice`, !devolverAoSitePrincipal(SUB, dentro))
+  }
+  // Caminhos de dentro de uma secção continuam a ser do backoffice.
+  teste('/pipeline/3 fica no backoffice', !devolverAoSitePrincipal(SUB, '/pipeline/3'))
+  // O que passa direto nunca é devolvido: o login no próprio subdomínio tem de funcionar, e as
+  // APIs são as mesmas do site.
+  for (const passa of ['/login', '/api/backoffice/eu', '/_next/static/x.js']) {
+    teste(`${passa} não é devolvido`, !devolverAoSitePrincipal(SUB, passa))
+  }
+  // E no domínio normal nada disto se aplica.
+  teste('no www nada é devolvido', !devolverAoSitePrincipal('www.morethanmoney.pt', '/admin'))
+  // O destino leva o caminho e a query, para um link com parâmetros não os perder pelo caminho.
+  teste('o destino mantém caminho e query',
+    urlNoSitePrincipal('/admin/backoffice', '?tab=equipa') === 'https://www.morethanmoney.pt/admin/backoffice?tab=equipa')
+}
+
+// A lista de secções tem de bater certo com o menu do layout — uma secção nova no menu e esquecida
+// na lista manda a pessoa para o `www` a meio do backoffice.
+{
+  const layout = readFileSync('app/backoffice/layout.tsx', 'utf8')
+  for (const s of SECCOES_BACKOFFICE) {
+    teste(`o menu conhece /${s}`, layout.includes(`/backoffice/${s}`))
+  }
+  for (const m of layout.matchAll(/href: '\/backoffice\/([a-z-]+)'/g)) {
+    teste(`a lista conhece /${m[1]}`, (SECCOES_BACKOFFICE as readonly string[]).includes(m[1]))
+  }
+}
 
 // ── Quem é pedido do backoffice ─────────────────────────────────────────────
 teste('subdomínio + caminho normal', ehPedidoBackoffice('backoffice.morethanmoney.pt', '/extracto'))

@@ -64,17 +64,64 @@ export function passaDireto(pathname: string): boolean {
  * absoluto gerava `/backoffice/backoffice/...` e dava 404 numa navegação e não na primeira, que é
  * o género de avaria que se demora uma tarde a perceber.
  */
+/**
+ * As SECÇÕES do backoffice, e a razão de existir esta lista.
+ *
+ * 25/09: o subdomínio servia QUALQUER caminho como se fosse do backoffice. Um link para `/admin`
+ * ou `/mtm` — e o site está cheio deles, em componentes partilhados — ficava em
+ * `backoffice.morethanmoney.pt/admin`, que por dentro virava `/backoffice/admin` e não existe.
+ * A pessoa clicava num atalho conhecido e caía num 404 dentro do subdomínio errado.
+ *
+ * Agora o subdomínio serve SÓ o que é dele; tudo o resto é devolvido ao site principal. Uma lista
+ * explícita, e não «tudo o que não estiver na lista de excepções», porque o erro tem de ser do
+ * lado seguro: uma secção nova que se esqueça aqui manda a pessoa para o `www` (chato, e nota-se
+ * logo), enquanto o contrário engolia páginas inteiras do site para dentro do backoffice.
+ *
+ * A guarda `backoffice-dominio.check.ts` compara esta lista com o menu do layout.
+ */
+export const SECCOES_BACKOFFICE = ['extracto', 'pipeline', 'tarefas', 'equipa', 'material'] as const
+
+/** O primeiro segmento do caminho (`/pipeline/3` → `pipeline`). */
+function primeiroSegmento(pathname: string): string {
+  return pathname.replace(/^\/+/, '').split('/')[0]?.split('?')[0] ?? ''
+}
+
+/** Este caminho pertence ao backoffice? (já com prefixo, ou uma secção dele) */
+export function ehCaminhoDoBackoffice(pathname: string): boolean {
+  if (pathname === '/backoffice' || pathname.startsWith('/backoffice/')) return true
+  if (pathname === '/' || pathname === '') return true
+  return (SECCOES_BACKOFFICE as readonly string[]).includes(primeiroSegmento(pathname))
+}
+
 export function caminhoInternoBackoffice(pathname: string): string | null {
   if (passaDireto(pathname)) return null
   if (pathname === '/backoffice' || pathname.startsWith('/backoffice/')) return null
   if (pathname === '/' || pathname === '') return '/backoffice'
+  // Só as secções do backoffice se reescrevem. O resto NÃO é daqui — ver `urlNoSitePrincipal`.
+  if (!ehCaminhoDoBackoffice(pathname)) return null
   return '/backoffice' + (pathname.startsWith('/') ? pathname : '/' + pathname)
+}
+
+/** O mesmo caminho, no site principal. É para onde volta o que não é do backoffice. */
+export function urlNoSitePrincipal(pathname: string, search = ''): string {
+  const base = 'https://www.morethanmoney.pt'
+  const caminho = pathname.startsWith('/') ? pathname : '/' + pathname
+  return base + caminho + (search || '')
 }
 
 /** Este pedido é para o backoffice (pelo subdomínio ou pelo caminho directo no domínio normal)? */
 export function ehPedidoBackoffice(host: string | null | undefined, pathname: string): boolean {
   if (pathname === '/backoffice' || pathname.startsWith('/backoffice/')) return true
-  return ehAnfitriaoBackoffice(host) && !passaDireto(pathname)
+  // No subdomínio, só as SECÇÕES do backoffice. Reclamar tudo era o que punha `/admin` e `/mtm`
+  // dentro dele, a dar 404 — ver o comentário em SECCOES_BACKOFFICE.
+  return ehAnfitriaoBackoffice(host) && !passaDireto(pathname) && ehCaminhoDoBackoffice(pathname)
+}
+
+/** No subdomínio, este caminho tem de ser devolvido ao site principal? */
+export function devolverAoSitePrincipal(host: string | null | undefined, pathname: string): boolean {
+  if (!ehAnfitriaoBackoffice(host)) return false
+  if (passaDireto(pathname)) return false
+  return !ehCaminhoDoBackoffice(pathname)
 }
 
 /**
