@@ -160,6 +160,10 @@ export function adminPanelKeyboard() {
         { text: '⚙️ Execução', callback_data: 'admin:exec' },
       ],
       [{ text: '🧲 Máquina de vendas', callback_data: 'admin:sm' }],
+      // A equipa de vendas e o MLM: quem faz o quê, o pipeline, e o dinheiro que está à espera de
+      // um sim dele. Sem isto, uma comissão de alguém que trabalhou ficava semanas parada à espera
+      // de ele abrir o portátil — foi exactamente o que aconteceu com os depósitos.
+      [{ text: '👔 Equipa e MLM', callback_data: 'admin:eq' }],
       [
         { text: '👥 Leads e funil', callback_data: 'admin:funil' },
         { text: '👑 Subscritores', callback_data: 'admin:subs' },
@@ -626,6 +630,144 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
     return
   }
 
+  /*
+   * ── EQUIPA, PAPÉIS, COMISSÕES E MLM ──────────────────────────────────────────────────────────
+   *
+   * As mesmas três regras dos blocos de cima, e por isso o mesmo desenho: `?` pergunta, `!` faz, e
+   * o `!` só corre depois de `abrirPorta` — que é o que traz a identidade que assina o registo.
+   *
+   * O que aqui NÃO existe é um botão de PAGAR. Aprovar uma comissão autoriza; o dinheiro sai por
+   * transferência, com as mãos dele, e marca-se pago no /admin com a referência à frente. Um botão
+   * de pagar num telemóvel era a definição de «nada paga sozinho» ao contrário.
+   */
+
+  // ── Comissões: cm?a|c:<uuid> pergunta, cm!a|c:<uuid> decide ──
+  if (action.startsWith('cm?') || action.startsWith('cm!')) {
+    const m = action.match(/^cm([?!])([ac]):([0-9a-f-]{36})$/i)
+    if (!m) {
+      await enviar(chatId, '🤔 Esse botão já não existe.', adminPanelKeyboard())
+      return
+    }
+    const [, modo, letra, id] = m
+    const decisao = letra.toLowerCase() === 'a' ? 'aprovada' : 'cancelada'
+    const equipa = await import('@/lib/telegram-admin-equipa')
+    if (modo === '?') {
+      // Relê-se a fila para a pergunta trazer o VALOR e o NOME de agora, e não os do ecrã anterior:
+      // uma confirmação que repita números velhos é uma confirmação que não confirma nada.
+      const { fila } = await equipa.carregarComissoesPendentes(supabase, 200)
+      const c = fila.find((x) => x.id.toLowerCase() === id.toLowerCase())
+      if (!c) {
+        await enviar(chatId, 'ℹ️ Essa comissão já não está pendente — alguém decidiu entretanto.', {
+          inline_keyboard: [[{ text: '💸 Ver as que faltam', callback_data: 'admin:eq_com' }], VOLTAR],
+        })
+        return
+      }
+      const q = equipa.confirmacaoComissao({ decisao, c })
+      await enviar(chatId, q.texto, q.teclado)
+      return
+    }
+    const porta = await abrirPorta(supabase, chatId)
+    if (!portaAberta(porta)) {
+      await enviar(chatId, porta.fechada)
+      return
+    }
+    const { decidirComissao } = await import('@/lib/telegram-admin-equipa-acoes')
+    await enviar(chatId, await decidirComissao(porta, id, decisao), {
+      inline_keyboard: [[{ text: '💸 Voltar às comissões', callback_data: 'admin:eq_com' }], VOLTAR],
+    })
+    return
+  }
+
+  // ── Papéis: pp?d|r + letra do papel + :<uuid> pergunta; pp! faz ──
+  if (action.startsWith('pp?') || action.startsWith('pp!')) {
+    const m = action.match(/^pp([?!])([dr])([ascrt]):([0-9a-f-]{36})$/i)
+    if (!m) {
+      await enviar(chatId, '🤔 Esse botão já não existe.', adminPanelKeyboard())
+      return
+    }
+    const [, modo, acto, codigo, userId] = m
+    const equipa = await import('@/lib/telegram-admin-equipa')
+    const papel = equipa.papelDoCodigo(codigo.toLowerCase())
+    if (!papel) {
+      await enviar(chatId, '🤔 Papel desconhecido nesse botão.', adminPanelKeyboard())
+      return
+    }
+    const dar = acto.toLowerCase() === 'd'
+    if (modo === '?') {
+      const lista = await equipa.carregarEquipa(supabase)
+      const p = lista.find((x) => x.userId.toLowerCase() === userId.toLowerCase())
+      const { carregarFolhaDeCliente } = await import('@/lib/telegram-admin-cliente')
+      // Pode ser alguém que ainda não tem papel nenhum (é o caso normal do primeiro papel): aí o
+      // nome vem da folha do cliente. Perguntar «dar papel a <uuid>?» não é perguntar nada.
+      const nome = p?.nome ?? (await carregarFolhaDeCliente(supabase, userId))?.nome ?? userId.slice(0, 8)
+      const q = equipa.confirmacaoPapel({ dar, papel, quem: nome, userId })
+      await enviar(chatId, q.texto, q.teclado)
+      return
+    }
+    const porta = await abrirPorta(supabase, chatId)
+    if (!portaAberta(porta)) {
+      await enviar(chatId, porta.fechada)
+      return
+    }
+    const { mexerPapel } = await import('@/lib/telegram-admin-equipa-acoes')
+    await enviar(chatId, await mexerPapel(porta, userId, papel, dar), {
+      inline_keyboard: [[{ text: '👤 Ver esta pessoa', callback_data: `admin:eq_p:${userId}` }], [{ text: '🎚️ Voltar aos papéis', callback_data: 'admin:eq_papeis' }], VOLTAR],
+    })
+    return
+  }
+
+  // ── Plano de comissão: pl?l|p:<uuid> pergunta, pl!l|p:<uuid> faz ──
+  if (action.startsWith('pl?') || action.startsWith('pl!')) {
+    const m = action.match(/^pl([?!])([lp]):([0-9a-f-]{36})$/i)
+    if (!m) {
+      await enviar(chatId, '🤔 Esse botão já não existe.', adminPanelKeyboard())
+      return
+    }
+    const [, modo, codigo, userId] = m
+    const equipa = await import('@/lib/telegram-admin-equipa')
+    const plano = equipa.planoDoCodigo(codigo.toLowerCase())
+    if (!plano) {
+      await enviar(chatId, '🤔 Plano desconhecido nesse botão.', adminPanelKeyboard())
+      return
+    }
+    if (modo === '?') {
+      const lista = await equipa.carregarEquipa(supabase)
+      const p = lista.find((x) => x.userId.toLowerCase() === userId.toLowerCase())
+      const q = equipa.confirmacaoPlano({
+        plano,
+        quem: p?.nome ?? userId.slice(0, 8),
+        userId,
+        planoActual: p?.plano ?? 'padrao',
+      })
+      await enviar(chatId, q.texto, q.teclado)
+      return
+    }
+    const porta = await abrirPorta(supabase, chatId)
+    if (!portaAberta(porta)) {
+      await enviar(chatId, porta.fechada)
+      return
+    }
+    const { mudarPlano } = await import('@/lib/telegram-admin-equipa-acoes')
+    await enviar(chatId, await mudarPlano(porta, userId, plano), {
+      inline_keyboard: [[{ text: '👤 Ver esta pessoa', callback_data: `admin:eq_p:${userId}` }], [{ text: '🎚️ Voltar aos papéis', callback_data: 'admin:eq_papeis' }], VOLTAR],
+    })
+    return
+  }
+
+  // ── A folha de uma pessoa da equipa (papéis que tem, plano em que está) ──
+  if (action.startsWith('eq_p:')) {
+    const userId = action.slice(5)
+    const equipa = await import('@/lib/telegram-admin-equipa')
+    const lista = await equipa.carregarEquipa(supabase)
+    const p = lista.find((x) => x.userId === userId)
+    if (!p) {
+      await enviar(chatId, '🤷 Essa pessoa já não tem papel activo.', { inline_keyboard: [[{ text: '🎚️ Voltar aos papéis', callback_data: 'admin:eq_papeis' }], VOLTAR] })
+      return
+    }
+    await enviar(chatId, equipa.textoPessoa(p), equipa.tecladoPessoa(p, VOLTAR))
+    return
+  }
+
   switch (action) {
     case 'menu':
       await enviar(chatId, TEXTO_PAINEL, adminPanelKeyboard())
@@ -754,6 +896,87 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
     case 'sm':
       await enviar(chatId, '🧲 <b>Máquina de vendas</b>\n\nO que queres fazer?', tecladoMaquinaVendas())
       return
+    /**
+     * O submenu da equipa. O cabeçalho já traz o número que decide se vale a pena entrar: quantas
+     * comissões estão à espera e quanto está em jogo. Um menu que obrigue a abrir um submenu para
+     * saber se há trabalho é um menu que ninguém abre.
+     */
+    case 'eq': {
+      const { carregarComissoesPendentes, tecladoEquipa, eur } = await import('@/lib/telegram-admin-equipa')
+      const r = await carregarComissoesPendentes(supabase, 1)
+      await enviar(
+        chatId,
+        '👔 <b>Equipa e MLM</b>\n\n' +
+          (r.quantas
+            ? `💸 <b>${r.quantas}</b> comissão(ões) por aprovar — <b>${eur(r.totalCents)}</b> em jogo.`
+            : '💸 Nada por aprovar. ✅') +
+          '\n\n<i>Aprovar autoriza; pagar é contigo, na transferência.</i>',
+        tecladoEquipa(VOLTAR),
+      )
+      return
+    }
+    case 'eq_equipa': {
+      const { carregarEquipa, textoEquipa } = await import('@/lib/telegram-admin-equipa')
+      await enviar(chatId, textoEquipa(await carregarEquipa(supabase)), {
+        inline_keyboard: [
+          [{ text: '🎚️ Dar/retirar papel', callback_data: 'admin:eq_papeis' }],
+          [{ text: '🌐 Backoffice no /admin', url: `${SITE}/admin/backoffice` }],
+          VOLTAR,
+        ],
+      })
+      return
+    }
+    case 'eq_pipe': {
+      const { carregarPipeline, textoPipeline } = await import('@/lib/telegram-admin-equipa')
+      await enviar(chatId, textoPipeline(await carregarPipeline(supabase)), {
+        inline_keyboard: [[{ text: '🌐 Vendas no /admin', url: `${SITE}/admin/vendas` }], VOLTAR],
+      })
+      return
+    }
+    /**
+     * A fila das comissões — uma MENSAGEM por comissão, com os botões de decidir.
+     *
+     * A lição dos depósitos: uma lista de texto obriga a ir procurar a linha noutro sítio para
+     * agir, e um pedido que só se decide depois de o encontrar é um pedido que fica dias parado.
+     */
+    case 'eq_com': {
+      const { carregarComissoesPendentes, textoComissoesResumo, textoComissao, tecladoComissao } =
+        await import('@/lib/telegram-admin-equipa')
+      const r = await carregarComissoesPendentes(supabase, 8)
+      await enviar(chatId, textoComissoesResumo(r), {
+        inline_keyboard: [[{ text: '🌐 Comissões no /admin', url: `${SITE}/admin/vendas` }], VOLTAR],
+      })
+      for (const c of r.fila) await enviar(chatId, textoComissao(c), tecladoComissao(c, VOLTAR))
+      if (r.quantas > r.fila.length) {
+        await enviar(chatId, `<i>Mostrei as ${r.fila.length} mais antigas de ${r.quantas}. Toca outra vez depois de decidires estas.</i>`, {
+          inline_keyboard: [[{ text: '💸 Recarregar', callback_data: 'admin:eq_com' }], VOLTAR],
+        })
+      }
+      return
+    }
+    case 'eq_mlm': {
+      const { carregarEstadoMlm, textoMlm } = await import('@/lib/telegram-admin-equipa')
+      // Sem botão para «MLM no /admin»: essa página não existe (o MLM vive dentro do /admin/vendas).
+      // Um atalho que dá 404 faz duvidar do resto do painel — já aconteceu uma vez.
+      await enviar(chatId, textoMlm(await carregarEstadoMlm(supabase)), {
+        inline_keyboard: [[{ text: '🌐 Comissões no /admin', url: `${SITE}/admin/vendas` }], VOLTAR],
+      })
+      return
+    }
+    case 'eq_papeis': {
+      const { carregarEquipa, tecladoEscolherPessoa } = await import('@/lib/telegram-admin-equipa')
+      const lista = await carregarEquipa(supabase)
+      await enviar(
+        chatId,
+        '🎚️ <b>Papéis e planos</b>\n\n' +
+          (lista.length
+            ? 'Escolhe a pessoa. No ecrã dela dás ou retiras papéis e mudas o plano de comissão — sempre com confirmação.'
+            : 'Ninguém tem papel activo ainda.') +
+          '\n\n<i>Para dar o PRIMEIRO papel a quem ainda não está na lista, usa o /admin: aqui só aparece quem já tem algum.</i>',
+        tecladoEscolherPessoa(lista, VOLTAR),
+      )
+      return
+    }
     case 'fecho': {
       const { textoFecho } = await import('@/lib/telegram-admin-extra')
       await enviar(chatId, await textoFecho(supabase), {
