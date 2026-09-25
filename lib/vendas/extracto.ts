@@ -71,6 +71,56 @@ function normalizarEstado(estado: string): 'pendente' | 'aprovada' | 'paga' | 'c
   }
 }
 
+/**
+ * A CONTA do extracto, isolada do acesso à base para poder ser provada sozinha
+ * (`lib/vendas/extracto.check.ts`). É aqui que se decide quanto se deve a uma pessoa hoje, e é a
+ * parte fácil de fazer mal: um extracto que só soma acaba a mandar pagar sobre uma devolução.
+ */
+export function somarExtracto(linhas: LinhaExtracto[]): Pick<Extracto, 'totais' | 'porOrigem'> {
+  const totais = {
+    ganho_cents: 0,
+    pago_cents: 0,
+    por_pagar_cents: 0,
+    a_descontar_cents: 0,
+    cancelado_cents: 0,
+    saldo_cents: 0,
+  }
+  const porOrigem: Extracto['porOrigem'] = {
+    papel: { ganho_cents: 0, pago_cents: 0, por_pagar_cents: 0 },
+    mlm: { ganho_cents: 0, pago_cents: 0, por_pagar_cents: 0 },
+  }
+
+  for (const linha of linhas) {
+    const valor = Math.round(Number(linha.valor_cents) || 0)
+    const estado = normalizarEstado(String(linha.estado))
+    const origem = linha.origem === 'mlm' ? 'mlm' : 'papel'
+    const paga = !!linha.paga_em || estado === 'paga'
+    const estornada = !!linha.estornada_em
+
+    // Estornada ANTES de ser paga: nunca saiu dinheiro, não entra em nada — nem como ganho.
+    if (estado === 'cancelada' || (estornada && !paga)) {
+      totais.cancelado_cents += valor
+      continue
+    }
+
+    totais.ganho_cents += valor
+    porOrigem[origem].ganho_cents += valor
+
+    if (paga) {
+      totais.pago_cents += valor
+      porOrigem[origem].pago_cents += valor
+      // Paga E devolvida pelo cliente: fica como dívida a descontar no próximo pagamento.
+      if (estornada) totais.a_descontar_cents += valor
+    } else {
+      totais.por_pagar_cents += valor
+      porOrigem[origem].por_pagar_cents += valor
+    }
+  }
+
+  totais.saldo_cents = totais.por_pagar_cents - totais.a_descontar_cents
+  return { totais, porOrigem }
+}
+
 export async function extractoDaPessoa(
   supabase: SupabaseClient,
   pessoaId: string,
@@ -88,46 +138,7 @@ export async function extractoDaPessoa(
   if (error) throw new Error(`Não foi possível ler o extracto: ${error.message}`)
 
   const linhas = (data ?? []) as unknown as LinhaExtracto[]
-
-  const totais = {
-    ganho_cents: 0,
-    pago_cents: 0,
-    por_pagar_cents: 0,
-    a_descontar_cents: 0,
-    cancelado_cents: 0,
-    saldo_cents: 0,
-  }
-  const porOrigem: Extracto['porOrigem'] = {
-    papel: { ganho_cents: 0, pago_cents: 0, por_pagar_cents: 0 },
-    mlm: { ganho_cents: 0, pago_cents: 0, por_pagar_cents: 0 },
-  }
-
-  for (const linha of linhas) {
-    const valor = Number(linha.valor_cents) || 0
-    const estado = normalizarEstado(String(linha.estado))
-    const origem = linha.origem === 'mlm' ? 'mlm' : 'papel'
-    const paga = !!linha.paga_em || estado === 'paga'
-    const estornada = !!linha.estornada_em
-
-    if (estado === 'cancelada' || (estornada && !paga)) {
-      totais.cancelado_cents += valor
-      continue
-    }
-
-    totais.ganho_cents += valor
-    porOrigem[origem].ganho_cents += valor
-
-    if (paga) {
-      totais.pago_cents += valor
-      porOrigem[origem].pago_cents += valor
-      if (estornada) totais.a_descontar_cents += valor
-    } else {
-      totais.por_pagar_cents += valor
-      porOrigem[origem].por_pagar_cents += valor
-    }
-  }
-
-  totais.saldo_cents = totais.por_pagar_cents - totais.a_descontar_cents
+  const { totais, porOrigem } = somarExtracto(linhas)
 
   return {
     pessoaId,
