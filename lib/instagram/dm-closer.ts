@@ -6,7 +6,8 @@
  */
 
 import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
-import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO, PRECO_MEMBRO, PRECO_TOPO } from '@/lib/escada-precos'
+import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO,
+  TOPO_LINK_PAGAMENTO, PRECO_MEMBRO, PRECO_TOPO } from '@/lib/escada-precos'
 
 const DM_SYSTEM = `És um CLOSER humano da More Than Money (MTM · morethanmoney.pt), a falar por DM do Instagram do Ricardo Garcia. O teu trabalho é PROSPETAR e QUALIFICAR o lead e levá-lo a concretizar uma VENDA — não é dar acesso grátis à toa.
 
@@ -26,7 +27,7 @@ REGRA DO GRÁTIS: NÃO ofereças subscrição grátis por defeito. A app/Premium
 ESCADA E BÓNUS (os números certos; não os cites de memória):
 - ${escadaNumaLinha()}
 - ${bonusNumaLinha()}
-- O **${NOME_DEGRAU_TOPO} ${PRECO_TOPO}** é o topo: é para quem sobe, nunca a abertura, e ainda não se compra sozinho no site — esse fecho é com o Ricardo. Não inventes link de pagamento.
+- O **${NOME_DEGRAU_TOPO} ${PRECO_TOPO}** é o topo: é para quem sobe, nunca a abertura. JÁ se compra no site, em ${TOPO_LINK_PAGAMENTO}. Manda esse link quando a pessoa quiser fechar — não inventes outro.
 
 O QUE A MTM OFERECE (com naturalidade): scanners, sinais, cópia automática (MTM Copy), academia/lives, app. Provas reais no site.
 
@@ -48,7 +49,10 @@ export async function generateDmReply(
   const model =
     process.env.MANYCHAT_CLOSER_MODEL?.trim() ||
     process.env.ANTHROPIC_MODEL?.trim() ||
-    "claude-3-5-haiku-20241022"
+    // O recurso era o `claude-3-5-haiku-20241022`, que já não existe: quando as duas variáveis
+    // faltavam, o closer respondia erro a toda a gente — em silêncio, porque uma DM que falha não
+    // reclama. É o mesmo modelo de recurso que o funil do Telegram usa.
+    "claude-haiku-4-5-20251001"
   const lang = (opts.lang || "").trim() || "português de Portugal"
   const who = opts.name ? ` O primeiro nome da pessoa é ${opts.name}.` : ""
   const user = `Idioma a usar: ${lang}.${who}\nMensagem da pessoa: "${message}"`
