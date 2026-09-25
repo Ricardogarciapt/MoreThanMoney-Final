@@ -19,6 +19,8 @@ import {
 import { papeisActivosDe } from "@/lib/backoffice-papeis-leitura"
 import { capacidadesDe, pode } from "@/lib/backoffice-papeis"
 import { areaDoCaminho, normalizarAreas } from "@/lib/backoffice-acessos-site"
+// O tecto vive em `lib/com-tecto.ts` — é puro, corre no edge, e o porquê está lá escrito.
+import { comTecto, TECTO_MIDDLEWARE_MS } from "@/lib/com-tecto"
 
 // Cache para rate limiting
 const rateLimit = new Map<string, { count: number; timestamp: number }>()
@@ -59,22 +61,6 @@ function isRateLimited(ip: string): boolean {
  *
  * Este tecto não conserta a base de dados. Serve para o site DEGRADAR em vez de cair.
  */
-const LIMITE_SUPABASE_MS = 2500
-
-async function comTecto<T>(promessa: Promise<T>, aoEsgotar: T, ms = LIMITE_SUPABASE_MS): Promise<T> {
-  let temporizador: ReturnType<typeof setTimeout> | undefined
-  try {
-    return await Promise.race([
-      promessa,
-      new Promise<T>((resolve) => {
-        temporizador = setTimeout(() => resolve(aoEsgotar), ms)
-      }),
-    ])
-  } finally {
-    if (temporizador) clearTimeout(temporizador)
-  }
-}
-
 /**
  * Este pedido TRAZ cookie de sessão do Supabase?
  *
@@ -181,6 +167,7 @@ export async function middleware(request: NextRequest) {
       const resposta = await comTecto<{ user: typeof cachedUser } | null>(
         pedidoAuth.then((r) => ({ user: r.data.user })).catch(() => null),
         null,
+        TECTO_MIDDLEWARE_MS,
       )
       if (resposta === null) {
         autenticacaoIndecisa = true
@@ -275,6 +262,7 @@ export async function middleware(request: NextRequest) {
         comTecto<Array<{ papel: unknown }>>(
           papeisActivosDe(supabaseBo as never, boUser.id).catch(() => []),
           [],
+          TECTO_MIDDLEWARE_MS,
         ),
         comTecto<{ user_type?: string; is_active?: boolean } | null>(
           (supabaseBo
@@ -287,6 +275,7 @@ export async function middleware(request: NextRequest) {
             .then((r) => r.data)
             .catch(() => null),
           null,
+          TECTO_MIDDLEWARE_MS,
         ),
       ])
       const capacidades = capacidadesDe(
@@ -459,6 +448,7 @@ export async function middleware(request: NextRequest) {
           .then((r) => (r.error ? LEITURA_FALHOU : r.data))
           .catch(() => LEITURA_FALHOU),
         LEITURA_FALHOU,
+        TECTO_MIDDLEWARE_MS,
       )
 
       if (lido === LEITURA_FALHOU) {
@@ -533,6 +523,7 @@ export async function middleware(request: NextRequest) {
         const restricaoRow = await comTecto<{ areas?: unknown } | null>(
           pedidoAreas.then((r) => r.data ?? {}).catch(() => ({})),
           null,
+          TECTO_MIDDLEWARE_MS,
         )
         restricao = normalizarAreas(restricaoRow?.areas)
         // Só se guarda o que foi realmente lido. Guardar um tecto esgotado ensinava a cache a
@@ -571,6 +562,7 @@ export async function middleware(request: NextRequest) {
         .then((r) => r.data)
         .catch(() => null),
       null,
+      TECTO_MIDDLEWARE_MS,
     )
 
     if (aiosProfile?.user_type !== 'admin') {

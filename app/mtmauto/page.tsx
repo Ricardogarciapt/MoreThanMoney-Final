@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { comTecto, TECTO_PAGINA_MS } from "@/lib/com-tecto"
 
 export const metadata: Metadata = {
   title: "MTM Auto — copy trading no teu telemóvel | MoreThanMoney",
@@ -296,7 +297,18 @@ const PORQUE = [
 ]
 
 export default async function MtmAutoPage() {
-  const [links, estrategias] = await Promise.all([linksDeDescarga(), estrategiasVivas()])
+  // TECTO: os links e a montra são acessórios — a página tem recuo para os dois. Sem ele, uma base
+  // de dados lenta fazia a geração estática desta página estoirar aos 60s e levava o deploy atrás
+  // (aconteceu a 25/09, ao mesmo tempo que em `/new-landing`).
+  const [links, estrategias] = await comTecto(
+    Promise.all([linksDeDescarga(), estrategiasVivas()]),
+    // O mesmo recuo que o `catch` de cada uma já usava — sem resposta não é pior do que com erro.
+    [{ apk: "/downloads/MTMAuto.apk", testflight: null }, []] as [
+      Awaited<ReturnType<typeof linksDeDescarga>>,
+      Awaited<ReturnType<typeof estrategiasVivas>>,
+    ],
+    TECTO_PAGINA_MS,
+  )
 
   return (
     <main className="min-h-screen bg-black text-white">

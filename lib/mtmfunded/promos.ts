@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import type { Promo } from '@/components/mtmfunded/splash-promos'
+import { comTecto, TECTO_PAGINA_MS } from '@/lib/com-tecto'
 
 /**
  * AS PROMOÇÕES A DECORRER, lidas da base de dados.
@@ -16,7 +17,17 @@ export async function promosAtivas(): Promise<Promo[]> {
   const db = getSupabaseAdmin()
   const agora = new Date().toISOString()
 
-  const [{ data: cupoes }, { data: programas }] = await Promise.all([
+  /**
+   * TECTO: um pop-up de campanha não pode ter poder de veto sobre a porta de entrada do site.
+   *
+   * 25/09 teve exactamente isso. Esta leitura corre na geração estática de `/new-landing`; com o
+   * Supabase a responder em dezenas de segundos, o Next desistiu da página aos 60s e o build
+   * inteiro abortou — ou seja, não havia forma de publicar o site enquanto a base estivesse má.
+   * Sem resposta, não há promoções: é o mesmo estado que existe sempre que não há campanha a
+   * decorrer, e a página já sabe desenhá-lo (não desenha nada).
+   */
+  const [{ data: cupoes }, { data: programas }] = await comTecto(
+    Promise.all([
     db
       .from('coupons')
       .select('code, type, discount_value, plan_override, valid_until, description, is_active, max_uses, used_count')
@@ -28,7 +39,10 @@ export async function promosAtivas(): Promise<Promo[]> {
       .from('mtm_funded_programs')
       .select('slug, nome, descricao, saldo, fases, preco_cents, regras, ativo')
       .eq('ativo', true),
-  ])
+    ]),
+    [{ data: null }, { data: null }] as never,
+    TECTO_PAGINA_MS,
+  )
 
   const promos: Promo[] = []
 
