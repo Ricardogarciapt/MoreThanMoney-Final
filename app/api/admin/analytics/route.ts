@@ -86,10 +86,10 @@ export async function GET(request: NextRequest) {
     // 4. Documentos Statistics
     const { data: documents } = await supabase
       .from('documents')
-      .select('view_count')
+      .select('views_count')
       .gte('created_at', startDate.toISOString())
 
-    const totalDocumentViews = documents?.reduce((sum, doc) => sum + (doc.view_count || 0), 0) || 0
+    const totalDocumentViews = documents?.reduce((sum, doc) => sum + (doc.views_count || 0), 0) || 0
 
     // 5. Social Feed Statistics
     const { data: posts } = await supabase

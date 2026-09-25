@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
       buy_price,
       current_price,
       asset_type,
-      notes,
+      // 'notes' nao entra: personal_portfolio nao tem essa coluna e incluir-la fazia
+      // o insert/update falhar por inteiro. Se for para guardar notas, falta a coluna.
     } = body
 
     const pp = purchase_price ?? buy_price
@@ -100,11 +101,10 @@ export async function POST(request: NextRequest) {
         user_id: session.user.id,
         symbol,
         name,
-        purchase_price: pp,
+        buy_price: pp,
         quantity,
         current_price: current_price ?? pp,
         asset_type: asset_type || 'crypto',
-        notes: notes ?? null,
       })
       .select()
       .single()
@@ -157,7 +157,8 @@ export async function PUT(request: NextRequest) {
       buy_price,
       current_price,
       asset_type,
-      notes,
+      // 'notes' nao entra: personal_portfolio nao tem essa coluna e incluir-la fazia
+      // o insert/update falhar por inteiro. Se for para guardar notas, falta a coluna.
     } = body
 
     if (!id) {
@@ -172,11 +173,11 @@ export async function PUT(request: NextRequest) {
       .update({
         symbol,
         name,
-        ...(pp != null ? { purchase_price: pp } : {}),
+        ...(pp != null ? { buy_price: pp } : {}),
         quantity,
         current_price,
         ...(asset_type != null ? { asset_type } : {}),
-        ...(notes !== undefined ? { notes } : {}),
+
       })
       .eq('id', id)
       .eq('user_id', session.user.id)

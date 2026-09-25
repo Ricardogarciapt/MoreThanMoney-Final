@@ -168,7 +168,10 @@ export const FERRAMENTAS: Ferramenta[] = [
     correr: async () => {
       const { data } = await getSupabaseAdmin()
         .from('mtmauto_accounts')
-        .select('id, nome, is_active, risco_pct, provider_id, created_at')
+        // Nomes reais das colunas de mtmauto_accounts (nome/is_active/provider_id nao existem:
+        // o select falhava e a ferramenta devolvia sempre zero contas). Os apelidos mantem as
+        // chaves de saida. A estrategia seguida vive em mtmauto_subscriptions, nao aqui.
+        .select('id, nome:nome_exibicao, is_active:copia_ativa, risco_pct, created_at')
         .order('created_at', { ascending: false })
         .limit(100)
       return { contas: data ?? [] }
