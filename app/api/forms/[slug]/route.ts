@@ -122,6 +122,47 @@ export async function POST(
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
+    /**
+     * O CONSENTIMENTO, SE A PESSOA O DEU.
+     *
+     * Até 26/09 nenhum formulário deste site registava permissão de marketing em sítio nenhum — o
+     * resultado era 187 emails na base e ZERO de quem se pudesse provar que pediu para receber
+     * campanhas. Uma lista assim não se usa: dá queixas de spam, e as queixas queimam o domínio que
+     * a MTM usa para falar com os clientes que pagam.
+     *
+     * Só escreve quando há uma caixa MARCADA. Não há valor por omissão, não há «submeteu logo
+     * aceitou»: o formulário tem de trazer um campo checkbox de consentimento e a pessoa tem de o
+     * ter marcado. Sem isso, a submissão fica como sempre ficou e não se inventa permissão nenhuma.
+     *
+     * Best-effort de propósito: a submissão já está gravada, e perder o registo da permissão é mau
+     * mas devolver erro a quem acabou de preencher um formulário é pior. O que não pode acontecer é
+     * o contrário — escrever permissão que a pessoa não deu.
+     */
+    try {
+      const campoConsentimento = fields.find(
+        (f) => f.type === 'checkbox' && /consent|novidades|newsletter|marketing/i.test(f.name),
+      )
+      const marcou = campoConsentimento ? result.clean[campoConsentimento.name] === true : false
+      if (marcou && result.email) {
+        const { PONTOS_DE_CAPTURA, normalizarEmail } = await import('@/lib/captacao-consentimento')
+        await supabase.from('captacao_consentimento').insert({
+          email: normalizarEmail(result.email),
+          canal: 'formulario_site',
+          base_legal: 'consentimento',
+          // A prova é o texto do código e não a etiqueta do campo: uma etiqueta muda-se no admin
+          // sem ninguém dar por isso, e a prova tem de ser aquilo que a pessoa leu.
+          prova:
+            campoConsentimento?.label?.trim() ||
+            PONTOS_DE_CAPTURA.find((p) => p.canal === 'formulario_site')?.pedido ||
+            'Marcou a caixa de consentimento no formulário do site.',
+          origem_url: `/formularios/${slug}`,
+          nota: form.title,
+        })
+      }
+    } catch (consentError) {
+      console.error('⚠️ [FORMS] Falha a registar consentimento:', consentError)
+    }
+
     // Atribuição Opinly: cada submissão é um lead (best-effort; dedup por form+email)
     try {
       const { opinlyTrack } = await import('@/lib/opinly/track')
