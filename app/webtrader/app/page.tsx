@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { decidirPassagem, destinoDaEntrada } from "@/lib/webtrader/sessao-app"
+import { decidirPassagem, destinoDaEntrada, tokenDoFragmento } from "@/lib/webtrader/sessao-app"
 
 /**
  * /webtrader/app — a porta do WebTrader dentro da app iOS MTM Auto.
@@ -18,7 +18,13 @@ import { decidirPassagem, destinoDaEntrada } from "@/lib/webtrader/sessao-app"
  * ecrã de entrada normal do WebTrader: pior caso, o cliente entra à mão — nunca fica numa página
  * presa nem com a sessão de outra pessoa.
  *
- * Fora da app (browser normal) não há casca: segue logo para /webtrader.
+ * Fora da app (browser normal) não há casca — e aí o token pode vir no FRAGMENTO do URL
+ * (`#mtmauto=<token>`), que é como a MTM Auto web manda cá a pessoa. O fragmento nunca é enviado ao
+ * servidor (não entra em logs nem no Referer) e é limpo do histórico ANTES de qualquer pedido de
+ * rede. Daí para a frente é exactamente a mesma passagem da casca: as duas portas entram no mesmo
+ * corredor, para não haver duas noções de «entrar com a conta da app».
+ *
+ * Sem casca e sem fragmento, segue logo para /webtrader — que é o caminho de quase toda a gente.
  */
 
 /** `erro`: a app não conseguiu dizer se há sessão (rede) — não se mexe na sessão do WebTrader. */
@@ -57,13 +63,11 @@ export default function EntradaWebtraderApp() {
       window.location.replace(destino)
     }
 
-    const ponte = ponteDaCasca()
-    if (!ponte) { seguir(); return }
-
-    let espera: ReturnType<typeof setTimeout> | undefined
-    window.__mtmAutoWTReceber = async (d: Dados) => {
-      // A casca respondeu: a partir daqui manda a passagem, não o relógio (senão saía-se a meio do pedido).
-      clearTimeout(espera)
+    /**
+     * A passagem, seja de onde vier o token. É uma função só de propósito: ter a casca e o browser
+     * a decidir em sítios diferentes era como nasciam as diferenças de comportamento entre app e web.
+     */
+    const passar = async (d: Dados): Promise<string> => {
       if (d?.erro) { seguir(); return "erro" }
       try {
         const { data } = await supabase.auth.getSession()
@@ -91,6 +95,31 @@ export default function EntradaWebtraderApp() {
         seguir()
         return "falhou"
       }
+    }
+
+    const ponte = ponteDaCasca()
+    if (!ponte) {
+      /**
+       * BROWSER. O token vem no fragmento — e a PRIMEIRA coisa a fazer é tirá-lo do histórico,
+       * antes de qualquer await. Se o pedido de rede falhasse com o fragmento ainda no URL, ficava
+       * lá um token a que basta carregar em «recarregar» para reaparecer.
+       *
+       * `decidirPassagem` não sabe o `userId` por este caminho (o URL não o traz, e trazê-lo não
+       * acrescentava segurança nenhuma) — passa-se `null`, que a função lê como «não sei de quem é»
+       * e resolve pedindo a sessão nova ao servidor, que é quem confirma a identidade do token.
+       */
+      const token = tokenDoFragmento(window.location.hash)
+      if (!token) { seguir(); return }
+      window.history.replaceState(null, "", window.location.pathname + window.location.search)
+      void passar({ token, userId: null })
+      return
+    }
+
+    let espera: ReturnType<typeof setTimeout> | undefined
+    window.__mtmAutoWTReceber = async (d: Dados) => {
+      // A casca respondeu: a partir daqui manda a passagem, não o relógio (senão saía-se a meio do pedido).
+      clearTimeout(espera)
+      return passar(d)
     }
 
     ponte.postMessage({ acao: "sessao" })

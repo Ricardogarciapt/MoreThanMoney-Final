@@ -84,3 +84,71 @@ export function destinoDaEntrada(search: string | null | undefined): string {
   if (!q || q === '?') return '/webtrader'
   return `/webtrader${q.startsWith('?') ? q : `?${q}`}`
 }
+
+// ── A passagem pelo BROWSER (fora da casca nativa) ───────────────────────────
+
+/**
+ * O NOME DO CAMPO ONDE O TOKEN VIAJA — e porque é no FRAGMENTO e não na query.
+ *
+ * Dentro da app o token viaja como argumento de função (`__mtmAutoWTReceber`), que é o sítio mais
+ * seguro que há: não existe fora da memória da página. No browser não há casca a chamar função
+ * nenhuma, e a app corre noutro domínio (mtm-auto.vercel.app) — logo o token tem de atravessar a
+ * fronteira pelo URL.
+ *
+ * Vai no FRAGMENTO (`#`) e nunca na query (`?`), e a diferença não é cosmética:
+ *  · o fragmento NÃO é enviado ao servidor — não entra em logs de acesso, nem da Vercel nem de
+ *    qualquer intermediário;
+ *  · não viaja no cabeçalho `Referer` para terceiros;
+ *  · a query faria as duas coisas.
+ *
+ * O que o fragmento ainda faz é ficar no histórico do browser — e por isso `limparFragmento()` é
+ * chamado assim que o token é lido, antes de qualquer pedido de rede.
+ *
+ * O QUE ISTO NÃO RESOLVE, dito por escrito: quem apanhar o URL completo nos dez minutos seguintes
+ * pode repeti-lo. A janela é curta (`IDADE_MAX_TOKEN_S`), o limitador trava a repetição
+ * (`LIMITE_EMISSOES`), e o token é de acesso — não o de renovação, que nunca sai da app. Para
+ * fechar mesmo essa janela é preciso um código de uso único emitido pela app, que é mais peça do
+ * que isto precisava para arrancar.
+ */
+export const CAMPO_TOKEN_FRAGMENTO = 'mtmauto'
+
+/**
+ * Lê o token do fragmento do URL. Devolve `null` quando não há nada aproveitável — e `null` é o
+ * caminho normal, porque a esmagadora maioria das visitas a esta página não traz token nenhum.
+ *
+ * Aceita `#mtmauto=<token>` e `#outra=x&mtmauto=<token>`. Um valor vazio, com espaços ou que não
+ * tenha a forma de um JWT é tratado como ausência: é melhor mandar a pessoa para o ecrã de entrada
+ * normal do que atirar um disparate ao servidor.
+ */
+export function tokenDoFragmento(hash: string | null | undefined): string | null {
+  const h = String(hash ?? '').replace(/^#/, '')
+  if (!h) return null
+  let bruto: string | null = null
+  for (const par of h.split('&')) {
+    const i = par.indexOf('=')
+    if (i < 0) continue
+    if (decodeURIComponent(par.slice(0, i)) !== CAMPO_TOKEN_FRAGMENTO) continue
+    try {
+      bruto = decodeURIComponent(par.slice(i + 1))
+    } catch {
+      bruto = par.slice(i + 1)
+    }
+  }
+  const t = (bruto ?? '').trim()
+  // Três partes separadas por ponto: a forma de um JWT. Não se valida a assinatura aqui — isso é do
+  // servidor, e fazê-lo no browser só daria uma falsa sensação de garantia.
+  if (!t || !/^[\w-]+\.[\w-]+\.[\w-]+$/.test(t)) return null
+  return t
+}
+
+/**
+ * O URL que a app MTM Auto abre no browser para entregar a sessão ao WebTrader.
+ *
+ * `base` é a origem do site (www.morethanmoney.pt). `destino` é o que se quer ver DEPOIS da
+ * passagem, e viaja na query — porque não é segredo nenhum e a página precisa dele para reencaminhar.
+ */
+export function urlDaPassagem(base: string, token: string, destino?: string | null): string {
+  const raiz = base.replace(/\/+$/, '')
+  const q = destino && destino !== '?' ? (destino.startsWith('?') ? destino : `?${destino}`) : ''
+  return `${raiz}/webtrader/app${q}#${CAMPO_TOKEN_FRAGMENTO}=${encodeURIComponent(token)}`
+}
