@@ -24,6 +24,7 @@ import { carregarSdk, eLimiteMetaApi } from '../funded-motor/metaapi-partilhada'
 import { LigacaoReal } from './ligacao'
 import { carregarEscopo, chaveItem, type Escopo } from './escopo'
 import { criarExecutorLive } from './live'
+import { PrecosNossos } from './precos-nossos'
 import { contasStreaming } from '../../lib/mtmcopy/metaapi-snapshot-regras'
 import { contaInexistente, marcarContaInexistente } from '../../lib/mtmcopy/metaapi-inexistentes'
 import { leituraDeFundoBloqueada, registarErroQuota } from '../../lib/mtmcopy/metaapi-quota'
@@ -60,6 +61,15 @@ const CFG = {
   tickMs: num('MOTOR_REAL_TICK_MS', 250),
   escopoMs: num('MOTOR_REAL_ESCOPO_MS', 15_000),
   cotacoesMs: num('MOTOR_REAL_COTACOES_MS', 500),
+  /**
+   * Subscrever cotações na MetaApi. DESLIGADO por omissão: os preços vêm da nossa fonte
+   * (`precos-nossos.ts`). Ligar só para comparar os dois lados — ver a nota em `ligacao.ts`.
+   */
+  cotacoesMetaApi: env('MOTOR_REAL_COTACOES_METAAPI') === '1',
+  /** De quanto em quanto tempo se relê a `funded_precos` para memória. */
+  precosNossosMs: num('MOTOR_REAL_PRECOS_MS', 1_000),
+  /** Mapa nome-da-corretora:nosso-nome, ex.: "GOLD:XAUUSD,XAUUSD.X:XAUUSD". */
+  mapaSimbolos: env('MOTOR_REAL_MAPA_SIMBOLOS'),
   gravarMs: num('MOTOR_REAL_GRAVAR_MS', 5_000),
   entradaLiveMs: num('MOTOR_REAL_ENTRADA_LIVE_MS', 15_000),
   planeamento: {
@@ -110,6 +120,31 @@ async function main() {
   let pausaGlobalAte = 0
   let porGravar: LinhaSombra[] = []
   const contadores = { ticks: 0, avaliacoes: 0, decisoes: 0, observacoes: 0, gravadas: 0, erros: 0 }
+
+  /**
+   * A FONTE DE PREÇOS DA CASA. Arranca antes de qualquer ligação: um tick que chegue sem preço não
+   * decide nada, e é melhor o primeiro tick esperar 1 s pela primeira leitura do que passar em
+   * claro com o motor a achar que não conhece o símbolo.
+   */
+  const mapaSimbolos = new Map<string, string>()
+  for (const par of CFG.mapaSimbolos.split(',')) {
+    const [de, para] = par.split(':').map((x) => x?.trim().toUpperCase())
+    if (de && para) mapaSimbolos.set(de, para)
+  }
+  const precos = new PrecosNossos({ db, intervaloMs: CFG.precosNossosMs, mapa: mapaSimbolos, log })
+  await precos.iniciar()
+  log(`[precos-nossos] ${JSON.stringify(precos.resumo())}`)
+
+  /**
+   * O preço de um símbolo, para o motor.
+   *
+   * A NOSSA fonte primeiro; a MetaApi só se ela não souber — e só sabe quando a subscrição de
+   * cotações estiver ligada de propósito. A ordem é o ponto todo desta mudança: sem uma conta
+   * deployada na MetaApi o motor ficava sem preço nenhum, e a nossa cadeia estava a receber ticks
+   * ao lado sem ninguém os usar.
+   */
+  const precoDe = (conta: string, simbolo: string): number | null =>
+    precos.preco(simbolo) ?? ligacoes.get(conta)?.precoMedio(simbolo) ?? null
 
   const registo = new RegistoSombra(CFG.sombra, (s) => pipDoItem('premium', s))
   const executor = criarExecutorLive({
@@ -243,6 +278,7 @@ async function main() {
       db,
       fotografia: CFG.fotografia.includes(conta),
       intervaloCotacoesMs: CFG.cotacoesMs,
+      subscreverCotacoes: CFG.cotacoesMetaApi,
       intervaloFotoMs: num('PREMIUM_STREAMING_INTERVALO_MS', 1000),
       batimentoFotoMs: num('PREMIUM_STREAMING_BATIMENTO_MS', 2000),
       aoFalhar: (erro) => void falhouLigar(conta, tk, erro),
@@ -314,7 +350,7 @@ async function main() {
 
         const doConta = [...itens.values()].filter((i) => i.conta === conta && !i.terminado && !i.ocupado)
         if (!doConta.length) continue
-        const foto = { conta, posicoes, precoMedio: (s: string) => l.precoMedio(s), agora }
+        const foto = { conta, posicoes, precoMedio: (s: string) => precoDe(conta, s), agora }
         // Posições que já têm dono (a linha que as originou). O tipo `provider` é o resto: a conta
         // mestre de uma estratégia também executa Premium e MTM Auto, e sem isto a mesma posição
         // seria decidida duas vezes, com duas regras diferentes, e a sombra ficaria ilegível.
@@ -413,7 +449,7 @@ async function main() {
     await limpar().catch(() => undefined)
   })(), CFG.gravarMs)
   const iLog = setInterval(() => {
-    log('[pulso]', JSON.stringify({ ...contadores, itens: itens.size, emEspera: registo.emEspera, live: [...entradaLive.keys()], contas: [...ligacoes.values()].map((l) => l.resumo()) }))
+    log('[pulso]', JSON.stringify({ ...contadores, precos: precos.resumo(), itens: itens.size, emEspera: registo.emEspera, live: [...entradaLive.keys()], contas: [...ligacoes.values()].map((l) => l.resumo()) }))
   }, 60_000)
 
   let aSair = false
@@ -424,6 +460,9 @@ async function main() {
     for (const i of [iTick, iEscopo, iGravar, iLog]) clearInterval(i)
     entradaLive.clear()
     CFG.escrita = false
+    // Pára o relógio dos preços antes de tudo: a partir daqui ninguém decide, e uma leitura a mais
+    // só atrasaria a saída dentro dos 8 s de graça.
+    precos.parar()
     await Promise.race([
       (async () => {
         await gravarPulso().catch(() => undefined)

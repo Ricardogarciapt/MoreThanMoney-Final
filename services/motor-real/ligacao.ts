@@ -32,6 +32,18 @@ export interface OpcoesLigacao {
   /** Escreve metaapi_snapshot (contas do monitor Premium). */
   fotografia: boolean
   intervaloCotacoesMs: number
+  /**
+   * Subscrever cotações na MetaApi?
+   *
+   * Passou a `false` por omissão (ver `precos-nossos.ts`): os preços são nossos, e cada símbolo
+   * subscrito gastava crédito num token que tem de servir primeiro a ENTREGA das ordens às contas
+   * dos clientes. Com as mestras undeployed, isto era ainda pior do que inútil — 355 falhas em 3
+   * horas, a cada 5 minutos, por contas que a MetaApi tinha desmontado.
+   *
+   * Fica o interruptor porque a comparação da sombra pode querer os dois lados: o preço da MetaApi
+   * e o nosso, para se medir a diferença antes de confiar só num.
+   */
+  subscreverCotacoes: boolean
   intervaloFotoMs: number
   batimentoFotoMs: number
   /** Erro ao ligar: o motor decide o recuo. */
@@ -129,6 +141,7 @@ export class LigacaoReal {
   private async acertarSubscricoes(): Promise<void> {
     const c = this.ligacao
     if (!c || !this.sincronizada) return
+    if (!this.o.subscreverCotacoes) return
     const queridos = new Set<string>(((c.terminalState?.positions ?? []) as Array<{ symbol?: string }>).map((p) => String(p.symbol ?? '')).filter(Boolean))
     for (const s of queridos) {
       if (this.subscritos.has(s)) continue
@@ -155,7 +168,13 @@ export class LigacaoReal {
       .filter((p): p is PosicaoSnapshot => !!p) as PosicaoGestao[]
   }
 
-  /** (bid+ask)/2 — a mesma conta do getMarketPrice e da fotografia. */
+  /**
+   * (bid+ask)/2 pelo lado da MetaApi — a mesma conta do getMarketPrice e da fotografia.
+   *
+   * Já NÃO é a fonte de preço do motor: é o recurso e o outro lado da comparação. Sem subscrição
+   * de cotações (o normal agora) isto devolve null para tudo o que não tenha vindo na
+   * sincronização, e null significa «não sei», que é a resposta certa.
+   */
   precoMedio(simbolo: string): number | null {
     if (!this.sincronizada) return null
     const q = this.ligacao.terminalState?.price?.(simbolo) as { bid?: number; ask?: number } | undefined
