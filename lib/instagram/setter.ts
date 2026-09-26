@@ -27,6 +27,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { pensar } from '@/lib/funis-ia'
 import { isAutoPublishBlocked } from './publish'
+import { ehDaCasa, handlesDaCasa } from './setter-casa'
 import {
   classificar,
   podeMandarDm,
@@ -103,12 +104,26 @@ export interface ComentarioParaSetter {
 export type Resultado =
   | 'desligado'
   | 'ignorado'
+  /** É gente nossa — cliente, equipa ou parceiro. Ver `setter-casa.ts`. */
+  | 'da_casa'
   | 'ja_tratado'
   | 'encerrado'
   | 'rascunho'
   | 'publica_enviada'
   | 'dm_enviada'
   | 'erro'
+
+/** As colunas que descrevem o comentário, iguais em todos os estados por que ele pode passar. */
+function baseDoComentario(c: ComentarioParaSetter) {
+  return {
+    comment_id: c.commentId,
+    media_id: c.mediaId,
+    ig_account_id: c.igAccountId,
+    ig_username: c.igUsername,
+    commenter: c.commenter,
+    comment_text: (c.texto || '').slice(0, 500),
+  }
+}
 
 async function gpost(path: string, params: Record<string, string>, token: string) {
   const body = new URLSearchParams({ ...params, access_token: token })
@@ -154,21 +169,43 @@ export async function tratarComentario(
     .maybeSingle()
   if (existente) return 'ja_tratado'
 
+  /**
+   * É GENTE NOSSA? Então não se aborda — e a guarda está aqui, ANTES de se redigir.
+   *
+   * Está antes de propósito: redigir é gastar um pedido ao modelo, mas sobretudo é deixar na lista
+   * um rascunho de venda com o nome de um cliente, à espera que alguém carregue em enviar por
+   * distração. A exclusão não pode ser o último passo de uma coisa que já parece pronta.
+   *
+   * No dia em que isto foi escrito, a fila TODA do Instagram era uma pessoa: `ruipaulo.fxcripto`,
+   * que é o Rui Rodrigues, sub-IB e cliente. Ligar o envio sem esta linha tinha como primeiro acto
+   * queimar a única private reply de seis comentários dele para lhe vender o que ele já tem.
+   *
+   * Um conjunto vazio significa «não consegui saber» — e aí `ehDaCasa` devolve `true` para quem não
+   * tem handle, e nada se envia a quem não se conseguiu identificar. Ver `setter-casa.ts`.
+   */
+  const fora = await handlesDaCasa(db)
+  if (ehDaCasa(c.commenter, fora)) {
+    await db.from('ig_setter_rascunhos').upsert(
+      {
+        ...baseDoComentario(c),
+        estado: 'descartado',
+        passo: 'da_casa',
+        dm_possivel: false,
+        dm_motivo: null,
+        decidido_em: new Date().toISOString(),
+      },
+      { onConflict: 'comment_id' },
+    )
+    return 'da_casa'
+  }
+
   const comentadoEm = c.timestamp ? new Date(c.timestamp) : null
   const horas =
     comentadoEm && !Number.isNaN(comentadoEm.getTime())
       ? (Date.now() - comentadoEm.getTime()) / 3_600_000
       : null
 
-  const base = {
-    comment_id: c.commentId,
-    media_id: c.mediaId,
-    ig_account_id: c.igAccountId,
-    ig_username: c.igUsername,
-    commenter: c.commenter,
-    comment_text: (c.texto || '').slice(0, 500),
-    comentado_em: comentadoEm && !Number.isNaN(comentadoEm.getTime()) ? comentadoEm.toISOString() : null,
-  }
+  const base = { ...baseDoComentario(c), comentado_em: comentadoEm && !Number.isNaN(comentadoEm.getTime()) ? comentadoEm.toISOString() : null }
 
   /**
    * A pessoa disse que não quer. Fica registado e ACABOU.
@@ -270,6 +307,8 @@ export interface ResumoDoSetter {
   publicasEnviadas: number
   dmsEnviadas: number
   ignorados: number
+  /** Comentários que eram de gente nossa e por isso não se tocou. */
+  daCasa: number
   jaTratados: number
   erros: number
   /** Chegou ao nosso tecto por corrida? Se sim, ficou coisa por tratar — volta na próxima volta. */
@@ -285,6 +324,7 @@ export function resumoVazio(ligado: Interruptor): ResumoDoSetter {
     publicasEnviadas: 0,
     dmsEnviadas: 0,
     ignorados: 0,
+    daCasa: 0,
     jaTratados: 0,
     erros: 0,
     atingiuTecto: false,
@@ -299,6 +339,7 @@ export function contar(r: ResumoDoSetter, resultado: Resultado): void {
   else if (resultado === 'publica_enviada') r.publicasEnviadas++
   else if (resultado === 'dm_enviada') r.dmsEnviadas++
   else if (resultado === 'ignorado') r.ignorados++
+  else if (resultado === 'da_casa') r.daCasa++
   else if (resultado === 'ja_tratado') r.jaTratados++
   else if (resultado === 'erro') r.erros++
 }
