@@ -13,6 +13,10 @@
  */
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { IG_ACCOUNTS, isAutoPublishBlocked, tokenForAccount } from "./publish"
+import {
+  lerInterruptor, tratarComentario, resumoVazio, contar, chegouAoTecto,
+  type ResumoDoSetter,
+} from "./setter"
 
 const GRAPH = "https://graph.facebook.com/v21.0"
 const DAYS_BACK = Number(process.env.IG_FUNNEL_DAYS) || 7 // janela de private_reply = 7 dias
@@ -189,7 +193,7 @@ async function fetchMedia(igId: string, token: string): Promise<any[]> {
   return out.slice(0, MAX_MEDIA)
 }
 
-interface AcctResult { account: string; leads: number; dmsSent: number; publicFallback: number; skippedDup: number; errors: string[] }
+interface AcctResult { account: string; leads: number; dmsSent: number; publicFallback: number; skippedDup: number; errors: string[]; setter?: ResumoDoSetter }
 
 async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>): Promise<AcctResult> {
   const res: AcctResult = { account: acc.username, leads: 0, dmsSent: 0, publicFallback: 0, skippedDup: 0, errors: [] }
@@ -197,6 +201,24 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
   if (!token) { res.errors.push(`sem token (${acc.tokenEnv})`); return res }
   const supabase = getSupabaseAdmin()
   const cutoff = Date.now() - DAYS_BACK * 86400000
+
+  /**
+   * O SETTER DA PERSONA — a rede por baixo do funil por palavra-chave.
+   *
+   * Medido a 26/09: em 30 dias, 19 respostas de agradecimento a 5 pessoas, e ZERO delas virou lead,
+   * porque nenhuma escreveu uma das palavras das campanhas. O funil não estava avariado; estava a
+   * ver passar as únicas pessoas que apareceram.
+   *
+   * Aqui, o caminho por palavra-chave continua a mandar e não muda uma linha: quem escreve PREMIUM
+   * pediu o Premium, e uma persona a conversar por cima disso seria pior do que o link directo. O
+   * setter só vê o que o `detectIntent` devolveu vazio.
+   *
+   * O interruptor é lido UMA vez por conta e não por comentário: com ele desligado — que é como
+   * nasce — isto custa uma leitura e nada mais.
+   */
+  const chavesDoSetter = await lerInterruptor()
+  const setter = resumoVazio(chavesDoSetter)
+  res.setter = setter
 
   const media = (await fetchMedia(acc.id, token)).filter((m) => (m.comments_count ?? 0) > 0)
   for (const post of media) {
@@ -209,7 +231,31 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
       if (commenter && own.has(commenter.toLowerCase())) continue
       // PROSPECTOR: deteta intenção em TODO o conteúdo (sem cortar por data — nada se perde).
       const intent = await detectIntent(c.text)
-      if (!intent) continue
+      if (!intent) {
+        // Sem palavra-chave: é aqui que o setter da persona pega, se estiver ligado.
+        if (chavesDoSetter.redigir && !chegouAoTecto(setter)) {
+          try {
+            contar(setter, await tratarComentario({
+              commentId: c.id,
+              mediaId: post.id,
+              igAccountId: acc.id,
+              igUsername: acc.username,
+              commenter,
+              texto: c.text ?? '',
+              timestamp: c.timestamp ?? null,
+              ehNossa: !!commenter && own.has(commenter.toLowerCase()),
+              legendaDoPost: post.caption ?? '',
+            }, token))
+          } catch (e) {
+            // Um erro do setter não pode derrubar o funil por palavra-chave, que é o que já vende.
+            setter.erros++
+            res.errors.push(`setter ${c.id}: ${String(e).slice(0, 120)}`)
+          }
+        } else if (chavesDoSetter.redigir) {
+          setter.atingiuTecto = true
+        }
+        continue
+      }
 
       const { data: existing } = await supabase.from("ig_leads").select("comment_id").eq("comment_id", c.id).maybeSingle()
       if (existing) { res.skippedDup++; continue }
