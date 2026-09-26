@@ -201,6 +201,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     await registarVendaDaEquipa({
       referencia: session.id,
       compradorId: session.metadata?.user_id ?? null,
+      emailComprador: session.customer_details?.email ?? null,
       pack: 'mtmfunded',
       valorCents: session.amount_total ?? 0,
       moeda: session.currency ?? 'eur',
@@ -231,6 +232,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       console.error('[MLM] Erro no registo novo (pending_registration):', mlmErr)
     }
 
+    // Guardado fora do `try` porque a venda que se registra a seguir precisa dele, e um
+    // provisionamento que falhou não pode levar a venda com ele.
+    let compradorProvisionado: string | null = null
+
     try {
       const { provisionStripeRegistrationFromSession } = await import(
         '@/lib/stripe-complete-registration'
@@ -239,6 +244,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         sendSetPasswordEmail: true,
       })
       if (provision.ok) {
+        compradorProvisionado = provision.userId ?? null
         console.log(
           `✅ [STRIPE-WEBHOOK] Conta provisionada server-side: ${provision.userId} (session ${session.id})`
         )
@@ -251,6 +257,25 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     } catch (provisionErr) {
       console.error('[STRIPE-WEBHOOK] Erro ao provisionar registo pós-pagamento:', provisionErr)
     }
+
+    // A VENDA, para o livro da equipa. Este caminho — registar e pagar no MESMO checkout — saía
+    // daqui com um `return` sem nunca a registar, e é o caminho principal de aquisição: quem a
+    // equipa traz de fora não tem conta antes de pagar. Era o buraco maior, porque perdia
+    // exactamente as vendas novas, as que pagam os 35 % do primeiro pagamento.
+    //
+    // O email vai sempre, com ou sem conta provisionada: é por ele que o negócio do lead que o
+    // setter trabalhou antes do registo é encontrado. Se o provisionamento falhou, a venda fica
+    // registada sem comprador — visível em `vendas_sem_atribuicao` — em vez de desaparecer.
+    await registarVendaDaEquipa({
+      referencia: session.id,
+      compradorId: compradorProvisionado,
+      emailComprador: session.customer_details?.email ?? session.metadata?.email ?? null,
+      pack: session.metadata?.plan || 'app_member_monthly',
+      valorCents: session.amount_total ?? 0,
+      moeda: session.currency ?? 'eur',
+      tipo: 'primeira',
+      nota: compradorProvisionado ? undefined : 'Registo pago sem conta provisionada — comprador por ligar.',
+    })
     return
   }
 
@@ -474,6 +499,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   await registarVendaDaEquipa({
     referencia: session.id,
     compradorId: userId,
+    emailComprador: session.customer_details?.email ?? null,
     pack: planId,
     valorCents: session.amount_total ?? 0,
     moeda: session.currency ?? 'eur',
@@ -831,6 +857,8 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 async function registarVendaDaEquipa(params: {
   referencia: string
   compradorId: string | null
+  /** O email do checkout. Chega ao livro porque pode ser a única identidade que existe. */
+  emailComprador?: string | null
   pack: string | null
   valorCents: number
   moeda: string
@@ -843,6 +871,7 @@ async function registarVendaDaEquipa(params: {
       fonte: 'stripe',
       referencia: params.referencia,
       compradorId: params.compradorId,
+      emailComprador: params.emailComprador ?? null,
       pack: params.pack,
       valorCents: params.valorCents,
       moeda: params.moeda,

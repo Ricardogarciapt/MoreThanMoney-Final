@@ -18,6 +18,7 @@ import {
   type PapelVendas,
   type ResultadoCalculo,
 } from './calculo'
+import { resolverNegocioDoComprador } from './atribuicao-leitura'
 import { carregarRegras, carregarRegrasRank, planosDasPessoas } from './regras'
 
 export type FonteVenda = 'stripe' | 'apple' | 'manual'
@@ -62,6 +63,14 @@ export type VendaConfirmada = {
   pagoEm?: string
   /** Negócio explícito. Se não vier, procura-se o do comprador. */
   negocioId?: string | null
+  /**
+   * O email com que se pagou, quando é conhecido.
+   *
+   * Existe porque o email do checkout e o email da conta do site não são sempre o mesmo, e porque
+   * num registo-e-pagamento no mesmo checkout o perfil ainda pode não existir quando isto corre. É
+   * por este email que o negócio de um lead trabalhado antes do registo é encontrado.
+   */
+  emailComprador?: string | null
   nota?: string | null
 }
 
@@ -85,38 +94,29 @@ const COLUNA_DO_PAPEL: Record<PapelVendas, string> = {
   afiliado: 'afiliado_id',
 }
 
-const COLUNAS_NEGOCIO = ['id', 'estado', ...Object.values(COLUNA_DO_PAPEL)].join(', ')
-
 /**
  * O negócio a que esta venda pertence.
  *
- * Procura-se pelo comprador e escolhe-se o mais recente que não está perdido. Sem negócio não há
- * atribuição, e sem atribuição não há comissões de equipa — o que é o comportamento certo: uma
- * compra que entrou pelo site sem ninguém a trabalhar não deve pagar a ninguém (e nesse caso é o
- * MLM binário que paga, ver `lib/vendas/exclusividade.ts`).
+ * A procura é de `lib/vendas/atribuicao-leitura.ts`, e é lá que está escrito porquê: procurar só
+ * por `comprador_id` — o que isto fazia até 26/09 — não encontrava nada, porque essa coluna estava
+ * vazia em todos os negócios da base. Passa a valer também o id do perfil na chave de origem e o
+ * email, e a ligação descoberta fica gravada.
+ *
+ * Sem negócio não há atribuição, e sem atribuição não há comissões de equipa — o que continua a
+ * ser o comportamento certo: uma compra que entrou pelo site sem ninguém a trabalhar não deve
+ * pagar a ninguém (e nesse caso é o MLM binário que paga, ver `lib/vendas/exclusividade.ts`).
  */
 async function encontrarNegocio(
   supabase: SupabaseClient,
   venda: VendaConfirmada,
-): Promise<Record<string, unknown> | null> {
-  if (venda.negocioId) {
-    const { data } = await supabase.from('vendas_negocios').select(COLUNAS_NEGOCIO).eq('id', venda.negocioId).maybeSingle()
-    if (data) return data as unknown as Record<string, unknown>
-  }
-
-  if (venda.compradorId) {
-    const { data } = await supabase
-      .from('vendas_negocios')
-      .select(COLUNAS_NEGOCIO)
-      .eq('comprador_id', venda.compradorId)
-      .neq('estado', 'perdido')
-      .order('atualizado_em', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (data) return data as unknown as Record<string, unknown>
-  }
-
-  return null
+): Promise<{ negocio: Record<string, unknown> | null; motivo: string; ambiguo: boolean }> {
+  const r = await resolverNegocioDoComprador(supabase, {
+    compradorId: venda.compradorId ?? null,
+    email: venda.emailComprador ?? null,
+    negocioIdExplicito: venda.negocioId ?? null,
+    colunasExtra: Object.values(COLUNA_DO_PAPEL),
+  })
+  return { negocio: r.negocio, motivo: r.motivo, ambiguo: r.ambiguo }
 }
 
 function atribuicaoDoNegocio(negocio: Record<string, unknown>): Atribuicao {
@@ -232,7 +232,7 @@ export async function registarVendaConfirmada(
     }
   }
 
-  const negocio = await encontrarNegocio(supabase, venda)
+  const { negocio, motivo: motivoDaProcura, ambiguo } = await encontrarNegocio(supabase, venda)
 
   const { data: criada, error: erroVenda } = await supabase
     .from('vendas_vendas')
@@ -276,6 +276,10 @@ export async function registarVendaConfirmada(
   const vendaId = String(criada.id)
 
   if (!negocio) {
+    // A venda fica registada de qualquer maneira: é ela que faz esta falta aparecer no admin em
+    // vez de desaparecer num log. O `ambiguo` distingue os dois casos que pedem acções diferentes —
+    // «ninguém a trabalhou» (o binário paga, está tudo bem) de «há mais do que um candidato» (é
+    // preciso uma pessoa decidir, e há dinheiro à espera).
     return {
       vendaId,
       repetida: false,
@@ -283,7 +287,9 @@ export async function registarVendaConfirmada(
       criadas: 0,
       totalCents: 0,
       resultado: null,
-      aviso: 'Venda sem negócio associado: não há atribuição, logo não há comissões de equipa (o MLM binário segue o seu caminho).',
+      aviso: ambiguo
+        ? `Venda por atribuir — ${motivoDaProcura}`
+        : `Venda sem negócio associado: não há atribuição, logo não há comissões de equipa (o MLM binário segue o seu caminho). ${motivoDaProcura}`,
     }
   }
 

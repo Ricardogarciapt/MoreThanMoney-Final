@@ -56,6 +56,15 @@ interface Candidato {
   origem: string
   estado: EstadoPipeline
   nota: string
+  /**
+   * Quem é esta pessoa no site, quando já se sabe.
+   *
+   * Isto não é decoração: é a coluna por onde o livro das comissões liga um pagamento ao negócio
+   * (`lib/vendas/atribuicao.ts`). Ficou vazia nos primeiros 97 negócios, e o resultado foi que
+   * nenhum pagamento encontrava a equipa que o tinha trabalhado. Quem cria o lead a partir de um
+   * perfil tem o id na mão — escreve-o.
+   */
+  comprador_id?: string | null
 }
 
 /**
@@ -271,6 +280,7 @@ async function daBase(db: SupabaseClient): Promise<Ingerido> {
     if (!email || ehEmailDeMentira(email)) continue
     candidatos.push({
       chave_origem: `perfil:${String(p.id)}`,
+      comprador_id: String(p.id),
       nome: nomeUtil(p.full_name as string, email),
       email,
       telefone: null,

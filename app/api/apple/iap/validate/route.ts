@@ -215,6 +215,34 @@ export async function POST(req: NextRequest) {
       console.error('[APPLE-IAP] Erro MLM signup:', mlmErr)
     }
 
+    // A VENDA, para o livro da equipa. O MLM acima já era chamado daqui; o livro não era — e por
+    // isso uma compra na app nunca pagava a quem a trabalhou. A referência é o `transactionId`, a
+    // mesma que `/api/apple/iap/webhook` usa: quem chegar primeiro registra, o segundo não duplica.
+    //
+    // A assinatura da transacção já foi verificada acima contra a raiz da Apple — é isso que faz
+    // deste sítio um lugar legítimo para criar dinheiro a pagar. Não se acrescenta o mesmo em
+    // `/api/subscriptions/apple-server-notifications` de propósito: essa rota descodifica o JWS sem
+    // verificar a assinatura, e um payload forjado passaria a criar comissões.
+    try {
+      const { registarVendaConfirmada } = await import('@/lib/vendas/livro')
+      const ctx = appleMlmContext(productId, plan)
+      await registarVendaConfirmada(supabase, {
+        fonte: 'apple',
+        referencia: transactionId || originalTransactionId,
+        compradorId: resolvedUserId,
+        pack: ctx.planId,
+        valorCents: ctx.amountCents,
+        moeda: ctx.currency,
+        // Restaurar uma compra antiga não é uma venda nova: quando a subscrição já estava activa,
+        // isto é uma renovação (ou um restore), e o residual é que se aplica — não os 35 % do
+        // primeiro pagamento. O livro conta o número do pagamento e trata do resto.
+        tipo: existing?.subscription_status === 'active' ? 'renovacao' : 'primeira',
+        nota: `App Store — ${productId}`,
+      })
+    } catch (vendaErr) {
+      console.error('[VENDAS] não foi possível registar a venda da Apple no livro:', vendaErr)
+    }
+
     const wasAlreadyActive = existing?.subscription_status === 'active'
     if (!wasAlreadyActive) {
       const mlmCtx = appleMlmContext(productId, plan)

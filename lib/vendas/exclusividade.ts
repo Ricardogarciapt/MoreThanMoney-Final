@@ -24,6 +24,7 @@
  * um deploy.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { resolverNegocioDoComprador } from './atribuicao-leitura'
 import { PAPEIS_VENDAS, type PapelVendas } from './calculo'
 
 /** As colunas de atribuição do negócio, na ordem dos papéis. */
@@ -44,9 +45,11 @@ export type EquipaNaVenda = {
 /**
  * Há equipa atribuída a este comprador?
  *
- * Olha para o negócio mais recente do comprador que não esteja perdido. Basta UM papel preenchido
- * para a venda ser «de equipa» — se houve um setter a marcar a reunião, a venda não é do
- * patrocinador da árvore, mesmo que o closer tenha sido o próprio dono.
+ * A procura do negócio é a MESMA que o livro usa (`lib/vendas/atribuicao-leitura.ts`), e tem de o
+ * ser: quando as duas portas procuravam de maneiras diferentes, podiam responder diferente sobre o
+ * mesmo pagamento — e aí ou pagava duas vezes (papéis + binário) ou não pagava a ninguém. Basta UM
+ * papel preenchido para a venda ser «de equipa»: se houve um setter a marcar a reunião, a venda não
+ * é do patrocinador da árvore, mesmo que o closer tenha sido o próprio dono.
  */
 export async function equipaAtribuidaAoComprador(
   supabase: SupabaseClient,
@@ -55,21 +58,21 @@ export async function equipaAtribuidaAoComprador(
   const vazio: EquipaNaVenda = { atribuida: false, negocioId: null, papeis: [] }
   if (!compradorId) return vazio
 
-  const colunas = ['id', ...Object.values(COLUNA_DO_PAPEL)].join(', ')
-  const { data, error } = await supabase
-    .from('vendas_negocios')
-    .select(colunas)
-    .eq('comprador_id', compradorId)
-    .neq('estado', 'perdido')
-    .order('atualizado_em', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  let resolvido: Awaited<ReturnType<typeof resolverNegocioDoComprador>>
+  try {
+    resolvido = await resolverNegocioDoComprador(supabase, {
+      compradorId,
+      colunasExtra: Object.values(COLUNA_DO_PAPEL),
+    })
+  } catch {
+    // Sem tabela (migração ainda não aplicada), ou com erro: o binário paga, como sempre pagou. Ver
+    // o comentário do topo — na dúvida preserva-se o que está prometido.
+    return vazio
+  }
 
-  // Sem tabela (migração ainda não aplicada), sem negócio, ou com erro: o binário paga, como
-  // sempre pagou. Ver o comentário do topo — na dúvida preserva-se o que está prometido.
-  if (error || !data) return vazio
+  if (!resolvido.negocio) return vazio
 
-  const linha = data as unknown as Record<string, unknown>
+  const linha = resolvido.negocio
   const papeis = PAPEIS_VENDAS.filter((papel) => {
     const valor = linha[COLUNA_DO_PAPEL[papel]]
     return typeof valor === 'string' && valor.length > 0
