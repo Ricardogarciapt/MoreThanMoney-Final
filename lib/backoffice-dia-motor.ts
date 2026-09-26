@@ -303,6 +303,16 @@ export interface OpcoesDoDia {
   avisar?: (chatId: string, texto: string) => Promise<void>
   /** Salta a redacção dos rascunhos. Serve para contar o trabalho sem gastar chamadas ao modelo. */
   semRascunhos?: boolean
+  /**
+   * Corre mesmo ao fim-de-semana.
+   *
+   * A regra de não preparar o dia ao sábado existe para o motor não DESPEJAR trabalho sozinho
+   * quando ninguém o pediu — na segunda-feira a pessoa abriria três dias acumulados e fechava o
+   * separador. Uma execução à mão, pedida por alguém que está a olhar, não é isso. Continua a ser
+   * preciso pedi-la de propósito, e é por isso que esta opção existe em vez de a regra
+   * simplesmente não existir.
+   */
+  aindaQueFimDeSemana?: boolean
   agora?: Date
 }
 
@@ -327,8 +337,8 @@ export async function correrDia(
     avisos,
   }
 
-  // Ao fim-de-semana não se prepara o dia de ninguém. Ver `ehDiaUtil`.
-  if (!ehDiaUtil(dia)) return { ...base, saltouPorSerFimDeSemana: true }
+  // Ao fim-de-semana não se prepara o dia de ninguém. Ver `ehDiaUtil` e `aindaQueFimDeSemana`.
+  if (!ehDiaUtil(dia) && !opcoes.aindaQueFimDeSemana) return { ...base, saltouPorSerFimDeSemana: true }
 
   // 1. INGERIR
   base.ingestao = opcoes.ensaio ? [] : await ingerirLeads(db)
@@ -511,6 +521,46 @@ export async function correrDia(
       .upsert(linhas, { onConflict: 'chave', ignoreDuplicates: true, count: 'exact' })
     if (error) avisos.push(`tarefas: ${error.message}`)
     else base.tarefasCriadas = count ?? linhas.length
+  }
+
+  /**
+   * QUEM RECEBE A TAREFA PASSA A SER O DONO DO NEGÓCIO.
+   *
+   * Sem isto, o motor atribuía a TAREFA a uma pessoa e deixava o NEGÓCIO sem dono — e o pipeline
+   * filtra por participação. Resultado medido hoje: 97 negócios, zero com vendedor, e um afiliado
+   * ou setter a abrir o backoffice e a ver uma lista vazia com «cria um negócio».
+   *
+   * E havia um impasse por cima disso: para alguém se pôr como setter num lead, o lead tem de lhe
+   * aparecer; e só aparece a quem já lá está. Um negócio sem dono não aparecia a ninguém, logo
+   * ninguém se podia atribuir a ele. Ficava invisível para sempre.
+   *
+   * A regra que resolve é a mais simples e a mais honesta: quem o motor escolheu para fazer o
+   * trabalho é quem fica responsável. Não se rouba nada a ninguém — só se escreve na coluna do
+   * papel quando ela está VAZIA (o `responsavelPor` já respeita quem lá está).
+   */
+  if (aEscrever.length) {
+    const porColuna = new Map<string, string[]>()
+    for (const p of aEscrever) {
+      const coluna = COLUNA_DO_PAPEL[p.papel]
+      if (!coluna) continue
+      const atual = (p.negocio as unknown as Record<string, string | null>)[coluna]
+      if (atual) continue // já tem dono: não se mexe
+      const chave = `${coluna}:${p.responsavel}`
+      const lista = porColuna.get(chave) ?? []
+      lista.push(p.negocio.id)
+      porColuna.set(chave, lista)
+    }
+    for (const [chave, ids] of porColuna) {
+      const corte = chave.indexOf(':')
+      const coluna = chave.slice(0, corte)
+      const pessoa = chave.slice(corte + 1)
+      const { error } = await db
+        .from('vendas_negocios')
+        .update({ [coluna]: pessoa })
+        .in('id', ids)
+        .is(coluna, null) // corrida: se alguém se atribuiu entretanto, é essa pessoa que vale
+      if (error) avisos.push(`atribuição ${coluna}: ${error.message}`)
+    }
   }
 
   // 3b. EXPANSÃO SOCIAL
