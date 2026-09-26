@@ -30,6 +30,13 @@ import { pode } from '@/lib/backoffice-papeis'
 import { COLUNAS_DE_PARTICIPACAO, ehUuid } from '@/lib/backoffice-negocios'
 import type { AtribuicoesDoNegocio } from '@/lib/backoffice-escrita'
 import {
+  COLUNA_DO_PAPEL_BOLSA,
+  estaSemDono,
+  papelParaPegar,
+  razaoParaNaoPegar,
+  type DonosDoNegocio,
+} from '@/lib/backoffice-bolsa'
+import {
   camposDaMudancaDeEstado,
   eventoDeAtribuicao,
   eventoDeEstado,
@@ -148,6 +155,57 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const negocio = (data ?? null) as NegocioParaEscrita | null
 
   if (erroLeitura) return NextResponse.json({ error: erroLeitura.message }, { status: 500 })
+
+  /**
+   * PEGAR NUM LEAD DA BOLSA.
+   *
+   * Vem ANTES do `podeMexerNoNegocio` de propósito: essa pergunta é «participas neste negócio?», e
+   * a resposta aqui é sempre não — é justamente por ninguém participar que o lead está na bolsa.
+   * Passar por ali dava 404 a toda a gente e o impasse mantinha-se: um lead sem dono não aparecia
+   * a ninguém, logo ninguém se podia atribuir a ele.
+   *
+   * O que substitui essa verificação:
+   *  · o negócio tem MESMO de estar sem dono (`estaSemDono`) — não se rouba trabalho a ninguém;
+   *  · a pessoa tem de ter o papel que o MOMENTO do lead pede (`papelParaPegar`), porque a coluna
+   *    onde se inscreve é a que manda nas comissões;
+   *  · a escrita leva `.is(coluna, null)`, para dois cliques ao mesmo tempo não darem dois donos.
+   */
+  if (negocio && body.accao === 'pegar') {
+    if (!estaSemDono(negocio as DonosDoNegocio)) {
+      return NextResponse.json({ error: 'Este lead já tem dono.' }, { status: 409 })
+    }
+    const papel = papelParaPegar(String(negocio.estado), ctx.papeis)
+    if (!papel) {
+      return NextResponse.json(
+        { error: razaoParaNaoPegar(String(negocio.estado), ctx.papeis) ?? 'Não podes pegar neste lead.' },
+        { status: 403 },
+      )
+    }
+    const coluna = COLUNA_DO_PAPEL_BOLSA[papel]
+    if (!coluna) return NextResponse.json({ error: 'Este papel não trabalha o pipeline.' }, { status: 403 })
+
+    const { data: ficou, error: erroPegar } = await supabase
+      .from('vendas_negocios')
+      .update({ [coluna]: ctx.userId, atualizado_em: new Date().toISOString() })
+      .eq('id', id)
+      .is(coluna, null)
+      .select('id')
+      .maybeSingle()
+
+    if (erroPegar) return NextResponse.json({ error: erroPegar.message }, { status: 500 })
+    // Sem linha devolvida, outra pessoa chegou primeiro entre a leitura e a escrita.
+    if (!ficou) return NextResponse.json({ error: 'Outra pessoa pegou neste lead primeiro.' }, { status: 409 })
+
+    await supabase.from('vendas_negocio_eventos').insert({
+      negocio_id: id,
+      de: String(negocio.estado),
+      para: String(negocio.estado),
+      por: ctx.userId,
+      nota: `Pegou no lead da bolsa como ${papel}.`,
+    })
+
+    return NextResponse.json({ ok: true, papel })
+  }
 
   // 404 e não 403 a quem não participa: responder «não podes» confirmava que o negócio existe, e
   // quem pergunta pelo id de um negócio alheio não tem nada a saber sobre ele.

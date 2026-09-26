@@ -19,6 +19,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AmbitoLeitura } from '@/lib/backoffice-papeis'
 import { fatiar, lerPagina, type Pagina } from '@/lib/backoffice-paginacao'
 import { ESTADOS_PIPELINE, type EstadoPipeline } from '@/lib/backoffice-vista'
+import { FILTRO_SEM_DONO } from '@/lib/backoffice-bolsa'
 
 /** As colunas de atribuição. É por estas cinco que se responde «participo neste negócio?». */
 export const COLUNAS_DE_PARTICIPACAO = [
@@ -47,11 +48,26 @@ export function ehUuid(v: unknown): v is string {
  * Devolve `null` quando não há nenhum id válido para filtrar — e `null` significa NÃO LER, nunca
  * «ler tudo». Um filtro vazio que o chamador ignorasse devolvia a casa inteira.
  */
-export function filtroDeParticipacao(ids: readonly string[]): string | null {
+export function filtroDeParticipacao(
+  ids: readonly string[],
+  opcoes: { incluirSemDono?: boolean } = {},
+): string | null {
   const limpos = [...new Set(ids.filter(ehUuid))]
   if (limpos.length === 0) return null
   const lista = limpos.join(',')
-  return COLUNAS_DE_PARTICIPACAO.map((c) => `${c}.in.(${lista})`).join(',')
+  const meus = COLUNAS_DE_PARTICIPACAO.map((c) => `${c}.in.(${lista})`)
+  /**
+   * A BOLSA entra DENTRO deste mesmo `or`, e nunca num `or` à parte.
+   *
+   * A razão está escrita em `negociosDoAmbito` e é séria: dois `or` no mesmo pedido juntam-se com
+   * E mas cada um perde o parêntesis do outro, e o filtro de segurança deixa de ser garantido. Um
+   * `and(...)` aninhado mantém tudo num só — ver `FILTRO_SEM_DONO`.
+   *
+   * O que isto abre, e só isto: negócios em que NINGUÉM está inscrito. Um negócio que já tem dono
+   * continua invisível a quem não participa nele.
+   */
+  if (opcoes.incluirSemDono) meus.push(FILTRO_SEM_DONO)
+  return meus.join(',')
 }
 
 export interface NegocioLinha {
@@ -93,6 +109,14 @@ export interface Listagem<T> {
 
 /** Os filtros que o pipeline aceita do endereço. O que não vier fica de fora da consulta. */
 export interface FiltrosNegocios {
+  /**
+   * Mostrar também os negócios em que ninguém está inscrito — a BOLSA DE LEADS.
+   *
+   * Decisão do dono a 26/09, depois de se medir que havia 97 negócios e ZERO com vendedor: quem
+   * não tem dono fica à vista de quem trabalha o pipeline, e quem quiser pega. Sem isto havia um
+   * impasse — um lead sem dono não aparecia a ninguém, logo ninguém se podia atribuir a ele.
+   */
+  incluirSemDono?: boolean
   estado?: EstadoPipeline | null
   /** Procura no nome do contacto. Já limpa por `lerProcura` — nunca texto cru do endereço. */
   procura?: string | null
@@ -109,7 +133,9 @@ export async function negociosDoAmbito(
   // O filtro resolve-se ANTES de se tocar na base: quem não tem âmbito não faz pergunta nenhuma.
   // Montar a consulta primeiro e só depois decidir deixava um caminho em que a consulta existe sem
   // filtro — e esse caminho, um dia, é executado.
-  const filtro = ambito.todos ? null : filtroDeParticipacao(ambito.ids)
+  const filtro = ambito.todos
+    ? null
+    : filtroDeParticipacao(ambito.ids, { incluirSemDono: filtros.incluirSemDono })
   if (!ambito.todos && !filtro) return { linhas: [], pagina, haMais: false }
 
   let query = supabase

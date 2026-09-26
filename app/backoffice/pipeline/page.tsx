@@ -41,6 +41,8 @@ import { Mover } from './mover'
 import { Trabalhar } from './trabalhar'
 import { Historico } from './historico'
 import { lerFoco, situacaoDoFoco } from './foco'
+import { estaSemDono } from '@/lib/backoffice-bolsa'
+import { Pegar } from './pegar'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Pipeline · Backoffice MTM' }
@@ -76,7 +78,20 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
   let negocios: NegocioLinha[]
   let haMais = false
   try {
-    const lista = await negociosDoAmbito(getSupabaseAdmin(), ambito, { estado: estadoFiltro, procura, pagina })
+    /**
+     * A BOLSA DE LEADS entra na mesma lista.
+     *
+     * Decisão do dono a 26/09, depois de se medir 97 negócios e ZERO com vendedor: quem não tem
+     * dono fica à vista de quem trabalha o pipeline. Sem isto havia um impasse — um lead sem dono
+     * não aparecia a ninguém, logo ninguém se podia atribuir a ele, e ficava invisível para
+     * sempre. Um negócio que JÁ tem dono continua invisível a quem não participa nele.
+     */
+    const lista = await negociosDoAmbito(getSupabaseAdmin(), ambito, {
+      estado: estadoFiltro,
+      procura,
+      pagina,
+      incluirSemDono: true,
+    })
     negocios = lista.linhas
     haMais = lista.haMais
   } catch (e) {
@@ -271,6 +286,18 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                         )}
                         {n.nota && <p className="mt-2 text-xs leading-relaxed text-gray-400">{n.nota}</p>}
                         {parado && <p className="mt-2 text-xs font-medium text-amber-400/90">{parado}</p>}
+                        {/* Um lead da bolsa não se move nem se trabalha antes de ter dono: primeiro
+                            pega-se. Mostrar «Mover» num negócio que não é de ninguém convidava a
+                            uma escrita que o servidor recusa, e a recusa parece avaria. */}
+                        {estaSemDono(n) ? (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-xs text-gray-500">
+                              Este lead não é de ninguém. Pega nele e passa a ser teu.
+                            </p>
+                            <Pegar id={n.id} nome={n.nome} />
+                          </div>
+                        ) : (
+                          <>
                         {/* Mover é um acto com autor: o evento que fica na base diz quem o fez. */}
                         <Mover id={n.id} estado={estado} nome={n.nome} />
                         {/* Os lugares que esta pessoa pode ocupar sozinha: vagos E de um papel que
@@ -285,6 +312,8 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                         {/* «Quem é que moveu isto», respondido pela base e não pela memória de duas
                             pessoas. Lê-se só quando se abre — ver `historico.tsx`. */}
                         <Historico id={n.id} />
+                          </>
+                        )}
                       </div>
                     )
                   })}
