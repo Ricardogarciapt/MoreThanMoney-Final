@@ -19,23 +19,57 @@ const teste = (nome: string, ok: boolean) => {
   if (!ok) falhas.push(nome)
 }
 
-/** Base falsa: devolve o negócio que lhe dermos (ou um erro), pela cadeia que a função usa. */
+/**
+ * Base falsa: devolve o negócio que lhe dermos (ou um erro), pela cadeia que a função usa.
+ *
+ * A cadeia é AGUARDÁVEL (`then`) e também responde a `maybeSingle`, porque a procura do negócio
+ * passou a ser a de `lib/vendas/atribuicao-leitura.ts`: lista de candidatos (aguardada directamente)
+ * mais uma leitura da linha escolhida. Um erro atirado é o que simula a base em baixo — e o que
+ * prova que nesse caso continua a pagar o binário.
+ */
 function dbFalso(resposta: { data?: Record<string, unknown> | null; error?: unknown }) {
+  const linhas = resposta.data ? [resposta.data] : []
   const cadeia: Record<string, unknown> = {}
   const devolve = () => cadeia
+  const resolver = () => {
+    if (resposta.error) throw resposta.error
+    return { data: linhas, error: null }
+  }
   Object.assign(cadeia, {
     select: devolve,
+    update: devolve,
     eq: devolve,
     neq: devolve,
+    is: devolve,
+    ilike: devolve,
     order: devolve,
     limit: devolve,
-    maybeSingle: async () => ({ data: resposta.data ?? null, error: resposta.error ?? null }),
+    maybeSingle: async () => {
+      if (resposta.error) throw resposta.error
+      return { data: resposta.data ?? null, error: null }
+    },
+    then: (ok: (v: unknown) => unknown, falha?: (e: unknown) => unknown) => {
+      try {
+        return Promise.resolve(resolver()).then(ok)
+      } catch (e) {
+        return falha ? Promise.resolve(falha(e)) : Promise.reject(e)
+      }
+    },
   })
   return { from: () => cadeia } as never
 }
 
+/**
+ * O negócio de teste traz `comprador_id` preenchido: é o caminho mais forte da atribuição, e o que
+ * a exclusividade usava antes de existirem os outros dois (chave de origem e email).
+ */
 const negocio = (extra: Record<string, unknown>) => ({
   id: 'n-1',
+  estado: 'qualificado',
+  comprador_id: 'comprador',
+  email: null,
+  chave_origem: null,
+  atualizado_em: '2026-09-26T00:00:00Z',
   prospector_id: null,
   setter_id: null,
   closer_id: null,
@@ -60,7 +94,7 @@ async function correr() {
   teste('negócio sem ninguém atribuído não é venda de equipa', !(await vendaPagaPelaEquipa(dbFalso({ data: negocio({}) }), 'comprador')))
   teste('sem negócio nenhum, paga o binário', !(await vendaPagaPelaEquipa(dbFalso({ data: null }), 'comprador')))
   teste('sem comprador identificado, paga o binário', !(await vendaPagaPelaEquipa(dbFalso({ data: null }), null)))
-  teste('coluna vazia (string vazia) não conta como atribuição', !(await vendaPagaPelaEquipa(dbFalso({ data: negocio({ closer_id: '' }) }), 'c')))
+  teste('coluna vazia (string vazia) não conta como atribuição', !(await vendaPagaPelaEquipa(dbFalso({ data: negocio({ closer_id: '', comprador_id: 'c' }) }), 'c')))
 
   // ── NA DÚVIDA, PAGA-SE O BINÁRIO. ──
   // Suprimir a comissão de alguém por causa de um erro de leitura nosso é tirar-lhe dinheiro por

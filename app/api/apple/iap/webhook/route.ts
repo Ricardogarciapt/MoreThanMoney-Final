@@ -8,6 +8,7 @@ import {
   processMlmSubscriptionSignup,
 } from '@/lib/mlm-subscription-integration'
 import { sendNewMemberWelcomeIfEligible } from '@/lib/new-member-welcome'
+import { estornarVenda, registarVendaConfirmada } from '@/lib/vendas/livro'
 
 const supabase = getSupabaseAdmin()
 
@@ -164,6 +165,48 @@ export async function POST(req: NextRequest) {
         }
       } catch (mlmErr) {
         console.error('[APPLE-WEBHOOK] MLM error:', mlmErr)
+      }
+
+      // A VENDA, para o livro da equipa. Estava a faltar: até 26/09 nenhum dos caminhos da Apple
+      // escrevia em `vendas_vendas`, e por isso uma compra feita na app nunca pagava comissão a
+      // quem a trabalhou — só o binário. Quem vende pela app é a mesma equipa que vende pelo site.
+      //
+      // A referência é o `transactionId` (não o `original`): cada renovação traz o seu, e é ele que
+      // faz de chave de deduplicação. O mesmo id chega por aqui e por `/api/apple/iap/validate`
+      // quando a app confirma a compra — a idempotência do livro é que garante que só conta uma vez.
+      try {
+        const ctx = appleMlmContext(productId)
+        await registarVendaConfirmada(supabase, {
+          fonte: 'apple',
+          referencia: transactionId,
+          compradorId: userId,
+          pack: ctx.planId,
+          valorCents: ctx.amountCents,
+          moeda: ctx.currency,
+          tipo: isRenewal ? 'renovacao' : 'primeira',
+          pagoEm: typeof tx.purchaseDate === 'number' ? new Date(tx.purchaseDate).toISOString() : undefined,
+          nota: `App Store — ${productId}`,
+        })
+      } catch (vendaErr) {
+        // O acesso já foi dado e o dinheiro já entrou: um erro no livro não pode fazer a Apple
+        // repetir a notificação. Fica no log e relança-se à mão no admin (a referência é única).
+        console.error('[VENDAS] não foi possível registar a venda da Apple no livro:', vendaErr)
+      }
+    }
+
+    // Devolução do lado da Apple → reverter o que ela pagou, como já se faz no Stripe. Sem isto, um
+    // reembolso deixava a comissão em pé e a equipa ficava paga por dinheiro que voltou para trás.
+    if (notificationType === 'REFUND' || notificationType === 'REVOKE') {
+      try {
+        const r = await estornarVenda(supabase, {
+          fonte: 'apple',
+          referencias: [transactionId, originalTxId].filter(Boolean),
+          motivo: `Apple ${notificationType}`,
+          cents: null,
+        })
+        console.log('[VENDAS] devolução da Apple processada', { transactionId, ...r })
+      } catch (estornoErr) {
+        console.error('[VENDAS] não foi possível reverter a venda da Apple:', estornoErr)
       }
     }
 
