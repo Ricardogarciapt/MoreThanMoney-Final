@@ -37,6 +37,23 @@ interface Degrau { nome: string; n: number; fonte: string; passou: number | null
 interface Automacao { nome: string; canal: string; ativa: boolean; disparos: number; ultimo_disparo: string | null }
 interface Prospeto { id: string; hashtag: string; permalink: string | null; legenda: string; pontuacao: number; porque: string }
 
+/** Um rascunho do setter: a mensagem escrita e AINDA NÃO enviada. */
+interface Rascunho {
+  comment_id: string
+  commenter: string | null
+  comment_text: string | null
+  texto_publico: string | null
+  texto_dm: string | null
+  /** `false` quando a janela dos 7 dias da Meta já fechou — e aí o rascunho só tem a parte pública. */
+  dm_possivel: boolean
+  dm_motivo: string | null
+  estado: string
+  erro: string | null
+  criado_em: string
+}
+interface SetterChaves { redigir: boolean; enviar_publica: boolean; enviar_dm: boolean }
+interface SetterStats { rascunhos: number; enviados: number; encerrados: number; semDm: number; pessoas: number }
+
 interface Stats {
   totalLeads: number
   dmsSent: number
@@ -84,6 +101,9 @@ export default function SocialLeadsPage() {
   const [escada, setEscada] = useState<Degrau[]>([])
   const [automacoes, setAutomacoes] = useState<Automacao[]>([])
   const [radar, setRadar] = useState<Prospeto[]>([])
+  const [setter, setSetter] = useState<Rascunho[]>([])
+  const [setterChaves, setSetterChaves] = useState<SetterChaves | null>(null)
+  const [setterStats, setSetterStats] = useState<SetterStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<"leads" | "engage" | "telegram">("leads")
 
@@ -99,6 +119,9 @@ export default function SocialLeadsPage() {
       setEscada(j.escada || [])
       setAutomacoes(j.automacoes || [])
       setRadar(j.radar || [])
+      setSetter(j.setter || [])
+      setSetterChaves(j.setterChaves || null)
+      setSetterStats(j.setterStats || null)
     } finally {
       setLoading(false)
     }
@@ -187,6 +210,88 @@ export default function SocialLeadsPage() {
               </span>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ── A BANCADA DO SETTER ───────────────────────────────────────────────────────────────
+          O que SAIRIA se o interruptor estivesse ligado. Existe porque a Meta dá UMA private
+          reply por comentário: uma mensagem mal enviada não tem segunda tentativa, o comentário
+          fica queimado. Ler antes de ligar custa minutos; o contrário não se desfaz. */}
+      {setterChaves && (
+        <div className="mb-6 rounded-xl border p-4">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold">Setter da persona · rascunhos</h2>
+            <div className="flex flex-wrap gap-1.5">
+              {([
+                ["redigir", "redige rascunhos"],
+                ["enviar_publica", "envia resposta pública"],
+                ["enviar_dm", "envia DM"],
+              ] as const).map(([k, rotulo]) => (
+                <span
+                  key={k}
+                  className={`rounded-full px-2.5 py-1 text-[11.5px] ${
+                    setterChaves[k] ? "bg-emerald-950 text-emerald-300" : "bg-neutral-100 text-neutral-400"
+                  }`}
+                >
+                  {setterChaves[k] ? "" : "⛔ "}{rotulo}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {!setterChaves.redigir ? (
+            <p className="rounded-lg bg-neutral-100 px-3 py-2 text-[12px] text-neutral-500">
+              Desligado. Liga-se em <code>site_settings</code> → <code>ig_setter_persona</code>,
+              um andar de cada vez: primeiro <b>redigir</b> (escreve e não envia, para ler o que
+              sairia), só depois os envios.
+            </p>
+          ) : setter.length === 0 ? (
+            <p className="text-[12px] text-neutral-400">
+              Ligado, sem rascunhos ainda. O setter só pega nos comentários que o funil por
+              palavra-chave não reclamou.
+            </p>
+          ) : (
+            <>
+              <div className="mb-3 flex flex-wrap gap-3 text-[12px] text-neutral-400">
+                <span><b className="text-neutral-100">{setterStats?.pessoas ?? 0}</b> pessoas</span>
+                <span><b className="text-neutral-100">{setterStats?.rascunhos ?? 0}</b> por decidir</span>
+                <span><b className="text-neutral-100">{setterStats?.enviados ?? 0}</b> enviados</span>
+                <span><b className="text-neutral-100">{setterStats?.encerrados ?? 0}</b> encerrados (disseram não)</span>
+                {/* Um rascunho sem DM já não tem a única mensagem que a Meta dava. */}
+                {(setterStats?.semDm ?? 0) > 0 && (
+                  <span className="text-amber-400"><b>{setterStats?.semDm}</b> já sem DM possível</span>
+                )}
+              </div>
+              <div className="space-y-2">
+                {setter.slice(0, 15).map((s) => (
+                  <div key={s.comment_id} className="rounded-lg border p-2.5">
+                    <div className="mb-1 flex flex-wrap items-center gap-2 text-[11.5px]">
+                      <span className="font-semibold text-neutral-100">@{s.commenter ?? "?"}</span>
+                      <span className="rounded bg-neutral-100 px-1.5 text-neutral-500">{s.estado}</span>
+                      {s.dm_possivel ? (
+                        <span className="rounded bg-emerald-950 px-1.5 text-emerald-300">DM possível</span>
+                      ) : (
+                        <span className="rounded bg-amber-950 px-1.5 text-amber-300">sem DM: {s.dm_motivo ?? "?"}</span>
+                      )}
+                      <span className="text-neutral-500">{s.criado_em ? fmt(s.criado_em) : ""}</span>
+                    </div>
+                    <p className="text-[12px] italic text-neutral-400">“{s.comment_text}”</p>
+                    {s.texto_publico && (
+                      <p className="mt-1.5 text-[12.5px] text-neutral-200">
+                        <span className="text-neutral-500">público → </span>{s.texto_publico}
+                      </p>
+                    )}
+                    {s.texto_dm && (
+                      <p className="mt-1 whitespace-pre-line text-[12.5px] text-neutral-200">
+                        <span className="text-neutral-500">DM → </span>{s.texto_dm}
+                      </p>
+                    )}
+                    {s.erro && <p className="mt-1 text-[11.5px] text-red-400">{s.erro}</p>}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
