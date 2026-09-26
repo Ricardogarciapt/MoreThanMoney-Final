@@ -1,3 +1,8 @@
+-- NOTA DE NUMERAÇÃO (26/09): escrita e aplicada em produção como `142_`, ao mesmo tempo que o
+-- ficheiro da ligação do Telegram tomava esse número no repositório. O Supabase regista pela
+-- DATA e não pelo número, por isso em produção não houve colisão — mas dois ficheiros `142_` no
+-- repositório deixavam a ordem de uma base NOVA à mercê da ordem alfabética. Renumerada para 143.
+
 -- ─────────────────────────────────────────────────────────────────────────────────────────────────
 -- CAPTAÇÃO — guardar o que permite trabalhar a pessoa, e guardar QUEM PEDIU para ser contactado.
 --
