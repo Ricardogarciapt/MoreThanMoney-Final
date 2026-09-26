@@ -65,6 +65,44 @@ interface Candidato {
    * perfil tem o id na mão — escreve-o.
    */
   comprador_id?: string | null
+
+  /**
+   * O QUE SE PERDIA AQUI, E PORQUE É QUE ISTO NÃO É DECORAÇÃO.
+   *
+   * A 26/09, com a migração 142 ainda por aplicar, a ingestão descartava tudo isto e enterrava o
+   * resto em prosa dentro da `nota`. O resultado é um pipeline onde não se consegue responder à
+   * pergunta mais básica de uma campanha: «a quem é que isto interessa, e em que língua?». Uma
+   * coisa escrita na nota não se segmenta — e sem segmentar não há campanha, há um envio para todos.
+   *
+   * Concretamente, o que estava a ser deitado fora:
+   *   · 59 perfis sabem o idioma, e 48 o país — o pipeline escrevia a todos em português.
+   *   · 5 perfis têm telefone e a linha do negócio guardava `telefone: null`.
+   *   · o `interesse` do bot e a palavra comentada no Instagram — o campo que separa quem quer
+   *     copytrading de quem quer aprender, dois discursos diferentes a receber o mesmo email.
+   *   · o `broker_uid` do bot: já abriu conta na corretora. É o sinal mais quente desta casa, e ia
+   *     directo para o lixo à entrada do pipeline.
+   *   · o handle do Instagram, que nestas pessoas é o ÚNICO contacto que existe e vivia escondido
+   *     dentro da chave de deduplicação.
+   *
+   * Nada disto é inventado: é o que a fonte dá. Onde a fonte não dá, fica nulo — um país adivinhado
+   * pelo prefixo do telefone seria pior do que campo vazio, porque parece um dado.
+   */
+  idioma?: string | null
+  pais?: string | null
+  interesse?: string | null
+  instagram_handle?: string | null
+  telegram_username?: string | null
+  broker_uid?: string | null
+  etiquetas?: string[] | null
+}
+
+/** O que a fonte deu, ou nulo. Nunca string vazia: uma coluna com '' finge que há dado onde não há. */
+function ouNulo(...tentativas: Array<string | null | undefined>): string | null {
+  for (const t of tentativas) {
+    const s = (t ?? '').toString().trim()
+    if (s) return s.slice(0, 200)
+  }
+  return null
 }
 
 /**
@@ -154,7 +192,7 @@ async function ingerir(
 async function doTelegram(db: SupabaseClient): Promise<Ingerido> {
   const { data } = await db
     .from('telegram_leads')
-    .select('chat_id, username, first_name, stage, interesse, interest, source, updated_at')
+    .select('chat_id, username, first_name, stage, interesse, interest, source, updated_at, lang, tags, broker_uid, email, telefone')
     .order('updated_at', { ascending: false })
     .limit(200)
 
@@ -167,9 +205,18 @@ async function doTelegram(db: SupabaseClient): Promise<Ingerido> {
     candidatos.push({
       chave_origem: `telegram:${String(l.chat_id)}`,
       nome: nomeUtil(l.first_name as string, l.username as string, `Telegram ${String(l.chat_id)}`),
-      email: null,
-      telefone: null,
+      // Colunas novas (migração 142): até aqui o funil do bot não tinha onde aterrar um email, e
+      // quatro dos seis leads existiam apenas como um número de conversa.
+      email: ouNulo(l.email as string),
+      telefone: ouNulo(l.telefone as string),
       telegram_id: String(l.chat_id),
+      telegram_username: ouNulo(l.username as string),
+      idioma: ouNulo(l.lang as string),
+      interesse: ouNulo(l.interesse as string, l.interest as string),
+      // Já abriu conta. Quem tem isto não é um lead frio — e a nota dizia-o em prosa, onde nenhuma
+      // segmentação o encontrava.
+      broker_uid: ouNulo(l.broker_uid as string),
+      etiquetas: Array.isArray(l.tags) ? (l.tags as string[]) : null,
       origem: 'telegram',
       estado,
       nota: `Veio do Telegram (${nomeUtil(l.source as string, 'bot')}). Interesse: ${interesse}.`,
@@ -188,7 +235,7 @@ async function doInstagram(db: SupabaseClient): Promise<Ingerido> {
       .limit(200),
     db
       .from('mtm_leads')
-      .select('id, instagram_handle, full_name, email, score, stage, source, last_interaction')
+      .select('id, instagram_handle, full_name, email, score, stage, source, last_interaction, country')
       .order('last_interaction', { ascending: false })
       .limit(200),
   ])
@@ -228,6 +275,12 @@ async function doInstagram(db: SupabaseClient): Promise<Ingerido> {
       email: null,
       telefone: null,
       telegram_id: null,
+      // O handle é o ÚNICO contacto que existe destas pessoas. Tê-lo só dentro da chave de
+      // deduplicação era tê-lo escondido de quem tem de lhes escrever.
+      instagram_handle: acc.quem,
+      // A palavra que a pessoa comentou é o que ela declarou querer. «Premium» e «DESAFIO» não são
+      // a mesma conversa.
+      interesse: ouNulo(acc.palavras[0]),
       origem: 'instagram',
       estado: 'lead',
       nota:
@@ -245,6 +298,8 @@ async function doInstagram(db: SupabaseClient): Promise<Ingerido> {
       email: (l.email as string) || null,
       telefone: null,
       telegram_id: null,
+      instagram_handle: ouNulo(l.instagram_handle as string),
+      pais: ouNulo(l.country as string),
       origem: 'instagram',
       // `warm` e acima já falaram connosco: entram como contactados para não repetir a abordagem.
       estado: ['warm', 'hot', 'qualified'].includes(String(l.stage ?? '').toLowerCase()) ? 'contactado' : 'lead',
@@ -268,7 +323,7 @@ async function doInstagram(db: SupabaseClient): Promise<Ingerido> {
 async function daBase(db: SupabaseClient): Promise<Ingerido> {
   const { data } = await db
     .from('profiles')
-    .select('id, full_name, email, created_at, is_active')
+    .select('id, full_name, email, phone, whatsapp, country, preferred_language, detected_language, created_at, is_active')
     .not('is_active', 'is', true)
     .order('created_at', { ascending: false })
     .limit(200)
@@ -283,8 +338,14 @@ async function daBase(db: SupabaseClient): Promise<Ingerido> {
       comprador_id: String(p.id),
       nome: nomeUtil(p.full_name as string, email),
       email,
-      telefone: null,
+      // O perfil TEM telefone em 5 casos e o pipeline escrevia `null`. Uma pessoa a quem se pode
+      // ligar e a que só se manda email é uma conversa que não acontece.
+      telefone: ouNulo(p.phone as string, p.whatsapp as string),
       telegram_id: null,
+      pais: ouNulo(p.country as string),
+      // `preferred_language` primeiro: é o que a pessoa escolheu. O detectado é um palpite do
+      // browser e só vale quando ela não escolheu nada.
+      idioma: ouNulo(p.preferred_language as string, p.detected_language as string),
       origem: 'base',
       estado: 'lead',
       nota: `Registou-se em ${String(p.created_at ?? '').slice(0, 10)} e nunca activou. Reactivação.`,
@@ -314,7 +375,7 @@ async function daRedeIb(db: SupabaseClient): Promise<Ingerido> {
   const [{ data }, { data: daCasa }, { data: ibs }] = await Promise.all([
     db
       .from('ib_contas')
-      .select('corretora, conta, cliente_nome, cliente_email, cliente_telefone, cliente_externo_id, volume_lotes, comissao_usd, estado_migracao')
+      .select('corretora, conta, cliente_nome, cliente_email, cliente_telefone, cliente_externo_id, volume_lotes, comissao_usd, estado_migracao, pais')
       .eq('estado_migracao', 'a_transitar')
       .order('volume_lotes', { ascending: false, nullsFirst: false })
       .limit(500),
@@ -356,6 +417,7 @@ async function daRedeIb(db: SupabaseClient): Promise<Ingerido> {
     email: string | null
     telefone: string | null
     corretora: string
+    pais: string | null
     contas: string[]
     lotes: number
     comissao: number
@@ -378,6 +440,7 @@ async function daRedeIb(db: SupabaseClient): Promise<Ingerido> {
       email: email || null,
       telefone: telefone || null,
       corretora,
+      pais: ouNulo(c.pais as string),
       contas: [],
       lotes: 0,
       comissao: 0,
@@ -397,6 +460,7 @@ async function daRedeIb(db: SupabaseClient): Promise<Ingerido> {
       email: p.email,
       telefone: p.telefone,
       telegram_id: null,
+      pais: p.pais,
       origem: 'corretora',
       estado: 'lead' as const,
       nota:
