@@ -623,6 +623,14 @@ ssh ubuntu@13.62.134.34
 **4. MetaApi (quando decidires)**: créditos em app.metaapi.cloud → verificar contas DEPLOYED → o streaming reassume sozinho como fonte principal. Aproveitar e apagar no painel a conta órfã 111c8463/estratégia YMEE (resto do Golden Moves).
 **5. Ulisses (se ainda não feito)**: abrir logado como admin: `https://www.morethanmoney.pt/api/admin/mtmfunded/conta-emitir-credenciais?account=4e2978b7-75c5-4954-90e5-d2275c1672e5` → gera credenciais e envia o email oficial (esperado: `{"ok":true,"emailAoDono":true}`).
 **6. Verificação final**: WebTrader com preços a mexer (cripto já; forex se TL configurado ou MetaApi com créditos); alerta/recuperação do vigia no Telegram; `servicos_pulso` no admin com `wsClientes` e `binance`.
+**7. Instalações no Mac (o container é efémero — repetir localmente, na pasta do repo)**:
+```bash
+npx skills add DietrichGebert/ponytail --skill ponytail --agent claude-code
+npx skills add addyosmani/agent-skills --agent claude-code   # 25 skills
+npm install -g omniroute                                      # router de IA (352 providers)
+uv tool install graphifyy && graphify install --platform claude  # 2 y no pacote; dá graphify + graphify-mcp
+```
+(As skills vão para `.claude/skills/`, que está no .gitignore — instalação local por máquina, por decisão de segurança: skills de terceiros correm com permissões totais.)
 
 ### ⚖️ DOUTRINA — MetaApi é SECUNDÁRIO (ordem do Ricardo, 2026-09-21)
 - **As mestres são as contas MTM Funded (sim)**: sinais abrem lá, e o NOSSO motor gere (trailing, auto-BE, parciais) ao nosso preço. A cópia mestre→slaves (MT5 via MetaApi, TradeLocker via API) sai de `copia_rotas` (078, sombra→live por interruptor; escritores mt5+TL implementados).
