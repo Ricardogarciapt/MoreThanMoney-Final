@@ -31,6 +31,34 @@ export interface SalesState {
   automacoes: { total: number; ativas: number; disparos: number; ultimoDisparo: string | null; naFila: number }
   /** Últimos 14 dias, para o número de hoje ter com o que se comparar. */
   tendencia: Array<{ dia: string; leads: number; corretora: number }>
+  /**
+   * O PIPELINE DA EQUIPA — o que o motor do dia preparou e o que dele foi feito.
+   *
+   * Faltava aqui e era o buraco mais caro do painel: a máquina de vendas mostrava leads a entrar e
+   * clientes a pagar, e no meio — onde se vende — não mostrava nada. Um funil sem o andar do
+   * trabalho humano explica a entrada e a saída e cala-se sobre a única parte que se pode mudar
+   * amanhã de manhã.
+   */
+  pipeline: {
+    porEstado: Record<string, number>
+    total: number
+    tarefasHoje: number
+    feitasHoje: number
+    /** Negócios cujo papel não é desempenhado por ninguém. É a falta de equipa, em número. */
+    semPapel: number
+  }
+  /**
+   * A REDE DE IBs — o volume que ainda paga comissão a outra casa.
+   *
+   * `foraDeCasa` é dinheiro que já existe e que não é nosso. Não é uma previsão nem um objectivo:
+   * é volume medido, exportado pelas corretoras, à espera de ser trazido.
+   */
+  ib: {
+    contas: number
+    aTransitar: number
+    lotesForaDeCasa: number
+    comissaoForaDeCasa: number
+  }
 }
 
 export interface Andar {
@@ -66,13 +94,24 @@ export async function buildSalesState(): Promise<SalesState> {
 
   // Segunda ronda: o que alimenta os andares e a tendência. Fica à parte porque nada disto é
   // preciso para os cartões de cima — se falhar, o painel continua a abrir.
-  const [{ count: registados }, { count: pagantes }, { data: automacoes }, { count: naFila }, { data: corretoraRecente }] =
-    await Promise.all([
+  const [
+    { count: registados },
+    { count: pagantes },
+    { data: automacoes },
+    { count: naFila },
+    { data: corretoraRecente },
+    { data: negocios },
+    { data: tarefasHoje },
+    { data: contasIb },
+  ] = await Promise.all([
       supabase.from('profiles').select('id', { count: 'exact', head: true }),
       supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('subscription_status', 'active'),
       supabase.from('mtm_automacoes').select('ativa, disparos, ultimo_disparo'),
       supabase.from('mtm_conversa_fila').select('id', { count: 'exact', head: true }).eq('processada', false),
       supabase.from('broker_clients').select('updated_at').gte('updated_at', new Date(Date.now() - 14 * 86400_000).toISOString()),
+      supabase.from('vendas_negocios').select('estado, prospector_id, setter_id, closer_id'),
+      supabase.from('vendas_tarefas').select('estado').eq('prazo', day),
+      supabase.from('ib_contas').select('corretora, estado_migracao, volume_lotes, comissao_usd'),
     ])
 
   const byStage: Record<string, number> = {}
@@ -125,9 +164,46 @@ export async function buildSalesState(): Promise<SalesState> {
     })
   }
 
+  // ── O pipeline da equipa ──────────────────────────────────────────────────
+  const porEstado: Record<string, number> = {}
+  let semPapel = 0
+  for (const n of negocios ?? []) {
+    const e = String((n as { estado: string }).estado || 'lead')
+    porEstado[e] = (porEstado[e] ?? 0) + 1
+    const d = n as { prospector_id: string | null; setter_id: string | null; closer_id: string | null }
+    if (!d.prospector_id && !d.setter_id && !d.closer_id && e !== 'ganho' && e !== 'perdido') semPapel++
+  }
+
+  // ── A rede de IBs ─────────────────────────────────────────────────────────
+  let aTransitar = 0
+  let lotesForaDeCasa = 0
+  let comissaoForaDeCasa = 0
+  for (const c of contasIb ?? []) {
+    const l = c as { corretora: string; estado_migracao: string; volume_lotes: number | null; comissao_usd: number | null }
+    if (l.estado_migracao === 'a_transitar') aTransitar++
+    // «Fora de casa» é tudo o que não é PU Prime — é essa a definição de estar fora.
+    if (l.corretora !== 'pu_prime') {
+      lotesForaDeCasa += Number(l.volume_lotes ?? 0)
+      comissaoForaDeCasa += Number(l.comissao_usd ?? 0)
+    }
+  }
+
   return {
     day,
     andares,
+    pipeline: {
+      porEstado,
+      total: (negocios ?? []).length,
+      tarefasHoje: (tarefasHoje ?? []).length,
+      feitasHoje: (tarefasHoje ?? []).filter((t) => (t as { estado: string }).estado === 'feita').length,
+      semPapel,
+    },
+    ib: {
+      contas: (contasIb ?? []).length,
+      aTransitar,
+      lotesForaDeCasa: Math.round(lotesForaDeCasa * 100) / 100,
+      comissaoForaDeCasa: Math.round(comissaoForaDeCasa * 100) / 100,
+    },
     automacoes: {
       total: (automacoes ?? []).length,
       ativas: (automacoes ?? []).filter((a) => a.ativa === true).length,

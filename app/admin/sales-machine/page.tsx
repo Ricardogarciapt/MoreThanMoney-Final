@@ -22,6 +22,8 @@ type State = {
   broker_clients: number
   signals_24h: number
   execution: Record<string, boolean>
+  pipeline: { porEstado: Record<string, number>; total: number; tarefasHoje: number; feitasHoje: number; semPapel: number }
+  ib: { contas: number; aTransitar: number; lotesForaDeCasa: number; comissaoForaDeCasa: number }
 }
 
 const card = "rounded-xl border border-neutral-800 bg-neutral-900/60 p-4"
@@ -120,6 +122,69 @@ export default function SalesMachinePage() {
         <Metric label="Conversões pagas 24h" value={state.conversions_24h} />
         <Metric label="Corretora validada" value={state.broker_clients} />
       </div>
+
+      {/*
+        O ANDAR QUE FALTAVA: o trabalho da equipa.
+
+        Este painel mostrava leads a entrar e clientes a pagar, e no meio — onde se vende — não
+        mostrava nada. Um funil que explica a entrada e a saída e se cala sobre a única parte que
+        se pode mudar amanhã de manhã não serve para decidir nada.
+      */}
+      {state.pipeline && (
+        <div className={card}>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-neutral-300">O trabalho da equipa</h2>
+            <a href="https://backoffice.morethanmoney.pt" className="text-xs text-amber-400 hover:underline">
+              abrir backoffice →
+            </a>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Metric label="Negócios no pipeline" value={state.pipeline.total} />
+            <Metric label="Tarefas para hoje" value={state.pipeline.tarefasHoje} />
+            <Metric label="Feitas hoje" value={state.pipeline.feitasHoje} />
+            <Metric label="Sem papel atribuído" value={state.pipeline.semPapel} />
+          </div>
+          {state.pipeline.semPapel > 0 && (
+            <p className="mt-3 text-xs leading-relaxed text-amber-400/90">
+              {state.pipeline.semPapel} negócios precisam de um papel que ninguém desempenha. Não é
+              um problema de sistema — é falta de setters, closers ou prospectores nomeados.
+            </p>
+          )}
+          {state.pipeline.total > 0 && (
+            <p className="mt-2 text-xs text-neutral-500">
+              {Object.entries(state.pipeline.porEstado)
+                .sort((a, b) => b[1] - a[1])
+                .map(([e, n]) => `${e} ${n}`)
+                .join(" · ")}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/*
+        A REDE DE IBs. O número que interessa é o volume que ainda paga comissão a outra casa —
+        não é previsão nem objectivo: é volume medido, exportado pelas corretoras.
+      */}
+      {state.ib && state.ib.contas > 0 && (
+        <div className={card}>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-neutral-300">Rede de IBs</h2>
+            <a href="https://backoffice.morethanmoney.pt/ib" className="text-xs text-amber-400 hover:underline">
+              ver contas →
+            </a>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Metric label="Contas de corretora" value={state.ib.contas} />
+            <Metric label="A transitar" value={state.ib.aTransitar} />
+            <Metric label="Lotes fora de casa" value={state.ib.lotesForaDeCasa} />
+            <Metric label="Comissão fora (USD)" value={state.ib.comissaoForaDeCasa} />
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-neutral-500">
+            «Fora de casa» é tudo o que não está na PU Prime. É volume que já existe e cuja comissão
+            está a ser paga a outra corretora.
+          </p>
+        </div>
+      )}
 
       {/* Os dados da corretora — a métrica «Corretora validada» aqui em cima não vale nada se
           ninguém souber que idade têm os números que a produzem. */}
