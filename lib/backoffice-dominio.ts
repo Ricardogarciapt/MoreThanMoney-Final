@@ -79,7 +79,7 @@ export function passaDireto(pathname: string): boolean {
  *
  * A guarda `backoffice-dominio.check.ts` compara esta lista com o menu do layout.
  */
-export const SECCOES_BACKOFFICE = ['extracto', 'pipeline', 'tarefas', 'equipa', 'material'] as const
+export const SECCOES_BACKOFFICE = ['extracto', 'pipeline', 'tarefas', 'equipa', 'material', 'ib'] as const
 
 /** O primeiro segmento do caminho (`/pipeline/3` → `pipeline`). */
 function primeiroSegmento(pathname: string): string {

@@ -11,6 +11,7 @@
  */
 import Link from 'next/link'
 import { contextoBackoffice } from '@/lib/backoffice-sessao'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { pode, PAPEL_NOME, type Capacidade } from '@/lib/backoffice-papeis'
 
 export const dynamic = 'force-dynamic'
@@ -29,6 +30,24 @@ export default async function BackofficeLayout({ children }: { children: React.R
   const ctx = await contextoBackoffice()
 
   /**
+   * A rede de IBs não é um papel do backoffice — é uma relação com uma corretora. Por isso a
+   * entrada do menu não se decide por capacidade como as outras: pergunta-se à tabela quem é IB.
+   * Mostrar o menu a quem depois leva «esta área não é tua» seria uma porta pintada na parede.
+   */
+  const ehIb = ctx
+    ? Boolean(
+        (
+          await getSupabaseAdmin()
+            .from('ib_membros')
+            .select('user_id')
+            .eq('user_id', ctx.userId)
+            .is('ate', null)
+            .maybeSingle()
+        ).data,
+      ) || ctx.admin
+    : false
+
+  /**
    * O layout NÃO reencaminha. É de propósito: a entrada (`/backoffice`) é justamente a página que
    * quem não tem papéis pode abrir, e um `redirect` aqui reenviava-a para si mesma até o browser
    * desistir. Quem barra as páginas de dentro é o middleware; aqui só se desenha menos.
@@ -38,6 +57,9 @@ export default async function BackofficeLayout({ children }: { children: React.R
    */
   const capacidades = ctx?.capacidades ?? new Set<Capacidade>()
   const visiveis = pode(capacidades, 'bo.entrar') ? MENU.filter((m) => pode(capacidades, m.exige)) : []
+  if (ehIb && pode(capacidades, 'bo.entrar')) {
+    visiveis.push({ href: '/backoffice/ib', label: 'Rede de IBs', exige: 'bo.entrar' })
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
