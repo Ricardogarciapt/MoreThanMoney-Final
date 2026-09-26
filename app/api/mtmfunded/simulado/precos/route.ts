@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { simboloDaLinha, precoFresco } from '@/lib/mtmfunded/simulado/ordens'
 import { registarPedidosDePreco } from '@/lib/mtmfunded/simulado/pedidos-precos'
+import { CLASSE_CRIPTO, CRIPTO_SEGUIDA } from '@/lib/cripto-seguida'
 
 export const dynamic = 'force-dynamic'
 
@@ -114,6 +115,18 @@ export async function GET(request: NextRequest) {
   let query = db.from('funded_symbols')
     .select('symbol, nome, classe, moeda_lucro, digits, contract_size, pip_size, spread_pontos, comissao_lote, volume_min, volume_step, volume_max, alavancagem_max, horario', { count: 'exact' })
     .eq('ativo', true)
+    /**
+     * O cripto do catálogo aparece reduzido às quatro de `lib/cripto-seguida.ts`.
+     *
+     * Filtra-se AQUI, e não depois de ler a página, porque é esta lista que gera a procura: cada
+     * símbolo que aparece no ecrã é pedido de 1,5 em 1,5 s e passa a `funded_precos_pedidos`, que é
+     * como o motor decide quem subscrever. Uma única visita à página do cripto punha 50 e tantos
+     * símbolos a escrever na base 24 horas por dia — e o cripto não fecha ao fim de semana.
+     *
+     * A regra é pela CLASSE (a coluna do catálogo), nunca pelas letras do símbolo, e o `count`
+     * continua exacto por vir do mesmo pedido: a paginação não fica com buracos.
+     */
+    .or(`classe.neq.${CLASSE_CRIPTO},symbol.in.(${CRIPTO_SEGUIDA.join(',')})`)
   if (classe) query = query.eq('classe', classe)
   if (q) query = query.or(`symbol.ilike.%${q}%,nome.ilike.%${q}%`)
   const [{ data, count, error }, classes] = await Promise.all([

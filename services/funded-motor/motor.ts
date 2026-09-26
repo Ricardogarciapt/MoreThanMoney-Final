@@ -59,6 +59,7 @@ import { iniciarFonteBinance, type FonteBinance } from './fonte-binance'
 import { iniciarFonteYahoo, type FonteYahoo } from './fonte-yahoo'
 import { iniciarFonteConectorMt5, type FonteConectorTicks } from './fonte-conector-mt5'
 import { CRUZADOS_FOREX, FRESCURA_FOREX_MS, cruzadosCalculaveis } from '../../lib/mtmfunded/precos/cruzados'
+import { criptoDeFora } from '../../lib/cripto-seguida'
 import {
   assinaturaMetricas,
   precisaDeEscreverMetricas,
@@ -537,6 +538,23 @@ function aoTick(t: Tick): void {
 }
 
 /**
+ * Uma cripto fora das quatro que ninguém está a usar — a que não vale a pena ter preço.
+ *
+ * Os ticks de cripto entram pelos recursos (Binance, cruzados calculados) e não pelas subscrições,
+ * por isso `canonicosDesejados()` não os travava: mesmo sem ninguém a olhar, 54 símbolos de cripto
+ * escreviam `funded_precos` a toda a hora, incluindo ao fim de semana com todo o resto fechado.
+ *
+ * «Ninguém a usar» é medido, não suposto: um símbolo com posição ou ordem aberta (`interessados`),
+ * gerido pelo espelho, pertencente a uma estratégia de provider ou com um alerta de preço activo
+ * passa sempre — nada disto muda o que já está no mercado. Fica de fora só o símbolo que existe
+ * porque está no catálogo.
+ */
+function criptoQueNinguemUsa(sym: string, classe: string): boolean {
+  if (!criptoDeFora(sym, classe)) return false
+  return !interessados.has(sym) && !simbolosDoEspelho.has(sym) && !simbolosDoProvider.has(sym) && !alertasPorSimbolo.has(sym)
+}
+
+/**
  * Preço de recurso (feed secundário) já em símbolo canónico: só entra se o principal estiver velho.
  *
  * `emMercado` é a hora que a FONTE declarou para este preço, ou `null` quando ela não a dá. Nunca
@@ -545,6 +563,7 @@ function aoTick(t: Tick): void {
 function aoTickRecurso(sym: string, bid: number, ask: number, em: number, emMercado: number | null, origem: string): void {
   if (!simbolos.has(sym)) return
   const s = simbolos.get(sym)!
+  if (criptoQueNinguemUsa(sym, s.classe)) return
   injecaoDeRecurso = true
   try {
     aoTick({
@@ -669,6 +688,10 @@ function canonicosDesejados(): Set<string> {
   for (const s of simbolosDoProvider) canon.add(s)
   for (const s of alertasPorSimbolo.keys()) canon.add(s)
   for (const s of pedidos) {
+    // Um pedido é alguém a OLHAR para um símbolo, e uma visita à página do catálogo não justifica
+    // subscrever uma cripto que ninguém negoceia (lib/cripto-seguida.ts). O que está aberto entra
+    // por `interessados`, acima, e não passa por aqui.
+    if (criptoQueNinguemUsa(s, simbolos.get(s)?.classe ?? '')) continue
     canon.add(s)
     const sm = simbolos.get(s)
     const conv = sm ? simboloDeConversao(moedaDe(sm)) : null
