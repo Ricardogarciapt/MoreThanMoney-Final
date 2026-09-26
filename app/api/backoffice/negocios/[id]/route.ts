@@ -54,6 +54,75 @@ type NegocioParaEscrita = AtribuicoesDoNegocio & {
   motivo_perda: string | null
 }
 
+/**
+ * O HISTÓRICO de um negócio — quem o moveu, quando, de onde para onde.
+ *
+ * `vendas_negocio_eventos` era escrita desde o primeiro dia e não era lida em sítio nenhum. Um
+ * rasto que ninguém vê não resolve a discussão para que foi feito («eu movi isso na segunda»,
+ * «marquei essa reunião»): resolve-a quem tem acesso à base, o que quer dizer que a pessoa que
+ * precisa da resposta continua a ter de ir perguntar ao Ricardo.
+ *
+ * A MESMA ORDEM DO PATCH, e pela mesma razão: capacidade, âmbito, ler o negócio,
+ * `podeMexerNoNegocio`, e só então ler os eventos. Uma rota de leitura que fosse buscar os eventos
+ * directamente pelo `negocio_id` que veio no endereço contava o percurso de qualquer negócio da
+ * casa a qualquer pessoa da equipa — e o percurso tem nomes de colegas dentro.
+ */
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const ctx = await exigirCapacidade(request, 'bo.pipeline_proprio')
+  if (ctx instanceof NextResponse) return ctx
+
+  const { id } = await params
+  if (!ehUuid(id)) return NextResponse.json({ error: 'id inválido' }, { status: 400 })
+
+  const supabase = getSupabaseAdmin()
+  const ambito = await ambitoDaEquipa(supabase, ctx, 'pipeline')
+
+  const { data, error: erroLeitura } = await supabase
+    .from('vendas_negocios')
+    .select(COLUNAS)
+    .eq('id', id)
+    .maybeSingle()
+  const negocio = (data ?? null) as NegocioParaEscrita | null
+
+  if (erroLeitura) return NextResponse.json({ error: erroLeitura.message }, { status: 500 })
+  if (!negocio || !podeMexerNoNegocio(negocio, ambito)) {
+    return NextResponse.json(
+      { error: 'Negócio não encontrado', detalhe: 'Ou não existe, ou não participas nele.' },
+      { status: 404 },
+    )
+  }
+
+  // Do mais recente para o mais antigo: quem abre o histórico está a perguntar «o que é que
+  // aconteceu aqui», e a resposta começa pela última coisa que aconteceu. O tecto de 100 existe
+  // para um negócio muito trabalhado não devolver uma resposta sem fim; quando bate, diz-se.
+  const { data: linhas, error } = await supabase
+    .from('vendas_negocio_eventos')
+    .select('id, de, para, por, nota, em')
+    .eq('negocio_id', id)
+    .order('em', { ascending: false })
+    .limit(101)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const eventos = linhas ?? []
+  const nomes = await nomesDe(supabase, eventos.map((e) => e.por))
+
+  return NextResponse.json({
+    ok: true,
+    // O nome de quem fez vem resolvido: um histórico com uuids dentro não é um histórico, é um
+    // despejo de base que a pessoa tem de ir traduzir a outro sítio.
+    eventos: eventos.slice(0, 100).map((e) => ({
+      id: e.id,
+      de: e.de,
+      para: e.para,
+      nota: e.nota,
+      em: e.em,
+      quem: e.por ? (nomes[String(e.por)] ?? 'alguém da equipa') : null,
+    })),
+    ha_mais: eventos.length > 100,
+  })
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await exigirCapacidade(request, 'bo.pipeline_proprio')
   if (ctx instanceof NextResponse) return ctx

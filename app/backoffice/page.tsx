@@ -45,7 +45,7 @@ export default async function BackofficeEntradaPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-white">
-          Bem-vindo{ctx.papeis.length ? ` , ${ctx.papeis.map((p) => PAPEL_NOME[p]).join(' · ')}` : ''}
+          Bem-vindo{ctx.papeis.length ? `, ${ctx.papeis.map((p) => PAPEL_NOME[p]).join(' · ')}` : ''}
         </h1>
         <p className="mt-2 text-sm text-gray-400">
           Aqui vês o teu percurso, as tuas tarefas e o teu extracto — o teu, e só o teu.
@@ -59,7 +59,7 @@ export default async function BackofficeEntradaPage() {
         pergunta que ela traz quando abre isto de manhã: «o que é que eu faço agora?». Uma página
         que responde a tudo menos a essa é uma página que se visita uma vez.
       */}
-      <OMeuDia ids={(await ambitoDaPagina(ctx, 'tarefas')).ambito.ids} />
+      <OMeuDia ids={(await ambitoDaPagina(ctx, 'tarefas')).ambito.ids} pessoaId={ctx.userId} />
 
       {/* O que cada papel dá, escrito à pessoa. Saber o que se pode ver evita metade das perguntas,
           e torna visível um papel que falta (ou um que sobra) sem ninguém ter de ir à base. */}
@@ -91,12 +91,26 @@ export default async function BackofficeEntradaPage() {
         </div>
       </section>
 
-      {/* Honestidade sobre o que ainda não existe: o pipeline, as tarefas e o cálculo das comissões
-          são construídos do outro lado da casa. Prometer aqui um número que ninguém calcula ainda
-          era pior do que dizer que falta. */}
-      <section className="rounded-lg border border-gray-800 bg-gray-900/20 p-4 text-sm text-gray-400">
-        O pipeline, as tarefas e os valores a receber entram aqui à medida que forem ligados. O que já
-        funciona é o acesso: entras pelo teu login do site, e o que vês depende dos papéis acima.
+      {/*
+        Este bloco dizia «o pipeline, as tarefas e os valores a receber entram aqui à medida que
+        forem ligados» — e isso deixou de ser verdade a 25/09, quando as três páginas passaram a ler
+        da base. Uma promessa que ficou verdadeira e não foi apagada é pior do que uma promessa: diz
+        a quem entra que o sistema ainda não serve, e quem lê isso não vai às páginas.
+
+        O que substitui não é publicidade: é a distinção que fica sempre por explicar, e que tem de
+        estar dita no primeiro ecrã porque é a que dá discussões — um negócio ganho não é dinheiro.
+      */}
+      <section className="space-y-2 rounded-lg border border-gray-800 bg-gray-900/20 p-4 text-sm leading-relaxed text-gray-400">
+        <p>
+          As páginas em cima lêem da base a sério: o pipeline são os negócios em que participas, as
+          tarefas são as tuas, o extracto é o teu. Tudo filtrado pelo teu papel — ninguém vê o
+          trabalho nem o dinheiro de quem não lidera.
+        </p>
+        <p>
+          <span className="text-gray-300">Ganho não é pago.</span> Mover um negócio para «ganho»
+          muda o negócio e mais nada; a comissão nasce do pagamento confirmado, e é aí que aparece no
+          teu extracto.
+        </p>
       </section>
     </div>
   )

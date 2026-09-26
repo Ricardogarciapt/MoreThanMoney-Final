@@ -39,6 +39,8 @@ import { Campo, ESTILO_CAMPO, Filtros, Paginacao, type Params } from '../_partes
 import { NegocioNovo } from './novo'
 import { Mover } from './mover'
 import { Trabalhar } from './trabalhar'
+import { Historico } from './historico'
+import { lerFoco, situacaoDoFoco } from './foco'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Pipeline · Backoffice MTM' }
@@ -67,6 +69,9 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
   const procura = lerProcura(params.procura)
   const pagina = lerPagina(params)
   const filtrado = !!estadoFiltro || !!procura
+  // O negócio que a pessoa veio ver, quando chegou aqui por um link de uma tarefa. Não entra na
+  // consulta (ver `foco.ts`): destaca.
+  const foco = lerFoco(params.negocio)
 
   let negocios: NegocioLinha[]
   let haMais = false
@@ -88,6 +93,11 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
   const outros = ambito.ids.filter((id) => id !== ctx.userId)
   const nomes = outros.length > 0 ? await nomesDe(outros) : {}
 
+  const ondeEstaOFoco = situacaoDoFoco(
+    foco,
+    negocios.map((n) => n.id),
+  )
+
   // Agrupar pela ordem do funil, e não pela ordem em que as linhas vieram: a página desenha-se pela
   // lista de estados, por isso um estado sem negócios continua a existir como coluna vazia — é
   // informação saber que não há ninguém em «qualificado».
@@ -105,12 +115,34 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-8">
+      {/* O `sub` dizia «mover um negócio faz-se no admin» — e o botão «Mover» está a vinte pixels
+          dele desde 25/09. Uma instrução desactualizada no cabeçalho não é um detalhe de texto: é a
+          página a ensinar a pessoa a não usar o que tem à frente. */}
       <Cabecalho
         titulo="Pipeline"
-        sub="Os negócios em que participas, por estado, com o passo seguinte de cada um. Mover um negócio faz-se no admin — aqui vês onde ele está e o que falta fazer."
+        sub="Os negócios em que participas, por estado, com o passo seguinte de cada um. Mover, escrever a nota, ocupar um papel e ver o histórico faz-se aqui — o que não se faz aqui é dinheiro: «ganho» não cria venda nem comissão."
       />
 
       {aviso && <Aviso>{aviso}</Aviso>}
+
+      {/* Vim por um link de uma tarefa e o negócio não está à vista. Calar isto era deixar a pessoa
+          a concluir que perdeu o negócio, quando o que tem é um filtro velho no endereço. */}
+      {ondeEstaOFoco === 'fora-da-pagina' && (
+        <Aviso>
+          O negócio que vinhas ver não está nesta página.{' '}
+          {filtrado ? (
+            <>
+              Há um filtro aplicado —{' '}
+              <a href={`${BASE}?negocio=${foco}`} className="text-[#D2A63C] underline">
+                limpa-o
+              </a>{' '}
+              para o procurar em toda a lista.
+            </>
+          ) : (
+            'Pode estar numa página seguinte, ou já não participas nele.'
+          )}
+        </Aviso>
+      )}
 
       <NegocioNovo papeis={ctx.papeis} ehDono={ctx.admin} />
 
@@ -193,8 +225,18 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                     const dias = diasParado(n.atualizado_em)
                     const parado = ehEstadoFechado(estado) ? null : avisoParado(dias)
                     const meus = papeisNoNegocio(n, ctx.userId)
+                    const emFoco = n.id === foco
                     return (
-                      <div key={n.id} className="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+                      <div
+                        key={n.id}
+                        // A âncora e o `scroll-mt` são o que faz o link da tarefa aterrar no
+                        // negócio em vez do topo da lista. O anel dourado fica porque, depois de
+                        // rolar, a pessoa tem de saber QUAL das linhas é a dela.
+                        id={`negocio-${n.id}`}
+                        className={`scroll-mt-20 rounded-lg border bg-gray-900/40 p-4 ${
+                          emFoco ? 'border-[#D2A63C] ring-1 ring-[#D2A63C]/40' : 'border-gray-800'
+                        }`}
+                      >
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
                           <span className="font-semibold text-white">{n.nome}</span>
                           <span className="text-xs text-gray-500">
@@ -240,6 +282,9 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                           vagos={papeisQuePodeOcupar(n, ctx.papeis, ctx.admin)}
                           meus={papeisQueOcupa(n, ctx.userId)}
                         />
+                        {/* «Quem é que moveu isto», respondido pela base e não pela memória de duas
+                            pessoas. Lê-se só quando se abre — ver `historico.tsx`. */}
+                        <Historico id={n.id} />
                       </div>
                     )
                   })}

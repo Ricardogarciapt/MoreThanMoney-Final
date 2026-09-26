@@ -206,7 +206,13 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
                 </span>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-600">{dataCurta(t.feita_em)}</span>
-                  <Marcar id={t.id} feita={true} estado={t.estado} prazo={t.prazo} />
+                  {/* A mesma regra da lista de cima, que aqui faltava: o botão só aparece nas dela.
+                      O servidor aceita um responsável a reabrir a tarefa de um liderado — mas
+                      desmarcar o trabalho de outra pessoa a partir de uma lista onde ela não tem
+                      botão para o marcar é uma assimetria que só se descobre a discutir. */}
+                  {t.responsavel_id === ctx.userId && (
+                    <Marcar id={t.id} feita={true} estado={t.estado} prazo={t.prazo} />
+                  )}
                 </div>
               </li>
             ))}
