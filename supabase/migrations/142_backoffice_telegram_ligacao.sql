@@ -1,3 +1,10 @@
+-- NOTA DE NUMERAÇÃO (26/09): este ficheiro foi escrito como `139_` e aplicado em produção com
+-- esse nome, ao mesmo tempo que outro agente aplicava um `139_ib_contas_colunas_em_falta`. O
+-- Supabase regista as migrações pela DATA e não pelo número, por isso as duas entraram sem
+-- colidir — mas num repositório com dois ficheiros `139_` a ordem numa base NOVA passava a
+-- depender da ordem alfabética, e isso é o género de coisa que só se descobre no dia em que se
+-- levanta um ambiente de raiz. Renumerado para 142; em produção continua registado como 139.
+
 -- 139 — Ligar o Telegram de quem trabalha no backoffice, sem abrir a conta de ninguém
 --
 -- PORQUÊ
