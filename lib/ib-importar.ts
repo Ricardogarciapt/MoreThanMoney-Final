@@ -48,6 +48,23 @@ export interface ContaImportada {
   registo: string | null
   ultima_negociacao: string | null
   ultimo_deposito: string | null
+  /**
+   * O identificador da PESSOA na corretora — «ID de usuário» na PU Prime, «User ID» na VT.
+   *
+   * É o campo que agrupa várias contas ao mesmo cliente. Sem ele, as 33 contas da PU Prime
+   * parecem 33 clientes quando são cerca de oito pessoas com várias contas cada — e um painel que
+   * diz 33 onde há 8 não está a arredondar, está a contar outra coisa.
+   */
+  cliente_externo_id: string | null
+  /** «Financiada», «Trading em 30 dias»… diz se a conta está viva. */
+  jornada: string | null
+  levantamentos_usd: number | null
+  tier: string | null
+  campanha: string | null
+  pais: string | null
+  lucro: number | null
+  credito: number | null
+  ultimo_instrumento: string | null
 }
 
 // ── Leitura de valores ───────────────────────────────────────────────────────
@@ -219,6 +236,15 @@ function lerLinha(
     registo: null,
     ultima_negociacao: null,
     ultimo_deposito: null,
+    cliente_externo_id: null,
+    jornada: null,
+    levantamentos_usd: null,
+    tier: null,
+    campanha: null,
+    pais: null,
+    lucro: null,
+    credito: null,
+    ultimo_instrumento: null,
   }
 
   const n = (...nomes: string[]) => numero(c[indice(cab, ...nomes)], virgula)
@@ -241,6 +267,12 @@ function lerLinha(
         registo: d('DATA'),
         ultima_negociacao: d('Data da Última Negociação'),
         ultimo_deposito: d('Data do Último Depósito'),
+        cliente_externo_id: t('ID de usuário'),
+        jornada: t('Jornada da Conta'),
+        campanha: t('Fonte da campanha'),
+        lucro: n('Lucro'),
+        credito: n('Crédito'),
+        ultimo_instrumento: t('Último Instrumento Negociado'),
       }
 
     case 'vtmarkets':
@@ -256,6 +288,12 @@ function lerLinha(
         registo: d('Date'),
         ultima_negociacao: d('Last Trade Date'),
         ultimo_deposito: d('Last Deposit Date'),
+        cliente_externo_id: t('User ID'),
+        jornada: t('Account Journey'),
+        campanha: t('Campaign source'),
+        lucro: n('Profit'),
+        credito: n('Credit'),
+        ultimo_instrumento: t('Last Traded Instrument'),
       }
 
     case 'hantec':
@@ -273,7 +311,10 @@ function lerLinha(
         // estado do pagamento dela.
         comissao_usd: (n('Comm. Paid') ?? 0) + (n('Comm. Unpaid') ?? 0) || null,
         depositos_usd: n('Deposits'),
+        levantamentos_usd: n('Withdrawals'),
         registo: d('Reg. Date'),
+        tier: t('Tier'),
+        campanha: t('Campaign'),
       }
 
     case 'infinox_clientes': {
@@ -287,6 +328,7 @@ function lerLinha(
         volume_lotes: n('Lots'),
         comissao_usd: n('Commission, USD'),
         depositos_usd: n('Deposits, USD'),
+        levantamentos_usd: n('Withdrawals, USD'),
       }
     }
 
@@ -299,6 +341,7 @@ function lerLinha(
         volume_lotes: n('Commissioned Lots'),
         comissao_usd: n('Commission Received, USD'),
         registo: d('Reg. Date'),
+        pais: t('Country Of Residence'),
       }
   }
 }

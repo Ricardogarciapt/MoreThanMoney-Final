@@ -39,6 +39,7 @@ interface Linha {
   conta: string
   cliente_nome: string | null
   cliente_email: string | null
+  cliente_telefone: string | null
   volume_lotes: number | null
   comissao_usd: number | null
   depositos_usd: number | null
@@ -79,10 +80,28 @@ export default async function IbPage() {
   const [{ data: todasRaw }, { data: membrosRaw }] = await Promise.all([
     db
       .from('ib_contas')
-      .select('id, corretora, conta, cliente_nome, cliente_email, volume_lotes, comissao_usd, depositos_usd, estado_migracao, nota')
+      .select('id, corretora, conta, cliente_nome, cliente_email, cliente_telefone, volume_lotes, comissao_usd, depositos_usd, estado_migracao, nota')
       .limit(2000),
     db.from('ib_membros').select('user_id, nivel, ib_externo').is('ate', null),
   ])
+
+  /**
+   * Quais destas contas já estão no pipeline.
+   *
+   * Sem isto, a mesma pessoa era abordada duas vezes: uma por quem olha para esta página e outra
+   * por quem recebe a tarefa que o motor do dia preparou. Duas abordagens da mesma empresa no
+   * mesmo dia é o género de coisa que não se desfaz com um pedido de desculpa.
+   */
+  const { data: noPipeline } = await db
+    .from('vendas_negocios')
+    .select('chave_origem, estado')
+    .like('chave_origem', 'ib:%')
+  const jaNoPipeline = new Map(
+    (noPipeline ?? []).map((r) => {
+      const n = r as { chave_origem: string; estado: string }
+      return [n.chave_origem, n.estado]
+    }),
+  )
 
   const todas = (todasRaw ?? []) as unknown as Linha[]
   const membros = (membrosRaw ?? []) as Array<{ user_id: string; nivel: string; ib_externo: string | null }>
@@ -182,6 +201,7 @@ export default async function IbPage() {
               <thead className="bg-gray-900/60 text-left text-xs uppercase tracking-wide text-gray-500">
                 <tr>
                   <th className="px-3 py-2 font-medium">Cliente</th>
+                  <th className="px-3 py-2 font-medium">Contacto</th>
                   <th className="px-3 py-2 font-medium">Corretora</th>
                   <th className="px-3 py-2 text-right font-medium">Lotes</th>
                   <th className="px-3 py-2 text-right font-medium">Comissão</th>
@@ -193,8 +213,28 @@ export default async function IbPage() {
                   <tr key={l.id} className="text-gray-300">
                     <td className="px-3 py-2">
                       <span className="text-white">{l.cliente_nome ?? l.conta}</span>
-                      {l.cliente_email && (
-                        <span className="block text-xs text-gray-600">{l.cliente_email}</span>
+                      <span className="block text-xs text-gray-600">conta {l.conta}</span>
+                      {jaNoPipeline.has(`ib:${l.corretora}:${l.conta}`) && (
+                        <span className="mt-1 inline-block rounded bg-[#D2A63C]/15 px-1.5 py-0.5 text-[10px] font-medium text-[#D2A63C]">
+                          no pipeline · {jaNoPipeline.get(`ib:${l.corretora}:${l.conta}`)}
+                        </span>
+                      )}
+                    </td>
+                    {/* O contacto é a razão de esta página existir para um setter: sem forma de
+                        chegar à pessoa, a linha é uma estatística e não um lead. */}
+                    <td className="px-3 py-2">
+                      {l.cliente_email ? (
+                        <a href={`mailto:${l.cliente_email}`} className="block text-xs text-[#D2A63C] hover:underline">
+                          {l.cliente_email}
+                        </a>
+                      ) : null}
+                      {l.cliente_telefone ? (
+                        <a href={`tel:${l.cliente_telefone.replace(/\s/g, '')}`} className="block text-xs text-[#D2A63C] hover:underline">
+                          {l.cliente_telefone}
+                        </a>
+                      ) : null}
+                      {!l.cliente_email && !l.cliente_telefone && (
+                        <span className="text-xs text-gray-700">sem contacto</span>
                       )}
                     </td>
                     <td className="px-3 py-2 text-gray-400">
@@ -210,6 +250,12 @@ export default async function IbPage() {
           </div>
           <p className="text-xs text-gray-600">
             Estado: {Object.entries(ESTADO_NOME).map(([k, v]) => `${v} (${todas.filter((l) => l.estado_migracao === k).length})`).join(' · ')}
+          </p>
+          <p className="text-xs leading-relaxed text-gray-600">
+            {aTrabalhar.filter((l) => l.cliente_email || l.cliente_telefone).length} destas têm
+            contacto e entram sozinhas no pipeline de manhã, pelas que mais volume têm. As que não
+            têm email nem telefone ficam de fora — um lead a que não se consegue chegar não é um
+            lead, e enchia a lista de quem a trabalha.
           </p>
         </section>
       )}

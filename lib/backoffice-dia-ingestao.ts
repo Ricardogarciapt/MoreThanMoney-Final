@@ -34,6 +34,10 @@ export const TECTO_POR_FONTE: Record<string, number> = {
   telegram: 15,
   instagram: 15,
   base: 10,
+  // A rede de IBs leva mais: são as pessoas com maior probabilidade de fechar de todas as fontes.
+  // Já negoceiam, já depositaram, já sabem o que é uma corretora — não é preciso explicar o
+  // produto a ninguém, é preciso mudar uma conta de sítio.
+  corretora: 20,
 }
 
 export interface Ingerido {
@@ -280,6 +284,123 @@ async function daBase(db: SupabaseClient): Promise<Ingerido> {
 }
 
 /**
+ * A REDE DE IBs — as pessoas que já negoceiam, só que noutra casa.
+ *
+ * É a melhor fonte de leads que a MTM tem, e esteve fechada num Excel até hoje. Não é gente a
+ * quem é preciso explicar o que é trading: é gente que já abriu conta, já depositou e já negociou
+ * — só que a comissão do que ela faz está a ser paga à Infinox, à Hantec ou à VT Markets. Trazer
+ * uma destas pessoas não é uma venda nova, é mudar uma conta de sítio.
+ *
+ * SÓ ENTRA QUEM SE CONSEGUE CONTACTAR. Uma boa parte das linhas das exportações não traz nome nem
+ * email (as contas de segundo nível da Hantec vêm todas com `N/A`). Um lead sem forma de lhe
+ * chegar não é um lead — é uma linha numa lista que faz a lista parecer maior do que é, e faz a
+ * pessoa que a trabalha perder a confiança nela ao terceiro nome sem contacto.
+ *
+ * E SÓ ENTRA QUEM ESTÁ MARCADO `a_transitar`. As contas `a_fechar` (sem volume, sem depósito, sem
+ * comissão) ficam de fora de propósito: são a maioria, e enchê-las na lista de alguém é a forma
+ * mais rápida de enterrar as que valem a pena.
+ */
+async function daRedeIb(db: SupabaseClient): Promise<Ingerido> {
+  const [{ data }, { data: daCasa }, { data: ibs }] = await Promise.all([
+    db
+      .from('ib_contas')
+      .select('corretora, conta, cliente_nome, cliente_email, cliente_telefone, cliente_externo_id, volume_lotes, comissao_usd, estado_migracao')
+      .eq('estado_migracao', 'a_transitar')
+      .order('volume_lotes', { ascending: false, nullsFirst: false })
+      .limit(500),
+    // Quem já é membro da casa não é lead. Ver a explicação abaixo.
+    db.from('profiles').select('email'),
+    db.from('ib_membros').select('user_id').is('ate', null),
+  ])
+
+  /**
+   * QUEM JÁ É NOSSO NÃO ENTRA.
+   *
+   * A primeira versão pôs o Rui Rodrigues no pipeline como lead a angariar. O Rui é sub-IB da
+   * rede e está na árvore de MLM — mandar um setter «abrir conversa» com ele é o tipo de coisa
+   * que faz uma equipa perder a confiança na lista à primeira linha que lê.
+   *
+   * Compara-se pelo email, que é o que as duas pontas têm em comum. Não é perfeito (quem usar um
+   * email diferente na corretora escapa), mas apanha o caso normal e nunca exclui ninguém a mais.
+   */
+  const emailsDaCasa = new Set(
+    (daCasa ?? [])
+      .map((r) => ((r as { email: string | null }).email ?? '').trim().toLowerCase())
+      .filter(Boolean),
+  )
+  void ibs
+
+  /**
+   * UM NEGÓCIO POR PESSOA, e não um por conta.
+   *
+   * É a segunda vez que caio neste erro no mesmo dia — primeiro com os comentários do Instagram,
+   * agora com as contas de corretora. O Nuno Fernandes tem quatro contas na Hantec, e a versão
+   * anterior punha-o quatro vezes na lista de trabalho de alguém. Duas abordagens da mesma empresa
+   * no mesmo dia já é mau; quatro é indefensável.
+   *
+   * As contas dele juntam-se numa linha só, com o volume e a comissão SOMADOS — que é, aliás, o
+   * número que interessa para decidir se vale a pena a conversa.
+   */
+  interface Pessoa {
+    nome: string
+    email: string | null
+    telefone: string | null
+    corretora: string
+    contas: string[]
+    lotes: number
+    comissao: number
+  }
+
+  const porPessoa = new Map<string, Pessoa>()
+  for (const r of data ?? []) {
+    const c = r as Record<string, unknown>
+    const email = ((c.cliente_email as string) || '').trim().toLowerCase()
+    const telefone = ((c.cliente_telefone as string) || '').trim()
+    if (!email && !telefone) continue // sem forma de contactar não há lead
+    if (email && ehEmailDeMentira(email)) continue
+    if (email && emailsDaCasa.has(email)) continue
+
+    const corretora = String(c.corretora)
+    // A chave é a pessoa: o identificador dela na corretora, ou o email, ou o telefone.
+    const chave = `ib:${corretora}:${String(c.cliente_externo_id || email || telefone)}`
+    const acc = porPessoa.get(chave) ?? {
+      nome: nomeUtil(c.cliente_nome as string),
+      email: email || null,
+      telefone: telefone || null,
+      corretora,
+      contas: [],
+      lotes: 0,
+      comissao: 0,
+    }
+    acc.contas.push(String(c.conta))
+    acc.lotes += Number(c.volume_lotes ?? 0)
+    acc.comissao += Number(c.comissao_usd ?? 0)
+    porPessoa.set(chave, acc)
+  }
+
+  const candidatos: Candidato[] = [...porPessoa.entries()]
+    // Pelo volume somado: quem negocia mais é quem mais vale a pena trazer.
+    .sort((a, b) => b[1].lotes - a[1].lotes)
+    .map(([chave, p]) => ({
+      chave_origem: chave,
+      nome: p.nome === 'Sem nome' ? `Conta ${p.contas[0]}` : p.nome,
+      email: p.email,
+      telefone: p.telefone,
+      telegram_id: null,
+      origem: 'corretora',
+      estado: 'lead' as const,
+      nota:
+        `Negoceia na ${p.corretora} — ${p.contas.length} ${p.contas.length === 1 ? 'conta' : 'contas'} ` +
+        `(${p.contas.join(', ')}). ` +
+        `${p.lotes > 0 ? `${p.lotes.toFixed(2)} lotes. ` : ''}` +
+        `${p.comissao > 0 ? `${p.comissao.toFixed(2)} USD de comissão paga a essa casa. ` : ''}` +
+        `Objectivo: trazer para a PU Prime.`,
+    }))
+
+  return ingerir(db, 'corretora', candidatos)
+}
+
+/**
  * Corre todas as fontes.
  *
  * Uma fonte que rebente não pode levar as outras atrás: o Instagram fica sem quota de API com
@@ -290,6 +411,7 @@ export async function ingerirLeads(db: SupabaseClient): Promise<Ingerido[]> {
     ['telegram', () => doTelegram(db)],
     ['instagram', () => doInstagram(db)],
     ['base', () => daBase(db)],
+    ['corretora', () => daRedeIb(db)],
   ]
 
   const resultados: Ingerido[] = []

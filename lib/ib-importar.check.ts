@@ -84,6 +84,38 @@ assert.equal(pg.depositos_usd, 100)
 // Está na casa: não há nada a trazer.
 assert.equal(estadoInicial(pg), 'na_casa')
 
+/**
+ * O ID DA PESSOA, que estava a ser deitado fora.
+ *
+ * É ele que agrupa várias contas ao mesmo cliente. Sem ele, as 33 contas da PU Prime parecem 33
+ * clientes quando são cerca de oito pessoas com várias contas cada. Um painel que diz 33 onde há
+ * 8 não está a arredondar — está a contar outra coisa, e saem decisões de negócio daqui.
+ */
+assert.equal(pg.cliente_externo_id, '2056173')
+assert.equal(pg.jornada, 'Financiada')
+assert.equal(pg.credito, 40)
+
+// Duas contas com IDs de usuário diferentes são duas pessoas; com o mesmo ID, é uma só.
+const duasContas = importar(
+  CAB_PU +
+    '\n2026-08-24\t702278\t34744057\t\tSubtil Garcia Ricardo\tSubtil Garcia Ricardo\tMT5 Standard\tMT5\tUSD\t\t0\t0\t0\tTrading em 30 dias\t2026-09-14\tXAUUSD.s\t0.01 Standard\t\t\t7526800' +
+    '\n2026-08-24\t702278\t34744071\t\tSubtil Garcia Ricardo\tSubtil Garcia Ricardo\tMT5 Standard\tMT5\tUSD\t\t0\t0\t0\tTrading em 30 dias\t2026-09-04\tXAUUSD.s\t0.01 Standard\t\t\t7526800',
+)
+assert.equal(duasContas.linhas.length, 2, 'duas contas')
+assert.equal(
+  new Set(duasContas.linhas.map((l) => l.cliente_externo_id)).size,
+  1,
+  'mas uma pessoa só — é isto que o ID de usuário existe para dizer',
+)
+
+// A campanha diz quem veio de nós. Só duas contas da PU Prime a têm, e é informação que não se
+// consegue recuperar de mais lado nenhum.
+const comCampanha = importar(
+  CAB_PU +
+    '\n2026-09-03\t2165879\t35251909\tmorethanmoney\tMario Oliveira\tSubtil Garcia Ricardo\tCopyTrading Standard\tMT5\tUSD\t\t0\t0\t0\tFinanciada\t\t\t\t2026-09-03\t350(USD)\t7526800',
+)
+assert.equal(comCampanha.linhas[0].campanha, 'morethanmoney')
+
 // ── Hantec: a conta com mais volume da exportação ───────────────────────────
 
 const hantec = importar(
@@ -102,6 +134,25 @@ assert.equal(fh.depositos_usd, 1619.93)
 assert.equal(fh.comissao_usd, 151.39, 'paga mais por pagar')
 // Fora da casa e com dinheiro mexido: é conversa a ter.
 assert.equal(estadoInicial(fh), 'a_transitar')
+assert.equal(fh.tier, '1')
+assert.equal(fh.campanha, 'PIP LAT-MUL_68')
+assert.equal(fh.levantamentos_usd, 0)
+
+/**
+ * OS LEVANTAMENTOS mudam a história.
+ *
+ * Esta conta depositou 6300 — e levantou 7710. Sem a coluna dos levantamentos, o painel diria
+ * «depositou 6300 USD» e alguém trataria esta pessoa como um cliente a crescer, quando o dinheiro
+ * já saiu todo. O líquido é negativo, e é essa a verdade.
+ */
+const comLevantamentos = importar(
+  CAB_HANTEC +
+    '\n50108924\tMT5\t1\t1\t19350\tRui Rodrigues\trui.pmcr@gmail.com\t+351968350028\t0.0\t0.0\tPIP LAT-MUL_68\t2025-07-20 01:53:36\t6300.0\t-7710.94\t133.22\t623.23\t0',
+)
+const rui = comLevantamentos.linhas[0]
+assert.equal(rui.depositos_usd, 6300)
+assert.equal(rui.levantamentos_usd, -7710.94)
+assert.ok((rui.depositos_usd ?? 0) + (rui.levantamentos_usd ?? 0) < 0, 'o líquido é negativo')
 
 // Linhas da Hantec sem dados nenhuns (as `N/A`) não podem virar zeros nem datas de hoje.
 const hantecVazia = importar(
@@ -147,6 +198,7 @@ assert.equal(ref.volume_lotes, 228.43)
 assert.equal(ref.comissao_usd, 696.93, 'o «USD» colado ao número não pode estragar a leitura')
 assert.equal(ref.registo, '2025-05-09')
 assert.equal(estadoInicial(ref), 'a_transitar', '228 lotes é exactamente o que se quer trazer')
+assert.equal(ref.pais, 'Portugal')
 
 // ── VT Markets ──────────────────────────────────────────────────────────────
 
@@ -162,6 +214,10 @@ assert.equal(v.saldo, 1246.22)
 assert.equal(v.equity, 1950.28)
 assert.equal(v.depositos_usd, 500)
 assert.equal(v.ultima_negociacao, '2026-09-24')
+assert.equal(v.cliente_externo_id, '1888958')
+assert.equal(v.jornada, 'Trading in 30 days')
+assert.equal(v.lucro, 216.7)
+assert.equal(v.ultimo_instrumento, 'XAUUSD-STD')
 assert.equal(estadoInicial(v), 'a_transitar')
 
 // ── A ordem por que a equipa trabalha isto ──────────────────────────────────
