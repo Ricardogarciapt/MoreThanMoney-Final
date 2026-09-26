@@ -397,3 +397,19 @@ export function encherODia<T extends { prioridade: number; diasParado: number; p
   }
   return escolhidos
 }
+
+/**
+ * QUANTAS INTERACÇÕES SOCIAIS POR DIA, por pessoa.
+ *
+ * O radar do Instagram tem 477 publicações pendentes e continua a encher. A tentação é despejá-las;
+ * o resultado seria o de sempre — ninguém faz 477, e a lista passa a ser ignorada.
+ *
+ * Cinco por dia é uma coisa que se faz. Vinte e cinco por semana, cento e poucas por mês, e a
+ * conta ao fim do ano já não é pequena. A expansão social ganha-se por hábito, não por assalto.
+ */
+export const TECTO_SOCIAL_DIARIO = 5
+
+/** A chave de uma interacção social. Sem data: cada publicação só se trabalha UMA vez, nunca mais. */
+export function chaveTarefaSocial(prospetoId: string): string {
+  return `radar:${prospetoId}`
+}

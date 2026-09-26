@@ -54,6 +54,22 @@ interface Candidato {
   nota: string
 }
 
+/**
+ * Emails que não são de ninguém.
+ *
+ * Encontrado no ensaio: `frangauci@test.com` ia entrar no pipeline e ocupar o lugar de uma pessoa
+ * a sério. São domínios reservados para exemplos e testes (RFC 2606) mais os que aparecem em
+ * formulários preenchidos à pressa. Filtra-se só o que é indiscutível — um registo estrangeiro
+ * frio continua a ser um lead, e descartá-lo por parecer improvável seria eu a decidir por quem
+ * vende.
+ */
+const DOMINIOS_DE_MENTIRA = ['test.com', 'example.com', 'example.org', 'example.net', 'teste.com', 'mailinator.com']
+
+function ehEmailDeMentira(email: string): boolean {
+  const dominio = email.split('@')[1] ?? ''
+  return DOMINIOS_DE_MENTIRA.includes(dominio)
+}
+
 /** Um nome apresentável a partir do que a fonte deu. Nunca vazio — uma linha sem nome não se trabalha. */
 function nomeUtil(...tentativas: Array<string | null | undefined>): string {
   for (const t of tentativas) {
@@ -70,9 +86,13 @@ function nomeUtil(...tentativas: Array<string | null | undefined>): string {
  * prospector a repetir uma conversa que já aconteceu, e a pessoa do outro lado a responder duas
  * vezes ao mesmo. O estado tem de reflectir o que já se sabe dela.
  */
-function estadoDoLeadTelegram(stage: string | null): EstadoPipeline {
+function estadoDoLeadTelegram(stage: string | null): EstadoPipeline | null {
   switch ((stage ?? '').toLowerCase()) {
+    // `granted` NÃO é um lead: é alguém a quem já foi dado acesso. Pô-lo no pipeline mandava a
+    // equipa abordar um cliente como se fosse desconhecido — o erro que mais depressa faz um
+    // cliente perder a confiança em nós.
     case 'granted':
+      return null
     case 'pending_review':
       return 'qualificado'
     case 'qualifying':
@@ -125,20 +145,23 @@ async function doTelegram(db: SupabaseClient): Promise<Ingerido> {
     .order('updated_at', { ascending: false })
     .limit(200)
 
-  const candidatos: Candidato[] = (data ?? []).map((r) => {
+  const candidatos: Candidato[] = []
+  for (const r of data ?? []) {
     const l = r as Record<string, unknown>
+    const estado = estadoDoLeadTelegram(l.stage as string)
+    if (!estado) continue // já é cliente — ver `estadoDoLeadTelegram`
     const interesse = nomeUtil(l.interesse as string, l.interest as string, 'sem interesse declarado')
-    return {
+    candidatos.push({
       chave_origem: `telegram:${String(l.chat_id)}`,
       nome: nomeUtil(l.first_name as string, l.username as string, `Telegram ${String(l.chat_id)}`),
       email: null,
       telefone: null,
       telegram_id: String(l.chat_id),
       origem: 'telegram',
-      estado: estadoDoLeadTelegram(l.stage as string),
+      estado,
       nota: `Veio do Telegram (${nomeUtil(l.source as string, 'bot')}). Interesse: ${interesse}.`,
-    }
-  })
+    })
+  }
   return ingerir(db, 'telegram', candidatos)
 }
 
@@ -159,19 +182,45 @@ async function doInstagram(db: SupabaseClient): Promise<Ingerido> {
 
   const candidatos: Candidato[] = []
 
+  /**
+   * UM NEGÓCIO POR PESSOA, e não um por comentário.
+   *
+   * A primeira versão deste código usava o `comment_id` como chave. O ensaio mostrou o resultado:
+   * o mesmo `ruipaulo.fxcripto` cinco vezes seguidas na lista de trabalho de uma pessoa, porque
+   * tinha comentado cinco vezes. É a forma mais rápida de alguém deixar de confiar na lista — e
+   * pior, de o Rui Paulo receber cinco abordagens diferentes da mesma empresa no mesmo dia.
+   *
+   * A chave é a PESSOA. Os vários comentários dela juntam-se numa nota só, que é contexto útil
+   * para quem vai falar com ela: quem comentou «Premium» e «DESAFIO» está mais quente do que quem
+   * comentou uma vez.
+   */
+  const porPessoa = new Map<string, { quem: string; palavras: string[]; textos: string[] }>()
   for (const r of comentarios.data ?? []) {
     const l = r as Record<string, unknown>
     const quem = nomeUtil(l.commenter as string)
     if (quem === 'Sem nome') continue // sem pessoa não há negócio
+    const chave = quem.toLowerCase()
+    const acc = porPessoa.get(chave) ?? { quem, palavras: [], textos: [] }
+    const palavra = (l.keyword as string) ?? ''
+    if (palavra && !acc.palavras.includes(palavra)) acc.palavras.push(palavra)
+    const texto = ((l.comment_text as string) ?? '').trim()
+    if (texto && acc.textos.length < 3 && !acc.textos.includes(texto)) acc.textos.push(texto)
+    porPessoa.set(chave, acc)
+  }
+
+  for (const [chave, acc] of porPessoa) {
     candidatos.push({
-      chave_origem: `ig-comentario:${String(l.comment_id)}`,
-      nome: quem,
+      chave_origem: `ig-pessoa:${chave}`,
+      nome: acc.quem,
       email: null,
       telefone: null,
       telegram_id: null,
       origem: 'instagram',
       estado: 'lead',
-      nota: `Comentou no Instagram${l.keyword ? ` («${String(l.keyword)}»)` : ''}: ${nomeUtil(l.comment_text as string, 'sem texto')}`,
+      nota:
+        `Comentou no Instagram` +
+        (acc.palavras.length ? ` (${acc.palavras.map((p) => `«${p}»`).join(', ')})` : '') +
+        (acc.textos.length ? `: ${acc.textos.join(' | ')}` : ''),
     })
   }
 
@@ -211,19 +260,22 @@ async function daBase(db: SupabaseClient): Promise<Ingerido> {
     .order('created_at', { ascending: false })
     .limit(200)
 
-  const candidatos: Candidato[] = (data ?? []).map((r) => {
+  const candidatos: Candidato[] = []
+  for (const r of data ?? []) {
     const p = r as Record<string, unknown>
-    return {
+    const email = ((p.email as string) || '').trim().toLowerCase()
+    if (!email || ehEmailDeMentira(email)) continue
+    candidatos.push({
       chave_origem: `perfil:${String(p.id)}`,
-      nome: nomeUtil(p.full_name as string, p.email as string),
-      email: (p.email as string) || null,
+      nome: nomeUtil(p.full_name as string, email),
+      email,
       telefone: null,
       telegram_id: null,
       origem: 'base',
       estado: 'lead',
       nota: `Registou-se em ${String(p.created_at ?? '').slice(0, 10)} e nunca activou. Reactivação.`,
-    }
-  })
+    })
+  }
   return ingerir(db, 'base', candidatos)
 }
 

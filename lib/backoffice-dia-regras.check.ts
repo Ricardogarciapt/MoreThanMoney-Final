@@ -10,6 +10,8 @@ import {
   chaveTarefaDoDia,
   diaEmLisboa,
   ehDiaUtil,
+  TECTO_SOCIAL_DIARIO,
+  chaveTarefaSocial,
   encherODia,
   escolherDoDia,
   estadoEstaVivo,
@@ -179,5 +181,14 @@ assert.equal(dia[0].prioridade, 90)
 // Nunca devolve um dia vazio por causa de arredondamentos, mesmo com um único item pesadíssimo.
 assert.equal(encherODia([{ prioridade: 1, diasParado: 0, papel: 'closer' as const }]).length, 1)
 assert.equal(encherODia([]).length, 0)
+
+// ── Expansão social ────────────────────────────────────────────────────────
+
+assert.ok(TECTO_SOCIAL_DIARIO > 0 && TECTO_SOCIAL_DIARIO <= 10, 'um hábito, não um assalto')
+// SEM data na chave: cada publicação trabalha-se uma vez e nunca mais. Se levasse o dia, a mesma
+// publicação voltava amanhã — e comentar duas vezes no mesmo post é pior do que não comentar.
+assert.equal(chaveTarefaSocial('x1'), chaveTarefaSocial('x1'))
+assert.notEqual(chaveTarefaSocial('x1'), chaveTarefaSocial('x2'))
+assert.ok(!chaveTarefaSocial('x1').includes('2026'), 'a chave social não pode variar com o dia')
 
 console.log('backoffice-dia-regras: OK')

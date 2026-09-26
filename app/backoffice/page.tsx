@@ -11,6 +11,8 @@
  */
 import { contextoBackoffice } from '@/lib/backoffice-sessao'
 import { pode, capacidadesDoPapel, PAPEL_NOME } from '@/lib/backoffice-papeis'
+import { ambitoDaPagina } from '@/lib/backoffice-equipa'
+import { OMeuDia } from './_partes/o-meu-dia'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +51,15 @@ export default async function BackofficeEntradaPage() {
           Aqui vês o teu percurso, as tuas tarefas e o teu extracto — o teu, e só o teu.
         </p>
       </div>
+
+      {/*
+        O DIA VEM PRIMEIRO, antes dos papéis e antes de tudo.
+
+        A entrada do backoffice explicava quem a pessoa é e o que pode ver. Faltava-lhe a única
+        pergunta que ela traz quando abre isto de manhã: «o que é que eu faço agora?». Uma página
+        que responde a tudo menos a essa é uma página que se visita uma vez.
+      */}
+      <OMeuDia ids={(await ambitoDaPagina(ctx, 'tarefas')).ambito.ids} />
 
       {/* O que cada papel dá, escrito à pessoa. Saber o que se pode ver evita metade das perguntas,
           e torna visível um papel que falta (ou um que sobra) sem ninguém ter de ir à base. */}

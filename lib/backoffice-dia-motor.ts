@@ -5,7 +5,9 @@ import { PAPEL_NOME, type Papel } from '@/lib/backoffice-papeis'
 import {
   PAPEL_DO_ESTADO,
   cadenciaDoEstado,
+  TECTO_SOCIAL_DIARIO,
   chaveTarefaDoDia,
+  chaveTarefaSocial,
   diaEmLisboa,
   ehDiaUtil,
   encherODia,
@@ -18,6 +20,7 @@ import {
   type MedidaDeEstado,
 } from '@/lib/backoffice-dia-regras'
 import { ingerirLeads, type Ingerido } from '@/lib/backoffice-dia-ingestao'
+import { RASCUNHOS_POR_PESSOA, redigirRascunho } from '@/lib/backoffice-dia-mensagem'
 
 /**
  * O MOTOR DO DIA — o que transforma um pipeline parado em trabalho começado.
@@ -50,14 +53,28 @@ export interface ResultadoDoDia {
   tarefasCriadas: number
   escalados: number
   pessoasAvisadas: number
+  socialCriadas: number
   semResponsavel: number
   avisos: string[]
+  /** Só no ensaio: o dia inteiro, pessoa a pessoa, para se poder ver antes de ligar. */
+  plano?: Array<{
+    pessoa: string
+    tarefas: Array<{
+      titulo: string
+      porque: string
+      papel: Papel
+      prioridade: number
+      escalar: boolean
+      rascunho: string | null
+    }>
+  }>
 }
 
 interface NegocioVivo {
   id: string
   nome: string
   estado: EstadoPipeline
+  nota: string | null
   origem: string | null
   pack_previsto: string | null
   atualizado_em: string
@@ -213,11 +230,79 @@ function responsavelPor(
 
 // ── O motor ──────────────────────────────────────────────────────────────────
 
+/**
+ * A EXPANSÃO SOCIAL — o radar do Instagram vira trabalho de quem prospecta.
+ *
+ * O `lead-radar` recolhe publicações do nicho todos os dias e há 477 à espera. Até hoje só eram
+ * visíveis em `/admin/social/radar`, que é ferramenta do Ricardo: a equipa não lhes chegava, e por
+ * isso a expansão social dependia de ele próprio se lembrar de lá ir.
+ *
+ * Não são negócios — são publicações, e um negócio precisa de uma pessoa. Por isso entram como
+ * tarefas soltas, com o link e a razão pela qual aquela publicação foi escolhida.
+ *
+ * A chave NÃO leva a data: cada publicação trabalha-se uma vez e nunca mais. Comentar duas vezes
+ * no mesmo post é pior do que não comentar.
+ */
+async function trabalhoSocial(
+  db: SupabaseClient,
+  dia: string,
+  porPapel: Map<Papel, string[]>,
+  contador: Map<Papel, number>,
+): Promise<number> {
+  const prospectores = porPapel.get('prospector') ?? porPapel.get('team_leader') ?? []
+  if (!prospectores.length) return 0
+
+  const quantos = TECTO_SOCIAL_DIARIO * prospectores.length
+  const { data: pendentes } = await db
+    .from('ig_radar_prospetos')
+    .select('id, permalink, hashtag, pontuacao, porque')
+    .eq('estado', 'pendente')
+    .order('pontuacao', { ascending: false })
+    .limit(quantos * 3)
+
+  if (!pendentes?.length) return 0
+
+  const chaves = pendentes.map((r) => chaveTarefaSocial(String((r as { id: string }).id)))
+  const { data: jaFeitas } = await db.from('vendas_tarefas').select('chave').in('chave', chaves)
+  const feitas = new Set((jaFeitas ?? []).map((r) => String((r as { chave: string }).chave)))
+
+  const linhas = pendentes
+    .filter((r) => !feitas.has(chaveTarefaSocial(String((r as { id: string }).id))))
+    .slice(0, quantos)
+    .map((r, i) => {
+      const p = r as { id: string; permalink: string | null; hashtag: string | null; pontuacao: number | null; porque: string | null }
+      const dono = prospectores[i % prospectores.length]
+      return {
+        chave: chaveTarefaSocial(String(p.id)),
+        titulo: `Interagir: ${p.hashtag ? `#${p.hashtag}` : 'publicação do radar'}`,
+        descricao:
+          `${p.porque ?? 'Publicação do nicho com boa tracção.'}` +
+          (p.pontuacao != null ? ` (pontuação ${p.pontuacao})` : '') +
+          (p.permalink ? `\n${p.permalink}` : ''),
+        responsavel_id: dono,
+        negocio_id: null,
+        papel: 'prospector',
+        prazo: dia,
+        estado: 'aberta',
+      }
+    })
+
+  if (!linhas.length) return 0
+  const { error, count } = await db
+    .from('vendas_tarefas')
+    .upsert(linhas, { onConflict: 'chave', ignoreDuplicates: true, count: 'exact' })
+  if (error) throw new Error(error.message)
+  void contador
+  return count ?? linhas.length
+}
+
 export interface OpcoesDoDia {
   /** Corre sem escrever nada. Serve para ver o que ACONTECERIA antes de ligar o motor a sério. */
   ensaio?: boolean
   /** Quem avisa as pessoas. Fora daqui para o motor poder ser corrido sem mandar mensagens. */
   avisar?: (chatId: string, texto: string) => Promise<void>
+  /** Salta a redacção dos rascunhos. Serve para contar o trabalho sem gastar chamadas ao modelo. */
+  semRascunhos?: boolean
   agora?: Date
 }
 
@@ -237,6 +322,7 @@ export async function correrDia(
     tarefasCriadas: 0,
     escalados: 0,
     pessoasAvisadas: 0,
+    socialCriadas: 0,
     semResponsavel: 0,
     avisos,
   }
@@ -254,7 +340,7 @@ export async function correrDia(
   const { data: vivosRaw } = await db
     .from('vendas_negocios')
     .select(
-      'id, nome, estado, origem, pack_previsto, atualizado_em, prospector_id, setter_id, closer_id, team_leader_id',
+      'id, nome, estado, nota, origem, pack_previsto, atualizado_em, prospector_id, setter_id, closer_id, team_leader_id',
     )
     .not('estado', 'in', '("ganho","perdido")')
     .order('atualizado_em', { ascending: true })
@@ -288,7 +374,9 @@ export async function correrDia(
     diasParado: number
     titulo: string
     porque: string
+    pedidoIA: string
     escalar: boolean
+    rascunho?: string
   }
 
   const planeadas: Planeada[] = []
@@ -331,6 +419,7 @@ export async function correrDia(
       diasParado,
       titulo: `${acc.titulo} — ${n.nome}`,
       porque: `${acc.porque} (${ESTADO_PIPELINE_NOME[n.estado]}, parado há ${diasParado}d)`,
+      pedidoIA: acc.pedidoIA,
       escalar: precisaEscalar(diasParado, cad.dias),
     })
   }
@@ -358,8 +447,50 @@ export async function correrDia(
     aEscrever.push(...doDia)
   }
 
+  /**
+   * OS RASCUNHOS — só para os primeiros de cada pessoa.
+   *
+   * Ver `RASCUNHOS_POR_PESSOA`: redigir a lista toda custa uma chamada ao modelo por tarefa, todos
+   * os dias, e a maioria nunca seria lida. Redigem-se os que vão mesmo ser feitos a seguir.
+   *
+   * Em sequência e não em paralelo de propósito: um jorro de chamadas simultâneas ao modelo
+   * apanha limites de ritmo, e o que falha aqui não falha sozinho — leva o dia inteiro atrás.
+   */
+  if (!opcoes.semRascunhos) {
+    for (const [, lista] of porPessoa) {
+      for (const p of lista.slice(0, RASCUNHOS_POR_PESSOA)) {
+        p.rascunho = await redigirRascunho(
+          {
+            nome: p.negocio.nome,
+            estado: p.negocio.estado,
+            origem: p.negocio.origem,
+            packPrevisto: p.negocio.pack_previsto,
+            nota: p.negocio.nota ?? null,
+            diasParado: p.diasParado,
+          },
+          p.pedidoIA,
+        )
+      }
+    }
+  }
+
   if (opcoes.ensaio) {
-    return { ...base, tarefasCriadas: aEscrever.length, escalados: aEscrever.filter((p) => p.escalar).length }
+    return {
+      ...base,
+      tarefasCriadas: aEscrever.length,
+      escalados: aEscrever.filter((p) => p.escalar).length,
+      plano: [...porPessoa.entries()].map(([pessoa, lista]) => ({
+        pessoa,
+        tarefas: lista.map((p) => ({
+          titulo: p.titulo,
+          porque: p.porque,
+          papel: p.papel,
+          prioridade: p.prioridade,
+          escalar: p.escalar,
+          rascunho: p.rascunho ?? null,
+        })),
+      })),
+    }
   }
 
   // Escrever as tarefas. A chave impede repetidos se isto correr duas vezes no mesmo dia.
@@ -373,12 +504,20 @@ export async function correrDia(
       papel: p.papel,
       prazo: dia,
       estado: 'aberta',
+      rascunho: p.rascunho ?? null,
     }))
     const { error, count } = await db
       .from('vendas_tarefas')
       .upsert(linhas, { onConflict: 'chave', ignoreDuplicates: true, count: 'exact' })
     if (error) avisos.push(`tarefas: ${error.message}`)
     else base.tarefasCriadas = count ?? linhas.length
+  }
+
+  // 3b. EXPANSÃO SOCIAL
+  try {
+    base.socialCriadas = await trabalhoSocial(db, dia, porPapel, contador)
+  } catch (e) {
+    avisos.push(`social: ${e instanceof Error ? e.message : String(e)}`)
   }
 
   // 4. ESCALAR — uma linha só para o team leader, com o que está encravado.
