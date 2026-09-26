@@ -383,12 +383,23 @@ export function escolherDoDia<T extends { prioridade: number; diasParado: number
  */
 export function encherODia<T extends { prioridade: number; diasParado: number; papel: Papel }>(
   candidatos: readonly T[],
+  jaOcupado = 0,
 ): T[] {
   const ordenados = [...candidatos].sort(
     (a, b) => b.prioridade - a.prioridade || b.diasParado - a.diasParado,
   )
   const escolhidos: T[] = []
-  let ocupado = 0
+  /**
+   * `jaOcupado` é a fatia do dia que a pessoa JÁ tem preenchida com tarefas abertas de hoje.
+   *
+   * Sem isto, o tecto contava por EXECUÇÃO e não por dia: correr o motor duas vezes dava dois dias
+   * de trabalho à mesma pessoa. Aconteceu — três execuções à mão puseram 45 tarefas em cima de uma
+   * pessoa, quando o tecto dela é 15. E não é preciso ser à mão: basta a Vercel repetir o cron.
+   */
+  let ocupado = Math.max(0, jaOcupado)
+  // O dia já cheio não recebe mais nada — nem sequer a «pelo menos uma» que se garante a um dia
+  // vazio, porque aí não está vazio.
+  if (ocupado >= 1) return escolhidos
   for (const c of ordenados) {
     const custo = 1 / Math.max(1, tectoDoPapel(c.papel))
     if (escolhidos.length && ocupado + custo > 1) break

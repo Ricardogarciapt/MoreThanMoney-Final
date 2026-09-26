@@ -8,6 +8,7 @@ import {
   TECTO_SOCIAL_DIARIO,
   chaveTarefaDoDia,
   chaveTarefaSocial,
+  tectoDoPapel,
   diaEmLisboa,
   ehDiaUtil,
   encherODia,
@@ -452,11 +453,32 @@ export async function correrDia(
     porPessoa.set(p.responsavel, lista)
   }
 
+  /**
+   * O que cada pessoa já tem de hoje, em fracção de dia.
+   *
+   * Lê-se das tarefas ABERTAS com prazo de hoje, e usa-se o `papel` que ficou gravado em cada uma
+   * para saber quanto custou. Uma tarefa já feita não conta: o dia dela abriu espaço.
+   */
+  const ocupadoDe = new Map<string, number>()
+  if (porPessoa.size) {
+    const { data: jaTem } = await db
+      .from('vendas_tarefas')
+      .select('responsavel_id, papel')
+      .in('responsavel_id', [...porPessoa.keys()])
+      .eq('prazo', dia)
+      .eq('estado', 'aberta')
+    for (const r of jaTem ?? []) {
+      const t = r as { responsavel_id: string; papel: string | null }
+      const custo = 1 / Math.max(1, tectoDoPapel((t.papel as Papel) ?? 'setter'))
+      ocupadoDe.set(t.responsavel_id, (ocupadoDe.get(t.responsavel_id) ?? 0) + custo)
+    }
+  }
+
   const aEscrever: Planeada[] = []
   for (const [pessoa, lista] of porPessoa) {
     // `encherODia` e não um tecto fixo: sem setters nem closers nomeados, a mesma pessoa cobre
     // três papéis no mesmo dia, e cada tipo de tarefa custa-lhe um tempo diferente.
-    const doDia = encherODia(lista)
+    const doDia = encherODia(lista, ocupadoDe.get(pessoa) ?? 0)
     porPessoa.set(pessoa, doDia)
     aEscrever.push(...doDia)
   }

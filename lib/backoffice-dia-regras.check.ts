@@ -178,6 +178,17 @@ assert.ok(dia.length >= 1 && dia.length <= tectoDoPapel('prospector'))
 // O mais prioritário entra sempre primeiro.
 assert.equal(dia[0].prioridade, 90)
 
+// O dia JÁ cheio não recebe mais nada. Sem isto, o tecto contava por execução e não por dia —
+// correr o motor duas vezes dava dois dias de trabalho à mesma pessoa (aconteceu: 45 tarefas
+// numa pessoa cujo tecto é 15).
+assert.equal(encherODia(soCloser, 1).length, 0, 'dia cheio não recebe mais nada')
+assert.equal(encherODia(soCloser, 2).length, 0, 'nem quando já passou do cheio')
+// Meio dia ocupado recebe cerca de metade.
+const metade = encherODia(soCloser, 0.5).length
+assert.ok(metade > 0 && metade < tectoDoPapel('closer'), `metade do dia devia dar entre 1 e ${tectoDoPapel('closer')}, deu ${metade}`)
+// Um valor negativo não pode dar MAIS do que um dia inteiro.
+assert.equal(encherODia(soCloser, -5).length, tectoDoPapel('closer'))
+
 // Nunca devolve um dia vazio por causa de arredondamentos, mesmo com um único item pesadíssimo.
 assert.equal(encherODia([{ prioridade: 1, diasParado: 0, papel: 'closer' as const }]).length, 1)
 assert.equal(encherODia([]).length, 0)
