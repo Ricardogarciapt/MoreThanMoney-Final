@@ -59,6 +59,47 @@ export async function POST(request: NextRequest) {
   const ctx = await exigirCapacidade(request, 'bo.entrar')
   if (ctx instanceof NextResponse) return ctx
 
+  /**
+   * O DONO PODE GERAR O CÓDIGO POR OUTRA PESSOA DA EQUIPA.
+   *
+   * Porque isto foi preciso: o fluxo normal obriga a pessoa a entrar no backoffice para gerar o
+   * seu código. Só que quem ainda não tem o hábito de lá entrar é exactamente quem precisa de ser
+   * ligado — hoje havia 25 e 20 tarefas à espera de duas pessoas que nunca abriram a página. O
+   * arranque de uma equipa não se faz pedindo à equipa que já esteja dentro.
+   *
+   * Assim o Ricardo gera e manda-lhes o link; um toque liga.
+   *
+   * O QUE ISTO ABRE, e é preciso dizê-lo sem rodeios: quem tiver o link recebe o trabalho e vê o
+   * extracto da pessoa a quem ele pertence. É por isso que só o dono o pode gerar por outrem, que
+   * o código morre em 15 minutos, que serve uma vez só, e que gerar outro mata o anterior. Um link
+   * reencaminhado por engano expira antes de ser um problema — mas quem o manda tem de saber que
+   * o está a mandar à pessoa certa.
+   */
+  let paraQuem = ctx.userId
+  if (ctx.admin) {
+    let corpo: { user_id?: unknown } = {}
+    try {
+      corpo = (await request.json()) as { user_id?: unknown }
+    } catch {
+      // Sem corpo é o caso normal: o dono a gerar o dele.
+    }
+    if (typeof corpo.user_id === 'string' && corpo.user_id && corpo.user_id !== ctx.userId) {
+      // Só para quem TEM papéis activos: um código para uma conta sem papéis não daria acesso a
+      // nada, e pedi-lo é sinal de engano — melhor recusar do que ligar um chat a uma conta muda.
+      const { data: temPapel } = await getSupabaseAdmin()
+        .from('backoffice_papeis')
+        .select('user_id')
+        .eq('user_id', corpo.user_id)
+        .is('retirado_at', null)
+        .limit(1)
+        .maybeSingle()
+      if (!temPapel) {
+        return NextResponse.json({ error: 'Essa pessoa não tem papéis activos no backoffice.' }, { status: 400 })
+      }
+      paraQuem = corpo.user_id
+    }
+  }
+
   const agora = Date.now()
   const anterior = ultimo.get(ctx.userId) ?? 0
   if (agora - anterior < ESPERA_MS) {
@@ -67,8 +108,17 @@ export async function POST(request: NextRequest) {
   ultimo.set(ctx.userId, agora)
 
   try {
-    const { codigo, expiraEm } = await criarCodigoDeLigacao(getSupabaseAdmin(), ctx.userId)
-    return NextResponse.json({ ok: true, codigo, expira_em: expiraEm, validade_minutos: VALIDADE_MINUTOS })
+    const { codigo, expiraEm } = await criarCodigoDeLigacao(getSupabaseAdmin(), paraQuem)
+    // O link de um toque vai já montado: escrever um código à mão é onde a adopção se perde.
+    const bot = (process.env.TELEGRAM_BOT_USERNAME || 'MoreThanMoney_aibot').replace(/^@/, '')
+    return NextResponse.json({
+      ok: true,
+      codigo,
+      link: `https://t.me/${bot}?start=${codigo}`,
+      para: paraQuem === ctx.userId ? 'proprio' : paraQuem,
+      expira_em: expiraEm,
+      validade_minutos: VALIDADE_MINUTOS,
+    })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Não consegui gerar o código.' }, { status: 500 })
   }

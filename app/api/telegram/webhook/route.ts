@@ -12,6 +12,9 @@ import {
 import { getSiteOrigin } from "@/lib/site-url"
 import { resolveAppChannelSlug } from "@/lib/telegram-app-channels"
 import { sendTelegramChannelPush } from "@/lib/telegram-channel-push"
+import { ligarChatComCodigo } from '@/lib/backoffice-telegram'
+import { ehCodigoBemFormado, normalizarCodigo } from '@/lib/backoffice-telegram-codigo'
+import { PAPEL_NOME } from '@/lib/backoffice-papeis'
 
 async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmin>, message: any) {
   const chatId = String(message.chat?.id ?? "")
@@ -531,6 +534,34 @@ export async function POST(request: NextRequest) {
       if (startMatch?.[1]) {
         const token = startMatch[1]
         let linked = false
+
+        /**
+         * LIGAR A CONTA DA EQUIPA NUM TOQUE.
+         *
+         * O `/ligar CÓDIGO` continua a existir, mas exige que a pessoa abra o backoffice, gere o
+         * código, o copie e o escreva ao bot sem se enganar. São quatro passos, e é aí que a
+         * adopção morre — hoje há 25 e 20 tarefas à espera de duas pessoas que ainda não ligaram
+         * o Telegram.
+         *
+         * Com o deep-link `t.me/<bot>?start=CÓDIGO`, o Ricardo manda-lhes o link e um toque liga.
+         * O código é o MESMO, com as mesmas defesas (uso único, 15 minutos, tentativas contadas,
+         * só o resumo guardado) — muda o caminho até ele, não a força dele.
+         *
+         * Vem ANTES da procura de mentor de propósito: um código da equipa é bem formado e
+         * distinto, e deixá-lo cair no ramo do mentor fazia uma consulta à toa por cada ligação.
+         */
+        if (ehCodigoBemFormado(normalizarCodigo(token))) {
+          const r = await ligarChatComCodigo(supabase, chatId, token, body.message?.from?.username ?? null)
+          if (r.ok) {
+            await sendMessage(
+              `✅ <b>Ligado.</b> ${r.papeis.map((p) => PAPEL_NOME[p]).join(' · ')}\n\n` +
+                'A partir de amanhã recebes aqui o teu dia de manhã. Escreve /ajuda para veres o que sei fazer.',
+            )
+            return NextResponse.json({ ok: true })
+          }
+          // Código mal formado por coincidência (é só um token de funil parecido): segue o caminho
+          // normal em vez de responder «código inválido» a quem nem estava a ligar a conta.
+        }
 
         // Só procura mentor se NÃO for um token reservado do funil.
         if (!RESERVED_START.has(token.toLowerCase())) {
