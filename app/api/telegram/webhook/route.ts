@@ -242,11 +242,29 @@ export async function POST(request: NextRequest) {
 
       // Descobrir o grupo de leads (regista os grupos vistos) + boas-vindas a novos membros
       try {
-        const { recordTelegramGroup, handleLeadsGroupNewMembers } = await import("@/lib/telegram-lead-funnel")
+        const { recordTelegramGroup } = await import("@/lib/telegram-lead-funnel")
         await recordTelegramGroup(supabase, body.message.chat)
-        if (Array.isArray(body.message.new_chat_members) && body.message.new_chat_members.length) {
-          await handleLeadsGroupNewMembers(supabase, body.message.chat, body.message.new_chat_members)
 
+        /**
+         * Registar + acolher UMA vez + escrever o lead, tudo pelo MESMO sítio que trata o update
+         * `chat_member` (ver `lib/telegram-grupo-entradas.ts`).
+         *
+         * Antes chamava-se `handleLeadsGroupNewMembers`, que publicava a mensagem e esquecia a
+         * pessoa: quem não carregasse no botão nunca chegava a existir para nós. Um grupo com 62
+         * membros e um pipeline a zero foi o resultado.
+         *
+         * Inclui as SAÍDAS, que também vinham nesta mensagem e também se perdiam.
+         */
+        {
+          const { lerMensagemDeMembros } = await import("@/lib/telegram-grupo-membros")
+          const mudancas = lerMensagemDeMembros(body.message)
+          if (mudancas.length) {
+            const { registarMudancasDeMembros } = await import("@/lib/telegram-grupo-entradas")
+            await registarMudancasDeMembros(supabase, mudancas)
+          }
+        }
+
+        if (Array.isArray(body.message.new_chat_members) && body.message.new_chat_members.length) {
           /**
            * E põe cada um a andar no funil DESENHADO, além do que o código já faz.
            *
@@ -275,6 +293,37 @@ export async function POST(request: NextRequest) {
 
     if (body.edited_message?.chat?.type === "supergroup" || body.edited_message?.chat?.type === "group") {
       after(() => handleTelegramChannelMessage(supabase, body.edited_message).catch((e) => console.error("[tg edited_message]", e)))
+    }
+
+    /**
+     * ENTRADAS E SAÍDAS DO GRUPO — o update que estava a faltar.
+     *
+     * Quem entra num SUPERGRUPO por LINK DE CONVITE não gera a mensagem de serviço
+     * `new_chat_members`: gera um update `chat_member`. Era por aqui que entrava a maior parte das
+     * pessoas do "MTM System" — e nenhuma delas chegava ao pipeline, porque o webhook nem sabia
+     * que tinham entrado (o print do dono: «joined the group via invite link», e essa pessoa não
+     * existia em `telegram_leads`, `mtm_leads`, `ig_leads` nem `profiles`).
+     *
+     * ATENÇÃO, e é a razão por que isto pode ficar silencioso depois do deploy: o Telegram só
+     * entrega `chat_member` a quem o PEDE em `allowed_updates`, e o bot tem de ser administrador
+     * do grupo. O comando de `setWebhook` está escrito no fim da migração 140 — é uma alteração
+     * de produção e é decisão do dono. Sem ela isto fica correcto e adormecido.
+     *
+     * A desduplicação com a mensagem de serviço é da tabela `telegram_grupo_membros`: os dois
+     * updates podem chegar para a mesma entrada, e a chave primária responde a «fui o primeiro?».
+     */
+    if (body.chat_member) {
+      after(async () => {
+        try {
+          const { lerChatMember } = await import("@/lib/telegram-grupo-membros")
+          const mudanca = lerChatMember(body.chat_member)
+          if (!mudanca) return
+          const { registarMudancasDeMembros } = await import("@/lib/telegram-grupo-entradas")
+          await registarMudancasDeMembros(supabase, [mudanca])
+        } catch (e) {
+          console.error("[tg chat_member]", e)
+        }
+      })
     }
 
     // Callback dos botões (Aprovar/Rejeitar acesso broker)
@@ -351,7 +400,27 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ ok: true })
         }
 
-        if (typeof cq.data === "string" && cq.data.startsWith("admin:")) {
+        /**
+         * Os botões da EQUIPA (`bo:`) — riscar uma tarefa, ver o rascunho.
+         *
+         * Prefixo próprio, e antes do `admin:` por ordem de leitura e não por prioridade: os dois
+         * conjuntos são disjuntos e há uma guarda a prender que nenhum prefixo é o começo do outro
+         * (`lib/backoffice-telegram-comandos.check.ts`). A autorização é feita lá dentro, pelas
+         * capacidades dos papéis — nunca pelo chat.
+         */
+        if (typeof cq.data === "string" && cq.data.startsWith("bo:")) {
+          const { tratarBotaoDeEquipa } = await import("@/lib/backoffice-telegram")
+          const chatEquipa = String(cq.message?.chat?.id ?? cq.from?.id ?? "")
+          const r = await tratarBotaoDeEquipa(supabase, chatEquipa, cq.data)
+          const btEq = getMtmcopyBotToken()
+          if (r && btEq) {
+            await fetch(`https://api.telegram.org/bot${btEq}/sendMessage`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chat_id: chatEquipa, parse_mode: "HTML", disable_web_page_preview: true,
+                text: r.texto, ...(r.teclado ? { reply_markup: r.teclado } : {}) }),
+            })
+          }
+        } else if (typeof cq.data === "string" && cq.data.startsWith("admin:")) {
           const { handleAdminAction } = await import("@/lib/telegram-admin-menu")
           await handleAdminAction(supabase, cq.data.slice(6), String(cq.from?.id ?? cq.message?.chat?.id ?? ""))
         } else {
@@ -630,6 +699,14 @@ export async function POST(request: NextRequest) {
       // /ajuda
       else if (text === "/ajuda" || text === "/help" || text === "/comandos") {
         const { ehChatDeAdmin } = await import("@/lib/telegram-admin-menu")
+        /**
+         * Quem trabalha na equipa vê os SEUS comandos aqui, e só os seus — a lista é filtrada pelas
+         * capacidades dos papéis dele. A quem não é da equipa não se menciona nada disto, pela mesma
+         * razão por que o painel não se anuncia: anunciar um comando a quem não o pode usar é
+         * convidar a tentar.
+         */
+        const { ajudaDeEquipaSeLigado } = await import("@/lib/backoffice-telegram")
+        const ajudaEquipa = await ajudaDeEquipaSeLigado(supabase, chatId)
         await sendMessage(
           "ℹ️ <b>Comandos MoreThanMoney</b>\n\n" +
           "/app — Teste grátis da app 📲\n" +
@@ -650,6 +727,7 @@ export async function POST(request: NextRequest) {
               "/comissoes — o que está à espera de aprovação 💸\n" +
               "/mlm — nós, ranks e escadas 🌳\n"
             : "") +
+          (ajudaEquipa ? `\n${ajudaEquipa}\n` : "") +
           "\n💬 Ou escreve-me em linguagem natural — respondo no teu idioma.\n" +
           "🌐 <a href='https://www.morethanmoney.pt/new-landing'>Conhece a MTM</a>"
         )
@@ -754,6 +832,25 @@ export async function POST(request: NextRequest) {
                 : "eq_com"
           await handleAdminAction(supabase, accao, chatId)
         }
+      }
+
+      /**
+       * OS COMANDOS DE QUEM TRABALHA NO BACKOFFICE — setters, closers, prospectores, afiliados e
+       * responsáveis de equipa.
+       *
+       * Vem DEPOIS de todos os comandos do dono, de propósito: nenhum nome colide (há uma guarda a
+       * prendê-lo), e mesmo se um dia colidisse é o comando do dono que ganha. Ver
+       * `lib/backoffice-telegram-comandos.ts` — a autorização é por CAPACIDADE do papel, e nenhum
+       * comando de administração está ao alcance destes chats.
+       *
+       * Devolve `null` a tudo o que não seja um comando da equipa, e é esse `null` que deixa a
+       * mensagem livre seguir para o funil e para a IA como sempre seguiu.
+       */
+      else if (text.startsWith("/")) {
+        const { tratarComandoDeEquipa } = await import("@/lib/backoffice-telegram")
+        const r = await tratarComandoDeEquipa(supabase, chatId, text, body.message?.from?.username ?? null)
+        if (r) await sendMessage(r.texto, r.teclado)
+        else await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.")
       }
 
       // Mensagem LIVRE (não-comando) em DM → ADMIN fala com a IA do site · OU UID da corretora · OU funil IA persona

@@ -12,7 +12,9 @@
 import { contextoBackoffice } from '@/lib/backoffice-sessao'
 import { pode, capacidadesDoPapel, PAPEL_NOME } from '@/lib/backoffice-papeis'
 import { ambitoDaPagina } from '@/lib/backoffice-equipa'
+import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 import { OMeuDia } from './_partes/o-meu-dia'
+import { LigarTelegram } from './_partes/telegram'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,6 +62,15 @@ export default async function BackofficeEntradaPage() {
         que responde a tudo menos a essa é uma página que se visita uma vez.
       */}
       <OMeuDia ids={(await ambitoDaPagina(ctx, 'tarefas')).ambito.ids} pessoaId={ctx.userId} />
+
+      {/*
+        O TELEGRAM vem a seguir ao dia, e não nas definições.
+
+        Estava escondido em lado nenhum: `backoffice_contactos` nasceu vazia e o motor da manhã
+        preparava trabalho que ninguém sabia que existia. A ligação tem de estar onde a pessoa vê o
+        trabalho — é aí que faz sentido dizer-lhe «isto pode chegar-te ao telemóvel».
+      */}
+      <LigarTelegram nomeDoBot={MTMCOPY_BOT_USERNAME()} />
 
       {/* O que cada papel dá, escrito à pessoa. Saber o que se pode ver evita metade das perguntas,
           e torna visível um papel que falta (ou um que sobra) sem ninguém ter de ir à base. */}
