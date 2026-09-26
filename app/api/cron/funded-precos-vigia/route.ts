@@ -5,6 +5,7 @@ import { getMarketQuotes } from '@/lib/mtmcopy/metaapi'
 import { CANONICAL_PREMIUM_ACCOUNT_ID } from '@/lib/mtmcopy/provider-constants'
 import { isMarketOpen } from '@/lib/mtmcopy/market-hours'
 import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
+import { ehCriptoSeguida, simboloListavel } from '@/lib/cripto-seguida'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -50,7 +51,17 @@ export async function GET(request: NextRequest) {
     const { data: ticks } = await db.from('funded_precos').select('symbol, em').limit(400)
     const agora = Date.now()
     const IDADE_MAX_MS = 90_000
-    const vigiados = (ticks ?? []).filter((t) => isMarketOpen(String(t.symbol)).open)
+    /**
+     * As cripto que o sistema deixou de seguir (lib/cripto-seguida.ts) não contam como feed parado.
+     *
+     * A linha delas fica na base com o último preço e nunca mais envelhece por tick novo — e como
+     * o cripto está sempre «de mercado aberto», sem esta excepção o vigia veria 55 símbolos
+     * congelados para sempre, avisava o admin e ficava em modo degradado a gastar MetaApi a vida
+     * toda. Um símbolo que ninguém segue não é um símbolo avariado.
+     */
+    const { data: criptoCatalogo } = await db.from('funded_symbols').select('symbol').eq('classe', 'cripto').eq('ativo', true).limit(200)
+    const largados = new Set((criptoCatalogo ?? []).map((s) => String(s.symbol)).filter((s) => !ehCriptoSeguida(s)))
+    const vigiados = (ticks ?? []).filter((t) => !largados.has(String(t.symbol)) && isMarketOpen(String(t.symbol)).open)
     const velhos = vigiados.filter((t) => agora - Date.parse(String(t.em)) > IDADE_MAX_MS)
     // A idade a REPORTAR é a do pior símbolo aberto (era a do melhor — o que escondia o problema).
     const idadeMs = velhos.length
@@ -89,8 +100,10 @@ export async function GET(request: NextRequest) {
 
     // Cotações com TETO de tempo: a ligação RPC tem retries de 55s cada — sem teto, a função
     // morre aos 60s (504) sem escrever nada.
-    const { data: simbolos } = await db.from('funded_symbols').select('symbol').eq('ativo', true).order('ordem').limit(25)
-    const abertos = (simbolos ?? []).map((s) => String(s.symbol)).filter((s) => isMarketOpen(s).open)
+    const { data: simbolos } = await db.from('funded_symbols').select('symbol, classe').eq('ativo', true).order('ordem').limit(25)
+    // Pelo mesmo motivo de cima: o modo degradado não gasta cotações a escrever cripto que o
+    // sistema já não segue — seriam linhas novas na base para ninguém.
+    const abertos = (simbolos ?? []).filter((s) => simboloListavel(String(s.symbol), String(s.classe))).map((s) => String(s.symbol)).filter((s) => isMarketOpen(s).open)
     const conta = process.env.FUNDED_VIGIA_METAAPI_ACCOUNT?.trim() || CANONICAL_PREMIUM_ACCOUNT_ID
     const quotes = await Promise.race([
       getMarketQuotes(conta, abertos),
