@@ -21,6 +21,8 @@ import {
 } from '@/lib/backoffice-dia-regras'
 import { ingerirLeads, type Ingerido } from '@/lib/backoffice-dia-ingestao'
 import { RASCUNHOS_POR_PESSOA, redigirRascunho } from '@/lib/backoffice-dia-mensagem'
+import { chamadasParaHoje } from '@/lib/captacao-hot-calls-leitura'
+import { chaveTarefaChamada } from '@/lib/captacao-hot-calls'
 
 /**
  * O MOTOR DO DIA — o que transforma um pipeline parado em trabalho começado.
@@ -54,6 +56,7 @@ export interface ResultadoDoDia {
   escalados: number
   pessoasAvisadas: number
   socialCriadas: number
+  chamadasCriadas: number
   semResponsavel: number
   avisos: string[]
   /** Só no ensaio: o dia inteiro, pessoa a pessoa, para se poder ver antes de ligar. */
@@ -333,6 +336,7 @@ export async function correrDia(
     escalados: 0,
     pessoasAvisadas: 0,
     socialCriadas: 0,
+    chamadasCriadas: 0,
     semResponsavel: 0,
     avisos,
   }
@@ -568,6 +572,50 @@ export async function correrDia(
     base.socialCriadas = await trabalhoSocial(db, dia, porPapel, contador)
   } catch (e) {
     avisos.push(`social: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  /**
+   * 3c. AS CHAMADAS QUENTES.
+   *
+   * O radar do Instagram tem 570 linhas e zero pessoas — são publicações, e a API não devolve o
+   * autor numa pesquisa por hashtag. Quem existe mesmo, com número e com motivo, está na rede de
+   * IBs (92 telefones), no pipeline (15) e nos perfis (16). É daí que sai a lista de chamadas.
+   *
+   * Vão para quem fecha: uma chamada não é um toque de mensagem, é uma conversa que se prepara.
+   */
+  try {
+    const paraLigar = await chamadasParaHoje(db)
+    const quemLiga = porPapel.get('closer') ?? porPapel.get('setter') ?? porPapel.get('team_leader') ?? []
+    if (paraLigar.length && quemLiga.length) {
+      const chaves = paraLigar.map((c) => chaveTarefaChamada(c.telefone, dia))
+      const { data: jaFeitas } = await db.from('vendas_tarefas').select('chave').in('chave', chaves)
+      const feitas = new Set((jaFeitas ?? []).map((r) => String((r as { chave: string }).chave)))
+
+      const linhas = paraLigar
+        .filter((c) => !feitas.has(chaveTarefaChamada(c.telefone, dia)))
+        .map((c, i) => ({
+          chave: chaveTarefaChamada(c.telefone, dia),
+          titulo: `Ligar a ${c.nome} — ${c.telefone}`,
+          // O motivo vai na descrição e não no título: é o que a pessoa lê ANTES de marcar o
+          // número, e é o que faz a chamada não ser adiada.
+          descricao: c.motivo,
+          responsavel_id: quemLiga[i % quemLiga.length],
+          negocio_id: null,
+          papel: 'closer',
+          prazo: dia,
+          estado: 'aberta',
+        }))
+
+      if (linhas.length) {
+        const { error, count } = await db
+          .from('vendas_tarefas')
+          .upsert(linhas, { onConflict: 'chave', ignoreDuplicates: true, count: 'exact' })
+        if (error) avisos.push(`chamadas: ${error.message}`)
+        else base.chamadasCriadas = count ?? linhas.length
+      }
+    }
+  } catch (e) {
+    avisos.push(`chamadas: ${e instanceof Error ? e.message : String(e)}`)
   }
 
   // 4. ESCALAR — uma linha só para o team leader, com o que está encravado.

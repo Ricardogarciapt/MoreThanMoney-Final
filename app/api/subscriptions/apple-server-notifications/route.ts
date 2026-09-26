@@ -28,24 +28,29 @@ import {
   processMlmSubscriptionSignup,
 } from "@/lib/mlm-subscription-integration"
 import { sendNewMemberWelcomeIfEligible } from "@/lib/new-member-welcome"
+import { verifyAppleNotification, verifyAppleTransaction } from '@/lib/apple-iap-verify'
 
 const supabase = getSupabaseAdmin()
 
-// ─── JWS Decoder (no signature verification needed — Apple's endpoint is authenticated) ──
+/**
+ * A ASSINATURA PASSA A SER VERIFICADA. Antes não era, e o comentário que aqui estava dizia
+ * «no signature verification needed — Apple's endpoint is authenticated». Isso é falso: este
+ * endereço é público e qualquer pessoa lhe pode fazer um POST.
+ *
+ * O que isso permitia, em concreto: um payload forjado com um `originalTransactionId` à escolha
+ * activava uma subscrição, marcava-a como paga e — desde 26/09, em que o Apple IAP passou a
+ * escrever no livro de vendas — criava a comissão correspondente. Dinheiro a sair por um pedido
+ * HTTP que qualquer um consegue fazer.
+ *
+ * NÃO SE APAGOU ESTA ROTA, e é de propósito: não está confirmado qual das duas o App Store
+ * Connect está a chamar, e apagar a que a Apple usa perde renovações e cancelamentos EM SILÊNCIO —
+ * a subscrição de um cliente expirava sem ninguém dar por isso. Fecha-se o buraco, mantêm-se as
+ * duas vivas, e retira-se esta quando se confirmar o que está configurado na Apple.
+ */
 
-function decodeJWSPayload(jws: string): Record<string, any> | null {
-  try {
-    const parts = jws.split(".")
-    if (parts.length !== 3) return null
-    const payload = parts[1]
-    // base64url → base64 → Buffer → string
-    const padded = payload.replace(/-/g, "+").replace(/_/g, "/")
-    const decoded = Buffer.from(padded, "base64").toString("utf-8")
-    return JSON.parse(decoded)
-  } catch {
-    return null
-  }
-}
+// O descodificador que lia o JWS SEM verificar a assinatura foi apagado daqui, e não apenas
+// deixado de usar. Uma função destas, esquecida num ficheiro, é reaproveitada por quem passar por
+// cá a precisar de «só espreitar o payload» — e o buraco volta pela mão de alguém de boa fé.
 
 // ─── Notification type → status mapping ──────────────────────────────────────
 
@@ -92,7 +97,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Decode notification envelope
-    const notification = decodeJWSPayload(signedPayload)
+    // A verificação é a mesma do `/api/apple/iap/webhook` — uma casa, uma forma de confiar na Apple.
+    const notification = await verifyAppleNotification(signedPayload)
     if (!notification) {
       return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
     }
@@ -105,11 +111,11 @@ export async function POST(request: NextRequest) {
 
     // Decode transaction info
     const signedTransactionInfo = notification.data?.signedTransactionInfo
-    const transaction = signedTransactionInfo ? decodeJWSPayload(signedTransactionInfo) : null
+    const transaction = signedTransactionInfo ? await verifyAppleTransaction(signedTransactionInfo) : null
 
     // Decode renewal info
     const signedRenewalInfo = notification.data?.signedRenewalInfo
-    const renewalInfo = signedRenewalInfo ? decodeJWSPayload(signedRenewalInfo) : null
+    const renewalInfo = signedRenewalInfo ? await verifyAppleTransaction(signedRenewalInfo) : null
 
     if (!transaction) {
       // Some notifications (e.g. TEST) don't have transaction data
