@@ -6,7 +6,6 @@
  *
  * Estado + histórico em `telegram_leads`. Não é aconselhamento financeiro.
  */
-import { getMtmcopyBotToken, MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 import { getProofStats } from '@/lib/proof-stats'
 // Os links dos grupos NÃO vivem aqui: quem os liberta é o `telegram-broker-gate`, com convites
 // pessoais, e só depois de a corretora estar validada. As duas constantes que aqui estavam
@@ -238,43 +237,19 @@ export async function recordTelegramGroup(
   }
 }
 
-/** Novo membro no GRUPO DE LEADS → dá boas-vindas no grupo com botão p/ DM (o bot não pode iniciar DM). */
-export async function handleLeadsGroupNewMembers(
-  supabase: Supa,
-  chat: { id: number | string; title?: string | null },
-  members: Array<{ first_name?: string; is_bot?: boolean }>,
-): Promise<void> {
-  const { data } = await supabase
-    .from('site_settings')
-    .select('value')
-    .eq('key', 'telegram_leads_group_id')
-    .maybeSingle()
-  const leadsId = (data?.value as { chat_id?: string } | null)?.chat_id
-  if (!leadsId || String(chat.id) !== String(leadsId)) return
-
-  const token = getMtmcopyBotToken()
-  // Uma fonte para o nome do bot — o link do botão é a coisa que mais custa ter errada.
-  const botUser = MTMCOPY_BOT_USERNAME()
-  if (!token) return
-  // A primeira coisa que um lead lê. O texto é editável no /admin/social — mudar uma vírgula
-  // aqui obrigava a um commit e a um deploy, e por isso ninguém o mudava.
-  const { lerMensagem } = await import('@/lib/mensagens-funil')
-  for (const m of members) {
-    if (m.is_bot) continue
-    const name = m.first_name || ''
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chat.id,
-        text: await lerMensagem('boas_vindas_grupo', { nome: name ? `, ${name}` : '' }),
-        reply_markup: {
-          inline_keyboard: [[{ text: '💬 Falar com o assistente MTM', url: `https://t.me/${botUser}?start=lead` }]],
-        },
-      }),
-    }).catch(() => {})
-  }
-}
+/**
+ * O ACOLHIMENTO DE QUEM ENTRA NO GRUPO MUDOU DE CASA.
+ *
+ * Vivia aqui, na `handleLeadsGroupNewMembers`: publicava a mensagem no grupo e ESQUECIA a pessoa.
+ * Quem não carregasse no botão desaparecia para sempre — não ficava lead, não entrava no pipeline,
+ * ninguém lhe voltava a falar. É isso que fez o grupo "MTM System" ter 62 membros e o pipeline não
+ * conhecer nenhum.
+ *
+ * Passou para `lib/telegram-grupo-entradas.ts`, que faz as três coisas juntas: registar, acolher UMA
+ * vez, e escrever o lead para a ingestão da manhã o levar ao pipeline. E não ficou uma cópia da
+ * mensagem aqui de propósito — duas cópias de uma mensagem de vendas é uma cópia a mais, que é a
+ * que alguém corrige sem o lead ver a diferença.
+ */
 
 /**
  * As boas-vindas do funil NÃO vivem aqui.
