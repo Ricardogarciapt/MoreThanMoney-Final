@@ -32,7 +32,10 @@
  * e por isso um preço sem hora de mercado tem um tecto mais curto, porque não se pode provar que
  * é de agora.
  */
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { lerFotografia, lerMapa } from '../funded-motor/fonte-conector-mt5'
 
 export interface PrecoNosso {
   simbolo: string
@@ -157,6 +160,23 @@ export interface OpcoesFonte {
   db: SupabaseClient
   /** De quanto em quanto tempo se relê a tabela. */
   intervaloMs?: number
+  /**
+   * Os ficheiros `ticks.json` dos terminais do conector — a ENTREGA RÁPIDA.
+   *
+   * O caminho pela base de dados é honesto mas lento: 1 s de cadência mais a ida à Supabase. O EA
+   * escreve a fotografia do Market Watch de 50 em 50 ms num ficheiro no mesmo VPS, e ler um
+   * ficheiro de 700 bytes custa microssegundos. Medido a 23/09: idade do tick p50 94 ms, p95
+   * 127 ms, contra os 2–4 s das fontes REST.
+   *
+   * Estes preços trazem a HORA DA CORRETORA (`time_msc`), que é a prova directa de que o tick é de
+   * agora — por isso passam pelo tecto dos 30 s e não precisam da prova do movimento.
+   *
+   * A base continua a servir tudo o que o terminal não tem no Market Watch. As duas fontes não
+   * competem: ganha a do conector quando ela tem o símbolo e o preço é utilizável.
+   */
+  ficheirosConector?: readonly string[]
+  /** Ritmo de leitura do ficheiro. 25 ms por omissão, como no motor do funded. */
+  ritmoConectorMs?: number
   tectos?: Tectos
   /** Mapa opcional de nomes de corretora → canónico (MOTOR_REAL_MAPA_SIMBOLOS). */
   mapa?: ReadonlyMap<string, string>
@@ -170,6 +190,11 @@ export interface OpcoesFonte {
  */
 export class PrecosNossos {
   private mapaPrecos = new Map<string, PrecoNosso>()
+  /** O que vem do ficheiro do conector — separado, porque tem prioridade e outra cadência. */
+  private doConector = new Map<string, PrecoNosso>()
+  private relogioConector: NodeJS.Timeout | null = null
+  ticksConector = 0
+  conectorLigado = false
   /** Desde quando é que cada símbolo não mexe. Ver `TECTO_PARADO_MS`. */
   private movimentos = new Map<string, Movimento>()
   private temporizador: NodeJS.Timeout | null = null
@@ -181,10 +206,20 @@ export class PrecosNossos {
   constructor(private readonly o: OpcoesFonte) {}
 
   private get intervalo() { return this.o.intervaloMs ?? 1_000 }
+  private mapaConectorCache: Map<string, string> | null = null
+  private get mapaConector(): Map<string, string> {
+    this.mapaConectorCache ??= lerMapa(process.env.CONECTOR_TICKS_MAPA)
+    return this.mapaConectorCache
+  }
   private get tectos() { return this.o.tectos ?? TECTOS }
 
   async iniciar(): Promise<void> {
     await this.ler()
+    await this.lerConector()
+    if (this.ficheiros.length) {
+      this.relogioConector = setInterval(() => void this.lerConector(), this.o.ritmoConectorMs ?? 25)
+      this.relogioConector.unref?.()
+    }
     const bater = () => {
       if (this.parado) return
       this.temporizador = setTimeout(async () => {
@@ -201,6 +236,38 @@ export class PrecosNossos {
     this.parado = true
     if (this.temporizador) clearTimeout(this.temporizador)
     this.temporizador = null
+    if (this.relogioConector) clearInterval(this.relogioConector)
+    this.relogioConector = null
+  }
+
+  private get ficheiros(): readonly string[] { return this.o.ficheirosConector ?? [] }
+
+  /**
+   * A leitura rápida. Nunca lança: um ficheiro em falta (terminal fechado) deixa simplesmente de
+   * haver caminho rápido, e a base continua a servir — que é o comportamento que já existia.
+   */
+  private async lerConector(): Promise<void> {
+    if (this.parado || !this.ficheiros.length) return
+    const mapa = this.mapaConector
+    const agora = Date.now()
+    for (const f of this.ficheiros) {
+      let bruto: string
+      try {
+        bruto = await fs.readFile(f, 'utf8')
+      } catch {
+        continue
+      }
+      this.conectorLigado = true
+      for (const t of lerFotografia(bruto, mapa)) {
+        const chave = canonico(t.sym, this.o.mapa)
+        const anterior = this.doConector.get(chave)
+        // A fotografia repete-se entre leituras: só o tick NOVO conta como tick.
+        if (anterior && anterior.emMercado === t.em) continue
+        if (!(t.bid > 0) || !(t.ask > 0)) continue
+        this.ticksConector++
+        this.doConector.set(chave, { simbolo: t.sym, bid: t.bid, ask: t.ask, em: agora, emMercado: t.em })
+      }
+    }
   }
 
   private async ler(): Promise<void> {
@@ -243,34 +310,54 @@ export class PrecosNossos {
     }
   }
 
-  bruto(simbolo: string): PrecoNosso | null {
-    return this.mapaPrecos.get(canonico(simbolo, this.o.mapa)) ?? null
+  /**
+   * O preço em bruto: o do conector quando ele o tem e está utilizável, senão o da base.
+   *
+   * A ordem é o ponto da entrega rápida — mas com a condição «e está utilizável». Sem ela, um
+   * terminal parado (fim de semana, terminal fechado, EA desligado) servia para sempre o seu último
+   * tick e tapava a base, que podia ter o símbolo vivo por outra fonte.
+   */
+  bruto(simbolo: string, agora = Date.now()): PrecoNosso | null {
+    const chave = canonico(simbolo, this.o.mapa)
+    const rapido = this.doConector.get(chave)
+    if (rapido && utilizavel(rapido, agora, this.tectos)) return rapido
+    return this.mapaPrecos.get(chave) ?? rapido ?? null
   }
 
   /** O médio utilizável, ou null. Ver a regra no topo do ficheiro. */
   preco(simbolo: string, agora = Date.now()): number | null {
     const chave = canonico(simbolo, this.o.mapa)
-    const p = this.mapaPrecos.get(chave)
+    const p = this.bruto(chave, agora)
     if (!p) return null
     if (!utilizavelComMovimento(p, agora, this.movimentos.get(chave) ?? null, this.tectos)) return null
     return medio(p)
   }
 
-  resumo(agora = Date.now()): { simbolos: number; utilizaveis: number; comHoraMercado: number; parados: number; leituras: number; falhas: number; idadeLeituraS: number | null } {
+  resumo(agora = Date.now()): { simbolos: number; utilizaveis: number; comHoraMercado: number; parados: number; conector: { ligado: boolean; simbolos: number; ticks: number; idadeP50Ms: number | null }; leituras: number; falhas: number; idadeLeituraS: number | null } {
     let utilizaveis = 0
     let comHora = 0
     let parados = 0
-    for (const [chave, p] of this.mapaPrecos) {
+    const idades: number[] = []
+    for (const p of this.doConector.values()) {
+      if (p.emMercado != null) idades.push(agora - p.emMercado)
+    }
+    idades.sort((a, b) => a - b)
+    const p50 = idades.length ? idades[Math.floor(idades.length / 2)] : null
+    // Conta-se sobre a UNIÃO das duas fontes: o conector pode ter símbolos que a base não tem.
+    const todas = new Map(this.mapaPrecos)
+    for (const [chave, p] of this.doConector) if (utilizavel(p, agora, this.tectos)) todas.set(chave, p)
+    for (const [chave, p] of todas) {
       const mov = this.movimentos.get(chave) ?? null
       if (utilizavelComMovimento(p, agora, mov, this.tectos)) utilizaveis++
       else if (utilizavel(p, agora, this.tectos)) parados++
       if (p.emMercado != null) comHora++
     }
     return {
-      simbolos: this.mapaPrecos.size,
+      simbolos: todas.size,
       utilizaveis,
       comHoraMercado: comHora,
       parados,
+      conector: { ligado: this.conectorLigado, simbolos: this.doConector.size, ticks: this.ticksConector, idadeP50Ms: p50 },
       leituras: this.leituras,
       falhas: this.falhas,
       idadeLeituraS: this.ultimaLeituraEm ? Math.round((agora - this.ultimaLeituraEm) / 1000) : null,

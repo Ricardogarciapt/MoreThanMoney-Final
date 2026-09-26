@@ -25,6 +25,7 @@ import { LigacaoReal } from './ligacao'
 import { carregarEscopo, chaveItem, type Escopo } from './escopo'
 import { criarExecutorLive } from './live'
 import { PrecosNossos } from './precos-nossos'
+import { GuardaDeploy, buscadorMetaApi } from './conta-deployada'
 import { contasStreaming } from '../../lib/mtmcopy/metaapi-snapshot-regras'
 import { contaInexistente, marcarContaInexistente } from '../../lib/mtmcopy/metaapi-inexistentes'
 import { leituraDeFundoBloqueada, registarErroQuota } from '../../lib/mtmcopy/metaapi-quota'
@@ -70,6 +71,15 @@ const CFG = {
   precosNossosMs: num('MOTOR_REAL_PRECOS_MS', 1_000),
   /** Mapa nome-da-corretora:nosso-nome, ex.: "GOLD:XAUUSD,XAUUSD.X:XAUUSD". */
   mapaSimbolos: env('MOTOR_REAL_MAPA_SIMBOLOS'),
+  /**
+   * Pastas raiz dos terminais do conector — a entrega RÁPIDA dos preços (ver `precos-nossos.ts`).
+   * Partilha a variável com o motor do funded de propósito: é o mesmo ficheiro, no mesmo VPS.
+   */
+  conectorRaizes: (env('CONECTOR_TICKS_RAIZES') || '').split(',').map((x) => x.trim()).filter(Boolean),
+  conectorTrabalho: env('CONECTOR_TICKS_TRABALHO') || 'mtm-conector',
+  conectorRitmoMs: num('CONECTOR_TICKS_MS', 25),
+  /** Verificar na MetaApi se a conta está deployada antes de lhe abrir streaming. */
+  guardaDeploy: env('MOTOR_REAL_GUARDA_DEPLOY') !== '0',
   gravarMs: num('MOTOR_REAL_GRAVAR_MS', 5_000),
   entradaLiveMs: num('MOTOR_REAL_ENTRADA_LIVE_MS', 15_000),
   planeamento: {
@@ -131,7 +141,15 @@ async function main() {
     const [de, para] = par.split(':').map((x) => x?.trim().toUpperCase())
     if (de && para) mapaSimbolos.set(de, para)
   }
-  const precos = new PrecosNossos({ db, intervaloMs: CFG.precosNossosMs, mapa: mapaSimbolos, log })
+  const ficheirosConector = CFG.conectorRaizes.map((r) => `${r}/MQL5/Files/${CFG.conectorTrabalho}/ticks.json`)
+  const precos = new PrecosNossos({
+    db,
+    intervaloMs: CFG.precosNossosMs,
+    mapa: mapaSimbolos,
+    ficheirosConector,
+    ritmoConectorMs: CFG.conectorRitmoMs,
+    log,
+  })
   await precos.iniciar()
   log(`[precos-nossos] ${JSON.stringify(precos.resumo())}`)
 
@@ -145,6 +163,12 @@ async function main() {
    */
   const precoDe = (conta: string, simbolo: string): number | null =>
     precos.preco(simbolo) ?? ligacoes.get(conta)?.precoMedio(simbolo) ?? null
+
+  /**
+   * O guarda das contas desmontadas. Usa o token da casa: as contas de equipa têm o seu próprio
+   * token e o erro delas já é neutralizado noutro sítio (`neutralizarErroDeEquipa`).
+   */
+  const guardaDeploy = CFG.guardaDeploy ? new GuardaDeploy(buscadorMetaApi(CFG.token), log) : null
 
   const registo = new RegistoSombra(CFG.sombra, (s) => pipDoItem('premium', s))
   const executor = criarExecutorLive({
@@ -253,6 +277,14 @@ async function main() {
         if (ligacoes.has(p.conta) || bloqueio.has(p.conta)) continue
         if (await contaInexistente(p.conta)) bloqueio.set(p.conta, 'conta inexistente na MetaApi (registo 24 h)')
         else if (p.chaveToken === 'casa' && (await leituraDeFundoBloqueada(p.conta))) bloqueio.set(p.conta, 'travão de quota da MetaApi')
+        /**
+         * UMA CONTA DESMONTADA NA METAAPI NÃO SE TOCA. Ver `conta-deployada.ts`: insistir nela
+         * fazia a MetaApi armar o travão GLOBAL, e com o travão global o motor recusava TODAS as
+         * contas — incluindo as que estavam boas. A verificação é um GET, não é streaming, e
+         * reabre-se sozinha de 10 em 10 minutos para apanhar a conta no momento em que for
+         * deployada.
+         */
+        else if (guardaDeploy && !(await guardaDeploy.podeLigar(p.conta))) bloqueio.set(p.conta, 'não está deployada na MetaApi')
         else if (p.chaveToken !== 'casa' && apis.pausadaAte(p.chaveToken as never, agora)) bloqueio.set(p.conta, `chave ${p.chaveToken} em pausa`)
       }
       const plano = planear(escopo.pedidos, estados, agora, CFG.planeamento, { pausaGlobalAte, bloqueada: (c) => bloqueio.get(c) ?? null })
@@ -449,7 +481,7 @@ async function main() {
     await limpar().catch(() => undefined)
   })(), CFG.gravarMs)
   const iLog = setInterval(() => {
-    log('[pulso]', JSON.stringify({ ...contadores, precos: precos.resumo(), itens: itens.size, emEspera: registo.emEspera, live: [...entradaLive.keys()], contas: [...ligacoes.values()].map((l) => l.resumo()) }))
+    log('[pulso]', JSON.stringify({ ...contadores, precos: precos.resumo(), deploy: guardaDeploy?.resumo() ?? null, itens: itens.size, emEspera: registo.emEspera, live: [...entradaLive.keys()], contas: [...ligacoes.values()].map((l) => l.resumo()) }))
   }, 60_000)
 
   let aSair = false
