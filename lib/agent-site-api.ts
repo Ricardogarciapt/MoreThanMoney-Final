@@ -57,6 +57,7 @@ export const AGENT_API_MANIFEST = {
     { method: "GET", path: "/api/agent/v1/ai/insights", description: "Métricas e sugestões de uso de IA" },
     { method: "GET", path: "/api/agent/v1/business", description: "Negócio (AIOS): overview|revenue|subscriptions|customers|leads|tasks (?resource=)" },
     { method: "POST", path: "/api/agent/v1/business", description: "AIOS: create_task | update_task | outreach_draft (rascunho, nunca envia)" },
+    { method: "POST", path: "/api/agent/v1/email/send", description: "Envia email a quem JÁ existe em profiles. Ensaio por omissão: exige \"confirmar\": true. Tecto de 25 destinatários por chamada." },
     { method: "GET", path: "/api/agent/v1/agents", description: "Lista agentes MTM (coach, portfolio) para o AIOS" },
     { method: "POST", path: "/api/agent/v1/agents", description: "Fala com um agente MTM do site: { agent, message } -> resposta" },
   ],
