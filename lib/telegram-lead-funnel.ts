@@ -7,6 +7,13 @@
  * Estado + histórico em `telegram_leads`. Não é aconselhamento financeiro.
  */
 import { getProofStats } from '@/lib/proof-stats'
+import { PONTOS_DE_CAPTURA } from '@/lib/captacao-consentimento'
+import {
+  ETIQUETA_PERGUNTADO,
+  confirmacao,
+  devePerguntar,
+  lerResposta,
+} from '@/lib/captacao-consentimento-conversa'
 // Os links dos grupos NÃO vivem aqui: quem os liberta é o `telegram-broker-gate`, com convites
 // pessoais, e só depois de a corretora estar validada. As duas constantes que aqui estavam
 // (FOREX_LINK, SENSEI_LINK) eram links estáticos que ninguém usava — e um link de grupo à solta
@@ -56,6 +63,8 @@ interface LeadRow {
   source: string | null
   history: Array<{ role: 'user' | 'assistant'; text: string }> | null
   message_count: number | null
+  /** Etiquetas canónicas do lead. É aqui que vive a marca de já se ter pedido o consentimento. */
+  tags: string[] | null
 }
 
 /** Deteta o interesse a partir do texto do lead (heurística leve, complementa a IA). */
@@ -89,10 +98,24 @@ export async function runLeadFunnelReply(input: {
   const supabase = getSupabaseAdmin()
   const { data: existing } = await supabase
     .from('telegram_leads')
-    .select('chat_id, first_name, interest, stage, source, history, message_count')
+    .select('chat_id, first_name, interest, stage, source, history, message_count, tags')
     .eq('chat_id', input.chatId)
     .maybeSingle()
   const lead = (existing ?? null) as LeadRow | null
+
+  /**
+   * ANTES DE FALAR: a pessoa está a responder ao pedido de consentimento — ou a pedir para sair?
+   *
+   * Corre primeiro, e por duas razões. A cara: quem escreve «parar» não pode receber uma resposta
+   * de vendas gerada por um modelo — é a pior mensagem possível, e é a que sai se isto vier no
+   * fim. A barata: um «sim» ou um «parar» não precisam de modelo nenhum para serem respondidos.
+   */
+  const etiquetas = Array.isArray(lead?.tags) ? lead.tags : []
+  const respostaConsentimento = lerResposta(input.userText, etiquetas.includes(ETIQUETA_PERGUNTADO))
+  if (respostaConsentimento !== 'nada') {
+    await registarConsentimento(supabase, input.chatId, input.source ?? lead?.source ?? 'telegram', respostaConsentimento)
+    return confirmacao(respostaConsentimento)
+  }
 
   const history = Array.isArray(lead?.history) ? lead!.history.slice(-8) : []
   const messages = [
@@ -175,6 +198,23 @@ export async function runLeadFunnelReply(input: {
     { role: 'user' as const, text: input.userText },
     { role: 'assistant' as const, text: answer },
   ].slice(-16)
+  /**
+   * E, se for altura, PEDE-SE — colado ao fim de uma resposta que já deu valor, e nunca à primeira.
+   *
+   * Sem isto o WhatsApp é um canal de uma mensagem só: a Meta deixa responder dentro das 24 horas
+   * em que a pessoa escreveu e mais nada, e o número fica na base a não servir para nada.
+   */
+  const perguntar = devePerguntar({
+    mensagensDela: (lead?.message_count ?? 0) + 1,
+    jaPerguntado: etiquetas.includes(ETIQUETA_PERGUNTADO),
+    jaConsentiu: false,
+    jaRecusouOuSaiu: false,
+  })
+  if (perguntar) {
+    const ponto = PONTOS_DE_CAPTURA.find((x) => x.canal === (input.source === 'whatsapp' ? 'whatsapp' : 'telegram'))
+    if (ponto) answer = `${answer}\n\n${ponto.pedido}`
+  }
+
   const interest = lead?.interest || detectInterest(input.userText)
   const stage = interest ? 'routed' : lead?.stage === 'new' || !lead ? 'qualifying' : lead?.stage || 'qualifying'
   const source = input.source || lead?.source || 'telegram'
@@ -184,6 +224,8 @@ export async function runLeadFunnelReply(input: {
     `src:${source}`,
     interest ? `interest:${interest}` : null,
     `stage:${stage}`,
+    // A marca que impede a segunda pergunta. Vive nas etiquetas do lead porque é aqui que se lê.
+    ...(etiquetas.includes(ETIQUETA_PERGUNTADO) || perguntar ? [ETIQUETA_PERGUNTADO] : []),
   ].filter(Boolean))) as string[]
   try {
     await supabase.from('telegram_leads').upsert(
@@ -209,6 +251,71 @@ export async function runLeadFunnelReply(input: {
 }
 
 type Supa = ReturnType<typeof getSupabaseAdmin>
+
+/**
+ * ESCREVER A PERMISSÃO NO LIVRO — ou a saída, que é a que tem de funcionar sempre.
+ *
+ * O `chatId` diz o canal na própria forma: `wa:351912345678` veio do WhatsApp, o resto é um chat
+ * do Telegram. Essa diferença decide a COLUNA, e a coluna é o que permite encontrar a pessoa
+ * depois: um número gravado em `telegram_chat_id` nunca mais é encontrado por quem procura um
+ * telefone, e o consentimento dela fica a existir sem servir para nada.
+ *
+ * A SAÍDA marca `retirado_em` em TODAS as linhas daquele contacto, não só na última. Uma pessoa
+ * que consentiu duas vezes (por email e por WhatsApp, por exemplo) e pede para sair está a sair de
+ * tudo — deixar uma linha viva era continuar a escrever-lhe com a bênção do sistema.
+ *
+ * Falhar a escrita NÃO pode ser silencioso quando é uma saída: se não se conseguir gravar, o que
+ * fica no log é a única forma de alguém reparar que uma pessoa pediu para sair e continua na lista.
+ */
+async function registarConsentimento(
+  supabase: Supa,
+  chatId: string,
+  canal: string,
+  resposta: 'sim' | 'nao' | 'sair',
+): Promise<void> {
+  const ehWhatsApp = chatId.startsWith('wa:')
+  const contacto = ehWhatsApp ? chatId.slice(3) : chatId
+  const coluna = ehWhatsApp ? 'telefone' : 'telegram_chat_id'
+  const agora = new Date().toISOString()
+
+  try {
+    if (resposta === 'sair') {
+      const { error } = await supabase
+        .from('captacao_consentimento')
+        .update({ retirado_em: agora, retirado_por: `conversa:${canal}` })
+        .eq(coluna, contacto)
+        .is('retirado_em', null)
+      if (error) throw new Error(error.message)
+      // Também se grava a saída de quem nunca tinha consentido: sem linha, não há prova de que
+      // ela pediu — e a próxima importação de contactos tratava-a como alguém por perguntar.
+      await supabase.from('captacao_consentimento').insert({
+        [coluna]: contacto,
+        canal: ehWhatsApp ? 'whatsapp' : 'telegram',
+        base_legal: 'sem_base',
+        pedido_em: agora,
+        retirado_em: agora,
+        retirado_por: `conversa:${canal}`,
+        prova: 'Pediu para parar dentro da conversa',
+      })
+      return
+    }
+
+    await supabase.from('captacao_consentimento').insert({
+      [coluna]: contacto,
+      canal: ehWhatsApp ? 'whatsapp' : 'telegram',
+      base_legal: resposta === 'sim' ? 'consentimento' : 'sem_base',
+      pedido_em: agora,
+      ...(resposta === 'nao' ? { retirado_em: agora, retirado_por: `conversa:${canal}` } : {}),
+      prova:
+        resposta === 'sim'
+          ? 'Respondeu «sim» ao pedido feito dentro da conversa'
+          : 'Respondeu «não» ao pedido feito dentro da conversa',
+    })
+  } catch (e) {
+    // Uma saída que não se grava é uma pessoa que pediu para sair e continua na lista.
+    console.error(`[consentimento] ${resposta} de ${coluna}=${contacto} NÃO gravado:`, e)
+  }
+}
 
 /** Regista os grupos onde o bot está (mapa em site_settings) — para descobrir o grupo de leads. */
 export async function recordTelegramGroup(
