@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { DIAS_INATIVIDADE, MOTIVO_INATIVIDADE, contasACair, type ContaParaInatividade } from '@/lib/mtmfunded/inatividade'
+import {
+  DIAS_INATIVIDADE,
+  MOTIVO_INATIVIDADE,
+  TECTO_POR_PASSAGEM,
+  contasAAvisar,
+  contasACair,
+  type ContaParaInatividade,
+} from '@/lib/mtmfunded/inatividade'
+import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -30,10 +38,10 @@ export const maxDuration = 300
  * pode bem ser o que se quer — mas é um número que ninguém deve descobrir depois de acontecer.
  */
 
-/** Quantas contas no máximo se apagam numa passagem. Ver a nota acima. */
-export const TECTO_POR_PASSAGEM = 20
-
 const CHAVE = 'funded_inatividade'
+const ADMIN_CHAT = () => process.env.TELEGRAM_ADMIN_CHAT_ID?.trim() || '1446687230'
+/** O tipo do registo que impede o mesmo aviso de sair duas vezes no mesmo dia. */
+const TIPO_AVISO = 'funded_inatividade_vespera'
 
 export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -101,6 +109,50 @@ export async function GET(request: NextRequest) {
     porque: x.porque,
   }))
 
+  /**
+   * O AVISO DA VÉSPERA — a lista de quem cai amanhã, no Telegram do dono.
+   *
+   * Sai SEMPRE, armado ou não, e mesmo num ensaio: avisar não apaga nada, e o valor disto é
+   * precisamente poder travar antes. O dedup vive em `notifications` (uma linha por conta e por
+   * dia), porque este cron pode ser corrido à mão além da passagem diária — e receber a mesma
+   * lista três vezes ensina a ignorá-la.
+   */
+  const vespera = contasAAvisar(factos, agora)
+  let avisadas = 0
+  if (vespera.length) {
+    const dia = new Date(agora).toISOString().slice(0, 10)
+    const chaves = vespera.map((x) => `${TIPO_AVISO}:${dia}:${x.conta.id}`)
+    const { data: jaAvisados } = await db
+      .from('notifications')
+      .select('title')
+      .eq('type', TIPO_AVISO)
+      .in('title', chaves)
+    const jaLa = new Set((jaAvisados ?? []).map((r) => String((r as { title?: string }).title ?? '')))
+    const novos = vespera.filter((x) => !jaLa.has(`${TIPO_AVISO}:${dia}:${x.conta.id}`))
+
+    if (novos.length) {
+      const linha = (x: (typeof novos)[number]) =>
+        `· ${porLogin.get(x.conta.id) ?? x.conta.id} (${x.conta.tipo}, parada há ${x.diasParado} d)`
+      const amostra = novos.slice(0, 15).map(linha).join('\n')
+      await sendTelegramChannelMessage(
+        ADMIN_CHAT(),
+        `⏳ <b>Inatividade — amanhã caem ${novos.length} conta(s)</b>\n` +
+          `${DIAS_INATIVIDADE} dias sem fechar uma trade. Serão QUEBRADAS e APAGADAS.\n\n${amostra}` +
+          (novos.length > 15 ? `\n… e mais ${novos.length - 15}.` : '') +
+          `\n\nPara travar: <code>site_settings.${CHAVE} = {"armada": false}</code>` +
+          (armada ? '' : '\n\n<i>(a regra está DESARMADA — hoje isto é só um aviso)</i>'),
+      ).catch(() => undefined)
+
+      // O registo só se escreve DEPOIS de a mensagem ter saído: marcar antes e falhar o envio
+      // fazia o aviso desaparecer para sempre, em silêncio, no dia em que mais falta fazia.
+      await db
+        .from('notifications')
+        .insert(novos.map((x) => ({ type: TIPO_AVISO, title: `${TIPO_AVISO}:${dia}:${x.conta.id}`, message: x.conta.id })))
+        .then(undefined, () => undefined)
+      avisadas = novos.length
+    }
+  }
+
   if (ensaio) {
     return NextResponse.json({
       ok: true,
@@ -109,6 +161,7 @@ export async function GET(request: NextRequest) {
       dias: DIAS_INATIVIDADE,
       analisadas: factos.length,
       caem: lista,
+      avisadasVespera: avisadas,
       nota: armada
         ? 'Ensaio pedido no pedido (dryRun=1): nada foi apagado.'
         : `Desarmado. Para armar: site_settings.${CHAVE} = {"armada": true}.`,
@@ -133,6 +186,7 @@ export async function GET(request: NextRequest) {
     dias: DIAS_INATIVIDADE,
     analisadas: factos.length,
     caem: lista.length,
+    avisadasVespera: avisadas,
     feitas,
     porFazer: Math.max(0, lista.length - TECTO_POR_PASSAGEM),
   })

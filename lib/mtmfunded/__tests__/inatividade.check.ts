@@ -103,3 +103,49 @@ assert.equal(DIAS_INATIVIDADE, 30)
 assert.match(MOTIVO_INATIVIDADE, /30 dias/)
 
 console.log('mtmfunded/inatividade: OK')
+
+// ── O AVISO DA VÉSPERA ─────────────────────────────────────────────────────
+
+import { DIAS_AVISO_VESPERA, TECTO_POR_PASSAGEM, contasAAvisar } from '../inatividade'
+
+{
+  /**
+   * A regra de ouro do aviso: quem aparece na véspera TEM de cair no dia seguinte, e quem cai no
+   * dia seguinte TEM de ter aparecido na véspera. Um aviso que não bate certo com o que acontece
+   * a seguir é pior do que não avisar — ensina a ignorá-lo, e é nesse dia que apaga a conta errada.
+   */
+  const amanha = AGORA + 86_400_000
+  const frota: ContaParaInatividade[] = [
+    conta({ id: 'cai-amanha', ultimaTradeFechadaEm: haDias(DIAS_INATIVIDADE - 1) }),
+    conta({ id: 'ainda-longe', ultimaTradeFechadaEm: haDias(5) }),
+    conta({ id: 'ja-caia-hoje', ultimaTradeFechadaEm: haDias(DIAS_INATIVIDADE + 3) }),
+    conta({ id: 'nunca-negociou-amanha', ultimaTradeFechadaEm: null, criadaEm: haDias(DIAS_INATIVIDADE - 1) }),
+    conta({ id: 'real', tipo: 'real', ultimaTradeFechadaEm: haDias(DIAS_INATIVIDADE - 1) }),
+  ]
+
+  const aviso = contasAAvisar(frota, AGORA).map((x) => x.conta.id)
+  assert.deepEqual(aviso.sort(), ['cai-amanha', 'nunca-negociou-amanha'].sort())
+
+  // Quem já caía HOJE não é véspera de nada: não se avisa de um corte que já aconteceu.
+  assert.ok(!aviso.includes('ja-caia-hoje'))
+  // E uma real nunca entra no aviso, porque nunca entra no corte.
+  assert.ok(!aviso.includes('real'))
+
+  // A prova dos dois sentidos, com o relógio adiantado um dia.
+  const caemAmanha = contasACair(frota, amanha).map((x) => x.conta.id)
+  for (const id of aviso) assert.ok(caemAmanha.includes(id), `avisado «${id}» tem de cair amanhã`)
+  const jaCaiamHoje = new Set(contasACair(frota, AGORA).map((x) => x.conta.id))
+  for (const id of caemAmanha) {
+    if (jaCaiamHoje.has(id)) continue
+    assert.ok(aviso.includes(id), `«${id}» cai amanhã e ninguém foi avisado`)
+  }
+
+  assert.equal(DIAS_AVISO_VESPERA, DIAS_INATIVIDADE - 1, 'a véspera é um dia antes, não três')
+  assert.equal(contasAAvisar([], AGORA).length, 0)
+}
+
+// O tecto por passagem vive com a regra e é modesto de propósito: dá uma manhã para travar.
+assert.equal(TECTO_POR_PASSAGEM, 20)
+assert.ok(TECTO_POR_PASSAGEM < 50)
+
+console.log('mtmfunded/inatividade (véspera): OK')

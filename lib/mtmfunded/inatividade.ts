@@ -32,6 +32,16 @@
 /** Os dias sem fechar uma trade a partir dos quais a conta cai. Decisão do dono: 30. */
 export const DIAS_INATIVIDADE = 30
 
+/**
+ * Quantas contas no máximo se apagam numa passagem.
+ *
+ * Vive aqui, com a regra, e não no cron: um ficheiro de rota do Next não pode exportar constantes
+ * (o type-check do build rejeita-o), e mais importante — o tecto faz parte da regra, não do
+ * calendário. Se um dia uma data ficar mal gravada em massa, o estrago pára no tecto e há uma
+ * manhã para dar por ele; sem tecto, uma passagem enganada apagava tudo antes de alguém acordar.
+ */
+export const TECTO_POR_PASSAGEM = 20
+
 /** O que fica escrito na conta quando ela cai por aqui. */
 export const MOTIVO_INATIVIDADE = `Inatividade: ${DIAS_INATIVIDADE} dias sem fechar uma trade`
 
@@ -58,6 +68,15 @@ export interface ContaParaInatividade {
 export type Veredicto =
   | { accao: 'nada'; porque: string }
   | { accao: 'quebrar_e_apagar'; diasParado: number; porque: string }
+
+/**
+ * A VÉSPERA — quantos dias parada para entrar no aviso do dia anterior.
+ *
+ * Existe porque a regra apaga sem volta: o dono ver a lista NA VÉSPERA é a diferença entre poder
+ * travar e ficar a saber depois. Um dia antes, e não três: um aviso que chega cedo de mais
+ * perde-se, e a decisão de travar toma-se sempre à beira do prazo.
+ */
+export const DIAS_AVISO_VESPERA = DIAS_INATIVIDADE - 1
 
 /** Os estados em que uma conta ainda está viva e portanto pode cair por inatividade. */
 const ESTADOS_VIVOS = new Set(['ativa', 'pedida'])
@@ -144,4 +163,27 @@ export function contasACair(
     if (v.accao === 'quebrar_e_apagar') caem.push({ conta: c, diasParado: v.diasParado, porque: v.porque })
   }
   return caem.sort((a, b) => b.diasParado - a.diasParado)
+}
+
+/**
+ * QUEM CAI AMANHÃ — a lista do aviso da véspera.
+ *
+ * Usa a MESMA decisão de `decidir`, só que com o relógio adiantado um dia: uma conta entra no
+ * aviso exactamente quando, passadas 24 horas, passaria a cair. Calcular isto com uma conta de
+ * dias à parte era a forma certa de o aviso e o corte discordarem — e um aviso que não bate certo
+ * com o que acontece no dia seguinte é pior do que não avisar, porque ensina a não confiar nele.
+ */
+export function contasAAvisar(
+  contas: readonly ContaParaInatividade[],
+  agora = Date.now(),
+): Array<{ conta: ContaParaInatividade; diasParado: number }> {
+  const amanha = agora + 86_400_000
+  const saida: Array<{ conta: ContaParaInatividade; diasParado: number }> = []
+  for (const c of contas) {
+    // Cai amanhã, mas AINDA NÃO cai hoje — quem já caía hoje não é véspera de nada.
+    if (decidir(c, agora).accao !== 'nada') continue
+    const v = decidir(c, amanha)
+    if (v.accao === 'quebrar_e_apagar') saida.push({ conta: c, diasParado: v.diasParado - 1 })
+  }
+  return saida.sort((a, b) => b.diasParado - a.diasParado)
 }
