@@ -1,13 +1,28 @@
-// TTS na voz clonada (Fish Audio) — para a dobragem ao vivo das sessões.
+// TTS da dobragem ao vivo das sessões — agora um ADAPTADOR fino da voz da casa (lib/voz).
 // REGRA MTM: todo o áudio AI usa SEMPRE o clone Fish "ricardogarcia", nunca voz genérica.
-// O texto já vem traduzido no idioma-alvo; o Fish fala-o na voz clonada (multilíngue).
+//
+// A lógica (voz, limites, cache, classificação de erros) mudou-se para `lib/voz` para
+// que o resto do sistema a possa usar. Aqui fica só a tradução para a interface antiga:
+// as mesmas assinaturas e o mesmo `null` em falha, para não mexer nos 3 chamadores vivos
+// (captions, dvr/worker e /api/live-sessions/tts). Quem quiser saber PORQUE falhou usa
+// `falar()`/`falarParaStorage()` de `lib/voz` directamente.
 
-const FISH_TTS_URL = 'https://api.fish.audio/v1/tts'
-// Voice ID do modelo clonado "ricardogarcia" (default; sobreponível por env).
-export const FISH_VOICE_ID = process.env.FISH_VOICE_ID || '1e0fa8b490c744acba94da72710e6db2'
-const FISH_MODEL = process.env.FISH_MODEL || 'speech-1.6'
+import { VOZ_RICARDO, falar, falarParaStorage, type FalhaVoz } from '@/lib/voz'
+
+/** Mantido para compatibilidade: a voz do clone do Ricardo. */
+export const FISH_VOICE_ID = VOZ_RICARDO
 
 export type SynthResult = { buffer: Buffer; contentType: string } | null
+
+// A dobragem usa a voz do EDUCADOR do stream quando ela existe: é a porta explícita
+// da regra da voz (ver lib/voz/nucleo.ts → resolverVoz). Sem este motivo, um voiceId
+// diferente do clone seria recusado — que é exactamente o que queremos por omissão.
+const MOTIVO_EDUCADOR = 'dobragem-lms: voz do educador do stream'
+
+function registar(f: FalhaVoz, onde: string): null {
+  console.error(`[lms-tts] ${onde} (${f.motivo}): ${f.detalhe}`)
+  return null
+}
 
 /** Gera TTS e guarda no bucket público `lms-tts`; devolve o URL público (ou null). */
 export async function synthesizeToStorage(
@@ -16,17 +31,11 @@ export async function synthesizeToStorage(
   path: string,
   voiceId?: string,
 ): Promise<string | null> {
-  const out = await synthesizeSpeech(text, { voiceId })
-  if (!out) return null
-  const { error } = await supabase.storage
-    .from('lms-tts')
-    .upload(path, out.buffer, { contentType: out.contentType, upsert: true })
-  if (error) {
-    console.error('[lms-tts] upload falhou:', error.message)
-    return null
-  }
-  const { data } = supabase.storage.from('lms-tts').getPublicUrl(path)
-  return (data?.publicUrl as string) || null
+  const r = await falarParaStorage(supabase, text, path, {
+    voiceId,
+    motivoVozAlternativa: MOTIVO_EDUCADOR,
+  })
+  return r.ok ? r.url : registar(r, 'synthesizeToStorage')
 }
 
 /**
@@ -37,35 +46,12 @@ export async function synthesizeSpeech(
   text: string,
   opts?: { voiceId?: string; format?: 'mp3' | 'opus' | 'wav'; latency?: 'normal' | 'balanced' },
 ): Promise<SynthResult> {
-  const key = process.env.FISH_API_KEY
-  if (!key || !text.trim()) return null
-  const format = opts?.format || 'mp3'
-  try {
-    const res = await fetch(FISH_TTS_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        model: FISH_MODEL, // backend de síntese (ex.: speech-1.6 / s1)
-      },
-      body: JSON.stringify({
-        text,
-        reference_id: opts?.voiceId || FISH_VOICE_ID,
-        format,
-        mp3_bitrate: 128,
-        normalize: true,
-        latency: opts?.latency || 'balanced',
-      }),
-    })
-    if (!res.ok) {
-      console.error('[lms-tts] Fish', res.status, (await res.text()).slice(0, 200))
-      return null
-    }
-    const buffer = Buffer.from(await res.arrayBuffer())
-    if (buffer.length < 200) return null // resposta vazia/erro
-    return { buffer, contentType: format === 'mp3' ? 'audio/mpeg' : `audio/${format}` }
-  } catch (err) {
-    console.error('[lms-tts] Fish exceção:', (err as Error).message)
-    return null
-  }
+  const r = await falar(text, {
+    voiceId: opts?.voiceId,
+    motivoVozAlternativa: MOTIVO_EDUCADOR,
+    formato: opts?.format,
+    latencia: opts?.latency,
+  })
+  if (!r.ok) return registar(r, 'synthesizeSpeech')
+  return { buffer: r.buffer, contentType: r.contentType }
 }
