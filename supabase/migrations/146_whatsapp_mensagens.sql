@@ -1,3 +1,8 @@
+-- NOTA (renumerada de 145 para 146): o 145 já estava tomado por
+-- `145_vendas_dossies_parceria.sql`, no ramo `dossies-parceria-26-09`. Dois ficheiros com o mesmo
+-- número são a terceira colisão desta série — e a que dói é a do dia em que os ramos se juntam,
+-- quando já ninguém se lembra de qual é qual.
+
 -- NOTA DE NUMERAÇÃO: escrita a 27/09 a seguir a `144_ig_setter_rascunhos.sql`. O Supabase registra
 -- as migrações pela DATA e não pelo número, por isso uma colisão de número com outro ramo não trava
 -- produção — mas deixa a ordem de uma base NOVA à mercê da ordem alfabética. Se este ficheiro

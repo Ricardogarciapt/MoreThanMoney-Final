@@ -171,7 +171,7 @@ Sem isto, só respondes a quem te escreveu há menos de um dia. Cada template é
 ## Passo 7 — A migração da base
 
 Uma coisa do meu lado que precisa de uma ordem tua: aplicar
-`supabase/migrations/145_whatsapp_mensagens.sql`. Cria a tabela `whatsapp_mensagens` (o livro das
+`supabase/migrations/146_whatsapp_mensagens.sql`. Cria a tabela `whatsapp_mensagens` (o livro das
 mensagens) e a vista `whatsapp_janela`.
 
 **Sem esta migração o canal não funciona**, e não é por zelo: é a última mensagem *dela* que define a
@@ -223,7 +223,7 @@ vazia — não é preciso para nada funcionar.
 | `lib/whatsapp-envio.check.ts` | As guardas (`npx tsx lib/whatsapp-envio.check.ts`) |
 | `lib/whatsapp-mensageiro.ts` | Lê o estado, decide, fala com a Meta, grava no livro |
 | `app/api/whatsapp/webhook/route.ts` | Recebe, registra a entrada, responde pelo funil do Telegram |
-| `supabase/migrations/145_whatsapp_mensagens.sql` | O livro `whatsapp_mensagens` + vista `whatsapp_janela` |
+| `supabase/migrations/146_whatsapp_mensagens.sql` | O livro `whatsapp_mensagens` + vista `whatsapp_janela` |
 | `lib/captacao-consentimento.ts` | O canal `whatsapp` no livro do consentimento |
 
 ## O que ainda não existe (e é preciso dizer)
