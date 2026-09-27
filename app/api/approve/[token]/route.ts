@@ -78,6 +78,8 @@ export async function GET(
           userId,
           source: 'admin',
           force: true,
+          // Ver a nota igual em app/api/admin/approve-user: sem isto ninguém é avisado da entrada.
+          notifyTeam: true,
         })
         console.log(`✅ [APPROVE] Email de boas-vindas enviado!`)
       } catch (emailError) {

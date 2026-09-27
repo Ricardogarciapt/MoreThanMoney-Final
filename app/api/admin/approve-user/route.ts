@@ -59,6 +59,9 @@ export async function POST(request: NextRequest) {
           userId,
           source: 'admin',
           force: true,
+          // Sem isto, o membro recebia as boas-vindas e MAIS NINGUÉM sabia que ele tinha entrado:
+          // nem o admin, nem os uplines da rede dele. Ver `sendNewMemberWelcomeIfEligible`.
+          notifyTeam: true,
         })
       } catch (emailError) {
         console.error('Erro ao enviar email de boas-vindas:', emailError)

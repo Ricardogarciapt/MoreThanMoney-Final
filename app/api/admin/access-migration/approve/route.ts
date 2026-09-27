@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin, requireAdmin, isValidUUID } from '@/lib/admin-api-helpers'
 import { completeAccessMigration, mergeAccessMigration } from '@/lib/access-migration'
 import { buildSubscriptionExpiry } from '@/lib/member-subscription'
+import { sendNewMemberWelcomeIfEligible } from '@/lib/new-member-welcome'
 
 const supabase = getSupabaseAdmin()
 
@@ -74,6 +75,29 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', userId)
+
+  /**
+   * O MEMBRO APROVADO À MÃO ENTRAVA EM SILÊNCIO.
+   *
+   * Esta é a porta de quem pagou fora do Stripe: o admin valida e a pessoa passa a membro. Só que
+   * daqui não saía email nenhum — nem as boas-vindas para ela, nem o aviso para o admin e para os
+   * uplines da rede dela. Medido a 27/09: o membro aprovado a 08/09 não tem
+   * `welcome_email_sent_at` nenhum, e não há aviso nenhum na caixa de entrada desse dia. Quem paga
+   * fora do Stripe recebia menos do que quem paga por lá, sem razão nenhuma para isso.
+   *
+   * `notifyTeam: true` é o que separa as duas coisas: sem ele o membro seria recebido e mais
+   * ninguém saberia que ele entrou.
+   *
+   * Não se espera pelo envio (`void`) nem se deixa uma falha de email derrubar a aprovação: o
+   * acesso já está dado e gravado, e uma caixa de correio em baixo não pode desfazer isso. A
+   * repetição está travada dentro de `sendNewMemberWelcomeIfEligible` pelo `welcome_email_sent_at`.
+   */
+  void sendNewMemberWelcomeIfEligible({
+    userId,
+    source: 'admin',
+    planId,
+    notifyTeam: true,
+  }).catch((e) => console.error('[access-migration/approve] boas-vindas falharam:', e))
 
   return NextResponse.json({
     success: true,

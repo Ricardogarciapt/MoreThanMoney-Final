@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     if (isNew) {
       try {
-        await sendNewMemberWelcomeIfEligible({ userId, source: 'primeverse' })
+        await sendNewMemberWelcomeIfEligible({ userId, source: 'primeverse', notifyTeam: true })
       } catch {
         /* best-effort */
       }
