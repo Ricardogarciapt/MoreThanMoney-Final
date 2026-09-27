@@ -35,6 +35,7 @@ import { papeisActivosDe, type ClienteLeitura } from '@/lib/backoffice-papeis-le
 import { equipasQueLidera, membrosDasEquipas } from '@/lib/backoffice-equipas'
 import { filtroDeParticipacao } from '@/lib/backoffice-negocios'
 import { diaEmLisboa } from '@/lib/backoffice-dia-regras'
+import { inicioDoDia } from '@/lib/backoffice-paginacao'
 import { ESTADO_PIPELINE_NOME, ehEstadoPipeline, ESTADO_COMISSAO_NOME, estadoComissao } from '@/lib/backoffice-vista'
 import { getOrCreateReferralCode } from '@/lib/referral'
 import {
@@ -43,6 +44,7 @@ import {
   comandoPor,
   podeComando,
   textoDeAjudaEquipa,
+  type PapelOuIb,
 } from '@/lib/backoffice-telegram-comandos'
 import {
   contarTentativa,
@@ -76,6 +78,22 @@ export interface Trabalhador {
   papeis: Papel[]
   capacidades: Set<Capacidade>
   avisosLigados: boolean
+  /**
+   * A linha desta pessoa em `ib_membros`, se estiver activa. `null` = não é da rede de IBs.
+   *
+   * Lê-se aqui, uma vez, e não dentro da bancada do `/ib`: é isto que decide se o comando existe
+   * para a pessoa, e uma decisão de acesso tomada no handler é uma decisão que o handler seguinte
+   * se esquece de tomar.
+   */
+  ib: { nivel: string; ibExterno: string | null; corretora: string } | null
+  /**
+   * O que a pessoa TEM, na linguagem do registo de comandos: os papéis mais o `ib`.
+   *
+   * Calcula-se uma vez e passa-se inteiro a `podeComando`/`comandosPara`/`textoDeAjudaEquipa`. Se
+   * cada sítio montasse a sua lista, bastava um esquecer o `ib` para a bancada da rede desaparecer
+   * (ou, pior, um esquecer os papéis e a autorização fechar-se em silêncio no meio de um comando).
+   */
+  papeisEIb: PapelOuIb[]
 }
 
 // ────────────────────────────── QUEM ESTÁ A ESCREVER ──────────────────────────────
@@ -101,18 +119,41 @@ export async function trabalhadorDoChat(db: Supa, chatId: string): Promise<Traba
     const linha = data as { user_id?: string; avisos_ligados?: boolean } | null
     if (!linha?.user_id) return null
 
-    const [{ data: perfil }, atribuicoes] = await Promise.all([
+    const [{ data: perfil }, atribuicoes, { data: ibRaw }] = await Promise.all([
       db.from('profiles').select('is_active').eq('id', linha.user_id).maybeSingle(),
       papeisActivosDe(db as unknown as ClienteLeitura, linha.user_id),
+      /**
+       * `ate is null` é a parte que importa: quem saiu da rede de IBs tem a linha lá com data de
+       * fim, e lê-la sem este filtro devolvia-lhe a carteira de clientes de corretora depois de já
+       * não ser IB. É a mesma leitura de `app/backoffice/ib/page.tsx` — de propósito: duas
+       * maneiras diferentes de perguntar «é IB?» acabam a responder coisas diferentes.
+       */
+      db
+        .from('ib_membros')
+        .select('nivel, ib_externo, corretora')
+        .eq('user_id', linha.user_id)
+        .is('ate', null)
+        .maybeSingle(),
     ])
     if ((perfil as { is_active?: boolean } | null)?.is_active === false) return null
 
     const papeis = atribuicoes.map((a) => a.papel)
+    const ibLinha = ibRaw as { nivel?: string; ib_externo?: string | null; corretora?: string } | null
+    const ib = ibLinha
+      ? {
+          nivel: String(ibLinha.nivel ?? 'sub'),
+          ibExterno: ibLinha.ib_externo ?? null,
+          corretora: String(ibLinha.corretora ?? 'pu_prime'),
+        }
+      : null
+
     return {
       userId: linha.user_id,
       papeis,
       capacidades: capacidadesDe(papeis),
       avisosLigados: linha.avisos_ligados !== false,
+      ib,
+      papeisEIb: ib ? [...papeis, 'ib'] : [...papeis],
     }
   } catch {
     return null
@@ -641,8 +682,433 @@ function respostaEu(t: Trabalhador): Resposta {
     texto:
       '👔 <b>Quem és, para mim</b>\n\n' +
       `Papéis: <b>${t.papeis.map((p) => PAPEL_NOME[p]).join(' · ') || '—'}</b>\n` +
+      // O IB aparece à parte porque não é papel: é pertença a `ib_membros` (migração 138).
+      (t.ib ? `Rede de IBs: <b>${t.ib.nivel === 'master' ? 'master' : 'sub'}</b>\n` : '') +
       `Resumo da manhã: <b>${t.avisosLigados ? 'ligado' : 'desligado'}</b>\n\n` +
-      textoDeAjudaEquipa(t.capacidades),
+      textoDeAjudaEquipa(t.capacidades, { papeis: t.papeisEIb }),
+  }
+}
+
+// ────────────────────────────── AS BANCADAS POR PAPEL ──────────────────────────────
+
+/**
+ * UMA BANCADA POR FUNÇÃO — e a razão de não ser um `/hoje` maior.
+ *
+ * O `/hoje` responde «o que tenho de fazer», e é igual para todos. O que o dono pediu é outra
+ * coisa: cada função tem uma pergunta própria que faz ao pegar no telemóvel — o prospector quer
+ * saber quantos nomes lhe faltam tocar, o setter quantos já podia estar a marcar, o closer o que
+ * decide hoje. Misturar isso tudo numa mensagem só dava a mensagem que ninguém lê.
+ *
+ * NENHUMA ESCREVE. São leituras do que já está na base, e o `ESCRITAS_PERMITIDAS` do registo prende
+ * isso: uma bancada que passe a escrever faz falhar a guarda até alguém decidir, com o ecrã à
+ * frente, que se pode mudar aquilo pelo telemóvel.
+ *
+ * O ÂMBITO É SEMPRE A COLUNA DO PAPEL. `/setter` lê por `setter_id`, `/closer` por `closer_id`,
+ * `/prospector` por `prospector_id`. Não se usa aqui o `filtroDeParticipacao` (que junta as cinco
+ * atribuições) de propósito: numa bancada de função, ver os negócios em que se participou com
+ * OUTRO papel é ver a lista de trabalho de outra pessoa — que é exactamente o que o papel no
+ * registo de comandos existe para impedir.
+ */
+
+/** A meia-noite do dia de Lisboa, em UTC — a mesma fronteira do resto do backoffice. */
+function desdeMeiaNoite(): string {
+  // `inicioDoDia` só devolve `null` para um dia nulo, e `diaEmLisboa()` nunca o é.
+  return inicioDoDia(diaEmLisboa()) ?? `${diaEmLisboa()}T00:00:00.000Z`
+}
+
+/** Quantos dias sem ninguém mexer. É o número que diz o que está a apodrecer. */
+function diasParado(quando: string | null): number {
+  const t = Date.parse(String(quando ?? ''))
+  if (!Number.isFinite(t)) return 0
+  return Math.max(0, Math.floor((Date.now() - t) / 86_400_000))
+}
+
+/** Um negócio parado há mais de isto ARREFECEU. Três dias é a decisão, e está escrita num sítio só. */
+const DIAS_PARA_ARREFECER = 3
+
+function nomeDoEstado(estado: string): string {
+  return ehEstadoPipeline(estado) ? ESTADO_PIPELINE_NOME[estado] : estado
+}
+
+interface NegocioBancada {
+  nome: string
+  estado: string
+  origem: string | null
+  pack_previsto: string | null
+  atualizado_em: string
+}
+
+const COLUNAS_BANCADA = 'nome, estado, origem, pack_previsto, atualizado_em'
+
+/** Os negócios desta pessoa NESTE papel, vivos, dos mais parados para os menos. */
+async function negociosDoPapel(
+  db: Supa,
+  userId: string,
+  coluna: 'prospector_id' | 'setter_id' | 'closer_id' | 'afiliado_id',
+  estados: readonly string[],
+): Promise<NegocioBancada[]> {
+  const { data } = await db
+    .from('vendas_negocios')
+    .select(COLUNAS_BANCADA)
+    .eq(coluna, userId)
+    .in('estado', estados)
+    .order('atualizado_em', { ascending: true })
+    .limit(200)
+  return (data ?? []) as unknown as NegocioBancada[]
+}
+
+function linhasDeNegocios(negocios: readonly NegocioBancada[], quantos = 3): string {
+  return negocios
+    .slice(0, quantos)
+    .map((n) => {
+      const dias = diasParado(n.atualizado_em)
+      const parado = dias > 0 ? ` <i>(${dias} dia${dias === 1 ? '' : 's'} sem mexer)</i>` : ''
+      return `· ${escapar(n.nome)} — ${nomeDoEstado(n.estado)}${parado}`
+    })
+    .join('\n')
+}
+
+/**
+ * A BANCADA DO PROSPECTOR — nomes por trabalhar, o que já tocou hoje, e por quem pegar a seguir.
+ *
+ * «Tocou hoje» conta EVENTOS do pipeline (`vendas_negocio_eventos.por`), que é o rasto de quem
+ * mexeu o quê. Contar negócios com `atualizado_em` de hoje daria outro número — o motor da manhã
+ * também mexe nas linhas, e a pessoa via trabalho que não fez.
+ */
+async function respostaProspector(db: Supa, t: Trabalhador): Promise<Resposta> {
+  const [porTrabalhar, { data: eventos }] = await Promise.all([
+    negociosDoPapel(db, t.userId, 'prospector_id', ['lead', 'contactado']),
+    db.from('vendas_negocio_eventos').select('negocio_id').eq('por', t.userId).gte('em', desdeMeiaNoite()).limit(500),
+  ])
+
+  const tocadosHoje = new Set((eventos ?? []).map((e) => String((e as { negocio_id: string }).negocio_id))).size
+
+  if (!porTrabalhar.length) {
+    return {
+      texto:
+        '🎯 <b>Bancada de prospeção</b>\n\n' +
+        `Tocados hoje: <b>${tocadosHoje}</b>\n` +
+        'Por trabalhar: <b>0</b>\n\n' +
+        'Não tens nomes atribuídos. Há leads sem dono à espera de alguém — abre a bolsa em ' +
+        `<a href="${BACKOFFICE}/pipeline">pipeline</a> e pega nos que quiseres.`,
+    }
+  }
+
+  const frios = porTrabalhar.filter((n) => diasParado(n.atualizado_em) >= DIAS_PARA_ARREFECER).length
+  const proximo = porTrabalhar[0]
+
+  return {
+    texto:
+      '🎯 <b>Bancada de prospeção</b>\n\n' +
+      `Por trabalhar: <b>${porTrabalhar.length}</b>` +
+      `${frios ? ` (${frios} há ${DIAS_PARA_ARREFECER}+ dias)` : ''}\n` +
+      `Tocados hoje: <b>${tocadosHoje}</b>\n\n` +
+      `<b>O próximo:</b>\n· ${escapar(proximo.nome)} — ${nomeDoEstado(proximo.estado)}` +
+      `${proximo.origem ? ` <i>(veio de ${escapar(proximo.origem)})</i>` : ''}\n\n` +
+      (porTrabalhar.length > 1 ? `<b>E depois:</b>\n${linhasDeNegocios(porTrabalhar.slice(1), 3)}\n\n` : '') +
+      `<a href="${BACKOFFICE}/pipeline">Abrir o pipeline</a>`,
+  }
+}
+
+/**
+ * A BANCADA DO SETTER — o que já podia estar marcado, o que está marcado, e o que arrefeceu.
+ *
+ * «Arrefeceu» não é um estado na base: é um negócio à espera de marcação parado há
+ * `DIAS_PARA_ARREFECER` dias, mais os `no_show`. Inventar uma coluna para isto obrigava alguém a
+ * ir marcá-la à mão todos os dias — e o que ninguém marca fica sempre a mentir.
+ */
+async function respostaSetter(db: Supa, t: Trabalhador): Promise<Resposta> {
+  // `apresentado` entra na consulta e não em nenhuma das contagens: o trabalho do setter acaba na
+  // marcação. Está aqui para que quem tem só apresentações não leia «não tens negócios atribuídos»,
+  // que seria falso e mandava a pessoa pegar leads na bolsa sem precisar.
+  const vivos = await negociosDoPapel(db, t.userId, 'setter_id', [
+    'lead',
+    'contactado',
+    'qualificado',
+    'marcado',
+    'no_show',
+    'apresentado',
+  ])
+  if (!vivos.length) {
+    return {
+      texto:
+        '📅 <b>Bancada de marcação</b>\n\n' +
+        'Não tens negócios atribuídos como setter. Se há leads à espera, pega neles na bolsa em ' +
+        `<a href="${BACKOFFICE}/pipeline">pipeline</a>.`,
+    }
+  }
+
+  const porMarcar = vivos.filter((n) => n.estado === 'lead' || n.estado === 'contactado' || n.estado === 'qualificado')
+  const marcados = vivos.filter((n) => n.estado === 'marcado')
+  const arrefeceram = [
+    ...vivos.filter((n) => n.estado === 'no_show'),
+    ...porMarcar.filter((n) => diasParado(n.atualizado_em) >= DIAS_PARA_ARREFECER),
+  ]
+
+  return {
+    texto:
+      '📅 <b>Bancada de marcação</b>\n\n' +
+      `À espera de marcação: <b>${porMarcar.length}</b>\n` +
+      `Reuniões marcadas: <b>${marcados.length}</b>\n` +
+      `Arrefeceram: <b>${arrefeceram.length}</b>\n\n` +
+      (porMarcar.length ? `<b>Liga a estes:</b>\n${linhasDeNegocios(porMarcar, 3)}\n\n` : '') +
+      (marcados.length ? `<b>Marcados:</b>\n${linhasDeNegocios(marcados, 3)}\n\n` : '') +
+      (arrefeceram.length ? `<b>Arrefeceram (${DIAS_PARA_ARREFECER}+ dias ou faltaram):</b>\n${linhasDeNegocios(arrefeceram, 3)}\n\n` : '') +
+      `<a href="${BACKOFFICE}/pipeline">Abrir o pipeline</a>`,
+  }
+}
+
+/**
+ * A BANCADA DO CLOSER — o que está em fecho, o que está em jogo, e o que decide hoje.
+ *
+ * SOBRE «O VALOR EM JOGO»: não se mostra em euros, e é uma ausência deliberada. `pack_previsto` é
+ * um `planId` da escada e NÃO existe em nenhum sítio uma tabela que diga quanto vale cada plano em
+ * cêntimos (`lib/stripe-prices.ts` guarda o id do preço no Stripe, não o montante). Escrever aqui
+ * uma soma em euros obrigava a inventar preços no código — e um número inventado numa bancada de
+ * fecho passa a ser a previsão de facturação de alguém. Mostra-se por isso o que é verdade: os
+ * packs que estão em jogo, e os euros que são REAIS (as comissões da própria pessoa, do extracto).
+ */
+async function respostaCloser(db: Supa, t: Trabalhador): Promise<Resposta> {
+  const [emFecho, { data: tarefas }, { data: extracto }] = await Promise.all([
+    negociosDoPapel(db, t.userId, 'closer_id', ['qualificado', 'marcado', 'apresentado']),
+    db
+      .from('vendas_tarefas')
+      .select('titulo')
+      .eq('responsavel_id', t.userId)
+      .eq('papel', 'closer')
+      .eq('estado', 'aberta')
+      .lte('prazo', diaEmLisboa())
+      .order('prazo', { ascending: true })
+      .limit(5),
+    db.from('vendas_extracto').select('valor_cents, estado, sinal').eq('pessoa_id', t.userId).limit(500),
+  ])
+
+  // Euros a haver: só o que já existe como comissão. Nada disto é previsão.
+  let aHaver = 0
+  for (const l of (extracto ?? []) as Array<{ valor_cents: number; estado: string; sinal: number }>) {
+    const e = estadoComissao(l.estado)
+    if (e !== 'pendente' && e !== 'aprovada') continue
+    aHaver += Number(l.valor_cents ?? 0) * (Number(l.sinal ?? 1) < 0 ? -1 : 1)
+  }
+
+  if (!emFecho.length) {
+    return {
+      texto:
+        '🤝 <b>Bancada de fecho</b>\n\n' +
+        'Não tens nada em fecho.\n' +
+        `A haver (comissões já criadas): <b>${euros(aHaver)}</b>\n\n` +
+        `Se há apresentações marcadas por outra pessoa, elas aparecem-te quando ficares como closer — vê em <a href="${BACKOFFICE}/pipeline">pipeline</a>.`,
+    }
+  }
+
+  const apresentados = emFecho.filter((n) => n.estado === 'apresentado')
+  const packs = new Map<string, number>()
+  for (const n of emFecho) {
+    const k = n.pack_previsto?.trim() || 'sem pack previsto'
+    packs.set(k, (packs.get(k) ?? 0) + 1)
+  }
+  const emJogo = [...packs.entries()].map(([k, n]) => `${escapar(k)}: <b>${n}</b>`).join(' · ')
+
+  // O que precisa de decisão HOJE: quem já viu a apresentação e está parado, mais as tarefas de
+  // closer com prazo até hoje. Uma apresentação feita que ninguém volta a tocar é uma venda perdida
+  // por silêncio, e é o único sítio onde isso aparece a quem a pode fechar.
+  const decidemHoje = apresentados.filter((n) => diasParado(n.atualizado_em) >= 1)
+  const linhasTarefas = ((tarefas ?? []) as Array<{ titulo: string }>).map((x) => `· ${escapar(x.titulo)}`)
+
+  return {
+    texto:
+      '🤝 <b>Bancada de fecho</b>\n\n' +
+      `Em fecho: <b>${emFecho.length}</b> (${apresentados.length} já apresentados)\n` +
+      `A haver (comissões já criadas): <b>${euros(aHaver)}</b>\n\n` +
+      `<b>Em jogo (packs previstos):</b>\n${emJogo}\n` +
+      '<i>Os packs não têm preço no sistema — o valor em euros só existe quando o pagamento entra.</i>\n\n' +
+      (decidemHoje.length
+        ? `<b>Precisa de decisão hoje:</b>\n${linhasDeNegocios(decidemHoje, 3)}\n\n`
+        : `<b>A trabalhar:</b>\n${linhasDeNegocios(emFecho, 3)}\n\n`) +
+      (linhasTarefas.length ? `<b>Tarefas de fecho para hoje:</b>\n${linhasTarefas.join('\n')}\n\n` : '') +
+      `<a href="${BACKOFFICE}/pipeline">Abrir o pipeline</a>`,
+  }
+}
+
+function usd(v: number): string {
+  return `${v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`
+}
+
+interface ContaIb {
+  conta: string
+  corretora: string
+  cliente_nome: string | null
+  volume_lotes: number | null
+  comissao_usd: number | null
+  estado_migracao: string
+}
+
+/**
+ * A BANCADA DO IB — as contas da rede dele, o que rendem, e quem vale a pena trazer para casa.
+ *
+ * O ÂMBITO, que é a parte séria: isto traz nome de cliente de corretora e volume negociado. Um
+ * `sub` vê as contas que lhe estão atribuídas (`ib_id`) ou que trazem o identificador dele na
+ * corretora (`ib_externo`); o `master`, que responde pela rede inteira perante a corretora, vê
+ * tudo. Sem `ib_externo` e sem contas atribuídas, um sub não vê NADA — e diz-se-lhe porquê, em vez
+ * de lhe mostrar a carteira dos outros «porque o filtro deu vazio».
+ *
+ * Nada aqui contacta ninguém nem mexe numa conta: mostra e ordena.
+ */
+async function respostaIb(db: Supa, t: Trabalhador): Promise<Resposta> {
+  // Chega aqui só quem tem `ib` (é o `papel: 'ib'` do registo). O `if` é o cinto: se um dia a
+  // autorização for reorganizada, isto fecha em vez de servir a carteira a quem não é IB.
+  if (!t.ib) return { texto: '⛔ Não fazes parte da rede de IBs.' }
+
+  const master = t.ib.nivel === 'master'
+  let contas: ContaIb[] = []
+
+  if (master) {
+    const { data } = await db
+      .from('ib_contas')
+      .select('conta, corretora, cliente_nome, volume_lotes, comissao_usd, estado_migracao')
+      .limit(2000)
+    contas = (data ?? []) as unknown as ContaIb[]
+  } else {
+    const alvos = [`ib_id.eq.${t.userId}`]
+    // O identificador na corretora é texto e vem da própria linha de `ib_membros` — mas é texto
+    // montado num filtro, e por isso só entra se for mesmo alfanumérico. Um `ib_externo` com
+    // vírgulas ou parêntesis quebrava o `or` e mudava o que a consulta devolve.
+    const externo = (t.ib.ibExterno ?? '').trim()
+    if (/^[A-Za-z0-9_-]{1,32}$/.test(externo)) alvos.push(`ib_externo.eq.${externo}`)
+
+    const { data } = await db
+      .from('ib_contas')
+      .select('conta, corretora, cliente_nome, volume_lotes, comissao_usd, estado_migracao')
+      .or(alvos.join(','))
+      .limit(2000)
+    contas = (data ?? []) as unknown as ContaIb[]
+  }
+
+  if (!contas.length) {
+    const semIdentificador = !master && !t.ib.ibExterno
+    return {
+      texto:
+        '🏦 <b>A tua rede de IB</b>\n\n' +
+        'Nenhuma conta atribuída a ti.\n\n' +
+        (semIdentificador
+          ? 'Ainda não tens identificador próprio na corretora — sem ele nenhuma linha das exportações te pode ser atribuída. É o passo seguinte: fala com o Ricardo.'
+          : `As contas entram por importação das exportações da corretora — vê em <a href="${BACKOFFICE}/ib">rede de IBs</a>.`),
+    }
+  }
+
+  let lotes = 0
+  let comissao = 0
+  const porEstado = new Map<string, number>()
+  for (const c of contas) {
+    lotes += Number(c.volume_lotes ?? 0)
+    comissao += Number(c.comissao_usd ?? 0)
+    porEstado.set(c.estado_migracao, (porEstado.get(c.estado_migracao) ?? 0) + 1)
+  }
+
+  /**
+   * «Quem vale a pena trazer» = as que estão noutra corretora e ainda valem volume, pela ordem do
+   * que se ganha em as trazer. A ordem é a MESMA de `app/backoffice/ib/page.tsx` (lotes a pesar dez
+   * vezes mais do que a comissão) de propósito: duas ordens diferentes punham a página e o bot a
+   * dizer a pessoas diferentes que a prioridade era outra.
+   */
+  const aTrazer = contas
+    .filter((c) => c.estado_migracao === 'a_transitar')
+    .sort(
+      (a, b) =>
+        (b.volume_lotes ?? 0) * 10 + (b.comissao_usd ?? 0) - ((a.volume_lotes ?? 0) * 10 + (a.comissao_usd ?? 0)),
+    )
+    .slice(0, 3)
+    .map(
+      (c) =>
+        `· ${escapar(c.cliente_nome || `conta ${c.conta}`)} — ${escapar(c.corretora)} · ${Number(c.volume_lotes ?? 0).toFixed(2)} lotes · ${usd(Number(c.comissao_usd ?? 0))}`,
+    )
+
+  const naCasa = porEstado.get('na_casa') ?? 0
+  const porAvaliar = porEstado.get('por_avaliar') ?? 0
+
+  return {
+    texto:
+      `🏦 <b>A tua rede de IB</b> (${master ? 'master — a rede toda' : 'as tuas contas'})\n\n` +
+      `Contas: <b>${contas.length}</b> · na casa: <b>${naCasa}</b> · por avaliar: <b>${porAvaliar}</b>\n` +
+      `Volume: <b>${lotes.toFixed(2)} lotes</b>\n` +
+      `Comissão: <b>${usd(comissao)}</b>\n\n` +
+      (aTrazer.length
+        ? `<b>Vale a pena trazer (${porEstado.get('a_transitar') ?? 0} a transitar):</b>\n${aTrazer.join('\n')}\n\n`
+        : 'Nenhuma conta marcada como «a transitar» — nada por trazer neste momento.\n\n') +
+      `<a href="${BACKOFFICE}/ib">Abrir a rede de IBs</a>\n` +
+      '<i>A comissão é a que a corretora exportou, em dólares. Não é o teu extracto.</i>',
+  }
+}
+
+/**
+ * A BANCADA DO AFILIADO — o link, quem entrou por ele, e o que isso rendeu.
+ *
+ * O código é o `referral_code` do perfil, o MESMO que o site usa — ver `respostaLink` para o porquê
+ * de não haver um segundo. Aqui junta-se-lhe o resultado: quantos se registaram com ele, quantos
+ * negócios lhe estão atribuídos como afiliado, e os euros que já são comissão de afiliado.
+ *
+ * Os euros vêm de `vendas_extracto` filtrado por `origem = 'papel'` e `detalhe = 'afiliado'`: é a
+ * comissão do PAPEL de afiliado e não o MLM binário, que é dinheiro da árvore e aparece no
+ * /extracto com a sua própria origem. Somar os dois aqui dava-lhe o crédito da divulgação por
+ * dinheiro que veio de outro sítio.
+ */
+async function respostaAfiliado(db: Supa, t: Trabalhador): Promise<Resposta> {
+  let codigo: string | null = null
+  try {
+    codigo = await getOrCreateReferralCode(db as never, t.userId)
+  } catch {
+    codigo = null
+  }
+
+  const [{ data: entrados }, negocios, { data: extracto }] = await Promise.all([
+    db.from('referrals').select('referred_id').eq('referrer_id', t.userId).limit(500),
+    negociosDoPapel(db, t.userId, 'afiliado_id', [
+      'lead',
+      'contactado',
+      'qualificado',
+      'marcado',
+      'no_show',
+      'apresentado',
+      'ganho',
+    ]),
+    db
+      .from('vendas_extracto')
+      .select('valor_cents, estado, sinal, detalhe, origem')
+      .eq('pessoa_id', t.userId)
+      .eq('origem', 'papel')
+      .eq('detalhe', 'afiliado')
+      .limit(500),
+  ])
+
+  const quantos = ((entrados ?? []) as Array<{ referred_id: string }>).length
+  const ganhos = negocios.filter((n) => n.estado === 'ganho').length
+
+  const soma = { pendente: 0, aprovada: 0, paga: 0 }
+  for (const l of (extracto ?? []) as Array<{ valor_cents: number; estado: string; sinal: number }>) {
+    const e = estadoComissao(l.estado)
+    const v = Number(l.valor_cents ?? 0) * (Number(l.sinal ?? 1) < 0 ? -1 : 1)
+    if (e === 'pendente') soma.pendente += v
+    else if (e === 'aprovada') soma.aprovada += v
+    else if (e === 'paga') soma.paga += v
+  }
+
+  const linkLinha = codigo
+    ? `Código: <code>${escapar(codigo)}</code>\nRegisto: <code>${SITE}/register?ref=${escapar(codigo)}</code>`
+    : `⚠️ Não consegui obter o teu código — vê em <a href="${BACKOFFICE}/material">materiais</a>.`
+
+  return {
+    texto:
+      '📣 <b>A tua divulgação</b>\n\n' +
+      `${linkLinha}\n\n` +
+      `Registaram-se com o teu código: <b>${quantos}</b>\n` +
+      `Negócios atribuídos a ti como afiliado: <b>${negocios.length}</b>${ganhos ? ` (${ganhos} ganhos)` : ''}\n\n` +
+      `<b>Comissão de afiliado:</b>\n` +
+      `${ESTADO_COMISSAO_NOME.paga}: <b>${euros(soma.paga)}</b> · ` +
+      `${ESTADO_COMISSAO_NOME.aprovada}: <b>${euros(soma.aprovada)}</b> · ` +
+      `${ESTADO_COMISSAO_NOME.pendente}: <b>${euros(soma.pendente)}</b>\n` +
+      '<i>Só o papel de afiliado. O MLM da árvore aparece no /extracto, com a sua origem.</i>\n\n' +
+      (negocios.length ? `<b>Os mais parados:</b>\n${linhasDeNegocios(negocios, 3)}\n\n` : '') +
+      `<a href="${BACKOFFICE}/material">Materiais</a> · <a href="${BACKOFFICE}/extracto">Extracto</a>`,
   }
 }
 
@@ -699,7 +1165,7 @@ export async function tratarComandoDeEquipa(
       texto:
         `✅ <b>Ligado.</b> ${r.papeis.map((p) => PAPEL_NOME[p]).join(' · ')}\n\n` +
         'A partir de amanhã recebes aqui o teu dia de manhã (podes desligar com /avisos).\n\n' +
-        (ligado ? textoDeAjudaEquipa(ligado.capacidades) : ''),
+        (ligado ? textoDeAjudaEquipa(ligado.capacidades, { papeis: ligado.papeisEIb }) : ''),
     }
   }
 
@@ -712,7 +1178,7 @@ export async function tratarComandoDeEquipa(
   if (!t) return { texto: '🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.' }
 
   // A autorização, num sítio só. Sem a capacidade, o comando não existe para esta pessoa.
-  if (!podeComando(t.capacidades, comando)) {
+  if (!podeComando(t.capacidades, comando, t.papeisEIb)) {
     return { texto: '🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.' }
   }
 
@@ -735,6 +1201,22 @@ export async function tratarComandoDeEquipa(
       return respostaLink(db, t)
     case '/minhaequipa':
       return respostaEquipa(db, t)
+    /**
+     * As cinco bancadas. Não há aqui nenhum `if (é setter)`: a autorização já aconteceu uma vez, em
+     * `podeComando(t.capacidades, comando, t.papeisEIb)`, e um comando sem o papel nem chega a este
+     * `switch`. Um papel novo amanhã é uma linha no registo e um `case` — nenhum handler existente
+     * precisa de saber que ele apareceu.
+     */
+    case '/prospector':
+      return respostaProspector(db, t)
+    case '/setter':
+      return respostaSetter(db, t)
+    case '/closer':
+      return respostaCloser(db, t)
+    case '/ib':
+      return respostaIb(db, t)
+    case '/afiliado':
+      return respostaAfiliado(db, t)
     case '/avisos': {
       const ligar = !t.avisosLigados
       const ok = await definirAvisos(db, chatId, ligar)
@@ -775,7 +1257,7 @@ export async function tratarBotaoDeEquipa(db: Supa, chatId: string, dados: strin
   // o erro clássico é gatear o comando e esquecer o botão.
   const exigir = (nome: string) => {
     const c = comandoPor(nome)
-    return c ? podeComando(t.capacidades, c) : false
+    return c ? podeComando(t.capacidades, c, t.papeisEIb) : false
   }
 
   if (acao === 'f') {
@@ -793,5 +1275,5 @@ export async function tratarBotaoDeEquipa(db: Supa, chatId: string, dados: strin
 export async function ajudaDeEquipaSeLigado(db: Supa, chatId: string): Promise<string | null> {
   const t = await trabalhadorDoChat(db, chatId)
   if (!t) return null
-  return textoDeAjudaEquipa(t.capacidades, { papeis: t.papeis.map((p) => PAPEL_NOME[p]) })
+  return textoDeAjudaEquipa(t.capacidades, { papeis: t.papeisEIb })
 }

@@ -104,14 +104,20 @@ assert.deepEqual(portas, ['/ligar'])
 
 for (const papel of PAPEIS) {
   const caps = capacidadesDe([papel])
-  const lista = comandosPara(caps).map((c) => c.nome)
+  /**
+   * Os papéis vão na chamada de propósito. Desde que existem bancadas com `papel` (o `/setter`, o
+   * `/closer`…), uma varredura que não os passasse testava a pessoa errada: via só os comandos sem
+   * papel e dizia «nenhum papel chega ao lado do dono» sem ter olhado para metade da lista.
+   * Quem prova o contrário — que o papel de outro NÃO abre — é `backoffice-telegram-papeis.check.ts`.
+   */
+  const lista = comandosPara(caps, [papel]).map((c) => c.nome)
   for (const proibido of nomesDono) {
     assert.ok(!lista.includes(proibido), `${papel} chegou a ${proibido}`)
   }
   // Nada aparece a quem não tem a capacidade — e a lista nunca inventa nomes fora do registo.
   for (const nome of lista) assert.ok(nomesEquipa.includes(nome), `${papel} recebeu um comando fora do registo: ${nome}`)
   for (const c of COMANDOS_EQUIPA) {
-    assert.equal(lista.includes(c.nome), podeComando(caps, c), `${papel}: lista e podeComando discordam em ${c.nome}`)
+    assert.equal(lista.includes(c.nome), podeComando(caps, c, [papel]), `${papel}: lista e podeComando discordam em ${c.nome}`)
   }
   // O texto de ajuda é o que a pessoa VÊ. Se um comando do dono aparecer aqui, alguém vai tentar.
   const ajuda = textoDeAjudaEquipa(caps, { papeis: [papel] })
@@ -122,26 +128,28 @@ for (const papel of PAPEIS) {
 }
 
 // Cada papel vê o que é dele, e não o dos outros. É o pedido do dono escrito como teste.
-const afiliado = comandosPara(capacidadesDe(['afiliado'])).map((c) => c.nome)
+const afiliado = comandosPara(capacidadesDe(['afiliado']), ['afiliado']).map((c) => c.nome)
 assert.ok(afiliado.includes('/extracto') && afiliado.includes('/link'))
 assert.ok(!afiliado.includes('/hoje'), 'o afiliado divulga e recebe — não tem tarefas de pipeline')
 assert.ok(!afiliado.includes('/negocios'), 'dar o pipeline ao afiliado é dar-lhe os contactos de quem os trabalhou')
 assert.ok(!afiliado.includes('/minhaequipa'))
 
-const setter = comandosPara(capacidadesDe(['setter'])).map((c) => c.nome)
+const setter = comandosPara(capacidadesDe(['setter']), ['setter']).map((c) => c.nome)
 assert.ok(setter.includes('/hoje') && setter.includes('/feito') && setter.includes('/negocios'))
 assert.ok(!setter.includes('/minhaequipa'), 'um setter não vê a equipa')
 
-const prospector = comandosPara(capacidadesDe(['prospector'])).map((c) => c.nome)
+const prospector = comandosPara(capacidadesDe(['prospector']), ['prospector']).map((c) => c.nome)
 assert.ok(prospector.includes('/hoje'))
 assert.ok(!prospector.includes('/negocios'), 'o prospector trabalha leads, não o pipeline de fecho')
 
-const leader = comandosPara(capacidadesDe(['team_leader'])).map((c) => c.nome)
+const leader = comandosPara(capacidadesDe(['team_leader']), ['team_leader']).map((c) => c.nome)
 assert.ok(leader.includes('/minhaequipa') && leader.includes('/negocios') && leader.includes('/hoje'))
 
 // Quem ainda não ligou a conta (ou ficou sem papéis) fica com a porta e mais nada.
 const semNada = comandosPara(new Set<Capacidade>()).map((c) => c.nome)
 assert.deepEqual(semNada, ['/ligar'])
+// Mesmo a fingir os cinco papéis: sem `bo.entrar` não há comando nenhum. Um papel não é uma chave.
+assert.deepEqual(comandosPara(new Set<Capacidade>(), [...PAPEIS]).map((c) => c.nome), ['/ligar'])
 assert.match(textoDeAjudaEquipa(new Set<Capacidade>()), /\/ligar/)
 
 // ── 4. Varredura ao código: o lado da equipa não conhece o lado do admin ────

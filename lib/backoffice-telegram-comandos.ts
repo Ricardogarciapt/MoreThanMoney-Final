@@ -13,6 +13,18 @@
  * acrescentar um comando tem de escrever a capacidade — não há caminho em que se esqueça, porque
  * sem ela o comando não aparece a ninguém.
  *
+ * A SEGUNDA CHAVE: O PAPEL
+ * A capacidade é o piso e não chega para tudo. O dono pediu uma bancada para o setter e outra para o
+ * closer — e esses dois papéis têm EXACTAMENTE as mesmas capacidades (ver o MAPA em
+ * `lib/backoffice-papeis.ts`), pelo que a capacidade sozinha dava a bancada de um ao outro. Por isso
+ * um comando pode declarar também `papel`, que APERTA: é sempre capacidade **E** papel, nunca uma em
+ * vez da outra. Provado em `backoffice-telegram-papeis.check.ts`, comando a comando.
+ *
+ * As rotas do site continuam a perguntar só por capacidade, e isso não muda: a distinção por função
+ * é uma decisão de INTERFACE do bot (que bancada mostrar), não um nível de acesso novo. Se um dia
+ * uma delas passar a dar acesso a dados que a capacidade não dá, o sítio certo é uma capacidade
+ * nova em `lib/backoffice-papeis.ts` — não um papel a fazer de capacidade por atalho.
+ *
  * A REGRA QUE NÃO SE NEGOCEIA
  * O dono, textualmente, sobre os comandos de administração: «essas funções são só para mim como
  * admin». Nenhum comando aqui toca em administração, e isso está PROVADO — não prometido — em
@@ -27,7 +39,7 @@
  * Ficheiro PURO: sem base de dados, sem rede, sem `next/*`. A decisão de deixar entrar tem de ser
  * testável num `npx tsx` de dois segundos.
  */
-import type { Capacidade } from '@/lib/backoffice-papeis'
+import { PAPEL_NOME, type Capacidade, type Papel } from '@/lib/backoffice-papeis'
 
 /**
  * OS COMANDOS DO DONO — a lista de nomes que o lado da equipa não pode servir, nunca.
@@ -63,6 +75,20 @@ export const PREFIXO_BOTAO_EQUIPA = 'bo:'
  */
 export const CAPACIDADES_SO_DO_DONO: readonly Capacidade[] = ['bo.extracto_todos', 'bo.papeis_gerir']
 
+/**
+ * O QUE UMA PESSOA É, para efeitos de comandos: os papéis do backoffice mais o `ib`.
+ *
+ * `ib` NÃO é um papel (ver `supabase/migrations/138_ib_rede.sql`): é pertença a `ib_membros` com
+ * `ate is null`, porque ser IB é uma relação com uma corretora e não uma função de vendas. Mas para
+ * decidir se um comando aparece, a pergunta é a mesma — «tem isto?» — e por isso as duas coisas
+ * entram na MESMA lista. Se o `ib` viesse por um parâmetro à parte, cada função de autorização
+ * passava a ter dois caminhos, e o dia em que aparecer a terceira pertença abre o terceiro.
+ */
+export type PapelOuIb = Papel | 'ib'
+
+/** Nome apresentável, para a assinatura do /ajuda. O `ib` não tem `PAPEL_NOME` porque não é papel. */
+export const PAPEL_OU_IB_NOME: Record<PapelOuIb, string> = { ...PAPEL_NOME, ib: 'IB' }
+
 export interface ComandoEquipa {
   /** Com barra, minúsculas, sem argumentos. */
   nome: string
@@ -71,6 +97,20 @@ export interface ComandoEquipa {
    * o `/ligar`, porque quem ainda não ligou a conta não tem capacidade nenhuma para se mostrar.
    */
   capacidade: Capacidade | null
+  /**
+   * O PAPEL que este comando exige, quando exigir. É um APERTO sobre a capacidade, nunca um
+   * substituto dela: quem não tem a capacidade não chega aqui, e quem não tem o papel também não.
+   *
+   * PORQUE É QUE ISTO TEVE DE EXISTIR
+   * O dono pediu bancadas separadas para o setter e para o closer. Só que os dois papéis têm
+   * EXACTAMENTE as mesmas capacidades (ver o MAPA em `lib/backoffice-papeis.ts`) — logo a
+   * capacidade sozinha dava ao setter o `/closer` e ao closer o `/setter`. Não é um detalhe de
+   * apresentação: a bancada do closer diz o que está em fecho e onde está o dinheiro em jogo, e a
+   * do setter diz quem arrefeceu. Trocá-las põe cada um a trabalhar a lista do outro.
+   *
+   * Vazio = o comando é de todos os que têm a capacidade, como sempre foi.
+   */
+  papel?: PapelOuIb
   /** Uma linha, como aparece no /ajuda de quem o tem. */
   descricao: string
   /** Muda estado? Serve para a guarda prender a lista de escritas e ver o que entrou de novo. */
@@ -108,6 +148,59 @@ export const COMANDOS_EQUIPA: readonly ComandoEquipa[] = [
   { nome: '/extracto', capacidade: 'bo.extracto_proprio', descricao: 'O que ganhaste e o que já foi pago', escreve: false },
   { nome: '/link', capacidade: 'bo.material', descricao: 'O teu código e o teu link de registo', escreve: false },
   { nome: '/minhaequipa', capacidade: 'bo.equipa_ver', descricao: 'A tua equipa e o trabalho aberto de cada um', escreve: false },
+
+  /**
+   * AS BANCADAS POR PAPEL — uma por função, e só para quem tem essa função.
+   *
+   * Cada uma responde à pergunta que essa pessoa faz ao abrir o telemóvel, e nenhuma escreve:
+   * são leituras do que já está na base (negócios, eventos do pipeline, tarefas, `ib_contas`,
+   * `referrals`, `vendas_extracto`). Ver `ESCRITAS_PERMITIDAS` — se um dia uma destas passar a
+   * escrever, a guarda falha até alguém decidir que sim.
+   *
+   * O par `capacidade` + `papel` é o ponto todo: a capacidade é o PISO (sem ela nem o nome existe)
+   * e o papel é o APERTO (um closer não vê a bancada do setter, embora tenha a mesma capacidade).
+   */
+  {
+    nome: '/prospector',
+    capacidade: 'bo.leads_proprias',
+    papel: 'prospector',
+    descricao: 'A tua bancada de prospeção: por trabalhar, tocados hoje, o próximo',
+    escreve: false,
+  },
+  {
+    nome: '/setter',
+    capacidade: 'bo.pipeline_proprio',
+    papel: 'setter',
+    descricao: 'A tua bancada de marcação: à espera de marcar, marcados, quem arrefeceu',
+    escreve: false,
+  },
+  {
+    nome: '/closer',
+    capacidade: 'bo.pipeline_proprio',
+    papel: 'closer',
+    descricao: 'A tua bancada de fecho: em fecho, o que está em jogo, o que decide hoje',
+    escreve: false,
+  },
+  {
+    /**
+     * A bancada da rede de IBs. O piso é `bo.entrar` e não uma capacidade de IB porque não existe
+     * nenhuma — e inventá-la seria pior: passava a poder ser dada a um setter no /admin «só para
+     * experimentar», e com ela ia a carteira de clientes de corretora (nome, contacto, saldo).
+     * Quem manda aqui é a pertença a `ib_membros`, exactamente como em `app/backoffice/ib/page.tsx`.
+     */
+    nome: '/ib',
+    capacidade: 'bo.entrar',
+    papel: 'ib',
+    descricao: 'A tua rede de IB: contas, volume, comissão e quem vale a pena trazer',
+    escreve: false,
+  },
+  {
+    nome: '/afiliado',
+    capacidade: 'bo.material',
+    papel: 'afiliado',
+    descricao: 'A tua divulgação: código, link, quem entrou por ti e o que rendeu',
+    escreve: false,
+  },
   { nome: '/avisos', capacidade: 'bo.entrar', descricao: 'Ligar ou desligar o resumo da manhã', escreve: true },
   { nome: '/desligar', capacidade: 'bo.entrar', descricao: 'Desligar este Telegram da tua conta', escreve: true },
 ]
@@ -162,18 +255,33 @@ export function comandoPor(texto: string): ComandoEquipa | null {
  *  · sem `bo.entrar` (quem ainda não ligou a conta, ou quem ficou sem papéis) fica só com a porta;
  *  · com `bo.entrar`, mostra-se exactamente o que as capacidades dela abrem, e nem um a mais.
  */
-export function comandosPara(capacidades: ReadonlySet<Capacidade>): ComandoEquipa[] {
-  const dentro = capacidades.has('bo.entrar')
-  return COMANDOS_EQUIPA.filter((c) => {
-    if (c.capacidade === null) return true
-    if (!dentro) return false
-    return capacidades.has(c.capacidade)
-  })
+export function comandosPara(
+  capacidades: ReadonlySet<Capacidade>,
+  papeis: readonly PapelOuIb[] = [],
+): ComandoEquipa[] {
+  // A lista é o FILTRO da mesma função que autoriza, e não uma segunda cópia da regra. Duas
+  // cópias divergem: a guarda já obrigava as duas a concordar comando a comando, e a única
+  // maneira de isso nunca falhar é não haver duas.
+  return COMANDOS_EQUIPA.filter((c) => podeComando(capacidades, c, papeis))
 }
 
-export function podeComando(capacidades: ReadonlySet<Capacidade>, comando: ComandoEquipa): boolean {
+/**
+ * A autorização, inteira, num sítio só: CAPACIDADE **E** PAPEL. Nunca uma em vez da outra.
+ *
+ * `papeis` tem valor por omissão VAZIO, e isso é deliberado: quem chamar isto sem dizer os papéis
+ * da pessoa perde os comandos com `papel` — fecha, não abre. É a regra da casa (negar por
+ * omissão) aplicada ao próprio esquecimento de quem escreve a próxima porta.
+ */
+export function podeComando(
+  capacidades: ReadonlySet<Capacidade>,
+  comando: ComandoEquipa,
+  papeis: readonly PapelOuIb[] = [],
+): boolean {
   if (comando.capacidade === null) return true
-  return capacidades.has('bo.entrar') && capacidades.has(comando.capacidade)
+  if (!capacidades.has('bo.entrar')) return false
+  if (!capacidades.has(comando.capacidade)) return false
+  if (comando.papel && !papeis.includes(comando.papel)) return false
+  return true
 }
 
 /**
@@ -185,11 +293,17 @@ export function podeComando(capacidades: ReadonlySet<Capacidade>, comando: Coman
  */
 export function textoDeAjudaEquipa(
   capacidades: ReadonlySet<Capacidade>,
-  opts?: { papeis?: readonly string[] },
+  opts?: { papeis?: readonly PapelOuIb[] },
 ): string {
-  const lista = comandosPara(capacidades)
+  /**
+   * Os MESMOS papéis gateiam e assinam a mensagem. Antes vinham por aqui já traduzidos, só para
+   * mostrar — e uma lista que serve só para enfeitar é uma lista que ninguém liga à autorização:
+   * era assim que o `/closer` aparecia a um setter enquanto a assinatura dizia «Setter».
+   */
+  const papeis = opts?.papeis ?? []
+  const lista = comandosPara(capacidades, papeis)
   const linhas = lista.map((c) => `${c.nome}${c.argumento ? ` &lt;${c.argumento}&gt;` : ''} — ${c.descricao}`)
-  const quem = opts?.papeis?.length ? `\n<i>${opts.papeis.join(' · ')}</i>` : ''
+  const quem = papeis.length ? `\n<i>${papeis.map((p) => PAPEL_OU_IB_NOME[p]).join(' · ')}</i>` : ''
 
   if (!capacidades.has('bo.entrar')) {
     return (
