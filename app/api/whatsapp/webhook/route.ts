@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { runLeadFunnelReply } from '@/lib/telegram-lead-funnel'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { enviarWhatsApp, lerEstadoDoContacto, registarEntrada } from '@/lib/whatsapp-mensageiro'
 
 /**
  * Webhook do WhatsApp (Meta Cloud API) — funil de vendas MTM no WhatsApp, reutilizando o MESMO
@@ -8,11 +9,20 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  * `lib/escada-precos.ts`. Este comentário dizia «PU Prime 300$» muito depois de o mínimo ter
  * passado a 350 — um comentário errado é a próxima pessoa a escrever o número errado.
  *
- * PREPARADO mas inerte até configurares no VPS/Meta:
+ * PREPARADO mas inerte até configurares no VPS/Meta — verificado a 27/09: nenhuma destas variáveis
+ * existe na Vercel nem no `.env.local`.
  *  - WHATSAPP_VERIFY_TOKEN     → token de verificação do webhook (GET hub.verify_token)
  *  - WHATSAPP_TOKEN            → token de acesso (permanente/system-user) para enviar mensagens
  *  - WHATSAPP_PHONE_NUMBER_ID  → id do número de WhatsApp Business (Cloud API)
  *  Alternativa VPS: WHATSAPP_RELAY_URL (+ CRON_SECRET) para enviar via um relay próprio no VPS.
+ * Os passos do lado da Meta, que só o dono pode fazer, estão em `docs/whatsapp-setup.md`.
+ *
+ * O ENVIO NÃO VIVE AQUI (27/09). Vive em `lib/whatsapp-mensageiro.ts`, por cima das regras puras de
+ * `lib/whatsapp-envio.ts`. O `sendWhatsApp()` que estava neste ficheiro mandava sempre texto livre e
+ * engolia o erro num `.catch(() => {})`: fora da janela de 24 horas da Meta isso é um pedido recusado
+ * que ninguém vê, e tentativas recusadas a acumular são o caminho para o número ser marcado como
+ * spam. Cada entrada passa a ficar registada (`whatsapp_mensagens`) porque é a última mensagem DELA
+ * que define a janela — sem esse registo, o sistema não sabe se pode responder com texto livre.
  */
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +39,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ok: false, error: 'verify failed' }, { status: 403 })
 }
 
-interface WAMessage { from?: string; type?: string; text?: { body?: string } }
+interface WAMessage { id?: string; from?: string; type?: string; text?: { body?: string } }
 
 /**
  * O funil de WhatsApp só trata LEADS NOVOS — nunca contactos/clientes já existentes.
@@ -61,30 +71,6 @@ async function isNewWhatsAppLead(phone: string): Promise<boolean> {
   return true
 }
 
-async function sendWhatsApp(to: string, body: string): Promise<void> {
-  const token = process.env.WHATSAPP_TOKEN
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID
-  // Relay próprio no VPS (contorna limites/gestão de token no servidor da Meta), se configurado.
-  const relay = process.env.WHATSAPP_RELAY_URL
-  if (relay) {
-    await fetch(relay, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${process.env.CRON_SECRET ?? ''}` },
-      body: JSON.stringify({ to, text: body }),
-    }).catch(() => {})
-    return
-  }
-  if (!token || !phoneId) {
-    console.warn('[whatsapp] WHATSAPP_TOKEN/PHONE_NUMBER_ID em falta — mensagem não enviada (prepara no VPS/Meta)')
-    return
-  }
-  await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body } }),
-  }).catch((e) => console.error('[whatsapp] envio falhou:', e))
-}
-
 // 2) Mensagens recebidas → cérebro do funil → resposta
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
@@ -97,6 +83,18 @@ export async function POST(req: NextRequest) {
         const from = m.from
         const text = m.text?.body?.trim()
         if (!from || !text) continue
+
+        /**
+         * REGISTAR A ENTRADA PRIMEIRO, ANTES DE QUALQUER DECISÃO.
+         *
+         * A janela de 24 horas é um facto do lado da Meta: abre porque ela escreveu, não porque nós
+         * respondemos. Se este registo ficasse depois do filtro de leads, os contactos que o funil
+         * ignora (clientes, contactos humanos) ficavam sem janela registada — e no dia em que o dono
+         * quisesse falar com um deles pela app, o sistema recusava texto livre a jurar que a janela
+         * estava fechada, quando estava aberta há dez minutos.
+         */
+        const numero = await registarEntrada({ numero: from, texto: text, waMessageId: m.id ?? null })
+
         // SÓ leads novos — nunca contactos/clientes existentes.
         if (!(await isNewWhatsAppLead(from))) {
           console.log('[whatsapp] contacto existente — funil ignorado:', from)
@@ -110,11 +108,21 @@ export async function POST(req: NextRequest) {
           userText: text,
           source: 'whatsapp',
         })
-        await sendWhatsApp(
-          from,
-          reply ||
-            'Diz-me só: procuras aprender, copiar sinais prontos ou algo automático? 🙂',
-        )
+
+        /**
+         * `finalidade: 'resposta'` e não 'campanha', porque é isso que isto é: ela escreveu agora e
+         * está à espera. A origem é o acto dela, e a janela acabou de abrir nesta mesma iteração —
+         * por isso passa-se o estado já lido, com a entrada que se acabou de gravar, em vez de deixar
+         * o mensageiro ir buscá-lo outra vez e correr o risco de ler antes de a escrita assentar.
+         */
+        const estado = numero ? await lerEstadoDoContacto(numero) : undefined
+        const r = await enviarWhatsApp({
+          para: from,
+          finalidade: 'resposta',
+          texto: reply || 'Diz-me só: procuras aprender, copiar sinais prontos ou algo automático? 🙂',
+          estado: estado ? { ...estado, ultimaEntradaIso: estado.ultimaEntradaIso ?? new Date().toISOString() } : undefined,
+        })
+        if (!r.enviado) console.warn(`[whatsapp] resposta ao lead não saiu (${r.codigo}): ${r.porque}`)
       }
     }
   } catch (e) {

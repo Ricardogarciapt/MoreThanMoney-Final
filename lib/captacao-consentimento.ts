@@ -186,6 +186,21 @@ export const PONTOS_DE_CAPTURA: readonly PontoDeCaptura[] = [
       'Cancelo quando quiser, sem perder o acesso ao que comprei.',
   },
   {
+    /**
+     * WhatsApp. Acrescentado a 27/09, quando se construiu o envio (`lib/whatsapp-mensageiro.ts`).
+     *
+     * Sem este canal, o livro não tinha onde aterrar uma permissão dada por WhatsApp — e sem linha no
+     * livro, o único envio que o sistema autoriza para um número é a resposta dentro das 24 horas em
+     * que a pessoa nos escreveu. Ou seja: falava-se com ela uma vez e nunca mais. Isto pede-se DENTRO
+     * dessa conversa, com ela a responder, e nunca a um número que apareceu numa exportação.
+     */
+    canal: 'whatsapp',
+    onde: 'Dentro da conversa de WhatsApp, depois de a pessoa perguntar algo (app/api/whatsapp/webhook)',
+    pedido:
+      'Queres que te avise por WhatsApp das sessões e das novidades da MoreThanMoney? Responde "sim" — ' +
+      'e sais quando quiseres, basta dizeres para parar.',
+  },
+  {
     canal: 'comentario_instagram',
     onde: 'Resposta ao comentário no Instagram que pede o contacto (funil Essential, sem ManyChat)',
     pedido:
