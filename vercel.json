@@ -73,6 +73,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/funded-inatividade",
+      "schedule": "30 6 * * *"
+    },
+    {
       "path": "/api/cron/daily-dca-check",
       "schedule": "0 9 * * *"
     },
