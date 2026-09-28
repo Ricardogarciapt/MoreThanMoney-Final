@@ -264,27 +264,19 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.areasTitle": "Quem dá as aulas tem nome.",
     "l2.areasTitle2": "E tem hora marcada.",
     "l2.areasSub":
-      "Duas frentes, e em cada uma há aulas ao vivo com o nome de quem as dá. Algumas áreas ainda não abriram — ficas a saber quais antes de pagares.",
+      "Duas frentes e oito áreas: aulas ao vivo todas as semanas com o nome de quem as dá, e percursos organizados para fazeres ao teu ritmo.",
     /* Os nomes dos pilares são marca e não se traduzem; as definições sim. */
     "l2.pil1D":
       "Os mercados e o dinheiro: aprender a operá-los, e as ferramentas que os operam por ti quando não podes estar.",
     "l2.pil2D":
       "Construir audiência e construir negócio: marca pessoal, conteúdo, e as formas de ganhar aqui sem abrir uma ordem.",
-    "l2.pilCountEdu": "{n} com educador",
-    "l2.pilCountNoEdu": "{n} sem aulas próprias",
-    "l2.pilCountSoon": "{n} a abrir",
+    "l2.pilCount": "{n} áreas",
     "l2.pilAlso": "também neste pilar",
-    "l2.areasFam1": "Com educador e horário semanal",
-    "l2.areasFam2": "A abrir",
-    "l2.areasSoonTag": "em preparação",
     "l2.areasEducator": "educador",
     "l2.areasLive": "a dar aulas",
-    "l2.areasNoTeacher": "Sem aulas próprias",
+    "l2.areasSelfPaced": "Percurso organizado",
+    "l2.areasSelfPacedSub": "módulo a módulo · ao teu ritmo",
     "l2.areasGo": "Ver no lobby ao vivo",
-    "l2.areasHint": "Estas áreas abrem quando houver o educador certo.",
-    "l2.areasHintLink": "Se és tu, candidata-te",
-    "l2.areasRisk":
-      "As salas e os horários são os que estão marcados esta semana, contados um a um. Uma área com uma sala e um horário acabou de começar — se procuras um arquivo cheio de aulas, ainda não é o que vais encontrar lá.",
 
     "l2.chFaq": "Antes de decidires",
     "l2.faqTitle": "As perguntas que toda a gente faz",
@@ -317,7 +309,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
        lugar na lista da landing, porque é a primeira coisa que trava quem chega. */
     "l2.faq9Q": "Isto é só para quem quer fazer trading?",
     "l2.faq9A":
-      "Não. Há aulas ao vivo em quatro áreas: Forex com o Ricardo Garcia, Criptomoedas com o Ruben Pereira, e Social Media e UGC e Mindset e Liderança com os educadores da casa — estas duas começaram agora, com uma sala e um horário semanal cada. Ações e ETF não têm aulas próprias: vivem no portefólio, no Terminal e no canal de chat. E Imobiliário, Inteligência Artificial e Network Marketing estão a abrir, ainda sem educador — dizemo-lo antes de pagares, não depois.",
+      "Não. São oito áreas em duas frentes. Nos mercados: Forex com o Ricardo Garcia, Criptomoedas com o Ruben Pereira, Ações e ETF, e Imobiliário. Do outro lado: Social Media e UGC, Mindset e Liderança, Inteligência Artificial e Network Marketing. Umas têm sala ao vivo com horário semanal, outras são percurso organizado para fazeres ao teu ritmo — e há quem venha para cá e nunca abra uma ordem.",
     "l2.faq10Q": "Consigo ganhar aqui sem abrir uma única ordem?",
     "l2.faq10A":
       "Consegues, por duas vias. Se produzes conteúdo, alojamos e vendemos o teu curso ou mentoria e ficas com 90–95% do que vender, sem entrada e sem exclusividade — candidatas-te e falamos. E se trazes pessoas, o Convida & Ganha dá-te dias de Premium por cada amigo que entre pelo teu link, com comissão sobre as subscrições que resultem. A parceria de corretora (IB) é outra coisa e não se faz por formulário: é uma conversa, e só depois é que entras na rede.",
@@ -619,26 +611,19 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.areasTitle": "Whoever teaches has a name.",
     "l2.areasTitle2": "And a time in the week.",
     "l2.areasSub":
-      "Two fronts, and each one has live classes with the name of whoever teaches them. Some areas haven't opened yet — you'll know which before you pay.",
+      "Two fronts and eight areas: live classes every week with the name of whoever gives them, and self-paced tracks you work through on your own time.",
     "l2.pil1D":
       "Markets and money: learning to run them, and the tools that run them for you when you can't be there.",
     "l2.pil2D":
       "Building an audience and building a business: personal brand, content, and the ways to earn here without opening an order.",
-    "l2.pilCountEdu": "{n} with an educator",
-    "l2.pilCountNoEdu": "{n} with no classes of its own",
-    "l2.pilCountSoon": "{n} opening",
+    "l2.pilCount": "{n} areas",
     "l2.pilAlso": "also in this pillar",
-    "l2.areasFam1": "With an educator and a weekly slot",
-    "l2.areasFam2": "Opening",
-    "l2.areasSoonTag": "in preparation",
+
     "l2.areasEducator": "educator",
     "l2.areasLive": "teaching",
-    "l2.areasNoTeacher": "No classes of its own",
+    "l2.areasSelfPaced": "Self-paced track",
+    "l2.areasSelfPacedSub": "module by module · on your own time",
     "l2.areasGo": "See it in the live lobby",
-    "l2.areasHint": "These areas open when the right educator turns up.",
-    "l2.areasHintLink": "If that's you, apply",
-    "l2.areasRisk":
-      "The rooms and slots are the ones booked this week, counted one by one. An area with one room and one slot has only just started — if you're after a full archive of lessons, that isn't what you'll find there yet.",
 
     "l2.chFaq": "Before you decide",
     "l2.faqTitle": "The questions everybody asks",
@@ -669,7 +654,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
       "The site and the app are translated into 21 languages, and live sessions carry subtitles translated into Portuguese, English, Spanish, French and German — live, while the educator is speaking.",
     "l2.faq9Q": "Is this only for people who want to trade?",
     "l2.faq9A":
-      "No. There are live classes in four areas: Forex with Ricardo Garcia, Crypto with Ruben Pereira, and Social Media and UGC and Mindset and Leadership with our in-house educators — those two have just started, with one room and one weekly slot each. Stocks and ETFs have no classes of their own: they live in the portfolio, the Terminal and the chat channel. And Real Estate, Artificial Intelligence and Network Marketing are opening, still without an educator — we say so before you pay, not after.",
+      "No. Eight areas across two fronts. On the markets side: Forex with Ricardo Garcia, Crypto with Ruben Pereira, Stocks and ETFs, and Real Estate. On the other: Social Media and UGC, Mindset and Leadership, Artificial Intelligence and Network Marketing. Some have a live room with a weekly slot, others are self-paced tracks you work through on your own time — and plenty of people come here and never place a single order.",
     "l2.faq10Q": "Can I earn here without opening a single order?",
     "l2.faq10A":
       "You can, two ways. If you make content, we host and sell your course or mentorship and you keep 90–95% of what it sells, with no entry fee and no exclusivity — you apply and we talk. And if you bring people, Refer and Earn gives you Premium days for every friend who joins through your link, with commission on the subscriptions that follow. The broker partnership (IB) is a different thing and isn't done through a form: it's a conversation, and only then do you join the network.",

@@ -199,10 +199,8 @@ export const LANDING_CSS = String.raw`
 @media(max-width:700px){.l2 .act{padding:54px 0 0}.l2 .act p{flex-basis:100%}}
 
 /* ─── Pilares (#areas) ────────────────────────────────────────────────────────
-   Três blocos, e a grelha passa a ter duas dimensões: pilar (a que parte da casa
-   pertence) e família (já dá aulas / está a abrir). A 375px não há espaço para as
-   duas ao mesmo tempo, por isso em telemóvel a coisa fica LINEAR e é o pilar que dá
-   a ordem: título do pilar → o que já acontece → o que está a abrir. */
+   Dois blocos, um por pilar, e dentro de cada um a mesma grelha de cartões iguais.
+   A 375px a grelha passa a uma coluna e a ordem é o pilar: título → áreas. */
 .l2 .pil{border-top:1px solid var(--line);padding-top:34px;margin-top:48px}
 .l2 .pil.p1{border-top:0;margin-top:0;padding-top:0}
 .l2 .pil__n{font-family:var(--disp);font-size:clamp(23px,3.1vw,32px);font-weight:800;letter-spacing:-.03em;
@@ -225,14 +223,12 @@ export const LANDING_CSS = String.raw`
 .l2 .also a:hover{background:rgba(210,166,60,.1)}
 
 /* ─── Áreas (#areas) ──────────────────────────────────────────────────────────
-   Duas famílias na mesma secção, e a diferença tem de ler-se sem ler o texto:
-   .ar = já dá aulas (painel cheio, ouro, nome do educador, link);
-   .ab = ainda não (traço interrompido, sem preenchimento, sem botão).
-   Se algum dia isto passar a uma grelha só, volta a mentir. */
-.l2 .aw{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-.l2 .aw3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+   Um cartão só (.ar) para as oito áreas. A linha de cima diz como se acompanha
+   aquela área — o nome do educador quando há sala ao vivo, o percurso quando é
+   para fazer ao ritmo de cada um — e o resto do cartão é igual em todas. */
+.l2 .aw{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:22px}
 @media(max-width:860px){
-.l2 .aw, .l2 .aw3{grid-template-columns:1fr}
+.l2 .aw{grid-template-columns:1fr}
 }
 .l2 .ar{position:relative;border:1px solid var(--line);border-radius:20px;padding:26px 24px;overflow:hidden;
   background:radial-gradient(130% 110% at 0% 0%,rgba(210,166,60,.09),transparent 60%),var(--panel);
@@ -260,18 +256,8 @@ export const LANDING_CSS = String.raw`
 .l2 .ar .lz b{width:6px;height:6px;border-radius:50%;background:var(--live);animation:l2pulse 2.4s ease-in-out infinite}
 /* Área real mas sem educador: ocupa a mesma linha da ficha do educador, para o cartão não
    encolher, e não pisca a verde — não há aula a acontecer. */
-.l2 .ar .nt{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
-  display:inline-flex;align-items:center;gap:7px;margin:0 0 14px;min-height:42px}
-.l2 .ar .nt b{width:6px;height:6px;border-radius:50%;background:var(--gold-dp);flex:none}
 /* A família que ainda não entrega. Sem ouro de fundo, sem botão, sem número inventado. */
-.l2 .soon{margin-top:14px}
-.l2 .ab{border:1px dashed var(--line2);border-radius:16px;padding:20px 22px;background:transparent;transition:border-color .4s}
-.l2 .ab:hover{border-color:var(--faint)}
-.l2 .ab .lb3{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);
   display:inline-flex;align-items:center;gap:7px;margin-bottom:11px}
-.l2 .ab .lb3 b{width:5px;height:5px;border-radius:50%;background:var(--line2);flex:none}
-.l2 .ab h3{font-size:17px;margin:0 0 7px;color:var(--dim);letter-spacing:-.018em}
-.l2 .ab p{margin:0;font-size:13.5px;color:var(--faint);line-height:1.55}
 .l2 .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
 .l2 .tag{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-lt);border:1px solid var(--gold-dp);border-radius:999px;padding:5px 12px}
 .l2 .certs{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}

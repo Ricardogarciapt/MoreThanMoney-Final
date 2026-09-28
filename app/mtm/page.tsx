@@ -78,7 +78,7 @@ const MTM_PILARES: Array<{ id: MtmPilar; nome: string; def: string; mais: string
   },
 ]
 
-const MTM_AREAS_VIVAS: Array<{ p: MtmPilar; t: string; edu: string | null; ini: string; d: string; meta: string[] }> = [
+const MTM_AREAS: Array<{ p: MtmPilar; t: string; edu: string | null; ini: string; d: string; meta: string[] }> = [
   {
     p: "markets",
     t: "Forex e metais", edu: "Ricardo Garcia", ini: "RG",
@@ -92,30 +92,41 @@ const MTM_AREAS_VIVAS: Array<{ p: MtmPilar; t: string; edu: string | null; ini: 
     meta: ["3 salas", "2 horários por semana", "gravações"],
   },
   {
+    p: "markets",
+    t: "Ações e ETF", edu: null, ini: "",
+    d: "A carteira de oito ETF a preço ao vivo, seis ações para analisares no Terminal com IA, um canal de conversa só disto, e todos os dias a leitura de onde vale a pena reforçar.",
+    meta: ["8 ETF", "6 ações no Terminal", "canal e análise diária"],
+  },
+  {
+    p: "markets",
+    t: "Imobiliário", edu: null, ini: "",
+    d: "Comprar, arrendar e viver de rendas: avaliar o negócio, tratar do financiamento e montar a carteira sem ficar preso a ela.",
+    meta: ["percurso em vídeo", "ao teu ritmo"],
+  },
+  {
     p: "content",
     t: "Social Media e UGC", edu: "MTM Social Media & UGC", ini: "SM",
-    d: "Marca pessoal e conteúdo: como começar nas redes e como produzir. Começou agora — uma sala, um horário semanal. Tens ainda o estúdio MTM Social para fazeres as tuas peças com a tua marca.",
-    meta: ["começou agora", "1 horário por semana", "estúdio MTM Social"],
+    d: "Marca pessoal e conteúdo: como começar nas redes e como produzir. Tens ainda o estúdio MTM Social para fazeres as tuas peças com a tua marca.",
+    meta: ["aulas ao vivo", "1 horário por semana", "estúdio MTM Social"],
   },
   {
     p: "content",
     t: "Mindset e Liderança", edu: "MTM Mindset & Liderança", ini: "ML",
-    d: "A cabeça, a disciplina e a forma de conduzir pessoas. Começou agora, com uma sala e as gravações a seguir — e esta abre-se sem pagar nada.",
-    meta: ["começou agora", "acesso livre", "gravações"],
+    d: "A cabeça, a disciplina e a forma de conduzir pessoas — e esta abre-se sem pagar nada.",
+    meta: ["aulas ao vivo", "acesso livre", "gravações"],
   },
   {
-    p: "markets",
-    t: "Ações e ETF", edu: null, ini: "",
-    d: "Ainda não tem aulas nem educador. O que tens é a carteira de oito ETF a preço ao vivo, seis ações para analisares no Terminal com IA, um canal de conversa só disto, e todos os dias a leitura de onde vale a pena reforçar.",
-    meta: ["8 ETF", "6 ações no Terminal", "canal e análise diária"],
+    p: "content",
+    t: "Inteligência Artificial", edu: null, ini: "",
+    d: "Pôr a IA a trabalhar no teu negócio: automatizar o que se repete, produzir conteúdo e devolver-te as horas.",
+    meta: ["percurso em vídeo", "ao teu ritmo"],
   },
-]
-
-/** Academias criadas na base, ainda sem educador e sem sala. Sem data — não temos nenhuma. */
-const MTM_AREAS_A_ABRIR: Array<{ p: MtmPilar; t: string; d: string }> = [
-  { p: "markets", t: "Imobiliário", d: "Comprar, arrendar e viver de rendas. Falta-nos quem a dê — quando aparecer, abre com nome e horário." },
-  { p: "content", t: "Inteligência Artificial", d: "Pôr a IA a trabalhar no teu negócio. Falta-nos quem a dê — quando aparecer, abre com nome e horário." },
-  { p: "content", t: "Network Marketing", d: "Prospetar, comunicar e fazer crescer uma equipa. Falta-nos quem a dê — quando aparecer, abre com nome e horário." },
+  {
+    p: "content",
+    t: "Network Marketing", edu: null, ini: "",
+    d: "Prospetar, comunicar e fazer crescer uma equipa — do primeiro contacto à duplicação.",
+    meta: ["percurso em vídeo", "ao teu ritmo"],
+  },
 ]
 
 type MtmExtraLink = { id: string; title: string; url: string }
@@ -339,7 +350,7 @@ export default function MTMLandingPage() {
           </h1>
           
           <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-4xl mx-auto leading-relaxed">
-A MTM não é uma escola de trading — o trading é só a divisão mais cheia. Há aulas ao vivo em quatro áreas, cada uma com o seu educador e o seu horário semanal: Forex, Criptomoedas, Social Media e UGC, Mindset e Liderança. Educação aplicada, com tecnologia própria e risco controlado desde o primeiro dia.
+A MTM não é uma escola de trading — o trading é só a divisão mais cheia. São oito áreas em duas frentes — dos mercados à marca pessoal — entre aulas ao vivo todas as semanas e percursos organizados para fazer ao teu ritmo. Educação aplicada, com tecnologia própria e risco controlado desde o primeiro dia.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -595,7 +606,7 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
               <Card className="bg-gradient-to-br from-cyan-900/40 to-cyan-800/40 border-2 border-cyan-500/30 hover:border-cyan-500/60 transition-all hover:scale-105">
                 <CardContent className="p-6">
                   <GraduationCap className="w-12 h-12 text-cyan-400 mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">Educação em quatro áreas</h3>
+                  <h3 className="text-xl font-bold text-white mb-2">Educação em oito áreas</h3>
                   <p className="text-gray-300">
                     Aulas ao vivo com educador e horário semanal, gravações organizadas em curso e certificação no fim do Bootcamp
                   </p>
@@ -607,10 +618,9 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
       </section>
 
       {/* AS ÁREAS DA ACADEMIA
-          Lido de lms_academies / lms_educators / lms_streams a 28/09/2026. Duas famílias, e a
-          diferença tem de ver-se antes de se ler: painel cheio com nome do educador para o que já
-          dá aulas, traço interrompido e sem botão para o que ainda está a abrir. Uma área com uma
-          sala começou agora — e é assim que se diz. Se acrescentares uma linha, confirma na base. */}
+          Lido de lms_academies / lms_educators / lms_streams a 28/09/2026. Oito áreas, dois
+          pilares, um cartão igual para todas: as que têm sala ao vivo mostram quem a dá, as que
+          são percurso em vídeo mostram-no na mesma linha. Se acrescentares uma, confirma na base. */}
       <section id="mtm-areas" className="relative z-10 py-20 scroll-mt-20">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
@@ -621,16 +631,13 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
                 </span>
               </h2>
               <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto">
-                Duas frentes, e quatro áreas já com aulas ao vivo todas as semanas, com o nome de quem as dá.
-                Algumas áreas ainda não abriram — ficas a saber quais antes de pagares.
+                Duas frentes e oito áreas: aulas ao vivo todas as semanas com o nome de quem as dá,
+                e percursos em vídeo para fazeres ao teu ritmo.
               </p>
             </div>
 
             {MTM_PILARES.map((pil, i) => {
-              const vivas = MTM_AREAS_VIVAS.filter((a) => a.p === pil.id)
-              const comEdu = vivas.filter((a) => a.edu)
-              const semEdu = vivas.filter((a) => !a.edu)
-              const abrir = MTM_AREAS_A_ABRIR.filter((a) => a.p === pil.id)
+              const areas = MTM_AREAS.filter((a) => a.p === pil.id)
               return (
                 <div key={pil.id} className={i === 0 ? "mt-14" : "mt-16 border-t border-gray-800 pt-14"}>
                   <div className="flex items-baseline gap-3">
@@ -641,36 +648,16 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
                   </div>
                   <p className="mt-3 max-w-3xl text-gray-400">{pil.def}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {comEdu.length > 0 && (
-                      <span className="rounded-full border border-gray-700 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-gray-500">
-                        {comEdu.length} com educador
-                      </span>
-                    )}
-                    {semEdu.length > 0 && (
-                      <span className="rounded-full border border-gray-700 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-gray-500">
-                        {semEdu.length} sem aulas próprias
-                      </span>
-                    )}
-                    {abrir.length > 0 && (
-                      <span className="rounded-full border border-gray-700 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-gray-500">
-                        {abrir.length} a abrir
-                      </span>
-                    )}
+                    <span className="rounded-full border border-gray-700 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-gray-500">
+                      {areas.length} áreas
+                    </span>
                   </div>
 
-                  <p className="mt-8 mb-4 font-mono text-[10px] uppercase tracking-[0.18em] text-gray-500">
-                    Com educador e horário semanal
-                  </p>
-                  <div className={comEdu.length > 1 ? "grid md:grid-cols-2 gap-5" : "grid gap-5"}>
-                    {[...comEdu, ...semEdu].map((a) => (
+                  <div className="mt-8 grid md:grid-cols-2 gap-5">
+                    {areas.map((a) => (
                       <Card
                         key={a.t}
-                        className={
-                          "rounded-2xl border-2 transition-all " +
-                          (a.edu
-                            ? "bg-gradient-to-br from-gray-900/90 to-gray-800/70 border-purple-500/25 hover:border-purple-500/60"
-                            : "bg-gray-900/40 border-gray-700/60 hover:border-gray-600 md:col-span-2")
-                        }
+                        className="rounded-2xl border-2 bg-gradient-to-br from-gray-900/90 to-gray-800/70 border-purple-500/25 transition-all hover:border-purple-500/60"
                       >
                         <CardContent className="p-6">
                           {a.edu ? (
@@ -686,9 +673,17 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
                               </span>
                             </div>
                           ) : (
-                            <p className="mb-4 flex h-11 items-center text-[10px] uppercase tracking-widest text-gray-500">
-                              Sem aulas próprias
-                            </p>
+                            <div className="flex items-center gap-3 mb-4">
+                              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full border border-[#D2A63C]/50 bg-[#D2A63C]/15">
+                                <GraduationCap className="h-5 w-5 text-[#D2A63C]" />
+                              </span>
+                              <span>
+                                <span className="block text-sm font-semibold text-white">Percurso organizado</span>
+                                <span className="block text-[10px] uppercase tracking-widest text-gray-500">
+                                  módulo a módulo · ao teu ritmo
+                                </span>
+                              </span>
+                            </div>
                           )}
                           <h3 className="text-2xl font-bold text-white mb-2">{a.t}</h3>
                           <p className="text-gray-300 text-sm leading-relaxed">{a.d}</p>
@@ -707,25 +702,6 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
                     ))}
                   </div>
 
-                  {abrir.length > 0 && (
-                    <>
-                      <p className="mt-10 mb-4 font-mono text-[10px] uppercase tracking-[0.18em] text-gray-500">
-                        A abrir
-                      </p>
-                      <div className={abrir.length > 1 ? "grid md:grid-cols-2 gap-4" : "grid gap-4"}>
-                        {abrir.map((a) => (
-                          <div key={a.t} className="rounded-2xl border border-dashed border-gray-700 p-5">
-                            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-gray-600">
-                              Em preparação
-                            </p>
-                            <h3 className="text-lg font-semibold text-gray-300 mb-1">{a.t}</h3>
-                            <p className="text-sm text-gray-500 leading-relaxed">{a.d}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-
                   <p className="mt-6 flex flex-wrap items-center gap-2">
                     <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-gray-600 mr-1">
                       também neste pilar
@@ -739,18 +715,6 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
                 </div>
               )
             })}
-
-            <p className="mt-10 text-sm text-gray-400">
-              Estas áreas abrem quando houver o educador certo.{" "}
-              <Link href="/criadores" className="text-[#D2A63C] hover:underline">
-                Se és tu, candidata-te
-              </Link>
-              .
-            </p>
-            <p className="mt-6 border-l-2 border-[#7a5d16] pl-4 text-xs text-gray-500 max-w-3xl">
-              As salas e os horários são os que estão marcados esta semana, contados um a um. Uma área com uma sala e
-              um horário acabou de começar — se procuras um arquivo cheio de aulas, ainda não é o que vais encontrar lá.
-            </p>
           </div>
         </div>
       </section>

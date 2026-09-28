@@ -141,7 +141,7 @@ const PILARES: Array<{ id: Pilar; nome: string; def: string; mais: Array<{ l: st
   },
 ]
 
-const AREAS_VIVAS: Area[] = [
+const AREAS: Area[] = [
   {
     p: "markets",
     t: "Forex e metais", edu: "Ricardo Garcia",
@@ -155,31 +155,42 @@ const AREAS_VIVAS: Area[] = [
     meta: ["3 salas", "2 horários por semana", "gravações"], href: "/live-sessions",
   },
   {
+    p: "markets",
+    t: "Ações e ETF", edu: null,
+    d: "A carteira de oito ETF a preço ao vivo, seis ações para analisares no Terminal com IA, um canal de conversa só disto, e todos os dias a leitura de onde vale a pena reforçar.",
+    meta: ["8 ETF", "6 ações no Terminal", "canal e análise diária"],
+    href: "/portfolios", cta: "Ver os portefólios",
+  },
+  {
+    p: "markets",
+    t: "Imobiliário", edu: null,
+    d: "Comprar, arrendar e viver de rendas: avaliar o negócio, tratar do financiamento e montar a carteira sem ficar preso a ela.",
+    meta: ["percurso em vídeo", "ao teu ritmo"],
+  },
+  {
     p: "content",
     t: "Social Media e UGC", edu: "MTM Social Media & UGC",
-    d: "Marca pessoal e conteúdo: como começar nas redes e como produzir. Começou agora — uma sala, um horário semanal. Tens ainda o estúdio MTM Social para fazeres as tuas peças com a tua marca, e um canal só desta conversa.",
-    meta: ["começou agora", "1 horário por semana", "estúdio MTM Social"], href: "/live-sessions",
+    d: "Marca pessoal e conteúdo: como começar nas redes e como produzir. Tens ainda o estúdio MTM Social para fazeres as tuas peças com a tua marca, e um canal só desta conversa.",
+    meta: ["aulas ao vivo", "1 horário por semana", "estúdio MTM Social"], href: "/live-sessions",
   },
   {
     p: "content",
     t: "Mindset e Liderança", edu: "MTM Mindset & Liderança",
-    d: "A cabeça, a disciplina e a forma de conduzir pessoas. Começou agora, com uma sala e as gravações a seguir — e esta abre-se sem pagar nada.",
-    meta: ["começou agora", "acesso livre", "gravações"], href: "/live-sessions",
+    d: "A cabeça, a disciplina e a forma de conduzir pessoas — e esta abre-se sem pagar nada.",
+    meta: ["aulas ao vivo", "acesso livre", "gravações"], href: "/live-sessions",
   },
   {
-    p: "markets",
-    t: "Ações e ETF", edu: null,
-    d: "Ainda não tem aulas nem educador. O que tens é a carteira de oito ETF a preço ao vivo, seis ações para analisares no Terminal com IA, um canal de conversa só disto, e todos os dias a leitura de onde vale a pena reforçar.",
-    meta: ["8 ETF", "6 ações no Terminal", "canal e análise diária"],
-    href: "/portfolios", cta: "Ver os portefólios",
+    p: "content",
+    t: "Inteligência Artificial", edu: null,
+    d: "Pôr a IA a trabalhar no teu negócio: automatizar o que se repete, produzir conteúdo e devolver-te as horas.",
+    meta: ["percurso em vídeo", "ao teu ritmo"],
   },
-]
-
-/** Academias criadas na base, ainda sem educador e sem sala. Sem data — não temos nenhuma. */
-const AREAS_A_ABRIR: Array<{ p: Pilar; t: string; d: string }> = [
-  { p: "markets", t: "Imobiliário", d: "Comprar, arrendar e viver de rendas. Falta-nos quem a dê — quando aparecer, abre com nome e horário." },
-  { p: "content", t: "Inteligência Artificial", d: "Pôr a IA a trabalhar no teu negócio. Falta-nos quem a dê — quando aparecer, abre com nome e horário." },
-  { p: "content", t: "Network Marketing", d: "Prospetar, comunicar e fazer crescer uma equipa. Falta-nos quem a dê — quando aparecer, abre com nome e horário." },
+  {
+    p: "content",
+    t: "Network Marketing", edu: null,
+    d: "Prospetar, comunicar e fazer crescer uma equipa — do primeiro contacto à duplicação.",
+    meta: ["percurso em vídeo", "ao teu ritmo"],
+  },
 ]
 
 const sig = (n: string) => {
@@ -199,7 +210,17 @@ function AreaCard({ a, big, t }: { a: Area; big?: boolean; t: (k: string) => str
           </span>
         </div>
       ) : (
-        <p className="nt"><b />{t("l2.areasNoTeacher")}</p>
+        <div className="who3">
+          <span className="av2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ width: "18px", height: "18px" }}>
+              <path d="M22 10 12 5 2 10l10 5 10-5Z" /><path d="M6 12v5c3 2 9 2 12 0v-5" />
+            </svg>
+          </span>
+          <span>
+            <span className="en">{t("l2.areasSelfPaced")}</span>
+            <span className="er">{t("l2.areasSelfPacedSub")}</span>
+          </span>
+        </div>
       )}
       <h3>{a.t}</h3>
       <p>{a.d}</p>
@@ -358,9 +379,8 @@ export default function NewLandingPage() {
 
 <div className="strip"><div className="strip__t">{[...STRIP, ...STRIP].map((s, i) => (<span key={i}><b>◆</b> {s}</span>))}</div></div>
 
-{/* As áreas da casa. Duas famílias, e a diferença lê-se antes de se ler o texto: painel cheio
-    com o nome do educador para o que já dá aulas, traço interrompido e sem botão para o que
-    ainda está a abrir. Ver AREAS_VIVAS / AREAS_A_ABRIR no topo do ficheiro. */}
+{/* As áreas da casa: oito, em dois pilares, todas com o mesmo cartão. As que têm sala ao vivo
+    mostram quem a dá; as que são percurso mostram-no na mesma linha. Ver AREAS no topo. */}
 
 {/* O SELECTOR. É a mesma coisa que os três actos que vêm a seguir — cada cartão leva ao seu
     acto — e não uma arrumação à parte. Quem chega escolhe pela intenção, que é a única coisa
@@ -399,56 +419,20 @@ export default function NewLandingPage() {
       <p>{t("l2.areasSub")}</p></div>
 
     {PILARES.map((pil, i) => {
-      const vivas = AREAS_VIVAS.filter((a) => a.p === pil.id)
-      const comEdu = vivas.filter((a) => a.edu)
-      const semEdu = vivas.filter((a) => !a.edu)
-      const abrir = AREAS_A_ABRIR.filter((a) => a.p === pil.id)
+      const areas = AREAS.filter((a) => a.p === pil.id)
       return (
         <div className={`pil p${i + 1}`} key={pil.id}>
           <div className="r">
             <p className="pil__n">{pil.nome}</p>
             <p className="pil__d">{t(pil.def)}</p>
             <p className="pil__c">
-              {comEdu.length > 0 && <span>{t("l2.pilCountEdu").replace("{n}", String(comEdu.length))}</span>}
-              {semEdu.length > 0 && <span>{t("l2.pilCountNoEdu").replace("{n}", String(semEdu.length))}</span>}
-              {abrir.length > 0 && <span>{t("l2.pilCountSoon").replace("{n}", String(abrir.length))}</span>}
+              <span>{t("l2.pilCount").replace("{n}", String(areas.length))}</span>
             </p>
           </div>
 
-          {comEdu.length > 0 && (
-            <>
-              <p className="pil__sub r">{t("l2.areasFam1")}</p>
-              <div className={comEdu.length === 1 ? "aw3" : "aw"} style={comEdu.length === 1 ? { gridTemplateColumns: "1fr", marginTop: 0 } : undefined}>
-                {comEdu.map((a) => (<AreaCard key={a.t} a={a} big={a.meta.length > 2 && comEdu.length > 1} t={t} />))}
-              </div>
-            </>
-          )}
-
-          {/* Área real mas sem educador: linha própria, a largura toda. Fica ao lado das que
-              têm aulas porque já existe, e separada porque não é a mesma coisa. */}
-          {semEdu.map((a) => (
-            <div className="aw3" style={{ gridTemplateColumns: "1fr" }} key={a.t}>
-              <AreaCard a={a} t={t} />
-            </div>
-          ))}
-
-          {abrir.length > 0 && (
-            <>
-              <p className="pil__sub r">{t("l2.areasFam2")}</p>
-              <div
-                className="aw3 soon r d2"
-                style={{ marginTop: 0, gridTemplateColumns: abrir.length < 3 ? `repeat(${abrir.length},1fr)` : undefined }}
-              >
-                {abrir.map((a) => (
-                  <div className="ab" key={a.t}>
-                    <p className="lb3"><b />{t("l2.areasSoonTag")}</p>
-                    <h3>{a.t}</h3>
-                    <p>{a.d}</p>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+          <div className="aw">
+            {areas.map((a) => (<AreaCard key={a.t} a={a} t={t} />))}
+          </div>
 
           <p className="also r d3">
             <em>{t("l2.pilAlso")}</em>
@@ -458,12 +442,6 @@ export default function NewLandingPage() {
       )
     })}
 
-    <p className="r d3" style={{ marginTop: "40px", fontSize: "14px", color: "var(--dim)" }}>
-      {t("l2.areasHint")}{" "}
-      <a href="/criadores" style={{ color: "var(--gold-lt)", borderBottom: "1px solid var(--gold-dp)" }}>{t("l2.areasHintLink")}</a>.
-    </p>
-
-    <p className="risk r d3">{t("l2.areasRisk")}</p>
   </div>
 </section>
 
