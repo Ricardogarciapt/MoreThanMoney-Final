@@ -36,6 +36,45 @@ O resumo do motor passa a dizer **quem está a mandar**: `conector.simbolosPorFo
 (`{"mtm-conector":11,"mac-ricardo":2}`) e `conector.porFonte` (ticks acumulados). A etiqueta sai do
 nome da raiz — nada a configurar.
 
+## 2b. A hora da corretora (o que travou a primeira ligação real)
+
+Na primeira ligação, **28/09/2026**: `aceites: 0 · recusados: 5779 · razões: {"futuro": 5741, "seq
+repetida": 38}`. Transporte, assinatura, janela e dedup a funcionar; **zero ticks aceites**. O
+ficheiro do Mac dizia, no mesmo instante, `em 17:43:17` e `t 20:43:15` — o `time_msc` do MT5 é a hora
+do **servidor da corretora**, e a do Mac está em GMT+3 (a do VPS calha estar em Greenwich). Três horas
+à frente é exactamente o que a guarda do futuro existe para recusar, e a guarda **não se afrouxou**.
+
+Agora o desvio é **medido** (`lib/precos-entrada/desvio.ts`), não configurado — um `+3h` num ficheiro
+de ambiente estaria errado no dia da mudança da hora:
+
+- **mede o agente**, porque só ele tem a âncora (`em`, a hora UTC da máquina do terminal) e só ele vê
+  duas leituras seguidas do ficheiro;
+- **mede só nos ticks que MUDARAM** entre leituras. Um tick que mudou foi escrito há milissegundos,
+  logo `t − em` é o desvio e mais nada. A conta ingénua (`tick mais recente − em`) dava, ao sábado com
+  o mercado fechado há 6 h, um desvio de −3 h — e com ele a cotação do **fecho de sexta ficava com a
+  hora de agora**, passava as duas guardas e podia mexer um stop. Mercado fechado = nenhuma medição
+  nova = a estimativa fica quieta = as cotações velhas continuam velhas. Cego, não enganado;
+- **aplica e pode recusar o receptor**: o desvio viaja como declaração dentro do corpo assinado, o
+  receptor exige que seja múltiplo de 15 min dentro de ±14 h, aplica-o, e depois são as guardas de
+  sempre a julgar o resultado. **Não há valor de desvio que faça passar um preço implausível** — um
+  desvio mentiroso só consegue que os ticks da própria fonte sejam recusados (provado no
+  `cadeia.e2e.check.ts`).
+
+O `t` que o receptor escreve no ficheiro já está em **UTC**: fica indistinguível do ficheiro do
+terminal local e os motores não sabem de fusos.
+
+Duas coisas mais, da mesma ligação:
+
+- **o agente perdia leituras aos milhares**: o EA escreve `.tmp`, **apaga** o destino e só depois
+  renomeia, por isso 20 vezes por segundo há um instante sem ficheiro. O agente relê até 4 vezes com
+  2 ms de pausa (`PRECOS_AGENTE_TENTATIVAS`), e o ensaio da cadeia reproduz a rotação e exige **zero**
+  avisos de leitura perdida;
+- **o `seq` sozinho podia trancar a reserva para sempre**: um lote com um `seq` absurdo (relógio a
+  saltar com o NTP, ou alguém com o segredo a fazê-lo de propósito) deixava o agente legítimo
+  eternamente «menor». Agora manda a **hora do lote** (que é limitada pelo relógio do receptor,
+  ±30 s) e o `seq` só decide dentro do mesmo milissegundo: o pior caso é ficar de fora enquanto a
+  janela não passa, e recompõe-se sozinho.
+
 ## 3. Construir
 
 ```bash
@@ -54,6 +93,7 @@ Guardas antes de subir:
 ```bash
 npx tsx lib/precos-entrada/sanidade.check.ts
 npx tsx lib/precos-entrada/assinatura.check.ts
+npx tsx lib/precos-entrada/desvio.check.ts
 npx tsx lib/precos-entrada/lote.check.ts
 npx tsx services/motor-real/precos-duas-raizes.check.ts
 npx tsx services/precos-entrada/cadeia.e2e.check.ts   # levanta receptor + agente e prova a cadeia
@@ -160,6 +200,19 @@ node ~/mtm-precos-agente/agente.js
 Tráfego: manda-se **só o símbolo que teve tick** (e a fotografia completa de 5 em 5 s, para o
 retrato do receptor se repor depois de um reinício). Mercado fechado = zero pedidos.
 
+## 6b. Actualizar uma instalação que já corre
+
+**Os dois lados** têm de ser substituídos, e por esta ordem:
+
+1. **receptor** (VPS): `dist/receptor.js` → `/opt/mtm/precos-entrada/`, `sudo systemctl restart
+   mtm-precos-entrada`. Sem variáveis novas. Um agente antigo (que não declara desvio) continua a ser
+   tratado como desvio 0 — ou seja, continua exactamente como estava, sem regressão;
+2. **agente** (Mac): `dist/agente.js` → `~/mtm-precos-agente/`, `launchctl kickstart -k
+   gui/$(id -u)/com.morethanmoney.precos-agente`.
+
+Depois, no log do agente (`~/Library/Logs/mtm-precos-agente.log`) tem de aparecer o desvio medido, e
+no VPS `desvioH: 3` com `desvioMedicoes` > 0.
+
 ## 7. Ver se está a entrar
 
 ```bash
@@ -170,9 +223,19 @@ ls -l --time-style=full-iso /var/lib/mtm-precos-entrada/mac-ricardo/MQL5/Files/m
 #   conector.simbolosPorFonte → {"mtm-conector":11,"mac-ricardo":2}
 ```
 
-`razoes` no estado é o mapa das recusas (`salto`, `divergencia`, `velho`, `spread`, `simbolo`…). Um
-`divergencia` constante quer dizer que o Mac está noutra corretora/conta — aí ou se corrige a conta
-do terminal ou se sobe o limite com conhecimento de causa, nunca por conveniência.
+`razoes` no estado é o mapa das recusas. O que cada uma quer dizer:
+
+| razão | o que está a acontecer |
+|---|---|
+| `futuro` | a hora da corretora não está a ser corrigida — agente antigo, ou o desvio ainda sem medições |
+| `velho` | o terminal do Mac está parado, ou o mercado está fechado (é o comportamento certo) |
+| `desvio` | a fonte declarou um desvio que não é múltiplo de 15 min ou está fora de ±14 h |
+| `em recuado` / `seq repetida` | lotes fora de ordem (rede a repetir) ou um relógio a saltar no Mac |
+| `divergencia` | o Mac está noutra corretora/conta que não a do VPS — corrigir a conta do terminal, e só subir o limite com conhecimento de causa |
+| `salto`, `spread`, `simbolo` | cotação implausível: ou o Market Watch tem lixo, ou alguém tentou injectar |
+
+No log do agente: `desvio 3h (9 medições)` é o estado bom; `à espera do primeiro tick que mude para
+medir o desvio` com o mercado aberto quer dizer que o Market Watch não está a receber ticks.
 
 ## 8. A tranca (porque um preço falso é dinheiro real)
 
@@ -180,7 +243,8 @@ do terminal ou se sobe o limite com conhecimento de causa, nunca por conveniênc
 |---|---|
 | TLS (nginx) | escuta e alteração no caminho |
 | HMAC-SHA256 por fonte, sobre o corpo inteiro | autoria: um lote reetiquetado ou com os preços trocados cai |
-| janela de ±30 s + sequência sempre a subir | reenviar um lote nosso gravado antes (preço velho como novo) |
+| janela de ±30 s + hora do lote a não recuar (e a sequência dentro do mesmo ms) | reenviar um lote nosso gravado antes (preço velho como novo), sem que um `seq` absurdo possa trancar a reserva |
+| desvio da corretora **medido** nos ticks que mudam, declarado no corpo assinado e **aplicado pelo receptor** | uma hora de corretora adiantada a fazer passar preços (ou a conta ingénua a ressuscitar a cotação do fecho) |
 | forma (símbolo, bid/ask, ask≥bid, spread ≤3 %) | lixo e spreads absurdos a arrastar o médio |
 | hora (`time_msc` sem futuro >5 s, sem idade >60 s, nunca a recuar) | ticks velhos e ticks empurrados para trás |
 | salto ≤5 % dentro de 2 min | um preço inventado longe do último aceite |

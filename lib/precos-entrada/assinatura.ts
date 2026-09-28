@@ -43,6 +43,14 @@ export interface Lote {
   em: number
   /** true = fotografia completa (repõe o retrato); false/ausente = só o que mudou */
   cheio?: boolean
+  /**
+   * O desvio da hora da CORRETORA desta fonte face a UTC, em ms (ver lib/precos-entrada/desvio.ts).
+   * Vai dentro do corpo assinado de propósito: é uma declaração que o receptor confere e aplica, e
+   * ninguém a pode mexer a caminho. Ausente = 0 (corretora já à hora de Greenwich).
+   */
+  desvioMs?: number
+  /** quantas medições sustentam o desvio declarado — só para se VER no estado */
+  desvioMedicoes?: number
   p: unknown
 }
 
@@ -51,22 +59,37 @@ export type VeredictoLote = { ok: true } | { ok: false; razao: string }
 /**
  * O lote é aceitável, antes de se olhar para um único preço?
  *
- * `ultimoSeq` = a maior sequência já aceite desta fonte (0 se é a primeira). Um receptor que
- * reinicia começa em 0 e aceita a sequência seguinte, seja ela qual for — o agente não tem de
- * saber que o receptor reiniciou, e a janela de tempo continua a impedir o reenvio de lotes
- * antigos.
+ * Três coisas, e a ORDEM entre elas é o que interessa:
+ *
+ *  1. a hora do lote tem de estar dentro da janela do relógio DESTE lado — e este relógio não é de
+ *     quem envia, o que torna a janela o limite de tudo o que se segue;
+ *  2. a hora não pode RECUAR face ao último lote aceite: um lote gravado e reenviado traz a hora de
+ *     quando foi gravado, e por aí não volta a entrar;
+ *  3. dentro do mesmo milissegundo, decide a sequência.
+ *
+ * Porque não é só a sequência (era, e estava mal): um lote com um `seq` absurdamente alto — um
+ * relógio que salta com o NTP, ou alguém com o segredo a fazê-lo de propósito — trancava o agente
+ * legítimo PARA SEMPRE, porque nada dele voltava a ser «maior». Numa peça que existe para ser
+ * redundância, um bloqueio permanente é a pior falha possível. Com a hora a mandar, o pior caso é
+ * ficar de fora enquanto a janela não passar, e depois recompõe-se sozinho.
+ *
+ * `ultimoEm`/`ultimoSeq` = os do último lote aceite desta fonte (0 se é o primeiro). Um receptor que
+ * reinicia começa em 0 e aceita o lote seguinte — o agente não tem de saber que o outro lado
+ * reiniciou.
  */
 export function aceitarLote(
   l: Lote,
   agora: number,
   ultimoSeq: number,
   janelaMs: number = JANELA_MS,
+  ultimoEm = 0,
 ): VeredictoLote {
   if (!l || typeof l.fonte !== 'string' || !l.fonte.trim()) return { ok: false, razao: 'fonte' }
   if (!Number.isFinite(l.seq) || l.seq <= 0) return { ok: false, razao: 'seq' }
-  if (l.seq <= ultimoSeq) return { ok: false, razao: 'seq repetida' }
   if (!Number.isFinite(l.em)) return { ok: false, razao: 'em' }
   if (Math.abs(agora - l.em) > janelaMs) return { ok: false, razao: 'fora da janela' }
+  if (l.em < ultimoEm) return { ok: false, razao: 'em recuado' }
+  if (l.em === ultimoEm && l.seq <= ultimoSeq) return { ok: false, razao: 'seq repetida' }
   if (!Array.isArray(l.p)) return { ok: false, razao: 'p' }
   return { ok: true }
 }

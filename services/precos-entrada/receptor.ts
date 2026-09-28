@@ -49,6 +49,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { aceitarLote, conferirAssinatura, lerFontes, type Lote } from '../../lib/precos-entrada/assinatura'
 import { avaliarTick, medio, type Referencia, type TickEntrada } from '../../lib/precos-entrada/sanidade'
+import { desvioPlausivel } from '../../lib/precos-entrada/desvio'
 import { canonizar, lerFotografia, lerMapa } from '../funded-motor/fonte-conector-mt5'
 
 /** 256 KB: uma fotografia de um Market Watch inteiro cabe muitas vezes aqui. */
@@ -58,6 +59,8 @@ const log = (...a: unknown[]) => console.log(new Date().toISOString(), ...a)
 
 interface EstadoFonte {
   ultimoSeq: number
+  /** a hora do último lote ACEITE: é ela que manda na protecção contra reenvios */
+  ultimoEmLote: number
   /**
    * Símbolo CANÓNICO → último tick aceite (com o nome da corretora lá dentro, intacto).
    *
@@ -76,6 +79,10 @@ interface EstadoFonte {
   ultimoLoteEm: number
   ultimaEscritaEm: number
   porEscrever: boolean
+  /** o desvio da corretora que a fonte DECLAROU no último lote aceite (ms) */
+  desvioMs: number
+  /** quantas medições o agente diz que o sustentam */
+  desvioMedicoes: number
 }
 
 const CFG = {
@@ -97,7 +104,7 @@ const estados = new Map<string, EstadoFonte>()
 function estadoDe(fonte: string): EstadoFonte {
   let e = estados.get(fonte)
   if (!e) {
-    e = { ultimoSeq: 0, retrato: new Map(), aceites: 0, recusados: 0, razoes: new Map(), lotes: 0, ultimoLoteEm: 0, ultimaEscritaEm: 0, porEscrever: false }
+    e = { ultimoSeq: 0, ultimoEmLote: 0, retrato: new Map(), aceites: 0, recusados: 0, razoes: new Map(), lotes: 0, ultimoLoteEm: 0, ultimaEscritaEm: 0, porEscrever: false, desvioMs: 0, desvioMedicoes: 0 }
     estados.set(fonte, e)
   }
   return e
@@ -189,17 +196,40 @@ async function atenderLote(req: IncomingMessage, res: ServerResponse): Promise<v
 
   const agora = Date.now()
   const e = estadoDe(fonte)
-  const veredicto = aceitarLote(lote, agora, e.ultimoSeq)
-  if (!veredicto.ok) { razao(e, veredicto.razao); responder(res, 409, { ok: false, erro: veredicto.razao, seq: e.ultimoSeq }); return }
+  const veredicto = aceitarLote(lote, agora, e.ultimoSeq, undefined, e.ultimoEmLote)
+  if (!veredicto.ok) { razao(e, veredicto.razao); responder(res, 409, { ok: false, erro: veredicto.razao, seq: e.ultimoSeq, em: e.ultimoEmLote }); return }
   e.ultimoSeq = lote.seq
+  e.ultimoEmLote = lote.em
   e.lotes++
   e.ultimoLoteEm = agora
 
+  /**
+   * O DESVIO DECLARADO — a hora da corretora da fonte, trazida dentro do corpo assinado.
+   *
+   * Quem mede é o agente (só ele tem a âncora: o `em` que o EA escreve com o relógio da MESMA
+   * máquina). Quem APLICA e quem pode recusar é este lado, e é essa a diferença que interessa: o
+   * desvio é uma DECLARAÇÃO, não uma instrução. Aqui confere-se que é um múltiplo de 15 minutos
+   * dentro de ±14 h, aplica-se, e depois são as guardas de sempre — futuro, velho, recuado, salto,
+   * divergência — a julgar o RESULTADO. Um desvio mentiroso só consegue fazer com que os ticks da
+   * própria fonte sejam recusados: não há valor de desvio que faça passar um preço implausível.
+   *
+   * Ausente = 0, para uma fonte cuja corretora já esteja à hora de Greenwich (o terminal do VPS)
+   * não ter de declarar nada.
+   */
+  const desvioMs = lote.desvioMs ?? 0
+  if (!desvioPlausivel(desvioMs)) {
+    razao(e, 'desvio')
+    log(`[precos-entrada] recusado: desvio declarado ${desvioMs} (fonte=${fonte})`)
+    responder(res, 400, { ok: false, erro: 'desvio' })
+    return
+  }
   const ref = await referencias(agora)
   const aceitos: TickEntrada[] = []
   const chaves = new Map<TickEntrada, string>()
   for (const bruto of lote.p as TickEntrada[]) {
-    const t: TickEntrada = { s: String(bruto?.s ?? '').trim().toUpperCase(), b: Number(bruto?.b), a: Number(bruto?.a), t: Number(bruto?.t) }
+    // `t` passa a UTC aqui e só aqui: o ficheiro que se escreve fica indistinguível do do terminal
+    // local, e os motores continuam a ler `time_msc` como sempre leram, sem saber de fusos.
+    const t: TickEntrada = { s: String(bruto?.s ?? '').trim().toUpperCase(), b: Number(bruto?.b), a: Number(bruto?.a), t: Number(bruto?.t) - desvioMs }
     const chave = canonizar(t.s, MAPA)
     const anteriorTick = e.retrato.get(chave)
     const anterior: Referencia | null = anteriorTick ? { medio: medio(anteriorTick), em: anteriorTick.t } : null
@@ -217,12 +247,28 @@ async function atenderLote(req: IncomingMessage, res: ServerResponse): Promise<v
     for (const t of aceitos) e.retrato.set(chaves.get(t) as string, t)
   }
   e.aceites += aceitos.length
+  // O desvio que se MOSTRA é o do último lote que produziu preços, não o último declarado: um lote
+  // cujos ticks foram todos recusados não deve mudar o número que o operador lê no estado — senão
+  // um lote mentiroso, recusado até ao fim, ficava a pintar o painel.
+  if (aceitos.length) {
+    if (desvioMs !== e.desvioMs) {
+      log(`[precos-entrada] ${fonte}: desvio da corretora ${e.desvioMs / 3_600_000}h → ${desvioMs / 3_600_000}h (${lote.desvioMedicoes ?? 0} medições)`)
+    }
+    e.desvioMs = desvioMs
+    e.desvioMedicoes = Number(lote.desvioMedicoes ?? 0)
+  }
 
   if (aceitos.length) {
     if (agora - e.ultimaEscritaEm >= CFG.escritaMinMs) await escrever(fonte, e, agora)
     else e.porEscrever = true
   }
   responder(res, 200, { ok: true, aceites: aceitos.length, recusados: (lote.p as unknown[]).length - aceitos.length, simbolos: e.retrato.size })
+}
+
+/** Idade mediana dos ticks do retrato (já em UTC) — a medida de «a reserva está viva». */
+function idadeP50(e: EstadoFonte, agora: number): number | null {
+  const idades = [...e.retrato.values()].map((t) => agora - t.t).sort((x, y) => x - y)
+  return idades.length ? idades[Math.floor(idades.length / 2)] : null
 }
 
 function estadoPublico(agora: number) {
@@ -236,7 +282,11 @@ function estadoPublico(agora: number) {
       recusados: e.recusados,
       razoes: Object.fromEntries(e.razoes),
       lotes: e.lotes,
+      desvioH: e.desvioMs / 3_600_000,
+      desvioMedicoes: e.desvioMedicoes,
       idadeLoteS: e.ultimoLoteEm ? Math.round((agora - e.ultimoLoteEm) / 1000) : null,
+      // A idade do tick mais fresco do retrato, JÁ em UTC: é isto que diz se a reserva está viva.
+      idadeTickMsP50: idadeP50(e, agora),
       ficheiro: ficheiroDe(fonte),
     })),
     referencia: { ficheiro: CFG.referencia || null, simbolos: refPrecos.size },

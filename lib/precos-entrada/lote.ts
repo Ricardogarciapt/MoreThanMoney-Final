@@ -26,12 +26,31 @@ import type { TickEntrada } from './sanidade'
  * corretora veio o preço, e um mapa mal posto no Mac não contamina o que os motores vêem.
  */
 export function lerTicksBrutos(texto: string): TickEntrada[] {
-  let j: { p?: Array<{ s?: unknown; b?: unknown; a?: unknown; t?: unknown }> }
+  return lerFicheiroEa(texto).ticks
+}
+
+/** A âncora do ficheiro: o `em` que o EA escreve com o relógio da máquina onde ele corre. */
+export interface FicheiroEa {
+  /** `em` do ficheiro (ms UTC), ou null quando não vem ou não é um número */
+  em: number | null
+  ticks: TickEntrada[]
+}
+
+/**
+ * O ficheiro do EA inteiro — ticks E âncora.
+ *
+ * A âncora é o que permite medir o desvio da hora da corretora (lib/precos-entrada/desvio.ts) sem
+ * ninguém configurar nada: `em` é a hora UTC da máquina do terminal, `t` é a hora do servidor da
+ * corretora, e a diferença nos ticks que acabaram de mudar é o desvio.
+ */
+export function lerFicheiroEa(texto: string): FicheiroEa {
+  let j: { em?: unknown; p?: Array<{ s?: unknown; b?: unknown; a?: unknown; t?: unknown }> }
   try {
     j = JSON.parse(texto)
   } catch {
-    return []
+    return { em: null, ticks: [] }
   }
+  const em = typeof j.em === 'number' && Number.isFinite(j.em) && j.em > 0 ? j.em : null
   const saida: TickEntrada[] = []
   for (const p of j.p ?? []) {
     const s = typeof p?.s === 'string' ? p.s.trim().toUpperCase() : ''
@@ -42,7 +61,7 @@ export function lerTicksBrutos(texto: string): TickEntrada[] {
     if (!(b > 0) || !(a > 0)) continue
     saida.push({ s, b, a, t })
   }
-  return saida
+  return { em, ticks: saida }
 }
 
 export interface OpcoesLote {

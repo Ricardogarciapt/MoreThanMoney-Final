@@ -34,14 +34,32 @@ assert.equal(razao(aceitarLote(l({ p: 'nao-e-lista' as unknown as [] }), AGORA, 
  * já foi vista, e a hora sai da janela. São as duas travas que fazem de um preço antigo um preço
  * recusado em vez de um preço «novo».
  */
-assert.equal(razao(aceitarLote(l({ seq: 10 }), AGORA, 10)), 'seq repetida')
-assert.equal(razao(aceitarLote(l({ seq: 9 }), AGORA, 10)), 'seq repetida')
+assert.equal(razao(aceitarLote(l({ seq: 10 }), AGORA, 10, undefined, AGORA)), 'seq repetida')
+assert.equal(razao(aceitarLote(l({ seq: 9 }), AGORA, 10, undefined, AGORA)), 'seq repetida')
 assert.equal(razao(aceitarLote(l(), AGORA + JANELA_MS + 1, 0)), 'fora da janela')
 assert.equal(razao(aceitarLote(l({ em: AGORA + JANELA_MS + 1 }), AGORA, 0)), 'fora da janela', 'nem do futuro')
+// O reenvio de um lote gravado traz a hora de quando foi gravado, e por aí não volta a entrar.
+assert.equal(razao(aceitarLote(l({ em: AGORA - 5_000 }), AGORA, 0, undefined, AGORA)), 'em recuado')
 
 // Um receptor que reinicia começa em 0 e volta a aceitar o lote seguinte, seja qual for o número:
 // o agente não tem de saber que o outro lado reiniciou.
 assert.equal(aceitarLote(l({ seq: 1_790_700_000_123 }), AGORA, 0).ok, true)
+
+/**
+ * O LOTE COM UM `seq` ABSURDO NÃO PODE TRANCAR O AGENTE. Um relógio que salta com o NTP — ou alguém
+ * com o segredo a fazê-lo de propósito — punha o `seq` tão alto que nada do agente legítimo voltava
+ * a ser «maior», e a reserva ficava morta até alguém reiniciar o receptor. Numa peça que existe para
+ * ser redundância, isso é a pior falha possível. Quem manda é a HORA, e ela é limitada pelo relógio
+ * de quem recebe.
+ */
+assert.equal(aceitarLote(l({ seq: 999_999_999_999_999 }), AGORA, 0, undefined, 0).ok, true)
+assert.equal(
+  aceitarLote(l({ seq: 5, em: AGORA + 1 }), AGORA + 1, 999_999_999_999_999, undefined, AGORA).ok,
+  true,
+  'no milissegundo seguinte um seq mais baixo volta a entrar — nada fica trancado para sempre',
+)
+// Dentro do MESMO milissegundo continua a decidir a sequência (é aí que o reenvio imediato mora).
+assert.equal(razao(aceitarLote(l({ seq: 5 }), AGORA, 999_999_999_999_999, undefined, AGORA)), 'seq repetida')
 
 // ── As fontes ───────────────────────────────────────────────────────────────
 const fontes = lerFontes(`mac-ricardo:${SEGREDO}, vps:${OUTRO}`)
