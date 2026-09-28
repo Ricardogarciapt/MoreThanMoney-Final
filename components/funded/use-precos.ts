@@ -38,7 +38,13 @@ function avisar() { ouvintes.forEach((o) => o()) }
 // de segurança: só corre quando a WS não está viva (motor em baixo, rede a bloquear WS). Foi o
 // poll por cliente a ler a Supabase que esgotou o egress a 19/09 — com a WS viva não há UMA
 // leitura de preços à base por causa do WebTrader.
-const WS_URL = process.env.NEXT_PUBLIC_FUNDED_WS_URL || ""
+// URL canónico por omissão (ordem do dono, 28/09: apresentação imediata, sem depender de env na
+// Vercel). NEXT_PUBLIC_FUNDED_WS_URL fica como override; "0" desliga a WS e volta ao poll puro.
+const WS_URL = (() => {
+  const v = process.env.NEXT_PUBLIC_FUNDED_WS_URL
+  if (v === "0" || v === "off") return ""
+  return v || "wss://stream.morethanmoney.pt/precos"
+})()
 let ws: WebSocket | null = null
 let wsTentativas = 0
 let wsUltimaMsg = 0
