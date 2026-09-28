@@ -510,20 +510,63 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
               </h2>
             </div>
 
-            {/* Imagem do Ecossistema */}
+            {/*
+              O ECOSSISTEMA, DESENHADO EM HTML E NÃO NUMA IMAGEM.
+              Era um PNG, e por isso mentia sem se poder corrigir: anunciava «Marketing Digital & IA»
+              (a IA não tem educador nenhum) e fechava com «uma fase intermédia de TRADING», que é o
+              oposto do que esta página passou a dizer — que o trading é uma via entre várias.
+              Uma imagem não se emenda com um deploy: obriga a design, e por isso fica errada durante
+              meses. Em HTML, quem mudar a casa muda isto no mesmo sítio onde muda o resto.
+            */}
             <div className="mb-12 flex justify-center">
               <div className="relative max-w-5xl w-full">
-                <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
-                  <img
-                    src={getImageUrl(images.ecossistema)}
-                    alt="O Ecossistema"
-                    className="w-full h-auto rounded-lg"
-                    loading="lazy"
-                    onError={(e) => {
-                      const fallback = getMtmImageUrl('ecossistema')
-                      if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback
-                    }}
-                  />
+                <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 md:p-10 hover:border-purple-500/60 transition-all">
+                  <div className="text-center mb-8">
+                    <p className="text-2xl md:text-3xl font-bold text-white">O Ecossistema MoreThanMoney</p>
+                    <p className="mt-2 text-sm md:text-base text-gray-400">Aprender, operar e construir no mesmo sítio</p>
+                  </div>
+
+                  <div className="mx-auto mb-8 w-fit rounded-xl border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-6 py-3 text-center">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[#D2A63C]">Ecossistema único</p>
+                    <p className="text-lg font-bold text-white">MoreThanMoney</p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {[
+                      {
+                        titulo: 'Educação',
+                        sub: 'Ao vivo, com quem dá a cara',
+                        itens: ['Forex e metais · Criptomoedas', 'Social Media e UGC · Mindset e Liderança', 'Gravações e percursos organizados'],
+                      },
+                      {
+                        titulo: 'Tecnologia',
+                        sub: 'Ferramentas próprias',
+                        itens: ['Scanners e Terminal com IA', 'MTM Auto — o sinal entra na tua conta', 'App MTM System, iOS e Android'],
+                      },
+                      {
+                        titulo: 'Comunidade',
+                        sub: 'Onde não se está sozinho',
+                        itens: ['Sessões ao vivo e mentoria', 'Chats por área e por estratégia', 'Portefólios acompanhados'],
+                      },
+                    ].map((c) => (
+                      <div key={c.titulo} className="rounded-xl border border-white/10 bg-black/40 p-5">
+                        <p className="text-lg font-bold text-white">{c.titulo}</p>
+                        <p className="mt-0.5 text-xs uppercase tracking-wide text-[#D2A63C]">{c.sub}</p>
+                        <ul className="mt-4 space-y-2">
+                          {c.itens.map((i) => (
+                            <li key={i} className="flex gap-2 text-sm leading-relaxed text-gray-300">
+                              <span className="text-[#D2A63C]">·</span>
+                              <span>{i}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="mt-8 text-center text-sm text-gray-400">
+                    Começas por onde faz sentido para ti — e o que aprendes numa área serve nas outras.
+                  </p>
                 </Card>
               </div>
             </div>
