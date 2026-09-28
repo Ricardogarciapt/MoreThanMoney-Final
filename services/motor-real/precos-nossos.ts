@@ -35,7 +35,7 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { lerFotografia, lerMapa } from '../funded-motor/fonte-conector-mt5'
+import { etiquetaDoFicheiro, lerFotografia, lerMapa } from '../funded-motor/fonte-conector-mt5'
 
 export interface PrecoNosso {
   simbolo: string
@@ -45,6 +45,12 @@ export interface PrecoNosso {
   emMercado: number | null
   /** Hora a que nós o escrevemos, em ms. Sempre presente. */
   em: number
+  /**
+   * Que terminal deu este tick, quando vem do caminho rápido (`mtm-conector` = o do VPS,
+   * `mac-ricardo` = a reserva entregue pelo receptor). Só para ver e auditar: nenhuma decisão
+   * depende do nome — quem decide é a frescura.
+   */
+  fonte?: string
 }
 
 /** Tectos por omissão. Deliberadamente curtos: o motor decide sobre stops. */
@@ -195,6 +201,8 @@ export class PrecosNossos {
   private relogioConector: NodeJS.Timeout | null = null
   ticksConector = 0
   conectorLigado = false
+  /** etiqueta do terminal → ticks que dele vieram. Para se VER quem está a alimentar o motor. */
+  private porFonte = new Map<string, number>()
   /** Desde quando é que cada símbolo não mexe. Ver `TECTO_PARADO_MS`. */
   private movimentos = new Map<string, Movimento>()
   private temporizador: NodeJS.Timeout | null = null
@@ -258,14 +266,21 @@ export class PrecosNossos {
         continue
       }
       this.conectorLigado = true
+      const fonte = etiquetaDoFicheiro(f) || 'conector'
       for (const t of lerFotografia(bruto, mapa)) {
         const chave = canonico(t.sym, this.o.mapa)
         const anterior = this.doConector.get(chave)
-        // A fotografia repete-se entre leituras: só o tick NOVO conta como tick.
-        if (anterior && anterior.emMercado === t.em) continue
+        // A fotografia repete-se entre leituras: só o tick NOVO conta como tick. E desde que há
+        // MAIS DO QUE UM terminal a publicar (o do VPS e a reserva do Mac, escrita pelo receptor de
+        // services/precos-entrada/), «novo» tem de ser MAIS FRESCO: comparar só por diferença
+        // deixava o ficheiro lido em último lugar sobrepor o seu tick atrasado ao tick bom do
+        // primeiro — a reserva a piorar o principal, que é o contrário do que ela existe para
+        // fazer. Ganha sempre a hora de mercado mais alta, venha de onde vier.
+        if (anterior?.emMercado != null && t.em <= anterior.emMercado) continue
         if (!(t.bid > 0) || !(t.ask > 0)) continue
         this.ticksConector++
-        this.doConector.set(chave, { simbolo: t.sym, bid: t.bid, ask: t.ask, em: agora, emMercado: t.em })
+        this.porFonte.set(fonte, (this.porFonte.get(fonte) ?? 0) + 1)
+        this.doConector.set(chave, { simbolo: t.sym, bid: t.bid, ask: t.ask, em: agora, emMercado: t.em, fonte })
       }
     }
   }
@@ -333,13 +348,18 @@ export class PrecosNossos {
     return medio(p)
   }
 
-  resumo(agora = Date.now()): { simbolos: number; utilizaveis: number; comHoraMercado: number; parados: number; conector: { ligado: boolean; simbolos: number; ticks: number; idadeP50Ms: number | null }; leituras: number; falhas: number; idadeLeituraS: number | null } {
+  resumo(agora = Date.now()): { simbolos: number; utilizaveis: number; comHoraMercado: number; parados: number; conector: { ligado: boolean; simbolos: number; ticks: number; idadeP50Ms: number | null; porFonte: Record<string, number>; simbolosPorFonte: Record<string, number> }; leituras: number; falhas: number; idadeLeituraS: number | null } {
     let utilizaveis = 0
     let comHora = 0
     let parados = 0
     const idades: number[] = []
+    const simbolosPorFonte: Record<string, number> = {}
     for (const p of this.doConector.values()) {
       if (p.emMercado != null) idades.push(agora - p.emMercado)
+      if (utilizavel(p, agora, this.tectos)) {
+        const f = p.fonte ?? 'conector'
+        simbolosPorFonte[f] = (simbolosPorFonte[f] ?? 0) + 1
+      }
     }
     idades.sort((a, b) => a - b)
     const p50 = idades.length ? idades[Math.floor(idades.length / 2)] : null
@@ -357,7 +377,15 @@ export class PrecosNossos {
       utilizaveis,
       comHoraMercado: comHora,
       parados,
-      conector: { ligado: this.conectorLigado, simbolos: this.doConector.size, ticks: this.ticksConector, idadeP50Ms: p50 },
+      conector: {
+        ligado: this.conectorLigado,
+        simbolos: this.doConector.size,
+        ticks: this.ticksConector,
+        idadeP50Ms: p50,
+        porFonte: Object.fromEntries(this.porFonte),
+        // Quem está a MANDAR agora, símbolo a símbolo: é isto que mostra a reserva a assumir.
+        simbolosPorFonte: simbolosPorFonte,
+      },
       leituras: this.leituras,
       falhas: this.falhas,
       idadeLeituraS: this.ultimaLeituraEm ? Math.round((agora - this.ultimaLeituraEm) / 1000) : null,

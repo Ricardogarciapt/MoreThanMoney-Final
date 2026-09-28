@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AGENTE DE PREÇOS NO MAC — arranca com a sessão e reinicia sozinho.
+
+  Instalar (ver deploy/vps-stream/precos-entrada/README.md, secção 6):
+    cp deploy/mac-precos-agente/com.morethanmoney.precos-agente.plist ~/Library/LaunchAgents/
+    # editar os caminhos e o segredo no ficheiro copiado
+    launchctl load -w ~/Library/LaunchAgents/com.morethanmoney.precos-agente.plist
+    launchctl list | grep morethanmoney
+    tail -f ~/Library/Logs/mtm-precos-agente.log
+
+  LaunchAgent (sessão do utilizador) e não LaunchDaemon: o MetaTrader corre na sessão do Ricardo e o
+  ticks.json vive dentro da pasta dele — um daemon a arrancar antes do login não teria ficheiro para
+  ler, e teria de atravessar as protecções de privacidade do macOS por nada.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.morethanmoney.precos-agente</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <!-- Um bundle único feito com esbuild (README, secção 6). Sem node_modules no Mac. -->
+    <string>/usr/local/bin/node</string>
+    <string>/Users/ALTERAR/mtm-precos-agente/agente.js</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PRECOS_AGENTE_URL</key><string>https://stream.morethanmoney.pt/precos-entrada/lote</string>
+    <key>PRECOS_AGENTE_FONTE</key><string>mac-ricardo</string>
+    <!-- O MESMO segredo que está em PRECOS_ENTRADA_FONTES no VPS. Mínimo 32 caracteres. -->
+    <key>PRECOS_AGENTE_SEGREDO</key><string>ALTERAR</string>
+    <!-- MT5 em Wine/CrossOver: .../drive_c/Program Files/<terminal>/MQL5/Files/mtm-conector/ticks.json
+         MT5 nativo (PlayOnMac/Parallels): o caminho que o terminal mostra em Ficheiro → Abrir Pasta de Dados. -->
+    <key>PRECOS_AGENTE_TICKS</key><string>/Users/ALTERAR/MQL5/Files/mtm-conector/ticks.json</string>
+    <key>PRECOS_AGENTE_RITMO_MS</key><string>50</string>
+  </dict>
+
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <!-- Não martelar o arranque se o terminal ainda não estiver de pé. -->
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>StandardOutPath</key><string>/Users/ALTERAR/Library/Logs/mtm-precos-agente.log</string>
+  <key>StandardErrorPath</key><string>/Users/ALTERAR/Library/Logs/mtm-precos-agente.log</string>
+  <!-- Prioridade baixa: isto nunca pode competir com o terminal que publica os ticks. -->
+  <key>Nice</key><integer>5</integer>
+</dict>
+</plist>

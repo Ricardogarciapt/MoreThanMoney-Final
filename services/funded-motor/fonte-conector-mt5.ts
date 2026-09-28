@@ -75,6 +75,28 @@ export function lerFotografia(
   return saida
 }
 
+/**
+ * DE QUE TERMINAL VEIO ESTE TICK — o nome da raiz.
+ *
+ * Desde que há mais do que um terminal a publicar (o do VPS e o do Mac do Ricardo, entregue pelo
+ * receptor de `services/precos-entrada/`), «conector-mt5» já não diz quem falou. A raiz diz:
+ * `/var/lib/mtm-conector` → `mtm-conector`, `/var/lib/mtm-precos-entrada/mac-ricardo` →
+ * `mac-ricardo`. Sem etiqueta reconhecível fica-se pelo nome de sempre — nada a configurar.
+ */
+export function etiquetaDoFicheiro(ficheiro: string): string {
+  // <raiz>/MQL5/Files/<trabalho>/ticks.json → basename(<raiz>)
+  const partes = ficheiro.split(path.sep).filter(Boolean)
+  const i = partes.lastIndexOf('MQL5')
+  const raiz = i > 0 ? partes[i - 1] : ''
+  return raiz && raiz !== 'MQL5' ? raiz : ''
+}
+
+/** 'conector-mt5' ou 'conector-mt5:<etiqueta>'. O prefixo nunca muda: há logs e testes a lê-lo. */
+export function origemDoFicheiro(ficheiro: string): string {
+  const e = etiquetaDoFicheiro(ficheiro)
+  return e ? `conector-mt5:${e}` : 'conector-mt5'
+}
+
 export function iniciarFonteConectorMt5(o: OpcoesConectorTicks): FonteConectorTicks | null {
   // `CONECTOR_TICKS_RAIZES` = pastas raiz dos terminais, separadas por vírgula.
   const raizes = (process.env.CONECTOR_TICKS_RAIZES ?? '')
@@ -89,7 +111,10 @@ export function iniciarFonteConectorMt5(o: OpcoesConectorTicks): FonteConectorTi
   // é o que se liga depois de comparar, porque este preço É o da corretora onde negociamos.
   const prioritario = process.env.CONECTOR_TICKS_PRIORIDADE === '1'
   const mapa = lerMapa(process.env.CONECTOR_TICKS_MAPA)
-  const ficheiros = raizes.map((r) => path.join(r, 'MQL5', 'Files', trabalho, 'ticks.json'))
+  const ficheiros = raizes.map((r) => {
+    const caminho = path.join(r, 'MQL5', 'Files', trabalho, 'ticks.json')
+    return { caminho, origem: origemDoFicheiro(caminho) }
+  })
 
   let ticks = 0
   let ligada = false
@@ -101,14 +126,18 @@ export function iniciarFonteConectorMt5(o: OpcoesConectorTicks): FonteConectorTi
       for (const f of ficheiros) {
         let bruto: string
         try {
-          bruto = await fs.readFile(f, 'utf8')
+          bruto = await fs.readFile(f.caminho, 'utf8')
         } catch {
           continue
         }
         ligada = true
         for (const t of lerFotografia(bruto, mapa)) {
-          // A fotografia repete-se entre leituras: só o tick NOVO conta.
-          if (ultimo.get(t.sym) === t.em) continue
+          // A fotografia repete-se entre leituras: só o tick NOVO conta. E com MAIS DO QUE UM
+          // terminal a publicar (VPS + reserva do Mac), «novo» tem de ser MAIS FRESCO e não apenas
+          // «diferente»: a igualdade sozinha deixava o terminal lido em segundo lugar sobrepor o
+          // seu tick atrasado ao tick bom do primeiro, e o motor ficava com o pior dos dois.
+          const visto = ultimo.get(t.sym)
+          if (visto != null && t.em <= visto) continue
           ultimo.set(t.sym, t.em)
           if (!prioritario && !o.precisa(t.sym)) continue
           ticks++
@@ -119,7 +148,7 @@ export function iniciarFonteConectorMt5(o: OpcoesConectorTicks): FonteConectorTi
           // pôr o `time_msc` (uns centos de ms no passado) em `em`, este tick — o melhor que
           // temos — perdia para um do Yahoo carimbado a `Date.now()`, e o EURUSD ficava com a
           // hora de mercado do Yahoo (medido: 65 s) em vez da da corretora (1,2 s).
-          o.injetar(t.sym, t.bid, t.ask, Date.now(), t.em, 'conector-mt5')
+          o.injetar(t.sym, t.bid, t.ask, Date.now(), t.em, f.origem)
         }
       }
     })()

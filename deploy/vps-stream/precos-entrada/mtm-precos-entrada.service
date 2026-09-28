@@ -1,0 +1,26 @@
+[Unit]
+Description=MTM - receptor de precos de terminais remotos (redundancia do terminal do conector)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/mtm-precos-entrada.env
+ExecStart=/usr/bin/node /opt/mtm/precos-entrada/receptor.js
+Restart=always
+RestartSec=5
+# SEM DynamicUser/StateDirectory de proposito: com DynamicUser o systemd poe a pasta de estado em
+# /var/lib/private/<servico> (0700, root) e deixa so um symlink em /var/lib — e os motores, que
+# tambem correm com DynamicUser, NAO conseguiriam ler o ticks.json lá dentro. O caminho que os
+# motores leem tem de ser uma pasta normal, como /var/lib/mtm-conector ja e:
+#   sudo install -d -o ubuntu -g ubuntu -m 0755 /var/lib/mtm-precos-entrada
+User=ubuntu
+Group=ubuntu
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/mtm-precos-entrada
+MemoryMax=192M
+
+[Install]
+WantedBy=multi-user.target
