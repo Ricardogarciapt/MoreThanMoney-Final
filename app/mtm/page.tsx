@@ -632,7 +632,7 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
               </h2>
               <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto">
                 Duas frentes e oito áreas: aulas ao vivo todas as semanas com o nome de quem as dá,
-                e percursos em vídeo para fazeres ao teu ritmo.
+                e percursos organizados para fazeres ao teu ritmo.
               </p>
             </div>
 

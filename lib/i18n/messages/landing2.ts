@@ -233,7 +233,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.pathGo": "Ver este caminho",
 
     "l2.act1": "Aprender",
-    "l2.act1Sub": "Quatro áreas com educador e horário semanal, em duas frentes.",
+    "l2.act1Sub": "Oito áreas em duas frentes, entre aulas ao vivo e percursos ao teu ritmo.",
     "l2.act2": "Ganhar",
     "l2.act2Sub": "O que executa por ti, e o que te paga sem abrires uma ordem.",
     "l2.act3": "Aceder",
@@ -582,7 +582,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.pathGo": "See this path",
 
     "l2.act1": "Learn",
-    "l2.act1Sub": "Four areas with an educator and a weekly slot, across two fronts.",
+    "l2.act1Sub": "Eight areas across two fronts, between live classes and self-paced tracks.",
     "l2.act2": "Earn",
     "l2.act2Sub": "What executes for you, and what pays you without opening an order.",
     "l2.act3": "Access",
