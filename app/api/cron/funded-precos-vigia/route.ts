@@ -61,6 +61,41 @@ export async function GET(request: NextRequest) {
      */
     const { data: criptoCatalogo } = await db.from('funded_symbols').select('symbol').eq('classe', 'cripto').eq('ativo', true).limit(200)
     const largados = new Set((criptoCatalogo ?? []).map((s) => String(s.symbol)).filter((s) => !ehCriptoSeguida(s)))
+    /**
+     * SAÚDE DO CONECTOR MT5 — vigiada à parte, TODOS os minutos, mesmo com a base «fresca».
+     *
+     * 28/09: o conector esteve 16 h mudo (idadeP50 do pulso a 59M ms) sem um único aviso, porque
+     * os recursos (TradeLocker/Yahoo/âncora do ouro) mantinham a base abaixo dos 90 s — mas as
+     * ABERTURAS exigem ≤5 s e recusavam «sem preço ao vivo» às mãos-cheias. Base fresca não prova
+     * conector vivo; o pulso do motor prova.
+     */
+    const CONECTOR_MUDO_MS = 10 * 60_000
+    const FLAG_CONECTOR = 'funded_conector_vigia'
+    try {
+      const { data: pulso } = await db.from('servicos_pulso').select('em, estado').eq('servico', 'mtm-funded-motor').maybeSingle()
+      const pulsoFresco = pulso && agora - Date.parse(String(pulso.em)) < 3 * 60_000
+      const c = (pulso?.estado as { conectorMt5?: { ligada?: boolean; idadeP50Ms?: number | null; terminais?: number } } | null)?.conectorMt5
+      const conectorMudo = Boolean(pulsoFresco && c && c.ligada && (c.idadeP50Ms == null || c.idadeP50Ms > CONECTOR_MUDO_MS))
+      const { data: flagC } = await db.from('site_settings').select('value').eq('key', FLAG_CONECTOR).maybeSingle()
+      const alertadoC = Boolean((flagC?.value as { alertado_em?: string } | null)?.alertado_em)
+      if (conectorMudo && !alertadoC) {
+        await db.from('site_settings').upsert({ key: FLAG_CONECTOR, value: { alertado_em: new Date().toISOString() } }, { onConflict: 'key' })
+        const h = c?.idadeP50Ms ? (c.idadeP50Ms / 3_600_000).toFixed(1) : '?'
+        await sendTelegramChannelMessage(
+          ADMIN_CHAT(),
+          `🟠 MTM Funded: o CONECTOR MT5 está mudo (tick mediano com ${h} h; ${c?.terminais ?? '?'} terminal).\n` +
+            `O motor está bom — é o terminal MT5 do VPS que parou de escrever ticks (EA MTMConector).\n` +
+            `Reabrir o terminal, confirmar ligação à corretora e AutoTrading LIGADO; cuidado com o limite de 100 gráficos (25/09).\n` +
+            `Até lá as aberturas dependem dos recursos (TL/Yahoo/âncora) e recusam «sem preço ao vivo» com frequência.`,
+        ).catch(() => undefined)
+      } else if (!conectorMudo && alertadoC) {
+        await db.from('site_settings').delete().eq('key', FLAG_CONECTOR)
+        await sendTelegramChannelMessage(ADMIN_CHAT(), '✅ MTM Funded: o conector MT5 voltou a entregar ticks frescos.').catch(() => undefined)
+      }
+    } catch {
+      // vigia do conector nunca pode partir o vigia dos preços
+    }
+
     const vigiados = (ticks ?? []).filter((t) => !largados.has(String(t.symbol)) && isMarketOpen(String(t.symbol)).open)
     const velhos = vigiados.filter((t) => agora - Date.parse(String(t.em)) > IDADE_MAX_MS)
     // A idade a REPORTAR é a do pior símbolo aberto (era a do melhor — o que escondia o problema).
