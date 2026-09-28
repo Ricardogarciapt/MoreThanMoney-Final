@@ -6,6 +6,10 @@ import { useT } from "@/components/i18n-provider"
 import { LANDING_CSS } from "@/components/new-landing/styles"
 import { mountLandingEffects } from "@/components/new-landing/effects"
 import { SNAPSHOT, type LandingStats } from "@/lib/landing-stats"
+/* NÃO importar preços de `lib/escada-precos` aqui: esse módulo puxa a cadeia do Telegram e do
+   MTM Funded atrás dele (pdfkit, next/headers) e isto é um componente de cliente — o empacotador
+   rebenta, e o `tsc` não o apanha. Os 35€/65€ ficam escritos à mão até haver um módulo de
+   constantes sem dependências. Enquanto isso, se o preço mudar na escada, muda-se aqui também. */
 
 /**
  * /new-landing — a landing pública.
@@ -29,9 +33,20 @@ const STRIP = [
   "Estúdio MTM Social", "Convida e ganha",
 ]
 
-/** Sequência real de 20/08/2026 no canal Premium. Os textos do motor não se traduzem: é o que sai. */
+/**
+ * Mensagens reais do canal Premium de 20/08/2026 (chat_messages, 06:41–06:43), verbatim.
+ *
+ * O que isto NÃO é: não é uma cadeia causal medida ao segundo — as mensagens entraram num
+ * bloco de importação do fornecedor, e o desfecho aparece menos de um minuto depois do sinal.
+ * É um exemplo do que um membro lê no telemóvel, não um relatório de execução. Por isso o
+ * primeiro cartão diz "canal Premium" e não o nome de um scanner nosso: o sinal veio de fora.
+ * Os textos do motor não se traduzem — é o que sai.
+ */
 const MSGS: Array<{ c: string; t: string; cls?: string; tap?: boolean }> = [
-  { c: "Sensei · scanner", t: "7. GOLD BUY SETUP\nGold Buy Zone 4370 – 4365\nSL 4360 · TP1 4375 · TP2 4380 · TP3 4385" },
+  { c: "canal Premium", t: "7. GOLD BUY SETUP\nGold Buy Zone 4370 – 4365\nSL 4360 · TP1 4375 · TP2 4380 · TP3 4485" },
+  // 4485 é o que a mensagem original diz. Estava aqui 4385, que é mais coerente com o
+  // "+200PIPS" de baixo — mas isto apresenta-se como verbatim, e emendar em silêncio o número
+  // de um artefacto que dizemos ser tal e qual é o princípio de deixar de o ser.
   { c: "na tua app", t: "⚡ Nova ideia Premium — XAUUSD", cls: "act", tap: true },
   { c: "a tua conta", t: "✅ ENTRY HIT · XAUUSD 🔵 COMPRA\nPosição aberta · gestão automática ligada", cls: "act" },
   { c: "gestão", t: "HIT TP1 ✅ +100PIPS\nParcial realizada · stop movido para a entrada", cls: "win" },
@@ -51,11 +66,28 @@ const CERTS: Array<[string, "fast-start" | "bootcamp" | "teste-final", string | 
 ]
 
 
+/**
+ * A ORDEM DA PÁGINA.
+ *
+ * Tinha vinte e três blocos que cresceram por acumulação, cada um acrescentado quando alguém se
+ * lembrou — e quatro inventários diferentes dos mesmos produtos.
+ *
+ * O eixo de fora é agora a INTENÇÃO, em três actos: APRENDER, GANHAR, ACEDER. Quem chega sabe
+ * sempre qual é a sua; não sabe é a nossa taxonomia. O assunto — MTM Markets e MTM Content &
+ * Business — continua a mandar dentro de "aprender", que é o sítio onde o assunto interessa.
+ * Os cartões de #caminhos e os três actos são a MESMA arrumação vista duas vezes, não duas
+ * arrumações: cada cartão leva ao seu acto. Não acrescentar um terceiro esquema por cima.
+ *
+ * O preço vem depois dos três actos e antes das perguntas: quem já decidiu não devia ter de
+ * atravessar o acordeão para saber quanto custa.
+ */
 const CHAPTERS: Array<[string, string]> = [
-  ["problema", "O problema"], ["dia", "Em ação"], ["executar", "Executar"], ["numeros", "A prova"],
-  ["eco", "O ecossistema"], ["cripto", "Cripto e DCA"], ["terminal", "Terminal IA"], ["alertas", "Alertas"],
-  ["areas", "As áreas"], ["educacao", "Escola"], ["certificados", "Certificados"], ["comunidade", "Comunidade"],
-  ["testemunhos", "Testemunhos"], ["construir", "Construir"], ["faq", "Perguntas"], ["l2-packs", "Packs"],
+  ["caminhos", "Caminhos"],
+  ["aprender", "Aprender"], ["areas", "As áreas"], ["educacao", "Escola"], ["certificados", "Certificados"],
+  ["ganhar", "Ganhar"], ["dia", "Em ação"], ["executar", "Executar"], ["seguranca", "Segurança"],
+  ["numeros", "A prova"], ["construir", "Construir"],
+  ["aceder", "Aceder"], ["comunidade", "Comunidade"], ["testemunhos", "Testemunhos"],
+  ["l2-packs", "Packs"], ["faq", "Perguntas"],
 ]
 
 /**
@@ -113,8 +145,8 @@ const AREAS_VIVAS: Area[] = [
   {
     p: "markets",
     t: "Forex e metais", edu: "Ricardo Garcia",
-    d: "Regressão de tendências e scanners, ao vivo. É a divisão mais cheia da casa: cinco salas, das básicas à mentoria VIP, e gravações organizadas em curso para quem falta.",
-    meta: ["5 salas", "7 horários por semana", "gravações"], href: "/live-sessions",
+    d: "Regressão de tendências e scanners, ao vivo. É a divisão mais cheia da casa: quatro salas, das básicas à mentoria VIP, e gravações organizadas em curso para quem falta.",
+    meta: ["4 salas", "7 horários por semana", "gravações"], href: "/live-sessions",
   },
   {
     p: "markets",
@@ -219,7 +251,7 @@ function Testimonial({ x, i, t }: { x: Testemunho; i: number; t: (k: string) => 
         <div className="av">{iniciais(x.n)}</div>
         <div>
           <p className="nn" style={{ margin: 0 }}>{x.n}</p>
-          <p className="lo" style={{ margin: 0 }}>{x.l} <span className="vf">✓ {t("l2.testVerified")}</span></p>
+          <p className="lo" style={{ margin: 0 }}>{x.l}{x.chat && <> <span className="vf">✓ {t("l2.testVerified")}</span></>}</p>
         </div>
       </div>
       <div className="rs">
@@ -313,34 +345,170 @@ export default function NewLandingPage() {
     </h1>
     <p className="l r d2">{t("l2.heroSub")}</p>
     <div className="acts r d3">
-      <a className="btn" href="#dia">{t("l2.heroCta1")}</a>
+      <a className="btn" href="#areas">{t("l2.heroCta1")}</a>
       <button type="button" className="vbtn" onClick={() => setVideo(true)}><i />{t("l2.heroVideo")}</button>
     </div>
+    {/* As três coisas que travam a decisão, ditas antes de se pedir o que quer que seja. */}
+    <p className="facts r d4">
+      <span>{t("l2.heroFact1")}</span><span>{t("l2.heroFact2")}</span><span>{t("l2.heroFact3")}</span>
+    </p>
   </div>
   <span className="hint">{t("l2.scrollHint")}</span>
 </header>
 
 <div className="strip"><div className="strip__t">{[...STRIP, ...STRIP].map((s, i) => (<span key={i}><b>◆</b> {s}</span>))}</div></div>
 
-<section id="problema" className="scene"><div className="scene__bg px" style={{backgroundImage:"url(/landing/cena1.jpg)",backgroundPosition:"65% center"}}></div><div className="scene__veil"></div>
-  <div className="wrap"><p className="ch r"><b>01</b>{t("l2.ch1")}</p>
-    <h2 className="r d1">{t("l2.probTitle")}</h2>
-    <p className="r d2">{t("l2.probBody")}</p>
+{/* As áreas da casa. Duas famílias, e a diferença lê-se antes de se ler o texto: painel cheio
+    com o nome do educador para o que já dá aulas, traço interrompido e sem botão para o que
+    ainda está a abrir. Ver AREAS_VIVAS / AREAS_A_ABRIR no topo do ficheiro. */}
+
+{/* O SELECTOR. É a mesma coisa que os três actos que vêm a seguir — cada cartão leva ao seu
+    acto — e não uma arrumação à parte. Quem chega escolhe pela intenção, que é a única coisa
+    que sabe de certeza ao fim de dois segundos na página. */}
+<section id="caminhos">
+  <div className="wrap">
+    <div className="head r"><p className="ch">{t("l2.chPaths")}</p>
+      <h2>{t("l2.pathsTitle")}</h2>
+      <p>{t("l2.pathsSub")}</p></div>
+    <div className="paths">
+      <a className="path r d1" href="#aprender">
+        <b>{t("l2.path1K")}</b><h3>{t("l2.path1T")}</h3><p>{t("l2.path1B")}</p>
+        <span className="who4">{t("l2.path1W")}</span><span className="go2">{t("l2.pathGo")}</span>
+      </a>
+      <a className="path r d2" href="#ganhar">
+        <b>{t("l2.path2K")}</b><h3>{t("l2.path2T")}</h3><p>{t("l2.path2B")}</p>
+        <span className="who4">{t("l2.path2W")}</span><span className="go2">{t("l2.pathGo")}</span>
+      </a>
+      <a className="path r d3" href="#aceder">
+        <b>{t("l2.path3K")}</b><h3>{t("l2.path3T")}</h3><p>{t("l2.path3B")}</p>
+        <span className="who4">{t("l2.path3W")}</span><span className="go2">{t("l2.pathGo")}</span>
+      </a>
+    </div>
   </div>
 </section>
 
-<section className="nar">
+
+<section className="act" id="aprender">
+  <div className="wrap"><b>{String(1).padStart(2, "0")}</b><h2>{t("l2.act1")}</h2><p>{t("l2.act1Sub")}</p></div>
+</section>
+
+<section id="areas">
   <div className="wrap">
-    <p className="lb2 r">{t("l2.narLabel1")}</p>
-    <q className="r d1">{t("l2.narQuote1")}</q>
-    <p className="r d2">{t("l2.narBody1")}</p>
-    <p className="sig2 r d3">{t("l2.narSign")}</p>
+    <div className="head r"><p className="ch">{t("l2.chAreas")}</p>
+      <h2>{t("l2.areasTitle")}<br />{t("l2.areasTitle2")}</h2>
+      <p>{t("l2.areasSub")}</p></div>
+
+    {PILARES.map((pil, i) => {
+      const vivas = AREAS_VIVAS.filter((a) => a.p === pil.id)
+      const comEdu = vivas.filter((a) => a.edu)
+      const semEdu = vivas.filter((a) => !a.edu)
+      const abrir = AREAS_A_ABRIR.filter((a) => a.p === pil.id)
+      return (
+        <div className={`pil p${i + 1}`} key={pil.id}>
+          <div className="r">
+            <p className="pil__n">{pil.nome}</p>
+            <p className="pil__d">{t(pil.def)}</p>
+            <p className="pil__c">
+              {comEdu.length > 0 && <span>{t("l2.pilCountEdu").replace("{n}", String(comEdu.length))}</span>}
+              {semEdu.length > 0 && <span>{t("l2.pilCountNoEdu").replace("{n}", String(semEdu.length))}</span>}
+              {abrir.length > 0 && <span>{t("l2.pilCountSoon").replace("{n}", String(abrir.length))}</span>}
+            </p>
+          </div>
+
+          {comEdu.length > 0 && (
+            <>
+              <p className="pil__sub r">{t("l2.areasFam1")}</p>
+              <div className={comEdu.length === 1 ? "aw3" : "aw"} style={comEdu.length === 1 ? { gridTemplateColumns: "1fr", marginTop: 0 } : undefined}>
+                {comEdu.map((a) => (<AreaCard key={a.t} a={a} big={a.meta.length > 2 && comEdu.length > 1} t={t} />))}
+              </div>
+            </>
+          )}
+
+          {/* Área real mas sem educador: linha própria, a largura toda. Fica ao lado das que
+              têm aulas porque já existe, e separada porque não é a mesma coisa. */}
+          {semEdu.map((a) => (
+            <div className="aw3" style={{ gridTemplateColumns: "1fr" }} key={a.t}>
+              <AreaCard a={a} t={t} />
+            </div>
+          ))}
+
+          {abrir.length > 0 && (
+            <>
+              <p className="pil__sub r">{t("l2.areasFam2")}</p>
+              <div
+                className="aw3 soon r d2"
+                style={{ marginTop: 0, gridTemplateColumns: abrir.length < 3 ? `repeat(${abrir.length},1fr)` : undefined }}
+              >
+                {abrir.map((a) => (
+                  <div className="ab" key={a.t}>
+                    <p className="lb3"><b />{t("l2.areasSoonTag")}</p>
+                    <h3>{a.t}</h3>
+                    <p>{a.d}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <p className="also r d3">
+            <em>{t("l2.pilAlso")}</em>
+            {pil.mais.map((m) => (m.h ? <a key={m.l} href={m.h}>{m.l}</a> : <span key={m.l}>{m.l}</span>))}
+          </p>
+        </div>
+      )
+    })}
+
+    <p className="r d3" style={{ marginTop: "40px", fontSize: "14px", color: "var(--dim)" }}>
+      {t("l2.areasHint")}{" "}
+      <a href="/criadores" style={{ color: "var(--gold-lt)", borderBottom: "1px solid var(--gold-dp)" }}>{t("l2.areasHintLink")}</a>.
+    </p>
+
+    <p className="risk r d3">{t("l2.areasRisk")}</p>
   </div>
+</section>
+
+<section className="band" id="educacao">
+  <div className="wrap split">
+    <div className="r">
+      <p className="ch">{t("l2.chSchool")}</p>
+      <h2>{t("l2.schoolTitle")}</h2>
+      <p style={{"marginTop": "18px"}}>O Bootcamp são 30 horas a sério, e no fim há avaliação. Quem passa recebe
+        um certificado oficial em nome próprio, com classificação e código de validação público. É a diferença
+        entre "vi um curso" e "sou capaz de operar uma conta".</p>
+      <div className="tags">
+        <span className="tag">{t("l2.schoolTag1")}</span><span className="tag">{t("l2.schoolTag2")}</span>
+        <span className="tag">{t("l2.schoolTag3")}</span><span className="tag">{t("l2.schoolTag4")}</span>
+        <span className="tag">{t("l2.schoolTag5")}</span>
+      </div>
+      <p style={{"marginTop": "26px"}}><a className="btn g" href="/avaliacoes">{t("l2.schoolCta")}</a></p>
+    </div>
+    <figure className="fig reveal r d2">
+      <img src="/landing/escola.jpg" alt={t("l2.schoolAlt")} />
+      <figcaption>{t("l2.schoolCaption")}</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="certificados">
+  <div className="wrap">
+    <div className="head r" style={{"textAlign": "center", "marginLeft": "auto", "marginRight": "auto"}}>
+      <p className="ch" style={{"justifyContent": "center"}}>{t("l2.ch5")}</p>
+      <p className="pill" style={{ margin: "0 0 20px" }}>✓ {t("l2.certsPill").replace("{n}", String(stats.certificados))}</p>
+      <h2>{t("l2.certsTitle")}</h2>
+      <p>{t("l2.certsSub")}</p>
+    </div>
+  </div>
+  <div className="crail r d1"><div className="crail__t">{[...CERTS, ...CERTS].map((c, i) => (<CertCard key={i} c={c} t={t} />))}</div></div>
+  <div className="wrap"><p className="risk r d2" style={{"marginTop": "34px"}}>{t("l2.certsRisk")}</p></div>
+</section>
+
+<section className="act" id="ganhar">
+  <div className="wrap"><b>{String(2).padStart(2, "0")}</b><h2>{t("l2.act2")}</h2><p>{t("l2.act2Sub")}</p></div>
 </section>
 
 <section id="dia" className="band">
   <div className="wrap">
-    <div className="head r"><p className="ch"><b>02</b>{t("l2.ch2")}</p>
+    <div className="head r"><p className="ch">{t("l2.ch2")}</p>
       <h2>{t("l2.diaTitle")}</h2>
       <p>{t("l2.diaSub")}</p></div>
     <div className="day">
@@ -439,10 +607,31 @@ export default function NewLandingPage() {
   </div>
 </section>
 
+
+{/* A objeção que trava mais gente do que qualquer outra — "isto é um esquema? ficam com o meu
+    dinheiro?" — vivia escondida numa pergunta do acordeão. Passa a ter bloco próprio e a vir
+    antes de pedirmos dinheiro a alguém. */}
+<section id="seguranca" className="band">
+  <div className="wrap">
+    <div className="head r"><p className="ch">{t("l2.chSafe")}</p>
+      <h2>{t("l2.safeTitle")}</h2>
+      <p>{t("l2.safeSub")}</p></div>
+    <div className="grid3">
+      <div className="card r d1"><span className="ic">◆</span><span className="n">{t("l2.safe1L")}</span><h3>{t("l2.safe1T")}</h3>
+        <p>{t("l2.safe1B")}</p></div>
+      <div className="card r d2"><span className="ic">◇</span><span className="n">{t("l2.safe2L")}</span><h3>{t("l2.safe2T")}</h3>
+        <p>{t("l2.safe2B")}</p></div>
+      <div className="card r d3"><span className="ic">◈</span><span className="n">{t("l2.safe3L")}</span><h3>{t("l2.safe3T")}</h3>
+        <p>{t("l2.safe3B")}</p></div>
+    </div>
+    <p className="risk r d3">{t("l2.safeRisk")}</p>
+  </div>
+</section>
+
 <section id="numeros">
   <div className="wrap">
     <div className="head r">
-      <p className="ch"><b>03</b>{t("l2.ch3")}</p>
+      <p className="ch">{t("l2.ch3")}</p>
       <h2>{t("l2.numTitle")}</h2>
       <p>{t("l2.numSub")}</p>
     </div>
@@ -460,374 +649,6 @@ export default function NewLandingPage() {
       <div className="ac"><a className="btn" href="#l2-packs">{t("l2.jump1Cta")}</a>
         <button type="button" className="btn g" onClick={() => setVideo(true)}>{t("l2.jumpVideo")}</button></div>
     </div>
-  </div>
-</section>
-
-<section className="nar">
-  <div className="wrap">
-    <p className="lb2 r">{t("l2.narLabel2")}</p>
-    <q className="r d1">{t("l2.narQuote2")}</q>
-    <p className="r d2">{t("l2.narBody2")}</p>
-    <p className="sig2 r d3">{t("l2.narSign")}</p>
-  </div>
-</section>
-<section id="eco">
-  <div className="wrap">
-    <div className="head r"><p className="ch"><b>04</b>{t("l2.ch4")}</p>
-      <h2>{t("l2.ecoTitle")}<br />{t("l2.ecoTitle2")}</h2>
-      <p>{t("l2.ecoSub")}</p></div>
-    <div className="grid4">
-      <div className="card r d1"><span className="ic">◆</span><span className="n">{t("l2.eco1L")}</span><h3>{t("l2.beat3Tool")}</h3>
-        <p>{t("l2.eco1B")}</p></div>
-      <div className="card r d2"><span className="ic">⇄</span><span className="n">{t("l2.eco2L")}</span><h3>MTM Copy</h3>
-        <p>{t("l2.eco2B")}</p></div>
-      <div className="card r d3"><span className="ic">◈</span><span className="n">{t("l2.eco3L")}</span><h3>{t("l2.eco3T")}</h3>
-        <p>{t("l2.eco3B")}</p></div>
-      <div className="card r d4"><span className="ic">⬡</span><span className="n">{t("l2.eco4L")}</span><h3>{t("l2.eco4T")}</h3>
-        <p>{t("l2.eco4B")}</p></div>
-      <div className="card r d1"><span className="ic">✦</span><span className="n">{t("l2.eco5L")}</span><h3>{t("l2.eco5T")}</h3>
-        <p>{t("l2.eco5B")}</p></div>
-      <div className="card r d2"><span className="ic">◎</span><span className="n">{t("l2.eco6L")}</span><h3>{t("l2.eco6T")}</h3>
-        <p>{t("l2.eco6B")}</p></div>
-      <div className="card r d3"><span className="ic">◍</span><span className="n">{t("l2.eco7L")}</span><h3>{t("l2.eco7T")}</h3>
-        <p>{t("l2.eco7B")}</p></div>
-      <div className="card r d4"><span className="ic">◐</span><span className="n">{t("l2.eco8L")}</span><h3>{t("l2.eco8T")}</h3>
-        <p>{t("l2.eco8B")}</p></div>
-    </div>
-    <div className="jump r d3">
-      <p>{t("l2.jump2")}<span>{t("l2.jump2Sub")}</span></p>
-      <div className="ac"><a className="btn" href="#l2-packs">{t("l2.jump2Cta")}</a></div>
-    </div>
-  </div>
-</section>
-
-<section id="cripto" className="band">
-  <div className="wrap">
-    <div className="head r">
-      <p className="ch">{t("l2.chCripto")}</p>
-      <h2>{t("l2.criptoTitle")}</h2>
-      <p>{t("l2.criptoSub")}</p></div>
-
-    <div className="demo r d1">
-      <div className="demo__bar"><span className="lv"><b />CoinGecko live</span>
-        <span className="lv"><b />Yahoo Finance live</span><em>auto-sync 2 min</em></div>
-      <div className="demo__bd">
-        <div className="tiles">
-          <div className="tl"><div className="tv" data-to="28">0</div><div className="tn">{t("l2.criptoAssets")}<br />{t("l2.criptoAssetsSub")}</div></div>
-          <div className="tl"><div className="tv" data-to="46">0</div><div className="tn">{t("l2.criptoFear")}<br />{t("l2.criptoFearSub")}</div></div>
-          <div className="tl"><div className="tv" data-to="41" data-suf="%" data-pre="+">0</div><div className="tn">{t("l2.criptoEtf")}</div></div>
-          <div className="tl"><div className="tv">~4x</div><div className="tn">{t("l2.criptoPot")}<br />{t("l2.criptoPotSub")}</div></div>
-        </div>
-
-        <p className="ch" style={{"margin": "26px 0 14px"}}>{t("l2.dcaTitle")}</p>
-        <div className="gauges">
-          <div className="ga"><div className="gl">{t("l2.dcaStrong")}</div><div className="gv" style={{"color": "var(--live)"}} data-to="1">0</div>
-            <div className="gt"><i data-w="20" style={{"background": "var(--live)"}}></i></div><div className="gs">{t("l2.dcaStrongSub")}</div></div>
-          <div className="ga"><div className="gl">{t("l2.dcaBuy")}</div><div className="gv" data-to="0">0</div>
-            <div className="gt"><i data-w="15" style={{"background": "var(--gold)"}}></i></div><div className="gs">{t("l2.dcaBuySub")}</div></div>
-          <div className="ga"><div className="gl">{t("l2.dcaWait")}</div><div className="gv" style={{"color": "var(--gold-lt)"}} data-to="1">0</div>
-            <div className="gt"><i data-w="5" style={{"background": "var(--gold-dp)"}}></i></div><div className="gs">{t("l2.dcaWaitSub")}</div></div>
-        </div>
-
-        <div className="dca">
-          <div className="dc"><div className="dc__t"><b>XRP</b><span className="chip pd">{t("l2.dcaNo")}</span></div>
-            <span className="tk">XRPUSDT</span>
-            <div className="px3">$1,2600</div><div className="sub2">+18,3% acima da média semanal</div>
-            <p className="why">{t("l2.dcaWhy")}</p></div>
-          <div className="dc"><div className="dc__t"><b>Chainlink</b><span className="chip pd">{t("l2.dcaNo")}</span></div>
-            <span className="tk">LINKUSDT</span>
-            <div className="px3">$10,6800</div><div className="sub2">+7,3% acima da média semanal</div>
-            <p className="why">{t("l2.dcaWhy")}</p></div>
-          <div className="dc"><div className="dc__t"><b>Kaspa</b><span className="chip pd">{t("l2.dcaNo")}</span></div>
-            <span className="tk">KASUSDT</span>
-            <div className="px3">$0,0280</div><div className="sub2">+7,1% acima da média semanal</div>
-            <p className="why">{t("l2.dcaWhy")}</p></div>
-        </div>
-      </div>
-    </div>
-
-    <p className="risk r d2">Leitura real do portefólio MTM. A análise DCA é uma sugestão de alocação do
-      reforço mensal, não uma recomendação de investimento. Sem grupos de "próximo 100x".</p>
-    <p className="r d3" style={{"marginTop": "22px"}}><a className="btn g" href="/portfolios">{t("l2.criptoCta")}</a></p>
-  </div>
-</section>
-
-<section id="terminal">
-  <div className="wrap">
-    <div className="head r">
-      <p className="ch">{t("l2.chTerminal")}</p>
-      <h2>{t("l2.terminalTitle")}</h2>
-      <p>{t("l2.terminalSub")}</p></div>
-
-    <div className="demo r d1" id="term">
-      <div className="demo__bar"><span className="lv"><b />{t("l2.live")}</span><em>{t("l2.terminalBar")}</em></div>
-      <div className="demo__bd">
-        <div className="tsig">
-          <span className="bull">▲ BULLISH</span>
-          <span className="cv">{t("l2.conviction")}<b>{t("l2.convictionVal")}</b></span>
-          <span className="px2">4576,4 <span style={{"fontSize": "12px", "color": "var(--faint)"}}>USD</span></span>
-        </div>
-        <p className="tline" id="l2-tline" data-txt={t("l2.terminalRead")}><span className="cur" /></p>
-
-        <div className="gauges">
-          <div className="ga"><div className="gl">{t("l2.retail")}</div><div className="gv" style={{"color": "var(--live)"}} data-to="68" data-suf="% bullish">0</div>
-            <div className="gt"><i data-w="68" style={{"background": "linear-gradient(90deg,#e0755f,var(--gold),var(--live))"}}></i></div>
-            <div className="gs">{t("l2.retailScale")}</div></div>
-          <div className="ga"><div className="gl">{t("l2.fear")}</div><div className="gv" style={{"color": "var(--gold)"}} data-to="61">0</div>
-            <div className="gt"><i data-w="61" style={{"background": "linear-gradient(90deg,#e0755f,var(--gold))"}}></i></div>
-            <div className="gs">{t("l2.greed")}</div></div>
-          <div className="ga"><div className="gl">{t("l2.inst")}</div><div className="gv" style={{"fontSize": "15px", "color": "var(--ink)"}}>{t("l2.instVal")}</div>
-            <div className="gt"><i data-w="86" style={{"background": "var(--gold-lt)"}}></i></div>
-            <div className="gs">{t("l2.instSub")}</div></div>
-        </div>
-
-        <p className="ch" style={{"margin": "0 0 14px"}}>{t("l2.scenarios")}</p>
-        <div className="scen">
-          <div className="sc"><div className="sh"><span style={{"color": "var(--live)"}}>Bullish</span><b style={{"color": "var(--live)"}}>+4,2%</b></div>
-            <div className="bar"><i data-w="62" style={{"background": "var(--live)"}}></i></div>
-            <p>Fed sinaliza cortes após CPI&lt;2,8% e emprego deteriora; DXY quebra 103 e safe-haven impulsiona para 4730–4763.</p></div>
-          <div className="sc"><div className="sh"><span style={{"color": "var(--gold)"}}>Base</span><b style={{"color": "var(--gold)"}}>+1,1%</b></div>
-            <div className="bar"><i data-w="34" style={{"background": "var(--gold)"}}></i></div>
-            <p>{t("l2.scBase")}</p></div>
-          <div className="sc"><div className="sh"><span style={{"color": "#e0755f"}}>Bearish</span><b style={{"color": "#e0755f"}}>−3,8%</b></div>
-            <div className="bar"><i data-w="21" style={{"background": "#e0755f"}}></i></div>
-            <p>{t("l2.scBear")}</p></div>
-        </div>
-
-        <div className="gauges" style={{"margin": "20px 0 0"}}>
-          <div className="ga"><div className="gl">{t("l2.supports")}</div>
-            <div className="gv" style={{"fontSize": "15px", "color": "var(--live)"}}>4370 · 4327,6 · 4315</div></div>
-          <div className="ga"><div className="gl">{t("l2.resistances")}</div>
-            <div className="gv" style={{"fontSize": "15px", "color": "#e0755f"}}>4643,5 · 4763</div></div>
-          <div className="ga"><div className="gl">{t("l2.alsoTerminal")}</div>
-            <div className="gv" style={{"fontSize": "15px", "color": "var(--ink)"}}>{t("l2.alsoTerminalVal")}</div>
-            <div className="gs">{t("l2.alsoTerminalSub")}</div></div>
-        </div>
-      </div>
-    </div>
-
-    <p className="risk r d2">{t("l2.terminalRisk")}</p>
-    <p className="r d3" style={{"marginTop": "22px"}}><a className="btn g" href="/mtm-terminal">{t("l2.terminalCta")}</a></p>
-  </div>
-</section>
-
-<section id="alertas" className="band">
-  <div className="wrap">
-    <div className="head r">
-      <p className="ch">{t("l2.chAlerts")}</p>
-      <h2>{t("l2.alertsTitle")}</h2>
-      <p>Nada de "manda mensagem para saber a entrada". Entrada, invalidação, três saídas e as
-        confirmações que faltam — tudo à frente, antes de arriscares.</p></div>
-
-    <div className="demo r d1">
-      <div className="demo__bar"><span className="lv"><b />{t("l2.alertsLive")}</span>
-        <em>{t("l2.alertsBar")}</em></div>
-      <div className="demo__bd">
-        <div className="alerts">
-          <div className="al">
-            <div className="al__t"><span className="sym">NATURALGAS</span><span className="chip buy">↗ Compra</span>
-              <span className="chip tf">15m</span><span className="chip pd">{t("l2.pending")}</span></div>
-            <div className="lvls">
-              <div className="sl"><span>{t("l2.invalidation")}</span><b>2,7305</b></div>
-              <div className="tp"><span>Saída 1</span><b>2,7682</b></div>
-              <div className="tp"><span>Saída 2</span><b>2,7934</b></div>
-              <div className="tp"><span>Saída 3</span><b>2,8186</b></div></div>
-            <div className="conf"><span className="cf2 ok">✓ Acima POC</span><span className="cf2 no">✕ DEMA 15&gt;50</span><span className="cf2 no">✕ DEMA 50&gt;238</span></div>
-            <div className="al__f"><span>MTM Scanner</span><span>1 / 3 confirmações</span></div></div>
-
-          <div className="al">
-            <div className="al__t"><span className="sym">GER40</span><span className="chip buy">↗ Compra</span>
-              <span className="chip tf">15m</span><span className="chip pd">{t("l2.pending")}</span></div>
-            <div className="lvls">
-              <div className="sl"><span>{t("l2.invalidation")}</span><b>25 962,8</b></div>
-              <div className="tp"><span>Saída 1</span><b>26 059,3</b></div>
-              <div className="tp"><span>Saída 2</span><b>26 123,6</b></div>
-              <div className="tp"><span>Saída 3</span><b>26 187,9</b></div></div>
-            <div className="conf"><span className="cf2 ok">✓ Acima POC</span><span className="cf2 ok">✓ DEMA 15&gt;50</span><span className="cf2 no">✕ DEMA 50&gt;238</span></div>
-            <div className="al__f"><span>MTM Scanner</span><span>2 / 3 confirmações</span></div></div>
-
-          <div className="al">
-            <div className="al__t"><span className="sym">US30</span><span className="chip sell">↘ Venda</span>
-              <span className="chip tf">15m</span><span className="chip pd">{t("l2.pending")}</span></div>
-            <div className="lvls">
-              <div className="sl"><span>{t("l2.invalidation")}</span><b>53 070,7</b></div>
-              <div className="tp"><span>Saída 1</span><b>52 830,2</b></div>
-              <div className="tp"><span>Saída 2</span><b>52 669,9</b></div>
-              <div className="tp"><span>Saída 3</span><b>52 509,6</b></div></div>
-            <div className="conf"><span className="cf2 no">✕ Acima POC</span><span className="cf2 no">✕ DEMA 15&gt;50</span><span className="cf2 no">✕ DEMA 50&gt;238</span></div>
-            <div className="al__f"><span>MTM Scanner</span><span>0 / 3 confirmações</span></div></div>
-        </div>
-        <p style={{"margin": "20px 0 0", "fontSize": "13px", "color": "var(--faint)", "lineHeight": "1.6"}}>{t("l2.alertsNote1")}<b style={{"color": "var(--gold)"}}>{t("l2.alertsNotePending")}</b>{t("l2.alertsNote2")}</p>
-      </div>
-    </div>
-
-    <p className="r d3" style={{"marginTop": "26px"}}><a className="btn g" href="/alertas-mtm">{t("l2.alertsCta")}</a></p>
-  </div>
-</section>
-
-{/* As áreas da casa. Duas famílias, e a diferença lê-se antes de se ler o texto: painel cheio
-    com o nome do educador para o que já dá aulas, traço interrompido e sem botão para o que
-    ainda está a abrir. Ver AREAS_VIVAS / AREAS_A_ABRIR no topo do ficheiro. */}
-<section id="areas">
-  <div className="wrap">
-    <div className="head r"><p className="ch">{t("l2.chAreas")}</p>
-      <h2>{t("l2.areasTitle")}<br />{t("l2.areasTitle2")}</h2>
-      <p>{t("l2.areasSub")}</p></div>
-
-    {PILARES.map((pil, i) => {
-      const vivas = AREAS_VIVAS.filter((a) => a.p === pil.id)
-      const comEdu = vivas.filter((a) => a.edu)
-      const semEdu = vivas.filter((a) => !a.edu)
-      const abrir = AREAS_A_ABRIR.filter((a) => a.p === pil.id)
-      return (
-        <div className={`pil p${i + 1}`} key={pil.id}>
-          <div className="r">
-            <p className="pil__n"><b>{String(i + 1).padStart(2, "0")}</b>{pil.nome}</p>
-            <p className="pil__d">{t(pil.def)}</p>
-            <p className="pil__c">
-              {comEdu.length > 0 && <span>{t("l2.pilCountEdu").replace("{n}", String(comEdu.length))}</span>}
-              {semEdu.length > 0 && <span>{t("l2.pilCountNoEdu").replace("{n}", String(semEdu.length))}</span>}
-              {abrir.length > 0 && <span>{t("l2.pilCountSoon").replace("{n}", String(abrir.length))}</span>}
-            </p>
-          </div>
-
-          {comEdu.length > 0 && (
-            <>
-              <p className="pil__sub r">{t("l2.areasFam1")}</p>
-              <div className={comEdu.length === 1 ? "aw3" : "aw"} style={comEdu.length === 1 ? { gridTemplateColumns: "1fr", marginTop: 0 } : undefined}>
-                {comEdu.map((a) => (<AreaCard key={a.t} a={a} big={a.meta.length > 2 && comEdu.length > 1} t={t} />))}
-              </div>
-            </>
-          )}
-
-          {/* Área real mas sem educador: linha própria, a largura toda. Fica ao lado das que
-              têm aulas porque já existe, e separada porque não é a mesma coisa. */}
-          {semEdu.map((a) => (
-            <div className="aw3" style={{ gridTemplateColumns: "1fr" }} key={a.t}>
-              <AreaCard a={a} t={t} />
-            </div>
-          ))}
-
-          {abrir.length > 0 && (
-            <>
-              <p className="pil__sub r">{t("l2.areasFam2")}</p>
-              <div
-                className="aw3 soon r d2"
-                style={{ marginTop: 0, gridTemplateColumns: abrir.length < 3 ? `repeat(${abrir.length},1fr)` : undefined }}
-              >
-                {abrir.map((a) => (
-                  <div className="ab" key={a.t}>
-                    <p className="lb3"><b />{t("l2.areasSoonTag")}</p>
-                    <h3>{a.t}</h3>
-                    <p>{a.d}</p>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          <p className="also r d3">
-            <em>{t("l2.pilAlso")}</em>
-            {pil.mais.map((m) => (m.h ? <a key={m.l} href={m.h}>{m.l}</a> : <span key={m.l}>{m.l}</span>))}
-          </p>
-        </div>
-      )
-    })}
-
-    <p className="r d3" style={{ marginTop: "40px", fontSize: "14px", color: "var(--dim)" }}>
-      {t("l2.areasHint")}{" "}
-      <a href="/criadores" style={{ color: "var(--gold-lt)", borderBottom: "1px solid var(--gold-dp)" }}>{t("l2.areasHintLink")}</a>.
-    </p>
-
-    <p className="risk r d3">{t("l2.areasRisk")}</p>
-  </div>
-</section>
-
-<section className="band" id="educacao">
-  <div className="wrap split">
-    <div className="r">
-      <p className="ch">{t("l2.chSchool")}</p>
-      <h2>{t("l2.schoolTitle")}</h2>
-      <p style={{"marginTop": "18px"}}>O Bootcamp são 30 horas a sério, e no fim há avaliação. Quem passa recebe
-        um certificado oficial em nome próprio, com classificação e código de validação público. É a diferença
-        entre "vi um curso" e "sou capaz de operar uma conta".</p>
-      <div className="tags">
-        <span className="tag">{t("l2.schoolTag1")}</span><span className="tag">{t("l2.schoolTag2")}</span>
-        <span className="tag">{t("l2.schoolTag3")}</span><span className="tag">{t("l2.schoolTag4")}</span>
-        <span className="tag">{t("l2.schoolTag5")}</span>
-      </div>
-      <p style={{"marginTop": "26px"}}><a className="btn g" href="/avaliacoes">{t("l2.schoolCta")}</a></p>
-    </div>
-    <figure className="fig reveal r d2">
-      <img src="/landing/escola.jpg" alt={t("l2.schoolAlt")} />
-      <figcaption>{t("l2.schoolCaption")}</figcaption>
-    </figure>
-  </div>
-</section>
-
-<section id="certificados">
-  <div className="wrap">
-    <div className="head r" style={{"textAlign": "center", "marginLeft": "auto", "marginRight": "auto"}}>
-      <p className="ch" style={{"justifyContent": "center"}}><b>05</b>{t("l2.ch5")}</p>
-      <p className="pill" style={{ margin: "0 0 20px" }}>✓ {t("l2.certsPill").replace("{n}", String(stats.certificados))}</p>
-      <h2>{t("l2.certsTitle")}</h2>
-      <p>{t("l2.certsSub")}</p>
-    </div>
-  </div>
-  <div className="crail r d1"><div className="crail__t">{[...CERTS, ...CERTS].map((c, i) => (<CertCard key={i} c={c} t={t} />))}</div></div>
-  <div className="wrap"><p className="risk r d2" style={{"marginTop": "34px"}}>{t("l2.certsRisk")}</p></div>
-</section>
-<section id="comunidade" className="band">
-  <div className="wrap">
-    <div className="head r"><p className="ch"><b>06</b>{t("l2.ch6")}</p>
-      <h2>{t("l2.commTitle")}<br />{t("l2.commTitle2")}</h2>
-      <p>{t("l2.commSub")}</p></div>
-    <div className="grid3">
-      <div className="card r d1"><span className="ic">◍</span><span className="n">{t("l2.comm1L")}</span><h3>{t("l2.comm1T")}</h3>
-        <p>{t("l2.comm1B")}</p></div>
-      <div className="card r d2"><span className="ic">◌</span><span className="n">{t("l2.comm2L")}</span><h3>{t("l2.comm2T")}</h3>
-        <p>{t("l2.comm2B")}</p></div>
-      <div className="card r d3"><span className="ic">▶</span><span className="n">{t("l2.live")}</span><h3>{t("l2.comm3T")}</h3>
-        <p>{t("l2.comm3B")}</p></div>
-      <div className="card r d1"><span className="ic">✦</span><span className="n">{t("l2.comm4L")}</span><h3>{t("l2.comm4T")}</h3>
-        <p>{t("l2.comm4B")}</p></div>
-      <div className="card r d2"><span className="ic">◇</span><span className="n">{t("l2.comm5L")}</span><h3>{t("l2.comm5T")}</h3>
-        <p>{t("l2.comm5B")}</p></div>
-      <div className="card r d3"><span className="ic">✧</span><span className="n">{t("l2.comm6L")}</span><h3>{t("l2.comm6T")}</h3>
-        <p>{t("l2.comm6B")}</p></div>
-    </div>
-  </div>
-</section>
-
-<section id="testemunhos">
-  <div className="wrap">
-    <div className="head r" style={{"textAlign": "center", "marginLeft": "auto", "marginRight": "auto"}}>
-      <p className="ch" style={{"justifyContent": "center"}}><b>07</b>{t("l2.ch7")}</p>
-      <h2>{t("l2.testTitle")}</h2></div>
-    <div className="tw">{TESTEMUNHOS.map((x, i) => (<Testimonial key={i} x={x} i={i} t={t} />))}</div>
-    <p className="stamp r d3" style={{ justifyContent: "center", display: "flex" }}><b />{t("l2.testStamp").replace("{p}", "33").replace("{c}", String(stats.certificados))}</p>
-    <div className="jump r d3">
-      <p>{t("l2.jump3")}<span>{t("l2.jump3Sub")}</span></p>
-      <div className="ac"><a className="btn" href="#l2-packs">{t("l2.jump3Cta")}</a>
-        <a className="btn g" href="/FreeSession">{t("l2.jump3Cta2")}</a></div>
-    </div>
-  </div>
-</section>
-
-<section className="nar">
-  <div className="wrap">
-    <p className="lb2 r">{t("l2.narLabel3")}</p>
-    <q className="r d1">{t("l2.narQuote3")}</q>
-    <p className="r d2">{t("l2.narBody3")}</p>
-    <p className="sig2 r d3">{t("l2.narSign")}</p>
-  </div>
-</section>
-
-<section className="scene"><div className="scene__bg px" style={{backgroundImage:"url(/landing/cena2.jpg)"}}></div><div className="scene__veil"></div>
-  <div className="wrap"><p className="ch r"><b>08</b>{t("l2.ch8")}</p>
-    <h2 className="r d1">{t("l2.buildScene")}</h2>
-    <p className="r d2">{t("l2.buildSceneSub")}</p>
-    <p className="r d3" style={{"marginTop": "26px"}}><a className="btn" href="/apresentacao">{t("l2.buildSceneCta")}</a></p>
   </div>
 </section>
 
@@ -859,42 +680,59 @@ export default function NewLandingPage() {
   </div>
 </section>
 
-<section id="faq">
+
+<section className="act" id="aceder">
+  <div className="wrap"><b>{String(3).padStart(2, "0")}</b><h2>{t("l2.act3")}</h2><p>{t("l2.act3Sub")}</p></div>
+</section>
+
+<section id="comunidade" className="band">
   <div className="wrap">
-    <div className="head r" style={{"textAlign": "center", "marginLeft": "auto", "marginRight": "auto"}}>
-      <p className="ch" style={{"justifyContent": "center"}}>{t("l2.chFaq")}</p>
-      <h2>{t("l2.faqTitle")}</h2>
-      <p>{t("l2.faqSub").split("{link}")[0]}<a href="/faq" style={{ color: "var(--gold-lt)" }}>/faq</a>{t("l2.faqSub").split("{link}")[1]}</p></div>
-    <div className="faq r d1">
-      {/* Estas duas ficam à cabeça de propósito: são as objeções que a página levantava
-          e não respondia — "isto é só trading?" e "dá para ganhar sem operar?". */}
-      <div className="fq"><button><span>{t("l2.faq9Q")}</span><i>+</i></button>
-        <div className="ans"><div className="in2"><p>{t("l2.faq9A")}</p></div></div></div>
-      <div className="fq"><button><span>{t("l2.faq10Q")}</span><i>+</i></button>
-        <div className="ans"><div className="in2"><p>{t("l2.faq10A")}</p></div></div></div>
-      <div className="fq"><button><span>{t("l2.faq1Q")}</span><i>+</i></button>
-        <div className="ans"><div className="in2"><p>{t("l2.faq1A")}</p></div></div></div>
-      <div className="fq"><button><span>{t("l2.faq2Q")}</span><i>+</i></button>
-        <div className="ans"><div className="in2"><p>{t("l2.faq2A")}</p></div></div></div>
-      <div className="fq"><button><span>{t("l2.faq3Q")}</span><i>+</i></button>
-        <div className="ans"><div className="in2"><p>{t("l2.faq3A")}</p></div></div></div>
-      <div className="fq"><button><span>{t("l2.faq4Q")}</span><i>+</i></button>
-        <div className="ans"><div className="in2"><p>{t("l2.faq4A")}</p></div></div></div>
-      <div className="fq"><button><span>{t("l2.faq5Q")}</span><i>+</i></button>
-        <div className="ans"><div className="in2"><p>{t("l2.faq5A")}</p></div></div></div>
-      <div className="fq"><button><span>{t("l2.faq6Q")}</span><i>+</i></button>
-        <div className="ans"><div className="in2"><p>{t("l2.faq6A")}</p></div></div></div>
-      <div className="fq"><button><span>{t("l2.faq7Q")}</span><i>+</i></button>
-        <div className="ans"><div className="in2"><p>{t("l2.faq7A")}</p></div></div></div>
-      <div className="fq"><button><span>{t("l2.faq8Q")}</span><i>+</i></button>
-        <div className="ans"><div className="in2"><p>{t("l2.faq8A")}</p></div></div></div>
+    <div className="head r"><p className="ch">{t("l2.ch6")}</p>
+      <h2>{t("l2.commTitle")}<br />{t("l2.commTitle2")}</h2>
+      <p>{t("l2.commSub")}</p></div>
+    <div className="grid3">
+      <div className="card r d1"><span className="ic">◍</span><span className="n">{t("l2.comm1L")}</span><h3>{t("l2.comm1T")}</h3>
+        <p>{t("l2.comm1B")}</p></div>
+      <div className="card r d2"><span className="ic">◌</span><span className="n">{t("l2.comm2L")}</span><h3>{t("l2.comm2T")}</h3>
+        <p>{t("l2.comm2B")}</p></div>
+      <div className="card r d3"><span className="ic">▶</span><span className="n">{t("l2.live")}</span><h3>{t("l2.comm3T")}</h3>
+        <p>{t("l2.comm3B")}</p></div>
+      <div className="card r d1"><span className="ic">✦</span><span className="n">{t("l2.comm4L")}</span><h3>{t("l2.comm4T")}</h3>
+        <p>{t("l2.comm4B")}</p></div>
+      <div className="card r d2"><span className="ic">◇</span><span className="n">{t("l2.comm5L")}</span><h3>{t("l2.comm5T")}</h3>
+        <p>{t("l2.comm5B")}</p></div>
+      <div className="card r d3"><span className="ic">✧</span><span className="n">{t("l2.comm6L")}</span><h3>{t("l2.comm6T")}</h3>
+        <p>{t("l2.comm6B")}</p></div>
     </div>
   </div>
 </section>
 
+<section id="testemunhos">
+  <div className="wrap">
+    <div className="head r" style={{"textAlign": "center", "marginLeft": "auto", "marginRight": "auto"}}>
+      <p className="ch" style={{"justifyContent": "center"}}>{t("l2.ch7")}</p>
+      <h2>{t("l2.testTitle")}</h2></div>
+    <div className="tw">{TESTEMUNHOS.map((x, i) => (<Testimonial key={i} x={x} i={i} t={t} />))}</div>
+    <p className="stamp r d3" style={{ justifyContent: "center", display: "flex" }}><b />{t("l2.testStamp").replace("{c}", String(stats.certificados))}</p>
+    <div className="jump r d3">
+      <p>{t("l2.jump3")}<span>{t("l2.jump3Sub")}</span></p>
+      <div className="ac"><a className="btn" href="#l2-packs">{t("l2.jump3Cta")}</a>
+        <a className="btn g" href="/FreeSession">{t("l2.jump3Cta2")}</a></div>
+    </div>
+  </div>
+</section>
+
+<section className="nar">
+  <div className="wrap">
+    <p className="lb2 r">{t("l2.narLabel2")}</p>
+    <q className="r d1">{t("l2.narQuote2")}</q>
+    <p className="r d2">{t("l2.narBody2")}</p>
+    <p className="sig2 r d3">{t("l2.narSign")}</p>
+  </div>
+</section>
 <section id="l2-packs">
   <div className="wrap">
-    <div className="head r"><p className="ch"><b>09</b>{t("l2.ch9")}</p><h2>{t("l2.packsTitle")}</h2>
+    <div className="head r"><p className="ch">{t("l2.ch9")}</p><h2>{t("l2.packsTitle")}</h2>
       <p>{t("l2.packsSub")}</p></div>
     <div className="packs">
       <div className="pk r d1"><div className="nm">{t("l2.packMember")}</div><div className="pr">35€</div><div className="pe">{t("l2.packMemberPer")}</div>
@@ -937,6 +775,39 @@ export default function NewLandingPage() {
   </div>
 </section>
 
+
+<section id="faq">
+  <div className="wrap">
+    <div className="head r" style={{"textAlign": "center", "marginLeft": "auto", "marginRight": "auto"}}>
+      <p className="ch" style={{"justifyContent": "center"}}>{t("l2.chFaq")}</p>
+      <h2>{t("l2.faqTitle")}</h2>
+      <p>{t("l2.faqSub").split("{link}")[0]}<a href="/faq" style={{ color: "var(--gold-lt)" }}>/faq</a>{t("l2.faqSub").split("{link}")[1]}</p></div>
+    <div className="faq r d1">
+      {/* Estas duas ficam à cabeça de propósito: são as objeções que a página levantava
+          e não respondia — "isto é só trading?" e "dá para ganhar sem operar?". */}
+      <div className="fq"><button><span>{t("l2.faq9Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq9A")}</p></div></div></div>
+      <div className="fq"><button><span>{t("l2.faq10Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq10A")}</p></div></div></div>
+      <div className="fq"><button><span>{t("l2.faq1Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq1A")}</p></div></div></div>
+      <div className="fq"><button><span>{t("l2.faq2Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq2A")}</p></div></div></div>
+      <div className="fq"><button><span>{t("l2.faq3Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq3A")}</p></div></div></div>
+      <div className="fq"><button><span>{t("l2.faq4Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq4A")}</p></div></div></div>
+      <div className="fq"><button><span>{t("l2.faq5Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq5A")}</p></div></div></div>
+      <div className="fq"><button><span>{t("l2.faq6Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq6A")}</p></div></div></div>
+      <div className="fq"><button><span>{t("l2.faq7Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq7A")}</p></div></div></div>
+      <div className="fq"><button><span>{t("l2.faq8Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq8A")}</p></div></div></div>
+    </div>
+  </div>
+</section>
 
       {/* barra de conversão — entra depois da abertura e retira-se nos packs */}
       <div id="l2-cta" className={ctaOn ? "on" : ""}>

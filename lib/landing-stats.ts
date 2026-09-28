@@ -36,15 +36,15 @@ export interface LandingStats {
   source: 'live' | 'snapshot'
 }
 
-/** Último valor conhecido — só serve se a BD não responder. Nunca inventa: foi medido a 20/08/2026. */
+/** Último valor conhecido — só serve se a BD não responder. Nunca inventa: foi medido a 28/09/2026. */
 export const SNAPSHOT: LandingStats = {
-  trades: 5205,
+  trades: 7329,
   winRatePct: 62,
-  contas: 8,
-  sinais: 17624,
-  ordens: 2707,
-  certificados: 52,
-  asOf: '2026-08-20',
+  contas: 11,
+  sinais: 26358,
+  ordens: 3335,
+  certificados: 56,
+  asOf: '2026-09-28',
   source: 'snapshot',
 }
 

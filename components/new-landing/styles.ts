@@ -59,8 +59,23 @@ export const LANDING_CSS = String.raw`
 @keyframes l2drift{to{transform:scale(1.16) translate3d(-1.5%,-1%,0)}}
 .l2 .open2__veil{position:absolute;inset:0;background:linear-gradient(90deg,rgba(14,14,18,.94) 4%,rgba(14,14,18,.72) 42%,rgba(14,14,18,.18) 74%,transparent),linear-gradient(0deg,var(--ground),transparent 52%)}
 .l2 .open2 .wrap{position:relative;z-index:2;padding:120px 24px 70px}
+/* A 375px a abertura tem de CABER: com os três factos por baixo do botão passou dos 100vh e o
+   título ficava acima da dobra. Aperta-se aqui em vez de se cortar texto. */
+@media(max-width:560px){
+.l2 .open2 .wrap{padding:80px 24px 46px}
+.l2 .open2 p.l{margin:16px 0 20px;font-size:15.5px}
+.l2 .facts{margin-top:12px;gap:6px}
+.l2 .acts{gap:10px}
+}
 .l2 .open2 h1{font-size:clamp(38px,6.6vw,76px);max-width:15ch}
 .l2 .open2 h1 em{font-style:italic;color:var(--gold-lt)}
+/* Os três factos por baixo do CTA. São as objeções que travam a decisão, ditas antes de se
+   pedir seja o que for — e não substituem a secção da segurança, preparam-na. */
+.l2 .facts{display:flex;flex-wrap:wrap;gap:9px;margin:22px 0 0;padding:0}
+.l2 .facts span{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--gold-lt);border:1px solid var(--gold-dp);border-radius:999px;padding:6px 13px;
+  background:rgba(210,166,60,.07);backdrop-filter:blur(4px)}
+@media(max-width:560px){.l2 .facts span{font-size:9px;padding:5px 11px}}
 .l2 .ln{display:block;overflow:hidden}
 .l2 .ln>span{display:block;transform:translateY(105%);transition:transform 1.05s cubic-bezier(.16,.72,.24,1)}
 .l2 .on .ln>span, .l2 .open2.go .ln>span{transform:none}
@@ -155,6 +170,34 @@ export const LANDING_CSS = String.raw`
 }
 .l2 .split h2{font-size:clamp(26px,3.6vw,40px)}
 .l2 .split p{color:var(--dim);font-size:16.5px}
+/* ─── Os três caminhos ────────────────────────────────────────────────────────
+   O eixo de fora da página é a INTENÇÃO (aprender / ganhar / aceder), porque quem chega
+   sabe sempre qual é a sua e nem sempre sabe a nossa taxonomia. O assunto — MTM Markets e
+   MTM Content & Business — continua a mandar, mas um nível abaixo, dentro de "aprender",
+   que é onde o assunto interessa. NÃO acrescentar um terceiro esquema por cima destes dois. */
+.l2 .paths{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:38px}
+@media(max-width:860px){.l2 .paths{grid-template-columns:1fr;gap:12px}}
+.l2 .path{position:relative;display:block;border:1px solid var(--line);border-radius:20px;padding:28px 26px 24px;
+  background:radial-gradient(130% 110% at 0% 0%,rgba(210,166,60,.08),transparent 60%),var(--panel);
+  transition:border-color .4s,transform .4s}
+.l2 .path:hover{border-color:var(--gold-dp);transform:translateY(-4px)}
+.l2 .path b{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--gold);font-weight:400}
+.l2 .path h3{font-family:var(--disp);font-size:clamp(26px,3.4vw,34px);font-weight:800;letter-spacing:-.03em;margin:9px 0 10px}
+.l2 .path p{color:var(--dim);font-size:14.5px;margin:0}
+.l2 .path .who4{display:block;margin-top:16px;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--faint)}
+.l2 .path .go2{margin-top:16px}
+/* ─── Actos ───────────────────────────────────────────────────────────────────
+   Marcam onde começa cada caminho. São a MESMA coisa que os cartões acima — o cartão leva
+   aqui — e não uma arrumação nova. */
+.l2 .act{padding:74px 0 0}
+.l2 .act .wrap{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.l2 .act h2{font-family:var(--disp);font-size:clamp(40px,8vw,86px);font-weight:800;letter-spacing:-.04em;
+  color:var(--ink);line-height:1}
+.l2 .act b{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--gold);font-weight:400}
+.l2 .act p{color:var(--faint);font-size:14.5px;margin:0;flex:1 1 260px;min-width:0}
+@media(max-width:700px){.l2 .act{padding:54px 0 0}.l2 .act p{flex-basis:100%}}
+
 /* ─── Pilares (#areas) ────────────────────────────────────────────────────────
    Três blocos, e a grelha passa a ter duas dimensões: pilar (a que parte da casa
    pertence) e família (já dá aulas / está a abrir). A 375px não há espaço para as

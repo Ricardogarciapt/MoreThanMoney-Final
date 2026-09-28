@@ -107,7 +107,7 @@ Não. Há duas formas de ganhar dinheiro aqui, e aulas ao vivo nas duas. Com os 
                     <b className="text-white">MTM Markets</b> — tens Forex com o Ricardo Garcia e Criptomoedas com o
                     Ruben Pereira. Com o que sabes e com quem conheces — <b className="text-white">MTM Content &amp;
                     Business</b> — tens Social Media e UGC e Mindset e Liderança, com os educadores da casa. O trading
-                    é a área mais cheia, com cinco salas e sete horários por semana; as outras duas acabaram de
+                    é a área mais cheia, com quatro salas e sete horários por semana; as outras duas acabaram de
                     começar, com uma sala cada. Se entrares à espera de um arquivo cheio de aulas nessas duas, vais
                     ficar desiludido — por isso preferimos dizer-to antes de pagares.
                   </AccordionContent>
@@ -121,7 +121,7 @@ Não. Há duas formas de ganhar dinheiro aqui, e aulas ao vivo nas duas. Com os 
                       <b className="text-white">MTM Markets</b> — os mercados e o dinheiro:
                     </span>
                     <ul className="list-disc pl-5 space-y-1 mb-3">
-                      <li><b className="text-white">Forex e metais</b> — Ricardo Garcia. Cinco salas, dos básicos à mentoria VIP, sete horários por semana e gravações organizadas em curso.</li>
+                      <li><b className="text-white">Forex e metais</b> — Ricardo Garcia. Quatro salas, dos básicos à mentoria VIP, sete horários por semana e gravações organizadas em curso.</li>
                       <li><b className="text-white">Criptomoedas</b> — Ruben Pereira. Três salas (DCA com MTM, Império Cripto, Live Trading Cripto), dois horários por semana.</li>
                       <li><b className="text-white">Ações e ETF</b> — sem aulas próprias e sem educador atribuído. Existe a carteira de oito ETF acompanhada ao vivo, seis ações no Terminal com IA, um canal de chat dedicado e a análise de reforço publicada todos os dias.</li>
                     </ul>

@@ -18,8 +18,11 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.heroL2a": "Não é ",
     "l2.heroL2b": "a única",
     "l2.heroSub":
-      "Debaixo do mesmo tecto: mercados, cripto, marca pessoal e UGC, mindset e liderança — e formas de ganhar aqui sem abrir uma ordem. Do lado do trading, construímos o que trabalha quando tu não podes: o sinal chega, decides com um toque, e o motor trata dele até fechar.",
-    "l2.heroCta1": "Ver um dia por dentro",
+      "Mercados, marca pessoal, mindset e liderança — e formas de ganhar aqui sem abrir uma ordem. Do lado do trading, o sinal chega, decides com um toque, e o motor trata dele até fechar.",
+    "l2.heroCta1": "Ver o que há cá dentro",
+    "l2.heroFact1": "A conta é tua",
+    "l2.heroFact2": "Sem fidelização",
+    "l2.heroFact3": "Aulas ao vivo todas as semanas",
     "l2.heroVideo": "Bem-vindo à MoreThanMoney · 2 min",
     "l2.scrollHint": "desce",
 
@@ -29,28 +32,18 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.videoFallbackLink": "vê-o no YouTube",
     "l2.close": "Fechar",
 
-    "l2.ch1": "O problema",
-    "l2.probTitle": "A maioria das casas para no sinal.",
-    "l2.probBody":
-      "Receber um alerta é a parte fácil. O que decide o resultado é o que acontece a seguir: entrar ao preço certo, tirar parciais, mover o stop, e saber quando a ideia já não presta. Foi essa parte que ninguém te dá — e foi essa parte que construímos.",
 
-    "l2.narLabel1": "O narrador · como isto começou",
-    "l2.narQuote1":
-      "Aos 41 anos, depois de três anos a viver o modelo da comunidade e a seguir Warren Buffett e Eric Worre, percebi o que faltava: educação sólida e tecnologia — no mesmo sítio.",
-    "l2.narBody1":
-      "A MoreThanMoney não nasceu de uma sala de sinais. Nasceu da frustração de ver gente boa a aprender bem e a executar mal, porque entre saber e fazer havia sempre um passo manual que ninguém estava lá para dar às 07:42 da manhã.",
     "l2.narSign": "— Ricardo Garcia, fundador",
 
     "l2.ch2": "A solução, em ação",
     "l2.diaTitle": "Um dia normal, visto de dentro",
     "l2.diaSub":
-      "Quarta-feira, 20 de agosto. Nada disto é encenado — é a sequência que os membros viram no telemóvel nesse dia.",
-    "l2.beat1T": "O scanner vê antes de ti",
+      "Quarta-feira, 20 de agosto. As mensagens são as que os membros leram no telemóvel nesse dia, tal e qual — não uma recriação.",
+    "l2.beat1T": "A ideia chega antes de ti",
     "l2.beat1B":
-      "Ninguém estava a olhar para o gráfico. As condições juntaram-se e o setup saiu sozinho, com entrada, stop e três alvos.",
-    "l2.beat1Tool": "Scanners próprios",
+      "Ninguém estava a olhar para o gráfico. A ideia chegou ao canal já completa: entrada, stop e três alvos, sem ter de perguntar nada a ninguém.",
+    "l2.beat1Tool": "Canal Premium",
     "l2.beat2T": "Chega ao teu bolso",
-    "l2.beat2B": "No Telegram e na app ao mesmo tempo. Sem link, sem PDF, sem “manda mensagem para saber mais”.",
     "l2.beat2Tool": "App iOS e Android",
     "l2.beat3T": "Um toque, e é teu",
     "l2.beat3B": "A ordem entra na tua conta, na tua corretora, com o lote calculado pelo teu saldo — não pelo nosso.",
@@ -86,7 +79,6 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.copyMaster": "MESTRE",
     "l2.copyStrategy": "ESTRATÉGIA MTM",
     "l2.copyClient": "Conta do cliente",
-    "l2.copyCopied": "copiado",
     "l2.execRisk":
       "Ambos operam na tua conta, na tua corretora, com o teu capital. Nunca temos acesso ao teu dinheiro — só à ordem que autorizaste.",
 
@@ -106,120 +98,22 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.jump1Cta": "Ligar a minha conta",
     "l2.jumpVideo": "Ver o vídeo · 2 min",
 
-    "l2.narLabel2": "O narrador · porque construímos tudo cá dentro",
+    "l2.narLabel2": "Ricardo Garcia · quem está do outro lado",
     "l2.narQuote2":
       "Podíamos ter alugado tudo. Não alugámos — e é por isso que conseguimos olhar alguém nos olhos quando alguma coisa corre mal.",
     "l2.narBody2":
-      "O indicador é nosso. O motor que gere a posição é nosso. A app é nossa. A escola é nossa. Quando um cliente pergunta porque é que uma ordem entrou àquele preço, há aqui alguém que sabe responder — porque escreveu a linha de código que a colocou.",
+      "Não é um nome numa apresentação. O Ricardo dá as aulas de Forex ele próprio — quatro salas, das básicas à mentoria, sete horários por semana — e escreveu os scanners, o motor que gere as posições e a app onde isto tudo vive. Quando alguém pergunta porque é que uma ordem entrou àquele preço, quem responde é quem escreveu a linha de código que a colocou.",
 
-    "l2.ch4": "O ecossistema",
-    "l2.ecoTitle": "Oito divisões diferentes.",
-    "l2.ecoTitle2": "Uma só conta.",
-    "l2.ecoSub":
-      "Não é uma sala de sinais com um curso ao lado. É uma casa inteira — e cada divisão foi construída aqui dentro.",
-    "l2.eco1L": "Executar",
-    "l2.eco1B": "Aceitas com o polegar, abre na tua conta MT5. Break-even, parciais e trailing sem tocares em nada.",
-    "l2.eco2L": "Copiar",
-    "l2.eco2B": "Se preferes não decidir nada, as estratégias copiam direto — com o teu risco e a tua corretora.",
-    "l2.eco3L": "Analisar",
-    "l2.eco3T": "Quatro scanners nossos",
-    "l2.eco3B": "Sensei, GoldKiller, Aurum Flow e MTM Scanner no TradingView, com acesso por convite.",
-    "l2.eco4L": "Cripto",
-    "l2.eco4T": "Portefólios e DCA inteligente",
-    "l2.eco4B": "19 ativos de cripto e 9 ETF acompanhados, com análise DCA que diz onde reforçar — e onde esperar.",
-    "l2.eco5L": "Decidir",
-    "l2.eco5T": "Terminal MTM com IA",
-    "l2.eco5B": "Escolhes o ativo e a IA lê o gráfico contigo: viés, zonas, alvos e stop — em segundos, dentro do site.",
-    "l2.eco6L": "Aprender",
-    "l2.eco6T": "Escola e certificação",
-    "l2.eco6B": "Fast Start, Bootcamp de 30 horas e Teste Final, com nota e certificado oficial. E aulas ao vivo em quatro áreas, não só mercados.",
-    "l2.eco7L": "Conviver",
-    "l2.eco7T": "App social da comunidade",
-    "l2.eco7B": "Feed, reações, chats por tema e sessões ao vivo com cinco educadores. Abre no que as pessoas dizem.",
-    "l2.eco8L": "Construir",
-    "l2.eco8T": "Criadores, IB e marketing",
-    "l2.eco8B": "Traz o teu conteúdo e fica com 90–95%. Ou constrói equipa com comissões recorrentes e material feito.",
-    "l2.jump2": "Uma conta abre-te as oito divisões.",
-    "l2.jump2Sub": "Não há pacotes escondidos nem upsell a meio do caminho.",
-    "l2.jump2Cta": "Ver os packs",
 
-    "l2.chCripto": "Cripto e investimento longo",
-    "l2.criptoTitle": "Nem tudo se decide ao minuto.",
-    "l2.criptoSub":
-      "Há a parte que corre em segundos — e há a parte que se constrói em anos. Isto é o que o portefólio MTM está a dizer neste momento.",
-    "l2.criptoAssets": "ativos no portefólio",
-    "l2.criptoAssetsSub": "19 cripto · 9 ETF",
-    "l2.criptoFear": "medo e ganância",
-    "l2.criptoFearSub": "o mercado está com medo",
-    "l2.criptoEtf": "desempenho da carteira ETF",
-    "l2.criptoPot": "potencial projetado",
-    "l2.criptoPotSub": "a cinco anos",
-    "l2.dcaTitle": "DCA inteligente · 19 ativos monitorizados",
-    "l2.dcaStrong": "Forte compra",
     "l2.dcaBuy": "Compra",
-    "l2.dcaWait": "Aguardar",
-    "l2.dcaStrongSub": "até 20% do reforço mensal",
-    "l2.dcaBuySub": "até 15% do reforço mensal",
-    "l2.dcaWaitSub": "até 5% do reforço mensal",
-    "l2.dcaNo": "Não reforçar",
-    "l2.dcaAbove": "acima da média semanal",
-    "l2.dcaWhy": "Valorização diária elevada. Evitar perseguir preço no curto prazo.",
-    "l2.criptoRisk":
-      "Leitura real do portefólio MTM. A análise DCA é uma sugestão de alocação do reforço mensal, não uma recomendação de investimento. Sem grupos de “próximo 100x”.",
-    "l2.criptoCta": "Ver os portefólios",
 
-    "l2.chTerminal": "Terminal MTM · inteligência artificial",
-    "l2.terminalTitle": "Uma segunda opinião, a qualquer hora.",
-    "l2.terminalSub":
-      "Escolhes o ativo e a IA lê o mercado contigo — sentimento, posicionamento institucional, cenários com probabilidade e os níveis que interessam. Isto é a leitura de hoje.",
     "l2.live": "Ao vivo",
-    "l2.terminalBar": "ouro / gold · oanda:xauusd · diário às 9h",
-    "l2.conviction": "Convicção",
-    "l2.convictionVal": "Médio-Alto",
-    "l2.terminalRead":
-      "Ouro rompeu 4500 com compras institucionais fortes e Fed dovish; rotação para safe-haven persiste com incerteza tarifária e geopolítica elevada.",
-    "l2.retail": "Sentimento retail",
-    "l2.retailScale": "bearish ← → bullish",
-    "l2.fear": "Medo e ganância",
-    "l2.greed": "ganância",
-    "l2.inst": "Institucional",
-    "l2.instVal": "net-long em máximos de 9 meses",
-    "l2.instSub": "2,1 mil M USD em ETF de ouro em 3 semanas",
-    "l2.scenarios": "Cenários · próximas 1 a 4 semanas",
-    "l2.scBull": "Fed sinaliza cortes após CPI<2,8% e emprego deteriora; DXY quebra 103 e safe-haven impulsiona para 4730–4763.",
-    "l2.scBase": "Consolidação 4500–4600 com Fed em pausa data-dependent; profit-taking limita o lado de cima.",
-    "l2.scBear": "Acordo comercial EUA-China surpreende; CPI acelera para 3,2% e força a Fed hawkish; correção para 4370–4400.",
-    "l2.supports": "Suportes",
-    "l2.resistances": "Resistências",
-    "l2.alsoTerminal": "Também no terminal",
-    "l2.alsoTerminalVal": "Macro, geopolítica e bancos",
-    "l2.alsoTerminalSub": "Goldman, JP Morgan, fluxos COT",
-    "l2.terminalRisk":
-      "Leitura gerada pela IA do Terminal MTM sobre o ouro. Não decide por ti — dá-te o argumento contrário antes de arriscares dinheiro. Não é aconselhamento financeiro.",
-    "l2.terminalCta": "Abrir o Terminal",
 
-    "l2.chAlerts": "Alertas MTM",
-    "l2.alertsTitle": "Cada sinal com o percurso à vista.",
-    "l2.alertsSub":
-      "Nada de “manda mensagem para saber a entrada”. Entrada, invalidação, três saídas e as confirmações que faltam — tudo à frente, antes de arriscares.",
-    "l2.alertsBar": "32 ativos · 16 pendentes · 16 ativas · filtros por classe, timeframe e estratégia",
-    "l2.alertsLive": "Sinais em tempo real",
-    "l2.buy": "Compra",
-    "l2.sell": "Venda",
-    "l2.pending": "Pendente",
     "l2.invalidation": "Invalidação",
     "l2.exit": "Saída",
-    "l2.confirmations": "confirmações",
-    "l2.alertsNote1": "As confirmações a vermelho não são um defeito — são a razão pela qual um sinal fica",
-    "l2.alertsNotePending": "pendente",
-    "l2.alertsNote2":
-      "em vez de entrar. Cada cartão abre o gráfico ao vivo, liga a gestão da trade por IA e deixa-te seguir o desfecho.",
-    "l2.alertsCta": "Ver os alertas ao vivo",
 
     "l2.chSchool": "Escola",
     "l2.schoolTitle": "Aprender aqui tem nota.",
-    "l2.schoolBody":
-      "O Bootcamp são 30 horas a sério, e no fim há avaliação. Quem passa recebe um certificado oficial em nome próprio, com classificação e código de validação público. É a diferença entre “vi um curso” e “sou capaz de operar uma conta”.",
     "l2.schoolTag1": "Fast Start",
     "l2.schoolTag2": "Bootcamp 30h",
     "l2.schoolTag3": "Teste Final · Junior Trader",
@@ -259,10 +153,9 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.comm2T": "Chats por tema",
     "l2.comm2B":
       "Canais separados para Premium, scanners, cripto e ideias de forex. Cada sinal traz a sua própria conversa em thread.",
-    "l2.comm3L": "Ao vivo",
     "l2.comm3T": "Sessões com educadores",
     "l2.comm3B":
-      "Cinco educadores em direto, com legendas traduzidas em cinco idiomas. Quem falta encontra a gravação organizada em curso.",
+      "Quatro salas em direto todas as semanas, com legendas traduzidas em cinco idiomas. Quem falta encontra a gravação organizada em curso.",
     "l2.comm4L": "Mentor",
     "l2.comm4T": "Mentor de IA",
     "l2.comm4B": "Responde às tuas dúvidas a qualquer hora, com o contexto do teu percurso e do teu plano de trading.",
@@ -279,30 +172,19 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.testVerbatim": "verbatim",
     "l2.testVerified": "verificado",
     "l2.testResult": "Resultado",
-    "l2.testStamp": "{p} pessoas certificadas · {c} certificados emitidos · comunidade a crescer",
+    "l2.testStamp": "{c} certificados emitidos · contados na nossa base, não estimados",
     "l2.jump3": "Nenhuma destas pessoas começou a saber.",
     "l2.jump3Sub": "Começaram a aparecer. É o único requisito.",
     "l2.jump3Cta": "Começar agora",
     "l2.jump3Cta2": "Assistir a uma sessão grátis",
 
-    "l2.narLabel3": "O narrador · para onde isto vai",
-    "l2.narQuote3":
-      "Não é sobre ter mais dinheiro. É sobre ter mais liberdade para viver a vida que verdadeiramente queres.",
-    "l2.narBody3":
-      "Há quem chegue aqui para aprender a operar uma conta e fique por aí — e está bem assim. E há quem perceba, algures pelo caminho, que o que tem em mãos dá para construir uma coisa maior. As duas portas estão abertas, e nenhuma delas te obriga a passar pela outra.",
 
-    "l2.ch8": "Para quem constrói",
-    "l2.buildScene": "Um produto que se explica em dois minutos.",
-    "l2.buildSceneSub":
-      "Se já trabalhas com pessoas, tens aqui algo demonstrável ao vivo — e uma estrutura de comissões que paga o esforço de o mostrar.",
-    "l2.buildSceneCta": "Ver a apresentação",
     "l2.doorsLabel": "As quatro portas",
     "l2.doorsTitle": "Há quem venha aprender.",
     "l2.doorsTitle2": "E há quem venha construir.",
     "l2.doorsSub": "Quatro portas diferentes — e nenhuma delas te obriga a comprar um pacote para começar.",
     "l2.door1L": "Criadores · UGC",
     "l2.door1T": "Traz o teu conteúdo",
-    "l2.door1B": "Alojamos, promovemos e cobramos por ti. Ficas com 90–95% do que vendes, com 0€ de entrada.",
     "l2.door1Cta": "Candidatar",
     "l2.door2L": "Convida e ganha",
     "l2.door2T": "Traz quem confia em ti",
@@ -325,9 +207,62 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
 
     /* Áreas (#areas). Os nomes das academias e dos educadores NÃO vivem aqui: são nomes
        próprios lidos da base (lms_academies / lms_educators) e mostram-se como estão. */
+    /* OS TRÊS CAMINHOS — o eixo de fora da página.
+       Arrumar por assunto obriga quem chega a saber o que procura; arrumar por intenção não,
+       porque a intenção toda a gente sabe qual é a sua. O assunto (MTM Markets / MTM Content
+       & Business) continua a mandar dentro de "aprender". */
+    "l2.chPaths": "Três caminhos",
+    "l2.pathsTitle": "Escolhe o teu.",
+    "l2.pathsSub":
+      "As pessoas não chegam aqui todas pelo mesmo motivo, e a página não devia fingir que sim.",
+    "l2.path1K": "Caminho um",
+    "l2.path1T": "Aprender",
+    "l2.path1B":
+      "Aulas ao vivo todas as semanas, com o nome de quem as dá. Mercados de um lado, marca pessoal e negócio do outro — e avaliação com certificado no fim.",
+    "l2.path1W": "Para quem chega sem saber nada",
+    "l2.path2K": "Caminho dois",
+    "l2.path2T": "Ganhar",
+    "l2.path2B":
+      "As ferramentas que executam na tua conta enquanto trabalhas, e as formas de ganhar aqui sem abrir uma ordem: alojamos o teu conteúdo, ou pagamos-te por quem trazes.",
+    "l2.path2W": "Para quem tem pouco tempo",
+    "l2.path3K": "Caminho três",
+    "l2.path3T": "Aceder",
+    "l2.path3B":
+      "Entrar na sala, perguntar e ser respondido. Sessões ao vivo com os educadores, chats por área, e o mentor de IA às três da manhã quando não há mais ninguém acordado.",
+    "l2.path3W": "Para quem já tentou sozinho",
+    "l2.pathGo": "Ver este caminho",
+
+    "l2.act1": "Aprender",
+    "l2.act1Sub": "Quatro áreas com educador e horário semanal, em duas frentes.",
+    "l2.act2": "Ganhar",
+    "l2.act2Sub": "O que executa por ti, e o que te paga sem abrires uma ordem.",
+    "l2.act3": "Aceder",
+    "l2.act3Sub": "As pessoas, as salas e quem construiu isto.",
+
+    /* A conta é tua (#seguranca). Isto já era a resposta de uma pergunta do acordeão; passou a
+       bloco porque é a objeção que trava mais gente, e porque vem antes de pedirmos dinheiro. */
+    "l2.chSafe": "Antes de mais nada",
+    "l2.safeTitle": "A conta é tua. O dinheiro nunca passa por nós.",
+    "l2.safeSub":
+      "É a primeira pergunta que toda a gente faz, e merece resposta antes de falarmos de preços.",
+    "l2.safe1L": "A conta",
+    "l2.safe1T": "Aberta em teu nome",
+    "l2.safe1B":
+      "Abres a conta na tua corretora, com os teus documentos. Nós nunca lhe tocamos no saldo, nunca recebemos depósitos e nunca fazemos levantamentos.",
+    "l2.safe2L": "A autorização",
+    "l2.safe2T": "Só para colocar a ordem",
+    "l2.safe2B":
+      "O que autorizas é a colocação da ordem na tua conta — mais nada. O lote sai do teu saldo e do teu risco, não do nosso.",
+    "l2.safe3L": "A saída",
+    "l2.safe3T": "Desligas quando quiseres",
+    "l2.safe3B":
+      "Desligar pára mesmo: as posições deixam de ser copiadas nesse instante. E os planos mensais não têm fidelização — cancelas no teu perfil em dois cliques.",
+    "l2.safeRisk":
+      "Operar nos mercados envolve risco de perda, e há semanas negativas. Não somos consultores financeiros licenciados e nada aqui é aconselhamento financeiro personalizado.",
+
     "l2.chAreas": "As áreas",
-    "l2.areasTitle": "Não é uma escola de trading.",
-    "l2.areasTitle2": "O trading é só a divisão mais cheia.",
+    "l2.areasTitle": "Quem dá as aulas tem nome.",
+    "l2.areasTitle2": "E tem hora marcada.",
     "l2.areasSub":
       "Duas frentes, e em cada uma há aulas ao vivo com o nome de quem as dá. Algumas áreas ainda não abriram — ficas a saber quais antes de pagares.",
     /* Os nomes dos pilares são marca e não se traduzem; as definições sim. */
@@ -335,8 +270,6 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
       "Os mercados e o dinheiro: aprender a operá-los, e as ferramentas que os operam por ti quando não podes estar.",
     "l2.pil2D":
       "Construir audiência e construir negócio: marca pessoal, conteúdo, e as formas de ganhar aqui sem abrir uma ordem.",
-    "l2.pil3D":
-      "A pessoa que opera a conta: a cabeça, a disciplina, a forma de conduzir pessoas e o corpo que aguenta o resto.",
     "l2.pilCountEdu": "{n} com educador",
     "l2.pilCountNoEdu": "{n} sem aulas próprias",
     "l2.pilCountSoon": "{n} a abrir",
@@ -395,10 +328,8 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.packMember": "Membro",
     "l2.packMemberPer": "por mês · 28€ no anual",
     "l2.packMemberLine": "Para quem quer aprender e estar com a comunidade.",
-    "l2.packMember1": "App iOS e Android",
     "l2.packMember2": "Feed, chats e sessões ao vivo",
     "l2.packMember3": "Formação e certificação",
-    "l2.packMember4": "Mentor de IA",
     "l2.packPremium": "Premium",
     "l2.packPremiumFlag": "O mais escolhido",
     "l2.packPremiumPer": "por mês · 52€ no anual",
@@ -455,8 +386,11 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.heroL2a": "It isn't ",
     "l2.heroL2b": "the only one",
     "l2.heroSub":
-      "Under the same roof: markets, crypto, personal brand and UGC, mindset and leadership — and ways to earn here without opening a single order. On the trading side, we built what works when you can't: the signal arrives, you decide with one tap, and the engine handles it to the close.",
-    "l2.heroCta1": "See a day from the inside",
+      "Markets, personal brand, mindset and leadership — and ways to earn here without opening a single order. On the trading side, the signal arrives, you decide with one tap, and the engine handles it to the close.",
+    "l2.heroCta1": "See what's inside",
+    "l2.heroFact1": "The account is yours",
+    "l2.heroFact2": "No lock-in",
+    "l2.heroFact3": "Live classes every week",
     "l2.heroVideo": "Welcome to MoreThanMoney · 2 min",
     "l2.scrollHint": "scroll",
 
@@ -466,28 +400,18 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.videoFallbackLink": "watch it on YouTube",
     "l2.close": "Close",
 
-    "l2.ch1": "The problem",
-    "l2.probTitle": "Most shops stop at the signal.",
-    "l2.probBody":
-      "Getting an alert is the easy part. What decides the outcome is what happens next: entering at the right price, taking partials, moving the stop, and knowing when the idea is no longer any good. That's the part nobody gives you — and that's the part we built.",
 
-    "l2.narLabel1": "The narrator · how this started",
-    "l2.narQuote1":
-      "At 41, after three years living the community model and following Warren Buffett and Eric Worre, I saw what was missing: solid education and technology — in the same place.",
-    "l2.narBody1":
-      "MoreThanMoney wasn't born out of a signals room. It was born out of the frustration of watching good people learn well and execute badly, because between knowing and doing there was always a manual step nobody was there to take at 07:42 in the morning.",
     "l2.narSign": "— Ricardo Garcia, founder",
 
     "l2.ch2": "The solution, in action",
     "l2.diaTitle": "An ordinary day, seen from inside",
     "l2.diaSub":
-      "Wednesday, 20 August. None of this is staged — it's the sequence members saw on their phones that day.",
-    "l2.beat1T": "The scanner sees it before you do",
+      "Wednesday, 20 August. The messages are the ones members read on their phones that day, word for word — not a recreation.",
+    "l2.beat1T": "The idea lands before you do",
     "l2.beat1B":
-      "Nobody was looking at the chart. The conditions lined up and the setup came out on its own, with entry, stop and three targets.",
-    "l2.beat1Tool": "Our own scanners",
+      "Nobody was looking at the chart. The idea landed in the channel already complete: entry, stop and three targets, without having to ask anyone anything.",
+    "l2.beat1Tool": "Premium channel",
     "l2.beat2T": "It reaches your pocket",
-    "l2.beat2B": "On Telegram and in the app at the same time. No link, no PDF, no “DM me for details”.",
     "l2.beat2Tool": "iOS and Android app",
     "l2.beat3T": "One tap, and it's yours",
     "l2.beat3B": "The order goes into your account, at your broker, with the lot sized by your balance — not ours.",
@@ -522,7 +446,6 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.copyMaster": "MASTER",
     "l2.copyStrategy": "MTM STRATEGY",
     "l2.copyClient": "Client account",
-    "l2.copyCopied": "copied",
     "l2.execRisk":
       "Both run in your account, at your broker, with your capital. We never have access to your money — only to the order you authorised.",
 
@@ -542,119 +465,22 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.jump1Cta": "Connect my account",
     "l2.jumpVideo": "Watch the video · 2 min",
 
-    "l2.narLabel2": "The narrator · why we built everything in-house",
+    "l2.narLabel2": "Ricardo Garcia · who is on the other side",
     "l2.narQuote2":
       "We could have rented all of it. We didn't — and that's why we can look someone in the eye when something goes wrong.",
     "l2.narBody2":
-      "The indicator is ours. The engine that manages the position is ours. The app is ours. The school is ours. When a client asks why an order went in at that price, there's someone here who can answer — because they wrote the line of code that placed it.",
+      "Not a name on a slide. Ricardo teaches the Forex classes himself — four rooms, from the basics to mentoring, seven slots a week — and he wrote the scanners, the engine that manages the positions, and the app all of this lives in. When someone asks why an order went in at that price, the person answering is the one who wrote the line of code that placed it.",
 
-    "l2.ch4": "The ecosystem",
-    "l2.ecoTitle": "Eight different rooms.",
-    "l2.ecoTitle2": "One single account.",
-    "l2.ecoSub": "This isn't a signals room with a course bolted on. It's a whole house — and every room was built in here.",
-    "l2.eco1L": "Execute",
-    "l2.eco1B": "Accept with your thumb, it opens in your MT5 account. Break-even, partials and trailing without touching anything.",
-    "l2.eco2L": "Copy",
-    "l2.eco2B": "If you'd rather not decide anything, the strategies copy straight across — with your risk and your broker.",
-    "l2.eco3L": "Analyse",
-    "l2.eco3T": "Four scanners of our own",
-    "l2.eco3B": "Sensei, GoldKiller, Aurum Flow and MTM Scanner on TradingView, invite-only access.",
-    "l2.eco4L": "Crypto",
-    "l2.eco4T": "Portfolios and smart DCA",
-    "l2.eco4B": "19 crypto assets and 9 ETFs tracked, with DCA analysis telling you where to add — and where to wait.",
-    "l2.eco5L": "Decide",
-    "l2.eco5T": "MTM Terminal with AI",
-    "l2.eco5B": "Pick the asset and the AI reads the chart with you: bias, zones, targets and stop — in seconds, inside the site.",
-    "l2.eco6L": "Learn",
-    "l2.eco6T": "School and certification",
-    "l2.eco6B": "Fast Start, a 30-hour Bootcamp and a Final Test, graded, with an official certificate. Plus live classes in four areas, not just markets.",
-    "l2.eco7L": "Belong",
-    "l2.eco7T": "The community's social app",
-    "l2.eco7B": "Feed, reactions, topic chats and live sessions with five educators. It opens on what people are saying.",
-    "l2.eco8L": "Build",
-    "l2.eco8T": "Creators, IB and marketing",
-    "l2.eco8B": "Bring your content and keep 90–95%. Or build a team with recurring commissions and material already made.",
-    "l2.jump2": "One account opens all eight rooms.",
-    "l2.jump2Sub": "No hidden bundles and no upsell halfway through.",
-    "l2.jump2Cta": "See the packs",
 
-    "l2.chCripto": "Crypto and the long game",
-    "l2.criptoTitle": "Not everything is decided by the minute.",
-    "l2.criptoSub":
-      "There's the part that runs in seconds — and the part that gets built over years. This is what the MTM portfolio is saying right now.",
-    "l2.criptoAssets": "assets in the portfolio",
-    "l2.criptoAssetsSub": "19 crypto · 9 ETF",
-    "l2.criptoFear": "fear and greed",
-    "l2.criptoFearSub": "the market is fearful",
-    "l2.criptoEtf": "ETF book performance",
-    "l2.criptoPot": "projected potential",
-    "l2.criptoPotSub": "over five years",
-    "l2.dcaTitle": "Smart DCA · 19 assets monitored",
-    "l2.dcaStrong": "Strong buy",
     "l2.dcaBuy": "Buy",
-    "l2.dcaWait": "Wait",
-    "l2.dcaStrongSub": "up to 20% of the monthly contribution",
-    "l2.dcaBuySub": "up to 15% of the monthly contribution",
-    "l2.dcaWaitSub": "up to 5% of the monthly contribution",
-    "l2.dcaNo": "Don't add",
-    "l2.dcaAbove": "above the weekly average",
-    "l2.dcaWhy": "Sharp daily appreciation. Avoid chasing price in the short term.",
-    "l2.criptoRisk":
-      "A real reading of the MTM portfolio. The DCA analysis is a suggested allocation of the monthly contribution, not an investment recommendation. No “next 100x” groups.",
-    "l2.criptoCta": "See the portfolios",
 
-    "l2.chTerminal": "MTM Terminal · artificial intelligence",
-    "l2.terminalTitle": "A second opinion, at any hour.",
-    "l2.terminalSub":
-      "Pick the asset and the AI reads the market with you — sentiment, institutional positioning, scenarios with probability and the levels that matter. This is today's reading.",
     "l2.live": "Live",
-    "l2.terminalBar": "gold · oanda:xauusd · daily at 9am",
-    "l2.conviction": "Conviction",
-    "l2.convictionVal": "Medium-High",
-    "l2.terminalRead":
-      "Gold broke 4500 on strong institutional buying and a dovish Fed; the rotation into safe havens persists amid tariff uncertainty and elevated geopolitics.",
-    "l2.retail": "Retail sentiment",
-    "l2.retailScale": "bearish ← → bullish",
-    "l2.fear": "Fear and greed",
-    "l2.greed": "greed",
-    "l2.inst": "Institutional",
-    "l2.instVal": "net-long at 9-month highs",
-    "l2.instSub": "USD 2.1bn into gold ETFs over 3 weeks",
-    "l2.scenarios": "Scenarios · next 1 to 4 weeks",
-    "l2.scBull": "Fed signals cuts after CPI<2.8% and employment deteriorates; DXY breaks 103 and safe-haven flows push to 4730–4763.",
-    "l2.scBase": "Consolidation 4500–4600 with the Fed data-dependent on hold; profit-taking caps the upside.",
-    "l2.scBear": "A US-China trade deal surprises; CPI accelerates to 3.2% forcing a hawkish Fed; correction to 4370–4400.",
-    "l2.supports": "Supports",
-    "l2.resistances": "Resistances",
-    "l2.alsoTerminal": "Also in the terminal",
-    "l2.alsoTerminalVal": "Macro, geopolitics and banks",
-    "l2.alsoTerminalSub": "Goldman, JP Morgan, COT flows",
-    "l2.terminalRisk":
-      "A reading generated by the MTM Terminal's AI on gold. It doesn't decide for you — it gives you the counter-argument before you risk money. This is not financial advice.",
-    "l2.terminalCta": "Open the Terminal",
 
-    "l2.chAlerts": "MTM Alerts",
-    "l2.alertsTitle": "Every signal with its path in plain sight.",
-    "l2.alertsSub":
-      "None of that “DM me for the entry”. Entry, invalidation, three exits and the confirmations still missing — all in front of you, before you risk anything.",
-    "l2.alertsBar": "32 active · 16 pending · 16 live · filters by class, timeframe and strategy",
-    "l2.alertsLive": "Real-time signals",
-    "l2.buy": "Buy",
-    "l2.sell": "Sell",
-    "l2.pending": "Pending",
     "l2.invalidation": "Invalidation",
     "l2.exit": "Exit",
-    "l2.confirmations": "confirmations",
-    "l2.alertsNote1": "The confirmations in red aren't a defect — they're the reason a signal stays",
-    "l2.alertsNotePending": "pending",
-    "l2.alertsNote2":
-      "instead of going in. Each card opens the live chart, turns on AI trade management and lets you follow the outcome.",
-    "l2.alertsCta": "See the live alerts",
 
     "l2.chSchool": "School",
     "l2.schoolTitle": "Learning here comes with a grade.",
-    "l2.schoolBody":
-      "The Bootcamp is a serious 30 hours, and there's an assessment at the end. Whoever passes gets an official certificate in their own name, with a grade and a public validation code. It's the difference between “I watched a course” and “I can run an account”.",
     "l2.schoolTag1": "Fast Start",
     "l2.schoolTag2": "30h Bootcamp",
     "l2.schoolTag3": "Final Test · Junior Trader",
@@ -693,10 +519,9 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.comm2T": "Chats by topic",
     "l2.comm2B":
       "Separate channels for Premium, scanners, crypto and forex ideas. Each signal brings its own threaded conversation.",
-    "l2.comm3L": "Live",
     "l2.comm3T": "Sessions with educators",
     "l2.comm3B":
-      "Five educators live, with subtitles translated into five languages. Anyone who misses one finds the recording organised into a course.",
+      "Four rooms live every week, with subtitles translated into five languages. Anyone who misses one finds the recording organised into a course.",
     "l2.comm4L": "Mentor",
     "l2.comm4T": "AI mentor",
     "l2.comm4B": "Answers your questions at any hour, with the context of your path and your trading plan.",
@@ -713,29 +538,19 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.testVerbatim": "verbatim",
     "l2.testVerified": "verified",
     "l2.testResult": "Result",
-    "l2.testStamp": "{p} people certified · {c} certificates issued · a growing community",
+    "l2.testStamp": "{c} certificates issued · counted in our database, not estimated",
     "l2.jump3": "None of these people started out knowing.",
     "l2.jump3Sub": "They started showing up. That's the only requirement.",
     "l2.jump3Cta": "Start now",
     "l2.jump3Cta2": "Watch a free session",
 
-    "l2.narLabel3": "The narrator · where this is going",
-    "l2.narQuote3": "It isn't about having more money. It's about having more freedom to live the life you actually want.",
-    "l2.narBody3":
-      "Some people come here to learn to run an account and stop there — and that's fine. And some realise, somewhere along the way, that what they're holding is enough to build something bigger. Both doors are open, and neither forces you through the other.",
 
-    "l2.ch8": "For those who build",
-    "l2.buildScene": "A product you can explain in two minutes.",
-    "l2.buildSceneSub":
-      "If you already work with people, you have something here you can demonstrate live — and a commission structure that pays for the effort of showing it.",
-    "l2.buildSceneCta": "See the presentation",
     "l2.doorsLabel": "The four doors",
     "l2.doorsTitle": "Some come to learn.",
     "l2.doorsTitle2": "And some come to build.",
     "l2.doorsSub": "Four different doors — and none of them makes you buy a bundle to start.",
     "l2.door1L": "Creators · UGC",
     "l2.door1T": "Bring your content",
-    "l2.door1B": "We host it, promote it and collect for you. You keep 90–95% of what you sell, with €0 to start.",
     "l2.door1Cta": "Apply",
     "l2.door2L": "Refer and earn",
     "l2.door2T": "Bring the people who trust you",
@@ -753,17 +568,62 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.door4B": "Remote roles with in-house training and recurring commissions. Working with us, not for us.",
     "l2.door4Cta": "See the roles",
 
+    "l2.chPaths": "Three paths",
+    "l2.pathsTitle": "Pick yours.",
+    "l2.pathsSub":
+      "People don't all arrive here for the same reason, and the page shouldn't pretend they do.",
+    "l2.path1K": "Path one",
+    "l2.path1T": "Learn",
+    "l2.path1B":
+      "Live classes every week, with the name of whoever teaches them. Markets on one side, personal brand and business on the other — and an assessment with a certificate at the end.",
+    "l2.path1W": "For people arriving knowing nothing",
+    "l2.path2K": "Path two",
+    "l2.path2T": "Earn",
+    "l2.path2B":
+      "The tools that execute in your account while you work, and the ways to earn here without opening an order: we host your content, or we pay you for the people you bring.",
+    "l2.path2W": "For people short on time",
+    "l2.path3K": "Path three",
+    "l2.path3T": "Access",
+    "l2.path3B":
+      "Walk into the room, ask, and get an answer. Live sessions with the educators, chats by area, and the AI mentor at three in the morning when nobody else is awake.",
+    "l2.path3W": "For people who already tried alone",
+    "l2.pathGo": "See this path",
+
+    "l2.act1": "Learn",
+    "l2.act1Sub": "Four areas with an educator and a weekly slot, across two fronts.",
+    "l2.act2": "Earn",
+    "l2.act2Sub": "What executes for you, and what pays you without opening an order.",
+    "l2.act3": "Access",
+    "l2.act3Sub": "The people, the rooms, and whoever built this.",
+
+    "l2.chSafe": "First things first",
+    "l2.safeTitle": "The account is yours. The money never passes through us.",
+    "l2.safeSub":
+      "It's the first question everyone asks, and it deserves an answer before we talk about prices.",
+    "l2.safe1L": "The account",
+    "l2.safe1T": "Opened in your name",
+    "l2.safe1B":
+      "You open the account at your broker, with your documents. We never touch the balance, never take deposits and never make withdrawals.",
+    "l2.safe2L": "The permission",
+    "l2.safe2T": "Only to place the order",
+    "l2.safe2B":
+      "What you authorise is placing the order in your account — nothing else. The lot comes out of your balance and your risk, not ours.",
+    "l2.safe3L": "The exit",
+    "l2.safe3T": "Switch it off whenever you want",
+    "l2.safe3B":
+      "Switching off actually stops it: positions stop being copied that instant. And monthly plans have no lock-in — you cancel in your profile in two clicks.",
+    "l2.safeRisk":
+      "Trading the markets carries risk of loss, and there are losing weeks. We are not licensed financial advisers and nothing here is personalised financial advice.",
+
     "l2.chAreas": "The areas",
-    "l2.areasTitle": "This isn't a trading school.",
-    "l2.areasTitle2": "Trading is just the fullest room.",
+    "l2.areasTitle": "Whoever teaches has a name.",
+    "l2.areasTitle2": "And a time in the week.",
     "l2.areasSub":
       "Two fronts, and each one has live classes with the name of whoever teaches them. Some areas haven't opened yet — you'll know which before you pay.",
     "l2.pil1D":
       "Markets and money: learning to run them, and the tools that run them for you when you can't be there.",
     "l2.pil2D":
       "Building an audience and building a business: personal brand, content, and the ways to earn here without opening an order.",
-    "l2.pil3D":
-      "The person running the account: the head, the discipline, how you lead people, and the body that carries the rest.",
     "l2.pilCountEdu": "{n} with an educator",
     "l2.pilCountNoEdu": "{n} with no classes of its own",
     "l2.pilCountSoon": "{n} opening",
@@ -820,10 +680,8 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.packMember": "Member",
     "l2.packMemberPer": "per month · €28 on the annual plan",
     "l2.packMemberLine": "For those who want to learn and be with the community.",
-    "l2.packMember1": "iOS and Android app",
     "l2.packMember2": "Feed, chats and live sessions",
     "l2.packMember3": "Training and certification",
-    "l2.packMember4": "AI mentor",
     "l2.packPremium": "Premium",
     "l2.packPremiumFlag": "Most chosen",
     "l2.packPremiumPer": "per month · €52 on the annual plan",

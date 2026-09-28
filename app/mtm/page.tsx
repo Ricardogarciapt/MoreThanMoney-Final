@@ -82,8 +82,8 @@ const MTM_AREAS_VIVAS: Array<{ p: MtmPilar; t: string; edu: string | null; ini: 
   {
     p: "markets",
     t: "Forex e metais", edu: "Ricardo Garcia", ini: "RG",
-    d: "Regressão de tendências e scanners, ao vivo. É a divisão mais cheia da casa: cinco salas, das básicas à mentoria VIP, e gravações organizadas em curso para quem falta.",
-    meta: ["5 salas", "7 horários por semana", "gravações"],
+    d: "Regressão de tendências e scanners, ao vivo. É a divisão mais cheia da casa: quatro salas, das básicas à mentoria VIP, e gravações organizadas em curso para quem falta.",
+    meta: ["4 salas", "7 horários por semana", "gravações"],
   },
   {
     p: "markets",
