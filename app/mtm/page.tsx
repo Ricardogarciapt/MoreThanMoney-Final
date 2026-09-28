@@ -915,7 +915,7 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
                     <h3 className="text-2xl font-bold text-white">Solução 2: Automação Total</h3>
                   </div>
                   <p className="text-gray-300 mb-4 text-lg">
-                    <span className="text-purple-400 font-semibold">IQAuto e Syphon AI:</span> Tecnologia de ponta com execução "Set-it-once", eliminando o erro humano.
+                    <span className="text-purple-400 font-semibold">MTM Auto:</span> ligas a tua conta uma vez, e o sinal passa a entrar nela sozinho, com o risco que definiste.
                   </p>
                 </CardContent>
               </Card>
@@ -929,7 +929,7 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
                     <h3 className="text-2xl font-bold text-white">Solução 3: Modelo Híbrido</h3>
                   </div>
                   <p className="text-gray-300 mb-4 text-lg">
-                    <span className="text-cyan-400 font-semibold">Copy Trading:</span> Replica as decisões de 30+ educadores globais enquanto entendes a lógica por trás de cada estratégia.
+                    <span className="text-cyan-400 font-semibold">MTM Copy:</span> segues as estratégias da casa, cada uma com o seu nome, enquanto percebes a lógica por trás de cada entrada.
                   </p>
                 </CardContent>
               </Card>
