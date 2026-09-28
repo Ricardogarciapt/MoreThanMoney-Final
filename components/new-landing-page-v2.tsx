@@ -25,6 +25,8 @@ const STRIP = [
   "Tap to Trade", "MTM Copy", "Sensei", "GoldKiller", "Aurum Flow", "MTM Scanner", "Alertas MTM",
   "Terminal com IA", "Portefólios cripto", "DCA inteligente", "Bootcamp 30h", "Certificação oficial",
   "Sessões ao vivo", "Feed da comunidade", "Mentor de IA", "Criadores UGC", "Parcerias IB", "Mindset e fitness",
+  "Marca pessoal", "Social Media e UGC", "Mindset e Liderança", "Fitness e Bem-Estar", "Ações e ETF",
+  "Estúdio MTM Social", "Convida e ganha",
 ]
 
 /** Sequência real de 20/08/2026 no canal Premium. Os textos do motor não se traduzem: é o que sai. */
@@ -52,9 +54,94 @@ const CERTS: Array<[string, "fast-start" | "bootcamp" | "teste-final", string | 
 const CHAPTERS: Array<[string, string]> = [
   ["problema", "O problema"], ["dia", "Em ação"], ["executar", "Executar"], ["numeros", "A prova"],
   ["eco", "O ecossistema"], ["cripto", "Cripto e DCA"], ["terminal", "Terminal IA"], ["alertas", "Alertas"],
-  ["educacao", "Escola"], ["certificados", "Certificados"], ["comunidade", "Comunidade"],
+  ["areas", "As áreas"], ["educacao", "Escola"], ["certificados", "Certificados"], ["comunidade", "Comunidade"],
   ["testemunhos", "Testemunhos"], ["construir", "Construir"], ["faq", "Perguntas"], ["l2-packs", "Packs"],
 ]
+
+/**
+ * As áreas da casa, lidas de `lms_academies` / `lms_educators` / `lms_streams` a 28/09/2026.
+ *
+ * A REGRA: só entra o que a casa entrega, e o que ainda não entrega entra MARCADO. As três
+ * áreas com uma sala começaram agora e é isso que se diz — quem chega e encontra um catálogo
+ * de uma aula sente-se enganado, e quem se sente enganado à entrada não volta.
+ *
+ * `edu` é o nome do educador na base; `null` significa que a área não tem aulas próprias e o
+ * cartão desenha-se sem a linha do educador, com o que a sustenta em `meta`.
+ * Se acrescentares uma área aqui, confirma primeiro na base — não pelo que era intenção.
+ */
+type Area = { t: string; edu: string | null; d: string; meta: string[]; href?: string; cta?: string }
+
+const AREAS_VIVAS: Area[] = [
+  {
+    t: "Forex e metais", edu: "Ricardo Garcia",
+    d: "Regressão de tendências e scanners, ao vivo. É a divisão mais cheia da casa: cinco salas, das básicas à mentoria VIP, e gravações organizadas em curso para quem falta.",
+    meta: ["5 salas", "7 horários por semana", "gravações"], href: "/live-sessions",
+  },
+  {
+    t: "Criptomoedas", edu: "Ruben Pereira",
+    d: "Três salas próprias — DCA com MTM, Império Cripto e Live Trading Cripto — ligadas aos portefólios e à análise de reforço mensal que corre no site.",
+    meta: ["3 salas", "2 horários por semana", "gravações"], href: "/live-sessions",
+  },
+  {
+    t: "Social Media e UGC", edu: "MTM Social Media & UGC",
+    d: "Marca pessoal e conteúdo: como começar nas redes e como produzir. Começou agora — uma sala, um horário semanal. Tens ainda o estúdio MTM Social para fazeres as tuas peças com a tua marca, e um canal só desta conversa.",
+    meta: ["começou agora", "1 horário por semana", "estúdio MTM Social"], href: "/live-sessions",
+  },
+  {
+    t: "Mindset e Liderança", edu: "MTM Mindset & Liderança",
+    d: "A cabeça, a disciplina e a forma de conduzir pessoas. Começou agora, com uma sala e as gravações a seguir — e esta abre-se sem pagar nada.",
+    meta: ["começou agora", "acesso livre", "gravações"], href: "/live-sessions",
+  },
+  {
+    t: "Fitness e Bem-Estar", edu: "MTM Fitness & Bem-Estar",
+    d: "Treino, hábitos e performance física. Começou agora, com três horários por semana já marcados. Do lado das ferramentas tens o registo de treinos, refeições e peso.",
+    meta: ["começou agora", "3 horários por semana"], href: "/live-sessions",
+  },
+  {
+    t: "Ações e ETF", edu: null,
+    d: "Sem aulas próprias e sem educador atribuído. O que existe é a carteira de oito ETF acompanhada ao vivo, seis ações no Terminal com IA, um canal de chat dedicado e a análise de reforço publicada todos os dias.",
+    meta: ["8 ETF", "6 ações no Terminal", "canal e análise diária"],
+    href: "/portfolios", cta: "Ver os portefólios",
+  },
+]
+
+/** Academias criadas na base, ainda sem educador e sem sala. Sem data — não temos nenhuma. */
+const AREAS_A_ABRIR: Array<{ t: string; d: string }> = [
+  { t: "Imobiliário", d: "Educação imobiliária e estratégias. Academia criada, à espera de educador." },
+  { t: "Inteligência Artificial", d: "Ferramentas de IA aplicadas ao negócio. Academia criada, à espera de educador." },
+  { t: "Network Marketing", d: "Fundamentos, prospeção, comunicação e crescimento de equipas. Academia criada, à espera de educador." },
+]
+
+const sig = (n: string) => {
+  const p = n.replace(/^MTM\s+/, "").split(/[\s&]+/).filter(Boolean)
+  return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? "")).toUpperCase()
+}
+
+function AreaCard({ a, big, t }: { a: Area; big?: boolean; t: (k: string) => string }) {
+  const corpo = (
+    <>
+      {a.edu ? (
+        <div className="who3">
+          <span className="av2">{sig(a.edu)}</span>
+          <span>
+            <span className="en">{a.edu}</span>
+            <span className="er">{t("l2.areasEducator")} · {t("l2.areasLive")}</span>
+          </span>
+        </div>
+      ) : (
+        <p className="nt"><b />{t("l2.areasNoTeacher")}</p>
+      )}
+      <h3>{a.t}</h3>
+      <p>{a.d}</p>
+      <div className="mt">{a.meta.map((m) => (<span key={m}>{m}</span>))}</div>
+      {a.href && <span className="go2">{a.cta ?? t("l2.areasGo")}</span>}
+    </>
+  )
+  const cls = `ar r d1${big ? " big" : ""}`
+  return a.href
+    ? <a className={cls} href={a.href}>{corpo}</a>
+    : <div className={cls}>{corpo}</div>
+}
 
 const iniciais = (n: string) =>
   n.split(/[\s&]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase()
@@ -540,6 +627,48 @@ export default function NewLandingPage() {
   </div>
 </section>
 
+{/* As áreas da casa. Duas famílias, e a diferença lê-se antes de se ler o texto: painel cheio
+    com o nome do educador para o que já dá aulas, traço interrompido e sem botão para o que
+    ainda está a abrir. Ver AREAS_VIVAS / AREAS_A_ABRIR no topo do ficheiro. */}
+<section id="areas">
+  <div className="wrap">
+    <div className="head r"><p className="ch">{t("l2.chAreas")}</p>
+      <h2>{t("l2.areasTitle")}<br />{t("l2.areasTitle2")}</h2>
+      <p>{t("l2.areasSub")}</p></div>
+
+    <p className="ch r" style={{ margin: "0 0 16px" }}>{t("l2.areasFam1")}</p>
+    <p className="r d1" style={{ margin: "0 0 22px", color: "var(--faint)", fontSize: "14px" }}>{t("l2.areasFam1Sub")}</p>
+    <div className="aw">
+      <AreaCard a={AREAS_VIVAS[0]} big t={t} />
+      <AreaCard a={AREAS_VIVAS[1]} big t={t} />
+    </div>
+    <div className="aw3">
+      {AREAS_VIVAS.slice(2, 5).map((a) => (<AreaCard key={a.t} a={a} t={t} />))}
+    </div>
+    <div className="aw3" style={{ gridTemplateColumns: "1fr" }}>
+      <AreaCard a={AREAS_VIVAS[5]} t={t} />
+    </div>
+
+    <p className="ch r" style={{ margin: "58px 0 16px" }}>{t("l2.areasFam2")}</p>
+    <p className="r d1" style={{ margin: "0 0 22px", color: "var(--faint)", fontSize: "14px" }}>{t("l2.areasFam2Sub")}</p>
+    <div className="aw3 soon r d2">
+      {AREAS_A_ABRIR.map((a) => (
+        <div className="ab" key={a.t}>
+          <p className="lb3"><b />{t("l2.areasSoonTag")}</p>
+          <h3>{a.t}</h3>
+          <p>{a.d}</p>
+        </div>
+      ))}
+    </div>
+    <p className="r d3" style={{ marginTop: "22px", fontSize: "14px", color: "var(--dim)" }}>
+      {t("l2.areasHint")}{" "}
+      <a href="/criadores" style={{ color: "var(--gold-lt)", borderBottom: "1px solid var(--gold-dp)" }}>{t("l2.areasHintLink")}</a>.
+    </p>
+
+    <p className="risk r d3">{t("l2.areasRisk")}</p>
+  </div>
+</section>
+
 <section className="band" id="educacao">
   <div className="wrap split">
     <div className="r">
@@ -647,6 +776,12 @@ export default function NewLandingPage() {
         <p>{t("l2.door4B")}</p>
         <p style={{"marginTop": "16px"}}><a className="btn g" style={{"padding": "8px 16px", "fontSize": "13px"}} href="/work">{t("l2.door4Cta")}</a></p></div>
     </div>
+    {/* O IB fica FORA da grelha, e de propósito: não há caminho self-service para entrar na
+        rede de IBs, e um cartão com botão prometeria um que não existe. */}
+    <p className="risk r d4" style={{ marginTop: "30px" }}>
+      {t("l2.doorsIb")}{" "}
+      <a href="/abrir-conta" style={{ color: "var(--gold-lt)", borderBottom: "1px solid var(--gold-dp)" }}>{t("l2.doorsIbCta")}</a>.
+    </p>
   </div>
 </section>
 
@@ -657,6 +792,12 @@ export default function NewLandingPage() {
       <h2>{t("l2.faqTitle")}</h2>
       <p>{t("l2.faqSub").split("{link}")[0]}<a href="/faq" style={{ color: "var(--gold-lt)" }}>/faq</a>{t("l2.faqSub").split("{link}")[1]}</p></div>
     <div className="faq r d1">
+      {/* Estas duas ficam à cabeça de propósito: são as objeções que a página levantava
+          e não respondia — "isto é só trading?" e "dá para ganhar sem operar?". */}
+      <div className="fq"><button><span>{t("l2.faq9Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq9A")}</p></div></div></div>
+      <div className="fq"><button><span>{t("l2.faq10Q")}</span><i>+</i></button>
+        <div className="ans"><div className="in2"><p>{t("l2.faq10A")}</p></div></div></div>
       <div className="fq"><button><span>{t("l2.faq1Q")}</span><i>+</i></button>
         <div className="ans"><div className="in2"><p>{t("l2.faq1A")}</p></div></div></div>
       <div className="fq"><button><span>{t("l2.faq2Q")}</span><i>+</i></button>

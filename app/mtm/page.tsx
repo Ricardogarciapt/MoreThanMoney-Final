@@ -41,6 +41,7 @@ const MTM_SECTION_NAV = [
   { id: "mtm-top", label: "Início" },
   { id: "mtm-diagnostico", label: "Diagnóstico" },
   { id: "mtm-ecossistema", label: "Ecossistema" },
+  { id: "mtm-areas", label: "Áreas" },
   { id: "mtm-escada", label: "Escada" },
   { id: "mtm-solucoes", label: "Soluções" },
   { id: "mtm-modelo", label: "Modelo" },
@@ -48,6 +49,51 @@ const MTM_SECTION_NAV = [
   { id: "mtm-porque", label: "Porquê MTM" },
   { id: "mtm-faq", label: "FAQ" },
 ] as const
+
+/**
+ * As áreas da academia, lidas de lms_academies / lms_educators / lms_streams a 28/09/2026.
+ * `edu: null` = a área existe mas não tem educador nem aulas próprias; o cartão desenha-se sem a
+ * ficha do educador e diz o que realmente a sustenta.
+ */
+const MTM_AREAS_VIVAS: Array<{ t: string; edu: string | null; ini: string; d: string; meta: string[] }> = [
+  {
+    t: "Forex e metais", edu: "Ricardo Garcia", ini: "RG",
+    d: "Regressão de tendências e scanners, ao vivo. É a divisão mais cheia da casa: cinco salas, das básicas à mentoria VIP, e gravações organizadas em curso para quem falta.",
+    meta: ["5 salas", "7 horários por semana", "gravações"],
+  },
+  {
+    t: "Criptomoedas", edu: "Ruben Pereira", ini: "RP",
+    d: "Três salas próprias — DCA com MTM, Império Cripto e Live Trading Cripto — ligadas aos portefólios e à análise de reforço mensal que corre no site.",
+    meta: ["3 salas", "2 horários por semana", "gravações"],
+  },
+  {
+    t: "Social Media e UGC", edu: "MTM Social Media & UGC", ini: "SM",
+    d: "Marca pessoal e conteúdo: como começar nas redes e como produzir. Começou agora — uma sala, um horário semanal. Tens ainda o estúdio MTM Social para fazeres as tuas peças com a tua marca.",
+    meta: ["começou agora", "1 horário por semana", "estúdio MTM Social"],
+  },
+  {
+    t: "Mindset e Liderança", edu: "MTM Mindset & Liderança", ini: "ML",
+    d: "A cabeça, a disciplina e a forma de conduzir pessoas. Começou agora, com uma sala e as gravações a seguir — e esta abre-se sem pagar nada.",
+    meta: ["começou agora", "acesso livre", "gravações"],
+  },
+  {
+    t: "Fitness e Bem-Estar", edu: "MTM Fitness & Bem-Estar", ini: "FB",
+    d: "Treino, hábitos e performance física. Começou agora, com três horários por semana já marcados. Do lado das ferramentas tens o registo de treinos, refeições e peso.",
+    meta: ["começou agora", "3 horários por semana"],
+  },
+  {
+    t: "Ações e ETF", edu: null, ini: "",
+    d: "Sem aulas próprias e sem educador atribuído. O que existe é a carteira de oito ETF acompanhada ao vivo, seis ações no Terminal com IA, um canal de chat dedicado e a análise de reforço publicada todos os dias.",
+    meta: ["8 ETF", "6 ações no Terminal", "canal e análise diária"],
+  },
+]
+
+/** Academias criadas na base, ainda sem educador e sem sala. Sem data — não temos nenhuma. */
+const MTM_AREAS_A_ABRIR: Array<{ t: string; d: string }> = [
+  { t: "Imobiliário", d: "Educação imobiliária e estratégias. Academia criada, à espera de educador." },
+  { t: "Inteligência Artificial", d: "Ferramentas de IA aplicadas ao negócio. Academia criada, à espera de educador." },
+  { t: "Network Marketing", d: "Fundamentos, prospeção, comunicação e crescimento de equipas. Academia criada, à espera de educador." },
+]
 
 type MtmExtraLink = { id: string; title: string; url: string }
 
@@ -270,7 +316,7 @@ export default function MTMLandingPage() {
           </h1>
           
           <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-4xl mx-auto leading-relaxed">
-            Ganha enquanto aprendes a investir nos mercados financeiros. Um ecossistema de educação aplicada, integrado com tecnologia de IA e risco controlado desde o primeiro dia.
+A MTM não é uma escola de trading — o trading é só a divisão mais cheia. Há aulas ao vivo em cinco áreas, cada uma com o seu educador e o seu horário semanal: Forex, Criptomoedas, Social Media e UGC, Mindset e Liderança, Fitness e Bem-Estar. Educação aplicada, com tecnologia própria e risco controlado desde o primeiro dia.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -483,13 +529,108 @@ export default function MTMLandingPage() {
               <Card className="bg-gradient-to-br from-cyan-900/40 to-cyan-800/40 border-2 border-cyan-500/30 hover:border-cyan-500/60 transition-all hover:scale-105">
                 <CardContent className="p-6">
                   <GraduationCap className="w-12 h-12 text-cyan-400 mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">Educação Premium</h3>
+                  <h3 className="text-xl font-bold text-white mb-2">Educação em cinco áreas</h3>
                   <p className="text-gray-300">
-                    Acesso a 100+ cursos que mudam a tua mentalidade financeira
+                    Aulas ao vivo com educador e horário semanal, gravações organizadas em curso e certificação no fim do Bootcamp
                   </p>
                 </CardContent>
               </Card>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* AS ÁREAS DA ACADEMIA
+          Lido de lms_academies / lms_educators / lms_streams a 28/09/2026. Duas famílias, e a
+          diferença tem de ver-se antes de se ler: painel cheio com nome do educador para o que já
+          dá aulas, traço interrompido e sem botão para o que ainda está a abrir. Uma área com uma
+          sala começou agora — e é assim que se diz. Se acrescentares uma linha, confirma na base. */}
+      <section id="mtm-areas" className="relative z-10 py-20 scroll-mt-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-4">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">
+                <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                  As áreas da academia
+                </span>
+              </h2>
+              <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto">
+                Cinco áreas já com educador e horário semanal. E áreas ainda a abrir — marcadas como tal,
+                para que ninguém entre à espera do que ainda não existe.
+              </p>
+            </div>
+
+            <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400 mt-12 mb-1">
+              Com educador e horário semanal
+            </p>
+            <p className="text-sm text-gray-500 mb-6">Aulas que já acontecem, com gravações a seguir para quem falta.</p>
+
+            <div className="grid md:grid-cols-2 gap-5">
+              {MTM_AREAS_VIVAS.map((a) => (
+                <Card
+                  key={a.t}
+                  className="bg-gradient-to-br from-gray-900/90 to-gray-800/70 border-2 border-purple-500/25 rounded-2xl hover:border-purple-500/60 transition-all"
+                >
+                  <CardContent className="p-6">
+                    {a.edu ? (
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full border border-[#D2A63C]/50 bg-[#D2A63C]/15 font-mono text-sm font-bold text-[#D2A63C]">
+                          {a.ini}
+                        </span>
+                        <span>
+                          <span className="block text-sm font-semibold text-white">{a.edu}</span>
+                          <span className="block text-[10px] uppercase tracking-widest text-gray-500">
+                            educador · a dar aulas
+                          </span>
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="mb-4 flex h-11 items-center text-[10px] uppercase tracking-widest text-gray-500">
+                        Sem aulas próprias
+                      </p>
+                    )}
+                    <h3 className="text-2xl font-bold text-white mb-2">{a.t}</h3>
+                    <p className="text-gray-300 text-sm leading-relaxed">{a.d}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {a.meta.map((m) => (
+                        <span
+                          key={m}
+                          className="rounded-full border border-[#D2A63C]/40 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-[#eccb78]"
+                        >
+                          {m}
+                        </span>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mt-14 mb-1">A abrir</p>
+            <p className="text-sm text-gray-500 mb-6">
+              Sem educador atribuído e sem aulas marcadas. Não damos data porque ainda não a temos — quando houver,
+              aparece aqui.
+            </p>
+            <div className="grid md:grid-cols-3 gap-4">
+              {MTM_AREAS_A_ABRIR.map((a) => (
+                <div key={a.t} className="rounded-2xl border border-dashed border-gray-700 p-5">
+                  <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-gray-600">Em preparação</p>
+                  <h3 className="text-lg font-semibold text-gray-300 mb-1">{a.t}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{a.d}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-5 text-sm text-gray-400">
+              Estas áreas abrem quando houver o educador certo.{" "}
+              <Link href="/criadores" className="text-[#D2A63C] hover:underline">
+                Se és tu, candidata-te
+              </Link>
+              .
+            </p>
+            <p className="mt-6 border-l-2 border-[#7a5d16] pl-4 text-xs text-gray-500 max-w-3xl">
+              Salas e horários contados na nossa base de sessões, não estimados. Uma área com uma sala e um horário
+              começou agora — e é assim que a apresentamos, sem lhe chamar catálogo.
+            </p>
           </div>
         </div>
       </section>

@@ -14,11 +14,11 @@ import type { Lang } from "@/lib/i18n/config"
 export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   pt: {
     "l2.heroKicker": "MoreThanMoney",
-    "l2.heroL1": "O mercado não espera",
-    "l2.heroL2a": "que estejas ",
-    "l2.heroL2b": "a olhar",
+    "l2.heroL1": "O trading é uma das vias.",
+    "l2.heroL2a": "Não é ",
+    "l2.heroL2b": "a única",
     "l2.heroSub":
-      "Construímos o que trabalha quando tu não podes: o sinal chega, decides com um toque, e a partir daí é o motor que trata dele — até fechar. Por baixo há uma escola inteira, cripto, um terminal com IA e uma comunidade que não te larga.",
+      "Debaixo do mesmo tecto: mercados, cripto, marca pessoal e UGC, mindset e liderança, fitness — e formas de ganhar aqui sem abrir uma ordem. Do lado do trading, construímos o que trabalha quando tu não podes: o sinal chega, decides com um toque, e o motor trata dele até fechar.",
     "l2.heroCta1": "Ver um dia por dentro",
     "l2.heroVideo": "Bem-vindo à MoreThanMoney · 2 min",
     "l2.scrollHint": "desce",
@@ -132,7 +132,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.eco5B": "Escolhes o ativo e a IA lê o gráfico contigo: viés, zonas, alvos e stop — em segundos, dentro do site.",
     "l2.eco6L": "Aprender",
     "l2.eco6T": "Escola e certificação",
-    "l2.eco6B": "Fast Start, Bootcamp de 30 horas e Teste Final. Corrigidos, com nota, e certificado oficial no email.",
+    "l2.eco6B": "Fast Start, Bootcamp de 30 horas e Teste Final, com nota e certificado oficial. E aulas ao vivo em cinco áreas, não só mercados.",
     "l2.eco7L": "Conviver",
     "l2.eco7T": "App social da comunidade",
     "l2.eco7B": "Feed, reações, chats por tema e sessões ao vivo com cinco educadores. Abre no que as pessoas dizem.",
@@ -304,10 +304,16 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.door1T": "Traz o teu conteúdo",
     "l2.door1B": "Alojamos, promovemos e cobramos por ti. Ficas com 90–95% do que vendes, com 0€ de entrada.",
     "l2.door1Cta": "Candidatar",
-    "l2.door2L": "Parcerias · IB",
-    "l2.door2T": "Programa de introdução",
-    "l2.door2B": "Comissões recorrentes por cada membro e por cada conta ligada, com acompanhamento no backoffice.",
+    "l2.door2L": "Convida e ganha",
+    "l2.door2T": "Traz quem confia em ti",
+    "l2.door2B": "Dias de Premium por cada amigo que entre pelo teu link, e comissão sobre as subscrições que resultem.",
     "l2.door2Cta": "Como funciona",
+    /* O IB é parceria de corretora, não um curso nem um botão: entra-se por conversa e a
+       comissão é da corretora, não nossa. Fica como nota fora da grelha — se virasse cartão
+       com botão, prometia um caminho self-service que não existe. */
+    "l2.doorsIb":
+      "Há ainda a parceria de corretora (IB): quem já traz volume entra na nossa rede e a comissão passa a ser paga do nosso lado. Não é um curso nem um formulário — é uma conversa, e o primeiro passo é abrires conta por nós.",
+    "l2.doorsIbCta": "Abrir conta",
     "l2.door3L": "Marketing digital",
     "l2.door3T": "Material feito para vender",
     "l2.door3B": "Criativos, funis, páginas e sequências já escritas. Não tens de inventar copy — tens de a usar.",
@@ -316,6 +322,28 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.door4T": "Setters, closers e growth",
     "l2.door4B": "Vagas remotas com formação interna e comissões recorrentes. Trabalhar connosco, não para nós.",
     "l2.door4Cta": "Ver vagas",
+
+    /* Áreas (#areas). Os nomes das academias e dos educadores NÃO vivem aqui: são nomes
+       próprios lidos da base (lms_academies / lms_educators) e mostram-se como estão. */
+    "l2.chAreas": "As áreas",
+    "l2.areasTitle": "Não é uma escola de trading.",
+    "l2.areasTitle2": "O trading é só a divisão mais cheia.",
+    "l2.areasSub":
+      "Há aulas ao vivo em cinco áreas, cada uma com o seu educador e o seu horário semanal. E há áreas que ainda estão a abrir — estão aqui marcadas como tal, para que ninguém entre à espera do que ainda não existe.",
+    "l2.areasFam1": "Com educador e horário semanal",
+    "l2.areasFam1Sub": "Aulas que já acontecem, com gravações a seguir para quem falta.",
+    "l2.areasFam2": "A abrir",
+    "l2.areasFam2Sub":
+      "Sem educador atribuído e sem aulas marcadas. Não damos data porque ainda não a temos — quando houver, aparece aqui.",
+    "l2.areasSoonTag": "em preparação",
+    "l2.areasEducator": "educador",
+    "l2.areasLive": "a dar aulas",
+    "l2.areasNoTeacher": "Sem aulas próprias",
+    "l2.areasGo": "Ver no lobby ao vivo",
+    "l2.areasHint": "Estas áreas abrem quando houver o educador certo.",
+    "l2.areasHintLink": "Se és tu, candidata-te",
+    "l2.areasRisk":
+      "Salas e horários contados na nossa base de sessões, não estimados. Uma área com uma sala e um horário começou agora — e é assim que a apresentamos, sem lhe chamar catálogo.",
 
     "l2.chFaq": "Antes de decidires",
     "l2.faqTitle": "As perguntas que toda a gente faz",
@@ -344,6 +372,14 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.faq8Q": "Em que idiomas está a plataforma?",
     "l2.faq8A":
       "O site e a app estão traduzidos em 21 idiomas, e as sessões ao vivo têm legendas traduzidas em português, inglês, espanhol, francês e alemão — em direto, enquanto o educador fala.",
+    /* As duas objeções que a página inteira levantava e não respondia. Ficam em primeiro
+       lugar na lista da landing, porque é a primeira coisa que trava quem chega. */
+    "l2.faq9Q": "Isto é só para quem quer fazer trading?",
+    "l2.faq9A":
+      "Não. Há aulas ao vivo em cinco áreas: Forex com o Ricardo Garcia, Criptomoedas com o Ruben Pereira, e Social Media e UGC, Mindset e Liderança e Fitness e Bem-Estar com os educadores da casa — estas três começaram agora, com uma sala e um horário semanal cada. Ações e ETF não têm aulas próprias: vivem no portefólio, no Terminal e no canal de chat. E Imobiliário, Inteligência Artificial e Network Marketing estão a abrir, ainda sem educador — dizemo-lo antes de pagares, não depois.",
+    "l2.faq10Q": "Consigo ganhar aqui sem abrir uma única ordem?",
+    "l2.faq10A":
+      "Consegues, por duas vias. Se produzes conteúdo, alojamos e vendemos o teu curso ou mentoria e ficas com 90–95% do que vender, sem entrada e sem exclusividade — candidatas-te e falamos. E se trazes pessoas, o Convida & Ganha dá-te dias de Premium por cada amigo que entre pelo teu link, com comissão sobre as subscrições que resultem. A parceria de corretora (IB) é outra coisa e não se faz por formulário: é uma conversa, e só depois é que entras na rede.",
 
     "l2.ch9": "A decisão",
     "l2.packsTitle": "Escolhe pelo que queres fazer",
@@ -407,11 +443,11 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
 
   en: {
     "l2.heroKicker": "MoreThanMoney",
-    "l2.heroL1": "The market doesn't wait",
-    "l2.heroL2a": "for you to be ",
-    "l2.heroL2b": "watching",
+    "l2.heroL1": "Trading is one way in.",
+    "l2.heroL2a": "It isn't ",
+    "l2.heroL2b": "the only one",
     "l2.heroSub":
-      "We built what works when you can't: the signal arrives, you decide with one tap, and from there the engine handles it — all the way to the close. Underneath there's a whole school, crypto, an AI terminal and a community that doesn't let go of you.",
+      "Under the same roof: markets, crypto, personal brand and UGC, mindset and leadership, fitness — and ways to earn here without opening a single order. On the trading side, we built what works when you can't: the signal arrives, you decide with one tap, and the engine handles it to the close.",
     "l2.heroCta1": "See a day from the inside",
     "l2.heroVideo": "Welcome to MoreThanMoney · 2 min",
     "l2.scrollHint": "scroll",
@@ -523,7 +559,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.eco5B": "Pick the asset and the AI reads the chart with you: bias, zones, targets and stop — in seconds, inside the site.",
     "l2.eco6L": "Learn",
     "l2.eco6T": "School and certification",
-    "l2.eco6B": "Fast Start, a 30-hour Bootcamp and a Final Test. Marked, graded, and an official certificate by email.",
+    "l2.eco6B": "Fast Start, a 30-hour Bootcamp and a Final Test, graded, with an official certificate. Plus live classes in five areas, not just markets.",
     "l2.eco7L": "Belong",
     "l2.eco7T": "The community's social app",
     "l2.eco7B": "Feed, reactions, topic chats and live sessions with five educators. It opens on what people are saying.",
@@ -693,10 +729,13 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.door1T": "Bring your content",
     "l2.door1B": "We host it, promote it and collect for you. You keep 90–95% of what you sell, with €0 to start.",
     "l2.door1Cta": "Apply",
-    "l2.door2L": "Partnerships · IB",
-    "l2.door2T": "Introducing programme",
-    "l2.door2B": "Recurring commissions for every member and every connected account, tracked in the back office.",
+    "l2.door2L": "Refer and earn",
+    "l2.door2T": "Bring the people who trust you",
+    "l2.door2B": "Premium days for every friend who joins through your link, plus commission on the subscriptions that follow.",
     "l2.door2Cta": "How it works",
+    "l2.doorsIb":
+      "There's also the broker partnership (IB): if you already bring volume, you join our network and the commission starts being paid on our side. It isn't a course and it isn't a form — it's a conversation, and the first step is opening an account through us.",
+    "l2.doorsIbCta": "Open an account",
     "l2.door3L": "Digital marketing",
     "l2.door3T": "Material built to sell",
     "l2.door3B": "Creatives, funnels, pages and sequences already written. You don't have to invent copy — you have to use it.",
@@ -705,6 +744,26 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.door4T": "Setters, closers and growth",
     "l2.door4B": "Remote roles with in-house training and recurring commissions. Working with us, not for us.",
     "l2.door4Cta": "See the roles",
+
+    "l2.chAreas": "The areas",
+    "l2.areasTitle": "This isn't a trading school.",
+    "l2.areasTitle2": "Trading is just the fullest room.",
+    "l2.areasSub":
+      "There are live classes in five areas, each with its own educator and its own weekly slot. And there are areas still opening — marked as such here, so nobody joins expecting what doesn't exist yet.",
+    "l2.areasFam1": "With an educator and a weekly slot",
+    "l2.areasFam1Sub": "Classes that already happen, with recordings afterwards for whoever misses them.",
+    "l2.areasFam2": "Opening",
+    "l2.areasFam2Sub":
+      "No educator assigned and no classes scheduled. We give no date because we don't have one yet — when we do, it shows up here.",
+    "l2.areasSoonTag": "in preparation",
+    "l2.areasEducator": "educator",
+    "l2.areasLive": "teaching",
+    "l2.areasNoTeacher": "No classes of its own",
+    "l2.areasGo": "See it in the live lobby",
+    "l2.areasHint": "These areas open when the right educator turns up.",
+    "l2.areasHintLink": "If that's you, apply",
+    "l2.areasRisk":
+      "Rooms and slots counted in our sessions database, not estimated. An area with one room and one slot has only just started — and that is how we present it, without calling it a catalogue.",
 
     "l2.chFaq": "Before you decide",
     "l2.faqTitle": "The questions everybody asks",
@@ -733,6 +792,12 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.faq8Q": "What languages is the platform in?",
     "l2.faq8A":
       "The site and the app are translated into 21 languages, and live sessions carry subtitles translated into Portuguese, English, Spanish, French and German — live, while the educator is speaking.",
+    "l2.faq9Q": "Is this only for people who want to trade?",
+    "l2.faq9A":
+      "No. There are live classes in five areas: Forex with Ricardo Garcia, Crypto with Ruben Pereira, and Social Media and UGC, Mindset and Leadership and Fitness and Wellbeing with our in-house educators — those three have just started, with one room and one weekly slot each. Stocks and ETFs have no classes of their own: they live in the portfolio, the Terminal and the chat channel. And Real Estate, Artificial Intelligence and Network Marketing are opening, still without an educator — we say so before you pay, not after.",
+    "l2.faq10Q": "Can I earn here without opening a single order?",
+    "l2.faq10A":
+      "You can, two ways. If you make content, we host and sell your course or mentorship and you keep 90–95% of what it sells, with no entry fee and no exclusivity — you apply and we talk. And if you bring people, Refer and Earn gives you Premium days for every friend who joins through your link, with commission on the subscriptions that follow. The broker partnership (IB) is a different thing and isn't done through a form: it's a conversation, and only then do you join the network.",
 
     "l2.ch9": "The decision",
     "l2.packsTitle": "Choose by what you want to do",

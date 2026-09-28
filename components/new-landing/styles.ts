@@ -155,6 +155,54 @@ export const LANDING_CSS = String.raw`
 }
 .l2 .split h2{font-size:clamp(26px,3.6vw,40px)}
 .l2 .split p{color:var(--dim);font-size:16.5px}
+/* ─── Áreas (#areas) ──────────────────────────────────────────────────────────
+   Duas famílias na mesma secção, e a diferença tem de ler-se sem ler o texto:
+   .ar = já dá aulas (painel cheio, ouro, nome do educador, link);
+   .ab = ainda não (traço interrompido, sem preenchimento, sem botão).
+   Se algum dia isto passar a uma grelha só, volta a mentir. */
+.l2 .aw{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.l2 .aw3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+@media(max-width:860px){
+.l2 .aw, .l2 .aw3{grid-template-columns:1fr}
+}
+.l2 .ar{position:relative;border:1px solid var(--line);border-radius:20px;padding:26px 24px;overflow:hidden;
+  background:radial-gradient(130% 110% at 0% 0%,rgba(210,166,60,.09),transparent 60%),var(--panel);
+  transition:border-color .4s,transform .4s;display:flex;flex-direction:column}
+.l2 .ar:hover{border-color:var(--gold-dp);transform:translateY(-4px)}
+.l2 .ar.big{padding:30px 28px}
+.l2 .ar .who3{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.l2 .ar .av2{width:42px;height:42px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+  background:rgba(210,166,60,.16);border:1px solid var(--gold-dp);color:var(--gold);
+  font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.04em}
+.l2 .ar .en{font-size:14.5px;font-weight:600;color:var(--ink);display:block;line-height:1.3}
+.l2 .ar .er{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);display:block;margin-top:3px}
+.l2 .ar h3{font-size:21px;margin:0 0 9px}
+.l2 .ar.big h3{font-size:26px}
+.l2 .ar p{color:var(--dim);margin:0;font-size:14.5px}
+.l2 .ar .mt{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+.l2 .ar .mt span{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--gold-lt);border:1px solid var(--gold-dp);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.l2 .ar .go2{margin-top:auto;padding-top:18px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--gold);display:inline-flex;align-items:center;gap:7px;align-self:flex-start}
+.l2 .ar .go2::after{content:"→";transition:transform .3s}
+.l2 .ar:hover .go2::after{transform:translateX(4px)}
+.l2 .ar .lz{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--live);
+  display:inline-flex;align-items:center;gap:7px;margin-bottom:14px}
+.l2 .ar .lz b{width:6px;height:6px;border-radius:50%;background:var(--live);animation:l2pulse 2.4s ease-in-out infinite}
+/* Área real mas sem educador: ocupa a mesma linha da ficha do educador, para o cartão não
+   encolher, e não pisca a verde — não há aula a acontecer. */
+.l2 .ar .nt{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  display:inline-flex;align-items:center;gap:7px;margin:0 0 14px;min-height:42px}
+.l2 .ar .nt b{width:6px;height:6px;border-radius:50%;background:var(--gold-dp);flex:none}
+/* A família que ainda não entrega. Sem ouro de fundo, sem botão, sem número inventado. */
+.l2 .soon{margin-top:14px}
+.l2 .ab{border:1px dashed var(--line2);border-radius:16px;padding:20px 22px;background:transparent;transition:border-color .4s}
+.l2 .ab:hover{border-color:var(--faint)}
+.l2 .ab .lb3{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);
+  display:inline-flex;align-items:center;gap:7px;margin-bottom:11px}
+.l2 .ab .lb3 b{width:5px;height:5px;border-radius:50%;background:var(--line2);flex:none}
+.l2 .ab h3{font-size:17px;margin:0 0 7px;color:var(--dim);letter-spacing:-.018em}
+.l2 .ab p{margin:0;font-size:13.5px;color:var(--faint);line-height:1.55}
 .l2 .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
 .l2 .tag{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-lt);border:1px solid var(--gold-dp);border-radius:999px;padding:5px 12px}
 .l2 .certs{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}

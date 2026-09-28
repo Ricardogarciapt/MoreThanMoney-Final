@@ -191,13 +191,13 @@
   .hf-orbit-ring-r { animation:hf-orbit 50s linear infinite reverse; transform-origin:720px 405px; }
 
   /* ── EDUCATION GRID ── */
-  .edu-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; width:100%; max-width:1100px; margin-top:20px; }
-  .edu-card { background:rgba(18,18,18,0.92); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:16px 14px 14px; display:flex; flex-direction:column; align-items:center; text-align:center; transition:border-color .3s,transform .3s; position:relative; overflow:hidden; }
+  .edu-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:11px; width:100%; max-width:1100px; margin-top:12px; }
+  .edu-card { background:rgba(18,18,18,0.92); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:13px 14px 12px; display:flex; flex-direction:column; align-items:center; text-align:center; transition:border-color .3s,transform .3s; position:relative; overflow:hidden; }
   .edu-card::after { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(210,166,60,.04),transparent); opacity:0; transition:opacity .3s; }
   .edu-card:hover { border-color:rgba(210,166,60,.35); transform:translateY(-3px); }
   .edu-card:hover::after { opacity:1; }
   .edu-card.hot { border-color:rgba(210,166,60,.2); background:linear-gradient(135deg,rgba(210,166,60,.07),rgba(20,20,20,0.95)); }
-  .edu-icon { width:48px; height:48px; display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:9px; position:relative; flex-shrink:0; }
+  .edu-icon { width:42px; height:42px; display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:9px; position:relative; flex-shrink:0; }
   .edu-icon::before { content:''; position:absolute; inset:0; border:1px solid rgba(210,166,60,.22); border-radius:11px; transform:rotate(45deg); transition:border-color .3s; }
   .edu-card:hover .edu-icon::before { border-color:rgba(210,166,60,.5); }
   .edu-title { font-size:12.5px; font-weight:700; color:var(--white); margin-bottom:5px; letter-spacing:.01em; }
@@ -205,6 +205,18 @@
   .edu-badge { display:inline-block; font-size:8px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:2px 7px; border-radius:4px; margin-top:9px; }
   .edu-badge.live { background:rgba(34,197,94,.12); color:#4ade80; border:1px solid rgba(34,197,94,.22); }
   .edu-badge.mtm { background:rgba(210,166,60,.1); color:var(--gold); border:1px solid rgba(210,166,60,.22); }
+  /* A área existe mas ainda nao tem educador nem aulas marcadas. Tem de se distinguir a olho
+     do "ao vivo": sem preenchimento, traco interrompido, cinzento. Se ficar igual, mente. */
+  /* A familia que ainda nao entrega vive numa tira, nao em cartoes: ocupa uma linha em vez
+     de tres, e a diferenca de forma diz sozinha que nao e a mesma coisa que o de cima. */
+  .soon-strip { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:9px; margin-top:11px; max-width:1100px; }
+  .soon-lb { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--grey); opacity:.8; margin-right:4px; }
+  .soon-pill { font-size:10.5px; color:var(--grey); border:1px dashed rgba(255,255,255,.18); border-radius:999px; padding:5px 13px; }
+  .edu-badge.abrir { background:transparent; color:var(--grey); border:1px dashed rgba(255,255,255,.2); }
+  .edu-card.abrir { border-style:dashed; border-color:rgba(255,255,255,.12); background:transparent; }
+  .edu-card.abrir .edu-title { color:var(--grey); }
+  .edu-card.abrir .edu-icon { opacity:.45; }
+  .edu-who { font-size:9px; color:var(--gold); letter-spacing:.06em; margin-bottom:5px; font-weight:600; }
   @media(max-width:1100px) { .edu-grid{grid-template-columns:repeat(2,1fr)} }
 
   /* ── IMAGE SLIDES ── */
@@ -1102,7 +1114,7 @@
     <div class="card" style="text-align:center;padding:36px 24px;">
       <div style="font-size:48px;margin-bottom:16px;">📚</div>
       <h3>Aprendizagem</h3>
-      <p style="margin-top:10px;">Cursos de Forex, Cripto, Marketing Digital e IA criados por traders reais. Live sessions com Ricardo Garcia. Academia MTM completa.</p>
+      <p style="margin-top:10px;">Aulas ao vivo em cinco áreas — Forex, Cripto, Social Media e UGC, Mindset e Liderança, Fitness — cada uma com o seu educador e horário semanal. Gravações organizadas em curso, e certificação no fim do Bootcamp.</p>
       <div style="margin-top:16px;font-size:11px;color:var(--gold);font-weight:600;letter-spacing:.08em;text-transform:uppercase;">MoreThanMoney</div>
     </div>
     <div class="card gold" style="text-align:center;padding:36px 24px;">
@@ -1225,63 +1237,62 @@
 
     <div class="edu-card hot">
       <div class="edu-icon">📈</div>
-      <div class="edu-title">Forex</div>
-      <div class="edu-desc">XAU/USD, pares principais, price action e gestão de risco em tempo real</div>
-      <span class="edu-badge live">● Live</span>
+      <div class="edu-title">Forex e metais</div>
+      <div class="edu-who">Ricardo Garcia</div>
+      <div class="edu-desc">XAU/USD e pares principais, dos básicos à mentoria VIP. Cinco salas e sete horários por semana</div>
+      <span class="edu-badge live">● A dar aulas</span>
     </div>
 
     <div class="edu-card hot">
       <div class="edu-icon">🪙</div>
-      <div class="edu-title">Cripto & Stocks</div>
-      <div class="edu-desc">Bitcoin, altcoins, análise on-chain e mercados de acções globais</div>
-      <span class="edu-badge live">● Live</span>
+      <div class="edu-title">Criptomoedas</div>
+      <div class="edu-who">Ruben Pereira</div>
+      <div class="edu-desc">DCA com MTM, Império Cripto e Live Trading Cripto. Três salas, dois horários por semana</div>
+      <span class="edu-badge live">● A dar aulas</span>
     </div>
 
     <div class="edu-card">
       <div class="edu-icon">📱</div>
-      <div class="edu-title">Redes Sociais</div>
-      <div class="edu-desc">Instagram, TikTok, crescimento orgânico, reels e monetização de audiência</div>
-      <span class="edu-badge mtm">MTM</span>
+      <div class="edu-title">Social Media e UGC</div>
+      <div class="edu-who">MTM Social Media &amp; UGC</div>
+      <div class="edu-desc">Marca pessoal, como começar nas redes e como produzir. Começou agora: uma sala, um horário semanal</div>
+      <span class="edu-badge mtm">Começou agora</span>
     </div>
 
     <div class="edu-card">
       <div class="edu-icon">🧠</div>
-      <div class="edu-title">Mindset</div>
-      <div class="edu-desc">Psicologia de sucesso, disciplina, foco mental e hábitos vencedores</div>
-      <span class="edu-badge mtm">MTM</span>
-    </div>
-
-    <div class="edu-card">
-      <div class="edu-icon">🏆</div>
-      <div class="edu-title">Liderança</div>
-      <div class="edu-desc">Gestão de equipas, comunicação de impacto e influência com propósito</div>
-      <span class="edu-badge mtm">MTM</span>
-    </div>
-
-    <div class="edu-card hot">
-      <div class="edu-icon">💡</div>
-      <div class="edu-title">Marketing Digital</div>
-      <div class="edu-desc">Funis de vendas, copywriting, publicidade e automações de crescimento</div>
-      <span class="edu-badge live">● Live</span>
+      <div class="edu-title">Mindset e Liderança</div>
+      <div class="edu-who">MTM Mindset &amp; Liderança</div>
+      <div class="edu-desc">Disciplina, foco e conduzir pessoas. Começou agora, com acesso livre e gravações a seguir</div>
+      <span class="edu-badge mtm">Começou agora</span>
     </div>
 
     <div class="edu-card">
       <div class="edu-icon">💪</div>
-      <div class="edu-title">Fitness</div>
-      <div class="edu-desc">Treino, nutrição, performance física e bem-estar integral</div>
-      <span class="edu-badge mtm">MTM</span>
+      <div class="edu-title">Fitness e Bem-Estar</div>
+      <div class="edu-who">MTM Fitness &amp; Bem-Estar</div>
+      <div class="edu-desc">Treino, nutrição e hábitos. Começou agora, com três horários por semana já marcados</div>
+      <span class="edu-badge mtm">Começou agora</span>
     </div>
 
     <div class="edu-card">
-      <div class="edu-icon">🤖</div>
-      <div class="edu-title">Inteligência Artificial</div>
-      <div class="edu-desc">ChatGPT, automações com IA e ferramentas de produtividade avançadas</div>
-      <span class="edu-badge mtm">MTM</span>
+      <div class="edu-icon">📊</div>
+      <div class="edu-title">Ações e ETF</div>
+      <div class="edu-desc">Sem aulas próprias: oito ETF no portefólio, seis ações no Terminal com IA, canal de chat e análise diária</div>
+      <span class="edu-badge mtm">Sem educador</span>
     </div>
 
   </div>
 
-  <p style="font-size:11px;color:var(--grey);margin-top:14px;text-align:center;position:relative;z-index:3;">+500 horas de conteúdo disponível · Live sessions semanais com educadores especializados · Acesso imediato · 100% remoto</p>
+  <div class="soon-strip" style="position:relative;z-index:3;">
+    <span class="soon-lb">Em preparação · academia criada, à espera de educador</span>
+    <span class="soon-pill">🏠 Imobiliário</span>
+    <span class="soon-pill">🤖 Inteligência Artificial</span>
+    <span class="soon-pill">🤝 Network Marketing</span>
+  </div>
+
+  <p style="font-size:11px;color:var(--grey);margin-top:10px;text-align:center;position:relative;z-index:3;">Cinco áreas com educador e horário semanal · gravações organizadas em curso · legendas ao vivo em cinco idiomas · as áreas em preparação abrem quando houver educador, e até lá ficam marcadas assim</p>
+
 </div>
 
 <!-- ════════════════════════════════════════

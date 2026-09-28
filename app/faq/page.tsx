@@ -89,6 +89,108 @@ export default function FAQPage() {
               </Accordion>
             </section>
 
+            {/* As áreas que não são trading. Os números aqui (salas, horários, educadores) são
+                contados em lms_academies / lms_educators / lms_streams — não estimados. Se
+                acrescentares uma área, confirma na base antes: uma área anunciada que a primeira
+                visita desmente custa mais do que a área que faltava anunciar. */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
+                Além do trading
+              </h2>
+              <Accordion type="single" collapsible className="space-y-3">
+                <AccordionItem value="alem-1" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Isto é só para quem quer fazer trading?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Não. Há aulas ao vivo em cinco áreas, cada uma com o seu educador e o seu horário semanal: Forex
+                    com o Ricardo Garcia, Criptomoedas com o Ruben Pereira, e Social Media e UGC, Mindset e Liderança
+                    e Fitness e Bem-Estar com os educadores da casa. O trading é a área mais cheia — cinco salas e sete
+                    horários por semana — e as outras três começaram agora, com uma sala cada. Dizemos isto assim
+                    porque é assim: quem chega à espera de um catálogo cheio nas áreas novas vai ficar desiludido, e
+                    preferimos que saibas antes de pagares.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="alem-2" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Quais são as áreas e quem dá as aulas?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    <span className="block mb-2">A dar aulas, com horário semanal:</span>
+                    <ul className="list-disc pl-5 space-y-1 mb-3">
+                      <li><b className="text-white">Forex e metais</b> — Ricardo Garcia. Cinco salas, dos básicos à mentoria VIP, sete horários por semana e gravações organizadas em curso.</li>
+                      <li><b className="text-white">Criptomoedas</b> — Ruben Pereira. Três salas (DCA com MTM, Império Cripto, Live Trading Cripto), dois horários por semana.</li>
+                      <li><b className="text-white">Social Media e UGC</b> — MTM Social Media &amp; UGC. Começou agora: uma sala, um horário semanal.</li>
+                      <li><b className="text-white">Mindset e Liderança</b> — MTM Mindset &amp; Liderança. Começou agora, com acesso livre.</li>
+                      <li><b className="text-white">Fitness e Bem-Estar</b> — MTM Fitness &amp; Bem-Estar. Começou agora, três horários por semana.</li>
+                    </ul>
+                    <span className="block mb-2">
+                      Em preparação, com a academia criada e à espera de educador: Imobiliário, Inteligência Artificial e
+                      Network Marketing. Não damos data porque ainda não a temos.
+                    </span>
+                    Ações e ETF não têm aulas próprias nem educador atribuído: o que existe é a carteira de oito ETF
+                    acompanhada ao vivo, seis ações no Terminal com IA, um canal de chat dedicado e a análise de
+                    reforço publicada todos os dias.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="alem-3" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Porque é que há áreas anunciadas sem aulas nenhumas?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Porque a academia já está criada do nosso lado e falta-lhe o educador certo. Podíamos não as
+                    mostrar, mas então não saberias que a casa vai por aí; podíamos mostrá-las como se já dessem aulas,
+                    e aí estaríamos a mentir-te. Ficam marcadas como <b className="text-white">em preparação</b>, sem
+                    data e sem botão para lado nenhum. Quando abrirem, abrem com nome de educador e horário — como
+                    todas as outras.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="alem-4" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Quero criar marca pessoal e vender o que sei. A MTM ajuda-me nisso?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Ajuda em duas coisas concretas, e convém saber quais. Primeira: a área de Social Media e UGC tem
+                    aulas ao vivo sobre como começar nas redes e como produzir, mais o estúdio{" "}
+                    <b className="text-white">MTM Social</b>, onde fazes cartões, carrosséis e capas de reel assinados
+                    com a <i>tua</i> marca — o teu nome, a tua arroba, o teu logótipo. Segunda: se já tens conteúdo
+                    para vender, alojamos, promovemos e cobramos por ti, e ficas com 90–95% do que vender, sem entrada
+                    e sem exclusividade. O que <b className="text-white">não</b> temos hoje é um construtor de
+                    portefólio de criador nem uma bolsa de marcas que te arranje parcerias pagas — se alguém te disser
+                    o contrário, está a inventar.{" "}
+                    <Link href="/criadores" className="text-[#D2A63C] hover:underline">Ver o programa de criadores</Link>.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="alem-5" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    O que é a parceria IB, e como entro?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    IB não é um curso nem um pack: é a parceria de introdução junto da corretora. Quem já traz volume
+                    — o seu ou o das pessoas que acompanha — entra na nossa rede e a comissão da corretora passa a ser
+                    paga do nosso lado, com a carteira visível no backoffice. Não há formulário nem botão de adesão, e
+                    isso é de propósito: entra-se por conversa, depois de percebermos o que já tens. O primeiro passo
+                    é abrires conta pela nossa recomendação.{" "}
+                    <Link href="/abrir-conta" className="text-[#D2A63C] hover:underline">Abrir conta</Link>. Se o que
+                    procuras é ganhar por trazer amigos, isso é outra coisa e é imediato:{" "}
+                    <Link href="/convida" className="text-[#D2A63C] hover:underline">Convida &amp; Ganha</Link>.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="alem-6" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Consigo ganhar aqui sem abrir uma única ordem?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Consegues, por duas vias já abertas. Se produzes conteúdo, alojamos e vendemos o teu curso ou
+                    mentoria e ficas com 90–95% do que vender — candidatas-te e falamos. Se trazes pessoas, o Convida
+                    &amp; Ganha dá-te dias de Premium por cada amigo que entre pelo teu link, com comissão sobre as
+                    subscrições que resultem. Nenhuma das duas tem valor garantido: depende do que vendes e de quem
+                    trazes, e há meses em que dá zero.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </section>
+
             {/* Planos e Subscrições */}
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
@@ -164,8 +266,8 @@ export default function FAQPage() {
                     O que é a App MTM System?
                   </AccordionTrigger>
                   <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
-                    A App MTM System é a aplicação móvel disponível para iOS e Android. Tens acesso ao portfólio
-                    cripto e de ações da MTM, Live Sessions, chat da comunidade, mentor AI, scanners,
+                    A App MTM System é a aplicação móvel disponível para iOS e Android. Tens acesso aos portefólios de
+                    cripto e de ETF da MTM, Live Sessions, chat da comunidade, mentor AI, scanners,
                     checklist de trading e muito mais — tudo no teu telemóvel.
                   </AccordionContent>
                 </AccordionItem>
