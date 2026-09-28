@@ -103,12 +103,13 @@ export default function FAQPage() {
                     Isto é só para quem quer fazer trading?
                   </AccordionTrigger>
                   <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
-                    Não. Há aulas ao vivo em cinco áreas, cada uma com o seu educador e o seu horário semanal: Forex
-                    com o Ricardo Garcia, Criptomoedas com o Ruben Pereira, e Social Media e UGC, Mindset e Liderança
-                    e Fitness e Bem-Estar com os educadores da casa. O trading é a área mais cheia — cinco salas e sete
-                    horários por semana — e as outras três começaram agora, com uma sala cada. Dizemos isto assim
-                    porque é assim: quem chega à espera de um catálogo cheio nas áreas novas vai ficar desiludido, e
-                    preferimos que saibas antes de pagares.
+Não. Há duas formas de ganhar dinheiro aqui, e aulas ao vivo nas duas. Com os mercados —{" "}
+                    <b className="text-white">MTM Markets</b> — tens Forex com o Ricardo Garcia e Criptomoedas com o
+                    Ruben Pereira. Com o que sabes e com quem conheces — <b className="text-white">MTM Content &amp;
+                    Business</b> — tens Social Media e UGC e Mindset e Liderança, com os educadores da casa. O trading
+                    é a área mais cheia, com cinco salas e sete horários por semana; as outras duas acabaram de
+                    começar, com uma sala cada. Se entrares à espera de um arquivo cheio de aulas nessas duas, vais
+                    ficar desiludido — por isso preferimos dizer-to antes de pagares.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="alem-2" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
@@ -116,21 +117,24 @@ export default function FAQPage() {
                     Quais são as áreas e quem dá as aulas?
                   </AccordionTrigger>
                   <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
-                    <span className="block mb-2">A dar aulas, com horário semanal:</span>
+                    <span className="block mb-2">
+                      <b className="text-white">MTM Markets</b> — os mercados e o dinheiro:
+                    </span>
                     <ul className="list-disc pl-5 space-y-1 mb-3">
                       <li><b className="text-white">Forex e metais</b> — Ricardo Garcia. Cinco salas, dos básicos à mentoria VIP, sete horários por semana e gravações organizadas em curso.</li>
                       <li><b className="text-white">Criptomoedas</b> — Ruben Pereira. Três salas (DCA com MTM, Império Cripto, Live Trading Cripto), dois horários por semana.</li>
-                      <li><b className="text-white">Social Media e UGC</b> — MTM Social Media &amp; UGC. Começou agora: uma sala, um horário semanal.</li>
-                      <li><b className="text-white">Mindset e Liderança</b> — MTM Mindset &amp; Liderança. Começou agora, com acesso livre.</li>
-                      <li><b className="text-white">Fitness e Bem-Estar</b> — MTM Fitness &amp; Bem-Estar. Começou agora, três horários por semana.</li>
+                      <li><b className="text-white">Ações e ETF</b> — sem aulas próprias e sem educador atribuído. Existe a carteira de oito ETF acompanhada ao vivo, seis ações no Terminal com IA, um canal de chat dedicado e a análise de reforço publicada todos os dias.</li>
                     </ul>
                     <span className="block mb-2">
-                      Em preparação, com a academia criada e à espera de educador: Imobiliário, Inteligência Artificial e
-                      Network Marketing. Não damos data porque ainda não a temos.
+                      <b className="text-white">MTM Content &amp; Business</b> — audiência e negócio:
                     </span>
-                    Ações e ETF não têm aulas próprias nem educador atribuído: o que existe é a carteira de oito ETF
-                    acompanhada ao vivo, seis ações no Terminal com IA, um canal de chat dedicado e a análise de
-                    reforço publicada todos os dias.
+                    <ul className="list-disc pl-5 space-y-1 mb-3">
+                      <li><b className="text-white">Social Media e UGC</b> — MTM Social Media &amp; UGC. Começou agora: uma sala, um horário semanal.</li>
+                      <li><b className="text-white">Mindset e Liderança</b> — MTM Mindset &amp; Liderança. Começou agora, com acesso livre.</li>
+                    </ul>
+Em preparação, com a academia criada e à espera de educador: Imobiliário (em Markets), Inteligência
+                    Artificial e Network Marketing (em Content &amp; Business). Não damos data porque ainda não a
+                    temos.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="alem-3" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
@@ -138,11 +142,10 @@ export default function FAQPage() {
                     Porque é que há áreas anunciadas sem aulas nenhumas?
                   </AccordionTrigger>
                   <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
-                    Porque a academia já está criada do nosso lado e falta-lhe o educador certo. Podíamos não as
-                    mostrar, mas então não saberias que a casa vai por aí; podíamos mostrá-las como se já dessem aulas,
-                    e aí estaríamos a mentir-te. Ficam marcadas como <b className="text-white">em preparação</b>, sem
-                    data e sem botão para lado nenhum. Quando abrirem, abrem com nome de educador e horário — como
-                    todas as outras.
+                    Porque queremos que saibas para onde a casa vai, e falta-lhes quem as dê. Podíamos não as
+                    mostrar, e ficavas sem saber; podíamos mostrá-las como se já dessem aulas, e aí estaríamos a
+                    mentir-te. Não damos data porque ainda não a temos. Quando abrirem, abrem como todas as outras:
+                    com o nome de quem dá as aulas e com o horário da semana.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="alem-4" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
@@ -168,9 +171,9 @@ export default function FAQPage() {
                   <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
                     IB não é um curso nem um pack: é a parceria de introdução junto da corretora. Quem já traz volume
                     — o seu ou o das pessoas que acompanha — entra na nossa rede e a comissão da corretora passa a ser
-                    paga do nosso lado, com a carteira visível no backoffice. Não há formulário nem botão de adesão, e
-                    isso é de propósito: entra-se por conversa, depois de percebermos o que já tens. O primeiro passo
-                    é abrires conta pela nossa recomendação.{" "}
+                    paga do nosso lado, e passas a ver as contas que trouxeste e o que rendem. Não há formulário nem
+                    botão de adesão: entra-se por conversa, depois de percebermos o que já tens. O primeiro passo é
+                    abrires conta pela nossa recomendação.{" "}
                     <Link href="/abrir-conta" className="text-[#D2A63C] hover:underline">Abrir conta</Link>. Se o que
                     procuras é ganhar por trazer amigos, isso é outra coisa e é imediato:{" "}
                     <Link href="/convida" className="text-[#D2A63C] hover:underline">Convida &amp; Ganha</Link>.
@@ -506,8 +509,8 @@ export default function FAQPage() {
                       backoffice.morethanmoney.pt
                     </a>
                     . Entras com o mesmo login do site e vês o teu percurso, as tuas vendas e o teu extracto — o
-                    teu, e só o teu. O acesso depende dos papéis que tens atribuídos; se a tua conta não tiver
-                    nenhum, a página diz-te isso e com quem falar.
+                    teu, e só o teu. Se a tua conta ainda não tiver acesso, ficas a saber logo à entrada com quem
+                    falar para o desbloquear.
                   </AccordionContent>
                 </AccordionItem>
 

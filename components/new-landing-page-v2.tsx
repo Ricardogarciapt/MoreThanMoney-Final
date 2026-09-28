@@ -24,8 +24,8 @@ import { SNAPSHOT, type LandingStats } from "@/lib/landing-stats"
 const STRIP = [
   "Tap to Trade", "MTM Copy", "Sensei", "GoldKiller", "Aurum Flow", "MTM Scanner", "Alertas MTM",
   "Terminal com IA", "Portefólios cripto", "DCA inteligente", "Bootcamp 30h", "Certificação oficial",
-  "Sessões ao vivo", "Feed da comunidade", "Mentor de IA", "Criadores UGC", "Parcerias IB", "Mindset e fitness",
-  "Marca pessoal", "Social Media e UGC", "Mindset e Liderança", "Fitness e Bem-Estar", "Ações e ETF",
+  "Sessões ao vivo", "Feed da comunidade", "Mentor de IA", "Criadores UGC", "Parcerias IB",
+  "Marca pessoal", "Social Media e UGC", "Mindset e Liderança", "Ações e ETF",
   "Estúdio MTM Social", "Convida e ganha",
 ]
 
@@ -69,47 +69,85 @@ const CHAPTERS: Array<[string, string]> = [
  * cartão desenha-se sem a linha do educador, com o que a sustenta em `meta`.
  * Se acrescentares uma área aqui, confirma primeiro na base — não pelo que era intenção.
  */
-type Area = { t: string; edu: string | null; d: string; meta: string[]; href?: string; cta?: string }
+type Pilar = "markets" | "content"
+type Area = { p: Pilar; t: string; edu: string | null; d: string; meta: string[]; href?: string; cta?: string }
+
+/**
+ * OS PILARES.
+ *
+ * Dois, com os nomes que o dono deu. Chegou a haver um terceiro desenhado — vida e bem-estar —
+ * porque o Fitness não é mercados nem é negócio; o dono decidiu que o Fitness ainda não entra
+ * nas páginas, e sem ele o terceiro pilar ficava com uma academia só, que é um órfão com título.
+ * Por isso o Mindset e Liderança fica aqui, no Content & Business, e encaixa: é a cabeça e a
+ * forma de conduzir pessoas de quem está a construir audiência e equipa.
+ *
+ * QUANDO O FITNESS VOLTAR: abre-se o terceiro pilar (MTM Life) e o Mindset e Liderança move-se
+ * para lá com ele. Não se põe o Fitness no Content — seria arrumá-lo à nossa conveniência em vez
+ * de dizer o que ele é, e a casa já os emparelhou sozinha (a rota chama-se /mindset-fitness).
+ */
+const PILARES: Array<{ id: Pilar; nome: string; def: string; mais: Array<{ l: string; h?: string }> }> = [
+  {
+    id: "markets", nome: "MTM Markets", def: "l2.pil1D",
+    mais: [
+      { l: "Sinais e Tap to Trade", h: "#executar" }, { l: "MTM Copy", h: "#executar" },
+      { l: "Quatro scanners", h: "/scanner" }, { l: "Terminal com IA", h: "/mtm-terminal" },
+      { l: "Portefólios e DCA", h: "/portfolios" }, { l: "Alertas MTM", h: "/alertas-mtm" },
+      { l: "MTM Auto", h: "/mtmauto" }, { l: "MTM Funded", h: "/mtmfunded" },
+      { l: "Certificação", h: "/avaliacoes" },
+    ],
+  },
+  {
+    id: "content", nome: "MTM Content & Business", def: "l2.pil2D",
+    mais: [
+      { l: "Programa de criadores", h: "/criadores" }, { l: "Convida e ganha", h: "/convida" },
+      { l: "Parceria IB", h: "/abrir-conta" }, { l: "Material de marketing", h: "/apresentacao" },
+      { l: "Vagas na equipa", h: "/work" },
+      // Sem link de propósito: o estúdio é ferramenta de membro e corre dentro da app — mandar
+      // para lá quem ainda não entrou dá um painel vazio.
+      { l: "Estúdio MTM Social (na app)" },
+    ],
+  },
+]
 
 const AREAS_VIVAS: Area[] = [
   {
+    p: "markets",
     t: "Forex e metais", edu: "Ricardo Garcia",
     d: "Regressão de tendências e scanners, ao vivo. É a divisão mais cheia da casa: cinco salas, das básicas à mentoria VIP, e gravações organizadas em curso para quem falta.",
     meta: ["5 salas", "7 horários por semana", "gravações"], href: "/live-sessions",
   },
   {
+    p: "markets",
     t: "Criptomoedas", edu: "Ruben Pereira",
     d: "Três salas próprias — DCA com MTM, Império Cripto e Live Trading Cripto — ligadas aos portefólios e à análise de reforço mensal que corre no site.",
     meta: ["3 salas", "2 horários por semana", "gravações"], href: "/live-sessions",
   },
   {
+    p: "content",
     t: "Social Media e UGC", edu: "MTM Social Media & UGC",
     d: "Marca pessoal e conteúdo: como começar nas redes e como produzir. Começou agora — uma sala, um horário semanal. Tens ainda o estúdio MTM Social para fazeres as tuas peças com a tua marca, e um canal só desta conversa.",
     meta: ["começou agora", "1 horário por semana", "estúdio MTM Social"], href: "/live-sessions",
   },
   {
+    p: "content",
     t: "Mindset e Liderança", edu: "MTM Mindset & Liderança",
     d: "A cabeça, a disciplina e a forma de conduzir pessoas. Começou agora, com uma sala e as gravações a seguir — e esta abre-se sem pagar nada.",
     meta: ["começou agora", "acesso livre", "gravações"], href: "/live-sessions",
   },
   {
-    t: "Fitness e Bem-Estar", edu: "MTM Fitness & Bem-Estar",
-    d: "Treino, hábitos e performance física. Começou agora, com três horários por semana já marcados. Do lado das ferramentas tens o registo de treinos, refeições e peso.",
-    meta: ["começou agora", "3 horários por semana"], href: "/live-sessions",
-  },
-  {
+    p: "markets",
     t: "Ações e ETF", edu: null,
-    d: "Sem aulas próprias e sem educador atribuído. O que existe é a carteira de oito ETF acompanhada ao vivo, seis ações no Terminal com IA, um canal de chat dedicado e a análise de reforço publicada todos os dias.",
+    d: "Ainda não tem aulas nem educador. O que tens é a carteira de oito ETF a preço ao vivo, seis ações para analisares no Terminal com IA, um canal de conversa só disto, e todos os dias a leitura de onde vale a pena reforçar.",
     meta: ["8 ETF", "6 ações no Terminal", "canal e análise diária"],
     href: "/portfolios", cta: "Ver os portefólios",
   },
 ]
 
 /** Academias criadas na base, ainda sem educador e sem sala. Sem data — não temos nenhuma. */
-const AREAS_A_ABRIR: Array<{ t: string; d: string }> = [
-  { t: "Imobiliário", d: "Educação imobiliária e estratégias. Academia criada, à espera de educador." },
-  { t: "Inteligência Artificial", d: "Ferramentas de IA aplicadas ao negócio. Academia criada, à espera de educador." },
-  { t: "Network Marketing", d: "Fundamentos, prospeção, comunicação e crescimento de equipas. Academia criada, à espera de educador." },
+const AREAS_A_ABRIR: Array<{ p: Pilar; t: string; d: string }> = [
+  { p: "markets", t: "Imobiliário", d: "Comprar, arrendar e viver de rendas. Falta-nos quem a dê — quando aparecer, abre com nome e horário." },
+  { p: "content", t: "Inteligência Artificial", d: "Pôr a IA a trabalhar no teu negócio. Falta-nos quem a dê — quando aparecer, abre com nome e horário." },
+  { p: "content", t: "Network Marketing", d: "Prospetar, comunicar e fazer crescer uma equipa. Falta-nos quem a dê — quando aparecer, abre com nome e horário." },
 ]
 
 const sig = (n: string) => {
@@ -636,31 +674,67 @@ export default function NewLandingPage() {
       <h2>{t("l2.areasTitle")}<br />{t("l2.areasTitle2")}</h2>
       <p>{t("l2.areasSub")}</p></div>
 
-    <p className="ch r" style={{ margin: "0 0 16px" }}>{t("l2.areasFam1")}</p>
-    <p className="r d1" style={{ margin: "0 0 22px", color: "var(--faint)", fontSize: "14px" }}>{t("l2.areasFam1Sub")}</p>
-    <div className="aw">
-      <AreaCard a={AREAS_VIVAS[0]} big t={t} />
-      <AreaCard a={AREAS_VIVAS[1]} big t={t} />
-    </div>
-    <div className="aw3">
-      {AREAS_VIVAS.slice(2, 5).map((a) => (<AreaCard key={a.t} a={a} t={t} />))}
-    </div>
-    <div className="aw3" style={{ gridTemplateColumns: "1fr" }}>
-      <AreaCard a={AREAS_VIVAS[5]} t={t} />
-    </div>
+    {PILARES.map((pil, i) => {
+      const vivas = AREAS_VIVAS.filter((a) => a.p === pil.id)
+      const comEdu = vivas.filter((a) => a.edu)
+      const semEdu = vivas.filter((a) => !a.edu)
+      const abrir = AREAS_A_ABRIR.filter((a) => a.p === pil.id)
+      return (
+        <div className={`pil p${i + 1}`} key={pil.id}>
+          <div className="r">
+            <p className="pil__n"><b>{String(i + 1).padStart(2, "0")}</b>{pil.nome}</p>
+            <p className="pil__d">{t(pil.def)}</p>
+            <p className="pil__c">
+              {comEdu.length > 0 && <span>{t("l2.pilCountEdu").replace("{n}", String(comEdu.length))}</span>}
+              {semEdu.length > 0 && <span>{t("l2.pilCountNoEdu").replace("{n}", String(semEdu.length))}</span>}
+              {abrir.length > 0 && <span>{t("l2.pilCountSoon").replace("{n}", String(abrir.length))}</span>}
+            </p>
+          </div>
 
-    <p className="ch r" style={{ margin: "58px 0 16px" }}>{t("l2.areasFam2")}</p>
-    <p className="r d1" style={{ margin: "0 0 22px", color: "var(--faint)", fontSize: "14px" }}>{t("l2.areasFam2Sub")}</p>
-    <div className="aw3 soon r d2">
-      {AREAS_A_ABRIR.map((a) => (
-        <div className="ab" key={a.t}>
-          <p className="lb3"><b />{t("l2.areasSoonTag")}</p>
-          <h3>{a.t}</h3>
-          <p>{a.d}</p>
+          {comEdu.length > 0 && (
+            <>
+              <p className="pil__sub r">{t("l2.areasFam1")}</p>
+              <div className={comEdu.length === 1 ? "aw3" : "aw"} style={comEdu.length === 1 ? { gridTemplateColumns: "1fr", marginTop: 0 } : undefined}>
+                {comEdu.map((a) => (<AreaCard key={a.t} a={a} big={a.meta.length > 2 && comEdu.length > 1} t={t} />))}
+              </div>
+            </>
+          )}
+
+          {/* Área real mas sem educador: linha própria, a largura toda. Fica ao lado das que
+              têm aulas porque já existe, e separada porque não é a mesma coisa. */}
+          {semEdu.map((a) => (
+            <div className="aw3" style={{ gridTemplateColumns: "1fr" }} key={a.t}>
+              <AreaCard a={a} t={t} />
+            </div>
+          ))}
+
+          {abrir.length > 0 && (
+            <>
+              <p className="pil__sub r">{t("l2.areasFam2")}</p>
+              <div
+                className="aw3 soon r d2"
+                style={{ marginTop: 0, gridTemplateColumns: abrir.length < 3 ? `repeat(${abrir.length},1fr)` : undefined }}
+              >
+                {abrir.map((a) => (
+                  <div className="ab" key={a.t}>
+                    <p className="lb3"><b />{t("l2.areasSoonTag")}</p>
+                    <h3>{a.t}</h3>
+                    <p>{a.d}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <p className="also r d3">
+            <em>{t("l2.pilAlso")}</em>
+            {pil.mais.map((m) => (m.h ? <a key={m.l} href={m.h}>{m.l}</a> : <span key={m.l}>{m.l}</span>))}
+          </p>
         </div>
-      ))}
-    </div>
-    <p className="r d3" style={{ marginTop: "22px", fontSize: "14px", color: "var(--dim)" }}>
+      )
+    })}
+
+    <p className="r d3" style={{ marginTop: "40px", fontSize: "14px", color: "var(--dim)" }}>
       {t("l2.areasHint")}{" "}
       <a href="/criadores" style={{ color: "var(--gold-lt)", borderBottom: "1px solid var(--gold-dp)" }}>{t("l2.areasHintLink")}</a>.
     </p>

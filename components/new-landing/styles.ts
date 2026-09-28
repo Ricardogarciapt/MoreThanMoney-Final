@@ -155,6 +155,32 @@ export const LANDING_CSS = String.raw`
 }
 .l2 .split h2{font-size:clamp(26px,3.6vw,40px)}
 .l2 .split p{color:var(--dim);font-size:16.5px}
+/* ─── Pilares (#areas) ────────────────────────────────────────────────────────
+   Três blocos, e a grelha passa a ter duas dimensões: pilar (a que parte da casa
+   pertence) e família (já dá aulas / está a abrir). A 375px não há espaço para as
+   duas ao mesmo tempo, por isso em telemóvel a coisa fica LINEAR e é o pilar que dá
+   a ordem: título do pilar → o que já acontece → o que está a abrir. */
+.l2 .pil{border-top:1px solid var(--line);padding-top:34px;margin-top:48px}
+.l2 .pil.p1{border-top:0;margin-top:0;padding-top:0}
+.l2 .pil__n{font-family:var(--disp);font-size:clamp(23px,3.1vw,32px);font-weight:800;letter-spacing:-.03em;
+  margin:0;display:flex;align-items:baseline;gap:13px}
+.l2 .pil__n b{font-family:var(--mono);font-size:11px;font-weight:400;letter-spacing:.2em;color:var(--gold);flex:none}
+.l2 .pil__d{color:var(--dim);font-size:15.5px;margin:10px 0 0;max-width:64ch}
+.l2 .pil__c{display:flex;flex-wrap:wrap;gap:7px;margin:15px 0 0}
+.l2 .pil__c span{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--faint);border:1px solid var(--line2);border-radius:999px;padding:4px 10px}
+.l2 .pil__sub{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--faint);margin:28px 0 13px}
+/* "Também neste pilar": o que já vive noutras secções da página. Serve para dar corpo ao
+   pilar sem repetir o catálogo — e um pilar magro fica magro, que é informação. */
+.l2 .also{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;align-items:center}
+.l2 .also em{font-style:normal;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);margin-right:3px}
+.l2 .also span, .l2 .also a{font-size:12.5px;border-radius:999px;padding:5px 12px;
+  border:1px solid var(--line);color:var(--dim);background:rgba(255,255,255,.02)}
+.l2 .also a{color:var(--gold-lt);border-color:var(--gold-dp)}
+.l2 .also a:hover{background:rgba(210,166,60,.1)}
+
 /* ─── Áreas (#areas) ──────────────────────────────────────────────────────────
    Duas famílias na mesma secção, e a diferença tem de ler-se sem ler o texto:
    .ar = já dá aulas (painel cheio, ouro, nome do educador, link);
