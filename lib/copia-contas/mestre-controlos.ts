@@ -278,6 +278,53 @@ export const CONTROLOS_MESTRE: Controlo[] = [
     lidoPor: ['lib/mestres/decisao.ts:motivoExposicao'],
     nota: 'Somado entre todas as estratégias e o T2T. Uma posição sem SL conhecido conta pelo pior caso (2 %), nunca por zero. Por omissão 6 %.',
   },
+  // ── as travas da conta que RECEBE, por tipo de conta (lib/travas-por-tipo-de-conta.ts) ────
+  // Estão neste quadro pela mesma razão que `max_posicoes`: o gestor tem de ver a trava inteira num
+  // sítio. Mas não são da mestre — são da conta de destino, e o limite depende do TIPO dela.
+  {
+    chave: 'travas.financiada',
+    rotulo: 'Conta financiada: perda diária 3 % · acumulada 6 %',
+    coluna: 'site_settings.travas_por_tipo_de_conta.financiada',
+    grupo: 'risco',
+    estado: 'aplicado',
+    lidoPor: [
+      'lib/travas-por-tipo-de-conta.ts:travaDaConta',
+      'lib/mtmfunded/simulado/travas-tipo.ts:exigirTravaDoTipo → execucao.ts:abrirPosicao e criarPendente (WebTrader, webhook, T2T, cópia, OCO, inverter)',
+      'lib/mestres/servidor/trava-tipo-conta.ts:travaDaContaDestino → ganchos.ts:bloqueioAbertura (motor da cópia)',
+    ],
+    nota: 'Drawdown diário E acumulado são regra de PROP FIRM: só a conta financiada os tem. Bloqueia entradas novas e NUNCA as saídas — parciais, BE, trailing e fechos passam sempre (guarda em lib/__tests__/travas-por-tipo-de-conta.check.ts). Sem a migração 156 os valores são os do código (3 %/6 %): o que falta é poder afiná-los sem publicar.',
+  },
+  {
+    chave: 'travas.real',
+    rotulo: 'Conta real: perda diária 30 % · SL máximo 95 % da banca',
+    coluna: 'site_settings.travas_por_tipo_de_conta.real',
+    grupo: 'risco',
+    estado: 'aplicado',
+    lidoPor: [
+      'lib/travas-por-tipo-de-conta.ts:travaDaConta e slAcimaDaBanca',
+      'lib/mtmfunded/simulado/execucao.ts:abrirPosicao (o tecto de SL, com o risco em USD já calculado)',
+      'lib/mestres/servidor/trava-tipo-conta.ts:travaDaContaDestino → ganchos.ts:bloqueioAbertura',
+    ],
+    nota: 'A conta real NÃO tem drawdown global nem margem livre mínima — são regra de prop firm, e o dono foi explícito (2026-09-29). O tecto de SL aplica-se a cada entrada, à abertura, e devolve 422 com o motivo no ticket.',
+  },
+  {
+    chave: 'travas.margemLivreMinPct',
+    rotulo: 'Margem livre mínima da conta financiada (%)',
+    coluna: 'site_settings.travas_por_tipo_de_conta.financiada.margemLivreMinPct',
+    grupo: 'risco',
+    estado: 'nao-aplicado',
+    lidoPor: [],
+    nota: 'O motor lê-a (travaDoTipo mede-a), mas está a NULL: nenhuma percentagem foi dada, e inventar uma era recusar entradas por uma regra imaginada. Enquanto estiver NULL não trava nada — pôr um número liga-a sem mexer em código.',
+  },
+  {
+    chave: 'travas.ancora_dia',
+    rotulo: 'Âncora do dia das contas de corretora',
+    coluna: 'mestres_contas.ancora_dia',
+    grupo: 'risco',
+    estado: 'nao-aplicado',
+    lidoPor: [],
+    nota: 'A COLUNA AINDA NÃO EXISTE (migração 156 escrita e não aplicada), por isso tem ZERO leitores com dados. Quem faz o trabalho dela nas contas SIMULADAS é `mtm_trading_accounts.sim_ancora_dia`, mantida pelo motor — e nessas a trava diária já funciona. Nas contas de CORRETORA, sem esta coluna, o motor da cópia mede a perda acumulada mas desliga a diária de propósito: medir «hoje» contra a linha de partida era medir o acumulado com outro nome.',
+  },
   {
     chave: 'max_atraso_abertura_s',
     rotulo: 'Atraso máximo de abertura (s)',

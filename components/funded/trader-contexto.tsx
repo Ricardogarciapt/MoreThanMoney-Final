@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react"
 import { estadoEmFrase } from "@/lib/webtrader/textos"
-import { AlertTriangle, Eye, type LucideIcon } from "lucide-react"
+import { AlertTriangle, Eye, ShieldCheck, type LucideIcon } from "lucide-react"
 import type { MapaPrecos } from "@/lib/mtmfunded/simulado/matematica"
 import type { LimitesConta } from "@/lib/mtmfunded/simulado/ordens"
 import { gestaoDaLinha } from "@/lib/mtmfunded/simulado/avancadas"
@@ -12,6 +12,8 @@ import type { Prefill } from "./funded-ticket"
 import type { AlertaGrafico, OrdemGrafico, PosicaoGrafico } from "./grafico-tipos"
 import { RascunhoProvider, useRascunho, type PedidoOrdem } from "./rascunho-ordem"
 import ModalSinal from "./modal-sinal"
+import ModalTravas from "./modal-travas"
+import { textoDaFolga } from "@/lib/travas-por-tipo-de-conta"
 import type { useAlertas } from "./funded-alertas"
 import type { useDiario } from "./funded-diario"
 
@@ -207,8 +209,43 @@ export function FaixaPrefill({ t }: { t: TraderBase }) {
 /** Avisos da conta simulada: investor, conta não activa, sem preço. */
 export function AvisosConta({ dados: t_dados, vivo }: { dados: Estado; vivo: VivoConta }) {
   const c = t_dados.conta
+  const [travasAbertas, setTravasAbertas] = useState(false)
+  /**
+   * A trava do tipo de conta (financiada 3 %/6 %, real 30 %) vem do servidor em `dados.travas` — o
+   * mesmo veredicto que recusa a ordem. A faixa só aparece quando há travas nesta conta: numa conta
+   * de desafio ou de análise não se põe uma faixa a falar de regras que não se lhe aplicam.
+   *
+   * `dados.travas` pode não existir numa resposta de um servidor antigo (a releitura leve guarda o
+   * último estado): daí o `?.`, em vez de um ecrã em branco.
+   */
+  const travas = (t_dados as { travas?: Parameters<typeof ModalTravas>[0]["veredicto"] }).travas
   return (
     <>
+      {travas?.temTrava && (
+        <button
+          type="button"
+          onClick={() => setTravasAbertas(true)}
+          className={`flex w-full items-center gap-1.5 px-3 py-1 text-left text-[11px] ${travas.podeAbrir ? "bg-white/5 text-zinc-300" : "bg-rose-500/10 text-rose-300"}`}
+        >
+          {travas.podeAbrir
+            ? <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+            : <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
+          <span className="min-w-0 flex-1 truncate">
+            {travas.podeAbrir
+              ? `Dia: ${textoDaFolga(travas.diaria)}`
+              : "Entradas travadas pelo limite de perda — as saídas continuam"}
+          </span>
+          <span className="shrink-0 underline">ver</span>
+        </button>
+      )}
+      {travasAbertas && travas && (
+        <ModalTravas
+          accountId={t_dados.conta.id}
+          veredicto={travas}
+          saldos={{ saldo: t_dados.estado.saldo, equity: vivo.equity, flutuante: vivo.flutuante, margemLivre: vivo.margemLivre }}
+          onFechar={() => setTravasAbertas(false)}
+        />
+      )}
       {t_dados.modo === "investor" && (
         <div className="flex items-center gap-1.5 bg-sky-500/10 px-3 py-1 text-[11px] text-sky-300"><Eye className="h-3.5 w-3.5" /> Só leitura (investor)</div>
       )}

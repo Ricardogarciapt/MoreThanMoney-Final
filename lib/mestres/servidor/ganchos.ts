@@ -10,6 +10,7 @@ import { lerRef } from '../../copia-contas/regras'
 import { distanciaDoSl } from '../../copia-contas/calculo'
 import type { GanchosMotor, RegistoOrdemMotor } from '../../copia-contas/motor'
 import type { EventoCopia } from '../../copia-contas/tipos'
+import { travaDaContaDestino } from './trava-tipo-conta'
 import type { EstadoMestres, RotaMestres } from './estado'
 
 export interface OpcoesGanchos {
@@ -160,6 +161,14 @@ export function criarGanchosMestres(o: OpcoesGanchos, rota: RotaMestres, ev: Eve
       const abertas = await abertasDaConta(db, rota.destino_chave, modo === 'sombra')
       const exp = motivoExposicao(abertas, { volume: acao.volume, riscoPct: riscoDaAbertura }, conta)
       if (exp) return { motivo: exp, gravarRecusa: true }
+
+      /**
+       * A trava do TIPO da conta de destino (financiada 3 %/6 %, real 30 %) — ../trava-tipo-conta.ts.
+       * Aqui e em mais sítio nenhum: é a guarda de ABERTURA. `registar` e os caminhos de saída não a
+       * chamam, para que uma conta travada continue a receber parciais, BE, trailing e fechos.
+       */
+      const travaTipo = await travaDaContaDestino(db, rota, { equity: ctx?.equity ?? null })
+      if (travaTipo) return { motivo: travaTipo, gravarRecusa: true }
 
       const conflito = conflitoEntreCaminhos(
         { symbol: acao.simbolo, direcao: acao.direcao, entrada: num(p.preco), agora: Date.now() },

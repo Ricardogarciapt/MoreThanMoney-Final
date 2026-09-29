@@ -323,8 +323,37 @@ async function exigirContaSemPausa(accountId: string) {
   }
 }
 
+/**
+ * Trava do TIPO de conta (financiada 3 %/6 %, real 30 %) — `lib/travas-por-tipo-de-conta.ts`.
+ *
+ * Só aqui e em `criarPendente`, como a pausa: são as duas portas por onde nasce uma posição ou uma
+ * ordem. Nenhum caminho de saída a chama, e há uma guarda a lê-lo neste ficheiro para que continue
+ * assim (lib/__tests__/travas-por-tipo-de-conta.check.ts).
+ *
+ * Importa-se em tempo de execução, como a pausa, para não fechar um ciclo de imports
+ * (travas-tipo.ts precisa do tipo de erro daqui).
+ */
+async function exigirTravaDoTipo(conta: Conta, equity?: number | null) {
+  const { exigirTravaDoTipo: exigir, TravaDoTipoAtingida } = await import('./travas-tipo')
+  try {
+    await exigir(conta as Parameters<typeof exigir>[0], { equity: equity ?? null })
+  } catch (e) {
+    if (e instanceof TravaDoTipoAtingida) throw new ErroOrdem(e.status, e.message)
+    throw e
+  }
+}
+
+/** A banca contra que se mede o tecto de SL: a equity, e o saldo quando ela não se sabe. */
+function bancaDaConta(conta: Conta): number | null {
+  const eq = Number(conta.sim_equity ?? NaN)
+  if (Number.isFinite(eq) && eq > 0) return eq
+  const s = Number(conta.sim_saldo ?? NaN)
+  return Number.isFinite(s) && s > 0 ? s : null
+}
+
 export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
   await exigirContaSemPausa(conta.id)
+  await exigirTravaDoTipo(conta)
   const symbol = String(e.symbol || '').toUpperCase()
   if (e.direcao !== 'buy' && e.direcao !== 'sell') throw new ErroOrdem(400, 'direção inválida')
   const abertas = await posicoesAbertas(conta.id)
@@ -341,6 +370,17 @@ export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
     posicoesAbertas: abertas.map(posicaoDaLinha), simbolos, precos, regras,
   })
   if (!plano.ok) throw new ErroOrdem(422, plano.erro)
+
+  // O SL desta entrada contra a banca (conta real: máximo 95 %). Mede-se AQUI e não em
+  // `planearAbertura` porque é aqui que o risco em USD já está calculado para a gestão — e assim
+  // não há duas formas de medir o mesmo stop.
+  const riscoUsd = riscoInicialUsd(simbolo, e.direcao, plano.volume, plano.precoExecucao, num(e.sl), precos)
+  const { limitesPorTipo } = await import('./travas-tipo')
+  const { slAcimaDaBanca, tipoDeConta } = await import('@/lib/travas-por-tipo-de-conta')
+  const tectoSl = (await limitesPorTipo())[tipoDeConta(conta.tipo)].slMaxPctDaBanca
+  const slDemais = slAcimaDaBanca(tectoSl, { riscoUsd, banca: bancaDaConta(conta) })
+  if (slDemais) throw new ErroOrdem(422, slDemais)
+
   const g = validarGestao(simbolo, e.direcao, plano.precoExecucao, plano.volume, num(e.sl), num(e.tp), e.gestao)
   if (!g.ok) throw new ErroOrdem(422, g.erro)
 
@@ -351,7 +391,7 @@ export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
     origem: origemValida(e.origem), ideia_ref: e.ideiaRef ? String(e.ideiaRef).slice(0, 200) : null,
     ...(e.comentario ? { comentario: String(e.comentario).slice(0, 64) } : {}),
     tick_entrada: { bid: preco.bid, ask: preco.ask, em: em[symbol] }, aberta_em: agora,
-  }, colunasGestao(g.gestao, riscoInicialUsd(simbolo, e.direcao, plano.volume, plano.precoExecucao, num(e.sl), precos), plano.volume))
+  }, colunasGestao(g.gestao, riscoUsd, plano.volume))
   if (error?.code === '23505') throw new ErroOrdem(409, 'esta ideia já foi aberta nesta conta')
   if (error || !pos) throw new ErroOrdem(500, 'não foi possível abrir a posição')
 
@@ -448,6 +488,7 @@ export interface EntradaPendente {
 
 export async function criarPendente(conta: Conta, e: EntradaPendente) {
   await exigirContaSemPausa(conta.id)
+  await exigirTravaDoTipo(conta)
   const symbol = String(e.symbol || '').toUpperCase()
   if (e.direcao !== 'buy' && e.direcao !== 'sell') throw new ErroOrdem(400, 'direção inválida')
   if (e.tipo !== 'limit' && e.tipo !== 'stop') throw new ErroOrdem(400, 'tipo inválido (limit ou stop)')
@@ -668,6 +709,18 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao, opcoes: { l
     regras, Number(conta.saldo_inicial ?? 0), estado.equity,
     conta.sim_ancora_dia == null ? null : Number(conta.sim_ancora_dia), Number(metricas.fase ?? 1),
   )
+  /**
+   * A trava do TIPO de conta, com a equity do ecrã — é o que o modal de travas mostra.
+   *
+   * Vem do servidor e não se recalcula no cliente de propósito: o número que o trader vê tem de ser
+   * o mesmo que o motor usa para lhe recusar a entrada. Vai também na resposta `leve` (a releitura
+   * de 4 em 4 s), porque a trava muda com o flutuante, não com o histórico.
+   */
+  const { veredictoDoTipo } = await import('./travas-tipo')
+  const travas = await veredictoDoTipo(conta as Parameters<typeof veredictoDoTipo>[0], {
+    equity: estado.equity, margemLivre: estado.margemLivre,
+  })
+
   // Na leve o desempenho sai vazio (e `parcial` diz ao cliente para manter o que já tinha).
   const desempenho = desempenhoDaConta({
     saldoInicial: Number(conta.saldo_inicial ?? 0),
@@ -702,6 +755,7 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao, opcoes: { l
     },
     estado: { saldo, ...estado },
     limites,
+    travas,
     regras,
     posicoes: abertas,
     historico: fechadas ?? [],
