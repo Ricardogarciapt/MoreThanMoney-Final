@@ -64,6 +64,7 @@ export default function FichaProduto({ slug }: { slug: string }) {
   // imagens do que antes, um índice fora de alcance corrige-se com um `min` — uma URL que já não
   // existe na galeria deixava a ficha sem imagem nenhuma.
   const [activa, setActiva] = useState(0)
+  const [email, setEmail] = useState("")
   const [cupao, setCupao] = useState("")
   const [referral, setReferral] = useState("")
   const [aComprar, setAComprar] = useState(false)
@@ -94,7 +95,9 @@ export default function FichaProduto({ slug }: { slug: string }) {
       const r = await fetch("/api/marketplace/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ produtoId: produto.id, cupao, referral }),
+        // `email` só vai quando não há sessão: com sessão, quem compra é quem está autenticado e o
+        // servidor ignora o que vier no corpo — a identidade nunca vem do pedido.
+        body: JSON.stringify({ produtoId: produto.id, cupao, referral, email }),
       })
       const j = await r.json()
       // Um produto da casa que mantém o caminho de compra antigo devolve `externo`.
@@ -110,7 +113,7 @@ export default function FichaProduto({ slug }: { slug: string }) {
     } finally {
       setAComprar(false)
     }
-  }, [produto, cupao, referral])
+  }, [produto, cupao, referral, email])
 
   if (produto === null) {
     return (
@@ -236,24 +239,44 @@ export default function FichaProduto({ slug }: { slug: string }) {
             >
               <ExternalLink size={14} /> Abrir na minha biblioteca
             </Link>
-          ) : !autenticado ? (
-            /* Sem sessão: um caminho só, e o que a pessoa ia fazer a seguir de qualquer maneira.
-               O cupão e o código de quem indicou ficam de fora daqui de propósito — escrevê-los
-               antes de entrar era perdê-los no login. Voltam a aparecer depois, nesta mesma
-               página, porque o `redirect` traz a pessoa ao sítio exacto. */
-            <>
-              <Link
-                href={`/login?redirect=/marketplace/${p.slug}`}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#D2A63C] px-4 py-2.5 text-sm font-semibold text-black hover:bg-[#BB8525]"
-              >
-                <Tag size={15} /> Entrar para comprar
-              </Link>
-              <p className="text-[11px] leading-relaxed text-zinc-500">
-                A compra fica agarrada à tua conta — é assim que o acesso ao produto funciona depois.
-              </p>
-            </>
           ) : p.podeComprar ? (
             <>
+              {/* ── SEM SESSÃO: O EMAIL, E MAIS NADA ─────────────────────────────────────────
+                  Antes havia aqui um «Entrar para comprar» que mandava a pessoa ao login. Pedir
+                  conta antes de vender é perder a venda de quem ainda não é cliente — e o
+                  marketplace existe exactamente para vender a essa pessoa.
+
+                  O email chega: a conta é criada no checkout e o produto fica agarrado a ela. O
+                  cupão e o código de quem indicou continuam aqui ao lado, e agora NÃO se perdem —
+                  não há login pelo meio onde os deixar cair.
+
+                  O link para entrar fica, mas em segundo plano: quem já é membro ganha com isso
+                  (a compra vai para a conta que já tem, e o preço de campanha de membro só se
+                  aplica com sessão — ver `lib/marketplace/comprador.ts`). */}
+              {!autenticado && (
+                <>
+                  <label className="block">
+                    <span className="text-xs text-zinc-400">O teu email</span>
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setErro(null) }}
+                      className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                      placeholder="nome@email.com"
+                    />
+                    {erro?.campo === "email" && <span className="mt-1 block text-xs text-red-300">{erro.texto}</span>}
+                  </label>
+                  <p className="text-[11px] leading-relaxed text-zinc-500">
+                    Criamos-te a conta com este email e enviamos-te o acesso depois do pagamento.{" "}
+                    <Link href={`/login?redirect=/marketplace/${p.slug}`} className="text-[#D2A63C] hover:underline">
+                      Já tenho conta
+                    </Link>
+                  </p>
+                </>
+              )}
+
               <label className="block">
                 <span className="text-xs text-zinc-400">Código de desconto (opcional)</span>
                 <input

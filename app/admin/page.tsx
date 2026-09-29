@@ -345,7 +345,7 @@ function AdminPageClient() {
                 <p className="text-sm text-gray-400 mt-1">
                   Produtos dos educadores e da casa: criar, editar, publicar e ligar o preço ao Stripe.
                   A aprovação de pedidos, a partilha de cada educador e os interruptores gerais estão em{" "}
-                  <a href="/admin/centro?s=marketplace" className="text-[#D2A63C] underline">Centro → Marketplace</a>.
+                  <a href="/admin/marketplace" className="text-[#D2A63C] underline">Admin → Marketplace</a>.
                 </p>
               </div>
               <div className="p-6">

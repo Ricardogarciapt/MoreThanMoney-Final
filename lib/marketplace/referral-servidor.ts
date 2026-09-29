@@ -155,6 +155,22 @@ export async function validarReferralParaCompra(entrada: {
  *
  * Por isso o negócio criado aqui leva `origem: 'marketplace'` e uma nota que diz de onde veio:
  * quando alguém for perceber porque é que o binário de uma pessoa parou, a resposta está escrita.
+ *
+ * ── O QUE A COMPRA SEM LOGIN ACRESCENTA A ISTO (e ainda não está decidido) ────────────────
+ *
+ * Com a compra sem login, este negócio passa a poder nascer para alguém que NUNCA foi membro: uma
+ * pessoa que chega à montra pelo link de um afiliado, escreve o email, compra um curso de 40 € e
+ * fica com um `vendas_negocios` em nome dela antes de existir como cliente da casa.
+ *
+ * A consequência é a de sempre, mas agora atinge um desconhecido em vez de um membro já nosso:
+ * quando essa pessoa comprar, meses depois, um Premium de 65 €/mês com um sponsor de MLM, o
+ * `vendaPagaPelaEquipa` responde «sim» e o binário NÃO paga a quem a recrutou — porque um código de
+ * indicação de um curso de 40 € já a reclamou.
+ *
+ * O código não decide isto sozinho: a regra da casa («o mesmo euro não paga duas vezes») é do dono,
+ * e a escolha entre as três saídas — deixar como está, limitar o negócio do marketplace a um
+ * afiliado por VENDA em vez de por comprador, ou não criar negócio quando a conta foi criada pela
+ * própria compra — é de negócio e não de implementação. Fica escrito aqui para a conversa ter dados.
  */
 export async function negocioParaComissao(entrada: {
   compradorId: string

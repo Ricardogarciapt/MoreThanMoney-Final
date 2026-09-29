@@ -542,14 +542,16 @@ function Cartao({
           {p.jaComprou ? (
             <span className="text-xs text-emerald-400">Já é teu</span>
           ) : !autenticado ? (
-            // A montra é pública. Um visitante que carrega em «Comprar» sem sessão recebia
-            // «Autenticação necessária» num aviso vermelho — em vez de ir ao registo, que é o que
-            // ele ia fazer a seguir de qualquer maneira.
+            // A montra é pública e comprar já não exige login. Mas um cartão não tem sítio para o
+            // email, e pedi-lo num cartão de uma grelha de doze era o pior ecrã possível — por isso
+            // o visitante vai à FICHA do produto, onde a caixa de compra o pede uma vez e mostra ao
+            // mesmo tempo o que está a comprar. Já não é um desvio ao login: é o passo seguinte da
+            // compra.
             <Link
-              href={`/login?redirect=/marketplace/${p.slug}`}
-              className="shrink-0 rounded-lg border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-3 py-1.5 text-sm font-medium text-[#D2A63C] hover:bg-[#D2A63C]/20"
+              href={`/marketplace/${p.slug}`}
+              className="shrink-0 rounded-lg bg-[#D2A63C] px-3 py-1.5 text-sm font-medium text-black transition-opacity hover:opacity-90"
             >
-              Entrar para comprar
+              Comprar
             </Link>
           ) : p.podeComprar ? (
             <button

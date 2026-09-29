@@ -86,7 +86,7 @@ const GRUPOS: Grupo[] = [
     itens: [
       { tipo: "tab", id: "content", rotulo: "Conteúdo", icone: FileText },
       { tipo: "tab", id: "education", rotulo: "Educação (LMS)", icone: GraduationCap },
-      { tipo: "tab", id: "marketplace", rotulo: "Marketplace", icone: Store },
+      { tipo: "link", href: "/admin/marketplace", rotulo: "Marketplace", icone: Store },
       { tipo: "tab", id: "dvr", rotulo: "Gravações DVR", icone: Film },
       { tipo: "tab", id: "avaliacoes", rotulo: "Avaliações", icone: Award },
     ],
@@ -139,7 +139,7 @@ const GRUPOS: Grupo[] = [
       { tipo: "link", href: "/admin/coupons", rotulo: "Cupões de Oferta", icone: Ticket },
       // Ao lado dos cupões de propósito: um cupão de âmbito marketplace desconta um produto
       // daqui, e quem anda a criar campanhas mexe nos dois no mesmo minuto.
-      { tipo: "link", href: "/admin/centro?s=marketplace", rotulo: "Marketplace", icone: Store },
+      { tipo: "link", href: "/admin/marketplace", rotulo: "Marketplace", icone: Store },
       { tipo: "link", href: "/admin/backoffice", rotulo: "MLM / Afiliados", icone: Network },
       // Desde 08/2026 esta página é só agentes, n8n e streaming — e a maior parte dos agentes
       // é de prospeção, setting e conteúdo. É aqui que pertence, não ao pé do Centro de comando.
