@@ -116,20 +116,21 @@ const OUTRA_PESSOA = 'user-vendedor'
 // ══════════════ 2. A SOMA DO QUE SAI NÃO PASSA O QUE ENTROU ══════════════
 
 {
-  // Uma venda de 100 €, educador a 90%, casa com 10%.
-  const p = calcularPartilha({ brutoCents: 10000, partilhaPct: 90 })
-  sim('o educador fica com 90,00 €', p.parteEducadorCents === 9000)
-  sim('a casa com 10,00 €', p.parteCasaCents === 1000)
+  // Uma venda de 100 €, educador a 80%, casa com 20%.
+  const p = calcularPartilha({ brutoCents: 10000, partilhaPct: 80 })
+  sim('o educador fica com 80,00 €', p.parteEducadorCents === 8000)
+  sim('a casa com 20,00 €', p.parteCasaCents === 2000)
 
-  // O CASO MAU: uma regra de comissão de 15% numa venda em que a casa só tem 10%.
+  // O CASO MAU: uma regra de comissão de 25% numa venda em que a casa só tem 20%.
+  // A regra viva é 5%, mas o teste tem de provar o TECTO, não o número do dia.
   const c = comissaoDoReferral({
-    brutoCents: 10000, parteCasaCents: p.parteCasaCents, pct: 15, referralUserId: OUTRA_PESSOA,
+    brutoCents: 10000, parteCasaCents: p.parteCasaCents, pct: 25, referralUserId: OUTRA_PESSOA,
   })
   assert.ok(
     c.valorCents <= p.parteCasaCents,
     'A COMISSÃO NUNCA PODE PASSAR A PARTE DA CASA. A parte do educador está congelada por acordo; o que sobra é o único sítio de onde a comissão pode sair.',
   )
-  sim('e fica limitada ao tecto, com o tecto registado', c.limitadaAoTectoCents === 1000 && c.valorCents === 1000)
+  sim('e fica limitada ao tecto, com o tecto registado', c.limitadaAoTectoCents === 2000 && c.valorCents === 2000)
 
   const contas = contasFecham({
     brutoCents: 10000,

@@ -60,7 +60,7 @@ const PRODUTO_BOM = {
   activo: true,
 }
 
-// ══════════════ 1. A PARTILHA: 90 É O TECTO DO EDUCADOR ══════════════
+// ══════════════ 1. A PARTILHA: 80 É O TECTO DO EDUCADOR ══════════════
 //
 // ── ESTE BLOCO MUDOU DE SIGNIFICADO, NÃO SÓ DE NÚMERO ─────────────────────────────────────
 //
@@ -68,17 +68,19 @@ const PRODUTO_BOM = {
 // PADRÃO=95 — com 90 a ser o PISO que protegia o educador de receber menos.
 //
 // A regra do dono inverteu isso: o educador fica com 90%, a casa leva no mínimo 10%, e o educador
-// pode dar mais à casa mas nunca ficar com mais. Portanto 90 passou de piso a TECTO.
+// pode dar mais à casa mas nunca ficar com mais. Portanto o tecto — 90 a 29/09 de manhã,
+// 80 à tarde, quando o referral desceu para 5% e a casa precisou de margem para o pagar.
 //
 // Não foi uma correcção de um erro de leitura: a versão antiga guardava fielmente o que a landing
 // prometia. Foi uma decisão de negócio nova, tomada depois. Fica escrito porque o `<= 90` onde antes
 // estava `>= 90` parece, sem contexto, um sinal trocado por acidente.
 //
-// Nota que este ficheiro NÃO verifica: a landing pública ainda promete «90 a 95%» e «comissão MTM de
-// 5–10%» em três sítios. Com a regra nova, 95% deixa de existir. É decisão do dono mexer nessas
-// páginas, e nada aqui depende de 95 existir.
+// A landing pública, a FAQ, a /criadores e as duas mensagens do bot do Instagram foram todas
+// corrigidas a 29/09 e dizem 80%. Antes diziam «90 a 95%» e «comissão MTM de
+// 5–10%» em oito sítios — incluindo as duas mensagens que o bot do Instagram manda a leads reais.
+// Foram todos corrigidos a 29/09 e dizem 80% / comissão 20%.
 
-sim('o tecto do educador é 90', PARTILHA_MAX_PCT === 90)
+sim('o tecto do educador é 80', PARTILHA_MAX_PCT === 80)
 sim('o piso é 50, contra o erro de escrita', PARTILHA_MIN_PCT === 50)
 assert.equal(
   PARTILHA_PADRAO_PCT,
@@ -95,22 +97,24 @@ for (const v of [null, undefined, NaN, 'muito', {}, -3, 0, 200, 91, 49.9, 100]) 
   const p = partilhaValida(v)
   sim(`partilhaValida(${String(v)}) fica dentro de 50–90`, p >= 50 && p <= 90)
 }
-sim('90 é aceite tal e qual', partilhaValida(90) === 90)
+sim('80 é aceite tal e qual', partilhaValida(80) === 80)
+sim('90 é cortado ao tecto de 80', partilhaValida(90) === 80)
 sim('75 é aceite tal e qual — o educador pode dar mais à casa', partilhaValida(75) === 75)
 // O ERRO DE ESCRITA QUE O PISO EXISTE PARA APANHAR: quem quer dizer «a casa leva 10» escreve 10.
 // Sem piso, isso dava 10% ao educador em vez de 90%.
 sim('escrever 10 por engano não deixa o educador com 10%', partilhaValida(10) === 50)
-// E o teto: pedir 95 (o número antigo) já não passa.
-sim('95 já não é um valor válido — deixou de existir', partilhaValida(95) === 90)
+// E o tecto: 95 e 90 foram os números antigos (de manhã e de tarde do mesmo dia). Nenhum passa.
+sim('95 já não é um valor válido', partilhaValida(95) === 80)
+sim('90 também deixou de existir', partilhaValida(90) === 80)
 
 // Venda simples no Stripe: 99,00 €, nada para loja nenhuma.
 //
 // Os números mudaram de 95/5 para 90/10 porque a REGRA mudou (ver o bloco 1), não porque a conta
 // estivesse errada. O que este teste guarda é a aritmética, e essa é a mesma.
 {
-  const p = calcularPartilha({ brutoCents: 9900, partilhaPct: 90 })
-  assert.equal(p.parteEducadorCents, 8910, '90% de 99,00 € são 89,10 € para o educador')
-  assert.equal(p.parteCasaCents, 990, 'à casa sobram os 10% — 9,90 €')
+  const p = calcularPartilha({ brutoCents: 9900, partilhaPct: 80 })
+  assert.equal(p.parteEducadorCents, 7920, '80% de 99,00 € são 79,20 € para o educador')
+  assert.equal(p.parteCasaCents, 1980, 'à casa sobram os 20% — 19,80 €')
   assert.equal(
     p.parteEducadorCents + p.parteCasaCents,
     p.liquidoCents,
@@ -120,26 +124,27 @@ sim('95 já não é um valor válido — deixou de existir', partilhaValida(95) 
 
 // ── O caso que paga do bolso da casa ──────────────────────────────────────────────────────
 //
-// 100 € vendidos na App Store. A Apple leva 15 antes de o dinheiro chegar cá. Se os 90% fossem
-// sobre o BRUTO, a casa entregava 90 € tendo recebido 85: prejuízo de 5 € por venda.
+// 100 € vendidos na App Store. A Apple leva 15 antes de o dinheiro chegar cá. Se os 80% fossem
+// sobre o BRUTO, a casa entregava 80 € tendo recebido 85 — e ficava com 5, não com 20.
 //
-// A margem de erro encolheu com a regra nova e vale dizê-lo: com 95% o prejuízo nesta venda era de
-// 10 €; com 90% é de 5 €. Continua a ser prejuízo, e é por isso que a ordem das operações (loja
-// primeiro, partilha depois) é o que este teste existe para prender.
+// A margem foi apertando: com 95% a casa PERDIA 10 € nesta venda, com 90% perdia 5, com 80% ganha
+// 5. O sentido inverteu-se, mas a ordem das operações continua a ser o que este teste prende —
+// porque é ela que decide se a casa ganha 5 ou perde 5, e a diferença entre as duas é invisível
+// até alguém somar um mês de vendas.
 {
   const bruto = 10000
   const loja = comissaoAppleCents(bruto)
   assert.equal(loja, 1500, 'o Small Business Program da Apple leva 15%')
-  const p = calcularPartilha({ brutoCents: bruto, comissaoLojaCents: loja, partilhaPct: 90 })
+  const p = calcularPartilha({ brutoCents: bruto, comissaoLojaCents: loja, partilhaPct: 80 })
   assert.equal(p.liquidoCents, 8500, 'só há 85,00 € para repartir')
-  assert.equal(p.parteEducadorCents, 7650, '90% de 85,00 € — não de 100,00 €')
+  assert.equal(p.parteEducadorCents, 6800, '80% de 85,00 € — não de 100,00 €')
   assert.ok(
     p.parteCasaCents >= 0,
     'a casa nunca pode ficar com uma parte negativa: era estar a pagar para vender o produto de outra pessoa',
   )
   // A regressão que isto trava, dita pelo número:
-  const seFosseSobreOBruto = Math.round((bruto * 90) / 100)
-  sim('a conta sobre o bruto seria maior do que o dinheiro recebido', seFosseSobreOBruto > 8500)
+  const seFosseSobreOBruto = Math.round((bruto * 80) / 100)
+  sim('a conta sobre o bruto deixava a casa com quase nada', 8500 - seFosseSobreOBruto < p.parteCasaCents)
 }
 
 sim('a comissão da Apple está escrita como 15', APPLE_COMISSAO_PCT === 15)
@@ -477,10 +482,11 @@ sim('título vazio dá slug vazio e não rebenta', slugDoTitulo('') === '')
   sim('produto da casa ignora uma partilha passada por engano', teimoso.parteEducadorCents === 0)
 
   // E o contrário: um produto de educador continua a pagar, e a somar ao cêntimo.
-  const deEducador = calcularPartilha({ brutoCents: 10000, dono: 'educador', partilhaPct: 90 })
-  sim('produto de educador continua a pagar 90%', deEducador.parteEducadorCents === 9000)
-  // E a casa fica SEMPRE com pelo menos 10% — é de dentro disto que sai a comissão do referral.
-  sim('a casa fica com 10% ou mais num produto de educador', deEducador.parteCasaCents >= 1000)
+  const deEducador = calcularPartilha({ brutoCents: 10000, dono: 'educador', partilhaPct: 80 })
+  sim('produto de educador continua a pagar 80%', deEducador.parteEducadorCents === 8000)
+  // E a casa fica SEMPRE com pelo menos 20% — é de dentro disto que sai a comissão do referral.
+  // A 29/09 a conta era: casa 10%, referral 10%, casa fica a ZERO. Passou a 20% e 5%, e sobram 15%.
+  sim('a casa fica com 20% ou mais num produto de educador', deEducador.parteCasaCents >= 2000)
   sim('as duas partes somam sempre o líquido', deEducador.parteEducadorCents + deEducador.parteCasaCents === deEducador.liquidoCents)
   sim('e no caso da casa também', daCasa.parteEducadorCents + daCasa.parteCasaCents === daCasa.liquidoCents)
 

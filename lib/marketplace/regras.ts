@@ -86,8 +86,11 @@ export function sugestaoDaCategoria(tipo: unknown): { recorrente: boolean; reque
 //
 // ── A REGRA, E PORQUE É QUE ELA ESTÁ AO CONTRÁRIO DO QUE JÁ ESTEVE ────────────────────────
 //
-// O educador fica com 90%. A casa leva no mínimo 10%. O educador PODE dar mais à casa se quiser,
-// mas não pode ficar com mais de 90%.
+// O educador fica com 80%. A casa leva no mínimo 20%. O educador PODE dar mais à casa se quiser,
+// mas não pode ficar com mais de 80%.
+//
+// 90 → 80 a 29/09/2026, no mesmo movimento em que o referral desceu de 10% para 5%: com a casa a
+// 10% e o referral a 10%, uma venda indicada deixava a casa a ZERO. A 80/20 sobram-lhe 15%.
 //
 // Isto INVERTE o que estava aqui antes. A primeira versão do marketplace leu a landing («ficas com
 // 90–95%»), tomou 95 como o valor e 90 como o piso do educador, e escreveu `>= 90 and <= 100`.
@@ -104,19 +107,19 @@ export function sugestaoDaCategoria(tipo: unknown): { recorrente: boolean; reque
 // razão não é filosófica: é o erro de escrita mais provável nesta coluna.
 //
 // Quem preenche isto a pensar «a casa leva 10» escreve 10. Com piso 0, essa linha grava, e o
-// educador passa a receber 10% em vez de 90% — sem erro, sem aviso, e só se descobre no primeiro
+// educador passa a receber 20% em vez de 80% — sem erro, sem aviso, e só se descobre no primeiro
 // extracto. Com piso 50, a mesma distracção é recusada em voz alta pela base de dados.
 //
 // 50 continua a deixar um educador oferecer metade da receita à casa, o que é muito mais do que
-// alguém faz por engano. O que se perde é a possibilidade de oferecer 90% à casa; o que se ganha é
+// alguém faz por engano. O que se perde é a possibilidade de oferecer mais de 50% à casa; o que se ganha é
 // que nenhum educador perde 80 pontos percentuais por ter trocado a ordem dos números na cabeça.
 
 /** O mínimo que o educador pode ficar. Piso contra o erro de escrita, não contra a generosidade. */
 export const PARTILHA_MIN_PCT = 50
 /** O máximo que o educador pode ficar. A casa leva sempre 10% ou mais. */
-export const PARTILHA_MAX_PCT = 90
+export const PARTILHA_MAX_PCT = 80
 /** O que vale por omissão: o tecto, que é o que favorece o educador. */
-export const PARTILHA_PADRAO_PCT = 90
+export const PARTILHA_PADRAO_PCT = 80
 
 export type Partilha = {
   /** O que o cliente pagou. */

@@ -172,7 +172,7 @@ export default function SeccaoMarketplace() {
         <Azulejo rotulo="Vendas" valor={String(dados.totais.vendas)} />
         <Azulejo rotulo="Bruto" valor={euros(dados.totais.brutoCents)} />
         <Azulejo rotulo="Para os educadores" valor={euros(dados.totais.paraEducadoresCents)} sub="por pagar/pago" />
-        <Azulejo rotulo="Para a casa" valor={euros(dados.totais.paraCasaCents)} sub="comissão 10%" />
+        <Azulejo rotulo="Para a casa" valor={euros(dados.totais.paraCasaCents)} sub="comissão 20%" />
       </div>
 
       {/* ── 2. A fila de revisão ─────────────────────────────────────────────────────── */}

@@ -97,7 +97,7 @@ export const POST = soAdmin(async (adminId: string, request: NextRequest) => {
       if (!educatorId) return NextResponse.json({ error: 'educator_id é obrigatório' }, { status: 400 })
       const linha: Record<string, unknown> = { educator_id: educatorId, updated_at: new Date().toISOString() }
       if ('activo' in b) linha.activo = b.activo === true
-      // A partilha é cortada ao TECTO de 90 antes de tocar na base. O número está prometido em
+      // A partilha é cortada ao TECTO de 80 antes de tocar na base. O número está prometido em
       // público na /criadores: um 50 escrito por engano no painel é um contrato quebrado.
       if ('partilha_pct' in b) linha.partilha_pct = partilhaValida(b.partilha_pct)
       if ('stripe_connect_account_id' in b) linha.stripe_connect_account_id = b.stripe_connect_account_id || null

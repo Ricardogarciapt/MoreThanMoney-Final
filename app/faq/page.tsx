@@ -157,7 +157,7 @@ Em preparação, com a academia criada e à espera de educador: Imobiliário (em
                     aulas ao vivo sobre como começar nas redes e como produzir, mais o estúdio{" "}
                     <b className="text-white">MTM Social</b>, onde fazes cartões, carrosséis e capas de reel assinados
                     com a <i>tua</i> marca — o teu nome, a tua arroba, o teu logótipo. Segunda: se já tens conteúdo
-                    para vender, alojamos, promovemos e cobramos por ti, e ficas com 90% do que vender, sem entrada
+                    para vender, alojamos, promovemos e cobramos por ti, e ficas com 80% do que vender, sem entrada
                     e sem exclusividade. O que <b className="text-white">não</b> temos hoje é um construtor de
                     portefólio de criador nem uma bolsa de marcas que te arranje parcerias pagas — se alguém te disser
                     o contrário, está a inventar.{" "}
@@ -185,7 +185,7 @@ Em preparação, com a academia criada e à espera de educador: Imobiliário (em
                   </AccordionTrigger>
                   <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
                     Consegues, por duas vias já abertas. Se produzes conteúdo, alojamos e vendemos o teu curso ou
-                    mentoria e ficas com 90% do que vender — candidatas-te e falamos. Se trazes pessoas, o Convida
+                    mentoria e ficas com 80% do que vender — candidatas-te e falamos. Se trazes pessoas, o Convida
                     &amp; Ganha dá-te dias de Premium por cada amigo que entre pelo teu link, com comissão sobre as
                     subscrições que resultem. Nenhuma das duas tem valor garantido: depende do que vendes e de quem
                     trazes, e há meses em que dá zero.
