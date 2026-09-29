@@ -28,6 +28,7 @@ import {
   Send, EyeOff, CreditCard, AlertTriangle, CheckCircle2, X,
 } from "lucide-react"
 import { CATEGORIAS, euros, sugestaoDaCategoria } from "@/lib/marketplace/regras"
+import CupoesEducador from "@/components/marketplace/cupoes-educador"
 
 type Produto = {
   id: string; slug: string; titulo: string; subtitulo: string | null; descricao: string | null
@@ -381,6 +382,17 @@ export default function GestorProdutos() {
           )
         })}
       </div>
+
+      {/* ── Os códigos de desconto (só o educador) ───────────────────────────────────────
+          O admin não os vê aqui de propósito: os cupões da casa — packs, MTM Funded, parcerias,
+          Apple — gerem-se no /admin/coupons, e duas portas para a mesma tabela com listas
+          diferentes é como se acaba a apagar no sítio errado. */}
+      {!ehAdmin && (
+        <CupoesEducador
+          produtos={dados.produtos.map((p) => ({ id: p.id, titulo: p.titulo }))}
+          partilhaPct={dados.vendedor?.partilha_pct ?? null}
+        />
+      )}
 
       {/* ── O formulário ─────────────────────────────────────────────────────────────────── */}
       {aEditar && (
