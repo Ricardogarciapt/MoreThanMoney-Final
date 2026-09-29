@@ -1,8 +1,23 @@
 /**
  * COMPRAR UM PRODUTO DO MARKETPLACE.
  *
- * POST { produtoId } → { url } (sessão Stripe Checkout)
- *                    → { externo: url } quando o produto da casa usa o caminho de compra ANTIGO
+ * POST { produtoId, email? } → { url } (sessão Stripe Checkout)
+ *                            → { externo: url } quando o produto da casa usa o caminho de compra ANTIGO
+ *
+ * ── COMPRAR NÃO EXIGE LOGIN ───────────────────────────────────────────────────────────────
+ *
+ * Esta rota devolvia 401 a quem não tinha sessão. Uma montra pública com um botão que responde
+ * «Autenticação necessária» é uma montra que só vende a quem já é cliente — e o marketplace existe
+ * para vender a quem ainda não é.
+ *
+ * Com sessão, nada muda: compra-se como sempre. Sem sessão, o `email` é obrigatório e a CONTA
+ * cria-se aqui, antes do pagamento — porque o acesso ao produto vive numa linha de
+ * `marketplace_compras` com um `comprador_id`, e sem conta não há a quem entregar.
+ *
+ * Essa conta nasce SEM DIREITOS NENHUNS, o email é a chave (nunca se cria uma segunda conta para o
+ * mesmo endereço) e o preço é o de visitante mesmo que o email seja de um Premium. O porquê de cada
+ * uma destas três decisões, e o que acontece a um pagamento abandonado, está em
+ * `lib/marketplace/comprador.ts`.
  *
  * ── A REGRA DA APPLE, NO SERVIDOR ─────────────────────────────────────────────────────────
  *
@@ -51,6 +66,8 @@ import { lerDefinicoes, lerVendedor, pctDoProduto } from '@/lib/marketplace/serv
 import { cupaoDaCampanha, cupaoStripeDePercentagem } from '@/lib/marketplace/stripe-preco'
 import { registarPasso } from '@/lib/marketplace/leads'
 import { sessaoDoMembro } from '@/lib/marketplace/sessao'
+import { contaDoComprador, emailServeParaComprar } from '@/lib/marketplace/comprador'
+import type { PerfilUi } from '@/lib/perfil-ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -97,12 +114,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(IOS_IAP_REQUIRED, { status: 403 })
     }
 
-    const sessao = await sessaoDoMembro(request)
-    if (!sessao) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })
-
     const corpo = await request.json().catch(() => ({}))
     const produtoId = corpo?.produtoId ?? null
     if (!produtoId) return NextResponse.json({ error: 'produtoId é obrigatório' }, { status: 400 })
+
+    /**
+     * QUEM COMPRA — a sessão, ou o email de um visitante.
+     *
+     * `perfil: null` no caso do visitante não é descuido: é o que faz `precoEfectivo` cotar a compra
+     * como visitante. Ver a nota do preço em `lib/marketplace/comprador.ts`.
+     *
+     * A conta cria-se ANTES de se falar com o Stripe. A ordem importa: se falhar a criação, não há
+     * cobrança nenhuma para desfazer.
+     */
+    const sessao = await sessaoDoMembro(request)
+    let quem: { userId: string; email: string | null; perfil: PerfilUi | null }
+    if (sessao) {
+      quem = { userId: sessao.userId, email: sessao.email, perfil: sessao.perfil }
+    } else {
+      const email = String(corpo?.email ?? '')
+      if (!emailServeParaComprar(email)) {
+        return NextResponse.json(
+          { error: 'Escreve o teu email para a compra ficar agarrada a uma conta.', code: 'email_necessario', campo: 'email' },
+          { status: 400 },
+        )
+      }
+      const conta = await contaDoComprador({ email, nome: corpo?.nome ?? null })
+      if (!conta) {
+        return NextResponse.json(
+          { error: 'Não foi possível preparar a tua conta. Tenta outra vez ou entra com a conta que já tens.', code: 'conta_falhou', campo: 'email' },
+          { status: 409 },
+        )
+      }
+      quem = { userId: conta.userId, email: conta.email, perfil: null }
+    }
     const codigoCupao = normalizarCodigo(corpo?.cupao)
     const codigoReferral = String(corpo?.referral ?? '').trim()
 
@@ -123,7 +168,7 @@ export async function POST(request: NextRequest) {
     const { data: ja } = await db
       .from('marketplace_compras')
       .select('id')
-      .eq('comprador_id', sessao.userId)
+      .eq('comprador_id', quem.userId)
       .eq('produto_id', produto.id)
       .eq('estado', 'paga')
       .maybeSingle()
@@ -160,8 +205,8 @@ export async function POST(request: NextRequest) {
       await registarPasso({
         etapa: 'iniciou_checkout',
         produtoId: produto.id,
-        userId: sessao.userId,
-        email: sessao.email,
+        userId: quem.userId,
+        email: quem.email,
         origem: 'checkout_externo',
         contexto: { destino: externo },
       })
@@ -179,7 +224,7 @@ export async function POST(request: NextRequest) {
 
     // O MESMO cálculo que a montra usou para desenhar o preço. Se isto divergisse do cartão, o
     // cliente via um número e pagava outro.
-    const preco = precoEfectivo(produto, agora, sessao.perfil)
+    const preco = precoEfectivo(produto, agora, quem.perfil)
 
     // ── O cupão ───────────────────────────────────────────────────────────────────────────
     //
@@ -200,7 +245,7 @@ export async function POST(request: NextRequest) {
           ? db.from('coupon_usages').select('id', { count: 'exact', head: true }).eq('coupon_id', linha.id)
           : Promise.resolve({ count: 0 } as { count: number | null }),
         linha?.id
-          ? db.from('coupon_usages').select('id').eq('coupon_id', linha.id).eq('user_id', sessao.userId).maybeSingle()
+          ? db.from('coupon_usages').select('id').eq('coupon_id', linha.id).eq('user_id', quem.userId).maybeSingle()
           : Promise.resolve({ data: null } as { data: { id: string } | null }),
       ])
 
@@ -229,7 +274,7 @@ export async function POST(request: NextRequest) {
     if (codigoReferral) {
       const r = await validarReferralParaCompra({
         codigo: codigoReferral,
-        compradorId: sessao.userId,
+        compradorId: quem.userId,
         educatorIdDoProduto: produto.educator_id,
         db,
       })
@@ -256,7 +301,7 @@ export async function POST(request: NextRequest) {
     const checkout = await stripe.checkout.sessions.create({
       mode: modoStripe(produto),
       line_items: [{ price: produto.stripe_price_id, quantity: 1 }],
-      customer_email: sessao.email ?? undefined,
+      customer_email: quem.email ?? undefined,
       ...(cupao ? { discounts: [{ coupon: cupao }] } : {}),
       // Merchandise é uma caixa que alguém tem de enviar. Sem isto, chegava uma encomenda paga
       // sem morada e alguém tinha de a ir pedir por email — que é o momento em que metade das
@@ -264,12 +309,23 @@ export async function POST(request: NextRequest) {
       ...(produto.requer_morada === true ? { shipping_address_collection: { allowed_countries: ['PT', 'ES', 'FR', 'DE', 'IT', 'NL', 'BE', 'LU', 'IE', 'AT', 'GB', 'BR'] as const } } : {}),
       success_url: buildStripeReturnUrl('/marketplace/biblioteca', { comprado: produto.slug }),
       cancel_url: buildStripeReturnUrl(`/marketplace/${produto.slug}`, { cancelado: '1' }, { includeSessionPlaceholder: false }),
+      /**
+       * O DISCRIMINADOR TAMBÉM NA SUBSCRIÇÃO, e não só na sessão.
+       *
+       * A metadata da sessão de checkout NÃO se propaga para a subscrição criada por ela. Os eventos
+       * `customer.subscription.*` e `invoice.*` de uma mentoria recorrente chegavam ao webhook sem
+       * nenhum sinal de que eram de marketplace — e era por aí que o comprador de um produto de
+       * educador ficava Membro pago da casa. Ver `lib/marketplace/subscricao-stripe.ts`.
+       */
+      ...(modoStripe(produto) === 'subscription'
+        ? { subscription_data: { metadata: { source: 'marketplace_product', product_id: produto.id } } }
+        : {}),
       metadata: {
         // `source` é o discriminador que o webhook lê primeiro — a mesma convenção do MTM Funded
         // e das licenças do EA. Sem isto a compra caía na lógica dos planos do site e mexia na
         // categoria de membro de quem só queria comprar um curso.
         source: 'marketplace_product',
-        user_id: sessao.userId,
+        user_id: quem.userId,
         product_id: produto.id,
         educator_id: produto.educator_id ?? '',
         dono: daCasa ? 'casa' : 'educador',
@@ -292,8 +348,8 @@ export async function POST(request: NextRequest) {
     await registarPasso({
       etapa: 'iniciou_checkout',
       produtoId: produto.id,
-      userId: sessao.userId,
-      email: sessao.email,
+      userId: quem.userId,
+      email: quem.email,
       referencia: checkout.id,
       origem: 'stripe',
       contexto: {

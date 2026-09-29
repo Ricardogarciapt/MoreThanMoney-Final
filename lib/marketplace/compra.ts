@@ -26,6 +26,7 @@ import { referralAceitavel } from './referral'
 import { perfilDoEducador } from './referral-servidor'
 import { registarVendaDoMarketplace } from './venda-equipa'
 import { registarPasso } from './leads'
+import { compraEntregue } from './comprador'
 import { lerVendedor, pctDoProduto, registarCompra } from './servidor'
 
 export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Session): Promise<void> {
@@ -118,6 +119,12 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
       console.log('[marketplace] evento repetido, compra já existia:', session.id)
       return
     }
+    // A conta que foi criada no checkout para esta compra deixa de estar «pendente de pagamento» e
+    // recebe o convite para definir a password. Sem isto, quem comprou sem login tem a compra na
+    // conta e não tem como entrar nela — que é igual a não ter comprado. Ver
+    // `lib/marketplace/comprador.ts` (é idempotente: a marca cai à primeira passagem).
+    await compraEntregue(compradorId)
+
     // O último passo do funil. Fica DEPOIS de a compra estar escrita e só quando ela é nova: um
     // evento reentregue pelo Stripe não pode aparecer no quadro como uma segunda venda.
     await registarPasso({

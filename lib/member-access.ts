@@ -49,6 +49,21 @@ export function isRegisteredMember(profile: UserProfile | null | undefined): boo
     return !trialIsExpired(profile)
   }
 
+  /**
+   * COMPRADOR DO MARKETPLACE — conta a sério, pack nenhum.
+   *
+   * Quem compra um curso sem login fica com uma conta criada no checkout e ZERO direitos (ver
+   * `lib/marketplace/comprador.ts`). Sem este ramo, o login atirava-o para /register («conta não
+   * encontrada») e a pessoa pagava e não conseguia abrir o que comprou.
+   *
+   * Isto diz «esta conta existe e é dela», e não «esta pessoa tem pack». Os direitos continuam a ser
+   * lidos de `subscription_plan`/`member_category`, que num comprador estão vazios — e o que ele
+   * comprou abre-se pela linha em `marketplace_compras`, como qualquer outra compra da montra.
+   */
+  if (profile.user_type === "comprador") {
+    return true
+  }
+
   if (isSubscriptionCategory(profile.member_category)) {
     return isSubscriptionActive(profile)
   }
