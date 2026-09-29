@@ -77,6 +77,70 @@ interface Linha {
   live_pips?: number | null
   live_pct?: number | null
   live_at?: string | null
+  /**
+   * Caminho do preço e saídas — migração 150. OPCIONAIS pela mesma razão que o `sl_original`:
+   * enquanto a migração não correr, a coluna não existe e o `select *` devolve a linha sem elas.
+   */
+  percurso?: Amostra[] | null
+  saidas?: Saida[] | null
+}
+
+/** Um ponto do caminho: instante (epoch, segundos), preço, lucro flutuante e pico em pips até ali. */
+interface Amostra { t: number; p: number; pips: number; pico: number }
+/** Uma saída: que nível, quando, o pico até ali e quanto já tinha recuado desde esse pico. */
+interface Saida { nivel: string; em: number; pico: number; recuo: number }
+
+/** Tecto de amostras por sinal. ~4 h de caminho a uma amostra por minuto, ou muito mais se andar parado. */
+const MAX_AMOSTRAS = 240
+/** Intervalo mínimo entre amostras quando o preço não mexeu o bastante (segundos). */
+const AMOSTRA_CADA_S = 300
+
+/**
+ * Decide se este instante merece ficar gravado.
+ *
+ * Gravar todos os minutos de todos os sinais activos seria a coluna a crescer por nada — o preço
+ * arredondado fica igual em muitas passagens. Grava-se quando passaram 5 minutos da última amostra
+ * OU quando o preço andou pelo menos 1 pip desde ela. O detalhe que interessa — os picos e os
+ * recuos — é exactamente o que se move, por isso é o movimento que puxa a amostra.
+ */
+function mereceAmostra(percurso: Amostra[], agora: number, pips: number): boolean {
+  const ultima = percurso[percurso.length - 1]
+  if (!ultima) return true
+  if (agora - ultima.t >= AMOSTRA_CADA_S) return true
+  return Math.abs(pips - ultima.pips) >= 1
+}
+
+/**
+ * Escreve um patch tolerando que as colunas da 150 ainda não existam.
+ *
+ * O MESMO princípio da 148, e pela mesma razão: uma ordem de deploy trocada não pode parar o motor
+ * de medição. Se o PostgREST recusar por causa de `percurso`/`saidas`, repete-se sem elas — a
+ * linha continua a ser seguida, só fica sem o caminho gravado até a migração correr.
+ */
+async function gravarTolerante(id: string, patch: Record<string, unknown>): Promise<void> {
+  const admin = getSupabaseAdmin()
+  const { error } = await admin.from('mtmcopy_signal_tracking').update(patch).eq('id', id)
+  if (!error) return
+  if (!/percurso|saidas/.test(error.message)) {
+    console.warn('[signal-tracker] escrita falhou:', error.message)
+    return
+  }
+  const { percurso: _p, saidas: _s, ...semColunas } = patch
+  const { error: e2 } = await admin.from('mtmcopy_signal_tracking').update(semColunas).eq('id', id)
+  if (e2) console.warn('[signal-tracker] escrita falhou:', e2.message)
+  else console.warn('[signal-tracker] gravado SEM percurso/saidas — falta correr a migração 150')
+}
+
+/** Junta uma saída à lista da linha, com o recuo desde o pico já calculado. */
+function comSaida(l: Linha, nivel: string, pipsAgora: number | null): Saida[] {
+  const anteriores = Array.isArray(l.saidas) ? l.saidas : []
+  const pico = Number.isFinite(l.peak_pips) ? l.peak_pips : 0
+  // `recuo` nunca é negativo: se a saída acontece NO pico, recuou zero.
+  const recuo = pipsAgora == null ? 0 : Math.max(0, pico - pipsAgora)
+  return [
+    ...anteriores.slice(-20),
+    { nivel, em: Math.round(Date.now() / 1000), pico: Math.round(pico * 10) / 10, recuo: Math.round(recuo * 10) / 10 },
+  ]
 }
 
 export interface ResultadoTracker {
@@ -462,13 +526,36 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
       l.peak_pips = lucroPips
       subiuPico = true
     }
+    /**
+     * GRAVAR O CAMINHO, não só o pico (migração 150).
+     *
+     * Com `peak_pips` sozinho, simular trailing é `max(resultado, pico − distância)` — uma conta
+     * que nunca piora quando se aperta a distância, e por isso responde sempre «o mais apertado
+     * possível». Não é um resultado, é um artefacto de não se saber por onde o preço andou. Com
+     * o percurso, a pergunta passa a ter resposta: sabe-se se o stop a seguir o preço teria sido
+     * tocado ANTES do alvo seguinte ou depois.
+     */
+    const percursoAtual = Array.isArray(l.percurso) ? l.percurso : []
+    const agoraS = Math.round(Date.now() / 1000)
+    if (percursoAtual.length < MAX_AMOSTRAS && mereceAmostra(percursoAtual, agoraS, lucroPips)) {
+      const amostra: Amostra = {
+        t: agoraS,
+        p: price,
+        pips: Math.round(lucroPips * 10) / 10,
+        pico: Math.round(l.peak_pips * 10) / 10,
+      }
+      const novoPercurso = [...percursoAtual, amostra]
+      patch.percurso = novoPercurso
+      l.percurso = novoPercurso
+    }
     // Só se grava quando o número que o cartão mostra mudou (ou de minuto a minuto): o preço anda
     // ao tick, mas arredondado a 0,1 pip fica muitas passagens igual. Antes era uma escrita por
     // linha activa em cada passagem (85 488 em 46 h, medido 15–17/09), a maior parte a repetir o valor.
     const liveAtMs = l.live_at ? Date.parse(l.live_at) : NaN
     const igual = !subiuPico && l.live_pips === patch.live_pips && l.live_pct === patch.live_pct
       && Number.isFinite(liveAtMs) && Date.now() - liveAtMs < 60_000
-    if (!igual) await admin.from('mtmcopy_signal_tracking').update(patch).eq('id', l.id)
+    // Uma amostra nova também é razão para escrever: o caminho é o que se está a gravar.
+    if (!igual || patch.percurso) await gravarTolerante(l.id, patch)
 
     const bateuSl = l.sl != null && (compra ? price <= l.sl : price >= l.sl)
     if (bateuSl) {
@@ -501,11 +588,13 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
         l.entry != null && l.entry > 0 && l.sl != null && Math.abs(l.sl - l.entry) < pip * 0.5
       if (noBreakEven) {
         const ganho = pipsEmbolsados(l, pip)
+        await gravarTolerante(l.id, { saidas: comSaida(l, 'break-even', 0) })
         await anunciar(l, 'stop_protegido', { price: l.sl })
         await gravarDesfecho(l, ganho, 'Parciais + break-even')
         eventos.push(`break-even ${l.symbol}${ganho != null ? ` +${Math.round(ganho)}p` : ''}`)
         continue
       }
+      await gravarTolerante(l.id, { saidas: comSaida(l, 'stop', perda) })
       await anunciar(l, 'stop_loss', { price: l.sl })
       await gravarDesfecho(l, perda, 'Stop loss')
       eventos.push(`stop ${l.symbol}`)
@@ -525,6 +614,9 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
     const pips = l.entry != null && l.entry > 0
       ? (compra ? alvo - l.entry : l.entry - alvo) / pip
       : null
+    // O recuo desde o pico NO MOMENTO de cada alvo é o campo que torna o trailing decidível:
+    // diz se um stop a perseguir o preço teria sido tocado antes de o alvo chegar.
+    await gravarTolerante(l.id, { saidas: comSaida(l, ultimo ? 'alvo-final' : `alvo-${proximo}`, pips) })
     await anunciar(l, ultimo ? 'target_final' : 'partial', { price: alvo, level: proximo })
     if (ultimo) {
       await gravarDesfecho(l, pips, 'Alvo final')
