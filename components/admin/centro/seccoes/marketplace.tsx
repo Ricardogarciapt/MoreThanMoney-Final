@@ -66,6 +66,8 @@ type Produto = {
   educator_id: string | null
   dono: string
   imagem_url: string | null
+  destaque: boolean
+  destaque_ordem: number
   motivo_recusa: string | null
   publicado_em: string | null
 }
@@ -302,6 +304,38 @@ export default function SeccaoMarketplace() {
                     <div className="text-[11px] text-zinc-500">/{p.slug} · {p.tipo}</div>
                   </td>
                   <td className={td}>{autorDe(p)}</td>
+                  {/*
+                    DESTAQUE. A estrela é o interruptor; o número ao lado é a ordem entre os
+                    destacados, e só aparece quando o produto está destacado — um campo de ordem
+                    num produto que não está na fila não ordena nada e só faz perguntar para que
+                    serve. Menor primeiro; empate desfaz-se pela data de publicação.
+                  */}
+                  <td className={td}>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={aAgir === p.id}
+                        title={p.destaque ? "Está em destaque na montra. Carrega para tirar." : "Pôr em destaque no topo da montra."}
+                        onClick={() => agir({ accao: "produto", id: p.id, destaque: !p.destaque }, p.id)}
+                        className={`text-[14px] leading-none ${p.destaque ? "text-[#D2A63C]" : "text-zinc-600 hover:text-zinc-300"}`}
+                      >
+                        {p.destaque ? "★" : "☆"}
+                      </button>
+                      {p.destaque && (
+                        <button
+                          type="button"
+                          title="Ordem entre os destacados (menor aparece primeiro)"
+                          className="rounded border border-white/10 px-1 text-[10.5px] tabular-nums text-zinc-400 hover:border-[#D2A63C]/40"
+                          onClick={() => {
+                            const v = window.prompt(`Ordem de «${p.titulo}» entre os destacados (0 = primeiro)`, String(p.destaque_ordem ?? 0))
+                            if (v !== null) agir({ accao: "produto", id: p.id, destaque_ordem: Number(v) || 0 }, p.id)
+                          }}
+                        >
+                          #{p.destaque_ordem ?? 0}
+                        </button>
+                      )}
+                    </div>
+                  </td>
                   <td className={td}>{euros(p.preco_cents, p.moeda)}</td>
                   <td className={td}>
                     <div className="flex gap-1.5">
@@ -397,6 +431,7 @@ export default function SeccaoMarketplace() {
                 <th className={th}>Produto</th>
                 <th className={th}>Autor</th>
                 <th className={th}>Estado</th>
+                <th className={th}>Montra</th>
                 <th className={th}>Preço</th>
                 <th className={th}>Stripe</th>
                 <th className={th}>Acções</th>
@@ -413,6 +448,38 @@ export default function SeccaoMarketplace() {
                   <td className={td}>
                     <Pilula tom={TOM_ESTADO[p.estado] ?? "neutro"}>{p.estado}</Pilula>
                     {!p.activo && <span className="ml-1"><Pilula tom="grave">desligado</Pilula></span>}
+                  </td>
+                  {/*
+                    DESTAQUE. A estrela é o interruptor; o número ao lado é a ordem entre os
+                    destacados, e só aparece quando o produto está destacado — um campo de ordem
+                    num produto que não está na fila não ordena nada e só faz perguntar para que
+                    serve. Menor primeiro; empate desfaz-se pela data de publicação.
+                  */}
+                  <td className={td}>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={aAgir === p.id}
+                        title={p.destaque ? "Está em destaque na montra. Carrega para tirar." : "Pôr em destaque no topo da montra."}
+                        onClick={() => agir({ accao: "produto", id: p.id, destaque: !p.destaque }, p.id)}
+                        className={`text-[14px] leading-none ${p.destaque ? "text-[#D2A63C]" : "text-zinc-600 hover:text-zinc-300"}`}
+                      >
+                        {p.destaque ? "★" : "☆"}
+                      </button>
+                      {p.destaque && (
+                        <button
+                          type="button"
+                          title="Ordem entre os destacados (menor aparece primeiro)"
+                          className="rounded border border-white/10 px-1 text-[10.5px] tabular-nums text-zinc-400 hover:border-[#D2A63C]/40"
+                          onClick={() => {
+                            const v = window.prompt(`Ordem de «${p.titulo}» entre os destacados (0 = primeiro)`, String(p.destaque_ordem ?? 0))
+                            if (v !== null) agir({ accao: "produto", id: p.id, destaque_ordem: Number(v) || 0 }, p.id)
+                          }}
+                        >
+                          #{p.destaque_ordem ?? 0}
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className={td}>{euros(p.preco_cents, p.moeda)}</td>
                   <td className={td}>

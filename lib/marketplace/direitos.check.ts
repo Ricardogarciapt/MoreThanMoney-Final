@@ -22,7 +22,9 @@ import {
   subscricaoEhDoMarketplace,
 } from './subscricao-stripe'
 import { baseDoUsername, emailNormalizado, emailServeParaComprar } from './comprador'
+import { compradorSemPack, ehCompradorDoMarketplace } from './comprador-marca'
 import { isRegisteredMember } from '@/lib/member-access'
+import { determinePostLoginRedirect } from '@/lib/role-redirect'
 
 const RAIZ = join(__dirname, '..', '..')
 
@@ -173,7 +175,16 @@ sim('metadata.plan vazia não conta', planoDaSubscricao({ priceId: 'px', metadat
     )
   }
 
-  sim('a conta do comprador fica marcada como tal', /user_type:\s*'comprador'/.test(COMPRADOR))
+  // A marca NÃO pode voltar ao `user_type`: `profiles_user_type_check` só aceita
+  // ('member','admin','pending','guest','presentation','inactive','vip','tournament'), e um valor
+  // novo ali fazia o insert falhar — a compra do visitante era recusada e a funcionalidade nascia
+  // morta até alguém aplicar uma migração. Ver `comprador-marca.ts`.
+  assert.ok(
+    !/user_type:\s*'comprador'/.test(COMPRADOR),
+    'a marca de comprador não pode viver no user_type: o CHECK da coluna não aceita valores novos',
+  )
+  sim('o user_type usado existe no CHECK da coluna', /user_type:\s*'member'/.test(COMPRADOR))
+  sim('a conta do comprador fica marcada em profile_data', /marketplace:\s*\{\s*comprador:\s*true/.test(COMPRADOR))
   sim('e marcada como pendente até o pagamento entrar', /pendente_pagamento:\s*true/.test(COMPRADOR))
   sim('nunca cria uma segunda conta para o mesmo email', /ilike\('email'/.test(COMPRADOR))
   // O convite NÃO pode sair na criação: senão a rota vira uma forma de mandar emails nossos a
@@ -230,11 +241,43 @@ sim('um local part curto não faz um username inválido', baseDoUsername('a@mail
 
 // ══════════════ 8. UM COMPRADOR ENTRA NA CONTA, SEM PACK ══════════════
 
-sim('o comprador é uma conta reconhecida', isRegisteredMember({ user_type: 'comprador', is_active: true }))
-sim('mas suspenso não entra', !isRegisteredMember({ user_type: 'comprador', is_active: false }))
-// E continua a não ser membro para efeito de direitos: sem plano nem categoria, quem lê direitos não
-// lhe dá nada. Isto está preso no ficheiro do comprador (secção 5): ele não escreve esses campos.
-sim('sem plano não há pack', isRegisteredMember({ user_type: 'member', is_active: true }) === false)
+const COMPRADOR_PERFIL = {
+  user_type: 'member',
+  is_active: true,
+  profile_data: { marketplace: { comprador: true, pendente_pagamento: false } },
+}
+
+sim('a marca lê-se', ehCompradorDoMarketplace(COMPRADOR_PERFIL))
+sim('um perfil sem marca não é comprador', !ehCompradorDoMarketplace({ profile_data: {} }))
+sim('profile_data lixo não rebenta', !ehCompradorDoMarketplace({ profile_data: 'texto' } as never))
+sim('comprador sem pack é comprador', compradorSemPack(COMPRADOR_PERFIL))
+sim('o comprador é uma conta reconhecida', isRegisteredMember(COMPRADOR_PERFIL))
+sim('mas suspenso não entra', !isRegisteredMember({ ...COMPRADOR_PERFIL, is_active: false }))
+sim('o destino dele é a biblioteca', determinePostLoginRedirect(COMPRADOR_PERFIL) === '/marketplace/biblioteca')
+
+// E sem a marca, um perfil igual continua a não ser membro: é a prova de que a marca é o que muda a
+// resposta, e não o `user_type: 'member'` que o comprador partilha com um membro a sério.
+sim('sem marca e sem plano não há pack', !isRegisteredMember({ user_type: 'member', is_active: true }))
+
+/**
+ * O CASO QUE A MARCA SOZINHA DEIXAVA PASSAR.
+ *
+ * A marca fica no perfil para sempre. Se as portas lessem só a marca, um comprador que depois pagasse
+ * um Premium continuava a entrar em tudo mesmo com a subscrição expirada — uma compra de 40 € a
+ * servir de chave permanente ao que se deixou de pagar.
+ */
+const EX_PREMIUM_QUE_COMPROU_UM_CURSO = {
+  ...COMPRADOR_PERFIL,
+  member_category: 'premium',
+  subscription_plan: 'premium' as const,
+  subscription_status: 'canceled',
+}
+assert.ok(
+  !compradorSemPack(EX_PREMIUM_QUE_COMPROU_UM_CURSO),
+  'com pack — activo ou expirado — a marca de comprador deixa de mandar, e as regras normais do pack decidem',
+)
+// E ao contrário: tirando o pack ao mesmo perfil, volta a ser um comprador.
+sim('sem pack, volta a ser comprador', compradorSemPack(COMPRADOR_PERFIL))
 
 // ── Relatório ─────────────────────────────────────────────────────────────────────────────
 

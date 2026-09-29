@@ -65,6 +65,8 @@ type Produto = {
   recorrente: boolean
   /** De quanto em quanto tempo se cobra (157). É ela que escreve «/mês» ou «/ano». */
   periodicidade: string
+  /** 158 — escolhido no admin para ir ao cimo da montra. */
+  destaque: boolean
   preco: Preco
   educador: Autor | null
   vendedor: Vendedor
@@ -178,6 +180,20 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
    */
   const emCampanha = useMemo(() => (produtos ?? []).filter((p) => p.preco.emCampanha).slice(0, 2), [produtos])
 
+  /**
+   * OS DESTAQUES (158) — o que a casa quer vender agora, escolhido no admin.
+   *
+   * Só aparecem quando NÃO há filtro nem procura: quem escreveu «sensei» na caixa quer o Sensei, e
+   * uma fila de destaques por cima dos resultados empurra para baixo exactamente o que ele pediu.
+   * A montra completa a seguir mostra-os na mesma — a fila é uma segunda porta, não uma secção que
+   * rouba produtos à grelha, porque um produto que aparece em cima e desaparece da lista faz quem
+   * procura julgar que ele já não está à venda.
+   */
+  const destacados = useMemo(
+    () => (categoria || termo.trim() ? [] : (produtos ?? []).filter((p) => p.destaque).slice(0, 6)),
+    [produtos, categoria, termo],
+  )
+
   if (produtos === null) {
     return (
       <div className="flex items-center justify-center py-16 text-zinc-500">
@@ -273,6 +289,24 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
                       </span>
                     </span>
                   </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── Em destaque ───────────────────────────────────────────────────────────── */}
+          {destacados.length > 0 && (
+            <section>
+              <Kicker>Em destaque</Kicker>
+              <div className={`grid gap-4 ${compacto ? "grid-cols-1" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
+                {destacados.map((p) => (
+                  <Cartao
+                    key={`destaque-${p.id}`}
+                    produto={p}
+                    autenticado={autenticado}
+                    aComprar={aComprar === p.id}
+                    onComprar={() => comprar(p.id)}
+                  />
                 ))}
               </div>
             </section>

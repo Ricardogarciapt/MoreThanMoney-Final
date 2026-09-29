@@ -52,7 +52,7 @@
  *   · Deixá-la a PARECER um membro também não: é exactamente o defeito que este trabalho fechou.
  *
  * Então fica com zero direitos e com uma marca em `profile_data.marketplace`:
- * `{ comprador: true, pendente_pagamento: true, criado_em }`. A marca cai quando a compra é
+ * `{ comprador: true, pendente_pagamento: true, criado_em }` (ver `comprador-marca.ts`). A marca cai quando a compra é
  * entregue (`compraEntregue`). Enquanto ela estiver de pé, a linha é identificável numa consulta e
  * distingue-se de um membro real por não ter direito nenhum — nem no site, nem nas apps, nem no MTM
  * Auto, porque todos eles leem `subscription_plan`/`member_category`, que aqui estão vazios.
@@ -173,16 +173,17 @@ export async function contaDoComprador(entrada: {
   }
 
   // 3. O perfil SEM DIREITOS. A lista de campos é curta de propósito: tudo o que não está aqui é
-  //    coisa que um comprador não tem. `user_type: 'comprador'` é um valor novo e é o que permite
-  //    responder «quem é esta gente?» numa consulta — e o que `isRegisteredMember` reconhece para a
-  //    pessoa poder entrar na conta sem que isso lhe dê pack nenhum.
+  //    coisa que um comprador não tem — nem categoria, nem plano, nem estado de subscrição, nem data
+  //    de expiração. O que marca esta conta é `profile_data.marketplace`, e o porquê de não ser um
+  //    `user_type` novo está em `comprador-marca.ts` (resumo: o CHECK da coluna não o aceita, e «de
+  //    onde veio a conta» não é a mesma pergunta que «que tipo de conta é»).
   const { error: erroPerfil } = await db.from('profiles').upsert(
     {
       id: userId,
       email,
       full_name: nome,
       username,
-      user_type: 'comprador',
+      user_type: 'member',
       is_active: true,
       checkout_source: 'marketplace',
       profile_data: {

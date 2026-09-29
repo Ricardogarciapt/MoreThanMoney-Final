@@ -2,6 +2,7 @@ import type { UserProfile } from "@/lib/role-redirect"
 import { isSubscriptionActive, isSubscriptionCategory } from "@/lib/member-subscription"
 import { needsAccessRevalidation } from "@/lib/access-migration"
 import { requiresActivation } from "@/lib/member-activation"
+import { compradorSemPack } from "@/lib/marketplace/comprador-marca"
 
 function trialIsExpired(p: UserProfile): boolean {
   if (p.trial_expired === true) return true
@@ -53,14 +54,15 @@ export function isRegisteredMember(profile: UserProfile | null | undefined): boo
    * COMPRADOR DO MARKETPLACE — conta a sério, pack nenhum.
    *
    * Quem compra um curso sem login fica com uma conta criada no checkout e ZERO direitos (ver
-   * `lib/marketplace/comprador.ts`). Sem este ramo, o login atirava-o para /register («conta não
-   * encontrada») e a pessoa pagava e não conseguia abrir o que comprou.
+   * `lib/marketplace/comprador.ts`). Sem este ramo caía no teste do pack mais abaixo — sem plano
+   * pago, `false` — e o login atirava-o para /register («conta não encontrada»): a pessoa pagava e
+   * não conseguia abrir o que comprou.
    *
    * Isto diz «esta conta existe e é dela», e não «esta pessoa tem pack». Os direitos continuam a ser
    * lidos de `subscription_plan`/`member_category`, que num comprador estão vazios — e o que ele
    * comprou abre-se pela linha em `marketplace_compras`, como qualquer outra compra da montra.
    */
-  if (profile.user_type === "comprador") {
+  if (compradorSemPack(profile)) {
     return true
   }
 

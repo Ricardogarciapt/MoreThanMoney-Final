@@ -70,7 +70,20 @@ export async function GET(request: NextRequest) {
     if (tipo) q = q.eq('tipo', tipoValido(tipo))
     if (vendedor === LOJA_DA_CASA) q = q.eq('dono', 'casa')
     else if (vendedor) q = q.eq('educator_id', vendedor).eq('dono', 'educador')
-    const { data } = await q.order('publicado_em', { ascending: false, nullsFirst: false }).limit(200)
+    /**
+     * A ORDEM DA MONTRA (158). Era só `publicado_em desc` — uma ordem de arquivo, e inútil aqui:
+     * os catorze produtos da casa foram publicados no mesmo minuto pela migração 153, por isso a
+     * ordem entre eles era, na prática, sorteada a cada leitura.
+     *
+     * Agora: destacados primeiro, entre eles pela ordem que o dono deu, e o resto pela data. O
+     * destaque NÃO torna nada visível — `produtoNaVitrine`, mais abaixo, continua a ser quem decide
+     * quem aparece; um produto destacado que esteja retirado continua fora.
+     */
+    const { data } = await q
+      .order('destaque', { ascending: false })
+      .order('destaque_ordem', { ascending: true })
+      .order('publicado_em', { ascending: false, nullsFirst: false })
+      .limit(200)
 
     const linhas = (data ?? []) as unknown as ProdutoVitrine[]
     const vendedores = await mapaDeVendedores()

@@ -7,7 +7,13 @@ export type TipoAlvo = "conta" | "estrategia" | "utilizador" | "sinal"
 export interface Alvo { tipo: TipoAlvo; id: string }
 
 export interface CentroCtx {
-  seccao: SeccaoCentro
+  /**
+   * A secção activa. Aceita `'marketplace'`, que já NÃO é uma secção do Centro: o Marketplace mudou
+   * para /admin/marketplace e serve este contexto em pequeno, porque as secções foram escritas para
+   * o usarem (`versao`/`depoisDeAcao`). Mentir aqui — dizer «cockpit» numa página que não é o
+   * cockpit — era pior do que a união.
+   */
+  seccao: SeccaoCentro | 'marketplace' 
   filtro: Record<string, string>
   irPara: (s: SeccaoCentro, filtro?: Record<string, string>) => void
   abrir: (a: Alvo) => void

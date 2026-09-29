@@ -43,7 +43,7 @@ export const GET = soAdmin(async () => {
       // casa (que não tem educador) de um produto de educador, e é essa distinção que faltava
       // quando o painel rebentava nos 14 produtos da casa. Sem `imagem_url` não há como ver quais
       // é que estão a ir para a montra como um cartão cinzento.
-      .select('id, slug, titulo, tipo, preco_cents, moeda, estado, activo, partilha_pct, stripe_price_id, educator_id, dono, imagem_url, motivo_recusa, publicado_em, created_at')
+      .select('id, slug, titulo, tipo, preco_cents, moeda, estado, activo, partilha_pct, stripe_price_id, educator_id, dono, imagem_url, destaque, destaque_ordem, motivo_recusa, publicado_em, created_at')
       .order('created_at', { ascending: false })
       .limit(300),
     db.from('marketplace_educadores').select('educator_id, activo, partilha_pct, stripe_connect_account_id, notas'),
@@ -202,6 +202,17 @@ export const POST = soAdmin(async (adminId: string, request: NextRequest) => {
         if ('partilha_pct' in b) patch.partilha_pct = b.partilha_pct == null ? null : partilhaValida(b.partilha_pct)
         if ('stripe_price_id' in b) patch.stripe_price_id = b.stripe_price_id || null
         if ('apple_product_id' in b) patch.apple_product_id = b.apple_product_id || null
+        /**
+         * O DESTAQUE só manda na ORDEM da montra — quem já não aparecia continua a não aparecer.
+         * Por isso não se valida aqui o estado do produto: destacar um rascunho é uma decisão
+         * legítima (fica pronto para quando for publicado) e recusá-la obrigava a fazer os dois
+         * cliques na ordem certa sem explicação nenhuma.
+         */
+        if ('destaque' in b) patch.destaque = b.destaque === true
+        if ('destaque_ordem' in b) {
+          const n = Number(b.destaque_ordem)
+          patch.destaque_ordem = Number.isFinite(n) ? Math.max(0, Math.min(999, Math.round(n))) : 0
+        }
       }
       const { data, error } = await db.from('marketplace_produtos').update(patch).eq('id', id).select().maybeSingle()
       if (error) return NextResponse.json({ error: error.message.slice(0, 300) }, { status: 400 })

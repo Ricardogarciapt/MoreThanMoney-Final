@@ -32,6 +32,9 @@ export const COLUNAS_VITRINE =
   // `recorrente` só diz que repete. A galeria vem com ela porque é a ficha que a desenha, e a ficha
   // lê-se desta mesma rota (`?slug=`).
   'periodicidade, ' +
+  // O destaque é ORDEM, não visibilidade (158): decide quem vai ao cimo, entre os que já iam
+  // aparecer. Vem na mesma leitura para a montra não ter de perguntar duas vezes.
+  'destaque, destaque_ordem, ' +
   // A campanha entra na montra porque o preço com desconto é o preço que se MOSTRA. Sem estas
   // colunas o cartão desenhava o preço de tabela e o checkout cobrava outro — e mostrar um preço
   // e cobrar outro é a única coisa que uma loja não pode fazer nunca.
@@ -48,6 +51,9 @@ export type ProdutoVitrine = {
   /** A galeria, sem a capa. A ficha desenha capa + isto; a montra desenha só a capa. */
   imagens: string[] | null
   periodicidade: string
+  /** 158 — vai ao cimo da montra. É ordem, não visibilidade. */
+  destaque: boolean
+  destaque_ordem: number
   preco_cents: number
   moeda: string
   estado: string
