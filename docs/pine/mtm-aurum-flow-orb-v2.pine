@@ -64,8 +64,41 @@
 //   uma chave que o webhook ignora e que sobrevive em `tradingview_signals.raw_payload` — é o que
 //   permite voltar a separar ORB de SMC numa próxima medição.
 
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// v2.1 (2026-09-29) — REVISÃO DO FICHEIRO, sem mexer em valores por omissão.
+// Nenhum número do estudo mudou. O que mudou foi código que não fazia o que os comentários diziam.
+//
+//   1. BLOQUEAVA A COMPILAÇÃO: duas funções novas (`distStop`, `feeOk`) tinham comentários em
+//      bloco `/** … */`. Pine só tem `//`. Bastava isto para o ficheiro não colar.
+//   2. LATCH QUEIMADO PELOS FILTROS (o defeito caro). O latch por sessão era consumido na barra do
+//      rompimento CRU; os filtros decidiam depois. Um rompimento recusado pelo RSI, pelo tecto de
+//      exaustão ou pelo piso de custo apagava a range para o resto do dia. Como o tecto de exaustão
+//      existe precisamente para esperar pela continuação, o código impedia aquilo para que o filtro
+//      foi posto. Agora o latch só é consumido quando o sinal SAI. Os filtros que não dependem da
+//      aresta rompida subiram para antes do motor; o piso de custo é avaliado aresta a aresta.
+//      Consequência: MAIS sinais do que os 35 do §14 — esse número passa a ser um piso.
+//   3. ARREDONDAMENTO ENVIESADO: `round_price` usava `int()`, que trunca em direcção a zero em vez
+//      de arredondar. Menos de um tick, mas sempre no mesmo sentido.
+//   4. Uma só conta de stop (`distStop`) para o filtro, para o latch e para o nível publicado.
+//   5. Limiar do painel «Taxas / risco» passa a 100/N (11,11% com N=9) em vez de um 11 à mão.
+//   6. `lookahead_off` explícito na EMA200 de 4h, com a diferença histórico/tempo-real declarada.
+//
+// O QUE FICA POR RESOLVER E NÃO SE ESCONDE:
+//   • O CAP de SL de 3,5% CORTA o stop em vez de recusar o sinal — ~11% dos ORB publicam um stop
+//     dentro da própria range. Mudar isso é decisão do dono.
+//   • O RSI do estudo é uma média simples de 14 barras; `ta.rsi` usa a média de Wilder (RMA). São
+//     números diferentes, logo o corte 55 do ficheiro não é exactamente o corte que foi medido. No
+//     §14 o filtro de RSI vale +0,005R (0,452 → 0,457): está dentro do ruído, e por isso esta
+//     diferença não muda nenhuma decisão. Fica dito para ninguém a descobrir mais tarde.
+//   • O ficheiro em disco NÃO era o que estava a correr: a v1 tem `s3On = false` (NYFX desligada) e
+//     mesmo assim o stream tem 24 alertas de ORB NYFX (§3). A linhagem dos valores por omissão da
+//     v1 é, portanto, incerta.
+//   • O ficheiro continua POR COMPILAR. Não há compilador de Pine fora do TradingView; esta revisão
+//     é leitura, não prova.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
 //@version=6
-indicator("MoreThanMoney - Aurum Flow · ORB v2", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=80)
+indicator("MoreThanMoney - Aurum Flow · ORB v2.1", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=80)
 
 // ═════════════════════════ HELPERS ═════════════════════════
 dema(src, length) =>
@@ -73,9 +106,12 @@ dema(src, length) =>
     e2 = ta.ema(e1, length)
     2 * e1 - e2
 
+// DEFEITO CORRIGIDO (v2.1): `int()` TRUNCA em direcção a zero, não arredonda. O efeito é de menos
+// de um tick, mas é ENVIESADO — o preço descia sempre, o que dava à compra um preço marginalmente
+// melhor e à venda um marginalmente pior. Numa casa que já apanhou uma fonte a +124% por causa de
+// uma regra de preenchimento, não se deixa um viés de sinal conhecido no arredondamento.
 round_price(x) =>
-    xx = int(x / syminfo.mintick)
-    xx * syminfo.mintick
+    math.round(x / syminfo.mintick) * syminfo.mintick
 
 // ═════════════════════════ MERCADO ═════════════════════════
 mGroup = "==== MERCADO ===="
@@ -100,7 +136,13 @@ useHTF   = input.bool(true,  "Exigir tendência de topo (EMA200 HTF)", group=reg
 htfTF    = input.timeframe("240", "Timeframe de topo (def. 4h)", group=regGroup)
 htfEmaLn = input.int(200, "EMA do timeframe de topo", minval=20, group=regGroup)
 useStack = input.bool(false, "Exigir stack DEMA local a favor", group=regGroup, tooltip="COMPRA só com DEMA15>50>238; VENDA só com <. Off por defeito (ORB já filtra por range).")
-htfEma   = request.security(syminfo.tickerid, htfTF, ta.ema(close, htfEmaLn))
+// `lookahead_off` explícito: é o valor por omissão, mas escrevê-lo evita que alguém lhe mexa sem
+// perceber. ATENÇÃO, e fica dito porque não está resolvido: mesmo assim a EMA200 de 4h tem uma
+// diferença histórico/tempo-real — no histórico usa-se o valor da vela de 4h já fechada, ao vivo
+// usa-se o da vela de 4h ainda a formar-se. Numa EMA de 200 períodos a diferença é pequena, mas é a
+// razão por que o filtro de regime pode aceitar ao vivo um sinal que o histórico recusa. Para o
+// matar de vez seria `ta.ema(close, htfEmaLn)[1]`, à custa de 4 horas de atraso no regime.
+htfEma   = request.security(syminfo.tickerid, htfTF, ta.ema(close, htfEmaLn), lookahead=barmerge.lookahead_off)
 htfUp    = close > htfEma
 htfDown  = close < htfEma
 plot(htfEma, color=color.new(color.orange, 0), title="EMA200 HTF", linewidth=2)
@@ -214,7 +256,13 @@ rrGroup   = "==== RISK-REWARD ===="
 slSource  = input.string("Estrutura (range/sweep)", "Base do SL", options=["Estrutura (range/sweep)", "ATR"], group=rrGroup, tooltip="Estrutura: SL na aresta oposta da range (ORB) ou além do sweep (SMC). ATR: SL = ATR×mult.")
 atrMultSL = input.float(1.5, "SL = ATR ×", step=0.1, group=rrGroup)
 slBufAtr  = input.float(0.25, "Buffer do SL (× ATR)", step=0.05, group=rrGroup, tooltip="Folga extra além da aresta/sweep para o SL não ser caçado pela mecha.")
-slMaxPct  = input.float(3.5, "CAP de SL (% máx do preço)", step=0.1, group=rrGroup, tooltip="Alinha com o gate do site: nenhuma trade arrisca mais que isto.")
+// NÃO MEXIDO, mas tem de ficar escrito porque é um comportamento silencioso: quando a range é mais
+// larga que 3,5% do preço, este CAP não recusa o sinal — CORTA o stop para 3,5%, o que o põe DENTRO
+// da range. A trade publicada deixa de ser a trade que a estrutura descrevia, e o "R" que vai no
+// payload já não é o R estrutural. Pelo §5 do estudo isso acontece em 11% dos sinais de ORB. A
+// alternativa — recusar em vez de cortar — é uma mudança de comportamento e é decisão do dono, não
+// minha; fica como recomendação.
+slMaxPct  = input.float(3.5, "CAP de SL (% máx do preço)", step=0.1, group=rrGroup, tooltip="Alinha com o gate do site: nenhuma trade arrisca mais que isto. ATENÇÃO: CORTA o stop, não recusa o sinal — em ~11% dos ORB o stop publicado fica dentro da range.")
 // ═══ A ESCADA DE ALVOS — refeita a partir de medida, não de intuição ═══
 // §13 do estudo mede a MESMA escada nos dois motores (parciais 50/25/25, taxa real 0,11%), o que
 // retira um enviesamento sério: os alertas de ORB da amostra usaram 3/…/15R e os de SMC usaram
@@ -283,6 +331,56 @@ alGroup = "==== ALERTAS ===="
 alertsOn = input.bool(true, "Emitir alertas p/ o site MTM", group=alGroup)
 intrabarAlerts = input.bool(false, "Alerta INTRA-VELA (repaint)", group=alGroup, tooltip="OFF (recomendado): só no FECHO da vela — sem repaint.")
 
+// ═════════════════════════ FILTROS (calculados ANTES do motor — ver o defeito do latch) ═════════
+// DEFEITO CORRIGIDO (v2.1), e é o mais caro dos três.
+//
+// O motor ORB tem um latch por sessão: `firedL`/`firedS` garantem que cada range só dá UM sinal de
+// cada lado. Na v2 esse latch era consumido na barra do ROMPIMENTO CRU, e só DEPOIS, lá em baixo,
+// é que os filtros decidiam se o sinal saía. Resultado: um rompimento recusado pelo RSI, pelo tecto
+// de exaustão ou pelo piso de custo **queimava a range para o resto do dia**. A barra seguinte,
+// ainda que passasse tudo, já não podia disparar.
+//
+// Na v1 isto quase não se via — `useRSI` estava off e os outros dois filtros não existiam, por isso
+// praticamente todo o rompimento passava. A v2 acrescenta TRÊS filtros que, pelo §14 do estudo,
+// recusam 16 dos 51 sinais de ORB. Com o latch como estava, esses 16 não eram só recusados: cada um
+// apagava também todos os rompimentos seguintes daquela sessão.
+//
+// E é pior no filtro em que o estudo mais insiste. O tecto de exaustão existe porque a vela GRANDE
+// de rompimento é a última do movimento, não a primeira (§8: corpo ≥50% dá −0,136R, vela ≥1 ATR dá
+// −0,063R, tecto ≤2,5 ATR dá +0,195R). A ideia é esperar por uma continuação normal — e era
+// exactamente essa continuação que o latch queimado tornava impossível.
+//
+// ISTO NÃO ESTÁ MEDIDO, e não pode estar: o stream de 160 alertas só contém os rompimentos que
+// SAÍRAM. Os que o latch comeu nunca chegaram a existir como alerta, por isso não há régua
+// histórica para eles. O que se pode dizer é que o código deixou de fazer uma coisa que ninguém
+// queria que fizesse. A consequência prática é MAIS sinais do que os 35 do §14, não menos — o
+// número desse quadro passa a ser um piso, não uma previsão.
+//
+// Por isso os filtros que não dependem do rompimento sobem para aqui: para o latch poder ser
+// consumido só quando o sinal SAI mesmo.
+bufSl     = atrValue * slBufAtr
+dAtrCand  = atrValue * atrMultSL
+dCapCand  = close * slMaxPct / 100.0
+// Piso de custo (só faz sentido em perps: no ouro o custo é spread, não taker %).
+custoIdaVolta = takerFeePct * 2
+minSlPct      = (useFeeFloor and isPerp) ? custoIdaVolta * minFeeMult : 0.0
+// Tecto da vela de rompimento (anti-exaustão).
+barVsAtr = atrValue > 0 ? (high - low) / atrValue : 0.0
+barOk    = not useMaxBar or barVsAtr <= maxBarAtr
+// Tudo o que se sabe ANTES de conhecer a aresta rompida. O que falta (o piso de custo) depende da
+// aresta e por isso é avaliado dentro do motor, aresta a aresta.
+preBuyOk  = allowBuy  and (not useHTF or htfUp)   and (not useStack or uptrend)   and (not useRSI or rsiVal >= rsiLevel)       and volOk and barOk
+preSellOk = allowSell and (not useHTF or htfDown) and (not useStack or downtrend) and (not useRSI or rsiVal <= 100 - rsiLevel) and volOk and barOk
+
+// Distância do stop de um candidato, com a MESMA conta do sinal publicado (cap e mintick incluídos).
+// Pine só tem comentários de linha (`//`): um bloco /* */ é erro de compilação.
+distStop(estrutural) =>
+    math.min(math.max((slSource == "ATR" ? dAtrCand : estrutural), syminfo.mintick), dCapCand)
+
+// O stop deste candidato vale pelo menos N× as taxas?
+feeOk(d) =>
+    close != 0 ? (d / close * 100) >= minSlPct : false
+
 // ═════════════════════════ ENGINE ORB ═════════════════════════
 // Deteção de janela por hora/minuto na timezone (robusto, sem time(session)).
 curMin = hour(time, orbTz) * 100 + minute(time, orbTz)
@@ -344,17 +442,19 @@ for i = 0 to 2
             rngPts = (rh - rl) / syminfo.mintick
             array.set(rLbl, i, label.new(b0, rh, array.get(sNm, i) + "\nRange: " + str.tostring(rngPts, "#") + "\nHigh: " + str.tostring(rh, format.mintick) + "\nLow: " + str.tostring(rl, format.mintick), color=color.new(col, 20), textcolor=color.white, style=label.style_label_down, size=size.small))
         // rompimento (range trancada, dentro da validade, ainda não disparada)
+        // O latch (`firedL`/`firedS`) só é consumido quando o sinal SAI mesmo — ver o bloco
+        // "FILTROS" acima. Um rompimento recusado por um filtro deixa a range viva para o próximo.
         if array.get(rLock, i)
             ageOk = na(array.get(rLockBar, i)) or (bar_index - array.get(rLockBar, i) <= eValidBars)
             rh = array.get(rHigh, i)
             rl = array.get(rLow, i)
-            if ageOk and not array.get(firedL, i) and close > rh and close[1] <= rh
+            if ageOk and not array.get(firedL, i) and close > rh and close[1] <= rh and preBuyOk and feeOk(distStop(close - rl + bufSl))
                 array.set(firedL, i, true)
                 orbBuy := true
                 brkLow := rl
                 brkHigh := rh
                 brkName := array.get(sNm, i)
-            if ageOk and not array.get(firedS, i) and close < rl and close[1] >= rl
+            if ageOk and not array.get(firedS, i) and close < rl and close[1] >= rl and preSellOk and feeOk(distStop(rh - close + bufSl))
                 array.set(firedS, i, true)
                 orbSell := true
                 brkLow := rl
@@ -524,35 +624,27 @@ if showRevZones and revSell
 
 // ═════════════════════════ COMBINAR SINAIS + FILTROS ═════════════════════════
 // O stop CANDIDATO tem de ser conhecido ANTES de o sinal ser aceite — senão o piso de custo não
-// pode vetar nada. É exactamente a mesma conta que estava lá em baixo, só que subida para aqui;
-// os níveis congelados reaproveitam-na, para não haver duas contas a divergir.
-bufSl     = atrValue * slBufAtr
-dAtrCand  = atrValue * atrMultSL
+// pode vetar nada. A conta é UMA só (`distStop`, definida lá em cima) e os níveis congelados
+// reaproveitam-na: antes havia duas contas quase iguais, uma sobre `close` e outra sobre `entry1`
+// arredondado, e bastava o arredondamento para o stop publicado não ser o stop que passou o filtro.
+//
+// Para o ORB os filtros JÁ foram aplicados dentro do motor (é o que protege o latch), por isso aqui
+// só falta o ramo SMC. Reaplicá-los ao ORB não muda nada — `orbBuy` só é true se passaram — e
+// manter a expressão inteira deixa o ficheiro legível a quem ligar o SMC.
 dStrBuy   = orbBuy  ? (close - brkLow + bufSl)  : (close - low  + bufSl)
 dStrSell  = orbSell ? (brkHigh - close + bufSl) : (high  - close + bufSl)
-dCapCand  = close * slMaxPct / 100.0
-dBuyCand  = math.min(math.max((slSource == "ATR" ? dAtrCand : dStrBuy),  syminfo.mintick), dCapCand)
-dSellCand = math.min(math.max((slSource == "ATR" ? dAtrCand : dStrSell), syminfo.mintick), dCapCand)
+dBuyCand  = distStop(dStrBuy)
+dSellCand = distStop(dStrSell)
 slPctBuy  = close != 0 ? dBuyCand  / close * 100 : 0.0
 slPctSell = close != 0 ? dSellCand / close * 100 : 0.0
 
-// Piso de custo (só faz sentido em perps: no ouro o custo é spread, não taker %).
-custoIdaVolta = takerFeePct * 2
-minSlPct      = (useFeeFloor and isPerp) ? custoIdaVolta * minFeeMult : 0.0
-feeOkBuy      = slPctBuy  >= minSlPct
-feeOkSell     = slPctSell >= minSlPct
-
-// Tecto da vela de rompimento (anti-exaustão).
-barVsAtr = atrValue > 0 ? (high - low) / atrValue : 0.0
-barOk    = not useMaxBar or barVsAtr <= maxBarAtr
-
-buyOk  = (not useHTF or htfUp)   and (not useStack or uptrend)   and (not useRSI or rsiVal >= rsiLevel)       and volOk and barOk and feeOkBuy
-sellOk = (not useHTF or htfDown) and (not useStack or downtrend) and (not useRSI or rsiVal <= 100 - rsiLevel) and volOk and barOk and feeOkSell
+buyOk  = preBuyOk  and feeOk(dBuyCand)
+sellOk = preSellOk and feeOk(dSellCand)
 
 rawBuy  = (allowORB and orbBuy)  or (allowSMC and revBuy)
 rawSell = (allowORB and orbSell) or (allowSMC and revSell)
-isBuySignal  = allowBuy  and rawBuy  and buyOk
-isSellSignal = allowSell and rawSell and sellOk
+isBuySignal  = rawBuy  and buyOk
+isSellSignal = rawSell and sellOk
 // Fonte + base do SL (ORB tem prioridade quando ambos disparam no mesmo bar)
 srcBuy  = orbBuy  ? ("ORB " + brkName) : "SMC Reversão"
 srcSell = orbSell ? ("ORB " + brkName) : "SMC Reversão"
@@ -701,10 +793,13 @@ if showPanel and barstate.islast and not na(entry1)
     table.cell(pnl, 1, 6, isPerp ? (str.tostring(levNeeded, "#.#") + "x") : str.tostring(usdPerPt, "#"), bgcolor=bg, text_color=color.yellow, text_size=size.small)
     table.cell(pnl, 0, 7, isPerp ? "Custo fees" : "Margem", bgcolor=bg, text_color=tc, text_size=size.small)
     table.cell(pnl, 1, 7, isPerp ? ("$" + str.tostring(feeCost, "#.##")) : "—", bgcolor=bg, text_color=tc, text_size=size.small)
-    // Quanto do risco é taxa. Acima de ~11% (N<9) o motor SMC morreu por aqui — vale a pena ver.
+    // Quanto do risco é taxa. O motor SMC morreu por aqui. O limiar do vermelho é o do PRÓPRIO
+    // piso (100/N), não um 11 escrito à mão: com N=9 dá 11,11% e um sinal exactamente no piso
+    // deixa de aparecer a vermelho como aparecia.
     taxaDoRisco = (isPerp and slPct > 0) ? custoIdaVolta / slPct * 100 : na
+    limiarTaxa  = minFeeMult > 0 ? 100.0 / minFeeMult : 100.0
     table.cell(pnl, 0, 8, "Taxas / risco", bgcolor=bg, text_color=tc, text_size=size.small)
-    table.cell(pnl, 1, 8, isPerp ? (str.tostring(taxaDoRisco, "#.#") + "%") : "—", bgcolor=bg, text_color=(na(taxaDoRisco) or taxaDoRisco <= 11 ? color.lime : color.red), text_size=size.small)
+    table.cell(pnl, 1, 8, isPerp ? (str.tostring(taxaDoRisco, "#.#") + "%") : "—", bgcolor=bg, text_color=(na(taxaDoRisco) or taxaDoRisco <= limiarTaxa ? color.lime : color.red), text_size=size.small)
 
 // ═════════════════════════ PAYLOAD → webhook dedicado dos perps ═════════════════════════
 sc_conf = '{"HTF Alta":' + (htfUp ? 'true' : 'false') + ',"HTF Baixa":' + (htfDown ? 'true' : 'false') + ',"OS":' + str.tostring(os_ms) + ',"ATR%":' + str.tostring(atrPct, "#.###") + ',"RSI":' + str.tostring(math.round(rsiVal)) + '}'
