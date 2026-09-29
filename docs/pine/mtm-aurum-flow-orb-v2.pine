@@ -1,0 +1,754 @@
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// O QUE ESTA VERSÃO **NÃO** PROVA, e é preciso dizer:
+//   • 160 alertas, 54 replicados no ORB. O intervalo de 95% do R médio do ORB é ±0,544 à volta de
+//     +0,085 — contém o zero com folga. NADA aqui diz que o ORB ganha dinheiro. Diz que, ao
+//     contrário do SMC, não se consegue mostrar que perde.
+//   • Foram testados ~20 filtros em dois motores. Com 40 comparações, um "melhor" a p<0,05 aparece
+//     por acaso duas vezes. Nenhum filtro desta versão sobrevive a uma correcção de comparações
+//     múltiplas. Escolheram-se os que são baratos (cortam poucos sinais) e cuja direcção faz
+//     sentido mecânico, não os que tinham o número mais bonito.
+//   • Os sinais estão correlacionados entre si (dias em que meia dúzia de perpétuos dispara junta).
+//     O IC calculado é, por isso, optimista — o verdadeiro é mais largo.
+//   • `orbValidBars`, `orbExtend` e o ×3 do perfil swing continuam SEM medida. O stream de alertas
+//     só contém os rompimentos que os valores actuais deixaram passar.
+//   • Volume não foi testado: o histórico em cache não tem a coluna. É a medida que falta para
+//     saber se um filtro de volume no rompimento vale alguma coisa.
+//   • Ouro: nada nesta versão foi medido em ouro.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// Este software e código faz parte integrante da propriedade intelectual de RicardoGarciaPT e sua Empresa MoreThanMoney
+// MoreThanMoney - AURUM FLOW · ORB EDITION v2 — scanner de Opening Range Breakout para PERPÉTUOS CRIPTO.
+//
+// v2 (2026-09-29). Os valores por omissão deixaram de ser opinião: vêm de um replay em velas reais
+// dos 160 alertas que ESTE indicador emitiu (`docs/aurum-orb-vs-smc.md`, gerado por
+// `scripts/estudos/aurum-orb-vs-smc.ts`). Cada mudança tem o número ao lado. O que não foi medido
+// ficou como estava, e está dito.
+//
+// O QUE O REPLAY DISSE (160 sinais, 12/08 a 22/09, velas de 15m, taxa taker REAL de 0,11% ida-e-volta):
+//   • ORB (rompimento), 54 replicados: +0,085R por trade · IC 95% ±0,544 → contém o zero.
+//     Não está provado que ganha, mas NÃO cai com as taxas em nenhum cenário testado.
+//   • SMC (reversão), 94 replicados: −0,200R por trade · IC 95% ±0,148 → **NÃO contém o zero**.
+//     É o único resultado estatisticamente significativo do estudo, e é negativo. O motor de
+//     reversão SANGRA. Por isso `engMode` passa a "ORB (rompimento)".
+//   • COMPARAÇÃO JUSTA (§13): os alertas de ORB da amostra usavam alvos 3/…/15R e os de SMC
+//     usavam 0,5/…/2R — compará-los com os alvos que cada um trazia não era comparar motores.
+//     Forçada a MESMA escada nos dois, o ORB bate o SMC em TODAS as escadas testadas, e o SMC é
+//     negativo em todas elas. Na melhor escada (3/6/10/16R): ORB +0,107R, SMC −0,446R.
+//   • PORQUÊ o SMC sangra: o stop dele é a mecha do sweep, mediana 0,65% e p25 0,14% do preço.
+//     Com 0,11% de taxas ida-e-volta, um stop de 0,14% é 0,79R de custo puro. Nenhum piso de stop
+//     o salva: com SL ≥ 0,99% fica em −0,435R (±0,194), pior ainda.
+//
+// O QUE OS VALORES POR OMISSÃO DESTA VERSÃO TERIAM DADO (§14, taxa real, escada 3/6/10/16R):
+//     tudo ligado como estava (ORB+SMC) .. −0,036R · 103 sinais
+//     só ORB ............................. +0,147R ·  51
+//     + piso de custo N=9 ................ +0,349R ·  42
+//     + tecto de exaustão 2,5× ATR ....... +0,452R ·  39
+//     + RSI a favor (o que se entrega) ... +0,457R ·  35   IC 95% ±0,803
+// Sobe a cada passo, e o intervalo continua a conter o zero em todos eles. Ler como uma aposta
+// mais bem informada, não como uma estratégia provada. O rodapé deste ficheiro diz o que falta.
+//
+// A IDEIA (inalterada):
+//   • Caixas de sessão (PRE-LONDON / LONDON / NYFX) com High/Low/Range — a "opening range".
+//   • Entrada = ROMPIMENTO da caixa a favor do regime; SL na aresta oposta (com CAP de risco).
+//   • Estrutura SMC por baixo (CHoCH, BOS, IDM, Sweeps, Order Blocks) — agora só VISUAL.
+//   • Níveis Entry/SL/TP1-4 com R e valor em $, sizing vol-normalizado.
+//
+// SÓ CRIPTO (decisão do dono, 29/09): o webhook já descarta alertas Aurum não-cripto
+// (`app/api/webhooks/tradingview/route.ts`, ramo `aurum_nao_cripto`). O modo "Ouro (Gold)" fica
+// como opção secundária, NÃO é o valor por omissão, e nada nos números desta versão foi medido
+// em ouro.
+//
+// ALERTA: 1 alerta, "Any alert() function call",
+//   URL: https://www.morethanmoney.pt/api/webhooks/tradingview-perps?secret=mtm-tv-sensei-2026
+//   O payload é o MESMO contrato de sempre (ticker/action/entry/sl/tp1..tp4 + strategy com
+//   "Aurum Flow" lá dentro, que é o que o webhook usa para rotear). Só se acrescentou "engine",
+//   uma chave que o webhook ignora e que sobrevive em `tradingview_signals.raw_payload` — é o que
+//   permite voltar a separar ORB de SMC numa próxima medição.
+
+//@version=6
+indicator("MoreThanMoney - Aurum Flow · ORB v2", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=80)
+
+// ═════════════════════════ HELPERS ═════════════════════════
+dema(src, length) =>
+    e1 = ta.ema(src, length)
+    e2 = ta.ema(e1, length)
+    2 * e1 - e2
+
+round_price(x) =>
+    xx = int(x / syminfo.mintick)
+    xx * syminfo.mintick
+
+// ═════════════════════════ MERCADO ═════════════════════════
+mGroup = "==== MERCADO ===="
+// A Aurum é SÓ CRIPTO desde 29/09 — o webhook descarta alertas Aurum não-cripto. O ouro fica
+// como opção, mas nenhum número desta versão foi medido em ouro.
+market = input.string("Perp (Cripto)", "Mercado", options=["Perp (Cripto)", "Ouro (Gold)"], group=mGroup, tooltip="Perp → tamanho em NOTIONAL + alavancagem, e liga o piso de custo. Ouro → LOTES (herança; a Aurum é só cripto desde 29/09).")
+isPerp = market == "Perp (Cripto)"
+
+// ═════════════════════════ TENDÊNCIA LOCAL (DEMA) ═════════════════════════
+dema15  = dema(close, 15)
+dema50  = dema(close, 50)
+dema238 = dema(close, 238)
+plot(dema15,  color=color.new(color.blue, 0),  title="DEMA 15")
+plot(dema50,  color=color.new(color.green, 0),  title="DEMA 50")
+plot(dema238, color=#ffce2b, title="DEMA 238", linewidth=2)
+uptrend   = dema15 > dema50 and dema50 > dema238
+downtrend = dema15 < dema50 and dema50 < dema238
+
+// ═════════════════════════ REGIME (obrigatório) ═════════════════════════
+regGroup = "==== REGIME ===="
+useHTF   = input.bool(true,  "Exigir tendência de topo (EMA200 HTF)", group=regGroup)
+htfTF    = input.timeframe("240", "Timeframe de topo (def. 4h)", group=regGroup)
+htfEmaLn = input.int(200, "EMA do timeframe de topo", minval=20, group=regGroup)
+useStack = input.bool(false, "Exigir stack DEMA local a favor", group=regGroup, tooltip="COMPRA só com DEMA15>50>238; VENDA só com <. Off por defeito (ORB já filtra por range).")
+htfEma   = request.security(syminfo.tickerid, htfTF, ta.ema(close, htfEmaLn))
+htfUp    = close > htfEma
+htfDown  = close < htfEma
+plot(htfEma, color=color.new(color.orange, 0), title="EMA200 HTF", linewidth=2)
+
+// Banda de volatilidade
+volGroup  = "==== VOLATILIDADE ===="
+atrPeriod = input.int(14, "Período ATR", minval=1, group=volGroup)
+minAtrPct = input.float(0.05, "ATR% mínimo (salta o morto)", step=0.05, group=volGroup)
+maxAtrPct = input.float(5.0,  "ATR% máximo (salta o spike)", step=0.5, group=volGroup)
+atrValue  = ta.atr(atrPeriod)
+atrPct    = close != 0 ? atrValue / close * 100 : 0.0
+volOk     = atrPct >= minAtrPct and atrPct <= maxAtrPct
+// MEDIDO (§8): no ORB, exigir RSI a favor (≥55 / ≤45) leva +0,125R → +0,181R por trade e mantém
+// 44 dos 51 sinais. É um ganho pequeno e dentro do ruído (IC ±0,64) — liga-se porque custa 7
+// sinais e nunca piorou, não porque esteja provado.
+useRSI    = input.bool(true, "Confirmar com RSI", group=volGroup)
+rsiLen    = input.int(14, "Período RSI", minval=2, group=volGroup)
+rsiLevel  = input.float(55.0, "RSI a favor: ≥ X na compra, ≤ 100−X na venda", minval=50, maxval=80, step=1, group=volGroup, tooltip="55 foi o que se mediu. A 50 o filtro quase não corta nada.")
+rsiVal    = ta.rsi(close, rsiLen)
+
+// ═════════════════════════ QUALIDADE DO ROMPIMENTO ═════════════════════════
+// Aqui está a surpresa do estudo, e é a que vale a pena ler devagar.
+//
+// A intuição ("os rompimentos falsos matam o ORB, logo exige-se uma vela FORTE") está MEDIDA e
+// está ERRADA. Sobre os mesmos 51 sinais de ORB, §8 do estudo:
+//     sem filtro nenhum .............. +0,125R por trade
+//     corpo ≥ 50% da vela ............ −0,136R   (19 sinais)  ← PIOR
+//     corpo ≥ 60% da vela ............ −0,083R   (12 sinais)  ← PIOR
+//     vela ≥ 1,0× ATR ("com força") .. −0,063R   (33 sinais)  ← PIOR
+//     momento 8 velas ≥ +1 ATR ....... −0,019R   (36 sinais)  ← PIOR
+//     vela ≤ 2,5× ATR (anti-exaustão)  +0,195R   (48 sinais)  ← o único que ajuda
+// Ou seja: as velas de rompimento GRANDES é que falham (exaustão / última vela do movimento),
+// não as pequenas. Por isso NÃO há filtro de corpo nem de momento aqui — só um TECTO.
+// Continua tudo dentro do ruído (IC ±0,6), mas a direcção do efeito é consistente e custa 3 dos
+// 51 sinais. É o filtro mais barato do estudo.
+qGroup    = "==== QUALIDADE DO ROMPIMENTO ===="
+useMaxBar = input.bool(true, "Recusar rompimento em vela de exaustão", group=qGroup, tooltip="Salta o rompimento quando a própria vela já é maior que X× ATR — normalmente é a última vela do movimento, não a primeira.")
+maxBarAtr = input.float(2.5, "Tecto da vela de rompimento (× ATR)", minval=0.5, step=0.1, group=qGroup)
+
+// ── PISO DE CUSTO ── a regra adimensional que faltava
+// A casa já sabe que `pipSizeForSymbol` devolve 1 para cripto (PONTOS), e que por isso qualquer
+// limiar em unidades de preço não serve para ~42 perpétuos com preços de 0,07 $ a 120 000 $
+// (docs/analise-perfil-gk-aurum.md). Este piso resolve isso escrevendo o limiar em MÚLTIPLOS DO
+// CUSTO: "o stop tem de valer pelo menos N vezes a ida-e-volta das taxas". É o mesmo número em
+// BTC e em ONDO, e diz exactamente a coisa que interessa — que fatia do risco é taxa.
+// MEDIDO (§12, com a taxa real de 0,11%), motor ORB:
+//     N=0  (sem piso) .. +0,085R · 54 sinais
+//     N=5  (SL≥0,55%) .. +0,149R · 49 sinais
+//     N=9  (SL≥0,99%) .. +0,296R · 42 sinais  ← melhor ponto medido
+//     N=14 (SL≥1,54%) .. +0,139R · 23 sinais
+//     N=20 (SL≥2,20%) .. −0,067R · 12 sinais
+// Todos contêm o zero. N=9 é a escolha, e a escolha é fraca: é o máximo de uma curva com 54
+// pontos. O que é SÓLIDO é a ponta de baixo — foi um stop minúsculo que matou o motor SMC.
+useFeeFloor = input.bool(true, "Piso de custo: recusar sinal com stop curto demais", group=qGroup)
+minFeeMult  = input.float(9.0, "Stop ≥ N × custo ida-e-volta", minval=1, step=0.5, group=qGroup, tooltip="N=9 com taker 0,055% ⇒ stop ≥ 0,99% do preço ⇒ as taxas são no máximo 11% do risco. Só se aplica em modo Perp.")
+
+// ═════════════════════════ LADOS ═════════════════════════
+sideGroup = "==== LADOS ===="
+allowBuy  = input.bool(true, "Permitir COMPRAS", group=sideGroup)
+// As vendas aparecem piores nos DOIS motores, de forma independente (§4): ORB compras +0,410R
+// (32) contra vendas −0,299R (22); SMC compras +0,161R (67) contra vendas −0,124R (27). É o
+// mesmo sentido em duas amostras separadas — mas 22 e 27 trades não chegam para desligar metade
+// do indicador, e o filtro de regime (EMA200 4h) JÁ obriga a venda a estar do lado certo e
+// mesmo assim ela perde. Fica LIGADO e fica dito. Se o dono quiser, é um clique.
+allowSell = input.bool(true, "Permitir VENDAS", group=sideGroup, tooltip="MEDIDO a perder nos dois motores (ORB −0,299R em 22 trades; SMC −0,124R em 27) — mas com amostra pequena de mais para o desligar por evidência. Desliga por decisão, não por número.")
+
+// ═════════════════════════ MOTOR DE SINAL ═════════════════════════
+engGroup = "==== MOTOR DE SINAL ===="
+// MEDIDO (docs/aurum-orb-vs-smc.md §10): com a taxa taker real (0,11% ida-e-volta) o motor de
+// reversão dá −0,200R por trade com IC 95% ±0,148 — o intervalo NÃO contém o zero. É a única
+// conclusão significativa do estudo e diz que o SMC perde dinheiro. O ORB dá +0,085R (±0,544):
+// não provado, mas não sangra. Por isso o valor por omissão deixa de ser "Ambos".
+engMode  = input.string("ORB (rompimento)", "Motor", options=["ORB (rompimento)", "SMC (reversão)", "Ambos"], group=engGroup, tooltip="ORB: rompe a range de sessão (+0,085R/trade medido). SMC: sweep+reclaim — MEDIDO A PERDER (−0,200R ±0,148, significativo). Não ligues o SMC sem voltar a medir.")
+allowORB = engMode != "SMC (reversão)"
+allowSMC = engMode != "ORB (rompimento)"
+
+// ═════════════════════════ SESSÕES / ORB ═════════════════════════
+// Janelas em HHMM na timezone escolhida (não podem cruzar a meia-noite).
+sGroup = "==== SESSÕES (Opening Range) ===="
+orbTz  = input.string("GMT+1", "Timezone das sessões", group=sGroup, tooltip="GMT+1 = hora do gráfico da imagem. Muda para a tua sessão de referência.")
+s1On = input.bool(true,  "Sessão 1", inline="s1", group=sGroup)
+s1Nm = input.string("PRE LONDON", "", inline="s1", group=sGroup)
+s1A  = input.int(600, "de", inline="s1b", group=sGroup)
+s1B  = input.int(700, "a",  inline="s1b", group=sGroup)
+s1Col= input.color(color.new(color.orange, 0), "", inline="s1b", group=sGroup)
+s2On = input.bool(true,  "Sessão 2", inline="s2", group=sGroup)
+s2Nm = input.string("LONDON", "", inline="s2", group=sGroup)
+s2A  = input.int(700, "de", inline="s2b", group=sGroup)
+s2B  = input.int(800, "a",  inline="s2b", group=sGroup)
+s2Col= input.color(color.new(color.purple, 0), "", inline="s2b", group=sGroup)
+// NYFX VOLTA A LIGAR. Estava OFF por causa de um backtest de OURO de 08/2026 — e a Aurum já não
+// negoceia ouro. No stream real de perpétuos (§3) a NYFX é a MELHOR das três: +0,287R por trade
+// em 24 sinais, contra −0,109R da LONDON (19) e +0,155R da PRE LONDON (11). Os intervalos são
+// enormes (±0,85 a ±1,19): isto não decide nada, só retira a razão que a tinha desligado.
+// A hora crua diz o mesmo (§9): as horas 07h e 08h UTC, onde caem os rompimentos da LONDON, são
+// as duas piores do dia (−0,79 e −0,67); as 15h UTC, da NYFX, é a melhor com n≥8 (+0,79).
+s3On = input.bool(true, "Sessão 3", inline="s3", group=sGroup)
+s3Nm = input.string("NYFX", "", inline="s3", group=sGroup)
+s3A  = input.int(1230, "de", inline="s3b", group=sGroup)
+s3B  = input.int(1330, "a",  inline="s3b", group=sGroup)
+s3Col= input.color(color.new(color.blue, 0), "", inline="s3b", group=sGroup)
+orbExtend = input.int(60, "Estender caixa (barras)", minval=0, group=sGroup)
+// NÃO MEDIDO, e por isso NÃO MEXIDO. O stream de alertas só traz os rompimentos que ESTE valor
+// deixou passar — não há como saber, a partir dele, o que teria acontecido com 40 ou 200 barras.
+// Para decidir isto é preciso correr o indicador no Bar Replay do TradingView com vários valores,
+// ou reescrever o motor ORB em Python sobre as velas. Fica na lista do que falta medir.
+orbValidBars = input.int(120, "Rompimento válido (barras após fechar a range)", minval=5, group=sGroup, tooltip="NÃO MEDIDO. Passado este nº de barras a range deixa de valer. Mexer aqui é opinião, não evidência.")
+
+// ═════════════════════════ RISCO / RR ═════════════════════════
+rrGroup   = "==== RISK-REWARD ===="
+slSource  = input.string("Estrutura (range/sweep)", "Base do SL", options=["Estrutura (range/sweep)", "ATR"], group=rrGroup, tooltip="Estrutura: SL na aresta oposta da range (ORB) ou além do sweep (SMC). ATR: SL = ATR×mult.")
+atrMultSL = input.float(1.5, "SL = ATR ×", step=0.1, group=rrGroup)
+slBufAtr  = input.float(0.25, "Buffer do SL (× ATR)", step=0.05, group=rrGroup, tooltip="Folga extra além da aresta/sweep para o SL não ser caçado pela mecha.")
+slMaxPct  = input.float(3.5, "CAP de SL (% máx do preço)", step=0.1, group=rrGroup, tooltip="Alinha com o gate do site: nenhuma trade arrisca mais que isto.")
+// ═══ A ESCADA DE ALVOS — refeita a partir de medida, não de intuição ═══
+// §13 do estudo mede a MESMA escada nos dois motores (parciais 50/25/25, taxa real 0,11%), o que
+// retira um enviesamento sério: os alertas de ORB da amostra usaram 3/…/15R e os de SMC usaram
+// 0,5/…/2R, por isso compará-los com os alvos que cada um trazia não era comparar motores.
+//     escada                         ORB        SMC
+//     0,5 / 1 / 1,5 / 2R ........  −0,110R    −0,202R
+//     1 / 2 / 3 / 4R ............  −0,104R    −0,329R
+//     1,5 / 3 / 4,5 / 6R ........  −0,098R    −0,400R   ← o que estava neste ficheiro
+//     1,5 / 4 / 7 / 12R .........  −0,060R    −0,461R
+//     2 / 4 / 7 / 12R ...........  −0,040R    −0,434R
+//     3 / 6 / 10 / 16R ..........  **+0,107R**  −0,446R  ← a única escada positiva de todo o estudo
+// Duas leituras. Uma: o ORB bate o SMC em TODAS as escadas, e o SMC é negativo em todas.
+// Duas: o ORB só fica positivo quando os alvos vão para longe — o valor está na cauda, não no meio.
+//
+// A ARITMÉTICA DO PONTO DE EQUILÍBRIO, que é o que o dono pediu. Com alvo único e taxa de acerto p,
+// um alvo de X R só paga se X > (1−p)/p:
+//     TP a 0,5R  → precisa de 67% de acerto. Medido no ORB: 48%. Nunca paga. É por isso que a
+//                  escada 0,5/1/1,5/2R tem 48% de vitórias e mesmo assim dá −0,110R.
+//     TP a 3R    → precisa de 25%. Medido: 25,9%. No fio da navalha.
+//     TP a 6R    → precisa de 14,3%. Medido: 18,5%. É aqui que há folga.
+// Por isso TP1 vai para 3R e a cauda para 16R. E note-se o que isto implica: um TP1 a 3R deixa de
+// ser um alvo "seguro" — é o alvo que decide o trade.
+tp1RR = input.float(3.0, "TP1 / Exit1 — BE aqui (1:X)", minval=0.1, step=0.1, group=rrGroup, tooltip="MEDIDO. A 0,5R precisava de 67% de acerto e o ORB tem 48% — sangrava. A 3R precisa de 25% e tem 25,9%.")
+tp2RR = input.float(6.0, "TP2 / runner (1:X)", minval=0.1, step=0.1, group=rrGroup)
+tp3RR = input.float(10.0, "TP3 (1:X)", minval=0.1, step=0.1, group=rrGroup)
+tp4RR = input.float(16.0, "TP4 (1:X)", minval=0.1, step=0.1, group=rrGroup)
+// ═══ PERFIL SWING (perpétuos) ═══
+// Os pisos subiram para a escada medida (6 / 10 / 16R). O mecanismo é o mesmo: nos perps os alvos
+// abrem e o rompimento vale 3× mais tempo. NOTA: o multiplicador de validade (×3) continua SEM
+// medida nenhuma por trás — ver o comentário de `orbValidBars`.
+useSwing   = input.bool(true, "Perfil SWING nos perpétuos (alvos largos + deixa correr)", group=rrGroup, tooltip="ON: nos perps garante TP2≥6R, TP3≥10R, TP4≥16R — a escada 3/6/10/16R é a única positiva do estudo (+0,107R).")
+swingPerp  = useSwing and isPerp
+etp1RR     = tp1RR
+etp2RR     = swingPerp ? math.max(tp2RR, 6.0)  : tp2RR
+etp3RR     = swingPerp ? math.max(tp3RR, 10.0) : tp3RR
+etp4RR     = swingPerp ? math.max(tp4RR, 16.0) : tp4RR
+eValidBars = swingPerp ? orbValidBars * 3 : orbValidBars
+
+// ═════════════════════════ GESTÃO / CONTA ═════════════════════════
+accGroup = "==== GESTÃO / CONTA ===="
+accountSize = input.float(1000.0, "Tamanho da conta (USD)", minval=1, group=accGroup)
+riskPct     = input.float(1.0, "Risco por trade (%)", minval=0.1, step=0.1, group=accGroup)
+usdPerPt    = input.float(100.0, "Ouro: USD por 1.0 de preço, por lote", step=1.0, group=accGroup, tooltip="XAUUSD (100oz): $1 de preço = $100 por 1.0 lote → 100. Ajusta ao teu contrato.")
+takerFeePct = input.float(0.055, "Perp: taxa taker (%)", step=0.005, group=accGroup)
+maxLev      = input.float(25.0, "Perp: alavancagem máxima", minval=1, group=accGroup)
+showPanel   = input.bool(true, "Mostrar painel", group=accGroup)
+
+// ═════════════════════════ SMC / ESTRUTURA ═════════════════════════
+smcGroup = "==== SMC / ESTRUTURA ===="
+smcLen   = input.int(50, "CHoCH Period", minval=10, maxval=200, group=smcGroup)
+smcShort = input.int(3,  "IDM Period", minval=1, maxval=20, group=smcGroup)
+bullCss  = input.color(#089981, "Bullish", group=smcGroup)
+bearCss  = input.color(#ff5252, "Bearish", group=smcGroup)
+showChoch= input.bool(true, "CHoCH", inline="sm1", group=smcGroup)
+showBos  = input.bool(true, "BOS",   inline="sm1", group=smcGroup)
+showIdm  = input.bool(true, "IDM",   inline="sm2", group=smcGroup)
+idmCss   = input.color(color.gray, "", inline="sm2", group=smcGroup)
+showSweeps=input.bool(true, "Sweeps",inline="sm3", group=smcGroup)
+sweepsCss= input.color(color.gray, "", inline="sm3", group=smcGroup)
+showCircles=input.bool(true, "Swings", group=smcGroup)
+showOB   = input.bool(true, "Order Blocks", group=smcGroup)
+showRevZones = input.bool(true, "Zonas de reversão (pullback)", group=smcGroup, tooltip="Demanda/oferta após sweep+reclaim de liquidez — zonas de pullback / entrada SMC.")
+
+// ═════════════════════════ ALERTAS ═════════════════════════
+alGroup = "==== ALERTAS ===="
+alertsOn = input.bool(true, "Emitir alertas p/ o site MTM", group=alGroup)
+intrabarAlerts = input.bool(false, "Alerta INTRA-VELA (repaint)", group=alGroup, tooltip="OFF (recomendado): só no FECHO da vela — sem repaint.")
+
+// ═════════════════════════ ENGINE ORB ═════════════════════════
+// Deteção de janela por hora/minuto na timezone (robusto, sem time(session)).
+curMin = hour(time, orbTz) * 100 + minute(time, orbTz)
+
+var string[] sNm  = array.from(s1Nm, s2Nm, s3Nm)
+var int[]    sA   = array.from(s1A, s2A, s3A)
+var int[]    sB   = array.from(s1B, s2B, s3B)
+var bool[]   sOn  = array.from(s1On, s2On, s3On)
+var color[]  sCl  = array.from(s1Col, s2Col, s3Col)
+
+var float[] rHigh = array.new_float(3, na)
+var float[] rLow  = array.new_float(3, na)
+var int[]   rB0   = array.new_int(3, na)
+var bool[]  rLock = array.new_bool(3, false)
+var int[]   rLockBar = array.new_int(3, na)
+var bool[]  wasIn = array.new_bool(3, false)
+var bool[]  firedL= array.new_bool(3, false)
+var bool[]  firedS= array.new_bool(3, false)
+var box[]   rBox  = array.new_box(3, na)
+var label[] rLbl  = array.new_label(3, na)
+
+// Saídas do rompimento deste bar
+orbBuy = false
+orbSell = false
+var float brkLow = na
+var float brkHigh = na
+var string brkName = ""
+
+for i = 0 to 2
+    if array.get(sOn, i)
+        inW = curMin >= array.get(sA, i) and curMin < array.get(sB, i)
+        was = array.get(wasIn, i)
+        if inW and not was
+            // início da janela → nova range
+            array.set(rHigh, i, high)
+            array.set(rLow, i, low)
+            array.set(rB0, i, bar_index)
+            array.set(rLock, i, false)
+            array.set(firedL, i, false)
+            array.set(firedS, i, false)
+        else if inW
+            array.set(rHigh, i, math.max(array.get(rHigh, i), high))
+            array.set(rLow, i, math.min(array.get(rLow, i), low))
+        // fim da janela → tranca + desenha caixa
+        if was and not inW and not array.get(rLock, i)
+            array.set(rLock, i, true)
+            array.set(rLockBar, i, bar_index)
+            rh = array.get(rHigh, i)
+            rl = array.get(rLow, i)
+            b0 = array.get(rB0, i)
+            col = array.get(sCl, i)
+            ob = array.get(rBox, i)
+            ol = array.get(rLbl, i)
+            if not na(ob)
+                box.delete(ob)
+            if not na(ol)
+                label.delete(ol)
+            array.set(rBox, i, box.new(b0, rh, bar_index + orbExtend, rl, border_color=col, border_width=1, bgcolor=color.new(col, 90)))
+            rngPts = (rh - rl) / syminfo.mintick
+            array.set(rLbl, i, label.new(b0, rh, array.get(sNm, i) + "\nRange: " + str.tostring(rngPts, "#") + "\nHigh: " + str.tostring(rh, format.mintick) + "\nLow: " + str.tostring(rl, format.mintick), color=color.new(col, 20), textcolor=color.white, style=label.style_label_down, size=size.small))
+        // rompimento (range trancada, dentro da validade, ainda não disparada)
+        if array.get(rLock, i)
+            ageOk = na(array.get(rLockBar, i)) or (bar_index - array.get(rLockBar, i) <= eValidBars)
+            rh = array.get(rHigh, i)
+            rl = array.get(rLow, i)
+            if ageOk and not array.get(firedL, i) and close > rh and close[1] <= rh
+                array.set(firedL, i, true)
+                orbBuy := true
+                brkLow := rl
+                brkHigh := rh
+                brkName := array.get(sNm, i)
+            if ageOk and not array.get(firedS, i) and close < rl and close[1] >= rl
+                array.set(firedS, i, true)
+                orbSell := true
+                brkLow := rl
+                brkHigh := rh
+                brkName := array.get(sNm, i)
+        array.set(wasIn, i, inW)
+
+// ═════════════════════════ SMC STRUCTURE ENGINE (motor Sensei) ═════════════════════════
+swings(slen) =>
+    var int os_ = 0
+    var int topx_ = na
+    var int btmx_ = na
+    up_ = ta.highest(slen)
+    dn_ = ta.lowest(slen)
+    os_ := high[slen] > up_ ? 0 : low[slen] < dn_ ? 1 : os_[1]
+    top_ = os_ == 0 and os_[1] != 0 ? high[slen] : na
+    btm_ = os_ == 1 and os_[1] != 1 ? low[slen] : na
+    topx_ := os_ == 0 and os_[1] != 0 ? bar_index[slen] : topx_
+    btmx_ := os_ == 1 and os_[1] != 1 ? bar_index[slen] : btmx_
+    [top_, topx_, btm_, btmx_]
+
+n = bar_index
+[top, topx, btm, btmx] = swings(smcLen)
+[stop_, stopx_, sbtm_, sbtmx_] = swings(smcShort)
+var int os_ms = 0
+var bool top_crossed = false
+var bool btm_crossed = false
+var float max_ms = na
+var float min_ms = na
+var int max_x1 = na
+var int min_x1 = na
+var float topy = na
+var float btmy = na
+var bool stop_crossed = false
+var bool sbtm_crossed = false
+var int choch_bull_bar = na
+var int choch_bear_bar = na
+var int bos_bull_bar = na
+var int bos_bear_bar = na
+if not na(top)
+    topy := top
+    top_crossed := false
+if not na(btm)
+    btmy := btm
+    btm_crossed := false
+if close > topy and not top_crossed
+    os_ms := 1
+    top_crossed := true
+    choch_bull_bar := n
+if close < btmy and not btm_crossed
+    os_ms := 0
+    btm_crossed := true
+    choch_bear_bar := n
+if os_ms != os_ms[1]
+    max_ms := high
+    min_ms := low
+    max_x1 := n
+    min_x1 := n
+    stop_crossed := false
+    sbtm_crossed := false
+    if os_ms == 1 and showChoch
+        line.new(topx, topy, n, topy, color=bullCss, style=line.style_dashed)
+        label.new(int(math.avg(n, topx)), topy, 'CHoCH', color=color(na), style=label.style_label_down, textcolor=bullCss, size=size.tiny)
+    else if os_ms == 0 and showChoch
+        line.new(btmx, btmy, n, btmy, color=bearCss, style=line.style_dashed)
+        label.new(int(math.avg(n, btmx)), btmy, 'CHoCH', color=color(na), style=label.style_label_up, textcolor=bearCss, size=size.tiny)
+var float stopy_ = na
+var float sbtmy_ = na
+stopy_ := na(stop_) ? stopy_ : stop_
+sbtmy_ := na(sbtm_) ? sbtmy_ : sbtm_
+if low < sbtmy_ and not sbtm_crossed and os_ms == 1 and sbtmy_ != btmy
+    if showIdm
+        line.new(sbtmx_, sbtmy_, n, sbtmy_, color=idmCss, style=line.style_dotted)
+        label.new(int(math.avg(n, sbtmx_)), sbtmy_, 'IDM', color=color(na), style=label.style_label_up, textcolor=idmCss, size=size.tiny)
+    sbtm_crossed := true
+if close > max_ms and sbtm_crossed and os_ms == 1
+    if showBos
+        line.new(max_x1, max_ms, n, max_ms, color=bullCss)
+        label.new(int(math.avg(n, max_x1)), max_ms, 'BOS', color=color(na), style=label.style_label_down, textcolor=bullCss, size=size.tiny)
+    bos_bull_bar := n
+    sbtm_crossed := false
+if high > stopy_ and not stop_crossed and os_ms == 0 and stopy_ != topy
+    if showIdm
+        line.new(stopx_, stopy_, n, stopy_, color=idmCss, style=line.style_dotted)
+        label.new(int(math.avg(n, stopx_)), stopy_, 'IDM', color=color(na), style=label.style_label_down, textcolor=idmCss, size=size.tiny)
+    stop_crossed := true
+if close < min_ms and stop_crossed and os_ms == 0
+    if showBos
+        line.new(min_x1, min_ms, n, min_ms, color=bearCss)
+        label.new(int(math.avg(n, min_x1)), min_ms, 'BOS', color=color(na), style=label.style_label_up, textcolor=bearCss, size=size.tiny)
+    bos_bear_bar := n
+    stop_crossed := false
+// Sweeps
+sweepUp = high > max_ms and close < max_ms and os_ms == 1 and n - max_x1 > 1
+sweepDn = low < min_ms and close > min_ms and os_ms == 0 and n - min_x1 > 1
+if sweepUp and showSweeps
+    line.new(max_x1, max_ms, n, max_ms, color=sweepsCss, style=line.style_dotted)
+    label.new(int(math.avg(n, max_x1)), max_ms, 'x', color=color(na), style=label.style_label_down, textcolor=sweepsCss)
+if sweepDn and showSweeps
+    line.new(min_x1, min_ms, n, min_ms, color=sweepsCss, style=line.style_dotted)
+    label.new(int(math.avg(n, min_x1)), min_ms, 'x', color=color(na), style=label.style_label_up, textcolor=sweepsCss)
+max_ms := math.max(high, max_ms)
+min_ms := math.min(low, min_ms)
+if max_ms > max_ms[1]
+    max_x1 := n
+if min_ms < min_ms[1]
+    min_x1 := n
+
+// ═════════════════════════ ORDER BLOCKS ═════════════════════════
+var float ob_bull_top = na
+var float ob_bull_bot = na
+var int ob_bull_bar = na
+var float ob_bear_top = na
+var float ob_bear_bot = na
+var int ob_bear_bar = na
+if os_ms == 1 and os_ms[1] == 0
+    for k = 1 to 6
+        if close[k] < open[k]
+            ob_bull_top := high[k]
+            ob_bull_bot := low[k]
+            ob_bull_bar := bar_index - k
+            break
+if os_ms == 0 and os_ms[1] == 1
+    for k = 1 to 6
+        if close[k] > open[k]
+            ob_bear_top := high[k]
+            ob_bear_bot := low[k]
+            ob_bear_bar := bar_index - k
+            break
+
+// ═════════════════════════ ZONAS DE REVERSÃO (pullback / SMC) ═════════════════════════
+// Sweep de liquidez do último swing + reclaim → zona de demanda/oferta.
+// DEFEITO CORRIGIDO: estas duas condições não tinham travão nenhum. Enquanto o swing não mudasse,
+// QUALQUER vela que mergulhasse abaixo de `btmy` e fechasse acima voltava a disparar — velas
+// seguidas, o mesmo sweep contado várias vezes. É metade da razão por que o SMC fez 94 alertas em
+// 16 dias (5,9/dia) contra 66 do ORB em 40 (1,65/dia). Agora dispara UMA vez por swing.
+var bool revBuyArmado  = true
+var bool revSellArmado = true
+if not na(btm)
+    revBuyArmado := true            // swing low novo → o sweep desse swing volta a valer uma vez
+if not na(top)
+    revSellArmado := true
+revBuyRaw  = not na(btmy) and low < btmy and close > btmy    // varre swing low e fecha acima
+revSellRaw = not na(topy) and high > topy and close < topy   // varre swing high e fecha abaixo
+revBuy  = revBuyRaw  and revBuyArmado
+revSell = revSellRaw and revSellArmado
+if revBuy
+    revBuyArmado := false
+if revSell
+    revSellArmado := false
+var box revBullBox = na
+var box revBearBox = na
+var label revBullLbl = na
+var label revBearLbl = na
+if showRevZones and revBuy
+    if not na(revBullBox)
+        box.delete(revBullBox)
+        label.delete(revBullLbl)
+    revBullBox := box.new(n, math.max(btmy, close), n + orbExtend, low, border_color=color.new(bullCss, 10), bgcolor=color.new(bullCss, 82))
+    revBullLbl := label.new(n, low, "Zona Reversão ▲", color=color.new(bullCss, 20), textcolor=color.white, style=label.style_label_up, size=size.tiny)
+if showRevZones and revSell
+    if not na(revBearBox)
+        box.delete(revBearBox)
+        label.delete(revBearLbl)
+    revBearBox := box.new(n, high, n + orbExtend, math.min(topy, close), border_color=color.new(bearCss, 10), bgcolor=color.new(bearCss, 82))
+    revBearLbl := label.new(n, high, "Zona Reversão ▼", color=color.new(bearCss, 20), textcolor=color.white, style=label.style_label_down, size=size.tiny)
+
+// ═════════════════════════ COMBINAR SINAIS + FILTROS ═════════════════════════
+// O stop CANDIDATO tem de ser conhecido ANTES de o sinal ser aceite — senão o piso de custo não
+// pode vetar nada. É exactamente a mesma conta que estava lá em baixo, só que subida para aqui;
+// os níveis congelados reaproveitam-na, para não haver duas contas a divergir.
+bufSl     = atrValue * slBufAtr
+dAtrCand  = atrValue * atrMultSL
+dStrBuy   = orbBuy  ? (close - brkLow + bufSl)  : (close - low  + bufSl)
+dStrSell  = orbSell ? (brkHigh - close + bufSl) : (high  - close + bufSl)
+dCapCand  = close * slMaxPct / 100.0
+dBuyCand  = math.min(math.max((slSource == "ATR" ? dAtrCand : dStrBuy),  syminfo.mintick), dCapCand)
+dSellCand = math.min(math.max((slSource == "ATR" ? dAtrCand : dStrSell), syminfo.mintick), dCapCand)
+slPctBuy  = close != 0 ? dBuyCand  / close * 100 : 0.0
+slPctSell = close != 0 ? dSellCand / close * 100 : 0.0
+
+// Piso de custo (só faz sentido em perps: no ouro o custo é spread, não taker %).
+custoIdaVolta = takerFeePct * 2
+minSlPct      = (useFeeFloor and isPerp) ? custoIdaVolta * minFeeMult : 0.0
+feeOkBuy      = slPctBuy  >= minSlPct
+feeOkSell     = slPctSell >= minSlPct
+
+// Tecto da vela de rompimento (anti-exaustão).
+barVsAtr = atrValue > 0 ? (high - low) / atrValue : 0.0
+barOk    = not useMaxBar or barVsAtr <= maxBarAtr
+
+buyOk  = (not useHTF or htfUp)   and (not useStack or uptrend)   and (not useRSI or rsiVal >= rsiLevel)       and volOk and barOk and feeOkBuy
+sellOk = (not useHTF or htfDown) and (not useStack or downtrend) and (not useRSI or rsiVal <= 100 - rsiLevel) and volOk and barOk and feeOkSell
+
+rawBuy  = (allowORB and orbBuy)  or (allowSMC and revBuy)
+rawSell = (allowORB and orbSell) or (allowSMC and revSell)
+isBuySignal  = allowBuy  and rawBuy  and buyOk
+isSellSignal = allowSell and rawSell and sellOk
+// Fonte + base do SL (ORB tem prioridade quando ambos disparam no mesmo bar)
+srcBuy  = orbBuy  ? ("ORB " + brkName) : "SMC Reversão"
+srcSell = orbSell ? ("ORB " + brkName) : "SMC Reversão"
+
+plotshape(isBuySignal,  style=shape.labelup,   location=location.belowbar, color=color.new(color.green, 0), textcolor=color.white, text="B", size=size.small, title="Compra")
+plotshape(isSellSignal, style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0),   textcolor=color.white, text="S", size=size.small, title="Venda")
+
+// ═════════════════════════ NÍVEIS (congelados na barra do sinal) ═════════════════════════
+var string sigDir = na
+var string sigSrc = na
+if isBuySignal
+    sigDir := "BUY"
+    sigSrc := srcBuy
+else if isSellSignal
+    sigDir := "SELL"
+    sigSrc := srcSell
+
+var float entry1 = na
+var float sl = na
+var float tp1 = na
+var float tp2 = na
+var float tp3 = na
+var float tp4 = na
+var float slPct = na
+var float posNotional = na
+var float levNeeded = na
+var float marginUsed = na
+var float riskAmt = na
+var float feeCost = na
+var float lots = na
+var int   et = 0
+
+if isBuySignal or isSellSignal
+    entry1 := round_price(close)
+    et := time
+    // A distância do stop é a MESMA que o gate avaliou (dBuyCand/dSellCand), não uma segunda conta.
+    // Antes havia duas contas quase iguais — uma sobre `close`, outra sobre `entry1` arredondado —
+    // e bastava o arredondamento para o stop publicado não ser o stop que passou o filtro.
+    d = isBuySignal ? dBuyCand : dSellCand
+    if isBuySignal
+        sl  := round_price(entry1 - d)
+        tp1 := round_price(entry1 + d * etp1RR)
+        tp2 := round_price(entry1 + d * etp2RR)
+        tp3 := round_price(entry1 + d * etp3RR)
+        tp4 := round_price(entry1 + d * etp4RR)
+    else
+        sl  := round_price(entry1 + d)
+        tp1 := round_price(entry1 - d * etp1RR)
+        tp2 := round_price(entry1 - d * etp2RR)
+        tp3 := round_price(entry1 - d * etp3RR)
+        tp4 := round_price(entry1 - d * etp4RR)
+    slPct := entry1 != 0 ? d / entry1 * 100 : na
+    // sizing vol-normalizado (risco $ fixo)
+    riskAmt := accountSize * riskPct / 100
+    if isPerp
+        posNotional := slPct > 0 ? riskAmt / (slPct / 100) : na
+        levNeeded := (not na(posNotional) and accountSize > 0) ? math.max(1.0, posNotional / accountSize) : na
+        levNeeded := not na(levNeeded) ? math.min(levNeeded, maxLev) : na
+        marginUsed := (not na(posNotional) and not na(levNeeded) and levNeeded > 0) ? posNotional / levNeeded : na
+        feeCost := not na(posNotional) ? posNotional * takerFeePct / 100 * 2 : na
+        lots := na
+    else
+        lots := (d > 0 and usdPerPt > 0) ? riskAmt / (d * usdPerPt) : na
+        posNotional := na
+        levNeeded := na
+        marginUsed := na
+        feeCost := na
+
+// ═════════════════════════ LINHAS + LABELS (estilo da imagem) ═════════════════════════
+dt = time - time[1]
+var line lE = na
+var line lS = na
+var line l1 = na
+var line l2 = na
+var line l3 = na
+var line l4 = na
+var label bE = na
+var label bS = na
+var label b1 = na
+var label b2 = na
+var label b3 = na
+var label b4 = na
+
+sizeStr = isPerp ? (str.tostring(levNeeded, "#.#") + "x · $" + str.tostring(posNotional, "#")) : (str.tostring(lots, "#.##") + " lots")
+
+if barstate.islast and not na(entry1)
+    line.delete(lE)
+    line.delete(lS)
+    line.delete(l1)
+    line.delete(l2)
+    line.delete(l3)
+    line.delete(l4)
+    label.delete(bE)
+    label.delete(bS)
+    label.delete(b1)
+    label.delete(b2)
+    label.delete(b3)
+    label.delete(b4)
+    xR = time + dt * 6
+    lE := line.new(et, entry1, xR, entry1, color=color.blue, xloc=xloc.bar_time, width=2)
+    lS := line.new(et, sl,     xR, sl,     color=color.red,  xloc=xloc.bar_time, width=1)
+    l1 := line.new(et, tp1,    xR, tp1,    color=color.green, xloc=xloc.bar_time)
+    l2 := line.new(et, tp2,    xR, tp2,    color=color.green, xloc=xloc.bar_time)
+    l3 := line.new(et, tp3,    xR, tp3,    color=color.green, xloc=xloc.bar_time)
+    l4 := line.new(et, tp4,    xR, tp4,    color=color.green, xloc=xloc.bar_time)
+    bE := label.new(xR, entry1, "Entry: " + str.tostring(entry1, format.mintick) + " | risco " + str.tostring(riskPct, "#.#") + "% | " + sizeStr, color=color.blue, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    bS := label.new(xR, sl,  "SL: " + str.tostring(sl, format.mintick) + " | -$" + str.tostring(riskAmt, "#"), color=color.red, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    b1 := label.new(xR, tp1, "TP1: " + str.tostring(tp1, format.mintick) + " (" + str.tostring(etp1RR, "#.#") + "R) | +$" + str.tostring(riskAmt * etp1RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    b2 := label.new(xR, tp2, "TP2: " + str.tostring(tp2, format.mintick) + " (" + str.tostring(etp2RR, "#.#") + "R) | +$" + str.tostring(riskAmt * etp2RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    b3 := label.new(xR, tp3, "TP3: " + str.tostring(tp3, format.mintick) + " (" + str.tostring(etp3RR, "#.#") + "R) | +$" + str.tostring(riskAmt * etp3RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    b4 := label.new(xR, tp4, "TP4: " + str.tostring(tp4, format.mintick) + " (" + str.tostring(etp4RR, "#.#") + "R) | +$" + str.tostring(riskAmt * etp4RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+
+// ═════════════════════════ ORDER BLOCKS VISUAL ═════════════════════════
+var box ob_bull_box = na
+var box ob_bear_box = na
+if barstate.islast and showOB
+    box.delete(ob_bull_box)
+    box.delete(ob_bear_box)
+    if not na(ob_bull_bar) and not na(ob_bull_top)
+        ob_bull_box := box.new(ob_bull_bar, ob_bull_top, bar_index + 25, ob_bull_bot, border_color=color.new(bullCss, 20), bgcolor=color.new(bullCss, 88), text="OB / Pullback", text_color=bullCss, text_size=size.tiny)
+    if not na(ob_bear_bar) and not na(ob_bear_top)
+        ob_bear_box := box.new(ob_bear_bar, ob_bear_top, bar_index + 25, ob_bear_bot, border_color=color.new(bearCss, 20), bgcolor=color.new(bearCss, 88), text="OB / Pullback", text_color=bearCss, text_size=size.tiny)
+
+// SMC swing circles
+plot(showCircles ? top : na, 'Swing High', color.new(bearCss, 50), 5, plot.style_circles, offset=-smcLen)
+plot(showCircles ? btm : na, 'Swing Low', color.new(bullCss, 50), 5, plot.style_circles, offset=-smcLen)
+
+// ═════════════════════════ PAINEL ═════════════════════════
+var table pnl = table.new(position.bottom_right, 2, 9, border_width=1, frame_color=color.gray, frame_width=1)
+if showPanel and barstate.islast and not na(entry1)
+    bg = color.new(color.black, 15)
+    tc = color.white
+    table.cell(pnl, 0, 0, "AURUM ORB · " + (na(sigDir) ? "—" : sigDir), bgcolor=color.new(color.blue, 0), text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 0, syminfo.ticker, bgcolor=color.new(color.blue, 0), text_color=tc, text_size=size.small)
+    table.cell(pnl, 0, 1, "Fonte", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 1, na(sigSrc) ? "—" : sigSrc, bgcolor=bg, text_color=color.yellow, text_size=size.small)
+    table.cell(pnl, 0, 2, "ATR%", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 2, str.tostring(atrPct, "#.##") + "%", bgcolor=bg, text_color=(volOk ? color.lime : color.red), text_size=size.small)
+    table.cell(pnl, 0, 3, "SL dist.", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 3, str.tostring(slPct, "#.##") + "%", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 0, 4, "Risco", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 4, "$" + str.tostring(riskAmt, "#"), bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 0, 5, isPerp ? "Notional" : "Lotes", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 5, isPerp ? ("$" + str.tostring(posNotional, "#")) : str.tostring(lots, "#.##"), bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 0, 6, isPerp ? "Alav. útil" : "USD/pt·lote", bgcolor=bg, text_color=color.yellow, text_size=size.small)
+    table.cell(pnl, 1, 6, isPerp ? (str.tostring(levNeeded, "#.#") + "x") : str.tostring(usdPerPt, "#"), bgcolor=bg, text_color=color.yellow, text_size=size.small)
+    table.cell(pnl, 0, 7, isPerp ? "Custo fees" : "Margem", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 7, isPerp ? ("$" + str.tostring(feeCost, "#.##")) : "—", bgcolor=bg, text_color=tc, text_size=size.small)
+    // Quanto do risco é taxa. Acima de ~11% (N<9) o motor SMC morreu por aqui — vale a pena ver.
+    taxaDoRisco = (isPerp and slPct > 0) ? custoIdaVolta / slPct * 100 : na
+    table.cell(pnl, 0, 8, "Taxas / risco", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 8, isPerp ? (str.tostring(taxaDoRisco, "#.#") + "%") : "—", bgcolor=bg, text_color=(na(taxaDoRisco) or taxaDoRisco <= 11 ? color.lime : color.red), text_size=size.small)
+
+// ═════════════════════════ PAYLOAD → webhook dedicado dos perps ═════════════════════════
+sc_conf = '{"HTF Alta":' + (htfUp ? 'true' : 'false') + ',"HTF Baixa":' + (htfDown ? 'true' : 'false') + ',"OS":' + str.tostring(os_ms) + ',"ATR%":' + str.tostring(atrPct, "#.###") + ',"RSI":' + str.tostring(math.round(rsiVal)) + '}'
+
+f_json(_dir, _src) =>
+    // CONTRATO DO WEBHOOK — confirmado em app/api/webhooks/tradingview/route.ts (não assumido):
+    //   obrigatórios: ticker · action · sl · pelo menos um tp (tp1) · secret na query.
+    //   `strategy` e `alert_name` são o MESMO campo do lado do handler (o `pick` aceita os dois) e
+    //   é aí que ele procura /aurum\s*flow/ para rotear. NÃO mexer nestes dois textos.
+    //   `market`, `source`, `order_type`, `sl_pct`, `lots`, `leverage`, `notional`, `margin`,
+    //   `fee_cost` são gravados em `tradingview_signals.raw_payload` mas nunca lidos.
+    // `engine` é novo e é dessa família: o webhook ignora-o, mas fica no raw_payload e é o que
+    // permite voltar a separar ORB de SMC numa próxima medição sem depender do texto de `source`.
+    m = '{"strategy":"MTM Aurum Flow ORB","alert_name":"MTM Perps Aurum Flow","market":"' + (isPerp ? "perp" : "gold") + '","source":"' + _src + '","engine":"' + (str.startswith(_src, "ORB") ? "ORB" : "SMC") + '","ticker":"' + syminfo.ticker + '"'
+    m := m + ',"exchange":"' + syminfo.prefix + '"'
+    m := m + ',"timeframe":"' + timeframe.period + '"'
+    m := m + ',"action":"' + _dir + '"'
+    m := m + ',"order_type":"MARKET"'
+    m := m + ',"entry":' + str.tostring(entry1)
+    m := m + ',"sl":' + str.tostring(sl)
+    m := m + ',"tp1":' + str.tostring(tp1)
+    m := m + ',"tp2":' + str.tostring(tp2)
+    m := m + ',"tp3":' + str.tostring(tp3)
+    m := m + ',"tp4":' + str.tostring(tp4)
+    m := m + ',"sl_pct":' + str.tostring(slPct)
+    m := m + ',"account":' + str.tostring(accountSize)
+    m := m + ',"risk_pct":' + str.tostring(riskPct)
+    m := m + ',"lots":' + (na(lots) ? 'null' : str.tostring(lots))
+    m := m + ',"leverage":' + (na(levNeeded) ? 'null' : str.tostring(levNeeded))
+    m := m + ',"notional":' + (na(posNotional) ? 'null' : str.tostring(posNotional))
+    m := m + ',"margin":' + (na(marginUsed) ? 'null' : str.tostring(marginUsed))
+    m := m + ',"fee_cost":' + (na(feeCost) ? 'null' : str.tostring(feeCost))
+    m := m + ',"confirmations":' + sc_conf + '}'
+    m
+
+valid = not na(entry1) and not na(sl) and not na(tp1)
+alertFreq = intrabarAlerts ? alert.freq_once_per_bar : alert.freq_once_per_bar_close
+
+if alertsOn and isBuySignal and valid
+    alert(f_json("buy", srcBuy), alertFreq)
+if alertsOn and isSellSignal and valid
+    alert(f_json("sell", srcSell), alertFreq)
+
+alertcondition(isBuySignal,  "Aurum ORB COMPRA", "MTM Aurum Flow ORB BUY")
+alertcondition(isSellSignal, "Aurum ORB VENDA",  "MTM Aurum Flow ORB SELL")
+
+// Este software e código faz parte integrante da propriedade intelectual de RicardoGarciaPT e sua Empresa MoreThanMoney
