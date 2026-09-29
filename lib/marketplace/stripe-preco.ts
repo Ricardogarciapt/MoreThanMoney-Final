@@ -65,6 +65,25 @@ export async function sincronizarPrecoNoStripe(produto: ProdutoParaStripe): Prom
   const stripe = getStripeClient()
   const db = getSupabaseAdmin()
 
+  // ── NÃO SE SINCRONIZA UM PREÇO QUE NÃO FOI ESTA CASA A CRIAR ──────────────────────────
+  //
+  // Um `stripe_price_id` sem `stripe_product_id` ao lado é um preço que nasceu FORA do
+  // marketplace — só esta função escreve as duas colunas juntas. É o caso dos catorze produtos da
+  // casa: apontam para os preços que já vendem hoje (Membro, Premium, scanners, EA).
+  //
+  // O que acontecia sem esta guarda, e não é hipotético: quatro desses produtos são subscrições
+  // ANUAIS. Esta função cria sempre `interval: 'month'` (ver mais abaixo), logo o preço anual do
+  // Stripe «não bate certo», e o caminho normal era criar um preço MENSAL de 624 € e arquivar o
+  // anual que está vivo. Um clique em «sincronizar preço» chegava para isso.
+  //
+  // Criar de raiz continua a funcionar: um produto sem preço nenhum no Stripe passa por aqui.
+  const temPrecoAlheio = Boolean(produto.stripe_price_id?.trim()) && !produto.stripe_product_id?.trim()
+  if (temPrecoAlheio) {
+    throw new Error(
+      'Este produto aponta para um preço do Stripe que não foi criado aqui (é um dos fluxos de compra antigos da casa). Não se sincroniza daqui — mexer nele mudava o que os clientes actuais pagam.',
+    )
+  }
+
   const moeda = String(produto.moeda ?? 'eur').toLowerCase()
   const montante = Math.max(0, Math.round(Number(produto.preco_cents) || 0))
   if (montante <= 0) {
@@ -163,6 +182,131 @@ export async function sincronizarPrecoNoStripe(produto: ProdutoParaStripe): Prom
   }
 
   return { stripeProductId: productId, stripePriceId: preco.id, criouPreco: true, arquivou }
+}
+
+// ── RETIRAR: arquivar, nunca apagar ───────────────────────────────────────────────────────
+
+export type ResultadoArquivo = {
+  /** Falso quando não havia nada para arquivar, ou quando a guarda recusou. */
+  arquivou: boolean
+  precoArquivado: string | null
+  produtoArquivado: string | null
+  /** Porque é que não se fez nada. É informação para o ecrã, não um erro. */
+  motivo?: 'produto_da_casa' | 'nao_e_nosso' | 'nada_no_stripe' | 'falhou'
+  detalhe?: string
+}
+
+/**
+ * Este produto pode ser arquivado no Stripe por esta via?
+ *
+ * ── A GUARDA QUE VALE DINHEIRO ────────────────────────────────────────────────────────────
+ *
+ * Os produtos da casa (`dono = 'casa'`) na montra NÃO têm preços criados por aqui: apontam para os
+ * preços que JÁ VENDEM hoje — as subscrições Membro e Premium, os packs de scanners, as licenças do
+ * EA. Catorze linhas, com `stripe_price_id` de produção e `stripe_product_id` a NULO, porque esses
+ * preços nasceram fora do marketplace.
+ *
+ * Tratar um desses como «um produto qualquer» ao retirar arquivava o preço de uma subscrição viva.
+ * Não cortava ninguém (ver a nota do `arquivarNoStripe`), mas impedia QUALQUER cliente novo de
+ * comprar Membro ou Premium no site inteiro — e a causa seria um clique em «retirar» numa montra.
+ *
+ * Duas condições, e são duas de propósito, porque respondem a perguntas diferentes:
+ *
+ *   1. É da casa? A casa não vende por esta via, vende pelos fluxos antigos.
+ *   2. Fomos nós que criámos o preço? `stripe_product_id` só é escrito por
+ *      `sincronizarPrecoNoStripe`. Sem ele, o preço é de outra pessoa e não é nosso para arquivar.
+ *
+ * A segunda sozinha já travava os catorze de hoje. A primeira fica porque o dia em que alguém
+ * sincronizar um produto da casa pela rota de gestão, a segunda deixa de travar — e a regra de
+ * negócio («os fluxos da casa não se mexem daqui») não pode depender de uma coluna estar vazia.
+ */
+export function podeArquivarNoStripe(produto: {
+  dono?: string | null
+  stripe_product_id?: string | null
+  stripe_price_id?: string | null
+}): { pode: boolean; motivo?: 'produto_da_casa' | 'nao_e_nosso' | 'nada_no_stripe' } {
+  if (String(produto.dono ?? 'educador') === 'casa') return { pode: false, motivo: 'produto_da_casa' }
+  const temPreco = Boolean(produto.stripe_price_id?.trim())
+  const nosso = Boolean(produto.stripe_product_id?.trim())
+  if (!temPreco && !nosso) return { pode: false, motivo: 'nada_no_stripe' }
+  if (!nosso) return { pode: false, motivo: 'nao_e_nosso' }
+  return { pode: true }
+}
+
+/**
+ * RETIRAR UM PRODUTO — arquiva o preço e o produto no Stripe.
+ *
+ * ── ARQUIVAR NÃO É UM REMENDO: É A OPERAÇÃO CERTA ─────────────────────────────────────────
+ *
+ * No Stripe um produto ou preço que já foi usado NÃO se apaga. `del()` devolve erro assim que
+ * houver uma transacção em cima dele, e ainda bem: apagar destruía o histórico de quem comprou.
+ * `active: false` é o que existe, e é o que esta casa já faz ao preço antigo quando o preço muda
+ * (ver `sincronizarPrecoNoStripe` mais acima).
+ *
+ * ── O QUE ISTO *NÃO* FAZ, E TEM DE FICAR ESCRITO ──────────────────────────────────────────
+ *
+ * Arquivar um preço NÃO CANCELA as subscrições que já o usam. Quem já paga continua a pagar, mês
+ * após mês, e é esse o comportamento certo — ninguém perde o que comprou porque o produto saiu da
+ * montra.
+ *
+ * A consequência é que «retirar» um produto RECORRENTE tira-o da montra e não corta cliente nenhum.
+ * É o género de coisa que se assume ao contrário: quem retira um produto de subscrição a pensar que
+ * está a terminar as subscrições dele está enganado, e cancelá-las é um acto separado, um a um, com
+ * decisão humana. Fazer aqui um cancelamento em massa era tirar dinheiro a clientes pagantes por
+ * causa de um clique numa montra.
+ *
+ * Nunca rebenta: devolve o que fez. Quem chama grava o produto primeiro e mostra o aviso depois —
+ * falhar no Stripe não pode perder a alteração ao produto.
+ */
+export async function arquivarNoStripe(produto: {
+  id: string
+  dono?: string | null
+  stripe_product_id?: string | null
+  stripe_price_id?: string | null
+}): Promise<ResultadoArquivo> {
+  const g = podeArquivarNoStripe(produto)
+  if (!g.pode) return { arquivou: false, precoArquivado: null, produtoArquivado: null, motivo: g.motivo }
+
+  const stripe = getStripeClient()
+  const precoId = produto.stripe_price_id?.trim() || ''
+  const productId = produto.stripe_product_id?.trim() || ''
+
+  let precoArquivado: string | null = null
+  let produtoArquivado: string | null = null
+  const problemas: string[] = []
+
+  // O PREÇO PRIMEIRO. A ordem importa: é o preço que o checkout usa, e arquivá-lo é o que impede
+  // uma compra nova. Se o segundo passo falhar, o pior caso é um produto vazio no catálogo —
+  // enquanto pela ordem inversa ficaria um preço vivo, ou seja, ainda a vender.
+  if (precoId) {
+    try {
+      await stripe.prices.update(precoId, { active: false })
+      precoArquivado = precoId
+    } catch (e) {
+      problemas.push(`preço ${precoId}: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  if (productId) {
+    try {
+      await stripe.products.update(productId, { active: false })
+      produtoArquivado = productId
+    } catch (e) {
+      problemas.push(`produto ${productId}: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  if (problemas.length > 0 && !precoArquivado) {
+    return {
+      arquivou: false, precoArquivado, produtoArquivado,
+      motivo: 'falhou', detalhe: problemas.join(' · ').slice(0, 300),
+    }
+  }
+  return {
+    arquivou: Boolean(precoArquivado || produtoArquivado),
+    precoArquivado,
+    produtoArquivado,
+    ...(problemas.length > 0 ? { detalhe: problemas.join(' · ').slice(0, 300) } : {}),
+  }
 }
 
 /**

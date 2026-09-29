@@ -5,6 +5,9 @@ import {
   createStripeCouponSync,
   deactivateStripePromotionCode,
 } from "@/lib/stripe-coupons"
+// O nome do âmbito vive num sítio só, ao lado da regra que o lê no checkout. Escrevê-lo à mão aqui
+// era a maneira de um 'marketplace' com maiúscula passar a criar cupões que nunca se aplicam.
+import { AMBITO_MARKETPLACE } from "@/lib/marketplace/cupoes"
 
 const supabase = getSupabaseAdmin()
 
@@ -127,10 +130,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ data, stripe_synced: false }, { status: 201 })
     }
 
-    const allowedPlans = ["app_member", "premium", "both", null, undefined]
+    /**
+     * `plan_override` faz de ÂMBITO, e a lista estava desalinhada do ecrã.
+     *
+     * O formulário já oferecia «MTM Funded (desafios)» e esta lista não o aceitava: escolher essa
+     * opção devolvia «plan_override inválido» e o cupão nunca chegava a existir. O painel oferecia
+     * uma coisa que o servidor recusava.
+     *
+     * `marketplace` entra agora pela mesma porta que o `mtmfunded` abriu, e é o que faltava para o
+     * âmbito de marketplace existir na prática — as regras, as guardas e a validação no checkout já
+     * cá estavam; o que não havia era maneira de criar um.
+     */
+    const allowedPlans = ["app_member", "premium", "both", "mtmfunded", AMBITO_MARKETPLACE, null, undefined]
     if (plan_override !== undefined && !allowedPlans.includes(plan_override)) {
       return NextResponse.json(
         { error: "plan_override inválido" },
+        { status: 400 }
+      )
+    }
+
+    // ── O âmbito dentro do marketplace ────────────────────────────────────────────────────
+    //
+    // Dois níveis, porque são duas perguntas reais: «só neste produto» e «em tudo o que é deste
+    // educador». Fora do marketplace são ignorados — um cupão de packs do site com um produto
+    // agarrado era um âmbito que ninguém leria e que confundiria quem fosse lá ver porquê.
+    const doMarketplace = plan_override === AMBITO_MARKETPLACE
+    const produtoDoAmbito = doMarketplace ? (body.marketplace_produto_id || null) : null
+    const educadorDoAmbito = doMarketplace ? (body.marketplace_educator_id || null) : null
+    if (produtoDoAmbito && educadorDoAmbito) {
+      // Os dois ao mesmo tempo não é mais restrito: é ambíguo. O checkout teria de decidir qual
+      // manda, e a decisão certa é não deixar a pergunta nascer.
+      return NextResponse.json(
+        { error: "Escolhe um âmbito: um produto OU um educador, não os dois." },
+        { status: 400 }
+      )
+    }
+    if (doMarketplace && type !== "discount_pct") {
+      // Um cupão de marketplace é uma PERCENTAGEM. «Meses grátis» não significa nada num curso
+      // avulso, e `validarCupao` recusa-o na cara do comprador — mais vale recusá-lo aqui, a quem
+      // o está a criar e ainda o pode mudar.
+      return NextResponse.json(
+        { error: "Um cupão de marketplace tem de ser de percentagem de desconto." },
         { status: 400 }
       )
     }
@@ -162,7 +202,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "apple_offer_id inválido. Valores: founder_50pct, mtm_founder" }, { status: 400 })
     }
 
+    /**
+     * UM CUPÃO DE MARKETPLACE NÃO VAI AO STRIPE COMO CÓDIGO PROMOCIONAL. É a decisão, não um atalho.
+     *
+     * `createStripeCouponSync` cria um *promotion code* na conta Stripe da casa — e um promotion
+     * code é resgatável em QUALQUER sessão de checkout dela. Um código de 50% feito para um curso
+     * de um educador passaria a ser escrevível na caixa de desconto do checkout dos packs do site,
+     * e cinquenta por cento de uma subscrição anual é muito dinheiro por um cupão que ninguém quis
+     * dar ali.
+     *
+     * O marketplace não precisa dele: o checkout valida o código contra a nossa tabela e constrói o
+     * desconto com `cupaoStripeDePercentagem`, um cupão anónimo pela percentagem, aplicado àquela
+     * sessão e a mais nenhuma.
+     */
     let stripeSync: { stripe_coupon_id: string; stripe_promotion_code_id: string } | null = null
+    if (doMarketplace) {
+      const { data, error } = await supabase
+        .from("coupons")
+        .insert({
+          code: normalizedCode,
+          type,
+          discount_value: discount_value ?? 0,
+          plan_override: AMBITO_MARKETPLACE,
+          marketplace_produto_id: produtoDoAmbito,
+          marketplace_educator_id: educadorDoAmbito,
+          max_uses: max_uses ?? null,
+          used_count: 0,
+          valid_from: valid_from || new Date().toISOString(),
+          valid_until: valid_until || null,
+          description: description || null,
+          is_active: true,
+        })
+        .select()
+        .single()
+      if (error) {
+        console.error("❌ [ADMIN COUPONS POST marketplace] Erro:", error)
+        return NextResponse.json({ error: "Erro ao criar cupão de marketplace", details: error.message }, { status: 500 })
+      }
+      return NextResponse.json({ data, stripe_synced: false }, { status: 201 })
+    }
+
     try {
       stripeSync = await createStripeCouponSync({
         code: normalizedCode,

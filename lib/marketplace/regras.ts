@@ -578,6 +578,59 @@ export function extractoDoEducador(
   return { vendas, brutoCents, aReceberCents }
 }
 
+/**
+ * O `checkout_externo_url` de um produto da casa é um destino a que se pode mandar alguém?
+ *
+ * Duas formas válidas, e a segunda é a que faltava: um endereço ABSOLUTO (`https://…`) e um
+ * caminho INTERNO (`/upgrade?plan=premium_monthly`). Os catorze produtos da casa publicados usam
+ * todos a segunda, e o teste na rota era só `^https?://` — nenhum passava, e os catorze botões da
+ * montra respondiam «este produto ainda não tem cobrança ligada».
+ *
+ * O que NÃO passa, e é o motivo de isto ser uma função com guarda em vez de um `startsWith('/')`:
+ * `//outro-sitio.com` é um caminho relativo ao PROTOCOLO. Começa por `/`, mas o browser segue-o
+ * para outro domínio. Aceitá-lo era transformar um campo de texto do painel numa porta de
+ * redireccionamento para fora — e um redireccionamento a partir de um domínio de confiança é
+ * metade do trabalho de quem monta uma página de login falsa.
+ */
+export function destinoDeCompraValido(url: unknown): boolean {
+  const s = String(url ?? '').trim()
+  if (!s) return false
+  if (/^https?:\/\//i.test(s)) return true
+  // `\` porque alguns browsers tratam `/\evil.com` como `//evil.com`.
+  return s.startsWith('/') && !s.startsWith('//') && !s.startsWith('/\\')
+}
+
+/** O nome da casa, quando é ela que vende. Escrito uma vez para os três ecrãs o dizerem igual. */
+export const NOME_DA_CASA = 'MoreThanMoney'
+
+/**
+ * DE QUEM É ESTE PRODUTO, em texto para um ecrã.
+ *
+ * Isto é uma função e não uma expressão dentro de um componente porque a expressão que estava no
+ * painel do Centro era esta:
+ *
+ *     const nomeDe = (id: string) => educadores.find((e) => e.educator_id === id)?.nome ?? id.slice(0, 8)
+ *
+ * E `educator_id` é NULO em todos os produtos da casa — é isso que `dono = 'casa'` significa. Com o
+ * marketplace ligado e 14 produtos da casa publicados, a primeira linha da tabela de produtos
+ * chamava `null.slice(0, 8)`, e um TypeError no render de um componente de cliente não estraga uma
+ * célula: derruba a secção inteira. O painel ficava em branco, e é esse o erro que o dono via.
+ *
+ * O que se aprende do caso é mais geral do que o `?.`: um produto SEM educador não é um produto com
+ * um educador desconhecido. A resposta certa não é um uuid cortado a oito letras — é o nome da casa.
+ * Por isso a decisão vive aqui, ao lado de `donoValido`, e não em cada ecrã que a repetia.
+ */
+export function nomeDoAutor(
+  produto: { educator_id?: string | null; dono?: string | null },
+  nomePorId?: (id: string) => string | null | undefined,
+): string {
+  const id = produto.educator_id ?? null
+  if (donoValido(produto.dono) === 'casa' || !id) return NOME_DA_CASA
+  // Um educador sem nome à mão mostra as primeiras letras do id — é feio, mas é informação, e
+  // acontece só enquanto a lista de educadores não tiver chegado ao ecrã.
+  return nomePorId?.(id) || id.slice(0, 8)
+}
+
 /** Cêntimos → «35,00 €». Um sítio só, porque um extracto com dois formatos parece dois extractos. */
 export function euros(cents: number | null | undefined, moeda = 'eur'): string {
   const v = (Math.round(Number(cents) || 0)) / 100

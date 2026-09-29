@@ -47,7 +47,7 @@ import {
   type Quem,
 } from '@/lib/marketplace/gestao'
 import { garantirVendedor, lerDefinicoes, vendasDoEducador } from '@/lib/marketplace/servidor'
-import { sincronizarPrecoNoStripe, lerPrecoDoStripe } from '@/lib/marketplace/stripe-preco'
+import { arquivarNoStripe, sincronizarPrecoNoStripe, lerPrecoDoStripe } from '@/lib/marketplace/stripe-preco'
 import { gerarDescricao, gerarImagemDoProduto } from '@/lib/marketplace/ia'
 
 export const dynamic = 'force-dynamic'
@@ -169,7 +169,33 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message.slice(0, 300) }, { status: 400 })
-  return NextResponse.json({ produto: data })
+
+  // ── O produto nasce JÁ no Stripe ────────────────────────────────────────────────────────
+  //
+  // Pedido do dono: «ao criar o produto no site, quero que ele o crie no Stripe». Antes, um produto
+  // novo ficava sem nada lá até alguém se lembrar de carregar em «sincronizar» — e o momento em que
+  // se dava por isso era o primeiro comprador a bater num 409 «sem cobrança ligada».
+  //
+  // Reutiliza `sincronizarPrecoNoStripe` em vez de uma segunda versão da mesma coisa: ela já sabe
+  // reutilizar o produto, não duplicar preços iguais e escrever os ids de volta.
+  //
+  // FALHAR NO STRIPE NÃO PODE PERDER O PRODUTO. A linha já está gravada quando chegamos aqui; o que
+  // se devolve é um aviso, exactamente como o PATCH faz. O inverso — desfazer a criação porque o
+  // Stripe esteve em baixo dois segundos — fazia o educador perder o que acabou de escrever.
+  const criado = data as unknown as ProdutoGerido
+  let avisoStripe: string | null = null
+  if (criado && criado.preco_cents > 0) {
+    try {
+      await sincronizarPrecoNoStripe(criado)
+    } catch (e) {
+      avisoStripe = `O produto foi criado, mas ainda não tem cobrança no Stripe: ${e instanceof Error ? e.message : String(e)}`
+    }
+  }
+
+  // Relido depois do sync para o ecrã receber já o `stripe_price_id` — sem isto, o formulário
+  // mostrava «sem cobrança ligada» num produto que acabou de a ganhar.
+  const { data: fresco } = await db.from('marketplace_produtos').select(COLUNAS_GESTAO).eq('id', criado.id).maybeSingle()
+  return NextResponse.json({ produto: fresco ?? data, avisoStripe })
 }
 
 // ── PATCH: editar e as acções ─────────────────────────────────────────────────────────────
@@ -305,11 +331,34 @@ export async function PATCH(request: NextRequest) {
   // pelo preço antigo sem dar por nada.
   const produto = data as unknown as ProdutoGerido
   let avisoStripe: string | null = null
-  if ('preco_cents' in patch && produto.stripe_price_id && produto.preco_cents > 0) {
+
+  // A condição deixou de exigir `stripe_price_id`.
+  //
+  // Antes só sincronizava um produto que JÁ tivesse preço no Stripe — o que deixava de fora
+  // exactamente o caso que faltava: um produto que nasceu a 0 (ou de antes desta regra) e agora
+  // ganhou preço. Esse ficava para sempre sem cobrança, e ninguém percebia porquê.
+  if ('preco_cents' in patch && produto.preco_cents > 0 && accao !== 'retirar') {
     try {
       await sincronizarPrecoNoStripe(produto)
     } catch (e) {
       avisoStripe = `O produto foi gravado, mas o preço no Stripe não foi actualizado: ${e instanceof Error ? e.message : String(e)}`
+    }
+  }
+
+  // ── Retirar arquiva no Stripe ───────────────────────────────────────────────────────────
+  //
+  // Depois da gravação e nunca antes: o produto sai da montra mesmo que o Stripe falhe. A guarda
+  // dos produtos da casa está dentro de `arquivarNoStripe` e não aqui — uma guarda que vive na
+  // rota é uma guarda que a próxima rota esquece.
+  //
+  // ATENÇÃO, e está escrito por extenso em `stripe-preco.ts`: arquivar NÃO cancela subscrições
+  // vivas. Retirar um produto recorrente tira-o da montra e não corta cliente nenhum.
+  if (accao === 'retirar') {
+    const r3 = await arquivarNoStripe(produto)
+    if (r3.motivo === 'falhou') {
+      avisoStripe = `O produto foi retirado da montra, mas o Stripe não foi arquivado: ${r3.detalhe ?? ''}`
+    } else if (r3.motivo === 'produto_da_casa') {
+      avisoStripe = 'Retirado da montra. O preço no Stripe NÃO foi tocado: é um produto da casa e esse preço serve os fluxos de compra antigos.'
     }
   }
 
@@ -336,5 +385,18 @@ export async function DELETE(request: NextRequest) {
   const { data, error } = await q.select('id').maybeSingle()
   if (error) return NextResponse.json({ error: error.message.slice(0, 300) }, { status: 400 })
   if (!data) return NextResponse.json({ error: 'Só se apagam rascunhos. Usa «retirar».' }, { status: 409 })
-  return NextResponse.json({ apagado: true })
+
+  // Apagado aqui, arquivado lá. Um rascunho apagado que deixasse o preço activo no Stripe era lixo
+  // a acumular no catálogo da casa — e, pior, um preço vivo sem produto nosso do outro lado.
+  //
+  // DEPOIS do delete e nunca antes: se o Stripe falhasse primeiro, ou apagávamos na mesma (e o
+  // arquivo perdia-se sem ninguém saber) ou recusávamos apagar um rascunho por causa do Stripe.
+  // Também aqui se ARQUIVA e não se apaga — ver `arquivarNoStripe`.
+  const arquivo = await arquivarNoStripe(r.produto as unknown as Parameters<typeof arquivarNoStripe>[0])
+  return NextResponse.json({
+    apagado: true,
+    avisoStripe: arquivo.motivo === 'falhou'
+      ? `O rascunho foi apagado, mas o Stripe não foi arquivado: ${arquivo.detalhe ?? ''}`
+      : null,
+  })
 }

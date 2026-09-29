@@ -87,6 +87,19 @@ interface CouponFormData {
   apple_offer_id: string
   grant_days: string
   grants_vip: boolean
+  /** 'todos' | 'produto' | 'educador' — só conta quando o âmbito é o marketplace. */
+  marketplace_ambito: string
+  marketplace_produto_id: string
+  marketplace_educator_id: string
+}
+
+/** O valor de `plan_override` que marca um cupão como sendo do marketplace. */
+const AMBITO_MARKETPLACE = "marketplace"
+
+/** O que o painel do marketplace devolve e que este ecrã precisa para desenhar o âmbito. */
+type AlvosMarketplace = {
+  produtos: { id: string; titulo: string; slug: string; dono: string }[]
+  educadores: { educator_id: string; nome: string }[]
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -135,7 +148,14 @@ function couponValueLabel(coupon: Coupon): string {
   }
 }
 
-function planOverrideLabel(plan: PlanOverride): string {
+/**
+ * `plan_override` deixou de ser só um plano: é um ÂMBITO, e há quatro negócios a usá-lo.
+ *
+ * O `switch` não tinha ramo para 'mtmfunded' nem para 'marketplace' e devolvia `undefined` — ou
+ * seja, a coluna aparecia em branco num cupão que tem âmbito. Em branco lê-se como «qualquer
+ * plano», que é exactamente o contrário do que aquele cupão faz.
+ */
+function planOverrideLabel(plan: PlanOverride | string | null): string {
   if (!plan) return "Qualquer plano"
   switch (plan) {
     case "app_member":
@@ -144,6 +164,12 @@ function planOverrideLabel(plan: PlanOverride): string {
       return "Premium"
     case "both":
       return "Ambos"
+    case "mtmfunded":
+      return "MTM Funded"
+    case AMBITO_MARKETPLACE:
+      return "Marketplace"
+    default:
+      return String(plan)
   }
 }
 
@@ -163,6 +189,9 @@ const defaultForm: CouponFormData = {
   apple_offer_id: "auto",
   grant_days: "60",
   grants_vip: true,
+  marketplace_ambito: "todos",
+  marketplace_produto_id: "",
+  marketplace_educator_id: "",
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -186,6 +215,18 @@ export default function CouponsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
+  /**
+   * Os alvos do âmbito, lidos do painel do marketplace que já existe.
+   *
+   * Reutilizar `/api/admin/centro/marketplace` em vez de abrir uma rota nova é a decisão: ela já é
+   * `soAdmin`, já devolve os produtos e os educadores, e uma segunda fonte para a mesma lista é
+   * como se acaba com um ecrã a oferecer um produto que o outro já não tem.
+   *
+   * Lido só quando alguém escolhe o âmbito do marketplace — quem vem cá criar um cupão de packs não
+   * tem de esperar por uma leitura que não vai usar.
+   */
+  const [alvos, setAlvos] = useState<AlvosMarketplace | null>(null)
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -200,6 +241,18 @@ export default function CouponsPage() {
       router.push("/new-landing")
     }
   }, [mounted, authLoading, user, isAdmin, router])
+
+  const lerAlvos = useCallback(async () => {
+    if (alvos) return
+    try {
+      const res = await fetch("/api/admin/centro/marketplace")
+      if (!res.ok) return
+      const d = await res.json()
+      setAlvos({ produtos: d.produtos ?? [], educadores: d.educadores ?? [] })
+    } catch {
+      // Sem alvos, o âmbito «todo o marketplace» continua a funcionar — que é o caso mais comum.
+    }
+  }, [alvos])
 
   // ── Fetch coupons ──────────────────────────────────────────────────────────
 
@@ -337,6 +390,18 @@ export default function CouponsPage() {
       toast({ title: "Indica os dias de acesso (ex: 60)", variant: "destructive" })
       return
     }
+    // Um âmbito escolhido e deixado em branco é pior do que âmbito nenhum: parece restrito e vale
+    // na loja toda. O servidor não consegue distinguir a distracção da intenção — o ecrã consegue.
+    if (form.plan_override === AMBITO_MARKETPLACE) {
+      if (form.marketplace_ambito === "produto" && !form.marketplace_produto_id) {
+        toast({ title: "Escolhe o produto a que o código se aplica", variant: "destructive" })
+        return
+      }
+      if (form.marketplace_ambito === "educador" && !form.marketplace_educator_id) {
+        toast({ title: "Escolhe o educador a que o código se aplica", variant: "destructive" })
+        return
+      }
+    }
 
     setCreating(true)
     try {
@@ -362,6 +427,16 @@ export default function CouponsPage() {
             : null,
         apple_offer_id: form.apple_offer_id === "auto" ? "" : form.apple_offer_id,
         ...(isPartnership ? { grant_days: Number(form.grant_days), grants_vip: form.grants_vip } : {}),
+        // O âmbito só viaja quando é de marketplace. Mandar sempre os dois campos a vazio enchia
+        // de nulos explícitos cupões que nada têm a ver com a montra.
+        ...(form.plan_override === AMBITO_MARKETPLACE
+          ? {
+              marketplace_produto_id:
+                form.marketplace_ambito === "produto" ? form.marketplace_produto_id || null : null,
+              marketplace_educator_id:
+                form.marketplace_ambito === "educador" ? form.marketplace_educator_id || null : null,
+            }
+          : {}),
       }
 
       const res = await fetch("/api/admin/coupons", {
@@ -868,9 +943,11 @@ export default function CouponsPage() {
               </label>
               <Select
                 value={form.plan_override}
-                onValueChange={(v) =>
+                onValueChange={(v) => {
                   setForm((f) => ({ ...f, plan_override: v }))
-                }
+                  // Os produtos e os educadores só se vão buscar quando alguém precisa deles.
+                  if (v === AMBITO_MARKETPLACE) void lerAlvos()
+                }}
               >
                 <SelectTrigger className="bg-gray-800 border-gray-700 text-white focus:border-[#D2A63C]/50">
                   <SelectValue />
@@ -893,9 +970,103 @@ export default function CouponsPage() {
                   <SelectItem value="mtmfunded" className="text-white hover:bg-gray-700">
                     MTM Funded (desafios)
                   </SelectItem>
+                  {/* Âmbito Marketplace: um código para os produtos da montra. Não vai ao Stripe
+                      como código promocional — ver a nota na rota — porque um promotion code é
+                      resgatável em QUALQUER checkout da casa, e 50% feitos para um curso passariam
+                      a valer numa subscrição anual. */}
+                  <SelectItem value={AMBITO_MARKETPLACE} className="text-white hover:bg-gray-700">
+                    Marketplace (produtos da montra)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* ── O âmbito dentro do marketplace ──────────────────────────────────────────
+                Sem isto, um código de marketplace vale em TODOS os produtos de TODOS os
+                educadores — e um cupão de 50% a descontar o curso de outra pessoa não é uma
+                configuração infeliz, é dinheiro tirado a alguém. */}
+            {form.plan_override === AMBITO_MARKETPLACE && (
+              <div className="space-y-3 rounded-lg border border-[#D2A63C]/20 bg-[#D2A63C]/[0.04] p-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                    Onde é que o código vale
+                  </label>
+                  <Select
+                    value={form.marketplace_ambito}
+                    onValueChange={(v) => setForm((f) => ({ ...f, marketplace_ambito: v }))}
+                  >
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white focus:border-[#D2A63C]/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="todos" className="text-white hover:bg-gray-700">
+                        Em todo o marketplace
+                      </SelectItem>
+                      <SelectItem value="educador" className="text-white hover:bg-gray-700">
+                        Só nos produtos de um educador
+                      </SelectItem>
+                      <SelectItem value="produto" className="text-white hover:bg-gray-700">
+                        Só num produto
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {form.marketplace_ambito === "educador" && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">Educador</label>
+                    <Select
+                      value={form.marketplace_educator_id}
+                      onValueChange={(v) => setForm((f) => ({ ...f, marketplace_educator_id: v }))}
+                    >
+                      <SelectTrigger className="bg-gray-800 border-gray-700 text-white focus:border-[#D2A63C]/50">
+                        <SelectValue placeholder={alvos ? "Escolhe" : "A carregar…"} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        {(alvos?.educadores ?? []).map((e) => (
+                          <SelectItem key={e.educator_id} value={e.educator_id} className="text-white hover:bg-gray-700">
+                            {e.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {form.marketplace_ambito === "produto" && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">Produto</label>
+                    <Select
+                      value={form.marketplace_produto_id}
+                      onValueChange={(v) => setForm((f) => ({ ...f, marketplace_produto_id: v }))}
+                    >
+                      <SelectTrigger className="bg-gray-800 border-gray-700 text-white focus:border-[#D2A63C]/50">
+                        <SelectValue placeholder={alvos ? "Escolhe" : "A carregar…"} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        {(alvos?.produtos ?? []).map((p) => (
+                          <SelectItem key={p.id} value={p.id} className="text-white hover:bg-gray-700">
+                            {p.titulo}
+                            {p.dono === "casa" ? " · da casa" : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {/* Dito aqui e não descoberto depois: os produtos da casa vendem-se pelos
+                        fluxos antigos (/upgrade, /scanner-access), que não passam pelo checkout do
+                        marketplace e por isso não lêem este código. */}
+                    <p className="text-[11px] text-gray-500">
+                      Nos produtos da casa este código não se aplica: eles vendem pelo caminho de compra antigo.
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-[11px] text-gray-500">
+                  Campanha e cupão não se somam — vale o maior dos dois. O desconto sai da venda, e a
+                  parte do educador é calculada já depois dele.
+                </p>
+              </div>
+            )}
 
             {/* Apple promotional offer (IAP) */}
             <div className={cn("space-y-1.5", form.type === "partnership" && "hidden")}>

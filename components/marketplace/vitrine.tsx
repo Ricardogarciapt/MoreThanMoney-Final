@@ -14,10 +14,22 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { Loader2, Lock, ShoppingBag, ExternalLink } from "lucide-react"
 import { euros } from "@/lib/marketplace/regras"
 
 type Autor = { id: string; display_name: string; avatar_url: string | null; specialty: string | null }
+/**
+ * O preço JÁ DECIDIDO pela rota. O cartão não recalcula desconto nenhum.
+ *
+ * Estava cá `preco_cents` e era o preço de TABELA — o mesmo cartão que a ficha mostrava já
+ * descontado. Uma montra a anunciar 65 € e uma ficha a anunciar 45 € pelo mesmo produto é a loja a
+ * discordar de si própria, e quem repara é o cliente.
+ */
+type Preco = {
+  baseCents: number; cents: number; descontoPct: number
+  emCampanha: boolean; acabaEm: string | null; moeda: string
+}
 type Produto = {
   id: string
   slug: string
@@ -25,9 +37,12 @@ type Produto = {
   subtitulo: string | null
   descricao: string | null
   tipo: string
+  categoria: string
   imagem_url: string | null
   preco_cents: number
   moeda: string
+  recorrente: boolean
+  preco: Preco
   educador: Autor | null
   jaComprou: boolean
   podeComprar: boolean
@@ -69,6 +84,7 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
   const [ligado, setLigado] = useState(true)
   const [aComprar, setAComprar] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [categoria, setCategoria] = useState<string | null>(null)
 
   const ler = useCallback(async () => {
     const [v, b] = await Promise.all([
@@ -92,8 +108,12 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
         body: JSON.stringify({ produtoId }),
       })
       const j = await r.json()
-      if (r.ok && j.url) {
-        window.location.href = j.url
+      // `externo` é o caminho de compra ANTIGO de um produto da casa — `/upgrade`,
+      // `/scanner-access`, `/sensei-ea`. A ficha do produto já o seguia; este ecrã não, e por isso
+      // os catorze produtos da casa respondiam «não foi possível abrir o pagamento» a um pedido que
+      // tinha corrido bem. O servidor devolvia o destino e o cartão deitava-o fora.
+      if (r.ok && (j.url || j.externo)) {
+        window.location.href = j.url ?? j.externo
         return
       }
       setAviso(j.error ?? "Não foi possível abrir o pagamento.")
@@ -114,6 +134,17 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
 
   const abertos = itens.filter((i) => i.aberto)
   const fechados = itens.filter((i) => !i.aberto)
+
+  /**
+   * As categorias que EXISTEM, e não as doze do catálogo.
+   *
+   * Desenhar as doze deixava nove botões que não devolvem nada — e um filtro que devolve uma montra
+   * vazia parece uma loja avariada, não um filtro sem resultados. A lista sai do que está à venda.
+   * Filtra-se aqui e não com um pedido novo ao servidor: são no máximo 200 produtos já em memória,
+   * e uma ida ao servidor por clique dava um piscar a cada categoria.
+   */
+  const categorias = Array.from(new Map(produtos.map((p) => [p.tipo, p.categoria])).entries())
+  const visiveis = categoria ? produtos.filter((p) => p.tipo === categoria) : produtos
 
   return (
     <div className="space-y-8">
@@ -179,17 +210,58 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
             <p className="mt-1 text-xs text-zinc-600">Os educadores estão a preparar os primeiros produtos.</p>
           </div>
         ) : (
-          <div className={`grid gap-4 ${compacto ? "grid-cols-1" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
-            {produtos.map((p) => (
+          <>
+            {/* ── Os filtros ────────────────────────────────────────────────────────────
+                Só aparecem a partir de duas categorias: com uma, um botão «Curso» ao lado de
+                «Tudo» não filtra nada e só ocupa a primeira linha da montra. */}
+            {categorias.length > 1 && (
+              <div className="mb-4 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCategoria(null)}
+                  className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                    categoria === null
+                      ? "border-[#D2A63C] bg-[#D2A63C]/10 text-[#D2A63C]"
+                      : "border-white/10 text-zinc-400 hover:border-white/25 hover:text-zinc-200"
+                  }`}
+                >
+                  Tudo ({produtos.length})
+                </button>
+                {categorias.map(([tipo, nome]) => (
+                  <button
+                    key={tipo}
+                    type="button"
+                    onClick={() => setCategoria(tipo)}
+                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                      categoria === tipo
+                        ? "border-[#D2A63C] bg-[#D2A63C]/10 text-[#D2A63C]"
+                        : "border-white/10 text-zinc-400 hover:border-white/25 hover:text-zinc-200"
+                    }`}
+                  >
+                    {nome} ({produtos.filter((x) => x.tipo === tipo).length})
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className={`grid gap-4 ${compacto ? "grid-cols-1" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
+            {visiveis.map((p) => (
               <article key={p.id} className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
-                {p.imagem_url && (
-                  <div className="relative h-36 w-full bg-black/40">
-                    <Image src={p.imagem_url} alt={p.titulo} fill className="object-cover" unoptimized />
-                  </div>
-                )}
+                {/* O cartão LEVA À FICHA. Sem isto, a descrição completa, a campanha, o campo do
+                    cupão e o de quem indicou não tinham como ser alcançados: a única coisa
+                    clicável num cartão era «Comprar», e comprar às cegas é o que faz devolver. */}
+                <Link href={`/marketplace/${p.slug}`} className="group">
+                  {p.imagem_url && (
+                    <div className="relative h-36 w-full bg-black/40">
+                      <Image src={p.imagem_url} alt={p.titulo} fill className="object-cover" unoptimized />
+                    </div>
+                  )}
+                </Link>
                 <div className="flex flex-1 flex-col p-4">
-                  <span className="text-[10px] uppercase tracking-wider text-[#D2A63C]">{p.tipo}</span>
-                  <h3 className="mt-1 font-medium text-zinc-100">{p.titulo}</h3>
+                  <span className="text-[10px] uppercase tracking-wider text-[#D2A63C]">{p.categoria}</span>
+                  <Link href={`/marketplace/${p.slug}`}>
+                    <h3 className="mt-1 font-medium text-zinc-100 hover:text-[#D2A63C]">{p.titulo}</h3>
+                  </Link>
                   {p.subtitulo && <p className="mt-0.5 text-xs text-zinc-400">{p.subtitulo}</p>}
                   {p.educador && (
                     <p className="mt-2 text-xs text-zinc-500">
@@ -201,7 +273,26 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
 
                   <div className="mt-4 flex items-center justify-between gap-2 pt-2">
                     <span className="text-lg font-semibold text-zinc-100">
-                      {p.preco_cents === 0 ? "Grátis" : euros(p.preco_cents, p.moeda)}
+                      {p.preco.baseCents === 0 ? (
+                        "Grátis"
+                      ) : (
+                        <>
+                          {p.preco.emCampanha && (
+                            <span className="mr-1.5 text-xs font-normal text-zinc-500 line-through">
+                              {euros(p.preco.baseCents, p.preco.moeda)}
+                            </span>
+                          )}
+                          {euros(p.preco.cents, p.preco.moeda)}
+                          {/* «subscrição» e NÃO «/mês».
+                              Visto com os olhos a 29/09: o cartão do «Membro · anual» dizia
+                              «336,00 €/mês», e o do «Premium · anual» «624,00 €/mês». São produtos
+                              ANUAIS. O modelo só tem `recorrente: boolean` — não sabe distinguir
+                              mensal de anual — e o ecrã assumia mensal. Anunciar um preço anual
+                              como mensal não é um erro de estilo: é a loja a mentir no número.
+                              Enquanto não houver um campo de periodicidade, diz-se o que se sabe. */}
+                          {p.recorrente && <span className="ml-1 text-xs font-normal text-zinc-500">subscrição</span>}
+                        </>
+                      )}
                     </span>
                     {p.jaComprou ? (
                       <span className="text-xs text-emerald-400">Já é teu</span>
@@ -223,7 +314,8 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
                 </div>
               </article>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </section>
     </div>

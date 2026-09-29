@@ -78,12 +78,29 @@ export async function gerarImagemGratis(p: PedidoGratis): Promise<ResultadoGrati
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 120_000)
   try {
-    const r = await fetch(url, { signal: ctrl.signal })
+    // O token é OPCIONAL e continua a ser a via gratuita: a Pollinations passou a pedir uma conta
+    // para o nível sem custo (ver o 402 mais abaixo). Sem `POLLINATIONS_TOKEN` o pedido sai
+    // exactamente como saía — o que não se faz aqui é cair para a chave paga da casa.
+    const token = process.env.POLLINATIONS_TOKEN?.trim()
+    const r = await fetch(url, {
+      signal: ctrl.signal,
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+    })
     if (!r.ok) {
+      // 402 MEDIDO A 29/09/2026, e é o que interessa contar aqui: a Pollinations deixou de servir
+      // pedidos ANÓNIMOS. Responde 402 com o corpo `{}` a qualquer modelo (default, flux, turbo),
+      // com ou sem referrer. O acesso passou a precisar de uma conta e de um token.
+      //
+      // A mensagem diz isto por extenso em vez de «respondeu 402» porque as duas levam a acções
+      // opostas: um número leva alguém a clicar outra vez durante meia hora, e a frase leva à
+      // decisão que é preciso tomar — registar um token do lado gratuito, ou escolher outra via.
+      // A via PAGA da casa não é a saída óbvia daqui: ver o cabeçalho deste ficheiro.
       throw new Error(
         r.status === 429
           ? 'o gerador gratuito está com muita gente agora — tenta daqui a um minuto'
-          : `o gerador gratuito respondeu ${r.status}`,
+          : r.status === 402 || r.status === 401
+            ? 'o gerador gratuito deixou de aceitar pedidos anónimos (402) — precisa de um token da Pollinations configurado'
+            : `o gerador gratuito respondeu ${r.status}`,
       )
     }
     const tipo = r.headers.get('content-type') ?? 'image/jpeg'

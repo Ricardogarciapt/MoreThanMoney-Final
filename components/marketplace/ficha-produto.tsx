@@ -169,7 +169,9 @@ export default function FichaProduto({ slug }: { slug: string }) {
             )}
             <div className="text-3xl font-semibold text-zinc-100">
               {p.preco.baseCents === 0 ? "Grátis" : euros(p.preco.cents, p.preco.moeda)}
-              {p.recorrente && <span className="ml-1 text-base font-normal text-zinc-500">/mês</span>}
+              {/* Não diz «/mês»: `recorrente` é um booleano e não distingue mensal de anual, e
+                  quatro dos produtos publicados são ANUAIS. Ver a nota igual em `vitrine.tsx`. */}
+              {p.recorrente && <span className="ml-1 text-base font-normal text-zinc-500">subscrição</span>}
             </div>
             {acaba && (
               <p className="mt-1 flex items-center gap-1 text-xs text-[#D2A63C]">

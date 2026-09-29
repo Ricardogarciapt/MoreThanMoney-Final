@@ -33,7 +33,7 @@ import {
   th,
   useCentro,
 } from "@/components/admin/centro/ui"
-import { euros } from "@/lib/marketplace/regras"
+import { euros, nomeDoAutor } from "@/lib/marketplace/regras"
 
 type Definicoes = { ligado: boolean; revisaoObrigatoria: boolean; iosVitrine: "ver_sem_comprar" | "esconder" }
 type LinhaEducador = {
@@ -60,14 +60,19 @@ type Produto = {
   activo: boolean
   partilha_pct: number | null
   stripe_price_id: string | null
-  educator_id: string
+  // NULO em todos os produtos da casa — é isso que `dono = 'casa'` significa. Estava declarado
+  // `string` e não era verdade, e foi essa mentira no tipo que deixou o `tsc` calado enquanto o
+  // ecrã fazia `null.slice(0, 8)` em produção. Ver `nomeDoAutor` em `regras.ts`.
+  educator_id: string | null
+  dono: string
+  imagem_url: string | null
   motivo_recusa: string | null
   publicado_em: string | null
 }
 type Venda = {
   id: string
   produto_id: string
-  educator_id: string
+  educator_id: string | null
   estado: string
   bruto_cents: number
   parte_educador_cents: number
@@ -82,8 +87,24 @@ type Dados = {
   produtos: Produto[]
   porRever: Produto[]
   vendas: Venda[]
+  funil: { dias: number; etapas: Record<EtapaFunil, number> }
   totais: { vendas: number; brutoCents: number; paraEducadoresCents: number; paraCasaCents: number }
 }
+
+type EtapaFunil = "viu_montra" | "viu_ficha" | "iniciou_checkout" | "pagou" | "desistiu"
+
+/**
+ * O funil pela ordem em que acontece, com o nome que uma pessoa usa.
+ *
+ * A ordem é a informação: é entre dois degraus seguidos que se vê onde as pessoas caem. Um objecto
+ * não tem ordem garantida, por isso ela está escrita à mão aqui e não deduzida das chaves.
+ */
+const DEGRAUS: { chave: EtapaFunil; nome: string }[] = [
+  { chave: "viu_montra", nome: "Viram a montra" },
+  { chave: "viu_ficha", nome: "Abriram uma ficha" },
+  { chave: "iniciou_checkout", nome: "Foram ao pagamento" },
+  { chave: "pagou", nome: "Pagaram" },
+]
 
 const TOM_ESTADO: Record<string, "neutro" | "ok" | "aviso" | "grave"> = {
   publicado: "ok",
@@ -117,7 +138,18 @@ export default function SeccaoMarketplace() {
   if (erro) return <Aviso tom="grave">Não consegui ler o marketplace: {erro}</Aviso>
   if (!dados) return <Vazio>A ler…</Vazio>
 
-  const nomeDe = (id: string) => dados.educadores.find((e) => e.educator_id === id)?.nome ?? id.slice(0, 8)
+  /**
+   * O nome de quem vende, e o cuidado que ele não tinha.
+   *
+   * A versão anterior era `(id: string) => …?.nome ?? id.slice(0, 8)` e recebia `p.educator_id`
+   * directamente. Nos 14 produtos da casa esse campo é NULO, e `null.slice` é um TypeError no meio
+   * do render — que não estraga uma célula, derruba a secção toda. A decisão de o que mostrar a um
+   * produto sem educador vive agora em `nomeDoAutor`, com guarda.
+   */
+  const nomeDoEducador = (id: string) => dados.educadores.find((e) => e.educator_id === id)?.nome
+  const autorDe = (p: { educator_id?: string | null; dono?: string | null }) => nomeDoAutor(p, nomeDoEducador)
+
+  const semImagem = dados.produtos.filter((p) => !p.imagem_url)
 
   return (
     <div className="space-y-4">
@@ -175,6 +207,76 @@ export default function SeccaoMarketplace() {
         <Azulejo rotulo="Para a casa" valor={euros(dados.totais.paraCasaCents)} sub="comissão 20%" />
       </div>
 
+      {/* ── O funil ──────────────────────────────────────────────────────────────────────
+          A pergunta a que este quadro responde é «quantos chegaram ao pagamento e não pagaram?»,
+          e é a resposta dela que diz se o problema é o preço, a ficha ou o checkout. Conta
+          PESSOAS e não cliques (ver `funilPorEtapa`): alguém que abriu a mesma ficha cinco vezes
+          é uma pessoa interessada, não cinco. */}
+      <Painel titulo={`Funil · últimos ${dados.funil.dias} dias`} sub="Pessoas, não cliques. Cada degrau é uma decisão que alguém tomou.">
+        {DEGRAUS.every((d) => (dados.funil.etapas[d.chave] ?? 0) === 0) ? (
+          <Vazio>Ninguém passou pela montra nestes dias.</Vazio>
+        ) : (
+          <div className="space-y-2">
+            {DEGRAUS.map((d, i) => {
+              const quantos = dados.funil.etapas[d.chave] ?? 0
+              const topo = dados.funil.etapas[DEGRAUS[0].chave] ?? 0
+              // A barra é sobre o PRIMEIRO degrau e a percentagem ao lado é sobre o ANTERIOR. São
+              // duas leituras diferentes de propósito: a barra dá a escala, a percentagem dá a
+              // queda — e é a queda que aponta o degrau estragado.
+              const largura = topo > 0 ? Math.max(2, Math.round((quantos / topo) * 100)) : 0
+              const anterior = i === 0 ? null : dados.funil.etapas[DEGRAUS[i - 1].chave] ?? 0
+              return (
+                <div key={d.chave}>
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="text-zinc-300">{d.nome}</span>
+                    <span className="text-zinc-400">
+                      {quantos}
+                      {anterior != null && anterior > 0 && (
+                        <span className="ml-1.5 text-[11px] text-zinc-500">
+                          {Math.round((quantos / anterior) * 100)}% do passo anterior
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-1.5 w-full rounded-full bg-white/5">
+                    <div className="h-1.5 rounded-full bg-[#E9C46A]" style={{ width: `${largura}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+            {(dados.funil.etapas.desistiu ?? 0) > 0 && (
+              <p className="pt-1 text-[11px] text-zinc-500">
+                {dados.funil.etapas.desistiu} desistiram no pagamento.
+              </p>
+            )}
+          </div>
+        )}
+      </Painel>
+
+      {/* ── As capas que faltam ──────────────────────────────────────────────────────────
+          Um cartão sem imagem não é um detalhe de estética: é a diferença entre uma montra e uma
+          lista. A geração é pela via GRATUITA (Pollinations) e nunca pela paga — ver o cabeçalho
+          de `lib/marketplace/ia.ts`. */}
+      {semImagem.length > 0 && (
+        <Painel titulo={`Sem capa (${semImagem.length})`} sub="A montra desenha um cartão cinzento a cada um destes.">
+          <div className="flex flex-wrap items-center gap-2">
+            <Botao
+              tom="ouro"
+              disabled={aAgir === "imagens"}
+              onClick={() => agir({ accao: "imagens_que_faltam" }, "imagens")}
+            >
+              {aAgir === "imagens" ? "A gerar…" : `Gerar as ${semImagem.length} capas`}
+            </Botao>
+            <span className="text-[11px] text-zinc-500">
+              Gerador gratuito. Demora alguns segundos por capa, e uma que falhe volta a aparecer aqui.
+            </span>
+          </div>
+          <div className="mt-2 text-[11px] text-zinc-500">
+            {semImagem.map((p) => p.titulo).join(" · ")}
+          </div>
+        </Painel>
+      )}
+
       {/* ── 2. A fila de revisão ─────────────────────────────────────────────────────── */}
       <Painel
         titulo={`À espera de revisão (${dados.porRever.length})`}
@@ -199,7 +301,7 @@ export default function SeccaoMarketplace() {
                     <div className="text-zinc-200">{p.titulo}</div>
                     <div className="text-[11px] text-zinc-500">/{p.slug} · {p.tipo}</div>
                   </td>
-                  <td className={td}>{nomeDe(p.educator_id)}</td>
+                  <td className={td}>{autorDe(p)}</td>
                   <td className={td}>{euros(p.preco_cents, p.moeda)}</td>
                   <td className={td}>
                     <div className="flex gap-1.5">
@@ -307,7 +409,7 @@ export default function SeccaoMarketplace() {
                     <div className="text-zinc-200">{p.titulo}</div>
                     <div className="text-[11px] text-zinc-500">/{p.slug}{p.motivo_recusa ? ` · recusado: ${p.motivo_recusa}` : ""}</div>
                   </td>
-                  <td className={td}>{nomeDe(p.educator_id)}</td>
+                  <td className={td}>{autorDe(p)}</td>
                   <td className={td}>
                     <Pilula tom={TOM_ESTADO[p.estado] ?? "neutro"}>{p.estado}</Pilula>
                     {!p.activo && <span className="ml-1"><Pilula tom="grave">desligado</Pilula></span>}
@@ -364,7 +466,7 @@ export default function SeccaoMarketplace() {
               {dados.vendas.map((v) => (
                 <tr key={v.id}>
                   <td className={td}>{fmtQuando(v.pago_em)}</td>
-                  <td className={td}>{nomeDe(v.educator_id)}</td>
+                  <td className={td}>{autorDe(v)}</td>
                   <td className={td}>
                     <Pilula tom={v.estado === "paga" ? "ok" : "grave"}>{v.estado}</Pilula>
                   </td>

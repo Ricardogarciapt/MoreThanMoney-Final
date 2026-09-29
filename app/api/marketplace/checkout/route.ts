@@ -41,7 +41,7 @@ import { getStripeClient } from '@/lib/stripe-client'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { donoValido, modoStripe, podeComprarAqui, precoEfectivo } from '@/lib/marketplace/regras'
+import { destinoDeCompraValido, donoValido, modoStripe, podeComprarAqui, precoEfectivo } from '@/lib/marketplace/regras'
 import {
   AMBITO_MARKETPLACE, TEXTO_RECUSA, descontoQueVale, normalizarCodigo, validarCupao,
 } from '@/lib/marketplace/cupoes'
@@ -144,8 +144,19 @@ export async function POST(request: NextRequest) {
     }
 
     // ── O caminho antigo, para os produtos da casa que já vendem ──────────────────────────
+    //
+    // O destino pode ser ABSOLUTO (`https://…`) ou um caminho INTERNO (`/upgrade?plan=…`), e o
+    // segundo caso faltava. Os catorze produtos da casa publicados apontam todos para páginas
+    // nossas — `/upgrade`, `/scanner-access`, `/sensei-ea` — e o teste era só `^https?://`. Ou
+    // seja: nenhum deles passava por aqui, caíam no `sem_preco` logo a seguir, e os catorze botões
+    // da montra respondiam «este produto ainda não tem cobrança ligada». O marketplace abriu com
+    // catorze produtos e zero caminhos de compra a funcionar.
+    //
+    // `//` fica de fora de propósito: `//evil.com` é um caminho relativo ao protocolo, o browser
+    // lê-o como outro domínio, e aceitá-lo aqui era abrir uma porta de redireccionamento a partir
+    // de um campo de texto do painel.
     const externo = String(produto.checkout_externo_url ?? '').trim()
-    if (daCasa && /^https?:\/\//i.test(externo)) {
+    if (daCasa && destinoDeCompraValido(externo)) {
       await registarPasso({
         etapa: 'iniciou_checkout',
         produtoId: produto.id,
