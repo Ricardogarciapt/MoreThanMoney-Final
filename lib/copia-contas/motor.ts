@@ -203,7 +203,11 @@ async function abrir(
   const lista = leitura.tipo === 'lida' ? leitura.simbolos : null
   const mapa = mapearSimbolo(symbol, rota.destino_tipo, rota.mapa_simbolos, lista)
   const simboloDestino = mapa.simbolo ?? (rota.destino_tipo === 'mtmfunded' ? mapa.canonico : null)
-  const decisaoSimbolo = decidirSimboloDestino(simboloDestino, mapa.canonico, leitura)
+  // `via: 'ambiguo'` = a corretora tem dois candidatos igualmente prováveis e a resolução
+  // automática recusou-se a atirar a moeda. Recusa-se a cópia com a frase que diz o que falta.
+  const decisaoSimbolo = decidirSimboloDestino(
+    simboloDestino, mapa.canonico, leitura, mapa.via === 'ambiguo' ? mapa.motivo : null,
+  )
   if (decisaoSimbolo.decisao === 'recusar') {
     await loja.inserirCopia({ rota_id: rota.id, origem_posicao_id: ev.origem_posicao_id, volume_origem_abertura: volumeOrigem, direcao, estado: 'recusada', erro: decisaoSimbolo.motivo })
     return { resultado: 'recusado', acaoPretendida: nada(decisaoSimbolo.motivo), modo }

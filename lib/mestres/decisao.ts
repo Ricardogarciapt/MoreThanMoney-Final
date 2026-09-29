@@ -126,5 +126,8 @@ export function aposResultado(falhasAntes: number, sucesso: boolean, n: number, 
 /** Erro técnico (conta a falha) vs recusa por regra (não conta). */
 export function eFalhaTecnica(erro: string | null | undefined): boolean {
   if (!erro) return false
-  return !/não existe no destino|abaixo de metade do mínimo|fora do filtro|máximo de \d+ posições|limite de|risco total|atraso|duplicad|não aceite|pausad|bloqueada/i.test(erro)
+  // «igualmente prováveis» = a resolução automática recusou-se a adivinhar o sufixo. É uma recusa
+  // por regra, não uma avaria: repetir dá o mesmo empate, e bloquear a conta por isto seria punir
+  // o cliente por falta de um mapa de símbolos.
+  return !/não existe no destino|igualmente prováveis|abaixo de metade do mínimo|fora do filtro|máximo de \d+ posições|limite de|risco total|atraso|duplicad|não aceite|pausad|bloqueada/i.test(erro)
 }

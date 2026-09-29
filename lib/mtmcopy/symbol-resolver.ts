@@ -108,6 +108,30 @@ function canonicalCores(canonical: string): Set<string> {
  * EURUSD-STD = FULL; o exato bare vem 1º mas é disabled → salta para -STD).
  */
 export function rankedBrokerSymbols(canonical: string, availableSymbols: string[]): string[] {
+  return rankedBrokerSymbolsComChave(canonical, availableSymbols).map((r) => r.sym)
+}
+
+/**
+ * O MESMO ranking, mas com a chave de desempate à vista.
+ *
+ * Existe porque escolher `[0]` às cegas é seguro quando há um vencedor e é um palpite quando há
+ * dois candidatos empatados em TUDO (ex.: uma conta com `XAUUSD.r` e `XAUUSD.x`, ambos com a mesma
+ * frequência de sufixo e a mesma grafia). Quem resolve símbolos automaticamente precisa de ver o
+ * empate para poder recusar em vez de adivinhar — ver `lib/mtmcopy/resolucao-simbolos.ts`.
+ */
+export interface CandidatoSimbolo {
+  sym: string
+  /** Igual ao canónico, letra a letra. */
+  exact: boolean
+  /** Só apanhado pelo fallback de família (commodities/índices) — match mais fraco. */
+  fuzzy: boolean
+  /** Quantas vezes este sufixo aparece na conta (o sufixo NATIVO da corretora ganha). */
+  suffix: number
+  /** Distância da grafia à do canónico; menor é melhor. */
+  score: number
+}
+
+export function rankedBrokerSymbolsComChave(canonical: string, availableSymbols: string[]): CandidatoSimbolo[] {
   const up = (canonical || '').toUpperCase().trim()
   if (!availableSymbols?.length) return []
 
@@ -129,7 +153,7 @@ export function rankedBrokerSymbols(canonical: string, availableSymbols: string[
   const wantedCompact = up.replace(/[^A-Z0-9]/g, '').length
   const exactUp = up
 
-  const ranked: Array<{ sym: string; exact: boolean; fuzzy: boolean; suffix: number; score: number }> = []
+  const ranked: CandidatoSimbolo[] = []
   for (const s of availableSymbols) {
     const su = s.toUpperCase().trim()
     const exact = su === exactUp
@@ -159,7 +183,7 @@ export function rankedBrokerSymbols(canonical: string, availableSymbols: string[
     (b.suffix - a.suffix) ||
     (a.score - b.score),
   )
-  return ranked.map((r) => r.sym)
+  return ranked
 }
 
 /**

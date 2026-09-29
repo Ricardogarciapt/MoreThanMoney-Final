@@ -7,7 +7,7 @@
  * Mesmas decisões do copiador MTM Funded (lib/mtmfunded/copia/dimensionar.ts), generalizadas para
  * as quatro plataformas: a regra de volume vem num formato neutro (RegraVolume) em vez da spec MT5.
  */
-import { rankedBrokerSymbols } from '@/lib/mtmcopy/symbol-resolver'
+import { resolverSimboloDestino } from '@/lib/mtmcopy/resolucao-simbolos'
 import { canonicoDe } from '@/lib/webtrader/corretoras/regras'
 import type { ContextoDestino, Direcao, EventoCopia, ModoLoteCopia, RegraVolume, RotaCopia, TipoEventoCopia } from './tipos'
 
@@ -126,7 +126,10 @@ export function calcularLote(e: EntradaLote): Lote {
  * Símbolo da origem → símbolo no destino.
  *  1. mapa manual da rota (pelo símbolo da corretora de origem OU pelo canónico);
  *  2. MTM Funded: o canónico (o catálogo é canónico);
- *  3. MT4/MT5/TradeLocker: o 1.º da lista da corretora pelo ranking de sempre (rankedBrokerSymbols).
+ *  3. o que a resolução automática já decidiu antes para esta conta (`guardadas`), enquanto o
+ *     símbolo continuar a existir no catálogo — para a escolha não mudar de ordem para ordem;
+ *  4. MT4/MT5/TradeLocker: a resolução automática pelo ranking de sempre. Quando dois candidatos
+ *     ficam empatados em TUDO, devolve `ambiguo` e NÃO escolhe — ver `lib/mtmcopy/resolucao-simbolos.ts`.
  *     A escolha fina por tradeMode (salta DISABLED/CLOSEONLY) faz-se no escritor, com as specs.
  */
 export function mapearSimbolo(
@@ -134,7 +137,16 @@ export function mapearSimbolo(
   destinoTipo: RotaCopia['destino_tipo'],
   mapa: Record<string, string> | null | undefined,
   simbolosDestino: string[] | null,
-): { simbolo: string | null; canonico: string; via: 'mapa' | 'canonico' | 'corretora' | 'nenhum' } {
+  guardadas?: Record<string, string> | null,
+): {
+  simbolo: string | null
+  canonico: string
+  via: 'mapa' | 'canonico' | 'corretora' | 'guardado' | 'ambiguo' | 'nenhum'
+  /** Só em `ambiguo`: a frase que explica o empate e o que fazer. */
+  motivo?: string
+  /** Só em `corretora`: vale a pena guardar esta resolução. */
+  guardar?: boolean
+} {
   const bruto = String(simboloOrigem ?? '').toUpperCase().trim()
   const canonico = canonicoDe(bruto)
   const m = Object.fromEntries(Object.entries(mapa ?? {}).map(([k, v]) => [k.toUpperCase().trim(), String(v).trim()]))
@@ -142,8 +154,12 @@ export function mapearSimbolo(
   if (manual) return { simbolo: manual, canonico, via: 'mapa' }
   if (destinoTipo === 'mtmfunded') return { simbolo: canonico, canonico, via: 'canonico' }
   if (!simbolosDestino) return { simbolo: null, canonico, via: 'nenhum' }
-  const escolhido = rankedBrokerSymbols(canonico, simbolosDestino)[0] ?? null
-  return { simbolo: escolhido, canonico, via: escolhido ? 'corretora' : 'nenhum' }
+
+  const r = resolverSimboloDestino(canonico, { simbolosDestino, guardadas })
+  if (r.via === 'guardado') return { simbolo: r.simbolo, canonico, via: 'guardado' }
+  if (r.via === 'automatico') return { simbolo: r.simbolo, canonico, via: 'corretora', guardar: true }
+  if (r.via === 'ambiguo') return { simbolo: null, canonico, via: 'ambiguo', motivo: r.motivo }
+  return { simbolo: null, canonico, via: 'nenhum' }
 }
 
 /**
@@ -187,8 +203,15 @@ export function decidirSimboloDestino(
   simboloDestino: string | null,
   canonico: string,
   leitura: LeituraSimbolosDestino,
+  /**
+   * O motivo do empate, quando a resolução automática se RECUSOU a adivinhar entre dois
+   * candidatos igualmente prováveis. Recusa-se a cópia com a frase que diz o que fazer — repetir
+   * não adiantava nada, porque o catálogo vai dar o mesmo empate na tentativa seguinte.
+   */
+  motivoAmbiguo?: string | null,
 ): DecisaoSimboloDestino {
   if (simboloDestino) return { decisao: 'seguir' }
+  if (motivoAmbiguo) return { decisao: 'recusar', motivo: motivoAmbiguo }
   switch (leitura.tipo) {
     // A única recusa legítima: perguntou-se, respondeu, e não há candidato nenhum.
     case 'lida':

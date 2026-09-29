@@ -189,6 +189,10 @@
       "schedule": "*/30 * * * *"
     },
     {
+      "path": "/api/cron/mtmauto-espelho-funded",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/mtmfunded-metrics",
       "schedule": "7 * * * *"
     },
