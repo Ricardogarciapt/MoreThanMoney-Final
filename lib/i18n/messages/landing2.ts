@@ -312,7 +312,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
       "Não. São oito áreas em duas frentes. Nos mercados: Forex com o Ricardo Garcia, Criptomoedas com o Ruben Pereira, Ações e ETF, e Imobiliário. Do outro lado: Social Media e UGC, Mindset e Liderança, Inteligência Artificial e Network Marketing. Umas têm sala ao vivo com horário semanal, outras são percurso organizado para fazeres ao teu ritmo — e há quem venha para cá e nunca abra uma ordem.",
     "l2.faq10Q": "Consigo ganhar aqui sem abrir uma única ordem?",
     "l2.faq10A":
-      "Consegues, por duas vias. Se produzes conteúdo, alojamos e vendemos o teu curso ou mentoria e ficas com 90–95% do que vender, sem entrada e sem exclusividade — candidatas-te e falamos. E se trazes pessoas, o Convida & Ganha dá-te dias de Premium por cada amigo que entre pelo teu link, com comissão sobre as subscrições que resultem. A parceria de corretora (IB) é outra coisa e não se faz por formulário: é uma conversa, e só depois é que entras na rede.",
+      "Consegues, por duas vias. Se produzes conteúdo, alojamos e vendemos o teu curso ou mentoria e ficas com 90% do que vender, sem entrada e sem exclusividade — candidatas-te e falamos. E se trazes pessoas, o Convida & Ganha dá-te dias de Premium por cada amigo que entre pelo teu link, com comissão sobre as subscrições que resultem. A parceria de corretora (IB) é outra coisa e não se faz por formulário: é uma conversa, e só depois é que entras na rede.",
 
     "l2.ch9": "A decisão",
     "l2.packsTitle": "Escolhe pelo que queres fazer",
@@ -657,7 +657,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
       "No. Eight areas across two fronts. On the markets side: Forex with Ricardo Garcia, Crypto with Ruben Pereira, Stocks and ETFs, and Real Estate. On the other: Social Media and UGC, Mindset and Leadership, Artificial Intelligence and Network Marketing. Some have a live room with a weekly slot, others are self-paced tracks you work through on your own time — and plenty of people come here and never place a single order.",
     "l2.faq10Q": "Can I earn here without opening a single order?",
     "l2.faq10A":
-      "You can, two ways. If you make content, we host and sell your course or mentorship and you keep 90–95% of what it sells, with no entry fee and no exclusivity — you apply and we talk. And if you bring people, Refer and Earn gives you Premium days for every friend who joins through your link, with commission on the subscriptions that follow. The broker partnership (IB) is a different thing and isn't done through a form: it's a conversation, and only then do you join the network.",
+      "You can, two ways. If you make content, we host and sell your course or mentorship and you keep 90% of what it sells, with no entry fee and no exclusivity — you apply and we talk. And if you bring people, Refer and Earn gives you Premium days for every friend who joins through your link, with commission on the subscriptions that follow. The broker partnership (IB) is a different thing and isn't done through a form: it's a conversation, and only then do you join the network.",
 
     "l2.ch9": "The decision",
     "l2.packsTitle": "Choose by what you want to do",

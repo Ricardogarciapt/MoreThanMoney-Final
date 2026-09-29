@@ -96,22 +96,17 @@ const GRUPOS: Grupo[] = [
     titulo: "Trading, cópia e funded",
     itens: [
       // O nome no menu dizia só «Centro de Controlo» e por isso confundia-se com o Centro de
-      // comando. O que a página é, de facto, é o console do MTM Auto — e é o sucessor do
-      // /admin/mtmcopy, que fica logo por baixo enquanto a paridade não fecha.
+      // comando. O que a página é, de facto, é o console do MTM Auto.
+      //
+      // A «Cópia (página antiga)» (/admin/mtmcopy) saiu do menu a 29/09/2026, a pedido do dono:
+      // o Centro já tem a cadeia inteira, com o quadro de arrastar. A PÁGINA continua a existir —
+      // não a apaguei — para quem tiver um atalho guardado; o que deixou de existir é o convite.
       {
         tipo: "link",
         href: "/admin/centro",
         rotulo: "Centro de Controlo MTM Auto",
         icone: Send,
-        prefixos: ["/admin/centro/"],
-      },
-      {
-        tipo: "link",
-        href: "/admin/mtmcopy",
-        rotulo: "Cópia (página antiga)",
-        icone: ArrowLeftRight,
-        prefixos: ["/admin/mtmcopy"],
-        secundaria: true,
+        prefixos: ["/admin/centro/", "/admin/mtmcopy"],
       },
       { tipo: "tab", id: "mtmfunded", rotulo: "MTM Funded & Torneios", icone: Trophy },
       { tipo: "link", href: "/admin/licencas", rotulo: "Licenças do EA", icone: KeyRound },

@@ -17,11 +17,11 @@ const APPLY_DM = "https://ig.me/m/ricardogarciapt"
 export const metadata: Metadata = {
   title: "Criadores & Educadores | More Than Money",
   description:
-    "Traz o teu conteúdo. Nós vendemos por ti. Ficas com 90–95%, 0€ de entrada. A MTM trata da promoção, tráfego, pagamentos e alojamento. Candidaturas abertas.",
+    "Traz o teu conteúdo. Nós vendemos por ti. Ficas com 90%, 0€ de entrada. A MTM trata da promoção, tráfego, pagamentos e alojamento. Candidaturas abertas.",
   openGraph: {
     title: "Traz o teu conteúdo. Nós vendemos por ti. | MTM Creators",
     description:
-      "Ficas com 90–95% de tudo o que vendes. 5–10% de comissão MTM, só quando vendes. 0€ de entrada. Candidaturas abertas.",
+      "Ficas com 90% de tudo o que vendes. 10% de comissão MTM, só quando vendes. 0€ de entrada. Candidaturas abertas.",
     url: "https://www.morethanmoney.pt/criadores",
     siteName: "More Than Money",
     locale: "pt_PT",
@@ -48,7 +48,7 @@ const DOES = [
 const STEPS = [
   { n: "01", t: "Publicas o teu conteúdo", d: "Curso, mentoria ou comunidade — o formato é teu." },
   { n: "02", t: "Nós promovemos e vendemos", d: "Tráfego, funil, pagamentos e suporte por nossa conta." },
-  { n: "03", t: "Recebes 90–95%", d: "Comissão MTM de 5–10% só quando há venda. Simples." },
+  { n: "03", t: "Recebes 90%", d: "Comissão MTM de 10% só quando há venda. Simples." },
 ]
 
 function Pill({ children }: { children: React.ReactNode }) {
@@ -135,7 +135,7 @@ export default function CriadoresPage() {
           }}
         >
           {[
-            { big: "90–95%", small: "Fica contigo de tudo o que vendes" },
+            { big: "90%", small: "Fica contigo de tudo o que vendes" },
             { big: "5–10%", small: "Comissão MTM — só quando vendes" },
             { big: "0€", small: "De entrada · sem mensalidade · sem exclusividade" },
           ].map((s) => (

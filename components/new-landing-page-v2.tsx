@@ -637,7 +637,7 @@ export default function NewLandingPage() {
       <p>{t("l2.doorsSub")}</p></div>
     <div className="grid4">
       <div className="card r d1"><span className="ic">◐</span><span className="n">{t("l2.door1L")}</span><h3>{t("l2.door1T")}</h3>
-        <p>Alojamos, promovemos e cobramos por ti. Ficas com <b style={{"color": "var(--gold-lt)"}}>90 a 95%</b> do que vendes, com 0€ de entrada.</p>
+        <p>Alojamos, promovemos e cobramos por ti. Ficas com <b style={{"color": "var(--gold-lt)"}}>90%</b> do que vendes, com 0€ de entrada.</p>
         <p style={{"marginTop": "16px"}}><a className="btn g" style={{"padding": "8px 16px", "fontSize": "13px"}} href="/criadores">{t("l2.door1Cta")}</a></p></div>
       <div className="card r d2"><span className="ic">◈</span><span className="n">{t("l2.door2L")}</span><h3>{t("l2.door2T")}</h3>
         <p>{t("l2.door2B")}</p>

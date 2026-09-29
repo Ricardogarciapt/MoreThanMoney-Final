@@ -53,7 +53,7 @@ const INTENTS: Intent[] = [
     key: "educator",
     kw: ["CRIAR", "CRIADOR", "CRIADORA", "CRIADORES", "EDUCADOR", "EDUCADORA", "CREATE", "CREATOR", "EDUCATOR", "UGC"],
     dm: (h) =>
-      `Boa${h}! 🙌 Que bom quereres criar com a MTM. Vê o modelo (ficas com 90–95%, 0€ de entrada) e candidata-te 👉 ${CRIADORES}. ` +
+      `Boa${h}! 🙌 Que bom quereres criar com a MTM. Vê o modelo (ficas com 90%, 0€ de entrada) e candidata-te 👉 ${CRIADORES}. ` +
       `Para avançar, responde-me aqui com 1 exemplo do teu conteúdo (link do perfil/portfólio) + a tua área — se encaixar, o Ricardo (@ricardogarciapt) fala contigo em privado. 🚀`,
     pub: (h) =>
       `Boa${h}! 🔥 Candidaturas de criadores abertas 👉 ${CRIADORES}. ` +
