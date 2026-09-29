@@ -92,9 +92,6 @@ export default function EducatorStudio() {
   const [keyOpStreamId, setKeyOpStreamId] = useState<string | null>(null)
   const [restreamSaving, setRestreamSaving] = useState(false)
   const [restreamKeyVisible, setRestreamKeyVisible] = useState(false)
-  const [tiktokSaving, setTiktokSaving] = useState(false)
-  const [tiktokKeyVisible, setTiktokKeyVisible] = useState(false)
-  const [tiktokForm, setTiktokForm] = useState({ enabled: false, server: "", key: "" })
   const [voiceSaving, setVoiceSaving] = useState(false)
   const [voiceId, setVoiceId] = useState("")
   const DEFAULT_VOICE_ID = "1e0fa8b490c744acba94da72710e6db2" // clone Fish "Ricardo Garcia"
@@ -139,11 +136,6 @@ export default function EducatorStudio() {
       ingest: ((me as any).restream_ingest_url as string)?.trim() || DEFAULT_RESTREAM_INGEST_URL,
       key: ((me as any).restream_stream_key as string) || "",
       embed: ((me as any).restream_embed_url as string) || "",
-    })
-    setTiktokForm({
-      enabled: Boolean((me as any).tiktok_enabled),
-      server: ((me as any).tiktok_server as string) || "",
-      key: ((me as any).tiktok_stream_key as string) || "",
     })
     setVoiceId(((me as any).fish_voice_id as string) || "")
   }, [me])
@@ -458,30 +450,6 @@ export default function EducatorStudio() {
     }
   }
 
-  const saveTiktokProfile = async () => {
-    setTiktokSaving(true)
-    setError("")
-    try {
-      const res = await fetch("/api/educator/update-tiktok", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          tiktok_enabled: tiktokForm.enabled,
-          tiktok_server: tiktokForm.server.trim() || null,
-          tiktok_key: tiktokForm.key.trim() || null,
-        }),
-      })
-      const j = await res.json()
-      if (!res.ok) {
-        setError(j.error || "Erro ao guardar TikTok")
-        return
-      }
-      await loadMe()
-    } finally {
-      setTiktokSaving(false)
-    }
-  }
 
   /** Define a voz Fish do educador para as traduções dobradas (vazio = Ricardo Garcia). */
   const saveVoiceProfile = async () => {
@@ -1266,72 +1234,6 @@ export default function EducatorStudio() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Integração e métricas</p>
             <p className="mt-0.5 text-xs text-gray-600">Restream ao nível do teu perfil; contadores por canal.</p>
           </div>
-
-          <Card className="border border-fuchsia-900/40 bg-gradient-to-br from-gray-950 to-black">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base text-fuchsia-300">
-                <Radio className="h-4 w-4" />
-                TikTok LIVE (multistream)
-              </CardTitle>
-              <p className="text-xs font-normal text-gray-500">
-                Transmites <strong className="text-gray-400">1×</strong> para o servidor MTM e o site
-                replica a stream para o teu <strong className="text-gray-400">TikTok</strong> ao mesmo tempo.
-                Cola o <strong className="text-gray-400">Server</strong> + a <strong className="text-gray-400">Stream Key</strong>{" "}
-                que o TikTok LIVE te dá (app → LIVE → transmitir com software de terceiros).
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <label className="flex items-center gap-2 text-xs text-gray-300">
-                <input
-                  type="checkbox"
-                  checked={tiktokForm.enabled}
-                  onChange={(e) => setTiktokForm((p) => ({ ...p, enabled: e.target.checked }))}
-                />
-                Ativar multistream para o TikTok
-              </label>
-              <div>
-                <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Server TikTok (rtmp://…)</p>
-                <Input
-                  value={tiktokForm.server}
-                  onChange={(e) => setTiktokForm((p) => ({ ...p, server: e.target.value }))}
-                  className="border-gray-700 bg-black/50 font-mono text-xs"
-                  placeholder="rtmp://…tiktokcdn.com/live/"
-                />
-              </div>
-              <div>
-                <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Stream Key TikTok</p>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-                  <Input
-                    type={tiktokKeyVisible ? "text" : "password"}
-                    value={tiktokForm.key}
-                    onChange={(e) => setTiktokForm((p) => ({ ...p, key: e.target.value }))}
-                    className="border-gray-700 bg-black/50 font-mono text-xs sm:flex-1"
-                    placeholder="Cola a Stream Key do TikTok LIVE"
-                    autoComplete="off"
-                    spellCheck={false}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 border-gray-600 text-gray-200"
-                    onClick={() => setTiktokKeyVisible((v) => !v)}
-                  >
-                    {tiktokKeyVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    <span className="ml-2">{tiktokKeyVisible ? "Ocultar" : "Mostrar"}</span>
-                  </Button>
-                </div>
-              </div>
-              <Button
-                type="button"
-                disabled={tiktokSaving}
-                className="bg-fuchsia-700 text-white hover:bg-fuchsia-600"
-                onClick={saveTiktokProfile}
-              >
-                {tiktokSaving ? "A guardar…" : "Guardar TikTok"}
-              </Button>
-            </CardContent>
-          </Card>
 
           <Card className="border border-emerald-900/40 bg-gradient-to-br from-gray-950 to-black">
             <CardHeader className="pb-2">

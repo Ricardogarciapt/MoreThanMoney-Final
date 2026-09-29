@@ -109,7 +109,9 @@ eq('caminho vazio', destinoPorCaminho(null), null)
 
 // A navbar montada a partir do registo tem de manter a forma que tinha à mão.
 const navbar = construirNavbar((c) => c) // tradutor que devolve a chave → cai no rótulo PT
-eq('sete entradas de topo', navbar.length, 7)
+// 7 → 8 a 29/09/2026: o Marketplace dos educadores entrou no topo. Não é dentro de «Educação»
+// de propósito — o que se vende ali é dos educadores, não da casa.
+eq('oito entradas de topo', navbar.length, 8)
 eq('primeira é o início', navbar[0].href, '/new-landing')
 eq('educação abre submenu', navbar.find((i) => i.id === 'educacao')?.submenu?.length, 4)
 eq(

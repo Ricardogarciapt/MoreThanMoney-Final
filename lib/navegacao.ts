@@ -108,6 +108,13 @@ export const DESTINOS_NAVEGACAO: DestinoNavegacao[] = [
 
   { id: 'onboarding', href: '/onboarding', chave: 'navfooter.navOnboarding', rotuloPt: 'Onboarding', grupo: 'topo', topo: true, comoUsar: 'o arranque' },
 
+  // O marketplace dos educadores. Fica no topo e não dentro de «Educação» de propósito: o que se
+  // vende aqui é dos EDUCADORES, não da casa, e enterrá-lo num submenu da casa dizia o contrário.
+  //
+  // ATENÇÃO: a página respeita `site_settings.marketplace.ligado`, que nasce DESLIGADO. Enquanto
+  // estiver assim, este link leva a uma montra vazia — é por isso que o interruptor existe.
+  { id: 'marketplace', href: '/marketplace', rotuloPt: 'Marketplace', grupo: 'topo', topo: true, comoUsar: 'o marketplace dos educadores' },
+
   { id: 'apps-ia', href: '/app-mobile?tab=apps', chave: 'navfooter.navAiApps', rotuloPt: 'Apps IA', grupo: 'apps', topo: true, comoUsar: 'as Apps IA' },
   { id: 'mtmsocial', href: '/mtmsocial', rotuloPt: 'MTM Social', grupo: 'apps', comoUsar: 'o MTM Social' },
   { id: 'mtm-studio', href: 'https://mtmbrandbuilder.lovable.app', rotuloPt: 'MTM Studio', grupo: 'apps', externo: true },
