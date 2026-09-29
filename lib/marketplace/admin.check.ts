@@ -22,7 +22,10 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { NOME_DA_CASA, destinoDeCompraValido, nomeDoAutor } from './regras'
+import {
+  LOJA_DA_CASA, NOME_DA_CASA, destinoDeCompraValido, nomeDoAutor,
+  procuraCasa, vendedorDoProduto, vendedoresDaMontra,
+} from './regras'
 import { podeArquivarNoStripe, sincronizarPrecoNoStripe } from './stripe-preco'
 
 let ok = 0
@@ -179,6 +182,70 @@ async function main() {
   sim('o painel do admin também arquiva ao retirar', centro.includes('arquivarNoStripe'))
   // Nenhuma das duas rotas pode chamar `del()` no Stripe: no Stripe o que já vendeu não se apaga.
   sim('ninguém apaga no Stripe', !/(products|prices)\.del\(/.test(gestao + centro))
+
+  // ── 6. A montra multivendedor ───────────────────────────────────────────────────────────
+  //
+  // O vendedor em cada cartão é o que faz disto um multivendedor. A casa é um vendedor como outro
+  // qualquer — e hoje é o único, com os catorze produtos.
+
+  const AUTOR = { id: 'edu-1', display_name: 'Ana Silva', avatar_url: null, specialty: 'Cripto' }
+
+  sim('vendedor: a casa é um vendedor', vendedorDoProduto(PRODUTO_DA_CASA).ehACasa === true)
+  sim('vendedor: a casa leva o nome da casa', vendedorDoProduto(PRODUTO_DA_CASA).nome === NOME_DA_CASA)
+  sim('vendedor: a loja da casa tem endereço próprio', vendedorDoProduto(PRODUTO_DA_CASA).id === LOJA_DA_CASA)
+  sim(
+    'vendedor: um educador leva o nome e a especialidade dele',
+    vendedorDoProduto(PRODUTO_DE_EDUCADOR, AUTOR).nome === 'Ana Silva' &&
+      vendedorDoProduto(PRODUTO_DE_EDUCADOR, AUTOR).nota === 'Cripto',
+  )
+  // O caso que faz a diferença entre um cartão com vendedor e um cartão partido: o autor ainda não
+  // chegou (a leitura dos autores falhou, ou o educador foi apagado). Cai para a casa em vez de
+  // deixar o cartão sem linha nenhuma.
+  sim('vendedor: sem autor resolvido, não fica vazio', vendedorDoProduto(PRODUTO_DE_EDUCADOR, null).ehACasa === true)
+
+  const tira = vendedoresDaMontra([
+    PRODUTO_DA_CASA, PRODUTO_DA_CASA, PRODUTO_DA_CASA,
+    { ...PRODUTO_DE_EDUCADOR, vendedor: vendedorDoProduto(PRODUTO_DE_EDUCADOR, AUTOR) },
+  ])
+  sim('tira: agrupa por vendedor', tira.length === 2)
+  sim('tira: conta os produtos de cada um', tira[0].produtos === 3 && tira[0].ehACasa)
+
+  // ── A procura ───────────────────────────────────────────────────────────────────────────
+
+  const SENSEI = { titulo: 'MTM Sensei EA · vitalício', subtitulo: 'Licença vitalícia.', tipo: 'ea', vendedor: { nome: NOME_DA_CASA } }
+
+  sim('procura: vazia devolve tudo', procuraCasa(SENSEI, ''))
+  sim('procura: encontra pelo título', procuraCasa(SENSEI, 'sensei'))
+  // Sem isto, quem escreve sem acentos (que é quase toda a gente, e todos os telemóveis) não
+  // encontrava o produto cujo título os tem.
+  sim('procura: ignora acentos', procuraCasa(SENSEI, 'vitalicio'))
+  sim('procura: palavras em qualquer ordem', procuraCasa(SENSEI, 'vitalicio sensei'))
+  sim('procura: encontra pela categoria', procuraCasa(SENSEI, 'robo'))
+  // Num multivendedor, escrever o nome de quem vende é uma das maneiras naturais de procurar.
+  sim('procura: encontra pelo vendedor', procuraCasa(SENSEI, 'morethanmoney'))
+  sim('procura: o que não existe não aparece', !procuraCasa(SENSEI, 'xpto'))
+  sim('procura: todas as palavras têm de bater', !procuraCasa(SENSEI, 'sensei xpto'))
+
+  // ── 7. A montra e a ficha são PÚBLICAS ──────────────────────────────────────────────────
+  //
+  // Mudança de 29/09: estavam atrás de `ProtectedPage` e quem chegava do Instagram via um
+  // formulário de entrada em vez de uma loja. O que protege o conteúdo não é a página — é o
+  // `conteudo_url` nunca sair na resposta pública. Estas duas verificações andam JUNTAS de
+  // propósito: se alguém abrir a porta, a segunda é que tem de continuar fechada.
+  const paginaMontra = readFileSync(join(RAIZ, 'app/marketplace/page.tsx'), 'utf8')
+  const paginaFicha = readFileSync(join(RAIZ, 'app/marketplace/[slug]/page.tsx'), 'utf8')
+  const servidor = readFileSync(join(RAIZ, 'lib/marketplace/servidor.ts'), 'utf8')
+
+  // Procura o IMPORT e não a palavra: os cabeçalhos destes ficheiros contam que elas já
+  // estiveram protegidas, e um teste que falha por causa do comentário que explica a mudança é um
+  // teste que alguém desliga.
+  const importaGuarda = (fonte: string) => /import\s+ProtectedPage\s+from/.test(fonte) || /<ProtectedPage/.test(fonte)
+  sim('a montra é pública', !importaGuarda(paginaMontra))
+  sim('a ficha é pública', !importaGuarda(paginaFicha))
+  // A linha que torna as duas de cima seguras. `COLUNAS_VITRINE` é o que a montra pode ver.
+  const colunas = servidor.slice(servidor.indexOf('COLUNAS_VITRINE'), servidor.indexOf('export type ProdutoVitrine'))
+  sim('a montra pública NÃO leva o conteudo_url', !colunas.includes('conteudo_url'))
+  sim('a montra pública NÃO leva a nota do conteúdo', !colunas.includes('conteudo_nota'))
 
   // ── Resultado ─────────────────────────────────────────────────────────────────────────────
 

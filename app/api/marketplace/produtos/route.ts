@@ -21,11 +21,16 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isIosAppRequest } from '@/lib/is-native-request'
 import {
+  LOJA_DA_CASA,
+  NOME_DA_CASA,
+  NOTA_DA_CASA,
   precoEfectivo,
   produtoNaVitrine,
   podeComprarAqui,
   nomeDaCategoria,
   tipoValido,
+  vendedorDoProduto,
+  vendedoresDaMontra,
   vitrineVisivelNoIos,
 } from '@/lib/marketplace/regras'
 import {
@@ -56,10 +61,15 @@ export async function GET(request: NextRequest) {
     const sessao = await sessaoDoMembro(request)
     const slug = request.nextUrl.searchParams.get('slug')
     const tipo = request.nextUrl.searchParams.get('tipo')
+    // A loja de um vendedor: 'casa' ou o uuid de um educador. Filtrado NA QUERY e não no fim, para
+    // a loja de um educador não trazer o catálogo inteiro pela rede só para deitar fora 90%.
+    const vendedor = request.nextUrl.searchParams.get('vendedor')
 
     let q = getSupabaseAdmin().from('marketplace_produtos').select(COLUNAS_VITRINE)
     if (slug) q = q.eq('slug', slug)
     if (tipo) q = q.eq('tipo', tipoValido(tipo))
+    if (vendedor === LOJA_DA_CASA) q = q.eq('dono', 'casa')
+    else if (vendedor) q = q.eq('educator_id', vendedor).eq('dono', 'educador')
     const { data } = await q.order('publicado_em', { ascending: false, nullsFirst: false }).limit(200)
 
     const linhas = (data ?? []) as unknown as ProdutoVitrine[]
@@ -85,9 +95,14 @@ export async function GET(request: NextRequest) {
         jaComprou,
       })
       const preco = precoEfectivo(p, agora, sessao?.perfil)
+      const educador = p.educator_id ? autores.get(p.educator_id) ?? null : null
       return {
         ...p,
-        educador: p.educator_id ? autores.get(p.educator_id) ?? null : null,
+        educador,
+        // QUEM VENDE, resolvido no servidor. Um produto da casa não tem educador, e era isso que
+        // deixava o cartão sem linha de vendedor nenhuma — numa montra multivendedor, essa linha é
+        // o que diz que aqui vende mais do que uma pessoa. Ver `vendedorDoProduto`.
+        vendedor: vendedorDoProduto(p, educador),
         categoria: nomeDaCategoria(p.tipo),
         jaComprou,
         preco,
@@ -114,8 +129,58 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // ── A loja do vendedor ────────────────────────────────────────────────────────────────
+    //
+    // Só quando se pede uma loja. A `bio` é lida AQUI e não vem no mapa de autores: `mapaDeAutores`
+    // serve a montra, onde ninguém lê biografias, e trazer um texto longo por produto era pagar
+    // isso em todos os cartões. A tabela `lms_educators` tem `password_hash` e chaves de ingestão
+    // ao lado — daí o `select` continuar a nomear só o que é público.
+    let loja: { id: string; nome: string; nota: string | null; bio: string | null; avatarUrl: string | null; ehACasa: boolean } | null = null
+    if (vendedor === LOJA_DA_CASA) {
+      loja = {
+        id: LOJA_DA_CASA,
+        nome: NOME_DA_CASA,
+        nota: NOTA_DA_CASA,
+        bio: 'Os produtos da casa: as subscrições, os scanners, os robôs e as licenças que a MoreThanMoney vende e mantém.',
+        avatarUrl: null,
+        ehACasa: true,
+      }
+    } else if (vendedor) {
+      const { data: e } = await getSupabaseAdmin()
+        .from('lms_educators')
+        .select('id, display_name, avatar_url, specialty, bio, is_active')
+        .eq('id', vendedor)
+        .maybeSingle()
+      // Um educador inactivo não tem loja. Devolver `null` em vez de 404 deixa o ecrã dizer «esta
+      // loja não existe» sem tratar o caso como avaria.
+      if (e && e.is_active !== false) {
+        loja = {
+          id: e.id as string,
+          nome: e.display_name as string,
+          nota: (e.specialty as string | null) ?? null,
+          bio: (e.bio as string | null) ?? null,
+          avatarUrl: (e.avatar_url as string | null) ?? null,
+          ehACasa: false,
+        }
+      }
+    }
+
     return NextResponse.json(
-      { ligado: def.ligado, ios, produtos },
+      {
+        ligado: def.ligado,
+        ios,
+        produtos,
+        ...(vendedor ? { loja } : {}),
+        // A tira de vendedores no topo da montra. É a assinatura de um multivendedor e serve de
+        // navegação: clicar leva à loja da pessoa.
+        vendedores: vendedoresDaMontra(produtos),
+        // A MONTRA É PÚBLICA, e por isso o ecrã precisa de saber se há sessão.
+        //
+        // `podeComprar` responde «este produto está à venda», que é outra pergunta. Sem esta, um
+        // visitante do Instagram carregava em «Comprar» e recebia «Autenticação necessária» num
+        // aviso vermelho — em vez de ser levado ao registo, que é o que ele ia fazer a seguir.
+        autenticado: Boolean(sessao),
+      },
       { headers: { 'Cache-Control': 'no-store' } },
     )
   } catch (e) {

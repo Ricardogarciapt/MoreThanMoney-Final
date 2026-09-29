@@ -53,6 +53,9 @@ const PORQUE_NAO: Record<string, string> = {
 
 export default function FichaProduto({ slug }: { slug: string }) {
   const [produto, setProduto] = useState<Produto | null | "nao-existe">(null)
+  // A ficha é PÚBLICA. Sem isto, um visitante sem sessão via a caixa de compra inteira — cupão,
+  // referral e botão — e o «Comprar» devolvia «Autenticação necessária» num aviso vermelho.
+  const [autenticado, setAutenticado] = useState(true)
   const [cupao, setCupao] = useState("")
   const [referral, setReferral] = useState("")
   const [aComprar, setAComprar] = useState(false)
@@ -63,6 +66,7 @@ export default function FichaProduto({ slug }: { slug: string }) {
       const r = await fetch(`/api/marketplace/produtos?slug=${encodeURIComponent(slug)}`)
       const j = await r.json().catch(() => ({ produtos: [] }))
       setProduto(j.produtos?.[0] ?? "nao-existe")
+      setAutenticado(j.autenticado !== false)
     })()
   }, [slug])
 
@@ -187,6 +191,22 @@ export default function FichaProduto({ slug }: { slug: string }) {
             >
               <ExternalLink size={14} /> Abrir na minha biblioteca
             </Link>
+          ) : !autenticado ? (
+            /* Sem sessão: um caminho só, e o que a pessoa ia fazer a seguir de qualquer maneira.
+               O cupão e o código de quem indicou ficam de fora daqui de propósito — escrevê-los
+               antes de entrar era perdê-los no login. Voltam a aparecer depois, nesta mesma
+               página, porque o `redirect` traz a pessoa ao sítio exacto. */
+            <>
+              <Link
+                href={`/login?redirect=/marketplace/${p.slug}`}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#D2A63C] px-4 py-2.5 text-sm font-semibold text-black hover:bg-[#BB8525]"
+              >
+                <Tag size={15} /> Entrar para comprar
+              </Link>
+              <p className="text-[11px] leading-relaxed text-zinc-500">
+                A compra fica agarrada à tua conta — é assim que o acesso ao produto funciona depois.
+              </p>
+            </>
           ) : p.podeComprar ? (
             <>
               <label className="block">

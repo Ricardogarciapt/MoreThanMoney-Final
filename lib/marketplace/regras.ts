@@ -578,6 +578,111 @@ export function extractoDoEducador(
   return { vendas, brutoCents, aReceberCents }
 }
 
+// ── O VENDEDOR ────────────────────────────────────────────────────────────────────────────
+//
+// Num marketplace de vários vendedores, a pergunta «de quem é isto?» tem de estar respondida em
+// cada cartão. É a diferença entre uma montra multivendedor e uma página de produtos: quem chega
+// vê logo que aqui vende mais do que uma pessoa.
+//
+// A CASA É UM VENDEDOR. Hoje é o único — os catorze produtos publicados são todos dela, e nenhum
+// educador tem produto ainda. A tentação era não mostrar vendedor nenhum enquanto assim for, e
+// acrescentá-lo quando houvesse educadores. Ficou de fora, por duas razões:
+//
+//   · Um layout onde o vendedor «às vezes aparece» tem dois desenhos, e o segundo só se vê no dia
+//     em que o primeiro educador publica — ou seja, é testado por um cliente.
+//   · A casa É a vendedora daqueles produtos. Esconder isso não é neutro: é tirar da montra a
+//     única coisa que a torna um marketplace.
+//
+// O que se resolve é o ASPECTO de catorze linhas iguais: a casa leva uma marca (uma pílula com o
+// nome e a categoria de vendedor), e um educador leva o nome e a especialidade dele. São duas
+// formas diferentes do mesmo campo, e não duas presenças diferentes.
+
+export type Vendedor = {
+  /** 'casa' para a MTM, ou o uuid do educador. É também o endereço da loja dele. */
+  id: string
+  nome: string
+  /** A linha por baixo do nome. A da casa é fixa; a do educador é a especialidade. */
+  nota: string | null
+  ehACasa: boolean
+  avatarUrl: string | null
+}
+
+/** O identificador da loja da casa. Não é um uuid de propósito: não há linha nenhuma por trás. */
+export const LOJA_DA_CASA = 'casa'
+
+/** O que a casa diz de si na montra. Um sítio só, para os três ecrãs não divergirem. */
+export const NOTA_DA_CASA = 'Equipa MoreThanMoney'
+
+/**
+ * Quem vende este produto, já pronto para um cartão.
+ *
+ * Recebe o autor já resolvido (a montra lê-os todos de uma vez) em vez de ir buscá-lo: manter isto
+ * puro é o que permite ao ecrã e à guarda usarem a mesma função.
+ */
+export function vendedorDoProduto(
+  produto: { educator_id?: string | null; dono?: string | null },
+  autor?: { id: string; display_name: string; avatar_url: string | null; specialty: string | null } | null,
+): Vendedor {
+  if (donoValido(produto.dono) === 'casa' || !produto.educator_id || !autor) {
+    return { id: LOJA_DA_CASA, nome: NOME_DA_CASA, nota: NOTA_DA_CASA, ehACasa: true, avatarUrl: null }
+  }
+  return {
+    id: autor.id,
+    nome: autor.display_name,
+    nota: autor.specialty ?? null,
+    ehACasa: false,
+    avatarUrl: autor.avatar_url ?? null,
+  }
+}
+
+/**
+ * A lista de vendedores de uma montra, com quantos produtos cada um tem.
+ *
+ * Ordenada por número de produtos e depois por nome — e NÃO por vendas. Não há dados de vendas
+ * nenhuns ainda, e uma ordem que finge um ranking é uma ordem que mente. Quando houver vendas, é
+ * esta a função que muda, e num sítio só.
+ */
+export function vendedoresDaMontra(
+  produtos: { educator_id?: string | null; dono?: string | null; vendedor?: Vendedor }[],
+): (Vendedor & { produtos: number })[] {
+  const por = new Map<string, Vendedor & { produtos: number }>()
+  for (const p of produtos) {
+    const v = p.vendedor ?? vendedorDoProduto(p)
+    const ja = por.get(v.id)
+    if (ja) ja.produtos += 1
+    else por.set(v.id, { ...v, produtos: 1 })
+  }
+  return Array.from(por.values()).sort((a, b) => b.produtos - a.produtos || a.nome.localeCompare(b.nome, 'pt'))
+}
+
+/**
+ * O que procurar dá.
+ *
+ * Puro, e no servidor não — é no BROWSER que isto corre, sobre os produtos que já lá estão. Uma ida
+ * ao servidor por tecla carregada dava um piscar a cada letra, e são no máximo 200 produtos.
+ *
+ * Sem acentos dos dois lados: quem escreve «vitalicio» tem de encontrar «vitalício». Procurar
+ * também no nome do VENDEDOR é o que faz «marketplace» e não «lista»: num multivendedor, escrever
+ * o nome de alguém é uma das maneiras naturais de procurar.
+ */
+export function procuraCasa(
+  produto: { titulo?: string | null; subtitulo?: string | null; tipo?: string | null; vendedor?: { nome?: string | null } },
+  termo: string,
+): boolean {
+  const q = semAcentos(termo).trim()
+  if (!q) return true
+  const alvo = semAcentos(
+    [produto.titulo, produto.subtitulo, nomeDaCategoria(produto.tipo), produto.vendedor?.nome].filter(Boolean).join(' '),
+  )
+  // Todas as palavras têm de aparecer, em qualquer ordem. «sensei vitalicio» encontra o produto
+  // cujo título é «MTM Sensei EA · vitalício»; com um `includes` da frase inteira não encontrava.
+  return q.split(/\s+/).every((palavra) => alvo.includes(palavra))
+}
+
+function semAcentos(s: string): string {
+  return String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
 /**
  * O `checkout_externo_url` de um produto da casa é um destino a que se pode mandar alguém?
  *
