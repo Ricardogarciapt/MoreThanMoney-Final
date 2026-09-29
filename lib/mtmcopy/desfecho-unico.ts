@@ -117,3 +117,78 @@ export async function gravarDesfechoUnico(
   }
   return (data?.length ?? 0) > 0
 }
+
+/** O que a reconstrução encontrou (e, se lhe pedirem, corrigiu). */
+export interface ResultadoReconciliacao {
+  /** Linhas fechadas do acompanhamento que foram comparadas. */
+  vistas: number
+  /** Onde o número publicado discordava do que o preço mediu. */
+  discordavam: number
+  /** Escreveu mesmo (false em simulação). */
+  aplicado: boolean
+  corrigidas: number
+  /** Amostra do que muda, para se poder olhar antes de decidir. */
+  exemplos: Array<{ canal: string; simbolo: string; publicado: number | null; preco: number | null; rotulo: string }>
+}
+
+/**
+ * RECONSTRUÇÃO DO HISTÓRICO — põe o lado do preço a mandar nos sinais que já fecharam.
+ *
+ * A escada impede que o problema volte, mas não desfaz o que já está gravado: as 289 linhas
+ * com dois números são anteriores a ela e não têm `origem`, por isso valem grau zero. E isso
+ * torna-as um alvo fácil — o cron do texto passa nas últimas 48 horas de 5 em 5 minutos e seria
+ * o primeiro a reclamá-las, o que fixava precisamente o número errado. O motor de preço não as
+ * volta a tocar: já fechou essas linhas e não revisita nada fechado.
+ *
+ * Aqui copia-se para a mensagem de entrada o número que a linha de acompanhamento mediu, que é
+ * o lado do preço, e marca-se `origem: 'tracker'` para ninguém de grau inferior lhe voltar a
+ * tocar.
+ *
+ * `aplicar: false` (o que está por omissão) NÃO escreve nada — conta e mostra. É de propósito:
+ * isto reescreve números de desempenho já publicados, e essa decisão é do dono, não do motor.
+ */
+export async function reconciliarHistorico(
+  opcoes: { aplicar?: boolean; limite?: number } = {},
+): Promise<ResultadoReconciliacao> {
+  const aplicar = opcoes.aplicar === true
+  const admin = getSupabaseAdmin()
+  const { data } = await admin
+    .from('mtmcopy_signal_tracking')
+    .select('chat_message_id, channel_slug, symbol, result_pips, result_pct, outcome_label')
+    .eq('status', 'closed')
+    .not('outcome_label', 'is', null)
+    .order('closed_at', { ascending: false })
+    .limit(opcoes.limite ?? 2000)
+
+  const out: ResultadoReconciliacao = { vistas: 0, discordavam: 0, aplicado: aplicar, corrigidas: 0, exemplos: [] }
+  for (const l of data ?? []) {
+    const id = l.chat_message_id as string
+    if (!id) continue
+    const { data: msg } = await admin.from('chat_messages').select('outcome').eq('id', id).maybeSingle()
+    out.vistas++
+    const atual = msg?.outcome as { pips?: number | null } | null
+    // Já está na escada e de grau igual ou superior: não é caso para reconstruir.
+    if (grauDoDesfecho(atual) >= GRAU.tracker) continue
+    const publicado = atual?.pips ?? null
+    const preco = (l.result_pips as number | null) ?? null
+    if (publicado === preco) continue
+    out.discordavam++
+    if (out.exemplos.length < 20) {
+      out.exemplos.push({
+        canal: l.channel_slug as string,
+        simbolo: l.symbol as string,
+        publicado,
+        preco,
+        rotulo: l.outcome_label as string,
+      })
+    }
+    if (!aplicar) continue
+    const ok = await gravarDesfechoUnico(id, 'tracker', {
+      label: l.outcome_label as string,
+      pips: preco,
+      pct: (l.result_pct as number | null) ?? null,
+    })
+    if (ok) out.corrigidas++
+  }
+  return out
+}
