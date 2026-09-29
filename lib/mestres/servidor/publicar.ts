@@ -22,6 +22,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { claimSignalOnce } from '@/lib/mtmcopy/premium-single'
 import { lifecycleMessage, stopFoiProtegido, type SignalEvent } from '@/lib/mtmcopy/signal-lifecycle'
 import { computeOutcome } from '@/lib/mtmcopy/trade-outcome'
+import { gravarDesfechoUnico } from '@/lib/mtmcopy/desfecho-unico'
 import { formatarSeguimento, formatarSinal } from '@/lib/sinais/formato-sinal'
 import { estrategiasPublicadasPelaMestre, type EstrategiaPublicada } from './canais-publicados'
 
@@ -250,10 +251,9 @@ async function publicarSeguimento(
 /** Resultado na mensagem de ENTRADA (o cartão lê daqui) — medido na mestre. */
 async function gravarResultado(chatId: string, p: Posicao, rotulo: string) {
   const o = computeOutcome({ symbol: p.symbol, direction: p.direcao, entry: p.preco_entrada, exit: p.preco_fecho })
-  await getSupabaseAdmin()
-    .from('chat_messages')
-    .update({ outcome: { label: rotulo, pips: o?.pips ?? null, pct: o?.pct ?? null } })
-    .eq('id', chatId)
+  // Grau mais alto da escada (ver `mtmcopy/desfecho-unico`): isto é o fecho de uma posição REAL,
+  // com o preço que a corretora deu. Nem o motor de preço nem o texto lhe escrevem por cima.
+  await gravarDesfechoUnico(chatId, 'mestre', { label: rotulo, pips: o?.pips ?? null, pct: o?.pct ?? null })
 }
 
 const ROTULO: Partial<Record<SignalEvent, string>> = {

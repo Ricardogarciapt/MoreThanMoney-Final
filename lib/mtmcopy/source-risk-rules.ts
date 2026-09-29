@@ -56,3 +56,46 @@ export function slComMinimo(
   const novo = direction === 'buy' ? entry - minimo * pip : entry + minimo * pip
   return Number(novo.toFixed(6))
 }
+
+/**
+ * O STOP ESTÁ DO LADO ERRADO? — a geometria do sinal, medida contra a ENTRADA.
+ *
+ * A guarda que já existia no acompanhamento comparava o stop com o PRIMEIRO ALVO, e só isso.
+ * Um sinal onde o stop está do lado errado da entrada mas ainda aquém do alvo passava inteiro:
+ * numa compra a 4353 com «SL 4358 · TP1 4364», o stop está 5 pontos ACIMA da entrada (não há
+ * risco nenhum a proteger, há lucro garantido a cortar) mas continua abaixo do alvo, por isso
+ * a comparação com o TP1 não dava por nada.
+ *
+ * Passaram dez linhas assim. Uma delas foi publicada no chat como «🛑 Stop loss · +50 pips» —
+ * um stop a dar lucro, que é uma contradição, e ainda entrou nas somas do mês. É o mesmo
+ * defeito de 31/08 que o comentário do tracker dava por resolvido: resolveu-se metade dele.
+ *
+ * Um sinal negociável tem, numa compra, `sl < entry < tp1` — e o espelho exacto numa venda.
+ * Falhar qualquer um dos lados é motivo para NÃO seguir: corrigir por nós seria adivinhar qual
+ * dos números é que o autor trocou, e uma vitória adivinhada é pior do que um sinal a menos.
+ *
+ * Devolve o motivo (para o log dizer o que estava mal) ou null quando a geometria está de pé.
+ * Sem entrada declarada — sinais a mercado — verifica-se só o que há: o stop contra o alvo.
+ */
+export function stopDoLadoErrado(args: {
+  direction: 'buy' | 'sell'
+  entry?: number | null
+  sl?: number | null
+  tp1?: number | null
+}): string | null {
+  const { direction, entry, sl, tp1 } = args
+  if (sl == null || !(sl > 0)) return 'sem stop'
+  const compra = direction === 'buy'
+  if (tp1 != null && tp1 > 0) {
+    if (compra ? sl > tp1 : sl < tp1) return `stop ${sl} do lado errado do alvo ${tp1}`
+  }
+  if (entry != null && entry > 0) {
+    // Igual também não serve: stop EM cima da entrada é uma trade sem risco definido, não uma
+    // trade protegida — o break-even só aparece depois do primeiro alvo, nunca à nascença.
+    if (compra ? sl >= entry : sl <= entry) return `stop ${sl} do lado errado da entrada ${entry}`
+    if (compra ? tp1 != null && tp1 <= entry : tp1 != null && tp1 >= entry) {
+      return `alvo ${tp1} do lado errado da entrada ${entry}`
+    }
+  }
+  return null
+}

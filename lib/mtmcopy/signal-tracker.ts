@@ -20,10 +20,11 @@ import { isT2TEntrySignal, t2tSourceKey, t2tMode } from './t2t-source'
 import { pipSizeForSymbol } from './trade-outcome'
 import { lifecycleMessage, type SignalEvent } from './signal-lifecycle'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
-import { T2T_SIGNAL_CHANNELS } from './tap-to-trade-channels'
+import { CANAIS_ACOMPANHADOS } from './tap-to-trade-channels'
 import { placeOrdersSequential, getMarketPrice } from './metaapi'
 import { isMarketOpen, podeSaltarLeitura } from './market-hours'
-import { slComMinimo } from './source-risk-rules'
+import { slComMinimo, stopDoLadoErrado } from './source-risk-rules'
+import { gravarDesfechoUnico } from './desfecho-unico'
 
 /**
  * Conta que ABRE todos os sinais do Tap to Trade — «All tap to trade Signals», PU Prime Demo,
@@ -54,7 +55,17 @@ interface Linha {
   symbol: string
   direction: 'buy' | 'sell'
   entry: number | null
+  /** Stop VIVO: sobe para a entrada no primeiro alvo. Não serve para medir o risco do sinal. */
   sl: number | null
+  /**
+   * Stop que a fonte PUBLICOU, intocado. Null nas 163 linhas anteriores à migração 148, onde o
+   * original já tinha sido apagado por cima — não há de onde o recuperar sem adivinhar.
+   *
+   * OPCIONAL de propósito: enquanto a migração 148 não correr, a coluna não existe e o `select *`
+   * devolve a linha sem este campo. Quem o lê trata `undefined` como «não se sabe», que é o
+   * mesmo que já faz com as linhas antigas.
+   */
+  sl_original?: number | null
   tps: number[]
   source_key: string | null
   status: 'pending' | 'active' | 'closed'
@@ -82,7 +93,7 @@ async function admitirNovos(): Promise<number> {
   const { data: msgs } = await admin
     .from('chat_messages')
     .select('id, channel_slug, content, created_at')
-    .in('channel_slug', T2T_SIGNAL_CHANNELS)
+    .in('channel_slug', CANAIS_ACOMPANHADOS)
     .eq('is_deleted', false)
     .gte('created_at', desde)
     .order('created_at', { ascending: true })
@@ -118,9 +129,15 @@ async function admitirNovos(): Promise<number> {
      * que não podia era ter recebido aqueles números. Corrigir o sinal por nós seria adivinhar
      * qual dos dois valores é que o autor trocou, por isso não se segue — e fica de fora do
      * histórico, em vez de lá entrar como uma vitória que nunca houve.
+     *
+     * A verificação vive agora em `source-risk-rules` e olha para a ENTRADA, não só para o
+     * primeiro alvo: era por isso que o defeito só estava meio resolvido e passaram mais dez
+     * linhas, uma delas publicada como «Stop loss · +50 pips» (premium XAUUSD compra, entrada
+     * 4353, SL 4358, 01/09). Contra o TP1 aquele stop parecia bem; contra a entrada, não.
      */
-    if ((p.direction === 'buy' && p.sl > tps[0]) || (p.direction === 'sell' && p.sl < tps[0])) {
-      console.warn('[signal-tracker] stop do lado errado, não admitido:', m.id, p.symbol, p.direction, p.sl, tps[0])
+    const maGeometria = stopDoLadoErrado({ direction: p.direction, entry: p.entry ?? null, sl: p.sl, tp1: tps[0] })
+    if (maGeometria) {
+      console.warn('[signal-tracker] não admitido:', m.id, p.symbol, p.direction, maGeometria)
       continue
     }
     novos.push({
@@ -131,6 +148,9 @@ async function admitirNovos(): Promise<number> {
       direction: p.direction,
       entry: p.entry ?? null,
       sl: p.sl,
+      // O stop que a FONTE publicou, guardado à parte. `sl` move-se para a entrada no primeiro
+      // alvo e deixa de servir para medir risco; este não se mexe nunca. Ver a migração 148.
+      sl_original: p.sl,
       tps,
       status: 'pending',
       created_at: m.created_at,
@@ -139,11 +159,31 @@ async function admitirNovos(): Promise<number> {
   }
   if (!novos.length) return 0
   const { error } = await admin.from('mtmcopy_signal_tracking').insert(novos)
-  if (error) {
-    console.warn('[signal-tracker] admissão falhou:', error.message)
+  if (!error) return novos.length
+  /**
+   * A COLUNA PODE AINDA NÃO EXISTIR — e isso não pode parar a medição.
+   *
+   * `sl_original` nasce na migração 148. Se o código chegar a produção antes de a migração
+   * correr, o PostgREST recusa o insert inteiro (PGRST204, «could not find the column») e o
+   * motor de medição pára de admitir sinais — uma ordem de deploy trocada apagaria o histórico
+   * de um dia inteiro, que é bem pior do que ficar sem o stop original de alguns sinais.
+   *
+   * Por isso a segunda tentativa vai sem o campo: a admissão continua, e as linhas admitidas
+   * nessa janela ficam com `sl_original` a null — o mesmo estado honesto das linhas antigas.
+   * Quando a migração correr, volta tudo ao normal sozinho, sem novo deploy.
+   */
+  if (/sl_original/.test(error.message)) {
+    const semColuna = novos.map(({ sl_original: _ignorado, ...resto }) => resto)
+    const { error: e2 } = await admin.from('mtmcopy_signal_tracking').insert(semColuna)
+    if (!e2) {
+      console.warn('[signal-tracker] admitido SEM sl_original — falta correr a migração 148')
+      return semColuna.length
+    }
+    console.warn('[signal-tracker] admissão falhou:', e2.message)
     return 0
   }
-  return novos.length
+  console.warn('[signal-tracker] admissão falhou:', error.message)
+  return 0
 }
 
 /** Publica o cartão em thread no sinal (idempotente pelo prefixo do próprio cartão). */
@@ -159,6 +199,16 @@ async function anunciar(linha: Linha, evento: SignalEvent, ctx: { price?: number
     entry: linha.entry,
     price: ctx.price ?? null,
     level: ctx.level,
+    /**
+     * O stop PUBLICADO, para o cartão poder calar um número impossível.
+     *
+     * `lifecycleMessage` já sabe recusar um «Stop loss» com pips positivos — mas precisa do
+     * `slOriginal` para distinguir «o trailing fechou-me em lucro» (número verdadeiro, tem de
+     * aparecer) de «o stop estava do lado errado da entrada» (número impossível, cala-se). O
+     * tracker nunca lho passou, e por isso essa guarda esteve inerte desde que foi escrita: foi
+     * assim que saiu «🛑 Stop loss · +50 pips» para o chat a 01/09.
+     */
+    slOriginal: linha.sl_original ?? null,
   })
   const prefixo = text.split('\n')[0]
   const { data: dup } = await admin
@@ -192,21 +242,27 @@ async function anunciar(linha: Linha, evento: SignalEvent, ctx: { price?: number
 /** Escreve pips e percentagem na mensagem de ENTRADA — é daqui que o cartão os lê. */
 async function gravarDesfecho(linha: Linha, pips: number | null, rotulo: string) {
   const admin = getSupabaseAdmin()
-  // Canal publicado pela mestre: o resultado no cartão é o da mestre (publicar.ts). Aqui só se fecha
-  // a linha de acompanhamento (a janela de aceitação T2T continua a lê-la).
-  const daMestre = await canalPublicadoPelaMestre(linha.channel_slug)
   // `pips` a null = o sinal acabou mas não se soube medi-lo (sem entrada). Grava-se o fecho e o
   // rótulo; o NÚMERO fica vazio, porque um zero no lugar dele é outra medição falsa.
   const p = pips != null ? Math.round(pips * 10) / 10 : null
   const pct = p != null && linha.entry && linha.entry > 0
     ? Math.round(((p * pipSizeForSymbol(linha.symbol)) / linha.entry) * 100 * 100) / 100
     : null
-  if (!daMestre) {
-    await admin
-      .from('chat_messages')
-      .update({ outcome: { label: rotulo, pips: p, pct } })
-      .eq('id', linha.chat_message_id)
-  }
+  /**
+   * O NÚMERO vai sempre, em qualquer canal — quem decide se fica é a escada (`desfecho-unico`).
+   *
+   * Aqui havia um `if (!daMestre)`: nos canais publicados pela mestre o tracker calava-se e
+   * deixava o campo livre. Só que quem o vinha ocupar não era a mestre — era o leitor de texto,
+   * de 5 em 5 minutos. O silêncio do lado do preço era a porta por onde entrava o número
+   * anunciado, e ficavam dois: o do chat e o desta linha.
+   *
+   * Agora escreve-se sempre e a escada arbitra: se a mestre (grau 3) já mediu o fecho real, esta
+   * escrita é recusada e a da mestre fica; se ainda não mediu, vale a cotação (grau 2) em vez do
+   * texto (grau 1). O que continua a respeitar a decisão de 18/09 são os CARTÕES — `anunciar()`
+   * mantém-se calado nos canais da mestre, que é de onde vinham os duplicados no chat. O `outcome`
+   * não é um cartão: é o número na mensagem de entrada, e esse tem de existir uma vez só.
+   */
+  await gravarDesfechoUnico(linha.chat_message_id, 'tracker', { label: rotulo, pips: p, pct })
   await admin
     .from('mtmcopy_signal_tracking')
     .update({

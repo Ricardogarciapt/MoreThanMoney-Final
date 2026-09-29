@@ -21,6 +21,7 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { pipSizeForSymbol, unitFor } from './trade-outcome'
+import { gravarDesfechoUnico } from './desfecho-unico'
 import { isT2TEntrySignal } from './t2t-source'
 import { directionFromText } from './signal-direction'
 /**
@@ -300,8 +301,18 @@ export async function atualizarDesfechosDoCanal(
     // Não reescreve o que já está igual — poupa escritas e mantém o histórico estável.
     const atual = jaTem.get(id) as SignalOutcome | null | undefined
     if (atual && atual.label === d.label && atual.closed_by === d.closed_by) continue
-    const { error: e } = await supabase.from('chat_messages').update({ outcome: d }).eq('id', id)
-    if (!e) escritas++
+    /**
+     * O texto é o degrau MAIS BAIXO da escada — e é aqui que isso passa a valer.
+     *
+     * Este cron corria de 5 em 5 minutos sobre as últimas 48 horas e escrevia direito ao campo,
+     * por isso era quase sempre o último a falar: apanhava sinais que o motor de preço já tinha
+     * medido e punha-lhes por cima o número que a fonte tinha anunciado no seguimento. Dos 289
+     * sinais com os dois números, 276 discordavam — e o que o cliente via era este.
+     *
+     * Continua a correr e continua a ser útil (é o único que apanha fechos que só existem em
+     * texto), mas deixou de poder tapar uma medição de preço.
+     */
+    if (await gravarDesfechoUnico(id, 'texto', d)) escritas++
   }
   return { lidas: mensagens.length, escritas }
 }
