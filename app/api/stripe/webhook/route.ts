@@ -44,6 +44,11 @@ import {
   subscricaoEhAddon,
 } from '@/lib/mtmcopy/addon-stripe'
 import { planoIncluiScanners, scannerDoPackFundador } from '@/lib/packs-fundador'
+import {
+  ehFaturaDeMarketplace,
+  ehSubscricaoDeMarketplace,
+  planoDaSubscricao,
+} from '@/lib/marketplace/subscricao-stripe'
 
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
 const SCANNER_PLAN_NAMES: Record<string, string> = {
@@ -580,11 +585,39 @@ async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
     return
   }
 
+  // Marketplace: um produto de OUTRA pessoa, cobrado ao mês. Sai daqui ANTES do bloco que escreve
+  // direitos, e pela mesma razão que o addon: nada do que vem a seguir se aplica a um curso ou a uma
+  // mentoria de um educador. Ver `lib/marketplace/subscricao-stripe.ts`.
+  if (await ehSubscricaoDeMarketplace(sub as unknown as Parameters<typeof ehSubscricaoDeMarketplace>[0])) {
+    console.log('[marketplace] subscrição de produto do marketplace — o perfil NÃO é tocado:', sub.id)
+    return
+  }
+
   if (!profile) return
 
   const item = sub.items.data[0]
   const priceId = item?.price?.id || ''
-  const planId = getPlanIdFromPriceId(priceId) || item?.price?.metadata?.plan || 'app_member_monthly'
+  /**
+   * SEM PLANO RECONHECIDO NÃO SE ESCREVE NADA.
+   *
+   * O recurso era `'app_member_monthly'`, e um preço desconhecido a virar «Membro mensal» é um sim
+   * silencioso: dava um pack pago a quem comprou outra coisa, e ao mesmo tempo DESCIA a categoria de
+   * um Premium cujo preço deixasse de ser reconhecido. Recusar e registar é o único caminho que não
+   * inventa direitos nem os retira. Quem cria um preço da casa garante a variável de ambiente do
+   * catálogo ou `metadata.plan` no preço — ver `planoDaSubscricao`.
+   */
+  const planId = planoDaSubscricao({
+    priceId,
+    metadataDoPreco: item?.price?.metadata,
+    metadataDaSubscricao: sub.metadata,
+  })
+  if (!planId) {
+    console.error(
+      '[STRIPE-WEBHOOK] subscrição com preço FORA do catálogo e sem metadata.plan — perfil não alterado.',
+      { subscricao: sub.id, preco: priceId, perfil: profile.id },
+    )
+    return
+  }
   const plan = normalizeSubscriptionPlan(planId)
   const billingCycle = item?.price?.recurring?.interval === 'year' ? 'annual' : 'monthly'
   const periodEnd = new Date(stripeSubscriptionPeriodEnd(sub) * 1000).toISOString()
@@ -669,6 +702,14 @@ async function handleSubscriptionCanceled(sub: Stripe.Subscription) {
     return
   }
 
+  // Cancelar a mentoria de um educador NÃO fecha a conta de ninguém. Sem isto, um Premium que
+  // desistisse de um produto do marketplace saía daqui com `is_active = false` e o acesso revogado —
+  // o mesmo estrago que o addon do MTM Copy fazia antes da guarda dele.
+  if (await ehSubscricaoDeMarketplace(sub as unknown as Parameters<typeof ehSubscricaoDeMarketplace>[0])) {
+    console.log('[marketplace] cancelamento de subscrição do marketplace — o perfil NÃO é tocado:', sub.id)
+    return
+  }
+
   if (!profile) return
 
   const wasPremiumStripe =
@@ -743,6 +784,16 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
         console.error('[MLM] Erro ao criar comissões de renovação (addon MTM Copy):', mlmErr)
       }
     }
+    return
+  }
+
+  // Renovação de um produto do marketplace. Sai daqui porque NADA disto lhe pertence: não reactiva
+  // o perfil, não conta como renovação do plano principal, não entra em `payment_history` como um
+  // pack, não oferece desafio MTM Funded, não gera comissões de MLM e não registra uma venda de pack
+  // no livro da equipa (a venda do marketplace já foi registada, com o tecto dela, em
+  // `lib/marketplace/venda-equipa.ts`).
+  if (await ehFaturaDeMarketplace(invoice as unknown as Parameters<typeof ehFaturaDeMarketplace>[0])) {
+    console.log('[marketplace] fatura de produto do marketplace — o perfil NÃO é tocado:', invoice.id)
     return
   }
 
@@ -956,6 +1007,14 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     const alvo = profile ?? (await perfilDoAddonPeloEmail(invoice.customer as string))
     if (!alvo) return
     await addonPagamento(supabase, alvo.id, invoice as unknown as Parameters<typeof faturaEhAddon>[0] & object, 'failed', null)
+    return
+  }
+
+  // Uma fatura falhada de um produto do marketplace não é um pagamento do pack da casa. Sem isto,
+  // três falhas na mentoria de um educador punham `is_active = false` e revogavam o acesso de um
+  // Premium que está a pagar o dele.
+  if (await ehFaturaDeMarketplace(invoice as unknown as Parameters<typeof ehFaturaDeMarketplace>[0])) {
+    console.log('[marketplace] fatura falhada do marketplace — o perfil NÃO é tocado:', invoice.id)
     return
   }
 

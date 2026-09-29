@@ -143,7 +143,7 @@ export async function gerarImagemDoProduto(p: {
   const pedido = [
     `capa para "${p.titulo}"`,
     nomeDaCategoria(p.tipo).toLowerCase(),
-    'finanças, mercados, educação; elegante, escuro, dourado e preto; sem texto, sem letras, sem números',
+    'finanças, mercados, educação; elegante, com dourado sobre carvão',
     (p.descricao ?? '').trim().slice(0, 200),
   ]
     .filter(Boolean)
@@ -151,8 +151,10 @@ export async function gerarImagemDoProduto(p: {
 
   const img = await gerarImagemGratis({
     descricao: pedido,
-    // 'fundo' e não 'destaque': uma capa é uma cena, não uma pessoa recortada.
-    camada: 'fundo',
+    // 'capa' e não 'fundo': o fundo manda o CENTRO ficar escuro e vazio (é um pano para a
+    // tipografia ir por cima), e com o «escuro, dourado e preto» que se pedia aqui em cima davam
+    // duas instruções de escuro empilhadas — saía um rectângulo quase preto. Medido a 29/09.
+    camada: 'capa',
     formato: 'post',
     semente: p.semente ?? Math.floor(Math.random() * 1e9),
   })

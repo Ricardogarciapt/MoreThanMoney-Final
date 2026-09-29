@@ -17,7 +17,7 @@
  * código trata isso como normal, porque é.
  */
 
-export type CamadaSocial = 'fundo' | 'destaque'
+export type CamadaSocial = 'fundo' | 'destaque' | 'capa'
 
 export interface PedidoGratis {
   descricao: string
@@ -40,8 +40,25 @@ const BASE = 'https://gen.pollinations.ai/image/'
  *
  * O fundo é FUNDO: a tipografia vai por cima, e uma imagem cheia de detalhe ao centro deixa a
  * frase ilegível. O destaque é uma pessoa sozinha, para poder ser recortada.
+ *
+ * A CAPA é o caso que faltava, e a falta dele deu uma imagem preta. O marketplace pedia capas com
+ * `camada: 'fundo'`, e o prompt do fundo manda «the centre of the frame stays dark and
+ * uncluttered» — depois o marketplace acrescentava «escuro, dourado e preto» por cima. Duas
+ * instruções de escuro empilhadas, e o gerador fez exactamente o que lhe pediram: um rectângulo
+ * quase preto. Não era a API nem a chave; era o pedido.
+ *
+ * Uma capa não é um pano de fundo: é o que aparece num cartão de 300px e tem de se perceber ao
+ * relance. Tem assunto ao centro, contraste, e é escura porque a marca é escura — não porque o
+ * centro tenha de estar vazio.
  */
 function prompt(p: PedidoGratis): string {
+  if (p.camada === 'capa') {
+    return (
+      `${p.descricao}, striking product cover artwork, the subject is clearly visible and centred, ` +
+      `rich contrast with a luminous focal point against a deep charcoal background, warm gold accents, ` +
+      `cinematic lighting, reads clearly as a small thumbnail, no text, no letters, no numbers, no watermark`
+    )
+  }
   if (p.camada === 'destaque') {
     return (
       `${p.descricao}, full body portrait of a person, isolated on a plain flat white background, ` +
