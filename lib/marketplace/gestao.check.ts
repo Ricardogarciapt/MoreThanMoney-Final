@@ -206,7 +206,13 @@ sim('nem dois nulos', !podeGerir(
   sim('a galeria é um campo do educador', CAMPOS_DO_EDUCADOR.includes('imagens'))
   // E não do admin em exclusivo: se estivesse nas duas listas, o educador perdia-as num refactor
   // que tirasse a duplicação pela lista errada.
-  sim('nenhuma das duas é exclusiva do admin', !CAMPOS_SO_DO_ADMIN.some((c) => c === 'periodicidade' || c === 'imagens'))
+  //
+  // O `as readonly string[]` é deliberado e não é preguiça de tipos: sem ele o TypeScript sabe que
+  // os dois conjuntos não se cruzam, dá a comparação por impossível, e esta linha passa a ser um
+  // teste que NUNCA pode falhar — com o aspecto de proteger alguma coisa. Comparado como texto, a
+  // verificação volta a correr a sério no dia em que alguém mover um dos campos de lista.
+  const soAdmin = CAMPOS_SO_DO_ADMIN as readonly string[]
+  sim('nenhuma das duas é exclusiva do admin', !soAdmin.includes('periodicidade') && !soAdmin.includes('imagens'))
 
   // O SERVIDOR é que garante a coerência, e não o formulário. Um ecrã pode mandar `recorrente:false`
   // com `periodicidade:'anual'`, e é a restrição `marketplace_produtos_periodicidade_coerente` (157)
