@@ -1,5 +1,6 @@
 import { derivarAlertas, FONTES, idadeS, mercadoAberto, percentil, serieTemporal, taxa, type ChaveFonte } from '../regras'
 import { carregarContas } from './contas'
+import { resumirSaldos } from '../linha-de-agua'
 import { carregarInfra } from './infra'
 import { carregarJanela } from './sinais'
 import { carregarPainelMestres } from '@/lib/mestres/servidor/painel-leitura'
@@ -73,10 +74,16 @@ export async function cockpit() {
   const ordemSev = { grave: 0, aviso: 1, info: 2 } as const
   alertas.sort((x, y) => ordemSev[x.severidade] - ordemSev[y.severidade])
 
+  // SALDOS no topo do Centro (pedido do dono): o saldo das contas e a distância à linha de partida.
+  // Separados por proveniência de propósito — um total que misturasse simulado com real seria um
+  // número que não existe em conta nenhuma e passaria por prova (ver lib/admin-centro/linha-de-agua).
+  const saldos = resumirSaldos(contas.contas)
+
   return {
     lidaEm: new Date().toISOString(),
     alertas,
     fontes,
+    saldos,
     execucao: { h1: exec1h, h24: exec24h, latenciaP50Ms: percentil(lat, 0.5), latenciaP95Ms: percentil(lat, 0.95), serieExec, serieErro },
     metaapi: {
       quota: infra.quota,

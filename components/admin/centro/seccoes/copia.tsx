@@ -8,13 +8,25 @@ import VistaSimples from "@/components/admin/copia-cadeia/vista-simples"
 import QuadroCadeia from "@/components/admin/copia-cadeia/quadro"
 
 import { CONFIRMACOES } from "@/lib/admin-centro/regras"
+import { useEffect, useState } from "react"
 import { useCentroCtx } from "../contexto"
-import { Aviso, Azulejo, BotaoLer, Botao, Painel, Pilula, Recolhivel, fmtMs, fmtNum, pedirCentro, pedirPalavra, useCentro } from "../ui"
+import { Aviso, Azulejo, BotaoLer, Botao, Chip, Painel, Pilula, Recolhivel, fmtMs, fmtNum, pedirCentro, pedirPalavra, useCentro } from "../ui"
 
 type Copia = Awaited<ReturnType<typeof carregarCopia>>
 
+/** O separador escolhido fica guardado: quem trabalha no quadro não o quer fechado a cada visita. */
+const CHAVE_VISTA = "centro:copia:vista"
+
 export default function SeccaoCopia() {
   const ctx = useCentroCtx()
+  const [vista, setVista] = useState<"lista" | "quadro">("lista")
+  // Lê-se depois do primeiro desenho para o servidor e o cliente renderizarem o mesmo (hidratação).
+  useEffect(() => {
+    try { if (window.localStorage.getItem(CHAVE_VISTA) === "quadro") setVista("quadro") } catch { /* sem localStorage, fica a lista */ }
+  }, [])
+  useEffect(() => {
+    try { window.localStorage.setItem(CHAVE_VISTA, vista) } catch { /* nada a fazer */ }
+  }, [vista])
   const { dados: c, erro, aCarregar, recarregar, lidoEm } = useCentro<Copia>(`/api/admin/centro/copia?v=${ctx.versao}`, 20_000)
   // A CADEIA («quem copia o quê») é a primeira leitura do ecrã: vem antes dos azulejos, porque é a
   // pergunta que o dono faz. Endpoint à parte para uma falha da 116 não levar a secção inteira.
@@ -41,15 +53,26 @@ export default function SeccaoCopia() {
       {erro && <Aviso tom="grave">{erro}</Aviso>}
       {c?.pendente && <Aviso>Migração 078 por aplicar — as tabelas da cópia entre contas não existem.</Aviso>}
 
-      {/* QUEM COPIA O QUÊ — fonte de sinais → conta mestre (estratégia) → subscritores. */}
-      <Painel titulo="Quem copia o quê" sub="A cadeia inteira: fonte do sinal → conta mestre (a estratégia) → quem a segue. O live/sombra de cada linha é o que o motor decide agora, não a coluna copia_rotas.modo.">
+      {/* QUEM COPIA O QUÊ — fonte de sinais → conta mestre (estratégia) → subscritores.
+          O quadro de arrastar VIVE AQUI DENTRO, num separador. Estava num `Recolhivel` fechado por
+          omissão, três écrans abaixo: o dono abria a página, não via arrastar nada e concluía, com
+          razão, que não existia. Um painel com dois separadores não esconde nenhum dos dois. */}
+      <Painel
+        titulo="Quem copia o quê"
+        sub="A cadeia inteira: fonte do sinal → conta mestre (a estratégia) → quem a segue. O live/sombra de cada linha é o que o motor decide agora, não a coluna copia_rotas.modo."
+        accao={
+          <div className="flex gap-1.5">
+            <Chip activo={vista === "lista"} onClick={() => setVista("lista")}>Lista</Chip>
+            <Chip activo={vista === "quadro"} onClick={() => setVista("quadro")}>Quadro (arrastar)</Chip>
+          </div>
+        }
+      >
         {erroCadeia && <Aviso tom="grave">{erroCadeia}</Aviso>}
-        {cadeia ? <VistaSimples c={cadeia} /> : !erroCadeia && <p className="text-[12px] text-zinc-500">A ler a cadeia…</p>}
+        {!cadeia && !erroCadeia && <p className="text-[12px] text-zinc-500">A ler a cadeia…</p>}
+        {cadeia && (vista === "lista"
+          ? <VistaSimples c={cadeia} />
+          : <QuadroCadeia c={cadeia} recarregar={() => { void recarregarCadeia(); void recarregar() }} />)}
       </Painel>
-
-      <Recolhivel titulo="Quadro — arrastar e largar" descricao="Organiza os subscritores à mão. Arrastar um subscritor escreve na base (escolha do cliente + ressincroniza as rotas); mover as caixas é só desenho.">
-        {cadeia && <QuadroCadeia c={cadeia} recarregar={() => { void recarregarCadeia(); void recarregar() }} />}
-      </Recolhivel>
 
       <div className="flex flex-wrap items-center gap-2">
         <Pilula tom={c?.motorLigado ? "info" : "neutro"} vivo={c?.motorLigado}>motor {c?.motorLigado ? "ligado (sombra)" : "desligado"}</Pilula>

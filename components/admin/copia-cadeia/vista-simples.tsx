@@ -15,6 +15,8 @@
 
 import type { Cadeia, NoEstrategia, SubscritorCadeia } from "@/lib/copia-contas/cadeia"
 import { Aviso, Azulejo, Painel, Pilula, Vazio } from "../centro/ui"
+import { MarcaProveniencia, PctLinhaDeAgua } from "../centro/linha-de-agua"
+import { fmtNum } from "../centro/ui"
 
 const NOME_EFECTIVO = { live: "live", sombra: "sombra", parado: "parado" } as const
 const NOME_EXECUTOR: Record<NoEstrategia["executor"], string> = {
@@ -61,9 +63,21 @@ function Coluna({ n }: { n: NoEstrategia }) {
         <p className="truncate text-[10.5px] text-zinc-500" title={n.executorNota}>
           quem executa: {NOME_EXECUTOR[n.executor]}
         </p>
-        <p className="mt-1 truncate font-mono text-[11px] text-zinc-400" title="A conta mestre desta estratégia (MTM Funded simulada)">
-          mestre {n.contaMestre ? `${n.contaMestre.etiqueta ?? n.contaMestre.login ?? n.contaMestre.id.slice(0, 8)}` : "— em falta"}
-        </p>
+        {/* A MESTRE, com o saldo e a linha de água: é a conta de onde sai a ordem, e sem a distância
+            à linha de partida o número dela não diz se a estratégia está a ganhar. */}
+        <div className="mt-1">
+          <p className="truncate font-mono text-[11px] text-zinc-400" title="A conta mestre desta estratégia — é a conta de onde o motor envia">
+            mestre {n.contaMestre ? `${n.contaMestre.etiqueta ?? n.contaMestre.login ?? n.contaMestre.id.slice(0, 8)}` : "— em falta"}
+          </p>
+          {n.contaMestre && (
+            <p className="flex items-center gap-1.5 font-mono text-[11px]">
+              <span className="text-zinc-300">{n.contaMestre.saldo == null ? "—" : fmtNum(n.contaMestre.saldo, 2)}</span>
+              <MarcaProveniencia p={n.contaMestre.linhaDeAgua.proveniencia} />
+              <PctLinhaDeAgua l={n.contaMestre.linhaDeAgua} />
+              {n.contaMestre.saldoInicial != null && <span className="text-[10px] text-zinc-600">de {fmtNum(n.contaMestre.saldoInicial, 0)}</span>}
+            </p>
+          )}
+        </div>
         <div className="mt-1.5 flex flex-wrap gap-1">
           <Pilula tom={n.modoPedido === "live" ? "grave" : n.modoPedido === "sombra" ? "info" : "neutro"}>cópia {n.modoPedido}</Pilula>
           <Pilula tom={n.t2tModo === "live" ? "grave" : n.t2tModo === "sombra" ? "info" : "neutro"}>T2T {n.t2tModo}</Pilula>

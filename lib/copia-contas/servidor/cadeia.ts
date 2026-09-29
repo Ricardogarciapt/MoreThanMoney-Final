@@ -24,6 +24,7 @@
  * `site_settings.copia_cadeia_layout`; mover um nó não muda nada no sistema.
  */
 import { emCache, esquecerCache } from '@/lib/admin-centro/cache'
+import { linhaDeAgua, provenienciaDoMotor } from '@/lib/admin-centro/linha-de-agua'
 import { db, ler, num, txt, type Linha } from '@/lib/admin-centro/servidor/base'
 import { registarAuditoria } from '@/lib/admin-centro/servidor/outros'
 import { lerEtiquetas } from '@/lib/contas/etiquetas-servidor'
@@ -66,7 +67,7 @@ async function lerCadeia(): Promise<CadeiaLida> {
   const rotaIds = rotas.linhas.map((r) => String(r.id))
 
   const [contasMestre, etiqFunded, abertas, disposicaoBruta] = await Promise.all([
-    contaIds.length ? ler(db().from('mtm_trading_accounts').select('id, mt5_login, sim_saldo, sim_equity').in('id', contaIds)) : Promise.resolve({ linhas: [] as Linha[] }),
+    contaIds.length ? ler(db().from('mtm_trading_accounts').select('id, mt5_login, motor, saldo_inicial, sim_saldo, sim_equity').in('id', contaIds)) : Promise.resolve({ linhas: [] as Linha[] }),
     lerEtiquetas('mtm_trading_accounts'),
     rotaIds.length ? ler(db().from('copia_posicoes').select('rota_id').in('rota_id', rotaIds.slice(0, 1000)).in('estado', ['aberta', 'enviando', 'sombra']).limit(5000)) : Promise.resolve({ linhas: [] as Linha[] }),
     ler(db().from('site_settings').select('value').eq('key', CHAVE_DISPOSICAO).maybeSingle()),
@@ -91,7 +92,13 @@ async function lerCadeia(): Promise<CadeiaLida> {
       // Ids CopyFactory ainda por cortar: com eles, quem copia é a CopyFactory e não o nosso motor.
       copyfactoryPorCortar: mestre && !mestre.copyfactoryCortadoEm ? mestre.copyfactoryIds : [],
       contaMestre: c
-        ? { id: String(c.id), login: txt(c.mt5_login), etiqueta: etiqFunded.get(String(c.id)) ?? null, saldo: num(c.sim_saldo), equity: num(c.sim_equity) }
+        ? {
+            id: String(c.id), login: txt(c.mt5_login), etiqueta: etiqFunded.get(String(c.id)) ?? null,
+            saldo: num(c.sim_saldo), equity: num(c.sim_equity), saldoInicial: num(c.saldo_inicial),
+            // A mesma conta do resto do Centro (lib/admin-centro/linha-de-agua) — as mestres são
+            // `motor='sim'`, por isso saem marcadas como simuladas e nunca passam por prova.
+            linhaDeAgua: linhaDeAgua(num(c.sim_saldo), num(c.saldo_inicial), provenienciaDoMotor(txt(c.motor))),
+          }
         : null,
     }
   })

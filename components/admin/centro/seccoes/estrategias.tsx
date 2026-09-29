@@ -38,7 +38,7 @@ export default function SeccaoEstrategias() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
-        <Azulejo rotulo="Estratégias activas" valor={todas.filter((e) => (e.ativa || e.mestres) && !e.apagada && !e.abandonada).length} sub={`${todas.length} no total${abandonadas.length ? ` · ${abandonadas.length} abandonada(s) escondida(s)` : ""}`} />
+        <Azulejo rotulo="Estratégias activas" valor={todas.filter((e) => (e.ativa || e.mestres) && !e.apagada && !e.abandonada).length} sub={`${todas.length} no total${todas.filter((e) => e.apagada).length ? ` · ${todas.filter((e) => e.apagada).length} escondida(s)` : ""}${abandonadas.length ? ` · ${abandonadas.length} abandonada(s)` : ""}`} />
         <Azulejo rotulo="Motor das mestres" valor={`${todas.filter((e) => e.mestres?.modo === "live").length} live`} sub={`${todas.filter((e) => e.mestres && e.mestres.modo !== "live").length} em sombra/desligadas · ${todas.reduce((a, e) => a + (e.mestres?.nContasLive ?? 0), 0)} conta(s) live`} tom={todas.some((e) => e.mestres?.modo === "live") ? "ok" : "neutro"} />
         <Azulejo rotulo="Seguidores" valor={fmtNum(todas.reduce((a, e) => a + e.seguidores.total, 0))} sub="MTM Auto + site + Funded" />
         <Azulejo rotulo="Com divergências" valor={todas.filter((e) => e.divergencias.length).length} tom={todas.some((e) => e.divergencias.length) ? "aviso" : "ok"} onClick={() => setSoDiv(true)} />
@@ -46,7 +46,7 @@ export default function SeccaoEstrategias() {
         <Azulejo rotulo="Ideias 30 d (interno)" valor={`${fmtNum(todas.reduce((a, e) => a + e.desempenho30d.pips, 0), 1)} p`} sub="tudo-ou-nada, sem parciais — o publicado é a coluna 90 d" />
       </div>
 
-      {/* O mesmo painel (e os mesmos controlos) da tab Estratégias de /admin/mtmauto-copia: se a página
+      {/* O mesmo painel (e os mesmos controlos) da tab Estratégias de /admin/mtmcopy: se a página
           antiga passar a redireccionar para aqui (admin_centro_padrao), nada se perde. */}
       <Recolhivel titulo="Motor das mestres · modos, contas e kill-switch" descricao="Quem executa cada estratégia, sombra/live por estratégia e por conta, últimas ordens e alertas — com confirmação e verificado no servidor." aberto>
         <MotorMestres />
@@ -54,10 +54,10 @@ export default function SeccaoEstrategias() {
 
       {dados?.sombras && dados.sombras.length > 0 && <SombraEstrategias sombras={dados.sombras} pendente={dados.sombraPendente === true} />}
 
-      <Painel titulo="Estratégias" sub="Quem executa (motor das mestres / CopyFactory / legado), seguidores por plataforma, métricas 90 d publicadas, ideias 30 d e divergências. Clica para abrir a gaveta." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
+      <Painel titulo="Estratégias" sub="Quem executa (motor das mestres / CopyFactory / legado), seguidores por plataforma, métricas 90 d publicadas, ideias 30 d e divergências. Clica para abrir a gaveta — é lá que se esconde (apagar) e se restaura uma estratégia." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
         <Filtros contagem={lista.length} total={todas.length}>
           <Chip activo={soDiv} onClick={() => setSoDiv(!soDiv)}>só com divergências</Chip>
-          <Chip activo={verApagadas} onClick={() => setVerApagadas(!verApagadas)}>mostrar apagadas e abandonadas{abandonadas.length ? ` (${abandonadas.map((e) => e.nome).join(", ")})` : ""}</Chip>
+          <Chip activo={verApagadas} onClick={() => setVerApagadas(!verApagadas)}>mostrar escondidas e abandonadas{abandonadas.length ? ` (${abandonadas.map((e) => e.nome).join(", ")})` : ""}</Chip>
         </Filtros>
         {dados?.veredictoPendente && <div className="mb-2"><Aviso tom="info">Veredicto do espelho (082) indisponível nesta base.</Aviso></div>}
         <Lista dados={dados} erro={erro} vazio={todas.length === 0} textoVazio="Nenhuma estratégia registada." filtrada={lista.length === 0}>
@@ -67,7 +67,7 @@ export default function SeccaoEstrategias() {
               {lista.map((e) => (
                 <tr key={e.id} className={trClic} onClick={() => ctx.abrir({ tipo: "estrategia", id: e.id })}>
                   <td className={td}>
-                    <p className="font-medium text-zinc-100">{e.nome}{e.apagada && <span className="ml-1 text-rose-400">(apagada)</span>}</p>
+                    <p className="font-medium text-zinc-100">{e.nome}{e.apagada && <span className="ml-1 text-rose-400" title="apagado_em: fora de todos os catálogos, histórico intacto. Abre a ficha para restaurar.">(escondida)</span>}</p>
                     <p className="text-[10px] text-zinc-500">{e.slug} · {e.tipo ?? "—"}{e.equipa ? ` · equipa ${e.equipa}` : " · casa"}{e.mestres?.cfIds.length ? ` · CF ${e.mestres.cfIds.join(",")} ${e.mestres.cfCortado ? "cortada" : "por cortar"}` : e.estrategiaCf ? ` · CF ${e.estrategiaCf}` : ""}{e.abandonada ? " · abandonada" : ""}</p>
                   </td>
                   <td className={td}>

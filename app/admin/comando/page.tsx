@@ -69,7 +69,7 @@ const DESTINOS: Array<{ grupo: string; itens: Array<{ nome: string; href: string
   {
     grupo: "Operar",
     itens: [
-      { nome: "MTM Auto · Cópia", href: "/admin/mtmauto-copia?tab=estrategias", nota: "motor das mestres, estratégias, contas, subscritores" },
+      { nome: "MTM Auto · Cópia", href: "/admin/mtmcopy?tab=estrategias", nota: "motor das mestres, estratégias, contas, subscritores" },
       { nome: "Centro de Controlo", href: "/admin/centro", nota: "cockpit, sinais, contas, MTM Funded" },
       { nome: "Portfolios", href: "/admin/portfolios", nota: "cripto e ETF" },
       { nome: "Utilizadores", href: "/admin?tab=users", nota: "contas, acessos, subscrições" },

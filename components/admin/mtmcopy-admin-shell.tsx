@@ -13,7 +13,7 @@ import {
 
 /**
  * «MTM Auto · Cópia» — as seis secções do admin (antes «Consola MTMcopier»). A rota continua
- * /admin/mtmcopy (links antigos e a app) e tem o alias /admin/mtmauto-copia.
+ * /admin/mtmcopy (links antigos e a app). O alias /admin/mtmauto-copia já não existe.
  */
 export type MtmcopyAdminTab = "visao" | "contas" | "estrategias" | "copia" | "eventos" | "sincronizacao"
 

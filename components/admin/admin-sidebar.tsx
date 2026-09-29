@@ -105,10 +105,10 @@ const GRUPOS: Grupo[] = [
       },
       {
         tipo: "link",
-        href: "/admin/mtmauto-copia",
+        href: "/admin/mtmcopy",
         rotulo: "Cópia (página antiga)",
         icone: ArrowLeftRight,
-        prefixos: ["/admin/mtmcopy", "/admin/mtmauto-copia"],
+        prefixos: ["/admin/mtmcopy"],
         secundaria: true,
       },
       { tipo: "tab", id: "mtmfunded", rotulo: "MTM Funded & Torneios", icone: Trophy },

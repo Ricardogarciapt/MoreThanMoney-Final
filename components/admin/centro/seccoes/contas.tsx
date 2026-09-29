@@ -7,6 +7,8 @@ import { nomeMotivo } from "@/lib/admin-centro/regras"
 import ContasCopia from "@/components/admin/mtmauto-copia/contas"
 import MTMcopierManager from "@/components/admin/mtmcopier-manager"
 
+import { AVISO_SIMULADO, resumirSaldos, textoPct } from "@/lib/admin-centro/linha-de-agua"
+import { MarcaProveniencia, PctLinhaDeAgua } from "../linha-de-agua"
 import { useCentroCtx } from "../contexto"
 import { Azulejo, BotaoLer, Chip, Filtros, Grupo, Lista, Painel, Pilula, Recolhivel, Tabela, Vazio, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
 
@@ -39,10 +41,26 @@ const FONTE_SALDO: Record<string, { curto: string; titulo: string }> = {
   maximo: { curto: "máx.", titulo: "o saldo mais alto já visto (MTM Auto) — não é o actual" },
 }
 
+/**
+ * O saldo de uma conta: o número, de onde vem, se é real ou simulado, e a LINHA DE ÁGUA (saldo
+ * actual contra `saldo_inicial`, com sinal) — que é o que o dono pediu para estar sempre à vista.
+ * Sem a percentagem, «10 250» não diz nada: a mestre parte de 10 000 e a conta de medição de 1 000.
+ */
 export function SaldoCel({ c }: { c: ContaCentro }) {
-  if (c.saldo == null) return <span className="text-zinc-600">—</span>
   const f = c.saldoFonte ? FONTE_SALDO[c.saldoFonte] : null
-  return <span title={f?.titulo}>{fmtNum(c.saldo, 2)}{f?.curto ? <span className="ml-1 text-[9.5px] text-zinc-500">{f.curto}</span> : null}</span>
+  return (
+    <div className="flex flex-col items-start gap-0.5">
+      <span className="flex items-center gap-1" title={f?.titulo}>
+        {c.saldo == null ? <span className="text-zinc-600">—</span> : <span>{fmtNum(c.saldo, 2)}</span>}
+        {f?.curto ? <span className="text-[9.5px] text-zinc-500">{f.curto}</span> : null}
+        <MarcaProveniencia p={c.proveniencia} />
+      </span>
+      <span className="text-[10px]">
+        <PctLinhaDeAgua l={c.linhaDeAgua} />
+        {c.saldoInicial != null && <span className="ml-1 text-zinc-600">de {fmtNum(c.saldoInicial, 0)}</span>}
+      </span>
+    </div>
+  )
 }
 
 /** A mesma conta pode vir de duas origens (a linha MTM Auto de uma MTM Funded e a própria MTM Funded). */
@@ -68,7 +86,7 @@ function SubscritorasPremium({ contas, abrir }: { contas: ContaCentro[]; abrir: 
     <Painel titulo="Subscritoras do MTM Premium" sub={`${lista.length} contas · ${activas} activas · saldo somado ${fmtNum(total, 2)} · ${comSaldo.length} com saldo (${soActual} actuais; «ref.» = ao ligar, «máx.» = o mais alto visto)`}>
       {lista.length === 0 ? <Vazio>Nenhuma conta a seguir o Premium.</Vazio> : (
         <Tabela min={760}>
-          <thead><tr><th className={th}>Conta</th><th className={th}>Dono</th><th className={th}>Como segue</th><th className={th}>Estado</th><th className={th}>Saldo</th><th className={th}>Equity</th></tr></thead>
+          <thead><tr><th className={th}>Conta</th><th className={th}>Dono</th><th className={th}>Como segue</th><th className={th}>Estado</th><th className={th} title="saldo actual · linha de água (contra saldo_inicial) · «SIM» = conta simulada">Saldo · linha de água</th><th className={th}>Equity</th></tr></thead>
           <tbody>
             {lista.map((c) => (
               <tr key={c.ref} className={trClic} onClick={() => abrir(c.ref)}>
@@ -87,6 +105,38 @@ function SubscritorasPremium({ contas, abrir }: { contas: ContaCentro[]; abrir: 
         </Tabela>
       )}
     </Painel>
+  )
+}
+
+/** Os saldos somados, um total por proveniência e a linha de água de cada conjunto. */
+function ResumoSaldos({ contas }: { contas: ContaCentro[] }) {
+  const r = resumirSaldos(contas)
+  return (
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <Azulejo
+        rotulo="Saldo real"
+        valor={r.real.contas ? fmtNum(r.real.saldo, 2) : "—"}
+        sub={`${r.real.contas} conta(s) com saldo · ${r.real.comLinha} com linha de partida`}
+      />
+      <Azulejo
+        rotulo="Linha de água · real"
+        valor={textoPct(r.real.pct)}
+        tom={r.real.pct == null ? "neutro" : r.real.pct >= 0 ? "ok" : "grave"}
+        sub={r.real.comLinha ? `contra ${fmtNum(r.real.inicial, 0)} de partida` : "nenhuma conta real declara saldo_inicial"}
+      />
+      <Azulejo
+        rotulo="Saldo simulado"
+        valor={r.simulado.contas ? fmtNum(r.simulado.saldo, 2) : "—"}
+        tom="aviso"
+        sub={`${r.simulado.contas} conta(s) SIM · não se somam às reais`}
+      />
+      <Azulejo
+        rotulo="Linha de água · simulado"
+        valor={textoPct(r.simulado.pct)}
+        tom="aviso"
+        sub={AVISO_SIMULADO}
+      />
+    </div>
   )
 }
 
@@ -125,6 +175,10 @@ export default function SeccaoContas() {
         <Azulejo rotulo="MTM Funded" valor={todas.filter((c) => c.plataforma === "mtmfunded").length} sub={`${todas.filter((c) => c.categoria === "casa").length} da casa · ${todas.filter((c) => c.mestreDe).length} mestres de estratégia`} />
       </div>
 
+      {/* Os saldos em DOIS totais. Somá-los daria um número que não está em conta nenhuma — e que
+          passaria por prova, porque o simulado entra a preço melhor do que o mercado deu. */}
+      <ResumoSaldos contas={todas} />
+
       {dados && <SubscritorasPremium contas={todas} abrir={(ref) => ctx.abrir({ tipo: "conta", id: ref })} />}
 
       <Painel titulo="Todas as contas" sub="T2T/site, MTM Auto, WebTrader e MTM Funded — estado guardado na base, sem chamadas à MetaApi. Clica para abrir a gaveta com acções." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
@@ -137,7 +191,7 @@ export default function SeccaoContas() {
         </Filtros>
         <Lista dados={dados} erro={erro} avisos={dados?.avisos} vazio={todas.length === 0} textoVazio="Nenhuma conta ligada em nenhum produto." filtrada={lista.length === 0}>
           <Tabela min={1100}>
-            <thead><tr><th className={th}>Conta</th><th className={th}>Dono · direito</th><th className={th}>Estado</th><th className={th}>MetaApi</th><th className={th}>Quota</th><th className={th}>Usos</th><th className={th}>Saldo</th><th className={th}>Actividade</th></tr></thead>
+            <thead><tr><th className={th}>Conta</th><th className={th}>Dono · direito</th><th className={th}>Estado</th><th className={th}>MetaApi</th><th className={th}>Quota</th><th className={th}>Usos</th><th className={th} title="saldo actual · linha de água (contra saldo_inicial) · «SIM» = conta simulada">Saldo · linha de água</th><th className={th}>Actividade</th></tr></thead>
             <tbody>
               {lista.slice(0, 500).map((c) => (
                 <tr key={c.ref} className={trClic} onClick={() => ctx.abrir({ tipo: "conta", id: c.ref })}>

@@ -1,7 +1,8 @@
 # Centro de Controlo MTM Auto — paridade com /admin/mtmcopy
 
 Rota nova: **/admin/centro** (`?s=<secção>&g=<tipo>:<id>`). A página antiga continua em
-/admin/mtmcopy (e /admin/mtmauto-copia) com a faixa «Novo Centro de Controlo». Quando esta lista
+/admin/mtmcopy com a faixa «Novo Centro de Controlo» (o alias /admin/mtmauto-copia foi apagado a
+29/09; as rotas de API /api/admin/mtmauto-copia/* ficaram, porque vivem noutra árvore). Quando esta lista
 estiver toda a ✓, liga-se `site_settings.admin_centro_padrao = true` (Centro → Sincronização →
 Transição, ou env `ADMIN_CENTRO_PADRAO=1`) e /admin/mtmcopy passa a redireccionar.
 

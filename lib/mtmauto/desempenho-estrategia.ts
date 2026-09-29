@@ -323,7 +323,9 @@ export async function desempenhoDaEstrategia(
 /** Todas as estratégias, para os painéis que as listam. */
 export async function desempenhoDeTodas(opts?: { admin?: boolean }): Promise<DesempenhoEstrategia[]> {
   const db = getSupabaseAdmin()
-  const { data: providers } = await db.from('mtmauto_providers').select('slug').order('nome')
+  // Escondidas (084) fora: esta lista alimenta os painéis do cliente. O histórico das trades
+  // antigas continua a poder nomear a estratégia — quem a nomeia lê a linha directamente.
+  const { data: providers } = await db.from('mtmauto_providers').select('slug').is('apagado_em', null).order('nome')
   const saida: DesempenhoEstrategia[] = []
   for (const p of providers ?? []) {
     const d = await desempenhoDaEstrategia(p.slug as string, opts)

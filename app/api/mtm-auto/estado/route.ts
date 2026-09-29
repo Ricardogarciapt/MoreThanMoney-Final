@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
   const [contas, { data: subs }, { data: provs }] = await Promise.all([
     contasDoUtilizador(userId!),
     supabase.from('mtmauto_subscriptions').select('provider_id, ativo, auto_aceitar').eq('user_id', userId!).eq('ativo', true),
-    supabase.from('mtmauto_providers').select('id, slug, nome, descricao, ativo').eq('ativo', true).order('nome'),
+    // `apagado_em` (084) tem de entrar: sem ele, uma estratégia escondida no admin do site
+    // continuava a aparecer na app-mobile. É o mesmo filtro de /mtmauto e da criação de contas.
+    supabase.from('mtmauto_providers').select('id, slug, nome, descricao, ativo').eq('ativo', true).is('apagado_em', null).order('nome'),
   ])
 
   const seguidas = new Map((subs ?? []).map((s) => [s.provider_id as string, Boolean(s.auto_aceitar)]))

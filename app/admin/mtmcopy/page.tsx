@@ -38,7 +38,7 @@ import { ArrowLeft, ArrowLeftRight, Copy, LayoutDashboard, ListTree, Loader2, Re
 
 /**
  * «MTM Auto · Cópia» — o admin da cópia (antes «Consola MTMcopier»). Rota de sempre /admin/mtmcopy
- * e alias /admin/mtmauto-copia.
+ * (o alias /admin/mtmauto-copia foi apagado; os links apontam para aqui ou para /admin/centro).
  *
  *   Visão geral · Contas · Estratégias · Cópia entre contas · Eventos · Sincronização
  *

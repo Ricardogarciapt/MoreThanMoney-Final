@@ -24,6 +24,9 @@ type Ficha = {
   opcoes: OpcoesEstrategia
   campos: CampoOpcao[]
   confirmacao: string
+  /** a palavra de apagar (o slug em maiúsculas) e o aviso — vêm do servidor, o ecrã não os inventa */
+  confirmacaoApagar: string
+  avisoApagar: string
 }
 
 /** O valor no formulário: os números e as listas editam-se como texto, para «vazio» existir. */
@@ -95,6 +98,33 @@ export default function OpcoesEstrategia({ providerId, versao, aoGravar }: { pro
     }
   }
 
+  /**
+   * Esconder = `apagado_em`. O servidor é que recusa (live, posições abertas, quem ainda a segue);
+   * aqui só se pede e se mostra o motivo. Não há DELETE em sítio nenhum: as FKs dos sinais e das
+   * subscrições são CASCADE e um DELETE levava o histórico dos clientes.
+   */
+  const apagar = async () => {
+    const palavra = pedirPalavra(
+      `ESCONDER «${ficha.nome}» dos catálogos (site, app MTM Auto, T2T, MTM Funded, criação de contas).\n\n`
+      + `${ficha.avisoApagar}\n\nO servidor recusa se a estratégia estiver em live, tiver posições abertas ou alguém a seguir.`,
+      ficha.confirmacaoApagar,
+    )
+    if (!palavra) return
+    setOcupado(true)
+    const r = await pedirCentro<{ message?: string }>("/api/admin/centro/estrategia-opcoes", { method: "POST", body: { providerId, accao: "apagar", confirmacao: palavra } })
+    setOcupado(false)
+    setMsg({ ok: r.success, texto: r.success ? r.data?.message ?? "escondida" : r.error ?? "falhou" })
+    if (r.success) { setFicha({ ...ficha, apagada: true }); aoGravar?.() }
+  }
+
+  const restaurar = async () => {
+    setOcupado(true)
+    const r = await pedirCentro<{ message?: string }>("/api/admin/centro/estrategia-opcoes", { method: "POST", body: { providerId, accao: "restaurar" } })
+    setOcupado(false)
+    setMsg({ ok: r.success, texto: r.success ? r.data?.message ?? "restaurada" : r.error ?? "falhou" })
+    if (r.success) { setFicha({ ...ficha, apagada: false }); aoGravar?.() }
+  }
+
   return (
     <div className="rounded-xl border border-white/[0.06] p-3">
       <p className="mb-0.5 text-[10px] uppercase tracking-wider text-zinc-500">Opções da estratégia</p>
@@ -102,7 +132,7 @@ export default function OpcoesEstrategia({ providerId, versao, aoGravar }: { pro
         As mesmas de <span className="text-zinc-300">/definicoes/admin</span> na MTM Auto, na mesma tabela e pela mesma
         regra. As contas e a fonte de execução não se mexem daqui — têm as rotas delas.
       </p>
-      {ficha.apagada && <Aviso tom="grave">Estratégia apagada: as opções ficam como estão.</Aviso>}
+      {ficha.apagada && <Aviso tom="grave">Estratégia escondida (apagado_em): fora de todos os catálogos, histórico intacto. As opções ficam como estão até a restaurares.</Aviso>}
 
       <div className="space-y-2">
         {ficha.campos.map((c) => {
@@ -143,7 +173,17 @@ export default function OpcoesEstrategia({ providerId, versao, aoGravar }: { pro
         </Botao>
         <Botao onClick={() => setAgora(base)} disabled={!alterado || ocupado}>Repor</Botao>
         {!alterado && <span className="text-[10.5px] text-zinc-600">Sem alterações por gravar.</span>}
+        <div className="ml-auto">
+          {ficha.apagada
+            ? <Botao onClick={() => void restaurar()} disabled={ocupado}>Restaurar nos catálogos</Botao>
+            : <Botao tom="perigo" onClick={() => void apagar()} disabled={ocupado}>Apagar (esconder)…</Botao>}
+        </div>
       </div>
+      <p className="mt-1.5 text-[10px] leading-snug text-zinc-600">
+        «Apagar» é ESCONDER: marca <code>apagado_em</code> e a estratégia sai de todos os destinos (site,
+        app MTM Auto, T2T, MTM Funded, criação de contas). A linha nunca é eliminada — as FKs dos sinais e
+        das subscrições são CASCADE e um DELETE levava o histórico dos clientes. Dá-se sempre para restaurar.
+      </p>
     </div>
   )
 }

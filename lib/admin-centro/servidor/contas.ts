@@ -12,6 +12,7 @@ import { lerEtiquetas } from '@/lib/contas/etiquetas-servidor'
 import { carregarPainelMestres } from '@/lib/mestres/servidor/painel-leitura'
 import { mestresPorConta } from '@/lib/mestres/painel'
 import { rotuloUsoT2T } from '@/lib/mtmcopy/alvo-t2t'
+import { linhaDeAgua, provenienciaDoMotor, type LinhaDeAgua, type Proveniencia } from '../linha-de-agua'
 
 /**
  * CONTAS — todas as contas numa lista (MT4/MT5/TradeLocker/MTM Funded; cliente, casa, seguidoras,
@@ -55,11 +56,23 @@ export interface ContaCentro {
   /** De onde vem o saldo: `atual` (motor MTM Funded), `referencia` (baseline_balance da ligação,
    *  guardado ao ligar) ou `maximo` (o mais alto já visto — MTM Auto, serve para a isenção). */
   saldoFonte: 'atual' | 'referencia' | 'maximo' | null
+  /** `mtm_trading_accounts.saldo_inicial` — a linha de partida. null = a conta não declara nenhuma. */
+  saldoInicial: number | null
+  /** «real» ou «simulado»: uma conta SIM entra ao preço do sinal e o saldo dela não é prova. */
+  proveniencia: Proveniencia
+  /** Saldo actual contra a linha de partida, em % com sinal (lib/admin-centro/linha-de-agua). */
+  linhaDeAgua: LinhaDeAgua
   equity: number | null
   ultimaActividade: string | null
   criadaEm: string | null
   atualizadaEm: string | null
 }
+
+/**
+ * A linha de água entra nas linhas de `base` como este vazio e é calculada UMA vez no fim, já com
+ * o saldo e a linha de partida decididos. Assim nenhum dos quatro laços de leitura repete a conta.
+ */
+const SEM_LINHA: LinhaDeAgua = { pct: null, delta: null, acima: null, proveniencia: 'real' }
 
 const plat = (v: unknown): ContaCentro['plataforma'] => {
   const p = String(v ?? 'mt5').toLowerCase()
@@ -72,10 +85,25 @@ export async function carregarContas(): Promise<{ contas: ContaCentro[]; avisos:
   return { ...r.v, avisos: r.velho ? [...r.v.avisos, 'leitura nova falhou — a mostrar a última boa'] : r.v.avisos }
 }
 
-function saldoAuto(funded: number | undefined, site: number | undefined, maximo: number | null): { saldo: number | null; saldoFonte: ContaCentro['saldoFonte'] } {
-  if (funded != null) return { saldo: funded, saldoFonte: 'atual' }
-  if (site != null) return { saldo: site, saldoFonte: 'referencia' }
-  return { saldo: maximo, saldoFonte: maximo == null ? null : 'maximo' }
+/**
+ * De onde vem o saldo de uma conta MTM Auto — e, com ele, a LINHA DE PARTIDA e a PROVENIÊNCIA.
+ *
+ * As três andam juntas de propósito: se o saldo vier da conta MTM Funded por trás, a linha de água
+ * tem de ser medida contra o `saldo_inicial` DESSA conta e marcada com o motor DELA («sim» = número
+ * simulado). Devolver o saldo sem a origem era o que deixava um +18% simulado passar por real.
+ */
+function saldoAuto(
+  funded: { saldo: number | null; inicial: number | null; motor: string | null } | null,
+  site: number | undefined,
+  maximo: number | null,
+): { saldo: number | null; saldoFonte: ContaCentro['saldoFonte']; saldoInicial: number | null; proveniencia: Proveniencia } {
+  if (funded?.saldo != null) {
+    return { saldo: funded.saldo, saldoFonte: 'atual', saldoInicial: funded.inicial, proveniencia: provenienciaDoMotor(funded.motor) }
+  }
+  // Sem saldo da MTM Funded, o número é de uma conta de corretora: real, e sem linha de partida
+  // declarada (o `baseline_balance` é a referência de quando se ligou, não uma linha de água).
+  if (site != null) return { saldo: site, saldoFonte: 'referencia', saldoInicial: null, proveniencia: 'real' }
+  return { saldo: maximo, saldoFonte: maximo == null ? null : 'maximo', saldoInicial: null, proveniencia: 'real' }
 }
 
 async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; lidaEm: string }> {
@@ -148,11 +176,13 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
   // Saldos conhecidos por conta ligada — para as contas MTM Auto que não guardam o seu.
   const saldoSitePorMetaApi = new Map<string, number>()
   for (const c of site.linhas) { const acc = txt(c.metaapi_account_id); const s = num(c.baseline_balance); if (acc && s != null) saldoSitePorMetaApi.set(acc, s) }
-  const saldoFunded = new Map<string, number>()
+  // Uma conta MTM Funded por id: saldo, a linha de partida e o motor (real vs simulado). As contas
+  // MTM Auto e do site que apontam para uma delas herdam as TRÊS coisas, nunca só o número.
+  const fundedPorId = new Map<string, { saldo: number | null; inicial: number | null; motor: string | null }>()
   const equityFunded = new Map<string, number>()
   for (const f of funded.linhas) {
-    const s = num(f.sim_saldo); const e = num(f.sim_equity)
-    if (s != null) saldoFunded.set(String(f.id), s)
+    fundedPorId.set(String(f.id), { saldo: num(f.sim_saldo), inicial: num(f.saldo_inicial), motor: txt(f.motor) })
+    const e = num(f.sim_equity)
     if (e != null) equityFunded.set(String(f.id), e)
   }
 
@@ -179,7 +209,8 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
       usos, estrategias: c.copyfactory_strategy_pick ? [String(c.copyfactory_strategy_pick)] : [],
       // `balance` nunca existiu nesta tabela: pedi-la fazia o select inteiro falhar e as contas
       // T2T/site desapareciam do painel. O saldo guardado é o `baseline_balance`.
-      saldo: num(c.baseline_balance), saldoFonte: num(c.baseline_balance) == null ? null : 'referencia', equity: null, ultimaActividade: txt(c.last_signal_at), criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
+      ...saldoAuto(c.funded_account_id ? fundedPorId.get(String(c.funded_account_id)) ?? null : null, num(c.baseline_balance) ?? undefined, null),
+      linhaDeAgua: SEM_LINHA, equity: null, ultimaActividade: txt(c.last_signal_at), criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
     })
   }
   for (const c of auto.linhas) {
@@ -195,7 +226,8 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
       usos: ['MTM Auto', ...(usosRota.get(`auto:${c.id}`) ?? [])], estrategias: estrategiasConta.get(String(c.id)) ?? [],
       // Saldo actual da MTM Funded por trás, se houver; senão a referência da ligação do site com o
       // mesmo id MetaApi; em último caso o `saldo_maximo` (o mais alto visto, não o actual).
-      ...saldoAuto(c.funded_account_id ? saldoFunded.get(String(c.funded_account_id)) : undefined, acc ? saldoSitePorMetaApi.get(acc) : undefined, num(c.saldo_maximo)),
+      ...saldoAuto(c.funded_account_id ? fundedPorId.get(String(c.funded_account_id)) ?? null : null, acc ? saldoSitePorMetaApi.get(acc) : undefined, num(c.saldo_maximo)),
+      linhaDeAgua: SEM_LINHA,
       equity: c.funded_account_id ? equityFunded.get(String(c.funded_account_id)) ?? null : null, ultimaActividade: txt(c.saldo_visto_em), criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
     })
   }
@@ -207,7 +239,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
       estado: String(c.estado ?? '—'), ativa: true, demo: demoPeloNome(c.servidor), erro: txt(c.erro), erroEstado: erroActual(txt(c.erro), txt(c.updated_at), agora),
       metaapiAccountId: acc, metaapi: metaapi(acc, txt(c.estado)),
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: acc, login: txt(c.login), plataforma, estado: txt(c.estado) }),
-      usos: ['WebTrader', ...(usosRota.get(`wt:${c.id}`) ?? [])], estrategias: [], saldo: null, saldoFonte: null, equity: null, ultimaActividade: null, criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
+      usos: ['WebTrader', ...(usosRota.get(`wt:${c.id}`) ?? [])], estrategias: [], saldo: null, saldoFonte: null, saldoInicial: null, proveniencia: 'real', linhaDeAgua: SEM_LINHA, equity: null, ultimaActividade: null, criadaEm: txt(c.created_at), atualizadaEm: txt(c.updated_at),
     })
   }
   for (const f of funded.linhas) {
@@ -224,7 +256,8 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
       erro: txt(f.quebrou_regra), erroEstado: f.quebrou_regra ? 'actual' : null, metaapiAccountId: txt(f.metaapi_account_id),
       metaapi: metaapi(txt(f.metaapi_account_id), f.motor === 'sim' ? 'simulada' : null), contaMetaApi: false,
       usos: [f.motor === 'sim' ? 'Simulada' : 'MT5', ...(mestre ? [`${mestre.rotulo} (motor: ${mestre.modo})`] : []), ...(f.segue_estrategia ? [`Segue ${f.segue_estrategia}`] : []), ...(f.aceita_t2t ? ['Aceita T2T'] : []), ...(usosRota.get(`funded:${f.id}`) ?? [])],
-      estrategias: f.segue_estrategia ? [String(f.segue_estrategia)] : [], saldo: num(f.sim_saldo), saldoFonte: num(f.sim_saldo) == null ? null : 'atual', equity: num(f.sim_equity),
+      estrategias: f.segue_estrategia ? [String(f.segue_estrategia)] : [], saldo: num(f.sim_saldo), saldoFonte: num(f.sim_saldo) == null ? null : 'atual',
+      saldoInicial: num(f.saldo_inicial), proveniencia: provenienciaDoMotor(txt(f.motor)), linhaDeAgua: SEM_LINHA, equity: num(f.sim_equity),
       ultimaActividade: txt(f.sim_ultimo_dia), criadaEm: txt(f.created_at), atualizadaEm: txt(f.updated_at),
     })
   }
@@ -240,7 +273,12 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     const d = c.userId ? direitos.get(c.userId) : undefined
     const emUso = c.userId ? uso.get(c.userId)?.size ?? 0 : 0
     const limite = d && Number.isFinite(d.quotaBase.limite) ? d.quotaBase.limite : null
-    return { ...c, email: d?.email ?? null, nome: d?.nome ?? null, plano: d?.plano ?? '—', motivoDireito: d?.motivo ?? '—', temMtmAuto: d?.temMtmAuto ?? false, quota: { emUso, limite, acima: limite != null && emUso > limite } }
+    return {
+      ...c, email: d?.email ?? null, nome: d?.nome ?? null, plano: d?.plano ?? '—', motivoDireito: d?.motivo ?? '—', temMtmAuto: d?.temMtmAuto ?? false,
+      quota: { emUso, limite, acima: limite != null && emUso > limite },
+      // A linha de água mede-se contra `saldo_inicial` e sai marcada com a proveniência do saldo.
+      linhaDeAgua: linhaDeAgua(c.saldo, c.saldoInicial, c.proveniencia),
+    }
   })
   return { contas, avisos, lidaEm: new Date().toISOString() }
 }
@@ -251,7 +289,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
  * `semTabela`: em toda a outra leitura do Centro uma coluna em falta é bug e tem de gritar.
  */
 async function lerFunded() {
-  const cols = 'id, user_id, tipo, mt5_login, servidor, estado, motor, quebrou_regra, metaapi_account_id, sim_saldo, sim_equity, sim_ultimo_dia, segue_estrategia, aceita_t2t, created_at, updated_at'
+  const cols = 'id, user_id, tipo, mt5_login, servidor, estado, motor, quebrou_regra, metaapi_account_id, saldo_inicial, sim_saldo, sim_equity, sim_ultimo_dia, segue_estrategia, aceita_t2t, created_at, updated_at'
   // 109 (`conta_real_casa`) primeiro; sem ela, como antes — a conta real da casa só não se distingue.
   const real = await ler(db().from('mtm_trading_accounts').select(`${cols}, conta_casa, recolhe_todos_sinais, conta_real_casa`).order('created_at', { ascending: false }).limit(3000))
   if (!semEsquema(real)) return real

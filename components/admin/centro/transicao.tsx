@@ -5,7 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { CHAVE_FLAG_PADRAO, lerFlagPadrao } from "@/lib/admin-centro/regras"
 
 /**
- * Transição /admin/mtmcopy (e o alias /admin/mtmauto-copia) → /admin/centro.
+ * Transição /admin/mtmcopy → /admin/centro.
  *
  *  · flag site_settings.admin_centro_padrao (ou env ADMIN_CENTRO_PADRAO=1) a true → redirecciona;
  *  · senão mostra a faixa «Novo Centro de Controlo» por cima da página antiga.

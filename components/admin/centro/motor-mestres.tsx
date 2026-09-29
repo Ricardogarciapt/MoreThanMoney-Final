@@ -7,7 +7,7 @@ import { palavraDeConfirmacao } from "@/lib/mestres/painel"
 import { Aviso, Azulejo, Botao, BotaoLer, Painel, Pilula, Tabela, Vazio, fmtIdade, fmtMs, fmtNum, td, th, useCentro, pedirCentro, pedirPalavra } from "./ui"
 
 /**
- * Cartão «Motor das mestres» do cockpit — o mesmo estado da tab Estratégias de /admin/mtmauto-copia,
+ * Cartão «Motor das mestres» do cockpit — o mesmo estado da tab Estratégias de /admin/mtmcopy,
  * resumido: motor ligado/kill, estratégias e contas em live, ordens e falhas das últimas 24 h, alertas.
  * Os modos mudam-se no painel completo; aqui só o kill-switch (parar é sempre permitido).
  */

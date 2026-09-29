@@ -33,6 +33,7 @@
  * Puro: recebe linhas já lidas e devolve a árvore. Sem Supabase, sem Next, sem React. Testado em
  * `lib/copia-contas/__tests__/cadeia.check.ts`. O cano está em `lib/copia-contas/servidor/cadeia.ts`.
  */
+import type { LinhaDeAgua } from '../admin-centro/linha-de-agua'
 import { decidirModo } from '../mestres/decisao'
 import type { ConfigGlobalMestres, ContaMestres, EstrategiaMestre, ModoDecidido } from '../mestres/tipos'
 import { contaPorOmissao } from '../mestres/tipos'
@@ -57,8 +58,20 @@ export interface EstrategiaEntrada {
   canalChat: string | null
   /** Ids CopyFactory ainda por cortar → quem copia hoje é a CopyFactory, não o nosso motor. */
   copyfactoryPorCortar: string[]
-  /** A conta mestre SIM (mtm_trading_accounts), para a mostrar no topo. */
-  contaMestre: { id: string; login: string | null; etiqueta: string | null; saldo: number | null; equity: number | null } | null
+  /**
+   * A conta mestre (mtm_trading_accounts), para a mostrar no TOPO da coluna — porque a mestre é a
+   * estratégia, não uma conta a mais. Traz a linha de partida e a proveniência: sem elas o «10 250»
+   * da mestre não se distingue do «1 100» da conta de medição, nem o simulado do real.
+   */
+  contaMestre: {
+    id: string
+    login: string | null
+    etiqueta: string | null
+    saldo: number | null
+    equity: number | null
+    saldoInicial: number | null
+    linhaDeAgua: LinhaDeAgua
+  } | null
 }
 
 /** Uma rota de cópia, como está em `copia_rotas`. */

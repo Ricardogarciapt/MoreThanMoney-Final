@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Activity, AlertTriangle, Clock, Database, Gauge, Radio, Server, ShieldAlert, Zap } from "lucide-react"
 import type { cockpit } from "@/lib/admin-centro/servidor/cockpit"
 import { CONFIRMACOES, tomIdade, type AcaoRunbook, type Alerta } from "@/lib/admin-centro/regras"
+import { AVISO_SIMULADO, textoPct } from "@/lib/admin-centro/linha-de-agua"
 import { useCentroCtx } from "../contexto"
 import MotorRealSombra from "../motor-real-sombra"
 import MotorMestresCentro from "../motor-mestres"
@@ -71,6 +72,33 @@ export default function SeccaoCockpit() {
         <Azulejo rotulo="Erros do sistema 24 h" valor={fmtNum(e24.errosSistema)} sub={`1 h: ${e1.errosSistema} · brutos ${e24.erro}`} serie={c.execucao.serieErro} barras tom={e1.errosSistema ? "grave" : e24.errosSistema ? "aviso" : "ok"} onClick={() => ctx.irPara("sinais", { estado: "sistema" })} />
         <Azulejo rotulo="Latência p50" valor={fmtMs(c.execucao.latenciaP50Ms)} sub="sinal → execução" />
         <Azulejo rotulo="Latência p95" valor={fmtMs(c.execucao.latenciaP95Ms)} sub="24 h" tom={(c.execucao.latenciaP95Ms ?? 0) > 10_000 ? "aviso" : "neutro"} />
+      </div>
+
+      {/* ── SALDOS ── o dono abre o Centro e vê o dinheiro. Dois totais, nunca um: o simulado entra
+           a preço melhor do que o mercado deu (~56% do lucro) e não se soma ao real. */}
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <Azulejo
+          rotulo="Saldo real"
+          valor={c.saldos.real.contas ? fmtNum(c.saldos.real.saldo, 2) : "—"}
+          sub={`${c.saldos.real.contas} conta(s) · linha de água ${textoPct(c.saldos.real.pct)}`}
+          tom={c.saldos.real.pct == null ? "neutro" : c.saldos.real.pct >= 0 ? "ok" : "grave"}
+          onClick={() => ctx.irPara("contas")}
+        />
+        <Azulejo
+          rotulo="Linha de água · real"
+          valor={textoPct(c.saldos.real.pct)}
+          tom={c.saldos.real.pct == null ? "neutro" : c.saldos.real.pct >= 0 ? "ok" : "grave"}
+          sub={c.saldos.real.comLinha ? `${c.saldos.real.comLinha} conta(s) contra ${fmtNum(c.saldos.real.inicial, 0)} de partida` : "nenhuma conta real declara saldo_inicial"}
+          onClick={() => ctx.irPara("contas")}
+        />
+        <Azulejo
+          rotulo="Saldo simulado"
+          valor={c.saldos.simulado.contas ? fmtNum(c.saldos.simulado.saldo, 2) : "—"}
+          tom="aviso"
+          sub={`${c.saldos.simulado.contas} conta(s) SIM · linha de água ${textoPct(c.saldos.simulado.pct)} — não se somam às reais`}
+          onClick={() => ctx.irPara("contas")}
+        />
+        <Azulejo rotulo="Simulado ≠ prova" valor={textoPct(c.saldos.simulado.pct)} tom="aviso" sub={AVISO_SIMULADO} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">

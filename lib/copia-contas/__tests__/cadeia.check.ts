@@ -10,6 +10,7 @@ import {
   textoDaFonte, textoDoLote, type EntradaCadeia, type EstrategiaEntrada, type RotaEntrada,
 } from '../cadeia'
 import type { ConfigGlobalMestres, EstrategiaMestre } from '../../mestres/tipos'
+import { linhaDeAgua } from '../../admin-centro/linha-de-agua'
 
 const casos: { nome: string; f: () => void }[] = []
 const caso = (nome: string, f: () => void) => casos.push({ nome, f })
@@ -26,7 +27,11 @@ const mestre = (over: Partial<EstrategiaMestre> = {}): EstrategiaMestre => ({
 const estrategia = (over: Partial<EstrategiaEntrada> = {}): EstrategiaEntrada => ({
   mestre: mestre(), providerId: 'p-1', slug: 'mtm-auto-wolf', nome: 'MTM Auto Wolf', ativo: true,
   fonteSinais: 'primeverse', fonteFiltro: 'g_wolf', canalChat: null, copyfactoryPorCortar: [],
-  contaMestre: { id: 'CM-1', login: '77460273', etiqueta: null, saldo: 10_000, equity: 10_000 },
+  // A mestre é simulada (motor='sim'): 10 250 sobre 10 000 de partida, marcada como simulado.
+  contaMestre: {
+    id: 'CM-1', login: '77460273', etiqueta: null, saldo: 10_250, equity: 10_250, saldoInicial: 10_000,
+    linhaDeAgua: linhaDeAgua(10_250, 10_000, 'simulado'),
+  },
   ...over,
 })
 
@@ -207,6 +212,17 @@ caso('a disposição só aceita chaves conhecidas e coordenadas finitas', () => 
 caso('disposição de lixo não rebenta', () => {
   assert.deepEqual(normalizarDisposicao(null, ['a']), {})
   assert.deepEqual(normalizarDisposicao('{}', ['a']), {})
+})
+
+caso('a mestre no topo traz a linha de água E a marca de simulado (nunca um número nu)', () => {
+  const c = montarCadeia(base())
+  const m = c.estrategias[0].contaMestre
+  assert.ok(m, 'a estratégia tem de trazer a mestre')
+  assert.equal(m.linhaDeAgua.pct, 2.5)
+  assert.equal(m.linhaDeAgua.acima, true)
+  // Isto é a guarda que importa: um saldo de conta SIM apresentado sem proveniência passaria por
+  // prova, e o viés do preço de entrada já foi medido como ~56% do lucro.
+  assert.equal(m.linhaDeAgua.proveniencia, 'simulado')
 })
 
 let n = 0

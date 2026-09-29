@@ -24,7 +24,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { accoesDoArrasto, podeLigar, type Cadeia, type NoEstrategia, type SubscritorCadeia } from "@/lib/copia-contas/cadeia"
-import { Aviso, Botao, Campo, Gaveta, Pilula, pedirCentro } from "../centro/ui"
+import { Aviso, Botao, Campo, Gaveta, Pilula, fmtNum, pedirCentro } from "../centro/ui"
+import { MarcaProveniencia, PctLinhaDeAgua } from "../centro/linha-de-agua"
 
 const LARGURA_NO = 280
 const ESPACO_X = 320
@@ -104,13 +105,30 @@ export default function QuadroCadeia({ c, recarregar }: { c: Cadeia; recarregar:
     recarregar()
   }
 
+  /**
+   * Deixar de seguir. A rota `desligar` já existia e o quadro não tinha por onde a pedir: dava para
+   * ligar e mover, nunca para tirar. Pede confirmação porque uma conta com posições abertas deixa de
+   * receber ordens novas — o que está aberto continua a ser gerido, mas isso tem de ser dito.
+   */
+  const desligar = async (slug: string, s: SubscritorCadeia) => {
+    const nome = s.etiqueta ?? s.email ?? s.ref
+    const aviso = s.abertas > 0 ? `\n\nATENÇÃO: tem ${s.abertas} posição(ões) aberta(s). Deixa de abrir novas; as abertas continuam geridas.` : ""
+    if (!window.confirm(`«${nome}» deixa de seguir «${slug}».${aviso}`)) return
+    setErro(null); setMensagem(null)
+    const r = await pedirCentro<{ mensagem?: string }>("/api/admin/mtmauto-copia/cadeia", { method: "POST", body: { accao: "desligar", ref: s.ref, slug } })
+    if (r.success) setMensagem(r.data?.mensagem ?? "deixou de seguir")
+    else setErro(r.error ?? "não deu para desligar")
+    recarregar()
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-[11px] text-zinc-500">
           Arrasta a BARRA de uma estratégia para a arrumar (só desenho). Arrasta um SUBSCRITOR para outra estratégia
           para o mudar de cópia — isso escreve na base. Com <kbd className="rounded bg-white/10 px-1">Alt</kbd> ele passa a
-          seguir as duas.
+          seguir as duas. O <span className="text-zinc-300">✕</span> no cartão tira-o desta estratégia,
+          e <span className="text-zinc-300">+ adicionar subscritor</span> escolhe uma conta já existente.
         </p>
         <div className="ml-auto flex gap-2">
           <Botao onClick={() => setGaveta({ tipo: "contas" })}>Criar contas…</Botao>
@@ -148,6 +166,13 @@ export default function QuadroCadeia({ c, recarregar }: { c: Cadeia; recarregar:
                   <p className="truncate font-mono text-[10.5px] text-zinc-500">
                     mestre {n.contaMestre ? n.contaMestre.etiqueta ?? n.contaMestre.login ?? n.contaMestre.id.slice(0, 8) : "— em falta"}
                   </p>
+                  {n.contaMestre && (
+                    <p className="flex items-center gap-1.5 font-mono text-[10.5px]">
+                      <span className="text-zinc-300">{n.contaMestre.saldo == null ? "—" : fmtNum(n.contaMestre.saldo, 2)}</span>
+                      <MarcaProveniencia p={n.contaMestre.linhaDeAgua.proveniencia} />
+                      <PctLinhaDeAgua l={n.contaMestre.linhaDeAgua} />
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-1 px-2 py-1">
                   <Pilula tom={n.modoPedido === "live" ? "grave" : n.modoPedido === "sombra" ? "info" : "neutro"}>cópia {n.modoPedido}</Pilula>
@@ -157,7 +182,7 @@ export default function QuadroCadeia({ c, recarregar }: { c: Cadeia; recarregar:
                 <div className="max-h-[240px] overflow-y-auto border-t border-white/[0.06]">
                   {n.subscritores.length === 0
                     ? <p className="px-2 py-2 text-[11px] text-zinc-600">Larga aqui uma conta.</p>
-                    : n.subscritores.map((s) => <Cartao key={s.rotaId} s={s} slug={n.slug} />)}
+                    : n.subscritores.map((s) => <Cartao key={s.rotaId} s={s} slug={n.slug} desligar={() => void desligar(n.slug, s)} />)}
                 </div>
                 <button
                   type="button"
@@ -178,19 +203,27 @@ export default function QuadroCadeia({ c, recarregar }: { c: Cadeia; recarregar:
   )
 }
 
-function Cartao({ s, slug }: { s: SubscritorCadeia; slug: string }) {
+function Cartao({ s, slug, desligar }: { s: SubscritorCadeia; slug: string; desligar: () => void }) {
   return (
     <div
       draggable
       onDragStart={(e) => e.dataTransfer.setData("text/plain", JSON.stringify({ ref: s.ref, chave: s.chave, slugOrigem: slug }))}
-      className="flex cursor-grab items-center gap-1.5 border-b border-white/[0.04] px-2 py-1 last:border-b-0 hover:bg-white/5 active:cursor-grabbing"
+      className="group flex cursor-grab items-center gap-1.5 border-b border-white/[0.04] px-2 py-1 last:border-b-0 hover:bg-white/5 active:cursor-grabbing"
       title={s.motivo}
     >
       <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.efectivo === "live" ? "#f87171" : s.efectivo === "sombra" ? "#60a5fa" : "#52525b" }} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[11.5px] text-zinc-200">{s.etiqueta ?? s.email ?? s.ref}</p>
-        <p className="truncate text-[10px] text-zinc-500">{s.lote}{s.tipo === "t2t" && " · T2T"}{s.pausadaMotivo && " · pausada"}</p>
+        <p className="truncate text-[10px] text-zinc-500">{s.lote}{s.tipo === "t2t" && " · T2T"}{s.abertas > 0 && ` · ${s.abertas} aberta(s)`}{s.pausadaMotivo && " · pausada"}</p>
       </div>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); desligar() }}
+        title={`Deixar de seguir «${slug}»`}
+        className="shrink-0 px-1 text-[12px] text-zinc-600 opacity-0 hover:text-rose-300 group-hover:opacity-100"
+      >
+        ✕
+      </button>
     </div>
   )
 }
@@ -241,9 +274,35 @@ function GavetaAdicionar({ slug, fechar, feito }: { slug: string; fechar: () => 
   )
 }
 
-/** Criar as contas de um utilizador para uma ou mais estratégias (idempotente). */
+/**
+ * Criar as contas de um utilizador para uma ou mais estratégias (idempotente).
+ *
+ * O campo do utilizador era um UUID à mão. Ninguém sabe UUIDs de cor, por isso o botão existia e não
+ * se usava: procura-se por email pela MESMA pesquisa da paleta de comandos (/api/admin/centro/pesquisa)
+ * e o uuid nunca é escrito à mão.
+ */
 function GavetaCriarContas({ estrategias, fechar, feito }: { estrategias: NoEstrategia[]; fechar: () => void; feito: () => void }) {
   const [userId, setUserId] = useState("")
+  const [quem, setQuem] = useState<string | null>(null)
+  const [qUser, setQUser] = useState("")
+  const [achados, setAchados] = useState<Array<{ id: string; titulo: string; sub: string }>>([])
+  const [aProcurar, setAProcurar] = useState(false)
+
+  // Pesquisa com travão: o endpoint corre sobre os loaders em cache, mas não a cada tecla.
+  useEffect(() => {
+    const t = qUser.trim()
+    if (t.length < 2) { setAchados([]); return }
+    const atraso = setTimeout(() => {
+      void (async () => {
+        setAProcurar(true)
+        const r = await pedirCentro<{ resultados?: Array<{ tipo: string; id: string; titulo: string; sub: string }> }>(`/api/admin/centro/pesquisa?q=${encodeURIComponent(t)}`)
+        setAProcurar(false)
+        setAchados(r.success ? (r.data?.resultados ?? []).filter((x) => x.tipo === "utilizador").slice(0, 12) : [])
+      })()
+    }, 350)
+    return () => clearTimeout(atraso)
+  }, [qUser])
+
   const [saldo, setSaldo] = useState("1000")
   const [escolhidas, setEscolhidas] = useState<string[]>([])
   const [erro, setErro] = useState<string | null>(null)
@@ -265,8 +324,24 @@ function GavetaCriarContas({ estrategias, fechar, feito }: { estrategias: NoEstr
     <Gaveta aberta titulo="Criar contas para um utilizador" sub="Conta MTM Funded simulada + linha no MTM Auto + subscrição. Repetir não duplica." aoFechar={fechar}>
       {erro && <Aviso tom="grave">{erro}</Aviso>}
       {mensagem && <Aviso tom="info">{mensagem}</Aviso>}
-      <Campo rotulo="Utilizador (uuid)">
-        <input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="00000000-0000-0000-0000-000000000000" className="w-full rounded-md border border-white/10 bg-black/40 px-2 py-1 font-mono text-[12px] text-white" />
+      <Campo rotulo="Utilizador">
+        {userId ? (
+          <div className="flex items-center gap-2 rounded-md border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-2 py-1">
+            <span className="min-w-0 flex-1 truncate text-[12px] text-[#E9C46A]">{quem ?? userId}</span>
+            <button type="button" onClick={() => { setUserId(""); setQuem(null) }} className="text-[11px] text-zinc-400 hover:text-white">trocar</button>
+          </div>
+        ) : (
+          <>
+            <input value={qUser} onChange={(e) => setQUser(e.target.value)} placeholder="email ou nome do membro…" className="w-full rounded-md border border-white/10 bg-black/40 px-2 py-1 text-[12px] text-white" />
+            {aProcurar && <p className="px-1 py-1 text-[11px] text-zinc-500">a procurar…</p>}
+            {achados.map((u) => (
+              <button key={u.id} type="button" onClick={() => { setUserId(u.id); setQuem(u.titulo) }} className="flex w-full items-center gap-2 border-b border-white/[0.05] px-1 py-1.5 text-left hover:bg-white/5">
+                <span className="min-w-0 flex-1 truncate text-[12px] text-zinc-200">{u.titulo}</span>
+                <span className="truncate text-[10.5px] text-zinc-500">{u.sub}</span>
+              </button>
+            ))}
+          </>
+        )}
       </Campo>
       <Campo rotulo="Saldo de partida (USD)">
         <input value={saldo} onChange={(e) => setSaldo(e.target.value)} inputMode="numeric" className="w-full rounded-md border border-white/10 bg-black/40 px-2 py-1 text-[12px] text-white" />
@@ -286,7 +361,7 @@ function GavetaCriarContas({ estrategias, fechar, feito }: { estrategias: NoEstr
         </div>
       </Campo>
       <div className="pt-2">
-        <Botao tom="ouro" onClick={() => void criar()} disabled={aCriar || !userId.trim() || escolhidas.length === 0}>
+        <Botao tom="ouro" onClick={() => void criar()} disabled={aCriar || !userId || escolhidas.length === 0}>
           {aCriar ? "A criar…" : `Criar ${escolhidas.length || ""} conta(s)`}
         </Botao>
       </div>

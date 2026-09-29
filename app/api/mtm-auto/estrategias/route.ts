@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { autorizarMtmAuto } from '@/lib/mtm-auto-bridge'
+import { semEscondidas, slugsEscondidos } from '@/lib/estrategias-admin/escondidas-servidor'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -23,7 +24,15 @@ export async function GET(request: NextRequest) {
       cache: 'no-store',
       signal: AbortSignal.timeout(25_000),
     })
-    return NextResponse.json(await r.json().catch(() => ({})), { status: r.status })
+    const corpo = (await r.json().catch(() => ({}))) as Record<string, unknown>
+    // O catálogo é filtrado por equipa NO OUTRO REPOSITÓRIO, mas o «escondida» é nosso: quem esconde
+    // uma estratégia no admin do site tem de a ver desaparecer da app do cliente. Por isso o filtro
+    // aplica-se à RESPOSTA — não há aqui uma segunda versão do catálogo, só a remoção do que se esconde.
+    if (r.ok && Array.isArray(corpo.providers)) {
+      const escondidas = await slugsEscondidos()
+      corpo.providers = semEscondidas(corpo.providers as Array<Record<string, unknown>>, escondidas, (p) => (p.slug as string) ?? null)
+    }
+    return NextResponse.json(corpo, { status: r.status })
   } catch {
     return NextResponse.json({ error: 'O MTM Auto não respondeu.', providers: [] }, { status: 502 })
   }
