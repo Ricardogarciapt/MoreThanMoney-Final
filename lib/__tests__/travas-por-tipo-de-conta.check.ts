@@ -179,8 +179,14 @@ teste('margem livre só trava quando há limite configurado E valor medido', () 
   assert.equal(travaDoTipo(comMargem.financiada, banca({ margemLivre: 2000 })).podeAbrir, true)
   // sem valor de margem: não trava
   assert.equal(travaDoTipo(comMargem.financiada, banca({ margemLivre: null })).podeAbrir, true)
-  // sem limite: também não
-  assert.equal(travaDoTipo(PADRAO.financiada, banca({ margemLivre: 1 })).podeAbrir, true)
+  // O PADRÃO das financiadas passou a ter limite (20%, dado pelo dono a 29/09), por isso é a
+  // conta REAL que serve de caso «sem limite» — nas reais a margem mínima não se aplica, por
+  // decisão dele: é regra de prop firm.
+  assert.equal(travaDoTipo(PADRAO.real, banca({ margemLivre: 1 })).podeAbrir, true)
+  // E o padrão das financiadas trava mesmo: 1 € de margem livre numa conta de 1 000 é 0,1%.
+  assert.equal(travaDoTipo(PADRAO.financiada, banca({ margemLivre: 1 })).podeAbrir, false)
+  assert.equal(PADRAO.financiada.margemLivreMinPct, 20)
+  assert.equal(PADRAO.real.margemLivreMinPct, null)
 })
 
 // ── 5 · configuração ────────────────────────────────────────────────────────

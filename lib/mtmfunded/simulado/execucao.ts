@@ -44,7 +44,10 @@ export type Origem = 'manual' | 'ideia_mtm' | 'scanner' | 'copia' | 'estrategia'
 const ORIGENS: Origem[] = ['manual', 'ideia_mtm', 'scanner', 'copia']
 export const origemValida = (o: unknown): Origem => (ORIGENS.includes(o as Origem) ? (o as Origem) : 'manual')
 
-const CAMPOS_CONTA = 'id, user_id, tipo, estado, motor, program_id, tournament_id, saldo_inicial, alavancagem, mt5_login, servidor, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_pico_equity, sim_dias_negociados, sim_ultimo_dia, quebrou_regra, quebrada_em, metricas, segue_estrategia, aceita_t2t, created_at'
+const CAMPOS_CONTA = 'id, user_id, tipo, estado, motor, program_id, tournament_id, saldo_inicial, alavancagem, mt5_login, servidor, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_pico_equity, sim_dias_negociados, sim_ultimo_dia, quebrou_regra, quebrada_em, metricas, segue_estrategia, aceita_t2t, created_at, ' +
+  // `sem_regras` marca as contas que existem para ESPELHAR uma estratégia. Sem ela no select, a
+  // exclusão em `foraDoAmbito` lia sempre undefined e as contas-espelho eram travadas aos 3%.
+  'sem_regras, conta_casa, conta_real_casa'
 export type Conta = Record<string, unknown> & { id: string; estado: string; motor: string }
 
 // ── quem manda nesta conta ─────────────────────────────────────────────────

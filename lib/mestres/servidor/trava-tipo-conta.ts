@@ -73,10 +73,15 @@ async function baseDoDestino(db: SupabaseClient, destinoRef: string): Promise<Ba
     if (r?.origem === 'funded' || r?.origem === 'wt') {
       // `conta_real_casa` (109) é auditoria da casa, «negociação real, sem regras» por decisão
       // explícita: sai do âmbito, como sai no WebTrader (lib/mtmfunded/simulado/travas-tipo.ts).
+      //
+      // E `sem_regras` também sai, pela mesma razão e por decisão do dono a 29/09: uma conta que
+      // existe para ESPELHAR uma estratégia não está a ser avaliada, está a ser medida — e pará-la
+      // aos 3% truncava a série a meio. Tem de ser o MESMO critério do WebTrader, senão uma conta
+      // abre por um caminho e é recusada pelo outro.
       const { data } = await db.from('mtm_trading_accounts')
-        .select('tipo, motor, saldo_inicial, sim_ancora_dia, conta_real_casa, conta_casa').eq('id', r.id).maybeSingle()
+        .select('tipo, motor, saldo_inicial, sim_ancora_dia, conta_real_casa, conta_casa, sem_regras').eq('id', r.id).maybeSingle()
       if (data) {
-        const casa = data.conta_real_casa === true
+        const casa = data.conta_real_casa === true || data.sem_regras === true
         base = {
           tipo: casa ? 'desconhecido' : ((data.tipo ?? '') as TipoDeConta),
           saldoInicial: n(data.saldo_inicial), ancoraPropria: n(data.sim_ancora_dia), motor: data.motor ?? null,

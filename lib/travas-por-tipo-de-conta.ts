@@ -62,12 +62,16 @@ const SEM_LIMITES: LimitesDoTipo = {
 /**
  * Os limiares por omissão, ditados pelo dono a 2026-09-29.
  *
- * `margemLivreMinPct` fica NULL até alguém dar um número: a margem mínima é regra de prop firm, mas
+ * `margemLivreMinPct` = 20% nas financiadas, dado pelo dono a 29/09. Nas REAIS fica NULL, e é
+ * decisão dele: «drawdown diário máximo e margem livre mínima devem ser para contas de prop firms;
+ * as reais não têm essa regra».
+ *
+ * Antes de ele dar o número ficava NULL, porque a margem mínima é regra de prop firm, mas
  * a percentagem não me foi dada, e inventar uma era recusar entradas por uma regra imaginada (o
  * mesmo raciocínio da consistência da FXIFY em lib/mtmcopy/prop-firm-guard.ts).
  */
 export const LIMITES_POR_TIPO: Record<TipoDeConta, LimitesDoTipo> = {
-  financiada: { perdaDiariaPct: 3, perdaGlobalPct: 6, slMaxPctDaBanca: null, margemLivreMinPct: null },
+  financiada: { perdaDiariaPct: 3, perdaGlobalPct: 6, slMaxPctDaBanca: null, margemLivreMinPct: 20 },
   real: { perdaDiariaPct: 30, perdaGlobalPct: null, slMaxPctDaBanca: 95, margemLivreMinPct: null },
   // Governadas pelo programa (mtm_funded_programs.regras → avaliarConta). Ver o cabeçalho.
   desafio: SEM_LIMITES,

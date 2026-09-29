@@ -63,6 +63,8 @@ export interface LinhaContaTravas {
   metricas?: Record<string, unknown> | null
   conta_real_casa?: unknown
   conta_casa?: unknown
+  /** Marca as contas que existem para espelhar uma estratégia — ver `foraDoAmbito`. */
+  sem_regras?: unknown
 }
 
 /**
@@ -71,23 +73,26 @@ export interface LinhaContaTravas {
  * SÓ a CONTA REAL DA CASA (109), por decisão explícita e já escrita: «auditoria · negociação real ·
  * sem regras». São duas contas, e são as da casa.
  *
- * A conta de ANÁLISE **é governada**, ao contrário do que `abrirPosicao` faz com as regras do
- * programa — e a decisão merece a explicação, porque é a diferença entre esta trava funcionar e ser
- * decorativa. Hoje 15 das 16 contas `financiada` e 9 das 12 `real` têm `analise: true`: são as
- * contas-espelho que medem cada estratégia. Exclui-las fazia os 3 %/6 % que o dono pediu não se
- * aplicarem praticamente a conta nenhuma.
+ * E as contas que EXISTEM PARA ESPELHAR UMA ESTRATÉGIA também não. Palavras do dono a 29/09:
+ * «se é conta que foi criada com o objectivo de receber estratégia e espelhar essa conta, não tem
+ * regra prop.» A razão é boa: essa conta não está a ser avaliada, está a ser MEDIDA. Pará-la aos
+ * 3 % interrompia a medição a meio e a série ficava truncada sem ninguém saber porquê.
  *
- * E há um argumento melhor do que a contagem: uma conta-espelho existe para mostrar o que a
- * estratégia faz A UMA CONTA DAQUELE TIPO. Um espelho que ignora os 3 % mostra um lucro que uma conta
- * financiada de verdade nunca teria tido, porque a verdadeira tinha parado de abrir. É a mesma
- * família de erro do «preço de entrada viciado» — um número que só existe porque a simulação é mais
- * permissiva do que a realidade.
+ * ── O CAMPO QUE AS DISTINGUE, E O QUE NÃO SERVE ──────────────────────────────────────────
  *
- * Quem discordar tem um interruptor em vez de um `git revert`:
- * `site_settings.travas_por_tipo_de_conta.excluirAnalise = true`.
+ * É `sem_regras`, e não `metricas.analise`. A diferença não é estética: hoje **nove contas de
+ * CLIENTES REAIS** têm `analise: true` (a do Pedro Gonçalves, a do Rúben Sousa, a do Fábio
+ * Henriques…) porque também são acompanhadas. Excluir por `analise` tirava as regras prop
+ * exactamente a quem elas existem para proteger.
+ *
+ * `sem_regras = true` está nas 15 contas-espelho e da casa, e a `false` nas nove de clientes. É a
+ * marca que já dizia o que o dono agora confirmou.
  */
 export async function foraDoAmbito(conta: LinhaContaTravas): Promise<boolean> {
   if (ehContaRealDaCasa(conta as unknown as Record<string, unknown>)) return true
+  if (conta.sem_regras === true) return true
+  // `excluirAnalise` fica como interruptor de recurso, desligado por omissão. NÃO o ligues sem ler
+  // o parágrafo acima: `analise` também está nas contas de clientes.
   const m = (conta.metricas ?? {}) as Record<string, unknown>
   const analise = m.analise === true || m.analise === 'true'
   return analise && (await configuracao()).excluirAnalise
