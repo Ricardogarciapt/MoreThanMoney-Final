@@ -28,7 +28,12 @@ export interface PedidoGratis {
   semente?: number
 }
 
-const BASE = 'https://image.pollinations.ai/prompt/'
+// A base MUDOU a 29/09/2026: `image.pollinations.ai/prompt/` passou a `gen.pollinations.ai/image/`.
+// A antiga é que devolvia 402 a tudo — não era só a conta que faltava, era o endereço.
+//
+// O modelo `flux` continua a ser um alias válido: o catálogo passou a `publisher/model`
+// (`black-forest-labs/flux.1-schnell`) mas mantém os aliases antigos nos pedidos.
+const BASE = 'https://gen.pollinations.ai/image/'
 
 /**
  * O que se pede muda com a camada — exactamente como no estúdio do admin.
@@ -78,13 +83,21 @@ export async function gerarImagemGratis(p: PedidoGratis): Promise<ResultadoGrati
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 120_000)
   try {
-    // O token é OPCIONAL e continua a ser a via gratuita: a Pollinations passou a pedir uma conta
-    // para o nível sem custo (ver o 402 mais abaixo). Sem `POLLINATIONS_TOKEN` o pedido sai
-    // exactamente como saía — o que não se faz aqui é cair para a chave paga da casa.
+    // O token é OBRIGATÓRIO desde 29/09/2026: «all generation requests require an API key»
+    // (gen.pollinations.ai/docs). Continua a ser a via gratuita — o nível sem custo é o «Quest
+    // Pollen», que vem com a conta. O que não se faz aqui é cair para a chave PAGA da casa.
+    //
+    // Sem token nem se tenta: um pedido que se sabe que vai dar 401 só serve para gastar dois
+    // minutos de espera e devolver um erro que não diz o que fazer.
     const token = process.env.POLLINATIONS_TOKEN?.trim()
+    if (!token) {
+      throw new Error(
+        'falta o POLLINATIONS_TOKEN — a geração de imagens passou a exigir uma conta (continua sem custo: enter.pollinations.ai/keys)',
+      )
+    }
     const r = await fetch(url, {
       signal: ctrl.signal,
-      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+      headers: { Authorization: `Bearer ${token}` },
     })
     if (!r.ok) {
       // 402 MEDIDO A 29/09/2026, e é o que interessa contar aqui: a Pollinations deixou de servir
@@ -98,8 +111,10 @@ export async function gerarImagemGratis(p: PedidoGratis): Promise<ResultadoGrati
       throw new Error(
         r.status === 429
           ? 'o gerador gratuito está com muita gente agora — tenta daqui a um minuto'
-          : r.status === 402 || r.status === 401
-            ? 'o gerador gratuito deixou de aceitar pedidos anónimos (402) — precisa de um token da Pollinations configurado'
+          : r.status === 401
+            ? 'o POLLINATIONS_TOKEN foi recusado (401) — confirma que é a chave certa em enter.pollinations.ai/keys'
+            : r.status === 402
+              ? 'a conta da Pollinations ficou sem saldo (402) — o nível gratuito («Quest Pollen») esgotou-se'
             : `o gerador gratuito respondeu ${r.status}`,
       )
     }
