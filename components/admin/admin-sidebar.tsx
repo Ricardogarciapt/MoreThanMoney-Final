@@ -142,6 +142,9 @@ const GRUPOS: Grupo[] = [
       { tipo: "link", href: "/admin/broadcast", rotulo: "Email em massa", icone: Mail },
       { tipo: "link", href: "/admin/forms", rotulo: "Formulários", icone: Inbox },
       { tipo: "link", href: "/admin/coupons", rotulo: "Cupões de Oferta", icone: Ticket },
+      // Ao lado dos cupões de propósito: um cupão de âmbito marketplace desconta um produto
+      // daqui, e quem anda a criar campanhas mexe nos dois no mesmo minuto.
+      { tipo: "link", href: "/admin/centro?s=marketplace", rotulo: "Marketplace", icone: Store },
       { tipo: "link", href: "/admin/backoffice", rotulo: "MLM / Afiliados", icone: Network },
       // Desde 08/2026 esta página é só agentes, n8n e streaming — e a maior parte dos agentes
       // é de prospeção, setting e conteúdo. É aqui que pertence, não ao pé do Centro de comando.
