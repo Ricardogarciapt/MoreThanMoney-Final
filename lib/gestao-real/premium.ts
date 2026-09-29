@@ -90,6 +90,30 @@ export interface OperacoesPremium {
 export interface ConfigPremium {
   earlyBeRatio: number
   lockProfitPips: number
+  /**
+   * A tranca de lucro em FRACÇÃO DO RISCO da própria posição. Manda sobre `lockProfitPips` quando
+   * está posta e o risco é conhecido.
+   *
+   * PORQUÊ: `lockProfitPips` são 12 pips ABSOLUTOS. Num sinal com stop de 50 pips isso é 0,24R —
+   * defensável. Num sinal com stop de 100 pips é 0,12R, e a posição fica trancada em BE antes de
+   * o Exit 1 (que exige tocar o TP1, a ~2R) ter a mínima hipótese de disparar. É a razão estrutural
+   * dos «0 parciais em 27 trades» registados em lib/mestres/premium.ts. Um limiar absoluto não
+   * sobrevive à mudança do risco do sinal entre meses — a fracção sobrevive.
+   *
+   * null = fica o comportamento em pips (nada muda sem alguém escolher mudar).
+   */
+  lockProfitFracaoRisco: number | null
+  /**
+   * A PRIMEIRA PARCIAL em fracção do risco, em vez de esperar pelo TP1 do sinal.
+   *
+   * PORQUÊ: no histórico do Premium (226 trades acompanhadas, 25/08→29/09) o TP1 do sinal está a
+   * 2,0R (~100 pips) e só 19,9% das trades lá chegam. Descer a primeira parcial para ~0,4R (20 pips)
+   * vale +17,9 pips por trade (IC95 [12,9 · 22,9], emparelhado sobre as mesmas trades). Não torna a
+   * fonte lucrativa — corta a sangria para cerca de um terço.
+   *
+   * null = fica o TP1 do sinal (nada muda sem alguém escolher mudar).
+   */
+  primeiraParcialFracaoRisco: number | null
   beBufferPips: number
   trailingTempoReal: boolean
   /** A linha é da conta MESTRE (só aí se espelha aos subscritores). */
@@ -104,8 +128,20 @@ export function configPremiumDoAmbiente(env: Record<string, string | undefined> 
   return {
     earlyBeRatio: Number.isFinite(ratio) && ratio > 0 && ratio <= 2 ? ratio : 0.4,
     lockProfitPips: Number.isFinite(lock) && lock > 0 ? lock : 12,
+    lockProfitFracaoRisco: fraccaoValida(env.PREMIUM_LOCK_PROFIT_FRAC_RISCO),
+    primeiraParcialFracaoRisco: fraccaoValida(env.PREMIUM_PRIMEIRA_PARCIAL_FRAC_RISCO),
     beBufferPips: Number.isFinite(buf) && buf >= 0 ? buf : 5,
   }
+}
+
+/**
+ * Uma fracção do risco só vale entre 0 e 2R: abaixo de 0 não é um alvo e acima de 2R já está para
+ * lá do TP1 do sinal, onde a regra que a fracção existe para substituir volta a mandar. Fora disso
+ * (ou por escrever) devolve null, e quem lê fica com o comportamento em pips.
+ */
+function fraccaoValida(v: string | undefined): number | null {
+  const n = Number(v)
+  return Number.isFinite(n) && n > 0 && n <= 2 ? n : null
 }
 
 /** Quanto tempo depois do sinal uma posição sem comentário ainda conta como sendo dele. */
@@ -227,7 +263,14 @@ export async function gerirLinhaPremium(
       await ops.gravar({ peak_profit_pips: pico })
       row.peak_profit_pips = pico
     }
-    if (!row.profit_locked && ref > 0 && pico >= cfg.lockProfitPips) {
+    // O gatilho da tranca: fracção do risco quando está configurada E o risco é conhecido, senão
+    // os pips absolutos de sempre. Ver `lockProfitFracaoRisco` para o porquê.
+    const riscoPipsTranca = row.sl && row.sl > 0 && ref > 0 ? Math.abs(ref - row.sl) / pip : 0
+    const gatilhoTranca =
+      cfg.lockProfitFracaoRisco != null && riscoPipsTranca > 0
+        ? cfg.lockProfitFracaoRisco * riscoPipsTranca
+        : cfg.lockProfitPips
+    if (!row.profit_locked && ref > 0 && pico >= gatilhoTranca) {
       try {
         await ops.modificar(beTarget(ref, row.direction, row.symbol), undefined)
         await ops.gravar({ profit_locked: true })
@@ -300,14 +343,18 @@ export async function gerirLinhaPremium(
     row.exits_done === 0 &&
     !row.trailing_started &&
     !row.early_trail_started &&
-    row.entry && row.entry > 0 &&
+    precoDeReferencia(row, pos) > 0 &&
     row.sl && row.sl > 0
   ) {
     const pipSize = pipSizeFor(row.symbol)
-    const riskPips = Math.max(1, Math.round(Math.abs(row.entry - row.sl) / pipSize))
+    // Mesma correcção do BE do Exit 1: o risco e o lucro medem-se a partir do preenchimento real,
+    // não da ponta favorável da zona. Com a régua antiga, uma zona de 50 pips bastava para dizer
+    // «já estás +40 pips» quando a posição ainda estava a zero.
+    const refZona = precoDeReferencia(row, pos)
+    const riskPips = Math.max(1, Math.round(Math.abs(refZona - row.sl) / pipSize))
     const isWideZone = riskPips >= PREMIUM_WIDE_ZONE_SL_PIPS - 10
     if (isWideZone) {
-      const profitPips = (row.direction === 'buy' ? price - row.entry : row.entry - price) / pipSize
+      const profitPips = (row.direction === 'buy' ? price - refZona : refZona - price) / pipSize
       if (profitPips >= PREMIUM_WIDE_ZONE_TRAIL_ACTIVATION_PIPS) {
         try {
           const trailing = premiumTrailingAfterTp1Hit(riskPips)
@@ -333,7 +380,21 @@ export async function gerirLinhaPremium(
   const tpPrice = tps[nextLevel - 1]
   if (tpPrice == null || tpPrice <= 0) return actions
 
-  const hit = row.direction === 'buy' ? price >= tpPrice : price <= tpPrice
+  // ── PRIMEIRA PARCIAL EM FRACÇÃO DO RISCO ─────────────────────────────────────
+  // Só o Exit 1, e só quando encurta: o nível é o MAIS PRÓXIMO entre o TP1 do sinal e
+  // `fracção × risco`. Nunca adia uma parcial que o TP1 já teria dado — só a antecipa.
+  const refExit = precoDeReferencia(row, pos)
+  let nivelSaida = tpPrice
+  if (nextLevel === 1 && cfg.primeiraParcialFracaoRisco != null && refExit > 0 && row.sl && row.sl > 0) {
+    const risco = Math.abs(refExit - row.sl)
+    const alvoFrac =
+      row.direction === 'buy'
+        ? refExit + cfg.primeiraParcialFracaoRisco * risco
+        : refExit - cfg.primeiraParcialFracaoRisco * risco
+    nivelSaida = row.direction === 'buy' ? Math.min(tpPrice, alvoFrac) : Math.max(tpPrice, alvoFrac)
+  }
+
+  const hit = row.direction === 'buy' ? price >= nivelSaida : price <= nivelSaida
   if (!hit) return actions
 
   const currentVol = pos.volume ?? 0
@@ -400,16 +461,24 @@ export async function gerirLinhaPremium(
   if (closeAll && nextLevel >= 3) patch.status = 'closed'
 
   // Exit 1 → break-even + trailing ancorado ao risco (na % que fica a correr)
-  if (nextLevel === 1 && !row.trailing_started && row.entry && row.entry > 0 && !closeAll) {
+  // O BE do Exit 1 ancora-se no PREENCHIMENTO REAL, não em `row.entry`.
+  //
+  // PORQUÊ: `row.entry` é a ponta FAVORÁVEL da zona anunciada (signal-parser.ts:304-310 devolve o
+  // mínimo na compra e o máximo na venda), mas a ordem vai a mercado — o preenchimento real pode
+  // estar dezenas de pips do outro lado da zona (largura mediana ~50 pips). Ancorar o «break-even»
+  // na ponta favorável punha o stop ABAIXO do preço a que a posição realmente encheu: não era um
+  // break-even, era um stop em perda. Todo o resto desta função já usava `precoDeReferencia` — só
+  // este bloco (e o da zona larga) tinham ficado com a régua antiga.
+  if (nextLevel === 1 && !row.trailing_started && refExit > 0 && !closeAll) {
     try {
       const pipSize = pipSizeForSymbol(row.symbol)
       const riskPips =
-        row.entry && row.sl && row.sl > 0
-          ? Math.max(1, Math.round(Math.abs(row.entry - row.sl) / pipSize))
+        row.sl && row.sl > 0
+          ? Math.max(1, Math.round(Math.abs(refExit - row.sl) / pipSize))
           : null
       const trailing = premiumTrailingAfterTp1Hit(riskPips)
       const runnerTp = (row.tp3 && row.tp3 > 0 ? row.tp3 : null) ?? (row.tp2 && row.tp2 > 0 ? row.tp2 : null) ?? (row.tp1 && row.tp1 > 0 ? row.tp1 : null) ?? undefined
-      const beSl = beTarget(row.entry, row.direction, row.symbol)
+      const beSl = beTarget(refExit, row.direction, row.symbol)
       await ops.modificar(beSl, runnerTp, trailing)
       patch.trailing_started = true
       detail.push(`${row.symbol}: BE (+${cfg.beBufferPips}p) + trailing + TP runner (${runnerTp ?? '—'}) após Exit 1`)

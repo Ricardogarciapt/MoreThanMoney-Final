@@ -868,7 +868,11 @@ export async function POST(request: NextRequest) {
       : typeof senseiScoreRaw === "string" && senseiScoreRaw.trim() !== "" && !Number.isNaN(Number(senseiScoreRaw))
         ? Number(senseiScoreRaw)
         : null
-  const SENSEI_MIN_SCORE = Number(process.env.SENSEI_MIN_SCORE || 8)
+  // `Number("oito")` é NaN, e `score >= NaN` é SEMPRE falso: uma gralha nesta variável de ambiente
+  // bloqueava em silêncio TODAS as entradas do Sensei, sem erro nem registo. Um valor inválido
+  // volta ao mínimo de sempre em vez de fechar a porta.
+  const senseiMinScoreEnv = Number(process.env.SENSEI_MIN_SCORE)
+  const SENSEI_MIN_SCORE = Number.isFinite(senseiMinScoreEnv) ? senseiMinScoreEnv : 8
   // Só bloqueia se o score EXISTE e está abaixo do mínimo (score ausente = compat. c/ formatos antigos).
   const senseiScoreOk = !isSenseiScored || senseiScore == null || senseiScore >= SENSEI_MIN_SCORE
   const execGate =
@@ -1035,7 +1039,19 @@ export async function POST(request: NextRequest) {
         await supabase.from("sensei_trade_ideas").update({ provider_order_placed: true }).eq("id", savedIdea.id)
       }
     } catch (err) {
+      // O motivo tem de sobreviver à resposta HTTP — o mesmo raciocínio do lado da mestre (linha
+      // ~1006). Até aqui, uma entrada que rebentava na execução do provider só deixava rasto no
+      // log da Vercel: `tradingview_signals` ficava com o sinal recebido e sem explicação nenhuma
+      // para a ordem que nunca apareceu na conta.
       console.error("[tradingview-webhook] provider exec error:", err)
+      providerDetail = `erro na execução do provider: ${err instanceof Error ? err.message : String(err)}`
+      if (logId) {
+        await supabase
+          .from("tradingview_signals")
+          .update({ ai_error: providerDetail })
+          .eq("id", logId)
+          .then(() => undefined, () => undefined)
+      }
     }
     if (pendingIdeaId) await activateSenseiTradeIdea(supabase, pendingIdeaId, logId)
   }
