@@ -13,7 +13,7 @@
  * As passwords nascem cifradas (camposDeContaSimulada → credenciaisNovas) e NUNCA saem daqui: nem na
  * resposta, nem em logs, nem por email. Vêem-se no painel/admin com sessão.
  */
-import { ESTRATEGIAS_PRIMEVERSE } from './calculo'
+import { ESTRATEGIAS_PRIMEVERSE_VIVAS } from './calculo'
 
 /** = SERVIDOR_SIMULADO de ../simulado/motor (não importado para este ficheiro continuar puro nos testes). */
 const SERVIDOR_SIMULADO = 'MTM Funded'
@@ -27,7 +27,7 @@ export const ESTRATEGIAS_DO_DONO: Array<{ slug: string; nome: string }> = [
   { slug: 'sensei', nome: 'MTM Auto Sensei' },
   { slug: 'aurum-flow', nome: 'MTM Auto Aurum Flow' },
   { slug: 'Goldkiller', nome: 'MTM Auto GoldKiller' },
-  ...ESTRATEGIAS_PRIMEVERSE.map((e) => ({ slug: e.slug, nome: e.nome })),
+  ...ESTRATEGIAS_PRIMEVERSE_VIVAS.map((e) => ({ slug: e.slug, nome: e.nome })),
 ]
 
 export const ROTULO_TODOS = 'Todos os sinais'
@@ -75,7 +75,7 @@ export function planoContasDoDono(existentes: ContaExistente[]): { criar: ContaP
 
 /** As contas da casa que faltam (puro). `ligadas` = slug → funded_account_id já no provider. */
 export function planoContasCasa(ligadas: Record<string, string | null>): ContaPlaneada[] {
-  return ESTRATEGIAS_PRIMEVERSE.filter((e) => !ligadas[e.slug]).map((e) => ({
+  return ESTRATEGIAS_PRIMEVERSE_VIVAS.filter((e) => !ligadas[e.slug]).map((e) => ({
     papel: 'casa' as const, slug: e.slug, rotulo: `Casa · ${e.nome}`, saldo: SALDO_CASA, tipo: 'provider' as const,
     ligarNasApps: false, subscrever: false,
     colunas: { provider_slug: e.slug, segue_estrategia: null, aceita_t2t: false, sem_regras: true, conta_casa: true, recolhe_todos_sinais: false },

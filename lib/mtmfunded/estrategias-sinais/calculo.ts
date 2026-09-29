@@ -37,13 +37,27 @@ export interface EstrategiaPrimeverse {
   apelidos: string[]
   /** Comentário à MT5 das posições (≤ 31). */
   comentario: string
+  /**
+   * A estratégia ainda ABRE posições novas?
+   *
+   * A 29/09/2026 o dono ficou só com a Edge: a King e a Wolf saíram, e os providers delas estão
+   * desligados. Mas não se apagam da lista — quem tem uma posição antiga delas tem de a poder
+   * FECHAR, e o histórico tem de continuar a saber dizer o nome da estratégia que a abriu.
+   *
+   * Por isso a distinção: a lista conhece as três, e só as vivas é que se OFERECEM a quem cria
+   * uma conta. Ver `ESTRATEGIAS_PRIMEVERSE_VIVAS`.
+   */
+  viva: boolean
 }
 
 export const ESTRATEGIAS_PRIMEVERSE: EstrategiaPrimeverse[] = [
-  { slug: 'mtm-auto-edge', nome: 'MTM Auto Edge', trader: 'fxedge', apelidos: ['fx_edge', 'fx-edge'], comentario: 'MTM Auto Edge' },
-  { slug: 'mtm-auto-king', nome: 'MTM Auto King', trader: 'kingfkg', apelidos: ['kingfkge', 'king_fkg', 'king-fkg'], comentario: 'MTM Auto King' },
-  { slug: 'mtm-auto-wolf', nome: 'MTM Auto Wolf', trader: 'g_wolf', apelidos: ['gwolf', 'g-wolf', 'g.wolf'], comentario: 'MTM Auto Wolf' },
+  { slug: 'mtm-auto-edge', nome: 'MTM Auto Edge', trader: 'fxedge', apelidos: ['fx_edge', 'fx-edge'], comentario: 'MTM Auto Edge', viva: true },
+  { slug: 'mtm-auto-king', nome: 'MTM Auto King', trader: 'kingfkg', apelidos: ['kingfkge', 'king_fkg', 'king-fkg'], comentario: 'MTM Auto King', viva: false },
+  { slug: 'mtm-auto-wolf', nome: 'MTM Auto Wolf', trader: 'g_wolf', apelidos: ['gwolf', 'g-wolf', 'g.wolf'], comentario: 'MTM Auto Wolf', viva: false },
 ]
+
+/** As que ainda se OFEREM. É esta que a criação de contas usa — a de cima serve para LER. */
+export const ESTRATEGIAS_PRIMEVERSE_VIVAS = ESTRATEGIAS_PRIMEVERSE.filter((e) => e.viva)
 
 export function normalizarTrader(t: string | null | undefined): string {
   return String(t ?? '').replace(/[\u200b-\u200f\ufeff\u2060]/g, '').trim().toLowerCase()

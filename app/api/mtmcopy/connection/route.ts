@@ -6,6 +6,7 @@ import { deleteMetaApiAccount } from '@/lib/mtmcopy/metaapi-provision'
 import { juntarSaldosTradeLocker } from '@/lib/tradelocker/saldos'
 import { juntarSaldosMtmFunded } from '@/lib/mtmfunded/simulado/ligar-conta'
 import { ehMtmFundedLigacao } from '@/lib/mtmcopy/destino-execucao'
+import { T2T_SOURCES } from '@/lib/mtmcopy/t2t-source'
 import { removeProviderStrategy } from '@/lib/mtmcopy/copyfactory'
 import { verifyTelegramChannel } from '@/lib/mtmcopy/telegram-bot'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
@@ -250,7 +251,13 @@ export async function POST(request: NextRequest) {
 
   // Preferências do Tap to Trade: que FONTES / CLASSES de ativo seguir (arrays; []=seguir tudo) + risco.
   if (t2t_sources !== undefined) {
-    const allowed = ['premium', 'sensei', 'james', 'primeverse', 'aurum']
+    // A lista de fontes aceites SAI DO CATÁLOGO, não é escrita à mão aqui.
+    //
+    // Estava escrita à mão com cinco chaves enquanto `T2T_SOURCES` já tinha oito, e a diferença
+    // não dava erro: quem escolhesse GoldKiller, MTM Scanner ou Ideias de Forex via a escolha
+    // gravar-se e desaparecer em silêncio. Ler o catálogo faz com que acrescentar uma fonte lá
+    // baste — não há segunda lista para alguém se esquecer de actualizar.
+    const allowed = T2T_SOURCES.map((f) => f.key) as string[]
     payload.t2t_sources = Array.isArray(t2t_sources)
       ? t2t_sources.map((s) => String(s)).filter((s) => allowed.includes(s))
       : null

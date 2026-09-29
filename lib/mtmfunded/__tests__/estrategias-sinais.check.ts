@@ -196,13 +196,19 @@ const ZW = '\u200b'
     { id: 'x2', tipo: 'financiada', segue_estrategia: null, provider_slug: null, recolhe_todos_sinais: true },
     { id: 'x3', tipo: 'provider', segue_estrategia: 'mtm-auto-edge', provider_slug: 'mtm-auto-edge' },
   ])
-  eq('idempotente: GoldKiller (maiúsculas) e Todos já existem; mestre da casa não conta', [parcial.jaExistem.map((j) => j.id), parcial.criar.length], [['x1', 'x2'], 6])
+  // 6 → 4 a 29/09/2026: a King e a Wolf saíram e deixaram de se OFERECER a quem cria conta.
+  // Continuam na lista de leitura (`ESTRATEGIAS_PRIMEVERSE`) para se poderem fechar posições
+  // antigas — o que mudou foi só o que se propõe criar. Ver `fontes-e-estrategias-vivas.check.ts`.
+  eq('idempotente: GoldKiller (maiúsculas) e Todos já existem; mestre da casa não conta', [parcial.jaExistem.map((j) => j.id), parcial.criar.length], [['x1', 'x2'], 4])
   const t2t = ligacaoT2T('u', { id: 'f1', mt5_login: '77123456', saldo_inicial: 1000 }, 'MTM Funded · MTM Auto Edge')
   eq('ligação T2T cumpre a 074 (mtmfunded, funded_account_id, sem MetaApi, sem login MT5)', [t2t.mt5_platform, t2t.funded_account_id, t2t.metaapi_account_id, t2t.mt5_login, t2t.mt5_login_last4, t2t.t2t_enabled], ['mtmfunded', 'f1', null, null, '3456', true])
   const auto = contaMtmAuto('u', { id: 'f1', mt5_login: '77123456' }, 'MTM Funded · MTM Auto Edge')
   eq('conta MTM Auto cumpre a 074', [auto.plataforma, auto.funded_account_id, auto.metaapi_account_id], ['mtmfunded', 'f1', null])
   sim('nenhuma linha leva password', !JSON.stringify([t2t, auto, vazio]).match(/password|cifrada/i))
-  eq('casa: só as que não têm mestre, 10 000 USD tipo provider', planoContasCasa({ 'mtm-auto-edge': 'abc', 'mtm-auto-king': null }).map((c) => [c.slug, c.saldo, c.tipo]), [['mtm-auto-king', 10000, 'provider'], ['mtm-auto-wolf', 10000, 'provider']])
+  // Com a Edge já ligada não sobra nenhuma por criar: a King e a Wolf deixaram de ser vivas, e
+  // uma conta da casa para uma estratégia que não abre posições é uma conta que ninguém usa.
+  eq('casa: só as VIVAS que não têm mestre, 10 000 USD tipo provider', planoContasCasa({ 'mtm-auto-edge': 'abc', 'mtm-auto-king': null }).map((c) => [c.slug, c.saldo, c.tipo]), [])
+  eq('casa: a Edge por ligar é proposta', planoContasCasa({}).map((c) => [c.slug, c.saldo, c.tipo]), [['mtm-auto-edge', 10000, 'provider']])
 }
 
 // ── 8. equidade da casa ──────────────────────────────────────────────────────
