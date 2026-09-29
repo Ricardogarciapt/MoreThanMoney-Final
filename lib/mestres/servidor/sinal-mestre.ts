@@ -18,6 +18,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { abrirSinalNaConta, type ResultadoAbrir } from '@/lib/mtmfunded/estrategias-sinais/abrir'
 import { chaveDoSinal, configDoProvider, gestaoDoSinal, impressaoDoTrade, loteParaConta } from '@/lib/mtmfunded/estrategias-sinais/calculo'
+import { lerTravas, temTravas, travasDaMestre } from '@/lib/copia-contas/mestre-travas'
 import { lerConfigGlobal, lerEstrategiaMestre, type ModoEstrategia } from '../tipos'
 import { COMENTARIO_PREMIUM, SLUG_PREMIUM } from '../premium'
 
@@ -185,6 +186,57 @@ export async function encaminharSinalParaMestre(s: SinalWebhook): Promise<Result
       return { modo: est.sinalModo, substituiMt5: travarOrdemMt5('estrategia-inactiva', est.sinalModo), estrategia: est.slug, motivo }
     }
     const cfg = { ...configDoProvider(prov as Record<string, unknown>), ...(alvo.permitirDuplicado ? { permitirDuplicado: true } : {}) }
+
+    /**
+     * AS TRAVAS DA MESTRE (lib/copia-contas/mestre-travas.ts) — janela horária, fecho de fim de
+     * semana, bloqueio de notícias, drawdown do dia e margem livre.
+     *
+     * É AQUI e não em cada seguidor porque este é o único sítio por onde um sinal entra na conta
+     * mestre: travado aqui, nada sai para conta nenhuma — e a cadeia inteira pára sem se escrever
+     * uma linha em `mestres_contas`. Ver o cabeçalho de mestre-travas.ts para o porquê de não se
+     * bloquear cada seguidor à mão.
+     *
+     * `substituiMt5` fica TRUE, pela mesma razão do kill-switch e da estratégia inactiva: deixar a
+     * ordem seguir para a mestre MT5 fazia o espelho provider trazê-la de volta para a SIM, e a
+     * trava era contornada pelas traseiras. Entre «não abrir» e «abrir contra a regra que o gestor
+     * acabou de configurar», não abrir é o lado seguro — com o motivo gravado, para não ser silêncio.
+     *
+     * As travas só decidem ABRIR. Nada aqui toca em BE, trailing, parciais ou fechos do que já está
+     * aberto: parar a gestão de uma posição viva é pior do que o prejuízo que se queria travar.
+     */
+    const travas = lerTravas((prov as Record<string, unknown>).sinais_config)
+    if (temTravas(travas)) {
+      // `0` é um valor válido (margem usada zero é uma conta sem posições), por isso não se usa `||`.
+      const numOuNull = (v: unknown): number | null => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v))
+      // Só se vai à base buscar equity/margem quando há alguma trava ligada — isto corre no caminho
+      // quente do webhook, antes da ordem na mestre MT5.
+      const { data: mestreTravas } = await db.from('mtm_trading_accounts')
+        .select('sim_equity, sim_saldo, sim_margem, sim_ancora_dia').eq('id', est.contaMestreId).maybeSingle()
+      const equity = numOuNull(mestreTravas?.sim_equity) ?? numOuNull(mestreTravas?.sim_saldo)
+      const margemUsada = numOuNull(mestreTravas?.sim_margem)
+      const v = travasDaMestre(travas, {
+        agora: new Date(),
+        symbol: s.symbol,
+        /**
+         * SEM FONTE DE EVENTOS ECONÓMICOS no lado do site: o único calendário da casa é o CSV em UTC
+         * das EA MT5, que vive no terminal e não numa tabela. Com a lista vazia a trava das notícias
+         * nunca dispara — e é por isso que ela aparece marcada «NÃO APLICADO» no quadro branco
+         * (lib/copia-contas/mestre-controlos.ts). Preferiu-se passar aqui uma lista vazia, com a
+         * ligação já feita, a deixar a função de fora e dar a impressão de que só falta configurar.
+         */
+        eventos: [],
+        equity,
+        equityInicioDoDia: numOuNull(mestreTravas?.sim_ancora_dia),
+        // Margem LIVRE = equity − margem usada. A conta mestre é simulada, por isso os dois números
+        // vêm do motor simulado; sem um deles, `margemInsuficiente` não trava (é o desenho).
+        margemLivre: equity != null && margemUsada != null ? equity - margemUsada : null,
+      })
+      if (!v.podeAbrir) {
+        const motivo = `travas da mestre: ${v.motivo}`
+        await gravarNaoExecucao(motivo)
+        return { modo: est.sinalModo, substituiMt5: travarOrdemMt5('estrategia-inactiva', est.sinalModo), estrategia: est.slug, motivo }
+      }
+    }
 
     const contas = new Set<string>([est.contaMestreId])
     const { data: seguidoras } = await db.from('mtm_trading_accounts').select('id')

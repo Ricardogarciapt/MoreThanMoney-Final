@@ -34,6 +34,8 @@ import { sincronizarRotasDaEstrategia } from '@/lib/mestres/servidor/sincronizar
 import {
   montarCadeia, normalizarDisposicao, type Cadeia, type EstrategiaEntrada, type NomeConta, type RotaEntrada,
 } from '../cadeia'
+import { escreverTravas, lerTravas, temTravas, type TravasMestre } from '../mestre-travas'
+import { CHAVES_GESTAO, lerGestaoMestre, normalizarGestaoMestre, textoDaGestao } from '../mestre-gestao'
 import { lerRef } from '../regras'
 import { lerInterruptores } from './base'
 
@@ -52,7 +54,9 @@ const CANAL_DA_ESTRATEGIA = new Map(Object.entries(ESTRATEGIA_DO_CANAL).map(([ca
 async function lerCadeia(): Promise<CadeiaLida> {
   const [cfg, provs, ests, rotas, contasM, pulso, interruptores] = await Promise.all([
     ler(db().from('site_settings').select('value').eq('key', 'mestres_motor').maybeSingle()),
-    ler(db().from('mtmauto_providers').select('id, slug, nome, ativo, fonte_sinais, fonte_filtro, funded_account_id').is('apagado_em', null).limit(200)),
+    // `sinais_config` entra na leitura por causa das TRAVAS da mestre (sinais_config.travas): o nó do
+    // quadro edita-as, e quem as aplica é lib/mestres/servidor/sinal-mestre.ts.
+    ler(db().from('mtmauto_providers').select('id, slug, nome, ativo, fonte_sinais, fonte_filtro, funded_account_id, sinais_config').is('apagado_em', null).limit(200)),
     ler(db().from('mestres_estrategias').select('*').limit(200)),
     ler(db().from('copia_rotas').select('id, user_id, mestres, tipo_rota, estrategia_slug, origem_ref, origem_chave, destino_ref, destino_chave, rotulo, modo_lote, valor, ativa, estado, modo, pausada_motivo').neq('estado', 'recusada').limit(3000)),
     ler(db().from('mestres_contas').select('*').limit(2000)),
@@ -91,6 +95,8 @@ async function lerCadeia(): Promise<CadeiaLida> {
       canalChat: CANAL_DA_ESTRATEGIA.get(slug.toLowerCase()) ?? null,
       // Ids CopyFactory ainda por cortar: com eles, quem copia é a CopyFactory e não o nosso motor.
       copyfactoryPorCortar: mestre && !mestre.copyfactoryCortadoEm ? mestre.copyfactoryIds : [],
+      travas: lerTravas(p.sinais_config),
+      gestao: lerGestaoMestre(p.sinais_config),
       contaMestre: c
         ? {
             id: String(c.id), login: txt(c.mt5_login), etiqueta: etiqFunded.get(String(c.id)) ?? null,
@@ -289,6 +295,91 @@ async function ligarContaAuto(contaId: string, providerId: string, slug: string,
       ? `Subscrito a «${slug}» nesta conta, com aceitação automática.`
       : `Subscrito a «${slug}» nesta conta. SEM aceitação automática (auto_aceitar=false) — a rota do motor só nasce com ela ligada.`,
   }
+}
+
+/**
+ * AS TRAVAS DA MESTRE, gravadas no nó do quadro.
+ *
+ * Escreve-se em `mtmauto_providers.sinais_config.travas` e em mais nada. A chave `travas` é NOVA e
+ * vive ao lado da gestão que já lá está (`beFracaoDoRisco`, `trailingInicioPips`, `perfil`…): por
+ * isso faz-se merge do jsonb inteiro, nunca um `update` do objecto todo. Substituir `sinais_config`
+ * por `{ travas }` apagava a gestão das oito estratégias de uma vez — e a gestão é o que move o SL.
+ *
+ * Grava-se e RELÊ-SE. É o padrão da casa desde o `/messages` em branco (POST escrevia, GET não lia):
+ * «gravado» sem releitura é uma promessa, não um facto — e numa trava de segurança a diferença entre
+ * as duas é o prejuízo que ela devia ter travado.
+ */
+export async function guardarTravas(
+  adminId: string,
+  p: { slug: string; travas: TravasMestre; gestao?: Record<string, unknown> },
+): Promise<Resposta> {
+  let r: Resposta
+  try {
+    const { data: prov, error } = await db().from('mtmauto_providers')
+      .select('id, slug, sinais_config').ilike('slug', p.slug).is('apagado_em', null).maybeSingle()
+    if (error || !prov) {
+      r = { ok: false, status: 404, mensagem: error?.message ?? `Estratégia «${p.slug}» não existe (ou está apagada).` }
+    } else {
+      const antes = (prov.sinais_config && typeof prov.sinais_config === 'object' ? prov.sinais_config : {}) as Record<string, unknown>
+      const escritas = escreverTravas(p.travas)
+      // Sem travas nenhumas, a chave SAI do jsonb em vez de ficar `{}` — um objecto vazio lia-se como
+      // «configurado a zero» e é outra coisa.
+      const depois = { ...antes }
+      if (Object.keys(escritas).length) depois.travas = escritas
+      else delete depois.travas
+
+      /**
+       * As automações de saída. `normalizarGestaoMestre` devolve as cinco chaves JÁ resolvidas contra
+       * o que estava, por isso apagam-se as cinco antigas antes de as pôr — senão desligar uma regra
+       * (enviar vazio) deixava a chave velha no jsonb e o motor continuava a honrá-la.
+       */
+      const gestao = p.gestao ? normalizarGestaoMestre(p.gestao, antes) : null
+      if (gestao && !gestao.ok) {
+        const erros = gestao.erros.map((e) => e.erro).join(' · ')
+        await registarAuditoria({ adminId, acao: 'cadeia:travas', alvo: p.slug, pedido: p, resultado: { erros }, ok: false })
+        return { ok: false, status: 400, mensagem: erros }
+      }
+      if (gestao?.ok) {
+        for (const k of [...CHAVES_GESTAO, 'semTrailing']) delete depois[k]
+        Object.assign(depois, gestao.chaves)
+      }
+
+      const { error: eUp } = await db().from('mtmauto_providers')
+        .update({ sinais_config: depois, updated_at: new Date().toISOString() }).eq('id', prov.id)
+      if (eUp) {
+        r = { ok: false, status: 409, mensagem: `A base recusou: ${eUp.message}` }
+      } else {
+        const { data: relida } = await db().from('mtmauto_providers').select('sinais_config').eq('id', prov.id).maybeSingle()
+        const agora = lerTravas(relida?.sinais_config)
+        /**
+         * A releitura confirma que o resto do `sinais_config` sobreviveu. As chaves que ESTE pedido
+         * podia mexer saem da comparação — senão desligar uma regra de propósito dava um falso alarme.
+         */
+        const tocaveis = new Set<string>([...CHAVES_GESTAO, 'semTrailing', 'travas'])
+        const relidoObj = (relida?.sinais_config ?? {}) as Record<string, unknown>
+        const restoIntacto = Object.keys(antes).filter((k) => !tocaveis.has(k)).every((k) => k in relidoObj)
+        r = !restoIntacto
+          ? { ok: false, status: 500, mensagem: 'Gravou, mas a releitura mostra que outra configuração da estratégia desapareceu do sinais_config — CONFIRMAR NA BASE antes de deixar esta mestre emitir.' }
+          : {
+              ok: true,
+              status: 200,
+              // A mensagem DIZ o que ficou, nos dois grupos. «Gravado» sem o valor não se confirma.
+              mensagem: [
+                temTravas(agora)
+                  ? `Travas de «${prov.slug}» gravadas — aplicadas por lib/mestres/servidor/sinal-mestre.ts no sinal seguinte, e só em ABERTURAS (o BE, o trailing e os fechos do que já está aberto passam sempre).`
+                  : `«${prov.slug}» fica SEM travas de raiz: nada impede a mestre de emitir fora de horas, em cima de uma notícia ou já a perder o dia.`,
+                `Saídas: ${textoDaGestao(lerGestaoMestre(relidoObj))}.`,
+              ].join(' '),
+              detalhe: { travas: agora, gestao: lerGestaoMestre(relidoObj) },
+            }
+      }
+    }
+  } catch (e) {
+    r = { ok: false, status: 500, mensagem: e instanceof Error ? e.message : String(e) }
+  }
+  esquecerCache(CHAVE_CACHE_CADEIA)
+  await registarAuditoria({ adminId, acao: 'cadeia:travas', alvo: p.slug, pedido: p, resultado: r, ok: r.ok })
+  return r
 }
 
 /** Arrastar = ligar à nova ANTES de desligar da antiga (nunca há um instante sem quem feche). */

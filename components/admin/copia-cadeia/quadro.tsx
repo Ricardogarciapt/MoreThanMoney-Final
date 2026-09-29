@@ -25,7 +25,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { accoesDoArrasto, podeLigar, type Cadeia, type NoEstrategia, type SubscritorCadeia } from "@/lib/copia-contas/cadeia"
 import { Aviso, Botao, Campo, Gaveta, Pilula, fmtNum, pedirCentro } from "../centro/ui"
+import MestreEditor from "./mestre-editor"
 import { MarcaProveniencia, PctLinhaDeAgua } from "../centro/linha-de-agua"
+
+/**
+ * A ORIGEM de cada conta, pelo prefixo da `ref` — é o que interliga o quadro ao resto da casa.
+ *
+ * As quatro superfícies escrevem na MESMA cadeia e o gestor tem de saber por qual delas a pessoa
+ * entrou: `site:` é a ligação do site (e é também por ela que o Tap to Trade abre), `auto:` é uma
+ * conta da app MTM Auto, `wt:` é o WebTrader, `funded:` é uma conta MTM Funded. A mesma pessoa pode
+ * ter contas em várias, e vê-las misturadas sem etiqueta era o que fazia parecer que havia contas
+ * duplicadas quando não havia.
+ */
+const ORIGEM: Record<string, { curto: string; nome: string; cor: string }> = {
+  site: { curto: "Site", nome: "Ligação do site (MTM Copy / Tap to Trade)", cor: "text-sky-300/80" },
+  auto: { curto: "Auto", nome: "Conta da app MTM Auto", cor: "text-emerald-300/80" },
+  wt: { curto: "WT", nome: "Conta do WebTrader", cor: "text-violet-300/80" },
+  funded: { curto: "Funded", nome: "Conta MTM Funded", cor: "text-amber-300/80" },
+  prov: { curto: "Mestre", nome: "Conta mestre de uma estratégia", cor: "text-[#D2A63C]" },
+}
+
+const origemDaRef = (ref: string) => ORIGEM[String(ref).split(":")[0]?.toLowerCase() ?? ""] ?? null
 
 const LARGURA_NO = 280
 const ESPACO_X = 320
@@ -44,7 +64,7 @@ export default function QuadroCadeia({ c, recarregar }: { c: Cadeia; recarregar:
   const [mensagem, setMensagem] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [aGravar, setAGravar] = useState(false)
-  const [gaveta, setGaveta] = useState<null | { tipo: "adicionar"; slug: string } | { tipo: "contas" }>(null)
+  const [gaveta, setGaveta] = useState<null | { tipo: "adicionar"; slug: string } | { tipo: "contas" } | { tipo: "mestre"; slug: string }>(null)
   const arrasto = useRef<null | { chave: string; dx: number; dy: number }>(null)
   const tela = useRef<HTMLDivElement>(null)
 
@@ -61,6 +81,37 @@ export default function QuadroCadeia({ c, recarregar }: { c: Cadeia; recarregar:
   }, [c.estrategias, colunas])
 
   const porChave = useMemo(() => new Map(c.estrategias.map((n) => [n.chave, n])), [c.estrategias])
+
+  /**
+   * A MESMA CONTA em vários nós. `strategy_lots` é um mapa, não uma escolha única: uma conta pode
+   * seguir o Sensei e o GoldKiller ao mesmo tempo (é o que a tecla Alt faz). Sem isto desenhado, o
+   * gestor vê a conta duas vezes e não sabe se é a mesma — e é a mesma, com a MESMA exposição, que é
+   * exactamente o que os limites de `mestres_contas` somam.
+   */
+  const nosPorConta = useMemo(() => {
+    const m = new Map<string, string[]>()
+    for (const n of c.estrategias) {
+      for (const s of n.subscritores) m.set(s.chave, [...(m.get(s.chave) ?? []), n.chave])
+    }
+    return m
+  }, [c.estrategias])
+
+  /** Os pares de nós ligados pela mesma conta — as linhas que se desenham por baixo das caixas. */
+  const lacos = useMemo(() => {
+    const out: { de: string; para: string; contas: number }[] = []
+    const pares = new Map<string, number>()
+    for (const nos of nosPorConta.values()) {
+      if (nos.length < 2) continue
+      for (let i = 0; i < nos.length; i++) {
+        for (let j = i + 1; j < nos.length; j++) {
+          const k = [nos[i], nos[j]].sort().join("|")
+          pares.set(k, (pares.get(k) ?? 0) + 1)
+        }
+      }
+    }
+    for (const [k, contas] of pares) { const [de, para] = k.split("|"); out.push({ de, para, contas }) }
+    return out
+  }, [nosPorConta])
 
   const aoMover = useCallback((e: MouseEvent) => {
     const a = arrasto.current
@@ -129,6 +180,9 @@ export default function QuadroCadeia({ c, recarregar }: { c: Cadeia; recarregar:
           para o mudar de cópia — isso escreve na base. Com <kbd className="rounded bg-white/10 px-1">Alt</kbd> ele passa a
           seguir as duas. O <span className="text-zinc-300">✕</span> no cartão tira-o desta estratégia,
           e <span className="text-zinc-300">+ adicionar subscritor</span> escolhe uma conta já existente.
+          <span className="text-zinc-300"> regras…</span> abre as travas da Conta Mestre.
+          As linhas tracejadas ligam estratégias que <strong>partilham contas</strong> — a mesma exposição, somada uma só vez pelos
+          limites de <code>mestres_contas</code>.
         </p>
         <div className="ml-auto flex gap-2">
           <Botao onClick={() => setGaveta({ tipo: "contas" })}>Criar contas…</Botao>
@@ -142,6 +196,33 @@ export default function QuadroCadeia({ c, recarregar }: { c: Cadeia; recarregar:
 
       <div ref={tela} className="relative h-[70vh] min-h-[520px] w-full overflow-auto rounded-xl border border-white/[0.07] bg-[radial-gradient(circle,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:24px_24px]">
         <div className="relative" style={{ width: Math.max(1200, colunas * ESPACO_X + 80), height: Math.max(700, Math.ceil(c.estrategias.length / colunas) * ESPACO_Y + 80) }}>
+          {/*
+            AS LINHAS entre estratégias que partilham contas. `pointer-events-none` de propósito: a
+            linha é informação, não um alvo — arrastar tem de continuar a apanhar a caixa que está por
+            cima dela. Fica por baixo (sem z-index) para nunca tapar um cartão.
+          */}
+          {lacos.length > 0 && (
+            <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
+              {lacos.map((l) => {
+                const a = pos[l.de]
+                const b = pos[l.para]
+                if (!a || !b) return null
+                const x1 = a.x + LARGURA_NO / 2
+                const x2 = b.x + LARGURA_NO / 2
+                return (
+                  <g key={`${l.de}|${l.para}`}>
+                    <line
+                      x1={x1} y1={a.y + 40} x2={x2} y2={b.y + 40}
+                      stroke="#D2A63C" strokeOpacity={0.28} strokeWidth={1 + Math.min(3, l.contas)} strokeDasharray="5 4"
+                    />
+                    <text x={(x1 + x2) / 2} y={(a.y + b.y) / 2 + 36} fill="#D2A63C" fillOpacity={0.55} fontSize={9.5} textAnchor="middle">
+                      {l.contas} conta{l.contas > 1 ? "s" : ""} em comum
+                    </text>
+                  </g>
+                )
+              })}
+            </svg>
+          )}
           {c.estrategias.map((n) => {
             const p = pos[n.chave] ?? { x: 24, y: 24 }
             return (
@@ -174,15 +255,37 @@ export default function QuadroCadeia({ c, recarregar }: { c: Cadeia; recarregar:
                     </p>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-1 px-2 py-1">
+                <div className="flex flex-wrap items-center gap-1 px-2 py-1">
                   <Pilula tom={n.modoPedido === "live" ? "grave" : n.modoPedido === "sombra" ? "info" : "neutro"}>cópia {n.modoPedido}</Pilula>
                   <Pilula tom={n.t2tModo === "live" ? "grave" : n.t2tModo === "sombra" ? "info" : "neutro"}>T2T {n.t2tModo}</Pilula>
                   {!n.ativo && <Pilula tom="neutro">inactivo</Pilula>}
+                  {/* As travas de RAIZ, na barra: uma mestre sem elas não protege a cadeia, e isso
+                      tem de se ver sem abrir nada. Ver lib/copia-contas/mestre-travas.ts. */}
+                  <Pilula tom={n.comTravas ? "ok" : "aviso"} title={n.comTravas ? "A mestre tem travas de raiz configuradas." : "Nada impede esta mestre de emitir fora de horas, em cima de uma notícia ou já a perder o dia."}>
+                    {n.comTravas ? "com travas" : "sem travas"}
+                  </Pilula>
+                  <button
+                    type="button"
+                    onClick={() => setGaveta({ tipo: "mestre", slug: n.slug })}
+                    title="Editar as regras da Conta Mestre (saídas, horários, risco de raiz)"
+                    className="ml-auto rounded border border-white/10 px-1.5 py-0.5 text-[10px] text-zinc-400 hover:border-[#D2A63C]/40 hover:text-[#E9C46A]"
+                  >
+                    regras…
+                  </button>
                 </div>
+                {/* O resumo das saídas em texto: «BE a 1,25× · trailing a 2×». Sem isto o gestor tinha
+                    de abrir os oito nós para saber qual deles gere as trades e qual as deixa correr. */}
+                <p className="truncate px-2 pb-1 font-mono text-[10px] text-zinc-500" title={n.gestaoTexto}>{n.gestaoTexto}</p>
                 <div className="max-h-[240px] overflow-y-auto border-t border-white/[0.06]">
                   {n.subscritores.length === 0
                     ? <p className="px-2 py-2 text-[11px] text-zinc-600">Larga aqui uma conta.</p>
-                    : n.subscritores.map((s) => <Cartao key={s.rotaId} s={s} slug={n.slug} desligar={() => void desligar(n.slug, s)} />)}
+                    : n.subscritores.map((s) => (
+                      <Cartao
+                        key={s.rotaId} s={s} slug={n.slug}
+                        noutras={(nosPorConta.get(s.chave)?.length ?? 1) - 1}
+                        desligar={() => void desligar(n.slug, s)}
+                      />
+                    ))}
                 </div>
                 <button
                   type="button"
@@ -198,12 +301,17 @@ export default function QuadroCadeia({ c, recarregar }: { c: Cadeia; recarregar:
       </div>
 
       {gaveta?.tipo === "adicionar" && <GavetaAdicionar slug={gaveta.slug} fechar={() => setGaveta(null)} feito={() => { setGaveta(null); recarregar() }} />}
+      {gaveta?.tipo === "mestre" && (() => {
+        const n = porChave.get(`estrategia:${gaveta.slug}`)
+        return n ? <MestreEditor no={n} fechar={() => setGaveta(null)} feito={() => recarregar()} /> : null
+      })()}
       {gaveta?.tipo === "contas" && <GavetaCriarContas estrategias={c.estrategias} fechar={() => setGaveta(null)} feito={() => { setGaveta(null); recarregar() }} />}
     </div>
   )
 }
 
-function Cartao({ s, slug, desligar }: { s: SubscritorCadeia; slug: string; desligar: () => void }) {
+function Cartao({ s, slug, desligar, noutras = 0 }: { s: SubscritorCadeia; slug: string; desligar: () => void; noutras?: number }) {
+  const origem = origemDaRef(s.ref)
   return (
     <div
       draggable
@@ -214,7 +322,13 @@ function Cartao({ s, slug, desligar }: { s: SubscritorCadeia; slug: string; desl
       <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.efectivo === "live" ? "#f87171" : s.efectivo === "sombra" ? "#60a5fa" : "#52525b" }} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[11.5px] text-zinc-200">{s.etiqueta ?? s.email ?? s.ref}</p>
-        <p className="truncate text-[10px] text-zinc-500">{s.lote}{s.tipo === "t2t" && " · T2T"}{s.abertas > 0 && ` · ${s.abertas} aberta(s)`}{s.pausadaMotivo && " · pausada"}</p>
+        <p className="truncate text-[10px] text-zinc-500">
+          {/* Por QUAL superfície é que esta conta entrou na cadeia: sem isto, uma conta do WebTrader e
+              uma da app MTM Auto são duas linhas iguais e a mesma pessoa parece estar duplicada. */}
+          {origem && <span className={origem.cor} title={origem.nome}>{origem.curto}</span>}
+          {origem && " · "}{s.lote}{s.tipo === "t2t" && " · T2T"}{s.abertas > 0 && ` · ${s.abertas} aberta(s)`}{s.pausadaMotivo && " · pausada"}
+          {noutras > 0 && <span className="text-[#D2A63C]/70" title="A mesma conta segue mais do que uma estratégia (strategy_lots aceita várias).">{` · +${noutras}`}</span>}
+        </p>
       </div>
       <button
         type="button"

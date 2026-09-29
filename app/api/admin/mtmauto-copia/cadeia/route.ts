@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { soAdmin } from '@/lib/copia-contas/servidor/guarda'
 import {
-  carregarCadeia, criarContasDoQuadro, guardarDisposicao, ligarSubscritor, moverSubscritor,
+  carregarCadeia, criarContasDoQuadro, guardarDisposicao, guardarTravas, ligarSubscritor, moverSubscritor,
 } from '@/lib/copia-contas/servidor/cadeia'
+import { lerTravas } from '@/lib/copia-contas/mestre-travas'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -53,6 +54,29 @@ export const POST = soAdmin(async (adminId: string, req: NextRequest) => {
       if (!SLUG.test(de) || !SLUG.test(para)) return NextResponse.json({ error: 'slug inválido' }, { status: 400 })
       if (de.toLowerCase() === para.toLowerCase()) return NextResponse.json({ error: 'a origem e o destino são a mesma estratégia' }, { status: 400 })
       const r = await moverSubscritor(adminId, { ref, de, para })
+      return NextResponse.json(r, { status: r.status })
+    }
+    /**
+     * As TRAVAS de segurança da mestre. O corpo vem como o jsonb que se vai gravar, e é
+     * `lerTravas` — a MESMA função que o motor corre — que o normaliza. Validar aqui com uma segunda
+     * regra era garantir que o painel e o motor discordavam um dia: uma trava que o painel aceita e
+     * o motor lê como desligada é pior do que uma recusa.
+     */
+    case 'travas': {
+      if (!SLUG.test(slug)) return NextResponse.json({ error: 'slug inválido' }, { status: 400 })
+      const travas = lerTravas({ travas: c.travas })
+      // Limites de sanidade sobre o que já foi normalizado: um drawdown de 90 % não é uma trava, e
+      // uma janela de notícias de um dia inteiro pára a estratégia sem o dizer.
+      if (travas.maxDdDiarioPct != null && travas.maxDdDiarioPct > 50) {
+        return NextResponse.json({ error: 'o drawdown diário máximo tem de ficar em 50 % ou abaixo' }, { status: 400 })
+      }
+      if (travas.margemLivreMinPct != null && travas.margemLivreMinPct > 95) {
+        return NextResponse.json({ error: 'a margem livre mínima tem de ficar em 95 % ou abaixo' }, { status: 400 })
+      }
+      if (travas.noticias && travas.noticias.minutosAntes + travas.noticias.minutosDepois > 480) {
+        return NextResponse.json({ error: 'a janela de notícias não pode passar de 8 h no total' }, { status: 400 })
+      }
+      const r = await guardarTravas(adminId, { slug, travas })
       return NextResponse.json(r, { status: r.status })
     }
     case 'criar-contas': {

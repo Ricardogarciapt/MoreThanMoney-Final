@@ -35,6 +35,8 @@
  */
 import type { LinhaDeAgua } from '../admin-centro/linha-de-agua'
 import { decidirModo } from '../mestres/decisao'
+import { SEM_TRAVAS, temTravas, type TravasMestre } from './mestre-travas'
+import { GESTAO_VAZIA, textoDaGestao, type GestaoMestre } from './mestre-gestao'
 import type { ConfigGlobalMestres, ContaMestres, EstrategiaMestre, ModoDecidido } from '../mestres/tipos'
 import { contaPorOmissao } from '../mestres/tipos'
 import { modoEfectivo, type Interruptores } from './regras'
@@ -58,6 +60,16 @@ export interface EstrategiaEntrada {
   canalChat: string | null
   /** Ids CopyFactory ainda por cortar → quem copia hoje é a CopyFactory, não o nosso motor. */
   copyfactoryPorCortar: string[]
+  /**
+   * As travas de segurança da mestre (`sinais_config.travas`), para o quadro as poder EDITAR no nó
+   * em vez de mandar o gestor a outro ecrã. Quem as aplica é `lib/mestres/servidor/sinal-mestre.ts`.
+   *
+   * Opcional porque uma estratégia sem a chave no jsonb é o caso NORMAL (era o de todas a 29/09) —
+   * e omitir tem de valer «sem travas», nunca um erro de leitura.
+   */
+  travas?: TravasMestre
+  /** As automações de saída lidas do mesmo jsonb (só as cinco que têm motor). */
+  gestao?: GestaoMestre
   /**
    * A conta mestre (mtm_trading_accounts), para a mostrar no TOPO da coluna — porque a mestre é a
    * estratégia, não uma conta a mais. Traz a linha de partida e a proveniência: sem elas o «10 250»
@@ -162,6 +174,14 @@ export interface NoEstrategia {
   /** quem executa esta estratégia HOJE */
   executor: Executor
   executorNota: string
+  /** As travas de segurança desta mestre, como estão gravadas (o editor do nó parte delas). */
+  travas: TravasMestre
+  /** Alguma trava configurada? O nó mostra-o na barra: uma mestre sem travas não protege nada. */
+  comTravas: boolean
+  /** As automações de saída desta mestre, como estão gravadas. */
+  gestao: GestaoMestre
+  /** «BE a 1,25× · trailing a 2×» — o resumo que cabe na barra do nó. */
+  gestaoTexto: string
   /** o modo pedido (mestres_estrategias.modo) — não é o mesmo que o efectivo de cada rota */
   modoPedido: EstrategiaMestre['modo'] | 'sem-mestre'
   t2tModo: EstrategiaMestre['t2tModo'] | 'sem-mestre'
@@ -292,6 +312,10 @@ export function montarCadeia(e: EntradaCadeia): Cadeia {
       fonteFiltro: x.fonteFiltro,
       canalChat: x.canalChat,
       contaMestre: x.contaMestre,
+      travas: x.travas ?? SEM_TRAVAS,
+      comTravas: temTravas(x.travas ?? SEM_TRAVAS),
+      gestao: x.gestao ?? GESTAO_VAZIA,
+      gestaoTexto: textoDaGestao(x.gestao ?? GESTAO_VAZIA),
       executor: ex.executor,
       executorNota: ex.nota,
       modoPedido: x.mestre?.modo ?? 'sem-mestre',
@@ -315,6 +339,15 @@ export function montarCadeia(e: EntradaCadeia): Cadeia {
   for (const n of estrategias) {
     if (n.modoPedido === 'live' && n.contagem.total > 0 && n.contagem.live === 0) {
       avisos.push(`${n.slug} está pedida em LIVE mas nenhuma das ${n.contagem.total} rotas executa — ver o motivo em cada subscritor.`)
+    }
+    /**
+     * Uma mestre a emitir para contas em live SEM UMA ÚNICA TRAVA na raiz. Não é um erro de
+     * configuração — é o estado em que as oito estratégias estavam a 29/09 — mas tem de estar dito
+     * em voz alta: nada impede esta mestre de emitir em cima de uma notícia, à sexta à noite, ou já
+     * a perder o dia, e o que ela emitir vai para todas as contas que a seguem.
+     */
+    if (!n.comTravas && n.contagem.live > 0) {
+      avisos.push(`${n.slug} emite para ${n.contagem.live} conta(s) em LIVE sem nenhuma trava de raiz (janela, fim de semana, drawdown do dia, margem). Editar no nó da mestre, no quadro.`)
     }
   }
 

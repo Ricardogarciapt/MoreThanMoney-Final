@@ -81,7 +81,14 @@ function Coluna({ n }: { n: NoEstrategia }) {
         <div className="mt-1.5 flex flex-wrap gap-1">
           <Pilula tom={n.modoPedido === "live" ? "grave" : n.modoPedido === "sombra" ? "info" : "neutro"}>cópia {n.modoPedido}</Pilula>
           <Pilula tom={n.t2tModo === "live" ? "grave" : n.t2tModo === "sombra" ? "info" : "neutro"}>T2T {n.t2tModo}</Pilula>
+          {/* As travas de RAIZ também aparecem na LISTA, não só no quadro: quem só abre esta vista
+              tem de ver que a mestre emite sem nenhuma protecção, sem ter de trocar de separador. */}
+          <Pilula tom={n.comTravas ? "ok" : "aviso"} title={n.comTravas ? "A mestre tem travas de raiz (janela, fim de semana, drawdown do dia, margem)." : "Nada impede esta mestre de emitir fora de horas, em cima de uma notícia ou já a perder o dia. Editar no separador Quadro → regras…"}>
+            {n.comTravas ? "com travas" : "sem travas"}
+          </Pilula>
         </div>
+        {/* «BE a 1,25× · trailing arranca a 2× e segue a 1,25×» — as automações de saída em texto. */}
+        <p className="mt-1 truncate font-mono text-[10px] text-zinc-500" title={n.gestaoTexto}>{n.gestaoTexto}</p>
       </div>
 
       {/* 3. OS SUBSCRITORES — quem copia. */}
