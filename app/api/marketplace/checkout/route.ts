@@ -42,8 +42,13 @@ import { buildStripeReturnUrl } from '@/lib/site-url'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { donoValido, modoStripe, podeComprarAqui, precoEfectivo } from '@/lib/marketplace/regras'
+import {
+  AMBITO_MARKETPLACE, TEXTO_RECUSA, descontoQueVale, normalizarCodigo, validarCupao,
+} from '@/lib/marketplace/cupoes'
+import { TEXTO_REFERRAL } from '@/lib/marketplace/referral'
+import { validarReferralParaCompra } from '@/lib/marketplace/referral-servidor'
 import { lerDefinicoes, lerVendedor, pctDoProduto } from '@/lib/marketplace/servidor'
-import { cupaoDaCampanha } from '@/lib/marketplace/stripe-preco'
+import { cupaoDaCampanha, cupaoStripeDePercentagem } from '@/lib/marketplace/stripe-preco'
 import { registarPasso } from '@/lib/marketplace/leads'
 import { sessaoDoMembro } from '@/lib/marketplace/sessao'
 
@@ -95,8 +100,11 @@ export async function POST(request: NextRequest) {
     const sessao = await sessaoDoMembro(request)
     if (!sessao) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })
 
-    const { produtoId } = await request.json().catch(() => ({ produtoId: null }))
+    const corpo = await request.json().catch(() => ({}))
+    const produtoId = corpo?.produtoId ?? null
     if (!produtoId) return NextResponse.json({ error: 'produtoId é obrigatório' }, { status: 400 })
+    const codigoCupao = normalizarCodigo(corpo?.cupao)
+    const codigoReferral = String(corpo?.referral ?? '').trim()
 
     const db = getSupabaseAdmin()
     const { data: lido } = await db
@@ -156,10 +164,82 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const agora = new Date().toISOString()
+
     // O MESMO cálculo que a montra usou para desenhar o preço. Se isto divergisse do cartão, o
     // cliente via um número e pagava outro.
-    const preco = precoEfectivo(produto, new Date().toISOString(), sessao.perfil)
-    const cupao = preco.emCampanha ? await cupaoDaCampanha(produto) : null
+    const preco = precoEfectivo(produto, agora, sessao.perfil)
+
+    // ── O cupão ───────────────────────────────────────────────────────────────────────────
+    //
+    // Validado ANTES de cobrar. Um código errado tem de ser dito — se falhasse em silêncio, a
+    // pessoa pagava o preço inteiro convencida de que o desconto se aplicou.
+    let cupaoValidado: { pct: number; cupaoId: string; codigo: string } | null = null
+    if (codigoCupao) {
+      const { data: linha } = await db
+        .from('coupons')
+        .select('id, code, type, discount_value, plan_override, max_uses, valid_from, valid_until, is_active, grant_days, grants_vip, marketplace_produto_id, marketplace_educator_id, criado_por_educador')
+        .eq('code', codigoCupao)
+        .maybeSingle()
+
+      // O consumo conta-se em `coupon_usages` e NUNCA em `coupons.used_count`: esse contador está
+      // partido desde 25/09 (nunca foi incrementado) e um limite que nunca dispara não é um limite.
+      const [{ count: usos }, { data: meu }] = await Promise.all([
+        linha?.id
+          ? db.from('coupon_usages').select('id', { count: 'exact', head: true }).eq('coupon_id', linha.id)
+          : Promise.resolve({ count: 0 } as { count: number | null }),
+        linha?.id
+          ? db.from('coupon_usages').select('id').eq('coupon_id', linha.id).eq('user_id', sessao.userId).maybeSingle()
+          : Promise.resolve({ data: null } as { data: { id: string } | null }),
+      ])
+
+      const v = validarCupao({
+        cupao: linha,
+        produto,
+        agoraIso: agora,
+        usosFeitos: usos ?? 0,
+        jaUsadoPorEstaPessoa: Boolean(meu?.id),
+      })
+      if (!v.ok) {
+        return NextResponse.json(
+          { error: TEXTO_RECUSA[v.motivo], code: `cupao_${v.motivo}`, campo: 'cupao' },
+          { status: 400 },
+        )
+      }
+      cupaoValidado = { pct: v.pct, cupaoId: v.cupaoId, codigo: codigoCupao }
+    }
+
+    // Campanha e cupão NÃO se somam: vale o maior. Ver `descontoQueVale`.
+    const desconto = descontoQueVale({ campanhaPct: preco.descontoPct, cupao: cupaoValidado })
+    const precoFinalCents = Math.max(0, preco.baseCents - Math.floor((preco.baseCents * desconto.pct) / 100))
+
+    // ── Quem indicou ──────────────────────────────────────────────────────────────────────
+    let referralId: string | null = null
+    if (codigoReferral) {
+      const r = await validarReferralParaCompra({
+        codigo: codigoReferral,
+        compradorId: sessao.userId,
+        educatorIdDoProduto: produto.educator_id,
+        db,
+      })
+      if (!r.ok) {
+        // Recusa explícita, incluindo o caso «este código é do autor do produto». O dono decidiu:
+        // o educador não pode ser referral de si próprio, e a compra NÃO avança em silêncio com a
+        // comissão a zero — quem compra tem de saber que o código não se aplicou.
+        return NextResponse.json(
+          { error: TEXTO_REFERRAL[r.motivo], code: `referral_${r.motivo}`, campo: 'referral' },
+          { status: 400 },
+        )
+      }
+      referralId = r.userId
+    }
+
+    // O cupão do Stripe: o da campanha quando é ela que vale, um ad-hoc quando é o código.
+    const cupao = desconto.pct > 0
+      ? desconto.veioDoCupao
+        ? await cupaoStripeDePercentagem(desconto.pct, `cupao:${cupaoValidado?.codigo ?? ''}`)
+        : await cupaoDaCampanha(produto)
+      : null
 
     const stripe = getStripeClient()
     const checkout = await stripe.checkout.sessions.create({
@@ -185,7 +265,16 @@ export async function POST(request: NextRequest) {
         // Congelada aqui e reconfirmada no webhook: o extracto não pode mudar por alguém ter
         // editado uma percentagem entre o clique e o pagamento.
         partilha_pct: String(pctDoProduto(produto, vendedor)),
-        campanha_pct: String(preco.descontoPct),
+        // O contexto do preço, para a compra se poder explicar no extracto do educador. Sem isto,
+        // uma venda descontada lê-se como «a casa pagou-me menos do que devia».
+        preco_tabela_cents: String(preco.baseCents),
+        desconto_pct: String(desconto.pct),
+        cupao_id: cupaoValidado?.cupaoId ?? '',
+        cupao_codigo: cupaoValidado?.codigo ?? '',
+        // A identidade de quem indicou viaja resolvida, mas o webhook volta a verificá-la: um
+        // acordo vale o que valia no clique, uma identidade confirma-se sempre contra a tabela.
+        referral_id: referralId ?? '',
+        referral_codigo: referralId ? codigoReferral : '',
       },
     })
 
@@ -196,7 +285,13 @@ export async function POST(request: NextRequest) {
       email: sessao.email,
       referencia: checkout.id,
       origem: 'stripe',
-      contexto: { cents: preco.cents, campanha: preco.emCampanha, modo: modoStripe(produto) },
+      contexto: {
+        cents: precoFinalCents,
+        descontoPct: desconto.pct,
+        veioDoCupao: desconto.veioDoCupao,
+        temReferral: Boolean(referralId),
+        modo: modoStripe(produto),
+      },
     })
 
     return NextResponse.json({ url: checkout.url, sessionId: checkout.id })

@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react"
 import type { UserManagement, AdminStats } from "@/lib/admin-types"
 import { adminApiCall, clearAdminCache } from "@/lib/admin-helpers"
 import AdminSidebar from "@/components/admin/admin-sidebar"
+import GestorProdutos from "@/components/marketplace/gestor-produtos"
 import MtmFundedManager from "@/components/admin/mtmfunded-manager"
 import EspelhoProviderRelatorio from "@/components/admin/espelho-provider-relatorio"
 import AdminOverview from "@/components/admin/admin-overview"
@@ -55,6 +56,7 @@ function AdminPageClient() {
     "users",
     "content",
     "education",
+    "marketplace",
     "dvr",
     "avaliacoes",
     "mtmfunded",
@@ -241,6 +243,7 @@ function AdminPageClient() {
               {activeSection === "users" && "Utilizadores"}
               {activeSection === "content" && "Conteúdo"}
               {activeSection === "education" && "Educação / LMS"}
+              {activeSection === "marketplace" && "Marketplace"}
               {activeSection === "dvr" && "Gravações DVR"}
               {activeSection === "avaliacoes" && "Avaliações & Certificados"}
               {activeSection === "mtmfunded" && "MTM Funded & Torneios"}
@@ -328,6 +331,25 @@ function AdminPageClient() {
               </div>
               <div className="p-6">
                 <LiveSessionsManager />
+              </div>
+            </div>
+          )}
+
+          {/* MARKETPLACE — o admin gere os produtos (todos) no mesmo editor que o educador usa
+              para os dele. A aprovação, a partilha e os interruptores continuam no Centro, que é
+              onde estão ao lado do extracto de cada educador. */}
+          {activeSection === "marketplace" && (
+            <div className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+              <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Marketplace</h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  Produtos dos educadores e da casa: criar, editar, publicar e ligar o preço ao Stripe.
+                  A aprovação de pedidos, a partilha de cada educador e os interruptores gerais estão em{" "}
+                  <a href="/admin/centro?s=marketplace" className="text-[#D2A63C] underline">Centro → Marketplace</a>.
+                </p>
+              </div>
+              <div className="p-6">
+                <GestorProdutos />
               </div>
             </div>
           )}

@@ -223,3 +223,52 @@ export async function lerPrecoDoStripe(priceId: string): Promise<{
     return null
   }
 }
+
+/**
+ * Um cupão do Stripe para uma percentagem avulsa — o caso do CÓDIGO escrito pelo comprador.
+ *
+ * Diferente do `cupaoDaCampanha`: aquele é do produto e guarda-se na linha dele. Este é o desconto
+ * de um código da tabela `coupons`, que pode valer em muitos produtos, e por isso não tem onde ser
+ * guardado por produto.
+ *
+ * A chave de reutilização é a PERCENTAGEM, não o código: dois códigos de 20% precisam exactamente
+ * do mesmo cupão Stripe, e criar um por código enchia a conta de cupões idênticos. O `lookup` pela
+ * metadata evita a criação repetida; falhar essa procura cria um novo, o que é inofensivo.
+ *
+ * `duration: 'once'` como nas campanhas — ver a nota lá. Um desconto de lançamento desconta a
+ * primeira cobrança, e um desconto vitalício é uma decisão que alguém tem de tomar por escrito.
+ */
+export async function cupaoStripeDePercentagem(pct: number, nota = ''): Promise<string | null> {
+  const p = Math.round(Number(pct) || 0)
+  if (!(p > 0)) return null
+
+  const stripe = getStripeClient()
+  const id = `mkt_pct_${p}`
+
+  try {
+    const existente = await stripe.coupons.retrieve(id)
+    if (existente.valid && existente.percent_off === p) return existente.id
+  } catch {
+    // Não existe ainda.
+  }
+
+  try {
+    const criado = await stripe.coupons.create({
+      // Id fixo e previsível: é o que torna a reutilização possível sem guardar nada do nosso lado.
+      id,
+      percent_off: p,
+      duration: 'once',
+      name: `Marketplace ${p}%`,
+      metadata: { origem: 'marketplace', pct: String(p), nota: nota.slice(0, 200) },
+    })
+    return criado.id
+  } catch {
+    // Corrida: outro pedido criou-o entre o `retrieve` e o `create`. Ele existe, e serve.
+    try {
+      const agora = await stripe.coupons.retrieve(id)
+      return agora.valid ? agora.id : null
+    } catch {
+      return null
+    }
+  }
+}

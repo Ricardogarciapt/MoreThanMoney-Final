@@ -22,6 +22,9 @@
 import type Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { donoValido } from './regras'
+import { referralAceitavel } from './referral'
+import { perfilDoEducador } from './referral-servidor'
+import { registarVendaDoMarketplace } from './venda-equipa'
 import { registarPasso } from './leads'
 import { lerVendedor, pctDoProduto, registarCompra } from './servidor'
 
@@ -36,7 +39,7 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
   const db = getSupabaseAdmin()
   const { data: produto } = await db
     .from('marketplace_produtos')
-    .select('id, educator_id, titulo, partilha_pct, dono')
+    .select('id, educator_id, titulo, slug, partilha_pct, dono')
     .eq('id', produtoId)
     .maybeSingle()
 
@@ -65,6 +68,30 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
       ? daMetadata
       : pctDoProduto(produto, produto.educator_id ? await lerVendedor(produto.educator_id) : null)
 
+  // ── Quem indicou: RECONFIRMADO, não aceite ──────────────────────────────────────────────
+  //
+  // O uuid chega resolvido na metadata para não se adivinhar duas vezes, mas a identidade volta a
+  // passar pela tabela. A regra do dono — o educador não pode ser referral de si próprio — é
+  // verificada aqui outra vez porque este caminho pode ser alcançado sem passar pelo checkout.
+  const referralDaMetadata = session.metadata?.referral_id || null
+  let referralId: string | null = null
+  if (referralDaMetadata) {
+    const { data: quem } = await db
+      .from('profiles')
+      .select('id, is_active')
+      .eq('id', referralDaMetadata)
+      .maybeSingle()
+    const perfilEducador = await perfilDoEducador(produto.educator_id, db)
+    const r = referralAceitavel({
+      referral: quem?.id ? { userId: quem.id as string, codigo: session.metadata?.referral_codigo ?? '', activo: quem.is_active !== false } : null,
+      codigoEscrito: session.metadata?.referral_codigo ?? '',
+      compradorId,
+      perfilDoEducadorDoProduto: perfilEducador,
+    })
+    if (r.ok) referralId = r.userId
+    else console.warn('[marketplace] referral recusado no webhook:', session.id, r.motivo)
+  }
+
   try {
     const r = await registarCompra({
       produtoId: produto.id,
@@ -80,6 +107,12 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
       comissaoLojaCents: 0,
       partilhaPct: pct,
       moeda: session.currency ?? 'eur',
+      precoTabelaCents: Number(session.metadata?.preco_tabela_cents) || null,
+      descontoPct: Number(session.metadata?.desconto_pct) || 0,
+      cupaoId: session.metadata?.cupao_id || null,
+      cupaoCodigo: session.metadata?.cupao_codigo || null,
+      referralId,
+      referralCodigo: referralId ? session.metadata?.referral_codigo ?? null : null,
     })
     if (!r.novo) {
       console.log('[marketplace] evento repetido, compra já existia:', session.id)
@@ -94,6 +127,31 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
       referencia: session.id,
       origem: 'stripe',
       contexto: { cents: session.amount_total ?? 0, dono },
+    })
+
+    // O consumo do cupão fica registado DEPOIS do pagamento confirmado, nunca na validação. É a
+    // mesma doutrina do MTM Funded, e a razão é simples: quem escreve um código e desiste no
+    // Stripe não pode ficar sem ele.
+    if (session.metadata?.cupao_id && r.compraId) {
+      await db
+        .from('coupon_usages')
+        .insert({
+          coupon_id: session.metadata.cupao_id,
+          user_id: compradorId,
+          context: 'marketplace',
+          marketplace_compra_id: r.compraId,
+        })
+        // UNIQUE(coupon_id, user_id): repetir não é erro, é o índice a fazer o trabalho dele.
+        .then(({ error }) => { if (error) console.log('[marketplace] uso de cupão já registado:', session.id) })
+    }
+
+    // A venda entra no livro da equipa, para gerar comissão como qualquer venda de pack.
+    await registarVendaDoMarketplace({
+      session,
+      compradorId,
+      referralId,
+      produto: { id: produto.id, titulo: produto.titulo as string, slug: (produto.slug as string) ?? '' },
+      parteCasaCents: Math.max(0, (session.amount_total ?? 0) - Math.round(((session.amount_total ?? 0) * pct) / 100)),
     })
   } catch (e) {
     // Rebenta de propósito: se a compra não ficou escrita, o comprador pagou e não tem acesso, e

@@ -221,6 +221,13 @@ export async function registarCompra(entrada: {
   dono?: DonoProduto | null
   moeda?: string
   acessoExpiraEm?: string | null
+  /** O contexto do preço, para a venda se poder explicar. Ver a migração 154. */
+  precoTabelaCents?: number | null
+  descontoPct?: number | null
+  cupaoId?: string | null
+  cupaoCodigo?: string | null
+  referralId?: string | null
+  referralCodigo?: string | null
 }): Promise<{ novo: boolean; compraId?: string }> {
   const db = getSupabaseAdmin()
   const { data: ja } = await db
@@ -255,6 +262,18 @@ export async function registarCompra(entrada: {
       parte_casa_cents: p.parteCasaCents,
       moeda: entrada.moeda ?? 'eur',
       acesso_expira_em: entrada.acessoExpiraEm ?? null,
+      // Sem estas colunas, uma venda descontada só se lê de uma maneira do lado do educador: «a
+      // casa pagou-me menos do que devia». O preço de tabela e o desconto são a explicação.
+      preco_tabela_cents: Math.max(0, Math.round(Number(entrada.precoTabelaCents) || 0)) || p.brutoCents,
+      desconto_pct: Math.min(90, Math.max(0, Number(entrada.descontoPct) || 0)),
+      desconto_cents: Math.max(
+        0,
+        (Math.max(0, Math.round(Number(entrada.precoTabelaCents) || 0)) || p.brutoCents) - p.brutoCents,
+      ),
+      cupao_id: entrada.cupaoId || null,
+      cupao_codigo: entrada.cupaoCodigo || null,
+      referral_id: entrada.referralId || null,
+      referral_codigo: entrada.referralCodigo || null,
     })
     .select('id')
     .maybeSingle()

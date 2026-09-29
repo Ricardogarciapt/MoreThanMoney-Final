@@ -168,25 +168,35 @@ sim('nem dois nulos', !podeGerir(
   }
 }
 
-// ══════════════ 5. A ROTA DO EDUCADOR CONTINUA PRESA AO ID DELE ══════════════
+// ══════════════ 5. A ROTA DE GESTÃO NÃO DEIXA UM EDUCADOR SAIR DA SUA PRATELEIRA ══════════
 //
-// A rota antiga protege-se filtrando por `educator_id` em cada query. Isso continua a valer e não
-// se pode perder numa refactorização — por isso fica escrito aqui.
+// A rota antiga (`educator-auth/marketplace`) protegia-se filtrando por `educator_id` em cada
+// query, e foi substituída pela rota única `/api/marketplace/gestao`, que serve o educador e o
+// admin com direitos diferentes. O filtro continua a ter de lá estar — não por desconfiança da
+// verificação em memória, mas porque uma verificação que se pode contornar reordenando linhas de
+// código não é uma garantia, e um filtro no WHERE é.
 
 {
-  const ROTA = readFileSync(join(RAIZ, 'app/api/live-sessions/educator-auth/marketplace/route.ts'), 'utf8')
-  sim('a rota do educador tira a identidade do cookie', /verifyEducatorToken|quemEsta\(/.test(ROTA))
+  const ROTA = readFileSync(join(RAIZ, 'app/api/marketplace/gestao/route.ts'), 'utf8')
+
   assert.ok(
     !/educator_id:\s*(b|body|corpo)\./.test(ROTA),
-    'o educator_id NUNCA pode vir do corpo do pedido — é o caminho directo para editar o produto de outro',
+    'o educator_id NUNCA pode vir do corpo do pedido — é o caminho directo para criar ou editar em nome de outro',
   )
-  const updates = ROTA.match(/\.update\([\s\S]{0,400}?\)/g) ?? []
-  sim('há updates para verificar', updates.length > 0)
-  // Cada update do lado do educador tem de ter o filtro dele à frente.
-  const semFiltro = (ROTA.match(/\.update\(patch\)[\s\S]{0,160}/g) ?? []).filter(
-    (t) => !/eq\('educator_id', educatorId\)/.test(t),
-  )
-  assert.equal(semFiltro.length, 0, 'um update do educador sem .eq(educator_id) alcança o produto de outro')
+  sim('a identidade vem de quemGere()', /quemGere\(\)/.test(ROTA))
+  sim('o produto vem sempre pela guarda', /produtoSobGestao\(/.test(ROTA))
+  sim('os campos vêm da lista do papel', /camposPermitidos\(/.test(ROTA))
+
+  // Cinto e suspensórios: todo o update/delete que a rota faz tem de ter o filtro do educador.
+  for (const verbo of ['update', 'delete']) {
+    const temFiltro = new RegExp(
+      `\\.${verbo}\\(([\\s\\S]{0,200}?)\\)[\\s\\S]{0,600}?papel === 'educador'[\\s\\S]{0,200}?eq\\('educator_id'`,
+    ).test(ROTA)
+    assert.ok(temFiltro, `o ${verbo} da rota de gestão tem de filtrar por educator_id quando quem chama é educador`)
+  }
+
+  // E o 404 em vez do 403, para não confirmar a existência do produto de outra pessoa.
+  sim('recusa com 404 e não 403', /status: 404/.test(ROTA) && /naoEncontrado/.test(ROTA))
 }
 
 // ── Relatório ─────────────────────────────────────────────────────────────────────────────

@@ -72,6 +72,30 @@ export type VendaConfirmada = {
    */
   emailComprador?: string | null
   nota?: string | null
+  /**
+   * O MÁXIMO que a soma das comissões desta venda pode atingir, em cêntimos.
+   *
+   * ── PORQUE É QUE ISTO EXISTE, E PORQUE É OPCIONAL ───────────────────────────────────────
+   *
+   * Não há, em lado nenhum desta casa, uma verificação de que a soma das comissões de uma venda
+   * cabe no valor dela. O que impede o duplo pagamento hoje é estrutural — a exclusividade entre
+   * equipa e binário, e o degrau de rank ser um FACTOR e não uma substituição — e não uma conta.
+   * Nada impede o dono de definir 40% para três papéis do mesmo pack.
+   *
+   * Numa venda de pack isso é um problema teórico: a casa fica com tudo o que não paga em comissão.
+   * Numa venda do MARKETPLACE não é: 90% já estão prometidos ao educador por acordo, antes de a
+   * comissão ser sequer calculada, e a casa só tem 10% de onde a pagar. Sem tecto, uma regra de 15%
+   * fazia a casa dever 105% de uma venda — e isso só se descobre no dia do pagamento.
+   *
+   * É OPCIONAL de propósito. Sem ele, o comportamento é exactamente o de sempre: nada é limitado, e
+   * nenhum dos caminhos que já existem muda. Só quem SABE que há outra parte a ser paga da mesma
+   * venda — hoje, apenas o marketplace — é que o passa.
+   *
+   * Quando o tecto corta, as linhas são reduzidas PROPORCIONALMENTE e não pela ordem em que
+   * aparecem: cortar a última a zero pagaria a uns e não a outros por causa de uma ordenação, e
+   * isso não se explica a ninguém. O corte fica registado em `avisos`.
+   */
+  tectoComissaoCents?: number | null
 }
 
 export type RegistoDeVenda = {
@@ -319,6 +343,27 @@ export async function registarVendaConfirmada(
     pagoEm,
     { numeroDoPagamento: numeroPagamento ?? undefined, planoPorPessoa, regrasRank, vendasNoMes },
   )
+
+  // ── O tecto ─────────────────────────────────────────────────────────────────────────────
+  //
+  // Aplicado ANTES de escrever, e não depois: uma linha já gravada com valor a mais é dinheiro
+  // prometido, e desfazer promessas é pior do que nunca as ter feito.
+  const tecto = Number(venda.tectoComissaoCents)
+  if (Number.isFinite(tecto) && tecto >= 0) {
+    const pedido = resultado.linhas.reduce((t, l) => t + Math.max(0, l.valor_cents || 0), 0)
+    if (pedido > tecto) {
+      // Proporcional: cada um perde a mesma fracção. `Math.floor` garante que a soma NUNCA passa o
+      // tecto por arredondamento — o cêntimo que sobra fica para a casa, que é quem está a pagar.
+      const fracao = pedido > 0 ? tecto / pedido : 0
+      for (const l of resultado.linhas) {
+        l.valor_cents = Math.floor(Math.max(0, l.valor_cents || 0) * fracao)
+      }
+      resultado.avisos.push(
+        `Comissões reduzidas de ${pedido} para ${tecto} cêntimos: o que sobrava desta venda depois ` +
+        `da parte do educador não chegava para as pagar por inteiro.`,
+      )
+    }
+  }
 
   let criadas = 0
   let totalCents = 0

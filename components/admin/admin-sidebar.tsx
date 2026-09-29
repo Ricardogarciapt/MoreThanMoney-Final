@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Shield,
   GraduationCap,
+  Store,
   Brain,
   Network,
   Send,
@@ -85,6 +86,7 @@ const GRUPOS: Grupo[] = [
     itens: [
       { tipo: "tab", id: "content", rotulo: "Conteúdo", icone: FileText },
       { tipo: "tab", id: "education", rotulo: "Educação (LMS)", icone: GraduationCap },
+      { tipo: "tab", id: "marketplace", rotulo: "Marketplace", icone: Store },
       { tipo: "tab", id: "dvr", rotulo: "Gravações DVR", icone: Film },
       { tipo: "tab", id: "avaliacoes", rotulo: "Avaliações", icone: Award },
     ],
