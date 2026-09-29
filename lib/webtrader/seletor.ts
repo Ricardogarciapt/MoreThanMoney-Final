@@ -33,6 +33,13 @@ export interface FundedDoUtilizador {
   aviso?: string
   programa?: { nome: string } | null
   segueEstrategia?: { slug: string; nome: string } | null
+  /**
+   * A conta é MESTRE desta estratégia (`mestres_estrategias.conta_mestre_id`). Nada a ver com
+   * `segueEstrategia`: uma conta de cliente SEGUE uma estratégia, a mestre É a estratégia — e nas
+   * oito mestres vivas `segue_estrategia` está a null, por isso sem este campo a pastilha do
+   * seletor ficava muda exactamente nas contas que interessava nomear.
+   */
+  mestreDe?: { slug: string; nome: string } | null
   /** 'investor' = conta de outra pessoa ligada com a password investor — abre só para ver. */
   modo?: 'master' | 'investor'
 }
@@ -87,6 +94,23 @@ export interface EntradaSeletor {
   real?: ContaRealSeletor
 }
 
+/**
+ * O TEXTO DA PASTILHA DOURADA de uma conta MTM Funded — «Funded · Wolf», «F1», «Torneio · Sensei».
+ *
+ * Porque é que isto não é só `etiqueta`: a fase vem de `lib/mtmfunded/etiquetas.ts::tipoCurto`, que
+ * não conhece o tipo `provider` (as mestres) e o deixa cair no ramo das fases — uma mestre saía
+ * rotulada «F1», como se fosse a primeira fase de um desafio. Mudar `tipoCurto` não serve: esse
+ * ficheiro existe IGUAL na app MTM Auto e está preso pela paridade entre repositórios. A correcção
+ * vive aqui, no seletor, que é quem sabe o que é uma mestre (`mestre: true`).
+ *
+ * Puro — testado em lib/webtrader/__tests__/entrada.check.ts.
+ */
+export function pastilhaDaConta(e: Pick<EntradaSeletor, 'etiqueta' | 'mestre' | 'segue'>): string {
+  const base = e.mestre ? 'Funded' : e.etiqueta
+  const nome = String(e.segue ?? '').replace(/^MTM Auto\s+/i, '').trim()
+  return nome ? `${base} · ${nome}` : base
+}
+
 const NOME: Record<PlataformaSeletor, string> = { mtmfunded: 'MTM Funded', tradelocker: 'TradeLocker', mt5: 'MT5' }
 
 export function montarSeletor(f: {
@@ -109,7 +133,10 @@ export function montarSeletor(f: {
       // Ligada com a investor: diz-se no próprio seletor, antes de abrir, que é só para ver.
       estadoCurto: c.modo === 'investor' ? `${c.estadoCurto} · só leitura` : c.estadoCurto,
       modo: c.modo === 'investor' ? 'investor' : 'master',
-      saldo: c.sim_saldo, equity: c.sim_equity, propria: true, segue: c.segueEstrategia?.nome ?? null, programa: c.programa?.nome ?? null, aviso: c.aviso ?? null,
+            saldo: c.sim_saldo, equity: c.sim_equity, propria: true,
+      // Numa mestre o nome da estratégia vem de `mestreDe`; numa conta de cliente, de `segueEstrategia`.
+      segue: c.segueEstrategia?.nome ?? c.mestreDe?.nome ?? null,
+      programa: c.programa?.nome ?? null, aviso: c.aviso ?? null,
       // Só o DONO etiqueta: uma conta ligada com a password investor é de outra pessoa.
       etiquetaDoDono: c.etiquetaDoDono ?? null, podeEtiquetar: c.modo !== 'investor', mestre: ehContaMestre(c),
     })

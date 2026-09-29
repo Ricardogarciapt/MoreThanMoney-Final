@@ -27,13 +27,24 @@ export async function carregarPainelMestres(): Promise<PainelMestresLido> {
   return (await emCache(CHAVE_CACHE_PAINEL, 10_000, lerPainel)).v
 }
 
-/** Mapa conta-mestre → «Mestre · Sensei» (para MTM Funded, Centro › Contas). Nunca lança. */
+/**
+ * Mapa conta-mestre → «Mestre · Sensei» (para MTM Funded, Centro › Contas e a pastilha do seletor do
+ * WebTrader). Nunca lança.
+ *
+ * Em cache 60 s: isto passou a ser lido em /api/mtmfunded/simulado/contas, que é das rotas mais
+ * pedidas da casa (o WebTrader relê o seletor), e são OITO linhas que mudam de mês a mês — duas
+ * consultas por cada abertura do seletor não se justificam.
+ */
+export const CHAVE_CACHE_MESTRES_CONTA = 'mestres:por-conta'
+
 export async function lerMestresPorConta() {
-  const r = await ler(db().from('mestres_estrategias').select('slug, conta_mestre_id, modo, provider_id').limit(100))
-  if (!r.linhas.length) return mestresPorConta([])
-  const provs = await ler(db().from('mtmauto_providers').select('id, nome').in('id', r.linhas.map((l) => String(l.provider_id))))
-  const nome = new Map(provs.linhas.map((p) => [String(p.id), txt(p.nome)]))
-  return mestresPorConta(r.linhas.map((l) => ({ ...l, nome: nome.get(String(l.provider_id)) ?? null })))
+  return (await emCache(CHAVE_CACHE_MESTRES_CONTA, 60_000, async () => {
+    const r = await ler(db().from('mestres_estrategias').select('slug, conta_mestre_id, modo, provider_id').limit(100))
+    if (!r.linhas.length) return mestresPorConta([])
+    const provs = await ler(db().from('mtmauto_providers').select('id, nome').in('id', r.linhas.map((l) => String(l.provider_id))))
+    const nome = new Map(provs.linhas.map((p) => [String(p.id), txt(p.nome)]))
+    return mestresPorConta(r.linhas.map((l) => ({ ...l, nome: nome.get(String(l.provider_id)) ?? null })))
+  })).v
 }
 
 async function lerPainel(): Promise<PainelMestresLido> {

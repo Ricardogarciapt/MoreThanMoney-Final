@@ -17,7 +17,7 @@ import { db } from '@/lib/admin-centro/servidor/base'
 import { registarAuditoria } from '@/lib/admin-centro/servidor/outros'
 import { lerConfigGlobal, lerEstrategiaMestre } from '../tipos'
 import { validarPedido, valorKill, type PedidoMestres } from '../painel'
-import { CHAVE_CACHE_PAINEL } from './painel-leitura'
+import { CHAVE_CACHE_MESTRES_CONTA, CHAVE_CACHE_PAINEL } from './painel-leitura'
 
 export interface RespostaMudanca { ok: boolean; status: number; mensagem: string; detalhe?: unknown }
 
@@ -91,7 +91,9 @@ export async function aplicarPedidoMestres(adminId: string, p: PedidoMestres): P
     r = { ok: false, status: 500, mensagem: e instanceof Error ? e.message : String(e) }
   }
   esquecerCache(CHAVE_CACHE_PAINEL)
-  for (const k of ['centro:estrategias', 'centro:contas', 'centro:funded']) esquecerCache(k)
+  // a pastilha do WebTrader e as listas do Centro lêem o mapa em cache — muda-se o modo, esquece-se
+  esquecerCache(CHAVE_CACHE_MESTRES_CONTA)
+  for (const k of ['centro:estrategias', 'centro:contas', 'centro:funded', 'copia:cadeia']) esquecerCache(k)
   await registarAuditoria({ adminId, acao: `mestres:${p.tipo}`, alvo, pedido: { ...p, confirmacao: undefined }, resultado: r!, ok: r!.ok })
   return r!
 }

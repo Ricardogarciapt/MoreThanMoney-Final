@@ -72,6 +72,18 @@ export async function GET(request: NextRequest) {
     ? await db.from('mtmauto_providers').select('slug, nome').in('slug', slugs)
     : { data: [] as Array<{ slug: string; nome: string }> }
   const nomeDe = new Map((estrategias ?? []).map((e) => [String(e.slug), String(e.nome)]))
+  // CONTAS MESTRE: a estratégia delas NÃO vive em `segue_estrategia` (está a null em todas as oito)
+  // — vive em `mestres_estrategias.conta_mestre_id`. Sem isto, a pastilha dourada do seletor do
+  // WebTrader ficava muda precisamente nas contas que são a estratégia. `lerMestresPorConta` é a
+  // mesma fonte que o admin e o Centro › Contas usam (uma só regra, em lib/mestres/painel.ts).
+  const mestrePorConta = await (async () => {
+    try {
+      const { lerMestresPorConta } = await import('@/lib/mestres/servidor/painel-leitura')
+      return await lerMestresPorConta()
+    } catch {
+      return new Map<string, { slug: string; nome: string }>()
+    }
+  })()
 
   const programaDe = new Map((programas ?? []).map((p) => [p.id as string, p]))
 
@@ -93,6 +105,8 @@ export async function GET(request: NextRequest) {
         segueEstrategia: (c as { segue_estrategia?: string | null }).segue_estrategia
           ? { slug: String((c as { segue_estrategia?: string }).segue_estrategia), nome: nomeDe.get(String((c as { segue_estrategia?: string }).segue_estrategia)) ?? String((c as { segue_estrategia?: string }).segue_estrategia) }
           : null,
+        // A estratégia de que esta conta é MESTRE (null quando não é mestre de nenhuma).
+        mestreDe: mestrePorConta.get(String(c.id)) ? { slug: mestrePorConta.get(String(c.id))!.slug, nome: mestrePorConta.get(String(c.id))!.nome } : null,
       }
     }),
     ...(leve ? {} : { posicoes: posicoes ?? [], ordens: ordens ?? [], simbolos: simbolos ?? [], precos: precos ?? [] }),

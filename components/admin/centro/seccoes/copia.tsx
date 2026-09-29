@@ -1,8 +1,11 @@
 "use client"
 
 import type { carregarCopia } from "@/lib/admin-centro/servidor/outros"
+import type { CadeiaLida } from "@/lib/copia-contas/servidor/cadeia"
 import CopiaEntreContas from "@/components/admin/mtmauto-copia/copia-entre-contas"
 import EventosCopia from "@/components/admin/mtmauto-copia/eventos"
+import VistaSimples from "@/components/admin/copia-cadeia/vista-simples"
+import QuadroCadeia from "@/components/admin/copia-cadeia/quadro"
 
 import { CONFIRMACOES } from "@/lib/admin-centro/regras"
 import { useCentroCtx } from "../contexto"
@@ -13,6 +16,9 @@ type Copia = Awaited<ReturnType<typeof carregarCopia>>
 export default function SeccaoCopia() {
   const ctx = useCentroCtx()
   const { dados: c, erro, aCarregar, recarregar, lidoEm } = useCentro<Copia>(`/api/admin/centro/copia?v=${ctx.versao}`, 20_000)
+  // A CADEIA («quem copia o quê») é a primeira leitura do ecrã: vem antes dos azulejos, porque é a
+  // pergunta que o dono faz. Endpoint à parte para uma falha da 116 não levar a secção inteira.
+  const { dados: cadeia, erro: erroCadeia, recarregar: recarregarCadeia } = useCentro<CadeiaLida>(`/api/admin/mtmauto-copia/cadeia?v=${ctx.versao}`, 30_000)
 
   const ligarMotor = async () => {
     const palavra = pedirPalavra("Ligar o motor da cópia entre contas EM SOMBRA (regista o que faria; não envia ordens).", "CONFIRMAR")
@@ -34,6 +40,17 @@ export default function SeccaoCopia() {
     <div className="space-y-4">
       {erro && <Aviso tom="grave">{erro}</Aviso>}
       {c?.pendente && <Aviso>Migração 078 por aplicar — as tabelas da cópia entre contas não existem.</Aviso>}
+
+      {/* QUEM COPIA O QUÊ — fonte de sinais → conta mestre (estratégia) → subscritores. */}
+      <Painel titulo="Quem copia o quê" sub="A cadeia inteira: fonte do sinal → conta mestre (a estratégia) → quem a segue. O live/sombra de cada linha é o que o motor decide agora, não a coluna copia_rotas.modo.">
+        {erroCadeia && <Aviso tom="grave">{erroCadeia}</Aviso>}
+        {cadeia ? <VistaSimples c={cadeia} /> : !erroCadeia && <p className="text-[12px] text-zinc-500">A ler a cadeia…</p>}
+      </Painel>
+
+      <Recolhivel titulo="Quadro — arrastar e largar" descricao="Organiza os subscritores à mão. Arrastar um subscritor escreve na base (escolha do cliente + ressincroniza as rotas); mover as caixas é só desenho.">
+        {cadeia && <QuadroCadeia c={cadeia} recarregar={() => { void recarregarCadeia(); void recarregar() }} />}
+      </Recolhivel>
+
       <div className="flex flex-wrap items-center gap-2">
         <Pilula tom={c?.motorLigado ? "info" : "neutro"} vivo={c?.motorLigado}>motor {c?.motorLigado ? "ligado (sombra)" : "desligado"}</Pilula>
         <Pilula tom={c?.liveDesbloqueado ? "grave" : "ok"}>live {c?.liveDesbloqueado ? "desbloqueado" : "bloqueado"}</Pilula>

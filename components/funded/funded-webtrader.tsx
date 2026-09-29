@@ -15,7 +15,8 @@ import type { Prefill } from "./funded-ticket"
 import {
   type ContaReal, COR_PLATAFORMA, apagarSessaoTL, ehRefReal, listarContasReais, lerSessoesTL, plataformaDaRef,
 } from "@/components/webtrader/api-corretoras"
-import { contaInicial, montarSeletor, type EntradaSeletor } from "@/lib/webtrader/seletor"
+import { contaInicial, montarSeletor, pastilhaDaConta, type EntradaSeletor } from "@/lib/webtrader/seletor"
+import { ehContaMestre } from "@/lib/webtrader/filtro-contas"
 import { moverConta, ordenarEntradas } from "@/lib/webtrader/ordem-contas"
 import {
   contarPorTipo, filtrarEntradas, juntarOrdemFiltrada, normalizarFiltro, temDoisTipos,
@@ -335,13 +336,12 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
               className="flex min-w-0 items-center gap-1.5 rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-left text-[12px]">
               {atual ? (
                 <>
-                  <span className="shrink-0 rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: atual.real ? COR_PLATAFORMA[atual.real.plataforma] : "#D2A63C" }}>{atual.etiqueta}</span>
+                  <span className="shrink-0 rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: atual.real ? COR_PLATAFORMA[atual.real.plataforma] : "#D2A63C" }}>{atual.real ? atual.etiqueta : pastilhaDaConta(atual)}</span>
                   {atual.real && <span className="shrink-0 text-[10px] font-bold text-rose-300">REAL</span>}
                   {atual.mestre && <span className="shrink-0 text-[10px] font-bold text-sky-300">MESTRE</span>}
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: corDoEstado(atual.estadoCurto) }} />
                   {atual.etiquetaDoDono && <span className="max-w-[120px] truncate text-[11.5px] font-semibold text-[#E9C46A]">{atual.etiquetaDoDono}</span>}
                   <span className="truncate font-mono">{atual.login ?? "—"}</span>
-                  {atual.segue && <span className="hidden truncate text-[10.5px] text-[#D2A63C] sm:inline">· {nomeCurto(atual.segue)}</span>}
                   {atual.modo === "investor" && <span className="text-[10.5px] text-sky-300">investor</span>}
                 </>
               ) : <span className="text-zinc-400">Escolhe uma conta</span>}
@@ -398,7 +398,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                     <Pega id={t.id} arrasto={arrasto} />
                     {organizar && <Olho oculta={estaOculta(ocultas, t.id)} aberta={t.id === ativa} alternar={() => alternarOcultaConta(t.id)} />}
                     <button role="option" aria-selected={t.id === ativa} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left" onClick={() => escolher(t.id)}>
-                      <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}{t.segue ? ` · ${nomeCurto(t.segue)}` : ""}</span>
+                      <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{pastilhaDaConta(t)}</span>
                       {/* A mestre diz-se na própria linha: em «As minhas» só aparece a que está aberta, e tem de se perceber porquê. */}
                       {t.mestre && <span className="shrink-0 rounded border border-sky-400/40 px-1 text-[9.5px] font-bold text-sky-300">MESTRE</span>}
                       <span className="rounded px-1.5 text-[10.5px]" style={{ color: corDoEstado(t.estadoCurto) }}>{t.estadoCurto}</span>
@@ -690,11 +690,6 @@ function CampoEtiqueta({ entrada, aEditar, abrir, fechar, gravar }: {
   )
 }
 
-/** «MTM Auto Aurum Flow» → «Aurum Flow»: na ficha só cabe o que distingue. */
-function nomeCurto(nome: string) {
-  return nome.replace(/^MTM Auto\s+/i, "").trim() || nome
-}
-
 /** Ecrã de entrada: as contas MTM Funded da pessoa + «Entrar com credenciais» (três plataformas). */
 function Entrada({ contas, onEscolher, onFechar, formulario }: {
   contas: ContaResumo[]
@@ -713,7 +708,7 @@ function Entrada({ contas, onEscolher, onFechar, formulario }: {
         <div className="space-y-2">
           {contas.map((c) => (
             <button key={c.id} onClick={() => onEscolher(c.id)} className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-black/40 p-2.5 text-left text-[12px] hover:border-[#D2A63C]/40">
-              <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{c.etiqueta}{c.segueEstrategia ? ` · segue ${nomeCurto(c.segueEstrategia.nome)}` : ""}</span>
+              <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{pastilhaDaConta({ etiqueta: c.etiqueta, mestre: ehContaMestre(c), segue: c.segueEstrategia?.nome ?? c.mestreDe?.nome ?? null })}</span>
               <span className="rounded px-1.5 py-0.5 text-[10.5px] font-semibold" style={{ color: corDoEstado(c.estadoCurto), background: `${corDoEstado(c.estadoCurto)}22` }}>{c.estadoCurto}</span>
               <div className="min-w-0">
                 <p className="font-mono text-white">{c.mt5_login ?? "—"}</p>

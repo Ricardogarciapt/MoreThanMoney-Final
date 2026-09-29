@@ -8,6 +8,7 @@ import {
   normalizarEscopo, normalizarFiltro, temDoisTipos, ESCOPO_POR_OMISSAO, FILTRO_POR_OMISSAO,
 } from '../filtro-contas'
 import { moverConta, ordenarEntradas } from '../ordem-contas'
+import { montarSeletor, pastilhaDaConta } from '../seletor'
 
 let n = 0
 const caso = (nome: string, f: () => void) => { f(); n++; console.log(`  ok  ${nome}`) }
@@ -186,6 +187,31 @@ function main() {
     assert.equal(normalizarEscopo('mestres'), ESCOPO_POR_OMISSAO)
     assert.equal(normalizarEscopo(null), 'minhas')
     assert.equal(ESCOPO_POR_OMISSAO, 'minhas')
+  })
+
+  // ── a pastilha dourada: «Funded · Wolf» ───────────────────────────────────
+  caso('uma conta MESTRE diz «Funded · <estratégia>», nunca «F1»', () => {
+    // tipoCurto não conhece `provider` e devolve 'F1' — a pastilha corrige isso no seletor.
+    assert.equal(pastilhaDaConta({ etiqueta: 'F1', mestre: true, segue: 'MTM Auto Wolf' }), 'Funded · Wolf')
+    assert.equal(pastilhaDaConta({ etiqueta: 'F1', mestre: true, segue: 'MTM Auto Aurum Flow' }), 'Funded · Aurum Flow')
+    assert.equal(pastilhaDaConta({ etiqueta: 'F1', mestre: true, segue: 'MTM Scanner · Forex' }), 'Funded · MTM Scanner · Forex')
+  })
+
+  caso('uma conta de cliente mantém a fase e junta a estratégia que segue', () => {
+    assert.equal(pastilhaDaConta({ etiqueta: 'Funded', mestre: false, segue: 'MTM Auto Sensei' }), 'Funded · Sensei')
+    assert.equal(pastilhaDaConta({ etiqueta: 'F2', mestre: false, segue: null }), 'F2')
+    assert.equal(pastilhaDaConta({ etiqueta: 'Torneio', mestre: false, segue: undefined }), 'Torneio')
+  })
+
+  caso('a mestre tira o nome de `mestreDe` (nas mestres `segueEstrategia` vem null)', () => {
+    const [e] = montarSeletor({
+      funded: [{
+        id: 'CM-1', tipo: 'provider', mt5_login: '77460273', etiqueta: 'F1', estadoCurto: 'Active',
+        sim_saldo: 10_000, sim_equity: 10_000, segueEstrategia: null, mestreDe: { slug: 'mtm-auto-wolf', nome: 'Wolf' },
+      }],
+    })
+    assert.equal(e.mestre, true)
+    assert.equal(pastilhaDaConta(e), 'Funded · Wolf')
   })
 
   console.log(`\nfiltro-contas: ${n} verificações certas`)
