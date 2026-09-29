@@ -116,9 +116,38 @@ export function t2tUsaTrailing(channelSlug?: string | null, content?: string | n
   return !T2T_FONTES_SEM_TRAILING.has(src)
 }
 
-/** Uma mensagem é T2T negociável? (allowlist de fonte) */
+/**
+ * FONTES QUE SE PUBLICAM MAS NÃO SE EXECUTAM.
+ *
+ * O MTM Scanner (que entra pelo canal «Ideias de Forex») foi medido a 29/09/2026 e **não tem
+ * borda nenhuma** — nem no conjunto, nem em nenhum subconjunto. 18 765 sinais, oito horizontes,
+ * sete cortes com correcção para comparações múltiplas: zero sobrevive. E a causa não é
+ * estatística, é aritmética: o retorno médio é **+0,027 ATR** e o meio-spread ida-e-volta custa
+ * **0,657 ATR**. O custo é vinte e quatro vezes o sinal. Num EURGBP o spread sozinho vale mais
+ * do que uma vela de 15 minutos inteira.
+ *
+ * Até esse dia havia código cujo único trabalho era pôr um botão de aceitar nestes sinais (o
+ * webhook marcava o remetente «📊 MTM Scanner · Forex» *para o T2T reconhecer a fonte*). Fica
+ * escrito porquê, para que ninguém o volte a ligar por parecer uma omissão.
+ *
+ * O canal CONTINUA a publicar — são ~2 300 ideias por mês e valem como leitura. O que deixa de
+ * existir é o caminho que as levava a dinheiro real. Ver docs/mtmscanner-borda.md.
+ *
+ * As chaves ficam no catálogo de propósito: estão gravadas nas preferências `t2t_sources` das
+ * contas dos clientes, e tirá-las de lá descartava em silêncio o que eles escolheram.
+ */
+const T2T_FONTES_SO_LEITURA = new Set<T2TSourceKey>(['mtmscanner', 'forexideas'])
+
+/** Uma mensagem é T2T negociável? (allowlist de fonte, menos as que são só de leitura) */
 export function isAllowedT2TSource(channelSlug?: string | null, content?: string | null): boolean {
-  return t2tSourceKey(channelSlug, content) !== null
+  const src = t2tSourceKey(channelSlug, content)
+  if (!src) return false
+  return !T2T_FONTES_SO_LEITURA.has(src)
+}
+
+/** Só para quem precisa de saber que a fonte existe mas não se executa (UI, avisos). */
+export function fonteSoLeitura(src: T2TSourceKey): boolean {
+  return T2T_FONTES_SO_LEITURA.has(src)
 }
 
 // Follow-ups / gestão (TP hit, BE, fecho, SL, cancelado) — não são ENTRADAS.

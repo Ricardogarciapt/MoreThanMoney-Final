@@ -1389,7 +1389,11 @@ export async function POST(request: NextRequest) {
     // Âmbito T2T (decisão): MTM Scanner + GoldKiller + Forex (Premium vem por outro push).
     // Sinal num canal T2T → o toque abre direto o T2T + menu de aceitação (?signal=<msgId>).
     // Restantes → chat específico do sinal (com âncora à mensagem p/ scroll/realce).
-    const T2T_NOTIF_CHANNELS = new Set(["trade-ideas-setup", "sinais-scanner-mtm", "trade-ideas", "sinais-goldkiller", "sensei-scanner"])
+    // «trade-ideas-setup» (Ideias de Forex) saiu a 29/09/2026: é por lá que entra o MTM Scanner, e
+    // o MTM Scanner não tem borda — o custo do spread é 24× o sinal (ver T2T_FONTES_SO_LEITURA em
+    // lib/mtmcopy/t2t-source.ts). A notificação passa a abrir o CHAT em vez do Tap to Trade: as
+    // ideias continuam a chegar, deixam de vir com um botão para as executar.
+    const T2T_NOTIF_CHANNELS = new Set(["sinais-scanner-mtm", "trade-ideas", "sinais-goldkiller", "sensei-scanner"])
     const isT2TNotif = Boolean(route.channel && chatId && T2T_NOTIF_CHANNELS.has(route.channel))
     const pushUrl = isT2TNotif
       ? urlDoTapToTrade(chatId as string)

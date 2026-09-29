@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { T2T_SOURCES } from '../t2t-source'
+import { T2T_SOURCES, isAllowedT2TSource } from '../t2t-source'
 import {
   ESTRATEGIAS_PRIMEVERSE,
   ESTRATEGIAS_PRIMEVERSE_VIVAS,
@@ -59,3 +59,26 @@ for (const slug of ['mtm-auto-king', 'mtm-auto-wolf']) {
 assert.ok(oferecidas.includes('mtm-auto-edge'), 'a Edge tem de continuar a oferecer-se')
 
 console.log('fontes-e-estrategias-vivas: OK')
+
+// ── O MTM Scanner publica mas não se executa ─────────────────────────────────
+
+/**
+ * Medido a 29/09/2026: retorno médio +0,027 ATR contra 0,657 ATR de custo de spread. O custo é
+ * 24× o sinal, e nenhum dos sete cortes sobrevive à correcção para comparações múltiplas. O
+ * canal continua a publicar ~2 300 ideias por mês; o que saiu foi o botão de as executar.
+ *
+ * Esta guarda existe porque a mudança é uma AUSÊNCIA — um botão que deixou de aparecer — e uma
+ * ausência não se nota quando alguém a desfaz.
+ */
+assert.ok(!isAllowedT2TSource('trade-ideas-setup', 'BUY EURUSD entrada 1.0850 SL 1.0840 TP 1.0870'),
+  'as Ideias de Forex voltaram a ser executáveis no T2T')
+assert.ok(!isAllowedT2TSource('sinais-scanner-mtm', 'MTM Scanner BUY EURUSD 1.0850'),
+  'um sinal marcado MTM Scanner voltou a ser executável')
+
+// E as que CONTINUAM a executar-se não podem ter sido apanhadas no mesmo laço.
+assert.ok(isAllowedT2TSource('premium-ideas', 'Gold Buy Zone 4150 - 4155 SL 4100 TP 4250'),
+  'o Premium deixou de ser executável — isso não foi pedido')
+assert.ok(isAllowedT2TSource('sensei-scanner', 'Sensei BUY XAUUSD 4150 SL 4100 TP1 4200'),
+  'o Sensei deixou de ser executável — a pausa dele é um interruptor, não esta lista')
+
+console.log('fontes-so-leitura: OK')
