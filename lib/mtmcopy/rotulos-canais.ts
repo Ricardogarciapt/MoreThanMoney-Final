@@ -21,16 +21,19 @@ export const ROTULOS_CANAIS_T2T: Record<string, string> = {
   'premium-ideas': 'MTM Auto Premium',
   'sensei-scanner': 'MTM Auto Sensei',
   'sinais-goldkiller': 'Sinais Scanner Gold Killer',
-  'sinais-scanner-mtm': 'MTM Auto Edge/Wolf/King',
-  'aurum-flow': 'MTM Auto Aurum Flow & Perpétuos',
-  // 18/09: `cripto-perps` fundido em `aurum-flow`; o slug antigo fica até correr a migração 118.
-  'cripto-perps': 'MTM Auto Aurum Flow & Perpétuos',
+  // O slug é histórico; o canal visível é só a estratégia Edge (a Wolf e a King saíram das listas).
+  'sinais-scanner-mtm': 'MTM Auto Edge',
+  // O slug `aurum-flow` mantém-se (mudá-lo obrigava a mexer em ~95 ficheiros, no histórico de
+  // mensagens e nas apps nativas); o que mudou foi o nome visível, que passou a «Ideias de Cripto».
+  'aurum-flow': 'Ideias de Cripto',
+  // 18/09: `cripto-perps` fundido em `aurum-flow`; o slug antigo fica pelo histórico de mensagens.
+  'cripto-perps': 'Ideias de Cripto',
   'trade-ideas-setup': 'Ideias de Forex',
   'trade-ideas': 'Ideias de Índices',
   // Swings: entram e ficam. Vão para T2T sem motor de gestão — só se acompanha o desfecho.
   'ideias-e-sinais': 'Ideias e Sinais',
-  // Slug antigo da Aurum Flow — remover depois de 2026-10-14 (30 dias após 2026-09-14).
-  'golden-moves': 'MTM Auto Aurum Flow & Perpétuos',
+  // Slug antigo da Aurum Flow — fica porque ainda há mensagens publicadas com ele.
+  'golden-moves': 'Ideias de Cripto',
 }
 
 /** O nome a mostrar: o do canal no chat se o tivermos, senão o canónico, senão o slug. */

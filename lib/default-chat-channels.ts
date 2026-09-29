@@ -125,11 +125,11 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
     position: 14,
   },
   {
-    // Fundido com os Perpétuos de Cripto a 18/09 (o slug antigo `cripto-perps` fica escondido com o
-    // histórico). No iOS o cripto sai mensagem a mensagem e o nome aparece sem «& Perpétuos».
+    // O slug mantém-se (mudá-lo obrigava a mexer no histórico de mensagens e nas apps nativas); o
+    // nome visível é que passou a «Ideias de Cripto». A Aurum Flow é SÓ cripto: o ouro saiu.
     slug: 'aurum-flow',
-    name: 'MTM Auto Aurum Flow & Perpétuos',
-    description: 'Estratégia Aurum Flow — ouro e perpétuos — Tap to Trade',
+    name: 'Ideias de Cripto',
+    description: 'Sinais de perpétuos cripto (Aurum Flow ORB) — do Telegram «Ideias de Perpétuos Cripto»',
     parent_slug: 'sinais',
     position: 15,
   },
@@ -141,10 +141,10 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
     position: 16,
   },
   {
-    // O slug é histórico: o canal é o das estratégias MTM Auto Edge / King / Wolf.
+    // O slug é histórico: o canal é o da estratégia MTM Auto Edge (a Wolf e a King saíram).
     slug: 'sinais-scanner-mtm',
-    name: 'MTM Auto Edge/Wolf/King',
-    description: 'Estratégias MTM Auto Edge, King e Wolf — Tap to Trade',
+    name: 'MTM Auto Edge',
+    description: 'Estratégia MTM Auto Edge (fxEdge) — Tap to Trade',
     parent_slug: 'sinais',
     position: 17,
   },

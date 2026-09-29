@@ -65,7 +65,7 @@ const SCANNERS: ScannerData[] = [
   },
   {
     key: "aurumflow",
-    name: "MTM Aurum Flow",
+    name: "MTM Aurum Flow Cripto",
     subtitle: "Perpétuos Cripto · Tendência",
     image: "/aurum-flow-preview.png",
     badge: "Novo",

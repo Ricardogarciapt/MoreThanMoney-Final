@@ -78,7 +78,7 @@ export function vantagensBlock(): string {
   const linhas: [string, string][] = [
     ['Tap to Trade', 'Aceitas um sinal com um toque e ele abre na tua conta MT5 — com break-even, parciais e trailing geridos sozinhos. Não existe mais nada assim em português.'],
     ['Copy trading próprio', 'As nossas estratégias copiam direto para a tua conta, com o teu risco e os teus lotes. Infraestrutura nossa, não um serviço alugado.'],
-    ['Scanners que construímos', 'Sensei, GoldKiller, Aurum Flow e MTM Scanner — indicadores próprios no TradingView, não versões repintadas de indicadores públicos.'],
+    ['Scanners que construímos', 'Sensei, GoldKiller, MTM Aurum Flow Cripto e MTM Scanner — indicadores próprios no TradingView, não versões repintadas de indicadores públicos.'],
     ['Sessões ao vivo e gravadas', 'Educadores em direto, com legendas traduzidas e as gravações organizadas em cursos para reveres quando quiseres.'],
     ['Certificação a sério', 'Emitimos certificados avaliados: Fast Start, Validação do Bootcamp (30 horas) e o Teste Final — Junior Trader. Com nota mínima e correção real, porque um certificado que toda a gente passa não vale nada.'],
     ['App própria', 'iOS e Android, feitas por nós. Não somos um grupo de Telegram com um site à frente.'],
@@ -149,7 +149,7 @@ Este último ano mudou a MoreThanMoney. Deixámos de ser um grupo de sinais e pa
 O QUE TENS AQUI E NÃO TENS NOUTRO LADO
 • Tap to Trade — aceitas um sinal com um toque e ele abre na tua conta MT5, com break-even, parciais e trailing geridos sozinhos.
 • Copy trading próprio — as nossas estratégias copiam direto para a tua conta, com o teu risco e os teus lotes.
-• Scanners que construímos — Sensei, GoldKiller, Aurum Flow e MTM Scanner, indicadores próprios no TradingView.
+• Scanners que construímos — Sensei, GoldKiller, MTM Aurum Flow Cripto e MTM Scanner, indicadores próprios no TradingView.
 • Sessões ao vivo e gravadas — educadores em direto, com legendas traduzidas e gravações organizadas em cursos.
 • Certificação a sério — Fast Start, Validação do Bootcamp (30 horas) e Teste Final — Junior Trader, com nota mínima e correção real.
 • App própria — iOS e Android, feitas por nós.

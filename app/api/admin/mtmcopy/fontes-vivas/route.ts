@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
   /**
    * O PrimeVerse não é uma rota provider — e por isso não aparecia em lado nenhum.
    *
-   * Os sinais dos traders de topo do PrimeVerse são colocados por EXECUÇÃO DIRETA numa conta
+   * Os sinais do Edge (fxEdge) do PrimeVerse são colocados por EXECUÇÃO DIRETA numa conta
    * configurada em `site_settings.primeverse_execution`, sem CopyFactory pelo meio. Como o painel
    * só listava rotas, essa conta parecia uma ligação partida: aparecia subscrita a uma estratégia
    * que já não existe (a `su0a` da antiga cascade) e nada explicava de onde lhe vinham as trades.
@@ -118,7 +118,9 @@ export async function GET(req: NextRequest) {
       }
       primeverse = {
         modo: cfg.mode,
-        traders: cfg.traders,
+        // Só o Edge: o PrimeVerse ficou reduzido ao fxEdge, e mostrar Wolf/King aqui fazia
+        // procurar execução para estratégias que já não estão vivas.
+        traders: cfg.traders.filter((t) => t === 'fxedge'),
         contaId: cfg.accountId,
         nome: (conta?.name as string) ?? null,
         login: (conta?.login as string) ?? null,

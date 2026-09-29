@@ -97,20 +97,21 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
   "sinais-scanner-mtm": {
     emoji: "🏆",
     accent: "#F59E0B",
-    tag: "Estratégias",
+    tag: "Edge",
     rules: [
-      "Estratégias MTM Auto Edge, King e Wolf",
+      "Estratégia MTM Auto Edge (fxEdge)",
       "Só leitura — os sinais chegam automaticamente",
       "Aceitar: no separador Tap to Trade (aqui é só leitura)",
     ],
     tips: ["Os seguimentos (TP, break-even, fecho) respondem ao sinal original"],
   },
+  // O slug `aurum-flow` mantém-se; o canal é o «Ideias de Cripto» e é SÓ cripto (o ouro saiu).
   "aurum-flow": {
-    emoji: "⚡",
-    accent: "#FBBF24",
-    tag: "Aurum Flow",
+    emoji: "₿",
+    accent: "#F59E0B",
+    tag: "Cripto",
     rules: [
-      "Estratégia Aurum Flow — ouro e perpétuos",
+      "Sinais de perpétuos cripto (Aurum Flow ORB)",
       "Só leitura — os sinais chegam automaticamente",
       "Perpétuos: seguir/copiar no separador Tap to Trade",
     ],

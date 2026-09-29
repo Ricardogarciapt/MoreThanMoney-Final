@@ -11,10 +11,10 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
   // 2026-08-27: saiu daqui o 'trade-ideas-setup' (Ideias de Forex) — muito aviso, pouco toque.
   //
   // O 'sinais-scanner-mtm' esteve fora durante umas horas por engano meu: o slug lê-se como
-  // "sinais scanner MTM", mas o canal chama-se **Sinais PrimeVerse** e é por ele que entram os
-  // sinais dos traders de topo do PrimeVerse — que são para aceitar, não para esconder.
-  // 18/09: `cripto-perps` fundido em `aurum-flow` (canal «MTM Auto Aurum Flow & Perpétuos»); o
-  // slug antigo fica para as mensagens que ainda lá estejam até correr a migração 118.
+  // "sinais scanner MTM", mas o canal é o **MTM Auto Edge** e é por ele que entram os sinais da
+  // estratégia Edge (fxEdge) — que são para aceitar, não para esconder.
+  // 18/09: `cripto-perps` fundido em `aurum-flow` (canal «Ideias de Cripto»); o slug antigo fica
+  // para as mensagens que ainda lá estejam.
   'trade-ideas': ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'aurum-flow', 'cripto-perps', 'sensei-scanner'],
 }
 
@@ -28,6 +28,28 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
 // nos perpétuos o botão não abre ordem, marca o sinal como seguido). Sem isto o fallback
 // rejeitava-os com 'provider_off' quando a configuração de rotas não estivesse disponível.
 export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'aurum-flow', 'cripto-perps']
+
+/**
+ * Canais ACOMPANHADOS pelo motor de seguimento (`signal-tracker`) — quais sinais são MEDIDOS.
+ *
+ * Não é a mesma pergunta que `T2T_SIGNAL_CHANNELS`, que diz quais são NEGOCIÁVEIS (têm botão de
+ * aceitar). Durante um mês foram a mesma lista, e isso custou a medição do MTM Scanner:
+ *
+ *   A 27/08 o 'trade-ideas-setup' («Ideias de Forex») saiu do T2T por decisão do dono — «muito
+ *   aviso, pouco toque». A decisão era sobre o BOTÃO, mas o tracker admitia sinais por esta mesma
+ *   constante, por isso o canal deixou de ser seguido no mesmo instante. O canal não secou: é o
+ *   mais movimentado do chat e continua a publicar sinais completos de 15 em 15 minutos (656
+ *   entradas só em Setembro, zero acompanhadas). O motor continuou a executá-los — chegam à mestre
+ *   e às contas — mas nenhum deles entrava na prova, no scorecard ou nos números da landing.
+ *
+ * `signal-outcomes.CANAIS_DE_SINAIS` sempre incluiu o 'trade-ideas-setup': o lado que FECHA ideias
+ * procurava desfechos num canal onde o lado que as ABRE nunca admitia nenhuma. Esta constante é
+ * que fecha essa assimetria.
+ *
+ * Tirar um canal do T2T não pode voltar a cegar a medição: quem mexer no T2T mexe na lista de
+ * cima; quem quiser deixar de MEDIR um canal tem de o dizer aqui, de propósito.
+ */
+export const CANAIS_ACOMPANHADOS = [...T2T_SIGNAL_CHANNELS, 'trade-ideas-setup']
 
 /**
  * Os NOMES vivem em `./rotulos-canais` — módulo puro, para as duas apps e o admin poderem usar a

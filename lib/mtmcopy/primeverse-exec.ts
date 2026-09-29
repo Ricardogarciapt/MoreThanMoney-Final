@@ -10,14 +10,15 @@ import { CANONICAL_SENSEI_ACCOUNT_ID } from './provider-constants'
  *
  * Config (site_settings.primeverse_execution): { mode, trader, senseiLot, tpLevel, bybit }
  *  mode: 'off' (default) | 'shadow' (só regista) | 'live' (executa)
- *  trader: assinatura a seguir (default 'kingfkg')
+ *  trader: assinatura a seguir (default 'fxedge' — 29/09 o dono ficou só com a Edge; a `kingfkg`
+ *          e a `g_wolf` saíram e os providers delas estão desligados)
  *  senseiLot: lote fixo na conta Sensei (default 0.01)
  *  tpLevel: qual TP usar como alvo da ordem MT5 (1..5, default 1)
  *  bybit: encaminhar BTCUSD para os perps Bybit (default true)
  */
 export interface PrimeverseExecConfig {
   mode: 'off' | 'shadow' | 'live'
-  /** Assinatura(s) a seguir — string bruta (pode ser CSV: "kingfkg,fxedge"). */
+  /** Assinatura(s) a seguir — string bruta (pode ser CSV). Hoje só "fxedge". */
   trader: string
   /** Lista normalizada de traders a executar (derivada de `trader`). */
   traders: string[]
@@ -42,7 +43,7 @@ export async function getPrimeverseExecConfig(): Promise<PrimeverseExecConfig> {
     const v = (data?.value ?? {}) as Partial<PrimeverseExecConfig>
     const mode: PrimeverseExecConfig['mode'] =
       v.mode === 'shadow' || v.mode === 'live' ? v.mode : 'off'
-    const trader = (typeof v.trader === 'string' && v.trader.trim()) ? v.trader.trim().toLowerCase() : 'kingfkg'
+    const trader = (typeof v.trader === 'string' && v.trader.trim()) ? v.trader.trim().toLowerCase() : 'fxedge'
     const traders = Array.isArray(v.traders) && v.traders.length
       ? v.traders.map((t) => String(t).trim().toLowerCase()).filter(Boolean)
       : trader.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
@@ -53,6 +54,6 @@ export async function getPrimeverseExecConfig(): Promise<PrimeverseExecConfig> {
     const accountId = typeof v.accountId === 'string' && v.accountId.trim() ? v.accountId.trim() : DEFAULT_ACCOUNT
     return { mode, trader, traders, senseiLot, riskPct, tpLevel, bybit, accountId }
   } catch {
-    return { mode: 'off', trader: 'kingfkg', traders: ['kingfkg'], senseiLot: 0.01, riskPct: 0.5, tpLevel: 1, bybit: true, accountId: DEFAULT_ACCOUNT }
+    return { mode: 'off', trader: 'fxedge', traders: ['fxedge'], senseiLot: 0.01, riskPct: 0.5, tpLevel: 1, bybit: true, accountId: DEFAULT_ACCOUNT }
   }
 }

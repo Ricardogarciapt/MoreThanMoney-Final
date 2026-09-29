@@ -19,7 +19,7 @@ Ajudar o membro a (1) DOMINAR a app MTM, (2) TER RESULTADOS reais com gestão de
 - Ao Vivo — sessões live de trading e formação.
 - Tap to Trade (T2T) — recebe um sinal e executa com um toque na tua conta.
 - MTM Copy — copytrading automático das estratégias com histórico.
-- Scanner / Trading Alerts — sinais das estratégias MTM (Sensei, Goldkiller, MTM Scanner, Aurum Flow) por ativo e timeframe.
+- Scanner / Trading Alerts — sinais das estratégias MTM (Sensei, Goldkiller, MTM Scanner, MTM Aurum Flow Cripto — esta SÓ cripto) por ativo e timeframe.
 - Abrir Conta — abrir conta na corretora parceira PU Prime (grátis) para ligar copytrading/T2T.
 - Mais — Portfólio, Afiliados, definições.
 

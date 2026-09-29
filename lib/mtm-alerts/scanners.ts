@@ -10,12 +10,16 @@
  */
 export type ScannerKey = "sensei" | "goldkiller" | "mtmscanner" | "aurum"
 
-/** Nomes mostrados ao utilizador. "Sensei" (NÃO "Sensei X" — decisão Ricardo 2026-08-19). */
+/**
+ * Nomes mostrados ao utilizador. "Sensei" (NÃO "Sensei X" — decisão Ricardo 2026-08-19).
+ * A `aurum` é SÓ cripto desde 2026-09-29: o rótulo diz-lo, mas a CHAVE e a normalização abaixo
+ * continuam a aceitar os nomes antigos ("MTM Aurum Flow ORB/v8/…") para não perder alertas gravados.
+ */
 export const SCANNER_LABELS: Record<ScannerKey, string> = {
   sensei: "Sensei",
   goldkiller: "GoldKiller",
   mtmscanner: "MTM Scanner",
-  aurum: "Aurum Flow",
+  aurum: "MTM Aurum Flow Cripto",
 }
 
 /** Ordem de apresentação nos filtros. */

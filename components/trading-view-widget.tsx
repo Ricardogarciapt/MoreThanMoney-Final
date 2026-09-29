@@ -30,6 +30,7 @@ import {
   Target,
   Brain,
   Star,
+  Bitcoin,
 } from "lucide-react"
 import { exitDocumentFullscreen, getFullscreenElement, requestElementFullscreen } from "@/lib/browser-compat"
 import { Button } from "@/components/ui/button"
@@ -95,7 +96,7 @@ const scannerStudies: Record<ScannerKey, string[]> = {
 const scannerLabels: Record<ScannerKey, string> = {
   GoldenZone: "Golden Zone",
   Momentum: "Momentum",
-  AurumFlow: "Aurum Flow",
+  AurumFlow: "MTM Aurum Flow Cripto",
   KillShot: "Kill Shot",
   Supernova: "Supernova",
   Winzone: "Sniper Pro",
@@ -108,7 +109,8 @@ const scannerLabels: Record<ScannerKey, string> = {
 const scannerLogos: Record<ScannerKey, { icon: any; color: string; bgColor: string }> = {
   GoldenZone: { icon: Crown, color: "text-gold-300", bgColor: "bg-gradient-to-r from-gold-500 to-yellow-400" },
   Momentum: { icon: Waves, color: "text-blue-300", bgColor: "bg-gradient-to-r from-blue-600 to-cyan-500" },
-  AurumFlow: { icon: Zap, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-yellow-500" },
+  // ₿ e âmbar (#F59E0B = amber-500): a MTM Aurum Flow Cripto deixou de ser ouro+perpétuos.
+  AurumFlow: { icon: Bitcoin, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-yellow-500" },
   KillShot: { icon: Skull, color: "text-gray-300", bgColor: "bg-gradient-to-r from-gray-600 to-slate-500" },
   Supernova: { icon: Zap, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-orange-500" },
   Winzone: { icon: Shield, color: "text-blue-300", bgColor: "bg-gradient-to-r from-blue-700 to-sky-500" },

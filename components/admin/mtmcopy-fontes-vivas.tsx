@@ -150,10 +150,10 @@ export default function MtmcopyFontesVivas() {
                 ) : (
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                 )}
-                PrimeVerse · traders de topo
+                PrimeVerse · MTM Auto Edge
               </span>
               <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[11px] text-zinc-300">
-                {primeverse.traders.join(" · ")}
+                {primeverse.traders.join(" · ") || "sem Edge ligado"}
               </span>
               <span className="text-[12px] text-zinc-400">
                 {primeverse.nome ?? "conta"} · {primeverse.login ?? "—"} · {primeverse.servidor ?? "—"}

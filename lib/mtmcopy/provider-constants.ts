@@ -180,8 +180,8 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
       'ouro. Conta mínima 500 USD (a 1% por trade).',
   },
   [CANONICAL_AURUMFLOW_STRATEGY_ID]: {
-    title: 'MTM Auto Aurum Flow',
-    publicLabel: 'MTM Auto Aurum Flow',
+    title: 'MTM Aurum Flow Cripto',
+    publicLabel: 'MTM Aurum Flow Cripto',
     description:
       'Ouro e alguns pares, com gestão feita na própria fonte — o trailing vem de lá, não é '
       + 'aplicado por cima. Stop e alvos da própria mensagem, ' +

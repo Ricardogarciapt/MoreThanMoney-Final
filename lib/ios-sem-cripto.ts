@@ -165,11 +165,19 @@ export function mencionaCripto(texto?: string | null): boolean {
 /** Símbolo por defeito quando o pedido era cripto. */
 export const SIMBOLO_SEM_CRIPTO = "XAUUSD"
 
-/** Canais de chat que são só cripto: fora da app iOS (Guideline 3.1.5, rejeição 21/09). */
-export const CANAIS_SO_CRIPTO = new Set(["cripto", "cripto-perps"])
+/**
+ * Canais de chat que são só cripto: fora da app iOS (Guideline 3.1.5, rejeição 21/09).
+ *
+ * O `aurum-flow` entrou aqui a 29/09. Antes era um canal MISTO — ouro da Aurum Flow + perpétuos —
+ * e por isso tinha de ser filtrado mensagem a mensagem, deixando passar o ouro. Com a Aurum Flow
+ * a passar a ser só cripto, o canal («Ideias de Cripto») é 100% cripto e sai inteiro da app iOS:
+ * um canal fora é mais seguro do que uma regex por mensagem, e a regex já custou uma rejeição.
+ * O `cripto-perps` fica pelo histórico — está escondido, mas quem o peça pelo slug não o recebe.
+ */
+export const CANAIS_SO_CRIPTO = new Set(["cripto", "cripto-perps", "aurum-flow"])
 
 /**
- * Esta mensagem de chat / sinal T2T é cripto? Os perpétuos (Aurum Flow & Perpétuos) têm o botão
+ * Esta mensagem de chat / sinal T2T é cripto? Os perpétuos («Ideias de Cripto») têm o botão
  * «TAP to Copy» para copy trading numa bolsa — foi isso que a Apple leu como «serviço de câmbio de
  * criptomoedas» na 3.7.6 (79). Na app iOS não aparecem nem o sinal nem o botão.
  */

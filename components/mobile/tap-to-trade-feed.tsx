@@ -96,9 +96,9 @@ const T2T_PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000
  * O sinal traz um NÍVEL de entrada (zona/limite)? Decide a validade: com nível é um setup
  * PENDENTE e vale 24h; sem nível é "a mercado" e morre em 5 minutos.
  *
- * A zona nem sempre vem etiquetada. A Aurum Flow escreve-a a seco — «I'm buying XAUUSD ⏎
- * 4606-4602 ⏎ TP1 4609» — e como aqui só se procurava a PALAVRA «entrada/zona», todos os sinais
- * dele caíam na janela dos 5 minutos e desapareciam do Tap to Trade antes de alguém lhes tocar.
+ * A zona nem sempre vem etiquetada. A MTM Aurum Flow Cripto escreve-a a seco — «I'm buying ⏎
+ * 4606-4602 ⏎ TP1 4609» (exemplo do tempo em que ainda publicava ouro) — e como aqui só se
+ * procurava a PALAVRA «entrada/zona», todos os sinais dela caíam na janela dos 5 minutos e desapareciam do Tap to Trade antes de alguém lhes tocar.
  * Eram 239 mensagens em duas semanas contra 560 com nível reconhecido.
  *
  * E a etiqueta nem sempre encosta ao número: o Sensei escreve «Entrada activada: 4637.54», com
@@ -124,7 +124,7 @@ function symbolOf(content: string): string | null {
 /**
  * Extrai os campos estruturados de um sinal (símbolo, direção, entrada, SL, TPs)
  * a partir do texto cru — que chega em formatos diferentes por fonte (Premium literal
- * do Telegram, "📡 PrimeVerse", master-poll "🟢 XAUUSD BUY"). Serve SÓ para o card
+ * do Telegram, "📡 PrimeVerse" (hoje só o MTM Auto Edge), master-poll "🟢 XAUUSD BUY"). Serve SÓ para o card
  * harmonizado do tab T2T; NÃO altera o texto guardado nem os chats.
  */
 interface SignalFields {
@@ -1709,7 +1709,7 @@ export default function TapToTradeFeed() {
           content={copySig.content || ""}
           titulo={
             ehSinalDePerpetuo(copySig.channel_slug, copySig.content)
-              ? "Tap to copy · Perpétuos"
+              ? "Tap to copy · Cripto"
               : "Tap to copy"
           }
           aoFechar={() => setCopySig(null)}

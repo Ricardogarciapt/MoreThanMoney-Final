@@ -19,8 +19,8 @@ export type MtmcopyTelegramGroup =
 
 /**
  * Chave ANTIGA da Aurum Flow, gravada em `telegram_group`/`telegram_groups` das ligações.
- * Alias temporário (2026-09-14): continua a ser lida e é traduzida para `aurum_flow`. A BD foi
- * migrada na 067; retirar este alias depois de 2026-10-14 (30 dias).
+ * Continua a ser lida e é traduzida para `aurum_flow`. A BD foi migrada na 067, mas o alias fica:
+ * é o que deixa ler as ligações antigas sem as reescrever.
  */
 const CHAVE_ANTIGA_AURUM_FLOW = 'golden_moves'
 
@@ -146,10 +146,10 @@ export const TELEGRAM_GROUPS: {
   {
     id: 'aurum_flow',
     channelKey: 'premium-signals',
-    title: 'MTM Auto Aurum Flow',
+    title: 'MTM Aurum Flow Cripto',
     description:
-      'Ouro pela fonte do Aurum Flow, com 1% de risco por trade e a gestão que vem na própria fonte '
-      + '— o trailing chega com o sinal, não é aplicado por cima.',
+      'Perpétuos cripto pela fonte do Aurum Flow (ORB), com 1% de risco por trade e a gestão que vem '
+      + 'na própria fonte — o trailing chega com o sinal, não é aplicado por cima.',
     chatId: '-1004343748070',
   },
   {
@@ -388,8 +388,8 @@ const TELEGRAM_GROUP_SHORT_LABEL: Record<MtmcopyTelegramGroup, string> = {
   goldkiller: 'GoldKiller · Ouro',
   forex_swings: 'Forex Swings',
   // Chave renomeada a 2026-09-14 (era `golden_moves`); a antiga continua a ser lida por
-  // `traduzirGrupo` durante 30 dias.
-  aurum_flow: 'MTM Auto Aurum Flow',
+  // `traduzirGrupo` porque há ligações gravadas com ela.
+  aurum_flow: 'MTM Aurum Flow Cripto',
 }
 
 export function telegramGroupsLabel(groups: MtmcopyTelegramGroup[]): string {

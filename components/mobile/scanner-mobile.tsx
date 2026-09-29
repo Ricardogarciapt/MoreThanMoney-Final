@@ -51,6 +51,7 @@ import {
   RotateCw,
   TrendingUp,
   Zap,
+  Bitcoin,
   Crown,
   Waves,
   Skull,
@@ -97,7 +98,8 @@ interface ChecklistSection {
 const scannerLogos: Record<ScannerKey, { icon: any; color: string; bgColor: string }> = {
   GoldenZone: { icon: Crown, color: "text-gold-300", bgColor: "bg-gradient-to-r from-gold-500 to-yellow-400" },
   Momentum: { icon: Waves, color: "text-blue-300", bgColor: "bg-gradient-to-r from-blue-600 to-cyan-500" },
-  AurumFlow: { icon: Zap, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-yellow-500" },
+  // ₿ e âmbar (#F59E0B = amber-500): a MTM Aurum Flow Cripto deixou de ser ouro+perpétuos.
+  AurumFlow: { icon: Bitcoin, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-yellow-500" },
   KillShot: { icon: Skull, color: "text-gray-300", bgColor: "bg-gradient-to-r from-gray-600 to-slate-500" },
   Supernova: { icon: Zap, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-orange-500" },
   Winzone: { icon: Shield, color: "text-blue-300", bgColor: "bg-gradient-to-r from-blue-700 to-sky-500" },

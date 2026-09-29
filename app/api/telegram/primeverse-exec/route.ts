@@ -6,18 +6,23 @@ import { getSiteOrigin } from '@/lib/site-url'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { handlePrimeverseCancelClose } from '@/lib/mtmcopy/primeverse-lifecycle'
-import { estrategiaDoTrader, formatarSeguimento, formatarSinal, lerSinal } from '@/lib/sinais/formato-sinal'
+import { estrategiaDoTrader, estrategiaVivaDoTrader, formatarSeguimento, formatarSinal, lerSinal } from '@/lib/sinais/formato-sinal'
 import { lifecycleMessage } from '@/lib/mtmcopy/signal-lifecycle'
 import { normalizeSymbol } from '@/lib/mtmcopy/signal-parser'
 import { encaminharPrimeverseParaEstrategia, type KindPrimeverse } from '@/lib/mtmfunded/estrategias-sinais/executar'
 
 /**
- * CANAL «MTM Auto Edge/Wolf/King» (slug `sinais-scanner-mtm`, 18/09).
+ * CANAL «MTM Auto Edge» (slug `sinais-scanner-mtm`).
  *
- * Os sinais dos traders fxedge / kingfkg / g_wolf são as estratégias MTM Auto Edge / King / Wolf
- * (migração 092) e publicam-se TODOS aqui, seja qual for o activo — ouro, índices, forex ou cripto
- * (no iOS o cripto sai mensagem a mensagem, pelo texto). Os outros traders da fonte deixam de ir ao
- * chat. O nome da fonte externa não aparece em lado nenhum: nem no texto, nem no remetente.
+ * 29/09 — decisão do dono: **da fonte fica só o trader `fxedge` = MTM Auto Edge**. A `kingfkg`
+ * (King) e a `g_wolf` (Wolf) saem: não se publicam sinais novos delas nem se executam (os
+ * providers `mtm-auto-king`/`mtm-auto-wolf` estão com `ativo = false`, e `executar.ts` recusa
+ * qualquer estratégia desligada). O que continua a funcionar para elas é o FECHO — ver o
+ * comentário de `nomeEstrategia` vs `nomeEstrategiaViva` mais abaixo.
+ *
+ * Os sinais publicam-se aqui seja qual for o activo — ouro, índices, forex ou cripto (no iOS o
+ * cripto sai mensagem a mensagem, pelo texto). O nome da fonte externa não aparece em lado
+ * nenhum: nem no texto, nem no remetente.
  *
  * Antes cada activo ia para o chat da sua classe (ouro → sinais-scanner-mtm, índices →
  * trade-ideas, forex → trade-ideas-setup, cripto → cripto-perps) com a assinatura da fonte; o canal
@@ -48,7 +53,7 @@ async function acharSetup(estrategia: string, symbol: string, direction: 'buy' |
   return null
 }
 
-/** Insere no canal Edge/King/Wolf + push. Devolve o id da mensagem. */
+/** Insere no canal «MTM Auto Edge» + push. Devolve o id da mensagem. */
 async function publicarNoCanal(content: string, estrategia: string, replyTo: string | null): Promise<string | null> {
   try {
     const insert: Record<string, unknown> = {
@@ -92,10 +97,10 @@ interface Body {
    *  Entry ("🟢 ENTRY HIT") → executa a MERCADO (preço ≈ entry, logo SL/TP ficam corretos).
    *  'cancel' = o trader cancelou a ordem pendente · 'close' = o trader fechou a posição →
    *  thread no chat + apaga/fecha as ordens T2T dos seguidores desse setup.
-   *  Default 'entry_hit' (retrocompat). Os setups do kingfkg são níveis pendentes: entrar a mercado
+   *  Default 'entry_hit' (retrocompat). Os setups desta fonte são níveis pendentes: entrar a mercado
    *  neles fica com o preço longe do Entry → SL enorme. Por isso só se executa no ENTRY HIT. */
   kind?: 'setup' | 'entry_hit' | 'cancel' | 'close' | 'tp_hit' | 'sl_be' | 'sl_hit'
-  /** id da mensagem do SETUP no canal (relay com PV_FOLLOWUPS) — chave exacta das estratégias MTM Auto Edge/King/Wolf */
+  /** id da mensagem do SETUP no canal (relay com PV_FOLLOWUPS) — chave exacta do sinal da MTM Auto Edge */
   setup_msg_id?: number | string
   /** tp_hit: nível · sl_be: preço do BE */
   level?: number
@@ -158,13 +163,20 @@ export async function POST(req: NextRequest) {
   // SETUP (alerta pendente): só MOSTRA o sinal no chat da classe de ativo (de TODOS os traders) e
   // NÃO executa nada — o Entry do kingfkg é um nível pendente; entrar a mercado aqui poria o SL
   // enorme (preço longe do Entry). A execução acontece SÓ quando chega o "🟢 ENTRY HIT".
-  // Só as estratégias Edge / King / Wolf vão ao chat.
+  // Só a estratégia VIVA vai ao chat — hoje só a Edge (decisão do dono 29/09).
+  //
+  // São duas perguntas diferentes e por isso são duas variáveis:
+  //  · `nomeEstrategia` conhece as TRÊS (Edge/King/Wolf). É a leitura do histórico, e é o que o
+  //    cancel/close precisa: uma posição da King/Wolf que ainda esteja aberta TEM de poder ser
+  //    fechada e de apagar as ordens T2T de quem a seguiu. Fechar é sempre permitido.
+  //  · `nomeEstrategiaViva` só conhece as que ainda se PUBLICAM. É o que abre sinais novos.
   const nomeEstrategia = estrategiaDoTrader(trader)
+  const nomeEstrategiaViva = estrategiaVivaDoTrader(trader)
   const chatSlug = nomeEstrategia ? CANAL_EKW : null
   if (kind === 'setup') {
-    if (nomeEstrategia) {
+    if (nomeEstrategiaViva) {
       const texto = formatarSinal({
-        estrategia: nomeEstrategia,
+        estrategia: nomeEstrategiaViva,
         simbolo: symbol,
         direcao: direction,
         entrada: entry,
@@ -173,9 +185,9 @@ export async function POST(req: NextRequest) {
         timeframe,
         estado: 'Novo sinal',
       })
-      await publicarNoCanal(texto, nomeEstrategia, null)
+      await publicarNoCanal(texto, nomeEstrategiaViva, null)
     }
-    return NextResponse.json({ ok: true, routed: chatSlug, kind, exec: 'aguarda_entry_hit', estrategia })
+    return NextResponse.json({ ok: true, routed: nomeEstrategiaViva ? chatSlug : null, kind, exec: 'aguarda_entry_hit', estrategia })
   }
 
   // ── kind === 'cancel' | 'close' ── o trader cancelou a ordem pendente ou fechou a posição →
@@ -189,11 +201,11 @@ export async function POST(req: NextRequest) {
   // ── kind === 'entry_hit' ── o preço chegou ao Entry → ativa a ordem (limit/stop) do sistema PrimeVerse.
   // Não re-mostra o card (já foi mostrado no setup) para não duplicar no chat, MAS acompanha a posição:
   // uma linha concisa a confirmar a ATIVAÇÃO, para o seguidor manual (Tap to Trade) gerir a partir daqui.
-  // Postado para TODOS os traders do setup (não só os executados), antes do gate de execução.
-  if (chatSlug && nomeEstrategia) {
+  // Postado para todos os traders VIVOS do setup (não só os executados), antes do gate de execução.
+  if (chatSlug && nomeEstrategiaViva) {
     // Seguimento em THREAD no sinal (formato único): o mesmo texto canónico do motor de preço.
     // Uma vez por sinal — o tracker também anuncia a entrada quando a mede pelo preço.
-    const setupId = await acharSetup(nomeEstrategia, symbol, direction)
+    const setupId = await acharSetup(nomeEstrategiaViva, symbol, direction)
     let jaAnunciado = false
     if (setupId) {
       const { data: dup } = await getSupabaseAdmin()
@@ -207,7 +219,7 @@ export async function POST(req: NextRequest) {
     }
     if (!jaAnunciado) {
       const { text } = lifecycleMessage('entry_hit', { symbol, direction, price: entry })
-      await publicarNoCanal(formatarSeguimento(text, nomeEstrategia), nomeEstrategia, setupId)
+      await publicarNoCanal(formatarSeguimento(text, nomeEstrategiaViva), nomeEstrategiaViva, setupId)
     }
   }
 

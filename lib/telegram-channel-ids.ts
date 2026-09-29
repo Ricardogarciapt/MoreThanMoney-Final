@@ -68,7 +68,8 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
     chatId: '-1004363723837',
     title: 'Ideias de Perpétuos Cripto',
     link: 'https://t.me/+ue9JuMRwMv0zMGQ0',
-    // Fundido com a Aurum Flow (18/09): o grupo espelha para o canal único.
+    // Fundido com a Aurum Flow (18/09): o grupo espelha para o canal único «Ideias de Cripto»
+    // (o slug `aurum-flow` mantém-se — só mudou o nome visível).
     appSlug: 'aurum-flow' as const,
     envVars: ['TELEGRAM_CHANNEL_PERPS', 'TELEGRAM_PERPS_CHAT_ID'],
   },

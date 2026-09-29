@@ -48,7 +48,7 @@ export const scannerStudies: Record<ScannerKey, string[]> = {
 export const scannerLabels: Record<ScannerKey, string> = {
   GoldenZone: "Golden Zone",
   Momentum: "Momentum",
-  AurumFlow: "Aurum Flow",
+  AurumFlow: "MTM Aurum Flow Cripto",
   KillShot: "Kill Shot",
   Supernova: "Supernova",
   Winzone: "Sniper Pro",

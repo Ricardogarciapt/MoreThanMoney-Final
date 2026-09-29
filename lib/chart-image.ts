@@ -57,7 +57,7 @@ const hline = (price: number, color: string, text: string) => ({
 })
 
 // Studies built-in do chart-img que reproduzem os plots dos scanners MTM.
-// Família MTM/Aurum: stack DEMA (15/50/238) + POC (Volume Profile) + RSI.
+// Família MTM / MTM Aurum Flow Cripto: stack DEMA (15/50/238) + POC (Volume Profile) + RSI.
 // chart-img ignora chaves de input desconhecidas → mando as variantes prováveis do "Length".
 const DEMA = (len: number) => ({ name: "Double EMA", input: { length: len, Length: len, in_0: len } })
 const POC = { name: "Volume Profile Visible Range" }
@@ -66,7 +66,7 @@ const RSI = { name: "Relative Strength Index" }
 /** Studies (em ordem de prioridade) para o scanner do sinal, pelo nome do alerta. */
 export function studiesForScanner(alertName?: string | null): { name: string; input?: unknown; override?: unknown }[] {
   const a = (alertName || "").toLowerCase()
-  // Aurum Flow e MTM Scanner partilham a base DEMA+POC+RSI
+  // A MTM Aurum Flow Cripto e o MTM Scanner partilham a base DEMA+POC+RSI
   if (/aurum|mtm\s*scanner|perps/.test(a)) {
     return [DEMA(15), DEMA(50), DEMA(238), POC, RSI]
   }

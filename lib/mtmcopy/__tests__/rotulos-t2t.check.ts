@@ -34,18 +34,21 @@ caso('os nomes são os de chat_channels.name (24/09) — o que a pessoa lê a se
   assert.equal(ROTULOS_CANAIS_T2T['premium-ideas'], 'MTM Auto Premium')
   assert.equal(ROTULOS_CANAIS_T2T['sensei-scanner'], 'MTM Auto Sensei')
   assert.equal(ROTULOS_CANAIS_T2T['sinais-goldkiller'], 'Sinais Scanner Gold Killer')
-  assert.equal(ROTULOS_CANAIS_T2T['sinais-scanner-mtm'], 'MTM Auto Edge/Wolf/King')
-  assert.equal(ROTULOS_CANAIS_T2T['aurum-flow'], 'MTM Auto Aurum Flow & Perpétuos')
+  assert.equal(ROTULOS_CANAIS_T2T['sinais-scanner-mtm'], 'MTM Auto Edge')
+  assert.equal(ROTULOS_CANAIS_T2T['aurum-flow'], 'Ideias de Cripto')
   assert.equal(ROTULOS_CANAIS_T2T['trade-ideas-setup'], 'Ideias de Forex')
 })
 
-caso('os perpétuos e o Aurum Flow dizem o mesmo (foram fundidos a 18/09)', () => {
+caso('os slugs-alias da cripto dizem todos «Ideias de Cripto»', () => {
+  // `cripto-perps` (fusão de 18/09) e `golden-moves` (slug antigo) continuam a apontar para o
+  // MESMO nome: são a mesma coisa vista pelo histórico de mensagens.
   assert.equal(rotuloCanalT2T('cripto-perps'), rotuloCanalT2T('aurum-flow'))
+  assert.equal(rotuloCanalT2T('golden-moves'), 'Ideias de Cripto')
 })
 
 caso('o nome vivo do canal ganha ao canónico; sem nenhum, fica o slug', () => {
   assert.equal(rotuloCanalT2T('aurum-flow', 'Outro nome'), 'Outro nome')
-  assert.equal(rotuloCanalT2T('aurum-flow', '   '), 'MTM Auto Aurum Flow & Perpétuos')
+  assert.equal(rotuloCanalT2T('aurum-flow', '   '), 'Ideias de Cripto')
   assert.equal(rotuloCanalT2T('canal-que-nao-existe'), 'canal-que-nao-existe')
 })
 

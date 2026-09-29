@@ -42,9 +42,9 @@ export function buildAppChannelMap(): Map<string, AppChatChannelSlug> {
   registerChatId(resolvedForexIdeasChatId(), 'trade-ideas-setup')
   registerChatId(resolvedGoldkillerScannerChatId(), 'sinais-goldkiller')
   registerChatId(resolvedPremiumSignalsChatId(), 'premium-ideas')
-  // Grupo dos Perpétuos (reaproveitado). Mapeia por ID → cripto-perps, ANTES do título (o título
-  // "Ideias de Perpétuos Cripto" senão cairia no fallback 'ideias'→Forex). Evita a notif trocada.
-  // Desde 18/09 o canal da app é o fundido «MTM Auto Aurum Flow & Perpétuos» (`aurum-flow`).
+  // Grupo dos Perpétuos (reaproveitado). Mapeia por ID ANTES do título (o título "Ideias de
+  // Perpétuos Cripto" senão cairia no fallback 'ideias'→Forex). Evita a notif trocada.
+  // O canal da app é o «Ideias de Cripto» — slug `aurum-flow`, que se mantém.
   registerChatId(resolvedPerpsChatId() ?? undefined, 'aurum-flow')
   // O chat Aurum Flow foi RETIRADO das apps a 2026-08-27. Já estava escondido; o que faltava era
   // parar de lhe escrever — continuava a receber mensagens (97, a última nesse mesmo dia) para um

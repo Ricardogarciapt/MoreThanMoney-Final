@@ -70,6 +70,10 @@ const SCANNER_STUDIES: Record<string, string[]> = {
   MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
   // Variante "sem painéis" do Sensei (publicada) — só plots, sem as tabelas laterais.
   Sensei: ["PUB;25c2231a331e413b8e7498364c5b94ab"],
+  // A Aurum Flow tem estudo PRÓPRIO e faltava aqui: um alerta dela abria o gráfico com os plots
+  // do Sensei, que é outra estratégia. O mesmo id de `lib/scanners/estudos.ts`, que é a tabela
+  // canónica — esta cópia local existe porque a variante do Sensei aqui é a "sem painéis".
+  AurumFlow: ["PUB;4ca56ac1162a401cb62fa3205c73366a"],
 }
 
 type StudySpec = string | { id: string; inputs?: Record<string, unknown> }
@@ -78,7 +82,7 @@ type StudySpec = string | { id: string; inputs?: Record<string, unknown> }
 function resolveStudies(strategy: string | null): StudySpec[] | undefined {
   const s = (strategy ?? "").toLowerCase().replace(/[^a-z]/g, "")
   if (!s) return undefined
-  if (s.includes("aurum")) return SCANNER_STUDIES.Sensei // Aurum Flow = família Sensei (perpétuos)
+  if (s.includes("aurum")) return SCANNER_STUDIES.AurumFlow // estudo próprio (não é o do Sensei)
   if (s.includes("sensei")) return SCANNER_STUDIES.Sensei
   if (s.includes("goldkiller")) return SCANNER_STUDIES.Goldkiller
   if (s.includes("goldenzone")) return SCANNER_STUDIES.GoldenZone
@@ -183,8 +187,17 @@ interface Subscription {
  * faz aos favoritos (components/funded/funded-watchlist.tsx::lerFavoritos).
  */
 const simbolosIniciais = () => (semCripto() ? DEFAULT_ALERT_SYMBOLS.filter((s) => !ehSimboloCripto(s)) : DEFAULT_ALERT_SYMBOLS)
-// Estratégias MTM que geram alertas (inclui Aurum Flow — scanner de perpétuos cripto).
-const STRATEGIES = ["Sensei", "Goldkiller", "MTMScanner", "Aurum Flow"]
+/**
+ * Estratégias MTM que geram alertas. O VALOR é o que fica gravado na subscrição — não muda,
+ * senão as preferências já guardadas deixavam de casar com os alertas. Só o rótulo mudou
+ * (a Aurum Flow passou a ser só cripto).
+ */
+const STRATEGIES: { valor: string; rotulo: string }[] = [
+  { valor: "Sensei", rotulo: "Sensei" },
+  { valor: "Goldkiller", rotulo: "Goldkiller" },
+  { valor: "MTMScanner", rotulo: "MTMScanner" },
+  { valor: "Aurum Flow", rotulo: "MTM Aurum Flow Cripto" },
+]
 const TIMEFRAMES = ["5", "15", "30", "60", "240", "D"]
 
 // Ativos agrupados por CLASSE (dropdowns no seletor de alertas).
@@ -819,7 +832,12 @@ export default function TradingAlertsMobile() {
             </p>
             <div className="flex flex-wrap gap-1.5">
               {STRATEGIES.map((s) => (
-                <Chip key={s} label={s} active={sub.strategies.includes(s)} onClick={() => toggle("strategies", s)} />
+                <Chip
+                  key={s.valor}
+                  label={s.rotulo}
+                  active={sub.strategies.includes(s.valor)}
+                  onClick={() => toggle("strategies", s.valor)}
+                />
               ))}
             </div>
           </div>

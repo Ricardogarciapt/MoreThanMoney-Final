@@ -51,7 +51,7 @@ export default function SeccaoSinais() {
 
       <Painel
         titulo="Feed unificado · 24 h"
-        sub="Site/Premium/T2T (mtmcopy_signal_log agrupado por mensagem), TradingView, MTM Auto (sinais + execuções) e PrimeVerse. Clica num sinal para ver o fan-out."
+        sub="Site/Premium/T2T (mtmcopy_signal_log agrupado por mensagem), TradingView, MTM Auto (sinais + execuções) e PrimeVerse (MTM Auto Edge). Clica num sinal para ver o fan-out."
         accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}
       >
         <div className="mb-3 flex flex-wrap items-center gap-1.5">

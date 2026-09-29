@@ -148,8 +148,10 @@ function linha(mudanca: Partial<LinhaDeAcompanhamento> = {}): LinhaDeAcompanhame
   // O admin e o chat chamam-lhe assim; as apps tinham outro nome («Premium · Ouro»).
   assert.equal(ROTULOS_CANAIS_T2T['premium-ideas'], 'MTM Auto Premium')
   assert.equal(ROTULOS_CANAIS_T2T['sensei-scanner'], 'MTM Auto Sensei')
-  // Os dois slugs da Aurum Flow dizem a mesma coisa desde a fusão de 18/09.
+  // Os slugs da cripto dizem todos a mesma coisa: o canal é um só, «Ideias de Cripto».
+  assert.equal(ROTULOS_CANAIS_T2T['aurum-flow'], 'Ideias de Cripto')
   assert.equal(ROTULOS_CANAIS_T2T['cripto-perps'], ROTULOS_CANAIS_T2T['aurum-flow'])
+  assert.equal(ROTULOS_CANAIS_T2T['golden-moves'], ROTULOS_CANAIS_T2T['aurum-flow'])
 }
 
 console.log('sinais nas duas superfícies: as mesmas regras, as mesmas palavras — OK')

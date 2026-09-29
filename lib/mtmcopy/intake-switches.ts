@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { INTAKE_CHANNELS, type IntakeKey } from "@/lib/mtmcopy/intake-channels"
 
-export { INTAKE_CHANNELS, intakeKeyForChannelSlug, type IntakeKey } from "@/lib/mtmcopy/intake-channels"
+export { INTAKE_CHANNELS, intakeKeyDoEspelhoTelegram, type IntakeKey } from "@/lib/mtmcopy/intake-channels"
 
 /**
  * RECEÇÃO POR CANAL — corta a entrada de sinais de uma fonte, sem desligar a estratégia.

@@ -1,7 +1,7 @@
 /**
  * FORMATO ÚNICO DE SINAL — um sítio só no servidor para escrever (e ler) as entradas de todos os
  * chats de ideias/sinais: Premium, Sensei, GoldKiller, Forex Swings, Índices, MTM Scanner,
- * Edge/King/Wolf e Aurum Flow & Perpétuos.
+ * MTM Auto Edge e Ideias de Cripto (Aurum Flow ORB).
  *
  * Módulo PURO (sem imports de servidor): serve os escritores (webhooks, relays, motores), os
  * leitores (parseSignal, T2T, tracker, motor das mestres), o cliente (app-mobile) e os testes.
@@ -270,6 +270,9 @@ export function formatarSeguimento(textoDoEvento: string, estrategia?: string | 
  * Trader da fonte → etiqueta da estratégia MTM Auto. Só estes três são publicados; o nome da fonte
  * NUNCA aparece nas mensagens (nem no remetente, nem no texto).
  * Aliases iguais aos de lib/mtmfunded/estrategias-sinais/calculo.ts.
+ *
+ * A Wolf e a King saíram de todas as listas VIVAS/visíveis (só a Edge continua a publicar), mas
+ * este mapa NÃO se apaga: é preciso para ler o histórico de mensagens já publicadas com elas.
  */
 const TRADER_ESTRATEGIA: Record<string, string> = {
   fxedge: 'MTM Auto Edge',
@@ -287,6 +290,25 @@ const TRADER_ESTRATEGIA: Record<string, string> = {
 
 export function estrategiaDoTrader(trader?: string | null): string | null {
   return TRADER_ESTRATEGIA[String(trader ?? '').trim().toLowerCase()] ?? null
+}
+
+/**
+ * As estratégias que continuam VIVAS — hoje só a Edge (trader `fxedge`).
+ *
+ * Decisão do dono (29/09): dos três traders da fonte fica só o fxEdge. A `g_wolf` e a `kingfkg`
+ * saem, e a execução delas já está fechada pelo interruptor `mtmauto_providers.ativo`.
+ *
+ * O mapa `TRADER_ESTRATEGIA` acima NÃO se apaga e continua a conhecer os três: há centenas de
+ * mensagens publicadas com «MTM Auto King» e «MTM Auto Wolf», e é por ele que o chat, as threads
+ * de seguimento e os desfechos as continuam a LER. Apagar o mapa não removia as mensagens —
+ * tornava-as ilegíveis. Quem quer saber se ainda se PUBLICA é que usa a função de baixo.
+ */
+export const ESTRATEGIAS_VIVAS = new Set(['MTM Auto Edge'])
+
+/** Etiqueta da estratégia só se ela ainda for publicada; null para as reformadas (King/Wolf). */
+export function estrategiaVivaDoTrader(trader?: string | null): string | null {
+  const e = estrategiaDoTrader(trader)
+  return e && ESTRATEGIAS_VIVAS.has(e) ? e : null
 }
 
 /** Etiqueta «MTM Auto Edge|King|Wolf» → chave do trader (para quem precisa da fonte interna). */

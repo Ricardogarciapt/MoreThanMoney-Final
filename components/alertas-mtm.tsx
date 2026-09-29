@@ -138,8 +138,8 @@ const STRATEGY_STUDIES: Record<string, string[]> = {
   MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
   // Sensei variante SEM painéis (só plots) — igual à app-mobile.
   Sensei: ["PUB;25c2231a331e413b8e7498364c5b94ab"],
-  // O Aurum Flow TEM estudo próprio (o mesmo do scanner mobile). Antes caía no MTM Scanner, e
-  // abrir um alerta de Aurum mostrava o gráfico com os plots de outra estratégia — o que é pior
+  // A MTM Aurum Flow Cripto TEM estudo próprio (o mesmo do scanner mobile). Antes caía no MTM
+  // Scanner, e abrir um alerta dela mostrava o gráfico com os plots de outra estratégia — pior
   // do que não mostrar nada, porque parece que o sinal veio dali.
   AurumFlow: ["PUB;4ca56ac1162a401cb62fa3205c73366a"],
 }
@@ -149,7 +149,7 @@ const DEFAULT_STUDIES = STRATEGY_STUDIES.MTMScanner
 function studiesForStrategy(strategy: string | null): string[] {
   if (!strategy) return DEFAULT_STUDIES
   const norm = strategy.toLowerCase().replace(/[^a-z0-9]/g, "")
-  // Aurum ANTES do resto: o nome dele contém "MTM" e cairia no scanner genérico.
+  // Aurum ANTES do resto: o nome dela contém "MTM" e cairia no scanner genérico.
   if (norm.includes("aurum")) return STRATEGY_STUDIES.AurumFlow
   if (norm.includes("sensei")) return STRATEGY_STUDIES.Sensei
   if (norm.includes("goldkiller") || (norm.includes("gold") && norm.includes("kill"))) return STRATEGY_STUDIES.Goldkiller
@@ -160,7 +160,7 @@ function studiesForStrategy(strategy: string | null): string[] {
 /** Estratégia do alerta → chave de scanner do ScannerMobile (para abrir no gráfico). */
 export function strategyToScannerKey(strategy: string | null): "Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow" {
   // Delega no normalizador canónico partilhado (lib/mtm-alerts/scanners) e mapeia para as chaves
-  // que o gráfico usa. O Aurum tem estudo próprio: abrir o gráfico de um alerta dele com os plots
+  // que o gráfico usa. A Aurum tem estudo próprio: abrir o gráfico de um alerta dela com os plots
   // do MTM Scanner mostrava a leitura errada por baixo do sinal certo.
   const k = scannerKeyFromStrategy(strategy)
   if (k === "sensei") return "Sensei"

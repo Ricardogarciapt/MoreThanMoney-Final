@@ -249,7 +249,8 @@ function resolveRoute(cls: AssetClass): SignalRoute {
     case "index":
       return { channel: "trade-ideas", telegram: null, sender: "📈 Ideias de Índices", push: true, autoCopy: false }
     case "crypto_perp":
-      // Fundido com a Aurum Flow a 18/09: um canal só, «MTM Auto Aurum Flow & Perpétuos».
+      // Canal único de cripto «Ideias de Cripto» (slug interno `aurum-flow`, que fica: mudá-lo
+      // obrigava a mexer no histórico das mensagens e nas apps nativas, que não se recompilam daqui).
       return { channel: "aurum-flow", telegram: resolvedPerpsChatId(), sender: "🪙 Perpétuos Cripto", push: true, autoCopy: false }
     default:
       return { channel: null, telegram: null, sender: "", push: false, autoCopy: false }
@@ -259,7 +260,7 @@ function resolveRoute(cls: AssetClass): SignalRoute {
 /** Etiqueta da estratégia (formato único) a partir do remetente da rota. */
 function estrategiaDoRemetente(sender: string): string {
   if (/gold\s*killer/i.test(sender)) return "MTM Auto GoldKiller"
-  if (/aurum/i.test(sender)) return "MTM Auto Aurum Flow"
+  if (/aurum/i.test(sender)) return "MTM Aurum Flow Cripto"
   if (/mtm\s*scanner/i.test(sender)) return "MTM Scanner"
   if (/perp/i.test(sender)) return "MTM Perps"
   if (/sensei/i.test(sender)) return "MTM Auto Sensei"
@@ -557,8 +558,8 @@ export async function POST(request: NextRequest) {
     // Lista única de perps → sempre canal "Ideias de Perpétuos Cripto", em PAPEL.
     // Execução real (Bybit, motor de cópia próprio) fica para a Fase 2, atrás de flag.
     assetClass = "crypto_perp"
-    // Canal fundido «MTM Auto Aurum Flow & Perpétuos» (18/09). O slug antigo `cripto-perps` fica
-    // escondido com o histórico (migração 118).
+    // Canal único «Ideias de Cripto». O slug interno continua `aurum-flow` (é onde está todo o
+    // histórico); o `cripto-perps` fica escondido, já sem mensagens (migrações 118 e 147).
     route.channel = "aurum-flow"
     // Telegram dedicado "Ideias de Perpétuos Cripto" (env TELEGRAM_CHANNEL_PERPS). Enquanto o grupo
     // não existir/estiver por definir → resolvedPerpsChatId()=null → publica só no chat da app (seguro).
@@ -568,15 +569,19 @@ export async function POST(request: NextRequest) {
     route.push = true
     route.autoCopy = false
   } else if (isAurumFlow && !isCryptoPerp) {
-    // Aurum Flow num activo NÃO cripto (ex.: ouro): vai ao MESMO canal da estratégia (fundido com os
-    // perpétuos), com a marca Aurum Flow. Antes caía na rota natural — o ouro ia parar ao Sensei
-    // com a marca do Sensei. No iOS aparece (não é cripto); o cripto do mesmo canal sai mensagem a
-    // mensagem. Não executa na conta Sensei (ver `aurumNaoCripto` no gate de execução).
-    route.channel = "aurum-flow"
-    route.telegram = resolvedPerpsChatId()
-    route.sender = "⚡ Aurum Flow"
-    route.push = true
-    route.autoCopy = false
+    // A AURUM FLOW É SÓ CRIPTO (decisão do dono, 29/09). Um alerta Aurum num activo não-cripto
+    // (ouro, forex, índices) DEIXA DE SER PUBLICADO — nem chat, nem Telegram, nem T2T.
+    //
+    // Antes ia ao mesmo canal com a marca «⚡ Aurum Flow», e era isso que mantinha uma segunda
+    // Aurum Flow viva — a do ouro — ao lado da de cripto. Os números dizem o mesmo: a perna de
+    // ouro da Aurum (provider `aurum-flow`, 50 XAUUSD + 1 NAS100) está calada desde 02/09,
+    // enquanto o lado cripto (BTC/ETH) continuou a produzir até 22/09.
+    //
+    // Descartar é de propósito. Deixar cair na rota natural era pior: o ouro ia parar ao canal do
+    // Sensei com a marca do Sensei, que foi exactamente o bug que esta ramificação corrigiu.
+    // Se um dia a Aurum voltar ao ouro, isto volta com um destino PRÓPRIO — não por omissão.
+    console.warn(`[webhook][aurum] alerta não-cripto descartado (a Aurum Flow é só cripto): ${ticker}`)
+    return NextResponse.json({ ok: true, skipped: "aurum_nao_cripto", ticker })
   } else if (perpsRequested && !isCryptoPerp) {
     // Sinal não-cripto no endpoint dos perps → segue a classificação natural do ticker
     // (USDCAD → forex, XAUUSD → gold_btc, etc.). Não sobrepõe route/assetClass.
@@ -906,6 +911,8 @@ export async function POST(request: NextRequest) {
     Boolean(parsedForExec.direction)
 
   // Aurum Flow fora do cripto não é um sinal do Sensei — não abre na conta/mestre do Sensei.
+  // Desde 29/09 o roteamento já descarta esses alertas antes de chegarem aqui; esta guarda fica
+  // como segunda tranca, para o dia em que alguém volte a dar-lhes um caminho.
   const aurumNaoCripto = isAurumFlow && !isCryptoPerp
   const canExecuteProvider =
     !aurumNaoCripto &&

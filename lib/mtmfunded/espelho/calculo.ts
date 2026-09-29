@@ -76,7 +76,7 @@ const COMENTARIOS: Record<string, string> = {
   'premium-ouro': 'MTM Auto Premium',
   goldkiller: 'MTM Auto GoldKiller',
   sensei: 'MTM Auto Sensei',
-  'aurum-flow': 'MTM Auto Aurum Flow',
+  'aurum-flow': 'MTM Aurum Flow Cripto',
   'mtm-scanner': 'MTM Auto Scanner',
 }
 

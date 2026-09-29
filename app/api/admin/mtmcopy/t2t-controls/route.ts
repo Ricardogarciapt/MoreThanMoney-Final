@@ -12,7 +12,7 @@
  *    por isso "sincroniza" por definição. Fica pausada até o admin religar.
  *  · route_t2t=false   → a fonte deixa de aparecer aos clientes no T2T e o botão de
  *    aceitar desaparece dos chats (o feed/accept usam tapToTradeEnabledChannels).
- *  · extra_channel     → liga/desliga canais T2T sem rota própria (ex.: cripto-perps).
+ *  · extra_channel     → liga/desliga canais T2T sem rota própria (ex.: aurum-flow, o canal de cripto).
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
        * lento e fala com a MetaApi.
        *
        * Porquê: isto já correu ao contrário e custou. A 04/09 o Ricardo pausou as três
-       * estratégias; o Sensei e o Aurum Flow ficaram pausados dos dois lados, o Premium não.
+       * estratégias; o Sensei e a MTM Aurum Flow Cripto ficaram pausados dos dois lados, o Premium não.
        * A config dizia pausado, o CopyFactory tinha a estratégia removida — mas
        * `mtmauto_providers.ativo` continuou `true`, e é ESSE campo que deixa a MTM Auto
        * continuar a ingerir e a executar sinais (`webhook/route.ts` filtra por `ativo`).

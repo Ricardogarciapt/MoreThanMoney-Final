@@ -92,19 +92,19 @@ const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: str
 /**
  * O que saiu, e porquê — para não se procurar o interruptor que já não existe.
  *
- * Quase todas foram apagadas na MetaApi (404) — mas não todas: o Premium (530d2e07) e o Aurum Flow
- * continuam vivos lá. Saíram daqui por deixarem de executar, não por terem desaparecido. Cada linha
+ * Quase todas foram apagadas na MetaApi (404) — mas não todas: o Premium (530d2e07) e a MTM Aurum
+ * Flow Cripto continuam vivos lá. Saíram daqui por deixarem de executar, não por terem desaparecido. Cada linha
  * diz qual é o caso, porque «apagada» e «reformada» pedem acções diferentes de quem lê o painel.
  */
 const RETIRADAS = [
   "Premium MxsR (conta 530d2e07) · a conta CONTINUA viva na MetaApi (é a fonte de preços do motor simulado), mas já não executa: o Premium passa pela mestre SIM do motor das mestres",
-  "PrimeVerse · execução directa numa conta MT5 (12862cb4, apagada na MetaApi) — Edge/King/Wolf seguem pelas mestres SIM; o modo saiu deste painel",
+  "PrimeVerse · execução directa numa conta MT5 (12862cb4, apagada na MetaApi) — o Edge segue pela mestre SIM; o modo saiu deste painel",
   "Espelho provider como FONTE de execução (082/084) · substituído pelo motor das mestres nas estratégias que lá estão",
   "GoldKiller (SDNb) · conta apagada na MetaApi (a GoldKiller actual é Wl1B)",
   "MTM Auto Forex / Trade Ideas (5IHE) · conta apagada",
   "20X Booster (pIrJ) · conta apagada",
   "Gold Did (e68I) · conta apagada",
-  "Aurum Flow (vT8w · conta a4ea0c45) · vivo, mas gerido na fonte — sem motor nosso",
+  "MTM Aurum Flow Cripto (vT8w) · vivo, mas gerido na fonte — sem motor nosso; a conta mestre vem da config guardada (o id fixo caiu a 2026-09-15)",
 ]
 
 const ENV_FLAG_LABELS: Record<string, string> = {
@@ -390,7 +390,7 @@ export default function MtmcopyStrategyControl() {
       )}
 
       {/* Modo de execução Forex Swings. O do PrimeVerse saiu (18/09): executava directamente numa conta
-          MT5 (12862cb4) que já não existe na MetaApi — Edge/King/Wolf seguem pelas mestres SIM do motor. */}
+          MT5 (12862cb4) que já não existe na MetaApi — o Edge segue pela mestre SIM do motor. */}
       <div className="grid sm:grid-cols-2 gap-4">
         {([
           { k: "forexSwings", label: "Forex Swings (James)", cur: cfg.forexSwings.mode, field: "forex_swings_mode" },

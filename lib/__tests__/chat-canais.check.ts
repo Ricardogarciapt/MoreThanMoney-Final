@@ -70,8 +70,8 @@ const linhas = [
   { slug: 'sinais', name: 'Sinais & Ideias', parent_slug: null, position: 10 },
   { slug: 'comunidade', name: 'Comunidade', parent_slug: null, position: 0, hidden: true },
   { slug: 'geral', name: 'Geral', parent_slug: 'comunidade', position: 1 },
-  { slug: 'aurum-flow', name: 'MTM Auto Aurum Flow & Perpétuos', parent_slug: 'sinais', position: 15 },
-  { slug: 'sinais-scanner-mtm', name: 'MTM Auto Edge/Wolf/King', parent_slug: 'sinais', position: 17, hidden: true },
+  { slug: 'aurum-flow', name: 'Ideias de Cripto', parent_slug: 'sinais', position: 15 },
+  { slug: 'sinais-scanner-mtm', name: 'MTM Auto Edge', parent_slug: 'sinais', position: 17, hidden: true },
   { slug: 'premium-ideas', name: 'MTM Auto Premium', parent_slug: 'sinais', position: 13, icone: '👑', cor: '#123456', etiqueta: 'VIP', regras: ['Só Premium'] },
 ]
 t('escondidos e filhos de pai escondido saem; ordem pela posição', () => {
@@ -83,7 +83,7 @@ t('visual da tabela manda; vazio cai no de sempre', () => {
   assert.deepEqual([p.icone, p.cor, p.etiqueta, p.regras], ['👑', '#123456', 'VIP', ['Só Premium']])
   assert.equal(p.pode_ler, false)
   const a = canalParaApp(linhas[3] as never, membro)
-  assert.equal(a.icone, '⚡')
+  assert.equal(a.icone, '₿') // sem ícone na tabela, cai no CHANNEL_META do «Ideias de Cripto»
   assert.equal(a.pode_escrever, false)
   assert.equal(canalParaApp(linhas[3] as never).pode_ler, null) // sem sessão
 })

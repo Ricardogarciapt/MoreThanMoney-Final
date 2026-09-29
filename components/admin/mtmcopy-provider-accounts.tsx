@@ -96,7 +96,7 @@ export default function MtmcopyProviderAccounts() {
             <div>
               <Label className="text-xs text-zinc-400">Nome</Label>
               <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })}
-                placeholder="MTM Auto Aurum" className="bg-zinc-900 border-zinc-700" />
+                placeholder="MTM Aurum Flow Cripto" className="bg-zinc-900 border-zinc-700" />
             </div>
             <div>
               <Label className="text-xs text-zinc-400">Servidor</Label>

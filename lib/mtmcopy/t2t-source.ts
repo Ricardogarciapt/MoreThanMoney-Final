@@ -9,7 +9,7 @@
  *  - Sensei       → canal 'sensei-scanner' (com o gate próprio de entrada validada, à parte)
  *  - James/Swings → marcador '🌊 Forex Swings' (canal 'ideias-e-sinais')
  *  - PrimeVerse   → marcador '📡 PrimeVerse' (canais partilhados por classe de ativo)
- *  - Aurum Flow   → marcador 'Aurum Flow' / 'ORB' (scanner ORB de ouro + perpétuos)
+ *  - Aurum Flow   → marcador 'Aurum Flow' / 'ORB' (scanner ORB de PERPÉTUOS CRIPTO)
  *
  * NOVO (2026-08-06): cada user pode ESCOLHER que fontes/classes de ativo seguir (prefs na conta T2T).
  * `t2tSourceKey()` devolve a chave da fonte para casar com essas prefs; `T2T_SOURCES` é o catálogo p/ a UI.
@@ -36,9 +36,11 @@ export const T2T_SOURCES: { key: T2TSourceKey; label: string; hint: string }[] =
   { key: 'forexideas', label: 'Ideias de Forex', hint: 'Sinais do canal Ideias de Forex' },
   { key: 'james', label: 'Forex Swings', hint: 'Swings de forex (James)' },
   // A chave interna continua 'primeverse' (gravada em t2t_sources dos clientes); o que se MOSTRA
-  // são as estratégias MTM Auto — o nome da fonte externa não aparece em lado nenhum.
-  { key: 'primeverse', label: 'MTM Auto Edge/King/Wolf', hint: 'Estratégias Edge, King e Wolf' },
-  { key: 'aurum', label: 'Aurum Flow & Perpétuos', hint: 'Scanner ORB — ouro e perpétuos' },
+  // é a estratégia MTM Auto — o nome da fonte externa não aparece em lado nenhum. A Wolf e a King
+  // saíram das listas vivas; sobra a Edge.
+  { key: 'primeverse', label: 'MTM Auto Edge', hint: 'Estratégia Edge (fxEdge)' },
+  // A Aurum Flow passou a ser SÓ cripto — deixou de ser «ouro e perpétuos».
+  { key: 'aurum', label: 'Aurum Flow Cripto', hint: 'Perpétuos cripto (Aurum Flow ORB)' },
 ]
 
 /** Catálogo de classes de ativo para a UI. */
@@ -61,11 +63,13 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
     if (/XAU|GOLD|OURO|XAG|SILVER|\bBTC\b|BITCOIN/i.test(c)) return null
     return 'mtmscanner'
   }
-  // Estratégias MTM Auto Edge / King / Wolf (formato único, canal `sinais-scanner-mtm`). Vem
-  // antes das regras por canal: a etiqueta da estratégia é a assinatura da fonte.
+  // Estratégias MTM Auto (formato único, canal `sinais-scanner-mtm`). Vem antes das regras por
+  // canal: a etiqueta da estratégia é a assinatura da fonte. A expressão continua a apanhar a Wolf
+  // e a King porque há mensagens já publicadas com elas — só a Edge é que continua viva.
   if (RE_ESTRATEGIAS_EKW.test(c)) return 'primeverse'
   if (channelSlug === 'premium-ideas') return 'premium'
-  // Chat da Aurum Flow (slug `aurum-flow` desde 2026-09-14). Alias do slug antigo da Aurum Flow — remover depois de 2026-10-14 (30 dias após 2026-09-14).
+  // Chat «Ideias de Cripto» (slug `aurum-flow`, que se mantém) e o slug antigo `golden-moves`,
+  // que fica enquanto houver mensagens publicadas com ele.
   if (channelSlug === 'aurum-flow' || channelSlug === 'golden-moves') return 'aurum'
   if (channelSlug === 'sensei-scanner') return 'sensei'
   if (channelSlug === 'sinais-goldkiller' || /gold\s*killer|goldkiller/i.test(c)) return 'goldkiller'
@@ -77,8 +81,8 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
     channelSlug === 'trade-ideas-setup'
   ) {
     if (/primeverse/i.test(c)) return 'primeverse'
-    // O canal `sinais-scanner-mtm` é agora o «MTM Auto Edge/Wolf/King»: tudo o que lá cai é dessas
-    // estratégias (as mensagens antigas trazem o marcador antigo, apanhado acima).
+    // O canal `sinais-scanner-mtm` é o «MTM Auto Edge»: tudo o que lá cai é dessa estratégia
+    // (as mensagens antigas trazem o marcador antigo, apanhado acima).
     if (channelSlug === 'sinais-scanner-mtm') return 'primeverse'
     // Perpétuos cripto (Aurum Flow ORB / MTM Perps): passam a gerar botão no T2T. O botão
     // NÃO abre ordem na conta do cliente — ver `t2tMode`: nos perps é SEGUIR a posição, com a
@@ -123,7 +127,7 @@ const T2T_FOLLOWUP_RE =
 // Performance / resumo / recap (London/New York Performance, Total Win/Loss/Net PIPS…) — NUNCA são T2T.
 const T2T_PERF_RE =
   /(performance|resultado\s+do\s+dia|resumo|recap|relat[óo]rio|estat[íi]stic|balan[çc]o|total\s+(de\s+)?pips|total\s+(win|loss|net)|pips\s+(de\s+)?(hoje|esta\s+semana|do\s+dia)|fecho\s+do\s+dia|lucro\s+do\s+dia)/i
-// O gerúndio conta como direção: "I'm buying XAUUSD" é como o Gold Did e a Aurum Flow
+// O gerúndio conta como direção: "I'm buying BTCUSDT" é como o Gold Did e a Aurum Flow
 // escrevem uma entrada. Sem isto a mensagem não passava por sinal.
 const T2T_DIR_RE = /(\b(buy|buying|sell|selling|long|short|compra|comprando|venda|vendendo)\b|🟢|🔴|🔵)/i
 
@@ -191,15 +195,15 @@ const PERP_RE = /\b[A-Z0-9]{2,12}(USDT|USDC)(\.P)?\b|\b[A-Z0-9]{2,12}\.P\b|\bPER
 
 /**
  * Canais onde vivem os perpétuos. Desde a fusão (18/09) o «Perpétuos de Cripto» e a Aurum Flow são
- * um canal só (`aurum-flow`), com ouro E cripto — por isso aqui decide o SÍMBOLO, não o canal: o
- * ouro da Aurum Flow executa; o perpétuo sem instrumento MT5 segue.
+ * um canal só (`aurum-flow`, hoje chamado «Ideias de Cripto»). Quem decide é o SÍMBOLO, não o
+ * canal: a cripto que existe nas contas MT5 executa; o perpétuo que não existe lá segue.
  */
 const CANAIS_PERPS = new Set(['cripto-perps', 'aurum-flow'])
 
 /**
  * Mensagem de PERPÉTUO (cripto) num canal de perpétuos? É o que decide o botão «TAP to Copy»
- * (copiar os parâmetros para a exchange) em vez do Tap to Trade. No canal fundido Aurum Flow &
- * Perpétuos o ouro tem Tap to Trade normal.
+ * (copiar os parâmetros para a exchange) em vez do Tap to Trade. No canal «Ideias de Cripto» a
+ * cripto que existe nas contas MT5 tem Tap to Trade normal.
  */
 export function ehSinalDePerpetuo(channelSlug?: string | null, content?: string | null): boolean {
   if (!CANAIS_PERPS.has(String(channelSlug ?? ''))) return false

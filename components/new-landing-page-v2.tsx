@@ -26,7 +26,7 @@ import { SNAPSHOT, type LandingStats } from "@/lib/landing-stats"
  */
 
 const STRIP = [
-  "Tap to Trade", "MTM Copy", "Sensei", "GoldKiller", "Aurum Flow", "MTM Scanner", "Alertas MTM",
+  "Tap to Trade", "MTM Copy", "Sensei", "GoldKiller", "MTM Aurum Flow Cripto", "MTM Scanner", "Alertas MTM",
   "Terminal com IA", "Portefólios cripto", "DCA inteligente", "Bootcamp 30h", "Certificação oficial",
   "Sessões ao vivo", "Feed da comunidade", "Mentor de IA", "Criadores UGC", "Parcerias IB",
   "Marca pessoal", "Social Media e UGC", "Mindset e Liderança", "Ações e ETF",
@@ -724,7 +724,7 @@ export default function NewLandingPage() {
         <a className="btn" href="/register?plan=premium">{t("l2.packStart")}</a></div>
       <div className="pk r d3"><div className="nm">{t("l2.packScanners")}</div><div className="pr">35€</div><div className="pe">{t("l2.packScannersPer")}</div>
         <p className="ln2">{t("l2.packScannersLine")}</p>
-        <ul><li>Sensei</li><li>GoldKiller</li><li>MTM Scanner</li><li>Aurum Flow</li></ul>
+        <ul><li>Sensei</li><li>GoldKiller</li><li>MTM Scanner</li><li>MTM Aurum Flow Cripto</li></ul>
         <a className="btn g" href="/scanner">{t("l2.packSeeScanners")}</a></div>
       {/* MTM Auto vive fora do ecossistema: é a porta para quem chega sem nos conhecer, e por
           isso tem preço próprio e checkout próprio — não é um extra dos packs. */}
