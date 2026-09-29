@@ -20,8 +20,10 @@
  */
 
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { NOME_DA_CASA, destinoDeCompraValido, nomeDoAutor } from './regras'
-import { podeArquivarNoStripe } from './stripe-preco'
+import { podeArquivarNoStripe, sincronizarPrecoNoStripe } from './stripe-preco'
 
 let ok = 0
 const falhas: string[] = []
@@ -123,12 +125,71 @@ sim(
   podeArquivarNoStripe({ stripe_price_id: 'price_y', stripe_product_id: null }).pode === false,
 )
 
-// ── Resultado ─────────────────────────────────────────────────────────────────────────────
+/**
+ * O resto corre dentro de uma função async.
+ *
+ * `await` no topo do ficheiro não passa no transformador que o `tsx` usa aqui (os outros `check`
+ * desta pasta são todos síncronos e usam `__dirname`). Envolver é mais simples do que mudar o
+ * modo do módulo só por causa de duas chamadas.
+ */
+async function main() {
+  // ── 4. Sincronizar: o mesmo preço vivo não se toca ────────────────────────────────────────
+  //
+  // A guarda corre ANTES de o Stripe e o Supabase serem instanciados, o que permite testá-la aqui
+  // sem chaves nenhumas à frente. Se um dia alguém a mover para baixo dos clientes, este teste
+  // deixa de passar por falta de chave — e é exactamente o aviso que se quer.
 
-if (falhas.length > 0) {
-  console.error(`❌ marketplace/admin: ${falhas.length} falharam:`)
-  for (const f of falhas) console.error(`   · ${f}`)
-  process.exit(1)
+  const recusaSync = async (produto: Parameters<typeof sincronizarPrecoNoStripe>[0]) => {
+    try {
+      await sincronizarPrecoNoStripe(produto)
+      return null
+    } catch (e) {
+      return e instanceof Error ? e.message : String(e)
+    }
+  }
+
+  const BASE_SYNC = { id: 'p1', titulo: 'Premium · anual', preco_cents: 62400, recorrente: true }
+
+  // O caso real: o «Premium · anual» da montra. Preço de produção vivo, `stripe_product_id` nulo.
+  // Sem a guarda, esta chamada criava um preço MENSAL de 624 € e arquivava o anual que está vivo.
+  const msgAlheio = await recusaSync({ ...BASE_SYNC, stripe_price_id: 'price_1Tg1sAB0TQE8czM3bSKfAr7z', stripe_product_id: null })
+  sim('sync: preço alheio é recusado', Boolean(msgAlheio))
+  sim('sync: a recusa explica-se', String(msgAlheio).includes('não foi criado aqui'))
+
+  // Um produto sem nada no Stripe TEM de poder passar a guarda — é o caminho da criação, e fechá-lo
+  // era impedir qualquer produto novo de nascer com preço. Falha depois, por falta de chaves, e é
+  // essa a prova de que passou daqui.
+  const msgNovo = await recusaSync({ ...BASE_SYNC, stripe_price_id: null, stripe_product_id: null })
+  sim('sync: produto novo passa a guarda', !String(msgNovo).includes('não foi criado aqui'))
+
+  // ── 5. As rotas fazem o que está prometido ────────────────────────────────────────────────
+  //
+  // Verificação sobre o TEXTO das rotas, como o `gestao.check.ts` já faz. Não substitui um teste a
+  // correr, mas apanha o que interessa: alguém a tirar uma destas chamadas num refactor. As quatro
+  // são promessas feitas ao dono por escrito.
+
+  const RAIZ = join(__dirname, '..', '..')
+  const gestao = readFileSync(join(RAIZ, 'app/api/marketplace/gestao/route.ts'), 'utf8')
+  const centro = readFileSync(join(RAIZ, 'app/api/admin/centro/marketplace/route.ts'), 'utf8')
+
+  sim('criar: o POST sincroniza no Stripe', /criado\.preco_cents > 0[\s\S]{0,200}sincronizarPrecoNoStripe/.test(gestao))
+  sim('criar: a falha do Stripe não perde o produto', /sincronizarPrecoNoStripe\(criado\)[\s\S]{0,200}catch[\s\S]{0,200}avisoStripe/.test(gestao))
+  sim('retirar: arquiva no Stripe', /accao === 'retirar'[\s\S]{0,200}arquivarNoStripe/.test(gestao))
+  sim('apagar: arquiva no Stripe', gestao.includes('arquivarNoStripe(r.produto'))
+  sim('o painel do admin também arquiva ao retirar', centro.includes('arquivarNoStripe'))
+  // Nenhuma das duas rotas pode chamar `del()` no Stripe: no Stripe o que já vendeu não se apaga.
+  sim('ninguém apaga no Stripe', !/(products|prices)\.del\(/.test(gestao + centro))
+
+  // ── Resultado ─────────────────────────────────────────────────────────────────────────────
+
+  if (falhas.length > 0) {
+    console.error(`❌ marketplace/admin: ${falhas.length} falharam:`)
+    for (const f of falhas) console.error(`   · ${f}`)
+    process.exit(1)
+  }
+  assert.ok(ok > 0)
+  console.log(`✅ marketplace/admin: ${ok} verificações passaram`)
+
 }
-assert.ok(ok > 0)
-console.log(`✅ marketplace/admin: ${ok} verificações passaram`)
+
+void main()

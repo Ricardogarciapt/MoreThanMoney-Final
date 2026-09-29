@@ -62,9 +62,6 @@ export type ResultadoSync = {
  * que permite ao ecrã chamá-la a cada gravação sem encher o Stripe de lixo.
  */
 export async function sincronizarPrecoNoStripe(produto: ProdutoParaStripe): Promise<ResultadoSync> {
-  const stripe = getStripeClient()
-  const db = getSupabaseAdmin()
-
   // ── NÃO SE SINCRONIZA UM PREÇO QUE NÃO FOI ESTA CASA A CRIAR ──────────────────────────
   //
   // Um `stripe_price_id` sem `stripe_product_id` ao lado é um preço que nasceu FORA do
@@ -83,6 +80,11 @@ export async function sincronizarPrecoNoStripe(produto: ProdutoParaStripe): Prom
       'Este produto aponta para um preço do Stripe que não foi criado aqui (é um dos fluxos de compra antigos da casa). Não se sincroniza daqui — mexer nele mudava o que os clientes actuais pagam.',
     )
   }
+
+  // Os clientes vêm DEPOIS da guarda, e é de propósito: assim a recusa acontece sem tocar em
+  // ligação nenhuma, e pode ser testada sem chaves de Stripe nem de Supabase à frente.
+  const stripe = getStripeClient()
+  const db = getSupabaseAdmin()
 
   const moeda = String(produto.moeda ?? 'eur').toLowerCase()
   const montante = Math.max(0, Math.round(Number(produto.preco_cents) || 0))
