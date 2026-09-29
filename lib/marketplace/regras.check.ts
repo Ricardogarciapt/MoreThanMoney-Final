@@ -13,7 +13,13 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   APPLE_COMISSAO_PCT,
+  CATEGORIAS,
   DEFINICOES_PADRAO,
+  donoValido,
+  modoStripe,
+  precoEfectivo,
+  sugestaoDaCategoria,
+  tipoValido,
   PARTILHA_MAX_PCT,
   PARTILHA_MIN_PCT,
   PARTILHA_PADRAO_PCT,
@@ -54,31 +60,57 @@ const PRODUTO_BOM = {
   activo: true,
 }
 
-// ══════════════ 1. A PARTILHA PROMETIDA EM PÚBLICO ══════════════
+// ══════════════ 1. A PARTILHA: 90 É O TECTO DO EDUCADOR ══════════════
 //
-// A /criadores diz «90–95%». Estes três números são o contrato.
+// ── ESTE BLOCO MUDOU DE SIGNIFICADO, NÃO SÓ DE NÚMERO ─────────────────────────────────────
+//
+// Dizia: «a /criadores diz 90–95%; estes três números são o contrato», e fixava MIN=90, MAX=95,
+// PADRÃO=95 — com 90 a ser o PISO que protegia o educador de receber menos.
+//
+// A regra do dono inverteu isso: o educador fica com 90%, a casa leva no mínimo 10%, e o educador
+// pode dar mais à casa mas nunca ficar com mais. Portanto 90 passou de piso a TECTO.
+//
+// Não foi uma correcção de um erro de leitura: a versão antiga guardava fielmente o que a landing
+// prometia. Foi uma decisão de negócio nova, tomada depois. Fica escrito porque o `<= 90` onde antes
+// estava `>= 90` parece, sem contexto, um sinal trocado por acidente.
+//
+// Nota que este ficheiro NÃO verifica: a landing pública ainda promete «90 a 95%» e «comissão MTM de
+// 5–10%» em três sítios. Com a regra nova, 95% deixa de existir. É decisão do dono mexer nessas
+// páginas, e nada aqui depende de 95 existir.
 
-sim('o mínimo prometido é 90', PARTILHA_MIN_PCT === 90)
-sim('o máximo prometido é 95', PARTILHA_MAX_PCT === 95)
+sim('o tecto do educador é 90', PARTILHA_MAX_PCT === 90)
+sim('o piso é 50, contra o erro de escrita', PARTILHA_MIN_PCT === 50)
 assert.equal(
   PARTILHA_PADRAO_PCT,
   PARTILHA_MAX_PCT,
-  'por omissão aplica-se o extremo que favorece o educador — entre dois números prometidos, um esquecimento não pode decidir contra ele',
+  'por omissão aplica-se o tecto: um esquecimento não pode decidir contra o educador',
+)
+assert.ok(
+  PARTILHA_MAX_PCT <= 90,
+  'A CASA TEM DE FICAR COM 10% NO MÍNIMO. É de dentro dessa margem que sai a comissão de quem indica a venda (ver referral.ts) — se o tecto subir, a comissão deixa de ter de onde sair.',
 )
 
-// Lixo não pode virar uma percentagem melhor nem pior do que a prometida.
-for (const v of [null, undefined, NaN, 'muito', {}, -3, 0, 200, 96, 89.9]) {
+// Lixo não pode virar uma percentagem fora do intervalo, nem para cima nem para baixo.
+for (const v of [null, undefined, NaN, 'muito', {}, -3, 0, 200, 91, 49.9, 100]) {
   const p = partilhaValida(v)
-  sim(`partilhaValida(${String(v)}) fica dentro do prometido`, p >= 90 && p <= 95)
+  sim(`partilhaValida(${String(v)}) fica dentro de 50–90`, p >= 50 && p <= 90)
 }
 sim('90 é aceite tal e qual', partilhaValida(90) === 90)
-sim('92,5 é aceite tal e qual', partilhaValida(92.5) === 92.5)
+sim('75 é aceite tal e qual — o educador pode dar mais à casa', partilhaValida(75) === 75)
+// O ERRO DE ESCRITA QUE O PISO EXISTE PARA APANHAR: quem quer dizer «a casa leva 10» escreve 10.
+// Sem piso, isso dava 10% ao educador em vez de 90%.
+sim('escrever 10 por engano não deixa o educador com 10%', partilhaValida(10) === 50)
+// E o teto: pedir 95 (o número antigo) já não passa.
+sim('95 já não é um valor válido — deixou de existir', partilhaValida(95) === 90)
 
 // Venda simples no Stripe: 99,00 €, nada para loja nenhuma.
+//
+// Os números mudaram de 95/5 para 90/10 porque a REGRA mudou (ver o bloco 1), não porque a conta
+// estivesse errada. O que este teste guarda é a aritmética, e essa é a mesma.
 {
-  const p = calcularPartilha({ brutoCents: 9900, partilhaPct: 95 })
-  assert.equal(p.parteEducadorCents, 9405, '95% de 99,00 € são 94,05 € para o educador')
-  assert.equal(p.parteCasaCents, 495, 'à casa sobram os 5% — 4,95 €')
+  const p = calcularPartilha({ brutoCents: 9900, partilhaPct: 90 })
+  assert.equal(p.parteEducadorCents, 8910, '90% de 99,00 € são 89,10 € para o educador')
+  assert.equal(p.parteCasaCents, 990, 'à casa sobram os 10% — 9,90 €')
   assert.equal(
     p.parteEducadorCents + p.parteCasaCents,
     p.liquidoCents,
@@ -88,21 +120,25 @@ sim('92,5 é aceite tal e qual', partilhaValida(92.5) === 92.5)
 
 // ── O caso que paga do bolso da casa ──────────────────────────────────────────────────────
 //
-// 100 € vendidos na App Store. A Apple leva 15 antes de o dinheiro chegar cá. Se os 95% fossem
-// sobre o BRUTO, a casa entregava 95 € tendo recebido 85: prejuízo de 10 € por venda.
+// 100 € vendidos na App Store. A Apple leva 15 antes de o dinheiro chegar cá. Se os 90% fossem
+// sobre o BRUTO, a casa entregava 90 € tendo recebido 85: prejuízo de 5 € por venda.
+//
+// A margem de erro encolheu com a regra nova e vale dizê-lo: com 95% o prejuízo nesta venda era de
+// 10 €; com 90% é de 5 €. Continua a ser prejuízo, e é por isso que a ordem das operações (loja
+// primeiro, partilha depois) é o que este teste existe para prender.
 {
   const bruto = 10000
   const loja = comissaoAppleCents(bruto)
   assert.equal(loja, 1500, 'o Small Business Program da Apple leva 15%')
-  const p = calcularPartilha({ brutoCents: bruto, comissaoLojaCents: loja, partilhaPct: 95 })
+  const p = calcularPartilha({ brutoCents: bruto, comissaoLojaCents: loja, partilhaPct: 90 })
   assert.equal(p.liquidoCents, 8500, 'só há 85,00 € para repartir')
-  assert.equal(p.parteEducadorCents, 8075, '95% de 85,00 € — não de 100,00 €')
+  assert.equal(p.parteEducadorCents, 7650, '90% de 85,00 € — não de 100,00 €')
   assert.ok(
     p.parteCasaCents >= 0,
     'a casa nunca pode ficar com uma parte negativa: era estar a pagar para vender o produto de outra pessoa',
   )
   // A regressão que isto trava, dita pelo número:
-  const seFosseSobreOBruto = Math.round((bruto * 95) / 100)
+  const seFosseSobreOBruto = Math.round((bruto * 90) / 100)
   sim('a conta sobre o bruto seria maior do que o dinheiro recebido', seFosseSobreOBruto > 8500)
 }
 
@@ -198,12 +234,92 @@ sim('por omissão a vitrine aparece no iOS sem comprar', vitrineVisivelNoIos(DEF
 sim('o dono pode escondê-la de todo', !vitrineVisivelNoIos({ ...LIGADO, iosVitrine: 'esconder' }))
 
 // A terceira opção não existe, e não pode passar a existir por distracção.
+//
+// ── PORQUE É QUE ESTA GUARDA MUDOU DE FORMA ───────────────────────────────────────────────
+//
+// Era um `grep` à fonte por `checkout_externo`. Isso funcionava enquanto o marketplace só vendia
+// produtos de educadores: a palavra não tinha razão de existir, e vê-la aparecer era sinal de que
+// alguém estava a abrir um caminho de pagamento externo.
+//
+// Deixou de servir quando os produtos da CASA entraram na montra. Um scanner já vendido no site
+// tem de mandar o comprador para o caminho de compra que já funciona (senão a compra cobra e não
+// entrega), e esse caminho chama-se `checkout_externo_url`. A palavra passou a ser legítima.
+//
+// Trocar um `grep` por nada era baixar a fasquia. O que ficou é MAIS forte do que o que saiu:
+// em vez de procurar uma palavra na fonte, prova-se o COMPORTAMENTO — que nenhuma forma de
+// produto, nenhuma, devolve caminho de compra a um pedido da app iOS. Uma palavra podia ser
+// contornada escrevendo-a de outra maneira; isto não.
 {
-  const FONTE = readFileSync(join(RAIZ, 'lib/marketplace/regras.ts'), 'utf8')
+  const DEF = LIGADO
+  const FORMAS: { nome: string; produto: Record<string, unknown>; vendedor?: { activo: boolean } | null }[] = [
+    { nome: 'produto normal de educador', produto: PRODUTO_BOM, vendedor: VENDEDOR },
+    {
+      nome: 'produto da casa com checkout externo (o caso que criou esta guarda)',
+      produto: { ...PRODUTO_BOM, dono: 'casa', educator_id: null, checkout_externo_url: 'https://morethanmoney.pt/scanners' },
+      vendedor: null,
+    },
+    {
+      nome: 'produto da casa sem vendedor nenhum',
+      produto: { ...PRODUTO_BOM, dono: 'casa', educator_id: null },
+      vendedor: null,
+    },
+    {
+      nome: 'produto em campanha (o desconto não abre a porta)',
+      produto: { ...PRODUTO_BOM, campanha_pct: 50, campanha_tier: 'all' },
+      vendedor: VENDEDOR,
+    },
+    {
+      nome: 'subscrição',
+      produto: { ...PRODUTO_BOM, tipo: 'subscricao', recorrente: true },
+      vendedor: VENDEDOR,
+    },
+    {
+      nome: 'merchandise com morada',
+      produto: { ...PRODUTO_BOM, tipo: 'merchandise', requer_morada: true },
+      vendedor: VENDEDOR,
+    },
+  ]
+
+  for (const f of FORMAS) {
+    const r = podeComprarAqui({ iosNativo: true, def: DEF, produto: f.produto, vendedor: f.vendedor })
+    sim(`no iOS não há compra: ${f.nome}`, r.pode === false)
+    sim(`no iOS o motivo é ios_iap_required: ${f.nome}`, r.motivo === 'ios_iap_required')
+  }
+
+  // E o contrário, para a guarda não passar só por estar tudo a dizer não a tudo.
   sim(
-    'as regras não conhecem nenhum modo que abra pagamento externo no iOS',
-    !/checkout_externo|stripe_no_ios|ios_stripe/i.test(FONTE),
+    'na web o produto da casa com checkout externo compra-se',
+    podeComprarAqui({
+      iosNativo: false,
+      def: DEF,
+      produto: { ...PRODUTO_BOM, dono: 'casa', educator_id: null, checkout_externo_url: 'https://morethanmoney.pt/scanners' },
+      vendedor: null,
+    }).pode,
   )
+
+  // A ordem importa: a recusa da Apple tem de vir ANTES das outras recusas, senão um produto novo
+  // que saia por outro ramo devolve à app um motivo que o ecrã não sabe tratar como «não vendas».
+  const desligado = podeComprarAqui({
+    iosNativo: true,
+    def: DEFINICOES_PADRAO,
+    produto: PRODUTO_BOM,
+    vendedor: VENDEDOR,
+  })
+  sim('no iOS a regra da Apple fala antes do interruptor geral', desligado.motivo === 'ios_iap_required')
+
+  // Já comprado é a ÚNICA coisa que fala antes da Apple, e é de propósito: não é um caminho de
+  // compra, é o ecrã a mostrar «Abrir». A Apple proíbe vender fora do IAP, não proíbe entregar.
+  const jaTem = podeComprarAqui({ iosNativo: true, def: DEF, produto: PRODUTO_BOM, vendedor: VENDEDOR, jaComprou: true })
+  sim('no iOS quem já comprou vê que já comprou', jaTem.motivo === 'ja_comprado' && !jaTem.pode)
+}
+
+// A rota do checkout também não pode ter um ramo que devolva o `externo` antes do travão do iOS.
+// Esta é a mesma afirmação da guarda de cima, mas na ROTA, que é onde o dinheiro se move.
+{
+  const ROTA = readFileSync(join(RAIZ, 'app/api/marketplace/checkout/route.ts'), 'utf8')
+  const posIos = ROTA.indexOf('isIosAppRequest(')
+  const posExterno = ROTA.indexOf('externo }')
+  sim('a rota trava o iOS antes de devolver qualquer caminho externo', posIos >= 0 && (posExterno < 0 || posIos < posExterno))
 }
 
 // A rota de checkout tem de ter o travão do servidor. Esconder o botão não chega: o pedido
@@ -259,16 +375,16 @@ sim('o admin abre para poder diagnosticar', temAcessoAoProduto([], 'p1', AGORA, 
 
 {
   const linhas = [
-    { estado: 'paga', bruto_cents: 9900, parte_educador_cents: 9405 },
-    { estado: 'paga', bruto_cents: 4900, parte_educador_cents: 4655 },
-    { estado: 'reembolsada', bruto_cents: 9900, parte_educador_cents: 9405 },
+    { estado: 'paga', bruto_cents: 9900, parte_educador_cents: 8910 },
+    { estado: 'paga', bruto_cents: 4900, parte_educador_cents: 4410 },
+    { estado: 'reembolsada', bruto_cents: 9900, parte_educador_cents: 8910 },
     { estado: 'anulada', bruto_cents: 1000, parte_educador_cents: 950 },
   ]
   const e = extractoDoEducador(linhas)
   assert.equal(e.vendas, 2, 'as devolvidas não contam como vendas')
   assert.equal(
     e.aReceberCents,
-    14060,
+    13320,
     'prometer ao educador dinheiro de uma venda devolvida é pior do que nunca lho ter mostrado',
   )
   sim('o bruto também ignora as devolvidas', e.brutoCents === 14800)
@@ -307,6 +423,186 @@ sim('título vazio dá slug vazio e não rebenta', slugDoTitulo('') === '')
   sim('o interruptor por educador nasce desligado', /activo boolean not null default false/.test(SQL))
   sim('a partilha está presa entre 90 e 100 no próprio esquema', /partilha_pct >= 90/.test(SQL))
   sim('as compras têm chave de idempotência única', /unique index[\s\S]*marketplace_compras_referencia/.test(SQL))
+}
+
+// ══════════════ 7. O CATÁLOGO ══════════════
+
+{
+  // As nove que o dono pediu, pelo nome. Uma categoria em falta não dá erro — dá um produto
+  // arrumado em 'outro', e uma montra que não sabe dizer o que vende.
+  for (const id of ['mentoria', 'masterclass', 'curso', 'ea', 'servico', 'personalizavel', 'merchandise', 'aplicacao', 'subscricao'] as const) {
+    sim(`a categoria ${id} existe`, CATEGORIAS.some((c) => c.id === id))
+  }
+  // E as da 151 não desapareceram: há linhas escritas com elas.
+  for (const id of ['ebook', 'comunidade', 'outro'] as const) {
+    sim(`a categoria antiga ${id} sobreviveu`, CATEGORIAS.some((c) => c.id === id))
+  }
+
+  sim('lixo cai em outro e não rebenta', tipoValido('<script>') === 'outro' && tipoValido(null) === 'outro')
+  sim('uma categoria válida passa intacta', tipoValido('masterclass') === 'masterclass')
+
+  // A categoria muda o que o checkout faz. Se isto se partir, uma subscrição é cobrada uma vez
+  // só, ou uma encomenda chega sem morada.
+  sim('subscrição nasce recorrente', sugestaoDaCategoria('subscricao').recorrente)
+  sim('curso NÃO nasce recorrente', !sugestaoDaCategoria('curso').recorrente)
+  sim('merchandise nasce a pedir morada', sugestaoDaCategoria('merchandise').requerMorada)
+  sim('um curso não pede morada', !sugestaoDaCategoria('curso').requerMorada)
+
+  sim('o modo do Stripe segue a recorrência', modoStripe({ recorrente: true }) === 'subscription')
+  sim('e por omissão cobra uma vez', modoStripe({}) === 'payment')
+
+  // A lista da fonte e o `check` do SQL têm de dizer o mesmo. Se discordarem, o formulário oferece
+  // uma categoria que a base de dados recusa — e o educador vê «erro» sem saber porquê.
+  const SQL153 = readFileSync(join(RAIZ, 'supabase/migrations/153_marketplace_catalogo_campanhas_leads.sql'), 'utf8')
+  for (const c of CATEGORIAS) {
+    sim(`o SQL aceita a categoria ${c.id}`, new RegExp(`'${c.id}'`).test(SQL153))
+  }
+}
+
+// ══════════════ 8. OS PRODUTOS DA CASA ══════════════
+//
+// O que se protege aqui é dinheiro nos dois sentidos: a casa não pode pagar 95% de um scanner a
+// um educador que não existe, e um educador não pode deixar de receber por o produto dele ter
+// sido marcado como sendo da casa.
+
+{
+  const daCasa = calcularPartilha({ brutoCents: 10000, dono: 'casa' })
+  sim('produto da casa: o educador não recebe nada', daCasa.parteEducadorCents === 0)
+  sim('produto da casa: o líquido é todo da casa', daCasa.parteCasaCents === 10000)
+  sim('produto da casa: a percentagem escrita na linha é 0', daCasa.parteEducadorPct === 0)
+
+  // A protecção mais importante: uma percentagem passada por engano NÃO ressuscita a partilha
+  // num produto da casa.
+  const teimoso = calcularPartilha({ brutoCents: 10000, dono: 'casa', partilhaPct: 90 })
+  sim('produto da casa ignora uma partilha passada por engano', teimoso.parteEducadorCents === 0)
+
+  // E o contrário: um produto de educador continua a pagar, e a somar ao cêntimo.
+  const deEducador = calcularPartilha({ brutoCents: 10000, dono: 'educador', partilhaPct: 90 })
+  sim('produto de educador continua a pagar 90%', deEducador.parteEducadorCents === 9000)
+  // E a casa fica SEMPRE com pelo menos 10% — é de dentro disto que sai a comissão do referral.
+  sim('a casa fica com 10% ou mais num produto de educador', deEducador.parteCasaCents >= 1000)
+  sim('as duas partes somam sempre o líquido', deEducador.parteEducadorCents + deEducador.parteCasaCents === deEducador.liquidoCents)
+  sim('e no caso da casa também', daCasa.parteEducadorCents + daCasa.parteCasaCents === daCasa.liquidoCents)
+
+  sim('donoValido não deixa passar lixo', donoValido('CASA!!') === 'educador' && donoValido('casa') === 'casa')
+
+  // Um produto da casa entra na vitrine sem vendedor nenhum — é este o ponto de tudo isto.
+  sim(
+    'produto da casa aparece na montra sem vendedor',
+    produtoNaVitrine({ ...PRODUTO_BOM, dono: 'casa', educator_id: null }, null, LIGADO),
+  )
+  sim(
+    'produto de educador SEM vendedor activo continua fora da montra',
+    !produtoNaVitrine(PRODUTO_BOM, { educator_id: 'e1', activo: false }, LIGADO),
+  )
+
+  // Publicar um produto da casa que entrega no caminho antigo não exige `conteudo_url`...
+  sim(
+    'produto da casa com checkout externo publica-se sem conteudo_url',
+    podePublicar(
+      { ...PRODUTO_BOM, dono: 'casa', educator_id: null, conteudo_url: null, checkout_externo_url: 'https://morethanmoney.pt/scanners' },
+      null,
+      LIGADO,
+    ).pode,
+  )
+  // ...mas um produto de EDUCADOR sem conteúdo continua a ser uma cobrança sem entrega.
+  sim(
+    'produto de educador sem conteúdo continua a NÃO publicar',
+    !podePublicar({ ...PRODUTO_BOM, conteudo_url: null }, VENDEDOR, LIGADO).pode,
+  )
+  // E um produto da casa SEM nenhum dos dois também não: o buraco não se abre por ser da casa.
+  sim(
+    'produto da casa sem conteúdo e sem checkout externo não publica',
+    !podePublicar({ ...PRODUTO_BOM, dono: 'casa', educator_id: null, conteudo_url: null }, null, LIGADO).pode,
+  )
+}
+
+// ══════════════ 9. CAMPANHAS ══════════════
+//
+// Uma campanha tem duas maneiras de sair mal e as duas custam dinheiro: cobrar a menos a quem não
+// tinha direito, e continuar a descontar depois de ter acabado.
+
+{
+  const MEMBRO = { user_type: 'member', member_category: 'premium', is_active: true }
+  const ONTEM = '2026-09-01T00:00:00.000Z'
+  const HOJE = '2026-09-15T00:00:00.000Z'
+  const AMANHA = '2026-09-30T00:00:00.000Z'
+
+  const P = { ...PRODUTO_BOM, preco_cents: 10000, campanha_pct: 20, campanha_tier: 'all' as const }
+
+  sim('sem campanha, paga-se o preço de tabela', precoEfectivo({ ...P, campanha_pct: 0 }, HOJE, MEMBRO).cents === 10000)
+
+  const emCampanha = precoEfectivo(P, HOJE, MEMBRO)
+  sim('com campanha de 20% paga-se 80', emCampanha.cents === 8000)
+  sim('e o ecrã sabe o preço de antes, para o riscar', emCampanha.baseCents === 10000)
+  sim('e sabe que está em campanha', emCampanha.emCampanha)
+
+  // O PRAZO. Estes dois são a diferença entre uma campanha e um desconto permanente por
+  // esquecimento.
+  sim(
+    'antes de começar, não desconta',
+    precoEfectivo({ ...P, campanha_inicio: AMANHA }, HOJE, MEMBRO).cents === 10000,
+  )
+  sim(
+    'depois de acabar, não desconta',
+    precoEfectivo({ ...P, campanha_fim: ONTEM }, HOJE, MEMBRO).cents === 10000,
+  )
+  sim(
+    'a correr dentro da janela, desconta',
+    precoEfectivo({ ...P, campanha_inicio: ONTEM, campanha_fim: AMANHA }, HOJE, MEMBRO).cents === 8000,
+  )
+  // Uma data ilegível FECHA a campanha. O erro que se prefere é cobrar o preço de tabela (que se
+  // corrige com um pedido de desculpa) e não descontar para sempre (que se corrige a pagar).
+  sim(
+    'uma data de fim ilegível fecha a campanha',
+    precoEfectivo({ ...P, campanha_fim: 'às tantas' }, HOJE, MEMBRO).cents === 10000,
+  )
+
+  // QUEM APANHA. Uma campanha «para membro» não é para uma conta suspensa nem para quem não tem
+  // o nível — senão «desconto para membro» não quer dizer nada.
+  const suspenso = { user_type: 'member', member_category: 'premium', is_active: false }
+  sim(
+    'uma conta suspensa não apanha a campanha de membro',
+    precoEfectivo({ ...P, campanha_tier: 'app_member' }, HOJE, suspenso).cents === 10000,
+  )
+  sim(
+    'uma campanha para todos aplica-se mesmo sem perfil',
+    precoEfectivo({ ...P, campanha_tier: 'all' }, HOJE, null).cents === 8000,
+  )
+  sim(
+    'uma campanha de VIP não se aplica a quem não é VIP',
+    precoEfectivo({ ...P, campanha_tier: 'vip' }, HOJE, { user_type: 'member', is_active: true }).cents === 10000,
+  )
+
+  // O desconto arredonda para BAIXO, para o que se cobra nunca ficar acima do que se anunciou.
+  const impar = precoEfectivo({ ...P, preco_cents: 999, campanha_pct: 33 }, HOJE, MEMBRO)
+  sim('o desconto arredonda a favor do cliente', impar.cents === 999 - Math.floor((999 * 33) / 100))
+  sim('e nunca dá um preço negativo', precoEfectivo({ ...P, preco_cents: 1, campanha_pct: 90 }, HOJE, MEMBRO).cents >= 0)
+
+  // A percentagem não pode escapar do intervalo por a coluna vir com lixo.
+  sim('uma campanha de 999% não dá dinheiro a ninguém', precoEfectivo({ ...P, campanha_pct: 999 }, HOJE, MEMBRO).cents >= 0)
+}
+
+// ══════════════ 10. O SQL DA 153 ══════════════
+
+{
+  const SQL = readFileSync(join(RAIZ, 'supabase/migrations/153_marketplace_catalogo_campanhas_leads.sql'), 'utf8')
+
+  sim('a coerência dono/educador está presa no esquema', /marketplace_produtos_dono_coerente/.test(SQL))
+  sim('uma campanha ao contrário não se grava', /marketplace_produtos_campanha_ordem/.test(SQL))
+  sim('o desconto está limitado no próprio esquema', /campanha_pct >= 0 and campanha_pct <= 90/.test(SQL))
+  sim('a tabela de leads tem RLS ligada', /alter table public\.marketplace_leads\s+enable row level security/.test(SQL))
+  sim('e é revogada a anon', /revoke all on public\.marketplace_leads\s+from anon/.test(SQL))
+  sim('nenhuma política nova diz using (true)', !/using\s*\(\s*true\s*\)/i.test(SQL))
+
+  // A guarda da promessa pública não foi afrouxada para acomodar os produtos da casa. Se alguém
+  // tiver de mexer no `check` dos 90 para fazer a casa funcionar, é sinal de que a partilha da
+  // casa voltou a ser uma percentagem em vez de um ramo — e aí um bug de tipagem paga 0 a um
+  // educador a sério.
+  sim(
+    'a 153 NÃO mexe no check dos 90% da partilha',
+    !/partilha_pct/.test(SQL) || !/drop constraint[^\n]*partilha/i.test(SQL),
+  )
 }
 
 // ── Relatório ─────────────────────────────────────────────────────────────────────────────

@@ -24,22 +24,99 @@
  * Guarda: `npx tsx lib/marketplace/regras.check.ts`
  */
 
-import { contaAtivaUi, ehAdminUi, type PerfilUi } from '@/lib/perfil-ui'
+import { contaAtivaUi, ehAdminUi, podeAcederAoTier, type PerfilUi } from '@/lib/perfil-ui'
+
+// ── O CATÁLOGO ────────────────────────────────────────────────────────────────────────────
+//
+// As doze categorias, num sítio só. A lista vive aqui e não no `check` do SQL, no formulário do
+// educador e no filtro da montra — que foi o que a 151 tinha (um `check` na tabela e o mesmo
+// array escrito à mão em duas rotas), e é assim que uma categoria nova nasce a funcionar em dois
+// dos três sítios.
+//
+// `recorrente` e `requerMorada` são o que a categoria SUGERE, não o que ela impõe: ficam colunas
+// no produto e o educador pode contrariá-las. Há mentorias cobradas ao mês e há merchandise que
+// é um ficheiro. Obrigar a categoria a decidir o modo do Stripe era garantir que, mais cedo ou
+// mais tarde, alguém escolhia a categoria errada só para conseguir cobrar como queria.
+
+export type TipoProduto =
+  | 'curso' | 'mentoria' | 'masterclass' | 'ea' | 'servico' | 'personalizavel'
+  | 'merchandise' | 'aplicacao' | 'subscricao' | 'ebook' | 'comunidade' | 'outro'
+
+export const CATEGORIAS: {
+  id: TipoProduto
+  nome: string
+  /** Sugestão: nasce a cobrar todos os meses. */
+  recorrente?: boolean
+  /** Sugestão: há uma caixa para enviar, o checkout pede morada. */
+  requerMorada?: boolean
+}[] = [
+  { id: 'mentoria', nome: 'Mentoria' },
+  { id: 'masterclass', nome: 'Masterclass' },
+  { id: 'curso', nome: 'Curso' },
+  { id: 'ea', nome: 'EA / Robô' },
+  { id: 'servico', nome: 'Serviços' },
+  { id: 'personalizavel', nome: 'Personalizáveis' },
+  { id: 'merchandise', nome: 'Merchandise', requerMorada: true },
+  { id: 'aplicacao', nome: 'Aplicações' },
+  { id: 'subscricao', nome: 'Subscrições', recorrente: true },
+  { id: 'ebook', nome: 'Ebook' },
+  { id: 'comunidade', nome: 'Comunidade' },
+  { id: 'outro', nome: 'Outro' },
+]
+
+const PorId = new Map(CATEGORIAS.map((c) => [c.id, c]))
+
+/** Só devolve uma categoria que existe. Lixo vira 'outro' — nunca rebenta um formulário. */
+export function tipoValido(tipo: unknown): TipoProduto {
+  const t = String(tipo ?? '').trim().toLowerCase()
+  return PorId.has(t as TipoProduto) ? (t as TipoProduto) : 'outro'
+}
+
+export function nomeDaCategoria(tipo: unknown): string {
+  return PorId.get(tipoValido(tipo))?.nome ?? 'Outro'
+}
+
+/** O que a categoria sugere ao formulário quando o educador a escolhe. */
+export function sugestaoDaCategoria(tipo: unknown): { recorrente: boolean; requerMorada: boolean } {
+  const c = PorId.get(tipoValido(tipo))
+  return { recorrente: c?.recorrente === true, requerMorada: c?.requerMorada === true }
+}
 
 // ── A partilha ────────────────────────────────────────────────────────────────────────────
 //
-// «Ficas com 90–95% do que vender» está escrito na /criadores, em texto corrido e nos três
-// cartões de números da página. Isso não é uma intenção — é o que a pessoa leu antes de se
-// candidatar, e é por isso que estes números vivem aqui e não numa variável de ambiente.
+// ── A REGRA, E PORQUE É QUE ELA ESTÁ AO CONTRÁRIO DO QUE JÁ ESTEVE ────────────────────────
 //
-// O valor por omissão é o EXTREMO QUE FAVORECE O EDUCADOR. Entre dois números prometidos em
-// público, aplicar o pior por omissão é deixar que um esquecimento decida contra a pessoa que
-// confiou na página. Descer para 90 é uma decisão que alguém toma à mão e que fica escrita na
-// linha dele.
+// O educador fica com 90%. A casa leva no mínimo 10%. O educador PODE dar mais à casa se quiser,
+// mas não pode ficar com mais de 90%.
+//
+// Isto INVERTE o que estava aqui antes. A primeira versão do marketplace leu a landing («ficas com
+// 90–95%»), tomou 95 como o valor e 90 como o piso do educador, e escreveu `>= 90 and <= 100`.
+// A regra do dono é a oposta: 90 é o TECTO do educador, não o piso dele. Não é uma correcção de um
+// erro de leitura — é uma regra nova, decidida depois, e o sentido dos três números mudou com ela.
+//
+// Consequência que vale a pena escrever, porque se nota em todo o resto do sistema: a casa passa a
+// ter SEMPRE pelo menos 10% de margem numa venda. É de dentro dessa margem que sai a comissão de
+// quem indicou a venda (ver `referral.ts`), e é por isso que ela existe.
+//
+// ── O PISO, E PORQUE NÃO É ZERO ───────────────────────────────────────────────────────────
+//
+// Um educador generoso pode dar mais do que 10% à casa, e isso é legítimo. Mas o piso não é 0, e a
+// razão não é filosófica: é o erro de escrita mais provável nesta coluna.
+//
+// Quem preenche isto a pensar «a casa leva 10» escreve 10. Com piso 0, essa linha grava, e o
+// educador passa a receber 10% em vez de 90% — sem erro, sem aviso, e só se descobre no primeiro
+// extracto. Com piso 50, a mesma distracção é recusada em voz alta pela base de dados.
+//
+// 50 continua a deixar um educador oferecer metade da receita à casa, o que é muito mais do que
+// alguém faz por engano. O que se perde é a possibilidade de oferecer 90% à casa; o que se ganha é
+// que nenhum educador perde 80 pontos percentuais por ter trocado a ordem dos números na cabeça.
 
-export const PARTILHA_MIN_PCT = 90
-export const PARTILHA_MAX_PCT = 95
-export const PARTILHA_PADRAO_PCT = 95
+/** O mínimo que o educador pode ficar. Piso contra o erro de escrita, não contra a generosidade. */
+export const PARTILHA_MIN_PCT = 50
+/** O máximo que o educador pode ficar. A casa leva sempre 10% ou mais. */
+export const PARTILHA_MAX_PCT = 90
+/** O que vale por omissão: o tecto, que é o que favorece o educador. */
+export const PARTILHA_PADRAO_PCT = 90
 
 export type Partilha = {
   /** O que o cliente pagou. */
@@ -51,6 +128,20 @@ export type Partilha = {
   parteEducadorPct: number
   parteEducadorCents: number
   parteCasaCents: number
+}
+
+/**
+ * De quem é o produto.
+ *
+ * `'casa'` é a MTM a vender coisa dela — scanners, subscrições, licenças de EA. Não tem educador
+ * e não tem partilha: o líquido é todo da casa. Existir como conceito é o que permite à montra
+ * abrir com produtos lá dentro em vez de abrir vazia, e é o que impede que a alternativa (um
+ * educador de mentira chamado «MoreThanMoney») apareça na lista de payouts a pedir transferência.
+ */
+export type DonoProduto = 'educador' | 'casa'
+
+export function donoValido(dono: unknown): DonoProduto {
+  return String(dono ?? '') === 'casa' ? 'casa' : 'educador'
 }
 
 /** Corta a percentagem para o intervalo prometido, e desconfia de lixo (null, NaN, texto). */
@@ -66,10 +157,10 @@ export function partilhaValida(pct: unknown): number {
  * A conta da venda.
  *
  * A COMISSÃO DA LOJA SAI PRIMEIRO. Quando a venda passa pela App Store, a Apple leva 15–30% antes
- * de o dinheiro existir aqui. Calcular os 95% do educador sobre o BRUTO numa venda dessas punha a
- * casa a pagar a comissão da Apple do próprio bolso: 100 € de venda, 30 € para a Apple, 95 € para
- * o educador, 25 € de prejuízo por cada produto vendido. Os 90–95% são sobre o que a casa recebe,
- * e é isso que tem de estar escrito no contrato do educador.
+ * de o dinheiro existir aqui. Calcular os 90% do educador sobre o BRUTO numa venda dessas punha a
+ * casa a pagar a comissão da Apple do próprio bolso: 100 € de venda, 30 € para a Apple, 90 € para
+ * o educador, e 20 € de prejuízo por cada produto vendido. Os 90% são sobre o que a casa RECEBE, e
+ * é isso que tem de estar escrito no contrato do educador.
  *
  * O ARREDONDAMENTO É PARA O EDUCADOR. Um cêntimo perdido no arredondamento tem de ir para algum
  * lado, e vai para quem produziu o conteúdo. A casa fica com o resto, o que garante que as duas
@@ -79,10 +170,27 @@ export function calcularPartilha(entrada: {
   brutoCents: number
   comissaoLojaCents?: number
   partilhaPct?: number | null
+  dono?: DonoProduto | null
 }): Partilha {
   const bruto = Math.max(0, Math.round(Number(entrada.brutoCents) || 0))
   const loja = Math.min(bruto, Math.max(0, Math.round(Number(entrada.comissaoLojaCents) || 0)))
   const liquido = bruto - loja
+
+  // Produto da casa: não há ninguém a quem pagar, e o líquido é todo dela. Isto é um RAMO e não
+  // uma percentagem de 0 porque `partilhaValida` corta tudo para 50–90 — é esse piso que protege o
+  // educador do erro de escrita, e afrouxá-lo para acomodar os produtos da casa era abrir a porta a
+  // uma venda de educador pagar 0 por um erro de tipagem em qualquer sítio.
+  if (donoValido(entrada.dono) === 'casa') {
+    return {
+      brutoCents: bruto,
+      comissaoLojaCents: loja,
+      liquidoCents: liquido,
+      parteEducadorPct: 0,
+      parteEducadorCents: 0,
+      parteCasaCents: liquido,
+    }
+  }
+
   const pct = partilhaValida(entrada.partilhaPct)
   const educador = Math.round((liquido * pct) / 100)
   return {
@@ -112,14 +220,25 @@ export type EstadoProduto = 'rascunho' | 'em_revisao' | 'publicado' | 'retirado'
 
 export type ProdutoRegra = {
   id?: string
-  educator_id?: string
+  educator_id?: string | null
   titulo?: string | null
   descricao?: string | null
+  tipo?: string | null
   preco_cents?: number | null
+  moeda?: string | null
   conteudo_url?: string | null
   estado?: string | null
   activo?: boolean | null
   partilha_pct?: number | null
+  dono?: string | null
+  recorrente?: boolean | null
+  requer_morada?: boolean | null
+  stripe_price_id?: string | null
+  checkout_externo_url?: string | null
+  campanha_pct?: number | null
+  campanha_inicio?: string | null
+  campanha_fim?: string | null
+  campanha_tier?: string | null
 }
 
 export type VendedorRegra = {
@@ -154,7 +273,10 @@ export function podePublicar(
   def: Definicoes,
 ): { pode: boolean; motivo?: string } {
   if (!def.ligado) return { pode: false, motivo: 'O marketplace está desligado. Fala connosco.' }
-  if (!vendedor?.activo) {
+  // Um produto da casa não tem vendedor para activar — quem o põe lá já é a casa. A pergunta do
+  // interruptor do vendedor só se faz a quem tem vendedor.
+  const daCasa = donoValido(produto.dono) === 'casa'
+  if (!daCasa && !vendedor?.activo) {
     return { pode: false, motivo: 'A tua conta de vendedor ainda não foi activada pela MTM.' }
   }
   const titulo = String(produto.titulo ?? '').trim()
@@ -164,7 +286,12 @@ export function podePublicar(
     return { pode: false, motivo: 'Escreve uma descrição com pelo menos 30 caracteres — é o que a pessoa lê antes de decidir.' }
   }
   const conteudo = String(produto.conteudo_url ?? '').trim()
-  if (!/^https?:\/\//i.test(conteudo)) {
+  const externo = String(produto.checkout_externo_url ?? '').trim()
+  // Um produto da casa que manda o comprador para o caminho de compra ANTIGO (um scanner, uma
+  // licença de EA) não entrega nada por aqui: quem entrega é o fluxo que já existe e que já
+  // provisiona o acesso. Exigir-lhe `conteudo_url` era exigir-lhe um link falso.
+  const entregaLaFora = daCasa && /^https?:\/\//i.test(externo)
+  if (!entregaLaFora && !/^https?:\/\//i.test(conteudo)) {
     // Um produto pago sem destino é uma cobrança sem entrega. É o pior defeito possível num
     // marketplace: o cliente paga, não recebe nada, e a culpa fica com a casa e não com o autor.
     return { pode: false, motivo: 'Falta o link do conteúdo — é para onde o comprador vai depois de pagar.' }
@@ -183,6 +310,123 @@ export function podePublicar(
  */
 export function estadoAoPublicar(def: Definicoes): EstadoProduto {
   return def.revisaoObrigatoria ? 'em_revisao' : 'publicado'
+}
+
+// ── Quanto custa, hoje, a esta pessoa ─────────────────────────────────────────────────────
+//
+// ── PORQUE É QUE ISTO NÃO USA A TABELA `coupons` ──────────────────────────────────────────
+//
+// O reflexo era reaproveitar os `coupons` da casa. Não serve, e é melhor dizer porquê do que
+// deixar a pergunta viva para a próxima pessoa:
+//
+//   · Um `coupon` é um CÓDIGO que alguém ESCREVE. Uma campanha de marketplace não se escreve —
+//     o preço aparece já descontado a quem tem direito. São duas interacções diferentes.
+//   · `coupons` não tem âmbito de produto. O campo que faz de âmbito é `plan_override`, um texto
+//     único já a fazer triplo serviço (packs do site, MTM Funded, parcerias). Não consegue dizer
+//     «20% NESTE produto».
+//   · `coupons.used_count` está partido desde Setembro (o contador nunca foi incrementado) e há
+//     rotas vivas que ainda o lêem. Encostar o preço do marketplace a isso era herdar o defeito.
+//
+// Uma campanha é do produto. Sem tabela, sem junção, e sem duas fontes a discordarem sobre
+// quanto custa a mesma coisa — que é o defeito que qualquer loja tem de não ter.
+//
+// O CÓDIGO ESCRITO À MÃO continua a poder existir um dia, por cima disto, sem conflito: seria um
+// desconto adicional e não a substituição deste. Hoje não existe de propósito.
+
+export type Preco = {
+  /** O preço de tabela, sem campanha. */
+  baseCents: number
+  /** O que esta pessoa paga, hoje. */
+  cents: number
+  descontoPct: number
+  descontoCents: number
+  emCampanha: boolean
+  /** Quando é que acaba, para o ecrã poder dizê-lo. Null = não acaba. */
+  acabaEm: string | null
+  moeda: string
+}
+
+/**
+ * A campanha está a correr AGORA e esta pessoa apanha-a?
+ *
+ * O `agoraIso` é parâmetro e não `new Date()` cá dentro pela mesma razão que em
+ * `temAcessoAoProduto`: uma regra que lê o relógio sozinha não se testa no dia a seguir ao prazo,
+ * e o prazo é metade do que uma campanha é.
+ *
+ * O tier usa `podeAcederAoTier`, que é a função que o resto da casa já usa para decidir quem vê
+ * o quê. Inventar aqui uma noção nova de «membro» era criar a TERCEIRA definição de membro nesta
+ * casa — e a segunda já custou sinais perdidos (o VIP que vive em dois campos).
+ */
+export function campanhaActiva(
+  produto: ProdutoRegra,
+  agoraIso: string,
+  perfil?: PerfilUi | null,
+): boolean {
+  const pct = Number(produto.campanha_pct ?? 0)
+  if (!Number.isFinite(pct) || pct <= 0) return false
+
+  const agora = Date.parse(agoraIso)
+  if (!Number.isFinite(agora)) return false
+
+  if (produto.campanha_inicio) {
+    const i = Date.parse(produto.campanha_inicio)
+    if (Number.isFinite(i) && i > agora) return false
+  }
+  if (produto.campanha_fim) {
+    const f = Date.parse(produto.campanha_fim)
+    // Uma data de fim ilegível NÃO deixa a campanha correr para sempre: fecha-a. Entre cobrar a
+    // menos indefinidamente e cobrar o preço de tabela, o erro que se corrige é o segundo.
+    if (!Number.isFinite(f) || f <= agora) return false
+  }
+
+  const tier = String(produto.campanha_tier ?? 'app_member')
+  if (tier === 'all') return true
+  return podeAcederAoTier(perfil, tier)
+}
+
+/**
+ * O preço que se mostra e o preço que se cobra — a MESMA função nos dois sítios.
+ *
+ * É esta a razão de ela ser pura: o cartão da montra chama-a no browser para desenhar «99 € →
+ * 79 €», e a rota do checkout chama-a no servidor para decidir quanto pedir ao Stripe. Se fossem
+ * duas contas, mais cedo ou mais tarde discordavam, e discordar aqui é mostrar um preço e cobrar
+ * outro — que é a única coisa que uma loja não pode fazer nunca.
+ */
+export function precoEfectivo(
+  produto: ProdutoRegra,
+  agoraIso: string,
+  perfil?: PerfilUi | null,
+): Preco {
+  const base = Math.max(0, Math.round(Number(produto.preco_cents ?? 0) || 0))
+  const moeda = String(produto.moeda ?? 'eur')
+  const activa = campanhaActiva(produto, agoraIso, perfil)
+  if (!activa) {
+    return { baseCents: base, cents: base, descontoPct: 0, descontoCents: 0, emCampanha: false, acabaEm: null, moeda }
+  }
+  const pct = Math.min(90, Math.max(0, Number(produto.campanha_pct ?? 0)))
+  // Arredonda o DESCONTO para baixo, não o preço: garante que o que se cobra nunca fica abaixo
+  // do que se anunciou por um cêntimo de arredondamento.
+  const desconto = Math.floor((base * pct) / 100)
+  return {
+    baseCents: base,
+    cents: Math.max(0, base - desconto),
+    descontoPct: pct,
+    descontoCents: desconto,
+    emCampanha: true,
+    acabaEm: produto.campanha_fim ?? null,
+    moeda,
+  }
+}
+
+/**
+ * O `mode` da sessão Stripe.
+ *
+ * Uma subscrição cobrada em `payment` cobra uma vez o que devia ser mensal; um curso cobrado em
+ * `subscription` fica a cobrar todos os meses a quem comprou uma vez. Nenhum dos dois dá erro —
+ * dão um extracto errado e um cliente zangado, e o segundo devolve-se com pedido de desculpa.
+ */
+export function modoStripe(produto: ProdutoRegra): 'payment' | 'subscription' {
+  return produto.recorrente === true ? 'subscription' : 'payment'
 }
 
 // ── Quem vê ───────────────────────────────────────────────────────────────────────────────
@@ -206,7 +450,8 @@ export function produtoNaVitrine(
 ): boolean {
   if (ehAdminUi(perfil)) return true
   if (!def.ligado) return false
-  if (!vendedor?.activo) return false
+  // Um produto da casa não depende do interruptor de vendedor nenhum — não tem vendedor.
+  if (donoValido(produto.dono) !== 'casa' && !vendedor?.activo) return false
   if (produto.activo === false) return false
   return produto.estado === 'publicado'
 }
@@ -236,13 +481,27 @@ export function podeComprarAqui(opcoes: {
   vendedor?: VendedorRegra | null
   jaComprou?: boolean
 }): { pode: boolean; motivo?: string } {
+  // «Já comprou» vem primeiro porque não é uma recusa: é o ecrã a mostrar «Abrir» em vez de
+  // «Comprar», e vale na app tanto como na web — a Apple proíbe VENDER fora do IAP, não proíbe
+  // entregar o que alguém já pagou.
   if (opcoes.jaComprou) return { pode: false, motivo: 'ja_comprado' }
+
+  // A REGRA DA APPLE VEM ANTES DE TODAS AS OUTRAS RECUSAS, e a ordem é a decisão.
+  //
+  // Antes estava em último. Funcionava, mas por sorte: bastava um produto novo (um da casa com
+  // `checkout_externo_url`, por exemplo) sair por um dos `return` de cima para o ecrã da app
+  // deixar de dizer «ios_iap_required» e passar a dizer outra coisa — e «outra coisa» é o caminho
+  // por onde um link para fora acaba a aparecer dentro da app. Com ela aqui, nenhum produto, de
+  // ninguém, por motivo nenhum, devolve um caminho de compra à app iOS. Guideline 3.1.1.
+  if (opcoes.iosNativo) return { pode: false, motivo: 'ios_iap_required' }
+
   if (!opcoes.def.ligado) return { pode: false, motivo: 'marketplace_desligado' }
-  if (!opcoes.vendedor?.activo) return { pode: false, motivo: 'vendedor_inactivo' }
+  if (donoValido(opcoes.produto.dono) !== 'casa' && !opcoes.vendedor?.activo) {
+    return { pode: false, motivo: 'vendedor_inactivo' }
+  }
   if (opcoes.produto.activo === false || opcoes.produto.estado !== 'publicado') {
     return { pode: false, motivo: 'produto_indisponivel' }
   }
-  if (opcoes.iosNativo) return { pode: false, motivo: 'ios_iap_required' }
   return { pode: true }
 }
 

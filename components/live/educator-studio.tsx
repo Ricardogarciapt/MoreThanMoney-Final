@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import EducatorCoursesPanel from "@/components/live/educator-courses-panel"
 import EducatorDvrPanel from "@/components/live/educator-dvr-panel"
+import GestorProdutos from "@/components/marketplace/gestor-produtos"
 import {
   ArrowLeft,
   BarChart3,
@@ -24,6 +25,8 @@ import {
   MessageSquare,
   Mic2,
   Video,
+  Store,
+  GraduationCap,
 } from "lucide-react"
 import InternalStudioModal from "@/components/live/internal-studio-modal"
 import EducatorFeedbacksList from "@/components/live/educator-feedbacks-list"
@@ -687,7 +690,7 @@ export default function EducatorStudio() {
           </div>
 
           <Tabs defaultValue="channels" className="w-full space-y-4">
-            <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl border border-gray-800 bg-black/40 p-1 sm:inline-flex sm:w-auto sm:justify-start">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl border border-gray-800 bg-black/40 p-1 sm:inline-flex sm:w-auto sm:justify-start lg:grid-cols-4">
               <TabsTrigger
                 value="channels"
                 className="gap-2 rounded-lg px-4 py-2.5 text-sm data-[state=active]:border data-[state=active]:border-[#D2A63C]/35 data-[state=active]:bg-[#D2A63C]/12 data-[state=active]:text-[#D2A63C] data-[state=active]:shadow-none"
@@ -713,6 +716,16 @@ export default function EducatorStudio() {
               >
                 <MessageSquare className="h-4 w-4 shrink-0" />
                 Feedbacks
+              </TabsTrigger>
+              {/* O separador do NEGÓCIO do educador. Fica ao lado das salas de propósito: o estúdio
+                  passa a ter os dois lados do que ele faz aqui — dar aulas e vender — em vez de ter
+                  o segundo escondido numa página que nada no site linkava. */}
+              <TabsTrigger
+                value="produtos"
+                className="gap-2 rounded-lg px-4 py-2.5 text-sm data-[state=active]:border data-[state=active]:border-[#D2A63C]/35 data-[state=active]:bg-[#D2A63C]/12 data-[state=active]:text-[#D2A63C] data-[state=active]:shadow-none"
+              >
+                <Store className="h-4 w-4 shrink-0" />
+                Produtos e Cursos
               </TabsTrigger>
             </TabsList>
 
@@ -1193,6 +1206,43 @@ export default function EducatorStudio() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* ── PRODUTOS E CURSOS ────────────────────────────────────────────────────────
+                Os dois juntos porque são a mesma coisa vista de dois lados: as playlists são o
+                conteúdo que o educador entrega, e os produtos são o que ele cobra por ele. Tê-los
+                em ecrãs diferentes era o que obrigava a ir a um sítio criar o curso e a outro
+                descobrir que ninguém o podia comprar. */}
+            <TabsContent value="produtos" className="mt-0 space-y-4 outline-none">
+              <Card className="border-gray-800 bg-gray-950/90">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm text-white">
+                    <Store className="h-4 w-4 text-[#D2A63C]" />
+                    À venda no marketplace
+                  </CardTitle>
+                  <p className="text-xs text-gray-400">
+                    Os teus produtos, os teus preços e o que já vendeste. Só vês os teus.
+                  </p>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
+                  <GestorProdutos />
+                </CardContent>
+              </Card>
+
+              <Card className="border-gray-800 bg-gray-950/90">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm text-white">
+                    <GraduationCap className="h-4 w-4 text-[#D2A63C]" />
+                    Cursos e playlists
+                  </CardTitle>
+                  <p className="text-xs text-gray-400">
+                    O conteúdo que aparece no teu perfil. Para o vender, cria um produto acima com o link dele.
+                  </p>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
+                  <EducatorCoursesPanel />
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </section>
 
@@ -1337,12 +1387,9 @@ export default function EducatorStudio() {
             </CardContent>
           </Card>
 
-          {/* CURSOS: playlists próprias do educador (dropdown "Cursos" no perfil) — cria/ordena aqui. */}
-          <Card className="border-gray-800 bg-gray-950/90">
-            <CardContent className="p-3">
-              <EducatorCoursesPanel />
-            </CardContent>
-          </Card>
+          {/* Os CURSOS (playlists) saíram daqui para o separador «Produtos e Cursos», onde estão ao
+              lado dos produtos à venda. Estavam numa coluna de 320px a fazer o trabalho de um ecrã
+              inteiro, e o educador tinha o conteúdo dele num sítio e o preço dele noutro. */}
 
           <EducatorDvrPanel />
 

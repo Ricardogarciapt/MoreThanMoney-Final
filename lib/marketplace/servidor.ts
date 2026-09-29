@@ -17,15 +17,21 @@ import {
   DEFINICOES_PADRAO,
   PARTILHA_PADRAO_PCT,
   calcularPartilha,
+  donoValido,
   partilhaValida,
   type Definicoes,
+  type DonoProduto,
 } from './regras'
 
 export const CHAVE_DEFINICOES = 'marketplace'
 
 /** As colunas que a MONTRA pode ver. `conteudo_url` e `conteudo_nota` não estão aqui de propósito. */
 export const COLUNAS_VITRINE =
-  'id, slug, titulo, subtitulo, descricao, tipo, imagem_url, preco_cents, moeda, estado, activo, educator_id, publicado_em'
+  'id, slug, titulo, subtitulo, descricao, tipo, imagem_url, preco_cents, moeda, estado, activo, educator_id, publicado_em, ' +
+  // A campanha entra na montra porque o preço com desconto é o preço que se MOSTRA. Sem estas
+  // colunas o cartão desenhava o preço de tabela e o checkout cobrava outro — e mostrar um preço
+  // e cobrar outro é a única coisa que uma loja não pode fazer nunca.
+  'dono, recorrente, requer_morada, checkout_externo_url, campanha_pct, campanha_inicio, campanha_fim, campanha_tier'
 
 export type ProdutoVitrine = {
   id: string
@@ -39,8 +45,16 @@ export type ProdutoVitrine = {
   moeda: string
   estado: string
   activo: boolean
-  educator_id: string
+  educator_id: string | null
   publicado_em: string | null
+  dono: string
+  recorrente: boolean
+  requer_morada: boolean
+  checkout_externo_url: string | null
+  campanha_pct: number | null
+  campanha_inicio: string | null
+  campanha_fim: string | null
+  campanha_tier: string | null
   educador?: { id: string; display_name: string; avatar_url: string | null; specialty: string | null } | null
   jaComprou?: boolean
 }
@@ -135,8 +149,13 @@ export async function garantirVendedor(educatorId: string): Promise<Vendedor | n
 
 export type AutorPublico = { id: string; display_name: string; avatar_url: string | null; specialty: string | null }
 
-export async function mapaDeAutores(ids: string[]): Promise<Map<string, AutorPublico>> {
+/**
+ * Aceita nulos na lista de propósito: os produtos da casa não têm educador, e obrigar cada
+ * chamador a filtrá-los antes era garantir que um deles se esquecia e passava um `null` ao `.in()`.
+ */
+export async function mapaDeAutores(entrada: (string | null | undefined)[]): Promise<Map<string, AutorPublico>> {
   const m = new Map<string, AutorPublico>()
+  const ids = entrada.filter((v): v is string => typeof v === 'string' && v.length > 0)
   if (!ids.length) return m
   const { data } = await getSupabaseAdmin()
     .from('lms_educators')
@@ -191,13 +210,15 @@ export async function vendasDoEducador(educatorId: string, limite = 200): Promis
  */
 export async function registarCompra(entrada: {
   produtoId: string
-  educatorId: string
+  /** Null num produto da casa: não há educador a quem pagar. */
+  educatorId: string | null
   compradorId: string
   fonte: 'stripe' | 'apple' | 'manual' | 'oferta'
   referencia: string
   brutoCents: number
   comissaoLojaCents?: number
   partilhaPct?: number | null
+  dono?: DonoProduto | null
   moeda?: string
   acessoExpiraEm?: string | null
 }): Promise<{ novo: boolean; compraId?: string }> {
@@ -214,6 +235,7 @@ export async function registarCompra(entrada: {
     brutoCents: entrada.brutoCents,
     comissaoLojaCents: entrada.comissaoLojaCents ?? 0,
     partilhaPct: entrada.partilhaPct,
+    dono: entrada.dono,
   })
 
   const { data, error } = await db
@@ -253,9 +275,15 @@ export async function registarCompra(entrada: {
 
 /**
  * A percentagem que se aplica a ESTE produto: a do produto se houver, senão a do educador, senão
- * a prometida. Nunca devolve nada fora de 90–95.
+ * a do acordo por omissão. Nunca devolve nada fora de 50–90.
  */
-export function pctDoProduto(produto: { partilha_pct?: number | null }, vendedor?: Vendedor | null): number {
+export function pctDoProduto(
+  produto: { partilha_pct?: number | null; dono?: string | null },
+  vendedor?: Vendedor | null,
+): number {
+  // Produto da casa: não há partilha. Devolver 90 aqui era escrever na linha da compra que a casa
+  // deve 90% de um scanner a um educador que não existe.
+  if (donoValido(produto.dono) === 'casa') return 0
   if (produto.partilha_pct != null) return partilhaValida(produto.partilha_pct)
   if (vendedor?.partilha_pct != null) return partilhaValida(vendedor.partilha_pct)
   return PARTILHA_PADRAO_PCT
