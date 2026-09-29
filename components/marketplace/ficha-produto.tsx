@@ -23,7 +23,8 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { Loader2, ArrowLeft, Tag, Clock, ExternalLink } from "lucide-react"
-import { euros } from "@/lib/marketplace/regras"
+import { euros, galeriaDoProduto } from "@/lib/marketplace/regras"
+import Sufixo from "@/components/marketplace/sufixo-periodo"
 
 type Preco = {
   baseCents: number; cents: number; descontoPct: number
@@ -32,6 +33,9 @@ type Preco = {
 type Produto = {
   id: string; slug: string; titulo: string; subtitulo: string | null; descricao: string | null
   tipo: string; categoria: string; imagem_url: string | null; recorrente: boolean
+  periodicidade: string
+  /** A galeria, SEM a capa — a capa é `imagem_url`. Ver `galeriaDoProduto`. */
+  imagens: string[] | null
   educador: { display_name: string; specialty: string | null } | null
   jaComprou: boolean; podeComprar: boolean; motivoSemCompra: string | null
   preco: Preco
@@ -56,6 +60,10 @@ export default function FichaProduto({ slug }: { slug: string }) {
   // A ficha é PÚBLICA. Sem isto, um visitante sem sessão via a caixa de compra inteira — cupão,
   // referral e botão — e o «Comprar» devolvia «Autenticação necessária» num aviso vermelho.
   const [autenticado, setAutenticado] = useState(true)
+  // Qual das imagens está em grande. Índice e não URL: se o produto for recarregado com menos
+  // imagens do que antes, um índice fora de alcance corrige-se com um `min` — uma URL que já não
+  // existe na galeria deixava a ficha sem imagem nenhuma.
+  const [activa, setActiva] = useState(0)
   const [cupao, setCupao] = useState("")
   const [referral, setReferral] = useState("")
   const [aComprar, setAComprar] = useState(false)
@@ -125,6 +133,9 @@ export default function FichaProduto({ slug }: { slug: string }) {
 
   const p = produto
   const acaba = p.preco.acabaEm ? new Date(p.preco.acabaEm) : null
+  // A MESMA função que o servidor usa para gravar: a capa primeiro, o resto pela ordem do autor, sem
+  // repetições. Montar a lista aqui à mão era arriscar que a ficha mostrasse a capa duas vezes.
+  const galeria = galeriaDoProduto(p)
 
   return (
     <div className="space-y-6">
@@ -134,9 +145,43 @@ export default function FichaProduto({ slug }: { slug: string }) {
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-5">
-          {p.imagem_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={p.imagem_url} alt="" className="aspect-[4/3] w-full rounded-xl object-cover" />
+          {/* ── A GALERIA ────────────────────────────────────────────────────────────────
+              A capa primeiro e a coluna `imagens` a seguir (`galeriaDoProduto`). Uma imagem só
+              desenha-se como antes: sem miniaturas, que numa fila de uma sugerem que falta algo.
+
+              A imagem grande é um estado LOCAL e não um link — trocar de imagem não muda de página,
+              e quem voltar atrás no browser volta ao marketplace e não à segunda fotografia. */}
+          {galeria.length > 0 && (
+            <div className="space-y-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={galeria[Math.min(activa, galeria.length - 1)]}
+                alt=""
+                className="aspect-[4/3] w-full rounded-xl border border-zinc-800 object-cover"
+              />
+              {galeria.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {galeria.map((url, i) => (
+                    <button
+                      key={url}
+                      type="button"
+                      onClick={() => setActiva(i)}
+                      /* `aria-label` com o número porque a miniatura não tem texto e o `alt` é
+                         vazio: estas imagens são decorativas para quem lê o ecrã com a voz, mas o
+                         BOTÃO tem de ser nomeável para se poder carregar nele. */
+                      aria-label={`Ver imagem ${i + 1} de ${galeria.length}`}
+                      aria-current={i === activa}
+                      className={`h-16 w-20 flex-shrink-0 overflow-hidden rounded-lg border transition ${
+                        i === activa ? "border-[#D2A63C]" : "border-zinc-800 opacity-60 hover:opacity-100"
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           <div>
@@ -173,9 +218,9 @@ export default function FichaProduto({ slug }: { slug: string }) {
             )}
             <div className="text-3xl font-semibold text-zinc-100">
               {p.preco.baseCents === 0 ? "Grátis" : euros(p.preco.cents, p.preco.moeda)}
-              {/* Não diz «/mês»: `recorrente` é um booleano e não distingue mensal de anual, e
-                  quatro dos produtos publicados são ANUAIS. Ver a nota igual em `vitrine.tsx`. */}
-              {p.recorrente && <span className="ml-1 text-base font-normal text-zinc-500">subscrição</span>}
+              {/* O período vem da coluna `periodicidade` (157), nunca do `recorrente`: quatro dos
+                  produtos publicados são ANUAIS. Ver a nota igual em `vitrine.tsx`. */}
+              <Sufixo p={p} className="text-base" />
             </div>
             {acaba && (
               <p className="mt-1 flex items-center gap-1 text-xs text-[#D2A63C]">

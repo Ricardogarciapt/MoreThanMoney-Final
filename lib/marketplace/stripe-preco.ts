@@ -31,6 +31,7 @@
 import type Stripe from 'stripe'
 import { getStripeClient } from '@/lib/stripe-client'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { intervaloStripe, periodicidadeValida } from './regras'
 
 export type ProdutoParaStripe = {
   id: string
@@ -40,6 +41,8 @@ export type ProdutoParaStripe = {
   preco_cents: number
   moeda?: string | null
   recorrente?: boolean | null
+  /** De quanto em quanto tempo. É ESTA que decide o `interval` do Stripe — ver `intervaloStripe`. */
+  periodicidade?: string | null
   stripe_product_id?: string | null
   stripe_price_id?: string | null
   dono?: string | null
@@ -69,9 +72,16 @@ export async function sincronizarPrecoNoStripe(produto: ProdutoParaStripe): Prom
   // casa: apontam para os preços que já vendem hoje (Membro, Premium, scanners, EA).
   //
   // O que acontecia sem esta guarda, e não é hipotético: quatro desses produtos são subscrições
-  // ANUAIS. Esta função cria sempre `interval: 'month'` (ver mais abaixo), logo o preço anual do
-  // Stripe «não bate certo», e o caminho normal era criar um preço MENSAL de 624 € e arquivar o
-  // anual que está vivo. Um clique em «sincronizar preço» chegava para isso.
+  // ANUAIS, e esta função criava sempre `interval: 'month'`. O preço anual do Stripe «não batia
+  // certo», e o caminho normal era criar um preço MENSAL de 624 € e arquivar o anual que está vivo.
+  // Um clique em «sincronizar preço» chegava para isso.
+  //
+  // A PERIODICIDADE JÁ ESTÁ RESOLVIDA (migração 157, e `intervaloStripe` mais abaixo) — e a guarda
+  // FICA. São duas coisas diferentes: a periodicidade impede criar o preço errado, a guarda impede
+  // tocar num preço que não nasceu aqui. Mesmo com o intervalo certo, sincronizar um dos catorze
+  // preços vivos da casa criaria um preço NOVO — com o mesmo valor e o mesmo intervalo, mas outro
+  // id — e arquivaria aquele que as subscrições actuais referenciam. Tirar a guarda porque «agora o
+  // intervalo está certo» era o erro seguinte.
   //
   // Criar de raiz continua a funcionar: um produto sem preço nenhum no Stripe passa por aqui.
   const temPrecoAlheio = Boolean(produto.stripe_price_id?.trim()) && !produto.stripe_product_id?.trim()
@@ -81,7 +91,27 @@ export async function sincronizarPrecoNoStripe(produto: ProdutoParaStripe): Prom
     )
   }
 
-  // Os clientes vêm DEPOIS da guarda, e é de propósito: assim a recusa acontece sem tocar em
+  // ── DE QUANTO EM QUANTO TEMPO ───────────────────────────────────────────────────────────
+  //
+  // Vinha `interval: 'month'` escrito à mão nos dois sítios (na comparação e na criação). Agora sai
+  // da coluna, pelo mapa de `regras.ts`, que é o mesmo que a montra usa para escrever «/ano».
+  //
+  // RECUSA-SE EM VEZ DE ADIVINHAR. Um recorrente sem periodicidade legível não vira mensal por
+  // omissão: um mensal adivinhado é exactamente o defeito que isto corrige, e o preço de um erro
+  // destes é cobrar 624 € doze vezes a quem contratou uma vez ao ano. A restrição
+  // `marketplace_produtos_periodicidade_coerente` (157) torna isto inalcançável para uma linha
+  // gravada — o que sobra é um chamador a passar um objecto montado à mão, e esse merece o erro.
+  //
+  // AQUI EM CIMA, ao lado da outra guarda e ANTES dos clientes, pela mesma razão que ela: uma
+  // recusa que precisa de uma chave de Stripe para acontecer é uma recusa que não se testa.
+  const intervalo = produto.recorrente === true ? intervaloStripe(produto.periodicidade) : null
+  if (produto.recorrente === true && !intervalo) {
+    throw new Error(
+      `Este produto cobra outra vez mas não diz de quanto em quanto tempo (periodicidade: «${periodicidadeValida(produto.periodicidade)}»). Escolhe mensal, trimestral, semestral ou anual antes de o pôr no Stripe.`,
+    )
+  }
+
+  // Os clientes vêm DEPOIS das guardas, e é de propósito: assim a recusa acontece sem tocar em
   // ligação nenhuma, e pode ser testada sem chaves de Stripe nem de Supabase à frente.
   const stripe = getStripeClient()
   const db = getSupabaseAdmin()
@@ -138,7 +168,12 @@ export async function sincronizarPrecoNoStripe(produto: ProdutoParaStripe): Prom
         p.unit_amount === montante &&
         p.currency === moeda &&
         Boolean(p.recurring) === recorrente &&
-        (!recorrente || p.recurring?.interval === 'month')
+        // O `interval_count` conta: `month`×3 e `month`×1 são o MESMO `interval` e preços
+        // diferentes. Sem o comparar, um produto que passasse de mensal a trimestral dizia que o
+        // preço batia certo e continuava a cobrar todos os meses.
+        (!recorrente ||
+          (p.recurring?.interval === intervalo?.interval &&
+            (p.recurring?.interval_count ?? 1) === intervalo?.interval_count))
       if (bate) {
         return { stripeProductId: productId, stripePriceId: antigo, criouPreco: false, arquivou: null }
       }
@@ -151,7 +186,7 @@ export async function sincronizarPrecoNoStripe(produto: ProdutoParaStripe): Prom
     product: productId,
     currency: moeda,
     unit_amount: montante,
-    ...(recorrente ? { recurring: { interval: 'month' as const } } : {}),
+    ...(intervalo ? { recurring: intervalo } : {}),
     nickname: `marketplace · ${produto.slug ?? produto.id}`,
     metadata: { origem: 'marketplace', produto_id: produto.id },
   })
@@ -361,13 +396,38 @@ export async function cupaoDaCampanha(produto: {
 /** O preço, tal como o Stripe o tem. Para o ecrã poder mostrar se está alinhado com a tabela. */
 export async function lerPrecoDoStripe(priceId: string): Promise<{
   activo: boolean; cents: number | null; moeda: string; recorrente: boolean
+  /** O intervalo REAL do Stripe, escrito como se lê: «mensal», «anual», «a cada 3 meses». */
+  intervalo: string | null
 } | null> {
   try {
     const p: Stripe.Price = await getStripeClient().prices.retrieve(priceId)
-    return { activo: p.active, cents: p.unit_amount, moeda: p.currency, recorrente: Boolean(p.recurring) }
+    return {
+      activo: p.active,
+      cents: p.unit_amount,
+      moeda: p.currency,
+      recorrente: Boolean(p.recurring),
+      // Lido do Stripe e não da nossa coluna, de propósito: é a única maneira de o ecrã poder
+      // CONTRADIZER-NOS. Um produto marcado como anual cujo preço Stripe diz «mensal» é o defeito
+      // que queremos ver escrito, não escondido atrás do que a nossa tabela acha.
+      intervalo: p.recurring ? nomeDoIntervalo(p.recurring.interval, p.recurring.interval_count) : null,
+    }
   } catch {
     return null
   }
+}
+
+/** O intervalo do Stripe em português, para caber numa frase. */
+function nomeDoIntervalo(interval: string, count: number): string {
+  if (count === 1) {
+    if (interval === 'month') return 'mensal'
+    if (interval === 'year') return 'anual'
+    if (interval === 'week') return 'semanal'
+    if (interval === 'day') return 'diário'
+  }
+  if (interval === 'month' && count === 3) return 'trimestral'
+  if (interval === 'month' && count === 6) return 'semestral'
+  const plural = { day: 'dias', week: 'semanas', month: 'meses', year: 'anos' }[interval] ?? interval
+  return `a cada ${count} ${plural}`
 }
 
 /**

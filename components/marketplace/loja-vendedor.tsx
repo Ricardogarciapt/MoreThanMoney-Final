@@ -22,6 +22,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, Loader2, Store } from "lucide-react"
 import { euros, type Vendedor } from "@/lib/marketplace/regras"
+import Sufixo from "@/components/marketplace/sufixo-periodo"
 
 type Preco = {
   baseCents: number; cents: number; descontoPct: number
@@ -30,7 +31,7 @@ type Preco = {
 type Produto = {
   id: string; slug: string; titulo: string; subtitulo: string | null
   tipo: string; categoria: string; imagem_url: string | null
-  recorrente: boolean; preco: Preco; vendedor: Vendedor
+  recorrente: boolean; periodicidade: string; preco: Preco; vendedor: Vendedor
   jaComprou: boolean; podeComprar: boolean; motivoSemCompra: string | null
 }
 type Loja = {
@@ -154,9 +155,9 @@ export default function LojaVendedor({ id }: { id: string }) {
                         </span>
                       )}
                       {euros(p.preco.cents, p.preco.moeda)}
-                      {/* Nunca «/mês»: `recorrente` não distingue mensal de anual, e quatro dos
-                          produtos publicados são anuais. Ver a nota em `vitrine.tsx`. */}
-                      {p.recorrente && <span className="ml-1 text-xs font-normal text-zinc-500">subscrição</span>}
+                      {/* O período vem da coluna `periodicidade` (157) — nunca adivinhado. Quatro
+                          dos produtos publicados são ANUAIS. Ver a nota em `vitrine.tsx`. */}
+                      <Sufixo p={p} className="text-xs" />
                     </>
                   )}
                 </span>

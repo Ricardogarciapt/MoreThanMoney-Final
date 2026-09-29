@@ -25,15 +25,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Loader2, Plus, Sparkles, ImagePlus, FileImage, Download, Trash2,
-  Send, EyeOff, CreditCard, AlertTriangle, CheckCircle2, X,
+  Send, EyeOff, CreditCard, AlertTriangle, CheckCircle2, X, ArrowUp, ArrowDown,
 } from "lucide-react"
-import { CATEGORIAS, euros, sugestaoDaCategoria } from "@/lib/marketplace/regras"
+import {
+  CATEGORIAS,
+  IMAGENS_MAX,
+  PERIODICIDADES,
+  euros,
+  galeriaParaGravar,
+  periodicidadeParaGravar,
+  sufixoDoPeriodo,
+  sugestaoDaCategoria,
+} from "@/lib/marketplace/regras"
 import CupoesEducador from "@/components/marketplace/cupoes-educador"
 
 type Produto = {
   id: string; slug: string; titulo: string; subtitulo: string | null; descricao: string | null
-  tipo: string; imagem_url: string | null; preco_cents: number; moeda: string
-  recorrente: boolean; requer_morada: boolean
+  tipo: string; imagem_url: string | null; imagens: string[] | null; preco_cents: number; moeda: string
+  recorrente: boolean; periodicidade: string; requer_morada: boolean
   conteudo_url: string | null; conteudo_nota: string | null
   estado: string; activo: boolean; dono: string; educator_id: string | null
   partilha_pct: number | null; stripe_price_id: string | null; checkout_externo_url: string | null
@@ -72,7 +81,14 @@ const TIERS = [
 const VAZIO = {
   titulo: "", subtitulo: "", descricao: "", tipo: "curso",
   preco_cents: 0, recorrente: false, requer_morada: false,
+  // A periodicidade do formulário é SEMPRE uma das recorrentes, mesmo com «cobra outra vez»
+  // desligado: é o que a pessoa escolheu para quando ligar. O que se GRAVA passa por
+  // `periodicidadeParaGravar`, que a põe em «unica» se não houver recorrência — e é aí que a
+  // coerência com a restrição da 157 se garante, e não na memória do formulário.
+  periodicidade: "mensal",
   conteudo_url: "", conteudo_nota: "", imagem_url: "",
+  /** A galeria, SEM a capa. A capa é `imagem_url` e não se repete aqui. */
+  imagens: [] as string[],
   campanha_pct: 0, campanha_inicio: "", campanha_fim: "", campanha_tier: "app_member",
 }
 
@@ -88,6 +104,9 @@ export default function GestorProdutos() {
   const [aEditar, setAEditar] = useState(false)
   const [aGravar, setAGravar] = useState(false)
   const [aPedirIa, setAPedirIa] = useState<"texto" | "imagem" | null>(null)
+  // A URL que está a ser escrita para acrescentar à galeria. Fora do `form` de propósito: é um
+  // rascunho do ecrã, não um campo do produto, e ao gravar não tem de ir a sítio nenhum.
+  const [novaImagem, setNovaImagem] = useState("")
   const [modalImagem, setModalImagem] = useState<string | null>(null)
   const [modalFlyer, setModalFlyer] = useState<string | null>(null)
 
@@ -114,7 +133,11 @@ export default function GestorProdutos() {
       id: p.id,
       titulo: p.titulo, subtitulo: p.subtitulo ?? "", descricao: p.descricao ?? "",
       tipo: p.tipo, preco_cents: p.preco_cents, recorrente: p.recorrente, requer_morada: p.requer_morada,
+      // «unica» não é uma opção do selector (só aparece quando há recorrência), por isso um produto
+      // de pagamento único abre em «mensal» — o que ele passaria a ser se alguém ligasse a caixa.
+      periodicidade: p.periodicidade && p.periodicidade !== "unica" ? p.periodicidade : "mensal",
       conteudo_url: p.conteudo_url ?? "", conteudo_nota: p.conteudo_nota ?? "", imagem_url: p.imagem_url ?? "",
+      imagens: Array.isArray(p.imagens) ? p.imagens : [],
       campanha_pct: Number(p.campanha_pct ?? 0),
       campanha_inicio: paraInput(p.campanha_inicio), campanha_fim: paraInput(p.campanha_fim),
       campanha_tier: p.campanha_tier ?? "app_member",
@@ -129,8 +152,13 @@ export default function GestorProdutos() {
         titulo: form.titulo, subtitulo: form.subtitulo || null, descricao: form.descricao || null,
         tipo: form.tipo, preco_cents: Math.round(Number(form.preco_cents) || 0),
         recorrente: form.recorrente, requer_morada: form.requer_morada,
+        periodicidade: periodicidadeParaGravar(form.recorrente, form.periodicidade),
         conteudo_url: form.conteudo_url || null, conteudo_nota: form.conteudo_nota || null,
         imagem_url: form.imagem_url || null,
+        // Limpo AQUI e outra vez na rota. Não por desconfiança do servidor: é para o tecto de 8 e a
+        // ausência da capa serem a mesma regra nos dois lados — a versão do ecrã existe para a
+        // pessoa ver o que vai gravar, a do servidor para valer para quem não passe por este ecrã.
+        imagens: galeriaParaGravar(form.imagem_url, form.imagens),
         campanha_pct: Number(form.campanha_pct) || 0,
         campanha_inicio: paraIso(form.campanha_inicio), campanha_fim: paraIso(form.campanha_fim),
         campanha_tier: form.campanha_tier,
@@ -178,6 +206,49 @@ export default function GestorProdutos() {
     setNota(j.criouPreco ? "Preço criado no Stripe. O produto já pode ser comprado." : "O preço no Stripe já estava certo.")
     await ler()
   }, [ler])
+
+  // ── A GALERIA ───────────────────────────────────────────────────────────────────────────
+  //
+  // Três operações e nada mais: acrescentar, remover, trocar de lugar. Não há «editar» a URL de uma
+  // imagem já na lista — trocar uma imagem é remover e acrescentar, e um campo de texto por imagem
+  // numa lista de oito é uma parede de caixas onde se corrige a linha errada sem dar por isso.
+
+  const acrescentarImagem = useCallback((url: string) => {
+    const limpa = url.trim()
+    if (!limpa) return
+    setForm((f) => {
+      if (f.imagens.length >= IMAGENS_MAX) {
+        setErro(`A galeria leva no máximo ${IMAGENS_MAX} imagens além da capa. Remove uma para acrescentar outra.`)
+        return f
+      }
+      // A capa não entra na galeria, e uma imagem já lá não entra duas vezes: `galeriaParaGravar`
+      // decide as duas coisas, para o ecrã não ter uma segunda opinião sobre a mesma regra.
+      const nova = galeriaParaGravar(f.imagem_url, [...f.imagens, limpa])
+      if (nova.length === f.imagens.length) {
+        setErro(limpa === f.imagem_url.trim() ? "Essa imagem já é a capa." : "Essa imagem já está na galeria.")
+        return f
+      }
+      setErro(null)
+      return { ...f, imagens: nova }
+    })
+    setNovaImagem("")
+  }, [])
+
+  const removerImagem = useCallback((i: number) => {
+    setErro(null)
+    setForm((f) => ({ ...f, imagens: f.imagens.filter((_, j) => j !== i) }))
+  }, [])
+
+  /** Troca com a vizinha. `delta` é −1 ou +1; nos extremos não faz nada (o botão está desligado). */
+  const moverImagem = useCallback((i: number, delta: -1 | 1) => {
+    setForm((f) => {
+      const j = i + delta
+      if (j < 0 || j >= f.imagens.length) return f
+      const lista = [...f.imagens]
+      ;[lista[i], lista[j]] = [lista[j], lista[i]]
+      return { ...f, imagens: lista }
+    })
+  }, [])
 
   // ── A IA ────────────────────────────────────────────────────────────────────────────────
 
@@ -318,7 +389,9 @@ export default function GestorProdutos() {
                     {CATEGORIAS.find((c) => c.id === p.tipo)?.nome ?? p.tipo}
                     {" · "}
                     {p.preco_cents === 0 ? "Grátis" : euros(p.preco_cents, p.moeda)}
-                    {p.recorrente ? "/mês" : ""}
+                    {/* O período REAL e não «/mês» fixo: quatro dos produtos publicados são anuais,
+                        e era esta linha a dizer ao dono que o Premium anual custava 624 €/mês. */}
+                    {sufixoDoPeriodo(p).texto ? `${sufixoDoPeriodo(p).junto ? "" : " "}${sufixoDoPeriodo(p).texto}` : ""}
                     {p.desempenho.vendas > 0 && ` · ${p.desempenho.vendas} venda(s) · ${euros(p.desempenho.aReceberCents)}`}
                   </div>
                   {p.motivo_recusa && (
@@ -441,10 +514,36 @@ export default function GestorProdutos() {
               />
             </label>
 
-            <label className="flex items-center gap-2 text-sm text-zinc-300">
-              <input type="checkbox" checked={form.recorrente} onChange={(e) => setForm({ ...form, recorrente: e.target.checked })} />
-              Cobrar todos os meses
-            </label>
+            {/* ── Cobra outra vez, e de quanto em quanto tempo ─────────────────────────────
+                Eram uma pergunta só («Cobrar todos os meses»), e é por isso que o Premium anual
+                andou a anunciar-se a 624 €/mês: a caixa dizia que repetia e o ecrã concluiu o resto.
+                São DUAS perguntas e agora estão as duas no formulário. */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm text-zinc-300">
+                <input type="checkbox" checked={form.recorrente} onChange={(e) => setForm({ ...form, recorrente: e.target.checked })} />
+                Cobra outra vez (subscrição)
+              </label>
+              {form.recorrente && (
+                <label className="block">
+                  <span className="text-xs text-zinc-400">De quanto em quanto tempo</span>
+                  <select
+                    value={form.periodicidade}
+                    onChange={(e) => setForm({ ...form, periodicidade: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                  >
+                    {/* «Pagamento único» fica de fora: aqui já se sabe que repete, e oferecê-la era
+                        oferecer a combinação que a restrição da base recusa. */}
+                    {PERIODICIDADES.filter((x) => x.id !== "unica").map((x) => (
+                      <option key={x.id} value={x.id}>{x.nome}</option>
+                    ))}
+                  </select>
+                  <span className="mt-1 block text-[11px] text-zinc-500">
+                    É isto que escreve «{sufixoDoPeriodo({ recorrente: true, periodicidade: form.periodicidade }).texto}» na
+                    montra e que decide o intervalo do preço no Stripe.
+                  </span>
+                </label>
+              )}
+            </div>
             <label className="flex items-center gap-2 text-sm text-zinc-300">
               <input type="checkbox" checked={form.requer_morada} onChange={(e) => setForm({ ...form, requer_morada: e.target.checked })} />
               Pedir morada de envio
@@ -501,7 +600,79 @@ export default function GestorProdutos() {
                 onChange={(e) => setForm({ ...form, imagem_url: e.target.value })}
                 className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
               />
+              <span className="mt-1 block text-[11px] text-zinc-500">
+                É esta que a montra desenha em todos os cartões. A galeria abaixo só aparece na ficha.
+              </span>
             </label>
+
+            {/* ── A galeria ─────────────────────────────────────────────────────────────────
+                A capa está SEMPRE em primeiro e não se remove daqui — é a `imagem_url`, e mostrá-la
+                nesta lista com um botão de apagar convidava a apagar a capa a pensar que se estava a
+                arrumar a galeria. Aparece só como referência, com a etiqueta «Capa». */}
+            <div className="sm:col-span-2">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-zinc-400">Galeria (só na ficha do produto)</span>
+                <span className="text-[11px] text-zinc-500">{form.imagens.length}/{IMAGENS_MAX}</span>
+              </div>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                {form.imagem_url.trim() && (
+                  <div className="relative h-20 w-24 overflow-hidden rounded-lg border border-[#D2A63C]/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={form.imagem_url} alt="" className="h-full w-full object-cover" />
+                    <span className="absolute inset-x-0 bottom-0 bg-black/70 py-0.5 text-center text-[10px] text-[#D2A63C]">Capa</span>
+                  </div>
+                )}
+                {form.imagens.map((url, i) => (
+                  <div key={url} className="relative h-20 w-24 overflow-hidden rounded-lg border border-zinc-700">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                    <div className="absolute inset-x-0 bottom-0 flex justify-center gap-0.5 bg-black/70 py-0.5">
+                      <button
+                        type="button" onClick={() => moverImagem(i, -1)} disabled={i === 0}
+                        aria-label={`Mover a imagem ${i + 1} para trás`}
+                        className="text-zinc-300 hover:text-white disabled:opacity-25"
+                      ><ArrowUp size={12} /></button>
+                      <button
+                        type="button" onClick={() => moverImagem(i, 1)} disabled={i === form.imagens.length - 1}
+                        aria-label={`Mover a imagem ${i + 1} para a frente`}
+                        className="text-zinc-300 hover:text-white disabled:opacity-25"
+                      ><ArrowDown size={12} /></button>
+                      <button
+                        type="button" onClick={() => removerImagem(i)}
+                        aria-label={`Remover a imagem ${i + 1}`}
+                        className="text-red-300 hover:text-red-200"
+                      ><Trash2 size={12} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={novaImagem}
+                  onChange={(e) => setNovaImagem(e.target.value)}
+                  /* Enter acrescenta. Sem isto, quem cola uma URL e carrega em Enter submetia o
+                     formulário e gravava o produto a meio de estar a montar a galeria. */
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); acrescentarImagem(novaImagem) } }}
+                  placeholder="https://… e Enter"
+                  className="flex-1 rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                />
+                <button
+                  type="button"
+                  onClick={() => acrescentarImagem(novaImagem)}
+                  disabled={!novaImagem.trim() || form.imagens.length >= IMAGENS_MAX}
+                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
+                >
+                  <Plus size={14} /> Acrescentar
+                </button>
+              </div>
+              <span className="mt-1 block text-[11px] text-zinc-500">
+                A capa é a primeira e não se apaga aqui. As setas mudam a ordem em que aparecem na ficha.
+                Máximo {IMAGENS_MAX} além da capa — a ficha tem de abrir depressa no telemóvel, que é onde a
+                maioria compra.
+              </span>
+            </div>
 
             <label className="sm:col-span-2 block">
               <span className="text-xs text-zinc-400">Link do conteúdo — para onde vai o comprador depois de pagar</span>
@@ -617,6 +788,13 @@ export default function GestorProdutos() {
               className="rounded-lg border border-[#D2A63C]/35 bg-[#D2A63C]/12 px-3 py-1.5 text-sm text-[#D2A63C]"
             >
               Usar como capa
+            </button>
+            <button
+              onClick={() => { acrescentarImagem(modalImagem); setModalImagem(null); setNota("Imagem acrescentada à galeria. Grava para ficar.") }}
+              disabled={form.imagens.length >= IMAGENS_MAX}
+              className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 disabled:opacity-40"
+            >
+              Acrescentar à galeria
             </button>
             <a href={modalImagem} download target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300">
               <Download size={14} /> Descarregar

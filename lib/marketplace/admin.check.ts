@@ -162,8 +162,46 @@ async function main() {
   // Um produto sem nada no Stripe TEM de poder passar a guarda — é o caminho da criação, e fechá-lo
   // era impedir qualquer produto novo de nascer com preço. Falha depois, por falta de chaves, e é
   // essa a prova de que passou daqui.
-  const msgNovo = await recusaSync({ ...BASE_SYNC, stripe_price_id: null, stripe_product_id: null })
+  const msgNovo = await recusaSync({ ...BASE_SYNC, stripe_price_id: null, stripe_product_id: null, periodicidade: 'anual' })
   sim('sync: produto novo passa a guarda', !String(msgNovo).includes('não foi criado aqui'))
+
+  // ── 4b. O STRIPE DEIXOU DE FORÇAR MENSAL ────────────────────────────────────────────────
+  //
+  // Este bloco é a prova do pior defeito do marketplace. `sincronizarPrecoNoStripe` criava sempre
+  // `interval: 'month'`: nos quatro produtos ANUAIS o preço do Stripe «não batia certo», logo o
+  // caminho normal era criar um MENSAL de 624 € e arquivar o anual que os clientes estão a pagar.
+  //
+  // Duas metades, e as duas presas:
+  //   · o intervalo sai agora da coluna `periodicidade` (migração 157);
+  //   · e um recorrente sem periodicidade legível é RECUSADO, não adivinhado como mensal.
+
+  const msgSemPeriodo = await recusaSync({ ...BASE_SYNC, stripe_price_id: null, stripe_product_id: null, periodicidade: 'unica' })
+  sim('sync: recorrente sem periodicidade é recusado', Boolean(msgSemPeriodo))
+  sim('sync: e a recusa diz o que falta escolher', String(msgSemPeriodo).includes('de quanto em quanto tempo'))
+  // O mensal adivinhado era o defeito. Se um dia esta chamada passar a guarda, ele voltou.
+  sim('sync: um recorrente sem período NÃO vira mensal em silêncio', !String(msgSemPeriodo).includes('0 não precisa'))
+
+  const stripePreco = readFileSync(join(__dirname, 'stripe-preco.ts'), 'utf8')
+  // SEM OS COMENTÁRIOS. O ficheiro conta a história do defeito e escreve `interval: 'month'` a
+  // explicá-la — apagar essa explicação para o teste passar era apagar a razão de o teste existir.
+  // O que se procura é o intervalo no CÓDIGO.
+  const stripeCodigo = stripePreco
+    .split('\n')
+    .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
+    .join('\n')
+
+  // O `interval: 'month'` escrito à mão desapareceu dos dois sítios — da criação do preço e da
+  // comparação com o que já lá está. Uma busca no texto porque é assim que este defeito volta:
+  // alguém a escrever o intervalo à mão num caminho novo.
+  sim("sync: já não há `interval: 'month'` escrito à mão", !/interval:\s*'month'/.test(stripeCodigo))
+  sim('sync: o intervalo vem do mapa das regras', /intervaloStripe\(produto\.periodicidade\)/.test(stripeCodigo))
+  // `month`×3 e `month`×1 são o MESMO `interval`. Sem comparar a contagem, um produto que passasse
+  // de mensal a trimestral dizia que o preço batia certo e continuava a cobrar todos os meses.
+  sim('sync: a comparação também confere o interval_count', /interval_count \?\? 1\) === intervalo\?\.interval_count/.test(stripePreco))
+  // E A GUARDA FICA. Com o intervalo certo, sincronizar um dos catorze preços vivos da casa ainda
+  // criaria um preço NOVO (outro id, mesmo valor) e arquivaria aquele que as subscrições
+  // referenciam. Tirar a guarda porque «agora o intervalo está certo» era o erro seguinte.
+  sim('sync: a guarda do preço que não é nosso continua lá', stripePreco.includes('temPrecoAlheio'))
 
   // ── 5. As rotas fazem o que está prometido ────────────────────────────────────────────────
   //

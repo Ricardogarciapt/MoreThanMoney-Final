@@ -87,6 +87,10 @@ export type ProdutoGerido = {
   preco_cents: number
   moeda: string
   recorrente: boolean
+  /** De quanto em quanto tempo se cobra (157). Decide o `interval` do Stripe. */
+  periodicidade: string
+  /** A galeria, SEM a capa — a capa é `imagem_url`. Máximo 8 (157). */
+  imagens: string[] | null
   requer_morada: boolean
   conteudo_url: string | null
   conteudo_nota: string | null
@@ -108,8 +112,8 @@ export type ProdutoGerido = {
 }
 
 export const COLUNAS_GESTAO =
-  'id, educator_id, dono, slug, titulo, subtitulo, descricao, tipo, imagem_url, preco_cents, moeda, ' +
-  'recorrente, requer_morada, conteudo_url, conteudo_nota, estado, activo, partilha_pct, ' +
+  'id, educator_id, dono, slug, titulo, subtitulo, descricao, tipo, imagem_url, imagens, preco_cents, moeda, ' +
+  'recorrente, periodicidade, requer_morada, conteudo_url, conteudo_nota, estado, activo, partilha_pct, ' +
   'stripe_product_id, stripe_price_id, checkout_externo_url, campanha_pct, campanha_inicio, ' +
   'campanha_fim, campanha_tier, campanha_stripe_coupon_id, motivo_recusa, publicado_em, created_at, updated_at'
 
@@ -205,6 +209,13 @@ export async function produtosSobGestao(quem: Quem, limite = 300): Promise<Produ
 export const CAMPOS_DO_EDUCADOR = [
   'titulo', 'subtitulo', 'descricao', 'tipo', 'imagem_url', 'conteudo_url', 'conteudo_nota',
   'preco_cents', 'recorrente', 'requer_morada',
+  // A periodicidade é do educador porque é ele que sabe se a mentoria dele é mensal ou anual — e
+  // porque foi a falta dela que fez a montra escrever «/mês» num produto anual. A coerência com
+  // `recorrente` é forçada na rota (`periodicidadeParaGravar`), não confiada ao formulário.
+  'periodicidade',
+  // A galeria. O tecto de 8 e a ausência da capa são impostos na rota (`galeriaParaGravar`) antes
+  // de a restrição da base ter de o fazer com um erro do Postgres à frente de quem está a editar.
+  'imagens',
   // A campanha é marketing do produto dele, e o dono pediu que ambos a pudessem mexer. O intervalo
   // (0–90) está preso no `check` da coluna, por isso não há aqui nada que ele possa exagerar.
   'campanha_pct', 'campanha_inicio', 'campanha_fim', 'campanha_tier',

@@ -35,6 +35,15 @@ import {
   slugDoTitulo,
   temAcessoAoProduto,
   vitrineVisivelNoIos,
+  IMAGENS_MAX,
+  PERIODICIDADES,
+  galeriaDoProduto,
+  galeriaParaGravar,
+  intervaloStripe,
+  periodicidadeCoerente,
+  periodicidadeParaGravar,
+  periodicidadeValida,
+  sufixoDoPeriodo,
   type Definicoes,
 } from './regras'
 
@@ -609,6 +618,146 @@ sim('título vazio dá slug vazio e não rebenta', slugDoTitulo('') === '')
     'a 153 NÃO mexe no check dos 90% da partilha',
     !/partilha_pct/.test(SQL) || !/drop constraint[^\n]*partilha/i.test(SQL),
   )
+}
+
+// ══════════════ 11. A PERIODICIDADE: DE QUANTO EM QUANTO TEMPO ══════════════
+//
+// O defeito de 29/09/2026, em duas metades. A montra escrevia «624,00 €/mês» no Premium ANUAL, e
+// `sincronizarPrecoNoStripe` criava sempre `interval: 'month'` — o que transformava «sincronizar o
+// preço» em «criar um mensal de 624 € e arquivar o anual que os clientes estão a pagar».
+//
+// As duas metades têm a mesma causa: `recorrente` é um booleano e responde a «paga-se outra vez?»,
+// não a «de quanto em quanto tempo?». O que está preso aqui é a segunda pergunta.
+
+{
+  const ANUAL = { recorrente: true, periodicidade: 'anual' }
+  const MENSAL = { recorrente: true, periodicidade: 'mensal' }
+  const UNICA = { recorrente: false, periodicidade: 'unica' }
+
+  // ── O rótulo do ecrã ───────────────────────────────────────────────────────────────────
+  //
+  // O caso exacto que se viu com os olhos: o Premium anual. Se este teste falhar, alguém voltou a
+  // anunciar um preço anual como mensal no produto mais caro do catálogo.
+  sim('o produto ANUAL escreve «/ano» e nunca «/mês»', sufixoDoPeriodo(ANUAL).texto === '/ano')
+  sim('o mensal escreve «/mês»', sufixoDoPeriodo(MENSAL).texto === '/mês')
+  sim('o trimestral escreve «/trimestre»', sufixoDoPeriodo({ recorrente: true, periodicidade: 'trimestral' }).texto === '/trimestre')
+  sim('o semestral escreve «/semestre»', sufixoDoPeriodo({ recorrente: true, periodicidade: 'semestral' }).texto === '/semestre')
+  sim('um pagamento único não escreve período nenhum', sufixoDoPeriodo(UNICA).texto === '')
+
+  // NUNCA ADIVINHA. Um recorrente sem periodicidade legível diz «subscrição» — vago mas verdadeiro.
+  // Se um dia isto devolver «/mês», o defeito voltou por inteiro.
+  sim(
+    'recorrente sem periodicidade NÃO inventa «/mês»',
+    sufixoDoPeriodo({ recorrente: true, periodicidade: null }).texto === 'subscrição' &&
+      sufixoDoPeriodo({ recorrente: true, periodicidade: 'lixo' }).texto === 'subscrição',
+  )
+  sim('o sufixo com barra cola ao número', sufixoDoPeriodo(ANUAL).junto === true)
+  sim('«subscrição» leva espaço', sufixoDoPeriodo({ recorrente: true, periodicidade: null }).junto === false)
+
+  // ── O mapa para o Stripe ───────────────────────────────────────────────────────────────
+  //
+  // O Stripe não tem `interval: 'quarter'` nem `'semester'`: tem `month` com `interval_count`.
+  sim('anual → year × 1', intervaloStripe('anual')?.interval === 'year' && intervaloStripe('anual')?.interval_count === 1)
+  sim('mensal → month × 1', intervaloStripe('mensal')?.interval === 'month' && intervaloStripe('mensal')?.interval_count === 1)
+  sim('trimestral → month × 3', intervaloStripe('trimestral')?.interval === 'month' && intervaloStripe('trimestral')?.interval_count === 3)
+  sim('semestral → month × 6', intervaloStripe('semestral')?.interval === 'month' && intervaloStripe('semestral')?.interval_count === 6)
+
+  // A prova de que o mensal deixou de ser o valor por omissão silencioso: `unica` e o lixo dão NULL,
+  // e quem chama tem de decidir. Em `stripe-preco.ts` a decisão é recusar.
+  sim('pagamento único não tem intervalo', intervaloStripe('unica') === null)
+  sim('periodicidade ilegível NÃO cai em mensal', intervaloStripe('lixo') === null && intervaloStripe(null) === null)
+
+  // ── A coerência com `recorrente` ───────────────────────────────────────────────────────
+  //
+  // A mesma regra que a restrição `marketplace_produtos_periodicidade_coerente` (157) tem presa no
+  // esquema. Repetida aqui porque uma restrição da base que rebenta à frente do educador não é
+  // validação: é uma avaria com sotaque.
+  sim('único + «unica» é coerente', periodicidadeCoerente(false, 'unica'))
+  sim('recorrente + «anual» é coerente', periodicidadeCoerente(true, 'anual'))
+  sim('recorrente + «unica» NÃO é coerente', !periodicidadeCoerente(true, 'unica'))
+  sim('único + «mensal» NÃO é coerente', !periodicidadeCoerente(false, 'mensal'))
+
+  // O que se GRAVA é sempre coerente, venha o formulário como vier — é isto que impede a restrição
+  // da base de ser a primeira a dizer «não» a quem está a editar.
+  sim('gravar: recorrente sem período fica mensal', periodicidadeParaGravar(true, 'unica') === 'mensal')
+  sim('gravar: recorrente com período mantém o período', periodicidadeParaGravar(true, 'anual') === 'anual')
+  sim('gravar: pagamento único apaga o período', periodicidadeParaGravar(false, 'anual') === 'unica')
+  for (const p of PERIODICIDADES) {
+    sim(`gravar: «${p.id}» sai coerente com recorrente=true`, periodicidadeCoerente(true, periodicidadeParaGravar(true, p.id)))
+    sim(`gravar: «${p.id}» sai coerente com recorrente=false`, periodicidadeCoerente(false, periodicidadeParaGravar(false, p.id)))
+  }
+
+  // `unica` é o valor de nascença e NÃO `mensal`: um produto sem periodicidade declarada é uma venda
+  // única, que é o caso que não cobra ninguém duas vezes por engano.
+  sim('por omissão é «unica» e não «mensal»', periodicidadeValida(undefined) === 'unica' && periodicidadeValida('') === 'unica')
+  sim('a lista tem as cinco, sem repetições', new Set(PERIODICIDADES.map((p) => p.id)).size === 5)
+  sim('só «unica» não tem intervalo de Stripe', PERIODICIDADES.filter((p) => !p.stripe).map((p) => p.id).join() === 'unica')
+}
+
+// ══════════════ 12. A GALERIA: A CAPA NÃO SE REPETE, E O TECTO É 8 ══════════════
+//
+// `imagem_url` é a CAPA e `imagens` é o resto. A capa não entra na galeria: quem lê mostra a capa
+// primeiro e a seguir `imagens`, e guardar a mesma URL nos dois sítios dava uma ficha com a primeira
+// imagem repetida — sem o ecrã ter maneira de saber se a repetição foi intenção de alguém.
+
+{
+  const CAPA = 'https://mtm/capa.jpg'
+  const A = 'https://mtm/a.jpg'
+  const B = 'https://mtm/b.jpg'
+
+  sim('a capa NUNCA entra na galeria', !galeriaParaGravar(CAPA, [CAPA, A]).includes(CAPA))
+  sim('e o resto fica', galeriaParaGravar(CAPA, [CAPA, A, B]).join() === [A, B].join())
+  sim('a ordem do autor mantém-se', galeriaParaGravar(CAPA, [B, A]).join() === [B, A].join())
+  sim('sem repetições', galeriaParaGravar(CAPA, [A, A, B, B]).join() === [A, B].join())
+  sim('sem vazios nem espaços', galeriaParaGravar(CAPA, ['', '   ', A]).join() === A)
+  sim('espaços em volta são cortados', galeriaParaGravar(CAPA, [`  ${A}  `]).join() === A)
+  sim('sem capa continua a funcionar', galeriaParaGravar(null, [A, B]).join() === [A, B].join())
+  sim('uma galeria que não é lista dá lista vazia', galeriaParaGravar(CAPA, 'isto-nao-e-uma-lista').length === 0)
+  sim('e null também', galeriaParaGravar(CAPA, null).length === 0)
+
+  // ── O TECTO ────────────────────────────────────────────────────────────────────────────
+  //
+  // O mesmo número que a restrição `marketplace_produtos_imagens_check` (157) tem presa. Sem tecto,
+  // um educador entusiasmado põe quarenta e a ficha passa a demorar a abrir num telemóvel — que é
+  // onde a maioria compra.
+  const muitas = Array.from({ length: 30 }, (_, i) => `https://mtm/${i}.jpg`)
+  sim(`o tecto é ${IMAGENS_MAX}`, IMAGENS_MAX === 8)
+  sim('trinta imagens cortam-se no tecto', galeriaParaGravar(CAPA, muitas).length === IMAGENS_MAX)
+  sim('e cortam-se pelo FIM, ficando as primeiras', galeriaParaGravar(CAPA, muitas)[0] === muitas[0])
+  // A capa não gasta lugar no tecto: o tecto é da COLUNA, e a capa vive noutra. Com a capa incluída
+  // a ficha mostra 9 — que é o que a restrição da base permite, e o que ela não permite é 9 na coluna.
+  sim('a capa não gasta lugar no tecto', galeriaParaGravar(CAPA, muitas).length === IMAGENS_MAX)
+
+  // ── O que a ficha mostra ───────────────────────────────────────────────────────────────
+  //
+  // A capa primeiro, e não ordenada por outro critério: é a imagem que a pessoa viu no cartão que a
+  // trouxe à ficha, e abrir noutra imagem faz duvidar de que se clicou no produto certo.
+  sim('a ficha abre na capa', galeriaDoProduto({ imagem_url: CAPA, imagens: [A, B] })[0] === CAPA)
+  sim('a ficha mostra capa + galeria', galeriaDoProduto({ imagem_url: CAPA, imagens: [A, B] }).join() === [CAPA, A, B].join())
+  sim('a capa não aparece duas vezes na ficha', galeriaDoProduto({ imagem_url: CAPA, imagens: [CAPA, A] }).join() === [CAPA, A].join())
+  sim('sem imagem nenhuma a ficha não desenha nada', galeriaDoProduto({ imagem_url: null, imagens: [] }).length === 0)
+  sim('só com capa a ficha mostra uma', galeriaDoProduto({ imagem_url: CAPA, imagens: null }).join() === CAPA)
+}
+
+// ══════════════ 13. O SQL DA 157 ══════════════
+
+{
+  const SQL = readFileSync(join(RAIZ, 'supabase/migrations/157_periodicidade_e_galeria.sql'), 'utf8')
+
+  sim('a coerência periodicidade↔recorrente está presa no esquema', /marketplace_produtos_periodicidade_coerente/.test(SQL))
+  sim('e recusa recorrente sem periodicidade', /recorrente = true\s+and periodicidade <> 'unica'/.test(SQL))
+  sim('e recusa periodicidade num pagamento único', /recorrente = false and periodicidade = 'unica'/.test(SQL))
+  sim('as cinco periodicidades estão presas no esquema', /periodicidade in \('unica', 'mensal', 'trimestral', 'semestral', 'anual'\)/.test(SQL))
+  sim('o valor de nascença é «unica» e não «mensal»', /periodicidade text not null default 'unica'/.test(SQL))
+  sim(`o tecto de ${IMAGENS_MAX} imagens está preso no esquema`, new RegExp(`jsonb_array_length\\(imagens\\) <= ${IMAGENS_MAX}`).test(SQL))
+  sim('e `imagens` tem de ser uma lista', /jsonb_typeof\(imagens\) = 'array'/.test(SQL))
+  sim('a galeria nasce vazia', /imagens jsonb not null default '\[\]'::jsonb/.test(SQL))
+
+  // A 157 não pode mexer em `imagem_url`: a capa FICA, é ela que a montra desenha, e uma migração
+  // que a mova para dentro da galeria deixa os catorze cartões sem imagem.
+  sim('a 157 NÃO apaga nem renomeia a capa', !/drop column[^\n]*imagem_url|rename column[^\n]*imagem_url/i.test(SQL))
+  // Nem toca em preços: a periodicidade descreve o que o Stripe já cobra, não muda quanto se cobra.
+  sim('a 157 não mexe em preços', !/update[\s\S]{0,80}set[^\n]*preco_cents/i.test(SQL))
 }
 
 // ── Relatório ─────────────────────────────────────────────────────────────────────────────

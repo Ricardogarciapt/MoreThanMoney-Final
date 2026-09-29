@@ -43,6 +43,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Loader2, Lock, ShoppingBag, ExternalLink, Search, Store, X } from "lucide-react"
 import { euros, procuraCasa, type Vendedor } from "@/lib/marketplace/regras"
+import Sufixo from "@/components/marketplace/sufixo-periodo"
 
 type Autor = { id: string; display_name: string; avatar_url: string | null; specialty: string | null }
 /** O preço JÁ DECIDIDO pela rota. O cartão não recalcula desconto nenhum. */
@@ -62,6 +63,8 @@ type Produto = {
   preco_cents: number
   moeda: string
   recorrente: boolean
+  /** De quanto em quanto tempo se cobra (157). É ela que escreve «/mês» ou «/ano». */
+  periodicidade: string
   preco: Preco
   educador: Autor | null
   vendedor: Vendedor
@@ -524,13 +527,14 @@ function Cartao({
                   </span>
                 )}
                 {euros(p.preco.cents, p.preco.moeda)}
-                {/* «subscrição» e NÃO «/mês».
-                    Visto com os olhos a 29/09: o cartão do «Membro · anual» dizia «336,00 €/mês»,
-                    e o do «Premium · anual» «624,00 €/mês». São produtos ANUAIS. O modelo só tem
-                    `recorrente: boolean` — não sabe distinguir mensal de anual — e o ecrã assumia
-                    mensal. Anunciar um preço anual como mensal não é um erro de estilo: é a loja a
-                    mentir no número. */}
-                {p.recorrente && <span className="ml-1 text-xs font-normal text-zinc-500">subscrição</span>}
+                {/* O PERÍODO CERTO, e não «/mês» nem «subscrição».
+                    Visto com os olhos a 29/09: o cartão do «Membro · anual» dizia «336,00 €/mês» e
+                    o do «Premium · anual» «624,00 €/mês». São produtos ANUAIS, e anunciar um preço
+                    anual como mensal não é um erro de estilo: é a loja a mentir no número. Ficou
+                    «subscrição» — vago mas verdadeiro — enquanto o modelo só tinha
+                    `recorrente: boolean`. Agora há `periodicidade` (157) e `sufixoDoPeriodo` diz
+                    «/ano», sem nunca adivinhar. */}
+                <Sufixo p={p} className="text-xs" />
               </>
             )}
           </span>

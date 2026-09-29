@@ -683,6 +683,168 @@ function semAcentos(s: string): string {
   return String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 }
 
+// ── DE QUANTO EM QUANTO TEMPO SE COBRA ────────────────────────────────────────────────────
+//
+// `recorrente` é um booleano e responde a «paga-se outra vez?». Não responde a «de quanto em
+// quanto tempo?», e a diferença custou caro duas vezes no mesmo dia (29/09/2026):
+//
+//   · a MONTRA escrevia «624,00 €/mês» no Premium ANUAL, porque `recorrente = true` foi lido como
+//     mensal. Um preço anual mostrado como mensal é publicidade enganosa, e é o produto mais caro
+//     do catálogo;
+//   · e `sincronizarPrecoNoStripe` criava sempre `interval: 'month'`. Nos quatro produtos anuais o
+//     preço do Stripe «não batia certo», logo o caminho normal era criar um MENSAL de 624 € e
+//     arquivar o anual que os clientes estão a pagar.
+//
+// A coluna `periodicidade` (migração 157) responde à pergunta, e é ELA que decide o `interval` do
+// Stripe. `recorrente` continua a decidir o `mode` da sessão (ver `modoStripe`) — são duas
+// perguntas, e foi por serem uma só que isto se partiu.
+
+export type Periodicidade = 'unica' | 'mensal' | 'trimestral' | 'semestral' | 'anual'
+
+/**
+ * As periodicidades, com o que cada uma escreve no ecrã e o que vale no Stripe.
+ *
+ * UMA LISTA E NÃO TRÊS. O rótulo, o intervalo do Stripe e a coerência com `recorrente` saem todos
+ * daqui: três tabelas separadas divergiam, e divergir aqui é mostrar «/mês» e cobrar ao ano.
+ *
+ * O Stripe não tem `interval: 'quarter'` nem `'semester'` — tem `month` com `interval_count`. É
+ * por isso que trimestral e semestral são o mesmo intervalo com contagens diferentes, e é o erro
+ * que se comete quando se tenta adivinhar o nome do intervalo em vez de o ler.
+ */
+export const PERIODICIDADES: {
+  id: Periodicidade
+  /** O nome no formulário. */
+  nome: string
+  /** O que vai a seguir ao preço na montra. Vazio quando não há repetição para anunciar. */
+  rotulo: string
+  /** O intervalo do Stripe. Null só para `unica`, que não é uma subscrição. */
+  stripe: { interval: 'day' | 'week' | 'month' | 'year'; interval_count: number } | null
+}[] = [
+  { id: 'unica', nome: 'Pagamento único', rotulo: '', stripe: null },
+  { id: 'mensal', nome: 'Mensal', rotulo: '/mês', stripe: { interval: 'month', interval_count: 1 } },
+  { id: 'trimestral', nome: 'Trimestral', rotulo: '/trimestre', stripe: { interval: 'month', interval_count: 3 } },
+  { id: 'semestral', nome: 'Semestral', rotulo: '/semestre', stripe: { interval: 'month', interval_count: 6 } },
+  { id: 'anual', nome: 'Anual', rotulo: '/ano', stripe: { interval: 'year', interval_count: 1 } },
+]
+
+/**
+ * A periodicidade que se grava.
+ *
+ * `unica` é o valor por omissão e NÃO `mensal`: um produto sem periodicidade declarada é uma venda
+ * única, que é o caso que não cobra ninguém duas vezes por engano.
+ */
+export function periodicidadeValida(v: unknown): Periodicidade {
+  const s = String(v ?? '').trim().toLowerCase()
+  return (PERIODICIDADES.find((p) => p.id === s)?.id ?? 'unica') as Periodicidade
+}
+
+/**
+ * `recorrente` e `periodicidade` estão de acordo?
+ *
+ * A mesma regra que a restrição `marketplace_produtos_periodicidade_coerente` da 157 tem presa no
+ * esquema. Está aqui repetida de propósito: uma restrição da base que rebenta com um erro do
+ * Postgres à frente do educador não é validação, é uma avaria com sotaque.
+ */
+export function periodicidadeCoerente(recorrente: unknown, periodicidade: unknown): boolean {
+  const p = periodicidadeValida(periodicidade)
+  return recorrente === true ? p !== 'unica' : p === 'unica'
+}
+
+/**
+ * A periodicidade coerente com o `recorrente` que vem do formulário.
+ *
+ * Quem manda é o `recorrente`, porque é ele que decide o `mode` do checkout: um produto marcado
+ * como pagamento único com «anual» ao lado cobra uma vez, e é esse o comportamento que o resto do
+ * código já tem. O contrário — uma subscrição sem periodicidade — fica `mensal`, que é o caso mais
+ * comum e o único que a restrição da base aceita.
+ */
+export function periodicidadeParaGravar(recorrente: unknown, periodicidade: unknown): Periodicidade {
+  const p = periodicidadeValida(periodicidade)
+  if (recorrente === true) return p === 'unica' ? 'mensal' : p
+  return 'unica'
+}
+
+/**
+ * O que vai a seguir ao preço, e se cola ao número.
+ *
+ * `junto` existe porque «624,00 €/ano» não leva espaço e «65,00 € subscrição» leva. Devolver isto
+ * em vez de o ecrã adivinhar é o que mantém os três sítios que desenham preços (montra, ficha e
+ * loja do vendedor) a escrever a mesma coisa.
+ *
+ * NUNCA INVENTA «/mês». Um produto recorrente sem periodicidade legível cai em «subscrição» — que
+ * é vago mas verdadeiro, e era exactamente o que o Premium anual precisava de ter dito.
+ */
+export function sufixoDoPeriodo(produto: {
+  recorrente?: boolean | null
+  periodicidade?: string | null
+}): { texto: string; junto: boolean } {
+  if (produto.recorrente !== true) return { texto: '', junto: true }
+  const achado = PERIODICIDADES.find((p) => p.id === periodicidadeValida(produto.periodicidade))
+  if (!achado || !achado.rotulo) return { texto: 'subscrição', junto: false }
+  return { texto: achado.rotulo, junto: true }
+}
+
+/**
+ * O `recurring` para o Stripe, ou null quando não há subscrição nenhuma.
+ *
+ * Devolve null para `unica` e NÃO um mensal por omissão: um mensal adivinhado é o defeito que isto
+ * veio corrigir. Quem chama tem de decidir o que fazer com o null — e em `stripe-preco.ts` a
+ * decisão é recusar, não inventar.
+ */
+export function intervaloStripe(periodicidade: unknown): { interval: 'day' | 'week' | 'month' | 'year'; interval_count: number } | null {
+  return PERIODICIDADES.find((p) => p.id === periodicidadeValida(periodicidade))?.stripe ?? null
+}
+
+// ── A GALERIA ─────────────────────────────────────────────────────────────────────────────
+//
+// Pedido do dono a 29/09: «permite ter várias imagens nos produtos de marketplace».
+//
+// `imagem_url` FICA e continua a ser a CAPA — é ela que a montra desenha. Uma montra em que cada
+// cartão escolhe uma imagem diferente da galeria é uma montra que muda de aspecto a cada
+// recarregamento. `imagens` é o resto, pela ordem em que o autor as pôs.
+//
+// A CAPA NÃO ENTRA NA GALERIA. Quem lê mostra a capa primeiro e a seguir `imagens`; guardar a mesma
+// URL nos dois sítios dava uma ficha com a primeira imagem repetida, e o ecrã não tem maneira de
+// saber se a repetição foi intenção de alguém.
+
+/** O tecto da coluna `imagens`, o mesmo número que a restrição da 157 tem preso. A capa é à parte. */
+export const IMAGENS_MAX = 8
+
+/**
+ * A galeria da coluna `imagens`, limpa: sem a capa, sem repetições, sem vazios, com o tecto.
+ *
+ * É esta que se GRAVA. Corre no ecrã antes de gravar e outra vez no servidor — não por desconfiança
+ * do primeiro, mas porque o servidor tem outros clientes além deste formulário (a app, e amanhã
+ * uma importação), e a restrição da base é a última rede e não a primeira.
+ */
+export function galeriaParaGravar(capa: unknown, imagens: unknown): string[] {
+  const capaLimpa = String(capa ?? '').trim()
+  const vistas = new Set<string>()
+  if (capaLimpa) vistas.add(capaLimpa)
+  const saida: string[] = []
+  for (const item of Array.isArray(imagens) ? imagens : []) {
+    const url = String(item ?? '').trim()
+    if (!url || vistas.has(url)) continue
+    vistas.add(url)
+    saida.push(url)
+    if (saida.length >= IMAGENS_MAX) break
+  }
+  return saida
+}
+
+/**
+ * O que a ficha mostra, pela ordem: a capa primeiro, a galeria a seguir.
+ *
+ * A capa primeiro e não a ordenar por qualquer outro critério: é a imagem que a pessoa viu no
+ * cartão que a trouxe aqui, e abrir a ficha noutra imagem faz duvidar de que se clicou no produto
+ * certo.
+ */
+export function galeriaDoProduto(produto: { imagem_url?: string | null; imagens?: unknown }): string[] {
+  const capa = String(produto.imagem_url ?? '').trim()
+  const resto = galeriaParaGravar(capa, produto.imagens)
+  return capa ? [capa, ...resto] : resto
+}
+
 /**
  * O `checkout_externo_url` de um produto da casa é um destino a que se pode mandar alguém?
  *

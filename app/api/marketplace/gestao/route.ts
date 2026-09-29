@@ -32,6 +32,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
   estadoAoPublicar,
   extractoDoEducador,
+  galeriaParaGravar,
+  periodicidadeParaGravar,
   podePublicar,
   slugDoTitulo,
   sugestaoDaCategoria,
@@ -145,6 +147,7 @@ export async function POST(request: NextRequest) {
 
   const tipo = tipoValido(b.tipo)
   const sug = sugestaoDaCategoria(tipo)
+  const recorrenteNovo = typeof b.recorrente === 'boolean' ? b.recorrente : sug.recorrente
 
   const { data, error } = await db
     .from('marketplace_produtos')
@@ -157,9 +160,16 @@ export async function POST(request: NextRequest) {
       descricao: b.descricao ?? null,
       tipo,
       imagem_url: b.imagem_url ?? null,
+      // A capa NÃO entra na galeria, e o tecto de 8 é aplicado aqui — antes de a restrição da 157
+      // ter de o fazer com um erro do Postgres à frente de quem está a criar o produto.
+      imagens: galeriaParaGravar(b.imagem_url, b.imagens),
       preco_cents: Math.max(0, Math.round(Number(b.preco_cents) || 0)),
       // A categoria SUGERE; se o corpo disser outra coisa, vale o corpo. Ver a nota em `regras.ts`.
-      recorrente: typeof b.recorrente === 'boolean' ? b.recorrente : sug.recorrente,
+      recorrente: recorrenteNovo,
+      // Coerente com o `recorrente` por construção: a restrição
+      // `marketplace_produtos_periodicidade_coerente` (157) recusa a linha se não for, e um produto
+      // perdido por causa disso seria um erro nosso a pagar por quem estava a escrever.
+      periodicidade: periodicidadeParaGravar(recorrenteNovo, b.periodicidade),
       requer_morada: typeof b.requer_morada === 'boolean' ? b.requer_morada : sug.requerMorada,
       conteudo_url: b.conteudo_url ?? null,
       conteudo_nota: b.conteudo_nota ?? null,
@@ -282,7 +292,30 @@ export async function PATCH(request: NextRequest) {
       patch[campo] = b[campo] === true
       continue
     }
+    // `periodicidade` e `imagens` saem do ciclo porque nenhuma das duas se decide sozinha: uma
+    // depende do `recorrente` que ficar, a outra da capa que ficar. Tratadas logo a seguir.
+    if (campo === 'periodicidade' || campo === 'imagens') continue
     patch[campo] = b[campo] ?? null
+  }
+
+  // ── As duas que dependem de outro campo ─────────────────────────────────────────────────
+  //
+  // O formulário pode mandar só um dos dois lados (mudar a capa sem tocar na galeria, marcar
+  // «pagamento único» sem tocar na periodicidade), por isso o valor que conta é o que FICA depois
+  // desta gravação — o do `patch` se veio, o do produto actual se não veio. Ler só o corpo era
+  // deixar a capa a repetir-se na galeria de todos os produtos a que alguém trocasse a capa.
+  const recorrenteFinal = 'recorrente' in patch ? patch.recorrente === true : actual.recorrente === true
+  if ('periodicidade' in b || 'recorrente' in patch) {
+    if (permitidos.includes('periodicidade')) {
+      patch.periodicidade = periodicidadeParaGravar(
+        recorrenteFinal,
+        'periodicidade' in b ? b.periodicidade : actual.periodicidade,
+      )
+    }
+  }
+  if (('imagens' in b || 'imagem_url' in patch) && permitidos.includes('imagens')) {
+    const capaFinal = 'imagem_url' in patch ? patch.imagem_url : actual.imagem_url
+    patch.imagens = galeriaParaGravar(capaFinal, 'imagens' in b ? b.imagens : actual.imagens)
   }
 
   if (accao === 'publicar') {

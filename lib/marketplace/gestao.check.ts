@@ -197,6 +197,29 @@ sim('nem dois nulos', !podeGerir(
 
   // E o 404 em vez do 403, para não confirmar a existência do produto de outra pessoa.
   sim('recusa com 404 e não 403', /status: 404/.test(ROTA) && /naoEncontrado/.test(ROTA))
+
+  // ── A periodicidade e a galeria (157) ──────────────────────────────────────────────────
+  //
+  // As duas colunas novas são do EDUCADOR — é ele que sabe se a mentoria dele é mensal ou anual, e
+  // foi a falta dessa resposta que fez a montra escrever «/mês» num produto anual.
+  sim('a periodicidade é um campo do educador', CAMPOS_DO_EDUCADOR.includes('periodicidade'))
+  sim('a galeria é um campo do educador', CAMPOS_DO_EDUCADOR.includes('imagens'))
+  // E não do admin em exclusivo: se estivesse nas duas listas, o educador perdia-as num refactor
+  // que tirasse a duplicação pela lista errada.
+  sim('nenhuma das duas é exclusiva do admin', !CAMPOS_SO_DO_ADMIN.some((c) => c === 'periodicidade' || c === 'imagens'))
+
+  // O SERVIDOR é que garante a coerência, e não o formulário. Um ecrã pode mandar `recorrente:false`
+  // com `periodicidade:'anual'`, e é a restrição `marketplace_produtos_periodicidade_coerente` (157)
+  // que rebenta — com um erro do Postgres à frente de quem está a editar, se a rota não limpar antes.
+  sim('a rota força a coerência da periodicidade', /periodicidadeParaGravar\(/.test(ROTA))
+  sim('e nos dois caminhos: criar e editar', (ROTA.match(/periodicidadeParaGravar\(/g) ?? []).length >= 2)
+  // O tecto de 8 e a capa fora da galeria, no servidor. A versão do ecrã existe para a pessoa VER o
+  // que vai gravar; esta existe para valer a quem não passe por esse ecrã (a app, uma importação).
+  sim('a rota limpa a galeria', /galeriaParaGravar\(/.test(ROTA))
+  sim('e nos dois caminhos: criar e editar', (ROTA.match(/galeriaParaGravar\(/g) ?? []).length >= 2)
+  // A capa que conta é a que FICA depois desta gravação, e não a que veio no corpo: ler só o corpo
+  // deixava a capa a repetir-se na galeria de todos os produtos a que alguém trocasse a capa.
+  sim('a galeria é limpa contra a capa final', /capaFinal/.test(ROTA))
 }
 
 // ── Relatório ─────────────────────────────────────────────────────────────────────────────
