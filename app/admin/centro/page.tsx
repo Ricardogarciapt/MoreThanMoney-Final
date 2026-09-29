@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
-  Activity, ArrowLeft, ArrowLeftRight, Command as IconeComando, Cpu, Landmark, ListTree, Loader2, Radio, RefreshCcw, Search, Users, Wallet,
+  Activity, ArrowLeft, ArrowLeftRight, Command as IconeComando, Cpu, Landmark, ListTree, Loader2, Radio, RefreshCcw, Search, Store, Users, Wallet,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { SECCOES, ehSeccao, type SeccaoCentro } from "@/lib/admin-centro/regras"
@@ -18,6 +18,7 @@ import SeccaoContas from "@/components/admin/centro/seccoes/contas"
 import SeccaoCopia from "@/components/admin/centro/seccoes/copia"
 import SeccaoUtilizadores from "@/components/admin/centro/seccoes/utilizadores"
 import SeccaoFunded from "@/components/admin/centro/seccoes/funded"
+import SeccaoMarketplace from "@/components/admin/centro/seccoes/marketplace"
 import SeccaoSincronizacao from "@/components/admin/centro/seccoes/sincronizacao"
 
 /**
@@ -30,7 +31,7 @@ import SeccaoSincronizacao from "@/components/admin/centro/seccoes/sincronizacao
  */
 
 const ICONE: Record<SeccaoCentro, typeof Activity> = {
-  cockpit: Activity, sinais: Radio, estrategias: ListTree, contas: Wallet, copia: ArrowLeftRight, utilizadores: Users, funded: Landmark, sincronizacao: RefreshCcw,
+  cockpit: Activity, sinais: Radio, estrategias: ListTree, contas: Wallet, copia: ArrowLeftRight, utilizadores: Users, funded: Landmark, marketplace: Store, sincronizacao: RefreshCcw,
 }
 const DESCRICAO: Record<SeccaoCentro, string> = {
   cockpit: "Saúde em tempo real: pipeline de sinais, execução, MetaApi, streaming, base, VPS, crons e alertas com runbook.",
@@ -40,6 +41,7 @@ const DESCRICAO: Record<SeccaoCentro, string> = {
   copia: "Cópia entre contas: rotas, sombra vs live, pretendido vs real, latência e pedidos a aprovar.",
   utilizadores: "Matriz de direitos MTM Auto, legado MTM Copy, quota MetaApi, contas e Tap to Trade por pessoa.",
   funded: "Programas e contas MTM Funded, equidade da casa e a ficha completa de cada conta.",
+  marketplace: "Produtos dos educadores: interruptores, fila de revisão, vendas e quanto cabe a cada autor.",
   sincronizacao: "Reconciliação site ↔ MetaApi/CopyFactory, transição da página antiga e auditoria do admin.",
 }
 const RESERVADOS = new Set(["s", "g"])
@@ -192,6 +194,7 @@ function Centro() {
             {seccao === "copia" && <SeccaoCopia />}
             {seccao === "utilizadores" && <SeccaoUtilizadores />}
             {seccao === "funded" && <SeccaoFunded />}
+            {seccao === "marketplace" && <SeccaoMarketplace />}
             {seccao === "sincronizacao" && <SeccaoSincronizacao />}
           </div>
         </main>

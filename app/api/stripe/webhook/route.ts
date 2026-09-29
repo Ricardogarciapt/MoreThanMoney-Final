@@ -211,6 +211,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
+  // Marketplace: um produto de OUTRA pessoa. Sai daqui pela mesma razão que o Funded e as
+  // licenças — não é um plano do site, não mexe no MLM e não muda a categoria de membro de
+  // ninguém. Quem compra um curso de cripto ao Ruben não passou a Premium por isso.
+  //
+  // A partilha (90–95% para o educador) é calculada e CONGELADA na linha da compra aqui, e é essa
+  // linha que serve ao mesmo tempo de recibo, de chave de acesso e de extracto do autor.
+  if (session.metadata?.source === 'marketplace_product') {
+    const { entregarCompraDoMarketplace } = await import('@/lib/marketplace/compra')
+    await entregarCompraDoMarketplace(session)
+    return
+  }
+
   // Registo novo: provisionar conta server-side (não depende do browser / localStorage)
   if (!userId && session.metadata?.pending_registration === 'true') {
     await supabase

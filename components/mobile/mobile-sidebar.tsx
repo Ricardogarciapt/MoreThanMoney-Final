@@ -27,6 +27,7 @@ import {
   Network,
   Globe,
   CandlestickChart,
+  Store,
 } from "lucide-react"
 import Image from "next/image"
 import { SiteLogo } from "@/components/site-logo"
@@ -179,6 +180,8 @@ export default function MobileSidebar({
     { id: 'trading-alerts', label: 'Trading Alerts', icon: Bell, href: '/app-mobile?tab=trading-alerts' },
     // WebTrader das contas simuladas MTM Funded (M3).
     { id: 'funded', label: 'MTM Funded', icon: CandlestickChart, href: '/app-mobile?tab=scanner&sub=webtrader' },
+    // Produtos dos educadores. Na app iOS mostra a montra sem caminho de compra (Apple 3.1.1).
+    { id: 'marketplace', label: 'Marketplace', icon: Store, href: '/app-mobile?tab=marketplace' },
     { id: 'apps', label: 'Apps', icon: LayoutGrid, href: '/app-mobile?tab=apps' },
     { id: 'mlm', label: 'Afiliados', icon: Network, href: '/app-mobile?tab=mlm' },
   ]

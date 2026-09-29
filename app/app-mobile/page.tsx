@@ -27,6 +27,7 @@ import {
 import MobileSidebar from "@/components/mobile/mobile-sidebar"
 import LiveSessionsMobile from "@/components/mobile/live-sessions-mobile"
 import MentorMobile from "@/components/mobile/mentor-mobile"
+import MarketplaceMobile from "@/components/mobile/marketplace-mobile"
 import AppsMobile from "@/components/mobile/apps-mobile"
 import ChatChannels from "@/components/mobile/chat-channels"
 import TradingAlertsMobile from "@/components/mobile/trading-alerts-mobile"
@@ -74,7 +75,7 @@ function AppMobileContent() {
     onForegroundMessage: handleForegroundMessage,
   })
   const [mounted, setMounted] = useState(false)
-  const validTabs = ["social", "chat", "tap-to-trade", "portfolio", "scanner", "apps", "live", "mentor", "settings", "mlm", "trading-alerts", "funded"] as const
+  const validTabs = ["social", "chat", "tap-to-trade", "portfolio", "scanner", "apps", "live", "mentor", "settings", "mlm", "trading-alerts", "funded", "marketplace"] as const
   // `funded` é o deep-link antigo do WebTrader: hoje é o sub-separador «Web trader» do Scanner.
   const normalizarTab = (t: string) => (t === "funded" ? "scanner" : t)
   const tabFromUrl = searchParams.get("tab")
@@ -557,6 +558,12 @@ function AppMobileContent() {
 
             <TabsContent value="apps" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
               <AppsMobile />
+            </TabsContent>
+
+            {/* Montado só quando activo: a vitrine faz dois pedidos ao abrir, e não vale a pena
+                fazê-los a quem nunca toca no separador. */}
+            <TabsContent value="marketplace" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
+              {activeTab === "marketplace" && <MarketplaceMobile />}
             </TabsContent>
 
             <TabsContent value="settings" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">

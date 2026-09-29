@@ -122,7 +122,7 @@ export interface Alerta {
   acoes: { rotulo: string; acao: AcaoRunbook; confirmar?: string }[]
 }
 
-export type SeccaoCentro = 'cockpit' | 'sinais' | 'estrategias' | 'contas' | 'copia' | 'utilizadores' | 'funded' | 'sincronizacao'
+export type SeccaoCentro = 'cockpit' | 'sinais' | 'estrategias' | 'contas' | 'copia' | 'utilizadores' | 'funded' | 'marketplace' | 'sincronizacao'
 
 export const SECCOES: { id: SeccaoCentro; nome: string; atalho: string }[] = [
   { id: 'cockpit', nome: 'Cockpit', atalho: '1' },
@@ -132,7 +132,8 @@ export const SECCOES: { id: SeccaoCentro; nome: string; atalho: string }[] = [
   { id: 'copia', nome: 'Cópia', atalho: '5' },
   { id: 'utilizadores', nome: 'Utilizadores', atalho: '6' },
   { id: 'funded', nome: 'MTM Funded', atalho: '7' },
-  { id: 'sincronizacao', nome: 'Sincronização & Auditoria', atalho: '8' },
+  { id: 'marketplace', nome: 'Marketplace', atalho: '8' },
+  { id: 'sincronizacao', nome: 'Sincronização & Auditoria', atalho: '9' },
 ]
 
 export function ehSeccao(v: unknown): v is SeccaoCentro {
