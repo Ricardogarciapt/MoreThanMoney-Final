@@ -40,6 +40,7 @@ import { scannerLabel } from "@/lib/mtm-alerts/scanners"
 // servidor respondia 401 e o ecrã mostrava zeros com o nome da pessoa no topo.
 import { authHeaders } from "@/lib/auth-token"
 import { DEFAULT_ALERT_SYMBOLS } from "@/lib/mtm-alerts/defaults"
+import { scannerStudies } from "@/lib/scanners/estudos"
 
 /** Normaliza o timeframe do alerta para um intervalo TradingView válido. */
 function tvInterval(tf: string | null): string {
@@ -53,27 +54,21 @@ function tvInterval(tf: string | null): string {
   return "60"
 }
 
-// Indicadores TradingView (PUB;<id>) publicados de cada scanner MTM — para
-// sobrepor no gráfico o mesmo study que gerou o alerta.
+/**
+ * Os estudos publicados de cada scanner — para sobrepor no gráfico o MESMO study que gerou o alerta.
+ *
+ * DERIVA da tabela canónica (`lib/scanners/estudos.ts`) em vez de a repetir. A lista estava aqui
+ * copiada à mão e divergiu: a Aurum Flow ficou com o id antigo e o Sensei com dois ids diferentes
+ * conforme o ficheiro. Uma cópia de uma lista de ids acaba sempre assim — é o que o próprio
+ * ficheiro canónico avisa no cabeçalho.
+ *
+ * A ÚNICA diferença deliberada é o Sensei: aqui usa-se a variante «sem painéis» (só plots, sem as
+ * tabelas laterais), porque no telemóvel as tabelas tapam o gráfico. É por isso que se sobrepõe
+ * uma entrada em vez de se copiar a tabela toda.
+ */
 const SCANNER_STUDIES: Record<string, string[]> = {
-  GoldenZone: ["PUB;0b373fb0e6634a73bc8b838cf0690725"],
-  Momentum: ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"],
-  KillShot: ["PUB;c1f81145e78a49ce92bd1f81f9c103dd"],
-  Supernova: ["PUB;c16bafd7d0874182a1415648ec3ed7b8"],
-  Winzone: [
-    "PUB;6c003d30b2154ef3a31074d5c703954f", "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",
-    "PUB;162198dcae874d5da28f7b048feb76e7", "PUB;b6587ba7dc7b4489927cfd94d1fb8a9f",
-    "PUB;0bf15eb0edba447f84e19fce69391ccb",
-  ],
-  Sinergy: ["PUB;3b86bd1192124fd98583490bb7508041"],
-  Goldkiller: ["PUB;a3eaa6af54de4202a2c2f807fd8baa08"],
-  MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
-  // Variante "sem painéis" do Sensei (publicada) — só plots, sem as tabelas laterais.
+  ...scannerStudies,
   Sensei: ["PUB;25c2231a331e413b8e7498364c5b94ab"],
-  // A Aurum Flow tem estudo PRÓPRIO e faltava aqui: um alerta dela abria o gráfico com os plots
-  // do Sensei, que é outra estratégia. O mesmo id de `lib/scanners/estudos.ts`, que é a tabela
-  // canónica — esta cópia local existe porque a variante do Sensei aqui é a "sem painéis".
-  AurumFlow: ["PUB;4ca56ac1162a401cb62fa3205c73366a"],
 }
 
 type StudySpec = string | { id: string; inputs?: Record<string, unknown> }

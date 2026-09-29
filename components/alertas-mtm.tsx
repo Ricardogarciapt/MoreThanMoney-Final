@@ -36,6 +36,7 @@ import {
   Radio,
   CandlestickChart,
 } from "lucide-react"
+import { scannerStudies } from "@/lib/scanners/estudos"
 
 interface AlertConfirmation {
   name: string
@@ -130,18 +131,20 @@ const DIR_META = {
 
 /** Scanner Momentum MTM — mostra os plots da estratégia no gráfico do alerta. */
 /**
- * Estratégias dos Alertas MTM — apenas as 3 que geram alarmes via webhook para
- * o site: MTM Scanner, GoldKiller e Sensei. Cada uma com o seu study (Pine público).
+ * Estratégias dos Alertas MTM — as que geram alarmes por webhook para o site.
+ *
+ * DERIVA da tabela canónica (`lib/scanners/estudos.ts`) em vez de a repetir: esta lista estava
+ * copiada à mão e a Aurum Flow ficou com o id antigo quando o estudo foi republicado. Um id
+ * desactualizado aqui é pior do que não ter estudo nenhum — o gráfico abre com os plots de OUTRA
+ * estratégia e parece que o sinal veio dali.
+ *
+ * A única diferença deliberada é o Sensei, na variante «sem painéis» (só plots).
  */
 const STRATEGY_STUDIES: Record<string, string[]> = {
-  Goldkiller: ["PUB;a3eaa6af54de4202a2c2f807fd8baa08"],
-  MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
-  // Sensei variante SEM painéis (só plots) — igual à app-mobile.
+  Goldkiller: scannerStudies.Goldkiller,
+  MTMScanner: scannerStudies.MTMScanner,
+  AurumFlow: scannerStudies.AurumFlow,
   Sensei: ["PUB;25c2231a331e413b8e7498364c5b94ab"],
-  // A MTM Aurum Flow Cripto TEM estudo próprio (o mesmo do scanner mobile). Antes caía no MTM
-  // Scanner, e abrir um alerta dela mostrava o gráfico com os plots de outra estratégia — pior
-  // do que não mostrar nada, porque parece que o sinal veio dali.
-  AurumFlow: ["PUB;4ca56ac1162a401cb62fa3205c73366a"],
 }
 const DEFAULT_STUDIES = STRATEGY_STUDIES.MTMScanner
 

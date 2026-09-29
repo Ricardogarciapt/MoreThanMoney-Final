@@ -29,7 +29,10 @@ export type ScannerKey = (typeof scannerOrder)[number]
 export const scannerStudies: Record<ScannerKey, string[]> = {
   GoldenZone: ["PUB;0b373fb0e6634a73bc8b838cf0690725"],
   Momentum: ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"],
-  AurumFlow: ["PUB;4ca56ac1162a401cb62fa3205c73366a"],
+  // v2 (29/09/2026): só o motor de rompimento. O de reversão media −0,200R por trade com um
+  // intervalo que não tocava o zero — era o único resultado significativo do estudo, e era
+  // negativo. Ver docs/aurum-orb-vs-smc.md. O id anterior era 4ca56ac1…
+  AurumFlow: ["PUB;7a37672ce0bf426eb038be265b6b4aba"],
   KillShot: ["PUB;c1f81145e78a49ce92bd1f81f9c103dd"],
   Supernova: ["PUB;c16bafd7d0874182a1415648ec3ed7b8"],
   Winzone: [

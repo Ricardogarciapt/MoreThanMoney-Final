@@ -56,6 +56,7 @@ import {
   resolveChartShareUrl,
 } from "@/lib/chart-share-capture"
 import { extractChartShareTradeDraft, type ChartShareTradeDraft } from "@/lib/chart-share-trade"
+import { scannerStudies as estudosCanonicos } from "@/lib/scanners/estudos"
 
 // Ordem explícita dos scanners (mantém a ordem dos botões)
 const scannerOrder = [
@@ -73,25 +74,10 @@ const scannerOrder = [
 
 type ScannerKey = (typeof scannerOrder)[number]
 
-// Scanners disponíveis
-const scannerStudies: Record<ScannerKey, string[]> = {
-  GoldenZone: ["PUB;0b373fb0e6634a73bc8b838cf0690725"],
-  Momentum: ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"],
-  AurumFlow: ["PUB;4ca56ac1162a401cb62fa3205c73366a"],
-  KillShot: ["PUB;c1f81145e78a49ce92bd1f81f9c103dd"],
-  Supernova: ["PUB;c16bafd7d0874182a1415648ec3ed7b8"],
-  Winzone: [
-    "PUB;6c003d30b2154ef3a31074d5c703954f",
-    "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",
-    "PUB;162198dcae874d5da28f7b048feb76e7",
-    "PUB;b6587ba7dc7b4489927cfd94d1fb8a9f",
-    "PUB;0bf15eb0edba447f84e19fce69391ccb",
-  ],
-  Sinergy: ["PUB;3b86bd1192124fd98583490bb7508041"],
-  Goldkiller: ["PUB;a3eaa6af54de4202a2c2f807fd8baa08"],
-  MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
-  Sensei: ["PUB;0aba45d8eeed42368922a344f547eeb6"],
-}
+// Os estudos vêm da tabela canónica (`lib/scanners/estudos.ts`). A lista estava aqui copiada e
+// já tinha divergido em dois ids — a Aurum Flow com o estudo antigo e o Sensei com um id que
+// nenhum outro ficheiro usava. É exactamente o que o cabeçalho da tabela canónica avisa.
+const scannerStudies = estudosCanonicos
 
 const scannerLabels: Record<ScannerKey, string> = {
   GoldenZone: "Golden Zone",
