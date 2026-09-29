@@ -28,7 +28,13 @@ export async function GET(request: NextRequest) {
   if (params.get("reconciliar") === "1") {
     // `aplicar` tem de ser pedido à mão — sem ele isto é uma vista, não uma escrita.
     const r = await reconciliarHistorico({ aplicar: params.get("aplicar") === "1" })
-    return NextResponse.json({ ok: true, reconciliacao: r })
+    /**
+     * `ok: true` com zero escritas foi exactamente o que enganou toda a gente a 30/09 — a
+     * gravação falhava por erro, devolvia false, e a resposta dizia «discordavam 355, corrigidas
+     * 0» com ar de sucesso. Se pedimos para aplicar e alguma escrita rebentou, isto responde 500.
+     */
+    const falhou = r.aplicado && r.falhadas > 0
+    return NextResponse.json({ ok: !falhou, reconciliacao: r }, { status: falhou ? 500 : 200 })
   }
   const full = params.get("full") === "1"
   const desde = full ? undefined : new Date(Date.now() - 48 * 3_600_000).toISOString()

@@ -67,9 +67,10 @@ export function podeEscrever(nova: OrigemDesfecho, outcomeAtual: unknown): boole
   return GRAU[nova] >= grauDoDesfecho(outcomeAtual)
 }
 
-/** As origens que `nova` tem direito a substituir — usado no filtro da escrita condicional. */
-function origensSubstituiveis(nova: OrigemDesfecho): OrigemDesfecho[] {
-  return (Object.keys(GRAU) as OrigemDesfecho[]).filter((o) => GRAU[o] <= GRAU[nova])
+/** Última falha de escrita, para quem chama poder dizer que falhou em vez de contar zero. */
+let ultimoErroDeEscrita: string | null = null
+export function ultimoErroDesfecho(): string | null {
+  return ultimoErroDeEscrita
 }
 
 /**
@@ -89,13 +90,21 @@ export interface DesfechoGravavel {
 /**
  * Grava o desfecho na mensagem de ENTRADA, respeitando a escada.
  *
- * A condição vai no PRÓPRIO update, não num select-e-depois-update: o tracker corre de 5 em 5
- * segundos e o cron do texto de 5 em 5 minutos, por isso as duas passagens sobrepõem-se. Ler
- * primeiro e escrever depois deixava a janela aberta para o texto ler «ainda não há nada»,
- * o tracker gravar, e o texto escrever por cima à mesma — exactamente o que se quer acabar.
+ * A condição corre DENTRO de uma instrução SQL só (a função `gravar_desfecho_unico`, migração
+ * 152), não num select-e-depois-update: o tracker corre de 5 em 5 segundos e o cron do texto de
+ * 5 em 5 minutos, por isso as duas passagens sobrepõem-se. Ler primeiro e escrever depois
+ * deixava a janela aberta para o texto ler «ainda não há nada», o tracker gravar, e o texto
+ * escrever por cima à mesma — exactamente o que se quer acabar.
  *
- * Devolve true quando escreveu. False = alguém de grau superior já lá tinha posto um número,
- * e isso é o sistema a funcionar, não um erro.
+ * ISTO JÁ FOI UM FILTRO DO POSTGREST e não escrevia nada. `outcome->>origem` dentro de um
+ * `.or()` é aceite num GET mas num PATCH o PostgREST lê-o como o NOME de uma coluna e responde
+ * «42703 · column chat_messages.outcome does not exist». Como o erro era tratado com um warn e
+ * um `return false`, a reconstrução dizia «355 discordavam, 0 corrigidas» sem se queixar. Por
+ * isso a condição mudou para SQL — e por isso o erro deixou de ser engolido.
+ *
+ * Devolve true quando escreveu. False = alguém de grau superior já lá tinha posto um número, e
+ * isso é o sistema a funcionar. Se houve ERRO, fica registado em `ultimoErroDesfecho()` para
+ * quem chama não poder confundir «recusado pela escada» com «falhou».
  */
 export async function gravarDesfechoUnico(
   chatMessageId: string,
@@ -103,19 +112,18 @@ export async function gravarDesfechoUnico(
   desfecho: DesfechoGravavel,
 ): Promise<boolean> {
   if (!chatMessageId) return false
-  const lista = origensSubstituiveis(origem).join(',')
-  const { data, error } = await getSupabaseAdmin()
-    .from('chat_messages')
-    .update({ outcome: { ...desfecho, origem } })
-    .eq('id', chatMessageId)
-    // Sem `origem` = histórico antigo (grau 0), substituível por qualquer um.
-    .or(`outcome->>origem.is.null,outcome->>origem.in.(${lista})`)
-    .select('id')
+  const { data, error } = await getSupabaseAdmin().rpc('gravar_desfecho_unico', {
+    p_chat_message_id: chatMessageId,
+    p_origem: origem,
+    p_desfecho: { ...desfecho },
+  })
   if (error) {
+    ultimoErroDeEscrita = error.message
     console.warn('[desfecho-unico] não gravou:', chatMessageId, origem, error.message)
     return false
   }
-  return (data?.length ?? 0) > 0
+  ultimoErroDeEscrita = null
+  return data === true
 }
 
 /** O que a reconstrução encontrou (e, se lhe pedirem, corrigiu). */
@@ -127,6 +135,15 @@ export interface ResultadoReconciliacao {
   /** Escreveu mesmo (false em simulação). */
   aplicado: boolean
   corrigidas: number
+  /**
+   * Quantas escritas FALHARAM, e a última mensagem de erro.
+   *
+   * Existe por causa de 30/09: a gravação devolvia false por erro e a reconstrução reportava
+   * «355 discordavam, 0 corrigidas» como se fosse um resultado. Um zero por erro e um zero por
+   * não haver nada que corrigir não são a mesma coisa, e a diferença tem de aparecer.
+   */
+  falhadas: number
+  erro: string | null
   /** Amostra do que muda, para se poder olhar antes de decidir. */
   exemplos: Array<{ canal: string; simbolo: string; publicado: number | null; preco: number | null; rotulo: string }>
 }
@@ -152,16 +169,32 @@ export async function reconciliarHistorico(
 ): Promise<ResultadoReconciliacao> {
   const aplicar = opcoes.aplicar === true
   const admin = getSupabaseAdmin()
-  const { data } = await admin
-    .from('mtmcopy_signal_tracking')
-    .select('chat_message_id, channel_slug, symbol, result_pips, result_pct, outcome_label')
-    .eq('status', 'closed')
-    .not('outcome_label', 'is', null)
-    .order('closed_at', { ascending: false })
-    .limit(opcoes.limite ?? 2000)
+  /**
+   * PAGINAR. O PostgREST devolve no máximo MIL linhas por pedido, aconteça o que acontecer ao
+   * `.limit()`: pedir 2000 devolvia 1000, e a reconstrução parava sempre nas mesmas, sem nunca
+   * chegar às 1305 que existem. Era o mesmo defeito que já tinha travado o backfill do Premium
+   * a meio (ver `atualizarDesfechosDoCanal`).
+   */
+  const PAGINA = 1000
+  const tecto = opcoes.limite ?? 10_000
+  const linhas: Record<string, unknown>[] = []
+  for (let inicio = 0; inicio < tecto; inicio += PAGINA) {
+    const { data, error } = await admin
+      .from('mtmcopy_signal_tracking')
+      .select('chat_message_id, channel_slug, symbol, result_pips, result_pct, outcome_label')
+      .eq('status', 'closed')
+      .not('outcome_label', 'is', null)
+      .order('closed_at', { ascending: false })
+      .range(inicio, Math.min(inicio + PAGINA, tecto) - 1)
+    if (error || !data?.length) break
+    linhas.push(...(data as Record<string, unknown>[]))
+    if (data.length < PAGINA) break
+  }
 
-  const out: ResultadoReconciliacao = { vistas: 0, discordavam: 0, aplicado: aplicar, corrigidas: 0, exemplos: [] }
-  for (const l of data ?? []) {
+  const out: ResultadoReconciliacao = {
+    vistas: 0, discordavam: 0, aplicado: aplicar, corrigidas: 0, falhadas: 0, erro: null, exemplos: [],
+  }
+  for (const l of linhas) {
     const id = l.chat_message_id as string
     if (!id) continue
     const { data: msg } = await admin.from('chat_messages').select('outcome').eq('id', id).maybeSingle()
@@ -188,7 +221,16 @@ export async function reconciliarHistorico(
       pips: preco,
       pct: (l.result_pct as number | null) ?? null,
     })
-    if (ok) out.corrigidas++
+    if (ok) {
+      out.corrigidas++
+    } else {
+      // Recusado pela escada não conta como falha; erro conta, e fica à vista.
+      const erro = ultimoErroDesfecho()
+      if (erro) {
+        out.falhadas++
+        out.erro = erro
+      }
+    }
   }
   return out
 }
