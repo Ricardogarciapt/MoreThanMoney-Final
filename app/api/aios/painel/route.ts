@@ -64,7 +64,7 @@ export const GET = soAdmin(async () => {
    *
    * É o pior engano possível num painel: o vazio a dizer «está tudo bem».
    */
-  const [porColuna, radar, leads, marcacoes, membros, membrosActivos] = await Promise.all([
+  const [porColuna, radar, radarTrabalhado, radarTopo, leads, leadsSemDm, marcacoes, membros, membrosActivos] = await Promise.all([
     Promise.all(COLUNAS.map((c) =>
       db.from('social_scheduled_posts')
         .select('id, caption, media_type, pillar, status, scheduled_at, permalink, ig_username, error')
@@ -73,7 +73,17 @@ export const GET = soAdmin(async () => {
         .limit(8),
     )),
     db.from('ig_radar_prospetos').select('id', { count: 'exact', head: true }),
+    // «usado» = alguém foi lá comentar à mão. É o ÚNICO passo que transforma um prospeto em
+    // conversa — ver a nota sobre o que a API do Instagram não deixa fazer, mais abaixo.
+    db.from('ig_radar_prospetos').select('id', { count: 'exact', head: true }).eq('estado', 'usado'),
+    db.from('ig_radar_prospetos')
+      .select('id, hashtag, permalink, legenda, gostos, comentarios, pontuacao, porque, encontrado_em')
+      .eq('estado', 'pendente')
+      .order('pontuacao', { ascending: false })
+      .limit(6),
     db.from('ig_leads').select('comment_id', { count: 'exact', head: true }),
+    // As DM que NÃO saíram. É a fuga real do funil: o lead comentou, e o link nunca lhe chegou.
+    db.from('ig_leads').select('comment_id', { count: 'exact', head: true }).neq('dm_status', 'sent'),
     db.from('agenda_marcacoes').select('id', { count: 'exact', head: true }).in('estado', ['marcada', 'a_confirmar', 'compareceu']),
     db.from('profiles').select('id', { count: 'exact', head: true }),
     db.from('profiles').select('id', { count: 'exact', head: true }).eq('is_active', true),
@@ -107,9 +117,27 @@ export const GET = soAdmin(async () => {
   const topo = radar.count ?? 0
   const pct = (n: number) => (topo > 0 ? Math.round((n / topo) * 1000) / 10 : null)
 
+  /**
+   * ═══ O DEGRAU QUE É UMA PESSOA, E PORQUE TEM DE SER ═════════════════════════════════════
+   *
+   * Entre «o radar encontrou» e «alguém falou connosco» há um passo que NENHUM código pode dar: a
+   * API do Instagram não deixa comentar em publicações de terceiros, nem seguir, nem mandar DM a
+   * quem não nos escreveu primeiro (está documentado em `lib/instagram/radar.ts`). O radar
+   * encontra e ordena; comentar é trabalho de uma pessoa.
+   *
+   * E há uma segunda razão, mais dura: a pesquisa por hashtag devolve `id, caption, like_count,
+   * comments_count, permalink` — e mais nada. Não devolve o autor. Mesmo que se quisesse ligar um
+   * prospeto ao lead que ele viesse a dar, não há nome por onde os ligar.
+   *
+   * Por isso o funil mostra o passo humano em vez de o esconder: quantos prospetos foram
+   * TRABALHADOS. Enquanto esse número for zero, os degraus abaixo não vêm do radar — vêm de quem
+   * já nos segue.
+   */
+  const trabalhados = radarTrabalhado.count ?? 0
   const funil = [
     { icone: '📡', rotulo: 'Radar Instagram', sub: 'publicações encontradas por hashtag', n: topo, pct: 100 },
-    { icone: '💬', rotulo: 'Leads do Instagram', sub: 'comentaram a palavra-chave', n: leads.count ?? 0, pct: pct(leads.count ?? 0) },
+    { icone: '✋', rotulo: 'Trabalhados à mão', sub: 'comentados por uma pessoa (a API não o faz)', n: trabalhados, pct: pct(trabalhados) },
+    { icone: '💬', rotulo: 'Leads do Instagram', sub: 'comentaram a palavra-chave nos nossos posts', n: leads.count ?? 0, pct: pct(leads.count ?? 0) },
     { icone: '📅', rotulo: 'Chamadas marcadas', sub: '/agendar', n: marcacoes.count ?? 0, pct: pct(marcacoes.count ?? 0) },
     { icone: '⭐', rotulo: 'Membros activos', sub: `de ${membros.count ?? 0} contas`, n: membrosActivos.count ?? 0, pct: pct(membrosActivos.count ?? 0) },
   ]
@@ -117,6 +145,26 @@ export const GET = soAdmin(async () => {
   return NextResponse.json({
     quadro,
     funil,
+    // Os prospetos por trabalhar, para se poder agir SEM sair do AIOS: abrir o post e marcar.
+    radar: {
+      pendentes: (topo || 0) - trabalhados,
+      porTrabalhar: (radarTopo.data ?? []).map((r) => ({
+        id: String(r.id),
+        hashtag: String(r.hashtag ?? ''),
+        permalink: String(r.permalink ?? ''),
+        excerto: String(r.legenda ?? '').split('\n')[0].slice(0, 90),
+        pontuacao: Number(r.pontuacao ?? 0),
+        porque: r.porque ? String(r.porque).slice(0, 90) : null,
+        gostos: Number(r.gostos ?? 0),
+        comentarios: Number(r.comentarios ?? 0),
+      })),
+    },
+    /**
+     * O ALERTA que vale mais do que o funil todo: leads que comentaram e a quem a mensagem privada
+     * NUNCA chegou. Nas nove de Setembro o motivo foi sempre o mesmo — a app não tem permissão
+     * para `private_replies`, e o que saiu foi uma resposta pública sem link.
+     */
+    fuga: { leadsSemDm: leadsSemDm.count ?? 0, leadsTotal: leads.count ?? 0 },
     // Para o ecrã poder dizer DE QUANDO são os números em vez de os mostrar como se fossem de agora.
     lidoEm: new Date().toISOString(),
     janela: { desde: ha30dias },

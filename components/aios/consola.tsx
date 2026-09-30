@@ -43,7 +43,12 @@ type Marcacao = { invitee_name?: string; name?: string; event_type_slug?: string
 type Cartao = { id: string; titulo: string; etiqueta: string; pilar: string | null; quando: string | null; permalink: string | null; erro: string | null }
 type Coluna = { chave: string; titulo: string; cor: string; cartoes: Cartao[] }
 type DegrauFunil = { icone: string; rotulo: string; sub: string; n: number; pct: number | null }
-type Painel = { quadro: Coluna[]; funil: DegrauFunil[]; lidoEm: string }
+type Prospeto = { id: string; hashtag: string; permalink: string; excerto: string; pontuacao: number; porque: string | null; gostos: number; comentarios: number }
+type Painel = {
+  quadro: Coluna[]; funil: DegrauFunil[]; lidoEm: string
+  radar: { pendentes: number; porTrabalhar: Prospeto[] }
+  fuga: { leadsSemDm: number; leadsTotal: number }
+}
 
 const CHECKLIST = [
   "Ver métricas do dia",
@@ -156,6 +161,26 @@ export default function ConsolaAios() {
       setPainel(null)
     }
   }, [])
+
+  /**
+   * Marcar um prospeto do radar. `usado` = fui lá comentar; `ignorado` = não presta.
+   *
+   * Tira-se da lista no ecrã ANTES de o servidor responder. Numa lista que se trabalha um a um, a
+   * espera de meio segundo entre o clique e o cartão desaparecer faz clicar duas vezes — e o
+   * segundo clique cai no cartão que entretanto subiu para aquele lugar.
+   */
+  const marcarProspeto = useCallback(async (id: string, estado: "usado" | "ignorado") => {
+    setPainel((p) => (p ? { ...p, radar: { ...p.radar, porTrabalhar: p.radar.porTrabalhar.filter((x) => x.id !== id) } } : p))
+    try {
+      await fetch("/api/admin/social/radar", {
+        method: "POST", credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id, estado }),
+      })
+    } catch {
+      mostrarToast("Não foi possível marcar — recarrega")
+    }
+  }, [mostrarToast])
 
   const lerN8n = useCallback(async () => {
     try {
@@ -458,6 +483,50 @@ export default function ConsolaAios() {
                         </div>
                       </div>
                     ))}
+                    {/*
+                      A FUGA, em cima de tudo o resto. Nove pessoas comentaram a palavra-chave e a
+                      mensagem com o link nunca lhes chegou — a app não tem permissão para responder
+                      em privado, e o que saiu foi uma resposta pública. Um funil que mostra os
+                      degraus e esconde o buraco por onde a água sai não serve para decidir nada.
+                    */}
+                    {painel.fuga.leadsSemDm > 0 && (
+                      <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(248,113,113,.4)", background: "rgba(248,113,113,.08)" }}>
+                        <div style={{ fontSize: 12, color: "#fca5a5", fontWeight: 600 }}>
+                          ⚠️ {painel.fuga.leadsSemDm} de {painel.fuga.leadsTotal} leads sem mensagem privada
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>
+                          Comentaram a palavra-chave e o link nunca lhes chegou: a app não tem permissão
+                          para <code>private_replies</code>. Saiu uma resposta pública, sem link.
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── O RADAR, para se trabalhar aqui ─────────────────────────────── */}
+                    <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "var(--gold)" }}>RADAR · POR TRABALHAR</span>
+                        <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{painel.radar.pendentes} à espera</span>
+                      </div>
+                      <p style={{ fontSize: 10.5, color: "var(--text-dim)", marginBottom: 8 }}>
+                        A API do Instagram não deixa comentar em posts de terceiros nem mandar DM a quem não
+                        nos escreveu. O radar encontra e ordena; comentar é teu. Marca aqui o que já foste fazer.
+                      </p>
+                      {painel.radar.porTrabalhar.length === 0 ? (
+                        <p style={{ fontSize: 11, color: "var(--text-dim)" }}>Nada por trabalhar.</p>
+                      ) : painel.radar.porTrabalhar.map((p) => (
+                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
+                          <span style={{ fontFamily: "monospace", fontSize: 12, color: "var(--gold)", minWidth: 26 }}>{p.pontuacao}</span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: 11.5, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.excerto || "(sem legenda)"}</div>
+                            <div style={{ fontSize: 10, color: "var(--text-dim)" }}>#{p.hashtag} · ♥ {p.gostos} · 💬 {p.comentarios}{p.porque ? ` · ${p.porque}` : ""}</div>
+                          </div>
+                          <a href={p.permalink} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "var(--gold)", textDecoration: "none", whiteSpace: "nowrap" }}>abrir ↗</a>
+                          <button type="button" onClick={() => void marcarProspeto(p.id, "usado")} style={{ fontSize: 10.5, padding: "3px 7px", borderRadius: 5, border: "1px solid rgba(52,211,153,.4)", background: "transparent", color: "#34d399", cursor: "pointer" }}>comentei</button>
+                          <button type="button" onClick={() => void marcarProspeto(p.id, "ignorado")} style={{ fontSize: 10.5, padding: "3px 7px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text-dim)", cursor: "pointer" }}>ignorar</button>
+                        </div>
+                      ))}
+                    </div>
+
                     <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 10 }}>
                       Lido às {new Date(painel.lidoEm).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
                     </p>
