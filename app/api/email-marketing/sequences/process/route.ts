@@ -4,6 +4,7 @@ import { isCronAuthorized } from "@/lib/cron-auth"
 import nodemailer from 'nodemailer'
 import * as emailTemplates from '@/lib/email-templates'
 import { brandedMailAttachments, prepareBrandedEmailHtml } from '@/lib/mail-transport'
+import { linkAgendar } from '@/lib/agenda/link'
 
 const supabase = getSupabaseAdmin()
 
@@ -186,7 +187,9 @@ export async function GET(request: NextRequest) {
             )
             break
           case 'onboarding_schedule':
-            const calendlyUrl = process.env.NEXT_PUBLIC_CALENDLY_URL || 'https://calendly.com/morethanmoney'
+            // O valor de recurso era «https://calendly.com/morethanmoney» — sem o «pt», ou seja um endereço
+            // que nem sequer era nosso. Passa a ser a agenda da casa, que não expira nem muda de dono.
+            const calendlyUrl = linkAgendar('onboarding')
             htmlContent = emailTemplates.onboardingScheduleEmailTemplate(
               templateData.userName,
               calendlyUrl,

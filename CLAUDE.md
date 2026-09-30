@@ -276,7 +276,7 @@ Orquestra e monitoriza todos os agentes e sistemas IA do ecossistema MTM.
 |---------|-------------|--------|
 | Supabase | iwscxotvmtkphajmasof.supabase.co | eu-north-1 |
 | ManyChat | api.manychat.com | Instagram |
-| Calendly | calendly.com/morethanmoneypt | Webhooks → Supabase |
+| Agenda própria | morethanmoney.pt/agendar | Substituiu o Calendly a 30/09/2026. Link único em lib/agenda/link.ts |
 | Vercel | vercel.com | morethanmoney.pt |
 | Anthropic | console.anthropic.com | API 12 agentes |
 

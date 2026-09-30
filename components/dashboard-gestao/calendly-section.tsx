@@ -119,7 +119,7 @@ export default function CalendlySection() {
       {/* Calendly links */}
       <div className="flex flex-wrap gap-3">
         <a
-          href="https://calendly.com/morethanmoneypt/onboarding-de-novos-membros"
+          href="/agendar?t=onboarding"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-xs text-gray-400 hover:text-[#D2A63C] px-3 py-2 rounded-lg border border-white/10 hover:border-[#D2A63C]/30 transition-colors"
@@ -129,7 +129,7 @@ export default function CalendlySection() {
           <ExternalLink className="h-3 w-3" />
         </a>
         <a
-          href="https://calendly.com/morethanmoneypt/30min"
+          href="/agendar"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-xs text-gray-400 hover:text-[#00b4d8] px-3 py-2 rounded-lg border border-white/10 hover:border-[#00b4d8]/30 transition-colors"

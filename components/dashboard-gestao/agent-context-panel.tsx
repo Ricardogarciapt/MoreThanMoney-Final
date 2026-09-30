@@ -177,8 +177,8 @@ const QUICK_LINKS: Record<string, { label: string; url: string }[]> = {
     { label: "Instagram MTM", url: "https://instagram.com/morethanmoney.pt" },
   ],
   setter: [
-    { label: "Calendly Onboarding", url: "https://calendly.com/morethanmoneypt/onboarding-de-novos-membros" },
-    { label: "Calendly Reunião", url: "https://calendly.com/morethanmoneypt/reuniao-pontual" },
+    { label: "Agendar · Onboarding", url: "/agendar?t=onboarding" },
+    { label: "Agendar · todos os assuntos", url: "/agendar" },
   ],
   financial_email: [
     { label: "Gmail MTM", url: "https://mail.google.com" },

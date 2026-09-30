@@ -8,9 +8,17 @@
  * que já não existe. Um funil que abre com uma promessa que não se pode cumprir não perde só
  * aquele passo: perde a confiança para os cinco seguintes.
  */
+import { LINK_AGENDAR_ONBOARDING } from './agenda/link'
 
-export const CALENDLY_ONBOARDING_URL =
-  'https://calendly.com/morethanmoneypt/onboarding-de-novos-membros'
+/**
+ * O NOME FICA, O DESTINO MUDA (30/09/2026). O Calendly foi substituído pela agenda da casa
+ * (`/agendar`) — ver `lib/agenda/link.ts`. A constante mantém o nome antigo porque é importada em
+ * vários sítios e renomeá-la num commit de substituição de ferramenta era misturar duas mudanças;
+ * o que importa é que ninguém volte a escrever um endereço destes à mão.
+ *
+ * @deprecated usa `LINK_AGENDAR_ONBOARDING` de `lib/agenda/link.ts`.
+ */
+export const CALENDLY_ONBOARDING_URL = LINK_AGENDAR_ONBOARDING
 
 export const SKOOL_FAST_START_URL =
   'https://www.skool.com/morethanmoney-1132/classroom/6124701a?md=0bdb4c0a86a84614ad1ddea4de3baa21'

@@ -168,7 +168,8 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'calendly-onboarding',
       title: 'Agendar Onboarding',
-      url: 'https://calendly.com/morethanmoneypt/onboarding-de-novos-membros',
+      // 30/09: deixou de ser Calendly. O id mantém-se porque é referenciado noutros sítios.
+      url: '/agendar?t=onboarding',
       type: 'calendly',
       page: '/onboarding',
       section: 'Hero',
