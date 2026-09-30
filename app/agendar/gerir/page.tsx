@@ -17,7 +17,7 @@ import { CalendarX, Loader2 } from "lucide-react"
  */
 export default function Gerir() {
   const token = useSearchParams()?.get("t") ?? ""
-  const [m, setM] = useState<null | { inicio: string; estado: string; tipo: string | null; anfitriao: string | null }>(null)
+  const [m, setM] = useState<null | { inicio: string; estado: string; tipo: string | null; anfitriao: string | null; inicioAnterior: string | null }>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [aCancelar, setACancelar] = useState(false)
   const [feito, setFeito] = useState<string | null>(null)
@@ -29,6 +29,17 @@ export default function Gerir() {
       .then((r) => (r.error ? setErro("Não encontrámos essa marcação.") : setM(r.marcacao)))
       .catch(() => setErro("Não foi possível ler a marcação."))
   }, [token])
+
+  const responder = async (accao: "confirmar" | "cancelar") => {
+    setACancelar(true)
+    const r = await fetch("/api/agenda/gerir", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify(accao === "confirmar" ? { token, accao: "confirmar" } : { token }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, mensagem: "Falhou." }))
+    setACancelar(false)
+    if (r.ok) setFeito(r.mensagem)
+    else setErro(r.mensagem ?? "Não foi possível.")
+  }
 
   const cancelar = async () => {
     setACancelar(true)
@@ -65,6 +76,34 @@ export default function Gerir() {
 
             {m.estado === "cancelada" ? (
               <p className="mt-6 text-[14px] text-zinc-400">Esta chamada já está cancelada.</p>
+            ) : m.estado === "a_confirmar" ? (
+              /*
+                A HORA MUDOU E ESPERA RESPOSTA. A hora velha fica riscada por cima da nova: quem
+                recebe o email lembra-se da hora que tinha, e ver as duas é o que torna a mudança
+                óbvia num relance em vez de obrigar a comparar com a memória.
+              */
+              <>
+                {m.inicioAnterior && (
+                  <p className="mt-4 text-[13px] text-zinc-500">
+                    Era <s>{new Date(m.inicioAnterior).toLocaleString("pt-PT", { dateStyle: "long", timeStyle: "short" })}</s>
+                  </p>
+                )}
+                <p className="mt-4 rounded-lg border border-[#D2A63C]/30 bg-[#D2A63C]/10 px-3 py-2 text-[13.5px] text-[#E9C46A]">
+                  Tivemos de mudar a hora. Serve-te?
+                </p>
+                <button
+                  type="button" onClick={() => void responder("confirmar")} disabled={aCancelar}
+                  className="mt-4 w-full rounded-xl bg-[#D2A63C] px-4 py-3 text-[15px] font-semibold text-black disabled:opacity-50"
+                >
+                  {aCancelar ? "…" : "Confirmo a hora nova"}
+                </button>
+                <button
+                  type="button" onClick={() => void responder("cancelar")} disabled={aCancelar}
+                  className="mt-2 w-full rounded-xl border border-white/12 px-4 py-2.5 text-[13.5px] text-zinc-300 hover:bg-white/5 disabled:opacity-50"
+                >
+                  Não me serve — cancelar e escolher outra
+                </button>
+              </>
             ) : (
               <>
                 <button

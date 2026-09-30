@@ -34,8 +34,26 @@ const AMBITOS = [
   'https://www.googleapis.com/auth/calendar.readonly',
 ].join(' ')
 
+/**
+ * O valor do ambiente, limpo.
+ *
+ * NÃO é paranóia: o `GOOGLE_CLIENT_ID` desta casa tinha, a 30/09, um `\n` LITERAL colado ao fim.
+ * Basta isso para o Google responder «Acesso bloqueado» com um erro que não diz qual é o problema —
+ * e ninguém olha para um client_id à procura de dois caracteres invisíveis. A mesma defesa já
+ * existia em `lib/stripe-prices.ts` pela mesma razão; repete-se aqui porque o valor é outro.
+ *
+ * Tira aspas (quem cola de um painel traz-nas), espaços, quebras de linha reais e a sequência
+ * `\n` escrita como texto.
+ */
+function limpo(v: string | undefined): string {
+  return String(v ?? '').trim().replace(/^["']|["']$/g, '').replace(/(\\n|\\r|\s)+$/g, '').trim()
+}
+
+export const clienteId = (): string => limpo(process.env.GOOGLE_CLIENT_ID)
+export const clienteSegredo = (): string => limpo(process.env.GOOGLE_CLIENT_SECRET)
+
 export function googleConfigurado(): boolean {
-  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+  return Boolean(clienteId() && clienteSegredo())
 }
 
 export function enderecoDeRetorno(): string {
@@ -52,7 +70,7 @@ export function enderecoDeRetorno(): string {
  */
 export function enderecoDeConsentimento(anfitriaoId: string, estado: string): string {
   const p = new URLSearchParams({
-    client_id: String(process.env.GOOGLE_CLIENT_ID),
+    client_id: clienteId(),
     redirect_uri: enderecoDeRetorno(),
     response_type: 'code',
     scope: AMBITOS,
@@ -69,8 +87,8 @@ async function trocarPorTokens(corpo: Record<string, string>): Promise<Record<st
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: String(process.env.GOOGLE_CLIENT_ID),
-      client_secret: String(process.env.GOOGLE_CLIENT_SECRET),
+      client_id: clienteId(),
+      client_secret: clienteSegredo(),
       ...corpo,
     }).toString(),
   })

@@ -26,8 +26,10 @@ type Tipo = {
   duracao_min: number; local: string; ativo: boolean; ordem: number; anfitrioes: string[]; pipeline_estado: string
 }
 type Marcacao = {
-  id: string; nome: string; email: string; telefone: string | null; inicio: string; estado: string
+  id: string; anfitriao_id: string; nome: string; email: string; telefone: string | null; inicio: string; estado: string
   local: string; respostas: Record<string, string>; negocio_id: string | null; fuso_convidado: string | null
+  inicio_anterior: string | null; confirmada_em: string | null; notas_internas: string | null
+  avisos: Array<{ motivo: string; em: string; email: boolean; whatsapp: boolean; nota: string }>
   agenda_tipos?: { nome?: string } | null
   agenda_anfitrioes?: { nome?: string } | null
 }
@@ -62,6 +64,29 @@ export default function AgendaAdmin() {
     setAGravar(null)
     if (r?.error) { setErro(r.error); return }
     await ler()
+  }
+
+  /**
+   * MUDAR A HORA. Pede-se a hora nova em texto local («2026-10-07 16:00») e não em ISO: quem está a
+   * remarcar está a olhar para o relógio da parede, não para UTC. A conversão é feita aqui, uma vez.
+   *
+   * O convidado recebe email e WhatsApp a PEDIR confirmação — a chamada fica «à espera» até ele
+   * responder. É o que impede alguém de contar com uma hora que a outra pessoa nunca aceitou.
+   */
+  const remarcar = async (m: Marcacao) => {
+    const actual = new Date(m.inicio)
+    const sugestao = `${actual.getFullYear()}-${String(actual.getMonth() + 1).padStart(2, "0")}-${String(actual.getDate()).padStart(2, "0")} ${String(actual.getHours()).padStart(2, "0")}:${String(actual.getMinutes()).padStart(2, "0")}`
+    const v = window.prompt(`Hora nova para «${m.nome}» (AAAA-MM-DD HH:MM, hora local).\n\nO convidado recebe email e WhatsApp a pedir confirmação.`, sugestao)
+    if (!v) return
+    const d = new Date(v.replace(" ", "T"))
+    if (!Number.isFinite(d.getTime())) { setErro("Essa hora não é válida. Usa AAAA-MM-DD HH:MM."); return }
+    await agir({ accao: "remarcar", id: m.id, inicio: d.toISOString() }, m.id)
+  }
+
+  const notas = async (m: Marcacao) => {
+    const v = window.prompt(`O que aconteceu na chamada com ${m.nome}?`, m.notas_internas ?? "")
+    if (v === null) return
+    await agir({ accao: "notas", id: m.id, notas: v }, m.id)
   }
 
   if (!dados) return <div className="flex items-center gap-2 p-8 text-zinc-500"><Loader2 className="h-4 w-4 animate-spin" /> a ler…</div>
@@ -167,16 +192,43 @@ export default function AgendaAdmin() {
                     {m.email}{m.telefone ? ` · ${m.telefone}` : ""}
                     {m.fuso_convidado && m.fuso_convidado !== "Europe/Lisbon" ? ` · ${m.fuso_convidado}` : ""}
                   </p>
+                  {m.notas_internas && <p className="mt-1 text-[11.5px] text-[#E9C46A]/80">nota: {m.notas_internas}</p>}
                   {Object.entries(m.respostas ?? {}).length > 0 && (
                     <p className="mt-1 text-[11.5px] text-zinc-400">
                       {Object.entries(m.respostas).map(([k, v]) => `${k}: ${v}`).join(" · ")}
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
                   {m.negocio_id && <span className="rounded border border-emerald-500/30 px-1.5 py-0.5 text-[10.5px] text-emerald-300">no pipeline</span>}
-                  {m.estado === "marcada" ? (
+                  {m.estado === "a_confirmar" && (
+                    <span className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10.5px] text-amber-200" title="Mudámos a hora e o convidado ainda não respondeu.">
+                      à espera de confirmação
+                    </span>
+                  )}
+                  {/* O último aviso enviado: quem vai ligar precisa de saber se a pessoa FOI avisada. */}
+                  {m.avisos?.length > 0 && (
+                    <span
+                      className={`rounded border px-1.5 py-0.5 text-[10.5px] ${m.avisos[m.avisos.length - 1].whatsapp ? "border-emerald-500/30 text-emerald-300" : "border-white/12 text-zinc-500"}`}
+                      title={m.avisos.map((a) => `${a.motivo}: ${a.nota}`).join("\n")}
+                    >
+                      {m.avisos[m.avisos.length - 1].whatsapp ? "avisado (wa+email)" : "avisado (só email)"}
+                    </span>
+                  )}
+
+                  {/* ── DISTRIBUIR: passar a chamada a quem a vai fazer. Não avisa o convidado. ── */}
+                  <select
+                    value={m.anfitriao_id}
+                    onChange={(e) => void agir({ accao: "distribuir", id: m.id, anfitriao_id: e.target.value }, m.id)}
+                    title="Quem faz esta chamada"
+                    className="rounded border border-white/12 bg-black/40 px-1.5 py-0.5 text-[11.5px] text-zinc-300"
+                  >
+                    {dados.anfitrioes.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                  </select>
+
+                  {["marcada", "a_confirmar"].includes(m.estado) ? (
                     <>
+                      <BotaoMini onClick={() => void remarcar(m)}>mudar hora</BotaoMini>
                       <BotaoMini onClick={() => void agir({ accao: "estado", id: m.id, estado: "compareceu" }, m.id)}>veio</BotaoMini>
                       <BotaoMini onClick={() => void agir({ accao: "estado", id: m.id, estado: "faltou" }, m.id)}>faltou</BotaoMini>
                       <BotaoMini tom="perigo" onClick={() => void agir({ accao: "estado", id: m.id, estado: "cancelada" }, m.id)}>cancelar</BotaoMini>
@@ -184,6 +236,7 @@ export default function AgendaAdmin() {
                   ) : (
                     <span className="text-[11.5px] text-zinc-500">{m.estado}</span>
                   )}
+                  <BotaoMini onClick={() => void notas(m)}>notas</BotaoMini>
                 </div>
               </div>
             ))}

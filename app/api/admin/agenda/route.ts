@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { soAdmin } from '@/lib/copia-contas/servidor/guarda'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { minutosDoRelogio } from '@/lib/agenda/horas'
+import { avisarConvidado } from '@/lib/agenda/avisos'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +27,7 @@ export const GET = soAdmin(async () => {
       .order('ordem'),
     db.from('agenda_tipos').select('*').order('ordem'),
     db.from('agenda_marcacoes')
-      .select('id, nome, email, telefone, inicio, fim, estado, local, join_url, respostas, negocio_id, fuso_convidado, agenda_tipos(nome), agenda_anfitrioes(nome)')
+      .select('id, tipo_id, anfitriao_id, nome, email, telefone, inicio, fim, estado, local, join_url, respostas, negocio_id, fuso_convidado, inicio_anterior, confirmada_em, notas_internas, avisos, agenda_tipos(nome), agenda_anfitrioes(nome)')
       .gte('inicio', new Date(Date.now() - 7 * 86_400_000).toISOString())
       .order('inicio')
       .limit(200),
@@ -130,11 +131,105 @@ export const POST = soAdmin(async (_adminId: string, request: NextRequest) => {
      */
     case 'estado': {
       const estado = String(b.estado ?? '')
-      if (!['marcada', 'cancelada', 'compareceu', 'faltou'].includes(estado)) {
+      if (!['marcada', 'a_confirmar', 'cancelada', 'compareceu', 'faltou'].includes(estado)) {
         return NextResponse.json({ error: 'estado inválido' }, { status: 400 })
       }
       const { error } = await db.from('agenda_marcacoes')
         .update({ estado, updated_at: new Date().toISOString(), ...(estado === 'cancelada' ? { cancelada_em: new Date().toISOString() } : {}) })
+        .eq('id', String(b.id ?? ''))
+      if (error) return NextResponse.json({ error: error.message.slice(0, 300) }, { status: 400 })
+      return NextResponse.json({ ok: true })
+    }
+
+    /**
+     * REMARCAR POR DENTRO — e PEDIR CONFIRMAÇÃO.
+     *
+     * Mudar a hora de uma chamada não é a mesma coisa que marcá-la: do outro lado está uma pessoa
+     * que já arrumou o dia à volta daquela hora. Por isso a marcação não passa a «marcada» — passa
+     * a «a_confirmar», e só volta a contar como firme quando ela disser que sim.
+     *
+     * A hora fica tomada na mesma enquanto espera (o índice único conta as duas), senão a mesma
+     * hora era proposta a duas pessoas ao mesmo tempo.
+     */
+    case 'remarcar': {
+      const id = String(b.id ?? '')
+      const novoInicio = new Date(String(b.inicio ?? ''))
+      if (!id || !Number.isFinite(novoInicio.getTime())) {
+        return NextResponse.json({ error: 'falta a marcação ou a hora nova' }, { status: 400 })
+      }
+
+      const { data: m } = await db.from('agenda_marcacoes')
+        .select('id, inicio, fim, token, nome, email, telefone, local, join_url, anfitriao_id, agenda_tipos(nome), agenda_anfitrioes(nome)')
+        .eq('id', id).maybeSingle()
+      if (!m) return NextResponse.json({ error: 'marcação não encontrada' }, { status: 404 })
+
+      const duracaoMs = new Date(String(m.fim)).getTime() - new Date(String(m.inicio)).getTime()
+      const novoFim = new Date(novoInicio.getTime() + duracaoMs)
+      // Trocar de anfitrião no mesmo gesto: é o caso normal de «este não pode, passa ao outro».
+      const anfitriaoId = String(b.anfitriao_id ?? m.anfitriao_id)
+
+      const { error } = await db.from('agenda_marcacoes').update({
+        inicio: novoInicio.toISOString(),
+        fim: novoFim.toISOString(),
+        anfitriao_id: anfitriaoId,
+        inicio_anterior: m.inicio,
+        estado: 'a_confirmar',
+        confirmada_em: null,
+        remarcada_em: new Date().toISOString(),
+        remarcada_por: _adminId,
+        updated_at: new Date().toISOString(),
+      }).eq('id', id)
+
+      if (error) {
+        // 23505 = o índice único: essa hora já está tomada nesse anfitrião.
+        const ocupada = String((error as { code?: string }).code) === '23505'
+        return NextResponse.json(
+          { error: ocupada ? 'Essa hora já está ocupada para esse anfitrião.' : error.message.slice(0, 300) },
+          { status: ocupada ? 409 : 400 },
+        )
+      }
+
+      const { data: anf } = await db.from('agenda_anfitrioes').select('nome').eq('id', anfitriaoId).maybeSingle()
+      const aviso = await avisarConvidado('remarcada', {
+        id, token: String(m.token),
+        tipoNome: (m.agenda_tipos as unknown as { nome?: string })?.nome ?? 'Chamada',
+        anfitriao: String(anf?.nome ?? (m.agenda_anfitrioes as unknown as { nome?: string })?.nome ?? 'MoreThanMoney'),
+        nome: String(m.nome), email: String(m.email), telefone: (m.telefone as string) ?? null,
+        inicio: novoInicio, fim: novoFim,
+        local: String(m.local), joinUrl: (m.join_url as string) ?? null,
+        inicioAnterior: new Date(String(m.inicio)),
+      })
+      return NextResponse.json({ ok: true, aviso })
+    }
+
+    /**
+     * DISTRIBUIR — passar a chamada a quem a vai fazer, sem mexer na hora.
+     *
+     * É o gesto do setter: ele marca e entrega. Não avisa o convidado, de propósito: para quem
+     * está do outro lado, a chamada não mudou. Avisar «passou para outra pessoa» só levanta uma
+     * dúvida que não existia.
+     */
+    case 'distribuir': {
+      const id = String(b.id ?? '')
+      const anfitriaoId = String(b.anfitriao_id ?? '')
+      if (!id || !anfitriaoId) return NextResponse.json({ error: 'falta a marcação ou o anfitrião' }, { status: 400 })
+      const { error } = await db.from('agenda_marcacoes')
+        .update({ anfitriao_id: anfitriaoId, updated_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) {
+        const ocupada = String((error as { code?: string }).code) === '23505'
+        return NextResponse.json(
+          { error: ocupada ? 'Essa pessoa já tem uma chamada a essa hora.' : error.message.slice(0, 300) },
+          { status: ocupada ? 409 : 400 },
+        )
+      }
+      return NextResponse.json({ ok: true })
+    }
+
+    /** O que aconteceu na chamada, escrito por quem a fez. */
+    case 'notas': {
+      const { error } = await db.from('agenda_marcacoes')
+        .update({ notas_internas: String(b.notas ?? '').slice(0, 4000) || null, updated_at: new Date().toISOString() })
         .eq('id', String(b.id ?? ''))
       if (error) return NextResponse.json({ error: error.message.slice(0, 300) }, { status: 400 })
       return NextResponse.json({ ok: true })
