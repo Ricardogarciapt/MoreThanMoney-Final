@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { soAdmin } from '@/lib/copia-contas/servidor/guarda'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { contarLeads } from '@/lib/instagram/leads-novos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -64,7 +65,7 @@ export const GET = soAdmin(async () => {
    *
    * É o pior engano possível num painel: o vazio a dizer «está tudo bem».
    */
-  const [porColuna, radar, radarTrabalhado, radarTopo, leads, leadsSemDm, marcacoes, membros, membrosActivos] = await Promise.all([
+  const [porColuna, radar, radarTrabalhado, radarTopo, leadsLinhas, perfis, marcacoes, membros, membrosActivos] = await Promise.all([
     Promise.all(COLUNAS.map((c) =>
       db.from('social_scheduled_posts')
         .select('id, caption, media_type, pillar, status, scheduled_at, permalink, ig_username, error')
@@ -81,9 +82,14 @@ export const GET = soAdmin(async () => {
       .eq('estado', 'pendente')
       .order('pontuacao', { ascending: false })
       .limit(6),
-    db.from('ig_leads').select('comment_id', { count: 'exact', head: true }),
-    // As DM que NÃO saíram. É a fuga real do funil: o lead comentou, e o link nunca lhe chegou.
-    db.from('ig_leads').select('comment_id', { count: 'exact', head: true }).neq('dm_status', 'sent'),
+    // As LINHAS, não a contagem: é preciso o `commenter` de cada uma para contar PESSOAS. Ver a
+    // nota em `lib/instagram/leads-novos.ts` — a 30/09 havia nove linhas e uma pessoa, e essa
+    // pessoa era um membro.
+    db.from('ig_leads').select('commenter, keyword, created_at, dm_status').limit(1000),
+    // Quem já é da casa. O handle do Instagram vive em `profiles.social_media` quando alguém o
+    // escreveu lá — e só lá é que a ligação existe: nada liga «ruipaulo.fxcripto» a «Rui
+    // Rodrigues» sem uma pessoa o dizer.
+    db.from('profiles').select('username, full_name, email, social_media').limit(1000),
     db.from('agenda_marcacoes').select('id', { count: 'exact', head: true }).in('estado', ['marcada', 'a_confirmar', 'compareceu']),
     db.from('profiles').select('id', { count: 'exact', head: true }),
     db.from('profiles').select('id', { count: 'exact', head: true }).eq('is_active', true),
@@ -134,10 +140,25 @@ export const GET = soAdmin(async () => {
    * já nos segue.
    */
   const trabalhados = radarTrabalhado.count ?? 0
+
+  /**
+   * LEADS SÃO PESSOAS, e pessoas que ainda não são nossas. Contar linhas de `ig_leads` dava nove
+   * onde havia uma, e essa uma era um membro — ver a guarda em `leads-novos.check.ts`.
+   */
+  const contagem = contarLeads(leadsLinhas.data ?? [], perfis.data ?? [])
+  const semDm = (leadsLinhas.data ?? []).filter((l) => String(l.dm_status) !== 'sent').length
   const funil = [
     { icone: '📡', rotulo: 'Radar Instagram', sub: 'publicações encontradas por hashtag', n: topo, pct: 100 },
     { icone: '✋', rotulo: 'Trabalhados à mão', sub: 'comentados por uma pessoa (a API não o faz)', n: trabalhados, pct: pct(trabalhados) },
-    { icone: '💬', rotulo: 'Leads do Instagram', sub: 'comentaram a palavra-chave nos nossos posts', n: leads.count ?? 0, pct: pct(leads.count ?? 0) },
+    {
+      icone: '💬',
+      rotulo: 'Leads do Instagram',
+      sub: contagem.jaNossas.length
+        ? `${contagem.pessoas} pessoas · ${contagem.jaNossas.length} já são da casa · ${contagem.comentarios} comentários`
+        : `${contagem.pessoas} pessoas em ${contagem.comentarios} comentários`,
+      n: contagem.novas,
+      pct: pct(contagem.novas),
+    },
     { icone: '📅', rotulo: 'Chamadas marcadas', sub: '/agendar', n: marcacoes.count ?? 0, pct: pct(marcacoes.count ?? 0) },
     { icone: '⭐', rotulo: 'Membros activos', sub: `de ${membros.count ?? 0} contas`, n: membrosActivos.count ?? 0, pct: pct(membrosActivos.count ?? 0) },
   ]
@@ -164,7 +185,7 @@ export const GET = soAdmin(async () => {
      * NUNCA chegou. Nas nove de Setembro o motivo foi sempre o mesmo — a app não tem permissão
      * para `private_replies`, e o que saiu foi uma resposta pública sem link.
      */
-    fuga: { leadsSemDm: leadsSemDm.count ?? 0, leadsTotal: leads.count ?? 0 },
+    fuga: { leadsSemDm: semDm, leadsTotal: contagem.comentarios, pessoas: contagem.pessoas, jaNossas: contagem.jaNossas },
     // Para o ecrã poder dizer DE QUANDO são os números em vez de os mostrar como se fossem de agora.
     lidoEm: new Date().toISOString(),
     janela: { desde: ha30dias },

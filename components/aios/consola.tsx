@@ -47,7 +47,7 @@ type Prospeto = { id: string; hashtag: string; permalink: string; excerto: strin
 type Painel = {
   quadro: Coluna[]; funil: DegrauFunil[]; lidoEm: string
   radar: { pendentes: number; porTrabalhar: Prospeto[] }
-  fuga: { leadsSemDm: number; leadsTotal: number }
+  fuga: { leadsSemDm: number; leadsTotal: number; pessoas: number; jaNossas: string[] }
 }
 
 const CHECKLIST = [
@@ -492,11 +492,14 @@ export default function ConsolaAios() {
                     {painel.fuga.leadsSemDm > 0 && (
                       <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(248,113,113,.4)", background: "rgba(248,113,113,.08)" }}>
                         <div style={{ fontSize: 12, color: "#fca5a5", fontWeight: 600 }}>
-                          ⚠️ {painel.fuga.leadsSemDm} de {painel.fuga.leadsTotal} leads sem mensagem privada
+                          ⚠️ {painel.fuga.leadsSemDm} de {painel.fuga.leadsTotal} comentários sem mensagem privada
+                          {" "}({painel.fuga.pessoas} pessoa{painel.fuga.pessoas === 1 ? "" : "s"})
                         </div>
                         <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>
-                          Comentaram a palavra-chave e o link nunca lhes chegou: a app não tem permissão
-                          para <code>private_replies</code>. Saiu uma resposta pública, sem link.
+                          A resposta pública saiu, e leva o link. O que faltou foi o Direct.
+                          {painel.fuga.jaNossas.length > 0 && (
+                            <> Destes, já são da casa: {painel.fuga.jaNossas.map((h) => `@${h}`).join(", ")} — não entram no funil de captação.</>
+                          )}
                         </div>
                       </div>
                     )}
