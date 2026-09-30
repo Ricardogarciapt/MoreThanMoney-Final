@@ -2,59 +2,54 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
 import { Loader2, ShieldAlert } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import ConsolaAios from "@/components/aios/consola"
 
 /**
- * /aios — JARVIS AI OS
- * Apenas acessível a utilizadores com user_type = 'admin'.
- * O middleware já bloqueia o acesso a nível de servidor;
- * esta página adiciona uma camada extra de verificação client-side.
+ * /aios — o JARVIS.
+ *
+ * Deixou de ser um `<iframe>` para `public/aios/index.html` a 30/09/2026. O que isso resolve, por
+ * ordem de importância:
+ *
+ *  · a chave da Fish Audio estava escrita em claro nesse HTML e ia para o browser de quem abrisse
+ *    a página. Agora a fala passa por `/api/aios/voz`, e a chave não sai do servidor;
+ *  · o ficheiro era servido de `public/`, ou seja fora do controlo do middleware enquanto ficheiro
+ *    estático. O que se vê agora é um componente React, servido pelas mesmas regras do resto;
+ *  · e o AIOS passa a poder usar o que a casa já tem — sessão, componentes, tipos — em vez de
+ *    reescrever tudo dentro de uma moldura.
  */
-export default function AiosPage() {
-  const { user, isLoading } = useAuth()
+export default function PaginaAios() {
+  const { user, isAdmin, isLoading } = useAuth()
   const router = useRouter()
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  const [montado, setMontado] = useState(false)
 
+  useEffect(() => { setMontado(true) }, [])
   useEffect(() => {
-    if (isLoading) return
-    if (!user) {
-      router.replace("/login?redirect=/aios")
-      return
-    }
-    const uType = (user as any).user_type ?? (user as any).profile?.user_type
-    if (uType === "admin") {
-      setIsAdmin(true)
-    } else {
-      setIsAdmin(false)
-    }
-  }, [user, isLoading, router])
+    if (!montado || isLoading) return
+    if (!user) router.replace("/login?redirect=/aios")
+  }, [montado, isLoading, user, router])
 
-  if (isLoading || isAdmin === null) {
+  if (!montado || isLoading) {
     return (
-      <div className="min-h-screen bg-[#050810] flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-[#D2A63C]" />
+      <div className="flex min-h-screen items-center justify-center bg-[#050810]">
+        <Loader2 className="h-10 w-10 animate-spin text-[#D2A63C]" />
       </div>
     )
   }
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-[#050810] flex items-center justify-center text-white flex-col gap-4">
-        <ShieldAlert className="w-12 h-12 text-red-400" />
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#050810] text-white">
+        <ShieldAlert className="h-12 w-12 text-red-400" />
         <p className="text-gray-400">Acesso restrito a administradores.</p>
       </div>
     )
   }
 
   return (
-    <div className="fixed inset-0 bg-[#050810]" style={{ zIndex: 9999 }}>
-      <iframe
-        src="/aios/index.html"
-        className="w-full h-full border-0"
-        title="JARVIS — MoreThanMoney AI OS"
-        allow="clipboard-read; clipboard-write"
-      />
+    <div className="fixed inset-0 overflow-hidden bg-[#050810]" style={{ zIndex: 9999 }}>
+      <ConsolaAios />
     </div>
   )
 }

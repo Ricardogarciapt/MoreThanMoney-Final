@@ -14,8 +14,10 @@ export default function JarvisPage() {
       router.replace("/login?redirect=/jarvis")
       return
     }
-    // Redirect directly to static AIOS page — avoids X-Frame-Options DENY
-    window.location.replace("/aios/index.html")
+    // O AIOS deixou de ser um ficheiro estático a 30/09/2026 — é uma página React em /aios. O
+    // endereço antigo (`/aios/index.html`) já não existe, e este atalho dava 404.
+    // `router.replace` e não `window.location`: agora é uma rota do próprio Next, não um ficheiro.
+    router.replace("/aios")
   }, [user, isLoading, router])
 
   return (
