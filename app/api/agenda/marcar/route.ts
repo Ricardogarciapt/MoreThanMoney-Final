@@ -45,8 +45,11 @@ export async function POST(request: NextRequest) {
   if (!tipo) return NextResponse.json({ error: 'Esse tipo de chamada não existe.' }, { status: 404 })
 
   // Numa chamada de WhatsApp o número NÃO é opcional: é o sítio onde a chamada acontece. Deixar
-  // marcar sem ele é marcar uma chamada que não se pode fazer.
-  if (tipo.local === 'whatsapp' && (!telefone || telefone.replace(/\D/g, '').length < 9)) {
+  // marcar sem ele é marcar uma chamada que não se pode fazer. Se a pessoa escolheu Zoom, o número
+  // volta a ser o que sempre foi — conforto para avisar, não o canal.
+  const ondeEscolhido = limpar(corpo.local, 20).toLowerCase()
+  const vaiPorWhatsApp = ondeEscolhido ? ondeEscolhido === 'whatsapp' : tipo.local === 'whatsapp'
+  if (vaiPorWhatsApp && (!telefone || telefone.replace(/\D/g, '').length < 9)) {
     return NextResponse.json({ error: 'Precisamos do teu número de WhatsApp — é por aí que a chamada acontece.', campo: 'telefone' }, { status: 400 })
   }
 
@@ -73,6 +76,7 @@ export async function POST(request: NextRequest) {
   const r = await marcar({
     slugTipo, inicioIso, nome, email, telefone,
     anfitriaoId: limpar(corpo.anfitriao, 40) || null,
+    local: ondeEscolhido || null,
     fusoConvidado: limpar(corpo.fuso, 64) || null,
     respostas,
     utm: (corpo.utm && typeof corpo.utm === 'object' ? corpo.utm : {}) as Record<string, unknown>,
@@ -84,7 +88,7 @@ export async function POST(request: NextRequest) {
 
   // O aviso ao convidado e a nós. Nenhum deles pode fazer a resposta falhar: a chamada já está
   // marcada, e é isso que a pessoa precisa de ver no ecrã.
-  void avisar({ ...r, tipoNome: tipo.nome, local: tipo.local, nome, email, telefone }).catch((e) =>
+  void avisar({ ...r, tipoNome: tipo.nome, nome, email, telefone }).catch((e) =>
     console.error('[agenda] avisos:', e))
 
   return NextResponse.json({
@@ -121,16 +125,37 @@ async function avisar(p: {
     // O transporte e a marca da casa são os de sempre (`mail-transport`): um email de confirmação
     // que chega com outro aspecto do que o resto faz a pessoa duvidar que veio de nós.
     const { createMailTransporter, mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } = await import('@/lib/mail-transport')
+
+    /**
+     * O .ics VAI ANEXADO, e é a parte do email que mais trabalho poupa: põe a chamada na agenda de
+     * quem marcou — seja ela Google, Apple ou Outlook — com um lembrete 30 minutos antes. Sem ele,
+     * a confirmação é um texto que a pessoa lê uma vez e esquece, e a falta à chamada não é
+     * má-vontade: é não ter ficado em lado nenhum.
+     */
+    const convite = ics({
+      id: p.id,
+      titulo: `${p.tipoNome} · MoreThanMoney`,
+      descricao: `${onde}\n\nPrecisas de desmarcar? ${base}/agendar/gerir?t=${p.token}`,
+      inicio: new Date(p.inicio),
+      fim: new Date(p.fim),
+      organizador: p.anfitriao,
+      local: p.joinUrl ?? (p.local === 'whatsapp' ? 'Chamada de WhatsApp' : 'MoreThanMoney'),
+    })
+
     await createMailTransporter().sendMail({
       from: mailFrom(),
       to: p.email,
       subject: `Chamada marcada: ${p.tipoNome} — ${quando}`,
-      attachments: brandedMailAttachments(),
+      attachments: [
+        ...brandedMailAttachments(),
+        { filename: 'chamada-mtm.ics', content: convite, contentType: 'text/calendar; charset=utf-8; method=PUBLISH' },
+      ],
       html: prepareBrandedEmailHtml(`
         <p>Olá ${p.nome},</p>
         <p>Está marcado: <strong>${p.tipoNome}</strong> com ${p.anfitriao}.</p>
         <p><strong>${quando}</strong> (hora de Lisboa)</p>
         <p>${onde}</p>
+        <p>Anexámos o convite para a tua agenda.</p>
         <p>Se precisares de desmarcar: <a href="${base}/agendar/gerir?t=${p.token}">cancelar esta chamada</a>.</p>
         <p>Até já,<br>MoreThanMoney</p>`),
     })

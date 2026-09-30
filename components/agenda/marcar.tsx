@@ -29,7 +29,7 @@ type Tipo = {
   perguntas: Pergunta[]
   cor: string
 }
-type Anfitriao = { anfitriao: { id: string; nome: string; fuso: string }; horas: string[] }
+type Anfitriao = { anfitriao: { id: string; nome: string; fuso: string; temZoom: boolean }; horas: string[] }
 
 const ONDE: Record<Tipo["local"], { texto: string; Icone: typeof Video }> = {
   whatsapp: { texto: "Chamada de WhatsApp", Icone: MessageCircle },
@@ -49,10 +49,13 @@ export default function Marcar({ slugInicial }: { slugInicial?: string }) {
   const [tipos, setTipos] = useState<Tipo[] | null>(null)
   const [escolhido, setEscolhido] = useState<Tipo | null>(null)
   const [agenda, setAgenda] = useState<Anfitriao[] | null>(null)
-  const [hora, setHora] = useState<{ iso: string; anfitriaoId: string; anfitriao: string } | null>(null)
+  const [hora, setHora] = useState<{ iso: string; anfitriaoId: string; anfitriao: string; temZoom: boolean } | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [aEnviar, setAEnviar] = useState(false)
   const [feito, setFeito] = useState<null | { inicio: string; anfitriao: string; local: string; joinUrl: string | null; token: string }>(null)
+
+  const [diaEscolhido, setDiaEscolhido] = useState<string | null>(null)
+  const [onde, setOnde] = useState<"whatsapp" | "zoom" | null>(null)
 
   const [nome, setNome] = useState("")
   const [email, setEmail] = useState("")
@@ -85,12 +88,12 @@ export default function Marcar({ slugInicial }: { slugInicial?: string }) {
   /** As horas de todos os anfitriões, agrupadas por dia no fuso de quem está a olhar. */
   const dias = useMemo(() => {
     if (!agenda) return []
-    const mapa = new Map<string, Array<{ iso: string; anfitriaoId: string; anfitriao: string }>>()
+    const mapa = new Map<string, Array<{ iso: string; anfitriaoId: string; anfitriao: string; temZoom: boolean }>>()
     for (const a of agenda) {
       for (const iso of a.horas) {
         const d = new Date(iso)
         const chave = d.toLocaleDateString("pt-PT", { timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit" })
-        mapa.set(chave, [...(mapa.get(chave) ?? []), { iso, anfitriaoId: a.anfitriao.id, anfitriao: a.anfitriao.nome }])
+        mapa.set(chave, [...(mapa.get(chave) ?? []), { iso, anfitriaoId: a.anfitriao.id, anfitriao: a.anfitriao.nome, temZoom: a.anfitriao.temZoom }])
       }
     }
     return [...mapa.entries()]
@@ -102,6 +105,12 @@ export default function Marcar({ slugInicial }: { slugInicial?: string }) {
       .sort((a, b) => a.horas[0].iso.localeCompare(b.horas[0].iso))
   }, [agenda, fuso])
 
+  /** O dia aberto: o que a pessoa escolheu, ou o primeiro com horas. */
+  const diaAberto = useMemo(
+    () => dias.find((d) => d.chave === diaEscolhido) ?? dias[0] ?? null,
+    [dias, diaEscolhido],
+  )
+
   const marcar = async () => {
     if (!escolhido || !hora) return
     setAEnviar(true); setErro(null)
@@ -111,6 +120,7 @@ export default function Marcar({ slugInicial }: { slugInicial?: string }) {
       body: JSON.stringify({
         tipo: escolhido.slug, inicio: hora.iso, anfitriao: hora.anfitriaoId,
         nome, email, telefone, fuso, respostas,
+        local: onde ?? undefined,
       }),
     }).then((x) => x.json()).catch(() => ({ error: "Falhou. Tenta outra vez." }))
     setAEnviar(false)
@@ -199,25 +209,58 @@ export default function Marcar({ slugInicial }: { slugInicial?: string }) {
             Não há horas livres nos próximos dias. Escreve-nos e marcamos à mão.
           </p>
         ) : (
-          <div className="space-y-5">
-            {dias.map((d) => (
-              <div key={d.chave}>
-                <p className="mb-2 text-[13px] font-medium capitalize text-zinc-300">
-                  {d.quando.toLocaleDateString("pt-PT", { timeZone: fuso, weekday: "long", day: "numeric", month: "long" })}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            {/*
+              A TIRA DE DIAS. Antes desenhavam-se todos os dias uns debaixo dos outros com TODAS as
+              horas de cada um — três semanas de agenda davam duzentos botões e uma página que não
+              acabava. Aqui escolhe-se o dia numa linha e só se vêem as horas desse dia: é a mesma
+              informação, num ecrã em vez de dez.
+            */}
+            {/*
+              A barra de deslocamento vai escondida: o CSS global da casa pinta-a de dourado e
+              grosso, e por baixo de uma fila de dias isso lê-se como uma barra de progresso — a
+              pessoa fica à espera que encha. A tira continua a deslizar com o dedo e com a roda.
+            */}
+            <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {dias.map((d) => {
+                const activo = d.chave === diaAberto?.chave
+                return (
+                  <button
+                    key={d.chave} type="button" onClick={() => setDiaEscolhido(d.chave)}
+                    className={`flex min-w-[58px] shrink-0 flex-col items-center rounded-xl border px-2 py-2 transition-colors ${
+                      activo ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#E9C46A]" : "border-white/10 text-zinc-400 hover:border-white/25 hover:text-zinc-200"
+                    }`}
+                  >
+                    <span className="text-[10.5px] uppercase tracking-wide">
+                      {d.quando.toLocaleDateString("pt-PT", { timeZone: fuso, weekday: "short" }).replace(".", "")}
+                    </span>
+                    <span className="text-[17px] font-semibold leading-tight tabular-nums">
+                      {d.quando.toLocaleDateString("pt-PT", { timeZone: fuso, day: "numeric" })}
+                    </span>
+                    <span className="text-[9.5px] tabular-nums opacity-70">{d.horas.length}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {diaAberto && (
+              <div className="border-t border-white/[0.07] pt-3">
+                <p className="mb-2.5 text-[12.5px] capitalize text-zinc-400">
+                  {diaAberto.quando.toLocaleDateString("pt-PT", { timeZone: fuso, weekday: "long", day: "numeric", month: "long" })}
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {d.horas.map((h) => (
+                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+                  {diaAberto.horas.map((h) => (
                     <button
                       key={h.iso + h.anfitriaoId} type="button" onClick={() => setHora(h)}
                       title={`com ${h.anfitriao}`}
-                      className="rounded-lg border border-white/12 bg-black/30 px-3.5 py-2 text-[13.5px] tabular-nums text-zinc-200 transition-colors hover:border-[#D2A63C]/60 hover:bg-[#D2A63C]/10 hover:text-[#E9C46A]"
+                      className="rounded-lg border border-white/12 bg-black/30 py-2 text-center text-[13.5px] tabular-nums text-zinc-200 transition-colors hover:border-[#D2A63C]/60 hover:bg-[#D2A63C]/10 hover:text-[#E9C46A]"
                     >
                       {new Date(h.iso).toLocaleTimeString("pt-PT", { timeZone: fuso, hour: "2-digit", minute: "2-digit" })}
                     </button>
                   ))}
                 </div>
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>
@@ -234,9 +277,31 @@ export default function Marcar({ slugInicial }: { slugInicial?: string }) {
       } />
       {erro && <Aviso>{erro}</Aviso>}
       <div className="space-y-3">
+        {/*
+          ONDE FALAMOS. Só aparece quando há mesmo uma sala de Zoom do outro lado (`temZoom`, que
+          vem com as horas). Oferecer Zoom sem link é prometer uma sala que não existe, e isso
+          descobre-se à hora da chamada — o pior momento possível.
+        */}
+        {hora.temZoom && (
+          <Campo rotulo="Onde falamos">
+            <div className="flex gap-1.5">
+              {([["whatsapp", "Chamada de WhatsApp"], ["zoom", "Zoom"]] as const).map(([v, rotulo]) => {
+                const activo = (onde ?? (escolhido.local === "zoom" ? "zoom" : "whatsapp")) === v
+                return (
+                  <button
+                    key={v} type="button" onClick={() => setOnde(v)}
+                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] transition-colors ${activo ? "bg-[#D2A63C] text-black" : "border border-white/12 text-zinc-300 hover:bg-white/5"}`}
+                  >
+                    {v === "zoom" ? <Video className="h-3.5 w-3.5" /> : <MessageCircle className="h-3.5 w-3.5" />} {rotulo}
+                  </button>
+                )
+              })}
+            </div>
+          </Campo>
+        )}
         <Campo rotulo="Nome"><input value={nome} onChange={(e) => setNome(e.target.value)} className={CAMPO} placeholder="Como te chamas" /></Campo>
         <Campo rotulo="Email"><input value={email} onChange={(e) => setEmail(e.target.value)} type="email" inputMode="email" className={CAMPO} placeholder="para onde vai a confirmação" /></Campo>
-        <Campo rotulo={escolhido.local === "whatsapp" ? "WhatsApp (é por aqui que ligamos)" : "Telemóvel (opcional)"}>
+        <Campo rotulo={(onde ?? escolhido.local) === "whatsapp" ? "WhatsApp (é por aqui que ligamos)" : "Telemóvel (opcional)"}>
           <input value={telefone} onChange={(e) => setTelefone(e.target.value)} inputMode="tel" className={CAMPO} placeholder="+351 9xx xxx xxx" />
         </Campo>
         {escolhido.perguntas?.map((q) => (

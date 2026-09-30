@@ -139,7 +139,13 @@ export async function ocupadoDoAnfitriao(a: Anfitriao, de: Date, ate: Date): Pro
 }
 
 export interface HorasDeUmAnfitriao {
-  anfitriao: { id: string; nome: string; fuso: string }
+  /**
+   * `temZoom` viaja com as horas de propósito: é o que permite ao ecrã oferecer «WhatsApp ou Zoom»
+   * SÓ quando há mesmo uma sala para onde mandar a pessoa. Oferecer Zoom sem link é prometer uma
+   * sala que não existe — e isso descobre-se à hora da chamada, que é o pior momento possível.
+   * O link em si não sai daqui: só entra na confirmação de quem marcou.
+   */
+  anfitriao: { id: string; nome: string; fuso: string; temZoom: boolean }
   horas: string[]
 }
 
@@ -148,7 +154,7 @@ export async function horasDoTipo(tipo: TipoDeChamada, de: Date, ate: Date): Pro
   const equipa = await anfitrioesDoTipo(tipo)
   const agora = new Date()
   return Promise.all(equipa.map(async (a) => ({
-    anfitriao: { id: a.id, nome: a.nome, fuso: a.fuso },
+    anfitriao: { id: a.id, nome: a.nome, fuso: a.fuso, temZoom: Boolean(a.zoom_url) },
     horas: horasLivres({ regras: regrasDe(a, tipo), agora, de, ate, ocupado: await ocupadoDoAnfitriao(a, de, ate) })
       .map((d) => d.toISOString()),
   })))
@@ -169,6 +175,8 @@ export async function marcar(p: {
   respostas?: Record<string, unknown>
   utm?: Record<string, unknown>
   userId?: string | null
+  /** Onde o VISITANTE escolheu falar. Só pode reduzir a escolha, nunca inventar uma — ver abaixo. */
+  local?: string | null
 }): Promise<ResultadoMarcacao> {
   const tipo = await tipoPorSlug(p.slugTipo)
   if (!tipo) return { ok: false, codigo: 'tipo_desconhecido', mensagem: 'Esse tipo de chamada não existe.' }
@@ -211,7 +219,18 @@ export async function marcar(p: {
     return { ok: false, codigo: 'hora_ocupada', mensagem: 'Essa hora deixou de estar livre. Escolhe outra, por favor.' }
   }
 
-  const joinUrl = tipo.local === 'zoom' ? anfitriao.zoom_url ?? null : null
+  /**
+   * ONDE ACONTECE. O tipo traz o sítio por omissão; o visitante pode trocar para Zoom — mas SÓ se
+   * o anfitrião tiver mesmo uma sala. A validação é aqui e não no ecrã: um campo que o browser
+   * escolhe é um campo que qualquer pessoa pode escrever à mão.
+   */
+  const pedido = String(p.local ?? '').toLowerCase()
+  const local = pedido === 'zoom' && anfitriao.zoom_url
+    ? 'zoom'
+    : pedido === 'whatsapp'
+      ? 'whatsapp'
+      : tipo.local
+  const joinUrl = local === 'zoom' ? anfitriao.zoom_url ?? null : null
 
   const { data: criada, error } = await db().from('agenda_marcacoes').insert({
     tipo_id: tipo.id,
@@ -223,7 +242,7 @@ export async function marcar(p: {
     fuso_convidado: p.fusoConvidado?.slice(0, 64) ?? null,
     inicio: inicio.toISOString(),
     fim: fim.toISOString(),
-    local: tipo.local,
+    local,
     join_url: joinUrl,
     respostas: p.respostas ?? {},
     utm: p.utm ?? {},
@@ -244,13 +263,13 @@ export async function marcar(p: {
   // ── Daqui para baixo, NADA pode fazer a marcação falhar. Ela já existe. ──
   await Promise.allSettled([
     ligarAoPipeline({ id, tipo, nome: p.nome, email: p.email, telefone: p.telefone ?? null, inicio, utm: p.utm ?? {} }),
-    escreverNoGoogle({ id, anfitriao, tipo, inicio, fim, nome: p.nome, email: p.email, telefone: p.telefone ?? null }),
+    escreverNoGoogle({ id, anfitriao, tipo: { ...tipo, local }, inicio, fim, nome: p.nome, email: p.email, telefone: p.telefone ?? null }),
   ])
 
   return {
     ok: true, id, token,
     inicio: inicio.toISOString(), fim: fim.toISOString(),
-    anfitriao: anfitriao.nome, local: tipo.local, joinUrl,
+    anfitriao: anfitriao.nome, local, joinUrl,
   }
 }
 
