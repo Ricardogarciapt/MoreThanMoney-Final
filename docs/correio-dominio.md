@@ -1,6 +1,23 @@
 # O correio de `morethanmoney.pt`
 
-## O que se descobriu (30/09/2026)
+## Estado (30/09/2026, fim do dia)
+
+**O domínio já recebe correio.** Feito e verificado por `dns.check.ts`:
+
+- MX: `10 mx.zoho.eu` · `20 mx2.zoho.eu` · `50 mx3.zoho.eu` ✓
+- SPF: `v=spf1 include:zohomail.eu ~all` ✓
+- Caixa: `geral@morethanmoney.pt` (superadministrador)
+- Aliases da mesma caixa: `suporte@` `support@` `funded@` `admin@` `noreply@` `ceo@` `ricardogarcia@`
+- DMARC: ainda por pôr
+
+**A conta ficou no plano «Mail Free»**, não no Mail Lite — 5 licenças, e nesse plano **não há
+SMTP/IMAP nem reencaminhamento**. Consequências, que são as duas que interessam:
+
+1. o site **não pode** enviar como `geral@` (as variáveis `MAIL_SMTP_*` ficam à espera);
+2. **não se pode reencaminhar** uma caixa para o email pessoal de um educador — o
+   reencaminhamento é funcionalidade de plano pago.
+
+## O que se descobriu de manhã (30/09/2026)
 
 O site publica seis endereços `@morethanmoney.pt` a clientes e **o domínio não tinha MX nenhum**.
 Nem SPF, nem DMARC. O DNS está nos nameservers da Vercel (`ns1.vercel-dns.com`) e nunca foi
@@ -59,7 +76,7 @@ Vercel → Domains → `morethanmoney.pt` → DNS Records → **Add**.
 | MX | *(vazio / @)* | `mx.zoho.eu` | 10 |
 | MX | *(vazio / @)* | `mx2.zoho.eu` | 20 |
 | MX | *(vazio / @)* | `mx3.zoho.eu` | 50 |
-| TXT | *(vazio / @)* | `v=spf1 include:zohomail.com ~all` | — |
+| TXT | *(vazio / @)* | `v=spf1 include:zohomail.eu ~all` | — |
 
 Servidores **`.eu`** porque a conta é criada na região europeia. A documentação do Zoho é
 explícita: o domínio de topo dos MX **muda com o centro de dados** da conta, e só os valores que
@@ -89,7 +106,7 @@ quando os relatórios mostrarem que tudo o que envia legítimo já está a passa
 que não ter nenhum. Junta-se num só:
 
 ```
-v=spf1 include:zohomail.com include:_spf.google.com ~all
+v=spf1 include:zohomail.eu include:_spf.google.com ~all
 ```
 
 O `dns.check.ts` apanha este caso e falha alto.
