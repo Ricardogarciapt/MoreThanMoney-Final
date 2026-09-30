@@ -263,8 +263,18 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
 
       const handle = commenter ? ` @${commenter}` : ""
       const dmText = intent.dm(commenter ? ` ${commenter.split(" ")[0]}` : "")
-      // SETTER: DM só dentro da janela de 7 dias (regra Meta). Fora → loga como window_expired
-      // (segues à mão). Dentro → private_reply; se falhar (scope), resposta pública sem link.
+      /**
+       * SETTER: DM só dentro da janela de 7 dias (regra da Meta). Fora → fica `window_expired` e
+       * segue-se à mão. Dentro → `private_replies`; se falhar, responde-se em PÚBLICO.
+       *
+       * A resposta pública LEVA O LINK, e leva-o de propósito — ver os `pub()` de cada intenção.
+       * (Este comentário dizia «resposta pública sem link» e estava errado desde que os `pub()`
+       * passaram a incluir o endereço. Enganou-me a mim a 30/09, a ler o comentário em vez do
+       * código: cheguei a dizer ao dono que nove leads tinham ficado sem link, e tinham-no
+       * recebido. Um comentário errado é pior do que nenhum.)
+       *
+       * O que a DM dá a mais é privacidade e a conversa aberta — não é o link.
+       */
       const withinWindow = !c.timestamp || new Date(c.timestamp).getTime() >= cutoff
       let dm_status = "window_expired"
       let dm_error: string | null = null
