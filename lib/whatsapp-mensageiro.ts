@@ -93,7 +93,11 @@ export async function lerEstadoDoContacto(e164: string): Promise<EstadoDoContact
   const { data: entrada } = await db
     .from('whatsapp_mensagens')
     .select('criado_em')
-    .eq('numero', e164)
+    // `telefone`, não `numero` — a coluna chama-se assim. Este filtro nunca acertava em nada, e um
+    // filtro que não acerta devolve «nunca escreveu», que é a resposta que FECHA a janela das 24
+    // horas. Ou seja: mesmo que o livro gravasse, o sistema continuaria a recusar texto livre a
+    // quem tinha acabado de nos escrever.
+    .eq('telefone', e164)
     .eq('direcao', 'entrada')
     .order('criado_em', { ascending: false })
     .limit(1)
@@ -138,20 +142,47 @@ interface LinhaDoLivro {
  * Se o livro falhar, a mensagem que já saiu não deve ser tratada como não enviada — e uma recusa não
  * deve virar excepção por causa de um `insert`. O erro fica no `console` para não desaparecer.
  */
+/**
+ * OS NOMES DAS COLUNAS SÃO OS DA TABELA, e isto teve de ser aprendido à força.
+ *
+ * Até 30/09/2026 esta função escrevia `numero`, `corpo` e `codigo`. A tabela chama-lhes `telefone`
+ * e `texto`, e `codigo` não existe de todo. Ou seja: o insert falhava SEMPRE, desde o primeiro dia,
+ * e o `catch` mandava o erro para uma consola que ninguém lê. O livro do WhatsApp esteve vazio
+ * durante meses sem uma única queixa — porque não havia nada a que se queixar: tudo respondia 200.
+ *
+ * Foi descoberto porque a primeira mensagem real não apareceu na base. Sem essa mensagem, o erro
+ * podia ter ficado lá mais uns meses.
+ *
+ * `whatsapp-mensageiro.check.ts` compara estes nomes com os da tabela. Se alguém voltar a mexer
+ * num, a guarda cai antes do deploy.
+ */
 async function gravar(l: LinhaDoLivro): Promise<void> {
   try {
     const { error } = await getSupabaseAdmin().from('whatsapp_mensagens').insert({
-      numero: l.numero,
+      telefone: l.numero,
       direcao: l.direcao,
       tipo: l.tipo,
       template: l.template ?? null,
-      corpo: l.corpo ?? null,
+      texto: l.corpo ?? null,
       estado: l.estado,
-      codigo: l.codigo ?? null,
-      motivo: l.motivo ?? null,
+      // `codigo` não existe na tabela; o código curto da decisão vive em `motivo`, junto com a
+      // frase em português — que é o que se lê quando se vai perceber porque é que algo não saiu.
+      motivo: [l.codigo, l.motivo].filter(Boolean).join(' · ') || null,
       wa_message_id: l.waMessageId ?? null,
     })
-    if (error) console.error('[whatsapp] livro não gravou:', error.message)
+    /**
+     * O erro é ENGOLIDO de propósito — um livro que não grava não pode fazer cair um webhook nem
+     * impedir uma mensagem de sair — mas passa a ser BARULHENTO. O `console.error` de antes era
+     * indistinguível de silêncio; este diz o que tentou escrever, para o próximo não ter de
+     * adivinhar como eu tive.
+     */
+    if (error) {
+      console.error(
+        `[whatsapp] LIVRO NÃO GRAVOU (${l.direcao} ${l.numero}): ${error.message}` +
+        (error.details ? ` · ${error.details}` : '') +
+        ' — confere os nomes das colunas contra a tabela.',
+      )
+    }
   } catch (e) {
     console.error('[whatsapp] livro não gravou:', e instanceof Error ? e.message : e)
   }
