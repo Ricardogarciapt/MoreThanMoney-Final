@@ -22,10 +22,10 @@
  *
  * ═══ O QUE FICA POR FAZER, E ESTÁ DITO ═════════════════════════════════════════════════════
  *
- * O quadro de Conteúdo (kanban) e o funil continuam com números escritos à mão no código, como
- * estavam. Não os inventei nem os liguei: ligar um quadro de conteúdo a dados reais é uma
- * funcionalidade, não uma portagem, e metê-la aqui misturava as duas coisas. Estão marcados no
- * ecrã com «exemplo» para ninguém os ler como reais — que era o que acontecia antes.
+ * O quadro de Conteúdo e o funil foram ligados a dados reais a 30/09, logo a seguir à portagem —
+ * ver `app/api/aios/painel/route.ts`. Traziam números escritos à mão desde Junho («4.2K views»,
+ * «892 likes»), e um painel de decisão com números inventados é pior do que um painel vazio: o
+ * vazio faz-se perguntas, o inventado faz-se acreditar.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -40,6 +40,10 @@ import {
 type Mensagem = { id: number; tipo: "user" | "ai" | "system"; texto: string; agente?: IdAgente }
 type Estado = "on" | "off" | "warn"
 type Marcacao = { invitee_name?: string; name?: string; event_type_slug?: string; event_type?: string; start_time?: string; status?: string }
+type Cartao = { id: string; titulo: string; etiqueta: string; pilar: string | null; quando: string | null; permalink: string | null; erro: string | null }
+type Coluna = { chave: string; titulo: string; cor: string; cartoes: Cartao[] }
+type DegrauFunil = { icone: string; rotulo: string; sub: string; n: number; pct: number | null }
+type Painel = { quadro: Coluna[]; funil: DegrauFunil[]; lidoEm: string }
 
 const CHECKLIST = [
   "Ver métricas do dia",
@@ -79,6 +83,7 @@ export default function ConsolaAios() {
   const [metricas, setMetricas] = useState<{ total: string; activos: string; novos: string; marcacoes: string }>({ total: "—", activos: "—", novos: "—", marcacoes: "—" })
   const [marcacoes, setMarcacoes] = useState<Marcacao[] | null>(null)
   const [n8n, setN8n] = useState<{ online: boolean | null; disco: string }>({ online: null, disco: "—" })
+  const [painel, setPainel] = useState<Painel | null>(null)
 
   const fimDoChat = useRef<HTMLDivElement>(null)
   const historico = useRef<Array<{ role: string; content: string }>>([])
@@ -137,6 +142,21 @@ export default function ConsolaAios() {
     }
   }, [])
 
+  /**
+   * O funil e o quadro de conteúdo, dos dados reais. Uma leitura só para os dois porque são a
+   * mesma pergunta feita ao mesmo momento — separá-las dava um funil de agora ao lado de um quadro
+   * de há dois minutos, e a diferença aparecia como se fosse informação.
+   */
+  const lerPainel = useCallback(async () => {
+    try {
+      const r = await fetch("/api/aios/painel", { credentials: "include" })
+      if (!r.ok) throw new Error(String(r.status))
+      setPainel(await r.json())
+    } catch {
+      setPainel(null)
+    }
+  }, [])
+
   const lerN8n = useCallback(async () => {
     try {
       const r = await fetch("/api/admin/n8n-vps?cmd=status", { credentials: "include" })
@@ -150,11 +170,11 @@ export default function ConsolaAios() {
   }, [])
 
   useEffect(() => {
-    void lerMetricas(); void lerN8n(); void lerMarcacoes()
-    const i = setInterval(() => { void lerMetricas(); void lerN8n() }, RELER_MS)
+    void lerMetricas(); void lerN8n(); void lerMarcacoes(); void lerPainel()
+    const i = setInterval(() => { void lerMetricas(); void lerN8n(); void lerPainel() }, RELER_MS)
     const t = setTimeout(() => setVozTexto("Sistemas carregados. Pronto para receber ordens, Ricardo."), 3000)
     return () => { clearInterval(i); clearTimeout(t) }
-  }, [lerMetricas, lerN8n, lerMarcacoes])
+  }, [lerMetricas, lerN8n, lerMarcacoes, lerPainel])
 
   // ── falar ─────────────────────────────────────────────────────────────────
   const falar = useCallback(async (texto: string) => {
@@ -412,54 +432,72 @@ export default function ConsolaAios() {
 
             {separador === "funnel" && (
               <div className={s["funnel-tab"]}>
-                <p style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 12 }}>
-                  Membros e marcações vêm do Supabase. As duas primeiras linhas são <strong>exemplo</strong> — o
-                  Instagram e o ManyChat ainda não estão ligados a este quadro.
-                </p>
-                {([
-                  ["👁️", "Seguidores Instagram", "@morethanmoney.pt", "—", "100%", true],
-                  ["💬", "Leads ManyChat", "Subscribers activos", "—", "—", true],
-                  ["📅", "Marcações", "Chamadas marcadas", metricas.marcacoes, "", false],
-                  ["⭐", "Membros MTM", "Comunidade activa", metricas.total, "", false],
-                ] as const).map(([icone, rotulo, sub, num, pct, exemplo], i) => (
-                  <div key={rotulo} className={s["funnel-step"]}>
-                    <div className={s["funnel-bar"]} style={{ width: ["100%", "35%", "15%", "8%"][i] }} />
-                    <div className={s["funnel-content"]}>
-                      <span className={s["funnel-icon"]}>{icone}</span>
-                      <div className={s["funnel-info"]}>
-                        <div className={s["funnel-label"]}>{rotulo}{exemplo && <span style={{ color: "var(--text-dim)", fontWeight: 400 }}> · exemplo</span>}</div>
-                        <div className={s["funnel-sub"]}>{sub}</div>
+                {!painel ? (
+                  <p style={{ fontSize: 12, color: "var(--text-dim)" }}>A ler o funil…</p>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 12 }}>
+                      Radar do Instagram → leads → chamadas marcadas → membros. Percentagens sobre o topo do funil.
+                    </p>
+                    {painel.funil.map((d, i) => (
+                      <div key={d.rotulo} className={s["funnel-step"]}>
+                        {/* A barra é a percentagem REAL, com um mínimo visível: um degrau de 1,4%
+                            desenhado a 1,4% da largura é uma linha que ninguém vê, e um degrau que
+                            não se vê parece um degrau que não existe. */}
+                        <div className={s["funnel-bar"]} style={{ width: `${Math.max(d.pct ?? 0, 4)}%` }} />
+                        <div className={s["funnel-content"]}>
+                          <span className={s["funnel-icon"]}>{d.icone}</span>
+                          <div className={s["funnel-info"]}>
+                            <div className={s["funnel-label"]}>{d.rotulo}</div>
+                            <div className={s["funnel-sub"]}>{d.sub}</div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div className={s["funnel-num"]}>{d.n.toLocaleString("pt-PT")}</div>
+                            <div className={s["funnel-pct"]}>{d.pct == null ? "—" : `${d.pct}%`}</div>
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div className={s["funnel-num"]}>{num}</div>
-                        <div className={s["funnel-pct"]}>{pct}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    ))}
+                    <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 10 }}>
+                      Lido às {new Date(painel.lidoEm).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </>
+                )}
               </div>
             )}
 
             {separador === "kanban" && (
               <div className={s["kanban-tab"]}>
-                <p style={{ gridColumn: "1/-1", fontSize: 11, color: "var(--text-dim)" }}>
-                  Quadro de <strong>exemplo</strong> — ainda não está ligado ao calendário de conteúdo real.
-                </p>
-                {([
-                  ["💡 IDEIAS", "#60a5fa", [["REEL", "5 erros que te mantêm pobre", "CTA: SISTEMA"], ["CARROSSEL", "O que aprendi nos últimos 12 meses", "CTA: RESULTADOS"]]],
-                  ["✍️ EM CRIAÇÃO", "#fbbf24", [["REEL", "Como saí das 40h/semana em 8 meses", "CTA: LIBERDADE"]]],
-                  ["📅 AGENDADO", "#34d399", [["REEL", "Mindset vs resultados", "18:00"]]],
-                  ["✅ PUBLICADO", "#D2A63C", [["POST", "O scanner e a zona de ouro", "—"]]],
-                ] as const).map(([titulo, cor, cartoes]) => (
-                  <div key={titulo} className={s["kanban-col"]}>
-                    <div className={s["kanban-col-header"]} style={{ background: `${cor}1a`, color: cor }}>{titulo}</div>
-                    {cartoes.map(([tag, t, meta]) => (
-                      <div key={t} className={s["kanban-card"]}>
-                        <span className={s["card-tag"]} style={{ background: `${cor}26`, color: cor }}>{tag}</span>
-                        <div className={s["card-title"]}>{t}</div>
-                        <div className={s["card-meta"]}>{meta}</div>
-                      </div>
-                    ))}
+                {!painel ? (
+                  <p style={{ gridColumn: "1/-1", fontSize: 12, color: "var(--text-dim)" }}>A ler o calendário…</p>
+                ) : painel.quadro.every((c) => c.cartoes.length === 0) ? (
+                  <p style={{ gridColumn: "1/-1", fontSize: 12, color: "var(--text-dim)" }}>Nada agendado nem publicado.</p>
+                ) : painel.quadro.map((col) => (
+                  <div key={col.chave} className={s["kanban-col"]}>
+                    <div className={s["kanban-col-header"]} style={{ background: `${col.cor}1a`, color: col.cor }}>
+                      {col.titulo} <span style={{ opacity: 0.6 }}>{col.cartoes.length}</span>
+                    </div>
+                    {col.cartoes.length === 0 && <p style={{ fontSize: 10, color: "var(--text-dim)", padding: "6px 2px" }}>vazio</p>}
+                    {col.cartoes.map((c) => {
+                      /* Um cartão publicado leva ao post; um que não foi publicado não leva a lado
+                         nenhum, e por isso não finge ser clicável. */
+                      const corpo = (
+                        <>
+                          <span className={s["card-tag"]} style={{ background: `${col.cor}26`, color: col.cor }}>{c.etiqueta}</span>
+                          <div className={s["card-title"]}>{c.titulo}</div>
+                          <div className={s["card-meta"]}>
+                            {c.quando ? new Date(c.quando).toLocaleString("pt-PT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "sem data"}
+                            {c.pilar ? ` · ${c.pilar}` : ""}
+                          </div>
+                          {c.erro && <div className={s["card-meta"]} style={{ color: "var(--red)" }}>{c.erro}</div>}
+                        </>
+                      )
+                      return c.permalink ? (
+                        <a key={c.id} className={s["kanban-card"]} href={c.permalink} target="_blank" rel="noreferrer" style={{ display: "block", textDecoration: "none" }}>{corpo}</a>
+                      ) : (
+                        <div key={c.id} className={s["kanban-card"]}>{corpo}</div>
+                      )
+                    })}
                   </div>
                 ))}
               </div>
