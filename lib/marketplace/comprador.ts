@@ -66,7 +66,7 @@
  * nada nem envia emails, mas é ruído numa tabela que a casa lê muito.
  */
 
-import { randomBytes } from 'crypto'
+import { createHash, randomBytes } from 'crypto'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 /** O email como se compara e se grava. Minúsculas, sem espaços. */
@@ -115,6 +115,48 @@ async function usernameLivre(email: string): Promise<string> {
   return `${base}-${randomBytes(4).toString('hex')}`
 }
 
+/** Quantas contas por IP e por hora. Cinco é largo para uma pessoa e apertado para um guião. */
+const CONTAS_POR_IP_HORA = 5
+
+/**
+ * A impressão do IP: sha256 com um segredo do servidor, cortada. Guardar o IP em claro num perfil
+ * era juntar um dado pessoal a uma linha que fica para sempre, por causa de uma contagem que dura
+ * uma hora. Com segredo, e não sha256 do IP e mais nada: o espaço dos endereços IPv4 é pequeno o
+ * suficiente para se percorrer inteiro e desfazer um sha256 sem sal numa tarde.
+ */
+function impressaoDoIp(ip: string | null): string | null {
+  const limpo = String(ip ?? '').trim()
+  if (!limpo) return null
+  const segredo = process.env.MARKETPLACE_IP_SALT || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  if (!segredo) return null
+  return createHash('sha256').update(`${segredo}:${limpo}`).digest('hex').slice(0, 32)
+}
+
+/**
+ * Já se criaram contas a mais deste IP na última hora?
+ *
+ * Na dúvida DEIXA PASSAR. É a mesma doutrina da exclusividade das comissões: se a consulta falhar,
+ * o prejuízo de recusar é uma venda real perdida por uma avaria nossa, e o de deixar passar são
+ * umas linhas a mais numa tabela. Sem IP (um pedido sem cabeçalho) também passa — recusar toda a
+ * gente que chega sem `x-forwarded-for` fechava a loja a quem estiver atrás de alguma proxy.
+ */
+async function ultrapassouOLimite(ip: string | null): Promise<boolean> {
+  const impressao = impressaoDoIp(ip)
+  if (!impressao) return false
+  try {
+    const desde = new Date(Date.now() - 3_600_000).toISOString()
+    const { count, error } = await getSupabaseAdmin()
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('profile_data->marketplace->>ip', impressao)
+      .gte('created_at', desde)
+    if (error) return false
+    return (count ?? 0) >= CONTAS_POR_IP_HORA
+  } catch {
+    return false
+  }
+}
+
 /**
  * A conta que vai ficar dona desta compra. Encontra ou cria — nunca duplica.
  *
@@ -125,6 +167,8 @@ async function usernameLivre(email: string): Promise<string> {
 export async function contaDoComprador(entrada: {
   email: string
   nome?: string | null
+  /** O IP de quem pediu. Só serve para o limite abaixo — nunca é guardado em claro. */
+  ip?: string | null
 }): Promise<ContaDoComprador | null> {
   const email = emailNormalizado(entrada.email)
   if (!emailServeParaComprar(email)) return null
@@ -139,6 +183,25 @@ export async function contaDoComprador(entrada: {
     .limit(1)
     .maybeSingle()
   if (existente?.id) return { userId: existente.id as string, email, criada: false }
+
+  /**
+   * O LIMITE POR IP — decisão do dono, 30/09/2026.
+   *
+   * Sem ele, esta rota escreve uma linha em `profiles` por cada email que alguém invente. Não dá
+   * acesso a nada e não manda emails (o convite só sai depois de o dinheiro entrar), mas há um dano
+   * real e silencioso: quem criar a conta com o email de OUTRA pessoa faz essa pessoa apanhar «email
+   * já registado» no dia em que se for registar, e obriga-a a passar pelo «esqueci-me da password»
+   * para entrar numa conta que ela não abriu.
+   *
+   * Conta-se só o que esta rota criou (a marca do marketplace), e não perfis em geral: um escritório
+   * inteiro atrás do mesmo IP a comprar cursos é um bom dia, não um ataque. Quem JÁ tem conta nunca
+   * chega aqui — o caminho de cima devolve o perfil existente antes disto correr.
+   */
+  const limite = await ultrapassouOLimite(entrada.ip ?? null)
+  if (limite) {
+    console.warn('[marketplace] limite de contas por IP atingido — compra recusada')
+    return null
+  }
 
   const nome = String(entrada.nome ?? '').trim().slice(0, 120) || email.split('@')[0]
   const username = await usernameLivre(email)
@@ -187,7 +250,14 @@ export async function contaDoComprador(entrada: {
       is_active: true,
       checkout_source: 'marketplace',
       profile_data: {
-        marketplace: { comprador: true, pendente_pagamento: true, criado_em: new Date().toISOString() },
+        marketplace: {
+          comprador: true,
+          pendente_pagamento: true,
+          criado_em: new Date().toISOString(),
+          // A IMPRESSÃO do IP, nunca o IP. É o que permite contar sem guardar de quem é: não há
+          // como voltar atrás a partir dela, e serve exactamente para a conta da hora seguinte.
+          ...(impressaoDoIp(entrada.ip ?? null) ? { ip: impressaoDoIp(entrada.ip ?? null) } : {}),
+        },
       },
       updated_at: new Date().toISOString(),
     },

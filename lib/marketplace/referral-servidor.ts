@@ -142,35 +142,23 @@ export async function validarReferralParaCompra(entrada: {
  * marketplace com referral passa a produzir EXACTAMENTE o mesmo tipo de linha que uma venda de pack,
  * pelas mesmas `vendas_regras_comissao`, e aparece nos mesmos extractos. Era esse o requisito.
  *
- * ── O EFEITO SECUNDÁRIO QUE O DONO TEM DE SABER ───────────────────────────────────────────
+ * ── O CÓDIGO PAGA A VENDA, NÃO COMPRA A PESSOA (decisão do dono, 30/09/2026) ──────────────
  *
- * `vendaPagaPelaEquipa(compradorId)` responde «sim» quando o comprador tem um negócio com um papel
- * preenchido — e responde por COMPRADOR, não por venda. Ou seja: criar este negócio faz com que as
- * OUTRAS compras dessa pessoa (um pack do site, por exemplo) deixem de pagar comissão binária de
- * MLM, porque o sistema passa a considerar que ela é uma venda da equipa.
+ * `vendaPagaPelaEquipa(compradorId)` responde por COMPRADOR, não por venda: um negócio com um papel
+ * preenchido faz as OUTRAS compras dessa pessoa deixarem de pagar comissão binária de MLM. É a
+ * regra de exclusividade da casa («o mesmo euro não paga duas vezes») e está certa — mas aplicada a
+ * um código de indicação de um curso de 40 € dava um resultado que ninguém quis: com a compra sem
+ * login, alguém que NUNCA foi membro chegava pela montra, comprava o curso, e ficava reclamado para
+ * sempre. Quando comprasse um Premium de 65 €/mês trazido por um membro da rede, o binário não
+ * pagava a quem a recrutou.
  *
- * Isso não é um defeito deste código — é a regra de exclusividade da casa («o mesmo euro não paga
- * duas vezes») a funcionar. Mas é uma consequência real de aceitar um código de indicação num curso
- * de 40 €, e tem de ser uma decisão do dono e não um efeito colateral que ninguém viu.
+ * O dono decidiu: **o afiliado do marketplace recebe daquela venda, e a pessoa fica livre.** A
+ * excepção vive em `lib/vendas/exclusividade.ts` e é estreita — só quando o negócio tem
+ * `origem = 'marketplace'` E o afiliado é o ÚNICO papel preenchido. Se um setter marcou reunião ou
+ * um closer fechou, houve trabalho humano e a exclusividade vale como sempre valeu.
  *
- * Por isso o negócio criado aqui leva `origem: 'marketplace'` e uma nota que diz de onde veio:
- * quando alguém for perceber porque é que o binário de uma pessoa parou, a resposta está escrita.
- *
- * ── O QUE A COMPRA SEM LOGIN ACRESCENTA A ISTO (e ainda não está decidido) ────────────────
- *
- * Com a compra sem login, este negócio passa a poder nascer para alguém que NUNCA foi membro: uma
- * pessoa que chega à montra pelo link de um afiliado, escreve o email, compra um curso de 40 € e
- * fica com um `vendas_negocios` em nome dela antes de existir como cliente da casa.
- *
- * A consequência é a de sempre, mas agora atinge um desconhecido em vez de um membro já nosso:
- * quando essa pessoa comprar, meses depois, um Premium de 65 €/mês com um sponsor de MLM, o
- * `vendaPagaPelaEquipa` responde «sim» e o binário NÃO paga a quem a recrutou — porque um código de
- * indicação de um curso de 40 € já a reclamou.
- *
- * O código não decide isto sozinho: a regra da casa («o mesmo euro não paga duas vezes») é do dono,
- * e a escolha entre as três saídas — deixar como está, limitar o negócio do marketplace a um
- * afiliado por VENDA em vez de por comprador, ou não criar negócio quando a conta foi criada pela
- * própria compra — é de negócio e não de implementação. Fica escrito aqui para a conversa ter dados.
+ * É por isso que o negócio criado aqui leva `origem: 'marketplace'`: não é etiqueta, é o que a
+ * regra lê. Mudá-la parte a decisão de cima — a guarda `lib/vendas/exclusividade.check.ts` prende-a.
  */
 export async function negocioParaComissao(entrada: {
   compradorId: string
@@ -214,7 +202,7 @@ export async function negocioParaComissao(entrada: {
         pack_previsto: 'marketplace',
         origem: 'marketplace',
         estado: 'ganho',
-        nota: `Criado por uma compra no marketplace com código de indicação. Ver a nota em lib/marketplace/referral-servidor.ts sobre o efeito na exclusividade do MLM.`,
+        nota: `Criado por uma compra no marketplace com código de indicação. Paga esta venda e não reclama a pessoa: o binário dela continua livre nas compras seguintes (ver lib/vendas/exclusividade.ts).`,
       })
       .select('id')
       .maybeSingle()

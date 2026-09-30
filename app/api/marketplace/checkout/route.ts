@@ -139,10 +139,17 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         )
       }
-      const conta = await contaDoComprador({ email, nome: corpo?.nome ?? null })
+      // O IP vai para o limite de criações (ver `contaDoComprador`). `x-forwarded-for` traz a
+      // cadeia inteira em proxy; o primeiro é o cliente.
+      const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || request.headers.get('x-real-ip')
+      const conta = await contaDoComprador({ email, nome: corpo?.nome ?? null, ip })
       if (!conta) {
         return NextResponse.json(
-          { error: 'Não foi possível preparar a tua conta. Tenta outra vez ou entra com a conta que já tens.', code: 'conta_falhou', campo: 'email' },
+          {
+            error: 'Não foi possível preparar a tua conta. Tenta outra vez daqui a pouco, ou entra com a conta que já tens.',
+            code: 'conta_falhou',
+            campo: 'email',
+          },
           { status: 409 },
         )
       }

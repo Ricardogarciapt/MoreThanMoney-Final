@@ -75,6 +75,7 @@ const negocio = (extra: Record<string, unknown>) => ({
   closer_id: null,
   team_leader_id: null,
   afiliado_id: null,
+  origem: null,
   ...extra,
 })
 
@@ -95,6 +96,29 @@ async function correr() {
   teste('sem negócio nenhum, paga o binário', !(await vendaPagaPelaEquipa(dbFalso({ data: null }), 'comprador')))
   teste('sem comprador identificado, paga o binário', !(await vendaPagaPelaEquipa(dbFalso({ data: null }), null)))
   teste('coluna vazia (string vazia) não conta como atribuição', !(await vendaPagaPelaEquipa(dbFalso({ data: negocio({ closer_id: '', comprador_id: 'c' }) }), 'c')))
+
+  // ── O CÓDIGO DE INDICAÇÃO DO MARKETPLACE PAGA A VENDA, NÃO COMPRA A PESSOA (30/09) ──
+  //
+  // Metade destes testes verifica que a excepção NÃO é larga de mais: basta um setter, ou uma
+  // origem que não seja o marketplace, para a exclusividade voltar a valer. Uma excepção larga aqui
+  // faz o binário pagar por cima da tabela de papéis, que é exactamente o que este ficheiro existe
+  // para impedir.
+  teste(
+    'afiliado sozinho num negócio do marketplace NÃO fecha o binário',
+    !(await vendaPagaPelaEquipa(dbFalso({ data: negocio({ afiliado_id: 'a-1', origem: 'marketplace', comprador_id: 'c' }) }), 'c')),
+  )
+  teste(
+    'mas com um setter no mesmo negócio do marketplace, a venda É da equipa',
+    await vendaPagaPelaEquipa(dbFalso({ data: negocio({ afiliado_id: 'a-1', setter_id: 's-1', origem: 'marketplace', comprador_id: 'c' }) }), 'c'),
+  )
+  teste(
+    'afiliado sozinho FORA do marketplace continua a fechar o binário',
+    await vendaPagaPelaEquipa(dbFalso({ data: negocio({ afiliado_id: 'a-1', origem: 'site', comprador_id: 'c' }) }), 'c'),
+  )
+  teste(
+    'afiliado sozinho sem origem declarada continua a fechar o binário',
+    await vendaPagaPelaEquipa(dbFalso({ data: negocio({ afiliado_id: 'a-1', comprador_id: 'c' }) }), 'c'),
+  )
 
   // ── NA DÚVIDA, PAGA-SE O BINÁRIO. ──
   // Suprimir a comissão de alguém por causa de um erro de leitura nosso é tirar-lhe dinheiro por

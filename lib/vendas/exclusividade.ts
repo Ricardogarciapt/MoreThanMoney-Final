@@ -62,7 +62,9 @@ export async function equipaAtribuidaAoComprador(
   try {
     resolvido = await resolverNegocioDoComprador(supabase, {
       compradorId,
-      colunasExtra: Object.values(COLUNA_DO_PAPEL),
+      // `origem` entra porque um negócio nascido de uma compra no marketplace não reclama a
+      // pessoa — ver `reclamaAPessoa`, logo abaixo.
+      colunasExtra: [...Object.values(COLUNA_DO_PAPEL), 'origem'],
     })
   } catch {
     // Sem tabela (migração ainda não aplicada), ou com erro: o binário paga, como sempre pagou. Ver
@@ -77,6 +79,28 @@ export async function equipaAtribuidaAoComprador(
     const valor = linha[COLUNA_DO_PAPEL[papel]]
     return typeof valor === 'string' && valor.length > 0
   })
+
+  /**
+   * O CÓDIGO DE INDICAÇÃO DO MARKETPLACE PAGA A VENDA, NÃO COMPRA A PESSOA. Decisão do dono,
+   * 30/09/2026.
+   *
+   * Com a compra sem login, alguém pode chegar pelo link de um afiliado, escrever o email, comprar
+   * um curso de 40 € — e ficar com um negócio em nome dele antes sequer de ser cliente. Sem esta
+   * excepção, quando essa pessoa comprasse meses depois um Premium de 65 €/mês trazida por um
+   * membro da rede, esta função respondia «é da equipa» e o binário NÃO pagava a quem a recrutou.
+   * Um código de um curso de 40 € reclamava-a para sempre.
+   *
+   * A excepção é ESTREITA de propósito: só quando o negócio veio do marketplace E o único papel
+   * preenchido é o afiliado. Se um setter marcou reunião ou um closer fechou, houve trabalho
+   * humano e a exclusividade vale como sempre valeu — mesmo num negócio do marketplace.
+   *
+   * O negócio continua a existir e a comissão daquela venda continua a ser paga: o que muda é só
+   * que ele não fecha o binário das vendas seguintes da mesma pessoa.
+   */
+  const soAfiliado = papeis.length === 1 && papeis[0] === 'afiliado'
+  if (soAfiliado && String(linha.origem ?? '') === 'marketplace') {
+    return { atribuida: false, negocioId: typeof linha.id === 'string' ? linha.id : null, papeis: [] }
+  }
 
   return {
     atribuida: papeis.length > 0,
