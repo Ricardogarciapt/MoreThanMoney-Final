@@ -21,6 +21,7 @@
  * `docs/whatsapp-setup.md`.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { ligarConversaAoQueExiste, registarEntradaNaConversa, registarSaidaNaConversa } from '@/lib/whatsapp/conversas'
 import type { BaseLegal } from '@/lib/captacao-consentimento'
 import {
   corpoParaCloudApi,
@@ -134,6 +135,8 @@ interface LinhaDoLivro {
   codigo?: string | null
   motivo?: string | null
   waMessageId?: string | null
+  /** O nome que ela tem no perfil do WhatsApp. Só serve para a conversa nascer com nome. */
+  nomeDoPerfil?: string | null
 }
 
 /**
@@ -186,6 +189,27 @@ async function gravar(l: LinhaDoLivro): Promise<void> {
   } catch (e) {
     console.error('[whatsapp] livro não gravou:', e instanceof Error ? e.message : e)
   }
+
+  /**
+   * A CONVERSA ACTUALIZA-SE AQUI, E NÃO EM CADA SÍTIO QUE ENVIA.
+   *
+   * Tudo o que entra e tudo o que sai passa por esta função. Pôr a actualização do CRM aqui é a
+   * diferença entre «o contador está sempre certo» e «está certo nos caminhos de que alguém se
+   * lembrou» — e há cinco sítios diferentes a enviar WhatsApp nesta casa.
+   *
+   * Só contam as saídas que REALMENTE saíram: uma recusada ou falhada não responde a ninguém, e
+   * zerar o contador nesse caso fazia desaparecer da lista quem continua à espera.
+   */
+  try {
+    if (l.direcao === 'entrada' && l.estado === 'recebida') {
+      await registarEntradaNaConversa({ telefone: l.numero, nome: l.nomeDoPerfil ?? null })
+      await ligarConversaAoQueExiste(l.numero)
+    } else if (l.direcao === 'saida' && l.estado === 'enviada') {
+      await registarSaidaNaConversa(l.numero)
+    }
+  } catch (e) {
+    console.error('[whatsapp] conversa não actualizada:', e instanceof Error ? e.message : e)
+  }
 }
 
 /**
@@ -196,7 +220,7 @@ async function gravar(l: LinhaDoLivro): Promise<void> {
  * ficou registada é um número a quem o sistema vai recusar texto livre por achar que a janela está
  * fechada quando ela está aberta.
  */
-export async function registarEntrada(args: { numero: string; texto: string; waMessageId?: string | null }): Promise<string | null> {
+export async function registarEntrada(args: { numero: string; texto: string; waMessageId?: string | null; nome?: string | null }): Promise<string | null> {
   const { e164 } = normalizarE164(args.numero)
   if (!e164) {
     console.warn('[whatsapp] entrada com número não normalizável:', args.numero)
@@ -209,6 +233,7 @@ export async function registarEntrada(args: { numero: string; texto: string; waM
     corpo: args.texto.slice(0, 4000),
     estado: 'recebida',
     waMessageId: args.waMessageId ?? null,
+    nomeDoPerfil: args.nome ?? null,
   })
   return e164
 }

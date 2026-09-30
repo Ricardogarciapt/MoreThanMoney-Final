@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
          * quisesse falar com um deles pela app, o sistema recusava texto livre a jurar que a janela
          * estava fechada, quando estava aberta há dez minutos.
          */
-        const numero = await registarEntrada({ numero: from, texto: text, waMessageId: m.id ?? null })
+        const numero = await registarEntrada({ numero: from, texto: text, waMessageId: m.id ?? null, nome: contactName })
 
         // SÓ leads novos — nunca contactos/clientes existentes.
         if (!(await isNewWhatsAppLead(from))) {

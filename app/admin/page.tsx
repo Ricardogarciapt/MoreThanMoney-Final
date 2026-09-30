@@ -12,6 +12,7 @@ import { adminApiCall, clearAdminCache } from "@/lib/admin-helpers"
 import AdminSidebar from "@/components/admin/admin-sidebar"
 import MarketplaceAdmin from "@/components/admin/marketplace-admin"
 import AgendaAdmin from "@/components/admin/agenda-admin"
+import WhatsappCrm from "@/components/admin/whatsapp-crm"
 import MtmFundedManager from "@/components/admin/mtmfunded-manager"
 import EspelhoProviderRelatorio from "@/components/admin/espelho-provider-relatorio"
 import AdminOverview from "@/components/admin/admin-overview"
@@ -59,6 +60,7 @@ function AdminPageClient() {
     "education",
     "marketplace",
     "agenda",
+    "whatsapp",
     "dvr",
     "avaliacoes",
     "mtmfunded",
@@ -343,6 +345,9 @@ function AdminPageClient() {
 
           {/* AGENDA — substitui o Calendly. O link público é /agendar. */}
           {activeSection === "agenda" && <AgendaAdmin />}
+
+          {/* WHATSAPP — a lista de conversas por trabalhar. A regra das 24 horas vem do servidor. */}
+          {activeSection === "whatsapp" && <WhatsappCrm />}
 
           {activeSection === "dvr" && (
             <div className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
