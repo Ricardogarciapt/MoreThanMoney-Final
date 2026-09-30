@@ -171,3 +171,42 @@ npx tsx lib/correio/remetente.check.ts  # a decisão do remetente
 
 E, no fim, o teste que conta: mandar um email para `suporte@morethanmoney.pt` de fora e ver se cai
 na caixa.
+
+## O componente no /admin
+
+`/admin` → **Configurações** → *Caixas de correio*. Mostra os endereços do domínio, de quem são
+(utilizador do site ou educador do LMS), e o reencaminhamento de cada um. As pessoas sem endereço
+ligado aparecem em baixo, com sugestão já feita — mas **nada é criado sozinho**: uma caixa criada
+em silêncio é um sítio onde o correio de alguém vai morrer.
+
+### As credenciais que faltam
+
+O botão de criar caixas só funciona com a API do Zoho ligada. Quatro variáveis na Vercel, geradas
+em **api-console.zoho.eu → Self Client**:
+
+```
+ZOHO_MAIL_CLIENT_ID
+ZOHO_MAIL_CLIENT_SECRET
+ZOHO_MAIL_REFRESH_TOKEN
+ZOHO_MAIL_ZOID          # o id da organização (Admin Console → Organização)
+ZOHO_MAIL_LICENCAS      # quantas licenças estão compradas (hoje: 1)
+```
+
+O scope a pedir é `ZohoMail.organization.accounts.ALL`. Sem estas variáveis o ecrã não rebenta —
+diz qual falta, em amarelo, e continua a mostrar tudo o resto.
+
+### Duas coisas que o ecrã sabe e que não são óbvias
+
+**Aliases não se criam por API.** A documentação do Zoho publica contas e reencaminhamento, e não
+publica aliases. Pedir um alias regista-o como `por_criar` e diz onde se acaba à mão (Utilizadores
+→ geral@ → Alias de e-mail). Gravar só na nossa base e dar por criado seria repetir exactamente o
+defeito que este painel veio expor: uma linha bonita para um endereço que não existe no servidor.
+
+**Reencaminhar nunca diz «ligado» logo.** O Zoho manda um código para o destino e só entrega depois
+de alguém o introduzir — foi o que aconteceu à mão a 30/09 com o Gmail. O ecrã mostra «por confirmar
+no Zoho» até estar mesmo a entregar.
+
+**E nunca se reencaminha para `@morethanmoney.pt`.** Dois endereços da casa a apontar um para o
+outro copiam cada mensagem em volta até um servidor cortar, e servidores que cortam ciclos marcam o
+domínio inteiro — incluindo a recuperação de password dos clientes. `lib/correio/caixas.ts` recusa,
+e `caixas.check.ts` prova que recusa, incluindo com o domínio escrito em maiúsculas.

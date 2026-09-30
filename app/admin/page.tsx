@@ -13,6 +13,7 @@ import AdminSidebar from "@/components/admin/admin-sidebar"
 import MarketplaceAdmin from "@/components/admin/marketplace-admin"
 import AgendaAdmin from "@/components/admin/agenda-admin"
 import WhatsappCrm from "@/components/admin/whatsapp-crm"
+import CorreioCaixas from "@/components/admin/correio-caixas"
 import MtmFundedManager from "@/components/admin/mtmfunded-manager"
 import EspelhoProviderRelatorio from "@/components/admin/espelho-provider-relatorio"
 import AdminOverview from "@/components/admin/admin-overview"
@@ -409,6 +410,14 @@ function AdminPageClient() {
 
           {activeSection === "settings" && (
             <div className="space-y-8">
+              {/* CORREIO — os endereços @morethanmoney.pt, de quem são e para onde vão. Vive nas
+                  configurações porque é infraestrutura da casa, não trabalho do dia. */}
+              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+                <div className="p-6">
+                  <CorreioCaixas />
+                </div>
+              </section>
+
               <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
                 <div className="border-b border-[#D2A63C]/15 px-6 py-4">
                   <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Integrações & Sistemas</h2>
