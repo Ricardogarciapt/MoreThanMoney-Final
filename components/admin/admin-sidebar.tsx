@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
+  CalendarClock,
   Gauge,
   Scissors,
   LayoutDashboard,
@@ -139,6 +140,9 @@ const GRUPOS: Grupo[] = [
       // Ao lado dos cupões de propósito: um cupão de âmbito marketplace desconta um produto
       // daqui, e quem anda a criar campanhas mexe nos dois no mesmo minuto.
       { tipo: "tab", id: "marketplace", rotulo: "Marketplace", icone: Store },
+      // A agenda vive aqui e não em «Formação»: quem marca uma chamada é um lead, e quem trata de
+      // leads passa o dia nesta categoria.
+      { tipo: "tab", id: "agenda", rotulo: "Agenda de chamadas", icone: CalendarClock },
       { tipo: "link", href: "/admin/backoffice", rotulo: "MLM / Afiliados", icone: Network },
       // Desde 08/2026 esta página é só agentes, n8n e streaming — e a maior parte dos agentes
       // é de prospeção, setting e conteúdo. É aqui que pertence, não ao pé do Centro de comando.

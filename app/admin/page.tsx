@@ -11,6 +11,7 @@ import type { UserManagement, AdminStats } from "@/lib/admin-types"
 import { adminApiCall, clearAdminCache } from "@/lib/admin-helpers"
 import AdminSidebar from "@/components/admin/admin-sidebar"
 import MarketplaceAdmin from "@/components/admin/marketplace-admin"
+import AgendaAdmin from "@/components/admin/agenda-admin"
 import MtmFundedManager from "@/components/admin/mtmfunded-manager"
 import EspelhoProviderRelatorio from "@/components/admin/espelho-provider-relatorio"
 import AdminOverview from "@/components/admin/admin-overview"
@@ -57,6 +58,7 @@ function AdminPageClient() {
     "content",
     "education",
     "marketplace",
+    "agenda",
     "dvr",
     "avaliacoes",
     "mtmfunded",
@@ -338,6 +340,9 @@ function AdminPageClient() {
           {/* MARKETPLACE — governação (interruptores, fila de revisão, vendas, partilha por
               educador) e catálogo no MESMO ecrã. Ver components/admin/marketplace-admin.tsx. */}
           {activeSection === "marketplace" && <MarketplaceAdmin />}
+
+          {/* AGENDA — substitui o Calendly. O link público é /agendar. */}
+          {activeSection === "agenda" && <AgendaAdmin />}
 
           {activeSection === "dvr" && (
             <div className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
