@@ -120,8 +120,19 @@ Duas coisas que essa decisão protege, e que valem a pena saber:
    o que a torna muito mais difícil de encontrar. `MAIL_FROM` existe para os aliases (`suporte@` a
    partir de `geral@`), mas é escolha explícita.
 
-O Zoho **grátis não tem SMTP nem IMAP** (só webmail e app). O envio pelo domínio exige o
-**Mail Lite**, ~1 $/caixa/mês.
+### Uma caixa, seis endereços
+
+O Zoho **grátis não tem SMTP nem IMAP** (só webmail e app) — o envio pelo domínio exige o
+**Mail Lite**, €0,90/caixa/mês, **cobrado anualmente** (não há plano mensal).
+
+Mas não são precisas seis caixas. O Zoho dá **até 30 aliases por utilizador**, e cada alias aparece
+no menu do `From` — ou seja, recebe-se e **responde-se** por ele. A montagem certa é:
+
+- **uma caixa**: `geral@morethanmoney.pt` — €0,90/mês, ~€10,80/ano
+- **aliases dela**, sem custo: `suporte@`, `support@`, `funded@`, `admin@`, `noreply@`
+
+Tudo cai na mesma caixa e filtra-se por destinatário. Quando o `funded@` justificar equipa própria,
+abre-se uma segunda caixa — não é decisão que tenha de ser tomada agora.
 
 ## As campanhas em massa são outro problema
 
