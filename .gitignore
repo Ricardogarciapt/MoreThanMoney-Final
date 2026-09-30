@@ -25,6 +25,11 @@ yarn-error.log*
 
 # local env files
 .env*.local
+# Uma cópia de segurança de um .env não é apanhada por «.env*.local» (o padrão exige que o nome
+# ACABE em .local). A 30/09 ficou um `.env.local.bak-…` por commitar durante dois minutos, com os
+# segredos todos lá dentro. Um segredo que entra no histórico não sai de lá com um `git rm`.
+.env*.bak*
+.env.local.*
 .env
 .env.vercel
 .env.vercel.bak
