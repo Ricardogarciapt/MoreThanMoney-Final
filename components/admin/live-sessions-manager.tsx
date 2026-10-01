@@ -15,7 +15,7 @@ import { ptWallTimeToUtcIso, toNaiveLocalWall } from "@/lib/pt-time"
 import { LMS_LANGUAGES, DEFAULT_LMS_LANGUAGE } from "@/lib/lms/languages"
 import { toast } from "sonner"
 
-type Academy = { id: string; name: string; slug: string }
+type Academy = { id: string; name: string; slug: string; description?: string | null; cover_url?: string | null }
 type Educator = {
   id: string
   display_name: string
@@ -63,6 +63,9 @@ export default function LiveSessionsManager() {
 
   const [academyName, setAcademyName] = useState("")
   const [academyDesc, setAcademyDesc] = useState("")
+  const [academyCover, setAcademyCover] = useState("")
+  /** Qual academia está a gravar capa. Sem isto o admin clica duas vezes e não sabe se pegou. */
+  const [academyBusyId, setAcademyBusyId] = useState<string | null>(null)
 
   const [educatorForm, setEducatorForm] = useState<any>({
     email: "",
@@ -143,15 +146,58 @@ export default function LiveSessionsManager() {
     load()
   }, [])
 
+  /**
+   * A resposta DIZ se gravou. Antes ninguém a lia: um nome repetido ou uma capa recusada davam
+   * um formulário limpo e nenhuma academia — a falha mais calada que isto tinha.
+   */
   const createAcademy = async () => {
-    await fetch("/api/admin/live-sessions/academies", {
+    const res = await fetch("/api/admin/live-sessions/academies", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: academyName, description: academyDesc }),
+      body: JSON.stringify({ name: academyName, description: academyDesc, cover_url: academyCover || null }),
     })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      toast.error(typeof j.error === "string" ? j.error : "Não foi possível criar a academia.")
+      return
+    }
+    // Só se limpa o formulário depois de a academia existir, para não se perder o que foi escrito.
     setAcademyName("")
     setAcademyDesc("")
+    setAcademyCover("")
+    toast.success("Academia criada.")
     load()
+  }
+
+  /**
+   * Troca a capa de uma academia que já existe.
+   *
+   * Grava assim que o upload termina (e não num «guardar» mais tarde): entre o upload e o gravar
+   * é onde uma capa se perdia sem ninguém ver. Se a rota recusar, a lista recarrega e o admin vê
+   * a capa que REALMENTE está lá — nunca a nova a fingir que pegou.
+   */
+  const updateAcademyCover = async (id: string, coverUrl: string) => {
+    setAcademyBusyId(id)
+    try {
+      const res = await fetch("/api/admin/live-sessions/academies", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ id, cover_url: coverUrl || null }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(typeof j.error === "string" ? j.error : "A capa não foi trocada.")
+      } else if (!j.unchanged) {
+        toast.success(coverUrl ? "Capa trocada." : "Capa removida.")
+      }
+    } catch {
+      toast.error("Erro de rede — a capa NÃO foi trocada.")
+    } finally {
+      setAcademyBusyId(null)
+      // Recarrega sempre: o que se mostra passa a ser o que está na base, e não o que se tentou.
+      load()
+    }
   }
 
   const createEducator = async () => {
@@ -519,14 +565,42 @@ export default function LiveSessionsManager() {
         </p>
         <Input value={academyName} onChange={(e) => setAcademyName(e.target.value)} placeholder="Nome da academia" />
         <Textarea value={academyDesc} onChange={(e) => setAcademyDesc(e.target.value)} placeholder="Descrição" />
+        <LmsImageUploadField
+          label="Capa (opcional)"
+          description="16:9 — 1920×1080 é o tamanho certo. Máximo 5 MB."
+          value={academyCover}
+          onUrlChange={setAcademyCover}
+          scope="academy_cover"
+          aspect="16:9"
+        />
         <Button className="bg-[#D2A63C] text-black hover:bg-[#BB8525]" onClick={createAcademy}>
           Criar academia
         </Button>
-        <div className="space-y-1 text-xs text-gray-300">
+
+        <div className="space-y-3 pt-2">
           {academies.map((a) => (
-            <p key={a.id}>
-              • {a.name} <span className="text-gray-500">({a.slug})</span>
-            </p>
+            <div key={a.id} className="rounded-xl border border-gray-800 bg-black/40 p-3">
+              <p className="text-xs text-gray-300">
+                {a.name} <span className="text-gray-500">({a.slug})</span>
+                {academyBusyId === a.id && <span className="ml-2 text-[#E9C46A]">a gravar…</span>}
+              </p>
+              <div className="mt-2">
+                {/*
+                  `commit="blur"` para o PATCH não sair a cada tecla quando se cola um URL à mão.
+                  O upload, esse, grava logo — é o caminho normal e é onde a capa se perdia.
+                */}
+                <LmsImageUploadField
+                  label="Capa"
+                  description={a.cover_url ? "Carrega outra imagem para trocar, ou limpa o campo para remover." : "Sem capa. 16:9 — 1920×1080."}
+                  value={a.cover_url || ""}
+                  onUrlChange={(url) => updateAcademyCover(a.id, url)}
+                  scope="academy_cover"
+                  refId={a.id}
+                  aspect="16:9"
+                  commit="blur"
+                />
+              </div>
+            </div>
           ))}
         </div>
       </div>

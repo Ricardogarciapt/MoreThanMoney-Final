@@ -4,8 +4,14 @@ import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { avaliarRacio } from "@/lib/lms/capa-academia"
 
-export type LmsImageScope = "educator_avatar" | "stream_thumbnail" | "stream_square" | "playlist_cover"
+export type LmsImageScope =
+  | "educator_avatar"
+  | "stream_thumbnail"
+  | "stream_square"
+  | "playlist_cover"
+  | "academy_cover"
 
 export function LmsImageUploadField({
   label,
@@ -14,6 +20,11 @@ export function LmsImageUploadField({
   onUrlChange,
   scope,
   refId,
+  /**
+   * A forma da pré-visualização. `"16:9"` nas capas, porque é a forma com que a secção as mostra:
+   * uma miniatura quadrada deixava publicar uma capa que só se vê deformada em produção.
+   */
+  aspect = "square",
   /** immediate = cada alteração no campo (formulários); blur = só ao sair do campo ou após upload (evita PATCH por tecla) */
   commit = "immediate",
   /** endpoint de upload — admin por defeito; o studio passa a rota do educador */
@@ -26,6 +37,7 @@ export function LmsImageUploadField({
   scope: LmsImageScope
   /** UUID do educador ou do stream (opcional); organiza pastas no storage */
   refId?: string | null
+  aspect?: "square" | "16:9"
   commit?: "immediate" | "blur"
   uploadUrl?: string
 }) {
@@ -33,9 +45,12 @@ export function LmsImageUploadField({
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState(value)
+  /** O que a imagem que está à frente tem de errado sem dar erro: rácio torto ou não carregar. */
+  const [avisoImagem, setAvisoImagem] = useState<string | null>(null)
 
   useEffect(() => {
     setDraft(value)
+    setAvisoImagem(null)
   }, [value])
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,13 +128,34 @@ export function LmsImageUploadField({
         </Button>
       </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
+      {/* Rácio torto e imagem que não carrega são AVISOS: nenhum dos dois dá erro em sítio nenhum,
+          e nenhum dos dois é razão para impedir o dono de publicar o que quer. */}
+      {avisoImagem && <p className="text-xs text-[#E9C46A]">{avisoImagem}</p>}
       {(commit === "blur" ? draft : value).trim() ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={(commit === "blur" ? draft : value).trim()}
-          alt=""
-          className="h-24 w-24 rounded-lg border border-gray-600 object-cover bg-black"
-        />
+        <div
+          className={
+            aspect === "16:9"
+              ? "aspect-video w-full max-w-sm overflow-hidden rounded-lg border border-gray-600 bg-black"
+              : "h-24 w-24 overflow-hidden rounded-lg border border-gray-600 bg-black"
+          }
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={(commit === "blur" ? draft : value).trim()}
+            alt=""
+            className="h-full w-full object-cover"
+            onLoad={(e) => {
+              // Mede-se a imagem JÁ CARREGADA, e não o ficheiro escolhido: assim também se apanha
+              // um URL colado à mão, que é por onde entram as capas tortas que ninguém carregou.
+              const img = e.currentTarget
+              if (aspect !== "16:9") return setAvisoImagem(null)
+              setAvisoImagem(avaliarRacio(img.naturalWidth, img.naturalHeight).aviso)
+            }}
+            onError={() => {
+              setAvisoImagem("Esta imagem não carrega — o endereço aponta para um ficheiro que não existe.")
+            }}
+          />
+        </div>
       ) : null}
     </div>
   )
