@@ -23,7 +23,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  LOJA_DA_CASA, NOME_DA_CASA, destinoDeCompraValido, nomeDoAutor,
+  LOJA_DA_CASA, NOME_DA_CASA, destinoDeCompraDoProduto, destinoDeCompraValido, nomeDoAutor,
   procuraCasa, vendedorDoProduto, vendedoresDaMontra,
 } from './regras'
 import { podeArquivarNoStripe, sincronizarPrecoNoStripe } from './stripe-preco'
@@ -73,6 +73,35 @@ sim(
 sim(
   'educador: nome vazio cai para o id, não para uma célula em branco',
   nomeDoAutor(PRODUTO_DE_EDUCADOR, () => '') === 'edu-1234',
+)
+
+// ── O nome de MARCA (`vendedor_nome`) ──────────────────────────────────────────────────────
+//
+// A She Is Faceless Academy: a educadora é a Maria Mafalda Costa, mas o curso vende-se sob o nome
+// da academia. Sem este campo, as duas saídas eram más — pôr o produto em nome da MTM, e ela
+// deixava de o poder editar; ou trocar o `display_name` dela, e a academia passava a chamar-se
+// assim no LMS e no estúdio.
+sim(
+  'marca: o nome do produto ganha ao nome da pessoa',
+  nomeDoAutor(
+    { ...PRODUTO_DE_EDUCADOR, vendedor_nome: 'SHE IS FACELESS ACADEMY' },
+    () => 'Maria Mafalda Costa',
+  ) === 'SHE IS FACELESS ACADEMY',
+)
+sim(
+  'marca: em branco não conta como marca — assina a pessoa',
+  nomeDoAutor({ ...PRODUTO_DE_EDUCADOR, vendedor_nome: '   ' }, () => 'Maria Mafalda Costa') === 'Maria Mafalda Costa',
+)
+/**
+ * O CASO MAU: um produto da CASA com um nome de marca escrito à mão.
+ *
+ * Se o campo fosse lido também aí, uma linha escrita no painel punha um produto da MTM a
+ * apresentar-se como sendo de outra entidade. O `dono` manda primeiro — e é por isso que a
+ * verificação da casa está ANTES da marca na função, e não depois.
+ */
+sim(
+  'marca: um produto da casa NÃO se apresenta com outro nome',
+  nomeDoAutor({ educator_id: 'edu-1', dono: 'casa', vendedor_nome: 'OUTRA EMPRESA LDA' }) === NOME_DA_CASA,
 )
 
 // ── 2. O destino de compra dos produtos da casa ───────────────────────────────────────────
@@ -298,3 +327,40 @@ async function main() {
 }
 
 void main()
+
+// ══════════════ O DESTINO DE COMPRA, POR DONO ══════════════
+//
+// A pergunta «para onde vai o botão de comprar» tinha duas respostas em dois ficheiros, e já
+// divergiram uma vez. Agora é uma função, e isto prova-a dos dois lados.
+{
+  const CASA = { dono: 'casa' as const }
+  const EDU = { dono: 'educador' as const }
+
+  sim('casa: caminho interno serve',
+    destinoDeCompraDoProduto({ ...CASA, checkout_externo_url: '/upgrade?plan=premium_annual' }) === '/upgrade?plan=premium_annual')
+  sim('casa: endereço absoluto serve',
+    destinoDeCompraDoProduto({ ...CASA, checkout_externo_url: 'https://morethanmoney.pt/scanners' }) !== null)
+
+  sim('educador: endereço absoluto serve (She Is Faceless Academy)',
+    destinoDeCompraDoProduto({ ...EDU, checkout_externo_url: 'https://shop.beacons.ai/sheisfacelessacademy/abc' })
+      === 'https://shop.beacons.ai/sheisfacelessacademy/abc')
+
+  /**
+   * O CASO MAU: um produto de educador a apontar para um caminho NOSSO.
+   *
+   * `/upgrade?plan=…` cobra uma subscrição da MTM. Pendurado num curso de outra pessoa, o cliente
+   * pagava-nos uma coisa e esperava outra — e o curso nunca lhe era entregue. Nada disto daria
+   * erro: o botão funcionava e levava a uma página de compra verdadeira.
+   */
+  sim('educador: caminho interno NÃO serve',
+    destinoDeCompraDoProduto({ ...EDU, checkout_externo_url: '/upgrade?plan=premium_annual' }) === null)
+
+  // O redireccionamento aberto, nos dois donos.
+  for (const mau of ['//evil.com', '/\\evil.com', '//morethanmoney.pt.evil.com']) {
+    sim(`casa: «${mau}» não é destino`, destinoDeCompraDoProduto({ ...CASA, checkout_externo_url: mau }) === null)
+    sim(`educador: «${mau}» não é destino`, destinoDeCompraDoProduto({ ...EDU, checkout_externo_url: mau }) === null)
+  }
+
+  sim('sem destino escrito, não há destino', destinoDeCompraDoProduto({ ...EDU, checkout_externo_url: null }) === null)
+  sim('só espaços não é destino', destinoDeCompraDoProduto({ ...CASA, checkout_externo_url: '   ' }) === null)
+}

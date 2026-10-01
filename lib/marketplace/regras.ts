@@ -290,10 +290,23 @@ export function podePublicar(
   }
   const conteudo = String(produto.conteudo_url ?? '').trim()
   const externo = String(produto.checkout_externo_url ?? '').trim()
-  // Um produto da casa que manda o comprador para o caminho de compra ANTIGO (um scanner, uma
-  // licença de EA) não entrega nada por aqui: quem entrega é o fluxo que já existe e que já
-  // provisiona o acesso. Exigir-lhe `conteudo_url` era exigir-lhe um link falso.
-  const entregaLaFora = daCasa && /^https?:\/\//i.test(externo)
+  /**
+   * Um produto que manda o comprador para um caminho de compra LÁ FORA não entrega nada por aqui:
+   * quem entrega é o fluxo do outro lado, que também cobra e também provisiona o acesso. Exigir-lhe
+   * `conteudo_url` era exigir-lhe um link falso.
+   *
+   * Isto já valia para os produtos da casa (um scanner, uma licença de EA, que se compram no
+   * caminho antigo). Passou a valer também para os de EDUCADOR quando a She Is Faceless Academy
+   * entrou na montra: o curso cobra-se na loja da academia, e o dinheiro nunca passa pela MTM.
+   *
+   * A pergunta certa é «quem é que pode APONTAR para fora», e a resposta não mudou: só a casa.
+   * `checkout_externo_url` está em `CAMPOS_SO_DO_ADMIN` (ver `gestao.ts`), por isso um educador não
+   * consegue escrever este campo por via nenhuma — pode editar o produto dele todo, menos o destino
+   * do dinheiro. Era essa a protecção, e ela continua inteira; o que aqui caiu era só o efeito
+   * colateral de a ter escrito duas vezes, e que obrigava a pôr em nome da MTM um curso que não é
+   * dela.
+   */
+  const entregaLaFora = /^https?:\/\//i.test(externo)
   if (!entregaLaFora && !/^https?:\/\//i.test(conteudo)) {
     // Um produto pago sem destino é uma cobrança sem entrega. É o pior defeito possível num
     // marketplace: o cliente paga, não recebe nada, e a culpa fica com a casa e não com o autor.
@@ -867,6 +880,40 @@ export function destinoDeCompraValido(url: unknown): boolean {
   return s.startsWith('/') && !s.startsWith('//') && !s.startsWith('/\\')
 }
 
+/**
+ * O DESTINO DE COMPRA DESTE PRODUTO, ou nada se ele não compra lá fora.
+ *
+ * Existe porque a mesma pergunta estava a ser respondida em dois sítios — `podePublicar` aqui ao
+ * lado e a rota do checkout — e as duas respostas já tinham divergido uma vez: a rota testava só
+ * `^https?://`, os catorze produtos da casa apontam todos para caminhos internos (`/upgrade?…`), e
+ * durante algum tempo os catorze botões da montra responderam «este produto ainda não tem cobrança
+ * ligada». Uma pergunta, uma função.
+ *
+ * ═══ PORQUE É QUE A REGRA NÃO É A MESMA PARA OS DOIS DONOS ═════════════════════════════════
+ *
+ * Um caminho INTERNO (`/upgrade?plan=…`) entrega cá dentro: é o fluxo da casa, que cobra e
+ * provisiona o acesso. Num produto de EDUCADOR isso não quer dizer nada — não há fluxo nosso que
+ * entregue um curso de outra pessoa — e aceitá-lo era deixar um produto cobrar sem entregar.
+ *
+ * Um endereço ABSOLUTO serve aos dois: a loja do outro lado cobra e entrega. É o caso da She Is
+ * Faceless Academy, em que o dinheiro nunca passa pela MTM.
+ *
+ * `//` fica de fora nos dois casos: `//outro-sitio.com` é relativo ao PROTOCOLO, o browser segue-o
+ * para outro domínio, e aceitá-lo transformava um campo de texto do painel numa porta de
+ * redireccionamento a partir de um domínio de confiança.
+ */
+export function destinoDeCompraDoProduto(produto: {
+  dono?: string | null
+  checkout_externo_url?: string | null
+}): string | null {
+  const url = String(produto.checkout_externo_url ?? '').trim()
+  if (!url) return null
+  if (/^https?:\/\//i.test(url)) return url
+  // Daqui para baixo é um caminho interno — só vale à casa.
+  if (donoValido(produto.dono) !== 'casa') return null
+  return destinoDeCompraValido(url) ? url : null
+}
+
 /** O nome da casa, quando é ela que vende. Escrito uma vez para os três ecrãs o dizerem igual. */
 export const NOME_DA_CASA = 'MoreThanMoney'
 
@@ -888,11 +935,20 @@ export const NOME_DA_CASA = 'MoreThanMoney'
  * Por isso a decisão vive aqui, ao lado de `donoValido`, e não em cada ecrã que a repetia.
  */
 export function nomeDoAutor(
-  produto: { educator_id?: string | null; dono?: string | null },
+  produto: { educator_id?: string | null; dono?: string | null; vendedor_nome?: string | null },
   nomePorId?: (id: string) => string | null | undefined,
 ): string {
+  /**
+   * O nome de marca, quando existe, ganha ao nome da pessoa — mas só num produto de EDUCADOR.
+   *
+   * É o caso da She Is Faceless Academy: a educadora é a Maria Mafalda Costa e o curso vende-se sob
+   * a marca da academia. Num produto da CASA este campo não se lê, senão um nome escrito à mão no
+   * painel passava a poder fazer um produto da MTM parecer de outra pessoa.
+   */
+  const marca = String(produto.vendedor_nome ?? '').trim()
   const id = produto.educator_id ?? null
   if (donoValido(produto.dono) === 'casa' || !id) return NOME_DA_CASA
+  if (marca) return marca
   // Um educador sem nome à mão mostra as primeiras letras do id — é feio, mas é informação, e
   // acontece só enquanto a lista de educadores não tiver chegado ao ecrã.
   return nomePorId?.(id) || id.slice(0, 8)

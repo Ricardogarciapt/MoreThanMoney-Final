@@ -56,7 +56,7 @@ import { getStripeClient } from '@/lib/stripe-client'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { destinoDeCompraValido, donoValido, modoStripe, podeComprarAqui, precoEfectivo } from '@/lib/marketplace/regras'
+import { destinoDeCompraDoProduto, donoValido, modoStripe, podeComprarAqui, precoEfectivo } from '@/lib/marketplace/regras'
 import {
   AMBITO_MARKETPLACE, TEXTO_RECUSA, descontoQueVale, normalizarCodigo, validarCupao,
 } from '@/lib/marketplace/cupoes'
@@ -214,8 +214,10 @@ export async function POST(request: NextRequest) {
     // `//` fica de fora de propósito: `//evil.com` é um caminho relativo ao protocolo, o browser
     // lê-o como outro domínio, e aceitá-lo aqui era abrir uma porta de redireccionamento a partir
     // de um campo de texto do painel.
-    const externo = String(produto.checkout_externo_url ?? '').trim()
-    if (daCasa && destinoDeCompraValido(externo)) {
+    // A regra de quem pode mandar o comprador para onde vive em `destinoDeCompraDoProduto` —
+    // um sítio só, porque já divergiu daqui uma vez e os catorze botões da montra pararam.
+    const externo = destinoDeCompraDoProduto(produto) ?? ''
+    if (externo) {
       await registarPasso({
         etapa: 'iniciou_checkout',
         produtoId: produto.id,

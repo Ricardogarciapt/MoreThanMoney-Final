@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { Loader2, ArrowLeft, Tag, Clock, ExternalLink } from "lucide-react"
-import { euros, galeriaDoProduto } from "@/lib/marketplace/regras"
+import { euros, galeriaDoProduto, nomeDoAutor } from "@/lib/marketplace/regras"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
 
 type Preco = {
@@ -37,6 +37,10 @@ type Produto = {
   /** A galeria, SEM a capa — a capa é `imagem_url`. Ver `galeriaDoProduto`. */
   imagens: string[] | null
   educador: { display_name: string; specialty: string | null } | null
+  /** Nome de marca do vendedor. Nulo = assina o educador. */
+  vendedor_nome?: string | null
+  educator_id?: string | null
+  dono?: string | null
   jaComprou: boolean; podeComprar: boolean; motivoSemCompra: string | null
   preco: Preco
 }
@@ -197,10 +201,14 @@ export default function FichaProduto({ slug }: { slug: string }) {
             <span className="text-xs uppercase tracking-wide text-[#D2A63C]">{p.categoria}</span>
             <h1 className="mt-1 text-2xl font-semibold text-zinc-100">{p.titulo}</h1>
             {p.subtitulo && <p className="mt-1 text-zinc-400">{p.subtitulo}</p>}
-            {p.educador && (
+            {/* O nome do vendedor passa por `nomeDoAutor` e não lê o educador directamente: há
+                produtos que se vendem sob uma marca (a She Is Faceless Academy) e não sob o nome
+                de quem os fez. A especialidade só acompanha quando é mesmo a pessoa a assinar —
+                «SHE IS FACELESS ACADEMY · Faceless Marketing» dizia a mesma coisa duas vezes. */}
+            {(p.vendedor_nome || p.educador) && (
               <p className="mt-2 text-sm text-zinc-500">
-                Por {p.educador.display_name}
-                {p.educador.specialty ? ` · ${p.educador.specialty}` : ""}
+                Por {nomeDoAutor(p, () => p.educador?.display_name)}
+                {!p.vendedor_nome && p.educador?.specialty ? ` · ${p.educador.specialty}` : ""}
               </p>
             )}
           </div>

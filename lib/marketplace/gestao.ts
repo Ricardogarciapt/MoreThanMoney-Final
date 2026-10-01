@@ -100,6 +100,7 @@ export type ProdutoGerido = {
   stripe_product_id: string | null
   stripe_price_id: string | null
   checkout_externo_url: string | null
+  vendedor_nome: string | null
   campanha_pct: number | null
   campanha_inicio: string | null
   campanha_fim: string | null
@@ -114,7 +115,7 @@ export type ProdutoGerido = {
 export const COLUNAS_GESTAO =
   'id, educator_id, dono, slug, titulo, subtitulo, descricao, tipo, imagem_url, imagens, preco_cents, moeda, ' +
   'recorrente, periodicidade, requer_morada, conteudo_url, conteudo_nota, estado, activo, partilha_pct, ' +
-  'stripe_product_id, stripe_price_id, checkout_externo_url, campanha_pct, campanha_inicio, ' +
+  'stripe_product_id, stripe_price_id, checkout_externo_url, vendedor_nome, campanha_pct, campanha_inicio, ' +
   'campanha_fim, campanha_tier, campanha_stripe_coupon_id, motivo_recusa, publicado_em, created_at, updated_at'
 
 /**
@@ -201,6 +202,8 @@ export async function produtosSobGestao(quem: Quem, limite = 300): Promise<Produ
  *   · `estado`, `publicado_em`, `motivo_recusa` — publicar é um acto de revisão. O educador PEDE
  *     (accao 'publicar'), não decide.
  *   · `checkout_externo_url` — manda o comprador para fora. Só a casa aponta para fora.
+ *   · `vendedor_nome` — o nome com que o produto se apresenta. Um educador a escrevê-lo podia
+ *     pôr na montra, por baixo do produto dele, o nome de outra pessoa ou o da própria MTM.
  *
  * Um campo que não esteja em lista nenhuma não se escreve por via nenhuma. É a escolha certa para
  * o erro por omissão: uma coluna nova nasce fechada e alguém tem de a abrir a pensar, em vez de
@@ -222,7 +225,7 @@ export const CAMPOS_DO_EDUCADOR = [
 ] as const
 
 export const CAMPOS_SO_DO_ADMIN = [
-  'partilha_pct', 'dono', 'activo', 'checkout_externo_url', 'apple_product_id',
+  'partilha_pct', 'dono', 'activo', 'checkout_externo_url', 'apple_product_id', 'vendedor_nome',
 ] as const
 
 export function camposPermitidos(papel: Papel): readonly string[] {

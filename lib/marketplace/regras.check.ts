@@ -520,10 +520,42 @@ sim('título vazio dá slug vazio e não rebenta', slugDoTitulo('') === '')
       LIGADO,
     ).pode,
   )
-  // ...mas um produto de EDUCADOR sem conteúdo continua a ser uma cobrança sem entrega.
+  // ...e um produto de EDUCADOR que cobra lá fora também não: é o caso da She Is Faceless Academy,
+  // em que o curso se paga na loja da academia e o dinheiro nunca passa pela MTM. Quem APONTA para
+  // fora continua a ser só a casa — `checkout_externo_url` é admin-only (ver gestao.check.ts) — mas
+  // o produto pode ficar em nome de quem o fez.
+  sim(
+    'produto de educador com checkout externo publica-se sem conteudo_url',
+    podePublicar(
+      { ...PRODUTO_BOM, conteudo_url: null, checkout_externo_url: 'https://shop.beacons.ai/sheisfacelessacademy/abc' },
+      VENDEDOR,
+      LIGADO,
+    ).pode,
+  )
+  // ...mas um produto de EDUCADOR sem conteúdo E sem destino continua a ser uma cobrança sem entrega.
   sim(
     'produto de educador sem conteúdo continua a NÃO publicar',
     !podePublicar({ ...PRODUTO_BOM, conteudo_url: null }, VENDEDOR, LIGADO).pode,
+  )
+  // E o vendedor por activar continua a mandar: um checkout externo não é uma porta das traseiras
+  // para pôr na montra um educador que a casa ainda não aprovou.
+  sim(
+    'educador NÃO-activado com checkout externo continua a não publicar',
+    !podePublicar(
+      { ...PRODUTO_BOM, conteudo_url: null, checkout_externo_url: 'https://shop.beacons.ai/sheisfacelessacademy/abc' },
+      { activo: false },
+      LIGADO,
+    ).pode,
+  )
+  // Um caminho interno não chega para dispensar o conteúdo: `/upgrade?...` entrega cá dentro, e
+  // dar-lhe o passe livre reabria exactamente o buraco da cobrança sem entrega.
+  sim(
+    'checkout interno NÃO dispensa o conteudo_url',
+    !podePublicar(
+      { ...PRODUTO_BOM, conteudo_url: null, checkout_externo_url: '/upgrade?plan=premium_annual' },
+      VENDEDOR,
+      LIGADO,
+    ).pode,
   )
   // E um produto da casa SEM nenhum dos dois também não: o buraco não se abre por ser da casa.
   sim(

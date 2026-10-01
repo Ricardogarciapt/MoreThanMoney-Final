@@ -38,7 +38,7 @@ export const COLUNAS_VITRINE =
   // A campanha entra na montra porque o preço com desconto é o preço que se MOSTRA. Sem estas
   // colunas o cartão desenhava o preço de tabela e o checkout cobrava outro — e mostrar um preço
   // e cobrar outro é a única coisa que uma loja não pode fazer nunca.
-  'dono, recorrente, requer_morada, checkout_externo_url, campanha_pct, campanha_inicio, campanha_fim, campanha_tier'
+  'dono, vendedor_nome, recorrente, requer_morada, checkout_externo_url, campanha_pct, campanha_inicio, campanha_fim, campanha_tier'
 
 export type ProdutoVitrine = {
   id: string
@@ -61,6 +61,8 @@ export type ProdutoVitrine = {
   educator_id: string | null
   publicado_em: string | null
   dono: string
+  /** Nome de ecrã do vendedor. Nulo = o nome do educador. Ver `nomeDoAutor`. */
+  vendedor_nome: string | null
   recorrente: boolean
   requer_morada: boolean
   checkout_externo_url: string | null

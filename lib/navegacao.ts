@@ -74,7 +74,11 @@ export const DESTINOS_NAVEGACAO: DestinoNavegacao[] = [
     chaveSubmenu: 'navfooter.subMtmEducation', rotuloSubmenuPt: 'Educação MTM',
   },
   { id: 'docs', href: '/docs', chave: 'navfooter.subDocs', rotuloPt: 'Docs', grupo: 'educacao', comoUsar: 'a documentação' },
-  { id: 'live-sessions', href: '/live-sessions', chave: 'navfooter.subLiveSessions', rotuloPt: 'Live Sessions', grupo: 'educacao', comoUsar: 'as sessões ao vivo' },
+  // «Academias e Lives» e não «Live Sessions»: o que lá está são as academias dos educadores, e as
+  // lives são uma parte delas. O nome antigo prometia só metade do que a página tem.
+  { id: 'live-sessions', href: '/live-sessions', chave: 'navfooter.subLiveSessions', rotuloPt: 'Academias e Lives', grupo: 'educacao', comoUsar: 'as academias e as sessões ao vivo' },
+  // O pilar de conteúdo e negócio digital: Social Media, UGC, Faceless Marketing e mentalidade.
+  { id: 'content-business', href: '/contentbussiness', chave: 'navfooter.subContentBusiness', rotuloPt: 'Content & Business', grupo: 'educacao', comoUsar: 'o pilar de conteúdo e negócio digital' },
   { id: 'avaliacoes', href: '/avaliacoes', chave: 'navfooter.subAvaliacoes', rotuloPt: 'Avaliações', grupo: 'educacao', comoUsar: 'as avaliações e certificados' },
 
   /**
