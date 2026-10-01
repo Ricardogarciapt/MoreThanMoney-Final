@@ -42,7 +42,13 @@ export const ORCAMENTO_INICIAL = 10
  */
 export const CARENCIA_HORAS = JANELA_HORAS
 
-export type EstadoAgente = 'vivo' | 'em_risco' | 'parado' | 'pausado'
+/**
+ * `reformado` não é `parado`, e a diferença não é cosmética: **parado é falhanço, reformado é
+ * sucesso.** Um agente reforma-se quando um filho dele passa a render mais — deixou descendência
+ * melhor, que é o melhor fim possível para um agente. Juntar os dois no mesmo estado perdia a
+ * única informação que distingue uma linhagem que evoluiu de uma que morreu.
+ */
+export type EstadoAgente = 'vivo' | 'em_risco' | 'parado' | 'pausado' | 'reformado'
 
 export interface Agente {
   id: string
@@ -50,10 +56,27 @@ export interface Agente {
   pilar: 'trading' | 'educacao' | 'desenvolvimento' | 'ceo'
   estado: EstadoAgente
   criado_em: string
-  /** Dólares que já consumiu (modelo, serviços, anúncios). */
+  /** Dólares que já consumiu DESDE QUE NASCEU (modelo, serviços, anúncios). */
   gasto: number
-  /** Dólares que entraram no Stripe e foram ATRIBUÍDOS a este agente. */
+  /** Dólares que entraram no Stripe e foram ATRIBUÍDOS a este agente, desde que nasceu. */
   receita: number
+  /**
+   * O mesmo, mas só nas últimas {@link JANELA_HORAS}.
+   *
+   * SÃO CONTAS DIFERENTES E SERVEM PARA COISAS DIFERENTES, e confundi-las é o defeito que esta
+   * separação veio corrigir:
+   *
+   *  · **viver** julga-se pela JANELA. Um agente que fez 400 $ no mês passado e não mexe há três
+   *    dias estava a passar como «vivo» pelo acumulado — ou seja, a regra das 48 horas não existia
+   *    para quem já tinha sido bom uma vez;
+   *  · **clonar** julga-se pelo ACUMULADO. Um agente bom não deixa de merecer um filho por ter
+   *    tido um fim-de-semana parado.
+   *
+   * Quando não vierem, usa-se o acumulado — e o juízo diz que foi isso que aconteceu, para ninguém
+   * ler «vivo» a pensar que foi medido na janela.
+   */
+  receita_janela?: number | null
+  gasto_janela?: number | null
   /** O orçamento que lhe resta. */
   saldo: number
   /** Quando foi julgado pela última vez. */
@@ -95,7 +118,11 @@ function horasEntre(a: string | null | undefined, b: Date): number | null {
  *  5. sem lucro e sem saldo: pára.
  */
 export function julgar(a: Agente, agora: Date = new Date()): Juizo {
-  const resultado = Number((Number(a.receita ?? 0) - Number(a.gasto ?? 0)).toFixed(2))
+  const temJanela = a.receita_janela != null || a.gasto_janela != null
+  const receitaJ = Number(a.receita_janela ?? a.receita ?? 0)
+  const gastoJ = Number(a.gasto_janela ?? a.gasto ?? 0)
+  const resultado = Number((receitaJ - gastoJ).toFixed(2))
+  const comoFoiMedido = temJanela ? '' : ' (medido pelo acumulado — não veio a janela)'
 
   if (a.pausado || a.estado === 'pausado') {
     return {
@@ -108,6 +135,12 @@ export function julgar(a: Agente, agora: Date = new Date()): Juizo {
 
   if (a.estado === 'parado') {
     return { decisao: 'espera', estado: 'parado', resultado, porque: 'Já está parado.' }
+  }
+  if (a.estado === 'reformado') {
+    return {
+      decisao: 'espera', estado: 'reformado', resultado,
+      porque: 'Reformado — um filho dele rende mais. Não se julga quem já passou o testemunho.',
+    }
   }
 
   const idade = horasEntre(a.criado_em, agora)
@@ -131,7 +164,7 @@ export function julgar(a: Agente, agora: Date = new Date()): Juizo {
       decisao: 'continua',
       estado: 'vivo',
       resultado,
-      porque: `Pagou-se: ${a.receita.toFixed(2)} $ de receita contra ${a.gasto.toFixed(2)} $ de gasto.`,
+      porque: `Pagou-se: ${receitaJ.toFixed(2)} $ de receita contra ${gastoJ.toFixed(2)} $ de gasto${comoFoiMedido}.`,
     }
   }
 
@@ -141,7 +174,7 @@ export function julgar(a: Agente, agora: Date = new Date()): Juizo {
       decisao: 'avisa',
       estado: 'em_risco',
       resultado,
-      porque: `Sem lucro em ${JANELA_HORAS} h (${resultado.toFixed(2)} $), mas ainda tem ${saldo.toFixed(2)} $ de orçamento. Em risco.`,
+      porque: `Sem lucro em ${JANELA_HORAS} h (${resultado.toFixed(2)} $)${comoFoiMedido}, mas ainda tem ${saldo.toFixed(2)} $ de orçamento. Em risco.`,
     }
   }
 
@@ -149,7 +182,7 @@ export function julgar(a: Agente, agora: Date = new Date()): Juizo {
     decisao: 'para',
     estado: 'parado',
     resultado,
-    porque: `Sem lucro e sem orçamento: ${a.receita.toFixed(2)} $ de receita, ${a.gasto.toFixed(2)} $ gastos. Pára.`,
+    porque: `Sem lucro e sem orçamento: ${receitaJ.toFixed(2)} $ de receita, ${gastoJ.toFixed(2)} $ gastos${comoFoiMedido}. Pára.`,
   }
 }
 
@@ -178,16 +211,109 @@ export function podeGastar(a: Agente, quanto: number): { pode: boolean; porque: 
  * lucro tem de pagar o orçamento inicial do filho. Clonar com o lucro de 2 $ um agente que custa
  * 10 $ a arrancar é criar dois agentes pobres em vez de um que funcionava.
  */
+export function lucroAcumulado(a: Agente): number {
+  return Number((Number(a.receita ?? 0) - Number(a.gasto ?? 0)).toFixed(2))
+}
+
 export function podeClonar(a: Agente, agora: Date = new Date()): { pode: boolean; porque: string } {
-  const j = julgar(a, agora)
-  if (j.decisao !== 'continua') {
-    return { pode: false, porque: `Só clona quem se paga. ${j.porque}` }
+  if (a.pausado || a.estado === 'pausado') return { pode: false, porque: 'Agente pausado.' }
+  if (a.estado === 'parado' || a.estado === 'reformado') {
+    return { pode: false, porque: `Um agente ${a.estado} não clona.` }
   }
-  if (j.resultado < ORCAMENTO_INICIAL) {
+  const idade = horasEntre(a.criado_em, agora)
+  if (idade === null || idade < CARENCIA_HORAS) {
+    return { pode: false, porque: 'Ainda na carência — ninguém se multiplica antes de ter sido julgado uma vez.' }
+  }
+
+  /**
+   * O ACUMULADO, e não o da janela. Decisão do dono (01/10): um agente que já rendeu 10 $ desde que
+   * nasceu merece um filho, mesmo que esta janela tenha sido fraca. Viver julga-se pelo que se faz
+   * agora; multiplicar-se julga-se pelo que já se provou.
+   */
+  const lucro = lucroAcumulado(a)
+  if (lucro < ORCAMENTO_INICIAL) {
     return {
       pode: false,
-      porque: `Lucro de ${j.resultado.toFixed(2)} $ não chega para financiar um filho (${ORCAMENTO_INICIAL} $).`,
+      porque: `Lucro acumulado de ${lucro.toFixed(2)} $ não chega para financiar um filho (${ORCAMENTO_INICIAL} $).`,
     }
   }
-  return { pode: true, porque: `Lucro de ${j.resultado.toFixed(2)} $ financia um filho com ${ORCAMENTO_INICIAL} $.` }
+  return { pode: true, porque: `Lucro acumulado de ${lucro.toFixed(2)} $ financia um filho com ${ORCAMENTO_INICIAL} $.` }
+}
+
+/**
+ * ═══ A REFORMA: O FILHO SUPERA O PAI ═══════════════════════════════════════════════════════
+ *
+ * Decisão do dono (01/10): se o filho render mais do que o pai, o filho reforma-o.
+ *
+ * ── E COMPARAR COMO? É AQUI QUE A REGRA SE GANHA OU SE PERDE ──
+ *
+ * Comparar LUCRO ACUMULADO seria escrever uma regra que nunca dispara: o filho nasce sempre depois,
+ * e um pai com três meses de vida leva sempre vantagem sobre um filho de três dias. A regra ficava
+ * no código a parecer que funcionava, e ninguém daria por isso — é o tipo de erro que só se descobre
+ * meses depois, a perguntar «porque é que nenhum pai se reformou ainda?».
+ *
+ * Compara-se RITMO: lucro por hora de vida. É a única comparação justa entre quem nasceu em alturas
+ * diferentes, e é a que responde à pergunta certa — «qual dos dois rende mais, agora?».
+ *
+ * Três travões, porque reformar é tirar um agente que funciona:
+ *  · o filho tem de ter passado a carência. Um filho de duas horas com uma venda de sorte tem um
+ *    ritmo enorme e não provou nada;
+ *  · o filho tem de estar a dar lucro de verdade. Render «menos mal» que o pai não é superá-lo;
+ *  · a margem tem de ser clara ({@link MARGEM_REFORMA}). Ganhar por 1% é ruído, não é evolução, e
+ *    reformar um pai bom por ruído é perder os dois.
+ */
+export const MARGEM_REFORMA = 1.25
+
+export function ritmo(a: Agente, agora: Date = new Date()): number | null {
+  const idade = horasEntre(a.criado_em, agora)
+  if (idade === null || idade <= 0) return null
+  return Number((lucroAcumulado(a) / idade).toFixed(4))
+}
+
+export function deveReformarOPai(
+  pai: Agente,
+  filho: Agente,
+  agora: Date = new Date(),
+): { pode: boolean; porque: string } {
+  if (pai.pilar === 'ceo') {
+    return { pode: false, porque: 'O CEO não se reforma por um sub-agente — responde ao Ricardo, não aos filhos.' }
+  }
+  if (pai.estado === 'parado' || pai.estado === 'reformado') {
+    return { pode: false, porque: `O pai já está ${pai.estado}.` }
+  }
+  if (pai.pausado || pai.estado === 'pausado') {
+    return { pode: false, porque: 'O pai está pausado pelo dono — a supervisão ganha à regra.' }
+  }
+
+  const idadeFilho = horasEntre(filho.criado_em, agora)
+  if (idadeFilho === null || idadeFilho < CARENCIA_HORAS) {
+    return {
+      pode: false,
+      porque: `O filho só tem ${Math.floor(idadeFilho ?? 0)} h. Uma venda de sorte na primeira hora dá um ritmo enorme e não prova nada.`,
+    }
+  }
+  if (lucroAcumulado(filho) <= 0) {
+    return { pode: false, porque: 'O filho ainda não deu lucro. Render menos mal que o pai não é superá-lo.' }
+  }
+
+  const rPai = ritmo(pai, agora)
+  const rFilho = ritmo(filho, agora)
+  if (rPai === null || rFilho === null) {
+    return { pode: false, porque: 'Falta a data de nascimento de um deles — sem idade não há ritmo.' }
+  }
+  // Um pai a perder dinheiro é superado por qualquer filho que ganhe: a margem multiplicativa não
+  // se aplica a números negativos (1.25 × -10 é MAIOR que -10, e isso invertia a regra).
+  const alvo = rPai > 0 ? rPai * MARGEM_REFORMA : 0
+  if (rFilho <= alvo) {
+    return {
+      pode: false,
+      porque: `O filho rende ${rFilho.toFixed(3)} $/h e o pai ${rPai.toFixed(3)} $/h. ` +
+        `Para reformar o pai tem de passar dos ${alvo.toFixed(3)} $/h — ganhar por pouco é ruído, não é evolução.`,
+    }
+  }
+  return {
+    pode: true,
+    porque: `O filho rende ${rFilho.toFixed(3)} $/h contra ${rPai.toFixed(3)} $/h do pai. ` +
+      'Reforma-se o pai: deixou descendência melhor, que é o melhor fim possível para um agente.',
+  }
 }
