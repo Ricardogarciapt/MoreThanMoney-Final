@@ -6,6 +6,8 @@ import { linkWebtrader } from "@/lib/mtmfunded/link-webtrader"
 import { useSearchParams } from "next/navigation"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { montarVista } from "@/lib/mtm-alerts/vista"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -547,6 +549,15 @@ function MobileAlertCard({
 export default function TradingAlertsMobile() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
+  /**
+   * «Só o que sigo» — DESLIGADO por omissão.
+   *
+   * A subscrição nasce com sete símbolos e a casa sinaliza em dezenas. Usada como filtro da lista,
+   * escondia quase tudo: a 01/10 entraram 470 alertas em 24 h e o ecrã dizia «não há alertas».
+   * Ela existe para decidir o que te é ENVIADO, não o que te é mostrado quando abres a lista de
+   * propósito. Ver lib/mtm-alerts/vista.ts.
+   */
+  const [soOQueSigo, setSoOQueSigo] = useState(false)
   const [sub, setSub] = useState<Subscription>({
     enabled: true, push_enabled: true, symbols: simbolosIniciais(), strategies: [], timeframes: [],
   })
@@ -695,22 +706,20 @@ export default function TradingAlertsMobile() {
   // Desempenho dos alertas subscritos + feed final (com filtro de estado)
   const perf = useMemo(() => {
     const acc = { pending: 0, active: 0, win: 0, loss: 0 } as Record<StateCat, number>
-    subFiltered.forEach((a) => acc[stateCategory(a.tradeStatus)]++)
+    // As contagens dos separadores seguem a MESMA base que a lista: com os números a contar uma
+    // coisa e a lista a mostrar outra, o ecrã parece partido mesmo quando está certo.
+    const base = soOQueSigo ? subFiltered : alerts
+    base.forEach((a) => acc[stateCategory(a.tradeStatus)]++)
     return acc
-  }, [subFiltered])
+  }, [subFiltered, alerts, soOQueSigo])
   const winRate = perf.win + perf.loss > 0 ? Math.round((perf.win / (perf.win + perf.loss)) * 100) : null
   // Pedido Ricardo 2026-08-20: a vista "Todos" mostra só sinais VIVOS (pendentes+ativos);
   // os terminados ficam nos separadores Wins/Loss com pips/% do desfecho (e nas métricas).
-  const visible = useMemo(
-    () =>
-      stateFilter === "all"
-        ? subFiltered.filter((a) => {
-            const c = stateCategory(a.tradeStatus)
-            return c === "pending" || c === "active"
-          })
-        : subFiltered.filter((a) => stateCategory(a.tradeStatus) === stateFilter),
-    [subFiltered, stateFilter]
+  const vista = useMemo(
+    () => montarVista(alerts, { sub, soOQueSigo, estado: stateFilter }),
+    [alerts, sub, soOQueSigo, stateFilter],
   )
+  const visible = vista.visiveis
   const STATE_TABS: { key: "all" | StateCat; label: string; count: number; cls: string }[] = [
     { key: "all", label: "Ativos", count: perf.pending + perf.active, cls: "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" },
     { key: "pending", label: "Pendentes", count: perf.pending, cls: "border-amber-500 bg-amber-500/15 text-amber-300" },
@@ -883,6 +892,31 @@ export default function TradingAlertsMobile() {
         </div>
       </div>
 
+      {/*
+        O INTERRUPTOR DO FILTRO — visível, e a dizer quanto está a esconder.
+        Um filtro que esconde sem se ver não é um filtro: é um ecrã partido. Era isso que fazia
+        parecer que não havia alertas quando tinham entrado 470 em 24 horas.
+      */}
+      {!loading && (
+        <button
+          type="button"
+          onClick={() => setSoOQueSigo((v) => !v)}
+          className={cn(
+            "mb-3 flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs transition-colors",
+            soOQueSigo ? "border-[#D2A63C] bg-[#D2A63C]/10 text-[#E9C46A]" : "border-gray-700 text-gray-400",
+          )}
+        >
+          <span>{soOQueSigo ? "Só o que sigo" : "Todos os alertas"}</span>
+          <span className="text-gray-500">
+            {soOQueSigo
+              ? vista.escondidosPelaSubscricao > 0
+                ? `+${vista.escondidosPelaSubscricao} escondidos · toca para ver todos`
+                : "toca para ver todos"
+              : "toca para filtrar pelos teus"}
+          </span>
+        </button>
+      )}
+
       {/* Feed */}
       {loading ? (
         <div className="flex items-center gap-2 py-10 text-gray-400">
@@ -891,8 +925,26 @@ export default function TradingAlertsMobile() {
       ) : visible.length === 0 ? (
         <div className="rounded-xl border border-gray-700 bg-black/40 py-12 text-center text-gray-500">
           <Bell className="mx-auto mb-3 h-10 w-10 opacity-40" />
+          {/*
+            O vazio diz PORQUÊ. «Sem alertas para os teus ativos» era mentira quando havia 470 a
+            chegar — e um vazio que não se explica manda a pessoa recarregar a página para sempre.
+          */}
           <p className="px-6 text-sm">
-            Sem alertas para os teus ativos. Toca em <span className="text-[#D2A63C]">Gerir</span> para escolher o que queres receber.
+            {vista.motivoDoVazio === "nada_chegou" && "Ainda não chegou nenhum alerta."}
+            {vista.motivoDoVazio === "subscricao" && (
+              <>
+                Há alertas, mas nenhum nos teus ativos.{" "}
+                <button type="button" onClick={() => setSoOQueSigo(false)} className="text-[#D2A63C] underline">
+                  Ver todos
+                </button>
+              </>
+            )}
+            {vista.motivoDoVazio === "estado" && (
+              <>
+                Nenhum alerta neste estado agora.
+                {vista.escondidosPeloEstado > 0 && ` Há ${vista.escondidosPeloEstado} noutros separadores.`}
+              </>
+            )}
           </p>
         </div>
       ) : (
