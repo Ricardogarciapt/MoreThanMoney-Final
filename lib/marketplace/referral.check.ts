@@ -201,6 +201,56 @@ sim('um cupão de marketplace válido passa', validarCupao({ cupao: BOM, produto
   }
 }
 
+/**
+ * ── OS CÓDIGOS DE ATRIBUIÇÃO ────────────────────────────────────────────────────────────
+ *
+ * Não descontam nada: servem para saber QUEM trouxe a venda. A equipa de agentes mede-se pela
+ * receita que traz, e sem um código gravado na compra essa receita não se consegue atribuir a
+ * ninguém — fica em «por atribuir», que é honesto mas não paga agentes.
+ *
+ * O que estes testes protegem é o contrário do que parece: NÃO é que o código funcione — é que ele
+ * nunca passe a descontar. Um `pct` diferente de zero aqui é um produto vendido abaixo do preço
+ * por causa de um código que existe para contar, não para dar.
+ */
+{
+  const ATRIB = { id: 'c9', code: 'AG-FORMACAO', type: 'atribuicao', discount_value: 0, is_active: true }
+
+  const v = validarCupao({ cupao: ATRIB, produto: PRODUTO, agoraIso: AGORA })
+  sim('um código de atribuição é aceite', v.ok)
+  sim('e NÃO desconta nada', v.ok === true && v.pct === 0)
+
+  /**
+   * Sem a saída própria, estes códigos caíam no ramo do desconto e eram recusados com
+   * «sem_desconto» — existiam, pareciam válidos, e não funcionavam. É a pior combinação possível,
+   * porque ninguém a procura: o código está na tabela, o agente está na equipa, e a venda
+   * aparece por atribuir sem explicação nenhuma.
+   */
+  sim('não cai no ramo do desconto', !(v.ok === false && v.motivo === 'sem_desconto'))
+
+  // O ÂMBITO não se lhes aplica: um código que desconta zero não tem de onde escapar, e marcar
+  // origem vale em qualquer produto.
+  sim('passa sem plan_override',
+    validarCupao({ cupao: { ...ATRIB, plan_override: null }, produto: PRODUTO, agoraIso: AGORA }).ok)
+
+  // Mas o prazo e o limite continuam a valer quando estiverem preenchidos.
+  const expirado = validarCupao({
+    cupao: { ...ATRIB, valid_until: '2020-01-01T00:00:00.000Z' }, produto: PRODUTO, agoraIso: AGORA,
+  })
+  sim('um código de atribuição expirado é recusado', !expirado.ok && expirado.motivo === 'expirado')
+
+  const esgotado = validarCupao({
+    cupao: { ...ATRIB, max_uses: 2 }, produto: PRODUTO, agoraIso: AGORA, usosFeitos: 2,
+  })
+  sim('e esgotado também', !esgotado.ok && esgotado.motivo === 'esgotado')
+
+  // Um código de atribuição que alguém marque como dando VIP continua a ser travado antes: a
+  // ordem das verificações é o que impede um «código de contagem» de dar o pack do site.
+  const perigoso = validarCupao({
+    cupao: { ...ATRIB, grants_vip: true }, produto: PRODUTO, agoraIso: AGORA,
+  })
+  sim('atribuição que dê VIP é travada na mesma', !perigoso.ok && perigoso.motivo === 'da_direitos_de_pack')
+}
+
 // ── O âmbito: o que impede um educador de descontar o produto de outro ──────────────────
 {
   const doOutro = { ...BOM, marketplace_produto_id: 'p-outro' }

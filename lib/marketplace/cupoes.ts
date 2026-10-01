@@ -132,6 +132,37 @@ export function validarCupao(entrada: {
   if (c.type === 'free_subscription' || c.type === 'free_months') {
     return { ok: false, motivo: 'tipo_nao_serve' }
   }
+
+  /**
+   * ── OS CÓDIGOS DE ATRIBUIÇÃO ────────────────────────────────────────────────────────────
+   *
+   * Não dão desconto nenhum: existem para saber QUEM trouxe a venda (a equipa de agentes mede-se
+   * pela receita que traz, e a receita reconhece-se pelo código gravado na compra).
+   *
+   * Passam ANTES do âmbito e do desconto, e por boas razões:
+   *
+   *  · o ÂMBITO não se lhes aplica. O âmbito existe para um desconto não escapar do sítio onde foi
+   *    pensado; um código que desconta zero não tem de onde escapar, e marcar origem vale em
+   *    qualquer produto;
+   *  · o ramo do DESCONTO recusa tudo o que seja `<= 0`, e estes são todos 0 por definição. Sem
+   *    esta saída, o código era aceite pela tabela e recusado no fim com «sem desconto» — a pior
+   *    combinação possível: existe, parece válido, e não funciona.
+   *
+   * O limite de usos e o prazo ainda se aplicam quando estiverem preenchidos, porque um código de
+   * campanha pode ser de atribuição E ter data para acabar.
+   */
+  if (c.type === 'atribuicao') {
+    const agoraA = Date.parse(entrada.agoraIso)
+    if (Number.isFinite(agoraA) && c.valid_until) {
+      const f = Date.parse(c.valid_until)
+      if (!Number.isFinite(f) || f <= agoraA) return { ok: false, motivo: 'expirado' }
+    }
+    const maxA = Number(c.max_uses ?? 0)
+    if (maxA > 0 && Number(entrada.usosFeitos ?? 0) >= maxA) return { ok: false, motivo: 'esgotado' }
+    // `pct: 0` é o ponto todo: o cliente paga o preço cheio e a compra fica com o código gravado.
+    return { ok: true, pct: 0, cupaoId: c.id }
+  }
+
   if (c.type !== 'discount_pct') return { ok: false, motivo: 'tipo_nao_serve' }
 
   // ── O âmbito ────────────────────────────────────────────────────────────────────────────
