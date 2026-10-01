@@ -5,7 +5,7 @@ import { getStripeRevenue } from "@/lib/agent-business-stripe"
 
 /**
  * API de negócio para o agente executivo AIOS.
- * GET  /api/agent/v1/business?resource=overview|revenue|subscriptions|customers|leads|tasks
+ * GET  /api/agent/v1/business?resource=overview|revenue|subscriptions|customers|leads|tasks|equidade
  * POST /api/agent/v1/business   body: { action: "create_task" | "update_task" | "outreach_draft", ... }
  *
  * Leitura = imediata. Escrita interna (tarefas) = imediata. Envios para clientes NÃO acontecem aqui:
@@ -189,6 +189,9 @@ export async function GET(request: NextRequest) {
         return agentOk(await getLeads(sb, url.searchParams.get("stage"), limit))
       case "tasks":
         return agentOk(await getTasks(sb, url.searchParams.get("status"), limit))
+      case "equidade":
+      case "equity":
+        return agentOk(await getEquidade(sb))
       // Máquina de vendas — usada pela FRIDAY (funnel) e EDITH (admin) do AIOS.
       case "funnel":
       case "sales":
@@ -288,5 +291,72 @@ export async function POST(request: NextRequest) {
     return agentError("action desconhecida: " + action, 400)
   } catch (e) {
     return agentError("Falha na acção: " + (e as Error).message, 500)
+  }
+}
+
+/**
+ * A EQUIDADE DAS CONTAS DA CASA.
+ *
+ * «Da casa» é o que `conta_casa` ou `conta_real_casa` marcam — mestres, financiadas e as duas
+ * reais. Não entram aqui as contas dos clientes: a pergunta «quanto temos» é sobre o nosso
+ * dinheiro, e misturar as duas numa resposta falada seria a pior forma de o confundir.
+ *
+ * O `lidas_em` vai sempre junto, e é a parte que não se pode cortar: uma equidade sem hora é um
+ * número que parece de agora e pode ser de ontem. Num painel vê-se a data ao lado; numa resposta
+ * falada, se não for dita, ninguém a pergunta.
+ */
+async function getEquidade(sb: ReturnType<typeof getSupabaseAdmin>) {
+  const { data, error } = await sb
+    .from("mtm_trading_accounts")
+    .select("etiqueta, mt5_login, tipo, estado, motor, saldo_inicial, sim_saldo, sim_equity, metricas, metricas_lidas_em, conta_real_casa")
+    .or("conta_casa.is.true,conta_real_casa.is.true")
+    .eq("estado", "ativa")
+  if (error) throw new Error(error.message)
+
+  const num = (v: unknown): number | null => {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+
+  const contas = (data ?? []).map((c) => {
+    const r = c as Record<string, unknown>
+    const metricas = (r.metricas ?? {}) as Record<string, unknown>
+    // A equidade vem do snapshot das métricas quando existe; o `sim_equity` é a do motor simulado.
+    // A ordem importa: as métricas são o que o motor real leu da corretora.
+    const equity = num(metricas.equity) ?? num(r.sim_equity) ?? num(r.sim_saldo)
+    const inicial = num(r.saldo_inicial)
+    return {
+      conta: (r.etiqueta as string) || `MT5 ${r.mt5_login}`,
+      login: r.mt5_login as string,
+      tipo: r.tipo as string,
+      motor: r.motor as string,
+      real: r.conta_real_casa === true,
+      equidade: equity,
+      inicial,
+      // Em valor E em percentagem: a percentagem compara contas de tamanhos diferentes, o valor
+      // diz o que está mesmo lá.
+      resultado: equity != null && inicial != null ? Number((equity - inicial).toFixed(2)) : null,
+      pct: equity != null && inicial ? Number((((equity - inicial) / inicial) * 100).toFixed(2)) : null,
+      lidas_em: r.metricas_lidas_em as string | null,
+    }
+  })
+
+  contas.sort((a, b) => (b.equidade ?? 0) - (a.equidade ?? 0))
+  const comValor = contas.filter((c) => c.equidade != null)
+  const total = comValor.reduce((s, c) => s + (c.equidade ?? 0), 0)
+  const investido = comValor.reduce((s, c) => s + (c.inicial ?? 0), 0)
+  const datas = contas.map((c) => c.lidas_em).filter(Boolean) as string[]
+
+  return {
+    contas,
+    quantas: contas.length,
+    total: Number(total.toFixed(2)),
+    investido: Number(investido.toFixed(2)),
+    resultado: Number((total - investido).toFixed(2)),
+    pct: investido ? Number((((total - investido) / investido) * 100).toFixed(2)) : null,
+    // A leitura MAIS ANTIGA, e não a mais recente: é ela que diz há quanto tempo o número mais
+    // velho desta soma não é confirmado. A mais recente só diria que alguma coisa foi lida agora.
+    lidas_desde: datas.length ? datas.sort()[0] : null,
+    nota: "Contas da casa (mestres, financiadas e reais). Não inclui contas de clientes.",
   }
 }
