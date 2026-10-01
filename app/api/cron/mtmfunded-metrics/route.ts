@@ -165,6 +165,63 @@ async function limparOrfas(
   return apagadas
 }
 
+
+/**
+ * AS CONTAS REAIS QUE NINGUÉM LIA.
+ *
+ * ═══ O BURACO, MEDIDO A 01/10/2026 ═════════════════════════════════════════════════════════
+ *
+ * Este cron sempre leu as contas pela lista de PARTICIPANTES DE TORNEIO. Quem não está num
+ * torneio nunca era lido — e isso incluía as cinco contas provider na MetaApi (19036, 19037,
+ * 19038, 19040, 19042), que são as que alimentam a cópia para os clientes. Medido: `metricas` a
+ * nulo e `metricas_lidas_em` a NULO desde que nasceram, a 11 de Setembro.
+ *
+ * Ou seja: a casa não sabia a equidade das contas de onde sai o sinal que os clientes copiam. Não
+ * dava erro em lado nenhum — o painel mostrava um traço, e um traço lê-se como «ainda não
+ * carregou».
+ *
+ * Isto corre DEPOIS dos torneios de propósito: se a quota da MetaApi se esgotar, esgota-se a ler
+ * o que decide prémios, e não o que enche um painel.
+ */
+async function lerContasForaDeTorneio(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  notas: string[],
+): Promise<{ lidas: number; semResposta: number }> {
+  /**
+   * Salta o que já foi lido nesta passagem pela FRESCURA e não por uma lista de ids: a lista das
+   * contas de torneio vive dentro de outra função, e passá-la para cá só para a cruzar criava um
+   * acoplamento que se parte na primeira vez que alguém mexer numa delas.
+   */
+  const agoraMenos10 = new Date(Date.now() - 10 * 60_000).toISOString()
+  const { data: contas } = await db
+    .from('mtm_trading_accounts')
+    .select('id, mt5_login, metaapi_account_id, metricas, metricas_lidas_em')
+    .eq('estado', 'ativa')
+    .eq('motor', 'mt5')
+    .not('metaapi_account_id', 'is', null)
+    .or(`metricas_lidas_em.is.null,metricas_lidas_em.lt.${agoraMenos10}`)
+    .limit(60)
+
+  let lidas = 0
+  let semResposta = 0
+  for (const c of contas ?? []) {
+    const id = String(c.id)
+    const snap = await lerConta(String(c.metaapi_account_id))
+    if (!snap) {
+      semResposta++
+      continue
+    }
+    const metricas = { ...(c.metricas as Record<string, unknown> ?? {}), ...snap }
+    await db
+      .from('mtm_trading_accounts')
+      .update({ metricas, metricas_lidas_em: new Date().toISOString() })
+      .eq('id', id)
+    lidas++
+  }
+  if (semResposta) notas.push(`fora de torneio: ${semResposta} conta(s) sem resposta da MetaApi`)
+  return { lidas, semResposta }
+}
+
 export async function GET(request: NextRequest) {
   if (!autorizado(request)) return NextResponse.json({ error: 'não autorizado' }, { status: 401 })
 
@@ -443,7 +500,13 @@ export async function GET(request: NextRequest) {
   semResposta += desafios.semResposta
 
   // ── e as contas que não são de ninguém ────────────────────────────────────
+  // As contas reais fora de torneio — ver o cabeçalho de `lerContasForaDeTorneio`.
+  const fora = await lerContasForaDeTorneio(db, notas)
+
   const orfas = await limparOrfas(db, notas)
 
-  return NextResponse.json({ ok: true, lidas, quebradas, semResposta, orfas, notas })
+  return NextResponse.json({
+    ok: true, lidas, quebradas, semResposta, orfas, notas,
+    foraDeTorneio: { lidas: fora.lidas, semResposta: fora.semResposta },
+  })
 }

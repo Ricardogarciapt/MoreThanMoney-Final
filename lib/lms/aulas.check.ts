@@ -36,6 +36,33 @@ const CRIPTO = { name: 'Criptomoedas', slug: 'criptomoedas' }
   teste('lista vazia dá lista vazia', porAcademia([]).length === 0)
 }
 
+// ── UMA ACADEMIA SEM SALAS CONTINUA A APARECER ──────────────────────────────
+{
+  /**
+   * O CASO MAU. Agrupar só pelas salas fazia desaparecer do ecrã o Imobiliário, a IA e o Network
+   * Marketing — academias que existem no catálogo e ainda não têm educador. Uma área que some da
+   * montra é uma área que a casa deixou de vender sem ninguém decidir isso, e a regra do dono de
+   * 28/09 é explícita: estão TODAS prontas.
+   */
+  const catalogo = [
+    { slug: 'forex', name: 'Forex', cover_url: 'https://x/forex.png' },
+    { slug: 'imobiliario', name: 'Imobiliário', cover_url: 'https://x/imo.png' },
+    { slug: 'ia', name: 'Inteligência Artificial', cover_url: null },
+  ]
+  const g = porAcademia([sala({ id: 'a', academy: FOREX, access_tier: 'free' })], catalogo)
+  teste('as três academias aparecem, mesmo as sem salas', g.length === 3)
+  teste('a que tem sala vem primeiro', g[0].chave === 'forex' && g[0].salas.length === 1)
+  teste('as sem salas vêm a seguir, mas aparecem',
+    g.slice(1).every((x) => x.salas.length === 0) && g.some((x) => x.chave === 'imobiliario'))
+  teste('e trazem a capa do catálogo', g.find((x) => x.chave === 'imobiliario')?.capa === 'https://x/imo.png')
+  teste('capa em falta não rebenta', g.find((x) => x.chave === 'ia')?.capa === null)
+
+  // Uma sala de uma academia FORA do catálogo não se perde — cria o grupo dela.
+  const fora = porAcademia([sala({ id: 'z', academy: CRIPTO })], catalogo)
+  teste('sala de academia fora do catálogo não se perde',
+    fora.some((x) => x.salas.some((s) => s.id === 'z')))
+}
+
 // ── A ORDEM ─────────────────────────────────────────────────────────────────
 {
   const grupos = porAcademia([

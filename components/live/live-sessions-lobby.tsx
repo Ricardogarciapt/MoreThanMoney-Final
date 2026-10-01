@@ -11,6 +11,7 @@ import { useConfigIntro } from "@/components/intro/usar-intro"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { useAuth } from "@/contexts/auth-context"
 import { podeAcederAoTier } from "@/lib/perfil-ui"
+import { porAcademia, type SalaDeAula } from "@/lib/lms/aulas"
 import { useI18n, useT } from "@/components/i18n-provider"
 import { Radio, Users, GraduationCap, Bell, ArrowRight, Circle, Lock, Compass, CalendarClock } from "lucide-react"
 
@@ -168,6 +169,20 @@ export default function LiveSessionsLobby() {
   const salasFiltradas = useMemo(
     () => (academia ? salas.filter((s) => s.academy?.name === academia) : salas),
     [salas, academia]
+  )
+
+  /**
+   * AS SALAS DENTRO DAS ACADEMIAS.
+   *
+   * Eram uma grelha achatada com um filtro por cima: sem filtro, dezoito salas seguidas sem se
+   * perceber onde acaba uma academia e começa a outra. A arrumação vem de `lib/lms/aulas.ts`, o
+   * mesmo módulo que serve o separador Aulas da app — uma regra e dois ecrãs, em vez de duas
+   * cópias que divergem. É lá que está escrito porque é que uma sala sem academia não desaparece
+   * e porque é que a sala mais aberta vem primeiro.
+   */
+  const seccoes = useMemo(
+    () => porAcademia(salasFiltradas as unknown as SalaDeAula[]),
+    [salasFiltradas],
   )
   const openEducatorDialog = async (ed: EducatorProfilePublic) => {
     setSelectedEducator(ed as EducatorPublic)
@@ -391,17 +406,36 @@ export default function LiveSessionsLobby() {
               {t("live.lobby.noRooms")}
             </p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {salasFiltradas.map((stream) => (
-                <StreamMarketCard
-                  key={stream.id}
-                  stream={stream}
-                  featured={stream.is_live}
-                  userPlan={user?.subscription_plan}
-                  userType={user?.user_type}
-                  memberCategory={user?.member_category}
-                  onEducatorProfile={() => openEducatorFromStream(stream)}
-                />
+            <div className="space-y-8">
+              {seccoes.map((seccao) => (
+                <section key={seccao.chave}>
+                  {/* O título só aparece quando NÃO há filtro: com a academia escolhida já está
+                      no chip aceso, e repeti-lo logo abaixo dizia a mesma coisa duas vezes. */}
+                  {!academia && (
+                    <h4 className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                      {seccao.nome}
+                      <span className="text-zinc-700">{seccao.salas.length}</span>
+                      {seccao.aoVivo > 0 && <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />}
+                    </h4>
+                  )}
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {seccao.salas.map((sala) => {
+                      const stream = salasFiltradas.find((x) => x.id === sala.id)
+                      if (!stream) return null
+                      return (
+                        <StreamMarketCard
+                          key={stream.id}
+                          stream={stream}
+                          featured={stream.is_live}
+                          userPlan={user?.subscription_plan}
+                          userType={user?.user_type}
+                          memberCategory={user?.member_category}
+                          onEducatorProfile={() => openEducatorFromStream(stream)}
+                        />
+                      )
+                    })}
+                  </div>
+                </section>
               ))}
             </div>
           )}

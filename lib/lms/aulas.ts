@@ -38,6 +38,22 @@ export interface AcademiaComSalas {
   salas: SalaDeAula[]
   /** Quantas estão ao vivo agora. É o que põe a academia no topo. */
   aoVivo: number
+  /** A capa 16:9, quando a academia tem uma. */
+  capa?: string | null
+}
+
+/**
+ * UMA ACADEMIA DO CATÁLOGO, venha ela com salas ou sem nenhuma.
+ *
+ * Existe porque agrupar só pelas salas fazia desaparecer do ecrã qualquer academia que ainda não
+ * tenha educador — e uma academia que existe no catálogo e não aparece na montra é uma área que a
+ * casa deixou de vender sem ninguém decidir isso. Ver a regra do dono de 28/09: as áreas estão
+ * TODAS prontas, e nenhuma diz o que lhe falta.
+ */
+export interface AcademiaDoCatalogo {
+  slug?: string | null
+  name?: string | null
+  cover_url?: string | null
 }
 
 /** O nome de quem fica sem academia. Não é um erro — há salas que não pertencem a nenhuma. */
@@ -52,14 +68,31 @@ export const SEM_ACADEMIA = 'Outras salas'
  * A ordem é: as academias com algo ao vivo primeiro, depois as que têm mais salas, e o desempate
  * é pelo nome — para a lista não dançar entre duas leituras só porque a base devolveu outra ordem.
  */
-export function porAcademia(salas: SalaDeAula[]): AcademiaComSalas[] {
+export function porAcademia(
+  salas: SalaDeAula[],
+  catalogo: AcademiaDoCatalogo[] = [],
+): AcademiaComSalas[] {
   const grupos = new Map<string, AcademiaComSalas>()
+
+  /**
+   * O CATÁLOGO ENTRA PRIMEIRO, e com salas vazias.
+   *
+   * Assim uma academia sem educador continua a ter lugar e capa, em vez de sumir. As salas que
+   * chegarem a seguir caem no grupo que já existe; as que vierem de uma academia que não está no
+   * catálogo criam o grupo delas, porque perder uma sala é pior do que mostrar uma academia a mais.
+   */
+  for (const a of catalogo) {
+    const nome = String(a?.name ?? '').trim()
+    if (!nome) continue
+    const chave = String(a?.slug ?? '').trim() || nome
+    grupos.set(chave, { chave, nome, salas: [], aoVivo: 0, capa: a?.cover_url ?? null })
+  }
 
   for (const s of salas) {
     if (!s?.id) continue
     const nome = String(s.academy?.name ?? '').trim() || SEM_ACADEMIA
     const chave = String(s.academy?.slug ?? '').trim() || nome
-    const g = grupos.get(chave) ?? { chave, nome, salas: [], aoVivo: 0 }
+    const g = grupos.get(chave) ?? { chave, nome, salas: [], aoVivo: 0, capa: null }
     g.salas.push(s)
     if (s.is_live) g.aoVivo += 1
     grupos.set(chave, g)
@@ -71,6 +104,9 @@ export function porAcademia(salas: SalaDeAula[]): AcademiaComSalas[] {
     if (a.aoVivo !== b.aoVivo) return b.aoVivo - a.aoVivo
     // «Outras salas» vai sempre para o fim: é o caixote, não uma academia.
     if ((a.nome === SEM_ACADEMIA) !== (b.nome === SEM_ACADEMIA)) return a.nome === SEM_ACADEMIA ? 1 : -1
+    // Uma academia sem salas mostra-se, mas depois das que têm: quem chega quer ver o que pode
+    // abrir já. Não é «a abrir» — é só ordem.
+    if ((a.salas.length === 0) !== (b.salas.length === 0)) return a.salas.length === 0 ? 1 : -1
     if (a.salas.length !== b.salas.length) return b.salas.length - a.salas.length
     return a.nome.localeCompare(b.nome, 'pt')
   })
