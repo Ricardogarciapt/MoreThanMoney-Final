@@ -212,6 +212,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       moeda: session.currency ?? 'eur',
       tipo: 'primeira',
       nota: `MTM Funded — programa ${session.metadata?.program_id ?? 'desconhecido'}`,
+      agenteCodigo: session.metadata?.agente_codigo ?? null,
     })
     return
   }
@@ -292,6 +293,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       moeda: session.currency ?? 'eur',
       tipo: 'primeira',
       nota: compradorProvisionado ? undefined : 'Registo pago sem conta provisionada — comprador por ligar.',
+      // Este é o caminho PRINCIPAL de aquisição: quem um agente traz de fora não tem conta antes
+      // de pagar. Esquecer o código aqui era perder exactamente as vendas novas — as que provam
+      // que o agente trabalhou.
+      agenteCodigo: session.metadata?.agente_codigo ?? null,
     })
     return
   }
@@ -521,6 +526,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     valorCents: session.amount_total ?? 0,
     moeda: session.currency ?? 'eur',
     tipo: 'primeira',
+    agenteCodigo: session.metadata?.agente_codigo ?? null,
   })
 
   // Notificar VIP/Admin + organização ascendente (fire-and-forget)
@@ -905,6 +911,10 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
         moeda: invoice.currency ?? 'eur',
         tipo: 'renovacao',
         pagoEm: invoice.created ? new Date(invoice.created * 1000).toISOString() : undefined,
+        // SEM código, e de propósito: uma `invoice` não traz metadata de checkout, e carimbar-lhe
+        // o código da primeira venda do mesmo cliente era inventar que um link clicado uma vez
+        // trouxe a renovação de um ano depois. Fica «sem código» — ver o campo `agenteCodigo`.
+        agenteCodigo: null,
       })
     }
   }
@@ -928,6 +938,24 @@ async function registarVendaDaEquipa(params: {
   tipo: 'primeira' | 'renovacao'
   pagoEm?: string
   nota?: string
+  /**
+   * O agente que trouxe esta compra, se o checkout levou o código no `metadata`.
+   *
+   * ── DE ONDE VEM ──
+   *
+   * Do `?ag=` que o browser guardou 30 dias e que o criador da sessão de checkout põe no
+   * `metadata` (é o que `app/api/marketplace/checkout/route.ts` já faz). Nada aqui o inventa: se o
+   * metadata não o trouxer, a venda fica sem código, que é a verdade.
+   *
+   * ── AS RENOVAÇÕES NÃO HERDAM O CÓDIGO, E É UMA DECISÃO ──
+   *
+   * Uma `invoice` de renovação não tem metadata de checkout nenhum. Era fácil ir buscar o código à
+   * primeira venda do mesmo cliente e carimbá-lo em todas as renovações — e seria inventar: a
+   * renovação de um ano depois não foi trazida por um link clicado uma vez. Fica «sem código». Se o
+   * dono um dia decidir que a permanência também é do agente, isso entra como regra declarada e
+   * não como um `join` discreto feito aqui.
+   */
+  agenteCodigo?: string | null
 }): Promise<void> {
   try {
     const r = await registarVendaConfirmada(supabase, {
@@ -941,6 +969,7 @@ async function registarVendaDaEquipa(params: {
       tipo: params.tipo,
       pagoEm: params.pagoEm,
       nota: params.nota,
+      agenteCodigo: params.agenteCodigo ?? null,
     })
     if (r.resultado?.semRegra.length) {
       // Isto é para ser visto: alguém trabalhou a venda e não há percentagem definida para lhe

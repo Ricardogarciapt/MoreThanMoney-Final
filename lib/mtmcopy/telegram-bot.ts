@@ -1,13 +1,31 @@
 /**
- * Bot admin MTMcopier + descoberta de canais Telegram: @morethanmoneypt_bot.
+ * Bot admin MTMcopier + descoberta de canais Telegram: @MoreThanMoney_aibot.
  *
- * O defeito era `MoreThanMoney_aibot`, que é o nome ANTIGO. Onde este valor aparece num link
- * (`https://t.me/<bot>?start=lead`, nas boas-vindas do grupo de leads e no closer do ManyChat), um
- * nome errado não dá erro nenhum: dá uma página do Telegram a dizer que o utilizador não existe.
+ * ═══ CORRECÇÃO DE 01/10/2026: O NOME POR OMISSÃO ESTAVA TROCADO ════════════════════════════
  *
- * `TELEGRAM_BOT_USERNAME` continua a mandar sobre isto — mas tem de estar certo no ambiente.
+ * Este cabeçalho dizia o contrário — que `MoreThanMoney_aibot` era «o nome ANTIGO» e que o certo
+ * era `morethanmoneypt_bot`. Está ao revés, e a confusão tem uma explicação: `morethanmoneypt_bot`
+ * é o **nome a mostrar** do bot, não o username. Quem o leu no Telegram tomou-o por username.
+ *
+ * Verificado de primeira mão, contra o t.me, com um terceiro handle inexistente como controlo:
+ *
+ *   t.me/MoreThanMoney_aibot  → <title>Telegram: Launch @MoreThanMoney_aibot</title>
+ *                               og:title «MoreThanMoneypt_bot» + bloco `tgme_page_title`  → EXISTE
+ *   t.me/morethanmoneypt_bot  → <title>Telegram: Contact @morethanmoneypt_bot</title>
+ *                               sem `tgme_page_title`                                      → NÃO EXISTE
+ *   t.me/zz_nao_existe_…      → a mesma forma exacta do anterior                           (controlo)
+ *
+ * Isto NÃO dá erro em sítio nenhum, e é por isso que durou: onde o valor aparece num link
+ * (`t.me/<bot>?start=lead`, no botão de acolhimento do grupo de leads, no closer, nas respostas
+ * públicas do funil do Instagram), um nome errado dá uma página do Telegram a dizer que o
+ * utilizador não existe. A pessoa carrega no link que a casa lhe deu e bate numa porta fechada —
+ * no passo exacto em que ela decidiu vir falar connosco.
+ *
+ * O valor por omissão passa a ser o que está PROVADO vivo. `TELEGRAM_BOT_USERNAME` continua a
+ * mandar sobre isto; a guarda `lib/telegram-bot-nome.check.ts` pergunta ao t.me se o nome
+ * configurado existe mesmo, porque esta é a classe de erro que não se vê a ler o código.
  */
-export const MTMCOPY_BOT_USERNAME_DEFAULT = 'morethanmoneypt_bot'
+export const MTMCOPY_BOT_USERNAME_DEFAULT = 'MoreThanMoney_aibot'
 
 /** Token canónico: TELEGRAM_AIBOT_TOKEN (não usar @MoreThanMoney_Copierbot). */
 export function getMtmcopyBotToken(): string {

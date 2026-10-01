@@ -91,6 +91,20 @@ export async function registarVendaDoMarketplace(entrada: {
       // O tecto: a comissão não pode passar o que sobra para a casa depois de o educador ser pago.
       tectoComissaoCents: Math.max(0, Math.round(entrada.parteCasaCents)),
       nota: `Marketplace — ${entrada.produto.titulo} (${entrada.produto.slug})`,
+      /**
+       * O agente que trouxe esta compra — a MESMA fonte que `marketplace_compras.agente_codigo`.
+       *
+       * O código já viajava no metadata da sessão (posto por `app/api/marketplace/checkout`, em
+       * campo PRÓPRIO e não no do cupão, para não tirar o desconto a quem tem um a sério) e já era
+       * gravado na linha da compra. O que faltava era chegar ao LIVRO, que é onde está o dinheiro
+       * que a régua de vida conta: uma compra de marketplace media-se pela tabela das compras e a
+       * mesma venda aparecia no livro sem dono.
+       *
+       * Lê-se do metadata e não da linha da compra para não precisar de uma segunda ida à base
+       * para um dado que já está na mão — e as duas escritas ficam com o mesmo valor por
+       * construção, em vez de ficarem com o mesmo valor por sorte.
+       */
+      agenteCodigo: entrada.session.metadata?.agente_codigo ?? null,
     })
 
     if (r.resultado?.semRegra?.length) {

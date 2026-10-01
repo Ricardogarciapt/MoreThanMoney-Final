@@ -186,6 +186,26 @@ const linha = (p: Partial<LinhaAgente> = {}): LinhaAgente => ({
 }
 
 /**
+ * ── A MONTAGEM LEVA O `pai_id` ATÉ À REGRA ──────────────────────────────────
+ *
+ * A excepção da imortalidade (`vida.ts`, `eImortal`) exige o topo da árvore: pilar do CEO E sem
+ * pai. Se a montagem deixar cair o `pai_id`, TODO o agente chega à regra a parecer raiz — e a
+ * imortalidade passa a valer para qualquer filho a quem calhe o pilar `ceo`. Não há erro nesse
+ * caminho: há uma equipa que deixa de parar.
+ */
+{
+  teste('o pai_id chega à regra', montarAgente(linha({ pai_id: 'o-ceo' })).agente.pai_id === 'o-ceo')
+  teste('sem pai fica nulo e não indefinido', montarAgente(linha({ pai_id: null })).agente.pai_id === null)
+
+  // E o efeito, de ponta a ponta: o mesmo saldo a zero, o mesmo pilar, e dois destinos diferentes
+  // só por causa do pai.
+  const topo = montarAgente(linha({ pilar: 'ceo', pai_id: null, orcamento: 10, gasto: 10 }), { receita: 0, gasto: 10 })
+  const sob = montarAgente(linha({ pilar: 'ceo', pai_id: 'o-ceo', orcamento: 10, gasto: 10 }), { receita: 0, gasto: 10 })
+  teste('o CEO do topo não é parado pelo motor', planearJuizo(topo, AGORA).estado !== 'parado')
+  teste('um filho com o pilar ceo é parado pelo motor', planearJuizo(sob, AGORA).estado === 'parado')
+}
+
+/**
  * ── QUEM RECUPERA VOLTA A `vivo` ────────────────────────────────────────────
  *
  * Sem isto, um agente que esteve em risco e voltou a dar lucro ficava marcado em risco para

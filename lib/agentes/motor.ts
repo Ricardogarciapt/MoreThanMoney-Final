@@ -156,6 +156,13 @@ export function montarAgente(linha: LinhaAgente, somas?: SomasJanela): AgenteMon
       id: String(linha.id),
       nome: String(linha.nome ?? ''),
       pilar,
+      /**
+       * O `pai_id` VIAJA, e não é decoração: é o que distingue o topo da casa de um filho a quem
+       * calhou o pilar do CEO. Sem ele, `eImortal` (em `vida.ts`) tinha de decidir só pelo pilar e
+       * a imortalidade espalhava-se por descendência — ou seja, a régua das 48 h deixava de ter
+       * dentes e ninguém dava por isso, porque não há erro nenhum nesse caminho.
+       */
+      pai_id: linha.pai_id ?? null,
       estado,
       criado_em: String(linha.criado_em ?? ''),
       gasto,

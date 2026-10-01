@@ -530,9 +530,28 @@ export async function POST(request: NextRequest) {
       ])
 
       // /start <token> — token de mentor OU deep-link de funil
+      //
+      // O PADRÃO NÃO ACEITA HÍFEN, e isso não é um descuido — é a razão de o código do agente
+      // viajar com o hífen trocado por `_` (ver `juntarCarga` em lib/agentes/mensagem-saida.ts).
+      // Um `?start=lead_ag_AG-SAAS` não casaria com nada aqui, e não casar NÃO cai nas
+      // boas-vindas: cai no fim da cadeia de `else`, que responde «não conheço esse comando». A
+      // pessoa carregava no link que veio do Instagram para ser mandada embora.
       const startMatch = text.match(/^\/start\s+([a-zA-Z0-9_]+)$/)
       if (startMatch?.[1]) {
-        const token = startMatch[1]
+        /**
+         * A CARGA DO AGENTE SAI DO TOKEN ANTES DE TUDO O RESTO.
+         *
+         * Tem de ser aqui, e não mais abaixo: `lead_ag_AG_SCANNER` não é `lead` — não está no
+         * `RESERVED_START`, ia fazer uma consulta à toa a `mentor_profiles`, e o deep-link do
+         * funil deixava de ser um deep-link do funil. Separada a carga, o token segue o seu
+         * caminho normal e o código fica escrito em `telegram_leads.agente_codigo`.
+         *
+         * É o passo que fecha o caminho que o dono quer crescer: Instagram → bot → grupo. Antes
+         * disto, quem chegava pelo link do Instagram nascia lead anónimo, e o agente que o trouxe
+         * nunca era medido — com a regra das 48 h a prepará-lo para ser parado por receita zero.
+         */
+        const { lerStartDeAgente } = await import("@/lib/agentes/mensagem-livro")
+        const { token } = await lerStartDeAgente(startMatch[1], chatId)
         let linked = false
 
         /**
@@ -952,10 +971,36 @@ export async function POST(request: NextRequest) {
               username: body.message.from?.username ?? null,
               userText: text,
             })
-            await sendMessage(
-              reply ||
+            /**
+             * A RESPOSTA DO CLOSER SAI PELA PORTA COM RASTO.
+             *
+             * Esta é a mensagem que mais vende de toda a casa, e era a menos registada: o
+             * `sendMessage` aqui em cima é um `fetch` directo ao Telegram, e o Telegram não tinha
+             * livro de saídas NENHUM. O texto do closer (que leva `/register`, a PU Prime, a
+             * escada de preços) saía e desaparecia.
+             *
+             * Só ESTA sai por aqui, e não os ~30 outros `sendMessage` deste ficheiro: os menus,
+             * o `/ajuda` e os painéis de admin não são trabalho de agente, e enchê-los no livro
+             * tornava inútil o número que serve para decidir se um agente se paga.
+             *
+             * O código vem do próprio lead — quem chegou por um deep-link de agente trouxe-o no
+             * `/start`, e é o agente que o trouxe que fica com o crédito de o fechar.
+             */
+            const { data: leadTg } = await supabase
+              .from("telegram_leads")
+              .select("agente_codigo")
+              .eq("chat_id", chatId)
+              .maybeSingle()
+            const { enviarTelegramPorAgente } = await import("@/lib/agentes/mensagem-livro")
+            await enviarTelegramPorAgente({
+              chatId,
+              texto:
+                reply ||
                 "Diz-me só: procuras <b>sinais para copiar à mão</b>, <b>Tap to Trade</b> (1 toque) ou algo <b>automático</b>? 🙂",
-            )
+              funil: "telegram:closer",
+              codigoExplicito: (leadTg as { agente_codigo?: string | null } | null)?.agente_codigo ?? undefined,
+              parseMode: "HTML",
+            })
             // Supervisão: se o lead está quente (compra/UID/falar contigo), avisa o admin.
             try {
               const { maybeEscalateLead } = await import("@/lib/mtm-sdr-escalation")

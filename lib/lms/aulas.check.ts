@@ -61,6 +61,28 @@ const CRIPTO = { name: 'Criptomoedas', slug: 'criptomoedas' }
   const fora = porAcademia([sala({ id: 'z', academy: CRIPTO })], catalogo)
   teste('sala de academia fora do catálogo não se perde',
     fora.some((x) => x.salas.some((s) => s.id === 'z')))
+
+  /**
+   * O CASO MAU Nº2, o que fez voltar aqui: a MESMA academia a abrir DUAS pastas.
+   *
+   * A chave tem de ser o SLUG. Agrupar pelo nome fazia duas pastas «Forex» quando o catálogo
+   * trazia o slug e a sala não — e duas pastas com o mesmo nome não se leem como erro, leem-se
+   * como duas academias, com metade das salas em cada uma. Está aqui porque a decisão passou a
+   * ser tomada em dois sítios (aqui e no porte Swift do separador Aulas da app iOS) e o que as
+   * faz divergir é exactamente isto.
+   */
+  const comSlug = porAcademia(
+    [
+      sala({ id: 's1', academy: { name: 'Forex', slug: 'forex' } }),
+      sala({ id: 's2', academy: { name: 'Forex', slug: 'forex' } }),
+    ],
+    [{ slug: 'forex', name: 'Forex', cover_url: 'https://x/forex.png' }],
+  )
+  teste('o slug junta tudo numa pasta só', comSlug.filter((x) => x.nome === 'Forex').length === 1)
+  teste('e nenhuma sala se perde no caminho',
+    comSlug.find((x) => x.chave === 'forex')?.salas.length === 2)
+  teste('a pasta mantém a capa do catálogo',
+    comSlug.find((x) => x.chave === 'forex')?.capa === 'https://x/forex.png')
 }
 
 // ── A ORDEM ─────────────────────────────────────────────────────────────────

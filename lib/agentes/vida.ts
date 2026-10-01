@@ -54,6 +54,14 @@ export interface Agente {
   id: string
   nome: string
   pilar: 'trading' | 'educacao' | 'desenvolvimento' | 'ceo'
+  /**
+   * O pai na árvore. Vazio/nulo = é raiz.
+   *
+   * Está aqui por UMA razão, e é a excepção da imortalidade ({@link eImortal}): sem o pai, a única
+   * forma de reconhecer o topo da casa era o `pilar`, e isso tornava imortal qualquer filho a quem
+   * calhasse `pilar: 'ceo'`. Ver o cabeçalho de {@link eImortal}.
+   */
+  pai_id?: string | null
   estado: EstadoAgente
   criado_em: string
   /** Dólares que já consumiu DESDE QUE NASCEU (modelo, serviços, anúncios). */
@@ -101,6 +109,52 @@ function horasEntre(a: string | null | undefined, b: Date): number | null {
   const t = Date.parse(String(a))
   if (!Number.isFinite(t)) return null
   return (b.getTime() - t) / 3_600_000
+}
+
+/**
+ * ═══ A EXCEPÇÃO NOMEADA: O CEO NÃO PÁRA ════════════════════════════════════════════════════
+ *
+ * Decisão do dono (01/10), palavras dele: «o agente CEO é IMORTAL, mas deve começar a pressionar
+ * os sub-agentes e filhos para resultados».
+ *
+ * ── ISTO É UMA EXCEPÇÃO, NÃO UMA CORRECÇÃO DA REGRA ──
+ *
+ * A regra das 48 horas continua inteira e continua certa. O que muda é que há UM agente a quem ela
+ * não se aplica, e isso escreve-se como excepção com nome — `eImortal` — em vez de se afrouxar o
+ * `julgar` com um `if` qualquer. A diferença não é de estilo: uma regra afrouxada perde-se de vista
+ * e deixa de se saber a quem se aplica; uma excepção nomeada aparece no sítio onde é lida, tem
+ * guarda própria, e qualquer dia alguém pode perguntar «a quem é que isto se aplica?» e ter uma
+ * resposta de uma linha.
+ *
+ * Porque é que o CEO é a excepção: ele é o único que cria e pára sub-agentes. Pará-lo não é perder
+ * um trabalhador — é perder o capataz, e a equipa inteira fica sem ninguém que a julgue nem que a
+ * reponha. Pior: a armadilha medida a 01/10 (receita real, ZERO atribuído, ver
+ * `lib/agentes/atribuicao.ts`) mataria primeiro quem não tem código a ser clicado em sítio nenhum,
+ * e o CEO é exactamente esse.
+ *
+ * ── O QUE A IMORTALIDADE *NÃO* É ──
+ *
+ *  · **não é deixar de medir.** O CEO continua a ser julgado, continua a aparecer `em_risco` quando
+ *    não se paga, e o motivo continua escrito. Imortal é não PARAR — não é passar a ter boa nota;
+ *  · **não se herda.** `eImortal` exige o topo da árvore: `pilar === 'ceo'` **e sem pai**. O teste
+ *    só pelo pilar era o erro óbvio e silencioso — bastava um filho nascer com `pilar: 'ceo'` (uma
+ *    cópia da linha do pai, um valor por omissão num formulário) para ficar imortal sem ninguém
+ *    decidir isso, e a régua das 48 h deixava de ter dentes precisamente onde tem de os ter. Estar
+ *    DEBAIXO do CEO também não dá nada: `pai_id` preenchido é, por si, a prova de que não é o topo;
+ *  · **não ganha ao dono.** Um CEO que o dono parou à mão fica parado. A supervisão humana ganha
+ *    sempre à regra automática, e uma excepção automática não é excepção à supervisão.
+ */
+export const PILAR_IMORTAL = 'ceo' as const
+
+/**
+ * É este o agente que não pára?
+ *
+ * Só o TOPO da casa: o pilar do CEO e sem pai. Há um só, e é isso que se quer — a imortalidade é
+ * um cargo, não uma característica que se possa espalhar por descendência ou por engano de dados.
+ */
+export function eImortal(a: Pick<Agente, 'pilar' | 'pai_id'>): boolean {
+  if (a.pilar !== PILAR_IMORTAL) return false
+  return String(a.pai_id ?? '').trim() === ''
 }
 
 /**
@@ -175,6 +229,27 @@ export function julgar(a: Agente, agora: Date = new Date()): Juizo {
       estado: 'em_risco',
       resultado,
       porque: `Sem lucro em ${JANELA_HORAS} h (${resultado.toFixed(2)} $)${comoFoiMedido}, mas ainda tem ${saldo.toFixed(2)} $ de orçamento. Em risco.`,
+    }
+  }
+
+  /**
+   * A EXCEPÇÃO, aplicada exactamente onde a regra mataria — e não antes.
+   *
+   * Pô-la no topo do `julgar` era tentador e era pior: o CEO saía da função sem ter sido medido, e
+   * o painel não saberia dizer se ele se paga. Aqui ele passou por tudo, o número está feito, e o
+   * que a excepção muda é só o destino: em vez de `parado`, fica `em_risco` com o motivo à vista.
+   */
+  if (eImortal(a)) {
+    return {
+      decisao: 'avisa',
+      estado: 'em_risco',
+      resultado,
+      porque:
+        `Sem lucro e sem orçamento: ${receitaJ.toFixed(2)} $ de receita, ${gastoJ.toFixed(2)} $ gastos${comoFoiMedido}. ` +
+        'NÃO pára — é o CEO, e a regra das 48 h tem nele uma excepção nomeada (decisão do dono, 01/10): ' +
+        'parar o único que cria e pára sub-agentes deixava a equipa sem ninguém a julgá-la. ' +
+        'Fica em risco, à vista, e continua a ser medido pela mesma régua — a imortalidade não lhe melhora a nota, ' +
+        'e não se estende a nenhum filho.',
     }
   }
 

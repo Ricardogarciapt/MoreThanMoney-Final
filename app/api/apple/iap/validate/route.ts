@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       userId,          // UUID do utilizador no Supabase (se já autenticado)
       email,           // email para criar conta (se novo utilizador)
       couponCode,      // código de cupão aplicado (opcional)
+      agenteCodigo,    // código do agente que trouxe esta compra (opcional) — ver a venda, abaixo
       sponsorUsername, // patrocinador MLM (ref=username)
       environment,     // 'production' | 'sandbox'
     } = body
@@ -238,6 +239,24 @@ export async function POST(req: NextRequest) {
         // primeiro pagamento. O livro conta o número do pagamento e trata do resto.
         tipo: existing?.subscription_status === 'active' ? 'renovacao' : 'primeira',
         nota: `App Store — ${productId}`,
+        /**
+         * O agente que trouxe esta compra, SE a app o mandar.
+         *
+         * ── PORQUE É QUE VEM DO CORPO E NÃO DE UM COOKIE ──
+         *
+         * Uma compra StoreKit não passa por um browser nosso: não há `?ag=` nem cookie. O único
+         * sítio onde o código pode estar é na app, se ela o tiver guardado (por exemplo de um link
+         * que abriu a ficha na loja). Hoje a app NÃO manda nada, e por isso estas vendas ficam
+         * «sem código» — que é a verdade e tem de se ler como tal.
+         *
+         * O campo existe mesmo vazio, e isso é a parte que importa: quando a app passar a mandá-lo,
+         * não há nada a lembrar deste lado. A alternativa era deixar esta porta sem o campo, e
+         * então o dia em que a app o mandasse ele era silenciosamente deitado fora.
+         *
+         * Não se vai buscar ao perfil do comprador: isso é a ligação fraca que fez toda a receita
+         * de 01/10 cair em «sem_codigo» — por pessoa e sobrescrita pelo último código que ela usar.
+         */
+        agenteCodigo: typeof agenteCodigo === 'string' ? agenteCodigo : null,
       })
     } catch (vendaErr) {
       console.error('[VENDAS] não foi possível registar a venda da Apple no livro:', vendaErr)

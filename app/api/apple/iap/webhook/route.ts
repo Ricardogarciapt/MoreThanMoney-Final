@@ -186,6 +186,23 @@ export async function POST(req: NextRequest) {
           tipo: isRenewal ? 'renovacao' : 'primeira',
           pagoEm: typeof tx.purchaseDate === 'number' ? new Date(tx.purchaseDate).toISOString() : undefined,
           nota: `App Store — ${productId}`,
+          /**
+           * SEM código de agente, e declarado em vez de omitido.
+           *
+           * Uma notificação da Apple é servidor-para-servidor: não traz browser, não traz cookie e
+           * não traz nada que a app tenha guardado. Não há aqui nenhum código a passar.
+           *
+           * O que havia a fazer e NÃO se faz: ir buscar o código à primeira venda do mesmo
+           * `originalTransactionId`, ou ao perfil do comprador. A primeira era carimbar todas as
+           * renovações com um link clicado uma vez; a segunda é a ligação fraca que fez toda a
+           * receita de 01/10 cair em «sem_codigo». As duas davam números que ninguém pode
+           * contestar porque ninguém sabe de onde vêm — e a régua de vida mata agentes com eles.
+           *
+           * Quando a compra também passa por `/api/apple/iap/validate` (a app a confirmar), é essa
+           * que registra primeiro e é essa que pode trazer código: a idempotência do livro garante
+           * que o que chegar depois não apaga nada.
+           */
+          agenteCodigo: null,
         })
       } catch (vendaErr) {
         // O acesso já foi dado e o dinheiro já entrou: um erro no livro não pode fazer a Apple

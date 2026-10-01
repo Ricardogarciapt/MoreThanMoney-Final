@@ -19,6 +19,9 @@ import {
   type ResultadoCalculo,
 } from './calculo'
 import { resolverNegocioDoComprador } from './atribuicao-leitura'
+// A forma de um código de agente decide-se num sítio só, e é um módulo puro com guarda. Repetir o
+// `regex` aqui era criar a segunda versão da mesma regra, que é como elas divergem.
+import { normalizar as normalizarCodigoDeAgente } from '@/lib/agentes/atribuicao'
 import { carregarRegras, carregarRegrasRank, planosDasPessoas } from './regras'
 
 export type FonteVenda = 'stripe' | 'apple' | 'manual'
@@ -72,6 +75,33 @@ export type VendaConfirmada = {
    */
   emailComprador?: string | null
   nota?: string | null
+  /**
+   * O CÓDIGO DO AGENTE QUE TROUXE ESTA VENDA — medição, e só medição.
+   *
+   * ── PORQUE É QUE ISTO VIVE NO LIVRO ─────────────────────────────────────────────────────
+   *
+   * Porque é aqui que está o dinheiro. A 01/10 a equipa de agentes mediu 35 € reais e atribuiu
+   * ZERO: a única ligação forte que existia era `marketplace_compras.agente_codigo`, e essa tabela
+   * estava vazia. O livro tinha a receita toda e nenhuma coluna de código — o que sobrava era
+   * adivinhar pelo `profiles.coupon_code` do comprador, que é por pessoa e sobrescrito. Resultado:
+   * toda a receita caía em «sem_codigo» e a régua das 48 h (`lib/agentes/vida.ts`) preparava-se
+   * para parar a equipa por falta de medição. Ver `docs/maquina-de-vendas-autonoma.md` §2.8.
+   *
+   * ── NÃO TEM NADA A VER COM COMISSÕES ────────────────────────────────────────────────────
+   *
+   * Não entra no cálculo, não cria papel nenhum e não paga a ninguém: o cálculo continua a sair só
+   * do negócio e dos cinco papéis. Isto é contabilidade interna dos AGENTES, que não são pessoas e
+   * não recebem dinheiro — recebem o direito de continuar a existir. Confundir as duas coisas era
+   * pagar uma comissão a um processo.
+   *
+   * ── UM CÓDIGO INVÁLIDO NÃO TRAVA A VENDA ────────────────────────────────────────────────
+   *
+   * Normaliza-se e, se não tiver a forma de um código de agente, grava-se NULO. A venda vale mais
+   * do que a medição dela, e ninguém perde o acesso que pagou por causa de um link mal copiado. A
+   * venda fica «sem código», que é exactamente o que ela é. (A forma é verificada em dois sítios de
+   * propósito: aqui e no CHECK da coluna — ver a migração 170.)
+   */
+  agenteCodigo?: string | null
   /**
    * O MÁXIMO que a soma das comissões desta venda pode atingir, em cêntimos.
    *
@@ -271,6 +301,10 @@ export async function registarVendaConfirmada(
       tipo,
       pago_em: pagoEm,
       nota: venda.nota ?? null,
+      // `normalizarCodigoDeAgente` devolve `null` para tudo o que não tenha a forma de um código de
+      // agente — incluindo um cupão de desconto que tenha vindo pelo caminho errado. Ver o campo
+      // `agenteCodigo` em `VendaConfirmada`.
+      agente_codigo: normalizarCodigoDeAgente(venda.agenteCodigo),
     })
     .select('id')
     .single()

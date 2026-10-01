@@ -14,13 +14,29 @@
  *     falhadas e mensagens a quem não as espera é um número que a Meta marca como spam.
  *   · Presumir permissão. Sem origem conhecida não se envia. O silêncio é não.
  *
- * ESTADO A 27/09: INERTE, E DE PROPÓSITO.
- * `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` e `WHATSAPP_VERIFY_TOKEN` não existem na Vercel nem
- * no `.env.local` — foi verificado, não é suposição. Sem elas, `enviarWhatsApp` recusa com
- * `sem_credenciais` e grava a recusa. O que falta é do lado da Meta e só o dono o pode fazer:
- * `docs/whatsapp-setup.md`.
+ * ═══ ESTADO A 01/10/2026: CONFIGURADO E VIVO ═══════════════════════════════════════════════
+ *
+ * O cabeçalho dizia «INERTE, E DE PROPÓSITO», e deixou de ser verdade. Confirmado pelo dono contra
+ * a Meta a 01/10:
+ *
+ *   · número +351 923 533 741, nome verificado «MoreThanMoney», Cloud API;
+ *   · token de sistema SEM validade — não há renovação periódica a esquecer;
+ *   · tecto de 250 conversas NOVAS por 24 h (é o escalão do número, não uma escolha nossa);
+ *   · `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` e `WHATSAPP_VERIFY_TOKEN` estão na Vercel, em
+ *     produção. **Não estão no `.env.local`** — localmente `enviarWhatsApp` continua a recusar com
+ *     `sem_credenciais` e a gravar a recusa, que é o comportamento certo para uma máquina de
+ *     desenvolvimento.
+ *
+ * CHAMADAS: NÃO. A Meta recusa activá-las neste número («Calling APIs cannot be enabled for this
+ * phone number»). Não há aqui caminho nenhum para chamadas e não se promete nenhum.
+ *
+ * O QUE CONTINUA A MANDAR, e não é nosso: a janela das 24 horas. Fora dela só passa template
+ * aprovado — `decidirEnvio` recusa texto livre antes de o pedido sair, de propósito. Insistir leva
+ * erro da Meta, e um número que acumula tentativas falhadas e mensagens a quem não as espera é um
+ * número que a Meta marca como spam. Um número de WhatsApp Business não se recupera com um deploy.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { prepararMensagem, type MensagemPreparada } from '@/lib/agentes/mensagem-saida'
 import { ligarConversaAoQueExiste, registarEntradaNaConversa, registarSaidaNaConversa } from '@/lib/whatsapp/conversas'
 import type { BaseLegal } from '@/lib/captacao-consentimento'
 import {
@@ -137,6 +153,10 @@ interface LinhaDoLivro {
   waMessageId?: string | null
   /** O nome que ela tem no perfil do WhatsApp. Só serve para a conversa nascer com nome. */
   nomeDoPerfil?: string | null
+  /** A decisão de `prepararMensagem`, quando a mensagem é de um agente. */
+  marcacao?: MensagemPreparada | null
+  /** A porta do código que enviou, para o livro do agente. */
+  funil?: string | null
 }
 
 /**
@@ -172,6 +192,10 @@ async function gravar(l: LinhaDoLivro): Promise<void> {
       // frase em português — que é o que se lê quando se vai perceber porque é que algo não saiu.
       motivo: [l.codigo, l.motivo].filter(Boolean).join(' · ') || null,
       wa_message_id: l.waMessageId ?? null,
+      // Quem mandou. Numa ENTRADA fica null — foi a pessoa, e atribuir-lhe um agente era inverter
+      // o sentido da conversa.
+      agente_codigo: l.marcacao?.codigo ?? null,
+      agente_links_marcados: l.marcacao?.marcados ?? 0,
     })
     /**
      * O erro é ENGOLIDO de propósito — um livro que não grava não pode fazer cair um webhook nem
@@ -188,6 +212,34 @@ async function gravar(l: LinhaDoLivro): Promise<void> {
     }
   } catch (e) {
     console.error('[whatsapp] livro não gravou:', e instanceof Error ? e.message : e)
+  }
+
+  /**
+   * E O LIVRO DO AGENTE, para as SAÍDAS que um agente mandou.
+   *
+   * Duas tabelas e não uma, e a razão é a pergunta de cada uma: `whatsapp_mensagens` responde «o
+   * que foi dito a esta pessoa» (e tem de ter as entradas dela para a janela das 24 h se poder
+   * calcular); `agentes_mensagens` responde «o que é que os agentes mandaram, nos três canais, e
+   * quanto disso saiu». A segunda não se responde a partir da primeira, porque a primeira só
+   * conhece o WhatsApp.
+   *
+   * Só as SAÍDAS de agente entram. Uma entrada é a pessoa a escrever, e uma saída escrita por uma
+   * pessoa no painel não é trabalho de agente nenhum — contá-la inflava o número que serve para
+   * decidir se um agente se paga.
+   */
+  if (l.direcao === 'saida' && l.marcacao) {
+    const { registarMensagemDeAgente } = await import('@/lib/agentes/mensagem-livro')
+    await registarMensagemDeAgente({
+      canal: 'whatsapp',
+      destino: l.numero,
+      funil: l.funil ?? null,
+      tipo: l.tipo,
+      texto: l.corpo ?? null,
+      estado: l.estado === 'enviada' ? 'enviada' : l.estado === 'falhou' ? 'falhou' : 'recusada',
+      motivo: [l.codigo, l.motivo].filter(Boolean).join(' · ') || null,
+      referencia: l.waMessageId ?? null,
+      marcacao: l.marcacao,
+    })
   }
 
   /**
@@ -249,6 +301,18 @@ export interface PedidoDeEnvio {
   template?: CorpoTemplate
   /** Estado já lido (evita uma ida à base quando quem chama acabou de o ler). */
   estado?: EstadoDoContacto
+  /**
+   * QUEM É QUE ESTÁ A MANDAR ISTO.
+   *
+   * `funil` é a chave em `AGENTE_POR_FUNIL` (lib/agentes/mensagem-saida.ts); `codigoExplicito`
+   * ganha-lhe e serve quem já sabe o agente. Sem nenhum dos dois a mensagem sai igual — a
+   * capacidade de enviar não depende disto — mas fica escrita como não atribuível, com o motivo.
+   *
+   * O texto é MARCADO antes de sair: os links nossos levam `?ag=` e os deep-links do bot levam a
+   * carga. É assim que uma conversa de WhatsApp que acaba numa compra se liga ao agente que a
+   * começou, em vez de a receita ficar por atribuir como ficaram os 35 € de 01/10.
+   */
+  agente?: { funil?: string; codigoExplicito?: unknown }
 }
 
 export interface ResultadoEnvio {
@@ -273,6 +337,29 @@ export async function enviarWhatsApp(p: PedidoDeEnvio): Promise<ResultadoEnvio> 
   const tipo: 'texto' | 'template' = p.template ? 'template' : 'texto'
   const { e164 } = normalizarE164(p.para)
 
+  /**
+   * MARCAR ANTES DE DECIDIR — e marcar SÓ O TEXTO LIVRE.
+   *
+   * Antes de decidir porque a decisão não depende do texto, e assim a marcação fica disponível
+   * para gravar em TODOS os desfechos, incluindo as recusas: uma recusa que não diz de que agente
+   * era é um número que depois ninguém consegue atribuir a nada.
+   *
+   * Só o texto livre porque **o corpo de um template vive na Meta, não aqui**. Os parâmetros são
+   * posicionais e aprovados um a um: enfiar-lhes um `?ag=` mudava o que a pessoa lê de uma forma
+   * que o template aprovado pode não permitir, e um template recusado pela Meta é uma mensagem que
+   * não sai. Por isso um template de agente fica registado com o CÓDIGO e com zero marcados — tem
+   * dono e não mede nada, que é a verdade e tem de se poder ver.
+   */
+  const marcacao = p.agente
+    ? prepararMensagem({
+        canal: 'whatsapp',
+        texto: tipo === 'texto' ? (p.texto ?? '') : '',
+        funil: p.agente.funil,
+        codigoExplicito: p.agente.codigoExplicito,
+      })
+    : null
+  if (marcacao && tipo === 'texto') p = { ...p, texto: marcacao.texto }
+
   const estado = p.estado ?? (e164 ? await lerEstadoDoContacto(e164) : { baseLegal: null, retirou: false, canal: null, ultimaEntradaIso: null })
 
   const decisao = decidirEnvio(
@@ -292,6 +379,8 @@ export async function enviarWhatsApp(p: PedidoDeEnvio): Promise<ResultadoEnvio> 
       await gravar({
         numero: decisao.para,
         direcao: 'saida',
+        marcacao,
+        funil: p.agente?.funil ?? null,
         tipo,
         template: p.template?.nome ?? null,
         corpo: corpoParaLivro.slice(0, 4000),
@@ -309,7 +398,7 @@ export async function enviarWhatsApp(p: PedidoDeEnvio): Promise<ResultadoEnvio> 
 
   if (tipo === 'texto' && !(p.texto ?? '').trim()) {
     const porque = 'mensagem de texto vazia — não se manda'
-    await gravar({ numero: para, direcao: 'saida', tipo, estado: 'recusada', codigo: 'texto_vazio', motivo: porque })
+    await gravar({ numero: para, direcao: 'saida', tipo, estado: 'recusada', codigo: 'texto_vazio', motivo: porque, marcacao, funil: p.agente?.funil ?? null })
     return { enviado: false, decisao, codigo: 'texto_vazio', porque }
   }
 
@@ -319,6 +408,8 @@ export async function enviarWhatsApp(p: PedidoDeEnvio): Promise<ResultadoEnvio> 
     await gravar({
       numero: para,
       direcao: 'saida',
+      marcacao,
+      funil: p.agente?.funil ?? null,
       tipo,
       template: p.template?.nome ?? null,
       corpo: corpoParaLivro.slice(0, 4000),
@@ -350,6 +441,8 @@ export async function enviarWhatsApp(p: PedidoDeEnvio): Promise<ResultadoEnvio> 
       await gravar({
         numero: para,
         direcao: 'saida',
+        marcacao,
+        funil: p.agente?.funil ?? null,
         tipo,
         template: p.template?.nome ?? null,
         corpo: corpoParaLivro.slice(0, 4000),
@@ -370,6 +463,8 @@ export async function enviarWhatsApp(p: PedidoDeEnvio): Promise<ResultadoEnvio> 
     await gravar({
       numero: para,
       direcao: 'saida',
+      marcacao,
+      funil: p.agente?.funil ?? null,
       tipo,
       template: p.template?.nome ?? null,
       corpo: corpoParaLivro.slice(0, 4000),
@@ -384,6 +479,8 @@ export async function enviarWhatsApp(p: PedidoDeEnvio): Promise<ResultadoEnvio> 
     await gravar({
       numero: para,
       direcao: 'saida',
+      marcacao,
+      funil: p.agente?.funil ?? null,
       tipo,
       template: p.template?.nome ?? null,
       corpo: corpoParaLivro.slice(0, 4000),

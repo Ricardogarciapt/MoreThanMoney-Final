@@ -61,6 +61,38 @@ export interface SalesState {
   }
   /** Ver `AtribuicaoConteudo`. */
   atribuicao: AtribuicaoConteudo
+  /** Ver `MensagensDeAgentes`. */
+  mensagens: MensagensDeAgentes
+}
+
+/**
+ * O QUE OS AGENTES MANDARAM — nos três canais, nas últimas 24 h.
+ *
+ * Decisão do dono de 01/10/2026: a capacidade de enviar mantém-se e é para usar. Este bloco é o
+ * que torna isso verificável em vez de ser uma frase — e é a primeira vez que existe, porque o
+ * Telegram, que é o canal que ele mandou crescer, não tinha livro de saídas NENHUM
+ * (`sendTelegramChannelMessage` não escrevia em tabela nenhuma).
+ *
+ * `recusadas` não é um número a esconder: é o mais útil da lista. Uma recusa é uma regra a
+ * funcionar — a janela das 24 h da Meta, um consentimento que falta, credenciais em falta — e sem
+ * ela à vista a leitura de «saíram 3 mensagens» não diz se o canal está a trabalhar ou entupido.
+ */
+export interface MensagensDeAgentes {
+  enviadas24h: number
+  recusadas24h: number
+  falhadas24h: number
+  /** Por canal, o que saiu. */
+  porCanal: Record<string, number>
+  /** Mensagens enviadas com pelo menos um link medido — as únicas que podem gerar receita. */
+  aMedir24h: number
+  /**
+   * As que não medem nada, pelo motivo. Nunca um total a seco: uma mensagem com dono e sem link
+   * onde medir não é a mesma coisa que uma mensagem sem dono, e confundi-las faz um agente que
+   * trabalhou parecer um agente que não fez nada.
+   */
+  porAtribuir: Record<string, number>
+  /** Por agente, quantas mandou e quantos links mediram. */
+  porAgente: Array<{ codigo: string; mensagens: number; links: number }>
 }
 
 /**
@@ -151,6 +183,58 @@ export async function buildSalesState(): Promise<SalesState> {
     .select('agente_codigo, agente_motivo, agente_links_marcados')
     .order('created_at', { ascending: false })
     .limit(500)
+
+  /**
+   * O QUE OS AGENTES MANDARAM NAS ÚLTIMAS 24 H. Ver `MensagensDeAgentes`.
+   *
+   * Tecto de 1000 linhas pela mesma razão que o de cima: um painel que deixa de abrir por causa
+   * de um relatório é pior do que um relatório em falta. E se este número chegar ao tecto, isso
+   * por si é a informação — mil mensagens em 24 horas é um canal a ser gasto depressa.
+   */
+  const { data: saidas } = await supabase
+    .from('agentes_mensagens')
+    .select('canal, agente_codigo, agente_motivo, links_marcados, estado')
+    .gte('criado_em', sinceIso)
+    .order('criado_em', { ascending: false })
+    .limit(1000)
+
+  const msgPorCanal: Record<string, number> = {}
+  const msgPorAtribuir: Record<string, number> = {}
+  const msgPorAgente = new Map<string, { mensagens: number; links: number }>()
+  let enviadas24h = 0
+  let recusadas24h = 0
+  let falhadas24h = 0
+  let msgAMedir = 0
+  for (const m of (saidas ?? []) as Array<{
+    canal: string
+    agente_codigo: string | null
+    agente_motivo: string | null
+    links_marcados: number | null
+    estado: string
+  }>) {
+    if (m.estado === 'enviada') enviadas24h++
+    else if (m.estado === 'recusada') recusadas24h++
+    else falhadas24h++
+    msgPorCanal[m.canal] = (msgPorCanal[m.canal] ?? 0) + 1
+
+    // O que MEDE conta-se só entre as que saíram: uma mensagem recusada não traz ninguém, e
+    // contá-la como «a medir» era prometer receita de uma mensagem que nunca chegou a existir.
+    const links = Number(m.links_marcados ?? 0)
+    if (m.agente_codigo) {
+      const a = msgPorAgente.get(m.agente_codigo) ?? { mensagens: 0, links: 0 }
+      a.mensagens++
+      a.links += links
+      msgPorAgente.set(m.agente_codigo, a)
+      if (links > 0 && m.estado === 'enviada') msgAMedir++
+      else {
+        const motivo = m.agente_motivo || 'sem_link_nosso'
+        msgPorAtribuir[motivo] = (msgPorAtribuir[motivo] ?? 0) + 1
+      }
+    } else {
+      const motivo = m.agente_motivo || 'funil_sem_agente'
+      msgPorAtribuir[motivo] = (msgPorAtribuir[motivo] ?? 0) + 1
+    }
+  }
 
   const byStage: Record<string, number> = {}
   let novos24h = 0
@@ -263,6 +347,17 @@ export async function buildSalesState(): Promise<SalesState> {
       porAgente: [...porAgenteMapa.entries()]
         .map(([codigo, v]) => ({ codigo, ...v }))
         .sort((a, b) => b.links - a.links || b.posts - a.posts),
+    },
+    mensagens: {
+      enviadas24h,
+      recusadas24h,
+      falhadas24h,
+      porCanal: msgPorCanal,
+      aMedir24h: msgAMedir,
+      porAtribuir: msgPorAtribuir,
+      porAgente: [...msgPorAgente.entries()]
+        .map(([codigo, v]) => ({ codigo, ...v }))
+        .sort((a, b) => b.links - a.links || b.mensagens - a.mensagens),
     },
     pipeline: {
       porEstado,

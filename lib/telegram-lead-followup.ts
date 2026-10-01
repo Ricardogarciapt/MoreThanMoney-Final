@@ -1,5 +1,4 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
 import { modeloClaude } from '@/lib/modelo-claude'
 /**
  * A VISÃO DA CASA e a duração do teste vêm de quem as manda.
@@ -89,7 +88,7 @@ export async function runLeadFollowups(): Promise<{ ok: boolean; sent: number; s
   // Leads ativos no funil, ainda não convertidos/atribuídos, dentro do limite de toques.
   const { data: leads } = await supabase
     .from('telegram_leads')
-    .select('chat_id, first_name, interest, stage, followup_count, updated_at, last_followup_at')
+    .select('chat_id, first_name, interest, stage, followup_count, updated_at, last_followup_at, agente_codigo')
     .in('stage', ['new', 'qualifying', 'routed'])
     .is('granted_at', null)
     .lt('followup_count', MAX_TOUCHES)
@@ -110,8 +109,28 @@ export async function runLeadFollowups(): Promise<{ ok: boolean; sent: number; s
 
     const touch = fc + 1
     const msg = await draftFollowup(l as Lead, touch)
-    const r = await sendTelegramChannelMessage(String(l.chat_id), msg)
-    if (r.ok) {
+    /**
+     * SAI PELA PORTA COM RASTO, e não pelo envio cru.
+     *
+     * Estes três toques são o caso mais puro de «um agente a mandar mensagem por iniciativa
+     * própria»: ninguém pediu, ninguém aprovou, e o link que levam é o `/register` que vende. Era
+     * exactamente o tipo de mensagem que saía sem ficar escrita em sítio nenhum —
+     * `sendTelegramChannelMessage` não escreve em tabela nenhuma, e `telegram_messages` é o
+     * espelho do que ENTRA nos canais, não um livro de saídas.
+     *
+     * O código do agente vem de `AGENTE_POR_FUNIL['telegram:followup']` = AG-SAAS, e a razão está
+     * escrita lá: o que estes toques empurram é o teste da app, e `cta:app` já é do AG-SAAS. Se
+     * um dia o lead trouxer `agente_codigo` (quem veio por deep-link do Instagram traz), esse
+     * GANHA — quem o trouxe fica com o crédito de o reactivar.
+     */
+    const { enviarTelegramPorAgente } = await import('@/lib/agentes/mensagem-livro')
+    const r = await enviarTelegramPorAgente({
+      chatId: String(l.chat_id),
+      texto: msg,
+      funil: 'telegram:followup',
+      codigoExplicito: (l as { agente_codigo?: string | null }).agente_codigo ?? undefined,
+    })
+    if (r.enviado) {
       sent++
       await supabase
         .from('telegram_leads')

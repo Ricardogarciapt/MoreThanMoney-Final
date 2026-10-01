@@ -4,6 +4,12 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { JANELA_HORAS, julgar } from '@/lib/agentes/vida'
 import { acaoManual, montarAgente, somarJanela, type EventoLido, type LinhaAgente } from '@/lib/agentes/motor'
 import { atribuirEGravar } from '@/lib/agentes/receita'
+import {
+  decidirInterruptor,
+  motivoDoInterruptor,
+  veioDoInterruptor,
+  type AgenteNoInterruptor,
+} from '@/lib/agentes/interruptor-equipa'
 
 /**
  * O PAINEL DA EQUIPA DE AGENTES — leitura, e os três botões.
@@ -120,6 +126,8 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json().catch(() => ({}))) as {
     acao?: 'pausar' | 'retomar' | 'parar'
+    /** `equipa` = o interruptor dos sete de uma vez. Sem isto, mexe-se num agente só. */
+    alvo?: 'agente' | 'equipa'
     id?: string
     porque?: string
   }
@@ -128,6 +136,24 @@ export async function POST(request: NextRequest) {
   if (acao !== 'pausar' && acao !== 'retomar' && acao !== 'parar') {
     return NextResponse.json({ ok: false, erro: 'acção inválida' }, { status: 400 })
   }
+
+  /**
+   * O INTERRUPTOR DA EQUIPA.
+   *
+   * `parar` não entra aqui de propósito: parar é o fim da linha, com data e motivo escritos, e um
+   * botão que o fizesse aos sete de uma vez era um acidente à espera de acontecer. A equipa pausa
+   * e retoma; parar continua a ser um a um, com a mão do dono.
+   */
+  if (body.alvo === 'equipa') {
+    if (acao === 'parar') {
+      return NextResponse.json(
+        { ok: false, erro: 'Parar é um a um: é o fim da linha e fica com data e motivo escritos.' },
+        { status: 400 },
+      )
+    }
+    return await interruptorDaEquipa(acao, String(body.porque ?? ''))
+  }
+
   const id = String(body.id ?? '').trim()
   if (!id) return NextResponse.json({ ok: false, erro: 'falta o agente' }, { status: 400 })
 
@@ -143,5 +169,86 @@ export async function POST(request: NextRequest) {
         : acao === 'pausar'
           ? 'Agente pausado. A regra das 48 horas não corre em agentes pausados.'
           : 'Agente retomado.',
+  })
+}
+
+/**
+ * Pausar ou retomar a equipa toda.
+ *
+ * ═══ PORQUE É QUE ISTO LÊ EVENTOS ANTES DE DECIDIR ═════════════════════════════════════════
+ *
+ * Porque «retomar a equipa» só pode mexer em quem o PRÓPRIO botão pausou. Para o saber, lê-se o
+ * último evento de pausa de cada agente e vê-se se traz a marca do interruptor. A alternativa era
+ * uma coluna nova a dizer «fui pausado pelo botão» — e uma segunda versão do mesmo facto é como
+ * elas divergem. O livro de eventos já é a memória de quem fez o quê.
+ *
+ * A decisão em si está em `lib/agentes/interruptor-equipa.ts`, com guarda ao lado: é a parte que
+ * erra em silêncio, e aqui só se executa o que ela decidiu.
+ */
+async function interruptorDaEquipa(acao: 'pausar' | 'retomar', porqueDoDono: string) {
+  const db = getSupabaseAdmin()
+
+  const { data: linhas, error } = await db
+    .from('agentes_equipa')
+    .select('id, nome, estado, pausado')
+    .order('nome')
+  if (error || !linhas) {
+    return NextResponse.json({ ok: false, erro: error?.message ?? 'não deu para ler a equipa' }, { status: 500 })
+  }
+
+  /**
+   * Quem foi pausado pelo botão? Só interessa para o retomar — no pausar ninguém pergunta. Lê-se
+   * o evento de pausa MAIS RECENTE de cada agente: um agente pausado pelo botão na segunda-feira,
+   * retomado, e pausado à mão na quarta tem de contar como pausado à mão.
+   */
+  const marcados = new Set<string>()
+  if (acao === 'retomar') {
+    const { data: eventos } = await db
+      .from('agentes_eventos')
+      .select('agente_id, tipo, detalhe, criado_em')
+      .in('tipo', ['avisado', 'retomado'])
+      .order('criado_em', { ascending: false })
+      .limit(400)
+    const jaVisto = new Set<string>()
+    for (const e of (eventos ?? []) as { agente_id: string; tipo: string; detalhe: string | null }[]) {
+      if (jaVisto.has(e.agente_id)) continue // só o mais recente de cada um conta
+      jaVisto.add(e.agente_id)
+      if (e.tipo === 'avisado' && veioDoInterruptor(e.detalhe)) marcados.add(e.agente_id)
+    }
+  }
+
+  const equipa: AgenteNoInterruptor[] = (linhas as LinhaAgente[]).map((l) => ({
+    id: l.id,
+    nome: l.nome,
+    estado: String(l.estado ?? ''),
+    pausado: Boolean(l.pausado),
+    pausadoPelaEquipa: marcados.has(l.id),
+  }))
+
+  const plano = decidirInterruptor(equipa, acao)
+  const motivo = motivoDoInterruptor(porqueDoDono)
+
+  /**
+   * Um a um, e não em bloco: `acaoManual` é quem sabe escrever o estado E o evento, e reescrever
+   * isso aqui criava a segunda versão da mesma regra. Se um falhar a meio, os anteriores ficam
+   * feitos — e é por isso que se devolve a lista do que correu mal em vez de um «erro» sozinho.
+   */
+  const falhados: { nome: string; erro: string }[] = []
+  for (const m of plano.mexer) {
+    if (!m.acao) continue
+    const r = await acaoManual(db, m.id, m.acao, motivo)
+    if (!r.ok) falhados.push({ nome: m.nome, erro: r.erro ?? 'não foi possível' })
+  }
+
+  const mexidos = plano.mexer.length - falhados.length
+  return NextResponse.json({
+    ok: falhados.length === 0,
+    porque:
+      falhados.length === 0
+        ? plano.resumo
+        : `${mexidos} de ${plano.mexer.length} ${acao === 'pausar' ? 'pausados' : 'retomados'}; os outros falharam.`,
+    mexidos,
+    deixados: plano.deixar,
+    falhados,
   })
 }

@@ -92,7 +92,25 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        const reply = await generateDmReply(msg.text)
+        /**
+         * A RESPOSTA DO CLOSER LEVA CÓDIGO E FICA NO LIVRO DO AGENTE.
+         *
+         * O `DM_SYSTEM` manda o modelo fechar em `morethanmoney.pt/register` ou no Telegram, e
+         * até aqui esses links saíam sem nada que os medisse: `ig_dm_log` guardava o texto e o
+         * erro e não dizia de quem era. Ou seja, a conversa que mais perto está de uma venda — uma
+         * DM a sério, com uma pessoa a responder — era a menos atribuível de todas.
+         *
+         * Aqui NÃO há post comentado de onde herdar (quem escreve a DM pode nem ter comentado
+         * nada), e não há dono declarado em `AGENTE_POR_FUNIL` para o closer. Por isso a mensagem
+         * sai igual, sem código, e fica escrita como `funil_sem_agente`. É deliberado: dar isto a
+         * um agente qualquer era inventar um número. Quando o dono decidir de quem é a DM do
+         * Instagram, acrescenta-se uma linha a `AGENTE_POR_FUNIL` e passa a medir.
+         */
+        const { prepararMensagem } = await import("@/lib/agentes/mensagem-saida")
+        const { registarMensagemDeAgente } = await import("@/lib/agentes/mensagem-livro")
+        const bruta = await generateDmReply(msg.text)
+        const marcacao = prepararMensagem({ canal: "instagram", texto: bruta, funil: "instagram:dm-closer" })
+        const reply = marcacao.texto
         const sent = await sendInstagramDmResilient(accountId, senderId, reply)
         try {
           await supabase
@@ -104,6 +122,17 @@ export async function POST(request: NextRequest) {
             })
             .eq("mid", mid)
         } catch {}
+        await registarMensagemDeAgente({
+          canal: "instagram",
+          destino: senderId,
+          funil: "instagram:dm-closer",
+          tipo: "dm",
+          texto: reply,
+          estado: sent.ok ? "enviada" : "falhou",
+          motivo: sent.ok ? null : String(sent.error ?? "erro").slice(0, 300),
+          referencia: mid,
+          marcacao,
+        })
         if (sent.ok) handled++
       } catch (e) {
         try {

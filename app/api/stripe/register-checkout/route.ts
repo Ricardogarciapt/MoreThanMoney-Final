@@ -7,6 +7,7 @@ import { resolveStripePromotionCode } from '@/lib/coupon-stripe-discount'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import type Stripe from 'stripe'
+import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 
 /**
  * POST /api/stripe/register-checkout
@@ -43,6 +44,9 @@ export async function POST(request: NextRequest) {
       metadata: { pending_registration: 'true', reg_token: regToken || '' },
     })
 
+    // O código do agente que trouxe esta pessoa, lido do cookie (ver o metadata, abaixo).
+    const agenteCodigo = normalizarAgente(request.cookies.get(COOKIE_ATRIBUICAO)?.value)
+
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customer.id,
       mode: 'subscription',
@@ -57,6 +61,14 @@ export async function POST(request: NextRequest) {
         pending_registration: 'true',
         reg_token: regToken || '',
         plan: planId,
+        // QUEM TROUXE ESTA COMPRA. Vem do cookie que `components/agentes/captura-atribuicao.tsx`
+        // escreve a partir do `?ag=` do link, e viaja no metadata para o webhook o poder gravar no
+        // livro de vendas (`vendas_vendas.agente_codigo`, migração 170). Lê-se do cookie e não do
+        // corpo do pedido pela mesma razão que o `opinly_anon_id`: um botão de compra que se
+        // esquecesse de o mandar não dava erro — dava uma venda sem dono, indistinguível de uma que
+        // nenhum agente trouxe. `normalizarAgente` devolve nulo a tudo o que não tenha a forma de
+        // um código de agente, por isso um cupão de desconto no `?ag=` não credita ninguém.
+        ...(agenteCodigo ? { agente_codigo: agenteCodigo } : {}),
         email,
         full_name: fullName,
         username,

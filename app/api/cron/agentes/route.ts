@@ -3,6 +3,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { atribuirEGravar } from '@/lib/agentes/receita'
 import { correrAvaliacao } from '@/lib/agentes/motor'
+import { correrCicloCeo } from '@/lib/agentes/ciclo-ceo'
 
 /**
  * A PASSAGEM DIÁRIA DA EQUIPA DE AGENTES — mede a receita, e depois julga.
@@ -26,6 +27,8 @@ import { correrAvaliacao } from '@/lib/agentes/motor'
  *
  *  · `?dry=1` lê tudo, decide tudo, e não escreve nada. É assim que isto se vê funcionar antes de
  *    lhe dar a faca;
+ *  · `?ciclo=0` corre a medição e o juízo e NÃO deixa o CEO pedir nada. Serve para quem quiser
+ *    ver as contas sem acrescentar pedidos à tabela;
  *  · `?trader=1` corre também o agente trader. Fica FORA da passagem automática de propósito: o
  *    trader tem o seu próprio interruptor e a conta dele já tem outro escritor — ver o cabeçalho
  *    de `lib/agentes/trader.ts`.
@@ -63,6 +66,24 @@ export async function GET(request: NextRequest) {
 
     const avaliacao = await correrAvaliacao(db, { ensaio, agora })
 
+    /**
+     * ── E AGORA O CEO AGE: LÊ A EQUIPA JULGADA E PEDE ALGO A QUEM NÃO SE PAGA ──
+     *
+     * DEPOIS do juízo, e a ordem é a regra outra vez. Ao contrário, o CEO pedia resultados com os
+     * estados de ontem: cobrava um agente que esta manhã recuperou, e dava-se por livre de cobrar
+     * um que acabou de entrar em risco. O pedido ficava escrito com um motivo perfeitamente
+     * sólido, como sempre acontece neste sistema quando a ordem está trocada.
+     *
+     * Um erro no juízo NÃO trava o ciclo: o ciclo volta a ler a equipa e a julgá-la pela mesma
+     * régua, por isso o que ele vê é coerente mesmo que a gravação do estado tenha falhado numa
+     * linha. O que o trava é não conseguir ler a janela — e isso está decidido dentro dele.
+     *
+     * `?ciclo=0` desliga-o. Fica LIGADO por omissão porque é o pedido do dono de 01/10: o CEO
+     * auto-corre. Um ciclo que só corresse quando alguém se lembrasse de o chamar não era
+     * autonomia nenhuma.
+     */
+    const ciclo = params.get('ciclo') === '0' ? null : await correrCicloCeo(db, { ensaio, agora })
+
     let trader: unknown = null
     if (params.get('trader') === '1') {
       const { correrTrader } = await import('@/lib/agentes/trader')
@@ -88,8 +109,21 @@ export async function GET(request: NextRequest) {
         ignorados: avaliacao.ignorados,
         escritas: avaliacao.escritas,
       },
+      /**
+       * O que o CEO pediu, a quem, e com que prazo. Sai na resposta do cron de propósito: é a
+       * única forma de alguém ver, sem ir à base, se a passagem de hoje pressionou alguém ou se
+       * não havia nada a pressionar — e as duas coisas são informação diferente.
+       */
+      ceo: ciclo
+        ? {
+            resumo: ciclo.resumo,
+            pedidos: ciclo.pedidos,
+            prazosFechados: ciclo.fechados,
+            naoPressionados: ciclo.ignorados,
+          }
+        : { resumo: 'Ciclo do CEO desligado nesta chamada (?ciclo=0).' },
       trader,
-      erros: [...receita.erros, ...avaliacao.erros],
+      erros: [...receita.erros, ...avaliacao.erros, ...(ciclo?.erros ?? [])],
     })
   } catch (err) {
     return NextResponse.json(

@@ -8,7 +8,7 @@
  * no ecrã — vê-se na conta ao fim do mês.
  */
 import {
-  CARENCIA_HORAS, JANELA_HORAS, MARGEM_REFORMA, ORCAMENTO_INICIAL, deveReformarOPai, julgar,
+  CARENCIA_HORAS, JANELA_HORAS, MARGEM_REFORMA, ORCAMENTO_INICIAL, deveReformarOPai, eImortal, julgar,
   lucroAcumulado, podeClonar, podeGastar, ritmo, type Agente,
 } from './vida'
 
@@ -196,6 +196,73 @@ const agente = (p: Partial<Agente>): Agente => ({
   teste('reformado não clona', !podeClonar({ ...pai, estado: 'reformado' }, AGORA).pode)
 
   teste('a margem é maior que 1', MARGEM_REFORMA > 1)
+}
+
+// ── A IMORTALIDADE DO CEO, E SOBRETUDO ONDE ELA *NÃO* CHEGA ─────────────────
+//
+// Decisão do dono (01/10). O caso bom é trivial e não é o que interessa provar: o que erra em
+// silêncio é a imortalidade a ALASTRAR — um filho a ficar indestrutível por lhe ter calhado o pilar
+// do CEO, ou por estar debaixo dele. Nesse caso a régua das 48 h continua escrita, continua a
+// correr, e deixa de parar quem devia parar. Não há exceção, não há log, não há nada: só uma equipa
+// a gastar orçamento para sempre.
+{
+  const semLucroNemSaldo = { receita: 0, gasto: 10, saldo: 0 } as const
+
+  // ── O topo da casa: pilar 'ceo' E sem pai ──
+  const ceo = agente({ nome: 'CEO', pilar: 'ceo', pai_id: null, ...semLucroNemSaldo })
+  teste('o CEO é imortal', eImortal(ceo))
+  const jCeo = julgar(ceo, AGORA)
+  teste('o CEO sem lucro e sem saldo NÃO pára', jCeo.decisao !== 'para' && jCeo.estado !== 'parado')
+  teste('fica em risco, à vista', jCeo.decisao === 'avisa' && jCeo.estado === 'em_risco')
+  teste('e o motivo diz que é excepção', /excep/i.test(jCeo.porque))
+  // Imortal não é «deixar de medir»: o número continua a ser feito e continua a aparecer.
+  teste('e o número medido continua lá', jCeo.resultado === -10 && jCeo.porque.includes('10.00'))
+
+  // ── O CASO MAU Nº 1: um filho com o pilar do CEO ──
+  // Uma linha copiada do pai, ou um valor por omissão num formulário, chega para isto.
+  const filhoComPilarCeo = agente({ nome: 'Falso CEO', pilar: 'ceo', pai_id: 'o-ceo', ...semLucroNemSaldo })
+  teste('um filho com pilar ceo NÃO é imortal', !eImortal(filhoComPilarCeo))
+  teste('e pára como qualquer outro', julgar(filhoComPilarCeo, AGORA).decisao === 'para')
+
+  // ── O CASO MAU Nº 2: estar debaixo do CEO não dá nada ──
+  const filhoDoCeo = agente({ nome: 'Produto SaaS', pilar: 'desenvolvimento', pai_id: 'o-ceo', ...semLucroNemSaldo })
+  teste('um filho do CEO não herda a imortalidade', !eImortal(filhoDoCeo))
+  teste('e pára', julgar(filhoDoCeo, AGORA).decisao === 'para' && julgar(filhoDoCeo, AGORA).estado === 'parado')
+
+  // ── O CASO MAU Nº 3: um agente raiz qualquer ──
+  // Ser raiz, por si, não é ser CEO — um órfão (pai apagado, ver `arvore.ts`) desenha-se no topo e
+  // não pode passar a indestrutível por isso.
+  const orfaoNoTopo = agente({ nome: 'Órfão', pilar: 'trading', pai_id: null, ...semLucroNemSaldo })
+  teste('ser raiz sem ser do pilar ceo não dá imortalidade', !eImortal(orfaoNoTopo))
+  teste('e pára', julgar(orfaoNoTopo, AGORA).decisao === 'para')
+
+  // ── `pai_id` vazio conta como raiz, mas só isso ──
+  teste('pai_id em branco é raiz', eImortal({ pilar: 'ceo', pai_id: '   ' }))
+  teste('pai_id indefinido é raiz', eImortal({ pilar: 'ceo' }))
+
+  // ── A SUPERVISÃO DO DONO GANHA À EXCEPÇÃO AUTOMÁTICA ──
+  // Imortal é não ser parado pela REGRA. Um CEO que o dono pausou ou parou à mão fica como ele o
+  // deixou — uma excepção automática que ressuscitasse o agente contra a decisão de uma pessoa era
+  // pior do que a regra que ela veio excepcionar.
+  teste(
+    'um CEO pausado pelo dono não é julgado',
+    julgar(agente({ pilar: 'ceo', pai_id: null, pausado: true, ...semLucroNemSaldo }), AGORA).estado === 'pausado',
+  )
+  teste(
+    'um CEO parado pelo dono fica parado',
+    julgar(agente({ pilar: 'ceo', pai_id: null, estado: 'parado', ...semLucroNemSaldo }), AGORA).estado === 'parado',
+  )
+
+  // ── E a imortalidade não lhe dá orçamento nem direito a clonar ──
+  // São contas separadas de propósito: não parar é uma coisa, poder gastar o que não tem é outra.
+  teste(
+    'o CEO imortal sem saldo continua a não poder gastar',
+    !podeGastar(agente({ pilar: 'ceo', pai_id: null, ...semLucroNemSaldo }), 5).pode,
+  )
+  teste(
+    'o CEO sem lucro acumulado não clona',
+    !podeClonar(agente({ pilar: 'ceo', pai_id: null, ...semLucroNemSaldo }), AGORA).pode,
+  )
 }
 
 // ── As constantes são as pedidas ────────────────────────────────────────────

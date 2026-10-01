@@ -116,11 +116,31 @@ export async function POST(req: NextRequest) {
          * o mensageiro ir buscá-lo outra vez e correr o risco de ler antes de a escrita assentar.
          */
         const estado = numero ? await lerEstadoDoContacto(numero) : undefined
+        /**
+         * O CÓDIGO DO AGENTE SEGUE O LEAD, mesmo quando ele muda de canal.
+         *
+         * O estado deste lead vive em `telegram_leads` com `chat_id = 'wa:<numero>'` — é a mesma
+         * tabela, de propósito (ver `runLeadFunnelReply`). Logo, se ele chegou por um deep-link de
+         * agente, o código está lá e aplica-se aqui: os links da resposta levam `?ag=`, e a
+         * conversa de WhatsApp que acabar numa compra liga-se a quem a começou.
+         *
+         * Sem código, a mensagem sai exactamente igual — só fica escrita como não atribuível. A
+         * capacidade de responder nunca depende de haver atribuição.
+         */
+        const { data: leadWa } = await getSupabaseAdmin()
+          .from('telegram_leads')
+          .select('agente_codigo')
+          .eq('chat_id', `wa:${from}`)
+          .maybeSingle()
         const r = await enviarWhatsApp({
           para: from,
           finalidade: 'resposta',
           texto: reply || 'Diz-me só: procuras aprender, copiar sinais prontos ou algo automático? 🙂',
           estado: estado ? { ...estado, ultimaEntradaIso: estado.ultimaEntradaIso ?? new Date().toISOString() } : undefined,
+          agente: {
+            funil: 'whatsapp:funil',
+            codigoExplicito: (leadWa as { agente_codigo?: string | null } | null)?.agente_codigo ?? undefined,
+          },
         })
         if (!r.enviado) console.warn(`[whatsapp] resposta ao lead não saiu (${r.codigo}): ${r.porque}`)
       }

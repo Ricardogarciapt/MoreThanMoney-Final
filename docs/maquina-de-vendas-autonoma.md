@@ -349,7 +349,16 @@ a mesma decisão vista de três sítios.
 
 ## 6. O que recomendo a seguir, por ordem de valor
 
-**1. Pôr o código do agente no livro de vendas.** É o que falta para a medição valer alguma coisa:
+**1. Pôr o código do agente no livro de vendas.** ✅ **FEITO a 01/10** — `vendas_vendas.agente_codigo`
+(migração 170, aplicada), `VendaConfirmada.agenteCodigo` em `lib/vendas/livro.ts`, as cinco portas
+alimentadas, e a guarda `lib/agentes/portas-receita.check.ts` a falhar quando uma delas deixa de
+passar o campo (provado a removê-lo). O código chega ao servidor por COOKIE (`COOKIE_ATRIBUICAO`),
+pelo mesmo padrão do `opinly_anon_id`: pôr o código no corpo de cada botão de compra deixava a
+medição à mercê de alguém se lembrar, e o que se esquecesse não dava erro. Os 35 € que já estavam no
+livro ficaram atribuídos a `CEO-MTM` por decisão declarada do dono — não por medição, e isso está
+escrito ao lado do lançamento. O texto abaixo fica como registo do que era o problema:
+
+~~É o que falta para a medição valer alguma coisa:~~
 hoje a ligação forte só existe em `marketplace_compras`, que está **vazia**, e toda a receita real
 está em `vendas_vendas`, que não tem coluna (§2.8). Uma coluna `agente_codigo` em `vendas_vendas`
 e um campo em `VendaConfirmada` (`lib/vendas/livro.ts:229`) chegam — mas há **cinco portas** a

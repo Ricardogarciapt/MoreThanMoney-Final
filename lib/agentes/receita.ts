@@ -17,7 +17,11 @@
  * Isto foi levantado no repo antes de se escrever uma linha, e é o que limita a medição:
  *
  *  · `vendas_vendas` é o LIVRO canónico das vendas (único por `fonte`+`referencia`, com estornos).
- *    **Não tem coluna de cupão.** É a melhor fonte de valor e a pior de atribuição;
+ *    Desde 01/10 (migração 170) tem `agente_codigo` NA LINHA DA VENDA — ligação exacta, e é a que
+ *    manda. Era isto que faltava: o livro tinha a receita toda e nenhuma coluna para dizer de quem
+ *    ela era, e por isso toda a receita real caía em «sem_codigo». As cinco portas que escrevem no
+ *    livro alimentam-na, com guarda em `portas-receita.check.ts` — uma porta esquecida perde
+ *    receita em silêncio;
  *  · `marketplace_compras` tem `cupao_codigo` por COMPRA — é a única ligação forte que existe hoje;
  *  · `profiles.coupon_code` tem o último código de cada pessoa. É por PESSOA e é SOBRESCRITO: quem
  *    usar dois códigos ao longo do tempo perde o primeiro. Usa-se, e **diz-se que é fraco**;
@@ -313,11 +317,13 @@ export async function lerVendasParaAtribuir(
     }
   }
 
-  // ── 2. O livro de vendas: código só pelo perfil do comprador ───────────────────────────────
+  // ── 2. O livro de vendas: código NA LINHA DA VENDA, e o perfil só como recurso ─────────────
   {
     let q = db
       .from('vendas_vendas')
-      .select('id, fonte, referencia, comprador_id, pack, valor_cents, moeda, pago_em, estornada_em, estorno_cents')
+      .select(
+        'id, fonte, referencia, comprador_id, pack, valor_cents, moeda, pago_em, estornada_em, estorno_cents, agente_codigo',
+      )
     if (desdeISO) q = q.gte('pago_em', desdeISO)
     const { data, error } = await q.limit(5000)
     if (error) {
@@ -353,7 +359,21 @@ export async function lerVendasParaAtribuir(
 
     for (const r of linhas) {
       const comprador = r.comprador_id ? String(r.comprador_id) : null
-      const codigo = comprador ? (codigoDe.get(comprador) ?? null) : null
+      /**
+       * A COLUNA DA VENDA PRIMEIRO, o perfil só como recurso.
+       *
+       * `vendas_vendas.agente_codigo` nasceu a 01/10 (migração 170) porque era isto que faltava
+       * para a medição valer algo: o livro tem a receita toda e não tinha onde dizer quem a trouxe.
+       * Está na LINHA DA VENDA, logo é ligação exacta — `na_compra`.
+       *
+       * O perfil do comprador fica como leitura de trás, para as vendas anteriores à coluna. É
+       * fraca de propósito e o painel di-lo: é por PESSOA e é sobrescrita pelo último código que
+       * ela usar. A ORDEM importa — se o perfil ganhasse, um código antigo da pessoa roubava o
+       * crédito de uma venda que já traz o seu na linha, e isso não dava erro em sítio nenhum.
+       */
+      const doLivro = normalizarCodigo(r.agente_codigo)
+      const doPerfil = comprador ? (codigoDe.get(comprador) ?? null) : null
+      const codigo = doLivro || doPerfil || null
       vendas.push({
         id: `${String(r.fonte ?? 'stripe')}:${String(r.referencia ?? r.id)}`,
         valorCents: Number(r.valor_cents),
@@ -361,7 +381,7 @@ export async function lerVendasParaAtribuir(
         estornoCents: r.estorno_cents == null ? 0 : Number(r.estorno_cents),
         estornada: r.estornada_em != null,
         codigo,
-        ligacao: codigo ? 'no_perfil' : null,
+        ligacao: codigo ? (doLivro ? 'na_compra' : 'no_perfil') : null,
         pagoEm: (r.pago_em as string | null) ?? null,
       })
     }

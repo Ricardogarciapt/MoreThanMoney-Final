@@ -25,6 +25,8 @@
  */
 
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { prepararMensagem } from '@/lib/agentes/mensagem-saida'
+import { agenteDoPostComentado, registarMensagemDeAgente } from '@/lib/agentes/mensagem-livro'
 import { pensar } from '@/lib/funis-ia'
 import { isAutoPublishBlocked } from './publish'
 import { ehDaCasa, handlesDaCasa } from './setter-casa'
@@ -237,7 +239,7 @@ export async function tratarComentario(
    * e só depois descobrir que a janela dos 7 dias fechou deixa uma promessa não cumprida debaixo do
    * post, à frente de toda a audiência da pessoa.
    */
-  const textoPublico =
+  let textoPublico =
     (await pensar({
       objetivo: guiaoFase1(dm.pode),
       modo: 'responder',
@@ -246,7 +248,7 @@ export async function tratarComentario(
       reserva: dm.pode ? RESERVA_FASE1_COM_DM : RESERVA_FASE1_SEM_DM,
     })).texto ?? (dm.pode ? RESERVA_FASE1_COM_DM : RESERVA_FASE1_SEM_DM)
 
-  const textoDm = dm.pode
+  let textoDm: string | null = dm.pode
     ? (await pensar({
         objetivo: guiaoFase2('entrega'),
         modo: 'responder',
@@ -256,10 +258,48 @@ export async function tratarComentario(
       })).texto ?? RESERVA_FASE2
     : null
 
+  /**
+   * O DONO DESTA RESPOSTA É O DONO DO POST QUE A PESSOA COMENTOU.
+   *
+   * Não é o setter: o setter responde ao que ela escreveu, mas quem a trouxe foi aquele post. Dar
+   * o crédito ao funil era dá-lo ao carteiro — e é por isso que `AGENTE_POR_FUNIL`
+   * (lib/agentes/mensagem-saida.ts) deliberadamente NÃO tem uma entrada para o setter.
+   *
+   * Marca-se o texto já redigido em vez de o mandar redigir com o código lá dentro: o modelo não
+   * tem de saber nada disto, e um link que ele escrevesse à mão podia vir com o código colado ao
+   * ponto final da frase — o caso que `lib/agentes/atribuicao.ts` documenta e que faz a atribuição
+   * desaparecer sem erro.
+   */
+  const donoDoPost = await agenteDoPostComentado(c.mediaId)
+  const marcadaPublica = prepararMensagem({
+    canal: 'instagram',
+    texto: textoPublico,
+    funil: 'instagram:setter',
+    codigoExplicito: donoDoPost,
+    herancaFalhou: !donoDoPost,
+  })
+  const marcadaDm = textoDm
+    ? prepararMensagem({
+        canal: 'instagram',
+        texto: textoDm,
+        funil: 'instagram:setter',
+        codigoExplicito: donoDoPost,
+        herancaFalhou: !donoDoPost,
+      })
+    : null
+
+  textoPublico = marcadaPublica.texto
+  textoDm = marcadaDm ? marcadaDm.texto : null
+
   const linha = {
     ...base,
     texto_publico: textoPublico,
     texto_dm: textoDm,
+    // Fica no rascunho para quem REVÊ poder ver se a mensagem mede alguma coisa antes de aprovar
+    // — do mesmo modo que a linha «📊 Agente:» do `content-draft`. Zero marcados com código é uma
+    // mensagem que não mede nada, e é diferente de uma mensagem sem dono.
+    agente_codigo: marcadaPublica.codigo,
+    agente_links_marcados: marcadaPublica.marcados + (marcadaDm?.marcados ?? 0),
     dm_possivel: dm.pode,
     dm_motivo: dm.motivo as MotivoSemDm | null,
     passo: 'entrega',
@@ -273,16 +313,50 @@ export async function tratarComentario(
   let enviouPublica = false
   let enviouDm = false
 
+  /**
+   * O ENVIO FICA ESCRITO NO LIVRO DO AGENTE, e não só no rascunho.
+   *
+   * O rascunho já guardava o texto e o erro — mas guarda-os POR COMENTÁRIO, e a pergunta que o
+   * dono vai fazer não é «o que aconteceu a este comentário»: é «o que é que os agentes mandaram
+   * ontem, e quanto disso saiu». Essa não se responde a partir de uma tabela com uma linha por
+   * comentário do Instagram. Ver `agentes_mensagens` (migração 171).
+   *
+   * E é aqui que o limite do dono fica medido em vez de ser uma promessa: `enviar_dm` está `true`
+   * em produção e ninguém escreve o estado `'aprovado'`, por decisão dele de 01/10. O que isso
+   * significa é que as DMs saem sem passar por uma pessoa — e passa a haver registo de cada uma.
+   */
   if (chaves.enviar_publica && contaEscreve) {
     const r = await gpost(`${c.commentId}/replies`, { message: textoPublico }, token)
     if (r.ok) enviouPublica = true
     else erros.push(`publica: ${String(r.json?.error?.message ?? 'erro').slice(0, 150)}`)
+    await registarMensagemDeAgente({
+      canal: 'instagram',
+      destino: c.commenter ?? c.commentId,
+      funil: 'instagram:setter',
+      tipo: 'resposta_publica',
+      texto: textoPublico,
+      estado: r.ok ? 'enviada' : 'falhou',
+      motivo: r.ok ? null : String(r.json?.error?.message ?? 'erro').slice(0, 300),
+      referencia: c.commentId,
+      marcacao: marcadaPublica,
+    })
   }
 
   if (chaves.enviar_dm && dm.pode && textoDm) {
     const r = await gpost(`${c.commentId}/private_replies`, { message: textoDm }, token)
     if (r.ok) enviouDm = true
     else erros.push(`dm: ${String(r.json?.error?.message ?? 'erro').slice(0, 150)}`)
+    await registarMensagemDeAgente({
+      canal: 'instagram',
+      destino: c.commenter ?? c.commentId,
+      funil: 'instagram:setter',
+      tipo: 'dm',
+      texto: textoDm,
+      estado: r.ok ? 'enviada' : 'falhou',
+      motivo: r.ok ? null : String(r.json?.error?.message ?? 'erro').slice(0, 300),
+      referencia: c.commentId,
+      marcacao: marcadaDm ?? marcadaPublica,
+    })
   }
 
   if (enviouPublica || enviouDm) {

@@ -12,6 +12,8 @@
  *   webhook de mensagens do IG. (/api/manychat/closer fica só para quando o ManyChat existir.)
  */
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { prepararMensagem } from "@/lib/agentes/mensagem-saida"
+import { agenteDoPostComentado, registarMensagemDeAgente } from "@/lib/agentes/mensagem-livro"
 import { IG_ACCOUNTS, isAutoPublishBlocked, tokenForAccount } from "./publish"
 import {
   lerInterruptor, tratarComentario, resumoVazio, contar, chegouAoTecto,
@@ -223,6 +225,20 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
   const media = (await fetchMedia(acc.id, token)).filter((m) => (m.comments_count ?? 0) > 0)
   for (const post of media) {
     if (res.leads >= MAX_DM_PER_ACCOUNT) break
+
+    /**
+     * DE QUEM É O POST QUE A PESSOA COMENTOU — e é essa a atribuição certa.
+     *
+     * A pessoa não veio do funil: veio DAQUELE post. Dar o crédito ao funil era dá-lo ao carteiro.
+     * Lê-se UMA vez por post e não por comentário (um post traz até 50), porque a resposta é a
+     * mesma para todos os comentários dele.
+     *
+     * `null` é uma resposta legítima: os 181 posts publicados antes da migração 168 não têm dono,
+     * e inventar-lhes um era inventar um número. Nesse caso a mensagem sai igual, sem código, e
+     * fica escrita com o motivo `post_sem_dono` — a diferença entre «este post é antigo» e «este
+     * funil não tem dono» é a diferença entre esperar e decidir.
+     */
+    const donoDoPost = await agenteDoPostComentado(post.id)
     const comments = await gget(`${post.id}/comments?fields=id,text,username,timestamp&limit=50`, token)
     if (!comments.ok) { res.errors.push(`comments ${post.id}: ${comments.json?.error?.message ?? comments.status}`); continue }
     for (const c of (comments.json?.data ?? [])) {
@@ -262,7 +278,34 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
       res.leads++
 
       const handle = commenter ? ` @${commenter}` : ""
-      const dmText = intent.dm(commenter ? ` ${commenter.split(" ")[0]}` : "")
+      /**
+       * AS DUAS RESPOSTAS PASSAM A LEVAR O CÓDIGO DO AGENTE — e é aqui que o caminho até ao grupo
+       * de Telegram passa a ser medível de ponta a ponta.
+       *
+       * Os textos destas intenções levam os dois tipos de ligação que a casa tem, e os dois são
+       * marcados: `morethanmoney.pt/...` leva `?ag=`, e `t.me/<bot>?start=lead` leva a carga
+       * (`?start=lead_ag_AG_SCANNER`). O token do funil sobrevive — quem vinha para a corretora
+       * continua a cair nos passos da corretora. Ver lib/agentes/mensagem-saida.ts.
+       *
+       * Depois disto, o `/start` do webhook escreve o código em `telegram_leads.agente_codigo`, a
+       * ingestão da manhã leva o lead ao pipeline, e o `?ag=` no browser leva-o à compra. Era este
+       * o único elo que faltava: a cadeia estava inteira e nunca COMEÇAVA.
+       */
+      const marcadaDm = prepararMensagem({
+        canal: "instagram",
+        texto: intent.dm(commenter ? ` ${commenter.split(" ")[0]}` : ""),
+        funil: `instagram:funil:${intent.key}`,
+        codigoExplicito: donoDoPost,
+        herancaFalhou: !donoDoPost,
+      })
+      const marcadaPublica = prepararMensagem({
+        canal: "instagram",
+        texto: intent.pub(handle),
+        funil: `instagram:funil:${intent.key}`,
+        codigoExplicito: donoDoPost,
+        herancaFalhou: !donoDoPost,
+      })
+      const dmText = marcadaDm.texto
       /**
        * SETTER: DM só dentro da janela de 7 dias (regra da Meta). Fora → fica `window_expired` e
        * segue-se à mão. Dentro → `private_replies`; se falhar, responde-se em PÚBLICO.
@@ -288,11 +331,55 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
             // Conta pessoal: fica registado como lead para seguir à mão, sem escrever nada lá.
             dm_status = "window_expired"
           } else {
-            const pub = await gpost(`${c.id}/replies`, { message: intent.pub(handle) }, token)
+            const pub = await gpost(`${c.id}/replies`, { message: marcadaPublica.texto }, token)
             if (pub.ok) res.publicFallback++
             else { dm_status = "error"; res.errors.push(`${intent.key} ${c.id}: dm(${dm_error}) pub(${pub.json?.error?.message ?? pub.status})`) }
+            await registarMensagemDeAgente({
+              canal: "instagram",
+              destino: commenter ?? c.id,
+              funil: `instagram:funil:${intent.key}`,
+              tipo: "resposta_publica",
+              texto: marcadaPublica.texto,
+              estado: pub.ok ? "enviada" : "falhou",
+              motivo: pub.ok ? null : String(pub.json?.error?.message ?? pub.status).slice(0, 300),
+              referencia: c.id,
+              marcacao: marcadaPublica,
+            })
           }
         }
+        /**
+         * A DM fica escrita nos três desfechos, e é o 'recusada' que importa guardar.
+         *
+         * `public_fallback` quer dizer que a Meta não deixou a DM sair — e a razão dela é a
+         * diferença entre corrigir em dez minutos e adivinhar durante uma semana. Era isso que
+         * ficava só num `res.errors` que morre no fim da corrida do cron.
+         */
+        await registarMensagemDeAgente({
+          canal: "instagram",
+          destino: commenter ?? c.id,
+          funil: `instagram:funil:${intent.key}`,
+          tipo: "dm",
+          texto: dmText,
+          estado: dm_status === "sent" ? "enviada" : "falhou",
+          motivo: dm_status === "sent" ? null : `${dm_status}${dm_error ? ` · ${dm_error}` : ""}`,
+          referencia: c.id,
+          marcacao: marcadaDm,
+        })
+      } else {
+        // Fora da janela de 7 dias da Meta não sai nada, e isso TAMBÉM se escreve: um lead que
+        // ninguém seguiu à mão porque não se soube que estava à espera é um lead perdido em
+        // silêncio. 'recusada' e não 'falhou' — a janela é uma regra a funcionar, não uma avaria.
+        await registarMensagemDeAgente({
+          canal: "instagram",
+          destino: commenter ?? c.id,
+          funil: `instagram:funil:${intent.key}`,
+          tipo: "dm",
+          texto: dmText,
+          estado: "recusada",
+          motivo: "window_expired · o comentário tem mais de 7 dias e a Meta já não aceita private reply",
+          referencia: c.id,
+          marcacao: marcadaDm,
+        })
       }
       /**
        * UM COMENTÁRIO NO POST DO SORTEIO É UMA ENTRADA.

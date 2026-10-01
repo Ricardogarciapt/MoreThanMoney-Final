@@ -44,6 +44,34 @@ export const PARAMETRO = 'ag'
 export const CHAVE_GUARDADA = 'mtm_agente_atribuicao'
 
 /**
+ * O MESMO CÓDIGO, NUM COOKIE — para o SERVIDOR o poder ler.
+ *
+ * ═══ PORQUE É QUE NÃO BASTA O `localStorage` ════════════════════════════════════════════════
+ *
+ * O `localStorage` só existe no browser. Serve para o marketplace, onde quem compra manda o código
+ * no corpo do pedido. Mas as sessões de checkout dos planos do site são criadas em rotas de
+ * servidor (`/api/stripe/create-checkout-session`, `register-checkout`, `oauth-register-checkout`)
+ * e é no `metadata` dessas sessões que o código tem de viajar para chegar ao webhook — e daí ao
+ * livro de vendas.
+ *
+ * A alternativa era mandar o código no corpo de cada botão de compra do site. São muitos botões, e
+ * **o que se esquecesse não dava erro nenhum**: dava uma venda sem código, indistinguível de uma
+ * venda que nenhum agente trouxe. É o defeito deste sistema inteiro, outra vez. Um cookie é lido
+ * por qualquer rota sem ninguém se lembrar de nada — e é exactamente o que a casa já faz com o
+ * `opinly_anon_id` do pixel.
+ *
+ * ── A JANELA PASSA A SER DO PRÓPRIO COOKIE ──
+ *
+ * O cookie dura {@link JANELA_DIAS} dias e só se reescreve quando um link TRAZ código. Um cookie
+ * expirado simplesmente não é enviado, o que dá a mesma janela que {@link codigoQueVale} aplica ao
+ * `localStorage` — sem ter de guardar a data uma segunda vez, que é como as duas divergiriam.
+ *
+ * NÃO é `HttpOnly` de propósito: é escrito pelo browser (é lá que o `?ag=` chega) e lido pelo
+ * servidor. Não há nada de secreto num código de atribuição — ele vem num link público.
+ */
+export const COOKIE_ATRIBUICAO = 'mtm_ag'
+
+/**
  * Isto parece um código de agente?
  *
  * ═══ O ERRO QUE ISTO EXISTE PARA TRAVAR ════════════════════════════════════════════════════

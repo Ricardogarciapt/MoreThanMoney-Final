@@ -29,25 +29,58 @@ import LiveCaptions from "@/components/mobile/live-captions"
 import LiveDubAudio from "@/components/mobile/live-dub-audio"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 import { handleLiveChatEnterKey } from "@/lib/live-chat"
+import {
+  classificarEnvio,
+  cursorDaProximaSondagem,
+  deveColarNoFundo,
+  etiquetaDeAutor,
+  juntarMensagens,
+  podeLimparCaixa,
+  type MensagemDoChat,
+} from "@/lib/live-chat-sala"
 
 interface Props {
   streamId: string
 }
 
-type Msg = {
-  id: string
-  sender_name: string
-  sender_type: "student" | "educator"
-  message: string
-  created_at: string
+type Msg = MensagemDoChat
+
+/**
+ * Cadência do chat. Era 5 s, e era a MESMA sondagem que trazia o stream inteiro: cada mensagem
+ * chegava até 5 s depois de ser escrita, o que numa sessão ao vivo chega para a conversa deixar
+ * de fazer sentido. Agora o chat tem a sua própria sondagem, incremental (`?desde=`), e por isso
+ * pode ser rápida sem custar nada: cada pedido traz só o que nasceu desde a última mensagem.
+ */
+const MS_SONDAGEM_CHAT_AO_VIVO = 1500
+const MS_SONDAGEM_CHAT_OFFLINE = 8000
+/** O stream (is_live, HLS) muda devagar — não precisa da cadência do chat. */
+const MS_SONDAGEM_STREAM = 5000
+
+/** Mensagem ainda a caminho: mostra-se logo, mas marcada, e nunca substitui o texto da caixa. */
+type MsgPendente = { chaveLocal: string; message: string; estado: "a-enviar" | "falhou"; motivo?: string }
+
+const horaCurta = (iso: string) => {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime())
+    ? ""
+    : d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })
 }
 
 export default function LiveStreamRoom({ streamId }: Props) {
   const [stream, setStream] = useState<any>(null)
   const [messages, setMessages] = useState<Msg[]>([])
+  const [pendentes, setPendentes] = useState<MsgPendente[]>([])
+  const [chatBloqueado, setChatBloqueado] = useState<string | null>(null)
+  const [naoLidas, setNaoLidas] = useState(0)
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
   const [clearing, setClearing] = useState(false)
+  const caixaMensagensRef = useRef<HTMLDivElement | null>(null)
+  const fundoRef = useRef<HTMLDivElement | null>(null)
+  // Guardado em ref (e não em estado) porque é lido dentro da sondagem: em estado, o intervalo
+  // ficaria preso ao valor do primeiro render e a sondagem repetia o histórico para sempre.
+  const cursorRef = useRef<string | null>(null)
+  const colarNoFundoRef = useRef(true)
   const [showChat, setShowChat] = useState(true)
   const [disclaimerOpen, setDisclaimerOpen] = useState(false)
   const prevIsLiveRef = useRef(false)
@@ -67,25 +100,115 @@ export default function LiveStreamRoom({ streamId }: Props) {
     }
   }
 
-  const load = async () => {
-    const [streamRes, msgRes] = await Promise.all([
-      fetch(`/api/live-sessions/streams/${streamId}`, { credentials: "same-origin", headers: await authHeaders() }).then((r) => r.json()),
-      fetch(`/api/live-sessions/streams/${streamId}/messages`, { credentials: "same-origin" }).then((r) =>
-        r.json()
-      ),
-    ])
-    setStream(streamRes.data || null)
-    setMessages(msgRes.data || [])
+  const carregarStream = async () => {
+    const res = await fetch(`/api/live-sessions/streams/${streamId}`, {
+      credentials: "same-origin",
+      headers: await authHeaders(),
+    }).then((r) => r.json())
+    setStream(res.data || null)
+  }
+
+  /**
+   * Uma sondagem só do chat. `modo: "historico"` é a primeira (ou depois de limpar) e traz as
+   * últimas mensagens — é o que quem chega aos 20 minutos tem de ver. `modo: "novas"` manda o
+   * cursor e traz só o que nasceu depois.
+   */
+  const carregarChat = async (modo: "historico" | "novas") => {
+    const cursor = modo === "novas" ? cursorRef.current : null
+    const url = cursor
+      ? `/api/live-sessions/streams/${streamId}/messages?desde=${encodeURIComponent(cursor)}`
+      : `/api/live-sessions/streams/${streamId}/messages`
+
+    let res: Response
+    try {
+      // A sessão viaja no token nas apps/webviews e no cookie no browser. Mandar só o cookie era
+      // o caminho directo para o chat em branco de quem TEM sessão (ver messages-dm-blank-fix).
+      res = await fetch(url, { credentials: "same-origin", headers: await authHeaders() })
+    } catch {
+      return // rede a oscilar: a próxima sondagem recupera, o ecrã não pisca
+    }
+
+    const corpo = await res.json().catch(() => null)
+
+    if (res.status === 403) {
+      // Nunca uma lista vazia: sem direito, DIZ-SE. Vazio lê-se como "ainda sem mensagens".
+      setChatBloqueado(corpo?.error || "Não tens acesso ao chat desta sessão.")
+      setMessages([])
+      return
+    }
+    if (!res.ok || !corpo?.success) return
+
+    setChatBloqueado(null)
+
+    if (corpo.chatLimpo) {
+      // Sessão Gratuita que terminou: o chat limpa-se de propósito. Reinicia-se o cursor, senão
+      // a sondagem seguinte pedia "desde" uma mensagem que já não existe.
+      cursorRef.current = null
+      setMessages([])
+      return
+    }
+
+    const novas = (corpo.data || []) as Msg[]
+    if (modo === "historico") {
+      cursorRef.current = cursorDaProximaSondagem(novas)
+      setMessages(novas)
+      return
+    }
+    if (novas.length === 0) return
+
+    setMessages((atuais) => {
+      const juntas = juntarMensagens(atuais, novas)
+      cursorRef.current = cursorDaProximaSondagem(juntas)
+      // Quem está a ler histórico não é arrastado para o fundo — leva um contador em vez disso.
+      if (!colarNoFundoRef.current) setNaoLidas((n) => n + novas.length)
+      return juntas
+    })
   }
 
   useEffect(() => {
     prevIsLiveRef.current = false
     closeDisclaimer()
-    load()
-    const id = setInterval(load, 5000)
+    cursorRef.current = null
+    setPendentes([])
+    setNaoLidas(0)
+    colarNoFundoRef.current = true
+    void carregarStream()
+    void carregarChat("historico")
+    const id = setInterval(carregarStream, MS_SONDAGEM_STREAM)
     return () => clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamId])
+
+  // Sondagem do chat, à parte e mais rápida quando há sessão a decorrer.
+  useEffect(() => {
+    if (!streamId || chatBloqueado) return
+    const ms = stream?.is_live ? MS_SONDAGEM_CHAT_AO_VIVO : MS_SONDAGEM_CHAT_OFFLINE
+    const id = setInterval(() => void carregarChat("novas"), ms)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streamId, stream?.is_live, chatBloqueado])
+
+  // Cola no fundo só se a pessoa já lá estava (ver deveColarNoFundo). O chat não fazia scroll
+  // nenhum: entrava-se no TOPO das últimas 80 mensagens e as novas nasciam fora do ecrã.
+  useEffect(() => {
+    if (!colarNoFundoRef.current) return
+    fundoRef.current?.scrollIntoView({ block: "end" })
+    setNaoLidas(0)
+  }, [messages, pendentes, showChat])
+
+  const aoScrollDoChat = () => {
+    const caixa = caixaMensagensRef.current
+    if (!caixa) return
+    const colar = deveColarNoFundo(caixa)
+    colarNoFundoRef.current = colar
+    if (colar) setNaoLidas(0)
+  }
+
+  const irParaOFundo = () => {
+    colarNoFundoRef.current = true
+    setNaoLidas(0)
+    fundoRef.current?.scrollIntoView({ block: "end", behavior: "smooth" })
+  }
 
   useEffect(() => {
     const el = videoRef.current
@@ -153,23 +276,83 @@ export default function LiveStreamRoom({ streamId }: Props) {
     }
   }, [stream?.is_live])
 
-  const send = async () => {
-    if (!canSend) return
-    setSending(true)
+  /**
+   * ENVIAR SEM PERDER NADA.
+   *
+   * Antes: `fetch`, ignorar o estado da resposta, `setText("")`. Com a rede a oscilar ou com a
+   * sessão caducada, o que a pessoa escreveu desaparecia da caixa e nunca chegava a ninguém —
+   * sem erro, sem aviso, sem rasto. Agora:
+   *   · a mensagem aparece logo, marcada como "a enviar" (a conversa não espera pela rede);
+   *   · a caixa só se limpa quando o servidor confirma que GRAVOU (`podeLimparCaixa`);
+   *   · se falhar, fica visível com o motivo e um "Tentar novamente" quando tentar faz sentido.
+   */
+  const enviarTexto = async (mensagem: string, chaveLocal: string) => {
+    let status: number | null = null
+    let corpo: any = null
     try {
       const res = await fetch(`/api/live-sessions/streams/${streamId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
         credentials: "same-origin",
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: mensagem }),
       })
-      const data = await res.json().catch(() => ({}))
-      if (data?.xp) void notifyXpFromResponse(data.xp)
-      setText("")
-      load()
+      status = res.status
+      corpo = await res.json().catch(() => null)
+    } catch {
+      status = null // o pedido nem chegou a sair
+    }
+
+    const resultado = classificarEnvio({ status, corpo })
+
+    if (resultado.saiu) {
+      if (corpo?.xp) void notifyXpFromResponse(corpo.xp)
+      // A linha gravada entra pela junção (nunca duplica com a que a sondagem vai trazer).
+      if (corpo?.data) {
+        colarNoFundoRef.current = true
+        setMessages((atuais) => {
+          const juntas = juntarMensagens(atuais, [corpo.data as Msg])
+          cursorRef.current = cursorDaProximaSondagem(juntas)
+          return juntas
+        })
+      }
+      setPendentes((ps) => ps.filter((p) => p.chaveLocal !== chaveLocal))
+      return resultado
+    }
+
+    setPendentes((ps) =>
+      ps.map((p) =>
+        p.chaveLocal === chaveLocal ? { ...p, estado: "falhou", motivo: resultado.motivo } : p
+      )
+    )
+    return resultado
+  }
+
+  const send = async () => {
+    if (!canSend) return
+    const mensagem = text.trim()
+    const chaveLocal = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    setSending(true)
+    colarNoFundoRef.current = true
+    setPendentes((ps) => [...ps, { chaveLocal, message: mensagem, estado: "a-enviar" }])
+    try {
+      const resultado = await enviarTexto(mensagem, chaveLocal)
+      // A caixa só se limpa com a mensagem gravada. Se falhou, o texto fica onde a pessoa o
+      // escreveu — pode corrigir, copiar ou carregar em "Tentar novamente".
+      if (podeLimparCaixa(resultado)) setText("")
     } finally {
       setSending(false)
     }
+  }
+
+  const reenviar = async (p: MsgPendente) => {
+    setPendentes((ps) =>
+      ps.map((x) => (x.chaveLocal === p.chaveLocal ? { ...x, estado: "a-enviar", motivo: undefined } : x))
+    )
+    await enviarTexto(p.message, p.chaveLocal)
+  }
+
+  const descartarPendente = (chaveLocal: string) => {
+    setPendentes((ps) => ps.filter((p) => p.chaveLocal !== chaveLocal))
   }
 
   const clearChat = async () => {
@@ -186,7 +369,10 @@ export default function LiveStreamRoom({ streamId }: Props) {
         const j = await res.json().catch(() => ({}))
         window.alert(j.error || "Não foi possível limpar o chat.")
       }
-      await load()
+      // Cursor a zero: depois de limpar, a sondagem tem de voltar a pedir o histórico (que agora
+      // está vazio) e não "o que nasceu depois" de uma mensagem que já não existe.
+      cursorRef.current = null
+      await carregarChat("historico")
     } finally {
       setClearing(false)
     }
@@ -428,39 +614,132 @@ export default function LiveStreamRoom({ streamId }: Props) {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="h-[min(40vh,320px)] sm:h-[320px] overflow-y-auto rounded-md border border-gray-700 bg-black/30 p-2 space-y-2">
-              {messages.map((msg) => (
-                <div key={msg.id} className="text-xs">
-                  <p className={msg.sender_type === "educator" ? "text-[#D2A63C]" : "text-blue-300"}>{msg.sender_name}</p>
-                  <p className="text-gray-200">{msg.message}</p>
-                </div>
-              ))}
-              {messages.length === 0 && <p className="text-gray-500 text-xs">Ainda sem mensagens.</p>}
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-              <textarea
-                className="min-h-[88px] w-full flex-1 rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white"
-                rows={3}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => handleLiveChatEnterKey(e, send, { disabled: !canSend || sending })}
-                placeholder="Mensagem no chat da live… (Enter para enviar)"
-              />
-              <div className="flex flex-row gap-2 sm:flex-col sm:justify-end sm:w-[100px] shrink-0">
-                <EmojiChatPicker
-                  onPick={appendEmoji}
-                  className="h-11 flex-1 border-gray-600 text-gray-200 sm:flex-none sm:h-11 sm:w-full"
-                />
-                <Button
-                  disabled={!canSend || sending}
-                  onClick={send}
-                  className="h-11 flex-1 bg-[#D2A63C] text-black hover:bg-[#BB8525] sm:h-11 sm:w-full"
-                >
-                  Enviar
-                </Button>
+            {chatBloqueado ? (
+              <div className="rounded-md border border-[#D2A63C]/25 bg-black/40 p-4 text-center text-xs text-gray-300">
+                🔒 {chatBloqueado}
               </div>
-            </div>
+            ) : (
+              <div className="relative">
+                <div
+                  ref={caixaMensagensRef}
+                  onScroll={aoScrollDoChat}
+                  className="h-[min(40vh,320px)] sm:h-[320px] overflow-y-auto rounded-md border border-gray-700 bg-black/30 p-2 space-y-2"
+                >
+                  {messages.map((msg) => {
+                    const etiqueta = etiquetaDeAutor(msg.sender_type, msg.sender_tier)
+                    const ehEducador = String(msg.sender_type).toLowerCase() === "educator"
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`rounded px-2 py-1.5 text-xs ${
+                          ehEducador ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/[0.07]" : ""
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                          <span
+                            className={ehEducador ? "font-semibold text-[#D2A63C]" : "font-medium text-gray-100"}
+                          >
+                            {msg.sender_name}
+                          </span>
+                          {etiqueta && (
+                            <span
+                              className="rounded-full border px-1.5 py-[1px] text-[10px] leading-none"
+                              style={{ color: etiqueta.cor, borderColor: `${etiqueta.cor}55` }}
+                            >
+                              {etiqueta.texto}
+                            </span>
+                          )}
+                          <span className="ml-auto text-[10px] tabular-nums text-gray-500">
+                            {horaCurta(msg.created_at)}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 whitespace-pre-wrap break-words text-gray-200">{msg.message}</p>
+                      </div>
+                    )
+                  })}
+
+                  {/* As que ainda não estão gravadas: visíveis, marcadas, nunca confundidas com as outras. */}
+                  {pendentes.map((p) => (
+                    <div
+                      key={p.chaveLocal}
+                      className={`rounded border-l-2 px-2 py-1.5 text-xs ${
+                        p.estado === "falhou"
+                          ? "border-red-500/70 bg-red-950/25"
+                          : "border-gray-600 bg-gray-900/40"
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap break-words text-gray-300">{p.message}</p>
+                      {p.estado === "a-enviar" ? (
+                        <p className="mt-0.5 text-[10px] text-gray-500">a enviar…</p>
+                      ) : (
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <span className="text-[10px] text-red-300">{p.motivo || "Não foi enviada."}</span>
+                          <button
+                            type="button"
+                            onClick={() => void reenviar(p)}
+                            className="rounded border border-[#D2A63C]/50 px-1.5 py-[1px] text-[10px] text-[#D2A63C] hover:bg-[#D2A63C]/10"
+                          >
+                            Tentar novamente
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => descartarPendente(p.chaveLocal)}
+                            className="text-[10px] text-gray-500 underline hover:text-gray-300"
+                          >
+                            Descartar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {messages.length === 0 && pendentes.length === 0 && (
+                    <p className="text-gray-500 text-xs">Ainda sem mensagens.</p>
+                  )}
+                  {/* Âncora do scroll automático. */}
+                  <div ref={fundoRef} />
+                </div>
+
+                {naoLidas > 0 && (
+                  <button
+                    type="button"
+                    onClick={irParaOFundo}
+                    className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-[#D2A63C]/50 bg-black/85 px-3 py-1 text-[11px] text-[#E9C46A] shadow-lg hover:bg-black"
+                  >
+                    {naoLidas} {naoLidas === 1 ? "nova mensagem" : "novas mensagens"} ↓
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!chatBloqueado && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                <textarea
+                  className="min-h-[88px] w-full flex-1 rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white"
+                  rows={3}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  onKeyDown={(e) => handleLiveChatEnterKey(e, send, { disabled: !canSend || sending })}
+                  /* O texto dizia "(Enter para enviar)" e o Enter NÃO envia — só Cmd/Ctrl+Enter
+                     (ver lib/live-chat.ts). O atalho é partilhado com os painéis do educador, por
+                     isso corrige-se o que se promete, não o comportamento de todos. */
+                  placeholder="Mensagem no chat da live… (Cmd/Ctrl+Enter para enviar)"
+                />
+                <div className="flex flex-row gap-2 sm:flex-col sm:justify-end sm:w-[100px] shrink-0">
+                  <EmojiChatPicker
+                    onPick={appendEmoji}
+                    className="h-11 flex-1 border-gray-600 text-gray-200 sm:flex-none sm:h-11 sm:w-full"
+                  />
+                  <Button
+                    disabled={!canSend || sending}
+                    onClick={send}
+                    className="h-11 flex-1 bg-[#D2A63C] text-black hover:bg-[#BB8525] sm:h-11 sm:w-full"
+                  >
+                    {sending ? "A enviar…" : "Enviar"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

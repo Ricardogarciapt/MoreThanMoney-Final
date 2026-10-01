@@ -16,7 +16,6 @@ import {
   PictureInPicture2,
   Lock,
   ChevronLeft,
-  ChevronRight,
   FolderOpen,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
@@ -741,12 +740,16 @@ export default function LiveSessionsMobile({
               Cada sala traz as suas gravações por baixo, como no site. As fechadas aparecem
               com cadeado: esconder o que ainda está por vender tira-o da montra. */}
           {/*
-            FECHADO: só as pastas, duas por linha. Cada cartão é um alvo grande (capa 16:9 + duas
-            linhas de texto, bem acima dos 44px) — a grelha de chips obrigava a apontar a uma
-            cápsula de 32px de altura num ecrã a mexer.
+            FECHADO: só as pastas. TRÊS por linha (eram duas): a duas colunas a capa 16:9 ficava
+            com ~165px de largura e a grelha enchia o ecrã antes de se ver a segunda fila. A três
+            a capa cai para ~109px e a grelha ocupa cerca de um terço menos de altura.
+            O que NÃO encolheu: o alvo de toque. Cada cartão continua com min-h-[44px] escrito à
+            mão e, na prática, mede mais de 110px de altura (capa ~61px + bloco de texto) — bem
+            acima do mínimo da Apple. A grelha de chips que isto substituiu obrigava a apontar a
+            uma cápsula de 32px num ecrã a mexer.
           */}
           {!aberta ? (
-          <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="mt-3 grid grid-cols-3 gap-2">
             {grupos.map((g) => (
               <PastaAcademia key={g.chave} academia={g} onAbrir={() => abrirPasta(g.chave)} />
             ))}
@@ -1212,30 +1215,37 @@ function PastaAcademia({
       aria-expanded={false}
       aria-controls="pasta-academia"
       aria-label={`Abrir a academia ${academia.nome} · ${etiqueta}`}
-      className="flex min-h-[44px] flex-col overflow-hidden rounded-2xl border border-[#D2A63C]/15 bg-gray-950/80 text-left active:scale-[0.99]"
+      className="flex min-h-[44px] flex-col overflow-hidden rounded-xl border border-[#D2A63C]/15 bg-gray-950/80 text-left active:scale-[0.99]"
     >
       <div className="relative aspect-video w-full bg-gray-900">
         {academia.capa ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={academia.capa} alt="" className="h-full w-full object-cover" loading="lazy" />
         ) : (
+          /* Sem ficheiro de capa a academia AINDA tem capa: a inicial sobre o gradiente da casa.
+             A regra é que nenhuma academia apareça sem rosto — nem as que ainda não têm educador. */
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#D2A63C]/20 to-black">
-            <span className="text-2xl font-black text-[#D2A63C]/70">{academia.nome.charAt(0).toUpperCase()}</span>
+            <span className="text-xl font-black text-[#D2A63C]/70">{academia.nome.charAt(0).toUpperCase()}</span>
           </div>
         )}
+        {/* O ícone de pasta passou para cima da capa: a 109px de largura, ícone + nome + chevron
+            na mesma linha não cabiam, e quem perdia era o nome. Aqui diz-se que é pasta sem
+            gastar largura de texto. */}
+        <span className="absolute bottom-1 right-1 rounded bg-black/65 p-0.5">
+          <FolderOpen className="h-3 w-3 text-[#D2A63C]" aria-hidden />
+        </span>
         {academia.aoVivo > 0 && (
-          <span className="absolute left-1.5 top-1.5 rounded bg-red-600 px-1.5 py-0.5 text-[8px] font-bold uppercase text-white">
+          <span className="absolute left-1 top-1 rounded bg-red-600 px-1 py-0.5 text-[8px] font-bold uppercase text-white">
             {academia.aoVivo} live
           </span>
         )}
       </div>
-      <div className="flex items-center gap-1.5 p-2.5">
-        <FolderOpen className="h-3.5 w-3.5 shrink-0 text-[#D2A63C]" aria-hidden />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-white">{academia.nome}</p>
-          <p className="text-[10px] text-gray-500">{etiqueta}</p>
-        </div>
-        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-600" aria-hidden />
+      <div className="p-1.5">
+        {/* line-clamp-2 e não truncate: num cartão estreito um nome de academia raramente cabe
+            numa linha. Dá-se-lhe duas e, se ainda transbordar, reticências — nunca um corte
+            a meio sem aviso. */}
+        <p className="line-clamp-2 text-[11px] font-semibold leading-tight text-white">{academia.nome}</p>
+        <p className="mt-0.5 text-[9px] text-gray-500">{etiqueta}</p>
       </div>
     </button>
   )

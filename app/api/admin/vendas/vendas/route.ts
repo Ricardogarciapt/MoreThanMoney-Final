@@ -85,6 +85,21 @@ export async function POST(request: NextRequest) {
         tipo: body.tipo === 'renovacao' ? 'renovacao' : 'primeira',
         pagoEm: body.pago_em ?? undefined,
         nota: `${nota} (lançado por ${auth.email ?? auth.userId ?? 'admin'})`,
+        /**
+         * O agente a quem esta venda conta, quando quem lança sabe de quem ela é.
+         *
+         * Num lançamento manual não há link nem cookie: só há a pessoa que está a assumir a venda
+         * com nota e prova. Por isso o código vem do corpo do pedido — é um acto humano, como o
+         * resto deste caminho.
+         *
+         * NÃO há omissão por omissão: sem `agente_codigo` no corpo, a venda fica sem código. O
+         * reflexo seria carimbar o CEO «porque é o topo», e isso dava-lhe receita que ninguém
+         * ganhou e salvava-o com dinheiro que não é dele.
+         *
+         * A forma é verificada no livro (`normalizar`) e outra vez no CHECK da coluna: um cupão de
+         * desconto escrito aqui por engano não credita agente nenhum.
+         */
+        agenteCodigo: typeof body.agente_codigo === 'string' ? body.agente_codigo : null,
       })
 
       return NextResponse.json({

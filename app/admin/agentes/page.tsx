@@ -35,7 +35,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
   AlertTriangle, ArrowLeft, Ban, Bot, Copy, Crown, GraduationCap, Loader2, Pause, Play,
-  RefreshCw, Terminal, TrendingDown, TrendingUp, Wrench,
+  PauseCircle, PlayCircle, RefreshCw, Terminal, TrendingDown, TrendingUp, Wrench,
 } from "lucide-react"
 import { linkDoAgente } from "@/lib/agentes/atribuicao"
 import {
@@ -205,6 +205,46 @@ export default function DashboardAgentesPage() {
     await ler()
   }
 
+  /**
+   * O interruptor da equipa — pausar ou retomar os sete de uma vez.
+   *
+   * Pede confirmação antes de pausar porque é um botão que mexe em toda a gente, e mostra depois o
+   * que NÃO mexeu: quem o dono tinha pausado à mão fica como estava, e se o ecrã não o disser, o
+   * botão parece ter falhado. `parar` não existe aqui — é o fim da linha e continua a ser um a um.
+   */
+  const agirEquipa = async (acao: "pausar" | "retomar") => {
+    const quantos = arvore?.total ?? 0
+    const confirmado = window.confirm(
+      acao === "pausar"
+        ? `Pausar a equipa (${quantos} agentes)?\n\nA regra das 48 horas não corre em agentes pausados. Quem já estiver pausado ou parado fica como está.`
+        : `Retomar a equipa?\n\nSó volta a trabalhar quem foi pausado por este botão. Quem pausaste à mão fica pausado.`,
+    )
+    if (!confirmado) return
+    setOcupado("equipa")
+    setErro(null)
+    setNota(null)
+    const r = await fetch("/api/admin/agentes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ acao, alvo: "equipa", porque: "" }),
+    })
+      .then((x) => x.json())
+      .catch(() => null)
+    setOcupado(null)
+    if (!r) {
+      setErro("Não foi possível falar com o servidor.")
+      return
+    }
+    // Os que ficaram de fora têm de aparecer com o motivo — senão o botão parece não ter feito nada.
+    const deixados = (r.deixados ?? []) as { nome: string; porque: string }[]
+    const detalhe = deixados.length
+      ? ` ${deixados.map((x) => `${x.nome}: ${x.porque}`).join(" · ")}`
+      : ""
+    if (!r.ok) setErro((r.erro ?? r.porque ?? "Não foi possível.") + detalhe)
+    else setNota((r.porque ?? "") + detalhe)
+    await ler()
+  }
+
   const copiar = (texto: string, chave: string) => {
     void navigator.clipboard?.writeText(texto)
     setCopiado(chave)
@@ -239,6 +279,25 @@ export default function DashboardAgentesPage() {
           </div>
           <div className="flex items-center gap-2">
             {lido && <span className="text-[11px] text-zinc-600">lido às {lido}</span>}
+            {/* Os dois botões da equipa inteira. Ficam juntos e separados do «Actualizar» por uma
+                linha, para ninguém carregar num deles a querer carregar no outro. */}
+            <div className="flex items-center gap-1.5 rounded-md border border-white/12 p-1">
+              <span className="pl-1.5 pr-0.5 text-[11px] text-zinc-500">Equipa</span>
+              <button
+                onClick={() => void agirEquipa("pausar")}
+                disabled={ocupado === "equipa"}
+                className="flex items-center gap-1.5 rounded px-2 py-1 text-[12px] text-zinc-300 transition hover:bg-white/[0.06] hover:text-[#E9C46A] disabled:opacity-50"
+              >
+                <PauseCircle className="h-3.5 w-3.5" /> Pausar
+              </button>
+              <button
+                onClick={() => void agirEquipa("retomar")}
+                disabled={ocupado === "equipa"}
+                className="flex items-center gap-1.5 rounded px-2 py-1 text-[12px] text-zinc-300 transition hover:bg-white/[0.06] hover:text-[#E9C46A] disabled:opacity-50"
+              >
+                <PlayCircle className="h-3.5 w-3.5" /> Retomar
+              </button>
+            </div>
             <button
               onClick={() => void ler()}
               className="flex items-center gap-1.5 rounded-md border border-white/12 px-2.5 py-1.5 text-[12px] text-zinc-300 transition hover:border-[#D2A63C]/60 hover:text-[#E9C46A]"

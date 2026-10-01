@@ -344,6 +344,39 @@ export const LIMITES: Facto[] = [
       'sobre o gosto de qualquer ferramenta ou skill. Procura-se o que existe antes de criar novo.',
     origem: [ficheiro('lib/pilares.ts'), memoria('landing-pilares-mtm')],
   },
+  {
+    oQue:
+      'A AUTONOMIA DO CEO NÃO REVOGA NENHUM DOS LIMITES ACIMA. Ele corre sozinho, cria apps e ' +
+      'sistemas, e dá pedidos com prazo aos filhos — mas publicar, cobrar, alterar preços e lançar ' +
+      'campanhas continuam a ser decisão do dono, e nenhum pedido dele pode mandar enviar uma ' +
+      'mensagem a um cliente ou mexer em dinheiro. O catálogo do que ele pode pedir é FECHADO ' +
+      '(`medir`, `propor`, `construir`, `baixar_custo`, `justificar`), na base e no código.',
+    porque:
+      'Uma autonomia nova é a forma mais natural de um limite antigo se perder: ninguém o revoga — ' +
+      'ele deixa de ser mencionado, e o passo seguinte parece razoável. Por isso o limite está na ' +
+      'FORMA e não na boa vontade: não existe acção para enviar nem para cobrar, o CHECK da coluna ' +
+      '`agentes_pedidos.accao` recusa-a, e `ciclo-ceo.check.ts` falha se alguma acção do catálogo ' +
+      'passar a mandar enviar, cobrar ou publicar.',
+    data: '01/10/2026',
+    origem: [
+      ficheiro('lib/agentes/ciclo-ceo.ts'),
+      ficheiro('lib/agentes/ciclo-ceo.check.ts'),
+      ficheiro('supabase/migrations/171_ceo_ciclo_e_imortalidade.sql'),
+    ],
+  },
+  {
+    oQue:
+      'A IMORTALIDADE É SÓ DO CEO, e é uma excepção nomeada à régua das 48 h — não um afrouxamento ' +
+      'dela. Não se estende a nenhum filho: nem por estar debaixo do CEO, nem por lhe calhar o ' +
+      'pilar «ceo». E não ganha ao dono: um CEO pausado ou parado à mão fica como a pessoa o deixou.',
+    porque:
+      'Parar o único que cria e pára sub-agentes deixava a equipa sem ninguém a julgá-la. Mas uma ' +
+      'imortalidade que se herdasse tirava os dentes à régua exactamente onde ela tem de os ter, e ' +
+      'sem dar erro nenhum — bastava um filho nascer com o pilar do pai. Por isso `eImortal` exige ' +
+      'o TOPO da árvore (pilar `ceo` E sem pai), e o caso mau está provado.',
+    data: '01/10/2026',
+    origem: [ficheiro('lib/agentes/vida.ts'), ficheiro('lib/agentes/vida.check.ts')],
+  },
 ]
 
 // ── OS INCIDENTES, E O QUE FICOU APRENDIDO ───────────────────────────────────────────────────
