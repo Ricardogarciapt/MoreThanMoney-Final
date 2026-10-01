@@ -80,6 +80,23 @@ export default function ConsolaAios() {
   const [feitos, setFeitos] = useState<Set<number>>(new Set())
   const [tokens, setTokens] = useState(0)
 
+  /**
+   * O MOTOR: nuvem ou máquina do Ricardo.
+   *
+   * «nuvem» é o que sempre houve — `/api/dashboard-gestao/chat`, a API da Anthropic com os prompts
+   * de cada agente. «local» é a ponte: fala com o Claude Code a correr no computador dele, que tem
+   * as skills todas instaladas E acesso ao repositório. São capacidades diferentes, não duas
+   * qualidades do mesmo: a nuvem sabe da MTM pelos prompts, o local sabe do CÓDIGO e pode mexer-lhe.
+   *
+   * A ponte só aparece se estiver mesmo de pé. Um botão que promete o que não existe é pior do que
+   * não ter botão.
+   */
+  const [motor, setMotor] = useState<"nuvem" | "local">("nuvem")
+  const [ponteViva, setPonteViva] = useState<boolean | null>(null)
+  const [segredoPonte, setSegredoPonte] = useState("")
+  const [pedirSegredo, setPedirSegredo] = useState(false)
+  const sessaoLocal = useRef<string | null>(null)
+
   const [aOuvir, setAOuvir] = useState(false)
   const [aFalar, setAFalar] = useState(false)
   const [vozTexto, setVozTexto] = useState("Pronto para receber ordens, Ricardo. Os sistemas estão a inicializar.")
@@ -95,6 +112,22 @@ export default function ConsolaAios() {
   const reconhecimento = useRef<{ stop: () => void } | null>(null)
   const aFalarRef = useRef(false)
   const proximoId = useRef(2)
+
+  // A ponte vive em 127.0.0.1 — é a máquina do próprio Ricardo, por isso o endereço é fixo.
+  const PONTE = "http://127.0.0.1:4319"
+
+  useEffect(() => {
+    try {
+      const guardado = window.localStorage.getItem("aios.ponte.segredo")
+      if (guardado) setSegredoPonte(guardado)
+    } catch { /* localStorage bloqueado: pede-se o segredo outra vez, e mais nada */ }
+    let vivo = true
+    fetch(`${PONTE}/saude`)
+      .then((r) => r.json())
+      .then((j) => { if (vivo) setPonteViva(Boolean(j?.ok)) })
+      .catch(() => { if (vivo) setPonteViva(false) })
+    return () => { vivo = false }
+  }, [])
 
   const mostrarToast = useCallback((m: string) => setToast(m), [])
   useEffect(() => {
@@ -225,6 +258,52 @@ export default function ConsolaAios() {
   }, [])
 
   // ── chat ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Mandar o pedido à máquina do Ricardo, pela ponte.
+   *
+   * A sessão guarda-se e devolve-se no pedido seguinte: sem isso, cada pergunta começava do zero e
+   * o Claude Code não se lembrava do que tinha acabado de fazer no repositório — que é metade do
+   * valor de ser ele a responder.
+   */
+  const enviarPelaPonte = useCallback(async (t: string, meuId: number) => {
+    const r = await fetch(`${PONTE}/pedido`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-aios-segredo": segredoPonte },
+      body: JSON.stringify({ pedido: t, sessao: sessaoLocal.current }),
+    })
+    if (r.status === 401) {
+      setPedirSegredo(true)
+      throw new Error("A ponte recusou o segredo. Corre `npx tsx aios-ponte/servidor.ts` e cola o segredo que ele escreve.")
+    }
+    if (!r.ok || !r.body) throw new Error(`A ponte respondeu ${r.status}.`)
+
+    const leitor = r.body.getReader()
+    const dec = new TextDecoder()
+    let completo = ""
+    let sobra = ""
+    for (;;) {
+      const { value, done } = await leitor.read()
+      if (done) break
+      const bruto = sobra + dec.decode(value, { stream: true })
+      const linhas = bruto.split("\n")
+      sobra = linhas.pop() ?? ""
+      for (const linha of linhas) {
+        if (!linha.startsWith("data: ")) continue
+        let o: { texto?: string; sessao?: string; erro?: string; fim?: boolean }
+        try { o = JSON.parse(linha.slice(6)) } catch { continue }
+        if (o.sessao) sessaoLocal.current = o.sessao
+        if (o.erro) { completo += `\n\n⚠️ ${o.erro}` }
+        if (o.texto) completo += o.texto
+        if (o.texto || o.erro) {
+          setTokens((n) => n + String(o.texto ?? "").split(" ").length)
+          setMensagens((x) => x.map((m) => (m.id === meuId ? { ...m, texto: completo } : m)))
+        }
+      }
+    }
+    return completo
+  }, [segredoPonte])
+
   const enviar = useCallback(async (texto: string) => {
     const t = texto.trim()
     if (!t) return
@@ -235,6 +314,21 @@ export default function ConsolaAios() {
     setAPensar(true)
 
     try {
+      /**
+       * O caminho local não passa pelo nosso servidor: o browser do Ricardo fala directamente com
+       * a máquina dele. Passar pela Vercel era mandar o pedido dar a volta ao mundo para voltar ao
+       * computador que está à frente dele — e obrigava o site a conseguir alcançá-lo, o que não
+       * consegue nem deve.
+       */
+      if (motor === "local") {
+        setAPensar(false)
+        const meuId = proximoId.current++
+        setMensagens((x) => [...x, { id: meuId, tipo: "ai", agente, texto: "" }])
+        const completo = await enviarPelaPonte(t, meuId)
+        historico.current.push({ role: "assistant", content: completo })
+        return
+      }
+
       const r = await fetch("/api/dashboard-gestao/chat", {
         method: "POST", credentials: "include",
         headers: { "content-type": "application/json" },
@@ -276,7 +370,7 @@ export default function ConsolaAios() {
       setAPensar(false)
       juntar({ tipo: "ai", agente, texto: `Erro: ${e instanceof Error ? e.message : "falhou"}. Confirma que a sessão de admin está activa.` })
     }
-  }, [agente, juntar, falar])
+  }, [agente, juntar, falar, motor, enviarPelaPonte])
 
   const escolherAgente = useCallback((id: IdAgente) => {
     setAgente(id)
@@ -355,6 +449,75 @@ export default function ConsolaAios() {
         </header>
 
         <aside className={s["left-panel"]}>
+          {/* O MOTOR. Só mostra o local quando a ponte responde de facto — um botão que promete
+              o que não existe é pior do que não haver botão. */}
+          <div className={s["panel-section"]}>
+            <div className={s["panel-title"]}>Motor</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+              <button
+                type="button" onClick={() => setMotor("nuvem")}
+                style={{
+                  flex: 1, padding: "6px 8px", fontSize: 11, borderRadius: 6, cursor: "pointer",
+                  border: `1px solid ${motor === "nuvem" ? "#D2A63C" : "rgba(255,255,255,.14)"}`,
+                  background: motor === "nuvem" ? "rgba(210,166,60,.12)" : "transparent",
+                  color: motor === "nuvem" ? "#D2A63C" : "#9ca3af",
+                }}
+              >
+                ☁️ Nuvem
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!ponteViva) return
+                  setMotor("local")
+                  if (!segredoPonte) setPedirSegredo(true)
+                }}
+                disabled={!ponteViva}
+                title={ponteViva ? "Claude Code nesta máquina, com as skills todas" : "Ponte desligada"}
+                style={{
+                  flex: 1, padding: "6px 8px", fontSize: 11, borderRadius: 6,
+                  cursor: ponteViva ? "pointer" : "not-allowed",
+                  opacity: ponteViva ? 1 : 0.45,
+                  border: `1px solid ${motor === "local" ? "#34d399" : "rgba(255,255,255,.14)"}`,
+                  background: motor === "local" ? "rgba(52,211,153,.12)" : "transparent",
+                  color: motor === "local" ? "#34d399" : "#9ca3af",
+                }}
+              >
+                💻 Local
+              </button>
+            </div>
+            <div style={{ fontSize: 10.5, color: "#6b7280", lineHeight: 1.45 }}>
+              {ponteViva === null && "À procura da ponte…"}
+              {ponteViva === false && (
+                <>Ponte desligada. Corre <code>npx tsx aios-ponte/servidor.ts</code> no repositório para usares o Claude Code e as skills.</>
+              )}
+              {ponteViva && motor === "local" && "Claude Code nesta máquina: skills todas e acesso ao repositório."}
+              {ponteViva && motor === "nuvem" && "Ponte disponível. O local dá-te as skills e o código."}
+            </div>
+            {pedirSegredo && (
+              <div style={{ marginTop: 6 }}>
+                <input
+                  type="password" placeholder="Segredo da ponte"
+                  defaultValue={segredoPonte}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim()
+                    if (!v) return
+                    setSegredoPonte(v)
+                    try { window.localStorage.setItem("aios.ponte.segredo", v) } catch { /* sem localStorage, pede-se outra vez */ }
+                    setPedirSegredo(false)
+                  }}
+                  style={{
+                    width: "100%", padding: "5px 7px", fontSize: 11, borderRadius: 6,
+                    border: "1px solid rgba(255,255,255,.14)", background: "rgba(0,0,0,.4)", color: "#fff",
+                  }}
+                />
+                <div style={{ fontSize: 10, color: "#6b7280", marginTop: 3 }}>
+                  A ponte escreve-o quando arranca. Fica só neste browser.
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className={s["panel-section"]}>
             <div className={s["panel-title"]}>12 Agentes</div>
             <div className={s["agents-grid"]}>
