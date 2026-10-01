@@ -99,7 +99,6 @@ export const DESTINOS_NAVEGACAO: DestinoNavegacao[] = [
   },
   { id: 'webtrader', href: '/webtrader', rotuloPt: 'WebTrader', grupo: 'trading', seccaoPt: 'Negociar', comoUsar: 'o WebTrader' },
   { id: 'mtmauto', href: '/mtmauto', rotuloPt: 'MTM Auto', grupo: 'trading', seccaoPt: 'Negociar', comoUsar: 'o MTM Auto' },
-  { id: 'trading-desk', href: '/trading', chave: 'navfooter.subTradingDesk', rotuloPt: 'Trading Desk', grupo: 'trading', seccaoPt: 'Negociar', comoUsar: 'o Trading Desk' },
   { id: 'mtm-terminal', href: '/mtm-terminal', chave: 'navfooter.subMtmTerminal', rotuloPt: 'Terminal MTM', grupo: 'trading', seccaoPt: 'Negociar', comoUsar: 'o Terminal MTM' },
 
   { id: 'alertas-mtm', href: '/alertas-mtm', chave: 'navfooter.subMtmAlerts', rotuloPt: 'Alertas MTM', grupo: 'trading', seccaoPt: 'Sinais e análise', comoUsar: 'os alertas MTM' },

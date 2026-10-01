@@ -410,7 +410,6 @@ function TerminalContent() {
             </li>
             <li className="flex items-center">
               <ChevronRight className="mx-1 h-4 w-4 text-gray-500" />
-              <Link href="/trading" className="text-gray-400 hover:text-[#D2A63C]">Trading</Link>
             </li>
             <li className="flex items-center">
               <ChevronRight className="mx-1 h-4 w-4 text-gray-500" />

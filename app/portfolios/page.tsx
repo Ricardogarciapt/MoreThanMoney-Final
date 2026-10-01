@@ -608,7 +608,7 @@ export default function PortfoliosPage() {
                       <CardContent className="p-4">
                         <div className="text-xs text-gray-400 mb-1">Potencial Médio</div>
                         <div className="text-2xl font-bold text-green-400">
-                          +{cryptoAssets.length > 0 ? (cryptoAssets.reduce((sum, a) => sum + a.potential_growth, 0) / cryptoAssets.length).toFixed(0) : '0'}%
+                          +{cryptoAssets.length > 0 ? (cryptoAssets.reduce((sum, a) => sum + a.potential_growth, 0) / cryptoAssets.length).toFixed(2) : '0'}%
                         </div>
                         <div className="text-xs text-gray-500 mt-1">Até ATH</div>
                       </CardContent>
@@ -622,7 +622,7 @@ export default function PortfoliosPage() {
                             que alguém mexe na carteira, e ninguém dá por isso. */}
                         <div className="text-xs text-gray-400 mb-1">DCA Semanal · sextas</div>
                         <div className="text-2xl font-bold text-blue-400">
-                          ${cryptoAssets.reduce((sum, a) => sum + (Number(a.weekly_reinforcement) || 0), 0).toFixed(0)}
+                          ${cryptoAssets.reduce((sum, a) => sum + (Number(a.weekly_reinforcement) || 0), 0).toFixed(2)}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">Reforço consistente</div>
                       </CardContent>
@@ -705,27 +705,27 @@ export default function PortfoliosPage() {
                                 </td>
                                 <td className="text-center py-4 px-4">
                                   <div className="font-bold text-white">
-                                    {asset.current_price ? `$${asset.current_price.toFixed(4)}` : '-'}
+                                    {asset.current_price ? `$${asset.current_price.toFixed(2)}` : '-'}
                                   </div>
                                 </td>
                                 <td className="text-center py-4 px-4">
                                   <div className="font-bold text-red-400">
-                                    {asset.stop_loss ? `$${asset.stop_loss.toFixed(4)}` : '-'}
+                                    {asset.stop_loss ? `$${asset.stop_loss.toFixed(2)}` : '-'}
                                   </div>
                                 </td>
                                 <td className="text-center py-4 px-4">
                                   <div className="font-bold text-green-400">
-                                    {asset.tp1 ? `$${asset.tp1.toFixed(4)}` : '-'}
+                                    {asset.tp1 ? `$${asset.tp1.toFixed(2)}` : '-'}
                                   </div>
                                 </td>
                                 <td className="text-center py-4 px-4">
                                   <div className="font-bold text-green-400">
-                                    {asset.tp2 ? `$${asset.tp2.toFixed(4)}` : '-'}
+                                    {asset.tp2 ? `$${asset.tp2.toFixed(2)}` : '-'}
                                   </div>
                                 </td>
                                 <td className="text-center py-4 px-4">
                                   <div className="font-bold text-green-400">
-                                    {asset.tp3 ? `$${asset.tp3.toFixed(4)}` : '-'}
+                                    {asset.tp3 ? `$${asset.tp3.toFixed(2)}` : '-'}
                                   </div>
                                 </td>
                                 <td className="text-center py-4 px-4">
@@ -739,7 +739,7 @@ export default function PortfoliosPage() {
                                       }`}
                                     >
                                       {asset.change_24h_percent >= 0 ? "+" : ""}
-                                      {asset.change_24h_percent.toFixed(1)}%
+                                      {asset.change_24h_percent.toFixed(2)}%
                                     </Badge>
                                   ) : (
                                     <span className="text-gray-500 text-sm" title="CoinGecko não devolveu variação 24h para este par">
@@ -780,7 +780,7 @@ export default function PortfoliosPage() {
                       <CardContent className="p-4">
                         <div className="text-xs text-gray-400 mb-1">Crescimento Médio 5Y</div>
                         <div className="text-2xl font-bold text-blue-400">
-                          +{etfAssets.length > 0 ? (etfAssets.reduce((sum, a) => sum + a.potential_growth, 0) / etfAssets.length).toFixed(0) : '0'}%
+                          +{etfAssets.length > 0 ? (etfAssets.reduce((sum, a) => sum + a.potential_growth, 0) / etfAssets.length).toFixed(2) : '0'}%
                         </div>
                         <div className="text-xs text-gray-500 mt-1">Estimativa conservadora</div>
                       </CardContent>
@@ -790,7 +790,7 @@ export default function PortfoliosPage() {
                       <CardContent className="p-4">
                         <div className="text-xs text-gray-400 mb-1">DCA Semanal · sextas</div>
                         <div className="text-2xl font-bold text-green-400">
-                          ${etfAssets.reduce((sum, a) => sum + (Number(a.weekly_reinforcement) || 0), 0).toFixed(0)}
+                          ${etfAssets.reduce((sum, a) => sum + (Number(a.weekly_reinforcement) || 0), 0).toFixed(2)}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">Investimento consistente</div>
                       </CardContent>

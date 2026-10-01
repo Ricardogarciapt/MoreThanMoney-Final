@@ -143,11 +143,11 @@ export default function PortfolioMobile() {
     
     // Para preços pequenos (<1): usar até 8 decimais, removendo zeros trailing
     if (price < 1) {
-      const formatted = price.toFixed(8).replace(/\.?0+$/, '')
+      const formatted = price.toFixed(2).replace(/\.?0+$/, '')
       return formatted
     }
     
-    return price.toFixed(4)
+    return price.toFixed(2)
   }
 
   useEffect(() => {
@@ -200,7 +200,7 @@ export default function PortfolioMobile() {
                 const entryPrice = asset.entry_price || currentPrice
                 const performance = ((currentPrice - entryPrice) / entryPrice) * 100
                 
-                console.log(`💰 [MOBILE] ${asset.symbol}: $${currentPrice} (${performance.toFixed(1)}%)`)
+                console.log(`💰 [MOBILE] ${asset.symbol}: $${currentPrice} (${performance.toFixed(2)}%)`)
                 
                 return {
                   ...asset,
@@ -891,7 +891,7 @@ www.morethanmoney.com`
               <CardContent className="p-4 relative z-10">
                 <p className="text-[10px] text-[#D2A63C] uppercase tracking-wider mb-1 font-black">{t("portfolio.performance")}</p>
                 <p className={`text-3xl font-black ${calculateTotalMTMPerformance() >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {calculateTotalMTMPerformance() >= 0 ? '+' : ''}{calculateTotalMTMPerformance().toFixed(1)}%
+                  {calculateTotalMTMPerformance() >= 0 ? '+' : ''}{calculateTotalMTMPerformance().toFixed(2)}%
                 </p>
                 <p className="text-xs text-gray-400 mt-1">{t("portfolio.overallAverage")}</p>
               </CardContent>
@@ -961,7 +961,7 @@ www.morethanmoney.com`
                             : 'bg-red-500/20 text-red-300 border border-red-500/50'
                         }`}>
                           {asset.current_price >= asset.entry_price ? '▲' : '▼'} 
-                          {(((asset.current_price - asset.entry_price) / asset.entry_price) * 100).toFixed(1)}%
+                          {(((asset.current_price - asset.entry_price) / asset.entry_price) * 100).toFixed(2)}%
                         </div>
                       )}
                     </div>

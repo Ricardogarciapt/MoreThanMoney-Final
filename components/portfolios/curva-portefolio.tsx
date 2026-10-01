@@ -33,7 +33,7 @@ const OURO = "#D2A63C"
 const OURO_CLARO = "#E9C46A"
 
 const dinheiro = (n: number) =>
-  n.toLocaleString("pt-PT", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
+  n.toLocaleString("pt-PT", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export default function CurvaPortefolio({
   titulo,
@@ -52,6 +52,7 @@ export default function CurvaPortefolio({
   desde?: string
   dca?: string
   fontePrecos?: string
+  /** Fica disponível para o admin, mas NÃO se desenha: o dono tirou-a do ecrã público. */
   nota?: string
 }) {
   const resultado = contribuido > 0 ? (valor / contribuido - 1) * 100 : 0
@@ -77,7 +78,7 @@ export default function CurvaPortefolio({
         </div>
         <div className="text-right">
           <p className={`text-2xl font-semibold tabular-nums ${ganha ? "text-emerald-400" : "text-red-400"}`}>
-            {resultado >= 0 ? "+" : ""}{resultado.toFixed(1)}%
+            {resultado >= 0 ? "+" : ""}{resultado.toFixed(2)}%
           </p>
           <p className="text-[11px] tabular-nums text-gray-500">
             {dinheiro(contribuido)} investidos → {dinheiro(valor)}
@@ -125,12 +126,6 @@ export default function CurvaPortefolio({
         </ResponsiveContainer>
       </div>
 
-      {/* A origem declarada, ao lado do número. É a regra da casa e é o que distingue uma prova
-          de um argumento. */}
-      {nota && <p className="mt-3 text-[11px] leading-relaxed text-gray-500">{nota}</p>}
-      <p className="mt-1 text-[11px] text-gray-600">
-        Percentagem medida sobre o dinheiro investido, não sobre o depósito inicial.
-      </p>
     </section>
   )
 }
