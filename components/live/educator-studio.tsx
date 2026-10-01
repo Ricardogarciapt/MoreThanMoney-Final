@@ -546,6 +546,11 @@ export default function EducatorStudio() {
               placeholder="Password"
               className="border-gray-700 bg-black/50"
             />
+            {/* A password do site serve aqui (ver app/api/live-sessions/educator-auth/login):
+                quem tem conta de membro não precisa de uma segunda password só para o estúdio. */}
+            <p className="text-[11px] text-gray-500">
+              Serve a password do estúdio ou a <strong>mesma que usas para entrar no site</strong>.
+            </p>
             {error && <p className="text-red-400 text-xs">{error}</p>}
             <Button onClick={login} className="w-full bg-[#D2A63C] text-black hover:bg-[#BB8525]">
               Entrar
