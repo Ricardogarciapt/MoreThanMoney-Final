@@ -5,7 +5,7 @@ import { getStripeRevenue } from "@/lib/agent-business-stripe"
 
 /**
  * API de negócio para o agente executivo AIOS.
- * GET  /api/agent/v1/business?resource=overview|revenue|subscriptions|customers|leads|tasks|equidade
+ * GET  /api/agent/v1/business?resource=overview|revenue|subscriptions|customers|leads|tasks|equidade|equipa
  * POST /api/agent/v1/business   body: { action: "create_task" | "update_task" | "outreach_draft", ... }
  *
  * Leitura = imediata. Escrita interna (tarefas) = imediata. Envios para clientes NÃO acontecem aqui:
@@ -192,6 +192,9 @@ export async function GET(request: NextRequest) {
       case "equidade":
       case "equity":
         return agentOk(await getEquidade(sb))
+      case "equipa":
+      case "agentes":
+        return agentOk(await getEquipa(sb))
       // Máquina de vendas — usada pela FRIDAY (funnel) e EDITH (admin) do AIOS.
       case "funnel":
       case "sales":
@@ -358,5 +361,61 @@ async function getEquidade(sb: ReturnType<typeof getSupabaseAdmin>) {
     // velho desta soma não é confirmado. A mais recente só diria que alguma coisa foi lida agora.
     lidas_desde: datas.length ? datas.sort()[0] : null,
     nota: "Contas da casa (mestres, financiadas e reais). Não inclui contas de clientes.",
+  }
+}
+
+
+/**
+ * A EQUIPA DE AGENTES — o estado de cada um e o relógio que corre contra ele.
+ *
+ * Existe para o AIOS poder responder «como está a equipa?» sem adivinhar. E o campo que não pode
+ * faltar é o `horasAteAoJuizo`: a regra de vida pára um agente ao fim da carência se a receita na
+ * janela não pagar o gasto, e sem o relógio à vista isso parece um agente a morrer do nada.
+ *
+ * `receitaPorAtribuir` vai junto de propósito: um agente a zero pode ter trazido vendas que
+ * ninguém conseguiu ligar a ele. Ver o cabeçalho de `lib/agentes/receita.ts` — o que não é
+ * atribuível não se inventa, mas também não se esconde.
+ */
+async function getEquipa(sb: ReturnType<typeof getSupabaseAdmin>) {
+  const { data } = await sb
+    .from("agentes_equipa")
+    .select("nome, papel, pilar, estado, pausado, orcamento, receita, gasto, chave_receita, avaliado_em, criado_em, parado_porque, pai_id")
+    .order("pai_id", { ascending: true, nullsFirst: true })
+    .order("nome")
+
+  const agora = Date.now()
+  const CARENCIA_H = 48
+  type Linha = Record<string, unknown>
+  const agentes = (data ?? []).map((a: Linha) => {
+    const nasceu = Date.parse(String(a.criado_em ?? "")) || agora
+    const horas = (nasceu + CARENCIA_H * 3600_000 - agora) / 3600_000
+    return {
+      nome: a.nome,
+      papel: a.papel,
+      pilar: a.pilar,
+      estado: a.estado,
+      pausado: a.pausado === true,
+      saldo: Number(a.receita ?? 0) - Number(a.gasto ?? 0),
+      receita: Number(a.receita ?? 0),
+      gasto: Number(a.gasto ?? 0),
+      orcamento: Number(a.orcamento ?? 0),
+      codigo: a.chave_receita,
+      avaliadoEm: a.avaliado_em,
+      // Negativo = a carência já passou e ele está a ser julgado a cada passagem.
+      horasAteAoJuizo: Math.round(horas * 10) / 10,
+      paradoPorque: a.parado_porque ?? null,
+      eCeo: a.pai_id == null,
+    }
+  })
+
+  return {
+    agentes,
+    vivos: agentes.filter((a: { estado: unknown }) => a.estado === "vivo").length,
+    parados: agentes.filter((a: { estado: unknown }) => a.estado === "parado").length,
+    semReceita: agentes.filter((a: { receita: number }) => a.receita === 0).length,
+    nota:
+      "A receita de um agente so' conta quando a compra traz o codigo dele (link ?ag=). " +
+      "Sem links em circulacao a receita e' zero para todos, e a regra de vida para a equipa " +
+      "por falta de MEDICAO, nao por falta de trabalho.",
   }
 }
