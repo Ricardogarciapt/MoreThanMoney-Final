@@ -255,7 +255,7 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
                   <YAxis stroke="#9ca3af" />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #D2A63C' }}
-                    formatter={(value?: number) => `€${(value ?? 0).toFixed(0)}`}
+                    formatter={(value?: number) => `€${(value ?? 0).toFixed(2)}`}
                   />
                   <Legend />
                   <Area type="monotone" dataKey="investido" stroke="#D2A63C" fillOpacity={1} fill="url(#colorInvestido)" name="Investido" />
@@ -344,7 +344,7 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
                   <YAxis stroke="#9ca3af" />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #D2A63C' }}
-                    formatter={(value?: number) => `€${(value ?? 0).toFixed(0)}`}
+                    formatter={(value?: number) => `€${(value ?? 0).toFixed(2)}`}
                   />
                   <Legend />
                   <Area type="monotone" dataKey="investido" stroke="#D2A63C" fillOpacity={1} fill="url(#colorInvestidoETF)" name="Investido" />
@@ -435,7 +435,7 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
               <div className="text-sm text-gray-400 mb-2">Multiplicação</div>
               <div className="text-3xl font-bold text-white">
                 ~{((((cryptoGrowthData[cryptoGrowthData.length - 1]?.valor || 0) + (etfGrowthData[etfGrowthData.length - 1]?.valor || 0)) / 
-                   ((cryptoGrowthData[cryptoGrowthData.length - 1]?.investido || 1) + (etfGrowthData[etfGrowthData.length - 1]?.investido || 1))).toFixed(1))}x
+                   ((cryptoGrowthData[cryptoGrowthData.length - 1]?.investido || 1) + (etfGrowthData[etfGrowthData.length - 1]?.investido || 1))).toFixed(2))}x
               </div>
               <div className="text-xs text-gray-500 mt-1">Em 5 anos, na simulação</div>
             </div>

@@ -184,8 +184,8 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
 
       if (response.ok && result.alert) {
         const alertMessage = type === 'dca_opportunity'
-          ? `✅ Alerta DCA criado!\n\n${opportunityName || symbol}\nPreço Ideal: $${value.toFixed(4)}\n\nSerás notificado quando o preço atingir a zona de entrada ideal!`
-          : `✅ Alerta criado para ${symbol}!\n\nPreço Target: $${value.toFixed(4)}\n\nSerás notificado quando atingir este valor!`
+          ? `✅ Alerta DCA criado!\n\n${opportunityName || symbol}\nPreço Ideal: ${formatPrice(value)}\n\nSerás notificado quando o preço atingir a zona de entrada ideal!`
+          : `✅ Alerta criado para ${symbol}!\n\nPreço Target: ${formatPrice(value)}\n\nSerás notificado quando atingir este valor!`
         
         alert(alertMessage)
         console.log(`✅ [DCA] Alerta criado: ${symbol} - ${type} - $${value}`)
@@ -269,8 +269,20 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
     }).format(value)
   }
 
-  const formatPrice = (value: number) =>
-    assetMode === 'etf' ? `$${value.toFixed(2)}` : `$${value.toFixed(4)}`
+  /**
+   * DUAS casas decimais — decisão do dono para toda a página dos portefólios.
+   *
+   * A excepção é o preço pequeno de mais para caber em duas casas: uma moeda a $0,0003 ficava
+   * «$0.00», que não é arredondar, é apagar o preço. Nesse caso mostram-se as casas necessárias
+   * para o primeiro algarismo aparecer. Zero é zero e fica com duas casas como tudo o resto.
+   */
+  const formatPrice = (value: number) => {
+    if (value !== 0 && Math.abs(value) < 0.01) {
+      // `toPrecision(2)` dá dois algarismos significativos; o Number tira os zeros à direita.
+      return `$${Number(value.toPrecision(2))}`
+    }
+    return `$${value.toFixed(2)}`
+  }
 
   if (analysisSeq < 1) {
     return (
@@ -640,7 +652,7 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
                           opp.discount_percent >= 10 ? 'text-blue-300' :
                           opp.discount_percent >= 5 ? 'text-yellow-300' : 'text-gray-300'
                         }`}>
-                          {opp.discount_percent >= 0 ? '+' : ''}{opp.discount_percent.toFixed(1)}%
+                          {opp.discount_percent >= 0 ? '+' : ''}{opp.discount_percent.toFixed(2)}%
                         </div>
                       </div>
                       {opp.discount_percent >= 15 && <div className="text-3xl animate-bounce">🔥</div>}
