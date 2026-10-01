@@ -3,6 +3,7 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { criarLimitador } from './regras'
+import { frescuraDoPreco } from '../frescura-preco'
 import type { PrecoWT } from './tipos'
 
 /** Um limitador por instância do servidor, partilhado por todos os utilizadores e separadores. */
@@ -19,7 +20,17 @@ export async function precoIndicativo(symbol: string): Promise<PrecoWT | null> {
   const bid = Number(data.bid)
   const ask = Number(data.ask)
   if (!(bid > 0) || !(ask > 0)) return null
-  return { symbol: s, bid, ask, em: String(data.em), indicativo: true }
+  /**
+   * O preço vai SEMPRE com a idade. Não se recusa um preço velho — ao fim-de-semana o último
+   * preço é legitimamente o de sexta — mas também não se deixa passar por actual. Medido a
+   * 01/10: dos 201 símbolos deste feed, 155 estavam parados há mais de uma hora e 80 há mais de
+   * uma semana, e todos eram servidos como se fossem de agora.
+   */
+  const f = frescuraDoPreco(data.em)
+  return {
+    symbol: s, bid, ask, em: String(data.em), indicativo: true,
+    grau: f.grau, idadeSegundos: Math.round(f.idadeSegundos), fresco: f.fresco, rotulo: f.rotulo,
+  }
 }
 
 export const numOuNull = (v: unknown): number | null => {

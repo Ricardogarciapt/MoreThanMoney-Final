@@ -88,6 +88,15 @@ export interface PrecoWT {
   em: string
   /** true = preço do nosso feed (indicativo), não da corretora — a execução é ao preço da corretora. */
   indicativo: boolean
+  /**
+   * Quão recente é a leitura. Sem isto, um preço parado há meses era servido como se fosse de
+   * agora — e um número plausível é pior do que um número em falta. Ver `lib/webtrader/frescura-preco.ts`.
+   */
+  grau?: 'vivo' | 'atrasado' | 'sessao_anterior' | 'morto'
+  idadeSegundos?: number
+  fresco?: boolean
+  /** O que o ecrã escreve ao lado do número. Vazio quando o preço está vivo. */
+  rotulo?: string
 }
 
 export interface PedidoOrdemWT {
