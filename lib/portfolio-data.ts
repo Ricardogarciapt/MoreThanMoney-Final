@@ -2,6 +2,8 @@
 // https://harmonious-comma-e85.notion.site/Portefolio-Cripto-e-Stocks-76557dddfbc348aba2f6e24ea1f5133e
 
 export interface CryptoAsset {
+  /** Reforço por SEXTA, em dólares. É a cadência real da casa; o mensal é derivado. */
+  reforco_semanal?: number
   categoria: string
   criptomoeda: string
   symbol: string // Símbolo para Binance (ex: BTCUSDT, ETHUSDT)

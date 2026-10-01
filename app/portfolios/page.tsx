@@ -29,6 +29,8 @@ import {
 import { cryptoPortfolio, etfPortfolio } from "@/lib/portfolio-data"
 
 interface AssetWithPrice {
+  /** Reforço por SEXTA. Os cartões somam-no em vez de mostrarem um número escrito à mão. */
+  weekly_reinforcement?: number
   symbol: string
   name: string
   current_price: number | null
@@ -188,6 +190,8 @@ export default function PortfoliosPage() {
               change_24h_percent: null,
               category: asset.categoria,
               recommended_monthly: asset.reforco_mensal,
+              // A cadência real da casa é SEMANAL, às sextas. O mensal fica como vista derivada.
+              weekly_reinforcement: originalAsset?.reforco_semanal ?? asset.reforco_semanal ?? 0,
               potential_growth: originalAsset?.potencial_crescimento_percent || 0,
               allocation_percent: originalAsset?.percentual || 0,
               ...tpslData,
@@ -309,6 +313,7 @@ export default function PortfoliosPage() {
               pnl_percent: realPerformance,
               category: asset.categoria,
               recommended_monthly: asset.reforco_semanal * 4,
+              weekly_reinforcement: originalAsset?.reforco_semanal ?? asset.reforco_semanal ?? 0,
               potential_growth: originalAsset?.crescimento_esperado_percent || 0,
               allocation_percent: originalAsset?.percentual || 0
             }
@@ -611,8 +616,14 @@ export default function PortfoliosPage() {
                     
                     <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-blue-500/30">
                       <CardContent className="p-4">
-                        <div className="text-xs text-gray-400 mb-1">DCA Mensal</div>
-                        <div className="text-2xl font-bold text-blue-400">€280</div>
+                        {/* O DCA da casa é SEMANAL, às sextas — nas duas carteiras. Estava
+                            escrito «Mensal €280» à mão, e €280 não era sequer o valor da
+                            configuração: um número fixo no ecrã deixa de bater certo no dia em
+                            que alguém mexe na carteira, e ninguém dá por isso. */}
+                        <div className="text-xs text-gray-400 mb-1">DCA Semanal · sextas</div>
+                        <div className="text-2xl font-bold text-blue-400">
+                          ${cryptoAssets.reduce((sum, a) => sum + (Number(a.weekly_reinforcement) || 0), 0).toFixed(0)}
+                        </div>
                         <div className="text-xs text-gray-500 mt-1">Reforço consistente</div>
                       </CardContent>
                     </Card>
@@ -777,8 +788,10 @@ export default function PortfoliosPage() {
                     
                     <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-green-500/30">
                       <CardContent className="p-4">
-                        <div className="text-xs text-gray-400 mb-1">DCA Semanal</div>
-                        <div className="text-2xl font-bold text-green-400">€25</div>
+                        <div className="text-xs text-gray-400 mb-1">DCA Semanal · sextas</div>
+                        <div className="text-2xl font-bold text-green-400">
+                          ${etfAssets.reduce((sum, a) => sum + (Number(a.weekly_reinforcement) || 0), 0).toFixed(0)}
+                        </div>
                         <div className="text-xs text-gray-500 mt-1">Investimento consistente</div>
                       </CardContent>
                     </Card>
