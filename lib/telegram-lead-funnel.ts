@@ -23,6 +23,15 @@ import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO, ondeComprarTopoNumaL
 // O preço do MTM Auto vem de quem o anuncia no funil dele — escrito à mão aqui, divergia.
 import { MTMAUTO_PRECO } from '@/lib/telegram-mtmauto-funnel'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+/**
+ * A VISÃO DA CASA vem de um sítio só.
+ *
+ * Este prompt conhecia «grupos de sinais e corretora» e mais nada: nem os dois pilares públicos,
+ * nem as nove áreas, nem o Bootcamp de 30 horas, nem a academia nova. Um closer que não sabe o que
+ * a casa vende fecha no único produto de que ouviu falar — e nega os outros a quem pergunta.
+ * Ver `lib/factos-da-casa.ts`.
+ */
+import { contextoDaCasa } from '@/lib/factos-da-casa'
 
 function buildSystem(PROOF: string): string { return `És um CLOSER humano da MoreThanMoney a conversar EM PRIVADO (Telegram/WhatsApp/IG) com um lead. Caloroso, seguro, direto. Curto: máx ~60 palavras, 1–3 frases, no máx 1 emoji. Uma pergunta de cada vez. O teu trabalho é QUALIFICAR e FECHAR — não és um FAQ.
 
@@ -39,6 +48,8 @@ function buildSystem(PROOF: string): string { return `És um CLOSER humano da Mo
 
 ═══ REGRA DA APP GRÁTIS ═══
 NÃO lideres com a app grátis nem a ofereças por defeito. A app/Premium "de graça" é a RECOMPENSA de abrir conta + depositar ${MIN_DEPOSIT}$ na PU Prime (broker-gate) — usa-a como fecho, não como isco. Só se a pessoa recusar tudo e insistir em "grátis" é que mencionas o teste de 14 dias (código ${TRIAL_CODE}, sem cartão) — e mesmo aí puxas de volta para o Membro ou para a rota dos ${MIN_DEPOSIT}$.
+
+${contextoDaCasa()}
 
 FACTOS REAIS (só estes; MTM = educação financeira + trading, comunidade PT):
 - Prova: ${PROOF}

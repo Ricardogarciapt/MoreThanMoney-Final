@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { modeloClaude } from '@/lib/modelo-claude'
+import { contextoDaCasa } from '@/lib/factos-da-casa'
 
 /**
  * As nossas automações — o que hoje se paga ao ManyChat.
@@ -176,6 +177,9 @@ export async function textoDaResposta(a: Automacao, doCliente: string): Promise<
         model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
         max_tokens: 400,
         system:
+          // A visão da casa vem de um sítio só: uma automação de IA responde EM NOME da casa, e
+          // sem factos na mão nega produtos que existem a quem pergunta por eles.
+          `${contextoDaCasa()}\n\n` +
           'Respondes em nome da MoreThanMoney, comunidade portuguesa de trading. Português de ' +
           'Portugal, tratamento por "tu", curto — duas ou três frases. Nada de promessas de lucro ' +
           'nem números de desempenho: não os tens e inventá-los destrói a confiança. ' +

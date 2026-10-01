@@ -9,6 +9,15 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { defaultContentConfig, type ContentConfig } from "@/lib/content-config"
 import { buildLocalMtmCoachReply } from "@/lib/mtm-ai-coach-fallback"
 import { modeloClaude } from '@/lib/modelo-claude'
+/**
+ * O CONTEXTO deste agente era só o snapshot da base — definições, contagens, eventos de IA.
+ *
+ * Isso diz-lhe como o site está CONFIGURADO e nada sobre o que a casa é: é este o agente que
+ * responde ao Ricardo no Telegram quando ele escreve texto livre, e respondia sobre produtos,
+ * áreas e preços pelo que se lembrava. Agora leva os factos de `lib/factos-da-casa.ts` — e as
+ * regras da casa, que aqui não existiam (nem a dos pips, nem a da plataforma que não se nomeia).
+ */
+import { contextoDaCasa } from '@/lib/factos-da-casa'
 
 export type AgentAuth = {
   actor: "agent" | "admin"
@@ -317,6 +326,8 @@ async function callOpenAI(system: string, userMessage: string): Promise<string |
 
 export function buildSiteAgentSystemPrompt(siteContext: Record<string, unknown>): string {
   return `És o **agente de gestão do site MoreThanMoney (MTM)** ligado à API /api/agent/v1.
+
+${contextoDaCasa()}
 
 Tens acesso (via ferramentas HTTP do utilizador) a:
 - Definições do site (manutenção, registo, nome)
