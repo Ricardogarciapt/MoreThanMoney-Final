@@ -624,8 +624,12 @@ function AppMobileContent() {
                 : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
+            {/* «Aulas» e não «Ao vivo»: o tab passou a ter as academias, as salas e as
+                gravações. O nome antigo prometia só a parte que acontece a horas — e fora
+                desse horário quem lá entrava achava que não havia nada. O id do tab
+                continua `live` de propósito: é o que está nos links e nas notificações. */}
             <Video className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "live" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "live" ? "text-[#D2A63C]" : ""}`}>Ao vivo</div>
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "live" ? "text-[#D2A63C]" : ""}`}>Aulas</div>
           </button>
 
           <button

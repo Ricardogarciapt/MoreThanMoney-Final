@@ -34,6 +34,7 @@ import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
 import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { LmsPlaylistSection } from "@/components/live/lms-playlist-section"
+import { oQuePodeFazer, porAcademia, type SalaDeAula } from "@/lib/lms/aulas"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -119,6 +120,14 @@ export default function LiveSessionsMobile({
   }, [router, toast, t])
   const { user } = useAuth()
   const [liveStreams, setLiveStreams] = useState<StreamListItem[]>([])
+  /**
+   * TODAS as salas, e não só as que estão ao vivo. O tab chamava-se «Ao vivo» e era isso que
+   * mostrava: fora do horário das lives ficava uma grelha vazia, e as gravações — que são a maior
+   * parte do que há para ver — não tinham por onde ser encontradas.
+   */
+  const [todasAsSalas, setTodasAsSalas] = useState<StreamListItem[]>([])
+  /** A academia escolhida. `null` = todas. */
+  const [academia, setAcademia] = useState<string | null>(null)
   const [scheduledStreams, setScheduledStreams] = useState<StreamListItem[]>([])
   const [scheduledSessions, setScheduledSessions] = useState<TimetableApiSession[]>([])
   const [loading, setLoading] = useState(true)
@@ -168,9 +177,11 @@ export default function LiveSessionsMobile({
         .sort((a: StreamListItem, b: StreamListItem) => new Date(a.scheduled_start_at!).getTime() - new Date(b.scheduled_start_at!).getTime())
         .slice(0, 10)
       setScheduledStreams(upcoming)
+      setTodasAsSalas((allRes.data || []) as StreamListItem[])
       setScheduledSessions((schedRes.data || []) as TimetableApiSession[])
     } catch {
       setLiveStreams([])
+      setTodasAsSalas([])
       setScheduledStreams([])
       setScheduledSessions([])
     } finally {
@@ -504,14 +515,34 @@ export default function LiveSessionsMobile({
       ? "h-full min-h-0 flex-1"
       : "h-full min-h-0 flex-1 max-sm:h-full max-sm:min-h-0 sm:h-auto sm:min-h-[min(62dvh,520px)] sm:max-h-[min(80dvh,600px)] sm:flex-none sm:aspect-video sm:max-h-none")
 
+  /**
+   * AS ACADEMIAS E AS SUAS SALAS.
+   *
+   * A arrumação está em `lib/lms/aulas.ts`, com guarda — é a parte que deixava cair salas sem
+   * ninguém dar por isso (uma sala sem academia desaparecia num `if`), e a que decide que as
+   * salas fechadas se MOSTRAM com cadeado em vez de serem escondidas: esconder o que ainda está
+   * por vender é tirá-lo da montra.
+   */
+  const grupos = useMemo(() => porAcademia(todasAsSalas as unknown as SalaDeAula[]), [todasAsSalas])
+  const grupoEscolhido = useMemo(
+    () => (academia ? grupos.find((g) => g.chave === academia) ?? null : null),
+    [grupos, academia],
+  )
+  const salasVisiveis = useMemo(
+    () => (grupoEscolhido ? grupoEscolhido.salas : grupos.flatMap((g) => g.salas)),
+    [grupos, grupoEscolhido],
+  )
+
   const hasPlayback = Boolean(stream?.playback_url || hlsUrl)
 
   return (
     <div className="min-h-[50vh] px-2 pb-28 pt-2 sm:px-3" data-live-player-guard>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-[#D2A63C]">{t("live.title")}</h2>
-          <p className="text-xs text-gray-500">{t("live.subtitle")}</p>
+          {/* «Aulas» e não «Ao vivo»: o que aqui está são as academias e as suas salas, e as
+              lives são uma parte delas. O nome antigo prometia só a parte que acontece a horas. */}
+          <h2 className="text-lg font-bold tracking-tight text-[#D2A63C]">Aulas</h2>
+          <p className="text-xs text-gray-500">Academias, salas e gravações para rever</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -532,11 +563,17 @@ export default function LiveSessionsMobile({
         </div>
       )}
 
-      {!loading && liveStreams.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-[#D2A63C]/25 bg-black/40 p-8 text-center text-sm text-gray-400">
-          <Radio className="mx-auto mb-2 h-8 w-8 text-[#D2A63C]/50" />
-          {t("live.emptyLiveNow")}
-        </div>
+      {/* ── AO VIVO AGORA ────────────────────────────────────────────────────────
+          Só aparece quando há mesmo. Antes esta era a página inteira, e fora do horário das
+          lives o tab ficava vazio como se não houvesse nada para ver. */}
+      {!loading && liveStreams.length > 0 && (
+        <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" />
+          </span>
+          A decorrer agora
+        </h3>
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -606,6 +643,120 @@ export default function LiveSessionsMobile({
             )
           })}
       </div>
+
+      {/* ══ AS ACADEMIAS ══════════════════════════════════════════════════════════════════
+          O que o tab não tinha: uma forma de escolher. Era uma grelha achatada de salas ao vivo,
+          e quem queria rever uma aula tinha de saber de cor em que sala ela estava. */}
+      {!loading && grupos.length > 0 && (
+        <div className="mt-6">
+          <h3 className="mb-2 text-sm font-semibold text-white">Academias</h3>
+          <div className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button
+              type="button"
+              onClick={() => setAcademia(null)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-2 text-xs transition-colors",
+                academia === null
+                  ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#E9C46A]"
+                  : "border-zinc-700 text-gray-400",
+              )}
+            >
+              Todas <span className="text-gray-600">({todasAsSalas.length})</span>
+            </button>
+            {grupos.map((g) => (
+              <button
+                key={g.chave}
+                type="button"
+                onClick={() => setAcademia(g.chave === academia ? null : g.chave)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-2 text-xs transition-colors",
+                  academia === g.chave
+                    ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#E9C46A]"
+                    : "border-zinc-700 text-gray-400",
+                )}
+              >
+                {g.nome} <span className="text-gray-600">({g.salas.length})</span>
+                {g.aoVivo > 0 && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-red-500 align-middle" />}
+              </button>
+            ))}
+          </div>
+
+          {/* ── AS SALAS ──────────────────────────────────────────────────────────────────
+              Cada sala traz as suas gravações por baixo, como no site. As fechadas aparecem
+              com cadeado: esconder o que ainda está por vender tira-o da montra. */}
+          <div className="mt-3 space-y-2.5">
+            {salasVisiveis.map((s) => {
+              const podeNivel = (tier: string | null | undefined) =>
+                canAccessStream(user as PerfilUi | null, tier as StreamListItem["access_tier"])
+              const r = oQuePodeFazer(s as unknown as SalaDeAula, podeNivel)
+              const img = streamVisualUrl(s as unknown as StreamListItem)
+              return (
+                <div key={s.id} className="overflow-hidden rounded-2xl border border-[#D2A63C]/15 bg-gray-950/80">
+                  <button
+                    type="button"
+                    onClick={() => (r.podeEntrar ? openModal(s.id) : goUpgrade())}
+                    className="flex w-full items-center gap-3 p-2.5 text-left active:scale-[0.99]"
+                  >
+                    <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-900">
+                      {img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
+                      ) : null}
+                      {!r.podeEntrar && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                          <Lock className="h-4 w-4 text-white/80" />
+                        </div>
+                      )}
+                      {s.is_live && (
+                        <span className="absolute left-1 top-1 rounded bg-red-600 px-1 py-0.5 text-[8px] font-bold uppercase text-white">
+                          {t("live.badgeLive")}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-white">{s.title}</p>
+                      {s.educator?.display_name && (
+                        <p className="truncate text-[11px] text-gray-400">{s.educator.display_name}</p>
+                      )}
+                      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-gray-600">
+                        {s.academy?.name ?? "—"}
+                        {r.temGravacoes ? " · com gravações" : ""}
+                      </p>
+                    </div>
+                    {!r.podeEntrar && (
+                      <span className="shrink-0 rounded-full bg-[#D2A63C] px-2 py-1 text-[9px] font-bold text-black">
+                        {t("live.upgradeCta")}
+                      </span>
+                    )}
+                  </button>
+
+                  {/*
+                    AS GRAVAÇÕES, com o nível DELAS e não o da sala. Há salas cuja emissão é VIP e
+                    cujas gravações abrem a membros — juntar os dois níveis punha um cadeado em
+                    aulas que estão pagas, e isso não dá erro nenhum.
+                  */}
+                  {r.temGravacoes && (
+                    <div className="border-t border-zinc-800/80 px-2.5 pb-2.5 pt-2">
+                      <LmsPlaylistSection
+                        playlistUrl={s.playlist_url}
+                        playlistTitle={s.playlist_title}
+                        canAccess={r.podeRever}
+                        tierLabel={s.playlist_access_tier ?? s.access_tier ?? null}
+                      />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {salasVisiveis.length === 0 && (
+            <p className="mt-3 rounded-2xl border border-dashed border-zinc-800 p-6 text-center text-sm text-gray-500">
+              Esta academia ainda não tem salas no teu plano.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ── Próximas sessões (Horário — estilo calendário escolar) ──────────── */}
       {scheduledSessions.length > 0 && (
