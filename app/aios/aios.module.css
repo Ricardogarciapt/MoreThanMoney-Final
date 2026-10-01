@@ -34,7 +34,23 @@
   .hud-corner.tr{top:8px;right:8px;border-width:2px 2px 0 0;}
   .hud-corner.bl{bottom:8px;left:8px;border-width:0 0 2px 2px;}
   .hud-corner.br{bottom:8px;right:8px;border-width:0 2px 2px 0;}
-  .app { position:relative; z-index:2; display:grid; grid-template-rows:52px 1fr 48px; grid-template-columns:260px 1fr 280px; height:100vh; gap:1px; background:var(--border); }
+  /*
+    O ESQUELETO, ADAPTATIVO.
+    --------------------------------------------------------------------------------------------
+    Era `260px 1fr 280px` fixo, sem uma única media query em todo o ficheiro. Num portátil de 13"
+    os dois painéis laterais comiam 540px — mais de metade do ecrã útil — e o chat, que é a razão
+    de a página existir, ficava espremido no meio. Num telemóvel transbordava.
+
+    Agora as colunas encolhem com `clamp()` em vez de serem fixas, e há três pontos de quebra. A
+    ordem em que as coisas desaparecem não é arbitrária: primeiro sai o painel da DIREITA (estado e
+    SOPs, que se consultam), depois o da ESQUERDA (agentes e checklist, que se escolhem), e o chat
+    fica sempre — é por ele que aqui se vem.
+
+    `100dvh` e não `100vh`: no telemóvel o `vh` conta com a barra do browser que desaparece ao
+    deslizar, por isso o rodapé ficava escondido por baixo dela justamente no ecrã onde há menos
+    espaço para o perder.
+  */
+  .app { position:relative; z-index:2; display:grid; grid-template-rows:52px 1fr 48px; grid-template-columns:clamp(190px,18vw,260px) minmax(0,1fr) clamp(210px,20vw,280px); height:100dvh; gap:1px; background:var(--border); }
   .header { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; padding:0 16px; background:var(--panel); border-bottom:1px solid var(--border); }
   .header-brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px; letter-spacing:2px; color:var(--gold); text-shadow:0 0 12px var(--gold-glow); }
   .logo-ring { width:32px; height:32px; border-radius:50%; border:2px solid var(--gold); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; box-shadow:0 0 10px var(--gold-glow); animation:pulse-ring 3s ease-in-out infinite; }
@@ -159,3 +175,43 @@
   .chat-pane{flex-direction:column;}
   .funnel-tab::-webkit-scrollbar,.activity-tab::-webkit-scrollbar{width:3px;}
   .funnel-tab::-webkit-scrollbar-thumb,.activity-tab::-webkit-scrollbar-thumb{background:var(--border);}
+
+  /* ══ ADAPTATIVO ══════════════════════════════════════════════════════════════════════════
+     Os painéis laterais passam a poder ser abertos e fechados quando não cabem. O estado vive no
+     componente (`painelAberto`), e o que aqui está é só o desenho de cada caso. */
+
+  /* Portátil estreito: o painel da direita sai da grelha e passa a sobrepor-se quando pedido.
+     Sai este primeiro porque é o de CONSULTA — estado dos sistemas, próximas marcações, SOPs. O da
+     esquerda escolhe o agente com que se está a falar, e isso faz falta a toda a hora. */
+  @media (max-width:1180px) {
+    .app { grid-template-columns:clamp(180px,22vw,240px) minmax(0,1fr); }
+    .right-panel { position:fixed; top:52px; right:0; bottom:48px; width:min(300px,82vw); z-index:30; border-left:1px solid var(--border); transform:translateX(100%); transition:transform .22s ease; box-shadow:-12px 0 28px rgba(0,0,0,.5); }
+    .right-panel.aberto { transform:translateX(0); }
+    .alternar-painel { display:inline-flex; }
+  }
+
+  /* Tablet e telemóvel: uma coluna só. Os dois painéis passam a gavetas. */
+  @media (max-width:860px) {
+    .app { grid-template-columns:minmax(0,1fr); grid-template-rows:52px 1fr 44px; }
+    .left-panel { position:fixed; top:52px; left:0; bottom:44px; width:min(280px,84vw); z-index:30; border-right:1px solid var(--border); transform:translateX(-100%); transition:transform .22s ease; box-shadow:12px 0 28px rgba(0,0,0,.5); }
+    .left-panel.aberto { transform:translateX(0); }
+    /* O véu que fecha a gaveta ao tocar fora — sem ele, num telemóvel, só se fecha às cegas. */
+    .veu { position:fixed; inset:52px 0 44px; background:rgba(0,0,0,.55); z-index:25; }
+    .voice-area { padding:10px 14px 8px; gap:6px; }
+    .voice-ring { width:56px; height:56px; }
+    /* 16px no campo de escrita não é estética: abaixo disso o iOS dá zoom ao tocar, e a página
+       fica torta sem ninguém perceber porquê. */
+    .chat-input { font-size:16px; }
+  }
+
+  /* Telemóvel estreito: o que sobra tem de caber. */
+  @media (max-width:420px) {
+    .agents-grid { grid-template-columns:1fr; }
+    .voice-output { font-size:12px; padding:6px 10px; }
+  }
+
+  /* Os botões das gavetas só existem quando há gavetas. Em ecrã largo não aparecem — um botão para
+     abrir um painel que já está aberto é um botão que ensina a desconfiar do ecrã. */
+  .alternar-painel { display:none; align-items:center; justify-content:center; width:28px; height:28px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--text-dim); cursor:pointer; }
+  .alternar-painel:hover { border-color:var(--gold); color:var(--gold); }
+  @media (max-width:860px) { .alternar-painel { display:inline-flex; } }

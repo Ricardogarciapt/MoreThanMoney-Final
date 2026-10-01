@@ -91,6 +91,17 @@ export default function ConsolaAios() {
    * A ponte só aparece se estiver mesmo de pé. Um botão que promete o que não existe é pior do que
    * não ter botão.
    */
+  /**
+   * AS GAVETAS. Em ecrã largo não existem — os dois painéis estão sempre lá e estes estados não
+   * fazem nada. Abaixo de 1180px (direita) e 860px (esquerda) o CSS tira-os da grelha e passam a
+   * sobrepor-se, e é então que isto serve para alguma coisa.
+   *
+   * Ficam FECHADAS por omissão: num telemóvel, abrir a página com um painel por cima do chat é
+   * esconder aquilo a que se vem.
+   */
+  const [gavetaEsquerda, setGavetaEsquerda] = useState(false)
+  const [gavetaDireita, setGavetaDireita] = useState(false)
+
   const [motor, setMotor] = useState<"nuvem" | "local">("nuvem")
   const [ponteViva, setPonteViva] = useState<boolean | null>(null)
   const [segredoPonte, setSegredoPonte] = useState("")
@@ -433,7 +444,17 @@ export default function ConsolaAios() {
 
       <div className={s.app}>
         <header className={s.header}>
-          <div className={s["header-brand"]}><div className={s["logo-ring"]}>J</div>JARVIS · MTM AI OS</div>
+          <div className={s["header-brand"]}>
+            {/* Só aparece quando o painel saiu da grelha — ver aios.module.css. Um botão para abrir
+                um painel que já está aberto ensina a desconfiar do ecrã. */}
+            <button
+              type="button" className={s["alternar-painel"]} aria-label="Agentes e checklist"
+              onClick={() => { setGavetaEsquerda((v) => !v); setGavetaDireita(false) }}
+            >
+              ☰
+            </button>
+            <div className={s["logo-ring"]}>J</div>JARVIS · MTM AI OS
+          </div>
           <div className={s["header-status"]}>
             <span><span className={`${s["status-dot"]} ${s[estados.supabase]}`} />Supabase</span>
             <span><span className={`${s["status-dot"]} ${s[estados.n8n]}`} />n8n</span>
@@ -445,10 +466,26 @@ export default function ConsolaAios() {
               {aOuvir ? "🔴 A ouvir…" : "🎙 Ei AIOS"}
             </button>
             <span className={s.clock}>{relogio}</span>
+            <button
+              type="button" className={s["alternar-painel"]} aria-label="Estado e SOPs"
+              onClick={() => { setGavetaDireita((v) => !v); setGavetaEsquerda(false) }}
+            >
+              ▦
+            </button>
           </div>
         </header>
 
-        <aside className={s["left-panel"]}>
+        {/* O véu fecha a gaveta ao tocar fora. Sem ele, num telemóvel, só se fecha às cegas —
+            e um painel que não se sabe fechar é um painel que tapa o ecrã. */}
+        {(gavetaEsquerda || gavetaDireita) && (
+          <div
+            className={s.veu}
+            onClick={() => { setGavetaEsquerda(false); setGavetaDireita(false) }}
+            aria-hidden
+          />
+        )}
+
+        <aside className={`${s["left-panel"]} ${gavetaEsquerda ? s.aberto : ""}`}>
           {/* O MOTOR. Só mostra o local quando a ponte responde de facto — um botão que promete
               o que não existe é pior do que não haver botão. */}
           <div className={s["panel-section"]}>
@@ -767,7 +804,7 @@ export default function ConsolaAios() {
           </div>
         </main>
 
-        <aside className={s["right-panel"]}>
+        <aside className={`${s["right-panel"]} ${gavetaDireita ? s.aberto : ""}`}>
           <div className={s["right-section"]}>
             <div className={s["right-title"]}>n8n · Automações VPS</div>
             {["n8n Engine", "JARVIS Telegram", "ManyChat Sync", "Voice Bridge"].map((n) => (

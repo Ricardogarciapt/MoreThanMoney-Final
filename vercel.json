@@ -235,6 +235,10 @@
     {
       "path": "/api/cron/captacao-campanhas",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/agentes",
+      "schedule": "0 6 * * *"
     }
   ]
 }

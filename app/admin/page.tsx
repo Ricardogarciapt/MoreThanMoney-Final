@@ -27,6 +27,7 @@ import ChatChannelsPanel from "@/components/admin/chat-channels-panel"
 import LiveSessionsManager from "@/components/admin/live-sessions-manager"
 import DvrRecordingsManager from "@/components/admin/dvr-recordings-manager"
 import AvaliacoesManager from "@/components/admin/avaliacoes-manager"
+import AgentesEquipa from "@/components/admin/agentes-equipa"
 
 function AdminPageClient() {
   const router = useRouter()
@@ -65,6 +66,7 @@ function AdminPageClient() {
     "dvr",
     "avaliacoes",
     "mtmfunded",
+    "agentes",
     "notifications",
     "settings",
   ])
@@ -252,6 +254,7 @@ function AdminPageClient() {
               {activeSection === "dvr" && "Gravações DVR"}
               {activeSection === "avaliacoes" && "Avaliações & Certificados"}
               {activeSection === "mtmfunded" && "MTM Funded & Torneios"}
+              {activeSection === "agentes" && "Equipa de agentes"}
               {activeSection === "notifications" && "Notificações"}
               {activeSection === "settings" && "Configurações"}
             </h1>
@@ -407,6 +410,10 @@ function AdminPageClient() {
               </div>
             </div>
           )}
+
+          {/* AGENTES — o CEO e os sub-agentes por pilar, com o motivo escrito de cada juízo e os
+              botões pausar/retomar/parar. Parar não apaga. Ver components/admin/agentes-equipa.tsx. */}
+          {activeSection === "agentes" && <AgentesEquipa />}
 
           {activeSection === "settings" && (
             <div className="space-y-8">

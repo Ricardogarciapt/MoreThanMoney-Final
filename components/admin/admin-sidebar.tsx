@@ -18,6 +18,7 @@ import {
   Shield,
   GraduationCap,
   Store,
+  Bot,
   Brain,
   Network,
   Send,
@@ -78,6 +79,10 @@ const GRUPOS: Grupo[] = [
     itens: [
       { tipo: "tab", id: "overview", rotulo: "Visão geral", icone: LayoutDashboard },
       { tipo: "tab", id: "users", rotulo: "Utilizadores", icone: Users },
+      // «Equipa de agentes» e não «Agentes»: já há um «Agentes e automações» no grupo de marketing
+      // que aponta para /dashboard-gestao, e dois itens com o mesmo nome mandavam o dono ao
+      // ecrã errado.
+      { tipo: "tab", id: "agentes", rotulo: "Equipa de agentes", icone: Bot },
       { tipo: "tab", id: "notifications", rotulo: "Notificações", icone: Bell },
       { tipo: "tab", id: "settings", rotulo: "Configurações", icone: Settings },
     ],
