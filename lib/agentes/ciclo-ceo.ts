@@ -20,9 +20,23 @@
  *  2. **não se pressiona quem está parado ou reformado.** Um agente parado não trabalha; pedir-lhe
  *     resultados é encher a tabela de pedidos que ninguém pode cumprir. Repor um agente parado é
  *     decisão do dono;
- *  3. **não se pressiona quem ainda está na carência.** Um agente de 3 horas não teve janela
- *     nenhuma para vender. Cobrar-lhe resultados é cobrar o que o sistema ainda não lhe deu tempo
- *     de fazer — exactamente o erro que a carência existe para evitar;
+ *  3. **na carência não se COBRA — mas DÁ-SE TRABALHO.** E esta é a correcção de 01/10, que vem de
+ *     ver o sistema a correr: a passagem avaliou os sete agentes, parou zero, e criou ZERO pedidos.
+ *     A tabela ficou vazia porque a carência travava a emissão inteira.
+ *
+ *     O raciocínio original — «cobrar a quem nunca teve janela é cobrar o que o sistema ainda não
+ *     lhe deu tempo de fazer» — está certo e mantém-se. O que ele não distinguia é que COBRAR e DAR
+ *     TRABALHO não são a mesma coisa:
+ *
+ *       · `justificar` e `baixar_custo` são COBRANÇA — pedem contas de um resultado. Estes esperam
+ *         pela carência, e é para isto que ela existe;
+ *       · `construir`, `propor` e `medir` são TRABALHO. Travá-los na carência é o contrário do que
+ *         ela serve: ela existe para dar ao agente TEMPO PARA TRABALHAR antes de ser julgado. O
+ *         efeito que se media era o oposto — um agente novo ficava 48 h sem nada que fazer, e
+ *         depois era julgado pelo que não fez nessas 48 h.
+ *
+ *     É uma armadilha com a forma exacta da que esta casa já conhece: parado por falta de medição,
+ *     não de trabalho. Ver {@link NATUREZA};
  *  4. **não se pressiona quem se paga.** Se o trabalho dele cobre o que gasta, um pedido é ruído —
  *     e um registo cheio de ruído é um registo onde não se encontra nada;
  *  5. **não se repete o pedido enquanto o prazo corre.** Sem isto, o cron diário mandava o mesmo
@@ -136,6 +150,30 @@ export const ACCOES_RECUSADAS: Record<string, string> = {
     'propósito.',
 }
 
+/**
+ * COBRANÇA OU TRABALHO — e é esta tabela que decide o que a carência trava.
+ *
+ * A distinção não é cosmética e custou uma tabela de pedidos vazia para aparecer. Um pedido de
+ * TRABALHO dá ao agente algo que fazer; um pedido de COBRANÇA pede-lhe contas de um resultado.
+ * Durante a carência só o primeiro faz sentido — o segundo cobrava um resultado que o sistema
+ * ainda não lhe deu tempo de produzir.
+ *
+ * Está como `Record` completo de propósito: acrescentar uma acção ao catálogo obriga a dizer, ali
+ * mesmo, se ela é trabalho ou cobrança. Um `switch` com `default` deixava a acção nova cair numa
+ * das duas sem ninguém decidir — e a que ela calhasse não dava erro nenhum.
+ */
+export const NATUREZA: Record<Accao, 'trabalho' | 'cobranca'> = {
+  medir: 'trabalho',
+  propor: 'trabalho',
+  construir: 'trabalho',
+  baixar_custo: 'cobranca',
+  justificar: 'cobranca',
+}
+
+export function ehCobranca(accao: Accao): boolean {
+  return NATUREZA[accao] === 'cobranca'
+}
+
 export function accaoPermitida(x: unknown): { pode: boolean; porque: string } {
   const a = String(x ?? '').trim()
   if (a in ACCOES) return { pode: true, porque: ACCOES[a as Accao].comoSeVe }
@@ -214,13 +252,44 @@ function horas(desde: string | null | undefined, agora: Date): number | null {
  *    certa deixa de ser «trabalha mais» e passa a ser «isto está mesmo medido?». É a lição de
  *    01/10 virada em procedimento: o sistema tem de deixar o agente dizer que a conta está errada,
  *    senão a única resposta possível é morrer calado.
+ *
+ * `naCarencia` corta as duas acções de COBRANÇA e deixa só trabalho — ver {@link NATUREZA} e o
+ * ponto 3 do cabeçalho. Não é uma excepção simpática: um agente de 5 horas a quem se pede para
+ * «baixar o custo» recebe um pedido impossível (não gastou nada ainda), e um a quem se pede para
+ * «justificar a medição» recebe uma pergunta sobre uma janela que ainda não existe.
  */
 export function accaoPara(
   a: AgenteNoCiclo,
   jaFoiCobrado: boolean,
+  naCarencia = false,
 ): { accao: Accao; porque: string } {
   const receitaJ = Number(a.agente.receita_janela ?? a.agente.receita ?? 0)
   const gastoJ = Number(a.agente.gasto_janela ?? a.agente.gasto ?? 0)
+
+  if (naCarencia) {
+    /**
+     * Na carência o agente não tem resultado nenhum para defender, e por isso só há duas coisas
+     * sensatas a dar-lhe: se ainda não é medível, tornar-se medível (`medir`) — porque sem isso
+     * tudo o que ele produzir nas próximas 48 h vai aparecer como zero no primeiro julgamento, que
+     * é precisamente a armadilha de 01/10; se já traz receita, crescer (`propor`).
+     */
+    if (receitaJ <= 0) {
+      return {
+        accao: 'medir',
+        porque:
+          `Está na carência: ainda não vai ser julgado, e por isso NÃO se lhe cobra nada. O que se ` +
+          `lhe dá é trabalho — e o primeiro trabalho de quem acaba de nascer é tornar-se medível, ` +
+          `senão tudo o que produzir nestas primeiras ${JANELA_HORAS} h aparece como zero no primeiro ` +
+          'julgamento, e o motivo escrito na linha vai parecer sólido.',
+      }
+    }
+    return {
+      accao: 'propor',
+      porque:
+        `Está na carência e já traz ${receitaJ.toFixed(2)} na janela: não há nada a corrigir, há tempo ` +
+        'para usar. Dá-se trabalho, não contas.',
+    }
+  }
 
   if (receitaJ <= 0) {
     if (jaFoiCobrado) {
@@ -302,15 +371,19 @@ export function planearCiclo(entrada: {
       continue
     }
 
-    // 3. A carência. Cobrar a quem nunca teve janela é cobrar o que o sistema não lhe deu tempo de
-    //    fazer — o mesmo motivo por que a régua de vida também não o julga.
-    if (x.idadeHoras !== null && x.idadeHoras < CARENCIA_HORAS) {
-      ignorados.push({
-        nome,
-        porque: `Só tem ${Math.floor(x.idadeHoras)} h e a carência é de ${CARENCIA_HORAS} h. Ainda não teve janela para vender.`,
-      })
-      continue
-    }
+    /**
+     * 3. A carência: NÃO SE COBRA, MAS DÁ-SE TRABALHO.
+     *
+     * Era aqui que o ciclo acabava, e era por isso que a tabela de pedidos estava vazia depois da
+     * primeira passagem a sério (01/10): os sete agentes tinham o relógio reposto, logo estavam
+     * todos na carência, logo ninguém recebeu nada. A carência existe para dar TEMPO DE TRABALHAR
+     * antes do julgamento — travar o trabalho durante ela produzia o contrário: 48 h sem nada que
+     * fazer, seguidas de um julgamento sobre o que não foi feito nessas 48 h.
+     *
+     * O que se trava é a COBRANÇA, e é só isso. Ver {@link NATUREZA}.
+     */
+    const naCarencia = x.idadeHoras !== null && x.idadeHoras < CARENCIA_HORAS
+    const faltamHoras = naCarencia ? Math.ceil(CARENCIA_HORAS - (x.idadeHoras ?? 0)) : 0
 
     /**
      * 4. Quem se paga não é pressionado.
@@ -318,14 +391,20 @@ export function planearCiclo(entrada: {
      * O juízo é a fonte, e não uma conta repetida aqui: `vida.ts` já decidiu se este agente se
      * paga, e uma segunda conta neste ficheiro podia discordar da primeira. Quando discordasse,
      * ninguém saberia qual das duas estava certa.
+     *
+     * Na carência este bloco NÃO corre, e tem de ser assim: `julgar` devolve `espera` a quem está
+     * na carência, por isso deixá-lo correr voltava a travar o trabalho pela porta do lado — a
+     * regra teria ficado escrita acima e sem efeito nenhum, que é a pior das duas situações.
      */
-    if (x.juizo.decisao === 'continua') {
-      ignorados.push({ nome, porque: `Paga-se (${x.juizo.resultado.toFixed(2)} na janela). Pressionar quem funciona é ruído.` })
-      continue
-    }
-    if (x.juizo.decisao === 'espera') {
-      ignorados.push({ nome, porque: `Não julgado nesta passagem: ${x.juizo.porque}` })
-      continue
+    if (!naCarencia) {
+      if (x.juizo.decisao === 'continua') {
+        ignorados.push({ nome, porque: `Paga-se (${x.juizo.resultado.toFixed(2)} na janela). Pressionar quem funciona é ruído.` })
+        continue
+      }
+      if (x.juizo.decisao === 'espera') {
+        ignorados.push({ nome, porque: `Não julgado nesta passagem: ${x.juizo.porque}` })
+        continue
+      }
     }
 
     // 5. Já tem um pedido aberto dentro do prazo? Não se repete.
@@ -359,14 +438,35 @@ export function planearCiclo(entrada: {
       continue
     }
 
-    const { accao, porque } = accaoPara(x, expirados.length > 0)
+    const { accao, porque } = accaoPara(x, expirados.length > 0, naCarencia)
+
+    /**
+     * O último travão, e é de forma e não de boa vontade: na carência NUNCA sai um pedido de
+     * cobrança. `accaoPara` já o garante, mas uma segunda pessoa a mexer nessa função não tem como
+     * saber que esta é a regra — aqui ela está escrita onde o pedido é emitido, e quem a quebrar
+     * vê o agente a ser ignorado com o motivo em vez de receber uma cobrança por acidente.
+     */
+    if (naCarencia && ehCobranca(accao)) {
+      ignorados.push({
+        nome,
+        porque:
+          `Está na carência (faltam ${faltamHoras} h) e a acção escolhida («${accao}») é cobrança. ` +
+          'Não se cobra um resultado a quem o sistema ainda não deu tempo de produzir.',
+      })
+      continue
+    }
+
     const def = ACCOES[accao]
+    const notaCarencia = naCarencia
+      ? ` ISTO NÃO É UMA COBRANÇA: estás na carência e faltam ${faltamHoras} h para a primeira ` +
+        'avaliação. É trabalho, para teres o que mostrar quando ela chegar.'
+      : ''
     pedidos.push({
       paraAgenteId: id,
       paraNome: nome,
       accao,
       pedido: def.oQue,
-      porque: `${porque} Verifica-se assim: ${def.comoSeVe}`,
+      porque: `${porque} Verifica-se assim: ${def.comoSeVe}${notaCarencia}`,
       prazoISO: new Date(agora.getTime() + def.prazoHoras * 3_600_000).toISOString(),
     })
   }

@@ -72,6 +72,40 @@ type Agente = {
 
 type PorAtribuir = { motivo: string; cents: number; vendas: number; porque: string }
 
+/** Um pedido do CEO a um filho, com prazo e desfecho. */
+type Pedido = {
+  id: string
+  para_agente_id: string
+  accao: string
+  porque: string
+  prazo: string | null
+  desfecho: string | null
+  criado_em: string | null
+}
+
+/** Um bloqueio que o CEO NÃO pode desbloquear, com a decisão pronta a tomar. */
+type Escalonamento = {
+  id: string
+  assunto: string
+  o_que: string
+  porque: string
+  decisao_pronta: string
+  estado: string
+  criado_em: string | null
+}
+
+/** Uma reescrita de instruções — aceite ou RECUSADA pela guarda. */
+type Reescrita = {
+  id: string
+  agente_id: string
+  autor: string
+  aceita: boolean
+  limites_perdidos: string[] | null
+  limites_acrescentados: string[] | null
+  veredicto: string
+  criado_em: string | null
+}
+
 type Dados = {
   ok: boolean
   janelaHoras: number
@@ -83,6 +117,10 @@ type Dados = {
     naoAtribuidoCents: number
     porAtribuir: PorAtribuir[]
   }
+  /** Opcionais porque um erro de leitura destes NÃO deve rebentar o painel de estado. */
+  pedidos?: Pedido[]
+  escalonamentos?: Escalonamento[]
+  reescritas?: Reescrita[]
 }
 
 /** Para onde apontam os links de um agente — as superfícies que já cobram hoje. */
@@ -379,6 +417,89 @@ export default function DashboardAgentesPage() {
                   {arvore.orfaos.map((o) => (
                     <li key={o.id}>{o.texto}</li>
                   ))}
+                </ul>
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════════════
+                 O GOVERNO: O QUE O CEO FECHOU SOZINHO, E O QUE ESPERA PELO DONO.
+                 
+                 Fica ANTES da árvore de propósito. A árvore diz como a equipa ESTÁ; isto diz o que
+                 foi DECIDIDO — e uma decisão automática que não se vê em ecrã nenhum é a mesma
+                 doença que se acabou de curar na medição dos agentes.
+                 ═══════════════════════════════════════════════════════════════════════════ */}
+            {(d.escalonamentos ?? []).filter((e) => e.estado === "aberto").length > 0 && (
+              <div className="mb-6 rounded-lg border border-sky-500/35 bg-sky-500/[0.06] px-3.5 py-3">
+                <div className="flex items-center gap-2 text-[12.5px] font-semibold text-sky-200">
+                  <AlertTriangle className="h-4 w-4" /> Na tua mesa — decisões que o CEO não pode tomar
+                </div>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-sky-100/70">
+                  Cada linha traz a <strong>decisão pronta a tomar</strong>, não uma pergunta. São bloqueios
+                  que fazem sair mensagens a clientes, publicam, ou mexem em dinheiro — e por isso são teus.
+                </p>
+                <ul className="mt-2.5 space-y-2.5 text-[12px] leading-relaxed">
+                  {(d.escalonamentos ?? [])
+                    .filter((e) => e.estado === "aberto")
+                    .map((e) => (
+                      <li key={e.id} className="rounded border border-sky-500/20 bg-black/20 px-2.5 py-2">
+                        <div className="font-medium text-sky-100">{e.assunto}</div>
+                        <div className="mt-0.5 text-zinc-400">{e.o_que}</div>
+                        <div className="mt-1.5 text-[#E9C46A]">{e.decisao_pronta}</div>
+                        <div className="mt-1 text-[11px] text-zinc-500">{e.porque}</div>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+
+            {/* As reescritas RECUSADAS primeiro, e em vermelho: uma recusa quer dizer que o CEO
+                tentou apagar um limite de um filho. É a linha mais importante deste ecrã. */}
+            {(d.reescritas ?? []).filter((r) => !r.aceita).length > 0 && (
+              <div className="mb-6 rounded-lg border border-red-500/35 bg-red-500/[0.07] px-3.5 py-3">
+                <div className="flex items-center gap-2 text-[12.5px] font-semibold text-red-200">
+                  <AlertTriangle className="h-4 w-4" /> Reescritas de instruções RECUSADAS pela guarda
+                </div>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-red-100/70">
+                  As instruções de cada agente são onde os limites dele vivem. A guarda recusou estas
+                  porque perdiam um limite — ou porque acrescentavam uma permissão que o contradiz. A
+                  coluna não mudou.
+                </p>
+                <ul className="mt-2 space-y-1.5 text-[12px] leading-relaxed text-red-100/80">
+                  {(d.reescritas ?? [])
+                    .filter((r) => !r.aceita)
+                    .slice(0, 8)
+                    .map((r) => (
+                      <li key={r.id}>
+                        <span className="text-zinc-400">{(r.criado_em ?? "").slice(0, 16).replace("T", " ")} · {r.autor} · </span>
+                        {r.veredicto}
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+
+            {(d.pedidos ?? []).filter((p) => !p.desfecho).length > 0 && (
+              <div className="mb-6 rounded-lg border border-white/12 bg-white/[0.02] px-3.5 py-3">
+                <div className="text-[12.5px] font-semibold text-zinc-200">
+                  Pedidos abertos do CEO ({(d.pedidos ?? []).filter((p) => !p.desfecho).length})
+                </div>
+                <p className="mt-1 text-[11.5px] text-zinc-500">
+                  Um pedido por agente, com prazo. Na carência o pedido é de <em>trabalho</em> e nunca de
+                  cobrança — é para o agente ter o que mostrar quando a primeira avaliação chegar.
+                </p>
+                <ul className="mt-2 space-y-1.5 text-[12px] leading-relaxed text-zinc-400">
+                  {(d.pedidos ?? [])
+                    .filter((p) => !p.desfecho)
+                    .map((p) => {
+                      const nome = d.agentes.find((a) => a.id === p.para_agente_id)?.nome ?? p.para_agente_id
+                      return (
+                        <li key={p.id}>
+                          <span className="font-medium text-[#E9C46A]">{nome} → {p.accao}</span>
+                          <span className="text-zinc-600"> · até {(p.prazo ?? "").slice(0, 16).replace("T", " ")}</span>
+                          <div className="text-[11.5px] text-zinc-500">{p.porque}</div>
+                        </li>
+                      )
+                    })}
                 </ul>
               </div>
             )}

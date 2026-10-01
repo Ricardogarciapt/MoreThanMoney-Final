@@ -10,6 +10,9 @@
  *    atropelada;
  *  · cobrar a um agente de três horas — parece diligência e é cobrar o que o sistema ainda não deu
  *    tempo de fazer;
+ *  · e o INVERSO disso, que foi o que aconteceu a 01/10: não lhe dar NADA durante a carência. O
+ *    ecrã fica ainda mais bonito — zero pedidos, zero paragens, tudo calmo — e o agente passa 48 h
+ *    sem nada que fazer para depois ser julgado pelo que não fez;
  *  · repetir o mesmo pedido todos os dias — a tabela enche, e ao segundo aviso ninguém lê;
  *  · deixar prazos abertos para sempre — e aí a pergunta «isto foi cumprido?» não tem resposta;
  *  · pedir mais trabalho a quem não tem onde ser medido — foi isto que quase parou a equipa a
@@ -23,6 +26,7 @@ import {
   PRAZO_HORAS,
   accaoPara,
   accaoPermitida,
+  ehCobranca,
   planearCiclo,
   type AgenteNoCiclo,
   type PedidoAberto,
@@ -111,9 +115,17 @@ const plano = (equipa: AgenteNoCiclo[], abertos: PedidoAberto[] = []) =>
   teste('um reformado não recebe pedido', plano([ceo(), comoSeFosseCobravel('reformado')]).pedidos.length === 0)
 }
 
-// ── A CARÊNCIA ──────────────────────────────────────────────────────────────
-// O caso mau tem muito bom aspecto: um agente nasce às 23h, o cron corre às 6h, e ele apanha um
-// pedido com prazo por não ter vendido nas primeiras sete horas de vida.
+// ── A CARÊNCIA: NÃO SE COBRA, MAS DÁ-SE TRABALHO ────────────────────────────
+//
+// Há aqui DOIS casos maus, em sentidos opostos, e um deles só se descobriu com o sistema a correr:
+//
+//  (a) cobrar na carência. O caso mau tem muito bom aspecto: um agente nasce às 23h, o cron corre
+//      às 6h, e ele apanha uma cobrança por não ter vendido nas primeiras sete horas de vida;
+//  (b) NÃO DAR NADA na carência. Este foi o que aconteceu a 01/10: o dono repôs o relógio dos sete,
+//      mandou-os trabalhar, a passagem correu — e a tabela `agentes_pedidos` ficou VAZIA, porque a
+//      carência travava a emissão inteira. Resultado: 48 h sem nada que fazer, seguidas de um
+//      julgamento sobre o que não foi feito nessas 48 h. A mesma armadilha de sempre nesta casa:
+//      parado por falta de trabalho dado, com um motivo que parece sólido.
 {
   // Juízo forjado outra vez, e pelo mesmo motivo: na carência o `julgar` devolve `espera`, e um
   // teste que confiasse nisso passava com a regra da carência apagada deste ficheiro.
@@ -122,15 +134,43 @@ const plano = (equipa: AgenteNoCiclo[], abertos: PedidoAberto[] = []) =>
     juizo: { decisao: 'avisa', estado: 'em_risco', resultado: -4, porque: 'sem lucro' },
     idadeHoras: h,
   })
-  const p = plano([ceo(), bebe(5)])
-  teste('um agente de 5 horas não é cobrado', p.pedidos.length === 0)
-  teste('e o motivo fala da carência', p.ignorados.some((i) => /carência/.test(i.porque)))
 
-  // À 47.ª hora ainda não; depois da carência, sim.
-  teste('à 47.ª hora ainda não se cobra', plano([ceo(), bebe(CARENCIA_HORAS - 1)]).pedidos.length === 0)
+  // (b) — o caso de 01/10. Um agente de 5 horas RECEBE trabalho.
+  const p = plano([ceo(), bebe(5)])
+  teste('UM AGENTE DE 5 HORAS RECEBE TRABALHO (a tabela não fica vazia)', p.pedidos.length === 1)
+  teste('e o trabalho é tornar-se medível', p.pedidos[0]?.accao === 'medir')
+  teste('e nunca é uma cobrança', !ehCobranca(p.pedidos[0]!.accao))
+
+  // (a) — e o pedido DIZ-LHE que não é uma cobrança, com as horas que faltam. Sem esta frase, um
+  // pedido na carência lê-se como uma ameaça, e o agente responde ao que acha que lhe pediram.
+  teste('o pedido diz que não é cobrança', /NÃO É UMA COBRANÇA/.test(p.pedidos[0]!.porque))
+  teste('e diz quantas horas faltam', new RegExp(`faltam ${CARENCIA_HORAS - 5} h`).test(p.pedidos[0]!.porque))
+
+  // (a) — as duas acções de cobrança NÃO saem na carência, venha o que vier de `accaoPara`.
+  for (const bruto of [
+    ag({ criado_em: haHoras(5), receita_janela: 5, gasto_janela: 12, receita: 5, gasto: 12 }), // → baixar_custo fora da carência
+  ]) {
+    const naCarencia = accaoPara({ agente: bruto, juizo: { decisao: 'avisa', estado: 'em_risco', resultado: -7, porque: '' }, idadeHoras: 5 }, true, true)
+    teste('quem gasta mais do que traz, na carência, recebe trabalho e não «baixar_custo»', !ehCobranca(naCarencia.accao))
+    const fora = accaoPara({ agente: bruto, juizo: { decisao: 'avisa', estado: 'em_risco', resultado: -7, porque: '' }, idadeHoras: 100 }, false, false)
+    teste('e fora da carência a mesma conta dá «baixar_custo»', fora.accao === 'baixar_custo')
+  }
+
+  // Segunda cobrança seguida → `justificar`. Na carência isso não pode acontecer, e é o pior dos
+  // dois: pedir a um agente de 5 horas que justifique uma medição de uma janela que não existe.
+  const segundaVez = accaoPara(bebe(5), true, true)
+  teste('nem «justificar» sai na carência', segundaVez.accao === 'medir')
+  teste('e fora da carência a segunda cobrança é «justificar»', accaoPara(bebe(100), true, false).accao === 'justificar')
+
+  // O limite de um pedido aberto por agente mantém-se — a carência não o abre.
+  const comAberto = plano([ceo(), bebe(5)], [
+    { id: 'p1', para_agente_id: 'f1', accao: 'medir', prazo: haHoras(-10), criado_em: haHoras(1) },
+  ])
+  teste('na carência também não se repete o pedido dentro do prazo', comAberto.pedidos.length === 0)
+
+  // Depois da carência, a cobrança volta ao normal.
   teste('às 50 h já se cobra', plano([ceo(), bebe(50)]).pedidos.length === 1)
-  // E com o juízo verdadeiro o resultado é o mesmo — as duas réguas concordam, que é o que se quer.
-  teste('e com o juízo real também não se cobra', plano([ceo(), no(ag({ criado_em: haHoras(5) }))]).pedidos.length === 0)
+  teste('e às 50 h com receita zero é «medir» (a lição de 01/10 mantém-se)', plano([ceo(), bebe(50)]).pedidos[0]?.accao === 'medir')
 }
 
 // ── QUEM SE PAGA NÃO É PRESSIONADO ──────────────────────────────────────────
@@ -269,5 +309,5 @@ if (falhas.length) {
   process.exit(1)
 }
 console.log(
-  'agentes/ciclo-ceo: pressiona quem não se paga, nunca quem o dono pausou nem quem está na carência, não repete dentro do prazo, e o catálogo fechado não deixa pedir um envio ✓',
+  'agentes/ciclo-ceo: pressiona quem não se paga, nunca quem o dono pausou, dá TRABALHO na carência sem cobrar nada, não repete dentro do prazo, e o catálogo fechado não deixa pedir um envio ✓',
 )

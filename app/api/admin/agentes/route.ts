@@ -105,6 +105,36 @@ export async function GET(request: NextRequest) {
    */
   const receita = await atribuirEGravar(db, { ensaio: true })
 
+  /**
+   * ── O GOVERNO DA EQUIPA: PEDIDOS, ESCALONAMENTOS E REESCRITAS ──
+   *
+   * Isto está aqui por uma regra desta casa: automação sem rasto é a doença que se acabou de curar
+   * nos agentes. O CEO passou a fechar coisas sozinho — pedir, educar, desbloquear — e tudo o que
+   * ele fecha tem de poder ser visto neste ecrã, senão a autonomia é invisível e ninguém a pode
+   * auditar.
+   *
+   * As três leituras em paralelo, e nenhuma delas trava o painel: um erro aqui mostra uma lista
+   * vazia e o resto do ecrã continua a funcionar. Um painel de estado que rebenta por não
+   * conseguir ler o histórico é um painel que não se abre no dia em que faz falta.
+   */
+  const [pedidosQ, escalonamentosQ, reescritasQ] = await Promise.all([
+    db
+      .from('agentes_pedidos')
+      .select('id, de_agente_id, para_agente_id, accao, pedido, porque, prazo, desfecho, desfecho_em, resultado, criado_em')
+      .order('criado_em', { ascending: false })
+      .limit(40),
+    db
+      .from('agentes_escalonamentos')
+      .select('id, assunto, o_que, porque, decisao_pronta, estado, criado_em')
+      .order('criado_em', { ascending: false })
+      .limit(20),
+    db
+      .from('agentes_instrucoes_versoes')
+      .select('id, agente_id, autor, aceita, limites_perdidos, limites_acrescentados, veredicto, porque, criado_em')
+      .order('criado_em', { ascending: false })
+      .limit(30),
+  ])
+
   return NextResponse.json({
     ok: true,
     janelaHoras: JANELA_HORAS,
@@ -117,6 +147,14 @@ export async function GET(request: NextRequest) {
       naoAtribuidoCents: receita.atribuicao.naoAtribuidoCents,
       porAtribuir: receita.atribuicao.porAtribuir,
     },
+    pedidos: pedidosQ.data ?? [],
+    escalonamentos: escalonamentosQ.data ?? [],
+    /**
+     * As reescritas RECUSADAS saem a par das aceites, e são as que interessam mais: uma recusa diz
+     * que o CEO tentou apagar um limite de um filho. Se só se mostrasse o que foi gravado, a
+     * tentativa era invisível — e a tentativa é precisamente o que se quer poder ver.
+     */
+    reescritas: reescritasQ.data ?? [],
   })
 }
 

@@ -4,6 +4,9 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { atribuirEGravar } from '@/lib/agentes/receita'
 import { correrAvaliacao } from '@/lib/agentes/motor'
 import { correrCicloCeo } from '@/lib/agentes/ciclo-ceo'
+import { reporLimitesEmFalta } from '@/lib/agentes/educacao'
+import { correrDesbloqueio } from '@/lib/agentes/desbloqueio'
+import { correrTrader, registarDecisoesNoLivro } from '@/lib/agentes/trader'
 
 /**
  * A PASSAGEM DIÁRIA DA EQUIPA DE AGENTES — mede a receita, e depois julga.
@@ -29,9 +32,27 @@ import { correrCicloCeo } from '@/lib/agentes/ciclo-ceo'
  *    lhe dar a faca;
  *  · `?ciclo=0` corre a medição e o juízo e NÃO deixa o CEO pedir nada. Serve para quem quiser
  *    ver as contas sem acrescentar pedidos à tabela;
- *  · `?trader=1` corre também o agente trader. Fica FORA da passagem automática de propósito: o
- *    trader tem o seu próprio interruptor e a conta dele já tem outro escritor — ver o cabeçalho
- *    de `lib/agentes/trader.ts`.
+ *  · `?trader=0` deixa o agente trader de fora desta chamada. Ele passou a correr em TODAS as
+ *    passagens — ver a nota abaixo, porque a mudança tem de ser justificada;
+ *  · `?desbloqueio=0` e `?limites=0` desligam as duas passagens novas.
+ *
+ * ═══ O TRADER PASSOU A CORRER SEMPRE — E PORQUÊ ════════════════════════════════════════════
+ *
+ * Até 01/10 ele só corria com `?trader=1`, ou seja: nunca, porque ninguém põe um parâmetro à mão às
+ * 6 da manhã. A decisão original era consciente e o motivo era bom — a conta de papel dele JÁ TEM
+ * outro escritor (`lib/mtmfunded/estrategias-sinais/todos-os-sinais.ts`), e um segundo escritor
+ * duplicava posições e estragava a única medição de desempenho honesta da casa.
+ *
+ * Só que o que duplica posições é ABRIR, e abrir já está travado por outra coisa: o interruptor
+ * `site_settings.agente_trader`. Analisar, decidir e registar não abre nada. Mantê-lo fora da
+ * passagem inteira não protegia a conta de nada que o interruptor não protegesse já — e produzia um
+ * agente que nunca pensava, não tinha nada para mostrar, e ia ser julgado pela régua das 48 h por
+ * não produzir. Exactamente a armadilha de 01/10 noutra forma: parado por nunca lhe ter sido dado
+ * trabalho.
+ *
+ * Agora corre sempre e REGISTA no seu livro o que analisou e decidiu. Armar a execução continua a
+ * ser uma decisão do dono, de uma chave só, e está escalada em `lib/agentes/desbloqueio.ts` com o
+ * motivo e o compromisso por escrito.
  */
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -84,11 +105,45 @@ export async function GET(request: NextRequest) {
      */
     const ciclo = params.get('ciclo') === '0' ? null : await correrCicloCeo(db, { ensaio, agora })
 
+    /**
+     * ── O TRADER: ANALISA, DECIDE, REGISTA ──
+     *
+     * Corre SEMPRE (ver o cabeçalho). A abertura continua travada pelo interruptor dele, dentro de
+     * `correrTrader`, e pelo portão `contaSegura()` que verifica a cada passagem que a conta ainda é
+     * de papel. `?trader=0` deixa-o de fora desta chamada.
+     *
+     * O registo é a metade que faltava: sem ele, uma passagem em que o agente analisou dez sinais e
+     * decidiu não abrir nenhum é indistinguível de uma em que ele não correu — e as duas pedem
+     * decisões opostas ao dono.
+     */
     let trader: unknown = null
-    if (params.get('trader') === '1') {
-      const { correrTrader } = await import('@/lib/agentes/trader')
-      trader = await correrTrader(db, { ensaio, agora })
+    if (params.get('trader') !== '0') {
+      const r = await correrTrader(db, { ensaio, agora })
+      const livro = await registarDecisoesNoLivro(db, r, { ensaio })
+      trader = { ...r, registo: { gravado: livro.gravado, erro: livro.erro ?? null, detalhe: livro.detalhe } }
     }
+
+    /**
+     * ── OS LIMITES DOS FILHOS, REPOSTOS SOZINHOS ──
+     *
+     * A migração 174 escreveu os quatro limites em todos os filhos de hoje. Isto é para os de
+     * amanhã: um agente novo nasce com as instruções que quem o criar lhe der, e o esquecimento de
+     * lhe escrever os limites NÃO DÁ ERRO — dá um agente sem travões, bem escrito.
+     *
+     * O CEO não escreve aqui uma palavra que seja sua: o texto é o canónico da guarda, e tudo o que
+     * esta passagem pode fazer é ACRESCENTAR um limite que falte. Nunca remover.
+     */
+    const limites = params.get('limites') === '0' ? null : await reporLimitesEmFalta(db, { ensaio })
+
+    /**
+     * ── O QUE ESTÁ PARADO: DESBLOQUEAR O QUE É DELE, ESCALAR O RESTO ──
+     *
+     * Corre DEPOIS do ciclo, porque precisa do id do CEO para assinar os escalonamentos — e porque
+     * um bloqueio escalado é informação para o dono, não para o ciclo.
+     */
+    const ceoDaEquipa = ciclo ? await idDoCeo(db) : null
+    const desbloqueio =
+      params.get('desbloqueio') === '0' ? null : await correrDesbloqueio(db, { ensaio, ceoId: ceoDaEquipa })
 
     return NextResponse.json({
       ok: avaliacao.ok,
@@ -123,7 +178,28 @@ export async function GET(request: NextRequest) {
           }
         : { resumo: 'Ciclo do CEO desligado nesta chamada (?ciclo=0).' },
       trader,
-      erros: [...receita.erros, ...avaliacao.erros, ...(ciclo?.erros ?? [])],
+      /**
+       * As duas passagens novas saem na resposta com o resumo, e não só com um contador: «0 limites
+       * repostos» e «não correu» têm o mesmo número e significados opostos.
+       */
+      limites: limites
+        ? { resumo: limites.resumo, repostos: limites.repostos, jaCompletos: limites.jaCompletos }
+        : { resumo: 'Reposição de limites desligada nesta chamada (?limites=0).' },
+      desbloqueio: desbloqueio
+        ? {
+            resumo: desbloqueio.resumo,
+            feitos: desbloqueio.resolvidosAgora,
+            naMesaDoDono: desbloqueio.escalados,
+            jaResolvidos: desbloqueio.jaResolvidos,
+          }
+        : { resumo: 'Desbloqueio desligado nesta chamada (?desbloqueio=0).' },
+      erros: [
+        ...receita.erros,
+        ...avaliacao.erros,
+        ...(ciclo?.erros ?? []),
+        ...(limites?.erros ?? []),
+        ...(desbloqueio?.erros ?? []),
+      ],
     })
   } catch (err) {
     return NextResponse.json(
@@ -131,4 +207,22 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     )
   }
+}
+
+
+/**
+ * Quem é o CEO, para assinar os escalonamentos.
+ *
+ * Devolve `null` quando não há — e aí nada é escalado. NÃO se elege um substituto: promover o
+ * primeiro agente da lista a chefe por omissão era dar-lhe um poder que ninguém lhe deu, e é a
+ * mesma decisão que `correrCicloCeo` já toma.
+ */
+async function idDoCeo(db: ReturnType<typeof getSupabaseAdmin>): Promise<string | null> {
+  const { data } = await db
+    .from('agentes_equipa')
+    .select('id, pilar, pai_id')
+    .eq('pilar', 'ceo')
+    .is('pai_id', null)
+    .maybeSingle()
+  return data ? String((data as { id: string }).id) : null
 }

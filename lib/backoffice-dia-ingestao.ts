@@ -1,5 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { EstadoPipeline } from '@/lib/backoffice-vista'
+import {
+  COLUNAS_PREENCHIVEIS,
+  SELECT_PARA_PROPAGAR,
+  mudancasSeguras,
+  planearPropagacao,
+  type ColunaPreenchivel,
+  type NegocioNoPipeline,
+  type OQueAFonteSabe,
+} from '@/lib/agentes/pipeline-fluxo'
 
 /**
  * A INGESTÃO — pôr no pipeline quem já está à espera e ninguém está a trabalhar.
@@ -24,9 +33,18 @@ import type { EstadoPipeline } from '@/lib/backoffice-vista'
  *    Entram aos poucos, todos os dias, e os mais recentes primeiro — porque quem se registou
  *    ontem ainda se lembra de nós e quem se registou em Março já não.
  *
+ * 3. (01/10) NUNCA MAIS CONGELAR. Até aqui esta passagem só INSERIA: depois da primeira cópia,
+ *    nada propagava. Um lead que passou a `pending_review` no Telegram, ou que entretanto deu o
+ *    `broker_uid`, continuava `lead` no pipeline para sempre, e a equipa abordava como desconhecido
+ *    quem já tinha respondido a tudo. Agora propaga — e propaga com as quatro regras de
+ *    `lib/agentes/pipeline-fluxo.ts`, que existem porque a CURA é mais perigosa do que o defeito:
+ *    um `update` automático que escreve tudo apaga o trabalho de quem vende. O estado só anda para
+ *    a frente, um negócio fechado não se toca, só se preenche o que está vazio, e a `nota` não se
+ *    escreve nunca.
+ *
  * O QUE ESTA FUNÇÃO NÃO FAZ
- * Não fala com ninguém. Cria a linha no pipeline e nada mais. Quem escreve à pessoa é a pessoa da
- * equipa, a partir da tarefa que o motor prepara.
+ * Não fala com ninguém. Cria e actualiza a linha no pipeline e nada mais. Quem escreve à pessoa é a
+ * pessoa da equipa, a partir da tarefa que o motor prepara.
  */
 
 /** Quantos negócios novos, no máximo, cada fonte pode trazer por dia. */
@@ -44,6 +62,13 @@ export interface Ingerido {
   fonte: string
   criados: number
   jaExistiam: number
+  /** Quantos negócios que JÁ existiam ficaram a par do que a fonte sabe hoje. */
+  actualizados: number
+  /**
+   * Uma frase sobre a propagação. Aparece sempre, mesmo quando é zero: um dia em que não houve nada
+   * a propagar tem de ser distinguível de um dia em que a propagação não correu.
+   */
+  propagacao: string
   erro?: string
 }
 
@@ -153,10 +178,72 @@ function estadoDoLeadTelegram(stage: string | null): EstadoPipeline | null {
   }
 }
 
-async function jaNoPipeline(db: SupabaseClient, chaves: string[]): Promise<Set<string>> {
-  if (!chaves.length) return new Set()
-  const { data } = await db.from('vendas_negocios').select('chave_origem').in('chave_origem', chaves)
-  return new Set((data ?? []).map((r) => String((r as { chave_origem: string }).chave_origem)))
+/**
+ * O que já está no pipeline, com o suficiente para decidir o que propagar.
+ *
+ * Lê-se mais do que a chave de propósito: sem o estado e sem os valores actuais não há como saber
+ * se uma propagação ANDA PARA A FRENTE ou se pisa o que uma pessoa escreveu — e essa decisão não
+ * se adivinha pelo que a fonte traz.
+ */
+async function lerDoPipeline(
+  db: SupabaseClient,
+  chaves: string[],
+): Promise<Map<string, NegocioNoPipeline>> {
+  const mapa = new Map<string, NegocioNoPipeline>()
+  if (!chaves.length) return mapa
+  const { data } = await db
+    .from('vendas_negocios')
+    // O literal vive em `pipeline-fluxo.ts`, ao lado da lista de colunas, e o `.check.ts` confirma
+    // que os dois dizem o mesmo. Ver o comentário de `SELECT_PARA_PROPAGAR` para o porquê.
+    .select(SELECT_PARA_PROPAGAR)
+    .in('chave_origem', chaves)
+  for (const r of data ?? []) {
+    const linha = r as Record<string, unknown>
+    const valores: Partial<Record<ColunaPreenchivel, unknown>> = {}
+    for (const c of COLUNAS_PREENCHIVEIS) valores[c] = linha[c]
+    mapa.set(String(linha.chave_origem), {
+      id: String(linha.id),
+      chave_origem: String(linha.chave_origem),
+      estado: (linha.estado as string | null) ?? null,
+      valores,
+    })
+  }
+  return mapa
+}
+
+/**
+ * PROPAGAR PARA QUEM JÁ ESTÁ LÁ.
+ *
+ * O tecto diário NÃO se aplica aqui, e é uma decisão: o tecto existe para não despejar conversas
+ * novas em cima de uma pessoa, e uma actualização não é uma conversa nova. Travar as actualizações
+ * pelo mesmo número deixava metade do pipeline desactualizado num dia de muitos leads novos.
+ */
+async function propagar(
+  db: SupabaseClient,
+  candidatos: Candidato[],
+  existentes: Map<string, NegocioNoPipeline>,
+): Promise<{ actualizados: number; resumo: string }> {
+  const fontes: OQueAFonteSabe[] = candidatos
+    .filter((c) => existentes.has(c.chave_origem))
+    .map((c) => {
+      const valores: Partial<Record<ColunaPreenchivel, unknown>> = {}
+      const comoRegisto = c as unknown as Record<string, unknown>
+      for (const col of COLUNAS_PREENCHIVEIS) valores[col] = comoRegisto[col]
+      return { chave_origem: c.chave_origem, estado: c.estado, valores }
+    })
+
+  const plano = planearPropagacao({ negocios: [...existentes.values()], fontes })
+  let actualizados = 0
+  for (const p of plano.propagar) {
+    const campos = mudancasSeguras(p.mudancas as Record<string, unknown>)
+    if (!Object.keys(campos).length) continue
+    const { error } = await db
+      .from('vendas_negocios')
+      .update({ ...campos, atualizado_em: new Date().toISOString() })
+      .eq('id', p.negocioId)
+    if (!error) actualizados++
+  }
+  return { actualizados, resumo: plano.resumo }
 }
 
 /**
@@ -180,10 +267,19 @@ async function ingerir(
   candidatos: Candidato[],
 ): Promise<Ingerido> {
   const tecto = TECTO_POR_FONTE[fonte] ?? 10
-  const existentes = await jaNoPipeline(db, candidatos.map((c) => c.chave_origem))
+  const existentes = await lerDoPipeline(db, candidatos.map((c) => c.chave_origem))
   const novos = candidatos.filter((c) => !existentes.has(c.chave_origem)).slice(0, tecto)
   const criados = await gravar(db, novos)
-  return { fonte, criados, jaExistiam: existentes.size }
+  // Propaga-se DEPOIS de inserir, e nunca sobre o que acabou de entrar: o que acabou de entrar já
+  // veio com o que a fonte sabe, e um update em cima dele era trabalho a dobrar com risco a dobrar.
+  const prop = await propagar(db, candidatos, existentes)
+  return {
+    fonte,
+    criados,
+    jaExistiam: existentes.size,
+    actualizados: prop.actualizados,
+    propagacao: prop.resumo,
+  }
 }
 
 // ── As fontes ────────────────────────────────────────────────────────────────
@@ -493,7 +589,14 @@ export async function ingerirLeads(db: SupabaseClient): Promise<Ingerido[]> {
     try {
       resultados.push(await correr())
     } catch (e) {
-      resultados.push({ fonte: nome, criados: 0, jaExistiam: 0, erro: e instanceof Error ? e.message : String(e) })
+      resultados.push({
+        fonte: nome,
+        criados: 0,
+        jaExistiam: 0,
+        actualizados: 0,
+        propagacao: 'Não propagou: a fonte falhou antes disso.',
+        erro: e instanceof Error ? e.message : String(e),
+      })
     }
   }
   return resultados

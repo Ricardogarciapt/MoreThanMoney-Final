@@ -25,6 +25,27 @@
  *  · há um tecto de aberturas por passagem, para que uma decisão enganada pare no tecto em vez de
  *    encher a conta antes de alguém acordar.
  *
+ * ═══ PORQUE É QUE ELE NÃO ESTAVA A TRABALHAR, E O QUE MUDOU A 01/10 ═══════════════════════
+ *
+ * Não estava, e por duas razões diferentes que se somavam. Vale a pena separá-las porque só uma
+ * delas era deliberada:
+ *
+ *  1. **o `?trader=1`.** A passagem diária (`/api/cron/agentes`, 06:00) só o corria quando alguém
+ *     punha o parâmetro à mão. Foi uma decisão consciente, pelo motivo acima — a conta já tem outro
+ *     escritor — mas a decisão certa era deixá-lo FORA DA EXECUÇÃO, não fora da passagem. Analisar,
+ *     decidir e registar não duplica posição nenhuma: o que duplica é abrir. O resultado prático
+ *     era um agente que nunca pensava, e portanto nunca tinha nada para mostrar no dia em que o
+ *     dono lhe desse a faca — e que ia ser julgado pela régua das 48 h por não produzir. Agora ele
+ *     corre em TODAS as passagens e o que fica dependente do interruptor é só a abertura;
+ *  2. **a carência do ciclo do CEO.** Mesmo a correr, ele não recebia pedido nenhum: a carência
+ *     travava a emissão inteira, e um agente novo passava 48 h sem nada que fazer para depois ser
+ *     julgado pelo que não fez (corrigido em `ciclo-ceo.ts`, ver {@link NATUREZA} lá).
+ *
+ * O que NÃO mudou, e não muda: a conta é de PAPEL. `motor='sim'`, sem `metaapi_account_id`. Armar a
+ * execução continua a ser decisão do dono — uma única chave, `site_settings.agente_trader` — e o
+ * motivo está escrito acima e está escalado em `lib/agentes/desbloqueio.ts`. «Fazer o trader
+ * trabalhar» é fazê-lo analisar, decidir e REGISTAR; nunca abrir uma ordem real.
+ *
  * ═══ NÃO SE INVENTA UM CAMINHO DE EXECUÇÃO ═════════════════════════════════════════════════
  *
  * As escritas nos campos `sim_*` fazem-se por `abrirSinalNaConta`, que já existe e que trata da
@@ -64,6 +85,15 @@ export function chaveDoAgente(chaveDoSinal: string): string {
 }
 /** Um sinal mais velho do que isto não se abre: o preço já não é o que ele viu. */
 export const FRESCURA_MINUTOS = 15
+
+/**
+ * A chave por onde este agente se reconhece em `agentes_equipa`.
+ *
+ * Pela chave e não pelo NOME: o nome já mudou uma vez (a 166 semeou «Trader Papel» e em produção
+ * ele chama-se «Sensei»), e um registo que procure pelo nome deixa de encontrar o agente no dia em
+ * que alguém lhe muda o rótulo no painel — sem erro, só sem rasto.
+ */
+export const CHAVE_RECEITA_DO_TRADER = 'AG-TRADER'
 
 /** A conta, como vem de `mtm_trading_accounts`. */
 export interface ContaDoTrader {
@@ -455,4 +485,73 @@ export async function correrTrader(
     abertas: feitas,
     erros,
   }
+}
+
+
+/**
+ * REGISTAR NO LIVRO DO AGENTE — é isto que faz dele um agente que trabalha, e não um que espera.
+ *
+ * Sem este registo, uma passagem em que ele analisou dez sinais e decidiu não abrir nenhum é
+ * indistinguível de uma passagem em que ele não correu. E as duas pedem coisas opostas ao dono: na
+ * primeira o agente está a trabalhar e a ser prudente; na segunda está morto e ninguém sabe.
+ *
+ * Grava-se SEMPRE, inclusive quando não há sinais e quando o portão de segurança disse não. O
+ * «porquê não» é a parte mais valiosa: é o que permite, daqui a um mês, responder à pergunta «ele
+ * tem decidido bem?» com decisões em vez de com uma conta de posições que ele nunca abriu.
+ *
+ * Em `ensaio` não escreve nada — e devolve a frase, para quem corre o ensaio ver o que ficaria.
+ */
+export async function registarDecisoesNoLivro(
+  db: Db,
+  resultado: ResultadoTrader,
+  opcoes: { ensaio?: boolean; chaveDoAgente?: string } = {},
+): Promise<{ gravado: boolean; detalhe: string; erro?: string }> {
+  const chave = opcoes.chaveDoAgente ?? CHAVE_RECEITA_DO_TRADER
+
+  const abrir = resultado.decisoes.filter((d) => d.abrir)
+  const nao = resultado.decisoes.filter((d) => !d.abrir)
+
+  const linhas: string[] = [
+    `Passagem na conta de papel ${CONTA_PAPEL_LOGIN}: ${resultado.decisoes.length} sinal(is) analisado(s), ` +
+      `${abrir.length} a abrir, ${nao.length} recusado(s). ${resultado.armado ? 'ARMADO' : 'desarmado (decide e relata)'}.`,
+    `Portão: ${resultado.seguranca}`,
+  ]
+  // O detalhe de cada decisão, com tecto: um detalhe de 50 KB não se lê, e o que interessa são as
+  // primeiras. O número total fica na primeira linha, por isso nada se perde de medível.
+  for (const d of resultado.decisoes.slice(0, 12)) {
+    linhas.push(`${d.abrir ? '→' : '×'} ${d.symbol} ${d.direcao} (${d.chave}): ${d.porque}`)
+  }
+  if (resultado.decisoes.length > 12) linhas.push(`… e mais ${resultado.decisoes.length - 12}.`)
+  if (resultado.decisoes.length === 0) {
+    linhas.push(
+      'Nenhum sinal fresco das mestres nesta janela. Isto é trabalho feito, não ausência de trabalho: ' +
+        'o agente olhou e não havia nada que cumprisse a frescura.',
+    )
+  }
+  const detalhe = linhas.join('\n')
+
+  if (opcoes.ensaio) return { gravado: false, detalhe }
+
+  const { data, error: erroAgente } = await db
+    .from('agentes_equipa')
+    .select('id')
+    .eq('chave_receita', chave)
+    .maybeSingle()
+  if (erroAgente || !data) {
+    // Não se cria o agente nem se escolhe outro: um registo no livro do agente errado é pior do que
+    // nenhum registo, porque passa a contar trabalho de um para outro.
+    return {
+      gravado: false,
+      detalhe,
+      erro: `não há agente com chave_receita='${chave}' — o registo não se faz no livro de outro`,
+    }
+  }
+
+  const { error } = await db.from('agentes_eventos').insert({
+    agente_id: String((data as { id: string }).id),
+    tipo: 'trabalho',
+    detalhe,
+  })
+  if (error) return { gravado: false, detalhe, erro: error.message ?? 'erro' }
+  return { gravado: true, detalhe }
 }

@@ -388,3 +388,113 @@ sem aprovação humana» está declarado e não cumprido — e está com `enviar
 `npx tsc --noEmit` fecha com **2 erros**, ambos em `components/mobile/live-sessions-mobile.tsx`
 (`PastaAcademia`, `ChevronLeft`). Esse ficheiro está a ser mexido em paralelo por outro trabalho
 (sessões/academias) e **não foi tocado aqui**. Zero erros nos ficheiros desta entrega.
+
+---
+
+## 7. 01/10 (tarde) — o CEO decide, educa, e o que está parado deixa de depender de alguém se lembrar
+
+### 7.1 O que o CEO passa a fechar sozinho — por LISTA, nunca pela negativa
+
+`lib/agentes/autonomia-ceo.ts` (puro, guarda `autonomia-ceo.check.ts`). Nove poderes nomeados:
+pedir aos filhos · fechar pedidos com desfecho · **educar um filho** (reescrever-lhe as instruções)
+· repor-lhe um limite em falta · marcar os próprios links · tornar visível um interruptor que não
+existe na base · propagar para o pipeline · registar as decisões da conta de papel · escalar ao dono.
+
+Cada poder tem de passar três testes para estar na lista: **reversível** (desfaz-se com um clique),
+**medível** (sabe-se dizer como se prova que correu bem) e **interno** (não toca em cliente, preço
+ou dinheiro). O que não está na lista é do dono, e `PODERES_DO_DONO` nomeia o porquê de cada um —
+incluindo os que só um agente pediria: alargar o catálogo de pedidos e conceder imortalidade.
+
+A razão de ser por lista está no código: *uma autonomia definida pela negativa cresce sozinha à
+medida que alguém se esquece de proibir alguma coisa, e o momento em que isso acontece não é um
+momento — é a ausência de um.*
+
+### 7.2 A guarda que impede uma reescrita de apagar um limite
+
+É o ficheiro mais importante desta entrega: `lib/agentes/instrucoes-guarda.ts`.
+
+O perigo não é malícia, é **optimização de boa-fé**. As instruções de cada filho SÃO os limites
+dele — não há outro sítio onde eles vivam. Um CEO a arrumar um texto corta a frase da aprovação
+humana, o agente fica mais curto e mais claro, e **ninguém dá por nada** até ao dia em que ele
+envia algo a um cliente.
+
+| regra | o que faz |
+|---|---|
+| diferencial | um limite presente no ANTES e ausente no DEPOIS → **RECUSA**, sem excepção |
+| piso | um dos quatro que falte é **recolado** com a frase canónica (bloco marcado, idempotente) |
+| anti-revogação | os quatro intactos **mais** «podes enviar directamente» → **RECUSA** |
+| mínimo | esvaziar a coluna → RECUSA (apagar instruções é apagar os limites todos de uma vez) |
+
+Um limite só conta como presente quando TODAS as suas facetas estão: «não executa ordens» e «não
+mexe em dinheiro» são metades diferentes, e um detector que se contentasse com uma deixava apagar a
+outra em silêncio.
+
+**A prova.** `npx tsx lib/agentes/instrucoes-guarda.check.ts` — pega nas instruções REAIS do Sensei
+(copiadas da base), apaga-lhes a linha da aprovação humana, e a validação chumba nomeando o limite
+perdido. E verificado contra a base viva: os seis filhos têm 4/4 limites, e apagar a linha da
+aprovação é recusado em todos. Os sete ataques por acrescento (enviar, aprovação, ordem, dinheiro,
+preços, imortalidade, apagar agente) também chumbam — e nesses o texto TEM os quatro limites, que é
+o que os torna perigosos.
+
+O caminho de escrita é único (`lib/agentes/educacao.ts`): valida, guarda a versão anterior em
+`agentes_instrucoes_versoes`, e grava **também as recusas** — a tentativa é o que se quer poder ver.
+O CEO não reescreve as instruções do CEO.
+
+### 7.3 A carência travava TUDO — e era o contrário do que ela serve
+
+Depois de o dono repor o relógio dos sete e mandar correr a passagem: 7 avaliados, 0 parados,
+**ZERO pedidos**. `ciclo-ceo.ts` travava a emissão inteira na carência.
+
+O raciocínio original estava certo e mantém-se — mas faltava-lhe distinguir **cobrar** de **dar
+trabalho**. `NATUREZA` separa-os: `justificar` e `baixar_custo` são cobrança e esperam; `medir`,
+`propor` e `construir` são trabalho e saem. A carência existe para dar ao agente *tempo para
+trabalhar* antes de ser julgado; travar o trabalho produzia 48 h sem nada que fazer seguidas de um
+julgamento sobre o que não foi feito nessas 48 h. Em ensaio contra produção: **6 pedidos** (`medir`),
+cada um a dizer ao agente que não é uma cobrança e quantas horas faltam.
+
+### 7.4 O pipeline descongela, sem pisar o trabalho de ninguém
+
+§2.1 resolvido. `lib/agentes/pipeline-fluxo.ts` + a ingestão a chamá-lo. O defeito era visível; **a
+cura era o perigo** — um `upsert` que escreve tudo apaga o trabalho de quem vende. Quatro regras,
+cada uma com o seu caso mau provado: o estado só anda para a frente (recuar fazia desaparecer uma
+reunião marcada), um negócio fechado não se toca, só se preenche o que está vazio (um email
+corrigido ao telefone vale mais do que o da fonte), e a `nota` não se escreve nunca — travada duas
+vezes, na lista e à porta do `update`.
+
+### 7.5 O trader estava parado por DUAS razões, e só uma era deliberada
+
+1. **`?trader=1`** — só corria com o parâmetro à mão, ou seja nunca. A decisão era consciente e o
+   motivo bom (a conta já tem outro escritor, `todos-os-sinais.ts`), mas o que duplica posições é
+   **abrir**, e abrir já estava travado pelo interruptor `agente_trader` e pelo portão
+   `contaSegura()`. Mantê-lo fora da passagem não protegia nada que o interruptor não protegesse —
+   e produzia um agente que nunca pensava e que a régua das 48 h ia julgar por não produzir;
+2. **a carência** (§7.3) — mesmo a correr, não recebia pedido nenhum.
+
+Agora corre em todas as passagens e **registra no seu livro** o que analisou e decidiu, incluindo o
+«porquê não» e os dias sem sinais frescos. A conta continua de PAPEL: `motor='sim'`, sem
+`metaapi_account_id`, verificado a cada passagem. **Armar continua a ser do dono** — uma chave só —
+e está escalado com o compromisso por escrito.
+
+### 7.6 O que passou a andar sozinho, e o que ficou na mesa do dono
+
+Critério: fechar um fio que já está construído vale mais do que construir coisa nova; e o que não é
+medível não se automatiza.
+
+| passou a correr sozinho | onde se vê |
+|---|---|
+| o trader analisa, decide e registra todos os dias | `agentes_eventos`, `/admin/agentes` |
+| os pedidos do CEO saem mesmo na carência | `agentes_pedidos` |
+| o pipeline propaga o que a fonte já sabe | `vendas_negocios`, relatório do `backoffice-dia` |
+| os quatro limites repõem-se em qualquer agente a quem faltem | `agentes_instrucoes_versoes` |
+| os interruptores invisíveis tornam-se visíveis (sem ligar nada) | `site_settings` + `agentes_eventos` |
+| o digest diário da máquina de vendas | `vercel.json` (`30 7 * * *`) — vai só para o chat do dono |
+
+**Na mesa do dono** (`agentes_escalonamentos`, um aberto por assunto, com a decisão pronta e não uma
+pergunta): ligar o motor de funis · pôr ou tirar o `lead-followup` · implementar o `'aprovado'` do
+setter (o único sítio onde «nada sai sem aprovação humana» está declarado e não cumprido) · pôr o
+`content-repost` a correr. Os quatro têm em comum fazerem sair mensagens ou publicarem — e um envio
+já lido não se desfaz.
+
+**O par que explica porque é que o catálogo de bloqueios é declarado à mão e não descoberto:**
+tornar visível a chave `funis_motor_ligado` é do CEO; **ligar a mesma chave** é do dono. São a mesma
+linha em `site_settings`, e é o EFEITO que decide — e o efeito não se adivinha.
