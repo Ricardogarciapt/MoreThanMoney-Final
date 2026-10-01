@@ -210,3 +210,22 @@ no Zoho» até estar mesmo a entregar.
 outro copiam cada mensagem em volta até um servidor cortar, e servidores que cortam ciclos marcam o
 domínio inteiro — incluindo a recuperação de password dos clientes. `lib/correio/caixas.ts` recusa,
 e `caixas.check.ts` prova que recusa, incluindo com o domínio escrito em maiúsculas.
+
+### As credenciais, ligadas (01/10/2026)
+
+Self Client criado em api-console.zoho.eu com os scopes
+`ZohoMail.organization.accounts.ALL`, `ZohoMail.organization.domains.READ`, `ZohoMail.accounts.ALL`.
+As cinco variáveis estão na Vercel (Production) e o deploy foi refeito para as apanhar.
+
+Dois tropeções que ficam registados para ninguém os repetir:
+
+1. **A descrição do Self Client recusa pontuação.** `>` e `/` dão «Enter a valid description» sem
+   dizer porquê. Texto simples passa.
+2. **`GET /api/organization` devolve `INVALID_OAUTHSCOPE`** mesmo com o scope de contas — é a
+   chamada que a documentação indica para descobrir o `zoid`. O `zoid` desta casa (`20119974605`)
+   tirou-se do painel: Admin Console → Organização → ID da organização.
+
+Confirmado a correr de verdade: `GET /api/organization/20119974605/accounts` → `status.code 200`,
+uma conta (`geral@morethanmoney.pt`, accountId `186965000000002002`, zuid `20119973477`), já
+gravados em `correio_caixas`. Criar conta e ligar reencaminhamento **ainda não foram vistos a
+correr** — está dito em `lib/correio/zoho.ts`.

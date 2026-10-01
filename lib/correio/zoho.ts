@@ -1,13 +1,18 @@
 /**
  * O CLIENTE DA API DO ZOHO MAIL.
  *
- * ═══ NADA AQUI FOI INVENTADO, E NADA AQUI FOI OBSERVADO ════════════════════════════════════
+ * ═══ O QUE FOI VISTO A CORRER, E O QUE NÃO FOI ═════════════════════════════════════════════
  *
- * Os caminhos e os corpos vêm da documentação do Zoho, citada em cada função. Mas **nenhuma destas
- * chamadas foi vista a correr de verdade** — quando isto foi escrito (30/09/2026) não existiam
- * credenciais de API nesta casa. A documentação de qualquer fornecedor mente por omissão: um campo
- * obrigatório que não está na lista, um `zoid` que afinal vem noutro sítio, uma resposta 200 com o
- * erro lá dentro.
+ * **Observado a 01/10/2026, com credenciais reais:** a troca do código por refresh token e o
+ * `GET /api/organization/{zoid}/accounts`, que devolveu `{"status":{"code":200}}` e a conta
+ * `geral@morethanmoney.pt`. **Ainda não observados:** criar conta e ligar reencaminhamento — as
+ * duas que escrevem. Os corpos dessas vêm da documentação, e a documentação de qualquer fornecedor
+ * mente por omissão.
+ *
+ * E já mentiu aqui: a documentação manda ir buscar o `zoid` a `GET /api/organization`, e essa
+ * chamada devolve `INVALID_OAUTHSCOPE` mesmo com `ZohoMail.organization.accounts.ALL` — precisa de
+ * outro scope. O `zoid` tirou-se do painel (Organização → ID da organização) e vive na variável
+ * `ZOHO_MAIL_ZOID`. Quem for acrescentar funções: confirma contra a API, não contra a página.
  *
  * Por isso este ficheiro faz três coisas em vez de duas:
  *  · chama;
@@ -16,8 +21,8 @@
  *  · devolve o corpo em bruto no erro, para quem estiver a ver os registos perceber o que o
  *    fornecedor realmente disse em vez de ler «falhou».
  *
- * A primeira chamada real que correr manda mais do que este comentário. Se discordar da
- * documentação, é a documentação que está errada.
+ * Regra: a chamada real manda mais do que este comentário. Se discordar da documentação, é a
+ * documentação que está errada.
  *
  * ═══ AS CREDENCIAIS ════════════════════════════════════════════════════════════════════════
  *
