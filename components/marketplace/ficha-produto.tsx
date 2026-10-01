@@ -65,6 +65,12 @@ export default function FichaProduto({ slug }: { slug: string }) {
   // existe na galeria deixava a ficha sem imagem nenhuma.
   const [activa, setActiva] = useState(0)
   const [email, setEmail] = useState("")
+  /**
+   * OPCIONAL, SEMPRE. Pede-se porque esta casa quase não tem telefones — 13% dos perfis a
+   * 01/10/2026 — e é por aqui que entra quem ainda não é cliente. Mas não se obriga: obrigar um
+   * telefone num checkout corta vendas, e trocar uma venda por um contacto é um mau negócio.
+   */
+  const [telefone, setTelefone] = useState("")
   const [cupao, setCupao] = useState("")
   const [referral, setReferral] = useState("")
   const [aComprar, setAComprar] = useState(false)
@@ -97,7 +103,7 @@ export default function FichaProduto({ slug }: { slug: string }) {
         headers: { "Content-Type": "application/json" },
         // `email` só vai quando não há sessão: com sessão, quem compra é quem está autenticado e o
         // servidor ignora o que vier no corpo — a identidade nunca vem do pedido.
-        body: JSON.stringify({ produtoId: produto.id, cupao, referral, email }),
+        body: JSON.stringify({ produtoId: produto.id, cupao, referral, email, telefone }),
       })
       const j = await r.json()
       // Um produto da casa que mantém o caminho de compra antigo devolve `externo`.
@@ -268,6 +274,25 @@ export default function FichaProduto({ slug }: { slug: string }) {
                     />
                     {erro?.campo === "email" && <span className="mt-1 block text-xs text-red-300">{erro.texto}</span>}
                   </label>
+                  <label className="block">
+                    <span className="text-xs text-zinc-400">Telemóvel (opcional)</span>
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      value={telefone}
+                      onChange={(e) => setTelefone(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                      placeholder="912 345 678"
+                    />
+                  </label>
+                  {/* O MOTIVO À FRENTE. Um campo de telefone sem explicação num checkout parece
+                      recolha para vender a alguém, e as pessoas não o preenchem — com razão. Com o
+                      motivo escrito, preenchem. */}
+                  <p className="text-[11px] leading-relaxed text-zinc-500">
+                    O telemóvel serve só para te avisarmos se houver algum problema com o teu acesso.
+                  </p>
+
                   <p className="text-[11px] leading-relaxed text-zinc-500">
                     Criamos-te a conta com este email e enviamos-te o acesso depois do pagamento.{" "}
                     <Link href={`/login?redirect=/marketplace/${p.slug}`} className="text-[#D2A63C] hover:underline">

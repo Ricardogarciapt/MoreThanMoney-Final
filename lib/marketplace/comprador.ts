@@ -68,6 +68,21 @@
 
 import { createHash, randomBytes } from 'crypto'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { normalizarE164 } from '@/lib/whatsapp-envio'
+
+/**
+ * O número, pronto a usar — ou nada.
+ *
+ * Usa o `normalizarE164` que já existe e já tem guarda, em vez de uma segunda limpeza aqui: dois
+ * normalizadores do mesmo número acabam a discordar, e discordam no caso difícil (o número sem
+ * indicativo, o `00` à cabeça, o que vem com parênteses de uma lista escrita à mão).
+ *
+ * Um número que não passa não é um erro para a pessoa: ela está a comprar, não a preencher um
+ * cadastro. Guarda-se o que serve e ignora-se o que não serve, em silêncio.
+ */
+function telefoneUtilizavel(bruto: string | null | undefined): string | null {
+  return normalizarE164(bruto).e164
+}
 
 /** O email como se compara e se grava. Minúsculas, sem espaços. */
 export function emailNormalizado(bruto: unknown): string {
@@ -167,6 +182,17 @@ async function ultrapassouOLimite(ip: string | null): Promise<boolean> {
 export async function contaDoComprador(entrada: {
   email: string
   nome?: string | null
+  /**
+   * OPCIONAL, e é aqui que a maior parte dos telefones desta casa vai passar a entrar.
+   *
+   * Medido a 01/10/2026: 13% dos perfis têm telefone. O `/register` pede-o e é obrigatório, mas o
+   * marketplace — que é por onde entra quem ainda não é cliente — não pedia nada além do email. Um
+   * pipeline sem telefones é um pipeline que não se trabalha ao telefone.
+   *
+   * Nunca obrigatório: obrigar um telefone num checkout corta vendas, e o objectivo é ter mais
+   * contactos, não menos compras.
+   */
+  telefone?: string | null
   /** O IP de quem pediu. Só serve para o limite abaixo — nunca é guardado em claro. */
   ip?: string | null
 }): Promise<ContaDoComprador | null> {
@@ -182,7 +208,31 @@ export async function contaDoComprador(entrada: {
     .ilike('email', email)
     .limit(1)
     .maybeSingle()
-  if (existente?.id) return { userId: existente.id as string, email, criada: false }
+  if (existente?.id) {
+    /**
+     * Um perfil que já existe não se toca — com uma excepção: se ele não tem telefone e a pessoa
+     * acabou de o escrever, grava-se. Deitar fora um contacto que alguém acabou de dar à mão para
+     * respeitar uma regra de «não tocar» era respeitar a regra e perder o que ela protege.
+     *
+     * Só preenche o que está VAZIO. Nunca substitui um número que já lá estava: o que está no
+     * perfil foi confirmado alguma vez, e o deste formulário pode ser um engano de teclado.
+     */
+    const tel = telefoneUtilizavel(entrada.telefone)
+    if (tel) {
+      const { data: perfil } = await db
+        .from('profiles').select('phone, whatsapp').eq('id', existente.id).maybeSingle()
+      const temPhone = String((perfil as { phone?: string } | null)?.phone ?? '').trim()
+      const temWa = String((perfil as { whatsapp?: string } | null)?.whatsapp ?? '').trim()
+      if (!temPhone || !temWa) {
+        await db.from('profiles').update({
+          ...(temPhone ? {} : { phone: tel }),
+          ...(temWa ? {} : { whatsapp: tel }),
+          updated_at: new Date().toISOString(),
+        }).eq('id', existente.id)
+      }
+    }
+    return { userId: existente.id as string, email, criada: false }
+  }
 
   /**
    * O LIMITE POR IP — decisão do dono, 30/09/2026.
@@ -249,6 +299,11 @@ export async function contaDoComprador(entrada: {
       user_type: 'member',
       is_active: true,
       checkout_source: 'marketplace',
+      // Os dois campos, com o mesmo número: `phone` é o que o pipeline lê e `whatsapp` é o que o
+      // mensageiro lê. Ter um e não o outro fazia o contacto existir para metade da casa.
+      ...(telefoneUtilizavel(entrada.telefone)
+        ? { phone: telefoneUtilizavel(entrada.telefone), whatsapp: telefoneUtilizavel(entrada.telefone) }
+        : {}),
       profile_data: {
         marketplace: {
           comprador: true,

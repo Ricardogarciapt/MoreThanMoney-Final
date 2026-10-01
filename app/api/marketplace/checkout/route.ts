@@ -1,7 +1,7 @@
 /**
  * COMPRAR UM PRODUTO DO MARKETPLACE.
  *
- * POST { produtoId, email? } → { url } (sessão Stripe Checkout)
+ * POST { produtoId, email?, telefone? } → { url } (sessão Stripe Checkout)
  *                            → { externo: url } quando o produto da casa usa o caminho de compra ANTIGO
  *
  * ── COMPRAR NÃO EXIGE LOGIN ───────────────────────────────────────────────────────────────
@@ -142,7 +142,14 @@ export async function POST(request: NextRequest) {
       // O IP vai para o limite de criações (ver `contaDoComprador`). `x-forwarded-for` traz a
       // cadeia inteira em proxy; o primeiro é o cliente.
       const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || request.headers.get('x-real-ip')
-      const conta = await contaDoComprador({ email, nome: corpo?.nome ?? null, ip })
+      const conta = await contaDoComprador({
+        email,
+        nome: corpo?.nome ?? null,
+        // Opcional: um número que não sirva é ignorado em silêncio e a compra segue. Travar uma
+        // venda por causa de um telefone mal escrito seria trocar dinheiro por um contacto.
+        telefone: typeof corpo?.telefone === 'string' ? corpo.telefone : null,
+        ip,
+      })
       if (!conta) {
         return NextResponse.json(
           {
@@ -214,6 +221,7 @@ export async function POST(request: NextRequest) {
         produtoId: produto.id,
         userId: quem.userId,
         email: quem.email,
+        telefone: typeof corpo?.telefone === 'string' ? corpo.telefone : null,
         origem: 'checkout_externo',
         contexto: { destino: externo },
       })
@@ -357,6 +365,7 @@ export async function POST(request: NextRequest) {
       produtoId: produto.id,
       userId: quem.userId,
       email: quem.email,
+      telefone: typeof corpo?.telefone === 'string' ? corpo.telefone : null,
       referencia: checkout.id,
       origem: 'stripe',
       contexto: {

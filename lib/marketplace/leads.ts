@@ -47,6 +47,12 @@ export async function registarPasso(entrada: {
   produtoId?: string | null
   userId?: string | null
   email?: string | null
+  /**
+   * O telemóvel, quando a pessoa o deu. Guarda-se AQUI e não só no perfil porque o funil tem de
+   * guardar o contacto de quem **não** chegou a comprar — e esse é precisamente o que vale a pena
+   * telefonar. Quem compra fica com perfil; quem desiste a meio só existe nesta tabela.
+   */
+  telefone?: string | null
   /** O id da sessão Stripe. É o que liga 'iniciou_checkout' a 'pagou'. */
   referencia?: string | null
   origem?: string | null
@@ -58,6 +64,7 @@ export async function registarPasso(entrada: {
       produto_id: entrada.produtoId ?? null,
       user_id: entrada.userId ?? null,
       email: entrada.email ?? null,
+      telefone: entrada.telefone ?? null,
       referencia: entrada.referencia ?? null,
       origem: entrada.origem ?? null,
       contexto: entrada.contexto ?? {},
