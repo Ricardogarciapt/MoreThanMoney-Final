@@ -29,7 +29,7 @@ const STRIP = [
   "Tap to Trade", "MTM Copy", "Sensei", "GoldKiller", "MTM Aurum Flow Cripto", "MTM Scanner", "Alertas MTM",
   "Terminal com IA", "Portefólios cripto", "DCA inteligente", "Bootcamp 30h", "Certificação oficial",
   "Sessões ao vivo", "Feed da comunidade", "Mentor de IA", "Criadores UGC", "Parcerias IB",
-  "Marca pessoal", "Social Media e UGC", "Mindset e Liderança", "Ações e ETF",
+  "Marca pessoal", "Social Media e UGC", "Faceless Marketing", "Mindset e Liderança", "Ações e ETF",
   "Estúdio MTM Social", "Convida e ganha",
 ]
 
@@ -146,13 +146,13 @@ const AREAS: Area[] = [
     p: "markets",
     t: "Forex e metais", edu: "Ricardo Garcia",
     d: "Regressão de tendências e scanners, ao vivo. É a divisão mais cheia da casa: quatro salas, das básicas à mentoria VIP, e gravações organizadas em curso para quem falta.",
-    meta: ["4 salas", "7 horários por semana", "gravações"], href: "/live-sessions",
+    meta: ["4 salas", "7 horários por semana", "gravações"], href: "/mtmmarkets",
   },
   {
     p: "markets",
     t: "Criptomoedas", edu: "Ruben Pereira",
     d: "Três salas próprias — DCA com MTM, Império Cripto e Live Trading Cripto — ligadas aos portefólios e à análise de reforço mensal que corre no site.",
-    meta: ["3 salas", "2 horários por semana", "gravações"], href: "/live-sessions",
+    meta: ["3 salas", "2 horários por semana", "gravações"], href: "/mtmmarkets",
   },
   {
     p: "markets",
@@ -171,13 +171,19 @@ const AREAS: Area[] = [
     p: "content",
     t: "Social Media e UGC", edu: "MTM Social Media & UGC",
     d: "Marca pessoal e conteúdo: como começar nas redes e como produzir. Tens ainda o estúdio MTM Social para fazeres as tuas peças com a tua marca, e um canal só desta conversa.",
-    meta: ["aulas ao vivo", "1 horário por semana", "estúdio MTM Social"], href: "/live-sessions",
+    meta: ["aulas ao vivo", "1 horário por semana", "estúdio MTM Social"], href: "/contentbussiness",
+  },
+  {
+    p: "content",
+    t: "Faceless Marketing", edu: "Maria Mafalda Costa",
+    d: "Construir e vender sem mostrar a cara. Marca, conteúdo e vendas para quem não quer — ou não pode — expor-se. A She Is Faceless Academy tem sala própria e o curso está no marketplace.",
+    meta: ["sala própria", "curso no marketplace", "gravações"], href: "/contentbussiness",
   },
   {
     p: "content",
     t: "Mindset e Liderança", edu: "MTM Mindset & Liderança",
     d: "A cabeça, a disciplina e a forma de conduzir pessoas — e esta abre-se sem pagar nada.",
-    meta: ["aulas ao vivo", "acesso livre", "gravações"], href: "/live-sessions",
+    meta: ["aulas ao vivo", "acesso livre", "gravações"], href: "/contentbussiness",
   },
   {
     p: "content",

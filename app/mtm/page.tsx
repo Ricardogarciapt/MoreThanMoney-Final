@@ -65,14 +65,14 @@ type MtmPilar = "markets" | "content"
  * uma academia só. Quando o Fitness voltar, abre-se o MTM Life e o Mindset e Liderança vai com
  * ele — não se põe o Fitness no Content, que seria arrumá-lo à nossa conveniência.
  */
-const MTM_PILARES: Array<{ id: MtmPilar; nome: string; def: string; mais: string[] }> = [
+const MTM_PILARES: Array<{ id: MtmPilar; nome: string; def: string; mais: string[]; href: string }> = [
   {
-    id: "markets", nome: "MTM Markets",
+    id: "markets", nome: "MTM Markets", href: "/mtmmarkets",
     def: "Os mercados e o dinheiro: aprender a operá-los, e as ferramentas que os operam por ti quando não podes estar.",
     mais: ["Sinais e Tap to Trade", "MTM Copy", "Quatro scanners", "Terminal com IA", "Portefólios e DCA", "Alertas MTM", "MTM Auto", "MTM Funded", "Certificação"],
   },
   {
-    id: "content", nome: "MTM Content & Business",
+    id: "content", nome: "MTM Content & Business", href: "/contentbussiness",
     def: "Construir audiência e construir negócio: marca pessoal, conteúdo, e as formas de ganhar aqui sem abrir uma ordem.",
     mais: ["Programa de criadores", "Convida e ganha", "Parceria IB", "Material de marketing", "Vagas na equipa", "Estúdio MTM Social (na app)"],
   },
@@ -108,6 +108,12 @@ const MTM_AREAS: Array<{ p: MtmPilar; t: string; edu: string | null; ini: string
     t: "Social Media e UGC", edu: "MTM Social Media & UGC", ini: "SM",
     d: "Marca pessoal e conteúdo: como começar nas redes e como produzir. Tens ainda o estúdio MTM Social para fazeres as tuas peças com a tua marca.",
     meta: ["aulas ao vivo", "1 horário por semana", "estúdio MTM Social"],
+  },
+  {
+    p: "content",
+    t: "Faceless Marketing", edu: "Maria Mafalda Costa", ini: "MC",
+    d: "Construir e vender sem mostrar a cara. Marca, conteúdo e vendas para quem não quer — ou não pode — expor-se. A She Is Faceless Academy entrou na casa com sala própria e curso no marketplace.",
+    meta: ["sala própria", "curso no marketplace", "gravações"],
   },
   {
     p: "content",
@@ -647,10 +653,17 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
                     <h3 className="text-2xl md:text-4xl font-bold text-white">{pil.nome}</h3>
                   </div>
                   <p className="mt-3 max-w-3xl text-gray-400">{pil.def}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
                     <span className="rounded-full border border-gray-700 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-gray-500">
                       {areas.length} áreas
                     </span>
+                    {/* A porta do pilar. Lá dentro, cada educador tem ligação directa à sala. */}
+                    <Link
+                      href={pil.href}
+                      className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-[#D2A63C]/40 px-4 py-2 text-sm text-[#eccb78] transition-colors hover:bg-[#D2A63C]/10"
+                    >
+                      Entrar em {pil.nome}
+                    </Link>
                   </div>
 
                   <div className="mt-8 grid md:grid-cols-2 gap-5">

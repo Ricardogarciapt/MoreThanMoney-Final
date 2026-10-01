@@ -77,7 +77,10 @@ export const DESTINOS_NAVEGACAO: DestinoNavegacao[] = [
   // «Academias e Lives» e não «Live Sessions»: o que lá está são as academias dos educadores, e as
   // lives são uma parte delas. O nome antigo prometia só metade do que a página tem.
   { id: 'live-sessions', href: '/live-sessions', chave: 'navfooter.subLiveSessions', rotuloPt: 'Academias e Lives', grupo: 'educacao', comoUsar: 'as academias e as sessões ao vivo' },
-  // O pilar de conteúdo e negócio digital: Social Media, UGC, Faceless Marketing e mentalidade.
+  // Os DOIS pilares, lado a lado e pela mesma ordem em que a /mtm e a /new-landing os contam.
+  // Separá-los era o erro antigo: o Content tinha página própria e o Markets não, o que fazia
+  // parecer que o pilar maior da casa não existia.
+  { id: 'mtm-markets', href: '/mtmmarkets', chave: 'navfooter.subMtmMarkets', rotuloPt: 'MTM Markets', grupo: 'educacao', comoUsar: 'o pilar dos mercados: Forex, cripto, ações e ETF, imobiliário' },
   { id: 'content-business', href: '/contentbussiness', chave: 'navfooter.subContentBusiness', rotuloPt: 'Content & Business', grupo: 'educacao', comoUsar: 'o pilar de conteúdo e negócio digital' },
   { id: 'avaliacoes', href: '/avaliacoes', chave: 'navfooter.subAvaliacoes', rotuloPt: 'Avaliações', grupo: 'educacao', comoUsar: 'as avaliações e certificados' },
 
