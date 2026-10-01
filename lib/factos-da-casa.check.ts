@@ -11,6 +11,7 @@
  *  · o preço com campanha a ficar congelado quando a campanha mudar;
  *  · uma área nova em `lib/pilares.ts` que o bot nunca chega a conhecer.
  */
+import { TRIAL_DAYS } from './trial-access'
 import { AREAS } from './pilares'
 import {
   AGENTES_POR_PILAR,
@@ -111,6 +112,16 @@ const factos = factosDaCasa()
   teste('as regras falam de pips', /PIPS/.test(REGRAS_DA_CASA))
   teste('as regras mandam dizer que não sabe', /não sabes/.test(REGRAS_DA_CASA))
   teste('as regras fixam o português de Portugal', /Portugal/.test(REGRAS_DA_CASA))
+}
+
+// ── O TRIAL SÃO TRÊS DIAS ───────────────────────────────────────────────────
+{
+  /**
+   * Uma passagem de 01/10 leu o nome do cupão (`14DayTrial`) e concluiu catorze dias. É plausível
+   * e é falso — a duração está em `TRIAL_DAYS` e os emails de onboarding dizem três em todos os
+   * idiomas. O bot chegou a prometer a leads reais uma condição que a casa não dá.
+   */
+  teste('o trial são 3 dias, não os do nome do cupão', TRIAL_DAYS === 3)
 }
 
 if (falhas.length) {

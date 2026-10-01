@@ -4,15 +4,20 @@ import { modeloClaude } from '@/lib/modelo-claude'
 /**
  * A VISÃO DA CASA e a duração do teste vêm de quem as manda.
  *
- * Este follow-up falava de «3 dias grátis» — o cupão da casa chama-se `14DayTrial`, e é ele que o
- * site honra. O bot estava a prometer menos do que a casa dá, e com um número que não existia em
- * sítio nenhum. Agora o número é derivado do cupão, e a visão da casa vem de `lib/factos-da-casa.ts`.
+ * O TRIAL SÃO TRÊS DIAS, e o nome do cupão não decide isso.
+ *
+ * Uma passagem anterior leu `14DayTrial` e concluiu catorze. É plausível e é falso: o cupão
+ * chama-se assim por história, e a duração a sério está em `lib/trial-access.ts` (`TRIAL_DAYS = 3`)
+ * — a mesma que os emails de onboarding dizem em todos os idiomas e que o checkout aplica.
+ *
+ * Por isso o número vem da CONSTANTE e nunca do nome. Derivar uma duração de um texto é o tipo de
+ * inferência que soa bem e põe o bot a prometer a leads reais uma condição que a casa não dá.
  */
-import { TRIAL_CODE } from '@/lib/telegram-broker-gate'
+import { TRIAL_DAYS } from '@/lib/trial-access'
 import { contextoDaCasa } from '@/lib/factos-da-casa'
 
 /** Os dias do teste, lidos do nome do cupão que o liberta. Um número inventado já aqui esteve. */
-const TRIAL_DIAS = Number(TRIAL_CODE.match(/^(\d+)/)?.[1] ?? 14)
+const TRIAL_DIAS = TRIAL_DAYS
 
 /**
  * FOLLOW-UP de reativação de leads mornos no funil do Telegram (ManyChat Essential — nativo).
