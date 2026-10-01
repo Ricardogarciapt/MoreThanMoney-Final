@@ -29,10 +29,27 @@ export type FiltroContas = 'minhas' | 'mestres' | 'todas'
 
 export const FILTRO_POR_OMISSAO: FiltroContas = 'minhas'
 
-/** O mínimo que esta lógica precisa de saber de uma entrada do seletor. */
+/**
+ * O mínimo que esta lógica precisa de saber de uma entrada do seletor.
+ *
+ * `minha` nasceu porque «mestre» e «minha» NÃO são lados opostos (01/10). Até aqui calculava-se
+ * `minhas = total − mestres` e filtrava-se por `Boolean(mestre) === querMestres`: uma conta mestre
+ * nunca podia ser minha. As duas contas de portefólio do dono são as duas coisas — `tipo =
+ * 'provider'` (mestres para quem as segue) e capital dele — e por isso o capital dele não aparecia
+ * em «As minhas». Quem responde à pergunta é `ehContaMinha` em lib/mtmfunded/contas-da-casa.ts.
+ *
+ * `minha` em falta (`undefined`) continua a querer dizer «o contrário de mestre»: é o que todas as
+ * outras contas sempre foram, e assim nenhuma chamada antiga muda de comportamento.
+ */
 export interface EntradaFiltravel {
   id: string
   mestre?: boolean | null
+  minha?: boolean | null
+}
+
+/** «Esta entrada é minha?» — com a regra de omissão num sítio só, para os três usos abaixo. */
+export function entradaEhMinha(e: EntradaFiltravel): boolean {
+  return e.minha == null ? !e.mestre : e.minha === true
 }
 
 /**
@@ -44,6 +61,8 @@ export interface EntradaFiltravel {
 export {
   ehContaDaCasa,
   ehContaMestre,
+  ehContaMinha,
+  ehContaPortefolioDaCasa,
   normalizarEscopo,
   ESCOPO_POR_OMISSAO,
   type EscopoContas,
@@ -61,7 +80,7 @@ export function normalizarFiltro(bruto: unknown): FiltroContas {
  * gente é uma linha a menos.
  */
 export function temDoisTipos(entradas: EntradaFiltravel[]): boolean {
-  return entradas.some((e) => e.mestre) && entradas.some((e) => !e.mestre)
+  return entradas.some((e) => e.mestre) && entradas.some((e) => entradaEhMinha(e))
 }
 
 /**
@@ -76,14 +95,25 @@ export function filtrarEntradas<T extends EntradaFiltravel>(
 ): T[] {
   // Sem os dois tipos não há filtro no ecrã — e o que está guardado não pode esconder nada.
   if (filtro === 'todas' || !temDoisTipos(entradas)) return entradas
-  const querMestres = filtro === 'mestres'
-  return entradas.filter((e) => Boolean(e.mestre) === querMestres || e.id === escolhida)
+  // Cada botão PERGUNTA pelo seu lado em vez de negar o outro: uma conta que é mestre E minha
+  // (as carteiras de portefólio do dono) fica nas duas listas, que é o que ele pediu.
+  const cabe = filtro === 'mestres' ? (e: EntradaFiltravel) => Boolean(e.mestre) : entradaEhMinha
+  return entradas.filter((e) => cabe(e) || e.id === escolhida)
 }
 
-/** Quantas contas de cada lado — o número que vai a seguir ao nome de cada botão do filtro. */
+/**
+ * Quantas contas de cada lado — o número que vai a seguir ao nome de cada botão do filtro.
+ *
+ * `minhas + mestres` pode dar MAIS do que `todas`, e está certo: as contas de portefólio contam
+ * nos dois botões porque aparecem nas duas listas. Um número que não batesse com a lista que o
+ * botão abre era pior do que um número que não soma com o vizinho.
+ */
 export function contarPorTipo(entradas: EntradaFiltravel[]): { minhas: number; mestres: number; todas: number } {
-  const mestres = entradas.filter((e) => e.mestre).length
-  return { minhas: entradas.length - mestres, mestres, todas: entradas.length }
+  return {
+    minhas: entradas.filter((e) => entradaEhMinha(e)).length,
+    mestres: entradas.filter((e) => e.mestre).length,
+    todas: entradas.length,
+  }
 }
 
 /**

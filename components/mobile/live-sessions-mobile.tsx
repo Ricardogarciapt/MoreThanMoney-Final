@@ -32,6 +32,7 @@ import { handleLiveChatEnterKey } from "@/lib/live-chat"
 import { enterLiveFullscreen } from "@/lib/live-player-viewport"
 import { useLmsHlsVideo } from "@/hooks/use-lms-hls-video"
 import { usePictureInPictureSupported } from "@/hooks/use-picture-in-picture-supported"
+import { cadenciaDeRefresco, sessaoAGuardar } from "@/lib/live/refresco-da-sessao"
 import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
 import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
@@ -383,22 +384,22 @@ export default function LiveSessionsMobile({
 
   const refreshModal = useCallback(async () => {
     if (!selectedId) return
+    const cabecalhos = await authHeaders()
     const [streamRes, msgRes] = await Promise.all([
-      fetch(`/api/live-sessions/streams/${selectedId}`, { headers: await authHeaders() }).then((r) => r.json()),
-      fetch(`/api/live-sessions/streams/${selectedId}/messages`).then((r) => r.json()),
+      fetch(`/api/live-sessions/streams/${selectedId}`, { headers: cabecalhos }).then((r) => r.json()),
+      // As mensagens também vão com sessão: a sala passou a ser fechada por direito de acesso, e
+      // sem cabeçalhos um webview sem cookie via o chat EM BRANCO numa sala paga.
+      fetch(`/api/live-sessions/streams/${selectedId}/messages`, { headers: cabecalhos }).then((r) => r.json()),
     ])
-    setStream(streamRes.data || null)
+    /**
+     * Guarda-se a sessão ANTIGA quando nada do que importa mudou. Substituí-la por um objecto
+     * novo com os mesmos valores remontava o leitor, e o vídeo voltava ao princípio — era isto
+     * que interrompia quem estava a ver uma aula.
+     */
+    setStream((anterior) => sessaoAGuardar(anterior, streamRes.data || null))
     setMessages(msgRes.data || [])
   }, [selectedId])
 
-  useEffect(() => {
-    if (!open || !selectedId) return
-    const { stream } = (window as any).__mtm_state || { stream: null }
-    const isLive = Boolean(stream?.is_live)
-    const interval = isLive ? 15000 : 5000
-    const id = setInterval(refreshModal, interval)
-    return () => clearInterval(id)
-  }, [open, selectedId, refreshModal])
 
   useEffect(() => {
     const onFs = () => setIsNativeFullscreen(Boolean(document.fullscreenElement))
@@ -460,6 +461,23 @@ export default function LiveSessionsMobile({
   const isLive = Boolean(stream?.is_live)
   const useHls = Boolean(hlsUrl && (stream?.is_live || !stream?.playback_url))
   const { viewerCount } = useLmsViewerHeartbeat(selectedId, Boolean(open && selectedId && isLive))
+
+  useEffect(() => {
+    if (!open || !selectedId) return
+    /**
+     * A cadência vem do estado REAL da sessão, não de `window.__mtm_state` — um objecto que não
+     * existe em lado nenhum do repositório e que, por nunca existir, deixava isto sempre nos 5
+     * segundos: a cadência mais rápida das duas, aplicada justamente ao caso em que nada muda.
+     * Numa gravação a resposta é não voltar a perguntar.
+     */
+    const cadencia = cadenciaDeRefresco({
+      aoVivo: Boolean(stream?.is_live),
+      temGravacao: Boolean(stream?.playback_url || hlsUrl),
+    })
+    if (cadencia === null) return
+    const id = setInterval(refreshModal, cadencia)
+    return () => clearInterval(id)
+  }, [open, selectedId, refreshModal, stream?.is_live, stream?.playback_url, hlsUrl])
   useLmsHlsVideo(videoRef, useHls ? hlsUrl : null)
 
   const iframePlaybackUrl = useMemo(() => {

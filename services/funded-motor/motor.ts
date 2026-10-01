@@ -339,6 +339,17 @@ async function carregarContas(): Promise<void> {
     .select(COLUNAS_CONTA)
     .eq('motor', 'sim')
     .eq('estado', 'ativa')
+    /**
+     * AS CARTEIRAS DO DONO FICAM DE FORA (173).
+     *
+     * `PORTF-CRIPTO` e `PORTF-ETF` não têm posições em `funded_positions` — a carteira delas vive
+     * em `portefolio_movimentos`. O motor, ao processá-las, concluía equity = saldo (zero posições)
+     * e REESCREVIA `sim_equity` com o saldo: apagava o valor de mercado verdadeiro que a
+     * reconstituição ali gravou (4 598 $ na Cripto) e punha a conta a dizer que está a zero quando
+     * está 2 632 $ abaixo. Já o fez em `metricas.equity`, que está a 7 230 ao lado de
+     * `metricas.valor` a 4 598. Nada aqui tem de correr sobre uma conta que não negoceia.
+     */
+    .not('conta_portefolio', 'is', true)
     .limit(5000)
   if (error) throw new Error(`contas: ${error.message}`)
   const ids = (cs ?? []).map((c) => (c as unknown as { id: string }).id)

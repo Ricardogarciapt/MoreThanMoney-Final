@@ -15,7 +15,8 @@
  *
  * Puro: sem React, sem browser — testado em lib/webtrader/__tests__/entrada.check.ts.
  */
-import { ehContaMestre } from './filtro-contas'
+import { ehContaMestre, ehContaMinha, ehContaPortefolioDaCasa } from './filtro-contas'
+import { ehContaRealDaCasa } from '../mtmfunded/conta-real-casa'
 
 export type PlataformaSeletor = 'mtmfunded' | 'tradelocker' | 'mt5'
 
@@ -42,6 +43,15 @@ export interface FundedDoUtilizador {
   mestreDe?: { slug: string; nome: string } | null
   /** 'investor' = conta de outra pessoa ligada com a password investor — abre só para ver. */
   modo?: 'master' | 'investor'
+  /**
+   * As marcas da LINHA, como a base as tem — a rota do seletor devolve a conta inteira (`...c`).
+   * São elas que decidem «esta conta é minha?», «leva crachá Real?» e «é uma carteira?»; o seletor
+   * não as reinventa (lib/mtmfunded/contas-da-casa.ts e conta-real-casa.ts).
+   */
+  conta_casa?: boolean | null
+  conta_real_casa?: boolean | null
+  conta_portefolio?: boolean | null
+  recolhe_todos_sinais?: boolean | null
 }
 
 export interface SessaoFunded { accountId: string; login: string; etiqueta?: string; estadoCurto?: string; aviso?: string; modo: 'master' | 'investor' }
@@ -91,11 +101,23 @@ export interface EntradaSeletor {
    * para a pessoa negociar. O filtro do seletor esconde-as por omissão (lib/webtrader/filtro-contas.ts).
    */
   mestre: boolean
+  /**
+   * 01/10 — a conta é do CAPITAL de quem está a olhar. Nasceu separada de `mestre` porque as duas
+   * carteiras de portefólio do dono são as duas coisas: mestres (`tipo = 'provider'`) e dele.
+   * Ver `ehContaMinha` em lib/mtmfunded/contas-da-casa.ts.
+   */
+  minha: boolean
+  /**
+   * 01/10 — conta REAL da casa (109, `conta_real_casa`): é ela que troca o crachá dourado
+   * «Funded» por «Real». Nome por extenso para não se confundir com `real`, logo abaixo, que é
+   * uma conta na CORRETORA da pessoa (TradeLocker/MT5) e é outra coisa.
+   */
+  contaRealDaCasa?: boolean
   real?: ContaRealSeletor
 }
 
 /**
- * O TEXTO DA PASTILHA DOURADA de uma conta MTM Funded — «Funded · Wolf», «F1», «Torneio · Sensei».
+ * O TEXTO DA PASTILHA DOURADA de uma conta MTM Funded — «Real», «Funded · Wolf», «F1», «Torneio».
  *
  * Porque é que isto não é só `etiqueta`: a fase vem de `lib/mtmfunded/etiquetas.ts::tipoCurto`, que
  * não conhece o tipo `provider` (as mestres) e o deixa cair no ramo das fases — uma mestre saía
@@ -103,10 +125,15 @@ export interface EntradaSeletor {
  * ficheiro existe IGUAL na app MTM Auto e está preso pela paridade entre repositórios. A correcção
  * vive aqui, no seletor, que é quem sabe o que é uma mestre (`mestre: true`).
  *
+ * 01/10 — «REAL» ANTES DE «FUNDED», e só nas contas com `conta_real_casa = true` (109). As duas
+ * carteiras de portefólio do dono são capital real dele e diziam «Funded», que é o nome de um
+ * programa de avaliação: a palavra errada numa conta de dinheiro verdadeiro. As contas MTM Funded
+ * que são financiadas de verdade continuam a dizer «Funded» — essas não têm a marca.
+ *
  * Puro — testado em lib/webtrader/__tests__/entrada.check.ts.
  */
-export function pastilhaDaConta(e: Pick<EntradaSeletor, 'etiqueta' | 'mestre' | 'segue'>): string {
-  const base = e.mestre ? 'Funded' : e.etiqueta
+export function pastilhaDaConta(e: Pick<EntradaSeletor, 'etiqueta' | 'mestre' | 'segue'> & { contaRealDaCasa?: boolean }): string {
+  const base = e.contaRealDaCasa ? 'Real' : e.mestre ? 'Funded' : e.etiqueta
   const nome = String(e.segue ?? '').replace(/^MTM Auto\s+/i, '').trim()
   return nome ? `${base} · ${nome}` : base
 }
@@ -139,11 +166,18 @@ export function montarSeletor(f: {
       programa: c.programa?.nome ?? null, aviso: c.aviso ?? null,
       // Só o DONO etiqueta: uma conta ligada com a password investor é de outra pessoa.
       etiquetaDoDono: c.etiquetaDoDono ?? null, podeEtiquetar: c.modo !== 'investor', mestre: ehContaMestre(c),
+      // Mestre E minha ao mesmo tempo nas carteiras de portefólio: as duas respostas valem.
+      // Uma conta ligada com a password investor é de OUTRA pessoa — nunca é «minha».
+      minha: c.modo !== 'investor' && ehContaMinha(c),
+      contaRealDaCasa: ehContaRealDaCasa(c) || ehContaPortefolioDaCasa(c),
     })
   }
   for (const s of Object.values(f.sessoesFunded ?? {})) {
     if (!s?.accountId) continue
-    juntar({ id: s.accountId, plataforma: 'mtmfunded', login: s.login, etiqueta: s.etiqueta ?? '—', estadoCurto: s.estadoCurto ?? '—', aviso: s.aviso ?? null, modo: s.modo, propria: false, etiquetaDoDono: null, podeEtiquetar: false, mestre: false })
+    juntar({ id: s.accountId, plataforma: 'mtmfunded', login: s.login, etiqueta: s.etiqueta ?? '—', estadoCurto: s.estadoCurto ?? '—', aviso: s.aviso ?? null, modo: s.modo, propria: false, etiquetaDoDono: null, podeEtiquetar: false, mestre: false,
+      // Conta aberta com credenciais neste separador: não é mestre, e em «As minhas» é onde ela
+      // sempre esteve — mudar isso agora escondia-a de quem a acabou de abrir.
+      minha: true })
   }
 
   // Reais: as do ligador primeiro; sessões TradeLocker antigas só se a mesma conta não estiver ligada.
@@ -162,7 +196,7 @@ export function montarSeletor(f: {
       // A sessão do separador não tem linha na base — não há onde guardar a etiqueta.
       etiquetaDoDono: r.etiquetaDoDono ?? null, podeEtiquetar: r.origem !== 'sessao',
       // Uma conta na corretora da pessoa nunca é mestre — as mestres são MTM Funded da casa.
-      mestre: false,
+      mestre: false, minha: true,
     })
   }
   return out

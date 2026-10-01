@@ -5,6 +5,10 @@ import { modoFundedPelaLigacao } from '@/lib/webtrader/contas-auto-regras'
 import { tipoCurto, estadoCurto } from '@/lib/mtmfunded/etiquetas'
 import { selecionarComOpcionais } from '@/lib/mtmfunded/numeros-conta'
 import { ehContaRealDaCasa } from '@/lib/mtmfunded/conta-real-casa'
+import {
+  ehContaPortefolio, estadoDePortefolio, resumoDoPortefolio,
+  type MovimentoPortefolio, type PontoCurvaPortefolio,
+} from '@/lib/mtmfunded/portefolio'
 import { SERVIDOR_SIMULADO } from './motor'
 import { desempenhoDaConta, type LinhaFechada } from './desempenho'
 import { type Direcao, type Simbolo, type MapaPrecos, type Preco, estadoDaConta } from './matematica'
@@ -47,7 +51,9 @@ export const origemValida = (o: unknown): Origem => (ORIGENS.includes(o as Orige
 const CAMPOS_CONTA = 'id, user_id, tipo, estado, motor, program_id, tournament_id, saldo_inicial, alavancagem, mt5_login, servidor, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_pico_equity, sim_dias_negociados, sim_ultimo_dia, quebrou_regra, quebrada_em, metricas, segue_estrategia, aceita_t2t, created_at, ' +
   // `sem_regras` marca as contas que existem para ESPELHAR uma estratégia. Sem ela no select, a
   // exclusão em `foraDoAmbito` lia sempre undefined e as contas-espelho eram travadas aos 3%.
-  'sem_regras, conta_casa, conta_real_casa'
+  // `conta_portefolio` (173): sem ela no select, o ecrã da carteira voltava a CALCULAR a equity a
+  // partir de `funded_positions` — tabela onde estas contas não escrevem — e escondia a perda.
+  'sem_regras, conta_casa, conta_real_casa, conta_portefolio'
 export type Conta = Record<string, unknown> & { id: string; estado: string; motor: string }
 
 // ── quem manda nesta conta ─────────────────────────────────────────────────
@@ -706,7 +712,51 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao, opcoes: { l
   const simbolos = await carregarSimbolos(envolvidos, false)
   const { precos, em } = await carregarPrecos(simbolosParaMedir(Object.values(simbolos)))
   const saldo = Number(conta.sim_saldo ?? 0)
-  const estado = estadoDaConta(saldo, Number(conta.alavancagem ?? 100), abertas.map(posicaoDaLinha), simbolos, precos)
+  const doMotor = estadoDaConta(saldo, Number(conta.alavancagem ?? 100), abertas.map(posicaoDaLinha), simbolos, precos)
+
+  /**
+   * AS CARTEIRAS DO DONO (173) — equity LIDA, histórico dos movimentos.
+   *
+   * Nestas contas `funded_positions` está vazia de propósito, e `estadoDaConta` sobre uma tabela
+   * vazia devolve flutuante 0 e equity = saldo. Era isso que punha a conta Cripto — 2 632 $ abaixo
+   * do contribuído — a aparecer como se estivesse a zero, enquanto a lista do seletor (que lê
+   * `sim_equity`) mostrava o número certo. Um ecrã lia, o outro calculava: a divergência era aqui.
+   *
+   * Sem valor de mercado gravado mantém-se o estado do motor — um `null` honesto em vez de um
+   * palpite.
+   */
+  const ehPortefolio = ehContaPortefolio(conta)
+  let movimentos: MovimentoPortefolio[] = []
+  let curvaPortefolio: PontoCurvaPortefolio[] = []
+  if (ehPortefolio && !leve) {
+    /**
+     * AOS MIL DE CADA VEZ, e não com um `.limit(10000)`.
+     *
+     * O PostgREST corta qualquer resposta no `max-rows` do servidor (1 000 linhas): um `limit`
+     * maior não levanta o tecto, devolve 1 000 e não se queixa. A conta Cripto tem 2 139
+     * movimentos — o histórico vinha cortado a menos de metade e o total comprado dava 2 165 $ em
+     * vez de 5 632 $, sem erro nenhum pelo caminho. É o mesmo padrão de lib/mtmcopy/desfecho-unico.ts.
+     */
+    const PAGINA = 1_000
+    const TECTO = 20_000
+    const lidos: MovimentoPortefolio[] = []
+    for (let inicio = 0; inicio < TECTO; inicio += PAGINA) {
+      const { data } = await db.from('portefolio_movimentos')
+        .select('id, symbol, tipo, data, unidades, preco, valor, motivo')
+        .eq('conta_id', conta.id)
+        // Ordem estável (data + id): sem o desempate, duas páginas podiam repetir ou saltar linhas.
+        .order('data', { ascending: false }).order('id')
+        .range(inicio, inicio + PAGINA - 1)
+      const pagina = (data ?? []) as unknown as MovimentoPortefolio[]
+      lidos.push(...pagina)
+      if (pagina.length < PAGINA) break
+    }
+    movimentos = lidos
+    const { data: cv } = await db.from('portefolio_curva')
+      .select('data, contribuido, valor').eq('conta_id', conta.id).order('data')
+    curvaPortefolio = (cv ?? []) as unknown as PontoCurvaPortefolio[]
+  }
+  const estado = (ehPortefolio ? estadoDePortefolio(saldo, conta.sim_equity as number | null) : null) ?? doMotor
   const metricas = (conta.metricas as Record<string, unknown>) ?? {}
   const limites = limitesDaConta(
     regras, Number(conta.saldo_inicial ?? 0), estado.equity,
@@ -747,7 +797,9 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao, opcoes: { l
       fase: Number(metricas.fase ?? 1),
       analise: ehContaDeAnalise(conta),
       // Conta real da casa (109): sem regras como a de análise, mas com negociação real.
-      contaReal: ehContaRealDaCasa(conta),
+      contaReal: ehContaRealDaCasa(conta) || ehPortefolio,
+      /** 173 — carteira reconstituída: o ecrã troca Histórico/Métricas/Diário pelos movimentos. */
+      portefolio: ehPortefolio,
       // Para as barras das regras do painel «A minha conta» (consistência) — as mesmas do admin.
       lucroPorDia: (metricas.lucroPorDia ?? null) as Record<string, number> | null,
       tournamentId: (conta.tournament_id as string | null) ?? null,
@@ -762,6 +814,21 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao, opcoes: { l
     regras,
     posicoes: abertas,
     historico: fechadas ?? [],
+    /**
+     * A CARTEIRA (173): `null` em todas as outras contas, para nenhum ecrã ter de perguntar duas
+     * vezes. Na resposta `leve` vem sem movimentos (como o histórico e o desempenho) — `parcial`
+     * já diz ao cliente para manter o que tinha.
+     */
+    portefolio: ehPortefolio && !leve
+      ? {
+          movimentos,
+          curva: curvaPortefolio,
+          resumo: resumoDoPortefolio(movimentos, curvaPortefolio, {
+            contribuido: saldo,
+            valorDeMercado: conta.sim_equity == null ? null : Number(conta.sim_equity),
+          }),
+        }
+      : null,
     ordens: pendentes ?? [],
     simbolos,
     precos: Object.fromEntries(Object.entries(precos).map(([s, p]) => [s, { ...p, em: em[s] }])),

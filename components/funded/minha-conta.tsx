@@ -8,6 +8,7 @@ import { barrasDaConta } from "@/lib/mtmfunded/numeros-conta"
 import { authHeaders } from "@/lib/auth-token"
 import FundedDesempenho from "./funded-desempenho"
 import FundedDiario from "./funded-diario"
+import { DiarioPortefolio, HistoricoPortefolio, MetricasPortefolio, type DadosPortefolio } from "./portefolio-conta"
 import ListaPosicoes from "./lista-posicoes"
 import CredenciaisConta from "./credenciais-conta"
 import { InterruptorUmClique } from "./um-clique"
@@ -38,6 +39,12 @@ export default function MinhaConta({ t }: { t: Trader }) {
   const c = d.conta
   const dono = d.modo === "master"
   const funded = c.etiqueta === "Funded"
+  /**
+   * AS CARTEIRAS DO DONO (173): Histórico, Métricas e Diário saem dos MOVIMENTOS e não de
+   * `funded_positions`, onde estas contas não escrevem. Sem isto os três separadores ficavam
+   * vazios tendo 2 139 linhas na base — e o Resumo chamava «Saldo» ao contribuído.
+   */
+  const carteira = (d as { portefolio?: DadosPortefolio | null }).portefolio ?? null
 
   const seccoes: Array<[Seccao, string, typeof LayoutGrid]> = [
     ["resumo", "Resumo", LayoutGrid], ["metricas", "Métricas", BarChart3], ["diario", "Diário", BookOpen],
@@ -56,16 +63,20 @@ export default function MinhaConta({ t }: { t: Trader }) {
           <span className="text-zinc-500">{String(c.servidor ?? "MTM Funded")} · 1:{c.alavancagem}</span>
           {c.segueEstrategia && <span className="rounded-full border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-2 py-0.5 text-[11px] text-[#D2A63C]">segue {c.segueEstrategia.nome}{c.segueEstrategia.ativa ? "" : " (em pausa)"}</span>}
           {/* Conta real da casa (109) = conta de AUDITORIA: sem regras como a de análise, mas negoceia a sério. */}
-          {c.contaReal
-            ? <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">auditoria · negociação real · sem regras</span>
-            : c.analise && <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300">conta de análise</span>}
+          {carteira
+            ? <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">capital real · carteira com reforço semanal</span>
+            : c.contaReal
+              ? <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">auditoria · negociação real · sem regras</span>
+              : c.analise && <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300">conta de análise</span>}
           {c.aceitaT2T && <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300">aceita Tap to Trade</span>}
           {!dono && <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-300">investor · só leitura</span>}
         </div>
+        {/* Numa carteira, «Saldo» é o CONTRIBUÍDO e «Equity» o valor de mercado: os rótulos de
+            negociação diziam a coisa errada sobre dinheiro que não está em posições abertas. */}
         <div className="mt-2 grid grid-cols-3 gap-1.5">
-          <Numero rotulo="Saldo" valor={`${usd(d.estado.saldo)} $`} />
-          <Numero rotulo="Equity" valor={`${usd(t.vivo.equity)} $`} cor={t.vivo.flutuante >= 0 ? "text-emerald-300" : "text-rose-300"} />
-          <Numero rotulo="Flutuante" valor={`${usd(t.vivo.flutuante)} $`} cor={t.vivo.flutuante >= 0 ? "text-emerald-300" : "text-rose-300"} />
+          <Numero rotulo={carteira ? "Contribuído" : "Saldo"} valor={`${usd(d.estado.saldo)} $`} />
+          <Numero rotulo={carteira ? "Valor de mercado" : "Equity"} valor={`${usd(t.vivo.equity)} $`} cor={t.vivo.flutuante >= 0 ? "text-emerald-300" : "text-rose-300"} />
+          <Numero rotulo={carteira ? "Resultado" : "Flutuante"} valor={`${usd(t.vivo.flutuante)} $`} cor={t.vivo.flutuante >= 0 ? "text-emerald-300" : "text-rose-300"} />
         </div>
       </div>
 
@@ -79,15 +90,18 @@ export default function MinhaConta({ t }: { t: Trader }) {
       </div>
 
       {seccao === "resumo" && <Resumo t={t} />}
-      {seccao === "metricas" && (
+      {seccao === "metricas" && carteira && <MetricasPortefolio d={carteira} />}
+      {seccao === "metricas" && !carteira && (
         <div className="space-y-2">
           <FundedEstatisticas accountId={t.accountId} equity={t.vivo.equity} semRegras
             regras={{ limites: t.vivo.limites, regras: d.regras, saldoInicial: c.saldoInicial, equity: t.vivo.equity, diasNegociados: c.diasNegociados }} />
           <div className="rounded-lg border border-white/10 bg-[#0d0d0d] p-3"><FundedDesempenho d={d.desempenho} estrategia={c.segueEstrategia?.nome} /></div>
         </div>
       )}
-      {seccao === "diario" && <FundedDiario accountId={t.accountId} historico={d.historico} podeEscrever={dono} diario={t.diario} focoTrade={foco} onFoco={setFoco} />}
-      {seccao === "historico" && (
+      {seccao === "diario" && carteira && <DiarioPortefolio d={carteira} />}
+      {seccao === "diario" && !carteira && <FundedDiario accountId={t.accountId} historico={d.historico} podeEscrever={dono} diario={t.diario} focoTrade={foco} onFoco={setFoco} />}
+      {seccao === "historico" && carteira && <HistoricoPortefolio d={carteira} />}
+      {seccao === "historico" && !carteira && (
         <div className="rounded-lg border border-white/10">
           <ListaPosicoes
             vista="historico" posicoes={d.posicoes} ordens={d.ordens} historico={d.historico} simbolos={t.fichas} precos={t.mapa}
@@ -144,17 +158,24 @@ function Resumo({ t }: { t: Trader }) {
           )
         }) : (
           <p className="text-[11.5px] leading-snug text-zinc-400">
-            {c.contaReal
-              ? "Conta de auditoria: negociação real, sem regras de programa — acompanha o desempenho em Métricas."
-              : c.analise ? "Conta de análise: as regras de programa não se aplicam — acompanha o desempenho em Métricas." : "Esta conta não tem regras de programa."}
+            {(d as { portefolio?: unknown }).portefolio
+              ? "Carteira de capital real com reforço semanal: não há regras de programa a cumprir — o que ela fez está em Métricas, Histórico e Diário, movimento a movimento."
+              : c.contaReal
+                ? "Conta de auditoria: negociação real, sem regras de programa — acompanha o desempenho em Métricas."
+                : c.analise ? "Conta de análise: as regras de programa não se aplicam — acompanha o desempenho em Métricas." : "Esta conta não tem regras de programa."}
           </p>
         )}
         <p className="text-[10.5px] text-zinc-500">Medido sobre a equity (as posições abertas contam). Os mesmos números que o suporte vê.</p>
       </div>
 
       <div className={`${cartao} space-y-1`}>
-        <p className="text-[12.5px] font-semibold text-white">Conta ao vivo</p>
-        {[...t.metricas, ["Dias negociados", String(c.diasNegociados)] as [string, string], ["Saldo inicial", `${c.saldoInicial.toLocaleString("pt-PT")} $`] as [string, string]].map(([k, v, cor]) => (
+        <p className="text-[12.5px] font-semibold text-white">{(d as { portefolio?: unknown }).portefolio ? "A carteira agora" : "Conta ao vivo"}</p>
+        {/* Numa carteira, «Dias negociados» é 0 e «Saldo inicial» são os 1 000 $ do arranque — dois
+            números que não dizem nada sobre ela. O que diz está em Métricas. */}
+        {[...t.metricas, ...((d as { portefolio?: unknown }).portefolio ? [] : [
+          ["Dias negociados", String(c.diasNegociados)] as [string, string],
+          ["Saldo inicial", `${c.saldoInicial.toLocaleString("pt-PT")} $`] as [string, string],
+        ])].map(([k, v, cor]) => (
           <div key={k} className="flex justify-between gap-2 text-[11.5px]"><span className="text-zinc-500">{k}</span><span className={`font-mono ${cor ?? "text-white"}`}>{v}</span></div>
         ))}
       </div>

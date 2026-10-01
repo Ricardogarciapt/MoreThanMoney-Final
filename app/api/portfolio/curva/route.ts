@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { resultadoDaConta, resultadoEmDinheiro } from '@/lib/portfolios/retorno'
 
 /**
  * A CURVA DAS CONTAS DE PORTEFÓLIO — dinheiro contribuído vs valor de mercado, semana a semana.
@@ -50,9 +51,17 @@ export async function GET() {
           nome: String(c.etiqueta ?? ''),
           contribuido,
           valor,
-          // Contra o CONTRIBUÍDO e não contra os 1000 $ iniciais: medir um portefólio com reforços
-          // contra o primeiro depósito dá um número bonito que não é o retorno de ninguém.
-          resultadoPct: contribuido > 0 ? ((valor / contribuido) - 1) * 100 : 0,
+          /**
+           * A FÓRMULA ÚNICA (lib/portfolios/retorno.ts): (valor − contribuído) / contribuído.
+           *
+           * Contra o CONTRIBUÍDO e não contra os 1 000 $ iniciais — medir um portefólio com
+           * reforços contra o primeiro depósito dá um número bonito que não é o retorno de
+           * ninguém. E num módulo só porque os quatro ecrãs que mostram este número têm de dizer
+           * o MESMO: a `/portfolios` chegou a anunciar «+60,37 %» numa conta que fez +39,52 %,
+           * por fazer a média simples das percentagens dos activos.
+           */
+          resultadoPct: resultadoDaConta({ contribuido, valor }) ?? 0,
+          resultado: resultadoEmDinheiro({ contribuido, valor }),
           desde: String(m.desde ?? '2024-03-01'),
           origem: String(m.origem ?? ''),
           fontePrecos: String(m.fonte_precos ?? ''),

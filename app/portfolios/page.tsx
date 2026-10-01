@@ -27,6 +27,7 @@ import {
   Thermometer,
 } from "lucide-react"
 import { cryptoPortfolio, etfPortfolio } from "@/lib/portfolio-data"
+import { pctFormatada, potencialPonderado, resultadoDasContas, retornoDaCarteira } from "@/lib/portfolios/retorno"
 
 interface AssetWithPrice {
   /** Reforço por SEXTA. Os cartões somam-no em vez de mostrarem um número escrito à mão. */
@@ -52,6 +53,10 @@ interface AssetWithPrice {
   /** Só preenchido quando a CoinGecko devolve `usd_24h_change` válido — não usar fallback inventado. */
   change_24h_percent?: number | null
 }
+
+/** As duas contas de portefólio, pela ordem com que se olham. Os logins são os da base (173). */
+const ORDEM_CONTAS = ['PORTF-CRIPTO', 'PORTF-ETF'] as const
+const NOME_CONTA: Record<string, string> = { 'PORTF-CRIPTO': 'Cripto', 'PORTF-ETF': 'ETF' }
 
 function mapFearGreedToPt(classification: string): string {
   const m: Record<string, string> = {
@@ -79,7 +84,7 @@ export default function PortfoliosPage() {
   /** Média 24h só entre ativos com dado CoinGecko válido; null = ainda sem dados fiáveis */
   const [crypto24hAvgPercent, setCrypto24hAvgPercent] = useState<number | null>(null)
   const [crypto24hCoverage, setCrypto24hCoverage] = useState<{ ok: number; total: number } | null>(null)
-  const [totalETFPercent, setTotalETFPercent] = useState(0)
+
   const [dataSource, setDataSource] = useState('Carregando...')
   const [fearGreed, setFearGreed] = useState<{
     value: number
@@ -320,16 +325,23 @@ export default function PortfoliosPage() {
           })
           setETFAssets(assets)
           
-          // Calcular rentabilidade média total ETF (apenas ativos com preço)
-          const assetsWithPrice = assets.filter((a: AssetWithPrice) => a.current_price !== null)
-          const totalPNL = assetsWithPrice.reduce((sum: number, a: AssetWithPrice) => sum + (a.pnl_percent || 0), 0)
-          const avgPerformance = assetsWithPrice.length > 0 ? totalPNL / assetsWithPrice.length : 0
-          setTotalETFPercent(avgPerformance)
-          
+          /**
+           * O RETORNO DA CARTEIRA — ponderado pelo investido, nunca a média das percentagens.
+           *
+           * Estava `totalPNL / assetsWithPrice.length`: a média simples do pnl_percent de cada
+           * activo. Isso é o retorno de uma carteira imaginária com o mesmo dinheiro em cada linha.
+           * Um activo de 50 $ a +200 % ao lado de um de 5 000 $ a −10 % dava «+95 %» numa carteira
+           * que perdeu 400 $ — e é por isso que o cartão anunciava +60,37 % quando a conta real do
+           * ETF fez +39,52 %. Uma percentagem inflacionada por uma média mal feita é um número
+           * inventado, e esta casa não os publica. A fórmula vive em lib/portfolios/retorno.ts.
+           */
+          const retorno = retornoDaCarteira(assets as AssetWithPrice[])
           console.log('📈 [PORTFOLIO] ETF processado:', {
-            total_assets: assets.length,
-            with_price: assetsWithPrice.length,
-            avg_performance: avgPerformance.toFixed(2) + '%'
+            total_assets: retorno.activos,
+            with_price: retorno.comCotacao,
+            investido: retorno.investido,
+            valor: retorno.valor,
+            retorno_ponderado: pctFormatada(retorno.resultadoPct),
           })
         }
 
@@ -345,6 +357,23 @@ export default function PortfoliosPage() {
       setAnalysisSeq((n) => n + 1)
     }
   }
+
+  /**
+   * As duas carteiras somadas — somam-se os DINHEIROS e mede-se UMA fracção. Fazer a média dos
+   * dois resultados (−36,40 % e +39,52 %) daria «+1,56 %», que não é o retorno de ninguém: é o
+   * mesmo erro da média simples, um nível acima.
+   */
+  const totais = resultadoDasContas(contasPortefolio)
+  const totalContribuido = totais.contribuido
+  const totalValor = totais.valor
+  const totalPct = totais.resultadoPct
+  /**
+   * O retorno dos ACTIVOS de cada cabaz, ponderado pelo investido — calculado no render porque é
+   * uma soma pura sobre o que já está em memória, e não precisa de estado próprio. É a vista por
+   * activo; a vista por CONTA (a que manda) está nos cartões de cima.
+   */
+  const retornoCripto = retornoDaCarteira(cryptoAssets)
+  const retornoETF = retornoDaCarteira(etfAssets)
 
   const formatPercent = (value: number) => {
     return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`
@@ -513,24 +542,48 @@ export default function PortfoliosPage() {
               </CardContent>
             </Card>
 
-            {/* ETF Performance */}
-            <Card className="bg-gray-900/50 border-blue-500/30 backdrop-blur-sm overflow-hidden relative group hover:border-blue-500/60 transition-all">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all"></div>
-              <CardContent className="p-6 relative">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="h-5 w-5 text-blue-400" />
-                  </div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wider">ETF Performance</div>
-                </div>
-                <div className={`text-4xl font-black mb-1 ${totalETFPercent >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
-                  {formatPercent(totalETFPercent)}
-                </div>
-                <Progress value={Math.min(100, Math.abs(totalETFPercent))} className="h-2 bg-gray-800" />
-              </CardContent>
-            </Card>
+            {/* As DUAS CONTAS REAIS, uma em cada cartão.
+                Antes havia aqui um «ETF Performance» com a média simples das percentagens dos
+                activos (+60,37 % numa conta que fez +39,52 %) e um «Potencial Total ~4x» escrito
+                à mão. Os dois saíram: o que o ecrã anuncia em grande é o que as contas FIZERAM,
+                com o investido e o valor à frente para se poder verificar. A fonte é a mesma do
+                detalhe da conta no WebTrader e do separador da app — uma só. */}
+            {ORDEM_CONTAS.map((chave) => {
+              const c = contasPortefolio.find((x) => x.chave === chave)
+              const ganha = (c?.resultadoPct ?? 0) >= 0
+              return (
+                <Card key={chave} className="bg-gray-900/50 border-blue-500/30 backdrop-blur-sm overflow-hidden relative group hover:border-blue-500/60 transition-all">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all"></div>
+                  <CardContent className="p-6 relative">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                        <BarChart3 className="h-5 w-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-400 uppercase tracking-wider">{NOME_CONTA[chave]} · conta real</div>
+                        <div className="text-[10px] text-gray-500 normal-case">Resultado desde o início · (valor − investido) / investido</div>
+                      </div>
+                    </div>
+                    <div className={`text-4xl font-black mb-1 ${c ? (ganha ? 'text-blue-400' : 'text-red-400') : 'text-gray-500'}`}>
+                      {pctFormatada(c?.resultadoPct ?? null)}
+                    </div>
+                    {c ? (
+                      <p className="text-xs text-gray-400">
+                        ${c.contribuido.toLocaleString('pt-PT', { minimumFractionDigits: 2 })} investidos → ${c.valor.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500">A carregar a conta…</p>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })}
 
-            {/* Potential Growth */}
+            {/* Investido nas duas carteiras, somado — um FACTO, e serve de base aos números acima.
+                Estava aqui um «Potencial Total ~4x · Projeção 5 anos»: um número escrito à mão,
+                sem origem e sem conta que o sustente, no meio de cartões de desempenho. É
+                exactamente o tipo de promessa que esta casa não publica, e saiu. O potencial do
+                admin continua a existir, nos cartões de cada carteira, rotulado como projecção. */}
             <Card className="bg-gray-900/50 border-purple-500/30 backdrop-blur-sm overflow-hidden relative group hover:border-purple-500/60 transition-all">
               <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl group-hover:bg-purple-500/10 transition-all"></div>
               <CardContent className="p-6 relative">
@@ -538,12 +591,17 @@ export default function PortfoliosPage() {
                   <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
                     <Zap className="h-5 w-5 text-purple-400" />
                   </div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wider">Potencial Total</div>
+                  <div>
+                    <div className="text-xs text-gray-400 uppercase tracking-wider">Investido · 2 carteiras</div>
+                    <div className="text-[10px] text-gray-500 normal-case">Reforço semanal desde Março de 2024</div>
+                  </div>
                 </div>
                 <div className="text-4xl font-black text-purple-400 mb-1">
-                  ~4x
+                  ${totalContribuido.toLocaleString('pt-PT', { maximumFractionDigits: 0 })}
                 </div>
-                <div className="text-xs text-gray-500">Projeção 5 anos</div>
+                <div className="text-xs text-gray-500">
+                  vale hoje ${totalValor.toLocaleString('pt-PT', { maximumFractionDigits: 0 })} · {pctFormatada(totalPct)}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -598,19 +656,30 @@ export default function PortfoliosPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-[#D2A63C]/30">
                       <CardContent className="p-4">
-                        <div className="text-xs text-gray-400 mb-1">Alocação Total</div>
-                        <div className="text-2xl font-bold text-[#D2A63C]">100%</div>
-                        <div className="text-xs text-gray-500 mt-1">Portfólio diversificado</div>
+                        {/* Retorno dos ACTIVOS deste cabaz, ponderado pelo dinheiro posto em cada
+                            um. Estava aqui «Alocação Total 100%», que é verdade por construção e
+                            não informa nada. A cobertura vai declarada: um activo sem cotação não
+                            entra em lado nenhum da fracção. */}
+                        <div className="text-xs text-gray-400 mb-1">Retorno dos activos · ponderado</div>
+                        <div className={`text-2xl font-bold ${(retornoCripto.resultadoPct ?? 0) >= 0 ? 'text-[#D2A63C]' : 'text-red-400'}`}>
+                          {pctFormatada(retornoCripto.resultadoPct)}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">{retornoCripto.comCotacao}/{retornoCripto.activos} activos com cotação</div>
                       </CardContent>
                     </Card>
                     
                     <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-green-500/30">
                       <CardContent className="p-4">
-                        <div className="text-xs text-gray-400 mb-1">Potencial Médio</div>
+                        {/* PROJECÇÃO, não desempenho — e ponderada pelo investido.
+                            Era a média simples dos potenciais de cada activo: um activo de 50 $
+                            com «+500 % até ao ATH» puxava o cartão inteiro. O rótulo diz agora o
+                            que isto é e de onde vem; o que a carteira FEZ está no cartão de cima
+                            e na curva, que é outra coisa e não se confunde com esta. */}
+                        <div className="text-xs text-gray-400 mb-1">Potencial até ATH · projecção</div>
                         <div className="text-2xl font-bold text-green-400">
-                          +{cryptoAssets.length > 0 ? (cryptoAssets.reduce((sum, a) => sum + a.potential_growth, 0) / cryptoAssets.length).toFixed(2) : '0'}%
+                          {pctFormatada(potencialPonderado(cryptoAssets))}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">Até ATH</div>
+                        <div className="text-xs text-gray-500 mt-1">Alvos da configuração do admin, ponderados pelo investido</div>
                       </CardContent>
                     </Card>
                     
@@ -770,19 +839,24 @@ export default function PortfoliosPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-[#D2A63C]/30">
                       <CardContent className="p-4">
-                        <div className="text-xs text-gray-400 mb-1">Alocação Total</div>
-                        <div className="text-2xl font-bold text-[#D2A63C]">100%</div>
-                        <div className="text-xs text-gray-500 mt-1">Portfólio balanceado</div>
+                        {/* Igual ao lado cripto: o retorno ponderado dos activos, com cobertura. */}
+                        <div className="text-xs text-gray-400 mb-1">Retorno dos activos · ponderado</div>
+                        <div className={`text-2xl font-bold ${(retornoETF.resultadoPct ?? 0) >= 0 ? 'text-[#D2A63C]' : 'text-red-400'}`}>
+                          {pctFormatada(retornoETF.resultadoPct)}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">{retornoETF.comCotacao}/{retornoETF.activos} activos com cotação</div>
                       </CardContent>
                     </Card>
                     
                     <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-blue-500/30">
                       <CardContent className="p-4">
-                        <div className="text-xs text-gray-400 mb-1">Crescimento Médio 5Y</div>
+                        {/* Mesma correcção do lado cripto: projecção declarada e ponderada pelo
+                            investido, nunca a média das percentagens dos activos. */}
+                        <div className="text-xs text-gray-400 mb-1">Crescimento a 5 anos · projecção</div>
                         <div className="text-2xl font-bold text-blue-400">
-                          +{etfAssets.length > 0 ? (etfAssets.reduce((sum, a) => sum + a.potential_growth, 0) / etfAssets.length).toFixed(2) : '0'}%
+                          {pctFormatada(potencialPonderado(etfAssets))}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">Estimativa conservadora</div>
+                        <div className="text-xs text-gray-500 mt-1">Estimativa da configuração do admin, ponderada pelo investido</div>
                       </CardContent>
                     </Card>
                     

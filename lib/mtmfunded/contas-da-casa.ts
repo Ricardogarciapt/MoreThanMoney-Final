@@ -46,6 +46,41 @@ export function ehContaDaCasa(
   return ehContaMestre(conta) || conta.conta_casa === true || conta.recolhe_todos_sinais === true
 }
 
+/**
+ * E é uma CARTEIRA reconstituída do dono? (`conta_portefolio`, migração 173.)
+ *
+ * As duas contas de portefólio (`PORTF-CRIPTO`, `PORTF-ETF`) são as DUAS coisas ao mesmo tempo:
+ * são `tipo = 'provider'` — e por isso mestres para quem as segue — e são capital do dono. O
+ * filtro do seletor tratava «mestre» e «minha» como lados opostos da mesma moeda
+ * (`minhas = total − mestres`), e por isso o capital dele desaparecia de «As minhas». Não eram
+ * lados opostos: eram duas perguntas, e esta é a que faltava.
+ *
+ * A regra NÃO passa por mudar o `tipo`: `lib/webtrader/seletor.ts` conta com `provider` para saber
+ * que a conta é da casa, e `lib/mestres/*` e `estrategia-mestre.ts` com ele para saber quem é a
+ * mestre de cada estratégia. Tirar-lhe o tipo calava a pastilha e partia a cadeia das mestres.
+ */
+export function ehContaPortefolioDaCasa(conta: { conta_portefolio?: boolean | null } | null | undefined): boolean {
+  return conta?.conta_portefolio === true
+}
+
+/**
+ * A conta é MINHA — do capital de quem está a olhar para o seletor?
+ *
+ * Tudo o que não é instrumento de medição da casa é da pessoa (é a regra de sempre, só que dita
+ * pelo lado positivo), MAIS as carteiras de portefólio: são da casa e são do dono, e as duas
+ * respostas valem ao mesmo tempo. Uma conta pode portanto ser mestre E minha — e é isso que
+ * `lib/webtrader/filtro-contas.ts` precisa de saber para a pôr nas duas listas.
+ */
+export function ehContaMinha(
+  conta:
+    | { tipo?: string | null; conta_casa?: boolean | null; recolhe_todos_sinais?: boolean | null; conta_portefolio?: boolean | null }
+    | null
+    | undefined,
+): boolean {
+  if (!conta) return false
+  return ehContaPortefolioDaCasa(conta) || !ehContaDaCasa(conta)
+}
+
 /** Os três estados do separador de Histórico. `minhas` é o de partida, como no WebTrader. */
 export type EscopoContas = 'minhas' | 'casa' | 'todas'
 

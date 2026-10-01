@@ -113,7 +113,8 @@ async function main() {
       return { data: [{ id: 'x' }], error: null }
     })
     assert.deepEqual(r.data, [{ id: 'x' }])
-    assert.equal(pedidas[1], 'id, pausada_em, conta_real_casa, etiqueta')
+    // `conta_portefolio` entrou na lista com a 173 — e continua a vir quando é a 082 que falta.
+    assert.equal(pedidas[1], 'id, pausada_em, conta_real_casa, etiqueta, conta_portefolio')
   })
 
   console.log(`\n${n} casos ok`)

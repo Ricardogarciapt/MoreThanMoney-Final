@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { PortfolioRebalanceAssistant } from "@/components/mobile/portfolio-rebalance-assistant"
 import { useT } from "@/components/i18n-provider"
+import { pctFormatada, resultadoDasContas } from "@/lib/portfolios/retorno"
 
 interface MTMAsset {
   symbol: string
@@ -114,6 +115,14 @@ export default function PortfolioMobile() {
   const t = useT()
   const [mounted, setMounted] = useState(false)
   const [mtmAssets, setMtmAssets] = useState<MTMAsset[]>([])
+  /**
+   * AS DUAS CONTAS REAIS das carteiras (`/api/portfolio/curva`, logins PORTF-CRIPTO/PORTF-ETF).
+   * É daqui que sai o desempenho que este separador mostra: a mesma fonte da página `/portfolios`
+   * e do detalhe da conta no WebTrader, para os três dizerem o mesmo número.
+   */
+  const [contasPortefolio, setContasPortefolio] = useState<Array<{
+    chave: string; nome: string; contribuido: number; valor: number; resultadoPct: number
+  }>>([])
   const [personalAssets, setPersonalAssets] = useState<PersonalAsset[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddAsset, setShowAddAsset] = useState(false)
@@ -152,6 +161,15 @@ export default function PortfolioMobile() {
 
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  // As contas reais das carteiras. Falhar aqui não leva o separador atrás: o desempenho fica a
+  // «—» (que é honesto) em vez de mostrar um zero que ninguém mediu.
+  useEffect(() => {
+    fetch("/api/portfolio/curva")
+      .then((r) => r.json())
+      .then((j) => setContasPortefolio(j?.contas ?? []))
+      .catch(() => setContasPortefolio([]))
   }, [])
 
   useEffect(() => {
@@ -717,13 +735,19 @@ export default function PortfolioMobile() {
     }
   }
 
-  const calculateTotalMTMPerformance = () => {
-    if (mtmAssets.length === 0) return 0
-    const assetsWithPrice = mtmAssets.filter(a => a.current_price)
-    if (assetsWithPrice.length === 0) return 0
-    const totalPerformance = assetsWithPrice.reduce((sum, a) => sum + a.performance_7d, 0)
-    return totalPerformance / assetsWithPrice.length
-  }
+  /**
+   * O DESEMPENHO DAS CARTEIRAS MTM — das CONTAS, não a média das percentagens dos activos.
+   *
+   * Estava `soma(performance_7d) / nº de activos`: a média simples. Isso é o retorno de uma
+   * carteira imaginária com o mesmo dinheiro em cada linha — um activo pequeno muito positivo
+   * ao lado de um grande negativo dá «ganha» numa carteira que perde. Era o mesmo defeito que a
+   * página `/portfolios` tinha (+60,37 % numa conta que fez +39,52 %).
+   *
+   * Aqui os activos nem trazem o investido (`mtmAssets` só tem preços e alvos), por isso não há
+   * como ponderar: o número honesto é o das duas contas reais, somando os dinheiros e medindo UMA
+   * fracção. É a mesma fonte do detalhe da conta no WebTrader e da `/portfolios`.
+   */
+  const desempenhoDasCarteiras = resultadoDasContas(contasPortefolio)
 
   // Função fallback para copiar texto em browsers mais antigos
   const fallbackCopyTextToClipboard = (text: string) => {
@@ -890,13 +914,39 @@ www.morethanmoney.com`
               <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#D2A63C]/20 rounded-full blur-3xl"></div>
               <CardContent className="p-4 relative z-10">
                 <p className="text-[10px] text-[#D2A63C] uppercase tracking-wider mb-1 font-black">{t("portfolio.performance")}</p>
-                <p className={`text-3xl font-black ${calculateTotalMTMPerformance() >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {calculateTotalMTMPerformance() >= 0 ? '+' : ''}{calculateTotalMTMPerformance().toFixed(2)}%
+                <p className={`text-3xl font-black ${(desempenhoDasCarteiras.resultadoPct ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {pctFormatada(desempenhoDasCarteiras.resultadoPct)}
                 </p>
-                <p className="text-xs text-gray-400 mt-1">{t("portfolio.overallAverage")}</p>
+                {/* A origem declarada, em vez de «média geral»: é o investido contra o valor de
+                    hoje das duas contas reais, e qualquer pessoa pode refazer a conta. */}
+                <p className="text-xs text-gray-400 mt-1">
+                  ${desempenhoDasCarteiras.contribuido.toLocaleString('pt-PT', { maximumFractionDigits: 0 })} → ${desempenhoDasCarteiras.valor.toLocaleString('pt-PT', { maximumFractionDigits: 0 })}
+                </p>
               </CardContent>
             </Card>
           </div>
+
+          {/* CADA CARTEIRA COM O SEU NÚMERO.
+              O cartão de cima soma as duas; aqui vê-se cada uma, porque uma a ganhar e outra a
+              perder escondidas num só número não é informação. Investido → valor à frente da
+              percentagem: a prova desta casa mede-se com a origem declarada. */}
+          {contasPortefolio.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {contasPortefolio.map((c) => (
+                <div key={c.chave} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-bold text-white">{c.nome}</p>
+                    <p className="font-mono text-[11px] text-gray-400">
+                      ${c.contribuido.toLocaleString('pt-PT', { maximumFractionDigits: 0 })} → ${c.valor.toLocaleString('pt-PT', { maximumFractionDigits: 0 })}
+                    </p>
+                  </div>
+                  <p className={`shrink-0 font-mono text-[17px] font-black ${c.resultadoPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {pctFormatada(c.resultadoPct)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Info Banner */}
           <div className="relative overflow-hidden bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-500/30 rounded-2xl p-4 mb-4">

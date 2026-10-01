@@ -708,7 +708,7 @@ function Entrada({ contas, onEscolher, onFechar, formulario }: {
         <div className="space-y-2">
           {contas.map((c) => (
             <button key={c.id} onClick={() => onEscolher(c.id)} className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-black/40 p-2.5 text-left text-[12px] hover:border-[#D2A63C]/40">
-              <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{pastilhaDaConta({ etiqueta: c.etiqueta, mestre: ehContaMestre(c), segue: c.segueEstrategia?.nome ?? c.mestreDe?.nome ?? null })}</span>
+              <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{pastilhaDaConta({ etiqueta: c.etiqueta, mestre: ehContaMestre(c), segue: c.segueEstrategia?.nome ?? c.mestreDe?.nome ?? null, contaRealDaCasa: c.conta_real_casa === true || c.conta_portefolio === true })}</span>
               <span className="rounded px-1.5 py-0.5 text-[10.5px] font-semibold" style={{ color: corDoEstado(c.estadoCurto), background: `${corDoEstado(c.estadoCurto)}22` }}>{c.estadoCurto}</span>
               <div className="min-w-0">
                 <p className="font-mono text-white">{c.mt5_login ?? "—"}</p>

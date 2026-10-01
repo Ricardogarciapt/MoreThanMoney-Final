@@ -12,6 +12,7 @@ import ProtectedPage from "@/components/protected-page"
 import { supabase } from "@/lib/supabase"
 import { Plus, Edit2, Trash2, Save, X, RefreshCw, Database } from "lucide-react"
 import { toast } from "sonner"
+import { pctFormatada } from "@/lib/portfolios/retorno"
 
 interface CryptoAsset {
   id?: string
@@ -73,6 +74,11 @@ const ETF_CATEGORIES = [
 
 export default function AdminPortfoliosPage() {
   const [cryptoAssets, setCryptoAssets] = useState<CryptoAsset[]>([])
+  /** As contas reais das carteiras (`/api/portfolio/curva`) — o que elas fizeram, não a config. */
+  const [contasPortefolio, setContasPortefolio] = useState<Array<{
+    chave: string; nome: string; contribuido: number; valor: number; resultadoPct: number
+    desde: string; dca: string; fontePrecos: string
+  }>>([])
   const [etfAssets, setETFAssets] = useState<ETFAsset[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -116,6 +122,15 @@ export default function AdminPortfoliosPage() {
 
   useEffect(() => {
     loadPortfolios()
+  }, [])
+
+  // Falhar aqui não leva o painel de configuração atrás: os cartões das contas simplesmente não
+  // aparecem, em vez de mostrarem zeros.
+  useEffect(() => {
+    fetch("/api/portfolio/curva")
+      .then((r) => r.json())
+      .then((j) => setContasPortefolio(j?.contas ?? []))
+      .catch(() => setContasPortefolio([]))
   }, [])
 
   const loadPortfolios = async () => {
@@ -367,6 +382,37 @@ export default function AdminPortfoliosPage() {
               </Button>
             </div>
           </div>
+
+          {/* AS DUAS CONTAS REAIS, antes da configuração.
+              Este painel só mostrava alocações e potenciais — o que as carteiras PROMETEM — e por
+              isso era possível mexer na configuração sem nunca ver o que elas fizeram. Os números
+              vêm de `/api/portfolio/curva` (as contas `PORTF-CRIPTO`/`PORTF-ETF`), a MESMA fonte
+              da página pública, do separador da app e do detalhe da conta no WebTrader: os quatro
+              ecrãs dizem o mesmo número para a mesma coisa, ou não valem nada. */}
+          {contasPortefolio.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {contasPortefolio.map((c) => (
+                <Card key={c.chave} className="bg-gray-900 border-emerald-500/30">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-xs text-gray-400">{c.nome}</div>
+                        <div className="mt-1 font-mono text-sm text-gray-300">
+                          ${c.contribuido.toLocaleString('pt-PT', { minimumFractionDigits: 2 })} investidos → ${c.valor.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
+                        </div>
+                        <div className="mt-1 text-[11px] text-gray-500">
+                          {c.dca} · desde {c.desde} · preços: {c.fontePrecos || '—'}
+                        </div>
+                      </div>
+                      <div className={`shrink-0 font-mono text-2xl font-bold ${c.resultadoPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {pctFormatada(c.resultadoPct)}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
           {/* Stats */}
           <div className="grid grid-cols-4 gap-4">

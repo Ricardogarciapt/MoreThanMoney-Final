@@ -46,8 +46,25 @@ export function intervaloDeSondagem(e: EstadoAssinavel | null): number {
   return e.posicoes.length || e.ordens.length ? SONDAGEM_ATIVA_MS : SONDAGEM_PARADA_MS
 }
 
-/** Junta uma resposta leve ao estado anterior: fica o histórico e o desempenho que já havia. */
-export function juntarLeve<T extends { historico: unknown; desempenho: unknown }>(anterior: T | null, leve: T): T {
+/**
+ * Junta uma resposta leve ao estado anterior: fica o histórico, o desempenho e os MOVIMENTOS da
+ * carteira que já havia.
+ *
+ * `portefolio` entrou nesta lista com a 173 pela mesma razão que o histórico: a resposta leve não
+ * traz os 2 139 movimentos (seria o mesmo peso que ela veio evitar) e vem a `null`. Sem o guardar
+ * aqui, o separador Histórico da carteira enchia-se e esvaziava-se a cada 4 segundos.
+ */
+export function juntarLeve<T extends { historico: unknown; desempenho: unknown; portefolio?: unknown }>(
+  anterior: T | null,
+  leve: T,
+): T {
   if (!anterior) return leve
-  return { ...leve, historico: anterior.historico, desempenho: anterior.desempenho }
+  // `portefolio` só se junta quando EXISTE: numa conta que não é carteira (todas menos duas) não
+  // se inventa a chave, e o estado junto fica carácter a carácter o que era antes da 173.
+  return {
+    ...leve,
+    historico: anterior.historico,
+    desempenho: anterior.desempenho,
+    ...('portefolio' in anterior ? { portefolio: anterior.portefolio } : {}),
+  }
 }

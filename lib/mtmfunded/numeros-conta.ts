@@ -42,6 +42,8 @@ export interface LinhaContaNumeros {
   conta_casa?: boolean | null
   /** 109 — conta real da casa (lib/mtmfunded/conta-real-casa.ts). */
   conta_real_casa?: boolean | null
+  /** 173 — carteira reconstituída: `sim_equity` é o valor de mercado, não um espelho do saldo. */
+  conta_portefolio?: boolean | null
 }
 
 export interface NumerosConta {
@@ -169,12 +171,13 @@ export const PONTOS_CURVA = 600
 
 /**
  * Colunas que só existem com migrações que podem ainda não estar aplicadas: `pausada_em` (079),
- * `conta_casa` (082, outro ramo), `conta_real_casa` (109) e `etiqueta` (113). Uma coluna em falta num select explícito
+ * `conta_casa` (082, outro ramo), `conta_real_casa` (109), `etiqueta` (113) e `conta_portefolio`
+ * (173). Uma coluna em falta num select explícito
  * dá ERRO e lista vazia — o pior modo de falhar (ecrã sem contas). Tenta-se com todas; se a base
  * disser QUAL falta, repete-se sem essa e com as outras (com a 079 e a 082 aplicadas e a 109 por
  * aplicar, `pausada_em` e `conta_casa` continuam a vir). Se não disser, repete-se sem nenhuma.
  */
-export const COLUNAS_OPCIONAIS = ['pausada_em', 'conta_casa', 'conta_real_casa', 'etiqueta'] as const
+export const COLUNAS_OPCIONAIS = ['pausada_em', 'conta_casa', 'conta_real_casa', 'etiqueta', 'conta_portefolio'] as const
 
 const COLUNA_EM_FALTA = /column\s+(?:"?\w+"?\.)?"?(\w+)"?\s+does not exist/i
 

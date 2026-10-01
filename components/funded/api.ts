@@ -39,6 +39,15 @@ export interface ContaResumo {
   segueEstrategia?: { slug: string; nome: string } | null
   /** A conta É a mestre desta estratégia (116) — nas mestres `segueEstrategia` vem sempre null. */
   mestreDe?: { slug: string; nome: string } | null
+  /**
+   * As marcas da linha, como a rota as devolve (`...c`). `conta_real_casa` (109) e
+   * `conta_portefolio` (173) são as que trocam o crachá dourado «Funded» por «Real»: as contas do
+   * dono não são desafios de avaliação, e a palavra «Funded» numa conta de dinheiro verdadeiro é a
+   * palavra errada. Ver `pastilhaDaConta` em lib/webtrader/seletor.ts.
+   */
+  conta_casa?: boolean | null
+  conta_real_casa?: boolean | null
+  conta_portefolio?: boolean | null
 }
 
 export interface SessaoConta { accountId: string; token: string; modo: "master" | "investor"; expira: string; login: string; etiqueta?: string; estadoCurto?: string; aviso?: string }

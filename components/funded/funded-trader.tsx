@@ -8,6 +8,8 @@ import { type MapaPrecos, estadoDaConta } from "@/lib/mtmfunded/simulado/matemat
 import { limitesDaConta, posicaoDaLinha, simbolosParaMedir } from "@/lib/mtmfunded/simulado/ordens"
 import { type SimboloFicha, type PrecoVivo, pedir, ordem, usd } from "./api"
 import { usePrecos } from "./use-precos"
+import { pctFormatada, resultadoDaConta } from "@/lib/portfolios/retorno"
+import { DiarioPortefolio, HistoricoPortefolio, MetricasPortefolio, type DadosPortefolio } from "./portefolio-conta"
 import { fichaDe } from "./pre-carga"
 import { assinaturaEstado, intervaloDeSondagem, juntarLeve, precisaDeEstadoCheio } from "./estado-leve"
 import type { Prefill } from "./funded-ticket"
@@ -189,7 +191,19 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
   const vivo = useMemo(() => {
     if (!dados) return null
     const posicoes = dados.posicoes.map((p) => posicaoDaLinha(p))
-    const e = estadoDaConta(dados.estado.saldo, dados.conta.alavancagem, posicoes, fichas, mapa)
+    /**
+     * A equity do ecrã recalcula-se a cada tick — EXCEPTO nas carteiras do dono (173).
+     *
+     * Nessas, `funded_positions` está vazia de propósito (os movimentos vivem em
+     * `portefolio_movimentos`): `estadoDaConta` sobre uma tabela vazia dava flutuante 0 e equity =
+     * saldo, e o detalhe mostrava a conta Cripto a zero quando ela está 2 632 $ abaixo. O valor de
+     * mercado é LIDO (`estado.equity`, que o servidor já tirou de `sim_equity`) — a mesma fonte que
+     * a lista do seletor, por isso os dois ecrãs passam a dizer o mesmo número.
+     */
+    const e = dados.conta.portefolio
+      ? { flutuante: dados.estado.flutuante, equity: dados.estado.equity, margem: dados.estado.margem,
+          margemLivre: dados.estado.margemLivre, nivelMargemPct: dados.estado.nivelMargemPct, semPreco: [] as string[] }
+      : estadoDaConta(dados.estado.saldo, dados.conta.alavancagem, posicoes, fichas, mapa)
     const l = limitesDaConta(dados.regras, dados.conta.saldoInicial, e.equity, dados.conta.ancoraDia, dados.conta.fase)
     return { ...e, limites: l }
   }, [dados, fichas, mapa])
@@ -223,7 +237,20 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
   }
   if (!dados || !vivo) return <div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" /></div>
 
-  const metricas: Array<[string, string, string?]> = [
+  const corResultado = vivo.flutuante >= 0 ? "text-emerald-300" : "text-rose-300"
+  /**
+   * Numa CARTEIRA (173) os rótulos de negociação dizem a coisa errada: «Saldo» é o contribuído,
+   * «Equity» é o valor de mercado e não há margem nem perda diária a mostrar. O resultado em % sai
+   * do contribuído — a mesma fórmula de lib/portfolios/retorno.ts, que manda nos quatro ecrãs.
+   */
+  const metricas: Array<[string, string, string?]> = dados.conta.portefolio
+    ? [
+        ["Contribuído", usd(dados.estado.saldo)],
+        ["Valor de mercado", usd(vivo.equity), corResultado],
+        ["Resultado", usd(vivo.flutuante), corResultado],
+        ["Resultado %", pctFormatada(resultadoDaConta({ contribuido: dados.estado.saldo, valor: vivo.equity })), corResultado],
+      ]
+    : [
     ["Saldo", usd(dados.estado.saldo)],
     ["Equity", usd(vivo.equity), vivo.flutuante >= 0 ? "text-emerald-300" : "text-rose-300"],
     ["Flutuante", usd(vivo.flutuante), vivo.flutuante >= 0 ? "text-emerald-300" : "text-rose-300"],
@@ -235,7 +262,13 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
     ...(vivo.limites.objetivoValor ? [["Objetivo", `${vivo.limites.progressoObjetivoPct ?? 0}% de ${vivo.limites.objetivoPct}%`] as [string, string]] : []),
   ]
 
-  const podeNegociar = dados.modo === "master" && dados.conta.estado === "ativa"
+  /**
+   * AS CARTEIRAS DO DONO (173) não se negoceiam: são uma carteira à vista com reforço semanal, e
+   * os activos delas (SPY, XRPUSDT…) nem estão no catálogo da corretora — de propósito. Deixar o
+   * ticket aberto era oferecer um botão que não pode funcionar.
+   */
+  const carteira = (dados as { portefolio?: DadosPortefolio | null }).portefolio ?? null
+  const podeNegociar = !carteira && dados.modo === "master" && dados.conta.estado === "ativa"
 
   /**
    * OS PAINÉIS DESTA CONTA — é aqui que se diz o que uma conta MTM Funded tem; o layout só arruma.
@@ -250,7 +283,21 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
       onNota={(id) => { setFocoDiario(id); irPara("diario") }} notas={diario.comTrade}
     />
   )
-  const paineis: PainelTrader[] = [
+  /**
+   * AS CARTEIRAS DO DONO (173): os painéis Histórico, Estatísticas e Diário saem dos MOVIMENTOS.
+   *
+   * Sem isto, os três painéis do layout PRO continuavam a ler `funded_positions` — vazia nestas
+   * contas — e ficavam vazios, enquanto o painel «A minha conta» já mostrava os 2 139 movimentos.
+   * Dois sítios do mesmo ecrã a responder coisas diferentes à mesma pergunta.
+   */
+  const paineis: PainelTrader[] = carteira
+    ? [
+        { chave: "historico", nome: "Movimentos", icone: History, contagem: carteira.resumo.movimentos, principal: true, conteudo: () => <HistoricoPortefolio d={carteira} /> },
+        { chave: "estatisticas", nome: "Métricas", icone: BarChart3, principal: true, conteudo: () => <MetricasPortefolio d={carteira} /> },
+        { chave: "diario", nome: "Diário", icone: BookOpen, conteudo: () => <DiarioPortefolio d={carteira} /> },
+        { chave: "conta", nome: "A minha conta", icone: User, conteudo: () => <PainelConta t={t} /> },
+      ]
+    : [
     { chave: "posicoes", nome: "Posições", icone: Wallet, contagem: dados.posicoes.length, principal: true, conteudo: ({ denso, irPara, fechar }) => lista("posicoes", denso, irPara, fechar) },
     { chave: "ordens", nome: "Ordens", icone: ListOrdered, contagem: dados.ordens.length, principal: true, conteudo: ({ denso, irPara, fechar }) => lista("ordens", denso, irPara, fechar) },
     { chave: "historico", nome: "Histórico", icone: History, principal: true, conteudo: ({ denso, irPara, fechar }) => lista("historico", denso, irPara, fechar) },
