@@ -307,7 +307,8 @@ export default function WorkLandingPage() {
             className="delay-1 mx-auto mt-6 max-w-2xl text-center text-zinc-400 leading-relaxed"
           >
             A equipa de crescimento expande a comunidade globalmente. Modelo baseado em
-            performance: cada membro constrói rendimento recorrente enquanto escala a comunidade.
+            performance: a comissão vem da venda feita, e cada venda fica registada no teu
+            extracto. Não há mínimo garantido — há um sistema montado e o que fizeres com ele.
           </p>
           <p
             data-reveal
@@ -316,12 +317,19 @@ export default function WorkLandingPage() {
             O teu papel não é vender. É conteúdo, visão, liderança e cultura. A máquina converte.
           </p>
           <ul className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {/*
+              O que a casa PÕE NA MÃO de quem entra, e não adjectivos.
+              «Sistema comprovado» e «Comunidade ativa» não dizem nada a ninguém — podiam estar em
+              qualquer página de recrutamento do mundo. O que está aqui agora existe, tem nome e
+              pode ser aberto: o backoffice com o pipeline, o guião de objeções, o marketplace, as
+              academias. Quem se candidata consegue verificar antes de decidir.
+            */}
             {[
-              "Sistema comprovado",
-              "Formação interna",
-              "Scripts de vendas",
-              "Comunidade ativa",
-              "Crescimento global",
+              "Backoffice com o teu dia já montado",
+              "Guião de objeções: o que dizem e o que está por trás",
+              "Oito áreas de formação para vender",
+              "Marketplace, scanners e sinais",
+              "Comissão por venda, visível no extracto",
               "Trabalho remoto",
             ].map((label) => (
               <li

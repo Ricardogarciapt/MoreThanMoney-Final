@@ -35,9 +35,14 @@ export default function TradingFloorLandingPage() {
         <h1 className="text-4xl md:text-6xl font-bold leading-tight">
           Recrutamento para o <span className="text-[#D2A63C]">Trading Floor</span>
         </h1>
+        {/* O que esta página dizia era uma intenção — «estrutura pensada como hedge fund». O que
+            está aqui agora é o que EXISTE e se pode verificar: a mesa corre sobre infra-estrutura
+            da casa, e isso é o que interessa a quem se candidata. Nenhum número de rendimento,
+            porque nenhum foi medido para quem entra. */}
         <p className="mt-6 max-w-3xl text-zinc-300 text-lg">
-          Estrutura pensada como hedge fund + trading desk + comunidade escalável. Procuramos perfis para
-          crescimento de AUM, análise de mercado e execução disciplinada.
+          A mesa já está montada e a correr: feed de preços próprio, contas-mestre com cópia para
+          clientes, scanners e sinais a publicar todos os dias, e carteiras com desempenho medido —
+          não projectado. Procuramos quem queira operar e fazer crescer isto.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
@@ -96,16 +101,23 @@ export default function TradingFloorLandingPage() {
           <CardContent className="p-7 md:p-10">
             <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <h2 className="text-2xl font-bold mb-3">Como funciona o Trading Floor</h2>
+                <h2 className="text-2xl font-bold mb-3">O que já está a correr</h2>
                 <p className="text-zinc-300 text-sm">
-                  Analyst cria insights e estratégias, Trader executa com disciplina, IB expande capital e rede.
-                  O resultado é uma estrutura operacional focada em performance e crescimento sustentável.
+                  Não entras para construir a mesa — entras para a operar. O analista produz a
+                  leitura, o trader executa com regra de risco, o IB traz capital e rede. Por baixo
+                  disso corre infra-estrutura nossa: webtrader com preços do nosso conector,
+                  contas-mestre que copiam para as contas dos clientes, scanners e Tap to Trade.
+                </p>
+                <p className="mt-3 text-zinc-400 text-xs">
+                  E uma equipa de agentes que vigia as carteiras todas as semanas, compara preços
+                  com entradas, alvos e stops, e propõe. Quem decide são as pessoas.
                 </p>
               </div>
               <div className="space-y-3 text-sm text-zinc-200">
-                <div className="flex items-center gap-2"><Users className="h-4 w-4 text-[#D2A63C]" /> KPI por função</div>
+                <div className="flex items-center gap-2"><Users className="h-4 w-4 text-[#D2A63C]" /> KPI por função, medido no backoffice</div>
                 <div className="flex items-center gap-2"><Target className="h-4 w-4 text-[#D2A63C]" /> Onboarding orientado por papel</div>
                 <div className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-[#D2A63C]" /> Progressão interna e accountability</div>
+                <div className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-[#D2A63C]" /> Resultados em pips e percentagem, com origem declarada</div>
               </div>
             </div>
             <div className="mt-7">
@@ -116,6 +128,12 @@ export default function TradingFloorLandingPage() {
                 </Button>
               </a>
             </div>
+            {/* A mesma nota que o /work tem, e pela mesma razão: três funções numa página de
+                recrutamento leem-se como promessa de rendimento se ninguém disser o contrário. */}
+            <p className="mt-5 text-xs leading-relaxed text-zinc-400">
+              Não há salário fixo nem mínimo garantido, e nada nesta página é uma promessa de
+              rendimento. Trading envolve risco de perda do capital.
+            </p>
           </CardContent>
         </Card>
       </section>
