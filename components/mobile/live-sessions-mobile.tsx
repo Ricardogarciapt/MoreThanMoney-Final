@@ -128,6 +128,12 @@ export default function LiveSessionsMobile({
   const [todasAsSalas, setTodasAsSalas] = useState<StreamListItem[]>([])
   /** A academia escolhida. `null` = todas. */
   const [academia, setAcademia] = useState<string | null>(null)
+  /**
+   * As salas abertas. Fechadas por omissão: com todas as listas de vídeos abertas ao mesmo tempo
+   * a página ficava com dezenas de ecrãs de altura e a hierarquia — academia › sala › aulas —
+   * deixava de se ler, que era exactamente o que se queria arrumar.
+   */
+  const [salasAbertas, setSalasAbertas] = useState<Record<string, boolean>>({})
   const [scheduledStreams, setScheduledStreams] = useState<StreamListItem[]>([])
   const [scheduledSessions, setScheduledSessions] = useState<TimetableApiSession[]>([])
   const [loading, setLoading] = useState(true)
@@ -528,8 +534,16 @@ export default function LiveSessionsMobile({
     () => (academia ? grupos.find((g) => g.chave === academia) ?? null : null),
     [grupos, academia],
   )
-  const salasVisiveis = useMemo(
-    () => (grupoEscolhido ? grupoEscolhido.salas : grupos.flatMap((g) => g.salas)),
+  /**
+   * A lista é SEMPRE por academia, mesmo em «Todas».
+   *
+   * A primeira versão achatava tudo numa lista só quando não havia filtro — e isso devolvia
+   * exactamente o problema que o tab tinha: dezoito salas seguidas sem se perceber onde começa
+   * uma academia e acaba a outra. Com o filtro escolhido fica uma secção só, que é o mesmo
+   * componente a mostrar menos.
+   */
+  const seccoes = useMemo(
+    () => (grupoEscolhido ? [grupoEscolhido] : grupos),
     [grupos, grupoEscolhido],
   )
 
@@ -649,7 +663,7 @@ export default function LiveSessionsMobile({
           e quem queria rever uma aula tinha de saber de cor em que sala ela estava. */}
       {!loading && grupos.length > 0 && (
         <div className="mt-6">
-          <h3 className="mb-2 text-sm font-semibold text-white">Academias</h3>
+          <h3 className="mb-2 text-sm font-semibold text-white">Academias e horários</h3>
           <div className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               type="button"
@@ -681,11 +695,47 @@ export default function LiveSessionsMobile({
             ))}
           </div>
 
+          {/* O HORÁRIO, aqui e não no fundo da página. Estava depois de tudo, e quem queria
+              saber a que horas é a próxima aula tinha de passar por todas as salas primeiro —
+              a informação mais procurada era a última a aparecer. */}
+      {scheduledSessions.length > 0 && (
+        <div className="mt-6 mb-4">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#D2A63C]" />
+            {t("live.scheduleHeading")}
+          </h3>
+          <SessionsTimetable
+            sessions={scheduledSessions.map((s) => ({
+              id: s.id,
+              title: s.title,
+              educatorName: s.educatorName ?? null,
+              language: s.language ?? null,
+              scheduledAt: s.scheduledAt,
+              tier: s.tier,
+            }))}
+          />
+        </div>
+      )}
+
           {/* ── AS SALAS ──────────────────────────────────────────────────────────────────
               Cada sala traz as suas gravações por baixo, como no site. As fechadas aparecem
               com cadeado: esconder o que ainda está por vender tira-o da montra. */}
-          <div className="mt-3 space-y-2.5">
-            {salasVisiveis.map((s) => {
+          <div className="mt-3 space-y-5">
+            {seccoes.map((seccao) => (
+              <section key={seccao.chave}>
+                {/* O título da academia só aparece em «Todas»: com o filtro escolhido já está no
+                    chip aceso, e repeti-lo a seguir era dizer a mesma coisa duas vezes. */}
+                {!grupoEscolhido && (
+                  <h4 className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    {seccao.nome}
+                    <span className="text-zinc-700">{seccao.salas.length}</span>
+                    {seccao.aoVivo > 0 && (
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
+                    )}
+                  </h4>
+                )}
+                <div className="space-y-2.5">
+            {seccao.salas.map((s) => {
               const podeNivel = (tier: string | null | undefined) =>
                 canAccessStream(user as PerfilUi | null, tier as StreamListItem["access_tier"])
               const r = oQuePodeFazer(s as unknown as SalaDeAula, podeNivel)
@@ -731,50 +781,55 @@ export default function LiveSessionsMobile({
                   </button>
 
                   {/*
+                    AS AULAS DESTA SALA, atrás de um toque.
+                    Separado do botão da sala de propósito: tocar no cartão ENTRA na sala (ou leva
+                    ao upgrade), e tocar aqui ABRE a lista. Um só alvo para as duas coisas obrigava
+                    a escolher qual delas perder.
+                  */}
+                  {r.temGravacoes && (
+                    <button
+                      type="button"
+                      onClick={() => setSalasAbertas((a) => ({ ...a, [s.id]: !a[s.id] }))}
+                      className="flex w-full items-center justify-between border-t border-zinc-800/80 px-3 py-2 text-left"
+                    >
+                      <span className="text-[11px] text-gray-400">
+                        {s.playlist_title?.trim() || "Aulas gravadas"}
+                      </span>
+                      <span className="text-[11px] text-[#D2A63C]">
+                        {salasAbertas[s.id] ? "fechar" : "ver aulas"}
+                      </span>
+                    </button>
+                  )}
+
+                  {/*
                     AS GRAVAÇÕES, com o nível DELAS e não o da sala. Há salas cuja emissão é VIP e
                     cujas gravações abrem a membros — juntar os dois níveis punha um cadeado em
                     aulas que estão pagas, e isso não dá erro nenhum.
                   */}
-                  {r.temGravacoes && (
+                  {r.temGravacoes && salasAbertas[s.id] && (
                     <div className="border-t border-zinc-800/80 px-2.5 pb-2.5 pt-2">
                       <LmsPlaylistSection
                         playlistUrl={s.playlist_url}
                         playlistTitle={s.playlist_title}
                         canAccess={r.podeRever}
                         tierLabel={s.playlist_access_tier ?? s.access_tier ?? null}
+                        defaultOpen
                       />
                     </div>
                   )}
                 </div>
               )
             })}
+                </div>
+              </section>
+            ))}
           </div>
 
-          {salasVisiveis.length === 0 && (
+          {seccoes.every((x) => x.salas.length === 0) && (
             <p className="mt-3 rounded-2xl border border-dashed border-zinc-800 p-6 text-center text-sm text-gray-500">
-              Esta academia ainda não tem salas no teu plano.
+              Ainda não há salas nesta academia.
             </p>
           )}
-        </div>
-      )}
-
-      {/* ── Próximas sessões (Horário — estilo calendário escolar) ──────────── */}
-      {scheduledSessions.length > 0 && (
-        <div className="mt-6 mb-4">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#D2A63C]" />
-            {t("live.scheduleHeading")}
-          </h3>
-          <SessionsTimetable
-            sessions={scheduledSessions.map((s) => ({
-              id: s.id,
-              title: s.title,
-              educatorName: s.educatorName ?? null,
-              language: s.language ?? null,
-              scheduledAt: s.scheduledAt,
-              tier: s.tier,
-            }))}
-          />
         </div>
       )}
 
