@@ -192,6 +192,29 @@ export function proximoPasso(p: PessoaDoNegocio, agora: Date = new Date()): Prox
     }
   }
 
+  /**
+   * SABE-SE QUE JÁ SE TENTOU, MAS NÃO QUANDO.
+   *
+   * Acontece porque `vendas_negocios` não guarda a data do último toque — quem chama conta as
+   * tentativas pelas tarefas que já existiram para aquele negócio, e isso diz «quantas» mas não
+   * «quando». Sem este ramo, o código caía no «Esperar» (porque `d` ficava 0) e mandava esperar
+   * para sempre por uma data que nunca vai existir.
+   *
+   * E havia um erro pior, visível no ecrã a 01/10: a tarefa dizia «Segunda tentativa de contacto»
+   * e a sugestão por baixo dizia «sem um único contacto». Duas frases a contradizerem-se no mesmo
+   * cartão ensinam quem lê a não acreditar em nenhuma.
+   */
+  if (desdeContacto === null && tentativas > 0) {
+    return {
+      accao: `Nova tentativa por ${vias[1]?.canal ?? melhor.canal}`,
+      canal: vias[1]?.canal ?? melhor.canal,
+      destino: vias[1]?.destino ?? melhor.destino,
+      urgencia: 450,
+      porque: `Já houve ${tentativas} tentativa(s) sem resposta registada. Não se sabe a data da última — ` +
+        (vias[1] ? 'muda de canal, que responde mais do que repetir o mesmo.' : 'muda o ângulo da mensagem.'),
+    }
+  }
+
   // Tentou-se e não respondeu.
   if (tentativas >= 4) {
     return {

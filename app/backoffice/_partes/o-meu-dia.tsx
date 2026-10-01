@@ -1,5 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { diaEmLisboa } from '@/lib/backoffice-dia-regras'
+import { proximoPasso, type PessoaDoNegocio } from '@/lib/vendas/abordagem'
+import { Contactar } from '@/components/backoffice-contactar'
 import { Copiar } from './copiar'
 import { Marcar } from '../tarefas/marcar'
 
@@ -16,6 +18,18 @@ import { Marcar } from '../tarefas/marcar'
  *
  * O rascunho é sempre editável e nunca é enviado por nós. Ver `backoffice-dia-mensagem.ts`: a IA
  * redige, a pessoa envia. Não existe caminho neste código para um destes textos sair sozinho.
+ *
+ * A ORDEM É POR URGÊNCIA, E NÃO POR PRAZO. Isto foi medido a 01/10/2026 e era o defeito mais caro
+ * deste ecrã: a leitura era `order('prazo')` ascendente com `limit(20)`, e havia 225 tarefas
+ * atrasadas de 26 a 30 de Setembro contra 53 de hoje. Resultado: as vinte vagas eram SEMPRE
+ * ocupadas pelas mais velhas — as menos prováveis de fechar — e **as de hoje nunca chegavam ao
+ * ecrã**. Quem abria o painel via o cemitério e não via o lead que entrou de manhã, que é o único
+ * que ainda responde.
+ *
+ * Agora lê-se mais do que cabe, pergunta-se a `lib/vendas/abordagem.ts` quanto vale cada negócio
+ * agora, e mostram-se os primeiros. Uma tarefa ligada a quem respondeu ontem passa à frente de uma
+ * de há cinco dias que nunca teve resposta — que é como qualquer vendedor trabalharia se tivesse a
+ * informação à frente.
  *
  * RISCAR FAZ-SE AQUI, e isso é o remendo de um buraco medido: no dia em que se contaram as tarefas
  * marcadas como feitas, o número era zero. Este bloco dizia «Feito? Marca em Tarefas» — ou seja,
@@ -47,6 +61,18 @@ interface TarefaDoDia {
   prazo: string | null
 }
 
+/** O que se mostra por linha, depois de a urgência decidir a ordem. */
+interface LinhaDoDia extends TarefaDoDia {
+  urgencia: number
+  accao: string | null
+  porque: string | null
+  canal: string | null
+  destino: string | null
+  atrasada: boolean
+  /** O negócio, para os botões de contacto. `null` nas tarefas de prospeção. */
+  pessoa: PessoaDoNegocio | null
+}
+
 export async function OMeuDia({ ids, pessoaId }: Props) {
   if (!ids.length) return null
 
@@ -63,11 +89,83 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
     .in('responsavel_id', ids as string[])
     .eq('estado', 'aberta')
     .lte('prazo', hoje)
-    .order('prazo', { ascending: true })
-    .order('criado_em', { ascending: true })
-    .limit(20)
+    .order('prazo', { ascending: false })
+    .limit(120)
 
-  const tarefas = (data ?? []) as unknown as TarefaDoDia[]
+  const brutas = (data ?? []) as unknown as TarefaDoDia[]
+
+  /**
+   * Os negócios por trás das tarefas, numa só ida à base. Sem eles não há urgência nenhuma para
+   * calcular: uma tarefa sozinha não sabe se a pessoa respondeu ontem ou nunca abriu a boca.
+   */
+  const idsNegocio = [...new Set(brutas.map((t) => t.negocio_id).filter(Boolean) as string[])]
+  const negocios = new Map<string, PessoaDoNegocio>()
+  if (idsNegocio.length) {
+    const { data: ns } = await db
+      .from('vendas_negocios')
+      .select('id, nome, email, telefone, telegram_id, telegram_username, instagram_handle, estado, criado_em, origem')
+      .in('id', idsNegocio)
+    for (const n of (ns ?? []) as unknown as Array<PessoaDoNegocio & { id: string }>) {
+      negocios.set(n.id, n)
+    }
+  }
+
+  /**
+   * QUANTAS VEZES JÁ SE TENTOU, contado pelas tarefas que existiram para aquele negócio.
+   *
+   * `vendas_negocios` não guarda a data do último toque nem um contador de tentativas, e sem isto a
+   * sugestão dizia «primeiro contacto» por baixo de uma tarefa chamada «Segunda tentativa de
+   * contacto» — duas frases a contradizerem-se no mesmo cartão. Contar as tarefas anteriores não
+   * dá a data, mas dá o número, e o número já chega para não mentir.
+   */
+  const tentativasPorNegocio = new Map<string, number>()
+  if (idsNegocio.length) {
+    const { data: antigas } = await db
+      .from('vendas_tarefas')
+      .select('negocio_id')
+      .in('negocio_id', idsNegocio)
+      // Canceladas NÃO são tentativas: ninguém falou com ninguém. Contá-las dizia «4 tentativas»
+      // por baixo de uma tarefa chamada «Segunda tentativa» — outra vez duas frases a discordar.
+      .neq('estado', 'cancelada')
+    for (const r of (antigas ?? []) as Array<{ negocio_id: string | null }>) {
+      if (!r.negocio_id) continue
+      tentativasPorNegocio.set(r.negocio_id, (tentativasPorNegocio.get(r.negocio_id) ?? 0) + 1)
+    }
+  }
+
+  const agora = new Date()
+  const tarefas: LinhaDoDia[] = brutas
+    .map((t) => {
+      const n = t.negocio_id ? negocios.get(t.negocio_id) : undefined
+      const atrasada = Boolean(t.prazo && t.prazo < hoje)
+      if (!n) {
+        /**
+         * Tarefas sem negócio — as de prospeção («Interagir: #hashtag»), que são 269 das 301.
+         * Valem, mas valem menos do que falar com alguém que já está no pipeline: interagir num
+         * post é semear, responder a quem respondeu é colher. E uma semeadura de há cinco dias
+         * vale menos do que a de hoje, porque o post já passou.
+         */
+        return { ...t, urgencia: atrasada ? 60 : 300, accao: null, porque: null, canal: null, destino: null, atrasada, pessoa: null }
+      }
+      // Menos um: a tarefa que está a ser mostrada não é uma tentativa já feita.
+      const feitas = Math.max(0, (tentativasPorNegocio.get(t.negocio_id as string) ?? 1) - 1)
+      const passo = proximoPasso({ ...n, tentativas: feitas }, agora)
+      return {
+        ...t,
+        // Um atraso tira peso mas não manda a tarefa para o fim: o que manda é o estado da pessoa.
+        urgencia: Math.round(passo.urgencia * (atrasada ? 0.85 : 1)),
+        accao: passo.accao,
+        porque: passo.porque,
+        canal: passo.canal,
+        destino: passo.destino,
+        atrasada,
+        pessoa: n,
+      }
+    })
+    .sort((a, b) => b.urgencia - a.urgencia || String(a.prazo).localeCompare(String(b.prazo)))
+    .slice(0, 20)
+
+  const atrasadas = brutas.filter((t) => t.prazo && t.prazo < hoje).length
 
   if (!tarefas.length) {
     return (
@@ -86,7 +184,9 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
       <div className="flex items-baseline justify-between">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">O teu dia</h2>
         <span className="text-xs text-gray-600">
-          {tarefas.length} por fazer · {hoje}
+          {/* O número total aparece SEMPRE, e não só o das 20 mostradas: esconder a dívida não a
+              paga, e quem só vê vinte não sabe que precisa de ajuda. */}
+          {brutas.length} por fazer{atrasadas ? ` · ${atrasadas} de dias anteriores` : ''} · {hoje}
         </span>
       </div>
 
@@ -104,6 +204,21 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
                 )}
                 {t.descricao && (
                   <p className="text-sm leading-relaxed text-gray-400">{t.descricao}</p>
+                )}
+
+                {/* O QUE FAZER E PORQUÊ. O motivo aparece sempre: um painel que manda fazer sem
+                    dizer porquê ensina quem o lê a obedecer sem pensar — e depois a ignorá-lo. */}
+                {t.accao && (
+                  <div className="rounded-lg border border-[#D2A63C]/25 bg-[#D2A63C]/[0.06] px-3 py-2">
+                    <p className="text-[13px] font-medium text-[#E9C46A]">{t.accao}</p>
+                    {t.porque && <p className="mt-0.5 text-[11.5px] leading-relaxed text-gray-400">{t.porque}</p>}
+                  </div>
+                )}
+
+                {t.pessoa && <Contactar pessoa={t.pessoa} />}
+
+                {t.atrasada && (
+                  <p className="text-[11px] text-gray-600">Ficou de {t.prazo}</p>
                 )}
 
                 {t.rascunho && (

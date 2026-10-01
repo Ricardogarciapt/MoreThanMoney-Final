@@ -33,6 +33,8 @@ import { PAPEIS, type Papel } from '@/lib/backoffice-papeis'
 import { ESTADOS_PIPELINE, ESTADO_PIPELINE_NOME, dataCurta, ehEstadoFechado, ehEstadoPipeline } from '@/lib/backoffice-vista'
 import { avisoParado, diasParado, sugestaoPara } from '@/lib/backoffice-playbook'
 import { lerDoCatalogo, lerPagina, lerProcura } from '@/lib/backoffice-paginacao'
+import { Contactar } from '@/components/backoffice-contactar'
+import { proximoPasso } from '@/lib/vendas/abordagem'
 import { abrirPagina, SemAcesso } from '../_partes/acesso'
 import { Aviso, Cabecalho, Etiqueta, Falhou, Vazio } from '../_partes/blocos'
 import { Campo, ESTILO_CAMPO, Filtros, Paginacao, type Params } from '../_partes/navegar'
@@ -286,6 +288,25 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                         )}
                         {n.nota && <p className="mt-2 text-xs leading-relaxed text-gray-400">{n.nota}</p>}
                         {parado && <p className="mt-2 text-xs font-medium text-amber-400/90">{parado}</p>}
+
+                        {/* POR ONDE SE FALA, e o que fazer a seguir.
+                            O `sugestaoPara` que já existia diz o que se faz NAQUELE ESTADO — é o
+                            guião. Isto diz por onde e QUANDO, que depende da pessoa e não do
+                            estado: quem respondeu ontem trata-se de outra maneira de quem nunca
+                            abriu a boca, mesmo estando os dois em «lead».
+                            A decisão vem de lib/vendas/abordagem.ts, que tem guarda. */}
+                        <div className="mt-3 space-y-1.5">
+                          {(() => {
+                            const passo = proximoPasso(n)
+                            return (
+                              <p className="text-[12.5px] leading-snug">
+                                <span className="font-medium text-[#E9C46A]">{passo.accao}</span>
+                                <span className="text-gray-500"> — {passo.porque}</span>
+                              </p>
+                            )
+                          })()}
+                          <Contactar pessoa={n} />
+                        </div>
                         {/* Um lead da bolsa não se move nem se trabalha antes de ter dono: primeiro
                             pega-se. Mostrar «Mover» num negócio que não é de ninguém convidava a
                             uma escrita que o servidor recusa, e a recusa parece avaria. */}

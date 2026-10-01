@@ -88,6 +88,17 @@ const haDias = (n: number) => new Date(AGORA.getTime() - n * 86_400_000).toISOSt
   // Repetir o mesmo canal que já falhou responde menos do que mudar.
   teste('e muda de canal', horas.canal !== caminhos({ email: 'a@b.pt', telefone: '+351900' })[0].canal)
 
+  /**
+   * O erro que apareceu no ecrã a 01/10: a tarefa dizia «Segunda tentativa» e a sugestão por baixo
+   * dizia «sem um único contacto». Sabe-se que já se tentou, não se sabe quando.
+   */
+  const semData = proximoPasso(
+    { email: 'a@b.pt', telefone: '+351900', estado: 'lead', criado_em: haDias(5), tentativas: 1 }, AGORA)
+  teste('tentativas sem data não dizem «primeiro contacto»', !semData.accao.includes('Primeiro'))
+  teste('e não mandam esperar para sempre', semData.accao !== 'Esperar')
+  teste('e admitem que não se sabe a data', semData.porque.includes('não se sabe') || semData.porque.includes('Não se sabe'))
+  teste('e mudam de canal quando há outro', semData.canal === 'telefone')
+
   const queimado = proximoPasso(
     { email: 'a@b.pt', estado: 'lead', criado_em: haDias(60), ultimo_contacto: haDias(20), tentativas: 5 }, AGORA)
   teste('ao fim de 5 tentativas, fecha', queimado.accao.includes('arquivar'))

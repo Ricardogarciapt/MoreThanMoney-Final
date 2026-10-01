@@ -9,21 +9,31 @@ medidos na base de produção neste dia, não estimados.
 |---|---|
 | Negócios | **111** — e **106 ainda em «lead»** (95%) |
 | Movidos | 1 contactado · 1 qualificado · 1 no-show · 2 ganhos |
-| Tarefas | **301** — 278 abertas, **todas atrasadas**, 4 feitas, 19 canceladas |
+| Tarefas | **301** — 278 abertas (**225 atrasadas** + 53 para hoje), 4 feitas, 19 canceladas |
 | Tarefas por papel | prospector 269 · closer 30 · setter 2 |
 | Equipas | `backoffice_equipas` e `backoffice_equipa_membros` **vazias** |
 | Atribuições | **0 negócios com closer**, 2 com setter |
 | Comissões | `vendas_comissoes` **vazia** |
 
 **A leitura honesta:** o backoffice não falha por falta de funcionalidades. Falha porque o trabalho
-é criado e não é feito. 278 tarefas abertas criadas entre 26/09 e 01/10, **todas** fora do prazo, e
-quatro concluídas. Acrescentar ecrãs a este estado acrescenta sítios onde não se faz nada.
+é criado e não é feito. O motor prepara ~53 tarefas por dia desde 26/09 e foram concluídas quatro.
+
+> **Correcção a uma primeira versão deste documento**, que dizia que as 278 «nasciam atrasadas».
+> Não nascem. `prazo` é uma coluna **DATE**, e comparar `prazo < now()` trata «hoje» como
+> «meia-noite de hoje» — pelo que toda a tarefa do próprio dia parece atrasada a partir das 00:01.
+> Foi o erro da consulta de diagnóstico, não do produto: o ecrã usa `lte('prazo', hoje)`, que
+> compara data com data e está certo. Contando bem: **225 atrasadas e 53 para hoje.**
 
 Três coisas valem mais do que qualquer funcionalidade nova:
 
-1. **Por que é que 278 tarefas nascem atrasadas?** Ou os prazos são irrealistas (nascem com prazo
-   no próprio dia) ou ninguém abre o ecrã. São problemas opostos com soluções opostas — medir antes
-   de desenhar.
+1. **O dia mostra sempre o mais frio primeiro.** O «meu dia» lê as tarefas com prazo até hoje
+   ordenadas por `prazo` ASCENDENTE e corta nas 20 primeiras. Com 225 atrasadas de 26 a 30 de
+   Setembro, **as 53 de hoje nunca aparecem no ecrã**: as 20 vagas são sempre ocupadas pelas mais
+   velhas, que são as menos prováveis de fechar. Quem abre o painel vê o cemitério e não vê o lead
+   que entrou esta manhã — e esse é o único que ainda responde.
+
+   (Uma versão anterior deste parágrafo dizia que a lista despejava 278 itens. Não despeja: há
+   `.limit(20)`. O defeito não é o tamanho, é a ordem.)
 2. **Ninguém tem dono.** Zero closers atribuídos em 111 negócios. Um pipeline sem dono é uma lista.
 3. **As equipas não existem na base.** «Gerir com os team leaders» não tem onde assentar: as duas
    tabelas estão a zero.

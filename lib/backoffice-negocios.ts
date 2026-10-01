@@ -75,6 +75,14 @@ export interface NegocioLinha {
   nome: string
   email: string | null
   telefone: string | null
+  /**
+   * Os outros canais. Entraram a 01/10/2026 porque sem eles os botões de contacto do pipeline
+   * ficavam cegos justamente para quem veio do Instagram e do Telegram — e esses respondem lá e
+   * não no email.
+   */
+  telegram_username: string | null
+  telegram_id: string | number | null
+  instagram_handle: string | null
   pack_previsto: string | null
   origem: string | null
   estado: string
@@ -91,7 +99,8 @@ export interface NegocioLinha {
 }
 
 const COLUNAS_NEGOCIO =
-  'id, nome, email, telefone, pack_previsto, origem, estado, motivo_perda, nota, ' +
+  'id, nome, email, telefone, telegram_username, telegram_id, instagram_handle, ' +
+  'pack_previsto, origem, estado, motivo_perda, nota, ' +
   'prospector_id, setter_id, closer_id, team_leader_id, afiliado_id, criado_em, atualizado_em, fechado_em'
 
 /**
