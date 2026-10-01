@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import CurvaPortefolio, { type PontoCurva } from "@/components/portfolios/curva-portefolio"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import ProtectedPage from "@/components/protected-page"
@@ -62,6 +63,12 @@ function mapFearGreedToPt(classification: string): string {
 }
 
 export default function PortfoliosPage() {
+  /**
+   * AS DUAS CONTAS DE PORTEFÓLIO, reconstruídas desde 01/03/2024 com preços semanais reais.
+   * Vêm da API e não do cálculo: a reconstituição precisa de 27 séries de duas fontes externas,
+   * e uma página pública não pode ficar refém de quem está do outro lado.
+   */
+
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [cryptoAssets, setCryptoAssets] = useState<AssetWithPrice[]>([])
@@ -80,6 +87,19 @@ export default function PortfoliosPage() {
 
   /** Incrementa após cada `loadPortfolioData` (preços + IA TP/SL) para a análise DCA correr uma vez com dados alinhados. */
   const [analysisSeq, setAnalysisSeq] = useState(0)
+
+  const [contasPortefolio, setContasPortefolio] = useState<Array<{
+    chave: string; nome: string; contribuido: number; valor: number; resultadoPct: number
+    desde: string; dca: string; fontePrecos: string; nota: string; curva: PontoCurva[]
+  }>>([])
+
+  useEffect(() => {
+    fetch("/api/portfolio/curva")
+      .then((r) => r.json())
+      .then((j) => setContasPortefolio(j?.contas ?? []))
+      // Um gráfico em falta não pode levar a página de preços atrás.
+      .catch(() => setContasPortefolio([]))
+  }, [])
 
   useEffect(() => {
     setMounted(true)
@@ -598,6 +618,26 @@ export default function PortfoliosPage() {
                     </Card>
                   </div>
 
+                  {/* A CONTA REAL DESTE PORTEFÓLIO, logo abaixo dos cartões.
+                      Os cartões dizem o que o portefólio PROMETE (alocação, potencial, DCA);
+                      isto diz o que ele FEZ. Sem os dois juntos, a página só tinha a promessa. */}
+                  {contasPortefolio
+                    .filter((c) => c.chave === "PORTF-CRIPTO")
+                    .map((c) => (
+                      <div key={c.chave} className="mb-6">
+                        <CurvaPortefolio
+                          titulo={c.nome}
+                          curva={c.curva}
+                          contribuido={c.contribuido}
+                          valor={c.valor}
+                          desde={c.desde}
+                          dca={c.dca}
+                          fontePrecos={c.fontePrecos}
+                          nota={c.nota}
+                        />
+                      </div>
+                    ))}
+
                   {/* Crypto Table */}
                   <Card className="bg-gray-900/80 border-[#D2A63C]/30 backdrop-blur-sm">
                     <CardHeader className="border-b border-gray-800">
@@ -744,6 +784,25 @@ export default function PortfoliosPage() {
                     </Card>
                   </div>
 
+                  {/* A conta real deste portefólio. Os cartões dizem o que ele promete; isto diz
+                      o que ele fez — e neste caso diz uma coisa boa que não estava à vista. */}
+                  {contasPortefolio
+                    .filter((c) => c.chave === "PORTF-ETF")
+                    .map((c) => (
+                      <div key={c.chave} className="mb-6">
+                        <CurvaPortefolio
+                          titulo={c.nome}
+                          curva={c.curva}
+                          contribuido={c.contribuido}
+                          valor={c.valor}
+                          desde={c.desde}
+                          dca={c.dca}
+                          fontePrecos={c.fontePrecos}
+                          nota={c.nota}
+                        />
+                      </div>
+                    ))}
+
                   {/* ETF Table */}
                   <Card className="bg-gray-900/80 border-[#D2A63C]/30 backdrop-blur-sm">
                     <CardHeader className="border-b border-gray-800">
@@ -835,6 +894,22 @@ export default function PortfoliosPage() {
 
             {/* Tab: Gráficos de Crescimento */}
             <TabsContent value="growth" className="mt-6">
+              {/* As duas contas reais primeiro: o que aconteceu vem antes do que se projecta. */}
+              <div className="mb-6 space-y-4">
+                {contasPortefolio.map((c) => (
+                  <CurvaPortefolio
+                    key={c.chave}
+                    titulo={c.nome}
+                    curva={c.curva}
+                    contribuido={c.contribuido}
+                    valor={c.valor}
+                    desde={c.desde}
+                    dca={c.dca}
+                    fontePrecos={c.fontePrecos}
+                    nota={c.nota}
+                  />
+                ))}
+              </div>
               <PortfolioGrowthCharts 
                 cryptoAssets={cryptoAssets}
                 etfAssets={etfAssets}
