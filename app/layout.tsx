@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import ThemeInitializer from "@/components/theme-initializer"
 import { Suspense } from "react"
+import CapturaAtribuicao from "@/components/agentes/captura-atribuicao"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from 'sonner'
 import ConditionalNavbarFooter from "@/components/conditional-navbar-footer"
@@ -89,6 +90,10 @@ export default function RootLayout({
           <AuthProvider>
             <I18nProvider>
               <Suspense fallback={null}>
+                {/* Apanha o `?ag=` dos links dos agentes e guarda-o 30 dias. Sem isto a receita
+                    deles é SEMPRE zero — e a regra de vida pára a equipa por falta de medição,
+                    não por falta de trabalho. Ver lib/agentes/atribuicao.ts. */}
+                <CapturaAtribuicao />
                 <GoogleTranslateLoader />
                 <ConditionalNavbarFooter>
                   {children}

@@ -22,6 +22,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react"
+import { linkDoAgente } from "@/lib/agentes/atribuicao"
 import {
   AlertTriangle, Ban, Bot, Loader2, Pause, Play, RefreshCw, TrendingDown, TrendingUp,
 } from "lucide-react"
@@ -69,6 +70,21 @@ type Dados = {
   }
 }
 
+/**
+ * PARA ONDE APONTAM OS LINKS DOS AGENTES.
+ *
+ * Curta de propósito: um menu com trinta destinos não se usa, e o que interessa é que cada agente
+ * tenha à mão o caminho que a VENDA dele percorre. São as superfícies que já cobram hoje.
+ */
+const DESTINOS = [
+  { caminho: "/marketplace", rotulo: "Marketplace" },
+  { caminho: "/marketplace/bootcamp-morethanmoney", rotulo: "Bootcamp" },
+  { caminho: "/upgrade", rotulo: "Planos" },
+  { caminho: "/scanner-access", rotulo: "Scanners" },
+  { caminho: "/mtmfunded", rotulo: "Funded" },
+  { caminho: "/", rotulo: "Início" },
+] as const
+
 const PILARES: Array<{ id: Agente["pilar"]; rotulo: string }> = [
   { id: "ceo", rotulo: "CEO" },
   { id: "trading", rotulo: "Trading" },
@@ -91,6 +107,10 @@ const TOM: Record<Agente["estado"], { borda: string; fundo: string; texto: strin
 
 export default function AgentesEquipa() {
   const [d, setD] = useState<Dados | null>(null)
+  const [copiado, setCopiado] = useState<string | null>(null)
+  // A origem real do browser: assim o link copiado no admin é o mesmo que o cliente vai abrir,
+  // mesmo em pré-visualizações da Vercel.
+  const origem = typeof window === "undefined" ? "https://www.morethanmoney.pt" : window.location.origin
   const [erro, setErro] = useState<string | null>(null)
   const [nota, setNota] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState<string | null>(null)
@@ -211,9 +231,10 @@ export default function AgentesEquipa() {
             </ul>
           )}
           <p className="mt-2 text-[11px] text-zinc-500">
-            A receita atribui-se pela <code className="text-zinc-400">chave_receita</code> de cada agente. Enquanto
-            esses códigos não existirem no Stripe, a receita medida é zero — e é por isso que os agentes aparecem em
-            risco. É o comportamento certo: um agente medido a adivinhar é pior do que um agente não medido.
+            A receita atribui-se pela <code className="text-zinc-400">chave_receita</code> de cada agente, e ela só
+            chega às compras por um link <code className="text-zinc-400">?ag=</code> — copia-os abaixo. Uma venda sem
+            código fica «por atribuir» com o motivo escrito, e não se reparte por ninguém: um agente medido a
+            adivinhar é pior do que um agente não medido.
           </p>
         </div>
       )}
@@ -251,6 +272,34 @@ export default function AgentesEquipa() {
                           <span className="text-amber-400/80"> · sem chave de receita — não é medível</span>
                         )}
                       </p>
+
+                      {/*
+                        OS LINKS DELE. É por aqui que o código chega a uma compra: sem um link
+                        destes em circulação, a receita medida é SEMPRE zero — e a regra de vida
+                        pára o agente por falta de medição, não por falta de trabalho.
+                      */}
+                      {a.chave_receita && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {DESTINOS.map((dest) => {
+                            const link = linkDoAgente(origem, dest.caminho, a.chave_receita!)
+                            return (
+                              <button
+                                key={dest.caminho}
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard?.writeText(link)
+                                  setCopiado(link)
+                                  window.setTimeout(() => setCopiado((c) => (c === link ? null : c)), 1800)
+                                }}
+                                title={link}
+                                className="rounded border border-zinc-700 px-2 py-1 text-[10.5px] text-zinc-400 transition-colors hover:border-[#D2A63C]/50 hover:text-[#E9C46A]"
+                              >
+                                {copiado === link ? "copiado ✓" : dest.rotulo}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
 
                       {/* Os números por que ele vive: a JANELA, não o acumulado. */}
                       <p className="mt-1.5 font-mono text-xs text-zinc-400">

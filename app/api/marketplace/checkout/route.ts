@@ -57,6 +57,7 @@ import { buildStripeReturnUrl } from '@/lib/site-url'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { destinoDeCompraDoProduto, donoValido, modoStripe, podeComprarAqui, precoEfectivo } from '@/lib/marketplace/regras'
+import { normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 import {
   AMBITO_MARKETPLACE, TEXTO_RECUSA, descontoQueVale, normalizarCodigo, validarCupao,
 } from '@/lib/marketplace/cupoes'
@@ -307,6 +308,33 @@ export async function POST(request: NextRequest) {
       referralId = r.userId
     }
 
+    /**
+     * QUEM TROUXE ESTA COMPRA — o código do agente, se houver.
+     *
+     * Vem do link `?ag=` que o browser guardou. NÃO é o cupão: o cupão dá desconto e esta compra
+     * só tem um; isto é só medição, e vive numa coluna própria (migração 173). Quem entra por um
+     * link de agente e tem um desconto a sério usa os dois.
+     *
+     * ═══ UM CÓDIGO INVÁLIDO NÃO TRAVA A VENDA ═════════════════════════════════════════════
+     *
+     * Ao contrário do cupão, que é recusado alto — se falhasse em silêncio a pessoa pagava o preço
+     * inteiro convencida de que tinha desconto —, um código de atribuição errado apenas não conta.
+     * A venda vale mais do que a medição dela, e quem compra não tem culpa de um link mal copiado.
+     * A venda fica como «sem código», que é exactamente o que ela é.
+     *
+     * Confirma-se contra `agentes_equipa` e não contra `coupons`: o crédito é de um AGENTE, e um
+     * código que já não pertence a ninguém não deve creditar coisa nenhuma.
+     */
+    let agenteCodigo: string | null = normalizarAgente(corpo?.agenteCodigo)
+    if (agenteCodigo) {
+      const { data: agente } = await db
+        .from('agentes_equipa')
+        .select('id')
+        .eq('chave_receita', agenteCodigo)
+        .maybeSingle()
+      if (!agente?.id) agenteCodigo = null
+    }
+
     // O cupão do Stripe: o da campanha quando é ela que vale, um ad-hoc quando é o código.
     const cupao = desconto.pct > 0
       ? desconto.veioDoCupao
@@ -359,6 +387,9 @@ export async function POST(request: NextRequest) {
         // acordo vale o que valia no clique, uma identidade confirma-se sempre contra a tabela.
         referral_id: referralId ?? '',
         referral_codigo: referralId ? codigoReferral : '',
+        // Separado do cupão de propósito — ver acima. O webhook grava-o em
+        // `marketplace_compras.agente_codigo`, que é o que a passagem diária da equipa lê.
+        agente_codigo: agenteCodigo ?? '',
       },
     })
 

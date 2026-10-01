@@ -24,6 +24,7 @@ import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { Loader2, ArrowLeft, Tag, Clock, ExternalLink } from "lucide-react"
 import { euros, galeriaDoProduto, nomeDoAutor } from "@/lib/marketplace/regras"
+import { codigoDeAgenteGuardado } from "@/lib/agentes/atribuicao-browser"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
 
 type Preco = {
@@ -107,7 +108,12 @@ export default function FichaProduto({ slug }: { slug: string }) {
         headers: { "Content-Type": "application/json" },
         // `email` só vai quando não há sessão: com sessão, quem compra é quem está autenticado e o
         // servidor ignora o que vier no corpo — a identidade nunca vem do pedido.
-        body: JSON.stringify({ produtoId: produto.id, cupao, referral, email, telefone }),
+        // `agenteCodigo` vai sempre e não tem campo no ecrã: quem compra não escolhe quem o
+        // trouxe. Vem do link `?ag=` guardado no browser, e é só medição — nunca mexe no preço.
+        body: JSON.stringify({
+          produtoId: produto.id, cupao, referral, email, telefone,
+          agenteCodigo: codigoDeAgenteGuardado(),
+        }),
       })
       const j = await r.json()
       // Um produto da casa que mantém o caminho de compra antigo devolve `externo`.

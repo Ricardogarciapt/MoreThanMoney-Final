@@ -241,6 +241,8 @@ export async function registarCompra(entrada: {
   descontoPct?: number | null
   cupaoId?: string | null
   cupaoCodigo?: string | null
+  /** Quem trouxe a compra. Separado do cupão: aquele é desconto, este é medição. */
+  agenteCodigo?: string | null
   referralId?: string | null
   referralCodigo?: string | null
 }): Promise<{ novo: boolean; compraId?: string }> {
@@ -287,6 +289,7 @@ export async function registarCompra(entrada: {
       ),
       cupao_id: entrada.cupaoId || null,
       cupao_codigo: entrada.cupaoCodigo || null,
+      agente_codigo: entrada.agenteCodigo || null,
       referral_id: entrada.referralId || null,
       referral_codigo: entrada.referralCodigo || null,
     })

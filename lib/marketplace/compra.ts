@@ -112,6 +112,9 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
       descontoPct: Number(session.metadata?.desconto_pct) || 0,
       cupaoId: session.metadata?.cupao_id || null,
       cupaoCodigo: session.metadata?.cupao_codigo || null,
+      // Sem isto a coluna fica sempre nula e a receita dos agentes é sempre zero — e a regra de
+      // vida pára a equipa por falta de medição. Ver lib/agentes/atribuicao.ts.
+      agenteCodigo: session.metadata?.agente_codigo || null,
       referralId,
       referralCodigo: referralId ? session.metadata?.referral_codigo ?? null : null,
     })

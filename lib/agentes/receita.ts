@@ -287,18 +287,27 @@ export async function lerVendasParaAtribuir(
   {
     let q = db
       .from('marketplace_compras')
-      .select('id, fonte, referencia, bruto_cents, moeda, estado, cupao_codigo, pago_em')
+      .select('id, fonte, referencia, bruto_cents, moeda, estado, cupao_codigo, agente_codigo, pago_em')
       .eq('estado', 'paga')
     if (desdeISO) q = q.gte('pago_em', desdeISO)
     const { data, error } = await q.limit(5000)
     if (error) erros.push(`marketplace_compras: ${error.message ?? 'erro'}`)
     for (const r of (data ?? []) as Record<string, unknown>[]) {
+      /**
+       * `agente_codigo` PRIMEIRO, e o cupão só como recurso.
+       *
+       * A coluna própria nasceu a 01/10 (migração 173) porque o campo do cupão não podia ser
+       * partilhado: o checkout só aceita um cupão, e um código de agente a ocupá-lo tirava o
+       * desconto a quem tinha um a sério. O cupão fica como leitura de trás: as compras
+       * anteriores à coluna só têm essa, e deitá-las fora era perder medição que já existe.
+       */
+      const codigo = (r.agente_codigo as string | null) ?? (r.cupao_codigo as string | null) ?? null
       vendas.push({
         id: `marketplace:${String(r.referencia ?? r.id)}`,
         valorCents: Number(r.bruto_cents),
         moeda: String(r.moeda ?? 'EUR'),
-        codigo: (r.cupao_codigo as string | null) ?? null,
-        ligacao: r.cupao_codigo ? 'na_compra' : null,
+        codigo,
+        ligacao: codigo ? 'na_compra' : null,
         pagoEm: (r.pago_em as string | null) ?? null,
       })
     }
