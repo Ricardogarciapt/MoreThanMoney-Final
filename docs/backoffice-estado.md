@@ -91,6 +91,16 @@ A decisão que falta em cada negócio aberto: **por onde falo com esta pessoa e 
 
 Tudo puro: sem base de dados e sem rede, para o teu ecrã poder chamá-las do servidor ou do browser.
 
+### Já ligado ao ecrã (01/10)
+
+- **`o-meu-dia`** ordena por urgência em vez de por prazo, e mostra em cada linha a acção, o motivo
+  e os botões de contacto.
+- **`pipeline`** mostra o mesmo em cada cartão, mais **«O que é que ele disse?»** — o painel de
+  objeções (`components/backoffice-objeccoes.tsx`), que só aparece a quem já pegou no negócio.
+  Guardar acrescenta à nota pela MESMA rota que a nota usa; não há segunda porta de escrita.
+- Uma objeção que não se reconhece **não devolve a mais parecida**: diz que não reconhece. Dar a
+  resposta errada com ar de certeza perde o lead sem ninguém perceber porquê.
+
 ## Regras da casa que se aplicam a este trabalho
 
 - **Nunca inventar números.** Nem no ecrã, nem nas sugestões de resposta, nem em gráficos de

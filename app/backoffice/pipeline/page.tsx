@@ -34,6 +34,7 @@ import { ESTADOS_PIPELINE, ESTADO_PIPELINE_NOME, dataCurta, ehEstadoFechado, ehE
 import { avisoParado, diasParado, sugestaoPara } from '@/lib/backoffice-playbook'
 import { lerDoCatalogo, lerPagina, lerProcura } from '@/lib/backoffice-paginacao'
 import { Contactar } from '@/components/backoffice-contactar'
+import { Objeccoes } from '@/components/backoffice-objeccoes'
 import { proximoPasso } from '@/lib/vendas/abordagem'
 import { abrirPagina, SemAcesso } from '../_partes/acesso'
 import { Aviso, Cabecalho, Etiqueta, Falhou, Vazio } from '../_partes/blocos'
@@ -306,6 +307,10 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                             )
                           })()}
                           <Contactar pessoa={n} />
+                          {/* O que ele respondeu, e o que isso quer mesmo dizer. Só aparece a
+                              quem já pegou no negócio: perguntar «o que é que ele disse» sobre um
+                              lead que não é de ninguém é perguntar ao vento. */}
+                          {!estaSemDono(n) && <Objeccoes id={n.id} nota={n.nota} />}
                         </div>
                         {/* Um lead da bolsa não se move nem se trabalha antes de ter dono: primeiro
                             pega-se. Mostrar «Mover» num negócio que não é de ninguém convidava a
