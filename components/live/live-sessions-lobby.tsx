@@ -11,9 +11,16 @@ import { useConfigIntro } from "@/components/intro/usar-intro"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { useAuth } from "@/contexts/auth-context"
 import { podeAcederAoTier } from "@/lib/perfil-ui"
-import { porAcademia, type SalaDeAula } from "@/lib/lms/aulas"
+import {
+  PARAM_ACADEMIA,
+  porAcademia,
+  resolverAcademia,
+  type AcademiaComSalas,
+  type AcademiaDoCatalogo,
+  type SalaDeAula,
+} from "@/lib/lms/aulas"
 import { useI18n, useT } from "@/components/i18n-provider"
-import { Radio, Users, GraduationCap, Bell, ArrowRight, Circle, Lock, Compass, CalendarClock } from "lucide-react"
+import { Radio, Users, GraduationCap, Bell, ArrowRight, Circle, Lock, Compass, CalendarClock, ChevronLeft, FolderOpen } from "lucide-react"
 
 type EducatorPublic = {
   id: string
@@ -36,7 +43,10 @@ type Stream = {
   scheduled_start_at?: string | null
   viewer_count?: number | null
   access_tier?: "free" | "all" | "app_member" | "premium" | "vip" | null
-  academy?: { id: string; name: string } | null
+  /** O `slug` vem da rota (`academy:lms_academies(id, slug, name)`) e é a chave que casa a sala
+      com a pasta do catálogo. Sem ele, a mesma academia abria duas pastas: uma por slug, outra
+      por nome. */
+  academy?: { id: string; name: string; slug?: string | null } | null
   educator?: {
     id: string
     display_name: string
@@ -86,28 +96,43 @@ export default function LiveSessionsLobby() {
   const [educators, setEducators] = useState<EducatorPublic[]>([])
   const [scheduledSessions, setScheduledSessions] = useState<ScheduledSession[]>([])
   const [loading, setLoading] = useState(true)
-  /** Nome da academia escolhida nos chips ("" = todas). Filtra salas E especialistas — um só filtro. */
-  const [academia, setAcademia] = useState("")
+  /**
+   * O CATÁLOGO DE ACADEMIAS, pedido à parte das salas.
+   *
+   * É o que dá capa e lugar às academias que ainda não têm educador. Sem ele, agrupar pelas salas
+   * fazia a pasta do Imobiliário (e da IA, e do Network Marketing) desaparecer da grelha — uma
+   * área que a casa deixou de vender sem ninguém decidir isso.
+   */
+  const [catalogo, setCatalogo] = useState<AcademiaDoCatalogo[]>([])
+  /**
+   * A PASTA ABERTA VIVE NA URL (`?academia=<slug>`), não num estado qualquer.
+   *
+   * Assim um link de notificação («nova aula na Academia Forex») abre já dentro da pasta, e o
+   * «voltar» do browser devolve a grelha sem código nenhum à mistura. Lê-se depois de montar,
+   * para o primeiro fotograma do servidor e do cliente serem o mesmo.
+   */
+  const [paramAcademia, setParamAcademia] = useState<string | null>(null)
 
   const [educatorDialogOpen, setEducatorDialogOpen] = useState(false)
   const [selectedEducator, setSelectedEducator] = useState<EducatorPublic | null>(null)
   const [selectedEducatorStreams, setSelectedEducatorStreams] = useState<Stream[]>([])
   const [selectedEducatorStreamsLoading, setSelectedEducatorStreamsLoading] = useState(false)
 
-  // A lista de academias deixou de ser pedida à parte: a tabela tem academias sem salas
-  // («Introdução», «Network Marketing»…) e um chip que não filtra nada é ruído. Os chips saem
-  // das salas que existem de facto.
+  // As academias VOLTARAM a ser pedidas à parte: deixaram de ser um chip de filtro e passaram a
+  // ser as pastas da montra, e uma pasta tem de existir mesmo sem salas dentro.
   const loadAll = useCallback(async () => {
     setLoading(true)
     try {
-      const [sRes, eRes, schedRes] = await Promise.all([
+      const [sRes, eRes, schedRes, acRes] = await Promise.all([
         fetch("/api/live-sessions/streams").then((r) => r.json()),
         fetch("/api/live-sessions/educators-public").then((r) => r.json()),
         fetch("/api/live-sessions/schedule?days=21&limit=12").then((r) => r.json()).catch(() => ({ data: [] })),
+        fetch("/api/live-sessions/academies").then((r) => r.json()).catch(() => ({ data: [] })),
       ])
       setStreams(Array.isArray(sRes?.data) ? sRes.data : [])
       setEducators(Array.isArray(eRes?.data) ? eRes.data : [])
       setScheduledSessions(Array.isArray(schedRes?.data) ? schedRes.data : [])
+      setCatalogo(Array.isArray(acRes?.data) ? acRes.data : [])
     } finally {
       setLoading(false)
     }
@@ -158,32 +183,56 @@ export default function LiveSessionsLobby() {
     )
   }, [agenda])
 
-  const academias = useMemo(() => {
-    const nomes = new Set<string>()
-    for (const s of salas) if (s.academy?.name) nomes.add(s.academy.name)
-    // Ordem alfabética: se viesse da ordem das salas, os chips trocavam de lugar sempre que uma
-    // sala entrasse em direto (as em direto sobem para o topo).
-    return [...nomes].sort((a, b) => a.localeCompare(b, "pt"))
-  }, [salas])
-
-  const salasFiltradas = useMemo(
-    () => (academia ? salas.filter((s) => s.academy?.name === academia) : salas),
-    [salas, academia]
+  /**
+   * AS ACADEMIAS, COMO PASTAS.
+   *
+   * Antes eram chips de filtro com TODAS as salas abertas por baixo: dezoito salas seguidas sem
+   * se perceber onde acaba uma academia e começa a outra. O dono pediu o contrário — primeiro só
+   * as pastas (a grelha de capas), clicar numa, e só então as salas DELA.
+   *
+   * O catálogo entra antes das salas de propósito: é isso que dá pasta e capa a uma academia sem
+   * educador, em vez de a fazer desaparecer. A arrumação vem de `lib/lms/aulas.ts`, com guarda, e
+   * é o mesmo módulo que serve o separador Aulas da app — uma regra e dois ecrãs.
+   */
+  const seccoes = useMemo(
+    () => porAcademia(salas as unknown as SalaDeAula[], catalogo),
+    [salas, catalogo],
   )
 
   /**
-   * AS SALAS DENTRO DAS ACADEMIAS.
-   *
-   * Eram uma grelha achatada com um filtro por cima: sem filtro, dezoito salas seguidas sem se
-   * perceber onde acaba uma academia e começa a outra. A arrumação vem de `lib/lms/aulas.ts`, o
-   * mesmo módulo que serve o separador Aulas da app — uma regra e dois ecrãs, em vez de duas
-   * cópias que divergem. É lá que está escrito porque é que uma sala sem academia não desaparece
-   * e porque é que a sala mais aberta vem primeiro.
+   * O que a URL pede, resolvido contra o que existe. Um slug que não resolve (link antigo,
+   * academia renomeada) dá `null` e volta à grelha — nunca uma pasta em branco.
    */
-  const seccoes = useMemo(
-    () => porAcademia(salasFiltradas as unknown as SalaDeAula[]),
-    [salasFiltradas],
-  )
+  const aberta = useMemo(() => resolverAcademia(paramAcademia, seccoes), [paramAcademia, seccoes])
+  // `porAcademia` devolve a sala no formato partilhado; o cartão precisa do stream inteiro.
+  const porId = useMemo(() => new Map(salas.map((x) => [x.id, x])), [salas])
+
+  // Ler a URL depois de montar, e seguir o «voltar» do browser: é ele que fecha a pasta.
+  useEffect(() => {
+    const ler = () => setParamAcademia(new URLSearchParams(window.location.search).get(PARAM_ACADEMIA))
+    ler()
+    window.addEventListener("popstate", ler)
+    return () => window.removeEventListener("popstate", ler)
+  }, [])
+
+  /**
+   * Abrir/fechar escreve na URL com a API nativa do histórico, e não com `router.push`: o `push`
+   * do App Router remontava a lista e as salas voltavam a ser pedidas só para abrir uma pasta.
+   * `pushState` ao abrir (para o «voltar» dar a grelha) e `replaceState` ao fechar (para não
+   * encher o histórico de idas e voltas).
+   */
+  const abrirPasta = useCallback((chave: string) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set(PARAM_ACADEMIA, chave)
+    window.history.pushState(null, "", url)
+    setParamAcademia(chave)
+  }, [])
+  const fecharPasta = useCallback(() => {
+    const url = new URL(window.location.href)
+    url.searchParams.delete(PARAM_ACADEMIA)
+    window.history.replaceState(null, "", url)
+    setParamAcademia(null)
+  }, [])
   const openEducatorDialog = async (ed: EducatorProfilePublic) => {
     setSelectedEducator(ed as EducatorPublic)
     setSelectedEducatorStreams([])
@@ -229,6 +278,11 @@ export default function LiveSessionsLobby() {
       </div>
     )
   }
+
+  // A contagem diz-se sempre, zero incluído. Uma academia sem salas mostra «0 salas» — nunca «a
+  // abrir»: as áreas estão prontas, e o que falta é o horário, não a área.
+  const etiquetaSalas = (n: number) =>
+    n === 1 ? t("live.lobby.roomsCountOne") : t("live.lobby.roomsCountMany").replace("{n}", String(n))
 
   const locale = lang === "pt" ? "pt-PT" : lang
   const quando = (iso: string) => {
@@ -365,81 +419,94 @@ export default function LiveSessionsLobby() {
       />
 
       {/*
-        3 · SALAS E ESPECIALISTAS, com um filtro só.
-        Antes havia uma caixa de pesquisa, um seletor de academias e uma fila de «filtros rápidos»
-        — e nenhum dos três mexia em nada visível: filtravam uma grelha que já não era desenhada.
-        Ficam chips por academia, tirados das salas que existem, e aplicam-se às duas listas.
+        3 · AS ACADEMIAS, COMO PASTAS.
+        Fechado vê-se só a grelha de capas — uma pasta por academia, com o nome e a contagem de
+        salas. Clicar abre as salas DESSA academia, e o estado vai na URL (`?academia=<slug>`)
+        para um link de notificação cair já dentro da pasta. Antes eram chips de filtro com TODAS
+        as academias abertas ao mesmo tempo: dezoito salas seguidas e nenhuma forma de escolher.
       */}
       <section id="salas" aria-labelledby="salas-titulo" className="scroll-mt-6 space-y-6">
         <div className="space-y-3">
           <h2 id="salas-titulo" className="text-xl font-bold tracking-tight text-white md:text-2xl">
-            {t("live.lobby.roomsHeading")}
+            {aberta ? aberta.nome : t("live.lobby.academiesHeading")}
           </h2>
-          {academias.length > 1 && (
-            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label={t("live.lobby.roomsHeading")}>
-              {["", ...academias].map((nome) => (
-                <button
-                  key={nome || "todas"}
-                  type="button"
-                  aria-pressed={academia === nome}
-                  onClick={() => setAcademia(nome)}
-                  className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition ${
-                    academia === nome
-                      ? "border-[#D2A63C] bg-[#D2A63C]/20 text-[#D2A63C]"
-                      : "border-gray-700 bg-black/40 text-gray-300 hover:border-gray-500"
-                  }`}
-                >
-                  {nome || t("live.lobby.filterAll")}
-                </button>
-              ))}
-            </div>
-          )}
+          <p className="text-sm text-gray-400">
+            {aberta ? etiquetaSalas(aberta.salas.length) : t("live.lobby.academiesIntro")}
+          </p>
         </div>
 
         {/* Os especialistas já aparecem no cartão de cada sala (e o perfil abre a partir dele): o
             carrossel à parte repetia a mesma informação duas vezes. */}
-        {/* Salas */}
-        <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-gray-400">{t("live.lobby.roomsSub")}</h3>
-          {salasFiltradas.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-gray-800 bg-black/30 p-6 text-center text-sm text-gray-500">
-              {t("live.lobby.noRooms")}
-            </p>
-          ) : (
-            <div className="space-y-8">
-              {seccoes.map((seccao) => (
-                <section key={seccao.chave}>
-                  {/* O título só aparece quando NÃO há filtro: com a academia escolhida já está
-                      no chip aceso, e repeti-lo logo abaixo dizia a mesma coisa duas vezes. */}
-                  {!academia && (
-                    <h4 className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                      {seccao.nome}
-                      <span className="text-zinc-700">{seccao.salas.length}</span>
-                      {seccao.aoVivo > 0 && <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />}
-                    </h4>
-                  )}
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {seccao.salas.map((sala) => {
-                      const stream = salasFiltradas.find((x) => x.id === sala.id)
-                      if (!stream) return null
-                      return (
-                        <StreamMarketCard
-                          key={stream.id}
-                          stream={stream}
-                          featured={stream.is_live}
-                          userPlan={user?.subscription_plan}
-                          userType={user?.user_type}
-                          memberCategory={user?.member_category}
-                          onEducatorProfile={() => openEducatorFromStream(stream)}
-                        />
-                      )
-                    })}
-                  </div>
-                </section>
-              ))}
+
+        {/*
+          FECHADO: só as pastas. Uma grelha de capas, uma por academia, com o nome e a contagem.
+          Nada de listas abertas por baixo — era isso que tornava a página num rolo sem fim.
+        */}
+        {!aberta ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {/* Sem academias nenhumas (catálogo em baixo e zero salas) não se deixa um buraco. */}
+            {seccoes.length === 0 && (
+              <p className="rounded-xl border border-dashed border-gray-800 bg-black/30 p-6 text-center text-sm text-gray-500 sm:col-span-2 xl:col-span-3">
+                {t("live.lobby.noRooms")}
+              </p>
+            )}
+            {seccoes.map((seccao) => (
+              <CartaoPasta
+                key={seccao.chave}
+                academia={seccao}
+                etiqueta={etiquetaSalas(seccao.salas.length)}
+                rotuloAbrir={t("live.lobby.openAcademy")}
+                onAbrir={() => abrirPasta(seccao.chave)}
+              />
+            ))}
+          </div>
+        ) : (
+          /*
+            ABERTO: as salas desta academia, e um caminho de volta à vista.
+            O botão de voltar é TAMBÉM o controlo da pasta (`aria-expanded`/`aria-controls`): quem
+            usa leitor de ecrã ouve que a pasta está expandida e qual é o painel que ela comanda.
+          */
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={fecharPasta}
+              aria-expanded
+              aria-controls="pasta-academia"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#D2A63C]/40 bg-black/40 px-4 text-sm font-semibold text-[#E9C46A] transition hover:border-[#D2A63C] hover:bg-[#D2A63C]/10"
+            >
+              <ChevronLeft className="h-4 w-4 shrink-0" />
+              {t("live.lobby.backToAcademies")}
+            </button>
+
+            <div id="pasta-academia">
+              {aberta.salas.length === 0 ? (
+                /* Pasta vazia diz-se pelo que é: ainda não há salas. Não se promete abertura
+                   nenhuma — a academia está pronta, o que falta é o horário. */
+                <p className="rounded-xl border border-dashed border-gray-800 bg-black/30 p-6 text-center text-sm text-gray-500">
+                  {t("live.lobby.noRooms")}
+                </p>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {aberta.salas.map((sala) => {
+                    const stream = porId.get(sala.id)
+                    if (!stream) return null
+                    return (
+                      <StreamMarketCard
+                        key={stream.id}
+                        stream={stream}
+                        featured={stream.is_live}
+                        userPlan={user?.subscription_plan}
+                        userType={user?.user_type}
+                        memberCategory={user?.member_category}
+                        onEducatorProfile={() => openEducatorFromStream(stream)}
+                      />
+                    )
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* 4 · AGENDA */}
@@ -461,6 +528,72 @@ export default function LiveSessionsLobby() {
         />
       </section>
     </div>
+  )
+}
+
+/**
+ * UMA PASTA DE ACADEMIA: a capa, o nome e a contagem.
+ *
+ * É um `<button>` e não um `<div>` com `onClick` porque tem de chegar por teclado e dizer o que é:
+ * nome acessível («Abrir a academia · Forex») e estado (`aria-expanded={false}`, com o painel que
+ * comanda). A capa é decorativa — o nome está no texto, e repeti-lo no `alt` fazia o leitor de
+ * ecrã dizer a academia duas vezes.
+ *
+ * Sem capa não fica um buraco: fica a moldura em ouro com a inicial. Uma academia sem imagem não
+ * é uma academia a menos.
+ */
+function CartaoPasta({
+  academia,
+  etiqueta,
+  rotuloAbrir,
+  onAbrir,
+}: {
+  academia: AcademiaComSalas
+  etiqueta: string
+  rotuloAbrir: string
+  onAbrir: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onAbrir}
+      aria-expanded={false}
+      aria-controls="pasta-academia"
+      aria-label={`${rotuloAbrir} · ${academia.nome} · ${etiqueta}`}
+      className="group flex min-h-[44px] flex-col overflow-hidden rounded-2xl border border-[#D2A63C]/15 bg-gray-950/90 text-left transition hover:border-[#D2A63C]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2A63C]"
+    >
+      <div className="relative aspect-video w-full bg-gray-900">
+        {academia.capa ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={academia.capa}
+            alt=""
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#D2A63C]/20 to-black">
+            <span className="text-3xl font-black text-[#D2A63C]/70">{academia.nome.charAt(0).toUpperCase()}</span>
+          </div>
+        )}
+        {academia.aoVivo > 0 && (
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-md bg-red-600 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-70" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+            </span>
+            {academia.aoVivo}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2 p-4">
+        <FolderOpen className="h-4 w-4 shrink-0 text-[#D2A63C]" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-bold leading-snug text-white">{academia.nome}</p>
+          <p className="text-xs text-gray-500">{etiqueta}</p>
+        </div>
+        <ArrowRight className="h-4 w-4 shrink-0 text-gray-600 transition group-hover:text-[#D2A63C]" aria-hidden />
+      </div>
+    </button>
   )
 }
 

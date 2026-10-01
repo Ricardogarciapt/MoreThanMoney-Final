@@ -15,6 +15,9 @@ import {
   Maximize2,
   PictureInPicture2,
   Lock,
+  ChevronLeft,
+  ChevronRight,
+  FolderOpen,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { podeAcederAoTier, type PerfilUi } from "@/lib/perfil-ui"
@@ -34,7 +37,15 @@ import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
 import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { LmsPlaylistSection } from "@/components/live/lms-playlist-section"
-import { oQuePodeFazer, porAcademia, type SalaDeAula } from "@/lib/lms/aulas"
+import {
+  PARAM_ACADEMIA,
+  oQuePodeFazer,
+  porAcademia,
+  resolverAcademia,
+  type AcademiaComSalas,
+  type AcademiaDoCatalogo,
+  type SalaDeAula,
+} from "@/lib/lms/aulas"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -47,7 +58,8 @@ type StreamListItem = {
   is_live: boolean
   playback_url?: string | null
   educator?: { id: string; display_name: string; avatar_url?: string | null } | null
-  academy?: { name: string } | null
+  /** O `slug` é a chave que casa a sala com a pasta do catálogo; o nome só serve de rótulo. */
+  academy?: { name: string; slug?: string | null } | null
   access_tier?: "all" | "app_member" | "premium" | "vip" | null
   scheduled_start_at?: string | null
   playlist_url?: string | null
@@ -126,8 +138,19 @@ export default function LiveSessionsMobile({
    * parte do que há para ver — não tinham por onde ser encontradas.
    */
   const [todasAsSalas, setTodasAsSalas] = useState<StreamListItem[]>([])
-  /** A academia escolhida. `null` = todas. */
-  const [academia, setAcademia] = useState<string | null>(null)
+  /**
+   * O CATÁLOGO DE ACADEMIAS. Pedido à parte das salas porque é ele que dá pasta e capa às
+   * academias que ainda não têm educador — sem isto, a pasta do Imobiliário não existia no ecrã.
+   */
+  const [catalogo, setCatalogo] = useState<AcademiaDoCatalogo[]>([])
+  /**
+   * A PASTA ABERTA VIVE NA URL (`?academia=<slug>`).
+   *
+   * É o que faz uma notificação («nova aula na Academia Forex») abrir já dentro da pasta, e o que
+   * deixa o «voltar» do telefone fechá-la. Lido depois de montar, para o primeiro fotograma ser
+   * igual no servidor e no cliente.
+   */
+  const [paramAcademia, setParamAcademia] = useState<string | null>(null)
   /**
    * As salas abertas. Fechadas por omissão: com todas as listas de vídeos abertas ao mesmo tempo
    * a página ficava com dezenas de ecrãs de altura e a hierarquia — academia › sala › aulas —
@@ -170,11 +193,13 @@ export default function LiveSessionsMobile({
   const loadLive = useCallback(async () => {
     setLoading(true)
     try {
-      const [liveRes, allRes, schedRes] = await Promise.all([
+      const [liveRes, allRes, schedRes, acRes] = await Promise.all([
         fetch("/api/live-sessions/streams?live=true", { headers: await authHeaders() }).then((r) => r.json()),
         fetch("/api/live-sessions/streams", { headers: await authHeaders() }).then((r) => r.json()),
         fetch("/api/live-sessions/schedule?days=21&limit=14").then((r) => r.json()).catch(() => ({ data: [] })),
+        fetch("/api/live-sessions/academies").then((r) => r.json()).catch(() => ({ data: [] })),
       ])
+      setCatalogo(Array.isArray(acRes?.data) ? acRes.data : [])
       setLiveStreams(liveRes.data || [])
       // Próximas lives: não live, com scheduled_start_at no futuro
       const now = Date.now()
@@ -529,23 +554,46 @@ export default function LiveSessionsMobile({
    * salas fechadas se MOSTRAM com cadeado em vez de serem escondidas: esconder o que ainda está
    * por vender é tirá-lo da montra.
    */
-  const grupos = useMemo(() => porAcademia(todasAsSalas as unknown as SalaDeAula[]), [todasAsSalas])
-  const grupoEscolhido = useMemo(
-    () => (academia ? grupos.find((g) => g.chave === academia) ?? null : null),
-    [grupos, academia],
+  const grupos = useMemo(
+    () => porAcademia(todasAsSalas as unknown as SalaDeAula[], catalogo),
+    [todasAsSalas, catalogo],
   )
   /**
-   * A lista é SEMPRE por academia, mesmo em «Todas».
+   * AS ACADEMIAS SÃO PASTAS, e não chips de filtro.
    *
-   * A primeira versão achatava tudo numa lista só quando não havia filtro — e isso devolvia
-   * exactamente o problema que o tab tinha: dezoito salas seguidas sem se perceber onde começa
-   * uma academia e acaba a outra. Com o filtro escolhido fica uma secção só, que é o mesmo
-   * componente a mostrar menos.
+   * A versão anterior mostrava chips com TODAS as salas de TODAS as academias abertas por baixo:
+   * a página ficava com dezenas de ecrãs de altura e a hierarquia — sessão ao vivo › academias e
+   * horários › salas › listas de vídeos — deixava de se ler. Agora fechado são só as capas, e
+   * abre-se uma. Um slug que não resolve devolve `null` e cai na grelha, nunca numa pasta vazia
+   * que ninguém percebe porque está vazia.
    */
-  const seccoes = useMemo(
-    () => (grupoEscolhido ? [grupoEscolhido] : grupos),
-    [grupos, grupoEscolhido],
-  )
+  const aberta = useMemo(() => resolverAcademia(paramAcademia, grupos), [paramAcademia, grupos])
+
+  // Ler a URL depois de montar, e seguir o «voltar» do telefone: é ele que fecha a pasta.
+  useEffect(() => {
+    const ler = () => setParamAcademia(new URLSearchParams(window.location.search).get(PARAM_ACADEMIA))
+    ler()
+    window.addEventListener("popstate", ler)
+    return () => window.removeEventListener("popstate", ler)
+  }, [])
+
+  /**
+   * `pushState` ao abrir (para o «voltar» dar a grelha) e `replaceState` ao fechar (para não
+   * encher o histórico). Com `router.push` o separador remontava e as salas eram pedidas outra
+   * vez só para abrir uma pasta.
+   */
+  const abrirPasta = useCallback((chave: string) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set(PARAM_ACADEMIA, chave)
+    window.history.pushState(null, "", url)
+    setParamAcademia(chave)
+  }, [])
+  const fecharPasta = useCallback(() => {
+    const url = new URL(window.location.href)
+    url.searchParams.delete(PARAM_ACADEMIA)
+    window.history.replaceState(null, "", url)
+    setParamAcademia(null)
+  }, [])
 
   const hasPlayback = Boolean(stream?.playback_url || hlsUrl)
 
@@ -663,37 +711,9 @@ export default function LiveSessionsMobile({
           e quem queria rever uma aula tinha de saber de cor em que sala ela estava. */}
       {!loading && grupos.length > 0 && (
         <div className="mt-6">
-          <h3 className="mb-2 text-sm font-semibold text-white">Academias e horários</h3>
-          <div className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <button
-              type="button"
-              onClick={() => setAcademia(null)}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-2 text-xs transition-colors",
-                academia === null
-                  ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#E9C46A]"
-                  : "border-zinc-700 text-gray-400",
-              )}
-            >
-              Todas <span className="text-gray-600">({todasAsSalas.length})</span>
-            </button>
-            {grupos.map((g) => (
-              <button
-                key={g.chave}
-                type="button"
-                onClick={() => setAcademia(g.chave === academia ? null : g.chave)}
-                className={cn(
-                  "shrink-0 rounded-full border px-3 py-2 text-xs transition-colors",
-                  academia === g.chave
-                    ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#E9C46A]"
-                    : "border-zinc-700 text-gray-400",
-                )}
-              >
-                {g.nome} <span className="text-gray-600">({g.salas.length})</span>
-                {g.aoVivo > 0 && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-red-500 align-middle" />}
-              </button>
-            ))}
-          </div>
+          <h3 className="mb-2 text-sm font-semibold text-white">
+            {aberta ? aberta.nome : "Academias e horários"}
+          </h3>
 
           {/* O HORÁRIO, aqui e não no fundo da página. Estava depois de tudo, e quem queria
               saber a que horas é a próxima aula tinha de passar por todas as salas primeiro —
@@ -720,22 +740,33 @@ export default function LiveSessionsMobile({
           {/* ── AS SALAS ──────────────────────────────────────────────────────────────────
               Cada sala traz as suas gravações por baixo, como no site. As fechadas aparecem
               com cadeado: esconder o que ainda está por vender tira-o da montra. */}
-          <div className="mt-3 space-y-5">
-            {seccoes.map((seccao) => (
-              <section key={seccao.chave}>
-                {/* O título da academia só aparece em «Todas»: com o filtro escolhido já está no
-                    chip aceso, e repeti-lo a seguir era dizer a mesma coisa duas vezes. */}
-                {!grupoEscolhido && (
-                  <h4 className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                    {seccao.nome}
-                    <span className="text-zinc-700">{seccao.salas.length}</span>
-                    {seccao.aoVivo > 0 && (
-                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
-                    )}
-                  </h4>
-                )}
-                <div className="space-y-2.5">
-            {seccao.salas.map((s) => {
+          {/*
+            FECHADO: só as pastas, duas por linha. Cada cartão é um alvo grande (capa 16:9 + duas
+            linhas de texto, bem acima dos 44px) — a grelha de chips obrigava a apontar a uma
+            cápsula de 32px de altura num ecrã a mexer.
+          */}
+          {!aberta ? (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {grupos.map((g) => (
+              <PastaAcademia key={g.chave} academia={g} onAbrir={() => abrirPasta(g.chave)} />
+            ))}
+          </div>
+          ) : (
+          <div className="mt-3 space-y-3">
+            {/* O voltar é TAMBÉM o controlo da pasta: quem usa leitor de ecrã ouve que está
+                expandida e qual é o painel que ela comanda. */}
+            <button
+              type="button"
+              onClick={fecharPasta}
+              aria-expanded
+              aria-controls="pasta-academia"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#D2A63C]/40 px-4 text-sm font-semibold text-[#E9C46A] active:scale-[0.99]"
+            >
+              <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
+              Todas as academias
+            </button>
+                <div id="pasta-academia" className="space-y-2.5">
+            {aberta.salas.map((s) => {
               const podeNivel = (tier: string | null | undefined) =>
                 canAccessStream(user as PerfilUi | null, tier as StreamListItem["access_tier"])
               const r = oQuePodeFazer(s as unknown as SalaDeAula, podeNivel)
@@ -821,14 +852,13 @@ export default function LiveSessionsMobile({
               )
             })}
                 </div>
-              </section>
-            ))}
+            {/* Pasta vazia diz-se pelo que é. A academia está pronta; o que falta é o horário. */}
+            {aberta.salas.length === 0 && (
+              <p className="rounded-2xl border border-dashed border-zinc-800 p-6 text-center text-sm text-gray-500">
+                Ainda não há salas nesta academia.
+              </p>
+            )}
           </div>
-
-          {seccoes.every((x) => x.salas.length === 0) && (
-            <p className="mt-3 rounded-2xl border border-dashed border-zinc-800 p-6 text-center text-sm text-gray-500">
-              Ainda não há salas nesta academia.
-            </p>
           )}
         </div>
       )}
@@ -1153,5 +1183,60 @@ export default function LiveSessionsMobile({
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+/**
+ * UMA PASTA DE ACADEMIA na app: capa, nome e contagem de salas.
+ *
+ * `<button>` e não `<div>` com `onClick`: tem de chegar por teclado (e pelo VoiceOver) e dizer o
+ * que é — nome acessível com a academia e a contagem, e estado `aria-expanded={false}` com o
+ * painel que comanda. A capa é decorativa: o nome já está no texto, e repeti-lo no `alt` fazia o
+ * leitor de ecrã dizer a academia duas vezes.
+ *
+ * A contagem diz-se mesmo a zero. Nunca «a abrir» — a academia está pronta, o que falta é o
+ * horário, e prometer abertura é prometer o que não se controla.
+ */
+function PastaAcademia({
+  academia,
+  onAbrir,
+}: {
+  academia: AcademiaComSalas
+  onAbrir: () => void
+}) {
+  const etiqueta = academia.salas.length === 1 ? "1 sala" : `${academia.salas.length} salas`
+  return (
+    <button
+      type="button"
+      onClick={onAbrir}
+      aria-expanded={false}
+      aria-controls="pasta-academia"
+      aria-label={`Abrir a academia ${academia.nome} · ${etiqueta}`}
+      className="flex min-h-[44px] flex-col overflow-hidden rounded-2xl border border-[#D2A63C]/15 bg-gray-950/80 text-left active:scale-[0.99]"
+    >
+      <div className="relative aspect-video w-full bg-gray-900">
+        {academia.capa ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={academia.capa} alt="" className="h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#D2A63C]/20 to-black">
+            <span className="text-2xl font-black text-[#D2A63C]/70">{academia.nome.charAt(0).toUpperCase()}</span>
+          </div>
+        )}
+        {academia.aoVivo > 0 && (
+          <span className="absolute left-1.5 top-1.5 rounded bg-red-600 px-1.5 py-0.5 text-[8px] font-bold uppercase text-white">
+            {academia.aoVivo} live
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 p-2.5">
+        <FolderOpen className="h-3.5 w-3.5 shrink-0 text-[#D2A63C]" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold text-white">{academia.nome}</p>
+          <p className="text-[10px] text-gray-500">{etiqueta}</p>
+        </div>
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-600" aria-hidden />
+      </div>
+    </button>
   )
 }

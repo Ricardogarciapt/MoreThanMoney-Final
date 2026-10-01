@@ -60,9 +60,28 @@ export function pareceCodigoDeAgente(codigo: unknown): boolean {
   return /^(AG|CEO)-[A-Z0-9]{2,24}$/.test(c)
 }
 
+/**
+ * Pontuação que vem colada ao código quando ele chega de um link escrito no meio de uma frase.
+ *
+ * ═══ O CASO MAU, QUE SÓ APARECE DEPOIS DE PUBLICADO ════════════════════════════════════════
+ *
+ * O código vai no FIM do endereço (`…/register?ag=AG-SAAS`), e numa legenda de Instagram esse
+ * endereço está dentro de uma frase que acaba em ponto: `…/register?ag=AG-SAAS.`. Quem auto-liga
+ * o texto — a rede social, o cliente de email, a pessoa que copia e cola — pode levar o ponto
+ * para dentro da ligação. O browser abre a página (o caminho está certo), a pessoa vê o que veio
+ * ver, e `ag` chega como `AG-SAAS.`: a forma falha, a atribuição desaparece, e não há erro em
+ * sítio nenhum. Depois a regra de vida pára o agente por receita zero.
+ *
+ * Cortar esta pontuação NÃO afrouxa a guarda: o teste de forma continua ancorado nos dois lados e
+ * continua a recusar `BLACKFRIDAY50`. O que muda é só que um ponto final deixa de custar um
+ * agente. Ver `lib/agentes/marca-conteudo.ts`, que é quem escreve estes links.
+ */
+const PONTUACAO_COLADA = '.,;:!?)]}>"\'»'
+
 /** A forma normalizada. Um sítio só, para o link, o browser e a base escreverem igual. */
 export function normalizar(codigo: unknown): string | null {
-  const c = String(codigo ?? '').trim().toUpperCase()
+  let c = String(codigo ?? '').trim().toUpperCase()
+  while (c.length > 0 && PONTUACAO_COLADA.includes(c[c.length - 1])) c = c.slice(0, -1)
   return pareceCodigoDeAgente(c) ? c : null
 }
 

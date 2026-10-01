@@ -6,7 +6,7 @@
  * Três coisas que falham caladas: uma sala desaparecer, uma sala fechada ser escondida (e deixar
  * de se vender), e gravações pagas ficarem com cadeado porque alguém juntou os dois níveis.
  */
-import { SEM_ACADEMIA, oQuePodeFazer, ordenarSalas, porAcademia, temGravacoes, type SalaDeAula } from './aulas'
+import { SEM_ACADEMIA, oQuePodeFazer, ordenarSalas, porAcademia, resolverAcademia, temGravacoes, type SalaDeAula } from './aulas'
 
 const falhas: string[] = []
 const teste = (nome: string, condicao: boolean) => { if (!condicao) falhas.push(nome) }
@@ -144,9 +144,53 @@ const CRIPTO = { name: 'Criptomoedas', slug: 'criptomoedas' }
   teste('playlist em branco não conta', !temGravacoes(sala({ id: 'w', playlist_url: '   ' })))
 }
 
+// ── AS ACADEMIAS SÃO PASTAS: A QUE ABRE VEM DA URL ──────────────────────────
+{
+  /**
+   * O CASO MAU Nº1: a pasta de uma academia SEM SALAS não abrir.
+   *
+   * O dono pediu as academias como pastas — grelha de capas fechada, clicar e ver as salas lá
+   * dentro. Uma academia sem educador tem de ter pasta e capa como as outras, e tem de ABRIR:
+   * se abrisse só a grelha outra vez, o clique não fazia nada e a área parecia desligada. Dentro
+   * mostra-se a pasta vazia; nunca «a abrir» — as áreas estão prontas.
+   */
+  const catalogo = [
+    { slug: 'forex', name: 'Forex', cover_url: 'https://x/forex.png' },
+    { slug: 'imobiliario', name: 'Imobiliário', cover_url: 'https://x/imo.png' },
+  ]
+  const grupos = porAcademia([sala({ id: 'a', academy: FOREX, access_tier: 'free' })], catalogo)
+
+  const vazia = resolverAcademia('imobiliario', grupos)
+  teste('a pasta de uma academia sem salas abre', vazia !== null)
+  teste('e abre com zero salas, não com as de outra', vazia?.salas.length === 0)
+  teste('e traz a capa para dentro', vazia?.capa === 'https://x/imo.png')
+  teste('a pasta com salas abre com as salas dela',
+    resolverAcademia('forex', grupos)?.salas.some((s) => s.id === 'a') === true)
+
+  /**
+   * O CASO MAU Nº2: um slug que não resolve. Link antigo, academia renomeada, nome escrito à mão.
+   * Devolver `null` manda o ecrã mostrar a grelha; devolver um grupo vazio inventado dava um ecrã
+   * em branco dentro de uma pasta que não existe — e isso não dá erro nenhum.
+   */
+  teste('slug desconhecido não abre pasta nenhuma', resolverAcademia('academia-que-nao-existe', grupos) === null)
+  teste('sem parâmetro fica fechado', resolverAcademia(null, grupos) === null)
+  teste('parâmetro em branco fica fechado', resolverAcademia('   ', grupos) === null)
+  teste('param vazio não agarra a primeira pasta', resolverAcademia('', grupos) === null)
+  teste('nenhuma pasta abre quando não há academias', resolverAcademia('forex', []) === null)
+
+  // Os links vêm de emails, Telegram e notificações antigas: falhar por uma maiúscula ou pelo
+  // nome em vez do slug é perder a pessoa à porta.
+  teste('o slug resolve com outra caixa', resolverAcademia('FOREX', grupos)?.chave === 'forex')
+  teste('o nome também resolve', resolverAcademia('Imobiliário', grupos)?.chave === 'imobiliario')
+
+  // O caixote também é uma pasta: as salas sem academia têm de poder abrir-se.
+  const comOrfa = porAcademia([sala({ id: 'orfa', academy: null })], catalogo)
+  teste('«Outras salas» também abre', resolverAcademia(SEM_ACADEMIA, comOrfa)?.salas.length === 1)
+}
+
 if (falhas.length) {
   console.error(`lms/aulas: ${falhas.length} falha(s)`)
   for (const f of falhas) console.error('  · ' + f)
   process.exit(1)
 }
-console.log('lms/aulas: nenhuma sala se perde, as fechadas vêem-se, e as gravações têm nível próprio ✓')
+console.log('lms/aulas: nenhuma sala se perde, as pastas vazias abrem, slug ruim cai na grelha, e as gravações têm nível próprio ✓')

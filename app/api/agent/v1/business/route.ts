@@ -2,10 +2,14 @@ import { NextRequest } from "next/server"
 import { agentOk, agentError, requireAgentAccess } from "@/lib/agent-site-api"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { getStripeRevenue } from "@/lib/agent-business-stripe"
+import {
+  CORTES_DA_ESCALA, achatar, escalaDeVida, estadoNoEcra, montarArvore, relogioDoJuizo,
+  resumoDaEquipa,
+} from "@/lib/agentes/arvore"
 
 /**
  * API de negócio para o agente executivo AIOS.
- * GET  /api/agent/v1/business?resource=overview|revenue|subscriptions|customers|leads|tasks|equidade|equipa
+ * GET  /api/agent/v1/business?resource=overview|revenue|subscriptions|customers|leads|tasks|equidade|equipa|conhecimento
  * POST /api/agent/v1/business   body: { action: "create_task" | "update_task" | "outreach_draft", ... }
  *
  * Leitura = imediata. Escrita interna (tarefas) = imediata. Envios para clientes NÃO acontecem aqui:
@@ -195,6 +199,31 @@ export async function GET(request: NextRequest) {
       case "equipa":
       case "agentes":
         return agentOk(await getEquipa(sb))
+      /**
+       * O CONHECIMENTO DA CASA — decisões que não se reabrem, limites, incidentes e o mapa do código.
+       *
+       * Existe como `resource` e não como texto nas `instrucoes` do agente porque não cabe lá e,
+       * pior, apodrecia: um prompt escrito à mão fica certo no dia em que se escreve. Assim o
+       * agente CONSULTA, e o que lê é montado da fonte a cada chamada.
+       *
+       * `?texto=1` devolve o bloco pronto a colar num `system`; sem isso vem estruturado, para
+       * quem quiser percorrer os factos um a um e ir às origens.
+       */
+      case "conhecimento": {
+        const c = await import("@/lib/agentes/conhecimento")
+        if (url.searchParams.get("texto") === "1") {
+          return agentOk({ texto: c.conhecimentoDoCEO() })
+        }
+        return agentOk({
+          decisoes_irreversiveis: c.DECISOES_IRREVERSIVEIS,
+          limites: c.LIMITES,
+          incidentes: c.INCIDENTES,
+          mapa_do_codigo: c.MAPA_DO_CODIGO,
+          como_consultar: c.COMO_CONSULTAR,
+          // Contado, não escrito: um total à mão diverge no dia em que entrar um facto novo.
+          total_factos: c.todosOsFactos().length,
+        })
+      }
       // Máquina de vendas — usada pela FRIDAY (funnel) e EDITH (admin) do AIOS.
       case "funnel":
       case "sales":
@@ -379,21 +408,51 @@ async function getEquidade(sb: ReturnType<typeof getSupabaseAdmin>) {
 async function getEquipa(sb: ReturnType<typeof getSupabaseAdmin>) {
   const { data } = await sb
     .from("agentes_equipa")
-    .select("nome, papel, pilar, estado, pausado, orcamento, receita, gasto, chave_receita, avaliado_em, criado_em, parado_porque, pai_id")
-    .order("pai_id", { ascending: true, nullsFirst: true })
-    .order("nome")
+    .select("id, nome, papel, pilar, estado, pausado, orcamento, receita, gasto, chave_receita, avaliado_em, criado_em, parado_porque, pai_id")
+    .order("criado_em", { ascending: true })
 
-  const agora = Date.now()
-  const CARENCIA_H = 48
-  type Linha = Record<string, unknown>
-  const agentes = (data ?? []).map((a: Linha) => {
-    const nasceu = Date.parse(String(a.criado_em ?? "")) || agora
-    const horas = (nasceu + CARENCIA_H * 3600_000 - agora) / 3600_000
+  const agora = new Date()
+  const arvore = montarArvore(
+    (data ?? []).map((a: Record<string, unknown>) => ({
+      id: String(a.id ?? ""),
+      nome: String(a.nome ?? ""),
+      pilar: a.pilar == null ? null : String(a.pilar),
+      pai_id: a.pai_id == null ? null : String(a.pai_id),
+      estado: a.estado == null ? null : String(a.estado),
+      pausado: a.pausado === true,
+      criado_em: a.criado_em == null ? null : String(a.criado_em),
+      bruto: a,
+    })),
+  )
+
+  /**
+   * A LISTA JÁ ACHATADA PELA ORDEM DA ÁRVORE.
+   *
+   * O AIOS e o dashboard dele são HTML e Python à mão: não reconstroem hierarquia. Entregar-lhes a
+   * ordem já feita — com a `profundidade` de cada um — é o que impede que o painel de lá discorde
+   * do painel do site. E `id` vai no payload porque ANTES não ia: mandava-se `pai_id` sem `id`
+   * nenhum, ou seja, a hierarquia era impossível de reconstruir do outro lado e todos os agentes
+   * apareciam como se fossem irmãos.
+   */
+  const agentes = achatar(arvore).map((n) => {
+    const a = n.agente.bruto as Record<string, unknown>
+    const ecra = estadoNoEcra(n.agente)
+    const relogio = relogioDoJuizo(n.agente, agora)
     return {
-      nome: a.nome,
-      papel: a.papel,
-      pilar: a.pilar,
+      id: n.agente.id,
+      nome: n.agente.nome,
+      papel: a.papel ?? null,
+      pilar: n.agente.pilar,
+      paiId: n.agente.pai_id,
+      profundidade: n.profundidade,
+      /** Verdadeiro quando o `pai_id` dele não bate com nenhum agente desta lista. */
+      orfao: n.orfao,
+      /** O estado da coluna, tal como está na base. */
       estado: a.estado,
+      /** O estado que se PINTA: `pausado` ganha a `estado`, e um estado desconhecido não vira vivo. */
+      estadoEcra: ecra.estado,
+      /** Não-nulo quando as duas colunas discordavam. Diz-se, não se cala. */
+      conflitoDeEstado: ecra.conflito,
       pausado: a.pausado === true,
       saldo: Number(a.receita ?? 0) - Number(a.gasto ?? 0),
       receita: Number(a.receita ?? 0),
@@ -401,18 +460,85 @@ async function getEquipa(sb: ReturnType<typeof getSupabaseAdmin>) {
       orcamento: Number(a.orcamento ?? 0),
       codigo: a.chave_receita,
       avaliadoEm: a.avaliado_em,
-      // Negativo = a carência já passou e ele está a ser julgado a cada passagem.
-      horasAteAoJuizo: Math.round(horas * 10) / 10,
+      /**
+       * O RELÓGIO, em fase + frase.
+       *
+       * O campo antigo `horasAteAoJuizo` ficava NEGATIVO depois da carência, e qualquer leitura que
+       * o tratasse como contagem decrescente dizia o contrário da verdade. Mantém-se, mas só com
+       * valor quando ele quer dizer mesmo «faltam»: fora da carência é `null`, e quem precisa de
+       * saber lê o `relogio`.
+       */
+      relogio,
+      horasAteAoJuizo: relogio.fase === "carencia" ? relogio.horas : null,
+      /**
+       * A ESCALA DE VIDA, calculada aqui e não no ecrã.
+       *
+       * Os cortes são os de `julgar()`, e `arvore.check.ts` prova que não se afastam dela. Um ecrã
+       * que os recalculasse a olho acabava a desenhar uma banda enquanto o cron parava o agente
+       * por outra — e as duas coisas pareceriam certas.
+       */
+      escala: escalaDeVida(
+        {
+          resultado: Number(a.receita ?? 0) - Number(a.gasto ?? 0),
+          saldo: Number(a.orcamento ?? 0) - Number(a.gasto ?? 0),
+          codigo: a.chave_receita == null ? null : String(a.chave_receita),
+          estado: n.agente.estado,
+          pausado: n.agente.pausado,
+          criado_em: n.agente.criado_em,
+        },
+        agora,
+      ),
       paradoPorque: a.parado_porque ?? null,
-      eCeo: a.pai_id == null,
+      eCeo: n.profundidade === 0 && !n.orfao,
     }
   })
 
+  /**
+   * A RECEITA POR ATRIBUIR, EM ENSAIO.
+   *
+   * Em ensaio porque uma LEITURA não escreve no livro: quem grava é o cron. E embrulhada em
+   * try/catch porque, se a atribuição falhar, o que não se pode é devolver zero — zero diria «não
+   * há nada por atribuir» quando o que aconteceu foi «ninguém conseguiu contar». `null` é lido como
+   * «não medido» por `resumoDaEquipa`, e o motivo vai junto.
+   */
+  let naoAtribuidoCents: number | null = null
+  let porAtribuir: unknown[] = []
+  let receitaErro: string | null = null
+  let atribuidoCents: number | null = null
+  let liquidoCents: number | null = null
+  try {
+    const { atribuirEGravar } = await import("@/lib/agentes/receita")
+    const r = await atribuirEGravar(sb, { ensaio: true })
+    naoAtribuidoCents = r.atribuicao.naoAtribuidoCents
+    atribuidoCents = r.atribuicao.atribuidoCents
+    liquidoCents = r.atribuicao.liquidoCents
+    porAtribuir = r.atribuicao.porAtribuir
+  } catch (e) {
+    receitaErro = (e as Error).message
+  }
+
+  const resumo = resumoDaEquipa(arvore, naoAtribuidoCents)
+
   return {
     agentes,
-    vivos: agentes.filter((a: { estado: unknown }) => a.estado === "vivo").length,
-    parados: agentes.filter((a: { estado: unknown }) => a.estado === "parado").length,
-    semReceita: agentes.filter((a: { receita: number }) => a.receita === 0).length,
+    /** Os filhos que a árvore teria perdido em silêncio. Vazio é o normal. */
+    orfaos: arvore.orfaos,
+    resumo,
+    cortesDaEscala: CORTES_DA_ESCALA,
+    receita: {
+      moeda: "EUR",
+      liquidoCents,
+      atribuidoCents,
+      naoAtribuidoCents,
+      porAtribuir,
+      /** Quando a atribuição falha, diz-se. Um erro calado aqui lê-se como «não há receita». */
+      erro: receitaErro,
+      texto: resumo.porAtribuirTexto,
+    },
+    // Mantidos pelos nomes antigos: o AIOS já os lê.
+    vivos: resumo.vivos,
+    parados: resumo.parados,
+    semReceita: resumo.semReceitaMedida,
     nota:
       "A receita de um agente so' conta quando a compra traz o codigo dele (link ?ag=). " +
       "Sem links em circulacao a receita e' zero para todos, e a regra de vida para a equipa " +

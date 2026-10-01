@@ -6,6 +6,7 @@ import { renderSocialCardBuffer } from '@/lib/social-card'
 import { factoDoDia, getPipsProof, notaViesPreco } from '@/lib/pips-proof'
 import { canvaAutofillImage } from '@/lib/canva-connect'
 import { modeloClaude } from '@/lib/modelo-claude'
+import { marcarConteudo } from '@/lib/agentes/marca-conteudo'
 
 /**
  * Imagem do post: 1º tenta o Canva Connect (teus templates reais, se configurado + plano pago);
@@ -252,6 +253,18 @@ export async function GET(req: NextRequest) {
       const when = new Date(now + (i + 1) * 24 * 3600 * 1000)
       when.setUTCHours(18, 0, 0, 0)
       const cta = (d.cta_keyword || assigned[i] || 'APP').toUpperCase()
+      /**
+       * O CÓDIGO DO AGENTE ENTRA AQUI, E ESTE É O SÍTIO ONDE A MEDIÇÃO COMEÇA.
+       *
+       * Até 01/10 nenhum dos 200 posts na base levava `?ag=` — e por isso os sete agentes tinham
+       * todos receita zero, com a regra das 48 h a prepará-los para parar por falta de medição e
+       * não de trabalho. Marca-se a legenda do MODELO (`d.caption`), antes de se lhe colar o
+       * bloco interno: o brief nunca é publicado, logo um link marcado lá não mede nada.
+       *
+       * Um pilar sem agente declarado NÃO cai no CEO — fica por atribuir com o motivo escrito.
+       * Ver lib/agentes/marca-conteudo.ts.
+       */
+      const marca = marcarConteudo({ legenda: (d.caption || '').trim(), pilar: `cta:${cta.toLowerCase()}` })
       // Gera o card de marca (imagem) para publicação sem toque.
       // Um facto por post, rodando: publicar todos os dias a mesma frase treina o leitor a
       // saltá-la. O deslocamento pelo índice dá factos diferentes no mesmo lote.
@@ -263,9 +276,13 @@ export async function GET(req: NextRequest) {
       // visto em miniatura, e a legenda é o único sítio onde a frase se lê sempre inteira.
       const ressalva = facto && notaProva ? `\n\n${notaProva}` : ''
       const caption =
-        `${(d.caption || '').trim()}${ressalva}\n\n${CAPTION_INTERNAL_MARK}\n` +
+        `${marca.legenda}${ressalva}\n\n${CAPTION_INTERNAL_MARK}\n` +
         `🎨 Visual sugerido: ${d.visual_brief || '—'}\n` +
         `🔑 CTA: comentário "${cta}" → funil automático\n` +
+        // Quem revê tem de ver se o post mede alguma coisa ANTES de aprovar. Um post sem link
+        // marcado não é um erro — é só um post que não vai conseguir provar quem o trouxe.
+        `📊 Agente: ${marca.codigo ?? `por atribuir (${marca.motivo})`}` +
+        `${marca.codigo && marca.marcados === 0 ? ' — sem link nosso, não mede nada' : ''}\n` +
         `🤖 ${status === 'approved' ? 'Auto-publicado pela máquina de vendas (card de marca gerado).' : 'Rascunho da máquina — revê/troca a imagem e aprova.'}`
       return {
         channel: 'instagram',
@@ -278,6 +295,11 @@ export async function GET(req: NextRequest) {
         scheduled_at: when.toISOString(),
         status,
         created_by: 'sales-machine',
+        agente_codigo: marca.codigo,
+        // O motivo vai para a base mesmo quando há código: «AG-SAAS, 0 €» parece um agente mau,
+        // «AG-SAAS, sem link nosso onde medir» é a verdade.
+        agente_motivo: marca.motivo ?? null,
+        agente_links_marcados: marca.marcados,
         ...(status === 'approved' ? { approved_by: 'sales-machine', approved_at: new Date().toISOString() } : {}),
       }
     }),

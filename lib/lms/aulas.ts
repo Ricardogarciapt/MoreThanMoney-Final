@@ -155,3 +155,36 @@ export function oQuePodeFazer(
     temGravacoes: gravacoes,
   }
 }
+
+/** O nome do parâmetro que diz qual a pasta aberta. Um só, partilhado pelo site e pela app. */
+export const PARAM_ACADEMIA = 'academia'
+
+/**
+ * QUAL A PASTA ABERTA, a partir do que vem na URL (`?academia=<slug>`).
+ *
+ * As academias passaram a ser PASTAS: fechado vê-se a grelha de capas, e só se abre a que se
+ * escolhe. Esse estado tem de ser endereçável — um deep-link de notificação («nova aula na
+ * Academia Forex») tem de cair já dentro da pasta, e o botão «voltar» do telefone tem de dar a
+ * grelha outra vez. É por isso que a verdade está na URL e não só num `useState`.
+ *
+ * O CASO MAU que esta função existe para não deixar acontecer: um slug que não resolve — a
+ * academia foi renomeada, o link é antigo, ou alguém escreveu o nome à mão. Devolve `null`, e
+ * `null` lê-se como «mostra a grelha». A alternativa silenciosa era ficar um ecrã em branco com o
+ * filtro aplicado a uma academia que não existe, e ninguém percebe porque não há salas.
+ *
+ * Aceita o slug, o nome, e qualquer dos dois com outra caixa, porque os links vêm de sítios que
+ * não controlamos (emails, Telegram, notificações antigas) e falhar por causa de uma maiúscula é
+ * perder a pessoa à porta.
+ */
+export function resolverAcademia(
+  pedida: string | null | undefined,
+  grupos: AcademiaComSalas[],
+): AcademiaComSalas | null {
+  const alvo = String(pedida ?? '').trim().toLowerCase()
+  if (!alvo) return null
+  return (
+    grupos.find((g) => g.chave.toLowerCase() === alvo) ??
+    grupos.find((g) => g.nome.toLowerCase() === alvo) ??
+    null
+  )
+}

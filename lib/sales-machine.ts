@@ -59,6 +59,33 @@ export interface SalesState {
     lotesForaDeCasa: number
     comissaoForaDeCasa: number
   }
+  /** Ver `AtribuicaoConteudo`. */
+  atribuicao: AtribuicaoConteudo
+}
+
+/**
+ * A MEDIÇÃO DO CONTEÚDO — quantos posts conseguem provar quem os trouxe.
+ *
+ * Isto não é um relatório a mais: é o único sítio do painel onde se vê a diferença entre um
+ * agente que não trabalhou e um agente que trabalhou e não foi medido. A 01/10 os 200 posts na
+ * base tinham ZERO links com `?ag=`, e os sete agentes tinham todos receita zero — a regra das
+ * 48 h (lib/agentes/vida.ts) estava a caminho de parar a equipa inteira por isso. Ver
+ * lib/agentes/marca-conteudo.ts.
+ */
+export interface AtribuicaoConteudo {
+  /** Posts contados. */
+  total: number
+  /** Posts com um agente dono. */
+  comDono: number
+  /** Posts com dono E pelo menos um link nosso marcado — os únicos que podem gerar receita. */
+  aMedir: number
+  /**
+   * Os que não medem nada, pelo motivo. Nunca um total a seco: «por atribuir» sem motivo é um
+   * número sem defesa.
+   */
+  porAtribuir: Record<string, number>
+  /** Por agente, quantos posts e quantos links medidos. */
+  porAgente: Array<{ codigo: string; posts: number; links: number }>
 }
 
 export interface Andar {
@@ -113,6 +140,17 @@ export async function buildSalesState(): Promise<SalesState> {
       supabase.from('vendas_tarefas').select('estado').eq('prazo', day),
       supabase.from('ib_contas').select('corretora, estado_migracao, volume_lotes, comissao_usd'),
     ])
+
+  /**
+   * A medição do conteúdo lê-se à parte e NUNCA rebenta o painel: estas colunas são novas
+   * (migração 168) e um painel que deixa de abrir por causa de um relatório é pior do que um
+   * relatório em falta.
+   */
+  const { data: marcados } = await supabase
+    .from('social_scheduled_posts')
+    .select('agente_codigo, agente_motivo, agente_links_marcados')
+    .order('created_at', { ascending: false })
+    .limit(500)
 
   const byStage: Record<string, number> = {}
   let novos24h = 0
@@ -188,9 +226,44 @@ export async function buildSalesState(): Promise<SalesState> {
     }
   }
 
+  // ── A medição do conteúdo ─────────────────────────────────────────────────
+  const porAtribuir: Record<string, number> = {}
+  const porAgenteMapa = new Map<string, { posts: number; links: number }>()
+  let comDono = 0
+  let aMedir = 0
+  for (const m of marcados ?? []) {
+    const l = m as { agente_codigo: string | null; agente_motivo: string | null; agente_links_marcados: number | null }
+    const links = Number(l.agente_links_marcados ?? 0)
+    if (l.agente_codigo) {
+      comDono++
+      const a = porAgenteMapa.get(l.agente_codigo) ?? { posts: 0, links: 0 }
+      a.posts++
+      a.links += links
+      porAgenteMapa.set(l.agente_codigo, a)
+      if (links > 0) aMedir++
+      // Dono mas sem link marcado: conta como «não mede», com o motivo. É o caso que de outra
+      // forma se confunde com um agente mau.
+      else porAtribuir[l.agente_motivo || 'sem_link_nosso'] = (porAtribuir[l.agente_motivo || 'sem_link_nosso'] ?? 0) + 1
+    } else {
+      // Os posts de antes da migração 168 não têm motivo escrito. Dizer «anterior_a_medicao» é
+      // mais honesto do que os misturar com os que o motor decidiu não atribuir.
+      const motivo = l.agente_motivo || 'anterior_a_medicao'
+      porAtribuir[motivo] = (porAtribuir[motivo] ?? 0) + 1
+    }
+  }
+
   return {
     day,
     andares,
+    atribuicao: {
+      total: (marcados ?? []).length,
+      comDono,
+      aMedir,
+      porAtribuir,
+      porAgente: [...porAgenteMapa.entries()]
+        .map(([codigo, v]) => ({ codigo, ...v }))
+        .sort((a, b) => b.links - a.links || b.posts - a.posts),
+    },
     pipeline: {
       porEstado,
       total: (negocios ?? []).length,

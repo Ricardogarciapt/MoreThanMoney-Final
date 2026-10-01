@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CAPTION_INTERNAL_MARK, publicCaption } from '@/lib/instagram/publish'
 import { modeloClaude } from '@/lib/modelo-claude'
+import { marcarConteudo } from '@/lib/agentes/marca-conteudo'
 
 /**
  * REPOST / AMPLIFICAÇÃO: @ricardogarciapt republica (com VOZ PESSOAL do Ricardo) os posts que
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
   // Posts de marca publicados recentemente, com imagem.
   const { data: brandPosts } = await supabase
     .from('social_scheduled_posts')
-    .select('id, caption, media_urls, published_media_id, created_at')
+    .select('id, caption, media_urls, published_media_id, created_at, agente_codigo')
     .eq('ig_account_id', IG_MTM)
     .eq('status', 'published')
     .gte('updated_at', sinceIso)
@@ -109,6 +110,18 @@ export async function GET(req: NextRequest) {
       continue
     }
     if (!personal) continue
+    /**
+     * O CRÉDITO DE UM REPOST É DE QUEM ESCREVEU O ORIGINAL.
+     *
+     * Passa-se o código do post de marca como EXPLÍCITO em vez de deixar o pilar decidir, porque
+     * o pilar de um repost é `repost:<uuid>` e nunca vai estar no mapa de pilares. Sem isto, um
+     * post que o @ricardogarciapt amplifica — e que pode trazer mais gente do que o original —
+     * ficava por atribuir, e o agente que fez o trabalho não via nada disso.
+     *
+     * O original sem código (todos os de antes de 01/10) devolve `codigo_invalido`/por atribuir,
+     * com o motivo escrito. Não se inventa um dono para o repost.
+     */
+    const marca = marcarConteudo({ legenda: personal, codigoExplicito: bp.agente_codigo })
     const when = new Date(now + (rows.length + 1) * 3 * 3600 * 1000) // escalona +3h cada
     const status = autopilot ? 'approved' : 'draft'
     rows.push({
@@ -118,13 +131,17 @@ export async function GET(req: NextRequest) {
       media_type: 'IMAGE',
       media_urls: [img],
       caption:
-        `${personal}\n\n${CAPTION_INTERNAL_MARK}\n` +
+        `${marca.legenda}\n\n${CAPTION_INTERNAL_MARK}\n` +
         `🔁 Repost automático de @morethanmoney.pt (post ${bp.id}).\n` +
+        `📊 Agente (herdado do original): ${marca.codigo ?? `por atribuir (${marca.motivo})`}\n` +
         `🤖 ${status === 'approved' ? 'Auto-publicado pela máquina de vendas.' : 'Rascunho — revê e aprova.'}`,
       pillar: `repost:${bp.id}`,
       scheduled_at: when.toISOString(),
       status,
       created_by: 'sales-machine',
+      agente_codigo: marca.codigo,
+      agente_motivo: marca.motivo ?? null,
+      agente_links_marcados: marca.marcados,
       ...(status === 'approved' ? { approved_by: 'sales-machine', approved_at: new Date().toISOString() } : {}),
     })
   }
