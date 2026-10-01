@@ -58,6 +58,8 @@ type Dados = {
   revisaoObrigatoria: boolean
   camposPermitidos: string[]
   vendedor: { activo: boolean; partilha_pct: number; temConta: boolean } | null
+  /** Só vem preenchida ao admin. O educador não precisa de saber quem mais vende aqui. */
+  educadores: Array<{ id: string; display_name: string; specialty: string | null }>
   produtos: Produto[]
   extracto: { vendas: number; brutoCents: number; aReceberCents: number }
 }
@@ -90,6 +92,14 @@ const VAZIO = {
   /** A galeria, SEM a capa. A capa é `imagem_url` e não se repete aqui. */
   imagens: [] as string[],
   campanha_pct: 0, campanha_inicio: "", campanha_fim: "", campanha_tier: "app_member",
+  /**
+   * De quem é o produto. Só o admin vê este campo: um educador cria sempre para si, e o
+   * `educator_id` dele vem da SESSÃO na rota — nunca do corpo do pedido, que é o que impede
+   * criar um produto em nome de outra pessoa.
+   *
+   * "" = ainda não escolheu · "casa" = produto da MTM · um uuid = o educador.
+   */
+  dono_escolhido: "",
 }
 
 /** `datetime-local` quer `YYYY-MM-DDTHH:mm`; a base de dados devolve ISO com segundos e fuso. */
@@ -141,6 +151,9 @@ export default function GestorProdutos() {
       campanha_pct: Number(p.campanha_pct ?? 0),
       campanha_inicio: paraInput(p.campanha_inicio), campanha_fim: paraInput(p.campanha_fim),
       campanha_tier: p.campanha_tier ?? "app_member",
+      // A editar não se escolhe dono: o campo nem aparece. Fica o que o produto já tem, para o
+      // estado do formulário não ter buracos.
+      dono_escolhido: p.dono === "casa" ? "casa" : (p.educator_id ?? ""),
     })
     setAEditar(true)
   }, [])
@@ -162,6 +175,12 @@ export default function GestorProdutos() {
         campanha_pct: Number(form.campanha_pct) || 0,
         campanha_inicio: paraIso(form.campanha_inicio), campanha_fim: paraIso(form.campanha_fim),
         campanha_tier: form.campanha_tier,
+      }
+      // Só na CRIAÇÃO e só o admin. Mudar o dono de um produto que já existe é outra operação —
+      // há vendas e repartições presas a ele — e não se faz por engano num formulário de edição.
+      if (!form.id && dados?.papel === "admin") {
+        if (form.dono_escolhido === "casa") corpo.dono = "casa"
+        else if (form.dono_escolhido) corpo.educator_id = form.dono_escolhido
       }
       if (accao) corpo.accao = accao
 
@@ -478,6 +497,37 @@ export default function GestorProdutos() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
+            {/*
+              DE QUEM É O PRODUTO — só o admin, e só ao criar.
+
+              A rota já exigia esta escolha e já recusava sem ela; o que faltava era o campo. Sem
+              ele o admin só conseguia criar produtos da casa, e um curso de educador tinha de
+              nascer por SQL.
+            */}
+            {!form.id && dados?.papel === "admin" && (
+              <label className="sm:col-span-2 block">
+                <span className="text-xs text-zinc-400">De quem é este produto</span>
+                <select
+                  value={form.dono_escolhido}
+                  onChange={(e) => setForm({ ...form, dono_escolhido: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                >
+                  {/* Vazio por omissão de propósito: escolher o dono é uma decisão, e um valor
+                      pré-seleccionado faz com que ela passe sem ninguém reparar. */}
+                  <option value="">— escolhe —</option>
+                  <option value="casa">MoreThanMoney (produto da casa)</option>
+                  {(dados.educadores ?? []).map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.display_name}{e.specialty ? ` · ${e.specialty}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-[11px] text-zinc-500">
+                  Um produto de educador conta para o extracto dele e pode ser editado por ele. Não se muda depois.
+                </span>
+              </label>
+            )}
+
             <label className="sm:col-span-2 block">
               <span className="text-xs text-zinc-400">Título</span>
               <input

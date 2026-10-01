@@ -85,12 +85,34 @@ export async function GET() {
     porProduto.set(v.produto_id, a)
   }
 
+  // Activos apenas: propor um educador inactivo era criar um produto que nasce invisível na
+  // montra (`produtoNaVitrine` exige vendedor activo) sem nada no ecrã a explicar porquê.
+  const educadores = quem.papel === 'admin'
+    ? ((await getSupabaseAdmin()
+        .from('lms_educators')
+        .select('id, display_name, specialty')
+        .eq('is_active', true)
+        .order('display_name')).data ?? [])
+    : []
+
   return NextResponse.json(
     {
       papel: quem.papel,
       marketplaceLigado: def.ligado,
       revisaoObrigatoria: def.revisaoObrigatoria,
       camposPermitidos: camposPermitidos(quem.papel),
+      /**
+       * A lista de educadores, SÓ para o admin.
+       *
+       * A rota do POST já aceitava `educator_id` e já recusava sem ele («Escolhe o educador, ou
+       * marca o produto como sendo da casa»), mas o formulário não tinha campo nenhum — por isso
+       * o admin só conseguia criar produtos DA CASA, e um curso de educador tinha de nascer por
+       * SQL. Era um beco: a regra existia, a porta não.
+       *
+       * Não vai para o educador: ele não precisa de saber quem mais vende aqui, e a lista de
+       * pessoas da casa não é informação dele.
+       */
+      educadores: quem.papel === 'admin' ? educadores : [],
       vendedor: vendedor
         ? { activo: vendedor.activo, partilha_pct: vendedor.partilha_pct, temConta: Boolean(vendedor.stripe_connect_account_id) }
         : null,
