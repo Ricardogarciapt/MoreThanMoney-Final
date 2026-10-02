@@ -941,7 +941,7 @@ export function nomeDoAutor(
   /**
    * O nome de marca, quando existe, ganha ao nome da pessoa — mas só num produto de EDUCADOR.
    *
-   * É o caso da She Is Faceless Academy: a educadora é a Maria Mafalda Costa e o curso vende-se sob
+   * É o caso da She Is Faceless Academy: a educadora é a Maria Costa e o curso vende-se sob
    * a marca da academia. Num produto da CASA este campo não se lê, senão um nome escrito à mão no
    * painel passava a poder fazer um produto da MTM parecer de outra pessoa.
    */

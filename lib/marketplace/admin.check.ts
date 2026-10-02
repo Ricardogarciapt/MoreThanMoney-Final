@@ -77,7 +77,7 @@ sim(
 
 // ── O nome de MARCA (`vendedor_nome`) ──────────────────────────────────────────────────────
 //
-// A She Is Faceless Academy: a educadora é a Maria Mafalda Costa, mas o curso vende-se sob o nome
+// A She Is Faceless Academy: a educadora é a Maria Costa, mas o curso vende-se sob o nome
 // da academia. Sem este campo, as duas saídas eram más — pôr o produto em nome da MTM, e ela
 // deixava de o poder editar; ou trocar o `display_name` dela, e a academia passava a chamar-se
 // assim no LMS e no estúdio.
@@ -85,12 +85,12 @@ sim(
   'marca: o nome do produto ganha ao nome da pessoa',
   nomeDoAutor(
     { ...PRODUTO_DE_EDUCADOR, vendedor_nome: 'SHE IS FACELESS ACADEMY' },
-    () => 'Maria Mafalda Costa',
+    () => 'Maria Costa',
   ) === 'SHE IS FACELESS ACADEMY',
 )
 sim(
   'marca: em branco não conta como marca — assina a pessoa',
-  nomeDoAutor({ ...PRODUTO_DE_EDUCADOR, vendedor_nome: '   ' }, () => 'Maria Mafalda Costa') === 'Maria Mafalda Costa',
+  nomeDoAutor({ ...PRODUTO_DE_EDUCADOR, vendedor_nome: '   ' }, () => 'Maria Costa') === 'Maria Costa',
 )
 /**
  * O CASO MAU: um produto da CASA com um nome de marca escrito à mão.

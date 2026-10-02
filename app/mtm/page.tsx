@@ -111,7 +111,7 @@ const MTM_AREAS: Array<{ p: MtmPilar; t: string; edu: string | null; ini: string
   },
   {
     p: "content",
-    t: "Faceless Marketing", edu: "Maria Mafalda Costa", ini: "MC",
+    t: "Faceless Marketing", edu: "Maria Costa", ini: "MC",
     d: "Construir e vender sem mostrar a cara. Marca, conteúdo e vendas para quem não quer — ou não pode — expor-se. A She Is Faceless Academy entrou na casa com sala própria e curso no marketplace.",
     meta: ["sala própria", "curso no marketplace", "gravações"],
   },

@@ -175,7 +175,7 @@ const AREAS: Area[] = [
   },
   {
     p: "content",
-    t: "Faceless Marketing", edu: "Maria Mafalda Costa",
+    t: "Faceless Marketing", edu: "Maria Costa",
     d: "Construir e vender sem mostrar a cara. Marca, conteúdo e vendas para quem não quer — ou não pode — expor-se. A She Is Faceless Academy tem sala própria e o curso está no marketplace.",
     meta: ["sala própria", "curso no marketplace", "gravações"], href: "/contentbussiness",
   },

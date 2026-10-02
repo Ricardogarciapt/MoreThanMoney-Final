@@ -243,6 +243,14 @@
     {
       "path": "/api/cron/sales-digest",
       "schedule": "30 7 * * *"
+    },
+    {
+      "path": "/api/cron/lead-followup",
+      "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/cron/content-repost",
+      "schedule": "20 10 * * *"
     }
   ]
 }

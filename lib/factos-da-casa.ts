@@ -88,7 +88,7 @@ export function bootcampPrecoComCampanha(): number {
 
 export const FACELESS = {
   area: 'Faceless Marketing',
-  educadora: 'Maria Mafalda Costa',
+  educadora: 'Maria Costa',
   /** A marca sob a qual os produtos dela se vendem. */
   academia: 'She Is Faceless',
   cursoPrecoEur: 127,
