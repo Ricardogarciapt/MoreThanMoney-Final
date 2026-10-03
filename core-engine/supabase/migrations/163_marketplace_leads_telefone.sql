@@ -1,0 +1,15 @@
+-- 163 — O TELEFONE NO FUNIL DO MARKETPLACE
+--
+-- Medido a 01/10/2026: dos 111 negócios do pipeline, só 15 têm telefone. A maior fonte são os 96
+-- perfis da base, dos quais apenas 5 o têm — e a cópia está correcta: os perfis é que nunca o
+-- tiveram. O /register pede telefone e é obrigatório; o MARKETPLACE não pedia nada além do email,
+-- e `marketplace_leads` não tinha sequer onde o guardar.
+--
+-- Fica OPCIONAL de propósito. Obrigar um telefone num checkout corta vendas, e o objectivo é ter
+-- mais contactos — não menos compras. Pede-se com o motivo à frente, que é o que faz as pessoas
+-- darem: «avisamos-te se houver algum problema com o acesso».
+--
+-- Guarda-se aqui E no perfil porque são duas perguntas diferentes: o perfil tem o contacto de quem
+-- COMPROU; esta tabela tem o de quem passou pelo checkout e NÃO comprou — e esse é precisamente o
+-- que vale a pena telefonar.
+alter table public.marketplace_leads add column if not exists telefone text;

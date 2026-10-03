@@ -1,0 +1,214 @@
+"use client"
+
+import { useCallback, useEffect, useState } from "react"
+import { Loader2, RefreshCw } from "lucide-react"
+
+/**
+ * Estado dos tokens do Instagram, e onde colar um novo.
+ *
+ * Vale a pena estar à vista: um token expirado não parte nada com estrondo — a publicação
+ * simplesmente não acontece e o painel de conteúdo continua com o mesmo ar de sempre.
+ */
+
+interface Conta {
+  conta: string
+  username: string
+  variavel: string
+  temToken: boolean
+  ok: boolean
+  motivo?: string
+  expiraEm?: string | null
+  diasQueFaltam?: number | null
+  permissoes?: string[]
+}
+
+/** O que é preciso para o que fazemos: publicar, ler comentários e responder. */
+const PERMISSOES_PRECISAS = [
+  "instagram_basic",
+  "instagram_content_publish",
+  "instagram_manage_comments",
+  "pages_show_list",
+]
+
+export function TokensInstagram() {
+  const [contas, setContas] = useState<Conta[]>([])
+  const [carregar, setCarregar] = useState(true)
+  const [novo, setNovo] = useState<Record<string, string>>({})
+  const [aGuardar, setAGuardar] = useState<string | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  /** O segredo da app — o que permite trocar um token de duas horas por um de dois meses. */
+  const [segredo, setSegredo] = useState("")
+
+  const buscar = useCallback(async () => {
+    setCarregar(true)
+    try {
+      const r = await fetch("/api/admin/ig-tokens", { cache: "no-store" })
+      const j = await r.json()
+      if (j.ok) setContas(j.contas as Conta[])
+    } catch {
+      setErro("Não foi possível ler o estado dos tokens")
+    }
+    setCarregar(false)
+  }, [])
+
+  useEffect(() => { void buscar() }, [buscar])
+
+  const guardar = async (variavel: string) => {
+    setAGuardar(variavel)
+    setErro(null)
+    try {
+      const r = await fetch("/api/admin/ig-tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variavel, token: novo[variavel] ?? "" }),
+      })
+      const j = await r.json()
+      if (j.ok) {
+        setContas(j.contas as Conta[])
+        setNovo((n) => ({ ...n, [variavel]: "" }))
+      } else {
+        setErro(j.erro ?? "Não guardou")
+      }
+    } catch {
+      setErro("Não guardou")
+    }
+    setAGuardar(null)
+  }
+
+  return (
+    <div className="rounded-xl border bg-white p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-neutral-200">Tokens do Instagram</h2>
+        <button onClick={() => void buscar()} disabled={carregar} className="rounded-lg border p-1.5 hover:bg-neutral-800 disabled:opacity-40">
+          {carregar ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        </button>
+      </div>
+
+      {erro && <p className="mb-2 text-xs text-red-400">{erro}</p>}
+
+      <div className="space-y-3">
+        {contas.map((c) => {
+          const faltam = c.permissoes?.length ? PERMISSOES_PRECISAS.filter((p) => !c.permissoes?.includes(p)) : []
+          return (
+            <div key={c.variavel} className="rounded-lg border bg-neutral-50 p-3">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="font-medium">@{c.username}</span>
+                {c.ok ? (
+                  <span className="rounded-full bg-emerald-950 px-2 py-0.5 text-[11px] text-emerald-300">a funcionar</span>
+                ) : (
+                  <span className="rounded-full bg-red-950 px-2 py-0.5 text-[11px] text-red-300">
+                    {c.motivo ?? "não funciona"}
+                  </span>
+                )}
+                {c.diasQueFaltam != null && (
+                  <span className={`text-[11px] ${c.diasQueFaltam < 10 ? "text-amber-300" : "text-neutral-400"}`}>
+                    expira em {c.diasQueFaltam} dias
+                  </span>
+                )}
+                {c.expiraEm === null && c.ok && (
+                  <span className="text-[11px] text-neutral-400">não expira</span>
+                )}
+              </div>
+
+              {faltam.length > 0 && (
+                <p className="mt-1 text-[11px] text-amber-300">
+                  Faltam permissões: {faltam.join(", ")} — sem elas, essa parte fica calada.
+                </p>
+              )}
+
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="password"
+                  value={novo[c.variavel] ?? ""}
+                  onChange={(e) => setNovo((n) => ({ ...n, [c.variavel]: e.target.value }))}
+                  placeholder="colar token novo"
+                  className="min-w-0 flex-1 rounded-md border bg-white px-2 py-1 text-sm"
+                />
+                <button
+                  onClick={() => void guardar(c.variavel)}
+                  disabled={aGuardar === c.variavel}
+                  className="rounded-lg bg-amber-500 px-3 py-1 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-40"
+                >
+                  {aGuardar === c.variavel ? "…" : "Verificar e guardar"}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+        {!carregar && !contas.length && <p className="text-sm text-neutral-400">Sem contas configuradas.</p>}
+      </div>
+
+      {/* O segredo fica aqui e não nas variáveis da Vercel porque é o par do token: quem vem
+          renovar um vem tratar do outro. Guardado, nunca devolvido. */}
+      <div className="mt-3 rounded-lg border bg-neutral-50 p-3">
+        <p className="text-[11px] text-neutral-400">
+          <b className="text-neutral-200">Segredo da app</b> — sem ele, um token do Explorer dura
+          uma ou duas horas. Com ele, o sistema troca-o por um de <b>60 dias</b> assim que o colas.
+        </p>
+        <div className="mt-2 flex gap-2">
+          <input
+            type="password"
+            value={segredo}
+            onChange={(e) => setSegredo(e.target.value)}
+            placeholder="App Secret (Definições → Básico, na app do Meta)"
+            className="min-w-0 flex-1 rounded-md border bg-white px-2 py-1 text-sm"
+          />
+          <button
+            onClick={async () => {
+              setAGuardar("segredo")
+              setErro(null)
+              try {
+                const r = await fetch("/api/admin/ig-tokens", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ segredo }),
+                })
+                const j = await r.json()
+                if (j.ok) { setSegredo(""); setContas(j.contas as Conta[]) } else setErro(j.erro ?? "Não guardou")
+              } catch { setErro("Não guardou") }
+              setAGuardar(null)
+            }}
+            disabled={aGuardar === "segredo"}
+            className="rounded-lg border px-3 py-1 text-sm font-semibold hover:bg-neutral-800 disabled:opacity-40"
+          >
+            {aGuardar === "segredo" ? "…" : "Guardar segredo"}
+          </button>
+        </div>
+        {/* O caso normal é colar o token antes de guardar o segredo — e ficar com o de duas horas
+            lá dentro. Este botão refaz a cadeia sobre o que já está guardado, sem voltar ao Meta. */}
+        <button
+          onClick={async () => {
+            setAGuardar("renovar")
+            setErro(null)
+            try {
+              const r = await fetch("/api/admin/ig-tokens", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ renovar: true }),
+              })
+              const j = await r.json()
+              if (j.ok) {
+                setContas(j.contas as Conta[])
+                if (!j.mexeu) setErro("Nada mudou — ou já estão renovados, ou falta o segredo acima.")
+              } else setErro(j.erro ?? "Não renovou")
+            } catch { setErro("Não renovou") }
+            setAGuardar(null)
+          }}
+          disabled={aGuardar === "renovar"}
+          className="mt-2 w-full rounded-lg border px-3 py-1.5 text-sm hover:bg-neutral-800 disabled:opacity-40"
+        >
+          {aGuardar === "renovar" ? "…" : "Renovar os tokens que já estão guardados"}
+        </button>
+      </div>
+
+      <p className="mt-3 text-[11px] text-neutral-400">
+        O token é verificado contra a Graph API antes de ser guardado — se for de outra conta, é
+        recusado. Guardar vazio devolve o comando à variável de ambiente. Onde gerar:{" "}
+        <a className="underline" href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer">
+          Graph API Explorer
+        </a>{" "}
+        com a app 1468588267606256 e as permissões acima.
+      </p>
+    </div>
+  )
+}
