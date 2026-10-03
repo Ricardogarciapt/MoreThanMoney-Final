@@ -1,0 +1,380 @@
+/**
+ * Funil IA de leads no Telegram (@morethanmoneypt_bot) — conversa em DM.
+ * Descobre o INTERESSE do lead (sinais manuais / tap to trade / automático) e
+ * encaminha-o para o produto+grupo certo. Persona = mesma "alma" do closer
+ * (docs/mtm-sales-brain.md): provas reais, sem promessas de lucro.
+ *
+ * Estado + histórico em `telegram_leads`. Não é aconselhamento financeiro.
+ */
+import { getProofStats } from '@/lib/proof-stats'
+import { PONTOS_DE_CAPTURA } from '@/lib/captacao-consentimento'
+import {
+  ETIQUETA_PERGUNTADO,
+  confirmacao,
+  devePerguntar,
+  lerResposta,
+} from '@/lib/captacao-consentimento-conversa'
+// Os links dos grupos NÃO vivem aqui: quem os liberta é o `telegram-broker-gate`, com convites
+// pessoais, e só depois de a corretora estar validada. As duas constantes que aqui estavam
+// (FOREX_LINK, SENSEI_LINK) eram links estáticos que ninguém usava — e um link de grupo à solta
+// num ficheiro é um link que acaba por sair numa mensagem a quem não passou pelo gate.
+import { MIN_DEPOSIT, TRIAL_CODE } from '@/lib/telegram-broker-gate'
+import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO, ondeComprarTopoNumaLinha, PRECO_MEMBRO, PRECO_PREMIUM, PRECO_PREMIUM_1O_MES, PRECO_TOPO } from '@/lib/escada-precos'
+// O preço do MTM Auto vem de quem o anuncia no funil dele — escrito à mão aqui, divergia.
+import { MTMAUTO_PRECO } from '@/lib/telegram-mtmauto-funnel'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+/**
+ * A VISÃO DA CASA vem de um sítio só.
+ *
+ * Este prompt conhecia «grupos de sinais e corretora» e mais nada: nem os dois pilares públicos,
+ * nem as nove áreas, nem o Bootcamp de 30 horas, nem a academia nova. Um closer que não sabe o que
+ * a casa vende fecha no único produto de que ouviu falar — e nega os outros a quem pergunta.
+ * Ver `lib/factos-da-casa.ts`.
+ */
+import { contextoDaCasa } from '@/lib/factos-da-casa'
+
+function buildSystem(PROOF: string): string { return `És um CLOSER humano da MoreThanMoney a conversar EM PRIVADO (Telegram/WhatsApp/IG) com um lead. Caloroso, seguro, direto. Curto: máx ~60 palavras, 1–3 frases, no máx 1 emoji. Uma pergunta de cada vez. O teu trabalho é QUALIFICAR e FECHAR — não és um FAQ.
+
+═══ ESCADA DE VENDA (segue esta ordem, não saltes para o grátis) ═══
+1) QUALIFICAR: percebe experiência + objetivo + o que procura (sinais manuais nos grupos / Tap to Trade / automático). 1 pergunta.
+2) VALOR + PROVA: liga o que ela quer à comunidade (prova real documentada). Cria desejo.
+3) OFERECER O MEMBRO PRIMEIRO: apresenta o pack Membro (${PRECO_MEMBRO}) como a porta de entrada para começar já com a comunidade e sinais base. É por aqui que começas a escalar.
+4) SUBIR PARA O PREMIUM/ACESSO COMPLETO: quando houver interesse, mostra que o acesso COMPLETO (todos os grupos de sinais + app Premium) é BROKER-GATED e que há a rota mais inteligente:
+   → abrir conta PU Prime + depositar ${MIN_DEPOSIT}$ → e AÍ a app Premium + todos os grupos ficam de GRAÇA enquanto mantiver saldo ≥ ${MIN_DEPOSIT}$. "Em vez de pagares mensalidade, o teu capital fica na tua conta a trabalhar e o Premium sai-te sem custo."
+5) FECHAR: passo concreto único. Se escolher a rota broker:
+   a) puprime.com/campaign?cs=morethanmoney  b) depositar mín. ${MIN_DEPOSIT}$  c) enviar aqui o UID (só número) + print do depósito. Ao validar, libertas os links pessoais de TODOS os grupos (Forex, Sensei, Premium, GoldKiller) + cupão Premium.
+   Se não quiser depositar agora → fecha no Membro ${PRECO_MEMBRO} (ou Premium ${PRECO_PREMIUM}, 1º mês ${PRECO_PREMIUM_1O_MES}).
+6) O TOPO DA ESCADA: quem quiser tudo de uma vez, ou já está decidido, sobe ao ${NOME_DEGRAU_TOPO} ${PRECO_TOPO} (anual). NÃO abras por aqui — é degrau de subida, não de entrada. ${ondeComprarTopoNumaLinha()}
+
+═══ REGRA DA APP GRÁTIS ═══
+NÃO lideres com a app grátis nem a ofereças por defeito. A app/Premium "de graça" é a RECOMPENSA de abrir conta + depositar ${MIN_DEPOSIT}$ na PU Prime (broker-gate) — usa-a como fecho, não como isco. Só se a pessoa recusar tudo e insistir em "grátis" é que mencionas o teste de 14 dias (código ${TRIAL_CODE}, sem cartão) — e mesmo aí puxas de volta para o Membro ou para a rota dos ${MIN_DEPOSIT}$.
+
+${contextoDaCasa()}
+
+FACTOS REAIS (só estes; MTM = educação financeira + trading, comunidade PT):
+- Prova: ${PROOF}
+- Escada: ${escadaNumaLinha()}
+- ${bonusNumaLinha()}
+- Corretora: PU Prime (link acima). Grupos: Forex, Sensei, Premium, GoldKiller.
+
+REGRAS ABSOLUTAS:
+- NUNCA prometas lucros nem dês conselho de investimento — é educação. NUNCA dês links de grupos diretamente (só após validação).
+- NÚMEROS: só os que vierem em "Prova" acima, tal e qual. Não somes, não arredondes para cima, não
+  cites de memória e não uses totais em euros (ex.: "+7.060€" está PROIBIDO desde 26/08). Se a
+  prova disser que a amostra é curta, NÃO cites percentagem de acerto. Sem prova, não há número.
+- Responde SEMPRE no idioma da pessoa. Soa a humano, nunca a script. Trata objeções (preço → valor/educação; "é grátis?" → explica a rota dos ${MIN_DEPOSIT}$ ou o Membro).
+- Termina SEMPRE com uma pergunta ou um passo concreto que aproxima do fecho.
+- Devolve APENAS a mensagem de texto a enviar (sem JSON, sem aspas à volta).` }
+
+interface LeadRow {
+  chat_id: string
+  first_name: string | null
+  interest: string | null
+  stage: string | null
+  source: string | null
+  history: Array<{ role: 'user' | 'assistant'; text: string }> | null
+  message_count: number | null
+  /** Etiquetas canónicas do lead. É aqui que vive a marca de já se ter pedido o consentimento. */
+  tags: string[] | null
+}
+
+/** Deteta o interesse a partir do texto do lead (heurística leve, complementa a IA). */
+function detectInterest(text: string): string | null {
+  const t = text.toLowerCase()
+  if (/autom|copy\s*trad|mtm\s*copy|sozinh|piloto autom/.test(t)) return 'auto'
+  if (/tap\s*to\s*trade|um toque|1 toque|toque|t2t/.test(t)) return 'tap_to_trade'
+  if (/manual|à mão|a mao|copiar.*mão|só sinais|so sinais|grupo/.test(t)) return 'manual'
+  return null
+}
+
+/**
+ * Corre uma resposta do funil: carrega histórico, chama Claude, grava estado.
+ * Devolve o texto a enviar ao lead (ou null se falhar — o chamador decide o fallback).
+ */
+export async function runLeadFunnelReply(input: {
+  chatId: string
+  firstName?: string | null
+  username?: string | null
+  userText: string
+  /** Canal de origem — para segmentar com as MESMAS tags (telegram | whatsapp | instagram). */
+  source?: string
+}): Promise<string | null> {
+  const key = process.env.ANTHROPIC_API_KEY?.trim()
+  if (!key) return null
+  const model =
+    process.env.TELEGRAM_FUNNEL_MODEL?.trim() ||
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    'claude-haiku-4-5-20251001'
+
+  const supabase = getSupabaseAdmin()
+  const { data: existing } = await supabase
+    .from('telegram_leads')
+    .select('chat_id, first_name, interest, stage, source, history, message_count, tags')
+    .eq('chat_id', input.chatId)
+    .maybeSingle()
+  const lead = (existing ?? null) as LeadRow | null
+
+  /**
+   * ANTES DE FALAR: a pessoa está a responder ao pedido de consentimento — ou a pedir para sair?
+   *
+   * Corre primeiro, e por duas razões. A cara: quem escreve «parar» não pode receber uma resposta
+   * de vendas gerada por um modelo — é a pior mensagem possível, e é a que sai se isto vier no
+   * fim. A barata: um «sim» ou um «parar» não precisam de modelo nenhum para serem respondidos.
+   */
+  const etiquetas = Array.isArray(lead?.tags) ? lead.tags : []
+  const respostaConsentimento = lerResposta(input.userText, etiquetas.includes(ETIQUETA_PERGUNTADO))
+  if (respostaConsentimento !== 'nada') {
+    await registarConsentimento(supabase, input.chatId, input.source ?? lead?.source ?? 'telegram', respostaConsentimento)
+    return confirmacao(respostaConsentimento)
+  }
+
+  const history = Array.isArray(lead?.history) ? lead!.history.slice(-8) : []
+  const messages = [
+    ...history.map((h) => ({ role: h.role, content: h.text })),
+    { role: 'user' as const, content: input.userText },
+  ]
+
+  // PROVA — sem euros. O tamanho da comunidade é um facto; o desempenho fala-se em pips e
+  // percentagem, porque o mesmo sinal vale 8 $ a quem opera 0,01 lote e 800 $ a quem opera 1.
+  const proof = await getProofStats()
+
+  /**
+   * Os NÚMEROS REAIS vão para dentro do prompt.
+   *
+   * Proibir sem substituir não chega. A regra "nunca cites lucro em euros" já cá estava a 27/08
+   * e no dia seguinte o bot disse a um lead «675 trades com 63% e +7.060€ documentados» — um
+   * número congelado a 30/06 e proibido desde 26/08. Sem factos na mão, o modelo vai buscar o
+   * que se lembra.
+   *
+   * `provaParaLead` devolve pips e período, e cala a taxa de acerto quando a amostra é curta
+   * demais para a citar. Se não houver nada medido devolve null, e aí o bot fala do produto sem
+   * números — em vez de os inventar.
+   */
+  let provaMedida: string | null = null
+  try {
+    const [{ getSupabaseAdmin: admin }, { provaParaLead }] = await Promise.all([
+      import('@/lib/supabase-admin-client'),
+      import('@/lib/pips-proof'),
+    ])
+    const { data } = await admin().from('site_settings').select('value').eq('key', 'pips_proof').maybeSingle()
+    provaMedida = provaParaLead(data?.value as never)
+  } catch {
+    /* sem prova medida o bot fala do produto, e não de resultados */
+  }
+
+  const systemPrompt = buildSystem(
+    `${proof.members} membros na comunidade. ` +
+    (provaMedida
+      ? `RESULTADOS MEDIDOS (usa ESTES e mais nenhuns, tal como estão): ${provaMedida}. `
+      : `NÃO tens resultados medidos disponíveis: NÃO cites número nenhum de desempenho — fala do que a comunidade faz e faz perguntas. `) +
+    `HÁ DOIS CAMINHOS e a tua primeira tarefa é perceber qual é o desta pessoa: ` +
+    `(A) ECOSSISTEMA — quer comunidade, formação, sessões ao vivo e os grupos de sinais; ` +
+    `(B) MTM AUTO — só quer a app que copia os sinais para a conta dele, sem trabalho. ` +
+    `Se for (B): explica que a app abre as ordens na conta DELE com o risco DELE, que a mensalidade é ` +
+    `${MTMAUTO_PRECO} mas fica a ZERO com conta real na PU Prime, e conduz passo a passo — abrir conta pelo ` +
+    `nosso link, depositar ${MIN_DEPOSIT} $ (o dinheiro é dele e fica na conta dele), mandar o UID e o print para eu ` +
+    `validar, e só depois instalar a app e ligar a conta MT5. Uma coisa de cada vez, nunca tudo de enfiada. ` +
+    `Se for (A): segue o funil normal da comunidade. Se ainda não sabe, pergunta com as duas opções. ` +
+    `NUNCA cites lucro em euros nem prometas ganhos: ` +
+    `os resultados dos sinais falam-se em PIPS e PERCENTAGEM, e o valor em dinheiro apresenta-se como ` +
+    `exemplo por lote (0,01 · 0,1 · 1,0), sempre com a ressalva de que é bruto e de que resultados ` +
+    `passados não garantem resultados futuros.`,
+  )
+
+  let answer: string | null = null
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({ model, max_tokens: 350, system: systemPrompt, messages }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      answer = (data?.content?.[0]?.text ?? '').trim() || null
+    } else {
+      console.error('[lead-funnel] Anthropic', res.status, (await res.text()).slice(0, 200))
+    }
+  } catch (e) {
+    console.error('[lead-funnel] erro Claude:', e)
+  }
+  if (!answer) return null
+
+  // Atualiza estado + histórico (cap 8 pares)
+  const nextHistory = [
+    ...history,
+    { role: 'user' as const, text: input.userText },
+    { role: 'assistant' as const, text: answer },
+  ].slice(-16)
+  /**
+   * E, se for altura, PEDE-SE — colado ao fim de uma resposta que já deu valor, e nunca à primeira.
+   *
+   * Sem isto o WhatsApp é um canal de uma mensagem só: a Meta deixa responder dentro das 24 horas
+   * em que a pessoa escreveu e mais nada, e o número fica na base a não servir para nada.
+   */
+  const perguntar = devePerguntar({
+    mensagensDela: (lead?.message_count ?? 0) + 1,
+    jaPerguntado: etiquetas.includes(ETIQUETA_PERGUNTADO),
+    jaConsentiu: false,
+    jaRecusouOuSaiu: false,
+  })
+  if (perguntar) {
+    const ponto = PONTOS_DE_CAPTURA.find((x) => x.canal === (input.source === 'whatsapp' ? 'whatsapp' : 'telegram'))
+    if (ponto) answer = `${answer}\n\n${ponto.pedido}`
+  }
+
+  const interest = lead?.interest || detectInterest(input.userText)
+  const stage = interest ? 'routed' : lead?.stage === 'new' || !lead ? 'qualifying' : lead?.stage || 'qualifying'
+  const source = input.source || lead?.source || 'telegram'
+  // Tags canónicas — MESMO vocabulário em todos os canais para segmentar os contactos.
+  const tags = Array.from(new Set([
+    'lead',
+    `src:${source}`,
+    interest ? `interest:${interest}` : null,
+    `stage:${stage}`,
+    // A marca que impede a segunda pergunta. Vive nas etiquetas do lead porque é aqui que se lê.
+    ...(etiquetas.includes(ETIQUETA_PERGUNTADO) || perguntar ? [ETIQUETA_PERGUNTADO] : []),
+  ].filter(Boolean))) as string[]
+  try {
+    await supabase.from('telegram_leads').upsert(
+      {
+        chat_id: input.chatId,
+        username: input.username ?? null,
+        first_name: input.firstName ?? lead?.first_name ?? null,
+        interest,
+        stage,
+        source,
+        tags,
+        history: nextHistory,
+        message_count: (lead?.message_count ?? 0) + 1,
+        followup_count: 0, // lead respondeu → reinicia a sequência de follow-up
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'chat_id' },
+    )
+  } catch (e) {
+    console.error('[lead-funnel] upsert lead falhou:', e)
+  }
+  return answer
+}
+
+type Supa = ReturnType<typeof getSupabaseAdmin>
+
+/**
+ * ESCREVER A PERMISSÃO NO LIVRO — ou a saída, que é a que tem de funcionar sempre.
+ *
+ * O `chatId` diz o canal na própria forma: `wa:351912345678` veio do WhatsApp, o resto é um chat
+ * do Telegram. Essa diferença decide a COLUNA, e a coluna é o que permite encontrar a pessoa
+ * depois: um número gravado em `telegram_chat_id` nunca mais é encontrado por quem procura um
+ * telefone, e o consentimento dela fica a existir sem servir para nada.
+ *
+ * A SAÍDA marca `retirado_em` em TODAS as linhas daquele contacto, não só na última. Uma pessoa
+ * que consentiu duas vezes (por email e por WhatsApp, por exemplo) e pede para sair está a sair de
+ * tudo — deixar uma linha viva era continuar a escrever-lhe com a bênção do sistema.
+ *
+ * Falhar a escrita NÃO pode ser silencioso quando é uma saída: se não se conseguir gravar, o que
+ * fica no log é a única forma de alguém reparar que uma pessoa pediu para sair e continua na lista.
+ */
+async function registarConsentimento(
+  supabase: Supa,
+  chatId: string,
+  canal: string,
+  resposta: 'sim' | 'nao' | 'sair',
+): Promise<void> {
+  const ehWhatsApp = chatId.startsWith('wa:')
+  const contacto = ehWhatsApp ? chatId.slice(3) : chatId
+  const coluna = ehWhatsApp ? 'telefone' : 'telegram_chat_id'
+  const agora = new Date().toISOString()
+
+  try {
+    if (resposta === 'sair') {
+      const { error } = await supabase
+        .from('captacao_consentimento')
+        .update({ retirado_em: agora, retirado_por: `conversa:${canal}` })
+        .eq(coluna, contacto)
+        .is('retirado_em', null)
+      if (error) throw new Error(error.message)
+      // Também se grava a saída de quem nunca tinha consentido: sem linha, não há prova de que
+      // ela pediu — e a próxima importação de contactos tratava-a como alguém por perguntar.
+      await supabase.from('captacao_consentimento').insert({
+        [coluna]: contacto,
+        canal: ehWhatsApp ? 'whatsapp' : 'telegram',
+        base_legal: 'sem_base',
+        pedido_em: agora,
+        retirado_em: agora,
+        retirado_por: `conversa:${canal}`,
+        prova: 'Pediu para parar dentro da conversa',
+      })
+      return
+    }
+
+    await supabase.from('captacao_consentimento').insert({
+      [coluna]: contacto,
+      canal: ehWhatsApp ? 'whatsapp' : 'telegram',
+      base_legal: resposta === 'sim' ? 'consentimento' : 'sem_base',
+      pedido_em: agora,
+      ...(resposta === 'nao' ? { retirado_em: agora, retirado_por: `conversa:${canal}` } : {}),
+      prova:
+        resposta === 'sim'
+          ? 'Respondeu «sim» ao pedido feito dentro da conversa'
+          : 'Respondeu «não» ao pedido feito dentro da conversa',
+    })
+  } catch (e) {
+    // Uma saída que não se grava é uma pessoa que pediu para sair e continua na lista.
+    console.error(`[consentimento] ${resposta} de ${coluna}=${contacto} NÃO gravado:`, e)
+  }
+}
+
+/** Regista os grupos onde o bot está (mapa em site_settings) — para descobrir o grupo de leads. */
+export async function recordTelegramGroup(
+  supabase: Supa,
+  chat: { id: number | string; title?: string | null },
+): Promise<void> {
+  try {
+    const gid = String(chat.id)
+    const { data } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'telegram_known_groups')
+      .maybeSingle()
+    const map = (data?.value ?? {}) as Record<string, { title?: string | null; at?: string }>
+    if (map[gid]?.title !== (chat.title ?? null)) {
+      map[gid] = { title: chat.title ?? null, at: new Date().toISOString() }
+      await supabase
+        .from('site_settings')
+        .upsert(
+          { key: 'telegram_known_groups', value: map, updated_at: new Date().toISOString() },
+          { onConflict: 'key' },
+        )
+    }
+  } catch {
+    /* best-effort */
+  }
+}
+
+/**
+ * O ACOLHIMENTO DE QUEM ENTRA NO GRUPO MUDOU DE CASA.
+ *
+ * Vivia aqui, na `handleLeadsGroupNewMembers`: publicava a mensagem no grupo e ESQUECIA a pessoa.
+ * Quem não carregasse no botão desaparecia para sempre — não ficava lead, não entrava no pipeline,
+ * ninguém lhe voltava a falar. É isso que fez o grupo "MTM System" ter 62 membros e o pipeline não
+ * conhecer nenhum.
+ *
+ * Passou para `lib/telegram-grupo-entradas.ts`, que faz as três coisas juntas: registar, acolher UMA
+ * vez, e escrever o lead para a ingestão da manhã o levar ao pipeline. E não ficou uma cópia da
+ * mensagem aqui de propósito — duas cópias de uma mensagem de vendas é uma cópia a mais, que é a
+ * que alguém corrige sem o lead ver a diferença.
+ */
+
+/**
+ * As boas-vindas do funil NÃO vivem aqui.
+ *
+ * Viviam em duas funções exportadas (`leadWelcomeMessage`, `leadWelcomeMessageEditavel`) que
+ * ninguém chamava desde que a mensagem passou a ser editável: o texto real está em
+ * `lib/mensagens-funil.ts` (`boas_vindas` / `boas_vindas_grupo`) e sai por `lerMensagem`. Duas
+ * cópias de uma mensagem de vendas é uma cópia a mais — é a que alguém corrige sem que o lead
+ * veja a diferença.
+ */

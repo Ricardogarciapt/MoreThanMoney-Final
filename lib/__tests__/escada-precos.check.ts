@@ -170,7 +170,7 @@ if (TOPO_LINK_PAGAMENTO) {
 const GUIOES = [
   '../instagram/dm-closer.ts',
   '../telegram-lead-funnel.ts',
-  '../../app/api/manychat/closer/route.ts',
+  '../../app/api//closer/route.ts',
 ]
 for (const rel of GUIOES) {
   const texto = readFileSync(new URL(rel, import.meta.url), 'utf-8')

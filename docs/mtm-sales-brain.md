@@ -1,7 +1,7 @@
-# MTM Sales Brain — memória + IA para fechar vendas (Claude + ManyChat)
+# MTM Sales Brain — memória + IA para fechar vendas (Claude + )
 
 > Fonte única de verdade para o **enquadramento** de qualquer agente de vendas MTM (Claude,
-> ManyChat AI, email, DM): o que se vende, por que ordem, com que tom, e o que nunca se diz.
+>  AI, email, DM): o que se vende, por que ordem, com que tom, e o que nunca se diz.
 >
 > **Este documento não tem números.** Nem preços, nem prova. Os preços vivem em
 > [`lib/escada-precos.ts`](../lib/escada-precos.ts); a prova vive em
@@ -26,7 +26,7 @@ e as regras que não se podem quebrar. Quem precisa de um valor vai buscá-lo à
 
 Seis ficheiros de runtime citam este documento como autoridade
 (`lib/telegram-lead-funnel.ts`, `lib/email-templates.ts`, `lib/escada-precos.ts`,
-`app/api/manychat/closer/route.ts`, `app/api/telegram/webhook/route.ts`,
+`app/api//closer/route.ts`, `app/api/telegram/webhook/route.ts`,
 `app/api/cron/telegram-leads-content/route.ts`). É por isso que ele tem de estar certo — e é por
 isso que não pode ser ele a guardar valores.
 
@@ -209,7 +209,7 @@ interpolados da fonte:
 | Superfície | Ficheiro |
 |---|---|
 | DM do Instagram | `lib/instagram/dm-closer.ts` |
-| ManyChat | `app/api/manychat/closer/route.ts` |
+|  | `app/api//closer/route.ts` |
 | Funil do Telegram | `lib/telegram-lead-funnel.ts` |
 | Desenhador de funis (/admin/social) | `app/api/admin/social/funil-ia/route.ts` |
 

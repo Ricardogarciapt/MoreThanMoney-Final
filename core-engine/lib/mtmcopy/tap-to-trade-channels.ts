@@ -1,0 +1,114 @@
+import { getSignalSourcesConfig } from './signal-sources-config'
+import type { ProviderRoute } from './signal-sources-config'
+import { normalizeProviderRoutes } from './provider-routes'
+
+/** Mapeia o sender_channel da rota provider → canais de chat onde os sinais aparecem. */
+export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
+  'premium-signals': ['premium-ideas'],
+  // trade-ideas cobre Forex + MTM Scanner + Índices + Forex Swings + Cripto (PrimeVerse) +
+  // Sensei VALIDADO (só as entradas activadas que caem no chat 'sensei-scanner').
+  // O GoldKiller usa app_channel próprio ('sinais-goldkiller').
+  // 2026-08-27: saiu daqui o 'trade-ideas-setup' (Ideias de Forex) — muito aviso, pouco toque.
+  //
+  // O 'sinais-scanner-mtm' esteve fora durante umas horas por engano meu: o slug lê-se como
+  // "sinais scanner MTM", mas o canal é o **MTM Auto Edge** e é por ele que entram os sinais da
+  // estratégia Edge (fxEdge) — que são para aceitar, não para esconder.
+  // 18/09: `cripto-perps` fundido em `aurum-flow` (canal «Ideias de Cripto»); o slug antigo fica
+  // para as mensagens que ainda lá estejam.
+  'trade-ideas': ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'aurum-flow', 'cripto-perps', 'sensei-scanner'],
+}
+
+/**
+ * Âmbito T2T decidido: MTM Scanner + GoldKiller + Forex + Premium + Sensei (entradas
+ * validadas — pedido Ricardo 2026-08-20: Sensei entra no monitor/gestão T2T completa).
+ * Nota: a lista viva é calculada dinamicamente por tapToTradeEnabledChannels() a partir
+ * das rotas com tap_to_trade=true; esta constante é o espelho canónico/documental.
+ */
+// 'cripto-perps' entra aqui para os perpétuos poderem ser SEGUIDOS no T2T (ver t2tMode:
+// nos perpétuos o botão não abre ordem, marca o sinal como seguido). Sem isto o fallback
+// rejeitava-os com 'provider_off' quando a configuração de rotas não estivesse disponível.
+export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'aurum-flow', 'cripto-perps']
+
+/**
+ * Canais ACOMPANHADOS pelo motor de seguimento (`signal-tracker`) — quais sinais são MEDIDOS.
+ *
+ * Não é a mesma pergunta que `T2T_SIGNAL_CHANNELS`, que diz quais são NEGOCIÁVEIS (têm botão de
+ * aceitar). Durante um mês foram a mesma lista, e isso custou a medição do MTM Scanner:
+ *
+ *   A 27/08 o 'trade-ideas-setup' («Ideias de Forex») saiu do T2T por decisão do dono — «muito
+ *   aviso, pouco toque». A decisão era sobre o BOTÃO, mas o tracker admitia sinais por esta mesma
+ *   constante, por isso o canal deixou de ser seguido no mesmo instante. O canal não secou: é o
+ *   mais movimentado do chat e continua a publicar sinais completos de 15 em 15 minutos (656
+ *   entradas só em Setembro, zero acompanhadas). O motor continuou a executá-los — chegam à mestre
+ *   e às contas — mas nenhum deles entrava na prova, no scorecard ou nos números da landing.
+ *
+ * `signal-outcomes.CANAIS_DE_SINAIS` sempre incluiu o 'trade-ideas-setup': o lado que FECHA ideias
+ * procurava desfechos num canal onde o lado que as ABRE nunca admitia nenhuma. Esta constante é
+ * que fecha essa assimetria.
+ *
+ * Tirar um canal do T2T não pode voltar a cegar a medição: quem mexer no T2T mexe na lista de
+ * cima; quem quiser deixar de MEDIR um canal tem de o dizer aqui, de propósito.
+ */
+export const CANAIS_ACOMPANHADOS = [...T2T_SIGNAL_CHANNELS, 'trade-ideas-setup']
+
+/**
+ * Os NOMES vivem em `./rotulos-canais` — módulo puro, para as duas apps e o admin poderem usar a
+ * MESMA tabela (este ficheiro fala com a base de dados e não entra num componente de cliente).
+ * Reexporta-se para quem já importava daqui não ter de mudar.
+ */
+export { ROTULOS_CANAIS_T2T, rotuloCanalT2T } from './rotulos-canais'
+
+/** Slug do canal de chat DEDICADO de uma rota provider (estável, por id da rota). */
+export function deriveProviderChannelSlug(r: ProviderRoute): string {
+  return `t2t-${r.id}`
+}
+
+/**
+ * Canal(is) de chat onde os sinais de uma rota provider aparecem:
+ *  1) app_channel explícito na rota; senão
+ *  2) mapa canónico por sender_channel (Premium/Sensei/Trade Ideas); senão (rota custom)
+ *  3) canal DEDICADO da rota (t2t-<id>) — auto-criado no chat quando a rota está ativa.
+ */
+export function appChannelsForRoute(r: ProviderRoute): string[] {
+  if (r.app_channel?.trim()) return [r.app_channel.trim()]
+  const mapped = T2T_SENDER_TO_CHAT[r.sender_channel ?? '']
+  if (mapped?.length) return mapped
+  return [deriveProviderChannelSlug(r)]
+}
+
+/**
+ * Canais de chat ATIVOS no Tap to Trade — qualquer rota com `tap_to_trade`, incluindo rotas
+ * custom (sem sender_channel). Devolve null se a config falhar.
+ *
+ * ⚠️ Só olha para `tap_to_trade`. NÃO olha para `enabled`.
+ *
+ * São dois interruptores porque são duas coisas diferentes: `enabled` é a **cópia automática**
+ * (o CopyFactory a replicar para a conta do cliente sem ele fazer nada), `tap_to_trade` é o
+ * cliente **aceitar um sinal à mão**. Exigir os dois fazia com que pausar a cópia arrastasse o
+ * T2T atrás — os interruptores T2T continuavam verdes no painel e mesmo assim o botão de
+ * aceitar desaparecia dos chats. Quem pausa a cópia quer travar o automático, não tirar às
+ * pessoas a hipótese de decidirem por elas.
+ *
+ * Isto também mantém a GESTÃO das posições T2T já abertas a funcionar durante uma pausa
+ * (`t2t-management` lê daqui): parar de gerir uma posição aberta seria abandoná-la.
+ */
+export async function tapToTradeEnabledChannels(): Promise<Set<string> | null> {
+  try {
+    const config = await getSignalSourcesConfig()
+    const routes = normalizeProviderRoutes(config)
+    const set = new Set<string>()
+    for (const r of routes) {
+      if (r.tap_to_trade === true) {
+        for (const ch of appChannelsForRoute(r)) set.add(ch)
+      }
+    }
+    // Fontes sem conta provedora (o cliente é quem abre) — ver t2t_extra_channels.
+    for (const ch of config.t2t_extra_channels ?? []) {
+      const slug = String(ch).trim()
+      if (slug) set.add(slug)
+    }
+    return set
+  } catch {
+    return null
+  }
+}

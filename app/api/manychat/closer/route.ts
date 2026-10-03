@@ -16,18 +16,18 @@ const TG_LINK = `https://t.me/${MTMCOPY_BOT_USERNAME()}?start=lead`
 export const dynamic = "force-dynamic"
 
 /**
- * POST /api/manychat/closer
+ * POST /api//closer
  *
- * Closer de vendas para o ManyChat (Instagram/DM). Sempre-ligado (Vercel) — a
- * ManyChat chama este endpoint num passo "External Request" e mapeia
+ * Closer de vendas para o  (Instagram/DM). Sempre-ligado (Vercel) — a
+ *  chama este endpoint num passo "External Request" e mapeia
  * `response.answer` → campo `Claude_resposta`, depois responde com esse texto.
  *
  * Mesma "alma" do AIOS (nota mtm-sales-brain): provas reais, sem promessas de
  * lucro, regra Apple (iPhone → subscrever na app). Segurança opcional: se
- * MANYCHAT_CLOSER_SECRET estiver definido, exige header `x-mtm-secret`.
+ * _CLOSER_SECRET estiver definido, exige header `x-mtm-secret`.
  */
 
-const CLOSER_SYSTEM = `És o CLOSER de vendas da MoreThanMoney a responder a uma DM (Instagram/ManyChat). Prospetar + qualificar + FECHAR — não é dar acesso grátis à toa.
+const CLOSER_SYSTEM = `És o CLOSER de vendas da MoreThanMoney a responder a uma DM (Instagram/). Prospetar + qualificar + FECHAR — não é dar acesso grátis à toa.
 Estilo: humano, caloroso, direto, curto (máx ~70 palavras, 1-3 frases), no máx 1 emoji.
 
 ESCADA DE VENDA (segue a ordem — NÃO lideres com o grátis):
@@ -77,7 +77,7 @@ async function callClaude(
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) throw new Error("ANTHROPIC_API_KEY em falta")
   // Mesmo recurso morto que o closer das DMs tinha: ver lib/modelo-claude.ts.
-  const model = modeloClaude(process.env.MANYCHAT_CLOSER_MODEL)
+  const model = modeloClaude(process.env._CLOSER_MODEL)
 
   const system = (mode || "").trim().toLowerCase() === "personal_router" ? PERSONAL_SYSTEM : CLOSER_SYSTEM
   const lang = (idioma || "").trim() || "português de Portugal"
@@ -128,7 +128,7 @@ async function callClaude(
 
 export async function POST(request: NextRequest) {
   // Segurança opcional por segredo partilhado.
-  const secret = process.env.MANYCHAT_CLOSER_SECRET?.trim()
+  const secret = process.env._CLOSER_SECRET?.trim()
   if (secret && request.headers.get("x-mtm-secret") !== secret) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 })
   }
@@ -154,11 +154,11 @@ export async function POST(request: NextRequest) {
   try {
     const answer = await callClaude(question, idioma, name, mode, source)
     // Escalada de lead QUENTE para o admin (supervisão): intenção de compra / falar com humano / depósito.
-    // Best-effort, não bloqueia a resposta ao ManyChat.
+    // Best-effort, não bloqueia a resposta ao .
     try {
       const { maybeEscalateLead } = await import("@/lib/mtm-sdr-escalation")
       const igUser = String(body.ig_username || body.username || "").trim() || null
-      const subId = String(body.subscriber_id || body.user_id || body.id || igUser || "manychat").trim()
+      const subId = String(body.subscriber_id || body.user_id || body.id || igUser || "").trim()
       void maybeEscalateLead({
         chatId: subId,
         username: igUser,
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
       telegram_url: TG_FUNIL,
     })
   } catch (e: any) {
-    // Fallback seguro para a ManyChat nunca ficar sem resposta.
+    // Fallback seguro para a  nunca ficar sem resposta.
     const fallback = copytrading
       ? `Boa escolha! Para copiares os nossos sinais/estratégias (copytrading), fala com o nosso assistente aqui 👉 ${TG_FUNIL} — ele guia-te para abrires conta e teres acesso.`
       : mode === "personal_router"

@@ -1,15 +1,15 @@
 {
-  "name": "MTM — ManyChat → Supabase Sync",
+  "name": "MTM —  → Supabase Sync",
   "nodes": [
     {
       "id": "mc-webhook",
-      "name": "ManyChat Webhook",
+      "name": " Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [240, 300],
-      "webhookId": "manychat-mtm",
+      "webhookId": "-mtm",
       "parameters": {
-        "path": "manychat-mtm",
+        "path": "-mtm",
         "responseMode": "onReceived",
         "responseData": "firstEntryJson"
       }
@@ -21,7 +21,7 @@
       "typeVersion": 2,
       "position": [460, 300],
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst subscriber = {\n  manychat_id: body.id || body.subscriber_id,\n  first_name: body.first_name || '',\n  last_name: body.last_name || '',\n  full_name: `${body.first_name || ''} ${body.last_name || ''}`.trim(),\n  instagram_handle: body.ig_username || body.username || '',\n  email: body.email || '',\n  phone: body.phone || '',\n  tags: body.tags || [],\n  last_interaction: new Date().toISOString(),\n  source: 'manychat_instagram',\n  status: 'lead'\n};\n\n// Determinar score e stage baseado nas tags\nconst tags = subscriber.tags.map(t => (t.name || t).toLowerCase());\nlet score = 1;\nlet stage = 'cold';\n\nif (tags.some(t => t.includes('bootcamp') || t.includes('sistema'))) { score = 4; stage = 'hot'; }\nelse if (tags.some(t => t.includes('liberdade') || t.includes('scanner'))) { score = 3; stage = 'warm'; }\nelse if (tags.some(t => t.includes('lead_ativo') || t.includes('resultados'))) { score = 2; stage = 'warm'; }\n\nsubscriber.score = score;\nsubscriber.stage = stage;\n\nreturn [{ json: subscriber }];"
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst subscriber = {\n  _id: body.id || body.subscriber_id,\n  first_name: body.first_name || '',\n  last_name: body.last_name || '',\n  full_name: `${body.first_name || ''} ${body.last_name || ''}`.trim(),\n  instagram_handle: body.ig_username || body.username || '',\n  email: body.email || '',\n  phone: body.phone || '',\n  tags: body.tags || [],\n  last_interaction: new Date().toISOString(),\n  source: '_instagram',\n  status: 'lead'\n};\n\n// Determinar score e stage baseado nas tags\nconst tags = subscriber.tags.map(t => (t.name || t).toLowerCase());\nlet score = 1;\nlet stage = 'cold';\n\nif (tags.some(t => t.includes('bootcamp') || t.includes('sistema'))) { score = 4; stage = 'hot'; }\nelse if (tags.some(t => t.includes('liberdade') || t.includes('scanner'))) { score = 3; stage = 'warm'; }\nelse if (tags.some(t => t.includes('lead_ativo') || t.includes('resultados'))) { score = 2; stage = 'warm'; }\n\nsubscriber.score = score;\nsubscriber.stage = stage;\n\nreturn [{ json: subscriber }];"
       }
     },
     {
@@ -46,7 +46,7 @@
           "jsonParameters": false,
           "bodyParameters": {
             "parameters": [
-              { "name": "manychat_id",      "value": "={{ $json.manychat_id }}" },
+              { "name": "_id",      "value": "={{ $json._id }}" },
               { "name": "first_name",       "value": "={{ $json.first_name }}" },
               { "name": "last_name",        "value": "={{ $json.last_name }}" },
               { "name": "full_name",        "value": "={{ $json.full_name }}" },
@@ -54,7 +54,7 @@
               { "name": "email",            "value": "={{ $json.email }}" },
               { "name": "score",            "value": "={{ $json.score }}" },
               { "name": "stage",            "value": "={{ $json.stage }}" },
-              { "name": "source",           "value": "manychat_instagram" },
+              { "name": "source",           "value": "_instagram" },
               { "name": "last_interaction", "value": "={{ $json.last_interaction }}" }
             ]
           }
@@ -93,7 +93,7 @@
         "resource": "message",
         "operation": "sendMessage",
         "chatId": "={{ $env.TELEGRAM_ADMIN_CHAT_ID }}",
-        "text": "={{ '🔥 *Lead Quente ManyChat!*\\n\\n👤 ' + $('Parse Subscriber').first().json.full_name + '\\n📸 @' + $('Parse Subscriber').first().json.instagram_handle + '\\n⭐ Score: ' + $('Parse Subscriber').first().json.score + '/5\\n🏷️ Stage: ' + $('Parse Subscriber').first().json.stage + '\\n\\n👉 Ação: Enviar DM de qualificação nas próximas 2h' }}",
+        "text": "={{ '🔥 *Lead Quente !*\\n\\n👤 ' + $('Parse Subscriber').first().json.full_name + '\\n📸 @' + $('Parse Subscriber').first().json.instagram_handle + '\\n⭐ Score: ' + $('Parse Subscriber').first().json.score + '/5\\n🏷️ Stage: ' + $('Parse Subscriber').first().json.stage + '\\n\\n👉 Ação: Enviar DM de qualificação nas próximas 2h' }}",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
@@ -115,7 +115,7 @@
     }
   ],
   "connections": {
-    "ManyChat Webhook":  { "main": [[{ "node": "Parse Subscriber",         "type": "main", "index": 0 }]] },
+    " Webhook":  { "main": [[{ "node": "Parse Subscriber",         "type": "main", "index": 0 }]] },
     "Parse Subscriber":  { "main": [[{ "node": "Upsert em Supabase",       "type": "main", "index": 0 }]] },
     "Upsert em Supabase":{ "main": [[{ "node": "É lead quente?",           "type": "main", "index": 0 }]] },
     "É lead quente?": {
@@ -128,5 +128,5 @@
   },
   "active": true,
   "settings": { "executionOrder": "v1" },
-  "tags": [{ "name": "MTM" }, { "name": "ManyChat" }, { "name": "Leads" }]
+  "tags": [{ "name": "MTM" }, { "name": "" }, { "name": "Leads" }]
 }

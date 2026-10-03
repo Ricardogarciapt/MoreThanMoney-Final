@@ -1,0 +1,225 @@
+import { NextRequest, NextResponse } from "next/server"
+import {
+  getSupabaseAdmin,
+  requireAdmin,
+  validateRequiredFields,
+  isValidEmail,
+  sanitizeString,
+} from "@/lib/admin-api-helpers"
+import { buildSubscriptionExpiry, isSubscriptionCategory } from "@/lib/member-subscription"
+
+export async function POST(request: NextRequest) {
+  // Verificar acesso admin
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
+  const supabase = getSupabaseAdmin()
+  
+  try {
+    const body = await request.json()
+    const {
+      email,
+      username,
+      full_name,
+      password,
+      phone,
+      whatsapp,
+      user_type,
+      membership_level,
+      member_category,
+      subscription_billing_cycle,
+    } = body
+
+    // Validação de campos obrigatórios
+    const validation = validateRequiredFields(body, ['email', 'username', 'password', 'full_name'])
+    if (!validation.valid) {
+      return NextResponse.json({ 
+        error: validation.error,
+        missing: validation.missing
+      }, { status: 400 })
+    }
+
+    // Validação de email
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ 
+        error: 'Email inválido' 
+      }, { status: 400 })
+    }
+
+    // Validação de senha
+    if (password.length < 6) {
+      return NextResponse.json({ 
+        error: 'A senha deve ter pelo menos 6 caracteres' 
+      }, { status: 400 })
+    }
+
+    if (password.length > 128) {
+      return NextResponse.json({ 
+        error: 'A senha deve ter no máximo 128 caracteres' 
+      }, { status: 400 })
+    }
+
+    // Sanitizar inputs
+    const sanitizedEmail = sanitizeString(email).toLowerCase()
+    const sanitizedUsername = sanitizeString(username)
+    const sanitizedFullName = sanitizeString(full_name)
+
+    // Verificar se email já existe (em paralelo com username)
+    const [emailCheck, usernameCheck] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', sanitizedEmail)
+        .maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', sanitizedUsername)
+        .maybeSingle()
+    ])
+
+    if (emailCheck.data) {
+      return NextResponse.json({ 
+        error: 'Email já está em uso' 
+      }, { status: 400 })
+    }
+
+    if (emailCheck.error && emailCheck.error.code !== 'PGRST116') {
+      console.error('❌ [CREATE USER] Erro ao verificar email:', emailCheck.error)
+    }
+
+    if (usernameCheck.data) {
+      return NextResponse.json({ 
+        error: 'Username já está em uso' 
+      }, { status: 400 })
+    }
+
+    if (usernameCheck.error && usernameCheck.error.code !== 'PGRST116') {
+      console.error('❌ [CREATE USER] Erro ao verificar username:', usernameCheck.error)
+    }
+
+    // Criar utilizador no Auth
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email: sanitizedEmail,
+      password,
+      email_confirm: true, // Email já verificado por ser criação manual
+      user_metadata: {
+        full_name: sanitizedFullName,
+        username: sanitizedUsername,
+        user_type: user_type || 'member'
+      }
+    })
+
+    if (authError) {
+      return NextResponse.json({ error: authError.message }, { status: 500 })
+    }
+
+    // Criar perfil na tabela profiles
+    if (authUser.user) {
+      // Calcular data de expiração para trial/guest users
+      const isTrial = user_type === 'guest' || user_type === 'presentation'
+      let trialExpiresAt = null
+      if (isTrial) {
+        const expiryDate = new Date()
+        if (user_type === 'presentation') {
+          expiryDate.setDate(expiryDate.getDate() + 7) // 7 dias para presentation
+        } else {
+          expiryDate.setHours(expiryDate.getHours() + 48) // 48 horas para guest
+        }
+        trialExpiresAt = expiryDate.toISOString()
+      }
+
+      const category =
+        member_category && ["iq", "skool", "vip", "standard", "premium"].includes(member_category)
+          ? member_category
+          : "standard"
+
+      const billingCycle: "monthly" | "annual" =
+        subscription_billing_cycle === "annual" ? "annual" : "monthly"
+
+      const profileRow: Record<string, unknown> = {
+        id: authUser.user.id,
+        email: sanitizedEmail,
+        username: sanitizedUsername,
+        full_name: sanitizedFullName,
+        phone: phone ? sanitizeString(phone) : null,
+        whatsapp: whatsapp ? sanitizeString(whatsapp) : null,
+        user_type: user_type || "member",
+        member_category: category,
+        membership_level: membership_level || "basic",
+        is_active: user_type !== "inactive",
+        is_verified: true,
+        trial_expires_at: trialExpiresAt,
+        trial_expired: false,
+        updated_at: new Date().toISOString(),
+      }
+
+      if (isSubscriptionCategory(category)) {
+        // Anual = 365 dias; mensal = 30 dias (padrão)
+        const expiryDate = new Date()
+        expiryDate.setDate(expiryDate.getDate() + (billingCycle === "annual" ? 365 : 30))
+
+        profileRow.subscription_expires_at = expiryDate.toISOString()
+        profileRow.subscription_auto_renew = true
+        profileRow.subscription_billing_cycle = billingCycle
+        profileRow.subscription_plan = category === "premium" ? "premium" : "app_member"
+        profileRow.subscription_platform = "manual"
+        profileRow.subscription_status = "active"
+        profileRow.checkout_source = "admin"
+        profileRow.user_type = "member"
+        profileRow.is_active = true
+      }
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .upsert(profileRow, { onConflict: "id" })
+
+      if (profileError) {
+        console.error('Erro ao guardar perfil:', profileError)
+        await supabase.auth.admin.deleteUser(authUser.user.id)
+        return NextResponse.json({ error: 'Erro ao criar perfil do utilizador' }, { status: 500 })
+      }
+    }
+
+    // Log da atividade
+    try {
+      await supabase.rpc('log_activity', {
+        p_user_email: 'admin@morethanmoney.pt',
+        p_action: 'user_created',
+        p_details: `Utilizador ${email} criado manualmente via admin`
+      })
+    } catch (logError) {
+      console.warn('Erro ao registrar log:', logError)
+    }
+
+    const isTrial = user_type === 'guest' || user_type === 'presentation'
+    const expiryDate = isTrial ? (() => {
+      const date = new Date()
+      if (user_type === 'presentation') {
+        date.setDate(date.getDate() + 7)
+      } else {
+        date.setHours(date.getHours() + 48)
+      }
+      return date.toISOString()
+    })() : null
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Utilizador criado com sucesso',
+      user: {
+        id: authUser.user?.id,
+        email,
+        username,
+        full_name,
+        user_type,
+        trial_expires_at: expiryDate
+      }
+    })
+
+  } catch (error: any) {
+    console.error('Erro ao criar utilizador:', error)
+    return NextResponse.json({ 
+      error: error.message || 'Erro interno do servidor' 
+    }, { status: 500 })
+  }
+}

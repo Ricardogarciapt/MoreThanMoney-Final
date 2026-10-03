@@ -1,0 +1,1753 @@
+// =====================================================
+// EMAIL TEMPLATES - MoreThanMoney
+// Templates HTML premium com componentes visuais
+// =====================================================
+
+import { getFastStartJourneySteps, resolveSiteBase } from './fast-start-journey'
+import { getEmailLogoSrc } from './mail-transport'
+import { ONBOARDING_EMAIL_COPY } from './onboarding-email-copy'
+import { LINK_AGENDAR, LINK_AGENDAR_ONBOARDING } from './agenda/link'
+
+// Cores MTM
+const COLORS = {
+  primary: '#D2A63C',
+  primaryDark: '#BB8525',
+  gold: '#F4D03F',
+  black: '#0a0a0a',
+  white: '#ffffff',
+  gray: '#f8f9fa',
+  grayDark: '#1a1a1a',
+}
+
+function resolveSiteUrl(siteUrl?: string): string {
+  return siteUrl?.replace(/\/$/, '') || 'https://www.morethanmoney.pt'
+}
+
+/** Logo inline (CID) nos emails; URL pública só para fallback em previews. */
+function resolveLogoUrl(_siteUrl?: string): string {
+  return getEmailLogoSrc()
+}
+
+// Header com logo MTM (emails transaccionais)
+const brandedHeaderComponent = (siteUrl?: string) => {
+  const logo = resolveLogoUrl(siteUrl)
+  const site = resolveSiteUrl(siteUrl)
+
+  return `
+<tr>
+  <td style="background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 50%, ${COLORS.gold} 100%); padding: 28px 30px; text-align: center;">
+    <a href="${site}" style="text-decoration: none;">
+      <img src="${logo}" alt="MoreThanMoney" width="180" style="max-width: 180px; height: auto; display: inline-block;" />
+    </a>
+  </td>
+</tr>
+`
+}
+
+// Base Template (wrapper comum)
+const baseTemplate = (content: string, preheader?: string, siteUrl?: string) => `
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  ${preheader ? `<meta name="description" content="${preheader}">` : ''}
+  <title>MoreThanMoney</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    
+    /* Responsive */
+    @media only screen and (max-width: 600px) {
+      .container { width: 100% !important; }
+      .card { padding: 20px !important; }
+      .button { padding: 14px 24px !important; font-size: 14px !important; }
+      .h1 { font-size: 24px !important; }
+      .h2 { font-size: 20px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background: #f0f0f0;">
+  ${preheader ? `<div style="display: none; max-height: 0px; overflow: hidden;">${preheader}</div>` : ''}
+  
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #f0f0f0; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="container" style="background: white; max-width: 600px; width: 100%; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+          ${brandedHeaderComponent(siteUrl)}
+          ${content}
+        </table>
+        
+        <!-- Footer -->
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="container" style="max-width: 600px; width: 100%; margin-top: 20px;">
+          <tr>
+            <td style="padding: 20px; text-align: center; color: #666; font-size: 12px; line-height: 18px;">
+              <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} MoreThanMoney. Todos os direitos reservados.</p>
+              <p style="margin: 0 0 10px 0;">
+                <a href="${resolveSiteUrl(siteUrl)}/faq" style="color: #666; text-decoration: underline;">FAQ</a> · 
+                <a href="${resolveSiteUrl(siteUrl)}/privacidade" style="color: #666; text-decoration: underline;">Privacidade</a> · 
+                <a href="mailto:geral@morethanmoney.pt" style="color: #666; text-decoration: underline;">Suporte</a>
+              </p>
+              <p style="margin: 0; color: #999;">
+                MoreThanMoney · Portugal · <a href="${resolveSiteUrl(siteUrl)}" style="color: #999;">morethanmoney.pt</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+
+// Componente: Header Premium
+const headerComponent = (title: string, subtitle?: string, icon?: string) => `
+<tr>
+  <td style="background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 50%, ${COLORS.gold} 100%); padding: 50px 30px; text-align: center; position: relative;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+      <tr>
+        <td align="center">
+          ${icon ? `<div style="font-size: 64px; margin-bottom: 20px;">${icon}</div>` : ''}
+          <h1 class="h1" style="color: ${COLORS.black}; font-size: 32px; font-weight: 900; margin: 0 0 10px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            ${title}
+          </h1>
+          ${subtitle ? `<p style="color: ${COLORS.black}; font-size: 16px; font-weight: 600; margin: 0; opacity: 0.9;">${subtitle}</p>` : ''}
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+`
+
+// Componente: Card de Conteúdo
+const cardComponent = (title: string, content: string, icon?: string, accentColor?: string) => `
+<tr>
+  <td style="padding: 30px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: ${COLORS.gray}; border-radius: 12px; border-left: 4px solid ${accentColor || COLORS.primary}; overflow: hidden;">
+      <tr>
+        <td style="padding: 25px;">
+          ${icon ? `<div style="font-size: 32px; margin-bottom: 15px;">${icon}</div>` : ''}
+          <h2 class="h2" style="color: ${accentColor || COLORS.primary}; font-size: 22px; font-weight: 700; margin: 0 0 15px 0;">
+            ${title}
+          </h2>
+          <div style="color: #333; font-size: 15px; line-height: 24px;">
+            ${content}
+          </div>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+`
+
+// Componente: Botão CTA Premium
+const buttonComponent = (text: string, url: string, variant: 'primary' | 'secondary' = 'primary') => {
+  const bgColor = variant === 'primary' 
+    ? `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%)`
+    : `linear-gradient(135deg, #28a745 0%, #20c997 100%)`
+  
+  return `
+<tr>
+  <td style="padding: 10px 30px 30px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+      <tr>
+        <td align="center">
+          <a href="${url}" class="button" style="display: inline-block; background: ${bgColor}; color: ${variant === 'primary' ? COLORS.black : COLORS.white}; padding: 18px 40px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 16px; box-shadow: 0 6px 20px rgba(210, 166, 60, 0.4); transition: transform 0.3s;">
+            ${text}
+          </a>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+`
+}
+
+// Componente: Estatísticas (3 colunas)
+const statsComponent = (stats: Array<{ value: string; label: string; icon: string }>) => `
+<tr>
+  <td style="padding: 20px 30px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+      <tr>
+        ${stats.map(stat => `
+          <td align="center" style="padding: 15px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: ${COLORS.grayDark}; border-radius: 12px; padding: 20px;">
+              <tr>
+                <td align="center">
+                  <div style="font-size: 36px; margin-bottom: 10px;">${stat.icon}</div>
+                  <div style="color: ${COLORS.primary}; font-size: 28px; font-weight: 900; margin-bottom: 5px;">${stat.value}</div>
+                  <div style="color: #999; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">${stat.label}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        `).join('')}
+      </tr>
+    </table>
+  </td>
+</tr>
+`
+
+// Componente: Lista de Features (com ícones)
+const featuresListComponent = (features: Array<{ title: string; description: string; icon: string }>) => `
+<tr>
+  <td style="padding: 20px 30px;">
+    ${features.map(feature => `
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background: white; border: 2px solid ${COLORS.gray}; border-radius: 12px; overflow: hidden;">
+        <tr>
+          <td style="padding: 20px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td width="60" valign="top">
+                  <div style="width: 48px; height: 48px; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                    ${feature.icon}
+                  </div>
+                </td>
+                <td valign="top">
+                  <h3 style="color: ${COLORS.black}; font-size: 18px; font-weight: 700; margin: 0 0 8px 0;">
+                    ${feature.title}
+                  </h3>
+                  <p style="color: #666; font-size: 14px; line-height: 22px; margin: 0;">
+                    ${feature.description}
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    `).join('')}
+  </td>
+</tr>
+`
+
+// Componente: Divider com estilo
+const dividerComponent = () => `
+<tr>
+  <td style="padding: 20px 30px;">
+    <div style="height: 2px; background: linear-gradient(90deg, transparent 0%, ${COLORS.primary} 50%, transparent 100%);"></div>
+  </td>
+</tr>
+`
+
+// Componente: Texto simples
+const textComponent = (content: string) => `
+<tr>
+  <td style="padding: 0 30px 20px; color: #333; font-size: 15px; line-height: 24px;">
+    ${content}
+  </td>
+</tr>
+`
+
+// Componente: Imagem destacada
+const imageComponent = (imageUrl: string, alt: string, linkUrl?: string) => {
+  const img = `<img src="${imageUrl}" alt="${alt}" style="width: 100%; height: auto; display: block; border-radius: 12px;" />`
+
+  return `
+<tr>
+  <td style="padding: 20px 30px;">
+    ${linkUrl ? `<a href="${linkUrl}">${img}</a>` : img}
+  </td>
+</tr>
+`
+}
+
+/** Preview visual estilo «print do site» (barra de URL + ecrã escuro MTM). */
+const sitePreviewComponent = (
+  previewPath: string,
+  previewHint: string,
+  title: string,
+  linkUrl: string,
+) => `
+<tr>
+  <td style="padding: 0 30px 16px;">
+    <a href="${linkUrl}" style="text-decoration: none; display: block;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #0a0a0a; border-radius: 12px; border: 1px solid #2a2a2a; overflow: hidden;">
+        <tr>
+          <td style="padding: 10px 14px; background: #141414; border-bottom: 1px solid #2a2a2a;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #D2A63C; margin-right: 6px; vertical-align: middle;"></span>
+            <span style="color: #888; font-size: 11px; font-family: monospace; vertical-align: middle;">morethanmoney.pt${previewPath.startsWith('/') ? previewPath : `/${previewPath}`}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 24px 20px; text-align: center;">
+            <p style="margin: 0 0 6px 0; color: ${COLORS.primary}; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">${previewHint}</p>
+            <p style="margin: 0; color: #f5f5f5; font-size: 17px; font-weight: 700; line-height: 1.3;">${title}</p>
+            <p style="margin: 12px 0 0 0; color: ${COLORS.primary}; font-size: 13px; font-weight: 600;">Abrir página →</p>
+          </td>
+        </tr>
+      </table>
+    </a>
+  </td>
+</tr>
+`
+
+const fastStartStepEmailComponent = (
+  stepNumber: number,
+  title: string,
+  description: string,
+  previewPath: string,
+  previewHint: string,
+  ctaLabel: string,
+  ctaUrl: string,
+) => `
+<tr>
+  <td style="padding: 0 30px 8px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: ${COLORS.gray}; border-radius: 12px; border-left: 4px solid ${COLORS.primary};">
+      <tr>
+        <td style="padding: 20px;">
+          <p style="margin: 0 0 8px 0; color: ${COLORS.primary}; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Passo ${stepNumber} de 6</p>
+          <h3 style="margin: 0 0 10px 0; color: ${COLORS.black}; font-size: 18px; font-weight: 700;">${title}</h3>
+          <p style="margin: 0 0 14px 0; color: #555; font-size: 14px; line-height: 22px;">${description}</p>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+${sitePreviewComponent(previewPath, previewHint, title, ctaUrl)}
+<tr>
+  <td style="padding: 0 30px 20px;">
+    <a href="${ctaUrl}" style="display: inline-block; color: ${COLORS.primaryDark}; font-size: 14px; font-weight: 700; text-decoration: underline;">${ctaLabel}</a>
+  </td>
+</tr>
+`
+
+// =====================================================
+// TEMPLATES PRONTOS
+// =====================================================
+
+// 1. BEM-VINDO (Novo Registo)
+export const welcomeEmailTemplate = (userName: string, userEmail: string, username: string, siteUrl: string) => {
+  const base = resolveSiteBase(siteUrl)
+  const steps = getFastStartJourneySteps(base)
+  const fastStartStepsHtml = steps
+    .map((s) =>
+      fastStartStepEmailComponent(
+        s.number,
+        s.title,
+        s.description,
+        s.previewPath,
+        s.previewHint,
+        s.ctaLabel,
+        s.ctaUrl,
+      ),
+    )
+    .join('')
+
+  const content = `
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; font-size: 26px; font-weight: 800; margin: 28px 0 12px 0; text-align: center;">
+        Bem-vindo, ${userName}! 👋
+      </h2>
+      <p style="margin-bottom: 12px; text-align: center; font-size: 16px;">
+        A tua subscrição está <strong>activa</strong>. Fazes agora parte do ecossistema <strong>MoreThanMoney</strong>.
+      </p>
+      <p style="margin-bottom: 0; text-align: center; color: #666; font-size: 14px;">
+        Segue o Fast Start abaixo — o mesmo percurso que vais encontrar na app e em <a href="${base}/fast-start" style="color: ${COLORS.primaryDark};">morethanmoney.pt/fast-start</a>.
+      </p>
+    `)}
+
+    ${cardComponent(
+      '🧭 Guia de Onboarding — começa aqui',
+      `
+        <p style="margin: 0 0 12px 0; line-height: 24px;">
+          Preparámos um <strong>guia visual passo a passo</strong> com tudo o que precisas:
+          instalar a app, criar conta, ativar a automação, configurar os alertas, aceitar o
+          primeiro Tap to Trade e ver as aulas ao vivo — pensado para teres
+          <strong>resultados nas primeiras 48 horas</strong>.
+        </p>
+        <p style="margin: 0; color: #666; font-size: 13px;">
+          Disponível em 🇵🇹 PT · 🇬🇧 EN · 🇪🇸 ES · 🇩🇪 DE · 🇫🇷 FR — muda o idioma no topo do guia.
+        </p>
+      `,
+      '🧭',
+      COLORS.primary,
+    )}
+
+    ${buttonComponent('🧭 Abrir o Guia de Onboarding (plano de 48h)', `${base}/onboarding`)}
+
+    ${cardComponent(
+      '🤝 MoreThanMoney — O teu plano',
+      `
+        <p style="margin: 0 0 12px 0; line-height: 24px;">
+          Educação prática, copy trading e crescimento de negócio num ecossistema premium.
+          Começa pela <strong>apresentação oficial</strong> para perceberes como tudo se liga.
+        </p>
+        <p style="margin: 0;">
+          <a href="${base}/apresentacao" style="color: ${COLORS.primaryDark}; font-weight: 700;">Ver apresentação MoreThanMoney →</a>
+        </p>
+      `,
+      '✨',
+      COLORS.primary,
+    )}
+
+    ${cardComponent(
+      '🔐 Os teus dados de acesso',
+      `
+        <table style="width: 100%; background: white; border-radius: 8px;">
+          <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: ${COLORS.primary};">Email</strong></td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace; text-align: right;">${userEmail}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;"><strong style="color: ${COLORS.primary};">Username</strong></td>
+            <td style="padding: 8px 0; font-family: monospace; text-align: right;">${username}</td>
+          </tr>
+        </table>
+      `,
+      '🔑',
+      COLORS.primary,
+    )}
+
+    ${buttonComponent('🚀 Entrar na plataforma', `${base}/login`)}
+
+    ${dividerComponent()}
+
+    ${textComponent(`
+      <h3 style="color: ${COLORS.black}; font-size: 20px; font-weight: 800; margin: 0 0 8px 0; text-align: center;">
+        🎯 Fast Start — 6 passos
+      </h3>
+      <p style="margin: 0 0 8px 0; text-align: center; color: #666; font-size: 14px;">
+        Registo → Onboarding → App → Conta → MTMcopier → Skool
+      </p>
+    `)}
+
+    ${fastStartStepsHtml}
+
+    ${cardComponent(
+      '💬 Apresenta-te na comunidade',
+      `
+        <p style="margin: 0 0 10px 0; line-height: 24px;">
+          Depois de instalares a app, vai ao separador <strong>Chat</strong> e deixa uma mensagem curta:
+          quem és, o teu objetivo e o que queres aprender (trading, copy ou negócio).
+        </p>
+        <p style="margin: 0; color: #666; font-size: 13px;">
+          Exemplo: «Olá! Sou o ${userName}, quero aprender XAUUSD com copy trading e crescer no MTM.»
+        </p>
+      `,
+      '👋',
+      '#26A5E4',
+    )}
+
+    ${buttonComponent('📋 Continuar Fast Start no site', `${base}/fast-start`, 'secondary')}
+
+    ${textComponent(`
+      <p style="margin: 0; color: #666; font-size: 13px; text-align: center;">
+        Dúvidas? Responde a este email ou escreve para <a href="mailto:geral@morethanmoney.pt" style="color: ${COLORS.primaryDark};">geral@morethanmoney.pt</a>
+      </p>
+    `)}
+  `
+
+  return baseTemplate(content, 'Bem-vindo à MoreThanMoney! O teu Fast Start começa aqui.', base)
+}
+
+// 1b. ONBOARDING LAUNCH — email simplificado (plano de 48h, 8 passos)
+export const onboardingLaunchEmailTemplate = (userName: string, siteUrl: string, lang: string = 'pt') => {
+  const base = resolveSiteBase(siteUrl)
+  const c = ONBOARDING_EMAIL_COPY[lang] || ONBOARDING_EMAIL_COPY.pt
+  const li = (n: number, title: string, desc: string) => `
+    <tr>
+      <td style="width: 34px; vertical-align: top; padding: 6px 10px 6px 0;">
+        <span style="display:inline-block; width:26px; height:26px; line-height:26px; text-align:center; border-radius:50%; background:${COLORS.primary}; color:#fff; font-weight:800; font-size:13px;">${n}</span>
+      </td>
+      <td style="padding: 6px 0; line-height: 21px;">
+        <strong style="color:${COLORS.black};">${title}</strong><br>
+        <span style="color:#555; font-size:14px;">${desc}</span>
+      </td>
+    </tr>`
+
+  const content = `
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; font-size: 26px; font-weight: 800; margin: 26px 0 12px 0; text-align: center;">
+        ${c.heading}
+      </h2>
+      <p style="margin: 0 0 12px 0; text-align: center; font-size: 16px;">
+        ${c.intro1a}<a href="${base}/onboarding" style="color: ${COLORS.primaryDark}; font-weight:700;">morethanmoney.pt/onboarding</a>${c.intro1b}
+      </p>
+      <p style="margin: 0; text-align: center; color: #666; font-size: 14px;">
+        ${c.intro2}
+      </p>
+    `)}
+
+    ${buttonComponent(c.ctaOnboarding, `${base}/onboarding`)}
+
+    ${cardComponent(
+      c.planTitle,
+      `
+        <table style="width:100%; border-collapse:collapse;">
+          ${li(1, c.step1t, c.step1d)}
+          ${li(2, c.step2t, c.step2d)}
+          ${li(3, c.step3t, c.step3d)}
+          ${li(4, c.step4t, c.step4d)}
+          ${li(5, c.step5t, c.step5d)}
+          ${li(6, c.step6t, c.step6d)}
+          ${li(7, c.step7t, c.step7d)}
+          ${li(8, c.step8t, c.step8d)}
+        </table>
+      `,
+      '🎯',
+      COLORS.primary,
+    )}
+
+    ${cardComponent(
+      c.installTitle,
+      `
+        <p style="margin: 0 0 10px 0; line-height: 22px;">${c.installIntro}</p>
+        <p style="margin: 0 0 6px 0;">🍎 <a href="https://apps.apple.com/app/id6778558643" style="color:${COLORS.primaryDark}; font-weight:700;">${c.installAppStore}</a> &nbsp;·&nbsp; <a href="https://testflight.apple.com/join/jPJx7CRx" style="color:${COLORS.primaryDark};">${c.installTestflight}</a></p>
+        <p style="margin: 0 0 6px 0;">🤖 <a href="${base}/downloads/MoreThanMoney.apk" style="color:${COLORS.primaryDark}; font-weight:700;">APK Android</a> &nbsp;<span style="color:#999; font-size:12px;">${c.installApkNote}</span></p>
+        <p style="margin: 0;">🌐 <a href="${base}/app-mobile" style="color:${COLORS.primaryDark}; font-weight:700;">Web App</a> &nbsp;<span style="color:#999; font-size:12px;">${c.installWebNote}</span></p>
+      `,
+      '⬇️',
+      '#26A5E4',
+    )}
+
+    ${buttonComponent(c.ctaCall, LINK_AGENDAR_ONBOARDING)}
+
+    ${dividerComponent()}
+
+    ${textComponent(`
+      <p style="margin: 0; color: #666; font-size: 13px; text-align: center;">
+        ${c.footer} <a href="https://instagram.com/morethanmoney.pt" style="color: ${COLORS.primaryDark};">@morethanmoney.pt</a>
+        · <a href="mailto:morethanmoneypt@gmail.com" style="color: ${COLORS.primaryDark};">morethanmoneypt@gmail.com</a>
+        · <a href="${LINK_AGENDAR}" style="color: ${COLORS.primaryDark};">${c.footerMeeting}</a>
+      </p>
+    `)}
+  `
+
+  return baseTemplate(content, c.preview, base)
+}
+
+// 2. ONBOARDING - Dia 1
+export const onboarding1EmailTemplate = (userName: string, siteUrl: string) => {
+  const content = `
+    ${headerComponent('📚 Bem-vindo ao MTM - Guia de Início', 'Passo 1: Conhece a Plataforma', '🎯')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; margin-bottom: 15px;">Olá ${userName}! 👋</h2>
+      <p style="margin-bottom: 15px;">
+        Bem-vindo ao primeiro email do teu <strong>Guia de Onboarding</strong>!
+      </p>
+      <p style="margin-bottom: 15px;">
+        Nos próximos dias, vamos enviar-te tudo o que precisas para dominares a plataforma MoreThanMoney.
+      </p>
+    `)}
+    
+    ${featuresListComponent([
+      {
+        icon: '📊',
+        title: 'Portfolios Profissionais',
+        description: 'Acede aos portfolios MTM de Crypto e ETFs com análise IA em tempo real.'
+      },
+      {
+        icon: '🎯',
+        title: 'DCA Smart',
+        description: 'Sistema inteligente que identifica as melhores oportunidades de compra com descontos.'
+      },
+      {
+        icon: '📱',
+        title: 'App Mobile',
+        description: 'Dashboard mobile premium para acompanhar tudo em qualquer lugar.'
+      },
+      {
+        icon: '👥',
+        title: 'Comunidade Skool',
+        description: 'Junta-te à comunidade exclusiva MTM no Skool para networking e aprendizagem.'
+      }
+    ])}
+    
+    ${buttonComponent('🚀 Explorar a Plataforma', `${siteUrl}/new-landing`)}
+    
+    ${dividerComponent()}
+    
+    ${textComponent(`
+      <p style="background: ${COLORS.gray}; padding: 15px; border-radius: 8px; margin: 0;">
+        <strong style="color: ${COLORS.primary};">💡 Dica do Dia:</strong><br>
+        Começa por explorar a aba <strong>"Portfolios"</strong> para veres como estruturamos os nossos investimentos.
+      </p>
+    `)}
+    
+    ${textComponent(`
+      <p style="color: #666; font-size: 14px; margin-top: 20px;">
+        <strong>Amanhã:</strong> Vais aprender a usar o App Mobile e configurar notificações push!
+      </p>
+    `)}
+  `
+  
+  return baseTemplate(content, 'Guia de Onboarding MTM - Passo 1')
+}
+
+// 3. ONBOARDING - Dia 2 (App Mobile)
+export const onboarding2EmailTemplate = (userName: string, siteUrl: string) => {
+  const content = `
+    ${headerComponent('📱 App Mobile MTM', 'Passo 2: Dashboard no Bolso', '🚀')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; margin-bottom: 15px;">Olá ${userName}!</h2>
+      <p style="margin-bottom: 15px;">
+        Hoje vais aprender a usar o <strong>App Mobile MTM</strong> - o teu dashboard premium sempre disponível!
+      </p>
+    `)}
+    
+    ${cardComponent(
+      '⚡ Início Rápido - 3 Passos',
+      `
+        <ol style="margin: 0; padding-left: 20px; line-height: 28px;">
+          <li><strong>Acede a /app-mobile</strong> no teu telemóvel</li>
+          <li><strong>Ativa notificações push</strong> para alertas DCA</li>
+          <li><strong>Adiciona ao ecrã inicial</strong> para acesso rápido</li>
+        </ol>
+      `,
+      '📲',
+      '#28a745'
+    )}
+    
+    ${statsComponent([
+      { value: '24/7', label: 'Disponível', icon: '⏰' },
+      { value: '100%', label: 'Sincronizado', icon: '🔄' },
+      { value: 'Real-Time', label: 'Preços', icon: '📊' }
+    ])}
+    
+    ${buttonComponent('📱 Abrir App Mobile', `${siteUrl}/app-mobile`, 'secondary')}
+    
+    ${dividerComponent()}
+    
+    ${featuresListComponent([
+      {
+        icon: '🔔',
+        title: 'Notificações Push',
+        description: 'Recebe alertas instantâneos quando surgirem oportunidades DCA ou alertas de preço.'
+      },
+      {
+        icon: '📊',
+        title: 'Dashboard Premium',
+        description: 'Visualiza portfolios, TP/SL, e performance em tempo real com design elegante.'
+      },
+      {
+        icon: '⚡',
+        title: 'Ultra Rápido',
+        description: 'Carregamento instantâneo e experiência fluida, mesmo com conexão lenta.'
+      }
+    ])}
+    
+    ${textComponent(`
+      <p style="background: ${COLORS.gray}; padding: 15px; border-radius: 8px; margin: 0;">
+        <strong style="color: ${COLORS.primary};">💡 Dica Pro:</strong><br>
+        No Safari (iPhone) ou Chrome (Android), clica em "Adicionar ao Ecrã Inicial" para usar como app nativa!
+      </p>
+    `)}
+  `
+  
+  return baseTemplate(content, 'App Mobile MTM - Teu dashboard no bolso')
+}
+
+// 4. ONBOARDING - Dia 3 (Scanners & Portfolios)
+export const onboarding3EmailTemplate = (userName: string, siteUrl: string) => {
+  const content = `
+    ${headerComponent('🔍 Scanners & Portfolios', 'Passo 3: Ferramentas Profissionais', '🎯')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; margin-bottom: 15px;">Olá ${userName}!</h2>
+      <p style="margin-bottom: 15px;">
+        Hoje vais conhecer as ferramentas que diferenciam o MTM de qualquer outra plataforma.
+      </p>
+    `)}
+    
+    ${cardComponent(
+      '📊 Portfolio MTM Crypto',
+      `
+        <p style="margin-bottom: 10px;">Acesso aos <strong>20 melhores ativos crypto</strong> selecionados pela nossa equipa:</p>
+        <ul style="margin: 0; padding-left: 20px; line-height: 26px;">
+          <li>✅ TP/SL validados por IA</li>
+          <li>✅ Análise técnica profissional</li>
+          <li>✅ Alocação otimizada</li>
+          <li>✅ Updates em tempo real</li>
+        </ul>
+      `,
+      '💎',
+      COLORS.primary
+    )}
+    
+    ${cardComponent(
+      '🔍 DCA Smart Scanner',
+      `
+        <p style="margin-bottom: 10px;">Sistema inteligente que <strong>identifica oportunidades</strong> automaticamente:</p>
+        <ul style="margin: 0; padding-left: 20px; line-height: 26px;">
+          <li>🚀 Forte Compra (desconto ≥15%)</li>
+          <li>💰 Compra (desconto 10-15%)</li>
+          <li>📈 Hold (mercado estável)</li>
+          <li>🔔 Notificações diárias às 10h</li>
+        </ul>
+      `,
+      '🎯',
+      '#28a745'
+    )}
+    
+    ${buttonComponent('📊 Ver Portfolios Agora', `${siteUrl}/portfolios`)}
+    
+    ${dividerComponent()}
+    
+    ${textComponent(`
+      <p style="background: ${COLORS.grayDark}; color: white; padding: 20px; border-radius: 12px; margin: 0;">
+        <strong style="color: ${COLORS.gold}; font-size: 18px;">💡 Como Usar o DCA Smart:</strong><br><br>
+        1️⃣ Acede à aba <strong>"Portfolios"</strong><br>
+        2️⃣ Clica em <strong>"DCA Opportunities"</strong><br>
+        3️⃣ Vê as análises e descontos<br>
+        4️⃣ Investe nos ativos com maior desconto<br>
+        5️⃣ Recebe notificações diárias automáticas
+      </p>
+    `)}
+  `
+  
+  return baseTemplate(content, 'Scanners & Portfolios MTM - Ferramentas profissionais')
+}
+
+// 5. ONBOARDING - Dia 5 (Skool Community)
+export const onboarding4EmailTemplate = (userName: string, skoolUrl: string) => {
+  const content = `
+    ${headerComponent('👥 Comunidade Skool MTM', 'Passo 4: Junta-te à Família', '🌟')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; margin-bottom: 15px;">Olá ${userName}!</h2>
+      <p style="margin-bottom: 15px;">
+        É hora de conheceres a <strong>comunidade mais ativa</strong> de investidores em Portugal!
+      </p>
+      <p style="margin-bottom: 15px;">
+        O Skool MTM é onde a magia acontece - networking, dicas exclusivas, e suporte 24/7.
+      </p>
+    `)}
+    
+    ${statsComponent([
+      { value: '500+', label: 'Membros', icon: '👥' },
+      { value: '24/7', label: 'Suporte', icon: '💬' },
+      { value: '100%', label: 'Grátis', icon: '🎁' }
+    ])}
+    
+    ${featuresListComponent([
+      {
+        icon: '📚',
+        title: 'Conteúdo Exclusivo',
+        description: 'Acesso a cursos, webinars, e materiais educativos disponíveis apenas para membros.'
+      },
+      {
+        icon: '💬',
+        title: 'Discussões Diárias',
+        description: 'Participa em discussões sobre mercado, estratégias, e partilha as tuas vitórias.'
+      },
+      {
+        icon: '🎯',
+        title: 'Challenges & Eventos',
+        description: 'Participa em challenges mensais e eventos ao vivo com a equipa MTM.'
+      },
+      {
+        icon: '🏆',
+        title: 'Networking',
+        description: 'Conhece outros investidores, cria parcerias, e cresce em comunidade.'
+      }
+    ])}
+    
+    ${buttonComponent('🚀 Entrar no Skool MTM', skoolUrl || 'https://www.skool.com/morethanmoney-1132/about')}
+    
+    ${dividerComponent()}
+    
+    ${textComponent(`
+      <p style="background: ${COLORS.gray}; padding: 15px; border-radius: 8px; margin: 0;">
+        <strong style="color: ${COLORS.primary};">💎 Benefício VIP:</strong><br>
+        Membros VIP têm acesso a canais privados, calls exclusivas, e suporte prioritário!
+      </p>
+    `)}
+  `
+  
+  return baseTemplate(content, 'Junta-te à Comunidade Skool MTM')
+}
+
+// 6. AGENDAMENTO DE ONBOARDING (Calendly)
+export const onboardingScheduleEmailTemplate = (userName: string, calendlyUrl: string, siteUrl: string) => {
+  const content = `
+    ${headerComponent('📅 Agende o Teu Onboarding', 'Sessão 1-on-1 com a Equipa MTM', '🎯')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; margin-bottom: 15px;">Olá ${userName}! 👋</h2>
+      <p style="margin-bottom: 15px;">
+        Para te ajudar a <strong>começar da melhor forma</strong>, oferecemos uma <strong>sessão de onboarding gratuita</strong>!
+      </p>
+      <p style="margin-bottom: 15px;">
+        Numa chamada de <strong>30 minutos</strong>, vamos:
+      </p>
+    `)}
+    
+    ${featuresListComponent([
+      {
+        icon: '🎯',
+        title: 'Conhecer os Teus Objetivos',
+        description: 'Vamos entender onde estás e onde queres chegar nos investimentos.'
+      },
+      {
+        icon: '🚀',
+        title: 'Tour pela Plataforma',
+        description: 'Mostramos-te como usar todas as ferramentas: portfolios, DCA, app mobile.'
+      },
+      {
+        icon: '💡',
+        title: 'Estratégia Personalizada',
+        description: 'Damos-te dicas específicas para o teu perfil de investidor.'
+      },
+      {
+        icon: '❓',
+        title: 'Tira Todas as Dúvidas',
+        description: 'Tempo exclusivo para perguntas e esclarecimentos.'
+      }
+    ])}
+    
+    ${cardComponent(
+      '⏰ Duração: 30 Minutos',
+      `
+        <p style="margin-bottom: 10px;">✅ <strong>100% Gratuito</strong></p>
+        <p style="margin-bottom: 10px;">✅ <strong>Sem Compromisso</strong></p>
+        <p style="margin-bottom: 10px;">✅ <strong>Horários Flexíveis</strong></p>
+        <p style="margin: 0;">✅ <strong>Online via Zoom/Meet</strong></p>
+      `,
+      '📞',
+      '#28a745'
+    )}
+    
+    ${buttonComponent('📅 Escolher Horário Agora', calendlyUrl)}
+    
+    ${dividerComponent()}
+    
+    ${textComponent(`
+      <p style="background: ${COLORS.grayDark}; color: white; padding: 20px; border-radius: 12px; margin: 0;">
+        <strong style="color: ${COLORS.gold}; font-size: 18px;">💡 Porque Agendar?</strong><br><br>
+        Membros que fazem onboarding têm <strong>3x mais resultados</strong> nos primeiros 30 dias!<br><br>
+        Aproveita esta oportunidade de ter suporte dedicado da nossa equipa.
+      </p>
+    `)}
+    
+    ${textComponent(`
+      <p style="text-align: center; margin-top: 20px;">
+        <a href="${calendlyUrl}" style="color: ${COLORS.primary}; text-decoration: underline;">
+          Ver horários disponíveis
+        </a>
+      </p>
+    `)}
+  `
+  
+  return baseTemplate(content, 'Agende o seu onboarding gratuito com a equipa MTM')
+}
+
+// 7. VISÃO CONJUNTA MTM (Anúncio Especial)
+export const visionAnnouncementEmailTemplate = (userName: string, siteUrl: string) => {
+  const content = `
+    ${headerComponent('🚀 A Nossa Jornada Juntos', 'MoreThanMoney - Mais do que Dinheiro, uma Comunidade', '✨')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; margin-bottom: 15px;">Olá ${userName}! 👋</h2>
+      <p style="margin-bottom: 15px; font-size: 16px;">
+        Hoje queremos partilhar algo especial contigo. Não é apenas uma atualização - é uma <strong>celebração</strong>.
+      </p>
+      <p style="margin-bottom: 15px; font-size: 16px;">
+        A <strong>MoreThanMoney</strong> não é apenas uma plataforma. É o resultado de uma <strong>visão conjunta</strong> construída por pessoas como tu.
+      </p>
+    `)}
+    
+    ${dividerComponent()}
+    
+    ${cardComponent(
+      '🌟 A Nossa Missão',
+      `
+        <p style="margin-bottom: 15px; font-size: 15px; line-height: 28px;">
+          Criámos a MTM com um propósito claro: <strong>democratizar o acesso a investimentos inteligentes</strong>.
+        </p>
+        <p style="margin-bottom: 15px; font-size: 15px; line-height: 28px;">
+          Num mundo onde a informação financeira é complexa e inacessível, decidimos fazer diferente.
+        </p>
+        <p style="margin: 0; font-size: 15px; line-height: 28px;">
+          Cada membro, cada discussão, cada partilha - tudo isso constrói algo <strong>maior do que nós</strong>.
+        </p>
+      `,
+      '🎯',
+      COLORS.primary
+    )}
+    
+    ${statsComponent([
+      { value: '500+', label: 'Membros Ativos', icon: '👥' },
+      { value: '20+', label: 'Ativos Analisados', icon: '💎' },
+      { value: '24/7', label: 'Suporte', icon: '🛡️' }
+    ])}
+    
+    ${textComponent(`
+      <div style="background: linear-gradient(135deg, ${COLORS.grayDark} 0%, #000000 100%); padding: 30px; border-radius: 16px; border-left: 4px solid ${COLORS.primary}; margin: 30px 0;">
+        <h3 style="color: ${COLORS.gold}; font-size: 22px; margin: 0 0 20px 0; text-align: center;">
+          ✨ O Que Conquistámos Juntos
+        </h3>
+        <div style="display: grid; gap: 15px;">
+          <div style="display: flex; align-items: start; gap: 15px;">
+            <div style="font-size: 28px;">📊</div>
+            <div>
+              <strong style="color: ${COLORS.primary}; display: block; margin-bottom: 5px;">Portfolios Profissionais</strong>
+              <p style="color: #ccc; margin: 0; font-size: 14px;">
+                Análise técnica completa de Crypto e ETFs, actualizada em tempo real com TP/SL validados por IA.
+              </p>
+            </div>
+          </div>
+          
+          <div style="display: flex; align-items: start; gap: 15px;">
+            <div style="font-size: 28px;">🤖</div>
+            <div>
+              <strong style="color: ${COLORS.primary}; display: block; margin-bottom: 5px;">DCA Smart Scanner</strong>
+              <p style="color: #ccc; margin: 0; font-size: 14px;">
+                Sistema inteligente que identifica oportunidades de compra automaticamente, enviando alertas diários.
+              </p>
+            </div>
+          </div>
+          
+          <div style="display: flex; align-items: start; gap: 15px;">
+            <div style="font-size: 28px;">📱</div>
+            <div>
+              <strong style="color: ${COLORS.primary}; display: block; margin-bottom: 5px;">App Mobile Premium</strong>
+              <p style="color: #ccc; margin: 0; font-size: 14px;">
+                Dashboard mobile com notificações push, sincronizado 24/7 com os teus investimentos.
+              </p>
+            </div>
+          </div>
+          
+          <div style="display: flex; align-items: start; gap: 15px;">
+            <div style="font-size: 28px;">👥</div>
+            <div>
+              <strong style="color: ${COLORS.primary}; display: block; margin-bottom: 5px;">Comunidade Skool</strong>
+              <p style="color: #ccc; margin: 0; font-size: 14px;">
+                Espaço exclusivo para networking, partilha de conhecimento e crescimento conjunto.
+              </p>
+            </div>
+          </div>
+          
+          <div style="display: flex; align-items: start; gap: 15px;">
+            <div style="font-size: 28px;">🎓</div>
+            <div>
+              <strong style="color: ${COLORS.primary}; display: block; margin-bottom: 5px;">Biblioteca de Documentos</strong>
+              <p style="color: #ccc; margin: 0; font-size: 14px;">
+                Recursos educativos exclusivos partilhados pelos educadores VIP e equipa MTM.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `)}
+    
+    ${dividerComponent()}
+    
+    ${cardComponent(
+      '💡 A Visão que Nos Move',
+      `
+        <p style="margin-bottom: 15px; font-size: 15px; line-height: 28px;">
+          Não queremos ser apenas <strong>"mais uma plataforma de trading"</strong>.
+        </p>
+        <p style="margin-bottom: 15px; font-size: 15px; line-height: 28px;">
+          Queremos ser o <strong>ecossistema</strong> onde investidores de todos os níveis encontram:
+        </p>
+        <ul style="margin: 0; padding-left: 20px; line-height: 32px; font-size: 15px;">
+          <li><strong>Ferramentas profissionais</strong> acessíveis</li>
+          <li><strong>Educação de qualidade</strong> contínua</li>
+          <li><strong>Comunidade</strong> que se apoia mutuamente</li>
+          <li><strong>Transparência</strong> em cada decisão</li>
+          <li><strong>Inovação</strong> constante</li>
+        </ul>
+      `,
+      '🎯',
+      '#28a745'
+    )}
+    
+    ${textComponent(`
+      <div style="text-align: center; padding: 40px 20px; background: linear-gradient(135deg, rgba(210, 166, 60, 0.1) 0%, rgba(187, 133, 37, 0.1) 100%); border-radius: 16px; margin: 30px 0;">
+        <div style="font-size: 48px; margin-bottom: 20px;">🙏</div>
+        <h3 style="color: ${COLORS.primary}; font-size: 28px; margin: 0 0 20px 0;">
+          Obrigado por Fazeres Parte
+        </h3>
+        <p style="color: white; font-size: 18px; line-height: 32px; margin: 0; max-width: 600px; margin: 0 auto;">
+          Cada membro, cada feedback, cada partilha na comunidade - tudo isso constrói a MTM.
+          <br><br>
+          <strong style="color: ${COLORS.gold};">És mais do que um utilizador. És parte da visão.</strong>
+        </p>
+      </div>
+    `)}
+    
+    ${featuresListComponent([
+      {
+        icon: '🚀',
+        title: 'O Que Vem a Seguir',
+        description: 'Novos scanners, análises de IA ainda mais precisas, expansão para novos mercados e muito mais. Tudo construído com o teu feedback.'
+      },
+      {
+        icon: '💬',
+        title: 'A Tua Voz Importa',
+        description: 'Queremos ouvir-te! Junta-te às discussões no Skool, partilha as tuas ideias e ajuda-nos a construir o futuro da MTM.'
+      },
+      {
+        icon: '🎯',
+        title: 'Compromisso com a Excelência',
+        description: 'Não paramos. Cada dia trabalhamos para trazer mais valor, mais ferramentas e mais oportunidades para toda a comunidade.'
+      }
+    ])}
+    
+    ${buttonComponent('🚀 Explorar a Plataforma', `${siteUrl}/new-landing`)}
+    ${buttonComponent('💬 Entrar na Comunidade', 'https://www.skool.com/morethanmoney-1132/about', 'secondary')}
+    
+    ${dividerComponent()}
+    
+    ${textComponent(`
+      <div style="background: ${COLORS.grayDark}; padding: 25px; border-radius: 12px; text-align: center; margin: 20px 0;">
+        <p style="color: ${COLORS.primary}; font-size: 20px; font-weight: 700; margin: 0 0 15px 0;">
+          "O sucesso não é medido apenas em lucros."
+        </p>
+        <p style="color: white; font-size: 16px; margin: 0 0 10px 0;">
+          É medido na <strong>comunidade que construímos</strong>,<br>
+          no <strong>conhecimento que partilhamos</strong>,<br>
+          e no <strong>impacto que criamos juntos</strong>.
+        </p>
+        <p style="color: ${COLORS.gold}; font-size: 14px; margin: 15px 0 0 0; font-style: italic;">
+          — Equipa MoreThanMoney
+        </p>
+      </div>
+    `)}
+    
+    ${textComponent(`
+      <p style="text-align: center; color: #999; font-size: 14px; margin-top: 30px;">
+        Vemo-nos na plataforma! 💪<br>
+        Continua a investir com inteligência. Continua a crescer connosco.
+      </p>
+    `)}
+  `
+  
+  return baseTemplate(content, 'A Nossa Jornada Juntos - MoreThanMoney é mais do que uma plataforma')
+}
+
+// 8. DCA OPPORTUNITY ALERT (Notificação de Oportunidade)
+export const dcaOpportunityEmailTemplate = (
+  userName: string,
+  opportunities: Array<{ name: string; discount: number; category: string }>,
+  siteUrl: string
+) => {
+  const strongBuys = opportunities.filter(o => o.discount >= 15)
+  const buys = opportunities.filter(o => o.discount >= 10 && o.discount < 15)
+  
+  const content = `
+    ${headerComponent(
+      `🚀 ${strongBuys.length} Oportunidades DCA Detectadas!`,
+      'Análise diária do mercado',
+      '💎'
+    )}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; margin-bottom: 15px;">Olá ${userName}!</h2>
+      <p style="margin-bottom: 15px;">
+        O scanner DCA Smart identificou <strong>${opportunities.length} oportunidades</strong> de compra hoje!
+      </p>
+    `)}
+    
+    ${strongBuys.length > 0 ? `
+      <tr>
+        <td style="padding: 0 30px 20px;">
+          <h3 style="color: #28a745; font-size: 20px; margin: 0 0 15px 0;">🚀 Forte Compra (≥15%)</h3>
+          ${strongBuys.map(opp => `
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(32, 201, 151, 0.1) 100%); border: 2px solid #28a745; border-radius: 12px; margin-bottom: 10px; overflow: hidden;">
+              <tr>
+                <td style="padding: 15px 20px;">
+                  <table width="100%">
+                    <tr>
+                      <td>
+                        <strong style="color: #28a745; font-size: 18px;">${opp.name}</strong>
+                        <div style="color: #666; font-size: 13px; margin-top: 5px;">${opp.category}</div>
+                      </td>
+                      <td align="right">
+                        <div style="background: #28a745; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 18px;">
+                          ${opp.discount.toFixed(1)}%
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          `).join('')}
+        </td>
+      </tr>
+    ` : ''}
+    
+    ${buys.length > 0 ? `
+      <tr>
+        <td style="padding: 0 30px 20px;">
+          <h3 style="color: ${COLORS.primary}; font-size: 20px; margin: 0 0 15px 0;">💰 Compra (10-15%)</h3>
+          ${buys.map(opp => `
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, rgba(210, 166, 60, 0.1) 0%, rgba(244, 208, 63, 0.1) 100%); border: 2px solid ${COLORS.primary}; border-radius: 12px; margin-bottom: 10px; overflow: hidden;">
+              <tr>
+                <td style="padding: 15px 20px;">
+                  <table width="100%">
+                    <tr>
+                      <td>
+                        <strong style="color: ${COLORS.primary}; font-size: 18px;">${opp.name}</strong>
+                        <div style="color: #666; font-size: 13px; margin-top: 5px;">${opp.category}</div>
+                      </td>
+                      <td align="right">
+                        <div style="background: ${COLORS.primary}; color: ${COLORS.black}; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 18px;">
+                          ${opp.discount.toFixed(1)}%
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          `).join('')}
+        </td>
+      </tr>
+    ` : ''}
+    
+    ${buttonComponent('📊 Ver Análise Completa', `${siteUrl}/portfolios`)}
+    
+    ${dividerComponent()}
+    
+    ${textComponent(`
+      <p style="background: ${COLORS.grayDark}; color: white; padding: 20px; border-radius: 12px; margin: 0;">
+        <strong style="color: ${COLORS.gold};">💡 Como Aproveitar:</strong><br><br>
+        1️⃣ Revê a análise completa no dashboard<br>
+        2️⃣ Verifica os TP/SL sugeridos<br>
+        3️⃣ Investe gradualmente (DCA)<br>
+        4️⃣ Acompanha a evolução no app mobile
+      </p>
+    `)}
+  `
+  
+  return baseTemplate(content, `${opportunities.length} oportunidades DCA detectadas!`)
+}
+
+// 9. RECUPERAÇÃO DE PASSWORD
+export const passwordRecoveryEmailTemplate = (
+  userName: string,
+  userEmail: string,
+  username: string,
+  resetLink: string,
+  siteUrl: string,
+) => {
+  const content = `
+    ${headerComponent('🔐 Recuperar Password', 'morethanmoney.pt', '🔑')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; font-size: 22px; font-weight: 700; margin: 0 0 15px 0;">
+        Olá ${userName}! 👋
+      </h2>
+      <p style="margin-bottom: 15px;">
+        Recebemos um pedido para <strong>redefinir a password</strong> da tua conta MoreThanMoney em
+        <strong>morethanmoney.pt</strong>.
+      </p>
+      <p style="margin-bottom: 15px;">
+        Se foste tu, clica no botão abaixo para escolher uma nova password. O link expira em <strong>1 hora</strong>.
+      </p>
+    `)}
+    
+    ${cardComponent(
+      '👤 Conta associada',
+      `
+        <table style="width: 100%; background: white; border-radius: 8px;">
+          <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: ${COLORS.primary};">Email:</strong></td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace;">${userEmail}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;"><strong style="color: ${COLORS.primary};">Username:</strong></td>
+            <td style="padding: 8px 0; font-family: monospace;">${username}</td>
+          </tr>
+        </table>
+      `,
+      '🔐',
+      COLORS.primary,
+    )}
+    
+    ${buttonComponent('Definir nova password', resetLink)}
+    
+    ${textComponent(`
+      <p style="color: #666; font-size: 13px; line-height: 22px; margin: 0;">
+        Se o botão não funcionar, copia e cola este link no browser:<br>
+        <a href="${resetLink}" style="color: ${COLORS.primary}; word-break: break-all;">${resetLink}</a>
+      </p>
+    `)}
+    
+    ${dividerComponent()}
+    
+    ${textComponent(`
+      <p style="background: ${COLORS.gray}; padding: 15px; border-radius: 8px; margin: 0; font-size: 14px; color: #555;">
+        <strong>Não pediste esta alteração?</strong> Ignora este email — a tua password mantém-se igual.
+        Se receberes emails suspeitos, contacta <a href="mailto:geral@morethanmoney.pt" style="color: ${COLORS.primary};">geral@morethanmoney.pt</a>.
+      </p>
+    `)}
+  `
+
+  return baseTemplate(content, 'Recuperação de password — MoreThanMoney', siteUrl)
+}
+
+// 10. PASSWORD ALTERADA COM SUCESSO
+export const passwordChangedEmailTemplate = (
+  userName: string,
+  userEmail: string,
+  username: string,
+  siteUrl: string,
+) => {
+  const content = `
+    ${headerComponent('✅ Password Actualizada', 'A tua conta está segura', '🛡️')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; font-size: 22px; font-weight: 700; margin: 0 0 15px 0;">
+        Olá ${userName}! 👋
+      </h2>
+      <p style="margin-bottom: 15px;">
+        Confirmamos que a password da tua conta <strong>MoreThanMoney</strong> em
+        <strong>morethanmoney.pt</strong> foi alterada com sucesso.
+      </p>
+    `)}
+    
+    ${cardComponent(
+      '🔐 Os teus dados de login',
+      `
+        <table style="width: 100%; background: white; border-radius: 8px;">
+          <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: ${COLORS.primary};">Email:</strong></td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace;">${userEmail}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: ${COLORS.primary};">Username:</strong></td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace;">${username}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;"><strong style="color: ${COLORS.primary};">Plataforma:</strong></td>
+            <td style="padding: 8px 0;"><a href="${siteUrl}/login" style="color: ${COLORS.primary};">${siteUrl}/login</a></td>
+          </tr>
+        </table>
+      `,
+      '🔑',
+      '#28a745',
+    )}
+    
+    ${buttonComponent('Fazer login agora', `${siteUrl}/login`)}
+    
+    ${dividerComponent()}
+    
+    ${textComponent(`
+      <p style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 0; font-size: 14px; color: #664d03;">
+        <strong>Não foste tu?</strong> Alguém pode ter acedido à tua conta. Responde imediatamente a
+        <a href="mailto:geral@morethanmoney.pt" style="color: ${COLORS.primaryDark};">geral@morethanmoney.pt</a>
+        para bloquearmos o acesso.
+      </p>
+    `)}
+  `
+
+  return baseTemplate(content, 'Password actualizada — MoreThanMoney', siteUrl)
+}
+
+// 11. NOVO REGISTO (admin)
+export const registrationAdminEmailTemplate = (
+  userName: string,
+  userEmail: string,
+  approveUrl: string,
+  rejectUrl: string,
+  siteUrl: string,
+) => {
+  const content = `
+    ${headerComponent('🔔 Novo Pedido de Registo', 'Acção necessária', '📋')}
+    
+    ${cardComponent(
+      'Informações do candidato',
+      `
+        <table style="width: 100%;">
+          <tr><td style="padding: 8px 0;"><strong>Nome:</strong></td><td>${userName}</td></tr>
+          <tr><td style="padding: 8px 0;"><strong>Email:</strong></td><td>${userEmail}</td></tr>
+          <tr><td style="padding: 8px 0;"><strong>Data:</strong></td><td>${new Date().toLocaleString('pt-PT')}</td></tr>
+        </table>
+      `,
+      '👤',
+      COLORS.primary,
+    )}
+    
+    ${buttonComponent('✅ Aprovar membro', approveUrl, 'secondary')}
+    ${buttonComponent('❌ Rejeitar', rejectUrl)}
+  `
+
+  return baseTemplate(content, 'Novo pedido de registo MTM', siteUrl)
+}
+
+// 12. REJEIÇÃO DE REGISTO
+export const registrationRejectedEmailTemplate = (
+  userName: string,
+  siteUrl: string,
+) => {
+  const content = `
+    ${headerComponent('Pedido de Registo', 'MoreThanMoney', '📩')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; margin-bottom: 15px;">Olá ${userName}</h2>
+      <p style="margin-bottom: 15px;">Obrigado pelo teu interesse na MoreThanMoney.</p>
+      <p style="margin-bottom: 15px;">
+        Após análise do teu pedido, infelizmente não podemos aprovar o registo neste momento.
+      </p>
+    `)}
+    
+    ${cardComponent(
+      'Precisas de ajuda?',
+      `<p style="margin: 0;">Contacta-nos em <a href="mailto:geral@morethanmoney.pt" style="color: ${COLORS.primary};">geral@morethanmoney.pt</a></p>`,
+      '💬',
+      COLORS.primary,
+    )}
+  `
+
+  return baseTemplate(content, 'Pedido de registo — MoreThanMoney', siteUrl)
+}
+
+// 13. ACESSO SCANNER (pós-compra)
+export const scannerAccessEmailTemplate = (
+  userName: string,
+  scannerName: string,
+  tradingviewUsername: string,
+  siteUrl: string,
+) => {
+  const content = `
+    ${headerComponent('🔓 Acesso Confirmado!', scannerName, '✅')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; margin-bottom: 15px;">Olá ${userName}! 👋</h2>
+      <p style="margin-bottom: 15px;">
+        Obrigado pela tua compra! Vamos configurar o teu acesso ao indicador no TradingView.
+      </p>
+    `)}
+    
+    ${cardComponent(
+      'Username TradingView',
+      `
+        <p style="margin: 0; font-size: 18px; font-weight: 700;">${tradingviewUsername}</p>
+        <p style="margin: 10px 0 0 0; font-size: 13px; color: #666;">
+          Se não estiver correto, responde a este email o quanto antes.
+        </p>
+      `,
+      '📋',
+      COLORS.primary,
+    )}
+    
+    ${featuresListComponent([
+      {
+        icon: '1️⃣',
+        title: 'Confirma o username',
+        description: 'Em tradingview.com → Perfil → URL tradingview.com/u/o-teu-username/',
+      },
+      {
+        icon: '2️⃣',
+        title: 'Aguarda o convite',
+        description: 'Até 24h úteis para adicionarmos o teu username ao script.',
+      },
+      {
+        icon: '3️⃣',
+        title: 'Adiciona ao gráfico',
+        description: 'Indicadores → Os Meus Scripts → invite-only scripts.',
+      },
+    ])}
+    
+    ${buttonComponent('Ver os meus scanners', `${siteUrl}/scanner`)}
+  `
+
+  return baseTemplate(content, `Acesso ao ${scannerName}`, siteUrl)
+}
+
+// 9. NOTIFICAÇÃO ADMIN (campanhas manuais do painel)
+export const adminBroadcastEmailTemplate = (
+  title: string,
+  message: string,
+  siteUrl?: string,
+) => {
+  const base = resolveSiteUrl(siteUrl)
+  const safeMessage = message
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+
+  const content = `
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; font-size: 22px; font-weight: 800; margin: 28px 0 16px 0; text-align: center;">
+        ${title}
+      </h2>
+      <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 26px; color: #333; text-align: center;">
+        ${safeMessage}
+      </p>
+    `)}
+    ${buttonComponent('Aceder à plataforma', `${base}/login`)}
+  `
+
+  return baseTemplate(content, title, base)
+}
+
+/**
+ * App Android ATUALIZADA — aviso aos membros de que a nova versão da app Android
+ * está disponível, com os novos Alertas MTM nativos no menu "Mais".
+ */
+export const androidUpdateEmailTemplate = (userName?: string, siteUrl?: string) => {
+  const base = resolveSiteUrl(siteUrl)
+  const name = (userName ?? '').trim()
+  const content = `
+    ${headerComponent('A app Android foi atualizada', 'Nova versão com Alertas MTM nativos', '🤖')}
+    ${textComponent(`
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        ${name ? `Olá ${name},` : 'Olá,'}
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Acabámos de atualizar a <strong>app MoreThanMoney para Android</strong>. Já podes descarregar a versão mais recente e ter tudo à distância de um toque.
+      </p>
+      <div style="background: ${COLORS.gray}; border-left: 4px solid ${COLORS.primary}; border-radius: 8px; padding: 16px 20px; margin: 0 0 24px 0;">
+        <p style="margin: 0 0 10px 0; font-size: 15px; line-height: 24px; color: #1a1a1a;"><strong>Novidades desta versão:</strong></p>
+        <p style="margin: 0; font-size: 15px; line-height: 26px; color: #333;">
+          🔔 <strong>Alertas MTM</strong> nativos no menu <strong>Mais</strong> — entradas, SL e TP com gráficos<br>
+          📈 Segue sinais e acompanha o <strong>desempenho</strong> (pendentes, wins e loss) em tempo real<br>
+          ⚡ Melhorias de estabilidade e desempenho
+        </p>
+      </div>
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        <strong>Android:</strong> descarrega o APK e toca em <strong>Instalar</strong> (permite "fontes desconhecidas" se pedir).
+      </p>
+    `)}
+    ${buttonComponent('Descarregar a app Android', `${base}/fast-start`)}
+    ${textComponent(`
+      <p style="margin: 24px 0 8px 0; font-size: 15px; line-height: 24px; color: #666;">
+        📱 <strong>iPhone?</strong> A versão iOS está disponível na App Store.
+      </p>
+      <p style="margin: 16px 0 4px 0; font-size: 16px; line-height: 26px; color: #333;">Bons trades,</p>
+      <p style="margin: 0; font-size: 16px; line-height: 26px; color: ${COLORS.primaryDark}; font-weight: 700;">Equipa MTM</p>
+    `)}
+  `
+  return baseTemplate(content, 'A app Android MoreThanMoney foi atualizada — nova versão com Alertas MTM', base)
+}
+
+/**
+ * Confirmação de SAÍDA / remoção RGPD — enviada a quem pediu para sair da lista de
+ * subscrição e/ou eliminação de conta. É um email transacional (não leva rodapé de
+ * unsubscribe — a pessoa já saiu).
+ */
+export const unsubscribeConfirmationEmailTemplate = (userName?: string, siteUrl?: string) => {
+  const base = resolveSiteUrl(siteUrl)
+  const name = (userName ?? '').trim()
+  const content = `
+    ${headerComponent('Pedido processado', 'Saíste da lista MoreThanMoney', '✅')}
+    ${textComponent(`
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        ${name ? `Olá ${name},` : 'Olá,'}
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Confirmamos que o teu pedido foi processado: foste <strong>removido(a) da nossa lista de
+        subscrição de email</strong> e a tua conta MoreThanMoney foi <strong>eliminada</strong>,
+        juntamente com os teus dados pessoais.
+      </p>
+      <div style="background: ${COLORS.gray}; border-left: 4px solid ${COLORS.primary}; border-radius: 8px; padding: 16px 20px; margin: 0 0 24px 0;">
+        <p style="margin: 0; font-size: 15px; line-height: 26px; color: #333;">
+          ✅ <strong>Sem mais comunicações</strong> — não voltarás a receber emails nossos.<br>
+          🔒 <strong>Dados eliminados</strong> — conforme o teu pedido (RGPD).
+        </p>
+      </div>
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Se algum dia quiseres regressar, és sempre bem-vindo(a) em
+        <a href="${base}" style="color: ${COLORS.primaryDark}; font-weight: 700; text-decoration: none;">morethanmoney.pt</a>.
+      </p>
+      <p style="margin: 24px 0 4px 0; font-size: 15px; line-height: 24px; color: #666;">
+        Qualquer questão: <a href="mailto:morethanmoneypt@gmail.com" style="color: ${COLORS.primaryDark};">morethanmoneypt@gmail.com</a>
+      </p>
+      <p style="margin: 16px 0 0 0; font-size: 16px; line-height: 26px; color: ${COLORS.primaryDark}; font-weight: 700;">Equipa MoreThanMoney</p>
+    `)}
+  `
+  return baseTemplate(content, 'Confirmação — saíste da lista MoreThanMoney', base)
+}
+
+// Export all components for custom templates
+export const components = {
+  header: headerComponent,
+  card: cardComponent,
+  button: buttonComponent,
+  stats: statsComponent,
+  features: featuresListComponent,
+  divider: dividerComponent,
+  text: textComponent,
+  image: imageComponent,
+}
+
+export const createCustomTemplate = (content: string, preheader?: string, siteUrl?: string) => {
+  return baseTemplate(content, preheader, siteUrl)
+}
+
+/**
+ * Notificação de NOVO MEMBRO — enviada aos uplines (organização ascendente) e ao admin
+ * quando há uma inscrição genuína. Usa o template/branding MTM (logo, footer).
+ */
+export const newMemberNotificationEmailTemplate = (params: {
+  recipientName: string
+  memberName: string
+  memberUsername: string
+  planLabel: string
+  isAdmin: boolean
+  siteUrl?: string
+}) => {
+  const site = resolveSiteUrl(params.siteUrl)
+  const tag = params.memberUsername.startsWith('@')
+    ? params.memberUsername
+    : `@${params.memberUsername}`
+
+  const header = headerComponent(
+    params.isAdmin ? 'Novo membro na MoreThanMoney' : 'Novo membro na tua equipa!',
+    params.isAdmin ? 'Notificação de administração' : 'A tua organização MoreThanMoney cresceu',
+    '🎉',
+  )
+
+  const intro = textComponent(
+    params.isAdmin
+      ? 'Entrou agora um novo membro na MoreThanMoney. Detalhes abaixo:'
+      : `Parabéns, ${params.recipientName}! ${tag} acabou de entrar na tua equipa MoreThanMoney.`,
+  )
+
+  const card = cardComponent(
+    'Detalhes do membro',
+    `<p style="margin:4px 0;"><strong>Nome:</strong> ${params.memberName}</p>
+     <p style="margin:4px 0;"><strong>Utilizador:</strong> ${tag}</p>
+     <p style="margin:4px 0;"><strong>Plano:</strong> ${params.planLabel}</p>`,
+    '👤',
+  )
+
+  const cta = params.isAdmin
+    ? buttonComponent('Abrir painel admin', `${site}/admin`, 'primary')
+    : buttonComponent('Ver a minha equipa', `${site}/app-mobile?tab=fast-start`, 'primary')
+
+  return createCustomTemplate(
+    header + intro + card + cta,
+    params.isAdmin ? 'Novo membro registado na MoreThanMoney' : 'Novo membro na tua equipa MoreThanMoney',
+    params.siteUrl,
+  )
+}
+
+/**
+ * Convite de LEAD QUENTE — standard para leads que aparecem via qualquer fluxo nosso
+ * (ManyChat closer, registo, funil de conversão). Conversão direta para teste grátis
+ * (/register) + "Conhece a MTM" (/new-landing). Métricas e testemunhos REAIS (sales brain,
+ * docs/mtm-sales-brain.md). Prints alojados em /email/*.png.
+ */
+export const hotLeadInviteTemplate = (params: { name?: string; siteUrl?: string }) => {
+  const site = resolveSiteUrl(params.siteUrl)
+  const greeting = params.name ? `Olá ${params.name} 👋` : 'Olá 👋'
+
+  const header = brandedHeaderComponent(site)
+  const hero = headerComponent(
+    'Estás a um passo do ecossistema que os traders portugueses escolhem.',
+    'Aprender de Verdade',
+    '🚀',
+  )
+  const intro = textComponent(
+    `${greeting} Já fazes parte da nossa rede — falta-te o que muda o jogo: os <strong>sistemas</strong>, os <strong>alertas</strong> e a <strong>comunidade</strong> da MoreThanMoney, tudo na app.`,
+  )
+  const systems = cardComponent(
+    'Os sistemas que vais ter',
+    `<p style="margin:6px 0"><strong>🛰️ MTM Scanner</strong> — oportunidades filtradas em tempo real.</p>
+     <p style="margin:6px 0"><strong>🔔 Trading Alerts</strong> — sinais Sensei &amp; GoldKiller com entrada, SL e alvos.</p>
+     <p style="margin:6px 0"><strong>⚡ Tap to Trade</strong> — copia um sinal com um único toque.</p>
+     <p style="margin:6px 0"><strong>🔁 MTM Copy</strong> — copy trading automático no MT5.</p>
+     <p style="margin:6px 0"><strong>🎓 Salas &amp; Aulas</strong> + <strong>💬 Comunidade</strong> (356 membros).</p>`,
+    '🧰',
+  )
+  const proof = cardComponent(
+    'Prova real da comunidade',
+    // Os números foram-se: "675 trades · 63% · +7.060€" estava congelado em 30/06 e em euros,
+    // que não são comparáveis entre lotes. O que fica é o que se pode dizer sem data de validade
+    // — os testemunhos são de pessoas e não caducam.
+    `<p style="margin:6px 0;font-size:18px">Estratégias reais, espelhadas via MTM Copy e medidas numa conta que abre <strong>todos</strong> os sinais publicados — sem escolha a dedo.</p>
+     <p style="margin:10px 0 4px;font-style:italic;color:#333">"Grato por estar na melhor comunidade, ecossistema de educação financeira do país."</p>
+     <p style="margin:4px 0;font-style:italic;color:#333">"O melhor resultado não é o saldo das contas… é o poder de saber proteger capital."</p>`,
+    '📊',
+  )
+  const ctaTrial = buttonComponent('Começar o meu teste grátis →', `${site}/register`, 'primary')
+  const landing = textComponent(
+    `Ainda a decidir? <a href="${site}/new-landing" style="color:${COLORS.primaryDark};font-weight:700;text-decoration:none">Conhece a MTM →</a> · 3 dias grátis · sem cartão · cancela quando quiseres.`,
+  )
+
+  return createCustomTemplate(
+    header + hero + intro + systems + proof + ctaTrial + landing,
+    'Scanner, alertas e cópia automática + comunidade. Testa grátis, sem cartão.',
+    params.siteUrl,
+  )
+}
+
+
+/**
+ * Licença do MTM Sensei EA emitida — a chave, a conta a que fica presa e os dois passos que o
+ * cliente tem mesmo de fazer no MetaTrader (a lista de URLs permitidos é onde toda a gente
+ * tropeça: sem ela o EA não consegue validar e parece avariado).
+ */
+export const licencaSenseiEmailTemplate = (
+  userName: string,
+  chave: string,
+  plano: 'anual' | 'vitalicia' | 'incluida',
+  mt5Login: string | null,
+  expiraEm: string | null,
+  siteUrl?: string,
+  produto: 'sensei_ea' | 'sensei_scalp' = 'sensei_ea',
+) => {
+  const base = resolveSiteUrl(siteUrl)
+  // São duas EA diferentes e o email tem de dizer qual, senão quem tem as duas não sabe onde
+  // colar a chave — e colá-la na errada dá "esta chave é do outro produto".
+  const ea =
+    produto === 'sensei_scalp'
+      ? { nome: 'MTM Sensei Scalp Edition', pagina: '/sensei-scalp' }
+      : { nome: 'MTM Sensei EA', pagina: '/sensei-ea' }
+  const nomePlano =
+    plano === 'vitalicia' ? 'Vitalícia' : plano === 'anual' ? 'Anual' : 'Incluída na subscrição'
+  const validade = expiraEm
+    ? new Date(expiraEm).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })
+    : 'Sem prazo'
+
+  const content = `
+    ${headerComponent(`A tua licença do ${ea.nome}`, `Licença ${nomePlano}`, '🔑')}
+
+    ${textComponent(`
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Olá ${userName || 'Trader'},
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 26px; color: #333;">
+        A tua licença está activa. Guarda esta chave — é ela que liga o Expert Advisor à tua conta.
+      </p>
+    `)}
+
+    ${cardComponent(
+      'Chave de licença',
+      `
+        <p style="margin: 0; font-family: 'Courier New', monospace; font-size: 22px; font-weight: 700; letter-spacing: 2px;">${chave}</p>
+        <p style="margin: 12px 0 0 0; font-size: 14px; color: #666;">
+          Conta MT5: <strong>${mt5Login || 'a primeira conta onde ligares o EA'}</strong><br>
+          Validade: <strong>${validade}</strong>
+        </p>
+      `,
+      '🔐',
+      COLORS.primary,
+    )}
+
+    ${featuresListComponent([
+      {
+        icon: '1️⃣',
+        title: 'Permitir o endereço no MetaTrader',
+        description:
+          'Ferramentas → Opções → Expert Advisors → "Permitir WebRequest para os seguintes URLs" e acrescenta https://www.morethanmoney.pt',
+      },
+      {
+        icon: '2️⃣',
+        title: 'Colar a chave no EA',
+        description: 'Ao arrastar o MTM Sensei para o gráfico, escreve a chave no campo "Licença".',
+      },
+      {
+        icon: '3️⃣',
+        title: 'Confirmar no separador Experts',
+        description: 'Deves ver "Licença válida". Se não vires, a mensagem diz exactamente o que falta.',
+      },
+    ])}
+
+    ${buttonComponent('Descarregar o EA e os presets', `${base}${ea.pagina}`)}
+  `
+
+  return baseTemplate(content, `A tua licença do ${ea.nome}`, base)
+}
+
+/**
+ * Membro que já paga: a licença do EA foi emitida para ele e está à espera.
+ *
+ * Diferente do `licencaSenseiEmailTemplate`, que responde a uma compra. Aqui ninguém comprou nada
+ * nem pediu nada — a licença apareceu porque a subscrição dá direito a ela. O email tem de dizer
+ * isso na primeira linha, senão parece uma fatura por pagar.
+ */
+export const licencaMembroEmailTemplate = (
+  userName: string,
+  chave: string,
+  siteUrl?: string,
+) => {
+  const base = resolveSiteUrl(siteUrl)
+  const nome = (userName ?? '').trim().split(' ')[0]
+
+  const content = `
+    ${headerComponent('A tua licença do MTM Sensei EA', 'Já está emitida — não tens de pagar nada', '🔑')}
+
+    ${textComponent(`
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        ${nome ? `Olá ${nome},` : 'Olá,'}
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Acabámos de lançar o <strong>MTM Sensei para MetaTrader 5</strong>: o robô que corre a nossa
+        leitura de mercado sozinho na tua conta — analisa, entra, tira parciais e faz trailing.
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Vende-se por 297 € por ano. <strong>A tua subscrição inclui-o</strong>, por isso a licença
+        já está emitida no teu nome. É só instalar.
+      </p>
+    `)}
+
+    ${cardComponent(
+      'A tua chave',
+      `
+        <p style="margin: 0; font-family: 'Courier New', monospace; font-size: 22px; font-weight: 700; letter-spacing: 2px;">${chave}</p>
+        <p style="margin: 12px 0 0 0; font-size: 14px; color: #666;">
+          Vale para <strong>uma conta MT5</strong> — prende-se à primeira onde ligares o robô.
+          Mudaste de corretora? Escreve-nos e libertamos.
+        </p>
+      `,
+      '🔐',
+      COLORS.primary,
+    )}
+
+    ${textComponent(`
+      <p style="margin: 0 0 10px 0; font-size: 16px; font-weight: 700; color: ${COLORS.primary};">
+        Instalar, em quatro passos
+      </p>
+    `)}
+
+    ${featuresListComponent([
+      {
+        icon: '1️⃣',
+        title: 'Descarrega o MetaTrader 5 e o pacote',
+        description:
+          'Em morethanmoney.pt/sensei-ea tens os dois. O instalador do pacote é automático — Windows e macOS — e põe tudo no sítio certo sozinho.',
+      },
+      {
+        icon: '2️⃣',
+        title: 'Permite o nosso endereço no MetaTrader',
+        description:
+          'Ferramentas > Opções > Consultores. Liga "Permitir WebRequest para os seguintes URLs" e acrescenta https://www.morethanmoney.pt — é aqui que toda a gente tropeça.',
+      },
+      {
+        icon: '3️⃣',
+        title: 'Cola a chave',
+        description: 'Ao arrastar o MTM Sensei para o gráfico, escreve a chave no campo "Licença", no topo dos parâmetros.',
+      },
+      {
+        icon: '4️⃣',
+        title: 'Confirma e escolhe o preset',
+        description:
+          'No separador Especialistas deve aparecer "LICENCA: valida". Depois carrega o preset do teu par. Corre em demo primeiro — sempre.',
+      },
+    ])}
+
+    ${textComponent(`
+      <p style="margin: 0 0 18px 0; font-size: 15px; line-height: 25px; color: #444;">
+        Vai em anexo o <strong>guia completo em PDF</strong>, com tudo isto ao pormenor: instalação,
+        que preset usar em cada par, o que o robô faz e o que não faz, e o que confirmar antes de
+        arriscares dinheiro a sério.
+      </p>
+    `)}
+
+    ${buttonComponent('Descarregar o EA e o MetaTrader', `${base}/sensei-ea`)}
+
+    ${textComponent(`
+      <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 23px; color: #666;">
+        A chave também está sempre na tua área de membro, no separador da subscrição — não precisas
+        de guardar este email. Dúvidas? Responde a esta mensagem.
+      </p>
+    `)}
+  `
+
+  return baseTemplate(content, 'A tua licença do MTM Sensei EA já está emitida', base)
+}

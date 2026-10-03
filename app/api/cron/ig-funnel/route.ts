@@ -1,7 +1,7 @@
 /**
  * Cron do FUNIL IG — Prospector + Setter (comment → DM). Corre a cada 30 min para apanhar a
  * intenção enquanto está quente. Deteta palavras-chave nos comentários e envia DM com a oferta.
- * O Closer (conversa na DM) é tratado pelo /api/manychat/closer + o link fecha (register→trial).
+ * O Closer (conversa na DM) é tratado pelo /api//closer + o link fecha (register→trial).
  */
 import { NextRequest, NextResponse } from "next/server"
 import { isCronAuthorized } from "@/lib/cron-auth"

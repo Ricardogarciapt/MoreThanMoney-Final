@@ -5,7 +5,7 @@
       "GET https://www.morethanmoney.pt/api/public/content-config (= admin_settings.setting_key='site_content', setting_value)",
       "public.site_content (Supabase morethanmoney) — 0 linhas no momento do arquivo"
     ],
-    "porque": "Os cartões «Conteúdo do site» e «Vídeos e links (config)» de /admin?tab=content foram removidos por serem configuração morta. O único consumidor público (app/mtm/page.tsx) só lê entradas com page='/mtm' e não havia nenhuma; as páginas referidas (/iqonic, /swipetotrade, /fast-start…) já não existem ou já não lêem isto (/onboarding passou a mtm_videos_intro + sala «Introdução», migração 100). Guardado aqui para se poder recuperar algum link/vídeo.",
+    "porque": "Os cartões «Conteúdo do site» e «Vídeos e links (config)» de /admin?tab=content foram removidos por serem configuração morta. O único consumidor público (app/mtm/page.tsx) só lê entradas com page='/mtm' e não havia nenhuma; as páginas referidas (/, /swipetotrade, /fast-start…) já não existem ou já não lêem isto (/onboarding passou a mtm_videos_intro + sala «Introdução», migração 100). Guardado aqui para se poder recuperar algum link/vídeo.",
     "contagens": {
       "videos": 6,
       "links": 19,
@@ -69,13 +69,13 @@
     ],
     "links": [
       {
-        "id": "whatsapp-iqonic",
-        "title": "WhatsApp IQONIC",
+        "id": "whatsapp-",
+        "title": "WhatsApp ",
         "url": "https://wa.me/message/5NMUP53HEXVMB1",
         "type": "whatsapp",
-        "page": "/iqonic",
+        "page": "/",
         "section": "Primary CTA",
-        "description": "Contacto direto para informações sobre IQONIC"
+        "description": "Contacto direto para informações sobre "
       },
       {
         "id": "whatsapp-scanners",
@@ -123,40 +123,40 @@
         "description": "Agendar sessão de onboarding personalizado"
       },
       {
-        "id": "iqonic-registration",
-        "title": "Registo IQONIC",
-        "url": "https://iqonic.life/morethanmoney",
+        "id": "-registration",
+        "title": "Registo ",
+        "url": "https://.life/morethanmoney",
         "type": "website",
-        "page": "/iqonic",
+        "page": "/",
         "section": "Secondary CTA",
-        "description": "Registo direto na plataforma IQONIC"
+        "description": "Registo direto na plataforma "
       },
       {
-        "id": "iqonic-academy",
-        "title": "IQonic Academy",
-        "url": "https://iqonic.vip",
+        "id": "-academy",
+        "title": " Academy",
+        "url": "https://.vip",
         "type": "website",
-        "page": "/iqonic",
+        "page": "/",
         "section": "Additional Resources",
-        "description": "Plataforma de cursos IQONIC"
+        "description": "Plataforma de cursos "
       },
       {
-        "id": "iqonic-backoffice",
-        "title": "BackOffice IQONIC",
-        "url": "https://user.iqonic.life",
+        "id": "-backoffice",
+        "title": "BackOffice ",
+        "url": "https://user..life",
         "type": "website",
-        "page": "/iqonic",
+        "page": "/",
         "section": "Additional Resources",
-        "description": "Área de membros IQONIC"
+        "description": "Área de membros "
       },
       {
-        "id": "iqonic-trading",
-        "title": "IQONIC Trading Platform",
-        "url": "https://trading.iqonic.life",
+        "id": "-trading",
+        "title": " Trading Platform",
+        "url": "https://trading..life",
         "type": "website",
         "page": "/swipetotrade",
         "section": "Learn More CTA",
-        "description": "Plataforma de trading IQONIC"
+        "description": "Plataforma de trading "
       },
       {
         "id": "vision-ambition",
