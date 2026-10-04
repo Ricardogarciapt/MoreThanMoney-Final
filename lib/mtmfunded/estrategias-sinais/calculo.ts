@@ -3,7 +3,11 @@
  * puras (com teste em lib/mtmfunded/__tests__/estrategias-sinais.check.ts); os canos estão em
  * ./executar.ts e ./todos-os-sinais.ts.
  *
- * De onde vêm os sinais: do canal PrimeVerse (PѴ TRADE INSIGHTS), lido pelo pv-relay na VPS. Cada
+ * 2026-10-04: a FONTE saiu — o pv-relay foi desligado pelo dono e a rota primeverse-exec devolve 410.
+ * Este módulo fica porque as mestres, a reconstituição e os chats continuam a LER o histórico com ele
+ * (configDoProvider, gestaoDoSinal, estrategiaDoTrader…); o parser abaixo já não recebe mensagens novas.
+ *
+ * De onde VINHAM os sinais: do canal PrimeVerse (PѴ TRADE INSIGHTS), lido pelo pv-relay na VPS. Cada
  * setup diz quem o publicou («🔔 NEW SIGNAL ALERT by fxedge»); os seguimentos (ENTRY HIT, TP HIT,
  * SL → BE, CLOSED, CANCELLED) são RESPOSTAS ao setup. Formatos reais vistos a 15/09 (anonimizados
  * nos testes):

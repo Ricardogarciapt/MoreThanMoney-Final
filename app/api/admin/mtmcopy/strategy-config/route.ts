@@ -105,11 +105,12 @@ export async function GET(request: NextRequest) {
   const authCheck = await requireAdmin(request)
   if (authCheck) return authCheck
 
-  const [switches, intake, primeverse, forexSwings, perpsRules, perpsScore, shadowCfg] = await Promise.all([
+  // 2026-10-04: `primeverse_execution` e `forex_swings_execution` deixaram de ser lidas — as rotas que
+  // as usavam (primeverse-exec / forex-swings-exec) devolvem 410 desde que os relays pv-relay e
+  // fs-relay foram desligados. As chaves ficam na BD como histórico; ninguém as executa.
+  const [switches, intake, perpsRules, perpsScore, shadowCfg] = await Promise.all([
     getExecSwitches(),
     getIntakeSwitches(),
-    readSetting("primeverse_execution"),
-    readSetting("forex_swings_execution"),
     readSetting("perps_gate_rules"),
     readSetting("perps_coin_scorecard"),
     readSetting("sensei_shadow_config"),
@@ -139,8 +140,6 @@ export async function GET(request: NextRequest) {
     ok: true,
     switches,
     intake,
-    primeverse: { mode: (primeverse.mode as string) ?? "off", ...primeverse },
-    forexSwings: { mode: (forexSwings.mode as string) ?? "off", ...forexSwings },
     perpsRules: {
       enabled: perpsRules.enabled === true,
       blacklist: Array.isArray(perpsRules.blacklist) ? perpsRules.blacklist : [],
@@ -210,18 +209,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 2) Modo de execução PrimeVerse / Forex Swings (off | shadow | live)
-  const validMode = (m: unknown): m is string => m === "off" || m === "shadow" || m === "live"
-  if (validMode(body.primeverse_mode)) {
-    const cur = await readSetting("primeverse_execution")
-    await writeSetting("primeverse_execution", { ...cur, mode: body.primeverse_mode }, "Execução PrimeVerse")
-    applied.push("primeverse_mode")
-  }
-  if (validMode(body.forex_swings_mode)) {
-    const cur = await readSetting("forex_swings_execution")
-    await writeSetting("forex_swings_execution", { ...cur, mode: body.forex_swings_mode }, "Execução Forex Swings")
-    applied.push("forex_swings_mode")
-  }
+  // 2) (saiu a 2026-10-04) Os modos de execução PrimeVerse / Forex Swings: as fontes acabaram com os
+  //    relays; um pedido com `primeverse_mode`/`forex_swings_mode` é ignorado em vez de gravar um modo
+  //    que nada lê.
 
   // 3) Regras do gate de perps (cap SL, cooldown, funding, blacklist) — afináveis sem redeploy
   if (body.perps_rules && typeof body.perps_rules === "object") {

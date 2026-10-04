@@ -14,9 +14,9 @@
  * passava para cá sem ninguém dar por isso. Foi também o que o dono pediu, à letra: «flyer por IA
  * gratuita».
  *
- * O TEXTO é a excepção, e é uma excepção pensada. A descrição escreve-se com o Claude, que é pago
- * e é da casa. Sai barato (algumas centenas de tokens por descrição, umas décimas de cêntimo) e
- * não há alternativa gratuita que escreva português europeu decente — e uma descrição má é a
+ * O TEXTO é a excepção, e é uma excepção pensada. A descrição escreve-se pela porta única da IA
+ * (`chamarIA`: Groq → Gemini → Ollama → OpenAI → Anthropic — grátis primeiro, pagos só em
+ * reserva). Sai barato (algumas centenas de tokens por descrição) e uma descrição má é a
  * diferença entre um produto que vende e um que fica na prateleira. Em troca, o portão é estreito:
  * só um educador autenticado ou um admin chega aqui, e só para produtos que são dele.
  *
@@ -28,7 +28,7 @@
  * sai é revisto por um humano antes de publicar (o produto nasce em rascunho e passa por revisão).
  */
 
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { gerarImagemGratis } from '@/lib/mtmsocial/imagens-gratis'
 import { uploadBufferToBucket } from '@/lib/instagram/publish'
 import { nomeDaCategoria } from './regras'
@@ -65,17 +65,14 @@ export type PedidoDescricao = {
 export type DescricaoGerada = { subtitulo: string; descricao: string }
 
 /**
- * Pede ao Claude a descrição.
+ * Pede a descrição à IA.
  *
- * O `fetch` directo com `AbortController` é o padrão da casa (ver
- * `app/api/admin/social/estudio/route.ts`): o SDK só é usado em dois sítios, e um timeout explícito
- * importa mais aqui do que a ergonomia — um educador à espera de um botão que nunca responde
- * fecha a página e acha que o estúdio está avariado.
+ * Vai por `chamarIA`, que já traz tecto por fornecedor — um educador à espera de um botão que
+ * nunca responde fecha a página e acha que o estúdio está avariado. Quando a cadeia inteira falha,
+ * lança um `Error` com a frase honesta (quem chama mostra `e.message`), nunca o JSON cru de um
+ * fornecedor.
  */
 export async function gerarDescricao(p: PedidoDescricao): Promise<DescricaoGerada> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) throw new Error('A geração por IA não está configurada (ANTHROPIC_API_KEY em falta).')
-
   const partes = [
     `Título do produto: ${p.titulo}`,
     `Categoria: ${nomeDaCategoria(p.tipo)}`,
@@ -84,31 +81,20 @@ export async function gerarDescricao(p: PedidoDescricao): Promise<DescricaoGerad
     p.notas?.trim() ? `Notas do autor (factos que PODES usar):\n${p.notas.trim().slice(0, 1000)}` : null,
   ].filter(Boolean)
 
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), 45_000)
+  let texto: string
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
-        max_tokens: 1200,
-        system: SISTEMA,
-        messages: [{ role: 'user', content: partes.join('\n\n') }],
-      }),
-      signal: ctrl.signal,
+    const r = await chamarIA({
+      tarefa: 'marketplace-descricao',
+      sistema: SISTEMA,
+      mensagens: [{ role: 'user', content: partes.join('\n\n') }],
+      maxTokens: 1200,
+      preferencia: 'qualidade',
     })
-    if (!r.ok) throw new Error(`Anthropic ${r.status}: ${(await r.text()).slice(0, 200)}`)
-    const j = await r.json()
-    const texto = ((j?.content ?? []) as { type: string; text?: string }[])
-      .filter((c) => c.type === 'text')
-      .map((c) => c.text ?? '')
-      .join('')
-      .trim()
-    return separar(texto)
-  } finally {
-    clearTimeout(timer)
+    texto = r.texto.trim()
+  } catch (e) {
+    throw new Error(mensagemIndisponivel(e))
   }
+  return separar(texto)
 }
 
 /**

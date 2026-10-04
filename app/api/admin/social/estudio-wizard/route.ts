@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { uploadBufferToBucket } from '@/lib/instagram/publish'
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, ErroIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -61,44 +61,26 @@ REGRAS DURAS:
 · NUNCA prometas lucro, retorno ou resultado. NUNCA inventes números, percentagens ou datas.
 · Sem emojis, sem hashtags, sem aspas dentro do texto.`
 
+/** O plano, pela porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic). */
 async function planear(tema: string, quantas: number): Promise<Plano> {
-  const chave = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!chave) throw new Error('ANTHROPIC_API_KEY em falta')
-
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': chave, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({
-      model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
-      max_tokens: 2000,
-      // O Sonnet 5 pensa por omissão e o pensamento come o max_tokens: a resposta vinha
-      // cortada ou vazia. Isto é trabalho de formato, não de raciocínio.
-      thinking: { type: 'disabled' },
-      system: SISTEMA,
-      messages: [
-        {
-          role: 'user',
-          content: tema
-            ? `Tema: ${tema}\nLâminas do meio: ${quantas}`
-            : `Escolhe tu o tema, dentro do que a More Than Money ensina: mentalidade, ` +
-              `disciplina, gestão de risco, os erros comuns de quem começa.\nLâminas do meio: ${quantas}`,
-        },
-      ],
-    }),
-    signal: AbortSignal.timeout(90_000),
+  const r = await chamarIA({
+    tarefa: 'social-estudio-wizard',
+    maxTokens: 2000,
+    json: true,
+    preferencia: 'qualidade',
+    sistema: SISTEMA,
+    mensagens: [
+      {
+        role: 'user',
+        content: tema
+          ? `Tema: ${tema}\nLâminas do meio: ${quantas}`
+          : `Escolhe tu o tema, dentro do que a More Than Money ensina: mentalidade, ` +
+            `disciplina, gestão de risco, os erros comuns de quem começa.\nLâminas do meio: ${quantas}`,
+      },
+    ],
   })
-  if (!r.ok) throw new Error(`Anthropic ${r.status}: ${(await r.text()).slice(0, 200)}`)
 
-  const j = await r.json()
-  const bruto = ((j?.content ?? []) as Array<{ type: string; text?: string }>)
-    .filter((x) => x.type === 'text')
-    .map((x) => x.text ?? '')
-    .join('')
-    .trim()
-  // O modelo às vezes embrulha o JSON em ```json apesar de lhe dizerem que não.
-  const limpo = bruto.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
-
-  const p = JSON.parse(limpo) as Partial<Plano>
+  const p = JSON.parse(r.texto) as Partial<Plano>
   if (!p.hook || !Array.isArray(p.laminas) || p.laminas.length < 2) {
     throw new Error('o plano veio incompleto')
   }
@@ -203,9 +185,8 @@ export async function POST(req: NextRequest) {
       passos,
     })
   } catch (e) {
-    return NextResponse.json(
-      { ok: false, erro: e instanceof Error ? e.message : 'o assistente falhou', passos },
-      { status: 500 },
-    )
+    // A IA sem resposta diz-se com a frase honesta da cadeia; o resto (desenho, upload) com a sua.
+    const erro = e instanceof ErroIA ? mensagemIndisponivel(e) : e instanceof Error ? e.message : 'o assistente falhou'
+    return NextResponse.json({ ok: false, erro, passos }, { status: e instanceof ErroIA ? 503 : 500 })
   }
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/supabase"
-import { modelCandidates } from "@/lib/mtm-terminal-analysis"
+import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
 import { userIdDoPedido } from "@/lib/sessao-do-pedido"
 import { alertaDeSinalPago } from "@/lib/direito-sinais"
 import { temDireitoSinaisPagosUtilizador } from "@/lib/direito-sinais-servidor"
@@ -74,31 +74,26 @@ function buildPrompt(row: Record<string, any>): string {
   return `Faz a gestão desta trade:\n\n${lines.join("\n")}`
 }
 
-async function generate(prompt: string): Promise<{ text: string; model: string } | null> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) return null
-  for (const model of modelCandidates()) {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({
-        model,
-        max_tokens: 700,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: prompt }],
-      }),
+/**
+ * Porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic). A rotação de modelos da
+ * Anthropic que aqui vivia (`modelCandidates`) passou a ser trabalho do núcleo. `model` leva
+ * «fornecedor/modelo» para a app continuar a mostrar quem respondeu.
+ */
+async function generate(prompt: string): Promise<{ text: string; model: string } | { erro: string }> {
+  try {
+    const r = await chamarIA({
+      tarefa: 'mtm-alerts-gestao',
+      sistema: SYSTEM_PROMPT,
+      mensagens: [{ role: "user", content: prompt }],
+      maxTokens: 700,
+      preferencia: 'qualidade',
     })
-    if (!resp.ok) {
-      const body = await resp.text()
-      if (resp.status === 404 || body.toLowerCase().includes("not_found") || body.toLowerCase().includes("model:")) continue
-      return null
-    }
-    const json = await resp.json()
-    const block = (json.content ?? []).find((b: { type: string }) => b.type === "text")
-    const text = (block?.text ?? "").trim()
-    if (text) return { text, model }
+    const text = r.texto.trim()
+    if (!text) return { erro: 'A IA não devolveu nada.' }
+    return { text, model: `${r.fornecedor}/${r.modelo}` }
+  } catch (e) {
+    return { erro: mensagemIndisponivel(e) }
   }
-  return null
 }
 
 export async function POST(request: NextRequest) {
@@ -146,11 +141,8 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await generate(buildPrompt(row))
-    if (!result) {
-      return NextResponse.json(
-        { error: "Gestão IA indisponível de momento. Tenta novamente." },
-        { status: 503 }
-      )
+    if ('erro' in result) {
+      return NextResponse.json({ error: result.erro }, { status: 503 })
     }
 
     // Guarda para reutilização (best-effort)

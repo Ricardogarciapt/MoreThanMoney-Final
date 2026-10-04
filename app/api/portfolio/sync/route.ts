@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Client } from '@notionhq/client'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 // Inicializar cliente do Notion
 const notion = new Client({ 
@@ -123,37 +124,24 @@ async function getStockPrice(symbol: string): Promise<number | null> {
   }
 }
 
-// Função para buscar preço via OpenAI (fallback)
-async function getPriceViaOpenAI(symbol: string, category: string): Promise<number | null> {
+// Função para buscar preço via IA (fallback) — porta única `chamarIA`
+async function getPriceViaIA(symbol: string, category: string): Promise<number | null> {
   try {
-    const openaiKey = process.env.OPENAI_API_KEY?.trim()
-    if (!openaiKey) return null
-
     const prompt = `What is the current market price of ${symbol} (${category})? Respond ONLY with the numeric price in USD, no other text.`
-    
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1,
-        max_tokens: 50
-      })
+
+    const r = await chamarIA({
+      tarefa: 'portfolio-preco-fallback',
+      mensagens: [{ role: 'user', content: prompt }],
+      temperatura: 0.1,
+      maxTokens: 50,
+      preferencia: 'rapido',
     })
 
-    if (!response.ok) return null
+    const price = parseFloat(r.texto.trim().replace(/[^0-9.]/g, ''))
 
-    const data = await response.json()
-    const priceText = data.choices?.[0]?.message?.content?.trim()
-    const price = parseFloat(priceText?.replace(/[^0-9.]/g, ''))
-    
     return isNaN(price) ? null : price
   } catch (error) {
-    console.error(`Erro ao buscar preço via OpenAI para ${symbol}:`, error)
+    console.error(`Erro ao buscar preço via IA para ${symbol}:`, mensagemIndisponivel(error))
     return null
   }
 }
@@ -174,8 +162,8 @@ async function getAssetPrice(symbol: string, category: string): Promise<number |
     if (price) return price
   }
 
-  // Fallback para OpenAI
-  price = await getPriceViaOpenAI(symbol, category)
+  // Fallback para a IA
+  price = await getPriceViaIA(symbol, category)
   
   return price
 }

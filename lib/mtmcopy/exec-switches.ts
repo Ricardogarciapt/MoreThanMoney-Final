@@ -24,8 +24,8 @@ export interface ExecSwitches {
    *  o ciclo de vida (Entry Hit → parcial → BE → fecho c/ resultado) no chat + Telegram dos perps.
    *  Só NOTIFICA (as saídas já são nativas da Bybit). Default ON. */
   perps_position_monitor: boolean
-  /** Fecho automático das ordens T2T dos SEGUIDORES quando a fonte fecha/cancela (PrimeVerse,
-   *  Premium, Sensei, GoldKiller, Forex Swings). Kill-switch único. Default ON. */
+  /** Fecho automático das ordens T2T dos SEGUIDORES quando a fonte fecha/cancela (Premium, Sensei,
+   *  GoldKiller — e qualquer outra fonte T2T que publique fechos). Kill-switch único. Default ON. */
   t2t_auto_close: boolean
   /** Fluxo do Premium para a CONTA MESTRE (real). OFF = Premium passa a SEMI-AUTOMÁTICO: o sinal do
    *  Telegram/chat vai DIRETO para a conta de cada subscritor (execução direta), sem conta mestre nem

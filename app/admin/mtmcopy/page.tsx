@@ -173,7 +173,7 @@ function PaginaAdminCopia() {
                     <Recolhivel titulo="Fontes · estado real" descricao="Cada estratégia, a conta que a publica e o que a MetaApi diz sobre ela.">
                       <MtmcopyFontesVivas />
                     </Recolhivel>
-                    <Recolhivel titulo="Controlo das estratégias" descricao="On/off por estratégia (com o estado no motor das mestres), modo Forex Swings, limites dos perps, trailing e desempenho.">
+                    <Recolhivel titulo="Controlo das estratégias" descricao="On/off por estratégia (com o estado no motor das mestres), limites dos perps, trailing e desempenho.">
                       <div className="space-y-6"><MtmcopyStrategyControl /><EstrategiasDesempenho /><EquidadeCasaCard /><TrailingEstrategias /></div>
                     </Recolhivel>
                     <Recolhivel titulo="Saúde das ligações (regras de risco)" descricao="Multiplicador sem risco, T2T com grupos, sem baseline, MT5 em erro.">

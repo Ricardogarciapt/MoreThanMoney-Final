@@ -1,14 +1,16 @@
 /**
  * ALLOWLIST + REGISTO de FONTES do Tap to Trade — módulo PURO (sem imports de servidor) para ser
  * partilhado pelo cliente (chat-channels.tsx, tap-to-trade-feed.tsx) E pelo servidor (accept do T2T),
- * sem dessincronizar. Pedido do Ricardo (2026-08-06): SÓ Premium, Sensei, James (Forex Swings),
- * PrimeVerse e Aurum Flow (ORB) são negociáveis — senão o T2T fica poluído com ecos do master-poll de
- * todos os providers, alertas MTM Scanner, GoldKiller, etc. Como vários canais são PARTILHADOS, o
- * filtro é por FONTE (assinatura no conteúdo/canal), não só por canal.
+ * sem dessincronizar. Pedido do Ricardo (2026-08-06): SÓ Premium, Sensei, Forex Swings, PrimeVerse
+ * e Aurum Flow (ORB) eram negociáveis — senão o T2T fica poluído com ecos do master-poll de todos os
+ * providers, alertas MTM Scanner, GoldKiller, etc. Como vários canais são PARTILHADOS, o filtro é
+ * por FONTE (assinatura no conteúdo/canal), não só por canal.
  *  - Premium      → canal 'premium-ideas'
  *  - Sensei       → canal 'sensei-scanner' (com o gate próprio de entrada validada, à parte)
- *  - James/Swings → marcador '🌊 Forex Swings' (canal 'ideias-e-sinais')
- *  - PrimeVerse   → marcador '📡 PrimeVerse' (canais partilhados por classe de ativo)
+ *  - Forex Swings → marcador '🌊 Forex Swings' (canal 'ideias-e-sinais'); a FONTE externa saiu a
+ *                   04/10/2026 (relay desligado) — a chave `james` fica só para LER o histórico
+ *  - PrimeVerse   → marcador '📡 PrimeVerse' / etiqueta «MTM Auto Edge» (fonte saiu a 04/10/2026;
+ *                   a chave fica para ler o histórico do canal `sinais-scanner-mtm`)
  *  - Aurum Flow   → marcador 'Aurum Flow' / 'ORB' (scanner ORB de PERPÉTUOS CRIPTO)
  *
  * NOVO (2026-08-06): cada user pode ESCOLHER que fontes/classes de ativo seguir (prefs na conta T2T).
@@ -34,10 +36,13 @@ export const T2T_SOURCES: { key: T2TSourceKey; label: string; hint: string }[] =
   { key: 'goldkiller', label: 'GoldKiller', hint: 'Scanner GoldKiller (ouro)' },
   { key: 'mtmscanner', label: 'MTM Scanner', hint: 'Scanner geral MTM' },
   { key: 'forexideas', label: 'Ideias de Forex', hint: 'Sinais do canal Ideias de Forex' },
-  { key: 'james', label: 'Forex Swings', hint: 'Swings de forex (James)' },
+  // `james` (Forex Swings) SAIU do catálogo a 2026-10-04: a fonte externa acabou com o relay e não se
+  // oferece a ninguém. A chave continua no tipo e em `t2tSourceKey` porque há mensagens publicadas
+  // com ela em `ideias-e-sinais` e quem tiver uma posição aberta tem de a poder fechar.
   // A chave interna continua 'primeverse' (gravada em t2t_sources dos clientes); o que se MOSTRA
   // é a estratégia MTM Auto — o nome da fonte externa não aparece em lado nenhum. A Wolf e a King
-  // saíram das listas vivas; sobra a Edge.
+  // saíram das listas vivas; sobra a Edge (a fonte dela saiu a 04/10, mas a estratégia e o canal
+  // `sinais-scanner-mtm` são da casa e continuam a ler-se).
   { key: 'primeverse', label: 'MTM Auto Edge', hint: 'Estratégia Edge (fxEdge)' },
   // A Aurum Flow passou a ser SÓ cripto — deixou de ser «ouro e perpétuos».
   { key: 'aurum', label: 'Aurum Flow Cripto', hint: 'Perpétuos cripto (Aurum Flow ORB)' },
@@ -105,8 +110,8 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
  *
  * FORA: `james` (Forex Swings). É swing de vários dias e a regra dele é explícita — sem trailing,
  * ver [[trading-execution-rules]]: um stop a seguir o preço tirava-o da trade no primeiro recuo
- * normal de um swing. As "Ideias de Forex" (`forexideas`, canal próprio no Telegram) NÃO são o
- * James e ficam DENTRO, a pedido do Ricardo.
+ * normal de um swing. As "Ideias de Forex" (`forexideas`, canal próprio no Telegram) NÃO são
+ * Forex Swings e ficam DENTRO, a pedido do Ricardo.
  */
 const T2T_FONTES_SEM_TRAILING = new Set<T2TSourceKey>(['james'])
 

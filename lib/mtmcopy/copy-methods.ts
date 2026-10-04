@@ -48,13 +48,14 @@ export const MTMCOPY_TELEGRAM_GROUP_IDS: MtmcopyTelegramGroup[] = [
   'premium',
   'sensei',
   'trade_ideas',
-  'forex_swings',
+  // `forex_swings` saiu da oferta a 2026-10-04: a fonte externa (fs-relay) foi desligada pelo dono e o
+  // grupo deixou de receber sinais. A chave fica no tipo e nos rótulos para ler ligações antigas.
   'goldkiller',
   'aurum_flow',
 ]
 
 /** Grupo de sinais → estratégia CopyFactory canónica (fonte real da cópia).
- *  Forex Swings executa na MESMA conta mestre Forex (fbeeafeb / 5IHE) — comentário «Forex Swings». */
+ *  `forex_swings` (fonte que saiu a 04/10/2026) aponta à mesma conta mestre Forex, só para ler ligações antigas. */
 export const TELEGRAM_GROUP_STRATEGY_ID: Record<MtmcopyTelegramGroup, string> = {
   premium: CANONICAL_PREMIUM_STRATEGY_ID,
   trade_ideas: CANONICAL_TRADE_IDEAS_STRATEGY_ID,
@@ -135,14 +136,7 @@ export const TELEGRAM_GROUPS: {
       'Sinais intraday e swing em pares forex. Set & forget com gestão de risco e trailing automático.',
     chatId: '-1003716578747',
   },
-  {
-    id: 'forex_swings',
-    channelKey: 'trade-ideas',
-    title: 'Forex Swings',
-    description:
-      'Sinais swing de forex (maioritariamente set & forget), com trailing automático e cópia automática na tua conta.',
-    chatId: '-1004362819270',
-  },
+  // O cartão «Forex Swings» saiu a 2026-10-04 (fonte desligada); ver MTMCOPY_TELEGRAM_GROUP_IDS.
   {
     id: 'aurum_flow',
     channelKey: 'premium-signals',

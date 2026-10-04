@@ -5,7 +5,7 @@ import type { Funil, NoDoFunil, TipoDeNo } from "@/lib/funis"
 // Os preços e a regra do bónus vêm da fonte única. Este ficheiro ainda dizia «300 $» meses
 // depois de o depósito mínimo ter passado a 350 — e a IA desenhava funis com o número errado.
 import { escadaNumaLinha, bonusNumaLinha } from "@/lib/escada-precos"
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -50,9 +50,6 @@ export async function POST(req: NextRequest) {
   const { pedido, existente } = (await req.json().catch(() => ({}))) as { pedido?: string; existente?: Funil }
   if (!pedido?.trim()) return NextResponse.json({ ok: false, erro: "Falta o pedido" }, { status: 400 })
 
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) return NextResponse.json({ ok: false, erro: "Sem chave da IA" }, { status: 400 })
-
   const sistema =
     `Desenhas funis para a MoreThanMoney, comunidade portuguesa de trading.\n\n` +
     `Devolves APENAS JSON, sem texto à volta e sem blocos de código. Formato:\n` +
@@ -77,30 +74,19 @@ export async function POST(req: NextRequest) {
     : `Pedido: ${pedido}`
 
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({
-        model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
-        max_tokens: 4000,
-        system: sistema,
-        messages: [{ role: "user", content: utilizador }],
-      }),
-      signal: AbortSignal.timeout(55_000),
+    // Porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic). Com `json: true` o núcleo
+    // já tira as cercas de código e garante que `texto` é JSON — senão passa ao fornecedor seguinte.
+    const r = await chamarIA({
+      tarefa: 'social-funil-ia',
+      sistema,
+      mensagens: [{ role: "user", content: utilizador }],
+      maxTokens: 4000,
+      json: true,
+      preferencia: 'qualidade',
     })
-    const j = await r.json()
-    const texto = ((j?.content ?? []) as { type: string; text?: string }[])
-      .filter((x) => x.type === "text")
-      .map((x) => x.text ?? "")
-      .join("")
-      .trim()
-
-    // Às vezes vem com cerca de código à volta, mesmo pedindo que não. Tirar isso é mais barato
-    // do que recusar e pedir outra vez.
-    const limpo = texto.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim()
     let funil: Funil
     try {
-      funil = JSON.parse(limpo) as Funil
+      funil = JSON.parse(r.texto) as Funil
     } catch {
       return NextResponse.json({ ok: false, erro: "A IA não devolveu JSON válido" }, { status: 502 })
     }
@@ -125,6 +111,6 @@ export async function POST(req: NextRequest) {
     // Os problemas vão junto: um desenho gerado que ninguém verificou é uma promessa por cumprir.
     return NextResponse.json({ ok: true, funil, problemas: problemasDoFunil(funil.nos) })
   } catch (e) {
-    return NextResponse.json({ ok: false, erro: e instanceof Error ? e.message : "erro" }, { status: 502 })
+    return NextResponse.json({ ok: false, erro: mensagemIndisponivel(e) }, { status: 503 })
   }
 }

@@ -50,12 +50,15 @@ export type ChaveFonte = 'premium' | 'primeverse' | 'sensei' | 'goldkiller' | 'm
 
 export const FONTES: { chave: ChaveFonte; nome: string; nota: string; limiteSilencioMin: number | null }[] = [
   { chave: 'premium', nome: 'Premium (relay SME)', nota: 'Telegram → relay-post → execução/CopyFactory', limiteSilencioMin: null },
-  { chave: 'primeverse', nome: 'PrimeVerse', nota: 'pv-relay → primeverse-exec', limiteSilencioMin: null },
+  // 2026-10-04: a fonte PrimeVerse acabou (pv-relay desligado; primeverse-exec devolve 410). A linha fica,
+  // renomeada, porque `fonteDoCanal` continua a devolver `primeverse` para o histórico do canal «MTM Auto
+  // Edge» e o painel precisa de um nome para o mostrar — mas já não é uma fonte a vigiar.
+  { chave: 'primeverse', nome: 'MTM Auto Edge (histórico)', nota: 'fonte externa desligada a 04/10/2026', limiteSilencioMin: null },
   { chave: 'sensei', nome: 'Sensei (TradingView)', nota: 'webhook TradingView', limiteSilencioMin: null },
   { chave: 'goldkiller', nome: 'GoldKiller', nota: 'webhook TradingView', limiteSilencioMin: null },
   { chave: 'mtmscanner', nome: 'MTM Scanner', nota: 'webhook TradingView', limiteSilencioMin: 240 },
   { chave: 'aurum', nome: 'Aurum Flow / perps', nota: 'webhook TradingView → Bybit', limiteSilencioMin: null },
-  { chave: 'forex', nome: 'Forex (ideias/swings)', nota: 'Telegram / fs-relay', limiteSilencioMin: null },
+  { chave: 'forex', nome: 'Forex (ideias/swings)', nota: 'Telegram', limiteSilencioMin: null },
   { chave: 't2t', nome: 'Tap to Trade', nota: 'aceitações dos clientes', limiteSilencioMin: null },
   { chave: 'mtmauto', nome: 'MTM Auto (motor)', nota: 'mtmauto_signals → execuções', limiteSilencioMin: null },
 ]

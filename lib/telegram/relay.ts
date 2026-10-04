@@ -32,10 +32,11 @@ const DEFAULTS: RelayConfig = {
   enabled: false,
   source_chat_id: "-1002424441843",
   target_chat_id: "-1004343748070",
-  // Marca do parceiro = "Gold Did" (NÃO "Wifi Money") e SEM assinatura "— Alcy"/"— …".
-  // A config viva (site_settings.telegram_relay_alcy) já reflete isto; estes defaults ficam alinhados.
+  // Marca do parceiro SEM assinatura "— Alcy"/"— …". Até 2026-10-04 o default era a marca da
+  // fonte de então ("Gold Did"); essa fonte saiu e o relay está desligado desde 20/08 — o default
+  // passa a ser a marca da casa. A config viva (site_settings.telegram_relay_alcy) manda sempre.
   signature: "",
-  header: "🟡 Gold Did",
+  header: "🏦 MTM Premium",
   bot_token_env: "TELEGRAM_WIFIMONEY_TOKEN",
   relay_photos: true,
   skip_new_position: false,
@@ -43,8 +44,8 @@ const DEFAULTS: RelayConfig = {
 
 /** Aplica cabeçalho de marca + sanitização + assinatura. */
 function brandForPartner(text: string | null | undefined, cfg: RelayConfig): string {
-  // Marca usada nas substituições: assinatura, senão o texto do header (sem emojis), senão "Gold Did".
-  const brandWord = cfg.signature.trim() || cfg.header.replace(/[^\p{L}\p{N} ]+/gu, "").trim() || "Gold Did"
+  // Marca usada nas substituições: assinatura, senão o texto do header (sem emojis), senão "MTM Premium".
+  const brandWord = cfg.signature.trim() || cfg.header.replace(/[^\p{L}\p{N} ]+/gu, "").trim() || "MTM Premium"
   let body = sanitizeForAlcy(text, cfg.signature, brandWord)
   // Remove o cabeçalho de marca original (linha a começar por 🏦, ex.: "🏦 MTM Premium")
   // para não duplicar com o header do parceiro.
@@ -90,7 +91,7 @@ export function sanitizeForAlcy(input: string | null | undefined, signature: str
   t = t.replace(/\bt\.me\/mtmgold\b/gi, "")
 
   // 2) Substituir menções à marca/autor pela marca do parceiro (case-insensitive).
-  const brand = (brandOverride && brandOverride.trim()) || signature || "Gold Did"
+  const brand = (brandOverride && brandOverride.trim()) || signature || "MTM Premium"
   const replacements: [RegExp, string][] = [
     [/more\s*than\s*money\s*premium\s*signals/gi, brand],
     [/more\s*than\s*money/gi, brand],
@@ -167,7 +168,7 @@ async function sendPhotoVia(
 /**
  * Relay de TEXTO enviado PELO SITE (bot-posted) para o canal do parceiro. O webhook NÃO
  * entrega ao bot as suas próprias mensagens, por isso este caminho cobre tudo o que o
- * MoreThanMoney_bot publica na Premium (relay Gold Did, sinais Premium…). Best-effort.
+ * MoreThanMoney_bot publica na Premium (relay do Signal Master Elite, sinais Premium…). Best-effort.
  * `sourceChatId` opcional: se vier, só relaya quando for o canal-fonte configurado.
  */
 export async function relayTextToWifi(

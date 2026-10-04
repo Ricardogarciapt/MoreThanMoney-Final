@@ -38,7 +38,7 @@ Execution rules (automated provider — MTM Auto / CopyFactory strategy):
   entries are the source's manual method; the automated leg enters once at the favourable edge.)
 - Partial closes 33/33/34% on HIT TP1 / HIT TP2 / HIT TP3; runner beyond TP3 trails toward TP4.
 - After HIT TP1: break-even + trailing stop that follows price from TP1.
-- Default risk: 0.5% per trade on provider account (Gold Did follows Premium; keeps its own branding).
+- Default risk: 0.5% per trade on provider account.
 - Zone signals = market entry at zone edge; when the zone-entry engine is live, hold pending until the
   in-zone reaction triggers.
 

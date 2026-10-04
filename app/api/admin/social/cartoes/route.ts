@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { renderCarrossel, renderSocialCardBuffer, type Lamina, type SocialCardParams } from "@/lib/social-card"
 import { uploadBufferToBucket } from "@/lib/instagram/publish"
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -18,43 +18,37 @@ export const maxDuration = 120
 
 const MIN_LAMINAS = 6
 
-/** Escreve as lâminas do carrossel, quando não vêm escritas. */
-async function escreverLaminas(tema: string, cta: string, quantas: number): Promise<string[] | null> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) return null
+/**
+ * Escreve as lâminas do carrossel, quando não vêm escritas.
+ *
+ * Vai pela porta única da IA (`chamarIA`: Groq → Gemini → Ollama → OpenAI → Anthropic). Quando
+ * falha, devolve a mensagem honesta da cadeia — quem chamou mostra-a, em vez de um «só consegui
+ * 0 lâminas» que não diz porquê.
+ */
+async function escreverLaminas(tema: string, cta: string, quantas: number): Promise<{ textos: string[] } | { erro: string }> {
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({
-        model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
-        max_tokens: 1200,
-        // O Sonnet 5 pensa por omissão e o pensamento come o max_tokens: a resposta vinha
-        // cortada ou vazia. Isto é trabalho de formato, não de raciocínio.
-        thinking: { type: 'disabled' },
-        system:
-          "Escreves carrosséis de Instagram para o Ricardo Garcia (MoreThanMoney, trading).\n\n" +
-          "Devolves APENAS JSON: {\"capa\":\"...\",\"meio\":[\"...\",\"...\"],\"fim\":\"...\"}\n\n" +
-          "· A CAPA tem de parar o dedo: no máximo 6 palavras, sem ponto final.\n" +
-          "· Cada lâmina do MEIO é UMA ideia, 12 a 25 palavras. Uma ideia por lâmina — duas " +
-          "juntas fazem a pessoa deslizar sem ler.\n" +
-          "· A do FIM pede a acção, no máximo 8 palavras.\n" +
-          "· Português de Portugal, tratamento por tu, primeira pessoa (é ELE que fala).\n" +
-          "· NUNCA prometas lucro. NUNCA inventes números, percentagens ou resultados.\n" +
-          "· Sem emojis, sem hashtags, sem aspas dentro do texto.",
-        messages: [{ role: "user", content: `Tema: ${tema}\nPalavra do CTA: ${cta || "(nenhuma)"}\nLâminas do meio: ${quantas}` }],
-      }),
-      signal: AbortSignal.timeout(50_000),
+    const r = await chamarIA({
+      tarefa: 'social-cartoes',
+      maxTokens: 1200,
+      json: true,
+      preferencia: 'qualidade',
+      sistema:
+        "Escreves carrosséis de Instagram para o Ricardo Garcia (MoreThanMoney, trading).\n\n" +
+        "Devolves APENAS JSON: {\"capa\":\"...\",\"meio\":[\"...\",\"...\"],\"fim\":\"...\"}\n\n" +
+        "· A CAPA tem de parar o dedo: no máximo 6 palavras, sem ponto final.\n" +
+        "· Cada lâmina do MEIO é UMA ideia, 12 a 25 palavras. Uma ideia por lâmina — duas " +
+        "juntas fazem a pessoa deslizar sem ler.\n" +
+        "· A do FIM pede a acção, no máximo 8 palavras.\n" +
+        "· Português de Portugal, tratamento por tu, primeira pessoa (é ELE que fala).\n" +
+        "· NUNCA prometas lucro. NUNCA inventes números, percentagens ou resultados.\n" +
+        "· Sem emojis, sem hashtags, sem aspas dentro do texto.",
+      mensagens: [{ role: "user", content: `Tema: ${tema}\nPalavra do CTA: ${cta || "(nenhuma)"}\nLâminas do meio: ${quantas}` }],
     })
-    const j = await r.json()
-    const bruto = ((j?.content ?? []) as { type: string; text?: string }[])
-      .filter((x) => x.type === "text").map((x) => x.text ?? "").join("").trim()
-    const limpo = bruto.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim()
-    const o = JSON.parse(limpo) as { capa?: string; meio?: string[]; fim?: string }
-    if (!o.capa || !Array.isArray(o.meio)) return null
-    return [o.capa, ...o.meio, o.fim ?? "Comenta abaixo"]
-  } catch {
-    return null
+    const o = JSON.parse(r.texto) as { capa?: string; meio?: string[]; fim?: string }
+    if (!o.capa || !Array.isArray(o.meio)) return { erro: `a IA (${r.fornecedor}) respondeu sem capa ou sem lâminas do meio` }
+    return { textos: [String(o.capa), ...o.meio.map(String), String(o.fim ?? "Comenta abaixo")] }
+  } catch (e) {
+    return { erro: mensagemIndisponivel(e) }
   }
 }
 
@@ -152,14 +146,21 @@ export async function POST(req: NextRequest) {
   const quantas = Math.max(MIN_LAMINAS, Math.min(Number(corpo.laminas) || MIN_LAMINAS, 10))
 
   let textos = (corpo.textos ?? []).map((t) => String(t).trim()).filter(Boolean)
+  let erroDaIA: string | null = null
   if (textos.length < quantas) {
     const escritas = await escreverLaminas(corpo.hook || "", corpo.cta || "", quantas - 2)
-    if (escritas) textos = escritas
+    if ('textos' in escritas) textos = escritas.textos
+    else erroDaIA = escritas.erro
   }
   if (textos.length < MIN_LAMINAS) {
     return NextResponse.json(
-      { ok: false, erro: `Só consegui ${textos.length} lâminas e o mínimo é ${MIN_LAMINAS}. Escreve-as ou tenta outra vez.` },
-      { status: 400 },
+      {
+        ok: false,
+        erro:
+          `Só consegui ${textos.length} lâminas e o mínimo é ${MIN_LAMINAS}. Escreve-as ou tenta outra vez.` +
+          (erroDaIA ? ` (${erroDaIA})` : ''),
+      },
+      { status: erroDaIA ? 502 : 400 },
     )
   }
 

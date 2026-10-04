@@ -21,7 +21,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCapacidade } from '@/lib/backoffice-sessao'
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { getPipsProof, provaParaLead, notaViesPreco, publicavel, RESSALVA_LEGAL } from '@/lib/pips-proof'
 import {
   enquadramentoDaMarca,
@@ -49,33 +49,16 @@ function travar(userId: string): string | null {
   return null
 }
 
+/** Porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic); a revisão a seguir é que decide se sai. */
 async function pedirAoModelo(sistema: string, pedido: string, limite: number): Promise<string> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) throw new Error('Falta a chave da IA no servidor.')
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), 30000)
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: modeloClaude(process.env.BACKOFFICE_MATERIAL_MODEL),
-        max_tokens: Math.max(400, Math.ceil(limite / 2)),
-        system: sistema,
-        messages: [{ role: 'user', content: pedido }],
-      }),
-      signal: ctrl.signal,
-    })
-    if (!res.ok) throw new Error(`A IA respondeu ${res.status}.`)
-    const data = await res.json()
-    return ((data?.content ?? []) as Array<{ type?: string; text?: string }>)
-      .filter((p) => p?.type === 'text')
-      .map((p) => p.text || '')
-      .join('')
-      .trim()
-  } finally {
-    clearTimeout(timer)
-  }
+  const r = await chamarIA({
+    tarefa: 'backoffice-material',
+    sistema,
+    mensagens: [{ role: 'user', content: pedido }],
+    maxTokens: Math.max(400, Math.ceil(limite / 2)),
+    preferencia: 'qualidade',
+  })
+  return r.texto.trim()
 }
 
 export async function POST(request: NextRequest) {
@@ -137,7 +120,7 @@ export async function POST(request: NextRequest) {
       revisao = revistarMaterial(texto, permitidos)
     }
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Não consegui gerar.' }, { status: 502 })
+    return NextResponse.json({ error: mensagemIndisponivel(e) }, { status: 503 })
   }
 
   if (!revisao.aprovado) {

@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { EMOJIS_PERMITIDOS, lerEnfase, type Enfase } from './estilos'
 
 /**
@@ -163,9 +163,6 @@ export async function analisarTranscricao(input: {
   titulo?: string | null
   quantos?: number
 }): Promise<ClipeProposto[]> {
-  const chave = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!chave) throw new Error('ANTHROPIC_API_KEY em falta')
-
   const texto = transcricaoParaTexto(input.palavras)
   if (texto.length < 200) throw new Error('transcrição demasiado curta para analisar')
 
@@ -179,33 +176,22 @@ export async function analisarTranscricao(input: {
     `Escolhe os ${quantos} melhores momentos. Palavras de CTA disponíveis: ${CTAS_VALIDOS.join(', ')}.\n\n` +
     `TRANSCRIÇÃO (o número entre parêntesis é o segundo em que a linha começa):\n\n${recortado}`
 
-  const modelo = modeloClaude(process.env.VIDEOCLIPER_MODEL)
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), 120_000)
+  // Porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic). O formato é delimitado
+  // (===CLIPE===), não JSON — `interpretar` recusa o que não bate certo. Uma sessão de duas
+  // horas é um pedido grande: tecto de 2 min por fornecedor, como antes.
   let bruto = ''
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': chave, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: modelo,
-        max_tokens: 12000,
-        // O Sonnet 5 pensa por omissão e o pensamento come o max_tokens: a resposta vinha
-        // cortada ou vazia. Isto é trabalho de formato, não de raciocínio.
-        thinking: { type: 'disabled' },
-        system: SISTEMA,
-        messages: [{ role: 'user', content: pedido }],
-      }),
-      signal: ctrl.signal,
+    const r = await chamarIA({
+      tarefa: 'videocliper-analise',
+      sistema: SISTEMA,
+      mensagens: [{ role: 'user', content: pedido }],
+      maxTokens: 12000,
+      preferencia: 'qualidade',
+      timeoutMs: 120_000,
     })
-    if (!r.ok) throw new Error(`Anthropic ${r.status}: ${(await r.text()).slice(0, 200)}`)
-    const j = await r.json()
-    bruto = (j?.content ?? [])
-      .filter((p: { type?: string }) => p?.type === 'text')
-      .map((p: { text?: string }) => p.text ?? '')
-      .join('')
-  } finally {
-    clearTimeout(timer)
+    bruto = r.texto
+  } catch (e) {
+    throw new Error(mensagemIndisponivel(e))
   }
 
   return interpretar(bruto, input.palavras)

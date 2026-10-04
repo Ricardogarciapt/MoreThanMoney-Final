@@ -76,12 +76,15 @@ ok('slug desconhecido devolve null (fail-open, não corta recepção por acident
 })
 
 // ── 5 · O rótulo do admin diz a fonte, não o canal ────────────────────────────────────────────
-ok('o rótulo do interruptor «primeverse» nomeia a estratégia Edge, não o MTM Scanner', () => {
-  const pv = INTAKE_CHANNELS.find((c) => c.key === 'primeverse')
-  assert.ok(pv, 'o interruptor «primeverse» desapareceu do catálogo')
-  assert.match(pv.label, /Edge/i, 'quem lê o painel tem de saber que este interruptor corta a Edge')
+ok('o interruptor «primeverse» saiu (04/10/2026) e o do MTM Scanner não diz Edge', () => {
+  // A fonte PrimeVerse acabou com o pv-relay; a rota que este interruptor gateava devolve 410. Um
+  // interruptor que não corta nada «parece que se pode ligar» — por isso saiu do catálogo.
+  assert.equal(INTAKE_CHANNELS.find((c) => c.key === ('primeverse' as string)), undefined,
+    'o interruptor «primeverse» voltou ao catálogo — a fonte saiu a 04/10/2026; se voltou, actualiza esta guarda a dizer porquê')
   const scanner = INTAKE_CHANNELS.find((c) => c.key === 'mtmscanner')
   assert.ok(scanner && !/edge/i.test(scanner.label), 'o interruptor do MTM Scanner não pode dizer Edge')
+  const fs = INTAKE_CHANNELS.find((c) => c.key === 'forex_swings')
+  assert.ok(fs && !/james|relay/i.test(fs.label), 'o interruptor «forex_swings» governa o espelho do grupo da casa, não um relay externo')
 })
 
 console.log(`\nrecepção por fonte: ${feitos}/${feitos} OK`)

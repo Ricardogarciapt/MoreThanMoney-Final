@@ -120,7 +120,7 @@ export default function SeccaoEstrategias() {
           lia-se a lista toda. Agora vão por PERGUNTA — o que ligo/desligo, de onde vêm os sinais,
           para onde vão, e o que confiro — que é o que se sabe antes de clicar. */}
       <Grupo titulo="Afinar" nota="Mexem no que a estratégia faz.">
-        <Recolhivel titulo="Controlo das estratégias" descricao="Interruptores (com o estado no motor das mestres), receção por canal, modo Forex Swings, perps, trailing e desempenho.">
+        <Recolhivel titulo="Controlo das estratégias" descricao="Interruptores (com o estado no motor das mestres), receção por canal, perps, trailing e desempenho.">
           <div className="space-y-6"><MtmcopyStrategyControl /><EstrategiasDesempenho /><TrailingEstrategias /></div>
         </Recolhivel>
         <Recolhivel titulo="Testes · provider e Telegram" descricao="Ordem de teste na conta provider e mensagem de teste nos canais."><MtmcopyTestPanel /></Recolhivel>

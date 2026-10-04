@@ -1,4 +1,5 @@
 import type { MorningBriefingMetrics } from './morning-briefing-metrics'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 export type MorningBriefingContent = {
   pushTitle: string
@@ -129,23 +130,8 @@ A comunidade MTM ${m.community.newMembersThisWeek > 0 ? 'cresceu' : 'manteve-se 
 export async function generateMorningBriefing(
   metrics: MorningBriefingMetrics,
 ): Promise<MorningBriefingContent> {
-  // ASR/LLM grátis: prefere Groq (llama) se houver key; senão OpenAI; senão fallback.
-  const groqKey = process.env.GROQ_API_KEY?.trim()
-  const openaiKey = process.env.OPENAI_API_KEY?.trim()
-  const provider = groqKey ? 'groq' : openaiKey ? 'openai' : null
-  if (!provider) {
-    return metrics.isSunday ? fallbackSunday(metrics) : fallbackDaily(metrics)
-  }
-  const apiUrl =
-    provider === 'groq'
-      ? 'https://api.groq.com/openai/v1/chat/completions'
-      : 'https://api.openai.com/v1/chat/completions'
-  const apiKey = (provider === 'groq' ? groqKey : openaiKey) as string
-  const model =
-    provider === 'groq'
-      ? process.env.GROQ_BRIEFING_MODEL || 'llama-3.3-70b-versatile'
-      : process.env.OPENAI_BRIEFING_MODEL || process.env.OPENAI_DCA_MODEL || 'gpt-4o-mini'
-
+  // Porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic). Sem resposta, sai o
+  // briefing-modelo com as métricas reais — texto da casa, não IA a fingir.
   const mode = metrics.isSunday
     ? 'domingo (resumo semanal + desejo de boa semana)'
     : 'dia útil (bom dia + briefing do dia)'
@@ -204,32 +190,16 @@ Responde em JSON válido:
 }`
 
   try {
-    const res = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 900,
-        temperature: 0.6,
-        response_format: { type: 'json_object' },
-      }),
+    const r = await chamarIA({
+      tarefa: 'morning-briefing',
+      mensagens: [{ role: 'user', content: prompt }],
+      maxTokens: 900,
+      temperatura: 0.6,
+      json: true,
+      preferencia: 'qualidade',
     })
 
-    if (!res.ok) {
-      return metrics.isSunday ? fallbackSunday(metrics) : fallbackDaily(metrics)
-    }
-
-    const data = await res.json()
-    const raw = data?.choices?.[0]?.message?.content?.trim()
-    if (!raw) {
-      return metrics.isSunday ? fallbackSunday(metrics) : fallbackDaily(metrics)
-    }
-
-    const parsed = JSON.parse(raw) as Partial<MorningBriefingContent>
+    const parsed = JSON.parse(r.texto) as Partial<MorningBriefingContent>
     if (!parsed.chatPost || !parsed.pushTitle || !parsed.pushBody) {
       return metrics.isSunday ? fallbackSunday(metrics) : fallbackDaily(metrics)
     }
@@ -239,7 +209,8 @@ Responde em JSON válido:
       pushBody: parsed.pushBody.slice(0, 140),
       chatPost: parsed.chatPost,
     }
-  } catch {
+  } catch (e) {
+    console.warn('[morning-briefing]', mensagemIndisponivel(e))
     return metrics.isSunday ? fallbackSunday(metrics) : fallbackDaily(metrics)
   }
 }

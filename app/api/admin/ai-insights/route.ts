@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { requireAdmin } from "@/lib/admin-api-helpers"
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 // Get AI insights and suggestions for admin dashboard
 export async function GET(request: NextRequest) {
@@ -80,11 +81,10 @@ export async function GET(request: NextRequest) {
         return acc
       }, {} as Record<string, number>)
 
-    // Generate suggestions using OpenAI
-    const openaiKey = process.env.OPENAI_API_KEY?.trim()
+    // Sugestões pela porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic).
     let suggestions: string[] = []
 
-    if (openaiKey && totalEvents > 0) {
+    if (totalEvents > 0) {
       try {
         const prompt = `Analise os seguintes dados de uso de IA e sugira melhorias:
 
@@ -96,33 +96,18 @@ export async function GET(request: NextRequest) {
 
 Sugira 3-5 melhorias práticas e acionáveis para otimizar o sistema de IA. Seja conciso e específico.`
 
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              {
-                role: 'system',
-                content: 'Você é um analista especializado em otimização de sistemas de IA. Forneça sugestões práticas e acionáveis.'
-              },
-              { role: 'user', content: prompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 300
-          })
+        const r = await chamarIA({
+          tarefa: 'admin-ai-insights',
+          sistema: 'Você é um analista especializado em otimização de sistemas de IA. Forneça sugestões práticas e acionáveis.',
+          mensagens: [{ role: 'user', content: prompt }],
+          temperatura: 0.7,
+          maxTokens: 300,
+          preferencia: 'rapido',
         })
-
-        if (response.ok) {
-          const data = await response.json()
-          const content = data.choices[0]?.message?.content || ''
-          suggestions = content.split('\n').filter((s: string) => s.trim().length > 0 && s.match(/^[-•\d]/))
-        }
+        suggestions = r.texto.split('\n').filter((s: string) => s.trim().length > 0 && s.match(/^[-•\d]/))
       } catch (error) {
-        console.error('❌ [AI INSIGHTS] Erro ao gerar sugestões:', error)
+        // Sem IA ficam as sugestões calculadas em baixo — nunca texto a fingir que é IA.
+        console.error('❌ [AI INSIGHTS] Erro ao gerar sugestões:', mensagemIndisponivel(error))
       }
     }
 

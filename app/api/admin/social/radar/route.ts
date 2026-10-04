@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { correrRadar } from "@/lib/instagram/radar"
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -59,45 +59,31 @@ export async function POST(req: NextRequest) {
     const { data: p } = await db.from("ig_radar_prospetos").select("legenda, hashtag, porque").eq("id", corpo.id).maybeSingle()
     if (!p) return NextResponse.json({ ok: false, erro: "Prospeto desconhecido" }, { status: 404 })
 
-    const key = process.env.ANTHROPIC_API_KEY?.trim()
-    if (!key) return NextResponse.json({ ok: false, erro: "Sem chave da IA" }, { status: 400 })
-
     try {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-        body: JSON.stringify({
-          model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
-          max_tokens: 200,
-          // O Sonnet 5 pensa por omissão e o pensamento come o max_tokens: a resposta vinha
-          // cortada ou vazia. Isto é trabalho de formato, não de raciocínio.
-          thinking: { type: 'disabled' },
-          system:
-            "Escreves um comentário para deixar num post de Instagram de OUTRA pessoa, em nome do " +
-            "Ricardo Garcia (MoreThanMoney, comunidade portuguesa de trading).\n\n" +
-            "Regras, e são duras porque é o que separa um comentário de um anúncio:\n" +
-            "· Uma a duas frases. Nunca mais.\n" +
-            "· Reage ao que a pessoa DISSE. Se não conseguires citar a ideia dela, o comentário está errado.\n" +
-            "· ZERO links, zero convites, zero menção à MoreThanMoney. Um comentário que vende é " +
-            "spam, é apagado, e queima a conta para os próximos.\n" +
-            "· Sem números de desempenho: não os tens.\n" +
-            "· Português de Portugal, tratamento por tu, sem emojis a mais (no máximo um).\n" +
-            "· Nada de 'ótimo post' nem 'concordo': isso não é conversa, é ruído.\n\n" +
-            "O objectivo é uma pessoa ler e ter vontade de ver quem escreveu. Mais nada.",
-          messages: [{ role: "user", content: `Post (#${p.hashtag}):\n${String(p.legenda).slice(0, 900)}` }],
-        }),
-        signal: AbortSignal.timeout(25_000),
+      // Porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic).
+      const r = await chamarIA({
+        tarefa: 'social-radar',
+        maxTokens: 200,
+        preferencia: 'qualidade',
+        sistema:
+          "Escreves um comentário para deixar num post de Instagram de OUTRA pessoa, em nome do " +
+          "Ricardo Garcia (MoreThanMoney, comunidade portuguesa de trading).\n\n" +
+          "Regras, e são duras porque é o que separa um comentário de um anúncio:\n" +
+          "· Uma a duas frases. Nunca mais.\n" +
+          "· Reage ao que a pessoa DISSE. Se não conseguires citar a ideia dela, o comentário está errado.\n" +
+          "· ZERO links, zero convites, zero menção à MoreThanMoney. Um comentário que vende é " +
+          "spam, é apagado, e queima a conta para os próximos.\n" +
+          "· Sem números de desempenho: não os tens.\n" +
+          "· Português de Portugal, tratamento por tu, sem emojis a mais (no máximo um).\n" +
+          "· Nada de 'ótimo post' nem 'concordo': isso não é conversa, é ruído.\n\n" +
+          "O objectivo é uma pessoa ler e ter vontade de ver quem escreveu. Mais nada.",
+        mensagens: [{ role: "user", content: `Post (#${p.hashtag}):\n${String(p.legenda).slice(0, 900)}` }],
       })
-      const j = await r.json()
-      const texto = ((j?.content ?? []) as { type: string; text?: string }[])
-        .filter((x) => x.type === "text")
-        .map((x) => x.text ?? "")
-        .join("")
-        .trim()
+      const texto = r.texto.trim()
       if (!texto) return NextResponse.json({ ok: false, erro: "A IA não devolveu nada" }, { status: 502 })
       return NextResponse.json({ ok: true, comentario: texto })
     } catch (e) {
-      return NextResponse.json({ ok: false, erro: e instanceof Error ? e.message : "erro" }, { status: 502 })
+      return NextResponse.json({ ok: false, erro: mensagemIndisponivel(e) }, { status: 503 })
     }
   }
 

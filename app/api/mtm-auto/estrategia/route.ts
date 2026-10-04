@@ -35,8 +35,8 @@ export const maxDuration = 40
  */
 
 /**
- * Fontes de ideias (Forex Swings, PrimeVerse) não têm conta provider: não se inventam números
- * para elas, mostram-se os alvos que os sinais atingiram, que é um facto.
+ * Fontes de ideias sem conta provider (foi o caso das antigas Forex Swings e PrimeVerse, que saíram a
+ * 04/10/2026): não se inventam números para elas, mostram-se os alvos que os sinais atingiram, que é um facto.
  */
 interface Desempenho {
   /** De onde vieram os números: a conta que produz a estratégia, ou os sinais dela. */

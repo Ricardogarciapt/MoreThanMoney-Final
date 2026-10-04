@@ -46,8 +46,6 @@ type Intake = Record<string, boolean>
 type Config = {
   switches: Switches
   intake?: Intake
-  primeverse: { mode: string }
-  forexSwings: { mode: string }
   perpsRules: PerpsRules
   perpsSuggestions: { keep: ScoreRow[]; cut: ScoreRow[] }
   senseiShadow: SenseiShadow
@@ -98,7 +96,8 @@ const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: str
  */
 const RETIRADAS = [
   "Premium MxsR (conta 530d2e07) · a conta CONTINUA viva na MetaApi (é a fonte de preços do motor simulado), mas já não executa: o Premium passa pela mestre SIM do motor das mestres",
-  "PrimeVerse · execução directa numa conta MT5 (12862cb4, apagada na MetaApi) — o Edge segue pela mestre SIM; o modo saiu deste painel",
+  "PrimeVerse · execução directa numa conta MT5 (12862cb4, apagada na MetaApi) — o Edge segue pela mestre SIM; o modo saiu deste painel. A 04/10 a FONTE saiu de todo (pv-relay desligado pelo dono; a rota primeverse-exec devolve 410)",
+  "Forex Swings (fonte James, fs-relay) · relay desligado a 04/10 pelo dono; a rota forex-swings-exec devolve 410 e o modo saiu deste painel. O grupo «MTM Auto FOREX swings» e o canal `ideias-e-sinais` são da casa e ficam",
   "Espelho provider como FONTE de execução (082/084) · substituído pelo motor das mestres nas estratégias que lá estão",
   "GoldKiller (SDNb) · conta apagada na MetaApi (a GoldKiller actual é Wl1B)",
   "MTM Auto Forex / Trade Ideas (5IHE) · conta apagada",
@@ -388,43 +387,6 @@ export default function MtmcopyStrategyControl() {
           </CardContent>
         </Card>
       )}
-
-      {/* Modo de execução Forex Swings. O do PrimeVerse saiu (18/09): executava directamente numa conta
-          MT5 (12862cb4) que já não existe na MetaApi — o Edge segue pela mestre SIM do motor. */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        {([
-          { k: "forexSwings", label: "Forex Swings (James)", cur: cfg.forexSwings.mode, field: "forex_swings_mode" },
-        ] as const).map(({ k, label, cur, field }) => (
-          <Card key={k} className="bg-zinc-900/60 border-zinc-800">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-zinc-200">{label} — modo de execução</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                {["off", "shadow", "live"].map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    disabled={saving}
-                    onClick={() => save({ [field]: m })}
-                    className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-                      cur === m
-                        ? m === "live"
-                          ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
-                          : m === "shadow"
-                            ? "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40"
-                            : "bg-zinc-700/40 text-zinc-300 ring-1 ring-zinc-600"
-                        : "bg-zinc-800/50 text-zinc-500 hover:text-white"
-                    }`}
-                  >
-                    {m === "off" ? "Off" : m === "shadow" ? "Shadow" : "Live"}
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
       {/* Regras do gate de perps */}
       <Card className="bg-zinc-900/60 border-zinc-800">

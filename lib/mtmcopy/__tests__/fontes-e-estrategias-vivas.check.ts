@@ -24,11 +24,14 @@ import { ESTRATEGIAS_DO_DONO } from '../../mtmfunded/estrategias-sinais/contas'
 // ── As fontes aceites saem do catálogo ───────────────────────────────────────
 
 const chaves = T2T_SOURCES.map((f) => f.key)
-assert.ok(chaves.length >= 8, `o catálogo encolheu para ${chaves.length} — alguém apagou uma fonte?`)
+assert.ok(chaves.length >= 7, `o catálogo encolheu para ${chaves.length} — alguém apagou uma fonte?`)
 assert.equal(new Set(chaves).size, chaves.length, 'há chaves repetidas no catálogo')
-for (const k of ['premium', 'sensei', 'james', 'primeverse', 'aurum', 'goldkiller', 'mtmscanner', 'forexideas']) {
+for (const k of ['premium', 'sensei', 'primeverse', 'aurum', 'goldkiller', 'mtmscanner', 'forexideas']) {
   assert.ok(chaves.includes(k as never), `«${k}» saiu do catálogo — se foi de propósito, actualiza esta guarda`)
 }
+// `james` (Forex Swings) saiu do catálogo a 04/10/2026: a fonte externa foi desligada pelo dono. A chave
+// continua a existir para LER as mensagens antigas de `ideias-e-sinais` (ver t2t-trailing-fontes.check).
+assert.ok(!chaves.includes('james' as never), '«james» voltou ao catálogo — a fonte saiu a 04/10/2026; se voltou, actualiza esta guarda a dizer porquê')
 
 // ── Vivas ⊆ todas, e a Edge é a única viva ───────────────────────────────────
 

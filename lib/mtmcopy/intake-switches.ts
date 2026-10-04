@@ -6,7 +6,7 @@ export { INTAKE_CHANNELS, intakeKeyDoEspelhoTelegram, type IntakeKey } from "@/l
 /**
  * RECEÇÃO POR CANAL — corta a entrada de sinais de uma fonte, sem desligar a estratégia.
  * Diferente dos exec-switches: estes travam **a montante** (nada entra no chat, nem executa, nem
- * notifica), incluindo o que chega pelos RELAYS do VPS (Premium/Gold Did, Forex Swings/James, PrimeVerse).
+ * notifica), incluindo o que chega pelo RELAY do VPS (Premium via gmi-relay / Signal Master Elite).
  *
  * Guardado em site_settings.mtmcopy_channel_intake. Default: TUDO LIGADO (só desliga quem for
  * explicitamente posto a false) — para nunca cortar receção por omissão.

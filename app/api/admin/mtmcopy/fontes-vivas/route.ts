@@ -94,47 +94,8 @@ export async function GET(req: NextRequest) {
     }),
   )
 
-  /**
-   * O PrimeVerse não é uma rota provider — e por isso não aparecia em lado nenhum.
-   *
-   * Os sinais do Edge (fxEdge) do PrimeVerse são colocados por EXECUÇÃO DIRETA numa conta
-   * configurada em `site_settings.primeverse_execution`, sem CopyFactory pelo meio. Como o painel
-   * só listava rotas, essa conta parecia uma ligação partida: aparecia subscrita a uma estratégia
-   * que já não existe (a `su0a` da antiga cascade) e nada explicava de onde lhe vinham as trades.
-   * Aqui diz-se.
-   */
-  let primeverse: Record<string, unknown> | null = null
-  try {
-    const { getPrimeverseExecConfig } = await import('@/lib/mtmcopy/primeverse-exec')
-    const cfg = await getPrimeverseExecConfig()
-    const { contaInexistente } = await import('@/lib/mtmcopy/metaapi-inexistentes')
-    if (cfg.mode !== 'off' && cfg.accountId && !(await contaInexistente(cfg.accountId))) {
-      let conta: Record<string, unknown> | null = null
-      try {
-        const r = await fetch(`${PROVISIONING}/users/current/accounts/${cfg.accountId}`, { headers: cabecalho })
-        if (r.ok) conta = (await r.json()) as Record<string, unknown>
-      } catch {
-        /* mostra-se o resto */
-      }
-      primeverse = {
-        modo: cfg.mode,
-        // Só o Edge: o PrimeVerse ficou reduzido ao fxEdge, e mostrar Wolf/King aqui fazia
-        // procurar execução para estratégias que já não estão vivas.
-        traders: cfg.traders.filter((t) => t === 'fxedge'),
-        contaId: cfg.accountId,
-        nome: (conta?.name as string) ?? null,
-        login: (conta?.login as string) ?? null,
-        servidor: (conta?.server as string) ?? null,
-        ligacao: (conta?.connectionStatus as string) ?? null,
-        existe: Boolean(conta),
-        riscoPct: cfg.riskPct,
-        lote: cfg.senseiLot,
-        bybit: cfg.bybit,
-      }
-    }
-  } catch {
-    /* sem config do PrimeVerse, o painel mostra só as rotas */
-  }
+  // (saiu a 2026-10-04) Aqui mostrava-se a conta de execução directa do PrimeVerse (Edge). A fonte acabou
+  // com o pv-relay; a rota primeverse-exec devolve 410 e não há execução directa a mostrar.
 
   /**
    * AS CONTAS MESTRE, COMO A BASE AS TEM.
@@ -153,5 +114,5 @@ export async function GET(req: NextRequest) {
     motor: motor.includes(c.accountId),
   }))
 
-  return NextResponse.json({ ok: true, fontes, contasMestre, primeverse })
+  return NextResponse.json({ ok: true, fontes, contasMestre })
 }

@@ -11,7 +11,7 @@
  * que só se descobre quando já foi dita a trezentas pessoas.
  */
 
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 export interface PedidoIA {
   objetivo: string
@@ -39,11 +39,12 @@ const VOZ =
   '· Não dás conselho de investimento personalizado.\n' +
   '· Se não souberes, dizes que não sabes e encaminhas para uma pessoa.'
 
+/**
+ * Pela porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic). Quando a cadeia inteira
+ * falha, a pessoa recebe a RESERVA — o texto que quem desenhou o funil escreveu para esse caso.
+ * Não é IA a fingir: é o plano B declarado no bloco. Ficar em silêncio seria pior.
+ */
 export async function pensar(p: PedidoIA): Promise<RespostaIA> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  // Sem chave, a pessoa recebe a reserva. Ficar em silêncio é pior do que uma resposta simples.
-  if (!key) return { texto: p.reserva || null, ramo: 0 }
-
   const querRamo = p.modo !== 'responder' && p.ramos.length > 0
   const sistema =
     `${VOZ}\n\nO que tens de fazer neste passo: ${p.objetivo}\n\n` +
@@ -57,32 +58,21 @@ export async function pensar(p: PedidoIA): Promise<RespostaIA> {
       : 'Devolves apenas a tua resposta, em texto simples.')
 
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
-        max_tokens: 500,
-        system: sistema,
-        messages: [{ role: 'user', content: (p.doCliente || '(a pessoa ainda não disse nada)').slice(0, 2000) }],
-      }),
-      signal: AbortSignal.timeout(25_000),
+    const r = await chamarIA({
+      tarefa: 'funis-ia',
+      sistema,
+      mensagens: [{ role: 'user', content: (p.doCliente || '(a pessoa ainda não disse nada)').slice(0, 2000) }],
+      maxTokens: 500,
+      // Com ramo a escolher, o núcleo garante JSON (ou passa ao fornecedor seguinte).
+      json: querRamo,
+      preferencia: 'rapido',
     })
-    if (!r.ok) return { texto: p.reserva || null, ramo: 0 }
-
-    const j = await r.json()
-    const bruto = ((j?.content ?? []) as { type: string; text?: string }[])
-      .filter((x) => x.type === 'text')
-      .map((x) => x.text ?? '')
-      .join('')
-      .trim()
+    const bruto = r.texto.trim()
 
     if (!querRamo) return { texto: bruto || p.reserva || null, ramo: null }
 
-    // Às vezes vem com cerca de código à volta, mesmo pedindo que não.
-    const limpo = bruto.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
     try {
-      const o = JSON.parse(limpo) as { ramo?: number; texto?: string }
+      const o = JSON.parse(bruto) as { ramo?: number; texto?: string }
       const i = Number(o.ramo)
       return {
         texto: p.modo === 'classificar' ? null : o.texto ?? p.reserva ?? null,
@@ -93,7 +83,8 @@ export async function pensar(p: PedidoIA): Promise<RespostaIA> {
       // Não devolveu JSON: aproveita-se o texto como resposta e segue-se o primeiro caminho.
       return { texto: p.modo === 'classificar' ? null : bruto || p.reserva || null, ramo: 0 }
     }
-  } catch {
+  } catch (e) {
+    console.warn('[funis-ia]', mensagemIndisponivel(e))
     return { texto: p.reserva || null, ramo: 0 }
   }
 }

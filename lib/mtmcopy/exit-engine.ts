@@ -3,10 +3,10 @@
  * Consolidação — ver o mapa de execução. Fonte única de verdade para o código novo.
  *
  *  'price'   → premium-price-monitor (realtime, por PREÇO, sobre a posição REAL). Principal.
- *              Gere Premium · Sensei · Gold Did (registados em mtmcopy_auto_positions).
+ *              Gere Premium · Sensei (registados em mtmcopy_auto_positions).
  *  'alert'   → sensei-management-exec (webhook tp_hit/sl_hit/be). LEGADO — só quando price_monitor OFF.
  *  'message' → premium-management-exec (Telegram HIT TP / running). FALLBACK do Premium.
- *  'own'     → motor próprio isolado (Forex Swings / PrimeVerse / Bybit) — mercados distintos, fica à parte.
+ *  'own'     → motor próprio isolado (Bybit; antes também Forex Swings / PrimeVerse, fontes que saíram a 04/10/2026).
  */
 export type ExitEngine = 'price' | 'alert' | 'message' | 'own'
 

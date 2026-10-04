@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { factosParaCartao, getPipsProof, notaViesPreco, publicavel, RESSALVA_LEGAL } from '@/lib/pips-proof'
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, ErroIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -30,35 +30,16 @@ async function ehAdmin(request: NextRequest): Promise<boolean> {
   return p?.user_type === 'admin'
 }
 
+/** Pela porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic); o `catch` do POST mostra a frase honesta. */
 async function pedirAoModelo(sistema: string, pedido: string, maxTokens = 1400): Promise<string> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) throw new Error('ANTHROPIC_API_KEY em falta')
-  const model = modeloClaude(process.env.CONTENT_DRAFT_MODEL)
-
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), 45_000)
-  try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        system: sistema,
-        messages: [{ role: 'user', content: pedido }],
-      }),
-      signal: ctrl.signal,
-    })
-    if (!r.ok) throw new Error(`Anthropic ${r.status}: ${(await r.text()).slice(0, 200)}`)
-    const j = await r.json()
-    return ((j?.content ?? []) as { type: string; text?: string }[])
-      .filter((p) => p.type === 'text')
-      .map((p) => p.text ?? '')
-      .join('')
-      .trim()
-  } finally {
-    clearTimeout(timer)
-  }
+  const r = await chamarIA({
+    tarefa: 'social-estudio',
+    sistema,
+    mensagens: [{ role: 'user', content: pedido }],
+    maxTokens,
+    preferencia: 'qualidade',
+  })
+  return r.texto.trim()
 }
 
 /** Os factos reais, prontos a entrar na instrução do modelo. */
@@ -234,6 +215,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 })
   } catch (e) {
+    if (e instanceof ErroIA) return NextResponse.json({ error: mensagemIndisponivel(e) }, { status: 503 })
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Falhou' },
       { status: 500 },

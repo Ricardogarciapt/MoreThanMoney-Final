@@ -1,8 +1,8 @@
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import type { Palavra } from './analise'
 
 /**
- * REVISÃO DAS LEGENDAS — o Whisper ouve, o Claude corrige.
+ * REVISÃO DAS LEGENDAS — o Whisper ouve, a IA corrige (porta única `chamarIA`).
  *
  * A transcrição automática acerta no som e erra na escrita: concordâncias trocadas, palavras
  * parecidas («policiais» por «polícia»), termos de trading mal ouvidos («stop lós», «pipes»),
@@ -41,37 +41,26 @@ português de Portugal quando for claramente o caso; não «abrasileires» nem �
 a pessoa disse. NÃO acrescentes palavras que não foram ditas e NÃO resumas.`
 
 export async function reverPalavras(palavras: Palavra[], contexto?: string): Promise<Palavra[]> {
-  const chave = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!chave || palavras.length === 0) return palavras
+  if (palavras.length === 0) return palavras
 
   const lista = palavras.map((p) => p.palavra)
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': chave, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: modeloClaude(process.env.VIDEOCLIPER_MODEL),
-        max_tokens: 8000,
-        // Trabalho de formato: sem pensamento a comer a resposta (o Sonnet 5 pensa por omissão).
-        thinking: { type: 'disabled' },
-        system: SISTEMA,
-        messages: [{
-          role: 'user',
-          content:
-            (contexto ? `Contexto do clipe: ${contexto}\n\n` : '') +
-            `${lista.length} posições:\n${JSON.stringify(lista)}`,
-        }],
-      }),
-      signal: AbortSignal.timeout(90_000),
+    // `json: true`: o núcleo garante que vem JSON (um array serve) ou passa ao fornecedor seguinte.
+    const r = await chamarIA({
+      tarefa: 'videocliper-revisao',
+      sistema: SISTEMA,
+      mensagens: [{
+        role: 'user',
+        content:
+          (contexto ? `Contexto do clipe: ${contexto}\n\n` : '') +
+          `${lista.length} posições:\n${JSON.stringify(lista)}`,
+      }],
+      maxTokens: 8000,
+      json: true,
+      preferencia: 'qualidade',
+      timeoutMs: 90_000,
     })
-    if (!r.ok) return palavras
-    const j = await r.json()
-    const bruto = ((j?.content ?? []) as Array<{ type: string; text?: string }>)
-      .filter((x) => x.type === 'text').map((x) => x.text ?? '').join('').trim()
-    const inicio = bruto.indexOf('[')
-    const fim = bruto.lastIndexOf(']')
-    if (inicio < 0 || fim <= inicio) return palavras
-    const corrigidas = JSON.parse(bruto.slice(inicio, fim + 1)) as unknown[]
+    const corrigidas = JSON.parse(r.texto) as unknown
     if (!Array.isArray(corrigidas) || corrigidas.length !== palavras.length) return palavras
 
     // Uma posição vazia sai da legenda; o tempo dela passa para a palavra anterior, para não
@@ -86,7 +75,9 @@ export async function reverPalavras(palavras: Palavra[], contexto?: string): Pro
       saida.push({ palavra: texto, inicio: p.inicio, fim: p.fim })
     })
     return saida.length ? saida : palavras
-  } catch {
+  } catch (e) {
+    // Sem revisão fica o original: uma legenda com um erro é melhor do que nenhuma.
+    console.warn('[videocliper-revisao]', mensagemIndisponivel(e))
     return palavras
   }
 }

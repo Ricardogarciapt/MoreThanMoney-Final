@@ -8,8 +8,8 @@
  * 0.1 XAU · pontos em índices/cripto) e limite de sanidade |12%| por trade —
  * sem ele, um ticker mal classificado (ex.: BTC com pip forex) rebenta a soma.
  *
- * O Premium NÃO vem do TradingView: vem do canal GOLD DID (relay → chat
- * premium-ideas). Preferimos os resumos diários do próprio canal ("Total Net :
+ * O Premium NÃO vem do TradingView: vem do canal SIGNAL MASTER ELITE (gmi-relay →
+ * chat premium-ideas). Preferimos os resumos diários do próprio canal ("Total Net :
  * N PIPS WIN"); nos dias sem resumo (ex.: relay caiu antes do fecho) somamos os
  * marcos finais "HIT TP3 ✅ +N PIPS" e penalizamos cada "HIT SL" com −50 pips
  * (a zona típica dos setups é ~50 pips) — estimativa conservadora, sem runners.
@@ -173,7 +173,7 @@ export async function getWeeklyFlyerStats(weekStartParam?: string | null): Promi
     }
   }
 
-  // ── Premium (GOLD DID → chat premium-ideas) ───────────────────────────────
+  // ── Premium (Signal Master Elite → chat premium-ideas) ────────────────────
   const { data: msgs } = await supabase
     .from('chat_messages')
     .select('content, created_at')

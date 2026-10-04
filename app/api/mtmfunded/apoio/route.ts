@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { papelMtmFunded } from '@/lib/mtmfunded/acesso'
+import { chamarIA, mensagemIndisponivel, type MensagemIA } from '@/lib/ia/chamar'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -66,39 +67,25 @@ export async function POST(request: NextRequest) {
   const mensagem = String(body?.mensagem ?? '').trim().slice(0, 2000)
   if (!mensagem) return NextResponse.json({ error: 'Mensagem vazia' }, { status: 400 })
 
-  const historico = Array.isArray(body?.historico)
+  const historico: MensagemIA[] = Array.isArray(body?.historico)
     ? (body.historico as Array<{ role: string; content: string }>)
         .filter((m) => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
         .slice(-8) // memória curta: chega para o fio da conversa, e não enche o pedido
-        .map((m) => ({ role: m.role, content: String(m.content).slice(0, 2000) }))
+        .map((m) => ({ role: m.role as 'user' | 'assistant', content: String(m.content).slice(0, 2000) }))
     : []
 
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) return NextResponse.json({ error: 'Apoio indisponível' }, { status: 503 })
-
+  // Porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic): grátis primeiro, rápido.
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 900,
-        system: CONTEXTO,
-        messages: [...historico, { role: 'user', content: mensagem }],
-      }),
-      signal: AbortSignal.timeout(25_000),
+    const r = await chamarIA({
+      tarefa: 'mtmfunded-apoio',
+      sistema: CONTEXTO,
+      mensagens: [...historico, { role: 'user', content: mensagem }],
+      maxTokens: 900,
+      preferencia: 'rapido',
     })
-    if (!res.ok) {
-      return NextResponse.json({ error: 'O apoio não respondeu. Tenta outra vez.' }, { status: 502 })
-    }
-    const dados = (await res.json()) as { content?: Array<{ text?: string }> }
-    const resposta = (dados.content ?? []).map((c) => c.text ?? '').join('').trim()
+    const resposta = r.texto.trim()
     return NextResponse.json({ resposta: resposta || 'Não consegui responder a isso.' })
-  } catch {
-    return NextResponse.json({ error: 'O apoio não respondeu. Tenta outra vez.' }, { status: 502 })
+  } catch (e) {
+    return NextResponse.json({ error: mensagemIndisponivel(e) }, { status: 503 })
   }
 }

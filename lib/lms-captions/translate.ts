@@ -1,25 +1,16 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { translationTargetsFor, CAPTION_LANGUAGE_LABELS } from './constants'
 
 // Tradução de legendas ao vivo. Um segmento de fala (idioma de origem) → tradução
-// para os idiomas-alvo, num único pedido ao Claude, devolvendo JSON { lang: texto }.
-// Modelo rápido (Haiku) por defeito — legendas ao vivo precisam de baixa latência.
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-const CAPTIONS_MODEL = process.env.CAPTIONS_MODEL || 'claude-haiku-4-5-20251001'
-const OPENAI_CAPTIONS_MODEL = process.env.CAPTIONS_OPENAI_MODEL || 'gpt-4o-mini'
+// para os idiomas-alvo, num único pedido à IA, devolvendo JSON { lang: texto }.
+// Vai pela porta única (`chamarIA`: Groq → Gemini → Ollama → OpenAI → Anthropic) com
+// `preferencia: 'rapido'` — legendas ao vivo precisam de baixa latência.
 
 const SYSTEM_PROMPT =
   'És um tradutor de legendas ao vivo de sessões de educação financeira e trading. ' +
   'Traduz a fala de forma natural, concisa e fiel, preservando termos técnicos ' +
   '(ex.: "breakeven", "stop loss", "long", "short", nomes de ativos como XAUUSD/BTC). ' +
   'Devolve APENAS um objeto JSON válido, sem markdown, sem explicações.'
-
-function extractJson(raw: string): Record<string, unknown> {
-  const s = raw.trim()
-  const j = s.startsWith('{') ? s : s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1)
-  return JSON.parse(j) as Record<string, unknown>
-}
 
 /**
  * Tradução via endpoint livre do Google Translate (sem chave, 0 €). Fallback sempre
@@ -54,30 +45,6 @@ async function translateWithGoogleFree(
   return out
 }
 
-/** Tradução via OpenAI (fallback quando a Anthropic falha/sem créditos). */
-async function translateWithOpenAI(prompt: string): Promise<Record<string, unknown>> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: OPENAI_CAPTIONS_MODEL,
-      max_tokens: 1024,
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: prompt },
-      ],
-    }),
-  })
-  if (!res.ok) throw new Error(`openai ${res.status}`)
-  const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-  return extractJson(data.choices?.[0]?.message?.content || '{}')
-}
-
 /**
  * Traduz um segmento de legenda para vários idiomas-alvo de uma vez.
  * @param text     texto no idioma de origem
@@ -104,33 +71,30 @@ export async function translateCaption(
     `Devolve JSON no formato {"<codigo_idioma>": "<traducao>"} exatamente com estes códigos.\n\n` +
     `Legenda: ${JSON.stringify(text)}`
 
-  // Ordem: Claude (qualidade) → OpenAI → Google grátis (sempre disponível, 0€).
-  let parsed: Record<string, unknown> | null = null
+  // Ordem: a cadeia da IA (grátis primeiro) → Google grátis (sempre disponível, 0 €). O Google é
+  // uma tradução a sério, não texto a fingir que é IA — por isso continua a ser rede de segurança.
+  let parsed: Record<string, unknown>
   try {
-    const res = await anthropic.messages.create({
-      model: CAPTIONS_MODEL,
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: prompt }],
+    const r = await chamarIA({
+      tarefa: 'lms-captions',
+      sistema: SYSTEM_PROMPT,
+      mensagens: [{ role: 'user', content: prompt }],
+      maxTokens: 1024,
+      temperatura: 0.2,
+      json: true,
+      preferencia: 'rapido',
     })
-    const raw = res.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
-    parsed = extractJson(raw)
+    const o = JSON.parse(r.texto) as unknown
+    if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('a tradução não veio como objeto {idioma: texto}')
+    parsed = o as Record<string, unknown>
   } catch (err) {
-    console.warn('[lms-captions] Anthropic falhou, fallback OpenAI:', (err as Error).message)
-    try {
-      parsed = await translateWithOpenAI(prompt)
-    } catch (err2) {
-      console.warn('[lms-captions] OpenAI falhou, fallback Google grátis:', (err2 as Error).message)
-      return await translateWithGoogleFree(text, source, langs)
-    }
+    console.warn('[lms-captions] IA falhou, fallback Google grátis:', mensagemIndisponivel(err))
+    return await translateWithGoogleFree(text, source, langs)
   }
 
   const out: Record<string, string> = {}
   for (const l of langs) {
-    const v = parsed?.[l]
+    const v = parsed[l]
     if (typeof v === 'string' && v.trim()) out[l] = v.trim()
   }
   return out

@@ -28,22 +28,7 @@ type Fonte = {
   origem: string
 }
 
-type PrimeVerse = {
-  modo: string
-  traders: string[]
-  contaId: string
-  nome: string | null
-  login: string | null
-  servidor: string | null
-  ligacao: string | null
-  existe: boolean
-  riscoPct: number
-  lote: number
-  bybit: boolean
-}
-
 export default function MtmcopyFontesVivas() {
-  const [primeverse, setPrimeverse] = useState<PrimeVerse | null>(null)
   const [fontes, setFontes] = useState<Fonte[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [aLer, setALer] = useState(false)
@@ -55,7 +40,6 @@ export default function MtmcopyFontesVivas() {
       const j = await r.json()
       if (!j.ok) throw new Error(j.error || "erro")
       setFontes(j.fontes)
-      setPrimeverse(j.primeverse ?? null)
       setErro(null)
     } catch (e) {
       setErro(e instanceof Error ? e.message : "não foi possível ler as fontes")
@@ -138,40 +122,6 @@ export default function MtmcopyFontesVivas() {
               </div>
             )
           })}
-
-          {/* O PrimeVerse chega por execução DIRETA, sem CopyFactory. Sem esta linha, a conta que
-              o recebe parecia uma ligação partida — subscrita a uma estratégia que já não existe
-              e sem nada que explicasse de onde lhe vinham as trades. */}
-          {primeverse && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-zinc-800 p-3">
-              <span className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                {primeverse.ligacao === "CONNECTED" ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                ) : (
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                )}
-                PrimeVerse · MTM Auto Edge
-              </span>
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[11px] text-zinc-300">
-                {primeverse.traders.join(" · ") || "sem Edge ligado"}
-              </span>
-              <span className="text-[12px] text-zinc-400">
-                {primeverse.nome ?? "conta"} · {primeverse.login ?? "—"} · {primeverse.servidor ?? "—"}
-              </span>
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] text-zinc-400">execução direta</span>
-              <span
-                className={`rounded px-1.5 py-0.5 text-[11px] ${
-                  primeverse.modo === "live" ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-800 text-zinc-500"
-                }`}
-              >
-                {primeverse.modo}
-              </span>
-              <span className="text-[11px] text-zinc-600">
-                {primeverse.riscoPct > 0 ? `${primeverse.riscoPct}% risco` : `lote fixo ${primeverse.lote}`}
-                {primeverse.bybit ? " · BTC também na Bybit" : ""}
-              </span>
-            </div>
-          )}
         </div>
       )}
     </div>
