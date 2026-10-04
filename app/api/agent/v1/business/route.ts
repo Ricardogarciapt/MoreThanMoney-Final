@@ -127,7 +127,7 @@ async function getCustomers(sb: ReturnType<typeof getSupabaseAdmin>, q: string |
 async function getLeads(sb: ReturnType<typeof getSupabaseAdmin>, stage: string | null, limit: number) {
   let query = sb
     .from("mtm_leads")
-    .select("id,full_name,instagram_handle,email,_id,score,stage,source,country,last_interaction,notes,created_at")
+    .select("id,full_name,instagram_handle,email,manychat_id,score,stage,source,country,last_interaction,notes,created_at")
     .order("score", { ascending: false, nullsFirst: false })
     .limit(limit)
   if (stage) query = query.eq("stage", stage)
@@ -310,7 +310,7 @@ export async function POST(request: NextRequest) {
         }`
       return agentOk({
         rascunho: {
-          canal: body.channel || (target._id ? "" : target.email ? "email" : "telegram"),
+          canal: body.channel || (target.manychat_id ? "manychat" : target.email ? "email" : "telegram"),
           para: target,
           objetivo: goal,
           mensagem: draft,

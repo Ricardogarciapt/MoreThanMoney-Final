@@ -38,12 +38,12 @@ const WORKFLOWS = [
     webhook: "/webhook/telegram-mtm",
   },
   {
-    id: "",
-    label: " → Supabase",
+    id: "manychat",
+    label: "ManyChat → Supabase",
     icon: Bot,
     color: "#a78bfa",
     description: "Sync leads Instagram · Scoring automático",
-    webhook: "/webhook/-mtm",
+    webhook: "/webhook/manychat-mtm",
   },
   {
     id: "email",

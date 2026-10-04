@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   /**
    * Aprovação manual: quem pagou fora do Stripe e o admin validou à mão.
    *
-   * O canal era '' — que NÃO é um canal válido. `readAccessMigration` só aceita 'stripe' ou
+   * O canal era 'iqonic' — que NÃO é um canal válido. `readAccessMigration` só aceita 'stripe' ou
    * 'skool', por isso o valor era escrito e depois lido como nulo: o registo de por onde a pessoa
    * pagou perdia-se em silêncio. 'skool' é o canal de pagamento-fora-do-Stripe que temos, e é o
    * que isto sempre foi na prática.

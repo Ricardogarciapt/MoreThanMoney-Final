@@ -1,8 +1,8 @@
 /**
  * Configuração central do conteúdo externo do site — editável em /admin?tab=content.
  *
- * 2026-08-27: saíram daqui 16 entradas que apontavam para páginas que já não existem — / e
- * /swipetotrade (removidas com o ) e /fast-start. Eram conteúdo editável de páginas que
+ * 2026-08-27: saíram daqui 16 entradas que apontavam para páginas que já não existem — /iqonic e
+ * /swipetotrade (removidas com o IQONIC) e /fast-start. Eram conteúdo editável de páginas que
  * ninguém consegue abrir: quem as editasse estava a trabalhar para um 404.
  *
  * REGRA: uma entrada nova tem de ter `page` a apontar para uma rota que exista. Quando uma página

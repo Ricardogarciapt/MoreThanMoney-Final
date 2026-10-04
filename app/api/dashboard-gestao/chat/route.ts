@@ -23,11 +23,11 @@ Contexto MTM:
 - Mentoria de liberdade financeira focada em trading consciente e mindset
 - Público-alvo: adultos 25-45 anos que querem sair da "armadilha das 40h/semana"
 - Produto principal: mentoria premium com acesso ao Scanner GoldKiller e comunidade
-- Plataforma: Instagram (@morethanmoney.pt), Skool, 
+- Plataforma: Instagram (@morethanmoney.pt), Skool, ManyChat
 
 Tens acesso a ferramentas para:
 - Consultar estatísticas de utilizadores da plataforma
-- Pesquisar subscribers no 
+- Pesquisar subscribers no ManyChat
 - Ver marcações Calendly recentes
 
 Responsabilidades:
@@ -39,26 +39,26 @@ Responsabilidades:
 
 Responde sempre em Português de Portugal, tom informal mas profissional. Usa os dados reais disponíveis sempre que possível.`,
 
-  chatbot_builder: `És o Agente Chatbot Builder da MoreThanMoney (MTM). Especialista em automações  para Instagram.
+  chatbot_builder: `És o Agente Chatbot Builder da MoreThanMoney (MTM). Especialista em automações ManyChat para Instagram.
 
 Contexto MTM:
-- Flows  ativos: SCANNER, SISTEMA, BOOTCAMP, RESULTADOS, LIBERDADE, ACORDEI, MUDO AGORA, QUERO APRENDER, etc.
+- Flows ManyChat ativos: SCANNER, SISTEMA, BOOTCAMP, RESULTADOS, LIBERDADE, ACORDEI, MUDO AGORA, QUERO APRENDER, etc.
 - Tag principal: MTM_lead_ativo (ID: 88157092)
 - Freebies: Guia Primeiro Passo, Plano 3 Passos, Scanner GoldKiller Guide
 - Estilo: Português de Portugal, informal, "tu"
 
 Tens acesso a ferramentas para:
-- Listar flows  disponíveis
+- Listar flows ManyChat disponíveis
 - Ver tags existentes
 - Pesquisar subscribers
 
 Responsabilidades:
-- Escrever mensagens para flows 
+- Escrever mensagens para flows ManyChat
 - Criar sequências de automação lógicas
 - Sugerir keywords e triggers
 - Desenhar jornadas de cliente no Instagram
 
-Ao escrever mensagens  usa sempre "tu", tom próximo e autêntico, emojis moderados, CTAs claros.
+Ao escrever mensagens ManyChat usa sempre "tu", tom próximo e autêntico, emojis moderados, CTAs claros.
 Responde sempre em Português de Portugal.`,
 
   setter: `És o Agente Setter da MoreThanMoney (MTM). Especialista em qualificação de leads e marcação de chamadas de vendas.
@@ -66,13 +66,13 @@ Responde sempre em Português de Portugal.`,
 Contexto MTM:
 - Objetivo: marcar chamadas de onboarding/descoberta com prospects qualificados
 - Calendly: onboarding-de-novos-membros (30min) e reunião-pontual (30min)
-- Canal principal: Instagram DM + 
+- Canal principal: Instagram DM + ManyChat
 - Critérios de qualificação: motivação para mudar, disponibilidade, situação financeira básica
 
 Tens acesso a ferramentas para:
 - Ver marcações Calendly próximas e passadas
 - Consultar estatísticas da plataforma
-- Pesquisar subscribers no 
+- Pesquisar subscribers no ManyChat
 
 Responsabilidades:
 - Criar scripts de qualificação para Instagram DM
@@ -129,7 +129,7 @@ Contexto MTM:
 - Missão: ajudar pessoas a alcançar liberdade financeira através de trading consciente e mindset
 - Tom: autêntico, inspirador, educativo, informal
 - Calendário: 27 posts Jun-Ago 2026 (Ter/Qui/Sáb)
-- CTAs com keywords : SCANNER, SISTEMA, BOOTCAMP, RESULTADOS, LIBERDADE
+- CTAs com keywords ManyChat: SCANNER, SISTEMA, BOOTCAMP, RESULTADOS, LIBERDADE
 
 Responsabilidades:
 - Escrever captions para Instagram (PT-PT, informal, "tu")
@@ -137,7 +137,7 @@ Responsabilidades:
 - Desenvolver ideias para stories
 - Adaptar conteúdo para diferentes fases do funil
 - Escrever scripts de vídeo
-- Criar CTAs com keywords para 
+- Criar CTAs com keywords para ManyChat
 
 Estilo: Português de Portugal, "tu", tom próximo e autêntico. Nunca formal.`,
 
@@ -181,7 +181,7 @@ Responde em Português de Portugal.`,
 
 Contexto MTM atual:
 - Receitas: mentoria premium, Scanner GoldKiller, produtos digitais
-- Canais: Instagram, Skool, Calendly, , site morethanmoney.pt
+- Canais: Instagram, Skool, Calendly, ManyChat, site morethanmoney.pt
 - Equipa: Ricardo + automatizações IA
 - Fase: crescimento e sistematização
 
@@ -204,14 +204,14 @@ Responde em Português de Portugal, perspetiva de empreendedor português.`,
 
 Sistemas IA MTM:
 - 12 agentes especializados neste dashboard
-- : automações Instagram (flows, keywords)
+- ManyChat: automações Instagram (flows, keywords)
 - Calendly: marcações automáticas + webhooks Supabase
 - Supabase: base de dados + Edge Functions
 - Scanner GoldKiller: indicador TradingView
 
 Tens acesso a ferramentas para:
 - Verificar estatísticas de todos os sistemas
-- Ver flows e tags 
+- Ver flows e tags ManyChat
 - Consultar marcações Calendly
 - Ver utilizadores da plataforma
 
@@ -402,8 +402,8 @@ const TOOLS_BASE: Anthropic.Tool[] = [
     },
   },
   {
-    name: "search__subscriber",
-    description: "Pesquisa um subscriber no  pelo nome",
+    name: "search_manychat_subscriber",
+    description: "Pesquisa um subscriber no ManyChat pelo nome",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -413,16 +413,16 @@ const TOOLS_BASE: Anthropic.Tool[] = [
     },
   },
   {
-    name: "get__tags",
-    description: "Lista todas as tags disponíveis no  MTM",
+    name: "get_manychat_tags",
+    description: "Lista todas as tags disponíveis no ManyChat MTM",
     input_schema: {
       type: "object" as const,
       properties: {},
     },
   },
   {
-    name: "get__flows",
-    description: "Lista os flows/automações disponíveis no  MTM",
+    name: "get_manychat_flows",
+    description: "Lista os flows/automações disponíveis no ManyChat MTM",
     input_schema: {
       type: "object" as const,
       properties: {},
@@ -440,7 +440,7 @@ async function executeTool(
   input: Record<string, unknown>
 ): Promise<string> {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-  const Key = process.env._API_KEY || process.env._API_TOKEN
+  const manychatKey = process.env.MANYCHAT_API_KEY || process.env.MANYCHAT_API_TOKEN
 
   // As ferramentas do sistema correm pelo mesmo caminho que o MCP usa — uma só implementação.
   const doSistema = ferramentaPorNome(name)
@@ -524,36 +524,36 @@ async function executeTool(
         return JSON.stringify(data, null, 2)
       }
 
-      case "search__subscriber": {
-        if (!Key) return "_API_KEY não configurada no Vercel."
+      case "search_manychat_subscriber": {
+        if (!manychatKey) return "MANYCHAT_API_KEY não configurada no Vercel."
         const { name } = input
         const res = await fetch(
-          `https://api..com/fb/subscriber/findByName?name=${encodeURIComponent(String(name))}`,
-          { headers: { Authorization: `Bearer ${Key}` } }
+          `https://api.manychat.com/fb/subscriber/findByName?name=${encodeURIComponent(String(name))}`,
+          { headers: { Authorization: `Bearer ${manychatKey}` } }
         )
-        if (!res.ok) return `Erro  API: ${res.status} ${res.statusText}`
+        if (!res.ok) return `Erro ManyChat API: ${res.status} ${res.statusText}`
         const data = await res.json()
         if (!data?.data?.length) return `Nenhum subscriber encontrado com o nome "${name}".`
         return JSON.stringify(data.data.slice(0, 5), null, 2)
       }
 
-      case "get__tags": {
-        if (!Key) return "_API_KEY não configurada no Vercel."
-        const res = await fetch("https://api..com/fb/page/getTags", {
-          headers: { Authorization: `Bearer ${Key}` },
+      case "get_manychat_tags": {
+        if (!manychatKey) return "MANYCHAT_API_KEY não configurada no Vercel."
+        const res = await fetch("https://api.manychat.com/fb/page/getTags", {
+          headers: { Authorization: `Bearer ${manychatKey}` },
         })
-        if (!res.ok) return `Erro  API: ${res.status} ${res.statusText}`
+        if (!res.ok) return `Erro ManyChat API: ${res.status} ${res.statusText}`
         const data = await res.json()
         const tags = data?.data?.slice(0, 30) || []
         return JSON.stringify(tags, null, 2)
       }
 
-      case "get__flows": {
-        if (!Key) return "_API_KEY não configurada no Vercel."
-        const res = await fetch("https://api..com/fb/sending/getFlows", {
-          headers: { Authorization: `Bearer ${Key}` },
+      case "get_manychat_flows": {
+        if (!manychatKey) return "MANYCHAT_API_KEY não configurada no Vercel."
+        const res = await fetch("https://api.manychat.com/fb/sending/getFlows", {
+          headers: { Authorization: `Bearer ${manychatKey}` },
         })
-        if (!res.ok) return `Erro  API: ${res.status} ${res.statusText}`
+        if (!res.ok) return `Erro ManyChat API: ${res.status} ${res.statusText}`
         const data = await res.json()
         const flows = data?.data?.slice(0, 20) || []
         return JSON.stringify(flows, null, 2)

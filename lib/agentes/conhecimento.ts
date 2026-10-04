@@ -157,12 +157,12 @@ export const DECISOES_IRREVERSIVEIS: Facto[] = [
   },
   {
     oQue:
-      'O  foi completamente removido do site a 26/06/2026 — login, rotas, auth e migração ' +
+      'O IQONIC foi completamente removido do site a 26/06/2026 — login, rotas, auth e migração ' +
       'de acesso. Não se recria nem se sugere. Rebrand: «IQ Sync» passou a Tap to Trade MTM e ' +
       '«IQ Auto» a MTM Copy.',
     porque: 'Decisão do dono com o risco aceite. Propor voltar atrás é reabrir um corte já pago.',
     data: '26/06/2026',
-    origem: [memoria('-removed')],
+    origem: [memoria('iqonic-removed')],
   },
   {
     oQue:

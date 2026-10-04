@@ -174,13 +174,13 @@ export async function GET(request: NextRequest) {
         ...user,
         skool_access_pending: profileData.skool_access_pending === true,
         access_validation_pending: profileData.access_validation_status === "pending",
-        // As chaves em `profile_data` continuam a chamar-se `_*`: são dados de 83 perfis
+        // As chaves em `profile_data` continuam a chamar-se `iqonic_*`: são dados de 83 perfis
         // reais e renomeá-las na base era reescrever histórico para arrumar um nome. O nome antigo
         // fica onde é um facto (o que foi gravado), não onde é vocabulário nosso.
         access_validation_member_id:
-          typeof profileData._member_id === "string" ? profileData._member_id : null,
+          typeof profileData.iqonic_member_id === "string" ? profileData.iqonic_member_id : null,
         access_validation_proof_url:
-          typeof profileData._proof_url === "string" ? profileData._proof_url : null,
+          typeof profileData.iqonic_proof_url === "string" ? profileData.iqonic_proof_url : null,
         access_revalidation_required: profileData.access_revalidation_required === true,
         xp: xpMap.get(user.id) || { total_xp: 0, level: 1 },
         fast_start: fastStartMap.get(user.id) || { progress_percent: 0, steps_completed: 0 },

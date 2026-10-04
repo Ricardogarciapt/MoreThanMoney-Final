@@ -10,9 +10,9 @@ import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
 
 /**
- * As automações — o que hoje se paga ao .
+ * As automações — o que hoje se paga ao ManyChat.
  *
- * Três coisas foram tiradas do `insta-p8` (ver a memória `referencias--funis`) porque
+ * Três coisas foram tiradas do `insta-p8` (ver a memória `referencias-manychat-funis`) porque
  * resolvem problemas reais que a nossa primeira versão não resolvia:
  *
  *  · as palavras-gatilho são ETIQUETAS, não um campo de texto. Uma regra costuma responder a

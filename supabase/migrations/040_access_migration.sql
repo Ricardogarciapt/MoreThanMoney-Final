@@ -1,4 +1,4 @@
--- 040_access_migration.sql — migração packs + comprovativos 
+-- 040_access_migration.sql — migração packs + comprovativos IQONIC
 
 ALTER TABLE profiles
   ADD COLUMN IF NOT EXISTS profile_data JSONB DEFAULT '{}'::jsonb;
@@ -33,6 +33,6 @@ USING (
 
 -- Admins via service role (API routes)
 
-CREATE INDEX IF NOT EXISTS idx_profiles__pending
+CREATE INDEX IF NOT EXISTS idx_profiles_iqonic_pending
 ON profiles ((profile_data->>'access_validation_status'))
 WHERE (profile_data->>'access_validation_status') = 'pending';

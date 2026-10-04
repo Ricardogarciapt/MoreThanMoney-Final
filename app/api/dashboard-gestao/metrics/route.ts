@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   if (guarda) return guarda
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-  const Key = process.env._API_KEY || process.env._API_TOKEN
+  const manychatKey = process.env.MANYCHAT_API_KEY || process.env.MANYCHAT_API_TOKEN
 
   const now = new Date()
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -88,43 +88,43 @@ export async function GET(request: NextRequest) {
     ? Math.round(((bookingsByStatus["cancelled"] ?? 0) / totalBookings) * 100)
     : 0
 
-  // ── 3.  ─────────────────────────────────────────────────────────
-  let Flows: { name: string; status?: string }[] = []
-  let Tags: { name: string }[] = []
-  let Followers = 0
+  // ── 3. ManyChat ─────────────────────────────────────────────────────────
+  let manychatFlows: { name: string; status?: string }[] = []
+  let manychatTags: { name: string }[] = []
+  let manychatFollowers = 0
 
-  if (Key) {
-    const headers = { Authorization: `Bearer ${Key}` }
+  if (manychatKey) {
+    const headers = { Authorization: `Bearer ${manychatKey}` }
     try {
       const [flowsRes, tagsRes, pageRes] = await Promise.all([
-        fetch("https://api..com/fb/sending/getFlows", { headers }),
-        fetch("https://api..com/fb/page/getTags", { headers }),
-        fetch("https://api..com/fb/page/getInfo", { headers }),
+        fetch("https://api.manychat.com/fb/sending/getFlows", { headers }),
+        fetch("https://api.manychat.com/fb/page/getTags", { headers }),
+        fetch("https://api.manychat.com/fb/page/getInfo", { headers }),
       ])
       if (flowsRes.ok) {
         const fd = await flowsRes.json()
-        Flows = Array.isArray(fd.data) ? fd.data : []
+        manychatFlows = Array.isArray(fd.data) ? fd.data : []
       }
       if (tagsRes.ok) {
         const td = await tagsRes.json()
-        Tags = Array.isArray(td.data) ? td.data : []
+        manychatTags = Array.isArray(td.data) ? td.data : []
       }
       if (pageRes.ok) {
         const pd = await pageRes.json()
-        Followers = pd.data?.total_active_subscriber_count ?? 0
+        manychatFollowers = pd.data?.total_active_subscriber_count ?? 0
       }
-    } catch { /*  offline ou key inválida */ }
+    } catch { /* ManyChat offline ou key inválida */ }
   }
 
   // Flows por estado
-  const flowsActive = Flows.filter((f) => f.status !== "draft" && f.status !== "inactive").length
-  const flowsDraft = Flows.length - flowsActive
+  const flowsActive = manychatFlows.filter((f) => f.status !== "draft" && f.status !== "inactive").length
+  const flowsDraft = manychatFlows.length - flowsActive
 
   // ── 4. Ecossistema — visão geral ─────────────────────────────────────────
   // Funil estimado: followers → leads (tagged) → agendamentos → membros
   const funnelData = [
-    { stage: "Seguidores IG", value: Followers || 0, color: "#60a5fa" },
-    { stage: "Leads ", value: Tags.length > 0 ? Math.max(Followers * 0.12, 50) : 0, color: "#a78bfa" },
+    { stage: "Seguidores IG", value: manychatFollowers || 0, color: "#60a5fa" },
+    { stage: "Leads ManyChat", value: manychatTags.length > 0 ? Math.max(manychatFollowers * 0.12, 50) : 0, color: "#a78bfa" },
     { stage: "Agendamentos", value: bookingsByStatus["active"] ?? 0, color: "#D2A63C" },
     { stage: "Membros", value: activeUsers, color: "#4ade80" },
   ]
@@ -170,25 +170,25 @@ export async function GET(request: NextRequest) {
       })),
     },
 
-    : {
-      followers: Followers,
-      totalFlows: Flows.length,
+    manychat: {
+      followers: manychatFollowers,
+      totalFlows: manychatFlows.length,
       activeFlows: flowsActive,
       draftFlows: flowsDraft,
-      totalTags: Tags.length,
+      totalTags: manychatTags.length,
       flowsSplit: [
         { name: "Ativos", value: flowsActive, color: "#4ade80" },
         { name: "Rascunhos", value: Math.max(flowsDraft, 0), color: "#6b7280" },
       ],
-      topFlows: Flows.slice(0, 8).map((f) => ({ name: f.name })),
-      topTags: Tags.slice(0, 8).map((t) => ({ name: t.name })),
+      topFlows: manychatFlows.slice(0, 8).map((f) => ({ name: f.name })),
+      topTags: manychatTags.slice(0, 8).map((t) => ({ name: t.name })),
     },
 
     funnel: funnelData,
 
     ecosystem: {
       supabase: "ok",
-      : Key ? (Flows.length > 0 ? "ok" : "sem_dados") : "sem_key",
+      manychat: manychatKey ? (manychatFlows.length > 0 ? "ok" : "sem_dados") : "sem_key",
       calendly: totalBookings > 0 ? "ok" : "sem_dados",
     },
   })

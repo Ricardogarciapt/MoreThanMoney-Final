@@ -19,9 +19,9 @@ const QUICK_PROMPTS: Record<string, string[]> = {
     "Cria uma lista de perguntas de qualificação para stories",
   ],
   chatbot_builder: [
-    "Mostra-me os flows disponíveis no ",
+    "Mostra-me os flows disponíveis no ManyChat",
     "Cria uma mensagem de boas-vindas para o flow SCANNER",
-    "Lista todas as tags disponíveis no ",
+    "Lista todas as tags disponíveis no ManyChat",
     "Escreve uma sequência de 3 mensagens para o flow LIBERDADE",
   ],
   setter: [
@@ -68,7 +68,7 @@ const QUICK_PROMPTS: Record<string, string[]> = {
   ],
   ai_control: [
     "Faz um relatório do estado de todos os sistemas MTM",
-    "Quais os flows  ativos e as tags existentes?",
+    "Quais os flows ManyChat ativos e as tags existentes?",
     "Como melhorar a integração entre Calendly e Supabase?",
     "Mostra-me as estatísticas gerais da plataforma",
   ],
@@ -97,7 +97,7 @@ const CAPABILITIES: Record<string, { label: string; icon: React.ElementType }[]>
     { label: "Análise de fit MTM", icon: TrendingUp },
   ],
   chatbot_builder: [
-    { label: "Flows ", icon: Bot },
+    { label: "Flows ManyChat", icon: Bot },
     { label: "Tags & keywords", icon: Zap },
     { label: "Mensagens automatizadas", icon: MessageSquare },
     { label: "Jornadas de cliente", icon: TrendingUp },
@@ -123,7 +123,7 @@ const CAPABILITIES: Record<string, { label: string; icon: React.ElementType }[]>
   content_creation: [
     { label: "Captions Instagram", icon: PenTool },
     { label: "Scripts de Reel", icon: PenTool },
-    { label: "CTAs ", icon: Bot },
+    { label: "CTAs ManyChat", icon: Bot },
     { label: "Calendário editorial", icon: Calendar },
   ],
   partnerships: [
@@ -146,7 +146,7 @@ const CAPABILITIES: Record<string, { label: string; icon: React.ElementType }[]>
   ],
   ai_control: [
     { label: "Status de sistemas", icon: Brain },
-    { label: "Flows ", icon: Bot },
+    { label: "Flows ManyChat", icon: Bot },
     { label: "Dados Supabase", icon: Zap },
     { label: "Relatórios de performance", icon: TrendingUp },
   ],
@@ -170,10 +170,10 @@ const CAPABILITIES: Record<string, { label: string; icon: React.ElementType }[]>
 const QUICK_LINKS: Record<string, { label: string; url: string }[]> = {
   prospeccao: [
     { label: "Instagram MTM", url: "https://instagram.com/morethanmoney.pt" },
-    { label: "", url: "https://app..com" },
+    { label: "ManyChat", url: "https://app.manychat.com" },
   ],
   chatbot_builder: [
-    { label: " Dashboard", url: "https://app..com" },
+    { label: "ManyChat Dashboard", url: "https://app.manychat.com" },
     { label: "Instagram MTM", url: "https://instagram.com/morethanmoney.pt" },
   ],
   setter: [
@@ -207,7 +207,7 @@ const QUICK_LINKS: Record<string, { label: string; url: string }[]> = {
   ],
   ai_control: [
     { label: "Supabase", url: "https://supabase.com/dashboard" },
-    { label: "", url: "https://app..com" },
+    { label: "ManyChat", url: "https://app.manychat.com" },
     { label: "Vercel", url: "https://vercel.com/dashboard" },
     { label: "Anthropic Console", url: "https://console.anthropic.com" },
   ],

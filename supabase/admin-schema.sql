@@ -67,9 +67,9 @@ ON CONFLICT (setting_key) DO NOTHING;
 
 -- Inserir conteúdo inicial do site
 --
--- 2026-09-24: saíram daqui as entradas do  (menu «Educação» e «Apresentação » para
--- /, « Academy» para .vip, «BackOffice IQ» para user..life) e as do
--- /swipetotrade, que foi removido com ele. O  saiu do site a 2026-06-26; se este seed
+-- 2026-09-24: saíram daqui as entradas do IQONIC (menu «Educação» e «Apresentação IQONIC» para
+-- /iqonic, «IQonic Academy» para iqonic.vip, «BackOffice IQ» para user.iqonic.life) e as do
+-- /swipetotrade, que foi removido com ele. O IQONIC saiu do site a 2026-06-26; se este seed
 -- voltasse a correr, o menu ressuscitava — com links para páginas que já não existem e para um
 -- produto que já não é nosso.
 INSERT INTO site_content (type, category, title, description, url, order_index) VALUES

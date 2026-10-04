@@ -16,7 +16,7 @@ import {
  * O QUE ISTO VEIO RESOLVER
  * Em 25/09 a contagem era esta: pipeline com ZERO negócios e ZERO tarefas, e ao lado, na mesma
  * base de dados, 96 perfis inactivos (gente que se registou e nunca chegou a nada), 5 leads do
- * Telegram, 5 do Instagram e 1 do . Cerca de cem pessoas paradas — algumas há meses — não
+ * Telegram, 5 do Instagram e 1 do ManyChat. Cerca de cem pessoas paradas — algumas há meses — não
  * por falta de equipa, mas porque nunca ninguém as passou do sítio onde caíram para o sítio onde
  * se trabalha.
  *
@@ -323,7 +323,7 @@ async function doTelegram(db: SupabaseClient): Promise<Ingerido> {
 
 /** Instagram: quem comentou com intenção. O `commenter` é uma pessoa, e é isso que faz disto um lead. */
 async function doInstagram(db: SupabaseClient): Promise<Ingerido> {
-  const [comentarios, ] = await Promise.all([
+  const [comentarios, manychat] = await Promise.all([
     db
       .from('ig_leads')
       .select('comment_id, commenter, keyword, intent, comment_text, created_at')
@@ -386,7 +386,7 @@ async function doInstagram(db: SupabaseClient): Promise<Ingerido> {
     })
   }
 
-  for (const r of .data ?? []) {
+  for (const r of manychat.data ?? []) {
     const l = r as Record<string, unknown>
     candidatos.push({
       chave_origem: `mtm-lead:${String(l.id)}`,
@@ -399,7 +399,7 @@ async function doInstagram(db: SupabaseClient): Promise<Ingerido> {
       origem: 'instagram',
       // `warm` e acima já falaram connosco: entram como contactados para não repetir a abordagem.
       estado: ['warm', 'hot', 'qualified'].includes(String(l.stage ?? '').toLowerCase()) ? 'contactado' : 'lead',
-      nota: `Lead do Instagram (${nomeUtil(l.source as string, '')}), score ${String(l.score ?? '—')}.`,
+      nota: `Lead do Instagram (${nomeUtil(l.source as string, 'manychat')}), score ${String(l.score ?? '—')}.`,
     })
   }
 
