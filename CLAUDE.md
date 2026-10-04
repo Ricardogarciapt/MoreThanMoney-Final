@@ -9,8 +9,9 @@
 
 - **Site:** https://www.morethanmoney.pt
 - **Stack:** Next.js 15 App Router · TypeScript · Tailwind · Supabase · Vercel
-- **Repositório local:** `/Users/ricardogarcia/Documents/Repositório SITE/SITE-MORETHANMONEY-FINAL-39aae3022258dec0b1e9cce3dc39489035c05b36`
-- **Branch principal:** `main` (auto-deploy Vercel)
+- **Repositório local:** `/Volumes/Disco externo/Ollama para a MTM/SITE-MORETHANMONEY-FINAL` (o `node_modules` é symlink para o arquivo; typecheck = `./node_modules/.bin/tsc --noEmit`)
+- **Repositório principal:** `https://github.com/Ricardogarciapt/MoreThanMoney-Final.git` (remote `origin`; auto-deploy Vercel). **Secundário:** `SITE-MORETHANMONEY-FINAL` (remote `secundario`) — publica-se nos dois: `git push origin main && git push secundario main`.
+- **Branch principal:** `main`
 - **Supabase project:** `iwscxotvmtkphajmasof` (eu-north-1)
 - **Social próprio (sem ManyChat desde 04/10/2026):** Instagram @morethanmoney.pt + @ricardogarciapt via Graph API (tokens de Página, `lib/instagram/**`) · WhatsApp Cloud API (`lib/whatsapp-*`, `lib/whatsapp/**`) · Telegram bot próprio (`MoreThanMoney_aibot`)
 
