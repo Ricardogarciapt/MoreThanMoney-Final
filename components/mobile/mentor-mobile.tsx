@@ -208,11 +208,19 @@ export default function MentorMobile() {
           signal: abortRef.current.signal,
         })
 
-        if (!res.ok || !res.body) throw new Error("Erro na resposta")
+        if (!res.ok || !res.body) {
+          // A rota responde JSON com `error` quando não chega a abrir o stream (401/400/500).
+          const j = (await res.json().catch(() => null)) as { error?: string } | null
+          throw new Error(j?.error || "Não foi possível contactar o Mentor AI.")
+        }
 
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
         let accumulated = ""
+        // A rota manda `{type:"error", message}` quando TODA a cadeia de IA falhou — a frase é
+        // honesta («A IA está indisponível… groq (…); gemini (…)») e é essa que o membro vê,
+        // em vez de uma bolha vazia a fingir que ainda vem resposta.
+        let erroDaRota: string | null = null
 
         while (true) {
           const { done, value } = await reader.read()
@@ -228,16 +236,23 @@ export default function MentorMobile() {
                 setMessages((prev) =>
                   prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m))
                 )
+              } else if (parsed.type === "error" && typeof parsed.message === "string") {
+                erroDaRota = parsed.message
               }
             } catch {
               // ignore json parse errors on empty lines
             }
           }
         }
+        if (!accumulated.trim()) {
+          throw new Error(erroDaRota || "O Mentor não devolveu resposta. Tenta outra vez daqui a pouco.")
+        }
       } catch (err) {
         if ((err as Error).name === "AbortError") return
-        toast({ title: "Erro", description: "Não foi possível contactar o Mentor AI.", variant: "destructive" })
-        setMessages((prev) => prev.filter((m) => m.id !== assistantId))
+        const motivo = (err as Error).message || "Não foi possível contactar o Mentor AI."
+        toast({ title: "Mentor indisponível", description: motivo, variant: "destructive" })
+        // A frase fica na conversa, no lugar da resposta — não desaparece com o toast.
+        setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: motivo } : m)))
       } finally {
         setStreaming(false)
         abortRef.current = null

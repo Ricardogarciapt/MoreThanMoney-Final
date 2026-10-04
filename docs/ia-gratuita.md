@@ -116,6 +116,17 @@ erros; (c) 400 mal formado NÃO salta; (d) sem chave é saltado sem contar como 
 pedido e não devolvido → extrai uma vez ou falha claro; (f) livro a falhar não impede resposta;
 (g) timeout passa ao seguinte; (h) uma tentativa por fornecedor.
 
+`npx tsx lib/__tests__/app-mobile-ia.check.ts` — guarda da app `/app-mobile`: segue em código os
+`fetch('/api/…')` de todos os componentes que a app monta (incl. a página embutida `/mtmsocial`),
+resolve cada rota ao ficheiro e aos imports do servidor, e FALHA se algum voltar a importar
+`@anthropic-ai/sdk`/`openai` ou a ler `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` (ou Gemini/Groq à mão)
+fora de `lib/ia/`. Com `--mapa` imprime componente → rota → usa IA → migrada.
+
+**Quota do Gemini grátis (visto a 04/10):** o limite diário é de **20 pedidos por dia POR MODELO**
+(`GenerateRequestsPerDayPerProjectPerModel-FreeTier`). Esgotado o `gemini-3.8-flash`, os
+`gemini-3.7-flash`, `3.6`, `3.5-flash-lite` e `3.1-flash-lite` respondiam com a mesma chave — é
+quota por modelo, não por chave. Sem Groq, o Gemini sozinho não aguenta um dia de app.
+
 ## Já migrados (04/10)
 
 `lib/mtm-terminal-analysis.ts` + `app/api/mtm-terminal/analyze/route.ts`,
