@@ -12,6 +12,7 @@
  */
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { IG_ACCOUNTS, tokenForAccount } from "./publish"
+import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
 
 const GRAPH = "https://graph.facebook.com/v21.0"
 
@@ -80,27 +81,38 @@ function templateReply(commentId: string, text: string, username: string | null)
   return pool[seed % pool.length](handle)
 }
 
-/** LLM opcional (Anthropic) — resposta curta, PT, apreço, sem links/promessas. Fallback → template. */
-async function llmReply(commentText: string, caption: string, commentId: string, username: string | null): Promise<string> {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) return templateReply(commentId, commentText, username)
+/** A porta única da IA. Injectável para a guarda provar o caso mau sem rede. */
+export type ChamarIA = typeof chamarIA
+
+const ENGAGE_SYSTEM =
+  "És o Ricardo (MoreThanMoney), a responder a um comentário no teu Instagram. Escreve UMA resposta de APREÇO curtíssima (máx 12 palavras), em português de Portugal, calorosa, no máximo 1-2 emojis. NUNCA prometas lucros, NUNCA metas links, NUNCA vendas. Só agradecer/aquecer. Devolve só a frase."
+
+/**
+ * LLM opcional (pela porta única da IA) — resposta curta, PT, apreço, sem links/promessas.
+ *
+ * Se a cadeia INTEIRA falhar cai no TEMPLATE da marca — que é o que o cron envia por omissão
+ * quando `IG_ENGAGE_LLM` não está ligado. O template não é texto a fingir IA: é a frase de apreço
+ * desenhada pela casa. O que NUNCA sai daqui é a mensagem de erro da IA dentro de um comentário.
+ */
+export async function llmReply(
+  commentText: string,
+  caption: string,
+  commentId: string,
+  username: string | null,
+  chamar: ChamarIA = chamarIA,
+): Promise<string> {
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 80,
-        system:
-          "És o Ricardo (MoreThanMoney), a responder a um comentário no teu Instagram. Escreve UMA resposta de APREÇO curtíssima (máx 12 palavras), em português de Portugal, calorosa, no máximo 1-2 emojis. NUNCA prometas lucros, NUNCA metas links, NUNCA vendas. Só agradecer/aquecer. Devolve só a frase.",
-        messages: [{ role: "user", content: `Post: "${caption.slice(0, 120)}"\nComentário: "${commentText.slice(0, 200)}"\nResponde:` }],
-      }),
+    const r = await chamar({
+      tarefa: "ig-engage",
+      sistema: ENGAGE_SYSTEM,
+      mensagens: [{ role: "user", content: `Post: "${caption.slice(0, 120)}"\nComentário: "${commentText.slice(0, 200)}"\nResponde:` }],
+      maxTokens: 80,
+      preferencia: "rapido",
     })
-    const j = await r.json().catch(() => null)
-    const txt = j?.content?.[0]?.text?.trim()
+    const txt = r.texto.trim()
     if (txt && txt.length <= 200 && !/https?:\/\//i.test(txt)) return txt
-  } catch {
-    /* fallback */
+  } catch (e) {
+    console.warn("[ig-engage] IA indisponível, vai o template:", mensagemIndisponivel(e))
   }
   return templateReply(commentId, commentText, username)
 }

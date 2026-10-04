@@ -7,8 +7,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { verifyAdminAccess, checkRateLimit, validateRequiredFields } from "@/lib/admin-api-helpers"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { defaultContentConfig, type ContentConfig } from "@/lib/content-config"
-import { buildLocalMtmCoachReply } from "@/lib/mtm-ai-coach-fallback"
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
 /**
  * O CONTEXTO deste agente era só o snapshot da base — definições, contagens, eventos de IA.
  *
@@ -272,58 +271,6 @@ export async function buildSiteContextSnapshot(): Promise<Record<string, unknown
   }
 }
 
-async function callAnthropic(system: string, userMessage: string): Promise<string | null> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) return null
-  const model = modeloClaude()
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 2048,
-      system,
-      messages: [{ role: "user", content: userMessage }],
-    }),
-  })
-  if (!res.ok) return null
-  const data = (await res.json()) as { content?: { type: string; text?: string }[] }
-  return data.content?.find((b) => b.type === "text")?.text?.trim() || null
-}
-
-async function callOpenAI(system: string, userMessage: string): Promise<string | null> {
-  const openaiKey = process.env.OPENAI_API_KEY?.trim()
-  if (!openaiKey) return null
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini"
-  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "")
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${openaiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: userMessage },
-      ],
-      temperature: 0.5,
-      max_tokens: 2048,
-    }),
-  })
-  if (!res.ok) return null
-  const data = (await res.json()) as {
-    choices?: { message?: { content?: string } }[]
-  }
-  const text = data.choices?.[0]?.message?.content?.trim()
-  return text || null
-}
-
 export function buildSiteAgentSystemPrompt(siteContext: Record<string, unknown>): string {
   return `És o **agente de gestão do site MoreThanMoney (MTM)** ligado à API /api/agent/v1.
 
@@ -341,6 +288,15 @@ ${JSON.stringify(siteContext, null, 2).slice(0, 12000)}
 Responde em **português de Portugal**, de forma clara e operacional. Para alterações no site, indica o endpoint e payload exactos.`
 }
 
+/**
+ * O chat do agente de gestão do site — pela porta única da IA.
+ *
+ * Até 04/10 tentava a OpenAI, depois a Anthropic (`AI_CHAT_PROVIDER` escolhia a ordem) e, se
+ * nenhuma respondesse, saía uma resposta LOCAL pré-escrita a fazer de IA. As duas contas estavam
+ * sem crédito, por isso era a resposta local que o Ricardo recebia no Telegram — sem saber.
+ * Agora a cadeia (Groq → Gemini → Ollama → OpenAI → Anthropic) decide quem responde, e quando TODA
+ * falha a resposta diz isso mesmo (`source: 'indisponivel'`) em vez de inventar.
+ */
 export async function runSiteAgentChat(
   message: string,
   extraContext?: string
@@ -348,31 +304,21 @@ export async function runSiteAgentChat(
   const snapshot = await buildSiteContextSnapshot()
   const system = buildSiteAgentSystemPrompt(snapshot) + (extraContext ? `\n\n${extraContext}` : "")
 
-  const prefer = (process.env.AI_CHAT_PROVIDER || "auto").toLowerCase()
-  let reply: string | null = null
-  let source = "local"
-
-  if (prefer === "anthropic") {
-    reply = await callAnthropic(system, message)
-    if (reply) source = "anthropic"
-  } else if (prefer === "openai") {
-    reply = await callOpenAI(system, message)
-    if (reply) source = "openai"
-  } else {
-    reply = await callOpenAI(system, message)
-    if (reply) source = "openai"
-    if (!reply) {
-      reply = await callAnthropic(system, message)
-      if (reply) source = "anthropic"
-    }
+  try {
+    const r = await chamarIA({
+      tarefa: "agente-site",
+      sistema: system,
+      mensagens: [{ role: "user", content: message }],
+      maxTokens: 2048,
+      temperatura: 0.5,
+      preferencia: "qualidade",
+    })
+    const reply = r.texto.trim()
+    if (reply) return { reply, source: r.fornecedor }
+    return { reply: "A IA devolveu uma resposta vazia.", source: "indisponivel" }
+  } catch (e) {
+    return { reply: mensagemIndisponivel(e), source: "indisponivel" }
   }
-
-  if (!reply) {
-    reply = buildLocalMtmCoachReply(message, { mentor_mode: false, onboarding_focus: false })
-    source = "local"
-  }
-
-  return { reply, source }
 }
 
 export { validateRequiredFields }

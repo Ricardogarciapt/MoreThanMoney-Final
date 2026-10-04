@@ -9,7 +9,7 @@
 import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
 import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO,
   ondeComprarTopoNumaLinha, PRECO_MEMBRO, PRECO_TOPO } from '@/lib/escada-precos'
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, type PedidoIA } from '@/lib/ia/chamar'
 
 const DM_SYSTEM = `És um CLOSER humano da More Than Money (MTM · morethanmoney.pt), a falar por DM do Instagram do Ricardo Garcia. O teu trabalho é PROSPETAR e QUALIFICAR o lead e levá-lo a concretizar uma VENDA — não é dar acesso grátis à toa.
 
@@ -41,43 +41,47 @@ RECRUTAMENTO DE CRIADORES/EDUCADORES (ativa quando a pessoa fala em CRIAR, ser C
 
 Responde SÓ com a mensagem para enviar à pessoa (texto puro, sem aspas, sem JSON, sem prefixos).`
 
-/** Gera a resposta do closer para uma mensagem recebida. */
+/**
+ * Qualidade por omissão: é a conversa mais perto de uma venda que a casa tem. `IG_CLOSER_PREFERENCIA`
+ * ('rapido' | 'qualidade') substitui o antigo `IG_CLOSER_MODEL`, que escolhia um id da Anthropic —
+ * com a IA a entrar por uma porta só (Groq → Gemini → Ollama → OpenAI → Anthropic), escolher um
+ * modelo de UM fornecedor deixou de querer dizer nada.
+ */
+function preferenciaDoCloser(): PedidoIA['preferencia'] {
+  return process.env.IG_CLOSER_PREFERENCIA?.trim() === 'rapido' ? 'rapido' : 'qualidade'
+}
+
+/** A porta única da IA. Injectável para a guarda provar o caso mau sem rede. */
+export type ChamarIA = typeof chamarIA
+
+/**
+ * Gera a resposta do closer para uma mensagem recebida.
+ *
+ * Se a cadeia INTEIRA de fornecedores falhar, LANÇA (`ErroIA`). Não devolve texto nenhum — uma
+ * DM que falha fica registada como erro em `ig_dm_log` pelo webhook, e não sai nada para a pessoa.
+ * O contrário (enviar «a IA está indisponível» a um lead por DM) é pior do que não responder.
+ */
 export async function generateDmReply(
   message: string,
   opts: { name?: string | null; lang?: string | null } = {},
+  chamar: ChamarIA = chamarIA,
 ): Promise<string> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) throw new Error("ANTHROPIC_API_KEY em falta")
-  // O recurso estava escrito à mão, e já foi um id morto (`claude-3-5-haiku-20241022`): com as
-  // duas variáveis por preencher, o closer respondia erro a toda a gente — em silêncio, porque
-  // uma DM que falha não reclama. Trocar o id por outro id à mão só adia o mesmo dia. O
-  // `modeloClaude` é que sabe quais são os mortos, e ignora-os mesmo quando é a CONFIGURAÇÃO a
-  // pedi-los — que é o caso que um recurso à mão nunca chega a apanhar.
-  const model = modeloClaude(process.env.IG_CLOSER_MODEL)
   const lang = (opts.lang || "").trim() || "português de Portugal"
   const who = opts.name ? ` O primeiro nome da pessoa é ${opts.name}.` : ""
   const user = `Idioma a usar: ${lang}.${who}\nMensagem da pessoa: "${message}"`
 
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), 20000)
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model, max_tokens: 400, system: DM_SYSTEM, messages: [{ role: "user", content: user }] }),
-      signal: ctrl.signal,
-    })
-    if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 200)}`)
-    const data = await res.json()
-    const text: string = (data?.content || [])
-      .filter((p: { type?: string }) => p?.type === "text")
-      .map((p: { text?: string }) => p.text || "")
-      .join("")
-      .trim()
-    return text
-  } finally {
-    clearTimeout(timer)
-  }
+  const r = await chamar({
+    tarefa: 'ig-dm-closer',
+    sistema: DM_SYSTEM,
+    mensagens: [{ role: 'user', content: user }],
+    maxTokens: 400,
+    preferencia: preferenciaDoCloser(),
+    timeoutMs: 20_000,
+  })
+  const text = r.texto.trim()
+  // Texto vazio não é resposta: rebenta para o webhook registar o erro em vez de enviar nada/lixo.
+  if (!text) throw new Error(`o closer recebeu texto vazio de ${r.fornecedor} (${r.modelo})`)
+  return text
 }
 
 /**

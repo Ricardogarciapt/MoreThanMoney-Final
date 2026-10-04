@@ -5,12 +5,14 @@
  * O `delete-user` apagava contas, o `approve-user` dava acesso, o chat do dashboard corria o
  * modelo com as ferramentas todas na nossa conta. Testado contra producao antes de fechar.
  */
-import Anthropic from "@anthropic-ai/sdk"
 import { createClient } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { FERRAMENTAS, ferramentaPorNome } from "@/lib/mcp/ferramentas"
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel, type MensagemIA } from "@/lib/ia/chamar"
+import {
+  MAX_VOLTAS_FERRAMENTAS, lerDecisao, protocoloFerramentas, type FerramentaDashboard,
+} from "@/lib/dashboard-gestao/protocolo-ferramentas"
 import { lerConversas } from '@/lib/whatsapp/conversas'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -352,13 +354,13 @@ Responde sempre em Português de Portugal, estilo pedagógico mas acessível.`,
  * fica desactualizada à primeira ferramenta nova — e o sintoma seria o agente a dizer que não
  * consegue fazer uma coisa que o sistema faz.
  */
-const FERRAMENTAS_MTM: Anthropic.Tool[] = FERRAMENTAS.map((f) => ({
+const FERRAMENTAS_MTM: FerramentaDashboard[] = FERRAMENTAS.map((f) => ({
   name: f.nome,
   description: f.descricao,
-  input_schema: f.esquema as Anthropic.Tool['input_schema'],
+  input_schema: f.esquema,
 }))
 
-const TOOLS_BASE: Anthropic.Tool[] = [
+const TOOLS_BASE: FerramentaDashboard[] = [
   {
     name: "get_platform_stats",
     description: "Obtém estatísticas da plataforma MTM: total de utilizadores, membros ativos, marcações Calendly recentes",
@@ -435,7 +437,7 @@ const TOOLS_BASE: Anthropic.Tool[] = [
 ]
 
 /** As duas famílias juntas: o que já havia, mais o estado do negócio. */
-const TOOLS: Anthropic.Tool[] = [...TOOLS_BASE, ...FERRAMENTAS_MTM]
+const TOOLS: FerramentaDashboard[] = [...TOOLS_BASE, ...FERRAMENTAS_MTM]
 
 
 // ── Tool execution ─────────────────────────────────────────────────────────────
@@ -558,84 +560,37 @@ async function executeTool(
   }
 }
 
+// ── Ciclo de ferramentas pela porta única da IA ───────────────────────────────
 /**
- * Os recursos, quando o primeiro modelo não responde.
+ * A 04/10 isto corria o SDK da Anthropic com tool-use nativo e streaming por token. A Anthropic
+ * ficou sem crédito e o dashboard inteiro morria com um JSON cru. Passou a entrar por `chamarIA`
+ * (Groq → Gemini → Ollama → OpenAI → Anthropic), que NÃO faz tool-use nativo — por isso o ciclo
+ * é explícito e simples, igual para todos os fornecedores:
  *
- * Esta lista já foi TODA de ids mortos (`claude-sonnet-4-5`, `claude-3-5-sonnet-20241022`): o
- * dashboard só não morria porque tenta os candidatos por ordem e apanha o 404 — mas gastava três
- * chamadas para chegar a lado nenhum, e depois mandava o admin configurar, à mão, mais um id
- * morto. Quem sabe quais são os mortos é o `lib/modelo-claude.ts`; aqui ficam só os vivos.
+ *   1. O modelo responde em JSON: `{"ferramenta": "...", "argumentos": {...}}` para pedir uma
+ *      ferramenta, ou `{"resposta": "..."}` com a resposta final.
+ *   2. Corre-se a ferramenta, o resultado volta como mensagem do utilizador, chama-se outra vez.
+ *   3. No máximo `MAX_VOLTAS_FERRAMENTAS` ferramentas por pergunta; depois pede-se a resposta final.
+ *
+ * Os PROMPTS dos 12 agentes ficam intocados — o protocolo das ferramentas é um bloco acrescentado
+ * a seguir. O ecrã continua a receber os mesmos eventos SSE (`text`, `tool_start`, `tool_result`,
+ * `error`, `[DONE]`); o texto chega num evento só porque o núcleo não faz streaming por token.
  */
-const ANTHROPIC_FALLBACK_MODELS = [
-  "claude-sonnet-5",
-  "claude-opus-5-5",
-]
-
-function getAnthropicModelCandidates() {
-  // O 1.º candidato passa pelo `modeloClaude`, que limpa o valor configurado e descarta um id
-  // morto vindo da configuração — o caso que esta lista de recursos nunca chegava a apanhar.
-  return [...new Set([modeloClaude(), ...ANTHROPIC_FALLBACK_MODELS])]
-}
-
-function isAnthropicModelUnavailableError(err: unknown) {
-  const errStr = String(err).toLowerCase()
-  return (
-    errStr.includes("not_found_error") ||
-    errStr.includes("404") ||
-    (errStr.includes("model") && errStr.includes("not available"))
-  )
-}
-
-async function createAnthropicStreamWithFallback(args: {
-  anthropic: Anthropic
-  systemPrompt: string
-  currentMessages: Anthropic.MessageParam[]
-  tools: Anthropic.Tool[]
-  modelCandidates: string[]
-}) {
-  let lastError: unknown = null
-
-  for (const model of args.modelCandidates) {
-    try {
-      const response = await args.anthropic.messages.create({
-        model,
-        max_tokens: 4096,
-        system: args.systemPrompt,
-        messages: args.currentMessages,
-        tools: args.tools,
-        stream: true,
-      })
-      return { response, model }
-    } catch (err) {
-      if (!isAnthropicModelUnavailableError(err)) throw err
-      lastError = err
-      console.warn(`[dashboard-gestao/chat] modelo Anthropic indisponível: ${model}`)
-    }
-  }
-
-  throw new Error(
-    `anthropic_models_unavailable::${args.modelCandidates.join(",")}::${String(lastError)}`
-  )
-}
-
 // ── Main handler ──────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const guarda = await requireAdmin(req)
   if (guarda) return guarda
 
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY não configurado" }, { status: 500 })
-  }
-
-  let body: { agent: string; messages: Array<{ role: string; content: string }> }
+  let body: { agent?: string; agentId?: string; messages: Array<{ role: string; content: string }> }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 })
   }
 
-  const { agent, messages } = body
+  // A consola do AIOS manda `agentId`; o dashboard manda `agent`. Aceitam-se os dois.
+  const agent = body.agent ?? body.agentId
+  const { messages } = body
   if (!agent || !messages?.length) {
     return NextResponse.json({ error: "agent e messages são obrigatórios" }, { status: 400 })
   }
@@ -644,9 +599,6 @@ export async function POST(req: NextRequest) {
   if (!systemPrompt) {
     return NextResponse.json({ error: `Agente "${agent}" não encontrado` }, { status: 404 })
   }
-
-  const anthropic = new Anthropic({ apiKey })
-  const modelCandidates = getAnthropicModelCandidates()
 
   const encoder = new TextEncoder()
 
@@ -658,134 +610,51 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        let selectedModel: string | null = null
-        let currentMessages: Anthropic.MessageParam[] = messages.map(
-          (m: { role: string; content: string }) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content,
+        const sistema = `${systemPrompt}\n\n${protocoloFerramentas(TOOLS)}`
+        const conversa: MensagemIA[] = messages.map((m) => ({
+          role: m.role === "assistant" ? "assistant" : "user",
+          content: m.content,
+        }))
+
+        let respondeu = false
+        for (let volta = 0; volta <= MAX_VOLTAS_FERRAMENTAS && !respondeu; volta++) {
+          const ultima = volta === MAX_VOLTAS_FERRAMENTAS
+          const r = await chamarIA({
+            tarefa: `dashboard-gestao:${agent}`,
+            sistema: ultima
+              ? `${sistema}\n\nJá usaste as ferramentas desta pergunta. Responde agora com {"resposta": "..."}.`
+              : sistema,
+            mensagens: conversa,
+            maxTokens: 4096,
+            json: true,
+            preferencia: "qualidade",
           })
-        )
+          const decisao = lerDecisao(r.texto)
 
-        // Agentic loop (max 5 tool-use iterations)
-        for (let i = 0; i < 5; i++) {
-          const response = selectedModel
-            ? await anthropic.messages.create({
-                model: selectedModel,
-                max_tokens: 4096,
-                system: systemPrompt,
-                messages: currentMessages,
-                tools: TOOLS,
-                stream: true,
-              })
-            : await (async () => {
-                const created = await createAnthropicStreamWithFallback({
-                  anthropic,
-                  systemPrompt,
-                  currentMessages,
-                  tools: TOOLS,
-                  modelCandidates,
-                })
-                selectedModel = created.model
-                return created.response
-              })()
-
-          type ContentBlock = { type: string; id?: string; name?: string; input?: string; text?: string }
-          const blocks: ContentBlock[] = []
-          let curIdx = -1
-          let stopReason = "end_turn"
-
-          for await (const event of response) {
-            if (event.type === "content_block_start") {
-              curIdx++
-              if (event.content_block.type === "text") {
-                blocks.push({ type: "text", text: "" })
-              } else if (event.content_block.type === "tool_use") {
-                blocks.push({
-                  type: "tool_use",
-                  id: event.content_block.id,
-                  name: event.content_block.name,
-                  input: "",
-                })
-                send({ type: "tool_start", name: event.content_block.name, id: event.content_block.id })
-              }
-            } else if (event.type === "content_block_delta") {
-              const blk = blocks[curIdx]
-              if (!blk) continue
-              if (event.delta.type === "text_delta" && blk.type === "text") {
-                blk.text = (blk.text || "") + event.delta.text
-                send({ type: "text", text: event.delta.text })
-              } else if (event.delta.type === "input_json_delta" && blk.type === "tool_use") {
-                blk.input = (blk.input || "") + event.delta.partial_json
-              }
-            } else if (event.type === "message_delta") {
-              stopReason = event.delta.stop_reason || "end_turn"
-            }
+          if (decisao.tipo === "resposta") {
+            send({ type: "text", text: decisao.texto })
+            respondeu = true
+            break
+          }
+          if (decisao.tipo === "invalida" || ultima) {
+            // Formato inesperado (ou ainda a pedir ferramentas depois do tecto): diz-se, não se finge.
+            send({ type: "error", message: `A IA respondeu num formato inesperado (${decisao.tipo === "invalida" ? decisao.motivo : "pediu mais ferramentas do que o permitido"}). Tenta reformular.` })
+            respondeu = true
+            break
           }
 
-          /**
-           * A mensagem do assistente para o histórico.
-           *
-           * O tipo é `ContentBlockParam` e não `ContentBlock`: o primeiro é o que se ENVIA, o
-           * segundo o que se RECEBE. São parecidos mas o recebido traz campos que o SDK preenche
-           * (citações, assinaturas) e que aqui não existem — daí o erro de tipos que estava a ser
-           * escondido pelo build ignorar o tsc.
-           */
-          const assistantContent: Anthropic.ContentBlockParam[] = blocks.map((b) => {
-            if (b.type === "text") return { type: "text" as const, text: b.text || "" }
-            let parsedInput: Record<string, unknown> = {}
-            try { parsedInput = JSON.parse(b.input || "{}") } catch { /* empty */ }
-            return { type: "tool_use" as const, id: b.id!, name: b.name!, input: parsedInput }
-          })
-          currentMessages.push({ role: "assistant", content: assistantContent })
+          const id = `tool_${volta}_${Date.now()}`
+          send({ type: "tool_start", name: decisao.nome, id })
+          const result = await executeTool(decisao.nome, decisao.argumentos)
+          const preview = result.length > 300 ? result.slice(0, 300) + "…" : result
+          send({ type: "tool_result", name: decisao.nome, id, preview })
 
-          if (stopReason !== "tool_use") break
-
-          // Execute tools and collect results
-          const toolResults: Anthropic.ToolResultBlockParam[] = []
-          for (const blk of blocks) {
-            if (blk.type !== "tool_use" || !blk.id) continue
-            let parsedInput: Record<string, unknown> = {}
-            try { parsedInput = JSON.parse(blk.input || "{}") } catch { /* empty */ }
-
-            const result = await executeTool(blk.name!, parsedInput)
-            const preview = result.length > 300 ? result.slice(0, 300) + "…" : result
-            send({ type: "tool_result", name: blk.name!, id: blk.id, preview })
-
-            toolResults.push({ type: "tool_result", tool_use_id: blk.id, content: result })
-          }
-          currentMessages.push({ role: "user", content: toolResults })
+          conversa.push({ role: "assistant", content: r.texto })
+          conversa.push({ role: "user", content: `Resultado da ferramenta «${decisao.nome}»:\n${result.slice(0, 12000)}` })
         }
       } catch (err) {
-        const errStr = String(err)
-        if (errStr.includes("anthropic_models_unavailable::")) {
-          send({
-            type: "error",
-            message:
-              `Nenhum modelo Anthropic compatível ficou disponível para o dashboard.\n\n` +
-              `Modelos tentados automaticamente: ${modelCandidates.join(", ")}\n\n` +
-              `No Vercel → Settings → Environment Variables, define por exemplo:\n` +
-              `ANTHROPIC_MODEL = claude-sonnet-5\n\n` +
-              `Alternativas disponíveis:\n` +
-              `ANTHROPIC_MODEL = claude-opus-5-5\n` +
-              `ANTHROPIC_MODEL = claude-haiku-4-5-20251001`,
-          })
-        } else if (isAnthropicModelUnavailableError(err)) {
-          send({
-            type: "error",
-            message:
-              `O modelo Anthropic configurado não está disponível.\n\n` +
-              `Modelos tentados automaticamente: ${modelCandidates.join(", ")}\n\n` +
-              `No Vercel → Settings → Environment Variables, define:\n` +
-              `ANTHROPIC_MODEL = claude-sonnet-5`,
-          })
-        } else if (errStr.includes("credit balance") || errStr.includes("insufficient")) {
-          send({
-            type: "error",
-            message: `Saldo insuficiente. Adiciona créditos em: console.anthropic.com/billing`,
-          })
-        } else {
-          send({ type: "error", message: `Erro: ${errStr}` })
-        }
+        // Mensagem honesta («a IA está indisponível: groq (…); openai (…)») — nunca o JSON cru de um fornecedor.
+        send({ type: "error", message: mensagemIndisponivel(err) })
       }
 
       send("[DONE]")

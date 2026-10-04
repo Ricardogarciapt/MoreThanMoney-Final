@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { contextoDaCasa } from '@/lib/factos-da-casa'
 
 /**
@@ -162,43 +162,40 @@ export function respostaPublica(a: Automacao): string | null {
   return lista[a.disparos % lista.length]
 }
 
-export async function textoDaResposta(a: Automacao, doCliente: string): Promise<string> {
+/** A porta única da IA. Injectável para a guarda provar o caso mau sem rede. */
+export type ChamarIA = typeof chamarIA
+
+export async function textoDaResposta(a: Automacao, doCliente: string, chamar: ChamarIA = chamarIA): Promise<string> {
   if (a.respostaTipo !== 'ia') return a.resposta?.texto ?? ''
 
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  // Sem chave devolve-se o texto de reserva — uma automação que não responde nada é pior do que
-  // uma que responde o básico.
-  if (!key) return a.resposta?.texto ?? ''
+  // A visão da casa vem de um sítio só: uma automação de IA responde EM NOME da casa, e
+  // sem factos na mão nega produtos que existem a quem pergunta por eles.
+  const sistema =
+    `${contextoDaCasa()}\n\n` +
+    'Respondes em nome da MoreThanMoney, comunidade portuguesa de trading. Português de ' +
+    'Portugal, tratamento por "tu", curto — duas ou três frases. Nada de promessas de lucro ' +
+    'nem números de desempenho: não os tens e inventá-los destrói a confiança. ' +
+    `Instrução para esta resposta: ${a.resposta?.instrucao ?? 'responde e encaminha para o passo seguinte'}` +
+    (a.resposta?.url ? `\nLink a incluir: ${a.resposta.url}` : '')
 
+  /**
+   * Se a cadeia INTEIRA de fornecedores falhar, sai o texto de RESERVA que o dono escreveu na
+   * automação — e, se não houver, sai '' e quem chama (bot-responder, webhook) não envia nada.
+   * O que nunca sai daqui é a mensagem de erro da IA a fazer de resposta a um cliente; a falha
+   * fica no livro `ia_chamadas` e no log do cron.
+   */
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
-        max_tokens: 400,
-        system:
-          // A visão da casa vem de um sítio só: uma automação de IA responde EM NOME da casa, e
-          // sem factos na mão nega produtos que existem a quem pergunta por eles.
-          `${contextoDaCasa()}\n\n` +
-          'Respondes em nome da MoreThanMoney, comunidade portuguesa de trading. Português de ' +
-          'Portugal, tratamento por "tu", curto — duas ou três frases. Nada de promessas de lucro ' +
-          'nem números de desempenho: não os tens e inventá-los destrói a confiança. ' +
-          `Instrução para esta resposta: ${a.resposta?.instrucao ?? 'responde e encaminha para o passo seguinte'}` +
-          (a.resposta?.url ? `\nLink a incluir: ${a.resposta.url}` : ''),
-        messages: [{ role: 'user', content: doCliente.slice(0, 1000) }],
-      }),
-      signal: AbortSignal.timeout(20_000),
+    const r = await chamar({
+      tarefa: 'automacao-ia',
+      sistema,
+      mensagens: [{ role: 'user', content: doCliente.slice(0, 1000) }],
+      maxTokens: 400,
+      preferencia: process.env.CONTENT_DRAFT_PREFERENCIA?.trim() === 'rapido' ? 'rapido' : 'qualidade',
+      timeoutMs: 20_000,
     })
-    if (!r.ok) return a.resposta?.texto ?? ''
-    const j = await r.json()
-    const texto = ((j?.content ?? []) as { type: string; text?: string }[])
-      .filter((p) => p.type === 'text')
-      .map((p) => p.text ?? '')
-      .join('')
-      .trim()
-    return texto || a.resposta?.texto || ''
-  } catch {
+    return r.texto.trim() || a.resposta?.texto || ''
+  } catch (e) {
+    console.warn('[automacoes] IA indisponível, vai o texto de reserva:', mensagemIndisponivel(e))
     return a.resposta?.texto ?? ''
   }
 }
