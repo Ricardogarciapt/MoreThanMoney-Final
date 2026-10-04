@@ -2,7 +2,7 @@
  * GEMINI — 2.º da cadeia. Plano gratuito do AI Studio, com visão (lê capturas de ecrã) e modo
  * JSON nativo. Vai a seguir ao Groq porque é mais lento e porque o limite diário do grátis é
  * mais apertado — é a reserva do grátis, não o motor.
- * Chave em aistudio.google.com → `GEMINI_API_KEY` (a 04/10 NÃO existe em produção: é saltado).
+ * Chave em aistudio.google.com → `GEMINI_API_KEY` (em produção desde 04/10; formato `AQ.…`, válida).
  */
 import type { Fornecedor, PedidoIA } from '../tipos'
 import { exigirTexto, postJson, sistemaComJson, ultimoIndiceUser } from './comum'
@@ -11,11 +11,13 @@ const TIMEOUT_MS = Number(process.env.IA_TIMEOUT_MS) || 25_000
 
 function modelo(p: PedidoIA): string {
   if (process.env.GEMINI_MODEL?.trim()) return process.env.GEMINI_MODEL.trim()
-  // Nomes EXPLÍCITOS, não os aliases «-latest»: um alias muda de modelo sem avisar, e um dia a
-  // resposta fica diferente sem ninguém ter mudado nada. E são os 2.5 porque foi o que a chave do
-  // dono listou a 04/10/2026 (GET /v1beta/models): os 2.0 e 1.5 já NÃO existem neste projecto e
-  // davam 404 — foi o primeiro erro que esta chave deu, e parecia chave inválida.
-  return p.preferencia === 'rapido' ? 'gemini-2.5-flash-lite' : 'gemini-2.5-flash'
+  // Nome EXPLÍCITO, não um alias «-latest»: um alias muda de modelo sem avisar. E é o 3.8 porque
+  // foi o ÚNICO que respondeu com a chave do dono a 04/10/2026: os 2.0/1.5 dão 404, e os 2.5
+  // aparecem em GET /v1beta/models mas devolvem «no longer available to new users — use
+  // gemini-3.8-flash». A lista de modelos NÃO é a lista do que a chave pode usar. O mesmo modelo
+  // para «rápido» e «qualidade» até se provar um -lite a responder; adivinhar um nome custava o
+  // segundo fornecedor da cadeia por um 404 mudo.
+  return 'gemini-3.8-flash'
 }
 
 export const gemini: Fornecedor = {
@@ -44,7 +46,10 @@ export const gemini: Fornecedor = {
         ...(sistema ? { systemInstruction: { parts: [{ text: sistema }] } } : {}),
         contents,
         generationConfig: {
-          maxOutputTokens: p.maxTokens ?? 1024,
+          // O 3.8 é um modelo que PENSA antes de responder e os tokens do pensamento contam
+          // para este tecto: com 16 gastou-os todos a pensar e devolveu texto vazio (visto a
+          // 04/10). Um chão de 512 garante que sobra espaço para a resposta.
+          maxOutputTokens: Math.max(p.maxTokens ?? 1024, 512),
           ...(p.temperatura != null ? { temperature: p.temperatura } : {}),
           ...(p.json ? { responseMimeType: 'application/json' } : {}),
         },
