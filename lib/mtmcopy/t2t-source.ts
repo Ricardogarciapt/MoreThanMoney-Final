@@ -36,9 +36,10 @@ export const T2T_SOURCES: { key: T2TSourceKey; label: string; hint: string }[] =
   { key: 'goldkiller', label: 'GoldKiller', hint: 'Scanner GoldKiller (ouro)' },
   { key: 'mtmscanner', label: 'MTM Scanner', hint: 'Scanner geral MTM' },
   { key: 'forexideas', label: 'Ideias de Forex', hint: 'Sinais do canal Ideias de Forex' },
-  // `james` (Forex Swings) SAIU do catálogo a 2026-10-04: a fonte externa acabou com o relay e não se
-  // oferece a ninguém. A chave continua no tipo e em `t2tSourceKey` porque há mensagens publicadas
-  // com ela em `ideias-e-sinais` e quem tiver uma posição aberta tem de a poder fechar.
+  // `james` (Forex Swings) SAIU do catálogo a 2026-10-04: a fonte externa acabou com o relay e, no mesmo
+  // dia, o dono fechou o grupo «MTM Auto FOREX swings» e o canal `ideias-e-sinais` (hidden=true). A chave
+  // continua no tipo e em `t2tSourceKey` SÓ para ler o histórico: 135 ideias no tracking (6 ainda activas
+  // a 04/10) e 432 mensagens publicadas com ela. Não entra em nenhuma lista viva.
   // A chave interna continua 'primeverse' (gravada em t2t_sources dos clientes); o que se MOSTRA
   // é a estratégia MTM Auto — o nome da fonte externa não aparece em lado nenhum. A Wolf e a King
   // saíram das listas vivas; sobra a Edge (a fonte dela saiu a 04/10, mas a estratégia e o canal
@@ -78,6 +79,7 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
   if (channelSlug === 'aurum-flow' || channelSlug === 'golden-moves') return 'aurum'
   if (channelSlug === 'sensei-scanner') return 'sensei'
   if (channelSlug === 'sinais-goldkiller' || /gold\s*killer|goldkiller/i.test(c)) return 'goldkiller'
+  // Canal FECHADO a 04/10/2026 — só para resolver a fonte das mensagens antigas (tracker/prova).
   if (channelSlug === 'ideias-e-sinais') return /forex\s*swings/i.test(c) ? 'james' : null
   if (
     channelSlug === 'sinais-scanner-mtm' ||
@@ -143,10 +145,17 @@ export function t2tUsaTrailing(channelSlug?: string | null, content?: string | n
  */
 const T2T_FONTES_SO_LEITURA = new Set<T2TSourceKey>(['mtmscanner', 'forexideas'])
 
-/** Uma mensagem é T2T negociável? (allowlist de fonte, menos as que são só de leitura) */
+/**
+ * Fontes FECHADAS: a chave fica no tipo para ler o histórico, mas nenhuma mensagem delas volta a ser
+ * entrada negociável. `james` (Forex Swings) fechou a 04/10/2026 com o grupo e o canal `ideias-e-sinais`.
+ */
+const T2T_FONTES_FECHADAS = new Set<T2TSourceKey>(['james'])
+
+/** Uma mensagem é T2T negociável? (allowlist de fonte, menos as só de leitura e as fechadas) */
 export function isAllowedT2TSource(channelSlug?: string | null, content?: string | null): boolean {
   const src = t2tSourceKey(channelSlug, content)
   if (!src) return false
+  if (T2T_FONTES_FECHADAS.has(src)) return false
   return !T2T_FONTES_SO_LEITURA.has(src)
 }
 

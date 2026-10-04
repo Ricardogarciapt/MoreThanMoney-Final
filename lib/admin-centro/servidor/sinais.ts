@@ -58,7 +58,8 @@ export interface Janela {
 const JANELA_MS = 24 * 3600_000
 // Desde 18/09 as estratégias Edge/King/Wolf publicam no `sinais-scanner-mtm`, com a etiqueta da
 // estratégia (formato único) e sem o nome da fonte; as mensagens antigas trazem «PrimeVerse».
-const SLUGS_PRIMEVERSE = ['sinais-scanner-mtm', 'trade-ideas', 'premium-ideas', 'sensei-scanner', 'trade-ideas-setup', 'ideias-e-sinais', 'cripto-perps', 'aurum-flow', 'sinais-goldkiller']
+// `ideias-e-sinais` saiu a 04/10/2026 (canal fechado — não publica mais nada na janela).
+const SLUGS_PRIMEVERSE = ['sinais-scanner-mtm', 'trade-ideas', 'premium-ideas', 'sensei-scanner', 'trade-ideas-setup', 'cripto-perps', 'aurum-flow', 'sinais-goldkiller']
 
 function contar(f: LinhaFanout[]) {
   return {

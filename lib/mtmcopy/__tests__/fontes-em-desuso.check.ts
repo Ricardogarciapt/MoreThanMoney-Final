@@ -12,9 +12,13 @@
  * Premium (-1002424441843) e a fonte SME (-1003671953091) têm de continuar referidas onde o sistema as lê.
  *
  * O que NÃO se proíbe, de propósito: «Gold Did»/«Forex Swings» em comentários (a casa guarda o porquê dos
- * incidentes); a palavra «gold» (é o OURO, o que o SME publica); o grupo da casa «MTM Auto FOREX swings»
- * (-1004362819270) em lib/telegram-channel-ids.ts e no gate da corretora — é um grupo NOSSO, não a fonte.
- * Em lib/mtmcopy esse id também não pode aparecer: lá só entrava como «grupo copiável», e isso saiu.
+ * incidentes); a palavra «gold» (é o OURO, o que o SME publica).
+ *
+ * 04/10/2026 — o dono FECHOU o grupo da casa «MTM Auto FOREX swings» (-1004362819270) e o canal da app
+ * `ideias-e-sinais` («fecham e retira o grupo»; «retira a fonte MTM Auto Forex completamente, mesmo de
+ * MTM Auto»). O canal fica na BD com hidden=true (432 mensagens de histórico). A secção CATÁLOGOS VIVOS
+ * abaixo prende que o id, o slug e a chave `forex_swings` não voltam a nenhuma lista que ofereça, liste
+ * ou deixe escolher — leitores de histórico (rótulos, desfechos, posições antigas) ficam de fora.
  *
  * Correr: npx tsx lib/mtmcopy/__tests__/fontes-em-desuso.check.ts
  */
@@ -40,6 +44,41 @@ const PROIBIDOS: { padrao: RegExp; porque: string }[] = [
 const PROIBIDOS_SO_MTMCOPY: { padrao: RegExp; porque: string }[] = [
   { padrao: /-?1004362819270/, porque: 'grupo «MTM Auto FOREX swings» voltou a ser oferecido como fonte copiável — a fonte saiu a 04/10' },
 ]
+
+/**
+ * CATÁLOGOS VIVOS (04/10/2026): ficheiros que OFERECEM/LISTAM/DEIXAM ESCOLHER canais, grupos e fontes.
+ * Nenhum pode conter, em código executável, o canal fechado, o grupo fechado ou a chave da fonte.
+ * Leitores de histórico (rotulos-canais, signal-outcomes, t2t-price-monitor SEM_GESTAO, regras.ts,
+ * copy-methods rótulos/tipo, t2t-source chave `james`) NÃO estão nesta lista de propósito.
+ */
+const CATALOGOS_VIVOS = [
+  'lib/default-chat-channels.ts',
+  'lib/telegram-channel-ids.ts',
+  'lib/telegram-broker-gate.ts',
+  'app/api/cron/broker-gate-renew/route.ts',
+  'lib/mtmcopy/intake-channels.ts',
+  'lib/mtmcopy/tap-to-trade-channels.ts',
+  'lib/chat-channel-permissions.ts',
+  'lib/notification-preferences.ts',
+  'lib/telegram-channel-push.ts',
+  'lib/admin-centro/servidor/sinais.ts',
+  'app/api/admin/mtmcopy/t2t-controls/route.ts',
+  'components/mobile/chat-channel-meta.ts',
+  'lib/copia-contas/estrategias.ts',
+  'lib/admin-centro/servidor/estrategias.ts',
+]
+const PASTAS_MTMAUTO = ['lib/mtmauto', 'lib/mestres', 'app/api/mtm-auto', 'app/mtmauto']
+const FECHADOS_04_10: { padrao: RegExp; porque: string }[] = [
+  { padrao: /ideias-e-sinais/, porque: 'canal `ideias-e-sinais` fechou a 04/10/2026 (hidden=true) — não volta a catálogo vivo' },
+  { padrao: /-?1004362819270/, porque: 'grupo «MTM Auto FOREX swings» fechou a 04/10/2026 — não se lista, não se convida, não se roteia' },
+  { padrao: /forex_swings|forexswings|mtm-auto-forex-swings/i, porque: 'a fonte Forex Swings saiu a 04/10/2026 — não se oferece nem se selecciona' },
+]
+// Casos sem regra textual: as listas EXPORTADAS que a app e o admin lêem.
+import { MTMCOPY_TELEGRAM_GROUP_IDS } from '../copy-methods'
+import { T2T_SOURCES } from '../t2t-source'
+import { INTAKE_CHANNELS, intakeKeyDoEspelhoTelegram } from '../intake-channels'
+import { T2T_SIGNAL_CHANNELS, CANAIS_ACOMPANHADOS } from '../tap-to-trade-channels'
+import { DEFAULT_CHAT_CHANNELS } from '../../default-chat-channels'
 
 /** O que TEM de continuar referido, e onde. */
 const OBRIGATORIOS: { ficheiro: string; padrao: RegExp; porque: string }[] = [
@@ -90,6 +129,29 @@ for (const pasta of PASTAS) {
   }
 }
 
+for (const ficheiro of CATALOGOS_VIVOS) {
+  const codigo = semComentarios(readFileSync(join(RAIZ, ficheiro), 'utf-8'))
+  for (const { padrao, porque } of FECHADOS_04_10) {
+    const m = padrao.exec(codigo)
+    if (m) regista(`${ficheiro}:${codigo.slice(0, m.index).split('\n').length} — «${m[0]}» em catálogo vivo: ${porque}`)
+  }
+}
+for (const pasta of PASTAS_MTMAUTO) {
+  for (const f of ficheiros(join(RAIZ, pasta))) {
+    const codigo = semComentarios(readFileSync(f, 'utf-8'))
+    for (const { padrao, porque } of FECHADOS_04_10) {
+      const m = padrao.exec(codigo)
+      if (m) regista(`${relative(RAIZ, f)}:${codigo.slice(0, m.index).split('\n').length} — «${m[0]}» na MTM Auto: ${porque}`)
+    }
+  }
+}
+if ((MTMCOPY_TELEGRAM_GROUP_IDS as readonly string[]).includes('forex_swings')) regista('copy-methods: `forex_swings` voltou aos grupos copiáveis oferecidos')
+if (T2T_SOURCES.some((s) => (s.key as string) === 'james')) regista('t2t-source: `james` voltou ao catálogo de fontes T2T')
+if (INTAKE_CHANNELS.some((c) => (c.key as string) === 'forex_swings')) regista('intake-channels: interruptor `forex_swings` voltou')
+if (intakeKeyDoEspelhoTelegram('ideias-e-sinais') != null) regista('intake-channels: `ideias-e-sinais` voltou a mapear para um interruptor')
+if (T2T_SIGNAL_CHANNELS.includes('ideias-e-sinais') || CANAIS_ACOMPANHADOS.includes('ideias-e-sinais')) regista('tap-to-trade-channels: `ideias-e-sinais` voltou aos canais negociáveis/acompanhados')
+if (DEFAULT_CHAT_CHANNELS.some((c) => c.slug === 'ideias-e-sinais')) regista('default-chat-channels: `ideias-e-sinais` voltou a ser criado por omissão')
+
 for (const { ficheiro, padrao, porque } of OBRIGATORIOS) {
   const src = readFileSync(join(RAIZ, ficheiro), 'utf-8')
   if (!padrao.test(src)) regista(`${ficheiro} deixou de referir ${padrao} — ${porque}`)
@@ -103,4 +165,4 @@ for (const rota of ['app/api/telegram/primeverse-exec/route.ts', 'app/api/telegr
 }
 
 assert.equal(falhas, 0, `${falhas} regressão(ões) às fontes em desuso — ver acima`)
-console.log('fontes-em-desuso: OK (ids/nomes das fontes que saíram ausentes do código executável; Premium e SME referidos onde devem)')
+console.log('fontes-em-desuso: OK (ids/nomes das fontes que saíram ausentes do código executável; canal/grupo/fonte Forex Swings fora dos catálogos vivos; Premium e SME referidos onde devem)')

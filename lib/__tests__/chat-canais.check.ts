@@ -91,6 +91,8 @@ t('visual da tabela manda; vazio cai no de sempre', () => {
 console.log('\n4. RLS (117) = funções TS')
 const sql = readFileSync(join(__dirname, '..', '..', 'supabase', 'migrations', '117_canais_config_admin.sql'), 'utf8')
 t('defaults de escrita da RLS iguais aos da web', () => {
+  // A migração 117 é história e fica como está; `ideias-e-sinais` fechou a 04/10/2026 (hidden=true) e
+  // saiu da lista viva da web (lib/chat-channel-permissions) — a RLS nunca lê o canal porque está escondido.
   assert.match(sql, /when p_slug in \('premium-ideas', 'sensei-scanner', 'trade-ideas'\) then 'vip'/)
   assert.match(sql, /when p_slug in \('trade-ideas-setup', 'ideias-e-sinais', 'sinais-goldkiller', 'sinais-scanner-mtm'\) then 'ninguem'/)
 })

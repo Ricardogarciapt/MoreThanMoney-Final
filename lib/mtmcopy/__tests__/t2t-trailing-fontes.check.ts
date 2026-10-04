@@ -8,6 +8,7 @@ const SENSEI = '🧠 Sensei Scanner — Entry Alert\n📊 XAUUSD 🔵 COMPRA\n�
 const GOLDEN = "I'm buying XAUUSD\n4624-4620\nTP1 4627\nSL 4616"
 
 // O James (Forex Swings) é a ÚNICA exceção: swing de vários dias, sem trailing.
+// O canal `ideias-e-sinais` FECHOU a 04/10/2026 — isto é leitor de HISTÓRICO (posições T2T antigas), não catálogo.
 assert.equal(t2tSourceKey('ideias-e-sinais', FOREX_SWINGS), 'james', 'fonte do James mal identificada')
 assert.equal(t2tUsaTrailing('ideias-e-sinais', FOREX_SWINGS), false, 'o James NÃO leva trailing')
 

@@ -15,7 +15,7 @@ const TERMINAL_RE =
 
 const PUSH_TITLES: Record<string, string> = {
   'trade-ideas-setup': '📊 Novo Sinal Forex!',
-  'ideias-e-sinais': '🌊 Nova Ideia Forex Swing!',
+  // 'ideias-e-sinais' (Forex Swings) saiu a 04/10/2026 — canal fechado.
   'premium-ideas': '💎 Nova Ideia Premium!',
 }
 

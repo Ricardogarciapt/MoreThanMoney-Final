@@ -22,8 +22,9 @@ const FRESH_DAYS = 40
 const PREMIUM_CHAT = "-1002424441843" // grupo "MoreThanMoney Premium Signals"
 const FOREX_CHAT = "-1003716578747"
 const SENSEI_CHAT = "-1003853860780"
-const FOREX_SWINGS_CHAT = process.env.TELEGRAM_FOREX_SWINGS_CHAT || "-1004362819270"
-const ALL_GROUPS = [FOREX_CHAT, FOREX_SWINGS_CHAT, SENSEI_CHAT, PREMIUM_CHAT]
+// O grupo «MTM Auto FOREX swings» saiu desta lista a 04/10/2026: fechou por decisão do dono
+// (ver lib/telegram-broker-gate — também já não é libertado), por isso não há de onde expulsar.
+const ALL_GROUPS = [FOREX_CHAT, SENSEI_CHAT, PREMIUM_CHAT]
 
 async function tg(method: string, body: Record<string, unknown>) {
   const token = getMtmcopyBotToken()

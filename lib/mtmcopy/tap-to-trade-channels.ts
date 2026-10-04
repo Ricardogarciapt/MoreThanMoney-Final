@@ -15,7 +15,8 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
   // estratégia Edge (fxEdge) — que são para aceitar, não para esconder.
   // 18/09: `cripto-perps` fundido em `aurum-flow` (canal «Ideias de Cripto»); o slug antigo fica
   // para as mensagens que ainda lá estejam.
-  'trade-ideas': ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'aurum-flow', 'cripto-perps', 'sensei-scanner'],
+  // 04/10/2026: `ideias-e-sinais` (Forex Swings) saiu — canal fechado pelo dono, hidden=true na BD.
+  'trade-ideas': ['sinais-scanner-mtm', 'trade-ideas', 'aurum-flow', 'cripto-perps', 'sensei-scanner'],
 }
 
 /**
@@ -27,7 +28,8 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
 // 'cripto-perps' entra aqui para os perpétuos poderem ser SEGUIDOS no T2T (ver t2tMode:
 // nos perpétuos o botão não abre ordem, marca o sinal como seguido). Sem isto o fallback
 // rejeitava-os com 'provider_off' quando a configuração de rotas não estivesse disponível.
-export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'aurum-flow', 'cripto-perps']
+// 'ideias-e-sinais' (Forex Swings) saiu a 04/10/2026: o canal fechou com a fonte (fs-relay).
+export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'aurum-flow', 'cripto-perps']
 
 /**
  * Canais ACOMPANHADOS pelo motor de seguimento (`signal-tracker`) — quais sinais são MEDIDOS.

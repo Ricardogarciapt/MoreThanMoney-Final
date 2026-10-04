@@ -66,8 +66,10 @@ const ZW = '\u200b'
   eq('comentários da fonte', [
     comentarioDaFonte({ sourceKey: 'primeverse', trader: 'fxedge' }), comentarioDaFonte({ sourceKey: 'premium' }),
     comentarioDaFonte({ sourceKey: 'sensei' }), comentarioDaFonte({ sourceKey: 'mtmscanner' }), comentarioDaFonte({ sourceKey: 'goldkiller' }),
-    comentarioDaFonte({ sourceKey: null, channelSlug: 'cripto-perps' }), comentarioDaFonte({ sourceKey: null, channelSlug: 'ideias-e-sinais' }),
+    comentarioDaFonte({ sourceKey: null, channelSlug: 'cripto-perps' }), comentarioDaFonte({ sourceKey: null, channelSlug: 'trade-ideas' }),
   ], ['PrimeVerse fxedge', 'Premium', 'Scanner Sensei', 'Scanner MTM', 'GoldKiller', 'Perps', 'MTM Alertas'])
+  // `ideias-e-sinais`/`forexswings` saíram a 04/10/2026 (canal fechado): já não têm rótulo próprio de fonte.
+  sim('fonte Forex Swings sem rótulo vivo', comentarioDaFonte({ sourceKey: 'forexswings' }) === 'forexswings')
   sim('comentário ≤ 31', ESTRATEGIAS_PRIMEVERSE.every((e) => e.comentario.length <= 31))
 }
 

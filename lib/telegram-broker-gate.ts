@@ -37,14 +37,14 @@ export const MIN_DEPOSIT = 350
 const BOT = () => getMtmcopyBotToken()
 
 /**
- * Os 4 grupos de sinais libertados após validação. chatId canónico (resolvido por env) +
+ * Os grupos de sinais libertados após validação. chatId canónico (resolvido por env) +
  * link estático de fallback (para grupos que não geram convite pessoal, ex.: Basic group).
  */
-const FOREX_SWINGS_CHAT = process.env.TELEGRAM_FOREX_SWINGS_CHAT || '-1004362819270'
+// O «Grupo Forex Swings» («MTM Auto FOREX swings») saiu desta lista a 04/10/2026: o grupo fechou por
+// decisão do dono e um convite para um grupo fechado é uma porta pintada na parede.
 function accessGroups(): { label: string; chatId: string; fallback: string | null }[] {
   return [
     { label: '💱 Grupo Forex', chatId: resolvedForexIdeasChatId(), fallback: process.env.TELEGRAM_FOREX_LINK || 'https://t.me/+cVcMbCRt2rlmNzg0' },
-    { label: '🌊 Grupo Forex Swings', chatId: FOREX_SWINGS_CHAT, fallback: process.env.TELEGRAM_FOREX_SWINGS_LINK || null },
     { label: '🧠 Grupo Sensei', chatId: resolvedTradeIdeasChatId(), fallback: process.env.TELEGRAM_SENSEI_LINK || 'https://t.me/+mbqBggXniu5lNTBk' },
     { label: '👑 Grupo Premium', chatId: resolvedPremiumSignalsChatId(), fallback: process.env.TELEGRAM_PREMIUM_LINK || 'https://t.me/MTMgold' },
     { label: '🥇 Grupo GoldKiller', chatId: resolvedGoldkillerScannerChatId(), fallback: process.env.TELEGRAM_GOLDKILLER_LINK || null },

@@ -15,7 +15,8 @@ let ok = 0
 const caso = (nome: string, f: () => void) => { f(); ok++; console.log(`  ok  ${nome}`) }
 
 /** Os canais que o admin pode ligar/desligar à mão (app/api/admin/mtmcopy/t2t-controls). */
-const EXTRAS_DO_ADMIN = ['aurum-flow', 'premium-ideas', 'sinais-scanner-mtm', 'trade-ideas-setup', 'ideias-e-sinais', 'sinais-goldkiller', 'sensei-scanner']
+// `ideias-e-sinais` saiu daqui a 04/10/2026 (canal fechado pelo dono).
+const EXTRAS_DO_ADMIN = ['aurum-flow', 'premium-ideas', 'sinais-scanner-mtm', 'trade-ideas-setup', 'sinais-goldkiller', 'sensei-scanner']
 
 caso('todo o canal que o admin liga tem nome — nenhum cai no slug cru', () => {
   const semNome = EXTRAS_DO_ADMIN.filter((c) => rotuloCanalT2T(c) === c)
@@ -30,6 +31,7 @@ caso('todo o canal de sinais T2T tem nome', () => {
 caso('os nomes são os de chat_channels.name (24/09) — o que a pessoa lê a seguir', () => {
   // Fotografia da base. Se o canal for renomeado, o nome vivo passa por `rotuloCanalT2T(slug, nome)`
   // e esta tabela é só a rede de segurança — mas continuar a divergir é como isto começou.
+  // Canal FECHADO a 04/10/2026 — o rótulo fica só para o histórico (432 mensagens) não sair com o slug cru.
   assert.equal(ROTULOS_CANAIS_T2T['ideias-e-sinais'], 'Ideias e Sinais')
   assert.equal(ROTULOS_CANAIS_T2T['premium-ideas'], 'MTM Auto Premium')
   assert.equal(ROTULOS_CANAIS_T2T['sensei-scanner'], 'MTM Auto Sensei')

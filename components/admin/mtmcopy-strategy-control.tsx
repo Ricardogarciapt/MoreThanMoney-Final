@@ -97,7 +97,7 @@ const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: str
 const RETIRADAS = [
   "Premium MxsR (conta 530d2e07) · a conta CONTINUA viva na MetaApi (é a fonte de preços do motor simulado), mas já não executa: o Premium passa pela mestre SIM do motor das mestres",
   "PrimeVerse · execução directa numa conta MT5 (12862cb4, apagada na MetaApi) — o Edge segue pela mestre SIM; o modo saiu deste painel. A 04/10 a FONTE saiu de todo (pv-relay desligado pelo dono; a rota primeverse-exec devolve 410)",
-  "Forex Swings (fonte James, fs-relay) · relay desligado a 04/10 pelo dono; a rota forex-swings-exec devolve 410 e o modo saiu deste painel. O grupo «MTM Auto FOREX swings» e o canal `ideias-e-sinais` são da casa e ficam",
+  "Forex Swings (fonte James, fs-relay) · relay desligado a 04/10 pelo dono; a rota forex-swings-exec devolve 410 e o modo saiu deste painel. No mesmo dia o dono fechou o grupo «MTM Auto FOREX swings» e o canal `ideias-e-sinais` (hidden=true; 432 mensagens de histórico ficam na BD)",
   "Espelho provider como FONTE de execução (082/084) · substituído pelo motor das mestres nas estratégias que lá estão",
   "GoldKiller (SDNb) · conta apagada na MetaApi (a GoldKiller actual é Wl1B)",
   "MTM Auto Forex / Trade Ideas (5IHE) · conta apagada",

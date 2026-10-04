@@ -19,9 +19,11 @@ function admite(canal: string, texto: string): { ok: boolean; porque: string } {
 // As fontes que ANTES não tinham métricas nenhumas — são estas que motivaram o motor.
 const IDEIAS_FOREX = '📊 MTM Scanner · Forex — Novo Sinal\n📊 GBPAUD 🔵 COMPRA\n🎯 Entrada: 1.90507\n🛑 Stop Loss: 1.90403\n✅ Take Profit 1: 1.90713\n✅ Take Profit 2: 1.9092'
 const JAMES = '🔵 USDCAD BUY\nSL: 1.3848\nTP: 1.392\n🌊 Forex Swings — set & forget'
+// `ideias-e-sinais` (Forex Swings) FECHOU a 04/10/2026 por decisão do dono: já não entra nada novo no
+// motor; a chave `james` fica só para LER as 135 ideias já seguidas (6 ainda activas a 04/10).
+assert.equal(admite('ideias-e-sinais', JAMES).ok, false, 'o canal fechou a 04/10/2026 — não pode voltar a admitir sinais')
+assert.equal(t2tSourceKey('ideias-e-sinais', JAMES), 'james', 'fonte das mensagens antigas do canal fechado mal identificada (leitor de histórico)')
 assert.equal(admite('trade-ideas-setup', IDEIAS_FOREX).ok, true, 'Ideias de Forex têm de entrar')
-assert.equal(admite('ideias-e-sinais', JAMES).ok, true, 'James tem de entrar')
-assert.equal(t2tSourceKey('ideias-e-sinais', JAMES), 'james', 'fonte do James mal identificada')
 
 // E as que já tinham.
 assert.equal(admite('premium-ideas', '8. GOLD BUY SETUP\nGold Buy Zone 4643 - 4637\nSL : 4635\nTP1 : 4650\nTP2 : 4655').ok, true, 'Premium')

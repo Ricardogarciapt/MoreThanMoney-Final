@@ -29,8 +29,9 @@ assert.equal(new Set(chaves).size, chaves.length, 'há chaves repetidas no catá
 for (const k of ['premium', 'sensei', 'primeverse', 'aurum', 'goldkiller', 'mtmscanner', 'forexideas']) {
   assert.ok(chaves.includes(k as never), `«${k}» saiu do catálogo — se foi de propósito, actualiza esta guarda`)
 }
-// `james` (Forex Swings) saiu do catálogo a 04/10/2026: a fonte externa foi desligada pelo dono. A chave
-// continua a existir para LER as mensagens antigas de `ideias-e-sinais` (ver t2t-trailing-fontes.check).
+// `james` (Forex Swings) saiu do catálogo a 04/10/2026: a fonte externa foi desligada pelo dono e, no mesmo
+// dia, o grupo «MTM Auto FOREX swings» e o canal `ideias-e-sinais` fecharam (hidden=true). A chave continua
+// a existir SÓ para LER as mensagens antigas do canal (ver t2t-trailing-fontes.check e fontes-em-desuso.check).
 assert.ok(!chaves.includes('james' as never), '«james» voltou ao catálogo — a fonte saiu a 04/10/2026; se voltou, actualiza esta guarda a dizer porquê')
 
 // ── Vivas ⊆ todas, e a Edge é a única viva ───────────────────────────────────

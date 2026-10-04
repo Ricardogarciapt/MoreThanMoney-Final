@@ -19,6 +19,14 @@ export type AppChatChannelSlug =
 
 const map = new Map<string, AppChatChannelSlug>()
 
+/**
+ * Grupos Telegram FECHADOS pelo dono: nunca se espelham para a app, nem pelo título.
+ * «MTM Auto FOREX swings» (-1004362819270) fechou a 04/10/2026 com o canal `ideias-e-sinais`;
+ * o título tem «forex» e, sem este bloqueio, qualquer mensagem que lá caísse (até a despedida)
+ * ia parar ao «Ideias de Forex» com a etiqueta errada.
+ */
+const GRUPOS_FECHADOS = new Set(['-1004362819270'])
+
 function registerChatId(raw: string | undefined, slug: AppChatChannelSlug) {
   if (!raw?.trim()) return
   for (const variant of telegramChatIdVariants(raw.trim())) {
@@ -85,6 +93,8 @@ export function resolveAppChannelSlug(chat: {
   username?: string
 }): AppChatChannelSlug | null {
   buildAppChannelMap()
+
+  if (chat.id != null && GRUPOS_FECHADOS.has(String(chat.id))) return null
 
   const keys = new Set<string>()
   if (chat.id != null) telegramChatIdVariants(chat.id).forEach((k) => keys.add(k))

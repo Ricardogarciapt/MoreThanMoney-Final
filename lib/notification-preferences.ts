@@ -91,12 +91,12 @@ export function normalizeNotificationPreferences(
 // Canais de SINAIS (secção «Sinais & Ideias» do admin). Até 22/09 faltavam os canais novos
 // (Sensei, GoldKiller, Ideias de Cripto, MTM Auto Edge, Forex Swings) e as mensagens deles contavam
 // como «Chat» — desligar Trade Ideas não os calava e desligar Chat calava sinais.
+// `ideias-e-sinais` (Forex Swings) saiu a 04/10/2026: canal fechado, não gera notificações novas.
 const TRADE_IDEAS_CHANNELS = new Set([
   'trade_ideas',
   'trade-ideas',
   'trade-ideas-setup',
   'tradeideas',
-  'ideias-e-sinais',
   'sensei-scanner',
   'sinais-goldkiller',
   'sinais-scanner-mtm',

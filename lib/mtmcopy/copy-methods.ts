@@ -380,7 +380,8 @@ const TELEGRAM_GROUP_SHORT_LABEL: Record<MtmcopyTelegramGroup, string> = {
   trade_ideas: 'Ideias de Forex',
   sensei: 'Sensei Scanner',
   goldkiller: 'GoldKiller · Ouro',
-  forex_swings: 'Forex Swings',
+  // Fonte FECHADA a 04/10/2026 (grupo e canal retirados pelo dono); o rótulo fica só para ler ligações antigas.
+  forex_swings: 'Forex Swings (fechada 04/10/2026)',
   // Chave renomeada a 2026-09-14 (era `golden_moves`); a antiga continua a ser lida por
   // `traduzirGrupo` porque há ligações gravadas com ela.
   aurum_flow: 'MTM Aurum Flow Cripto',

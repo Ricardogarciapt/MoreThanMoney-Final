@@ -30,7 +30,8 @@ export const ROTULOS_CANAIS_T2T: Record<string, string> = {
   'cripto-perps': 'Ideias de Cripto',
   'trade-ideas-setup': 'Ideias de Forex',
   'trade-ideas': 'Ideias de Índices',
-  // Swings: entram e ficam. Vão para T2T sem motor de gestão — só se acompanha o desfecho.
+  // Canal FECHADO a 04/10/2026 (Forex Swings, grupo «MTM Auto FOREX swings»); o nome fica só para
+  // rotular o histórico (432 mensagens, 135 ideias no tracking). Não é catálogo vivo.
   'ideias-e-sinais': 'Ideias e Sinais',
   // Slug antigo da Aurum Flow — fica porque ainda há mensagens publicadas com ele.
   'golden-moves': 'Ideias de Cripto',

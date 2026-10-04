@@ -552,7 +552,7 @@ const ROTULOS_FONTE: Record<string, string> = {
   mtmscanner: 'Scanner MTM',
   aurum: 'Aurum Flow',
   forexideas: 'MTM Alertas',
-  forexswings: 'Forex Swings',
+  // `forexswings` saiu a 04/10/2026: o canal `ideias-e-sinais` fechou com a fonte; não há ordens novas dele.
   alertas: 'MTM Alertas',
   perps: 'Perps',
 }
@@ -563,7 +563,7 @@ export function comentarioDaFonte(p: { sourceKey?: string | null; channelSlug?: 
   if (sk === 'primeverse') return `PrimeVerse ${normalizarTrader(p.trader)}`.trim().slice(0, 31)
   if (ROTULOS_FONTE[sk]) return ROTULOS_FONTE[sk]
   if (p.channelSlug === 'cripto-perps') return 'Perps'
-  if (p.channelSlug === 'ideias-e-sinais' || p.channelSlug === 'trade-ideas') return 'MTM Alertas'
+  if (p.channelSlug === 'trade-ideas') return 'MTM Alertas'
   return (sk || p.channelSlug || 'MTM').slice(0, 31)
 }
 

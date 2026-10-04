@@ -9,7 +9,6 @@ export type IntakeKey =
   | "goldkiller"
   | "mtmscanner"
   | "forex_ideas"
-  | "forex_swings"
   | "perps"
 
 export const INTAKE_CHANNELS: { key: IntakeKey; label: string; hint: string }[] = [
@@ -20,9 +19,9 @@ export const INTAKE_CHANNELS: { key: IntakeKey; label: string; hint: string }[] 
   { key: "goldkiller", label: "GoldKiller", hint: "Webhook TradingView (XAUUSD)" },
   { key: "mtmscanner", label: "MTM Scanner", hint: "Webhook TradingView (forex + ouro/BTC)" },
   { key: "forex_ideas", label: "Ideias de Forex", hint: "Canal Telegram de forex" },
-  // 2026-10-04: a fonte externa (fs-relay) saiu; o que este interruptor corta hoje é o ESPELHO do grupo
-  // Telegram da casa «MTM Auto FOREX swings» para o canal da app `ideias-e-sinais`.
-  { key: "forex_swings", label: "Forex Swings (grupo Telegram → app)", hint: "Espelho do grupo da casa para o canal ideias-e-sinais; a fonte externa saiu a 04/10" },
+  // 2026-10-04: a chave `forex_swings` saiu — a fonte externa (fs-relay) acabou e, no mesmo dia, o dono
+  // fechou o grupo «MTM Auto FOREX swings» e o canal da app `ideias-e-sinais`. Sem grupo não há espelho
+  // para gatear.
   // 2026-10-04: a chave `primeverse` saiu do catálogo — só gateava a rota primeverse-exec, que devolve 410
   // desde que o pv-relay foi desligado. Um interruptor que não corta nada parece que se pode ligar.
   { key: "perps", label: "Ideias de Cripto", hint: "Perpétuos cripto (Aurum Flow ORB) → Bybit" },
@@ -58,7 +57,6 @@ export function intakeKeyDoEspelhoTelegram(slug: string | null | undefined): Int
     case "sinais-goldkiller": return "goldkiller"
     case "sinais-scanner-mtm": return "mtmscanner"
     case "trade-ideas-setup": return "forex_ideas"
-    case "ideias-e-sinais": return "forex_swings"
     case "cripto-perps": return "perps"
     case "aurum-flow": return "perps"
     default: return null

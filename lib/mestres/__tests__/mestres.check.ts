@@ -347,7 +347,8 @@ caso('corte: tira só a estratégia (mantém as outras), com o name; conta só c
 
 // ── T2T ─────────────────────────────────────────────────────────────────────
 caso('T2T: estratégia pelo trader PrimeVerse ou pelo canal', () => {
-  assert.equal(estrategiaDoSinalT2T('ideias-e-sinais', '📡 PrimeVerse · fxedge\nXAUUSD BUY'), 'mtm-auto-edge')
+  // O trader manda sobre o canal. (Até 04/10/2026 este caso usava `ideias-e-sinais`; o canal fechou.)
+  assert.equal(estrategiaDoSinalT2T('sinais-scanner-mtm', '📡 PrimeVerse · fxedge\nXAUUSD BUY'), 'mtm-auto-edge')
   assert.equal(estrategiaDoSinalT2T('sinais-goldkiller', 'XAUUSD BUY'), 'Goldkiller')
   assert.equal(estrategiaDoSinalT2T('trade-ideas', 'EURUSD'), null)
 })

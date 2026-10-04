@@ -35,7 +35,8 @@ export const maxDuration = 60
  * Fontes T2T sem rota própria que o admin pode ligar/desligar diretamente. Os NOMES vêm de
  * lib/mtmcopy/tap-to-trade-channels — os mesmos que a app mostra ao cliente no seletor de fontes.
  */
-const EXTRA_CHANNELS = ['aurum-flow', 'premium-ideas', 'sinais-scanner-mtm', 'trade-ideas-setup', 'ideias-e-sinais', 'sinais-goldkiller', 'sensei-scanner']
+// `ideias-e-sinais` (Forex Swings) saiu a 04/10/2026 — canal fechado pelo dono; não há o que ligar.
+const EXTRA_CHANNELS = ['aurum-flow', 'premium-ideas', 'sinais-scanner-mtm', 'trade-ideas-setup', 'sinais-goldkiller', 'sensei-scanner']
 
 
 async function buildState() {

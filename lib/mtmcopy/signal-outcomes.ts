@@ -43,6 +43,7 @@ export const CANAIS_DE_SINAIS = [
   'sinais-goldkiller',
   'cripto-perps',
   'aurum-flow',
+  // Fechado a 04/10/2026 (Forex Swings); fica só para fechar desfechos de ideias antigas já publicadas.
   'ideias-e-sinais',
   'sinais',
   'aurum-flow',

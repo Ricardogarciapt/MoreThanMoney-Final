@@ -74,6 +74,7 @@ export function fonteDoCanal(canal: string | null | undefined, texto?: string | 
   if (c.includes('goldkiller')) return 'goldkiller'
   if (c.includes('scanner')) return 'mtmscanner'
   if (c.includes('aurum') || c.includes('perps')) return 'aurum'
+  // `ideias-e-sinais` fechou a 04/10/2026; fica aqui só para classificar linhas antigas do log.
   if (c.includes('trade-ideas') || c.includes('forex') || c === 'ideias-e-sinais') return 'forex'
   if (c.includes('t2t') || c.includes('tap')) return 't2t'
   return 'outra'

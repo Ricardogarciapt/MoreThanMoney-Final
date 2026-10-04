@@ -127,6 +127,9 @@ export async function runT2TPriceMonitor(): Promise<{
    *
    * A trade continua a ser gerida — pela ordem que o próprio sinal trouxe, com o stop e os
    * alvos escritos nele. O que não há é uma segunda mão a mexer por cima.
+   *
+   * O canal `ideias-e-sinais` FECHOU a 04/10/2026 (fonte e grupo saíram); a entrada fica só para
+   * qualquer posição T2T antiga que ainda esteja aberta com esse channel_key — não é catálogo vivo.
    */
   const SEM_GESTAO = new Set(['ideias-e-sinais'])
   const geríveis = rows.filter((r) => !SEM_GESTAO.has(String((r as LogRow).channel_key ?? '')))

@@ -76,15 +76,19 @@ ok('slug desconhecido devolve null (fail-open, não corta recepção por acident
 })
 
 // ── 5 · O rótulo do admin diz a fonte, não o canal ────────────────────────────────────────────
-ok('o interruptor «primeverse» saiu (04/10/2026) e o do MTM Scanner não diz Edge', () => {
+ok('os interruptores «primeverse» e «forex_swings» saíram (04/10/2026) e o do MTM Scanner não diz Edge', () => {
   // A fonte PrimeVerse acabou com o pv-relay; a rota que este interruptor gateava devolve 410. Um
   // interruptor que não corta nada «parece que se pode ligar» — por isso saiu do catálogo.
   assert.equal(INTAKE_CHANNELS.find((c) => c.key === ('primeverse' as string)), undefined,
     'o interruptor «primeverse» voltou ao catálogo — a fonte saiu a 04/10/2026; se voltou, actualiza esta guarda a dizer porquê')
   const scanner = INTAKE_CHANNELS.find((c) => c.key === 'mtmscanner')
   assert.ok(scanner && !/edge/i.test(scanner.label), 'o interruptor do MTM Scanner não pode dizer Edge')
-  const fs = INTAKE_CHANNELS.find((c) => c.key === 'forex_swings')
-  assert.ok(fs && !/james|relay/i.test(fs.label), 'o interruptor «forex_swings» governa o espelho do grupo da casa, não um relay externo')
+  // 04/10/2026: o interruptor «forex_swings» também saiu — o dono fechou o grupo «MTM Auto FOREX swings»
+  // e o canal `ideias-e-sinais`; sem grupo não há espelho para gatear.
+  assert.equal(INTAKE_CHANNELS.find((c) => c.key === ('forex_swings' as string)), undefined,
+    'o interruptor «forex_swings» voltou ao catálogo — o grupo e o canal fecharam a 04/10/2026; se voltou, actualiza esta guarda a dizer porquê')
+  assert.equal(intakeKeyDoEspelhoTelegram('ideias-e-sinais'), null,
+    '`ideias-e-sinais` fechou a 04/10/2026 — não pode mapear para interruptor nenhum')
 })
 
 console.log(`\nrecepção por fonte: ${feitos}/${feitos} OK`)
