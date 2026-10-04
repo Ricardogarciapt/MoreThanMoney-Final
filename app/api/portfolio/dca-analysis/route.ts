@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
 import { normalizeBinancePair, fetchCoinGeckoOhlcAsKlines } from "@/lib/crypto-usd"
 
 interface CandleData {
@@ -67,16 +68,10 @@ async function fetchNewsData(symbol: string) {
   }
 }
 
+// Sentimento pela porta única da IA (`chamarIA`), em JSON. Quando a cadeia falha, o painel fica
+// «Neutral» com o MOTIVO honesto no rationale — não um «Erro na análise» mudo.
 async function analyzeSentiment(articles: { title?: string; description?: string }[], assetLabel: string) {
   try {
-    const openaiKey = process.env.OPENAI_API_KEY?.trim()
-    if (!openaiKey) {
-      return {
-        shortTermSentiment: { category: "Neutral", score: 0, rationale: "OPENAI_API_KEY não configurada" },
-        longTermSentiment: { category: "Neutral", score: 0, rationale: "OPENAI_API_KEY não configurada" },
-      }
-    }
-
     const newsBlock =
       articles.length > 0
         ? `Analise as seguintes notícias recentes (ativo / mercado: ${assetLabel}):\n\n${JSON.stringify(
@@ -137,31 +132,20 @@ Retorne APENAS um JSON com esta estrutura:
   }
 }`
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-        response_format: { type: 'json_object' }
-      })
+    const r = await chamarIA({
+      tarefa: 'portfolio-dca-sentimento',
+      mensagens: [{ role: 'user', content: prompt }],
+      maxTokens: 1200,
+      temperatura: 0.3,
+      json: true,
     })
-
-    if (!response.ok) throw new Error('Erro na OpenAI API')
-
-    const data = await response.json()
-    const content = JSON.parse(data.choices[0].message.content)
-    
-    return content
+    return JSON.parse(r.texto)
   } catch (error) {
-    console.error('Erro na análise de sentiment:', error)
+    const motivo = mensagemIndisponivel(error)
+    console.error('Erro na análise de sentiment:', motivo)
     return {
-      shortTermSentiment: { category: 'Neutral', score: 0, rationale: 'Erro na análise' },
-      longTermSentiment: { category: 'Neutral', score: 0, rationale: 'Erro na análise' }
+      shortTermSentiment: { category: 'Neutral', score: 0, rationale: motivo },
+      longTermSentiment: { category: 'Neutral', score: 0, rationale: motivo }
     }
   }
 }

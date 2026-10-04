@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { uploadBufferToBucket } from '@/lib/instagram/publish'
 import { renderCarrossel, renderElemento, socialCardElement, type Lamina } from '@/lib/social-card'
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,9 +16,10 @@ export const maxDuration = 300
  * cor e o logótipo vêm da marca de quem está a criar. Sem isso, a peça de um membro saía
  * assinada com a conta da casa — pôr a marca da MTM em conteúdo que não é da MTM.
  *
- * A escrita dos textos e da legenda usa o Claude da casa, e isso É deliberado: custa cêntimos e
- * é o que distingue uma peça útil de um gerador de frases. A IMAGEM é que não, porque essa custa
- * a sério — ver `lib/mtmsocial/imagens-gratis`.
+ * A escrita dos textos e da legenda vai pela porta única da IA (`chamarIA`: Groq → Gemini →
+ * Ollama → OpenAI → Anthropic) — grátis primeiro, desde 04/10, quando a Anthropic ficou sem
+ * crédito e isto deixou de escrever. A IMAGEM continua a não usar IA paga, porque essa custa a
+ * sério — ver `lib/mtmsocial/imagens-gratis`.
  */
 
 interface Marca {
@@ -50,48 +51,35 @@ function logoAbsoluto(marca: Marca | null): string | null {
   return `${base}${rel.startsWith('/') ? '' : '/'}${rel}`
 }
 
-/** Escreve as lâminas e a legenda. Devolve `null` em vez de inventar, se não conseguir. */
+/** Escreve as lâminas e a legenda. Falha com a mensagem honesta da cadeia em vez de inventar. */
 async function escrever(
   tema: string,
   cta: string,
   quantas: number,
   marca: string,
-): Promise<{ hook: string; laminas: string[]; caption: string } | null> {
-  const chave = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!chave) return null
+): Promise<{ hook: string; laminas: string[]; caption: string } | { erro: string }> {
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': chave, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
-        max_tokens: 1800,
-        // O Sonnet 5 pensa por omissão e o pensamento come o max_tokens: a resposta vinha
-        // cortada ou vazia. Isto é trabalho de formato, não de raciocínio.
-        thinking: { type: 'disabled' },
-        system:
-          `Escreves carrosséis de Instagram para a marca «${marca}».\n\n` +
-          'Devolves APENAS JSON: {"hook":"...","laminas":["..."],"caption":"..."}\n\n' +
-          '· HOOK — a capa, no máximo 7 palavras, sem ponto final. Tem de caber em duas metades ' +
-          'de peso parecido: é assim que é desenhada, em duas faixas de cor.\n' +
-          '· LAMINAS — as do meio. Uma ideia por lâmina, 12 a 25 palavras.\n' +
-          '· CAPTION — a legenda, até 6 linhas, a acabar a pedir o comentário.\n\n' +
-          'Português de Portugal, tratamento por tu. NUNCA prometas lucro nem inventes números, ' +
-          'percentagens ou datas. Sem emojis, sem hashtags, sem aspas dentro do texto.',
-        messages: [{ role: 'user', content: `Tema: ${tema}\nPalavra do CTA: ${cta}\nLâminas do meio: ${quantas}` }],
-      }),
-      signal: AbortSignal.timeout(60_000),
+    const r = await chamarIA({
+      tarefa: 'mtmsocial',
+      maxTokens: 1800,
+      json: true,
+      preferencia: 'qualidade',
+      sistema:
+        `Escreves carrosséis de Instagram para a marca «${marca}».\n\n` +
+        'Devolves APENAS JSON: {"hook":"...","laminas":["..."],"caption":"..."}\n\n' +
+        '· HOOK — a capa, no máximo 7 palavras, sem ponto final. Tem de caber em duas metades ' +
+        'de peso parecido: é assim que é desenhada, em duas faixas de cor.\n' +
+        '· LAMINAS — as do meio. Uma ideia por lâmina, 12 a 25 palavras.\n' +
+        '· CAPTION — a legenda, até 6 linhas, a acabar a pedir o comentário.\n\n' +
+        'Português de Portugal, tratamento por tu. NUNCA prometas lucro nem inventes números, ' +
+        'percentagens ou datas. Sem emojis, sem hashtags, sem aspas dentro do texto.',
+      mensagens: [{ role: 'user', content: `Tema: ${tema}\nPalavra do CTA: ${cta}\nLâminas do meio: ${quantas}` }],
     })
-    if (!r.ok) return null
-    const j = await r.json()
-    const bruto = ((j?.content ?? []) as Array<{ type: string; text?: string }>)
-      .filter((x) => x.type === 'text').map((x) => x.text ?? '').join('').trim()
-    const limpo = bruto.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
-    const o = JSON.parse(limpo) as { hook?: string; laminas?: string[]; caption?: string }
-    if (!o.hook || !Array.isArray(o.laminas)) return null
+    const o = JSON.parse(r.texto) as { hook?: string; laminas?: string[]; caption?: string }
+    if (!o.hook || !Array.isArray(o.laminas)) return { erro: `a IA (${r.fornecedor}) respondeu sem hook ou sem lâminas` }
     return { hook: o.hook, laminas: o.laminas.map(String), caption: String(o.caption ?? '') }
-  } catch {
-    return null
+  } catch (e) {
+    return { erro: mensagemIndisponivel(e) }
   }
 }
 
@@ -141,8 +129,8 @@ export async function POST(request: NextRequest) {
   // seria pagar outra chamada e, pior, mudar o texto debaixo de quem só queria mover o texto.
   if (corpo?.comIA === true && !textos.length && !hook) {
     const escrito = await escrever(String(corpo?.tema ?? hook), cta, Math.max(3, Number(corpo?.laminas) || 4), m.nome)
-    if (!escrito) {
-      return NextResponse.json({ erro: 'não consegui escrever os textos — tenta outra vez' }, { status: 502 })
+    if ('erro' in escrito) {
+      return NextResponse.json({ erro: `não consegui escrever os textos — ${escrito.erro}` }, { status: 502 })
     }
     hook = escrito.hook
     caption = escrito.caption

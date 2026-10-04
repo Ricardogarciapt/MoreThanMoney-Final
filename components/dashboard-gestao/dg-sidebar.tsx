@@ -72,7 +72,7 @@ export const navItems: NavItem[] = [
     id: "chatbot_builder",
     label: "Chatbot Builder",
     icon: Bot,
-    description: "Flows ManyChat",
+    description: "Automações próprias",
     color: "#a78bfa",
   },
   {

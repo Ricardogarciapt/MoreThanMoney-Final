@@ -1528,7 +1528,7 @@ export const newMemberNotificationEmailTemplate = (params: {
 
 /**
  * Convite de LEAD QUENTE — standard para leads que aparecem via qualquer fluxo nosso
- * (ManyChat closer, registo, funil de conversão). Conversão direta para teste grátis
+ * (closer das DMs, registo, funil de conversão). Conversão direta para teste grátis
  * (/register) + "Conhece a MTM" (/new-landing). Métricas e testemunhos REAIS (sales brain,
  * docs/mtm-sales-brain.md). Prints alojados em /email/*.png.
  */

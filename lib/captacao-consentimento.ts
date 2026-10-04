@@ -202,7 +202,7 @@ export const PONTOS_DE_CAPTURA: readonly PontoDeCaptura[] = [
   },
   {
     canal: 'comentario_instagram',
-    onde: 'Resposta ao comentário no Instagram que pede o contacto (funil Essential, sem ManyChat)',
+    onde: 'Resposta ao comentário no Instagram que pede o contacto (funil nativo do Instagram)',
     pedido:
       'Manda-me o teu email em mensagem e envio-te o acesso — e aviso-te das próximas sessões, se quiseres. ' +
       'Sais quando quiseres.',

@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
   if (guarda) return guarda
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-  const manychatKey = process.env.MANYCHAT_API_KEY || process.env.MANYCHAT_API_TOKEN
 
   const now = new Date()
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -88,43 +87,31 @@ export async function GET(request: NextRequest) {
     ? Math.round(((bookingsByStatus["cancelled"] ?? 0) / totalBookings) * 100)
     : 0
 
-  // ── 3. ManyChat ─────────────────────────────────────────────────────────
-  let manychatFlows: { name: string; status?: string }[] = []
-  let manychatTags: { name: string }[] = []
-  let manychatFollowers = 0
-
-  if (manychatKey) {
-    const headers = { Authorization: `Bearer ${manychatKey}` }
-    try {
-      const [flowsRes, tagsRes, pageRes] = await Promise.all([
-        fetch("https://api.manychat.com/fb/sending/getFlows", { headers }),
-        fetch("https://api.manychat.com/fb/page/getTags", { headers }),
-        fetch("https://api.manychat.com/fb/page/getInfo", { headers }),
-      ])
-      if (flowsRes.ok) {
-        const fd = await flowsRes.json()
-        manychatFlows = Array.isArray(fd.data) ? fd.data : []
-      }
-      if (tagsRes.ok) {
-        const td = await tagsRes.json()
-        manychatTags = Array.isArray(td.data) ? td.data : []
-      }
-      if (pageRes.ok) {
-        const pd = await pageRes.json()
-        manychatFollowers = pd.data?.total_active_subscriber_count ?? 0
-      }
-    } catch { /* ManyChat offline ou key inválida */ }
-  }
-
-  // Flows por estado
-  const flowsActive = manychatFlows.filter((f) => f.status !== "draft" && f.status !== "inactive").length
-  const flowsDraft = manychatFlows.length - flowsActive
+  // ── 3. Social próprio ─────────────────────────────────────────────────────
+  // Até 04/10/2026 este bloco pedia flows, tags e «seguidores» à API do ManyChat. O ManyChat saiu
+  // (decisão do dono) e o que se conta aqui é o que a casa MEDE mesmo, nas tabelas que o motor
+  // nativo escreve: `ig_leads` (quem comentou uma palavra-chave no Instagram), `whatsapp_conversas`
+  // (Cloud API própria) e `telegram_leads` (bot próprio). Nenhum destes números é estimado.
+  const [igLeadsQ, igLeads30dQ, waConversasQ, waPorResponderQ, tgLeadsQ] = await Promise.all([
+    supabase.from("ig_leads").select("comment_id", { count: "exact", head: true }),
+    supabase.from("ig_leads").select("comment_id", { count: "exact", head: true }).gte("created_at", thirtyDaysAgo),
+    supabase.from("whatsapp_conversas").select("id", { count: "exact", head: true }),
+    supabase.from("whatsapp_conversas").select("id", { count: "exact", head: true }).gt("por_responder", 0),
+    supabase.from("telegram_leads").select("chat_id", { count: "exact", head: true }),
+  ])
+  const igLeads = igLeadsQ.count ?? 0
+  const igLeads30d = igLeads30dQ.count ?? 0
+  const waConversas = waConversasQ.count ?? 0
+  const waPorResponder = waPorResponderQ.count ?? 0
+  const tgLeads = tgLeadsQ.count ?? 0
 
   // ── 4. Ecossistema — visão geral ─────────────────────────────────────────
-  // Funil estimado: followers → leads (tagged) → agendamentos → membros
+  // Funil medido: leads com intenção (IG) → chegaram ao Telegram → agendamentos → membros.
+  // O degrau «Seguidores» saiu com o ManyChat: não há tabela de seguidores, e um número estimado
+  // num funil é pior do que um degrau a menos.
   const funnelData = [
-    { stage: "Seguidores IG", value: manychatFollowers || 0, color: "#60a5fa" },
-    { stage: "Leads ManyChat", value: manychatTags.length > 0 ? Math.max(manychatFollowers * 0.12, 50) : 0, color: "#a78bfa" },
+    { stage: "Leads Instagram", value: igLeads, color: "#60a5fa" },
+    { stage: "Leads Telegram", value: tgLeads, color: "#a78bfa" },
     { stage: "Agendamentos", value: bookingsByStatus["active"] ?? 0, color: "#D2A63C" },
     { stage: "Membros", value: activeUsers, color: "#4ade80" },
   ]
@@ -170,25 +157,19 @@ export async function GET(request: NextRequest) {
       })),
     },
 
-    manychat: {
-      followers: manychatFollowers,
-      totalFlows: manychatFlows.length,
-      activeFlows: flowsActive,
-      draftFlows: flowsDraft,
-      totalTags: manychatTags.length,
-      flowsSplit: [
-        { name: "Ativos", value: flowsActive, color: "#4ade80" },
-        { name: "Rascunhos", value: Math.max(flowsDraft, 0), color: "#6b7280" },
-      ],
-      topFlows: manychatFlows.slice(0, 8).map((f) => ({ name: f.name })),
-      topTags: manychatTags.slice(0, 8).map((t) => ({ name: t.name })),
+    social: {
+      instagram: { leads: igLeads, leads30d: igLeads30d },
+      whatsapp: { conversas: waConversas, porResponder: waPorResponder },
+      telegram: { leads: tgLeads },
     },
 
     funnel: funnelData,
 
     ecosystem: {
       supabase: "ok",
-      manychat: manychatKey ? (manychatFlows.length > 0 ? "ok" : "sem_dados") : "sem_key",
+      instagram: igLeads > 0 ? "ok" : "sem_dados",
+      whatsapp: waConversas > 0 ? "ok" : "sem_dados",
+      telegram: tgLeads > 0 ? "ok" : "sem_dados",
       calendly: totalBookings > 0 ? "ok" : "sem_dados",
     },
   })

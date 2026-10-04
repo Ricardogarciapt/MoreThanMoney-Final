@@ -18,7 +18,7 @@ export const maxDuration = 30
  * ═══ AS FONTES, E PORQUE SÃO ESTAS ═════════════════════════════════════════════════════════
  *
  * O funil antigo prometia «Seguidores Instagram» e «Leads ManyChat». Nenhum dos dois existe em
- * lado nenhum desta base — não há tabela de seguidores nem de subscritores do ManyChat. Em vez de
+ * lado nenhum desta base — não há tabela de seguidores, e o ManyChat saiu (04/10/2026). Em vez de
  * inventar uma contagem ou de deixar o traço, o funil passa a ser o que a casa MEDE mesmo:
  *
  *   radar do Instagram  →  leads (quem comentou a palavra-chave)  →  chamadas marcadas  →  membros

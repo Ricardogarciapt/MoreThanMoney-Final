@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { FERRAMENTAS, ferramentaPorNome } from "@/lib/mcp/ferramentas"
 import { modeloClaude } from '@/lib/modelo-claude'
+import { lerConversas } from '@/lib/whatsapp/conversas'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -23,11 +24,12 @@ Contexto MTM:
 - Mentoria de liberdade financeira focada em trading consciente e mindset
 - Público-alvo: adultos 25-45 anos que querem sair da "armadilha das 40h/semana"
 - Produto principal: mentoria premium com acesso ao Scanner GoldKiller e comunidade
-- Plataforma: Instagram (@morethanmoney.pt), Skool, ManyChat
+- Plataforma: Instagram (@morethanmoney.pt, Graph API nativa), WhatsApp Cloud API, Telegram (bot próprio), Skool
 
 Tens acesso a ferramentas para:
 - Consultar estatísticas de utilizadores da plataforma
-- Pesquisar subscribers no ManyChat
+- Listar os leads do Instagram (quem comentou uma palavra-chave nos posts — tabela ig_leads)
+- Ver as conversas de WhatsApp em curso
 - Ver marcações Calendly recentes
 
 Responsabilidades:
@@ -39,26 +41,27 @@ Responsabilidades:
 
 Responde sempre em Português de Portugal, tom informal mas profissional. Usa os dados reais disponíveis sempre que possível.`,
 
-  chatbot_builder: `És o Agente Chatbot Builder da MoreThanMoney (MTM). Especialista em automações ManyChat para Instagram.
+  chatbot_builder: `És o Agente Chatbot Builder da MoreThanMoney (MTM). Especialista nas automações PRÓPRIAS da casa para Instagram, WhatsApp e Telegram — sem nenhuma ferramenta paga pelo meio.
 
 Contexto MTM:
-- Flows ManyChat ativos: SCANNER, SISTEMA, BOOTCAMP, RESULTADOS, LIBERDADE, ACORDEI, MUDO AGORA, QUERO APRENDER, etc.
-- Tag principal: MTM_lead_ativo (ID: 88157092)
+- Instagram: motor nativo (Graph API). As regras «palavra-chave no comentário → resposta pública/DM → seguimento» editam-se em /admin/social e vivem na tabela mtm_automacoes; as intenções do funil (SCANNER, SISTEMA, BOOTCAMP, RESULTADOS, LIBERDADE, ACORDEI, MUDO AGORA, QUERO APRENDER, etc.) são palavras que a pessoa comenta e ficam em ig_leads.
+- WhatsApp: Cloud API da Meta (+351 923 533 741), conversas em whatsapp_conversas, templates aprovados.
+- Telegram: bot próprio (MoreThanMoney_aibot) com o funil de leads e a validação da corretora.
 - Freebies: Guia Primeiro Passo, Plano 3 Passos, Scanner GoldKiller Guide
 - Estilo: Português de Portugal, informal, "tu"
 
 Tens acesso a ferramentas para:
-- Listar flows ManyChat disponíveis
-- Ver tags existentes
-- Pesquisar subscribers
+- Listar as automações da casa (listar_automacoes) e ver o estado da execução
+- Listar os funis desenhados e ensaiá-los (listar_funis, ensaiar_funil)
+- Listar os leads do Instagram e as conversas de WhatsApp
 
 Responsabilidades:
-- Escrever mensagens para flows ManyChat
+- Escrever mensagens para as automações e funis da casa
 - Criar sequências de automação lógicas
-- Sugerir keywords e triggers
-- Desenhar jornadas de cliente no Instagram
+- Sugerir palavras-chave e gatilhos
+- Desenhar jornadas de cliente no Instagram, WhatsApp e Telegram
 
-Ao escrever mensagens ManyChat usa sempre "tu", tom próximo e autêntico, emojis moderados, CTAs claros.
+Ao escrever mensagens usa sempre "tu", tom próximo e autêntico, emojis moderados, CTAs claros.
 Responde sempre em Português de Portugal.`,
 
   setter: `És o Agente Setter da MoreThanMoney (MTM). Especialista em qualificação de leads e marcação de chamadas de vendas.
@@ -66,13 +69,13 @@ Responde sempre em Português de Portugal.`,
 Contexto MTM:
 - Objetivo: marcar chamadas de onboarding/descoberta com prospects qualificados
 - Calendly: onboarding-de-novos-membros (30min) e reunião-pontual (30min)
-- Canal principal: Instagram DM + ManyChat
+- Canal principal: Instagram DM (motor nativo) + WhatsApp + Telegram
 - Critérios de qualificação: motivação para mudar, disponibilidade, situação financeira básica
 
 Tens acesso a ferramentas para:
 - Ver marcações Calendly próximas e passadas
 - Consultar estatísticas da plataforma
-- Pesquisar subscribers no ManyChat
+- Listar os leads do Instagram e as conversas de WhatsApp
 
 Responsabilidades:
 - Criar scripts de qualificação para Instagram DM
@@ -129,7 +132,7 @@ Contexto MTM:
 - Missão: ajudar pessoas a alcançar liberdade financeira através de trading consciente e mindset
 - Tom: autêntico, inspirador, educativo, informal
 - Calendário: 27 posts Jun-Ago 2026 (Ter/Qui/Sáb)
-- CTAs com keywords ManyChat: SCANNER, SISTEMA, BOOTCAMP, RESULTADOS, LIBERDADE
+- CTAs com palavras-chave para comentar (o funil nativo do Instagram apanha-as): SCANNER, SISTEMA, BOOTCAMP, RESULTADOS, LIBERDADE
 
 Responsabilidades:
 - Escrever captions para Instagram (PT-PT, informal, "tu")
@@ -137,7 +140,7 @@ Responsabilidades:
 - Desenvolver ideias para stories
 - Adaptar conteúdo para diferentes fases do funil
 - Escrever scripts de vídeo
-- Criar CTAs com keywords para ManyChat
+- Criar CTAs com palavras-chave para o funil nativo do Instagram
 
 Estilo: Português de Portugal, "tu", tom próximo e autêntico. Nunca formal.`,
 
@@ -181,7 +184,7 @@ Responde em Português de Portugal.`,
 
 Contexto MTM atual:
 - Receitas: mentoria premium, Scanner GoldKiller, produtos digitais
-- Canais: Instagram, Skool, Calendly, ManyChat, site morethanmoney.pt
+- Canais: Instagram, WhatsApp, Telegram, Skool, Calendly, site morethanmoney.pt
 - Equipa: Ricardo + automatizações IA
 - Fase: crescimento e sistematização
 
@@ -204,14 +207,14 @@ Responde em Português de Portugal, perspetiva de empreendedor português.`,
 
 Sistemas IA MTM:
 - 12 agentes especializados neste dashboard
-- ManyChat: automações Instagram (flows, keywords)
+- Social próprio: Instagram (Graph API), WhatsApp Cloud API e bot Telegram — automações em mtm_automacoes, editáveis em /admin/social
 - Calendly: marcações automáticas + webhooks Supabase
 - Supabase: base de dados + Edge Functions
 - Scanner GoldKiller: indicador TradingView
 
 Tens acesso a ferramentas para:
 - Verificar estatísticas de todos os sistemas
-- Ver flows e tags ManyChat
+- Ver as automações da casa e o estado da execução
 - Consultar marcações Calendly
 - Ver utilizadores da plataforma
 
@@ -402,30 +405,31 @@ const TOOLS_BASE: Anthropic.Tool[] = [
     },
   },
   {
-    name: "search_manychat_subscriber",
-    description: "Pesquisa um subscriber no ManyChat pelo nome",
+    name: "listar_leads_instagram",
+    description:
+      "Lista os leads do Instagram do motor nativo (tabela ig_leads): quem comentou uma palavra-chave nos posts, a intenção detetada e se a DM saiu.",
     input_schema: {
       type: "object" as const,
       properties: {
-        name: { type: "string", description: "Nome do subscriber a pesquisar" },
+        nome: { type: "string", description: "Filtra pelo handle de quem comentou (contém)" },
+        intencao: { type: "string", description: "Filtra pela intenção/palavra-chave (ex.: SCANNER, PREMIUM)" },
+        limit: { type: "number", description: "Número máximo de resultados. Default: 20" },
       },
-      required: ["name"],
     },
   },
   {
-    name: "get_manychat_tags",
-    description: "Lista todas as tags disponíveis no ManyChat MTM",
+    name: "conversas_whatsapp",
+    description: "Lista as conversas de WhatsApp (Cloud API própria) por ordem da última mensagem recebida, com estado, responsável e quantas estão por responder.",
     input_schema: {
       type: "object" as const,
-      properties: {},
-    },
-  },
-  {
-    name: "get_manychat_flows",
-    description: "Lista os flows/automações disponíveis no ManyChat MTM",
-    input_schema: {
-      type: "object" as const,
-      properties: {},
+      properties: {
+        estado: {
+          type: "string",
+          enum: ["novo", "a_falar", "a_aguardar", "ganho", "perdido", "silenciado"],
+          description: "Filtra pelo estado da conversa",
+        },
+        limit: { type: "number", description: "Número máximo de resultados. Default: 20" },
+      },
     },
   },
 ]
@@ -440,7 +444,6 @@ async function executeTool(
   input: Record<string, unknown>
 ): Promise<string> {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-  const manychatKey = process.env.MANYCHAT_API_KEY || process.env.MANYCHAT_API_TOKEN
 
   // As ferramentas do sistema correm pelo mesmo caminho que o MCP usa — uma só implementação.
   const doSistema = ferramentaPorNome(name)
@@ -524,39 +527,27 @@ async function executeTool(
         return JSON.stringify(data, null, 2)
       }
 
-      case "search_manychat_subscriber": {
-        if (!manychatKey) return "MANYCHAT_API_KEY não configurada no Vercel."
-        const { name } = input
-        const res = await fetch(
-          `https://api.manychat.com/fb/subscriber/findByName?name=${encodeURIComponent(String(name))}`,
-          { headers: { Authorization: `Bearer ${manychatKey}` } }
-        )
-        if (!res.ok) return `Erro ManyChat API: ${res.status} ${res.statusText}`
-        const data = await res.json()
-        if (!data?.data?.length) return `Nenhum subscriber encontrado com o nome "${name}".`
-        return JSON.stringify(data.data.slice(0, 5), null, 2)
+      case "listar_leads_instagram": {
+        const { nome, intencao, limit = 20 } = input
+        let query = supabase
+          .from("ig_leads")
+          .select("commenter, ig_username, keyword, intent, comment_text, dm_status, created_at")
+          .order("created_at", { ascending: false })
+          .limit(Math.min(Number(limit) || 20, 100))
+        if (nome) query = query.ilike("commenter", `%${String(nome)}%`)
+        if (intencao) query = query.or(`intent.ilike.%${String(intencao)}%,keyword.ilike.%${String(intencao)}%`)
+        const { data, error } = await query
+        if (error) return `Erro Supabase: ${error.message}`
+        if (!data?.length) return "Nenhum lead do Instagram encontrado com esses filtros."
+        return JSON.stringify(data, null, 2)
       }
 
-      case "get_manychat_tags": {
-        if (!manychatKey) return "MANYCHAT_API_KEY não configurada no Vercel."
-        const res = await fetch("https://api.manychat.com/fb/page/getTags", {
-          headers: { Authorization: `Bearer ${manychatKey}` },
-        })
-        if (!res.ok) return `Erro ManyChat API: ${res.status} ${res.statusText}`
-        const data = await res.json()
-        const tags = data?.data?.slice(0, 30) || []
-        return JSON.stringify(tags, null, 2)
-      }
-
-      case "get_manychat_flows": {
-        if (!manychatKey) return "MANYCHAT_API_KEY não configurada no Vercel."
-        const res = await fetch("https://api.manychat.com/fb/sending/getFlows", {
-          headers: { Authorization: `Bearer ${manychatKey}` },
-        })
-        if (!res.ok) return `Erro ManyChat API: ${res.status} ${res.statusText}`
-        const data = await res.json()
-        const flows = data?.data?.slice(0, 20) || []
-        return JSON.stringify(flows, null, 2)
+      case "conversas_whatsapp": {
+        const { estado, limit = 20 } = input
+        const todas = await lerConversas(200)
+        const lista = (estado ? todas.filter((c) => c.estado === estado) : todas).slice(0, Math.min(Number(limit) || 20, 100))
+        if (!lista.length) return "Nenhuma conversa de WhatsApp com esses filtros."
+        return JSON.stringify(lista, null, 2)
       }
 
       default:

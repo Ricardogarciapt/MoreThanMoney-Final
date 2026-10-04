@@ -33,7 +33,7 @@ import { supabase } from "@/lib/supabase"
  *    do texto.
  *
  * ── O que isto NÃO faz ────────────────────────────────────────────────────────────────────────
- * Não executa. O motor continua a ser o código do Telegram e do ManyChat. Isto é o desenho e a
+ * Não executa. O motor continua a ser o código do Telegram e do Instagram nativo. Isto é o desenho e a
  * documentação viva dele — e está escrito no próprio painel, porque um mapa em que se acredita
  * que muda o comportamento é pior do que não haver mapa.
  */
@@ -76,7 +76,7 @@ const BLOCOS: Record<TipoDeNo, {
   espera:   { rotulo: "Espera",    fundo: "#f5f3ff", borda: "#8b5cf6", texto: "#4c1d95", Icone: Clock,           ajuda: "Um intervalo antes do passo seguinte" },
   condicao: { rotulo: "Condição",  fundo: "#eff6ff", borda: "#3b82f6", texto: "#1e3a8a", Icone: GitBranch,       ajuda: "O caminho parte-se em dois" },
   acao:     { rotulo: "Ação",      fundo: "#fdf4ff", borda: "#a855f7", texto: "#581c87", Icone: Zap,             ajuda: "Etiquetar, dar cupão, mudar o estado" },
-  webhook:  { rotulo: "Automação", fundo: "#f0f9ff", borda: "#0ea5e9", texto: "#075985", Icone: Webhook,         ajuda: "Chama algo de fora (n8n, ManyChat, API)" },
+  webhook:  { rotulo: "Automação", fundo: "#f0f9ff", borda: "#0ea5e9", texto: "#075985", Icone: Webhook,         ajuda: "Chama algo de fora (n8n, API)" },
   divisao:  { rotulo: "Teste A/B", fundo: "#fff7ed", borda: "#f97316", texto: "#7c2d12", Icone: Shuffle,         ajuda: "Divide o tráfego para comparar" },
   irpara:   { rotulo: "Ir para",   fundo: "#f8fafc", borda: "#64748b", texto: "#0f172a", Icone: CornerDownRight, ajuda: "Salta para outro funil" },
   destino:  { rotulo: "Destino",   fundo: "#f0fdf4", borda: "#22c55e", texto: "#14532d", Icone: Flag,            ajuda: "Onde queremos que a pessoa chegue" },

@@ -4,6 +4,7 @@ import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/supabase"
 import { findTerminalAsset } from "@/lib/mtm-terminal-assets"
 import { buildAndGenerate } from "@/lib/mtm-terminal-analysis"
+import { ErroIA, mensagemIndisponivel } from "@/lib/ia/chamar"
 import { refreshDecision } from "@/lib/mtm-terminal-live"
 import { podeAcederPremiumUi, type PerfilUi } from "@/lib/perfil-ui"
 
@@ -175,7 +176,12 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error("[mtm-terminal] falha a gerar análise", asset.symbol, `${Math.round((Date.now() - now) / 1000)}s`, error)
         lastUserRequest.delete(key) // falhou: não conta para o limite do utilizador
-        send({ ok: false, error: error instanceof Error ? error.message : "Erro ao gerar a análise" })
+        // A 04/10 isto mandava para a página o JSON cru da Anthropic («credit balance too low»).
+        // Agora: se a cadeia de IA falhou toda, a mensagem honesta nomeia os fornecedores tentados.
+        send({
+          ok: false,
+          error: error instanceof ErroIA ? mensagemIndisponivel(error) : error instanceof Error ? error.message : "Erro ao gerar a análise",
+        })
       } finally {
         clearInterval(beat)
         controller.close()

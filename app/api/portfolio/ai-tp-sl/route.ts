@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 interface TPSLRecommendation {
   symbol: string
@@ -85,7 +86,8 @@ function calculateIndicators(candles: any[]) {
   }
 }
 
-// Análise OpenAI para TP/SL estratégicos
+// Análise IA para TP/SL estratégicos — pela porta única (`chamarIA`), em JSON.
+// Devolve `{ erro }` honesto quando a cadeia falha; os níveis técnicos continuam a ser calculados.
 async function analyzeTPSLWithAI(
   symbol: string,
   currentPrice: number,
@@ -94,12 +96,6 @@ async function analyzeTPSLWithAI(
   historicalData: any
 ): Promise<any> {
   try {
-    const openaiKey = process.env.OPENAI_API_KEY?.trim()
-    if (!openaiKey) {
-      console.warn('⚠️ OpenAI API Key não configurada')
-      return null
-    }
-
     const prompt = `Você é um trader profissional especializado em gestão de risco e análise técnica avançada.
 
 **Ativo:** ${symbol}
@@ -186,39 +182,20 @@ Retorne APENAS um JSON neste formato:
   }
 }`
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: 'Você é um gestor de portfolio profissional com 20 anos de experiência em mercados financeiros, especializado em criptomoedas, análise técnica, macro economia e geopolítica.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.3,
-        response_format: { type: 'json_object' }
-      })
+    const r = await chamarIA({
+      tarefa: 'portfolio-tp-sl',
+      sistema:
+        'Você é um gestor de portfolio profissional com 20 anos de experiência em mercados financeiros, especializado em criptomoedas, análise técnica, macro economia e geopolítica.',
+      mensagens: [{ role: 'user', content: prompt }],
+      maxTokens: 1500,
+      temperatura: 0.3,
+      json: true,
+      preferencia: 'qualidade',
     })
-
-    if (!response.ok) {
-      console.error('❌ OpenAI API error:', response.status)
-      return null
-    }
-
-    const data = await response.json()
-    return JSON.parse(data.choices[0].message.content)
+    return JSON.parse(r.texto)
   } catch (error) {
-    console.error('❌ Erro na análise OpenAI:', error)
-    return null
+    console.error('❌ Erro na análise IA:', mensagemIndisponivel(error))
+    return { erro: mensagemIndisponivel(error) }
   }
 }
 
@@ -280,8 +257,9 @@ export async function GET(request: NextRequest) {
     // Tentar validar com IA se a chave estiver configurada
     let aiValidated = false
     let aiData = null
+    let aiError: string | null = null
     
-    if (process.env.OPENAI_API_KEY?.trim()) {
+    {
       try {
         console.log(`🧠 [AI TP/SL] Tentando validar com IA...`)
         // Calcular indicadores básicos para IA
@@ -301,6 +279,10 @@ export async function GET(request: NextRequest) {
         
         aiData = await analyzeTPSLWithAI(symbol, currentPrice, entryPrice || currentPrice, indicators, null)
         
+        if (aiData && typeof aiData.erro === 'string') {
+          aiError = aiData.erro
+          aiData = null
+        }
         if (aiData) {
           aiValidated = true
           console.log(`✅ [AI TP/SL] Validação IA concluída para ${symbol}`)
@@ -312,12 +294,11 @@ export async function GET(request: NextRequest) {
         } else {
           console.log(`⚠️ [AI TP/SL] IA não disponível, usando cálculos técnicos`)
         }
-      } catch (aiError) {
-        console.error(`❌ [AI TP/SL] Erro na IA:`, aiError)
+      } catch (e) {
+        console.error(`❌ [AI TP/SL] Erro na IA:`, e)
+        aiError = mensagemIndisponivel(e)
         // Continuar com cálculos técnicos
       }
-    } else {
-      console.log(`⚠️ [AI TP/SL] OPENAI_API_KEY não configurada, usando cálculos técnicos`)
     }
 
     return NextResponse.json({
@@ -327,6 +308,9 @@ export async function GET(request: NextRequest) {
       entry_price: entryPrice || currentPrice,
       performance: performance,
       ai_validated: aiValidated,
+      // Honestidade: se a IA não validou, a página sabe porquê (fornecedores tentados) em vez de
+      // mostrar níveis «técnicos» como se tivessem passado pela IA.
+      ai_error: aiError,
       take_profit_levels: {
         tp1: { 
           price: tp1, 

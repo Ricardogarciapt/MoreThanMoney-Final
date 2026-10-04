@@ -19,7 +19,7 @@ import { contextoDaCasa } from '@/lib/factos-da-casa'
 const TRIAL_DIAS = TRIAL_DAYS
 
 /**
- * FOLLOW-UP de reativação de leads mornos no funil do Telegram (ManyChat Essential — nativo).
+ * FOLLOW-UP de reativação de leads mornos no funil do Telegram (nativo, bot próprio).
  * "A fortuna está no follow-up" (Grant Cardone). Sequência de 3 toques com posture (Eric Worre —
  * sem perseguir, edifica a prova/comunidade) e fecho (Daniel G — urgência + take-away):
  *   Toque 1 (~6h silêncio): curiosidade + prova, sem pressão (Worre).
@@ -55,7 +55,7 @@ async function draftFollowup(lead: Lead, touch: number): Promise<string> {
   }
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) return fallback[touch] || fallback[1]
-  const model = modeloClaude(process.env.MANYCHAT_CLOSER_MODEL)
+  const model = modeloClaude(process.env.IG_CLOSER_MODEL)
   const ctx = `Lead: ${name || '(sem nome)'} · interesse: ${lead.interest || 'desconhecido'} · etapa: ${lead.stage || 'qualifying'}. Este é o TOQUE ${touch} de ${MAX_TOUCHES}.`
   try {
     const ctrl = new AbortController()

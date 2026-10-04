@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk"
+import { chamarIA, ErroIA } from "@/lib/ia/chamar"
 import type { TerminalAsset } from "@/lib/mtm-terminal-assets"
 import { buildLivePriceContext, type TerminalQuote } from "@/lib/mtm-terminal-quote"
 import {
@@ -132,7 +132,6 @@ const SHAPE_HINT = `{
   "news": [{ "headline": "...", "impact": "alto"|"medio"|"baixo", "source": "<URL exato da pesquisa>" }]
 }`
 
-const WEB_RULES = ` ou em resultados da pesquisa web que fizeres agora. Podes pesquisar notícias dos últimos 7 dias sobre o ativo; cada notícia em «news» tem de ter «source» = URL exato de um resultado da pesquisa. Sem fonte, não entra`
 
 // ─── Contexto ────────────────────────────────────────────────────────────────
 export interface RecentSignal {
@@ -194,10 +193,6 @@ export function buildUserPrompt(input: AnalysisInput): string {
 }
 
 // ─── Geração ─────────────────────────────────────────────────────────────────
-function webSearchEnabled(model: string): boolean {
-  return process.env.MTM_TERMINAL_WEB_SEARCH === "1" && isCurrentGenModel(model)
-}
-
 /**
  * Parâmetros que dependem do modelo. A regra que PARTIU a página: o `format` (saída estruturada)
  * estava preso ao mesmo teste do `effort`, por isso um modelo da geração anterior
@@ -221,101 +216,56 @@ export function modelTuning(
   }
 }
 
-function isModelUnavailable(err: unknown): boolean {
-  if (err instanceof Anthropic.NotFoundError) return true
-  if (err instanceof Anthropic.BadRequestError) {
-    const m = String(err.message).toLowerCase()
-    return m.includes("model") || m.includes("not supported") || m.includes("effort") || m.includes("output_config")
-  }
-  return false
-}
-
 /**
- * Gera o dashboard. `deadlineMs` é o tempo total disponível (rota: ~100 s; cron: por ativo).
+ * Gera o dashboard — pela porta única da IA (`chamarIA`: Groq → Gemini → Ollama → OpenAI →
+ * Anthropic). Foi aqui que o dono viu, a 04/10, o 400 cru «credit balance too low» da Anthropic:
+ * esta função falava só com ela. Agora quem responde é o primeiro fornecedor com chave que estiver
+ * de pé, e o `model` devolvido diz quem foi («groq/llama-3.3-70b-versatile»).
+ *
+ * O que se perdeu de propósito: a pesquisa web (`MTM_TERMINAL_WEB_SEARCH`) era uma ferramenta só
+ * da Anthropic e não há equivalente nos grátis; `news` fica vazio e `grounding.webSearch=false`,
+ * que é o que a página já sabia mostrar. O schema JSON também era da Anthropic — em vez dele vai
+ * a FORMA escrita no pedido (SHAPE_HINT) + `json: true`, e `normaliseDashboard` continua a aceitar
+ * sinónimos e a impor os níveis calculados.
+ *
  * Os níveis finais são SEMPRE os calculados, nunca os do modelo.
  */
 export async function generateTerminalDashboard(
   input: AnalysisInput,
   opts: { deadlineMs?: number } = {},
 ): Promise<{ data: TerminalDashboard; model: string }> {
-  const started = Date.now()
-  const deadline = started + (opts.deadlineMs ?? 100_000)
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY?.trim(), maxRetries: 0 })
-  const userPrompt = buildUserPrompt(input)
-  let lastErr: unknown = new Error("sem modelo configurado")
+  const deadline = opts.deadlineMs ?? 100_000
+  if (deadline < 10_000) throw new Error("tempo esgotado antes de pedir a análise")
+  const system = SYSTEM_PROMPT.replace("{{WEB}}", "")
+  const userPrompt =
+    buildUserPrompt(input) + `\n\nResponde APENAS com um objeto JSON com esta forma exata (sem «news»):\n${SHAPE_HINT}`
 
-  for (const model of modelCandidates()) {
-    const remaining = deadline - Date.now()
-    if (remaining < 10_000) break
-    const current = isCurrentGenModel(model)
-    const web = webSearchEnabled(model)
-    const system = SYSTEM_PROMPT.replace("{{WEB}}", web ? WEB_RULES : "")
-    // O schema vai SEMPRE que não há pesquisa web (é o que obriga o modelo às chaves certas:
-    // direction/rationale/kind). Só a pesquisa web o dispensa, porque não pode ir com `tools`.
-    const format = web
-      ? null
-      : { type: "json_schema" as const, schema: DASHBOARD_SCHEMA as unknown as Record<string, unknown> }
-
-    try {
-      const messages: Anthropic.MessageParam[] = [
-        {
-          role: "user",
-          content:
-            userPrompt +
-            // Com pesquisa web não há schema (não pode ir com `tools`), por isso a FORMA tem de ir
-            // escrita — incluindo as sub-chaves. Foi o que faltou e deu veredito e cenários vazios.
-            (web ? `\n\nResponde no fim APENAS com um objeto JSON com esta forma exata:\n${SHAPE_HINT}` : ""),
-        },
-      ]
-      const sources = new Map<string, TerminalSource>()
-      let text = ""
-      // pause_turn (pesquisa web longa) → continua a mesma volta, no máximo 3 vezes.
-      for (let turn = 0; turn < 3; turn++) {
-        const left = deadline - Date.now()
-        if (left < 5_000) throw new Error("tempo esgotado a gerar a análise")
-        const resp = await client.messages.create(
-          {
-            model,
-            max_tokens: 4_000,
-            system,
-            messages,
-            ...modelTuning(model, format),
-            ...(web ? { tools: [{ type: "web_search_20260209" as const, name: "web_search" as const, max_uses: 3 }] } : {}),
-          },
-          { timeout: left },
-        )
-        for (const block of resp.content) {
-          if (block.type === "text") {
-            text += block.text
-            for (const c of block.citations ?? []) {
-              if (c.type === "web_search_result_location") sources.set(c.url, { title: c.title ?? c.url, url: c.url })
-            }
-          } else if (block.type === "web_search_tool_result" && Array.isArray(block.content)) {
-            for (const r of block.content) sources.set(r.url, { title: r.title, url: r.url })
-          }
-        }
-        if (resp.stop_reason === "refusal") throw new Error("o modelo recusou gerar esta análise")
-        if (resp.stop_reason !== "pause_turn") break
-        messages.push({ role: "assistant", content: resp.content })
-      }
-
-      const parsed = parseJsonLoose(text) as Partial<TerminalDashboard>
-      const data = normaliseDashboard(parsed, input, sources, web)
-      // Uma análise oca (sem leitura nem cenários) NÃO se guarda: era o que enchia a página de
-      // cartões vazios em silêncio. Vale mais tentar o modelo seguinte e, se nenhum servir, falhar.
-      const faltam = missingDashboardParts(data)
-      if (faltam.length) {
-        lastErr = new Error(`o modelo ${model} devolveu uma análise incompleta (${faltam.join(", ")})`)
-        continue
-      }
-      return { data, model }
-    } catch (err) {
-      lastErr = err
-      if (isModelUnavailable(err)) continue
-      throw err
-    }
+  let resposta
+  try {
+    resposta = await chamarIA({
+      tarefa: "mtm-terminal",
+      sistema: system,
+      mensagens: [{ role: "user", content: userPrompt }],
+      maxTokens: 4_000,
+      json: true,
+      temperatura: 0.2,
+      preferencia: "qualidade",
+      // Dois fornecedores grátis + reservas têm de caber no orçamento da rota (~100 s).
+      timeoutMs: Math.min(40_000, Math.floor(deadline / 2)),
+    })
+  } catch (err) {
+    // A mensagem do ErroIA já nomeia os fornecedores tentados: é a que a página mostra.
+    throw err instanceof ErroIA ? err : new Error(err instanceof Error ? err.message : String(err))
   }
-  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr))
+
+  const parsed = parseJsonLoose(resposta.texto) as Partial<TerminalDashboard>
+  const data = normaliseDashboard(parsed, input, new Map(), false)
+  // Uma análise oca (sem leitura nem cenários) NÃO se guarda: era o que enchia a página de
+  // cartões vazios em silêncio. Vale mais falhar a dizer qual o modelo que a devolveu.
+  const faltam = missingDashboardParts(data)
+  const model = `${resposta.fornecedor}/${resposta.modelo}${resposta.emReserva ? " (reserva)" : ""}`
+  if (faltam.length) throw new Error(`o modelo ${model} devolveu uma análise incompleta (${faltam.join(", ")})`)
+  return { data, model }
 }
 
 /**

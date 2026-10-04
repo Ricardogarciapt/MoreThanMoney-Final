@@ -12,8 +12,8 @@ export const maxDuration = 60
  * GET  → verificação do webhook Meta (hub.challenge).
  * POST → DM recebida → AI closer → resposta pela Graph API (dedup por mid em ig_dm_log).
  *
- * FAILSAFE: se `IG_DM_SELFHOSTED_ENABLED='false'`, não responde (deixa o ManyChat tratar).
- * O ManyChat continua ligado como rede de segurança.
+ * INTERRUPTOR: se `IG_DM_SELFHOSTED_ENABLED='false'`, não responde — e desde 04/10/2026 não há
+ * rede de segurança por trás (o ManyChat saiu). Desligar isto é deixar as DMs sem resposta.
  */
 
 // ── GET: verificação do webhook (Meta) ───────────────────────────────────────
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, ignored: true })
   }
 
-  // FAILSAFE: motor self-hosted desligado → não responde (ManyChat trata).
+  // INTERRUPTOR: motor desligado → não responde (e ninguém responde por nós).
   if (process.env.IG_DM_SELFHOSTED_ENABLED === "false") {
     return NextResponse.json({ ok: true, selfhosted: false })
   }

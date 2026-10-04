@@ -33,18 +33,16 @@ function ToolIndicator({ tool }: { tool: ToolEvent }) {
     get_platform_stats: "A consultar estatísticas da plataforma…",
     get_calendly_bookings: "A carregar marcações Calendly…",
     get_recent_users: "A carregar utilizadores recentes…",
-    search_manychat_subscriber: "A pesquisar subscriber no ManyChat…",
-    get_manychat_tags: "A carregar tags ManyChat…",
-    get_manychat_flows: "A carregar flows ManyChat…",
+    listar_leads_instagram: "A carregar leads do Instagram…",
+    conversas_whatsapp: "A carregar conversas de WhatsApp…",
   }
 
   const TOOL_LABELS_DONE: Record<string, string> = {
     get_platform_stats: "Estatísticas carregadas",
     get_calendly_bookings: "Marcações Calendly carregadas",
     get_recent_users: "Utilizadores carregados",
-    search_manychat_subscriber: "Subscriber encontrado",
-    get_manychat_tags: "Tags ManyChat carregadas",
-    get_manychat_flows: "Flows ManyChat carregados",
+    listar_leads_instagram: "Leads do Instagram carregados",
+    conversas_whatsapp: "Conversas de WhatsApp carregadas",
   }
 
   return (

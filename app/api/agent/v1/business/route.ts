@@ -124,13 +124,21 @@ async function getCustomers(sb: ReturnType<typeof getSupabaseAdmin>, q: string |
   return { total: (data || []).length, clientes: data || [] }
 }
 
+/**
+ * Os leads do Instagram — do motor NATIVO (`ig_leads`, escrita por lib/instagram/funnel.ts).
+ *
+ * Até 04/10/2026 lia-se `mtm_leads`, a tabela que o ManyChat sincronizava. O ManyChat saiu; a
+ * tabela ficou (com o que já tinha) mas não recebe mais nada, e um agente a ler uma fonte parada
+ * responde com confiança sobre gente de há meses. O `stage` aqui é o estado da DM
+ * (`sent` · `public_fallback` · `window_expired`), que é o que a fonte sabe.
+ */
 async function getLeads(sb: ReturnType<typeof getSupabaseAdmin>, stage: string | null, limit: number) {
   let query = sb
-    .from("mtm_leads")
-    .select("id,full_name,instagram_handle,email,manychat_id,score,stage,source,country,last_interaction,notes,created_at")
-    .order("score", { ascending: false, nullsFirst: false })
+    .from("ig_leads")
+    .select("comment_id,commenter,ig_username,keyword,intent,comment_text,dm_status,created_at")
+    .order("created_at", { ascending: false })
     .limit(limit)
-  if (stage) query = query.eq("stage", stage)
+  if (stage) query = query.eq("dm_status", stage)
   const { data, error } = await query
   if (error) return { erro: error.message, leads: [] }
   return { total: (data || []).length, leads: data || [] }
@@ -310,7 +318,7 @@ export async function POST(request: NextRequest) {
         }`
       return agentOk({
         rascunho: {
-          canal: body.channel || (target.manychat_id ? "manychat" : target.email ? "email" : "telegram"),
+          canal: body.channel || (target.instagram_handle || target.commenter ? "instagram" : target.email ? "email" : "telegram"),
           para: target,
           objetivo: goal,
           mensagem: draft,

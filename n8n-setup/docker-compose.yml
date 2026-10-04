@@ -35,7 +35,6 @@ services:
       - SUPABASE_URL=https://iwscxotvmtkphajmasof.supabase.co
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - MANYCHAT_API_KEY=${MANYCHAT_API_KEY}
       - GMAIL_USER=morethanmoneypt@gmail.com
       - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
 

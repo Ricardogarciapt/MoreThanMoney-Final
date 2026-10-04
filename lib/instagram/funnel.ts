@@ -4,12 +4,12 @@
  * PROSPECTOR: varre os comentários dos posts/reels e deteta INTENÇÃO por palavra-chave
  *   (as CTAs dos reels: MUNDO, EU VOU, DISCIPLINA, PREMIUM, SINAIS, APP...).
  * SETTER: tenta uma DM PRIVADA (Graph `private_replies`) com a oferta + link; se o scope de DM
- *   faltar (app sem `instagram_manage_messages`, ManyChat Essential), cai para RESPOSTA PÚBLICA
+ *   faltar (app sem `instagram_manage_messages`), cai para RESPOSTA PÚBLICA
  *   QUE JÁ LEVA O LINK. Regista o lead em `ig_leads`.
- * CLOSER (modelo ESSENTIAL, sem ManyChat): o fecho NÃO é no IG — o link leva ao funil do Telegram
+ * CLOSER: o fecho NÃO é no IG — o link leva ao funil do Telegram
  *   (`MoreThanMoney_aibot?start=lead` → lead-funnel + broker-gate) ou ao `/register` (trial
- *   self-serve). Toda a conversa/close é nativa (Telegram/site), não precisa de ManyChat nem de
- *   webhook de mensagens do IG. (/api/manychat/closer fica só para quando o ManyChat existir.)
+ *   self-serve). Toda a conversa/close é nativa (Telegram/site); quando a DM chega, responde o
+ *   `dm-closer.ts` pelo webhook /api/webhooks/instagram. Nenhuma ferramenta externa pelo meio.
  */
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { prepararMensagem } from "@/lib/agentes/mensagem-saida"
@@ -120,9 +120,9 @@ const INTENTS: Intent[] = [
 /**
  * As intenções que estão EDITÁVEIS no /admin/social, mais as que vivem aqui no código.
  *
- * Isto é o que substitui o ManyChat. As palavras e as respostas deixam de estar escritas num
- * ficheiro que só se muda com um deploy: passam a ser regras que se editam num ecrã — que é a
- * única coisa que o ManyChat fazia melhor do que nós.
+ * Isto é o que substituiu o ManyChat (retirado a 04/10/2026). As palavras e as respostas deixam de
+ * estar escritas num ficheiro que só se muda com um deploy: passam a ser regras que se editam num
+ * ecrã — que era a única coisa que a ferramenta paga fazia melhor do que nós.
  *
  * As do código ficam como fundo, e ficam de propósito: uma base vazia (ou em baixo) faria o funil
  * de Instagram emudecer sem que nada o dissesse, e uma automação que se cala em silêncio é pior

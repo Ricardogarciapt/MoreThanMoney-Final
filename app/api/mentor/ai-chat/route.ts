@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
-import Anthropic from "@anthropic-ai/sdk"
-import { modeloClaude } from '@/lib/modelo-claude'
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
 
 const MTM_MENTOR_SYSTEM_PROMPT = `És o Mentor MTM — o assistente de inteligência artificial da More Than Money (MTM). Acompanhas cada membro no seu percurso, com um princípio: PRIMEIRO cliente com resultados, DEPOIS distribuidor se (e só se) o quiser.
 
@@ -127,36 +122,27 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = MTM_MENTOR_SYSTEM_PROMPT + contextBlock
 
-    // SSE streaming response
+    // SSE — o cliente continua a receber `text`/`done`/`error` como antes. A diferença (04/10):
+    // a resposta vem pela porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic) em vez
+    // de só da Anthropic, que estava sem crédito. O núcleo não faz streaming por token, por isso o
+    // texto chega num só evento — a troca é ter resposta em vez de um erro cru.
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const anthropicStream = await anthropic.messages.stream({
-            model: modeloClaude(),
-            max_tokens: 1024,
-            system: systemPrompt,
-            messages: messages.map((m) => ({
-              role: m.role,
-              content: m.content,
-            })),
+          const resposta = await chamarIA({
+            tarefa: "mentor",
+            sistema: systemPrompt,
+            mensagens: messages.map((m) => ({ role: m.role, content: m.content })),
+            maxTokens: 1024,
+            preferencia: "qualidade",
           })
-
-          for await (const chunk of anthropicStream) {
-            if (
-              chunk.type === "content_block_delta" &&
-              chunk.delta.type === "text_delta"
-            ) {
-              const data = JSON.stringify({ type: "text", text: chunk.delta.text })
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`))
-            }
-          }
-
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "text", text: resposta.texto })}\n\n`))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done", fornecedor: resposta.fornecedor, emReserva: resposta.emReserva })}\n\n`))
         } catch (err) {
-          const errMsg = err instanceof Error ? err.message : "Erro interno"
+          // Mensagem honesta («a IA está indisponível: groq (…), openai (…)») — nunca o JSON cru de um fornecedor.
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "error", message: errMsg })}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({ type: "error", message: mensagemIndisponivel(err) })}\n\n`)
           )
         } finally {
           controller.close()

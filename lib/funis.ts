@@ -14,7 +14,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  * passos, não a lista deles.
  *
  * ── O que isto NÃO é ──────────────────────────────────────────────────────────────────────────
- * Não executa nada. O motor continua a ser o código do Telegram e do ManyChat. Isto é o desenho
+ * Não executa nada. O motor continua a ser o código do Telegram e do Instagram nativo. Isto é o desenho
  * e a documentação viva dele — para se VER onde trava antes de se mexer no que corre.
  * Prometer que arrastar uma caixa muda o comportamento seria mentir, e um mapa em que não se
  * confia é pior do que não haver mapa.

@@ -1,8 +1,9 @@
 /**
  * A escada de preços da MoreThanMoney — a ÚNICA fonte dos números que o funil anuncia.
  *
- * Os preços estavam escritos à mão em cinco guiões diferentes (o /premium do bot, o closer do
- * ManyChat, o cérebro do funil do Telegram, o closer das DMs do Instagram e o desenhador de
+ * Os preços estavam escritos à mão em cinco guiões diferentes (o /premium do bot, o antigo
+ * closer do ManyChat — retirado a 04/10/2026 —, o cérebro do funil do Telegram, o closer das DMs
+ * do Instagram e o desenhador de
  * funis do admin). Nenhum deles sabia dos outros: o desenhador de funis ainda dizia «300 $»
  * meses depois de o depósito mínimo ter passado a 350 — exactamente o incidente que o
  * `MIN_DEPOSIT` já tinha obrigado a resolver uma vez.

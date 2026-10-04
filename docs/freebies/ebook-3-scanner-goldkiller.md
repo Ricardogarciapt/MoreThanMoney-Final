@@ -1,6 +1,6 @@
 # EBOOK 3 — Scanner GoldKiller: Guia Rápido de Utilização
 
-**Canva ID:** `DAHKe4N039A` · **Páginas:** 8 · **Keywords ManyChat:** TRADING · SCANNER
+**Canva ID:** `DAHKe4N039A` · **Páginas:** 8 · **Palavras-chave (comentário IG, funil nativo):** TRADING · SCANNER
 **Objetivo no funil:** mostrar a ferramenta (GoldKiller) → leitor quer acesso → entra no Premium / copytrading / Tap to Trade.
 **Tom:** técnico mas acessível, orientado à ação. Sempre com gestão de risco.
 

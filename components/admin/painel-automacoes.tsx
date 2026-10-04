@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
 
 /**
- * As automações — o que hoje se paga ao ManyChat.
+ * As automações — o que substituiu o ManyChat (retirado a 04/10/2026).
  *
  * Três coisas foram tiradas do `insta-p8` (ver a memória `referencias-manychat-funis`) porque
  * resolvem problemas reais que a nossa primeira versão não resolvia:

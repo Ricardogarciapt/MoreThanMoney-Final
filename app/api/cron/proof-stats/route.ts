@@ -4,7 +4,7 @@ import { computeProofStats, getProofStats } from '@/lib/proof-stats'
 
 /**
  * CRON diário: recalcula a PROVA SOCIAL a partir das contas mestre reais e grava em
- * site_settings.proof_stats. É a fonte que o funil (posts/emails/ManyChat/cartões) lê — antes os
+ * site_settings.proof_stats. É a fonte que o funil (posts/emails/DMs/cartões) lê — antes os
  * números estavam hardcoded e ficavam congelados. Se não houver dados suficientes, mantém o snapshot
  * anterior (nunca degrada nem inventa a prova).
  */

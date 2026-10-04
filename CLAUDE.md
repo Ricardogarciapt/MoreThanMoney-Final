@@ -12,7 +12,7 @@
 - **Repositório local:** `/Users/ricardogarcia/Documents/Repositório SITE/SITE-MORETHANMONEY-FINAL-39aae3022258dec0b1e9cce3dc39489035c05b36`
 - **Branch principal:** `main` (auto-deploy Vercel)
 - **Supabase project:** `iwscxotvmtkphajmasof` (eu-north-1)
-- **ManyChat page:** @morethanmoney.pt
+- **Social próprio (sem ManyChat desde 04/10/2026):** Instagram @morethanmoney.pt + @ricardogarciapt via Graph API (tokens de Página, `lib/instagram/**`) · WhatsApp Cloud API (`lib/whatsapp-*`, `lib/whatsapp/**`) · Telegram bot próprio (`MoreThanMoney_aibot`)
 
 ---
 
@@ -41,11 +41,15 @@ npx supabase db diff
 ## Arquitetura MTM
 
 ```
-Instagram DMs
-    └─> ManyChat (flows, tags, keywords)
-         └─> Webhooks → Supabase (DB + Edge Functions)
+Instagram (Graph API nativa — comentários, DMs, publicação)
+    └─> lib/instagram/** (funnel · setter · dm-closer · radar · publish)
+         └─> Supabase (ig_leads · ig_radar_prospetos · mtm_automacoes · social_scheduled_posts)
+WhatsApp Cloud API ───> lib/whatsapp-* · lib/whatsapp/** → whatsapp_conversas · whatsapp_mensagens
+Telegram (bot próprio) ─> app/api/telegram/webhook → telegram_leads (funil + validação corretora)
                    └─> morethanmoney.pt (Next.js)
-                        └─> Dashboard Gestão (12 agentes IA)
+                        └─> Dashboard Gestão (12 agentes IA) · /admin/social (automações editáveis)
+
+(O ManyChat saiu a 04/10/2026 por decisão do dono: tudo corre no sistema próprio, sem custo.)
 
 Calendly ─────────────> Webhook → Supabase (bookings)
 Stripe ───────────────> Webhook → Supabase (subscriptions)
@@ -76,13 +80,12 @@ Identifica e qualifica potenciais membros MTM.
 
 **Contexto:**
 - Público-alvo: adultos 25-45 anos, Portugal/Brasil, querem sair da "armadilha das 40h/semana"
-- Canal principal: Instagram (@morethanmoney.pt) + ManyChat
+- Canal principal: Instagram (@morethanmoney.pt, motor nativo) + WhatsApp + Telegram
 - Qualificação: motivação para mudar · disponibilidade · situação financeira básica
-- Tag principal: `MTM_lead_ativo` (ID: 88157092)
 
 **Ferramentas disponíveis (API local):**
 - `GET /api/dashboard-gestao/bookings` — marcações Calendly
-- ManyChat API: `POST https://api.manychat.com/fb/subscriber/findByName`
+- Ferramenta `listar_leads_instagram` (tabela `ig_leads`) e `conversas_whatsapp` (tabela `whatsapp_conversas`) no chat do dashboard
 
 **Quick prompts:**
 - "Cria um script de prospeção para Instagram DM para quem comentou num post de trading"
@@ -96,22 +99,24 @@ Identifica e qualifica potenciais membros MTM.
 **ID:** `chatbot_builder`
 **Cor:** `#a78bfa`
 
-Especialista em automações ManyChat para Instagram.
+Especialista nas automações PRÓPRIAS da casa (Instagram · WhatsApp · Telegram).
 
 **Contexto:**
-- Flows ManyChat ativos: SCANNER · SISTEMA · BOOTCAMP · RESULTADOS · LIBERDADE · ACORDEI · MUDO AGORA · QUERO APRENDER
+- Instagram: regras «palavra-chave no comentário → resposta → seguimento» em `mtm_automacoes`, editáveis em `/admin/social`; intenções do funil (SCANNER · SISTEMA · BOOTCAMP · RESULTADOS · LIBERDADE · ACORDEI · MUDO AGORA · QUERO APRENDER) ficam em `ig_leads`
+- WhatsApp: Cloud API (+351 923 533 741), conversas em `whatsapp_conversas`
+- Telegram: bot próprio com o funil de leads e a validação da corretora
 - Freebies: Guia Primeiro Passo · Plano 3 Passos · Scanner GoldKiller Guide
 - Tom: PT-PT · informal · "tu" · emojis moderados · CTAs claros
 
-**Ferramentas:**
-- `GET https://api.manychat.com/fb/page/getFlows` — listar flows
-- `GET https://api.manychat.com/fb/tagging/getTags` — listar tags
-- `POST https://api.manychat.com/fb/sending/sendContent` — enviar mensagem
+**Ferramentas (chat do dashboard, vindas de `lib/mcp/ferramentas.ts`):**
+- `listar_automacoes` · `estado_da_execucao` · `mexer_interruptor`
+- `listar_funis` · `ensaiar_funil`
+- `listar_leads_instagram` · `conversas_whatsapp`
 
 **Quick prompts:**
-- "Mostra-me os flows disponíveis no ManyChat"
-- "Cria uma mensagem de boas-vindas para o flow SCANNER"
-- "Escreve uma sequência de 3 mensagens para o flow LIBERDADE"
+- "Lista as automações da casa e diz-me quais estão ligadas"
+- "Cria uma resposta de boas-vindas para quem comenta SCANNER"
+- "Escreve uma sequência de 3 mensagens de seguimento para quem comentou LIBERDADE"
 
 ---
 
@@ -124,7 +129,7 @@ Qualificação de leads e marcação de chamadas de vendas.
 
 **Contexto:**
 - Calendly links: `/onboarding-de-novos-membros` (30min) · `/reuniao-pontual` (30min)
-- Canal: Instagram DM + ManyChat
+- Canal: Instagram DM (motor nativo) + WhatsApp + Telegram
 - Objeções comuns: "não tenho dinheiro" · "não tenho tempo" · "não sei se funciona para mim"
 
 **Ferramentas:**
@@ -191,7 +196,7 @@ Criação de conteúdo para Instagram e outras plataformas.
 **Contexto:**
 - Marca: Ricardo Garcia | MoreThanMoney
 - Calendário: 27 posts Jun-Ago 2026 (Ter/Qui/Sáb)
-- CTAs com keywords ManyChat: SCANNER · SISTEMA · BOOTCAMP · RESULTADOS · LIBERDADE
+- CTAs com palavras-chave para comentar (o funil nativo do IG apanha-as): SCANNER · SISTEMA · BOOTCAMP · RESULTADOS · LIBERDADE
 - Tom: autêntico · inspirador · educativo · informal · PT-PT · "tu"
 
 **Quick prompts:**
@@ -249,7 +254,7 @@ Escalamento do negócio e desenvolvimento de novos produtos.
 
 **Contexto:**
 - Receitas: mentoria premium · Scanner GoldKiller · produtos digitais
-- Canais: Instagram · Skool · Calendly · ManyChat · morethanmoney.pt
+- Canais: Instagram · WhatsApp · Telegram · Skool · Calendly · morethanmoney.pt
 - Fase atual: crescimento e sistematização
 - Próximos objetivos: 100+ membros · app nas stores · novos produtos
 
@@ -275,14 +280,14 @@ Orquestra e monitoriza todos os agentes e sistemas IA do ecossistema MTM.
 | Sistema | URL/Endpoint | Estado |
 |---------|-------------|--------|
 | Supabase | iwscxotvmtkphajmasof.supabase.co | eu-north-1 |
-| ManyChat | api.manychat.com | Instagram |
+| Social próprio | /admin/social · lib/instagram · lib/whatsapp | Instagram (Graph API) · WhatsApp Cloud API · Telegram bot |
 | Agenda própria | morethanmoney.pt/agendar | Substituiu o Calendly a 30/09/2026. Link único em lib/agenda/link.ts |
 | Vercel | vercel.com | morethanmoney.pt |
 | Anthropic | console.anthropic.com | API 12 agentes |
 
 **Quick prompts:**
 - "Faz um relatório do estado de todos os sistemas MTM"
-- "Quais os flows ManyChat ativos e as tags existentes?"
+- "Quais as automações ligadas e o que está parado na execução?"
 - "Como melhorar a integração entre Calendly e Supabase?"
 
 ---
@@ -431,7 +436,7 @@ ANTHROPIC_API_KEY          # console.anthropic.com — ⚠️ Necessita crédito
 ANTHROPIC_MODEL            # claude-3-5-sonnet-20241022 (default se não definido)
 NEXT_PUBLIC_SUPABASE_URL   # https://iwscxotvmtkphajmasof.supabase.co
 SUPABASE_SERVICE_ROLE_KEY  # Service role (server-side only)
-MANYCHAT_API_KEY           # api.manychat.com
+IG_CLOSER_MODEL            # opcional — modelo do closer das DMs/follow-ups (omissão: ANTHROPIC_MODEL)
 CALENDLY_SIGNING_KEY       # opcional — HMAC webhook verification
 OPINLY_API_KEY             # sk-… — blog Opinly (/blog) + eventos server-side
 OPINLY_WEBHOOK_SECRET      # whsec_… — assinatura Svix do webhook /api/opinly/webhook (opcional)
@@ -461,33 +466,6 @@ SELECT * FROM subscriptions WHERE status = 'active' LIMIT 10;
 
 -- Edge Functions
 -- POST https://iwscxotvmtkphajmasof.supabase.co/functions/v1/calendly-webhook
-```
-
----
-
-## ManyChat — Endpoints Úteis
-
-```bash
-BASE="https://api.manychat.com"
-KEY="$MANYCHAT_API_KEY"
-
-# Info da página
-curl -H "Authorization: Bearer $KEY" "$BASE/fb/page/getInfo"
-
-# Listar flows
-curl -H "Authorization: Bearer $KEY" "$BASE/fb/page/getFlows"
-
-# Listar tags
-curl -H "Authorization: Bearer $KEY" "$BASE/fb/tagging/getTags"
-
-# Procurar subscriber
-curl -H "Authorization: Bearer $KEY" "$BASE/fb/subscriber/findByName?name=Ricardo"
-
-# Enviar mensagem a subscriber
-curl -X POST -H "Authorization: Bearer $KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"subscriber_id":"123","data":{"version":"v2","content":{"messages":[{"type":"text","text":"Olá!"}]}}}' \
-  "$BASE/fb/sending/sendContent"
 ```
 
 ---
@@ -556,23 +534,18 @@ GROUP BY week
 ORDER BY week;
 ```
 
-### ManyChat — via curl
+### Social próprio — contagens reais (Supabase)
 
-```bash
-# Seguidores totais
-curl -s -H "Authorization: Bearer $MANYCHAT_API_KEY" \
-  "https://api.manychat.com/fb/page/getInfo" | python3 -c \
-  "import sys,json; d=json.load(sys.stdin); print('Seguidores:', d['data'].get('total_active_subscriber_count', 'N/A'))"
+```sql
+-- Leads do Instagram (quem comentou uma palavra-chave)
+SELECT COUNT(*) FROM ig_leads;
+SELECT intent, COUNT(*) FROM ig_leads GROUP BY intent ORDER BY 2 DESC;
 
-# Contar flows
-curl -s -H "Authorization: Bearer $MANYCHAT_API_KEY" \
-  "https://api.manychat.com/fb/page/getFlows" | python3 -c \
-  "import sys,json; d=json.load(sys.stdin); flows=d.get('data',[]); print(f'{len(flows)} flows total')"
+-- Conversas de WhatsApp por responder
+SELECT COUNT(*) FROM whatsapp_conversas WHERE por_responder > 0;
 
-# Contar tags
-curl -s -H "Authorization: Bearer $MANYCHAT_API_KEY" \
-  "https://api.manychat.com/fb/tagging/getTags" | python3 -c \
-  "import sys,json; d=json.load(sys.stdin); tags=d.get('data',[]); print(f'{len(tags)} tags total')"
+-- Leads do Telegram por etapa
+SELECT stage, COUNT(*) FROM telegram_leads GROUP BY stage;
 ```
 
 ### API Métricas completa (JSON)
@@ -595,9 +568,8 @@ Vai a: **dashboard-gestao → Métricas** (ícone BarChart3 na sidebar)
 | Atividade de Membros | Ativos vs Inativos (%) |
 | Marcações por Estado | Ativas vs Canceladas |
 | Tipo de Marcação | Onboarding vs Reunião Pontual |
-| Flows ManyChat | Ativos vs Rascunhos |
 | Novos Membros | Esta semana vs semana anterior (bar) |
-| Funil MTM | Seguidores → Leads → Agendamentos → Membros |
+| Funil MTM | Leads Instagram → Leads Telegram → Agendamentos → Membros |
 
 ---
 
@@ -656,9 +628,9 @@ Para coordenar múltiplos agentes numa tarefa complexa:
 Tarefa: "Lançar campanha de reativação de leads frios"
 
 1. @agente:ai_control    → "Analisa o estado atual dos sistemas e dá-me dados"
-2. @agente:prospeccao    → "Identifica leads frios no ManyChat dos últimos 30 dias"
+2. @agente:prospeccao    → "Identifica leads frios do Instagram/WhatsApp dos últimos 30 dias"
 3. @agente:content       → "Cria 3 emails de reativação para leads frios"
-4. @agente:chatbot       → "Cria um flow ManyChat de reativação com os emails aprovados"
+4. @agente:chatbot       → "Cria uma sequência de seguimento nas automações próprias com os emails aprovados"
 5. @agente:compliance    → "Revê os emails por conformidade RGPD"
 6. @agente:financial     → "Analisa o ROI esperado da campanha"
 ```

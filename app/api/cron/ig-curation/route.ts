@@ -83,7 +83,7 @@ async function scoreWithLLM(item: IgItem, username: string): Promise<Score | nul
   if (!key) return null
   const model =
     process.env.IG_CURATION_MODEL?.trim() ||
-    process.env.MANYCHAT_CLOSER_MODEL?.trim() ||
+    process.env.IG_CLOSER_MODEL?.trim() ||
     "claude-haiku-4-5-20251001"
 
   const system = `És o curador de conteúdo da More Than Money (MTM), marca de educação financeira e copytrading. Recebes UM post/story de Instagram e decides se é ÚTIL para o funil de vendas de um grupo de Telegram de leads (pessoas interessadas em trading/copytrading/app MTM).

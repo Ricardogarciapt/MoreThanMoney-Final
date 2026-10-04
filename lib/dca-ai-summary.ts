@@ -1,4 +1,9 @@
-/** Resumo executivo IA para DCA Inteligente (crypto ou ETF). */
+/**
+ * Resumo executivo IA para DCA Inteligente (crypto ou ETF).
+ * Vai pela porta única da IA (`chamarIA`). Devolve `null` quando não há resposta — quem chama
+ * mostra o painel sem resumo; não se inventa parágrafo nenhum.
+ */
+import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 
 export type DcaOpportunityLite = {
   symbol: string
@@ -18,8 +23,7 @@ export async function generateDcaAiSummary(
     total_assets_analyzed: number
   },
 ): Promise<string | null> {
-  const openaiKey = process.env.OPENAI_API_KEY?.trim()
-  if (!openaiKey || opportunities.length === 0) return null
+  if (opportunities.length === 0) return null
 
   const top = [...opportunities]
     .filter((o) => o.recommendation === 'Forte Compra' || o.recommendation === 'Compra')
@@ -45,24 +49,16 @@ Regras:
 - Responde só com o parágrafo, sem título`
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_DCA_MODEL || 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 320,
-        temperature: 0.4,
-      }),
+    const r = await chamarIA({
+      tarefa: 'dca-resumo',
+      mensagens: [{ role: 'user', content: prompt }],
+      maxTokens: 320,
+      temperatura: 0.4,
+      preferencia: 'rapido',
     })
-    if (!res.ok) return null
-    const data = await res.json()
-    const text = data?.choices?.[0]?.message?.content?.trim()
-    return text || null
-  } catch {
+    return r.texto.trim() || null
+  } catch (e) {
+    console.warn('[dca-ai-summary]', mensagemIndisponivel(e))
     return null
   }
 }

@@ -27,7 +27,7 @@ export interface SalesState {
    * corretora esteve meses a zero sem ninguém dar por isso.
    */
   andares: Andar[]
-  /** Saúde do motor de automações — o que substitui o ManyChat. */
+  /** Saúde do motor de automações — o que substituiu o ManyChat (retirado a 04/10/2026). */
   automacoes: { total: number; ativas: number; disparos: number; ultimoDisparo: string | null; naFila: number }
   /** Últimos 14 dias, para o número de hoje ter com o que se comparar. */
   tendencia: Array<{ dia: string; leads: number; corretora: number }>

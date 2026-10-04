@@ -221,7 +221,7 @@ export default function SalesMachinePage() {
         </p>
       </div>
 
-      {/* Automações — o que substitui o ManyChat. Um motor sem regras não avisa que está parado:
+      {/* Automações — o motor próprio (o ManyChat saiu a 04/10/2026). Um motor sem regras não avisa que está parado:
           fica calado, que é exactamente o que faria se estivesse a funcionar. */}
       <div className={card}>
         <div className="mb-2 flex items-center justify-between">

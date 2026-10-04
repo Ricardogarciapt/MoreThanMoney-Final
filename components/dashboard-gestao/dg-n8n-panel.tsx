@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import {
   Server, Play, Square, RefreshCw, ExternalLink, Terminal,
   CheckCircle2, XCircle, Loader2, Zap, Activity, HardDrive,
-  Download, ChevronDown, ChevronUp, Bot, Mail, MessageSquare, TrendingUp,
+  Download, ChevronDown, ChevronUp, Mail, MessageSquare, TrendingUp,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -36,14 +36,6 @@ const WORKFLOWS = [
     color: "#60a5fa",
     description: "/sinais · /portfolio · /scanner · /alertas",
     webhook: "/webhook/telegram-mtm",
-  },
-  {
-    id: "manychat",
-    label: "ManyChat → Supabase",
-    icon: Bot,
-    color: "#a78bfa",
-    description: "Sync leads Instagram · Scoring automático",
-    webhook: "/webhook/manychat-mtm",
   },
   {
     id: "email",

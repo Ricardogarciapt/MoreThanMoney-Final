@@ -3,7 +3,7 @@ import { modeloClaude } from '@/lib/modelo-claude'
 import { contextoDaCasa } from '@/lib/factos-da-casa'
 
 /**
- * As nossas automações — o que hoje se paga ao ManyChat.
+ * As nossas automações — o que substituiu o ManyChat (retirado a 04/10/2026).
  *
  * O modelo veio do `insta-p8` (ver a memória `referencias-manychat-funis`), que resolve o mesmo
  * problema com o mesmo stack: um GATILHO, uma RESPOSTA e passos de SEGUIMENTO. Copiou-se o
@@ -12,8 +12,9 @@ import { contextoDaCasa } from '@/lib/factos-da-casa'
  * ── Porque é que isto existe ──────────────────────────────────────────────────────────────────
  * Duas razões, e nenhuma é "porque dá jeito ter":
  *
- *  · as contas de Instagram estão no plano Essential do ManyChat, que NÃO faz automação de DM.
- *    Pagava-se por uma ferramenta que não fazia a parte que interessa;
+ *  · as contas de Instagram estavam no plano Essential do ManyChat, que NÃO fazia automação de
+ *    DM. Pagava-se por uma ferramenta que não fazia a parte que interessa — e a 04/10/2026 o dono
+ *    retirou-a: o social corre só aqui (Instagram Graph API, WhatsApp Cloud API, bot Telegram);
  *  · o funil do Telegram — o que converte — estava escrito dentro do código, sem forma de o
  *    afinar sem um deploy. E o que não se pode afinar não se afina.
  *

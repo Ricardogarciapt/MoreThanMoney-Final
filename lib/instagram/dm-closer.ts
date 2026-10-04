@@ -1,8 +1,9 @@
 /**
  * DM self-hosted da More Than Money — cérebro (AI closer) + envio pela Graph API.
  *
- * 1º nível: responde às DMs do Instagram diretamente (webhook /api/webhooks/instagram).
- * ManyChat fica como FAILSAFE (se este nível estiver off ou falhar).
+ * Responde às DMs do Instagram diretamente (webhook /api/webhooks/instagram). É o ÚNICO nível:
+ * o ManyChat, que era a rede de segurança, saiu a 04/10/2026 — se isto estiver desligado, a DM
+ * fica sem resposta, e é por isso que o interruptor IG_DM_SELFHOSTED_ENABLED não deve estar a 'false'.
  */
 
 import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
@@ -52,7 +53,7 @@ export async function generateDmReply(
   // uma DM que falha não reclama. Trocar o id por outro id à mão só adia o mesmo dia. O
   // `modeloClaude` é que sabe quais são os mortos, e ignora-os mesmo quando é a CONFIGURAÇÃO a
   // pedi-los — que é o caso que um recurso à mão nunca chega a apanhar.
-  const model = modeloClaude(process.env.MANYCHAT_CLOSER_MODEL)
+  const model = modeloClaude(process.env.IG_CLOSER_MODEL)
   const lang = (opts.lang || "").trim() || "português de Portugal"
   const who = opts.name ? ` O primeiro nome da pessoa é ${opts.name}.` : ""
   const user = `Idioma a usar: ${lang}.${who}\nMensagem da pessoa: "${message}"`

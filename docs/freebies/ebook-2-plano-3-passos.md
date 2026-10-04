@@ -1,6 +1,6 @@
 # EBOOK 2 — Plano de 3 Passos para Criar Liberdade Financeira
 
-**Canva ID:** `DAHKe7zOzDg` · **Páginas:** 11 · **Keywords ManyChat:** COMEÇAR · 15MIN · PLANO · ENTENDI
+**Canva ID:** `DAHKe7zOzDg` · **Páginas:** 11 · **Palavras-chave (comentário IG, funil nativo):** COMEÇAR · 15MIN · PLANO · ENTENDI
 **Objetivo no funil:** dar um método claro (3 passos) + worksheets → leitor sente que tem um plano → entra no ecossistema (Telegram → corretora → Premium).
 **Tom:** método, prático, acionável. Cada passo termina com "faz isto agora".
 

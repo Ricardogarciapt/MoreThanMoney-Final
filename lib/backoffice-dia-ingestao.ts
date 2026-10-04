@@ -16,7 +16,8 @@ import {
  * O QUE ISTO VEIO RESOLVER
  * Em 25/09 a contagem era esta: pipeline com ZERO negócios e ZERO tarefas, e ao lado, na mesma
  * base de dados, 96 perfis inactivos (gente que se registou e nunca chegou a nada), 5 leads do
- * Telegram, 5 do Instagram e 1 do ManyChat. Cerca de cem pessoas paradas — algumas há meses — não
+ * Telegram, 5 do Instagram e 1 do ManyChat (ferramenta que saiu a 04/10/2026; o lead que ela
+ * trouxe já está no pipeline e fica). Cerca de cem pessoas paradas — algumas há meses — não
  * por falta de equipa, mas porque nunca ninguém as passou do sítio onde caíram para o sítio onde
  * se trabalha.
  *
@@ -321,20 +322,20 @@ async function doTelegram(db: SupabaseClient): Promise<Ingerido> {
   return ingerir(db, 'telegram', candidatos)
 }
 
-/** Instagram: quem comentou com intenção. O `commenter` é uma pessoa, e é isso que faz disto um lead. */
+/**
+ * Instagram: quem comentou com intenção. O `commenter` é uma pessoa, e é isso que faz disto um lead.
+ *
+ * Até 04/10/2026 lia-se também `mtm_leads`, a tabela que o ManyChat enchia por sincronização. O
+ * ManyChat saiu e a tabela deixou de receber linhas; o único lead que trouxe já entrou no pipeline
+ * com a chave `mtm-lead:<id>` e fica lá — a ingestão nunca apaga. A fonte viva do Instagram é só
+ * `ig_leads`, escrita pelo motor nativo (lib/instagram/funnel.ts).
+ */
 async function doInstagram(db: SupabaseClient): Promise<Ingerido> {
-  const [comentarios, manychat] = await Promise.all([
-    db
-      .from('ig_leads')
-      .select('comment_id, commenter, keyword, intent, comment_text, created_at')
-      .order('created_at', { ascending: false })
-      .limit(200),
-    db
-      .from('mtm_leads')
-      .select('id, instagram_handle, full_name, email, score, stage, source, last_interaction, country')
-      .order('last_interaction', { ascending: false })
-      .limit(200),
-  ])
+  const comentarios = await db
+    .from('ig_leads')
+    .select('comment_id, commenter, keyword, intent, comment_text, created_at')
+    .order('created_at', { ascending: false })
+    .limit(200)
 
   const candidatos: Candidato[] = []
 
@@ -383,23 +384,6 @@ async function doInstagram(db: SupabaseClient): Promise<Ingerido> {
         `Comentou no Instagram` +
         (acc.palavras.length ? ` (${acc.palavras.map((p) => `«${p}»`).join(', ')})` : '') +
         (acc.textos.length ? `: ${acc.textos.join(' | ')}` : ''),
-    })
-  }
-
-  for (const r of manychat.data ?? []) {
-    const l = r as Record<string, unknown>
-    candidatos.push({
-      chave_origem: `mtm-lead:${String(l.id)}`,
-      nome: nomeUtil(l.full_name as string, l.instagram_handle as string),
-      email: (l.email as string) || null,
-      telefone: null,
-      telegram_id: null,
-      instagram_handle: ouNulo(l.instagram_handle as string),
-      pais: ouNulo(l.country as string),
-      origem: 'instagram',
-      // `warm` e acima já falaram connosco: entram como contactados para não repetir a abordagem.
-      estado: ['warm', 'hot', 'qualified'].includes(String(l.stage ?? '').toLowerCase()) ? 'contactado' : 'lead',
-      nota: `Lead do Instagram (${nomeUtil(l.source as string, 'manychat')}), score ${String(l.score ?? '—')}.`,
     })
   }
 

@@ -50,7 +50,7 @@ export const SOPS: Record<string, { agente: IdAgente; titulo: string; descricao:
     titulo: '📅 Plano Semanal',
     descricao: 'Gerar 3 posts + 5 stories para a semana',
     gatilho: 'CONTEÚDO',
-    pedido: 'Cria plano de conteúdo para esta semana: 3 posts (Ter/Qui/Sáb) + 5 ideias de stories. Inclui hooks, captions e CTAs com keywords ManyChat.',
+    pedido: 'Cria plano de conteúdo para esta semana: 3 posts (Ter/Qui/Sáb) + 5 ideias de stories. Inclui hooks, captions e CTAs com palavras-chave para comentar (o funil nativo do Instagram apanha-as).',
   },
   scanner_update: {
     agente: 'trading',
@@ -64,7 +64,7 @@ export const SOPS: Record<string, { agente: IdAgente; titulo: string; descricao:
     titulo: '💌 Reactivação Leads',
     descricao: 'Campanha para leads frios 30d',
     gatilho: 'EMAIL + CHATBOT',
-    pedido: 'Cria campanha de reactivação para leads frios (sem interacção há 30+ dias). Sequência de 3 emails + flow ManyChat de reengagement.',
+    pedido: 'Cria campanha de reactivação para leads frios (sem interacção há 30+ dias). Sequência de 3 emails + sequência de seguimento nas automações próprias (Instagram/WhatsApp).',
   },
 }
 

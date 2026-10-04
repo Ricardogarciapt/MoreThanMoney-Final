@@ -1,23 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
-import { modeloClaude } from '@/lib/modelo-claude'
-
-const ANTHROPIC_VERSION = "2023-06-01"
-
-function visionModel(): string {
-  return modeloClaude(process.env.ANTHROPIC_VISION_MODEL)
-}
-
-function textModel(): string {
-  return modeloClaude()
-}
-
-/** Modelo preferido para análise completa de portefólio (maior qualidade JSON + raciocínio). */
-function portfolioAnalysisModel(): string {
-  // Mantém a cadeia das duas variáveis; o que deixa de ser escrito à mão é o recurso.
-  return modeloClaude(process.env.ANTHROPIC_PORTFOLIO_MODEL || process.env.ANTHROPIC_VISION_MODEL)
-}
+import { chamarIA, mensagemIndisponivel, type ImagemIA } from "@/lib/ia/chamar"
 
 type ImagePart = { media_type: string; data: string }
 
@@ -49,63 +33,41 @@ async function fetchFearGreed(): Promise<{ value: number; classification: string
   }
 }
 
+/**
+ * Pede JSON à porta única da IA. Com imagens, só os fornecedores com visão entram (Gemini,
+ * OpenAI, Anthropic) — o núcleo salta os outros. Erro → mensagem honesta com os fornecedores
+ * tentados, 503, em vez do «Falha ao contactar o modelo» que não dizia nada.
+ */
 async function callAnthropicJson(args: {
   system: string
   userText: string
   images?: ImagePart[]
   maxTokens: number
-  /** Força modelo (ex.: análise completa de portefólio em texto). */
+  /** Mantido por compatibilidade com quem chama; o modelo é escolhido pela cadeia. */
   modelOverride?: string
 }): Promise<{ text: string } | { error: string; status: number }> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) {
-    return { error: "Serviço de IA não configurado (ANTHROPIC_API_KEY).", status: 503 }
+  const imagens: ImagemIA[] | undefined = args.images?.length
+    ? args.images.slice(0, 6).map((img) => ({
+        mediaType:
+          img.media_type === "image/png" || img.media_type === "image/webp" ? img.media_type : ("image/jpeg" as const),
+        dataBase64: img.data,
+      }))
+    : undefined
+  try {
+    const r = await chamarIA({
+      tarefa: imagens ? "portfolio-rebalance-visao" : "portfolio-rebalance",
+      sistema: args.system,
+      mensagens: [{ role: "user", content: args.userText }],
+      maxTokens: args.maxTokens,
+      json: true,
+      preferencia: "qualidade",
+      imagens,
+    })
+    return { text: r.texto }
+  } catch (e) {
+    console.error("[rebalance-analyze]", mensagemIndisponivel(e))
+    return { error: mensagemIndisponivel(e), status: 503 }
   }
-
-  const model =
-    args.modelOverride ||
-    (args.images?.length ? visionModel() : textModel())
-
-  const userContent: unknown[] = []
-  if (args.images?.length) {
-    for (const img of args.images.slice(0, 6)) {
-      const media =
-        img.media_type === "image/png" || img.media_type === "image/jpeg" || img.media_type === "image/webp"
-          ? img.media_type
-          : "image/jpeg"
-      userContent.push({
-        type: "image",
-        source: { type: "base64", media_type: media, data: img.data },
-      })
-    }
-  }
-  userContent.push({ type: "text", text: args.userText })
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": ANTHROPIC_VERSION,
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: args.maxTokens,
-      system: args.system,
-      messages: [{ role: "user", content: userContent }],
-    }),
-  })
-
-  if (!res.ok) {
-    const errText = await res.text()
-    console.error("[rebalance-analyze] Anthropic error:", res.status, errText)
-    return { error: "Falha ao contactar o modelo de IA.", status: 502 }
-  }
-
-  const data = (await res.json()) as { content?: { type: string; text?: string }[] }
-  const text = data.content?.find((b) => b.type === "text")?.text?.trim() || ""
-  if (!text) return { error: "Resposta vazia do modelo.", status: 502 }
-  return { text }
 }
 
 export async function POST(request: NextRequest) {
@@ -260,7 +222,6 @@ Distribui allocations[].dcaAmount (USD) de forma coerente com o capital DCA e a 
         userText,
         images: useVision ? images : undefined,
         maxTokens: 8192,
-        modelOverride: useVision ? undefined : portfolioAnalysisModel(),
       })
       if ("error" in ai) {
         return NextResponse.json({ error: ai.error }, { status: ai.status })

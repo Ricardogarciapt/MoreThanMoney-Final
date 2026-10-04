@@ -55,7 +55,7 @@ const CHECKLIST = [
   "Rever marcações pendentes",
   "Publicar conteúdo IG",
   "Responder DMs quentes",
-  "Rever flows ManyChat",
+  "Rever automações próprias (IG · WhatsApp · Telegram)",
   "Check scanner XAUUSD",
 ]
 
@@ -807,7 +807,7 @@ export default function ConsolaAios() {
         <aside className={`${s["right-panel"]} ${gavetaDireita ? s.aberto : ""}`}>
           <div className={s["right-section"]}>
             <div className={s["right-title"]}>n8n · Automações VPS</div>
-            {["n8n Engine", "JARVIS Telegram", "ManyChat Sync", "Voice Bridge"].map((n) => (
+            {["n8n Engine", "JARVIS Telegram", "Voice Bridge"].map((n) => (
               <div key={n} className={s["n8n-row"]}><span>{n}</span><span className={`${s["n8n-badge"]} ${badge.c}`}>{badge.t}</span></div>
             ))}
             <div className={s["n8n-row"]} style={{ border: "none", paddingTop: 8 }}>

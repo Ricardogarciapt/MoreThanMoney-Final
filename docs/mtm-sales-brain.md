@@ -1,7 +1,7 @@
-# MTM Sales Brain — memória + IA para fechar vendas (Claude + ManyChat)
+# MTM Sales Brain — memória + IA para fechar vendas (Claude, nativo)
 
 > Fonte única de verdade para o **enquadramento** de qualquer agente de vendas MTM (Claude,
-> ManyChat AI, email, DM): o que se vende, por que ordem, com que tom, e o que nunca se diz.
+> DM do Instagram, WhatsApp, Telegram, email): o que se vende, por que ordem, com que tom, e o que nunca se diz.
 >
 > **Este documento não tem números.** Nem preços, nem prova. Os preços vivem em
 > [`lib/escada-precos.ts`](../lib/escada-precos.ts); a prova vive em
@@ -24,10 +24,11 @@ quando. Por isso a correcção não foi actualizar a tabela — foi **tirar-lhe 
 fica é o que não é um número: a ordem da escada, o que cada degrau desbloqueia, o tom, as objecções,
 e as regras que não se podem quebrar. Quem precisa de um valor vai buscá-lo à fonte.
 
-Seis ficheiros de runtime citam este documento como autoridade
+Cinco ficheiros de runtime citam este documento como autoridade
 (`lib/telegram-lead-funnel.ts`, `lib/email-templates.ts`, `lib/escada-precos.ts`,
-`app/api/manychat/closer/route.ts`, `app/api/telegram/webhook/route.ts`,
-`app/api/cron/telegram-leads-content/route.ts`). É por isso que ele tem de estar certo — e é por
+`app/api/telegram/webhook/route.ts`, `app/api/cron/telegram-leads-content/route.ts`). A rota
+`app/api/manychat/closer` saiu a 04/10/2026 com o ManyChat — a DM do Instagram é fechada pelo
+`lib/instagram/dm-closer.ts`. É por isso que ele tem de estar certo — e é por
 isso que não pode ser ele a guardar valores.
 
 `lib/__tests__/escada-precos.check.ts` falha se voltar a aparecer aqui um preço escrito à mão, ou se
@@ -209,11 +210,10 @@ interpolados da fonte:
 | Superfície | Ficheiro |
 |---|---|
 | DM do Instagram | `lib/instagram/dm-closer.ts` |
-| ManyChat | `app/api/manychat/closer/route.ts` |
 | Funil do Telegram | `lib/telegram-lead-funnel.ts` |
 | Desenhador de funis (/admin/social) | `app/api/admin/social/funil-ia/route.ts` |
 
-Os quatro importam `escadaNumaLinha()` e `bonusNumaLinha()`. Um prompt novo faz o mesmo. Colar um
+Os três importam `escadaNumaLinha()` e `bonusNumaLinha()`. Um prompt novo faz o mesmo. Colar um
 prompt com preços dentro é reabrir a divergência que este documento existe para fechar.
 
 Esqueleto (sem números, os números entram pelas funções):

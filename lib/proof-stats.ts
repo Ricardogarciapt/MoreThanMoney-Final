@@ -1,5 +1,5 @@
 /**
- * PROVA SOCIAL — fonte ÚNICA e VIVA dos números usados no funil (posts, emails, ManyChat, freebies,
+ * PROVA SOCIAL — fonte ÚNICA e VIVA dos números usados no funil (posts, emails, DMs, freebies,
  * cartões sociais). Antes cada ficheiro tinha os valores hardcoded ("675 trades · 63% · +7.060€"),
  * congelados na auditoria de 30/06 — daí ficarem sempre iguais. Agora:
  *

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { buildLocalMtmCoachReply } from "@/lib/mtm-ai-coach-fallback"
-import { modeloClaude } from '@/lib/modelo-claude'
+import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
 
 type ChatContext = {
   pathname?: string
@@ -10,104 +10,6 @@ type ChatContext = {
   include_dca?: boolean
   mentor_mode?: boolean
   onboarding_focus?: boolean
-}
-
-async function callAnthropic(system: string, userMessage: string): Promise<string | null> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) return null
-
-  const model = modeloClaude()
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 1024,
-      system,
-      messages: [{ role: "user", content: userMessage }],
-    }),
-  })
-
-  if (!res.ok) {
-    const errText = await res.text()
-    console.error("❌ [AI CHAT] Anthropic error:", res.status, errText)
-    return null
-  }
-
-  const data = (await res.json()) as {
-    content?: { type: string; text?: string }[]
-  }
-  const text = data.content?.find((b) => b.type === "text")?.text?.trim()
-  return text || null
-}
-
-function normalizeOpenAIContent(raw: unknown): string | null {
-  if (raw == null) return null
-  if (typeof raw === "string") {
-    const t = raw.trim()
-    return t.length ? t : null
-  }
-  if (Array.isArray(raw)) {
-    const parts = raw
-      .map((b: { type?: string; text?: string }) => {
-        if (b?.type === "text" && typeof b.text === "string") return b.text
-        return ""
-      })
-      .filter(Boolean)
-    const joined = parts.join("").trim()
-    return joined.length ? joined : null
-  }
-  return null
-}
-
-async function callOpenAI(system: string, userMessage: string): Promise<string | null> {
-  const openaiKey = process.env.OPENAI_API_KEY?.trim()
-  if (!openaiKey) return null
-
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini"
-  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "")
-
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${openaiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: userMessage },
-      ],
-      temperature: 0.7,
-      max_tokens: 1200,
-    }),
-  })
-
-  if (!response.ok) {
-    const errorData = await response.text()
-    console.error("❌ [AI CHAT] OpenAI error:", response.status, errorData)
-    return null
-  }
-
-  const data = (await response.json()) as {
-    choices?: { message?: { content?: unknown; refusal?: string } }[]
-    error?: { message?: string }
-  }
-  if (data.error?.message) {
-    console.error("❌ [AI CHAT] OpenAI API body error:", data.error.message)
-    return null
-  }
-  const msg = data.choices?.[0]?.message
-  if (msg?.refusal && typeof msg.refusal === "string") {
-    return msg.refusal.trim() || null
-  }
-  return normalizeOpenAIContent(msg?.content)
 }
 
 function buildSystemPrompt(
@@ -272,33 +174,24 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = buildSystemPrompt(dcaContext, additionalContext, context || {})
 
-    const prefer = (process.env.AI_CHAT_PROVIDER || "auto").toLowerCase()
-    let aiMessage: string | null = null
-    let source: "anthropic" | "openai" | "local" = "local"
-
-    const hasAnthropic = Boolean(process.env.ANTHROPIC_API_KEY?.trim())
-    const hasOpenAI = Boolean(process.env.OPENAI_API_KEY?.trim())
-
-    if (prefer === "anthropic" && hasAnthropic) {
-      aiMessage = await callAnthropic(systemPrompt, message)
-      if (aiMessage) source = "anthropic"
-    } else if (prefer === "openai" && hasOpenAI) {
-      aiMessage = await callOpenAI(systemPrompt, message)
-      if (aiMessage) source = "openai"
-    } else if (prefer === "auto") {
-      if (hasOpenAI) {
-        aiMessage = await callOpenAI(systemPrompt, message)
-        if (aiMessage) source = "openai"
-      }
-      if (!aiMessage && hasAnthropic) {
-        aiMessage = await callAnthropic(systemPrompt, message)
-        if (aiMessage) source = "anthropic"
-      }
-    }
-
-    if (!aiMessage) {
-      aiMessage = buildLocalMtmCoachReply(message, context)
+    // 04/10: saem as chamadas à mão (OpenAI → Anthropic); entra a porta única da IA, grátis
+    // primeiro. Se a cadeia falhar toda, o guia local responde — mas a DIZER que a IA está em
+    // baixo e quem foi tentado, nunca a fingir que é IA.
+    let aiMessage: string
+    let source: "groq" | "gemini" | "ollama" | "openai" | "anthropic" | "local"
+    try {
+      const resposta = await chamarIA({
+        tarefa: "ai-chat",
+        sistema: systemPrompt,
+        mensagens: [{ role: "user", content: message }],
+        maxTokens: 1024,
+        temperatura: 0.7,
+      })
+      aiMessage = resposta.texto
+      source = resposta.fornecedor
+    } catch (err) {
       source = "local"
+      aiMessage = `⚠️ ${mensagemIndisponivel(err)}\n\nEntretanto, o guia local da MTM responde:\n\n${buildLocalMtmCoachReply(message, context)}`
     }
 
     const responseTime = Date.now() - startTime

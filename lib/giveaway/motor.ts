@@ -56,7 +56,7 @@ function normalizarHandle(h: string | null | undefined): string | null {
 /**
  * Regista uma entrada. Idempotente: a mesma pessoa na mesma campanha devolve o que já tem.
  *
- * Carregar duas vezes no botão, ou o ManyChat reenviar o mesmo evento, não pode dar dois
+ * Carregar duas vezes no botão, ou um webhook reenviar o mesmo evento, não pode dar dois
  * conjuntos de bilhetes à mesma pessoa — e é isso que a chave única na base de dados garante,
  * não este código. Aqui só se trata o caso com jeito em vez de devolver um erro de duplicado.
  */

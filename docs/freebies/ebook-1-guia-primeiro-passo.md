@@ -1,6 +1,6 @@
 # EBOOK 1 — Guia do Primeiro Passo para a Liberdade Financeira
 
-**Canva ID:** `DAHKe05uGcI` · **Páginas:** 8 · **Keywords ManyChat:** ACORDEI · MUDO AGORA · QUERO APRENDER
+**Canva ID:** `DAHKe05uGcI` · **Páginas:** 8 · **Palavras-chave (comentário IG, funil nativo):** ACORDEI · MUDO AGORA · QUERO APRENDER
 **Objetivo no funil:** isco de topo. Leitor que nunca investiu → entende o conceito → dá o primeiro passo concreto (Telegram / corretora / comunidade).
 **Tom:** direto, premium, humano. Prova real, sem promessas de retorno garantido.
 
