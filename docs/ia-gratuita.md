@@ -13,7 +13,7 @@ percorre uma cadeia de fornecedores — grátis primeiro — e grava cada chamad
 | # | Fornecedor | Custo | Modelo (default) | Porquê nesta posição |
 |---|---|---|---|---|
 | 1 | **Groq** | grátis | `llama-3.3-70b-versatile` (qualidade) / `llama-3.1-8b-instant` (rápido) | o mais rápido de todos; as páginas esperam por ele |
-| 2 | **Gemini** | grátis | `gemini-2.0-flash` / `gemini-2.0-flash-lite` | tem visão e JSON nativo, mas é mais lento e o limite diário do grátis é mais curto — reserva do grátis |
+| 2 | **Gemini** | grátis | `gemini-2.5-flash` / `gemini-2.5-flash-lite` | tem visão e JSON nativo, mas é mais lento e o limite diário do grátis é mais curto — reserva do grátis |
 | 3 | **Ollama** | zero por chamada | `OLLAMA_MODEL` (default `llama3.2:3b`) | nosso, mas lento em CPU (tecto 60 s); **só entra se `OLLAMA_URL` existir** |
 | 4 | **OpenAI** | pago | `gpt-4o-mini` | reserva paga; só se houver chave |
 | 5 | **Anthropic** | pago | `modeloClaude()` | última reserva; a 04/10 **sem crédito** |

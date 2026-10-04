@@ -11,7 +11,11 @@ const TIMEOUT_MS = Number(process.env.IA_TIMEOUT_MS) || 25_000
 
 function modelo(p: PedidoIA): string {
   if (process.env.GEMINI_MODEL?.trim()) return process.env.GEMINI_MODEL.trim()
-  return p.preferencia === 'rapido' ? 'gemini-2.0-flash-lite' : 'gemini-2.0-flash'
+  // Nomes EXPLÍCITOS, não os aliases «-latest»: um alias muda de modelo sem avisar, e um dia a
+  // resposta fica diferente sem ninguém ter mudado nada. E são os 2.5 porque foi o que a chave do
+  // dono listou a 04/10/2026 (GET /v1beta/models): os 2.0 e 1.5 já NÃO existem neste projecto e
+  // davam 404 — foi o primeiro erro que esta chave deu, e parecia chave inválida.
+  return p.preferencia === 'rapido' ? 'gemini-2.5-flash-lite' : 'gemini-2.5-flash'
 }
 
 export const gemini: Fornecedor = {
