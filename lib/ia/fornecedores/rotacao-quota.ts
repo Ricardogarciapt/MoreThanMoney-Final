@@ -38,6 +38,19 @@ const TEXTO_DE_RITMO = /PerMinute|per[\s_-]?minute|RPM\b|retry in\s*\d+(?:\.\d+)
 export const HORAS_POR_OMISSAO = 10
 
 /**
+ * SATURAÇÃO de um modelo — não da chave. A 04/10/2026 o 3.8-flash respondeu «503 high demand» a
+ * meio de uma prova enquanto o 3.7 respondia à primeira. Um 5xx assim é do MODELO, e trocar de
+ * modelo cura; por isso roda, como a quota diária — mas SEM marcar: é um pico de minutos, não um
+ * tecto do dia, e o pedido seguinte volta a tentar o configurado.
+ */
+const TEXTO_DE_SATURACAO = /high demand|overloaded|temporarily unavailable|try again later|UNAVAILABLE/i
+export function ehErroDeSaturacao(err: unknown): err is ErroFornecedor {
+  if (!(err instanceof ErroFornecedor)) return false
+  if (err.status === 503) return true
+  return err.status === 429 && TEXTO_DE_SATURACAO.test(err.message) && !/quota|limit/i.test(err.message)
+}
+
+/**
  * É um 429 de quota DIÁRIA? Só então vale a pena rodar de modelo.
  * Um 429 que fale de minutos NÃO é — mesmo que também mencione o dia, porque a espera é curta e
  * rodar gastaria quota de todos.

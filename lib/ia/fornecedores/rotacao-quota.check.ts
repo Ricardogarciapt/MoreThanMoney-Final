@@ -227,11 +227,41 @@ async function main() {
     certo(reg3[0]?.modelo === 'gemini-3.6-flash', `(g) o morto saiu da rotação: foi ao ${reg3[0]?.modelo}`)
   }
 
+  // ─── (h) 503 «high demand» no 1.º → roda SEM marcar: responde o 2.º, e o pedido seguinte ──
+  //         volta a tentar o 1.º (era saturação, não quota)
+  {
+    esquecerGemini()
+    const saturado = { error: { code: 503, message: 'The model is overloaded. Please try again later.', status: 'UNAVAILABLE' } }
+    const reg = armarFetch([{ status: 503, body: saturado }, { status: 200, body: ok }])
+    const r = await gemini.gerar(pedido, sinal())
+    certo(r.texto === 'OK' && reg.length === 2, `(h) 2 pedidos e responde, foram ${reg.length}`)
+    certo(reg[1].modelo === 'gemini-3.7-flash', `(h) 3.8 saturado → 3.7, foi ${reg[1]?.modelo}`)
+    certo(/rodado: gemini-3\.8-flash saturado/.test(r.modelo), `(h) o livro diz «saturado», veio «${r.modelo}»`)
+    const reg2 = armarFetch([{ status: 200, body: ok }])
+    await gemini.gerar(pedido, sinal())
+    certo(reg2[0]?.modelo === 'gemini-3.8-flash', `(h) o pedido seguinte volta ao 3.8 — saturação não marca, foi ${reg2[0]?.modelo}`)
+  }
+
+  // ─── (i) 503 em três modelos → rebenta passável, sem 4.º pedido ─────────────────────────
+  {
+    esquecerGemini()
+    const saturado = { error: { code: 503, message: 'high demand', status: 'UNAVAILABLE' } }
+    const reg = armarFetch([{ status: 503, body: saturado }, { status: 503, body: saturado }, { status: 503, body: saturado }])
+    let err: unknown
+    try {
+      await gemini.gerar(pedido, sinal())
+    } catch (e) {
+      err = e
+    }
+    certo(err instanceof ErroFornecedor && err.passavel && reg.length === 3, `(i) 3 pedidos e passa ao fornecedor seguinte, foram ${reg.length}`)
+    certo(err instanceof ErroFornecedor && /saturado/.test(err.message), `(i) a mensagem diz saturado, veio «${err instanceof Error ? err.message.slice(-90) : ''}»`)
+  }
+
   if (falhas) {
     console.error(`rotacao-quota: ${falhas} falha(s)`)
     process.exit(1)
   }
-  console.log('rotacao-quota: um 429 diário roda de modelo, um 429 por minuto não, e nunca mais de 3 modelos por pedido ✓')
+  console.log('rotacao-quota: um 429 diário roda e marca, um 503 saturado roda sem marcar, um 429 por minuto não roda, e nunca mais de 3 modelos por pedido ✓')
 }
 
 void main()
