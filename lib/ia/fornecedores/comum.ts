@@ -32,16 +32,52 @@ export function passavelPorStatus(status: number, corpo: string): boolean {
   return TEXTO_DE_CONTA.test(corpo)
 }
 
-/** Tira a mensagem útil de um corpo de erro JSON, sem rebentar se não for JSON. */
+type DetalheGoogle = {
+  '@type'?: string
+  violations?: { quotaId?: string }[]
+  retryDelay?: string
+}
+
+/**
+ * Tira a mensagem útil de um corpo de erro JSON, sem rebentar se não for JSON.
+ *
+ * O corte aos 300 caracteres é para o livro e para o ecrã não levarem romances. Mas o 429 real do
+ * Google (04/10) tem 411 caracteres e o «Please retry in 3h45m» vem no FIM — cortado, perdia-se a
+ * única pista de que era quota DIÁRIA, e a rotação de modelo não disparava (visto na prova real).
+ * O essencial vive em `error.details`: o `quotaId` («…PerDay…» ou «…PerMinute…») e o `retryDelay`
+ * («13559s»). Anexam-se compactos DEPOIS do corte, para a decisão «diário ou minuto?» nunca ser
+ * tomada sobre texto truncado.
+ */
 export function resumirErro(corpo: string): string {
   try {
-    const j = JSON.parse(corpo) as { error?: { message?: string } | string; message?: string }
+    const j = JSON.parse(corpo) as {
+      error?: { message?: string; details?: DetalheGoogle[] } | string
+      message?: string
+    }
     const m = typeof j.error === 'string' ? j.error : j.error?.message ?? j.message
-    if (m) return String(m).slice(0, 300)
+    const detalhes = typeof j.error === 'object' && Array.isArray(j.error?.details) ? j.error.details : []
+    const cauda = caudaDeQuota(detalhes)
+    if (m) return String(m).slice(0, 300) + cauda
+    if (cauda) return cauda.slice(3)
   } catch {
     /* não era JSON */
   }
   return corpo.replace(/\s+/g, ' ').trim().slice(0, 300)
+}
+
+/** «· quota: GenerateRequestsPerDay… · retry in 3h46m» a partir dos `details` do Google; vazio se não houver. */
+function caudaDeQuota(detalhes: DetalheGoogle[]): string {
+  const partes: string[] = []
+  for (const d of detalhes) {
+    for (const v of d.violations ?? []) if (v.quotaId) partes.push(`quota: ${v.quotaId}`)
+    const seg = d.retryDelay ? Number.parseFloat(d.retryDelay) : NaN
+    if (Number.isFinite(seg) && seg > 0) {
+      // Em horas+minutos quando é longo e em segundos quando é curto — é essa a diferença que
+      // separa um tecto diário (roda de modelo) de um pico por minuto (não roda).
+      partes.push(seg >= 3600 ? `retry in ${Math.floor(seg / 3600)}h${Math.round((seg % 3600) / 60)}m` : `retry in ${Math.ceil(seg)}s`)
+    }
+  }
+  return partes.length ? ' · ' + partes.join(' · ') : ''
 }
 
 /**

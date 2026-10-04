@@ -13,7 +13,7 @@ percorre uma cadeia de fornecedores — grátis primeiro — e grava cada chamad
 | # | Fornecedor | Custo | Modelo (default) | Porquê nesta posição |
 |---|---|---|---|---|
 | 1 | **Groq** | grátis | `llama-3.3-70b-versatile` (qualidade) / `llama-3.1-8b-instant` (rápido) | o mais rápido de todos; as páginas esperam por ele |
-| 2 | **Gemini** | grátis | `gemini-3.8-flash` / `gemini-3.8-flash` | tem visão e JSON nativo, mas é mais lento e o limite diário do grátis é mais curto — reserva do grátis |
+| 2 | **Gemini** | grátis | `gemini-3.8-flash`, com rotação para `3.7` → `3.6` → `3.5-flash-lite` → `3.1-flash-lite` → `gemma-4-26b-a4b-it` quando a quota diária estoura | tem visão e JSON nativo, mas é mais lento e a quota do grátis é de **20 pedidos/dia por modelo** — reserva do grátis |
 | 3 | **Ollama** | zero por chamada | `OLLAMA_MODEL` (default `llama3.2:3b`) | nosso, mas lento em CPU (tecto 60 s); **só entra se `OLLAMA_URL` existir** |
 | 4 | **OpenAI** | pago | `gpt-4o-mini` | reserva paga; só se houver chave |
 | 5 | **Anthropic** | pago | `modeloClaude()` | última reserva; a 04/10 **sem crédito** |
@@ -41,7 +41,7 @@ pode encurtar com `timeoutMs`.
 |---|---|---|---|
 | `GROQ_API_KEY` | Groq | [console.groq.com](https://console.groq.com) → API Keys | **existe** |
 | `GROQ_MODEL` | forçar modelo | — | opcional |
-| `GEMINI_API_KEY` | Gemini | [aistudio.google.com](https://aistudio.google.com) → Get API key | **NÃO existe** — o Gemini fica na cadeia mas é saltado até o dono criar a chave |
+| `GEMINI_API_KEY` | Gemini | [aistudio.google.com](https://aistudio.google.com) → Get API key | **existe** desde 04/10 (formato `AQ.…`); quota grátis de 20 pedidos/dia por modelo — ver secção «Gemini: quota real e rotação» |
 | `GEMINI_MODEL` | forçar modelo | — | opcional |
 | `OLLAMA_URL` | activa o Ollama (ex.: `https://ollama.com` ou `http://ip:11434`) | servidor nosso ou nuvem ollama.com | **NÃO existe** — o Ollama está fora da cadeia |
 | `OLLAMA_TOKEN` (ou `OLLAMA_API_KEY`) | Bearer, se o servidor pedir | — | existe `OLLAMA_API_KEY`, mas sem `OLLAMA_URL` não activa nada; não se assume para onde aponta |
@@ -122,10 +122,62 @@ resolve cada rota ao ficheiro e aos imports do servidor, e FALHA se algum voltar
 `@anthropic-ai/sdk`/`openai` ou a ler `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` (ou Gemini/Groq à mão)
 fora de `lib/ia/`. Com `--mapa` imprime componente → rota → usa IA → migrada.
 
-**Quota do Gemini grátis (visto a 04/10):** o limite diário é de **20 pedidos por dia POR MODELO**
-(`GenerateRequestsPerDayPerProjectPerModel-FreeTier`). Esgotado o `gemini-3.8-flash`, os
-`gemini-3.7-flash`, `3.6`, `3.5-flash-lite` e `3.1-flash-lite` respondiam com a mesma chave — é
-quota por modelo, não por chave. Sem Groq, o Gemini sozinho não aguenta um dia de app.
+`npx tsx lib/ia/fornecedores/descoberta.check.ts` — nome de modelo morto (404) → descobre o
+substituto (Groq: lista da chave; Gemini: a frase do erro) e repete UMA vez; 401/429 não disparam.
+
+`npx tsx lib/ia/fornecedores/rotacao-quota.check.ts` — ver secção seguinte.
+
+## Gemini: quota real e rotação de modelo (04/10)
+
+**Medido a 04/10/2026:** o plano grátis do Gemini dá **20 pedidos por dia POR MODELO**
+(`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, 429 com «Please retry in 10h»). Esgotado o
+`gemini-3.8-flash` a meio de uma prova, com a MESMA chave o 3.7, o 3.6, o 3.5-flash-lite, o
+3.1-flash-lite e o gemma-4 continuavam a responder: a quota é por modelo, não por chave. Antes,
+esse 429 passava logo ao fornecedor seguinte — os pagos sem crédito — e o utilizador via
+«indisponível» com dezenas de pedidos grátis por usar.
+
+**A rotação** (`lib/ia/fornecedores/gemini.ts`, lógica em `rotacao-quota.ts`), nomes confirmados
+em `GET /v1beta/models` a 04/10 e todos a responder nesse dia; os 2.5 estão fechados a novos
+utilizadores e NÃO entram:
+
+1. o configurado (`GEMINI_MODEL`, default `gemini-3.8-flash`)
+2. `gemini-3.7-flash`
+3. `gemini-3.6-flash`
+4. `gemini-3.5-flash-lite`
+5. `gemini-3.1-flash-lite`
+6. `gemma-4-26b-a4b-it`
+
+**A regra: diário roda, por minuto não.**
+
+- 429 cujo texto denuncie quota **diária / por modelo** (`PerDay`, `per day`, `daily`,
+  `retry in Nh`, `GenerateRequestsPerDay`) → passa ao modelo seguinte da lista. O esgotado fica
+  **marcado em memória, por processo**, até à hora que o erro diz (`retry in 10h`; sem hora, 10 h):
+  os pedidos seguintes vão directos ao próximo. O `modelo` no livro fica
+  `gemini-3.7-flash (rodado: gemini-3.8-flash com a quota diária esgotada)` — é assim que se vê
+  o 3.8 a esgotar-se.
+- 429 de **ritmo por minuto** (`PerMinute`, `retry in Ns`) → **NÃO roda**: passa ao fornecedor
+  seguinte como qualquer erro. Rodar por um limite de segundos gastava um pedido da quota diária
+  de TODOS os modelos a cada pico — e à tarde não havia nenhum.
+- **Máximo de 3 modelos por pedido.** Mais do que isso é a quota do dia a ir-se em cascata num só
+  pedido quando o problema afinal é outro.
+- Compõe com a descoberta: um 404 de nome morto segue a sugestão do erro como antes, e o nome
+  **sai da rotação** desse processo. Um 404 não roda — rodar é para quota, não para nomes.
+- **Onde está a pista diária:** no corpo real do 429 (411 caracteres) a métrica do texto é
+  `generate_content_free_tier_requests` — sem «per day» — e o «Please retry in 3h45m» vem no fim,
+  depois do corte aos 300 do `resumirErro`. A pista fiável está em `error.details`: `quotaId`
+  (`GenerateRequestsPerDayPerProjectPerModel-FreeTier` vs `…PerMinute…`) e `retryDelay`
+  (`13559s`). O `resumirErro` (`comum.ts`) anexa-os compactos fora do corte
+  (`· quota: GenerateRequestsPerDay… · retry in 3h46m`), senão a rotação não disparava — foi a
+  prova real a apanhar isto.
+
+Contas: 6 modelos × 20 = 120 pedidos/dia grátis no Gemini. Sem Groq à frente, nem assim aguenta
+um dia de app — o Groq continua a ser o motor; isto é a reserva a render o que tem.
+
+Guarda `npx tsx lib/ia/fornecedores/rotacao-quota.check.ts`, com `fetch` falso e contado: (a) 429
+diário no 1.º → responde o 2.º, 2 pedidos; (b) diário no 1.º e 2.º → responde o 3.º, 3 pedidos;
+(c) diário em 3 → rebenta passável sem 4.º pedido; (d) 429 por minuto → NÃO roda, 1 pedido; (e) o
+esgotado fica marcado: o pedido seguinte vai directo ao 2.º com 1 pedido; (f) a marca expira
+(relógio injectado); (g) 404 de nome morto funciona como antes e sai da rotação.
 
 ## Já migrados (04/10)
 
