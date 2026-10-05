@@ -1,5 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js"
 import { createBrowserClient } from "@supabase/ssr"
+import { fechaduraComTecto } from "./supabase-fechadura"
 import { getSupabaseAdmin as getServiceRoleClient } from "./supabase-admin-client"
 
 // URLs e chaves do Supabase (trim para evitar newline no env que quebra Realtime/WebSocket)
@@ -23,7 +24,10 @@ export const supabase: SupabaseClient = (() => {
     // Usar createBrowserClient do @supabase/ssr para PKCE correto
     // O createBrowserClient gerencia automaticamente os cookies para o code verifier
     // Não precisa de configuração explícita de cookies - já faz isso automaticamente
-    supabaseInstance = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    // `lock`: a fechadura entre separadores COM tecto de espera. Sem isto, um separador preso
+    // a meio de um refresh pendurava o login («A concluir o login…» para sempre) e qualquer
+    // escrita (o feed) em todos os outros — ver lib/supabase-fechadura.ts (05/10/2026).
+    supabaseInstance = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { lock: fechaduraComTecto } })
   }
   return supabaseInstance
 })()

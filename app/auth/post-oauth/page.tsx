@@ -168,8 +168,17 @@ export default function PostOAuthPage() {
     }
 
     run()
+    // VIGIA: se em 20 s isto não saiu daqui, não vai sair. Antes ficava a rodar para sempre
+    // (05/10/2026: fechadura da auth presa por outro separador). Manda-se para o login com uma
+    // frase, em vez de um spinner eterno.
+    const vigia = window.setTimeout(() => {
+      if (cancelled) return
+      const q = new URLSearchParams({ message: "O login demorou demasiado. Fecha os outros separadores do site e tenta outra vez." })
+      window.location.replace(`/login?${q}`)
+    }, 20_000)
     return () => {
       cancelled = true
+      window.clearTimeout(vigia)
     }
   }, [searchParams])
 
