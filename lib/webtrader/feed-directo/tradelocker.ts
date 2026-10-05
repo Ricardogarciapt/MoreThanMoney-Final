@@ -41,7 +41,7 @@ export class ErroFeedTL extends Error {
 }
 
 export async function criarFeedTradeLocker(credInicial: Cred, opcoes: { preferencias?: Record<string, string> } = {}): Promise<FeedConta> {
-  const avisador = criarAvisador(1000)
+  const avisador = criarAvisador()
   const filaCotacoes = criarFilaRitmada(Math.ceil(1000 / LIMITES.tradelocker.cotacoesPorSegundo) + 10)
   const filaHistorico = criarFilaRitmada(Math.ceil(1000 / LIMITES.tradelocker.historicoPorSegundo) + 20)
 

@@ -1,9 +1,15 @@
 /**
  * Ouvintes + coalescência: os ticks chegam vários por segundo e o React não precisa de ir atrás
  * de cada um. `avisar()` junta tudo o que chegou e acorda os ouvintes no máximo uma vez por
- * `intervaloMs` (~1/s no feed directo); `avisarJa()` é para o que não pode esperar (posição nova).
+ * `intervaloMs`; `avisarJa()` é para o que não pode esperar (posição nova).
+ *
+ * 250 ms (05/10/2026, era 1 s): as contas da casa na MetaApi são todas cloud-g2, sem o tecto de
+ * 1 tick/2,5 s do G1, por isso a cotação chega mais depressa do que o ecrã a mostrava. Redesenhar
+ * só acontece quando chegou algo novo — sem ticks, não há trabalho nenhum.
  */
-export function criarAvisador(intervaloMs = 1000) {
+export const RITMO_ECRA_MS = 250
+
+export function criarAvisador(intervaloMs = RITMO_ECRA_MS) {
   const ouvintes = new Set<() => void>()
   let timer: ReturnType<typeof setTimeout> | null = null
   let ultimo = 0

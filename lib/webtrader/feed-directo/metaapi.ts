@@ -81,7 +81,7 @@ const FRESCO_MS = 10_000
 
 export async function criarFeedMetaApi(credInicial: Cred, opcoes: { preferencias?: Record<string, string> } = {}): Promise<FeedConta> {
   const sdk = await carregarSdk()
-  const avisador = criarAvisador(1000)
+  const avisador = criarAvisador()
   const semaforo = criarSemaforo(LIMITES.metaapi.historicosConcorrentes)
 
   let cred = credInicial
