@@ -13,9 +13,10 @@
 import {
   type Direcao, type Simbolo, type Preco, type MapaPrecos, type PosicaoAberta,
   normalizarVolume, validarNiveis, precoDeAbertura, precoDeFecho, margemUsd, comissaoUsd,
-  estadoDaConta, lucroUsd, pendenteDispara, moedaDeCotacao,
+  estadoDaConta, lucroUsd, moedaDeCotacao,
 } from './matematica'
 import { avaliarConta, type RegrasConta } from '../regras'
+import { erroDaPendente, mensagemVolumeForaDosLimites } from '@/lib/webtrader/regras-ordem'
 
 export type Falha = { ok: false; erro: string }
 
@@ -121,7 +122,7 @@ export interface PlanoAbertura {
 export function planearAbertura(p: PedidoAbertura): PlanoAbertura | Falha {
   const volume = normalizarVolume(p.simbolo, p.volume)
   if (volume == null) {
-    return { ok: false, erro: `volume fora dos limites (${p.simbolo.volume_min}–${p.simbolo.volume_max}, passo ${p.simbolo.volume_step})` }
+    return { ok: false, erro: mensagemVolumeForaDosLimites({ min: p.simbolo.volume_min, max: p.simbolo.volume_max, passo: p.simbolo.volume_step }) }
   }
   const precoExecucao = precoDeAbertura(p.direcao, p.preco)
   const erroNiveis = validarNiveis(p.direcao, precoExecucao, p.sl, p.tp)
@@ -224,18 +225,12 @@ export function validarPendente(
   sl: number | null, tp: number | null, preco: Preco | null,
 ): { ok: true; volume: number } | Falha {
   const v = normalizarVolume(simbolo, volume)
-  if (v == null) return { ok: false, erro: `volume fora dos limites (${simbolo.volume_min}–${simbolo.volume_max})` }
-  if (!(nivel > 0)) return { ok: false, erro: 'preço da ordem inválido' }
+  if (v == null) return { ok: false, erro: mensagemVolumeForaDosLimites({ min: simbolo.volume_min, max: simbolo.volume_max, passo: simbolo.volume_step }) }
+  // Preço válido e «ainda não dispara» — a regra partilhada com o ticket (regras-ordem.ts).
+  const erroPreco = erroDaPendente(direcao, tipo, nivel, preco)
+  if (erroPreco) return { ok: false, erro: erroPreco }
   const erro = validarNiveis(direcao, nivel, sl, tp)
   if (erro) return { ok: false, erro }
-  // Uma pendente que já dispararia agora não é pendente — é uma ordem a mercado mal escolhida
-  // (buy limit ACIMA do preço, por exemplo). Dizer isso ensina mais do que executá-la.
-  if (preco && pendenteDispara(direcao, tipo, nivel, preco)) {
-    const lado = tipo === 'limit'
-      ? (direcao === 'buy' ? 'abaixo' : 'acima')
-      : (direcao === 'buy' ? 'acima' : 'abaixo')
-    return { ok: false, erro: `uma ${direcao === 'buy' ? 'buy' : 'sell'} ${tipo} tem de ficar ${lado} do preço atual` }
-  }
   return { ok: true, volume: v }
 }
 

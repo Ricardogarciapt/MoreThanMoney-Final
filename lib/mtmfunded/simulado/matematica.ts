@@ -1,3 +1,4 @@
+import { erroDosNiveis, normalizarVolumeRegra, pendenteJaDispara } from '@/lib/webtrader/regras-ordem'
 /**
  * A MATEMÁTICA DAS CONTAS SIMULADAS — uma só, para o site e para o motor.
  *
@@ -91,13 +92,13 @@ export function precoDeFecho(direcao: Direcao, p: Preco): number {
   return direcao === 'buy' ? p.bid : p.ask
 }
 
-/** Volume arredondado ao passo do símbolo; null se ficar fora dos limites. */
+/**
+ * Volume arredondado ao passo do símbolo; null se ficar fora dos limites.
+ * A regra vive em lib/webtrader/regras-ordem.ts (a MESMA do ticket e das contas reais).
+ */
 export function normalizarVolume(s: Simbolo, volume: number): number | null {
-  if (!(volume > 0)) return null
-  const passos = Math.round(volume / s.volume_step)
-  const v = Math.round(passos * s.volume_step * 100) / 100
-  if (v < s.volume_min - 1e-9 || v > s.volume_max + 1e-9) return null
-  return v
+  const r = normalizarVolumeRegra(volume, { min: s.volume_min, max: s.volume_max, passo: s.volume_step })
+  return r.ok ? r.volume : null
 }
 
 /** Lucro/prejuízo em USD de `volume` lotes entre dois preços. */
@@ -193,20 +194,11 @@ export function tocaTp(p: PosicaoAberta, preco: Preco): boolean {
 
 /** SL/TP do lado certo do preço de entrada? Devolve o erro em linguagem de gente, ou null. */
 export function validarNiveis(direcao: Direcao, entrada: number, sl: number | null, tp: number | null): string | null {
-  if (sl != null) {
-    if (direcao === 'buy' && sl >= entrada) return 'numa compra o stop fica abaixo do preço'
-    if (direcao === 'sell' && sl <= entrada) return 'numa venda o stop fica acima do preço'
-  }
-  if (tp != null) {
-    if (direcao === 'buy' && tp <= entrada) return 'numa compra o alvo fica acima do preço'
-    if (direcao === 'sell' && tp >= entrada) return 'numa venda o alvo fica abaixo do preço'
-  }
-  return null
+  // Regra partilhada (lib/webtrader/regras-ordem.ts) — o ticket pré-valida com a mesma.
+  return erroDosNiveis(direcao, entrada, sl, tp)
 }
 
 /** Ordem pendente: limit compra abaixo / vende acima; stop compra acima / vende abaixo. Dispara? */
 export function pendenteDispara(direcao: Direcao, tipo: 'limit' | 'stop', nivel: number, preco: Preco): boolean {
-  const x = precoDeAbertura(direcao, preco)
-  if (tipo === 'limit') return direcao === 'buy' ? x <= nivel : x >= nivel
-  return direcao === 'buy' ? x >= nivel : x <= nivel
+  return pendenteJaDispara(direcao, tipo, nivel, preco)
 }

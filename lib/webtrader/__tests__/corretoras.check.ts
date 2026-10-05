@@ -95,7 +95,7 @@ async function main() {
   assert.deepEqual(validarPedido({ symbol: 'xauusd', direcao: 'buy', volume: 0.1 }), { symbol: 'XAUUSD', direcao: 'buy', tipo: 'mercado', volume: 0.1, preco: null, sl: null, tp: null })
   assert.throws(() => validarPedido({ symbol: 'XAUUSD', direcao: 'buy', volume: 0 }), ErroCorretora)
   assert.throws(() => validarPedido({ symbol: 'XAUUSD', direcao: 'buy', volume: 0.1, tipo: 'limit' }), ErroCorretora)
-  assert.throws(() => validarPedido({ symbol: 'XAUUSD', direcao: 'buy', volume: 0.1, tipo: 'limit', preco: 2400, sl: 2410 }), /SL fica abaixo/)
+  assert.throws(() => validarPedido({ symbol: 'XAUUSD', direcao: 'buy', volume: 0.1, tipo: 'limit', preco: 2400, sl: 2410 }), /stop fica abaixo/)
   assert.throws(() => validarPedido({ symbol: "X'; drop", direcao: 'buy', volume: 0.1 }), ErroCorretora)
 
   // ── gate da quota MetaApi no WebTrader ──────────────────────────────────────────────────────

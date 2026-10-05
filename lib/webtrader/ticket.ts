@@ -1,3 +1,4 @@
+import { normalizarVolumeRegra } from './regras-ordem'
 /**
  * REGRAS DO TICKET QUE NÃO SÃO CONTAS — puras, testadas em lib/webtrader/__tests__/ticket.check.ts.
  *
@@ -52,12 +53,11 @@ export function validarTicketReal(c: {
 }): TicketReal {
   const volume = numeroDoCampo(c.volume)
   if (volume == null || !Number.isFinite(volume) || !(volume > 0)) return { ok: false, erro: 'Volume inválido.' }
-  const passo = c.passo > 0 ? c.passo : 0.01
-  if (volume < c.volumeMin - 1e-9) return { ok: false, erro: `O volume mínimo é ${c.volumeMin} lotes.` }
-  const passos = volume / passo
-  if (Math.abs(passos - Math.round(passos)) > 1e-6) return { ok: false, erro: `O volume tem de ir em passos de ${passo} lotes.` }
-  const casas = Math.max(0, Math.min(8, Math.ceil(-Math.log10(passo) - 1e-9)))
-  const volumeNoPasso = Number((Math.round(passos) * passo).toFixed(casas))
+  // A regra do lote é a partilhada (regras-ordem.ts), em modo estrito: aqui o trader escreveu o
+  // lote à mão e um 0,015 que saísse 0,02 era uma surpresa com dinheiro real.
+  const v = normalizarVolumeRegra(volume, { min: c.volumeMin, max: 0, passo: c.passo }, { estrito: true })
+  if (!v.ok) return { ok: false, erro: `${v.erro.charAt(0).toUpperCase()}${v.erro.slice(1)}.` }
+  const volumeNoPasso = v.volume
   let preco: number | null = null
   if (c.tipo !== 'mercado') {
     preco = numeroDoCampo(c.preco)

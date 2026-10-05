@@ -188,8 +188,10 @@ export default function GraficoLeve(props: GraficoProps & {
   // A ordem em preparação é do rascunho partilhado com o ticket (rascunho-ordem.tsx).
   const k = useRascunho()
   const umClique = useUmClique()
+  // Com uma acção a correr (`ocupado`) não se inicia outra a partir do gráfico: o um-clique trata
+  // um `executar` durante esse tempo como aninhado (sem confirmação) — ver um-clique.tsx.
   const accao = (descricao: string, fn: () => Promise<unknown>) =>
-    umClique.executar(descricao, fn, { confirmar: true, digitos: simbolo.digits })
+    umClique.ocupado ? Promise.reject(new AccaoCancelada()) : umClique.executar(descricao, fn, { confirmar: true, digitos: simbolo.digits })
   const [rascunho, setRascunho] = useState<Record<string, number>>({})
   const [ys, setYs] = useState<Record<string, number>>({})
   const [menu, setMenu] = useState<{ x: number; y: number; dono: Dono } | null>(null)

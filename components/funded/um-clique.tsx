@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react"
 import { Loader2, Zap } from "lucide-react"
 import { gravarUmClique, gravarUmCliqueAceite, lerPreferenciasUmClique } from "./api"
+import { decidirUmClique } from "@/lib/webtrader/regras-ordem"
 
 /**
  * NEGOCIAÇÃO NUM CLIQUE — como o «One Click Trading» do MetaTrader 5 e o «One-click trading» do
@@ -31,6 +32,13 @@ import { gravarUmClique, gravarUmCliqueAceite, lerPreferenciasUmClique } from ".
  *    o «Fechar tudo» depois de escolher o volume): executa-se logo.
  * Em ambos os casos há protecção contra toques repetidos: a mesma acção dentro de 800 ms, ou
  * enquanto a anterior ainda corre, é ignorada.
+ *
+ * UMA SÓ CONFIRMAÇÃO, UM SÓ «FEITO» (05/10): um `executar` chamado DENTRO de outro (o rascunho do
+ * ticket chama `executar(…, confirmar: false)` e, lá dentro, o trader das contas reais volta a
+ * chamar `executar(…, confirmar: true)` com outra descrição) é a mesma acção — corre sem
+ * confirmar, sem avisar e sem contar. A decisão é pura (`decidirUmClique`, regras-ordem.ts). Para
+ * isto ser seguro, enquanto uma acção corre (`ocupado`) os botões e o arrasto no gráfico não
+ * iniciam outra: um `executar` novo durante esse tempo só pode ser o aninhado.
  */
 
 export const CHAVE_UM_CLIQUE = (accountId: string) => `mtmfunded_um_clique:${accountId}`
@@ -94,6 +102,8 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
   const [aviso, setAviso] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null)
   const [emCurso, setEmCurso] = useState(0)
   const ultimas = useRef<Map<string, { em: number; promessa: Promise<unknown> | null }>>(new Map())
+  /** Quantos `executar` estão a correr: > 0 quando chega outro = esse outro é aninhado. */
+  const profundidade = useRef(0)
 
   useEffect(() => {
     setLigadoGuardado(ler(CHAVE_UM_CLIQUE(accountId)) === "1" && ler(CHAVE_UM_CLIQUE_ACEITE(accountId)) != null)
@@ -157,6 +167,9 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
   }
 
   const executar = useCallback(<T,>(descricao: string, fn: () => Promise<T>, opcoes: { confirmar: boolean; digitos?: number }): Promise<T> => {
+    const decisao = decidirUmClique({ ligado, confirmar: opcoes.confirmar, aninhado: profundidade.current > 0 })
+    // Aninhado: é a mesma acção que o `executar` de fora já confirmou e vai avisar — só corre.
+    if (!decisao.avisar) return fn()
     const correr = async (): Promise<T> => {
       const u = ultimas.current.get(descricao)
       if (u && (u.promessa || Date.now() - u.em < REPETICAO_MS)) {
@@ -164,6 +177,7 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
         if (u.promessa) return u.promessa as Promise<T>
         throw new AccaoCancelada()
       }
+      profundidade.current++
       const promessa = fn()
       ultimas.current.set(descricao, { em: Date.now(), promessa })
       setEmCurso((n) => n + 1)
@@ -177,11 +191,12 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
         setAviso({ tipo: "erro", texto: `${descricao}: ${(e as Error).message}` })
         throw e
       } finally {
+        profundidade.current--
         ultimas.current.set(descricao, { em: Date.now(), promessa: null })
         setEmCurso((n) => n - 1)
       }
     }
-    if (ligado || !opcoes.confirmar) return correr()
+    if (!decisao.pedirConfirmacao) return correr()
     return new Promise<T>((ok, falha) => {
       setConfirmacao({
         descricao,

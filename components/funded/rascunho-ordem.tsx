@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { arredAosDigitos } from "@/lib/webtrader/formato"
 import {
-  type Direcao, type MapaPrecos, comissaoUsd, lucroUsd, margemUsd, normalizarVolume, pendenteDispara, pips,
+  type Direcao, type MapaPrecos, comissaoUsd, lucroUsd, margemUsd, normalizarVolume, pips,
   precoDeAbertura, spreadEmPreco, validarNiveis,
 } from "@/lib/mtmfunded/simulado/matematica"
 import { tipoDeEntrada, valorDoPip } from "@/lib/mtmfunded/simulado/ordens"
@@ -15,6 +15,7 @@ import { AccaoCancelada, useUmClique } from "./um-clique"
 import { AVANCADO_VAZIO, type Avancado, expiracaoDe, gestaoDoAvancado, numeroDe } from "./avancado"
 import type { Gestao } from "@/lib/mtmfunded/simulado/avancadas"
 import { emModoRisco, modoNiveisEfectivo } from "@/lib/webtrader/ticket"
+import { erroDaPendente, mensagemVolumeForaDosLimites } from "@/lib/webtrader/regras-ordem"
 
 /**
  * O RASCUNHO DA ORDEM — UM só estado para o ticket e para o gráfico, como no painel de ordens do
@@ -255,12 +256,14 @@ export function RascunhoProvider(props: {
       e.volume = dimensionamento.motivo === "sem_sl" ? "Define o SL (em preço ou pips, ou arrasta a linha) para calcular o lote"
         : dimensionamento.motivo === "sem_risco" ? (dim.modo === "risco_pct" && saldo == null ? "sem saldo para calcular a %" : "indica o risco para calcular o lote")
           : "sem preço de conversão para calcular o lote"
-    } else if (normalizarVolume(s, volume) == null) e.volume = `volume fora dos limites (${s.volume_min}–${s.volume_max}, passo ${s.volume_step})`
+    } else if (normalizarVolume(s, volume) == null) e.volume = mensagemVolumeForaDosLimites({ min: s.volume_min, max: s.volume_max, passo: s.volume_step })
     if (r.tipo !== "mercado") {
+      // A pré-validação é a MESMA função do servidor (lib/webtrader/regras-ordem.ts): o erro que o
+      // ticket mostra é o que a rota daria. Só com preço fresco — um preço velho não serve de régua.
       if (!(r.entrada != null && r.entrada > 0)) e.entrada = "indica o preço da ordem"
-      else if (preco?.fresco && pendenteDispara(r.lado, r.tipo, r.entrada, preco)) {
-        const lado = r.tipo === "limit" ? (r.lado === "buy" ? "abaixo" : "acima") : (r.lado === "buy" ? "acima" : "abaixo")
-        e.entrada = `uma ${r.lado} ${r.tipo} tem de ficar ${lado} do preço atual`
+      else {
+        const ep = erroDaPendente(r.lado, r.tipo, r.entrada, preco?.fresco ? preco : null)
+        if (ep) e.entrada = ep
       }
     }
     if (entrada != null) {

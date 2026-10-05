@@ -12,6 +12,7 @@
  *
  * Puro (sem base, sem Next): testado em lib/webtrader/__tests__/corretoras.check.ts.
  */
+import { erroDosNiveis } from '../regras-ordem'
 
 export type PlataformaWT = 'mtmfunded' | 'tradelocker' | 'mt5'
 export const PLATAFORMAS_WT: PlataformaWT[] = ['mtmfunded', 'tradelocker', 'mt5']
@@ -200,10 +201,12 @@ export function validarPedido(p: Partial<PedidoOrdemWT>): PedidoOrdemWT {
   const tp = pos(p.tp)
   if ([preco, sl, tp].some((v) => Number.isNaN(v))) throw new ErroCorretora(400, 'preço, SL ou TP inválido')
   if (tipo !== 'mercado' && preco == null) throw new ErroCorretora(400, 'falta o preço da ordem pendente')
+  // Os níveis contra o preço da pendente — a MESMA regra do ticket e do motor simulado
+  // (lib/webtrader/regras-ordem.ts). A mercado não há referência fiável aqui: é a corretora que valida.
   const ref = tipo === 'mercado' ? null : preco
   if (ref != null) {
-    if (p.direcao === 'buy' && ((sl != null && sl >= ref) || (tp != null && tp <= ref))) throw new ErroCorretora(400, 'numa compra o SL fica abaixo e o TP acima do preço')
-    if (p.direcao === 'sell' && ((sl != null && sl <= ref) || (tp != null && tp >= ref))) throw new ErroCorretora(400, 'numa venda o SL fica acima e o TP abaixo do preço')
+    const erro = erroDosNiveis(p.direcao, ref, sl, tp)
+    if (erro) throw new ErroCorretora(400, erro)
   }
   return { symbol, direcao: p.direcao, tipo, volume, preco, sl, tp }
 }
