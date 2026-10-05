@@ -198,7 +198,8 @@ export async function emitirCredenciaisFeed(userId: string, refBruta: unknown, c
   const c = ref.plataforma === 'mt5'
     ? await emitirMetaApi(userId, ref.origem, ref.id)
     : await emitirTradeLocker(userId, ref.origem, ref.id, ctx)
-  if (cacheavel) await paraCache(userId, refTxt, c, ctx)
+  // Uma conta MT desligada não fica em cache: depois de «Ligar conta» o pedido seguinte tem de ver o estado novo.
+  if (cacheavel && !(c.plataforma === 'metaapi' && c.estadoConta === 'desligada')) await paraCache(userId, refTxt, c, ctx)
   return c
 }
 

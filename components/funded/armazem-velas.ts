@@ -41,7 +41,27 @@ export const FRESCO_MS = 15_000
 
 const memoria = new Map<string, SerieVelas>()
 const emCurso = new Map<string, Promise<SerieVelas>>()
-const chave = (symbol: string, tf: string) => `${symbol}:${tf}`
+
+/**
+ * FONTE DIRECTA (feed da conta, lib/webtrader/feed-directo). Quando o WebTrader de uma conta real
+ * tem o feed ligado, as velas dos símbolos que a corretora dá vêm DELA — da ligação da conta à
+ * corretora, puxadas pelo browser — e não da rota do servidor. A série fica guardada à parte
+ * (`conta:<ref>|XAUUSD:M5`): as velas da corretora do cliente e as do feed MTM nunca se misturam,
+ * nem em memória nem no disco. O gráfico não sabe de nada disto: pede por símbolo+timeframe como
+ * sempre e é a `chave` que o leva à série certa.
+ */
+export interface FonteVelasDirecta {
+  /** `conta:<ref>` — prefixo das séries desta fonte. */
+  chave: string
+  cobre: (symbol: string) => boolean
+  /** `ate` em segundos (época) = velas mais antigas do que isso. */
+  pedir: (symbol: string, tf: string, limite: number, ate?: number) => Promise<VelaC[]>
+}
+let fonteDirecta: FonteVelasDirecta | null = null
+export function definirFonteVelas(f: FonteVelasDirecta | null) { fonteDirecta = f }
+export function fonteVelasActiva(symbol: string): string | null { return fonteDirecta && fonteDirecta.cobre(symbol) ? fonteDirecta.chave : null }
+
+const chave = (symbol: string, tf: string) => { const f = fonteVelasActiva(symbol); return f ? `${f}|${symbol}:${tf}` : `${symbol}:${tf}` }
 
 function guardar(k: string, s: SerieVelas) {
   if (s.velas.length > MAX_VELAS_SERIE) s = { ...s, velas: s.velas.slice(-MAX_VELAS_SERIE), inicio: false }
@@ -88,6 +108,9 @@ function juntarRecente(antes: SerieVelas | undefined, velas: VelaC[], janela: nu
 type RespostaRede = { col?: Parameters<typeof deColunas>[0]; velas?: VelaC[] }
 
 async function pedirRede(symbol: string, tf: string, limite: number, ate?: number): Promise<VelaC[]> {
+  // Feed directo ligado e a cobrir este símbolo: as velas vêm da corretora do cliente, não da rota.
+  const f = fonteDirecta
+  if (f && f.cobre(symbol)) return f.pedir(symbol, tf, limite, ate)
   const url = URL_VELAS(symbol, tf, limite, ate)
   const doFetch = async () => {
     const r = await fetch(url)
