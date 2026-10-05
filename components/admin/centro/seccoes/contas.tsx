@@ -6,6 +6,7 @@ import { appDaConta } from "@/lib/admin-centro/ligacoes"
 import { nomeMotivo } from "@/lib/admin-centro/regras"
 import ContasCopia from "@/components/admin/mtmauto-copia/contas"
 import MTMcopierManager from "@/components/admin/mtmcopier-manager"
+import SeccaoFunded from "./funded"
 
 import { AVISO_SIMULADO, resumirSaldos, textoPct } from "@/lib/admin-centro/linha-de-agua"
 import { MarcaProveniencia, PctLinhaDeAgua } from "../linha-de-agua"
@@ -238,6 +239,14 @@ export default function SeccaoContas() {
         </Recolhivel>
         <Recolhivel titulo="Gestor detalhado por utilizador" descricao="Lotes, prop firm, trailing, auditoria de risco, re-sync, testar MT5, últimos sinais." aberto={Boolean(ctx.filtro.userId)}>
           <MTMcopierManager highlightUserId={ctx.filtro.userId ?? null} />
+        </Recolhivel>
+      </Grupo>
+
+      {/* Era a secção «MTM Funded» (?s=funded, que redirecciona para aqui com grupo=funded). As contas
+          Funded já estão na lista de cima; os programas, a equidade da casa e o gestor ficam aqui. */}
+      <Grupo titulo="MTM Funded" nota="Programas, equidade da casa, contas emitidas e o gestor completo.">
+        <Recolhivel titulo="MTM Funded · programas, contas e gestor" descricao="Equidade MTM, contas de clientes e mestres, a ficha de cada conta e o gestor (lançamento, torneios, levantamentos, certificados)." aberto={ctx.filtro.grupo === "funded"}>
+          <SeccaoFunded />
         </Recolhivel>
       </Grupo>
     </div>

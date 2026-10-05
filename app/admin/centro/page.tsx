@@ -4,10 +4,10 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
-  Activity, ArrowLeft, ArrowLeftRight, Command as IconeComando, Cpu, Landmark, ListTree, Loader2, Radio, RefreshCcw, Search, Users, Wallet,
+  Activity, ArrowLeft, ArrowLeftRight, Command as IconeComando, Cpu, ListTree, Loader2, Radio, Search, Users, Wallet,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import { SECCOES, ehSeccao, type SeccaoCentro } from "@/lib/admin-centro/regras"
+import { SECCOES, destinoDeSeccaoAntiga, ehSeccao, type SeccaoCentro } from "@/lib/admin-centro/regras"
 import { Contexto, lerAlvo, type Alvo, type CentroCtx } from "@/components/admin/centro/contexto"
 import Gavetas from "@/components/admin/centro/gavetas"
 import Paleta from "@/components/admin/centro/paleta"
@@ -17,8 +17,6 @@ import SeccaoEstrategias from "@/components/admin/centro/seccoes/estrategias"
 import SeccaoContas from "@/components/admin/centro/seccoes/contas"
 import SeccaoCopia from "@/components/admin/centro/seccoes/copia"
 import SeccaoUtilizadores from "@/components/admin/centro/seccoes/utilizadores"
-import SeccaoFunded from "@/components/admin/centro/seccoes/funded"
-import SeccaoSincronizacao from "@/components/admin/centro/seccoes/sincronizacao"
 
 /**
  * «Centro de Controlo MTM Auto» — o sítio único para execução e cópia (substitui /admin/mtmcopy
@@ -30,17 +28,15 @@ import SeccaoSincronizacao from "@/components/admin/centro/seccoes/sincronizacao
  */
 
 const ICONE: Record<SeccaoCentro, typeof Activity> = {
-  cockpit: Activity, sinais: Radio, estrategias: ListTree, contas: Wallet, copia: ArrowLeftRight, utilizadores: Users, funded: Landmark, sincronizacao: RefreshCcw,
+  cockpit: Activity, sinais: Radio, estrategias: ListTree, contas: Wallet, copia: ArrowLeftRight, utilizadores: Users,
 }
 const DESCRICAO: Record<SeccaoCentro, string> = {
   cockpit: "Saúde em tempo real: pipeline de sinais, execução, MetaApi, streaming, base, VPS, crons e alertas com runbook.",
   sinais: "Todos os sinais das últimas 24 h e o fan-out de cada um: quem executou, quem saltou e porquê, erros.",
   estrategias: "Estratégias da casa e das equipas: fonte mestre/espelho, seguidores, desempenho, divergências e afinações.",
-  contas: "Todas as contas (MT4/MT5/TradeLocker/MTM Funded; clientes, casa, seguidoras, equipas) com dono, direito, quota e estado.",
-  copia: "Cópia entre contas: rotas, sombra vs live, pretendido vs real, latência e pedidos a aprovar.",
+  contas: "Todas as contas (MT4/MT5/TradeLocker/MTM Funded; clientes, casa, seguidoras, equipas) com dono, direito, quota e estado — e, no fim, os programas e o gestor MTM Funded.",
+  copia: "O quadro de controlo de cópias: quem copia o quê, rotas, sombra vs live, latência, pedidos a aprovar — e a sincronização com a MetaApi e a auditoria do admin.",
   utilizadores: "Matriz de direitos MTM Auto, legado MTM Copy, quota MetaApi, contas e Tap to Trade por pessoa.",
-  funded: "Programas e contas MTM Funded, equidade da casa e a ficha completa de cada conta.",
-  sincronizacao: "Reconciliação site ↔ MetaApi/CopyFactory, transição da página antiga e auditoria do admin.",
 }
 const RESERVADOS = new Set(["s", "g"])
 
@@ -64,6 +60,14 @@ function Centro() {
     sp.forEach((v, k) => { if (!RESERVADOS.has(k)) f[k] = v })
     return f
   }, [sp])
+
+  // Links guardados para secções que saíram (?s=funded, ?s=sincronizacao) → a secção que as absorveu.
+  useEffect(() => {
+    const atual: Record<string, string> = {}
+    sp.forEach((v, k) => { atual[k] = v })
+    const novo = destinoDeSeccaoAntiga(atual)
+    if (novo) router.replace(`${pathname}?${new URLSearchParams(novo).toString()}`, { scroll: false })
+  }, [sp, router, pathname])
 
   const escrever = useCallback((p: URLSearchParams) => {
     const qs = p.toString()
@@ -191,8 +195,6 @@ function Centro() {
             {seccao === "contas" && <SeccaoContas />}
             {seccao === "copia" && <SeccaoCopia />}
             {seccao === "utilizadores" && <SeccaoUtilizadores />}
-            {seccao === "funded" && <SeccaoFunded />}
-            {seccao === "sincronizacao" && <SeccaoSincronizacao />}
           </div>
         </main>
 

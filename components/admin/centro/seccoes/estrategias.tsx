@@ -11,7 +11,6 @@ import EspelhoProviderRelatorio from "@/components/admin/espelho-provider-relato
 import MtmcopyFontesVivas from "@/components/admin/mtmcopy-fontes-vivas"
 import MtmcopyStrategyControl from "@/components/admin/mtmcopy-strategy-control"
 import { EstrategiasDesempenho } from "@/components/admin/estrategias-desempenho"
-import { TrailingEstrategias } from "@/components/admin/trailing-estrategias"
 import MtmcopySubscriberHealth from "@/components/admin/mtmcopy-subscriber-health"
 import MtmcopyTelegramSenders from "@/components/admin/mtmcopy-telegram-senders"
 import MtmcopyProviderPipeline from "@/components/admin/mtmcopy-provider-pipeline"
@@ -19,12 +18,30 @@ import MtmcopyProviderAccounts from "@/components/admin/mtmcopy-provider-account
 import MtmcopyTestPanel from "@/components/admin/mtmcopy-test-panel"
 import MtmcopyGlobalPerformance from "@/components/admin/mtmcopy-global-performance"
 import { useCentroCtx } from "../contexto"
+import PaginaEstrategia from "../estrategia-pagina"
 import { textoResumo90d, type Resumo90d } from "@/lib/mestres/painel"
 import { Aviso, Azulejo, BotaoLer, Chip, Filtros, Grupo, Lista, Painel, Pilula, Recolhivel, Tabela, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
 
 export type DadosEstrategias = { estrategias: EstrategiaCentro[]; sombras?: SombraCentro[]; sombraPendente?: boolean; veredictoPendente: boolean; fontePendente: boolean }
 
+/**
+ * ESTRATÉGIAS — revamp de 05/10 (pedido do dono: menos cartões repetidos, hierarquia clara).
+ *
+ *   1. Atenção   — só as estratégias com algo por resolver (divergências, fonte desligada).
+ *   2. Controlo  — a lista; um clique abre a PÁGINA da estratégia (`&e=<slug>`), que é o único sítio
+ *                  onde se decide o que ela faz (cadeia fonte → mestre → rotas → subscritores).
+ *   3. Detalhe   — o motor global (kill-switch, modo por conta) e os painéis de diagnóstico, recolhidos.
+ *
+ * O que saiu daqui e para onde foi está em docs/admin-controlo-unico.md («Centro: o que mudou»).
+ */
 export default function SeccaoEstrategias() {
+  const ctx = useCentroCtx()
+  // A página de uma estratégia substitui a lista inteira: é para lá que o dono vai decidir.
+  if (ctx.filtro.e) return <PaginaEstrategia refEstrategia={ctx.filtro.e} />
+  return <ListaEstrategias />
+}
+
+function ListaEstrategias() {
   const ctx = useCentroCtx()
   const { dados, erro, aCarregar, recarregar, lidoEm } = useCentro<DadosEstrategias>(`/api/admin/centro/estrategias?v=${ctx.versao}`, 30_000)
   // Métricas de 90 dias TAL COMO a MTM Auto as publica (contas reais, parciais pesadas). O «ideias
@@ -36,26 +53,36 @@ export default function SeccaoEstrategias() {
   const abandonadas = (dados?.estrategias ?? []).filter((e) => e.abandonada && !e.apagada)
   const todas = dados?.estrategias ?? []
 
+  // ATENÇÃO primeiro: só o que tem algo por resolver. Uma estratégia sem problemas não ocupa ecrã aqui.
+  const atencao = todas.filter((e) => !e.apagada && !e.abandonada && (e.divergencias.length > 0 || e.fonteDesligada))
+  const abrir = (slug: string) => ctx.irPara("estrategias", { e: slug })
+
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Azulejo rotulo="Estratégias activas" valor={todas.filter((e) => (e.ativa || e.mestres) && !e.apagada && !e.abandonada).length} sub={`${todas.length} no total${todas.filter((e) => e.apagada).length ? ` · ${todas.filter((e) => e.apagada).length} escondida(s)` : ""}${abandonadas.length ? ` · ${abandonadas.length} abandonada(s)` : ""}`} />
         <Azulejo rotulo="Motor das mestres" valor={`${todas.filter((e) => e.mestres?.modo === "live").length} live`} sub={`${todas.filter((e) => e.mestres && e.mestres.modo !== "live").length} em sombra/desligadas · ${todas.reduce((a, e) => a + (e.mestres?.nContasLive ?? 0), 0)} conta(s) live`} tom={todas.some((e) => e.mestres?.modo === "live") ? "ok" : "neutro"} />
         <Azulejo rotulo="Seguidores" valor={fmtNum(todas.reduce((a, e) => a + e.seguidores.total, 0))} sub="MTM Auto + site + Funded" />
-        <Azulejo rotulo="Com divergências" valor={todas.filter((e) => e.divergencias.length).length} tom={todas.some((e) => e.divergencias.length) ? "aviso" : "ok"} onClick={() => setSoDiv(true)} />
-        <Azulejo rotulo="Em espelho" valor={todas.filter((e) => e.fonteExecucao === "espelho").length} sub={`${todas.filter((e) => e.espelho?.alinhado).length} alinhada(s)`} />
-        <Azulejo rotulo="Ideias 30 d (interno)" valor={`${fmtNum(todas.reduce((a, e) => a + e.desempenho30d.pips, 0), 1)} p`} sub="tudo-ou-nada, sem parciais — o publicado é a coluna 90 d" />
+        <Azulejo rotulo="Precisam de atenção" valor={atencao.length} tom={atencao.length ? "aviso" : "ok"} onClick={() => setSoDiv(true)} />
       </div>
 
-      {/* O mesmo painel (e os mesmos controlos) da tab Estratégias de /admin/mtmcopy: se a página
-          antiga passar a redireccionar para aqui (admin_centro_padrao), nada se perde. */}
-      <Recolhivel titulo="Motor das mestres · modos, contas e kill-switch" descricao="Quem executa cada estratégia, sombra/live por estratégia e por conta, últimas ordens e alertas — com confirmação e verificado no servidor." aberto>
-        <MotorMestres />
-      </Recolhivel>
+      {/* 1 · ATENÇÃO */}
+      {atencao.length > 0 && (
+        <section aria-label="Precisam de atenção" className="space-y-1.5">
+          <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D2A63C]/80">Atenção</p>
+          {atencao.map((e) => (
+            <button key={e.id} type="button" onClick={() => abrir(e.slug)} className="block w-full rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-left transition-colors duration-200 hover:border-[#D2A63C]/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D2A63C]">
+              <span className="text-[12.5px] font-medium text-amber-100">{e.nome}</span>
+              {e.fonteDesligada && <span className="ml-2"><Pilula tom="grave">fonte desligada</Pilula></span>}
+              {e.divergencias.map((d) => <span key={d} className="block text-[11px] text-amber-200/80">• {d}</span>)}
+            </button>
+          ))}
+        </section>
+      )}
 
       {dados?.sombras && dados.sombras.length > 0 && <SombraEstrategias sombras={dados.sombras} pendente={dados.sombraPendente === true} />}
 
-      <Painel titulo="Estratégias" sub="Quem executa (motor das mestres / CopyFactory / legado), seguidores por plataforma, métricas 90 d publicadas, ideias 30 d e divergências. Clica para abrir a gaveta — é lá que se esconde (apagar) e se restaura uma estratégia." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
+      <Painel titulo="Estratégias" sub="Clica numa estratégia para abrir a página dela — a cadeia inteira (fonte → mestre → rotas → subscritores) e todos os interruptores. É o único sítio onde se decide." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
         <Filtros contagem={lista.length} total={todas.length}>
           <Chip activo={soDiv} onClick={() => setSoDiv(!soDiv)}>só com divergências</Chip>
           <Chip activo={verApagadas} onClick={() => setVerApagadas(!verApagadas)}>mostrar escondidas e abandonadas{abandonadas.length ? ` (${abandonadas.map((e) => e.nome).join(", ")})` : ""}</Chip>
@@ -66,7 +93,7 @@ export default function SeccaoEstrategias() {
             <thead><tr><th className={th}>Estratégia</th><th className={th}>Execução</th><th className={th}>Seguidores</th><th className={th} title="Catálogo da MTM Auto: trades reais fechadas em 90 dias, parciais pesadas — o número que os clientes vêem">90 d · publicado</th><th className={th} title="mtmauto_signals: tudo-ou-nada, sem parciais — sub-avalia. Diagnóstico interno, não publicar.">Ideias 30 d</th><th className={th}>Último sinal</th><th className={th}>Divergências</th></tr></thead>
             <tbody>
               {lista.map((e) => (
-                <tr key={e.id} className={trClic} onClick={() => ctx.abrir({ tipo: "estrategia", id: e.id })}>
+                <tr key={e.id} className={trClic} onClick={() => abrir(e.slug)}>
                   <td className={td}>
                     <p className="font-medium text-zinc-100">{e.nome}{e.apagada && <span className="ml-1 text-rose-400" title="apagado_em: fora de todos os catálogos, histórico intacto. Abre a ficha para restaurar.">(escondida)</span>}</p>
                     <p className="text-[10px] text-zinc-500">{e.slug} · {e.tipo ?? "—"}{e.equipa ? ` · equipa ${e.equipa}` : " · casa"}{e.mestres?.cfIds.length ? ` · CF ${e.mestres.cfIds.join(",")} ${e.mestres.cfCortado ? "cortada" : "por cortar"}` : e.estrategiaCf ? ` · CF ${e.estrategiaCf}` : ""}{e.abandonada ? " · abandonada" : ""}{e.canalChat ? ` · chat ${e.canalChat}` : ""}</p>
@@ -119,33 +146,24 @@ export default function SeccaoEstrategias() {
         </Lista>
       </Painel>
 
-      {/* Eram doze acordeões seguidos, pela ordem em que foram sendo acrescentados: para achar um
-          lia-se a lista toda. Agora vão por PERGUNTA — o que ligo/desligo, de onde vêm os sinais,
-          para onde vão, e o que confiro — que é o que se sabe antes de clicar. */}
-      <Grupo titulo="Afinar" nota="Mexem no que a estratégia faz.">
-        <Recolhivel titulo="Controlo das estratégias" descricao="Interruptores (com o estado no motor das mestres), receção por canal, perps, trailing e desempenho.">
-          <div className="space-y-6"><MtmcopyStrategyControl /><EstrategiasDesempenho /><TrailingEstrategias /></div>
-        </Recolhivel>
-        <Recolhivel titulo="Testes · provider e Telegram" descricao="Ordem de teste na conta provider e mensagem de teste nos canais."><MtmcopyTestPanel /></Recolhivel>
+      {/* 3 · DETALHE — recolhido. Decidir uma estratégia faz-se na página dela; aqui fica o que é do
+          motor inteiro (kill-switch, modo por conta) e o diagnóstico. O que saiu está no inventário. */}
+      <Grupo titulo="Motor e criação" nota="O que não é de uma estratégia só.">
+        <Recolhivel titulo="Motor das mestres · kill-switch, contas e alertas" descricao="O motor inteiro: kill-switch, modo por conta, últimas ordens e alertas. Os modos de cada estratégia mudam-se na página dela."><MotorMestres /></Recolhivel>
+        <Recolhivel titulo="Nova estratégia · provider externo" descricao="MetaApi (id colado), Telegram (chat id) ou MT5 directo. Nasce em sombra com mestre, rotas e canal."><ProvidersExternos aoCriar={recarregar} /></Recolhivel>
+        <Recolhivel titulo="Interruptores globais da receção" descricao="Receção por canal, perps, sombra do Sensei (site_settings) — valem para todas as estratégias."><MtmcopyStrategyControl /></Recolhivel>
       </Grupo>
 
-      <Grupo titulo="De onde vêm os sinais" nota="As contas e os canais que produzem cada estratégia.">
-        <Recolhivel titulo="Nova estratégia · provider externo" descricao="MetaApi (id colado), Telegram (chat id) ou MT5 directo — o mesmo modelo e API do admin da MTM Auto. Nasce em sombra com mestre, rotas e canal."><ProvidersExternos aoCriar={recarregar} /></Recolhivel>
+      <Grupo titulo="Diagnóstico" nota="Só leitura (a reconciliação lê a MetaApi quando lho pedes).">
+        <Recolhivel titulo="Desempenho por estratégia" descricao="Resultados por estratégia (interno)."><EstrategiasDesempenho /></Recolhivel>
         <Recolhivel titulo="Fontes · estado real" descricao="Cada estratégia, a conta que a publica e o que a MetaApi diz sobre ela."><MtmcopyFontesVivas /></Recolhivel>
         <Recolhivel titulo="Contas provider (mestre)" descricao="As contas de origem de cada estratégia."><MtmcopyProviderAccounts /></Recolhivel>
         <Recolhivel titulo="Providers das equipas" descricao="Contas de estratégia agrupadas por equipa MTM Auto."><ProvidersEquipas /></Recolhivel>
-        <Recolhivel titulo="Senders · Telegram e chats" descricao="Para que canal sai cada estratégia."><MtmcopyTelegramSenders /></Recolhivel>
-        <Recolhivel titulo="Rotas provider" descricao="O caminho de cada rota, da origem ao canal." aberto={Boolean(ctx.filtro.routeId)}><MtmcopyProviderPipeline initialRouteId={ctx.filtro.routeId ?? null} /></Recolhivel>
-      </Grupo>
-
-      <Grupo titulo="Conferir" nota="Só leitura — nenhum destes painéis muda alguma coisa (o de cima lê a MetaApi quando lho pedes).">
-        <Recolhivel titulo="Reconciliação CopyFactory (lê a MetaApi)" descricao="Seguidores reais na CopyFactory, divergências e re-sync em lote com releitura — acção explícita, não corre sozinha.">
-          <EstrategiasCopia />
-        </Recolhivel>
+        <Recolhivel titulo="Senders · Telegram e rotas provider" descricao="Para que canal sai cada estratégia e o caminho de cada rota." aberto={Boolean(ctx.filtro.routeId)}><div className="space-y-6"><MtmcopyTelegramSenders /><MtmcopyProviderPipeline initialRouteId={ctx.filtro.routeId ?? null} /></div></Recolhivel>
+        <Recolhivel titulo="Reconciliação CopyFactory (lê a MetaApi)" descricao="Seguidores reais na CopyFactory, divergências e re-sync em lote com releitura."><EstrategiasCopia /></Recolhivel>
         <Recolhivel titulo="Saúde das ligações (regras de risco)" descricao="Multiplicador sem risco, T2T com grupos, sem baseline, MT5 em erro."><MtmcopySubscriberHealth /></Recolhivel>
-        <Recolhivel titulo="Espelho provider (caminho antigo) · relatório" descricao="Mestre MetaApi vs conta SIM trade a trade. Só enquanto a estratégia não passa o sinal directo à mestre SIM do motor (sinal em live desliga-o).">
-          <EspelhoProviderRelatorio />
-        </Recolhivel>
+        <Recolhivel titulo="Espelho provider · relatório" descricao="Mestre MetaApi vs conta SIM trade a trade (caminho antigo). Ligar/configurar: página da estratégia."><EspelhoProviderRelatorio /></Recolhivel>
+        <Recolhivel titulo="Testes · provider e Telegram" descricao="Ordem de teste na conta provider e mensagem de teste nos canais."><MtmcopyTestPanel /></Recolhivel>
         <Recolhivel titulo="Visão global do sistema" descricao="Performance agregada (só admin)."><MtmcopyGlobalPerformance /></Recolhivel>
       </Grupo>
     </div>

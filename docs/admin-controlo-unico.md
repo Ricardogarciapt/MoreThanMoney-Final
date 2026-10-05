@@ -75,3 +75,72 @@ acrescentam a coluna «depois».
 | Página | `/admin/centro?s=estrategias&e=<slug>` |
 
 As 6 rotas antigas ficam vivas como **fachadas finas** que chamam a camada única.
+
+## Fase 1 — feito (05/10)
+
+**Página por estratégia**: `/admin/centro?s=estrategias&e=<slug>` (`components/admin/centro/estrategia-pagina.tsx`).
+Ordem do ecrã = hierarquia pedida pelo dono:
+
+1. **Atenção** — contradições entre elos (`lib/admin-centro/estrategia-contradicoes.ts`): fonte
+   desligada × mestre live, MT5 por ligar × live, apagada/inactiva × live, mestre sem conta,
+   CopyFactory por cortar × propagação live, kill/motor desligado, T2T live × T2T da rota desligado,
+   cópia pausada × estratégia activa na app, rota activa para quem não tem direito, subscrição em
+   auto-aceitar sem rota.
+2. **Cadeia** (cada elo com o seu interruptor):
+   1. Fonte — tipo, conta/chat, estado (viva / desligada / MT5 por ligar / sem fonte), canal T2T,
+      último sinal; «Registar na cadeia» quando não há mestre.
+   2. Conta mestre — login, saldo/equity, **posições abertas agora**, CopyFactory por cortar; os três
+      modos (sinal → mestre, propagação, T2T) com o motivo de bloqueio do live.
+   3. Rotas — `copia_rotas` da mestre: destino, tipo, live/sombra pela regra do motor, estado/motivo
+      de pausa, lote, abertas, último evento, direito; Ligar/Desligar subscritor; cópia da rota provider.
+   4. Subscritores — MTM Auto (auto-aceitar, lote, rota?, direito), contas MTM Funded que seguem,
+      ligações T2T do canal; Tap to Trade on/off da rota provider.
+   Ao lado: a MESMA coluna do quadro de cópias (`vista-simples.tsx`), e «Ver no quadro de cópias»
+   abre `?s=copia&estrategia=<slug>` filtrado.
+3. **Gestão** — `OpcoesEstrategia` (listada, a executar, SL mínimo, trailing, risco, BE, máx/dia,
+   símbolos, apagar=esconder/restaurar), saídas parciais (novo no site, validado: soma ≤ 100 %),
+   espelho provider (criar conta, ligar, fechos/parciais) e fonte de execução mestre/espelho.
+4. **Detalhe** — ids, recolhido.
+
+**Escrita única**: `lib/admin-centro/servidor/estrategia-escrita.ts` (`escreverEstrategia(quem, {accao,…})`)
+com a regra pura em `lib/admin-centro/estrategia-escrita-plano.ts`. Acções: `opcoes`, `trailing`,
+`saidas`, `fonte`, `apagar`, `apagar_parando`, `restaurar`, `registar`, `gravar`, `conta`
+(alcance **equipa**) · `mestres`, `rota_provider`, `canal_extra`, `espelho`, `criar`, `equipas`,
+`subscritor`, `conta_mestre` (alcance **casa**: só admin do site / super admin).
+
+**API**: `GET /api/admin/centro/estrategia?e=<slug>` (página), `GET …?lista=1[&equipa=]`, `POST …`.
+Guarda `soQuemDecide`: admin do site → tudo; admin da MTM Auto (Bearer) → só a sua equipa.
+
+### As 6 rotas que escreviam `mtmauto_providers` — agora fachadas
+| Rota | Depois |
+|---|---|
+| `api/admin/mtmcopy/trailing-estrategias` POST | → `escreverEstrategia({accao:'trailing'})` |
+| `api/admin/mtmcopy/t2t-controls` POST | → `rota_provider` / `canal_extra` (mesma ordem do travão) |
+| `api/admin/mtmfunded/espelho-provider` POST | → `espelho` (criar_conta / ligar / config) |
+| `api/admin/mtmauto-copia/providers` POST | → `registar` / `criar` |
+| `lib/admin-centro/servidor/opcoes-estrategia.ts` | chamado SÓ pela camada (`opcoes`/`apagar`/`restaurar`); a rota `centro/estrategia-opcoes` POST passa pela camada |
+| `lib/mtmfunded/estrategias-sinais/contas.ts` | → `conta_mestre` |
+| (extra) `api/admin/mtmauto-copia/mestres` POST e `centro/acoes {trocar_fonte}` | → `mestres` / `fonte` |
+
+`mestres_estrategias`: `painel-escrita.ts` só é importado pela camada; `registar-provider.ts` só é
+chamado pela camada (`registar`/`criar`).
+
+Guardas: `lib/admin-centro/__tests__/estrategia-escrita.check.ts` (paridade com a regra antiga de
+cada rota + franchisado X → 403 em Y, sem escrita) e `estrategia-contradicoes.check.ts`.
+
+## Centro: o que mudou (revamp 05/10)
+
+Pedido do dono: menos secções e cartões repetidos; atenção → controlo → detalhe. Nada que o dono
+use deixou de existir sem destino.
+
+| Onde estava | Para onde foi | Porquê |
+|---|---|---|
+| Secção **MTM Funded** (`?s=funded`, atalho 7) | Contas → grupo «MTM Funded» (aberto por `?s=contas&grupo=funded`); `?s=funded` redirecciona | as contas Funded já estavam na lista de Contas; o resto é um grupo |
+| Secção **Sincronização & Auditoria** (`?s=sincronizacao`, atalho 8) | Cópia → «Sincronização & auditoria» (aberto por `?s=copia&grupo=sincronizacao`); `?s=sincronizacao` redirecciona | sincronizar é reconciliar a cópia; a secção Cópia continua a ser o quadro de controlo (URL igual) |
+| Estratégias → gaveta: opções, trocar fonte, link «Pausar/apagar no admin MTM Auto» | Página da estratégia (Gestão) | dois sítios com o mesmo interruptor; a gaveta é agora resumo + «Abrir a página» |
+| Estratégias → **TrailingEstrategias** | Página da estratégia → Opções (trailing estava 2× no mesmo ecrã) | duplicado |
+| Estratégias → MotorMestres aberto no topo | «Motor e criação» (recolhido); os modos por estratégia estão na página | o motor inteiro (kill, contas) não é de uma estratégia |
+| Estratégias → azulejos «Em espelho» e «Ideias 30 d» | coluna «Ideias 30 d» da tabela; espelho na página | cartões repetidos |
+| Estratégias → 12 acordeões em 3 grupos | «Atenção» (só as com problemas) · lista · «Motor e criação» · «Diagnóstico» | hierarquia |
+| Estratégias → «Senders» e «Rotas provider» separados | um só acordeão «Senders · Telegram e rotas provider» | o mesmo assunto |
+| `?s=copia` | fica; ganha filtro `&estrategia=<slug>` e o grupo de sincronização | regra do dono |

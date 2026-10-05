@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { soAdmin } from '@/lib/copia-contas/servidor/guarda'
 import { CAMPOS_OPCOES } from '@/lib/estrategias-admin/opcoes'
-import {
-  apagarEstrategia, CONFIRMACAO_OPCOES, gravarOpcoesEstrategia, lerOpcoesEstrategia, restaurarEstrategia,
-} from '@/lib/admin-centro/servidor/opcoes-estrategia'
+import { CONFIRMACAO_OPCOES, lerOpcoesEstrategia } from '@/lib/admin-centro/servidor/opcoes-estrategia'
+import { escreverEstrategia } from '@/lib/admin-centro/servidor/estrategia-escrita'
+import { quemAdminDoSite } from '@/lib/admin-centro/servidor/quem-decide'
 import { AVISO_APAGAR, confirmacaoDeApagar } from '@/lib/estrategias-admin/apagar'
 
 export const dynamic = 'force-dynamic'
@@ -33,22 +33,15 @@ export const GET = soAdmin(async (_a: string, req: NextRequest) => {
   })
 })
 
+/** POST — passa pela camada única de escrita (opcoes | apagar | restaurar). */
 export const POST = soAdmin(async (adminId: string, req: NextRequest) => {
   const corpo = (await req.json().catch(() => ({}))) as Record<string, unknown>
-  const { providerId, confirmacao, accao, ...opcoes } = corpo
+  const { providerId, accao, ...resto } = corpo
   if (!providerId) return NextResponse.json({ error: 'Falta o id da estratégia.' }, { status: 400 })
-
-  // Apagar = esconder (084): a linha fica, sai dos catálogos, o histórico não se perde.
-  if (accao === 'apagar' || accao === 'restaurar') {
-    const r = accao === 'apagar'
-      ? await apagarEstrategia(adminId, String(providerId), String(confirmacao ?? ''))
-      : await restaurarEstrategia(adminId, String(providerId))
-    return NextResponse.json({ ok: r.ok, message: r.mensagem, ...(r.ok ? {} : { error: r.mensagem }) }, { status: r.status })
-  }
-
-  const r = await gravarOpcoesEstrategia(adminId, String(providerId), opcoes, String(confirmacao ?? ''))
+  const a = accao === 'apagar' || accao === 'restaurar' ? accao : 'opcoes'
+  const r = await escreverEstrategia(quemAdminDoSite(adminId), { ...resto, accao: a, providerId: String(providerId) })
   return NextResponse.json(
-    { ok: r.ok, message: r.mensagem, opcoes: r.opcoes ?? null, ...(r.ok ? {} : { error: r.mensagem }) },
+    { ok: r.ok, message: r.mensagem, opcoes: (r.dados?.opcoes as unknown) ?? null, ...(r.ok ? {} : { error: r.mensagem }) },
     { status: r.status },
   )
 })

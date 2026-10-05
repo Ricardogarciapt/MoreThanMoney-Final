@@ -38,7 +38,9 @@ async function main() {
     const src = readFileSync(p, 'utf8')
     const metodos = [...src.matchAll(/export\s+(?:async\s+function|const|function)\s+(GET|POST|PUT|PATCH|DELETE)\b/g)].map((m) => m[1])
     assert.ok(metodos.length > 0, `${p}: sem handlers`)
-    const guardados = [...src.matchAll(/export\s+const\s+(GET|POST|PUT|PATCH|DELETE)\s*=\s*soAdmin\(/g)].map((m) => m[1])
+    // `soQuemDecide` (05/10) é o soAdmin que também deixa entrar o admin da MTM Auto, limitado à equipa
+    // dele — só em /api/admin/centro/estrategia, a API única que a MTM Auto usa para as estratégias.
+    const guardados = [...src.matchAll(/export\s+const\s+(GET|POST|PUT|PATCH|DELETE)\s*=\s*(?:soAdmin|soQuemDecide)\(/g)].map((m) => m[1])
     assert.deepEqual(guardados.sort(), metodos.sort(), `${p}: há handlers sem soAdmin`)
   }
   let chamadas403 = 0

@@ -8,7 +8,6 @@ import type { LinhaFanout, Sinal } from "@/lib/admin-centro/servidor/sinais"
 import { FONTES, nomeMotivo } from "@/lib/admin-centro/regras"
 import { appDaConta, contasDaEstrategia, estrategiasDaConta, estrategiasSemFicha } from "@/lib/admin-centro/ligacoes"
 import ContaModal from "@/components/admin/mtmfunded-conta-modal"
-import OpcoesEstrategia from "./opcoes-estrategia"
 import { useCentroCtx, type Alvo } from "./contexto"
 import { tomEstadoConta, type DadosContas } from "./seccoes/contas"
 import type { DadosEstrategias } from "./seccoes/estrategias"
@@ -188,79 +187,42 @@ function GavetaConta({ refConta }: { refConta: string }) {
 
 function GavetaEstrategia({ id }: { id: string }) {
   const ctx = useCentroCtx()
-  const { dados, recarregar } = useCentro<DadosEstrategias>(`/api/admin/centro/estrategias?v=${ctx.versao}`, 30_000)
+  const { dados } = useCentro<DadosEstrategias>(`/api/admin/centro/estrategias?v=${ctx.versao}`, 30_000)
   const contas = useCentro<DadosContas>(`/api/admin/centro/contas?v=${ctx.versao}`, 30_000)
-  const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null)
   const e = dados?.estrategias.find((x) => x.id === id)
   // A mesma regra da ficha da conta, lida ao contrário (lib/admin-centro/ligacoes.ts).
   const seguidores = e ? contasDaEstrategia(e, contas.dados?.contas ?? []) : []
-
-  const trocar = async (fonte: "mestre" | "espelho") => {
-    if (!e) return
-    const palavra = pedirPalavra(`Trocar a fonte de execução de ${e.nome} para «${fonte}».\nA base troca a estratégia E as rotas de cópia no mesmo commit, e recusa «espelho» sem veredicto alinhado.`, "CONFIRMAR")
-    if (!palavra) return
-    const r = await pedirCentro<{ message?: string }>("/api/admin/centro/acoes", { method: "POST", body: { acao: "trocar_fonte", providerId: e.id, fonte, confirmacao: palavra } })
-    setMsg({ ok: r.success, texto: r.success ? r.data?.message ?? "feito" : r.error ?? "falhou" })
-    ctx.depoisDeAcao(); void recarregar()
-  }
+  /**
+   * A gaveta é o RESUMO (vem de qualquer sítio: conta, sinal, utilizador). Decidir faz-se na PÁGINA
+   * da estratégia — opções, fonte de execução e apagar saíram daqui a 05/10 para não haver dois
+   * sítios com o mesmo interruptor (docs/admin-controlo-unico.md).
+   */
+  const abrirPagina = () => { if (e) { ctx.fechar(); ctx.irPara("estrategias", { e: e.slug }) } }
 
   return (
     <Gaveta aberta titulo={e?.nome ?? "Estratégia"} sub={e ? `${e.slug} · ${e.tipo ?? "—"}${e.equipa ? ` · equipa ${e.equipa}` : " · casa"}` : id} aoFechar={ctx.fechar}>
       {!dados ? <Vazio>A ler…</Vazio> : !e ? <Vazio>Estratégia não encontrada.</Vazio> : (
         <>
+          <Botao tom="ouro" onClick={abrirPagina}>Abrir a página da estratégia — cadeia e interruptores →</Botao>
           <div className="flex flex-wrap gap-1.5">
             <Pilula tom={e.ativa ? "ok" : "neutro"}>{e.ativa ? "activa" : "inactiva"}</Pilula>
             {e.apagada && <Pilula tom="grave">apagada</Pilula>}
-            <Pilula tom={e.fonteExecucao === "espelho" ? "info" : "neutro"}>fonte {e.fonteExecucao ?? "mestre (084 por aplicar)"}</Pilula>
-            {e.estrategiaCf && <Pilula>CopyFactory {e.mestres?.cfIds.length ? `${e.mestres.cfIds.join(",")} ${e.mestres.cfCortado ? "cortada" : "por cortar"}` : e.estrategiaCf}</Pilula>}
-          </div>
-          {e.mestres && (
-            <div className="rounded-xl border border-[#D2A63C]/20 p-3 text-xs">
-              <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">Motor das mestres</p>
-              <p>Executa hoje: <b>{e.mestres.executor === "motor" ? "motor das mestres" : e.mestres.executor === "copyfactory" ? "CopyFactory" : "legado"}</b> — {e.mestres.executorNota}.</p>
-              <p className="text-zinc-400">Propagação {e.mestres.modo} · sinal {e.mestres.sinalModo} · T2T {e.mestres.t2tModo} · {e.mestres.rotuloMestre} {e.mestres.contaMestreLogin ?? ""} · {e.mestres.nRotasLive}/{e.mestres.nRotas} rotas live</p>
-              <a href="/admin/centro?s=estrategias" className="text-[#D2A63C] hover:underline">Mudar modos / contas / kill-switch →</a>
-            </div>
-          )}
-          {msg && <Aviso tom={msg.ok ? "info" : "grave"}>{msg.texto}</Aviso>}
-          <div className="grid grid-cols-2 gap-3 rounded-xl border border-white/[0.06] p-3 sm:grid-cols-3">
-            <Campo rotulo="Conta mestre"><span className="font-mono">{e.metaapiAccountId ?? "—"}</span></Campo>
-            <Campo rotulo="Seguidores">{e.seguidores.total} (auto {e.seguidores.mtmauto}, site {e.seguidores.site}, funded {e.seguidores.funded})</Campo>
-            <Campo rotulo="Em automático">{e.seguidores.mtmautoAuto}</Campo>
-            <Campo rotulo="Sinais 30 d">{e.desempenho30d.sinais} ({e.desempenho30d.fechados} fechados)</Campo>
-            <Campo rotulo="Pips · % · acerto">{fmtNum(e.desempenho30d.pips, 1)} · {e.desempenho30d.pct ?? "—"}% · {e.desempenho30d.acerto ?? "—"}%</Campo>
-            <Campo rotulo="Resultado € (admin)">{e.desempenho30d.dinheiro == null ? "—" : fmtNum(e.desempenho30d.dinheiro, 2)} em {e.desempenho30d.execucoes} execuções</Campo>
+            {e.fonteDesligada && <Pilula tom="grave">fonte desligada</Pilula>}
+            {e.mestres && <Pilula tom={e.mestres.modo === "live" ? "grave" : "info"}>motor {e.mestres.modo} · sinal {e.mestres.sinalModo} · T2T {e.mestres.t2tModo}</Pilula>}
           </div>
           {e.divergencias.length > 0 && <Aviso>{e.divergencias.map((d) => <p key={d}>• {d}</p>)}</Aviso>}
-
-          {/* O que a estratégia FAZ — listada, a executar, risco por omissão, stop mínimo, trailing,
-              break-even, tecto de trades e símbolos. Isto só se escrevia no admin da MTM Auto e o
-              Centro mandava o admin para lá; agora escreve-se aqui, na mesma tabela e pela mesma
-              regra (lib/estrategias-admin/opcoes.ts). */}
-          {!e.apagada && <OpcoesEstrategia providerId={e.id} versao={ctx.versao} aoGravar={() => { ctx.depoisDeAcao(); void recarregar() }} />}
-
-          <div className="rounded-xl border border-white/[0.06] p-3">
-            <p className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">Fonte de execução</p>
-            {e.espelho ? (
-              <div className="space-y-1 text-xs">
-                <p>Conta espelho <span className="font-mono">{e.espelho.conta ?? "—"}</span> · <Pilula tom={e.espelho.alinhado ? "ok" : "aviso"}>{e.espelho.alinhado ? "alinhado" : "por alinhar"}</Pilula></p>
-                <p className="text-zinc-500">{e.espelho.nTrades ?? 0} trades · dif. média {e.espelho.mediaDiferencaPips ?? "—"} pips · p95 {fmtMs(e.espelho.latenciaP95Ms)}</p>
-                {e.espelho.motivos.map((m) => <p key={m} className="text-amber-300">• {m}</p>)}
-              </div>
-            ) : <p className="text-xs text-zinc-500">Sem conta espelho.</p>}
-            <div className="mt-2 flex gap-1.5">
-              <Botao onClick={() => trocar("mestre")} disabled={e.fonteExecucao === "mestre" || e.apagada}>Usar mestre</Botao>
-              {!e.mestres && <Botao tom="ouro" onClick={() => trocar("espelho")} disabled={!e.espelho?.alinhado || e.fonteExecucao === "espelho" || e.apagada} title={e.espelho?.alinhado ? "" : "Só com veredicto alinhado"}>Usar espelho</Botao>}
-            </div>
-            {e.mestres && <p className="mt-1 text-[10.5px] text-zinc-500">Esta estratégia está no motor das mestres: a conta SIM é a mestre e o motor copia-a directamente. A troca para «espelho» (084) é do caminho antigo e fica escondida aqui.</p>}
+          <div className="grid grid-cols-2 gap-3 rounded-xl border border-white/[0.06] p-3 sm:grid-cols-3">
+            <Campo rotulo="Conta mestre"><span className="font-mono">{e.mestres?.contaMestreLogin ?? e.metaapiAccountId ?? "—"}</span></Campo>
+            <Campo rotulo="Seguidores">{e.seguidores.total} (auto {e.seguidores.mtmauto}, site {e.seguidores.site}, funded {e.seguidores.funded})</Campo>
+            <Campo rotulo="Rotas live">{e.mestres ? `${e.mestres.nRotasLive}/${e.mestres.nRotas}` : "—"}</Campo>
+            <Campo rotulo="Sinais 30 d">{e.desempenho30d.sinais} ({e.desempenho30d.fechados} fechados)</Campo>
+            <Campo rotulo="Pips · % · acerto">{fmtNum(e.desempenho30d.pips, 1)} · {e.desempenho30d.pct ?? "—"}% · {e.desempenho30d.acerto ?? "—"}%</Campo>
+            <Campo rotulo="Resultado € (admin)">{e.desempenho30d.dinheiro == null ? "—" : fmtNum(e.desempenho30d.dinheiro, 2)}</Campo>
           </div>
-
           <div className="flex flex-wrap gap-1.5">
             <Botao onClick={() => ctx.irPara("sinais", { estrategia: e.id })}>Sinais desta estratégia</Botao>
-            <Botao onClick={() => ctx.irPara("estrategias")}>Controlo / trailing / reconciliação</Botao>
-            <a href={`${process.env.NEXT_PUBLIC_MTM_AUTO_BASE_URL || "https://mtm-auto.vercel.app"}/`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800" title="Pausar/apagar estratégia: caminho guardado do MTM Auto (marca apagado_em, nunca DELETE)">Pausar/apagar no admin MTM Auto <ExternalLink className="h-3 w-3" /></a>
+            <Botao onClick={() => { ctx.fechar(); ctx.irPara("copia", { estrategia: e.slug }) }}>Ver no quadro de cópias</Botao>
           </div>
-
           <div>
             <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">Contas a seguir ({seguidores.length})</p>
             {seguidores.length === 0 ? <Vazio>Nenhuma conta ligada encontrada.</Vazio> : (

@@ -382,7 +382,7 @@ function AdminPageClient() {
                     procura uma conta deve ir para lá; aqui é o produto (vendas, torneios, regras). */}
                 <p className="text-sm text-gray-400 mt-2">
                   À procura de uma <strong className="text-gray-300">conta</strong> (estado, saldo, dono, ficha)?{" "}
-                  <Link href="/admin/centro?s=funded" className="text-[#D2A63C] hover:underline">
+                  <Link href="/admin/centro?s=contas&grupo=funded" className="text-[#D2A63C] hover:underline">
                     Centro de Controlo › MTM Funded
                   </Link>{" "}
                   tem a lista completa e a ficha de cada uma.

@@ -182,7 +182,10 @@ export async function ligarContaExistente(userId: string, conta: { id: string; m
     }
   }
   if (c.papel === 'casa' && c.slug) {
-    const { error } = await db.from('mtmauto_providers').update({ funded_account_id: conta.id, updated_at: new Date().toISOString() }).ilike('slug', c.slug).is('funded_account_id', null)
-    if (error) r.erro = `mtmauto_providers: ${error.message}`
+    // A conta mestre escreve-se pela camada única (05/10) — provisionamento da casa, com o dono como autor.
+    const { escreverEstrategia } = await import('@/lib/admin-centro/servidor/estrategia-escrita')
+    const { quemAdminDoSite } = await import('@/lib/admin-centro/servidor/quem-decide')
+    const w = await escreverEstrategia(quemAdminDoSite(userId), { accao: 'conta_mestre', slug: c.slug, contaId: conta.id })
+    if (!w.ok) r.erro = w.mensagem
   }
 }

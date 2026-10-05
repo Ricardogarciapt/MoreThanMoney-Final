@@ -46,7 +46,8 @@ export function LinhaSubscritor({ s, compacto }: { s: SubscritorCadeia; compacto
   )
 }
 
-function Coluna({ n }: { n: NoEstrategia }) {
+/** Exportada para a página da estratégia no Centro: a MESMA coluna do quadro, filtrada a uma estratégia. */
+export function Coluna({ n }: { n: NoEstrategia }) {
   return (
     <div className="flex min-w-[260px] flex-1 flex-col rounded-xl border border-white/[0.07] bg-zinc-900/40">
       {/* 1. A FONTE — onde nasce o sinal. */}

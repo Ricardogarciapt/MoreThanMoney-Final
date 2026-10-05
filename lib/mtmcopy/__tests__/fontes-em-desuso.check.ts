@@ -63,6 +63,8 @@ const CATALOGOS_VIVOS = [
   'lib/telegram-channel-push.ts',
   'lib/admin-centro/servidor/sinais.ts',
   'app/api/admin/mtmcopy/t2t-controls/route.ts',
+  // os canais T2T extra mudaram-se para a regra da camada única de escrita (05/10)
+  'lib/admin-centro/estrategia-escrita-plano.ts',
   'components/mobile/chat-channel-meta.ts',
   'lib/copia-contas/estrategias.ts',
   'lib/admin-centro/servidor/estrategias.ts',

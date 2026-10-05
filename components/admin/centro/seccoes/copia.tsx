@@ -6,6 +6,7 @@ import CopiaEntreContas from "@/components/admin/mtmauto-copia/copia-entre-conta
 import EventosCopia from "@/components/admin/mtmauto-copia/eventos"
 import VistaSimples from "@/components/admin/copia-cadeia/vista-simples"
 import QuadroCadeia from "@/components/admin/copia-cadeia/quadro"
+import SeccaoSincronizacao from "./sincronizacao"
 
 import { CONFIRMACOES } from "@/lib/admin-centro/regras"
 import { useEffect, useState } from "react"
@@ -69,8 +70,15 @@ export default function SeccaoCopia() {
       >
         {erroCadeia && <Aviso tom="grave">{erroCadeia}</Aviso>}
         {!cadeia && !erroCadeia && <p className="text-[12px] text-zinc-500">A ler a cadeia…</p>}
+        {ctx.filtro.estrategia && (
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-[11.5px] text-zinc-400">
+            <Pilula tom="ouro">só {ctx.filtro.estrategia}</Pilula>
+            <Botao onClick={() => ctx.irPara("copia")}>ver todas</Botao>
+            <Botao onClick={() => ctx.irPara("estrategias", { e: ctx.filtro.estrategia })}>página da estratégia →</Botao>
+          </div>
+        )}
         {cadeia && (vista === "lista"
-          ? <VistaSimples c={cadeia} />
+          ? <VistaSimples c={ctx.filtro.estrategia ? { ...cadeia, estrategias: cadeia.estrategias.filter((n) => n.slug.toLowerCase() === ctx.filtro.estrategia.toLowerCase()) } : cadeia} />
           : <QuadroCadeia c={cadeia} recarregar={() => { void recarregarCadeia(); void recarregar() }} />)}
       </Painel>
 
@@ -99,6 +107,10 @@ export default function SeccaoCopia() {
       </Painel>
       <Recolhivel titulo="Eventos (pretendido vs real)" descricao="Registo unificado com filtros e CSV." aberto={Boolean(ctx.filtro.eventos)}>
         <EventosCopia />
+      </Recolhivel>
+      {/* Era a secção «Sincronização & Auditoria» (?s=sincronizacao redirecciona para aqui). */}
+      <Recolhivel titulo="Sincronização & auditoria" descricao="Sincronizar tudo com a MetaApi/CopyFactory (pré-visualiza e aplica só o que escolheres), a transição de /admin/mtmcopy e a auditoria do admin." aberto={ctx.filtro.grupo === "sincronizacao"}>
+        <SeccaoSincronizacao />
       </Recolhivel>
     </div>
   )

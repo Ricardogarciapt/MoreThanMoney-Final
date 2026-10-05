@@ -72,10 +72,11 @@ export async function executarAcao(adminId: string, corpo: Record<string, unknow
         alvo = `provider:${providerId}`
         if (!ehUuid(providerId) || !['mestre', 'espelho'].includes(fonte)) { r = { ok: false, status: 400, mensagem: 'Pedido inválido.' }; break }
         if (confirmacao !== 'CONFIRMAR') { r = { ok: false, status: 400, mensagem: 'Escreve «CONFIRMAR» para trocar a fonte de execução.' }; break }
-        const { data, error } = await db().rpc('mtmauto_trocar_fonte_execucao', { p_provider: providerId, p_fonte: fonte, p_por: adminId })
-        r = error
-          ? { ok: false, status: /does not exist|could not find/i.test(error.message) ? 424 : 409, mensagem: /does not exist|could not find/i.test(error.message) ? 'Migração 084 por aplicar.' : error.message.replace(/^.*fonte_execucao: /, '') }
-          : { ok: true, status: 200, mensagem: `Fonte de execução: ${fonte}.`, detalhe: data }
+        // A troca escreve-se pela camada única (05/10); a auditoria fica a desta acção, não em dobro.
+        const { escreverEstrategia } = await import('./estrategia-escrita')
+        const { quemAdminDoSite } = await import('./quem-decide')
+        const w = await escreverEstrategia(quemAdminDoSite(adminId), { accao: 'fonte', providerId, fonte }, { auditar: false })
+        r = { ok: w.ok, status: w.status, mensagem: w.mensagem, detalhe: w.dados }
         break
       }
       case 'flag_padrao': {

@@ -127,7 +127,7 @@ export interface Alerta {
   acoes: { rotulo: string; acao: AcaoRunbook; confirmar?: string }[]
 }
 
-export type SeccaoCentro = 'cockpit' | 'sinais' | 'estrategias' | 'contas' | 'copia' | 'utilizadores' | 'funded' | 'sincronizacao'
+export type SeccaoCentro = 'cockpit' | 'sinais' | 'estrategias' | 'contas' | 'copia' | 'utilizadores'
 
 export const SECCOES: { id: SeccaoCentro; nome: string; atalho: string }[] = [
   { id: 'cockpit', nome: 'Cockpit', atalho: '1' },
@@ -136,9 +136,24 @@ export const SECCOES: { id: SeccaoCentro; nome: string; atalho: string }[] = [
   { id: 'contas', nome: 'Contas', atalho: '4' },
   { id: 'copia', nome: 'Cópia', atalho: '5' },
   { id: 'utilizadores', nome: 'Utilizadores', atalho: '6' },
-  { id: 'funded', nome: 'MTM Funded', atalho: '7' },
-  { id: 'sincronizacao', nome: 'Sincronização & Auditoria', atalho: '8' },
 ]
+
+/**
+ * Secções que SAÍRAM no revamp de 05/10 e para onde foram. O dono tem links guardados: `?s=funded` e
+ * `?s=sincronizacao` continuam a abrir — redireccionam para a secção que os absorveu, com o grupo
+ * certo aberto (docs/admin-controlo-unico.md, «Centro: o que mudou»).
+ */
+export const SECCOES_ABSORVIDAS: Record<string, { s: SeccaoCentro; filtro: Record<string, string> }> = {
+  funded: { s: 'contas', filtro: { grupo: 'funded' } },
+  sincronizacao: { s: 'copia', filtro: { grupo: 'sincronizacao' } },
+}
+
+/** O URL novo de uma secção antiga (null = não é antiga). Os outros parâmetros mantêm-se. */
+export function destinoDeSeccaoAntiga(params: Record<string, string>): Record<string, string> | null {
+  const d = SECCOES_ABSORVIDAS[params.s ?? '']
+  if (!d) return null
+  return { ...params, ...d.filtro, s: d.s }
+}
 
 export function ehSeccao(v: unknown): v is SeccaoCentro {
   return SECCOES.some((s) => s.id === v)

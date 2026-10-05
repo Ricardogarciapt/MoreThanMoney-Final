@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { soAdmin } from "@/lib/copia-contas/servidor/guarda"
+import { escreverEstrategia } from "@/lib/admin-centro/servidor/estrategia-escrita"
+import { quemAdminDoSite } from "@/lib/admin-centro/servidor/quem-decide"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -71,23 +74,13 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ok: true, estrategias })
 }
 
-export async function POST(req: NextRequest) {
-  const guard = await requireAdmin(req)
-  if (guard) return guard
-
-  const corpo = (await req.json().catch(() => ({}))) as Partial<Estrategia> & { id?: string }
+/**
+ * FACHADA (05/10): a escrita do trailing vive na camada única (`lib/admin-centro/servidor/
+ * estrategia-escrita.ts`, acção `trailing`). Esta rota fica viva para os painéis antigos não partirem.
+ */
+export const POST = soAdmin(async (adminId: string, req: NextRequest) => {
+  const corpo = (await req.json().catch(() => ({}))) as Record<string, unknown>
   if (!corpo.id) return NextResponse.json({ ok: false, erro: "Falta a estratégia" }, { status: 400 })
-
-  // Só os campos do trailing. O resto da linha (conta MetaApi, símbolos, horário) tem os seus
-  // próprios ecrãs — deixar este endpoint escrever tudo era abrir uma porta lateral para eles.
-  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
-  if (corpo.trailing_tempo_real !== undefined) patch.trailing_tempo_real = corpo.trailing_tempo_real === true
-  if (corpo.trailing_arranca_pips !== undefined) patch.trailing_arranca_pips = num(corpo.trailing_arranca_pips)
-  if (corpo.trailing_distancia_pips !== undefined) patch.trailing_distancia_pips = num(corpo.trailing_distancia_pips)
-  if (corpo.trailing_passo_pips !== undefined) patch.trailing_passo_pips = num(corpo.trailing_passo_pips)
-
-  const { error } = await getSupabaseAdmin().from("mtmauto_providers").update(patch).eq("id", corpo.id)
-  if (error) return NextResponse.json({ ok: false, erro: error.message }, { status: 500 })
-
-  return NextResponse.json({ ok: true })
-}
+  const r = await escreverEstrategia(quemAdminDoSite(adminId), { ...corpo, accao: "trailing", providerId: corpo.id })
+  return r.ok ? NextResponse.json({ ok: true }) : NextResponse.json({ ok: false, erro: r.mensagem }, { status: r.status })
+})

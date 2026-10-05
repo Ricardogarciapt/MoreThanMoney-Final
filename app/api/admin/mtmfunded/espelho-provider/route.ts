@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin, requireAdmin } from '@/lib/admin-api-helpers'
+import { soAdmin } from '@/lib/copia-contas/servidor/guarda'
+import { escreverEstrategia } from '@/lib/admin-centro/servidor/estrategia-escrita'
+import { quemAdminDoSite } from '@/lib/admin-centro/servidor/quem-decide'
 import { msEntre, resumirLatencias, veredictoEspelho, type LinhaComparacao } from '@/lib/mtmfunded/espelho/provider'
 
 export const dynamic = 'force-dynamic'
@@ -90,56 +93,13 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ migracao: true, dias, estrategias, pulso: pulsoR.data ?? null, veredictoSqlDisponivel: !veredR.error })
 }
 
-export async function POST(request: NextRequest) {
-  const negado = await requireAdmin(request)
-  if (negado) return negado
-  const db = getSupabaseAdmin()
+/**
+ * FACHADA (05/10): as escritas do espelho vivem na camada única (`estrategia-escrita.ts`, acção
+ * `espelho`). O corpo antigo `{ accao, slug, … }` continua a valer.
+ */
+export const POST = soAdmin(async (adminId: string, request: NextRequest) => {
   const b = await request.json().catch(() => ({})) as Record<string, unknown>
-  const slug = String(b.slug ?? '')
-  const { data: prov } = await db.from('mtmauto_providers').select('id, slug, nome, espelho_funded_account_id').eq('slug', slug).maybeSingle()
-  if (!prov) return NextResponse.json({ error: 'estratégia desconhecida' }, { status: 404 })
-
-  if (b.accao === 'criar_conta') {
-    if (prov.espelho_funded_account_id) return NextResponse.json({ error: 'esta estratégia já tem conta espelho', contaId: prov.espelho_funded_account_id }, { status: 409 })
-    const saldo = Number(b.saldo ?? 100_000)
-    if (!(saldo >= 1000 && saldo <= 10_000_000)) return NextResponse.json({ error: 'saldo inválido' }, { status: 400 })
-    const { verifyAdminAccess } = await import('@/lib/admin-api-helpers')
-    const { userId } = await verifyAdminAccess()
-    if (!userId) return NextResponse.json({ error: 'sem sessão de admin' }, { status: 401 })
-    const { camposDeContaSimulada } = await import('@/lib/mtmfunded/simulado/motor')
-    // Conta da CASA: nunca de cliente, sem segue_estrategia (o espelho das seguidoras não lhe toca),
-    // sem mtmauto_accounts (não aparece no MTM Auto), analise=true (as regras não a quebram).
-    const { data: conta, error } = await db.from('mtm_trading_accounts').insert({
-      user_id: userId, tipo: 'financiada', program_id: null, saldo_inicial: saldo, alavancagem: 100,
-      ...(await camposDeContaSimulada(saldo)),
-      conta_casa: true,
-      metricas: { analise: true, casa: true, espelhoProvider: prov.slug, estrategia: prov.nome ?? prov.slug, criadaEm: new Date().toISOString() },
-    }).select('id, mt5_login').single()
-    if (error || !conta) return NextResponse.json({ error: error?.message ?? 'insert sem linha' }, { status: 500 })
-    const { error: e2 } = await db.from('mtmauto_providers').update({ espelho_funded_account_id: conta.id }).eq('id', prov.id)
-    if (e2) return NextResponse.json({ error: e2.message, contaId: conta.id }, { status: 500 })
-    return NextResponse.json({ ok: true, contaId: conta.id, login: conta.mt5_login })
-  }
-
-  if (b.accao === 'ligar') {
-    if (b.ativo === true && !prov.espelho_funded_account_id) return NextResponse.json({ error: 'cria primeiro a conta espelho' }, { status: 409 })
-    const { error } = await db.from('mtmauto_providers').update({ espelho_provider_ativo: b.ativo === true }).eq('id', prov.id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ ok: true })
-  }
-
-  if (b.accao === 'config') {
-    const c = (b.config ?? {}) as Record<string, unknown>
-    const sf = String(c.seguirFechos ?? 'humanos')
-    const config = {
-      seguirFechos: ['humanos', 'todos', 'nenhum'].includes(sf) ? sf : 'humanos',
-      seguirParciais: c.seguirParciais === true,
-      copiarNiveisIniciais: c.copiarNiveisIniciais !== false,
-    }
-    const { error } = await db.from('mtmauto_providers').update({ espelho_config: config }).eq('id', prov.id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ ok: true, config })
-  }
-
-  return NextResponse.json({ error: 'acção desconhecida' }, { status: 400 })
-}
+  const r = await escreverEstrategia(quemAdminDoSite(adminId), { ...b, accao: 'espelho', sub: String(b.accao ?? ''), slug: String(b.slug ?? '') })
+  if (!r.ok) return NextResponse.json({ error: r.mensagem, ...(r.dados ?? {}) }, { status: r.status })
+  return NextResponse.json({ ok: true, ...(r.dados ?? {}) })
+})

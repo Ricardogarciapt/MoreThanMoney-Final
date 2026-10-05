@@ -218,7 +218,10 @@ caso('rotas novas: só administradores, verificado no servidor; a escrita só é
     }
   }
   for (const d of ['app', 'components', 'lib']) andar(join(raiz, d))
-  assert.deepEqual(importadores.filter((f) => !f.includes('__tests__')), ['app/api/admin/mtmauto-copia/mestres/route.ts'])
+  // Desde 05/10 a escrita das mestres só entra pela camada única (lib/admin-centro/servidor/
+  // estrategia-escrita.ts, acção `mestres`), que tem a guarda de equipa; a rota antiga é fachada dela.
+  assert.deepEqual(importadores.filter((f) => !f.includes('__tests__')), ['lib/admin-centro/servidor/estrategia-escrita.ts'])
+  assert.match(readFileSync(join(raiz, 'app/api/admin/mtmauto-copia/mestres/route.ts'), 'utf8'), /escreverEstrategia/, 'a rota antiga passa pela camada única')
 })
 
 // ── emblema das mestres ─────────────────────────────────────────────────────
