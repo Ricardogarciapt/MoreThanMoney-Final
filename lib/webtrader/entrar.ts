@@ -27,6 +27,7 @@ import { ligarOuReutilizarTradeLocker } from './tradelocker-ligar'
 import { cifraDisponivel } from '@/lib/mtmfunded/credenciais'
 import { emitirBilhete, envValido, lerBilhete } from '@/lib/tradelocker/ligacao'
 import { verificarQuotaMetaApi } from '@/lib/contas/quota-metaapi'
+import { esquecerContasDoUtilizador } from './contas'
 import { criarContaMetaApiDireta, deleteMetaApiAccount } from '@/lib/mtmcopy/metaapi-provision'
 import { isMetaApiConfigured } from '@/lib/mtmcopy/metaapi'
 import { chaveTentativa } from './corretoras/regras'
@@ -161,6 +162,7 @@ export async function entrarMt5(userId: string, corpo: Record<string, unknown>, 
       if (r.existente.mtmUserId === userId) {
         await db.from('webtrader_contas_mt5').update({ metaapi_account_id: r.existente.id, estado: 'connected', erro: null, updated_at: new Date().toISOString() }).eq('id', linhaId).eq('user_id', userId)
         await registarTentativa(userId, chave, true)
+        esquecerContasDoUtilizador(userId)
         return { ref: `mt5:wt:${linhaId}`, reutilizada: true }
       }
       throw new ErroCorretora(409, await falhar('Esta conta MT5 já está ligada à MTM noutro perfil ou produto. Usa a conta MTM onde a ligaste, ou remove-a lá primeiro.'))
@@ -177,6 +179,8 @@ export async function entrarMt5(userId: string, corpo: Record<string, unknown>, 
 
   await db.from('webtrader_contas_mt5').update({ metaapi_account_id: r.accountId, estado: 'connected', erro: null, updated_at: new Date().toISOString() }).eq('id', linhaId).eq('user_id', userId)
   await registarTentativa(userId, chave, true)
+  // A conta nova tem de contar já na quota e abrir já no WebTrader — sem esperar os 60 s da cache.
+  esquecerContasDoUtilizador(userId)
   return { ref: `mt5:wt:${linhaId}`, reutilizada: false }
 }
 
@@ -200,5 +204,6 @@ export async function removerContaWebtraderMt5(userId: string, id: string) {
     }
   }
   await db.from('webtrader_contas_mt5').delete().eq('id', id).eq('user_id', userId)
+  esquecerContasDoUtilizador(userId)
   return { ok: true, metaapi }
 }

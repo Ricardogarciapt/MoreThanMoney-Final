@@ -160,32 +160,53 @@ export function decidirQuotaMetaApi(
   return { ok: false, estado, codigo: 'quota_metaapi', erro: mensagemQuota(estado) }
 }
 
-/** Linhas de contas do utilizador nos DOIS produtos, normalizadas. */
-export async function linhasDeContas(userId: string): Promise<LinhaConta[]> {
+/**
+ * AS LINHAS CRUAS das três tabelas de contas do utilizador — UMA leitura, três derivações.
+ *
+ * A quota (`linhasDeContasBrutas`), a ordem da quota no WebTrader (`contasMetaApiDatadas`) e a
+ * lista do seletor (`listarContasReais`, em lib/webtrader/contas.ts) liam as MESMAS três tabelas
+ * cada uma por si: nove consultas por pedido, a cada sondagem de 5 s. Agora lêem-se uma vez e
+ * cada derivação é pura sobre o mesmo resultado. '*' porque colunas das migrações 069/074 podem
+ * não existir ainda; `webtrader_contas_mt5` (076) pode nem existir — sem ela, lista vazia.
+ */
+export interface ContasBrutas {
+  site: Record<string, unknown>[]
+  auto: Record<string, unknown>[]
+  wt: Record<string, unknown>[]
+}
+
+export async function lerContasBrutas(userId: string): Promise<ContasBrutas> {
   const db = getSupabaseAdmin()
   const [{ data: site }, { data: auto }, webtrader] = await Promise.all([
-    // '*': colunas das migrações 069/074 podem não existir ainda.
-    db.from('mtmcopy_connections').select('*').eq('user_id', userId),
-    db.from('mtmauto_accounts').select('*').eq('user_id', userId),
-    // Contas MT5 abertas só no WebTrader (076). Sem a migração aplicada, a consulta falha e não conta nada.
-    db.from('webtrader_contas_mt5').select('*').eq('user_id', userId),
+    db.from('mtmcopy_connections').select('*').eq('user_id', userId).order('created_at'),
+    db.from('mtmauto_accounts').select('*').eq('user_id', userId).order('created_at'),
+    db.from('webtrader_contas_mt5').select('*').eq('user_id', userId).order('created_at'),
   ])
+  return {
+    site: (site ?? []) as Record<string, unknown>[],
+    auto: (auto ?? []) as Record<string, unknown>[],
+    wt: webtrader.error ? [] : ((webtrader.data ?? []) as Record<string, unknown>[]),
+  }
+}
+
+/** As linhas normalizadas para a quota — pura, a partir das cruas. */
+export function linhasDeContasBrutas(b: ContasBrutas): LinhaConta[] {
   return [
-    ...(site ?? []).map((c: Record<string, unknown>) => ({
+    ...b.site.map((c) => ({
       metaapi_account_id: (c.metaapi_account_id as string) ?? null,
       login: (c.mt5_login as string) ?? null,
       servidor: (c.mt5_server as string) ?? null,
       plataforma: (c.mt5_platform as string) ?? 'mt5',
       estado: (c.mt5_status as string) ?? null,
     })),
-    ...(auto ?? []).map((c: Record<string, unknown>) => ({
+    ...b.auto.map((c) => ({
       metaapi_account_id: (c.metaapi_account_id as string) ?? null,
       login: (c.login as string) ?? null,
       servidor: (c.servidor as string) ?? null,
       plataforma: (c.plataforma as string) ?? 'mt5',
       estado: (c.estado as string) ?? null,
     })),
-    ...(webtrader.error ? [] : (webtrader.data ?? [])).map((c: Record<string, unknown>) => ({
+    ...b.wt.map((c) => ({
       metaapi_account_id: (c.metaapi_account_id as string) ?? null,
       login: (c.login as string) ?? null,
       servidor: (c.servidor as string) ?? null,
@@ -193,6 +214,11 @@ export async function linhasDeContas(userId: string): Promise<LinhaConta[]> {
       estado: (c.estado as string) ?? null,
     })),
   ]
+}
+
+/** Linhas de contas do utilizador nos DOIS produtos, normalizadas. */
+export async function linhasDeContas(userId: string): Promise<LinhaConta[]> {
+  return linhasDeContasBrutas(await lerContasBrutas(userId))
 }
 
 /** Estado da quota (para o ecrã «Limites e plano»). */
