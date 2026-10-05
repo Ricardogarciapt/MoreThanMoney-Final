@@ -5,6 +5,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { awardXp } from '@/lib/xp-service'
 import { notifyNewSocialPost } from '@/lib/social-push-notify'
 import { ehAdminUi, ehVipUi } from '@/lib/perfil-ui'
+import { fetchLinkPreview } from '@/lib/link-preview-fetch'
+import { conteudoPublicavel, enriquecerLinkDoPost } from '@/lib/social/link-preview'
 
 export async function GET() {
   try {
@@ -81,6 +83,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { content, media_url, media_type } = body
 
+    // 05/10/2026: a rota aceitava `content` vazio sem média e criava posts em branco no feed.
+    if (!conteudoPublicavel(content, media_url)) {
+      return NextResponse.json({ error: 'Escreve algo ou junta uma imagem' }, { status: 400 })
+    }
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('user_type, member_category, membership_level, subscription_plan, is_active')
@@ -92,13 +99,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sem permissão para criar posts' }, { status: 403 })
     }
 
+    // Thumbnail do link: o MESMO extractor OpenGraph do chat, com timeout curto — um site
+    // lento ou em baixo nunca atrasa nem impede a publicação (fica link_url para o backfill).
+    const { link_url, link_preview } = await enriquecerLinkDoPost(content, fetchLinkPreview)
+
     const { data: newPost, error } = await supabase
       .from('social_posts')
       .insert({
         user_id: session.user.id,
-        content,
+        content: typeof content === 'string' ? content.trim() : content,
         media_url,
         media_type,
+        link_url,
+        link_preview,
         likes_count: 0,
         comments_count: 0
       })

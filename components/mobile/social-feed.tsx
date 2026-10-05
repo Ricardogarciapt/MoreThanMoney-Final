@@ -47,6 +47,7 @@ interface Post {
   likes_count?: number
   comments_count?: number
   liked_by_user?: boolean
+  link_url?: string | null
   link_preview?: LinkPreviewData | null
 }
 
@@ -325,6 +326,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
         "likes_count",
         "comments_count",
         "link_preview",
+        "link_url",
       ]
       
       for (const col of optionalColumns) {
@@ -764,9 +766,12 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
         mentionedUserIds.push(match[2])
       }
 
-      // Use the already-fetched draft preview (avoids double-fetch at submit time)
+      // Use the already-fetched draft preview (avoids double-fetch at submit time).
+      // 05/10: também com média — nesse caso aparece mais pequeno por baixo do texto.
+      // Se o browser não o tiver, o servidor preenche-o a seguir (/api/social/feed/notify).
       const linkPreview: LinkPreviewData | null =
-        mediaUrls.length === 0 && !linkPreviewDismissed ? (draftLinkPreview ?? null) : null
+        !linkPreviewDismissed ? (draftLinkPreview ?? null) : null
+      const linkUrl = getPrimaryUrlFromText(newPost)
 
       // Preparar dados para inserção (apenas colunas que existem)
       const postData: any = {
@@ -775,6 +780,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
         content: newPost.trim(),
         category: selectedCategory || null,
         media_url: mediaUrl, // Backward compatibility - sempre presente
+        ...(linkUrl && { link_url: linkUrl }),
         ...(linkPreview && { link_preview: linkPreview }),
       }
 
@@ -1759,16 +1765,17 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                   <RichPostText text={post.content} />
                 </div>
 
-                {/* Pré-visualização de link (sem média — estilo WhatsApp) */}
-                {!postHasMedia(post) &&
-                  (getPrimaryUrlFromText(post.content) || post.link_preview) && (
-                    <div className="mb-3">
-                      <PostLinkPreview
-                        content={post.content}
-                        storedPreview={post.link_preview}
-                      />
-                    </div>
-                  )}
+                {/* Pré-visualização de link: cartão grande sem média (estilo WhatsApp);
+                    com média fica a miniatura pequena por baixo do texto (pedido de 05/10). */}
+                {(post.link_preview || getPrimaryUrlFromText(post.content)) && (
+                  <div className="mb-3">
+                    <PostLinkPreview
+                      content={post.content}
+                      storedPreview={post.link_preview}
+                      compact={postHasMedia(post)}
+                    />
+                  </div>
+                )}
 
                 {/* Media Carousel */}
                 {(() => {

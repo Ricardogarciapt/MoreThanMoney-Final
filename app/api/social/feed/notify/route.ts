@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getSocialSession } from '@/lib/social-request-auth'
 import { notifyNewSocialPost } from '@/lib/social-push-notify'
+import { fetchLinkPreview } from '@/lib/link-preview-fetch'
+import { enriquecerLinkDoPost, extrairPrimeiroUrl } from '@/lib/social/link-preview'
 
 /**
  * Notificações server-side após criar post no feed (posts).
  * POST { post_id, content, mentioned_user_ids? }
+ *
+ * Desde 05/10/2026 também garante a thumbnail do link: o browser só obtinha o preview
+ * quando o post não tinha média (e nem sempre), por isso aqui, já com o post gravado e o
+ * cliente admin, preenche-se `link_url`/`link_preview` se faltarem. Corre depois da
+ * resposta ao utilizador — nunca atrasa a publicação.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +35,7 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseAdmin()
     const { data: post } = await supabase
       .from('posts')
-      .select('id, user_id')
+      .select('id, user_id, content, link_url, link_preview')
       .eq('id', postId)
       .maybeSingle()
 
@@ -53,6 +60,15 @@ export async function POST(request: NextRequest) {
       content,
       mentionedUserIds,
     })
+
+    if (!post.link_preview && extrairPrimeiroUrl(post.content)) {
+      void enriquecerLinkDoPost(post.content, fetchLinkPreview)
+        .then((enr) => supabase.from('posts').update(enr).eq('id', postId))
+        .then(({ error }) => {
+          if (error) console.warn('[social/feed/notify] link_preview:', error.message)
+        })
+        .catch((e) => console.warn('[social/feed/notify] link_preview:', e))
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

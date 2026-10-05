@@ -10,6 +10,8 @@ interface PostLinkPreviewProps {
   content: string
   storedPreview?: LinkPreviewData | null
   className?: string
+  /** Post com média: miniatura pequena por baixo do texto em vez do cartão grande. */
+  compact?: boolean
 }
 
 function normalizeStoredPreview(raw: unknown): LinkPreviewData | null {
@@ -31,6 +33,7 @@ export default function PostLinkPreview({
   content,
   storedPreview,
   className = "",
+  compact = false,
 }: PostLinkPreviewProps) {
   const [preview, setPreview] = useState<LinkPreviewData | null>(
     normalizeStoredPreview(storedPreview)
@@ -72,6 +75,7 @@ export default function PostLinkPreview({
   }, [content, storedPreview])
 
   if (loading && !preview) {
+    if (compact) return null
     return (
       <div
         className={`flex items-center justify-center gap-2 py-8 rounded-xl border border-gray-700/60 bg-gray-900/50 ${className}`}
@@ -84,5 +88,5 @@ export default function PostLinkPreview({
 
   if (!preview) return null
 
-  return <LinkPreviewCard preview={preview} className={className} />
+  return <LinkPreviewCard preview={preview} className={className} compact={compact} />
 }

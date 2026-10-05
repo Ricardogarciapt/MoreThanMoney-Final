@@ -8,11 +8,40 @@ import { getHostname } from "@/lib/url-utils"
 interface LinkPreviewCardProps {
   preview: LinkPreviewData
   className?: string
+  /** Quando o post já tem média: cartão horizontal, miniatura pequena, sem descrição. */
+  compact?: boolean
 }
 
 /** Cartão de pré-visualização de link (estilo WhatsApp). */
-export default function LinkPreviewCard({ preview, className = "" }: LinkPreviewCardProps) {
+export default function LinkPreviewCard({ preview, className = "", compact = false }: LinkPreviewCardProps) {
   const domain = preview.siteName || getHostname(preview.url)
+
+  if (compact) {
+    return (
+      <a
+        href={preview.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className={`flex items-stretch gap-3 rounded-lg border border-gray-700/80 bg-gray-900/80 overflow-hidden hover:border-[#D2A63C]/40 transition-colors ${className}`}
+      >
+        {preview.image && (
+          <div className="relative w-20 shrink-0 bg-gray-800">
+            <Image src={preview.image} alt={preview.title || domain} fill className="object-cover" unoptimized />
+          </div>
+        )}
+        <div className="min-w-0 py-2 pr-3 flex flex-col justify-center gap-0.5">
+          {preview.title && (
+            <p className="text-xs font-semibold text-white line-clamp-2 leading-snug">{preview.title}</p>
+          )}
+          <p className="text-[11px] text-gray-500 flex items-center gap-1">
+            <ExternalLink className="w-3 h-3 shrink-0" />
+            <span className="truncate">{domain}</span>
+          </p>
+        </div>
+      </a>
+    )
+  }
 
   return (
     <a
