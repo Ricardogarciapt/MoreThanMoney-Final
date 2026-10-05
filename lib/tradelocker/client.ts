@@ -582,6 +582,24 @@ export class TradeLockerSessao {
     return tokens.accessToken
   }
 
+  /**
+   * A FICHA SÓ DE LEITURA PARA O BROWSER — o accessToken e quando expira, e NADA mais.
+   *
+   * O feed directo do WebTrader (lib/webtrader/feed-directo) põe o browser do cliente a ler
+   * cotações, velas e posições directamente na TradeLocker. Para isso precisa do Bearer. O
+   * `refreshToken` fica cá: quem o tiver renova sessões para sempre, e é ele que a TradeLocker usa
+   * para expulsar a sessão anterior do utilizador. Quando o access caducar o browser volta a pedir
+   * ao servidor, que renova pelo caminho de sempre (cofre + refresh).
+   */
+  async fichaSoLeitura(): Promise<{ accessToken: string; expiraEm: string }> {
+    const accessToken = await this.token()
+    const t = tokensEmCache.get(this.chave)
+    const exp = t?.tokens.expireDate ? Date.parse(t.tokens.expireDate) : NaN
+    // Sem data da TradeLocker assume-se o mesmo TTL com que a cache a daria por válida.
+    const expiraEm = Number.isFinite(exp) ? new Date(exp).toISOString() : new Date((t?.em ?? Date.now()) + TTL_TOKEN_MS).toISOString()
+    return { accessToken, expiraEm }
+  }
+
   /** Pedido autenticado; um 401 renova o token e repete UMA vez. */
   async pedido<T>(p: Omit<TLPedido, 'env' | 'accessToken' | 'accNum' | 'fetchImpl'> & { semAccNum?: boolean }): Promise<T> {
     const base = { ...p, env: this.cred.env, accNum: p.semAccNum ? undefined : this.accNum, fetchImpl: this.fetchImpl }
