@@ -333,7 +333,10 @@ export async function GET(request: NextRequest) {
 
     const alerts: MtmAlert[] = (data || []).map((row: any) => {
       const raw = (row.raw_payload && typeof row.raw_payload === "object" ? row.raw_payload : {}) as Record<string, unknown>
-      const entry = num(row.price)
+      // `price` chega a 0 nos sinais pendentes do MTM Scanner, mas o payload traz a entrada
+      // real (`entry`): o gráfico do sinal mostrava «ENTRADA 0.99111» e o cartão «a mercado»
+      // (visto na app a 05/10/2026). A entrada é a da BD e, se for zero, a do payload.
+      const entry = num(row.price) || num(raw.entry) || num(raw.entry_price) || null
       const stopLoss = extractStopLoss(num(row.sl), raw)
       const cls = classifyAssetClass(row.ticker)
       const sl = slInfo(row.ticker, entry, stopLoss, cls)
