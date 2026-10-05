@@ -19,7 +19,8 @@ for (const campo of ['fonteDesligada', 'canalChat', 'mt5Estado', 'fora do motor 
 const ui = readFileSync(join(RAIZ, 'components/admin/centro/seccoes/estrategias.tsx'), 'utf8')
 assert.ok(ui.includes('fonte desligada') && ui.includes('ProvidersExternos'), 'Centro → Estratégias sem fonte desligada / Nova estratégia')
 const mtmcopy = readFileSync(join(RAIZ, 'app/admin/mtmcopy/page.tsx'), 'utf8')
-assert.ok(mtmcopy.includes('ProvidersExternos'), '/admin/mtmcopy sem o mesmo modelo de provider')
+// 05/10: criar provider saiu de /admin/mtmcopy (duplicado) — decide-se no Centro; aqui só leitura.
+assert.ok(!mtmcopy.includes('ProvidersExternos') && mtmcopy.includes('DecideNoCentro'), '/admin/mtmcopy tem de ser só leitura e mandar para o Centro')
 // componentes de admin: james/primeverse só dentro da lista de RETIRADAS
 const ctrl = readFileSync(join(RAIZ, 'components/admin/mtmcopy-strategy-control.tsx'), 'utf8')
 const fora = ctrl.split('\n').filter((l) => /james|primeverse|forex.?swings/i.test(l) && !/RETIRADAS|410|retirad|histór|saiu|desligad/i.test(l))

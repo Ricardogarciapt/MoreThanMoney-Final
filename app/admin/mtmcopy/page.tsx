@@ -32,7 +32,7 @@ import CopiaEntreContas from "@/components/admin/mtmauto-copia/copia-entre-conta
 import EventosCopia from "@/components/admin/mtmauto-copia/eventos"
 import SincronizacaoCopia from "@/components/admin/mtmauto-copia/sincronizacao"
 import ProvidersEquipas from "@/components/admin/mtmauto-copia/providers-equipas"
-import ProvidersExternos from "@/components/admin/mtmauto-copia/providers-externos"
+import DecideNoCentro, { LinksParaOCentro } from "@/components/admin/decide-no-centro"
 import MotorMestres from "@/components/admin/mtmauto-copia/motor-mestres"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ArrowLeftRight, Copy, LayoutDashboard, ListTree, Loader2, RefreshCcw, ScrollText, Wallet } from "lucide-react"
@@ -163,34 +163,45 @@ function PaginaAdminCopia() {
               />
             )}
 
+            {/* 05/10: o Centro é o único sítio onde se DECIDE uma estratégia. Aqui mostra-se o estado
+                (painéis dentro de DecideNoCentro, só leitura) e o diagnóstico continua vivo. A criação de
+                provider externo saiu daqui (duplicado) — está em Centro › Estratégias › Motor e criação. */}
             {activeTab === "estrategias" && (
               <EstrategiasCopia
-                topo={<MotorMestres />}
+                topo={
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-[#D2A63C]/30 bg-[#D2A63C]/[0.05] p-3">
+                      <p className="mb-2 text-[12.5px] text-zinc-200">Esta página é de <b>diagnóstico</b>. Mudar o que uma estratégia faz (modos, trailing, rotas, T2T, opções, apagar) faz-se na página dela no Centro.</p>
+                      <LinksParaOCentro />
+                    </div>
+                    <DecideNoCentro titulo="Motor das mestres"><MotorMestres /></DecideNoCentro>
+                  </div>
+                }
                 afinacoes={
                   <div className="space-y-3 pt-2">
-                    <Recolhivel titulo="Nova estratégia · provider externo" descricao="MetaApi (id colado), Telegram (chat id) ou MT5 directo — o mesmo modelo e API do admin da MTM Auto. Nasce em sombra com mestre, rotas e canal.">
-                      <ProvidersExternos />
-                    </Recolhivel>
                     <Recolhivel titulo="Providers por equipa (MTM Auto)" descricao="Contas de estratégia de cada equipa — MT4/MT5 na chave certa, MTM Funded e TradeLocker — e as rotas de cópia que as usam como fonte.">
                       <ProvidersEquipas />
                     </Recolhivel>
                     <Recolhivel titulo="Fontes · estado real" descricao="Cada estratégia, a conta que a publica e o que a MetaApi diz sobre ela.">
                       <MtmcopyFontesVivas />
                     </Recolhivel>
-                    <Recolhivel titulo="Controlo das estratégias" descricao="On/off por estratégia (com o estado no motor das mestres), limites dos perps, trailing e desempenho.">
-                      <div className="space-y-6"><MtmcopyStrategyControl /><EstrategiasDesempenho /><EquidadeCasaCard /><TrailingEstrategias /></div>
+                    <Recolhivel titulo="Controlo das estratégias (só leitura)" descricao="On/off por estratégia, limites dos perps e trailing — o estado; muda-se no Centro.">
+                      <DecideNoCentro titulo="Controlo e trailing"><div className="space-y-6"><MtmcopyStrategyControl /><TrailingEstrategias /></div></DecideNoCentro>
+                    </Recolhivel>
+                    <Recolhivel titulo="Desempenho e equidade" descricao="Resultados por estratégia e equidade da casa.">
+                      <div className="space-y-6"><EstrategiasDesempenho /><EquidadeCasaCard /></div>
                     </Recolhivel>
                     <Recolhivel titulo="Saúde das ligações (regras de risco)" descricao="Multiplicador sem risco, T2T com grupos, sem baseline, MT5 em erro.">
                       <MtmcopySubscriberHealth />
                     </Recolhivel>
-                    <Recolhivel titulo="Senders · Telegram e chats" aberto={Boolean(highlightRouteId)}>
-                      <MtmcopyTelegramSenders />
+                    <Recolhivel titulo="Senders · Telegram e chats (só leitura)" aberto={Boolean(highlightRouteId)}>
+                      <DecideNoCentro titulo="Senders"><MtmcopyTelegramSenders /></DecideNoCentro>
                     </Recolhivel>
-                    <Recolhivel titulo="Rotas provider" aberto={Boolean(highlightRouteId)}>
-                      <MtmcopyProviderPipeline initialRouteId={highlightRouteId} />
+                    <Recolhivel titulo="Rotas provider (só leitura)" aberto={Boolean(highlightRouteId)}>
+                      <DecideNoCentro titulo="Rotas provider"><MtmcopyProviderPipeline initialRouteId={highlightRouteId} /></DecideNoCentro>
                     </Recolhivel>
-                    <Recolhivel titulo="Contas provider (mestre)">
-                      <MtmcopyProviderAccounts />
+                    <Recolhivel titulo="Contas provider (mestre, só leitura)">
+                      <DecideNoCentro titulo="Contas provider"><MtmcopyProviderAccounts /></DecideNoCentro>
                     </Recolhivel>
                     <Recolhivel titulo="Testes · provider e Telegram">
                       <MtmcopyTestPanel />

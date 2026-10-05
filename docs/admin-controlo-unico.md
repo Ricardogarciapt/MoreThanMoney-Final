@@ -144,3 +144,23 @@ use deixou de existir sem destino.
 | Estratégias → 12 acordeões em 3 grupos | «Atenção» (só as com problemas) · lista · «Motor e criação» · «Diagnóstico» | hierarquia |
 | Estratégias → «Senders» e «Rotas provider» separados | um só acordeão «Senders · Telegram e rotas provider» | o mesmo assunto |
 | `?s=copia` | fica; ganha filtro `&estrategia=<slug>` e o grupo de sincronização | regra do dono |
+
+## Fase 2 — `/admin/mtmcopy` só leitura (05/10)
+
+`components/admin/decide-no-centro.tsx`: banner «só leitura aqui · Abrir no Centro» + um atalho por
+estratégia (`/admin/centro?s=estrategias&e=<slug>`), e o painel dentro de `<fieldset disabled>` (o
+browser desliga todos os controlos; o painel continua a mostrar o estado e o Centro usa o mesmo
+componente com os controlos vivos).
+
+| Painel em /admin/mtmcopy › Estratégias | Agora | Onde se decide |
+|---|---|---|
+| MotorMestres | só leitura | Centro › página da estratégia (modos) · Estratégias › Motor e criação (kill, contas) |
+| MtmcopyStrategyControl | só leitura | Centro › Estratégias › Motor e criação › Interruptores globais |
+| TrailingEstrategias | só leitura | Centro › página da estratégia › Gestão (opções) |
+| MtmcopyTelegramSenders / MtmcopyProviderPipeline | só leitura | Centro › Estratégias › Diagnóstico › Senders e rotas provider; cópia/T2T por rota na página |
+| MtmcopyProviderAccounts | só leitura | Centro › Estratégias › Diagnóstico › Contas provider |
+| **ProvidersExternos** | **removido** (duplicado) | Centro › Estratégias › Motor e criação › Nova estratégia |
+| FontesVivas, SubscriberHealth, Desempenho/Equidade, Testes, Visão global, Providers por equipa | ficam (diagnóstico) | — |
+| Reconciliação CopyFactory (EstrategiasCopia) | fica (manutenção, relê a MetaApi) | — |
+
+Guarda: `lib/admin-centro/__tests__/mtmcopy-so-leitura.check.ts`.
