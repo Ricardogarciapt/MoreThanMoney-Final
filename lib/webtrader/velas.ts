@@ -6,10 +6,16 @@
  * verdadeiro chega, a de colar duas janelas por tempo e a do formato compacto da rota.
  */
 
+import { DERIVACAO, TF_NATIVOS, TF_SEG_GRAFICO, inicioCalendario } from "./timeframes"
+
 export interface VelaC { t: number; o: number; h: number; l: number; c: number; v?: number }
 
-export const TF_SEGUNDOS: Record<string, number> = { M1: 60, M5: 300, M15: 900, H1: 3600, H4: 14400, D1: 86400 }
-const ORDEM = ["M1", "M5", "M15", "H1", "H4", "D1"]
+// Os 16 timeframes do gráfico (05/10/2026) vêm de lib/webtrader/timeframes.ts — a mesma tabela que
+// a rota de velas usa, para o browser e o servidor nunca discordarem do tamanho de uma vela.
+export const TF_SEGUNDOS: Record<string, number> = TF_SEG_GRAFICO
+// Deriva-se só a partir dos NATIVOS (os que a rota devolve de verdade): uma vela derivada de outra
+// derivada acumula o erro da vela aberta.
+const ORDEM: readonly string[] = TF_NATIVOS
 
 /**
  * De que timeframes em cache se pode derivar `tf`, pela ordem de preferência: o maior que divide
@@ -19,6 +25,8 @@ const ORDEM = ["M1", "M5", "M15", "H1", "H4", "D1"]
 export function fontesDerivacao(tf: string): string[] {
   const alvo = TF_SEGUNDOS[tf]
   if (!alvo || tf === "D1") return []
+  // W1 e MN são de calendário (segunda / dia 1): só se derivam do D1, nunca por divisão de segundos.
+  if (DERIVACAO[tf]?.calendario) return ["D1"]
   return ORDEM.filter((x) => TF_SEGUNDOS[x] < alvo && alvo % TF_SEGUNDOS[x] === 0).reverse()
 }
 
@@ -28,6 +36,28 @@ export function agregarVelas(velas: VelaC[], seg: number): VelaC[] {
   let atual: VelaC | null = null
   for (const v of velas) {
     const t = Math.floor(v.t / seg) * seg
+    if (!atual || atual.t !== t) {
+      if (atual) out.push(atual)
+      atual = { t, o: v.o, h: v.h, l: v.l, c: v.c, v: Number(v.v) || 0 }
+    } else {
+      if (v.h > atual.h) atual.h = v.h
+      if (v.l < atual.l) atual.l = v.l
+      atual.c = v.c
+      atual.v = (atual.v ?? 0) + (Number(v.v) || 0)
+    }
+  }
+  if (atual) out.push(atual)
+  return out
+}
+
+/** Agrega no timeframe `tf`: calendário para W1/MN (segunda / dia 1, UTC), segundos para o resto. */
+export function agregarVelasTf(velas: VelaC[], tf: string): VelaC[] {
+  const cal = DERIVACAO[tf]?.calendario
+  if (!cal) return agregarVelas(velas, TF_SEGUNDOS[tf] ?? 300)
+  const out: VelaC[] = []
+  let atual: VelaC | null = null
+  for (const v of velas) {
+    const t = inicioCalendario(v.t, cal)
     if (!atual || atual.t !== t) {
       if (atual) out.push(atual)
       atual = { t, o: v.o, h: v.h, l: v.l, c: v.c, v: Number(v.v) || 0 }

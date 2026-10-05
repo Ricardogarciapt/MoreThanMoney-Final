@@ -1,7 +1,7 @@
 "use client"
 
 import {
-  type VelaC, TF_SEGUNDOS, URL_VELAS, acrescentarAntigas, agregarVelas, colar, deColunas, fontesDerivacao, tirarPreCarga,
+  type VelaC, TF_SEGUNDOS, URL_VELAS, acrescentarAntigas, agregarVelasTf, colar, deColunas, fontesDerivacao, tirarPreCarga,
 } from "@/lib/webtrader/velas"
 
 /**
@@ -88,7 +88,7 @@ export function lerDerivado(symbol: string, tf: string): VelaC[] | null {
   for (const origem of fontesDerivacao(tf)) {
     const s = lerMemoria(symbol, origem)
     if (!s) continue
-    const agregadas = agregarVelas(s.velas, seg)
+    const agregadas = agregarVelasTf(s.velas, tf)
     if (agregadas.length >= 40) return agregadas
   }
   return null
@@ -197,7 +197,9 @@ export function preBuscar(symbol: string, tfs: string[]) {
 }
 
 export const TF_VIZINHOS: Record<string, string[]> = {
-  M1: ["M5"], M5: ["M15", "M1"], M15: ["H1", "M5"], H1: ["H4", "M15"], H4: ["H1", "D1"], D1: ["H4"],
+  M1: ["M5"], M2: ["M1", "M3"], M3: ["M1", "M5"], M5: ["M15", "M1"], M10: ["M5", "M15"],
+  M15: ["H1", "M5"], M30: ["M15", "H1"], H1: ["H4", "M15"], H2: ["H1", "H4"], H4: ["H1", "D1"],
+  H6: ["H1", "H4"], H8: ["H1", "H4"], H12: ["H1", "D1"], D1: ["H4"], W1: ["D1"], MN: ["D1", "W1"],
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

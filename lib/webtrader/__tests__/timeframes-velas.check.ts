@@ -104,3 +104,18 @@ async function main() {
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })
+
+// ── Derivação no browser (05/10): os timeframes novos aparecem logo a partir da cache ──
+import { agregarVelasTf, fontesDerivacao } from '../velas'
+{
+  const ok = (c: boolean, o: string) => { if (!c) { console.error('  ✗ ' + o); process.exit(1) } }
+  ok(fontesDerivacao('H2').includes('H1'), 'H2 deriva de H1 em cache')
+  ok(fontesDerivacao('M3').includes('M1') && !fontesDerivacao('M3').includes('M2'), 'M3 deriva de M1, não de M2')
+  ok(JSON.stringify(fontesDerivacao('W1')) === '["D1"]' && JSON.stringify(fontesDerivacao('MN')) === '["D1"]', 'W1/MN só de D1')
+  ok(fontesDerivacao('D1').length === 0, 'D1 continua sem derivação de intradiário')
+  // 2026-10-04 (domingo) e 2026-10-05 (segunda): têm de cair em semanas diferentes
+  const dom = Date.UTC(2026, 9, 4) / 1000, seg = Date.UTC(2026, 9, 5) / 1000
+  const w = agregarVelasTf([{ t: dom, o: 1, h: 2, l: 1, c: 2 }, { t: seg, o: 2, h: 3, l: 2, c: 3 }], 'W1')
+  ok(w.length === 2 && w[1].t === seg, 'W1 corta à segunda 00:00 UTC (domingo fica na semana anterior)')
+  console.log('derivação no browser: M2…H12 por divisão, W1/MN por calendário a partir de D1 ✓')
+}
