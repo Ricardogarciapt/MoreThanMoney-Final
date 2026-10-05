@@ -245,3 +245,49 @@ export function decidirEspelho(a: {
   if (!(a.abertoNoCliente > 0)) return { tipo: 'nada' }
   return { tipo: 'parcial', volume: Math.min(aFechar, a.abertoNoCliente), porCopiar, eleFechou }
 }
+
+/**
+ * ESPELHO DAS MODIFICAÇÕES DE SL/TP DO EDUCADOR (F4, 05/10) — «copiar a pessoa» passa a copiar
+ * também os stops, não só os fechos.
+ *
+ * Copia-se a DISTÂNCIA à entrada, não o preço: a entrada do cliente não é a do educador (deslize,
+ * corretora diferente), e o mesmo preço de stop seria outro risco. O SL do educador a 50 pips da
+ * entrada dele fica a 50 pips da entrada REAL do cliente; o break-even dele (SL na entrada) fica
+ * break-even do cliente.
+ *
+ * Duas regras de protecção:
+ *  · com BE/trailing próprios do cliente (`protegerStop`), um SL espelhado nunca PIORA o stop que o
+ *    cliente já tem — esses protegem, não decidem; o espelho só aperta;
+ *  · diferenças abaixo de `tolPips` (0,5) ignoram-se: arredondamentos não são decisões de ninguém.
+ * Educador sem SL/TP (removeu) → não se remove o do cliente. Puro; testado nos dois repositórios.
+ */
+export type DecisaoModificacao = { tipo: 'nada' } | { tipo: 'modificar'; sl: number | null; tp: number | null }
+
+export function decidirModificacaoEspelho(a: {
+  symbol: string
+  direcao: 'buy' | 'sell'
+  educador: { openPrice: number; stopLoss?: number | null; takeProfit?: number | null }
+  cliente: { openPrice: number; stopLoss?: number | null; takeProfit?: number | null }
+  protegerStop: boolean
+  tolPips?: number
+}): DecisaoModificacao {
+  const pip = tamanhoPip(a.symbol)
+  const tol = (a.tolPips ?? 0.5) * pip
+  const ent = Number(a.educador.openPrice)
+  const entC = Number(a.cliente.openPrice)
+  if (!(ent > 0) || !(entC > 0)) return { tipo: 'nada' }
+  const espelhar = (nivel: number | null | undefined): number | null =>
+    Number(nivel) > 0 ? precoDaCorretora(entC + (Number(nivel) - ent), a.symbol) : null
+  let sl = espelhar(a.educador.stopLoss)
+  const tp = espelhar(a.educador.takeProfit)
+  const slC = Number(a.cliente.stopLoss) > 0 ? Number(a.cliente.stopLoss) : null
+  const tpC = Number(a.cliente.takeProfit) > 0 ? Number(a.cliente.takeProfit) : null
+  if (sl != null && slC != null && a.protegerStop) {
+    const pior = a.direcao === 'buy' ? sl < slC : sl > slC
+    if (pior) sl = null
+  }
+  const mudaSl = sl != null && (slC == null || Math.abs(sl - slC) > tol)
+  const mudaTp = tp != null && (tpC == null || Math.abs(tp - tpC) > tol)
+  if (!mudaSl && !mudaTp) return { tipo: 'nada' }
+  return { tipo: 'modificar', sl: mudaSl ? sl : slC, tp: mudaTp ? tp : tpC }
+}

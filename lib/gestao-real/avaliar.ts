@@ -17,6 +17,7 @@ import { acharPosicao, gerirLinhaPremium, type AcaoEspelhoPremium, type ConfigPr
 import { gerirPosicaoT2T, type ConfigT2T, type EstadoT2T, type LinhaT2T } from './t2t'
 import {
   decidirEspelho,
+  decidirModificacaoEspelho,
   estadoDoEducadorPelasPosicoes,
   gerirAlvosEProtecao,
   type ConfigMtmAuto,
@@ -326,6 +327,22 @@ async function avaliarMtmAuto(item: ItemMtmAuto, foto: FotografiaConta, ctx: Con
         e.espelhado_pct = Math.min(1, ja + fechou)
         sobrepor(ctx, item.conta, real.id, { volume: d.tipo === 'fechar_tudo' ? 0 : Math.max(0, Math.round(((posicao.volume ?? 0) - d.volume) * 100) / 100) }, agora)
         if (fechou >= 1) { item.terminado = true; recolha.entregar(ctx, agora); return notas }
+      }
+      // F4: o educador mexeu no SL/TP → a mesma distância à entrada REAL do cliente (só aperta o stop
+      // quando o cliente tem BE/trailing próprios).
+      const posDele = (ctx.posicoesDe(item.contaEducador) ?? []).find((p) => String(p.id) === item.sinal.ref_externa!.slice(4))
+      if (dele.aberta && posDele) {
+        const m = decidirModificacaoEspelho({
+          symbol: item.sinal.symbol, direcao: item.sinal.direction,
+          educador: { openPrice: Number(posDele.openPrice), stopLoss: posDele.stopLoss ?? null, takeProfit: posDele.takeProfit ?? null },
+          cliente: { openPrice: Number(posicao.openPrice), stopLoss: posicao.stopLoss ?? null, takeProfit: posicao.takeProfit ?? null },
+          protegerStop: item.opcoes.beAtivo || item.opcoes.trailingAtivo,
+        })
+        if (m.tipo === 'modificar') {
+          notas.push(`${item.sinal.symbol}: educador mexeu no SL/TP → sl ${m.sl ?? '—'} tp ${m.tp ?? '—'}`)
+          recolha.add({ ...base, regra: 'espelho_educador_sltp', acao: 'sl', sl: m.sl, tp: m.tp })
+          sobrepor(ctx, item.conta, real.id, { sl: m.sl ?? undefined, tp: m.tp ?? undefined }, agora)
+        }
       }
     }
   }

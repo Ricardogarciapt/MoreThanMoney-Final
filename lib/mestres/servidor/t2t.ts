@@ -23,6 +23,7 @@ import { loteDaLigacaoSite } from '../lote'
 import { pipDe } from '../pips'
 import { chaveAberturaAceite, escolherPosicaoMestre, estrategiaDoSinalT2T, type PosicaoMestreCandidata } from '../t2t'
 import { mapaCanalEstrategia } from '../canal-t2t'
+import { candidatasDosFactos, origemT2TDoProvider, refDaPosicao, type FactoOrigem, type ProviderParaSeguir } from '../seguir-mestre'
 import { lerConfigGlobal, lerEstrategiaMestre, type ModoEstrategia } from '../tipos'
 
 type Ligacao = Record<string, unknown> & { id: string; user_id: string }
@@ -71,15 +72,35 @@ export async function encaminharT2TParaMotor(p: PedidoT2TMotor): Promise<Resulta
     // o kill do motor não é o interruptor do T2T legado, por isso devolve-se e o legado decide.
     if (global.kill) return nada(est.t2tModo, 'kill-switch accionado')
 
+    // F4: a ORIGEM é a conta que opera — mestre SIM (fpos:), conta MT do educador (pos:) ou TL (tlpos:)
+    const { data: provLinha } = await db.from('mtmauto_providers')
+      .select('id, tipo, plataforma, login, servidor, metaapi_account_id, tl_env, tl_account_id, funded_account_id, fonte_execucao, espelho_funded_account_id')
+      .eq('id', est.providerId).maybeSingle()
+    const origem = origemT2TDoProvider((provLinha ?? { id: est.providerId, tipo: 'mtmfunded' }) as ProviderParaSeguir, est.contaMestreId)
+
     // posição da mestre que corresponde ao sinal
-    const { data: cands } = await db.from('funded_positions').select('id, symbol, direcao, preco_entrada, aberta_em, estado, volume, sl, tp')
-      .eq('account_id', est.contaMestreId).eq('estado', 'aberta').limit(50)
-    const pos = escolherPosicaoMestre((cands ?? []) as PosicaoMestreCandidata[], {
+    let cands: Array<Record<string, unknown>> = []
+    if (origem.fonte === 'funded') {
+      const { data } = await db.from('funded_positions').select('id, symbol, direcao, preco_entrada, aberta_em, estado, volume, sl, tp')
+        .eq('account_id', origem.contaFunded!).eq('estado', 'aberta').limit(50)
+      cands = (data ?? []) as Array<Record<string, unknown>>
+    } else {
+      // conta MT/TL: as posições vêm dos factos que o streaming do VPS já publicou para esta origem
+      const { data: rotasOrigem } = await db.from('copia_rotas').select('id').eq('origem_chave', origem.origem_chave).limit(50)
+      const ids = (rotasOrigem ?? []).map((r) => String(r.id))
+      const { data: factos } = ids.length
+        ? await db.from('copia_eventos').select('origem_posicao_id, tipo, payload, origem_em, criado_em').in('rota_id', ids)
+          .gte('criado_em', new Date(Date.now() - 24 * 3600_000).toISOString()).order('id', { ascending: false }).limit(2000)
+        : { data: [] as FactoOrigem[] }
+      cands = candidatasDosFactos((factos ?? []) as FactoOrigem[]) as unknown as Array<Record<string, unknown>>
+    }
+    const pos = escolherPosicaoMestre(cands as unknown as PosicaoMestreCandidata[], {
       symbol: p.sinal.symbol, direcao: p.sinal.direction, entrada: p.sinal.entry,
       mensagemEm: p.mensagem.created_at ?? new Date().toISOString(), pip: pipDe(p.sinal.symbol),
     })
-    if (!pos) return nada(est.t2tModo, 'sem posição aberta da mestre para este sinal — T2T de sempre')
-    const posCompleta = (cands ?? []).find((c) => c.id === pos.id) as Record<string, unknown>
+    if (!pos) return nada(est.t2tModo, `sem posição aberta da origem (${origem.fonte}) para este sinal — T2T de sempre`)
+    const posCompleta = cands.find((c) => c.id === pos.id) as Record<string, unknown>
+    const refPos = refDaPosicao(origem, pos.id)
 
     const tratadas: ResultadoT2TMotor['tratadas'] = []
     for (const l of p.contas) {
@@ -95,14 +116,14 @@ export async function encaminharT2TParaMotor(p: PedidoT2TMotor): Promise<Resulta
         await db.from('mestres_ordens').insert({
           chave: `t2t:${p.chatMessageId}:${l.id}`, rota_id: null, estrategia: est.slug, conta_chave: chave, conta_ref: ref,
           tipo: 'abrir', modo: 'sombra', estado: 'sombra',
-          pedido: { t2t: true, chat_message_id: p.chatMessageId, posicao_mestre: pos.id, symbol: p.sinal.symbol, direcao: p.sinal.direction, lote: lote.lote },
+          pedido: { t2t: true, chat_message_id: p.chatMessageId, posicao_mestre: pos.id, ref_posicao: refPos, origem: origem.origem_chave, symbol: p.sinal.symbol, direcao: p.sinal.direction, lote: lote.lote },
         })
         continue
       }
 
       // live: rota T2T (mestre SIM → esta conta), aceite, evento de abertura
       const base = {
-        user_id: l.user_id, origem_tipo: 'mtmfunded', origem_ref: `prov:${est.providerId}`, origem_chave: `mtmfunded:${est.contaMestreId.toLowerCase()}`,
+        user_id: l.user_id, origem_tipo: origem.origem_tipo, origem_ref: `prov:${est.providerId}`, origem_chave: origem.origem_chave,
         destino_tipo: plataforma, destino_ref: ref, destino_chave: chave, rotulo: `T2T ${est.slug} → ${account}`,
         modo_lote: lote.lote.modo_lote, valor: lote.lote.valor, lote_max: lote.lote.lote_max, copiar_sl: lote.lote.copiar_sl, copiar_tp: lote.lote.copiar_tp,
         filtro_simbolos: [], mestres: true, tipo_rota: 't2t', estrategia_slug: est.slug, ativa: true, estado: 'aprovada', modo: 'shadow',
@@ -123,7 +144,7 @@ export async function encaminharT2TParaMotor(p: PedidoT2TMotor): Promise<Resulta
       const agora = new Date().toISOString()
       const { error: eEv } = await db.from('copia_eventos').insert({
         rota_id: rotaId, origem_posicao_id: pos.id, tipo: 'open', chave: chaveAberturaAceite(rotaId, pos.id), origem_em: agora,
-        payload: { symbol: posCompleta.symbol, direcao: posCompleta.direcao, volume: Number(posCompleta.volume), preco: Number(posCompleta.preco_entrada), sl: posCompleta.sl, tp: posCompleta.tp, origem: 't2t', chat_message_id: p.chatMessageId },
+        payload: { symbol: posCompleta.symbol, direcao: posCompleta.direcao, volume: Number(posCompleta.volume), preco: Number(posCompleta.preco_entrada), sl: posCompleta.sl, tp: posCompleta.tp, origem: 't2t', chat_message_id: p.chatMessageId, ref_posicao: refPos },
       })
       if (eEv && eEv.code !== '23505') { tratadas.push({ connectionId: l.id, account, ok: false, error: eEv.message }); continue }
       tratadas.push({ connectionId: l.id, account, ok: true })
