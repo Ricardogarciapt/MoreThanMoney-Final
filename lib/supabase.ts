@@ -1,6 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js"
 import { createBrowserClient } from "@supabase/ssr"
 import { fechaduraComTecto } from "./supabase-fechadura"
+import { ehAppNativa, eventoEntregaSessao, entregarSessaoAoNativo } from "./supabase-nativo"
 import { getSupabaseAdmin as getServiceRoleClient } from "./supabase-admin-client"
 
 // URLs e chaves do Supabase (trim para evitar newline no env que quebra Realtime/WebSocket)
@@ -28,6 +29,15 @@ export const supabase: SupabaseClient = (() => {
     // a meio de um refresh pendurava o login («A concluir o login…» para sempre) e qualquer
     // escrita (o feed) em todos os outros — ver lib/supabase-fechadura.ts (05/10/2026).
     supabaseInstance = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { lock: fechaduraComTecto } })
+    // Dentro da app nativa há UMA sessão, e é o nativo que a renova: aqui pára-se o timer de
+    // renovação e, se o supabase-js renovar na mesma (a pedido), entrega-se a sessão nova ao
+    // nativo — ver lib/supabase-nativo.ts (05/10/2026).
+    if (ehAppNativa(navigator.userAgent)) {
+      supabaseInstance.auth.stopAutoRefresh()
+      supabaseInstance.auth.onAuthStateChange((evento, sessao) => {
+        if (eventoEntregaSessao(evento)) entregarSessaoAoNativo(window as unknown as Parameters<typeof entregarSessaoAoNativo>[0], sessao)
+      })
+    }
   }
   return supabaseInstance
 })()
