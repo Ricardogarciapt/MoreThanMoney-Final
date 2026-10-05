@@ -81,12 +81,8 @@ t('o chat lê o &msg= e salta para a mensagem', () => {
   const page = readFileSync(join(raiz, 'app/app-mobile/page.tsx'), 'utf8')
   assert.ok(page.includes('initialMessageId={searchParams.get("msg")}'), 'a app tem de passar o msg=')
 })
-t('o separador T2T lê signal= e sinal=', () => {
-  const feed = readFileSync(join(raiz, 'components/mobile/tap-to-trade-feed.tsx'), 'utf8')
-  assert.ok(feed.includes('q.get("sinal") ?? q.get("signal")'), 'o feed tem de aceitar os dois nomes')
-  const page = readFileSync(join(raiz, 'app/app-mobile/page.tsx'), 'utf8')
-  assert.ok(page.includes('n.data.url.includes("sinal=")'), 'o resgate do deep-link também')
-})
+// O resgate de «sinal=» na app-mobile saiu com o separador T2T (05/10/2026): esses links caem no
+// Chat (normalizarTab) e o sinal abre-se na MTM Auto — ver app-mobile-sem-t2t.check.ts.
 t('o chat não tem botão de aceitar (a aceitação vive no T2T)', () => {
   const chat = readFileSync(join(raiz, 'components/mobile/chat-channels.tsx'), 'utf8')
   assert.ok(!chat.includes('onTapToTrade'), 'o botão por mensagem saiu a 24/09')

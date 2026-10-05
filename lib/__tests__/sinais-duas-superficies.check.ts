@@ -1,3 +1,5 @@
+import { existsSync as existsSync } from 'node:fs'
+const RAIZ_SDS = process.cwd()
 /**
  * AS DUAS SUPERFÍCIES DE SINAIS CONTAM A MESMA HISTÓRIA.
  *
@@ -116,35 +118,19 @@ function linha(mudanca: Partial<LinhaDeAcompanhamento> = {}): LinhaDeAcompanhame
   assert.ok(rotaViva.includes('stopJaBatido(r)'), 'a rota do resultado ao vivo usa a regra, não uma cópia')
 }
 
-// ── 4. O ecrã já não tem a sua segunda regra de «isto é um sinal» ─────────────────────────────
+// ── 4. O ecrã T2T da app-mobile saiu (05/10/2026): o T2T vive só na MTM Auto ───────────────
 {
-  const ecra = ler('components/mobile/tap-to-trade-feed.tsx')
-  assert.ok(
-    ecra.includes('isT2TEntrySignal(m.channel_slug, m.content)'),
-    'a lista do separador T2T filtra-se pela regra da lib',
-  )
-  assert.ok(!/function isEntrySignal\(/.test(ecra), 'não pode voltar a haver uma regra local de entrada')
-  assert.ok(!/function foraDaZona\(/.test(ecra), 'não pode voltar a haver uma janela local')
-  assert.ok(!/const SENSEI_ACTIVE_RE/.test(ecra), 'o portão do Sensei é do servidor (senseiSignalIds)')
-  assert.ok(!/const CHANNEL_LABEL: Record/.test(ecra), 'os nomes dos canais vêm da tabela partilhada')
-
+  assert.ok(!existsSync(join(RAIZ_SDS, 'components/mobile/tap-to-trade-feed.tsx')), 'o ecrã T2T antigo da app-mobile não volta')
   // O caso real: «Entrada executada» é o que a mestre do Sensei escreve desde 21/09.
   const senseiNovo =
     '🔴 XAUUSD · VENDA\n📌 MTM Auto Sensei · Entrada executada\n🎯 Entrada: 4281.01\n🛑 SL: 4290.00\n🎯 TP1: 4260.00'
-  assert.equal(
-    isT2TEntrySignal('sensei-scanner', senseiNovo),
-    true,
-    'a palavra da mestre mudou e o sinal tem de continuar a existir',
-  )
-  // E o que NÃO é entrada continua fora.
+  assert.equal(isT2TEntrySignal('sensei-scanner', senseiNovo), true, 'a palavra da mestre mudou e o sinal tem de continuar a existir')
   assert.equal(isT2TEntrySignal('sensei-scanner', '🎯 Alvo 1 · XAUUSD 🔵 COMPRA · +75 pips'), false)
   assert.equal(isT2TEntrySignal('premium-ideas', 'Performance do dia: total 120 pips, TP1 4600'), false)
 }
 
 // ── 5. O nome de um canal é um só ─────────────────────────────────────────────────────────────
 {
-  const ecra = ler('components/mobile/tap-to-trade-feed.tsx')
-  assert.ok(ecra.includes('const CHANNEL_LABEL = ROTULOS_CANAIS_T2T'), 'o ecrã usa a tabela partilhada')
   // O admin e o chat chamam-lhe assim; as apps tinham outro nome («Premium · Ouro»).
   assert.equal(ROTULOS_CANAIS_T2T['premium-ideas'], 'MTM Auto Premium')
   assert.equal(ROTULOS_CANAIS_T2T['sensei-scanner'], 'MTM Auto Sensei')

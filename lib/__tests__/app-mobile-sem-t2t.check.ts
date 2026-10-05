@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 /**
  * GUARDA — a app-mobile NÃO tem separador «T2T» (Tap to Trade) desde 05/10/2026.
  *
@@ -72,6 +73,12 @@ ok(normalizarTab('portfolio') === 'portfolio', 'ids vivos passam intactos')
 ok(ehTabValida('tap-to-trade') && ehTabValida('trading-alerts'), 'tap-to-trade (legado) e trading-alerts são aceites no URL')
 ok(!ehTabValida('inventado') && !ehTabValida(null), 'ids desconhecidos/null são rejeitados')
 ok(TABS_VALIDAS.includes('trading-alerts'), 'trading-alerts está em TABS_VALIDAS')
+
+// ── O código do T2T e do admin T2T saiu da app-mobile (05/10/2026): o T2T vive só na MTM Auto ──
+{
+  ok(!existsSync('components/mobile/tap-to-trade-feed.tsx'), 'o ecrã T2T da app-mobile não volta')
+  ok(!existsSync('components/mobile/mtm-auto-estrategias.tsx'), 'o admin T2T da app-mobile não volta (decide-se no Centro)')
+}
 
 // ── Caso MAU: o detector dispara numa página fabricada com o botão T2T ─────────────────
 const paginaMa = `
