@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { isT2TEntrySignal } from "@/lib/mtmcopy/t2t-source"
 import { CANAIS_SO_CRIPTO, mensagemCripto, semCripto } from "@/lib/ios-sem-cripto"
@@ -1175,33 +1174,10 @@ function ChannelView({
     setMessages((prev) => prev.filter((m) => m.id !== msgId))
   }
 
-  // ── Aceitação vive fora do chat ─────────────────────────────────────────────
-  // O chat é para ler e acompanhar. Quem quiser aceitar vai ao separador Tap to Trade (ou à app
-  // MTM Auto, /sinais). Aqui fica só uma linha no TOPO do canal — uma por canal, nunca por
-  // mensagem, que era isso que poluía a conversa.
-  const router = useRouter()
-
-  /** Fontes T2T ativas no sistema (admin liga/desliga). null = ainda a carregar. */
-  const [t2tActiveChannels, setT2tActiveChannels] = useState<Set<string> | null>(null)
-
-  useEffect(() => {
-    let cancel = false
-    const run = async () => {
-      const { getAccessToken } = await import("@/lib/auth-token")
-      const token = await getAccessToken()
-      if (!token) return
-      const r = await fetch("/api/mtmcopy/tap-to-trade/providers", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
-      if (!r.ok) return
-      const j = await r.json().catch(() => null)
-      if (!cancel && Array.isArray(j?.channels)) setT2tActiveChannels(new Set(j.channels.map(String)))
-    }
-    run().catch(() => {})
-    return () => { cancel = true }
-  }, [])
-
-  /** Este canal é fonte T2T ligada? Só então se mostra o atalho (enquanto carrega, não pisca). */
-  const canalEFonteT2T = t2tActiveChannels !== null && t2tActiveChannels.has(channel.slug)
-
+  // ── Aceitação vive fora da app-mobile ─────────────────────────────────────
+  // O chat é para ler e acompanhar. Até 05/10/2026 havia aqui um atalho «Aceitar no Tap to Trade»
+  // que levava ao separador T2T da app-mobile; esse separador deixou de existir (o Tap to Trade
+  // vive só na app MTM Auto), por isso o atalho e a consulta às fontes T2T activas saíram daqui.
 
   // ── Fetch messages ────────────────────────────────────────────────────────
 
@@ -1730,18 +1706,6 @@ function ChannelView({
 
       {/* Card FIXO: como seguir os sinais (só canais de sinais com instruções configuradas) */}
       <ChatPinnedInstructions slug={channel.slug} />
-
-      {/* Onde se aceita. Uma linha por CANAL — a aceitação saiu das mensagens (decisão 24/09). */}
-      {canalEFonteT2T && (
-        <button
-          type="button"
-          onClick={() => router.push("/app-mobile?tab=tap-to-trade")}
-          className="mx-3 mt-1.5 mb-0.5 flex items-center gap-1.5 self-start text-[11.5px] text-[#D2A63C]/80 active:text-[#D2A63C]"
-        >
-          <span>Aceitar no Tap to Trade</span>
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
-      )}
 
       {/* Messages */}
       <div className="relative flex-1" style={{ minHeight: 0 }}>

@@ -10,7 +10,7 @@ import CopiasEntreContas from "@/components/contas/copias-entre-contas"
 
 /**
  * LIGADOR DE CONTAS — «As minhas contas». UM componente para todo o lado:
- *   • separador T2T › Conta na app-mobile (/app-mobile?tab=tap-to-trade)
+ *   • separador T2T › Conta na app MTM Auto (até 05/10/2026 também na app-mobile, em ?tab=tap-to-trade)
  *   • área de membro no site (/member-area/contas)
  *
  * Plataformas: MetaTrader 5, MetaTrader 4, TradeLocker e MTM Funded. A lista, a quota e as acções

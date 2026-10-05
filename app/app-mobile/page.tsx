@@ -20,7 +20,6 @@ import {
   LayoutGrid,
   Video,
   MessageSquare,
-  Zap,
   Bell,
   X,
 } from "lucide-react"
@@ -31,7 +30,7 @@ import MarketplaceMobile from "@/components/mobile/marketplace-mobile"
 import AppsMobile from "@/components/mobile/apps-mobile"
 import ChatChannels from "@/components/mobile/chat-channels"
 import TradingAlertsMobile from "@/components/mobile/trading-alerts-mobile"
-import TapToTradeFeed from "@/components/mobile/tap-to-trade-feed"
+import { ehTabValida, normalizarTab } from "@/lib/app-mobile/tabs"
 import SettingsMobile from "@/components/mobile/settings-mobile"
 import OnboardingTutorial, { useOnboarding } from "@/components/mobile/onboarding-tutorial"
 import MlmDashboardTab from "@/components/mobile/mlm-dashboard-tab"
@@ -75,14 +74,13 @@ function AppMobileContent() {
     onForegroundMessage: handleForegroundMessage,
   })
   const [mounted, setMounted] = useState(false)
-  const validTabs = ["social", "chat", "tap-to-trade", "portfolio", "scanner", "apps", "live", "mentor", "settings", "mlm", "trading-alerts", "funded", "marketplace"] as const
-  // `funded` é o deep-link antigo do WebTrader: hoje é o sub-separador «Web trader» do Scanner.
-  const normalizarTab = (t: string) => (t === "funded" ? "scanner" : t)
+  // A lista de separadores e a normalização dos ids antigos (`funded`→scanner, `tap-to-trade`→chat)
+  // vivem em lib/app-mobile/tabs.ts, para a guarda lib/__tests__/app-mobile-sem-t2t.check.ts as provar.
   const tabFromUrl = searchParams.get("tab")
   const subScanner = tabFromUrl === "funded" || searchParams.get("sub") === "webtrader" ? "webtrader" : "scanner"
   const channelFromUrl = searchParams.get("channel")
   const [activeTab, setActiveTab] = useState(() =>
-    tabFromUrl && validTabs.includes(tabFromUrl as (typeof validTabs)[number]) ? normalizarTab(tabFromUrl) : "social"
+    ehTabValida(tabFromUrl) ? normalizarTab(tabFromUrl) : "social"
   )
 
   /**
@@ -95,7 +93,7 @@ function AppMobileContent() {
    * nenhum dentro das apps nativas, que vivem inteiras nesta página.
    */
   useEffect(() => {
-    if (tabFromUrl && validTabs.includes(tabFromUrl as (typeof validTabs)[number]) && normalizarTab(tabFromUrl) !== activeTab) {
+    if (ehTabValida(tabFromUrl) && normalizarTab(tabFromUrl) !== activeTab) {
       setActiveTab(normalizarTab(tabFromUrl))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,56 +112,9 @@ function AppMobileContent() {
   const contentRef = useRef<HTMLDivElement>(null)
   const { shouldShow: showOnboarding, markDone: markOnboardingDone } = useOnboarding()
 
-  // ── RESGATE do deep-link de push (shell iOS nativa / cold start) ───────────
-  // A shell WKWebView (APNs nativo) abre a app SEM entregar o URL da notificação à web layer.
-  // Fallback server-side (sem rebuild nativo): ao abrir/retomar SEM ?signal na barra, procura a
-  // notificação in-app T2T mais recente NÃO LIDA criada nos últimos 3 min (o intervalo entre o
-  // tap na push e a app abrir), navega para o URL dela (abre o modal de aceitação) e marca-a
-  // lida — 1× por notificação. Em fluxos que já entregam o URL (web/SW/Capacitor), o ?signal
-  // presente faz esta rotina não disparar.
-  const deepLinkClaimBusy = useRef(false)
-  useEffect(() => {
-    const claim = async () => {
-      if (deepLinkClaimBusy.current) return
-      deepLinkClaimBusy.current = true
-      try {
-        const here = new URLSearchParams(window.location.search)
-        if (here.get("signal") || here.get("msg")) return
-        const res = await fetch("/api/notifications/user", { credentials: "include", cache: "no-store" })
-        if (!res.ok) return
-        const { notifications } = await res.json()
-        const fresh = (notifications ?? []).find(
-          (n: { read?: boolean; created_at?: string; data?: { url?: string } }) =>
-            !n.read &&
-            typeof n?.data?.url === "string" &&
-            n.data.url.includes("tab=tap-to-trade") &&
-            // Há dois emissores e dois nomes para o mesmo parâmetro (`signal=` e `sinal=`).
-            // Ler só um deixava metade das notificações de sinal a abrir o separador T2T em
-            // branco — e agora, sem botão no chat, não há segunda via para aceitar.
-            (n.data.url.includes("signal=") || n.data.url.includes("sinal=")) &&
-            n.created_at != null &&
-            Date.now() - new Date(n.created_at).getTime() < 3 * 60_000,
-        )
-        if (!fresh) return
-        await fetch(`/api/notifications/user?id=${encodeURIComponent(fresh.id)}`, {
-          method: "PUT",
-          credentials: "include",
-        }).catch(() => {})
-        router.replace(fresh.data.url)
-      } catch {
-        /* silencioso — fallback best-effort */
-      } finally {
-        deepLinkClaimBusy.current = false
-      }
-    }
-    claim()
-    const onVis = () => {
-      if (document.visibilityState === "visible") claim()
-    }
-    document.addEventListener("visibilitychange", onVis)
-    return () => document.removeEventListener("visibilitychange", onVis)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // (05/10/2026) O «resgate do deep-link de push» que procurava notificações T2T não lidas e navegava
+  // para ?tab=tap-to-trade saiu daqui: já não há separador T2T na app-mobile para onde ir. O Tap to
+  // Trade vive só na app MTM Auto; as notificações antigas com esse URL caem no Chat (normalizarTab).
 
   useEffect(() => {
     setMounted(true)
@@ -255,7 +206,7 @@ function AppMobileContent() {
       router.replace(path, { scroll: false })
       return
     }
-    if (tab && validTabs.includes(tab as (typeof validTabs)[number])) {
+    if (ehTabValida(tab)) {
       setActiveTab(normalizarTab(tab))
     }
   }, [searchParams, router])
@@ -329,7 +280,7 @@ function AppMobileContent() {
     const isLeftSwipe = distance > 50
     const isRightSwipe = distance < -50
 
-    const tabs = ['social', 'chat', 'live', 'apps', 'portfolio', 'scanner']
+    const tabs = ['social', 'chat', 'live', 'trading-alerts', 'apps', 'portfolio', 'scanner']
     const currentIndex = tabs.indexOf(activeTab)
 
     if (isLeftSwipe && currentIndex < tabs.length - 1) {
@@ -532,10 +483,6 @@ function AppMobileContent() {
               {activeTab === "chat" && <ChatChannels initialSlug={channelFromUrl} initialMessageId={searchParams.get("msg")} />}
             </TabsContent>
 
-            <TabsContent value="tap-to-trade" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
-              {activeTab === "tap-to-trade" && <TapToTradeFeed />}
-            </TabsContent>
-
             <TabsContent value="live" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
               <LiveSessionsMobile
                 isActive={activeTab === "live"}
@@ -632,17 +579,20 @@ function AppMobileContent() {
             <div className={`text-[10px] font-medium leading-tight ${activeTab === "live" ? "text-[#D2A63C]" : ""}`}>Aulas</div>
           </button>
 
+          {/* «Alertas» ocupa o lugar do antigo botão «T2T» (05/10/2026). O Tap to Trade passou a
+              viver só na app MTM Auto; aqui o cliente passa a ter à mão os alertas de trading, que
+              já existiam como separador mas só se chegava a eles pelo menu lateral. */}
           <button
-            data-tutorial-tab="tap-to-trade"
-            onClick={() => handleTabChange("tap-to-trade")}
+            data-tutorial-tab="trading-alerts"
+            onClick={() => handleTabChange("trading-alerts")}
             className={`py-3 rounded-lg transition-all relative ${
-              activeTab === "tap-to-trade"
+              activeTab === "trading-alerts"
                 ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
                 : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <Zap className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "tap-to-trade" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "tap-to-trade" ? "text-[#D2A63C]" : ""}`}>T2T</div>
+            <Bell className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "trading-alerts" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "trading-alerts" ? "text-[#D2A63C]" : ""}`}>Alertas</div>
           </button>
 
           <button

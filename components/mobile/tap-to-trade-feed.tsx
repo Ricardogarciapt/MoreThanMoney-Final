@@ -1,5 +1,15 @@
 "use client"
 
+/**
+ * TAP TO TRADE FEED — desde 05/10/2026 DEIXOU DE SER MONTADO na app-mobile (/app-mobile).
+ *
+ * O dono decidiu que o Tap to Trade vive só na app MTM Auto (repo separado); na app-mobile o
+ * botão «T2T» da barra inferior deu lugar a «Alertas» e os links/notificações antigos com
+ * ?tab=tap-to-trade caem no Chat (lib/app-mobile/tabs.ts). O componente fica no repositório
+ * porque o backend (lib/mtmcopy/*, /api/mtmcopy/*) continua vivo e a MTM Auto pode reaproveitá-lo.
+ * A guarda lib/__tests__/app-mobile-sem-t2t.check.ts impede que volte a ser importado na página.
+ */
+
 import { lerSinal } from "@/lib/sinais/formato-sinal"
 import { ehSinalDePerpetuo, t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { mensagemCripto, useSemCripto } from "@/lib/ios-sem-cripto"
