@@ -223,7 +223,7 @@ export default function PaginaEstrategia({ refEstrategia }: { refEstrategia: str
                           <td className={td}><Pilula tom={s.ativo ? "ok" : "neutro"}>{s.ativo ? "activa" : "inactiva"}</Pilula></td>
                           <td className={td}>{s.autoAceitar ? "sim" : "não"}</td>
                           <td className={`${td} font-mono text-[11px]`}>{s.lote}</td>
-                          <td className={td}>{s.temRota ? <span className="text-emerald-300">sim</span> : <span className="text-amber-300">sem rota</span>}</td>
+                          <td className={td}>{s.temRota ? <span className="text-emerald-300">sim</span> : s.ativo ? <span className="text-amber-300">sem rota</span> : <span className="text-zinc-600">—</span>}</td>
                           <td className={td}>{s.temDireito == null ? "?" : <Pilula tom={s.temDireito ? "ok" : "grave"}>{s.temDireito ? "sim" : "não"}</Pilula>}</td>
                           <td className={td}>{s.contaId && <Botao tom={s.ativo ? "perigo" : "ouro"} disabled={!f.pode.subscritor || ocupado != null} onClick={() => alternarSubscritor(`auto:${s.contaId}`, s.email ?? s.userId, !s.ativo)}>{s.ativo ? "Desligar" : "Ligar"}</Botao>}</td>
                         </tr>
