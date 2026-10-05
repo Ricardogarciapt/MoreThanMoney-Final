@@ -12,7 +12,18 @@ import { Input } from "@/components/ui/input"
 import MarkdownRenderer from "@/components/dashboard-gestao/markdown-renderer"
 import TvChartEmbed from "@/components/tv-chart-embed"
 import { supabase } from "@/lib/supabase"
-import { scannerFilterOptions, scannerKeyFromStrategy, scannerLabel } from "@/lib/mtm-alerts/scanners"
+import { scannerKeyFromStrategy, scannerLabel } from "@/lib/mtm-alerts/scanners"
+// Catálogo partilhado com a app-mobile (lib/alertas/catalogo): classes, timeframes e estratégias
+// deixaram de ser deduzidos do que chegou — o filtro mostrava 3 estratégias num dia e 4 noutro.
+import {
+  CLASSES_DE_ACTIVOS,
+  ESTRATEGIAS,
+  TIMEFRAMES,
+  classeDoAlerta,
+  normalizarEstrategiasSubscricao,
+  type AlertAssetClass as AssetClass,
+} from "@/lib/alertas/catalogo"
+import { naSubscricao, type Subscricao } from "@/lib/mtm-alerts/vista"
 import { classifyOutcome, winRate as calcWinRate, fullWinShare, emptyTally, type OutcomeCat } from "@/lib/mtm-alerts/outcome"
 import {
   Bell,
@@ -172,26 +183,6 @@ export function strategyToScannerKey(strategy: string | null): "Goldkiller" | "M
   return "MTMScanner"
 }
 
-type AssetClass = "gold_btc" | "forex" | "index" | "crypto_perp" | "other"
-const CLASS_LABELS: Record<AssetClass, string> = {
-  gold_btc: "Ouro & BTC",
-  forex: "Forex",
-  index: "Índices",
-  crypto_perp: "Cripto Perp",
-  other: "Outros",
-}
-const FX_CODES = new Set(["EUR", "USD", "GBP", "JPY", "CHF", "AUD", "NZD", "CAD", "SGD", "SEK", "NOK", "MXN", "ZAR"])
-const IDX_SET = new Set(["UK100", "US30", "US100", "US500", "SPX500", "SPX", "NAS100", "NAS", "NDX", "DJI", "GER40", "DE40", "DE30", "DAX", "JP225", "JPN225", "FRA40", "EU50", "US2000", "HK50", "AUS200", "ESP35", "IT40"])
-function classifyAssetClient(ticker: string | null): AssetClass {
-  if (!ticker) return "other"
-  const norm = ticker.toUpperCase().replace(/[^A-Z0-9.]/g, "").replace(/^[A-Z]+:/, "")
-  if (/XAUUSD/.test(norm) || /^BTCUSD$/.test(norm)) return "gold_btc"
-  if (/\.P$/.test(norm) || /USDT/.test(norm) || /PERP/.test(norm)) return "crypto_perp"
-  const letters = norm.replace(/[^A-Z]/g, "")
-  if (letters.length === 6 && FX_CODES.has(letters.slice(0, 3)) && FX_CODES.has(letters.slice(3, 6))) return "forex"
-  if (IDX_SET.has(norm) || IDX_SET.has(letters)) return "index"
-  return "other"
-}
 
 function CopyBtn({ value }: { value: number | null }) {
   const [copied, setCopied] = useState(false)
@@ -674,6 +665,29 @@ export default function AlertasMtm({
   const [stateFilter, setStateFilter] = useState<"all" | StateCat>("all")
   const [followed, setFollowed] = useState<Set<string>>(new Set())
   const searchRef = useRef("")
+  /**
+   * A subscrição pessoal (a mesma que a app-mobile guarda em «Gerir»), como filtro que se LIGA.
+   * Nasce desligado — quem abre a lista quer ver o que há (lib/mtm-alerts/vista.ts). Antes o
+   * desktop ignorava as preferências guardadas; a app respeitava-as. Agora é a mesma regra.
+   */
+  const [soOQueSigo, setSoOQueSigo] = useState(false)
+  const [sub, setSub] = useState<Subscricao | null>(null)
+  const loadSub = useCallback(async () => {
+    try {
+      const res = await fetch("/api/mtm-alerts/subscriptions", { credentials: "include", cache: "no-store" })
+      const data = await res.json()
+      if (data.success && data.subscription) {
+        const s = data.subscription
+        setSub({
+          symbols: Array.isArray(s.symbols) ? s.symbols : [],
+          strategies: normalizarEstrategiasSubscricao(s.strategies),
+          timeframes: Array.isArray(s.timeframes) ? s.timeframes : [],
+        })
+      }
+    } catch {
+      /* sem subscrição: o filtro fica indisponível */
+    }
+  }, [])
 
   const loadFollowed = useCallback(async () => {
     try {
@@ -723,7 +737,8 @@ export default function AlertasMtm({
   useEffect(() => {
     load()
     loadFollowed()
-  }, [load, loadFollowed])
+    loadSub()
+  }, [load, loadFollowed, loadSub])
 
   useEffect(() => {
     if (!supabase) return
@@ -740,14 +755,17 @@ export default function AlertasMtm({
     }
   }, [load])
 
-  const tfOptions = [...new Set(alerts.map((a) => a.timeframe).filter(Boolean))] as string[]
-  // Scanners CANÓNICOS (sem duplicados): as variantes do payload ("MTM Aurum Flow ORB/v8/…",
-  // "MTM Sensei X") colapsam no scanner respetivo — antes cada variante virava uma opção.
-  const stratOptions = scannerFilterOptions(alerts.map((a) => a.strategy))
+  // Os timeframes e as estratégias são os do CATÁLOGO, não os do que chegou: tirados dos dados,
+  // o filtro perdia opções nos dias calmos e ninguém sabia se a estratégia tinha deixado de existir
+  // ou só de disparar.
+  const tfOptions = TIMEFRAMES
+  const stratOptions = ESTRATEGIAS.map((e) => ({ key: e.chave, label: e.rotulo }))
+  const escondidosPelaSubscricao = sub ? alerts.filter((a) => !naSubscricao(a, sub)).length : 0
 
   const visible = alerts.filter((a) => {
+    if (soOQueSigo && sub && !naSubscricao(a, sub)) return false
     if (dirFilter !== "all" && a.direction !== dirFilter) return false
-    if (classFilter !== "all" && classifyAssetClient(a.ticker) !== classFilter) return false
+    if (classFilter !== "all" && classeDoAlerta(a.ticker) !== classFilter) return false
     if (tfFilter !== "all" && a.timeframe !== tfFilter) return false
     if (stratFilter !== "all" && scannerKeyFromStrategy(a.strategy) !== stratFilter) return false
     // "Todos" mostra só sinais VIVOS (pendentes+ativas); terminados ficam nos separadores
@@ -763,8 +781,9 @@ export default function AlertasMtm({
   // Desempenho (respeita ativo/classe/timeframe/estratégia/direção, ignora o filtro de estado
   // para os contadores refletirem sempre o universo filtrado)
   const perfBase = alerts.filter((a) => {
+    if (soOQueSigo && sub && !naSubscricao(a, sub)) return false
     if (dirFilter !== "all" && a.direction !== dirFilter) return false
-    if (classFilter !== "all" && classifyAssetClient(a.ticker) !== classFilter) return false
+    if (classFilter !== "all" && classeDoAlerta(a.ticker) !== classFilter) return false
     if (tfFilter !== "all" && a.timeframe !== tfFilter) return false
     if (stratFilter !== "all" && scannerKeyFromStrategy(a.strategy) !== stratFilter) return false
     return true
@@ -845,8 +864,8 @@ export default function AlertasMtm({
           className="rounded-md border border-gray-700 bg-black/60 px-2.5 py-1.5 text-xs text-gray-200"
         >
           <option value="all">Todas as classes</option>
-          {(Object.keys(CLASS_LABELS) as AssetClass[]).map((c) => (
-            <option key={c} value={c}>{CLASS_LABELS[c]}</option>
+          {CLASSES_DE_ACTIVOS.map((c) => (
+            <option key={c.chave} value={c.chave}>{c.rotulo}</option>
           ))}
         </select>
         <select
@@ -869,7 +888,19 @@ export default function AlertasMtm({
             <option key={o.key} value={o.key}>{o.label}</option>
           ))}
         </select>
-        {(classFilter !== "all" || tfFilter !== "all" || stratFilter !== "all" || dirFilter !== "all" || stateFilter !== "all") && (
+        {sub && (
+          <button
+            type="button"
+            onClick={() => setSoOQueSigo((v) => !v)}
+            title="Filtra pela subscrição guardada em «Gerir» na app"
+            className={`rounded-md border px-2.5 py-1.5 text-xs transition-colors ${
+              soOQueSigo ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-gray-700 text-gray-400 hover:text-white"
+            }`}
+          >
+            {soOQueSigo ? `Só o que sigo · +${escondidosPelaSubscricao} escondidos` : "Só o que sigo"}
+          </button>
+        )}
+        {(classFilter !== "all" || tfFilter !== "all" || stratFilter !== "all" || dirFilter !== "all" || stateFilter !== "all" || soOQueSigo) && (
           <button
             onClick={() => {
               setClassFilter("all")
@@ -877,6 +908,7 @@ export default function AlertasMtm({
               setStratFilter("all")
               setDirFilter("all")
               setStateFilter("all")
+              setSoOQueSigo(false)
             }}
             className="rounded-md border border-gray-700 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white"
           >

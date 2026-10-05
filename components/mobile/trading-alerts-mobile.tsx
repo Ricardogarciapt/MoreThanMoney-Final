@@ -6,14 +6,23 @@ import { linkWebtrader } from "@/lib/mtmfunded/link-webtrader"
 import { useSearchParams } from "next/navigation"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { montarVista } from "@/lib/mtm-alerts/vista"
+import { montarVista, naSubscricao } from "@/lib/mtm-alerts/vista"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
-import { TERMINAL_ASSETS, type TerminalAssetType } from "@/lib/mtm-terminal-assets"
+// O catálogo (estratégias, grupos de activos, timeframes) vive em lib/alertas/catalogo — era
+// mantido à mão aqui e no desktop, e já não batiam certo. A guarda catalogo.check.ts falha se voltar.
+import {
+  ESTRATEGIAS,
+  GRUPOS_DE_ACTIVOS,
+  TIMEFRAMES,
+  TOTAL_DE_ACTIVOS,
+  cabecalhoDoSelector,
+  normalizarEstrategiasSubscricao,
+} from "@/lib/alertas/catalogo"
 import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import {
   Bell,
@@ -184,27 +193,6 @@ interface Subscription {
  * faz aos favoritos (components/funded/funded-watchlist.tsx::lerFavoritos).
  */
 const simbolosIniciais = () => (semCripto() ? DEFAULT_ALERT_SYMBOLS.filter((s) => !ehSimboloCripto(s)) : DEFAULT_ALERT_SYMBOLS)
-/**
- * Estratégias MTM que geram alertas. O VALOR é o que fica gravado na subscrição — não muda,
- * senão as preferências já guardadas deixavam de casar com os alertas. Só o rótulo mudou
- * (a Aurum Flow passou a ser só cripto).
- */
-const STRATEGIES: { valor: string; rotulo: string }[] = [
-  { valor: "Sensei", rotulo: "Sensei" },
-  { valor: "Goldkiller", rotulo: "Goldkiller" },
-  { valor: "MTMScanner", rotulo: "MTMScanner" },
-  { valor: "Aurum Flow", rotulo: "MTM Aurum Flow Cripto" },
-]
-const TIMEFRAMES = ["5", "15", "30", "60", "240", "D"]
-
-// Ativos agrupados por CLASSE (dropdowns no seletor de alertas).
-const ASSET_CLASSES: { key: TerminalAssetType; label: string }[] = [
-  { key: "commodity", label: "Metais / Commodities" },
-  { key: "index", label: "Índices" },
-  { key: "forex", label: "Forex" },
-  { key: "crypto", label: "Cripto" },
-  { key: "stock", label: "Ações" },
-]
 
 /**
  * App iOS: os MTM Alerts não mostram alertas cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
@@ -602,7 +590,14 @@ export default function TradingAlertsMobile() {
     try {
       const res = await fetch("/api/mtm-alerts/subscriptions", { credentials: "include", cache: "no-store", headers: await authHeaders() })
       const data = await res.json()
-      if (data.success && data.subscription) setSub((prev) => ({ ...prev, ...data.subscription }))
+      if (data.success && data.subscription)
+        setSub((prev) => ({
+          ...prev,
+          ...data.subscription,
+          // Chaves canónicas: a base tem linhas antigas em maiúsculas e com estratégias que nunca
+          // existiram nos alertas (GOLDENZONE, KILLSHOT) — era o «ESTRATÉGIAS (6)» com 4 chips.
+          strategies: normalizarEstrategiasSubscricao(data.subscription.strategies),
+        }))
     } catch {
       /* usa defaults */
     }
@@ -686,22 +681,9 @@ export default function TradingAlertsMobile() {
     }
   }
 
-  // Feed filtrado às preferências (símbolos escolhidos; vazio = todos)
-  const subFiltered = useMemo(() => {
-    const norm = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "")
-    return alerts.filter((a) => {
-      if (sub.symbols.length > 0) {
-        const t = norm(a.ticker || "")
-        if (!sub.symbols.some((s) => t.includes(norm(s)))) return false
-      }
-      if (sub.timeframes.length > 0 && a.timeframe && !sub.timeframes.includes(a.timeframe)) return false
-      if (sub.strategies.length > 0) {
-        const st = norm(a.strategy || "")
-        if (!st || !sub.strategies.some((s) => st.includes(norm(s)))) return false
-      }
-      return true
-    })
-  }, [alerts, sub])
+  // Feed filtrado às preferências — a MESMA regra que a vista usa (lib/mtm-alerts/vista), não
+  // uma cópia dela: duas cópias davam contagens e lista a discordar.
+  const subFiltered = useMemo(() => alerts.filter((a) => naSubscricao(a, sub)), [alerts, sub])
 
   // Desempenho dos alertas subscritos + feed final (com filtro de estado)
   const perf = useMemo(() => {
@@ -806,22 +788,23 @@ export default function TradingAlertsMobile() {
 
           <div>
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              Ativos ({sub.symbols.length || "todos"})
+              {/* «ATIVOS (7)» lia-se como 7 categorias; eram 7 símbolos seleccionados. Agora diz de quantos. */}
+              {cabecalhoDoSelector("Ativos", sub.symbols.length, TOTAL_DE_ACTIVOS)}
             </p>
             <div className="space-y-1.5">
-              {ASSET_CLASSES.filter((cls) => !(cls.key === "crypto" && semCripto())).map((cls) => {
-                const assets = TERMINAL_ASSETS.filter((a) => a.type === cls.key && !(semCripto() && ehSimboloCripto(a.symbol)))
-                if (assets.length === 0) return null
-                const selected = assets.filter((a) => sub.symbols.includes(a.symbol)).length
+              {GRUPOS_DE_ACTIVOS.filter((g) => !(g.chave === "crypto" && semCripto())).map((g) => {
+                const simbolos = g.simbolos.filter((s) => !(semCripto() && ehSimboloCripto(s)))
+                if (simbolos.length === 0) return null
+                const selected = simbolos.filter((s) => sub.symbols.includes(s)).length
                 return (
-                  <details key={cls.key} className="rounded-lg border border-[#D2A63C]/15 bg-black/30">
+                  <details key={g.chave} className="rounded-lg border border-[#D2A63C]/15 bg-black/30">
                     <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-gray-300">
-                      <span>{cls.label}</span>
-                      <span className="text-[10px] text-gray-500">{selected ? `${selected}/${assets.length}` : `${assets.length} ativos`}</span>
+                      <span>{g.rotulo}</span>
+                      <span className="text-[10px] text-gray-500">{selected ? `${selected}/${simbolos.length}` : `${simbolos.length} ativos`}</span>
                     </summary>
                     <div className="flex flex-wrap gap-1.5 px-3 pb-3">
-                      {assets.map((a) => (
-                        <Chip key={a.symbol} label={a.symbol} active={sub.symbols.includes(a.symbol)} onClick={() => toggle("symbols", a.symbol)} />
+                      {simbolos.map((s) => (
+                        <Chip key={s} label={s} active={sub.symbols.includes(s)} onClick={() => toggle("symbols", s)} />
                       ))}
                     </div>
                   </details>
@@ -832,15 +815,15 @@ export default function TradingAlertsMobile() {
 
           <div>
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              Estratégias ({sub.strategies.length || "todas"})
+              {cabecalhoDoSelector("Estratégias", sub.strategies.length, ESTRATEGIAS.length)}
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {STRATEGIES.map((s) => (
+              {ESTRATEGIAS.map((s) => (
                 <Chip
-                  key={s.valor}
+                  key={s.chave}
                   label={s.rotulo}
-                  active={sub.strategies.includes(s.valor)}
-                  onClick={() => toggle("strategies", s.valor)}
+                  active={sub.strategies.includes(s.valorSubscricao)}
+                  onClick={() => toggle("strategies", s.valorSubscricao)}
                 />
               ))}
             </div>
@@ -848,7 +831,7 @@ export default function TradingAlertsMobile() {
 
           <div>
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              Timeframes ({sub.timeframes.length || "todos"})
+              {cabecalhoDoSelector("Timeframes", sub.timeframes.length, TIMEFRAMES.length)}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {TIMEFRAMES.map((t) => (

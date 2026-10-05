@@ -33,6 +33,7 @@ import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId, resolvedGoldkillerS
 import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
 import { evaluatePerpsSignalGate } from "@/lib/mtmcopy/perps-signal-gate"
 import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/signal-rules"
+import { alertaNasEstrategias } from "@/lib/alertas/catalogo"
 import { temTodasAsConfirmacoes } from "@/lib/mtmcopy/scanner-confirmacoes"
 import { decidirScannerParaMestre } from "@/lib/mtmcopy/scanner-para-mestre"
 // Classificação do ativo e gates locais vivem em lib: a sombra das estratégias (lib/mtmauto/sombra)
@@ -335,9 +336,11 @@ async function pushSignalSubscribers(
     /** Sinal de scanner pago (Sensei/GoldKiller): só vai a quem tem direito (lib/direito-sinais). */
     pago?: boolean
     channel?: string | null
+    /** Texto da estratégia do alerta (alert_name/strategy) — para respeitar as estratégias subscritas. */
+    strategy?: string | null
   }
 ): Promise<number> {
-  const { ticker, timeframe, title, body, url, signalId, category, messageId, pago, channel } = opts
+  const { ticker, timeframe, title, body, url, signalId, category, messageId, pago, channel, strategy } = opts
   if (!ticker) return 0
   const norm = ticker.toUpperCase().replace(/[^A-Z0-9]/g, "")
 
@@ -349,11 +352,11 @@ async function pushSignalSubscribers(
     supabase.from("profiles").select("id").eq("is_active", true).in("id", deviceUsers),
     supabase
       .from("user_signal_subscriptions")
-      .select("user_id, enabled, push_enabled, symbols, timeframes")
+      .select("user_id, enabled, push_enabled, symbols, timeframes, strategies")
       .in("user_id", deviceUsers),
   ])
   const activeSet = new Set((profs ?? []).map((p: { id: string }) => p.id))
-  const subMap = new Map<string, { enabled: boolean | null; push_enabled: boolean | null; symbols: string[] | null; timeframes: string[] | null }>()
+  const subMap = new Map<string, { enabled: boolean | null; push_enabled: boolean | null; symbols: string[] | null; timeframes: string[] | null; strategies: string[] | null }>()
   for (const s of subs ?? []) subMap.set(s.user_id, s as any)
 
   const matchSym = (syms: string[]) => syms.some((sym) => norm.includes(sym.toUpperCase().replace(/[^A-Z0-9]/g, "")))
@@ -371,6 +374,9 @@ async function pushSignalSubscribers(
     const syms = Array.isArray(s.symbols) && s.symbols.length ? s.symbols : ALERT_DEFAULT_SYMBOLS
     if (!matchSym(syms)) continue
     if (Array.isArray(s.timeframes) && s.timeframes.length && timeframe && !s.timeframes.includes(timeframe)) continue
+    // As estratégias escolhidas no «Gerir» eram guardadas e nunca lidas aqui: quem só queria
+    // GoldKiller levava o MTM Scanner inteiro (1.900 alertas/semana) no telemóvel.
+    if (Array.isArray(s.strategies) && s.strategies.length && !alertaNasEstrategias(strategy, s.strategies)) continue
     targets.push(uid)
   }
   // O corpo leva direção e preço («Sensei · XAUUSD · COMPRA · @ 2345»): num sinal pago, só a quem
@@ -1411,6 +1417,8 @@ export async function POST(request: NextRequest) {
         signalId: logId,
         messageId: chatId,
         channel: route.channel,
+        // A estratégia canónica resolve-se do nome; a Aurum Flow vem forçada por ?strategy=aurum.
+        strategy: isAurumFlow ? "aurum" : scannerKey === "sensei" || scannerKey === "goldkiller" || scannerKey === "mtmscanner" ? scannerKey : alertName,
         // Pago = o canal é pago (o mesmo do chat); sem canal, o scanner Premium (Sensei/GoldKiller).
         pago: route.channel ? canalDeSinaisPago(route.channel) : isGoldKiller || scannerKey === "sensei" || scannerKey === "goldkiller",
       })

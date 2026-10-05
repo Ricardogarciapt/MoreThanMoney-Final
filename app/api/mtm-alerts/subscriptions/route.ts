@@ -4,6 +4,7 @@ import { cookies } from "next/headers"
 import { userIdDoPedido } from "@/lib/sessao-do-pedido"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { DEFAULT_ALERT_SYMBOLS } from "@/lib/mtm-alerts/defaults"
+import { normalizarEstrategiasSubscricao } from "@/lib/alertas/catalogo"
 
 /**
  * Preferências de Trading Alerts do utilizador (símbolos/estratégias/timeframes).
@@ -58,7 +59,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, subscription: DEFAULT_SUB })
   }
 
-  return NextResponse.json({ success: true, subscription: data || DEFAULT_SUB })
+  if (!data) return NextResponse.json({ success: true, subscription: DEFAULT_SUB })
+  // As estratégias saem CANÓNICAS. Há linhas antigas com «GOLDENZONE»/«KILLSHOT» (nunca foram
+  // estratégias de alerta) e com tudo em maiúsculas — era isso que dava «ESTRATÉGIAS (6)» com
+  // 4 chips apagados. Limpa-se à leitura; a próxima gravação fixa-o na base.
+  return NextResponse.json({
+    success: true,
+    subscription: { ...data, strategies: normalizarEstrategiasSubscricao(data.strategies) },
+  })
 }
 
 export async function POST(request: NextRequest) {
@@ -81,7 +89,8 @@ export async function POST(request: NextRequest) {
     enabled: body.enabled !== false,
     push_enabled: body.push_enabled !== false,
     symbols: clean(body.symbols),
-    strategies: clean(body.strategies),
+    // Chaves canónicas (sensei/goldkiller/mtmscanner/aurum), nunca o texto do chip em maiúsculas.
+    strategies: normalizarEstrategiasSubscricao(body.strategies),
     timeframes: clean(body.timeframes),
     updated_at: new Date().toISOString(),
   }

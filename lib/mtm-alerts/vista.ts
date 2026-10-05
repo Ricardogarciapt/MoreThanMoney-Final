@@ -25,6 +25,8 @@
  * ecrã partido.
  */
 
+import { alertaNasEstrategias } from '@/lib/alertas/catalogo'
+
 export type EstadoAlerta = 'pending' | 'active' | 'win' | 'loss'
 
 export interface AlertaParaVista {
@@ -57,10 +59,9 @@ export function naSubscricao(a: AlertaParaVista, sub: Subscricao): boolean {
     if (!sub.symbols.some((s) => t.includes(norm(s)))) return false
   }
   if (sub.timeframes.length > 0 && a.timeframe && !sub.timeframes.includes(a.timeframe)) return false
-  if (sub.strategies.length > 0) {
-    const st = norm(a.strategy)
-    if (!st || !sub.strategies.some((s) => st.includes(norm(s)))) return false
-  }
+  // Pela chave CANÓNICA (lib/alertas/catalogo): a rota guardava «SENSEI» e o alerta traz
+  // «MTM Sensei X» — comparar texto com texto funcionava por acaso e falhava nos chips.
+  if (!alertaNasEstrategias(a.strategy, sub.strategies)) return false
   return true
 }
 
