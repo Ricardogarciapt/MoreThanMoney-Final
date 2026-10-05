@@ -7,6 +7,7 @@ import type { ContaWT, OrdemWT, PosicaoWT } from "@/lib/webtrader/corretoras/tip
 import { ErroFeed, criarFeed, lerPreferenciasSimbolos, pedirCredenciais, pulsar } from "@/lib/webtrader/feed-directo/ligar"
 import type { CredenciaisFeed, EstadoFeed, FeedConta, FichaMinima } from "@/lib/webtrader/feed-directo/tipos"
 import type { VelaC } from "@/lib/webtrader/velas"
+import { decidirFonte } from "@/lib/webtrader/feed-directo/fonte"
 
 /**
  * O FEED DA CONTA NO ECRÃ — dada a ref (`mt5:site:<uuid>`, `tradelocker:auto:<uuid>`…), pede a
@@ -22,7 +23,6 @@ import type { VelaC } from "@/lib/webtrader/velas"
  */
 
 const FRESCO_MS = 10_000
-const QUEDA_PARA_MTM_MS = 10_000
 const PULSO_MS = 60_000
 const FOLGA_RENOVACAO_MS = 2 * 60_000
 
@@ -162,11 +162,8 @@ export function useFeedConta(ref: string | null, simbolos: string[], opcoes: { a
   useEffect(() => {
     const avaliar = () => {
       const e = entradaRef.current
-      const feed = e?.feed
-      if (!feed) { setFonte('mtm'); return }
-      if (feed.estado === 'ligado') { if (e) e.caidoDesde = null; setFonte('conta'); return }
-      if (e && e.caidoDesde == null) e.caidoDesde = Date.now()
-      if (e && Date.now() - (e.caidoDesde ?? 0) > QUEDA_PARA_MTM_MS) setFonte('mtm')
+      if (!e) { setFonte('mtm'); return }
+      setFonte(decidirFonte(e.feed?.estado ?? null, e, Date.now()))
     }
     avaliar()
     const iv = setInterval(avaliar, 1000)
