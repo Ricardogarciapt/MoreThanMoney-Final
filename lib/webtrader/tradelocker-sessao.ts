@@ -1,4 +1,13 @@
 /**
+ * ⚠ CANDIDATO A MORTO (05/10) — NÃO APAGADO por dependência cruzada.
+ *
+ * `emitirSessaoTL` já não é chamado por ninguém: `entrarTradeLocker` (entrar.ts) liga a conta pelo
+ * ligador e devolve `sessao: null`. Sem emissão, `lerSessaoTL` nunca encontra uma sessão válida e
+ * as refs `tradelocker:sessao:<id>` não abrem. Fica porque o feed directo (lib/webtrader/feed-directo/
+ * emitir.ts, de outra frente) ainda importa `lerSessaoTL` e `CABECALHO_SESSAO_TL`. Para apagar:
+ * tirar o ramo `origem === 'sessao'` de lá, de contas.ts e de corretoras/regras.ts no mesmo commit.
+ */
+/**
  * SESSÃO TRADELOCKER DO WEBTRADER — entrar numa conta TradeLocker sem a ligar ao Tap to Trade.
  *
  * O que NÃO se guarda: a password. Nem na base, nem no browser. Depois do login devolve-se ao

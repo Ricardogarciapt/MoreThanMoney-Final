@@ -16,7 +16,9 @@ export const maxDuration = 120
 /**
  * O WEBTRADER DAS TRÊS PLATAFORMAS — uma rota, um adaptador (lib/webtrader/corretoras).
  *
- *   GET  /api/webtrader/{mtmfunded|tradelocker|mt5}/{conta|posicoes|ordens|historico|simbolos|preco}?conta=<ref>[&q=][&symbol=][&dias=]
+ *   GET  /api/webtrader/{mtmfunded|tradelocker|mt5}/{conta|posicoes|historico|simbolos}?conta=<ref>[&q=][&dias=]
+ *        (`ordens` e `preco` saíram a 05/10: nenhum cliente os pedia — as pendentes vêm em `posicoes`
+ *        e o preço vem do feed MTM / feed directo, nunca daqui.)
  *   POST /api/webtrader/{plataforma}/ordem      { conta, symbol, direcao, tipo, volume, preco?, sl?, tp? }
  *   POST /api/webtrader/{plataforma}/modificar  { conta, alvo: posicao|ordem, id, sl?, tp?, preco? }
  *   POST /api/webtrader/{plataforma}/fechar     { conta, positionId, volume? }
@@ -69,21 +71,12 @@ export async function GET(request: NextRequest, { params }: Params) {
         dados = { posicoes, ordens, gestaoAuto }
         break
       }
-      case 'ordens':
-        dados = { ordens: await a.ordens() }
-        break
       case 'historico':
         dados = { historico: await a.historico(Number(sp.get('dias') ?? 30) || 30) }
         break
       case 'simbolos':
         dados = { simbolos: await a.simbolos(sp.get('q') ?? '') }
         break
-      case 'preco': {
-        const symbol = String(sp.get('symbol') ?? '').toUpperCase()
-        if (!/^[A-Z0-9._#+-]{2,24}$/.test(symbol)) throw new ErroCorretora(400, 'símbolo inválido')
-        dados = { preco: await a.preco(symbol) }
-        break
-      }
       default:
         throw new ErroCorretora(404, 'acção desconhecida')
     }

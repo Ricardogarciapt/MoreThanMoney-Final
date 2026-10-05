@@ -13,7 +13,7 @@ import { preaquecerWebtrader } from "./pre-carga"
 import { InterruptorModo, useModoWebtrader } from "./modo-webtrader"
 import type { Prefill } from "./funded-ticket"
 import {
-  type ContaReal, COR_PLATAFORMA, apagarSessaoTL, ehRefReal, listarContasReais, lerSessoesTL, plataformaDaRef,
+  type ContaReal, COR_PLATAFORMA, ehRefReal, listarContasReais, plataformaDaRef,
 } from "@/components/webtrader/api-corretoras"
 import { contaInicial, montarSeletor, pastilhaDaConta, type EntradaSeletor } from "@/lib/webtrader/seletor"
 import { ehContaMestre } from "@/lib/webtrader/filtro-contas"
@@ -146,9 +146,9 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
         setCompraPermitida(reaisR.value.compraPermitida)
       }
     }
-    // Sessões TradeLocker antigas deste separador (o WebTrader passou a ligar pelo ligador de contas).
-    // Só com sessão MTM: o servidor exige o dono também nestas.
-    if (sessaoMtm) listaReais = montarSeletor({ funded: [], reais: listaReais, sessoesTL: lerSessoesTL() }).map((e) => e.real!).filter(Boolean)
+    // As sessões TradeLocker «por separador» deixaram de entrar no seletor (05/10): o servidor nunca as
+    // emite (`entrarTradeLocker` devolve `sessao: null` e liga a conta pelo ligador) — só apareceriam
+    // restos guardados no browser, a dar 401 ao abrir.
     setTemSessaoMtm(sessaoMtm)
     setReais(listaReais)
     setContas(lista)
@@ -389,9 +389,6 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                       fechar={() => setEtiquetaEmEdicao(null)}
                       gravar={(texto) => void guardarEtiqueta(t, texto)}
                     />
-                    {t.real.origem === "sessao" && (
-                      <button type="button" aria-label="Sair desta conta" title="Sair desta conta" onClick={() => { apagarSessaoTL(t.id); void carregar() }} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-white/5 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"><X className="h-4 w-4" /></button>
-                    )}
                   </div>
                 ) : (
                   <div key={t.id} data-conta-id={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${organizar && estaOculta(ocultas, t.id) ? "opacity-40" : ""} ${arrasto.aArrastar === t.id ? "bg-white/15 opacity-70" : t.id === ativa ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>

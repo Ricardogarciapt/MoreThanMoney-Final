@@ -1,7 +1,6 @@
 "use client"
 
 import type { PrecoVivo, SimboloFicha } from "./api"
-import { bibliotecaTvDisponivel } from "./biblioteca-tv"
 import { semearPrecos } from "./use-precos"
 import { registarSimbolosCripto } from "@/lib/ios-sem-cripto"
 import { buscarRecentes, lerDisco, lerMemoria } from "./armazem-velas"
@@ -65,7 +64,7 @@ export const VELAS_PRIMEIRA_JANELA = 300
 let lwAquecido = false
 /**
  * Arranca tudo o que é público para o símbolo que vai abrir: ficha + preço, velas recentes no
- * timeframe guardado, o código do Lightweight Charts e o teste da biblioteca TradingView.
+ * timeframe guardado, e o código do Lightweight Charts.
  * Pode chamar-se várias vezes — os pedidos repetidos são a mesma promessa.
  */
 export function preaquecerWebtrader(candidatos: string | null) {
@@ -73,7 +72,6 @@ export function preaquecerWebtrader(candidatos: string | null) {
   if (!lwAquecido) {
     lwAquecido = true
     void import("lightweight-charts").catch(() => { lwAquecido = false })
-    void bibliotecaTvDisponivel()
   }
   let tf = "M5"
   try {

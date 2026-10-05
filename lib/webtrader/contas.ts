@@ -32,6 +32,7 @@ import { ErroCorretora, type AdaptadorCorretora, type PlataformaWT } from './cor
 import { lerSessaoTL } from './tradelocker-sessao'
 import { etiquetaDaLinha } from '@/lib/contas/etiqueta'
 
+/** ⚠ Candidato a morto (05/10) — ver lib/webtrader/tradelocker-sessao.ts (ninguém emite a sessão). */
 export const CABECALHO_SESSAO_TL = 'x-webtrader-tl'
 
 export interface ContaListadaWT {

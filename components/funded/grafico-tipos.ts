@@ -7,12 +7,10 @@ import type { SinalEstudo } from "./use-sinais-estudos"
 /**
  * O CONTRATO DOS GRÁFICOS DO WEBTRADER.
  *
- * Há dois motores de gráfico e ambos recebem exactamente isto:
- *  · `grafico-tradingview.tsx` — a biblioteca licenciada do TradingView (Advanced Charts / Trading
- *    Platform), quando os ficheiros estão em public/charting_library/;
- *  · `grafico-leve.tsx` — lightweight-charts com a mecânica do TradingView desenhada por cima.
- * O trader (funded-trader.tsx) não sabe qual está a correr: dá posições, ordens e callbacks, e
- * recebe as mesmas acções (modificar SL/TP, mover pendente, fechar, cancelar, confirmar ferramenta).
+ * Há um motor de gráfico — `grafico-leve.tsx`, lightweight-charts com a mecânica do TradingView
+ * desenhada por cima (a biblioteca licenciada, que nunca foi instalada, saiu a 05/10). O trader dá
+ * posições, ordens e callbacks e recebe as acções (modificar SL/TP, mover pendente, fechar,
+ * cancelar). A ferramenta Long/Short envia pelo rascunho partilhado (rascunho-ordem.tsx).
  */
 
 export interface PosicaoGrafico {
@@ -24,7 +22,6 @@ export interface PosicaoGrafico {
 export interface AlertaGrafico { id: string; preco: number; nota?: string | null }
 export interface OrdemGrafico { id: string; direcao: Direcao; tipo: "limit" | "stop"; volume: number; preco: number; sl: number | null; tp: number | null }
 export interface Ferramenta { direcao: Direcao; entrada: number; sl: number; tp: number }
-export type FerramentaConfirmada = Ferramenta & { tipo: "mercado" | "limit" | "stop" }
 
 export interface GraficoProps {
   simbolo: SimboloFicha
@@ -55,8 +52,6 @@ export interface GraficoProps {
   onModificarPendente: (id: string, preco: number, sl: number | null, tp: number | null) => Promise<unknown>
   onFecharPosicao: (id: string) => Promise<unknown>
   onCancelarPendente: (id: string) => Promise<unknown>
-  /** Obsoleto: a ferramenta envia pelo rascunho partilhado (rascunho-ordem.tsx). */
-  onConfirmarFerramenta?: (f: FerramentaConfirmada) => Promise<void>
   /** Sinais dos estudos MTM (GoldKiller/Sensei/MTM Scanner) para este símbolo: setas no gráfico. */
   sinais?: SinalEstudo[]
   /** O sinal activo mais recente: linhas ténues de entrada/SL/TP. */

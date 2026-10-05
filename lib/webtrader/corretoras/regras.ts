@@ -32,6 +32,7 @@ export function lerRefConta(plataforma: string, ref: unknown): RefConta | null {
   if (plataforma === 'tradelocker') {
     if ((origem === 'site' || origem === 'auto') && UUID.test(id)) return { plataforma, origem, id }
     // Sessão do WebTrader: o id é o accountId TradeLocker (numérico); a posse vem do bilhete.
+    // ⚠ Candidato a morto (05/10): ninguém emite estas sessões — ver lib/webtrader/tradelocker-sessao.ts.
     if (origem === 'sessao' && /^\d{1,20}$/.test(id)) return { plataforma, origem, id }
     return null
   }

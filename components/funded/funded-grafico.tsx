@@ -1,6 +1,5 @@
 "use client"
 
-import dynamic from "next/dynamic"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { TrendingUp, TrendingDown, Lock, Zap, Eye, EyeOff, Maximize2, Minimize2 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
@@ -9,7 +8,6 @@ import { ESTUDOS_WEBTRADER, type ChaveEstudoWebtrader } from "@/lib/scanners/est
 import type { Direcao } from "@/lib/mtmfunded/simulado/matematica"
 import { px } from "./api"
 import { type GraficoProps, type Tf, TIMEFRAMES, TV } from "./grafico-tipos"
-import { bibliotecaTvDisponivel } from "./biblioteca-tv"
 import GraficoLeve from "./grafico-leve"
 import { useSinaisEstudos } from "./use-sinais-estudos"
 import { useGraficoVisivel } from "./grafico-visivel"
@@ -24,9 +22,6 @@ import type { ResultadoMTMScanner } from "@/lib/estudos/mtmscanner/tipos"
 
 export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
 
-// A biblioteca do TradingView está adormecida (só entra se `bibliotecaTvDisponivel()`): o seu
-// componente (~600 linhas) deixa de ir no JS inicial de toda a gente e só se descarrega quando é usado.
-const GraficoTradingView = dynamic(() => import("./grafico-tradingview"), { ssr: false })
 
 /**
  * O GRÁFICO DO WEBTRADER — um só modo, com tudo no mesmo gráfico.
@@ -42,9 +37,9 @@ const GraficoTradingView = dynamic(() => import("./grafico-tradingview"), { ssr:
  * sinal» lê o último B/S (entrada/SL/TP1-3 do alerta). O gráfico gratuito do TradingView fica só no separador Scanner
  * (que não é este componente).
  *
- * A biblioteca licenciada do TradingView (grafico-tradingview.tsx) está adormecida: só é usada,
- * sozinha e no mesmo modo único, se existir em public/charting_library/ E tiver as primitivas de
- * trading (edição Trading Platform). Se arrancar sem elas, ou falhar, volta-se ao Lightweight.
+ * A biblioteca licenciada do TradingView (grafico-tradingview.tsx + biblioteca-tv.ts) saiu a 05/10:
+ * estava adormecida à espera de public/charting_library/, que nunca existiu, e custava um HEAD (404)
+ * e um ecrã vazio «a verificar» em cada abertura. Para a repor: `git show 4c894bdf:components/funded/grafico-tradingview.tsx`.
  *
  * Estudos por perfil (lib/mtmfunded/acesso.ts): membro/admin todos, torneio só GoldKiller, quem
  * entrou só com login+password da conta simulada nenhum.
@@ -120,13 +115,10 @@ export default function FundedGrafico(props: GraficoProps) {
   const comFerramenta = Boolean(rascunho) && props.ferramenta !== false
   const modo = rascunho ? rascunho.ferramenta : modoLocal
   const setModo = (d: Direcao | null) => (rascunho ? rascunho.setFerramenta(d) : setModoLocal(d))
-  const [motor, setMotor] = useState<"a_verificar" | "tv" | "leve">("a_verificar")
-  const [semTradingPlatform, setSemTradingPlatform] = useState(false)
   const [tf, setTfEstado] = useState<Tf>("M5")
   const [estudos, setEstudos] = useState<ChaveEstudoWebtrader[]>(["Goldkiller"])
 
   useEffect(() => {
-    bibliotecaTvDisponivel().then((ok) => setMotor(ok ? "tv" : "leve"))
     setEstudos(ler<ChaveEstudoWebtrader[]>(CHAVE_ESTUDOS, ["Goldkiller"]))
     const guardado = ler<string | null>(CHAVE_TF + (props.chaveTf ?? ""), null)
     if (guardado && TIMEFRAMES.some((t) => t.chave === guardado)) setTfEstado(guardado as Tf)
@@ -148,17 +140,14 @@ export default function FundedGrafico(props: GraficoProps) {
     guardar(CHAVE_ESTUDOS, novo)
   }
 
-  // Sensei: no gráfico Lightweight é o estudo completo calculado aqui; na biblioteca do TradingView
-  // (adormecida) continua a ser setas dos alertas.
-  const senseiLocal = motor === "leve" && ativos.includes("Sensei")
+  // Sensei, GoldKiller e MTM Scanner: o estudo completo calculado aqui, no gráfico Lightweight.
+  const senseiLocal = ativos.includes("Sensei")
   const { inputs: inputsSensei, definir: definirSensei, repor: reporSensei } = useInputsSensei(user?.id)
   const [resultadoSensei, setResultadoSensei] = useState<ResultadoSensei | null>(null)
-  // GoldKiller: igual — estudo completo no Lightweight, setas dos alertas na biblioteca adormecida.
-  const gkLocal = motor === "leve" && ativos.includes("Goldkiller")
+  const gkLocal = ativos.includes("Goldkiller")
   const { inputs: inputsGK, definir: definirGK, repor: reporGK } = useInputsGoldKiller(user?.id)
   const [resultadoGK, setResultadoGK] = useState<ResultadoGoldKiller | null>(null)
-  // MTM Scanner: igual.
-  const msLocal = motor === "leve" && ativos.includes("MTMScanner")
+  const msLocal = ativos.includes("MTMScanner")
   const { inputs: inputsMS, definir: definirMS, repor: reporMS } = useInputsMTMScanner(user?.id)
   const [resultadoMS, setResultadoMS] = useState<ResultadoMTMScanner | null>(null)
   const estudosSetas = useMemo(
@@ -222,7 +211,7 @@ export default function FundedGrafico(props: GraficoProps) {
 
       {/* Linha 2 — timeframes, estudos (setas), ferramentas */}
       <div className="flex items-center gap-1 overflow-x-auto border-b px-2 py-1 text-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ borderColor: TV.borda }}>
-        {motor !== "tv" && TIMEFRAMES.map((t) => (
+        {TIMEFRAMES.map((t) => (
           <button key={t.chave} onClick={() => setTf(t.chave)} className="shrink-0 rounded px-2 py-1 font-medium hover:bg-white/5" style={{ color: tf === t.chave ? TV.azul : TV.texto }}>
             {t.rotulo}
           </button>
@@ -232,7 +221,7 @@ export default function FundedGrafico(props: GraficoProps) {
           <span className="flex shrink-0 items-center gap-1 text-[11px]" style={{ color: TV.textoFraco }}><Lock className="h-3 w-3" /> Estudos MTM para membros</span>
         ) : permitidos.map((e) => {
           const on = ativos.includes(e.chave)
-          const completo = motor === "leve"
+          const completo = true
           return (
             <span key={e.chave} className="flex shrink-0 items-center gap-1">
               <button onClick={() => alternarEstudo(e.chave)} title={completo ? (e.chave === "Sensei" ? "MTM Sensei completo no gráfico (DEMAs, cloud, estrutura, OB, sinais e painéis)" : e.chave === "Goldkiller" ? "MTM GoldKiller completo no gráfico (níveis HLCC4, faixas, BUY/SELL)" : "MTM Scanner V3.5 completo no gráfico (DEMAs, POC, B/S, Entry/Stop/TP, estrutura)") : `Setas dos sinais ${e.rotulo} no gráfico`} className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[11px]"
@@ -288,22 +277,10 @@ export default function FundedGrafico(props: GraficoProps) {
 
       {/* Escondido fica montado (display:none): velas, estudos e subscrições não se perdem. */}
       <div className={mostrar ? "contents" : "hidden"}>
-      {motor === "a_verificar" ? (
-        <div className={encher ? "min-h-0 flex-1" : props.alturaClasse ?? "h-[400px] md:h-[500px]"} />
-      ) : motor === "tv" ? (
-        // Adormecido: só com a Trading Platform instalada. Sem primitivas de trading ou a falhar → Lightweight.
-        <GraficoTradingView {...props} preencher={encher} sinais={sinais} sinalAtivo={ultimoAtivo} modo={modo} setModo={setModo} onFalhou={() => setMotor("leve")} onSemLinhas={() => { setSemTradingPlatform(true); setMotor("leve") }} />
-      ) : (
-        // A trade ativa do Sensei já tem as linhas ENTRY/SL/EXIT do próprio estudo e o GoldKiller os
-        // seus níveis: só o alerta (não o sinal local) leva as linhas ténues de referência.
-        <GraficoLeve {...props} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} tf={tf} modo={modo} setModo={setModo} />
-      )}
+      {/* A trade ativa do Sensei já tem as linhas ENTRY/SL/EXIT do próprio estudo e o GoldKiller os
+          seus níveis: só o alerta (não o sinal local) leva as linhas ténues de referência. */}
+      <GraficoLeve {...props} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} tf={tf} modo={modo} setModo={setModo} />
       </div>
-      {semTradingPlatform && (
-        <p className="border-t px-2 py-1 text-center text-[10.5px]" style={{ borderColor: TV.borda, color: TV.textoFraco }}>
-          A biblioteca TradingView instalada é «Advanced Charts»: linhas de ordens exigem a biblioteca Trading Platform — a usar o gráfico Lightweight.
-        </p>
-      )}
     </div>
   )
 }

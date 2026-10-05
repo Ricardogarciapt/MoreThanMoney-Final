@@ -31,8 +31,8 @@ import { AccaoCancelada, useUmClique } from "./um-clique"
  * com a altura toda para as velas, em todos os modos.
  *
  * É O gráfico dos web traders, num modo só (WebTrader e faixa do dock do scanner). A biblioteca
- * licenciada (grafico-tradingview.tsx) fica adormecida: só entra se estiver instalada com as
- * primitivas de trading (edição Trading Platform).
+ * licenciada do TradingView, que esperava por public/charting_library/ e nunca foi instalada, saiu
+ * a 05/10 (ver funded-grafico.tsx).
  *
  * Como está feito, peça a peça (API v5, https://tradingview.github.io/lightweight-charts/):
  *  · a biblioteca importa-se DINAMICAMENTE no cliente (não entra no bundle do servidor nem no SSR);
