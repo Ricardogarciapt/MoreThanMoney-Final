@@ -22,6 +22,7 @@ import { impressaoParaConta } from '../dedupe'
 import { loteDaLigacaoSite } from '../lote'
 import { pipDe } from '../pips'
 import { chaveAberturaAceite, escolherPosicaoMestre, estrategiaDoSinalT2T, type PosicaoMestreCandidata } from '../t2t'
+import { mapaCanalEstrategia } from '../canal-t2t'
 import { lerConfigGlobal, lerEstrategiaMestre, type ModoEstrategia } from '../tipos'
 
 type Ligacao = Record<string, unknown> & { id: string; user_id: string }
@@ -52,9 +53,11 @@ function plataformaDa(l: Ligacao): PlataformaCopia | null {
 
 export async function encaminharT2TParaMotor(p: PedidoT2TMotor): Promise<ResultadoT2TMotor> {
   try {
-    const slug = estrategiaDoSinalT2T(p.mensagem.channel_slug, p.mensagem.content)
-    if (!slug) return nada()
     const db = getSupabaseAdmin()
+    // canal → estratégia derivado dos providers (um provider novo entra sem mexer no código)
+    const { data: provs } = await db.from('mtmauto_providers').select('slug, canal_chat, fonte_mtm, apagado_em').is('apagado_em', null).limit(500)
+    const slug = estrategiaDoSinalT2T(p.mensagem.channel_slug, p.mensagem.content, mapaCanalEstrategia((provs ?? []) as never))
+    if (!slug) return nada()
     const [{ data: linha, error }, { data: cfg }] = await Promise.all([
       db.from('mestres_estrategias').select('*').ilike('slug', slug).maybeSingle(),
       db.from('site_settings').select('value').eq('key', 'mestres_motor').maybeSingle(),

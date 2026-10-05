@@ -32,6 +32,7 @@ import CopiaEntreContas from "@/components/admin/mtmauto-copia/copia-entre-conta
 import EventosCopia from "@/components/admin/mtmauto-copia/eventos"
 import SincronizacaoCopia from "@/components/admin/mtmauto-copia/sincronizacao"
 import ProvidersEquipas from "@/components/admin/mtmauto-copia/providers-equipas"
+import ProvidersExternos from "@/components/admin/mtmauto-copia/providers-externos"
 import MotorMestres from "@/components/admin/mtmauto-copia/motor-mestres"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ArrowLeftRight, Copy, LayoutDashboard, ListTree, Loader2, RefreshCcw, ScrollText, Wallet } from "lucide-react"
@@ -167,6 +168,9 @@ function PaginaAdminCopia() {
                 topo={<MotorMestres />}
                 afinacoes={
                   <div className="space-y-3 pt-2">
+                    <Recolhivel titulo="Nova estratégia · provider externo" descricao="MetaApi (id colado), Telegram (chat id) ou MT5 directo — o mesmo modelo e API do admin da MTM Auto. Nasce em sombra com mestre, rotas e canal.">
+                      <ProvidersExternos />
+                    </Recolhivel>
                     <Recolhivel titulo="Providers por equipa (MTM Auto)" descricao="Contas de estratégia de cada equipa — MT4/MT5 na chave certa, MTM Funded e TradeLocker — e as rotas de cópia que as usam como fonte.">
                       <ProvidersEquipas />
                     </Recolhivel>

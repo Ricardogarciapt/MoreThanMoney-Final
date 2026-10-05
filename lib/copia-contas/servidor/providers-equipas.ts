@@ -21,6 +21,11 @@ export interface ProviderEquipaAdmin {
   partilhadaCom: string[]
   /** 084: de onde a estratégia executa — conta mestre ou espelho MTM Funded da casa */
   fonteExecucao: 'mestre' | 'espelho'
+  /** 179: canal de chat T2T, estado da conta MT5 directa e fonte desligada */
+  canal_chat: string | null
+  mt5_estado: string | null
+  fonte_desligada_em: string | null
+  apagado: boolean
 }
 
 export interface EquipaComProviders {
@@ -70,13 +75,16 @@ export async function listarProvidersPorEquipa(): Promise<{ equipas: EquipaComPr
     const conta = p.tipo === 'metaapi' ? (p.login ? `${p.plataforma ?? 'mt5'} ${p.login}@${p.servidor ?? '?'}` : p.metaapi_account_id ? `MetaApi ${String(p.metaapi_account_id).slice(0, 8)}…` : null)
       : p.tipo === 'mtmfunded' ? (p.funded_account_id ? `MTM Funded ${String(p.funded_account_id).slice(0, 8)}…` : null)
         : p.tipo === 'tradelocker' ? (p.tl_acc_num ? `TradeLocker ${p.tl_env ?? ''} #${p.tl_acc_num}` : null)
-          : p.tipo === 'mtm_t2t' ? `fonte ${p.fonte_mtm ?? '—'}` : p.tipo === 'telegram' ? 'Telegram' : null
+          : p.tipo === 'mt5' ? (p.login ? `MT5 directo ${p.login}@${p.servidor ?? '?'} (${p.mt5_estado ?? 'por_ligar'})` : null)
+          : p.tipo === 'mtm_t2t' ? `fonte ${p.fonte_mtm ?? '—'}` : p.tipo === 'telegram' ? `Telegram ${p.telegram_chat_titulo ?? p.telegram_chat_id ?? ''}` : null
     if (p.tipo === 'metaapi' && p.metaapi_account_id) g.providersMetaApi++
     g.providers.push({
       id: String(p.id), nome: String(p.nome), slug: String(p.slug), tipo: String(p.tipo), ativo: p.ativo === true, espelhar: p.espelhar === true, conta,
       chave: p.tipo !== 'metaapi' ? '—' : p.metaapi_chave_equipa === true ? 'equipa' : 'casa',
       fonteDeCopia: providerEhFonteDeCopia(p), rotas: rotasPorProv.get(String(p.id)) ?? 0, partilhadaCom: partilhadas.get(String(p.id)) ?? [],
       fonteExecucao: p.fonte_execucao === 'espelho' ? 'espelho' : 'mestre',
+      canal_chat: p.canal_chat ? String(p.canal_chat) : null, mt5_estado: p.mt5_estado ? String(p.mt5_estado) : null,
+      fonte_desligada_em: p.fonte_desligada_em ? String(p.fonte_desligada_em) : null, apagado: Boolean(p.apagado_em),
     })
   }
   return { equipas: [...grupos.values()].sort((a, b) => (a.tenantId ? 1 : 0) - (b.tenantId ? 1 : 0) || a.nome.localeCompare(b.nome)) }

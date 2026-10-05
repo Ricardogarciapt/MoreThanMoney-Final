@@ -5,6 +5,7 @@ import type { EstrategiaCentro, SombraCentro } from "@/lib/admin-centro/servidor
 import SombraEstrategias from "../sombra-estrategias"
 import EstrategiasCopia from "@/components/admin/mtmauto-copia/estrategias"
 import ProvidersEquipas from "@/components/admin/mtmauto-copia/providers-equipas"
+import ProvidersExternos from "@/components/admin/mtmauto-copia/providers-externos"
 import MotorMestres from "@/components/admin/mtmauto-copia/motor-mestres"
 import EspelhoProviderRelatorio from "@/components/admin/espelho-provider-relatorio"
 import MtmcopyFontesVivas from "@/components/admin/mtmcopy-fontes-vivas"
@@ -127,6 +128,7 @@ export default function SeccaoEstrategias() {
       </Grupo>
 
       <Grupo titulo="De onde vêm os sinais" nota="As contas e os canais que produzem cada estratégia.">
+        <Recolhivel titulo="Nova estratégia · provider externo" descricao="MetaApi (id colado), Telegram (chat id) ou MT5 directo — o mesmo modelo e API do admin da MTM Auto. Nasce em sombra com mestre, rotas e canal."><ProvidersExternos aoCriar={recarregar} /></Recolhivel>
         <Recolhivel titulo="Fontes · estado real" descricao="Cada estratégia, a conta que a publica e o que a MetaApi diz sobre ela."><MtmcopyFontesVivas /></Recolhivel>
         <Recolhivel titulo="Contas provider (mestre)" descricao="As contas de origem de cada estratégia."><MtmcopyProviderAccounts /></Recolhivel>
         <Recolhivel titulo="Providers das equipas" descricao="Contas de estratégia agrupadas por equipa MTM Auto."><ProvidersEquipas /></Recolhivel>

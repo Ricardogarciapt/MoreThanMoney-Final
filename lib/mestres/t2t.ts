@@ -13,18 +13,22 @@
  */
 import { estrategiaDoTrader, traderDoConteudo } from '../mtmfunded/estrategias-sinais/calculo'
 import type { Direcao } from '../copia-contas/tipos'
+import { CANAIS_FIXOS_HISTORICOS } from './canal-t2t'
 
-/** Canal do chat → estratégia (slug de mtmauto_providers). */
-export const ESTRATEGIA_DO_CANAL: Record<string, string> = {
-  'sensei-scanner': 'sensei',
-  'sinais-goldkiller': 'Goldkiller',
-  'premium-ideas': 'premium-ouro',
-}
+/**
+ * Canal do chat → estratégia. DEIXOU DE SER FIXO (05/10): o mapa deriva-se dos providers
+ * (`mapaCanalEstrategia` em ./canal-t2t.ts); isto é só o valor de arranque / rede de segurança.
+ */
+export const ESTRATEGIA_DO_CANAL: Record<string, string> = { ...CANAIS_FIXOS_HISTORICOS }
 
-export function estrategiaDoSinalT2T(channelSlug: string | null | undefined, content: string | null | undefined): string | null {
+export function estrategiaDoSinalT2T(
+  channelSlug: string | null | undefined,
+  content: string | null | undefined,
+  mapa: Record<string, string> = ESTRATEGIA_DO_CANAL,
+): string | null {
   const trader = traderDoConteudo(content)
   if (trader) return estrategiaDoTrader(trader)?.slug ?? null
-  return ESTRATEGIA_DO_CANAL[String(channelSlug ?? '')] ?? null
+  return mapa[String(channelSlug ?? '')] ?? null
 }
 
 export interface PosicaoMestreCandidata {
