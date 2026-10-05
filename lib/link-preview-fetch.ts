@@ -1,5 +1,6 @@
 import type { LinkPreviewData } from "@/lib/link-preview-types"
 import { getHostname, normalizeUrlForHref } from "@/lib/url-utils"
+import { youtubeId, previewDoYoutube, type OEmbedYoutube } from "@/lib/social/youtube"
 
 function decodeHtmlEntities(s: string): string {
   return s
@@ -68,6 +69,23 @@ export async function fetchLinkPreview(urlInput: string): Promise<LinkPreviewDat
   }
 
   if (isPrivateHost(parsed.hostname)) return null
+
+  // YouTube não dá OpenGraph ao bot (página de consentimento): usa-se o oEmbed oficial e, à
+  // falta dele, a thumbnail pelo id do vídeo — ver lib/social/youtube.ts (05/10/2026).
+  const ytId = youtubeId(url)
+  if (ytId) {
+    const ctl = new AbortController()
+    const t = setTimeout(() => ctl.abort(), 5_000)
+    try {
+      const r = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, { signal: ctl.signal })
+      const o = r.ok ? ((await r.json()) as OEmbedYoutube) : null
+      return previewDoYoutube(url, ytId, o)
+    } catch {
+      return previewDoYoutube(url, ytId, null)
+    } finally {
+      clearTimeout(t)
+    }
+  }
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 10_000)
