@@ -184,10 +184,17 @@ const COLUNA_EM_FALTA = /column\s+(?:"?\w+"?\.)?"?(\w+)"?\s+does not exist/i
 export async function selecionarComOpcionais<T>(
   colunas: string,
   consulta: (cols: string) => PromiseLike<{ data: T[] | null; error: { code?: string; message: string } | null }>,
+  /**
+   * Colunas opcionais SÓ desta leitura (não entram em `COLUNAS_OPCIONAIS`, que todos os ecrãs
+   * recebem). A rota das ordens pede `pausa_motivo` (079) e `travas_base_global` (156) aqui para
+   * a pausa e a trava do tipo lerem a mesma linha em vez de voltarem à base por ela.
+   */
+  extras: readonly string[] = [],
 ): Promise<{ data: T[]; error: { message: string } | null }> {
-  let opcionais: string[] = [...COLUNAS_OPCIONAIS]
+  const todas = [...COLUNAS_OPCIONAIS, ...extras.filter((c) => !(COLUNAS_OPCIONAIS as readonly string[]).includes(c))]
+  let opcionais: string[] = [...todas]
   // No máximo uma volta por coluna opcional + a volta sem nenhuma.
-  for (let volta = 0; volta <= COLUNAS_OPCIONAIS.length; volta++) {
+  for (let volta = 0; volta <= todas.length; volta++) {
     const r = await consulta(opcionais.length ? `${colunas}, ${opcionais.join(', ')}` : colunas)
     if (!r.error) return { data: r.data ?? [], error: null }
     const faltaColuna = r.error.code === '42703' || /column .* does not exist/i.test(r.error.message)

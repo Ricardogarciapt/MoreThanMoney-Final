@@ -11,7 +11,7 @@ import { usePrecos } from "./use-precos"
 import { pctFormatada, resultadoDaConta } from "@/lib/portfolios/retorno"
 import { DiarioPortefolio, HistoricoPortefolio, MetricasPortefolio, type DadosPortefolio } from "./portefolio-conta"
 import { fichaDe } from "./pre-carga"
-import { assinaturaEstado, intervaloDeSondagem, juntarLeve, precisaDeEstadoCheio } from "./estado-leve"
+import { aplicarEstadoDaOrdem, assinaturaEstado, intervaloDeSondagem, juntarLeve, precisaDeEstadoCheio } from "./estado-leve"
 import type { Prefill } from "./funded-ticket"
 import type { PedidoOrdem } from "./rascunho-ordem"
 import { corpoDoPedido } from "./pedido"
@@ -208,10 +208,30 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
     return { ...e, limites: l }
   }, [dados, fichas, mapa])
 
-  // O «feito @ preço» e os erros aparecem no aviso da negociação num clique (um-clique.tsx); aqui relê-se a conta.
+  /**
+   * O «feito @ preço» e os erros aparecem no aviso da negociação num clique (um-clique.tsx).
+   *
+   * A resposta da ordem TRAZ o estado leve já depois da acção (`estado`, igual ao GET `?leve=1`):
+   * aplica-se como uma releitura leve e não se pede o estado inteiro — eram mais ~11 consultas e
+   * uma chamada ao Auth por ordem. Só os FECHOS mudam o histórico e o desempenho, que a leve não
+   * traz: aí pede-se o inteiro em fundo, como antes. Nas outras acções a assinatura da última
+   * inteira avança para a nova (saldo/posições/pendentes mudaram por mão nossa, não por um fecho
+   * do motor) — senão a sondagem seguinte pedia o inteiro na mesma.
+   */
   const executar = useCallback(async (accao: string, corpo: Record<string, unknown>) => {
-    const r = await ordem(accao, corpo, accountId)
-    void recarregar()
+    const r = await ordem<{ estado?: Estado }>(accao, corpo, accountId)
+    const a = aplicarEstadoDaOrdem(r.estado, accao, dadosRef.current, ultimoCheio.current, Date.now())
+    if (a.estado) {
+      dadosRef.current = a.estado
+      ultimoCheio.current = a.ultimoCheio
+      setDados(a.estado)
+      setFichas((f) => {
+        const novo = { ...f }
+        for (const [k, v] of Object.entries((a.estado?.simbolos ?? {}) as Record<string, SimboloFicha>)) novo[k] = { ...v, ...f[k] }
+        return novo
+      })
+    }
+    if (a.pedirInteiro) void recarregar()
     return r
   }, [accountId, recarregar])
   const enviarPedido = useCallback((p: PedidoOrdem, symbol: string) => {

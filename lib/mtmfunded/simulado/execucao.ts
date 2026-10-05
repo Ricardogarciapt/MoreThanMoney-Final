@@ -108,6 +108,15 @@ export async function ligacoesFundedDoUtilizador(userId: string, accountId?: str
   return [...(a.error ? [] : a.data ?? []), ...(b.error ? [] : b.data ?? [])]
 }
 
+/**
+ * As colunas que a PAUSA (079) e a TRAVA DO TIPO (156) precisam. Vêm na MESMA leitura da conta para
+ * uma ordem ler `mtm_trading_accounts` uma vez só: antes, a mesma linha era lida quatro a cinco
+ * vezes por ordem (autorizar, pausa, base global, dia negociado, releitura final). Opcionais porque
+ * uma base sem a migração não pode partir todas as ordens — sem a coluna, `pausa.ts` e
+ * `travas-tipo.ts` voltam a perguntar à base por ela (a chave fica ausente da linha).
+ */
+const COLUNAS_PAUSA_E_TRAVA = ['pausa_motivo', 'travas_base_global'] as const
+
 export async function lerConta(accountId: string): Promise<Conta | null> {
   if (!/^[0-9a-f-]{36}$/i.test(accountId)) return null
   // `pausada_em` (079) para o estado «Pause» igual ao do admin e `conta_real_casa` (109) para o
@@ -115,6 +124,7 @@ export async function lerConta(accountId: string): Promise<Conta | null> {
   const db = getSupabaseAdmin()
   const { data } = await selecionarComOpcionais<Conta>(
     CAMPOS_CONTA, (cols) => db.from('mtm_trading_accounts').select(cols).eq('id', accountId).limit(1) as never,
+    COLUNAS_PAUSA_E_TRAVA,
   )
   return data[0] ?? null
 }
@@ -259,19 +269,33 @@ export async function somarSaldo(accountId: string, delta: number): Promise<numb
  * Primeira trade de um dia da corretora (vira às 22:00 UTC) = mais um dia negociado. Guarda
  * otimista no próprio contador: duas aberturas simultâneas não contam o mesmo dia duas vezes.
  */
-export async function marcarDiaNegociado(accountId: string): Promise<void> {
+export async function marcarDiaNegociado(
+  accountId: string,
+  /**
+   * O que a linha da conta já dizia (quem chama acabou de a ler): poupa a leitura da primeira
+   * tentativa. Só se volta à base quando a guarda otimista falha — outra abertura passou à frente.
+   */
+  conhecido?: Record<string, unknown> | null,
+): Promise<{ sim_ultimo_dia: string; sim_dias_negociados: number } | null> {
   const db = getSupabaseAdmin()
   const hoje = diaDaCorretora()
+  let c: Record<string, unknown> | null = conhecido ?? null
   for (let tentativa = 0; tentativa < 3; tentativa++) {
-    const { data: c } = await db.from('mtm_trading_accounts')
-      .select('sim_ultimo_dia, sim_dias_negociados').eq('id', accountId).maybeSingle()
-    if (!c || String(c.sim_ultimo_dia ?? '') === hoje) return
+    if (!c) {
+      const { data } = await db.from('mtm_trading_accounts')
+        .select('sim_ultimo_dia, sim_dias_negociados').eq('id', accountId).maybeSingle()
+      c = (data as Record<string, unknown> | null) ?? null
+    }
+    if (!c) return null
+    if (String(c.sim_ultimo_dia ?? '') === hoje) return { sim_ultimo_dia: hoje, sim_dias_negociados: Number(c.sim_dias_negociados ?? 0) }
     const n = Number(c.sim_dias_negociados ?? 0)
     const { data: feito } = await db.from('mtm_trading_accounts')
       .update({ sim_ultimo_dia: hoje, sim_dias_negociados: n + 1 })
       .eq('id', accountId).eq('sim_dias_negociados', n).select('id')
-    if (feito?.length) return
+    if (feito?.length) return { sim_ultimo_dia: hoje, sim_dias_negociados: n + 1 }
+    c = null
   }
+  return null
 }
 
 // ── abrir ─────────────────────────────────────────────────────────────────
@@ -321,11 +345,14 @@ async function inserirComGestao(tabela: 'funded_positions' | 'funded_orders', ba
   return r
 }
 
-/** Pausa do admin (079): as posições existentes continuam geridas, as novas não nascem. */
-async function exigirContaSemPausa(accountId: string) {
+/**
+ * Pausa do admin (079): as posições existentes continuam geridas, as novas não nascem. Recebe a
+ * LINHA já lida — `pausa.ts` só volta à base se a coluna não tiver vindo (079 por aplicar).
+ */
+async function exigirContaSemPausa(conta: Conta) {
   const { exigirSemPausa, ContaEmPausa } = await import('./pausa')
   try {
-    await exigirSemPausa(accountId)
+    await exigirSemPausa(conta)
   } catch (e) {
     if (e instanceof ContaEmPausa) throw new ErroOrdem(e.status, e.message)
     throw e
@@ -361,7 +388,7 @@ function bancaDaConta(conta: Conta): number | null {
 }
 
 export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
-  await exigirContaSemPausa(conta.id)
+  await exigirContaSemPausa(conta)
   await exigirTravaDoTipo(conta)
   const symbol = String(e.symbol || '').toUpperCase()
   if (e.direcao !== 'buy' && e.direcao !== 'sell') throw new ErroOrdem(400, 'direção inválida')
@@ -405,9 +432,21 @@ export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
   if (error || !pos) throw new ErroOrdem(500, 'não foi possível abrir a posição')
 
   // A comissão sai À ABERTURA, por quem abre (convenção partilhada com o motor).
-  await somarSaldo(conta.id, -plano.comissao)
-  await marcarDiaNegociado(conta.id)
-  return { posicao: pos, plano }
+  const saldoDepois = await somarSaldo(conta.id, -plano.comissao)
+  const dia = await marcarDiaNegociado(conta.id, conta)
+  /**
+   * A linha da conta COMO FICOU, para quem chama devolver o estado ao ecrã sem a reler: o saldo
+   * vem da própria função atómica da base, o dia negociado da guarda otimista. O resto da linha
+   * não mudou com esta ordem (o motor só mexe no saldo por fechos, e esses relêem).
+   */
+  const contaDepois: Conta = {
+    ...conta,
+    ...(saldoDepois != null ? { sim_saldo: saldoDepois } : {}),
+    ...(dia ? { sim_ultimo_dia: dia.sim_ultimo_dia, sim_dias_negociados: dia.sim_dias_negociados } : {}),
+  }
+  // `regras` só se passa adiante quando foram mesmo lidas: numa conta de análise ficam `null` aqui
+  // de propósito (não se aplicam à abertura), mas o ecrã continua a querer as barras do programa.
+  return { posicao: pos, plano, contaDepois, regrasLidas: ehContaDeAnalise(conta) ? undefined : regras }
 }
 
 // ── fechar ────────────────────────────────────────────────────────────────
@@ -496,7 +535,7 @@ export interface EntradaPendente {
 }
 
 export async function criarPendente(conta: Conta, e: EntradaPendente) {
-  await exigirContaSemPausa(conta.id)
+  await exigirContaSemPausa(conta)
   await exigirTravaDoTipo(conta)
   const symbol = String(e.symbol || '').toUpperCase()
   if (e.direcao !== 'buy' && e.direcao !== 'sell') throw new ErroOrdem(400, 'direção inválida')
@@ -688,7 +727,15 @@ export async function sincronizarAlvo(conta: Conta, symbol: string, alvo: number
  * quando uma posição fecha, e aí o saldo ou a lista de abertas também mudam: o cliente vê isso e
  * pede o estado inteiro (components/funded/estado-leve.ts). Resposta leve leva `parcial: true`.
  */
-export async function estadoCompleto(conta: Conta, modo: ModoSessao, opcoes: { leve?: boolean } = {}) {
+export async function estadoCompleto(
+  conta: Conta,
+  modo: ModoSessao,
+  opcoes: {
+    leve?: boolean
+    /** As regras do programa já lidas por quem acabou de executar a ordem — poupa a segunda leitura. */
+    regras?: Record<string, unknown> | null
+  } = {},
+) {
   const db = getSupabaseAdmin()
   const leve = opcoes.leve === true
   const segue = conta.segue_estrategia ? String(conta.segue_estrategia) : null
@@ -699,7 +746,7 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao, opcoes: { l
       .order('fechada_em', { ascending: false }).limit(100),
     db.from('funded_orders').select('*').eq('account_id', conta.id).eq('estado', 'pendente')
       .order('criada_em', { ascending: false }),
-    regrasDaConta(conta),
+    opcoes.regras !== undefined ? Promise.resolve(opcoes.regras) : regrasDaConta(conta),
     // O desempenho mede a conta INTEIRA, não só as 100 do histórico visível.
     leve ? nada : db.from('funded_positions')
       .select('id, mae_id, symbol, direcao, volume, preco_entrada, preco_fecho, pnl, comissao, swap, fechada_em, origem, comentario')

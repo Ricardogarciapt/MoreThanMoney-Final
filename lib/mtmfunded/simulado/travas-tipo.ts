@@ -14,10 +14,12 @@ import { ehContaRealDaCasa } from '@/lib/mtmfunded/conta-real-casa'
  * (`lib/__tests__/travas-por-tipo-de-conta.check.ts`): uma conta travada tem de conseguir sair do
  * que já tem aberto, senão a trava faz mais dano do que o prejuízo que travava.
  *
- * As colunas novas (`travas_base_global`, migração 156) lêem-se À PARTE e pela chave primária, nunca
- * no `CAMPOS_CONTA` partilhado: enquanto a 156 não estiver aplicada a coluna não existe, e pô-la no
- * select comum partia TODAS as ordens. Sem a coluna, a base da perda global é o `saldo_inicial` —
- * a trava funciona, só não há reposições registadas.
+ * A coluna nova (`travas_base_global`, migração 156) vem como OPCIONAL na leitura da conta
+ * (`lerConta`, via `selecionarComOpcionais`) e nunca no `CAMPOS_CONTA` obrigatório: enquanto a 156
+ * não estiver aplicada a coluna não existe, e pô-la no select comum partia TODAS as ordens. Quem
+ * chega com uma linha sem a chave (outro caminho de leitura) faz-nos ler à parte, pela chave
+ * primária. Sem a coluna, a base da perda global é o `saldo_inicial` — a trava funciona, só não há
+ * reposições registadas.
  */
 
 export class TravaDoTipoAtingida extends Error {
@@ -65,6 +67,11 @@ export interface LinhaContaTravas {
   conta_casa?: unknown
   /** Marca as contas que existem para espelhar uma estratégia — ver `foraDoAmbito`. */
   sem_regras?: unknown
+  /**
+   * `travas_base_global` (156) quando veio na MESMA leitura da conta (`lerConta` pede-a como
+   * opcional). Chave presente = usa-se sem voltar à base; ausente = lê-se à parte como antes.
+   */
+  travas_base_global?: unknown
 }
 
 /**
@@ -114,7 +121,9 @@ export async function veredictoDoTipo(
   opts: { equity?: number | null; margemLivre?: number | null } = {},
 ): Promise<VeredictoTipo & { foraDoAmbito: boolean }> {
   const limites = await limitesPorTipo()
-  const baseGlobal = await lerBaseGlobal(conta.id)
+  // A base global vem na linha quando quem chamou a leu com `lerConta` (uma leitura por ordem);
+  // só se volta à base quando a chave não veio (base sem a 156, ou linha lida por outro caminho).
+  const baseGlobal = 'travas_base_global' in conta ? n(conta.travas_base_global) : await lerBaseGlobal(conta.id)
   const fora = await foraDoAmbito(conta)
   const v = travaDaConta(fora ? 'desconhecido' : conta.tipo, limites, {
     saldo: n(conta.sim_saldo),

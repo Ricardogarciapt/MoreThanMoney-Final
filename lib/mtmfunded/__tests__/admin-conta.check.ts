@@ -67,7 +67,7 @@ sim('com pausa → recusa com o motivo', String(motivoDePausa({ pausada_em: '202
   for (const f of ['abrirPosicao', 'criarPendente']) {
     const i = ex.indexOf(`export async function ${f}(`)
     const primeira = ex.slice(i).split('\n')[1].trim()
-    eq(`${f}: primeira linha verifica a pausa`, primeira, 'await exigirContaSemPausa(conta.id)')
+    eq(`${f}: primeira linha verifica a pausa`, primeira, 'await exigirContaSemPausa(conta)')
   }
   // Fechar, modificar e cancelar continuam permitidos numa conta em pausa.
   for (const f of ['fecharPosicao', 'modificarPosicao', 'cancelarPendente']) {

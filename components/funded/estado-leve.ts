@@ -68,3 +68,32 @@ export function juntarLeve<T extends { historico: unknown; desempenho: unknown; 
     ...('portefolio' in anterior ? { portefolio: anterior.portefolio } : {}),
   }
 }
+
+/** As acções que FECHAM posições — mudam o histórico e o desempenho, que a resposta leve não traz. */
+export const ACCOES_QUE_FECHAM = new Set(['fechar', 'fechar_lote', 'inverter'])
+
+/**
+ * O estado que a RESPOSTA DE UMA ORDEM traz (`estado`, a leve do GET já depois da acção) aplicado
+ * ao que o ecrã tinha — para não fazer o GET inteiro a seguir a cada ordem.
+ *
+ *  · sem `estado` (servidor antigo) ou sem estado anterior (não há histórico a que juntar) → pede-se
+ *    o inteiro, como dantes;
+ *  · uma acção que fecha → aplica-se já a leve (o ecrã vê o fecho sem esperar) E pede-se o inteiro
+ *    em fundo, porque o histórico e o desempenho mudaram;
+ *  · qualquer outra → aplica-se a leve e a ASSINATURA da última inteira avança para esta: o saldo e
+ *    as posições mudaram por mão nossa, não por um fecho do motor, e sem isto a sondagem seguinte
+ *    via a diferença e pedia o inteiro na mesma. O `em` fica o da última inteira real, para a
+ *    releitura de segurança de minuto a minuto continuar a contar a partir dela.
+ */
+export function aplicarEstadoDaOrdem<T extends EstadoAssinavel & { historico: unknown; desempenho: unknown; portefolio?: unknown }>(
+  estado: T | null | undefined,
+  accao: string,
+  anterior: T | null,
+  ultimoCheio: { em: number; assinatura: string } | null,
+  agoraMs: number,
+): { estado: T | null; ultimoCheio: { em: number; assinatura: string } | null; pedirInteiro: boolean } {
+  if (!estado || !anterior) return { estado: null, ultimoCheio, pedirInteiro: true }
+  const junto = juntarLeve(anterior, estado)
+  if (ACCOES_QUE_FECHAM.has(accao)) return { estado: junto, ultimoCheio, pedirInteiro: true }
+  return { estado: junto, ultimoCheio: { em: ultimoCheio?.em ?? agoraMs, assinatura: assinaturaEstado(junto) }, pedirInteiro: false }
+}

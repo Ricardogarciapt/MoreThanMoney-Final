@@ -169,8 +169,9 @@ export function gravarContaFavorita(ref: string | null): Promise<{ ok: true; fav
   return pedir("/api/contas/ordem", { method: "PATCH", body: JSON.stringify({ favorita: ref }) })
 }
 
-export function ordem(accao: string, corpo: Record<string, unknown>, accountId: string) {
-  return pedir("/api/mtmfunded/simulado/ordens", { method: "POST", body: JSON.stringify({ accao, ...corpo }) }, accountId)
+/** A resposta traz `estado` (a leve do GET, já depois da acção) — ver funded-trader.tsx, `executar`. */
+export function ordem<T = any>(accao: string, corpo: Record<string, unknown>, accountId: string): Promise<T> {
+  return pedir<T>("/api/mtmfunded/simulado/ordens", { method: "POST", body: JSON.stringify({ accao, ...corpo }) }, accountId)
 }
 
 // ── formatação ──
