@@ -568,6 +568,13 @@ export function comentarioDaFonte(p: { sourceKey?: string | null; channelSlug?: 
 }
 
 /** O trader PrimeVerse escrito na entrada do chat («📡 PrimeVerse · fxedge»). */
+/**
+ * HISTÓRICO (fonte desligada 04/10): o parser PrimeVerse já não recebe mensagens novas. Serve só
+ * para ler o que ficou gravado (chats, mestres, reconstituição). Não acrescentar fontes aqui — a
+ * guarda lib/mtmcopy/__tests__/fontes-em-desuso.check.ts verifica esta marca.
+ */
+export const PARSER_PRIMEVERSE_HISTORICO = true
+
 export function traderDoConteudo(content: string | null | undefined): string | null {
   const c = String(content ?? '')
   const m = /PrimeVerse\s*[·•-]\s*([A-Za-z0-9_\-.]+)/i.exec(c)

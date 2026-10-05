@@ -166,3 +166,17 @@ for (const rota of ['app/api/telegram/primeverse-exec/route.ts', 'app/api/telegr
 
 assert.equal(falhas, 0, `${falhas} regressão(ões) às fontes em desuso — ver acima`)
 console.log('fontes-em-desuso: OK (ids/nomes das fontes que saíram ausentes do código executável; canal/grupo/fonte Forex Swings fora dos catálogos vivos; Premium e SME referidos onde devem)')
+
+// ── 05/10: o mapa canal→estratégia derivado (lib/mestres/canal-t2t.ts) não conhece fontes mortas,
+//    e o parser PrimeVerse está marcado como histórico (não volta a ser fonte) ──────────────────
+{
+  const { CANAL_POR_FONTE_MTM, CANAIS_FIXOS_HISTORICOS } = require('../../mestres/canal-t2t') as typeof import('../../mestres/canal-t2t')
+  const { PARSER_PRIMEVERSE_HISTORICO } = require('../../mtmfunded/estrategias-sinais/calculo') as typeof import('../../mtmfunded/estrategias-sinais/calculo')
+  for (const morta of ['james', 'primeverse', 'forexideas', 'goldenmoves', 'gold-did']) {
+    assert.ok(!(morta in CANAL_POR_FONTE_MTM), `fonte morta «${morta}» voltou a CANAL_POR_FONTE_MTM`)
+  }
+  assert.ok(!Object.keys(CANAIS_FIXOS_HISTORICOS).includes('ideias-e-sinais'), 'canal do Forex Swings nos fixos')
+  assert.ok(!Object.keys(CANAIS_FIXOS_HISTORICOS).includes('sinais-scanner-mtm'), 'canal PrimeVerse/Edge nos fixos (Edge só entra pelo provider)')
+  assert.equal(PARSER_PRIMEVERSE_HISTORICO, true, 'parser PrimeVerse deixou de estar marcado como histórico')
+  console.log('fontes-em-desuso (05/10): mapa canal→estratégia sem fontes mortas; parser PrimeVerse histórico')
+}
