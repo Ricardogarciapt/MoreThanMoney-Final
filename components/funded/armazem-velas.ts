@@ -105,12 +105,30 @@ function juntarRecente(antes: SerieVelas | undefined, velas: VelaC[], janela: nu
   return { velas: colar(antes.velas, velas), recenteEm: agora, janela: Math.max(janela, antes.janela), inicio: antes.inicio }
 }
 
+export const TECTO_VELAS_CONTA_MS = 8000
+
+/** Resolve com a promessa ou rejeita passado `ms` (a promessa original segue sozinha e é ignorada). */
+export function comTecto<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((res, rej) => {
+    const t = setTimeout(() => rej(new Error(`tecto de ${ms} ms`)), ms)
+    p.then((v) => { clearTimeout(t); res(v) }, (e) => { clearTimeout(t); rej(e) })
+  })
+}
+
 type RespostaRede = { col?: Parameters<typeof deColunas>[0]; velas?: VelaC[] }
 
 async function pedirRede(symbol: string, tf: string, limite: number, ate?: number): Promise<VelaC[]> {
   // Feed directo ligado e a cobrir este símbolo: as velas vêm da corretora do cliente, não da rota.
   const f = fonteDirecta
-  if (f && f.cobre(symbol)) return f.pedir(symbol, tf, limite, ate)
+  if (f && f.cobre(symbol)) {
+    // A MetaApi admite históricos de minutos («timeouts can exceed 4 min») e a TradeLocker limita a
+    // 3/s: um gráfico nunca fica em branco à espera da corretora. Passado o tecto, ou com erro, ou
+    // vazio, usa-se a rota do nosso feed — e o feed directo continua a pintar a vela viva por cima.
+    try {
+      const v = await comTecto(f.pedir(symbol, tf, limite, ate), TECTO_VELAS_CONTA_MS)
+      if (v && v.length) return v
+    } catch { /* cai para a rota */ }
+  }
   const url = URL_VELAS(symbol, tf, limite, ate)
   const doFetch = async () => {
     const r = await fetch(url)
