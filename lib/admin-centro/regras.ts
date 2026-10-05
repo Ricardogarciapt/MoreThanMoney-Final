@@ -58,7 +58,8 @@ export const FONTES: { chave: ChaveFonte; nome: string; nota: string; limiteSile
   { chave: 'goldkiller', nome: 'GoldKiller', nota: 'webhook TradingView', limiteSilencioMin: null },
   { chave: 'mtmscanner', nome: 'MTM Scanner', nota: 'webhook TradingView', limiteSilencioMin: 240 },
   { chave: 'aurum', nome: 'Aurum Flow / perps', nota: 'webhook TradingView → Bybit', limiteSilencioMin: null },
-  { chave: 'forex', nome: 'Forex (ideias/swings)', nota: 'Telegram', limiteSilencioMin: null },
+  // 05/10: o Forex Swings (James) saiu a 04/10 — a linha fica só para classificar o histórico.
+  { chave: 'forex', nome: 'Forex (histórico)', nota: 'fs-relay desligado a 04/10/2026 — não é fonte viva', limiteSilencioMin: null },
   { chave: 't2t', nome: 'Tap to Trade', nota: 'aceitações dos clientes', limiteSilencioMin: null },
   { chave: 'mtmauto', nome: 'MTM Auto (motor)', nota: 'mtmauto_signals → execuções', limiteSilencioMin: null },
 ]

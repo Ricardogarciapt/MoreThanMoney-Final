@@ -64,6 +64,10 @@ export interface EstrategiaCentro {
   } | null
   /** inactiva, fora do motor, sem sombra e sem ninguém a seguir (ex.: Gold Did) — escondida por omissão */
   abandonada: boolean
+  /** F5 (179): canal de chat T2T, fonte desligada (Edge 04/10), estado da conta MT5 directa */
+  canalChat: string | null
+  fonteDesligada: { em: string; motivo: string | null } | null
+  mt5Estado: string | null
 }
 
 /** Uma linha de `estrategia_sombra_dia` (migração 108), como o painel a usa. */
@@ -163,6 +167,10 @@ async function lerEstrategias() {
     if (p.metaapi_account_id && contas.contas.some((c) => c.metaapiAccountId === p.metaapi_account_id && c.metaapi.inexistente)) divergencias.push('conta mestre no registo de inexistentes')
     if (fechadosTodos.length > fechados.length) divergencias.push(`${fechadosTodos.length - fechados.length} resultado(s) incoerente(s) excluído(s) do desempenho`)
     if (p.fonte_execucao === 'espelho' && v && v.alinhado !== true) divergencias.push('fonte espelho sem veredicto alinhado')
+    // F5: o que a cadeia nova mostra — fonte desligada com propagação live, provider vivo fora do motor
+    if (p.fonte_desligada_em && m && (m.modo === 'live' || m.t2tModo === 'live')) divergencias.push(`fonte desligada a ${String(p.fonte_desligada_em).slice(0, 10)} mas o motor ainda está em live (nada flui; passar a sombra é decisão do dono)`)
+    if (!p.apagado_em && p.ativo !== false && !m) divergencias.push('fora do motor das mestres — «registar na cadeia» em Nova estratégia')
+    if (p.tipo === 'mt5' && p.mt5_estado !== 'ligada') divergencias.push('MT5 directo «por ligar» — nada é lido nem executado')
 
     return {
       id, slug, nome: String(p.nome ?? slug), equipa: p.tenant_id ? nomeEquipa.get(String(p.tenant_id)) ?? 'equipa' : null, tipo: txt(p.tipo),
@@ -193,6 +201,9 @@ async function lerEstrategias() {
         nRotas: m.nRotas, nRotasLive: m.nRotasLive, nContasLive: m.nContasLive, cfIds: m.cf.ids, cfCortado: m.cf.cortado,
       } : null,
       abandonada: p.ativo === false && !m && modoDe(p) !== 'sombra' && subsP.length + siteSeg.length + fundedSeg.length === 0,
+      canalChat: txt(p.canal_chat),
+      fonteDesligada: p.fonte_desligada_em ? { em: String(p.fonte_desligada_em), motivo: txt(p.fonte_desligada_motivo) } : null,
+      mt5Estado: txt(p.mt5_estado),
     }
   }).sort((a, b) => Number(a.apagada) - Number(b.apagada) || Number(b.ativa) - Number(a.ativa) || b.seguidores.total - a.seguidores.total)
 

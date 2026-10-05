@@ -69,7 +69,9 @@ export default function SeccaoEstrategias() {
                 <tr key={e.id} className={trClic} onClick={() => ctx.abrir({ tipo: "estrategia", id: e.id })}>
                   <td className={td}>
                     <p className="font-medium text-zinc-100">{e.nome}{e.apagada && <span className="ml-1 text-rose-400" title="apagado_em: fora de todos os catálogos, histórico intacto. Abre a ficha para restaurar.">(escondida)</span>}</p>
-                    <p className="text-[10px] text-zinc-500">{e.slug} · {e.tipo ?? "—"}{e.equipa ? ` · equipa ${e.equipa}` : " · casa"}{e.mestres?.cfIds.length ? ` · CF ${e.mestres.cfIds.join(",")} ${e.mestres.cfCortado ? "cortada" : "por cortar"}` : e.estrategiaCf ? ` · CF ${e.estrategiaCf}` : ""}{e.abandonada ? " · abandonada" : ""}</p>
+                    <p className="text-[10px] text-zinc-500">{e.slug} · {e.tipo ?? "—"}{e.equipa ? ` · equipa ${e.equipa}` : " · casa"}{e.mestres?.cfIds.length ? ` · CF ${e.mestres.cfIds.join(",")} ${e.mestres.cfCortado ? "cortada" : "por cortar"}` : e.estrategiaCf ? ` · CF ${e.estrategiaCf}` : ""}{e.abandonada ? " · abandonada" : ""}{e.canalChat ? ` · chat ${e.canalChat}` : ""}</p>
+                    {e.fonteDesligada && <p className="mt-0.5"><Pilula tom="grave" title={e.fonteDesligada.motivo ?? undefined}>fonte desligada {e.fonteDesligada.em.slice(0, 10)}</Pilula></p>}
+                    {e.tipo === "mt5" && <p className="mt-0.5"><Pilula tom="aviso">MT5 directo · {e.mt5Estado ?? "por_ligar"}</Pilula></p>}
                   </td>
                   <td className={td}>
                     {e.mestres && (
