@@ -8,6 +8,7 @@
  * estratégia esteja ATIVA no Tap to Trade.
  */
 import { canalPublicadoPelaMestre } from '@/lib/mestres/servidor/canais-publicados'
+import { idsDeLigacao } from './ids-de-ligacao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
   readOpenPositions,
@@ -84,7 +85,9 @@ export async function openT2TRowsForManagement(
     : rows
   if (!matched.length) return []
 
-  const connIds = [...new Set(matched.map((r) => r.connection_id as string))]
+  // Sem `connection_id` não há conta a gerir — e um null no `.in()` recusava o pedido inteiro.
+  const connIds = idsDeLigacao(matched)
+  if (!connIds.length) return []
   const { data: conns } = await db()
     .from('mtmcopy_connections')
     .select('id, metaapi_account_id')
@@ -133,7 +136,9 @@ async function resolveOpenT2TByChannelSlug(
     : rows
   if (!matched.length) return []
 
-  const connIds = [...new Set(matched.map((r) => r.connection_id as string))]
+  // Sem `connection_id` não há conta a gerir — e um null no `.in()` recusava o pedido inteiro.
+  const connIds = idsDeLigacao(matched)
+  if (!connIds.length) return []
   const { data: conns } = await db()
     .from('mtmcopy_connections')
     .select('id, metaapi_account_id')

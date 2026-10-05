@@ -3,6 +3,16 @@
  * Reduz chamadas desnecessárias ao Supabase
  */
 
+/**
+ * Só é uma sessão utilizável se trouxer um `user.id` não vazio. Uma sessão com `user: {}` ou
+ * `id: ''` (visto em cache corrompida da app nativa) não serve para ler o perfil — pedi-lo dava
+ * `profiles?id=eq.` e um erro de uuid na base de dados.
+ */
+export function temUtilizadorValido(session: unknown): boolean {
+  const id = (session as { user?: { id?: unknown } } | null)?.user?.id
+  return typeof id === 'string' && id.length > 0
+}
+
 interface CachedSession {
   session: any
   timestamp: number
@@ -26,6 +36,11 @@ export function getCachedSession(): any | null {
 
     // Verificar se o cache ainda é válido
     if (now - timestamp < CACHE_DURATION) {
+      if (!temUtilizadorValido(session)) {
+        // cache sem user.id: deitar fora em vez de a devolver (ver temUtilizadorValido)
+        localStorage.removeItem(CACHE_KEY)
+        return null
+      }
       console.log('⚡ [AUTH CACHE] Usando sessão em cache')
       return session
     }
@@ -77,8 +92,11 @@ export function clearCachedSession(): void {
  * Valida se uma sessão ainda está ativa
  */
 export function isSessionValid(session: any): boolean {
-  if (!session || !session.user) {
-    console.log('⚠️ [AUTH CACHE] Sessão inválida: sem user')
+  // `user.id` tem de ser um uuid a sério. Nos logs de 05/10 apareceram 14 pedidos
+  // `profiles?id=eq.` (id vazio) vindos da app nativa: uma sessão com `user.id === ''` passava
+  // esta guarda e ia ao PostgREST, que recusava com «invalid input syntax for type uuid».
+  if (!temUtilizadorValido(session)) {
+    console.log('⚠️ [AUTH CACHE] Sessão inválida: sem user.id')
     return false
   }
 

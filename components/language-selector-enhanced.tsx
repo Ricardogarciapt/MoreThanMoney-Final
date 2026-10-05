@@ -113,7 +113,8 @@ export default function LanguageSelectorEnhanced() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       
-      if (session?.user) {
+      // sem user.id não há perfil a ler (id='' dava erro de uuid no PostgREST)
+      if (session?.user?.id) {
         setUserId(session.user.id)
         
         const { data: profile } = await supabase

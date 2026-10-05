@@ -36,13 +36,16 @@
 -- a percentagem de perda que estava atingida — e o ecrã do trader mostra o número de reposições ao
 -- lado das barras, sem o esconder.
 --
--- Aditiva e idempotente. NÃO APLICAR sem rever.
+-- Aditiva e idempotente. Revista e aplicada a 2026-10-05.
 
 begin;
 
 -- ── 1. os limiares, configuráveis ───────────────────────────────────────────
--- `margemLivreMinPct` fica a null de propósito nos dois tipos: a margem mínima é regra de prop firm,
--- mas nenhuma percentagem foi dada — e inventar uma era recusar entradas por uma regra imaginada.
+-- `margemLivreMinPct`: 20 % nas financiadas (número dado pelo dono a 29/09, o mesmo de
+-- `LIMITES_POR_TIPO` no código) e null nas reais — a margem mínima é regra de prop firm. Aplicada a
+-- 05/10/2026: o código lia `travas_base_global` em cada abertura e a coluna não existia (552 erros
+-- «column does not exist» em 2 h); o JSON tem de bater certo com o código para a aplicação não
+-- mudar comportamento nenhum.
 -- Desafio, torneio e provider não aparecem aqui: quem os governa é `mtm_funded_programs.regras`
 -- (avaliarConta) e `sinais_config.travas` (as travas da mestre). Duas travas sobre o mesmo número
 -- davam dois limites diferentes para a mesma conta.
@@ -55,7 +58,7 @@ values (
   -- mostra um lucro que uma conta financiada de verdade nunca teria tido, porque a verdadeira tinha
   -- parado de abrir — a mesma família de erro do «preço de entrada viciado». Pôr `true` aqui exclui-as.
   '{
-    "financiada":    { "perdaDiariaPct": 3,  "perdaGlobalPct": 6,    "slMaxPctDaBanca": null, "margemLivreMinPct": null },
+    "financiada":    { "perdaDiariaPct": 3,  "perdaGlobalPct": 6,    "slMaxPctDaBanca": null, "margemLivreMinPct": 20 },
     "real":          { "perdaDiariaPct": 30, "perdaGlobalPct": null, "slMaxPctDaBanca": 95,   "margemLivreMinPct": null },
     "excluirAnalise": false
   }'::jsonb,

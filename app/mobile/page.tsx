@@ -48,7 +48,7 @@ export default function MobilePage() {
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
-      if (sessionError || !session) {
+      if (sessionError || !session?.user?.id) {
         console.log('❌ [MOBILE] Sem sessão')
         return
       }

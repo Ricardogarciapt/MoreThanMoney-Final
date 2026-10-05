@@ -126,7 +126,7 @@ export default function MemberAreaPage() {
       console.log('🔍 [MEMBER AREA] Verificando sessão...')
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-      if (sessionError || !session) {
+      if (sessionError || !session?.user?.id) {
         console.log('❌ [MEMBER AREA] Sem sessão, redirecionando...')
         setIsLoading(false)
         window.location.href = '/login?redirect=/member-area'

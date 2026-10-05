@@ -15,6 +15,7 @@
  * Switch: exec-switch `t2t_price_monitor` (default ON). Corre no mesmo loop ~1s do VPS.
  */
 import { canalPublicadoPelaMestre } from '@/lib/mestres/servidor/canais-publicados'
+import { idsDeLigacao } from './ids-de-ligacao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getExecSwitches } from './exec-switches'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
@@ -139,7 +140,8 @@ export async function runT2TPriceMonitor(): Promise<{
   rows = geríveis as typeof rows
 
   // Conta MetaApi de cada conexão.
-  const connIds = [...new Set(rows.map((r) => (r as LogRow).connection_id))]
+  // Linhas sem ligação ficam de fora: um null no `.in()` recusava o pedido inteiro (erro de uuid).
+  const connIds = idsDeLigacao(rows as ReadonlyArray<{ connection_id?: unknown }>)
   // Ligações desligadas e contas que não existem na MetaApi ficam de fora (15/09: pedidos a contas
   // apagadas estrangularam o token inteiro). Sem conta = null = a linha não se lê nesta passagem.
   const { data: conns } = await admin

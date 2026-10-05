@@ -202,7 +202,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           if (!mounted) return
           
-          if (error || !session?.user) {
+          // `user.id` vazio conta como «sem sessão»: pedir o perfil com id='' dá erro de uuid na BD.
+          if (error || !session?.user?.id) {
             console.log('ℹ️ [AUTH CONTEXT] Nenhuma sessão ativa')
             setUser(null)
             setIsLoading(false)
@@ -266,7 +267,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       console.log('🔔 [AUTH CONTEXT] Auth evento:', event)
 
-      if (event === 'SIGNED_IN' && session) {
+      if (event === 'SIGNED_IN' && session?.user?.id) {
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(session)
 
@@ -479,7 +480,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('🔄 RefreshUser chamado')
       const { data: { session } } = await supabase.auth.getSession()
       
-      if (session?.user) {
+      if (session?.user?.id) {
         console.log('✅ Sessão encontrada, buscando perfil...')
         let { data: profile } = await supabase
           .from("profiles")

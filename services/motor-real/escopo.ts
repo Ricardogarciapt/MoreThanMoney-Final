@@ -18,6 +18,7 @@
  *  · Subscritores do Premium (opcional): só com posição mestre aberta.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { idsDeLigacao } from '../../lib/mtmcopy/ids-de-ligacao'
 import { getExecSwitches, type ExecSwitches } from '../../lib/mtmcopy/exec-switches'
 import { CANONICAL_PREMIUM_ACCOUNT_ID } from '../../lib/mtmcopy/provider-constants'
 import {
@@ -118,8 +119,10 @@ export async function carregarEscopo(db: SupabaseClient, o: OpcoesEscopo): Promi
       .limit(200)
     if (error) throw new Error(`signal_log: ${error.message}`)
     const geriveis = ((rows ?? []) as unknown as LinhaT2T[]).filter((r) => !T2T_SEM_GESTAO.has(String(r.channel_key ?? '')) && r.symbol)
-    if (geriveis.length) {
-      const connIds = [...new Set(geriveis.map((r) => r.connection_id))]
+    // Linhas sem `connection_id` não se gerem (não há conta) e, pior, mandavam `id=in.(null)` ao
+    // PostgREST — o pedido inteiro era recusado (erro de uuid) e nenhuma ligação era lida.
+    const connIds = idsDeLigacao(geriveis)
+    if (connIds.length) {
       const [{ data: conns }, { data: estado }] = await Promise.all([
         db.from('mtmcopy_connections').select('id, metaapi_account_id').in('id', connIds).neq('mt5_status', 'disconnected'),
         db.from('site_settings').select('value').eq('key', 't2t_monitor_state').maybeSingle(),
