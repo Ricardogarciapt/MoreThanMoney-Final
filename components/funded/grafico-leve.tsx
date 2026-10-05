@@ -11,7 +11,8 @@ import type { InputsMTMScanner, ResultadoMTMScanner } from "@/lib/estudos/mtmsca
 import type { InputsSensei, ResultadoSensei, Vela } from "@/lib/estudos/sensei/tipos"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
-import { type GraficoProps, type Tf, TV, tfPorChave } from "./grafico-tipos"
+import { type GraficoProps, type Tf, TV, inicioDaVela } from "./grafico-tipos"
+import { TF_SEG_GRAFICO } from "@/lib/webtrader/timeframes"
 import PainelFerramenta from "./painel-ferramenta"
 import { carregarExtrasSensei, useCalculadoraSensei } from "./sensei-estudo"
 import { useCalculadoraGoldKiller } from "./goldkiller-estudo"
@@ -534,8 +535,8 @@ export default function GraficoLeve(props: GraficoProps & {
   useEffect(() => {
     const serie = serieRef.current
     if (!serie || !preco || estadoVelas === "a_carregar") return
-    const passo = tfPorChave(tf).seg
-    const t = Math.floor(new Date(preco.em).getTime() / 1000 / passo) * passo
+    // W1/MN abrem pelo calendário (segunda / dia 1), os outros pela época — lib/webtrader/timeframes.ts.
+    const t = inicioDaVela(Math.floor(new Date(preco.em).getTime() / 1000), tf)
     const v = preco.bid
     const u = ultimaVelaRef.current
     let nova
@@ -625,9 +626,8 @@ export default function GraficoLeve(props: GraficoProps & {
   useEffect(() => {
     const m = marcasRef.current
     if (!m || !pronto || estadoVelas === "a_carregar") return
-    const passo = tfPorChave(tf).seg
     const marcas = (props.sinais ?? []).map((s) => ({
-      time: Math.floor(s.em / passo) * passo,
+      time: inicioDaVela(s.em, tf),
       position: s.direcao === "buy" ? "belowBar" : "aboveBar",
       color: s.estudo.cor,
       shape: s.direcao === "buy" ? "arrowUp" : "arrowDown",
@@ -673,7 +673,7 @@ export default function GraficoLeve(props: GraficoProps & {
     const snapshot = velasRef.current.slice()
     if (snapshot.length < 50) return
     let vivo = true
-    const tfSeg = tfPorChave(tf).seg
+    const tfSeg = TF_SEG_GRAFICO[tf]
     const inputs: Partial<InputsSensei> = { ...inputsSensei, simbolo: simbolo.symbol, tfSegundos: tfSeg, mintick: Math.pow(10, -simbolo.digits) }
     ;(async () => {
       const kc = chaveEstudo("sensei", simbolo.symbol, tf, chaveInputsSensei, snapshot)
@@ -734,7 +734,7 @@ export default function GraficoLeve(props: GraficoProps & {
     const snapshot = velasRef.current.slice()
     if (snapshot.length < 50) return
     let vivo = true
-    const tfSeg = tfPorChave(tf).seg
+    const tfSeg = TF_SEG_GRAFICO[tf]
     const inputs: Partial<InputsGoldKiller> = { ...inputsGK, simbolo: simbolo.symbol, tfSegundos: tfSeg, mintick: Math.pow(10, -simbolo.digits) }
     ;(async () => {
       const kc = chaveEstudo("gk", simbolo.symbol, tf, chaveInputsGK, snapshot)
@@ -776,7 +776,7 @@ export default function GraficoLeve(props: GraficoProps & {
     const snapshot = velasRef.current.slice()
     if (snapshot.length < 50) return
     let vivo = true
-    const tfSeg = tfPorChave(tf).seg
+    const tfSeg = TF_SEG_GRAFICO[tf]
     // mintick = o tick do símbolo no funded_symbols (digits); o volume é o de ticks da rota das velas.
     const inputs: Partial<InputsMTMScanner> = { ...inputsMS, simbolo: simbolo.symbol, tfSegundos: tfSeg, mintick: Math.pow(10, -simbolo.digits) }
     ;(async () => {
@@ -827,31 +827,73 @@ export default function GraficoLeve(props: GraficoProps & {
     }
   }, [linhas, pronto])
 
-  // Coordenadas: o gráfico mexe-se (pan, zoom, escala automática) sem avisar o React, por isso lê-se
-  // a posição de cada linha a cada frame e só se re-desenha quando algo andou meio píxel.
-  useEffect(() => {
-    let raf = 0
-    let antes = ""
-    const passo = () => {
-      const serie = serieRef.current
-      if (serie) {
-        const novo: Record<string, number> = {}
-        for (const l of linhasRef.current) {
-          const y = serie.priceToCoordinate(l.preco)
-          if (y != null) novo[l.chave] = Math.round(y * 2) / 2
-        }
-        try { larguraEscalaRef.current = graficoRef.current?.priceScale("right").width() ?? 56 } catch { /* ok */ }
-        const s = JSON.stringify(novo)
-        if (s !== antes) { antes = s; setYs(novo) }
-      }
-      raf = requestAnimationFrame(passo)
+  /**
+   * COORDENADAS DAS LINHAS — recalculadas só quando algo as pode ter mexido (05/10).
+   *
+   * Antes: um `requestAnimationFrame` permanente (60 medições/s, cada uma a converter todas as
+   * linhas e a serializar o resultado) mais um `setInterval` de 300 ms de rede de segurança — a
+   * correr com o gráfico parado, em todos os gráficos abertos (o multi-gráfico tem até 4).
+   * Agora mede-se por EVENTO, e várias pedidas no mesmo frame juntam-se numa só:
+   *  · as linhas mudaram (preço novo nas etiquetas, arrasto, ordem nova) — efeito em `linhas`;
+   *  · vela nova / vela viva — `versaoVelas` e o preço;
+   *  · scroll/zoom no tempo — `subscribeVisibleLogicalRangeChange`;
+   *  · resize — `subscribeSizeChange` (e o autoSize do gráfico);
+   *  · arrasto/zoom do eixo de preços — não há evento no Lightweight: apanha-se pelo movimento do
+   *    ponteiro (`subscribeCrosshairMove`) e pela roda/fim do toque no contentor.
+   * A rede de segurança de quem tem rAF estrangulado (WebViews, separador em fundo) fica: o mesmo
+   * pedido também agenda um `setTimeout` de 50 ms, e o primeiro a chegar cancela o outro.
+   */
+  const coordAgendadas = useRef<{ raf: number; to: ReturnType<typeof setTimeout> | null; antes: string }>({ raf: 0, to: null, antes: "" })
+  const medirCoordenadas = useCallback(() => {
+    const a = coordAgendadas.current
+    if (a.raf) { cancelAnimationFrame(a.raf); a.raf = 0 }
+    if (a.to) { clearTimeout(a.to); a.to = null }
+    const serie = serieRef.current
+    if (!serie) return
+    const novo: Record<string, number> = {}
+    for (const l of linhasRef.current) {
+      const y = serie.priceToCoordinate(l.preco)
+      if (y != null) novo[l.chave] = Math.round(y * 2) / 2
     }
-    raf = requestAnimationFrame(passo)
-    // Rede de segurança: WebViews e separadores em segundo plano estrangulam o rAF, e as linhas
-    // ficavam por desenhar até ao próximo toque.
-    const iv = setInterval(() => { cancelAnimationFrame(raf); passo() }, 300)
-    return () => { cancelAnimationFrame(raf); clearInterval(iv) }
+    try { larguraEscalaRef.current = graficoRef.current?.priceScale("right").width() ?? 56 } catch { /* ok */ }
+    const s = JSON.stringify(novo)
+    if (s !== a.antes) { a.antes = s; setYs(novo) }
   }, [])
+  const agendarCoordenadas = useCallback(() => {
+    const a = coordAgendadas.current
+    if (a.raf || a.to) return
+    a.raf = requestAnimationFrame(medirCoordenadas)
+    a.to = setTimeout(medirCoordenadas, 50)
+  }, [medirCoordenadas])
+  useEffect(() => () => {
+    const a = coordAgendadas.current
+    if (a.raf) cancelAnimationFrame(a.raf)
+    if (a.to) clearTimeout(a.to)
+  }, [])
+  // As linhas, a vela viva e as velas fechadas mudaram.
+  useEffect(() => { agendarCoordenadas() }, [linhas, preco, versaoVelas, estadoVelas, pronto, agendarCoordenadas])
+  // O gráfico mexeu-se sozinho ou pela mão do trader.
+  useEffect(() => {
+    const chart = graficoRef.current
+    const caixa = caixaRef.current
+    if (!pronto || !chart) return
+    const escala = chart.timeScale()
+    try { escala.subscribeVisibleLogicalRangeChange(agendarCoordenadas) } catch { /* ok */ }
+    try { escala.subscribeSizeChange(agendarCoordenadas) } catch { /* ok */ }
+    try { chart.subscribeCrosshairMove(agendarCoordenadas) } catch { /* ok */ }
+    caixa?.addEventListener("wheel", agendarCoordenadas, { passive: true })
+    caixa?.addEventListener("pointerup", agendarCoordenadas)
+    window.addEventListener("resize", agendarCoordenadas)
+    agendarCoordenadas()
+    return () => {
+      try { escala.unsubscribeVisibleLogicalRangeChange(agendarCoordenadas) } catch { /* gráfico removido */ }
+      try { escala.unsubscribeSizeChange(agendarCoordenadas) } catch { /* ok */ }
+      try { chart.unsubscribeCrosshairMove(agendarCoordenadas) } catch { /* ok */ }
+      caixa?.removeEventListener("wheel", agendarCoordenadas)
+      caixa?.removeEventListener("pointerup", agendarCoordenadas)
+      window.removeEventListener("resize", agendarCoordenadas)
+    }
+  }, [pronto, agendarCoordenadas])
 
   // ── interacção ──
   const precoNoY = (y: number): number | null => {

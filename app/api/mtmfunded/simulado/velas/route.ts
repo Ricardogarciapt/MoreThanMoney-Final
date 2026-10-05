@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { JANELA_RECENTE, MAX_VELAS, TF_METAAPI, obterVelas } from '@/lib/mtmfunded/simulado/velas'
+import { JANELA_RECENTE, MAX_VELAS, obterVelas, tfValido } from '@/lib/mtmfunded/simulado/velas'
 import { paraColunas } from '@/lib/webtrader/velas'
 
 export const dynamic = 'force-dynamic'
@@ -7,23 +7,23 @@ export const dynamic = 'force-dynamic'
 /**
  * VELAS HISTÓRICAS para o gráfico do WebTrader.
  *
- * GET ?symbol=XAUUSD&tf=M1|M5|M15|H1|H4|D1&limit=300[&ate=<unix s>][&f=a]
+ * GET ?symbol=XAUUSD&tf=M1|M2|M3|M5|M10|M15|M30|H1|H2|H4|H6|H8|H12|D1|W1|MN&limit=300[&ate=<unix s>][&f=a]
  *   → { symbol, tf, velas: [{ t, o, h, l, c, v }], fonte, simboloFonte?, motivo? }
  *   → com `f=a` (formato do gráfico): { symbol, tf, col: { t:[], o:[], h:[], l:[], c:[], v:[] }, fonte, … }
- * (`v` = volume de ticks da MetaApi — painel de volume e MTM Sensei; 0 quando não vem)
+ * (`v` = volume da fonte — painel de volume e MTM Sensei; 0 quando não vem)
+ * M2/M3/M10/M30/H2/H6/H8/H12/W1/MN derivam-se no servidor de um nativo (ver velas.ts, DERIVACAO).
  *
- * `limit` vai até 5000 (o Sensei pede 3000; a MetaApi dá 1000 por página e o helper pagina para
- * trás). `ate` pede as velas ANTERIORES a esse instante: é assim que se pede mais histórico quando
+ * `limit` vai até 5000 (o Sensei pede 3000). `ate` pede as velas ANTERIORES a esse instante: é assim que se pede mais histórico quando
  * se arrasta para trás. Sem `ate`, as últimas até agora.
  *
- * Toda a lógica (resolução do nome do símbolo na conta de leitura, paginação, cache LRU + pedidos
- * em curso partilhados) está em lib/mtmfunded/simulado/velas.ts — ver lá o porquê do XAUUSD.s.
+ * Toda a lógica (fontes, derivação, cache LRU + pedidos em curso partilhados) está em
+ * lib/mtmfunded/simulado/velas.ts.
  *
- * Sem MetaApi (2026-09-21: conta de leitura UNDEPLOYED, sem créditos) as velas vêm das reservas
- * públicas — Binance spot (cripto, PAXG para o ouro) e Yahoo (forex, metais, índices, energia,
- * acções) — reescaladas ao nosso nível; `fonte`/`simboloFonte`/`reescala` dizem de onde e quanto.
- * A MetaApi tem 3 s e corre em PARALELO com a reserva (VELAS_METAAPI=0 tira-a de todo).
- * Só sem nenhuma das duas vem a lista vazia e o gráfico constrói-se pelos preços ao vivo.
+ * As velas vêm das referências públicas — Binance spot (cripto, PAXG para o ouro) e Yahoo (forex,
+ * metais, índices, energia, acções) — reescaladas ao nosso nível pelo último preço de
+ * `funded_precos`; `fonte`/`simboloFonte`/`reescala` dizem de onde e quanto. A MetaApi não entra
+ * (regra do dono): só com MOTOR_PRECOS_METAAPI=1 e só se as referências vierem vazias.
+ * Sem nada vem a lista vazia e o gráfico constrói-se pelos preços ao vivo.
  *
  * Cache (2026-09, «rápido como o TradingView»): as velas são do mercado, iguais para toda a gente,
  * por isso servem-se da CDN — `s-maxage` curto conforme o timeframe (uma vela de M1 muda a cada
@@ -31,9 +31,16 @@ export const dynamic = 'force-dynamic'
  * revalida por trás. O gráfico cola o preço ao vivo por cima da última vela, por isso uma cópia com
  * segundos não se nota. `max-age` curto deixa o browser reaproveitar o pedido pré-aquecido (hover no
  * link, pré-carga) ao mudar de página; o ETag faz a revalidação responder 304 sem corpo.
- * Nada disto lê ou escreve na base: a resolução do símbolo lê o catálogo uma vez por instância (6 h).
+ * Quase nada disto lê a base: o catálogo (classe/dígitos) fica 6 h por instância e a âncora 60 s.
  */
-const S_MAXAGE: Record<string, number> = { M1: 5, M5: 10, M15: 15, H1: 30, H4: 60, D1: 120 }
+/**
+ * `s-maxage` por timeframe: cerca de 1/10 da vela, entre 5 s e 10 min. Uma cópia com esta idade não
+ * se nota (o gráfico cola o preço vivo por cima da última vela) e um W1/MN quase não muda.
+ */
+const S_MAXAGE: Record<string, number> = {
+  M1: 5, M2: 8, M3: 10, M5: 10, M10: 15, M15: 15, M30: 20,
+  H1: 30, H2: 45, H4: 60, H6: 90, H8: 90, H12: 120, D1: 120, W1: 300, MN: 600,
+}
 
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams
@@ -41,7 +48,7 @@ export async function GET(request: NextRequest) {
   const tf = (sp.get('tf') ?? 'M5').toUpperCase()
   const limit = Math.min(MAX_VELAS, Math.max(20, Number(sp.get('limit') ?? 300) || 300))
   const compacto = sp.get('f') === 'a'
-  if (!/^[A-Z0-9._#-]{1,24}$/.test(symbol) || !TF_METAAPI[tf]) {
+  if (!/^[A-Z0-9._#-]{1,24}$/.test(symbol) || !tfValido(tf)) {
     return NextResponse.json({ error: 'symbol/tf inválidos' }, { status: 400 })
   }
   // Arredondado ao minuto: dois pedidos de histórico ao mesmo ponto partilham a cache.

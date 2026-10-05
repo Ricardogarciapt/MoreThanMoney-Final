@@ -5,48 +5,61 @@ import { candidatosDeTicker } from './ordens'
 import { isMarketOpen } from '@/lib/mtmcopy/market-hours'
 import { fatorAncorado, fatorValido, referenciasPara, reescalar, soAberto, type Ancora, type RefMercado } from '@/lib/mercado/referencias'
 import { buscarVelasRef, velasAVoltaDe } from '@/lib/mercado/velas-referencia'
+// Os timeframes e a agregação são puros e partilhados com o cliente (selector, vela viva).
+import { DERIVACAO, agregarNoTimeframe } from '@/lib/webtrader/timeframes'
 
 /**
  * VELAS HISTÓRICAS (servidor) — o helper por trás de /api/mtmfunded/simulado/velas.
  *
- * As velas vêm do histórico da MetaApi lido através de uma conta provider já ligada (as velas são
- * do mercado, não da conta; pedir por uma conta é só a forma como a MetaApi serve histórico).
+ * ── DE ONDE VÊM (05/10, regra do dono «a MetaApi não entra nas velas») ─────────────────────────
+ * A MetaApi é só o cano que entrega ordens às contas dos clientes (memória metaapi-so-entrega-slaves).
+ * As velas vêm, por esta ordem:
+ *   1. das referências públicas de lib/mercado — Binance spot (cripto, PAXG para o ouro) e Yahoo
+ *      (forex, metais, índices, energia, acções) —, reescaladas ao nosso nível por um fator
+ *      ancorado no último preço conhecido em `funded_precos` (a âncora é o nosso preço; a forma da
+ *      vela é a da referência). `fonte` diz de onde vieram; `reescala` o fator aplicado;
+ *   2. a vela VIVA é sempre a nossa: o gráfico cola por cima os ticks de `funded_precos`/conector
+ *      (use-precos.ts no cliente). Nem `funded_precos` nem o conector MT5 guardam histórico de
+ *      velas — o conector só emite ticks —, por isso não podem ser fonte do passado;
+ *   3. só com `MOTOR_PRECOS_METAAPI=1` (a mesma chave que liga a MetaApi no motor do VPS), e só
+ *      quando as reservas não dão nada, a MetaApi entra como último recurso (3 s de prazo e
+ *      disjuntor). Sem a chave, nem é chamada. Antes ia PRIMEIRO, em corrida com a reserva.
  *
- * ── O problema que isto resolve (2026-09) ─────────────────────────────────────────────────────
- * A rota pedia sempre `funded_symbols.simbolo_fonte` (XAUUSD.s — o nome na corretora das contas
- * simuladas). A conta de leitura é de OUTRA corretora e não conhece «XAUUSD.s»: a MetaApi respondia
- * 500 «Symbol XAUUSD.s does not exist» e o gráfico abria vazio em produção. E há uma segunda
- * armadilha: a mesma conta tem «US30» mas com a última vela em 2024 (símbolo morto) — responder 200
- * não chega, a vela mais recente tem de ser recente.
- *
- * Por isso o nome a pedir RESOLVE-SE, por esta ordem, e o que funciona fica em cache por
- * símbolo+conta:
- *   1. o símbolo canónico (XAUUSD) — primeiro desde 2026-09, ver `resolverSemCache`;
- *   2. `simbolo_fonte` do catálogo (quando a conta de leitura é da mesma corretora);
- *   3. as variantes de `candidatosDeTicker` (sem sufixo, apelidos US30/DJ30…);
- *   4. a lista de símbolos da própria conta ordenada por `rankedBrokerSymbols` (DJIUSD para US30).
- * Cada candidato só «funciona» se devolver velas E a mais recente tiver menos de ~4 dias.
+ * ── TIMEFRAMES ────────────────────────────────────────────────────────────────────────────────
+ * Nativos (as fontes servem-nos): M1 M5 M15 H1 H4 D1. Os outros DERIVAM-SE de um nativo aqui no
+ * servidor — M2/M3 do M1, M10 do M5, M30 do M15, H2/H6/H8/H12 do H1, W1 e MN do D1 — com a mesma
+ * agregação do cliente (`agregarVelas`, alinhada à época UTC) e, para a semana e o mês, alinhada
+ * ao CALENDÁRIO (segunda-feira 00:00 UTC; dia 1 00:00 UTC), que a época não alinha (o dia 0 Unix
+ * foi uma quinta). O tecto de velas por pedido é o do nativo (MAX_VELAS): um H12 dá no máximo
+ * MAX_VELAS/12 velas.
  *
  * ── Quantidade ────────────────────────────────────────────────────────────────────────────────
  * O MTM Sensei precisa de ~3000 velas (DEMA 238 aquece em 474 barras, estrutura e estatísticas
- * pedem história). A MetaApi dá no máximo 1000 por pedido e pagina PARA TRÁS (`startTime` = agora
- * devolve as velas anteriores), por isso pede-se por páginas até ao total.
+ * pedem história).
  *
  * ── Cache ─────────────────────────────────────────────────────────────────────────────────────
  * LRU em memória por instância (30 s) + pedidos em curso partilhados: dez pessoas no ouro com o
- * Sensei ligado não são trinta pedidos. A rota junta `Cache-Control` de 30 s para a CDN.
+ * Sensei ligado não são trinta pedidos. A rota junta `Cache-Control` para a CDN.
  *
- * ── Reservas SEM MetaApi (2026-09-21, doutrina «MetaApi é secundário») ─────────────────────────
- * A conta de leitura ficou UNDEPLOYED por falta de créditos e o gráfico abria vazio. Agora a MetaApi
- * tem 3 s — ou 1 s depois de a reserva estar pronta — e um disjuntor (3 falhas seguidas → 2 min sem
- * a tentar); corre em paralelo com as
- * referências públicas de lib/mercado (Binance spot para cripto e PAXG para o ouro; Yahoo para
- * forex, metais, índices, energia e acções), reescaladas ao nosso nível por um fator ancorado no
- * último preço conhecido em funded_precos. `fonte` diz de onde vieram; `reescala` o fator aplicado.
+ * ── MetaApi (só com a chave) ──────────────────────────────────────────────────────────────────
+ * A conta de leitura é de OUTRA corretora e não conhece «XAUUSD.s»: o nome a pedir resolve-se
+ * (canónico → `simbolo_fonte` → `candidatosDeTicker` → lista da conta por `rankedBrokerSymbols`),
+ * e só serve se a vela mais recente tiver menos de ~4 dias. Dá no máximo 1000 velas por pedido e
+ * pagina para trás.
  */
+
+export { DERIVACAO, TIMEFRAMES_GRAFICO, TF_NATIVOS, inicioCalendario, inicioDaVela, tfValido } from '@/lib/webtrader/timeframes'
+
+/** Agrega as velas do nativo no timeframe derivado (`tf` nativo: devolve-as tal como vêm). */
+export function derivarVelas(velas: VelaOHLCV[], tf: string): VelaOHLCV[] {
+  return DERIVACAO[tf] ? agregarNoTimeframe(velas, tf) : velas
+}
 
 export const TF_METAAPI: Record<string, string> = { M1: '1m', M5: '5m', M15: '15m', H1: '1h', H4: '4h', D1: '1d' }
 const TF_SEG: Record<string, number> = { M1: 60, M5: 300, M15: 900, H1: 3600, H4: 14400, D1: 86400 }
+
+/** A MetaApi só entra nas velas com esta chave (a mesma do motor do VPS). */
+export const metaApiNasVelas = () => process.env.MOTOR_PRECOS_METAAPI === '1' && Boolean(process.env.METAAPI_TOKEN)
 
 /** Máximo de velas por pedido à rota (o Sensei pede 3000; a folga cobre o H4 de gráficos longos). */
 export const MAX_VELAS = 5000
@@ -61,7 +74,7 @@ export interface VelaOHLCV {
   h: number
   l: number
   c: number
-  /** volume de ticks da MetaApi (0 quando não vem) — o Sensei usa-o no volume e no order flow */
+  /** volume (ticks/negócios da fonte; 0 quando não vem) — o Sensei usa-o no volume e no order flow */
   v: number
 }
 
@@ -294,6 +307,15 @@ async function recolher(conta: string, nome: string, tf: string, limite: number,
  * Nunca lança: falhar devolve lista vazia com `motivo` (o gráfico constrói-se pelos preços ao vivo).
  */
 export async function obterVelas(symbol: string, tf: string, limite: number, ate: number | null = null): Promise<RespostaVelas> {
+  const d = DERIVACAO[tf]
+  if (d) {
+    // Derivado: pede-se o nativo com velas que cheguem (+1 para a primeira não sair cortada) e agrega-se.
+    const base = await obterVelas(symbol, d.de, Math.min(MAX_VELAS, (Math.max(20, Math.floor(limite) || 300) + 1) * d.fator), ate)
+    const velas = derivarVelas(base.velas, tf)
+    // A primeira vela agregada pode estar incompleta (o nativo começou a meio dela): sai, se sobrar.
+    const inteiras = velas.length > 1 ? velas.slice(1) : velas
+    return { ...base, tf, velas: inteiras.slice(-Math.max(20, Math.floor(limite) || 300)) }
+  }
   const lim = Math.min(MAX_VELAS, Math.max(20, Math.floor(limite) || 300))
   // Janela grande até agora = corpo (cache longa) + cauda recente (cache curta), colados por tempo.
   if (ate == null && lim > JANELA_RECENTE) {
@@ -303,7 +325,7 @@ export async function obterVelas(symbol: string, tf: string, limite: number, ate
     ])
     if (!corpo.velas.length) return cauda.velas.length ? cauda : corpo
     if (!cauda.velas.length) return corpo
-    // Fontes diferentes (corpo da MetaApi, cauda da reserva) não se colam: níveis podem não bater.
+    // Fontes diferentes (corpo de uma referência, cauda de outra) não se colam: níveis podem não bater.
     if (corpo.fonte !== cauda.fonte || corpo.simboloFonte !== cauda.simboloFonte) return corpo
     return { ...corpo, velas: colarVelas(corpo.velas, cauda.velas, lim) }
   }
@@ -325,7 +347,7 @@ export function colarVelas(antiga: VelaOHLCV[], nova: VelaOHLCV[], limite: numbe
 // MetaApi com prazo e disjuntor
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** A MetaApi tem isto para dar velas; depois disso segue-se para as reservas (ela acaba por trás e fica em cache). */
+/** A MetaApi (só com MOTOR_PRECOS_METAAPI=1, último recurso) tem isto para dar velas. */
 export const PRAZO_METAAPI_MS = 3_000
 let falhasMetaSeguidas = 0
 let metaPausadaAte = 0
@@ -347,25 +369,16 @@ async function velasMetaApi(symbol: string, tf: string, lim: number, ate: number
   return { symbol, tf, velas, fonte: 'metaapi', simboloFonte: fonte.nome }
 }
 
-/** Com a reserva já pronta, a MetaApi só tem mais isto (a frio, a resolução dela pendurava os 3 s todos). */
-export const FOLGA_APOS_RESERVA_MS = 1_000
-
-async function velasMetaApiComPrazo(symbol: string, tf: string, lim: number, ate: number | null, reserva?: Promise<RespostaVelas>): Promise<RespostaVelas | null> {
-  // VELAS_METAAPI=0 tira a MetaApi do caminho das velas (conta de leitura desligada, sem créditos).
-  if (!process.env.METAAPI_TOKEN || process.env.VELAS_METAAPI === '0') return null
+async function velasMetaApiComPrazo(symbol: string, tf: string, lim: number, ate: number | null): Promise<RespostaVelas | null> {
+  // A MetaApi não entra nas velas sem a chave (regra do dono, 05/10) — nem um pedido.
+  if (!metaApiNasVelas()) return null
   if (Date.now() < metaPausadaAte) return { symbol, tf, velas: [], fonte: null, motivo: 'MetaApi em pausa (falhas seguidas)' }
   let prazo: ReturnType<typeof setTimeout> | undefined
-  let folga: ReturnType<typeof setTimeout> | undefined
   const r = await Promise.race([
     velasMetaApi(symbol, tf, lim, ate).catch(() => null),
     new Promise<null>((res) => { prazo = setTimeout(() => res(null), PRAZO_METAAPI_MS) }),
-    ...(reserva ? [reserva.then((x) => new Promise<null>((res) => {
-      if (!x.velas.length) return // reserva vazia: a MetaApi fica com o prazo inteiro
-      folga = setTimeout(() => res(null), FOLGA_APOS_RESERVA_MS)
-    }))] : []),
   ])
   if (prazo) clearTimeout(prazo)
-  if (folga) clearTimeout(folga)
   if (r?.velas.length) { falhasMetaSeguidas = 0; return r }
   if (++falhasMetaSeguidas >= 3) { metaPausadaAte = Date.now() + 2 * 60_000; falhasMetaSeguidas = 0 }
   return r ?? { symbol, tf, velas: [], fonte: null, motivo: 'MetaApi sem resposta em 3 s' }
@@ -407,7 +420,7 @@ async function fatorPara(ref: RefMercado, velas: VelaOHLCV[], ancora: Ancora | n
 }
 
 /**
- * Velas de reserva sem MetaApi. Tenta as referências do plano por ordem; uma referência fora do
+ * Velas das referências públicas (a fonte principal desde 05/10). Tenta as referências do plano por ordem; uma referência fora do
  * nosso nível só serve reescalada (fator válido), e uma «ao mesmo nível» cujo fator saia dos ±10 %
  * é outro instrumento e salta-se. Sem âncora nenhuma, a primeira série serve tal como vem (dito em `motivo`).
  */
@@ -451,21 +464,19 @@ async function comCache(cache: LRU<RespostaVelas>, symbol: string, tf: string, l
 
   const trabalho = (async (): Promise<RespostaVelas> => {
     if (!TF_METAAPI[tf]) return { symbol, tf, velas: [], fonte: null, motivo: 'timeframe inválido' }
-    // As duas em paralelo: a MetaApi (se ligada) ganha quando responde dentro do prazo; senão a
-    // reserva já está pronta — o gráfico nunca espera pela MetaApi e depois ainda pela reserva.
-    const reservaP = velasDeReserva(symbol, tf, lim, ate).catch((): RespostaVelas => ({ symbol, tf, velas: [], fonte: null, motivo: 'reservas falharam' }))
-    const meta = await velasMetaApiComPrazo(symbol, tf, lim, ate, reservaP)
-    if (meta?.velas.length) return meta
-    const reserva = await reservaP
+    // Referências públicas primeiro; a MetaApi só se a chave a ligar E as referências vierem vazias.
+    const reserva = await velasDeReserva(symbol, tf, lim, ate).catch((): RespostaVelas => ({ symbol, tf, velas: [], fonte: null, motivo: 'reservas falharam' }))
     if (reserva.velas.length) return reserva
-    return { ...reserva, motivo: meta?.motivo ? `${meta.motivo}; ${reserva.motivo ?? 'sem reserva'}` : reserva.motivo }
+    const meta = await velasMetaApiComPrazo(symbol, tf, lim, ate)
+    if (meta?.velas.length) return meta
+    return { ...reserva, motivo: meta?.motivo ? `${reserva.motivo ?? 'sem reserva'}; ${meta.motivo}` : reserva.motivo }
   })()
 
   EM_CURSO.set(chave, trabalho)
   try {
     const r = await trabalho
-    // Respostas vazias guardam-se só 30 s (na cache curta): um símbolo sem histórico não martela a
-    // MetaApi, mas também não fica 10 min sem gráfico se a conta de leitura voltar.
+    // Respostas vazias guardam-se só 30 s (na cache curta): um símbolo sem histórico não martela as
+    // fontes, mas também não fica 10 min sem gráfico quando elas voltarem.
     if (r.velas.length || cache !== CACHE_CORPO) cache.set(chave, r)
     else CACHE_RESPOSTAS.set(chave, r)
     return r

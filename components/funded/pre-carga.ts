@@ -6,12 +6,13 @@ import { registarSimbolosCripto } from "@/lib/ios-sem-cripto"
 import { buscarRecentes, lerDisco, lerMemoria } from "./armazem-velas"
 import { URL_FICHAS, tirarPreCarga } from "@/lib/webtrader/velas"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
+import { tfValido } from "@/lib/webtrader/timeframes"
 
 /**
  * PRÉ-CARGA DO WEBTRADER — o que é público pede-se logo, sem esperar pela sessão nem pelas contas.
  *
  * Antes (2026-09) o gráfico ficava no fim de uma cascata: token → contas → contas reais → estado
- * da conta → ficha do símbolo → HEAD da biblioteca TradingView → import do Lightweight Charts →
+ * da conta → ficha do símbolo → import do Lightweight Charts →
  * velas (3000, ~9 s a frio na MetaApi) → primeiro preço. Tudo o que NÃO é da pessoa (a ficha do
  * símbolo, o primeiro preço, as velas recentes, o código do gráfico) não depende de nada disso e
  * arranca aqui, no primeiro render de /webtrader — e do deep link dos scanners, com o símbolo do link.
@@ -76,7 +77,7 @@ export function preaquecerWebtrader(candidatos: string | null) {
   let tf = "M5"
   try {
     const v = JSON.parse(localStorage.getItem("mtmfunded_tf") || "null")
-    if (typeof v === "string" && /^(M1|M5|M15|H1|H4|D1)$/.test(v)) tf = v
+    if (typeof v === "string" && tfValido(v)) tf = v
   } catch { /* ok */ }
   const csv = candidatos || "XAUUSD"
   void fichaDe(csv).then((f) => {

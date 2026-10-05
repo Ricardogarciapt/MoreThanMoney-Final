@@ -63,21 +63,32 @@ export interface GraficoProps {
 }
 
 /**
- * Timeframes: a chave é a do endpoint /velas, `seg` o tamanho da vela, `tv` a resolução do
- * TradingView e `rotulo` o botão da barra (como o TradingView os escreve).
+ * Timeframes: a chave é a do endpoint /velas, `seg` o tamanho (nominal em W1/MN — ver
+ * lib/webtrader/timeframes.ts) e `rotulo` o botão da barra (como o TradingView os escreve).
+ * M2/M3/M10/M30/H2/H6/H8/H12/W1/MN derivam-se no servidor de um nativo; a vela viva abre em
+ * `inicioDaVela` (W1/MN pelo calendário, não pela época).
  */
 export const TIMEFRAMES = [
-  { chave: "M1", seg: 60, tv: "1", rotulo: "1m" },
-  { chave: "M5", seg: 300, tv: "5", rotulo: "5m" },
-  { chave: "M15", seg: 900, tv: "15", rotulo: "15m" },
-  { chave: "H1", seg: 3600, tv: "60", rotulo: "1h" },
-  { chave: "H4", seg: 14400, tv: "240", rotulo: "4h" },
-  { chave: "D1", seg: 86400, tv: "1D", rotulo: "1D" },
+  { chave: "M1", seg: 60, rotulo: "1m" },
+  { chave: "M2", seg: 120, rotulo: "2m" },
+  { chave: "M3", seg: 180, rotulo: "3m" },
+  { chave: "M5", seg: 300, rotulo: "5m" },
+  { chave: "M10", seg: 600, rotulo: "10m" },
+  { chave: "M15", seg: 900, rotulo: "15m" },
+  { chave: "M30", seg: 1800, rotulo: "30m" },
+  { chave: "H1", seg: 3600, rotulo: "1h" },
+  { chave: "H2", seg: 7200, rotulo: "2h" },
+  { chave: "H4", seg: 14400, rotulo: "4h" },
+  { chave: "H6", seg: 21600, rotulo: "6h" },
+  { chave: "H8", seg: 28800, rotulo: "8h" },
+  { chave: "H12", seg: 43200, rotulo: "12h" },
+  { chave: "D1", seg: 86400, rotulo: "1D" },
+  { chave: "W1", seg: 604800, rotulo: "1W" },
+  { chave: "MN", seg: 2592000, rotulo: "1M" },
 ] as const
 export type Tf = (typeof TIMEFRAMES)[number]["chave"]
-export const tfPorChave = (c: string) => TIMEFRAMES.find((t) => t.chave === c) ?? TIMEFRAMES[1]
-export const tfPorResolucaoTv = (r: string) =>
-  TIMEFRAMES.find((t) => t.tv === r || (t.tv === "1D" && (r === "D" || r === "1D"))) ?? null
+export const tfPorChave = (c: string) => TIMEFRAMES.find((t) => t.chave === c) ?? TIMEFRAMES[3]
+export { inicioDaVela } from "@/lib/webtrader/timeframes"
 
 /** A paleta escura do TradingView — o nosso gráfico veste-a para não parecer outra app. */
 export const TV = {
