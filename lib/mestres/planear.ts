@@ -66,6 +66,10 @@ export type LigacaoSiteSeguidora = LigacaoSite & {
 export type ContaAutoSeguidora = ContaAuto & {
   id: string
   user_id: string
+  /** Interruptores do cliente em /definicoes da MTM Auto (F3, 05/10) — a cadeia passa a LÊ-LOS. */
+  espelhar_saidas?: boolean | null
+  be_ativo?: boolean | null
+  trailing_ativo?: boolean | null
   plataforma?: string | null
   login?: string | null
   servidor?: string | null
@@ -104,11 +108,36 @@ export interface RotaDesejada {
   filtro_simbolos: string[]
   max_abertas: number | null
   pausada_motivo: string | null
+  /** F3: o que a rota copia da mestre, derivado dos interruptores do cliente (flagsDaContaAuto) */
+  copiar_parciais: boolean
+  copiar_modificacoes: boolean
+  fechar_com_origem: boolean
   mestres: true
   tipo_rota: 'estrategia'
   estrategia_slug: string
   notas: string
 }
+
+/**
+ * OS INTERRUPTORES DO CLIENTE LIDOS PELA CADEIA (F3, 05/10).
+ *
+ * Até aqui ninguém os lia: o motor próprio da MTM Auto (que os honrava) está morto e a cadeia copiava
+ * tudo da mestre fosse qual fosse a escolha do cliente. A tradução para as flags da rota:
+ *  · «Seguir as saídas do educador» (`espelhar_saidas`) = copiar a PESSOA: parciais e SL/TP da mestre
+ *    são copiados por proporção/pips (copiar_parciais + copiar_modificacoes).
+ *  · desligado = copiar a ESTRATÉGIA: as saídas são os alvos do cliente (`saidas_pct`, motor-real) →
+ *    as parciais da mestre NÃO se copiam. As modificações de SL só se copiam se o cliente NÃO gere o
+ *    stop por conta própria (BE e trailing desligados) — senão eram duas mãos no mesmo stop.
+ *  · fechar_com_origem é sempre true: a mestre fechar é o fim da ideia, em qualquer modo.
+ * Contas do site (mtmcopy_connections) não têm estes interruptores → tudo true, como antes.
+ */
+export function flagsDaContaAuto(c: Pick<ContaAutoSeguidora, 'espelhar_saidas' | 'be_ativo' | 'trailing_ativo'>): { copiar_parciais: boolean; copiar_modificacoes: boolean; fechar_com_origem: boolean } {
+  const espelha = c.espelhar_saidas === true
+  const gereStop = c.be_ativo !== false || c.trailing_ativo !== false
+  return { copiar_parciais: espelha, copiar_modificacoes: espelha || !gereStop, fechar_com_origem: true }
+}
+
+const FLAGS_SITE = { copiar_parciais: true, copiar_modificacoes: true, fechar_com_origem: true }
 
 export interface Ignorado { ref: string; motivo: string }
 
@@ -210,7 +239,7 @@ export function planearRotasDaEstrategia(p: {
     vistas.add(chave)
     rotas.push({
       ...base, user_id: l.user_id, destino_tipo: plataforma, destino_ref: ref, destino_chave: chave,
-      rotulo: `${e.nome} → ${ref.slice(0, 13)}`, ...semOrigem(lote.lote),
+      rotulo: `${e.nome} → ${ref.slice(0, 13)}`, ...semOrigem(lote.lote), ...FLAGS_SITE,
       pausada_motivo: l.is_active === false ? 'ligação pausada pelo cliente' : null,
       notas: `mestres 116 · ${porGrupo ? 'grupo Telegram · ' : ''}${lote.lote.origem}`,
     })
@@ -240,7 +269,7 @@ export function planearRotasDaEstrategia(p: {
       const pausa = s.ativo === false ? 'subscrição inactiva' : conta.copia_ativa === false ? 'cópia pausada na conta MTM Auto' : String(conta.estado ?? '').toLowerCase() === 'error' ? 'conta MTM Auto em erro' : null
       rotas.push({
         ...base, user_id: s.user_id, destino_tipo: plataforma, destino_ref: ref, destino_chave: chave,
-        rotulo: `${e.nome} → ${ref.slice(0, 13)}`, ...semOrigem(lote.lote), pausada_motivo: pausa,
+        rotulo: `${e.nome} → ${ref.slice(0, 13)}`, ...semOrigem(lote.lote), ...flagsDaContaAuto(conta), pausada_motivo: pausa,
         notas: `mestres 116 · ${lote.lote.origem}`,
       })
     }
@@ -266,6 +295,9 @@ export interface RotaExistente {
   filtro_simbolos: string[] | null
   max_abertas: number | null
   pausada_motivo: string | null
+  copiar_parciais?: boolean
+  copiar_modificacoes?: boolean
+  fechar_com_origem?: boolean
   /** cópias ainda abertas nesta rota (sombra/enviando/aberta) */
   abertas: number
 }
@@ -295,6 +327,10 @@ export function planoDeEscrita(desejadas: RotaDesejada[], existentes: RotaExiste
     if (!iguaisArr(r.filtro_simbolos, d.filtro_simbolos)) patch.filtro_simbolos = d.filtro_simbolos
     if ((r.max_abertas ?? null) !== (d.max_abertas ?? null)) patch.max_abertas = d.max_abertas
     if ((r.pausada_motivo ?? null) !== d.pausada_motivo) patch.pausada_motivo = d.pausada_motivo
+    // F3: os interruptores do cliente mudam as flags da rota na sincronização seguinte
+    if (r.copiar_parciais != null && r.copiar_parciais !== d.copiar_parciais) patch.copiar_parciais = d.copiar_parciais
+    if (r.copiar_modificacoes != null && r.copiar_modificacoes !== d.copiar_modificacoes) patch.copiar_modificacoes = d.copiar_modificacoes
+    if (r.fechar_com_origem != null && r.fechar_com_origem !== d.fechar_com_origem) patch.fechar_com_origem = d.fechar_com_origem
     if (r.destino_ref !== d.destino_ref) patch.destino_ref = d.destino_ref
     if (!r.ativa) patch.ativa = true
     if (Object.keys(patch).length) actualizar.push({ id: r.id, patch })

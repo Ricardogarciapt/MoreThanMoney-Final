@@ -25,10 +25,14 @@
 export type TipoGestao = 'premium' | 't2t' | 'mtmauto'
 
 /**
- * Tipos que o motor já executa em live. T2T e MTM Auto ficam de fora na fase 1: o guarda deles
- * existe, mas enquanto o tipo não estiver aqui nunca cala o monitor antigo.
+ * Tipos que o motor já executa em live. T2T fica de fora na fase 1: o guarda dele existe, mas
+ * enquanto o tipo não estiver aqui nunca cala o monitor antigo.
+ *
+ * 'mtmauto' entrou a 05/10 (F3 — motor partilhado): o motor próprio da MTM Auto foi retirado e a
+ * gestão por preço das contas MTM Auto é do motor do VPS. Só conta a conta: continua a exigir a
+ * conta em `site_settings.motor_real_contas_live` (vazia) + batimento vivo — é o dono que a põe lá.
  */
-export const TIPOS_LIVE_SUPORTADOS: readonly TipoGestao[] = ['premium']
+export const TIPOS_LIVE_SUPORTADOS: readonly TipoGestao[] = ['premium', 'mtmauto']
 
 export const CHAVE_LISTA_LIVE = 'motor_real_contas_live'
 export const SERVICO_PULSO = 'motor-real'
