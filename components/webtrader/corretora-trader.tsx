@@ -8,7 +8,8 @@ import type { PlataformaWT, CapacidadesWT, ContaWT, NegocioWT, OrdemWT, PosicaoW
 import type { MapaPrecos } from "@/lib/mtmfunded/simulado/matematica"
 import type { SimboloFicha } from "@/components/funded/api"
 import { usd } from "@/components/funded/api"
-import { usePrecos } from "@/components/funded/use-precos"
+import { useFeedConta } from "@/hooks/use-feed-conta"
+import { definirFonteVelas } from "@/components/funded/armazem-velas"
 import { calibrar, lucroAoVivo, equityAoVivo, type Calibracao } from "@/components/webtrader/pnl-ao-vivo"
 import { fichaDe } from "@/components/funded/pre-carga"
 import { AccaoCancelada, InterruptorUmClique, UmCliqueProvider, useUmClique } from "@/components/funded/um-clique"
@@ -18,6 +19,7 @@ import LayoutSimples from "@/components/funded/layout-simples"
 import type { PainelTrader, TraderBase } from "@/components/funded/trader-contexto"
 import { validarTicketReal } from "@/lib/webtrader/ticket"
 import { ordemParaCorretora } from "@/lib/webtrader/pedido-real"
+import { canonicoDe } from "@/lib/webtrader/corretoras/regras"
 import type { Prefill } from "@/components/funded/funded-ticket"
 import { COR_PLATAFORMA, ErroWT, NOME_PLATAFORMA, pedirWT } from "./api-corretoras"
 import { GestaoAutoCorretora, type EstadoGestaoCorretora } from "@/components/funded/gestao-auto"
@@ -37,7 +39,12 @@ const LayoutPro = dynamic(() => import("@/components/funded/layout-pro"), { ssr:
  * Custo e limites (o servidor limita por conta; o ecrã não gasta mais do que precisa):
  *  · posições+pendentes: MT5 de 5 em 5 s, TradeLocker de 3 em 3 s — SÓ com o separador visível;
  *  · saldo/equity de 10 em 10 s; histórico só quando se abre o painel;
- *  · preço do gráfico e do ticket: o feed MTM (grátis, indicativo). A ordem executa na corretora.
+ *  · preço do gráfico e do ticket: o FEED DIRECTO da conta (hooks/use-feed-conta: o browser lê a
+ *    corretora do cliente — MetaApi SDK web ou TradeLocker) e, só quando ele não existe ou cai, o
+ *    feed MTM (grátis, indicativo). Com o feed directo ligado as sondagens acima PARAM: posições,
+ *    ordens e conta vêm dele; o servidor só se consulta de minuto a minuto para reconciliar (e
+ *    para o estado da gestão automática, que é do servidor). As velas do gráfico vêm da conta pelo
+ *    armazém (série conta:<ref>|símbolo:tf) e o P&L é o da corretora, sem calibração.
  *
  * Segurança da negociação real (nada disto mudou): aviso fixo «Conta REAL», confirmação obrigatória
  * na PRIMEIRA ordem de cada conta e negociação num clique desligada por defeito — cada ordem,
@@ -77,6 +84,9 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   })
   const [pedeAceite, setPedeAceite] = useState<null | { ok: () => void; nao: () => void }>(null)
   const intervalo = plataforma === "mt5" ? 5000 : 3000
+  // O feed precisa dos símbolos visíveis e a ficha precisa do feed; as refs quebram a ordem circular.
+  const precisosRef = useRef<string[]>([symbol])
+  const fichaFeedRef = useRef<(s: string) => ReturnType<ReturnType<typeof useFeedConta>["ficha"]>>(() => null)
 
   const lerConta = useCallback(async () => {
     try {
@@ -105,15 +115,23 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     }
   }, [plataforma, contaRef])
 
-  // Leituras só com o separador visível; pára escondido e retoma ao voltar.
+  /**
+   * O FEED DIRECTO DA CONTA. `precisos` (símbolo, lista visível, posições) é o que ele subscreve;
+   * `fonte` diz de onde vêm os números: 'conta' = corretora do cliente, 'mtm' = feed indicativo.
+   */
+  const feed = useFeedConta(contaRef, precisosRef.current)
+  const directo = feed.fonte === "conta"
+
+  // Leituras só com o separador visível; pára escondido e retoma ao voltar. Com o feed directo
+  // ligado ficam só como reconciliação de minuto a minuto (gestão automática + rede de segurança).
   useEffect(() => {
     let iv1: ReturnType<typeof setInterval> | null = null
     let iv2: ReturnType<typeof setInterval> | null = null
     const ligar = () => {
       if (iv1) return
       void lerConta(); void lerPosicoes()
-      iv1 = setInterval(() => void lerPosicoes(), intervalo)
-      iv2 = setInterval(() => void lerConta(), 10_000)
+      iv1 = setInterval(() => void lerPosicoes(), directo ? 60_000 : intervalo)
+      iv2 = setInterval(() => void lerConta(), directo ? 60_000 : 10_000)
     }
     const desligar = () => { if (iv1) clearInterval(iv1); if (iv2) clearInterval(iv2); iv1 = iv2 = null }
     const mudou = () => (document.visibilityState === "hidden" ? desligar() : ligar())
@@ -121,13 +139,32 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     if (document.visibilityState !== "hidden") ligar()
     document.addEventListener("visibilitychange", mudou)
     return () => { desligar(); document.removeEventListener("visibilitychange", mudou) }
-  }, [lerConta, lerPosicoes, intervalo])
+  }, [lerConta, lerPosicoes, intervalo, directo])
+
+  // Posições e ordens do feed directo entram no mesmo estado que a sondagem enchia — o resto do
+  // ecrã não distingue. Comparam-se serializadas: o feed devolve listas novas a cada leitura.
+  const chavePosFeed = directo ? JSON.stringify(feed.posicoes) : null
+  const chaveOrdFeed = directo ? JSON.stringify(feed.ordens) : null
+  useEffect(() => { if (directo && feed.posicoes) setPosicoes(feed.posicoes) }, [chavePosFeed]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (directo && feed.ordens) setOrdens(feed.ordens) }, [chaveOrdFeed]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // As velas do gráfico vêm da conta enquanto o feed directo estiver ligado (armazém, série própria).
+  useEffect(() => {
+    if (!directo || !feed.velas) { definirFonteVelas(null); return }
+    definirFonteVelas({ chave: `conta:${contaRef}`, cobre: feed.cobre, pedir: feed.velas })
+    return () => definirFonteVelas(null)
+  }, [directo, feed.velas, feed.cobre, contaRef])
 
   /** A ficha do catálogo MTM (gráfico, casas decimais, lote mínimo) — a mesma promessa da pré-carga. */
   const obterFicha = useCallback(async (nome: string): Promise<SimboloFicha | null> => {
     const s = await fichaDe(nome)
-    if (s) setFichas((f) => (f[s.symbol] ? f : { ...f, [s.symbol]: s }))
-    return s
+    if (s) { setFichas((f) => (f[s.symbol] ? f : { ...f, [s.symbol]: s })); return s }
+    // Símbolo que só existe na corretora: ficha mínima derivada da spec (MetaApi) / instrumento (TL).
+    const m = fichaFeedRef.current(nome)
+    if (!m) return null
+    const minima: SimboloFicha = { ...m, nome: m.nome ?? undefined, spread_pontos: 0, comissao_lote: 0, alavancagem_max: 100 }
+    setFichas((f) => (f[minima.symbol] ? f : { ...f, [minima.symbol]: minima }))
+    return minima
   }, [])
   useEffect(() => { void obterFicha(symbol) }, [symbol, obterFicha])
   const ficha = fichas[symbol] ?? null
@@ -140,7 +177,9 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     () => [...new Set([symbol, ...visiveis, ...extras, ...posicoes.map((p) => p.symbol), ...ordens.map((o) => o.symbol)])].slice(0, 40),
     [symbol, visiveis, extras, posicoes, ordens],
   )
-  const { precos: vivos } = usePrecos(precisos, 2000)
+  precisosRef.current = precisos
+  fichaFeedRef.current = feed.ficha
+  const vivos = feed.vivos
   const mapa: MapaPrecos = useMemo(() => Object.fromEntries(Object.entries(vivos).map(([s, p]) => [s, { symbol: s, bid: p.bid, ask: p.ask }])), [vivos])
 
   /**
@@ -190,12 +229,21 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     })
   }), [contaRef])
 
+  /**
+   * Depois de uma ordem (que sai SEMPRE pelo servidor): com o feed directo a lista actualiza por
+   * ele — a MetaApi empurra, a TradeLocker relê-se já — e não por um GET cheio; sem feed, relê-se.
+   */
+  const depoisDeEscrever = useCallback(() => {
+    if (directo) { feed.actualizarAgora(); return }
+    void lerPosicoes(); void lerConta()
+  }, [directo, feed.actualizarAgora, lerPosicoes, lerConta]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const accao = useCallback(async (descricao: string, acao: string, corpo: Record<string, unknown>, confirmar = true) => {
     await garantirAceite()
     const r = await u.executar(descricao, () => pedirWT(plataforma, acao, { conta: contaRef, metodo: "POST", corpo }), { confirmar })
-    void lerPosicoes(); void lerConta()
+    depoisDeEscrever()
     return r
-  }, [u, plataforma, contaRef, garantirAceite, lerPosicoes, lerConta])
+  }, [u, plataforma, contaRef, garantirAceite, depoisDeEscrever])
   /**
    * O pedido sem passar pela negociação num clique — para o GRÁFICO, que já passa as acções dele por
    * `executar` (grafico-leve: confirmação, protecção contra repetidos, aviso). Com `accao` havia dois
@@ -204,9 +252,9 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   const chamar = useCallback(async (acao: string, corpo: Record<string, unknown>) => {
     await garantirAceite()
     const r = await pedirWT(plataforma, acao, { conta: contaRef, metodo: "POST", corpo })
-    void lerPosicoes(); void lerConta()
+    depoisDeEscrever()
     return r
-  }, [plataforma, contaRef, garantirAceite, lerPosicoes, lerConta])
+  }, [plataforma, contaRef, garantirAceite, depoisDeEscrever])
 
   /** As acções do gráfico falam a língua do trader das contas MTM Funded; aqui traduzem-se. */
   const executar = useCallback((acao: string, corpo: Record<string, unknown>) => {
@@ -251,13 +299,15 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   const podeNegociar = info.podeNegociar
   const capacidades = info.capacidades
   const digitos = ficha?.digits ?? 5
-  const c = info.conta
+  // Com o feed directo, saldo/equity/margem são os que a corretora acabou de dar ao browser.
+  const c = (directo && feed.conta) ? feed.conta : info.conta
   const moeda = c.moeda ? ` ${c.moeda}` : ""
   // O saldo só muda quando uma posição FECHA — e aí a sondagem trá-lo. O que se mexe entre
   // sondagens é o flutuante, e com ele a equity. Se não der para calcular, fica o número da
   // corretora: mais vale atrasado do que inventado.
-  const flutuanteMostrado = flutuanteAoVivo ?? c.flutuante
-  const equityMostrada = (flutuanteAoVivo != null ? equityAoVivo(c.saldo, flutuanteAoVivo) : null) ?? c.equity
+  // Com o feed directo não há calibração: o número é o da corretora, no instante em que ela o deu.
+  const flutuanteMostrado = directo ? c.flutuante : flutuanteAoVivo ?? c.flutuante
+  const equityMostrada = directo ? c.equity : (flutuanteAoVivo != null ? equityAoVivo(c.saldo, flutuanteAoVivo) : null) ?? c.equity
   const metricas: Array<[string, string, string?]> = [
     ["Saldo", `${usd(c.saldo)}${moeda}`], ["Equity", `${usd(equityMostrada)}${moeda}`],
     ["Flutuante", `${usd(flutuanteMostrado)}${moeda}`, (flutuanteMostrado ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"],
@@ -283,7 +333,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
       conteudo: () => (
         <div className="overflow-x-auto">
           <TabelaPosicoes posicoes={posicoes} digitos={digitos} podeNegociar={podeNegociar} mapa={mapa} gestaoAuto={gestaoAuto}
-            vivos={vivos} calibracoes={calibracoes.current}
+            vivos={vivos} calibracoes={calibracoes.current} directo={directo}
             onFechar={(p, v) => semCancelar(accao(`Fechar ${v ? `${v} de ` : ""}${p.volume} ${p.simboloCorretora}`, "fechar", { positionId: p.id, volume: v }))}
             onModificar={(p, sl, tp) => semCancelar(accao(`Mudar SL/TP de ${p.simboloCorretora}`, "modificar", { alvo: "posicao", id: p.id, sl, tp }))}
             /* Ligar gestão automática é autorizar o servidor a mexer neste SL: passa pelo MESMO caminho
@@ -308,7 +358,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     },
     {
       chave: "simbolos", nome: "Símbolos da corretora", icone: Search,
-      conteudo: () => <div className="p-2"><PesquisaSimbolo plataforma={plataforma} contaRef={contaRef} atual={symbol} onEscolher={(s) => void selecionarPorNome(s)} /></div>,
+      conteudo: () => <div className="p-2"><PesquisaSimbolo plataforma={plataforma} contaRef={contaRef} atual={symbol} lista={directo ? feed.simbolosCorretora : null} onEscolher={(s) => void selecionarPorNome(s)} /></div>,
     },
     {
       chave: "conta", nome: "A minha conta", icone: User,
@@ -331,7 +381,8 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
           <p className="flex items-start gap-1.5 rounded-lg border border-white/10 bg-[#0d0f15] p-2 text-[11px] leading-snug text-zinc-400">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             Nesta conta {NOME_PLATAFORMA[plataforma]}: ordens a mercado, limit e stop com SL/TP nativos, fecho parcial e mover pendentes.
-            TP1-3 em bracket, trailing, OCO, regras, diário e alertas só existem nas contas MTM Funded. Preço no ecrã é indicativo (feed MTM); a execução é ao preço da corretora.
+            TP1-3 em bracket, trailing, OCO, regras, diário e alertas só existem nas contas MTM Funded.
+            {directo ? " Cotações, velas e posições vêm directamente da tua corretora (ligação da tua conta, lida pelo teu browser); as ordens saem pelo servidor MTM." : " Preço no ecrã é indicativo (feed MTM); a execução é ao preço da corretora."}
           </p>
         </div>
       ),
@@ -358,6 +409,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
           <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[plataforma] }}>{NOME_PLATAFORMA[plataforma]}</span>
           <span className="font-bold text-rose-300">CONTA REAL</span>
           <span className="min-w-0 truncate text-rose-200/80">as ordens são executadas na tua corretora</span>
+          <BadgeFonte directo={directo} estado={feed.estado} />
         </div>
         {erro && <p className="flex items-center gap-2 px-3 py-1 text-[11.5px] text-amber-300">{erro.texto} {botaoLigar}</p>}
       </>
@@ -387,6 +439,13 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
       )}
     </div>
   )
+}
+
+/** Badge discreto: de onde vêm os números que o trader está a ver. */
+function BadgeFonte({ directo, estado }: { directo: boolean; estado: string }) {
+  if (directo) return <span title="O teu browser lê a tua corretora directamente (só leitura)" className="ml-auto rounded border border-emerald-400/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">Dados da tua corretora</span>
+  const aLigar = estado === "a_ligar"
+  return <span title={aLigar ? "A ligar à tua corretora…" : "Preço do feed MTM; a execução é ao preço da corretora"} className="ml-auto rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400">{aLigar ? "A ligar à corretora…" : "Preço indicativo MTM"}</span>
 }
 
 function AceiteReal({ onOk, onNao, plataforma }: { onOk: () => void; onNao: () => void; plataforma: PlataformaWT }) {
@@ -468,7 +527,7 @@ function PainelHistorico({ estado, ler }: {
   )
 }
 
-function PesquisaSimbolo({ plataforma, contaRef, atual, onEscolher }: { plataforma: PlataformaWT; contaRef: string; atual: string; onEscolher: (s: string) => void }) {
+function PesquisaSimbolo({ plataforma, contaRef, atual, lista: listaFeed, onEscolher }: { plataforma: PlataformaWT; contaRef: string; atual: string; lista: string[] | null; onEscolher: (s: string) => void }) {
   const [q, setQ] = useState("")
   const [lista, setLista] = useState<SimboloWT[]>([])
   const [aberta, setAberta] = useState(true)
@@ -476,6 +535,13 @@ function PesquisaSimbolo({ plataforma, contaRef, atual, onEscolher }: { platafor
   useEffect(() => {
     if (!aberta) return
     if (t.current) clearTimeout(t.current)
+    // Com o feed directo a lista da corretora já está no browser: pesquisa-se aqui, sem ir ao servidor.
+    if (listaFeed) {
+      const termo = q.trim().toUpperCase()
+      const r = listaFeed.map((s) => ({ symbol: canonicoDe(s), simboloCorretora: s, nome: null })).filter((s) => !termo || s.symbol.includes(termo) || s.simboloCorretora.toUpperCase().includes(termo)).slice(0, 80)
+      setLista(semCripto() ? r.filter((x) => !ehSimboloCripto(x.symbol) && !ehSimboloCripto(x.simboloCorretora)) : r)
+      return
+    }
     t.current = setTimeout(async () => {
       try {
         const r = (await pedirWT<{ simbolos: SimboloWT[] }>(plataforma, "simbolos", { conta: contaRef, query: { q } })).simbolos
@@ -483,7 +549,7 @@ function PesquisaSimbolo({ plataforma, contaRef, atual, onEscolher }: { platafor
         setLista(semCripto() ? r.filter((x) => !ehSimboloCripto(x.symbol) && !ehSimboloCripto(x.simboloCorretora)) : r)
       } catch { setLista([]) }
     }, 350)
-  }, [q, aberta, plataforma, contaRef])
+  }, [q, aberta, plataforma, contaRef, listaFeed])
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-2">
@@ -572,10 +638,11 @@ function CelulaNivel({ valor, digitos, onMudar, podeNegociar, rotulo }: { valor:
  * que a corretora mandou — e o título diz qual dos dois está a ser mostrado, para quem olha saber
  * se está a ver o instante ou a última sondagem.
  */
-function CelulaLucro({ pos, preco, cal }: {
-  pos: PosicaoWT; preco?: { bid: number; ask: number; fresco: boolean }; cal?: Calibracao
+function CelulaLucro({ pos, preco, cal, directo }: {
+  pos: PosicaoWT; preco?: { bid: number; ask: number; fresco: boolean }; cal?: Calibracao; directo: boolean
 }) {
-  const { valor, aoVivo } = lucroAoVivo(pos, preco, cal)
+  // Feed directo: o lucro é o que a corretora acabou de dar — sem calibração, sem estimativa.
+  const { valor, aoVivo } = directo ? { valor: pos.lucro, aoVivo: true } : lucroAoVivo(pos, preco, cal)
   return (
     <td className={`font-mono ${(valor ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}
       title={aoVivo ? "ao preço de agora" : "último valor da corretora"}>
@@ -584,9 +651,10 @@ function CelulaLucro({ pos, preco, cal }: {
   )
 }
 
-function TabelaPosicoes({ posicoes, digitos, podeNegociar, mapa, gestaoAuto, vivos, calibracoes, onFechar, onModificar, onGestaoAuto }: {
+function TabelaPosicoes({ posicoes, digitos, podeNegociar, mapa, gestaoAuto, vivos, calibracoes, directo, onFechar, onModificar, onGestaoAuto }: {
   posicoes: PosicaoWT[]; digitos: number; podeNegociar: boolean; mapa: MapaPrecos
   gestaoAuto: EstadoGestaoCorretora[]
+  directo: boolean
   vivos: Record<string, { bid: number; ask: number; fresco: boolean }>
   calibracoes: Record<string, Calibracao>
   onFechar: (p: PosicaoWT, volume: number | null) => Promise<unknown>
@@ -607,7 +675,7 @@ function TabelaPosicoes({ posicoes, digitos, podeNegociar, mapa, gestaoAuto, viv
             <td className="font-mono">{p.precoEntrada.toFixed(digitos)}</td>
             <td><CelulaNivel rotulo={`SL de ${p.symbol}`} valor={p.sl} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(p, v, p.tp).catch(() => {})} /></td>
             <td><CelulaNivel rotulo={`TP de ${p.symbol}`} valor={p.tp} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(p, p.sl, v).catch(() => {})} /></td>
-            <CelulaLucro pos={p} preco={vivos[p.symbol]} cal={calibracoes[p.id]} />
+            <CelulaLucro pos={p} preco={vivos[p.symbol]} cal={calibracoes[p.id]} directo={directo} />
             <td className="whitespace-nowrap pr-2 text-right">
               {podeNegociar && (
                 <span className="inline-flex items-center gap-1">
