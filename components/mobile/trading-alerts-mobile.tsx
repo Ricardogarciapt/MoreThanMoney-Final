@@ -218,6 +218,9 @@ function stateCategory(tradeStatus: string | null): StateCat {
 }
 
 function fmt(n: number | null) {
+  // Entrada a ZERO não é um preço: o MTM Scanner manda 0 quando entra a mercado (visto na
+  // app a 05/10/2026: «Entrada 0»). Diz-se «a mercado» — igual ao ecrã nativo iOS.
+  if (n === 0) return "a mercado"
   return n == null ? "—" : n.toLocaleString("pt-PT", { maximumFractionDigits: 6 })
 }
 function timeAgo(iso: string) {

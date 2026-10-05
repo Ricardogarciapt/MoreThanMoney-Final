@@ -111,6 +111,8 @@ function stateCategory(tradeStatus: string | null, tpCount?: number): StateCat {
 
 function fmt(n: number | null): string {
   if (n == null) return "—"
+  // 0 = entrada a mercado (o MTM Scanner não manda preço); igual à app-mobile e ao iOS.
+  if (n === 0) return "a mercado"
   return n.toLocaleString("pt-PT", { maximumFractionDigits: 6 })
 }
 
