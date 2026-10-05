@@ -164,3 +164,25 @@ componente com os controlos vivos).
 | Reconciliação CopyFactory (EstrategiasCopia) | fica (manutenção, relê a MetaApi) | — |
 
 Guarda: `lib/admin-centro/__tests__/mtmcopy-so-leitura.check.ts`.
+
+## Fase 3 — a MTM Auto usa a mesma API (05/10)
+
+Repositório `mtm-auto`: `lib/site-estrategias.ts` (`pedirAoSite`/`escreverNoSite`, com o Bearer do
+próprio admin) → `POST/GET /api/admin/centro/estrategia` do site.
+
+| Rota da MTM Auto | Antes | Depois |
+|---|---|---|
+| `GET /api/admin/providers` | lia `mtmauto_providers` + subs + funded | lista do site (`?lista=1`, filtro de equipa lá) + `tem_conta`/quota locais |
+| `POST /api/admin/providers` (criar/editar) | upsert directo | valida aqui (chave MetaApi da equipa, quota, cifra) → site `gravar` |
+| `POST … {fonte}` / `{equipas}` | rpc / delete+insert directos | site `fonte` / `equipas` |
+| `DELETE /api/admin/providers` | parava seguidores e marcava directo | conta e valida aqui (planoApagar) → site `apagar_parando`; apagar a conta MetaApi fica aqui (chave da equipa) |
+| `POST /api/admin/mestres` | update directo de `mestres_estrategias` | site `mestres` |
+| `/api/admin/contas-estrategia[/mtmfunded\|/tradelocker]`, `/api/admin/telegram {ligar}` | update directo das colunas da conta | provisiona aqui → site `conta` (o `ligar` do Telegram não tinha fronteira de equipa nenhuma) |
+| `lib/mestres/registar.ts` | site `mtmauto-copia/providers` (só admin do site — falhava para franchisados) | site `registar` (aceita o admin da equipa) |
+
+UI familiar mantida; cada estratégia ganha «Chain» (a cadeia do Centro, filtrada pela equipa, só
+leitura, com link para o Centro). Guardas: site `estrategia-escrita.check.ts` (franchisado X → 403
+em Y) e mtm-auto `lib/__tests__/estrategias-pelo-site.check.ts` (nenhuma rota de admin escreve
+estratégias directamente; o 403 do site chega ao ecrã).
+
+Fica a ler directamente (só leitura): `GET /api/admin/mestres` da MTM Auto.

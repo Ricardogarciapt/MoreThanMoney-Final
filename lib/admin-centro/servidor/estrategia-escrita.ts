@@ -291,7 +291,10 @@ async function aplicar(deps: DepsEscrita, quem: QuemDecide, accao: string, p: Pe
       const l = linhaGravavel(linha, quem, alvo)
       const { data, error } = await deps.db().from('mtmauto_providers').upsert(l, { onConflict: 'id' }).select('*').single()
       if (error) return { ok: false, status: /column|schema cache/i.test(error.message) ? 409 : 500, mensagem: error.message }
-      return { ok: true, status: 200, mensagem: 'Gravada.', dados: { provider: data as Record<string, unknown> } }
+      // A password MT5 cifrada não volta a sair do servidor, nem para o admin.
+      const { mt5_password_cifrada: _w, ...semSegredo } = (data ?? {}) as Record<string, unknown>
+      void _w
+      return { ok: true, status: 200, mensagem: 'Gravada.', dados: { provider: semSegredo } }
     }
 
     // ── colunas da conta (ligar MetaApi / MTM Funded / TradeLocker / canal Telegram, na MTM Auto) ──
