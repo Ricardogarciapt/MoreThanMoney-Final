@@ -1,3 +1,4 @@
+import { lerRegrasVida } from "@/lib/agentes/vida"
 import { NextRequest } from "next/server"
 import { agentOk, agentError, requireAgentAccess } from "@/lib/agent-site-api"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
@@ -449,6 +450,9 @@ async function getEquipa(sb: ReturnType<typeof getSupabaseAdmin>) {
     .order("criado_em", { ascending: true })
 
   const agora = new Date()
+  // A régua viva: o relógio conta desde o último reinício do dono, como o motor julga.
+  const { data: cfgVida } = await sb.from("site_settings").select("value").eq("key", "agentes_vida").maybeSingle()
+  const reguaViva = lerRegrasVida(cfgVida?.value)
   const arvore = montarArvore(
     (data ?? []).map((a: Record<string, unknown>) => ({
       id: String(a.id ?? ""),
@@ -474,7 +478,7 @@ async function getEquipa(sb: ReturnType<typeof getSupabaseAdmin>) {
   const agentes = achatar(arvore).map((n) => {
     const a = n.agente.bruto as Record<string, unknown>
     const ecra = estadoNoEcra(n.agente)
-    const relogio = relogioDoJuizo(n.agente, agora)
+    const relogio = relogioDoJuizo(n.agente, agora, undefined, reguaViva)
     return {
       id: n.agente.id,
       nome: n.agente.nome,
@@ -522,8 +526,12 @@ async function getEquipa(sb: ReturnType<typeof getSupabaseAdmin>) {
           estado: n.agente.estado,
           pausado: n.agente.pausado,
           criado_em: n.agente.criado_em,
+          pilar: n.agente.pilar,
+          pai_id: n.agente.pai_id,
         },
         agora,
+        10,
+        reguaViva,
       ),
       paradoPorque: a.parado_porque ?? null,
       eCeo: n.profundidade === 0 && !n.orfao,

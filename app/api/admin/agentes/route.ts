@@ -156,6 +156,8 @@ export async function GET(request: NextRequest) {
     ok: true,
     janelaHoras: regras.janelaHoras ?? JANELA_HORAS,
     gracaHoras: regras.gracaHoras,
+    /** Desde quando a escala conta (o dono reinicia-a). O relógio do painel conta a partir daqui. */
+    regraDesde: regras.regraDesde,
     /** O interruptor geral do motor autónomo — o MESMO que o painel do AIOS e o Telegram mexem. */
     motor: interruptor,
     agentes,

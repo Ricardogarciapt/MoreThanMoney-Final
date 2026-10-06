@@ -31,6 +31,7 @@
  * Tudo isto está provado em `lib/agentes/arvore.check.ts`.
  */
 
+import type { RegrasVida } from "@/lib/agentes/vida"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
@@ -115,6 +116,8 @@ type Dados = {
   ok: boolean
   janelaHoras: number
   gracaHoras?: number
+  /** Desde quando a escala de vida conta (o dono reinicia-a). */
+  regraDesde?: string | null
   /** O interruptor geral do motor autónomo (o mesmo do painel do AIOS e do Telegram). */
   motor?: { ligado: boolean; por: string | null; em: string | null; porque: string | null }
   agentes: Agente[]
@@ -563,6 +566,7 @@ export default function DashboardAgentesPage() {
                   onAbrir={() => setAberto(aberto === n.agente.id ? null : n.agente.id)}
                   onAgir={agir}
                   onCopiar={copiar}
+                  regras={d ? { janelaHoras: d.janelaHoras, gracaHoras: d.gracaHoras ?? 72, regraDesde: d.regraDesde ?? null } : undefined}
                 />
               ))}
               {nos.length === 0 && (
@@ -725,9 +729,11 @@ function Cartao({ rotulo, valor, pe, cor }: { rotulo: string; valor: string; pe:
 }
 
 function LinhaDaArvore({
-  no, foco, aberto, ocupado, copiado, origem, onAbrir, onAgir, onCopiar,
+  no, foco, aberto, ocupado, copiado, origem, onAbrir, onAgir, onCopiar, regras,
 }: {
   no: No<Agente>
+  /** A régua viva, vinda da API. Sem ela o relógio cai no antigo (só idade). */
+  regras?: RegrasVida
   foco: string | null
   aberto: boolean
   ocupado: boolean
@@ -742,7 +748,7 @@ function LinhaDaArvore({
   // provados — e é o MESMO módulo que o servidor usa para o painel do AIOS. Dois ecrãs a derivar
   // a mesma regra por conta própria acabariam a discordar, e discordariam no caso difícil.
   const { estado, conflito } = estadoNoEcra(a)
-  const relogio = relogioDoJuizo(a)
+  const relogio = relogioDoJuizo(a, new Date(), undefined, regras)
   const escala = escalaDeVida({
     resultado: a.resultado,
     saldo: a.saldo,
@@ -753,7 +759,7 @@ function LinhaDaArvore({
     ultima_receita_em: a.ultima_receita_em ?? null,
     pilar: a.pilar,
     pai_id: a.pai_id,
-  })
+  }, new Date(), 10, regras)
   const tom = TOM[estado]
   const Icone = ICONE_PILAR[String(a.pilar)] ?? Bot
   const codigo = a.chave_receita ?? null

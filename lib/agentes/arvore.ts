@@ -27,7 +27,7 @@
  * A guarda é `arvore.check.ts` (`npx tsx lib/agentes/arvore.check.ts`) e prova sobretudo o caso
  * mau: o pai que não existe, o ciclo, o parado pintado de vivo, o relógio negativo.
  */
-import { CARENCIA_HORAS, JANELA_HORAS, julgar, type Agente, type EstadoAgente } from './vida'
+import { CARENCIA_HORAS, JANELA_HORAS, julgar, type Agente, type EstadoAgente, type RegrasVida } from './vida'
 
 /** O mínimo que um agente precisa de ter para entrar na árvore. */
 export interface NoBruto {
@@ -265,10 +265,47 @@ export interface Relogio {
   texto: string
 }
 
+/** O relógio pela régua viva — a mesma conta de `julgar()` (lib/agentes/vida.ts). */
+function relogioDaRegua(
+  a: { ultima_receita_em?: string | null; pilar?: string | null; pai_id?: string | null },
+  tNasceu: number,
+  idade: number,
+  agora: Date,
+  regras: RegrasVida,
+): Relogio {
+  if (a.pilar === 'ceo' && !a.pai_id) {
+    return { fase: 'suspenso', horas: null, texto: 'Imortal — o CEO é medido mas não morre.' }
+  }
+  if (idade < regras.gracaHoras) {
+    const faltam = Math.max(0, Math.ceil(regras.gracaHoras - idade))
+    return { fase: 'carencia', horas: faltam, texto: `Recém-nascido: faltam ${faltam} h de graça (nasceu há ${Math.floor(idade)} h).` }
+  }
+  let ref = tNasceu
+  let deOnde = 'desde que nasceu'
+  const tUlt = Date.parse(String(a.ultima_receita_em ?? ''))
+  if (Number.isFinite(tUlt) && tUlt > ref && tUlt <= agora.getTime()) { ref = tUlt; deOnde = 'desde a última receita' }
+  const tRegra = Date.parse(String(regras.regraDesde ?? ''))
+  if (Number.isFinite(tRegra) && tRegra > ref) { ref = tRegra; deOnde = 'desde o último reinício da escala' }
+  const sem = (agora.getTime() - ref) / 3_600_000
+  const faltam = Math.ceil(regras.janelaHoras - sem)
+  if (faltam > 0) {
+    return { fase: 'carencia', horas: faltam, texto: `Faltam ${faltam} h para as ${regras.janelaHoras} h sem receita (conta ${deOnde}).` }
+  }
+  const passou = Math.max(0, Math.floor(-faltam))
+  return { fase: 'em_julgamento', horas: passou, texto: `${regras.janelaHoras} h sem receita ${deOnde} — morre na próxima passagem do motor.` }
+}
+
 export function relogioDoJuizo(
-  a: Pick<NoBruto, 'criado_em' | 'estado' | 'pausado'>,
+  a: Pick<NoBruto, 'criado_em' | 'estado' | 'pausado'> & { ultima_receita_em?: string | null; pilar?: string | null; pai_id?: string | null },
   agora: Date = new Date(),
   carenciaHoras: number = CARENCIA_HORAS,
+  /**
+   * 06/10: a RÉGUA VIVA (`site_settings.agentes_vida`). Com ela, o relógio conta como o motor julga:
+   * graça desde o nascimento e, depois, as horas sem receita a partir do MAIS TARDE de nascimento,
+   * última receita e `regraDesde` — que é o que o dono reinicia. Sem ela, fica o relógio antigo
+   * (só idade), e os dois painéis mostravam um reinício como se não tivesse acontecido.
+   */
+  regras?: RegrasVida,
 ): Relogio {
   const estado = String(a.estado ?? '')
   if (a.pausado === true || estado === 'pausado') {
@@ -294,6 +331,7 @@ export function relogioDoJuizo(
   }
 
   const idade = (agora.getTime() - t) / 3_600_000
+  if (regras && idade >= 0) return relogioDaRegua(a, t, idade, agora, regras)
   if (idade < 0) {
     // Nascido no futuro é relógio trocado. Dizer-se, em vez de dar uma carência eterna.
     return {
@@ -502,10 +540,11 @@ export function escalaDeVida(
   a: FactosDaEscala,
   agora: Date = new Date(),
   orcamentoInicial = 10,
+  regras?: RegrasVida,
 ): Escala {
   // A ORDEM É A DE `julgar()`. Trocá-la dava uma escala que discorda da regra no caso difícil —
   // que é o único caso em que a escala interessa.
-  const relogio = relogioDoJuizo(a, agora)
+  const relogio = relogioDoJuizo(a, agora, CARENCIA_HORAS, regras)
   if (relogio.fase === 'suspenso') {
     return { nivel: null, banda: 'suspenso', cortes: CORTES_DA_ESCALA, porque: relogio.texto }
   }
@@ -522,7 +561,13 @@ export function escalaDeVida(
     }
   }
 
-  if (relogio.fase === 'sem_data' || relogio.fase === 'carencia') {
+  // Com a régua viva, «carência» no relógio também quer dizer «dentro das 48 h»; para a escala só
+  // conta a GRAÇA do recém-nascido — dentro das 48 h a escala é a de `julgar()`.
+  const tNasc = Date.parse(String(a.criado_em ?? ''))
+  const emGraca = regras
+    ? Number.isFinite(tNasc) && (agora.getTime() - tNasc) / 3_600_000 < regras.gracaHoras
+    : relogio.fase === 'carencia'
+  if (relogio.fase === 'sem_data' || emGraca) {
     return {
       nivel: null,
       banda: 'carencia',
@@ -546,7 +591,7 @@ export function escalaDeVida(
     estado: 'vivo', criado_em: String(a.criado_em ?? ''), gasto: 0, receita: 0, saldo,
     receita_janela: resultado, gasto_janela: 0, ultima_receita_em: a.ultima_receita_em ?? null,
   }
-  const j = julgar(facto, agora)
+  const j = regras ? julgar(facto, agora, regras) : julgar(facto, agora)
 
   if (j.decisao === 'continua') {
     if (resultado > 0) {
