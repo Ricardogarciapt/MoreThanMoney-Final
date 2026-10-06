@@ -129,6 +129,10 @@
       "schedule": "0 6 * * *"
     },
     {
+      "path": "/api/cron/primegate-reverificar",
+      "schedule": "17 * * * *"
+    },
+    {
       "path": "/api/cron/ig-curation",
       "schedule": "0 * * * *"
     },

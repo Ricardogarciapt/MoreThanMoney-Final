@@ -166,6 +166,94 @@ export async function handleBrokerUid(
       `Agora envia-me um <b>print screen</b> da tua conta PU Prime a mostrar o <b>depósito de ≥ $${MIN_DEPOSIT}</b>. ` +
       `Assim que confirmar, liberto o acesso aos grupos de sinais + cupão Premium para a app. 📸`,
   )
+  await reforcoPrimeGate(supabase, chatId, uid)
+}
+
+/**
+ * PrimeGate (PrimeVerse) — REFORÇO, não substituto.
+ *
+ * Confirma que o par email+UID está no ramo de IB do Ricardo; NÃO confirma depósito. Por isso
+ * não liberta acesso sozinho: o depósito continua a ser provado como sempre (export ou print). O
+ * que muda é que o admin passa a ver, ao aprovar, se a conta é mesmo nossa, e o cliente sabe
+ * honestamente se o registo já aparece. Sem chave configurada isto não faz nada.
+ */
+async function reforcoPrimeGate(supabase: Supa, chatId: string, uid: string): Promise<void> {
+  try {
+    const { primeGateAtivo } = await import('@/lib/primegate/config')
+    if (!(await primeGateAtivo())) return
+    const { data: lead } = await supabase.from('telegram_leads').select('email').eq('chat_id', chatId).maybeSingle()
+    const email = (lead as { email?: string | null } | null)?.email
+    if (!email) {
+      await send(
+        chatId,
+        `📧 Para confirmar que a tua conta ficou ligada à MTM, envia-me também o <b>email com que te registaste na PU Prime</b> (só o email).`,
+      )
+      return
+    }
+    const { verificar } = await import('@/lib/primegate/verificacao')
+    const r = await verificar({ email, uid, chatId, origem: 'telegram', db: supabase })
+    if (r.ativo && r.estado) await send(chatId, htmlDaMensagem(r.mensagem))
+  } catch {
+    /* o PrimeGate é um reforço: se falhar, o funil segue como sempre */
+  }
+}
+
+const htmlDaMensagem = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+/**
+ * O lead escreveu um EMAIL depois de dar o UID → é o email da PU Prime para o PrimeGate.
+ *
+ * Devolve true se tratou a mensagem (e o webhook não deve passá-la à IA/automações). Só apanha
+ * quando: há chave PrimeGate, o texto é um email, e o lead já deu o UID e ainda não tem acesso.
+ * Ligado em `app/api/telegram/webhook/route.ts`, logo a seguir ao `looksLikeBrokerUid`.
+ */
+export async function tratarEmailPrimeGate(supabase: Supa, chatId: string, texto: string): Promise<boolean> {
+  const email = texto.trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false
+  try {
+    const { data: lead } = await supabase
+      .from('telegram_leads')
+      .select('broker_uid, stage, email')
+      .eq('chat_id', chatId)
+      .maybeSingle()
+    const l = lead as { broker_uid?: string | null; stage?: string | null; email?: string | null } | null
+    if (!l?.broker_uid || !['awaiting_proof', 'pending_review', 'rejected'].includes(String(l.stage ?? ''))) return false
+    const { primeGateAtivo } = await import('@/lib/primegate/config')
+    if (!(await primeGateAtivo())) return false
+    if (!l.email) {
+      await supabase.from('telegram_leads').update({ email, updated_at: new Date().toISOString() }).eq('chat_id', chatId)
+    }
+    const { verificar } = await import('@/lib/primegate/verificacao')
+    const r = await verificar({ email, uid: l.broker_uid, chatId, origem: 'telegram', db: supabase })
+    if (!r.ativo || !r.estado) return false
+    await send(
+      chatId,
+      htmlDaMensagem(r.mensagem) +
+        (l.stage === 'awaiting_proof' ? `\n\n📸 Não te esqueças do <b>print screen</b> do depósito de ≥ $${MIN_DEPOSIT}.` : ''),
+    )
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Uma linha para o admin: o que o PrimeGate disse sobre este lead (vazio se nada). */
+async function linhaPrimeGateDoLead(supabase: Supa, chatId: string): Promise<string> {
+  try {
+    const { data } = await supabase
+      .from('primegate_verificacoes')
+      .select('estado, email')
+      .eq('chat_id', chatId)
+      .order('atualizado_em', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!data) return ''
+    const e = String(data.estado)
+    const txt = e === 'confirmed' ? '✅ no ramo MTM' : e === 'undetermined' ? '⏳ ainda não aparece (não é recusa)' : '⚠️ não verificado (erro)'
+    return `\nPrimeGate: ${txt} · ${data.email}`
+  } catch {
+    return ''
+  }
 }
 
 /** Lead enviou o print screen (foto). Guarda e envia ao admin para aprovar. */
@@ -204,7 +292,7 @@ export async function handleProofPhoto(
   await tg('sendPhoto', {
     chat_id: adminChat,
     photo: fileId,
-    caption: `🆕 <b>Pedido de acesso</b>\nUID: <code>${uid}</code>\nLead: ${firstName ?? chatId} (chat ${chatId})\n\nDepósito ≥ $${MIN_DEPOSIT}?`,
+    caption: `🆕 <b>Pedido de acesso</b>\nUID: <code>${uid}</code>\nLead: ${firstName ?? chatId} (chat ${chatId})${await linhaPrimeGateDoLead(supabase, chatId)}\n\nDepósito ≥ $${MIN_DEPOSIT}?`,
     parse_mode: 'HTML',
     reply_markup: {
       inline_keyboard: [

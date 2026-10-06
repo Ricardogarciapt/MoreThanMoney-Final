@@ -84,6 +84,11 @@ export default function AccountOpenPage() {
   const [uid, setUid] = useState("")
   const [savedUid, setSavedUid] = useState("")
   const [savingUid, setSavingUid] = useState(false)
+  // PrimeGate (PrimeVerse): confirma se a conta ficou no ramo MTM. Só aparece com a chave ligada.
+  const [pgAtivo, setPgAtivo] = useState(false)
+  const [pgEmail, setPgEmail] = useState("")
+  const [pgEstado, setPgEstado] = useState<string | null>(null)
+  const [pgMensagem, setPgMensagem] = useState<string | null>(null)
   const [linkOpened, setLinkOpened] = useState(false)
   const [broker, setBroker] = useState<Broker>(BROKERS.puprime)
 
@@ -98,6 +103,17 @@ export default function AccountOpenPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) return
+      setPgEmail((e) => e || session.user.email || "")
+      void fetch("/api/primegate/verificar", { headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store" })
+        .then((r) => r.json())
+        .then((j) => {
+          if (!j?.ok) return
+          setPgAtivo(Boolean(j.ativo))
+          if (j.email) setPgEmail(j.email)
+          setPgEstado(j.estado ?? null)
+          setPgMensagem(j.mensagem ?? null)
+        })
+        .catch(() => {})
       const { data } = await supabase
         .from("profiles")
         .select("broker_uid")
@@ -158,7 +174,27 @@ export default function AccountOpenPage() {
         title: "UID guardado!",
         description: "O teu número de conta foi registado com sucesso.",
       })
-      setTimeout(() => setExpandedStep(null), 500)
+      // Reforço PrimeGate: confirma no ramo de IB. Se falhar ou estiver desligado, o UID já ficou guardado.
+      let ficaAberto = false
+      if (pgAtivo) {
+        try {
+          const r = await fetch("/api/primegate/verificar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({ uid: uid.trim(), email: pgEmail.trim() || undefined }),
+          })
+          const j = await r.json()
+          if (j?.ok && j.ativo) {
+            setPgEstado(j.estado ?? null)
+            setPgMensagem(j.mensagem ?? null)
+            ficaAberto = j.estado !== "confirmed"
+          } else if (j?.error) {
+            setPgMensagem(j.error)
+            ficaAberto = true
+          }
+        } catch {}
+      }
+      if (!ficaAberto) setTimeout(() => setExpandedStep(null), 500)
     } catch (err) {
       console.error(err)
       toast({ title: "Erro ao guardar UID", description: "Tenta novamente.", variant: "destructive" })
@@ -384,6 +420,30 @@ export default function AccountOpenPage() {
                             className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#D2A63C]/50 font-mono"
                           />
                         </div>
+                        {pgAtivo && (
+                          <div>
+                            <label htmlFor="pg-email" className="text-xs text-gray-400 mb-1.5 block">Email com que te registaste na {broker.name}</label>
+                            <input
+                              id="pg-email"
+                              type="email"
+                              autoComplete="email"
+                              value={pgEmail}
+                              onChange={e => setPgEmail(e.target.value)}
+                              placeholder="o.teu@email.com"
+                              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#D2A63C]/50"
+                            />
+                            <p className="mt-1 text-[11px] text-gray-500">Serve só para confirmarmos que a tua conta ficou ligada à MTM.</p>
+                          </div>
+                        )}
+                        {pgAtivo && pgMensagem && (
+                          <div
+                            role="status"
+                            aria-live="polite"
+                            className={`rounded-lg border px-3 py-2 text-sm whitespace-pre-line ${pgEstado === "confirmed" ? "border-green-500/20 bg-green-500/10 text-green-300" : "border-[#D2A63C]/30 bg-[#D2A63C]/10 text-[#E9C46A]"}`}
+                          >
+                            {pgMensagem}
+                          </div>
+                        )}
                         <button
                           onClick={handleSaveUid}
                           disabled={savingUid}

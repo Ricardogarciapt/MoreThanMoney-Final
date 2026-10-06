@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { BrokerDadosPanel } from "@/components/admin/broker-dados-panel"
 import { BrokerLinksPanel } from "@/components/admin/broker-links-panel"
+import { PrimeGatePanel } from "@/components/admin/primegate-panel"
 
 /**
  * Painel MÁQUINA DE VENDAS (/admin/sales-machine) — consome o hub /api/sales-machine (sessão-admin).
@@ -342,6 +343,9 @@ export default function SalesMachinePage() {
           entre IBs faz parte da máquina de vendas — é o andar onde o lead vira cliente da
           corretora, e é onde se percebe se está a ser distribuída. */}
       <BrokerLinksPanel />
+
+      {/* PrimeGate (PrimeVerse): o par email+UID está no nosso ramo de IB? A chave cola-se aqui. */}
+      <PrimeGatePanel />
     </div>
   )
 }

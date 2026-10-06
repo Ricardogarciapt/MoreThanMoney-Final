@@ -923,6 +923,8 @@ export async function POST(request: NextRequest) {
           const uid = bg.looksLikeBrokerUid(text)
           if (uid) {
             await bg.handleBrokerUid(supabase, chatId, uid, body.message.from?.first_name ?? null)
+          } else if (await bg.tratarEmailPrimeGate(supabase, chatId, text)) {
+            // Email da PU Prime para o PrimeGate (só apanha com chave configurada e UID já dado).
           } else {
             /**
              * As NOSSAS automações primeiro.

@@ -88,6 +88,15 @@ export default function PrimeverseHubPage() {
         >
           <Globe className="w-4 h-4" /> Abrir PrimeVerse Hub
         </button>
+        {/* Depois do registo no hub/PU Prime, o passo seguinte é dar o UID: é com ele (e o email)
+            que o PrimeGate confirma que a conta ficou no ramo MTM. Sem este atalho a pessoa
+            registava-se e ficava por ali. */}
+        <a
+          href="/app-mobile/accountopen"
+          className="text-[13px] text-[#E9C46A] underline underline-offset-4"
+        >
+          Já te registaste? Confirma aqui a tua conta PU Prime (UID)
+        </a>
       </div>
     </div>
   )
