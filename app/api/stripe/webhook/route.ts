@@ -6,6 +6,14 @@ import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import { sendScannerAccessEmail, sendMTMcopierSetupNotification } from '@/lib/email-service'
 import { sanitizeEnv } from '@/lib/env-sanitize'
+import { createMailTransporter, mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } from '@/lib/mail-transport'
+import {
+  buildAvisoCartaoFalhado,
+  chaveDoAviso,
+  jaAvisado,
+  juntarMarca,
+  momentoDoAviso,
+} from '@/lib/cobranca/aviso-cartao-falhado'
 import { opinlyTrack, opinlyTrackPurchase } from '@/lib/opinly/track'
 import { getStripeClient, stripeInvoiceLinePrice, stripeSubscriptionPeriodEnd } from '@/lib/stripe-client'
 import {
@@ -1027,7 +1035,7 @@ async function estornarCobranca(charge: Stripe.Charge, motivo: string, cents: nu
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, payment_failed_count, subscription_plan')
+    .select('id, email, full_name, profile_data, payment_failed_count, subscription_plan')
     .eq('stripe_customer_id', invoice.customer as string)
     .maybeSingle()
 
@@ -1053,10 +1061,10 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
   const updates: any = {
     payment_failed_count: failCount,
-    subscription_status: failCount >= 3 ? 'unpaid' : 'past_due',
+    subscription_status: failCount >= LIMIAR_CORTE_FALHAS ? 'unpaid' : 'past_due',
   }
 
-  if (failCount >= 3) {
+  if (failCount >= LIMIAR_CORTE_FALHAS) {
     updates.is_active = false
     updates.access_revoked_at = new Date().toISOString()
     updates.inactive_reason = 'payment_failed'
@@ -1077,6 +1085,62 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
       null,
     source: 'stripe',
   })
+
+  await avisarCartaoFalhado(profile, invoice, failCount)
+}
+
+const LIMIAR_CORTE_FALHAS = 3
+
+/**
+ * O cliente fica a saber que o banco recusou — antes, o Stripe tentava 9 a 12 vezes em silêncio e
+ * cancelava. Uma falha no envio nunca parte o webhook (o Stripe repetiria o evento e contaríamos a
+ * falha duas vezes).
+ */
+async function avisarCartaoFalhado(
+  profile: { id: string; email?: string | null; full_name?: string | null; profile_data?: unknown },
+  invoice: Stripe.Invoice,
+  failCount: number,
+) {
+  try {
+    const email = profile.email || invoice.customer_email
+    if (!email) return
+    const momento = momentoDoAviso({
+      tentativaFatura: invoice.attempt_count,
+      falhasPerfil: failCount,
+      limiarCorte: LIMIAR_CORTE_FALHAS,
+    })
+    if (!momento || !invoice.id) return
+
+    const pd = (profile.profile_data && typeof profile.profile_data === 'object' ? profile.profile_data : {}) as Record<string, unknown>
+    const chave = chaveDoAviso(invoice.id, momento)
+    if (jaAvisado(pd.avisos_cartao, chave)) return
+
+    const nome = (profile.full_name || '').trim().split(/\s+/)[0] || 'Olá'
+    const mail = buildAvisoCartaoFalhado({
+      nome,
+      momento,
+      valorCents: invoice.amount_due,
+      moeda: invoice.currency,
+      linkFatura: invoice.hosted_invoice_url,
+    })
+    const transporter = createMailTransporter()
+    await transporter.sendMail({
+      from: mailFrom(),
+      to: email,
+      subject: mail.subject,
+      html: prepareBrandedEmailHtml(mail.html),
+      text: mail.text,
+      attachments: brandedMailAttachments(),
+    })
+    transporter.close()
+
+    await supabase
+      .from('profiles')
+      .update({ profile_data: { ...pd, avisos_cartao: juntarMarca(pd.avisos_cartao, chave) } })
+      .eq('id', profile.id)
+  } catch (err) {
+    console.error('[cobranca] aviso de cartão falhado não saiu:', err)
+  }
 }
 
 export const runtime = 'nodejs'
