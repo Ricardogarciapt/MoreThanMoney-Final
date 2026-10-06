@@ -70,4 +70,3 @@ __pycache__/
 
 # saída gerada do graphify (grafo local por máquina; rebuild com /graphify)
 graphify-out/
-.aios-ponte-segredo

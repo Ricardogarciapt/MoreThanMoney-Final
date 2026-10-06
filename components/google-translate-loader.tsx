@@ -38,8 +38,6 @@ const TRANSLATE_BLOCKED_PREFIXES = [
   // "/app-mobile" removido (2026-07-17): o app iOS/mobile carrega /app-mobile e o
   // seletor de idioma (nativo + web) precisa do Google Translate a aplicar aqui.
   // O guard anti-crash React vive em lib/google-translate-safe.ts.
-  "/aios",
-  "/jarvis",
   "/tradingfloor",
   "/mtm-terminal",
   // "/mtmfunded" (2026-09-11): estas páginas passaram a traduzir-se pelo DICIONÁRIO nativo.

@@ -26,6 +26,18 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        // AIOS saiu do site (decisão do dono 06/10): links guardados de /aios e /jarvis vão para
+        // o admin em vez de dar 404. O AIOS vive agora só localmente.
+        source: '/aios/:path*',
+        destination: '/admin',
+        permanent: true,
+      },
+      {
+        source: '/jarvis/:path*',
+        destination: '/admin',
+        permanent: true,
+      },
+      {
         source: '/logo-new.png',
         destination: '/icon-512x512.png',
         permanent: false,

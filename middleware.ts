@@ -544,34 +544,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // ── Protecção /aios — apenas admins ───────────────────────────────────────
-  if (pathname.startsWith("/aios") && hasSupabaseEnv) {
-    const aiosUser = await getCachedUser()
-    if (!aiosUser) {
-      return NextResponse.redirect(new URL('/login?redirect=/aios', request.url))
-    }
-
-    // Tecto: sem resposta não é admin, e /aios fecha. É a decisão certa para uma porta de admin —
-    // e devolve-a num instante, em vez de deixar o pedido a contar até ao 504.
-    const aiosProfile = await comTecto<{ user_type?: string } | null>(
-      (getSupabase()
-        .from('profiles')
-        .select('user_type')
-        .eq('id', aiosUser.id)
-        .single() as unknown as Promise<{ data: { user_type?: string } | null }>)
-        .then((r) => r.data)
-        .catch(() => null),
-      null,
-      TECTO_MIDDLEWARE_MS,
-    )
-
-    if (aiosProfile?.user_type !== 'admin') {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-
-    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
-  }
-
   return response
 }
 
