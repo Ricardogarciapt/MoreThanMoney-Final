@@ -96,12 +96,21 @@ export interface NegocioLinha {
   criado_em: string
   atualizado_em: string
   fechado_em: string | null
+  /**
+   * 06/10/2026 — o AGENTE IA responsável (`agentes_equipa.id`), quando um agente de vendas trabalha
+   * este negócio. Não é uma das cinco colunas humanas: um agente não é pessoa nem recebe comissão.
+   * Ver `lib/agentes/pipeline-agentes.ts`.
+   */
+  agente_id?: string | null
+  agente_pontuacao?: number | null
+  agente_qualificacao?: string | null
 }
 
 const COLUNAS_NEGOCIO =
   'id, nome, email, telefone, telegram_username, telegram_id, instagram_handle, ' +
   'pack_previsto, origem, estado, motivo_perda, nota, ' +
-  'prospector_id, setter_id, closer_id, team_leader_id, afiliado_id, criado_em, atualizado_em, fechado_em'
+  'prospector_id, setter_id, closer_id, team_leader_id, afiliado_id, criado_em, atualizado_em, fechado_em, ' +
+  'agente_id, agente_pontuacao, agente_qualificacao'
 
 /**
  * Os negócios que esta pessoa pode ver.
@@ -174,7 +183,9 @@ export interface TarefaLinha {
   id: string
   titulo: string
   descricao: string | null
-  responsavel_id: string
+  /** Uma pessoa OU um agente (`agente_id`) — desde 06/10 uma tarefa pode ser de um agente IA. */
+  responsavel_id: string | null
+  agente_id?: string | null
   negocio_id: string | null
   papel: string | null
   prazo: string | null
@@ -215,7 +226,7 @@ export async function tarefasDoAmbito(
 
   let query = supabase
     .from('vendas_tarefas')
-    .select('id, titulo, descricao, responsavel_id, negocio_id, papel, prazo, estado, feita_em, criado_em')
+    .select('id, titulo, descricao, responsavel_id, agente_id, negocio_id, papel, prazo, estado, feita_em, criado_em')
     .in('estado', estados)
     .order('prazo', { ascending: true, nullsFirst: false })
     .range(pagina.desde, pagina.ate)

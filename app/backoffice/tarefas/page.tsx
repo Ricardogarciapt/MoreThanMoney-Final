@@ -20,6 +20,7 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ambitoDaPagina, nomesDe } from '@/lib/backoffice-equipa'
+import { agentesDoPipeline } from '@/lib/backoffice-agentes'
 import { tarefasDoAmbito, type TarefaLinha } from '@/lib/backoffice-negocios'
 import { PESO_PRAZO, SITUACAO_PRAZO_NOME, dataCurta, situacaoDoPrazo } from '@/lib/backoffice-vista'
 import { lerDoCatalogo, lerPagina } from '@/lib/backoffice-paginacao'
@@ -86,8 +87,13 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
   // DE QUEM É CADA TAREFA. Só se pergunta quando o âmbito tem mais do que uma pessoa: numa lista
   // só dela, o nome dela não acrescenta nada — e num responsável a ver a equipa, uma lista sem
   // nomes é uma lista que ele não consegue usar (não sabe a quem ir falar).
-  const outros = [...new Set(tarefas.map((t) => t.responsavel_id).filter((id) => id && id !== ctx.userId))]
+  const outros = [...new Set(tarefas.map((t) => t.responsavel_id).filter((id): id is string => !!id && id !== ctx.userId))]
   const nomes = outros.length > 0 ? await nomesDe(outros) : {}
+  // 06/10: uma tarefa pode ser de um AGENTE IA (`agente_id`, sem responsável humano). Diz-se de quem
+  // é, com o selo, em vez de «Da equipa» — o humano tem de saber que foi uma máquina.
+  const agentes = tarefas.some((t) => t.agente_id) ? await agentesDoPipeline() : {}
+  const dono = (t: (typeof tarefas)[number]) =>
+    t.agente_id ? `Agente IA · ${agentes[t.agente_id]?.papel ?? agentes[t.agente_id]?.nome ?? 'agente'}` : (t.responsavel_id && nomes[t.responsavel_id]) || 'Da equipa'
 
   const abertas = tarefas.filter((t) => t.estado === 'aberta')
   const feitas = tarefas.filter((t) => t.estado === 'feita')
@@ -156,7 +162,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
                       {t.prazo ? ` · ${dataCurta(t.prazo)}` : ''}
                     </Etiqueta>
                     {t.responsavel_id !== ctx.userId && (
-                      <Etiqueta tom="aviso">{nomes[t.responsavel_id] ?? 'Da equipa'}</Etiqueta>
+                      <Etiqueta tom="aviso">{dono(t)}</Etiqueta>
                     )}
                     {t.papel && <Etiqueta>como {t.papel}</Etiqueta>}
                     {t.negocio_id && <Etiqueta>de um negócio</Etiqueta>}
@@ -201,7 +207,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
                 <span className="text-sm text-gray-500 line-through">
                   {t.titulo}
                   {t.responsavel_id !== ctx.userId && (
-                    <span className="ml-2 no-underline">— {nomes[t.responsavel_id] ?? 'da equipa'}</span>
+                    <span className="ml-2 no-underline">— {dono(t)}</span>
                   )}
                 </span>
                 <div className="flex items-center gap-3">

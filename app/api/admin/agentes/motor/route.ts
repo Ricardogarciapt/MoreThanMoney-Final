@@ -12,6 +12,7 @@ import {
   type Familia, type PedidoContacto, type Tectos,
 } from '@/lib/agentes/contacto-inicial'
 import type { TipoEnvio } from '@/lib/envios-aprovacao'
+import { executarAccaoPipeline, retratoPipeline } from '@/lib/agentes/pipeline-agentes-db'
 
 /**
  * A PORTA DO MOTOR AUTÓNOMO — o único sítio por onde `aios/motor/orquestrador.py` ESCREVE.
@@ -42,6 +43,9 @@ const ACCOES_DO_MOTOR = [
   'decidir_versao',  // o CEO aceita/rejeita com uma acção do catálogo
   'contacto',        // 06/10: pode este envio sair SOZINHO? (base legal decidida e REGISTADA aqui)
   'excluir',         // 06/10: alguém pediu para sair — entra na lista de exclusão global
+  'pipeline',        // 06/10: acção de um agente de vendas no pipeline do backoffice — catálogo FECHADO
+                     //        em lib/agentes/pipeline-agentes.ts (sem apagar, sem «ganho», sem envios)
+  'pipeline_ler',    // 06/10: a parte do pipeline que cabe a um agente (retrato do motor)
 ] as const
 
 const TIPOS_DE_EVENTO_DO_MOTOR = new Set(['ciclo', 'trabalho', 'envio', 'motor'])
@@ -244,6 +248,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, decisao: { ...d, pode: false, destino: 'fila', porque: `Registo da base legal falhou (${reg.erro}) — não sai sem registo.` } })
     }
     return NextResponse.json({ ok: true, ensaio, decisao: d })
+  }
+
+  if (acao === 'pipeline_ler') {
+    const r = await retratoPipeline(db, agenteId, { diasParado: Number(corpo.dias_parado) })
+    return NextResponse.json(r, { status: r.ok ? 200 : 400 })
+  }
+
+  if (acao === 'pipeline') {
+    /**
+     * O pedido do agente vai em `pedido` ({accao, ...campos}). A decisão é pura e provada
+     * (`pipeline-agentes.check.ts`); cada acção — aceite ou recusada — fica em vendas_agentes_accoes.
+     * Nenhuma mensagem sai por aqui: enviar continua a ser a acção «contacto» + fila.
+     */
+    const pedido = (corpo.pedido && typeof corpo.pedido === 'object' ? corpo.pedido : {}) as Record<string, unknown>
+    const r = await executarAccaoPipeline(db, agenteId, pedido, { ensaio })
+    return NextResponse.json(r, { status: r.status })
   }
 
   if (acao === 'excluir') {

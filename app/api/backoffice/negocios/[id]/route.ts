@@ -22,6 +22,7 @@
  * (migração 128, regra 3). Se as duas coisas se pudessem separar, alguém acabava por marcar ganhos
  * que não existiram — e o livro pagava sobre eles.
  */
+import { agentesDoPipeline } from '@/lib/backoffice-agentes'
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCapacidade } from '@/lib/backoffice-sessao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // para um negócio muito trabalhado não devolver uma resposta sem fim; quando bate, diz-se.
   const { data: linhas, error } = await supabase
     .from('vendas_negocio_eventos')
-    .select('id, de, para, por, nota, em')
+    .select('id, de, para, por, agente_id, nota, em')
     .eq('negocio_id', id)
     .order('em', { ascending: false })
     .limit(101)
@@ -113,6 +114,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const eventos = linhas ?? []
   const nomes = await nomesDe(supabase, eventos.map((e) => e.por))
+  // 06/10: um movimento feito por um agente IA diz-se como tal — «por Agente IA · Setter».
+  const agentes = eventos.some((e) => e.agente_id) ? await agentesDoPipeline() : {}
 
   return NextResponse.json({
     ok: true,
@@ -124,7 +127,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       para: e.para,
       nota: e.nota,
       em: e.em,
-      quem: e.por ? (nomes[String(e.por)] ?? 'alguém da equipa') : null,
+      quem: e.por
+        ? (nomes[String(e.por)] ?? 'alguém da equipa')
+        : e.agente_id
+          ? `Agente IA · ${agentes[String(e.agente_id)]?.papel ?? 'agente'}`
+          : null,
     })),
     ha_mais: eventos.length > 100,
   })

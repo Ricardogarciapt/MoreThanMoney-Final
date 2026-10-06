@@ -46,6 +46,7 @@ import { Historico } from './historico'
 import { lerFoco, situacaoDoFoco } from './foco'
 import { estaSemDono } from '@/lib/backoffice-bolsa'
 import { Pegar } from './pegar'
+import { accoesDeHojePorAgente, accoesDosAgentes, agentesDoPipeline, NOME_DA_ACCAO } from '@/lib/backoffice-agentes'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Pipeline · Backoffice MTM' }
@@ -111,6 +112,16 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
   const outros = ambito.ids.filter((id) => id !== ctx.userId)
   const nomes = outros.length > 0 ? await nomesDe(outros) : {}
 
+  // OS AGENTES IA, ao lado das pessoas (06/10). Quem são, o que fizeram nestes negócios e quanto
+  // trabalharam hoje — lido do registo `vendas_agentes_accoes`. Um humano tem de ver o que uma
+  // máquina fez no negócio antes de lhe pegar.
+  const [agentes, accoes, hojePorAgente] = await Promise.all([
+    agentesDoPipeline(),
+    accoesDosAgentes(negocios.map((n) => n.id)),
+    accoesDeHojePorAgente(),
+  ])
+  const agentesVivos = Object.values(agentes).filter((a) => a.estado !== 'morto')
+
   const ondeEstaOFoco = situacaoDoFoco(
     foco,
     negocios.map((n) => n.id),
@@ -160,6 +171,25 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
             'Pode estar numa página seguinte, ou já não participas nele.'
           )}
         </Aviso>
+      )}
+
+      {agentesVivos.length > 0 && (
+        <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Agentes IA no pipeline</div>
+          <p className="mt-1 text-xs leading-relaxed text-gray-500">
+            Trabalham os leads da bolsa ao teu lado: criam, qualificam, movem, agendam follow-ups e passam-te o
+            negócio quando é preciso uma pessoa. Num negócio que é teu só podem deixar notas. Não enviam mensagens
+            por aqui, não marcam «ganho» e não mexem em dinheiro.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {agentesVivos.map((a) => (
+              <Etiqueta key={a.id} tom="aviso">
+                Agente IA · {a.papel}
+                {hojePorAgente[a.id] ? ` · ${hojePorAgente[a.id]} hoje` : ''}
+              </Etiqueta>
+            ))}
+          </div>
+        </div>
       )}
 
       <NegocioNovo papeis={ctx.papeis} ehDono={ctx.admin} />
@@ -278,6 +308,16 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                                 .join(', ') || 'Da equipa'}
                             </Etiqueta>
                           )}
+                          {n.agente_id && (
+                            <Etiqueta tom="aviso">
+                              Agente IA · {agentes[n.agente_id]?.papel ?? 'agente'}
+                            </Etiqueta>
+                          )}
+                          {typeof n.agente_pontuacao === 'number' && (
+                            <Etiqueta tom={n.agente_pontuacao >= 70 ? 'bom' : 'neutro'}>
+                              pontuação {n.agente_pontuacao}
+                            </Etiqueta>
+                          )}
                           {n.pack_previsto && <Etiqueta>{n.pack_previsto}</Etiqueta>}
                           {n.origem && <Etiqueta>via {n.origem}</Etiqueta>}
                         </div>
@@ -288,6 +328,24 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                           </p>
                         )}
                         {n.nota && <p className="mt-2 text-xs leading-relaxed text-gray-400">{n.nota}</p>}
+                        {n.agente_qualificacao && (
+                          <p className="mt-2 text-xs leading-relaxed text-gray-400">
+                            <span className="text-gray-500">Qualificação do agente: </span>
+                            {n.agente_qualificacao}
+                          </p>
+                        )}
+                        {(accoes[n.id] ?? []).length > 0 && (
+                          <ul className="mt-2 space-y-1 border-l border-[#D2A63C]/30 pl-3">
+                            {(accoes[n.id] ?? []).map((a, i) => (
+                              <li key={i} className="text-[11.5px] leading-snug text-gray-400">
+                                <span className="text-[#D2A63C]">Agente IA · {agentes[a.agente_id]?.papel ?? 'agente'}</span>{' '}
+                                {NOME_DA_ACCAO[a.accao] ?? a.accao}
+                                <span className="text-gray-600"> · {dataCurta(a.criado_em)}</span>
+                                {a.texto && <span className="text-gray-500"> — {a.texto.slice(0, 220)}</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                         {parado && <p className="mt-2 text-xs font-medium text-amber-400/90">{parado}</p>}
 
                         {/* POR ONDE SE FALA, e o que fazer a seguir.
