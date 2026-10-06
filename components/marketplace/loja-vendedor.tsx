@@ -17,12 +17,13 @@
  * produtos de X» era uma segunda oportunidade de um produto retirado continuar à venda num sítio.
  */
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, Loader2, Store } from "lucide-react"
 import { euros, type Vendedor } from "@/lib/marketplace/regras"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
+import { agruparMontra } from "@/lib/marketplace/grupos"
 
 type Preco = {
   baseCents: number; cents: number; descontoPct: number
@@ -33,6 +34,8 @@ type Produto = {
   tipo: string; categoria: string; imagem_url: string | null
   recorrente: boolean; periodicidade: string; preco: Preco; vendedor: Vendedor
   jaComprou: boolean; podeComprar: boolean; motivoSemCompra: string | null
+  /** 195 — variantes agrupadas: um cartão por grupo. */
+  grupo?: string | null; variante_nome?: string | null; variante_ordem?: number | null
 }
 type Loja = {
   id: string; nome: string; nota: string | null; bio: string | null
@@ -55,6 +58,9 @@ export default function LojaVendedor({ id }: { id: string }) {
   }, [id])
 
   useEffect(() => { void ler() }, [ler])
+
+  // 195 — um cartão por produto: as variantes (Mensal, Anual, Vitalício…) escolhem-se na ficha.
+  const entradas = useMemo(() => agruparMontra(produtos), [produtos])
 
   if (loja === null) {
     return (
@@ -112,7 +118,7 @@ export default function LojaVendedor({ id }: { id: string }) {
         </div>
         {loja.bio && <p className="mt-5 max-w-[68ch] text-sm leading-relaxed text-zinc-400">{loja.bio}</p>}
         <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
-          {produtos.length} {produtos.length === 1 ? "produto à venda" : "produtos à venda"}
+          {entradas.length} {entradas.length === 1 ? "produto à venda" : "produtos à venda"}
         </p>
       </header>
 
@@ -122,9 +128,9 @@ export default function LojaVendedor({ id }: { id: string }) {
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {produtos.map((p) => (
+          {entradas.map(({ chave, principal: p, variantes, maisBarata }) => (
             <Link
-              key={p.id}
+              key={chave}
               href={`/marketplace/${p.slug}`}
               className="group flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] transition-colors hover:border-[#D2A63C]/35"
             >
@@ -145,7 +151,16 @@ export default function LojaVendedor({ id }: { id: string }) {
                 <h2 className="mt-1 font-medium leading-snug text-zinc-100 group-hover:text-[#eccb78]">{p.titulo}</h2>
                 {p.subtitulo && <p className="mt-0.5 text-xs text-zinc-400">{p.subtitulo}</p>}
                 <span className="mt-auto pt-4 text-lg font-semibold text-zinc-100">
-                  {p.preco.baseCents === 0 ? (
+                  {variantes.length > 1 ? (
+                    <>
+                      <span className="mr-1 text-xs font-normal text-zinc-500">desde</span>
+                      {maisBarata.preco.cents === 0 ? "Grátis" : euros(maisBarata.preco.cents, maisBarata.preco.moeda)}
+                      <Sufixo p={maisBarata} className="text-xs" />
+                      <span className="mt-0.5 block text-[11px] font-normal text-zinc-500">
+                        {variantes.map((v) => v.variante_nome).filter(Boolean).join(" · ")}
+                      </span>
+                    </>
+                  ) : p.preco.baseCents === 0 ? (
                     "Grátis"
                   ) : (
                     <>

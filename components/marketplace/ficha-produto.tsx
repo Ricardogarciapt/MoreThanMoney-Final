@@ -28,6 +28,7 @@ import { codigoDeAgenteGuardado } from "@/lib/agentes/atribuicao-browser"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
 import { CaixaConsentimentoEmail } from "@/components/consentimento-email-caixa"
 import { CAIXA_PRE_MARCADA } from "@/lib/captacao-consentimento"
+import { ordenarVariantes, poupancaPct, varianteInicial } from "@/lib/marketplace/grupos"
 
 type Preco = {
   baseCents: number; cents: number; descontoPct: number
@@ -52,6 +53,10 @@ type Produto = {
   preco_cents: number
   /** 193 — o «antes» da loja oficial quando ela está em promoção (lido pelo cron). */
   preco_base_cents?: number | null
+  /** 195 — variantes do mesmo produto (Mensal, Anual, Vitalício…). Nulo = produto sozinho. */
+  grupo?: string | null
+  variante_nome?: string | null
+  variante_ordem?: number | null
 }
 
 
@@ -70,7 +75,16 @@ const PORQUE_NAO: Record<string, string> = {
 }
 
 export default function FichaProduto({ slug }: { slug: string }) {
-  const [produto, setProduto] = useState<Produto | null | "nao-existe">(null)
+  /**
+   * AS VARIANTES (195). A rota devolve o produto pedido e as outras opções do grupo dele; cada uma
+   * vem com o seu preço efectivo (campanha, preço de membro), o seu `podeComprar` e o seu
+   * `jaComprou`. `produto` é a variante ESCOLHIDA — e é ela, e só ela, que vai para o checkout.
+   */
+  const [lidos, setLidos] = useState<Produto[] | null | "nao-existe">(null)
+  const [escolhido, setEscolhido] = useState<string | null>(null)
+  const variantes = Array.isArray(lidos) ? ordenarVariantes(lidos) : []
+  const produto: Produto | null | "nao-existe" =
+    lidos === null ? null : lidos === "nao-existe" ? "nao-existe" : (variantes.find((v) => v.slug === escolhido) ?? variantes[0] ?? "nao-existe")
   // A ficha é PÚBLICA. Sem isto, um visitante sem sessão via a caixa de compra inteira — cupão,
   // referral e botão — e o «Comprar» devolvia «Autenticação necessária» num aviso vermelho.
   const [autenticado, setAutenticado] = useState(true)
@@ -94,9 +108,12 @@ export default function FichaProduto({ slug }: { slug: string }) {
 
   useEffect(() => {
     void (async () => {
-      const r = await fetch(`/api/marketplace/produtos?slug=${encodeURIComponent(slug)}`)
+      const r = await fetch(`/api/marketplace/produtos?slug=${encodeURIComponent(slug)}&variantes=1`)
       const j = await r.json().catch(() => ({ produtos: [] }))
-      setProduto(j.produtos?.[0] ?? "nao-existe")
+      const lista = (j.produtos ?? []) as Produto[]
+      setLidos(lista.length ? lista : "nao-existe")
+      // Entrar pelo slug de uma variante abre o grupo com ESSA variante escolhida.
+      setEscolhido(varianteInicial(lista, slug)?.slug ?? null)
       setAutenticado(j.autenticado !== false)
     })()
   }, [slug])
@@ -162,6 +179,15 @@ export default function FichaProduto({ slug }: { slug: string }) {
   }
 
   const p = produto
+  // O nome do produto é o da variante principal («Pack de Scanners»), não o da opção escolhida.
+  const tituloDoGrupo = variantes.length > 1 ? variantes[0].titulo : p.titulo
+  const escolher = (v: Produto) => {
+    setEscolhido(v.slug)
+    setActiva(0)
+    setErro(null)
+    // O endereço acompanha a opção, para um link partilhado abrir a mesma escolha.
+    try { window.history.replaceState(null, "", `/marketplace/${v.slug}${window.location.search}`) } catch { /* sem history */ }
+  }
   const acaba = p.preco.acabaEm ? new Date(p.preco.acabaEm) : null
   // A MESMA função que o servidor usa para gravar: a capa primeiro, o resto pela ordem do autor, sem
   // repetições. Montar a lista aqui à mão era arriscar que a ficha mostrasse a capa duas vezes.
@@ -219,7 +245,7 @@ export default function FichaProduto({ slug }: { slug: string }) {
               {p.categoria}
               {p.subcategoria ? ` · ${p.subcategoria}` : ""}
             </span>
-            <h1 className="mt-1 text-2xl font-semibold text-zinc-100">{p.titulo}</h1>
+            <h1 className="mt-1 text-2xl font-semibold text-zinc-100">{tituloDoGrupo}</h1>
             {p.subtitulo && <p className="mt-1 text-zinc-400">{p.subtitulo}</p>}
             {/* O nome do vendedor passa por `nomeDoAutor` e não lê o educador directamente: há
                 produtos que se vendem sob uma marca (a She Is Faceless Academy) e não sob o nome
@@ -244,6 +270,45 @@ export default function FichaProduto({ slug }: { slug: string }) {
 
         {/* ── A caixa de compra ────────────────────────────────────────────────────────── */}
         <aside className="h-fit space-y-4 rounded-xl border border-zinc-800 bg-black/40 p-4 lg:sticky lg:top-4">
+          {/* ── AS OPÇÕES (195) ───────────────────────────────────────────────────────────
+              Cada opção é uma variante com o SEU preço já decidido pela rota. A poupança só
+              aparece quando sai das contas dos preços reais (`poupancaPct`): nunca um número
+              escrito à mão. */}
+          {variantes.length > 1 && (
+            <div role="radiogroup" aria-label="Opções" className="space-y-1.5">
+              <span className="text-xs text-zinc-400">Escolhe a opção</span>
+              {variantes.map((v) => {
+                const activa = v.id === p.id
+                const poupa = poupancaPct(v, variantes)
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={activa}
+                    onClick={() => escolher(v)}
+                    className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                      activa ? "border-[#D2A63C] bg-[#D2A63C]/10" : "border-zinc-800 hover:border-zinc-600"
+                    }`}
+                  >
+                    <span className="text-zinc-100">
+                      {v.variante_nome ?? v.titulo}
+                      {v.jaComprou && <span className="ml-1.5 text-[11px] text-emerald-400">já é teu</span>}
+                    </span>
+                    <span className="text-right">
+                      <span className="font-medium text-zinc-100">
+                        {v.preco.baseCents === 0 ? "Grátis" : euros(v.preco.cents, v.preco.moeda)}
+                        <Sufixo p={v} className="text-xs" />
+                      </span>
+                      {poupa !== null && (
+                        <span className="block text-[11px] text-[#D2A63C]">poupas {poupa}%</span>
+                      )}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
           <div>
             {/* Produto de terceiros em promoção na loja oficial: o «antes» é o que a loja mostra
                 riscado (lido pelo cron), não uma campanha nossa. */}

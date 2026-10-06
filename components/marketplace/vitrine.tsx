@@ -45,6 +45,7 @@ import Link from "next/link"
 import { Loader2, Lock, ShoppingBag, ExternalLink, Search, Store, X } from "lucide-react"
 import { euros, precoAntesDaLoja, procuraCasa, type Vendedor } from "@/lib/marketplace/regras"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
+import { agruparMontra, type Entrada } from "@/lib/marketplace/grupos"
 
 type Autor = { id: string; display_name: string; avatar_url: string | null; specialty: string | null }
 /** O preço JÁ DECIDIDO pela rota. O cartão não recalcula desconto nenhum. */
@@ -67,6 +68,10 @@ type Produto = {
   subcategoria?: string | null
   /** 193 — o «antes» da loja oficial em promoção (lido pelo cron). */
   preco_base_cents?: number | null
+  /** 195 — variantes agrupadas: um cartão por grupo. Nulo = produto sozinho. */
+  grupo?: string | null
+  variante_nome?: string | null
+  variante_ordem?: number | null
   recorrente: boolean
   /** De quanto em quanto tempo se cobra (157). É ela que escreve «/mês» ou «/ano». */
   periodicidade: string
@@ -176,26 +181,37 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
     [produtos],
   )
 
+  // 195 — um cartão por grupo de variantes (ver `visiveis`).
+  const entradas = useMemo(() => agruparMontra(produtos ?? []), [produtos])
+
   // As subcategorias da categoria escolhida (hoje só «Produtos» as tem). Saem dos produtos que
   // existem, como as categorias: um filtro sem nada lá dentro é um beco.
   const subcategorias = useMemo(() => {
     if (!categoria) return []
     const conta = new Map<string, number>()
-    for (const p of produtos ?? []) {
+    for (const { principal: p } of entradas) {
       if (p.tipo === categoria && p.subcategoria) conta.set(p.subcategoria, (conta.get(p.subcategoria) ?? 0) + 1)
     }
     return Array.from(conta.entries())
-  }, [produtos, categoria])
+  }, [entradas, categoria])
 
+  /**
+   * UM CARTÃO POR PRODUTO (195). As variantes do mesmo grupo (Mensal, Anual, Vitalício…) juntam-se
+   * num cartão com o preço «desde»; a escolha faz-se na ficha. Agrupa-se ANTES de filtrar, e um
+   * cartão aparece se QUALQUER variante passar no filtro — procurar «vitalício» tem de encontrar o
+   * Pack de Scanners, e não um cartão só com a variante vitalícia.
+   */
   const visiveis = useMemo(
     () =>
-      (produtos ?? []).filter(
-        (p) =>
-          (!categoria || p.tipo === categoria) &&
-          (!subcategoria || p.subcategoria === subcategoria) &&
-          procuraCasa(p, termo),
+      entradas.filter((e) =>
+        e.variantes.some(
+          (p) =>
+            (!categoria || p.tipo === categoria) &&
+            (!subcategoria || p.subcategoria === subcategoria) &&
+            procuraCasa(p, termo),
+        ),
       ),
-    [produtos, categoria, subcategoria, termo],
+    [entradas, categoria, subcategoria, termo],
   )
 
   /**
@@ -218,8 +234,9 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
    * procura julgar que ele já não está à venda.
    */
   const destacados = useMemo(
-    () => (categoria || termo.trim() ? [] : (produtos ?? []).filter((p) => p.destaque).slice(0, 6)),
-    [produtos, categoria, termo],
+    // O destaque de um grupo é o da variante principal (195).
+    () => (categoria || termo.trim() ? [] : entradas.filter((e) => e.principal.destaque).slice(0, 6)),
+    [entradas, categoria, termo],
   )
 
   if (produtos === null) {
@@ -327,13 +344,13 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
             <section>
               <Kicker>Em destaque</Kicker>
               <div className={`grid gap-4 ${compacto ? "grid-cols-1" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
-                {destacados.map((p) => (
+                {destacados.map((e) => (
                   <Cartao
-                    key={`destaque-${p.id}`}
-                    produto={p}
+                    key={`destaque-${e.chave}`}
+                    entrada={e}
                     autenticado={autenticado}
-                    aComprar={aComprar === p.id}
-                    onComprar={() => comprar(p.id)}
+                    aComprar={aComprar === e.principal.id}
+                    onComprar={() => comprar(e.principal.id)}
                   />
                 ))}
               </div>
@@ -395,11 +412,11 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
             {categorias.length > 1 && (
               <div className="flex flex-wrap gap-1.5">
                 <Pilula activa={categoria === null} onClick={() => { setCategoria(null); setSubcategoria(null) }}>
-                  Tudo ({produtos.length})
+                  Tudo ({entradas.length})
                 </Pilula>
                 {categoriasVisiveis.map(([tipo, nome]) => (
                   <Pilula key={tipo} activa={categoria === tipo} onClick={() => { setCategoria(tipo); setSubcategoria(null) }}>
-                    {nome} ({produtos.filter((x) => x.tipo === tipo).length})
+                    {nome} ({entradas.filter((e) => e.principal.tipo === tipo).length})
                   </Pilula>
                 ))}
                 {categorias.length > CATEGORIAS_A_MOSTRAR && (
@@ -446,13 +463,13 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
               </div>
             ) : (
               <div className={`grid gap-4 ${compacto ? "grid-cols-1" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
-                {visiveis.map((p) => (
+                {visiveis.map((e) => (
                   <Cartao
-                    key={p.id}
-                    produto={p}
+                    key={e.chave}
+                    entrada={e}
                     autenticado={autenticado}
-                    aComprar={aComprar === p.id}
-                    onComprar={() => comprar(p.id)}
+                    aComprar={aComprar === e.principal.id}
+                    onComprar={() => comprar(e.principal.id)}
                   />
                 ))}
               </div>
@@ -545,16 +562,22 @@ function CapaEmFalta({ categoria }: { categoria: string }) {
 }
 
 function Cartao({
-  produto: p,
+  entrada,
   autenticado,
   aComprar,
   onComprar,
 }: {
-  produto: Produto
+  entrada: Entrada<Produto>
   autenticado: boolean
   aComprar: boolean
   onComprar: () => void
 }) {
+  // O cartão desenha a variante PRINCIPAL (título, capa, vendedor). Num grupo, o preço é o «desde»
+  // da mais barata e o botão leva à ficha, onde se escolhe a opção — comprar a partir do cartão
+  // seria escolher pela pessoa.
+  const p = entrada.principal
+  const agrupado = entrada.variantes.length > 1
+  const barata = entrada.maisBarata
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] transition-colors hover:border-[#D2A63C]/35">
       {/* O cartão LEVA À FICHA. Sem isto, a descrição completa, a campanha, o campo do cupão e o
@@ -595,7 +618,16 @@ function Cartao({
 
         <div className="mt-auto flex items-end justify-between gap-2 pt-4">
           <span className="text-lg font-semibold text-zinc-100">
-            {p.preco.baseCents === 0 ? (
+            {agrupado ? (
+              <>
+                <span className="mr-1 text-xs font-normal text-zinc-500">desde</span>
+                {barata.preco.cents === 0 ? "Grátis" : euros(barata.preco.cents, barata.preco.moeda)}
+                <Sufixo p={barata} className="text-xs" />
+                <span className="mt-0.5 block text-[11px] font-normal text-zinc-500">
+                  {entrada.variantes.map((v) => v.variante_nome).filter(Boolean).join(" · ")}
+                </span>
+              </>
+            ) : p.preco.baseCents === 0 ? (
               "Grátis"
             ) : (
               <>
@@ -621,7 +653,14 @@ function Cartao({
             )}
           </span>
 
-          {p.jaComprou ? (
+          {agrupado ? (
+            <Link
+              href={`/marketplace/${p.slug}`}
+              className="shrink-0 rounded-lg bg-[#D2A63C] px-3 py-1.5 text-sm font-medium text-black transition-opacity hover:opacity-90"
+            >
+              Ver opções
+            </Link>
+          ) : p.jaComprou ? (
             <span className="text-xs text-emerald-400">Já é teu</span>
           ) : !autenticado ? (
             // A montra é pública e comprar já não exige login. Mas um cartão não tem sítio para o

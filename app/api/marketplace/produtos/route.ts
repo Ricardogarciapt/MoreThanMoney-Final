@@ -4,6 +4,8 @@
  * GET /api/marketplace/produtos            → a montra toda
  * GET /api/marketplace/produtos?slug=x     → um produto (a ficha)
  * GET /api/marketplace/produtos?tipo=curso → a montra filtrada por categoria
+ * GET /api/marketplace/produtos?slug=x&variantes=1 → a ficha: o produto e as outras variantes do
+ *     grupo dele (195). Sem `variantes=1` a resposta é a de sempre (só o produto).
  *
  * O que NUNCA sai daqui é o `conteudo_url`. A montra mostra o que se compra; a chave entrega-se
  * em /api/marketplace/biblioteca, e só a quem tem compra. Separar as duas coisas é a correcção da
@@ -65,8 +67,17 @@ export async function GET(request: NextRequest) {
     // a loja de um educador não trazer o catálogo inteiro pela rede só para deitar fora 90%.
     const vendedor = request.nextUrl.searchParams.get('vendedor')
 
+    // 195 — a ficha pede as variantes do grupo. Lê-se primeiro o grupo do slug pedido; a
+    // visibilidade de cada variante continua a ser decidida mais abaixo por `produtoNaVitrine`.
+    let grupo: string | null = null
+    if (slug && request.nextUrl.searchParams.get('variantes') === '1') {
+      const { data: g } = await getSupabaseAdmin().from('marketplace_produtos').select('grupo').eq('slug', slug).maybeSingle()
+      grupo = (g as { grupo: string | null } | null)?.grupo ?? null
+    }
+
     let q = getSupabaseAdmin().from('marketplace_produtos').select(COLUNAS_VITRINE)
-    if (slug) q = q.eq('slug', slug)
+    if (grupo) q = q.eq('grupo', grupo)
+    else if (slug) q = q.eq('slug', slug)
     if (tipo) q = q.eq('tipo', tipoValido(tipo))
     if (vendedor === LOJA_DA_CASA) q = q.eq('dono', 'casa')
     else if (vendedor) q = q.eq('educator_id', vendedor).eq('dono', 'educador')
@@ -134,7 +145,7 @@ export async function GET(request: NextRequest) {
     if (sessao) {
       void registarPasso({
         etapa: slug ? 'viu_ficha' : 'viu_montra',
-        produtoId: slug ? produtos[0]?.id ?? null : null,
+        produtoId: slug ? (produtos.find((x) => x.slug === slug) ?? produtos[0])?.id ?? null : null,
         userId: sessao.userId,
         email: sessao.email,
         origem: ios ? 'app_ios' : 'web',

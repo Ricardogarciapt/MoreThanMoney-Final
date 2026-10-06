@@ -40,7 +40,9 @@ export const COLUNAS_VITRINE =
   // e cobrar outro é a única coisa que uma loja não pode fazer nunca.
   'dono, vendedor_nome, recorrente, requer_morada, checkout_externo_url, campanha_pct, campanha_inicio, campanha_fim, campanha_tier, ' +
   // 193 — a subcategoria (ex.: «Tech Crypto») e o «antes» da loja oficial (lido pelo cron de preços).
-  'subcategoria, preco_base_cents'
+  'subcategoria, preco_base_cents, ' +
+  // 195 — variantes agrupadas: a montra desenha um cartão por grupo, a ficha um selector.
+  'grupo, variante_nome, variante_ordem'
 
 export type ProdutoVitrine = {
   id: string
@@ -74,6 +76,9 @@ export type ProdutoVitrine = {
   campanha_tier: string | null
   subcategoria: string | null
   preco_base_cents: number | null
+  grupo: string | null
+  variante_nome: string | null
+  variante_ordem: number
   educador?: { id: string; display_name: string; avatar_url: string | null; specialty: string | null } | null
   jaComprou?: boolean
 }
