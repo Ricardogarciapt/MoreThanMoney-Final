@@ -76,8 +76,22 @@ async function draftFollowup(lead: Lead, touch: number): Promise<string> {
   }
 }
 
-/** Corre a sequência de follow-up. Devolve {sent, scanned}. Best-effort, nunca lança. */
-export async function runLeadFollowups(): Promise<{ ok: boolean; sent: number; scanned: number }> {
+/**
+ * Corre a sequência de follow-up — e desde 06/10 NÃO ENVIA: deixa rascunhos `pendente`.
+ *
+ * Estes toques são o caso mais puro de «a máquina a escrever por iniciativa própria»: o lead
+ * calou-se e quem volta a escrever é o bot. Pela regra de conformidade (`lib/envios-aprovacao.ts`)
+ * isso precisa de uma pessoa a aprovar. Cada toque fica em `aios_tasks` (kind
+ * `envio:telegram_followup`, chave `tg-followup:<chat>:<toque>`) e sai só por `aprovar_envio`
+ * (/admin/social/leads ou a API do agente), que é também quem avança o `followup_count`.
+ *
+ * Responder a quem ESCREVEU ao bot continua automático — isso é o `bot-responder` e o funil do
+ * webhook, que não passam por aqui.
+ *
+ * Devolve `{ rascunhos, scanned }`; `sent` fica a 0 e mantém-se no retorno porque quem lê o cron
+ * já o lê.
+ */
+export async function runLeadFollowups(): Promise<{ ok: boolean; sent: number; rascunhos: number; scanned: number }> {
   const supabase = getSupabaseAdmin()
   const now = Date.now()
   // Delays por toque (desde a última atividade/último follow-up).
@@ -95,8 +109,12 @@ export async function runLeadFollowups(): Promise<{ ok: boolean; sent: number; s
     .order('updated_at', { ascending: true })
     .limit(50)
 
-  let sent = 0
+  let rascunhos = 0
   const scanned = (leads ?? []).length
+  const { criarEnvioPorAprovar } = await import('@/lib/envios-fila')
+  const { KIND_ENVIO } = await import('@/lib/envios-aprovacao')
+  const { prepararMensagem } = await import('@/lib/agentes/mensagem-saida')
+
   for (const l of leads ?? []) {
     const fc = Number(l.followup_count || 0)
     const lastActivity = l.updated_at ? new Date(l.updated_at as string).getTime() : 0
@@ -108,35 +126,27 @@ export async function runLeadFollowups(): Promise<{ ok: boolean; sent: number; s
     if (!due) continue
 
     const touch = fc + 1
+    const chave = `tg-followup:${l.chat_id}:${touch}:${fc}`
     const msg = await draftFollowup(l as Lead, touch)
-    /**
-     * SAI PELA PORTA COM RASTO, e não pelo envio cru.
-     *
-     * Estes três toques são o caso mais puro de «um agente a mandar mensagem por iniciativa
-     * própria»: ninguém pediu, ninguém aprovou, e o link que levam é o `/register` que vende. Era
-     * exactamente o tipo de mensagem que saía sem ficar escrita em sítio nenhum —
-     * `sendTelegramChannelMessage` não escreve em tabela nenhuma, e `telegram_messages` é o
-     * espelho do que ENTRA nos canais, não um livro de saídas.
-     *
-     * O código do agente vem de `AGENTE_POR_FUNIL['telegram:followup']` = AG-SAAS, e a razão está
-     * escrita lá: o que estes toques empurram é o teste da app, e `cta:app` já é do AG-SAAS. Se
-     * um dia o lead trouxer `agente_codigo` (quem veio por deep-link do Instagram traz), esse
-     * GANHA — quem o trouxe fica com o crédito de o reactivar.
-     */
-    const { enviarTelegramPorAgente } = await import('@/lib/agentes/mensagem-livro')
-    const r = await enviarTelegramPorAgente({
-      chatId: String(l.chat_id),
-      texto: msg,
-      funil: 'telegram:followup',
-      codigoExplicito: (l as { agente_codigo?: string | null }).agente_codigo ?? undefined,
+    const codigo = (l as { agente_codigo?: string | null }).agente_codigo ?? null
+    // O texto que quem aprova lê é o texto que vai sair — já com o código nos links.
+    const previa = prepararMensagem({ canal: 'telegram', texto: msg, funil: 'telegram:followup', codigoExplicito: codigo ?? undefined })
+    const nome = (l.first_name || '').split(' ')[0] || String(l.chat_id)
+    const r = await criarEnvioPorAprovar({
+      kind: KIND_ENVIO.FOLLOWUP_TELEGRAM,
+      chave,
+      titulo: `Follow-up Telegram · toque ${touch}/${MAX_TOUCHES} · ${nome}`,
+      detalhes: `Lead calado (etapa ${l.stage ?? '?'}, interesse ${l.interest ?? '?'}). Mensagem:\n\n${previa.texto}`,
+      payload: {
+        chat_id: String(l.chat_id),
+        texto: msg,
+        toque: touch,
+        funil: 'telegram:followup',
+        codigo,
+        followup_count_na_criacao: fc,
+      },
     })
-    if (r.enviado) {
-      sent++
-      await supabase
-        .from('telegram_leads')
-        .update({ followup_count: touch, last_followup_at: new Date().toISOString() })
-        .eq('chat_id', l.chat_id)
-    }
+    if (r.criado) rascunhos++
   }
-  return { ok: true, sent, scanned }
+  return { ok: true, sent: 0, rascunhos, scanned }
 }

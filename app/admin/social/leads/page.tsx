@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, RefreshCw, Loader2, MessageCircle, Send, Users, Heart } from "lucide-react"
+import { EnviosPorAprovar } from "@/components/admin/envios-por-aprovar"
 
 interface Lead {
   comment_id: string
@@ -147,6 +148,9 @@ export default function SocialLeadsPage() {
           Atualizar
         </Button>
       </div>
+
+      {/* O que a máquina quer mandar por iniciativa própria espera aqui por uma pessoa (06/10). */}
+      <EnviosPorAprovar />
 
       {/* A escada. As grelhas de números dizem quantos há em cada sítio; não dizem onde se
           perdem — e é onde se perdem que decide o que fazer a seguir. */}

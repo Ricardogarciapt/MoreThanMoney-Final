@@ -11,7 +11,8 @@
  *
  *   redigir        — escreve rascunhos e não envia NADA. É o modo de sombra: o dono lê o que sairia.
  *   enviar_publica — a fase 1 (resposta pública) sai sozinha.
- *   enviar_dm      — a fase 2 (a DM) sai sozinha.
+ *   enviar_dm      — (desde 06/10 SEM efeito) a DM nunca sai sozinha: fica `pendente` e só sai
+ *                    depois de aprovada (/admin/social/leads ou `aprovar_envio` na API do agente).
  *
  * Separados porque ligar a redacção é reversível e ligar o envio não é: a Meta dá UMA private reply
  * por comentário, e uma mensagem mal enviada não tem segunda tentativa — o comentário fica queimado.
@@ -28,7 +29,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { prepararMensagem } from '@/lib/agentes/mensagem-saida'
 import { agenteDoPostComentado, registarMensagemDeAgente } from '@/lib/agentes/mensagem-livro'
 import { pensar } from '@/lib/funis-ia'
-import { isAutoPublishBlocked } from './publish'
+import { isAutoPublishBlocked, tokenForAccount } from './publish'
+import { podeSair } from '@/lib/envios-aprovacao'
 import { ehDaCasa, handlesDaCasa } from './setter-casa'
 import {
   classificar,
@@ -303,29 +305,25 @@ export async function tratarComentario(
     dm_possivel: dm.pode,
     dm_motivo: dm.motivo as MotivoSemDm | null,
     passo: 'entrega',
-    estado: 'rascunho' as string,
+    estado: 'pendente' as string,
     erro: null as string | null,
     enviado_em: null as string | null,
+    publica_enviada_em: null as string | null,
   }
 
-  // ── Daqui para baixo só corre se o dono tiver ligado o envio. Por omissão, para aqui. ──
+  // ── Daqui para baixo: a resposta PÚBLICA pode sair (a pessoa comentou); a DM NUNCA sai aqui. ──
   const erros: string[] = []
   let enviouPublica = false
-  let enviouDm = false
 
   /**
-   * O ENVIO FICA ESCRITO NO LIVRO DO AGENTE, e não só no rascunho.
+   * A RESPOSTA PÚBLICA SAI SOZINHA — quem começou foi a pessoa, ao comentar.
    *
-   * O rascunho já guardava o texto e o erro — mas guarda-os POR COMENTÁRIO, e a pergunta que o
-   * dono vai fazer não é «o que aconteceu a este comentário»: é «o que é que os agentes mandaram
-   * ontem, e quanto disso saiu». Essa não se responde a partir de uma tabela com uma linha por
-   * comentário do Instagram. Ver `agentes_mensagens` (migração 171).
-   *
-   * E é aqui que o limite do dono fica medido em vez de ser uma promessa: `enviar_dm` está `true`
-   * em produção e ninguém escreve o estado `'aprovado'`, por decisão dele de 01/10. O que isso
-   * significa é que as DMs saem sem passar por uma pessoa — e passa a haver registo de cada uma.
+   * É debaixo do comentário dela, à vista, e é uma resposta ao que ela escreveu. Por isso passa
+   * por `podeSair` como `resposta_publica_a_comentario` e não precisa de aprovação (regra de
+   * 06/10, `lib/envios-aprovacao.ts`). Continua a depender do interruptor `enviar_publica` e da
+   * conta poder escrever sozinha (a pessoal do Ricardo nunca).
    */
-  if (chaves.enviar_publica && contaEscreve) {
+  if (chaves.enviar_publica && contaEscreve && podeSair({ tipo: 'resposta_publica_a_comentario' }).pode) {
     const r = await gpost(`${c.commentId}/replies`, { message: textoPublico }, token)
     if (r.ok) enviouPublica = true
     else erros.push(`publica: ${String(r.json?.error?.message ?? 'erro').slice(0, 150)}`)
@@ -342,24 +340,24 @@ export async function tratarComentario(
     })
   }
 
-  if (chaves.enviar_dm && dm.pode && textoDm) {
-    const r = await gpost(`${c.commentId}/private_replies`, { message: textoDm }, token)
-    if (r.ok) enviouDm = true
-    else erros.push(`dm: ${String(r.json?.error?.message ?? 'erro').slice(0, 150)}`)
-    await registarMensagemDeAgente({
-      canal: 'instagram',
-      destino: c.commenter ?? c.commentId,
-      funil: 'instagram:setter',
-      tipo: 'dm',
-      texto: textoDm,
-      estado: r.ok ? 'enviada' : 'falhou',
-      motivo: r.ok ? null : String(r.json?.error?.message ?? 'erro').slice(0, 300),
-      referencia: c.commentId,
-      marcacao: marcadaDm ?? marcadaPublica,
-    })
-  }
-
-  if (enviouPublica || enviouDm) {
+  /**
+   * A DM FICA PENDENTE. Sempre. (06/10, conformidade)
+   *
+   * Até aqui, com `enviar_dm: true` em produção, a DM saía sem passar por ninguém — o degrau
+   * `aprovado` existia no esquema e não no caminho (`lib/agentes/desbloqueio.ts`,
+   * `ig_setter_sem_aprovado`). A pessoa comentou; não pediu uma conversa privada. Por isso a DM é
+   * iniciativa da máquina e fica `pendente` até alguém a aprovar no /admin/social/leads ou pela
+   * API do agente (`aprovar_envio`). Quem a envia é `enviarRascunhoAprovado`, e só a partir de
+   * `aprovado`.
+   *
+   * Sem DM possível, o rascunho só fica pendente se a resposta pública ainda não saiu (para quem
+   * aprovar a poder mandar); se já saiu, está `enviado` e não há mais nada a decidir.
+   */
+  linha.publica_enviada_em = enviouPublica ? new Date().toISOString() : null
+  const temDmPorDecidir = dm.pode && !!textoDm
+  if (temDmPorDecidir || !enviouPublica) {
+    linha.estado = 'pendente'
+  } else {
     linha.estado = 'enviado'
     linha.enviado_em = new Date().toISOString()
   }
@@ -368,9 +366,105 @@ export async function tratarComentario(
   const { error } = await db.from('ig_setter_rascunhos').upsert(linha, { onConflict: 'comment_id' })
   if (error) return 'erro'
 
-  if (enviouDm) return 'dm_enviada'
-  if (enviouPublica) return 'publica_enviada'
+  if (enviouPublica && !temDmPorDecidir) return 'publica_enviada'
   return erros.length ? 'erro' : 'rascunho'
+}
+
+// ── O envio do que foi APROVADO ──────────────────────────────────────────────────────────────────
+
+export interface ResultadoDoAprovado {
+  ok: boolean
+  estado: string
+  erro?: string
+}
+
+/**
+ * Envia um rascunho do setter que uma pessoa aprovou. É o ÚNICO caminho por onde sai a DM.
+ *
+ * Lê o estado da base (não confia em quem chama) e pergunta a `podeSair` como `dm_setter`: só
+ * `aprovado` passa. A janela dos 7 dias volta a medir-se AGORA — um rascunho aprovado tarde
+ * demais já não tem a private reply, e tentar só gastava um erro da Meta.
+ */
+export async function enviarRascunhoAprovado(commentId: string): Promise<ResultadoDoAprovado> {
+  const db = getSupabaseAdmin()
+  const { data: r } = await db.from('ig_setter_rascunhos').select('*').eq('comment_id', commentId).maybeSingle()
+  if (!r) return { ok: false, estado: 'desconhecido', erro: 'rascunho não encontrado' }
+  const row = r as Record<string, any>
+
+  const decisao = podeSair({ tipo: 'dm_setter', estado: row.estado })
+  if (!decisao.pode) return { ok: false, estado: String(row.estado), erro: decisao.porque }
+
+  const token = await tokenForAccount(String(row.ig_account_id))
+  if (!token) return { ok: false, estado: String(row.estado), erro: 'sem token da conta' }
+
+  const contaEscreve = !isAutoPublishBlocked(row.ig_account_id)
+  const erros: string[] = []
+  let saiuAlguma = false
+  const marcacaoGuardada = {
+    codigo: (row.agente_codigo ?? null) as string | null,
+    marcados: Number(row.agente_links_marcados ?? 0),
+  }
+
+  if (!row.publica_enviada_em && row.texto_publico && contaEscreve) {
+    const p = await gpost(`${commentId}/replies`, { message: String(row.texto_publico) }, token)
+    if (p.ok) saiuAlguma = true
+    else erros.push(`publica: ${String(p.json?.error?.message ?? 'erro').slice(0, 150)}`)
+    await registarMensagemDeAgente({
+      canal: 'instagram', destino: row.commenter ?? commentId, funil: 'instagram:setter', tipo: 'resposta_publica',
+      texto: String(row.texto_publico), estado: p.ok ? 'enviada' : 'falhou',
+      motivo: p.ok ? null : String(p.json?.error?.message ?? 'erro').slice(0, 300), referencia: commentId,
+      marcacao: marcacaoGuardada,
+    })
+    if (p.ok) await db.from('ig_setter_rascunhos').update({ publica_enviada_em: new Date().toISOString() }).eq('comment_id', commentId)
+  }
+
+  if (row.dm_possivel && row.texto_dm) {
+    const horas = row.comentado_em ? (Date.now() - new Date(row.comentado_em).getTime()) / 3_600_000 : null
+    const dm = podeMandarDm({ horasDesdeComentario: horas, jaRespondidoEmPrivado: false, contaPodeEscreverSozinha: contaEscreve })
+    if (!dm.pode) {
+      erros.push(`dm: ${dm.motivo}`)
+    } else {
+      const d = await gpost(`${commentId}/private_replies`, { message: String(row.texto_dm) }, token)
+      if (d.ok) saiuAlguma = true
+      else erros.push(`dm: ${String(d.json?.error?.message ?? 'erro').slice(0, 150)}`)
+      await registarMensagemDeAgente({
+        canal: 'instagram', destino: row.commenter ?? commentId, funil: 'instagram:setter', tipo: 'dm',
+        texto: String(row.texto_dm), estado: d.ok ? 'enviada' : 'falhou',
+        motivo: d.ok ? null : String(d.json?.error?.message ?? 'erro').slice(0, 300), referencia: commentId,
+        marcacao: marcacaoGuardada,
+      })
+    }
+  }
+
+  const estado = saiuAlguma ? 'enviado' : 'falhou'
+  await db
+    .from('ig_setter_rascunhos')
+    .update({
+      estado,
+      enviado_em: saiuAlguma ? new Date().toISOString() : null,
+      erro: erros.length ? erros.join(' | ') : null,
+    })
+    .eq('comment_id', commentId)
+    .eq('estado', 'aprovado')
+  return { ok: saiuAlguma, estado, ...(erros.length ? { erro: erros.join(' | ') } : {}) }
+}
+
+/**
+ * Corre os aprovados que ficaram por enviar (a aprovação tenta logo; isto apanha o que falhou
+ * por rede). Chamado pelo cron `ig-funnel`. Nunca toca em `pendente`.
+ */
+export async function enviarAprovadosPendentes(limite = 10): Promise<number> {
+  const { data } = await getSupabaseAdmin()
+    .from('ig_setter_rascunhos')
+    .select('comment_id')
+    .eq('estado', 'aprovado')
+    .limit(limite)
+  let n = 0
+  for (const r of data ?? []) {
+    const x = await enviarRascunhoAprovado(String((r as { comment_id: string }).comment_id))
+    if (x.ok) n++
+  }
+  return n
 }
 
 export interface ResumoDoSetter {

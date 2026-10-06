@@ -188,14 +188,23 @@ export const BLOQUEIOS: BloqueioConhecido[] = [
       const { valor } = await chaveExiste(db, 'ig_setter_persona')
       const bruto = typeof valor === 'string' ? safeJson(valor) : valor
       const enviaDm = (bruto as { enviar_dm?: unknown } | null)?.enviar_dm === true
-      const { count } = await db
+      // Desde 06/10 o degrau existe no CAMINHO (lib/envios-aprovacao.ts + setter.ts): a DM fica
+      // `pendente` e só sai de `aprovado`. O que se mede agora é se alguma DM saiu SEM decisão
+      // registada depois disso — esse número tem de ser zero.
+      const { count: pendentes } = await db
         .from('ig_setter_rascunhos')
         .select('comment_id', { count: 'exact', head: true })
-        .eq('estado', 'aprovado')
-      const aprovados = Number(count ?? 0)
+        .eq('estado', 'pendente')
+      const { count: semDecisao } = await db
+        .from('ig_setter_rascunhos')
+        .select('comment_id', { count: 'exact', head: true })
+        .eq('estado', 'enviado')
+        .eq('dm_possivel', true)
+        .is('decidido_por', null)
+        .gte('enviado_em', '2026-10-06T12:00:00Z')
       return {
-        parado: enviaDm && aprovados === 0,
-        medida: `enviar_dm=${enviaDm}, rascunhos no estado «aprovado»: ${aprovados}`,
+        parado: Number(semDecisao ?? 0) > 0,
+        medida: `enviar_dm=${enviaDm} (sem efeito desde 06/10); DMs por aprovar: ${Number(pendentes ?? 0)}; DMs enviadas sem decisão desde 06/10: ${Number(semDecisao ?? 0)}`,
       }
     },
   },

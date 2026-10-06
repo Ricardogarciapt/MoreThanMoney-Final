@@ -96,12 +96,12 @@ export async function GET(request: NextRequest) {
       setter,
       setterChaves,
       setterStats: {
-        rascunhos: setter.filter((s) => s.estado === "rascunho").length,
+        rascunhos: setter.filter((s) => s.estado === "rascunho" || s.estado === "pendente").length,
         enviados: setter.filter((s) => s.estado === "enviado").length,
         encerrados: setter.filter((s) => s.estado === "encerrado").length,
         // Quantos rascunhos NÃO podem levar DM, e porquê. É o número que diz se vale a pena
         // apressar a aprovação: um rascunho fora dos 7 dias já não tem DM para dar.
-        semDm: setter.filter((s) => s.dm_possivel === false && s.estado === "rascunho").length,
+        semDm: setter.filter((s) => s.dm_possivel === false && (s.estado === "rascunho" || s.estado === "pendente")).length,
         pessoas: new Set(setter.map((s) => s.commenter).filter(Boolean)).size,
       },
       stats: {

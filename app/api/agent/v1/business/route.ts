@@ -9,8 +9,13 @@ import {
 
 /**
  * API de negócio para o agente executivo AIOS.
- * GET  /api/agent/v1/business?resource=overview|revenue|subscriptions|customers|leads|tasks|equidade|equipa|conhecimento
- * POST /api/agent/v1/business   body: { action: "create_task" | "update_task" | "outreach_draft", ... }
+ * GET  /api/agent/v1/business?resource=overview|revenue|subscriptions|customers|leads|tasks|envios|equidade|equipa|conhecimento
+ * POST /api/agent/v1/business   body: { action: "create_task" | "update_task" | "outreach_draft" | "aprovar_envio" | "rejeitar_envio", ... }
+ *
+ * `envios` / `aprovar_envio` / `rejeitar_envio` (06/10): as mensagens que a máquina quer mandar
+ * por iniciativa própria (DM do setter IG, follow-up do bot, email de recuperação de checkout)
+ * ficam `pendente`; aprovar com `{ action: "aprovar_envio", id }` FAZ-AS SAIR. O `id` é o uuid da
+ * fila `aios_tasks` ou o `comment_id` do setter. Ver lib/envios-fila.ts.
  *
  * Leitura = imediata. Escrita interna (tarefas) = imediata. Envios para clientes NÃO acontecem aqui:
  * outreach_draft devolve apenas um rascunho para o AIOS confirmar antes de enviar.
@@ -201,6 +206,10 @@ export async function GET(request: NextRequest) {
         return agentOk(await getLeads(sb, url.searchParams.get("stage"), limit))
       case "tasks":
         return agentOk(await getTasks(sb, url.searchParams.get("status"), limit))
+      case "envios": {
+        const { listarEnviosPendentes } = await import("@/lib/envios-fila")
+        return agentOk(await listarEnviosPendentes(limit))
+      }
       case "equidade":
       case "equity":
         return agentOk(await getEquidade(sb))
@@ -292,9 +301,29 @@ export async function POST(request: NextRequest) {
       return agentOk({ criada: data })
     }
 
+    // ----- Envios por aprovar: aprovar FAZ SAIR a mensagem; rejeitar arquiva-a -----
+    if (action === "aprovar_envio" || action === "rejeitar_envio") {
+      if (!body.id) return agentError("Falta 'id'.", 400)
+      const quem = `agente:${auth.email || auth.userId || auth.keyId}`
+      const { aprovarEnvio, rejeitarEnvio } = await import("@/lib/envios-fila")
+      const r =
+        action === "aprovar_envio"
+          ? await aprovarEnvio(String(body.id), quem)
+          : await rejeitarEnvio(String(body.id), quem, body.motivo ? String(body.motivo) : undefined)
+      return r.ok ? agentOk(r) : agentError(r.erro || "falhou", 409, { ...r })
+    }
+
     // ----- Escrita interna: atualizar tarefa (imediata) -----
     if (action === "update_task") {
       if (!body.id) return agentError("Falta 'id'.", 400)
+      // Um envio por aprovar não muda de estado por aqui: aprovar FAZ SAIR uma mensagem, e isso
+      // tem o seu caminho (`aprovar_envio`), com a transição condicional e o envio juntos.
+      if (body.status !== undefined) {
+        const { data: t } = await sb.from("aios_tasks").select("kind").eq("id", body.id).maybeSingle()
+        if (String((t as { kind?: string } | null)?.kind ?? "").startsWith("envio:")) {
+          return agentError("Envios por aprovar mudam de estado só por 'aprovar_envio'/'rejeitar_envio'.", 400)
+        }
+      }
       const patch: any = { updated_at: new Date().toISOString() }
       for (const k of ["title", "details", "kind", "status", "priority", "due_at"]) {
         if (body[k] !== undefined) patch[k] = body[k]
