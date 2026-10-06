@@ -7,7 +7,8 @@ import { factoDoDia, getPipsProof, notaViesPreco } from '@/lib/pips-proof'
 import { canvaAutofillImage } from '@/lib/canva-connect'
 import { chamarIA, ErroIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { marcarConteudo } from '@/lib/agentes/marca-conteudo'
+import { agenteDoPilar, marcarConteudo } from '@/lib/agentes/marca-conteudo'
+import { AG } from '@/lib/agentes/codigos'
 
 /**
  * Imagem do post: 1º tenta o Canva Connect (teus templates reais, se configurado + plano pago);
@@ -303,7 +304,12 @@ export async function correrContentDraft(req: NextRequest, deps: DepsContentDraf
        * Um pilar sem agente declarado NÃO cai no CEO — fica por atribuir com o motivo escrito.
        * Ver lib/agentes/marca-conteudo.ts.
        */
-      const marca = marcarConteudo({ legenda: (d.caption || '').trim(), pilar: `cta:${cta.toLowerCase()}` })
+      // 06/10: um pilar sem agente declarado deixa de ficar por atribuir — o post sai assinado pelo
+      // AG-SOCIAL, que é quem o gera. Um pilar COM dono (AGENTE_POR_PILAR) continua a ganhar.
+      const marca = marcarConteudo({
+        legenda: (d.caption || '').trim(),
+        codigoExplicito: agenteDoPilar(`cta:${cta.toLowerCase()}`) ?? AG.SOCIAL,
+      })
       // Gera o card de marca (imagem) para publicação sem toque.
       // Um facto por post, rodando: publicar todos os dias a mesma frase treina o leitor a
       // saltá-la. O deslocamento pelo índice dá factos diferentes no mesmo lote.

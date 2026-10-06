@@ -36,6 +36,8 @@ export interface DefinicaoMensagem {
  * dele. Mudar o código do teste num deles deixava o outro a anunciar o antigo.
  */
 import { MIN_DEPOSIT, APP_REGISTER_LINK, APP_ANDROID_LINK, TRIAL_CODE, PUPRIME_LINK } from '@/lib/telegram-broker-gate'
+import { AG } from '@/lib/agentes/codigos'
+import { prepararMensagem } from '@/lib/agentes/mensagem-saida'
 export { MIN_DEPOSIT, APP_REGISTER_LINK, APP_ANDROID_LINK, TRIAL_CODE, PUPRIME_LINK }
 /** Os preços dos degraus vivem em `lib/escada-precos.ts` — aqui só se leem. */
 import { escadaEmLinhas, bonusEmLinhas, NOME_DEGRAU_TOPO } from '@/lib/escada-precos'
@@ -162,12 +164,22 @@ async function lerOverrides(): Promise<Record<string, string>> {
 }
 
 /** O texto que vai mesmo sair: o editado, se existir; senão o do código. */
-export async function lerMensagem(chave: string, valores: Record<string, string> = {}): Promise<string> {
+export async function lerMensagem(
+  chave: string,
+  valores: Record<string, string> = {},
+  /**
+   * Quem assina os links desta mensagem. 06/10: nenhum link da máquina sai sem `?ag=` — estas
+   * mensagens são as do bot do Telegram, por isso o AG-FORMACAO por omissão. Os links do site
+   * levam `?ag=`, os deep-links do bot levam a carga `_ag_` (ver lib/agentes/mensagem-saida.ts).
+   */
+  codigo: string = AG.FORMACAO,
+): Promise<string> {
   const def = MENSAGENS.find((m) => m.chave === chave)
   if (!def) return ''
   const overrides = await lerOverrides()
   const bruto = overrides[chave]?.trim() || def.padrao
-  return substituir(bruto, { ...valoresPadrao(), ...valores })
+  const texto = substituir(bruto, { ...valoresPadrao(), ...valores })
+  return prepararMensagem({ canal: 'telegram', texto, codigoExplicito: codigo }).texto
 }
 
 /** Todas as mensagens com o estado de edição, para o painel do admin. */

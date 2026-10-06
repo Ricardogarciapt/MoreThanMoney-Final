@@ -4,6 +4,7 @@ import { CAPTION_INTERNAL_MARK, publicCaption } from '@/lib/instagram/publish'
 import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { marcarConteudo } from '@/lib/agentes/marca-conteudo'
+import { AG } from '@/lib/agentes/codigos'
 
 /**
  * REPOST / AMPLIFICAÇÃO: @ricardogarciapt republica (com VOZ PESSOAL do Ricardo) os posts que
@@ -130,7 +131,9 @@ export async function correrContentRepost(req: NextRequest, deps: DepsContentRep
      * O original sem código (todos os de antes de 01/10) devolve `codigo_invalido`/por atribuir,
      * com o motivo escrito. Não se inventa um dono para o repost.
      */
-    const marca = marcarConteudo({ legenda: personal, codigoExplicito: bp.agente_codigo })
+    // 06/10: o original sem código (anterior a 01/10) deixa de dar um repost por atribuir — sai
+    // assinado pelo AG-SOCIAL, que é quem republica. Um original COM código continua a ganhar.
+    const marca = marcarConteudo({ legenda: personal, codigoExplicito: bp.agente_codigo || AG.SOCIAL })
     const when = new Date(now + (rows.length + 1) * 3 * 3600 * 1000) // escalona +3h cada
     const status = autopilot ? 'approved' : 'draft'
     rows.push({

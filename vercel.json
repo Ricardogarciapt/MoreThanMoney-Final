@@ -237,6 +237,10 @@
       "schedule": "0 8 * * 1"
     },
     {
+      "path": "/api/cron/recuperacao-checkout",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/agentes",
       "schedule": "0 6 * * *"
     },

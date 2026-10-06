@@ -45,6 +45,7 @@
  */
 import { marcarConteudo, type Marcacao, type MotivoSemCodigo } from './marca-conteudo'
 import { normalizar, pareceCodigoDeAgente } from './atribuicao'
+import { AG } from './codigos'
 
 /** Por onde é que a mensagem sai. É o que decide o livro e o que se pode marcar. */
 export type CanalDeSaida = 'telegram' | 'whatsapp' | 'instagram'
@@ -69,7 +70,44 @@ export const AGENTE_POR_FUNIL: Readonly<Record<string, string>> = Object.freeze(
    * `AGENTE_POR_PILAR`. Dar isto a outro agente era partir o mesmo produto em dois donos.
    */
   'telegram:followup': 'AG-SAAS',
+
+  /**
+   * ═══ DESDE 06/10: NENHUM LINK DA MÁQUINA SAI SEM CÓDIGO ═══════════════════════════════════
+   *
+   * A regra anterior («sem dono declarado, sai sem código») deu zero usos de `?ag=` e os sete
+   * agentes «em_risco» por falta de MEDIÇÃO. O dono decidiu: todo o link sai assinado. A herança
+   * continua a ganhar — o `codigoExplicito` (dono do post comentado, código do lead) passa à
+   * frente disto — e estas linhas são só o que vale quando a herança falha.
+   *
+   * A procura é por PREFIXO (ver `agenteDoFunil`): `instagram:funil:copytrading` cai em
+   * `instagram:funil`, que é como os funis por palavra-chave se chamam.
+   */
+  // O bot do Telegram (respostas do closer a quem escreveu) — vendas de formação.
+  'telegram:closer': AG.FORMACAO,
+  'telegram:funil': AG.FORMACAO,
+  // Instagram: o setter e o funil por palavra-chave respondem a um post; sem dono no post, o canal.
+  'instagram:setter': AG.SOCIAL,
+  'instagram:funil': AG.SOCIAL,
+  // A DM a sério, com uma pessoa a responder, é do closer.
+  'instagram:dm-closer': AG.CLOSER,
+  'whatsapp:funil': AG.CLOSER,
+  // Recuperação de checkout por email.
+  'email:recuperacao-checkout': AG.EMAIL,
 })
+
+/**
+ * O dono de um funil, procurado do mais específico para o mais largo: `a:b:c` → `a:b:c`, `a:b`.
+ * Nunca chega a `a` sozinho — um canal inteiro não é um funil, e dar-lhe dono por omissão
+ * escondia funis novos que ainda ninguém decidiu de quem são.
+ */
+export function agenteDoFunil(funil: unknown): string | null {
+  const partes = String(funil ?? '').trim().split(':').filter(Boolean)
+  for (let n = partes.length; n >= 2; n--) {
+    const c = AGENTE_POR_FUNIL[partes.slice(0, n).join(':')]
+    if (c) return normalizar(c)
+  }
+  return null
+}
 
 /** Porque é que uma mensagem saiu sem código. Os três primeiros vêm de `marca-conteudo.ts`. */
 export type MotivoSemCodigoMensagem =
@@ -241,7 +279,7 @@ export function prepararMensagem(p: PedidoDeMarcacao): MensagemPreparada {
   const bruto = typeof p.texto === 'string' ? p.texto : String(p.texto ?? '')
 
   const explicito = p.codigoExplicito != null && String(p.codigoExplicito).trim() !== ''
-  const doFunil = explicito ? null : normalizar(AGENTE_POR_FUNIL[String(p.funil ?? '').trim()] ?? null)
+  const doFunil = explicito ? null : agenteDoFunil(p.funil)
 
   // Sem dono nenhum: não se inventa, e o motivo distingue as duas razões de não haver.
   if (!explicito && !doFunil) {

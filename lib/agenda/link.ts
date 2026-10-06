@@ -20,7 +20,7 @@
  * ambiente para não haver um `localhost` a escapar para dentro de uma campanha.
  */
 
-const RAIZ = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').replace(/\/$/, '')
+import { AG, linkAssinado } from '@/lib/agentes/codigos'
 
 /** Os assuntos, como estão em `agenda_tipos.slug`. Existe para não se escrever o slug à mão. */
 export type AssuntoDaChamada =
@@ -36,9 +36,13 @@ export type AssuntoDaChamada =
  *
  * Um slug que não exista NÃO dá erro: a página mostra a lista, que é o comportamento certo — é
  * melhor a pessoa escolher do que ver uma página de erro por causa de uma letra num email.
+ *
+ * SAI SEMPRE ASSINADO (06/10): marcar uma chamada é trabalho do AG-SETTER, e um link da agenda
+ * sem `?ag=` era uma chamada que nunca se ligava a ninguém. Quem tem um dono mais certo (o post,
+ * o lead que já trazia código) passa-o em `codigo`.
  */
-export function linkAgendar(assunto?: AssuntoDaChamada): string {
-  return assunto ? `${RAIZ}/agendar?t=${assunto}` : `${RAIZ}/agendar`
+export function linkAgendar(assunto?: AssuntoDaChamada, codigo: string = AG.SETTER): string {
+  return linkAssinado(assunto ? `/agendar?t=${assunto}` : '/agendar', codigo)
 }
 
 /** O de onboarding, que é o que substitui o antigo link do Calendly nos emails de boas-vindas. */

@@ -101,14 +101,14 @@ export async function POST(request: NextRequest) {
          * DM a sério, com uma pessoa a responder — era a menos atribuível de todas.
          *
          * Aqui NÃO há post comentado de onde herdar (quem escreve a DM pode nem ter comentado
-         * nada), e não há dono declarado em `AGENTE_POR_FUNIL` para o closer. Por isso a mensagem
-         * sai igual, sem código, e fica escrita como `funil_sem_agente`. É deliberado: dar isto a
-         * um agente qualquer era inventar um número. Quando o dono decidir de quem é a DM do
-         * Instagram, acrescenta-se uma linha a `AGENTE_POR_FUNIL` e passa a medir.
+         * nada). O dono decidiu a 06/10: a DM do Instagram é do AG-CLOSER
+         * (`AGENTE_POR_FUNIL['instagram:dm-closer']`) — nenhum link da máquina sai sem `?ag=`.
          */
         const { prepararMensagem } = await import("@/lib/agentes/mensagem-saida")
         const { registarMensagemDeAgente } = await import("@/lib/agentes/mensagem-livro")
-        const bruta = await generateDmReply(msg.text)
+        // Quem pede para falar recebe o link da agenda na resposta (AG-SETTER, 06/10).
+        const { comLinkDaAgenda } = await import("@/lib/agenda/pedido-de-chamada")
+        const bruta = comLinkDaAgenda(await generateDmReply(msg.text), msg.text)
         const marcacao = prepararMensagem({ canal: "instagram", texto: bruta, funil: "instagram:dm-closer" })
         const reply = marcacao.texto
         const sent = await sendInstagramDmResilient(accountId, senderId, reply)

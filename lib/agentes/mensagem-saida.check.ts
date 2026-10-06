@@ -200,10 +200,35 @@ caso('o ponto final da frase não come a atribuição', () => {
 })
 
 caso('um funil sem dono NÃO cai no CEO', () => {
-  const r = prepararMensagem({ canal: 'instagram', texto: 'morethanmoney.pt/register', funil: 'instagram:setter' })
+  // Desde 06/10 o setter tem dono de reserva (AG-SOCIAL); o caso sem dono passa a ser um funil
+  // que ninguém declarou — esse continua a não ganhar dono por omissão.
+  const r = prepararMensagem({ canal: 'instagram', texto: 'morethanmoney.pt/register', funil: 'instagram:novo-sem-dono' })
   assert.equal(r.codigo, null, 'inventou um dono para um funil que não o tem')
   assert.equal(r.motivo, 'funil_sem_agente')
   assert.ok(!r.texto.includes('?ag='), 'marcou com um código que não existe')
+})
+
+caso('06/10: o setter sem post com dono sai assinado pelo AG-SOCIAL (nenhum link sem ?ag=)', () => {
+  const r = prepararMensagem({
+    canal: 'instagram',
+    texto: 'morethanmoney.pt/register',
+    funil: 'instagram:setter',
+    codigoExplicito: null,
+    herancaFalhou: true,
+  })
+  assert.equal(r.codigo, 'AG-SOCIAL')
+  assert.ok(r.texto.includes('?ag=AG-SOCIAL'), r.texto)
+})
+
+caso('06/10: o funil por palavra-chave acha o dono pelo prefixo', () => {
+  const r = prepararMensagem({ canal: 'instagram', texto: 'morethanmoney.pt/register', funil: 'instagram:funil:copytrading' })
+  assert.equal(r.codigo, 'AG-SOCIAL')
+})
+
+caso('06/10: o bot do Telegram assina com AG-FORMACAO', () => {
+  const r = prepararMensagem({ canal: 'telegram', texto: 'Começa em t.me/MoreThanMoney_aibot?start=lead', funil: 'telegram:closer' })
+  assert.equal(r.codigo, 'AG-FORMACAO')
+  assert.ok(r.texto.includes('start=lead_ag_AG_FORMACAO'), r.texto)
 })
 
 caso('herdar de um post sem dono diz-se por outro nome', () => {

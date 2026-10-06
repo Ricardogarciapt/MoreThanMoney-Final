@@ -992,11 +992,15 @@ export async function POST(request: NextRequest) {
               .eq("chat_id", chatId)
               .maybeSingle()
             const { enviarTelegramPorAgente } = await import("@/lib/agentes/mensagem-livro")
+            // Lead quente que pede para falar → a resposta leva o link da agenda (AG-SETTER).
+            const { comLinkDaAgenda } = await import("@/lib/mtm-sdr-escalation")
             await enviarTelegramPorAgente({
               chatId,
-              texto:
+              texto: comLinkDaAgenda(
                 reply ||
-                "Diz-me só: procuras <b>sinais para copiar à mão</b>, <b>Tap to Trade</b> (1 toque) ou algo <b>automático</b>? 🙂",
+                  "Diz-me só: procuras <b>sinais para copiar à mão</b>, <b>Tap to Trade</b> (1 toque) ou algo <b>automático</b>? 🙂",
+                text,
+              ),
               funil: "telegram:closer",
               codigoExplicito: (leadTg as { agente_codigo?: string | null } | null)?.agente_codigo ?? undefined,
               parseMode: "HTML",

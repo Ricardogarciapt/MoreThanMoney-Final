@@ -2,6 +2,14 @@ import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 /**
+ * O lead quente que PEDE PARA FALAR recebe o link da agenda na própria resposta (06/10) — o aviso
+ * ao Ricardo continua, mas a pessoa deixa de ficar à espera sem nada para fazer. A decisão é pura
+ * e vive em lib/agenda/pedido-de-chamada.ts; reexporta-se aqui porque é aqui que se trata o lead
+ * quente.
+ */
+export { comLinkDaAgenda, pedeParaFalar } from '@/lib/agenda/pedido-de-chamada'
+
+/**
  * Escalada de leads QUENTES para o admin (supervisão da máquina de vendas).
  * Quando o SDR de IA deteta intenção de compra / pedido de falar com humano / depósito feito,
  * avisa o Ricardo no chat de admin do Telegram para ele SALTAR para a conversa. Autónomo, mas
