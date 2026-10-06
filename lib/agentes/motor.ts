@@ -91,7 +91,7 @@ function legivel(v: unknown): boolean {
   return Number.isFinite(n)
 }
 
-const PILARES = new Set(['trading', 'educacao', 'desenvolvimento', 'ceo'])
+const PILARES = new Set(['trading', 'educacao', 'desenvolvimento', 'vendas', 'ceo'])
 const ESTADOS = new Set<EstadoAgente>(['vivo', 'em_risco', 'parado', 'pausado', 'reformado', 'morto'])
 
 /**

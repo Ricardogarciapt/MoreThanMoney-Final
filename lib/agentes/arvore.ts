@@ -73,7 +73,7 @@ export interface Arvore<T extends NoBruto> {
 }
 
 /** A ordem dos pilares no ecrã. O CEO primeiro porque é o topo, não por ordem alfabética. */
-export const ORDEM_PILARES = ['ceo', 'trading', 'educacao', 'desenvolvimento'] as const
+export const ORDEM_PILARES = ['ceo', 'trading', 'educacao', 'desenvolvimento', 'vendas'] as const
 
 function textoDoPilar(p: string | null | undefined): string {
   switch (String(p ?? '')) {
@@ -85,6 +85,8 @@ function textoDoPilar(p: string | null | undefined): string {
       return 'Educação'
     case 'desenvolvimento':
       return 'Desenvolvimento'
+    case 'vendas':
+      return 'Vendas'
     default:
       return 'Sem pilar'
   }

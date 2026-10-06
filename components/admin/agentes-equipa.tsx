@@ -33,7 +33,7 @@ type Agente = {
   id: string
   nome: string
   papel: string | null
-  pilar: "ceo" | "trading" | "educacao" | "desenvolvimento"
+  pilar: "ceo" | "trading" | "educacao" | "desenvolvimento" | "vendas"
   pai_id: string | null
   estado: "vivo" | "em_risco" | "parado" | "pausado" | "reformado"
   pausado: boolean
@@ -90,6 +90,7 @@ const PILARES: Array<{ id: Agente["pilar"]; rotulo: string }> = [
   { id: "trading", rotulo: "Trading" },
   { id: "educacao", rotulo: "Educação" },
   { id: "desenvolvimento", rotulo: "Desenvolvimento" },
+  { id: "vendas", rotulo: "Vendas" },
 ]
 
 const eur = (cents: number) =>

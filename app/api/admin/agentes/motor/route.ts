@@ -7,6 +7,11 @@ import { correrReproducao } from '@/lib/agentes/reproducao'
 import { aplicarDecisaoCeo, correrReversoes, gravarProposta } from '@/lib/agentes/evolucao'
 import { gravarInterruptor, lerInterruptor } from '@/lib/agentes/motor-interruptor'
 import { validarReescrita } from '@/lib/agentes/instrucoes-guarda'
+import {
+  contarHoje, decidirContacto, juntarEvidencia, registarEnvio, TECTOS_PADRAO,
+  type Familia, type PedidoContacto, type Tectos,
+} from '@/lib/agentes/contacto-inicial'
+import type { TipoEnvio } from '@/lib/envios-aprovacao'
 
 /**
  * A PORTA DO MOTOR AUTÓNOMO — o único sítio por onde `aios/motor/orquestrador.py` ESCREVE.
@@ -35,6 +40,8 @@ const ACCOES_DO_MOTOR = [
   'propor_versao',   // um agente propõe instruções novas (a guarda corre aqui)
   'propor_mutacao',  // um pai propõe o ângulo do próximo filho
   'decidir_versao',  // o CEO aceita/rejeita com uma acção do catálogo
+  'contacto',        // 06/10: pode este envio sair SOZINHO? (base legal decidida e REGISTADA aqui)
+  'excluir',         // 06/10: alguém pediu para sair — entra na lista de exclusão global
 ] as const
 
 const TIPOS_DE_EVENTO_DO_MOTOR = new Set(['ciclo', 'trabalho', 'envio', 'motor'])
@@ -192,6 +199,61 @@ export async function POST(request: NextRequest) {
       mutacao: texto,
       mutacao_angulo: angulo,
     })
+    return NextResponse.json({ ok: !error, erro: error?.message })
+  }
+
+  if (acao === 'contacto') {
+    /**
+     * A base legal decide-se AQUI, com evidência lida pelo servidor — o motor e o agente só dizem
+     * o que querem mandar. «Quem iniciou» também se verifica aqui (Telegram: o lead escreveu ao bot;
+     * WhatsApp: mensagem de entrada nas últimas 24 h). Cada decisão fica em agentes_envios.
+     */
+    const { data: ag } = await db.from('agentes_equipa').select('id, estado').eq('id', agenteId).maybeSingle()
+    if (!ag || !['vivo', 'em_risco'].includes(String((ag as { estado: string }).estado))) {
+      return NextResponse.json({ ok: false, erro: 'Agente inexistente ou fora de jogo.' }, { status: 409 })
+    }
+    const p: PedidoContacto = {
+      canal: String(corpo.canal ?? ''),
+      destino: String(corpo.destino ?? ''),
+      texto: String(corpo.texto ?? ''),
+      familiaOferta: (corpo.familia_oferta as Familia) ?? null,
+      tipoResposta: (corpo.tipo_resposta as TipoEnvio) ?? null,
+    }
+    let iniciou = false
+    if (p.tipoResposta && p.canal === 'telegram') {
+      const { data } = await db.from('telegram_leads').select('message_count').eq('chat_id', p.destino).maybeSingle()
+      iniciou = Number((data as { message_count?: number } | null)?.message_count ?? 0) > 0
+    } else if (p.tipoResposta && p.canal === 'whatsapp') {
+      const desde = new Date(Date.now() - 24 * 3_600_000).toISOString()
+      const { data } = await db.from('whatsapp_mensagens').select('id').eq('telefone', p.destino).eq('direcao', 'entrada').gte('criado_em', desde).limit(1)
+      iniciou = (data ?? []).length > 0
+    }
+    const ev = await juntarEvidencia(db, p, { iniciou })
+    const usados = await contarHoje(db, agenteId, String(p.canal).toLowerCase())
+    if (!usados) {
+      // Sem saber quantos já saíram hoje, o tecto não se consegue respeitar: não sai.
+      return NextResponse.json({ ok: true, decisao: { pode: false, base: null, destino: 'fila', porque: 'Não se leu o registo de envios de hoje — o tecto não se pode verificar.' } })
+    }
+    const { data: cfg } = await db.from('site_settings').select('value').eq('key', 'agentes_motor').maybeSingle()
+    const ct = ((cfg?.value ?? {}) as { contacto_tectos?: { por_agente_dia?: number; por_canal_dia?: Tectos['porCanalDia'] } }).contacto_tectos
+    const tectos: Tectos = ct ? { porAgenteDia: Number(ct.por_agente_dia ?? TECTOS_PADRAO.porAgenteDia), porCanalDia: ct.por_canal_dia ?? TECTOS_PADRAO.porCanalDia } : TECTOS_PADRAO
+    const d = decidirContacto(p, ev, usados, tectos)
+    const reg = await registarEnvio(db, agenteId, p, d, ensaio)
+    if (!reg.ok && d.pode) {
+      // Um envio sem registo da base legal não sai: é o registo que o torna defensável.
+      return NextResponse.json({ ok: true, decisao: { ...d, pode: false, destino: 'fila', porque: `Registo da base legal falhou (${reg.erro}) — não sai sem registo.` } })
+    }
+    return NextResponse.json({ ok: true, ensaio, decisao: d })
+  }
+
+  if (acao === 'excluir') {
+    const id = String(corpo.identificador ?? '').trim()
+    if (!id) return NextResponse.json({ ok: false, erro: 'falta o identificador' }, { status: 400 })
+    if (ensaio) return NextResponse.json({ ok: true, ensaio })
+    const { error } = await db.from('contacto_exclusao').upsert(
+      { identificador: id.includes('@') ? id.toLowerCase() : id, canal_origem: String(corpo.canal ?? '') || null, nota: String(corpo.nota ?? '') || null },
+      { onConflict: 'identificador', ignoreDuplicates: true },
+    )
     return NextResponse.json({ ok: !error, erro: error?.message })
   }
 

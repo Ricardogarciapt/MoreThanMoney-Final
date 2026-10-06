@@ -35,7 +35,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
   AlertTriangle, ArrowLeft, Ban, Bot, Copy, Crown, GraduationCap, Loader2, Pause, Play,
-  PauseCircle, PlayCircle, Power, RefreshCw, Terminal, TrendingDown, TrendingUp, Wrench,
+  Handshake, PauseCircle, PlayCircle, Power, RefreshCw, Terminal, TrendingDown, TrendingUp, Wrench,
 } from "lucide-react"
 import { linkDoAgente } from "@/lib/agentes/atribuicao"
 import {
@@ -49,7 +49,7 @@ type Agente = {
   id: string
   nome: string
   papel: string | null
-  pilar: "ceo" | "trading" | "educacao" | "desenvolvimento"
+  pilar: "ceo" | "trading" | "educacao" | "desenvolvimento" | "vendas"
   pai_id: string | null
   estado: "vivo" | "em_risco" | "parado" | "pausado" | "reformado" | "morto"
   pausado: boolean
@@ -161,6 +161,7 @@ const ICONE_PILAR: Record<string, typeof Bot> = {
   trading: TrendingUp,
   educacao: GraduationCap,
   desenvolvimento: Wrench,
+  vendas: Handshake,
 }
 
 const eur = (cents: number) =>

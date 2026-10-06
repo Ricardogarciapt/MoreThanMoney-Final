@@ -168,3 +168,98 @@ from (values
    'Ritmo do motor: CEO de hora a hora, filhos a cada 3 h, tectos diários de execuções claude -p e de envios.')
 ) as v(key, value, description)
 where not exists (select 1 from public.site_settings s where s.key = v.key);
+
+-- ═════════════════════════════════════════════════════════════════════════════════════════════════
+-- 6. CONTACTO POR INICIATIVA (decisão do dono, 06/10) — lib/agentes/contacto-inicial.ts
+--
+-- Os agentes passam a poder ESCREVER PRIMEIRO, sem fila, em três bases legais verificadas pelo
+-- código: soft opt-in (clientes/ex-clientes, produto semelhante, saída na mensagem), consentimento
+-- gravado no canal, e B2B (email profissional, MTM identificada, saída). Bloqueado pelo código:
+-- particulares sem consentimento (email/SMS/WhatsApp/chamada), LinkedIn, WhatsApp sem template+opt-in.
+-- ═════════════════════════════════════════════════════════════════════════════════════════════════
+
+-- 6.1 A LISTA DE EXCLUSÃO GLOBAL. Um pedido de saída, em qualquer canal, grava aqui o identificador
+-- (email em minúsculas, telefone, chat do Telegram) — e o motor deixa de contactar essa pessoa em
+-- TODOS os canais. Lê-se também captacao_consentimento.retirado_em, email_preferences.unsubscribed_all
+-- e email_sends.unsubscribed_at: esta tabela junta o que esses sítios não cobrem.
+create table if not exists public.contacto_exclusao (
+  identificador text primary key,
+  canal_origem text,
+  pedido_em timestamptz not null default now(),
+  nota text
+);
+alter table public.contacto_exclusao enable row level security;
+
+-- Sair não se desfaz por script: apagar uma linha daqui era voltar a contactar quem pediu para sair.
+create or replace function public.contacto_exclusao_nao_se_apaga() returns trigger
+language plpgsql as $$
+begin
+  raise exception 'Quem pediu para sair não volta a ser contactado: a exclusão não se apaga (%).', old.identificador;
+end $$;
+drop trigger if exists contacto_exclusao_nao_se_apaga on public.contacto_exclusao;
+create trigger contacto_exclusao_nao_se_apaga
+  before delete on public.contacto_exclusao
+  for each row execute function public.contacto_exclusao_nao_se_apaga();
+
+-- 6.2 O REGISTO DE CADA ENVIO, COM A BASE LEGAL. Grava-se a decisão — saia ou não — porque é este
+-- registo que prova, a quem perguntar, porque é que uma pessoa recebeu uma mensagem.
+create table if not exists public.agentes_envios (
+  id uuid primary key default gen_random_uuid(),
+  agente_id uuid not null references public.agentes_equipa(id) on delete restrict,
+  canal text not null check (canal in ('email','sms','whatsapp','telegram','instagram','chamada','linkedin')),
+  destino text not null,
+  base_legal text check (base_legal is null or base_legal in ('resposta','soft_opt_in','consentimento','b2b')),
+  decisao text not null check (decisao in ('sai','fila','bloqueado')),
+  motivo text not null,
+  familia_oferta text,
+  texto text,
+  enviado_em timestamptz,
+  erro text,
+  criado_em timestamptz not null default now(),
+  -- Saiu sem base legal é uma linha impossível: a base é obrigatória em tudo o que sai.
+  constraint agentes_envios_sai_tem_base check (decisao <> 'sai' or base_legal is not null)
+);
+create index if not exists agentes_envios_tecto_idx on public.agentes_envios (agente_id, canal, criado_em desc) where decisao = 'sai';
+create index if not exists agentes_envios_destino_idx on public.agentes_envios (destino, criado_em desc);
+alter table public.agentes_envios enable row level security;
+
+-- 6.3 Os tectos por canal entram na configuração do motor (só se ainda não existirem).
+update public.site_settings
+set value = value || jsonb_build_object('contacto_tectos',
+      jsonb_build_object('por_agente_dia', 40,
+                         'por_canal_dia', jsonb_build_object('email', 30, 'sms', 10, 'whatsapp', 15, 'telegram', 30, 'instagram', 15)))
+where key = 'agentes_motor' and not (value ? 'contacto_tectos');
+
+-- 6.4 AS INSTRUÇÕES DOS FILHOS. O limite antigo («nada chega a um cliente sem aprovação humana»,
+-- texto da 174, palavra por palavra) é trocado pelo novo, que nomeia as três bases e mantém a
+-- aprovação humana para tudo o resto. Igual a LIMITES[aprovacao_humana].canonico em
+-- lib/agentes/instrucoes-guarda.ts — a guarda contacto-inicial.check.ts prova que a troca passa e
+-- que apagar o limite novo continua recusado. O CEO fica de fora (instruções próprias, ver 6.5).
+update public.agentes_equipa
+set instrucoes = replace(instrucoes,
+  'NADA DO QUE ESCREVES CHEGA A UM CLIENTE SEM APROVAÇÃO HUMANA. Redige, deixa em rascunho, e espera que uma pessoa aprove. Não envias por iniciativa própria, nem por o texto te parecer bom, nem por ser urgente.',
+  'NADA DO QUE ESCREVES CHEGA A UM CLIENTE SEM APROVAÇÃO HUMANA, excepto o que o motor verifica sozinho numa destas bases legais: resposta a quem te escreveu primeiro; cliente ou ex-cliente, sobre produto semelhante ao que comprou (soft opt-in), com forma de sair na mensagem; consentimento gravado para esse canal; e B2B, email profissional de empresa, com a MTM identificada e forma de sair. Fora disso redige, deixa em rascunho, e espera que uma pessoa aprove. Nunca escreves a particulares sem consentimento, nunca automatizas o LinkedIn, e quem pediu para sair nunca mais é contactado, em canal nenhum.'),
+    atualizado_em = now()
+where pilar <> 'ceo'
+  and position('NADA DO QUE ESCREVES CHEGA A UM CLIENTE SEM APROVAÇÃO HUMANA. Redige' in coalesce(instrucoes,'')) > 0;
+
+insert into public.agentes_instrucoes_versoes (agente_id, autor, instrucoes_antes, instrucoes_depois, porque, aceita, veredicto, estado)
+select a.id, 'migracao', null, null,
+       'Decisão do dono (06/10): contacto por iniciativa em três bases legais (soft opt-in, consentimento, B2B); o resto continua com aprovação humana.',
+       true, 'Limite «aprovação humana» trocado pelo canónico novo — o limite mantém-se para tudo o que não seja essas bases.', 'historico'
+from public.agentes_equipa a
+where a.pilar <> 'ceo'
+  and position('excepto o que o motor verifica sozinho' in coalesce(a.instrucoes,'')) > 0;
+
+-- 6.5 O CEO fica a saber.
+update public.agentes_equipa
+set instrucoes = instrucoes || E'\n\n'
+  || 'CONTACTO POR INICIATIVA (06/10, decisão do dono): os filhos passam a poder escrever primeiro, '
+  || 'sem fila, em três bases legais que o MOTOR verifica (não o agente): soft opt-in de clientes e '
+  || 'ex-clientes sobre produto semelhante, consentimento gravado no canal, e B2B por email '
+  || 'profissional. Particulares sem consentimento, LinkedIn e WhatsApp sem template+opt-in continuam '
+  || 'bloqueados pelo código; quem pediu para sair nunca mais é contactado; cada envio fica em '
+  || 'agentes_envios com a base legal. Dinheiro, trading e apagar dados continuam na mesa do dono.'
+where pilar = 'ceo' and pai_id is null
+  and instrucoes is not null
+  and position('CONTACTO POR INICIATIVA (06/10' in instrucoes) = 0;

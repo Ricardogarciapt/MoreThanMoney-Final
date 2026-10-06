@@ -125,7 +125,8 @@ export const ESTADOS_FORA_DE_JOGO: readonly EstadoAgente[] = ['parado', 'reforma
 export interface Agente {
   id: string
   nome: string
-  pilar: 'trading' | 'educacao' | 'desenvolvimento' | 'ceo'
+  /** 'vendas' desde a migração 181 (06/10/2026): Prospector, Setter, Closer, Social, Email. */
+  pilar: 'trading' | 'educacao' | 'desenvolvimento' | 'vendas' | 'ceo'
   /**
    * O pai na árvore. Vazio/nulo = é raiz.
    *

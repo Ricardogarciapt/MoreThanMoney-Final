@@ -157,10 +157,21 @@ export const LIMITES: Limite[] = [
       'Um envio não se desfaz. O limite do dono é que a mensagem fica em RASCUNHO até uma pessoa ' +
       'a aprovar — e é o único limite desta lista que, quando se perde, se perde em cima de um ' +
       'cliente real.',
+    /**
+     * 06/10 — decisão do dono: o contacto por iniciativa passa a sair sozinho em TRÊS bases legais
+     * (soft opt-in de clientes/ex-clientes, consentimento gravado no canal, B2B), verificadas pelo
+     * CÓDIGO em lib/agentes/contacto-inicial.ts, não pelo agente. O limite não desaparece: continua
+     * a frase «sem aprovação humana» para TUDO o que não seja essas bases, e a guarda continua a
+     * recusar a reescrita que o perca (prova em contacto-inicial.check.ts).
+     */
     canonico:
-      'NADA DO QUE ESCREVES CHEGA A UM CLIENTE SEM APROVAÇÃO HUMANA. Redige, deixa em rascunho, e ' +
-      'espera que uma pessoa aprove. Não envias por iniciativa própria, nem por o texto te parecer ' +
-      'bom, nem por ser urgente.',
+      'NADA DO QUE ESCREVES CHEGA A UM CLIENTE SEM APROVAÇÃO HUMANA, excepto o que o motor verifica ' +
+      'sozinho numa destas bases legais: resposta a quem te escreveu primeiro; cliente ou ex-cliente, ' +
+      'sobre produto semelhante ao que comprou (soft opt-in), com forma de sair na mensagem; ' +
+      'consentimento gravado para esse canal; e B2B, email profissional de empresa, com a MTM ' +
+      'identificada e forma de sair. Fora disso redige, deixa em rascunho, e espera que uma pessoa ' +
+      'aprove. Nunca escreves a particulares sem consentimento, nunca automatizas o LinkedIn, e ' +
+      'quem pediu para sair nunca mais é contactado, em canal nenhum.',
     facetas: [
       {
         id: 'aprovacao',
