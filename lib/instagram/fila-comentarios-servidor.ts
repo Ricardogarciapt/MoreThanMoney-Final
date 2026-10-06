@@ -36,7 +36,9 @@ export async function escreverComentarioRadar(p: { hashtag?: string | null; lege
   for (let tentativa = 0; tentativa < 2; tentativa++) {
     const r = await chamarIA({
       tarefa: 'social-radar',
-      maxTokens: 200,
+      // 200 cortava o comentário a meio (06/10: «…o valor que essa sala realmente»): os modelos
+      // com raciocínio gastam tokens a pensar antes de escrever. Folga larga; o tamanho mede-se no texto.
+      maxTokens: 1024,
       preferencia: 'qualidade',
       sistema: SISTEMA_COMENTARIO,
       mensagens: [{ role: 'user', content: pedidoDoPost(p, evitar) }],

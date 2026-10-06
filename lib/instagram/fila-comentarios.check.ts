@@ -309,4 +309,10 @@ caso('a taxa de resposta diz que não se mede quando não há ligação', () => 
   assert.equal(taxaDeResposta(8, 2, true), 25)
 })
 
+// 06/10: o comentário vinha cortado pelo limite de tokens. Um texto que acaba a meio é recusado.
+{
+  const cortado = avaliarComentario('Só quem já passou por essas noites a pensar sozinho é que sabe o valor que essa sala realmente')
+  if (cortado.ok || !cortado.problemas.some((p) => p.startsWith('cortado'))) throw new Error('comentário cortado a meio passou')
+  if (!avaliarComentario('Só quem já passou por essas noites sabe o valor que essa sala tem.').ok) throw new Error('frase completa recusada')
+}
 console.log(`\n${passou} guardas passaram.`)

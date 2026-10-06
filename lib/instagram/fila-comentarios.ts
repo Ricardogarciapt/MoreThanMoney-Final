@@ -104,6 +104,9 @@ export function avaliarComentario(texto: string): Avaliacao {
   if (!t) problemas.push('vazio')
   if (t.length < 8) problemas.push('curto demais')
   if (t.length > 400) problemas.push('longo demais')
+  // Um comentário cortado pelo limite de tokens acaba a meio de uma frase. Tem de terminar em
+  // pontuação final, reticências ou emoji — senão volta à IA e, à segunda, não entra.
+  if (t && !/([.!?…»”)\]]|\p{Extended_Pictographic}|\uFE0F)$/u.test(t)) problemas.push('cortado a meio (não termina a frase)')
   if (temLink(t)) problemas.push('tem link')
   if (/(^|\s)#[\p{L}\d_]+/u.test(t)) problemas.push('tem hashtag')
   if (/(^|\s)@[a-z0-9._]+/i.test(t)) problemas.push('marca alguém')
