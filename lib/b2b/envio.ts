@@ -167,7 +167,7 @@ function textoParaHtml(texto: string): string {
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   return esc(texto)
     .split(/\n{2,}/)
-    .map((par) => `<p style="margin:0 0 14px">${par.replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>')}</p>`)
+    .map((par) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#e9e9ee">${par.replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#D2A63C">$1</a>')}</p>`)
     .join('\n')
 }
 
@@ -213,7 +213,8 @@ export async function correrLote(db: Db, opts: { ensaio?: boolean; limiteExtra?:
   const exclusao = await carregarExclusao(db, prontos.map((p) => p.email))
   const segredo = segredoSaida()
   let enviadosHoje = cont.hoje
-  const { createMailTransporter, mailFrom } = await import('@/lib/mail-transport')
+  const { createMailTransporter, mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } = await import('@/lib/mail-transport')
+  const { mtmEmailShell } = await import('@/lib/activation-emails')
   const transporte = ensaio ? null : createMailTransporter()
 
   for (const p of prontos) {
@@ -250,7 +251,9 @@ export async function correrLote(db: Db, opts: { ensaio?: boolean; limiteExtra?:
         to: p.email,
         subject: d.assunto!,
         text: d.texto!,
-        html: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222">${textoParaHtml(d.texto!)}</div>`,
+        // Branding da casa (ouro sobre carvão, logo): o mesmo invólucro dos emails de serviço.
+        html: prepareBrandedEmailHtml(mtmEmailShell(textoParaHtml(d.texto!))),
+        attachments: brandedMailAttachments(),
         headers: linkSair ? { 'List-Unsubscribe': `<${linkSair}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } : undefined,
       })
       const agora = new Date().toISOString()
