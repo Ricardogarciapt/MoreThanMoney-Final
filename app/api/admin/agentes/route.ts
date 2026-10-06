@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { JANELA_HORAS, julgar } from '@/lib/agentes/vida'
-import { acaoManual, montarAgente, somarJanela, type EventoLido, type LinhaAgente } from '@/lib/agentes/motor'
+import { JANELA_HORAS, julgar, lerRegrasVida } from '@/lib/agentes/vida'
+import { acaoManual, montarAgente, somarJanela, ultimaReceita, type EventoLido, type LinhaAgente } from '@/lib/agentes/motor'
+import { gravarInterruptor, lerInterruptor } from '@/lib/agentes/motor-interruptor'
 import { atribuirEGravar } from '@/lib/agentes/receita'
 import {
   decidirInterruptor,
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   const { data: linhas, error } = await db
     .from('agentes_equipa')
     .select(
-      'id, nome, papel, pilar, pai_id, estado, pausado, instrucoes, orcamento, gasto, receita, chave_receita, avaliado_em, parado_em, parado_porque, criado_em',
+      'id, nome, papel, pilar, pai_id, estado, pausado, instrucoes, orcamento, gasto, receita, chave_receita, avaliado_em, parado_em, parado_porque, morto_em, causa_morte, mutacao, criado_em',
     )
     .order('pilar', { ascending: true })
     .order('criado_em', { ascending: true })
@@ -53,6 +54,19 @@ export async function GET(request: NextRequest) {
     .in('tipo', ['receita', 'gastou'])
   const somas = somarJanela((eventos ?? []) as EventoLido[], agora)
 
+  /**
+   * 06/10: a régua é «48 h seguidas sem receita» — precisa da hora da ÚLTIMA receita de cada um
+   * (de sempre, não só da janela) e das regras configuradas (`regra_desde`, graça). Sem isto o
+   * painel julgava pela régua antiga e mostrava «morre» a quem o cron mantém vivo.
+   */
+  const [{ data: receitasSempre }, { data: cfgVida }, interruptor] = await Promise.all([
+    db.from('agentes_eventos').select('agente_id, tipo, valor, criado_em').eq('tipo', 'receita').order('criado_em', { ascending: false }).limit(5000),
+    db.from('site_settings').select('value').eq('key', 'agentes_vida').maybeSingle(),
+    lerInterruptor(db),
+  ])
+  const ultimas = ultimaReceita((receitasSempre ?? []) as EventoLido[], agora)
+  const regras = lerRegrasVida(cfgVida?.value)
+
   // As últimas linhas do livro, para o painel poder mostrar o historial sem uma segunda chamada.
   const { data: ultimos } = await db
     .from('agentes_eventos')
@@ -61,7 +75,7 @@ export async function GET(request: NextRequest) {
     .limit(120)
 
   const agentes = equipa.map((l) => {
-    const montado = montarAgente(l, somas.get(String(l.id)))
+    const montado = montarAgente(l, somas.get(String(l.id)), ultimas.get(String(l.id)) ?? null)
     const juizo = montado.ilegivel.length
       ? {
           decisao: 'espera' as const,
@@ -69,7 +83,7 @@ export async function GET(request: NextRequest) {
           resultado: 0,
           porque: `Não julgado: campos ilegíveis na base (${montado.ilegivel.join(', ')}).`,
         }
-      : julgar(montado.agente, agora)
+      : julgar(montado.agente, agora, regras)
 
     return {
       id: montado.agente.id,
@@ -93,6 +107,9 @@ export async function GET(request: NextRequest) {
       avaliado_em: l.avaliado_em ?? null,
       parado_em: l.parado_em ?? null,
       parado_porque: l.parado_porque ?? null,
+      morto_em: l.morto_em ?? null,
+      causa_morte: l.causa_morte ?? null,
+      ultima_receita_em: montado.agente.ultima_receita_em ?? null,
       /** O motivo escrito do juízo, que é o que o dono tem de poder ler. */
       juizo: { decisao: juizo.decisao, porque: juizo.porque },
       ilegivel: montado.ilegivel,
@@ -137,7 +154,10 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    janelaHoras: JANELA_HORAS,
+    janelaHoras: regras.janelaHoras ?? JANELA_HORAS,
+    gracaHoras: regras.gracaHoras,
+    /** O interruptor geral do motor autónomo — o MESMO que o painel do AIOS e o Telegram mexem. */
+    motor: interruptor,
     agentes,
     eventos: ultimos ?? [],
     receita: {
@@ -163,11 +183,33 @@ export async function POST(request: NextRequest) {
   if (negado) return negado
 
   const body = (await request.json().catch(() => ({}))) as {
-    acao?: 'pausar' | 'retomar' | 'parar'
-    /** `equipa` = o interruptor dos sete de uma vez. Sem isto, mexe-se num agente só. */
-    alvo?: 'agente' | 'equipa'
+    acao?: 'pausar' | 'retomar' | 'parar' | 'ligar' | 'desligar'
+    /**
+     * `equipa` = o interruptor dos sete de uma vez. `motor` (06/10) = o interruptor geral do motor
+     * autónomo. Sem nenhum, mexe-se num agente só.
+     */
+    alvo?: 'agente' | 'equipa' | 'motor'
     id?: string
     porque?: string
+  }
+
+  /**
+   * O INTERRUPTOR GERAL DO MOTOR (06/10). Escreve `site_settings.agentes_motor_ligado` — a MESMA
+   * chave que o painel do AIOS e o comando «para os agentes» no Telegram escrevem. Um sítio só,
+   * para os três nunca discordarem.
+   */
+  if (body.alvo === 'motor') {
+    if (body.acao !== 'ligar' && body.acao !== 'desligar') {
+      return NextResponse.json({ ok: false, erro: 'O motor liga ou desliga.' }, { status: 400 })
+    }
+    const db = getSupabaseAdmin()
+    const r = await gravarInterruptor(db, body.acao === 'ligar', 'painel', String(body.porque ?? ''))
+    return NextResponse.json(
+      r.ok
+        ? { ok: true, porque: body.acao === 'ligar' ? 'Motor ligado: os agentes vivos voltam a acordar no próximo minuto do orquestrador.' : 'Motor desligado: nenhum agente acorda até o voltares a ligar.' }
+        : { ok: false, erro: r.erro },
+      { status: r.ok ? 200 : 500 },
+    )
   }
 
   const acao = body.acao
@@ -189,7 +231,18 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       )
     }
-    return await interruptorDaEquipa(acao, String(body.porque ?? ''))
+    /**
+     * Ligado ao interruptor geral (pedido do dono, 06/10): pausar a equipa DESLIGA o motor, retomar
+     * LIGA-o. Desligar primeiro: se a pausa falhar a meio, o motor já não acorda ninguém.
+     */
+    const dbMotor = getSupabaseAdmin()
+    const m = await gravarInterruptor(dbMotor, acao === 'retomar', 'painel', `interruptor da equipa: ${acao}`)
+    const resposta = await interruptorDaEquipa(acao, String(body.porque ?? ''))
+    if (!m.ok) {
+      const j = await resposta.json()
+      return NextResponse.json({ ...j, ok: false, erro: `Equipa: ${j.porque ?? ''} — mas o interruptor do motor NÃO foi gravado (${m.erro}).` }, { status: 500 })
+    }
+    return resposta
   }
 
   const id = String(body.id ?? '').trim()

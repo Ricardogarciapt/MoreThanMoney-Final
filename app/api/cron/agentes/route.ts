@@ -7,6 +7,8 @@ import { correrCicloCeo } from '@/lib/agentes/ciclo-ceo'
 import { reporLimitesEmFalta } from '@/lib/agentes/educacao'
 import { correrDesbloqueio } from '@/lib/agentes/desbloqueio'
 import { correrTrader, registarDecisoesNoLivro } from '@/lib/agentes/trader'
+import { correrReproducao } from '@/lib/agentes/reproducao'
+import { correrReversoes } from '@/lib/agentes/evolucao'
 
 /**
  * A PASSAGEM DIÁRIA DA EQUIPA DE AGENTES — mede a receita, e depois julga.
@@ -34,7 +36,12 @@ import { correrTrader, registarDecisoesNoLivro } from '@/lib/agentes/trader'
  *    ver as contas sem acrescentar pedidos à tabela;
  *  · `?trader=0` deixa o agente trader de fora desta chamada. Ele passou a correr em TODAS as
  *    passagens — ver a nota abaixo, porque a mudança tem de ser justificada;
- *  · `?desbloqueio=0` e `?limites=0` desligam as duas passagens novas.
+ *  · `?desbloqueio=0` e `?limites=0` desligam as duas passagens novas;
+ *  · `?so=vida` (06/10) corre SÓ receita → juízo (morte arquivada) → reversões de versões →
+ *    reprodução. É o que o motor autónomo do Mac (`aios/motor/orquestrador.py`) chama de hora a
+ *    hora: a régua das 48 h com um cron diário às 06:00 deixava um agente viver até 72 h sem
+ *    receita, e os nascimentos esperavam um dia inteiro. O ciclo do CEO, o trader e o desbloqueio
+ *    continuam só na passagem diária — não precisam de correr 24 vezes.
  *
  * ═══ O TRADER PASSOU A CORRER SEMPRE — E PORQUÊ ════════════════════════════════════════════
  *
@@ -86,6 +93,31 @@ export async function GET(request: NextRequest) {
     }
 
     const avaliacao = await correrAvaliacao(db, { ensaio, agora })
+
+    /**
+     * ── A VIDA DA EQUIPA: VERSÕES E NASCIMENTOS (06/10) ──
+     *
+     * DEPOIS do juízo, e a ordem conta: um agente que morreu nesta passagem já não se reproduz, e
+     * os tectos de vivos contam com as mortes de agora. As reversões vêm antes da reprodução porque
+     * um pai cuja versão foi revertida volta às instruções de antes — e é dessas que o filho herda.
+     */
+    const ceoId = await idDoCeo(db)
+    const reversoes = params.get('reversoes') === '0' ? null : await correrReversoes(db, { ensaio, agora })
+    const reproducao = params.get('reproducao') === '0' ? null : await correrReproducao(db, { ensaio, agora, ceoId })
+
+    if (params.get('so') === 'vida') {
+      return NextResponse.json({
+        ok: avaliacao.ok && (reproducao?.ok ?? true) && (reversoes?.ok ?? true),
+        ensaio,
+        so: 'vida',
+        avaliacao: { avaliados: avaliacao.avaliados, mortos: avaliacao.mortos, avisados: avaliacao.avisados, escritas: avaliacao.escritas },
+        reversoes,
+        reproducao: reproducao
+          ? { resumo: reproducao.plano.resumo, nascidos: reproducao.nascidos, nascimentos: reproducao.plano.nascimentos.map((n) => ({ nome: n.nome, codigo: n.codigo, pai: n.paiNome, mutacao: n.mutacao })), bloqueios: reproducao.plano.bloqueios }
+          : null,
+        erros: [...receita.erros, ...avaliacao.erros, ...(reproducao?.erros ?? []), ...(reversoes?.erros ?? [])],
+      })
+    }
 
     /**
      * ── E AGORA O CEO AGE: LÊ A EQUIPA JULGADA E PEDE ALGO A QUEM NÃO SE PAGA ──
@@ -141,7 +173,7 @@ export async function GET(request: NextRequest) {
      * Corre DEPOIS do ciclo, porque precisa do id do CEO para assinar os escalonamentos — e porque
      * um bloqueio escalado é informação para o dono, não para o ciclo.
      */
-    const ceoDaEquipa = ciclo ? await idDoCeo(db) : null
+    const ceoDaEquipa = ciclo ? ceoId : null
     const desbloqueio =
       params.get('desbloqueio') === '0' ? null : await correrDesbloqueio(db, { ensaio, ceoId: ceoDaEquipa })
 
@@ -159,6 +191,7 @@ export async function GET(request: NextRequest) {
       },
       avaliacao: {
         avaliados: avaliacao.avaliados,
+        mortos: avaliacao.mortos,
         parados: avaliacao.parados,
         avisados: avaliacao.avisados,
         ignorados: avaliacao.ignorados,
@@ -178,6 +211,10 @@ export async function GET(request: NextRequest) {
           }
         : { resumo: 'Ciclo do CEO desligado nesta chamada (?ciclo=0).' },
       trader,
+      reversoes,
+      reproducao: reproducao
+        ? { resumo: reproducao.plano.resumo, nascidos: reproducao.nascidos, bloqueios: reproducao.plano.bloqueios }
+        : null,
       /**
        * As duas passagens novas saem na resposta com o resumo, e não só com um contador: «0 limites
        * repostos» e «não correu» têm o mesmo número e significados opostos.
@@ -199,6 +236,8 @@ export async function GET(request: NextRequest) {
         ...(ciclo?.erros ?? []),
         ...(limites?.erros ?? []),
         ...(desbloqueio?.erros ?? []),
+        ...(reproducao?.erros ?? []),
+        ...(reversoes?.erros ?? []),
       ],
     })
   } catch (err) {
