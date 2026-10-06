@@ -97,7 +97,8 @@ export const NOME_DO_AGENTE: Record<AgenteDeVendas, string> = {
 /** As etapas da bolsa que cada agente vê no seu retrato. */
 export const ETAPAS_DO_AGENTE: Record<AgenteDeVendas, readonly EstadoPipeline[]> = {
   'AG-PROSPECTOR': ['lead'],
-  'AG-SETTER': ['contactado', 'qualificado'],
+  // 06/10 (dono): o Setter também qualifica directamente os leads — os 107 abertos estavam todos em «lead».
+  'AG-SETTER': ['lead', 'contactado', 'qualificado'],
   'AG-CLOSER': ['marcado', 'no_show', 'apresentado'],
   'AG-EMAIL': ['lead', 'contactado', 'qualificado', 'no_show'],
   'AG-SOCIAL': ['lead', 'contactado'],
