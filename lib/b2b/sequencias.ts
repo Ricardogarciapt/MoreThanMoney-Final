@@ -71,7 +71,7 @@ export interface Identificacao {
 export function identificacaoDoAmbiente(): Identificacao {
   return {
     assinante: String(process.env.B2B_ASSINANTE || 'Ricardo Garcia').trim(),
-    linhaLegal: String(process.env.B2B_IDENTIFICACAO || 'More Than Money (MTM) · Portugal · www.morethanmoney.pt').trim(),
+    linhaLegal: String(process.env.B2B_IDENTIFICACAO || 'MoreThanMoney - Ricardo Garcia · NIF 241991439 · Portugal · www.morethanmoney.pt').trim(),
   }
 }
 
