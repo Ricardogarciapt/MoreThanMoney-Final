@@ -185,6 +185,10 @@
       "schedule": "*/30 9-16 * * *"
     },
     {
+      "path": "/api/cron/fila-comentarios",
+      "schedule": "15,45 9-16 * * *"
+    },
+    {
       "path": "/api/cron/funis",
       "schedule": "* * * * *"
     },

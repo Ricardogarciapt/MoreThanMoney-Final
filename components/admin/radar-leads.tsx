@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Loader2, RefreshCw, ExternalLink, Radar } from "lucide-react"
+import { FilaComentarios } from "./fila-comentarios"
 
 /**
  * O radar: as conversas do nicho por onde vale a pena entrar hoje.
@@ -59,6 +60,10 @@ export function RadarLeads() {
 
   return (
     <div className="space-y-3">
+      {/* Modo «Fila»: os comentários que o Prospector já deixou prontos. Vem primeiro porque é
+          onde o tempo do dono rende mais — colar e publicar, sem escolher nem escrever. */}
+      <FilaComentarios onMudou={() => void buscar()} />
+
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-100">
