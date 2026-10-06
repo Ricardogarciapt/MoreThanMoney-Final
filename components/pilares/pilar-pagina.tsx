@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowRight, ArrowUpRight, PlayCircle } from 'lucide-react'
 import type { AreaMontada, Pilar } from '@/lib/pilares'
 import { PERCURSO_ORGANIZADO } from '@/lib/pilares'
+import QueroQueMeLiguem from '@/components/captacao/quero-que-me-liguem'
 
 /**
  * A PÁGINA DE UM PILAR — o mesmo desenho para o MTM Markets e para o Content & Business.
@@ -147,6 +148,12 @@ export default function PilarPagina({
           </div>
         </div>
       </section>
+
+      <QueroQueMeLiguem
+        origem={`pilar:${pilar.id}`}
+        interesseInicial="formacao"
+        subtitulo={`Queres saber por onde começar no ${pilar.nome}? Deixa o teu número e uma pessoa da equipa fala contigo.`}
+      />
 
       <section className="border-t border-white/5 px-6 py-14">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4">

@@ -29,6 +29,7 @@ import {
   tipoDoKind,
   transicaoValida,
   type KindEnvio,
+  type PayloadContactoImediato,
   type PayloadEmailRecuperacao,
   type PayloadFollowupTelegram,
 } from '@/lib/envios-aprovacao'
@@ -65,6 +66,46 @@ export async function criarEnvioPorAprovar(n: NovoEnvio): Promise<{ criado: bool
   // 23505 = a chave única apanhou uma corrida entre dois crons. Não é erro: já existe.
   if (error && (error as { code?: string }).code === '23505') return { criado: false }
   return error ? { criado: false, erro: error.message } : { criado: true }
+}
+
+/**
+ * A tarefa de contacto IMEDIATO de quem pediu «Quero que me liguem» (site, bot, Meta Lead Ads).
+ *
+ * Nasce já `aprovado` quando a regra do motor (lib/agentes/contacto-inicial.ts) autoriza o canal
+ * pelo consentimento gravado — é a «saída autorizada», e o setter liga/escreve sem esperar.
+ * Senão nasce `pendente` e espera a decisão do dono, como os outros envios. A `chave` é o id do
+ * pedido: o mesmo pedido nunca dá duas tarefas.
+ */
+export async function criarTarefaContactoImediato(n: {
+  chave: string
+  titulo: string
+  detalhes: string
+  payload: PayloadContactoImediato
+}): Promise<{ id: string | null; estado: 'aprovado' | 'pendente' | null; erro?: string }> {
+  const db = getSupabaseAdmin()
+  const estado = n.payload.saida_autorizada ? 'aprovado' : 'pendente'
+  const agora = new Date().toISOString()
+  const { data, error } = await db
+    .from('aios_tasks')
+    .insert({
+      title: n.titulo,
+      details: n.detalhes,
+      kind: KIND_ENVIO.CONTACTO_IMEDIATO,
+      status: estado,
+      priority: 'alta',
+      chave: n.chave,
+      payload: n.payload,
+      created_by: 'maquina',
+      ...(estado === 'aprovado' ? { decidido_por: 'regra:consentimento', decidido_em: agora } : {}),
+    })
+    .select('id')
+    .maybeSingle()
+  if (error && (error as { code?: string }).code === '23505') {
+    const { data: ja } = await db.from('aios_tasks').select('id, status').eq('chave', n.chave).maybeSingle()
+    return { id: (ja as { id?: string } | null)?.id ?? null, estado: ((ja as { status?: string } | null)?.status as 'aprovado' | 'pendente') ?? null }
+  }
+  if (error) return { id: null, estado: null, erro: error.message }
+  return { id: (data as { id?: string } | null)?.id ?? null, estado }
 }
 
 export interface ResultadoDecisao {
@@ -204,6 +245,11 @@ export async function enviarEnvioAprovado(id: string): Promise<{ ok: boolean; es
     } catch (e) {
       return fechar('falhou', e instanceof Error ? e.message.slice(0, 300) : 'erro no envio')
     }
+  }
+
+  if (t.kind === KIND_ENVIO.CONTACTO_IMEDIATO) {
+    // Uma chamada não «sai» por código: aprovada, fica autorizada e é o setter que a faz.
+    return { ok: true, estado: 'aprovado' }
   }
 
   return { ok: false, estado: t.status, erro: 'kind sem envio' }

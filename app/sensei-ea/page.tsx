@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import QueroQueMeLiguem from "@/components/captacao/quero-que-me-liguem"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -369,6 +370,8 @@ export default function SenseiEaPage() {
           futuros. Nada nesta página é aconselhamento de investimento.
         </p>
       </section>
+
+      <QueroQueMeLiguem origem="produto:/sensei-ea" interesseInicial="ea_sensei" titulo="Queres ajuda a instalar a EA Sensei?" />
     </div>
   )
 }

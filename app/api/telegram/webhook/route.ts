@@ -746,6 +746,24 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // /ligar — «Quero que me liguem»: manda o link do formulário (06/10). O consentimento dá-se
+      // lá, caixa a caixa; o bot não o regista por si (escrever ao bot não é aceitar uma chamada).
+      else if (text === "/ligar" || text === "/liguem" || text === "/chamada") {
+        const { linkLigar } = await import("@/lib/pedido-contacto")
+        const { AG } = await import("@/lib/agentes/codigos")
+        const link = linkLigar(
+          (process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt").replace(/\/$/, ""),
+          AG.FORMACAO,
+          "telegram:bot",
+        )
+        await sendMessage(
+          "📞 <b>Queres que te liguemos?</b>\n\n" +
+          "Deixa o teu número e escolhe como preferes ser contactado (chamada, WhatsApp ou email). " +
+          "Só usamos os canais que marcares, e sais quando quiseres.\n\n" +
+          `▶️ <a href='${link}'>Pedir contacto</a>`
+        )
+      }
+
       // /ajuda
       else if (text === "/ajuda" || text === "/help" || text === "/comandos") {
         const { ehChatDeAdmin } = await import("@/lib/telegram-admin-menu")
@@ -765,6 +783,7 @@ export async function POST(request: NextRequest) {
           "/grupos — Grupos de sinais 💬\n" +
           "/premium — Packs e preços 👑\n" +
           "/corretora — Abrir conta (PU Prime) 🏦\n" +
+          "/ligar — Pedir que te liguemos 📞\n" +
           "/status — Estado da tua ligação\n" +
           // O painel só se anuncia a quem o pode abrir. Anunciá-lo a toda a gente era convidar
           // estranhos a escrever /admin — que era precisamente como se tomava o painel.

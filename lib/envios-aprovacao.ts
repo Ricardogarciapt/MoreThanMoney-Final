@@ -32,6 +32,12 @@ export type TipoEnvio =
   | 'followup_bot'
   /** Email de recuperação de um checkout abandonado. */
   | 'email_recuperacao'
+  /**
+   * Contacto imediato a quem pediu «Quero que me liguem» (06/10). Sai sozinho só quando a regra do
+   * motor (lib/agentes/contacto-inicial.ts) o autoriza pelo consentimento gravado; senão espera
+   * aprovação como os outros.
+   */
+  | 'contacto_por_consentimento'
 
 /** Os tipos que a pessoa iniciou. Tudo o resto é iniciativa da máquina e precisa de aprovação. */
 const INICIADO_PELO_UTILIZADOR: ReadonlySet<TipoEnvio> = new Set<TipoEnvio>([
@@ -109,6 +115,8 @@ export function transicaoValida(de: string | null | undefined, para: 'aprovado' 
 export const KIND_ENVIO = {
   FOLLOWUP_TELEGRAM: 'envio:telegram_followup',
   EMAIL_RECUPERACAO: 'envio:email_recuperacao_checkout',
+  /** «Quero que me liguem» / Meta Lead Ads → tarefa do setter (lib/pedido-contacto-registo.ts). */
+  CONTACTO_IMEDIATO: 'envio:contacto_imediato',
 } as const
 export type KindEnvio = (typeof KIND_ENVIO)[keyof typeof KIND_ENVIO]
 
@@ -117,6 +125,7 @@ export function ehKindDeEnvio(kind: unknown): kind is KindEnvio {
 }
 
 export function tipoDoKind(kind: KindEnvio): TipoEnvio {
+  if (kind === KIND_ENVIO.CONTACTO_IMEDIATO) return 'contacto_por_consentimento'
   return kind === KIND_ENVIO.FOLLOWUP_TELEGRAM ? 'followup_bot' : 'email_recuperacao'
 }
 
@@ -148,4 +157,24 @@ export interface PayloadEmailRecuperacao {
 export function followupAindaValido(p: { countNaCriacao: number; countAgora: number | null; convertido: boolean }): boolean {
   if (p.convertido) return false
   return Number(p.countAgora ?? 0) === Number(p.countNaCriacao)
+}
+
+/** O que vai no `payload` da tarefa de contacto imediato. */
+export interface PayloadContactoImediato {
+  pedido_contacto_id: string
+  agente: string
+  nome: string
+  telefone: string | null
+  email: string | null
+  interesse: string
+  melhor_hora: string
+  canais: string[]
+  canal_inicial: string | null
+  texto: string
+  origem: string | null
+  ag: string | null
+  fonte: 'site' | 'meta_lead_ads' | 'telegram'
+  /** A decisão do motor no momento em que a tarefa nasceu, por canal. */
+  decisoes: Record<string, { destino: string; base: string | null; porque: string }>
+  saida_autorizada: boolean
 }

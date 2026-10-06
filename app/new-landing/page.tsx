@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import NewLandingPage from "@/components/new-landing-page-v2"
+import QueroQueMeLiguem from "@/components/captacao/quero-que-me-liguem"
 
 export const metadata: Metadata = {
   title: "MoreThanMoney — formação, sinais e execução no mesmo sítio",
@@ -26,5 +27,10 @@ export const metadata: Metadata = {
  * secção da página e não como janela por cima dela.
  */
 export default async function NewLanding() {
-  return <NewLandingPage />
+  return (
+    <>
+      <NewLandingPage />
+      <QueroQueMeLiguem origem="pagina:/new-landing" />
+    </>
+  )
 }

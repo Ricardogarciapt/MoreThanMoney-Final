@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import QueroQueMeLiguem from '@/components/captacao/quero-que-me-liguem'
 import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { RegrasDeNegociacao, type RegrasNegociacao } from '@/components/mtmfunded/regras-negociacao'
@@ -403,6 +404,8 @@ export default async function MtmFundedPage() {
           </Link>
         </div>
       </section>
+
+      <QueroQueMeLiguem origem="produto:/mtmfunded" interesseInicial="mtm_funded" titulo="Dúvidas sobre o MTM Funded?" />
     </main>
   )
 }

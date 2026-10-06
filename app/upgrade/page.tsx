@@ -14,6 +14,7 @@
 import { NOME_DEGRAU_TOPO, PRECO_TOPO, TOPO_ANUAL_EUR, TOPO_PLAN_ID } from '@/lib/escada-precos'
 import { getStripePriceId } from '@/lib/stripe-prices'
 import UpgradeClient, { type OfertaTopo } from './upgrade-client'
+import QueroQueMeLiguem from '@/components/captacao/quero-que-me-liguem'
 
 // A variável do preço vive na Vercel (Production e Preview), não no `.env.local`. Lida no
 // build, o ambiente local dizia que faltava e a coluna nascia escondida em produção. Lida a
@@ -51,5 +52,14 @@ export default function UpgradePage() {
     )
   }
 
-  return <UpgradeClient topo={topo} />
+  return (
+    <>
+      <UpgradeClient topo={topo} />
+      <QueroQueMeLiguem
+        origem="pagina:/upgrade"
+        titulo="Preferes falar antes de escolher?"
+        subtitulo="Diz-nos o que procuras e ligamos-te para ajudar a escolher o pack certo. Sem compromisso."
+      />
+    </>
+  )
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
+import QueroQueMeLiguem from "@/components/captacao/quero-que-me-liguem"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { comTecto, ehCompilacao, TECTO_PAGINA_MS } from "@/lib/com-tecto"
 
@@ -477,6 +478,8 @@ export default async function MtmAutoPage() {
           </div>
         </div>
       </section>
+
+      <QueroQueMeLiguem origem="produto:/mtmauto" interesseInicial="sinais_copy" titulo="Queres que te ajudemos a ligar a conta?" />
     </main>
   )
 }
