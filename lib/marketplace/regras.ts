@@ -40,7 +40,7 @@ import { contaAtivaUi, ehAdminUi, podeAcederAoTier, type PerfilUi } from '@/lib/
 
 export type TipoProduto =
   | 'curso' | 'mentoria' | 'masterclass' | 'ea' | 'servico' | 'personalizavel'
-  | 'merchandise' | 'aplicacao' | 'subscricao' | 'ebook' | 'comunidade' | 'outro'
+  | 'merchandise' | 'produto' | 'aplicacao' | 'subscricao' | 'ebook' | 'comunidade' | 'outro'
 
 export const CATEGORIAS: {
   id: TipoProduto
@@ -57,6 +57,9 @@ export const CATEGORIAS: {
   { id: 'servico', nome: 'Serviços' },
   { id: 'personalizavel', nome: 'Personalizáveis' },
   { id: 'merchandise', nome: 'Merchandise', requerMorada: true },
+  // 06/10: produtos físicos de terceiros vendidos na loja deles (ex.: Solana Seeker). O checkout é
+  // externo, por isso a morada pede-a quem vende — aqui não.
+  { id: 'produto', nome: 'Produtos' },
   { id: 'aplicacao', nome: 'Aplicações' },
   { id: 'subscricao', nome: 'Subscrições', recorrente: true },
   { id: 'ebook', nome: 'Ebook' },
