@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { Loader2, ArrowLeft, Tag, Clock, ExternalLink } from "lucide-react"
-import { euros, galeriaDoProduto, lojaExternaDe, nomeDoAutor } from "@/lib/marketplace/regras"
+import { euros, galeriaDoProduto, lojaExternaDe, nomeDoAutor, precoAntesDaLoja } from "@/lib/marketplace/regras"
 import { codigoDeAgenteGuardado } from "@/lib/agentes/atribuicao-browser"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
 import { CaixaConsentimentoEmail } from "@/components/consentimento-email-caixa"
@@ -47,6 +47,11 @@ type Produto = {
   jaComprou: boolean; podeComprar: boolean; motivoSemCompra: string | null
   preco: Preco
   checkout_externo_url?: string | null
+  /** 193 — ex.: «Tech Crypto», dentro de «Produtos». */
+  subcategoria?: string | null
+  preco_cents: number
+  /** 193 — o «antes» da loja oficial quando ela está em promoção (lido pelo cron). */
+  preco_base_cents?: number | null
 }
 
 
@@ -210,7 +215,10 @@ export default function FichaProduto({ slug }: { slug: string }) {
           )}
 
           <div>
-            <span className="text-xs uppercase tracking-wide text-[#D2A63C]">{p.categoria}</span>
+            <span className="text-xs uppercase tracking-wide text-[#D2A63C]">
+              {p.categoria}
+              {p.subcategoria ? ` · ${p.subcategoria}` : ""}
+            </span>
             <h1 className="mt-1 text-2xl font-semibold text-zinc-100">{p.titulo}</h1>
             {p.subtitulo && <p className="mt-1 text-zinc-400">{p.subtitulo}</p>}
             {/* O nome do vendedor passa por `nomeDoAutor` e não lê o educador directamente: há
@@ -237,6 +245,16 @@ export default function FichaProduto({ slug }: { slug: string }) {
         {/* ── A caixa de compra ────────────────────────────────────────────────────────── */}
         <aside className="h-fit space-y-4 rounded-xl border border-zinc-800 bg-black/40 p-4 lg:sticky lg:top-4">
           <div>
+            {/* Produto de terceiros em promoção na loja oficial: o «antes» é o que a loja mostra
+                riscado (lido pelo cron), não uma campanha nossa. */}
+            {!p.preco.emCampanha && precoAntesDaLoja(p) && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-zinc-500 line-through">{euros(precoAntesDaLoja(p), p.preco.moeda)}</span>
+                <span className="rounded bg-[#D2A63C]/15 px-1.5 py-0.5 text-[11px] font-medium text-[#D2A63C]">
+                  −{Math.round((1 - p.preco_cents / (precoAntesDaLoja(p) as number)) * 100)}% na loja oficial
+                </span>
+              </div>
+            )}
             {p.preco.emCampanha && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-zinc-500 line-through">{euros(p.preco.baseCents, p.preco.moeda)}</span>

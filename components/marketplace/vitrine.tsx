@@ -43,7 +43,7 @@ import Image from "next/image"
 import { lojaExternaDe } from "@/lib/marketplace/regras"
 import Link from "next/link"
 import { Loader2, Lock, ShoppingBag, ExternalLink, Search, Store, X } from "lucide-react"
-import { euros, procuraCasa, type Vendedor } from "@/lib/marketplace/regras"
+import { euros, precoAntesDaLoja, procuraCasa, type Vendedor } from "@/lib/marketplace/regras"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
 
 type Autor = { id: string; display_name: string; avatar_url: string | null; specialty: string | null }
@@ -63,6 +63,10 @@ type Produto = {
   imagem_url: string | null
   preco_cents: number
   moeda: string
+  /** 193 — ex.: «Tech Crypto», dentro de «Produtos». */
+  subcategoria?: string | null
+  /** 193 — o «antes» da loja oficial em promoção (lido pelo cron). */
+  preco_base_cents?: number | null
   recorrente: boolean
   /** De quanto em quanto tempo se cobra (157). É ela que escreve «/mês» ou «/ano». */
   periodicidade: string
@@ -117,6 +121,8 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
   const [aComprar, setAComprar] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [categoria, setCategoria] = useState<string | null>(null)
+  // 193 — o filtro de segundo nível, só dentro de «Produtos».
+  const [subcategoria, setSubcategoria] = useState<string | null>(null)
   const [todasCategorias, setTodasCategorias] = useState(false)
   const [termo, setTermo] = useState("")
 
@@ -170,9 +176,26 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
     [produtos],
   )
 
+  // As subcategorias da categoria escolhida (hoje só «Produtos» as tem). Saem dos produtos que
+  // existem, como as categorias: um filtro sem nada lá dentro é um beco.
+  const subcategorias = useMemo(() => {
+    if (!categoria) return []
+    const conta = new Map<string, number>()
+    for (const p of produtos ?? []) {
+      if (p.tipo === categoria && p.subcategoria) conta.set(p.subcategoria, (conta.get(p.subcategoria) ?? 0) + 1)
+    }
+    return Array.from(conta.entries())
+  }, [produtos, categoria])
+
   const visiveis = useMemo(
-    () => (produtos ?? []).filter((p) => (!categoria || p.tipo === categoria) && procuraCasa(p, termo)),
-    [produtos, categoria, termo],
+    () =>
+      (produtos ?? []).filter(
+        (p) =>
+          (!categoria || p.tipo === categoria) &&
+          (!subcategoria || p.subcategoria === subcategoria) &&
+          procuraCasa(p, termo),
+      ),
+    [produtos, categoria, subcategoria, termo],
   )
 
   /**
@@ -371,11 +394,11 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
 
             {categorias.length > 1 && (
               <div className="flex flex-wrap gap-1.5">
-                <Pilula activa={categoria === null} onClick={() => setCategoria(null)}>
+                <Pilula activa={categoria === null} onClick={() => { setCategoria(null); setSubcategoria(null) }}>
                   Tudo ({produtos.length})
                 </Pilula>
                 {categoriasVisiveis.map(([tipo, nome]) => (
-                  <Pilula key={tipo} activa={categoria === tipo} onClick={() => setCategoria(tipo)}>
+                  <Pilula key={tipo} activa={categoria === tipo} onClick={() => { setCategoria(tipo); setSubcategoria(null) }}>
                     {nome} ({produtos.filter((x) => x.tipo === tipo).length})
                   </Pilula>
                 ))}
@@ -390,6 +413,19 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
                 )}
               </div>
             )}
+
+            {subcategorias.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 border-l border-[#D2A63C]/30 pl-3">
+                <Pilula activa={subcategoria === null} onClick={() => setSubcategoria(null)}>
+                  Todos
+                </Pilula>
+                {subcategorias.map(([nome, n]) => (
+                  <Pilula key={nome} activa={subcategoria === nome} onClick={() => setSubcategoria(nome)}>
+                    {nome} ({n})
+                  </Pilula>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* ── A montra ─────────────────────────────────────────────────────────────── */}
@@ -402,7 +438,7 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
                 <p className="text-sm text-zinc-400">Nada encontrado para o que procuraste.</p>
                 <button
                   type="button"
-                  onClick={() => { setTermo(""); setCategoria(null) }}
+                  onClick={() => { setTermo(""); setCategoria(null); setSubcategoria(null) }}
                   className="mt-2 text-xs text-[#D2A63C] hover:underline"
                 >
                   Ver tudo outra vez
@@ -547,7 +583,10 @@ function Cartao({
           {p.vendedor.ehACasa && <Store size={11} className="text-[#D2A63C]/70" />}
         </Link>
 
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#D2A63C]">{p.categoria}</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#D2A63C]">
+          {p.categoria}
+          {p.subcategoria ? ` · ${p.subcategoria}` : ""}
+        </span>
         <Link href={`/marketplace/${p.slug}`}>
           <h3 className="mt-1 font-medium leading-snug text-zinc-100 group-hover:text-[#eccb78]">{p.titulo}</h3>
         </Link>
@@ -560,11 +599,15 @@ function Cartao({
               "Grátis"
             ) : (
               <>
-                {p.preco.emCampanha && (
+                {p.preco.emCampanha ? (
                   <span className="mr-1.5 text-xs font-normal text-zinc-500 line-through">
                     {euros(p.preco.baseCents, p.preco.moeda)}
                   </span>
-                )}
+                ) : precoAntesDaLoja(p) ? (
+                  <span className="mr-1.5 text-xs font-normal text-zinc-500 line-through">
+                    {euros(precoAntesDaLoja(p), p.preco.moeda)}
+                  </span>
+                ) : null}
                 {euros(p.preco.cents, p.preco.moeda)}
                 {/* O PERÍODO CERTO, e não «/mês» nem «subscrição».
                     Visto com os olhos a 29/09: o cartão do «Membro · anual» dizia «336,00 €/mês» e

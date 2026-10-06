@@ -983,3 +983,18 @@ export function lojaExternaDe(p: { tipo: string; checkout_externo_url?: string |
   const u = p.checkout_externo_url ?? ''
   return p.tipo === 'produto' && /^https:\/\//.test(u) ? u : null
 }
+
+/**
+ * SUBCATEGORIAS dentro de «Produtos» (193). A coluna é texto livre na base de dados (até 40
+ * caracteres); esta é a lista que o site oferece e a que a montra usa para o filtro.
+ */
+export const SUBCATEGORIAS_PRODUTO: readonly string[] = ['Tech Crypto']
+
+/**
+ * O «antes» de um produto de terceiros em promoção na loja oficial (`preco_base_cents`, lido pelo
+ * cron). Só conta se for MAIOR do que o preço actual — senão não há promoção para mostrar.
+ */
+export function precoAntesDaLoja(p: { tipo: string; preco_cents: number; preco_base_cents?: number | null }): number | null {
+  const base = Math.round(Number(p.preco_base_cents ?? 0) || 0)
+  return p.tipo === 'produto' && base > Math.round(Number(p.preco_cents) || 0) ? base : null
+}
