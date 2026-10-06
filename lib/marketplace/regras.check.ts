@@ -467,7 +467,8 @@ sim('título vazio dá slug vazio e não rebenta', slugDoTitulo('') === '')
 
   // A lista da fonte e o `check` do SQL têm de dizer o mesmo. Se discordarem, o formulário oferece
   // uma categoria que a base de dados recusa — e o educador vê «erro» sem saber porquê.
-  const SQL153 = readFileSync(join(RAIZ, 'supabase/migrations/153_marketplace_catalogo_campanhas_leads.sql'), 'utf8')
+  // O check vive na migração mais recente que o redefine (192 acrescentou 'produto').
+  const SQL153 = readFileSync(join(RAIZ, 'supabase/migrations/192_marketplace_categoria_produtos.sql'), 'utf8')
   for (const c of CATEGORIAS) {
     sim(`o SQL aceita a categoria ${c.id}`, new RegExp(`'${c.id}'`).test(SQL153))
   }

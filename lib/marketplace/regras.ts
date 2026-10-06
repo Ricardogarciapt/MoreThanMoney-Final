@@ -973,3 +973,13 @@ export function slugDoTitulo(titulo: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 60)
 }
+
+/**
+ * Produto físico de TERCEIROS (categoria «Produtos», ex.: Solana Seeker): a compra, o envio e a
+ * garantia são da loja oficial. Não se pede email, cupão nem conta — mandar criar conta na MTM para
+ * comprar o telemóvel de outra marca era só fricção. O botão é um link directo para a loja.
+ */
+export function lojaExternaDe(p: { tipo: string; checkout_externo_url?: string | null }): string | null {
+  const u = p.checkout_externo_url ?? ''
+  return p.tipo === 'produto' && /^https:\/\//.test(u) ? u : null
+}

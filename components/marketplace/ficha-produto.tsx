@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { Loader2, ArrowLeft, Tag, Clock, ExternalLink } from "lucide-react"
-import { euros, galeriaDoProduto, nomeDoAutor } from "@/lib/marketplace/regras"
+import { euros, galeriaDoProduto, lojaExternaDe, nomeDoAutor } from "@/lib/marketplace/regras"
 import { codigoDeAgenteGuardado } from "@/lib/agentes/atribuicao-browser"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
 import { CaixaConsentimentoEmail } from "@/components/consentimento-email-caixa"
@@ -46,7 +46,9 @@ type Produto = {
   dono?: string | null
   jaComprou: boolean; podeComprar: boolean; motivoSemCompra: string | null
   preco: Preco
+  checkout_externo_url?: string | null
 }
+
 
 /**
  * O que se diz a quem não pode comprar.
@@ -263,6 +265,21 @@ export default function FichaProduto({ slug }: { slug: string }) {
             >
               <ExternalLink size={14} /> Abrir na minha biblioteca
             </Link>
+          ) : p.podeComprar && lojaExternaDe(p) ? (
+            <>
+              <a
+                href={lojaExternaDe(p) as string}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#D2A63C] px-4 py-2.5 text-sm font-semibold text-black hover:bg-[#BB8525]"
+              >
+                <ExternalLink size={15} /> Comprar na loja oficial
+              </a>
+              <p className="text-[11px] leading-relaxed text-zinc-500">
+                A compra, o envio e a garantia são feitos na loja oficial do fabricante. O preço
+                indicado é de referência; o que conta é o da loja no momento da compra.
+              </p>
+            </>
           ) : p.podeComprar ? (
             <>
               {/* ── SEM SESSÃO: O EMAIL, E MAIS NADA ─────────────────────────────────────────

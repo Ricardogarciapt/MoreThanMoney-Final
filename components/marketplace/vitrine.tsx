@@ -40,6 +40,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Image from "next/image"
+import { lojaExternaDe } from "@/lib/marketplace/regras"
 import Link from "next/link"
 import { Loader2, Lock, ShoppingBag, ExternalLink, Search, Store, X } from "lucide-react"
 import { euros, procuraCasa, type Vendedor } from "@/lib/marketplace/regras"
@@ -136,6 +137,10 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
   useEffect(() => { void ler() }, [ler])
 
   const comprar = useCallback(async (produtoId: string) => {
+    // Produto de terceiros (categoria «Produtos»): vai directo à loja oficial, sem conta nem checkout nosso.
+    const daLista = (produtos ?? []).find((x) => x.id === produtoId) as { tipo: string; checkout_externo_url?: string | null } | undefined
+    const loja = daLista ? lojaExternaDe(daLista) : null
+    if (loja) { window.open(loja, "_blank", "noopener,noreferrer"); return }
     setAComprar(produtoId)
     setAviso(null)
     try {
@@ -158,7 +163,7 @@ export function Vitrine({ compacto = false }: { compacto?: boolean }) {
     } finally {
       setAComprar(null)
     }
-  }, [])
+  }, [produtos])
 
   const categorias = useMemo(
     () => Array.from(new Map((produtos ?? []).map((p) => [p.tipo, p.categoria])).entries()),
