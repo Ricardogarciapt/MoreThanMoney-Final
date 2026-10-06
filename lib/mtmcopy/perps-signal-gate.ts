@@ -147,7 +147,16 @@ export function naWatchlistAurum(ticker: string | null | undefined): boolean {
 export async function evaluatePerpsSignalGate(
   symbol: string,
   direction: "buy" | "sell",
-  opts?: { entry?: number | null; sl?: number | null; timeframe?: string | null },
+  opts?: {
+    entry?: number | null
+    sl?: number | null
+    timeframe?: string | null
+    /**
+     * A linha DESTE alerta. O webhook grava o sinal antes de chamar o gate; sem a excluir, o
+     * cooldown contava o próprio alerta e bloqueava TODAS as entradas de perps (06/10, XRPUSDT).
+     */
+    excluirId?: string | null
+  },
 ): Promise<PerpsGateResult> {
   const norm = normPerpSymbol(symbol)
 
@@ -179,13 +188,15 @@ export async function evaluatePerpsSignalGate(
     if (effectiveCooldown > 0) {
       try {
         const sinceIso = new Date(Date.now() - effectiveCooldown * 60000).toISOString()
-        const { count } = await getSupabaseAdmin()
+        let q = getSupabaseAdmin()
           .from("tradingview_signals")
           .select("id", { count: "exact", head: true })
           .eq("signal_kind", "entry")
           .ilike("ticker", `%${norm}%`)
           .not("trade_status", "in", '("filtered","discarded")')
           .gte("received_at", sinceIso)
+        if (opts?.excluirId) q = q.neq("id", opts.excluirId)
+        const { count } = await q
         if ((count ?? 0) > 0) {
           return { allow: false, reason: `cooldown ${effectiveCooldown}min (${norm}, TF ${opts?.timeframe ?? '?'}) — 1 entrada/vela` }
         }

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse, after } from "next/server"
 import { encaminharSinalParaMestre } from "@/lib/mestres/servidor/sinal-mestre"
 import { estrategiasPublicadasPelaMestre } from "@/lib/mestres/servidor/canais-publicados"
 import { publicarEntradaDaMestre } from "@/lib/mestres/servidor/publicar"
@@ -411,7 +411,46 @@ async function pushSignalSubscribers(
   return targets.length
 }
 
+/**
+ * A TradingView desiste ao fim de ~3 s («Webhook delivery failed — request took too long and timed
+ * out», 06/10 XRPUSDT). O processamento todo — gate, análise, chat, push, Telegram, mestres, execução —
+ * leva mais do que isso. Por isso: valida-se o segredo, responde-se JÁ, e o alerta é processado em
+ * `after()`, na mesma invocação, depois da resposta. `?sincrono=1` mantém o caminho antigo (testes).
+ */
 export async function POST(request: NextRequest) {
+  const rawBody = await request.text()
+  const url = new URL(request.url)
+  const copia = new NextRequest(request.url, { method: "POST", headers: request.headers, body: rawBody })
+  if (url.searchParams.get("sincrono") === "1") return processarAlerta(copia)
+
+  if (!segredoTradingViewValido(url, rawBody)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  }
+  after(async () => {
+    try {
+      await processarAlerta(copia)
+    } catch (e) {
+      console.error("[tv-webhook] falhou o processamento em segundo plano:", e)
+    }
+  })
+  return NextResponse.json({ ok: true, aceite: true })
+}
+
+/** A mesma regra de segredo do processamento (env rotacionável + legado opcional). */
+function segredoTradingViewValido(url: URL, rawBody: string): boolean {
+  const envSecrets = (process.env.TRADINGVIEW_WEBHOOK_SECRET || "").split(",").map((s) => s.trim()).filter(Boolean)
+  const allowLegacy = process.env.TRADINGVIEW_ALLOW_LEGACY_SECRET !== "false"
+  const validos = new Set<string>([...envSecrets, ...(allowLegacy ? ["mtm-tv-sensei-2026"] : [])])
+  let p: Json = {}
+  try { p = JSON.parse(rawBody) } catch { p = {} }
+  const dado =
+    url.searchParams.get("secret") ??
+    (typeof p.secret === "string" ? p.secret : null) ??
+    (typeof p.passphrase === "string" ? p.passphrase : null)
+  return !!dado && validos.has(dado)
+}
+
+async function processarAlerta(request: NextRequest) {
   // Secrets válidos: os de TRADINGVIEW_WEBHOOK_SECRET (vários, separados por vírgula) — a via
   // preferida e ROTACIONÁVEL. O secret LEGADO "mtm-tv-sensei-2026" (hardcoded histórico) continua
   // aceite POR DEFEITO para não partir os alertas atuais, MAS pode ser desligado com
@@ -1171,7 +1210,7 @@ export async function POST(request: NextRequest) {
   // e sobe o winrate para ~52%. Aplica-se ao que PUBLICA no chat E ao que executa na Bybit.
   let perpsGate: { allow: boolean; reason: string } = { allow: true, reason: "" }
   if (perpsRequested && !isFollowup && execSymbolForGate && (execDirForGate === "buy" || execDirForGate === "sell")) {
-    perpsGate = await evaluatePerpsSignalGate(execSymbolForGate, execDirForGate, { entry: entry ?? price, sl, timeframe })
+    perpsGate = await evaluatePerpsSignalGate(execSymbolForGate, execDirForGate, { entry: entry ?? price, sl, timeframe, excluirId: logId ?? null })
     if (!perpsGate.allow && logId) {
       await supabase
         .from("tradingview_signals")
