@@ -36,7 +36,9 @@ import {
   periodicidadeParaGravar,
   sufixoDoPeriodo,
   sugestaoDaCategoria,
+  SUBCATEGORIAS_PRODUTO,
 } from "@/lib/marketplace/regras"
+import { slugDoGrupo, temPeriodicidade } from "@/lib/marketplace/grupos"
 import CupoesEducador from "@/components/marketplace/cupoes-educador"
 
 type Produto = {
@@ -49,6 +51,9 @@ type Produto = {
   campanha_pct: number | null; campanha_inicio: string | null; campanha_fim: string | null
   campanha_tier: string | null
   motivo_recusa: string | null; publicado_em: string | null
+  /** 193/195/196 — subcategoria e variantes agrupadas. */
+  subcategoria?: string | null; grupo?: string | null; variante_nome?: string | null
+  variante_ordem?: number | null; grupo_subtitulo?: string | null
   desempenho: { vendas: number; aReceberCents: number }
 }
 
@@ -100,6 +105,16 @@ const VAZIO = {
    * "" = ainda não escolheu · "casa" = produto da MTM · um uuid = o educador.
    */
   dono_escolhido: "",
+  // ── 193/195/196: a arrumação na loja ──
+  subcategoria: "",
+  /** O slug do grupo escolhido; "" = sem grupo. */
+  grupo: "",
+  /** true = a escrever um grupo NOVO (o slug sai de `grupo_novo`). */
+  grupo_criar: false,
+  grupo_novo: "",
+  variante_nome: "",
+  variante_ordem: 0,
+  grupo_subtitulo: "",
 }
 
 /** `datetime-local` quer `YYYY-MM-DDTHH:mm`; a base de dados devolve ISO com segundos e fuso. */
@@ -154,9 +169,17 @@ export default function GestorProdutos() {
       // A editar não se escolhe dono: o campo nem aparece. Fica o que o produto já tem, para o
       // estado do formulário não ter buracos.
       dono_escolhido: p.dono === "casa" ? "casa" : (p.educator_id ?? ""),
+      subcategoria: p.subcategoria ?? "",
+      grupo: p.grupo ?? "", grupo_criar: false, grupo_novo: "",
+      variante_nome: p.variante_nome ?? "", variante_ordem: Number(p.variante_ordem ?? 0),
+      // A frase é do GRUPO: se esta linha ainda não a tem, mostra a das irmãs — senão gravar esta
+      // variante com o campo vazio apagava a frase do grupo inteiro.
+      grupo_subtitulo: p.grupo_subtitulo
+        ?? (p.grupo ? dados?.produtos.find((x) => x.grupo === p.grupo && x.grupo_subtitulo)?.grupo_subtitulo : null)
+        ?? "",
     })
     setAEditar(true)
-  }, [])
+  }, [dados])
 
   const gravar = useCallback(async (accao?: "publicar" | "retirar") => {
     setAGravar(true); setErro(null); setNota(null)
@@ -182,6 +205,16 @@ export default function GestorProdutos() {
         if (form.dono_escolhido === "casa") corpo.dono = "casa"
         else if (form.dono_escolhido) corpo.educator_id = form.dono_escolhido
       }
+      // As variantes e a subcategoria só se editam num produto que já existe. O servidor decide
+      // quem pode o quê (`camposPermitidos` + `podeAgrupar`); aqui só não se manda o que não se vê.
+      if (form.id) {
+        const grupo = form.grupo_criar ? slugDoGrupo(form.grupo_novo) : (form.grupo || null)
+        corpo.grupo = grupo
+        corpo.variante_nome = grupo ? form.variante_nome.trim() || null : null
+        corpo.variante_ordem = Math.max(0, Math.round(Number(form.variante_ordem) || 0))
+        corpo.grupo_subtitulo = grupo ? form.grupo_subtitulo.trim() || null : null
+        if (podeVer("subcategoria")) corpo.subcategoria = form.subcategoria.trim() || null
+      }
       if (accao) corpo.accao = accao
 
       const r = form.id
@@ -199,7 +232,7 @@ export default function GestorProdutos() {
     } finally {
       setAGravar(false)
     }
-  }, [form, dados?.papel, ler])
+  }, [form, dados?.papel, ler, podeVer])
 
   const accaoSimples = useCallback(async (id: string, accao: "publicar" | "retirar") => {
     setErro(null); setNota(null)
@@ -310,6 +343,38 @@ export default function GestorProdutos() {
   }, [form])
 
   const totais = useMemo(() => dados?.extracto ?? { vendas: 0, brutoCents: 0, aReceberCents: 0 }, [dados])
+
+  /**
+   * Os grupos que ESTE produto pode escolher: os do mesmo dono (a casa, ou o mesmo educador). O
+   * servidor recusa os outros de qualquer maneira (`podeAgrupar`); mostrá-los era oferecer um erro.
+   */
+  const gruposDisponiveis = useMemo(() => {
+    const lista = dados?.produtos ?? []
+    const actual = lista.find((x) => x.id === form.id)
+    if (!actual) return []
+    const donoDe = (x: Produto) => (x.dono === "casa" ? "casa" : `edu:${x.educator_id ?? ""}`)
+    const meu = donoDe(actual)
+    const por = new Map<string, { slug: string; n: number; nomes: string[]; frase: string | null }>()
+    const alheios = new Set<string>()
+    for (const x of lista) {
+      if (!x.grupo) continue
+      if (donoDe(x) !== meu) { alheios.add(x.grupo); continue }
+      const g = por.get(x.grupo) ?? { slug: x.grupo, n: 0, nomes: [], frase: null }
+      g.n += 1
+      if (x.variante_nome) g.nomes.push(x.variante_nome)
+      g.frase = g.frase ?? x.grupo_subtitulo ?? null
+      por.set(x.grupo, g)
+    }
+    // Um grupo com linhas de outro dono não é escolhível (o servidor recusava).
+    return Array.from(por.values()).filter((g) => !alheios.has(g.slug)).sort((a, b) => a.slug.localeCompare(b.slug))
+  }, [dados, form.id])
+
+  /** As subcategorias já usadas + as que o site oferece (`SUBCATEGORIAS_PRODUTO`). */
+  const subcategoriasSugeridas = useMemo(() => {
+    const s = new Set<string>(SUBCATEGORIAS_PRODUTO)
+    for (const x of dados?.produtos ?? []) if (x.subcategoria) s.add(x.subcategoria)
+    return Array.from(s).sort((a, b) => a.localeCompare(b, "pt"))
+  }, [dados])
 
   if (erro && !dados) {
     return <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">{erro}</div>
@@ -798,6 +863,123 @@ export default function GestorProdutos() {
               )}
             </p>
           </fieldset>
+
+          {/* ── Arrumação na loja: subcategoria e variantes agrupadas (193/195/196) ────────── */}
+          {form.id ? (
+            <fieldset className="rounded-xl border border-zinc-800 p-4">
+              <legend className="px-1 text-xs text-zinc-400">Arrumação na loja</legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {podeVer("subcategoria") && (
+                  <label className="block sm:col-span-2">
+                    <span className="text-xs text-zinc-400">Subcategoria</span>
+                    <input
+                      list="mtm-subcategorias"
+                      value={form.subcategoria}
+                      maxLength={40}
+                      onChange={(e) => setForm({ ...form, subcategoria: e.target.value })}
+                      placeholder="Ex.: Tech Crypto — vazio = sem subcategoria"
+                      className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                    />
+                    <datalist id="mtm-subcategorias">
+                      {subcategoriasSugeridas.map((x) => <option key={x} value={x} />)}
+                    </datalist>
+                    <span className="mt-1 block text-[11px] text-zinc-500">O filtro de segundo nível da montra, dentro da categoria.</span>
+                  </label>
+                )}
+
+                <label className="block">
+                  <span className="text-xs text-zinc-400">Grupo de variantes</span>
+                  <select
+                    value={form.grupo_criar ? "__novo__" : form.grupo}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      if (v === "__novo__") { setForm({ ...form, grupo_criar: true }); return }
+                      const g = gruposDisponiveis.find((x) => x.slug === v)
+                      setForm({
+                        ...form, grupo_criar: false, grupo: v,
+                        grupo_subtitulo: form.grupo_subtitulo || g?.frase || "",
+                      })
+                    }}
+                    className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                  >
+                    <option value="">— Sem grupo (cartão próprio) —</option>
+                    {form.grupo && !gruposDisponiveis.some((g) => g.slug === form.grupo) && (
+                      <option value={form.grupo}>{form.grupo}</option>
+                    )}
+                    {gruposDisponiveis.map((g) => (
+                      <option key={g.slug} value={g.slug}>
+                        {g.slug} · {g.n} {g.n === 1 ? "variante" : "variantes"}{g.nomes.length ? ` (${g.nomes.join(", ")})` : ""}
+                      </option>
+                    ))}
+                    <option value="__novo__">+ Criar grupo novo…</option>
+                  </select>
+                  {form.grupo_criar && (
+                    <>
+                      <input
+                        value={form.grupo_novo}
+                        onChange={(e) => setForm({ ...form, grupo_novo: e.target.value })}
+                        placeholder="Nome do grupo, ex.: Pack de Scanners"
+                        className="mt-2 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                      />
+                      <span className="mt-1 block text-[11px] text-zinc-500">
+                        Fica gravado como <code className="text-[#D2A63C]">{slugDoGrupo(form.grupo_novo) ?? "—"}</code>.
+                      </span>
+                    </>
+                  )}
+                  <span className="mt-1 block text-[11px] text-zinc-500">
+                    Variantes do mesmo grupo viram um cartão com «desde» na montra. Só com produtos do mesmo vendedor.
+                  </span>
+                </label>
+
+                {(form.grupo || form.grupo_criar) && (
+                  <>
+                    <div className="grid grid-cols-[1fr_5.5rem] gap-2">
+                      <label className="block">
+                        <span className="text-xs text-zinc-400">Nome da opção</span>
+                        <input
+                          value={form.variante_nome}
+                          maxLength={40}
+                          onChange={(e) => setForm({ ...form, variante_nome: e.target.value })}
+                          placeholder="Mensal, Anual, Vitalício…"
+                          className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs text-zinc-400">Ordem</span>
+                        <input
+                          type="number" min={0} max={999}
+                          value={form.variante_ordem}
+                          onChange={(e) => setForm({ ...form, variante_ordem: Number(e.target.value) })}
+                          className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                        />
+                      </label>
+                      <span className="col-span-2 block text-[11px] text-zinc-500">
+                        A ordem mais baixa é a principal: dá o título, a capa e o lugar do cartão.
+                      </span>
+                    </div>
+
+                    <label className="block sm:col-span-2">
+                      <span className="text-xs text-zinc-400">Subtítulo do grupo</span>
+                      <input
+                        value={form.grupo_subtitulo}
+                        maxLength={120}
+                        onChange={(e) => setForm({ ...form, grupo_subtitulo: e.target.value })}
+                        placeholder="A frase do cartão, válida para todas as opções"
+                        className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                      />
+                      <span className={`mt-1 block text-[11px] ${temPeriodicidade(form.grupo_subtitulo) ? "text-amber-300" : "text-zinc-500"}`}>
+                        {temPeriodicidade(form.grupo_subtitulo)
+                          ? "Sem período (mês, ano, vitalício…): esta frase aparece ao lado de «desde» e vale para todas as opções."
+                          : "Aplica-se a todas as variantes do grupo. Vazio = a montra usa uma frase neutra."}
+                      </span>
+                    </label>
+                  </>
+                )}
+              </div>
+            </fieldset>
+          ) : (
+            <p className="text-[11px] text-zinc-500">Grava o produto primeiro para o pôr num grupo de variantes.</p>
+          )}
 
           {ehAdmin && podeVer("partilha_pct") && (
             <p className="text-[11px] text-zinc-500">

@@ -108,6 +108,14 @@ export type ProdutoGerido = {
   campanha_stripe_coupon_id: string | null
   motivo_recusa: string | null
   publicado_em: string | null
+  /** 193 — ex.: «Tech Crypto». Só o admin escreve (ver CAMPOS_SO_DO_ADMIN). */
+  subcategoria: string | null
+  /** 195 — o grupo de variantes (slug) e a opção que esta linha é dentro dele. */
+  grupo: string | null
+  variante_nome: string | null
+  variante_ordem: number
+  /** 196 — a frase do cartão do grupo; igual em todas as variantes do grupo. */
+  grupo_subtitulo: string | null
   created_at: string
   updated_at: string
 }
@@ -116,7 +124,8 @@ export const COLUNAS_GESTAO =
   'id, educator_id, dono, slug, titulo, subtitulo, descricao, tipo, imagem_url, imagens, preco_cents, moeda, ' +
   'recorrente, periodicidade, requer_morada, conteudo_url, conteudo_nota, estado, activo, partilha_pct, ' +
   'stripe_product_id, stripe_price_id, checkout_externo_url, vendedor_nome, campanha_pct, campanha_inicio, ' +
-  'campanha_fim, campanha_tier, campanha_stripe_coupon_id, motivo_recusa, publicado_em, created_at, updated_at'
+  'campanha_fim, campanha_tier, campanha_stripe_coupon_id, motivo_recusa, publicado_em, created_at, updated_at, ' +
+  'subcategoria, grupo, variante_nome, variante_ordem, grupo_subtitulo'
 
 /**
  * Esta pessoa pode mexer NESTE produto? — a função pura, para se poder testar o caso mau.
@@ -222,12 +231,51 @@ export const CAMPOS_DO_EDUCADOR = [
   // A campanha é marketing do produto dele, e o dono pediu que ambos a pudessem mexer. O intervalo
   // (0–90) está preso no `check` da coluna, por isso não há aqui nada que ele possa exagerar.
   'campanha_pct', 'campanha_inicio', 'campanha_fim', 'campanha_tier',
+  // As variantes agrupadas (195/196). O educador agrupa os produtos DELE — e só com os dele: a rota
+  // pergunta a `podeAgrupar` antes de gravar, com os membros reais do grupo lidos da base. Num
+  // produto da casa nem lá chega, porque `podeGerir` já o recusou.
+  'grupo', 'variante_nome', 'variante_ordem', 'grupo_subtitulo',
 ] as const
 
 export const CAMPOS_SO_DO_ADMIN = [
   'partilha_pct', 'dono', 'activo', 'checkout_externo_url', 'apple_product_id', 'vendedor_nome',
+  // A subcategoria é a arrumação da LOJA (o filtro de segundo nível da montra), não do produto: um
+  // educador a inventar subcategorias enchia o filtro de becos com um produto cada.
+  'subcategoria',
 ] as const
 
 export function camposPermitidos(papel: Papel): readonly string[] {
   return papel === 'admin' ? [...CAMPOS_DO_EDUCADOR, ...CAMPOS_SO_DO_ADMIN] : CAMPOS_DO_EDUCADOR
+}
+
+/**
+ * ESTE PRODUTO PODE ENTRAR NESTE GRUPO? — a função pura, para a guarda poder testar o caso mau.
+ *
+ * Um grupo é UMA prateleira de UM dono: todas as variantes são da casa, ou todas do mesmo educador.
+ * Sem isto, um educador punha o curso dele no grupo `premium` e o cartão do Premium passava a ter
+ * uma «opção» que é dele — com o preço dele a dar o «desde» do produto da casa. E o admin também
+ * não mistura donos: um cartão com dois vendedores não tem a quem atribuir a marca de água.
+ *
+ * `membros` são as OUTRAS linhas que já estão no grupo, lidas da base pela rota (nunca do corpo).
+ * Grupo novo (sem membros) ou tirar do grupo (`grupo` nulo) pode sempre — dentro do que é dele.
+ */
+export function podeAgrupar(
+  quem: Quem | null | undefined,
+  produto: { id?: string | null; educator_id?: string | null; dono?: string | null } | null | undefined,
+  grupo: string | null,
+  membros: { id?: string | null; educator_id?: string | null; dono?: string | null }[],
+): boolean {
+  if (!podeGerir(quem, produto) || !produto) return false
+  if (!grupo) return true
+  const donoP = donoValido(produto.dono)
+  const outros = membros.filter((m) => !produto.id || m.id !== produto.id)
+  return outros.every((m) => {
+    const donoM = donoValido(m.dono)
+    if (donoM !== donoP) return false
+    if (donoP === 'casa') return true
+    // Do mesmo educador — e, para um educador, desse educador. `podeGerir` já garantiu que o
+    // produto é dele; isto garante que os OUTROS também são.
+    if (!m.educator_id || m.educator_id !== produto.educator_id) return false
+    return quem?.papel === 'admin' || m.educator_id === quem?.educatorId
+  })
 }

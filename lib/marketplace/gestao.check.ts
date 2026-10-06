@@ -18,6 +18,7 @@ import {
   CAMPOS_DO_EDUCADOR,
   CAMPOS_SO_DO_ADMIN,
   camposPermitidos,
+  podeAgrupar,
   podeGerir,
   type Quem,
 } from './gestao'
@@ -226,6 +227,55 @@ sim('nem dois nulos', !podeGerir(
   // A capa que conta é a que FICA depois desta gravação, e não a que veio no corpo: ler só o corpo
   // deixava a capa a repetir-se na galeria de todos os produtos a que alguém trocasse a capa.
   sim('a galeria é limpa contra a capa final', /capaFinal/.test(ROTA))
+}
+
+// ══════════════ 6. UM EDUCADOR NÃO METE UM PRODUTO NUM GRUPO ALHEIO (195/196) ══════════════
+//
+// O grupo é uma prateleira de UM dono. O caso mau: o educador A a pôr o curso dele no grupo
+// `premium` da casa (o «desde» do Premium passava a ser o preço dele) ou no grupo do educador B.
+
+{
+  const A1 = { id: 'a1', ...PRODUTO_DE_A }
+  const A2 = { id: 'a2', ...PRODUTO_DE_A }
+  const B1 = { id: 'b1', ...PRODUTO_DE_B }
+  const CASA1 = { id: 'c1', ...PRODUTO_DA_CASA }
+  const CASA2 = { id: 'c2', ...PRODUTO_DA_CASA }
+
+  sim('o educador agrupa os produtos dele', podeAgrupar(EDUCADOR_A, A1, 'mentoria-a', [A2]))
+  sim('o educador cria um grupo novo (sem membros)', podeAgrupar(EDUCADOR_A, A1, 'grupo-novo', []))
+  sim('o educador tira o produto dele do grupo', podeAgrupar(EDUCADOR_A, A1, null, [B1, CASA1]))
+  sim('a própria linha nos membros não conta como alheia', podeAgrupar(EDUCADOR_A, A1, 'g', [A1, A2]))
+
+  assert.ok(!podeAgrupar(EDUCADOR_A, A1, 'premium', [CASA1, CASA2]), 'UM EDUCADOR NÃO METE O PRODUTO DELE NUM GRUPO DA CASA')
+  assert.ok(!podeAgrupar(EDUCADOR_A, A1, 'curso-b', [B1]), 'um educador não mete o produto dele no grupo de outro educador')
+  assert.ok(!podeAgrupar(EDUCADOR_A, A1, 'misto', [A2, B1]), 'nem num grupo que tenha UMA linha de outro')
+  sim('nem num grupo da casa com uma linha dele lá metida', !podeAgrupar(EDUCADOR_A, A1, 'premium', [A2, CASA1]))
+  assert.ok(!podeAgrupar(EDUCADOR_A, B1, 'curso-b', []), 'um educador não agrupa o produto de outro')
+  assert.ok(!podeAgrupar(EDUCADOR_A, CASA1, 'premium', [CASA2]), 'um educador não agrupa um produto da casa')
+  assert.ok(!podeAgrupar(EDUCADOR_A, CASA1, null, []), 'nem o tira do grupo')
+  sim('sem sessão não agrupa nada', !podeAgrupar(null, A1, 'g', []))
+
+  // O admin também não mistura donos: um cartão com dois vendedores não tem a quem dar a marca.
+  sim('o admin agrupa produtos da casa', podeAgrupar(ADMIN, CASA1, 'premium', [CASA2]))
+  sim('o admin agrupa produtos do mesmo educador', podeAgrupar(ADMIN, A1, 'g', [A2]))
+  sim('o admin não mete um produto da casa num grupo de educador', !podeAgrupar(ADMIN, CASA1, 'g', [A2]))
+  sim('o admin não junta dois educadores', !podeAgrupar(ADMIN, A1, 'g', [B1]))
+
+  // Os campos: a subcategoria é só do admin; o grupo é do educador (validado por `podeAgrupar`).
+  const doEducador = camposPermitidos('educador')
+  sim('a subcategoria é só do admin', !doEducador.includes('subcategoria') && camposPermitidos('admin').includes('subcategoria'))
+  for (const c of ['grupo', 'variante_nome', 'variante_ordem', 'grupo_subtitulo']) {
+    sim(`o educador escreve '${c}' (nos produtos dele)`, doEducador.includes(c))
+  }
+
+  // A rota pergunta mesmo, com os membros lidos da BASE e antes de gravar.
+  const ROTA = readFileSync(join(RAIZ, 'app/api/marketplace/gestao/route.ts'), 'utf8')
+  sim('a rota pergunta a podeAgrupar', /podeAgrupar\(quem, actual, grupoFinal, membrosDoGrupo\)/.test(ROTA))
+  sim('os membros vêm da base, pelo grupo', /\.select\('id, educator_id, dono, grupo_subtitulo'\)\s*\.eq\('grupo', grupoFinal\)/.test(ROTA))
+  sim('e antes do update', ROTA.indexOf('podeAgrupar(quem') < ROTA.indexOf(".update(patch)"))
+  sim('o grupo é normalizado no servidor', /slugDoGrupo\(b\.grupo\)/.test(ROTA))
+  sim('o servidor recusa frase de grupo com período', /temPeriodicidade\(t\)/.test(ROTA))
+  sim('a propagação da frase filtra o educador', /grupo_subtitulo: patch\.grupo_subtitulo[\s\S]{0,300}?papel === 'educador'\) qg = qg\.eq\('educator_id', quem\.educatorId\)/.test(ROTA))
 }
 
 // ── Relatório ─────────────────────────────────────────────────────────────────────────────

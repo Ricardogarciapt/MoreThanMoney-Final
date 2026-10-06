@@ -25,6 +25,7 @@
  */
 
 import { contaAtivaUi, ehAdminUi, podeAcederAoTier, type PerfilUi } from '@/lib/perfil-ui'
+import { cartoesDe, type Agrupavel } from './grupos'
 
 // ── O CATÁLOGO ────────────────────────────────────────────────────────────────────────────
 //
@@ -652,23 +653,30 @@ export function vendedorDoProduto(
 }
 
 /**
- * A lista de vendedores de uma montra, com quantos produtos cada um tem.
+ * A lista de vendedores de uma montra, com quantos CARTÕES cada um tem.
+ *
+ * Conta cartões e não linhas (196): o Pack de Scanners são três variantes (Mensal, 6 meses,
+ * Vitalício) e um só cartão na montra — a tira dizia «13 produtos» numa loja onde se viam 7. A
+ * contagem passa pela MESMA função que desenha a montra (`cartoesDe`, em `grupos.ts`), por vendedor,
+ * por isso o número bate sempre com o que a loja dele mostra.
  *
  * Ordenada por número de produtos e depois por nome — e NÃO por vendas. Não há dados de vendas
  * nenhuns ainda, e uma ordem que finge um ranking é uma ordem que mente. Quando houver vendas, é
  * esta a função que muda, e num sítio só.
  */
 export function vendedoresDaMontra(
-  produtos: { educator_id?: string | null; dono?: string | null; vendedor?: Vendedor }[],
+  produtos: (Agrupavel & { educator_id?: string | null; dono?: string | null; vendedor?: Vendedor })[],
 ): (Vendedor & { produtos: number })[] {
-  const por = new Map<string, Vendedor & { produtos: number }>()
+  const por = new Map<string, { v: Vendedor; linhas: Agrupavel[] }>()
   for (const p of produtos) {
     const v = p.vendedor ?? vendedorDoProduto(p)
     const ja = por.get(v.id)
-    if (ja) ja.produtos += 1
-    else por.set(v.id, { ...v, produtos: 1 })
+    if (ja) ja.linhas.push(p)
+    else por.set(v.id, { v, linhas: [p] })
   }
-  return Array.from(por.values()).sort((a, b) => b.produtos - a.produtos || a.nome.localeCompare(b.nome, 'pt'))
+  return Array.from(por.values())
+    .map(({ v, linhas }) => ({ ...v, produtos: cartoesDe(linhas).length }))
+    .sort((a, b) => b.produtos - a.produtos || a.nome.localeCompare(b.nome, 'pt'))
 }
 
 /**

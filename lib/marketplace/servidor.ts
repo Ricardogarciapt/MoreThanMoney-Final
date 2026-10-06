@@ -42,7 +42,9 @@ export const COLUNAS_VITRINE =
   // 193 — a subcategoria (ex.: «Tech Crypto») e o «antes» da loja oficial (lido pelo cron de preços).
   'subcategoria, preco_base_cents, ' +
   // 195 — variantes agrupadas: a montra desenha um cartão por grupo, a ficha um selector.
-  'grupo, variante_nome, variante_ordem'
+  'grupo, variante_nome, variante_ordem, ' +
+  // 196 — a frase do cartão de grupo (sem periodicidade).
+  'grupo_subtitulo'
 
 export type ProdutoVitrine = {
   id: string
@@ -79,6 +81,7 @@ export type ProdutoVitrine = {
   grupo: string | null
   variante_nome: string | null
   variante_ordem: number
+  grupo_subtitulo: string | null
   educador?: { id: string; display_name: string; avatar_url: string | null; specialty: string | null } | null
   jaComprou?: boolean
 }

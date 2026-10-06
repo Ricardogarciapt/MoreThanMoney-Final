@@ -45,7 +45,7 @@ import Link from "next/link"
 import { Loader2, Lock, ShoppingBag, ExternalLink, Search, Store, X } from "lucide-react"
 import { euros, precoAntesDaLoja, procuraCasa, type Vendedor } from "@/lib/marketplace/regras"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
-import { agruparMontra, type Entrada } from "@/lib/marketplace/grupos"
+import { agruparMontra, subtituloDoCartao, type Entrada } from "@/lib/marketplace/grupos"
 
 type Autor = { id: string; display_name: string; avatar_url: string | null; specialty: string | null }
 /** O preço JÁ DECIDIDO pela rota. O cartão não recalcula desconto nenhum. */
@@ -72,6 +72,8 @@ type Produto = {
   grupo?: string | null
   variante_nome?: string | null
   variante_ordem?: number | null
+  /** 196 — a frase do cartão de grupo; ver `subtituloDoCartao`. */
+  grupo_subtitulo?: string | null
   recorrente: boolean
   /** De quanto em quanto tempo se cobra (157). É ela que escreve «/mês» ou «/ano». */
   periodicidade: string
@@ -578,6 +580,8 @@ function Cartao({
   const p = entrada.principal
   const agrupado = entrada.variantes.length > 1
   const barata = entrada.maisBarata
+  // 196 — num grupo, a frase do GRUPO e nunca a da principal com «por mês» ao lado do «desde».
+  const subtitulo = subtituloDoCartao(entrada)
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] transition-colors hover:border-[#D2A63C]/35">
       {/* O cartão LEVA À FICHA. Sem isto, a descrição completa, a campanha, o campo do cupão e o
@@ -613,7 +617,7 @@ function Cartao({
         <Link href={`/marketplace/${p.slug}`}>
           <h3 className="mt-1 font-medium leading-snug text-zinc-100 group-hover:text-[#eccb78]">{p.titulo}</h3>
         </Link>
-        {p.subtitulo && <p className="mt-0.5 text-xs text-zinc-400">{p.subtitulo}</p>}
+        {subtitulo && <p className="mt-0.5 text-xs text-zinc-400">{subtitulo}</p>}
         {p.descricao && <p className="mt-2 line-clamp-2 text-xs text-zinc-500">{p.descricao}</p>}
 
         <div className="mt-auto flex items-end justify-between gap-2 pt-4">

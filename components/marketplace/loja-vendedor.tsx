@@ -23,7 +23,7 @@ import Link from "next/link"
 import { ArrowLeft, Loader2, Store } from "lucide-react"
 import { euros, type Vendedor } from "@/lib/marketplace/regras"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
-import { agruparMontra } from "@/lib/marketplace/grupos"
+import { agruparMontra, subtituloDoCartao } from "@/lib/marketplace/grupos"
 
 type Preco = {
   baseCents: number; cents: number; descontoPct: number
@@ -36,6 +36,8 @@ type Produto = {
   jaComprou: boolean; podeComprar: boolean; motivoSemCompra: string | null
   /** 195 — variantes agrupadas: um cartão por grupo. */
   grupo?: string | null; variante_nome?: string | null; variante_ordem?: number | null
+  /** 196 — a frase do cartão de grupo. */
+  grupo_subtitulo?: string | null
 }
 type Loja = {
   id: string; nome: string; nota: string | null; bio: string | null
@@ -149,7 +151,9 @@ export default function LojaVendedor({ id }: { id: string }) {
               <div className="flex flex-1 flex-col p-4">
                 <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#D2A63C]">{p.categoria}</span>
                 <h2 className="mt-1 font-medium leading-snug text-zinc-100 group-hover:text-[#eccb78]">{p.titulo}</h2>
-                {p.subtitulo && <p className="mt-0.5 text-xs text-zinc-400">{p.subtitulo}</p>}
+                {subtituloDoCartao({ principal: p, variantes }) && (
+                  <p className="mt-0.5 text-xs text-zinc-400">{subtituloDoCartao({ principal: p, variantes })}</p>
+                )}
                 <span className="mt-auto pt-4 text-lg font-semibold text-zinc-100">
                   {variantes.length > 1 ? (
                     <>

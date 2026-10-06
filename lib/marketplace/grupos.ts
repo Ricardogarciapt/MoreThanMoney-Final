@@ -8,13 +8,24 @@
  * Funções puras, sem rede: a guarda (`grupos.check.ts`) prende-as.
  */
 
+/**
+ * O mínimo para decidir QUE CARTÕES há: quem é de que grupo e por que ordem. Sem preço — é o que
+ * deixa a tira de vendedores contar cartões com a mesma função que os desenha (`cartoesDe`).
+ */
+export type Agrupavel = {
+  id?: string | null
+  grupo?: string | null
+  variante_ordem?: number | null
+}
+
 /** O mínimo que estas funções precisam de saber de um produto já com o preço decidido pela rota. */
-export type Variante = {
+export type Variante = Agrupavel & {
   id: string
   slug: string
-  grupo?: string | null
   variante_nome?: string | null
-  variante_ordem?: number | null
+  /** 196 — a frase do cartão de grupo (sem periodicidade). Igual em todas as variantes do grupo. */
+  grupo_subtitulo?: string | null
+  subtitulo?: string | null
   recorrente?: boolean | null
   periodicidade?: string | null
   preco: { cents: number; baseCents: number; moeda: string }
@@ -31,13 +42,19 @@ export type Entrada<T extends Variante> = {
   maisBarata: T
 }
 
-const ordem = (v: Variante) => Number(v.variante_ordem ?? 0) || 0
+const ordem = (v: Agrupavel) => Number(v.variante_ordem ?? 0) || 0
+
+export type Cartao<T extends Agrupavel> = { chave: string; principal: T; variantes: T[] }
 
 /**
- * A montra agrupada. Mantém a ordem que a rota deu (destaques primeiro, etc.), e um grupo ocupa o
- * lugar da sua variante PRINCIPAL — não o da primeira que aparecer. Um produto sem grupo fica igual.
+ * OS CARTÕES — a única função que decide o agrupamento. A montra (`agruparMontra`), a loja do
+ * vendedor e a contagem da tira de vendedores (`vendedoresDaMontra`) passam todas por aqui, por isso
+ * o número ao lado do nome do vendedor é sempre o número de cartões que se vêem na loja dele.
+ *
+ * Mantém a ordem que a rota deu (destaques primeiro, etc.), e um grupo ocupa o lugar da sua
+ * variante PRINCIPAL — não o da primeira que aparecer. Um produto sem grupo fica igual.
  */
-export function agruparMontra<T extends Variante>(produtos: T[]): Entrada<T>[] {
+export function cartoesDe<T extends Agrupavel>(produtos: T[]): Cartao<T>[] {
   const porGrupo = new Map<string, T[]>()
   for (const p of produtos) {
     const g = (p.grupo ?? '').trim()
@@ -46,18 +63,71 @@ export function agruparMontra<T extends Variante>(produtos: T[]): Entrada<T>[] {
     l.push(p)
     porGrupo.set(g, l)
   }
-  const saida: Entrada<T>[] = []
+  const saida: Cartao<T>[] = []
   for (const p of produtos) {
     const g = (p.grupo ?? '').trim()
     if (!g) {
-      saida.push({ chave: p.id, principal: p, variantes: [p], maisBarata: p })
+      saida.push({ chave: String(p.id ?? ''), principal: p, variantes: [p] })
       continue
     }
     const variantes = [...(porGrupo.get(g) as T[])].sort((a, b) => ordem(a) - ordem(b))
-    if (variantes[0].id !== p.id) continue // o grupo entra no lugar da principal
-    saida.push({ chave: `grupo:${g}`, principal: variantes[0], variantes, maisBarata: maisBarataDe(variantes) })
+    if (variantes[0] !== p) continue // o grupo entra no lugar da principal
+    saida.push({ chave: `grupo:${g}`, principal: variantes[0], variantes })
   }
   return saida
+}
+
+/** A montra agrupada: os cartões de `cartoesDe`, cada um com a variante que dá o «desde». */
+export function agruparMontra<T extends Variante>(produtos: T[]): Entrada<T>[] {
+  return cartoesDe(produtos).map((c) => ({ ...c, maisBarata: maisBarataDe(c.variantes) }))
+}
+
+// ── O SUBTÍTULO DO CARTÃO DE GRUPO (196) ─────────────────────────────────────────────────────
+//
+// Num cartão de grupo, o subtítulo da principal soa mal ao lado do «desde X»: o do Pack de Scanners
+// dizia «… por mês» por cima de um preço que também cobre o vitalício. O cartão de grupo usa a frase
+// do GRUPO (`grupo_subtitulo`) e, sem ela, nada que fale de período.
+
+/** Palavras de periodicidade. Uma frase de grupo que as tenha está a falar de UMA das opções. */
+export const PERIODICIDADE_RE =
+  /(?:\bpor\s+|\bao\s+|\/\s*)(?:m[eê]s|ano|semana|dia)\b|\bmensa(?:l|is)\b|\banua(?:l|is)\b|\bsemestra(?:l|is)\b|\btrimestra(?:l|is)\b|\bmeses\b|\bvital[ií]ci[oa]s?\b|\buma vez\b|\bpara sempre\b|\bpagamento (?:único|só)/i
+
+export function temPeriodicidade(texto: string | null | undefined): boolean {
+  return PERIODICIDADE_RE.test(String(texto ?? ''))
+}
+
+/**
+ * A frase por baixo do título de um cartão.
+ *
+ *   · produto sozinho → o subtítulo dele, como sempre;
+ *   · grupo → o `grupo_subtitulo` (da principal, ou da primeira variante que o tenha), se não falar
+ *     de período; senão, o subtítulo da principal SE for neutro; senão, nenhum (null).
+ *
+ * Nunca devolve, num grupo, uma frase com periodicidade — a guarda prende isto.
+ */
+export function subtituloDoCartao<T extends Variante>(c: { principal: T; variantes: T[] }): string | null {
+  if (c.variantes.length <= 1) return c.principal.subtitulo ?? null
+  const candidatas = [c.principal, ...c.variantes].map((v) => (v.grupo_subtitulo ?? '').trim())
+  const doGrupo = candidatas.find((t) => t && !temPeriodicidade(t))
+  if (doGrupo) return doGrupo
+  const daPrincipal = (c.principal.subtitulo ?? '').trim()
+  return daPrincipal && !temPeriodicidade(daPrincipal) ? daPrincipal : null
+}
+
+/**
+ * O slug de um grupo, como a 195 o aceita (`^[a-z0-9][a-z0-9-]{0,59}$`). Sem acentos, minúsculas,
+ * tudo o resto vira hífen. Vazio → null (sem grupo).
+ */
+export function slugDoGrupo(texto: unknown): string | null {
+  const s = String(texto ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/g, '')
+  return s || null
 }
 
 /** A variante com o preço efectivo (`preco.cents`, já com campanha) mais baixo. Empate: a primeira. */

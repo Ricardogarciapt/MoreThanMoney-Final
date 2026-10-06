@@ -9,7 +9,11 @@
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { agruparMontra, maisBarataDe, poupancaPct, varianteInicial, type Variante } from './grupos'
+import {
+  agruparMontra, cartoesDe, maisBarataDe, poupancaPct, slugDoGrupo, subtituloDoCartao, temPeriodicidade,
+  varianteInicial, type Variante,
+} from './grupos'
+import { vendedorDoProduto, vendedoresDaMontra } from './regras'
 
 let ok = 0
 const falhas: string[] = []
@@ -122,6 +126,82 @@ const ledger = v('ledger-nano-x', null, 0, 9900, 'unica', false)
   sim('a 195 não agrupa o GoldKiller (uma só linha)', !sql.includes("'goldkiller-vitalicio'"))
   const serv = readFileSync(join(RAIZ, 'lib/marketplace/servidor.ts'), 'utf8')
   sim('a montra lê grupo, variante_nome e variante_ordem', /grupo, variante_nome, variante_ordem/.test(serv))
+}
+
+// ══════════════ 7. O SUBTÍTULO DO CARTÃO DE GRUPO NÃO TRAZ PERIODICIDADE (196) ══════════════
+{
+  // Os subtítulos reais de 06/10: a principal do Pack de Scanners diz «por mês».
+  const sm = { ...scMensal, subtitulo: 'Todos os scanners MTM no TradingView, por mês.' }
+  const ss = { ...scSeis, subtitulo: 'Seis meses do pack de scanners, num pagamento.' }
+  const sv = { ...scVit, subtitulo: 'O pack de scanners, uma vez, para sempre.' }
+  const [semFrase] = agruparMontra([sm, ss, sv])
+  sim('sem frase de grupo: não usa o «por mês» da principal', subtituloDoCartao(semFrase) === null)
+  const FRASE = 'Todos os scanners MTM no teu TradingView: zonas, níveis e alertas.'
+  const [comFrase] = agruparMontra([sm, ss, sv].map((x) => ({ ...x, grupo_subtitulo: FRASE })))
+  sim('com frase de grupo: usa-a', subtituloDoCartao(comFrase) === FRASE)
+  // Uma frase de grupo com período (escrita à mão, ou antiga) também não passa.
+  const [frasePeriodo] = agruparMontra([sm, ss, sv].map((x) => ({ ...x, grupo_subtitulo: 'Os scanners, por mês.' })))
+  sim('frase de grupo com período: não passa', subtituloDoCartao(frasePeriodo) === null)
+  // Principal com subtítulo neutro (ex.: Sensei EA) serve de recurso.
+  const ea1 = v('sensei-ea-anual', 'mtm-sensei-ea', 1, 29700, 'anual', true, { subtitulo: 'O Sensei a correr sozinho no teu MetaTrader 5.' } as Partial<Variante>)
+  const ea2 = v('sensei-ea-vitalicio', 'mtm-sensei-ea', 2, 100000, 'unica', false, { subtitulo: 'Licença vitalícia do Sensei EA.' } as Partial<Variante>)
+  sim('sem frase: a principal neutra serve', subtituloDoCartao(agruparMontra([ea1, ea2])[0]) === 'O Sensei a correr sozinho no teu MetaTrader 5.')
+  // Produto sozinho fica igual.
+  sim('produto sozinho: o subtítulo dele', subtituloDoCartao(agruparMontra([{ ...goldkiller, subtitulo: 'Vitalício.' }])[0]) === 'Vitalício.')
+  // Em TODAS as combinações de grupo, a frase nunca traz período.
+  const frases = [null, '', FRASE, 'Por mês.', '/ano', 'Licença vitalícia', 'Doze meses num pagamento só.', 'A porta de entrada.']
+  let todas = true
+  for (const fg of frases) for (const sp of frases) {
+    const [c] = agruparMontra([{ ...sm, subtitulo: sp, grupo_subtitulo: fg }, { ...ss, grupo_subtitulo: fg }])
+    if (temPeriodicidade(subtituloDoCartao(c))) todas = false
+  }
+  sim('nenhuma combinação devolve período num grupo', todas)
+  for (const t of ['por mês', '35 €/mês', 'Mensal', 'anual', 'vitalício', '6 meses', 'uma vez, para sempre', 'pagamento único', 'ao ano'])
+    sim(`detecta período: «${t}»`, temPeriodicidade(t))
+  for (const t of [FRASE, 'O Sensei a correr sozinho no teu MetaTrader 5.', 'A versão rápida do Sensei, para quem fecha no dia.', 'Tudo o que o Membro tem, mais os sinais e a execução automática.'])
+    sim(`frase neutra passa: «${t.slice(0, 30)}…»`, !temPeriodicidade(t))
+  // As 6 frases da 196 são todas neutras e cabem na coluna.
+  const sql = readFileSync(join(RAIZ, 'supabase/migrations/196_marketplace_grupo_subtitulo.sql'), 'utf8')
+  const da196 = Array.from(sql.matchAll(/\('([a-z0-9-]+)',\s*'([^']+)'\)/g)).map((m) => ({ g: m[1], f: m[2] }))
+  sim('a 196 escreve os 6 grupos', ['pack-scanners', 'mtm-sensei-ea', 'sensei-scalp', 'membro', 'premium', 'mtm-scanner'].every((g) => da196.some((x) => x.g === g)))
+  sim('as frases da 196 não trazem período', da196.length === 6 && da196.every((x) => !temPeriodicidade(x.f)))
+  // Nenhum número (preço, %, resultado) — o «5» de «MetaTrader 5» é o nome da plataforma.
+  sim('as frases da 196 não trazem números', da196.every((x) => !/\d/.test(x.f.replace(/MetaTrader 5/g, ''))))
+  sim('as frases da 196 cabem nos 120', da196.every((x) => x.f.length <= 120) && /between 1 and 120/.test(sql))
+  const vit = readFileSync(join(RAIZ, 'components/marketplace/vitrine.tsx'), 'utf8')
+  const loja = readFileSync(join(RAIZ, 'components/marketplace/loja-vendedor.tsx'), 'utf8')
+  sim('a montra usa subtituloDoCartao', /subtituloDoCartao\(entrada\)/.test(vit))
+  sim('a loja do vendedor usa subtituloDoCartao', /subtituloDoCartao\(/.test(loja))
+  const serv = readFileSync(join(RAIZ, 'lib/marketplace/servidor.ts'), 'utf8')
+  sim('a montra lê grupo_subtitulo', /grupo_subtitulo/.test(serv))
+  // O slug de um grupo novo.
+  sim('slug: normaliza acentos e espaços', slugDoGrupo('  Pack de Scanners Vitalício! ') === 'pack-de-scanners-vitalicio')
+  sim('slug: vazio é sem grupo', slugDoGrupo('  ') === null && slugDoGrupo('—') === null)
+  sim('slug: cabe na restrição da 195', /^[a-z0-9][a-z0-9-]{0,59}$/.test(slugDoGrupo('x'.repeat(80) + ' y') ?? ''))
+}
+
+// ══════════════ 8. A CONTAGEM DA TIRA BATE COM O NÚMERO DE CARTÕES ══════════════
+{
+  const casa = vendedorDoProduto({ dono: 'casa' })
+  const ana = { id: 'edu-ana', nome: 'Ana', nota: null, ehACasa: false, avatarUrl: null }
+  const daCasa = [scVit, goldkiller, scMensal, mbAnual, ledger, scSeis, mbMensal, prMensal, prAnual].map((x) => ({ ...x, dono: 'casa', vendedor: casa }))
+  const daAna = [
+    v('ana-curso', null, 0, 9900, 'unica', false),
+    v('ana-mentoria-m', 'ana-mentoria', 1, 5000, 'mensal', true),
+    v('ana-mentoria-a', 'ana-mentoria', 2, 50000, 'anual', true),
+  ].map((x) => ({ ...x, dono: 'educador', educator_id: 'edu-ana', vendedor: ana }))
+  const montra = [...daCasa, ...daAna]
+  const tira = vendedoresDaMontra(montra)
+  const nCasa = tira.find((x) => x.ehACasa)?.produtos
+  const nAna = tira.find((x) => x.id === 'edu-ana')?.produtos
+  sim('casa: 9 linhas contam 5 cartões', nCasa === 5)
+  sim('casa: a contagem bate com os cartões da loja dela', nCasa === agruparMontra(daCasa).length)
+  sim('educadora: 3 linhas contam 2 cartões', nAna === 2 && nAna === agruparMontra(daAna).length)
+  sim('a soma da tira é o número de cartões da montra', tira.reduce((a, x) => a + x.produtos, 0) === agruparMontra(montra).length)
+  sim('cartoesDe e agruparMontra dão os mesmos cartões', cartoesDe(montra).map((c) => c.chave).join() === agruparMontra(montra).map((c) => c.chave).join())
+  const regras = readFileSync(join(RAIZ, 'lib/marketplace/regras.ts'), 'utf8')
+  sim('a tira conta com cartoesDe (a mesma função da montra)', /cartoesDe\(linhas\)\.length/.test(regras))
+  sim('agruparMontra passa por cartoesDe', /return cartoesDe\(produtos\)/.test(readFileSync(join(RAIZ, 'lib/marketplace/grupos.ts'), 'utf8')))
 }
 
 if (falhas.length) {

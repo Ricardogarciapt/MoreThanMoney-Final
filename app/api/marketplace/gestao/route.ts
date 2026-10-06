@@ -39,8 +39,10 @@ import {
   sugestaoDaCategoria,
   tipoValido,
 } from '@/lib/marketplace/regras'
+import { slugDoGrupo, temPeriodicidade } from '@/lib/marketplace/grupos'
 import {
   camposPermitidos,
+  podeAgrupar,
   produtoSobGestao,
   produtosSobGestao,
   quemGere,
@@ -310,6 +312,31 @@ export async function PATCH(request: NextRequest) {
       patch.campanha_pct = Number.isFinite(n) ? Math.min(90, Math.max(0, n)) : 0
       continue
     }
+    // ── As variantes agrupadas (195/196) e a subcategoria (193) ──────────────────────────
+    // Limpos aqui para a restrição da base nunca ter de recusar com um erro do Postgres à frente.
+    if (campo === 'grupo') { patch.grupo = slugDoGrupo(b.grupo); continue }
+    if (campo === 'variante_nome' || campo === 'subcategoria') {
+      patch[campo] = String(b[campo] ?? '').trim().slice(0, 40) || null
+      continue
+    }
+    if (campo === 'variante_ordem') {
+      const n = Math.round(Number(b.variante_ordem))
+      patch.variante_ordem = Number.isFinite(n) ? Math.min(999, Math.max(0, n)) : 0
+      continue
+    }
+    if (campo === 'grupo_subtitulo') {
+      const t = String(b.grupo_subtitulo ?? '').trim().slice(0, 120) || null
+      // A frase do grupo fala do PRODUTO, não de uma das opções: com «por mês» ao lado do «desde»
+      // o cartão mente sobre as outras. Recusa-se em vez de se gravar e esconder na montra.
+      if (t && temPeriodicidade(t)) {
+        return NextResponse.json(
+          { error: 'O subtítulo do grupo não pode falar de período (mês, ano, vitalício…): vale para todas as opções.' },
+          { status: 400 },
+        )
+      }
+      patch.grupo_subtitulo = t
+      continue
+    }
     if (campo === 'recorrente' || campo === 'requer_morada' || campo === 'activo') {
       patch[campo] = b[campo] === true
       continue
@@ -338,6 +365,32 @@ export async function PATCH(request: NextRequest) {
   if (('imagens' in b || 'imagem_url' in patch) && permitidos.includes('imagens')) {
     const capaFinal = 'imagem_url' in patch ? patch.imagem_url : actual.imagem_url
     patch.imagens = galeriaParaGravar(capaFinal, 'imagens' in b ? b.imagens : actual.imagens)
+  }
+
+  // ── O grupo: só com produtos do MESMO dono (195/196) ─────────────────────────────────
+  //
+  // Os membros do grupo lêem-se da BASE, nunca do corpo. Um educador não mete o produto dele num
+  // grupo da casa nem no de outro educador; o admin não mistura donos. Recusa genérica (sem dizer
+  // de quem é o grupo), pela mesma razão do 404: não confirmar o catálogo dos outros.
+  const grupoFinal = 'grupo' in patch ? (patch.grupo as string | null) : actual.grupo
+  let membrosDoGrupo: { id: string; educator_id: string | null; dono: string; grupo_subtitulo: string | null }[] = []
+  if (grupoFinal) {
+    const { data: m } = await getSupabaseAdmin()
+      .from('marketplace_produtos')
+      .select('id, educator_id, dono, grupo_subtitulo')
+      .eq('grupo', grupoFinal)
+    membrosDoGrupo = ((m ?? []) as typeof membrosDoGrupo).filter((x) => x.id !== actual.id)
+    if ('grupo' in patch && !podeAgrupar(quem, actual, grupoFinal, membrosDoGrupo)) {
+      return NextResponse.json(
+        { error: 'Esse grupo não está disponível para este produto. Escolhe outro nome de grupo.', code: 'grupo_alheio' },
+        { status: 409 },
+      )
+    }
+    // Ao entrar num grupo que já tem frase, herda-a — a frase é do grupo, não da linha.
+    if ('grupo' in patch && grupoFinal !== actual.grupo && !('grupo_subtitulo' in patch) && !actual.grupo_subtitulo) {
+      const herdada = membrosDoGrupo.find((x) => x.grupo_subtitulo)?.grupo_subtitulo
+      if (herdada) patch.grupo_subtitulo = herdada
+    }
   }
 
   if (accao === 'publicar') {
@@ -386,6 +439,22 @@ export async function PATCH(request: NextRequest) {
   // pelo preço antigo sem dar por nada.
   const produto = data as unknown as ProdutoGerido
   let avisoStripe: string | null = null
+
+  // ── A frase do grupo é do GRUPO: propaga-se às outras variantes (196) ───────────────────
+  //
+  // Só às do mesmo dono — o mesmo filtro no WHERE que o resto da rota usa. `podeAgrupar` já garantiu
+  // que o grupo é todo dele; o filtro é para isso continuar verdade se alguém reordenar o código.
+  if ('grupo_subtitulo' in patch && produto.grupo) {
+    let qg = db
+      .from('marketplace_produtos')
+      .update({ grupo_subtitulo: patch.grupo_subtitulo ?? null, updated_at: new Date().toISOString() })
+      .eq('grupo', produto.grupo)
+      .neq('id', produto.id)
+    if (quem.papel === 'educador') qg = qg.eq('educator_id', quem.educatorId).eq('dono', 'educador')
+    else if (produto.dono === 'casa') qg = qg.eq('dono', 'casa')
+    else qg = qg.eq('dono', 'educador').eq('educator_id', produto.educator_id ?? '')
+    await qg
+  }
 
   // A condição deixou de exigir `stripe_price_id`.
   //
