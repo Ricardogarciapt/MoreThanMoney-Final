@@ -65,11 +65,11 @@ export type CanalDeSaida = 'telegram' | 'whatsapp' | 'instagram'
  */
 export const AGENTE_POR_FUNIL: Readonly<Record<string, string>> = Object.freeze({
   /**
-   * O follow-up de reactivação no Telegram (`lib/telegram-lead-followup.ts`). O link que ele leva
-   * é `/register` e o que ele empurra é o teste da app — e `cta:app` já é do AG-SAAS em
-   * `AGENTE_POR_PILAR`. Dar isto a outro agente era partir o mesmo produto em dois donos.
+   * O follow-up de reactivação no Telegram (`lib/telegram-lead-followup.ts`). Desde 06/10 (F4)
+   * empurra o próximo passo PAGO da escada (Membro → corretora), não o teste da app — por isso
+   * é do AG-FORMACAO e já não do AG-SAAS. Ver `lib/vendas/escada-followup.ts` (AGENTE_DO_PASSO).
    */
-  'telegram:followup': 'AG-SAAS',
+  'telegram:followup': AG.FORMACAO,
 
   /**
    * ═══ DESDE 06/10: NENHUM LINK DA MÁQUINA SAI SEM CÓDIGO ═══════════════════════════════════

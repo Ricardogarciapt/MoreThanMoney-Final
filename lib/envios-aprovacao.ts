@@ -3,11 +3,13 @@
  *
  * ═══ A REGRA (conformidade, 06/10) ═════════════════════════════════════════════════════════
  *
- * · Quem COMEÇOU a conversa foi a pessoa (escreveu ao bot, mandou DM, comentou o post e a
- *   resposta é PÚBLICA debaixo do comentário dela) → a resposta sai automática.
- * · Quem começa é a MÁQUINA (DM do setter a quem só comentou, follow-up a um lead calado, email
- *   de recuperação de checkout) → fica RASCUNHO `pendente` e só sai depois de uma pessoa (ou o
- *   agente pela API, que responde ao dono) o pôr em `aprovado`.
+ * · Quem COMEÇOU a conversa foi a pessoa (escreveu ao bot, mandou DM, comentou o post) → a
+ *   resposta sai automática. Inclui a DM do setter a quem comentou (decisão do dono, 06/10 F4:
+ *   quem comenta iniciou o contacto) — mas só até 48 h depois do comentário; depois disso fica
+ *   `expirado` e nunca sai.
+ * · Quem começa é a MÁQUINA (follow-up a um lead calado, email de recuperação de checkout) →
+ *   fica RASCUNHO `pendente` e só sai depois de uma pessoa (ou o agente pela API, que responde
+ *   ao dono) o pôr em `aprovado`.
  *
  * Isto é puro de propósito: é o que as guardas (`envios-aprovacao.check.ts`) prendem, e é o
  * que os três caminhos de envio chamam antes de tocar na rede. Um caminho que envie sem passar
@@ -15,7 +17,7 @@
  */
 
 /** Os estados de um rascunho por aprovar. Iguais nas duas filas (IG e `aios_tasks`). */
-export const ESTADOS = ['pendente', 'aprovado', 'enviado', 'rejeitado', 'falhou', 'obsoleto'] as const
+export const ESTADOS = ['pendente', 'aprovado', 'enviado', 'rejeitado', 'falhou', 'obsoleto', 'expirado'] as const
 export type EstadoEnvio = (typeof ESTADOS)[number]
 
 /** O tipo de mensagem, que é o que diz quem a iniciou. */
@@ -24,8 +26,8 @@ export type TipoEnvio =
   | 'resposta_a_mensagem'
   /** Resposta pública debaixo do comentário que a pessoa escreveu. */
   | 'resposta_publica_a_comentario'
-  /** DM do setter a quem comentou — a pessoa não pediu conversa privada. */
-  | 'dm_setter'
+  /** DM do setter a quem comentou. A pessoa iniciou o contacto: sai sozinha, dentro de 48 h. */
+  | 'dm_ao_comentador'
   /** Seguimento que o bot inicia a um lead que não respondeu. */
   | 'followup_bot'
   /** Email de recuperação de um checkout abandonado. */
@@ -45,6 +47,17 @@ export interface PedidoDeSaida {
   tipo: TipoEnvio
   /** O estado do rascunho, quando há um. `null`/`undefined` = não há rascunho aprovado. */
   estado?: string | null
+  /** Só para `dm_ao_comentador`: horas desde o comentário. `null` = não se sabe → não sai. */
+  horasDesdeComentario?: number | null
+}
+
+/** Até quando a DM ao comentador ainda pode sair (e o cron a pode reenviar). Depois: `expirado`. */
+export const JANELA_DM_COMENTADOR_HORAS = 48
+
+/** A DM a este comentador já passou da janela? `null` (sem data) conta como passada. */
+export function dmExpirada(horasDesdeComentario: number | null | undefined): boolean {
+  if (horasDesdeComentario == null || !Number.isFinite(horasDesdeComentario)) return true
+  return horasDesdeComentario > JANELA_DM_COMENTADOR_HORAS || horasDesdeComentario < -1
 }
 
 export interface DecisaoDeSaida {
@@ -58,6 +71,17 @@ export interface DecisaoDeSaida {
  * reply da Meta), um «pendente» espera, e qualquer valor que não se reconheça é NÃO.
  */
 export function podeSair(p: PedidoDeSaida): DecisaoDeSaida {
+  if (p.tipo === 'dm_ao_comentador') {
+    // A private reply é UMA por comentário: o que já saiu, foi descartado ou expirou não volta.
+    if (p.estado === 'enviado') return { pode: false, porque: 'já foi enviado — não se repete' }
+    if (p.estado === 'expirado' || p.estado === 'descartado' || p.estado === 'encerrado') {
+      return { pode: false, porque: `estado ${p.estado} — não sai` }
+    }
+    if (dmExpirada(p.horasDesdeComentario)) {
+      return { pode: false, porque: `fora das ${JANELA_DM_COMENTADOR_HORAS} h depois do comentário — expirado` }
+    }
+    return { pode: true, porque: 'a pessoa comentou (iniciou o contacto) e está dentro das 48 h' }
+  }
   if (iniciadoPeloUtilizador(p.tipo)) {
     return { pode: true, porque: 'a pessoa iniciou a conversa — a resposta sai automática' }
   }

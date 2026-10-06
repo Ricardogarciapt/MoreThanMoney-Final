@@ -17,17 +17,22 @@ function caso(nome: string, f: () => void) {
   console.log(`  ok  ${nome}`)
 }
 
-// ── 1. DM sem aprovação não sai ─────────────────────────────────────────────────────────────────
-caso('DM do setter SEM aprovação não sai (pendente, rascunho, nada, lixo)', () => {
-  for (const estado of ['pendente', 'rascunho', null, undefined, '', 'APROVADO', 'aprovado ', 'descartado', 'falhou']) {
-    assert.equal(podeSair({ tipo: 'dm_setter', estado }).pode, false, `saiu com estado ${JSON.stringify(estado)}`)
+// ── 1. DM ao comentador: sai sozinha dentro de 48 h; fora disso é recusada (F4, 06/10) ──────────
+caso('DM ao comentador sai sozinha dentro de 48 h, sem aprovação', () => {
+  for (const h of [0, 0.1, 5, 47.9, 48]) {
+    assert.equal(podeSair({ tipo: 'dm_ao_comentador', horasDesdeComentario: h }).pode, true, `não saiu às ${h} h`)
+    assert.equal(podeSair({ tipo: 'dm_ao_comentador', estado: 'pendente', horasDesdeComentario: h }).pode, true)
   }
 })
-caso('DM já enviada não sai outra vez (a private reply é única)', () => {
-  assert.equal(podeSair({ tipo: 'dm_setter', estado: 'enviado' }).pode, false)
+caso('MAU: DM ao comentador fora das 48 h é recusada', () => {
+  for (const h of [48.01, 72, 24 * 7, null, undefined, Number.NaN]) {
+    assert.equal(podeSair({ tipo: 'dm_ao_comentador', estado: 'pendente', horasDesdeComentario: h as number }).pode, false, `saiu com ${h} h`)
+  }
 })
-caso('DM aprovada sai', () => {
-  assert.equal(podeSair({ tipo: 'dm_setter', estado: 'aprovado' }).pode, true)
+caso('MAU: DM já enviada, expirada ou descartada não sai outra vez (a private reply é única)', () => {
+  for (const estado of ['enviado', 'expirado', 'descartado', 'encerrado']) {
+    assert.equal(podeSair({ tipo: 'dm_ao_comentador', estado, horasDesdeComentario: 1 }).pode, false, estado)
+  }
 })
 
 // ── 2. Follow-up sem aprovação não sai ──────────────────────────────────────────────────────────
@@ -70,19 +75,23 @@ caso('tarefas internas do AIOS não são envios', () => {
 const raiz = join(__dirname, '..')
 const ler = (p: string) => readFileSync(join(raiz, p), 'utf8')
 
-caso('o setter não manda DM no caminho do cron (tratarComentario)', () => {
+caso('o setter pergunta a podeSair (dm_ao_comentador, com as horas) ANTES de cada DM', () => {
   const src = ler('lib/instagram/setter.ts')
-  const ini = src.indexOf('export async function tratarComentario')
-  const fim = src.indexOf('export async function enviarRascunhoAprovado')
-  assert.ok(ini > 0 && fim > ini)
-  assert.ok(!src.slice(ini, fim).includes('private_replies'), 'tratarComentario voltou a mandar DMs sem aprovação')
+  let desde = 0
+  let dms = 0
+  for (;;) {
+    const i = src.indexOf('private_replies`', desde)
+    if (i < 0) break
+    dms++
+    const antes = src.slice(Math.max(0, i - 2500), i)
+    assert.ok(/podeSair\(\{ tipo: 'dm_ao_comentador'[^}]*horasDesdeComentario/.test(antes), `DM na posição ${i} sai sem podeSair com as horas`)
+    desde = i + 1
+  }
+  assert.ok(dms >= 2, 'esperava o envio imediato e o reenvio')
 })
-caso('o envio do setter pergunta a podeSair ANTES de tocar na Meta', () => {
+caso('o reenvio marca expirado passadas as 48 h', () => {
   const src = ler('lib/instagram/setter.ts')
-  const corpo = src.slice(src.indexOf('export async function enviarRascunhoAprovado'))
-  const iPode = corpo.indexOf("podeSair({ tipo: 'dm_setter'")
-  const iDm = corpo.indexOf('private_replies')
-  assert.ok(iPode > 0 && iDm > iPode, 'a DM aprovada sai sem passar por podeSair')
+  assert.match(src, /dmExpirada\(horas\)[\s\S]{0,200}estado: 'expirado'/)
 })
 caso('o follow-up do Telegram não envia — só cria rascunhos', () => {
   const src = ler('lib/telegram-lead-followup.ts')

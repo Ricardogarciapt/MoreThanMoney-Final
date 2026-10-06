@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,8 @@ import { buildOAuthCallbackUrl, OAUTH_PENDING_REG_KEY } from '@/lib/oauth-flow'
 import { useT, useI18n } from '@/components/i18n-provider'
 import LanguagePicker from '@/components/language-picker'
 import { COUNTRIES, langForCountry } from '@/lib/countries'
+import { CaixaConsentimentoEmail } from '@/components/consentimento-email-caixa'
+import { CAIXA_PRE_MARCADA } from '@/lib/captacao-consentimento'
 
 type PlanId = 'app_member_monthly' | 'app_member_annual' | 'premium_monthly' | 'premium_annual'
 type BillingCycle = 'monthly' | 'annual'
@@ -62,11 +64,22 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  // A caixa de email (opcional, desmarcada — 06/10 F4).
+  const [consentimentoEmail, setConsentimentoEmail] = useState(CAIXA_PRE_MARCADA)
 
   const router = useRouter()
   const searchParams = useSearchParams()
   const infoMessage = searchParams.get('message')
   const refCode = searchParams.get('ref') || '' // código de referral (convida & ganha)
+  // `?plano=membro` (links do follow-up do Telegram, 06/10 F4) abre directamente o pack Membro
+  // pago — o follow-up empurra o passo pago, e cair no separador do teste desfazia isso.
+  const planoPedido = searchParams.get('plano')
+  useEffect(() => {
+    if (planoPedido === 'membro') {
+      setMode('paid')
+      setSelectedPlan('app_member')
+    }
+  }, [planoPedido])
 
   const activePlan = PLANS[selectedPlan]
   const activePricing = billingCycle === 'annual' ? activePlan.annual : activePlan.monthly
@@ -260,6 +273,7 @@ export default function RegisterPage() {
           preferred_language: uiLang,
           couponCode: formData.couponCode.trim().toUpperCase(),
           trial: isTrialFlow,
+          consentimentoEmail,
         }),
       })
 
@@ -651,6 +665,8 @@ export default function RegisterPage() {
                   </button>
                 </div>
               </div>
+
+              <CaixaConsentimentoEmail marcada={consentimentoEmail} onMudar={setConsentimentoEmail} />
 
               <Button type="submit" disabled={isLoading} size="lg"
                 className="w-full font-semibold text-black"

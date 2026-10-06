@@ -8,6 +8,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import type Stripe from 'stripe'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
+import { registarConsentimentoDaCompra } from '@/lib/captacao-consentimento-registo'
 
 /**
  * POST /api/stripe/register-checkout
@@ -25,6 +26,14 @@ export async function POST(request: NextRequest) {
     if (!planId || !email || !fullName || !username) {
       return NextResponse.json({ error: 'planId, email, fullName e username são obrigatórios' }, { status: 400 })
     }
+
+    // A caixa «lembretes e novidades por email» (opcional, desmarcada — 06/10 F4). Só com `true`.
+    await registarConsentimentoDaCompra({
+      aceitou: body.consentimentoEmail,
+      email,
+      canal: 'checkout',
+      origemUrl: request.headers.get('referer'),
+    })
 
     // Planos descontinuados (MTM Copy) não abrem checkout novo.
     const descontinuado = recusaPlanoDescontinuado(planId)

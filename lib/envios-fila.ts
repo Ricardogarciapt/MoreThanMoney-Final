@@ -16,9 +16,9 @@
  * Os envios distinguem-se das tarefas internas pelo `kind` com prefixo `envio:` (ver
  * `KIND_ENVIO`). O `update_task` genérico da API NÃO os faz sair: só `aprovar_envio` faz.
  *
- * O Instagram fica na sua própria tabela (`ig_setter_rascunhos`): a private reply é UMA por
- * comentário e é por comentário que se tem de saber se já se gastou. `aprovarEnvio` aceita os
- * dois ids — um uuid é desta fila, outra coisa é um `comment_id` do setter.
+ * O Instagram fica na sua própria tabela (`ig_setter_rascunhos`) e, desde 06/10 (F4), FORA da
+ * aprovação: a DM ao comentador sai sozinha dentro de 48 h (quem comenta iniciou o contacto).
+ * `rejeitarEnvio` com um `comment_id` pára um reenvio pendente.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
@@ -84,16 +84,9 @@ export async function aprovarEnvio(id: string, quem: string): Promise<ResultadoD
   const agora = new Date().toISOString()
 
   if (!UUID.test(id)) {
-    const { data } = await db
-      .from('ig_setter_rascunhos')
-      .update({ estado: 'aprovado', decidido_em: agora, decidido_por: quem })
-      .eq('comment_id', id)
-      .eq('estado', 'pendente')
-      .select('comment_id, estado')
-    if (!data?.length) return { ok: false, fila: 'ig_setter_rascunhos', estado: 'nao_pendente', erro: 'não existe ou não está pendente' }
-    const { enviarRascunhoAprovado } = await import('@/lib/instagram/setter')
-    const r = await enviarRascunhoAprovado(id)
-    return { ok: true, fila: 'ig_setter_rascunhos', estado: r.estado, enviado: r.ok, ...(r.erro ? { erro: r.erro } : {}) }
+    // Desde 06/10 (F4) a DM ao comentador do Instagram sai sozinha, dentro de 48 h: não há o que
+    // aprovar. Rejeitar continua a existir — serve para parar um reenvio.
+    return { ok: false, fila: 'ig_setter_rascunhos', estado: 'sem_aprovacao', erro: 'a DM ao comentador sai sozinha (48 h); não se aprova' }
   }
 
   const { data: atual } = await db.from('aios_tasks').select('id, kind, status').eq('id', id).maybeSingle()
@@ -227,24 +220,14 @@ function textoParaHtml(texto: string): string {
 /** O que está por decidir, nas duas filas. Para o painel e para a API do agente. */
 export async function listarEnviosPendentes(limite = 100) {
   const db = getSupabaseAdmin()
-  const [fila, ig] = await Promise.all([
-    db
-      .from('aios_tasks')
-      .select('id, title, details, kind, status, payload, created_at')
-      .like('kind', 'envio:%')
-      .eq('status', 'pendente')
-      .order('created_at', { ascending: false })
-      .limit(limite),
-    db
-      .from('ig_setter_rascunhos')
-      .select('comment_id, commenter, comment_text, texto_publico, texto_dm, dm_possivel, dm_motivo, publica_enviada_em, criado_em')
-      .eq('estado', 'pendente')
-      .order('criado_em', { ascending: false })
-      .limit(limite),
-  ])
-  return {
-    fila: fila.data ?? [],
-    instagram: ig.data ?? [],
-    erros: [fila.error?.message, ig.error?.message].filter(Boolean),
-  }
+  const fila = await db
+    .from('aios_tasks')
+    .select('id, title, details, kind, status, payload, created_at')
+    .like('kind', 'envio:%')
+    .eq('status', 'pendente')
+    .order('created_at', { ascending: false })
+    .limit(limite)
+  // `instagram` fica no retorno (vazio) porque o painel e o AIOS já o lêem: a DM ao comentador
+  // deixou de passar por aprovação (F4).
+  return { fila: fila.data ?? [], instagram: [] as unknown[], erros: [fila.error?.message].filter(Boolean) }
 }

@@ -15,6 +15,8 @@ import {
   CreditCard, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { CaixaConsentimentoEmail } from '@/components/consentimento-email-caixa'
+import { CAIXA_PRE_MARCADA } from '@/lib/captacao-consentimento'
 
 /**
  * A oferta do degrau de cima (Elite), vinda do servidor.
@@ -198,6 +200,7 @@ export default function UpgradeClient({ topo }: { topo: OfertaTopo | null }) {
 
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
   const [loading, setLoading] = useState<string | null>(null)
+  const [consentimentoEmail, setConsentimentoEmail] = useState(CAIXA_PRE_MARCADA)
   const [error, setError] = useState('')
   // Chegada pela campanha de ativação (email ou redirect do middleware): a conta existe,
   // falta escolher pack. Lê-se do location para não obrigar a Suspense de useSearchParams.
@@ -237,7 +240,7 @@ export default function UpgradeClient({ topo }: { topo: OfertaTopo | null }) {
       const res = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ planId, email: user.email }),
+        body: JSON.stringify({ planId, email: user.email, consentimentoEmail }),
       })
       const data = await res.json()
       if (!res.ok || !data.url) {
@@ -320,6 +323,9 @@ export default function UpgradeClient({ topo }: { topo: OfertaTopo | null }) {
         </div>
 
         {/* Cards de plano */}
+        {/* A caixa de email (opcional, desmarcada — 06/10 F4). Antes dos packs: vale para o que se escolher. */}
+        <CaixaConsentimentoEmail marcada={consentimentoEmail} onMudar={setConsentimentoEmail} className="mx-auto mb-6 max-w-xl" />
+
         <div className={`grid gap-5 mb-10 mx-auto ${planos.length > 2 ? 'md:grid-cols-3 max-w-5xl' : 'md:grid-cols-2 max-w-3xl'}`}>
           {planos.map((plan) => {
             const pricing  = billing === 'annual' ? plan.annual : plan.monthly

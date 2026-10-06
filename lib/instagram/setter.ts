@@ -11,8 +11,8 @@
  *
  *   redigir        — escreve rascunhos e não envia NADA. É o modo de sombra: o dono lê o que sairia.
  *   enviar_publica — a fase 1 (resposta pública) sai sozinha.
- *   enviar_dm      — (desde 06/10 SEM efeito) a DM nunca sai sozinha: fica `pendente` e só sai
- *                    depois de aprovada (/admin/social/leads ou `aprovar_envio` na API do agente).
+ *   enviar_dm      — a fase 2 (a DM) sai sozinha logo a seguir ao comentário — quem comenta iniciou
+ *                    o contacto (dono, 06/10 F4). Falhou? O cron reenvia até 48 h; depois `expirado`.
  *
  * Separados porque ligar a redacção é reversível e ligar o envio não é: a Meta dá UMA private reply
  * por comentário, e uma mensagem mal enviada não tem segunda tentativa — o comentário fica queimado.
@@ -30,7 +30,7 @@ import { prepararMensagem } from '@/lib/agentes/mensagem-saida'
 import { agenteDoPostComentado, registarMensagemDeAgente } from '@/lib/agentes/mensagem-livro'
 import { pensar } from '@/lib/funis-ia'
 import { isAutoPublishBlocked, tokenForAccount } from './publish'
-import { podeSair } from '@/lib/envios-aprovacao'
+import { dmExpirada, podeSair } from '@/lib/envios-aprovacao'
 import { ehDaCasa, handlesDaCasa } from './setter-casa'
 import {
   classificar,
@@ -341,130 +341,127 @@ export async function tratarComentario(
   }
 
   /**
-   * A DM FICA PENDENTE. Sempre. (06/10, conformidade)
+   * A DM SAI LOGO A SEGUIR AO COMENTÁRIO (decisão do dono, 06/10 F4).
    *
-   * Até aqui, com `enviar_dm: true` em produção, a DM saía sem passar por ninguém — o degrau
-   * `aprovado` existia no esquema e não no caminho (`lib/agentes/desbloqueio.ts`,
-   * `ig_setter_sem_aprovado`). A pessoa comentou; não pediu uma conversa privada. Por isso a DM é
-   * iniciativa da máquina e fica `pendente` até alguém a aprovar no /admin/social/leads ou pela
-   * API do agente (`aprovar_envio`). Quem a envia é `enviarRascunhoAprovado`, e só a partir de
-   * `aprovado`.
-   *
-   * Sem DM possível, o rascunho só fica pendente se a resposta pública ainda não saiu (para quem
-   * aprovar a poder mandar); se já saiu, está `enviado` e não há mais nada a decidir.
+   * Quem comenta iniciou o contacto, por isso a DM não espera aprovação — a F2 tinha-a posto em
+   * `pendente` e o dono reverteu isso. Continua a depender do interruptor `enviar_dm` e passa por
+   * `podeSair` como `dm_ao_comentador`, que só deixa sair dentro de 48 h do comentário. Se o envio
+   * falhar, a linha fica `pendente` e o cron `ig-funnel` reenvia (`reenviarDmsPorSair`) até às 48 h;
+   * depois disso fica `expirado` e nunca sai.
    */
   linha.publica_enviada_em = enviouPublica ? new Date().toISOString() : null
-  const temDmPorDecidir = dm.pode && !!textoDm
-  if (temDmPorDecidir || !enviouPublica) {
-    linha.estado = 'pendente'
-  } else {
+  const temDm = dm.pode && !!textoDm
+  let enviouDm = false
+  if (temDm && chaves.enviar_dm && podeSair({ tipo: 'dm_ao_comentador', horasDesdeComentario: horas }).pode) {
+    const r = await gpost(`${c.commentId}/private_replies`, { message: textoDm as string }, token)
+    if (r.ok) enviouDm = true
+    else erros.push(`dm: ${String(r.json?.error?.message ?? 'erro').slice(0, 150)}`)
+    await registarMensagemDeAgente({
+      canal: 'instagram',
+      destino: c.commenter ?? c.commentId,
+      funil: 'instagram:setter',
+      tipo: 'dm',
+      texto: textoDm as string,
+      estado: r.ok ? 'enviada' : 'falhou',
+      motivo: r.ok ? null : String(r.json?.error?.message ?? 'erro').slice(0, 300),
+      referencia: c.commentId,
+      marcacao: marcadaDm ?? marcadaPublica,
+    })
+  }
+
+  if (enviouDm || (enviouPublica && !temDm)) {
     linha.estado = 'enviado'
     linha.enviado_em = new Date().toISOString()
+  } else if (temDm && chaves.enviar_dm) {
+    // A DM devia ter saído e falhou: fica para o cron reenviar dentro das 48 h.
+    linha.estado = 'pendente'
+  } else {
+    // Modo de sombra (interruptores desligados): fica escrito para ler, sem envio nenhum.
+    linha.estado = 'rascunho'
   }
   if (erros.length) linha.erro = erros.join(' | ')
 
   const { error } = await db.from('ig_setter_rascunhos').upsert(linha, { onConflict: 'comment_id' })
   if (error) return 'erro'
 
-  if (enviouPublica && !temDmPorDecidir) return 'publica_enviada'
+  if (enviouDm) return 'dm_enviada'
+  if (enviouPublica) return 'publica_enviada'
   return erros.length ? 'erro' : 'rascunho'
 }
 
-// ── O envio do que foi APROVADO ──────────────────────────────────────────────────────────────────
+// ── O reenvio das DMs que falharam (até 48 h) ───────────────────────────────────────────────────
 
-export interface ResultadoDoAprovado {
+export interface ResultadoDoReenvio {
   ok: boolean
   estado: string
   erro?: string
 }
 
 /**
- * Envia um rascunho do setter que uma pessoa aprovou. É o ÚNICO caminho por onde sai a DM.
- *
- * Lê o estado da base (não confia em quem chama) e pergunta a `podeSair` como `dm_setter`: só
- * `aprovado` passa. A janela dos 7 dias volta a medir-se AGORA — um rascunho aprovado tarde
- * demais já não tem a private reply, e tentar só gastava um erro da Meta.
+ * Reenvia a DM de um comentário que ficou `pendente` (o envio imediato falhou). Lê o estado da
+ * base e pergunta a `podeSair` como `dm_ao_comentador`, com as horas desde o comentário: passadas
+ * as 48 h a linha fica `expirado` e a DM nunca sai.
  */
-export async function enviarRascunhoAprovado(commentId: string): Promise<ResultadoDoAprovado> {
+export async function reenviarDm(commentId: string): Promise<ResultadoDoReenvio> {
   const db = getSupabaseAdmin()
   const { data: r } = await db.from('ig_setter_rascunhos').select('*').eq('comment_id', commentId).maybeSingle()
   if (!r) return { ok: false, estado: 'desconhecido', erro: 'rascunho não encontrado' }
   const row = r as Record<string, any>
 
-  const decisao = podeSair({ tipo: 'dm_setter', estado: row.estado })
-  if (!decisao.pode) return { ok: false, estado: String(row.estado), erro: decisao.porque }
+  const horas = row.comentado_em ? (Date.now() - new Date(row.comentado_em).getTime()) / 3_600_000 : null
+  if (row.estado === 'pendente' && dmExpirada(horas)) {
+    await db
+      .from('ig_setter_rascunhos')
+      .update({ estado: 'expirado', erro: `${row.erro ? row.erro + ' | ' : ''}expirou: mais de 48 h desde o comentário` })
+      .eq('comment_id', commentId)
+      .eq('estado', 'pendente')
+    return { ok: false, estado: 'expirado', erro: 'mais de 48 h desde o comentário' }
+  }
+
+  const decisao = podeSair({ tipo: 'dm_ao_comentador', estado: row.estado, horasDesdeComentario: horas })
+  if (!decisao.pode || !row.dm_possivel || !row.texto_dm) {
+    return { ok: false, estado: String(row.estado), erro: decisao.pode ? 'sem DM possível' : decisao.porque }
+  }
 
   const token = await tokenForAccount(String(row.ig_account_id))
   if (!token) return { ok: false, estado: String(row.estado), erro: 'sem token da conta' }
+  if (isAutoPublishBlocked(row.ig_account_id)) return { ok: false, estado: String(row.estado), erro: 'conta não escreve sozinha' }
 
-  const contaEscreve = !isAutoPublishBlocked(row.ig_account_id)
-  const erros: string[] = []
-  let saiuAlguma = false
-  const marcacaoGuardada = {
-    codigo: (row.agente_codigo ?? null) as string | null,
-    marcados: Number(row.agente_links_marcados ?? 0),
-  }
-
-  if (!row.publica_enviada_em && row.texto_publico && contaEscreve) {
-    const p = await gpost(`${commentId}/replies`, { message: String(row.texto_publico) }, token)
-    if (p.ok) saiuAlguma = true
-    else erros.push(`publica: ${String(p.json?.error?.message ?? 'erro').slice(0, 150)}`)
-    await registarMensagemDeAgente({
-      canal: 'instagram', destino: row.commenter ?? commentId, funil: 'instagram:setter', tipo: 'resposta_publica',
-      texto: String(row.texto_publico), estado: p.ok ? 'enviada' : 'falhou',
-      motivo: p.ok ? null : String(p.json?.error?.message ?? 'erro').slice(0, 300), referencia: commentId,
-      marcacao: marcacaoGuardada,
-    })
-    if (p.ok) await db.from('ig_setter_rascunhos').update({ publica_enviada_em: new Date().toISOString() }).eq('comment_id', commentId)
-  }
-
-  if (row.dm_possivel && row.texto_dm) {
-    const horas = row.comentado_em ? (Date.now() - new Date(row.comentado_em).getTime()) / 3_600_000 : null
-    const dm = podeMandarDm({ horasDesdeComentario: horas, jaRespondidoEmPrivado: false, contaPodeEscreverSozinha: contaEscreve })
-    if (!dm.pode) {
-      erros.push(`dm: ${dm.motivo}`)
-    } else {
-      const d = await gpost(`${commentId}/private_replies`, { message: String(row.texto_dm) }, token)
-      if (d.ok) saiuAlguma = true
-      else erros.push(`dm: ${String(d.json?.error?.message ?? 'erro').slice(0, 150)}`)
-      await registarMensagemDeAgente({
-        canal: 'instagram', destino: row.commenter ?? commentId, funil: 'instagram:setter', tipo: 'dm',
-        texto: String(row.texto_dm), estado: d.ok ? 'enviada' : 'falhou',
-        motivo: d.ok ? null : String(d.json?.error?.message ?? 'erro').slice(0, 300), referencia: commentId,
-        marcacao: marcacaoGuardada,
-      })
-    }
-  }
-
-  const estado = saiuAlguma ? 'enviado' : 'falhou'
+  const d = await gpost(`${commentId}/private_replies`, { message: String(row.texto_dm) }, token)
+  await registarMensagemDeAgente({
+    canal: 'instagram', destino: row.commenter ?? commentId, funil: 'instagram:setter', tipo: 'dm',
+    texto: String(row.texto_dm), estado: d.ok ? 'enviada' : 'falhou',
+    motivo: d.ok ? null : String(d.json?.error?.message ?? 'erro').slice(0, 300), referencia: commentId,
+    marcacao: { codigo: (row.agente_codigo ?? null) as string | null, marcados: Number(row.agente_links_marcados ?? 0) },
+  })
+  const erro = d.ok ? null : `dm (reenvio): ${String(d.json?.error?.message ?? 'erro').slice(0, 150)}`
   await db
     .from('ig_setter_rascunhos')
-    .update({
-      estado,
-      enviado_em: saiuAlguma ? new Date().toISOString() : null,
-      erro: erros.length ? erros.join(' | ') : null,
-    })
+    .update(d.ok ? { estado: 'enviado', enviado_em: new Date().toISOString(), erro: null } : { erro })
     .eq('comment_id', commentId)
-    .eq('estado', 'aprovado')
-  return { ok: saiuAlguma, estado, ...(erros.length ? { erro: erros.join(' | ') } : {}) }
+    .eq('estado', 'pendente')
+  return { ok: d.ok, estado: d.ok ? 'enviado' : 'pendente', ...(erro ? { erro } : {}) }
 }
 
 /**
- * Corre os aprovados que ficaram por enviar (a aprovação tenta logo; isto apanha o que falhou
- * por rede). Chamado pelo cron `ig-funnel`. Nunca toca em `pendente`.
+ * Corre as DMs `pendente` (o envio imediato falhou). Chamado pelo cron `ig-funnel`. As que já
+ * passaram das 48 h ficam `expirado` aqui mesmo.
  */
-export async function enviarAprovadosPendentes(limite = 10): Promise<number> {
+export async function reenviarDmsPorSair(limite = 20): Promise<{ enviadas: number; expiradas: number }> {
   const { data } = await getSupabaseAdmin()
     .from('ig_setter_rascunhos')
     .select('comment_id')
-    .eq('estado', 'aprovado')
+    .eq('estado', 'pendente')
+    .order('criado_em', { ascending: true })
     .limit(limite)
-  let n = 0
+  let enviadas = 0
+  let expiradas = 0
   for (const r of data ?? []) {
-    const x = await enviarRascunhoAprovado(String((r as { comment_id: string }).comment_id))
-    if (x.ok) n++
+    const x = await reenviarDm(String((r as { comment_id: string }).comment_id))
+    if (x.ok) enviadas++
+    else if (x.estado === 'expirado') expiradas++
   }
-  return n
+  return { enviadas, expiradas }
 }
 
 export interface ResumoDoSetter {

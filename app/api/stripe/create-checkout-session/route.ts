@@ -7,6 +7,7 @@ import { recusaPlanoDescontinuado, requireStripePriceId } from '@/lib/stripe-pri
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
+import { registarConsentimentoDaCompra } from '@/lib/captacao-consentimento-registo'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -34,7 +35,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
 
-    const { planId, email, tradingview_username, sponsorCode } = await request.json()
+    const { planId, email, tradingview_username, sponsorCode, consentimentoEmail } = await request.json()
+
+    // A caixa «lembretes e novidades por email» (opcional, desmarcada — 06/10 F4). O email é o da
+    // sessão, nunca o do corpo: com sessão, a identidade não vem do pedido.
+    await registarConsentimentoDaCompra({
+      aceitou: consentimentoEmail,
+      email: user.email,
+      canal: 'checkout',
+      origemUrl: request.headers.get('referer'),
+    })
 
     if (!planId) {
       return NextResponse.json({ error: 'planId é obrigatório' }, { status: 400 })

@@ -188,23 +188,23 @@ export const BLOQUEIOS: BloqueioConhecido[] = [
       const { valor } = await chaveExiste(db, 'ig_setter_persona')
       const bruto = typeof valor === 'string' ? safeJson(valor) : valor
       const enviaDm = (bruto as { enviar_dm?: unknown } | null)?.enviar_dm === true
-      // Desde 06/10 o degrau existe no CAMINHO (lib/envios-aprovacao.ts + setter.ts): a DM fica
-      // `pendente` e só sai de `aprovado`. O que se mede agora é se alguma DM saiu SEM decisão
-      // registada depois disso — esse número tem de ser zero.
-      const { count: pendentes } = await db
+      // 06/10 F4: o dono decidiu que a DM ao comentador sai sozinha (quem comenta iniciou o
+      // contacto), mas só até 48 h depois do comentário. O que se mede é se alguma saiu FORA disso.
+      const { data: enviadas } = await db
         .from('ig_setter_rascunhos')
-        .select('comment_id', { count: 'exact', head: true })
-        .eq('estado', 'pendente')
-      const { count: semDecisao } = await db
-        .from('ig_setter_rascunhos')
-        .select('comment_id', { count: 'exact', head: true })
+        .select('comentado_em, enviado_em')
         .eq('estado', 'enviado')
         .eq('dm_possivel', true)
-        .is('decidido_por', null)
         .gte('enviado_em', '2026-10-06T12:00:00Z')
+        .limit(500)
+      const foraDaJanela = ((enviadas ?? []) as unknown[]).filter((r: unknown) => {
+        const x = r as { comentado_em: string | null; enviado_em: string | null }
+        if (!x.comentado_em || !x.enviado_em) return true
+        return new Date(x.enviado_em).getTime() - new Date(x.comentado_em).getTime() > 48 * 3_600_000
+      }).length
       return {
-        parado: Number(semDecisao ?? 0) > 0,
-        medida: `enviar_dm=${enviaDm} (sem efeito desde 06/10); DMs por aprovar: ${Number(pendentes ?? 0)}; DMs enviadas sem decisão desde 06/10: ${Number(semDecisao ?? 0)}`,
+        parado: foraDaJanela > 0,
+        medida: `enviar_dm=${enviaDm}; DMs enviadas desde 06/10: ${(enviadas ?? []).length}; fora das 48 h: ${foraDaJanela}`,
       }
     },
   },

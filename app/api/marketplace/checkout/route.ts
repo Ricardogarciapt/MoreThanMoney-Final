@@ -66,6 +66,7 @@ import { validarReferralParaCompra } from '@/lib/marketplace/referral-servidor'
 import { lerDefinicoes, lerVendedor, pctDoProduto } from '@/lib/marketplace/servidor'
 import { cupaoDaCampanha, cupaoStripeDePercentagem } from '@/lib/marketplace/stripe-preco'
 import { registarPasso } from '@/lib/marketplace/leads'
+import { registarConsentimentoDaCompra } from '@/lib/captacao-consentimento-registo'
 import { sessaoDoMembro } from '@/lib/marketplace/sessao'
 import { contaDoComprador, emailServeParaComprar } from '@/lib/marketplace/comprador'
 import type { PerfilUi } from '@/lib/perfil-ui'
@@ -163,6 +164,15 @@ export async function POST(request: NextRequest) {
       }
       quem = { userId: conta.userId, email: conta.email, perfil: null }
     }
+
+    // A caixa «lembretes e novidades por email» (opcional, desmarcada por omissão — 06/10 F4).
+    // Só grava com `consentimentoEmail === true`; comprar não é subscrever.
+    await registarConsentimentoDaCompra({
+      aceitou: corpo?.consentimentoEmail,
+      email: quem.email,
+      canal: 'marketplace',
+      origemUrl: request.headers.get('referer'),
+    })
     const codigoCupao = normalizarCodigo(corpo?.cupao)
     const codigoReferral = String(corpo?.referral ?? '').trim()
 

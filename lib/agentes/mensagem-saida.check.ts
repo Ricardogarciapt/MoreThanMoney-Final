@@ -176,14 +176,13 @@ caso('um t.me de outra pessoa não é o nosso bot e não se confunde com um cami
 
 // ── 3. A decisão completa ────────────────────────────────────────────────────────────────────────
 
-caso('o follow-up do Telegram passa a medir — texto real de telegram-lead-followup.ts', () => {
-  // Toque 2, copiado do `fallback` de `lib/telegram-lead-followup.ts`. O link está no FIM da
-  // frase, que é o caso em que a pontuação se cola ao código.
-  const real = 'Olá, não quero que percas o arranque 🚀 O trial de 3 dias (sem cartão) é a forma mais rápida de veres tudo por dentro. Queres que to deixe já ativado? 👉 https://www.morethanmoney.pt/register'
+caso('o follow-up do Telegram passa a medir — e é do AG-FORMACAO desde 06/10 (F4)', () => {
+  // O link no FIM da frase, que é o caso em que a pontuação se cola ao código.
+  const real = 'Ana, se quiseres avançar, o pack Membro está aqui 👉 https://www.morethanmoney.pt/register'
   const r = prepararMensagem({ canal: 'telegram', texto: real, funil: 'telegram:followup' })
-  assert.equal(r.codigo, 'AG-SAAS', 'o dono do funil do follow-up não foi aplicado')
+  assert.equal(r.codigo, 'AG-FORMACAO', 'o dono do funil do follow-up não foi aplicado')
   assert.equal(r.marcados, 1)
-  assert.ok(r.texto.includes('/register?ag=AG-SAAS'), r.texto)
+  assert.ok(r.texto.includes('/register?ag=AG-FORMACAO'), r.texto)
 })
 
 caso('o ponto final da frase não come a atribuição', () => {
@@ -195,7 +194,7 @@ caso('o ponto final da frase não come a atribuição', () => {
     texto: 'Começas aqui: www.morethanmoney.pt/register.',
     funil: 'telegram:followup',
   })
-  assert.ok(r.texto.includes('/register?ag=AG-SAAS.'), r.texto)
+  assert.ok(r.texto.includes('/register?ag=AG-FORMACAO.'), r.texto)
   assert.ok(!r.texto.includes('/register.?ag='), 'pôs o código depois do ponto — 404 para quem clica')
 })
 
@@ -248,9 +247,9 @@ caso('um código explícito mal formado não cai em silêncio para o funil', () 
   })
   assert.equal(r.codigo, null, 'um cupão de desconto passou por código de agente')
   assert.equal(r.motivo, 'codigo_invalido')
-  // E não caiu no AG-SAAS do funil: quem passou o código acredita que atribuiu a esse agente, e o
-  // crédito ia para outro sem ninguém dar por nada.
-  assert.ok(!r.texto.includes('AG-SAAS'))
+  // E não caiu no AG-FORMACAO do funil: quem passou o código acredita que atribuiu a esse agente,
+  // e o crédito ia para outro sem ninguém dar por nada.
+  assert.ok(!r.texto.includes('?ag='))
 })
 
 caso('o código explícito GANHA ao funil — é como o post comentado se herda', () => {
@@ -258,10 +257,10 @@ caso('o código explícito GANHA ao funil — é como o post comentado se herda'
     canal: 'telegram',
     texto: 'morethanmoney.pt/register',
     funil: 'telegram:followup',
-    codigoExplicito: 'AG-FORMACAO',
+    codigoExplicito: 'AG-SCANNER',
   })
-  assert.equal(r.codigo, 'AG-FORMACAO')
-  assert.ok(r.texto.includes('?ag=AG-FORMACAO'))
+  assert.equal(r.codigo, 'AG-SCANNER')
+  assert.ok(r.texto.includes('?ag=AG-SCANNER'))
 })
 
 caso('uma mensagem com dono e SEM link nosso declara-se, não se cala', () => {

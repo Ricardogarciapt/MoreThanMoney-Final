@@ -26,6 +26,8 @@ import { Loader2, ArrowLeft, Tag, Clock, ExternalLink } from "lucide-react"
 import { euros, galeriaDoProduto, nomeDoAutor } from "@/lib/marketplace/regras"
 import { codigoDeAgenteGuardado } from "@/lib/agentes/atribuicao-browser"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
+import { CaixaConsentimentoEmail } from "@/components/consentimento-email-caixa"
+import { CAIXA_PRE_MARCADA } from "@/lib/captacao-consentimento"
 
 type Preco = {
   baseCents: number; cents: number; descontoPct: number
@@ -70,6 +72,8 @@ export default function FichaProduto({ slug }: { slug: string }) {
   // existe na galeria deixava a ficha sem imagem nenhuma.
   const [activa, setActiva] = useState(0)
   const [email, setEmail] = useState("")
+  // A caixa de email (opcional, desmarcada — 06/10 F4).
+  const [consentimentoEmail, setConsentimentoEmail] = useState(CAIXA_PRE_MARCADA)
   /**
    * OPCIONAL, SEMPRE. Pede-se porque esta casa quase não tem telefones — 13% dos perfis a
    * 01/10/2026 — e é por aqui que entra quem ainda não é cliente. Mas não se obriga: obrigar um
@@ -111,7 +115,7 @@ export default function FichaProduto({ slug }: { slug: string }) {
         // `agenteCodigo` vai sempre e não tem campo no ecrã: quem compra não escolhe quem o
         // trouxe. Vem do link `?ag=` guardado no browser, e é só medição — nunca mexe no preço.
         body: JSON.stringify({
-          produtoId: produto.id, cupao, referral, email, telefone,
+          produtoId: produto.id, cupao, referral, email, telefone, consentimentoEmail,
           agenteCodigo: codigoDeAgenteGuardado(),
         }),
       })
@@ -129,7 +133,7 @@ export default function FichaProduto({ slug }: { slug: string }) {
     } finally {
       setAComprar(false)
     }
-  }, [produto, cupao, referral, email])
+  }, [produto, cupao, referral, email, consentimentoEmail])
 
   if (produto === null) {
     return (
@@ -337,6 +341,8 @@ export default function FichaProduto({ slug }: { slug: string }) {
                 />
                 {erro?.campo === "referral" && <span className="mt-1 block text-xs text-red-300">{erro.texto}</span>}
               </label>
+
+              <CaixaConsentimentoEmail marcada={consentimentoEmail} onMudar={setConsentimentoEmail} />
 
               <button
                 onClick={() => void comprar()}

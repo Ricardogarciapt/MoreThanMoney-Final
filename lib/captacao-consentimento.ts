@@ -147,6 +147,15 @@ export function listaDe(p: PessoaParaDecidir): Lista {
  * pedido tem de existir para a lista crescer de forma limpa. Cada entrada é um sítio onde a pessoa
  * age por vontade própria — nenhuma é uma importação.
  */
+/**
+ * O texto da caixa no checkout e no marketplace (06/10, F4). Curto, diz o que se recebe (lembretes
+ * e novidades), por onde (email), que é opcional e que se sai quando se quiser. É ESTE texto que
+ * fica gravado como prova na linha do livro — o ecrã e a prova têm de ser a mesma frase.
+ */
+export const TEXTO_CAIXA_CHECKOUT =
+  'Quero receber lembretes e novidades da MoreThanMoney por email (opcional). ' +
+  'Cancelo quando quiser, sem perder o acesso ao que comprei.'
+
 export interface PontoDeCaptura {
   canal: string
   onde: string
@@ -180,10 +189,13 @@ export const PONTOS_DE_CAPTURA: readonly PontoDeCaptura[] = [
   },
   {
     canal: 'checkout',
-    onde: 'Checkout, separado da compra — comprar não é subscrever',
-    pedido:
-      'Além dos emails sobre a minha conta, quero receber as novidades e conteúdos da MoreThanMoney. ' +
-      'Cancelo quando quiser, sem perder o acesso ao que comprei.',
+    onde: 'Checkout do site (/upgrade e /register), separado da compra — comprar não é subscrever',
+    pedido: TEXTO_CAIXA_CHECKOUT,
+  },
+  {
+    canal: 'marketplace',
+    onde: 'Ficha do produto no marketplace, ao lado do botão de compra (components/marketplace/ficha-produto.tsx)',
+    pedido: TEXTO_CAIXA_CHECKOUT,
   },
   {
     /**
@@ -216,3 +228,41 @@ export const PONTOS_DE_CAPTURA: readonly PontoDeCaptura[] = [
  * subir a conversão da página — e um sim que a pessoa não deu é pior do que um não.
  */
 export const CAIXA_PRE_MARCADA = false
+
+
+// ── A caixa do checkout e do marketplace (06/10, F4) ─────────────────────────────────────────────
+
+/** Os canais onde a caixa vive ao lado de uma compra. */
+export type CanalDeCompra = 'checkout' | 'marketplace'
+
+export interface LinhaDeConsentimento {
+  email: string
+  canal: CanalDeCompra
+  base_legal: 'consentimento'
+  prova: string
+  origem_url: string | null
+}
+
+/**
+ * O que gravar no livro (`captacao_consentimento`, que a vista `captacao_permissao_email` lê) a
+ * partir de uma compra. SÓ com a caixa marcada pela pessoa: `aceitou` tem de ser exactamente
+ * `true`. Um `'on'`, um `1`, um `undefined` ou a ausência do campo não são consentimento — e
+ * comprar não é subscrever. Devolve `null` quando não há nada a gravar.
+ */
+export function consentimentoDaCompra(p: {
+  aceitou: unknown
+  email: string | null | undefined
+  canal: CanalDeCompra
+  origemUrl?: string | null
+}): LinhaDeConsentimento | null {
+  if (p.aceitou !== true) return null
+  const email = normalizarEmail(p.email)
+  if (!emailUtilizavel(email) || ehEmailDeMentira(email)) return null
+  return {
+    email,
+    canal: p.canal,
+    base_legal: 'consentimento',
+    prova: TEXTO_CAIXA_CHECKOUT,
+    origem_url: p.origemUrl ? String(p.origemUrl).slice(0, 500) : null,
+  }
+}
