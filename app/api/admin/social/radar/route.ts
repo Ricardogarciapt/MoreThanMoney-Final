@@ -1,3 +1,4 @@
+import { filtroFrescoPostgrest } from "@/lib/instagram/radar-frescura"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const db = getSupabaseAdmin()
   const [{ data: prospetos }, { data: hashtags }] = await Promise.all([
-    db.from("ig_radar_prospetos").select("*").eq("estado", "pendente").order("pontuacao", { ascending: false }).limit(40),
+    db.from("ig_radar_prospetos").select("*").eq("estado", "pendente").or(filtroFrescoPostgrest()).order("publicado_em", { ascending: false, nullsFirst: false }).order("pontuacao", { ascending: false }).limit(40),
     db.from("ig_radar_hashtags").select("hashtag, ultima_procura, encontrados, media_pontuacao").order("media_pontuacao", { ascending: false }),
   ])
 

@@ -1,3 +1,5 @@
+import { postFresco } from './radar-frescura'
+export { postFresco, filtroFrescoPostgrest, RADAR_IDADE_MAX_DIAS } from './radar-frescura'
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { IG_ACCOUNTS, tokenForAccount } from "./publish"
 
@@ -219,7 +221,7 @@ export async function correrRadar(quantasHashtags = 3): Promise<{
       const r = await graph(
         // 12 e não 25: nas hashtags grandes a Meta recusa com "reduce the amount of data" — o
         // limite dela é sobre o VOLUME devolvido, e as legendas dos posts populares são longas.
-        `${id}/${balde.edge}?user_id=${conta.id}&fields=id,caption,like_count,comments_count,permalink&limit=12`,
+        `${id}/${balde.edge}?user_id=${conta.id}&fields=id,caption,like_count,comments_count,permalink,timestamp&limit=12`,
         token,
       )
       if (r.error) {
@@ -244,6 +246,10 @@ export async function correrRadar(quantasHashtags = 3): Promise<{
       vistos += posts.length
 
       for (const p of posts) {
+        // Só conteúdo fresco: um post com mais de RADAR_IDADE_MAX_DIAS já não tem conversa a acontecer.
+        // Sem data (a Meta nem sempre a devolve) só entra o balde dos recentes, que são das últimas horas.
+        const publicadoEm = typeof p.timestamp === "string" ? p.timestamp : null
+        if (!postFresco(publicadoEm, balde.origem)) continue
         const legenda = String(p.caption ?? "")
         const { pontos, porque } = pontuar(legenda, Number(p.like_count ?? 0), Number(p.comments_count ?? 0))
         pontuacoes.push(pontos)
@@ -262,6 +268,7 @@ export async function correrRadar(quantasHashtags = 3): Promise<{
             pontuacao: pontos,
             porque,
             origem: balde.origem,
+            publicado_em: publicadoEm,
           },
           { onConflict: "media_id", ignoreDuplicates: true },
         )

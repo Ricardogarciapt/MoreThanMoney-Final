@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chamarIA } from '@/lib/ia/chamar'
+import { filtroFrescoPostgrest } from './radar-frescura'
 import {
   AGENTE_DA_FILA,
   PONTUACAO_MINIMA,
@@ -81,7 +82,7 @@ export async function prepararFila(
     .gte('pontuacao', PONTUACAO_MINIMA)
     .not('permalink', 'is', null)
     // Só posts recentes: comentar uma publicação de há um mês não apanha conversa nenhuma.
-    .gte('encontrado_em', new Date(Date.now() - 3 * 86_400_000).toISOString())
+    .or(filtroFrescoPostgrest())
     .order('pontuacao', { ascending: false })
     .order('encontrado_em', { ascending: false })
     .limit(quantos * 3)
