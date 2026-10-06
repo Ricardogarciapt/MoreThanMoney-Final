@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { BrokerDadosPanel } from "@/components/admin/broker-dados-panel"
 import { BrokerLinksPanel } from "@/components/admin/broker-links-panel"
 import { PrimeGatePanel } from "@/components/admin/primegate-panel"
+import { B2BProspeccaoPanel } from "@/components/admin/b2b-prospeccao-panel"
 
 /**
  * Painel MÁQUINA DE VENDAS (/admin/sales-machine) — consome o hub /api/sales-machine (sessão-admin).
@@ -346,6 +347,9 @@ export default function SalesMachinePage() {
 
       {/* PrimeGate (PrimeVerse): o par email+UID está no nosso ramo de IB? A chave cola-se aqui. */}
       <PrimeGatePanel />
+
+      {/* Prospeção B2B por email profissional: prospectos por estado, respostas e excluir. */}
+      <B2BProspeccaoPanel />
     </div>
   )
 }

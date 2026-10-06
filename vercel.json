@@ -263,6 +263,10 @@
     {
       "path": "/api/cron/social-link-preview",
       "schedule": "15 * * * *"
+    },
+    {
+      "path": "/api/cron/b2b-prospeccao",
+      "schedule": "30 10 * * 1-5"
     }
   ]
 }
