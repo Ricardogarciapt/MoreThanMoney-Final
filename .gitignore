@@ -47,7 +47,10 @@ next-env.d.ts
 .cursor/
 
 # Claude Code sessions
-.claude/
+.claude/*
+# As skills do projeto (06/10/2026: as 522 em português do kursku/skills) vão com o repositório;
+# o resto de .claude/ (definições locais, sessões) continua fora.
+!.claude/skills/
 
 # Build / CI cache
 .turbo/
