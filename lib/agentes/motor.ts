@@ -26,10 +26,13 @@
  */
 import {
   JANELA_HORAS,
+  REGRAS_PADRAO,
   julgar,
+  lerRegrasVida,
   type Agente,
   type EstadoAgente,
   type Juizo,
+  type RegrasVida,
 } from './vida'
 
 /** Uma linha de `agentes_equipa`, como o PostgREST a devolve (numéricos podem vir em texto). */
@@ -49,6 +52,8 @@ export interface LinhaAgente {
   avaliado_em?: string | null
   parado_em?: string | null
   parado_porque?: string | null
+  morto_em?: string | null
+  causa_morte?: string | null
   criado_em?: string | null
 }
 
@@ -87,7 +92,7 @@ function legivel(v: unknown): boolean {
 }
 
 const PILARES = new Set(['trading', 'educacao', 'desenvolvimento', 'ceo'])
-const ESTADOS = new Set<EstadoAgente>(['vivo', 'em_risco', 'parado', 'pausado', 'reformado'])
+const ESTADOS = new Set<EstadoAgente>(['vivo', 'em_risco', 'parado', 'pausado', 'reformado', 'morto'])
 
 /**
  * SOMAR A JANELA.
@@ -119,6 +124,27 @@ export function somarJanela(
   return fora
 }
 
+/**
+ * A HORA DA ÚLTIMA RECEITA DE CADA AGENTE (06/10).
+ *
+ * A régua nova é «48 h SEGUIDAS sem receita», e isso não se tira de uma soma: tira-se da hora do
+ * último evento `receita` com valor positivo. Um evento de receita a zero (ou negativo, de um
+ * estorno mal gravado) NÃO conta como venda — contá-lo era dar mais 48 h de vida a um agente por
+ * uma linha que não trouxe dinheiro nenhum.
+ */
+export function ultimaReceita(eventos: EventoLido[], agora: Date = new Date()): Map<string, string> {
+  const fora = new Map<string, string>()
+  for (const e of eventos) {
+    if (e.tipo !== 'receita') continue
+    if (!(numero(e.valor) > 0)) continue
+    const t = Date.parse(String(e.criado_em))
+    if (!Number.isFinite(t) || t > agora.getTime()) continue
+    const atual = fora.get(e.agente_id)
+    if (!atual || Date.parse(atual) < t) fora.set(e.agente_id, new Date(t).toISOString())
+  }
+  return fora
+}
+
 export interface AgenteMontado {
   agente: Agente
   /**
@@ -135,7 +161,7 @@ export interface AgenteMontado {
  * propagava-se para `podeGastar` e para o painel como se o agente tivesse dívida, quando o que
  * aconteceu foi gastar-se mais do que o orçamento — que é informação diferente e vive no `gasto`.
  */
-export function montarAgente(linha: LinhaAgente, somas?: SomasJanela): AgenteMontado {
+export function montarAgente(linha: LinhaAgente, somas?: SomasJanela, ultimaReceitaEm?: string | null): AgenteMontado {
   const ilegivel: string[] = []
   if (!legivel(linha.orcamento)) ilegivel.push('orcamento')
   if (!legivel(linha.gasto)) ilegivel.push('gasto')
@@ -171,6 +197,8 @@ export function montarAgente(linha: LinhaAgente, somas?: SomasJanela): AgenteMon
       // em 48 h significa que nada aconteceu, e é isso que a regra tem de julgar.
       receita_janela: somas?.receita ?? 0,
       gasto_janela: somas?.gasto ?? 0,
+      // Nulo quando nunca vendeu: a régua conta então desde o nascimento (ou desde a régua).
+      ultima_receita_em: ultimaReceitaEm ?? null,
       saldo: Math.max(0, Number((orcamento - gasto).toFixed(2))),
     },
   }
@@ -183,9 +211,12 @@ export interface Escrita {
   /** O estado novo, ou `null` quando o estado não muda. */
   estado: EstadoAgente | null
   /** O evento a gravar no livro, ou `null` quando não há nada que valha uma linha. */
-  evento: { tipo: 'avaliado' | 'avisado' | 'parou'; valor: number; detalhe: string } | null
+  evento: { tipo: 'avaliado' | 'avisado' | 'parou' | 'morreu'; valor: number; detalhe: string } | null
   parado_em: string | null
   parado_porque: string | null
+  /** Só quando a régua mata: a hora e a causa vão para a linha E para o arquivo. */
+  morto_em?: string | null
+  causa_morte?: string | null
   juizo: Juizo
   /** Porque é que o motor decidiu escrever (ou não escrever) isto. Vai para o painel e para o log. */
   nota: string
@@ -217,6 +248,7 @@ export function planearJuizo(
   montado: AgenteMontado,
   agora: Date = new Date(),
   avaliadoEm?: string | null,
+  regras: RegrasVida = REGRAS_PADRAO,
 ): Escrita {
   const { agente, ilegivel } = montado
 
@@ -238,21 +270,28 @@ export function planearJuizo(
     }
   }
 
-  const juizo = julgar(agente, agora)
+  const juizo = julgar(agente, agora, regras)
   const mudaEstado = juizo.estado !== agente.estado
 
-  if (juizo.decisao === 'para') {
+  /**
+   * A MORTE (06/10). Muda o estado para `morto`, escreve a hora e a causa, e o executor arquiva o
+   * registo inteiro em `agentes_arquivo`. Não há aqui — nem em lado nenhum deste ficheiro — um
+   * `delete`: a guarda prova-o. `parado_em` NÃO se escreve: parado passou a ser só a mão do dono, e
+   * misturar as duas datas era perder a resposta a «foi a régua ou fui eu?».
+   */
+  if (juizo.decisao === 'morre') {
     return {
       agente_id: agente.id,
       nome: agente.nome,
-      estado: 'parado',
-      evento: { tipo: 'parou', valor: juizo.resultado, detalhe: juizo.porque },
-      // `parado_em` é o instante do juízo, não `now()` do Postgres: assim a hora que o painel
-      // mostra é a mesma que a regra usou para decidir.
-      parado_em: agora.toISOString(),
-      parado_porque: juizo.porque,
+      estado: 'morto',
+      evento: { tipo: 'morreu', valor: Number(agente.receita ?? 0), detalhe: juizo.porque },
+      parado_em: null,
+      parado_porque: null,
+      // O instante do juízo, não `now()` do Postgres: a hora que o painel mostra é a que a regra usou.
+      morto_em: agora.toISOString(),
+      causa_morte: juizo.porque,
       juizo,
-      nota: 'parado',
+      nota: 'morreu',
     }
   }
 
@@ -313,9 +352,51 @@ export function planearEquipa(
   linhas: LinhaAgente[],
   eventos: EventoLido[],
   agora: Date = new Date(),
+  regras: RegrasVida = REGRAS_PADRAO,
+  /** Eventos de receita de SEMPRE (não só da janela), para a hora da última venda. */
+  eventosReceita: EventoLido[] = eventos,
 ): Escrita[] {
-  const somas = somarJanela(eventos, agora)
-  return linhas.map((l) => planearJuizo(montarAgente(l, somas.get(String(l.id))), agora, l.avaliado_em))
+  const somas = somarJanela(eventos, agora, regras.janelaHoras)
+  const ultimas = ultimaReceita(eventosReceita, agora)
+  return linhas.map((l) =>
+    planearJuizo(
+      montarAgente(l, somas.get(String(l.id)), ultimas.get(String(l.id)) ?? null),
+      agora,
+      l.avaliado_em,
+      regras,
+    ),
+  )
+}
+
+/**
+ * O ARQUIVO DE UM MORTO — puro: monta a linha que vai para `agentes_arquivo`.
+ *
+ * Guarda TUDO o que se precisa para ler a vida dele daqui a seis meses sem depender de mais nada:
+ * a linha como estava, a receita total, as instruções, e os eventos. Os eventos continuam também
+ * em `agentes_eventos` (nada se apaga); a cópia aqui é o «processo fechado», que não muda mais.
+ */
+export function montarArquivo(
+  linha: LinhaAgente,
+  escrita: Escrita,
+  eventos: Array<Record<string, unknown>>,
+  extra: { codigo?: string | null; pai_id?: string | null } = {},
+): Record<string, unknown> {
+  return {
+    agente_id: escrita.agente_id,
+    nome: linha.nome,
+    codigo: extra.codigo ?? linha.chave_receita ?? null,
+    pai_id: extra.pai_id ?? linha.pai_id ?? null,
+    pilar: linha.pilar,
+    nasceu_em: linha.criado_em ?? null,
+    morto_em: escrita.morto_em,
+    causa_morte: escrita.causa_morte,
+    receita_total: numero(linha.receita),
+    gasto_total: numero(linha.gasto),
+    orcamento: numero(linha.orcamento),
+    instrucoes: linha.instrucoes ?? null,
+    linha: linha as unknown as Record<string, unknown>,
+    eventos,
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -331,7 +412,9 @@ export interface ResultadoMotor {
   ok: boolean
   ensaio: boolean
   avaliados: number
+  /** Desde 06/10 a régua não pára ninguém: mata. Mantido com o nome antigo para quem já o lê. */
   parados: number
+  mortos: number
   avisados: number
   ignorados: number
   escritas: Array<{ nome: string; nota: string; porque: string; resultado: number }>
@@ -355,17 +438,17 @@ export async function correrAvaliacao(
   const { data: linhas, error: erroLinhas } = await db
     .from('agentes_equipa')
     .select(
-      'id, nome, papel, pilar, pai_id, estado, pausado, orcamento, gasto, receita, chave_receita, avaliado_em, criado_em',
+      'id, nome, papel, pilar, pai_id, estado, pausado, instrucoes, orcamento, gasto, receita, chave_receita, avaliado_em, criado_em',
     )
   if (erroLinhas) {
     return {
-      ok: false, ensaio, avaliados: 0, parados: 0, avisados: 0, ignorados: 0, escritas: [],
+      ok: false, ensaio, avaliados: 0, parados: 0, mortos: 0, avisados: 0, ignorados: 0, escritas: [],
       erros: [`agentes_equipa: ${erroLinhas.message ?? 'erro'}`],
     }
   }
   const equipa = (linhas ?? []) as LinhaAgente[]
   if (!equipa.length) {
-    return { ok: true, ensaio, avaliados: 0, parados: 0, avisados: 0, ignorados: 0, escritas: [], erros: [] }
+    return { ok: true, ensaio, avaliados: 0, parados: 0, mortos: 0, avisados: 0, ignorados: 0, escritas: [], erros: [] }
   }
 
   /**
@@ -386,12 +469,48 @@ export async function correrAvaliacao(
     // Sem os eventos a janela seria toda zero, e isso punha a equipa inteira em risco de uma vez.
     // Vale muito mais não julgar ninguém nesta passagem.
     return {
-      ok: false, ensaio, avaliados: 0, parados: 0, avisados: 0, ignorados: 0, escritas: [],
+      ok: false, ensaio, avaliados: 0, parados: 0, mortos: 0, avisados: 0, ignorados: 0, escritas: [],
       erros: [`agentes_eventos: ${erroEventos.message ?? 'erro'} — ninguém foi julgado nesta passagem`],
     }
   }
 
-  const plano = planearEquipa(equipa, (eventos ?? []) as EventoLido[], agora)
+  /**
+   * As regras configuráveis e a hora da última venda de cada agente.
+   *
+   * Se a configuração não se ler, usam-se as regras decididas — EXCEPTO `regraDesde`: sem ela, a
+   * régua contaria desde o nascimento e podia matar de uma vez quem nunca teve links assinados. Por
+   * isso uma configuração ilegível NÃO mata ninguém nesta passagem (ver abaixo).
+   */
+  const { data: cfg, error: erroCfg } = await db
+    .from('site_settings')
+    .select('value')
+    .eq('key', 'agentes_vida')
+    .maybeSingle()
+  const regras = lerRegrasVida(cfg?.value)
+  const regrasLidas = !erroCfg && cfg != null
+
+  const { data: receitasSempre, error: erroReceitas } = await db
+    .from('agentes_eventos')
+    .select('agente_id, tipo, valor, criado_em')
+    .eq('tipo', 'receita')
+    .order('criado_em', { ascending: false })
+    .limit(5000)
+  if (erroReceitas) {
+    // Sem a hora da última venda, toda a gente parecia não vender desde que nasceu. Não se julga.
+    return {
+      ok: false, ensaio, avaliados: 0, parados: 0, mortos: 0, avisados: 0, ignorados: 0, escritas: [],
+      erros: [`agentes_eventos (receitas): ${erroReceitas.message ?? 'erro'} — ninguém foi julgado nesta passagem`],
+    }
+  }
+
+  const plano = planearEquipa(
+    equipa,
+    (eventos ?? []) as EventoLido[],
+    agora,
+    regras,
+    (receitasSempre ?? []) as EventoLido[],
+  )
+  const porId = new Map(equipa.map((l) => [String(l.id), l]))
 
   let parados = 0
   let avisados = 0
@@ -402,15 +521,46 @@ export async function correrAvaliacao(
       ignorados++
       continue
     }
-    if (e.evento?.tipo === 'parou') parados++
+    /**
+     * Sem a configuração lida, ninguém MORRE nesta passagem (os avisos continuam). A configuração
+     * traz o `regra_desde`, e julgar a morte sem ele é julgar por horas anteriores à régua.
+     */
+    if (e.evento?.tipo === 'morreu' && !regrasLidas) {
+      erros.push(`${e.nome}: morte adiada — site_settings.agentes_vida não se leu, e sem «regra_desde» a régua podia contar horas anteriores a ela`)
+      continue
+    }
+    if (e.evento?.tipo === 'morreu') parados++
     if (e.evento?.tipo === 'avisado') avisados++
 
     if (ensaio) continue
+
+    /**
+     * O ARQUIVO VEM ANTES DA MUDANÇA DE ESTADO. Ao contrário, um erro no arquivo deixava um morto
+     * sem processo — e o processo é a única coisa que a regra do dono manda guardar.
+     */
+    if (e.evento?.tipo === 'morreu') {
+      const linha = porId.get(e.agente_id)
+      const { data: evs } = await db
+        .from('agentes_eventos')
+        .select('tipo, valor, detalhe, criado_em')
+        .eq('agente_id', e.agente_id)
+        .order('criado_em', { ascending: true })
+        .limit(5000)
+      const { error: erroArquivo } = await db
+        .from('agentes_arquivo')
+        .insert(montarArquivo(linha ?? ({ id: e.agente_id, nome: e.nome, pilar: '', estado: '' } as LinhaAgente), e, (evs ?? []) as Array<Record<string, unknown>>))
+      if (erroArquivo) {
+        erros.push(`${e.nome}: arquivo não gravado (${erroArquivo.message ?? 'erro'}) — NÃO morreu nesta passagem`)
+        continue
+      }
+    }
 
     const mudanca: Record<string, unknown> = { avaliado_em: agora.toISOString(), atualizado_em: agora.toISOString() }
     if (e.estado) mudanca.estado = e.estado
     if (e.parado_em) mudanca.parado_em = e.parado_em
     if (e.parado_porque) mudanca.parado_porque = e.parado_porque
+    if (e.morto_em) mudanca.morto_em = e.morto_em
+    if (e.causa_morte) mudanca.causa_morte = e.causa_morte
 
     const { error: erroUpdate } = await db.from('agentes_equipa').update(mudanca).eq('id', e.agente_id)
     if (erroUpdate) {
@@ -436,6 +586,7 @@ export async function correrAvaliacao(
     ensaio,
     avaliados: plano.length - ignorados,
     parados,
+    mortos: parados,
     avisados,
     ignorados,
     escritas: plano.map((e) => ({
@@ -462,6 +613,17 @@ export async function acaoManual(
 ): Promise<{ ok: boolean; erro?: string }> {
   const agora = new Date().toISOString()
   const motivo = porque.trim() || 'Sem motivo escrito.'
+
+  /**
+   * UM MORTO NÃO SE MEXE (06/10). Nem retomar, nem pausar, nem parar: «retomar» um morto era
+   * ressuscitá-lo por um botão pensado para pausas, e «pausar» escrevia `pausado` por cima da causa
+   * da morte. Se o dono quiser a linhagem de volta, faz-se nascer um agente NOVO — o morto fica
+   * arquivado como está.
+   */
+  const { data: atual } = await db.from('agentes_equipa').select('estado').eq('id', agenteId).maybeSingle()
+  if (atual && String((atual as { estado?: string }).estado) === 'morto') {
+    return { ok: false, erro: 'Este agente está morto e arquivado — não volta a correr. Para a mesma função, nasce um agente novo.' }
+  }
 
   const mudanca: Record<string, unknown> =
     acao === 'pausar'

@@ -80,6 +80,13 @@ export function decidirInterruptor(
   for (const a of agentes) {
     const parado = a.estado === 'parado'
 
+    // Um morto (06/10) não entra no interruptor em sentido nenhum: não volta a correr, e pausá-lo
+    // escrevia por cima da causa da morte.
+    if (a.estado === 'morto') {
+      deixar.push({ id: a.id, nome: a.nome, acao: null, porque: 'Está morto e arquivado — não volta a correr.' })
+      continue
+    }
+
     if (acao === 'pausar') {
       if (parado) {
         deixar.push({

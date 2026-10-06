@@ -85,7 +85,16 @@ export const COOKIE_ATRIBUICAO = 'mtm_ag'
  */
 export function pareceCodigoDeAgente(codigo: unknown): boolean {
   const c = String(codigo ?? '').trim().toUpperCase()
-  return /^(AG|CEO)-[A-Z0-9]{2,24}$/.test(c)
+  /**
+   * 06/10 — OS FILHOS. A reprodução automática dá a cada filho `AG-<pai>-<n>` (ex.: `AG-SETTER-1`,
+   * e o neto `AG-SETTER-1-2`; o filho do CEO é `AG-CEO-MTM-1`). Com a forma antiga (um só bloco
+   * depois do prefixo) o código do filho NÃO passava aqui: o `?ag=` era deitado fora no browser, a
+   * venda gravava-se sem código, e o filho morria às 48 h com vendas feitas. Aceitam-se até cinco
+   * blocos a seguir ao prefixo, cada um só com letras e números, e 48 caracteres no total — o
+   * suficiente para quatro gerações, e nada que um cupão de desconto da casa pareça.
+   */
+  if (c.length > 48) return false
+  return /^(AG|CEO)-[A-Z0-9]{2,24}(-[A-Z0-9]{1,24}){0,4}$/.test(c)
 }
 
 /**

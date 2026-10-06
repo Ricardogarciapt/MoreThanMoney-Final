@@ -366,7 +366,8 @@ export function planearCiclo(entrada: {
     }
 
     // 2. Parado ou reformado: nada há a pedir, e repor é do dono.
-    if (x.agente.estado === 'parado' || x.agente.estado === 'reformado') {
+    // 06/10: e `morto` — arquivado, não volta a correr; um pedido a um morto nunca se cumpre.
+    if (x.agente.estado === 'parado' || x.agente.estado === 'reformado' || x.agente.estado === 'morto') {
       ignorados.push({ nome, porque: `Está ${x.agente.estado}. Pedir trabalho a quem não trabalha enche o registo e não produz nada.` })
       continue
     }

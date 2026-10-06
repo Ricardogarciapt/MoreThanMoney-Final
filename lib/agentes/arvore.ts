@@ -27,7 +27,7 @@
  * A guarda é `arvore.check.ts` (`npx tsx lib/agentes/arvore.check.ts`) e prova sobretudo o caso
  * mau: o pai que não existe, o ciclo, o parado pintado de vivo, o relógio negativo.
  */
-import { CARENCIA_HORAS, type EstadoAgente } from './vida'
+import { CARENCIA_HORAS, JANELA_HORAS, julgar, type Agente, type EstadoAgente } from './vida'
 
 /** O mínimo que um agente precisa de ter para entrar na árvore. */
 export interface NoBruto {
@@ -278,6 +278,9 @@ export function relogioDoJuizo(
   if (estado === 'reformado') {
     return { fase: 'suspenso', horas: null, texto: 'Relógio parado — reformado, passou o testemunho a um filho.' }
   }
+  if (estado === 'morto') {
+    return { fase: 'suspenso', horas: null, texto: 'Morto — 48 h sem receita; arquivado, não volta a correr.' }
+  }
 
   const t = Date.parse(String(a.criado_em ?? ''))
   if (!Number.isFinite(t)) {
@@ -332,7 +335,7 @@ export function estadoNoEcra(a: Pick<NoBruto, 'estado' | 'pausado'>): {
   conflito: string | null
 } {
   const bruto = String(a.estado ?? '')
-  const conhecido = (['vivo', 'em_risco', 'parado', 'pausado', 'reformado'] as const).includes(
+  const conhecido = (['vivo', 'em_risco', 'parado', 'pausado', 'reformado', 'morto'] as const).includes(
     bruto as EstadoAgente,
   )
     ? (bruto as EstadoAgente)
@@ -369,6 +372,8 @@ export interface ResumoEquipa {
   parados: number
   pausados: number
   reformados: number
+  /** 06/10: mortos pela régua das 48 h sem receita (arquivados, nunca apagados). */
+  mortos: number
   /** Agentes com receita medida a ZERO. Não é o mesmo que agentes que não venderam. */
   semReceitaMedida: number
   orfaos: number
@@ -411,6 +416,7 @@ export function resumoDaEquipa<T extends NoBruto & { receita?: number | null }>(
     parados: conta('parado'),
     pausados: conta('pausado'),
     reformados: conta('reformado'),
+    mortos: conta('morto'),
     semReceitaMedida: nos.filter((n) => Number(n.agente.receita ?? 0) === 0).length,
     orfaos: arvore.orfaos.length,
     porAtribuirCents: cents,
@@ -465,7 +471,7 @@ export interface Escala {
 }
 
 export const CORTES_DA_ESCALA =
-  '0–2 pára · 3–5 em risco · 6–9 paga-se — os mesmos limiares de julgar() em lib/agentes/vida.ts'
+  '0–2 morre · 3–5 em risco (mais de 24 h sem receita) · 6–9 vendeu na janela — a banda vem do próprio julgar() em lib/agentes/vida.ts'
 
 export interface FactosDaEscala {
   /** Receita menos gasto NA JANELA. É por este número que o agente vive. */
@@ -477,6 +483,11 @@ export interface FactosDaEscala {
   estado?: string | null
   pausado?: boolean | null
   criado_em?: string | null
+  /** 06/10: a hora da última receita. É por ela que o agente vive. */
+  ultima_receita_em?: string | null
+  /** Para a excepção do CEO: sem pilar e pai a escala não sabe quem é imortal. */
+  pilar?: string | null
+  pai_id?: string | null
 }
 
 /** Encaixa um valor numa das casas de uma banda, sem nunca sair dela. */
@@ -522,33 +533,48 @@ export function escalaDeVida(
   const saldo = Number(a.saldo ?? 0)
   const base = orcamentoInicial > 0 ? orcamentoInicial : 10
 
-  if (resultado > 0) {
-    // 6 a 9: quem se paga. O topo é quem gera, na janela, pelo menos o orçamento de um filho —
-    // que é o mesmo limiar por que `podeClonar` deixa um agente multiplicar-se.
-    return {
-      nivel: casa(resultado / base, 6, 9),
-      banda: 'paga_se',
-      cortes: CORTES_DA_ESCALA,
-      porque: `Pagou-se na janela: ${resultado.toFixed(2)} $. A casa 9 é quem gera, em 48 h, o orçamento de um filho (${base} $).`,
+  /**
+   * A BANDA VEM DO PRÓPRIO `julgar()` (06/10). Antes a escala reescrevia os cortes à mão, e a
+   * guarda tinha de provar que as duas cópias concordavam; com a régua nova (horas sem receita) a
+   * cópia ficava obsoleta no próprio dia. Chamar a regra é a única forma de não discordar dela.
+   */
+  const pilar = (['trading', 'educacao', 'desenvolvimento', 'ceo'] as const).find((p) => p === a.pilar) ?? 'trading'
+  const facto: Agente = {
+    id: 'escala', nome: '', pilar, pai_id: a.pai_id ?? (a.pilar ? null : 'desconhecido'),
+    estado: 'vivo', criado_em: String(a.criado_em ?? ''), gasto: 0, receita: 0, saldo,
+    receita_janela: resultado, gasto_janela: 0, ultima_receita_em: a.ultima_receita_em ?? null,
+  }
+  const j = julgar(facto, agora)
+
+  if (j.decisao === 'continua') {
+    if (resultado > 0) {
+      return {
+        nivel: casa(resultado / base, 6, 9),
+        banda: 'paga_se',
+        cortes: CORTES_DA_ESCALA,
+        porque: `Vendeu na janela: ${resultado.toFixed(2)} €. A casa 9 é quem gera, em 48 h, o orçamento de um filho (${base} €).`,
+      }
     }
+    return { nivel: 6, banda: 'paga_se', cortes: CORTES_DA_ESCALA, porque: j.porque }
   }
 
-  if (saldo > 0) {
-    // 3 a 5: sem lucro, mas com orçamento. Quanto mais orçamento resta, mais alto — é o tempo que
-    // ainda tem para virar o jogo.
-    return {
-      nivel: casa(saldo / base, 3, 5),
-      banda: 'risco',
-      cortes: CORTES_DA_ESCALA,
-      porque: `Sem lucro na janela (${resultado.toFixed(2)} $), mas ainda tem ${saldo.toFixed(2)} $ de orçamento. Em risco, não parado.`,
-    }
+  if (j.decisao === 'avisa') {
+    // 3 a 5: quanto mais horas faltam para a janela fechar, mais alto.
+    const t = Date.parse(String(a.ultima_receita_em ?? a.criado_em ?? ''))
+    const horasSem = Number.isFinite(t) ? (agora.getTime() - t) / 3_600_000 : JANELA_HORAS
+    const folga = 1 - Math.min(1, Math.max(0, (horasSem - JANELA_HORAS / 2) / (JANELA_HORAS / 2)))
+    return { nivel: casa(folga, 3, 5), banda: 'risco', cortes: CORTES_DA_ESCALA, porque: j.porque }
   }
 
-  // 0 a 2: sem lucro e sem orçamento. Mais fundo quanto maior o prejuízo.
+  if (j.decisao === 'espera') {
+    return { nivel: null, banda: 'carencia', cortes: CORTES_DA_ESCALA, porque: j.porque }
+  }
+
+  // 0 a 2: a régua mata. Mais fundo quanto maior o prejuízo da janela.
   return {
-    nivel: casa(1 - Math.min(1, Math.abs(resultado) / base), 0, 2),
+    nivel: casa(1 - Math.min(1, Math.abs(Math.min(0, resultado)) / base), 0, 2),
     banda: 'para',
     cortes: CORTES_DA_ESCALA,
-    porque: `Sem lucro (${resultado.toFixed(2)} $) e sem orçamento. É esta a casa em que a regra pára o agente.`,
+    porque: j.porque,
   }
 }

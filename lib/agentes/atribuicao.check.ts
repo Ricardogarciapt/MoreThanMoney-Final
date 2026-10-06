@@ -36,6 +36,15 @@ const AGORA = Date.parse('2026-10-01T16:00:00Z')
   // Maiúsculas e espaços não são um código diferente.
   teste('minúsculas normalizam-se', normalizar('  ag-formacao ') === 'AG-FORMACAO')
   // Mas o que é parecido e não é, não entra.
+  // 06/10: os códigos dos filhos da reprodução automática têm de passar — senão o `?ag=` deles
+  // perdia-se no browser e o filho morria com vendas feitas.
+  for (const filho of ['AG-SETTER-1', 'AG-SETTER-1-2', 'AG-CEO-MTM-1', 'ag-formacao-3']) {
+    teste(`«${filho}» (filho) é código de agente`, pareceCodigoDeAgente(filho))
+  }
+  teste('o filho normaliza-se em maiúsculas', normalizar(' ag-setter-1 ') === 'AG-SETTER-1')
+  for (const mau of ['AG-SETTER-', 'AG-SETTER--1', 'AG-SETTER-1-2-3-4-5-6', 'AG-' + 'X'.repeat(24) + '-' + 'Y'.repeat(24)]) {
+    teste(`«${mau}» (forma de filho partida ou longa demais) não entra`, !pareceCodigoDeAgente(mau))
+  }
   for (const mau of ['AG-', 'AG', 'CEO', 'XX-TRADER', 'AG_TRADER', 'AG-TRADER; DROP', 'AG-ÇÃO', '']) {
     teste(`«${mau}» não entra`, !pareceCodigoDeAgente(mau))
   }

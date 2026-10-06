@@ -8,8 +8,8 @@
  * no ecrã — vê-se na conta ao fim do mês.
  */
 import {
-  CARENCIA_HORAS, JANELA_HORAS, MARGEM_REFORMA, ORCAMENTO_INICIAL, deveReformarOPai, eImortal, julgar,
-  lucroAcumulado, podeClonar, podeGastar, ritmo, type Agente,
+  CARENCIA_HORAS, GRACA_HORAS, JANELA_HORAS, MARGEM_REFORMA, ORCAMENTO_INICIAL, REGRAS_PADRAO, deveReformarOPai,
+  eImortal, julgar, lerRegrasVida, lucroAcumulado, podeClonar, podeGastar, ritmo, type Agente,
 } from './vida'
 
 const falhas: string[] = []
@@ -20,46 +20,80 @@ const haHoras = (h: number) => new Date(AGORA.getTime() - h * 3_600_000).toISOSt
 
 const agente = (p: Partial<Agente>): Agente => ({
   id: 'a1', nome: 'Teste', pilar: 'trading', estado: 'vivo',
-  criado_em: haHoras(72), gasto: 0, receita: 0, saldo: ORCAMENTO_INICIAL, ...p,
+  criado_em: haHoras(100), gasto: 0, receita: 0, saldo: ORCAMENTO_INICIAL, ...p,
 })
 
-// ── A carência ──────────────────────────────────────────────────────────────
+// ── A GRAÇA DO RECÉM-NASCIDO (06/10: 72 h) ──────────────────────────────────
 {
   const bebe = julgar(agente({ criado_em: haHoras(3) }), AGORA)
   teste('um agente de 3 horas não é julgado', bebe.decisao === 'espera')
   teste('e diz quantas horas faltam', bebe.porque.includes('faltam'))
 
-  /**
-   * O caso que a carência existe para evitar: nascer a uma sexta à noite e ser julgado no domingo,
-   * sem nunca ter tido um dia útil para vender.
-   */
-  const quase = julgar(agente({ criado_em: haHoras(CARENCIA_HORAS - 1) }), AGORA)
-  teste('à 47ª hora ainda não se julga', quase.decisao === 'espera')
-  teste('à 49ª já se julga', julgar(agente({ criado_em: haHoras(49), gasto: 5, saldo: 5 }), AGORA).decisao !== 'espera')
+  // O CASO MAU: a graça a proteger mal. À 71ª hora, sem uma única venda, ainda não pode morrer.
+  const quase = julgar(agente({ criado_em: haHoras(GRACA_HORAS - 1) }), AGORA)
+  teste('à 71ª hora sem receita ainda NÃO morre (graça)', quase.decisao === 'espera' && quase.estado === 'vivo')
+  teste('passada a graça, sem receita nenhuma, morre',
+    julgar(agente({ criado_em: haHoras(GRACA_HORAS + 1) }), AGORA).decisao === 'morre')
+  teste('a graça é maior do que a janela', GRACA_HORAS > JANELA_HORAS)
+  teste('a carência antiga é o MESMO número que a graça', CARENCIA_HORAS === GRACA_HORAS)
 }
 
-// ── Quem se paga, continua ──────────────────────────────────────────────────
+// ── A RÉGUA: 48 h SEGUIDAS SEM RECEITA ATRIBUÍDA ────────────────────────────
 {
-  const bom = julgar(agente({ receita: 50, gasto: 8, saldo: 2 }), AGORA)
-  teste('lucro continua', bom.decisao === 'continua' && bom.estado === 'vivo')
-  teste('e o resultado é receita menos gasto', bom.resultado === 42)
-  // Lucro com saldo a zero NÃO mata: quem está a gerar receita não se desliga por ter gasto o
-  // orçamento inicial — era desligar exactamente o que funciona.
-  teste('lucro com saldo zero continua', julgar(agente({ receita: 50, gasto: 10, saldo: 0 }), AGORA).decisao === 'continua')
+  const comVendaOntem = julgar(agente({ ultima_receita_em: haHoras(20), receita: 35, receita_janela: 35 }), AGORA)
+  teste('venda há 20 h: vivo', comVendaOntem.decisao === 'continua' && comVendaOntem.estado === 'vivo')
+
+  const ha30 = julgar(agente({ ultima_receita_em: haHoras(30), receita: 35 }), AGORA)
+  teste('30 h sem receita: em risco', ha30.decisao === 'avisa' && ha30.estado === 'em_risco')
+  teste('e diz quantas horas faltam para morrer', ha30.porque.includes('faltam 18 h'))
+
+  const ha49 = julgar(agente({ ultima_receita_em: haHoras(49), receita: 400, gasto: 1, saldo: 9 }), AGORA)
+  teste('49 h sem receita: MORRE, mesmo com 400 € de vida e orçamento por gastar',
+    ha49.decisao === 'morre' && ha49.estado === 'morto')
+  teste('e o motivo diz as horas e a receita da vida toda', ha49.porque.includes('49 h') && ha49.porque.includes('400.00'))
+
+  // O orçamento deixou de ser prazo de vida: sem receita e COM saldo morre na mesma.
+  teste('saldo cheio não salva quem não vende', julgar(agente({ saldo: 10 }), AGORA).decisao === 'morre')
+  // E o inverso: sem saldo mas com venda recente vive. O orçamento só trava gasto.
+  teste('sem saldo mas com venda recente vive',
+    julgar(agente({ saldo: 0, gasto: 10, ultima_receita_em: haHoras(2), receita: 5 }), AGORA).decisao === 'continua')
+
+  // Compatibilidade: sem a hora da última receita, receita na janela prova que houve.
+  teste('receita na janela sem data conta como receita recente',
+    julgar(agente({ receita_janela: 12, gasto_janela: 0 }), AGORA).decisao === 'continua')
+
+  // Uma "última receita" no futuro é relógio trocado: não dá vida eterna.
+  teste('última receita no futuro não salva ninguém',
+    julgar(agente({ ultima_receita_em: new Date(AGORA.getTime() + 99 * 3_600_000).toISOString() }), AGORA).decisao === 'morre')
 }
 
-// ── Sem lucro ───────────────────────────────────────────────────────────────
+// ── A RÉGUA SÓ CONTA DESDE QUE EXISTE ───────────────────────────────────────
+//
+// O caso mau real: os seis filhos de 01/10 estiveram 5 dias sem links assinados. Aplicar a régua
+// nova sem `regraDesde` matava-os todos na primeira passagem, por horas anteriores à regra.
 {
-  const risco = julgar(agente({ receita: 0, gasto: 4, saldo: 6 }), AGORA)
-  teste('sem receita mas com saldo fica em risco', risco.decisao === 'avisa' && risco.estado === 'em_risco')
-  teste('e o motivo diz quanto resta', risco.porque.includes('6.00'))
+  const regras = { ...REGRAS_PADRAO, regraDesde: haHoras(10) }
+  const velhoSemVendas = julgar(agente({ criado_em: haHoras(120) }), AGORA, regras)
+  teste('régua com 10 h de vida não mata ninguém por horas anteriores', velhoSemVendas.decisao === 'continua')
+  teste('e diz que conta desde a régua', velhoSemVendas.porque.includes('régua'))
+  const regras50 = { ...REGRAS_PADRAO, regraDesde: haHoras(50) }
+  teste('régua com 50 h já mata quem não vendeu nesse tempo',
+    julgar(agente({ criado_em: haHoras(120) }), AGORA, regras50).decisao === 'morre')
 
-  const morto = julgar(agente({ receita: 0, gasto: 10, saldo: 0 }), AGORA)
-  teste('sem receita e sem saldo, pára', morto.decisao === 'para' && morto.estado === 'parado')
-  teste('e o motivo diz os números', morto.porque.includes('0.00') && morto.porque.includes('10.00'))
+  // A configuração não pode encurtar a vida por engano.
+  const lixo = lerRegrasVida({ janela_horas: 'abc', graca_horas: -5 })
+  teste('config ilegível volta às 48 h', lixo.janelaHoras === 48 && lixo.gracaHoras === 72)
+  teste('janela mínima de 12 h', lerRegrasVida({ janela_horas: 1 }).janelaHoras === 12)
+  teste('graça nunca abaixo da janela', lerRegrasVida({ janela_horas: 60, graca_horas: 24 }).gracaHoras === 60)
+  teste('config em texto JSON também se lê', lerRegrasVida('{"graca_horas": 96}').gracaHoras === 96)
+}
 
-  // Empatar não é pagar-se: receita igual ao gasto deixa a casa a pagar a infraestrutura.
-  teste('empate não conta como lucro', julgar(agente({ receita: 10, gasto: 10, saldo: 0 }), AGORA).decisao === 'para')
+// ── UM MORTO NÃO RESSUSCITA ─────────────────────────────────────────────────
+{
+  const m = julgar(agente({ estado: 'morto', ultima_receita_em: haHoras(1), receita: 50 }), AGORA)
+  teste('morto com venda atrasada continua morto', m.decisao === 'espera' && m.estado === 'morto')
+  teste('morto não gasta', !podeGastar(agente({ estado: 'morto' }), 1).pode)
+  teste('morto não clona', !podeClonar(agente({ estado: 'morto', receita: 99 }), AGORA).pode)
 }
 
 /**
@@ -134,8 +168,7 @@ const agente = (p: Partial<Agente>): Agente => ({
     receita_janela: 0, gasto_janela: 12,        // e nada nas últimas 48 h
   })
   const j = julgar(dormente, AGORA)
-  teste('quem já foi bom mas não mexe há 48 h, pára', j.decisao === 'para')
-  teste('e os números do motivo são os da JANELA', j.porque.includes('12.00') && !j.porque.includes('400'))
+  teste('quem já foi bom mas não vende há mais de 48 h, morre', j.decisao === 'morre')
 
   // O inverso: janela boa com acumulado mau continua vivo. O que conta para viver é agora.
   teste('janela boa com acumulado mau continua',
@@ -144,7 +177,7 @@ const agente = (p: Partial<Agente>): Agente => ({
   // Sem janela, usa-se o acumulado — e DIZ-SE, para ninguém ler «vivo» a pensar que foi medido nas
   // últimas 48 horas.
   const semJanela = julgar(agente({ receita: 40, gasto: 5 }), AGORA)
-  teste('sem janela usa o acumulado', semJanela.decisao === 'continua')
+  teste('sem janela nem data usa o acumulado', semJanela.decisao === 'continua')
   teste('e avisa que foi pelo acumulado', semJanela.porque.includes('acumulado'))
 
   teste('o acumulado é receita menos gasto totais', lucroAcumulado(agente({ receita: 30, gasto: 12 })) === 18)
@@ -159,7 +192,7 @@ const agente = (p: Partial<Agente>): Agente => ({
  */
 {
   const pai = agente({ id: 'pai', criado_em: haHoras(300), receita: 150, gasto: 50 })   // 100 $ / 300 h ≈ 0,33 $/h
-  const filhoBom = agente({ id: 'f1', criado_em: haHoras(60), receita: 60, gasto: 10 }) // 50 $ / 60 h ≈ 0,83 $/h
+  const filhoBom = agente({ id: 'f1', criado_em: haHoras(80), receita: 60, gasto: 10 }) // 50 $ / 80 h ≈ 0,63 $/h (80 h: já fora da graça de 72 h)
 
   teste('o pai tem MAIS lucro acumulado que o filho', lucroAcumulado(pai) > lucroAcumulado(filhoBom))
   teste('mas o filho tem melhor RITMO', (ritmo(filhoBom, AGORA) ?? 0) > (ritmo(pai, AGORA) ?? 0))
@@ -169,7 +202,7 @@ const agente = (p: Partial<Agente>): Agente => ({
   teste('e o motivo mostra os dois ritmos', r.porque.includes('$/h'))
 
   // Ganhar por pouco é ruído: reformar um pai bom por 1% de diferença perde os dois.
-  const filhoQuaseIgual = agente({ id: 'f2', criado_em: haHoras(60), receita: 30, gasto: 9.8 })
+  const filhoQuaseIgual = agente({ id: 'f2', criado_em: haHoras(80), receita: 30, gasto: 9.8 })
   teste('ganhar por pouco não reforma', !deveReformarOPai(pai, filhoQuaseIgual, AGORA).pode)
   teste('e explica a margem', deveReformarOPai(pai, filhoQuaseIgual, AGORA).porque.includes('ruído'))
 
@@ -177,7 +210,7 @@ const agente = (p: Partial<Agente>): Agente => ({
   teste('um filho de 2 h não reforma ninguém', !deveReformarOPai(pai, bebe, AGORA).pode)
   teste('e diz que uma venda de sorte não prova nada', deveReformarOPai(pai, bebe, AGORA).porque.includes('sorte'))
 
-  const filhoSemLucro = agente({ id: 'f4', criado_em: haHoras(60), receita: 1, gasto: 9 })
+  const filhoSemLucro = agente({ id: 'f4', criado_em: haHoras(80), receita: 1, gasto: 9 })
   teste('um filho a perder dinheiro não reforma', !deveReformarOPai(pai, filhoSemLucro, AGORA).pode)
 
   // Um pai a PERDER dinheiro é superado por qualquer filho que ganhe. A margem multiplicativa não
@@ -206,35 +239,36 @@ const agente = (p: Partial<Agente>): Agente => ({
 // correr, e deixa de parar quem devia parar. Não há exceção, não há log, não há nada: só uma equipa
 // a gastar orçamento para sempre.
 {
-  const semLucroNemSaldo = { receita: 0, gasto: 10, saldo: 0 } as const
+  const semLucroNemSaldo = { receita: 0, gasto: 10, saldo: 0 } as const // e sem venda nenhuma: >48 h
 
   // ── O topo da casa: pilar 'ceo' E sem pai ──
   const ceo = agente({ nome: 'CEO', pilar: 'ceo', pai_id: null, ...semLucroNemSaldo })
   teste('o CEO é imortal', eImortal(ceo))
   const jCeo = julgar(ceo, AGORA)
-  teste('o CEO sem lucro e sem saldo NÃO pára', jCeo.decisao !== 'para' && jCeo.estado !== 'parado')
+  teste('o CEO sem receita há mais de 48 h NÃO morre', jCeo.decisao !== 'morre' && jCeo.estado !== 'morto')
   teste('fica em risco, à vista', jCeo.decisao === 'avisa' && jCeo.estado === 'em_risco')
   teste('e o motivo diz que é excepção', /excep/i.test(jCeo.porque))
   // Imortal não é «deixar de medir»: o número continua a ser feito e continua a aparecer.
   teste('e o número medido continua lá', jCeo.resultado === -10 && jCeo.porque.includes('10.00'))
+  teste('um CEO morto por engano de dados não é rejulgado para vivo', julgar({ ...ceo, estado: 'morto' }, AGORA).estado === 'morto')
 
   // ── O CASO MAU Nº 1: um filho com o pilar do CEO ──
   // Uma linha copiada do pai, ou um valor por omissão num formulário, chega para isto.
   const filhoComPilarCeo = agente({ nome: 'Falso CEO', pilar: 'ceo', pai_id: 'o-ceo', ...semLucroNemSaldo })
   teste('um filho com pilar ceo NÃO é imortal', !eImortal(filhoComPilarCeo))
-  teste('e pára como qualquer outro', julgar(filhoComPilarCeo, AGORA).decisao === 'para')
+  teste('e morre como qualquer outro', julgar(filhoComPilarCeo, AGORA).decisao === 'morre')
 
   // ── O CASO MAU Nº 2: estar debaixo do CEO não dá nada ──
   const filhoDoCeo = agente({ nome: 'Produto SaaS', pilar: 'desenvolvimento', pai_id: 'o-ceo', ...semLucroNemSaldo })
   teste('um filho do CEO não herda a imortalidade', !eImortal(filhoDoCeo))
-  teste('e pára', julgar(filhoDoCeo, AGORA).decisao === 'para' && julgar(filhoDoCeo, AGORA).estado === 'parado')
+  teste('e morre', julgar(filhoDoCeo, AGORA).decisao === 'morre' && julgar(filhoDoCeo, AGORA).estado === 'morto')
 
   // ── O CASO MAU Nº 3: um agente raiz qualquer ──
   // Ser raiz, por si, não é ser CEO — um órfão (pai apagado, ver `arvore.ts`) desenha-se no topo e
   // não pode passar a indestrutível por isso.
   const orfaoNoTopo = agente({ nome: 'Órfão', pilar: 'trading', pai_id: null, ...semLucroNemSaldo })
   teste('ser raiz sem ser do pilar ceo não dá imortalidade', !eImortal(orfaoNoTopo))
-  teste('e pára', julgar(orfaoNoTopo, AGORA).decisao === 'para')
+  teste('e morre', julgar(orfaoNoTopo, AGORA).decisao === 'morre')
 
   // ── `pai_id` vazio conta como raiz, mas só isso ──
   teste('pai_id em branco é raiz', eImortal({ pilar: 'ceo', pai_id: '   ' }))
@@ -280,5 +314,5 @@ if (falhas.length) {
   process.exit(1)
 }
 console.log(
-  'agentes/vida: viver pela janela, clonar pelo acumulado, e o filho de melhor RITMO reforma o pai ✓',
+  'agentes/vida: 48 h sem receita morre (arquivado), a graça protege o recém-nascido, a régua conta desde que existe, o CEO não morre ✓',
 )

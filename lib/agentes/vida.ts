@@ -1,12 +1,29 @@
 /**
- * A REGRA DE VIDA DOS AGENTES — decide quem continua e quem pára.
+ * A REGRA DE VIDA DOS AGENTES — decide quem continua e quem MORRE.
  *
- * ═══ A REGRA, EM UMA FRASE ═════════════════════════════════════════════════════════════════
+ * ═══ A REGRA, EM UMA FRASE (decisão do dono, 06/10/2026) ═══════════════════════════════════
  *
- * Um agente mantém-se vivo enquanto se pagar a si próprio. Se em 48 horas não trouxer receita que
- * cubra o que gastou, pára.
+ * Um agente com 48 horas seguidas SEM RECEITA ATRIBUÍDA morre: sai da equipa, deixa de correr para
+ * sempre, e o registo fica ARQUIVADO (estado `morto`, `morto_em`, `causa_morte`, receita total,
+ * eventos guardados). Nunca apagado. A receita é só a de `vendas_vendas.agente_codigo` (o `?ag=`),
+ * e nunca a dos filhos somada ao pai.
  *
- * ═══ PÁRA, NÃO SE APAGA ════════════════════════════════════════════════════════════════════
+ * ── O que mudou em relação a 01/10, e porquê ──
+ *
+ *  · antes julgava-se LUCRO (receita − gasto) e o agente só parava quando também ficava sem
+ *    orçamento. O dono trocou isso por uma régua mais simples e mais dura: houve receita nas últimas
+ *    48 h, ou não houve. O orçamento passa a ser só um travão de gasto (`podeGastar`), não um prazo
+ *    de vida;
+ *  · `parado` deixa de ser o fim automático: passa a ser SÓ a paragem manual do dono (uma pausa
+ *    forte, com motivo). O estado terminal automático é `morto`, e não tem botão de volta no
+ *    motor — um morto não volta a correr;
+ *  · um recém-nascido tem GRAÇA ({@link GRACA_HORAS}, 72 h por omissão, configurável em
+ *    `site_settings.agentes_vida`) antes de poder morrer;
+ *  · a régua só conta a partir de quando passou a existir (`regraDesde`). Sem isto, aplicar a
+ *    migração matava de uma vez os seis filhos de 01/10 — que estiveram 5 dias SEM links assinados
+ *    (ver lib/agentes/codigos.ts) — por 48 horas que aconteceram antes de a regra existir.
+ *
+ * ═══ MORRE, MAS NÃO SE APAGA ═══════════════════════════════════════════════════════════════
  *
  * O pedido original era que o agente «se apagasse da existência». Faz-se o efeito — deixa de
  * trabalhar, perde orçamento, sai da lista — mas por DESACTIVAÇÃO REGISTADA, e por três razões que
@@ -35,20 +52,75 @@ export const JANELA_HORAS = 48
 export const ORCAMENTO_INICIAL = 10
 
 /**
- * O tempo que um agente tem antes de ser julgado pela primeira vez.
+ * A GRAÇA DE UM RECÉM-NASCIDO: o tempo antes de poder morrer.
  *
- * Sem isto, um agente nascido às 23h de sexta é avaliado no domingo, sem nunca ter tido um dia útil
- * para vender. A primeira avaliação só conta depois de ele ter tido a janela inteira.
+ * Maior do que a janela de propósito (72 h > 48 h): um filho nascido à sexta à noite precisa de
+ * pelo menos um dia útil inteiro para alguém clicar no código dele e comprar. Com a graça igual à
+ * janela, um filho nascido a meio de um fim-de-semana morria sem ter tido um único dia de vendas.
  */
-export const CARENCIA_HORAS = JANELA_HORAS
+export const GRACA_HORAS = 72
+
+/**
+ * Nome antigo da graça, mantido porque o ciclo do CEO e a árvore o usam para «não pressionar quem
+ * ainda está na carência». É o MESMO número: duas carências diferentes faziam o CEO cobrar um filho
+ * que a regra de vida ainda protege.
+ */
+export const CARENCIA_HORAS = GRACA_HORAS
+
+/**
+ * As regras configuráveis (`site_settings.agentes_vida`). Os valores por omissão são os decididos.
+ */
+export interface RegrasVida {
+  janelaHoras: number
+  gracaHoras: number
+  /**
+   * Desde quando a régua da morte existe. As horas sem receita contam-se a partir do MAIS TARDE de:
+   * nascimento, última receita, e isto. Nulo = desde sempre.
+   */
+  regraDesde?: string | null
+}
+
+export const REGRAS_PADRAO: RegrasVida = { janelaHoras: JANELA_HORAS, gracaHoras: GRACA_HORAS, regraDesde: null }
+
+/**
+ * Lê `site_settings.agentes_vida` com tolerância: o `value` pode vir objecto ou texto JSON (há
+ * chaves desta casa gravadas das duas formas), e um número ilegível NUNCA encurta a vida de
+ * ninguém — volta ao valor decidido. Mínimos duros: janela ≥ 12 h, graça ≥ janela.
+ */
+export function lerRegrasVida(valor: unknown): RegrasVida {
+  let v: Record<string, unknown> = {}
+  try {
+    v = typeof valor === 'string' ? JSON.parse(valor) : ((valor ?? {}) as Record<string, unknown>)
+  } catch {
+    v = {}
+  }
+  const n = (x: unknown, d: number) => {
+    const k = Number(x)
+    return Number.isFinite(k) && k > 0 ? k : d
+  }
+  const janelaHoras = Math.max(12, n(v.janela_horas, JANELA_HORAS))
+  const gracaHoras = Math.max(janelaHoras, n(v.graca_horas, GRACA_HORAS))
+  const desde = typeof v.regra_desde === 'string' && Number.isFinite(Date.parse(v.regra_desde)) ? v.regra_desde : null
+  return { janelaHoras, gracaHoras, regraDesde: desde }
+}
 
 /**
  * `reformado` não é `parado`, e a diferença não é cosmética: **parado é falhanço, reformado é
  * sucesso.** Um agente reforma-se quando um filho dele passa a render mais — deixou descendência
  * melhor, que é o melhor fim possível para um agente. Juntar os dois no mesmo estado perdia a
  * única informação que distingue uma linhagem que evoluiu de uma que morreu.
+ *
+ * `morto` (06/10) é o fim AUTOMÁTICO: 48 h sem receita. `parado` passa a ser só a mão do dono.
+ * São estados diferentes porque respondem a perguntas diferentes: «a régua matou-o» e «o Ricardo
+ * mandou-o parar» pedem leituras opostas quando se olha para a linhagem meses depois.
  */
-export type EstadoAgente = 'vivo' | 'em_risco' | 'parado' | 'pausado' | 'reformado'
+export type EstadoAgente = 'vivo' | 'em_risco' | 'parado' | 'pausado' | 'reformado' | 'morto'
+
+/**
+ * Estados fora de jogo: não correm, não gastam, não se reproduzem. Só `morto` é irreversível pelo
+ * motor; `parado` volta pela mão do dono, `reformado` é um fim honroso.
+ */
+export const ESTADOS_FORA_DE_JOGO: readonly EstadoAgente[] = ['parado', 'reformado', 'morto']
 
 export interface Agente {
   id: string
@@ -85,6 +157,12 @@ export interface Agente {
    */
   receita_janela?: number | null
   gasto_janela?: number | null
+  /**
+   * A data do último evento `receita` deste agente (06/10). É POR ESTE NÚMERO que ele vive: a régua
+   * é «48 h seguidas sem receita», e isso só se sabe com a hora da última. Quando não vem (chamadas
+   * antigas), usa-se `receita_janela > 0` como prova de receita recente — e o motivo diz-o.
+   */
+  ultima_receita_em?: string | null
   /** O orçamento que lhe resta. */
   saldo: number
   /** Quando foi julgado pela última vez. */
@@ -95,7 +173,7 @@ export interface Agente {
 
 export interface Juizo {
   /** O que fazer com este agente. */
-  decisao: 'continua' | 'avisa' | 'para' | 'espera'
+  decisao: 'continua' | 'avisa' | 'morre' | 'espera'
   /** O estado em que fica. */
   estado: EstadoAgente
   /** Em português, para aparecer no painel e no registo. */
@@ -158,42 +236,56 @@ export function eImortal(a: Pick<Agente, 'pilar' | 'pai_id'>): boolean {
 }
 
 /**
- * O JULGAMENTO.
+ * O JULGAMENTO (regra de 06/10).
  *
  * A ordem das perguntas é a regra, e não uma sequência de ifs qualquer:
  *
  *  1. está pausado pelo dono? Então não se julga. A supervisão humana ganha sempre à regra
  *     automática — é esse o ponto de haver supervisão;
- *  2. ainda está na carência? Espera-se;
- *  3. deu lucro? Continua;
- *  4. não deu, mas ainda tem saldo? Avisa-se, e fica em risco. Um agente sem receita mas com
- *     orçamento ainda pode virar o jogo, e matá-lo ao primeiro dia mau é matar o que ainda não
- *     teve tempo de vender;
- *  5. sem lucro e sem saldo: pára.
+ *  2. já está fora de jogo (parado à mão, reformado, morto)? Não se rejulga. Em particular, um
+ *     morto NÃO ressuscita por ter entrado uma venda atrasada com o código dele: a receita fica
+ *     registada no arquivo, mas a morte é o fim;
+ *  3. ainda está na GRAÇA de recém-nascido? Espera-se;
+ *  4. quantas horas seguidas leva sem receita atribuída — contadas desde o MAIS TARDE de: nascimento,
+ *     última receita, e o dia em que a régua passou a existir? Menos de metade da janela: vivo.
+ *     Mais de metade: em risco, com as horas que faltam escritas;
+ *  5. a janela inteira sem receita: MORRE — excepto o CEO, que fica em risco à vista.
  */
-export function julgar(a: Agente, agora: Date = new Date()): Juizo {
+export function julgar(a: Agente, agora: Date = new Date(), regras: RegrasVida = REGRAS_PADRAO): Juizo {
+  const janela = regras.janelaHoras
+  const graca = regras.gracaHoras
   const temJanela = a.receita_janela != null || a.gasto_janela != null
   const receitaJ = Number(a.receita_janela ?? a.receita ?? 0)
   const gastoJ = Number(a.gasto_janela ?? a.gasto ?? 0)
+  // O resultado continua a ser calculado e mostrado: deixou de decidir a vida, mas continua a ser
+  // a primeira coisa que o dono quer ver ao lado do nome.
   const resultado = Number((receitaJ - gastoJ).toFixed(2))
-  const comoFoiMedido = temJanela ? '' : ' (medido pelo acumulado — não veio a janela)'
 
   if (a.pausado || a.estado === 'pausado') {
     return {
       decisao: 'espera',
       estado: 'pausado',
       resultado,
-      porque: 'Pausado pelo dono — a regra das 48 horas não corre em agentes pausados.',
+      porque: `Pausado pelo dono — a regra das ${janela} horas não corre em agentes pausados.`,
     }
   }
 
   if (a.estado === 'parado') {
-    return { decisao: 'espera', estado: 'parado', resultado, porque: 'Já está parado.' }
+    return {
+      decisao: 'espera', estado: 'parado', resultado,
+      porque: 'Parado à mão pelo dono. Desde 06/10 parar é só decisão dele — a régua já não pára ninguém, mata.',
+    }
   }
   if (a.estado === 'reformado') {
     return {
       decisao: 'espera', estado: 'reformado', resultado,
       porque: 'Reformado — um filho dele rende mais. Não se julga quem já passou o testemunho.',
+    }
+  }
+  if (a.estado === 'morto') {
+    return {
+      decisao: 'espera', estado: 'morto', resultado,
+      porque: 'Morto e arquivado. Não volta a correr — uma venda atrasada com o código dele fica no arquivo, não o ressuscita.',
     }
   }
 
@@ -203,32 +295,65 @@ export function julgar(a: Agente, agora: Date = new Date()): Juizo {
     // escaparia para sempre — ou pareceria velhíssimo, e morria à primeira.
     return { decisao: 'espera', estado: a.estado, resultado, porque: 'Sem data de criação — não há janela para julgar.' }
   }
-  if (idade < CARENCIA_HORAS) {
-    const faltam = Math.ceil(CARENCIA_HORAS - idade)
+  if (idade < 0) {
+    return { decisao: 'espera', estado: a.estado, resultado, porque: 'Data de criação no futuro — relógio trocado. Não se julga.' }
+  }
+  if (idade < graca) {
+    const faltam = Math.ceil(graca - idade)
     return {
       decisao: 'espera',
       estado: 'vivo',
       resultado,
-      porque: `Ainda na carência: nasceu há ${Math.floor(idade)} h e a primeira avaliação é às ${CARENCIA_HORAS} h (faltam ${faltam} h).`,
+      porque: `Ainda na graça de recém-nascido: nasceu há ${Math.floor(idade)} h e só pode morrer depois das ${graca} h (faltam ${faltam} h).`,
     }
   }
 
-  if (resultado > 0) {
-    return {
-      decisao: 'continua',
-      estado: 'vivo',
-      resultado,
-      porque: `Pagou-se: ${receitaJ.toFixed(2)} $ de receita contra ${gastoJ.toFixed(2)} $ de gasto${comoFoiMedido}.`,
-    }
+  // ── As horas seguidas sem receita ──
+  const tUltima = a.ultima_receita_em ? Date.parse(String(a.ultima_receita_em)) : NaN
+  const tNasceu = Date.parse(String(a.criado_em))
+  const tRegra = regras.regraDesde ? Date.parse(String(regras.regraDesde)) : NaN
+  let referencia = tNasceu
+  let deOnde = 'desde que nasceu'
+  if (Number.isFinite(tUltima) && tUltima > referencia && tUltima <= agora.getTime()) {
+    referencia = tUltima
+    deOnde = 'desde a última receita'
+  }
+  if (Number.isFinite(tRegra) && tRegra > referencia) {
+    referencia = tRegra
+    deOnde = 'desde que a régua da morte passou a existir'
+  }
+  let horasSem = (agora.getTime() - referencia) / 3_600_000
+
+  /**
+   * Compatibilidade: quem chama sem `ultima_receita_em` mas com receita na janela PROVA que houve
+   * receita nas últimas 48 h — trata-se como receita agora, e diz-se. O caso contrário (sem data e
+   * sem receita na janela) cai na contagem desde o nascimento/régua, que é o mais cauteloso que se
+   * pode ser sem inventar uma data.
+   */
+  let nota = ''
+  if (a.ultima_receita_em == null && receitaJ > 0) {
+    horasSem = 0
+    nota = temJanela ? ' (receita na janela, sem a hora exacta da última)' : ' (medido pelo acumulado — não veio a janela)'
   }
 
-  const saldo = Number(a.saldo ?? 0)
-  if (saldo > 0) {
+  if (horasSem < janela) {
+    const faltam = Math.max(1, Math.ceil(janela - horasSem))
+    if (horasSem < janela / 2) {
+      return {
+        decisao: 'continua',
+        estado: 'vivo',
+        resultado,
+        porque:
+          receitaJ > 0
+            ? `Vivo: ${receitaJ.toFixed(2)} € de receita atribuída na janela${nota}.`
+            : `Vivo: ${Math.floor(horasSem)} h sem receita ${deOnde}; morre às ${janela} h sem receita (faltam ${faltam} h).`,
+      }
+    }
     return {
       decisao: 'avisa',
       estado: 'em_risco',
       resultado,
-      porque: `Sem lucro em ${JANELA_HORAS} h (${resultado.toFixed(2)} $)${comoFoiMedido}, mas ainda tem ${saldo.toFixed(2)} $ de orçamento. Em risco.`,
+      porque: `Em risco: ${Math.floor(horasSem)} h seguidas sem receita atribuída ${deOnde}. Se chegar às ${janela} h sem uma venda com o código dele, morre (faltam ${faltam} h).`,
     }
   }
 
@@ -237,7 +362,7 @@ export function julgar(a: Agente, agora: Date = new Date()): Juizo {
    *
    * Pô-la no topo do `julgar` era tentador e era pior: o CEO saía da função sem ter sido medido, e
    * o painel não saberia dizer se ele se paga. Aqui ele passou por tudo, o número está feito, e o
-   * que a excepção muda é só o destino: em vez de `parado`, fica `em_risco` com o motivo à vista.
+   * que a excepção muda é só o destino: em vez de `morto`, fica `em_risco` com o motivo à vista.
    */
   if (eImortal(a)) {
     return {
@@ -245,19 +370,21 @@ export function julgar(a: Agente, agora: Date = new Date()): Juizo {
       estado: 'em_risco',
       resultado,
       porque:
-        `Sem lucro e sem orçamento: ${receitaJ.toFixed(2)} $ de receita, ${gastoJ.toFixed(2)} $ gastos${comoFoiMedido}. ` +
-        'NÃO pára — é o CEO, e a regra das 48 h tem nele uma excepção nomeada (decisão do dono, 01/10): ' +
-        'parar o único que cria e pára sub-agentes deixava a equipa sem ninguém a julgá-la. ' +
+        `${Math.floor(horasSem)} h seguidas sem receita atribuída ${deOnde} (${receitaJ.toFixed(2)} € na janela, ${gastoJ.toFixed(2)} gastos). ` +
+        `NÃO morre — é o CEO, e a regra das ${janela} h tem nele uma excepção nomeada (decisão do dono, 01/10, mantida a 06/10): ` +
+        'matar o único que cria e julga sub-agentes deixava a equipa sem ninguém a julgá-la. ' +
         'Fica em risco, à vista, e continua a ser medido pela mesma régua — a imortalidade não lhe melhora a nota, ' +
         'e não se estende a nenhum filho.',
     }
   }
 
   return {
-    decisao: 'para',
-    estado: 'parado',
+    decisao: 'morre',
+    estado: 'morto',
     resultado,
-    porque: `Sem lucro e sem orçamento: ${receitaJ.toFixed(2)} $ de receita, ${gastoJ.toFixed(2)} $ gastos${comoFoiMedido}. Pára.`,
+    porque:
+      `${Math.floor(horasSem)} h seguidas sem receita atribuída ${deOnde} (a régua são ${janela} h). ` +
+      `Morre: sai da equipa e fica arquivado — ${Number(a.receita ?? 0).toFixed(2)} € de receita em toda a vida, ${Number(a.gasto ?? 0).toFixed(2)} gastos.`,
   }
 }
 
@@ -270,6 +397,7 @@ export function julgar(a: Agente, agora: Date = new Date()): Juizo {
 export function podeGastar(a: Agente, quanto: number): { pode: boolean; porque: string } {
   if (a.pausado || a.estado === 'pausado') return { pode: false, porque: 'Agente pausado.' }
   if (a.estado === 'parado') return { pode: false, porque: 'Agente parado — não gasta mais.' }
+  if (a.estado === 'morto') return { pode: false, porque: 'Agente morto — arquivado, não gasta mais.' }
   const q = Number(quanto)
   if (!Number.isFinite(q) || q <= 0) return { pode: false, porque: 'Valor inválido.' }
   const saldo = Number(a.saldo ?? 0)
@@ -292,7 +420,7 @@ export function lucroAcumulado(a: Agente): number {
 
 export function podeClonar(a: Agente, agora: Date = new Date()): { pode: boolean; porque: string } {
   if (a.pausado || a.estado === 'pausado') return { pode: false, porque: 'Agente pausado.' }
-  if (a.estado === 'parado' || a.estado === 'reformado') {
+  if (a.estado === 'parado' || a.estado === 'reformado' || a.estado === 'morto') {
     return { pode: false, porque: `Um agente ${a.estado} não clona.` }
   }
   const idade = horasEntre(a.criado_em, agora)
@@ -353,7 +481,7 @@ export function deveReformarOPai(
   if (pai.pilar === 'ceo') {
     return { pode: false, porque: 'O CEO não se reforma por um sub-agente — responde ao Ricardo, não aos filhos.' }
   }
-  if (pai.estado === 'parado' || pai.estado === 'reformado') {
+  if (pai.estado === 'parado' || pai.estado === 'reformado' || pai.estado === 'morto') {
     return { pode: false, porque: `O pai já está ${pai.estado}.` }
   }
   if (pai.pausado || pai.estado === 'pausado') {

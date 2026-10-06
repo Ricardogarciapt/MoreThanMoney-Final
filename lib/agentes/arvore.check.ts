@@ -12,7 +12,7 @@ import {
   CORTES_DA_ESCALA, achatar, escalaDeVida, estadoNoEcra, montarArvore, relogioDoJuizo,
   resumoDaEquipa, textoDoPilar, type FactosDaEscala, type NoBruto,
 } from './arvore'
-import { CARENCIA_HORAS, julgar } from './vida'
+import { CARENCIA_HORAS, GRACA_HORAS, julgar } from './vida'
 
 const falhas: string[] = []
 const teste = (nome: string, condicao: boolean) => { if (!condicao) falhas.push(nome) }
@@ -126,18 +126,19 @@ const ag = (p: Partial<Linha> & { id: string }): Linha => ({
    * `toFixed` desenhava «faltam 24 h» a um agente que está a ser julgado desde ontem — o inverso
    * exacto da verdade, e com bom aspecto.
    */
-  const velho = relogioDoJuizo({ criado_em: haHoras(72), estado: 'vivo' }, AGORA)
+  const velho = relogioDoJuizo({ criado_em: haHoras(GRACA_HORAS + 24), estado: 'vivo' }, AGORA)
   teste('depois da carência a fase muda', velho.fase === 'em_julgamento')
   teste('e as horas NUNCA são negativas', (velho.horas ?? 0) >= 0)
-  teste('e dizem o tempo JÁ PASSADO, não o que falta', velho.horas === 72 - CARENCIA_HORAS)
+  teste('e dizem o tempo JÁ PASSADO, não o que falta', velho.horas === 24)
   teste('e o texto nega a contagem decrescente', velho.texto.includes('não há contagem decrescente'))
 
   // A fronteira exacta: à 47ª hora ainda falta, à 49ª já se julga.
-  teste('47 h -> carência', relogioDoJuizo({ criado_em: haHoras(47), estado: 'vivo' }, AGORA).fase === 'carencia')
-  teste('49 h -> em julgamento', relogioDoJuizo({ criado_em: haHoras(49), estado: 'vivo' }, AGORA).fase === 'em_julgamento')
+  // 06/10: a graça passou a 72 h.
+  teste('71 h -> carência', relogioDoJuizo({ criado_em: haHoras(GRACA_HORAS - 1), estado: 'vivo' }, AGORA).fase === 'carencia')
+  teste('73 h -> em julgamento', relogioDoJuizo({ criado_em: haHoras(GRACA_HORAS + 1), estado: 'vivo' }, AGORA).fase === 'em_julgamento')
 
   // Pausado/parado: o relógio está DESLIGADO, e não a zero. Zero parece «é agora».
-  for (const e of ['pausado', 'parado', 'reformado'] as const) {
+  for (const e of ['pausado', 'parado', 'reformado', 'morto'] as const) {
     const r = relogioDoJuizo({ criado_em: haHoras(99), estado: e }, AGORA)
     teste(`${e} suspende o relógio`, r.fase === 'suspenso' && r.horas === null)
   }
@@ -174,7 +175,7 @@ const ag = (p: Partial<Linha> & { id: string }): Linha => ({
    * Um estado que não se reconhece NÃO se pinta de vivo. «vivo» é a cor que diz «está a trabalhar e
    * a pagar-se»; assumi-la por omissão era pintar de verde um agente de que não se sabe nada.
    */
-  for (const mau of ['', 'ativo', 'ACTIVE', 'morto', null]) {
+  for (const mau of ['', 'ativo', 'ACTIVE', 'zumbi', null]) {
     const r = estadoNoEcra({ estado: mau as string | null, pausado: false })
     teste(`estado «${mau}» não vira vivo`, r.estado !== 'vivo')
     teste(`estado «${mau}» declara o problema`, r.conflito !== null)
@@ -232,13 +233,14 @@ const ag = (p: Partial<Linha> & { id: string }): Linha => ({
 // ═══ A ESCALA DE VIDA: OS CORTES TÊM DE BATER COM A REGRA ════════════════════════════════════
 {
   const E = (p: Partial<FactosDaEscala>): FactosDaEscala => ({
-    codigo: 'AG-X', estado: 'vivo', pausado: false, criado_em: haHoras(72), saldo: 10, resultado: 0, ...p,
+    codigo: 'AG-X', estado: 'vivo', pausado: false, criado_em: haHoras(100), saldo: 10, resultado: 0, ...p,
   })
 
   // As três bandas, nos mesmos casos em que `julgar()` decide continuar / avisar / parar.
   teste('lucro -> banda paga_se', escalaDeVida(E({ resultado: 20, saldo: 0 }), AGORA).banda === 'paga_se')
-  teste('sem lucro com saldo -> banda risco', escalaDeVida(E({ resultado: -2, saldo: 6 }), AGORA).banda === 'risco')
-  teste('sem lucro sem saldo -> banda para', escalaDeVida(E({ resultado: -2, saldo: 0 }), AGORA).banda === 'para')
+  // 06/10: a banda é das HORAS SEM RECEITA, não do saldo.
+  teste('30 h sem receita -> banda risco', escalaDeVida(E({ resultado: -2, saldo: 6, ultima_receita_em: haHoras(30) }), AGORA).banda === 'risco')
+  teste('mais de 48 h sem receita -> banda para (morre), mesmo com saldo', escalaDeVida(E({ resultado: -2, saldo: 6 }), AGORA).banda === 'para')
 
   /**
    * A GUARDA QUE IMPORTA: a escala e a regra não podem discordar. Se discordarem, o painel desenha
@@ -247,13 +249,15 @@ const ag = (p: Partial<Linha> & { id: string }): Linha => ({
   const casos: Array<Partial<FactosDaEscala>> = [
     { resultado: 42, saldo: 2 }, { resultado: 0.01, saldo: 0 }, { resultado: 0, saldo: 6 },
     { resultado: -30, saldo: 0 }, { resultado: -0.5, saldo: 0.5 }, { resultado: 0, saldo: 0 },
+    { resultado: 0, saldo: 3, ultima_receita_em: haHoras(30) }, { resultado: 0, saldo: 3, ultima_receita_em: haHoras(10) },
   ]
   for (const c of casos) {
     const f = E(c)
     const esc = escalaDeVida(f, AGORA)
     const j = julgar(
       { id: 'x', nome: 'x', pilar: 'trading', estado: 'vivo', criado_em: f.criado_em!, gasto: 0,
-        receita: 0, saldo: Number(f.saldo), receita_janela: Number(f.resultado), gasto_janela: 0 },
+        receita: 0, saldo: Number(f.saldo), receita_janela: Number(f.resultado), gasto_janela: 0,
+        ultima_receita_em: f.ultima_receita_em ?? null },
       AGORA,
     )
     const esperado = j.decisao === 'continua' ? 'paga_se' : j.decisao === 'avisa' ? 'risco' : 'para'
@@ -265,9 +269,9 @@ const ag = (p: Partial<Linha> & { id: string }): Linha => ({
     const n = escalaDeVida(E({ resultado: r, saldo: 0 }), AGORA).nivel!
     teste(`lucro ${r} fica entre 6 e 9`, n >= 6 && n <= 9)
   }
-  for (const s of [0.01, 5, 10, 999]) {
-    const n = escalaDeVida(E({ resultado: -1, saldo: s }), AGORA).nivel!
-    teste(`saldo ${s} fica entre 3 e 5`, n >= 3 && n <= 5)
+  for (const h of [25, 30, 40, 47]) {
+    const n = escalaDeVida(E({ resultado: -1, saldo: 5, ultima_receita_em: haHoras(h) }), AGORA).nivel!
+    teste(`${h} h sem receita fica entre 3 e 5`, n >= 3 && n <= 5)
   }
   for (const r of [0, -1, -10, -9999]) {
     const n = escalaDeVida(E({ resultado: r, saldo: 0 }), AGORA).nivel!

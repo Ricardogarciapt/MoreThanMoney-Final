@@ -15,9 +15,11 @@
 import { JANELA_HORAS, ORCAMENTO_INICIAL } from './vida'
 import {
   montarAgente,
+  montarArquivo,
   planearEquipa,
   planearJuizo,
   somarJanela,
+  ultimaReceita,
   type EventoLido,
   type LinhaAgente,
 } from './motor'
@@ -30,7 +32,7 @@ const haHoras = (h: number) => new Date(AGORA.getTime() - h * 3_600_000).toISOSt
 
 const linha = (p: Partial<LinhaAgente> = {}): LinhaAgente => ({
   id: 'a1', nome: 'Teste', pilar: 'trading', estado: 'vivo',
-  criado_em: haHoras(72), orcamento: 10, gasto: 0, receita: 0, ...p,
+  criado_em: haHoras(100), orcamento: 10, gasto: 0, receita: 0, ...p,
 })
 
 /**
@@ -141,7 +143,8 @@ const linha = (p: Partial<LinhaAgente> = {}): LinhaAgente => ({
 
   const p = planearJuizo(m, AGORA)
   teste('quem foi bom mas não mexe há 48 h não passa como lucrativo', p.juizo.decisao !== 'continua')
-  teste('e o motivo não cita o acumulado', !p.juizo.porque.includes('400'))
+  // 06/10: a régua é «48 h sem receita» — o acumulado de 400 € não compra vida.
+  teste('e morre pela régua, não se salva pelo acumulado', p.juizo.decisao === 'morre')
 }
 
 /**
@@ -151,7 +154,8 @@ const linha = (p: Partial<LinhaAgente> = {}): LinhaAgente => ({
  * aviso dezenas de vezes por dia até o agente morrer — e enche o livro de onde a janela é somada.
  */
 {
-  const emRisco = montarAgente(linha({ orcamento: 10, gasto: 4 }), { receita: 0, gasto: 4 })
+  // 30 h desde a última venda: em risco (metade da janela passada), ainda não morto.
+  const emRisco = montarAgente(linha({ orcamento: 10, gasto: 4 }), { receita: 5, gasto: 4 }, haHoras(30))
 
   const primeira = planearJuizo(emRisco, AGORA)
   teste('o primeiro aviso muda o estado', primeira.estado === 'em_risco')
@@ -159,7 +163,7 @@ const linha = (p: Partial<LinhaAgente> = {}): LinhaAgente => ({
   teste('com o motivo por escrito', (primeira.evento?.detalhe ?? '').length > 20)
 
   // Agora o agente JÁ está em risco. A mesma situação não se volta a gravar.
-  const jaAvisado = montarAgente(linha({ estado: 'em_risco', orcamento: 10, gasto: 4 }), { receita: 0, gasto: 4 })
+  const jaAvisado = montarAgente(linha({ estado: 'em_risco', orcamento: 10, gasto: 4 }), { receita: 5, gasto: 4 }, haHoras(31))
   const segunda = planearJuizo(jaAvisado, AGORA)
   teste('o segundo aviso não grava nada', segunda.evento === null)
   teste('nem volta a escrever o estado', segunda.estado === null)
@@ -167,22 +171,52 @@ const linha = (p: Partial<LinhaAgente> = {}): LinhaAgente => ({
 }
 
 /**
- * ── PARAR ESCREVE O MOTIVO, E A HORA DO JUÍZO ───────────────────────────────
+ * ── MORRER ESCREVE A CAUSA, A HORA DO JUÍZO, E ARQUIVA — NUNCA APAGA (06/10) ─
  *
- * Um agente «parado» sem motivo escrito é um agente que ninguém consegue defender nem recuperar.
- * E a hora é a do juízo, não a do Postgres: se fossem diferentes, o painel mostrava uma hora e a
- * regra tinha usado outra.
+ * O caso mau: a morte a ser feita com um `delete` (o pedido original do dono, em 01/10, era que o
+ * agente «se apagasse»). A regra de 06/10 diz o contrário por escrito: o registo é ARQUIVADO.
+ * E `parado_*` não se escreve: parado é só a mão do dono, e misturar as duas datas apagava a
+ * resposta a «foi a régua ou fui eu?».
  */
 {
-  const morto = montarAgente(linha({ orcamento: 10, gasto: 10 }), { receita: 0, gasto: 10 })
+  const morto = montarAgente(linha({ orcamento: 10, gasto: 3, receita: 12 }), { receita: 0, gasto: 0 }, haHoras(60))
   const p = planearJuizo(morto, AGORA)
-  teste('sem lucro e sem saldo, pára', p.estado === 'parado')
-  teste('grava evento `parou`', p.evento?.tipo === 'parou')
-  teste('escreve o motivo na linha', (p.parado_porque ?? '').length > 20)
-  teste('e a hora do juízo', p.parado_em === AGORA.toISOString())
+  teste('60 h sem receita: morre', p.estado === 'morto')
+  teste('grava evento `morreu`', p.evento?.tipo === 'morreu')
+  teste('com a receita da vida toda no valor do evento', p.evento?.valor === 12)
+  teste('escreve a causa na linha', (p.causa_morte ?? '').length > 20)
+  teste('e a hora do juízo', p.morto_em === AGORA.toISOString())
+  teste('NÃO escreve parado_em (parado é só o dono)', p.parado_em === null && p.parado_porque === null)
 
-  // O limite do dono: parar é mudar de estado. Nada aqui produz um apagamento.
-  teste('parar não produz nenhuma ordem de apagar', !JSON.stringify(p).toLowerCase().includes('delete'))
+  // O limite do dono: morrer é mudar de estado e arquivar. Nada aqui produz um apagamento.
+  teste('morrer não produz nenhuma ordem de apagar', !JSON.stringify(p).toLowerCase().includes('delete'))
+
+  const eventos = [{ tipo: 'nasceu', valor: 10, criado_em: haHoras(100) }, { tipo: 'receita', valor: 12, criado_em: haHoras(60) }]
+  const arq = montarArquivo(linha({ id: 'a1', chave_receita: 'AG-X-1', receita: 12, instrucoes: 'faz X' }), p, eventos)
+  teste('o arquivo guarda os eventos', Array.isArray(arq.eventos) && (arq.eventos as unknown[]).length === 2)
+  teste('o arquivo guarda a receita total', arq.receita_total === 12)
+  teste('o arquivo guarda as instruções e o código', arq.instrucoes === 'faz X' && arq.codigo === 'AG-X-1')
+  teste('o arquivo guarda a causa e a hora', arq.causa_morte === p.causa_morte && arq.morto_em === p.morto_em)
+}
+
+/**
+ * ── A HORA DA ÚLTIMA RECEITA: SÓ DINHEIRO A SÉRIO ──────────────────────────
+ * Uma linha `receita` a zero não é venda. Contá-la dava mais 48 h de vida por nada.
+ */
+{
+  const evs: EventoLido[] = [
+    { agente_id: 'a1', tipo: 'receita', valor: 0, criado_em: haHoras(2) },
+    { agente_id: 'a1', tipo: 'receita', valor: 9, criado_em: haHoras(50) },
+    { agente_id: 'a1', tipo: 'gastou', valor: 9, criado_em: haHoras(1) },
+    { agente_id: 'a2', tipo: 'receita', valor: 5, criado_em: new Date(AGORA.getTime() + 3_600_000).toISOString() },
+  ]
+  const u = ultimaReceita(evs, AGORA)
+  teste('receita a zero não conta como venda', u.get('a1') === new Date(haHoras(50)).toISOString())
+  teste('receita no futuro (relógio trocado) não conta', !u.has('a2'))
+
+  // De ponta a ponta: a receita velha de SEMPRE (fora da janela) dá a hora certa — e mata.
+  const plano = planearEquipa([linha({ id: 'a1', nome: 'A' })], [], AGORA, undefined, evs)
+  teste('última venda há 50 h: morre, mesmo com um evento a zero há 2 h', plano[0]!.estado === 'morto')
 }
 
 /**
@@ -201,8 +235,8 @@ const linha = (p: Partial<LinhaAgente> = {}): LinhaAgente => ({
   // só por causa do pai.
   const topo = montarAgente(linha({ pilar: 'ceo', pai_id: null, orcamento: 10, gasto: 10 }), { receita: 0, gasto: 10 })
   const sob = montarAgente(linha({ pilar: 'ceo', pai_id: 'o-ceo', orcamento: 10, gasto: 10 }), { receita: 0, gasto: 10 })
-  teste('o CEO do topo não é parado pelo motor', planearJuizo(topo, AGORA).estado !== 'parado')
-  teste('um filho com o pilar ceo é parado pelo motor', planearJuizo(sob, AGORA).estado === 'parado')
+  teste('o CEO do topo não morre pelo motor', planearJuizo(topo, AGORA).estado !== 'morto')
+  teste('um filho com o pilar ceo morre pelo motor', planearJuizo(sob, AGORA).estado === 'morto')
 }
 
 /**
@@ -212,7 +246,7 @@ const linha = (p: Partial<LinhaAgente> = {}): LinhaAgente => ({
  * sempre, e o painel mentia ao dono exactamente sobre o caso bom.
  */
 {
-  const recuperou = montarAgente(linha({ estado: 'em_risco', orcamento: 10, gasto: 4 }), { receita: 40, gasto: 4 })
+  const recuperou = montarAgente(linha({ estado: 'em_risco', orcamento: 10, gasto: 4 }), { receita: 40, gasto: 4 }, haHoras(2))
   const p = planearJuizo(recuperou, AGORA)
   teste('quem voltou a dar lucro volta a vivo', p.estado === 'vivo')
   teste('e isso fica no livro', p.evento?.tipo === 'avaliado')
@@ -226,7 +260,7 @@ const linha = (p: Partial<LinhaAgente> = {}): LinhaAgente => ({
  * a cada passagem.
  */
 {
-  const bom = montarAgente(linha({ orcamento: 10, gasto: 2 }), { receita: 40, gasto: 2 })
+  const bom = montarAgente(linha({ orcamento: 10, gasto: 2 }), { receita: 40, gasto: 2 }, haHoras(3))
 
   const avaliadoAgora = planearJuizo(bom, AGORA, haHoras(1))
   teste('avaliado há 1 h não volta a gravar', avaliadoAgora.evento === null)
@@ -261,8 +295,8 @@ const linha = (p: Partial<LinhaAgente> = {}): LinhaAgente => ({
 {
   const bebe = montarAgente(linha({ criado_em: haHoras(3), orcamento: 10, gasto: 10 }), { receita: 0, gasto: 10 })
   const p = planearJuizo(bebe, AGORA)
-  teste('um recém-nascido sem saldo NÃO é parado', p.estado !== 'parado')
-  teste('e o motivo fala da carência', p.juizo.porque.includes('carência'))
+  teste('um recém-nascido sem saldo NÃO morre', p.estado !== 'morto' && p.estado !== 'parado')
+  teste('e o motivo fala da graça', p.juizo.porque.includes('graça'))
 }
 
 /**
@@ -286,7 +320,7 @@ const linha = (p: Partial<LinhaAgente> = {}): LinhaAgente => ({
   const por = (nome: string) => plano.find((p) => p.nome === nome)!
 
   teste('a receita foi para o agente certo', por('Bom').juizo.decisao === 'continua')
-  teste('e o outro não a recebeu', por('Mau').estado === 'parado')
+  teste('e o outro não a recebeu', por('Mau').estado === 'morto')
   teste('o recém-nascido fica à espera', por('Novo').juizo.decisao === 'espera')
   teste('a linha rota é ignorada', por('Roto').nota.startsWith('ignorado'))
   teste('planeia um resultado por agente', plano.length === 4)
