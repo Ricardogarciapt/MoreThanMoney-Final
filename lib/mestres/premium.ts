@@ -118,6 +118,8 @@ export interface SinalPremiumMestre {
   referencia: number | null
   sl: number
   tps: number[]
+  /** a zona do trader [baixo, alto] — onde a mestre entra (entradaPremium) */
+  zona?: [number, number] | null
 }
 
 export type DecisaoSinalPremium = { abrir: true; sinal: SinalPremiumMestre } | { abrir: false; motivo: string }
@@ -168,7 +170,7 @@ export function decidirSinalPremium(p: { sinal: SinalLido | null; agora: Date; p
   }
   if (!dentroDaJanelaPremium(p.agora)) return { abrir: false, motivo: `fora da janela ${PREMIUM_JANELA.inicio}h–${PREMIUM_JANELA.fim}h ${PREMIUM_JANELA.fuso}` }
   if (p.pausadoHoje) return { abrir: false, motivo: 'limite diário de SL atingido (premium_daily_stop)' }
-  return { abrir: true, sinal: { symbol, direcao: s.direction, referencia: ref, sl, tps } }
+  return { abrir: true, sinal: { symbol, direcao: s.direction, referencia: ref, sl, tps, zona: s.zone ?? null } }
 }
 
 /** Posição aberta da mestre (funded_positions), o bastante para a regra da trade anterior. */
@@ -204,6 +206,97 @@ export function bloqueioPelaAnterior(abertas: PosicaoMestrePremium[], symbol: st
   return null
 }
 
+// ── entrada na ZONA do trader (07/10) ────────────────────────────────────────
+
+/**
+ * ONDE A MESTRE ENTRA — no MEIO da zona do trader, por ordem limite, e não a mercado.
+ *
+ * Medido a 07/10 nos 66 sinais Premium de 24/09 a 07/10 (velas de 1 min da OANDA, mesma gestão,
+ * comparação emparelhada — os números absolutos de velas não valem, a diferença sim):
+ *
+ *   entrada a mercado (o que a mestre fazia)          −458 pips · semana 1 +304 · semana 2 −762
+ *   limite no meio da zona, válida 60 min              +880 pips · semana 1 +616 · semana 2 +264
+ *
+ * O trader NÃO entra a mercado: «1st entry / 2nd entry / 3rd entry» são camadas DENTRO da zona, e os
+ * pips que anuncia contam-se a partir delas. A mercado a mestre ficava sempre na ponta pior da zona
+ * (um SELL «4278–4283» com o preço em 4278 vendia no fundo) e o stop de ~100 pips contra um TP1 de
+ * 50 fazia o resto. No meio da zona o risco encolhe meia zona (~25–35 pips) e só se entra quando o
+ * preço volta — que é exactamente o que o trader faz.
+ *
+ * O preço já DENTRO da zona para lá do meio (melhor do que o meio) → a mercado: uma limite do lado
+ * errado do preço é recusada pela corretora (e pelo simulador), e esperar seria pior do que o mercado.
+ */
+export const PREMIUM_ENTRADA_PADRAO = {
+  /** 'zona' = limite no meio da zona; 'mercado' = como era até 07/10 */
+  modo: 'zona' as 'zona' | 'mercado',
+  /** validade da limite — 60 min medidos (30–120 dão o mesmo sinal; 15 perde enchimentos) */
+  validadeMin: 60,
+  /** posições + pendentes Premium vivas ao mesmo tempo na mestre (o trader faz camadas) */
+  maxVivas: 2,
+}
+export type EntradaPremiumConfig = typeof PREMIUM_ENTRADA_PADRAO
+
+/** `sinais_config.entradaPremium` do premium-ouro, com o padrão para o que faltar ou vier torto. */
+export function lerEntradaPremium(sinaisConfig: unknown): EntradaPremiumConfig {
+  const c = (sinaisConfig && typeof sinaisConfig === 'object' ? (sinaisConfig as Record<string, unknown>).entradaPremium : null) as Record<string, unknown> | null
+  const out = { ...PREMIUM_ENTRADA_PADRAO }
+  if (!c || typeof c !== 'object') return out
+  if (c.modo === 'zona' || c.modo === 'mercado') out.modo = c.modo
+  const v = Number(c.validadeMin)
+  if (Number.isFinite(v) && v >= 5 && v <= 240) out.validadeMin = Math.round(v)
+  const m = Number(c.maxVivas)
+  if (Number.isFinite(m) && m >= 1 && m <= 5) out.maxVivas = Math.floor(m)
+  return out
+}
+
+export type EntradaPremium =
+  | { tipo: 'mercado'; motivo: string }
+  | { tipo: 'limite'; preco: number; expiraEm: string }
+  | { tipo: 'recusar'; motivo: string }
+
+/**
+ * Mercado ou limite no meio da zona? Pura (teste em __tests__/premium-zona.check.ts).
+ * `preco` é o tick ao vivo; sem ele decide-se pela zona (a limite não precisa de preço fresco).
+ */
+export function entradaPremium(p: {
+  direcao: 'buy' | 'sell'
+  zona: [number, number] | null | undefined
+  sl: number
+  tp1: number | null
+  preco: { bid: number; ask: number } | null
+  cfg: EntradaPremiumConfig
+  agora: Date
+  digits?: number
+}): EntradaPremium {
+  if (p.cfg.modo === 'mercado') return { tipo: 'mercado', motivo: 'entradaPremium.modo = mercado' }
+  const z = p.zona
+  if (!z || !(Number(z[0]) > 0) || !(Number(z[1]) > 0)) return { tipo: 'mercado', motivo: 'sinal sem zona' }
+  const f = Math.pow(10, p.digits ?? 2)
+  const meio = Math.round(((Number(z[0]) + Number(z[1])) / 2) * f) / f
+  const lado = p.direcao === 'buy' ? 1 : -1
+  // O meio tem de ficar entre o SL e o TP1 — senão a zona foi mal lida e a limite seria um disparate.
+  if ((meio - p.sl) * lado <= 0) return { tipo: 'recusar', motivo: `meio da zona (${meio}) do lado errado do SL (${p.sl})` }
+  if (p.tp1 != null && (p.tp1 - meio) * lado <= 0) return { tipo: 'recusar', motivo: `meio da zona (${meio}) já para lá do TP1 (${p.tp1})` }
+  if (p.preco) {
+    const px = p.direcao === 'buy' ? p.preco.ask : p.preco.bid
+    // Preço já melhor do que o meio (dentro da zona, do lado bom): a mercado é melhor do que a limite.
+    if (Number.isFinite(px) && px > 0 && (meio - px) * lado >= 0) {
+      if ((px - p.sl) * lado <= 0) return { tipo: 'recusar', motivo: `o preço (${px}) já passou o SL (${p.sl})` }
+      return { tipo: 'mercado', motivo: `preço ${px} já melhor do que o meio da zona ${meio}` }
+    }
+  }
+  return { tipo: 'limite', preco: meio, expiraEm: new Date(p.agora.getTime() + p.cfg.validadeMin * 60_000).toISOString() }
+}
+
+/**
+ * A regra nova da trade anterior (substitui `bloqueioPelaAnterior` no caminho da mestre): o trader
+ * faz camadas, por isso deixam-se `maxVivas` trades Premium vivas (abertas + pendentes) em vez de
+ * exigir que a anterior esteja em BE e com parcial. Medido: uma de cada vez +573 pips; até 2 +880.
+ */
+export function bloqueioPorExposicao(vivas: number, cfg: Pick<EntradaPremiumConfig, 'maxVivas'>): string | null {
+  return vivas >= cfg.maxVivas ? `já há ${vivas} trade(s) Premium vivas na mestre (máximo ${cfg.maxVivas})` : null
+}
+
 // ── seguimentos ──────────────────────────────────────────────────────────────
 
 /**
@@ -216,4 +309,22 @@ export type AccaoSeguimentoPremium = 'contar_sl' | 'nada'
 
 export function accaoSeguimentoPremium(kind: string | null | undefined): AccaoSeguimentoPremium {
   return kind === 'sl_hit' ? 'contar_sl' : 'nada'
+}
+
+/**
+ * O que o trader DIZ que fez e que a mestre tem de espelhar (07/10). A gestão por preço continua a
+ * mandar nas parciais e no BE — mas há duas saídas que só se sabem pela mensagem:
+ *  · «Close all now» (o trader fecha a trade e as camadas) → fechar TODO o Premium aberto/pendente;
+ *  · «HIT SL» → o trader saiu; a pendente desse sinal que ainda não encheu cancela-se (a zona
+ *    partiu) e o que estiver aberto fecha (o nosso SL é o dele, normalmente já fechou sozinho).
+ * «HIT TP» / «running» NÃO cancelam a pendente: medido, deixar a limite viva os 60 min dá mais
+ * (+880 contra +664 a cancelar no TP1) — o preço volta muitas vezes à zona e entra-se melhor.
+ * Só vale para mensagens em RESPOSTA a um sinal: sem pai não se sabe que trade fechar.
+ */
+export function saidaDoTraderPremium(texto: string | null | undefined): 'fechar_tudo' | 'fechar_sinal' | 'nada' {
+  const t = String(texto ?? '')
+  // «1st entry running … 4th entry running … Close all now»: TODAS as camadas, não só a do pai.
+  if (/\bclose\s+all\b/i.test(t)) return 'fechar_tudo'
+  if (/\b(?:hit\s?sl|sl\s?hit|stop\s?loss\s+hit)\b/i.test(t)) return 'fechar_sinal'
+  return 'nada'
 }

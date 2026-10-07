@@ -357,6 +357,7 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
       gestao,
       ignorar: shouldIgnoreChannelMessage(text),
       sinal: gestao ? null : parseSignal(text),
+      paiMessageId: ctx.parentMessageId,
     })
     if (viaMotor.modo !== 'desligado') console.log(`[mtmcopy] Premium → mestre SIM (${viaMotor.modo}): ${viaMotor.detalhe}`)
     if (viaMotor.legadoCortado) {

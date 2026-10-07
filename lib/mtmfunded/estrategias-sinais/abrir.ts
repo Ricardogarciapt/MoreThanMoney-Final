@@ -43,7 +43,8 @@ export interface PedidoAbrir {
 export interface ResultadoAbrir {
   accountId: string
   ok: boolean
-  estado: 'aberta' | 'duplicado' | 'recusada' | 'erro'
+  /** `pendente` = ordem limite colocada (./pendente.ts); `positionId` é então o id da ORDEM */
+  estado: 'aberta' | 'pendente' | 'duplicado' | 'recusada' | 'erro'
   positionId?: string
   volume?: number
   semGestao?: boolean

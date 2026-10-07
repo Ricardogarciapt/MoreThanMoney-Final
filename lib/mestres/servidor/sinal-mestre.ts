@@ -17,6 +17,7 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { abrirSinalNaConta, type ResultadoAbrir } from '@/lib/mtmfunded/estrategias-sinais/abrir'
+import { colocarPendenteDoSinal } from '@/lib/mtmfunded/estrategias-sinais/pendente'
 import { chaveDoSinal, configDoProvider, gestaoDoSinal, impressaoDoTrade, loteParaConta } from '@/lib/mtmfunded/estrategias-sinais/calculo'
 import { lerTravas, temTravas, travasDaMestre } from '@/lib/copia-contas/mestre-travas'
 import { lerConfigGlobal, lerEstrategiaMestre, type ModoEstrategia } from '../tipos'
@@ -104,6 +105,12 @@ export interface SinalWebhook {
    * referência (1.º valor da zona) serve só para o registo e para a gestão calculada em sombra.
    */
   entradaReferencia?: number | null
+  /**
+   * Premium (07/10): entrar por ORDEM LIMITE no meio da zona do trader em vez de a mercado
+   * (lib/mestres/premium.ts › entradaPremium). Cada conta recebe a sua pendente com a gestão já
+   * gravada; o motor do VPS enche-a e expira-a. Ausente = a mercado, como sempre.
+   */
+  limite?: { preco: number; expiraEm: string } | null
 }
 
 export interface ResultadoSinalMestre {
@@ -258,7 +265,7 @@ export async function encaminharSinalParaMestre(s: SinalWebhook): Promise<Result
       const gestao = simb && volume && ref ? gestaoDoSinal({ simbolo: simb as never, direcao: s.direcao, precoExecucao: ref, volume, sl: s.sl, tps: s.tps, cfg }) : null
       await db.from('mestres_sinais').upsert({
         estrategia: est.slug, chave, modo: 'sombra', symbol: s.symbol, direcao: s.direcao, entrada: ref, sl: s.sl, tps: s.tps,
-        resultado: { contas: contas.size, mestre: est.contaMestreId, volumeMestre: volume, gestao: gestao?.gestao ?? null, tpFinal: gestao?.tpFinal ?? null },
+        resultado: { contas: contas.size, mestre: est.contaMestreId, volumeMestre: volume, gestao: gestao?.gestao ?? null, tpFinal: gestao?.tpFinal ?? null, limite: s.limite ?? null },
       }, { onConflict: 'estrategia,chave,modo', ignoreDuplicates: true })
       return { modo: 'sombra', substituiMt5: false, estrategia: est.slug }
     }
@@ -269,18 +276,23 @@ export async function encaminharSinalParaMestre(s: SinalWebhook): Promise<Result
     // mestre MT5 — ver o `catch` no fim.
     tocouNasContas = true
     for (let i = 0; i < ids.length; i += 10) {
-      resultados.push(...(await Promise.all(ids.slice(i, i + 10).map((accountId) => abrirSinalNaConta({
-        accountId, estrategia: est.slug, chave, impressao, fonte: est.slug, comentario: alvo.comentario,
-        symbol: s.symbol, direcao: s.direcao, entrada: s.entrada, sl: s.sl, tps: s.tps, cfg,
-      })))))
+      resultados.push(...(await Promise.all(ids.slice(i, i + 10).map((accountId) => (s.limite && s.sl != null
+        ? colocarPendenteDoSinal({
+          accountId, estrategia: est.slug, chave, fonte: est.slug, comentario: alvo.comentario,
+          symbol: s.symbol, direcao: s.direcao, preco: s.limite.preco, expiraEm: s.limite.expiraEm, sl: s.sl, tps: s.tps, cfg,
+        })
+        : abrirSinalNaConta({
+          accountId, estrategia: est.slug, chave, impressao, fonte: est.slug, comentario: alvo.comentario,
+          symbol: s.symbol, direcao: s.direcao, entrada: s.entrada, sl: s.sl, tps: s.tps, cfg,
+        }))))))
     }
     await db.from('mestres_sinais').upsert({
       estrategia: est.slug, chave, modo: 'live', symbol: s.symbol, direcao: s.direcao, entrada: ref, sl: s.sl, tps: s.tps,
-      resultado: { contas: resultados.map((r) => ({ conta: r.accountId, estado: r.estado, volume: r.volume ?? null, motivo: r.motivo ?? null })) },
+      resultado: { ...(s.limite ? { limite: s.limite } : {}), contas: resultados.map((r) => ({ conta: r.accountId, estado: r.estado, volume: r.volume ?? null, motivo: r.motivo ?? null, ...(r.estado === 'pendente' ? { ordem: r.positionId ?? null } : {}) })) },
     }, { onConflict: 'estrategia,chave,modo', ignoreDuplicates: true })
     // A mestre é a conta que manda: se NELA não abriu nada, o sinal não existe para o resto do
     // sistema e isso tem de sair dito (era o outro modo de ficar calado com `substituiMt5: true`).
-    const mestreAbriu = resultados.some((r) => r.accountId === est.contaMestreId && r.estado === 'aberta')
+    const mestreAbriu = resultados.some((r) => r.accountId === est.contaMestreId && (r.estado === 'aberta' || r.estado === 'pendente'))
     const motivoMestre = mestreAbriu
       ? undefined
       : `a mestre ${est.contaMestreId.slice(0, 8)} não abriu: ${resultados.find((r) => r.accountId === est.contaMestreId)?.motivo ?? 'sem resposta da conta mestre'}`
