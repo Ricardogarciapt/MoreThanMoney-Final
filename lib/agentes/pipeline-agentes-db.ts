@@ -7,6 +7,7 @@
  * pegou no negócio entre a leitura e a escrita, o UPDATE não apanha linha nenhuma e a acção é
  * recusada — o humano ganha sempre a corrida.
  */
+import { lerConfigOs, orcamentoPipelineDb } from './os/os-db'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   COLUNAS_HUMANAS, ETAPAS_DO_AGENTE, TECTO_DIA_PADRAO, decidirAccaoPipeline, diasDesde, ehUuid,
@@ -22,7 +23,12 @@ function inicioDoDia(agora = new Date()): string {
   return d.toISOString()
 }
 
-export async function tectoDiario(db: SupabaseClient): Promise<number> {
+export async function tectoDiario(db: SupabaseClient, agenteId?: string): Promise<number> {
+  // OS v2 (07/10): tecto dinâmico por agente (chão 40 sem dados, tecto duro 150, limitado pelo trabalho que existe).
+  if (agenteId && (await lerConfigOs(db)).ligado) {
+    const o = await orcamentoPipelineDb(db, agenteId)
+    return o.valor
+  }
   const { data } = await db.from('site_settings').select('value').eq('key', 'agentes_motor').maybeSingle()
   let v: unknown = data?.value
   if (typeof v === 'string') {
@@ -59,7 +65,7 @@ export async function executarAccaoPipeline(
     agenteCodigo: codigo,
     agenteEstado: agente.estado,
     usadosHoje: await usadosHoje(db, agenteId),
-    tecto: await tectoDiario(db),
+    tecto: await tectoDiario(db, agenteId),
   }
 
   let negocioLido: string | null = null
@@ -174,7 +180,7 @@ export async function retratoPipeline(db: SupabaseClient, agenteId: string, opco
       return q.order('atualizado_em', { ascending: false }).limit(15)
     })(),
     db.from('vendas_tarefas').select('id, titulo, negocio_id, prazo, estado').eq('agente_id', agenteId).eq('estado', 'aberta').order('prazo', { ascending: true, nullsFirst: false }).limit(40),
-    tectoDiario(db),
+    tectoDiario(db, agenteId),
     usadosHoje(db, agenteId),
     db.from('backoffice_papeis').select('user_id, papel').is('retirado_at', null).in('papel', ['prospector', 'setter', 'closer', 'team_leader']).limit(200),
   ])

@@ -26,6 +26,7 @@
  * PURO em cima (`pedidoDoEnvio`, `decidirLote` — guarda em envios-auto-aprovar.check.ts), base de
  * dados em baixo.
  */
+import { lerConfigOs, tectosContactoDb } from '@/lib/agentes/os/os-db'
 import { KIND_ENVIO, type PayloadEmailRecuperacao, type PayloadFollowupTelegram } from '@/lib/envios-aprovacao'
 import {
   contarHoje, decidirContacto, juntarEvidencia, registarEnvio, TECTOS_PADRAO,
@@ -260,9 +261,14 @@ export async function processarLinhas(
 
   const { data: cfg } = await db.from('site_settings').select('value').eq('key', 'agentes_motor').maybeSingle()
   const ct = ((cfg?.value ?? {}) as { contacto_tectos?: { por_agente_dia?: number; por_canal_dia?: Tectos['porCanalDia'] } }).contacto_tectos
-  const tectos: Tectos = ct
+  let tectos: Tectos = ct
     ? { porAgenteDia: Number(ct.por_agente_dia ?? TECTOS_PADRAO.porAgenteDia), porCanalDia: ct.por_canal_dia ?? TECTOS_PADRAO.porCanalDia }
     : TECTOS_PADRAO
+  // OS v2 (07/10): tectos dinâmicos (chão = fixos antigos; nunca acima dos tectos duros externos).
+  if ((await lerConfigOs(db)).ligado) {
+    const t = await tectosContactoDb(db, null)
+    tectos = { porAgenteDia: t.porAgenteDia, porCanalDia: t.porCanalDia }
+  }
 
   const itens: ItemLote[] = []
   const usados: Record<string, { total: number; porCanal: Record<string, number> }> = {}

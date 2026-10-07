@@ -10,6 +10,7 @@
  *     se disser «sai» com base `b2b`, sai; se disser «fila», fica registado na fila e não sai.
  * Cada decisão grava-se em `b2b_envios` com a base legal «b2b_pessoa_colectiva».
  */
+import { lerConfigOs, orcamentoB2BDb } from '@/lib/agentes/os/os-db'
 import { decidirContacto, type Tectos } from '@/lib/agentes/contacto-inicial'
 import { validarProspecto } from './validador'
 import { montarMensagem, segredoSaida, validarMensagem, AGENTE_B2B, type Pais, type Segmento } from './sequencias'
@@ -188,6 +189,9 @@ export async function correrLote(db: Db, opts: { ensaio?: boolean; limiteExtra?:
   const ensaio = opts.ensaio === true
   const esperar = opts.esperar ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)))
   const cfg = await carregarConfig(db)
+  // OS v2 (07/10): o tecto diário B2B é DINÂMICO (chão 20 sem dados; tecto duro 50; warm-up +50 %/dia;
+  // pára com bounces/queixas). O interruptor `ligado` continua a ser o do dono.
+  if ((await lerConfigOs(db)).ligado) cfg.tecto_dia = (await orcamentoB2BDb(db)).valor
   const res: ResultadoLote = { ligado: cfg.ligado, vagas: 0, enviados: 0, fila: 0, bloqueados: 0, erros: [], ensaio }
   if (!cfg.ligado && !ensaio) return res
 

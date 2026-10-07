@@ -9,6 +9,7 @@ import { correrDesbloqueio } from '@/lib/agentes/desbloqueio'
 import { correrTrader, registarDecisoesNoLivro } from '@/lib/agentes/trader'
 import { correrReproducao } from '@/lib/agentes/reproducao'
 import { correrReversoes } from '@/lib/agentes/evolucao'
+import { correrOs, lerConfigOs } from '@/lib/agentes/os/os-db'
 
 /**
  * A PASSAGEM DIÁRIA DA EQUIPA DE AGENTES — mede a receita, e depois julga.
@@ -92,7 +93,16 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const avaliacao = await correrAvaliacao(db, { ensaio, agora })
+    /**
+     * OS v2 (07/10): com `agentes_os_v2.ligado`, a régua das 48 h e a reprodução de 06/10 não
+     * correm — corre o ciclo de vida económico + clonagem pela quota (lib/agentes/os/os-db.ts).
+     * O resto do cron (CEO, desbloqueio, trader) segue igual.
+     */
+    const osV2 = (await lerConfigOs(db)).ligado
+    const avaliacao = osV2
+      ? { ok: true, ensaio, avaliados: 0, parados: 0, mortos: 0, avisados: 0, ignorados: 0, escritas: [] as Array<{ nome: string; nota: string; porque: string; resultado: number }>, erros: [] as string[] }
+      : await correrAvaliacao(db, { ensaio, agora })
+    const os = osV2 ? await correrOs(db, { ensaio, agora, clonar: false }) : null
 
     /**
      * ── A VIDA DA EQUIPA: VERSÕES E NASCIMENTOS (06/10) ──
@@ -103,7 +113,7 @@ export async function GET(request: NextRequest) {
      */
     const ceoId = await idDoCeo(db)
     const reversoes = params.get('reversoes') === '0' ? null : await correrReversoes(db, { ensaio, agora })
-    const reproducao = params.get('reproducao') === '0' ? null : await correrReproducao(db, { ensaio, agora, ceoId })
+    const reproducao = params.get('reproducao') === '0' || osV2 ? null : await correrReproducao(db, { ensaio, agora, ceoId })
 
     if (params.get('so') === 'vida') {
       return NextResponse.json({
@@ -111,6 +121,7 @@ export async function GET(request: NextRequest) {
         ensaio,
         so: 'vida',
         avaliacao: { avaliados: avaliacao.avaliados, mortos: avaliacao.mortos, avisados: avaliacao.avisados, escritas: avaliacao.escritas },
+        os_v2: os ? { transicoes: os.transicoes, arquivados: os.arquivados, clonagem: os.clonagem, erros: os.erros } : null,
         reversoes,
         reproducao: reproducao
           ? { resumo: reproducao.plano.resumo, nascidos: reproducao.nascidos, nascimentos: reproducao.plano.nascimentos.map((n) => ({ nome: n.nome, codigo: n.codigo, pai: n.paiNome, mutacao: n.mutacao })), bloqueios: reproducao.plano.bloqueios }

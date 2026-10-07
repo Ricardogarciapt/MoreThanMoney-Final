@@ -13,6 +13,7 @@ import {
 } from '@/lib/agentes/contacto-inicial'
 import type { TipoEnvio } from '@/lib/envios-aprovacao'
 import { executarAccaoPipeline, retratoPipeline } from '@/lib/agentes/pipeline-agentes-db'
+import { correrOs, executarAccaoCeo, lerConfigOs, orcamentos, pedirClonagem, pnl, tectosContactoDb, type Quota } from '@/lib/agentes/os/os-db'
 
 /**
  * A PORTA DO MOTOR AUTÓNOMO — o único sítio por onde `aios/motor/orquestrador.py` ESCREVE.
@@ -46,7 +47,18 @@ const ACCOES_DO_MOTOR = [
   'pipeline',        // 06/10: acção de um agente de vendas no pipeline do backoffice — catálogo FECHADO
                      //        em lib/agentes/pipeline-agentes.ts (sem apagar, sem «ganho», sem envios)
   'pipeline_ler',    // 06/10: a parte do pipeline que cabe a um agente (retrato do motor)
+  'os_pnl',          // 07/10 OS v2: o P&L e o gargalo que o CEO lê em cada ciclo (só leitura)
+  'os_orcamento',    // 07/10 OS v2: os orçamentos dinâmicos de hoje (só leitura)
+  'ceo_accao',       // 07/10 OS v2: criar_missao | alocar_recursos | escalar | arquivar | suspender | retomar | fechar_missao
+  'pedir_clonagem',  // 07/10 OS v2: REQUEST_CLONING de um agente, com evidência (o CEO valida)
 ] as const
+
+/** A quota do claude -p que o motor mediu (motor/regras.py `capacidade_ciclos`). */
+function quotaDoCorpo(corpo: Record<string, unknown>): Partial<Quota> | null {
+  const q = corpo.quota as Record<string, unknown> | undefined
+  if (!q || typeof q !== 'object') return null
+  return { capacidade: Number(q.capacidade), usadosHoje: Number(q.usados_hoje ?? q.usadosHoje), limiteBatido24h: q.limite_batido_24h === true || q.limiteBatido24h === true }
+}
 
 const TIPOS_DE_EVENTO_DO_MOTOR = new Set(['ciclo', 'trabalho', 'envio', 'motor'])
 
@@ -63,15 +75,15 @@ export async function GET(request: NextRequest) {
 
   const [interruptor, cfgs, equipa, recentes, propostas] = await Promise.all([
     lerInterruptor(db),
-    db.from('site_settings').select('key, value').in('key', ['agentes_motor', 'agentes_vida', 'agentes_reproducao', 'agentes_evolucao']),
+    db.from('site_settings').select('key, value').in('key', ['agentes_motor', 'agentes_vida', 'agentes_reproducao', 'agentes_evolucao', 'agentes_os_v2', 'agentes_proof', 'os_objectivos']),
     db
       .from('agentes_equipa')
-      .select('id, nome, papel, pilar, pai_id, estado, pausado, instrucoes, orcamento, gasto, receita, chave_receita, criado_em, avaliado_em, morto_em, causa_morte, mutacao')
+      .select('id, nome, papel, pilar, pai_id, estado, pausado, instrucoes, orcamento, gasto, receita, chave_receita, criado_em, avaliado_em, morto_em, causa_morte, mutacao, ciclo, ciclo_desde, familia, especializacao, geracao, efemero, missao_id, proof_score, proof_banda, proof_amostra_ok, recursos_mult, dominante')
       .order('criado_em', { ascending: true }),
     db
       .from('agentes_eventos')
       .select('agente_id, tipo, valor, detalhe, criado_em')
-      .in('tipo', ['nasceu', 'morreu', 'clonou', 'reproducao_bloqueada', 'versao_aceite', 'versao_rejeitada', 'versao_revertida', 'ciclo', 'receita', 'avisado'])
+      .in('tipo', ['nasceu', 'morreu', 'clonou', 'reproducao_bloqueada', 'versao_aceite', 'versao_rejeitada', 'versao_revertida', 'ciclo', 'receita', 'avisado', 'ciclo_estado', 'arquivado', 'clonagem_pedida', 'clonagem_validada', 'dominante', 'worker', 'ceo_accao'])
       .gte('criado_em', new Date(Date.now() - 14 * 86_400_000).toISOString())
       .order('criado_em', { ascending: false })
       .limit(400),
@@ -131,8 +143,22 @@ export async function POST(request: NextRequest) {
     if (!receita.ok) {
       return NextResponse.json({ ok: false, fase: 'receita', erros: receita.erros, nota: 'Ninguém foi julgado: a receita não se leu.' })
     }
-    const avaliacao = await correrAvaliacao(db, { ensaio, agora })
     const { data: ceo } = await db.from('agentes_equipa').select('id').eq('pilar', 'ceo').is('pai_id', null).maybeSingle()
+    const os = await lerConfigOs(db)
+    if (os.ligado) {
+      /**
+       * OS v2 (07/10): ciclo de vida económico + Proof Score + clonagem pela quota. A régua das 48 h
+       * e a reprodução de 06/10 NÃO correm. Reverter = site_settings.agentes_os_v2.ligado = false.
+       */
+      const reversoes = await correrReversoes(db, { ensaio, agora })
+      const r = await correrOs(db, { ensaio, agora, quota: quotaDoCorpo(corpo) })
+      return NextResponse.json({
+        ok: r.ok && reversoes.ok, ensaio, os_v2: true,
+        transicoes: r.transicoes, arquivados: r.arquivados, dominantes: r.dominantes, clonagem: r.clonagem,
+        proofs: r.proofs, reversoes, erros: [...r.erros, ...reversoes.erros],
+      })
+    }
+    const avaliacao = await correrAvaliacao(db, { ensaio, agora })
     const reversoes = await correrReversoes(db, { ensaio, agora })
     const reproducao = await correrReproducao(db, { ensaio, agora, ceoId: ceo ? String((ceo as { id: string }).id) : null })
     return NextResponse.json({
@@ -146,6 +172,22 @@ export async function POST(request: NextRequest) {
   }
 
   const agenteId = String(corpo.agente_id ?? '').trim()
+
+  if (acao === 'os_pnl') {
+    const r = await pnl(db, quotaDoCorpo(corpo))
+    return NextResponse.json(r)
+  }
+  if (acao === 'os_orcamento') {
+    return NextResponse.json({ ok: true, ...(await orcamentos(db, quotaDoCorpo(corpo))) })
+  }
+  if (acao === 'ceo_accao') {
+    const r = await executarAccaoCeo(db, agenteId, String(corpo.accao ?? ''), (corpo.pedido && typeof corpo.pedido === 'object' ? corpo.pedido : {}) as Record<string, unknown>, { ensaio, quota: quotaDoCorpo(corpo) })
+    return NextResponse.json(r, { status: r.status })
+  }
+  if (acao === 'pedir_clonagem') {
+    const r = await pedirClonagem(db, agenteId, String(corpo.evidencia ?? '').slice(0, 2000), ensaio)
+    return NextResponse.json(r, { status: r.ok ? 200 : 400 })
+  }
 
   if (acao === 'evento') {
     const tipo = String(corpo.tipo ?? '')
@@ -240,7 +282,12 @@ export async function POST(request: NextRequest) {
     }
     const { data: cfg } = await db.from('site_settings').select('value').eq('key', 'agentes_motor').maybeSingle()
     const ct = ((cfg?.value ?? {}) as { contacto_tectos?: { por_agente_dia?: number; por_canal_dia?: Tectos['porCanalDia'] } }).contacto_tectos
-    const tectos: Tectos = ct ? { porAgenteDia: Number(ct.por_agente_dia ?? TECTOS_PADRAO.porAgenteDia), porCanalDia: ct.por_canal_dia ?? TECTOS_PADRAO.porCanalDia } : TECTOS_PADRAO
+    let tectos: Tectos = ct ? { porAgenteDia: Number(ct.por_agente_dia ?? TECTOS_PADRAO.porAgenteDia), porCanalDia: ct.por_canal_dia ?? TECTOS_PADRAO.porCanalDia } : TECTOS_PADRAO
+    // OS v2: tectos DINÂMICOS (chão = os fixos antigos sem dados; nunca acima dos tectos duros externos).
+    if ((await lerConfigOs(db)).ligado) {
+      const t = await tectosContactoDb(db, agenteId)
+      tectos = { porAgenteDia: t.porAgenteDia, porCanalDia: t.porCanalDia }
+    }
     const d = decidirContacto(p, ev, usados, tectos)
     const reg = await registarEnvio(db, agenteId, p, d, ensaio)
     if (!reg.ok && d.pode) {

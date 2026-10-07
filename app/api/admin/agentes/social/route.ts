@@ -1,3 +1,4 @@
+import { lerConfigOs, orcamentoSocialDb } from '@/lib/agentes/os/os-db'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAgentAccess } from '@/lib/agent-site-api'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
@@ -30,7 +31,13 @@ type Db = ReturnType<typeof getSupabaseAdmin>
 
 async function lerCfg(db: Db) {
   const { data } = await db.from('site_settings').select('value').eq('key', CHAVE_AUTO_PUBLICAR).maybeSingle()
-  return lerAutoPublicar(data?.value)
+  const cfg = lerAutoPublicar(data?.value)
+  // OS v2 (07/10): posts/histórias por dia DINÂMICOS (chão 2/1 sem dados; tecto duro 6/10 por conta).
+  if ((await lerConfigOs(db)).ligado) {
+    const o = await orcamentoSocialDb(db)
+    return { ...cfg, posts_dia_conta: o.posts.valor, historias_dia_conta: o.historias.valor }
+  }
+  return cfg
 }
 
 /** Posts/histórias de AGENTES na fila para a conta, no dia de Lisboa de `quando`. null = não se leu. */
