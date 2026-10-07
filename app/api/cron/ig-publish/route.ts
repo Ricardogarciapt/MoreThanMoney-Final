@@ -18,6 +18,7 @@ import {
   isAutoPublishBlocked,
   type ScheduledPost,
 } from "@/lib/instagram/publish"
+import { CHAVE_AUTO_PUBLICAR, lerAutoPublicar } from "@/lib/agentes/social-agente"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -53,7 +54,20 @@ export async function GET(request: NextRequest) {
 
   const results: Array<Record<string, unknown>> = []
 
+  // Posts dos AGENTES (created_by «agente:…») só saem com o botão «Auto-publicar posts dos agentes»
+  // ligado. O dono pausa tudo desligando-o: o que estava aprovado volta a rascunho, nada sai.
+  const { data: autoRow } = await supabase.from("site_settings").select("value").eq("key", CHAVE_AUTO_PUBLICAR).maybeSingle()
+  const autoAgentes = lerAutoPublicar(autoRow?.value)
+
   for (const row of due) {
+    if (String(row.created_by || "").startsWith("agente:") && !autoAgentes.ligado) {
+      await supabase
+        .from("social_scheduled_posts")
+        .update({ status: "draft", error: "Pausado pelo dono (auto-publicar dos agentes desligado).", updated_at: new Date().toISOString() })
+        .eq("id", row.id)
+      results.push({ id: row.id, status: "draft", reason: "agentes pausados" })
+      continue
+    }
     // O Instagram pessoal do Ricardo não é destino de automação: se alguma coisa pôs uma linha
     // na fila para lá, morre aqui em vez de sair no perfil dele.
     if (isAutoPublishBlocked(row.ig_account_id)) {

@@ -6,7 +6,7 @@
  *  · NENHUM número de resultado. A prova desta casa mede-se em pips e com origem declarada — num
  *    primeiro contacto não se cita nenhuma; quem quiser vê-la pede-a na conversa;
  *  · todo o email leva: a MTM identificada, a assinatura com identificação, a linha de saída com o
- *    link que grava na exclusão global, e o link com `?ag=` do agente de vendas (AG-CLOSER).
+ *    link que grava na exclusão global, e o link com `?ag=` do agente dono do B2B (AG-PROSPECTOR, decisão do dono a 07/10).
  *
  * `validarMensagem` é a porta: uma mensagem sem saída, sem `?ag=` ou sem identificação NÃO sai.
  */
@@ -18,8 +18,11 @@ export type Segmento = 'ib_afiliado' | 'comunidade' | 'criador' | 'escola' | 'pr
 export type Pais = 'PT' | 'BR'
 export const SEGMENTOS: readonly Segmento[] = ['ib_afiliado', 'comunidade', 'criador', 'escola', 'prop_firm']
 
-/** O agente de vendas que assina os links B2B. Não há AG-B2B em codigos.ts: fecha o AG-CLOSER. */
-export const AGENTE_B2B = AG.CLOSER
+/**
+ * O agente que assina os links B2B e a quem os envios ficam atribuídos. 07/10 («activa tudo»): o
+ * Prospector passa a ser o DONO do envio B2B — recolhe a lista e envia. Até aqui era o AG-CLOSER.
+ */
+export const AGENTE_B2B = AG.PROSPECTOR
 
 const RAIZ = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').replace(/\/$/, '')
 
@@ -247,7 +250,7 @@ export interface Mensagem {
 export function montarMensagem(p: PedidoMensagem): Mensagem {
   const id = p.identificacao ?? identificacaoDoAmbiente()
   const caminho = p.toque === 1 ? PAGINA_DA_OFERTA[p.segmento] : '/agendar'
-  const linkOferta = linkAssinado(caminho, p.agente || AGENTE_B2B)
+  const linkOferta = linkAssinado(caminho, AGENTE_B2B)
   const sair = linkSaida(p.email, p.segredo)
   const { assunto, corpo } = (p.pais === 'BR' ? BR : PT)[p.segmento][p.toque - 1](p.empresa.trim(), linkOferta)
   const linhaSaida =

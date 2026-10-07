@@ -46,6 +46,7 @@ import { RadarLeads } from "@/components/admin/radar-leads"
 import { ProspecaoTelegram } from "@/components/admin/prospecao-telegram"
 import { ConversasBot } from "@/components/admin/conversas-bot"
 import { EstudioCartoes } from "@/components/admin/estudio-cartoes"
+import { AutoPublicarAgentes } from "@/components/admin/auto-publicar-agentes"
 
 interface Post {
   id: string
@@ -356,6 +357,8 @@ export default function AdminSocialPage() {
             </Button>
           </div>
         </div>
+
+        <AutoPublicarAgentes />
 
         {/* Os três separadores: a fila do que sai, os factos que vão dentro dos cartões e o
             funil de onde vêm as pessoas. Aprovar um post sem ver o número que vai na imagem é

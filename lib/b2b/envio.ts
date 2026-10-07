@@ -107,7 +107,7 @@ export function decidirEnvioB2B(
 
   const toque = (Math.min(3, p.toques + 1)) as 1 | 2 | 3
   if (!ctx.segredo) return { decisao: 'bloqueado', motivo: 'Sem segredo para o link de saída (B2B_SAIR_SEGREDO/CRON_SECRET).' }
-  const m = montarMensagem({ segmento: p.segmento, pais: p.pais, toque, empresa: p.empresa, email: p.email, agente: p.agente || AGENTE_B2B, segredo: ctx.segredo })
+  const m = montarMensagem({ segmento: p.segmento, pais: p.pais, toque, empresa: p.empresa, email: p.email, agente: AGENTE_B2B, segredo: ctx.segredo })
   const texto = ctx.textoForcado ?? m.texto
   const porta = validarMensagem(texto)
   if (!porta.ok) return { decisao: 'bloqueado', motivo: porta.motivo, assunto: m.assunto, texto }
@@ -221,7 +221,7 @@ export async function correrLote(db: Db, opts: { ensaio?: boolean; limiteExtra?:
     if (res.enviados >= vagas) break
     const d = decidirEnvioB2B(p, { cfg: { ...cfg, ligado: true }, enviadosHoje, exclusao, segredo })
     const toque = Math.min(3, p.toques + 1)
-    const registo = { prospecto_id: p.id, email: p.email, toque, assunto: d.assunto ?? null, texto: d.texto ?? null, agente: p.agente || AGENTE_B2B, base_legal: BASE_LEGAL_B2B, decisao: d.decisao, motivo: d.motivo }
+    const registo = { prospecto_id: p.id, email: p.email, toque, assunto: d.assunto ?? null, texto: d.texto ?? null, agente: AGENTE_B2B, base_legal: BASE_LEGAL_B2B, decisao: d.decisao, motivo: d.motivo }
 
     if (d.decisao !== 'sai') {
       if (d.decisao === 'fila') res.fila++

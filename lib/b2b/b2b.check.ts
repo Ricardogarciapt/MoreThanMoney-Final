@@ -95,7 +95,7 @@ for (const segmento of SEGMENTOS) {
       const m = montarMensagem({ segmento, pais, toque, empresa: 'Exemplo', email: 'info@exemplo.pt', segredo: SEG })
       const n = `${segmento}/${pais}/T${toque}`
       teste(`${n}: passa a porta`, validarMensagem(m.texto).ok)
-      teste(`${n}: link com ?ag=AG-CLOSER`, m.linkOferta.includes('ag=AG-CLOSER'))
+      teste(`${n}: link com ?ag=AG-PROSPECTOR`, m.linkOferta.includes('ag=AG-PROSPECTOR'))
       teste(`${n}: sem €/%/R$ (nada de números de resultado)`, !/[€%]|R\$|\+\d/.test(m.texto))
       teste(`${n}: curto (< 1300 caracteres)`, m.texto.length < 1300)
       teste(`${n}: idioma`, pais === 'BR' ? /você|vocês|Oi/.test(m.texto) : /Olá/.test(m.texto))
@@ -130,6 +130,17 @@ teste('robots: Disallow vazio permite', robotsPermite('User-agent: *\nDisallow:'
   teste('regra do motor consumida', src.includes('decidirContacto('))
   teste('base legal gravada', src.includes("BASE_LEGAL_B2B = 'b2b_pessoa_colectiva'") && src.includes('base_legal: BASE_LEGAL_B2B'))
   teste('LinkedIn não é fonte', readFileSync(join(__dirname, 'recolha.ts'), 'utf8').includes('linkedin\\.com'))
+}
+
+// ── 07/10 «activa tudo»: o Prospector é o dono do envio B2B ─────────────────────────────────
+{
+  // Um prospecto antigo, ainda gravado com AG-CLOSER, sai assinado pelo Prospector.
+  const d = decidirEnvioB2B(pros('parcerias@exemplo.pt', { agente: 'AG-CLOSER' }), { cfg, enviadosHoje: 0, exclusao: [], segredo: SEG })
+  teste('envio B2B atribuído ao Prospector', d.decisao === 'sai' && /ag=AG-PROSPECTOR/.test(d.texto ?? '') && !/ag=AG-CLOSER/.test(d.texto ?? ''))
+  const src = readFileSync(join(__dirname, 'envio.ts'), 'utf8')
+  teste('registo do envio grava o Prospector', src.includes('agente: AGENTE_B2B, base_legal') && !src.includes('p.agente || AGENTE_B2B'))
+  // O tecto continua: com 20 hoje, mesmo o Prospector não envia o 21.º.
+  teste('Prospector respeita o tecto', decidirEnvioB2B(pros('geral@exemplo.pt'), { cfg, enviadosHoje: 20, exclusao: [], segredo: SEG }).decisao !== 'sai')
 }
 
 if (falhas.length) {

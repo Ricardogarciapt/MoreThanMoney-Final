@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-api-helpers'
+import { verifyAgentAccess } from '@/lib/agent-site-api'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { avisarDono, carregarConfig, contarEnviados, excluir } from '@/lib/b2b/envio'
 import { recolherDaPagina } from '@/lib/b2b/recolha'
-import { SEGMENTOS, type Pais, type Segmento } from '@/lib/b2b/sequencias'
+import { AGENTE_B2B, SEGMENTOS, type Pais, type Segmento } from '@/lib/b2b/sequencias'
 
 /**
- * PROSPEÇÃO B2B — painel (/admin/sales-machine) e agente (Bearer CRON_SECRET).
+ * PROSPEÇÃO B2B — painel (/admin/sales-machine), cron (Bearer CRON_SECRET) e o motor dos agentes
+ * (Bearer AGENT_SITE_API_KEY: 07/10 o Prospector alimenta a lista pela acção «recolher»).
  *  GET  → contagens por estado, prospectos, envios recentes, configuração.
  *  POST → { action: 'excluir'|'estado'|'confirmar_pc'|'config'|'recolher', ... }
  */
@@ -18,7 +19,8 @@ const ESTADOS = ['novo', 'contactado', 'respondeu', 'reuniao', 'fechado', 'exclu
 async function autorizar(req: NextRequest): Promise<NextResponse | null> {
   const s = process.env.CRON_SECRET
   if (s && (req.headers.get('authorization') || '') === `Bearer ${s}`) return null
-  return requireAdmin(req)
+  const a = await verifyAgentAccess(req)
+  return 'error' in a ? NextResponse.json({ ok: false, error: a.error }, { status: a.status }) : null
 }
 
 export async function GET(req: NextRequest) {
@@ -101,7 +103,7 @@ export async function POST(req: NextRequest) {
         empresa, site: (() => { try { return new URL(url).origin } catch { return null } })(), segmento, pais,
         email: a.email, email_tipo: a.tipo, fonte_url: url, fonte_verificada_em: agora,
         identificacao: b.identificacao ? String(b.identificacao) : null, pessoa_colectiva: b.pessoa_colectiva === true,
-        agente: 'AG-CLOSER', nota: 'recolha automática',
+        agente: AGENTE_B2B, nota: b.nota ? String(b.nota).slice(0, 300) : 'recolha automática',
       }))
       if (linhas.length) {
         const { error } = await db.from('b2b_prospectos').upsert(linhas, { onConflict: 'email', ignoreDuplicates: true })
