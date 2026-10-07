@@ -395,7 +395,7 @@ DECISÃO       ciclo de vida (escala/muta/arquiva) + cloner (pela quota) + CEO (
 
 ### Guardas
 
-- `npx tsx lib/agentes/os/os.check.ts`: 69 provas. Orçamentos contra 3000 sinais aleatórios; chão sem dados; transições sem apagar; uma passagem inteira contra uma base falsa sem nenhum delete; CEO; fila humana; uma venda isolada não clona; mutação com pai e variação; quota; genealogia intacta ao arquivar.
+- `npx tsx lib/agentes/os/os.check.ts`: 70 provas. Orçamentos contra 3000 sinais aleatórios; chão sem dados; transições sem apagar; uma passagem inteira contra uma base falsa sem nenhum delete; CEO; fila humana; uma venda isolada não clona; mutação com pai e variação; quota; genealogia intacta ao arquivar.
 - `/usr/bin/python3 motor/os_check.py`: 46 provas. Quota ≤ tecto, chão 260, recuo e pausa depois do limite; um dia simulado com 40 agentes nunca passa a capacidade nem acorda ARCHIVED/IDLE/SUSPENDED; fila por Proof; fila humana; lista igual à do site.
 - As guardas antigas continuam verdes, porque o caminho de 06/10 ficou intacto para o interruptor: `motor.check`, `motor-autonomo.check`, `vida.check`, `contacto-inicial.check`, `pipeline-agentes.check`, `b2b.check`, `social-agente.check`, `envios-auto-aprovar.check`, `motor_check.py`, `retrato_check.py` e `autonomia_check.py`.
 
