@@ -13,6 +13,21 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 const KEY = 'proof_stats'
 
+/**
+ * Membros PUBLICÁVEIS — decisão do dono (07/10: 312), em `site_settings.membros_publicos`.
+ * Manda sobre o snapshot de 30/06 (356) e sobre a contagem de `profiles.is_active`, que só conta
+ * contas com pack activo no site e não a comunidade inteira. Sem a chave, fica o comportamento antigo.
+ */
+async function membrosPublicos(): Promise<number | null> {
+  try {
+    const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', 'membros_publicos').maybeSingle()
+    const n = Number(data?.value)
+    return Number.isFinite(n) && n > 0 ? Math.round(n) : null
+  } catch {
+    return null
+  }
+}
+
 /** Snapshot AUDITADO (30/06/2026) — fallback quando não há leitura viva. */
 export const AUDITED_FALLBACK = {
   trades: 675,
@@ -38,6 +53,12 @@ export interface ProofStats {
 
 /** Lê os números publicáveis. Nunca falha: cai no snapshot auditado. */
 export async function getProofStats(): Promise<ProofStats> {
+  const s = await lerProofStats()
+  const dono = await membrosPublicos()
+  return dono ? { ...s, members: dono } : s
+}
+
+async function lerProofStats(): Promise<ProofStats> {
   try {
     const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', KEY).maybeSingle()
     const v = data?.value as Partial<ProofStats> | null
