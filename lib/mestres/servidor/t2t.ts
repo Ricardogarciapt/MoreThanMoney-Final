@@ -21,7 +21,7 @@ import type { PlataformaCopia } from '@/lib/copia-contas/tipos'
 import { impressaoParaConta } from '../dedupe'
 import { loteDaLigacaoSite } from '../lote'
 import { pipDe } from '../pips'
-import { chaveAberturaAceite, escolherPosicaoMestre, estrategiaDoSinalT2T, type PosicaoMestreCandidata } from '../t2t'
+import { chaveAberturaAceite, posicaoMestreDoAceite, estrategiaDoSinalT2T, type PosicaoMestreCandidata } from '../t2t'
 import { mapaCanalEstrategia } from '../canal-t2t'
 import { candidatasDosFactos, origemT2TDoProvider, refDaPosicao, type FactoOrigem, type ProviderParaSeguir } from '../seguir-mestre'
 import { lerConfigGlobal, lerEstrategiaMestre, type ModoEstrategia } from '../tipos'
@@ -94,11 +94,28 @@ export async function encaminharT2TParaMotor(p: PedidoT2TMotor): Promise<Resulta
         : { data: [] as FactoOrigem[] }
       cands = candidatasDosFactos((factos ?? []) as FactoOrigem[]) as unknown as Array<Record<string, unknown>>
     }
-    const pos = escolherPosicaoMestre(cands as unknown as PosicaoMestreCandidata[], {
+    // POR ID primeiro: a ponte do sinal (a mensagem aceite) diz qual é a posição da mestre (199).
+    let posicaoPorId: string | null = null
+    if (origem.fonte === 'funded' && p.chatMessageId) {
+      const { data: ponte } = await db.from('funded_sinal_posicoes').select('funded_position_id')
+        .eq('account_id', origem.contaFunded!).eq('chat_message_id', p.chatMessageId).not('funded_position_id', 'is', null).limit(2)
+      if ((ponte ?? []).length === 1) posicaoPorId = String(ponte![0].funded_position_id)
+    }
+    const escolha = posicaoMestreDoAceite(cands as unknown as PosicaoMestreCandidata[], {
       symbol: p.sinal.symbol, direcao: p.sinal.direction, entrada: p.sinal.entry,
       mensagemEm: p.mensagem.created_at ?? new Date().toISOString(), pip: pipDe(p.sinal.symbol),
-    })
-    if (!pos) return nada(est.t2tModo, `sem posição aberta da origem (${origem.fonte}) para este sinal — T2T de sempre`)
+    }, posicaoPorId)
+    const pos = escolha.pos
+    if (!pos && escolha.motivo && !posicaoPorId) {
+      // AMBÍGUO (várias posições servem): as contas saem do T2T de sempre SEM abrir — abrir às
+      // cegas ao lado da mestre era a mesma mistura por outro caminho. Fica o motivo.
+      return {
+        modo: est.t2tModo,
+        motivo: escolha.motivo,
+        tratadas: p.contas.map((l) => ({ connectionId: String(l.id), account: String(l.account_label ?? l.id).slice(0, 40), ok: false, skipped: true, error: escolha.motivo! })),
+      }
+    }
+    if (!pos) return nada(est.t2tModo, escolha.motivo ?? `sem posição aberta da origem (${origem.fonte}) para este sinal — T2T de sempre`)
     const posCompleta = cands.find((c) => c.id === pos.id) as Record<string, unknown>
     const refPos = refDaPosicao(origem, pos.id)
 

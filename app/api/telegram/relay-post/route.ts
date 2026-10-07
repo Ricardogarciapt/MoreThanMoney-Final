@@ -332,7 +332,9 @@ export async function POST(req: NextRequest) {
               notified: true,
               // Threading: follow-ups (HIT TP1/BE/fecho) são REPLIES no Telegram → responder ao
               // mesmo pai no chat da app (senão aparecem todos ao mesmo nível).
-              ...(await resolveThreadParent(slug, replyTo, execText).then((id) => (id ? { reply_to_id: id } : {}))),
+              // O pai NO DESTINO (resolvido pelo mapa fonte→destino), não o `reply_to_message_id`
+              // cru, que o VPS quase nunca sabe — sem ele o pai caía na heurística dos pips (199).
+              ...(await resolveThreadParent(slug, replyToDest, execText).then((id) => (id ? { reply_to_id: id } : {}))),
             })
             .select('id')
             .single()
@@ -353,8 +355,11 @@ export async function POST(req: NextRequest) {
         message_id: r.messageId ?? 0,
         // reply_to_message com TEXT → o executor resolve o sinal-pai direto (sem depender de
         // threading/lookup). Passamos o message_id (se houver) e/ou o texto do SETUP.
-        ...(replyTo || replyText
-          ? { reply_to_message: { ...(replyTo ? { message_id: replyTo } : {}), ...(replyText ? { text: replyText } : {}) } }
+        // O id do PAI no destino (o mesmo espaço de ids de `message_id`, a chave do sinal na mestre:
+        // premium-ouro:msg:tg:<id>). Era `replyTo` cru — quase sempre null — e por isso «HIT SL»/
+        // «Close all» nunca chegavam ao sinal certo pelo id (07/10, isolamento 199).
+        ...(replyToDest || replyText
+          ? { reply_to_message: { ...(replyToDest ? { message_id: replyToDest } : {}), ...(replyText ? { text: replyText } : {}) } }
           : {}),
       } as Parameters<typeof processMtmcopyTelegramMessage>[0])
     } catch (e) {

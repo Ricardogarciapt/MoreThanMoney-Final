@@ -12,7 +12,7 @@
 import { canalPublicadoPelaMestre } from '@/lib/mestres/servidor/canais-publicados'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
-import { cancelPendingOrdersForSymbol, listOpenPositions, closePositionById } from './metaapi'
+import { cancelPendingOrderById, cancelPendingOrdersForSymbol, listOpenPositions, closePositionById } from './metaapi'
 import { symbolMatchesCanonical } from './symbol-resolver'
 import { getExecSwitches } from './exec-switches'
 import { lifecycleMessage, logStatusFor, type SignalEvent } from './signal-lifecycle'
@@ -80,15 +80,35 @@ async function findEntryMessageWithFollowers(
   return candidates[0] // nenhuma com seguidores vivos → a mais recente (só faz thread)
 }
 
-/** Fecha/cancela a ordem T2T do símbolo numa conta (pendentes + abertas). */
+/**
+ * Fecha/cancela a ordem T2T DESTE sinal numa conta.
+ *
+ * ISOLAMENTO (199, 07/10): com `brokerId` (o `broker_position_id` do log) só se toca nessa posição
+ * ou ordem. Sem id, o fecho por símbolo só corre quando `porSimboloSeguro` — a conta não tem outro
+ * T2T aberto no mesmo símbolo (outro sinal, outra estratégia). Senão é ambíguo e não se mexe.
+ */
 async function closeFollowerOrder(
   accountId: string,
   symbol: string,
   /** Só apaga pendentes e deixa as posições abertas — usado quando a fonte leva SL: a posição
    *  do seguidor fecha pelo SL dela, ao preço dela, e não deve ser fechada à força por nós. */
   pendingOnly = false,
+  brokerId: string | null = null,
 ): Promise<{ cancelled: number; closed: number }> {
   const out = { cancelled: 0, closed: 0 }
+  if (brokerId) {
+    try {
+      const positions = pendingOnly ? [] : await listOpenPositions(accountId)
+      if (positions.some((p) => String(p.id) === String(brokerId))) {
+        const r = await closePositionById(accountId, brokerId)
+        if (r.success) out.closed++
+        return out
+      }
+      const c = await cancelPendingOrderById(accountId, brokerId)
+      if (c.cancelled) out.cancelled++
+    } catch { /* ignora */ }
+    return out
+  }
   try {
     const pend = await cancelPendingOrdersForSymbol(accountId, symbol)
     out.cancelled = pend.cancelled
@@ -118,6 +138,11 @@ export async function closeT2TFollowersForSignal(opts: {
   sourceMatch?: RegExp
   /** Só apagar ordens pendentes, deixando as posições abertas a fechar pelo SL/TP delas. */
   pendingOnly?: boolean
+  /**
+   * A mensagem de ENTRADA do sinal, quando o chamador a sabe por id (199). Com ela não se procura
+   * a entrada pelo símbolo/direcção no canal — e é o caminho obrigatório do webhook TradingView.
+   */
+  entradaChatMessageId?: string | null
 }): Promise<{ threaded: boolean; followers: number; cancelled: number; closed: number }> {
   const { kind, chatSlug, symbol, direction, label, sourceMatch } = opts
   // Kill-switch único (default ON). Off → não toca em ordens nem posta.
@@ -127,7 +152,10 @@ export async function closeT2TFollowersForSignal(opts: {
   const sym = symbol.replace(/USDT$/, '')
   const event = KIND_TO_EVENT[kind]
 
-  const entry = await findEntryMessageWithFollowers(chatSlug, symbol, direction, sourceMatch)
+  const entry = opts.entradaChatMessageId
+    ? await supabase.from('chat_messages').select('id, content').eq('id', opts.entradaChatMessageId).maybeSingle()
+        .then(({ data }) => (data ? { id: String(data.id), content: String((data as { content?: string }).content ?? '') } : null))
+    : await findEntryMessageWithFollowers(chatSlug, symbol, direction, sourceMatch)
 
   // Desfecho em pips e percentagem. A entrada lê-se da mensagem original; o preço de saída não
   // existe em lado nenhum (foi a fonte que mandou fechar, não um TP/SL nosso), por isso vamos
@@ -153,14 +181,16 @@ export async function closeT2TFollowersForSignal(opts: {
   let threaded = false
   try {
     const sinceIso = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-    const { data: dup } = await supabase
+    // Com a entrada conhecida, o duplicado é o mesmo anúncio NESSA thread — um segundo setup no
+    // mesmo par/direcção já não é calado pelo primeiro (199).
+    let dupQ = supabase
       .from('chat_messages')
       .select('id')
       .eq('channel_slug', chatSlug)
       .ilike('content', `${linePrefix}%`)
       .gte('created_at', sinceIso)
-      .limit(1)
-      .maybeSingle()
+    if (entry?.id) dupQ = dupQ.eq('reply_to_id', entry.id)
+    const { data: dup } = await dupQ.limit(1).maybeSingle()
     // Canal publicado pela mestre: as ordens dos seguidores tratam-se na mesma (passo 2), mas o
     // anúncio é o da mestre.
     if (!dup && !(await canalPublicadoPelaMestre(chatSlug))) {
@@ -199,7 +229,7 @@ export async function closeFollowersByMessage(
   await import('@/lib/mtmfunded/estrategias-sinais/todos-os-sinais').then((m) => m.fecharTodosOsSinaisDaMensagem(chatMessageId, pendingOnly)).catch(() => undefined)
   const { data: logs } = await supabase
     .from('mtmcopy_signal_log')
-    .select('id, connection_id')
+    .select('id, connection_id, broker_position_id')
     .eq('chat_message_id', chatMessageId)
     .in('status', OPEN_LOG_STATUSES)
   for (const log of logs ?? []) {
@@ -218,7 +248,26 @@ export async function closeFollowersByMessage(
     const accId = (conn as { metaapi_account_id?: string } | null)?.metaapi_account_id
     if (!accId) continue
     followers++
-    const r = await closeFollowerOrder(accId, symbol, pendingOnly)
+    const brokerId = (log as { broker_position_id?: string | null }).broker_position_id ?? null
+    if (!brokerId) {
+      // Sem id da posição: só se fecha por símbolo se não houver OUTRO T2T aberto no mesmo
+      // símbolo nesta ligação (de outro sinal/estratégia). Senão é ambíguo: não se mexe.
+      const { data: outros } = await supabase
+        .from('mtmcopy_signal_log')
+        .select('id, symbol, chat_message_id')
+        .eq('connection_id', connId)
+        .in('status', OPEN_LOG_STATUSES)
+        .neq('chat_message_id', chatMessageId)
+        .limit(50)
+      const conflito = (outros ?? []).some((o) => symbolMatchesCanonical(String((o as { symbol?: string }).symbol ?? ''), symbol))
+      if (conflito) {
+        await supabase.from('mtmcopy_signal_log')
+          .update({ detail: `${detail} · ambíguo: sem id da posição e outro T2T aberto em ${symbol} — não fechado` })
+          .eq('id', (log as { id: string }).id)
+        continue
+      }
+    }
+    const r = await closeFollowerOrder(accId, symbol, pendingOnly, brokerId)
     cancelled += r.cancelled
     closed += r.closed
     await supabase.from('mtmcopy_signal_log')

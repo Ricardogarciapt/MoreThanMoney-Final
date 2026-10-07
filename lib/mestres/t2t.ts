@@ -50,6 +50,15 @@ export function escolherPosicaoMestre(
   sinal: { symbol: string; direcao: Direcao; entrada: number | null; mensagemEm: string; pip: number },
   opts: { antesMs?: number; depoisMs?: number; tolPips?: number } = {},
 ): PosicaoMestreCandidata | null {
+  return posicoesCompativeis(candidatas, sinal, opts)[0] ?? null
+}
+
+/** As posições compatíveis com o sinal (mesmas regras de `escolherPosicaoMestre`), da mais recente para a mais antiga. */
+export function posicoesCompativeis(
+  candidatas: PosicaoMestreCandidata[],
+  sinal: { symbol: string; direcao: Direcao; entrada: number | null; mensagemEm: string; pip: number },
+  opts: { antesMs?: number; depoisMs?: number; tolPips?: number } = {},
+): PosicaoMestreCandidata[] {
   const antes = opts.antesMs ?? 10 * 60_000
   const depois = opts.depoisMs ?? 6 * 3600_000
   const tol = opts.tolPips ?? 60
@@ -66,7 +75,29 @@ export function escolherPosicaoMestre(
     return true
   })
   boas.sort((a, b) => Date.parse(b.aberta_em) - Date.parse(a.aberta_em))
-  return boas[0] ?? null
+  return boas
+}
+
+/**
+ * A posição da mestre de um aceite T2T, POR ID primeiro (isolamento 199, 07/10):
+ *  1. `posicaoPorId` — a posição que a ponte do sinal (`funded_sinal_posicoes.chat_message_id` =
+ *     mensagem aceite) diz ser a dele. Se existir e estiver aberta, é essa — sem olhar a preços.
+ *  2. Sem ponte: as compatíveis pelo par/direcção/janela/preço. UMA → essa. Várias (duas camadas
+ *     Premium, dois sinais no mesmo par) → AMBÍGUO: não se escolhe «a mais recente», não se liga.
+ */
+export function posicaoMestreDoAceite(
+  candidatas: PosicaoMestreCandidata[],
+  sinal: { symbol: string; direcao: Direcao; entrada: number | null; mensagemEm: string; pip: number },
+  posicaoPorId: string | null,
+): { pos: PosicaoMestreCandidata | null; motivo: string | null } {
+  if (posicaoPorId) {
+    const pos = candidatas.find((c) => String(c.id) === String(posicaoPorId) && c.estado === 'aberta') ?? null
+    return pos ? { pos, motivo: null } : { pos: null, motivo: `a posição ${posicaoPorId} do sinal já não está aberta na origem` }
+  }
+  const boas = posicoesCompativeis(candidatas, sinal)
+  if (boas.length === 1) return { pos: boas[0], motivo: null }
+  if (!boas.length) return { pos: null, motivo: null }
+  return { pos: null, motivo: `${boas.length} posições da origem servem a este sinal — ambíguo, não se liga nenhuma` }
 }
 
 /** Chave do evento de abertura por ACEITE (≠ da abertura do trigger, que numa rota T2T é ignorada). */

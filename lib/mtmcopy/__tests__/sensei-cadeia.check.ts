@@ -75,10 +75,15 @@ assert.equal(primeiroPortaoFechado([[true, 'a'], [() => false, 'qualidade']]), '
 // ── 4. O webhook usa isto (guarda estática, para ninguém voltar ao ticker sozinho) ───────────
 const rota = readFileSync(join(__dirname, '..', '..', '..', 'app', 'api', 'webhooks', 'tradingview', 'route.ts'), 'utf8')
 assert.ok(/entradaSenseiAutonoma\(/.test(rota), 'o webhook não procura ideia pendente para a entrada do Sensei X')
+// Desde 07/10 (199) a escolha é por ID e não por fonte+preço: estratégia + chave da trade, uma só
+// ligação (`entradaLigada`) que os dois caminhos de seguimento (Pine e eventos JSON) usam.
+// Isolamento completo em lib/sinais/__tests__/isolamento-estrategias.check.ts.
+assert.ok(/ligarSeguimento\(/.test(rota), 'o seguimento liga-se à entrada por estratégia + chave')
 assert.ok(
-  (rota.match(/escolherEntradaDoSeguimento\(/g) ?? []).length >= 2,
-  'os dois caminhos de seguimento (Pine e eventos JSON) escolhem a entrada pela fonte',
+  (rota.match(/const entryRow = entradaLigada/g) ?? []).length >= 2,
+  'os dois caminhos de seguimento (Pine e eventos JSON) usam a entrada ligada por id',
 )
+assert.ok(!/escolherEntradaDoSeguimento\(/.test(rota), 'nenhum caminho volta a escolher a entrada pelo ticker')
 assert.ok(/primeiroPortaoFechado\(/.test(rota), 'o canExecuteProvider diz porquê')
 
 console.log('sensei-cadeia: ok')

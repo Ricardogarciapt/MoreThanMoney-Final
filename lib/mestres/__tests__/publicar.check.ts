@@ -52,7 +52,7 @@ const WEBHOOK = ler('app/api/webhooks/tradingview/route.ts')
 t('webhook: cartão, espelho de fecho, avisos e relay Telegram passam pelo publicador', () => {
   assert.match(WEBHOOK, /estrategiasPublicadasPelaMestre\(\)\)\.find\(\(e\) => e\.canal === route\.channel\)/)
   assert.match(WEBHOOK, /if \(publicacaoMestre\) \{[\s\S]{0,600}publicarEntradaDaMestre\(/)
-  assert.match(WEBHOOK, /route\.channel && !publicacaoMestre\) \{/)
+  assert.match(WEBHOOK, /route\.channel && !publicacaoMestre( && entradaChatMessageId)?\) \{/) // 199: o fecho T2T exige a entrada por id
   assert.match(WEBHOOK, /!RELAY_DISABLED && !publicacaoMestre\)/)
   assert.match(WEBHOOK, /!publicacaoMestre && \(tradeStatus === "loss"/)
 })

@@ -42,19 +42,27 @@ function tpFromDb(raw: unknown): number[] {
   return raw.filter((n): n is number => typeof n === 'number' && Number.isFinite(n))
 }
 
+/**
+ * ISOLAMENTO POR ESTRATÉGIA (199, 07/10): `sensei_trade_ideas` recebe ideias de VÁRIOS scanners
+ * (Sensei, GoldKiller, MTM Scanner). Cada ideia leva a `estrategia` e todas as leituras/expirações
+ * filtram por ela — uma ideia do GoldKiller nunca expira, activa nem empresta SL/TP a uma do Sensei.
+ * Sem estratégia não se grava nem se procura nada (lib/sinais/identidade.ts).
+ */
 export async function saveSenseiTradeIdea(
   supabase: SupabaseClient,
   alert: SenseiParsedAlert,
-  signalId?: string,
+  signalId: string | undefined,
+  estrategia: string | null,
 ): Promise<{ id: string; tradeNumber: number | null } | null> {
   const symbol = alert.symbol
-  if (!symbol) return null
+  if (!symbol || !estrategia) return null
 
   const tf = alert.timeframe ?? null
 
   let expireQ = supabase
     .from('sensei_trade_ideas')
     .update({ status: 'expired' })
+    .eq('estrategia', estrategia)
     .eq('symbol', symbol)
     .eq('status', 'pending')
   expireQ = tf ? expireQ.eq('timeframe', tf) : expireQ.is('timeframe', null)
@@ -70,6 +78,7 @@ export async function saveSenseiTradeIdea(
       sl: alert.sl,
       tp: alert.tp,
       status: 'pending',
+      estrategia,
       source_signal_id: signalId ?? null,
       raw_message: alert.raw,
       raw_payload: { alert_type: 'idea', timeframe: tf, exchange: alert.exchange },
@@ -101,48 +110,27 @@ export async function attachSenseiIdeaMessages(
 }
 
 /**
- * Ideia correspondente a um follow-up (TP/BE/SL), associada pelo PREÇO DE ENTRADA.
- * Quando há várias ideias do mesmo símbolo, escolhe a do entry mais próximo (não a
- * mais recente) — para o BE/SL/TP cair na trade certa e o CopyFactory/clientes não baralharem.
+ * A ideia de uma ENTRADA, pelo id do registo do webhook (`tradingview_signals.id`): é o
+ * `source_signal_id` (entrada que criou a ideia) ou o `trigger_signal_id` (entrada que a activou).
+ * Substitui a procura pelo ticker + preço + «a mais recente» (199, 07/10): o seguimento chega aqui
+ * já ligado à SUA entrada (lib/sinais/identidade.ts › ligarSeguimento). Mesma estratégia ou nada.
  */
-export async function findActiveSenseiIdeaForFollowup(
+export async function ideiaDaEntrada(
   supabase: SupabaseClient,
-  symbol: string,
-  timeframe?: string | null,
-  direction?: 'buy' | 'sell' | null,
-  entry?: number | null,
+  entradaId: string | null | undefined,
+  estrategia: string | null,
 ): Promise<SenseiTradeIdea | null> {
-  let q = supabase
+  if (!entradaId || !estrategia) return null
+  const { data, error } = await supabase
     .from('sensei_trade_ideas')
     .select(IDEA_COLUMNS)
-    .eq('symbol', symbol)
-    .in('status', ['activated', 'pending'])
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  if (timeframe) q = q.eq('timeframe', timeframe)
-  if (direction) q = q.eq('direction', direction)
-
-  const { data, error } = await q
+    .eq('estrategia', estrategia)
+    .or(`source_signal_id.eq.${entradaId},trigger_signal_id.eq.${entradaId}`)
+    .limit(2)
   if (error || !data?.length) return null
-
-  const ideas = (data as Record<string, unknown>[]).map(mapIdeaRow)
-
-  // Associa pelo preço de entrada (tolerância 0.2% do preço) — chave correta.
-  if (entry != null && Number.isFinite(entry) && entry > 0) {
-    const tol = Math.max(Math.abs(entry) * 0.002, 0.01)
-    const withEntry = ideas.filter((i) => i.entry != null)
-    let best: SenseiTradeIdea | null = null
-    let bestDiff = Infinity
-    for (const i of withEntry) {
-      const diff = Math.abs((i.entry as number) - entry)
-      if (diff < bestDiff) { bestDiff = diff; best = i }
-    }
-    if (best && bestDiff <= tol) return best
-  }
-
-  // Sem entry ou sem match por preço → a mais recente (fallback).
-  return ideas[0] ?? null
+  // Duas ideias para a mesma entrada não deviam existir; se existirem é ambíguo e não se escolhe.
+  if (data.length > 1) return null
+  return mapIdeaRow(data[0] as Record<string, unknown>)
 }
 
 /**
@@ -152,9 +140,10 @@ export async function findActiveSenseiIdeaForFollowup(
 export async function createActivatedSenseiIdea(
   supabase: SupabaseClient,
   alert: SenseiParsedAlert,
-  signalId?: string,
+  signalId: string | undefined,
+  estrategia: string | null,
 ): Promise<SenseiTradeIdea | null> {
-  if (!alert.symbol) return null
+  if (!alert.symbol || !estrategia) return null
   const { data, error } = await supabase
     .from('sensei_trade_ideas')
     .insert({
@@ -165,6 +154,7 @@ export async function createActivatedSenseiIdea(
       sl: alert.sl,
       tp: alert.tp,
       status: 'activated',
+      estrategia,
       activated_at: new Date().toISOString(),
       source_signal_id: signalId ?? null,
       trigger_signal_id: signalId ?? null,
@@ -180,25 +170,33 @@ export async function createActivatedSenseiIdea(
   return mapIdeaRow(data as Record<string, unknown>)
 }
 
+/**
+ * Ideia pendente que uma activação (`entry_trigger`) completa — SÓ da mesma estratégia. Duas
+ * pendentes da mesma estratégia e símbolo não deviam coexistir (a nova expira a anterior); se
+ * coexistirem, é ambíguo e não se funde nenhuma.
+ */
 export async function findPendingSenseiIdea(
   supabase: SupabaseClient,
   symbol: string,
-  timeframe?: string | null,
+  timeframe: string | null | undefined,
+  estrategia: string | null,
 ): Promise<SenseiTradeIdea | null> {
+  if (!estrategia) return null
   let q = supabase
     .from('sensei_trade_ideas')
     .select(IDEA_COLUMNS)
+    .eq('estrategia', estrategia)
     .eq('symbol', symbol)
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
-    .limit(1)
+    .limit(2)
 
   if (timeframe) q = q.eq('timeframe', timeframe)
 
-  const { data, error } = await q.maybeSingle()
-  if (error || !data) return null
+  const { data, error } = await q
+  if (error || !data?.length || data.length > 1) return null
 
-  return mapIdeaRow(data as Record<string, unknown>)
+  return mapIdeaRow(data[0] as Record<string, unknown>)
 }
 
 export async function activateSenseiTradeIdea(

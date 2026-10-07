@@ -1846,6 +1846,30 @@ export async function listPendingOrders(accountId: string): Promise<MetaApiPendi
   }
 }
 
+/**
+ * Cancela UMA ordem pendente pelo id (isolamento 199): o fecho de um sinal T2T apaga a ordem DESSE
+ * sinal, não todas as pendentes do símbolo na conta do cliente. Ordem inexistente = `found:false`.
+ */
+export async function cancelPendingOrderById(
+  accountId: string,
+  orderId: string,
+): Promise<{ cancelled: boolean; found: boolean; error?: string }> {
+  let closeConn: (() => Promise<void>) | undefined
+  try {
+    const { connection, close: closeFn } = await getRpcConnection(accountId)
+    closeConn = closeFn
+    if (!connection.getOrders || !connection.cancelOrder) return { cancelled: false, found: false, error: 'MetaAPI getOrders/cancelOrder indisponível' }
+    const orders = (await connection.getOrders()) as MetaApiPendingOrder[]
+    if (!orders.some((o) => String(o.id) === String(orderId))) return { cancelled: false, found: false }
+    await connection.cancelOrder(orderId)
+    return { cancelled: true, found: true }
+  } catch (err: unknown) {
+    return { cancelled: false, found: true, error: err instanceof Error ? err.message : 'Erro ao cancelar ordem' }
+  } finally {
+    if (closeConn) await closeConn()
+  }
+}
+
 export async function cancelPendingOrdersForSymbol(
   accountId: string,
   signalSymbol: string,

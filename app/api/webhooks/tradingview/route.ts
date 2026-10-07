@@ -21,8 +21,8 @@ import {
   activateSenseiTradeIdea,
   attachSenseiIdeaMessages,
   createActivatedSenseiIdea,
-  findActiveSenseiIdeaForFollowup,
   findPendingSenseiIdea,
+  ideiaDaEntrada,
   mergeSenseiTriggerWithIdea,
   saveSenseiTradeIdea,
   type SenseiTradeIdea,
@@ -40,7 +40,17 @@ import { decidirScannerParaMestre } from "@/lib/mtmcopy/scanner-para-mestre"
 // tem de decidir «teria executado?» com EXACTAMENTE o mesmo código que este webhook.
 import { classifyAsset, confirmationsPassed, isCryptoPerpTicker, passesQualityGate, stopsSane, type AssetClass } from "@/lib/mtmcopy/webhook-gates"
 import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
-import { entradaSenseiAutonoma, escolherEntradaDoSeguimento, primeiroPortaoFechado } from "@/lib/mtmcopy/sensei-cadeia"
+import { entradaSenseiAutonoma, primeiroPortaoFechado } from "@/lib/mtmcopy/sensei-cadeia"
+import {
+  alvoLegadoDaEstrategia,
+  chaveDaTrade,
+  entradaOriginal,
+  fonteDaMestreParaEstrategia,
+  ligarSeguimento,
+  resolverEstrategiaDoAlerta,
+  type EntradaComIdentidade,
+  type Ligacao,
+} from "@/lib/sinais/identidade"
 import { urlDoChat, urlDoTapToTrade } from "@/lib/notificacao-destino"
 import { lifecycleMessage, stopFoiProtegido } from "@/lib/mtmcopy/signal-lifecycle"
 import { formatarSeguimento, formatarSinal } from "@/lib/sinais/formato-sinal"
@@ -590,6 +600,15 @@ async function processarAlerta(request: NextRequest) {
   // Endpoint dedicado /api/webhooks/tradingview-perps reencaminha para aqui com este
   // header → força o modo perps independentemente do nome do alerta (fonte = a lista).
   const forcedPerps = request.headers.get("x-mtm-perps") === "1"
+
+  /**
+   * IDENTIDADE DO SINAL (isolamento por estratégia, 07/10 — docs/sinais-isolamento-estrategias.md).
+   * Resolve-se UMA vez e acompanha o sinal até ao fim: vai para `tradingview_signals.estrategia`,
+   * escolhe a mestre (só a desta estratégia), filtra as ideias e liga os seguimentos à SUA entrada.
+   * `null` = desconhecida ou ambígua → publica como sempre, mas não executa em lado nenhum.
+   */
+  const identidade = resolverEstrategiaDoAlerta({ forcada: forcedStrategy, alertName, texto: freeText })
+  const estrategia = identidade.estrategia
   // Só força perps se o ticker for MESMO cripto. Um forex/índice/ouro que apareça no alerta
   // dos perps (ex.: USDCAD no Aurum Flow) segue a sua classe natural e nunca vai ao chat de
   // perps nem à Bybit (que só tem cripto). Evita sinais errados no canal + ordens inválidas.
@@ -712,9 +731,10 @@ async function processarAlerta(request: NextRequest) {
   // (pendingHadLimit) ou activava a ideia alheia — lib/mtmcopy/sensei-cadeia.ts (07/10).
   const senseiEntradaAutonoma = entradaSenseiAutonoma({ scannerKey, assetClass, state })
   if (senseiParsed?.alertType === "entry_trigger" && senseiParsed.symbol && !senseiEntradaAutonoma) {
-    let pending = await findPendingSenseiIdea(supabase, senseiParsed.symbol, senseiParsed.timeframe)
+    // Só ideias da MESMA estratégia (199): a activação de um scanner nunca funde nem activa a ideia de outro.
+    let pending = await findPendingSenseiIdea(supabase, senseiParsed.symbol, senseiParsed.timeframe, estrategia)
     if (!pending && senseiParsed.timeframe) {
-      pending = await findPendingSenseiIdea(supabase, senseiParsed.symbol, null)
+      pending = await findPendingSenseiIdea(supabase, senseiParsed.symbol, null, estrategia)
     }
     if (pending) {
       pendingIdeaId = pending.id
@@ -772,12 +792,67 @@ async function processarAlerta(request: NextRequest) {
         : "active"
   const initSignalKind = mgmtStatus || initIsFollow ? "followup" : "entry"
 
+  // Chave da trade com os campos da PRÓPRIA fonte (o payload cru — a fonte repete o seu preço, não o
+  // nosso). Liga a entrada aos seus seguimentos sem passar pelo «último do ticker».
+  const chaveTrade = chaveDaTrade({ estrategia, ticker, payload, direcao: action })
+
   // Log inicial
   const { data: logRow } = await supabase
     .from("tradingview_signals")
-    .insert({ ticker, exchange, timeframe, action, price, sl, tp, alert_name: alertName, message: freeText, raw_payload: payload, ai_status: "pending", trade_status: initTradeStatus, signal_kind: initSignalKind })
+    .insert({
+      ticker, exchange, timeframe, action, price, sl, tp, alert_name: alertName, message: freeText, raw_payload: payload,
+      ai_status: "pending", trade_status: initTradeStatus, signal_kind: initSignalKind,
+      estrategia, chave_trade: chaveTrade,
+      ligacao: estrategia ? (initSignalKind === "entry" ? "origem" : null) : "sem_estrategia",
+      ...(estrategia ? {} : { ai_error: `identidade: ${identidade.motivo ?? "estratégia desconhecida"}`.slice(0, 300) }),
+    })
     .select("id").single()
   const logId = logRow?.id as string | undefined
+
+  /**
+   * SEGUIMENTO → A SUA ENTRADA, por estratégia + chave (lib/sinais/identidade.ts › ligarSeguimento).
+   * Zero ou várias candidatas = não liga, e NADA do que depende da entrada corre (estado da entrada,
+   * avisos aos seguidores, fecho T2T, gestão no provider). O motivo fica em `ligacao`/`ai_error`.
+   * Uma ENTRADA repetida (mesma estratégia e chave ainda aberta) fica ligada à original.
+   */
+  const ESTADOS_ABERTOS = ["active", "pending", "be", "exit_1", "exit_2", "exit_3"]
+  let ligacaoSeg: Ligacao | null = null
+  if (logId && estrategia && chaveTrade) {
+    try {
+      const { data: abertas } = await supabase
+        .from("tradingview_signals")
+        .select("id, estrategia, chave_trade, entrada_id, chat_message_id")
+        .eq("estrategia", estrategia)
+        .eq("chave_trade", chaveTrade)
+        .eq("signal_kind", "entry")
+        .in("trade_status", ESTADOS_ABERTOS)
+        .neq("id", logId)
+        .limit(5)
+      const lista = (abertas ?? []) as EntradaComIdentidade[]
+      if (initSignalKind === "entry") {
+        const original = entradaOriginal(lista, { id: logId, estrategia, chave: chaveTrade })
+        if (original) await supabase.from("tradingview_signals").update({ entrada_id: original, ligacao: "duplicada" }).eq("id", logId)
+      } else {
+        ligacaoSeg = ligarSeguimento(lista, { estrategia, chave: chaveTrade })
+      }
+    } catch (e) {
+      console.error("[tradingview-webhook] ligação do seguimento:", e)
+    }
+  }
+  if (initSignalKind === "followup" && !ligacaoSeg) {
+    ligacaoSeg = ligarSeguimento([], { estrategia, chave: chaveTrade })
+  }
+  if (logId && ligacaoSeg) {
+    await supabase
+      .from("tradingview_signals")
+      .update(ligacaoSeg.ok
+        ? { entrada_id: ligacaoSeg.entradaId, ligacao: ligacaoSeg.ligacao }
+        : { ligacao: ligacaoSeg.ligacao, ai_error: `seguimento não ligado: ${ligacaoSeg.motivo}`.slice(0, 300) })
+      .eq("id", logId)
+      .then(undefined, (e) => console.error("[tradingview-webhook] gravar ligação:", e))
+  }
+  /** A entrada deste seguimento (só quando a ligação é inequívoca). */
+  const entradaLigada = ligacaoSeg?.ok ? ligacaoSeg.entrada : null
 
   // Imagem do sinal (só entradas): aponta o cartão para a rota lazy, que renderiza o gráfico
   // TradingView REAL (chart-img) com as linhas da trade na 1.ª visualização (CDN cacheia por
@@ -793,19 +868,9 @@ async function processarAlerta(request: NextRequest) {
   // Atalho para eventos de gestão JSON: atualiza a entrada + notifica na hora, sem chat/cópia.
   if (mgmtStatus && ticker) {
     try {
-      // A entrada DESTA fonte (alert_name), não a última do ticker — senão um evento do GoldKiller
-      // marcava a entrada do Sensei (lib/mtmcopy/sensei-cadeia.ts).
-      const { data: candidatas } = await supabase
-        .from("tradingview_signals")
-        .select("id, chat_message_id, alert_name, price, raw_payload")
-        .eq("ticker", ticker)
-        .eq("signal_kind", "entry")
-        .in("trade_status", ["active", "pending", "be", "exit_1", "exit_2", "exit_3"])
-        .order("received_at", { ascending: false })
-        .limit(20)
-      // Eventos JSON (GoldKiller/MTM Scanner): só se acrescenta o filtro da fonte; a escolha pela
-      // mais recente fica como estava (não se sabe se o evento traz a entrada original).
-      const entryRow = escolherEntradaDoSeguimento(candidatas ?? [], { alertName, entry: null })
+      // A entrada DESTE evento: mesma estratégia e mesma chave (id ou entrada da fonte). Um evento
+      // sem chave não toca em entrada nenhuma — antes ia à mais recente do ticker (199, 07/10).
+      const entryRow = entradaLigada
       if (entryRow?.id) {
         await supabase.from("tradingview_signals").update({ trade_status: mgmtStatus }).eq("id", entryRow.id)
         if (mgmtStatus === "loss" || mgmtStatus === "be" || mgmtStatus.startsWith("exit_")) {
@@ -977,11 +1042,19 @@ async function processarAlerta(request: NextRequest) {
    * do `&&` que estava aqui). O motivo do primeiro fechado vai para `tradingview_signals.ai_error`
    * nas entradas — antes uma entrada barrada ficava «sem motivo registado» (auditoria Sensei 07/10).
    */
+  /**
+   * EXECUTOR DA ESTRATÉGIA — e só dela. Antes: `isGoldKiller ? goldkiller : forex ? forex : sensei`,
+   * ou seja, todo o ouro/BTC que não fosse GoldKiller ia para a conta e a mestre do SENSEI, mesmo um
+   * alerta sem estratégia reconhecida (199, 07/10).
+   */
+  const alvoExec = alvoLegadoDaEstrategia(estrategia, assetClass)
   const motivoNaoExecutar = primeiroPortaoFechado([
     [!aurumNaoCripto, "Aurum Flow fora do cripto"],
+    [estrategia != null, `sem estratégia inequívoca: ${identidade.motivo ?? "desconhecida"}`],
     // Master switch = interruptor por-ativo na BD (mtmcopy_exec_switches), afinável sem redeploy.
     // (Antes exigia também o env SENSEI_PROVIDER_EXEC_ENABLED, que mantinha tudo OFF por defeito.)
     [execSwitchOn, "interruptor de execução desligado (mtmcopy_exec_switches)"],
+    [scannerKey === "mtmscanner" || alvoExec != null, `a estratégia ${estrategia} não tem executor para ${assetClass}`],
     // MTM Scanner NÃO executa em conta nenhuma (pedido Ricardo): só PUBLICA + alimenta o T2T
     // (forex). Sem casa própria — a trade abre/gere/fecha na conta de quem aceitar via T2T.
     [scannerKey !== "mtmscanner", "o MTM Scanner não executa"],
@@ -1039,20 +1112,23 @@ async function processarAlerta(request: NextRequest) {
     // Sensei X ENTRY (gate dedicado): cria SEMPRE registo ATIVADO (chaveado pelo preço de
     // entrada) para os follow-ups (BE/SL/TP) se associarem e responderem em thread — mesmo
     // que o parser tenha classificado como "idea" (que de outra forma ficaria só pendente).
-    entryTradeIdea = pendingIdea ?? (await createActivatedSenseiIdea(supabase, activeSensei, logId))
+    entryTradeIdea = pendingIdea ?? (await createActivatedSenseiIdea(supabase, activeSensei, logId, estrategia))
   } else if (isIdeaAlert && activeSensei) {
-    savedIdea = await saveSenseiTradeIdea(supabase, activeSensei, logId)
+    savedIdea = await saveSenseiTradeIdea(supabase, activeSensei, logId, estrategia)
   } else if (activeSensei?.alertType === "entry_trigger" && activeSensei.symbol) {
     // ENTRY sem ideia prévia → cria registo ativado chaveado pelo preço de entrada,
     // para os follow-ups (BE/SL/TP) se associarem e responderem em thread.
-    entryTradeIdea = pendingIdea ?? (await createActivatedSenseiIdea(supabase, activeSensei, logId))
+    entryTradeIdea = pendingIdea ?? (await createActivatedSenseiIdea(supabase, activeSensei, logId, estrategia))
   }
 
   if (canExecuteProvider) {
     // await (não fire-and-forget): no Vercel o trabalho assíncrono é morto após a resposta,
     // o que deixaria a trade por abrir. A latência é cortada dentro do processor (chamadas
     // MetaAPI paralelizadas), não tirando a execução do caminho da resposta.
-    const execTarget = isGoldKiller ? "goldkiller" : assetClass === "forex" ? "forex" : "sensei"
+    // `alvoExec` não é null aqui (portão acima). A fonte da mestre é a da ESTRATÉGIA; o forex do
+    // Sensei não tem mestre (cai em `desligado` como sempre).
+    const execTarget = alvoExec as "sensei" | "goldkiller" | "forex"
+    const fonteMestre = execTarget === "forex" ? "forex" : fonteDaMestreParaEstrategia(estrategia) ?? "sem-mestre"
     // MESTRES NOSSAS (116): o sinal abre também/só na mestre SIM da estratégia. `sinal_modo` desligado
     // (por omissão) não faz nada; sombra só regista; live abre na SIM e SUBSTITUI a ordem na mestre MT5.
     let mestreSubstituiMt5 = false
@@ -1060,7 +1136,7 @@ async function processarAlerta(request: NextRequest) {
       const sinalExec = parsedForExec as NonNullable<ReturnType<typeof parseSignal>>
       const tpsExec = (Array.isArray(sinalExec.tp) ? sinalExec.tp : []).filter((t): t is number => typeof t === "number" && t > 0)
       const m = await encaminharSinalParaMestre({
-        fonte: execTarget, symbol: String(sinalExec.symbol), direcao: sinalExec.direction === "sell" ? "sell" : "buy",
+        fonte: fonteMestre, symbol: String(sinalExec.symbol), direcao: sinalExec.direction === "sell" ? "sell" : "buy",
         entrada: sinalExec.entry ?? price ?? null, sl: sinalExec.sl ?? null, tps: tpsExec, externalRef: String(logId ?? ""),
       })
       mestreSubstituiMt5 = m.substituiMt5
@@ -1153,7 +1229,7 @@ async function processarAlerta(request: NextRequest) {
    * única vez. A pergunta certa é `initSignalKind === "entry"`, a mesma que fica em `signal_kind`.
    */
   const confirmacoesScanner =
-    scannerKey === "mtmscanner" ? temTodasAsConfirmacoes(payload, execDirForGate) : null
+    scannerKey === "mtmscanner" && estrategia === "mtm-scanner" ? temTodasAsConfirmacoes(payload, execDirForGate) : null
   const gateScanner =
     scannerKey === "mtmscanner"
       ? passesExecGate(
@@ -1166,7 +1242,8 @@ async function processarAlerta(request: NextRequest) {
         )
       : { ok: false as const, reason: "não é o MTM Scanner" }
   const decisaoScanner = decidirScannerParaMestre({
-    scanner: scannerKey,
+    // A mestre do scanner só recebe o que é INEQUIVOCAMENTE do scanner (199).
+    scanner: estrategia === "mtm-scanner" ? scannerKey : null,
     tipoSinal: initSignalKind === "entry" ? "entry" : "followup",
     classe: assetClass,
     simbolo: parsedForExec.symbol ?? null,
@@ -1257,16 +1334,16 @@ async function processarAlerta(request: NextRequest) {
    */
   const ehBreakeven = (activeSensei?.alertType ?? initAlertType) === "breakeven"
   let breakevenRedundante = false
-  if (ehBreakeven && activeSensei?.symbol) {
-    const { data: linha } = await supabase
-      .from("mtmcopy_signal_tracking")
-      .select("exits_done")
-      .eq("symbol", activeSensei.symbol)
-      .in("status", ["active", "closed"])
-      .order("created_at", { ascending: false })
+  if (ehBreakeven && entradaLigada?.id) {
+    // Já houve um alvo NESTA trade? (seguimentos ligados à mesma entrada — antes: a última linha
+    // do tracker com o mesmo símbolo, de qualquer canal e de qualquer fonte.)
+    const { data: alvos } = await supabase
+      .from("tradingview_signals")
+      .select("id")
+      .eq("entrada_id", entradaLigada.id)
+      .like("trade_status", "exit_%")
       .limit(1)
-      .maybeSingle()
-    breakevenRedundante = Number(linha?.exits_done ?? 0) >= 1
+    breakevenRedundante = (alvos?.length ?? 0) > 0
   }
 
   const alertOk =
@@ -1276,14 +1353,10 @@ async function processarAlerta(request: NextRequest) {
       perpsRequested ||
       passesAlertGate(signalRules, execSymbolForGate, execConfCount, scannerKey, assetClass))
   let linkedIdea: SenseiTradeIdea | null = null
-  if (isFollowup && activeSensei?.symbol) {
-    linkedIdea = await findActiveSenseiIdeaForFollowup(
-      supabase,
-      activeSensei.symbol,
-      activeSensei.timeframe,
-      activeSensei.direction,
-      activeSensei.entry, // associa pelo PREÇO DE ENTRADA original
-    )
+  if (isFollowup && entradaLigada?.id) {
+    // A ideia DA entrada a que este seguimento pertence (ids), da mesma estratégia — já não pelo
+    // ticker + preço + «a mais recente».
+    linkedIdea = await ideiaDaEntrada(supabase, entradaLigada.id, estrategia)
   }
 
   // Contexto da mensagem: entrada/TP/numeração (da ideia ligada por preço, ou da própria entrada)
@@ -1301,7 +1374,11 @@ async function processarAlerta(request: NextRequest) {
     assetClass === "gold_btc" &&
     isFollowup &&
     activeSensei?.symbol &&
-    (!isGoldKiller || execSwitches.goldkiller)
+    // Só com a entrada ligada e o executor desta estratégia (199): um seguimento ambíguo não mexe
+    // em posição nenhuma, e um seguimento do MTM Scanner já não vai gerir a conta do Sensei.
+    entradaLigada != null &&
+    (alvoExec === "sensei" || alvoExec === "goldkiller") &&
+    (alvoExec !== "goldkiller" || execSwitches.goldkiller)
   ) {
     try {
       await processMtmcopyWebhookManagement({
@@ -1310,7 +1387,7 @@ async function processarAlerta(request: NextRequest) {
         alertType: activeSensei.alertType,
         tpLevel: activeSensei.tpLevel ?? null,
         entry: linkedIdea?.entry ?? activeSensei.entry ?? null,
-        target: isGoldKiller ? "goldkiller" : "sensei",
+        target: alvoExec === "goldkiller" ? "goldkiller" : "sensei",
       })
     } catch (err) {
       console.error("[tradingview-webhook] sensei/goldkiller management error:", err)
@@ -1346,10 +1423,18 @@ async function processarAlerta(request: NextRequest) {
       slOriginal: msgCtx?.slOriginal ?? null,
       price: v.sl ?? activeSensei?.sl ?? null,
     })
-  if ((isExitFollowup || isSlFollowup) && t2tCloseSymbol && route.channel && !publicacaoMestre) {
+  // A mensagem de ENTRADA desta trade (ids): sem ela não se fecha nada nos seguidores (199).
+  const entradaChatMessageId = entradaLigada?.chat_message_id ?? linkedIdea?.chatMessageId ?? null
+  if ((isExitFollowup || isSlFollowup) && t2tCloseSymbol && route.channel && !publicacaoMestre && !entradaChatMessageId && logId) {
+    await supabase.from("tradingview_signals")
+      .update({ ai_error: `t2t: fecho não espelhado — ${ligacaoSeg && !ligacaoSeg.ok ? ligacaoSeg.motivo : "a entrada não tem mensagem no chat"}`.slice(0, 300) })
+      .eq("id", logId).then(undefined, () => undefined)
+  }
+  if ((isExitFollowup || isSlFollowup) && t2tCloseSymbol && route.channel && !publicacaoMestre && entradaChatMessageId) {
     try {
       const { closeT2TFollowersForSignal } = await import("@/lib/mtmcopy/t2t-lifecycle")
       await closeT2TFollowersForSignal({
+        entradaChatMessageId,
         kind: isSlFollowup && !slProtegido ? "discard" : "close",
         // No SL só se apagam as pendentes: a posição aberta do seguidor fecha pelo SL dela.
         pendingOnly: isSlFollowup,
@@ -1532,7 +1617,8 @@ async function processarAlerta(request: NextRequest) {
      * abre a mesma trade: a mestre é a SIM, e a MetaApi só serve para entregar às contas dos clientes.
      */
     let aurumNaMestreSim = false
-    if (isAurumFlow && initSignalKind === "entry") {
+    // A mestre da Aurum só recebe o que é INEQUIVOCAMENTE da Aurum (199).
+    if (isAurumFlow && estrategia === "aurum-flow" && initSignalKind === "entry") {
       try {
         const { decidirAurumParaMestre } = await import("@/lib/mestres/aurum")
         const entradaAurum = entry ?? price ?? null
@@ -1718,23 +1804,9 @@ async function processarAlerta(request: NextRequest) {
     }
     // Follow-up: atualiza o estado da entrada correspondente mais recente
     if (isFollow && ticker) {
-      // A entrada da MESMA fonte e, quando o seguimento traz o preço de entrada (o Pine do Sensei
-      // traz), a da MESMA trade. Antes ia à última entrada do ticker de qualquer fonte: a 07/10 os
-      // TP1..TP4 da venda do Sensei marcaram a compra do MTM Scanner (lib/mtmcopy/sensei-cadeia.ts).
-      const { data: candidatas } = await supabase
-        .from("tradingview_signals")
-        .select("id, chat_message_id, alert_name, price, raw_payload")
-        .eq("ticker", ticker)
-        .eq("signal_kind", "entry")
-        .in("trade_status", ["active", "pending", "be", "exit_1", "exit_2", "exit_3"])
-        .order("received_at", { ascending: false })
-        .limit(20)
-      // O preço de entrada só entra na escolha no Sensei X (o Pine manda `entry` = entrada ORIGINAL
-      // em todos os seguimentos); as outras fontes ficam com a mais recente da mesma fonte.
-      const entryRow = escolherEntradaDoSeguimento(candidatas ?? [], {
-        alertName,
-        entry: scannerKey === "sensei" ? activeSensei?.entry ?? entry : null,
-      })
+      // A entrada DESTE seguimento: mesma estratégia e mesma chave da trade (199). Antes ia à
+      // última entrada do ticker (a 07/10 os TP do Sensei marcaram a compra do MTM Scanner).
+      const entryRow = entradaLigada
       if (entryRow?.id) {
         await supabase.from("tradingview_signals").update({ trade_status: tradeStatus }).eq("id", entryRow.id)
         // Notifica seguidores + quem aceitou no T2T: break-even (proteger), SL ou um TP.

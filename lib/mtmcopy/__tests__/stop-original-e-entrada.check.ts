@@ -105,7 +105,7 @@ caso('a admissão aguenta a coluna ainda não existir — a ordem de deploy não
   const src = readFileSync('lib/mtmcopy/signal-tracker.ts', 'utf8')
   // Sem esta retentativa, um deploy antes da migração recusava o insert inteiro (PGRST204) e o
   // motor deixava de admitir sinais — perdia-se o histórico do dia, não só o stop original.
-  assert.match(src, /if \(\/sl_original\/\.test\(error\.message\)\)/)
+  assert.match(src, /if \(\/sl_original(\|preco_admissao\|tipo_entrada)?\/\.test\(error\.message\)\)/) // 199: as colunas da entrada também caem com tolerância
   assert.match(src, /sl_original: _ignorado/)
 })
 

@@ -273,6 +273,11 @@ export interface ResumoPublicacao {
 /** Uma passagem por UMA estratégia: entradas em falta + seguimentos novos das posições recentes. */
 export async function publicarDaMestre(est: EstrategiaPublicada): Promise<ResumoPublicacao> {
   const db = getSupabaseAdmin()
+  // Pendentes que o motor encheu → ponte ligada à posição ANTES de publicar (07/10). Sem isto a
+  // ponte só se ligava na entrada Premium seguinte e os seguimentos de uma limite cheia nunca saíam.
+  await import('@/lib/mtmfunded/estrategias-sinais/pendente')
+    .then((m) => m.arrumarPontesPendentes([est.contaMestreId], est.estrategia))
+    .catch(() => undefined)
   const desde = new Date(Date.now() - JANELA_SEGUIMENTOS_MS).toISOString()
   const { data: linhas } = await db
     .from('funded_positions')

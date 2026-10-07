@@ -25,6 +25,7 @@ import { placeOrdersSequential, getMarketPrice } from './metaapi'
 import { isMarketOpen, podeSaltarLeitura } from './market-hours'
 import { slComMinimo, stopDoLadoErrado } from './source-risk-rules'
 import { gravarDesfechoUnico } from './desfecho-unico'
+import { descarteSilencioso, entradaEncheu, horasAteDesistir, tipoDaEntrada, type TipoEntrada } from './tracker-entrada'
 
 /**
  * Conta que ABRE todos os sinais do Tap to Trade — «All tap to trade Signals», PU Prime Demo,
@@ -83,6 +84,9 @@ interface Linha {
    */
   percurso?: Amostra[] | null
   saidas?: Saida[] | null
+  /** 199: preço no instante da admissão e o tipo de entrada que ele decide (ver tracker-entrada.ts) */
+  preco_admissao?: number | null
+  tipo_entrada?: TipoEntrada | null
 }
 
 /** Um ponto do caminho: instante (epoch, segundos), preço, lucro flutuante e pico em pips até ali. */
@@ -204,7 +208,12 @@ async function admitirNovos(): Promise<number> {
       console.warn('[signal-tracker] não admitido:', m.id, p.symbol, p.direction, maGeometria)
       continue
     }
+    // O tipo da entrada (limite/stop/mercado) decide-se AGORA, contra o preço deste instante.
+    const precoAgora = await referencePrice(p.symbol).catch(() => null)
+    const entradaSinal = p.entry ?? null
     novos.push({
+      preco_admissao: precoAgora,
+      tipo_entrada: tipoDaEntrada({ direcao: p.direction, entrada: entradaSinal, preco: precoAgora }),
       chat_message_id: m.id,
       channel_slug: m.channel_slug,
       source_key: t2tSourceKey(m.channel_slug, m.content),
@@ -236,8 +245,8 @@ async function admitirNovos(): Promise<number> {
    * nessa janela ficam com `sl_original` a null — o mesmo estado honesto das linhas antigas.
    * Quando a migração correr, volta tudo ao normal sozinho, sem novo deploy.
    */
-  if (/sl_original/.test(error.message)) {
-    const semColuna = novos.map(({ sl_original: _ignorado, ...resto }) => resto)
+  if (/sl_original|preco_admissao|tipo_entrada/.test(error.message)) {
+    const semColuna = novos.map(({ sl_original: _ignorado, preco_admissao: _p, tipo_entrada: _t, ...resto }) => resto)
     const { error: e2 } = await admin.from('mtmcopy_signal_tracking').insert(semColuna)
     if (!e2) {
       console.warn('[signal-tracker] admitido SEM sl_original — falta correr a migração 148')
@@ -471,6 +480,21 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
   }
 
   for (const l of linhas as Linha[]) {
+    // Um setup que expirou descarta-se mesmo SEM cotação: a validade conta-se no relógio, não no
+    // preço (sem isto, um símbolo sem preço ficava pendente para sempre — LLLGOLD desde 02/10).
+    if (l.status === 'pending') {
+      const idadeH = (Date.now() - Date.parse(l.created_at)) / 3600_000
+      const validadeH = horasAteDesistir(l.source_key, HORAS_ATE_DESISTIR)
+      if (idadeH >= validadeH) {
+        // Descartado não tem resultado: a entrada nunca encheu. Sem preço, o cartão sai sem números.
+        // Muito atrasado (o tracker esteve parado) → fecha em silêncio, sem despejar cartões velhos.
+        if (descarteSilencioso(idadeH, validadeH)) l.announce = false
+        await anunciar(l, 'discarded', { price: null })
+        await gravarDesfecho(l, 0, 'Ideia descartada')
+        eventos.push(`descartado ${l.symbol}`)
+        continue
+      }
+    }
     const price = precos.get(l.symbol) ?? null
     if (price == null || !(price > 0)) continue
     const pip = pipSizeForSymbol(l.symbol)
@@ -478,8 +502,16 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
 
     // ── PENDENTE: à espera de a entrada encher ────────────────────────────────
     if (l.status === 'pending') {
-      const idadeH = (Date.now() - Date.parse(l.created_at)) / 3600_000
-      const encheu = l.entry == null || (compra ? price <= l.entry : price >= l.entry)
+      // (a validade já foi vista acima, antes da cotação: um setup morto nunca chega aqui)
+      // Tipo da entrada: decidido na admissão; nas linhas sem ele, na PRIMEIRA cotação vista (exige
+      // um cruzamento depois disso — nunca se dá por cheia uma entrada que o preço já tinha passado).
+      let tipo = l.tipo_entrada ?? null
+      if (tipo == null) {
+        tipo = tipoDaEntrada({ direcao: l.direction, entrada: l.entry, preco: price })
+        if (tipo) await gravarTolerante(l.id, { tipo_entrada: tipo, preco_admissao: price })
+        if (tipo !== 'mercado') continue
+      }
+      const encheu = entradaEncheu({ direcao: l.direction, entrada: l.entry, tipo, preco: price })
       if (encheu) {
         // TRANSIÇÃO ATÓMICA. O tracker corre de 5 em 5 segundos e uma passagem demora mais do que
         // isso, por isso duas sobrepõem-se: sem o `eq('status','pending')` ambas viam a linha por
@@ -498,12 +530,6 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
         await anunciar(l, 'entry_hit', { price })
         eventos.push(`entrada ${l.symbol} ${l.channel_slug}`)
         continue
-      }
-      if (idadeH >= HORAS_ATE_DESISTIR) {
-        // Descartado não tem resultado: a entrada nunca encheu. Sem preço, o cartão sai sem números.
-        await anunciar(l, 'discarded', { price: null })
-        await gravarDesfecho(l, 0, 'Ideia descartada')
-        eventos.push(`descartado ${l.symbol}`)
       }
       continue
     }
