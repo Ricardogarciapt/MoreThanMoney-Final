@@ -15,7 +15,7 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
-  decidirDuplicado, gestaoDoSinal, loteParaConta, niveisAncorados,
+  aplicarLoteMinimo, decidirDuplicado, gestaoDoSinal, loteParaConta, niveisAncorados,
   type ConfigSinais, type PonteAberta,
 } from './calculo'
 import type { Direcao } from '../simulado/matematica'
@@ -36,6 +36,8 @@ export interface PedidoAbrir {
   cfg: ConfigSinais
   /** lote fixo (conta «Todos os sinais»: 0,01); sem isto, por saldo */
   loteFixo?: number | null
+  /** lote MÍNIMO por conta (mtm_trading_accounts.lote_minimo, 197): o lote por saldo nunca fica abaixo disto */
+  loteMinimo?: number | null
 }
 
 export interface ResultadoAbrir {
@@ -159,9 +161,10 @@ export async function abrirSinalNaConta(p: PedidoAbrir): Promise<ResultadoAbrir>
     const precoExec = fill.preco
 
     // 4. lote, níveis ao nosso preço e gestão
-    const volume = p.loteFixo && p.loteFixo > 0
+    const volumeBase = p.loteFixo && p.loteFixo > 0
       ? Math.max(s.volume_min, Math.round(p.loteFixo / s.volume_step) * s.volume_step)
       : loteParaConta(Number(conta.sim_saldo ?? conta.saldo_inicial ?? 0), p.cfg, s)
+    const volume = aplicarLoteMinimo(volumeBase, p.loteMinimo, s)
     const niveis = niveisAncorados({ direcao: p.direcao, entrada: p.entrada, sl: p.sl, tps: p.tps }, precoExec, s.digits)
     const { gestao, tpFinal } = gestaoDoSinal({ simbolo: s, direcao: p.direcao, precoExecucao: precoExec, volume, sl: niveis.sl, tps: niveis.tps, cfg: p.cfg })
 

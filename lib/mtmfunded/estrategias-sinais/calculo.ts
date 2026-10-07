@@ -347,6 +347,19 @@ export function loteParaConta(saldo: number, cfg: Pick<ConfigSinais, 'lotePor100
   return Math.min(s.volume_max, Math.max(s.volume_min, v))
 }
 
+/**
+ * O lote nunca abaixo do mínimo da conta (coluna `lote_minimo`, 197 — a «Todos os sinais» pediu 0,02
+ * a 07/10 para que o TP1 parta a posição). Arredonda ao passo do símbolo e respeita o máximo.
+ * Sem mínimo (nulo/0), devolve o lote como veio.
+ */
+export function aplicarLoteMinimo(volume: number, minimo: number | null | undefined, s: Pick<Simbolo, 'volume_min' | 'volume_step' | 'volume_max'>): number {
+  const m = Number(minimo)
+  if (!Number.isFinite(m) || m <= 0) return volume
+  const passos = Math.ceil(m / s.volume_step - 1e-9)
+  const minimoNoPasso = Math.round(passos * s.volume_step * 100) / 100
+  return Math.min(s.volume_max, Math.max(volume, minimoNoPasso, s.volume_min))
+}
+
 // ── niveis e gestão ──────────────────────────────────────────────────────────
 
 export interface NiveisSinal {

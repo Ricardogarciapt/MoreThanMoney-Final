@@ -25,6 +25,66 @@ export interface ContextoAccao {
   adminEmail?: string | null
   conta: Record<string, unknown> & { id: string; estado: string; motor: string; tipo: string }
   agora: string
+  /** Quem manda o email do ajuste (o teste troca-o por um espião; por omissão, o SMTP da casa). */
+  enviarEmail?: EnviarEmail
+}
+
+export type EnviarEmail = (para: string, mail: { subject: string; html: string; text: string }) => Promise<void>
+
+const enviarPeloSmtp: EnviarEmail = async (para, mail) => {
+  const { createMailTransporter, mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } = await import('@/lib/mail-transport')
+  const t = createMailTransporter()
+  try {
+    await t.sendMail({ from: mailFrom(), to: para, subject: mail.subject, html: prepareBrandedEmailHtml(mail.html), text: mail.text, attachments: brandedMailAttachments() })
+  } finally {
+    t.close?.()
+  }
+}
+
+/**
+ * O email de UMA linha do histórico de ajustes, ao dono da conta. Só é chamado por um pedido
+ * explícito (caixa marcada no ajuste, ou botão na linha). Marca a linha com o estado do envio.
+ */
+export async function enviarEmailDoAjuste(ctx: Pick<ContextoAccao, 'db' | 'conta' | 'enviarEmail'>, ajusteId: string): Promise<'enviado' | 'falhou' | 'sem_email'> {
+  const { db, conta } = ctx
+  const { data: a } = await db.from('mtm_funded_ajustes_saldo')
+    .select('id, account_id, delta, saldo_depois, referencia, observacao, estado, aplicado_em, criado_em')
+    .eq('id', ajusteId).eq('account_id', conta.id).maybeSingle()
+  if (!a) throw new ErroAdmin(404, 'ajuste não encontrado nesta conta')
+  if (a.estado !== 'aplicado') throw new ErroAdmin(409, 'só se avisa o cliente de um ajuste aplicado')
+  const { data: perfil } = conta.user_id
+    ? await db.from('profiles').select('full_name, email').eq('id', String(conta.user_id)).maybeSingle()
+    : { data: null }
+  let estado: 'enviado' | 'falhou' | 'sem_email'
+  if (!perfil?.email) estado = 'sem_email'
+  else {
+    const { construirEmailAjuste } = await import('./email-ajuste-saldo')
+    const mail = construirEmailAjuste({
+      nome: (perfil.full_name as string | null) ?? null, login: String(conta.mt5_login ?? '—'),
+      delta: Number(a.delta), referencia: String(a.referencia), observacao: (a.observacao as string | null) ?? null,
+      saldoNovo: Number(a.saldo_depois), em: new Date(String(a.aplicado_em ?? a.criado_em)),
+    })
+    try {
+      await (ctx.enviarEmail ?? enviarPeloSmtp)(String(perfil.email), mail)
+      estado = 'enviado'
+    } catch (e) {
+      console.error('[mtmfunded/admin] email do ajuste falhou:', e)
+      estado = 'falhou'
+    }
+  }
+  await db.from('mtm_funded_ajustes_saldo').update({
+    email_estado: estado, ...(estado === 'enviado' ? { email_enviado_em: new Date().toISOString() } : {}),
+  }).eq('id', ajusteId)
+  return estado
+}
+
+/** Erros das funções SQL (raise exception) → status HTTP com a mensagem da base. */
+function erroDaFuncao(e: { code?: string; message?: string } | null, oQue: string): never {
+  const m = e?.message ?? 'falhou'
+  if (/42883|PGRST202|function .* does not exist/i.test(`${e?.code} ${m}`)) throw new ErroAdmin(503, `${oQue}: a migração 197 ainda não foi aplicada`)
+  if (e?.code === 'P0002') throw new ErroAdmin(404, m)
+  if (e?.code === '22023' || e?.code === '23514' || e?.code === '40001') throw new ErroAdmin(409, m)
+  throw new ErroAdmin(500, `${oQue}: ${m}`)
 }
 
 export interface ResultadoAccao {
@@ -170,12 +230,74 @@ export async function executarAccao(ctx: ContextoAccao, p: PedidoAccao): Promise
 
     case 'ajustar_saldo': {
       exigirSimulada(conta, 'Ajustar o saldo')
-      const atual = Number(conta.sim_saldo ?? 0)
-      if (p.delta < 0 && atual + p.delta < 0) throw new ErroAdmin(409, `o débito deixava o saldo negativo (saldo ${atual.toFixed(2)} USD)`)
-      // A ÚNICA escrita de saldo: a função atómica, a mesma do motor e do WebTrader.
-      const { data, error } = await db.rpc('funded_somar_saldo', { p_conta: conta.id, p_delta: p.delta })
-      if (error) throw new ErroAdmin(500, `não foi possível ajustar o saldo: ${error.message}`)
-      return { resposta: { saldo: data == null ? null : Number(data), delta: p.delta } }
+      // A ÚNICA escrita de saldo continua a ser funded_somar_saldo — chamada DENTRO da função que
+      // regista o histórico, na mesma transacção (antes/depois saem da mesma instrução UPDATE).
+      // Nada aqui lê o saldo para o escrever: a recusa de saldo negativo é da própria função.
+      const { data, error } = await db.rpc('funded_ajustar_saldo_registado', {
+        p_conta: conta.id, p_delta: p.delta, p_referencia: p.referencia, p_observacao: p.observacao ?? null,
+        p_admin_id: ctx.adminId, p_admin_email: ctx.adminEmail ?? null, p_chave: null, p_preparado: p.preparadoId ?? null, p_tipo: 'ajuste',
+      })
+      if (error) erroDaFuncao(error, 'ajustar o saldo')
+      const r = (data ?? {}) as { id?: string; saldo?: number; saldoAntes?: number }
+      // O email SÓ sai com a caixa marcada pelo dono. Sem ela, nada é enviado.
+      const email = p.enviarEmail && r.id ? await enviarEmailDoAjuste(ctx, r.id) : 'nao_pedido'
+      return {
+        resposta: { saldo: r.saldo == null ? null : Number(r.saldo), saldoAntes: r.saldoAntes == null ? null : Number(r.saldoAntes), delta: p.delta, referencia: p.referencia, ajusteId: r.id ?? null, email },
+      }
+    }
+
+    case 'preparar_ajuste': {
+      exigirSimulada(conta, 'Preparar um ajuste')
+      // Rascunho pronto a clicar: NÃO mexe no saldo (estado 'preparado', sem antes/depois).
+      const { data, error } = await db.from('mtm_funded_ajustes_saldo').insert({
+        account_id: conta.id, tipo: 'ajuste', estado: 'preparado', delta: p.delta, referencia: p.referencia,
+        observacao: p.observacao ?? null, admin_id: ctx.adminId, admin_email: ctx.adminEmail ?? null,
+      }).select('id').single()
+      if (error) erroDaFuncao(error, 'preparar o ajuste')
+      return { resposta: { preparado: data?.id ?? null } }
+    }
+
+    case 'email_ajuste': {
+      const estado = await enviarEmailDoAjuste(ctx, p.ajusteId)
+      return { resposta: { email: estado } }
+    }
+
+    case 'transferir_saldo': {
+      exigirSimulada(conta, 'Transferir saldo')
+      const porLogin = !/^[0-9a-f-]{36}$/i.test(p.destino)
+      const { data: dest } = await db.from('mtm_trading_accounts').select('id, mt5_login, user_id')
+        .eq(porLogin ? 'mt5_login' : 'id', p.destino).maybeSingle()
+      if (!dest) throw new ErroAdmin(404, `conta de destino ${p.destino} não existe`)
+      if (dest.id === conta.id) throw new ErroAdmin(400, 'a origem e o destino são a mesma conta')
+      // As duas pernas numa só transacção, com as linhas trancadas; valor nulo = tudo, lido sob a tranca.
+      const { data, error } = await db.rpc('funded_transferir_saldo', {
+        p_origem: conta.id, p_destino: dest.id, p_valor: p.valor, p_referencia: p.referencia, p_observacao: p.observacao ?? null,
+        p_admin_id: ctx.adminId, p_admin_email: ctx.adminEmail ?? null, p_chave: null,
+      })
+      if (error) erroDaFuncao(error, 'transferir')
+      return { resposta: { transferencia: data, destino: dest.mt5_login, mesmoDono: dest.user_id === conta.user_id } }
+    }
+
+    case 'repor_saldo_negativo': {
+      exigirSimulada(conta, 'Repor o saldo')
+      const { data, error } = await db.rpc('funded_repor_saldo_negativo', {
+        p_conta: conta.id, p_alvo: p.alvo, p_referencia: p.referencia, p_observacao: p.observacao ?? null,
+        p_admin_id: ctx.adminId, p_admin_email: ctx.adminEmail ?? null, p_chave: null,
+      })
+      if (error) erroDaFuncao(error, 'repor o saldo')
+      return { resposta: { reposicao: data } }
+    }
+
+    case 'arquivar': {
+      const { data, error } = await db.rpc('funded_arquivar_conta', { p_conta: conta.id, p_motivo: p.motivo, p_admin_id: ctx.adminId })
+      if (error) erroDaFuncao(error, 'arquivar')
+      return { resposta: { arquivo: data } }
+    }
+
+    case 'desarquivar': {
+      const { data, error } = await db.rpc('funded_desarquivar_conta', { p_conta: conta.id, p_admin_id: ctx.adminId })
+      if (error) erroDaFuncao(error, 'desarquivar')
+      return { resposta: { desarquivo: data } }
     }
 
     case 'estender_prazo': {

@@ -63,11 +63,15 @@ export interface LinhaTracker {
 
 const desligado = () => process.env.TODOS_SINAIS_DESLIGADO === '1'
 
-async function contasQueRecolhem(): Promise<string[]> {
-  const { data, error } = await getSupabaseAdmin().from('mtm_trading_accounts').select('id')
+async function contasQueRecolhem(): Promise<Array<{ id: string; loteMinimo: number | null }>> {
+  const db = getSupabaseAdmin()
+  const r = await db.from('mtm_trading_accounts').select('id, lote_minimo')
     .eq('recolhe_todos_sinais', true).eq('motor', 'sim').eq('estado', 'ativa').limit(20)
-  // Sem a 092 a coluna não existe: não há conta, nada acontece.
-  return error ? [] : (data ?? []).map((c) => String(c.id))
+  if (!r.error) return (r.data ?? []).map((c) => ({ id: String(c.id), loteMinimo: c.lote_minimo == null ? null : Number(c.lote_minimo) }))
+  // Sem a 197 (lote_minimo) lê-se como antes; sem a 092 a coluna não existe: não há conta, nada acontece.
+  const { data, error } = await db.from('mtm_trading_accounts').select('id')
+    .eq('recolhe_todos_sinais', true).eq('motor', 'sim').eq('estado', 'ativa').limit(20)
+  return error ? [] : (data ?? []).map((c) => ({ id: String(c.id), loteMinimo: null }))
 }
 
 export async function abrirNaContaTodosOsSinais(l: LinhaTracker): Promise<ResultadoAbrir[]> {
@@ -82,10 +86,11 @@ export async function abrirNaContaTodosOsSinais(l: LinhaTracker): Promise<Result
     }
     const fonte = comentarioDaFonte({ sourceKey: l.source_key, channelSlug: l.channel_slug, trader })
     const impressao = impressaoDoTrade({ symbol: l.symbol, direcao: l.direction, entrada: l.entry })
-    return await Promise.all(contas.map((accountId) => abrirSinalNaConta({
-      accountId, estrategia: 'todos', chave: `chat:${l.chat_message_id}`, impressao, fonte, comentario: fonte,
+    return await Promise.all(contas.map(({ id: accountId, loteMinimo }) => abrirSinalNaConta({
+      accountId, loteMinimo, estrategia: 'todos', chave: `chat:${l.chat_message_id}`, impressao, fonte, comentario: fonte,
       chatMessageId: l.chat_message_id, symbol: l.symbol, direcao: l.direction, entrada: l.entry, sl: l.sl,
       // Sem `loteFixo`: o lote sai do saldo da conta (ver cabeçalho) — é o que dá parciais na de 10 K.
+      // `loteMinimo` (197): a de 1 K «Todos os sinais» abre a 0,02 desde 07/10, para o TP1 partir a posição.
       tps: l.tps, cfg: CONFIG_TODOS_OS_SINAIS,
     })))
   } catch (e) {

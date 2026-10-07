@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { levantavelUsd } from './contrato'
+import { REFERENCIA_VALIDA, motivoComReferencia } from './referencia-ajuste'
 
 /**
  * A GESTÃO DE UMA CONTA MTM FUNDED PELO ADMIN — as decisões, sem base de dados.
@@ -23,6 +24,9 @@ const motivo = z.string().trim().min(3, 'escreve o motivo (mín. 3 caracteres)')
 const uuid = z.string().regex(/^[0-9a-f-]{36}$/i, 'id inválido')
 const chave = z.string().regex(/^[A-Za-z0-9_-]{8,80}$/, 'chave de idempotência inválida')
 const preco = z.union([z.number().positive(), z.null()])
+const referencia = z.string().trim().transform((r) => r.toUpperCase())
+  .refine((r) => REFERENCIA_VALIDA.test(r), 'referência obrigatória (ex.: DL261007-PG-195)')
+const observacao = z.string().trim().max(400).optional()
 
 export const PedidoAccao = z.discriminatedUnion('accao', [
   // Posições & ordens
@@ -38,7 +42,27 @@ export const PedidoAccao = z.discriminatedUnion('accao', [
   z.object({ accao: z.literal('reverter_breach'), motivo }),
   z.object({ accao: z.literal('avancar_fase'), motivo, emitirFinanciada: z.boolean().default(false) }),
   z.object({ accao: z.literal('reset'), confirmacao: z.string(), saldo: z.number().min(100).max(1_000_000).optional(), motivo }),
-  z.object({ accao: z.literal('ajustar_saldo'), delta: z.number().refine((n) => n !== 0 && Math.abs(n) <= 1_000_000, 'valor entre −1.000.000 e 1.000.000, diferente de zero'), motivo }),
+  // 197 — o ajuste leva SEMPRE referência (formato em ./referencia-ajuste) e fica no histórico
+  // `mtm_funded_ajustes_saldo` com o antes/depois. O email ao cliente só sai com `enviarEmail: true`.
+  z.object({
+    accao: z.literal('ajustar_saldo'),
+    delta: z.number().refine((n) => n !== 0 && Math.abs(n) <= 1_000_000, 'valor entre −1.000.000 e 1.000.000, diferente de zero'),
+    referencia, observacao, origem: z.string().max(20).optional(), enviarEmail: z.boolean().default(false),
+    preparadoId: uuid.optional(), motivo: motivo.optional(),
+  }),
+  z.object({ accao: z.literal('preparar_ajuste'), delta: z.number().refine((n) => n !== 0 && Math.abs(n) <= 1_000_000, 'valor inválido'), referencia, observacao, motivo: motivo.optional() }),
+  z.object({ accao: z.literal('email_ajuste'), ajusteId: uuid, motivo: motivo.optional() }),
+  z.object({
+    accao: z.literal('transferir_saldo'),
+    /** login (77xxxxxx) ou id da conta de destino */
+    destino: z.string().trim().min(3).max(60),
+    /** nulo = TUDO o que a origem tiver (lido sob a tranca, na função atómica) */
+    valor: z.number().positive().max(1_000_000).nullable(),
+    referencia, observacao, motivo: motivo.optional(),
+  }),
+  z.object({ accao: z.literal('repor_saldo_negativo'), alvo: z.number().positive().max(1_000_000).default(1000), referencia, observacao, motivo: motivo.optional() }),
+  z.object({ accao: z.literal('arquivar'), motivo }),
+  z.object({ accao: z.literal('desarquivar'), motivo }),
   z.object({ accao: z.literal('estender_prazo'), dias: z.number().int().min(1).max(365), motivo }),
   z.object({ accao: z.literal('definir_analise'), valor: z.boolean(), motivo }),
   z.object({ accao: z.literal('definir_aceita_t2t'), valor: z.boolean(), motivo }),
@@ -60,6 +84,7 @@ export const CorpoPost = z.object({ chave })
 /** As que mexem em dinheiro ou fecham posições: sem chave não correm (a UI gera-a ao abrir a confirmação). */
 export const ACCOES_DE_DINHEIRO: ReadonlySet<NomeAccao> = new Set([
   'fechar_posicao', 'fechar_tudo', 'reset', 'ajustar_saldo', 'levantamento', 'avancar_fase', 'apagar_conta',
+  'transferir_saldo', 'repor_saldo_negativo',
 ])
 
 export function validarPedido(corpo: unknown):
@@ -72,7 +97,13 @@ export function validarPedido(corpo: unknown):
     const i = p.error.issues[0]
     return { ok: false, erro: i ? `${i.path.join('.') || 'pedido'}: ${i.message}` : 'pedido inválido' }
   }
-  return { ok: true, pedido: p.data, chave: c.data.chave }
+  const pedido = p.data
+  // Os movimentos de saldo levam a referência no motivo da auditoria, no formato dos registos de
+  // 23/09 («<descrição> · REF <ref>») — quem lê a auditoria não precisa de abrir o histórico.
+  if ((pedido.accao === 'ajustar_saldo' || pedido.accao === 'transferir_saldo' || pedido.accao === 'repor_saldo_negativo') && !pedido.motivo) {
+    pedido.motivo = motivoComReferencia('origem' in pedido ? pedido.origem : null, pedido.referencia, pedido.observacao)
+  }
+  return { ok: true, pedido, chave: c.data.chave }
 }
 
 // ── quem pode ────────────────────────────────────────────────────────────────

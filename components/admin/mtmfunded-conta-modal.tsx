@@ -6,8 +6,9 @@ import {
 } from 'recharts'
 import {
   Loader2, X, RefreshCw, ExternalLink, Download, Pause, Play, Ban, Undo2, ChevronsRight, RotateCcw,
-  Wallet, CalendarPlus, KeyRound, Bell, Lock, FlaskConical, Radio, GitBranch,
+  Wallet, CalendarPlus, KeyRound, Bell, Lock, FlaskConical, Radio, GitBranch, Archive, ArchiveRestore, ArrowRightLeft, Mail,
 } from 'lucide-react'
+import { ORIGENS_AJUSTE, gerarReferencia, referenciaValida } from '@/lib/mtmfunded/referencia-ajuste'
 import { COR_DO_ESTADO, type EstadoCurto } from '@/lib/mtmfunded/etiquetas'
 
 /**
@@ -22,7 +23,7 @@ import { COR_DO_ESTADO, type EstadoCurto } from '@/lib/mtmfunded/etiquetas'
  * com o separador à vista. O resto relê quando se abre o separador ou se carrega em actualizar.
  */
 
-type Aba = 'resumo' | 'metricas' | 'posicoes' | 'historico' | 'gestao' | 'levantamentos' | 'auditoria'
+type Aba = 'resumo' | 'metricas' | 'posicoes' | 'historico' | 'gestao' | 'saldo' | 'levantamentos' | 'auditoria'
 
 const ABAS: Array<{ id: Aba; nome: string }> = [
   { id: 'resumo', nome: 'Resumo' },
@@ -30,6 +31,7 @@ const ABAS: Array<{ id: Aba; nome: string }> = [
   { id: 'posicoes', nome: 'Posições & Ordens' },
   { id: 'historico', nome: 'Histórico' },
   { id: 'gestao', nome: 'Gestão' },
+  { id: 'saldo', nome: 'Saldo & ajustes' },
   { id: 'levantamentos', nome: 'Levantamentos' },
   { id: 'auditoria', nome: 'Auditoria' },
 ]
@@ -126,6 +128,7 @@ export default function ContaModal({ contaId, aoFechar, aoMudar }: {
               {c.analise && <span className="rounded bg-purple-500/15 px-1.5 py-0.5 text-[10px] text-purple-300">análise</span>}
               {c.contaReal && <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">auditoria</span>}
               {c.mestre && <span className="rounded bg-[#D2A63C]/20 px-1.5 py-0.5 text-[10px] font-semibold text-[#E9C46A]" title={`Conta SIM da casa: o motor das mestres copia-a para os clientes (${c.mestre.modo}). Não é conta de cliente.`}>{c.mestre.rotulo}</span>}
+              {c.arquivada_em && <span className="rounded bg-gray-700/60 px-1.5 py-0.5 text-[10px] font-semibold text-gray-200" title={c.arquivo_motivo ?? ''}>arquivada</span>}
               {c.etiquetaDoDono && <span className="rounded border border-[#D2A63C]/30 px-1.5 py-0.5 text-[10px] text-[#E9C46A]" title="etiqueta do dono da conta">{c.etiquetaDoDono}</span>}
             </>
           )}
@@ -174,6 +177,7 @@ export default function ContaModal({ contaId, aoFechar, aoMudar }: {
               {aba === 'posicoes' && <SeparadorPosicoes base={base} versao={versao} conta={c} accao={accao} setAviso={setAviso} />}
               {aba === 'historico' && <SeparadorHistorico base={base} versao={versao} />}
               {aba === 'gestao' && <SeparadorGestao r={resumo} accao={accao} setAviso={setAviso} />}
+              {aba === 'saldo' && <SeparadorSaldo base={base} versao={versao} r={resumo} accao={accao} setAviso={setAviso} />}
               {aba === 'levantamentos' && <SeparadorLevantamentos base={base} versao={versao} accao={accao} setAviso={setAviso} />}
               {aba === 'auditoria' && <SeparadorAuditoria base={base} versao={versao} />}
             </>
@@ -616,8 +620,11 @@ function SeparadorGestao({ r, accao, setAviso }: { r: Dados; accao: Accao; setAv
     { id: 'reset', nome: 'Reset da conta', icone: RotateCcw, perigo: true, visivel: sim, campos: 'reset', confirmacaoEscrita: true,
       nota: 'Fecha as posições a zero, cancela as pendentes e repõe o saldo (e o saldo inicial). Numa só transacção.',
       corpo: (x) => ({ accao: 'reset', ...(Number(x.saldo) > 0 ? { saldo: Number(x.saldo) } : {}), confirmacao: x.confirmacao }) },
-    { id: 'ajustar_saldo', nome: 'Ajustar saldo', icone: Wallet, visivel: sim, campos: 'saldo',
-      nota: 'Crédito (+) ou débito (−) pela função atómica funded_somar_saldo.', corpo: (x) => ({ accao: 'ajustar_saldo', delta: Number(x.delta) }) },
+    { id: 'arquivar', nome: 'Arquivar conta', icone: Archive, perigo: true, visivel: !c.arquivada_em,
+      nota: 'Reversível: deixa de seguir estratégias, sai do T2T/MTM Auto/rotas e passa a cancelada. Recusa com posições, levantamentos, compra activa, mestres e portefólios.',
+      corpo: () => ({ accao: 'arquivar' }) },
+    { id: 'desarquivar', nome: 'Desarquivar conta', icone: ArchiveRestore, visivel: Boolean(c.arquivada_em),
+      nota: 'Repõe o estado, a estratégia, o T2T, o MTM Auto e as rotas como estavam antes do arquivo.', corpo: () => ({ accao: 'desarquivar' }) },
     { id: 'estender_prazo', nome: 'Estender prazo', icone: CalendarPlus, visivel: true, campos: 'dias',
       nota: 'Soma dias ao limite de duração desta conta (o motor do VPS ainda tem de passar a ler este valor).', corpo: (x) => ({ accao: 'estender_prazo', dias: Number(x.dias) }) },
     { id: 'definir_analise', nome: c.analise ? 'Desligar modo análise' : 'Ligar modo análise', icone: FlaskConical, visivel: true,
@@ -760,6 +767,242 @@ function DialogoGestao({ def, r, aoFechar, aoConfirmar }: {
         aoConfirmar={async () => {
           setOcupado(true)
           if ((await aoConfirmar({ ...def.corpo(x), ...(precisaMotivo ? { motivo: motivo.trim() } : {}) }, chave)) === false) setChave(novaChave())
+          setOcupado(false)
+        }}
+      />
+    </Dialogo>
+  )
+}
+
+// ── Saldo & ajustes (197) ────────────────────────────────────────────────────
+//
+// Ajuste com REFERÊNCIA obrigatória (pré-preenchida no formato dos créditos de 23/09:
+// <ORIGEM><AAMMDD>-<INICIAIS>-<VALOR>, ver lib/mtmfunded/referencia-ajuste.ts) e observação,
+// histórico com antes/depois e quem fez, transferência entre contas e reposição de saldo negativo.
+// O email ao cliente só sai com a caixa marcada (ou o botão de uma linha) — nunca sozinho.
+
+const ROTULO_TIPO: Record<string, string> = {
+  ajuste: 'Ajuste', transferencia_saida: 'Transferência →', transferencia_entrada: 'Transferência ←', reposicao: 'Reposição',
+}
+
+function SeparadorSaldo({ base, versao, r, accao, setAviso }: {
+  base: string; versao: number; r: Dados; accao: Accao; setAviso: (s: string | null) => void
+}) {
+  const c = r.conta
+  const sim = c.motor === 'sim'
+  const [d, setD] = useState<Dados | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  const [dialogo, setDialogo] = useState<null | 'ajuste' | 'transferir' | 'repor'>(null)
+  const [preparado, setPreparado] = useState<Dados | null>(null)
+  useEffect(() => {
+    let vivo = true
+    setD(null)
+    pedirJson(`${base}?vista=ajustes`).then((j) => vivo && setD(j)).catch((x) => vivo && setErro((x as Error).message))
+    return () => { vivo = false }
+  }, [base, versao])
+  if (erro) return <p className="text-sm text-red-400">{erro}</p>
+  if (!d) return <Carregar />
+  const nome = d.nomeDono ?? r.dono?.full_name ?? null
+  const preparados = (d.ajustes as Dados[]).filter((a) => a.estado === 'preparado')
+  const aplicados = (d.ajustes as Dados[]).filter((a) => a.estado !== 'preparado')
+
+  const depois = (j: Dados | false | null, texto: (j: Dados) => string) => {
+    if (!j) return j
+    setDialogo(null); setPreparado(null)
+    setAviso(j.repetido ? 'Já tinha sido feito (mesma chave).' : texto(j))
+    return j
+  }
+
+  return (
+    <div className="space-y-4">
+      {!sim && <p className="text-xs text-gray-500">Conta da corretora (MT5): o saldo vive na corretora — aqui só se vê o histórico.</p>}
+      {d.arquivada && <p className="rounded-lg border border-gray-700 bg-gray-800/40 px-4 py-2 text-xs text-gray-300">Conta arquivada a {data(d.arquivada.em)} · {d.arquivada.motivo}</p>}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-auto text-sm text-gray-300">Saldo actual <b className="text-gray-100">{usd(d.saldo)}</b></span>
+        {sim && <MiniBotao onClick={() => { setPreparado(null); setDialogo('ajuste') }}><Wallet className="mr-1 inline h-3 w-3" />Ajustar saldo</MiniBotao>}
+        {sim && <MiniBotao onClick={() => setDialogo('transferir')}><ArrowRightLeft className="mr-1 inline h-3 w-3" />Transferir para outra conta</MiniBotao>}
+        {sim && Number(d.saldo) < 0 && <MiniBotao perigo onClick={() => setDialogo('repor')}>Repor saldo negativo</MiniBotao>}
+      </div>
+
+      {preparados.length > 0 && (
+        <Bloco titulo="Ajustes preparados — prontos a aplicar (ainda NÃO mexeram no saldo)">
+          <ul className="space-y-2 text-sm">
+            {preparados.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-center gap-3">
+                <span className="font-mono text-gray-100">{a.referencia}</span>
+                <span className={Number(a.delta) > 0 ? 'text-emerald-400' : 'text-red-400'}>{Number(a.delta) > 0 ? '+' : ''}{usd(a.delta)}</span>
+                <span className="text-gray-400">{a.observacao ?? ''}</span>
+                <MiniBotao onClick={() => { setPreparado(a); setDialogo('ajuste') }}>Aplicar…</MiniBotao>
+              </li>
+            ))}
+          </ul>
+        </Bloco>
+      )}
+
+      <Tabela cabecalhos={['Quando', 'Tipo', 'Valor', 'Antes', 'Depois', 'Referência', 'Observação', 'Quem', 'Email']}>
+        {aplicados.map((a) => (
+          <tr key={a.id} className="border-t border-gray-900">
+            <Td>{data(a.aplicado_em ?? a.criado_em)}</Td>
+            <Td>{ROTULO_TIPO[a.tipo] ?? a.tipo}{a.contraparteLogin ? ` ${a.contraparteLogin}` : ''}{a.estado === 'anulado' ? ' · anulado' : ''}</Td>
+            <Td><span className={Number(a.delta) > 0 ? 'text-emerald-400' : 'text-red-400'}>{Number(a.delta) > 0 ? '+' : ''}{usd(a.delta)}</span></Td>
+            <Td>{usd(a.saldo_antes)}</Td><Td>{usd(a.saldo_depois)}</Td>
+            <Td mono>{a.referencia}</Td>
+            <Td>{a.observacao ?? '—'}</Td>
+            <Td>{a.admin_email ?? '—'}</Td>
+            <Td>
+              {a.email_estado === 'enviado' ? <span className="text-emerald-400">enviado {data(a.email_enviado_em)}</span> : (
+                <span className="flex flex-wrap items-center gap-1">
+                  {a.email_estado && <span className="text-amber-400">{a.email_estado}</span>}
+                  {a.estado === 'aplicado' && (
+                    <MiniBotao onClick={async () => {
+                      if (!window.confirm(`Enviar ao cliente o email deste movimento (${a.referencia})?`)) return
+                      const j = await accao({ accao: 'email_ajuste', ajusteId: a.id }, novaChave())
+                      if (j) setAviso(`Email: ${j.email}`)
+                    }}><Mail className="mr-1 inline h-3 w-3" />Enviar email</MiniBotao>
+                  )}
+                </span>
+              )}
+            </Td>
+          </tr>
+        ))}
+        {!aplicados.length && <Vazio colunas={9} texto={d.aviso ?? 'Sem ajustes registados nesta conta.'} />}
+      </Tabela>
+
+      {dialogo === 'ajuste' && (
+        <DialogoAjuste r={r} nome={nome} saldo={d.saldo} preparado={preparado} aoFechar={() => { setDialogo(null); setPreparado(null) }}
+          aoConfirmar={async (corpo, chave) => depois(await accao(corpo, chave), (j) => `Saldo ${usd(j.saldoAntes)} → ${usd(j.saldo)} · ${j.referencia}${j.email && j.email !== 'nao_pedido' ? ` · email: ${j.email}` : ''}`)} />
+      )}
+      {dialogo === 'transferir' && (
+        <DialogoTransferir nome={nome} saldo={d.saldo} aoFechar={() => setDialogo(null)}
+          aoConfirmar={async (corpo, chave) => depois(await accao(corpo, chave), (j) => `Transferidos ${usd(j.transferencia?.valor)} para ${j.destino} · origem ${usd(j.transferencia?.origem?.depois)} · destino ${usd(j.transferencia?.destino?.depois)}`)} />
+      )}
+      {dialogo === 'repor' && (
+        <DialogoRepor nome={nome} saldo={d.saldo} aoFechar={() => setDialogo(null)}
+          aoConfirmar={async (corpo, chave) => depois(await accao(corpo, chave), (j) => j.reposicao?.aplicado ? `Saldo reposto: ${usd(j.reposicao.saldo)}` : `Nada feito: ${j.reposicao?.motivo ?? 'saldo não está negativo'}`)} />
+      )}
+    </div>
+  )
+}
+
+function CamposReferencia({ origem, setOrigem, referencia, setReferencia, observacao, setObservacao, sugerida, origens }: {
+  origem: string; setOrigem: (s: string) => void; referencia: string; setReferencia: (s: string) => void
+  observacao: string; setObservacao: (s: string) => void; sugerida: string; origens?: string[]
+}) {
+  return (
+    <>
+      <Campo rotulo="Origem do movimento">
+        <select value={origem} onChange={(e) => setOrigem(e.target.value)} className={INPUT}>
+          {ORIGENS_AJUSTE.filter((o) => !origens || origens.includes(o.id)).map((o) => <option key={o.id} value={o.id}>{o.id} · {o.descricao}</option>)}
+        </select>
+      </Campo>
+      <Campo rotulo={`Referência (obrigatória · sugerida ${sugerida})`}>
+        <input value={referencia} onChange={(e) => setReferencia(e.target.value.toUpperCase())} className={`${INPUT} font-mono`} maxLength={80} autoComplete="off" />
+      </Campo>
+      <Campo rotulo="Observação (vai no histórico e, se pedires, no email ao cliente)">
+        <input value={observacao} onChange={(e) => setObservacao(e.target.value)} className={INPUT} maxLength={400} />
+      </Campo>
+    </>
+  )
+}
+
+/** A referência acompanha valor/origem enquanto o dono não a escrever à mão. */
+function useReferencia(origemInicial: string, nome: string | null, valor: number, inicial?: string | null) {
+  const [origem, setOrigem] = useState(origemInicial)
+  const [mao, setMao] = useState<string | null>(inicial ?? null)
+  const sugerida = gerarReferencia({ origem, data: new Date(), nome, valor: Number.isFinite(valor) && valor !== 0 ? valor : 0 })
+  return { origem, setOrigem, referencia: mao ?? sugerida, setReferencia: (s: string) => setMao(s), sugerida }
+}
+
+function DialogoAjuste({ r, nome, saldo, preparado, aoFechar, aoConfirmar }: {
+  r: Dados; nome: string | null; saldo: number; preparado: Dados | null; aoFechar: () => void; aoConfirmar: Confirmar
+}) {
+  const [chave, setChave] = useState(novaChave)
+  const [delta, setDelta] = useState<string>(preparado ? String(preparado.delta) : '')
+  const [observacao, setObservacao] = useState<string>(preparado?.observacao ?? '')
+  const [email, setEmail] = useState(false)
+  const [ocupado, setOcupado] = useState(false)
+  const v = Number(delta)
+  const ref = useReferencia(preparado ? 'AJ' : 'DL', nome, v, preparado?.referencia ?? null)
+  const valido = Number.isFinite(v) && v !== 0 && referenciaValida(ref.referencia) && (v > 0 || saldo + v >= 0)
+  return (
+    <Dialogo titulo={preparado ? `Aplicar ajuste preparado ${preparado.referencia}` : 'Ajustar saldo'} aoFechar={aoFechar}>
+      <p className="text-sm text-gray-400">Crédito (+) ou débito (−) pela função atómica, com registo no histórico (antes, depois, referência, quem). Conta {r.conta.mt5_login} · {nome ?? 'sem dono'} · saldo {usd(saldo)}.</p>
+      <Campo rotulo="Valor em USD (negativo debita)">
+        <input type="number" step="0.01" value={delta} onChange={(e) => setDelta(e.target.value)} className={INPUT} autoFocus disabled={Boolean(preparado)} />
+      </Campo>
+      <CamposReferencia {...ref} observacao={observacao} setObservacao={setObservacao} />
+      {Number.isFinite(v) && v !== 0 && <p className="text-xs text-gray-400">Saldo depois: <b className="text-gray-200">{usd(saldo + v)}</b></p>}
+      <label className="flex items-center gap-2 text-xs text-gray-300">
+        <input type="checkbox" checked={email} onChange={(e) => setEmail(e.target.checked)} className="accent-[#D2A63C]" />
+        Enviar email ao cliente (valor, referência, observação e saldo novo)
+      </label>
+      <BotoesDialogo
+        ocupado={ocupado} valido={valido} aoFechar={aoFechar}
+        aoConfirmar={async () => {
+          setOcupado(true)
+          const corpo = {
+            accao: 'ajustar_saldo', delta: v, referencia: ref.referencia.trim(), origem: ref.origem,
+            ...(observacao.trim() ? { observacao: observacao.trim() } : {}), enviarEmail: email,
+            ...(preparado ? { preparadoId: preparado.id } : {}),
+          }
+          if ((await aoConfirmar(corpo, chave)) === false) setChave(novaChave())
+          setOcupado(false)
+        }}
+      />
+    </Dialogo>
+  )
+}
+
+function DialogoTransferir({ nome, saldo, aoFechar, aoConfirmar }: { nome: string | null; saldo: number; aoFechar: () => void; aoConfirmar: Confirmar }) {
+  const [chave, setChave] = useState(novaChave)
+  const [destino, setDestino] = useState('')
+  const [tudo, setTudo] = useState(true)
+  const [valor, setValor] = useState('')
+  const [observacao, setObservacao] = useState('')
+  const [ocupado, setOcupado] = useState(false)
+  const v = tudo ? saldo : Number(valor)
+  const ref = useReferencia('TR', nome, v)
+  const valido = destino.trim().length >= 3 && referenciaValida(ref.referencia) && (tudo || (Number.isFinite(v) && v > 0 && v <= saldo))
+  return (
+    <Dialogo titulo="Transferir saldo para outra conta" aoFechar={aoFechar}>
+      <p className="text-sm text-gray-400">Débito aqui e crédito no destino na MESMA transacção (funções atómicas), com uma linha no histórico de cada lado e a mesma referência. «Tudo» lê o saldo sob a tranca, no instante — e recusa se houver posições abertas ou ordens pendentes.</p>
+      <Campo rotulo="Conta de destino (login, ex.: 77720210)">
+        <input value={destino} onChange={(e) => setDestino(e.target.value.trim())} className={`${INPUT} font-mono`} autoComplete="off" autoFocus />
+      </Campo>
+      <label className="flex items-center gap-2 text-xs text-gray-300"><input type="checkbox" checked={tudo} onChange={(e) => setTudo(e.target.checked)} className="accent-[#D2A63C]" /> Transferir o saldo todo (hoje {usd(saldo)})</label>
+      {!tudo && <Campo rotulo="Valor em USD"><input type="number" step="0.01" min={0.01} value={valor} onChange={(e) => setValor(e.target.value)} className={INPUT} /></Campo>}
+      <CamposReferencia {...ref} observacao={observacao} setObservacao={setObservacao} origens={['TR', 'AJ']} />
+      <BotoesDialogo
+        ocupado={ocupado} valido={valido} perigo aoFechar={aoFechar}
+        aoConfirmar={async () => {
+          setOcupado(true)
+          const corpo = { accao: 'transferir_saldo', destino: destino.trim(), valor: tudo ? null : v, referencia: ref.referencia.trim(), ...(observacao.trim() ? { observacao: observacao.trim() } : {}) }
+          if ((await aoConfirmar(corpo, chave)) === false) setChave(novaChave())
+          setOcupado(false)
+        }}
+      />
+    </Dialogo>
+  )
+}
+
+function DialogoRepor({ nome, saldo, aoFechar, aoConfirmar }: { nome: string | null; saldo: number; aoFechar: () => void; aoConfirmar: Confirmar }) {
+  const [chave, setChave] = useState(novaChave)
+  const [alvo, setAlvo] = useState('1000')
+  const [observacao, setObservacao] = useState('Saldo negativo reposto')
+  const [ocupado, setOcupado] = useState(false)
+  const a = Number(alvo)
+  const ref = useReferencia('RP', nome, a)
+  const valido = Number.isFinite(a) && a > 0 && referenciaValida(ref.referencia)
+  return (
+    <Dialogo titulo="Repor saldo negativo" aoFechar={aoFechar}>
+      <p className="text-sm text-gray-400">Só mexe se o saldo estiver abaixo de zero no instante (hoje {usd(saldo)}): credita o que falta para chegar ao valor, pela função atómica, com registo.</p>
+      <Campo rotulo="Saldo final (USD)"><input type="number" step="1" value={alvo} onChange={(e) => setAlvo(e.target.value)} className={INPUT} /></Campo>
+      <CamposReferencia {...ref} observacao={observacao} setObservacao={setObservacao} origens={['RP', 'AJ']} />
+      <BotoesDialogo
+        ocupado={ocupado} valido={valido} aoFechar={aoFechar}
+        aoConfirmar={async () => {
+          setOcupado(true)
+          if ((await aoConfirmar({ accao: 'repor_saldo_negativo', alvo: a, referencia: ref.referencia.trim(), ...(observacao.trim() ? { observacao: observacao.trim() } : {}) }, chave)) === false) setChave(novaChave())
           setOcupado(false)
         }}
       />

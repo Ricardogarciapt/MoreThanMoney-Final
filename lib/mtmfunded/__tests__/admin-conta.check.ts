@@ -3,7 +3,7 @@
  *
  *  · só admin (401 sem sessão, 403 sem admin) e a guarda corre ANTES de qualquer leitura;
  *  · a pausa fecha as duas portas de ordens novas (abrirPosicao, criarPendente), e só essas;
- *  · o ajuste de saldo é a função atómica funded_somar_saldo — nunca um update de sim_saldo;
+ *  · o ajuste de saldo é a função atómica (funded_ajustar_saldo_registado → funded_somar_saldo) — nunca um update de sim_saldo;
  *  · breach / reverter só nas transições certas, e nunca com posições abertas numa simulada;
  *  · um levantamento só se aprova/paga numa Funded activa, sem posições, dentro do levantável.
  *
@@ -154,17 +154,17 @@ async function espera(nome: string, f: () => Promise<unknown>, status: number) {
 
 async function executor() {
   {
-    const f = baseFalsa({ rpc: 1250 })
-    const r = await executarAccao({ db: f.db, adminId: 'adm', conta: contaSim, agora: 'T' }, { accao: 'ajustar_saldo', delta: 250, motivo: 'compensação de spread' })
-    eq('ajustar saldo: uma chamada à função atómica', f.rpcs, [{ nome: 'funded_somar_saldo', args: { p_conta: 'c1', p_delta: 250 } }])
+    // 197: o ajuste vai pela função que regista o histórico; ela chama funded_somar_saldo por dentro.
+    const f = baseFalsa({ rpc: { id: 'aj1', saldo: 1250, saldoAntes: 1000 } })
+    const r = await executarAccao({ db: f.db, adminId: 'adm', conta: contaSim, agora: 'T' }, { accao: 'ajustar_saldo', delta: 250, referencia: 'AJ261007-UX-250', enviarEmail: false, motivo: 'compensação de spread' })
+    eq('ajustar saldo: uma chamada à função atómica com registo', f.rpcs.map((x) => x.nome), ['funded_ajustar_saldo_registado'])
     sim('ajustar saldo: nenhum update de sim_saldo', !f.registos.some((x) => x.op === 'update' && JSON.stringify(x.payload).includes('sim_saldo')))
     eq('ajustar saldo: devolve o saldo da função', r.resposta.saldo, 1250)
   }
   {
     const f = baseFalsa()
-    await espera('débito que deixa negativo → 409', () => executarAccao({ db: f.db, adminId: 'adm', conta: contaSim, agora: 'T' }, { accao: 'ajustar_saldo', delta: -1500, motivo: 'estorno' }), 409)
-    eq('débito recusado não chama a função', f.rpcs.length, 0)
-    await espera('ajustar saldo numa MT5 → 409', () => executarAccao({ db: f.db, adminId: 'adm', conta: { ...contaSim, motor: 'mt5' }, agora: 'T' }, { accao: 'ajustar_saldo', delta: 10, motivo: 'teste' }), 409)
+    await espera('ajustar saldo numa MT5 → 409', () => executarAccao({ db: f.db, adminId: 'adm', conta: { ...contaSim, motor: 'mt5' }, agora: 'T' }, { accao: 'ajustar_saldo', delta: 10, referencia: 'AJ261007-UX-10', enviarEmail: false, motivo: 'teste' }), 409)
+    eq('MT5 recusada não chama a função', f.rpcs.length, 0)
   }
   {
     const f = baseFalsa({ contagens: { funded_positions: 0, funded_orders: 0 } })
@@ -219,7 +219,7 @@ sim('pedido já pago não muda', guardaLevantamento(L({ estadoAtual: 'pago', nov
 eq('sem chave → recusa', validarPedido({ accao: 'retomar', motivo: 'ok ok' }).ok, false)
 eq('acção desconhecida → recusa', validarPedido({ accao: 'apagar_tudo', chave: 'abcdefgh12' }).ok, false)
 eq('motivo curto → recusa', validarPedido({ accao: 'retomar', motivo: 'a', chave: 'abcdefgh12' }).ok, false)
-eq('ajuste zero → recusa', validarPedido({ accao: 'ajustar_saldo', delta: 0, motivo: 'nada nada', chave: 'abcdefgh12' }).ok, false)
+eq('ajuste zero → recusa', validarPedido({ accao: 'ajustar_saldo', delta: 0, referencia: 'AJ261007-UX-1', motivo: 'nada nada', chave: 'abcdefgh12' }).ok, false)
 eq('reset sem confirmação → recusa', validarPedido({ accao: 'reset', motivo: 'pedido', chave: 'abcdefgh12' }).ok, false)
 eq('pedido válido passa', validarPedido({ accao: 'pausar', motivo: 'KYC em falta', chave: 'abcdefgh12' }).ok, true)
 

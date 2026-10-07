@@ -169,6 +169,28 @@ export async function GET(request: NextRequest, { params }: Ctx) {
     }, semCache)
   }
 
+  // ── histórico de ajustes de saldo (197) + a referência sugerida ──────────
+  if (vista === 'ajustes') {
+    const { data, error } = await db.from('mtm_funded_ajustes_saldo')
+      .select('id, tipo, estado, delta, saldo_antes, saldo_depois, referencia, observacao, transferencia_id, conta_contraparte, admin_email, email_enviado_em, email_estado, criado_em, aplicado_em')
+      .eq('account_id', id).order('criado_em', { ascending: false }).limit(200)
+    if (error) return NextResponse.json({ ajustes: [], aviso: 'histórico indisponível — migração 197 por aplicar' }, semCache)
+    const contraparteIds = [...new Set((data ?? []).map((a) => a.conta_contraparte).filter(Boolean) as string[])]
+    const { data: cps } = contraparteIds.length
+      ? await db.from('mtm_trading_accounts').select('id, mt5_login').in('id', contraparteIds)
+      : { data: [] as Array<{ id: string; mt5_login: string | null }> }
+    const loginDe = new Map((cps ?? []).map((x) => [x.id, x.mt5_login]))
+    const { data: dono } = conta.user_id
+      ? await db.from('profiles').select('full_name').eq('id', conta.user_id as string).maybeSingle()
+      : { data: null }
+    return NextResponse.json({
+      ajustes: (data ?? []).map((a) => ({ ...a, contraparteLogin: a.conta_contraparte ? loginDe.get(a.conta_contraparte) ?? null : null })),
+      nomeDono: (dono as { full_name?: string } | null)?.full_name ?? null,
+      saldo: conta.motor === 'sim' ? Number(conta.sim_saldo ?? 0) : null,
+      arquivada: conta.arquivada_em ? { em: conta.arquivada_em, motivo: conta.arquivo_motivo ?? null } : null,
+    }, semCache)
+  }
+
   // ── auditoria ────────────────────────────────────────────────────────────
   if (vista === 'auditoria') {
     const { data, error } = await db.from('mtm_funded_admin_audit')
