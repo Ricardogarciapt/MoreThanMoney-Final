@@ -11,7 +11,7 @@ import {
 /**
  * API de negócio para o agente executivo AIOS.
  * GET  /api/agent/v1/business?resource=overview|revenue|subscriptions|customers|leads|tasks|envios|equidade|equipa|conhecimento
- * POST /api/agent/v1/business   body: { action: "create_task" | "update_task" | "outreach_draft" | "aprovar_envio" | "rejeitar_envio", ... }
+ * POST /api/agent/v1/business   body: { action: "create_task" | "update_task" | "outreach_draft" | "aprovar_envio" | "rejeitar_envio" | "auto_aprovar_envios", ... }
  *
  * `envios` / `aprovar_envio` / `rejeitar_envio` (06/10): as mensagens que a máquina quer mandar
  * por iniciativa própria (DM do setter IG, follow-up do bot, email de recuperação de checkout)
@@ -312,6 +312,24 @@ export async function POST(request: NextRequest) {
           ? await aprovarEnvio(String(body.id), quem)
           : await rejeitarEnvio(String(body.id), quem, body.motivo ? String(body.motivo) : undefined)
       return r.ok ? agentOk(r) : agentError(r.erro || "falhou", 409, { ...r })
+    }
+
+    // ----- 07/10: o toggle «Auto-aprovar» do AIOS aplicado à fila do site -----
+    // Só sai o que `decidirContacto` marca «sai» (base legal + exclusão + tectos), e sai pelo mesmo
+    // `aprovarEnvio` do clique. `ensaio: true` só diz o que sairia. Ver lib/envios-auto-aprovar.ts.
+    if (action === "auto_aprovar_envios") {
+      const { autoAprovarFilaSite } = await import("@/lib/envios-auto-aprovar")
+      const usados = body.usados_por_agente && typeof body.usados_por_agente === "object" ? body.usados_por_agente : {}
+      const r = await autoAprovarFilaSite(sb, {
+        ensaio: body.ensaio === true,
+        limite: Number(body.limite ?? 0),
+        tectoPorAgente: body.tecto_por_agente === undefined ? undefined : Number(body.tecto_por_agente),
+        usadosAiosPorCodigo: Object.fromEntries(
+          Object.entries(usados as Record<string, unknown>).map(([k, v]) => [String(k).toUpperCase(), Number(v) || 0]),
+        ),
+        quem: "regra:auto-aprovar",
+      })
+      return r.ok ? agentOk(r) : agentError(r.erros.join("; ") || "falhou", 500, { ...r })
     }
 
     // ----- Escrita interna: atualizar tarefa (imediata) -----

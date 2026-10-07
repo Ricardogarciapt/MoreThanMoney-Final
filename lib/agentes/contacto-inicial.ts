@@ -16,6 +16,12 @@
  *    com a MTM identificada e forma de sair (Lei 41/2004 art. 13.º-A, n.º 2: o regime de opt-out
  *    aplica-se a pessoas colectivas).
  *
+ * E, desde 07/10, o EMAIL DE SERVIÇO (`servico`) — não é marketing: é sobre o contrato da própria
+ * pessoa (pagamento recusado, renovação, subscrição cancelada por falta de pagamento), só por email,
+ * só a quem pagou ou tentou pagar esse produto (RGPD art. 6(1)(b), execução do contrato), e só
+ * quando quem redige o declara (`natureza: 'servico'`). Uma oferta de OUTRO produto dentro dele
+ * deixa de ser serviço e cai nas regras do marketing.
+ *
  * A resposta a quem nos escreveu primeiro continua a sair sozinha, como já saía
  * (`lib/envios-aprovacao.ts::iniciadoPeloUtilizador`) — aqui chama-se `resposta`.
  *
@@ -40,7 +46,7 @@
 import { iniciadoPeloUtilizador, type TipoEnvio } from '@/lib/envios-aprovacao'
 
 export type Canal = 'email' | 'sms' | 'whatsapp' | 'telegram' | 'instagram' | 'chamada' | 'linkedin'
-export type BaseLegal = 'resposta' | 'soft_opt_in' | 'consentimento' | 'b2b'
+export type BaseLegal = 'resposta' | 'soft_opt_in' | 'consentimento' | 'b2b' | 'servico'
 
 /** Famílias de produto — «semelhante» do soft opt-in mede-se por família, não por produto exacto. */
 export type Familia = 'formacao' | 'sinais' | 'copy' | 'auto_t2t' | 'funded' | 'software'
@@ -55,6 +61,8 @@ export interface Evidencia {
   consentimentoCanal?: boolean
   /** Famílias de produto que comprou (pagamento real, mesmo que já tenha saído). */
   familiasCompradas?: Familia[]
+  /** Famílias de que teve CONTRATO: pagou ou tentou pagar (débito recusado conta). Só para `servico`. */
+  familiasContrato?: Familia[]
   /** Email de domínio de empresa, verificado como pessoa colectiva (não webmail). */
   emailProfissional?: boolean
   /** WhatsApp: template aprovado pela Meta para esta mensagem. */
@@ -71,6 +79,8 @@ export interface PedidoContacto {
   familiaOferta?: Familia | null
   /** Quando é resposta, o tipo da regra do site. */
   tipoResposta?: TipoEnvio | null
+  /** `servico` = a mensagem é sobre o contrato da pessoa (pagamento, renovação), não uma oferta. */
+  natureza?: 'servico' | null
 }
 
 export interface Tectos {
@@ -191,6 +201,16 @@ export function decidirContacto(
     return bloq('Telegram: o bot só escreve a quem já abriu conversa com ele.')
   }
 
+  // 5a. Email de serviço: sobre o contrato DELA, a quem pagou ou tentou pagar esse produto.
+  if (canal === 'email' && p.natureza === 'servico') {
+    const contrato = [...new Set([...(ev.familiasContrato ?? []), ...(ev.familiasCompradas ?? [])])]
+    if (contrato.length === 0) return bloq('«Serviço» a quem nunca pagou nem tentou pagar: não há contrato — não é serviço.')
+    if (p.familiaOferta && !contrato.includes(p.familiaOferta)) {
+      return bloq(`«Serviço» que fala de ${p.familiaOferta}, e o contrato é de ${contrato.join('/')}: isso é oferta, não serviço.`)
+    }
+    return { pode: true, base: 'servico', porque: `Email de serviço sobre o contrato dela (${contrato.join('/')}).`, destino: 'sai' }
+  }
+
   if (canal === 'email' || canal === 'sms' || canal === 'telegram') {
     const saida = temSaida(texto)
     if (ev.consentimentoCanal === true) {
@@ -299,13 +319,27 @@ export async function juntarEvidencia(db: Db, p: PedidoContacto, extra: { inicio
     const { data: pagos } = await db.from('payment_history').select('plan, status').eq('user_id', ids.user_id).limit(50)
     const { data: vendas } = await db.from('vendas_vendas').select('pack, estornada_em').eq('comprador_id', ids.user_id).limit(50)
     const fam = new Set<Familia>()
-    for (const x of (pagos ?? []) as Array<{ plan: string; status: string }>) {
-      if (/succeeded|paid|pago|complete/i.test(String(x.status))) { const f = familiaDoPlano(x.plan); if (f) fam.add(f) }
+    const contrato = new Set<Familia>()
+    const { data: perfil } = await db.from('profiles').select('subscription_plan').eq('id', ids.user_id).maybeSingle()
+    const fPerfil = familiaDoPlano(perfil?.subscription_plan)
+    if (fPerfil) contrato.add(fPerfil)
+    for (const x of (pagos ?? []) as Array<{ plan: string | null; status: string }>) {
+      const f = familiaDoPlano(x.plan)
+      if (f) contrato.add(f)
+    }
+    for (const x of (pagos ?? []) as Array<{ plan: string | null; status: string }>) {
+      if (/succeeded|paid|pago|complete/i.test(String(x.status))) {
+        // O 1.º débito do Stripe chega muitas vezes SEM plano. Atribui-se só quando o contrato
+        // da pessoa tem UMA família — com duas, não se adivinha qual delas pagou.
+        const f = familiaDoPlano(x.plan) ?? (contrato.size === 1 ? [...contrato][0] : null)
+        if (f) fam.add(f)
+      }
     }
     for (const x of (vendas ?? []) as Array<{ pack: string; estornada_em: string | null }>) {
       if (!x.estornada_em) { const f = familiaDoPlano(x.pack); if (f) fam.add(f) }
     }
     ev.familiasCompradas = [...fam]
+    ev.familiasContrato = [...new Set([...contrato, ...fam])]
   }
   if (canal === 'email' && ids.email) {
     const { data: s } = await db.from('email_sends').select('unsubscribed_at').eq('email', ids.email).not('unsubscribed_at', 'is', null).limit(1)
