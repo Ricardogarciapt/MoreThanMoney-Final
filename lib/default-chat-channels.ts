@@ -103,10 +103,15 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
     parent_slug: 'sinais',
     position: 12,
   },
-  // `ideias-e-sinais` («Ideias e Sinais» / Forex Swings, grupo Telegram «MTM Auto FOREX swings»)
-  // FECHADO a 04/10/2026 por decisão do dono («fecham e retira o grupo»): ficou sem fonte quando o
-  // fs-relay saiu. O canal fica na BD com `hidden=true` (432 mensagens de histórico, nada apagado)
-  // e deixa de ser criado/anunciado aqui.
+  // `ideias-e-sinais` — fechado a 04/10, REABERTO a 07/10 pelo dono como fonte de sinais só para
+  // publicação (fs-relay → grupo «MTM Auto FOREX swings» → este canal). Sem estratégia nem execução.
+  {
+    slug: 'ideias-e-sinais',
+    name: 'Forex Swings',
+    description: 'Sinais swing de forex — só leitura (sem execução automática)',
+    parent_slug: 'sinais',
+    position: 13,
+  },
   {
     slug: 'premium-ideas',
     name: 'Premium · Ouro',

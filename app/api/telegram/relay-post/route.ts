@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { resolveAppChannelSlug } from '@/lib/telegram-app-channels'
 import { resolveThreadParent } from '@/lib/telegram-reply-thread'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
+import { fonteSoPublicacaoDoCanal } from '@/lib/sinais/identidade'
 
 /**
  * Fontes com chat próprio na app: espelham no chat, geram cartão T2T e executam na CONTA
@@ -364,6 +365,46 @@ export async function POST(req: NextRequest) {
       } as Parameters<typeof processMtmcopyTelegramMessage>[0])
     } catch (e) {
       console.error('[relay-post] processador erro:', e instanceof Error ? e.message : e)
+    }
+  }
+  /**
+   * FONTES SÓ DE PUBLICAÇÃO (07/10 — Forex Swings, lib/sinais/identidade.ts › FONTES_SO_PUBLICACAO):
+   * o que o relay publicou no grupo da casa ESPELHA-SE no canal da app e notifica — e acaba aqui. Não
+   * passa pelo processador nem por executor nenhum: não há estratégia, mestre nem rotas por trás.
+   * (O Telegram não entrega ao webhook as mensagens do próprio bot; sem isto o canal da app ficava vazio.)
+   */
+  if (r.ok && r.messageId && slug && fonteSoPublicacaoDoCanal(slug)) {
+    try {
+      const { intakeKeyDoEspelhoTelegram, isIntakeEnabled } = await import('@/lib/mtmcopy/intake-switches')
+      const ik = intakeKeyDoEspelhoTelegram(slug)
+      if (!ik || (await isIntakeEnabled(ik))) {
+        const { data: dup } = await supabase
+          .from('chat_messages')
+          .select('id')
+          .eq('channel_slug', slug)
+          .eq('telegram_message_id', r.messageId)
+          .maybeSingle()
+        if (!dup) {
+          const paiId = await resolveThreadParent(slug, replyToDest, execText)
+          const { data: msg } = await supabase
+            .from('chat_messages')
+            .insert({
+              channel_slug: slug,
+              user_id: null,
+              content: execText,
+              message_type: 'telegram_forward',
+              telegram_sender: null,
+              telegram_message_id: r.messageId,
+              notified: true,
+              ...(paiId ? { reply_to_id: paiId } : {}),
+            })
+            .select('id')
+            .single()
+          await sendTelegramChannelPush({ slug, content: execText, chatMessageId: msg?.id as string, telegramMessageId: r.messageId }).catch(() => {})
+        }
+      }
+    } catch (e) {
+      console.error(`[relay-post] espelho ${slug} (só publicação) erro:`, e instanceof Error ? e.message : e)
     }
   }
   return NextResponse.json({ ok: r.ok, messageId: r.messageId, error: r.error })

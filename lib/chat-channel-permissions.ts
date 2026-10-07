@@ -40,7 +40,7 @@ export const SIGNAL_PUBLISH_CHANNELS = ["premium-ideas", "sensei-scanner", "trad
 /** Canais alimentados pelo sistema — ninguém publica à mão (regra de sempre). */
 const SO_SISTEMA_POR_OMISSAO = new Set([
   "trade-ideas-setup",
-  // `ideias-e-sinais` saiu daqui a 04/10/2026 (canal fechado, hidden=true na BD).
+  "ideias-e-sinais", // Forex Swings — reaberto a 07/10, só o sistema publica
   "sinais-goldkiller",
   "sinais-scanner-mtm",
 ])
@@ -92,6 +92,7 @@ export function isReadOnlyChannel(slug: string, cfg?: ChatChannelConfig | null) 
   if (cfgDe(slug, cfg)?.escrita) return nivelEscrita(slug, cfg) !== "membros"
   return (
     slug === "trade-ideas-setup" ||
+    slug === "ideias-e-sinais" ||
     slug === "premium-ideas" ||
     slug === "sensei-scanner" ||
     slug === "sinais-goldkiller" ||

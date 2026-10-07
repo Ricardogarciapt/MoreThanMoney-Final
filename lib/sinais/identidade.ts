@@ -45,6 +45,25 @@ export const FONTE_DA_MESTRE: Record<string, ChaveWebhook> = {
   'aurum-flow': 'aurum',
 }
 
+/**
+ * FONTES SÓ DE PUBLICAÇÃO (07/10): chegam por relay do Telegram, publicam no chat da app e nas
+ * notificações, e NÃO têm estratégia de execução — nem mestre, nem rotas, nem MTM Auto. Ficam de fora
+ * de `FONTE_DA_MESTRE` e de `ESTRATEGIA_DA_CHAVE` de propósito: uma fonte daqui nunca resolve para
+ * uma mestre (nem para a de outra estratégia).
+ *
+ *  · Forex Swings — fs-relay → grupo da casa «MTM Auto FOREX swings» → canal `ideias-e-sinais`.
+ *    Fechado a 04/10, reaberto pelo dono a 07/10 só para publicação; forex-swings-exec continua 410.
+ */
+export const FONTES_SO_PUBLICACAO: Readonly<Record<string, { fonte: string; canal: string }>> = {
+  'forex-swings': { fonte: 'forex-swings', canal: 'ideias-e-sinais' },
+}
+
+/** A fonte só-publicação de um canal da app (ou null). Quem a recebe publica e não executa. */
+export function fonteSoPublicacaoDoCanal(canal: string | null | undefined): string | null {
+  if (!canal) return null
+  return Object.values(FONTES_SO_PUBLICACAO).find((f) => f.canal === canal)?.fonte ?? null
+}
+
 const FORCADA: Record<string, ChaveWebhook> = {
   sensei: 'sensei',
   goldkiller: 'goldkiller',

@@ -16,16 +16,17 @@ export type AppChatChannelSlug =
   | 'sinais-scanner-mtm'
   | 'cripto-perps'
   | 'aurum-flow'
+  | 'ideias-e-sinais'
 
 const map = new Map<string, AppChatChannelSlug>()
 
 /**
  * Grupos Telegram FECHADOS pelo dono: nunca se espelham para a app, nem pelo título.
- * «MTM Auto FOREX swings» (-1004362819270) fechou a 04/10/2026 com o canal `ideias-e-sinais`;
- * o título tem «forex» e, sem este bloqueio, qualquer mensagem que lá caísse (até a despedida)
- * ia parar ao «Ideias de Forex» com a etiqueta errada.
+ * Vazio desde 07/10: o «MTM Auto FOREX swings» (fechado a 04/10) foi REABERTO pelo dono como fonte
+ * de sinais SÓ para publicação — mapeia por id para `ideias-e-sinais` em buildAppChannelMap (antes
+ * do fallback pelo título, que o mandava para «Ideias de Forex» com a etiqueta errada).
  */
-const GRUPOS_FECHADOS = new Set(['-1004362819270'])
+const GRUPOS_FECHADOS = new Set<string>([])
 
 function registerChatId(raw: string | undefined, slug: AppChatChannelSlug) {
   if (!raw?.trim()) return
@@ -54,6 +55,8 @@ export function buildAppChannelMap(): Map<string, AppChatChannelSlug> {
   // Perpétuos Cripto" senão cairia no fallback 'ideias'→Forex). Evita a notif trocada.
   // O canal da app é o «Ideias de Cripto» — slug `aurum-flow`, que se mantém.
   registerChatId(resolvedPerpsChatId() ?? undefined, 'aurum-flow')
+  // Forex Swings (07/10): só publicação — o canal da app `ideias-e-sinais`, sem execução nenhuma.
+  registerChatId(CANONICAL_TELEGRAM_CHANNELS.forexSwings.chatId, 'ideias-e-sinais')
   // O chat Aurum Flow foi RETIRADO das apps a 2026-08-27. Já estava escondido; o que faltava era
   // parar de lhe escrever — continuava a receber mensagens (97, a última nesse mesmo dia) para um
   // canal que ninguém via. Escrever para um sítio invisível não é inofensivo: enche a tabela de

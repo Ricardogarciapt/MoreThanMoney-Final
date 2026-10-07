@@ -51,21 +51,18 @@ const PROIBIDOS_SO_MTMCOPY: { padrao: RegExp; porque: string }[] = [
  * Leitores de histórico (rotulos-canais, signal-outcomes, t2t-price-monitor SEM_GESTAO, regras.ts,
  * copy-methods rótulos/tipo, t2t-source chave `james`) NÃO estão nesta lista de propósito.
  */
+// 07/10/2026 — o dono REABRIU o Forex Swings só como FONTE DE PUBLICAÇÃO (chat da app + notificações).
+// Saíram desta lista os catálogos de PUBLICAÇÃO (canais por omissão, ids Telegram, intake, permissões,
+// notificações, push, metadados do chat). Ficam os de EXECUÇÃO e de oferta (cópia, T2T, gate da
+// corretora, Centro, estratégias) — e a secção «FOREX SWINGS SEM EXECUÇÃO» no fim prova o resto.
 const CATALOGOS_VIVOS = [
-  'lib/default-chat-channels.ts',
-  'lib/telegram-channel-ids.ts',
   'lib/telegram-broker-gate.ts',
   'app/api/cron/broker-gate-renew/route.ts',
-  'lib/mtmcopy/intake-channels.ts',
   'lib/mtmcopy/tap-to-trade-channels.ts',
-  'lib/chat-channel-permissions.ts',
-  'lib/notification-preferences.ts',
-  'lib/telegram-channel-push.ts',
   'lib/admin-centro/servidor/sinais.ts',
   'app/api/admin/mtmcopy/t2t-controls/route.ts',
   // os canais T2T extra mudaram-se para a regra da camada única de escrita (05/10)
   'lib/admin-centro/estrategia-escrita-plano.ts',
-  'components/mobile/chat-channel-meta.ts',
   'lib/copia-contas/estrategias.ts',
   'lib/admin-centro/servidor/estrategias.ts',
 ]
@@ -149,10 +146,31 @@ for (const pasta of PASTAS_MTMAUTO) {
 }
 if ((MTMCOPY_TELEGRAM_GROUP_IDS as readonly string[]).includes('forex_swings')) regista('copy-methods: `forex_swings` voltou aos grupos copiáveis oferecidos')
 if (T2T_SOURCES.some((s) => (s.key as string) === 'james')) regista('t2t-source: `james` voltou ao catálogo de fontes T2T')
-if (INTAKE_CHANNELS.some((c) => (c.key as string) === 'forex_swings')) regista('intake-channels: interruptor `forex_swings` voltou')
-if (intakeKeyDoEspelhoTelegram('ideias-e-sinais') != null) regista('intake-channels: `ideias-e-sinais` voltou a mapear para um interruptor')
+// 07/10: o interruptor de publicação do Forex Swings VOLTOU (reaberto pelo dono) — tem de existir e de
+// gatear o espelho do canal; é o que permite calá-lo sem tocar no VPS.
+if (!INTAKE_CHANNELS.some((c) => (c.key as string) === 'forex_swings')) regista('intake-channels: falta o interruptor `forex_swings` (publicação do Forex Swings)')
+if (intakeKeyDoEspelhoTelegram('ideias-e-sinais') !== 'forex_swings') regista('intake-channels: `ideias-e-sinais` tem de mapear para `forex_swings`')
 if (T2T_SIGNAL_CHANNELS.includes('ideias-e-sinais') || CANAIS_ACOMPANHADOS.includes('ideias-e-sinais')) regista('tap-to-trade-channels: `ideias-e-sinais` voltou aos canais negociáveis/acompanhados')
-if (DEFAULT_CHAT_CHANNELS.some((c) => c.slug === 'ideias-e-sinais')) regista('default-chat-channels: `ideias-e-sinais` voltou a ser criado por omissão')
+if (!DEFAULT_CHAT_CHANNELS.some((c) => c.slug === 'ideias-e-sinais')) regista('default-chat-channels: falta o canal `ideias-e-sinais` (Forex Swings reaberto a 07/10)')
+
+// ── 07/10: FOREX SWINGS = SÓ PUBLICAÇÃO. Nem estratégia, nem mestre, nem rota, nem execução. ──────
+{
+  const { FONTES_SO_PUBLICACAO, FONTE_DA_MESTRE, ESTRATEGIA_DA_CHAVE, fonteSoPublicacaoDoCanal } = require('../../sinais/identidade') as typeof import('../../sinais/identidade')
+  const { ESTRATEGIA_DO_WEBHOOK } = require('../../mestres/servidor/sinal-mestre') as typeof import('../../mestres/servidor/sinal-mestre')
+  const { resolveAppChannelSlug } = require('../../telegram-app-channels') as typeof import('../../telegram-app-channels')
+  if (fonteSoPublicacaoDoCanal('ideias-e-sinais') !== 'forex-swings') regista('identidade: o canal ideias-e-sinais tem de ser da fonte só-publicação forex-swings')
+  if (resolveAppChannelSlug({ id: -1004362819270 }) !== 'ideias-e-sinais') regista('o grupo «MTM Auto FOREX swings» tem de espelhar para ideias-e-sinais (e não para «Ideias de Forex»)')
+  const mestres = [...Object.values(FONTE_DA_MESTRE), ...Object.keys(FONTE_DA_MESTRE), ...Object.values(ESTRATEGIA_DA_CHAVE), ...Object.keys(ESTRATEGIA_DO_WEBHOOK), ...Object.values(ESTRATEGIA_DO_WEBHOOK).map((a) => a.slug)]
+  for (const f of Object.keys(FONTES_SO_PUBLICACAO)) {
+    if (mestres.some((m) => /forex.?swing|james/i.test(String(m)) || String(m) === f)) regista(`fonte só-publicação «${f}» apareceu nas fontes/estratégias com mestre`)
+  }
+  if ((MTMCOPY_TELEGRAM_GROUP_IDS as readonly string[]).some((g) => /forex.?swing/i.test(g))) regista('o Forex Swings voltou aos grupos copiáveis')
+  // O espelho do relay-post para estas fontes NÃO chama o processador nem executor nenhum.
+  const relay = semComentarios(readFileSync(join(RAIZ, 'app/api/telegram/relay-post/route.ts'), 'utf-8'))
+  const bloco = relay.slice(relay.indexOf('fonteSoPublicacaoDoCanal(slug)'), relay.lastIndexOf('return NextResponse.json'))
+  if (!bloco || /processMtmcopy|executeSignal|encaminhar|placeOrder|abrirSinal/.test(bloco)) regista('relay-post: o espelho das fontes só-publicação ganhou um caminho de execução')
+  console.log('fontes-em-desuso (07/10): Forex Swings publica em ideias-e-sinais, sem mestre/rota/execução; forex-swings-exec 410')
+}
 
 for (const { ficheiro, padrao, porque } of OBRIGATORIOS) {
   const src = readFileSync(join(RAIZ, ficheiro), 'utf-8')

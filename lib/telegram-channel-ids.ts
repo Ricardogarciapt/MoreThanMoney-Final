@@ -73,9 +73,20 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
     appSlug: 'aurum-flow' as const,
     envVars: ['TELEGRAM_CHANNEL_PERPS', 'TELEGRAM_PERPS_CHAT_ID'],
   },
-  // O grupo «MTM Auto FOREX swings» (e o canal da app `ideias-e-sinais`) FECHOU a 04/10/2026 por
-  // decisão do dono («fecham e retira o grupo»): ficou sem fonte quando o fs-relay saiu. Saiu daqui,
-  // do gate da corretora e dos catálogos do T2T; o histórico do canal fica na BD (hidden=true).
+  /**
+   * MTM Auto FOREX swings — o grupo da casa onde o fs-relay publica os swings de forex.
+   *
+   * 04/10 fechou; 07/10 o dono REABRIU-O, só como FONTE DE SINAIS para os chats e as apps: nada de
+   * estratégia MTM Auto, mestre, rotas ou execução (forex-swings-exec continua 410, e o grupo não
+   * volta aos métodos de cópia, ao T2T nem ao gate da corretora). Ver lib/sinais/identidade.ts ›
+   * FONTES_SO_PUBLICACAO e a guarda lib/mtmcopy/__tests__/fontes-em-desuso.check.ts.
+   */
+  forexSwings: {
+    chatId: '-1004362819270',
+    title: 'MTM Auto FOREX swings',
+    appSlug: 'ideias-e-sinais' as const,
+    envVars: ['TELEGRAM_CHANNEL_FOREX_SWINGS', 'TELEGRAM_FOREX_SWINGS_CHAT_ID'],
+  },
   /**
    * MTM System — a comunidade. NÃO é canal de sinais: não roteia para estratégia nenhuma.
    * Está aqui para o painel mostrar o conjunto dos grupos oficiais, que é o que o admin tem

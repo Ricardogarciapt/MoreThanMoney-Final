@@ -9,9 +9,17 @@ export type ChannelMeta = {
 }
 
 export const CHANNEL_META: Record<string, ChannelMeta> = {
-  // `ideias-e-sinais` («Ideias e Sinais» / Forex Swings) FECHOU a 04/10/2026 por decisão do dono:
-  // o canal está `hidden=true` na BD e já não se desenha na app. A entrada saiu daqui para o
-  // ecrã não ter metadados de um canal que não existe para o cliente.
+  // `ideias-e-sinais` (Forex Swings): reaberto a 07/10, só leitura e sem execução.
+  "ideias-e-sinais": {
+    emoji: "🌊",
+    accent: "#2DD4BF",
+    tag: "Forex Swings",
+    rules: [
+      "Canal de leitura — sinais swing de forex",
+      "Ideias para acompanhar: nada é executado automaticamente",
+    ],
+    tips: ["Este canal é só para ler e acompanhar"],
+  },
   geral: {
     emoji: "💬",
     accent: "#38BDF8",
