@@ -81,7 +81,13 @@ const webhook = readFileSync(join(raiz, 'app/api/webhooks/tradingview/route.ts')
 
 // 1. O scanner continua SEM execução nas contas MT5 dos clientes: o `canExecuteProvider` mantém a
 //    exclusão escrita a 18/08. É a diferença entre «a mestre regista» e «o cliente abre trades».
-assert.match(webhook, /scannerKey !== "mtmscanner" &&/, 'canExecuteProvider tem de continuar a excluir o mtmscanner')
+// (desde 07/10 o canExecuteProvider é uma lista de portões com motivo — `primeiroPortaoFechado`)
+assert.match(
+  webhook,
+  /\[scannerKey !== "mtmscanner", "o MTM Scanner não executa"\]/,
+  'canExecuteProvider tem de continuar a excluir o mtmscanner',
+)
+assert.match(webhook, /const canExecuteProvider = motivoNaoExecutar === null/, 'o portão do scanner decide o canExecuteProvider')
 
 // 2. O desvio para a mestre passa pelo filtro das confirmações — e pelo cano de sempre.
 assert.match(webhook, /temTodasAsConfirmacoes\(payload, execDirForGate\)/, 'o filtro tem de ser aplicado no webhook')

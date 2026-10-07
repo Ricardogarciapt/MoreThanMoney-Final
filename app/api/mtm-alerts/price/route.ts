@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
   const ticker = (new URL(request.url).searchParams.get("ticker") || "").trim()
   if (!ticker) return NextResponse.json({ error: "ticker em falta" }, { status: 400 })
 
-  const price = await resolveCurrentPrice(ticker)
+  // Só mostra a cotação: aceita o último preço da casa até 4 dias (fim-de-semana), em vez do
+  // futuro GC=F que estava ~25 USD acima do spot (lib/mtm-alerts/evaluate.ts).
+  const price = await resolveCurrentPrice(ticker, { idadeMaxOuroMs: 4 * 86_400_000 })
   return NextResponse.json({ success: true, ticker, price }, { headers: { "Cache-Control": "no-store" } })
 }

@@ -40,6 +40,7 @@ import { decidirScannerParaMestre } from "@/lib/mtmcopy/scanner-para-mestre"
 // tem de decidir «teria executado?» com EXACTAMENTE o mesmo código que este webhook.
 import { classifyAsset, confirmationsPassed, isCryptoPerpTicker, passesQualityGate, stopsSane, type AssetClass } from "@/lib/mtmcopy/webhook-gates"
 import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
+import { entradaSenseiAutonoma, escolherEntradaDoSeguimento, primeiroPortaoFechado } from "@/lib/mtmcopy/sensei-cadeia"
 import { urlDoChat, urlDoTapToTrade } from "@/lib/notificacao-destino"
 import { lifecycleMessage, stopFoiProtegido } from "@/lib/mtmcopy/signal-lifecycle"
 import { formatarSeguimento, formatarSinal } from "@/lib/sinais/formato-sinal"
@@ -706,7 +707,11 @@ async function processarAlerta(request: NextRequest) {
   let activeSensei = senseiParsed
   let pendingIdeaId: string | null = null
   let pendingIdea: SenseiTradeIdea | null = null
-  if (senseiParsed?.alertType === "entry_trigger" && senseiParsed.symbol) {
+  // A entrada do Sensei X (state ENTRY) é autónoma: o Pine não manda ideias pendentes, e as que estão
+  // em `sensei_trade_ideas` são do GoldKiller/MTM Scanner. Fundir com elas barrava a entrada
+  // (pendingHadLimit) ou activava a ideia alheia — lib/mtmcopy/sensei-cadeia.ts (07/10).
+  const senseiEntradaAutonoma = entradaSenseiAutonoma({ scannerKey, assetClass, state })
+  if (senseiParsed?.alertType === "entry_trigger" && senseiParsed.symbol && !senseiEntradaAutonoma) {
     let pending = await findPendingSenseiIdea(supabase, senseiParsed.symbol, senseiParsed.timeframe)
     if (!pending && senseiParsed.timeframe) {
       pending = await findPendingSenseiIdea(supabase, senseiParsed.symbol, null)
@@ -788,15 +793,19 @@ async function processarAlerta(request: NextRequest) {
   // Atalho para eventos de gestão JSON: atualiza a entrada + notifica na hora, sem chat/cópia.
   if (mgmtStatus && ticker) {
     try {
-      const { data: entryRow } = await supabase
+      // A entrada DESTA fonte (alert_name), não a última do ticker — senão um evento do GoldKiller
+      // marcava a entrada do Sensei (lib/mtmcopy/sensei-cadeia.ts).
+      const { data: candidatas } = await supabase
         .from("tradingview_signals")
-        .select("id, chat_message_id")
+        .select("id, chat_message_id, alert_name, price, raw_payload")
         .eq("ticker", ticker)
         .eq("signal_kind", "entry")
         .in("trade_status", ["active", "pending", "be", "exit_1", "exit_2", "exit_3"])
         .order("received_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
+        .limit(20)
+      // Eventos JSON (GoldKiller/MTM Scanner): só se acrescenta o filtro da fonte; a escolha pela
+      // mais recente fica como estava (não se sabe se o evento traz a entrada original).
+      const entryRow = escolherEntradaDoSeguimento(candidatas ?? [], { alertName, entry: null })
       if (entryRow?.id) {
         await supabase.from("tradingview_signals").update({ trade_status: mgmtStatus }).eq("id", entryRow.id)
         if (mgmtStatus === "loss" || mgmtStatus === "be" || mgmtStatus.startsWith("exit_")) {
@@ -963,25 +972,32 @@ async function processarAlerta(request: NextRequest) {
   // Desde 29/09 o roteamento já descarta esses alertas antes de chegarem aqui; esta guarda fica
   // como segunda tranca, para o dia em que alguém volte a dar-lhes um caminho.
   const aurumNaoCripto = isAurumFlow && !isCryptoPerp
-  const canExecuteProvider =
-    !aurumNaoCripto &&
+  /**
+   * Os portões da execução, por ordem e com o MOTIVO de cada um (mesma lógica e mesmo curto-circuito
+   * do `&&` que estava aqui). O motivo do primeiro fechado vai para `tradingview_signals.ai_error`
+   * nas entradas — antes uma entrada barrada ficava «sem motivo registado» (auditoria Sensei 07/10).
+   */
+  const motivoNaoExecutar = primeiroPortaoFechado([
+    [!aurumNaoCripto, "Aurum Flow fora do cripto"],
     // Master switch = interruptor por-ativo na BD (mtmcopy_exec_switches), afinável sem redeploy.
     // (Antes exigia também o env SENSEI_PROVIDER_EXEC_ENABLED, que mantinha tudo OFF por defeito.)
-    execSwitchOn &&
+    [execSwitchOn, "interruptor de execução desligado (mtmcopy_exec_switches)"],
     // MTM Scanner NÃO executa em conta nenhuma (pedido Ricardo): só PUBLICA + alimenta o T2T
     // (forex). Sem casa própria — a trade abre/gere/fecha na conta de quem aceitar via T2T.
-    scannerKey !== "mtmscanner" &&
-    (assetClass === "gold_btc" || assetClass === "forex") &&
-    parsedForExec.symbol &&
-    parsedForExec.direction &&
-    passesQualityGate(payload, timeframe, assetClass, isGoldKiller, isSenseiScored) &&
-    senseiScoreOk &&
-    stopsSane(parsedForExec.entry ?? price, parsedForExec.sl) &&
-    execGate.ok &&
-    !pendingHadLimit &&
-    ((!isIdeaAlert && (activeSensei?.alertType === "entry_trigger" || !activeSensei)) ||
-      isLimitIdea ||
-      isSenseiXEntry)
+    [scannerKey !== "mtmscanner", "o MTM Scanner não executa"],
+    [assetClass === "gold_btc" || assetClass === "forex", `a classe ${assetClass} não executa`],
+    [Boolean(parsedForExec.symbol && parsedForExec.direction), "sinal sem símbolo ou direcção"],
+    [() => passesQualityGate(payload, timeframe, assetClass, isGoldKiller, isSenseiScored), "gate de qualidade (confirmações/timeframe)"],
+    [senseiScoreOk, `score ${senseiScore} abaixo do mínimo ${SENSEI_MIN_SCORE}`],
+    [() => stopsSane(parsedForExec.entry ?? price, parsedForExec.sl), "stop a mais de 25% da entrada"],
+    [execGate.ok, `gate de execução: ${"reason" in execGate ? execGate.reason ?? "" : ""}`],
+    [!pendingHadLimit, "a ideia pendente já tinha ordem limit no provider"],
+    [
+      (!isIdeaAlert && (activeSensei?.alertType === "entry_trigger" || !activeSensei)) || isLimitIdea || isSenseiXEntry,
+      "não é uma entrada executável (ideia sem limit ou seguimento)",
+    ],
+  ])
+  const canExecuteProvider = motivoNaoExecutar === null
 
   // ── SHADOW #57/#59 (não executa, não posta) ──────────────────────────────────
   // Regista o que a nova política do Sensei FARIA — entrar-NO-SINAL (sem esperar gatilho) +
@@ -1099,6 +1115,9 @@ async function processarAlerta(request: NextRequest) {
       }
     }
     if (pendingIdeaId) await activateSenseiTradeIdea(supabase, pendingIdeaId, logId)
+  } else if (initSignalKind === "entry" && motivoNaoExecutar) {
+    // A entrada não chegou a ir à mestre: fica dito porquê (lido no registo do canal da mestre).
+    mestreMotivo = `não foi à mestre: ${motivoNaoExecutar}`
   }
 
   /**
@@ -1370,7 +1389,12 @@ async function processarAlerta(request: NextRequest) {
         .from("tradingview_signals")
         .update(chatId
           ? { chat_status: "sent", chat_message_id: chatId, telegram_status: "sent" }
-          : {
+          : initSignalKind !== "entry"
+            // Um seguimento do Pine não abre nada: no canal da mestre quem publica TP/BE/SL é o cron
+            // /api/cron/mestre-publicar, pelas posições da mestre. Não é uma falha — antes ficava
+            // gravado «a mestre não abriu este sinal» em todos os seguimentos (07/10).
+            ? { chat_status: "mestre", telegram_status: "mestre" }
+            : {
               chat_status: "mestre",
               telegram_status: "mestre",
               // O MOTIVO, não a frase genérica: «a mestre não abriu este sinal» não dizia porquê, e
@@ -1604,7 +1628,9 @@ async function processarAlerta(request: NextRequest) {
     } catch (err) {
       if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "error", telegram_chat_id: relayChatId, telegram_error: String(err) }).eq("id", logId)
     }
-  } else if (logId) {
+  } else if (logId && !publicacaoMestre) {
+    // (Canal publicado pela mestre: o estado do Telegram já ficou escrito acima — «sent» quando o
+    // publicador o enviou, «mestre» quando não — e não pode ser trocado por «relay desligado».)
     /**
      * O motivo real, e por esta ordem.
      *
@@ -1643,15 +1669,23 @@ async function processarAlerta(request: NextRequest) {
     }
     // Follow-up: atualiza o estado da entrada correspondente mais recente
     if (isFollow && ticker) {
-      const { data: entryRow } = await supabase
+      // A entrada da MESMA fonte e, quando o seguimento traz o preço de entrada (o Pine do Sensei
+      // traz), a da MESMA trade. Antes ia à última entrada do ticker de qualquer fonte: a 07/10 os
+      // TP1..TP4 da venda do Sensei marcaram a compra do MTM Scanner (lib/mtmcopy/sensei-cadeia.ts).
+      const { data: candidatas } = await supabase
         .from("tradingview_signals")
-        .select("id, chat_message_id")
+        .select("id, chat_message_id, alert_name, price, raw_payload")
         .eq("ticker", ticker)
         .eq("signal_kind", "entry")
         .in("trade_status", ["active", "pending", "be", "exit_1", "exit_2", "exit_3"])
         .order("received_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
+        .limit(20)
+      // O preço de entrada só entra na escolha no Sensei X (o Pine manda `entry` = entrada ORIGINAL
+      // em todos os seguimentos); as outras fontes ficam com a mais recente da mesma fonte.
+      const entryRow = escolherEntradaDoSeguimento(candidatas ?? [], {
+        alertName,
+        entry: scannerKey === "sensei" ? activeSensei?.entry ?? entry : null,
+      })
       if (entryRow?.id) {
         await supabase.from("tradingview_signals").update({ trade_status: tradeStatus }).eq("id", entryRow.id)
         // Notifica seguidores + quem aceitou no T2T: break-even (proteger), SL ou um TP.

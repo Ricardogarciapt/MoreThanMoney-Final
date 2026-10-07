@@ -25,11 +25,68 @@ const YAHOO_MAP: Record<string, string> = {
   UK100: "^FTSE", FTSE: "^FTSE", JP225: "^N225",
 }
 
-/** Resolve o preço atual de um ticker de webhook para várias classes de ativo. */
-export async function resolveCurrentPrice(ticker: string | null): Promise<number | null> {
+/**
+ * OURO À VISTA, NUNCA O FUTURO.
+ *
+ * O XAUUSD resolvia-se pelo `GC=F` da Yahoo — o FUTURO do ouro, que cota ~25 USD ACIMA do spot
+ * (07/10/2026 14:14 UTC: GC=F 4122,1 vs spot 4097,4). Os stops do Sensei estão a 6–14 USD da
+ * entrada: numa VENDA o futuro já está acima do stop no primeiro minuto, e o avaliador marcava
+ * `loss` (e mandava «🛑 Stop loss» a quem seguia o sinal). As 11 entradas do Sensei de 01/10 a
+ * 07/10 ficaram TODAS «loss», incluindo a que fez TP4. Numa COMPRA o erro é o contrário (alvos
+ * «atingidos» que o mercado nunca deu).
+ *
+ * O ouro passa a vir do preço da CASA (`funded_precos`, o mesmo que o motor das mestres usa para
+ * abrir — bid/ask a 1–6 s). Sem preço fresco, NÃO se avalia (fica como está) — um desfecho
+ * inventado é pior do que um desfecho atrasado.
+ */
+const SIMBOLOS_PRECO_DA_CASA: Record<string, string> = { XAUUSD: "XAUUSD", GOLD: "XAUUSD" }
+const IDADE_MAX_PRECO_CASA_MS = 120_000
+
+/** Meio do bid/ask se o retrato tiver no máximo `maxIdadeMs`. Puro (testado em evaluate-ouro.check.ts). */
+export function precoSpotFresco(
+  linha: { bid?: unknown; ask?: unknown; em?: unknown; em_mercado?: unknown } | null | undefined,
+  agoraMs: number,
+  maxIdadeMs = IDADE_MAX_PRECO_CASA_MS,
+): number | null {
+  if (!linha) return null
+  const bid = Number(linha.bid)
+  const ask = Number(linha.ask)
+  if (!Number.isFinite(bid) || !Number.isFinite(ask) || bid <= 0 || ask <= 0) return null
+  const quando = Date.parse(String(linha.em_mercado ?? linha.em ?? ""))
+  if (!Number.isFinite(quando) || agoraMs - quando > maxIdadeMs) return null
+  return (bid + ask) / 2
+}
+
+async function precoDaCasa(simbolo: string, maxIdadeMs: number): Promise<number | null> {
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from("funded_precos")
+      .select("bid, ask, em, em_mercado")
+      .eq("symbol", simbolo)
+      .maybeSingle()
+    return precoSpotFresco(data as Record<string, unknown> | null, Date.now(), maxIdadeMs)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Resolve o preço atual de um ticker de webhook para várias classes de ativo.
+ * `idadeMaxOuroMs`: idade máxima do preço da casa para o ouro (por omissão 2 min — o que um
+ * avaliador de desfechos precisa; um ecrã que só mostra a cotação pode aceitar mais).
+ */
+export async function resolveCurrentPrice(
+  ticker: string | null,
+  opts?: { idadeMaxOuroMs?: number },
+): Promise<number | null> {
   if (!ticker) return null
   const norm = ticker.toUpperCase().replace(/[^A-Z0-9.]/g, "")
   const clean = norm.replace(/\.P$/i, "").replace(/[^A-Z0-9]/g, "")
+
+  // Ouro: preço à vista da casa, ou nada (nunca o futuro GC=F — ver acima).
+  if (SIMBOLOS_PRECO_DA_CASA[clean]) {
+    return precoDaCasa(SIMBOLOS_PRECO_DA_CASA[clean], opts?.idadeMaxOuroMs ?? IDADE_MAX_PRECO_CASA_MS)
+  }
 
   // Cripto: perp (.P), pares *USDT, ou bases conhecidas terminadas em USD
   const cryptoBase = clean.replace(/USDT?$/i, "")

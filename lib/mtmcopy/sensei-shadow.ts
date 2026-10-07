@@ -67,8 +67,8 @@ export async function recordSenseiShadow(sig: ShadowSignalInput): Promise<{ reco
 
     const cls = shadowAssetClass(sig.ticker)
     // Entrar-no-sinal = entrar ao PREÇO DE MERCADO agora, na MESMA fonte que o avaliador usa
-    // (evaluate.resolveCurrentPrice — ouro=GC=F). Assim entrada e avaliação batem certo (sem
-    // basis spot-vs-futuros). Fallback ao nível do sinal se a cotação falhar.
+    // (evaluate.resolveCurrentPrice — ouro = preço à vista da casa desde 07/10; antes GC=F). Assim
+    // entrada e avaliação batem certo. Fallback ao nível do sinal se a cotação falhar.
     const mkt = await resolveCurrentPrice(sig.ticker).catch(() => null)
     const entry = mkt != null && mkt > 0 ? mkt : sig.entry
     const dist = cls === "btc" ? entry * (cfg.btcTargetPct / 100) : cfg.goldTargetDistance
