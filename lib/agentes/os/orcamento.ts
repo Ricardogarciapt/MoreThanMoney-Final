@@ -11,7 +11,7 @@
  *   desempenho = clamp(0,5 ; 2,5 ; taxaSuavizada / taxaRef)
  *                taxaSuavizada = (sucessos + priorPeso × taxaRef) / (tentativas + priorPeso)
  *                (média bayesiana: com pouca amostra fica perto de 1 — não reage a ruído)
- *   reputação  = 1    se erros < 2 % e queixas < 0,1 %
+ *   reputação  = 1    se erros < 2 % e queixas < 0,1 %   (erros só a partir de 3; queixas sobre ≥ 100 envios)
  *                0,5  se erros < 5 % e queixas < 0,3 %   (limiar das regras da Google para remetentes)
  *                0    acima disso — PÁRA o canal, mesmo abaixo do chão (a segurança ganha ao chão)
  *   warm-up    = ceil(1,5 × máximo enviado num dia dos últimos 7) — nunca mais de +50 %/dia
@@ -64,8 +64,10 @@ const n0 = (x: unknown) => (Number.isFinite(Number(x)) && Number(x) > 0 ? Number
 export function reputacao(s: Sinais): number {
   const t = n0(s.tentativas)
   if (t <= 0) return 1
-  const e = n0(s.erros) / t
-  const q = n0(s.queixas) / t
+  // Amostras minúsculas não fazem alarme: 1 falha em 2 publicações é ruído. Erros só contam a partir
+  // de 3; as queixas contam sempre, mas sobre pelo menos 100 envios (1 queixa em 10 envios ≠ 10 %).
+  const e = n0(s.erros) >= 3 ? n0(s.erros) / t : 0
+  const q = n0(s.queixas) / Math.max(t, 100)
   if (e < 0.02 && q < 0.001) return 1
   if (e < 0.05 && q < 0.003) return 0.5
   return 0
