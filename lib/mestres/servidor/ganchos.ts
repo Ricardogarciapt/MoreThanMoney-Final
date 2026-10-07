@@ -6,6 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { aberturaAtrasada, aposResultado, eFalhaTecnica, motivoExposicao, riscoPctDaPosicao, type PosicaoAbertaConta } from '../decisao'
 import { conflitoEntreCaminhos, impressaoParaConta, type ExecucaoRecente } from '../dedupe'
+import { mapaCanalEstrategia } from '../canal-t2t'
 import { lerRef } from '../../copia-contas/regras'
 import { distanciaDoSl } from '../../copia-contas/calculo'
 import type { GanchosMotor, RegistoOrdemMotor } from '../../copia-contas/motor'
@@ -76,11 +77,18 @@ async function execucoesRecentes(db: SupabaseClient, rota: RotaMestres): Promise
   const out: ExecucaoRecente[] = []
   const r = lerRef(rota.destino_ref)
   if (r?.origem === 'site') {
-    const { data } = await db.from('mtmcopy_signal_log').select('symbol, direction, entry, created_at, status')
+    const { data } = await db.from('mtmcopy_signal_log').select('symbol, direction, entry, created_at, status, channel_key')
       .eq('connection_id', r.id).gte('created_at', desde).in('status', ['open', 'ok', 'pending', 'filled', 'active', 'executed']).limit(50)
+    // A estratégia do T2T legado pelo canal (mesmo mapa do motor): outra estratégia = outra trade (07/10).
+    let mapa: Record<string, string> = {}
+    if ((data ?? []).length) {
+      const { data: provs } = await db.from('mtmauto_providers').select('slug, canal_chat, fonte_mtm, apagado_em').is('apagado_em', null).limit(500)
+      mapa = mapaCanalEstrategia((provs ?? []) as never)
+    }
     for (const l of data ?? []) {
       if (!l.symbol || (l.direction !== 'buy' && l.direction !== 'sell')) continue
-      out.push({ symbol: String(l.symbol), direcao: l.direction, entrada: num(l.entry), em: Date.parse(String(l.created_at)), origem: 'o Tap to Trade do site' })
+      const canal = String((l as { channel_key?: string | null }).channel_key ?? '')
+      out.push({ symbol: String(l.symbol), direcao: l.direction, entrada: num(l.entry), em: Date.parse(String(l.created_at)), origem: 'o Tap to Trade do site', estrategia: mapa[canal] ?? null })
     }
   }
   return out
@@ -171,14 +179,15 @@ export function criarGanchosMestres(o: OpcoesGanchos, rota: RotaMestres, ev: Eve
       if (travaTipo) return { motivo: travaTipo, gravarRecusa: true }
 
       const conflito = conflitoEntreCaminhos(
-        { symbol: acao.simbolo, direcao: acao.direcao, entrada: num(p.preco), agora: Date.now() },
+        { symbol: acao.simbolo, direcao: acao.direcao, entrada: num(p.preco), agora: Date.now(), estrategia: est?.slug ?? rota.estrategia_slug ?? null },
         await execucoesRecentes(db, rota),
       )
       if (conflito) return { motivo: conflito, gravarRecusa: true }
       if (modo === 'live') {
-        const impressao = impressaoParaConta({ symbol: String(p.symbol ?? acao.simbolo), direcao: acao.direcao, entrada: num(p.preco), em: ev.origem_em ?? ev.criado_em })
+        // Com a estratégia: o mesmo trade de outra estratégia nesta conta é outra execução (07/10).
+        const impressao = impressaoParaConta({ symbol: String(p.symbol ?? acao.simbolo), direcao: acao.direcao, entrada: num(p.preco), em: ev.origem_em ?? ev.criado_em, estrategia: est?.slug ?? rota.estrategia_slug ?? null })
         const ok = await reclamarExecucao(db, { contaChave: rota.destino_chave, impressao, origem: rota.tipo_rota === 't2t' ? 't2t' : 'estrategia', ref: `${rota.id}:${ev.origem_posicao_id}` })
-        if (!ok) return { motivo: 'duplicado: o mesmo trade já foi executado nesta conta por outro caminho do motor', gravarRecusa: true }
+        if (!ok) return { motivo: 'duplicado: o mesmo trade desta estratégia já foi executado nesta conta por outro caminho do motor', gravarRecusa: true }
       }
       return null
     },

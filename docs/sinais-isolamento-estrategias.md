@@ -37,7 +37,7 @@ Com duas estratégias no mesmo par isso mistura-as. Casos provados a 07/10:
 | 20 | `t2t-price-monitor` (descartes) | `cancelPendingOrdersForSymbol` | apaga pendentes alheias | fase 2 (`cancelPendingOrderById` já existe) |
 | 21 | `perps-position-monitor` | `symbol|side` + `startsWith` no canal | Aurum × MTM Perps no mesmo canal | fase 2 |
 | 22 | `mtm-alerts/evaluate` (ramo T2T) | por ticker; `chat_channel_slug` nem é lido | ramo morto | fase 2 |
-| 23 | dedupe `decidirDuplicado` / `mestres_execucoes_conta` | impressão sem estratégia | 2.ª estratégia recusada na mesma conta | intencional na «Todos os sinais»; rever com o dono |
+| 23 | dedupe `decidirDuplicado` / `mestres_execucoes_conta` / `conflitoEntreCaminhos` / `contasJaExecutadasPeloMotor` | impressão sem estratégia | 2.ª estratégia recusada na mesma conta | **corrigido (decisão do dono 07/10)**: âmbito = estratégia (na «Todos os sinais», a fonte); o mesmo sinal repetido na mesma estratégia continua a abrir uma vez |
 
 ## O modelo
 
@@ -100,3 +100,15 @@ Também na fase 2:
 
 - O webhook passa a gravar `estrategia` nas linhas que já existem em `mtmcopy_signal_tracking` e `mtmcopy_signal_log`. Hoje essas linhas têm `source_key` adivinhado do texto.
 - Pedir ao Pine um `trade_id` explícito em todos os alertas. A chave já o aceita.
+
+## Deduplicação por estratégia (decisão do dono, 07/10)
+
+O mesmo sinal em duas estratégias na mesma conta dá **duas** trades. O mesmo sinal repetido na mesma estratégia dá **uma**.
+
+- **Contas SIM:** `ambitoDoDuplicado(estrategia, fonte)` define o âmbito. É a estratégia; na «Todos os sinais» (estratégia `todos`) é a fonte. A impressão gravada passa a ser `<âmbito>|<impressão>` e o unique `(conta, impressao)` vivo continua a valer, agora por âmbito. Não precisou de migração.
+- **Motor das mestres:** a impressão em `mestres_execucoes_conta` leva a estratégia. `conflitoEntreCaminhos` deixa passar quando as duas estratégias são conhecidas e diferentes. Se uma for desconhecida, bloqueia, que é o lado seguro.
+- **Transição:** o `copia-contas` do VPS corre um bundle de 24/09 e ainda grava impressões sem estratégia. Até ser reconstruído, o T2T do site trata essas linhas como «pode ser a mesma» e não abre. A regra nova no motor só vale depois do redeploy.
+- **Exposição:**
+  - Contas reais pelo motor: `mestres_contas` (máx. posições, risco total e lote total por conta) e a trava do tipo de conta.
+  - Contas SIM (mestres, seguidoras, «Todos os sinais»): só a margem livre e as regras do programa. `max_posicoes_par_direcao` existe no código mas não está configurado em lado nenhum.
+  - Não há tecto por símbolo nem de risco total por conta nas SIM.

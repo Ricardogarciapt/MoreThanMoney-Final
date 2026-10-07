@@ -404,6 +404,7 @@ export async function POST(request: NextRequest) {
   const jaPeloMotor = await contasJaExecutadasPeloMotor(
     targets.filter((c) => !tratadasPeloMotor.has(c.id)) as unknown as Array<Record<string, unknown> & { id: string; user_id: string }>,
     { symbol: signal.symbol, direction: signal.direction, entry: signal.entry ?? null },
+    motorT2T.estrategia ?? null,
   )
   targets = targets.filter((c) => !tratadasPeloMotor.has(c.id) && !jaPeloMotor.has(c.id))
   const resultadosDoMotor = [

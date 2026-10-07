@@ -519,8 +519,33 @@ export function impressaoDoTrade(p: { symbol: string; direcao: Direcao; entrada:
   return `${p.symbol.toUpperCase()}:${p.direcao}:${balde}:${p.hora ?? horaDoSinal()}`
 }
 
+/**
+ * ÂMBITO DA DEDUPLICAÇÃO (decisão do dono, 07/10): o mesmo sinal em DUAS estratégias na mesma conta
+ * dá DUAS trades — cada estratégia executa a sua. O anti-duplicado vale só DENTRO de cada estratégia
+ * (o mesmo sinal repetido da mesma estratégia nunca abre duas vezes). Na conta «Todos os sinais» a
+ * estratégia é sempre `todos` e quem distingue é a FONTE (Premium, Scanner Sensei, GoldKiller…).
+ */
+export function ambitoDoDuplicado(estrategia: string | null | undefined, fonte: string | null | undefined): string {
+  const e = String(estrategia ?? '').trim().toLowerCase()
+  return e === 'todos' ? `todos:${String(fonte ?? '').trim().toLowerCase()}` : e
+}
+
+/** A impressão do trade dentro do seu âmbito (é esta que vai para o unique (conta, impressao)). */
+export function impressaoNoAmbito(impressao: string | null, ambito: string): string | null {
+  if (!impressao) return null
+  return ambito ? `${ambito}|${impressao}` : impressao
+}
+
+/** A impressão sem o prefixo `<âmbito>|`. */
+export function semAmbito(impressao: string): string {
+  const i = impressao.lastIndexOf('|')
+  return i >= 0 ? impressao.slice(i + 1) : impressao
+}
+
 export interface PonteAberta {
   chave: string
+  /** âmbito da deduplicação (`ambitoDoDuplicado`); ausente = ponte antiga, sem âmbito conhecido */
+  ambito?: string | null
   impressao: string | null
   symbol: string
   direcao: Direcao
@@ -536,18 +561,23 @@ export const TOLERANCIA_DUPLICADO_PIPS = 15
 export type DecisaoDuplicado = { abrir: true } | { abrir: false; motivo: 'mesma_chave' | 'mesmo_trade'; chaveOriginal: string; fonteOriginal: string }
 
 export function decidirDuplicado(
-  novo: { chave: string; impressao: string | null; symbol: string; direcao: Direcao; entrada: number | null; agora?: number },
-  abertas: PonteAberta[],
+  novo: { chave: string; impressao: string | null; symbol: string; direcao: Direcao; entrada: number | null; agora?: number; ambito?: string | null },
+  abertasTodas: PonteAberta[],
   permitirDuplicado = false,
 ): DecisaoDuplicado {
-  const mesma = abertas.find((a) => a.chave === novo.chave)
+  const mesma = abertasTodas.find((a) => a.chave === novo.chave)
   if (mesma) return { abrir: false, motivo: 'mesma_chave', chaveOriginal: mesma.chave, fonteOriginal: mesma.fonte }
   if (permitirDuplicado) return { abrir: true }
+  // Só se compara com o MESMO âmbito (estratégia; na «Todos os sinais», a fonte). Outra estratégia
+  // com o mesmo trade abre a sua. Sem âmbito no pedido = comportamento antigo (todas).
+  const abertas = novo.ambito != null ? abertasTodas.filter((a) => (a.ambito ?? null) === novo.ambito) : abertasTodas
   const agora = novo.agora ?? Date.now()
   const pip = pipSizeForSymbol(novo.symbol)
   const igual = abertas.find((a) => {
     if (a.symbol.toUpperCase() !== novo.symbol.toUpperCase() || a.direcao !== novo.direcao) return false
-    if (novo.impressao && a.impressao === novo.impressao) return true
+    // Compara-se a impressão SEM o prefixo do âmbito (já filtrado acima): as pontes de antes de 07/10
+    // não o têm e continuam a contar como o mesmo trade da mesma estratégia.
+    if (novo.impressao && a.impressao && semAmbito(a.impressao) === semAmbito(novo.impressao)) return true
     if (agora - a.criadaEm > JANELA_DUPLICADO_MS) return false
     if (a.entrada == null || novo.entrada == null) return a.entrada == null && novo.entrada == null
     return Math.abs(a.entrada - novo.entrada) / pip <= TOLERANCIA_DUPLICADO_PIPS

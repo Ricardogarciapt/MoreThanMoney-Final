@@ -15,7 +15,7 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
-  aplicarLoteMinimo, decidirDuplicado, gestaoDoSinal, loteParaConta, niveisAncorados,
+  aplicarLoteMinimo, ambitoDoDuplicado, decidirDuplicado, impressaoNoAmbito, gestaoDoSinal, loteParaConta, niveisAncorados,
   type ConfigSinais, type PonteAberta,
 } from './calculo'
 import type { Direcao } from '../simulado/matematica'
@@ -94,15 +94,19 @@ export async function abrirSinalNaConta(p: PedidoAbrir): Promise<ResultadoAbrir>
   try {
     // 1. duplicado? (antes, arrumar as pontes cujas posições o motor já fechou)
     await arrumarPontes(p.accountId)
+    // Âmbito da deduplicação: a estratégia (na «Todos os sinais», a fonte) — decisão do dono 07/10.
+    const ambito = ambitoDoDuplicado(p.estrategia, p.fonte)
+    const impressao = impressaoNoAmbito(p.impressao, ambito)
     const { data: vivas } = await db.from('funded_sinal_posicoes')
-      .select('chave, impressao, symbol, direcao, entrada, fonte, created_at')
+      .select('chave, estrategia, impressao, symbol, direcao, entrada, fonte, created_at')
       .eq('account_id', p.accountId).in('estado', VIVAS).limit(200)
     const abertas: PonteAberta[] = (vivas ?? []).map((v) => ({
-      chave: String(v.chave), impressao: (v.impressao as string) ?? null, symbol: String(v.symbol),
+      chave: String(v.chave), ambito: ambitoDoDuplicado(v.estrategia as string, v.fonte as string),
+      impressao: (v.impressao as string) ?? null, symbol: String(v.symbol),
       direcao: v.direcao as Direcao, entrada: v.entrada == null ? null : Number(v.entrada),
       fonte: String(v.fonte), criadaEm: Date.parse(String(v.created_at)),
     }))
-    const dup = decidirDuplicado({ chave: p.chave, impressao: p.impressao, symbol: p.symbol, direcao: p.direcao, entrada: p.entrada }, abertas, p.cfg.permitirDuplicado)
+    const dup = decidirDuplicado({ chave: p.chave, impressao, symbol: p.symbol, direcao: p.direcao, entrada: p.entrada, ambito }, abertas, p.cfg.permitirDuplicado)
     if (!dup.abrir) {
       if (dup.motivo === 'mesmo_trade') await juntarFonteExtra(p.accountId, dup.chaveOriginal, p.fonte)
       return { ...base, ok: false, estado: 'duplicado', motivo: dup.motivo }
@@ -111,7 +115,7 @@ export async function abrirSinalNaConta(p: PedidoAbrir): Promise<ResultadoAbrir>
     // 2. a ponte ANTES da posição
     const { data: ponte, error: ePonte } = await db.from('funded_sinal_posicoes').insert({
       account_id: p.accountId, estrategia: p.estrategia, chave: p.chave,
-      impressao: p.cfg.permitirDuplicado ? null : p.impressao, fonte: p.fonte,
+      impressao: p.cfg.permitirDuplicado ? null : impressao, fonte: p.fonte,
       chat_message_id: p.chatMessageId ?? null, symbol: p.symbol, direcao: p.direcao,
       entrada: p.entrada, sl: p.sl, tps: p.tps, estado: 'a_abrir',
     }).select('id').single()
@@ -119,7 +123,7 @@ export async function abrirSinalNaConta(p: PedidoAbrir): Promise<ResultadoAbrir>
       if (ePonte?.code === '23505') {
         // perdeu a corrida para outro pedido com a mesma chave/trade
         const { data: outra } = await db.from('funded_sinal_posicoes').select('chave')
-          .eq('account_id', p.accountId).eq('impressao', p.impressao ?? '').in('estado', VIVAS).maybeSingle()
+          .eq('account_id', p.accountId).eq('impressao', impressao ?? '').in('estado', VIVAS).maybeSingle()
         if (outra && outra.chave !== p.chave) await juntarFonteExtra(p.accountId, String(outra.chave), p.fonte)
         return { ...base, ok: false, estado: 'duplicado', motivo: 'corrida' }
       }

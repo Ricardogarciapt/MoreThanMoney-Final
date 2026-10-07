@@ -41,6 +41,8 @@ export interface ResultadoT2TMotor {
   /** contas que o MOTOR vai executar (live) — saem do T2T de sempre */
   tratadas: Array<{ connectionId: string; account: string; ok: boolean; skipped?: boolean; error?: string }>
   motivo?: string
+  /** a estratégia do sinal aceite (quando se soube) — para a deduplicação por estratégia */
+  estrategia?: string | null
 }
 
 const nada = (modo: ModoEstrategia = 'desligado', motivo?: string): ResultadoT2TMotor => ({ modo, tratadas: [], motivo })
@@ -65,12 +67,12 @@ export async function encaminharT2TParaMotor(p: PedidoT2TMotor): Promise<Resulta
     ])
     if (error || !linha) return nada()
     const est = lerEstrategiaMestre(linha)
-    if (est.t2tModo === 'desligado') return nada()
+    if (est.t2tModo === 'desligado') return { ...nada(), estrategia: est.slug }
     const global = lerConfigGlobal(cfg?.value)
-    if (!global.ligado) return nada(est.t2tModo, 'motor das mestres desligado')
+    if (!global.ligado) return { ...nada(est.t2tModo, 'motor das mestres desligado'), estrategia: est.slug }
     // Kill: em live o motor não aceita nada; o T2T de sempre também não deve abrir às cegas — mas
     // o kill do motor não é o interruptor do T2T legado, por isso devolve-se e o legado decide.
-    if (global.kill) return nada(est.t2tModo, 'kill-switch accionado')
+    if (global.kill) return { ...nada(est.t2tModo, 'kill-switch accionado'), estrategia: est.slug }
 
     // F4: a ORIGEM é a conta que opera — mestre SIM (fpos:), conta MT do educador (pos:) ou TL (tlpos:)
     const { data: provLinha } = await db.from('mtmauto_providers')
@@ -111,11 +113,12 @@ export async function encaminharT2TParaMotor(p: PedidoT2TMotor): Promise<Resulta
       // cegas ao lado da mestre era a mesma mistura por outro caminho. Fica o motivo.
       return {
         modo: est.t2tModo,
+        estrategia: est.slug,
         motivo: escolha.motivo,
         tratadas: p.contas.map((l) => ({ connectionId: String(l.id), account: String(l.account_label ?? l.id).slice(0, 40), ok: false, skipped: true, error: escolha.motivo! })),
       }
     }
-    if (!pos) return nada(est.t2tModo, escolha.motivo ?? `sem posição aberta da origem (${origem.fonte}) para este sinal — T2T de sempre`)
+    if (!pos) return { ...nada(est.t2tModo, escolha.motivo ?? `sem posição aberta da origem (${origem.fonte}) para este sinal — T2T de sempre`), estrategia: est.slug }
     const posCompleta = cands.find((c) => c.id === pos.id) as Record<string, unknown>
     const refPos = refDaPosicao(origem, pos.id)
 
@@ -166,15 +169,25 @@ export async function encaminharT2TParaMotor(p: PedidoT2TMotor): Promise<Resulta
       if (eEv && eEv.code !== '23505') { tratadas.push({ connectionId: l.id, account, ok: false, error: eEv.message }); continue }
       tratadas.push({ connectionId: l.id, account, ok: true })
     }
-    return { modo: est.t2tModo, tratadas }
+    return { modo: est.t2tModo, tratadas, estrategia: est.slug }
   } catch (e) {
     return nada('desligado', `erro: ${e instanceof Error ? e.message : String(e)}`)
   }
 }
 
 /** Contas onde o motor JÁ executou este trade (cópia da estratégia) — o T2T de sempre não repete. */
-export async function contasJaExecutadasPeloMotor(contas: Ligacao[], sinal: { symbol: string; direction: 'buy' | 'sell'; entry: number | null }): Promise<Set<string>> {
+export async function contasJaExecutadasPeloMotor(
+  contas: Ligacao[],
+  sinal: { symbol: string; direction: 'buy' | 'sell'; entry: number | null },
+  /**
+   * A estratégia do sinal aceite (07/10). Só se recusa o T2T se o motor já executou o mesmo trade
+   * DESTA estratégia na conta; o de outra estratégia é outra trade. Sem estratégia conhecida não há
+   * execução do motor que seja «a mesma» — não se recusa.
+   */
+  estrategia: string | null,
+): Promise<Set<string>> {
   const out = new Set<string>()
+  if (!estrategia) return out
   try {
     const chaves = new Map<string, string>()
     for (const l of contas) {
@@ -188,7 +201,13 @@ export async function contasJaExecutadasPeloMotor(contas: Ligacao[], sinal: { sy
     // e a entrada da mestre difere da do sinal pelo deslize: baldes vizinhos (±10 pips) também contam
     const pip = pipDe(sinal.symbol)
     const entradas = sinal.entry != null && sinal.entry > 0 ? [sinal.entry, sinal.entry - 10 * pip, sinal.entry + 10 * pip] : [null]
-    const impressoes = [agora, agora - 3600_000].flatMap((t) => entradas.map((e) => impressaoParaConta({ symbol: sinal.symbol, direcao: sinal.direction, entrada: e, em: t })))
+    const impressoes = [agora, agora - 3600_000].flatMap((t) => entradas.flatMap((e) => [
+      impressaoParaConta({ symbol: sinal.symbol, direcao: sinal.direction, entrada: e, em: t, estrategia }),
+      // TRANSIÇÃO: o serviço copia-contas do VPS (bundle de 24/09) ainda grava a impressão SEM
+      // estratégia. Até ser reconstruído, essas linhas contam como «pode ser a mesma» (regra antiga,
+      // do lado seguro). Depois do redeploy deixam de aparecer e isto não muda nada.
+      impressaoParaConta({ symbol: sinal.symbol, direcao: sinal.direction, entrada: e, em: t }),
+    ]))
     const { data, error } = await getSupabaseAdmin().from('mestres_execucoes_conta').select('conta_chave, impressao')
       .in('conta_chave', [...chaves.keys()]).in('impressao', impressoes)
     if (error) return out

@@ -16,10 +16,15 @@ import { impressaoDoTrade } from '../mtmfunded/estrategias-sinais/calculo'
 import { pipDe } from './pips'
 import type { Direcao, TipoEventoCopia } from '../copia-contas/tipos'
 
-/** Impressão do trade para a conta (a mesma de «Todos os sinais»). */
-export function impressaoParaConta(p: { symbol: string; direcao: Direcao; entrada: number | null; em?: string | number | Date }): string {
+/**
+ * Impressão do trade para a conta — COM a estratégia (decisão do dono, 07/10): o mesmo sinal de duas
+ * estratégias na mesma conta são duas trades; o mesmo sinal repetido da mesma estratégia é uma.
+ */
+export function impressaoParaConta(p: { symbol: string; direcao: Direcao; entrada: number | null; em?: string | number | Date; estrategia?: string | null }): string {
   const hora = p.em != null ? new Date(p.em).toISOString().slice(0, 13) : undefined
-  return impressaoDoTrade({ symbol: p.symbol, direcao: p.direcao, entrada: p.entrada, hora })
+  const base = impressaoDoTrade({ symbol: p.symbol, direcao: p.direcao, entrada: p.entrada, hora })
+  const e = String(p.estrategia ?? '').trim().toLowerCase()
+  return e ? `${e}|${base}` : base
 }
 
 export interface ExecucaoRecente {
@@ -28,6 +33,8 @@ export interface ExecucaoRecente {
   entrada: number | null
   em: number
   origem: string
+  /** estratégia da execução recente (null = desconhecida) */
+  estrategia?: string | null
 }
 
 /** Janela e tolerância do «mesmo trade» vindo por outro caminho (T2T legado, outra ligação). */
@@ -39,14 +46,18 @@ export const TOLERANCIA_CONFLITO_PIPS = 15
  * entrada a ≤ 15 pips, há ≤ 30 min). Devolve o motivo ou null.
  */
 export function conflitoEntreCaminhos(
-  novo: { symbol: string; direcao: Direcao; entrada: number | null; agora: number },
+  novo: { symbol: string; direcao: Direcao; entrada: number | null; agora: number; estrategia?: string | null },
   recentes: ExecucaoRecente[],
 ): string | null {
   const pip = pipDe(novo.symbol)
+  const est = (s: string | null | undefined) => String(s ?? '').trim().toLowerCase()
   const norm = (s: string) => String(s).toUpperCase().replace(/[^A-Z0-9]/g, '')
   const igual = recentes.find((r) => {
     if (norm(r.symbol) !== norm(novo.symbol) && !norm(r.symbol).startsWith(norm(novo.symbol)) && !norm(novo.symbol).startsWith(norm(r.symbol))) return false
     if (r.direcao !== novo.direcao) return false
+    // Outra estratégia (as duas conhecidas) = outra trade — cada estratégia executa a sua (07/10).
+    // Uma das duas desconhecida = não se sabe se é o mesmo sinal: fica a regra conservadora.
+    if (est(novo.estrategia) && est(r.estrategia) && est(novo.estrategia) !== est(r.estrategia)) return false
     if (novo.agora - r.em > JANELA_CONFLITO_MS || r.em - novo.agora > 60_000) return false
     if (r.entrada == null || novo.entrada == null) return true
     return Math.abs(r.entrada - novo.entrada) / pip <= TOLERANCIA_CONFLITO_PIPS
