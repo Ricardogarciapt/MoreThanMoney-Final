@@ -93,9 +93,11 @@ assert.match(webhook, /const canExecuteProvider = motivoNaoExecutar === null/, '
 assert.match(webhook, /temTodasAsConfirmacoes\(payload, execDirForGate\)/, 'o filtro tem de ser aplicado no webhook')
 assert.match(webhook, /fonte: "mtmscanner"/, 'o desvio tem de usar encaminharSinalParaMestre')
 assert.equal(
-  (webhook.match(/encaminharSinalParaMestre\(/g) ?? []).length, 2,
-  'só as duas chamadas (a de sempre e a do scanner): nenhum segundo executor',
+  (webhook.match(/encaminharSinalParaMestre\(/g) ?? []).length, 3,
+  // 07/10: a 3.ª é a da Aurum Flow (fonte `aurum`, lib/mestres/aurum.ts) — o MESMO cano, não um executor novo.
+  'só as três chamadas (a de sempre, a do scanner e a da Aurum): nenhum segundo executor',
 )
+assert.match(webhook, /fonte: "aurum"/, 'a 3.ª chamada é a da Aurum Flow')
 
 // 3. O slug tem de bater certo com a linha de `mestres_estrategias` criada a 24/09.
 assert.equal(ESTRATEGIA_DO_WEBHOOK.mtmscanner?.slug, 'mtm-scanner')

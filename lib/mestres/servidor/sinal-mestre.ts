@@ -51,6 +51,12 @@ export const ESTRATEGIA_DO_WEBHOOK: Record<string, AlvoDaFonte> = {
    * `canExecuteProvider` exclui-o de propósito desde 18/08, e isso não muda.
    */
   mtmscanner: { slug: 'mtm-scanner', comentario: 'MTM Auto Scanner' },
+  /**
+   * Aurum Flow (07/10, pedido do dono: a mestre «recomeça do zero e passa a seguir os sinais do
+   * webhook ?strategy=aurum»). Só cripto; o webhook traduz o perpétuo para o símbolo da casa
+   * (lib/mestres/aurum.ts) e respeita o perps-gate antes de chegar aqui.
+   */
+  aurum: { slug: 'aurum-flow', comentario: 'MTM Auto Aurum Flow' },
   // Premium (relay-post → processador → lib/mestres/servidor/premium.ts), não o webhook TradingView.
   premium: { slug: SLUG_PREMIUM, comentario: COMENTARIO_PREMIUM, ignoraProviderAtivo: true, permitirDuplicado: true, prefixo: 'tg' },
 }

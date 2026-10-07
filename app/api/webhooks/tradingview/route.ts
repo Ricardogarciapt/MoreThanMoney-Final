@@ -1521,7 +1521,56 @@ async function processarAlerta(request: NextRequest) {
      * Só onde a corretora cota o par — dos cinco da lista, uma conta de CFD costuma ter dois.
      * Os que faltam são saltados em silêncio: é uma condição normal, não um erro.
      */
-    if (isAurumFlow && normSym && initSignalKind === "entry") {
+    /**
+     * A MESTRE SIM DA AURUM (07/10, pedido do dono): a conta-mestre da estratégia `aurum-flow`
+     * (mestres_estrategias.conta_mestre_id) passa a seguir os sinais deste webhook, pelo mesmo cano
+     * das outras estratégias (`encaminharSinalParaMestre`, fonte `aurum`) — sinal_modo, kill-switch,
+     * provider activo e travas da mestre decidem como sempre. A decisão e o símbolo da casa
+     * (XRPUSDT.P → XRPUSD) estão em lib/mestres/aurum.ts (puro, com testes).
+     *
+     * Quando a SIM fica com o sinal (`substituiMt5`), a conta MT5 antiga pela MetaApi (abaixo) NÃO
+     * abre a mesma trade: a mestre é a SIM, e a MetaApi só serve para entregar às contas dos clientes.
+     */
+    let aurumNaMestreSim = false
+    if (isAurumFlow && initSignalKind === "entry") {
+      try {
+        const { decidirAurumParaMestre } = await import("@/lib/mestres/aurum")
+        const entradaAurum = entry ?? price ?? null
+        const d = decidirAurumParaMestre({
+          aurum: true,
+          classe: assetClass,
+          tipoSinal: "entry",
+          ticker: String(v.symbol ?? ticker ?? ""),
+          direcao: execDirForGate,
+          entrada: entradaAurum,
+          sl: sl ?? null,
+          stopsSaos: stopsSane(entradaAurum, sl),
+          perpsGate,
+        })
+        if (d.vai && d.simbolo) {
+          const m = await encaminharSinalParaMestre({
+            fonte: "aurum",
+            symbol: d.simbolo,
+            direcao: execDirForGate === "sell" ? "sell" : "buy",
+            entrada: entradaAurum,
+            sl: sl ?? null,
+            tps: [tp, tp2, tp3].filter((n): n is number => typeof n === "number" && n > 0),
+            externalRef: String(logId ?? ""),
+          })
+          aurumNaMestreSim = m.substituiMt5
+          if (logId && m.motivo) {
+            await supabase.from("tradingview_signals").update({ ai_error: `mestre aurum: ${m.motivo}`.slice(0, 300) }).eq("id", logId)
+          }
+        } else if (logId && d.motivo && !d.motivo.startsWith("perps-gate")) {
+          // O perps-gate já deixou o motivo dele em ai_error; os outros ficam ditos aqui.
+          await supabase.from("tradingview_signals").update({ ai_error: `mestre aurum: ${d.motivo}`.slice(0, 300) }).eq("id", logId)
+        }
+      } catch (e) {
+        console.error("[webhook][aurum] mestre SIM:", e instanceof Error ? e.message : e)
+      }
+    }
+
+    if (isAurumFlow && normSym && initSignalKind === "entry" && !aurumNaMestreSim) {
       try {
         const { abrirNaContaMestreAurum } = await import("@/lib/mtmcopy/aurum-conta-mestre")
         const rm = await abrirNaContaMestreAurum({
