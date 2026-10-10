@@ -14,7 +14,7 @@ export const scannerOrder = [
   "GoldenZone",
   "Momentum",
   "AurumFlow",
-  "KillShot",
+  "TrendShot",
   "Supernova",
   "Winzone",
   "Sinergy",
@@ -33,7 +33,7 @@ export const scannerStudies: Record<ScannerKey, string[]> = {
   // intervalo que não tocava o zero — era o único resultado significativo do estudo, e era
   // negativo. Ver docs/aurum-orb-vs-smc.md. O id anterior era 4ca56ac1…
   AurumFlow: ["PUB;7a37672ce0bf426eb038be265b6b4aba"],
-  KillShot: ["PUB;c1f81145e78a49ce92bd1f81f9c103dd"],
+  TrendShot:["PUB;be1c60d3c15249e4b609bb40a4412d1f"],
   Supernova: ["PUB;c16bafd7d0874182a1415648ec3ed7b8"],
   Winzone: [
     "PUB;6c003d30b2154ef3a31074d5c703954f",
@@ -52,7 +52,7 @@ export const scannerLabels: Record<ScannerKey, string> = {
   GoldenZone: "Golden Zone",
   Momentum: "Momentum",
   AurumFlow: "MTM Aurum Flow Cripto",
-  KillShot: "Kill Shot",
+  TrendShot: "TrendShot",
   Supernova: "Supernova",
   Winzone: "Sniper Pro",
   Sinergy: "Quantum",
