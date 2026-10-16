@@ -2,6 +2,7 @@
 -- Não cria um segundo CRM, não envia mensagens, não toca em comissões.
 begin;
 alter table public.vendas_negocios
+  add column if not exists crm_instagram_id text,
   add column if not exists crm_ai_score text check (crm_ai_score in ('A','B','C')),
   add column if not exists crm_ai_resumo text,
   add column if not exists crm_ai_qualificacao jsonb;
@@ -42,6 +43,7 @@ begin
 
   select array_agg(id) into ids from public.vendas_negocios
   where chave_origem = p_lead->>'chave'
+    or (p_lead->>'instagram_id' is not null and crm_instagram_id = p_lead->>'instagram_id')
     or (p_lead->>'email' is not null and lower(email) = p_lead->>'email')
     or (p_lead->>'telefone' is not null and regexp_replace(telefone, '[^+0-9]', '', 'g') = p_lead->>'telefone')
     or (p_lead->>'telegram_id' is not null and telegram_id = p_lead->>'telegram_id')
@@ -51,9 +53,9 @@ begin
   if cardinality(ids) = 1 then
     select * into negocio from public.vendas_negocios where id = ids[1] for update;
   else
-    insert into public.vendas_negocios (nome, email, telefone, telegram_id, instagram_handle, origem, chave_origem, estado)
+    insert into public.vendas_negocios (nome, email, telefone, telegram_id, instagram_handle, crm_instagram_id, origem, chave_origem, estado)
     values (p_lead->>'nome', p_lead->>'email', p_lead->>'telefone', p_lead->>'telegram_id',
-      p_lead->>'instagram_handle', p_lead->>'origem', p_lead->>'chave', p_lead->>'estado') returning * into negocio;
+      p_lead->>'instagram_handle', p_lead->>'instagram_id', p_lead->>'origem', p_lead->>'chave', p_lead->>'estado') returning * into negocio;
     novo := true;
   end if;
 
@@ -63,6 +65,7 @@ begin
   if negocio.estado not in ('ganho','perdido') then
     -- Colunas IA separadas da nota humana. Não regride etapa nem altera decisões humanas.
     update public.vendas_negocios set
+      crm_instagram_id = coalesce(crm_instagram_id, p_lead->>'instagram_id'),
       crm_ai_score = p_lead->>'score', crm_ai_resumo = p_lead->>'resumo',
       crm_ai_qualificacao = p_lead->'qualificacao',
       email = coalesce(nullif(email,''), p_lead->>'email'),

@@ -9,6 +9,7 @@ const contacto = {
   name: texto(160),
   email: z.string().trim().email().max(200).transform(v => v.toLowerCase()).optional(),
   phone: telefone.optional(),
+  instagram_id: texto(100).regex(/^\d+:\d+$/).optional(),
   telegram_id: z.string().regex(/^\d{1,20}$/).optional(),
   instagram_username: texto(30).regex(/^@?[\w.]+$/).transform(v => v.replace(/^@/, '').toLowerCase()).optional(),
 }
@@ -45,7 +46,7 @@ export const contratoLead = z.union([simples, estruturado]).transform(v => {
   } : { ...v, qualification: null }
   return p
 }).superRefine((v, ctx) => {
-  if (!v.email && !v.phone && !v.telegram_id && !v.instagram_username) {
+  if (!v.email && !v.phone && !v.telegram_id && !v.instagram_username && !v.instagram_id) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'É necessário um contacto identificável.' })
   }
   if (v.channel === 'telegram' && !v.telegram_id && !v.email && !v.phone) {
@@ -71,12 +72,12 @@ export function segredoValido(recebido: string | null, esperado: string | undefi
 
 export function parametrosLead(p: LeadOmnicanal) {
   // Uma origem estável impede duplicados mesmo com event IDs diferentes.
-  const identidade = p.telegram_id ? `telegram:${p.telegram_id}`
+  const identidade = p.instagram_id ? `instagram-id:${p.instagram_id}` : p.telegram_id ? `telegram:${p.telegram_id}`
     : p.phone ? `phone:${p.phone}` : p.email ? `email:${p.email}` : `instagram:${p.instagram_username}`
   return {
     chave: `crm:${createHash('sha256').update(identidade).digest('hex')}`,
     nome: p.name, email: p.email ?? null, telefone: p.phone ?? null,
-    telegram_id: p.telegram_id ?? null, instagram_handle: p.instagram_username ?? null,
+    telegram_id: p.telegram_id ?? null, instagram_id: p.instagram_id ?? null, instagram_handle: p.instagram_username ?? null,
     origem: p.channel, estado: estadoInicial(p), papel: p.aiScore === 'A' ? 'closer' : 'setter',
     score: p.aiScore, resumo: p.aiSummary, qualificacao: p.qualification,
   }

@@ -103,6 +103,8 @@ export interface NegocioLinha {
    */
   agente_id?: string | null
   agente_pontuacao?: number | null
+  crm_ai_score?: string | null
+  crm_ai_resumo?: string | null
   agente_qualificacao?: string | null
 }
 
@@ -110,7 +112,7 @@ const COLUNAS_NEGOCIO =
   'id, nome, email, telefone, telegram_username, telegram_id, instagram_handle, ' +
   'pack_previsto, origem, estado, motivo_perda, nota, ' +
   'prospector_id, setter_id, closer_id, team_leader_id, afiliado_id, criado_em, atualizado_em, fechado_em, ' +
-  'agente_id, agente_pontuacao, agente_qualificacao'
+  'agente_id, agente_pontuacao, agente_qualificacao, crm_ai_score, crm_ai_resumo'
 
 /**
  * Os negócios que esta pessoa pode ver.

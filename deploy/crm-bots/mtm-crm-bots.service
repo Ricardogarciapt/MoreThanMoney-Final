@@ -1,0 +1,18 @@
+[Unit]
+Description=MTM CRM bots - consumir um item da fila pela API autenticada
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+EnvironmentFile=/etc/mtm-crm-bots.env
+ExecStart=/usr/bin/node /opt/mtm-crm-bots/worker.mjs
+TimeoutStartSec=140
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+StandardOutput=journal
+StandardError=journal

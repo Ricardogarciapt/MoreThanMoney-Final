@@ -1,3 +1,4 @@
+import { assinaturaMetaValida } from '@/lib/crm/meta-assinatura'
 import { NextRequest, NextResponse } from 'next/server'
 import { runLeadFunnelReply } from '@/lib/telegram-lead-funnel'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
@@ -73,7 +74,12 @@ async function isNewWhatsAppLead(phone: string): Promise<boolean> {
 
 // 2) Mensagens recebidas → cérebro do funil → resposta
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}))
+  const raw = await req.text()
+  if (!assinaturaMetaValida(raw, req.headers.get('x-hub-signature-256'), process.env.WHATSAPP_APP_SECRET)) {
+    return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
+  }
+  let body
+  try { body = JSON.parse(raw) } catch { return NextResponse.json({ error: 'JSON inválido.' }, { status: 400 }) }
   try {
     const changes = body?.entry?.[0]?.changes ?? []
     for (const ch of changes) {

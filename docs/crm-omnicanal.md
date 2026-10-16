@@ -2,8 +2,9 @@
 
 ## O que esta entrega implementa
 
-A primeira camada do manual: entrada autenticada de leads já qualificados, score A/B/C,
-deduplicação, distribuição humana por carga e sincronização de marcações confirmadas.
+Entrada autenticada de leads, score A/B/C, deduplicação, distribuição humana por carga e
+sincronização de marcações confirmadas. A continuação liga entradas dos bots a uma fila
+persistente e ao worker de IA existente; ver `docs/crm-operacao.md`.
 O destino é **`vendas_negocios`**, já usado no backoffice e na máquina de vendas.
 Não existem novas tabelas `leads`/`team_agents`, nem novas contas/papéis ou comissões.
 
@@ -69,24 +70,21 @@ apenas qualificação, não prova de reunião/fecho. A decisão de routing usa o
 proposta pelo LLM. A resposta devolve `negocio_id`, indicador de replay e URL da agenda; não expõe
 os dados pessoais do lead. Os recibos não são acessíveis a `anon`/`authenticated`.
 
-## O que ainda não está implementado/activado
+## Continuação e limites
 
-Este PR **não é a activação integral do manual**:
+- Telegram: webhook autenticado enfileira mensagens privadas, independentemente do fornecedor do funil.
+- Instagram/WhatsApp: triggers enfileiram mensagens de entrada dos livros existentes; assinaturas
+  Meta são obrigatórias antes de persistir. IDs scoped Instagram não são tratados como handles.
+- Worker usa `chamarIA` (incluindo o fornecedor VPS se já configurado), valida JSON, evidência
+  literal e confiança. Pedidos de saída não são enviados à IA de qualificação; seguem para revisão.
+- Pipeline mostra score/resumo e actualiza a leitura autenticada a cada 30 s, sem Realtime público.
+- Há um consumidor systemd opcional em `deploy/crm-bots`, não uma instalação já feita.
 
-- Não liga os webhooks nativos Instagram/Telegram a este endpoint nem altera os seus funis existentes.
-- Não chama um LLM para produzir a qualificação. Recebe a qualificação de um integrador autorizado;
-  é preciso configurar o modelo, critérios, consentimento e revisão no fluxo que o chama.
-- Não cria o ciclo Instagram de recolha de telefone com três tentativas, nem workflows n8n.
-- Não instala WACRM/n8n/Docker/SSH nem assume que a imagem exemplificada no manual existe.
-- Não envia DMs/WhatsApp nem contorna as regras existentes de consentimento e janela de contacto.
-- Não adiciona Kanban ou Realtime público. O painel sales-machine mantém o polling existente de
-  30 segundos; o pipeline do backoffice mantém o comportamento de actualização existente.
-- Não cria o papel humano PRESENTER, que não existe no modelo actual, nem muda comissões.
-- Não aplica migrações, não configura segredos e não publica produção.
-
-Antes de ligar os canais: definir o consentimento/retensão dos dados, validar permissões reais da
-Meta, rever critérios de score e destinatários humanos com o dono. IA de triagem comercial não
-constitui avaliação de adequação de investimento nem consultoria financeira.
+**Não foi activado em produção.** Faltam migrações, segredos de assinatura, base de teste e ensaio
+real. Não foi criado o ciclo Instagram de três tentativas para recolher telefone; não foram
+instalados WACRM/n8n, nem criado o papel PRESENTER. O worker não envia novas mensagens automáticas.
+Os bots mantêm as suas respostas e controlos existentes; a qualificação comercial não é avaliação
+de adequação de investimento. Não assume capital/riqueza do lead para lhe atribuir score.
 
 ## Verificação local
 
@@ -103,5 +101,5 @@ aditivos para conservar o histórico. A agenda anterior volta com a reversão de
 
 Nesta entrega, os três testes CRM, lint focado, typecheck focado (rota e módulos CRM) e as
 regressões `pipeline-fluxo.check.ts`/`agenda/horas.check.ts` foram verificados localmente.
-O typecheck integral excedeu a memória disponível (heap de 2 GiB; retry de 4 GiB terminado pelo
+Na primeira fase o typecheck integral excedeu a memória disponível (heap de 2 GiB; retry de 4 GiB terminado pelo
 ambiente). O build integral e o fluxo real de produção não foram verificados.
