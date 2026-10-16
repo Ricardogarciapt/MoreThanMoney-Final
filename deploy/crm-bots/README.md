@@ -5,7 +5,45 @@ Este consumidor dá uma alternativa de agendamento na VPS; **não transporta men
 os webhooks existentes**. Pode coexistir com Vercel (os leases evitam processar o mesmo item), mas
 é preferível escolher um scheduler para não fazer pedidos inúteis. Cada chamada processa um item.
 
-## Instalação pelo operador com SSH (não executada pelo agente)
+## Instalação automática — comandos simples
+
+Na VPS, abre um checkout revisto deste PR (não uses `curl | bash`). Se ainda não tens o repositório:
+
+```sh
+git clone --branch vercel-agent/crm-omnicanal-bridge --single-branch https://github.com/Ricardogarciapt/MoreThanMoney-Final.git mtm-crm
+cd mtm-crm
+# Revê o instalador antes de executar como root:
+less deploy/crm-bots/install.sh
+sudo bash deploy/crm-bots/install.sh
+```
+
+Requer Node.js 22 em `/usr/bin/node` e systemd activo. O instalador não instala dependências do
+site nem altera Node, Docker, firewall, base de dados ou serviços existentes. Pede `CRON_SECRET`
+sem eco no terminal, cria configuração root-only e preserva-a em reinstalações. Usa o mesmo segredo
+já configurado na Vercel; não inventa outro. Não passa segredos em argumentos ou URLs.
+
+**Instalar não activa o timer e não publica o site.** Prepara primeiro as migrações 203/204, os
+segredos Meta, um deployment Ready e o ensaio descrito em `docs/crm-operacao.md`. Depois:
+
+```sh
+sudo bash deploy/crm-bots/install.sh --enable
+sudo bash deploy/crm-bots/install.sh --status
+sudo journalctl -u mtm-crm-bots.service -n 20 --no-pager
+```
+
+`--enable` pede confirmação `ACTIVAR` e faz uma primeira chamada real (pode consumir um item).
+Se falhar, não activa o timer. Para parar/actualizar:
+
+```sh
+sudo bash deploy/crm-bots/install.sh --disable
+# Actualiza o checkout para a revisão aprovada, revê o diff e volta a instalar.
+sudo bash deploy/crm-bots/install.sh
+```
+
+A instalação local foi validada com `bash -n` e teste isolado com comandos simulados; não foi
+executada na tua VPS. O instalador não aplica SQL nem verifica a veracidade da confirmação do operador.
+
+## Instalação manual alternativa pelo operador com SSH
 
 Pré-requisitos: migrações 203/204 aplicadas, código publicado, variáveis server-side configuradas,
 Node 22 em `/usr/bin/node`, systemd e HTTPS de saída autorizado. Conferir os caminhos, sem alterar
