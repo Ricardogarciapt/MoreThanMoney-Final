@@ -162,12 +162,25 @@ async function handleTelegramChannelMessage(
 export async function POST(request: NextRequest) {
   try {
     const secret = process.env.TELEGRAM_WEBHOOK_SECRET
-    if (secret && request.nextUrl.searchParams.get("secret") !== secret) {
+    if (!secret || (request.headers.get('x-telegram-bot-api-secret-token') !== secret && request.nextUrl.searchParams.get("secret") !== secret)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const body = await request.json()
     const supabase = getSupabaseAdmin()
+
+    // Persistir a entrada privada antes do funil: mesmo sem crédito num fornecedor, não se perde o lead.
+    const mensagemCRM = body.message
+    if (mensagemCRM?.chat?.type === 'private' && !mensagemCRM.from?.is_bot &&
+        typeof mensagemCRM.text === 'string' && !mensagemCRM.text.startsWith('/') &&
+        Number.isSafeInteger(body.update_id)) {
+      const { error } = await supabase.rpc('crm_bot_telegram', {
+        p_evento: `tg:${body.update_id}`, p_chat: String(mensagemCRM.chat.id),
+        p_nome: mensagemCRM.from?.first_name ?? 'Contacto Telegram', p_texto: mensagemCRM.text,
+      })
+      // Antes de iniciar qualquer acção: erro transitório faz Telegram repetir a entrega.
+      if (error) return NextResponse.json({ error: 'Recepção CRM indisponível.' }, { status: 503 })
+    }
 
     // IMPORTANTE: o processamento de sinais (mirror + MetaApi) é PESADO (ligação MetaApi fria pode
     // demorar dezenas de segundos). Se o awaitássemos antes de responder, o Telegram dava "Read timeout

@@ -1,0 +1,10 @@
+[Unit]
+Description=MTM CRM bots a cada minuto
+
+[Timer]
+OnBootSec=60
+OnUnitInactiveSec=60
+Unit=mtm-crm-bots.service
+
+[Install]
+WantedBy=timers.target

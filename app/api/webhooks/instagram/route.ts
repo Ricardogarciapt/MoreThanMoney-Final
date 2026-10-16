@@ -1,3 +1,4 @@
+import { assinaturaMetaValida } from '@/lib/crm/meta-assinatura'
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { generateDmReply, sendInstagramDmResilient, candidateTokensForIgAccount } from "@/lib/instagram/dm-closer"
@@ -39,12 +40,16 @@ type IgMessaging = {
 // ── POST: mensagens recebidas ────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   // Responder 200 rápido é obrigatório; processamos e respondemos na mesma invocação (maxDuration 60).
+  const raw = await request.text()
+  if (!assinaturaMetaValida(raw, request.headers.get('x-hub-signature-256'), process.env.INSTAGRAM_APP_SECRET)) {
+    return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
+  }
   let body: {
     object?: string
     entry?: { id?: string; messaging?: IgMessaging[]; time?: number }[]
   } = {}
   try {
-    body = await request.json()
+    body = JSON.parse(raw)
   } catch {
     return NextResponse.json({ ok: true })
   }

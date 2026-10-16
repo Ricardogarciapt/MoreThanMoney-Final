@@ -20,6 +20,7 @@ export const dynamic = 'force-dynamic'
 const MENU: Array<{ href: string; label: string; exige: Capacidade }> = [
   { href: '/backoffice', label: 'Início', exige: 'bo.entrar' },
   { href: '/backoffice/extracto', label: 'O meu extracto', exige: 'bo.extracto_proprio' },
+  { href: '/backoffice/crm', label: 'CRM da equipa', exige: 'bo.pipeline_proprio' },
   { href: '/backoffice/pipeline', label: 'Pipeline', exige: 'bo.pipeline_proprio' },
   { href: '/backoffice/tarefas', label: 'Tarefas', exige: 'bo.tarefas_proprias' },
   { href: '/backoffice/equipa', label: 'A minha equipa', exige: 'bo.equipa_ver' },

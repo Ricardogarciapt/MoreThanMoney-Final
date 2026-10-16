@@ -290,30 +290,10 @@ async function ligarAoPipeline(p: {
   utm: Record<string, unknown>
 }): Promise<void> {
   try {
-    const email = p.email.toLowerCase()
-    const { data: existente } = await db().from('vendas_negocios').select('id').ilike('email', email).limit(1).maybeSingle()
-
-    if (existente?.id) {
-      await db().from('agenda_marcacoes').update({ negocio_id: existente.id }).eq('id', p.id)
-      await db().from('vendas_negocios').update({
-        nota: `Marcou «${p.tipo.nome}» para ${p.inicio.toISOString().slice(0, 16).replace('T', ' ')} UTC.`,
-        atualizado_em: new Date().toISOString(),
-      }).eq('id', existente.id)
-      return
-    }
-
-    const { data: novo } = await db().from('vendas_negocios').insert({
-      nome: p.nome.slice(0, 120),
-      email,
-      telefone: p.telefone,
-      estado: p.tipo.pipeline_estado,
-      pack_previsto: p.tipo.pack_previsto,
-      origem: 'agenda',
-      chave_origem: `agenda:${p.id}`,
-      nota: `Marcou «${p.tipo.nome}» para ${p.inicio.toISOString().slice(0, 16).replace('T', ' ')} UTC.`,
-    }).select('id').maybeSingle()
-
-    if (novo?.id) await db().from('agenda_marcacoes').update({ negocio_id: novo.id }).eq('id', p.id)
+    // A marcação já foi confirmada. A ponte resolve identidade, liga e avança na mesma
+    // transacção; nunca substitui a nota do closer nem reabre um negócio fechado.
+    const { error } = await db().rpc('crm_ligar_marcacao', { p_marcacao: p.id })
+    if (error) throw error
   } catch (e) {
     console.error('[agenda] a marcação não entrou no pipeline (a chamada está marcada na mesma):', e)
   }

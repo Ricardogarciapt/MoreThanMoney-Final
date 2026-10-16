@@ -46,6 +46,7 @@ import { Historico } from './historico'
 import { lerFoco, situacaoDoFoco } from './foco'
 import { estaSemDono } from '@/lib/backoffice-bolsa'
 import { Pegar } from './pegar'
+import { ActualizarPipeline } from './actualizar'
 import { accoesDeHojePorAgente, accoesDosAgentes, agentesDoPipeline, NOME_DA_ACCAO } from '@/lib/backoffice-agentes'
 
 export const dynamic = 'force-dynamic'
@@ -144,6 +145,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-8">
+      <ActualizarPipeline />
       {/* O `sub` dizia «mover um negócio faz-se no admin» — e o botão «Mover» está a vinte pixels
           dele desde 25/09. Uma instrução desactualizada no cabeçalho não é um detalhe de texto: é a
           página a ensinar a pessoa a não usar o que tem à frente. */}
@@ -287,6 +289,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                       >
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
                           <span className="font-semibold text-white">{n.nome}</span>
+                          {n.crm_ai_score && <Etiqueta>IA · {n.crm_ai_score}</Etiqueta>}
                           <span className="text-xs text-gray-500">
                             mexeu {dataCurta(n.atualizado_em)}
                             {dias !== null && dias > 0 ? ` · há ${dias} dia${dias === 1 ? '' : 's'}` : ''}
@@ -328,6 +331,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                           </p>
                         )}
                         {n.nota && <p className="mt-2 text-xs leading-relaxed text-gray-400">{n.nota}</p>}
+                        {n.crm_ai_resumo && <p className="text-xs text-white/60">Triagem IA: {n.crm_ai_resumo}</p>}
                         {n.agente_qualificacao && (
                           <p className="mt-2 text-xs leading-relaxed text-gray-400">
                             <span className="text-gray-500">Qualificação do agente: </span>

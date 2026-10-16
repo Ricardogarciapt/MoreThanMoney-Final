@@ -103,14 +103,22 @@ export interface NegocioLinha {
    */
   agente_id?: string | null
   agente_pontuacao?: number | null
+  crm_ai_score?: string | null
+  crm_ai_resumo?: string | null
   agente_qualificacao?: string | null
 }
 
-const COLUNAS_NEGOCIO =
+export function faltamColunasCrm(erro: { code?: string; message?: string } | null): boolean {
+  return !!erro && ['42703', 'PGRST204'].includes(erro.code ?? '') &&
+    /(?:crm_ai_score|crm_ai_resumo)/.test(erro.message ?? '')
+}
+
+const COLUNAS_NEGOCIO_BASE =
   'id, nome, email, telefone, telegram_username, telegram_id, instagram_handle, ' +
   'pack_previsto, origem, estado, motivo_perda, nota, ' +
   'prospector_id, setter_id, closer_id, team_leader_id, afiliado_id, criado_em, atualizado_em, fechado_em, ' +
   'agente_id, agente_pontuacao, agente_qualificacao'
+const COLUNAS_NEGOCIO = COLUNAS_NEGOCIO_BASE + ', crm_ai_score, crm_ai_resumo'
 
 /**
  * Os negócios que esta pessoa pode ver.
@@ -173,7 +181,13 @@ export async function negociosDoAmbito(
   // mas cada um perde o parêntesis do outro e o filtro de segurança deixava de ser garantido.
   if (filtros.procura) query = query.ilike('nome', `%${filtros.procura}%`)
 
-  const { data, error } = await query
+  let { data, error } = await query
+  if (faltamColunasCrm(error)) {
+    // O mesmo builder conserva âmbito, filtros, ordem e paginação; só retira colunas opcionais.
+    const base = await query.select(COLUNAS_NEGOCIO_BASE)
+    data = base.data as typeof data
+    error = base.error
+  }
   if (error) throw new Error(`Não foi possível ler o pipeline: ${error.message}`)
   const { linhas, haMais } = fatiar((data ?? []) as unknown as NegocioLinha[], pagina)
   return { linhas, pagina, haMais }
