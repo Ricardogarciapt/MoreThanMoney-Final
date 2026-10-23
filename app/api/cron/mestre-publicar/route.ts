@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { publicarTodasAsMestres } from '@/lib/mestres/servidor/publicar'
+import { vigiaNaVps } from '@/lib/vigias/delegacao'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -14,6 +15,8 @@ export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // Corre no VPS (mtm-vigias) enquanto o pulso estiver fresco — aqui só sai.
+  if (await vigiaNaVps('mestre-publicar')) return NextResponse.json({ ok: true, vps: true })
   const resumo = await publicarTodasAsMestres()
   return NextResponse.json({ ok: true, resumo, timestamp: new Date().toISOString() })
 }

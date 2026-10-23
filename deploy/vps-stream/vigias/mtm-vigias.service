@@ -1,0 +1,23 @@
+[Unit]
+Description=MTM Vigias - monitores de 10 s que eram crons de 1 min na Vercel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/mtm-vigias.env
+StateDirectory=mtm-vigias
+WorkingDirectory=/var/lib/mtm-vigias
+ExecStart=/usr/bin/node --max-old-space-size=384 /opt/mtm/vigias/vigias.js
+Restart=always
+RestartSec=10
+# Ao parar, o processo escreve um pulso vazio: a Vercel volta a correr as tarefas no minuto seguinte.
+TimeoutStopSec=10
+DynamicUser=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target
