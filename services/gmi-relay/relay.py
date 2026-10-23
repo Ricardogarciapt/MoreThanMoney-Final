@@ -3,14 +3,15 @@
 Relay MTProto multi-fonte → MTM (via sessão de UTILIZADOR do Ricardo).
 
 Lê canais Telegram onde o @RicardoSubtilGarcia está (o bot não precisa de lá estar —
-2026-09-09: o bot foi removido do GOLD DID, e a leitura passa TODA pela sessão) e
+2026-09-09: o bot foi removido do canal-fonte de então, e a leitura passa TODA pela sessão) e
 RE-PUBLICA no destino MTM através do endpoint relay-post (bot MoreThanMoney).
 Dedup por state file por-rota + dedup atómico no servidor. DRY_RUN=1 → só imprime.
 
 ENV:
   TELEGRAM_API_ID, TELEGRAM_API_HASH, GMI_SESSION_STRING   (sessão de utilizador — make_session.py)
   RELAY_ROUTES  JSON de rotas; se ausente usa o modo legado GMI_* (uma rota).
-      [{"name":"gold-did", "source": -1003452689502, "dest": "-1002424441843", "filter": "gold"}]
+      [{"name":"signal-master-elite", "source": -1003671953091, "dest": "-1002424441843", "filter": "gold"}]
+      (rota única desde 15/09; as fontes anteriores saíram e os ids delas não voltam a entrar aqui)
       · source: id numérico OU título/username exato — resolvido dos diálogos da sessão no arranque.
       · dest: chat Telegram MTM onde o bot publica (o relay-post deriva daí o canal da app).
       · filter: "gold" (setups/TP/SL/pips — o filtro clássico) ou "all" (tudo o que não for lixo).
@@ -57,7 +58,7 @@ def load_routes():
         # modo legado: uma rota a partir dos envs GMI_* (compatível com o .env atual do VPS)
         routes = [{
             "name": "legacy",
-            "source": int(os.environ.get("GMI_SOURCE_ID", "-1003812659078")),
+            "source": int(os.environ.get("GMI_SOURCE_ID", "-1003671953091")),  # Signal Master Elite
             "dest": os.environ.get("GMI_DEST_CHAT", PREMIUM_DEST),
             "filter": "gold",
         }]
@@ -119,6 +120,19 @@ def brand(text: str, header) -> str:
 
 NOISE = ("standby", "good morning traders", "new position", "position closed 🔒", "position closed")
 
+# Filtro "astro" (formato «XAUUSD I'm buying» + zona/stop/alvos, follow-ups «Tp2 hit») — de uma fonte
+# que já saiu; fica como modo de filtro disponível, sem rota a usá-lo.
+# O filtro "gold" não os apanha — exige «gold buy zone» ou pips, e ele não escreve nem uma
+# coisa nem outra. Sem esta lista a rota lia o canal e não passava um único sinal.
+ASTRO = [
+    re.compile(r"i.?m\s+(buying|selling)", re.I),
+    re.compile(r"entry\s*zone", re.I),
+    re.compile(r"\btp\s*\d\s*hit", re.I),
+    re.compile(r"\bsl\s*hit\b", re.I),
+    re.compile(r"stop\s*loss\b", re.I),
+    re.compile(r"\b(close|closed|be|break\s*even)\b", re.I),
+]
+
 def should_forward(text: str, mode: str) -> bool:
     if not text or len(text.strip()) < 4:
         return False
@@ -126,6 +140,8 @@ def should_forward(text: str, mode: str) -> bool:
         return False
     if mode == "all":
         return True
+    if mode == "astro":
+        return any(rx.search(text) for rx in ASTRO)
     return any(rx.search(text) for rx in KEEP)
 
 # ── Estado por rota ──────────────────────────────────────────────────────────
@@ -134,9 +150,9 @@ def load_state():
         s = json.load(open(STATE_FILE))
     except Exception:
         s = {}
-    # migração do state legado (flat) → por-rota, para não repetir o histórico do GOLD DID
+    # migração do state legado (flat) → por-rota, para não repetir o histórico já publicado
     if "last_id" in s and "routes" not in s:
-        s = {"routes": {"legacy": s, "gold-did": dict(s)}}
+        s = {"routes": {"legacy": s}}
     s.setdefault("routes", {})
     return s
 

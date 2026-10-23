@@ -68,6 +68,42 @@ RX_SYMBOL = re.compile(r"moeda\s*:\s*([A-Za-z]{6,8})", re.I)
 RX_SIDE = re.compile(r"a[cç][aã]o\s*:.*?(buy|sell|compra|venda)", re.I | re.S)
 RX_SL = re.compile(r"stop\s*loss\s*:?\s*([0-9]+\.?[0-9]*)", re.I)
 RX_TP = re.compile(r"take\s*profit\s*:?\s*([0-9]+\.?[0-9]*)", re.I)
+# CICLO DE VIDA (fecho/cancelamento MANUAL do James) → espelha nas ordens T2T dos seguidores.
+# NÃO apanha "TP hit"/"SL hit" (o SL/TP do próprio seguidor já os trata). FS_LIFECYCLE: "shadow"
+# (só regista, DEFAULT) | "live" (envia kind ao EXEC_URL).
+RX_CLOSE = re.compile(r"\bclos(e|ed|ing)\b|close\s*all|encerr|fechad|out\s+of\s+the\s+trade", re.I)
+RX_CANCEL = re.compile(r"\bcancel", re.I)
+RX_PAIR = re.compile(r"\b(XAU[A-Z]{3}|[A-Z]{3}(?:USD|JPY|GBP|EUR|AUD|CAD|CHF|NZD))\b", re.I)
+FS_LIFECYCLE = os.environ.get("FS_LIFECYCLE", "shadow").strip().lower()
+
+
+def lifecycle_kind(text):
+    if RX_CANCEL.search(text):
+        return "cancel"
+    if RX_CLOSE.search(text):
+        return "close"
+    return None
+
+
+def extract_pair(text):
+    m = RX_PAIR.search(text)
+    return m.group(1).upper() if m else None
+
+
+def post_exec_lifecycle(symbol, kind):
+    if not EXEC_URL:
+        print(f"[fs-relay] {kind.upper()} {symbol} sem EXEC_URL — ignoro"); return
+    body = {"symbol": symbol, "kind": kind}
+    data = json.dumps(body).encode()
+    req = urllib.request.Request(
+        EXEC_URL, data=data,
+        headers={"Content-Type": "application/json", "authorization": f"Bearer {RELAY_SECRET}"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=25) as r:
+            print(f"{kind} exec:", json.load(r))
+    except Exception as e:
+        print(f"erro {kind} exec:", e)
 
 
 def parse_signal(text: str):
@@ -169,6 +205,16 @@ async def run_once(client, state):
                 sent += 1
                 maybe_exec(sig)
                 await asyncio.sleep(1)
+            continue
+        # Ciclo de vida: fecho/cancelamento MANUAL do James → espelha nas ordens T2T dos seguidores.
+        cc = lifecycle_kind(m.message)
+        if cc:
+            sym = extract_pair(m.message)
+            if sym:
+                if FS_LIFECYCLE == "live":
+                    post_exec_lifecycle(sym, cc)
+                else:
+                    print(f"[fs-relay] SHADOW {cc.upper()} {sym} | texto: {m.message[:80]!r}")
     save_state(state)
     return len(batch), sent
 
