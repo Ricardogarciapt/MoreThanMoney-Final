@@ -185,6 +185,84 @@
 .others a:hover { color: var(--gold-light); border-color: rgba(210, 166, 60, 0.5); }
 .disclaimer { color: var(--text-3); font-size: 0.85rem; max-width: 60ch; margin: 40px auto 0; }
 
+/* Simulação 3D */
+.simSection { padding-top: clamp(64px, 8vw, 120px); }
+.sim { display: grid; gap: 18px; }
+.simStage {
+  position: relative; height: clamp(380px, 62vh, 680px); border-radius: var(--r-out); overflow: hidden;
+  border: 1px solid var(--border);
+  background: radial-gradient(120% 80% at 50% 0%, rgba(210, 166, 60, 0.1), transparent 60%), var(--surface);
+}
+.simCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.simCaption {
+  position: absolute; left: 20px; bottom: 20px; max-width: min(560px, calc(100% - 40px)); margin: 0;
+  padding: 12px 18px; border-radius: 16px; background: rgba(8, 8, 10, 0.72); border: 1px solid rgba(210, 166, 60, 0.35);
+  backdrop-filter: blur(10px); font-weight: 600; font-size: clamp(0.95rem, 1.3vw, 1.08rem); line-height: 1.4;
+}
+.simPanel {
+  position: absolute; right: 16px; top: 16px; min-width: 210px; padding: 14px 16px; border-radius: 16px;
+  background: rgba(8, 8, 10, 0.74); border: 1px solid var(--border-strong); backdrop-filter: blur(10px); font-size: 0.88rem;
+}
+.simPanelTitle { display: block; color: var(--gold-light); font-weight: 700; margin-bottom: 8px; }
+.simRow { display: flex; justify-content: space-between; gap: 16px; padding: 3px 0; color: var(--text-2); }
+.simRow b { font-weight: 700; color: #ef4b5a; }
+.simRow b[data-v="on"] { color: #22c58b; }
+@media (max-width: 640px) {
+  .simPanel { left: 12px; right: 12px; top: 12px; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; font-size: 0.78rem; }
+  .simPanelTitle { grid-column: 1 / -1; }
+  .simCaption { left: 12px; bottom: 12px; }
+}
+.simFoot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; align-items: center; }
+.simLegend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--text-2); font-size: 0.92rem; }
+.simLegend li { display: inline-flex; align-items: center; gap: 8px; }
+.simLegend i { width: 14px; height: 4px; border-radius: 2px; display: inline-block; }
+.simNote { margin: 0; color: var(--text-3); font-size: 0.85rem; }
+@media (prefers-reduced-motion: no-preference) {
+  .simCaption { animation: fade 0.6s var(--ease) both; }
+}
+
+/* Hero: o vídeo cresce até à largura toda enquanto entra no ecrã (--p vem do scroll). */
+.stage { --p: 1; }
+.stage .stageFrame { transform: scale(calc(0.86 + 0.14 * var(--p))); transform-origin: 50% 0; }
+
+/* Simulação 3D presa ao ecrã: a secção é alta e o palco fica sticky. */
+.simPin { position: relative; height: 320vh; }
+.simSticky { position: sticky; top: 0; height: 100dvh; display: flex; align-items: center; padding: 72px 0 24px; }
+.simSticky .container { width: 100%; }
+.simTitle {
+  font-weight: 800; text-transform: uppercase; letter-spacing: -0.03em; line-height: 1;
+  font-size: clamp(1.8rem, 4vw, 3.4rem); margin: 0 0 20px;
+}
+.simStageTall { height: min(64dvh, 640px); }
+
+/* Pan horizontal: o trilho anda para a esquerda com --p × --dist. */
+.pan { position: relative; --p: 0; --dist: 0px; }
+.panSticky { position: sticky; top: 0; min-height: 100dvh; display: flex; align-items: center; overflow: hidden; }
+.panTrack {
+  display: flex; gap: 20px; align-items: stretch; padding: 96px var(--gutter);
+  transform: translate3d(calc(var(--p) * var(--dist) * -1), 0, 0); will-change: transform;
+}
+.panIntro { flex: 0 0 min(520px, 82vw); align-self: center; padding-right: 24px; }
+.panIntro .sectionTitle { margin-bottom: 20px; }
+.panCard {
+  flex: 0 0 min(360px, 78vw); min-height: 340px; display: flex; flex-direction: column; justify-content: space-between;
+  padding: 32px; border-radius: var(--r-out); border: 1px solid var(--border); background: var(--surface);
+}
+.panCardAlt { background: linear-gradient(160deg, rgba(210, 166, 60, 0.16), rgba(210, 166, 60, 0.02) 70%), var(--surface); }
+.panCard p { margin: 0; font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 600; line-height: 1.35; }
+.panNum { font-weight: 800; font-size: 3rem; line-height: 1; color: transparent; -webkit-text-stroke: 1px rgba(210, 166, 60, 0.7); }
+.panShot { flex: 0 0 min(760px, 86vw); align-self: center; }
+.panShot figcaption { color: var(--text-3); font-size: 0.85rem; padding: 10px 8px 2px; }
+@media (max-width: 899px), (prefers-reduced-motion: reduce) {
+  .panSticky { position: relative; min-height: 0; overflow-x: auto; scroll-snap-type: x mandatory; }
+  .panTrack { transform: none; padding-block: 64px; }
+  .panTrack > * { scroll-snap-align: start; }
+}
+@media (max-width: 640px) {
+  .simPin { height: auto; }
+  .simSticky { position: relative; height: auto; padding: 64px 0; }
+}
+
 /* Movimento: só quando o sistema o permite */
 @media (prefers-reduced-motion: no-preference) {
   .rise { animation: rise 1.1s var(--ease) both; }

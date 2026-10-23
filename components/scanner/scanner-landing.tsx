@@ -1,8 +1,9 @@
 "use client"
 
-// Landing de venda de um scanner (/scanner/<slug>), no estilo do studify-site:
-// hero com vídeo, funcionalidades em bento, passos, ecrãs, preços e FAQ. Sem dependências novas:
-// o movimento é CSS + IntersectionObserver e desliga com prefers-reduced-motion.
+// Landing de venda de um scanner (/scanner/<slug>), no estilo evolutivo do studify-site: o vídeo
+// cresce ao descer, a simulação 3D fica presa e desenha o mercado com o scroll, e as
+// funcionalidades passam num pan horizontal. O movimento sai do scroll (variável --p), não de
+// listeners, e desliga com prefers-reduced-motion.
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
@@ -11,6 +12,8 @@ import { ArrowUpRight, Asterisk, Play, Volume2, VolumeX, Check, Plus } from "luc
 import type { ScannerData, ScannerProduct } from "@/lib/scanners-catalog"
 import type { ScannerLanding } from "@/lib/scanner-landings"
 import { CheckoutModal } from "@/components/scanner/checkout-modal"
+import { ScannerChart3D } from "@/components/scanner/scanner-chart-3d"
+import { useScrollProgress } from "@/components/scanner/use-scroll-progress"
 import s from "./scanner-landing.module.css"
 
 const display = Unbounded({ subsets: ["latin"], weight: ["600", "800"], display: "swap" })
@@ -76,6 +79,32 @@ export function ScannerLandingView({
   others: { slug: string; name: string }[]
 }) {
   const root = useReveal()
+  const stageRef = useRef<HTMLDivElement>(null)
+  const simRef = useRef<HTMLElement>(null)
+  const panRef = useRef<HTMLElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [panDist, setPanDist] = useState(0)
+  useScrollProgress(stageRef, "enter")
+  const simProgress = useScrollProgress(simRef, "pin")
+  useScrollProgress(panRef, "pin")
+
+  // Distância do pan = largura do trilho menos o ecrã; só em ecrãs largos (no telemóvel é scroll lateral).
+  useEffect(() => {
+    const track = trackRef.current
+    if (!track) return
+    const measure = () => {
+      const wide = window.matchMedia("(min-width: 900px) and (prefers-reduced-motion: no-preference)").matches
+      setPanDist(wide ? Math.max(0, track.scrollWidth - window.innerWidth) : 0)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(track)
+    window.addEventListener("resize", measure)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener("resize", measure)
+    }
+  }, [])
   const video = useRef<HTMLVideoElement>(null)
   const [muted, setMuted] = useState(true)
   const [checkout, setCheckout] = useState<{ product: ScannerProduct; name: string } | null>(null)
@@ -87,6 +116,7 @@ export function ScannerLandingView({
   const buyLabel = plans.length ? `Comprar por ${mainPlan.price}` : `Pack por ${PACK.price}`
 
   const gallery = scanner.gallery?.length ? scanner.gallery : [scanner.image]
+  const features = landing.features ?? scanner.features
 
   const playWithSound = () => {
     const v = video.current
@@ -135,7 +165,7 @@ export function ScannerLandingView({
           </div>
         </div>
 
-        <div className={s.stage}>
+        <div ref={stageRef} className={s.stage}>
           <div className={`${s.frame} ${s.stageFrame}`}>
             <div className={s.core}>
               {landing.video ? (
@@ -173,21 +203,42 @@ export function ScannerLandingView({
         </div>
       </div>
 
-      {/* FUNCIONALIDADES */}
-      <section className={s.section}>
-        <div className={s.container}>
-          <h2 className={`${display.className} ${s.sectionTitle} ${s.reveal}`}>
-            O que vês <span className={s.gold}>no gráfico.</span>
-          </h2>
-          <div className={s.bento}>
-            {scanner.features.map((f, i) => (
-              <article key={f} className={`${s.tile} ${s[`tile${i}`]} ${s.reveal}`}>
-                {i === 0 && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img className={s.tileImg} src={gallery[0]} alt="" loading="lazy" />
-                )}
-                <p className={s.tileText}>{f}</p>
+      {/* SIMULAÇÃO 3D: fica presa ao ecrã e o scanner desenha o mercado à medida que desces */}
+      <section ref={simRef} className={s.simPin} aria-label={`Simulação 3D do ${scanner.name}`}>
+        <div className={s.simSticky}>
+          <div className={s.container}>
+            <h2 className={`${display.className} ${s.simTitle}`}>
+              Vê-o <span className={s.gold}>a trabalhar.</span>
+            </h2>
+            <ScannerChart3D slug={landing.slug} progress={simProgress} tall />
+          </div>
+        </div>
+      </section>
+
+      {/* POR DENTRO: pan horizontal com as funcionalidades e os ecrãs reais */}
+      <section ref={panRef} className={s.pan} style={{ ["--dist" as string]: `${panDist}px`, height: panDist ? `calc(100dvh + ${panDist}px)` : undefined }}>
+        <div className={s.panSticky}>
+          <div ref={trackRef} className={s.panTrack}>
+            <div className={s.panIntro}>
+              <h2 className={`${display.className} ${s.sectionTitle}`}>
+                O que vês <span className={s.gold}>no gráfico.</span>
+              </h2>
+              <p className={s.body}>{landing.sub}</p>
+            </div>
+            {features.map((f, i) => (
+              <article key={f} className={`${s.panCard} ${i % 2 ? s.panCardAlt : ""}`}>
+                <span className={`${display.className} ${s.panNum}`}>{String(i + 1).padStart(2, "0")}</span>
+                <p>{f}</p>
               </article>
+            ))}
+            {gallery.map((src, i) => (
+              <figure key={src} className={`${s.frame} ${s.panShot}`}>
+                <div className={s.core}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={`${scanner.name} no TradingView, exemplo ${i + 1}`} loading="lazy" />
+                </div>
+                <figcaption>No TradingView, com dados reais.</figcaption>
+              </figure>
             ))}
           </div>
         </div>
@@ -198,7 +249,7 @@ export function ScannerLandingView({
         <div className={`${s.container} ${s.howGrid}`}>
           <div className={s.howSticky}>
             <h2 className={`${display.className} ${s.sectionTitle} ${s.reveal}`}>Do pagamento ao gráfico.</h2>
-            <p className={`${s.body} ${s.reveal}`}>{scanner.description}</p>
+            <p className={`${s.body} ${s.reveal}`}>{landing.description ?? scanner.description}</p>
           </div>
           <ol className={s.steps}>
             <li className={`${s.step} ${s.reveal}`}>
@@ -217,21 +268,14 @@ export function ScannerLandingView({
         </div>
       </section>
 
-      {/* ECRÃS + ESPECIFICAÇÕES */}
+      {/* ESPECIFICAÇÕES */}
       <section className={s.section}>
         <div className={s.container}>
-          <div className={s.shots}>
-            {gallery.map((src, i) => (
-              <figure key={src} className={`${s.frame} ${s.reveal} ${i === 0 ? s.shotMain : ""}`}>
-                <div className={s.core}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={`${scanner.name}, exemplo no gráfico ${i + 1}`} loading="lazy" />
-                </div>
-              </figure>
-            ))}
-          </div>
+          <h2 className={`${display.className} ${s.sectionTitle} ${s.reveal}`}>
+            Os detalhes <span className={s.gold}>técnicos.</span>
+          </h2>
           <ul className={s.specs}>
-            {scanner.techSpecs.map((t) => (
+            {(landing.specs ?? scanner.techSpecs).map((t) => (
               <li key={t} className={s.reveal}>
                 <Check size={18} className={s.gold} /> {t}
               </li>
