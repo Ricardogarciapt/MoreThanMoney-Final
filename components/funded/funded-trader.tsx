@@ -344,7 +344,7 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
     carteira: {
       nome: dados.conta?.login ? `Conta ${String(dados.conta.login)}` : null,
       alavancagem: dados.conta.alavancagem, margemLivre: vivo.margemLivre, saldo: dados.estado.saldo,
-      equity: vivo.equity, flutuante: vivo.flutuante,
+      equity: vivo.equity, flutuante: vivo.flutuante, nivelMargem: vivo.nivelMargemPct,
     },
     alertasGrafico: (symbol) => (alertas.alertas ?? []).filter((a) => a.ativo && a.symbol === symbol).map((a) => ({ id: a.id, preco: a.preco, nota: a.nota })),
     avisos: <AvisosConta dados={dados} vivo={vivo} />,

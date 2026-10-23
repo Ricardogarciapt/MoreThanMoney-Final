@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { ChevronDown, Loader2, Minus, Plus, X } from "lucide-react"
 import { normalizarVolume } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
+import AnelMargem from "./anel-margem"
 import FundedWatchlist from "./funded-watchlist"
 import { EstadoMercado, Sentimento } from "./estado-mercado"
 import { useRascunho } from "./rascunho-ordem"
@@ -176,9 +177,13 @@ function Conteudo({ t }: { t: TraderBase }) {
           <span className="font-mono text-[12px] text-zinc-300">{px(preco?.bid, s.digits)}</span>
           <EstadoMercado simbolo={s} compacto />
         </div>
-        <button onClick={() => setFolha("conta")} className="ml-auto flex min-h-[44px] flex-col items-end justify-center rounded-lg px-2 py-0.5 leading-tight active:bg-white/5" aria-label="ver conta">
-          <span className="text-[9.5px] uppercase tracking-wide text-zinc-500">Equity</span>
-          <span className={`font-mono text-[13px] font-semibold ${(t.carteira.flutuante ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{usd(t.carteira.equity)} $</span>
+        {/* Equity + anel do nível de margem: um toque abre o resumo da conta */}
+        <button onClick={() => setFolha("conta")} className="ml-auto flex min-h-[44px] items-center gap-2 rounded-lg px-2 py-0.5 active:bg-white/5" aria-label="ver conta">
+          <span className="flex flex-col items-end leading-tight">
+            <span className="text-[9.5px] uppercase tracking-wide text-zinc-500">Equity</span>
+            <span className={`font-mono text-[13px] font-semibold ${(t.carteira.flutuante ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{usd(t.carteira.equity)} $</span>
+          </span>
+          <AnelMargem nivel={t.carteira.nivelMargem} />
         </button>
       </div>
       {t.avisos}
@@ -193,9 +198,16 @@ function Conteudo({ t }: { t: TraderBase }) {
     </div>
   )
 
+  // A margem que esta ordem prende, antes de carregar: a mesma conta do ticket (rascunho), não outra.
+  const margemOrdem = k.resumo.margem
   const botoes = t.podeNegociar && (
-    // SELL | volume | BUY — 44 px de altura no mínimo (dedo)
-    <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-stretch gap-1.5 border-t border-[#2A2E39] bg-[#131722] px-2 py-1.5">
+    <>
+    <div className="flex shrink-0 items-center justify-center gap-1 border-t border-[#2A2E39] bg-[#131722] pt-1 text-[11px] text-zinc-400">
+      Margem da ordem: <span className="font-mono text-zinc-200">{margemOrdem == null ? "—" : `≈ ${usd(margemOrdem)} $`}</span>
+      {k.erros.margem && <span className="text-rose-300">· insuficiente</span>}
+    </div>
+    {/* SELL | volume | BUY — 44 px de altura no mínimo (dedo) */}
+    <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-stretch gap-1.5 bg-[#131722] px-2 py-1.5">
       <button disabled={semPreco || ocupado} onClick={() => carregar("sell")} aria-label={`Vender ${t.volume} ${s.symbol}${umClique.ligado ? " (num clique)" : ""}`} className="min-h-[48px] rounded-xl bg-[#F23645] py-2 text-white active:brightness-90 disabled:opacity-40">
         <span className="block text-[11px] font-bold tracking-wide">SELL</span>
         <span className="block font-mono text-[15px] font-semibold">{px(preco?.bid, s.digits)}</span>
@@ -210,6 +222,7 @@ function Conteudo({ t }: { t: TraderBase }) {
         <span className="block font-mono text-[15px] font-semibold">{px(preco?.ask, s.digits)}</span>
       </button>
     </div>
+    </>
   )
 
   const gavetaEl = (

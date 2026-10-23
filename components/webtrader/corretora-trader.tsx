@@ -399,7 +399,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
     carteira: {
       nome: `${NOME_PLATAFORMA[plataforma]} · conta real`,
       alavancagem: ficha?.alavancagem_max || 100, margemLivre: c.margemLivre, saldo: c.saldo,
-      equity: c.equity, flutuante: c.flutuante,
+      equity: c.equity, flutuante: c.flutuante, nivelMargem: c.nivelMargem ?? null,
     },
     // Regras de prop firm, diário e alertas não existem nesta conta: nada a desenhar no gráfico.
     alertasGrafico: () => [],

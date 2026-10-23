@@ -96,6 +96,8 @@ export interface TraderBase {
     saldo: number | null
     equity: number | null
     flutuante: number | null
+    /** Equity ÷ margem usada, em %. null sem posições (não há margem a medir). */
+    nivelMargem: number | null
   }
   /** Linhas de alerta no gráfico — vazio nas contas que não têm alertas. */
   alertasGrafico: (symbol: string) => AlertaGrafico[]
