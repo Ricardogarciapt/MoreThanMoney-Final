@@ -1006,3 +1006,27 @@ export function precoAntesDaLoja(p: { tipo: string; preco_cents: number; preco_b
   const base = Math.round(Number(p.preco_base_cents ?? 0) || 0)
   return p.tipo === 'produto' && base > Math.round(Number(p.preco_cents) || 0) ? base : null
 }
+
+/**
+ * SCANNERS DA CASA: o plano Stripe que a ficha do marketplace compra directamente.
+ *
+ * Os scanners vivem no marketplace com `checkout_externo_url` = `/scanner#<scanner>`, o que levava
+ * o comprador para outra página e obrigava a escolher de novo. A ficha passa a pedir o username do
+ * TradingView (sem ele não há acesso a dar) e abre o Stripe com o MESMO plano que o /scanner usa —
+ * o preço vem do `lookup_key` (ver `resolverPrecoStripe`), por isso não há dois preços a manter.
+ * Nulo = não é um scanner, segue o caminho normal.
+ */
+const PLANOS_SCANNER: Record<string, Record<string, string>> = {
+  goldkiller: { semestral: 'goldkiller_semestral', vitalicio: 'goldkiller_lifetime' },
+  aurumflow: { semestral: 'aurumflow_semestral', vitalicio: 'aurumflow_lifetime' },
+  'mtm-scanner': { semestral: 'mtm_scanner_semestral', vitalicio: 'mtm_scanner_lifetime' },
+  trendshot: { semestral: 'trendshot_semestral', vitalicio: 'trendshot_lifetime' },
+  pack: { mensal: 'scanners_monthly' },
+}
+
+export function planoScannerDe(p: { slug: string; checkout_externo_url?: string | null }): string | null {
+  const m = /^\/scanner#([a-z0-9-]+)$/.exec(String(p.checkout_externo_url ?? '').trim())
+  if (!m) return null
+  const variante = /-(semestral|vitalicio|mensal)$/.exec(p.slug)?.[1]
+  return (variante && PLANOS_SCANNER[m[1]]?.[variante]) || null
+}
