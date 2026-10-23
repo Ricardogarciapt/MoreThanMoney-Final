@@ -20,6 +20,7 @@ const CuponsSemGuarda = dynamic(() => import('@/components/admin/cupoes-admin'),
 
 const ECRAS: Record<string, React.ComponentType> = {
   contas: dynamic(() => import('@/app/admin/centro/page'), { ssr: false, loading: carregar }),
+  telegram: dynamic(() => import('@/components/admin/telegram-painel'), { ssr: false, loading: carregar }),
   agenda: dynamic(() => import('@/components/admin/agenda-admin'), { ssr: false, loading: carregar }),
   'whatsapp:conversas': dynamic(() => import('@/components/admin/whatsapp-crm'), { ssr: false, loading: carregar }),
   'whatsapp:escrever': dynamic(() => import('@/app/admin/whatsapp/page'), { ssr: false, loading: carregar }),
