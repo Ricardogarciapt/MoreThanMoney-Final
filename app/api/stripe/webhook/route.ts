@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendScannerAccessEmail, sendMTMcopierSetupNotification } from '@/lib/email-service'
 import { sanitizeEnv } from '@/lib/env-sanitize'
 import { createMailTransporter, mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } from '@/lib/mail-transport'
@@ -75,10 +75,7 @@ const SCANNER_PLAN_NAMES: Record<string, string> = {
 }
 
 const stripe = getStripeClient()
-const supabase = createClient(
-  sanitizeEnv(process.env.NEXT_PUBLIC_SUPABASE_URL),
-  sanitizeEnv(process.env.SUPABASE_SERVICE_ROLE_KEY)
-)
+const supabase = getSupabaseAdmin()
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
