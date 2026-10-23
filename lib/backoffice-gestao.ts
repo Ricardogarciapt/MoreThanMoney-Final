@@ -8,7 +8,7 @@ import type { Capacidade } from '@/lib/backoffice-papeis'
  * árvore), ficam como duas vistas do MESMO módulo.
  *
  * `exige` é a capacidade que abre o módulo — o menu, a página e a API perguntam pela mesma:
- *   · `bo.dono`             → só o dono (contas, agentes, dashboard, acessos)
+ *   · `bo.dono`             → só o dono (contas, Telegram, agentes, dashboard, acessos)
  *   · `bo.gestao_crm`       → acesso «Clientes & CRM» (agenda, WhatsApp, leads, formulários)
  *   · `bo.gestao_comercial` → acesso «Comercial» (tráfego, cupões)
  */
@@ -26,6 +26,8 @@ export type ModuloGestao = {
 export const MODULOS_GESTAO: readonly ModuloGestao[] = [
   { slug: 'contas', nome: 'Contas & cópia', grupo: 'Operação', exige: 'bo.dono',
     descricao: 'O centro de controlo: contas (uma linha por conta), sinais, estratégias, cópia, utilizadores e o MTM Funded.' },
+  { slug: 'telegram', nome: 'Telegram', grupo: 'Operação', exige: 'bo.dono',
+    descricao: 'Os bots da VPS: se os relays estão vivos, o que cada rota publicou e os teus grupos sem o bot.' },
   { slug: 'agenda', nome: 'Agenda', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
     descricao: 'As marcações da agenda própria (/agendar), disponibilidade e tipos de reunião.' },
   { slug: 'whatsapp', nome: 'WhatsApp', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',

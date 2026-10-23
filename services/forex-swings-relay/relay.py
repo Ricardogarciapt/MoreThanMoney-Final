@@ -24,7 +24,7 @@ ENV:
   FS_POLL_SEC    default 45
   FS_LOOKBACK_H  default 3
 """
-import os, re, json, time, asyncio, datetime, urllib.request
+import os, re, json, time, socket, asyncio, datetime, urllib.request
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
@@ -40,6 +40,27 @@ DRY_RUN = os.environ.get("FS_DRY_RUN", "1") == "1"
 STATE_FILE = os.environ.get("FS_STATE_FILE", "fs_relay_state.json")
 POLL_SEC = int(os.environ.get("FS_POLL_SEC", "45"))
 LOOKBACK_H = int(os.environ.get("FS_LOOKBACK_H", "3"))
+VERSAO = "2026-10-23"
+
+# ── Pulso para o backoffice (Gestão → Telegram) ─────────────────────────────
+# De 5 em 5 min, POST a /api/telegram/relay-pulso com o mesmo segredo do relay-post. O site grava em
+# servicos_pulso; a VPS nunca tem a chave do Supabase. Falhar o pulso nunca pára o relay.
+PULSO_URL = os.environ.get("RELAY_PULSO_URL", RELAY_POST_URL.replace("/relay-post", "/relay-pulso"))
+PULSO_SEC = int(os.environ.get("RELAY_PULSO_SEC", "300"))
+_ultimo_pulso = 0.0
+
+def pulso(relay, rotas, erro=None):
+    global _ultimo_pulso
+    agora = time.time()
+    if DRY_RUN or not RELAY_SECRET or PULSO_SEC <= 0 or agora - _ultimo_pulso < PULSO_SEC:
+        return
+    _ultimo_pulso = agora
+    body = json.dumps({"relay": relay, "versao": VERSAO, "host": socket.gethostname(), "rotas": rotas, "erro": erro}).encode()
+    req = urllib.request.Request(PULSO_URL, data=body, headers={"Content-Type": "application/json", "authorization": f"Bearer {RELAY_SECRET}"})
+    try:
+        urllib.request.urlopen(req, timeout=10).close()
+    except Exception as e:
+        print("aviso: pulso falhou:", e)
 
 HEADER = "🌊 MTM Auto FOREX Swings"
 
@@ -159,9 +180,21 @@ async def main():
     if not await client.is_user_authorized():
         print("sessão não autorizada"); return
     print(f"[fs-relay] {'DRY-RUN' if DRY_RUN else 'LIVE'} | fonte {SOURCE_ID} → swings {DEST_CHAT} | exec={'ON' if EXEC_URL else 'OFF'}")
+    publicadas = 0
     while True:
-        scanned, sent = await run_once(client, state)
-        print(f"[fs-relay] passagem: {scanned} novas, {sent} publicadas (last_id={state['last_id']})")
+        try:
+            scanned, sent = await run_once(client, state)
+            publicadas += sent or 0
+            print(f"[fs-relay] passagem: {scanned} novas, {sent} publicadas (last_id={state['last_id']})")
+        except Exception as e:
+            # Como antes: o erro deita o serviço abaixo e o systemd reinicia-o. Antes disso, o pulso
+            # leva o erro ao backoffice (fora do intervalo de 5 min).
+            global _ultimo_pulso
+            _ultimo_pulso = 0.0
+            pulso("fs-relay", [], str(e)[:300])
+            raise
+        pulso("fs-relay", [{"nome": "james-swings", "fonte": str(SOURCE_ID), "destino": str(DEST_CHAT),
+                            "last_id": state.get("last_id", 0), "publicadas": publicadas, "erro": None, "activa": True}])
         if POLL_SEC <= 0:
             break
         await asyncio.sleep(POLL_SEC)

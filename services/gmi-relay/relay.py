@@ -33,7 +33,7 @@ Robustez (herdada do relay GMI 2026-08-10, agora POR ROTA):
   - Passa reply_to_text + source_chat_id/source_message_id/reply_to_source_id ao endpoint →
     threading no destino + dedup idempotente no servidor por id da fonte.
 """
-import os, re, json, asyncio, datetime, hashlib, urllib.request
+import os, re, json, asyncio, datetime, hashlib, socket, time, urllib.request
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
@@ -46,6 +46,7 @@ POLL_SEC = int(os.environ.get("GMI_POLL_SEC", "45"))
 LOOKBACK_H = int(os.environ.get("GMI_LOOKBACK_H", "3"))
 EDIT_LOOKBACK_H = int(os.environ.get("GMI_EDIT_LOOKBACK_H", "6"))
 PREMIUM_DEST = "-1002424441843"
+VERSAO = "2026-10-23"
 
 # ── Rotas ────────────────────────────────────────────────────────────────────
 def load_routes():
@@ -144,6 +145,26 @@ def save_state(s):
 
 RELAY_POST_URL = os.environ.get("RELAY_POST_URL", "https://www.morethanmoney.pt/api/telegram/relay-post")
 RELAY_SECRET = os.environ.get("RELAY_SECRET", "")
+
+# ── Pulso para o backoffice (Gestão → Telegram) ─────────────────────────────
+# De 5 em 5 min, POST a /api/telegram/relay-pulso com o mesmo segredo do relay-post. O site grava em
+# servicos_pulso; a VPS nunca tem a chave do Supabase. Falhar o pulso nunca pára o relay.
+PULSO_URL = os.environ.get("RELAY_PULSO_URL", RELAY_POST_URL.replace("/relay-post", "/relay-pulso"))
+PULSO_SEC = int(os.environ.get("RELAY_PULSO_SEC", "300"))
+_ultimo_pulso = 0.0
+
+def pulso(relay, rotas, erro=None):
+    global _ultimo_pulso
+    agora = time.time()
+    if DRY_RUN or not RELAY_SECRET or PULSO_SEC <= 0 or agora - _ultimo_pulso < PULSO_SEC:
+        return
+    _ultimo_pulso = agora
+    body = json.dumps({"relay": relay, "versao": VERSAO, "host": socket.gethostname(), "rotas": rotas, "erro": erro}).encode()
+    req = urllib.request.Request(PULSO_URL, data=body, headers={"Content-Type": "application/json", "authorization": f"Bearer {RELAY_SECRET}"})
+    try:
+        urllib.request.urlopen(req, timeout=10).close()
+    except Exception as e:
+        print("aviso: pulso falhou:", e)
 
 def bot_send(dest, source_id, text, reply_to=None, source_msg_id=None, reply_to_source_id=None, reply_to_text=None, edit=False, app_only=False):
     """Publica via o ENDPOINT do site (token válido na Vercel).
@@ -314,15 +335,24 @@ async def main():
         state["routes"].setdefault(r["name"], {"last_id": 0})
     print(f"[relay] {'DRY-RUN' if DRY_RUN else 'LIVE'} | rotas: " +
           ", ".join(f"{r['name']} {r['_source_id']}→{r['dest']}" for r in routes))
+    contas = {r["name"]: {"publicadas": 0, "erro": None} for r in routes}
     while True:
         for r in routes:
             try:
                 scanned, sent = await run_route(client, r, state["routes"][r["name"]])
+                contas[r["name"]]["publicadas"] += sent or 0
+                contas[r["name"]]["erro"] = None
                 if scanned or sent:
                     print(f"[relay:{r['name']}] {scanned} novas, {sent} publicadas (last_id={state['routes'][r['name']]['last_id']})")
             except Exception as e:
+                contas[r["name"]]["erro"] = str(e)[:300]
                 print(f"[relay:{r['name']}] erro na passagem: {e}")
         save_state(state)
+        pulso("gmi-relay", [{
+            "nome": r["name"], "fonte": str(r["_source_id"]), "destino": str(r["dest"]),
+            "last_id": state["routes"][r["name"]].get("last_id", 0), "publicadas": contas[r["name"]]["publicadas"],
+            "erro": contas[r["name"]]["erro"], "activa": r.get("enabled", True) is not False,
+        } for r in routes])
         if POLL_SEC <= 0:
             break
         await asyncio.sleep(POLL_SEC)
