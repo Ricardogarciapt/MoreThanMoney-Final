@@ -37,6 +37,9 @@ Robustez (herdada do relay GMI 2026-08-10, agora POR ROTA):
 import os, re, json, asyncio, datetime, hashlib, socket, time, urllib.request
 from telethon import TelegramClient
 from telethon.sessions import StringSession
+from telethon.tl.functions.channels import CreateChannelRequest, InviteToChannelRequest, EditAdminRequest
+from telethon.tl.functions.messages import ExportChatInviteRequest
+from telethon.tl.types import ChatAdminRights
 
 API_ID = int(os.environ["TELEGRAM_API_ID"])
 API_HASH = os.environ["TELEGRAM_API_HASH"]
@@ -49,7 +52,7 @@ EDIT_LOOKBACK_H = int(os.environ.get("GMI_EDIT_LOOKBACK_H", "6"))
 PREMIUM_DEST = "-1002424441843"
 RELAY_POST_URL = os.environ.get("RELAY_POST_URL", "https://www.morethanmoney.pt/api/telegram/relay-post")
 RELAY_SECRET = os.environ.get("RELAY_SECRET", "")
-VERSAO = "2026-10-23b"
+VERSAO = "2026-10-23c"
 
 # ── Rotas ────────────────────────────────────────────────────────────────────
 # Desde 23/10 as rotas vivem no backoffice (Gestão → Telegram → Forwarder, tabela telegram_rotas).
@@ -388,6 +391,74 @@ async def preparar_rotas(client, routes, state):
           (", ".join(f"{r['name']} {r['_source_id']}→{r['dest']}" for r in prontas) or "nenhuma"))
     return prontas
 
+# ── Grupos e canais novos ────────────────────────────────────────────────────
+# Gestão → Telegram → Grupos novos (tabela telegram_grupos_novos). O Bot API não cria grupos; a
+# sessão pessoal cria. Lido ao mesmo ritmo das rotas. GRUPOS_MAX_DIA também é contado AQUI (no
+# state), para que um site com um erro nunca ponha a conta a criar grupos em série.
+GRUPOS_SITE = os.environ.get("RELAY_GRUPOS_SITE", "1") != "0"
+GRUPOS_MAX_DIA = int(os.environ.get("RELAY_GRUPOS_MAX_DIA", "3"))
+
+def _site_json(url, corpo=None):
+    dados = json.dumps(corpo).encode() if corpo is not None else None
+    req = urllib.request.Request(url, data=dados, headers={"authorization": f"Bearer {RELAY_SECRET}", "content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.load(resp)
+
+def _url_pedidos():
+    return os.environ.get("RELAY_PEDIDOS_URL", RELAY_POST_URL.replace("/relay-post", "/relay-pedidos"))
+
+DIREITOS_BOT = ChatAdminRights(change_info=True, post_messages=True, edit_messages=True, delete_messages=True,
+                               ban_users=True, invite_users=True, pin_messages=True, manage_call=False)
+
+async def criar_um(client, p):
+    canal = p["tipo"] == "canal"
+    r = await client(CreateChannelRequest(title=p["titulo"], about=p.get("descricao") or "", megagroup=not canal, broadcast=canal))
+    ent = r.chats[0]
+    chat_id = f"-100{ent.id}"
+    aviso = None
+    if p.get("bot"):
+        try:
+            bot = await client.get_input_entity(p["bot"])
+            if not canal:
+                await client(InviteToChannelRequest(ent, [bot]))
+            await client(EditAdminRequest(ent, bot, DIREITOS_BOT, rank="MTM"))
+        except Exception as e:
+            aviso = f"criado, mas o bot @{p['bot']} não entrou: {e}"[:300]
+    convite = None
+    try:
+        convite = (await client(ExportChatInviteRequest(ent))).link
+    except Exception as e:
+        aviso = aviso or f"criado, sem link de convite: {e}"[:300]
+    return {"id": p["id"], "ok": True, "chat_id": chat_id, "convite": convite, "erro": aviso}
+
+async def criar_pedidos(client, state):
+    if not GRUPOS_SITE or not RELAY_SECRET or DRY_RUN:
+        return
+    agora = time.time()
+    feitos = [t for t in state.get("grupos_criados", []) if agora - t < 86400]
+    if len(feitos) >= GRUPOS_MAX_DIA:
+        return
+    try:
+        # Pede só os que ainda pode criar hoje: o site reserva o que entrega.
+        d = _site_json(f"{_url_pedidos()}?max={GRUPOS_MAX_DIA - len(feitos)}")
+    except Exception as e:
+        print("aviso: pedidos de grupos falharam:", e)
+        return
+    for p in (d.get("pedidos") or [])[: GRUPOS_MAX_DIA - len(feitos)]:
+        try:
+            res = await criar_um(client, p)
+            feitos.append(time.time())
+            print(f"[grupos] criado «{p['titulo']}» {res['chat_id']}")
+        except Exception as e:
+            res = {"id": p["id"], "ok": False, "erro": str(e)[:300]}
+            print(f"[grupos] falhou «{p['titulo']}»: {e}")
+        try:
+            _site_json(_url_pedidos(), res)
+        except Exception as e:
+            print("aviso: resultado do grupo não chegou ao site:", e)
+        await asyncio.sleep(5)
+    state["grupos_criados"] = feitos
+
 async def main():
     site = rotas_do_site()
     routes = load_routes(site)
@@ -412,6 +483,7 @@ async def main():
                     versao_rotas = assinatura(novas)
                     for r in routes:
                         contas.setdefault(r["name"], {"publicadas": 0, "erro": None})
+            await criar_pedidos(client, state)
         for r in routes:
             try:
                 scanned, sent = await run_route(client, r, state["routes"][r["name"]])

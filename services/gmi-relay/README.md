@@ -47,3 +47,14 @@ journalctl -u gmi-relay -f              # ver logs
 ```
 
 Ir live: pôr `GMI_DRY_RUN=0` no `.env` e `sudo systemctl restart gmi-relay`.
+
+## Grupos e canais novos (desde 23/10)
+
+Gestão → Telegram → Grupos e bots novos grava pedidos em `telegram_grupos_novos`. A cada leitura
+das rotas, o relay pede os pendentes a `/api/telegram/relay-pedidos?max=N` (mesmo segredo), cria-os
+com a sessão pessoal (`CreateChannelRequest`), põe o bot escolhido como administrador, exporta o
+link de convite e devolve o resultado por POST ao mesmo endpoint.
+
+- `RELAY_GRUPOS_MAX_DIA` (omissão 3): limite contado no state do relay, além do limite do site.
+- `RELAY_GRUPOS_SITE=0` desliga. Com `GMI_DRY_RUN=1` nunca cria nada.
+- Um pedido reservado que falhe a meio fica `a_criar` e não volta a sair: nunca se cria duas vezes.
