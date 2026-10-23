@@ -19,19 +19,24 @@ const CalendarioEconomico = dynamic(() => import("./calendario-economico"), { ss
  * O MODO PRO — a plataforma de secretária.
  *
  *   ┌ barra: conta · métricas ao vivo · estado do mercado · sentimento · 1/2/2/4 gráficos · atalhos ┐
- *   │ lista  │  gráficos (1/2/4)                                 │ ticket | calendário │
- *   │ (24 h, │───────────────────────────────────────────────────│                     │
- *   │ mini-  │  Posições | Ordens | Histórico | Estatísticas |   │                     │
- *   │ gráf.) │  Diário | Alertas | Conta                         │                     │
- *   └──────────────────────────────────────────────────────────────────────────────────┘
+ *   │  gráficos (1/2/4)                                       │ lista (24 h, mini-gráf.) │
+ *   │                                                         │──────────────────────────│
+ *   │                                                         │ ticket | calendário      │
+ *   │─────────────────────────────────────────────────────────┴──────────────────────────│
+ *   │  Posições | Ordens | Histórico | Estatísticas | Diário | Alertas | Conta           │
+ *   └────────────────────────────────────────────────────────────────────────────────────┘
+ *
+ * A arrumação segue a das plataformas de corretora que os alunos já conhecem (TradeLocker e afins):
+ * o olho fica no gráfico, a mão à direita (escolher símbolo → ticket) e as posições em baixo com a
+ * largura toda, onde cabem as colunas sem rolar.
  *
  * Painéis redimensionáveis com `react-resizable-panels` (já instalado; `autoSaveId` guarda os
  * tamanhos no browser). A lista e o ticket recolhem-se arrastando até ao fim. Abaixo de 768 px o
  * PRO empilha na vertical (gráficos · ticket · painel) — quem escolhe PRO no telemóvel quer tudo,
  * mesmo apertado; o SIMPLE é que é pensado para o dedo.
  *
- * TABLET (768–1179 px, lib/webtrader/layout.ts): a lista começa recolhida e o ticket fica mais
- * largo (tamanhos guardados à parte) — com 22 % de 768 px o ticket tinha 170 px e não cabia.
+ * TABLET (768–1179 px, lib/webtrader/layout.ts): a coluna da direita fica mais larga (tamanhos
+ * guardados à parte) — com 22 % de 768 px o ticket tinha 170 px e não cabia.
  *
  * «Mostrar gráfico» desligado: a célula dos gráficos encolhe até à barra de ferramentas (em
  * grelha, cada célula até à sua barra) e o painel de baixo sobe com o espaço todo — nada de um
@@ -44,6 +49,7 @@ export default function LayoutPro({ t }: { t: TraderBase }) {
   const [layout, setLayoutEstado] = useState<Layout>("1")
   const [lateral, setLateral] = useState<"ticket" | "calendario">("ticket")
   const ticketRef = useRef<ImperativePanelHandle>(null)
+  const direitaRef = useRef<ImperativePanelHandle>(null)
   const tabletOuMais = useMediaQuery(MQ_TABLET_OU_MAIS, true)
   const largo = useMediaQuery(MQ_LARGO, true)
   const estreito = !tabletOuMais
@@ -57,6 +63,7 @@ export default function LayoutPro({ t }: { t: TraderBase }) {
 
   const abrirTicket = () => {
     setLateral("ticket")
+    direitaRef.current?.expand()
     ticketRef.current?.expand()
     setTimeout(() => (document.querySelector<HTMLInputElement>('[data-ticket] input[aria-label="volume em lotes"], [data-ticket] input')?.focus()), 60)
   }
@@ -84,6 +91,21 @@ export default function LayoutPro({ t }: { t: TraderBase }) {
 
   const puxador = (vertical = false) => (
     <PanelResizeHandle className={`group relative shrink-0 bg-[#2A2E39] transition-colors hover:bg-[#D2A63C]/60 data-[resize-handle-state=drag]:bg-[#D2A63C] ${vertical ? "h-1" : "w-1"}`} />
+  )
+
+  // A coluna da direita: a lista por cima do ticket (como nas plataformas de corretora).
+  const direita = (
+    <Panel id="direita" ref={direitaRef} order={2} defaultSize={tablet ? 40 : 28} minSize={tablet ? 30 : 18} maxSize={tablet ? 55 : 42} collapsible collapsedSize={0}>
+      <PanelGroup direction="vertical" autoSaveId={tablet ? "mtmfunded-pro2-dir-tablet" : "mtmfunded-pro2-dir"}>
+        <Panel id="lista" order={1} defaultSize={55} minSize={15} collapsible collapsedSize={0}>
+          <div className="h-full p-1"><FundedWatchlist precos={t.vivos} selecionado={simbolo.symbol} onSelecionar={t.selecionar} onVisiveis={t.setVisiveis} detalhe preencher /></div>
+        </Panel>
+        {puxador(true)}
+        <Panel id="ticket" order={2} defaultSize={45} minSize={20} collapsible collapsedSize={0} ref={ticketRef}>
+          {lateralConteudo}
+        </Panel>
+      </PanelGroup>
+    </Panel>
   )
 
   return (
@@ -117,34 +139,37 @@ export default function LayoutPro({ t }: { t: TraderBase }) {
             </div>
           )
         ) : (
-          <PanelGroup direction="horizontal" autoSaveId={tablet ? "mtmfunded-pro-h-tablet" : "mtmfunded-pro-h"}>
-            <Panel id="lista" order={1} defaultSize={tablet ? 0 : 18} minSize={tablet ? 16 : 12} maxSize={tablet ? 34 : 30} collapsible collapsedSize={0}>
-              <div className="h-full p-1"><FundedWatchlist precos={t.vivos} selecionado={simbolo.symbol} onSelecionar={t.selecionar} onVisiveis={t.setVisiveis} detalhe preencher /></div>
-            </Panel>
-            {puxador()}
-            <Panel id="centro" order={2} defaultSize={tablet ? 63 : 60} minSize={30}>
-              {graficoVisivel ? (
-                <PanelGroup direction="vertical" autoSaveId="mtmfunded-pro-v">
-                  <Panel id="graficos" order={1} defaultSize={62} minSize={20}>
-                    {graficos(layout)}
-                  </Panel>
-                  {puxador(true)}
-                  <Panel id="baixo" order={2} defaultSize={38} minSize={10} collapsible collapsedSize={4}>
+          // Gráfico em cima à esquerda; à direita a lista por cima do ticket; o painel de baixo com a
+          // largura toda. Ids de guardar novos: os tamanhos da arrumação antiga não servem nesta.
+          graficoVisivel ? (
+            <PanelGroup direction="vertical" autoSaveId={tablet ? "mtmfunded-pro2-v-tablet" : "mtmfunded-pro2-v"}>
+              <Panel id="cima" order={1} defaultSize={60} minSize={20}>
+                <PanelGroup direction="horizontal" autoSaveId={tablet ? "mtmfunded-pro2-h-tablet" : "mtmfunded-pro2-h"}>
+                  <Panel id="graficos" order={1} defaultSize={tablet ? 60 : 72} minSize={30}>{graficos(layout)}</Panel>
+                  {puxador()}
+                  {direita}
+                </PanelGroup>
+              </Panel>
+              {puxador(true)}
+              <Panel id="baixo" order={2} defaultSize={40} minSize={10} collapsible collapsedSize={4}>
+                <PainelInferior paineis={t.paineis} chaveGuardar={t.chavePaineis} />
+              </Panel>
+            </PanelGroup>
+          ) : (
+            // Sem gráfico: fica só a barra dele e o painel de baixo sobe para o lugar, ao lado da coluna.
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="shrink-0">{graficos(layout)}</div>
+              <div className="min-h-0 flex-1 border-t border-[#2A2E39]">
+                <PanelGroup direction="horizontal" autoSaveId={tablet ? "mtmfunded-pro2-sem-grafico-tablet" : "mtmfunded-pro2-sem-grafico"}>
+                  <Panel id="baixo" order={1} defaultSize={tablet ? 60 : 72} minSize={30}>
                     <PainelInferior paineis={t.paineis} chaveGuardar={t.chavePaineis} />
                   </Panel>
+                  {puxador()}
+                  {direita}
                 </PanelGroup>
-              ) : (
-                <div className="flex h-full min-h-0 flex-col">
-                  <div className="shrink-0">{graficos(layout)}</div>
-                  <div className="min-h-0 flex-1 border-t border-[#2A2E39]"><PainelInferior paineis={t.paineis} chaveGuardar={t.chavePaineis} /></div>
-                </div>
-              )}
-            </Panel>
-            {puxador()}
-            <Panel id="ticket" order={3} defaultSize={tablet ? 37 : 22} minSize={tablet ? 28 : 16} maxSize={tablet ? 48 : 36} collapsible collapsedSize={0} ref={ticketRef}>
-              {lateralConteudo}
-            </Panel>
-          </PanelGroup>
+              </div>
+            </div>
+          )
         )}
       </div>
     </ProvedorRascunho>
