@@ -136,7 +136,7 @@ export async function estatisticasDaContaServidor(
   const [{ data: fechadas }, { data: abertas }, { data: fotos }] = await Promise.all([
     db.from('funded_positions')
       .select('id, mae_id, symbol, direcao, volume, pnl, comissao, swap, aberta_em, fechada_em, origem, comentario, motivo_fecho, risco_inicial')
-      .eq('account_id', conta.id).eq('estado', 'fechada').order('fechada_em', { ascending: true }).limit(10000),
+      .eq('account_id', conta.id).eq('estado', 'fechada').is('fora_estatisticas', null).order('fechada_em', { ascending: true }).limit(10000),
     db.from('funded_positions').select('id').eq('account_id', conta.id).eq('estado', 'aberta'),
     db.from('funded_equity_snapshots').select('em, saldo, equity').eq('account_id', conta.id)
       .order('em', { ascending: false }).limit(2000),

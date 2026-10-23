@@ -747,10 +747,11 @@ export async function estadoCompleto(
     db.from('funded_orders').select('*').eq('account_id', conta.id).eq('estado', 'pendente')
       .order('criada_em', { ascending: false }),
     opcoes.regras !== undefined ? Promise.resolve(opcoes.regras) : regrasDaConta(conta),
-    // O desempenho mede a conta INTEIRA, não só as 100 do histórico visível.
+    // O desempenho mede a conta INTEIRA, não só as 100 do histórico visível — menos as trades
+    // marcadas fora das estatísticas (migração 205: «teste interno», ficam no histórico).
     leve ? nada : db.from('funded_positions')
       .select('id, mae_id, symbol, direcao, volume, preco_entrada, preco_fecho, pnl, comissao, swap, fechada_em, origem, comentario')
-      .eq('account_id', conta.id).eq('estado', 'fechada').order('fechada_em', { ascending: true }).limit(5000),
+      .eq('account_id', conta.id).eq('estado', 'fechada').is('fora_estatisticas', null).order('fechada_em', { ascending: true }).limit(5000),
     segue
       ? db.from('mtmauto_providers').select('slug, nome, ativo').eq('slug', segue).maybeSingle()
       : Promise.resolve({ data: null }),
