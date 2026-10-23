@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { exigirGestao } from '@/lib/backoffice-sessao'
 import { classificarDialogos, lerDialogos, resumoDoMapa } from '@/lib/prospecao/dialogos'
-import { agregarRotas, estadoDoPulso, NOME_RELAY, RELAYS_CONHECIDOS, servicoDoRelay, type LinhaRelayLog } from '@/lib/telegram/painel-logica'
+import { agregarRotas, estadoDoPulso, NOME_RELAY, RELAY_PARADO, RELAYS_CONHECIDOS, servicoDoRelay, type LinhaRelayLog } from '@/lib/telegram/painel-logica'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
     return {
       relay,
       nome: NOME_RELAY[relay] ?? relay,
+      parado: RELAY_PARADO[relay] ?? null,
       estado: estadoDoPulso(p?.em as string | undefined, agora),
       em: (p?.em as string | undefined) ?? null,
       versao: (p?.versao as string | undefined) ?? null,
