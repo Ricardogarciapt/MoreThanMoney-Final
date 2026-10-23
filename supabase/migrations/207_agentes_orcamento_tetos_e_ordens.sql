@@ -1,4 +1,4 @@
--- 207 — ORÇAMENTO DOS AGENTES: DAR SALDO, TETOS E O LIVRO DA DESPESA
+-- 207 — ORÇAMENTO DOS AGENTES (SALDO, TETOS, LIVRO DA DESPESA) E AS ORDENS DO DONO
 --
 -- O dono passa a poder carregar saldo num agente, pôr-lhe um teto de gasto por dia e por mês, e
 -- registar uma despesa à mão. Tudo fica no livro (`agentes_eventos`), nunca só na linha.
@@ -75,3 +75,25 @@ $$;
 
 revoke all on function public.agentes_movimentar(uuid, text, numeric, text) from public, anon, authenticated;
 grant execute on function public.agentes_movimentar(uuid, text, numeric, text) to service_role;
+
+-- ═══ AS ORDENS DO DONO ═══════════════════════════════════════════════════════════════════════
+--
+-- Uma ordem escrita a um agente (no painel, no chat IA da Gestão ou no Telegram). O motor do AIOS
+-- lê as abertas pela rota do motor, põe-nas no prompt do ciclo seguinte e devolve a resposta do
+-- agente. A ordem nunca se apaga: cancela-se, e fica no livro com o que o agente disse.
+create table if not exists public.agentes_ordens (
+  id uuid primary key default gen_random_uuid(),
+  agente_id uuid not null references public.agentes_equipa(id) on delete cascade,
+  texto text not null check (length(texto) between 1 and 4000),
+  origem text not null default 'painel' check (origem in ('painel', 'chat', 'telegram', 'aios')),
+  estado text not null default 'pendente' check (estado in ('pendente', 'entregue', 'em_curso', 'feita', 'recusada', 'cancelada')),
+  resposta text,
+  criado_por text,
+  criado_em timestamptz not null default now(),
+  entregue_em timestamptz,
+  respondida_em timestamptz
+);
+alter table public.agentes_ordens enable row level security;
+create index if not exists agentes_ordens_abertas_idx on public.agentes_ordens (agente_id, criado_em)
+  where estado in ('pendente', 'entregue', 'em_curso');
+create index if not exists agentes_ordens_agente_idx on public.agentes_ordens (agente_id, criado_em desc);
