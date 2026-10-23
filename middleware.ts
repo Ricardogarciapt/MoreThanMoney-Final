@@ -554,8 +554,12 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - Static files are automatically excluded by Next.js
+     * - api/cron/ (crons: só precisam do CRON_SECRET, que a própria rota valida)
+     * - ficheiros estáticos por extensão (imagens, vídeo, fontes, pdf)
+     *
+     * O Next NÃO exclui sozinho os ficheiros de public/: sem isto cada imagem e cada cron era uma
+     * invocação de middleware paga (a saída cedo lá dentro poupava CPU, não a invocação).
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/cron/|.*\\.(?:png|jpe?g|gif|webp|svg|ico|pdf|mp4|mp3|woff2?|ttf|eot)$).*)',
   ],
 }

@@ -16,20 +16,19 @@ const carregar = () => (
     <Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" />
   </div>
 )
-const op = { ssr: false, loading: carregar }
 
 const ECRAS: Record<string, React.ComponentType> = {
-  contas: dynamic(() => import('@/app/admin/centro/page'), op),
-  agenda: dynamic(() => import('@/components/admin/agenda-admin'), op),
-  'whatsapp:conversas': dynamic(() => import('@/components/admin/whatsapp-crm'), op),
-  'whatsapp:escrever': dynamic(() => import('@/app/admin/whatsapp/page'), op),
-  leads: dynamic(() => import('@/app/admin/social/leads/page'), op),
-  formularios: dynamic(() => import('@/app/admin/forms/page'), op),
-  trafego: dynamic(() => import('@/components/admin/trafego-painel'), op),
-  cupoes: dynamic(() => import('@/app/admin/coupons/page'), op),
-  'agentes:painel': dynamic(() => import('@/components/admin/agentes-equipa'), op),
-  'agentes:arvore': dynamic(() => import('@/app/admin/agentes/page'), op),
-  gestao: dynamic(() => import('@/app/dashboard-gestao/page'), op),
+  contas: dynamic(() => import('@/app/admin/centro/page'), { ssr: false, loading: carregar }),
+  agenda: dynamic(() => import('@/components/admin/agenda-admin'), { ssr: false, loading: carregar }),
+  'whatsapp:conversas': dynamic(() => import('@/components/admin/whatsapp-crm'), { ssr: false, loading: carregar }),
+  'whatsapp:escrever': dynamic(() => import('@/app/admin/whatsapp/page'), { ssr: false, loading: carregar }),
+  leads: dynamic(() => import('@/app/admin/social/leads/page'), { ssr: false, loading: carregar }),
+  formularios: dynamic(() => import('@/app/admin/forms/page'), { ssr: false, loading: carregar }),
+  trafego: dynamic(() => import('@/components/admin/trafego-painel'), { ssr: false, loading: carregar }),
+  cupoes: dynamic(() => import('@/app/admin/coupons/page'), { ssr: false, loading: carregar }),
+  'agentes:painel': dynamic(() => import('@/components/admin/agentes-equipa'), { ssr: false, loading: carregar }),
+  'agentes:arvore': dynamic(() => import('@/app/admin/agentes/page'), { ssr: false, loading: carregar }),
+  gestao: dynamic(() => import('@/app/dashboard-gestao/page'), { ssr: false, loading: carregar }),
 }
 
 export default function Modulo({ slug }: { slug: string }) {

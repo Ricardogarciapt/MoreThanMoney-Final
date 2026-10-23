@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { runPerpsPositionMonitor } from '@/lib/mtmcopy/perps-position-monitor'
+import { vigiaNaVps } from '@/lib/vigias/delegacao'
 
 /**
  * CRON: monitor de POSIÇÃO dos Perpétuos (Bybit) — acompanha a posição-mestre e publica o ciclo de
@@ -16,6 +17,8 @@ export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // Corre no VPS (mtm-vigias) enquanto o pulso estiver fresco — aqui só sai.
+  if (await vigiaNaVps('perps-position-monitor')) return NextResponse.json({ ok: true, vps: true })
   try {
     const result = await runPerpsPositionMonitor()
     return NextResponse.json({ success: true, ...result })
