@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     const [{ data: sims }, { data: fechadas }, { data: abertas }, { data: provs }] = await Promise.all([
       db.from('mtm_trading_accounts').select('id, mt5_login, saldo_inicial, sim_saldo, sim_equity, segue_estrategia, estado').in('id', fundedIds),
       db.from('funded_positions').select('id, account_id, mae_id, symbol, direcao, volume, preco_entrada, preco_fecho, pnl, comissao, swap, fechada_em, origem, comentario')
-        .in('account_id', fundedIds).eq('estado', 'fechada').limit(10000),
+        .in('account_id', fundedIds).eq('estado', 'fechada').is('fora_estatisticas', null).limit(10000),
       db.from('funded_positions').select('id, account_id').in('account_id', fundedIds).eq('estado', 'aberta'),
       db.from('mtmauto_providers').select('slug, nome'),
     ])
