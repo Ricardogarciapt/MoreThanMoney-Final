@@ -87,6 +87,13 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
     appSlug: 'ideias-e-sinais' as const,
     envVars: ['TELEGRAM_CHANNEL_FOREX_SWINGS', 'TELEGRAM_FOREX_SWINGS_CHAT_ID'],
   },
+  trendshot: {
+    // Supergrupo desde 12/10/2026 (o grupo de origem era -5443595284). Id visto pelo bot em mtmcopy_telegram_discovered.
+    chatId: '-1004357489588',
+    title: 'Ideias e sinais - Scanner TrendShot',
+    appSlug: 'sinais-trendshot' as const,
+    envVars: ['TELEGRAM_CHANNEL_TRENDSHOT', 'TELEGRAM_TRENDSHOT_CHAT_ID'],
+  },
   /**
    * MTM System — a comunidade. NÃO é canal de sinais: não roteia para estratégia nenhuma.
    * Está aqui para o painel mostrar o conjunto dos grupos oficiais, que é o que o admin tem
