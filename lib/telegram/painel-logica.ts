@@ -16,6 +16,11 @@ export const NOME_RELAY: Record<string, string> = {
   'pv-relay': 'PrimeVerse → Sensei',
 }
 
+/** Relays desligados de propósito: o painel mostra-os como parados, não como avariados. */
+export const RELAY_PARADO: Record<string, string> = {
+  'pv-relay': 'Parado desde 04/10',
+}
+
 export const servicoDoRelay = (relay: string) => `telegram:${relay}`
 
 /** O relay pulsa de 5 em 5 min; 12 min sem pulso é um ciclo falhado mais folga. */
