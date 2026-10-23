@@ -23,7 +23,8 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { Loader2, ArrowLeft, Tag, Clock, ExternalLink } from "lucide-react"
-import { euros, galeriaDoProduto, lojaExternaDe, nomeDoAutor, precoAntesDaLoja } from "@/lib/marketplace/regras"
+import { euros, galeriaDoProduto, lojaExternaDe, nomeDoAutor, planoScannerDe, precoAntesDaLoja } from "@/lib/marketplace/regras"
+import { supabase } from "@/lib/supabase"
 import { codigoDeAgenteGuardado } from "@/lib/agentes/atribuicao-browser"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
 import { CaixaConsentimentoEmail } from "@/components/consentimento-email-caixa"
@@ -104,6 +105,8 @@ export default function FichaProduto({ slug }: { slug: string }) {
   const [cupao, setCupao] = useState("")
   const [referral, setReferral] = useState("")
   const [aComprar, setAComprar] = useState(false)
+  // Só nos scanners: sem o username do TradingView não há acesso a dar ao script.
+  const [tvUsername, setTvUsername] = useState("")
   const [erro, setErro] = useState<{ texto: string; campo?: string } | null>(null)
 
   useEffect(() => {
@@ -128,6 +131,8 @@ export default function FichaProduto({ slug }: { slug: string }) {
 
   const comprar = useCallback(async () => {
     if (!produto || produto === "nao-existe") return
+    const plano = planoScannerDe(produto)
+    if (plano) return comprarScanner(plano)
     setAComprar(true)
     setErro(null)
     try {
@@ -157,7 +162,53 @@ export default function FichaProduto({ slug }: { slug: string }) {
     } finally {
       setAComprar(false)
     }
-  }, [produto, cupao, referral, email, consentimentoEmail])
+  }, [produto, cupao, referral, email, consentimentoEmail, tvUsername])
+
+  /**
+   * SCANNERS: direto ao Stripe, pelas mesmas rotas do /scanner. Com sessão vai o token (a compra
+   * fica na conta); sem sessão vai o email, e a conta é criada pelo webhook como no /scanner.
+   */
+  async function comprarScanner(planId: string) {
+    const tv = tvUsername.trim()
+    if (!tv) {
+      setErro({ texto: "O teu nome de utilizador do TradingView é necessário para activar o acesso.", campo: "tv" })
+      return
+    }
+    setAComprar(true)
+    setErro(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      let r: Response
+      if (session?.access_token) {
+        r = await fetch("/api/stripe/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ planId, tradingview_username: tv, sponsorCode: referral.trim() }),
+        })
+      } else {
+        const em = email.trim()
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+          setErro({ texto: "Indica um email válido para receberes o acesso.", campo: "email" })
+          return
+        }
+        r = await fetch("/api/stripe/scanner-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planId, email: em, tvUsername: tv, sponsorCode: referral.trim() }),
+        })
+      }
+      const j = await r.json().catch(() => ({}))
+      if (r.ok && j.url) {
+        window.location.href = j.url
+        return
+      }
+      setErro({ texto: j.error ?? "Não foi possível abrir o pagamento." })
+    } catch {
+      setErro({ texto: "Não foi possível abrir o pagamento." })
+    } finally {
+      setAComprar(false)
+    }
+  }
 
   if (produto === null) {
     return (
@@ -392,6 +443,9 @@ export default function FichaProduto({ slug }: { slug: string }) {
                     />
                     {erro?.campo === "email" && <span className="mt-1 block text-xs text-red-300">{erro.texto}</span>}
                   </label>
+                  {/* Os scanners vão pelas rotas do /scanner, que não guardam o telemóvel — não se
+                      pede o que não se usa. */}
+                  {!planoScannerDe(p) && (<>
                   <label className="block">
                     <span className="text-xs text-zinc-400">Telemóvel (opcional)</span>
                     <input
@@ -410,6 +464,7 @@ export default function FichaProduto({ slug }: { slug: string }) {
                   <p className="text-[11px] leading-relaxed text-zinc-500">
                     O telemóvel serve só para te avisarmos se houver algum problema com o teu acesso.
                   </p>
+                  </>)}
 
                   <p className="text-[11px] leading-relaxed text-zinc-500">
                     Criamos-te a conta com este email e enviamos-te o acesso depois do pagamento.{" "}
@@ -420,6 +475,23 @@ export default function FichaProduto({ slug }: { slug: string }) {
                 </>
               )}
 
+              {planoScannerDe(p) && (
+                <label className="block">
+                  <span className="text-xs text-zinc-400">Nome de utilizador TradingView *</span>
+                  <input
+                    value={tvUsername}
+                    onChange={(e) => { setTvUsername(e.target.value); setErro(null) }}
+                    className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                    placeholder="O teu @username no TradingView"
+                  />
+                  {erro?.campo === "tv" && <span className="mt-1 block text-xs text-red-300">{erro.texto}</span>}
+                  <span className="mt-1 block text-[11px] text-zinc-500">
+                    Após o pagamento recebes um email com as instruções de acesso ao script no TradingView.
+                  </span>
+                </label>
+              )}
+
+              {!planoScannerDe(p) && (
               <label className="block">
                 <span className="text-xs text-zinc-400">Código de desconto (opcional)</span>
                 <input
@@ -430,6 +502,7 @@ export default function FichaProduto({ slug }: { slug: string }) {
                 />
                 {erro?.campo === "cupao" && <span className="mt-1 block text-xs text-red-300">{erro.texto}</span>}
               </label>
+              )}
 
               <label className="block">
                 <span className="text-xs text-zinc-400">Quem te indicou (opcional)</span>
@@ -442,7 +515,7 @@ export default function FichaProduto({ slug }: { slug: string }) {
                 {erro?.campo === "referral" && <span className="mt-1 block text-xs text-red-300">{erro.texto}</span>}
               </label>
 
-              <CaixaConsentimentoEmail marcada={consentimentoEmail} onMudar={setConsentimentoEmail} />
+              {!planoScannerDe(p) && <CaixaConsentimentoEmail marcada={consentimentoEmail} onMudar={setConsentimentoEmail} />}
 
               <button
                 onClick={() => void comprar()}
@@ -456,7 +529,9 @@ export default function FichaProduto({ slug }: { slug: string }) {
               {erro && !erro.campo && <p className="text-xs text-red-300">{erro.texto}</p>}
 
               <p className="text-[11px] leading-relaxed text-zinc-500">
-                Pagamento seguro via Stripe. Depois de pagar, o produto aparece na tua biblioteca.
+                {planoScannerDe(p)
+                  ? "Pagamento seguro via Stripe · SSL encriptado"
+                  : "Pagamento seguro via Stripe. Depois de pagar, o produto aparece na tua biblioteca."}
               </p>
             </>
           ) : (
