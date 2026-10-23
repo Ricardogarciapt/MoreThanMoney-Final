@@ -493,6 +493,13 @@ async function processarAlerta(request: NextRequest) {
 
   const supabase = getSupabaseAdmin()
 
+  // MTM Auto Trendshot (23/10): caminho próprio — o alerta só traz a direcção e o preço; os níveis
+  // calculam-se como no Pine. Fica à parte dos gates dos outros scanners.
+  if ((url.searchParams.get("strategy") || "").toLowerCase().trim() === "trendshot") {
+    const { processarTrendshot } = await import("@/lib/sinais/trendshot-webhook")
+    return NextResponse.json(await processarTrendshot(payload, rawBody))
+  }
+
   // Campos do alerta TradingView
   const ticker = pick(payload, ["ticker", "symbol", "pair", "instrument"])
   const exchange = pick(payload, ["exchange", "broker"])
@@ -1617,13 +1624,19 @@ async function processarAlerta(request: NextRequest) {
      * abre a mesma trade: a mestre é a SIM, e a MetaApi só serve para entregar às contas dos clientes.
      */
     let aurumNaMestreSim = false
-    // A mestre da Aurum só recebe o que é INEQUIVOCAMENTE da Aurum (199).
-    if (isAurumFlow && estrategia === "aurum-flow" && initSignalKind === "entry") {
+    // A mestre da Aurum só recebe o que é INEQUIVOCAMENTE cripto do canal «Ideias de Cripto» (199).
+    // 23/10 (pedido do dono): desde 15/10 os perpétuos que chegam a esse canal (e ao Telegram dos
+    // perpétuos) vêm do «MTM Sensei X» (estrategia `sensei`, classe crypto_perp) e a Aurum ORB está
+    // calada — a mestre cripto ficou sem nada. O cripto do Sensei X passa a ir à mesma mestre; o ouro
+    // do Sensei continua na mestre `sensei` (classe gold_btc, nunca crypto_perp).
+    const criptoParaMestreAurum =
+      assetClass === "crypto_perp" && (estrategia === "aurum-flow" || estrategia === "sensei")
+    if (criptoParaMestreAurum && initSignalKind === "entry") {
       try {
         const { decidirAurumParaMestre } = await import("@/lib/mestres/aurum")
         const entradaAurum = entry ?? price ?? null
         const d = decidirAurumParaMestre({
-          aurum: true,
+          aurum: criptoParaMestreAurum,
           classe: assetClass,
           tipoSinal: "entry",
           ticker: String(v.symbol ?? ticker ?? ""),

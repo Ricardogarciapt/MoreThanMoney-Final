@@ -151,6 +151,13 @@ if (T2T_SOURCES.some((s) => (s.key as string) === 'james')) regista('t2t-source:
 if (!INTAKE_CHANNELS.some((c) => (c.key as string) === 'forex_swings')) regista('intake-channels: falta o interruptor `forex_swings` (publicação do Forex Swings)')
 if (intakeKeyDoEspelhoTelegram('ideias-e-sinais') !== 'forex_swings') regista('intake-channels: `ideias-e-sinais` tem de mapear para `forex_swings`')
 if (T2T_SIGNAL_CHANNELS.includes('ideias-e-sinais') || CANAIS_ACOMPANHADOS.includes('ideias-e-sinais')) regista('tap-to-trade-channels: `ideias-e-sinais` voltou aos canais negociáveis/acompanhados')
+// 23/10 (pedido do dono): o Forex Swings volta a ser SEGUIDO por preço (CANAIS_SO_SEGUIMENTO), só para
+// os cartões de seguimento (chat + Telegram). Execução continua proibida: `james` tem de ser fonte só medida.
+{
+  const { fonteSoMedida, isT2TEntrySignal } = require('../t2t-source') as typeof import('../t2t-source')
+  if (!fonteSoMedida('james')) regista('signal-tracker: `ideias-e-sinais` acompanhado mas `james` abriria ordem na conta-espelho')
+  if (isT2TEntrySignal('ideias-e-sinais', '🔵 USDCAD BUY\nSL: 1.3848\nTP: 1.392\n🌊 Forex Swings')) regista('t2t-source: Forex Swings voltou a ser entrada negociável')
+}
 if (!DEFAULT_CHAT_CHANNELS.some((c) => c.slug === 'ideias-e-sinais')) regista('default-chat-channels: falta o canal `ideias-e-sinais` (Forex Swings reaberto a 07/10)')
 
 // ── 07/10: FOREX SWINGS = SÓ PUBLICAÇÃO. Nem estratégia, nem mestre, nem rota, nem execução. ──────

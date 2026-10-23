@@ -27,8 +27,10 @@ const admin = { is_active: true, user_type: 'admin' }
 const inativo = { is_active: false, user_type: 'admin' }
 
 console.log('\n1. regras de sempre')
-t('Premium/Sensei/GoldKiller pagos; o resto aberto a membros activos', () => {
-  for (const s of ['premium-ideas', 'sensei-scanner', 'sinais-goldkiller']) {
+// 23/10 (dono): Premium e superior = Premium, Sensei, Ideias de Cripto e Edge; GoldKiller passa a membros.
+t('Premium/Sensei/Cripto/Edge pagos; o resto aberto a membros activos', () => {
+  assert.equal(canReadChannel('sinais-goldkiller', membro), true)
+  for (const s of ['premium-ideas', 'sensei-scanner', 'aurum-flow', 'sinais-scanner-mtm']) {
     assert.equal(canReadChannel(s, membro), false)
     assert.equal(canReadChannel(s, premium), true)
     assert.equal(canReadChannel(s, vipTipo), true)
