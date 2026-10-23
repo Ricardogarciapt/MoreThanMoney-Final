@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { correrGestaoAutoDeTodas } from '@/lib/webtrader/gestao-auto-servidor'
+import { vigiaNaVps } from '@/lib/vigias/delegacao'
 
 /**
  * CRON: gestão automática (Auto BE / Auto Trailing) das posições em contas de CORRETORA do WebTrader.
@@ -19,6 +20,8 @@ export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // Corre no VPS (mtm-vigias) enquanto o pulso estiver fresco — aqui só sai.
+  if (await vigiaNaVps('webtrader-gestao-auto')) return NextResponse.json({ ok: true, vps: true })
   try {
     return NextResponse.json({ success: true, ...(await correrGestaoAutoDeTodas()) })
   } catch (err) {

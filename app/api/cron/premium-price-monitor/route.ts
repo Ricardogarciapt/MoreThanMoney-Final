@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { runPremiumPriceMonitor } from '@/lib/mtmcopy/premium-price-monitor'
 import { emSegundoPlano } from '@/lib/mtmcopy/metaapi-quota'
+import { vigiaNaVps } from '@/lib/vigias/delegacao'
 
 /**
  * CRON: monitor de preço Premium — fecha parciais/BE/trailing por PREÇO.
@@ -15,6 +16,8 @@ export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // Corre no VPS (mtm-vigias) enquanto o pulso estiver fresco — aqui só sai.
+  if (await vigiaNaVps('premium-price-monitor')) return NextResponse.json({ ok: true, vps: true })
   try {
     const result = await emSegundoPlano(() => runPremiumPriceMonitor()) // leituras saltam com a quota estourada; ordens nunca
     return NextResponse.json({ success: true, ...result })

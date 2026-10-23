@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { runSignalTracker } from '@/lib/mtmcopy/signal-tracker'
 import { emSegundoPlano } from '@/lib/mtmcopy/metaapi-quota'
+import { vigiaNaVps } from '@/lib/vigias/delegacao'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -14,6 +15,8 @@ export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // Corre no VPS (mtm-vigias) enquanto o pulso estiver fresco — aqui só sai.
+  if (await vigiaNaVps('signal-tracker')) return NextResponse.json({ ok: true, vps: true })
   try {
     const r = await emSegundoPlano(() => runSignalTracker()) // leituras saltam com a quota estourada; ordens nunca
     if (r.eventos.length) console.log('[CRON signal-tracker]', r.eventos.join(' · '))

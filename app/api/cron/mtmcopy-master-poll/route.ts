@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { pollMasterAccounts } from '@/lib/mtmcopy/master-poll'
+import { vigiaNaVps } from '@/lib/vigias/delegacao'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -13,6 +14,8 @@ export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // Corre no VPS (mtm-vigias) enquanto o pulso estiver fresco — aqui só sai.
+  if (await vigiaNaVps('mtmcopy-master-poll')) return NextResponse.json({ ok: true, vps: true })
   try {
     const result = await pollMasterAccounts()
     console.log('[CRON master-poll]', result)

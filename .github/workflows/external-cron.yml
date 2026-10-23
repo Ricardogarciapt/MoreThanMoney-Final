@@ -1,15 +1,12 @@
 name: External Cron Runner (MoreThanMoney)
 
-# Backup opcional — o plano Vercel Pro corre estes crons via vercel.json.
+# Backup MANUAL — o plano Vercel Pro já corre estes crons via vercel.json.
+# Os horários automáticos saíram a 23/10/2026: chamavam os mesmos endpoints uma segunda vez
+# (invocações e eventos de observabilidade a dobrar na fatura Vercel). Fica só o botão
+# «Run workflow» para quando a Vercel falhar.
 # CRON_SECRET deve ser idêntico em Vercel + GitHub Secrets.
 
 on:
-  schedule:
-    - cron: '*/15 * * * *'
-    - cron: '0 * * * *'
-    - cron: '0 3 * * *'
-    - cron: '0 8 * * *'
-    - cron: '0 9 * * *'
   workflow_dispatch: {}
 
 env:
