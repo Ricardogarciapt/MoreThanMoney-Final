@@ -98,6 +98,7 @@ const PARES_AMBITO = [
 for (const p of PAPEIS) {
   const caps = capacidadesDe([p])
   teste(`${p} não gere papéis`, !caps.has('bo.papeis_gerir'))
+  teste(`${p} não entra na área do dono`, !caps.has('bo.dono'))
   teste(`${p} não vê o extracto de todos`, !caps.has('bo.extracto_todos'))
   teste(`${p} entra no backoffice`, caps.has('bo.entrar'))
   teste(`${p} tem nome apresentável`, typeof PAPEL_NOME[p] === 'string' && PAPEL_NOME[p].length > 0)

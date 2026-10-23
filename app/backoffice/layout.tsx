@@ -24,6 +24,7 @@ const MENU: Array<{ href: string; label: string; exige: Capacidade }> = [
   { href: '/backoffice/tarefas', label: 'Tarefas', exige: 'bo.tarefas_proprias' },
   { href: '/backoffice/equipa', label: 'A minha equipa', exige: 'bo.equipa_ver' },
   { href: '/backoffice/material', label: 'Materiais', exige: 'bo.material' },
+  { href: '/backoffice/dono', label: 'Dono', exige: 'bo.dono' },
 ]
 
 export default async function BackofficeLayout({ children }: { children: React.ReactNode }) {
@@ -85,7 +86,8 @@ export default async function BackofficeLayout({ children }: { children: React.R
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      {/* A área do dono traz ecrãs largos (o centro de contas, a gestão): ocupa a largura toda. */}
+      <main className="mx-auto max-w-6xl px-4 py-8 has-[[data-largo]]:max-w-none">{children}</main>
     </div>
   )
 }
