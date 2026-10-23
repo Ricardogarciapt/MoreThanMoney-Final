@@ -548,7 +548,7 @@ export async function enviarConfirmacaoInscricao(participanteId: string): Promis
         <li>A classificação é pública e actualiza de hora a hora.</li>
       </ul>
 
-      <a href="${site}/mtmfunded/tradingtournament/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:13px 26px;border-radius:8px;font-weight:600;font-size:15px;">
+      <a href="${site}/mtmfunded/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:13px 26px;border-radius:8px;font-weight:600;font-size:15px;">
         Abrir a minha área
       </a>
 

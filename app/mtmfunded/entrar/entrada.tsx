@@ -22,7 +22,7 @@ export default function Entrada({
 }) {
   const t = useT()
   const { redirect } = use(searchParams)
-  const destino = redirect && redirect.startsWith('/mtmfunded') ? redirect : '/mtmfunded/tradingtournament/dashboard'
+  const destino = redirect && redirect.startsWith('/mtmfunded') ? redirect : '/mtmfunded/dashboard'
 
   const [modo, setModo] = useState<'entrar' | 'criar'>('entrar')
   const [dados, setDados] = useState({ email: '', password: '' })

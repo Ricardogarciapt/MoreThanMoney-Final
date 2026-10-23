@@ -47,7 +47,7 @@ export function construirEmailAjuste(d: DadosEmailAjuste): { subject: string; ht
       ${linha('Data', esc(quando))}
     </table>
     <div style="text-align:center;margin:22px 0 6px">
-      <a href="${getSiteUrl()}/mtmfunded/tradingtournament/dashboard" style="display:inline-block;background:#D2A63C;color:#0b0b0f;text-decoration:none;font-weight:700;font-size:15px;padding:12px 26px;border-radius:10px">Abrir a minha conta</a>
+      <a href="${getSiteUrl()}/mtmfunded/dashboard" style="display:inline-block;background:#D2A63C;color:#0b0b0f;text-decoration:none;font-weight:700;font-size:15px;padding:12px 26px;border-radius:10px">Abrir a minha conta</a>
     </div>
     <p style="margin:16px 0 0;font-size:13px;line-height:1.7;color:#a9a9b8">Se alguma coisa não bater certo, responde a este email com a referência acima.</p>
     <p style="margin:18px 0 0;font-size:14px;line-height:1.6">Até já,<br/><b>Ricardo Garcia</b><br/><span style="color:#8a8a9a">MoreThanMoney · MTM Funded</span></p>`

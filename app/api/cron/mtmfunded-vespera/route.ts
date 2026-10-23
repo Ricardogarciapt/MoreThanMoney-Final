@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
           login: c.mt5_login as string,
           servidor: (c.servidor as string) || 'TheTradingMaster-Live',
           alavancagem: Number(c.alavancagem ?? 100),
-          urlPainel: `${getSiteUrl()}/mtmfunded/tradingtournament/dashboard?conta=${c.id}&credenciais=1`,
+          urlPainel: `${getSiteUrl()}/mtmfunded/dashboard?conta=${c.id}&credenciais=1`,
           regras: (t.regras ?? null) as Record<string, number | string> | null,
           qrMetaTrader: (c.qrcode_url as string) ?? null,
         })

@@ -269,7 +269,7 @@ async function enviarEmailDaOferta(input: {
         meses. Um de cada vez: o próximo chega quando este terminar — passes ou não.
       </p>
 
-      <a href="${site}/mtmfunded/tradingtournament/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">
+      <a href="${site}/mtmfunded/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">
         Abrir a minha área
       </a>
 

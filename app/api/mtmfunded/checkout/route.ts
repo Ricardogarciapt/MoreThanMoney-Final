@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
             },
           },
         ],
-    success_url: buildStripeReturnUrl('/mtmfunded/tradingtournament/dashboard', {
+    success_url: buildStripeReturnUrl('/mtmfunded/dashboard', {
       programa: programa.slug,
     }),
     cancel_url: buildStripeReturnUrl('/mtmfunded', {}, { includeSessionPlaceholder: false }),
