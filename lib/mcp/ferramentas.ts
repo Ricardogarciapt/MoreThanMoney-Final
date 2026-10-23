@@ -5,6 +5,7 @@ import { lerFunis } from '@/lib/funis'
 import { andar, bracosDeEnsaio, funilPorId } from '@/lib/funis-motor'
 import { correrRadar } from '@/lib/instagram/radar'
 import { listarAutomacoes } from '@/lib/automacoes'
+import { acharAgente, darOrdem, listarOrdens } from '@/lib/agentes/ordens'
 import { tocaPremium, validarRota } from '@/lib/telegram/rotas'
 import { validarMenu } from '@/lib/telegram/menu-bot'
 import { gravarMenu, lerMenu } from '@/lib/telegram/menu-bot-servidor'
@@ -206,6 +207,48 @@ export const FERRAMENTAS: Ferramenta[] = [
           texto: String(p.caption ?? '').slice(0, 200),
         })),
       }
+    },
+  },
+
+  {
+    nome: 'dar_ordem_agente',
+    descricao:
+      'Dá uma ordem do dono a um agente da equipa (CEO, Sensei, Vendedora…). Chega-lhe no próximo ' +
+      'ciclo do motor do AIOS e a resposta dele fica na ordem (ver ordens_dos_agentes). Reversível: ' +
+      'cancela-se enquanto não está feita. A ordem não passa por cima das leis do motor (dinheiro, ' +
+      'trading e apagar continuam a pedir o dono).',
+    esquema: {
+      type: 'object',
+      properties: {
+        agente: { type: 'string', description: 'Nome ou código do agente, tal como aparece em Gestão → Agentes' },
+        texto: { type: 'string', description: 'A ordem, em PT-PT, com o que se quer e até quando' },
+      },
+      required: ['agente', 'texto'],
+      additionalProperties: false,
+    },
+    correr: async (a) => {
+      const r = await darOrdem(getSupabaseAdmin(), { agente: String(a.agente ?? ''), texto: String(a.texto ?? ''), origem: 'chat', por: 'dono (chat IA)' })
+      return r.ok ? { ok: true, agente: r.agente, ordem_id: r.ordem.id, estado: r.ordem.estado } : { ok: false, erro: r.erro }
+    },
+  },
+
+  {
+    nome: 'ordens_dos_agentes',
+    descricao: 'As ordens dadas aos agentes, com o estado (pendente, entregue, em curso, feita, recusada, cancelada) e a resposta de cada agente.',
+    esquema: {
+      type: 'object',
+      properties: {
+        agente: { type: 'string', description: 'Só as deste agente (nome ou código). Vazio = todos' },
+        abertas: { type: 'boolean', description: 'Só as que ainda não estão fechadas' },
+      },
+      additionalProperties: false,
+    },
+    correr: async (a) => {
+      const db = getSupabaseAdmin()
+      const ag = a.agente ? await acharAgente(db, String(a.agente)) : null
+      if (a.agente && !ag) return { ok: false, erro: `Não encontrei o agente «${a.agente}».` }
+      const r = await listarOrdens(db, { agenteId: ag?.id, abertas: a.abertas === true, limite: 30 })
+      return r.erro ? { ok: false, erro: r.erro } : { ok: true, ordens: r.ordens }
     },
   },
 
