@@ -14,6 +14,7 @@ import {
 import type { TipoEnvio } from '@/lib/envios-aprovacao'
 import { executarAccaoPipeline, retratoPipeline } from '@/lib/agentes/pipeline-agentes-db'
 import { correrOs, executarAccaoCeo, lerConfigOs, orcamentos, pedirClonagem, pnl, tectosContactoDb, type Quota } from '@/lib/agentes/os/os-db'
+import { orcamentosDaEquipa } from '@/lib/agentes/orcamento-db'
 
 /**
  * A PORTA DO MOTOR AUTÓNOMO — o único sítio por onde `aios/motor/orquestrador.py` ESCREVE.
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
   if (negado) return negado
   const db = getSupabaseAdmin()
 
-  const [interruptor, cfgs, equipa, recentes, propostas] = await Promise.all([
+  const [interruptor, cfgs, equipa, recentes, propostas, orc] = await Promise.all([
     lerInterruptor(db),
     db.from('site_settings').select('key, value').in('key', ['agentes_motor', 'agentes_vida', 'agentes_reproducao', 'agentes_evolucao', 'agentes_os_v2', 'agentes_proof', 'os_objectivos']),
     db
@@ -93,6 +94,7 @@ export async function GET(request: NextRequest) {
       .eq('estado', 'proposta')
       .order('criado_em', { ascending: true })
       .limit(30),
+    orcamentosDaEquipa(db, new Date()),
   ])
 
   const config: Record<string, unknown> = {}
@@ -102,10 +104,14 @@ export async function GET(request: NextRequest) {
     ok: !equipa.error,
     interruptor,
     config,
-    agentes: equipa.data ?? [],
+    /**
+     * `orcamento_bloqueio`: o motivo por que o motor NÃO o acorda (sem saldo, teto do dia ou do
+     * mês), calculado aqui pela mesma função do painel. Nulo = pode gastar. O motor só obedece.
+     */
+    agentes: (equipa.data ?? []).map((a) => ({ ...a, orcamento_bloqueio: orc.orcamentos.get(String(a.id))?.bloqueado ?? null })),
     eventos: recentes.data ?? [],
     propostas: propostas.data ?? [],
-    erros: [equipa.error?.message, recentes.error?.message, propostas.error?.message, interruptor.erro].filter(Boolean),
+    erros: [equipa.error?.message, recentes.error?.message, propostas.error?.message, interruptor.erro, orc.erro].filter(Boolean),
   })
 }
 
