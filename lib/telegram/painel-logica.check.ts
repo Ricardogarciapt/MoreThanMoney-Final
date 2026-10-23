@@ -22,4 +22,6 @@ assert.deepEqual(
   { f: 'a', d24: 1, d7: 2, falhas: 1, erro: 'Bad Request', nome: 'Premium', dias: 0 },
 )
 assert.equal(rotas[1].diasParada, 22)
+assert.deepEqual(rotas[0].serie14d.slice(-4), [1, 0, 0, 1])
+assert.equal(rotas[1].serie14d.reduce((a, v) => a + v, 0), 0)
 console.log('painel-logica: ok')

@@ -16,6 +16,11 @@ export const NOME_RELAY: Record<string, string> = {
   'pv-relay': 'PrimeVerse → Sensei',
 }
 
+/** Relays desligados de propósito: o painel mostra-os como parados, não como avariados. */
+export const RELAY_PARADO: Record<string, string> = {
+  'pv-relay': 'Parado desde 04/10',
+}
+
 export const servicoDoRelay = (relay: string) => `telegram:${relay}`
 
 /** O relay pulsa de 5 em 5 min; 12 min sem pulso é um ciclo falhado mais folga. */
@@ -44,6 +49,8 @@ export type RotaObservada = {
   ultimoErro: string | null
   /** Dias desde a última publicação; o painel avisa a partir de 3. */
   diasParada: number | null
+  /** Publicadas por dia nos últimos 14 dias, do mais antigo para hoje (o gráfico da linha). */
+  serie14d: number[]
 }
 
 /** Agrupa o registo por fonte→destino. As linhas vêm dos últimos 30 dias. */
@@ -57,6 +64,7 @@ export function agregarRotas(linhas: LinhaRelayLog[], titulos: Map<string, strin
         fonte: l.source_chat_id, destino: l.target_chat_id,
         fonteNome: titulos.get(l.source_chat_id) ?? null, destinoNome: titulos.get(l.target_chat_id) ?? null,
         publicadas24h: 0, publicadas7d: 0, falhas7d: 0, ultimaIso: null, ultimoErro: null, diasParada: null,
+        serie14d: new Array(14).fill(0),
       }
       mapa.set(k, r)
     }
@@ -65,6 +73,8 @@ export function agregarRotas(linhas: LinhaRelayLog[], titulos: Map<string, strin
     if (l.status === 'sent') {
       if (idade <= 86_400_000) r.publicadas24h++
       if (idade <= 7 * 86_400_000) r.publicadas7d++
+      const dia = Math.floor(idade / 86_400_000)
+      if (dia >= 0 && dia < 14) r.serie14d[13 - dia]++
       if (!r.ultimaIso || t > Date.parse(r.ultimaIso)) r.ultimaIso = l.created_at
     } else if (idade <= 7 * 86_400_000) {
       r.falhas7d++

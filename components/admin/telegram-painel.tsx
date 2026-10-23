@@ -1,16 +1,17 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Loader2, Plus, Radio, Route, Send, Users } from 'lucide-react'
+import { Aviso, Azulejo, BotaoLer, Chip, Faixa, Filtros, Painel, Pilula, Sparkline, Vazio, fmtNum, fmtQuando } from '@/components/admin/centro/ui'
 import type { EstadoPulso, RotaObservada } from '@/lib/telegram/painel-logica'
 import type { GrupoClassificado } from '@/lib/prospecao/dialogos'
 
 /**
  * GESTÃO → TELEGRAM — os bots MTProto da VPS (relays de sinais e o mapa dos grupos) vistos do
  * backoffice. Só leitura: as rotas vivem no .env da VPS, e a sessão é a conta pessoal do dono.
- * Ver `app/api/admin/backoffice/telegram/route.ts`.
+ * Ver `app/api/admin/backoffice/telegram/route.ts`. As peças são as do Centro (`centro/ui.tsx`).
  */
-type Relay = { relay: string; nome: string; estado: EstadoPulso; em: string | null; versao: string | null; erro: string | null; rotas: Array<{ nome: string; lastId: number; publicadas: number; erro: string | null; activa: boolean }> }
+type Relay = { relay: string; nome: string; parado: string | null; estado: EstadoPulso; em: string | null; versao: string | null; erro: string | null; rotas: Array<{ nome: string; lastId: number; publicadas: number; erro: string | null; activa: boolean }> }
 type Dados = {
   relays: Relay[]
   rotas: RotaObservada[]
@@ -20,35 +21,33 @@ type Dados = {
   erros: string[]
 }
 
-const TOM_PULSO: Record<EstadoPulso, { rotulo: string; cls: string }> = {
-  vivo: { rotulo: 'Vivo', cls: 'bg-emerald-500/15 text-emerald-300' },
-  atrasado: { rotulo: 'Sem pulso recente', cls: 'bg-rose-500/15 text-rose-300' },
-  'sem-pulso': { rotulo: 'Sem pulso', cls: 'bg-zinc-700/40 text-zinc-400' },
+const PULSO: Record<EstadoPulso, { rotulo: string; tom: 'ok' | 'grave' | 'neutro' }> = {
+  vivo: { rotulo: 'vivo', tom: 'ok' },
+  atrasado: { rotulo: 'sem pulso recente', tom: 'grave' },
+  'sem-pulso': { rotulo: 'sem pulso', tom: 'neutro' },
 }
 
-const quando = (iso: string | null) => {
-  if (!iso) return '—'
-  const min = Math.round((Date.now() - Date.parse(iso)) / 60_000)
-  if (min < 60) return `há ${min} min`
-  if (min < 48 * 60) return `há ${Math.round(min / 60)} h`
-  return `há ${Math.round(min / 1440)} dias`
-}
-const n0 = (v: number) => v.toLocaleString('pt-PT')
+type FiltroGrupos = 'todos' | 'nossos' | 'sem-bot' | 'parados' | 'terceiros'
+const FILTROS: Array<[FiltroGrupos, string]> = [['todos', 'Todos'], ['nossos', 'Nossos'], ['sem-bot', 'Sem o bot'], ['parados', 'Parados'], ['terceiros', 'Terceiros']]
+const PASSO = 25
 
-function Azulejo({ rotulo, valor, sub }: { rotulo: string; valor: string; sub?: string }) {
-  return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-      <p className="text-[10px] uppercase tracking-widest text-zinc-500">{rotulo}</p>
-      <p className="mt-1 text-xl font-bold text-zinc-100">{valor}</p>
-      {sub && <p className="mt-0.5 text-[10.5px] text-zinc-500">{sub}</p>}
-    </div>
-  )
-}
+const LINK_BOT = 'https://t.me/morethanmoneypt_bot?startgroup=true'
+/** O conselho do classificador traz o link do bot no meio do texto; aqui sai do texto e vira botão. */
+const pedeBot = (t: string) => t.includes('t.me/morethanmoneypt_bot')
+const semLinkDoBot = (t: string) => t.replace(/\s*\(t\.me\/morethanmoneypt_bot\?startgroup=true\)/, '')
+const membros = (v: number | null) => (v == null ? '' : v === 1 ? '1 membro' : `${fmtNum(v)} membros`)
+
+const tomDaRota = (r: RotaObservada) => (r.falhas7d > 0 ? 'grave' : (r.diasParada ?? 99) >= 3 ? 'aviso' : 'ok')
+const nomeChat = (nome: string | null, id: string) => nome ?? id
 
 export default function TelegramPainel() {
   const [dados, setDados] = useState<Dados | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [aLer, setALer] = useState(false)
+  const [lidoEm, setLidoEm] = useState<number | null>(null)
+  const [filtro, setFiltro] = useState<FiltroGrupos>('todos')
+  const [q, setQ] = useState('')
+  const [mostrar, setMostrar] = useState(PASSO)
 
   const ler = useCallback(async () => {
     setALer(true)
@@ -57,7 +56,7 @@ export default function TelegramPainel() {
       const r = await fetch('/api/admin/backoffice/telegram', { cache: 'no-store' })
       const d = await r.json()
       if (!r.ok) setErro(d?.message ?? d?.error ?? 'Não consegui ler.')
-      else setDados(d)
+      else { setDados(d); setLidoEm(Date.now()) }
     } catch {
       setErro('Sem ligação.')
     } finally {
@@ -67,113 +66,219 @@ export default function TelegramPainel() {
 
   useEffect(() => { void ler() }, [ler])
 
+  const totais = useMemo(() => {
+    const rotas = dados?.rotas ?? []
+    const serie = new Array(14).fill(0)
+    for (const r of rotas) r.serie14d?.forEach((v, i) => { serie[i] += v })
+    const activos = dados?.relays.filter((r) => !r.parado) ?? []
+    return {
+      vivos: activos.filter((r) => r.estado === 'vivo').length,
+      relays: activos.length,
+      d24: rotas.reduce((a, r) => a + r.publicadas24h, 0),
+      d7: rotas.reduce((a, r) => a + r.publicadas7d, 0),
+      falhas: rotas.reduce((a, r) => a + r.falhas7d, 0),
+      paradas: rotas.filter((r) => (r.diasParada ?? 99) >= 3).length,
+      serie,
+    }
+  }, [dados])
+
+  const grupos = useMemo(() => {
+    if (!dados?.grupos.ok) return { lista: [] as GrupoClassificado[], blocos: [] as Array<{ conselho: string; grupos: GrupoClassificado[] }>, total: 0 }
+    const termo = q.trim().toLowerCase()
+    const lista = dados.grupos.lista.filter((g) => {
+      if (filtro === 'nossos' && g.papel !== 'nosso') return false
+      if (filtro === 'terceiros' && g.papel !== 'terceiros') return false
+      if (filtro === 'sem-bot' && !(g.papel === 'nosso' && !g.botPresente)) return false
+      if (filtro === 'parados' && !(g.papel === 'nosso' && (g.diasParado ?? 0) > 7)) return false
+      return !termo || g.titulo.toLowerCase().includes(termo)
+    })
+    // A lista vem ordenada por prioridade; junta-se por conselho para cada conselho aparecer uma vez.
+    const porConselho = new Map<string, GrupoClassificado[]>()
+    for (const g of lista) porConselho.set(g.oQueFazer, [...(porConselho.get(g.oQueFazer) ?? []), g])
+    const blocos = [...porConselho.entries()].map(([conselho, grupos]) => ({ conselho, grupos }))
+    return { lista, blocos, total: dados.grupos.lista.length }
+  }, [dados, filtro, q])
+
+  useEffect(() => { setMostrar(PASSO) }, [filtro, q])
+
   if (!dados && !erro) {
     return <div className="flex min-h-[30vh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" /></div>
   }
 
-  const semPulso = dados?.relays.every((r) => r.estado === 'sem-pulso')
+  const semPulso = dados?.relays.filter((r) => !r.parado).every((r) => r.estado === 'sem-pulso')
+  const resumo = dados?.grupos.ok ? dados.grupos.resumo : null
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-2">
-        <p className="text-xs text-zinc-500">Os bots da VPS correm com a tua sessão de Telegram. Aqui vês se estão vivos, o que publicaram e onde estás sem o bot.</p>
-        <button type="button" onClick={() => void ler()} className="ml-auto rounded-lg border border-zinc-800 p-1.5 text-zinc-400 hover:text-zinc-200" aria-label="Actualizar">
-          {aLer ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-        </button>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="max-w-2xl text-xs leading-relaxed text-zinc-500">
+          Os bots da VPS correm com a tua sessão de Telegram. Aqui vês se estão vivos, o que publicaram e em que grupos teus o bot ainda não está.
+        </p>
+        <div className="ml-auto"><BotaoLer onClick={() => void ler()} aCarregar={aLer} lidoEm={lidoEm} /></div>
       </div>
-      {erro && <p className="rounded-lg border border-rose-500/30 bg-rose-500/[0.06] p-3 text-sm text-rose-200">{erro}</p>}
+      {erro && <Aviso tom="grave">{erro}</Aviso>}
 
       {dados && (
         <>
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-zinc-200">Relays</h2>
-            {semPulso && (
-              <p className="rounded-lg border border-amber-500/30 bg-amber-500/[0.05] p-3 text-xs text-amber-200">
-                Os relays ainda não mandam pulso. Fica activo quando a versão nova do relay.py for instalada na VPS. Até lá, a actividade lê-se nas rotas abaixo.
-              </p>
-            )}
-            <div className="grid gap-2 sm:grid-cols-3">
-              {dados.relays.map((r) => (
-                <div key={r.relay} className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-zinc-100">{r.nome}</p>
-                    <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] ${TOM_PULSO[r.estado].cls}`}>{TOM_PULSO[r.estado].rotulo}</span>
-                  </div>
-                  <p className="mt-1 text-[11px] text-zinc-500">{r.relay} · {quando(r.em)}{r.versao ? ` · ${r.versao}` : ''}</p>
-                  {r.erro && <p className="mt-1 text-[11px] text-rose-300">{r.erro}</p>}
-                  {r.rotas.length > 0 && (
-                    <ul className="mt-2 space-y-0.5 text-[11px] text-zinc-400">
-                      {r.rotas.map((x) => (
-                        <li key={x.nome} className={x.activa ? '' : 'opacity-50'}>
-                          {x.nome} · {n0(x.publicadas)} publicadas{x.erro ? <span className="text-rose-300"> · {x.erro}</span> : null}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <Azulejo
+              rotulo="Relays vivos"
+              valor={semPulso ? '—' : `${totais.vivos}/${totais.relays}`}
+              sub={semPulso ? 'à espera do primeiro pulso' : totais.vivos === totais.relays ? 'todos a pulsar' : 'há relays calados'}
+              tom={semPulso ? undefined : totais.vivos === totais.relays ? 'ok' : 'grave'}
+            />
+            <Azulejo rotulo="Publicadas · 24 h" valor={fmtNum(totais.d24)} sub={`${fmtNum(totais.d7)} em 7 dias`} serie={totais.serie} barras />
+            <Azulejo
+              rotulo="Falhas · 7 dias"
+              valor={fmtNum(totais.falhas)}
+              sub={totais.paradas ? `${totais.paradas} rota${totais.paradas > 1 ? 's' : ''} parada${totais.paradas > 1 ? 's' : ''} há 3+ dias` : 'nenhuma rota parada'}
+              tom={totais.falhas ? 'grave' : totais.paradas ? 'aviso' : 'ok'}
+            />
+            <Azulejo
+              rotulo="Grupos teus sem o bot"
+              valor={resumo ? fmtNum(resumo.nossosSemBot) : '—'}
+              sub={resumo ? `de ${fmtNum(resumo.nossos)} grupos teus` : 'mapa de grupos indisponível'}
+              tom={resumo?.nossosSemBot ? 'aviso' : resumo ? 'ok' : undefined}
+              onClick={resumo?.nossosSemBot ? () => setFiltro('sem-bot') : undefined}
+            />
+          </div>
 
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-zinc-200">Rotas (30 dias)</h2>
-            {dados.rotas.length === 0 ? (
-              <p className="text-xs text-zinc-500">Nada publicado nos últimos 30 dias.</p>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-zinc-800">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-900/60 text-[10px] uppercase tracking-wider text-zinc-500">
-                    <tr><th className="px-3 py-2">Fonte → destino</th><th className="px-3 py-2 text-right">24 h</th><th className="px-3 py-2 text-right">7 dias</th><th className="px-3 py-2 text-right">Falhas 7 d</th><th className="px-3 py-2">Última</th></tr>
-                  </thead>
-                  <tbody>
-                    {dados.rotas.map((r) => (
-                      <tr key={`${r.fonte}-${r.destino}`} className="border-t border-zinc-800/70">
-                        <td className="px-3 py-2 text-zinc-200">
-                          {r.fonteNome ?? r.fonte} <span className="text-zinc-500">→</span> {r.destinoNome ?? r.destino}
-                          {r.ultimoErro && <p className="text-[10.5px] text-rose-300">{r.ultimoErro}</p>}
-                        </td>
-                        <td className="px-3 py-2 text-right text-zinc-300">{n0(r.publicadas24h)}</td>
-                        <td className="px-3 py-2 text-right text-zinc-300">{n0(r.publicadas7d)}</td>
-                        <td className={`px-3 py-2 text-right ${r.falhas7d ? 'text-rose-300' : 'text-zinc-500'}`}>{n0(r.falhas7d)}</td>
-                        <td className={`px-3 py-2 ${(r.diasParada ?? 0) >= 3 ? 'text-amber-300' : 'text-zinc-400'}`}>{quando(r.ultimaIso)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <Painel titulo="Relays" icone={<Radio className="h-3.5 w-3.5 text-[#D2A63C]" />} sub="Cada relay manda um pulso de 5 em 5 minutos.">
+            {semPulso && (
+              <div className="mb-3">
+                <Aviso tom="info">Os relays ainda não mandam pulso. O estado aparece aqui uns minutos depois de a versão nova do relay.py ser instalada na VPS. Até lá, a actividade lê-se nas rotas abaixo.</Aviso>
               </div>
             )}
-          </section>
+            <div className="grid gap-2 md:grid-cols-3">
+              {dados.relays.map((r) => {
+                const p = r.parado ? { rotulo: 'parado', tom: 'neutro' as const } : PULSO[r.estado]
+                return (
+                  <div key={r.relay} className={`rounded-xl border border-white/[0.06] bg-zinc-900/40 p-3 ${r.parado ? 'opacity-60' : ''}`}>
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-zinc-100">{r.nome}</p>
+                        <p className="mt-0.5 font-mono text-[10.5px] text-zinc-500">{r.relay}</p>
+                      </div>
+                      <span className="ml-auto"><Pilula tom={p.tom} vivo={r.estado === 'vivo'}>{p.rotulo}</Pilula></span>
+                    </div>
+                    <p className="mt-2 text-[11px] text-zinc-500">
+                      {r.parado ?? (r.em ? `último pulso ${fmtQuando(r.em)}` : 'nunca pulsou')}{r.versao ? ` · versão ${r.versao}` : ''}
+                    </p>
+                    {r.erro && <p className="mt-1.5 rounded-md bg-rose-500/10 px-2 py-1 text-[11px] text-rose-200">{r.erro}</p>}
+                    {r.rotas.length > 0 && (
+                      <ul className="mt-2.5 space-y-1 border-t border-white/[0.05] pt-2">
+                        {r.rotas.map((x) => (
+                          <li key={x.nome} className={`flex items-center gap-2 text-[11px] ${x.activa ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${x.erro ? 'bg-rose-500' : x.activa ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                            <span className="truncate">{x.nome}</span>
+                            <span className="ml-auto font-mono tabular-nums text-zinc-500">{fmtNum(x.publicadas)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </Painel>
 
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-zinc-200">Os teus grupos</h2>
+          <Painel titulo="Rotas" icone={<Route className="h-3.5 w-3.5 text-[#D2A63C]" />} sub="O que cada fonte publicou no destino, nos últimos 30 dias. O gráfico mostra 14 dias.">
+            {dados.rotas.length === 0 ? (
+              <Vazio>Nada publicado nos últimos 30 dias.</Vazio>
+            ) : (
+              <div className="space-y-1.5">
+                {dados.rotas.map((r) => (
+                  <Faixa key={`${r.fonte}-${r.destino}`} tom={tomDaRota(r)}>
+                    <div className="grid items-center gap-x-4 gap-y-1.5 sm:grid-cols-[minmax(0,1fr)_140px_auto]">
+                      <div className="min-w-0">
+                        <p className="flex min-w-0 items-center gap-1.5 text-[12.5px] text-zinc-100">
+                          <span className="truncate">{nomeChat(r.fonteNome, r.fonte)}</span>
+                          <Send className="h-3 w-3 shrink-0 text-zinc-600" />
+                          <span className="truncate text-[#E9C46A]">{nomeChat(r.destinoNome, r.destino)}</span>
+                        </p>
+                        <p className="mt-0.5 text-[10.5px] text-zinc-500">
+                          última {fmtQuando(r.ultimaIso)}
+                          {(r.diasParada ?? 0) >= 3 && <span className="text-amber-300"> · parada há {r.diasParada} dias</span>}
+                        </p>
+                        {r.ultimoErro && <p className="mt-0.5 truncate text-[10.5px] text-rose-300" title={r.ultimoErro}>{r.ultimoErro}</p>}
+                      </div>
+                      <div className="hidden sm:block"><Sparkline serie={r.serie14d ?? []} tom={tomDaRota(r)} barras /></div>
+                      <div className="flex gap-4 text-right font-mono text-[11px] tabular-nums">
+                        <div><p className="text-[9.5px] uppercase tracking-wider text-zinc-600">24 h</p><p className="text-zinc-200">{fmtNum(r.publicadas24h)}</p></div>
+                        <div><p className="text-[9.5px] uppercase tracking-wider text-zinc-600">7 d</p><p className="text-zinc-200">{fmtNum(r.publicadas7d)}</p></div>
+                        <div><p className="text-[9.5px] uppercase tracking-wider text-zinc-600">falhas</p><p className={r.falhas7d ? 'text-rose-300' : 'text-zinc-600'}>{fmtNum(r.falhas7d)}</p></div>
+                      </div>
+                    </div>
+                  </Faixa>
+                ))}
+              </div>
+            )}
+          </Painel>
+
+          <Painel
+            titulo="Os teus grupos"
+            icone={<Users className="h-3.5 w-3.5 text-[#D2A63C]" />}
+            sub={resumo ? `${fmtNum(resumo.nossos)} teus · ${fmtNum(resumo.terceiros)} de terceiros, com ${fmtNum(resumo.alcanceTerceiros)} pessoas ao todo` : undefined}
+          >
             {!dados.grupos.ok ? (
-              <p className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3 text-xs text-zinc-400">{dados.grupos.motivo}</p>
+              <Vazio>{dados.grupos.motivo}</Vazio>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <Azulejo rotulo="Grupos nossos" valor={n0(dados.grupos.resumo.nossos)} />
-                  <Azulejo rotulo="Nossos sem o bot" valor={n0(dados.grupos.resumo.nossosSemBot)} sub="sem boas-vindas nem leads" />
-                  <Azulejo rotulo="Nossos parados" valor={n0(dados.grupos.resumo.nossosParados)} sub="mais de 7 dias sem tráfego" />
-                  <Azulejo rotulo="Alcance em terceiros" valor={n0(dados.grupos.resumo.alcanceTerceiros)} sub={`${n0(dados.grupos.resumo.terceiros)} grupos`} />
-                </div>
-                <ul className="divide-y divide-zinc-800/70 rounded-xl border border-zinc-800">
-                  {dados.grupos.lista.map((g) => (
-                    <li key={g.chatId} className="px-3 py-2">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="font-medium text-zinc-100">{g.titulo}</span>
-                        <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${g.papel === 'nosso' ? 'bg-[#D2A63C]/15 text-[#E9C46A]' : 'bg-zinc-800 text-zinc-400'}`}>{g.papel === 'nosso' ? 'nosso' : 'terceiros'}</span>
-                        {!g.botPresente && g.papel === 'nosso' && <span className="rounded-full bg-rose-500/15 px-1.5 py-0.5 text-[10px] text-rose-300">sem bot</span>}
-                        <span className="ml-auto text-[10.5px] text-zinc-500">{g.membros != null ? `${n0(g.membros)} membros` : ''}</span>
-                      </div>
-                      <p className="mt-0.5 text-[11px] text-zinc-500">{g.oQueFazer}</p>
-                    </li>
+                <Filtros q={q} aoMudarQ={setQ} exemplo="Procurar grupo…" contagem={grupos.lista.length} total={grupos.total}>
+                  {FILTROS.map(([k, rotulo]) => (
+                    <Chip key={k} activo={filtro === k} onClick={() => setFiltro(k)}>
+                      {rotulo}
+                      {k === 'sem-bot' && resumo?.nossosSemBot ? ` · ${resumo.nossosSemBot}` : k === 'parados' && resumo?.nossosParados ? ` · ${resumo.nossosParados}` : ''}
+                    </Chip>
                   ))}
-                </ul>
+                </Filtros>
+                {grupos.lista.length === 0 ? (
+                  <Vazio>Nada com estes filtros.</Vazio>
+                ) : (
+                  <div className="space-y-3">
+                    {grupos.blocos.map(({ conselho, grupos: gs }) => {
+                      const bot = pedeBot(conselho)
+                      const aberto = mostrar > PASSO || gs.length <= 8
+                      return (
+                        <div key={conselho} className={`rounded-xl border p-3 ${bot ? 'border-amber-500/25 bg-amber-500/[0.03]' : 'border-white/[0.06] bg-zinc-900/30'}`}>
+                          <div className="flex flex-wrap items-start gap-2">
+                            <p className="min-w-0 flex-1 text-[12px] leading-relaxed text-zinc-200">{semLinkDoBot(conselho)}</p>
+                            <Pilula tom={bot ? 'aviso' : 'neutro'}>{gs.length} grupo{gs.length > 1 ? 's' : ''}</Pilula>
+                            {bot && (
+                              <a href={LINK_BOT} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md border border-[#D2A63C]/50 bg-[#D2A63C]/10 px-2.5 py-1 text-[11px] font-medium text-[#E9C46A] hover:bg-[#D2A63C]/20">
+                                <Plus className="h-3 w-3" /> Adicionar o bot
+                              </a>
+                            )}
+                          </div>
+                          <ul className="mt-2 space-y-1">
+                            {(aberto ? gs : gs.slice(0, 8)).map((g) => (
+                              <li key={g.chatId}>
+                                <Faixa tom={g.papel === 'nosso' && !g.botPresente ? 'aviso' : g.papel === 'nosso' ? 'ok' : 'neutro'} className="py-1.5">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="min-w-0 truncate text-[12px] font-medium text-zinc-100">{g.titulo}</span>
+                                    <Pilula tom={g.papel === 'nosso' ? 'ouro' : 'neutro'}>{g.papel === 'nosso' ? 'teu' : 'terceiros'}</Pilula>
+                                    {g.papel === 'nosso' && (g.diasParado ?? 0) > 7 && <Pilula tom="neutro">parado {g.diasParado} d</Pilula>}
+                                    <span className="ml-auto font-mono text-[10.5px] tabular-nums text-zinc-500">{[g.tipo, membros(g.membros)].filter(Boolean).join(' · ')}</span>
+                                  </div>
+                                </Faixa>
+                              </li>
+                            ))}
+                          </ul>
+                          {!aberto && (
+                            <button type="button" onClick={() => setMostrar((m) => m + PASSO)} className="mt-2 w-full rounded-lg border border-dashed border-white/10 py-1.5 text-[11px] text-zinc-400 hover:border-[#D2A63C]/40 hover:text-white">
+                              Mostrar os outros {gs.length - 8}
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </>
             )}
-          </section>
+          </Painel>
 
-          {dados.erros.length > 0 && <p className="text-[11px] text-zinc-500">Leituras com erro: {dados.erros.join(' · ')}</p>}
+          {dados.erros.length > 0 && <Aviso>Leituras com erro: {dados.erros.join(' · ')}</Aviso>}
         </>
       )}
     </div>
