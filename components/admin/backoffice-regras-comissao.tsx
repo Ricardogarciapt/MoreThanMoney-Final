@@ -49,6 +49,8 @@ const PACKS_CONHECIDOS = [
   'mtm_scanner_monthly',
   'scanners_monthly',
   'scanners_semestral',
+  'trendshot_semestral',
+  'trendshot_lifetime',
 ]
 
 const PAPEIS_ORDEM: Papel[] = ['afiliado', 'setter', 'closer', 'prospector', 'team_leader']

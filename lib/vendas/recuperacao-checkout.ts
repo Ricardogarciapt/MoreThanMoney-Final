@@ -99,7 +99,7 @@ export function linkDeRetoma(c: Pick<CheckoutAbandonado, 'origem' | 'produto'>):
   if (c.origem === 'marketplace_leads') return linkAssinado(`/marketplace/${encodeURIComponent(c.produto)}`, AG.EMAIL)
   const plano = c.produto.toLowerCase()
   if (plano.startsWith('mtmcopy')) return linkAssinado('/mtmcopy', AG.EMAIL)
-  if (plano.startsWith('goldkiller')) return linkAssinado('/scanner', AG.EMAIL)
+  if (/^(goldkiller|aurumflow|trendshot|mtm_scanner|scanners)/.test(plano)) return linkAssinado('/scanner', AG.EMAIL)
   return linkAssinado('/upgrade', AG.EMAIL)
 }
 
@@ -110,6 +110,9 @@ const NOME_DO_PLANO: Record<string, string> = {
   premium_monthly: 'Premium',
   premium_annual: 'Premium (anual)',
   goldkiller_lifetime: 'GoldKiller (vitalício)',
+  goldkiller_semestral: 'GoldKiller (semestral)',
+  trendshot_lifetime: 'TrendShot (vitalício)',
+  trendshot_semestral: 'TrendShot (semestral)',
 }
 
 /**

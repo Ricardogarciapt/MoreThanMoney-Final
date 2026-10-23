@@ -34,6 +34,7 @@ interface ScannerData {
   techSpecs: string[]
   products: ScannerProduct[]
   badge?: string
+  gallery?: string[]
 }
 
 const SCANNERS: ScannerData[] = [
@@ -60,7 +61,8 @@ const SCANNERS: ScannerData[] = [
       "Preenchimento com cores suaves para visualização de distâncias",
     ],
     products: [
-      { id: "gk-lifetime", label: "Acesso Vitalício", price: "50€", priceNote: "Pagamento único", planId: "goldkiller_lifetime", highlight: true },
+      { id: "gk-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "goldkiller_semestral" },
+      { id: "gk-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "goldkiller_lifetime", highlight: true },
     ],
   },
   {
@@ -86,7 +88,8 @@ const SCANNERS: ScannerData[] = [
       "Baseado no motor proprietário do MTM Scanner",
     ],
     products: [
-      { id: "af-lifetime", label: "Acesso Vitalício", price: "50€", priceNote: "Pagamento único", planId: "aurumflow_lifetime", highlight: true },
+      { id: "af-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "aurumflow_semestral" },
+      { id: "af-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "aurumflow_lifetime", highlight: true },
     ],
   },
   {
@@ -111,8 +114,36 @@ const SCANNERS: ScannerData[] = [
       "Integração com TradingView",
     ],
     products: [
-      { id: "mtm-monthly", label: "Mensal", price: "12,50€/mês", planId: "mtm_scanner_monthly" },
-      { id: "mtm-lifetime", label: "Vitalício", price: "250€", priceNote: "Pagamento único", planId: "mtm_scanner_lifetime", highlight: true },
+      { id: "mtm-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "mtm_scanner_semestral" },
+      { id: "mtm-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "mtm_scanner_lifetime", highlight: true },
+    ],
+  },
+  {
+    key: "trendshot",
+    name: "TrendShot by MTM",
+    subtitle: "Tendência · Estrutura · Risco/Retorno",
+    image: "/scanners/trendshot-xauusd.png",
+    gallery: ["/scanners/trendshot-xauusd.png", "/scanners/trendshot-us30.png", "/scanners/trendshot-sp500.png"],
+    badge: "Novo",
+    description:
+      "Indicador multifuncional de análise técnica que junta seguimento de tendência, análise multi-timeframe, níveis de preço por volume e projeções automáticas de risco/retorno — uma leitura estruturada do mercado diretamente no teu gráfico do TradingView. Para Forex, Ouro (XAUUSD), índices e cripto.",
+    features: [
+      "Sistema de EMAs (20 · 50 · 238) com sinais de cruzamento",
+      "Dashboard de tendência em até 6 timeframes (M1 a Diário)",
+      "POC de volume em M15, M30 e H1 (preço acima/abaixo)",
+      "Suporte e resistência dinâmicos com zonas filtradas por ATR",
+      "Marcadores de swing (pequeno, médio e grande)",
+    ],
+    techSpecs: [
+      "Entrada, Stop Loss e até 4 Take Profits após cruzamento confirmado",
+      "SL fixo ou pela estrutura de suporte/resistência anterior",
+      "Filtro de sessão (por omissão 08:00–21:00)",
+      "Alertas TradingView para cruzamentos de alta e de baixa",
+      "Ferramenta educativa: não executa ordens nem garante resultados",
+    ],
+    products: [
+      { id: "ts-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "trendshot_semestral" },
+      { id: "ts-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "trendshot_lifetime", highlight: true },
     ],
   },
   {
@@ -338,17 +369,11 @@ function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
 
 export default function ScannerPage() {
   const [checkoutProduct, setCheckoutProduct] = useState<{ product: ScannerProduct; scannerName: string } | null>(null)
-  const [packBilling, setPackBilling] = useState<"monthly" | "semestral" | "lifetime">("monthly")
-
-  const PACK_TOTAL_PRODUCTS: ScannerProduct[] = [
-    { id: "pack-monthly",   label: "Mensal",    price: "35€/mês",             planId: "scanners_monthly",   highlight: false },
-    { id: "pack-semestral", label: "Semestral", price: "165€", priceNote: "27,50€/mês · pago de 6 em 6 meses", planId: "scanners_semestral", highlight: true },
-    { id: "pack-lifetime",  label: "Vitalício", price: "750€", priceNote: "Pagamento único · acesso para sempre",planId: "scanners_lifetime",  highlight: false },
-  ]
-
-  const selectedPackProduct = PACK_TOTAL_PRODUCTS.find(p =>
-    p.id === `pack-${packBilling}`
-  ) || PACK_TOTAL_PRODUCTS[0]
+  // Pack de todos os scanners: só mensal, 35 €/mês (23/10/2026). Os planos semestral e vitalício do
+  // pack deixaram de se vender aqui; o webhook continua a reconhecê-los para quem já os comprou.
+  const selectedPackProduct: ScannerProduct = {
+    id: "pack-monthly", label: "Mensal", price: "35€/mês", priceNote: "Todos os scanners · cancelas quando quiseres", planId: "scanners_monthly", highlight: true,
+  }
 
   return (
     <>
@@ -387,7 +412,7 @@ export default function ScannerPage() {
 
           {/* Individual Scanners */}
           {SCANNERS.map((scanner) => (
-            <div key={scanner.key} className="mb-16">
+            <div key={scanner.key} id={scanner.key} className="mb-16 scroll-mt-24">
               <div className="flex flex-col md:flex-row gap-10 items-start">
                 {/* Image */}
                 <div className="w-full md:w-1/2 shrink-0">
@@ -403,6 +428,20 @@ export default function ScannerPage() {
                       className="w-full h-auto rounded-xl border border-[#D2A63C]/20 shadow-lg"
                     />
                   </div>
+                  {scanner.gallery && scanner.gallery.length > 1 && (
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      {scanner.gallery.slice(1).map((src) => (
+                        <a key={src} href={src} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={src}
+                            alt={`${scanner.name} no gráfico`}
+                            loading="lazy"
+                            className="w-full h-auto rounded-lg border border-gray-800 hover:border-[#D2A63C]/50 transition-colors"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Content */}
@@ -484,44 +523,15 @@ export default function ScannerPage() {
           ))}
 
           {/* Pack Scanners */}
-          <div className="mb-16">
+          <div id="pack" className="mb-16 scroll-mt-24">
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 bg-[#D2A63C]/10 border border-[#D2A63C]/30 rounded-full px-4 py-1.5 text-[#D2A63C] text-sm font-medium mb-4">
                 <Star className="w-4 h-4" /> Melhor Valor
               </div>
               <h2 className="text-3xl font-bold text-white mb-2">Pack Scanners</h2>
               <p className="text-gray-400 max-w-xl mx-auto">
-                Acesso a todos os scanners MTM — Gold Killer, MTM Scanner V3.4 e Sensei — num único pack.
+                Todos os scanners MTM num só pack, por 35€/mês — Gold Killer, Aurum Flow, Scanner V3.4, TrendShot e Sensei.
               </p>
-            </div>
-
-            {/* Billing Toggle */}
-            <div className="flex justify-center mb-8">
-              <div className="inline-flex rounded-xl bg-gray-900 p-1 border border-gray-800">
-                {(["monthly", "semestral", "lifetime"] as const).map((cycle) => (
-                  <button
-                    key={cycle}
-                    onClick={() => setPackBilling(cycle)}
-                    className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      packBilling === cycle
-                        ? "bg-[#D2A63C] text-black shadow"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    {cycle === "monthly" ? "Mensal" : cycle === "semestral" ? "Semestral" : "Vitalício"}
-                    {cycle === "semestral" && (
-                      <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full">
-                        -21%
-                      </span>
-                    )}
-                    {cycle === "lifetime" && (
-                      <span className="ml-2 text-xs bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full">
-                        ∞
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -529,7 +539,7 @@ export default function ScannerPage() {
               <div className="md:col-span-2 bg-gray-900/60 border border-gray-800 rounded-2xl p-6">
                 <h3 className="font-semibold text-white mb-4">O que está incluído</h3>
                 <div className="grid sm:grid-cols-3 gap-4">
-                  {["MTM Gold Killer V2.1", "Scanner MTM V3.4", "Sensei"].map((name) => (
+                  {["MTM Gold Killer V2.1", "Aurum Flow Cripto", "Scanner MTM V3.4", "TrendShot by MTM", "Sensei"].map((name) => (
                     <div key={name} className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-[#D2A63C] rounded-full shrink-0" />
                       <span className="text-sm text-gray-300">{name}</span>
@@ -597,16 +607,16 @@ export default function ScannerPage() {
             <Card className="bg-gray-900/60 border-gray-800">
               <CardHeader>
                 <CardTitle className="text-[#D2A63C] flex items-center gap-2 text-base">
-                  <Shield className="w-5 h-5" /> Resultados Documentados
+                  <Shield className="w-5 h-5" /> Preços simples
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-gray-300">
                   {[
-                    "Taxa de precisão: 85%+",
-                    "Redução de perdas: 60%+",
-                    "Melhoria de timing: 70%+",
-                    "ROI médio documentado: 20%+",
+                    "Cada scanner: 50€ por semestre",
+                    "Cada scanner vitalício: 350€, pagamento único",
+                    "Pack com todos os scanners: 35€/mês",
+                    "Sem fidelização no pack mensal",
                   ].map(item => (
                     <li key={item} className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-400 rounded-full" />
@@ -615,7 +625,7 @@ export default function ScannerPage() {
                   ))}
                 </ul>
                 <p className="text-xs text-gray-500 mt-4">
-                  Resultados passados não garantem resultados futuros. Trading envolve risco.
+                  Conteúdo educativo, não constitui consultoria financeira. Resultados não garantidos; trading envolve risco.
                 </p>
               </CardContent>
             </Card>
@@ -625,11 +635,11 @@ export default function ScannerPage() {
           <div className="text-center bg-gradient-to-r from-[#D2A63C]/10 to-purple-900/10 border border-[#D2A63C]/20 rounded-2xl p-10">
             <h2 className="text-3xl font-bold text-white mb-3">Pronto para elevar o teu trading?</h2>
             <p className="text-gray-300 mb-6 max-w-xl mx-auto">
-              Junte-se à comunidade MTM e começa a usar as mesmas ferramentas que os nossos traders profissionais.
+              Junta-te à comunidade MTM e começa a usar as mesmas ferramentas que os nossos traders profissionais.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
-                onClick={() => setCheckoutProduct({ product: PACK_TOTAL_PRODUCTS[1], scannerName: "Pack Scanners" })}
+                onClick={() => setCheckoutProduct({ product: selectedPackProduct, scannerName: "Pack Scanners" })}
                 className="bg-[#D2A63C] hover:bg-[#BB8525] text-black font-bold px-8"
                 size="lg"
               >

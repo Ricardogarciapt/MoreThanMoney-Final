@@ -5,9 +5,16 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   app_member_annual: 'STRIPE_PRICE_APP_MEMBER_ANNUAL',
   premium_monthly: 'STRIPE_PRICE_PREMIUM_MONTHLY',
   premium_annual: 'STRIPE_PRICE_PREMIUM_ANNUAL',
+  // Scanners individuais (23/10/2026): 50 € por semestre ou 350 € vitalício, cada um. Os preços
+  // vivem no Stripe com `lookup_key` igual ao plano — ver `resolverPrecoStripe`.
+  goldkiller_semestral: 'STRIPE_PRICE_GOLDKILLER_SEMESTRAL',
   goldkiller_lifetime: 'STRIPE_PRICE_GOLDKILLER_LIFETIME',
+  aurumflow_semestral: 'STRIPE_PRICE_AURUMFLOW_SEMESTRAL',
   aurumflow_lifetime: 'STRIPE_PRICE_AURUMFLOW_LIFETIME',
+  trendshot_semestral: 'STRIPE_PRICE_TRENDSHOT_SEMESTRAL',
+  trendshot_lifetime: 'STRIPE_PRICE_TRENDSHOT_LIFETIME',
   mtm_scanner_monthly: 'STRIPE_PRICE_MTM_SCANNER_MONTHLY',
+  mtm_scanner_semestral: 'STRIPE_PRICE_MTM_SCANNER_SEMESTRAL',
   mtm_scanner_lifetime: 'STRIPE_PRICE_MTM_SCANNER_LIFETIME',
   scanners_monthly: 'STRIPE_PRICE_SCANNERS_MONTHLY',
   scanners_semestral: 'STRIPE_PRICE_SCANNERS_SEMESTRAL',
@@ -66,6 +73,27 @@ export function requireStripePriceId(planId: string): string {
     throw new Error(`Plano "${planId}" não encontrado ou preço não configurado`)
   }
   return priceId
+}
+
+/**
+ * Preço a cobrar por um plano: primeiro o preço ACTIVO do Stripe com `lookup_key` igual ao plano,
+ * depois a variável de ambiente.
+ *
+ * O lookup_key ganha porque um preço do Stripe não se edita: mudar o valor é criar outro. Com a
+ * variável à frente, cada mudança de preço exigia tocar na Vercel e redeploy, e até lá o site
+ * continuava a cobrar o valor antigo. Assim basta criar o preço novo e transferir-lhe o lookup_key.
+ */
+export async function resolverPrecoStripe(
+  stripe: { prices: { list: (p: { lookup_keys: string[]; active: boolean; limit: number }) => Promise<{ data: { id: string }[] }> } },
+  planId: string,
+): Promise<string> {
+  try {
+    const { data } = await stripe.prices.list({ lookup_keys: [planId], active: true, limit: 1 })
+    if (data[0]?.id) return data[0].id
+  } catch (err) {
+    console.warn(`[stripe-prices] lookup_key ${planId} falhou, a usar a variável de ambiente:`, err)
+  }
+  return requireStripePriceId(planId)
 }
 
 /** Mapeia price_id Stripe → planId interno (ex: app_member_monthly). */

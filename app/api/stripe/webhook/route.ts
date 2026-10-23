@@ -60,8 +60,14 @@ import {
 
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
 const SCANNER_PLAN_NAMES: Record<string, string> = {
+  goldkiller_semestral: 'Scanner Gold Killer (Semestral)',
   goldkiller_lifetime: 'Scanner Gold Killer (Vitalício)',
+  aurumflow_semestral: 'Scanner Aurum Flow Cripto (Semestral)',
+  aurumflow_lifetime: 'Scanner Aurum Flow Cripto (Vitalício)',
+  trendshot_semestral: 'TrendShot by MTM (Semestral)',
+  trendshot_lifetime: 'TrendShot by MTM (Vitalício)',
   mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
+  mtm_scanner_semestral: 'Scanner MTM V3.4 (Semestral)',
   mtm_scanner_lifetime: 'Scanner MTM V3.4 (Vitalício)',
   scanners_monthly: 'Pack Total de Scanners MTM (Mensal)',
   scanners_semestral: 'Pack Total de Scanners MTM (Semestral)',

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripeClient } from '@/lib/stripe-client'
-import { recusaPlanoDescontinuado, requireStripePriceId } from '@/lib/stripe-prices'
+import { recusaPlanoDescontinuado, resolverPrecoStripe } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 
 const SUBSCRIPTION_PLANS = new Set(['mtm_scanner_monthly', 'scanners_monthly'])
@@ -25,10 +25,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const priceId = requireStripePriceId(planId)
+    const stripe = getStripeClient()
+    const priceId = await resolverPrecoStripe(stripe, planId)
     const isSubscription = SUBSCRIPTION_PLANS.has(planId)
     const mode: 'subscription' | 'payment' = isSubscription ? 'subscription' : 'payment'
-    const stripe = getStripeClient()
 
     const customer = await stripe.customers.create({
       email: email.trim(),

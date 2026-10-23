@@ -3,7 +3,7 @@ import { opinlyTrack } from '@/lib/opinly/track'
 import type Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getStripeClient } from '@/lib/stripe-client'
-import { recusaPlanoDescontinuado, requireStripePriceId } from '@/lib/stripe-prices'
+import { recusaPlanoDescontinuado, resolverPrecoStripe } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(descontinuado, { status: 410 })
     }
 
-    const priceId = requireStripePriceId(planId)
     const stripe = getStripeClient()
+    const priceId = await resolverPrecoStripe(stripe, planId)
 
     const isLifetime = SCANNER_LIFETIME_PLANS.has(planId) || planId.includes('lifetime') || planId.includes('semestral')
     const mode: 'subscription' | 'payment' = isLifetime ? 'payment' : 'subscription'
