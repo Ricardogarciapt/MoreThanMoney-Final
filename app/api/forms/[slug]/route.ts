@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { checkRateLimit } from '@/lib/admin-api-helpers'
 import { validateSubmission, SLUG_RE, type CustomFormField } from '@/lib/custom-forms'
 import { createMailTransporter, mailFrom } from '@/lib/mail-transport'
+import { ingerirSubmissao } from '@/lib/backoffice-dia-ingestao'
 
 export const dynamic = 'force-dynamic'
 
@@ -112,14 +113,32 @@ export async function POST(
       }
     }
 
-    const { error: insertError } = await supabase.from('form_submissions').insert({
-      form_slug: slug,
-      form_title: form.title,
-      email: result.email || null,
-      data: result.clean,
-    })
+    const { data: gravada, error: insertError } = await supabase
+      .from('form_submissions')
+      .insert({
+        form_slug: slug,
+        form_title: form.title,
+        email: result.email || null,
+        data: result.clean,
+      })
+      .select('id')
+      .maybeSingle()
     if (insertError) {
       return NextResponse.json({ error: insertError.message }, { status: 500 })
+    }
+
+    // O lead entra JÁ no pipeline (CRM do backoffice), pelo mesmo caminho da ingestão diária —
+    // best-effort: a submissão já está gravada e a ingestão das 7h apanha-a se isto falhar.
+    try {
+      await ingerirSubmissao(supabase, {
+        id: String(gravada?.id ?? ''),
+        form_slug: slug,
+        form_title: form.title,
+        email: result.email || null,
+        data: result.clean,
+      })
+    } catch (e) {
+      console.warn('[forms] não entrou no pipeline:', e instanceof Error ? e.message : e)
     }
 
     /**
