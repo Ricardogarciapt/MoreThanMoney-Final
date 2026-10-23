@@ -10,6 +10,8 @@
  */
 import { readFileSync } from 'node:fs'
 import {
+  entraNaGestao,
+  normalizarAreasGestao,
   PAPEIS,
   CAPACIDADES,
   capacidadesDe,
@@ -154,6 +156,18 @@ teste('não-array dá vazio', normalizarAreas('sinais').length === 0)
 const papeisLib = readFileSync('lib/backoffice-papeis.ts', 'utf8')
 teste('o modelo é puro (sem base de dados)', !/supabase|createClient|from\(/.test(papeisLib))
 teste('o modelo não importa next', !/from ['"]next/.test(papeisLib))
+
+// ── Acessos à Gestão: abrem a porta e a área, e nunca o que é só do dono ─────
+{
+  const crm = capacidadesDe([], { gestao: ['crm'] })
+  teste('acesso CRM entra no backoffice', pode(crm, 'bo.entrar'))
+  teste('acesso CRM abre a área CRM', pode(crm, 'bo.gestao_crm') && entraNaGestao(crm))
+  teste('acesso CRM não abre o Comercial', !pode(crm, 'bo.gestao_comercial'))
+  teste('acesso CRM não é dono', !pode(crm, 'bo.dono'))
+  teste('acesso CRM não vê o extracto de ninguém', !pode(crm, 'bo.extracto_proprio') && !pode(crm, 'bo.extracto_todos'))
+  teste('área inventada é deitada fora', normalizarAreasGestao(['crm', 'dono', 'admin']).join() === 'crm')
+  teste('sem acesso nem papel não entra na Gestão', !entraNaGestao(capacidadesDe(['setter'])))
+}
 
 if (falhas.length) {
   console.error(`backoffice-papeis: ${falhas.length} falha(s)`)

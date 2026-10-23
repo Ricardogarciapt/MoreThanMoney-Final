@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { soAdmin } from '@/lib/copia-contas/servidor/guarda'
+import { soGestao } from '@/lib/backoffice-sessao'
 import { enderecoDeConsentimento, googleConfigurado } from '@/lib/agenda/google'
 import { randomBytes } from 'crypto'
 
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
  * impede que alguém prepare um link de retorno e ligue a agenda DELE à nossa conta — sem isto, o
  * endereço de retorno aceitava qualquer código que lhe aparecesse à frente.
  */
-export const GET = soAdmin(async (_a: string, request: NextRequest) => {
+export const GET = soGestao('bo.gestao_crm', async (_a: string, request: NextRequest) => {
   if (!googleConfigurado()) {
     return NextResponse.json({ error: 'Falta GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET no ambiente.' }, { status: 400 })
   }

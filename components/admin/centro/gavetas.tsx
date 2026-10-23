@@ -126,8 +126,18 @@ function GavetaConta({ refConta }: { refConta: string }) {
             </div>
           )}
 
+          {c.fundedId && c.origem !== "funded" && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#D2A63C]/25 bg-[#D2A63C]/[0.04] p-3">
+              <p className="flex-1 text-xs text-zinc-300">Esta ligação aponta para uma conta MTM Funded. Saldo, regras, credenciais, ajustes e estado gerem-se na ficha da conta.</p>
+              <Botao tom="ouro" onClick={() => ctx.abrir({ tipo: "conta", id: `funded:${c.fundedId}` })}>Gerir a conta MTM Funded →</Botao>
+            </div>
+          )}
+
           <div>
-            <p className="mb-1.5 text-[10px] uppercase tracking-wider text-zinc-500">Acções (caminhos guardados, auditadas)</p>
+            <p className="mb-1.5 text-[10px] uppercase tracking-wider text-zinc-500">Acções desta ligação (auditadas)</p>
+            {!c.metaapiAccountId && (c.plataforma === "mt4" || c.plataforma === "mt5") && (
+              <p className="mb-1.5 text-[10.5px] text-zinc-500">Sem conta MetaApi associada: sincronizar, deploy e posições ao vivo não se aplicam.</p>
+            )}
             <div className="flex flex-wrap gap-1.5">
               {(c.plataforma === "mt4" || c.plataforma === "mt5") && c.metaapiAccountId && <Botao onClick={() => operar("sincronizar")} disabled={Boolean(aCorrer)} title="1 GET à MetaApi + releitura CopyFactory">{aCorrer === "sincronizar" && <Loader2 className="h-3 w-3 animate-spin" />}Sincronizar</Botao>}
               {(c.origem === "site" || c.origem === "auto") && (c.ativa

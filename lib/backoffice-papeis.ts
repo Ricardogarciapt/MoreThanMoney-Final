@@ -71,9 +71,13 @@ export const CAPACIDADES = [
   'bo.equipa_ver',
   /** Dar e tirar papéis, criar afiliados, escolher acessos ao site. Só o dono. */
   'bo.papeis_gerir',
-  /** A área «Dono» do backoffice (contas, agenda, WhatsApp, agentes, leads, cupões, gestão). Só o dono:
-   *  nenhum papel a recebe — chega ao admin pela linha única de `capacidadesDe`. */
+  /** A parte da área «Gestão» que é só do dono (contas & cópia, agentes IA, dashboard de gestão, acessos).
+   *  Nenhum papel nem acesso a recebe — chega ao admin pela linha única de `capacidadesDe`. */
   'bo.dono',
+  /** Gestão · Clientes & CRM: agenda, WhatsApp, leads sociais e formulários. Dada por acesso, não por papel. */
+  'bo.gestao_crm',
+  /** Gestão · Comercial: tráfego e cupões. Dada por acesso, não por papel. */
+  'bo.gestao_comercial',
 ] as const
 export type Capacidade = (typeof CAPACIDADES)[number]
 
@@ -118,6 +122,21 @@ const MAPA: Record<Papel, readonly Capacidade[]> = {
   ],
 }
 
+/**
+ * ACESSOS À GESTÃO — o que se dá a quem trabalha a casa sem ser vendedor (tabela
+ * `backoffice_gestao_acessos`, migração 203). Não são papéis: não levam comissão nem pipeline, e por
+ * isso não entram no CHECK dos papéis de venda. Cada área abre um grupo de módulos da Gestão.
+ */
+export const AREAS_GESTAO = ['crm', 'comercial'] as const
+export type AreaGestao = (typeof AREAS_GESTAO)[number]
+export const AREA_GESTAO_NOME: Record<AreaGestao, string> = { crm: 'Clientes & CRM', comercial: 'Comercial' }
+const CAPACIDADE_DA_AREA: Record<AreaGestao, Capacidade> = { crm: 'bo.gestao_crm', comercial: 'bo.gestao_comercial' }
+
+export function normalizarAreasGestao(v: unknown): AreaGestao[] {
+  if (!Array.isArray(v)) return []
+  return [...new Set(v.filter((x): x is AreaGestao => typeof x === 'string' && (AREAS_GESTAO as readonly string[]).includes(x)))]
+}
+
 /** O que um papel dá, sozinho. Útil para explicar no admin antes de atribuir. */
 export function capacidadesDoPapel(papel: Papel): readonly Capacidade[] {
   return MAPA[papel] ?? []
@@ -131,13 +150,26 @@ export function capacidadesDoPapel(papel: Papel): readonly Capacidade[] {
  * caminho de código que a de todos os outros, e um engano num `if` distraído não abre uma porta
  * a quem não é dono.
  */
-export function capacidadesDe(papeis: readonly Papel[], opts?: { admin?: boolean }): Set<Capacidade> {
+export function capacidadesDe(
+  papeis: readonly Papel[],
+  opts?: { admin?: boolean; gestao?: readonly AreaGestao[] },
+): Set<Capacidade> {
   if (opts?.admin) return new Set(CAPACIDADES)
   const out = new Set<Capacidade>()
   for (const p of papeis) {
     for (const c of capacidadesDoPapel(p)) out.add(c)
   }
+  // Um acesso de gestão também é entrar: quem só gere a agenda não precisa de ser setter para abrir a porta.
+  for (const a of opts?.gestao ?? []) {
+    const c = CAPACIDADE_DA_AREA[a]
+    if (c) { out.add('bo.entrar'); out.add(c) }
+  }
   return out
+}
+
+/** Pode abrir a área Gestão (algum módulo dela)? */
+export function entraNaGestao(capacidades: ReadonlySet<Capacidade>): boolean {
+  return ['bo.dono', 'bo.gestao_crm', 'bo.gestao_comercial'].some((c) => capacidades.has(c as Capacidade))
 }
 
 /** A pergunta que as rotas fazem. Sem capacidade → falso. Sempre. */

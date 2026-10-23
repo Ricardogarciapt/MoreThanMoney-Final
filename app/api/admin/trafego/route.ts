@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin, requireAdmin } from '@/lib/admin-api-helpers'
+import { exigirGestao } from '@/lib/backoffice-sessao'
+import { getSupabaseAdmin } from '@/lib/admin-api-helpers'
 import { PERIODOS, inicioDoPeriodo, lerCampanhasMeta, type PeriodoMeta } from '@/lib/trafego/meta'
 
 export const dynamic = 'force-dynamic'
@@ -10,8 +11,8 @@ export const dynamic = 'force-dynamic'
  * isso mesmo no ecrã: sem UTM ligada a cada negócio, não se sabe que lead veio de que anúncio.
  */
 export async function GET(request: NextRequest) {
-  const negado = await requireAdmin(request)
-  if (negado) return negado
+  const g = await exigirGestao(request, 'bo.gestao_comercial')
+  if (g.negado) return g.negado
 
   const pedido = request.nextUrl.searchParams.get('periodo') as PeriodoMeta | null
   const periodo: PeriodoMeta = pedido && PERIODOS.includes(pedido) ? pedido : 'last_7d'
@@ -34,5 +35,7 @@ export async function GET(request: NextRequest) {
     meta,
     crm: { novos: (crm.data ?? []).length, porOrigem, erro: crm.error?.message ?? null },
     agenda: { marcacoes: marcacoes.length, comUtmMeta: comUtmPago },
+    // As escritas (pausar, orçamento) são só do dono — o ecrã esconde os botões a quem não as pode fazer.
+    podeEscrever: g.admin,
   })
 }

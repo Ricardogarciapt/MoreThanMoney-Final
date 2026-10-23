@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin, getSupabaseAdmin, isValidUUID } from '@/lib/admin-api-helpers'
+import { exigirGestao } from '@/lib/backoffice-sessao'
+import { getSupabaseAdmin, isValidUUID } from '@/lib/admin-api-helpers'
 
 export const dynamic = 'force-dynamic'
 
 /** GET /api/admin/forms/submissions?slug=… — lista submissões (todas ou por formulário). */
 export async function GET(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (authCheck) return authCheck
 
   const slug = request.nextUrl.searchParams.get('slug')
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 
 /** PUT /api/admin/forms/submissions — atualizar estado (new | read | contacted | rejected). */
 export async function PUT(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (authCheck) return authCheck
 
   const body = await request.json().catch(() => ({}))
@@ -46,7 +47,7 @@ export async function PUT(request: NextRequest) {
 
 /** DELETE /api/admin/forms/submissions?id=… — apaga uma submissão. */
 export async function DELETE(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (authCheck) return authCheck
 
   const id = request.nextUrl.searchParams.get('id') || ''

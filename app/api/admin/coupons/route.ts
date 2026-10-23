@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
+import { exigirGestao } from '@/lib/backoffice-sessao'
+import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
 import {
   activateStripePromotionCode,
   createStripeCouponSync,
@@ -14,7 +15,7 @@ const supabase = getSupabaseAdmin()
 // ── GET — list all coupons ────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_comercial')).negado
   if (authCheck) return authCheck
 
   try {
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
 // ── POST — create coupon ──────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_comercial')).negado
   if (authCheck) return authCheck
 
   try {
@@ -307,7 +308,7 @@ export async function POST(request: NextRequest) {
 // ── PATCH — toggle is_active or update fields ─────────────────────────────────
 
 export async function PATCH(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_comercial')).negado
   if (authCheck) return authCheck
 
   try {
@@ -397,7 +398,7 @@ export async function PATCH(request: NextRequest) {
 // ── DELETE — remove coupon ────────────────────────────────────────────────────
 
 export async function DELETE(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_comercial')).negado
   if (authCheck) return authCheck
 
   try {

@@ -3,12 +3,13 @@
  * Read-only para o painel /admin/social/leads.
  */
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
+import { exigirGestao } from '@/lib/backoffice-sessao'
+import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
 
 const supabase = getSupabaseAdmin()
 
 export async function GET(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (authCheck) return authCheck
 
   try {

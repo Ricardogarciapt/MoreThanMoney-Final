@@ -1,14 +1,15 @@
 /**
- * TRÁFEGO PAGO — leitura das campanhas Meta (Facebook/Instagram Ads) pela Marketing API.
+ * TRÁFEGO PAGO — as campanhas Meta (Facebook/Instagram Ads) pela Marketing API.
  *
- * Só LÊ. Pausar, mudar orçamento ou criar anúncios gasta dinheiro e é acto do dono: fica para o
- * gestor da Meta (ou para o conector Meta Ads do Claude, que pede confirmação em cada escrita).
- * Ler directamente a Graph API — em vez de pôr o servidor Python do meta-ads-mcp (BSL 1.1) a correr
- * só para isto — poupa um serviço e uma porta; as perguntas são as mesmas.
+ * LÊ (insights, estado, orçamento) e faz as TRÊS escritas que um gestor de tráfego faz todos os dias:
+ * pausar, reactivar e mudar o orçamento diário de uma campanha (`mudarCampanha`). As escritas gastam
+ * ou poupam dinheiro, por isso a rota só as deixa ao dono e pede confirmação no ecrã. Criar campanhas
+ * e anúncios continua no Gestor de Anúncios. É o mesmo leque de operações do meta-ads-mcp (BSL 1.1),
+ * feito directamente na Graph API — sem mais um serviço Python e uma porta para manter.
  *
  * Variáveis (Vercel):
- *   META_ADS_ACCESS_TOKEN  token de utilizador de sistema com `ads_read` (o mesmo cuidado do WhatsApp:
- *                          tipo SYSTEM_USER e `expires_at: 0`, ver CLAUDE.md)
+ *   META_ADS_ACCESS_TOKEN  token de utilizador de sistema com `ads_read` (e `ads_management` para as
+ *                          escritas). O mesmo cuidado do WhatsApp: tipo SYSTEM_USER e `expires_at: 0`
  *   META_AD_ACCOUNT_IDS    ids das contas de anúncios, separados por vírgula (sem `act_`)
  */
 const VERSAO = 'v21.0'
@@ -29,6 +30,10 @@ export type CampanhaMeta = {
   cpc: number | null
   /** Acções de lead que a Meta atribui (formulário instantâneo, pixel «Lead», mensagens iniciadas). */
   leads: number
+  /** Vezes que, em média, a mesma pessoa viu o anúncio no período. */
+  frequencia: number | null
+  /** Orçamento diário da CAMPANHA (CBO), em unidades da moeda. null = o orçamento está nos conjuntos. */
+  orcamentoDiario: number | null
 }
 
 export type LeituraMeta =
@@ -66,7 +71,7 @@ export async function lerCampanhasMeta(periodo: PeriodoMeta): Promise<LeituraMet
       const q = new URLSearchParams({
         level: 'campaign',
         date_preset: periodo,
-        fields: 'campaign_id,campaign_name,objective,spend,impressions,clicks,ctr,cpc,actions,account_currency',
+        fields: 'campaign_id,campaign_name,objective,spend,impressions,clicks,ctr,cpc,frequency,actions,account_currency',
         limit: '200',
         access_token: token!,
       })
@@ -79,13 +84,19 @@ export async function lerCampanhasMeta(periodo: PeriodoMeta): Promise<LeituraMet
         }
         // O estado vem de outro pedido (insights não o traz); um só pedido por conta, pelos ids.
         const estados = new Map<string, string>()
+        const orcamentos = new Map<string, number>()
         const ids = (d.data ?? []).map((l: { campaign_id: string }) => l.campaign_id)
         if (ids.length) {
           const e = await fetch(
-            `https://graph.facebook.com/${VERSAO}/?ids=${ids.join(',')}&fields=effective_status&access_token=${encodeURIComponent(token!)}`,
+            `https://graph.facebook.com/${VERSAO}/?ids=${ids.join(',')}&fields=effective_status,daily_budget&access_token=${encodeURIComponent(token!)}`,
             { cache: 'no-store' },
           ).then((x) => x.json()).catch(() => ({}))
-          for (const [k, v] of Object.entries(e ?? {})) estados.set(k, String((v as { effective_status?: string })?.effective_status ?? ''))
+          for (const [k, v] of Object.entries(e ?? {})) {
+            const x = v as { effective_status?: string; daily_budget?: string }
+            estados.set(k, String(x?.effective_status ?? ''))
+            // A Meta dá o orçamento em cêntimos da moeda da conta.
+            if (x?.daily_budget) orcamentos.set(k, num(x.daily_budget) / 100)
+          }
         }
         for (const l of d.data ?? []) {
           moeda = moeda ?? l.account_currency ?? null
@@ -103,6 +114,8 @@ export async function lerCampanhasMeta(periodo: PeriodoMeta): Promise<LeituraMet
             ctr: l.ctr == null ? null : num(l.ctr),
             cpc: l.cpc == null ? null : num(l.cpc),
             leads,
+            frequencia: l.frequency == null ? null : num(l.frequency),
+            orcamentoDiario: orcamentos.get(l.campaign_id) ?? null,
           })
         }
       } catch (e) {
@@ -125,5 +138,33 @@ export function inicioDoPeriodo(p: PeriodoMeta, agora = new Date()): { de: Date;
     case 'last_30d': return { de: new Date(inicioDia(d).getTime() - 30 * 86_400_000), ate: inicioDia(d) }
     case 'this_month': return { de: new Date(d.getFullYear(), d.getMonth(), 1), ate: d }
     case 'last_month': return { de: new Date(d.getFullYear(), d.getMonth() - 1, 1), ate: new Date(d.getFullYear(), d.getMonth(), 1) }
+  }
+}
+
+export type MudancaCampanha = { acao: 'pausar' } | { acao: 'activar' } | { acao: 'orcamento'; diario: number }
+
+/**
+ * Pausar, reactivar ou mudar o orçamento diário (CBO) de uma campanha. Devolve a mensagem da Meta
+ * em caso de recusa — sem a traduzir para «falhou», porque é ela que diz o que falta (permissão
+ * `ads_management`, orçamento abaixo do mínimo, orçamento nos conjuntos e não na campanha…).
+ */
+export async function mudarCampanha(campanhaId: string, m: MudancaCampanha): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const token = process.env.META_ADS_ACCESS_TOKEN
+  if (!token) return { ok: false, erro: 'META_ADS_ACCESS_TOKEN não está configurado.' }
+  if (!/^\d+$/.test(campanhaId)) return { ok: false, erro: 'Campanha inválida.' }
+  const corpo = new URLSearchParams({ access_token: token })
+  if (m.acao === 'pausar') corpo.set('status', 'PAUSED')
+  else if (m.acao === 'activar') corpo.set('status', 'ACTIVE')
+  else {
+    if (!Number.isFinite(m.diario) || m.diario < 1 || m.diario > 5000) return { ok: false, erro: 'Orçamento diário entre 1 e 5000.' }
+    corpo.set('daily_budget', String(Math.round(m.diario * 100)))
+  }
+  try {
+    const r = await fetch(`https://graph.facebook.com/${VERSAO}/${campanhaId}`, { method: 'POST', body: corpo, cache: 'no-store' })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok || d.error) return { ok: false, erro: d?.error?.error_user_msg ?? d?.error?.message ?? `HTTP ${r.status}` }
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, erro: e instanceof Error ? e.message : String(e) }
   }
 }

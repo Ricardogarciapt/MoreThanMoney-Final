@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { soAdmin } from '@/lib/copia-contas/servidor/guarda'
+import { soGestao } from '@/lib/backoffice-sessao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { minutosDoRelogio } from '@/lib/agenda/horas'
 import { avisarConvidado } from '@/lib/agenda/avisos'
@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic'
  * conta — o token em si é a chave da agenda de uma pessoa, e uma chave dessas não anda num JSON que
  * o browser guarda em cache.
  */
-export const GET = soAdmin(async () => {
+export const GET = soGestao('bo.gestao_crm', async () => {
   const db = getSupabaseAdmin()
   const [{ data: anfitrioes }, { data: tipos }, { data: marcacoes }] = await Promise.all([
     db.from('agenda_anfitrioes')
@@ -61,7 +61,7 @@ function janelasValidas(v: unknown): Array<{ dia: number; inicio: string; fim: s
   return out
 }
 
-export const POST = soAdmin(async (_adminId: string, request: NextRequest) => {
+export const POST = soGestao('bo.gestao_crm', async (_adminId: string, request: NextRequest) => {
   const b = (await request.json().catch(() => ({}))) as Record<string, unknown>
   const db = getSupabaseAdmin()
 

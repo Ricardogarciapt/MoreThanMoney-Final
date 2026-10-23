@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-api-helpers'
+import { exigirGestao } from '@/lib/backoffice-sessao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { credenciaisWhatsApp, enviarWhatsApp, lerEstadoDoContacto } from '@/lib/whatsapp-mensageiro'
 import { JANELA_MS, decidirEnvio, normalizarE164 } from '@/lib/whatsapp-envio'
@@ -23,7 +23,7 @@ export const dynamic = 'force-dynamic'
  * acabariam a discordar, e o ecrã passaria a mentir exactamente no caso difícil.
  */
 export async function GET(request: NextRequest) {
-  const negado = await requireAdmin(request)
+  const negado = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (negado) return negado
 
   const bruto = request.nextUrl.searchParams.get('telefone') ?? ''
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
  * segunda porta que deixa passar o que a primeira travava.
  */
 export async function POST(request: NextRequest) {
-  const negado = await requireAdmin(request)
+  const negado = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (negado) return negado
 
   const body = (await request.json().catch(() => ({}))) as {
