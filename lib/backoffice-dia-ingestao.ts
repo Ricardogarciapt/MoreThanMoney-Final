@@ -572,7 +572,10 @@ function campoDe(dados: Record<string, unknown>, padrao: RegExp): string | null 
  * email): a mesma pessoa em dois formulários diferentes são dois pedidos, e o pipeline mostra os dois.
  * Sem email nem telefone não há a quem responder — não entra.
  */
-export function candidatoDeSubmissao(s: { id: string; form_slug: string; form_title?: string | null; email?: string | null; data?: unknown }): Candidato | null {
+export function candidatoDeSubmissao(
+  s: { id: string; form_slug: string; form_title?: string | null; email?: string | null; data?: unknown },
+  destino?: { etiquetas?: string[]; interesse?: string | null } | null,
+): Candidato | null {
   const dados = (s.data && typeof s.data === 'object' ? s.data : {}) as Record<string, unknown>
   const email = ouNulo(s.email ?? undefined, campoDe(dados, /e-?mail/i))?.toLowerCase() ?? null
   const telefone = ouNulo(campoDe(dados, /telefone|telemovel|phone|whats/i))
@@ -587,8 +590,9 @@ export function candidatoDeSubmissao(s: { id: string; form_slug: string; form_ti
     telegram_id: null,
     instagram_handle: instagram ? instagram.replace(/^@/, '').toLowerCase() : null,
     pais: ouNulo(campoDe(dados, /pais|country/i)),
-    interesse: ouNulo(campoDe(dados, /interesse|interest|objectivo|objetivo/i), s.form_title ?? undefined),
-    etiquetas: [`form:${s.form_slug}`],
+    interesse: ouNulo(campoDe(dados, /interesse|interest|objectivo|objetivo/i), destino?.interesse, s.form_title ?? undefined),
+    // As etiquetas do destino do formulário (o funil a que pertence) vão com a da origem.
+    etiquetas: [...new Set([`form:${s.form_slug}`, ...(destino?.etiquetas ?? [])])],
     origem: 'formulario',
     estado: 'lead',
     nota: `Preencheu o formulário «${s.form_title ?? s.form_slug}».`,
@@ -597,14 +601,18 @@ export function candidatoDeSubmissao(s: { id: string; form_slug: string; form_ti
 
 /** Formulários: quem pediu contacto por escrito. Lê as submissões recentes; a chave impede repetidos. */
 async function dosFormularios(db: SupabaseClient): Promise<Ingerido> {
-  const { data } = await db
-    .from('form_submissions')
-    .select('id, form_slug, form_title, email, data, status, created_at')
-    .order('created_at', { ascending: false })
-    .limit(300)
+  const [{ data }, { data: forms }] = await Promise.all([
+    db
+      .from('form_submissions')
+      .select('id, form_slug, form_title, email, data, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(300),
+    db.from('custom_forms').select('slug, destino'),
+  ])
+  const destinos = new Map((forms ?? []).map((f) => [String(f.slug), f.destino as { etiquetas?: string[]; interesse?: string | null } | null]))
   const candidatos = (data ?? [])
     .filter((r) => (r as { status?: string }).status !== 'spam')
-    .map((r) => candidatoDeSubmissao(r as { id: string; form_slug: string }))
+    .map((r) => candidatoDeSubmissao(r as { id: string; form_slug: string }, destinos.get(String((r as { form_slug: string }).form_slug))))
     .filter((c): c is Candidato => c !== null)
   return ingerir(db, 'formulario', candidatos)
 }
@@ -614,8 +622,12 @@ async function dosFormularios(db: SupabaseClient): Promise<Ingerido> {
  * contacto às 22h e só aparece à equipa no dia útil seguinte já arrefeceu. Mesmo caminho (`ingerir`),
  * por isso a mesma deduplicação: a ingestão do dia seguinte encontra-a e não a repete.
  */
-export async function ingerirSubmissao(db: SupabaseClient, s: Parameters<typeof candidatoDeSubmissao>[0]): Promise<Ingerido | null> {
-  const c = candidatoDeSubmissao(s)
+export async function ingerirSubmissao(
+  db: SupabaseClient,
+  s: Parameters<typeof candidatoDeSubmissao>[0],
+  destino?: Parameters<typeof candidatoDeSubmissao>[1],
+): Promise<Ingerido | null> {
+  const c = candidatoDeSubmissao(s, destino)
   return c ? ingerir(db, 'formulario', [c]) : null
 }
 

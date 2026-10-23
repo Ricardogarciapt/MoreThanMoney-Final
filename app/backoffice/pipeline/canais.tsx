@@ -26,11 +26,11 @@ const DESCREVER: Record<keyof Canais, { nome: string; linha: (l: Linha) => strin
   whatsapp: {
     nome: 'WhatsApp',
     linha: (l) => `${t(l.estado)}${Number(l.por_responder) > 0 ? ` · ${l.por_responder} por responder` : ''} · última mensagem ${quando(l.ultima_entrada ?? l.ultima_saida)}`,
-    href: '/backoffice/dono/whatsapp',
+    href: '/backoffice/gestao/whatsapp',
   },
-  agenda: { nome: 'Agenda', linha: (l) => `${quando(l.inicio)} · ${t(l.estado)}`, href: '/backoffice/dono/agenda' },
-  formularios: { nome: 'Formulários', linha: (l) => `${t(l.form_title ?? l.form_slug)} · ${quando(l.created_at)}`, href: '/backoffice/dono/formularios' },
-  instagram: { nome: 'Instagram', linha: (l) => `comentou ${t(l.keyword)}${l.intent ? ` (${l.intent})` : ''} · DM ${t(l.dm_status)} · ${quando(l.created_at)}`, href: '/backoffice/dono/leads' },
+  agenda: { nome: 'Agenda', linha: (l) => `${quando(l.inicio)} · ${t(l.estado)}`, href: '/backoffice/gestao/agenda' },
+  formularios: { nome: 'Formulários', linha: (l) => `${t(l.form_title ?? l.form_slug)} · ${quando(l.created_at)}`, href: '/backoffice/gestao/formularios' },
+  instagram: { nome: 'Instagram', linha: (l) => `comentou ${t(l.keyword)}${l.intent ? ` (${l.intent})` : ''} · DM ${t(l.dm_status)} · ${quando(l.created_at)}`, href: '/backoffice/gestao/leads' },
   telegram: { nome: 'Telegram', linha: (l) => `${t(l.stage)}${l.interesse ? ` · ${l.interesse}` : ''} · ${t(l.message_count)} mensagens · ${quando(l.updated_at)}` },
 }
 

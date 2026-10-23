@@ -131,3 +131,23 @@ export function validateSubmission(fields: CustomFormField[], data: unknown): Su
 
   return { ok: true, clean, email }
 }
+
+/**
+ * Para onde vai uma submissão, além da caixa do formulário: as etiquetas e o interesse com que entra
+ * no pipeline do backoffice (CRM), e se o dono recebe aviso no Telegram. É o que liga um formulário
+ * a um funil — o funil lê etiquetas e interesse para saber que discurso usar.
+ */
+export interface DestinoFormulario {
+  etiquetas: string[]
+  interesse: string | null
+  avisarTelegram: boolean
+}
+
+export function sanitizeDestino(raw: unknown): DestinoFormulario {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const etiquetas = (Array.isArray(o.etiquetas) ? o.etiquetas : String(o.etiquetas ?? '').split(','))
+    .map((x) => String(x).trim().toLowerCase().replace(/[^a-z0-9:_-]/g, '-').slice(0, 40))
+    .filter(Boolean)
+  const interesse = String(o.interesse ?? '').trim().slice(0, 120)
+  return { etiquetas: [...new Set(etiquetas)].slice(0, 8), interesse: interesse || null, avisarTelegram: o.avisarTelegram === true }
+}

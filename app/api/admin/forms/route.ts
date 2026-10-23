@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin, getSupabaseAdmin, isValidUUID } from '@/lib/admin-api-helpers'
-import { sanitizeFields, SLUG_RE } from '@/lib/custom-forms'
+import { exigirGestao } from '@/lib/backoffice-sessao'
+import { getSupabaseAdmin, isValidUUID } from '@/lib/admin-api-helpers'
+import { sanitizeDestino, sanitizeFields, SLUG_RE } from '@/lib/custom-forms'
 
 export const dynamic = 'force-dynamic'
 
 /** GET /api/admin/forms — todos os formulários + contagem de submissões. */
 export async function GET(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (authCheck) return authCheck
 
   const supabase = getSupabaseAdmin()
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
 
 /** POST /api/admin/forms — criar formulário novo. */
 export async function POST(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (authCheck) return authCheck
 
   const body = await request.json().catch(() => ({}))
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
       badge: String(body.badge || '').trim().slice(0, 40) || null,
       active: body.active !== false,
       fields,
+      destino: sanitizeDestino(body.destino),
     })
     .select()
     .single()
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
 
 /** PUT /api/admin/forms — atualizar um formulário existente (por id). */
 export async function PUT(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (authCheck) return authCheck
 
   const body = await request.json().catch(() => ({}))
@@ -95,6 +97,7 @@ export async function PUT(request: NextRequest) {
   if (body.description !== undefined) update.description = String(body.description || '').trim().slice(0, 2000) || null
   if (body.badge !== undefined) update.badge = String(body.badge || '').trim().slice(0, 40) || null
   if (body.active !== undefined) update.active = body.active === true
+  if (body.destino !== undefined) update.destino = sanitizeDestino(body.destino)
   if (body.fields !== undefined) {
     const fields = sanitizeFields(body.fields)
     if (!fields) return NextResponse.json({ error: 'Estrutura de campos inválida.' }, { status: 400 })
@@ -116,7 +119,7 @@ export async function PUT(request: NextRequest) {
 
 /** DELETE /api/admin/forms?id=… — apaga o formulário e as suas submissões. */
 export async function DELETE(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (authCheck) return authCheck
 
   const id = request.nextUrl.searchParams.get('id') || ''

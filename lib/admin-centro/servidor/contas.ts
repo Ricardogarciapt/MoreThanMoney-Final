@@ -41,6 +41,9 @@ export interface ContaCentro {
   mestreDe: { slug: string; rotulo: string; modo: string } | null
   login: string | null
   servidor: string | null
+  /** A conta MTM Funded por trás desta ligação (a própria, se for uma Funded). Junta as ligações
+   *  T2T/MTM Auto de uma Funded à conta, mesmo quando a ligação não guarda o login. */
+  fundedId: string | null
   estado: string
   ativa: boolean
   demo: boolean
@@ -202,6 +205,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
       categoria: c.account_role === 'master' || (acc && contasProvider.has(acc)) ? 'mestre' : 'cliente',
       userId: txt(c.user_id), rotulo: txt(c.account_label), etiquetaDoDono: etiqSite.get(String(c.id)) ?? null, mestreDe: null,
       login: plataforma === 'tradelocker' ? txt(c.tl_acc_num) : txt(c.mt5_login), servidor: plataforma === 'tradelocker' ? txt(c.tl_server) ?? txt(c.mt5_server) : txt(c.mt5_server),
+      fundedId: txt(c.funded_account_id),
       estado: String(c.mt5_status ?? '—'), ativa: c.is_active !== false, demo: plataforma === 'tradelocker' ? c.tl_env === 'demo' : demoPeloNome(c.mt5_server),
       erro, erroEstado: erro && ehErroDeQuotaTexto(erro) && c.last_signal_at && Date.parse(String(c.last_signal_at)) > Date.parse(String(c.updated_at ?? 0)) ? 'velho' : erroActual(erro, txt(c.updated_at), agora),
       metaapiAccountId: acc, metaapi: metaapi(acc, txt(c.mt5_status)),
@@ -220,6 +224,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     base.push({
       ref: `auto:${c.id}`, origem: 'auto', plataforma, categoria: equipa.has(String(c.user_id)) ? 'equipa' : acc && contasProvider.has(acc) ? 'mestre' : 'cliente',
       userId: txt(c.user_id), rotulo: txt(c.rotulo) ?? txt(c.corretora), etiquetaDoDono: etiqAuto.get(String(c.id)) ?? null, mestreDe: null, login: txt(c.login), servidor: txt(c.servidor),
+      fundedId: txt(c.funded_account_id),
       estado: String(c.estado ?? '—'), ativa: c.copia_ativa !== false, demo: Boolean(c.demo), erro, erroEstado: erroActual(erro, txt(c.updated_at), agora),
       metaapiAccountId: acc, metaapi: metaapi(acc, txt(c.estado)),
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: acc, login: txt(c.login), plataforma, estado: txt(c.estado) }),
@@ -235,7 +240,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     const acc = txt(c.metaapi_account_id)
     const plataforma = c.plataforma === 'mt4' ? 'mt4' : 'mt5'
     base.push({
-      ref: `wt:${c.id}`, origem: 'wt', plataforma, categoria: 'cliente', userId: txt(c.user_id), rotulo: txt(c.rotulo), etiquetaDoDono: etiqWt.get(String(c.id)) ?? null, mestreDe: null, login: txt(c.login), servidor: txt(c.servidor),
+      ref: `wt:${c.id}`, origem: 'wt', plataforma, categoria: 'cliente', userId: txt(c.user_id), rotulo: txt(c.rotulo), etiquetaDoDono: etiqWt.get(String(c.id)) ?? null, mestreDe: null, login: txt(c.login), servidor: txt(c.servidor), fundedId: null,
       estado: String(c.estado ?? '—'), ativa: true, demo: demoPeloNome(c.servidor), erro: txt(c.erro), erroEstado: erroActual(txt(c.erro), txt(c.updated_at), agora),
       metaapiAccountId: acc, metaapi: metaapi(acc, txt(c.estado)),
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: acc, login: txt(c.login), plataforma, estado: txt(c.estado) }),
@@ -252,7 +257,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
       userId: txt(f.user_id), rotulo: [mestre?.rotulo ?? null, real ? 'Casa · auditoria' : casa ? 'Casa' : null, txt(f.tipo), f.recolhe_todos_sinais === true ? 'todos os sinais' : null].filter(Boolean).join(' · ') || 'MTM Funded',
       etiquetaDoDono: etiqFunded.get(String(f.id)) ?? null,
       mestreDe: mestre ? { slug: mestre.slug, rotulo: mestre.rotulo, modo: mestre.modo } : null,
-      login: txt(f.mt5_login), servidor: txt(f.servidor) ?? 'MTM Funded', estado: String(f.estado ?? '—'), ativa: f.estado === 'ativa', demo: false,
+      login: txt(f.mt5_login), servidor: txt(f.servidor) ?? 'MTM Funded', fundedId: String(f.id), estado: String(f.estado ?? '—'), ativa: f.estado === 'ativa', demo: false,
       erro: txt(f.quebrou_regra), erroEstado: f.quebrou_regra ? 'actual' : null, metaapiAccountId: txt(f.metaapi_account_id),
       metaapi: metaapi(txt(f.metaapi_account_id), f.motor === 'sim' ? 'simulada' : null), contaMetaApi: false,
       usos: [f.motor === 'sim' ? 'Simulada' : 'MT5', ...(mestre ? [`${mestre.rotulo} (motor: ${mestre.modo})`] : []), ...(f.segue_estrategia ? [`Segue ${f.segue_estrategia}`] : []), ...(f.aceita_t2t ? ['Aceita T2T'] : []), ...(usosRota.get(`funded:${f.id}`) ?? [])],

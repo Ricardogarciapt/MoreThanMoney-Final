@@ -17,6 +17,9 @@ export type ContaAgrupada = ContaCentro & { ligacoes: ContaCentro[] }
 const PESO: Record<ContaCentro['origem'], number> = { funded: 4, site: 3, auto: 2, wt: 1 }
 
 export function chaveDaConta(c: ContaCentro): string {
+  // Uma ligação T2T/MTM Auto a uma Funded é a Funded — muitas não guardam login, e ficavam soltas,
+  // numa linha sem gestão (a gestão da conta é a ficha Funded).
+  if (c.fundedId) return `funded:${c.fundedId}`
   if (!c.login) return c.ref
   return `${c.plataforma}:${c.login.trim()}:${c.userId ?? (c.servidor ?? '').trim().toLowerCase()}`
 }

@@ -79,8 +79,8 @@ const GRUPOS: Grupo[] = [
     itens: [
       { tipo: "tab", id: "overview", rotulo: "Visão geral", icone: LayoutDashboard },
       // A área do dono no backoffice junta contas, agenda, WhatsApp, agentes, leads, cupões e a
-      // gestão num sítio só (lib/backoffice-dono.ts). As entradas daqui continuam até a migração fechar.
-      { tipo: "link", href: "https://backoffice.morethanmoney.pt/dono", rotulo: "Backoffice · área do dono", icone: Network },
+      // gestão num sítio só (lib/backoffice-gestao.ts). As entradas daqui continuam até a migração fechar.
+      { tipo: "link", href: "https://backoffice.morethanmoney.pt/backoffice/gestao", rotulo: "Backoffice · Gestão", icone: Network },
       { tipo: "tab", id: "users", rotulo: "Utilizadores", icone: Users },
       // «Equipa de agentes» e não «Agentes»: já há um «Agentes e automações» no grupo de marketing
       // que aponta para /dashboard-gestao, e dois itens com o mesmo nome mandavam o dono ao

@@ -16,7 +16,7 @@ import {
 } from "@/lib/backoffice-dominio"
 // A leitura vem do ficheiro SÓ-LEITURA, nunca de `backoffice-sessao`: esse importa `next/headers`,
 // que não existe no edge onde o middleware corre.
-import { papeisActivosDe } from "@/lib/backoffice-papeis-leitura"
+import { areasGestaoDe, papeisActivosDe } from "@/lib/backoffice-papeis-leitura"
 import { capacidadesDe, pode } from "@/lib/backoffice-papeis"
 import { areaDoCaminho, normalizarAreas } from "@/lib/backoffice-acessos-site"
 // O tecto vive em `lib/com-tecto.ts` — é puro, corre no edge, e o porquê está lá escrito.
@@ -258,7 +258,7 @@ export async function middleware(request: NextRequest) {
       // Tecto: sem resposta, entra-se sem papéis nenhuns — e `bo.entrar` fecha a porta logo abaixo.
       // Fechar por lentidão é chato; deixar o pedido pendurado até ao 504 da Vercel é pior, e era o
       // que fazia a raiz de backoffice.morethanmoney.pt cair (registos da Vercel, 25/09).
-      const [atribuicoes, perfilBo] = await Promise.all([
+      const [atribuicoes, perfilBo, gestaoBo] = await Promise.all([
         comTecto<Array<{ papel: unknown }>>(
           papeisActivosDe(supabaseBo as never, boUser.id).catch(() => []),
           [],
@@ -277,10 +277,11 @@ export async function middleware(request: NextRequest) {
           null,
           TECTO_MIDDLEWARE_MS,
         ),
+        comTecto(areasGestaoDe(supabaseBo as never, boUser.id).catch(() => []), [], TECTO_MIDDLEWARE_MS),
       ])
       const capacidades = capacidadesDe(
         atribuicoes.map((a) => a.papel as never),
-        { admin: perfilBo?.user_type === "admin" && perfilBo?.is_active === true },
+        { admin: perfilBo?.user_type === "admin" && perfilBo?.is_active === true, gestao: gestaoBo },
       )
 
       if (!pode(capacidades, "bo.entrar")) {

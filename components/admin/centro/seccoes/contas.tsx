@@ -178,7 +178,7 @@ export default function SeccaoContas() {
         </Filtros>
         <Lista dados={dados} erro={erro} avisos={dados?.avisos} vazio={todas.length === 0} textoVazio="Nenhuma conta ligada em nenhum produto." filtrada={lista.length === 0}>
           <Tabela min={1100}>
-            <thead><tr><th className={th}>Conta</th><th className={th}>Dono · direito</th><th className={th}>Estado</th><th className={th}>MetaApi</th><th className={th}>Quota</th><th className={th}>Usos</th><th className={th} title="saldo actual · linha de água (contra saldo_inicial) · «SIM» = conta simulada">Saldo · linha de água</th><th className={th}>Actividade</th></tr></thead>
+            <thead><tr><th className={th}>Conta</th><th className={th}>Dono · direito</th><th className={th}>Estado</th><th className={th}>MetaApi · quota</th><th className={th}>Usos</th><th className={th} title="saldo actual · linha de água (contra saldo_inicial) · «SIM» = conta simulada">Saldo · linha de água</th><th className={th}>Actividade</th><th className={th} /></tr></thead>
             <tbody>
               {lista.slice(0, 500).map((c) => (
                 <tr key={c.ref} className={trClic} onClick={() => ctx.abrir({ tipo: "conta", id: c.ref })}>
@@ -201,17 +201,20 @@ export default function SeccaoContas() {
                     {c.erro && <p className={`mt-1 max-w-[220px] truncate text-[10px] ${c.erroEstado === "actual" ? "text-rose-300" : "text-zinc-600"}`} title={c.erro}>{c.erroEstado === "velho" ? "histórico: " : ""}{c.erro}</p>}
                   </td>
                   <td className={`${td} text-[10.5px]`}>
-                    {c.metaapiAccountId ? <p className="font-mono text-zinc-400">{c.metaapiAccountId.slice(0, 8)}</p> : <span className="text-zinc-600">—</span>}
+                    {c.metaapiAccountId ? <p className="font-mono text-zinc-400">{c.metaapiAccountId.slice(0, 8)}</p> : <span className="text-zinc-600">sem MetaApi</span>}
                     <div className="mt-0.5 flex flex-wrap gap-1">
+                      {c.contaMetaApi && <Pilula tom={c.quota.acima ? "aviso" : "neutro"} title="contas MetaApi do dono / limite do plano">quota {c.quota.emUso}/{c.quota.limite ?? "∞"}</Pilula>}
                       {c.metaapi.inexistente && <Pilula tom="grave">inexistente</Pilula>}
                       {c.metaapi.streaming && <Pilula tom={c.metaapi.streaming === "fresco" ? "ok" : "aviso"}>stream</Pilula>}
                       {c.metaapi.motorTempoReal && <Pilula tom="info">motor</Pilula>}
                     </div>
                   </td>
-                  <td className={`${td} font-mono`}>{c.contaMetaApi ? <span className={c.quota.acima ? "text-amber-300" : ""}>{c.quota.emUso}/{c.quota.limite ?? "∞"}</span> : <span className="text-zinc-600">n/a</span>}</td>
                   <td className={`${td} max-w-[240px] text-[10.5px] text-zinc-400`}>{[...c.usos, ...c.estrategias.filter((e) => !c.usos.some((u) => u.includes(e)))].join(" · ")}</td>
                   <td className={`${td} font-mono`}><SaldoCel c={c} /></td>
                   <td className={`${td} font-mono`}>{c.ultimaActividade ? fmtIdade(idadeDe(c.ultimaActividade)) : "—"}</td>
+                  <td className={td}>
+                    <span className="rounded-md border border-[#D2A63C]/40 px-2 py-1 text-[10.5px] font-medium text-[#E9C46A]">Gerir</span>
+                  </td>
                 </tr>
               ))}
             </tbody>

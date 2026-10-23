@@ -10,7 +10,7 @@
  * + sessão, com a RLS «cada um vê os seus») e o do servidor (service role, pela id verificada).
  */
 
-import { ehPapel, type Papel } from '@/lib/backoffice-papeis'
+import { ehPapel, normalizarAreasGestao, type AreaGestao, type Papel } from '@/lib/backoffice-papeis'
 import { normalizarAreas, type AreaSite } from '@/lib/backoffice-acessos-site'
 
 /** Um papel atribuído, como está na base. `rankKey` fica por preencher até haver ranks por papel. */
@@ -108,6 +108,20 @@ export async function areasRestritasDe(supabase: ClienteLeitura, userId: string)
       .eq('user_id', userId)
       .maybeSingle()
     return normalizarAreas((data as { areas?: unknown } | null)?.areas)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * As áreas da Gestão dadas a uma pessoa (`backoffice_gestao_acessos`). Mesma regra dos papéis: erro
+ * de leitura → lista vazia, nunca lança — uma falha fecha a porta, não a abre.
+ */
+export async function areasGestaoDe(supabase: ClienteLeitura, userId: string): Promise<AreaGestao[]> {
+  try {
+    const { data, error } = await supabase.from('backoffice_gestao_acessos').select('areas').eq('user_id', userId).maybeSingle()
+    if (error || !data) return []
+    return normalizarAreasGestao((data as { areas?: unknown }).areas)
   } catch {
     return []
   }

@@ -18,9 +18,10 @@
 import { NextResponse } from 'next/server'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { capacidadesDe, pode, type Capacidade, type Papel } from '@/lib/backoffice-papeis'
+import { capacidadesDe, pode, type AreaGestao, type Capacidade, type Papel } from '@/lib/backoffice-papeis'
 import type { AreaSite } from '@/lib/backoffice-acessos-site'
 import {
+  areasGestaoDe,
   areasRestritasDe,
   papeisActivosDe,
   type ClienteLeitura,
@@ -37,6 +38,8 @@ export interface ContextoBackoffice {
   papeis: Papel[]
   atribuicoes: PapelAtribuido[]
   capacidades: Set<Capacidade>
+  /** Áreas da Gestão dadas por acesso (Clientes & CRM, Comercial) — ver `AREAS_GESTAO`. */
+  gestao: AreaGestao[]
   /** Restrição de áreas do site. Vazio = sem restrição (ver `lib/backoffice-acessos-site.ts`). */
   areasRestritas: AreaSite[]
 }
@@ -52,10 +55,11 @@ export async function contextoBackoffice(request?: Request): Promise<ContextoBac
 
   const supabase = getSupabaseAdmin()
 
-  const [perfilRes, atribuicoes, areasRestritas] = await Promise.all([
+  const [perfilRes, atribuicoes, areasRestritas, gestao] = await Promise.all([
     supabase.from('profiles').select('user_type, is_active').eq('id', userId).maybeSingle(),
     papeisActivosDe(supabase as unknown as ClienteLeitura, userId),
     areasRestritasDe(supabase as unknown as ClienteLeitura, userId),
+    areasGestaoDe(supabase as unknown as ClienteLeitura, userId),
   ])
 
   const perfil = perfilRes.data as { user_type?: string; is_active?: boolean } | null
@@ -69,7 +73,8 @@ export async function contextoBackoffice(request?: Request): Promise<ContextoBac
     admin,
     papeis,
     atribuicoes,
-    capacidades: capacidadesDe(papeis, { admin }),
+    capacidades: capacidadesDe(papeis, { admin, gestao }),
+    gestao,
     areasRestritas,
   }
 }
@@ -107,4 +112,39 @@ export async function exigirCapacidade(
   }
 
   return ctx
+}
+
+/**
+ * Para as rotas /api/admin/* que a Gestão abre à equipa (agenda, WhatsApp, leads, formulários,
+ * tráfego, cupões): passa o admin OU quem tiver a capacidade da área. Devolve a recusa, ou `null`
+ * com o id de quem pede (para auditoria). Os ecrãs são os mesmos do /admin; a fechadura passa a
+ * perguntar pela capacidade em vez de «é admin?».
+ */
+export async function exigirGestao(
+  request: Request | undefined,
+  capacidade: Capacidade,
+): Promise<{ negado: NextResponse; userId?: undefined } | { negado: null; userId: string; admin: boolean }> {
+  const ctx = await contextoBackoffice(request)
+  if (!ctx) return { negado: NextResponse.json({ error: 'Não autenticado' }, { status: 401 }) }
+  if (!ctx.admin && !(pode(ctx.capacidades, 'bo.entrar') && pode(ctx.capacidades, capacidade))) {
+    return { negado: NextResponse.json({ error: 'Acesso negado', message: 'Sem acesso a esta área da Gestão' }, { status: 403 }) }
+  }
+  return { negado: null, userId: ctx.userId, admin: ctx.admin }
+}
+
+/** `soAdmin` para a Gestão: envolve um handler e nega antes de correr, se faltar a capacidade. */
+export function soGestao<A extends unknown[]>(
+  capacidade: Capacidade,
+  handler: (userId: string, ...args: A) => Promise<Response>,
+): (...args: A) => Promise<Response> {
+  return async (...args: A) => {
+    const pedido = args[0] instanceof Request ? args[0] : undefined
+    const g = await exigirGestao(pedido, capacidade)
+    if (g.negado) return g.negado
+    try {
+      return await handler(g.userId, ...args)
+    } catch (e) {
+      return NextResponse.json({ error: (e instanceof Error ? e.message : String(e)).slice(0, 300) }, { status: 500 })
+    }
+  }
 }

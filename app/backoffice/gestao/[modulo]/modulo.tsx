@@ -1,13 +1,12 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { moduloDono } from '@/lib/backoffice-dono'
+import { moduloGestao } from '@/lib/backoffice-gestao'
 
 /**
- * O ecrã de um módulo do dono. Os componentes são os MESMOS do /admin — importados, não copiados —
+ * O ecrã de um módulo da Gestão. Os componentes são os MESMOS do /admin — importados, não copiados —
  * e carregam só quando o módulo abre (um `dynamic` por módulo), por isso abrir a Agenda não descarrega
  * o centro de contas inteiro.
  */
@@ -17,22 +16,27 @@ const carregar = () => (
   </div>
 )
 
+const CuponsSemGuarda = dynamic(() => import('@/components/admin/cupoes-admin'), { ssr: false, loading: carregar })
+
 const ECRAS: Record<string, React.ComponentType> = {
   contas: dynamic(() => import('@/app/admin/centro/page'), { ssr: false, loading: carregar }),
   agenda: dynamic(() => import('@/components/admin/agenda-admin'), { ssr: false, loading: carregar }),
   'whatsapp:conversas': dynamic(() => import('@/components/admin/whatsapp-crm'), { ssr: false, loading: carregar }),
   'whatsapp:escrever': dynamic(() => import('@/app/admin/whatsapp/page'), { ssr: false, loading: carregar }),
   leads: dynamic(() => import('@/app/admin/social/leads/page'), { ssr: false, loading: carregar }),
-  formularios: dynamic(() => import('@/app/admin/forms/page'), { ssr: false, loading: carregar }),
+  formularios: dynamic(() => import('@/components/admin/formularios-admin'), { ssr: false, loading: carregar }),
   trafego: dynamic(() => import('@/components/admin/trafego-painel'), { ssr: false, loading: carregar }),
-  cupoes: dynamic(() => import('@/app/admin/coupons/page'), { ssr: false, loading: carregar }),
+  // O portão do /admin/coupons é «só admin»; aqui quem guarda é a página no servidor (`exige`).
+  cupoes: () => <CuponsSemGuarda guarda={false} />,
   'agentes:painel': dynamic(() => import('@/components/admin/agentes-equipa'), { ssr: false, loading: carregar }),
   'agentes:arvore': dynamic(() => import('@/app/admin/agentes/page'), { ssr: false, loading: carregar }),
-  gestao: dynamic(() => import('@/app/dashboard-gestao/page'), { ssr: false, loading: carregar }),
+  dashboard: dynamic(() => import('@/app/dashboard-gestao/page'), { ssr: false, loading: carregar }),
+  'acessos:gestao': dynamic(() => import('@/components/admin/gestao-acessos'), { ssr: false, loading: carregar }),
+  'acessos:papeis': dynamic(() => import('@/components/admin/backoffice-equipa'), { ssr: false, loading: carregar }),
 }
 
 export default function Modulo({ slug }: { slug: string }) {
-  const m = moduloDono(slug)!
+  const m = moduloGestao(slug)!
   const sp = useSearchParams()
   const router = useRouter()
   const caminho = usePathname() ?? ''
@@ -42,9 +46,12 @@ export default function Modulo({ slug }: { slug: string }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-lg font-semibold text-gray-100">{m.nome}</h1>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Gestão · {m.grupo}</p>
+          <h1 className="text-lg font-semibold text-gray-100">{m.nome}</h1>
+        </div>
         {m.vistas && (
-          <div className="flex gap-1 rounded-lg border border-gray-800 p-0.5 text-xs">
+          <div className="ml-auto flex gap-1 rounded-lg border border-white/[0.08] p-0.5 text-xs">
             {m.vistas.map((v) => (
               <button
                 key={v.id}
@@ -57,15 +64,10 @@ export default function Modulo({ slug }: { slug: string }) {
             ))}
           </div>
         )}
-        {m.antigo && (
-          <Link href={`https://www.morethanmoney.pt${m.antigo}`} className="ml-auto text-[11px] text-gray-600 hover:text-gray-400">
-            morada antiga ↗
-          </Link>
-        )}
       </div>
       {/* translateZ(0) faz desta caixa o contentor dos `fixed` dos ecrãs antigos (fundos, ajudas): ficam
-          dentro do módulo em vez de taparem o cabeçalho do backoffice. */}
-      <div className="overflow-hidden rounded-xl border border-gray-800 [transform:translateZ(0)]">
+          dentro do módulo em vez de taparem o menu do backoffice. */}
+      <div className="overflow-hidden rounded-xl border border-white/[0.07] [transform:translateZ(0)]">
         <Ecra />
       </div>
     </div>

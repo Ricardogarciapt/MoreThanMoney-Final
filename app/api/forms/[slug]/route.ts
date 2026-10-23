@@ -1,13 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { checkRateLimit } from '@/lib/admin-api-helpers'
-import { validateSubmission, SLUG_RE, type CustomFormField } from '@/lib/custom-forms'
+import { validateSubmission, sanitizeDestino, SLUG_RE, type CustomFormField } from '@/lib/custom-forms'
 import { createMailTransporter, mailFrom } from '@/lib/mail-transport'
 import { ingerirSubmissao } from '@/lib/backoffice-dia-ingestao'
 
 export const dynamic = 'force-dynamic'
 
 const ADMIN_EMAIL = 'morethanmoneypt@gmail.com'
+
+/** Best-effort: o aviso ao dono nunca faz falhar a submissão (o mesmo caminho do pedido de contacto). */
+async function avisarDonoNoTelegram(db: ReturnType<typeof getSupabaseAdmin>, texto: string) {
+  try {
+    const { sendTelegramChannelMessage } = await import('@/lib/mtmcopy/telegram-bot')
+    let chat = process.env.TELEGRAM_ADMIN_CHAT_ID?.trim() || ''
+    if (!chat) {
+      const { data } = await db.from('site_settings').select('value').eq('key', 'telegram_admin_chat_id').maybeSingle()
+      const v = data?.value as { chat_id?: string } | string | null
+      chat = typeof v === 'string' ? v : v?.chat_id ? String(v.chat_id) : ''
+    }
+    if (chat) await sendTelegramChannelMessage(chat, texto)
+  } catch (e) {
+    console.warn('[forms] aviso Telegram falhou:', e instanceof Error ? e.message : e)
+  }
+}
 
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -81,7 +97,7 @@ export async function POST(
     const supabase = getSupabaseAdmin()
     const { data: form, error: formError } = await supabase
       .from('custom_forms')
-      .select('slug, title, fields')
+      .select('slug, title, fields, destino')
       .eq('slug', slug)
       .eq('active', true)
       .maybeSingle()
@@ -129,6 +145,7 @@ export async function POST(
 
     // O lead entra JÁ no pipeline (CRM do backoffice), pelo mesmo caminho da ingestão diária —
     // best-effort: a submissão já está gravada e a ingestão das 7h apanha-a se isto falhar.
+    const destino = sanitizeDestino((form as { destino?: unknown }).destino)
     try {
       await ingerirSubmissao(supabase, {
         id: String(gravada?.id ?? ''),
@@ -136,10 +153,11 @@ export async function POST(
         form_title: form.title,
         email: result.email || null,
         data: result.clean,
-      })
+      }, destino)
     } catch (e) {
       console.warn('[forms] não entrou no pipeline:', e instanceof Error ? e.message : e)
     }
+    if (destino.avisarTelegram) await avisarDonoNoTelegram(supabase, `📝 Formulário «${form.title}»: ${result.email || 'sem email'} — já está no pipeline.`)
 
     /**
      * O CONSENTIMENTO, SE A PESSOA O DEU.

@@ -15,6 +15,7 @@ import { ambitoDaPagina } from '@/lib/backoffice-equipa'
 import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 import { OMeuDia } from './_partes/o-meu-dia'
 import { LigarTelegram } from './_partes/telegram'
+import { HojeNaGestao } from './_partes/hoje-na-gestao'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,11 +47,14 @@ export default async function BackofficeEntradaPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-white">
-          Bem-vindo{ctx.papeis.length ? `, ${ctx.papeis.map((p) => PAPEL_NOME[p]).join(' · ')}` : ''}
+        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
+          {new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Lisbon' })}
+        </p>
+        <h1 className="mt-1 text-2xl font-bold text-white">
+          Hoje{ctx.papeis.length ? ` · ${ctx.papeis.map((p) => PAPEL_NOME[p]).join(' · ')}` : ''}
         </h1>
         <p className="mt-2 text-sm text-gray-400">
-          Aqui vês o teu percurso, as tuas tarefas e o teu extracto — o teu, e só o teu.
+          O que tens para fazer agora, por ordem. O teu percurso, as tuas tarefas e o teu extracto — o teu, e só o teu.
         </p>
       </div>
 
@@ -62,6 +66,9 @@ export default async function BackofficeEntradaPage() {
         que responde a tudo menos a essa é uma página que se visita uma vez.
       */}
       <OMeuDia ids={(await ambitoDaPagina(ctx, 'tarefas')).ambito.ids} pessoaId={ctx.userId} />
+
+      {/* Quem também gere a casa vê, a seguir ao seu dia, o que pede atenção na Gestão. */}
+      <HojeNaGestao capacidades={ctx.capacidades} />
 
       {/*
         O TELEGRAM vem a seguir ao dia, e não nas definições.

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-api-helpers'
+import { exigirGestao } from '@/lib/backoffice-sessao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { normalizarE164 } from '@/lib/whatsapp-envio'
 import { lerConversas, lerHistorico } from '@/lib/whatsapp/conversas'
@@ -30,7 +30,7 @@ export const dynamic = 'force-dynamic'
  * porta que deixa passar o que a primeira travava.
  */
 export async function GET(request: NextRequest) {
-  const negado = await requireAdmin(request)
+  const negado = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (negado) return negado
 
   const telefone = request.nextUrl.searchParams.get('telefone')
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
  * escrito é melhor do que aceitar e sujar o histórico de vendas.
  */
 export async function POST(request: NextRequest) {
-  const negado = await requireAdmin(request)
+  const negado = (await exigirGestao(request, 'bo.gestao_crm')).negado
   if (negado) return negado
 
   const body = (await request.json().catch(() => ({}))) as {
