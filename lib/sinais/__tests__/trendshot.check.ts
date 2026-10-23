@@ -3,6 +3,10 @@ import { classeTrendshot, direcaoTrendshot, niveisTrendshot, CANAL_TRENDSHOT, ES
 import { formatarSinal } from '../formato-sinal'
 import { isEntradaParaSeguimento, isT2TEntrySignal } from '../../mtmcopy/t2t-source'
 import { parseSignal } from '../../mtmcopy/signal-parser'
+import { scannerKeyFromStrategy } from '../../mtm-alerts/scanners'
+import { chaveDeSubscricao } from '../../alertas/catalogo'
+import { ESTUDOS_WEBTRADER } from '../../scanners/estudos'
+import { ESTRATEGIA_DO_WEBHOOK } from '../../mestres/servidor/sinal-mestre'
 
 /** Níveis do modo AUTO do Pine «Trendshot by MTM». Correr: npx tsx lib/sinais/__tests__/trendshot.check.ts */
 assert.equal(classeTrendshot('XAUUSD'), 'ouro')
@@ -35,3 +39,12 @@ assert.equal(p?.direction, 'buy')
 assert.equal(p?.sl, 3980)
 assert.deepEqual(p?.tp, [4006, 4012, 4020, 4030])
 console.log('trendshot.check: OK')
+
+// 23/10: o TrendShot é uma estratégia própria nos alertas e no WebTrader, e tem mestre no webhook.
+{
+  assert.equal(scannerKeyFromStrategy(ESTRATEGIA_TRENDSHOT), 'trendshot')
+  assert.equal(scannerKeyFromStrategy('MTM Scanner V3.5'), 'mtmscanner')
+  assert.equal(chaveDeSubscricao('TrendShot'), 'trendshot')
+  assert.ok(ESTUDOS_WEBTRADER.some((e) => e.chave === 'TrendShot' && e.alerta === 'trendshot'))
+  assert.equal(ESTRATEGIA_DO_WEBHOOK.trendshot?.slug, 'mtm-auto-trendshot')
+}
