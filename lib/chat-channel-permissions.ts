@@ -32,7 +32,8 @@ export const NIVEIS_LEITURA: readonly NivelLeitura[] = ["membros", "premium", "a
 export const NIVEIS_ESCRITA: readonly NivelEscrita[] = ["membros", "vip", "ninguem"]
 
 /** Regra de sempre (sem configuração): canais pagos. */
-const LEITURA_PREMIUM_POR_OMISSAO = new Set(["premium-ideas", "sensei-scanner", "sinais-goldkiller"])
+// 23/10 (dono): espelha chat_channels.leitura — a base manda; isto só vale quando a coluna falta.
+const LEITURA_PREMIUM_POR_OMISSAO = new Set(["premium-ideas", "sensei-scanner", "aurum-flow", "sinais-scanner-mtm"])
 
 /** Canais de sinais: Premium · Ouro, Sensei Scanner e Ideias de Índices — publicam admin e VIP. */
 export const SIGNAL_PUBLISH_CHANNELS = ["premium-ideas", "sensei-scanner", "trade-ideas"] as const

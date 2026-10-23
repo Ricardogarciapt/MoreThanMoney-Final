@@ -191,12 +191,43 @@ export function isManagementFollowup(content?: string | null): boolean {
  * (As mensagens de gestão do Premium servem para gerir a trade já aceite, não para abrir nova.)
  */
 export function isT2TEntrySignal(channelSlug?: string | null, content?: string | null): boolean {
+  return eEntradaCompleta(channelSlug, content, isAllowedT2TSource)
+}
+
+/**
+ * Canais cujas entradas se SEGUEM por preço (cartões de alvo/BE/stop no chat e no Telegram) sem
+ * serem negociáveis: «Ideias de Forex» (MTM Scanner, só leitura desde 29/09) e «MTM Auto FOREX
+ * swings» (reaberto a 07/10 só para publicar) e «MTM Auto Trendshot» (nasce a 23/10). Pedido do
+ * dono, 23/10/2026. Nenhuma ordem nasce daqui — o tracker não abre a conta-espelho para estas
+ * fontes (`fonteSoMedida`; o Trendshot nem tem chave T2T, por isso fica de fora à partida).
+ */
+export const CANAIS_SO_SEGUIMENTO: readonly string[] = ['trade-ideas-setup', 'ideias-e-sinais', 'sinais-trendshot']
+
+/** Entrada que o tracker de preço acompanha: T2T negociável OU entrada de um canal só de seguimento. */
+export function isEntradaParaSeguimento(channelSlug?: string | null, content?: string | null): boolean {
+  if (isT2TEntrySignal(channelSlug, content)) return true
+  if (!CANAIS_SO_SEGUIMENTO.includes(String(channelSlug ?? ''))) return false
+  // Nestes canais só o sistema publica: a forma da mensagem (direcção, preço, alvo) chega.
+  return eEntradaCompleta(channelSlug, content, () => true)
+}
+
+/** A fonte desta linha só se mede (sem ordem na conta-espelho nem na «Todos os sinais»)? */
+export function fonteSoMedida(sourceKey: string | null | undefined): boolean {
+  if (!sourceKey) return true
+  return T2T_FONTES_SO_LEITURA.has(sourceKey as T2TSourceKey) || T2T_FONTES_FECHADAS.has(sourceKey as T2TSourceKey)
+}
+
+function eEntradaCompleta(
+  channelSlug: string | null | undefined,
+  content: string | null | undefined,
+  fonteAceite: (c: string | null | undefined, t: string) => boolean,
+): boolean {
   if (!content) return false
   // Um anúncio NOSSO ("🎯 Alvo 1 · XAUUSD 🔵 COMPRA · +75 pips") tem direção, números e o 🎯 —
   // passava por entrada e ganhava botão de Tap to Trade. Pior: os follow-ups seguintes
   // penduravam-se nele em vez do sinal verdadeiro.
   if (isOwnLifecycleAnnouncement(content)) return false
-  if (!isAllowedT2TSource(channelSlug, content)) return false
+  if (!fonteAceite(channelSlug, content)) return false
   if (T2T_PERF_RE.test(content)) return false      // performance / resumo do dia
   if (T2T_FOLLOWUP_RE.test(content)) return false  // update/gestão/saída — não é entrada
   if (!T2T_DIR_RE.test(content)) return false       // precisa de direção

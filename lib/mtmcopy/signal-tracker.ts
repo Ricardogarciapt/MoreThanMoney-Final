@@ -16,7 +16,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getExecSwitches } from './exec-switches'
 import { parseSignal } from './signal-parser'
 import { referencePrice } from './reference-price'
-import { isT2TEntrySignal, t2tSourceKey, t2tMode } from './t2t-source'
+import { CANAIS_SO_SEGUIMENTO, isEntradaParaSeguimento, fonteSoMedida, t2tSourceKey, t2tMode } from './t2t-source'
+import { enviarSeguimentoTelegram } from '@/lib/telegram-seguimento'
 import { pipSizeForSymbol } from './trade-outcome'
 import { lifecycleMessage, type SignalEvent } from './signal-lifecycle'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
@@ -161,7 +162,7 @@ async function admitirNovos(): Promise<number> {
   const { data: msgs } = await admin
     .from('chat_messages')
     .select('id, channel_slug, content, created_at')
-    .in('channel_slug', CANAIS_ACOMPANHADOS)
+    .in('channel_slug', [...new Set([...CANAIS_ACOMPANHADOS, ...CANAIS_SO_SEGUIMENTO])])
     .eq('is_deleted', false)
     .gte('created_at', desde)
     .order('created_at', { ascending: true })
@@ -177,7 +178,7 @@ async function admitirNovos(): Promise<number> {
   const novos: Record<string, unknown>[] = []
   for (const m of msgs) {
     if (vistos.has(m.id)) continue
-    if (!isT2TEntrySignal(m.channel_slug, m.content)) continue
+    if (!isEntradaParaSeguimento(m.channel_slug, m.content)) continue
     // Perpétuos que não existem em MT5 são SEGUIDOS na Bybit, não abertos aqui — a gestão deles
     // vive no motor dos perps e seguir por cotação daria números de outro mercado.
     if (t2tMode(m.channel_slug, m.content) === 'follow') continue
@@ -305,11 +306,15 @@ async function anunciar(linha: Linha, evento: SignalEvent, ctx: { price?: number
     })
     .select('id')
     .single()
+  // Sem linha nova (ex.: o trigger «um fecho por sinal» calou-a) não há Telegram: o grupo e o
+  // chat contam a mesma história.
+  if (!data?.id) return
   await sendTelegramChannelPush({
     slug: linha.channel_slug,
     content: text,
-    chatMessageId: data?.id as string,
+    chatMessageId: data.id as string,
   }).catch(() => {})
+  await enviarSeguimentoTelegram({ canal: linha.channel_slug, entradaChatId: linha.chat_message_id, texto: text })
 }
 
 /** Escreve pips e percentagem na mensagem de ENTRADA — é daqui que o cartão os lê. */
@@ -524,9 +529,13 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
           .eq('status', 'pending')
           .select('id')
         if (!ganhou?.length) continue
-        await abrirNaContaEspelho(l, price)
-        // Conta MTM Funded «Todos os sinais» (092): mesmo sinal, 0,01, fonte no comentário. Nunca lança.
-        await import('@/lib/mtmfunded/estrategias-sinais/todos-os-sinais').then((m) => m.abrirNaContaTodosOsSinais(l)).catch(() => undefined)
+        // Fontes só de leitura/fechadas (Ideias de Forex, Forex Swings) medem-se e anunciam-se, mas
+        // não abrem ordem em lado nenhum — ver CANAIS_SO_SEGUIMENTO.
+        if (!fonteSoMedida(l.source_key)) {
+          await abrirNaContaEspelho(l, price)
+          // Conta MTM Funded «Todos os sinais» (092): mesmo sinal, 0,01, fonte no comentário. Nunca lança.
+          await import('@/lib/mtmfunded/estrategias-sinais/todos-os-sinais').then((m) => m.abrirNaContaTodosOsSinais(l)).catch(() => undefined)
+        }
         await anunciar(l, 'entry_hit', { price })
         eventos.push(`entrada ${l.symbol} ${l.channel_slug}`)
         continue

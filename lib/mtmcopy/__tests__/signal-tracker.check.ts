@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { isT2TEntrySignal, t2tMode, t2tSourceKey } from '../t2t-source'
+import { isT2TEntrySignal, isEntradaParaSeguimento, fonteSoMedida, t2tMode, t2tSourceKey } from '../t2t-source'
 import { parseSignal } from '../signal-parser'
 
 /**
@@ -7,7 +7,7 @@ import { parseSignal } from '../signal-parser'
  * conta-espelho e passa a dar métricas; o que não entra fica de fora para sempre.
  */
 function admite(canal: string, texto: string): { ok: boolean; porque: string } {
-  if (!isT2TEntrySignal(canal, texto)) return { ok: false, porque: 'não é entrada' }
+  if (!isEntradaParaSeguimento(canal, texto)) return { ok: false, porque: 'não é entrada' }
   if (t2tMode(canal, texto) === 'follow') return { ok: false, porque: 'perpétuo (segue na Bybit)' }
   const p = parseSignal(texto)
   if (!p?.symbol || !p.direction) return { ok: false, porque: 'sem par/direção' }
@@ -21,7 +21,12 @@ const IDEIAS_FOREX = '📊 MTM Scanner · Forex — Novo Sinal\n📊 GBPAUD 🔵
 const JAMES = '🔵 USDCAD BUY\nSL: 1.3848\nTP: 1.392\n🌊 Forex Swings — set & forget'
 // `ideias-e-sinais` (Forex Swings) FECHOU a 04/10/2026 por decisão do dono: já não entra nada novo no
 // motor; a chave `james` fica só para LER as 135 ideias já seguidas (6 ainda activas a 04/10).
-assert.equal(admite('ideias-e-sinais', JAMES).ok, false, 'o canal fechou a 04/10/2026 — não pode voltar a admitir sinais')
+// 23/10/2026: volta a ser SEGUIDO (cartões no chat e no Telegram), nunca negociado nem aberto na espelho.
+assert.equal(admite('ideias-e-sinais', JAMES).ok, true, 'Forex Swings tem de ser seguido para os cartões de seguimento')
+assert.equal(isT2TEntrySignal('ideias-e-sinais', JAMES), false, 'Forex Swings não pode voltar a ser negociável no T2T')
+assert.equal(fonteSoMedida('james'), true, 'Forex Swings não abre ordem na conta-espelho')
+assert.equal(fonteSoMedida('forexideas'), true, 'Ideias de Forex (MTM Scanner) não abre ordem na conta-espelho')
+assert.equal(fonteSoMedida('premium'), false, 'Premium continua a abrir na conta-espelho')
 assert.equal(t2tSourceKey('ideias-e-sinais', JAMES), 'james', 'fonte das mensagens antigas do canal fechado mal identificada (leitor de histórico)')
 assert.equal(admite('trade-ideas-setup', IDEIAS_FOREX).ok, true, 'Ideias de Forex têm de entrar')
 

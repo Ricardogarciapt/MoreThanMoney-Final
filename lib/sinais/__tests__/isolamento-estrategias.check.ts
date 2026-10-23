@@ -163,7 +163,13 @@ async function main() {
     assert.match(rota, /fonte: fonteMestre/, 'a mestre principal recebe a fonte da ESTRATÉGIA')
     assert.ok(!/const execTarget = isGoldKiller \? "goldkiller"/.test(rota), 'acabou o «tudo o resto vai ao Sensei»')
     assert.match(rota, /scanner: estrategia === "mtm-scanner" \? scannerKey : null/, 'a mestre do scanner só recebe o scanner')
-    assert.match(rota, /isAurumFlow && estrategia === "aurum-flow"/, 'a mestre da Aurum só recebe a Aurum')
+    // 23/10: a mestre cripto recebe o cripto do canal «Ideias de Cripto» — Aurum ou Sensei X —, nunca
+    // o ouro do Sensei (gold_btc) nem outra estratégia.
+    assert.match(
+      rota,
+      /assetClass === "crypto_perp" && \(estrategia === "aurum-flow" \|\| estrategia === "sensei"\)/,
+      'a mestre da Aurum só recebe o cripto (Aurum ou Sensei X)',
+    )
     assert.ok(!/findActiveSenseiIdeaForFollowup/.test(rota), 'o seguimento não procura ideia pelo ticker')
     assert.match(rota, /entradaChatMessageId,/, 'o fecho T2T vai pela mensagem da entrada')
     assert.ok(!/from\("mtmcopy_signal_tracking"\)\s*\.select\("exits_done"\)\s*\.eq\("symbol"/.test(rota), 'o BE redundante já não lê o último do símbolo')

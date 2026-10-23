@@ -80,10 +80,11 @@ for (const [nome, perfil] of casosSemDireito) {
 }
 
 // ── 3. Que sinais são pagos ────────────────────────────────────────────────────────────────
-assert.equal(canalDeSinaisPago('premium-ideas'), false) // aberto aos membros (18/09)
-assert.equal(canalDeSinaisPago('sensei-scanner'), true)
-assert.equal(canalDeSinaisPago('sinais-goldkiller'), true)
-for (const aberto of ['trade-ideas', 'trade-ideas-setup', 'sinais-scanner-mtm', 'cripto-perps', 'geral', '', null]) {
+// 23/10 (dono): Premium e superior = Premium, Sensei, Ideias de Cripto (aurum-flow) e Edge.
+for (const pago of ['premium-ideas', 'sensei-scanner', 'aurum-flow', 'sinais-scanner-mtm']) {
+  assert.equal(canalDeSinaisPago(pago), true, `canal ${pago} é Premium`)
+}
+for (const aberto of ['sinais-goldkiller', 'trade-ideas', 'trade-ideas-setup', 'ideias-e-sinais', 'sinais-trendshot', 'cripto-perps', 'geral', '', null]) {
   assert.equal(canalDeSinaisPago(aberto), false, `canal ${aberto} é aberto`)
 }
 assert.equal(alertaDeSinalPago({ strategy: 'MTM Sensei X', assetClass: 'gold_btc' }), true)
