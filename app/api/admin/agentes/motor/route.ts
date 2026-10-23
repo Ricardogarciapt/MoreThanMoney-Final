@@ -14,6 +14,9 @@ import {
 import type { TipoEnvio } from '@/lib/envios-aprovacao'
 import { executarAccaoPipeline, retratoPipeline } from '@/lib/agentes/pipeline-agentes-db'
 import { correrOs, executarAccaoCeo, lerConfigOs, orcamentos, pedirClonagem, pnl, tectosContactoDb, type Quota } from '@/lib/agentes/os/os-db'
+import { orcamentosDaEquipa } from '@/lib/agentes/orcamento-db'
+import { programacaoDoAgente } from '@/lib/agentes/programacao'
+import { listarOrdens, marcarOrdem } from '@/lib/agentes/ordens'
 
 /**
  * A PORTA DO MOTOR AUTÓNOMO — o único sítio por onde `aios/motor/orquestrador.py` ESCREVE.
@@ -51,6 +54,7 @@ const ACCOES_DO_MOTOR = [
   'os_orcamento',    // 07/10 OS v2: os orçamentos dinâmicos de hoje (só leitura)
   'ceo_accao',       // 07/10 OS v2: criar_missao | alocar_recursos | escalar | arquivar | suspender | retomar | fechar_missao
   'pedir_clonagem',  // 07/10 OS v2: REQUEST_CLONING de um agente, com evidência (o CEO valida)
+  'ordem',           // 23/10: marcar uma ordem do dono (entregue / em_curso / feita / recusada + resposta)
 ] as const
 
 /** A quota do claude -p que o motor mediu (motor/regras.py `capacidade_ciclos`). */
@@ -73,7 +77,7 @@ export async function GET(request: NextRequest) {
   if (negado) return negado
   const db = getSupabaseAdmin()
 
-  const [interruptor, cfgs, equipa, recentes, propostas] = await Promise.all([
+  const [interruptor, cfgs, equipa, recentes, propostas, orc, ordens] = await Promise.all([
     lerInterruptor(db),
     db.from('site_settings').select('key, value').in('key', ['agentes_motor', 'agentes_vida', 'agentes_reproducao', 'agentes_evolucao', 'agentes_os_v2', 'agentes_proof', 'os_objectivos']),
     db
@@ -93,7 +97,15 @@ export async function GET(request: NextRequest) {
       .eq('estado', 'proposta')
       .order('criado_em', { ascending: true })
       .limit(30),
+    orcamentosDaEquipa(db, new Date()),
+    listarOrdens(db, { abertas: true, limite: 200 }),
   ])
+  const ordensDe = new Map<string, Array<{ id: string; texto: string; estado: string; criado_em: string }>>()
+  for (const o of [...ordens.ordens].reverse()) {
+    const l = ordensDe.get(o.agente_id) ?? []
+    l.push({ id: o.id, texto: o.texto, estado: o.estado, criado_em: o.criado_em })
+    ordensDe.set(o.agente_id, l)
+  }
 
   const config: Record<string, unknown> = {}
   for (const r of (cfgs.data ?? []) as Array<{ key: string; value: unknown }>) config[r.key] = r.value
@@ -102,10 +114,21 @@ export async function GET(request: NextRequest) {
     ok: !equipa.error,
     interruptor,
     config,
-    agentes: equipa.data ?? [],
+    /**
+     * `orcamento_bloqueio`: o motivo por que o motor NÃO o acorda (sem saldo, teto do dia ou do
+     * mês), calculado aqui pela mesma função do painel. Nulo = pode gastar. O motor só obedece.
+     */
+    agentes: (equipa.data ?? []).map((a) => ({
+      ...a,
+      orcamento_bloqueio: orc.orcamentos.get(String(a.id))?.bloqueado ?? null,
+      // A programação própria do agente (Gestão → Agentes → Programações). Ausente = a da equipa.
+      ...programacaoDoAgente(config.agentes_motor, String(a.id)),
+      // As ordens do dono ainda abertas, da mais antiga para a mais recente.
+      ordens_do_dono: ordensDe.get(String(a.id)) ?? [],
+    })),
     eventos: recentes.data ?? [],
     propostas: propostas.data ?? [],
-    erros: [equipa.error?.message, recentes.error?.message, propostas.error?.message, interruptor.erro].filter(Boolean),
+    erros: [equipa.error?.message, recentes.error?.message, propostas.error?.message, interruptor.erro, orc.erro, ordens.erro].filter(Boolean),
   })
 }
 
@@ -187,6 +210,13 @@ export async function POST(request: NextRequest) {
   if (acao === 'pedir_clonagem') {
     const r = await pedirClonagem(db, agenteId, String(corpo.evidencia ?? '').slice(0, 2000), ensaio)
     return NextResponse.json(r, { status: r.ok ? 200 : 400 })
+  }
+
+  if (acao === 'ordem') {
+    if (!agenteId) return NextResponse.json({ ok: false, erro: 'Falta o agente.' }, { status: 400 })
+    if (ensaio) return NextResponse.json({ ok: true, ensaio })
+    const r = await marcarOrdem(db, { id: String(corpo.ordem_id ?? ''), agenteId, estado: String(corpo.estado ?? ''), resposta: corpo.resposta == null ? null : String(corpo.resposta) })
+    return NextResponse.json(r.ok ? r : { ok: false, erro: r.erro }, { status: r.ok ? 200 : 400 })
   }
 
   if (acao === 'evento') {
