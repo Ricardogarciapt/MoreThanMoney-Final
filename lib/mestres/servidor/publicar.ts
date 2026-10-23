@@ -248,7 +248,7 @@ async function publicarSeguimento(
   return true
 }
 
-/** Anúncios de fecho de posição — os mesmos que o trigger 203 deixa entrar uma só vez por sinal. */
+/** Anúncios de fecho de posição — os mesmos que o trigger 204 deixa entrar uma só vez por sinal. */
 const RE_FECHO = /^\s*(🏁 (Alvo final|Posição fechada)|🛑 Stop loss|🔒 Stop protegido)/u
 
 /** O sinal já tem um anúncio de fecho no chat (de qualquer motor)? */
@@ -335,7 +335,7 @@ export async function publicarDaMestre(est: EstrategiaPublicada): Promise<Resumo
 
     if (p.estado === 'fechada') {
       const evento = eventoDeFecho(p, ponte?.sl ?? null)
-      // UM fecho por sinal no chat (203): se outro caminho já anunciou o fecho, a mensagem não sai —
+      // UM fecho por sinal no chat (204): se outro caminho já anunciou o fecho, a mensagem não sai —
       // mas o resultado da mestre e o fecho dos seguidores T2T fazem-se na mesma, uma vez.
       const jaAnunciado = await fechoJaNoChat(chatId)
       const ok = jaAnunciado

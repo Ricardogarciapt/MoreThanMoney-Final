@@ -1,4 +1,4 @@
--- 203 · UM FECHO POR SINAL NO CHAT (pedido do dono, 23/10/2026)
+-- 204 · UM FECHO POR SINAL NO CHAT (pedido do dono, 23/10/2026)
 --
 -- O problema: vários motores anunciam o fecho da mesma trade (webhook TradingView, monitor de preço
 -- T2T, signal-tracker, monitor de perps, publicador da mestre). Uma trade que fechava no trailing
