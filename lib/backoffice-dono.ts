@@ -14,7 +14,8 @@ export type ModuloDono = {
   descricao: string
   grupo: 'Operação' | 'Clientes & CRM' | 'Comercial' | 'Inteligência'
   vistas?: Array<{ id: string; nome: string }>
-  antigo: string
+  /** Morada antiga no /admin, se havia (um módulo que nasceu no backoffice não tem). */
+  antigo?: string
 }
 
 export const MODULOS_DONO: readonly ModuloDono[] = [
@@ -29,6 +30,8 @@ export const MODULOS_DONO: readonly ModuloDono[] = [
     descricao: 'Quem comentou ou escreveu no Instagram, com os envios por aprovar.' },
   { slug: 'formularios', nome: 'Formulários', grupo: 'Clientes & CRM', antigo: '/admin/forms',
     descricao: 'Criar formulários de captação e ler as submissões.' },
+  { slug: 'trafego', nome: 'Tráfego', grupo: 'Comercial',
+    descricao: 'Campanhas Meta (gasto, cliques, leads, CPL) ao lado do que entrou no CRM e na agenda na mesma janela.' },
   { slug: 'cupoes', nome: 'Cupões', grupo: 'Comercial', antigo: '/admin/coupons',
     descricao: 'Códigos de desconto, limites, validade e utilização.' },
   { slug: 'agentes', nome: 'Agentes IA', grupo: 'Inteligência', antigo: '/admin?tab=agentes',

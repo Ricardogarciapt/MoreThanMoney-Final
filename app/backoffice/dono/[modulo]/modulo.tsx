@@ -25,6 +25,7 @@ const ECRAS: Record<string, React.ComponentType> = {
   'whatsapp:escrever': dynamic(() => import('@/app/admin/whatsapp/page'), op),
   leads: dynamic(() => import('@/app/admin/social/leads/page'), op),
   formularios: dynamic(() => import('@/app/admin/forms/page'), op),
+  trafego: dynamic(() => import('@/components/admin/trafego-painel'), op),
   cupoes: dynamic(() => import('@/app/admin/coupons/page'), op),
   'agentes:painel': dynamic(() => import('@/components/admin/agentes-equipa'), op),
   'agentes:arvore': dynamic(() => import('@/app/admin/agentes/page'), op),
@@ -57,9 +58,11 @@ export default function Modulo({ slug }: { slug: string }) {
             ))}
           </div>
         )}
-        <Link href={`https://www.morethanmoney.pt${m.antigo}`} className="ml-auto text-[11px] text-gray-600 hover:text-gray-400">
-          morada antiga ↗
-        </Link>
+        {m.antigo && (
+          <Link href={`https://www.morethanmoney.pt${m.antigo}`} className="ml-auto text-[11px] text-gray-600 hover:text-gray-400">
+            morada antiga ↗
+          </Link>
+        )}
       </div>
       {/* translateZ(0) faz desta caixa o contentor dos `fixed` dos ecrãs antigos (fundos, ajudas): ficam
           dentro do módulo em vez de taparem o cabeçalho do backoffice. */}
