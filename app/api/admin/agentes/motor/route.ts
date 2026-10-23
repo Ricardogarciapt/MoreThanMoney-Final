@@ -15,6 +15,7 @@ import type { TipoEnvio } from '@/lib/envios-aprovacao'
 import { executarAccaoPipeline, retratoPipeline } from '@/lib/agentes/pipeline-agentes-db'
 import { correrOs, executarAccaoCeo, lerConfigOs, orcamentos, pedirClonagem, pnl, tectosContactoDb, type Quota } from '@/lib/agentes/os/os-db'
 import { orcamentosDaEquipa } from '@/lib/agentes/orcamento-db'
+import { programacaoDoAgente } from '@/lib/agentes/programacao'
 
 /**
  * A PORTA DO MOTOR AUTÓNOMO — o único sítio por onde `aios/motor/orquestrador.py` ESCREVE.
@@ -108,7 +109,12 @@ export async function GET(request: NextRequest) {
      * `orcamento_bloqueio`: o motivo por que o motor NÃO o acorda (sem saldo, teto do dia ou do
      * mês), calculado aqui pela mesma função do painel. Nulo = pode gastar. O motor só obedece.
      */
-    agentes: (equipa.data ?? []).map((a) => ({ ...a, orcamento_bloqueio: orc.orcamentos.get(String(a.id))?.bloqueado ?? null })),
+    agentes: (equipa.data ?? []).map((a) => ({
+      ...a,
+      orcamento_bloqueio: orc.orcamentos.get(String(a.id))?.bloqueado ?? null,
+      // A programação própria do agente (Gestão → Agentes → Programações). Ausente = a da equipa.
+      ...programacaoDoAgente(config.agentes_motor, String(a.id)),
+    })),
     eventos: recentes.data ?? [],
     propostas: propostas.data ?? [],
     erros: [equipa.error?.message, recentes.error?.message, propostas.error?.message, interruptor.erro, orc.erro].filter(Boolean),
