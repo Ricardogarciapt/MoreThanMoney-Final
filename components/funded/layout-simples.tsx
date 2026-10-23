@@ -2,7 +2,8 @@
 
 import dynamic from "next/dynamic"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
-import { ChevronDown, Loader2, Minus, Plus, X } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { BarChart3, CandlestickChart, ChevronDown, Layers, List, Loader2, Minus, Plus, User, X, type LucideIcon } from "lucide-react"
 import { normalizarVolume } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
 import AnelMargem from "./anel-margem"
@@ -37,6 +38,21 @@ const CalendarioEconomico = dynamic(() => import("./calendario-economico"), { ss
 type FolhaAberta = null | "ticket" | "mercado" | "conta"
 /** O calendário não é da conta (é do mercado): o SIMPLE junta-o sempre aos painéis «Mais». */
 const CALENDARIO = "__calendario"
+
+/**
+ * As secções do /webtrader aberto sozinho (browser/PWA), na barra de baixo — a arrumação das
+ * plataformas de corretora no telemóvel. Cada secção é uma peça que já existia (lista, gráfico,
+ * gaveta, «Mais», resumo da conta): a barra só escolhe qual ocupa o ecrã.
+ *
+ * Dentro da app-mobile NÃO aparece: a app já tem a sua barra de separadores (e as apps nativas a do
+ * sistema) — duas barras empilhadas era a mesma função duas vezes. Aí fica a gaveta, que tem as
+ * mesmas secções em separadores.
+ */
+type Seccao = "mercados" | "grafico" | "negociacoes" | "insights" | "conta"
+const SECCOES: Array<[Seccao, string, LucideIcon]> = [
+  ["mercados", "Mercados", List], ["grafico", "Gráfico", CandlestickChart], ["negociacoes", "Negociações", Layers],
+  ["insights", "Insights", BarChart3], ["conta", "Conta", User],
+]
 
 const CHAVE_GAVETA = "mtmfunded_simples_gaveta"
 /** Abaixo disto, largar a pega fecha a gaveta (fica só a barra dos separadores). */
@@ -113,7 +129,10 @@ function Conteudo({ t }: { t: TraderBase }) {
   // Tablet deitado: a gaveta vai para o lado, com a altura toda (só com o gráfico à vista).
   const aoLado = useMediaQuery(MQ_PAINEL_AO_LADO) && graficoVisivel
   // Gráfico escondido (ou gaveta ao lado): a gaveta fica aberta e com o espaço todo (sem pega).
-  const cheia = !graficoVisivel || aoLado
+  // Só no /webtrader sozinho (ver SECCOES); no tablet deitado a gaveta já fica ao lado.
+  const comSeccoes = (usePathname() ?? "").startsWith("/webtrader") && !aoLado
+  const [seccao, setSeccao] = useState<Seccao>("grafico")
+  const cheia = !graficoVisivel || aoLado || (comSeccoes && seccao !== "grafico")
 
   // Um alerta/ideia com direção abre logo o ticket (o resumo já vem escolhido).
   useEffect(() => { if (k.r.escolhido) setFolha("ticket") }, [k.r.escolhido])
@@ -269,6 +288,57 @@ function Conteudo({ t }: { t: TraderBase }) {
       </div>
   )
 
+  const escolherSeccao = (x: Seccao) => {
+    setSeccao(x)
+    if (x === "negociacoes") irPara(0)
+    if (x === "insights") {
+      const estat = extras.find((e) => e.chave === "estatisticas") ?? extras[0]
+      setMais(estat.chave)
+      irPara(principais.length)
+    }
+  }
+
+  const barraSeccoes = comSeccoes && (
+    <nav aria-label="Secções do WebTrader" className="grid shrink-0 grid-cols-5 border-t border-[#2A2E39] bg-[#0E1016]">
+      {SECCOES.map(([x, nome, Icone]) => {
+        const ativa = seccao === x
+        return (
+          <button key={x} type="button" onClick={() => escolherSeccao(x)} aria-current={ativa ? "page" : undefined}
+            className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[10.5px] ${ativa ? "text-[#D2A63C]" : "text-zinc-500 active:text-zinc-300"}`}>
+            <Icone className="h-5 w-5" strokeWidth={ativa ? 2.2 : 1.8} />
+            <span className="max-w-full truncate px-0.5">{nome}</span>
+          </button>
+        )
+      })}
+    </nav>
+  )
+
+  if (comSeccoes && seccao !== "grafico") {
+    return (
+      <>
+        {topo}
+        {seccao === "mercados" && (
+          <div className="min-h-0 flex-1 overflow-y-auto p-1">
+            <FundedWatchlist precos={t.vivos} selecionado={s.symbol} onSelecionar={(x) => { t.selecionar(x); setSeccao("grafico") }} onVisiveis={t.setVisiveis} preencher />
+          </div>
+        )}
+        {(seccao === "negociacoes" || seccao === "insights") && gavetaEl}
+        {seccao === "conta" && (
+          <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+            <div className="mb-2 flex items-center gap-2 px-1 text-[11.5px]"><span className="text-zinc-500">Sentimento {s.symbol}</span><Sentimento symbol={s.symbol} /></div>
+            {painelConta?.conteudo({ irPara: (c) => { escolherSeccao("negociacoes"); irParaChave(c) }, denso: false, fechar: () => setSeccao("grafico") })}
+          </div>
+        )}
+        {barraSeccoes}
+        {folha === "ticket" && (
+          <Folha titulo="Nova ordem" onFechar={() => { setFolha(null); k.limpar(); k.setFerramenta(null) }}>
+            {t.ticket}
+          </Folha>
+        )}
+      </>
+    )
+  }
+
   return (
     <>
       {topo}
@@ -280,6 +350,7 @@ function Conteudo({ t }: { t: TraderBase }) {
       ) : (
         <>{grafico}{botoes}{gavetaEl}</>
       )}
+      {barraSeccoes}
 
       {folha === "ticket" && (
         <Folha titulo="Nova ordem" onFechar={() => { setFolha(null); k.limpar(); k.setFerramenta(null) }}>
