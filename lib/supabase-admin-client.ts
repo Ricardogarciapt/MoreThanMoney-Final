@@ -18,7 +18,24 @@ const ANON_KEY = (
 let singleton: SupabaseClient | null = null
 let anonSingleton: SupabaseClient | null = null
 
+/**
+ * Sem chave, devolve um cliente que só falha QUANDO É USADO.
+ *
+ * Há perto de 150 rotas que chamam isto ao nível do módulo, e o `next build` importa-as todas para
+ * recolher dados de página. Com o `createClient` a rebentar logo à importação, um ambiente sem a
+ * chave (as previews da Vercel) não chegava sequer a compilar — por causa de uma rota que nunca ia
+ * ser chamada. Assim o build passa e o erro aparece no pedido, com a mesma mensagem clara.
+ */
+function clienteSemChave(): SupabaseClient {
+  return new Proxy({} as SupabaseClient, {
+    get() {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY não configurada neste ambiente")
+    },
+  })
+}
+
 export function getSupabaseAdmin(): SupabaseClient {
+  if (!ADMIN_SERVICE_KEY) return clienteSemChave()
   if (!singleton) {
     singleton = createClient(ADMIN_URL, ADMIN_SERVICE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },

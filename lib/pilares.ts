@@ -88,7 +88,7 @@ export const AREAS: Area[] = [
       'Salas próprias ligadas aos portefólios e à análise de reforço mensal que corre no site — do DCA ao acompanhamento ao vivo.',
   },
   {
-    pilar: 'markets', titulo: 'Ações e ETF', academias: [],
+    pilar: 'markets', titulo: 'Ações e ETF', academias: ['stocks-e-etfs'],
     descricao:
       'A carteira de ETF a preço ao vivo, ações para analisares no Terminal com IA, e a leitura diária de onde vale a pena reforçar.',
   },

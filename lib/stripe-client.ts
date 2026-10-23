@@ -9,7 +9,15 @@ let stripeClient: Stripe | null = null
 export function getStripeClient(): Stripe {
   if (!stripeClient) {
     const key = sanitizeEnv(process.env.STRIPE_SECRET_KEY)
-    if (!key) throw new Error('STRIPE_SECRET_KEY não configurada')
+    // Sem chave, um cliente que só falha quando é usado: há rotas que o pedem ao nível do módulo,
+    // e o `next build` importa-as — sem isto, uma preview sem a chave nem compilava.
+    if (!key) {
+      return new Proxy({} as Stripe, {
+        get() {
+          throw new Error('STRIPE_SECRET_KEY não configurada')
+        },
+      })
+    }
     // Versão da API FIXADA de propósito: é a forma de resposta que este código lê.
     // Os tipos do SDK (v18) descrevem uma API mais recente, por isso o cast — e daí
     // existirem os acessores abaixo para os campos que mudaram de sítio nessa versão.

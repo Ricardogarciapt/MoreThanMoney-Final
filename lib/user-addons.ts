@@ -7,6 +7,12 @@ export const SCANNER_ADDON_PLANS = [
   { id: 'scanners_semestral', label: 'Scanners Semestral', recurring: true },
   { id: 'scanners_lifetime', label: 'Scanners Vitalício', recurring: false },
   { id: 'goldkiller_lifetime', label: 'GoldKiller Vitalício', recurring: false },
+  { id: 'goldkiller_semestral', label: 'GoldKiller Semestral', recurring: false },
+  { id: 'aurumflow_semestral', label: 'Aurum Flow Semestral', recurring: false },
+  { id: 'aurumflow_lifetime', label: 'Aurum Flow Vitalício', recurring: false },
+  { id: 'trendshot_semestral', label: 'TrendShot Semestral', recurring: false },
+  { id: 'trendshot_lifetime', label: 'TrendShot Vitalício', recurring: false },
+  { id: 'mtm_scanner_semestral', label: 'MTM Scanner Semestral', recurring: false },
 ] as const
 
 /** MTM Copy: descontinuado (fase 1) — já não se vende; fica só para ler/gerir subscrições antigas. */
