@@ -200,8 +200,8 @@ function goldKiller() {
     for (let i = leg.i; i <= end; i++) center[i] = leg.entry
     ;(leg.levels || []).forEach((lv) => {
       if (!isFinite(lv.gain) || !isFinite(lv.dd)) return
-      zones.push({ i0: leg.i, i1: end, top: Math.max(lv.gain, leg.entry), bot: Math.min(lv.gain, leg.entry), color: GREEN, opacity: lv.a * 0.32, edge: lv.gain })
-      zones.push({ i0: leg.i, i1: end, top: Math.max(lv.dd, leg.entry), bot: Math.min(lv.dd, leg.entry), color: RED, opacity: lv.a * 0.32, edge: lv.dd })
+      zones.push({ i0: leg.i, i1: end, top: Math.max(lv.gain, leg.entry), bot: Math.min(lv.gain, leg.entry), color: GREEN, opacity: lv.a * 0.13, edge: lv.gain })
+      zones.push({ i0: leg.i, i1: end, top: Math.max(lv.dd, leg.entry), bot: Math.min(lv.dd, leg.entry), color: RED, opacity: lv.a * 0.13, edge: lv.dd })
     })
   })
   const shown = legs.filter((l) => l.i >= warm)

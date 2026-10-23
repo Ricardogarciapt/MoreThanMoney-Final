@@ -82,6 +82,14 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
   pmin -= pad
   pmax += pad
   const X = (i) => (i - (N - 1) / 2) * DX
+  // Mínimo e máximo das últimas 60 velas até cada índice, para a câmara enquadrar o preço visível.
+  const runLow = [], runHigh = []
+  for (let i = 0; i < N; i++) {
+    let l = Infinity, h = -Infinity
+    for (let k = Math.max(0, i - 60); k <= i; k++) { l = Math.min(l, sim.candles[k].l); h = Math.max(h, sim.candles[k].h) }
+    runLow.push(l)
+    runHigh.push(h)
+  }
   const Y = (p) => ((p - pmin) / (pmax - pmin)) * H - H / 2
 
   const disposables = []
@@ -186,7 +194,7 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
     g.add(fill)
     let edge = null
     if (z.edge != null) {
-      edge = new THREE.Mesh(boxGeo, track(new THREE.MeshBasicMaterial({ color: z.color, transparent: true, opacity: Math.min(1, z.opacity * 3.2) })))
+      edge = new THREE.Mesh(boxGeo, track(new THREE.MeshBasicMaterial({ color: z.color, transparent: true, opacity: Math.min(1, z.opacity * 6) })))
       g.add(edge)
     }
     let label = null
@@ -343,6 +351,13 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
         it.bar.position.set(l2 + ww / 2, Y(it.it.price), 0.32)
         it.label.position.set(l2 + ww + it.label.scale.x / 2 + 0.08, Y(it.it.price), 0.36)
       }
+      // Níveis muito próximos: afasta as etiquetas na vertical para não se taparem.
+      const shown = g.items.filter((it) => it.label.visible).sort((p, q) => p.label.position.y - q.label.position.y)
+      const gap = 0.46
+      for (let k = 1; k < shown.length; k++) {
+        const prev = shown[k - 1].label.position.y
+        if (shown[k].label.position.y < prev + gap) shown[k].label.position.y = prev + gap
+      }
     })
 
     // Câmara: órbita lenta, perto do preço e a acompanhar a vela atual.
@@ -350,10 +365,10 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
     const t = time
     const theta = -0.42 + 0.16 * Math.sin(t * 0.18) + progress * 0.22
     const phi = 0.16 + 0.04 * Math.sin(t * 0.13)
-    const dist = (narrow ? 30 : 19.5) - progress * 1.5
-    const last = sim.candles[Math.min(N - 1, ci)]
+    const dist = (narrow ? 30 : 22) - progress * 1.5
+    const lo = runLow[Math.min(N - 1, ci)], hi = runHigh[Math.min(N - 1, ci)]
     const tx = X(cur) * 0.55 - 1.2
-    const ty = Y(last.c) * 0.45
+    const ty = ((Y(lo) + Y(hi)) / 2) * 0.85
     const target = new THREE.Vector3(tx, ty, 0)
     camera.position.set(target.x + Math.sin(theta) * dist, target.y + Math.sin(phi) * dist + 0.4, Math.cos(theta) * dist)
     camera.lookAt(target)
