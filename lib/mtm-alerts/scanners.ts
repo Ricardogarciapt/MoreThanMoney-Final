@@ -8,7 +8,7 @@
  *
  * Módulo PURO (sem imports) — pode ser usado no cliente e no servidor.
  */
-export type ScannerKey = "sensei" | "goldkiller" | "mtmscanner" | "aurum"
+export type ScannerKey = "sensei" | "goldkiller" | "mtmscanner" | "aurum" | "trendshot"
 
 /**
  * Nomes mostrados ao utilizador. "Sensei" (NÃO "Sensei X" — decisão Ricardo 2026-08-19).
@@ -20,10 +20,11 @@ export const SCANNER_LABELS: Record<ScannerKey, string> = {
   goldkiller: "GoldKiller",
   mtmscanner: "MTM Scanner",
   aurum: "MTM Aurum Flow Cripto",
+  trendshot: "TrendShot",
 }
 
 /** Ordem de apresentação nos filtros. */
-export const SCANNER_ORDER: ScannerKey[] = ["sensei", "goldkiller", "mtmscanner", "aurum"]
+export const SCANNER_ORDER: ScannerKey[] = ["sensei", "goldkiller", "mtmscanner", "aurum", "trendshot"]
 
 /**
  * Normaliza o `strategy` cru de um alerta para o scanner canónico.
@@ -32,6 +33,7 @@ export const SCANNER_ORDER: ScannerKey[] = ["sensei", "goldkiller", "mtmscanner"
 export function scannerKeyFromStrategy(strategy: string | null | undefined): ScannerKey {
   const n = (strategy ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
   if (!n) return "mtmscanner"
+  if (n.includes("trendshot")) return "trendshot"                          // "MTM Auto Trendshot" (23/10)
   if (n.includes("aurum")) return "aurum"                                  // ORB, v8, base
   if (n.includes("sensei")) return "sensei"                                // "MTM Sensei X" → Sensei
   if (n.includes("goldkiller") || (n.includes("gold") && n.includes("kill"))) return "goldkiller"

@@ -5,8 +5,9 @@
  * direcção (e o `{{close}}`), e os níveis saem de `niveisTrendshot`. Publica no chat da app
  * `sinais-trendshot` e no grupo Telegram «Ideias e sinais - Scanner TrendShot» (env
  * TELEGRAM_CHANNEL_TRENDSHOT). O acompanhamento por preço (alvos/BE/stop no chat e no Telegram) é o
- * do tracker — o canal está em CANAIS_SO_SEGUIMENTO. Nenhuma ordem nasce aqui: a mestre
- * «MTM Auto Trendshot» liga-se à parte, quando o dono a puser em live.
+ * do tracker — o canal está em CANAIS_SO_SEGUIMENTO. A entrada vai também à mestre «MTM Auto
+ * Trendshot» pelo mesmo `encaminharSinalParaMestre` das outras estratégias: sem linha em
+ * mestres_estrategias, ou em `sinal_modo` desligado, não abre nada (o motivo fica no registo).
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
@@ -14,6 +15,7 @@ import { grupoTelegramTrendshot } from '@/lib/telegram-seguimento'
 import { normalizeSymbol } from '@/lib/mtmcopy/signal-parser'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { formatarSinal } from '@/lib/sinais/formato-sinal'
+import { encaminharSinalParaMestre } from '@/lib/mestres/servidor/sinal-mestre'
 import {
   CANAL_TRENDSHOT,
   ESTRATEGIA_TRENDSHOT,
@@ -147,5 +149,17 @@ export async function processarTrendshot(payload: Json, rawBody: string): Promis
       .eq('id', logId)
   }
   await sendTelegramChannelPush({ slug: CANAL_TRENDSHOT, content: texto_, chatMessageId: chatId }).catch(() => undefined)
-  return { ok: true, estrategia: 'trendshot', simbolo, direcao, entrada, sl, tps, chatId, telegram: !!telegramMessageId }
+
+  // Mestre: a publicação já saiu; uma falha aqui fica escrita e não parte o webhook.
+  let mestre: string | null = null
+  try {
+    const m = await encaminharSinalParaMestre({ fonte: 'trendshot', symbol: simbolo, direcao, entrada, sl, tps, externalRef: String(logId ?? '') })
+    mestre = m.modo === 'desligado' ? null : m.modo
+    if (m.motivo && logId) await supabase.from('tradingview_signals').update({ ai_error: `mestre trendshot: ${m.motivo}`.slice(0, 300) }).eq('id', logId)
+  } catch (e) {
+    const motivo = e instanceof Error ? e.message : String(e)
+    console.error('[trendshot] mestre:', motivo)
+    if (logId) await supabase.from('tradingview_signals').update({ ai_error: `mestre trendshot: erro ao encaminhar: ${motivo}`.slice(0, 300) }).eq('id', logId)
+  }
+  return { ok: true, estrategia: 'trendshot', simbolo, direcao, entrada, sl, tps, chatId, telegram: !!telegramMessageId, mestre }
 }

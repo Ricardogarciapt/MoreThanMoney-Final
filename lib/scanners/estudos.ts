@@ -62,7 +62,8 @@ export const scannerLabels: Record<ScannerKey, string> = {
 }
 
 /**
- * Os três estudos que o WebTrader oferece. Para cada um:
+ * Os estudos que o WebTrader oferece (TrendShot desde 23/10: só as setas dos sinais e o estudo
+ * publicado no gráfico de análise — o cálculo local no gráfico Lightweight ainda não existe). Para cada um:
  *  · `alerta` — a chave canónica dos alertas (lib/mtm-alerts/scanners → scannerKeyFromStrategy),
  *    para sobrepor no gráfico de negociação os SINAIS que o estudo gerou;
  *  · `acesso` — o nome que lib/mtmfunded/acesso.ts usa (o participante de torneio só tem GoldKiller);
@@ -72,6 +73,7 @@ export const ESTUDOS_WEBTRADER = [
   { chave: "Goldkiller", rotulo: "GoldKiller", alerta: "goldkiller", acesso: "GoldKiller", curto: "GK", cor: "#EAB308" },
   { chave: "Sensei", rotulo: "Sensei", alerta: "sensei", acesso: "Sensei", curto: "Sensei", cor: "#F472B6" },
   { chave: "MTMScanner", rotulo: "MTM Scanner", alerta: "mtmscanner", acesso: "MTMScanner", curto: "MTM", cor: "#A78BFA" },
+  { chave: "TrendShot", rotulo: "TrendShot", alerta: "trendshot", acesso: "TrendShot", curto: "TS", cor: "#38BDF8" },
 ] as const
 
 export type EstudoWebtrader = (typeof ESTUDOS_WEBTRADER)[number]

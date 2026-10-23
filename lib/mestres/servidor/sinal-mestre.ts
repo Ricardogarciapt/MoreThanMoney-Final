@@ -58,6 +58,11 @@ export const ESTRATEGIA_DO_WEBHOOK: Record<string, AlvoDaFonte> = {
    * (lib/mestres/aurum.ts) e respeita o perps-gate antes de chegar aqui.
    */
   aurum: { slug: 'aurum-flow', comentario: 'MTM Auto Aurum Flow' },
+  /**
+   * MTM Auto Trendshot (23/10, pedido do dono). Sem linha em mestres_estrategias nada abre; a mestre
+   * nasce em sombra pelo «Registar na cadeia» do admin, e o provider (9e178a77) está desligado.
+   */
+  trendshot: { slug: 'mtm-auto-trendshot', comentario: 'MTM Auto Trendshot' },
   // Premium (relay-post → processador → lib/mestres/servidor/premium.ts), não o webhook TradingView.
   premium: { slug: SLUG_PREMIUM, comentario: COMENTARIO_PREMIUM, ignoraProviderAtivo: true, permitirDuplicado: true, prefixo: 'tg' },
 }
