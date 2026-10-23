@@ -12,12 +12,14 @@ import { BOT_DA_CASA, type EstadoPedido, type PedidoGrupo, type TipoGrupo } from
  */
 const API_GRUPOS = '/api/admin/backoffice/telegram/grupos-novos'
 const API_BOTS = '/api/admin/backoffice/telegram/bots'
+const porTratarAlgum = (pedidos: PedidoGrupo[] | null) => pedidos?.some((p) => p.estado === 'pendente' || p.estado === 'a_criar')
 const entrada = 'w-full rounded-md border border-white/10 bg-zinc-900 px-2 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:border-[#D2A63C]/50 focus:outline-none'
 const VAZIO = { tipo: 'grupo' as TipoGrupo, titulo: '', descricao: '', bot: BOT_DA_CASA }
 
 type BotRegistado = { id: string; bot_id: number; username: string; nome: string; notas: string | null; criado_em: string }
 
 const ESTADO: Record<EstadoPedido, { texto: string; tom: 'ok' | 'aviso' | 'grave' | 'neutro' | 'ouro' }> = {
+  rascunho: { texto: 'proposto pela IA', tom: 'neutro' },
   pendente: { texto: 'à espera do relay', tom: 'aviso' },
   a_criar: { texto: 'a criar', tom: 'ouro' },
   criado: { texto: 'criado', tom: 'ok' },
@@ -44,14 +46,14 @@ export default function TelegramGruposNovos() {
   useEffect(() => { void ler() }, [ler])
 
   // Enquanto houver um pedido por tratar, relê de 20 em 20 s para o link aparecer sozinho.
-  const porTratar = pedidos?.some((p) => p.estado === 'pendente' || p.estado === 'a_criar')
+  const porTratar = porTratarAlgum(pedidos)
   useEffect(() => {
     if (!porTratar) return
     const t = setInterval(() => void ler(), 20_000)
     return () => clearInterval(t)
   }, [porTratar, ler])
 
-  const pedir = async (url: string, metodo: 'POST' | 'DELETE', corpo?: unknown) => {
+  const pedir = async (url: string, metodo: 'POST' | 'PATCH' | 'DELETE', corpo?: unknown) => {
     setAGravar(true)
     setErro(null)
     try {
@@ -83,6 +85,9 @@ export default function TelegramGruposNovos() {
       accao={!novo && <Botao tom="ouro" onClick={() => setNovo({ ...VAZIO })} disabled={esgotado}><Plus className="h-3 w-3" /> Grupo ou canal</Botao>}
     >
       {erro && <div className="mb-3"><Aviso tom="grave">{erro}</Aviso></div>}
+      <p className="mb-3 text-[11px] text-zinc-500">
+        Produto novo? O <a className="text-[#E9C46A] hover:underline" href="https://www.morethanmoney.pt/dashboard-gestao?tab=telegram_arquiteto" target="_blank" rel="noreferrer">Arquiteto Telegram</a> lê o cérebro e o pipeline e deixa aqui os rascunhos (grupo, comando, rota) para aprovares.
+      </p>
 
       {novo && (
         <div className="mb-3 rounded-xl border border-[#D2A63C]/25 bg-[#D2A63C]/[0.03] p-3">
@@ -130,7 +135,13 @@ export default function TelegramGruposNovos() {
                   {p.convite && (
                     <Botao onClick={() => void navigator.clipboard.writeText(p.convite!)} title="Copiar o link de convite"><Copy className="h-3 w-3" /> Convite</Botao>
                   )}
-                  {(p.estado === 'pendente' || p.estado === 'a_criar') && (
+                  {p.estado === 'rascunho' && (
+                    <Botao tom="ouro" disabled={aGravar || esgotado} title="Aprovar: o relay cria-o com a tua conta"
+                      onClick={() => { if (window.confirm(`Criar «${p.titulo}» com a tua conta pessoal? Conta para o limite de ${usados.limite} por dia.`)) void pedir(API_GRUPOS, 'PATCH', { id: p.id }) }}>
+                      Aprovar
+                    </Botao>
+                  )}
+                  {(p.estado === 'rascunho' || p.estado === 'pendente' || p.estado === 'a_criar') && (
                     <Botao tom="perigo" onClick={() => void pedir(`${API_GRUPOS}?id=${p.id}`, 'DELETE')} disabled={aGravar} title="Cancelar"><X className="h-3 w-3" /></Botao>
                   )}
                 </span>

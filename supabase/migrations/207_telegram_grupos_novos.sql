@@ -2,6 +2,7 @@
 -- grupos; quem os cria é o gmi-relay da VPS, com a sessão pessoal do dono, que lê os pedidos por
 -- /api/telegram/relay-pedidos (Bearer CRON_SECRET) e devolve o resultado (chat_id, convite).
 -- No máximo 3 por dia (limite no site E no relay): criar grupos em série é o que a Telegram limita.
+-- `rascunho` = proposto pelo assistente de IA; o relay não lhe toca até o dono aprovar no painel.
 create table if not exists public.telegram_grupos_novos (
   id uuid primary key default gen_random_uuid(),
   tipo text not null check (tipo in ('grupo', 'canal')),
@@ -9,7 +10,7 @@ create table if not exists public.telegram_grupos_novos (
   descricao text,
   -- @username do bot que entra como administrador; null = nenhum.
   bot text,
-  estado text not null default 'pendente' check (estado in ('pendente', 'a_criar', 'criado', 'falhou', 'cancelado')),
+  estado text not null default 'pendente' check (estado in ('rascunho', 'pendente', 'a_criar', 'criado', 'falhou', 'cancelado')),
   chat_id text,
   convite text,
   erro text,

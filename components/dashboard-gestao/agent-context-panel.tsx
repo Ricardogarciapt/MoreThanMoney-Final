@@ -78,6 +78,12 @@ const QUICK_PROMPTS: Record<string, string[]> = {
     "Cria 10 perguntas de quiz sobre gestão de risco",
     "Desenvolve um checklist de onboarding para novos membros MTM",
   ],
+  telegram_arquiteto: [
+    "Vou lançar um produto novo: monta-me a presença no Telegram (grupo, canal, comando e funil)",
+    "O que temos hoje no Telegram e onde está o funil travado?",
+    "Propõe um comando /bootcamp com botões para a página e para o WhatsApp",
+    "De onde vêm os negócios do pipeline nos últimos 30 dias?",
+  ],
   app_creator: [
     "Como converter a app-mobile MTM para iOS e Android com Capacitor? Dá os comandos exatos",
     "Quais os requisitos completos da App Store para uma app de educação financeira?",
@@ -156,6 +162,12 @@ const CAPABILITIES: Record<string, { label: string; icon: React.ElementType }[]>
     { label: "Quiz & exercícios", icon: Zap },
     { label: "Jornadas de aprendizagem", icon: TrendingUp },
   ],
+  telegram_arquiteto: [
+    { label: "Grupos e canais (rascunho → aprovar)", icon: Users },
+    { label: "Comandos do bot", icon: Bot },
+    { label: "Forwarder", icon: Zap },
+    { label: "Cérebro e pipeline", icon: Brain },
+  ],
   app_creator: [
     { label: "Conversão web→nativo (Capacitor)", icon: Smartphone },
     { label: "App Store compliance (Apple)", icon: Store },
@@ -214,6 +226,10 @@ const QUICK_LINKS: Record<string, { label: string; url: string }[]> = {
   education: [
     { label: "Skool Cursos", url: "https://www.skool.com/morethanmoney-1132" },
     { label: "Canva", url: "https://www.canva.com" },
+  ],
+  telegram_arquiteto: [
+    { label: "Gestão → Telegram (aprovar)", url: "https://backoffice.morethanmoney.pt/backoffice/gestao/telegram" },
+    { label: "@BotFather (criar bots)", url: "https://t.me/BotFather" },
   ],
   app_creator: [
     { label: "Apple Developer", url: "https://developer.apple.com" },

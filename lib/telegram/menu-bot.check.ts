@@ -26,4 +26,12 @@ if (e.ok) {
   assert.deepEqual(r?.teclado, { inline_keyboard: [[{ text: 'Ir', url: 'https://morethanmoney.pt' }]] })
   assert.equal(respostaDoExtra(e.menu, '/outro'), null)
 }
+// Um rascunho da IA não responde nem aparece no menu.
+const r = validarMenu({ extras: [{ command: 'evento', description: 'a', resposta: 'b', rascunho: true }] })
+assert.ok(r.ok)
+if (r.ok) {
+  assert.equal(r.menu.extras[0].rascunho, true)
+  assert.equal(respostaDoExtra(r.menu, '/evento'), null)
+  assert.equal(comandosDoMenu(r.menu).some((c) => c.command === 'evento'), false)
+}
 console.log('menu-bot: ok')

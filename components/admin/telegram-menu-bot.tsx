@@ -133,7 +133,12 @@ export default function TelegramMenuBot() {
                   <button type="button" className="text-[11px] text-[#E9C46A] hover:underline" onClick={() => extra(i, { botoes: [...x.botoes, { texto: '', url: '' }] })}>+ botão</button>
                 )}
               </div>
-              {!x.visivel && <p className="mt-1.5"><Pilula tom="neutro">fora do menu, mas responde</Pilula></p>}
+              {x.rascunho ? (
+                <p className="mt-1.5 flex items-center gap-2">
+                  <Pilula tom="ouro">proposto pela IA · não responde</Pilula>
+                  <Botao onClick={() => extra(i, { rascunho: false })}>Aceitar</Botao>
+                </p>
+              ) : !x.visivel && <p className="mt-1.5"><Pilula tom="neutro">fora do menu, mas responde</Pilula></p>}
             </Faixa>
           ))}
         </div>

@@ -32,7 +32,11 @@ export const DESCRICAO_CURTA_BASE = 'Sinais MTM & ligação ao mentor'
 
 export type ComandoBase = { command: string; description: string; visivel: boolean }
 export type Botao = { texto: string; url: string }
-export type ComandoExtra = { command: string; description: string; resposta: string; botoes: Botao[]; visivel: boolean }
+export type ComandoExtra = {
+  command: string; description: string; resposta: string; botoes: Botao[]; visivel: boolean
+  /** Proposto pelo assistente de IA: não responde nem aparece até o dono o aceitar no painel. */
+  rascunho?: boolean
+}
 export type MenuBot = {
   base: ComandoBase[]
   extras: ComandoExtra[]
@@ -96,7 +100,7 @@ export function validarMenu(entrada: unknown): { ok: true; menu: MenuBot } | { o
       botoes.push({ texto, url })
     }
     if (botoes.length > 6) return { ok: false, erro: `/${command}: no máximo 6 botões.` }
-    extras.push({ command, description, resposta, botoes, visivel: x?.visivel !== false })
+    extras.push({ command, description, resposta, botoes, visivel: x?.visivel !== false, ...(x?.rascunho === true ? { rascunho: true } : {}) })
   }
   if (extras.length > 20) return { ok: false, erro: 'No máximo 20 comandos extra.' }
 
@@ -125,7 +129,7 @@ export function validarMenu(entrada: unknown): { ok: true; menu: MenuBot } | { o
 export function comandosDoMenu(menu: MenuBot) {
   return [
     ...menu.base.filter((c) => c.visivel).map(({ command, description }) => ({ command, description })),
-    ...menu.extras.filter((c) => c.visivel).map(({ command, description }) => ({ command, description })),
+    ...menu.extras.filter((c) => c.visivel && !c.rascunho).map(({ command, description }) => ({ command, description })),
   ]
 }
 
@@ -134,7 +138,7 @@ const escapar = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 /** A resposta de um extra, pronta para o sendMessage (parse_mode HTML). `null` = não é um extra. */
 export function respostaDoExtra(menu: MenuBot, texto: string): { texto: string; teclado?: unknown } | null {
   const command = texto.trim().split(/[\s@]/)[0].replace(/^\//, '').toLowerCase()
-  const x = menu.extras.find((e) => e.command === command)
+  const x = menu.extras.find((e) => e.command === command && !e.rascunho)
   if (!x) return null
   return {
     texto: escapar(x.resposta),

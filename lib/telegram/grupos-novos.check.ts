@@ -12,6 +12,7 @@ const agora = Date.parse('2026-10-23T18:00:00Z')
 assert.equal(contaParaLimite([
   { estado: 'criado', criado_em: '2026-10-23T10:00:00Z' },
   { estado: 'cancelado', criado_em: '2026-10-23T11:00:00Z' },
+  { estado: 'rascunho', criado_em: '2026-10-23T12:00:00Z' },
   { estado: 'falhou', criado_em: '2026-10-22T19:00:00Z' },
   { estado: 'criado', criado_em: '2026-10-22T17:00:00Z' },
 ], agora), 2)

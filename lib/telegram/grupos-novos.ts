@@ -5,6 +5,9 @@
  * este caminho é lento de propósito: um pedido fica `pendente`, o relay apanha-o em até 2 min,
  * marca-o `a_criar`, cria, põe o bot como administrador e devolve o link de convite.
  *
+ * O assistente de IA (dashboard-gestao, agente telegram_arquiteto) só cria `rascunho`: o relay
+ * não lhe toca até o dono carregar em Aprovar. Criar um grupo com o nome dele não se desfaz.
+ *
  * O limite diário (LIMITE_DIA) existe nos dois lados. Uma conta pessoal que cria grupos em série
  * leva FLOOD_WAIT ou pior, e com ela caíam os relays e a Premium.
  *
@@ -14,7 +17,7 @@ export const LIMITE_DIA = 3
 export const BOT_DA_CASA = 'MoreThanMoney_aibot'
 export const TIPOS = ['grupo', 'canal'] as const
 export type TipoGrupo = (typeof TIPOS)[number]
-export type EstadoPedido = 'pendente' | 'a_criar' | 'criado' | 'falhou' | 'cancelado'
+export type EstadoPedido = 'rascunho' | 'pendente' | 'a_criar' | 'criado' | 'falhou' | 'cancelado'
 
 export type PedidoGrupo = {
   id: string
@@ -44,9 +47,9 @@ export function validarPedido(entrada: unknown): { ok: true; pedido: PedidoNovo 
   return { ok: true, pedido: { tipo, titulo, descricao, bot } }
 }
 
-/** Pedidos que contam para o limite: os das últimas 24 h que não foram cancelados. */
+/** Pedidos que contam para o limite: os das últimas 24 h que foram aprovados e não cancelados. */
 export function contaParaLimite(pedidos: Pick<PedidoGrupo, 'estado' | 'criado_em'>[], agora = Date.now()): number {
-  return pedidos.filter((p) => p.estado !== 'cancelado' && agora - Date.parse(p.criado_em) < 86_400_000).length
+  return pedidos.filter((p) => p.estado !== 'cancelado' && p.estado !== 'rascunho' && agora - Date.parse(p.criado_em) < 86_400_000).length
 }
 
 /** O que o relay recebe: só o que precisa para criar. */
