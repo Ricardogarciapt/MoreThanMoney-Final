@@ -6,6 +6,10 @@ import { andar, bracosDeEnsaio, funilPorId } from '@/lib/funis-motor'
 import { correrRadar } from '@/lib/instagram/radar'
 import { listarAutomacoes } from '@/lib/automacoes'
 import { acharAgente, darOrdem, listarOrdens } from '@/lib/agentes/ordens'
+import { tocaPremium, validarRota } from '@/lib/telegram/rotas'
+import { validarMenu } from '@/lib/telegram/menu-bot'
+import { gravarMenu, lerMenu } from '@/lib/telegram/menu-bot-servidor'
+import { validarPedido } from '@/lib/telegram/grupos-novos'
 
 /**
  * As ferramentas que o sistema MTM expõe — a mesma camada que o painel usa.
@@ -245,6 +249,140 @@ export const FERRAMENTAS: Ferramenta[] = [
       if (a.agente && !ag) return { ok: false, erro: `Não encontrei o agente «${a.agente}».` }
       const r = await listarOrdens(db, { agenteId: ag?.id, abertas: a.abertas === true, limite: 30 })
       return r.erro ? { ok: false, erro: r.erro } : { ok: true, ordens: r.ordens }
+    },
+  },
+
+  // ── Telegram (Gestão → Telegram). A IA só deixa RASCUNHOS: rota pausada, comando fora do menu,
+  // grupo à espera de Aprovar. Ligar, publicar e criar continuam a ser um clique do dono no painel.
+  {
+    nome: 'telegram_estado',
+    descricao:
+      'O Telegram da casa: as rotas do forwarder (fonte → destino, activa ou pausada), os comandos ' +
+      'do bot @MoreThanMoney_aibot (os de base e os extra), os bots registados e os últimos pedidos ' +
+      'de grupos e canais novos. Ver antes de propor alguma coisa, para não duplicar.',
+    esquema: semArgs,
+    correr: async () => {
+      const db = getSupabaseAdmin()
+      const [rotas, bots, pedidos, menu] = await Promise.all([
+        db.from('telegram_rotas').select('nome, fonte, destino, filtro, activa, notas').order('criado_em'),
+        db.from('telegram_bots').select('username, nome, notas'),
+        db.from('telegram_grupos_novos').select('tipo, titulo, bot, estado, convite, criado_em').order('criado_em', { ascending: false }).limit(10),
+        lerMenu(db),
+      ])
+      return {
+        rotas: rotas.data ?? [],
+        bots: bots.data ?? [],
+        gruposPedidos: pedidos.data ?? [],
+        comandos: { base: menu.base, extras: menu.extras.map(({ command, description, visivel }) => ({ command, description, visivel })) },
+        premium: '-1002424441843 é a Premium: EXECUTA nas contas dos clientes. Nunca propor rotas para lá.',
+      }
+    },
+  },
+
+  {
+    nome: 'telegram_propor_rota',
+    descricao:
+      'Propõe uma rota do forwarder (lê a fonte com a conta do dono e republica no destino pelo bot). ' +
+      'Fica PAUSADA: o dono liga-a em Gestão → Telegram → Forwarder. Recusa a Premium.',
+    esquema: {
+      type: 'object',
+      properties: {
+        nome: { type: 'string', description: 'curto, letras-números-hífenes, ex.: ouro-londres' },
+        fonte: { type: 'string', description: 'id do chat (-100…) ou @canal a ler' },
+        destino: { type: 'string', description: 'id do chat MTM (-100…) onde o bot publica' },
+        filtro: { type: 'string', enum: ['gold', 'all', 'astro'], description: 'gold = só setups/TP/SL; all = tudo' },
+        cabecalho: { type: 'string', description: 'opcional' },
+        porque: { type: 'string', description: 'uma frase para o dono perceber a proposta' },
+      },
+      required: ['nome', 'fonte', 'destino'],
+      additionalProperties: false,
+    },
+    correr: async (a) => {
+      const v = validarRota({ ...a, activa: false, notas: `Proposta pela IA: ${String(a.porque ?? '').slice(0, 250)}` })
+      if (!v.ok) return { erro: v.erro }
+      if (tocaPremium(v.rota.destino)) return { erro: 'A Premium executa nas contas dos clientes. Isso só o dono faz, à mão, no painel.' }
+      const { error } = await getSupabaseAdmin().from('telegram_rotas').insert({ ...v.rota, relay: 'gmi-relay', so_novas: true })
+      if (error) return { erro: error.code === '23505' ? 'Já há uma rota com esse nome.' : error.message }
+      return { ok: true, estado: 'pausada', falta: 'O dono liga-a em Gestão → Telegram → Forwarder.' }
+    },
+  },
+
+  {
+    nome: 'telegram_propor_comando',
+    descricao:
+      'Acrescenta um comando ao bot @MoreThanMoney_aibot (ex.: /bootcamp) com uma resposta fixa e ' +
+      'até 6 botões de link https. Fica em RASCUNHO (não responde, não aparece) até o dono o ' +
+      'aceitar e publicar em Gestão → Telegram → Menu do bot.',
+    esquema: {
+      type: 'object',
+      properties: {
+        comando: { type: 'string', description: 'sem barra, letras-números-_' },
+        descricao: { type: 'string', description: 'o texto no menu' },
+        resposta: { type: 'string', description: 'o que o bot responde (texto simples, PT-PT, tu)' },
+        botoes: { type: 'array', items: { type: 'object', properties: { texto: { type: 'string' }, url: { type: 'string' } }, required: ['texto', 'url'] } },
+      },
+      required: ['comando', 'descricao', 'resposta'],
+      additionalProperties: false,
+    },
+    correr: async (a) => {
+      const db = getSupabaseAdmin()
+      const menu = await lerMenu(db)
+      const extra = { command: String(a.comando ?? ''), description: String(a.descricao ?? ''), resposta: String(a.resposta ?? ''), botoes: Array.isArray(a.botoes) ? a.botoes : [], visivel: true, rascunho: true }
+      const v = validarMenu({ ...menu, extras: [...menu.extras, extra] })
+      if (!v.ok) return { erro: v.erro }
+      const { error } = await gravarMenu(db, v.menu)
+      if (error) return { erro: error.message }
+      return { ok: true, estado: 'rascunho', falta: 'O dono aceita-o e publica em Gestão → Telegram → Menu do bot.' }
+    },
+  },
+
+  {
+    nome: 'telegram_propor_grupo',
+    descricao:
+      'Propõe um grupo (as pessoas falam) ou um canal (só nós publicamos) novo, com o bot como ' +
+      'administrador. Fica em RASCUNHO: só é criado, com a conta pessoal do dono, depois de ele ' +
+      'carregar em Aprovar (máximo 3 por dia).',
+    esquema: {
+      type: 'object',
+      properties: {
+        tipo: { type: 'string', enum: ['grupo', 'canal'] },
+        titulo: { type: 'string' },
+        descricao: { type: 'string', description: 'até 255 caracteres; inclui o aviso educativo se falar de trading' },
+      },
+      required: ['tipo', 'titulo'],
+      additionalProperties: false,
+    },
+    correr: async (a) => {
+      const v = validarPedido({ ...a, bot: 'MoreThanMoney_aibot' })
+      if (!v.ok) return { erro: v.erro }
+      const { error } = await getSupabaseAdmin().from('telegram_grupos_novos').insert({ ...v.pedido, estado: 'rascunho' })
+      if (error) return { erro: error.message }
+      return { ok: true, estado: 'rascunho', falta: 'O dono aprova em Gestão → Telegram → Grupos e bots novos.' }
+    },
+  },
+
+  {
+    nome: 'pipeline_vendas',
+    descricao:
+      'O pipeline de vendas (vendas_negocios) dos últimos N dias: quantos negócios por etapa ' +
+      '(lead → contactado → qualificado → marcado → apresentado → ganho/perdido) e por origem. ' +
+      'Serve para ver de onde vêm os negócios (ex.: telegram) antes de desenhar um funil novo.',
+    esquema: {
+      type: 'object',
+      properties: { dias: { type: 'number', description: 'janela em dias (por omissão 30, máximo 180)' } },
+      additionalProperties: false,
+    },
+    correr: async (a) => {
+      const dias = Math.min(Math.max(Number(a.dias) || 30, 1), 180)
+      const { data, error } = await getSupabaseAdmin()
+        .from('vendas_negocios')
+        .select('estado, origem, pack_previsto')
+        .gte('criado_em', new Date(Date.now() - dias * 86_400_000).toISOString())
+        .limit(5000)
+      if (error) return { erro: error.message }
+      const conta = (k: 'estado' | 'origem' | 'pack_previsto') =>
+        Object.entries((data ?? []).reduce<Record<string, number>>((m, n) => { const c = n[k] || '(sem)'; m[c] = (m[c] ?? 0) + 1; return m }, {})).sort((x, y) => y[1] - x[1])
+      return { dias, total: data?.length ?? 0, porEtapa: conta('estado'), porOrigem: conta('origem'), porPack: conta('pack_previsto') }
     },
   },
 ]

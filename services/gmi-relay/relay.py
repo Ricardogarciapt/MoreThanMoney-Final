@@ -3,14 +3,15 @@
 Relay MTProto multi-fonte → MTM (via sessão de UTILIZADOR do Ricardo).
 
 Lê canais Telegram onde o @RicardoSubtilGarcia está (o bot não precisa de lá estar —
-2026-09-09: o bot foi removido do GOLD DID, e a leitura passa TODA pela sessão) e
+2026-09-09: o bot foi removido do canal-fonte de então, e a leitura passa TODA pela sessão) e
 RE-PUBLICA no destino MTM através do endpoint relay-post (bot MoreThanMoney).
 Dedup por state file por-rota + dedup atómico no servidor. DRY_RUN=1 → só imprime.
 
 ENV:
   TELEGRAM_API_ID, TELEGRAM_API_HASH, GMI_SESSION_STRING   (sessão de utilizador — make_session.py)
   RELAY_ROUTES  JSON de rotas; se ausente usa o modo legado GMI_* (uma rota).
-      [{"name":"gold-did", "source": -1003452689502, "dest": "-1002424441843", "filter": "gold"}]
+      [{"name":"signal-master-elite", "source": -1003671953091, "dest": "-1002424441843", "filter": "gold"}]
+      (rota única desde 15/09; as fontes anteriores saíram e os ids delas não voltam a entrar aqui)
       · source: id numérico OU título/username exato — resolvido dos diálogos da sessão no arranque.
       · dest: chat Telegram MTM onde o bot publica (o relay-post deriva daí o canal da app).
       · filter: "gold" (setups/TP/SL/pips — o filtro clássico) ou "all" (tudo o que não for lixo).
@@ -36,6 +37,9 @@ Robustez (herdada do relay GMI 2026-08-10, agora POR ROTA):
 import os, re, json, asyncio, datetime, hashlib, socket, time, urllib.request
 from telethon import TelegramClient
 from telethon.sessions import StringSession
+from telethon.tl.functions.channels import CreateChannelRequest, InviteToChannelRequest, EditAdminRequest
+from telethon.tl.functions.messages import ExportChatInviteRequest
+from telethon.tl.types import ChatAdminRights
 
 API_ID = int(os.environ["TELEGRAM_API_ID"])
 API_HASH = os.environ["TELEGRAM_API_HASH"]
@@ -46,18 +50,42 @@ POLL_SEC = int(os.environ.get("GMI_POLL_SEC", "45"))
 LOOKBACK_H = int(os.environ.get("GMI_LOOKBACK_H", "3"))
 EDIT_LOOKBACK_H = int(os.environ.get("GMI_EDIT_LOOKBACK_H", "6"))
 PREMIUM_DEST = "-1002424441843"
-VERSAO = "2026-10-23"
+RELAY_POST_URL = os.environ.get("RELAY_POST_URL", "https://www.morethanmoney.pt/api/telegram/relay-post")
+RELAY_SECRET = os.environ.get("RELAY_SECRET", "")
+VERSAO = "2026-10-23c"
 
 # ── Rotas ────────────────────────────────────────────────────────────────────
-def load_routes():
-    raw = os.environ.get("RELAY_ROUTES", "").strip()
-    if raw:
+# Desde 23/10 as rotas vivem no backoffice (Gestão → Telegram → Forwarder, tabela telegram_rotas).
+# O relay pede-as ao site de ROTAS_SEC em ROTAS_SEC com o mesmo segredo do relay-post. Se o site
+# não responder, fica com as últimas que recebeu; no arranque sem site, cai no RELAY_ROUTES do .env.
+# RELAY_ROTAS_SITE=0 desliga isto e volta ao .env só.
+ROTAS_SEC = int(os.environ.get("RELAY_ROTAS_SEC", "120"))
+ROTAS_SITE = os.environ.get("RELAY_ROTAS_SITE", "1") != "0"
+
+def rotas_do_site():
+    """Lista de rotas do backoffice, ou None se o site não respondeu (nunca rebenta)."""
+    if not ROTAS_SITE or not RELAY_SECRET:
+        return None
+    url = os.environ.get("RELAY_ROTAS_URL", RELAY_POST_URL.replace("/relay-post", "/relay-rotas")) + "?relay=gmi-relay"
+    req = urllib.request.Request(url, headers={"authorization": f"Bearer {RELAY_SECRET}"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            d = json.load(resp)
+        return d["rotas"] if d.get("ok") and isinstance(d.get("rotas"), list) else None
+    except Exception as e:
+        print("aviso: rotas do site falharam:", e)
+        return None
+
+def load_routes(do_site=None):
+    if do_site is not None:
+        routes = do_site
+    elif (raw := os.environ.get("RELAY_ROUTES", "").strip()):
         routes = json.loads(raw)
     else:
         # modo legado: uma rota a partir dos envs GMI_* (compatível com o .env atual do VPS)
         routes = [{
             "name": "legacy",
-            "source": int(os.environ.get("GMI_SOURCE_ID", "-1003812659078")),
+            "source": int(os.environ.get("GMI_SOURCE_ID", "-1003671953091")),  # Signal Master Elite
             "dest": os.environ.get("GMI_DEST_CHAT", PREMIUM_DEST),
             "filter": "gold",
         }]
@@ -119,6 +147,19 @@ def brand(text: str, header) -> str:
 
 NOISE = ("standby", "good morning traders", "new position", "position closed 🔒", "position closed")
 
+# Filtro "astro" (formato «XAUUSD I'm buying» + zona/stop/alvos, follow-ups «Tp2 hit») — de uma fonte
+# que já saiu; fica como modo de filtro disponível, sem rota a usá-lo.
+# O filtro "gold" não os apanha — exige «gold buy zone» ou pips, e ele não escreve nem uma
+# coisa nem outra. Sem esta lista a rota lia o canal e não passava um único sinal.
+ASTRO = [
+    re.compile(r"i.?m\s+(buying|selling)", re.I),
+    re.compile(r"entry\s*zone", re.I),
+    re.compile(r"\btp\s*\d\s*hit", re.I),
+    re.compile(r"\bsl\s*hit\b", re.I),
+    re.compile(r"stop\s*loss\b", re.I),
+    re.compile(r"\b(close|closed|be|break\s*even)\b", re.I),
+]
+
 def should_forward(text: str, mode: str) -> bool:
     if not text or len(text.strip()) < 4:
         return False
@@ -126,6 +167,8 @@ def should_forward(text: str, mode: str) -> bool:
         return False
     if mode == "all":
         return True
+    if mode == "astro":
+        return any(rx.search(text) for rx in ASTRO)
     return any(rx.search(text) for rx in KEEP)
 
 # ── Estado por rota ──────────────────────────────────────────────────────────
@@ -134,17 +177,15 @@ def load_state():
         s = json.load(open(STATE_FILE))
     except Exception:
         s = {}
-    # migração do state legado (flat) → por-rota, para não repetir o histórico do GOLD DID
+    # migração do state legado (flat) → por-rota, para não repetir o histórico já publicado
     if "last_id" in s and "routes" not in s:
-        s = {"routes": {"legacy": s, "gold-did": dict(s)}}
+        s = {"routes": {"legacy": s}}
     s.setdefault("routes", {})
     return s
 
 def save_state(s):
     json.dump(s, open(STATE_FILE, "w"))
 
-RELAY_POST_URL = os.environ.get("RELAY_POST_URL", "https://www.morethanmoney.pt/api/telegram/relay-post")
-RELAY_SECRET = os.environ.get("RELAY_SECRET", "")
 
 # ── Pulso para o backoffice (Gestão → Telegram) ─────────────────────────────
 # De 5 em 5 min, POST a /api/telegram/relay-pulso com o mesmo segredo do relay-post. O site grava em
@@ -323,20 +364,126 @@ async def run_route(client, route, rstate):
 
     return len(batch), sent
 
+def assinatura(routes):
+    """O que muda o comportamento de uma rota. Igual → não se mexe em nada."""
+    return json.dumps(sorted(
+        [[r["name"], str(r["source"]), str(r["dest"]), r.get("filter"), r.get("header"), bool(r.get("app_only"))] for r in routes]
+    ))
+
+async def preparar_rotas(client, routes, state):
+    """Resolve as fontes e prepara o state. Uma rota que não resolve fica de fora, as outras seguem."""
+    prontas = []
+    for r in routes:
+        try:
+            r["_source_id"] = await resolve_source(client, r["source"])
+        except Exception as e:
+            print(f"[relay:{r['name']}] fora: {e}")
+            continue
+        if r["name"] not in state["routes"]:
+            st = {"last_id": 0}
+            if r.get("so_novas"):
+                # Rota criada no backoffice: começa no que existe agora, não republica o histórico.
+                async for m in client.iter_messages(r["_source_id"], limit=1):
+                    st["last_id"] = m.id
+            state["routes"][r["name"]] = st
+        prontas.append(r)
+    print(f"[relay] {'DRY-RUN' if DRY_RUN else 'LIVE'} | rotas: " +
+          (", ".join(f"{r['name']} {r['_source_id']}→{r['dest']}" for r in prontas) or "nenhuma"))
+    return prontas
+
+# ── Grupos e canais novos ────────────────────────────────────────────────────
+# Gestão → Telegram → Grupos novos (tabela telegram_grupos_novos). O Bot API não cria grupos; a
+# sessão pessoal cria. Lido ao mesmo ritmo das rotas. GRUPOS_MAX_DIA também é contado AQUI (no
+# state), para que um site com um erro nunca ponha a conta a criar grupos em série.
+GRUPOS_SITE = os.environ.get("RELAY_GRUPOS_SITE", "1") != "0"
+GRUPOS_MAX_DIA = int(os.environ.get("RELAY_GRUPOS_MAX_DIA", "3"))
+
+def _site_json(url, corpo=None):
+    dados = json.dumps(corpo).encode() if corpo is not None else None
+    req = urllib.request.Request(url, data=dados, headers={"authorization": f"Bearer {RELAY_SECRET}", "content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.load(resp)
+
+def _url_pedidos():
+    return os.environ.get("RELAY_PEDIDOS_URL", RELAY_POST_URL.replace("/relay-post", "/relay-pedidos"))
+
+DIREITOS_BOT = ChatAdminRights(change_info=True, post_messages=True, edit_messages=True, delete_messages=True,
+                               ban_users=True, invite_users=True, pin_messages=True, manage_call=False)
+
+async def criar_um(client, p):
+    canal = p["tipo"] == "canal"
+    r = await client(CreateChannelRequest(title=p["titulo"], about=p.get("descricao") or "", megagroup=not canal, broadcast=canal))
+    ent = r.chats[0]
+    chat_id = f"-100{ent.id}"
+    aviso = None
+    if p.get("bot"):
+        try:
+            bot = await client.get_input_entity(p["bot"])
+            if not canal:
+                await client(InviteToChannelRequest(ent, [bot]))
+            await client(EditAdminRequest(ent, bot, DIREITOS_BOT, rank="MTM"))
+        except Exception as e:
+            aviso = f"criado, mas o bot @{p['bot']} não entrou: {e}"[:300]
+    convite = None
+    try:
+        convite = (await client(ExportChatInviteRequest(ent))).link
+    except Exception as e:
+        aviso = aviso or f"criado, sem link de convite: {e}"[:300]
+    return {"id": p["id"], "ok": True, "chat_id": chat_id, "convite": convite, "erro": aviso}
+
+async def criar_pedidos(client, state):
+    if not GRUPOS_SITE or not RELAY_SECRET or DRY_RUN:
+        return
+    agora = time.time()
+    feitos = [t for t in state.get("grupos_criados", []) if agora - t < 86400]
+    if len(feitos) >= GRUPOS_MAX_DIA:
+        return
+    try:
+        # Pede só os que ainda pode criar hoje: o site reserva o que entrega.
+        d = _site_json(f"{_url_pedidos()}?max={GRUPOS_MAX_DIA - len(feitos)}")
+    except Exception as e:
+        print("aviso: pedidos de grupos falharam:", e)
+        return
+    for p in (d.get("pedidos") or [])[: GRUPOS_MAX_DIA - len(feitos)]:
+        try:
+            res = await criar_um(client, p)
+            feitos.append(time.time())
+            print(f"[grupos] criado «{p['titulo']}» {res['chat_id']}")
+        except Exception as e:
+            res = {"id": p["id"], "ok": False, "erro": str(e)[:300]}
+            print(f"[grupos] falhou «{p['titulo']}»: {e}")
+        try:
+            _site_json(_url_pedidos(), res)
+        except Exception as e:
+            print("aviso: resultado do grupo não chegou ao site:", e)
+        await asyncio.sleep(5)
+    state["grupos_criados"] = feitos
+
 async def main():
-    routes = load_routes()
+    site = rotas_do_site()
+    routes = load_routes(site)
     state = load_state()
     client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
     await client.connect()
     if not await client.is_user_authorized():
         print("sessão não autorizada — gera nova com make_session.py"); return
-    for r in routes:
-        r["_source_id"] = await resolve_source(client, r["source"])
-        state["routes"].setdefault(r["name"], {"last_id": 0})
-    print(f"[relay] {'DRY-RUN' if DRY_RUN else 'LIVE'} | rotas: " +
-          ", ".join(f"{r['name']} {r['_source_id']}→{r['dest']}" for r in routes))
+    routes = await preparar_rotas(client, routes, state)
+    versao_rotas = assinatura(routes)
+    ultima_leitura = time.time()
     contas = {r["name"]: {"publicadas": 0, "erro": None} for r in routes}
     while True:
+        if ROTAS_SEC > 0 and time.time() - ultima_leitura >= ROTAS_SEC:
+            ultima_leitura = time.time()
+            site = rotas_do_site()
+            if site is not None:
+                novas = load_routes(site)
+                if assinatura(novas) != versao_rotas:
+                    print("[relay] rotas mudaram no backoffice — a recarregar")
+                    routes = await preparar_rotas(client, novas, state)
+                    versao_rotas = assinatura(novas)
+                    for r in routes:
+                        contas.setdefault(r["name"], {"publicadas": 0, "erro": None})
+            await criar_pedidos(client, state)
         for r in routes:
             try:
                 scanned, sent = await run_route(client, r, state["routes"][r["name"]])

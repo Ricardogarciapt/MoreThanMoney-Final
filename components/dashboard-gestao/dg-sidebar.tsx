@@ -23,6 +23,7 @@ import {
   BarChart3,
   Radio,
   Zap,
+  Send,
 } from "lucide-react"
 
 /**
@@ -48,6 +49,7 @@ export type DGSection =
   | "ai_control"
   | "education"
   | "app_creator"
+  | "telegram_arquiteto"
   | "calendly"
   | "stream_vps"
   | "n8n_vps"
@@ -144,6 +146,13 @@ export const navItems: NavItem[] = [
     icon: Smartphone,
     description: "Apps iOS & Android para as stores",
     color: "#06b6d4",
+  },
+  {
+    id: "telegram_arquiteto",
+    label: "Arquiteto Telegram",
+    icon: Send,
+    description: "Grupos, bots, rotas e funis por produto",
+    color: "#229ED9",
   },
   {
     id: "calendly",

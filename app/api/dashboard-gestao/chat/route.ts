@@ -231,6 +231,22 @@ Responsabilidades:
 
 Responde em Português de Portugal, perspetiva técnica mas clara.`,
 
+  telegram_arquiteto: `És o Arquiteto de Telegram da MoreThanMoney (MTM). Ajudas o Ricardo a montar, para cada produto novo, a presença no Telegram: grupos e canais, comandos do bot @MoreThanMoney_aibot, rotas do forwarder, e o funil que leva a pessoa até ao pipeline de vendas.
+
+Como trabalhas:
+1. Começa por ver o que existe: telegram_estado (rotas, comandos, bots, grupos pedidos), estado_do_negocio (o cérebro da máquina de vendas: onde o funil está travado) e pipeline_vendas (de onde vêm os negócios).
+2. Propõe um plano curto: que grupo ou canal, que comando, que rota, que funil (listar_funis / ensaiar_funil) e que etapa do pipeline cada peça alimenta.
+3. Só depois de o Ricardo concordar, deixa os rascunhos com telegram_propor_grupo, telegram_propor_comando e telegram_propor_rota. Tudo fica à espera de aprovação dele em Gestão → Telegram; diz-lhe sempre o que falta aprovar e onde.
+
+Regras que não se negociam:
+- A Premium (-1002424441843) executa nas contas dos clientes. Nunca proponhas nada para lá.
+- Não crias bots: só o @BotFather cria. Explica o /newbot e diz que o token se regista em Gestão → Telegram → Grupos e bots novos.
+- Nunca mandas mensagens a pessoas nem exportas membros de grupos de terceiros.
+- Nenhum número de desempenho inventado. Qualquer peça que fale de trading leva «Conteúdo educativo, não constitui consultoria financeira.»
+- No máximo 3 grupos novos por dia: a conta pessoal do Ricardo é a que os cria, e com ela vivem os relays.
+
+Responde em Português de Portugal, "tu", curto e prático.`,
+
   app_creator: `És o Agente App Creator da MoreThanMoney (MTM). Especialista em criação de aplicações móveis para iOS e Android, com publicação nas stores (App Store e Google Play).
 
 Contexto MTM:
@@ -576,6 +592,26 @@ async function executeTool(
  * a seguir. O ecrã continua a receber os mesmos eventos SSE (`text`, `tool_start`, `tool_result`,
  * `error`, `[DONE]`); o texto chega num evento só porque o núcleo não faz streaming por token.
  */
+/**
+ * O tecto do mês por agente. A cadeia começa nos grátis (Groq, Gemini), que custam 0 cêntimos;
+ * o tecto só morde quando a conversa cai na reserva paga. TELEGRAM_IA_TECTO_CENTS, por omissão 500.
+ */
+async function tectoDoMes(agent: string): Promise<string | null> {
+  const tecto = Number(process.env.TELEGRAM_IA_TECTO_CENTS ?? 500)
+  const inicio = new Date()
+  inicio.setUTCDate(1)
+  inicio.setUTCHours(0, 0, 0, 0)
+  const { data, error } = await createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    .from("ia_chamadas")
+    .select("custo_cents")
+    .eq("tarefa", `dashboard-gestao:${agent}`)
+    .gte("criado_em", inicio.toISOString())
+    .limit(10000)
+  if (error) return null // o livro nunca impede a resposta
+  const gasto = (data ?? []).reduce((s, l) => s + (Number(l.custo_cents) || 0), 0)
+  return gasto >= tecto ? `Este assistente já gastou ${(gasto / 100).toFixed(2)} $ este mês em IA paga (tecto ${(tecto / 100).toFixed(2)} $). Volta no dia 1 ou sobe TELEGRAM_IA_TECTO_CENTS.` : null
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const guarda = await requireAdmin(req)
@@ -598,6 +634,11 @@ export async function POST(req: NextRequest) {
   const systemPrompt = AGENT_SYSTEM_PROMPTS[agent]
   if (!systemPrompt) {
     return NextResponse.json({ error: `Agente "${agent}" não encontrado` }, { status: 404 })
+  }
+
+  if (agent === "telegram_arquiteto") {
+    const tecto = await tectoDoMes(agent)
+    if (tecto) return NextResponse.json({ error: tecto }, { status: 429 })
   }
 
   const encoder = new TextEncoder()
