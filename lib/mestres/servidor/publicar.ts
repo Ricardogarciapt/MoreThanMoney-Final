@@ -248,6 +248,19 @@ async function publicarSeguimento(
   return true
 }
 
+/** Anúncios de fecho de posição — os mesmos que o trigger 203 deixa entrar uma só vez por sinal. */
+const RE_FECHO = /^\s*(🏁 (Alvo final|Posição fechada)|🛑 Stop loss|🔒 Stop protegido)/u
+
+/** O sinal já tem um anúncio de fecho no chat (de qualquer motor)? */
+async function fechoJaNoChat(chatId: string): Promise<boolean> {
+  const { data } = await getSupabaseAdmin()
+    .from('chat_messages')
+    .select('content, is_deleted')
+    .eq('reply_to_id', chatId)
+    .limit(50)
+  return (data ?? []).some((r) => !r.is_deleted && RE_FECHO.test(String(r.content ?? '')))
+}
+
 /** Resultado na mensagem de ENTRADA (o cartão lê daqui) — medido na mestre. */
 async function gravarResultado(chatId: string, p: Posicao, rotulo: string) {
   const o = computeOutcome({ symbol: p.symbol, direction: p.direcao, entry: p.preco_entrada, exit: p.preco_fecho })
@@ -322,13 +335,18 @@ export async function publicarDaMestre(est: EstrategiaPublicada): Promise<Resumo
 
     if (p.estado === 'fechada') {
       const evento = eventoDeFecho(p, ponte?.sl ?? null)
-      const ok = await publicarSeguimento(est, raiz, `${p.id}:fecho`, evento, {
-        ...base,
-        price: p.preco_fecho,
-        slOriginal: ponte?.sl ?? null,
-      })
+      // UM fecho por sinal no chat (203): se outro caminho já anunciou o fecho, a mensagem não sai —
+      // mas o resultado da mestre e o fecho dos seguidores T2T fazem-se na mesma, uma vez.
+      const jaAnunciado = await fechoJaNoChat(chatId)
+      const ok = jaAnunciado
+        ? await claimSignalOnce(`mestre-pub:${p.id}:fecho`, TTL_RECLAMACAO_S)
+        : await publicarSeguimento(est, raiz, `${p.id}:fecho`, evento, {
+          ...base,
+          price: p.preco_fecho,
+          slOriginal: ponte?.sl ?? null,
+        })
       if (ok) {
-        out.seguimentos++
+        if (!jaAnunciado) out.seguimentos++
         await gravarResultado(chatId, p, ROTULO[evento] ?? 'Fechada')
         // A mestre fechou → as posições T2T de quem aceitou ESTA entrada seguem-na (no stop, só
         // as pendentes: a posição do cliente fecha pelo stop dela).
