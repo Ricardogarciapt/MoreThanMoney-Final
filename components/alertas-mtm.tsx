@@ -174,7 +174,7 @@ function studiesForStrategy(strategy: string | null): string[] {
 }
 
 /** Estratégia do alerta → chave de scanner do ScannerMobile (para abrir no gráfico). */
-export function strategyToScannerKey(strategy: string | null): "Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow" {
+export function strategyToScannerKey(strategy: string | null): "Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow" | "TrendShot" {
   // Delega no normalizador canónico partilhado (lib/mtm-alerts/scanners) e mapeia para as chaves
   // que o gráfico usa. A Aurum tem estudo próprio: abrir o gráfico de um alerta dela com os plots
   // do MTM Scanner mostrava a leitura errada por baixo do sinal certo.
@@ -182,6 +182,7 @@ export function strategyToScannerKey(strategy: string | null): "Goldkiller" | "M
   if (k === "sensei") return "Sensei"
   if (k === "goldkiller") return "Goldkiller"
   if (k === "aurum") return "AurumFlow"
+  if (k === "trendshot") return "TrendShot"
   return "MTMScanner"
 }
 
@@ -325,7 +326,7 @@ function AlertCard({
   alert: MtmAlert
   following: boolean
   onToggleFollow: (id: string, follow: boolean) => void
-  onSelectAlert?: (p: { tvSymbol: string; interval: string; scannerKey: "Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow" }) => void
+  onSelectAlert?: (p: { tvSymbol: string; interval: string; scannerKey: "Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow" | "TrendShot" }) => void
 }) {
   const pathname = usePathname()
   const [showChart, setShowChart] = useState(false)
@@ -654,7 +655,7 @@ function AlertCard({
 export default function AlertasMtm({
   onSelectAlert,
 }: {
-  onSelectAlert?: (p: { tvSymbol: string; interval: string; scannerKey: "Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow" }) => void
+  onSelectAlert?: (p: { tvSymbol: string; interval: string; scannerKey: "Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow" | "TrendShot" }) => void
 } = {}) {
   const [alerts, setAlerts] = useState<MtmAlert[]>([])
   const [loading, setLoading] = useState(true)
