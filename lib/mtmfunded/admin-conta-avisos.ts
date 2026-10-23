@@ -57,7 +57,7 @@ export async function notificarDono(p: {
           <h1 style="margin:0;font-size:21px;color:#111;">${esc(titulo)}</h1>
           <p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#444;">Olá ${esc(nome)},</p>
           <p style="margin:10px 0 18px;font-size:15px;line-height:1.6;color:#444;">${esc(corpo)}</p>
-          <a href="${site}/mtmfunded/tradingtournament/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">Abrir o painel</a>
+          <a href="${site}/mtmfunded/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">Abrir o painel</a>
           <p style="margin:20px 0 0;font-size:12px;color:#999;">Negociação simulada. As credenciais nunca vão por email.</p>
         </div>
       </div>`

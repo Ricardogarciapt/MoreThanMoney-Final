@@ -186,7 +186,7 @@ function Resumo({ t }: { t: Trader }) {
           <div className="text-[11.5px] leading-snug text-zinc-300">
             {c.etiqueta === "Torneio" ? "Conta de torneio." : `Fase ${c.fase}${fases ? ` de ${fases}` : ""} do desafio.`}{" "}
             Ao concluir, o certificado aparece na tua área e chega por email.{" "}
-            <a href="/mtmfunded/tradingtournament/dashboard" className="text-[#D2A63C]">Ver certificados →</a>
+            <a href="/mtmfunded/dashboard" className="text-[#D2A63C]">Ver certificados →</a>
           </div>
         </div>
       )}
@@ -244,7 +244,7 @@ function Levantamentos({ t }: { t: Trader }) {
       ) : (
         <p className="text-[11.5px] text-emerald-300">Podes pedir um levantamento.</p>
       )}
-      <a href="/mtmfunded/tradingtournament/dashboard#levantamentos" className="inline-block rounded-md bg-[#D2A63C] px-3 py-1.5 text-[12px] font-semibold text-black">Pedir levantamento</a>
+      <a href="/mtmfunded/dashboard#levantamentos" className="inline-block rounded-md bg-[#D2A63C] px-3 py-1.5 text-[12px] font-semibold text-black">Pedir levantamento</a>
       <p className="text-[10.5px] leading-snug text-zinc-500">Pago como depósito na tua conta PU Prime (USDC), acima da almofada de 3%, na tua quota de 75%. Sem posições abertas nem ordens pendentes.</p>
       {pedidos.length > 0 && (
         <div className="divide-y divide-white/5 rounded-md border border-white/10">

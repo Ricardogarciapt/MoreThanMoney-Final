@@ -57,6 +57,9 @@ export const TECTO_POR_FONTE: Record<string, number> = {
   // Já negoceiam, já depositaram, já sabem o que é uma corretora — não é preciso explicar o
   // produto a ninguém, é preciso mudar uma conta de sítio.
   corretora: 20,
+  // Quem preencheu um formulário pediu contacto por escrito: é o lead mais explícito da casa, e não
+  // fica à espera de vaga. O tecto existe só para um formulário atacado por bots não inundar o pipeline.
+  formulario: 50,
 }
 
 export interface Ingerido {
@@ -554,6 +557,68 @@ async function daRedeIb(db: SupabaseClient): Promise<Ingerido> {
   return ingerir(db, 'corretora', candidatos)
 }
 
+// ── Formulários (/docs/forms e os que o dono cria em /admin/forms) ──────────────
+
+/** O primeiro campo da submissão cujo NOME bate com um dos padrões (nome, telefone…). */
+function campoDe(dados: Record<string, unknown>, padrao: RegExp): string | null {
+  for (const [k, v] of Object.entries(dados)) {
+    if (padrao.test(k) && typeof v === 'string' && v.trim()) return v.trim()
+  }
+  return null
+}
+
+/**
+ * Uma submissão → um candidato. A chave é por formulário E pessoa (email, ou telefone quando não há
+ * email): a mesma pessoa em dois formulários diferentes são dois pedidos, e o pipeline mostra os dois.
+ * Sem email nem telefone não há a quem responder — não entra.
+ */
+export function candidatoDeSubmissao(s: { id: string; form_slug: string; form_title?: string | null; email?: string | null; data?: unknown }): Candidato | null {
+  const dados = (s.data && typeof s.data === 'object' ? s.data : {}) as Record<string, unknown>
+  const email = ouNulo(s.email ?? undefined, campoDe(dados, /e-?mail/i))?.toLowerCase() ?? null
+  const telefone = ouNulo(campoDe(dados, /telefone|telemovel|phone|whats/i))
+  const pessoa = email ?? telefone?.replace(/[^\d+]/g, '')
+  if (!pessoa) return null
+  const instagram = campoDe(dados, /insta/i)
+  return {
+    chave_origem: `form:${s.form_slug}:${pessoa}`,
+    nome: nomeUtil(campoDe(dados, /^(nome|name|full_?name|primeiro_?nome)$/i), email?.split('@')[0], `Formulário ${s.form_slug}`),
+    email,
+    telefone,
+    telegram_id: null,
+    instagram_handle: instagram ? instagram.replace(/^@/, '').toLowerCase() : null,
+    pais: ouNulo(campoDe(dados, /pais|country/i)),
+    interesse: ouNulo(campoDe(dados, /interesse|interest|objectivo|objetivo/i), s.form_title ?? undefined),
+    etiquetas: [`form:${s.form_slug}`],
+    origem: 'formulario',
+    estado: 'lead',
+    nota: `Preencheu o formulário «${s.form_title ?? s.form_slug}».`,
+  }
+}
+
+/** Formulários: quem pediu contacto por escrito. Lê as submissões recentes; a chave impede repetidos. */
+async function dosFormularios(db: SupabaseClient): Promise<Ingerido> {
+  const { data } = await db
+    .from('form_submissions')
+    .select('id, form_slug, form_title, email, data, status, created_at')
+    .order('created_at', { ascending: false })
+    .limit(300)
+  const candidatos = (data ?? [])
+    .filter((r) => (r as { status?: string }).status !== 'spam')
+    .map((r) => candidatoDeSubmissao(r as { id: string; form_slug: string }))
+    .filter((c): c is Candidato => c !== null)
+  return ingerir(db, 'formulario', candidatos)
+}
+
+/**
+ * A submissão acabada de chegar entra JÁ no pipeline — sem esperar pela ingestão das 7h. Quem pede
+ * contacto às 22h e só aparece à equipa no dia útil seguinte já arrefeceu. Mesmo caminho (`ingerir`),
+ * por isso a mesma deduplicação: a ingestão do dia seguinte encontra-a e não a repete.
+ */
+export async function ingerirSubmissao(db: SupabaseClient, s: Parameters<typeof candidatoDeSubmissao>[0]): Promise<Ingerido | null> {
+  const c = candidatoDeSubmissao(s)
+  return c ? ingerir(db, 'formulario', [c]) : null
+}
+
 /**
  * Corre todas as fontes.
  *
@@ -566,6 +631,7 @@ export async function ingerirLeads(db: SupabaseClient): Promise<Ingerido[]> {
     ['instagram', () => doInstagram(db)],
     ['base', () => daBase(db)],
     ['corretora', () => daRedeIb(db)],
+    ['formulario', () => dosFormularios(db)],
   ]
 
   const resultados: Ingerido[] = []

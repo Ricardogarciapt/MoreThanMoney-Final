@@ -472,7 +472,7 @@ export async function POST(request: NextRequest) {
           // O link abre o painel JÁ nas credenciais desta conta. Mandá-lo para a raiz do
           // painel obrigava a pessoa a procurar onde estava a password que o email lhe
           // prometeu — e a maior parte não procura, escreve a perguntar.
-          urlPainel: `${getSiteUrl()}/mtmfunded/tradingtournament/dashboard?conta=${pedido.account_id}&credenciais=1`,
+          urlPainel: `${getSiteUrl()}/mtmfunded/dashboard?conta=${pedido.account_id}&credenciais=1`,
           qrMetaTrader: (conta.qrcode_url as string) ?? null,
           regras: dados.regras,
         })

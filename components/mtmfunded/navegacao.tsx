@@ -72,7 +72,7 @@ export default function NavegacaoFunded() {
               precisa dele ANTES de ler a página, não depois. */}
           <div className="ml-1"><LanguageSelectorEnhanced /></div>
           <Link
-            href="/mtmfunded/tradingtournament/dashboard"
+            href="/mtmfunded/dashboard"
             className="ml-1 rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-black"
           >
             {t('mtmfunded.nav.area')}
@@ -106,7 +106,7 @@ export default function NavegacaoFunded() {
             </Link>
           ))}
           <Link
-            href="/mtmfunded/tradingtournament/dashboard"
+            href="/mtmfunded/dashboard"
             onClick={() => setAberto(false)}
             className="mt-2 block rounded-lg bg-[#D2A63C] px-3 py-2.5 text-center text-sm font-semibold text-black"
           >

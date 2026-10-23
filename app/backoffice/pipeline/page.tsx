@@ -43,6 +43,7 @@ import { NegocioNovo } from './novo'
 import { Mover } from './mover'
 import { Trabalhar } from './trabalhar'
 import { Historico } from './historico'
+import { CanaisDoNegocio } from './canais'
 import { lerFoco, situacaoDoFoco } from './foco'
 import { estaSemDono } from '@/lib/backoffice-bolsa'
 import { Pegar } from './pegar'
@@ -396,6 +397,8 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                         {/* «Quem é que moveu isto», respondido pela base e não pela memória de duas
                             pessoas. Lê-se só quando se abre — ver `historico.tsx`. */}
                         <Historico id={n.id} />
+                        {/* A ficha do contacto: o que esta pessoa fez nos outros canais. Ver `canais.tsx`. */}
+                        <CanaisDoNegocio id={n.id} ehDono={ctx.admin} />
                           </>
                         )}
                       </div>

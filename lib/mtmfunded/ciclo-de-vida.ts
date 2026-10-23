@@ -582,7 +582,7 @@ async function enviarEmailDeConclusao(input: {
         <p style="margin:10px 0 0;font-size:13px;line-height:1.6;color:#6b8577;">
           Confirmas lá o teu nome completo e a data de nascimento; é preciso ter 18 anos ou mais.
         </p>
-        <a href="${site}/mtmfunded/tradingtournament/dashboard?tab=contratos" style="display:inline-block;margin-top:14px;background:#2e7d5b;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">
+        <a href="${site}/mtmfunded/dashboard?tab=contratos" style="display:inline-block;margin-top:14px;background:#2e7d5b;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">
           Assinar o contrato
         </a>
       </div>`
@@ -594,7 +594,7 @@ async function enviarEmailDeConclusao(input: {
         <a href="${site}/mtmfunded/certificates/${input.codigo}" style="color:#BB8525;">verificar</a>
       </p>
 
-      <a href="${site}/mtmfunded/tradingtournament/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">
+      <a href="${site}/mtmfunded/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">
         Abrir a minha área
       </a>
     </div>
@@ -941,7 +941,7 @@ async function enviarEmailDeRenovacao(input: {
         muda. O que lá acontecer depois deste email não conta para nada.
       </p>
 
-      <a href="${site}/mtmfunded/tradingtournament/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">
+      <a href="${site}/mtmfunded/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">
         Abrir a minha área
       </a>
     </div>

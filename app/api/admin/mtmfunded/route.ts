@@ -576,7 +576,7 @@ export async function POST(request: NextRequest) {
       login: conta.mt5_login as string,
       servidor: (conta.servidor as string) || 'TheTradingMaster-Live',
       alavancagem: Number(conta.alavancagem ?? 100),
-      urlPainel: `${getSiteUrl()}/mtmfunded/tradingtournament/dashboard?conta=${id}&credenciais=1`,
+      urlPainel: `${getSiteUrl()}/mtmfunded/dashboard?conta=${id}&credenciais=1`,
       regras: dados.regras,
     })
     return NextResponse.json({ ok: r.success, error: r.success ? undefined : 'o email não saiu' })

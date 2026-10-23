@@ -24,6 +24,7 @@ import { useT } from '@/components/i18n-provider'
 import ModalMetricas from '@/components/mtmfunded/modal-metricas'
 import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
 import CredenciaisConta from '@/components/funded/credenciais-conta'
+import { SECCOES_DO_CLIENTE, SECCOES_DO_TORNEIO } from './seccoes'
 
 /**
  * O painel de admin aqui é o MESMO componente do /admin, e não uma cópia.
@@ -99,7 +100,17 @@ const SECCOES = [
 
 type SeccaoId = (typeof SECCOES)[number]['id'] | 'comunidade' | 'apoio' | 'admin'
 
+/** `cliente` = /mtmfunded/dashboard (a área MTM Funded); `torneio` = /mtmfunded/tradingtournament/dashboard. */
+export type VariantePainel = 'cliente' | 'torneio'
+const DA_VARIANTE: Record<VariantePainel, readonly string[]> = { cliente: SECCOES_DO_CLIENTE, torneio: SECCOES_DO_TORNEIO }
+const OUTRO_PAINEL: Record<VariantePainel, { href: string; nome: string }> = {
+  cliente: { href: '/mtmfunded/tradingtournament/dashboard', nome: 'Torneio' },
+  torneio: { href: '/mtmfunded/dashboard', nome: 'A minha área MTM Funded' },
+}
+const EXTRA: readonly string[] = ['comunidade', 'apoio', 'admin']
+
 export default function PainelParticipante(props: {
+  variante: VariantePainel
   nome: string
   /** Admin vê, aqui mesmo, o painel de gestão do MTM Funded e dos torneios. */
   ehAdmin?: boolean
@@ -125,12 +136,34 @@ export default function PainelParticipante(props: {
    * — e a maior parte não procura, escreve a perguntar.
    */
   const [contaAberta, setContaAberta] = useState<string | null>(null)
+  const seccoes = SECCOES.filter((s) => DA_VARIANTE[props.variante].includes(s.id))
+  const valida = useCallback(
+    (id: string | null | undefined): id is SeccaoId =>
+      Boolean(id) && (DA_VARIANTE[props.variante].includes(id!) || (EXTRA.includes(id!) && (id !== 'admin' || props.ehAdmin === true))),
+    [props.variante, props.ehAdmin],
+  )
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
-    if (q.get('credenciais') === '1') {
+    if (q.get('credenciais') === '1' && valida('contas')) {
       setSeccao('contas')
       setContaAberta(q.get('conta'))
+      return
     }
+    // `?tab=contratos` (emails) ou `#levantamentos` (links antigos) abrem logo essa secção.
+    const pedida = q.get('tab') ?? window.location.hash.replace('#', '')
+    if (valida(pedida)) setSeccao(pedida)
+  }, [valida])
+
+  /** A secção fica no endereço: recarregar ou partilhar o link volta ao mesmo sítio. */
+  const irPara = useCallback((id: SeccaoId) => {
+    setSeccao(id)
+    const url = new URL(window.location.href)
+    if (id === 'dashboard') url.searchParams.delete('tab')
+    else url.searchParams.set('tab', id)
+    url.searchParams.delete('credenciais')
+    url.searchParams.delete('conta')
+    url.hash = ''
+    window.history.replaceState(null, '', url.toString())
   }, [])
   const { torneio, participante, contas, certificados, classificacao } = props
 
@@ -144,13 +177,13 @@ export default function PainelParticipante(props: {
             <p className="mt-1 text-sm text-zinc-400">{t('mtmfunded.painel.ola')}, {props.nome.split(' ')[0]}</p>
           </div>
           <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
-            {SECCOES.map((s) => {
+            {seccoes.map((s) => {
               const Icone = s.icone
               const ativa = seccao === s.id
               return (
                 <button
                   key={s.id}
-                  onClick={() => setSeccao(s.id)}
+                  onClick={() => irPara(s.id)}
                   className={`flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                     ativa ? 'bg-[#4B8BFF]/10 text-[#4B8BFF]' : 'text-zinc-400 hover:text-white'
                   }`}
@@ -172,14 +205,14 @@ export default function PainelParticipante(props: {
             {([
               { id: 'comunidade' as const, nome: t('mtmfunded.painel.comunidade'), icone: MessageSquare },
               { id: 'apoio' as const, nome: t('mtmfunded.painel.apoio'), icone: Bot },
-              ...(props.ehAdmin ? [{ id: 'admin' as const, nome: t('mtmfunded.painel.admin'), icone: Settings }] : []),
+              ...(props.ehAdmin && props.variante === 'cliente' ? [{ id: 'admin' as const, nome: t('mtmfunded.painel.admin'), icone: Settings }] : []),
             ]).map((s2) => {
               const Icone = s2.icone
               const ativa = seccao === s2.id
               return (
                 <button
                   key={s2.id}
-                  onClick={() => setSeccao(s2.id)}
+                  onClick={() => irPara(s2.id)}
                   className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                     ativa ? 'bg-[#4B8BFF]/10 text-[#4B8BFF]' : 'text-zinc-400 hover:text-white'
                   }`}
@@ -188,15 +221,25 @@ export default function PainelParticipante(props: {
                 </button>
               )
             })}
+            <Link
+              href={OUTRO_PAINEL[props.variante].href}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-zinc-500 transition-colors hover:text-[#D2A63C]"
+            >
+              {props.variante === 'cliente' ? <Trophy className="h-4 w-4" /> : <LayoutDashboard className="h-4 w-4" />}
+              {OUTRO_PAINEL[props.variante].nome} →
+            </Link>
           </div>
         </aside>
 
         <main className="min-w-0 flex-1">
-          {seccao === 'dashboard' && <Dashboard {...{ torneio, participante, contas }} nome={props.nome} perfil={props.perfil} />}
+          {seccao === 'dashboard' && props.variante === 'torneio' && <Dashboard {...{ torneio, participante, contas }} nome={props.nome} perfil={props.perfil} />}
+          {seccao === 'dashboard' && props.variante === 'cliente' && (
+            <ResumoCliente contas={contas} certificados={certificados} torneio={torneio} inscrito={Boolean(participante)} irPara={irPara} />
+          )}
           {seccao === 'contas' && <Contas contas={contas} abrir={contaAberta} ehAdmin={props.ehAdmin === true} filtroInicial={props.filtroContas} />}
           {seccao === 'contratos' && <Contratos />}
-          {seccao === 'levantamentos' && <Levantamentos irParaContrato={() => setSeccao('contratos')} />}
-          {seccao === 'competicoes' && <Competicoes torneio={torneio} participante={participante} onInscrever={() => setSeccao('dashboard')} />}
+          {seccao === 'levantamentos' && <Levantamentos irParaContrato={() => irPara('contratos')} />}
+          {seccao === 'competicoes' && <Competicoes torneio={torneio} participante={participante} onInscrever={() => irPara('dashboard')} />}
           {seccao === 'classificacao' && <Classificacao linhas={classificacao} />}
           {seccao === 'terminal' && <Terminal scanners={props.scannersPermitidos} />}
           {seccao === 'certificados' && <Certificados certificados={certificados} />}
@@ -439,6 +482,73 @@ function Dashboard({ torneio, participante, contas, nome, perfil }: {
             </p>
           )}
         </Caixa>
+      )}
+    </div>
+  )
+}
+
+/**
+ * O Dashboard da ÁREA DE CLIENTE: as contas dele, num relance, e o caminho para o que costuma ser
+ * preciso (credenciais, contratos, levantamentos). O torneio aparece só como convite — a prova vive
+ * no painel dela, para não misturar a conta de avaliação com a classificação.
+ */
+function ResumoCliente({ contas, certificados, torneio, inscrito, irPara }: {
+  contas: Conta[]; certificados: Certificado[]; torneio: Torneio | null; inscrito: boolean; irPara: (id: SeccaoId) => void
+}) {
+  const minhas = contas.filter((c) => !c.mestre)
+  const activas = minhas.filter((c) => estadoCurto(c.estado, c.metricas) === 'Active')
+  const quebradas = minhas.filter((c) => c.quebrouRegra)
+  const porEmitir = minhas.filter((c) => !c.login)
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Metrica titulo="Contas" valor={String(minhas.length)} />
+        <Metrica titulo="Activas" valor={String(activas.length)} cor={activas.length ? 'text-emerald-400' : undefined} />
+        <Metrica titulo="Certificados" valor={String(certificados.length)} />
+      </div>
+
+      {porEmitir.length > 0 && (
+        <p className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-400">
+          {porEmitir.length === 1 ? 'Tens 1 conta a ser emitida.' : `Tens ${porEmitir.length} contas a ser emitidas.`} Recebes os dados por email assim que estiverem prontas.
+        </p>
+      )}
+
+      <Caixa titulo="As tuas contas">
+        {minhas.length === 0 ? (
+          <Vazio>Ainda não tens contas MTM Funded.</Vazio>
+        ) : (
+          <div className="divide-y divide-zinc-900">
+            {minhas.slice(0, 6).map((c) => (
+              <button key={c.id} type="button" onClick={() => irPara('contas')} className="flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm hover:text-[#D2A63C]">
+                <span className="min-w-0 truncate">{c.etiquetaDoDono ?? `${tipoCurto(c.tipo, c.metricas)} · ${c.login ?? 'a emitir'}`}</span>
+                <span className="shrink-0 text-xs" style={{ color: COR_DO_ESTADO[estadoCurto(c.estado, c.metricas)] }}>{estadoCurto(c.estado, c.metricas)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {quebradas.length > 0 && <p className="mt-3 text-xs text-zinc-500">{quebradas.length} quebrada(s): as métricas ficaram congeladas no momento em que aconteceu.</p>}
+      </Caixa>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {([
+          { id: 'contas', nome: 'Credenciais e contas' },
+          { id: 'contratos', nome: 'Contratos' },
+          { id: 'levantamentos', nome: 'Levantamentos' },
+        ] as const).map((a) => (
+          <button key={a.id} type="button" onClick={() => irPara(a.id)} className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 text-left text-sm text-zinc-300 transition-colors hover:border-[#D2A63C]/40 hover:text-[#D2A63C]">
+            {a.nome} →
+          </button>
+        ))}
+      </div>
+
+      {torneio && (
+        <Link href="/mtmfunded/tradingtournament/dashboard" className="flex items-center gap-3 rounded-2xl border border-[#D2A63C]/25 bg-[#D2A63C]/[0.04] p-4 text-sm hover:border-[#D2A63C]/50">
+          <Trophy className="h-5 w-5 shrink-0 text-[#D2A63C]" />
+          <span>
+            <span className="font-semibold text-[#D2A63C]">{torneio.nome}</span>
+            <span className="block text-xs text-zinc-500">{inscrito ? 'Estás inscrito: vê a tua posição no painel do torneio.' : 'Vê a prova e a inscrição no painel do torneio.'}</span>
+          </span>
+        </Link>
       )}
     </div>
   )

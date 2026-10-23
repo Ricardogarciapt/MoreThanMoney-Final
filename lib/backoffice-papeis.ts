@@ -71,6 +71,9 @@ export const CAPACIDADES = [
   'bo.equipa_ver',
   /** Dar e tirar papéis, criar afiliados, escolher acessos ao site. Só o dono. */
   'bo.papeis_gerir',
+  /** A área «Dono» do backoffice (contas, agenda, WhatsApp, agentes, leads, cupões, gestão). Só o dono:
+   *  nenhum papel a recebe — chega ao admin pela linha única de `capacidadesDe`. */
+  'bo.dono',
 ] as const
 export type Capacidade = (typeof CAPACIDADES)[number]
 

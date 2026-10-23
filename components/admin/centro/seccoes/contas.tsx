@@ -7,11 +7,12 @@ import { nomeMotivo } from "@/lib/admin-centro/regras"
 import ContasCopia from "@/components/admin/mtmauto-copia/contas"
 import MTMcopierManager from "@/components/admin/mtmcopier-manager"
 import SeccaoFunded from "./funded"
+import { agruparContas, type ContaAgrupada } from "@/lib/admin-centro/agrupar-contas"
 
 import { AVISO_SIMULADO, resumirSaldos, textoPct } from "@/lib/admin-centro/linha-de-agua"
 import { MarcaProveniencia, PctLinhaDeAgua } from "../linha-de-agua"
 import { useCentroCtx } from "../contexto"
-import { Azulejo, BotaoLer, Chip, Filtros, Grupo, Lista, Painel, Pilula, Recolhivel, Tabela, Vazio, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
+import { Azulejo, BotaoLer, Chip, Filtros, Grupo, Lista, Painel, Pilula, Recolhivel, Tabela, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
 
 export type DadosContas = { contas: ContaCentro[]; avisos: string[]; lidaEm: string }
 
@@ -64,48 +65,22 @@ export function SaldoCel({ c }: { c: ContaCentro }) {
   )
 }
 
-/** A mesma conta pode vir de duas origens (a linha MTM Auto de uma MTM Funded e a própria MTM Funded). */
-function semRepetidas(contas: ContaCentro[]) {
-  const vistas = new Map<string, ContaCentro>()
-  const peso = (c: ContaCentro) => (c.origem === "funded" ? 3 : c.origem === "site" ? 2 : 1)
-  for (const c of contas) {
-    const chave = c.login ? `${c.plataforma}:${c.login}` : c.ref
-    const ja = vistas.get(chave)
-    if (!ja || peso(c) > peso(ja)) vistas.set(chave, c)
-  }
-  return [...vistas.values()]
-}
-
-function SubscritorasPremium({ contas, abrir }: { contas: ContaCentro[]; abrir: (ref: string) => void }) {
-  const lista = semRepetidas(contas.filter(ehPremium).filter((c) => c.categoria !== "mestre"))
-    .sort((a, b) => (b.saldo ?? -1) - (a.saldo ?? -1))
-  const comSaldo = lista.filter((c) => c.saldo != null)
-  const total = comSaldo.reduce((s, c) => s + (c.saldo ?? 0), 0)
-  const soActual = comSaldo.filter((c) => c.saldoFonte === "atual").length
-  const activas = lista.filter((c) => c.ativa).length
+/** As ligações da conta: uma pílula por app, cada uma abre a SUA gaveta (as acções são por ligação). */
+function Ligacoes({ c, abrir }: { c: ContaAgrupada; abrir: (ref: string) => void }) {
   return (
-    <Painel titulo="Subscritoras do MTM Premium" sub={`${lista.length} contas · ${activas} activas · saldo somado ${fmtNum(total, 2)} · ${comSaldo.length} com saldo (${soActual} actuais; «ref.» = ao ligar, «máx.» = o mais alto visto)`}>
-      {lista.length === 0 ? <Vazio>Nenhuma conta a seguir o Premium.</Vazio> : (
-        <Tabela min={760}>
-          <thead><tr><th className={th}>Conta</th><th className={th}>Dono</th><th className={th}>Como segue</th><th className={th}>Estado</th><th className={th} title="saldo actual · linha de água (contra saldo_inicial) · «SIM» = conta simulada">Saldo · linha de água</th><th className={th}>Equity</th></tr></thead>
-          <tbody>
-            {lista.map((c) => (
-              <tr key={c.ref} className={trClic} onClick={() => abrir(c.ref)}>
-                <td className={td}>
-                  <p className="font-mono text-zinc-100">{c.plataforma.toUpperCase()} {c.login ?? "—"}</p>
-                  <p className="text-[10px] text-zinc-500">{c.servidor ?? "—"} · {appDaConta(c.origem).nome} · {c.categoria}{c.demo ? " · demo" : ""}</p>
-                </td>
-                <td className={td}><p className="text-zinc-200">{c.nome ?? c.email ?? "—"}</p><p className="text-[10px] text-zinc-500">{c.email ?? ""}</p></td>
-                <td className={`${td} max-w-[260px] text-[10.5px] text-zinc-400`}>{[...c.usos, ...c.estrategias].filter((x) => /premium|MxsR/i.test(x)).join(" · ")}</td>
-                <td className={td}><Pilula tom={tomEstadoConta(c)}>{c.ativa ? c.estado : `${c.estado} · pausada`}</Pilula></td>
-                <td className={`${td} font-mono`}><SaldoCel c={c} /></td>
-                <td className={`${td} font-mono`}>{c.equity == null ? "—" : fmtNum(c.equity, 2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </Tabela>
-      )}
-    </Painel>
+    <div className="mt-1 flex flex-wrap gap-1">
+      {c.ligacoes.map((l) => (
+        <button
+          key={l.ref}
+          type="button"
+          title={`Abrir a ligação ${appDaConta(l.origem).nome}${l.estado ? ` · ${l.estado}` : ""}`}
+          onClick={(e) => { e.stopPropagation(); abrir(l.ref) }}
+          className={`rounded border px-1.5 py-px text-[9.5px] transition-colors hover:border-[#D2A63C]/60 hover:text-[#E9C46A] ${tomEstadoConta(l) === "grave" ? "border-rose-500/40 text-rose-300" : "border-zinc-700 text-zinc-400"}`}
+        >
+          {appDaConta(l.origem).nome}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -150,37 +125,46 @@ export default function SeccaoContas() {
   const [problema, setProblema] = useState(ctx.filtro.problema ?? "")
   useEffect(() => { setProblema(ctx.filtro.problema ?? "") }, [ctx.filtro])
 
-  const todas = dados?.contas ?? []
+  const [premium, setPremium] = useState(false)
+  // `ligacoes` = cada caminho por onde a conta chega (T2T, MTM Auto, WebTrader, Funded); `todas` = a
+  // conta uma vez só. Quota e MetaApi contam-se por ligação (cada uma é uma conta MetaApi); o resto
+  // conta-se por conta — senão a mesma conta somava o saldo duas vezes.
+  const ligacoes = useMemo(() => dados?.contas ?? [], [dados])
+  const todas = useMemo(() => agruparContas(ligacoes), [ligacoes])
   const lista = useMemo(() => {
     const t = q.trim().toLowerCase()
+    const alguma = (c: ContaAgrupada, f: (l: ContaCentro) => boolean) => c.ligacoes.some(f)
     return todas.filter((c) => {
       if (plataforma && c.plataforma !== plataforma) return false
-      if (categoria && c.categoria !== categoria) return false
-      if (problema === "inexistente" && !c.metaapi.inexistente) return false
-      if (problema === "1" && tomEstadoConta(c) !== "grave" && !c.quota.acima) return false
-      if (problema === "quota" && !c.quota.acima) return false
-      if (t && ![c.email, c.nome, c.login, c.servidor, c.rotulo, c.etiquetaDoDono, c.metaapiAccountId, c.ref].some((x) => x && x.toLowerCase().includes(t))) return false
+      if (categoria && !alguma(c, (l) => l.categoria === categoria)) return false
+      if (premium && (!ehPremium(c) || c.categoria === "mestre")) return false
+      if (problema === "inexistente" && !alguma(c, (l) => l.metaapi.inexistente)) return false
+      if (problema === "1" && !alguma(c, (l) => tomEstadoConta(l) === "grave" || l.quota.acima)) return false
+      if (problema === "quota" && !alguma(c, (l) => l.quota.acima)) return false
+      if (t && !c.ligacoes.some((l) => [l.email, l.nome, l.login, l.servidor, l.rotulo, l.etiquetaDoDono, l.metaapiAccountId, l.ref].some((x) => x && x.toLowerCase().includes(t)))) return false
       return true
     })
-  }, [todas, q, plataforma, categoria, problema])
+  }, [todas, q, plataforma, categoria, problema, premium])
 
-  const graves = todas.filter((c) => tomEstadoConta(c) === "grave").length
+  const graves = todas.filter((c) => c.ligacoes.some((l) => tomEstadoConta(l) === "grave")).length
+  const premiumLista = todas.filter((c) => ehPremium(c) && c.categoria !== "mestre")
+  const funded = todas.filter((c) => c.plataforma === "mtmfunded")
+  const verFunded = () => { setPlataforma("mtmfunded"); setCategoria(""); setPremium(false); setProblema("") }
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
-        <Azulejo rotulo="Contas" valor={fmtNum(todas.length)} sub={`${todas.filter((c) => c.ativa).length} activas`} />
-        <Azulejo rotulo="MetaApi" valor={todas.filter((c) => c.contaMetaApi).length} sub="contam para a quota" />
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-7">
+        <Azulejo rotulo="Contas" valor={fmtNum(todas.length)} sub={`${todas.filter((c) => c.ativa).length} activas · ${ligacoes.length} ligações`} />
+        <Azulejo rotulo="MetaApi" valor={ligacoes.filter((c) => c.contaMetaApi).length} sub="ligações que contam para a quota" />
         <Azulejo rotulo="Com problema" valor={graves} tom={graves ? "grave" : "ok"} onClick={() => setProblema("1")} />
-        <Azulejo rotulo="MetaApi inexistente" valor={todas.filter((c) => c.metaapi.inexistente).length} tom={todas.some((c) => c.metaapi.inexistente) ? "aviso" : "ok"} onClick={() => setProblema("inexistente")} />
-        <Azulejo rotulo="Acima da quota" valor={todas.filter((c) => c.quota.acima).length} tom={todas.some((c) => c.quota.acima) ? "aviso" : "neutro"} onClick={() => setProblema("quota")} />
-        <Azulejo rotulo="MTM Funded" valor={todas.filter((c) => c.plataforma === "mtmfunded").length} sub={`${todas.filter((c) => c.categoria === "casa").length} da casa · ${todas.filter((c) => c.mestreDe).length} mestres de estratégia`} />
+        <Azulejo rotulo="MetaApi inexistente" valor={ligacoes.filter((c) => c.metaapi.inexistente).length} tom={ligacoes.some((c) => c.metaapi.inexistente) ? "aviso" : "ok"} onClick={() => setProblema("inexistente")} />
+        <Azulejo rotulo="Acima da quota" valor={ligacoes.filter((c) => c.quota.acima).length} tom={ligacoes.some((c) => c.quota.acima) ? "aviso" : "neutro"} onClick={() => setProblema("quota")} />
+        <Azulejo rotulo="Seguem o Premium" valor={premiumLista.length} sub={`${premiumLista.filter((c) => c.ativa).length} activas`} onClick={() => setPremium(true)} />
+        <Azulejo rotulo="MTM Funded" valor={funded.length} sub={`${todas.filter((c) => c.categoria === "casa").length} da casa · ${funded.filter((c) => c.mestreDe).length} mestres`} onClick={verFunded} />
       </div>
 
       {/* Os saldos em DOIS totais. Somá-los daria um número que não está em conta nenhuma — e que
           passaria por prova, porque o simulado entra a preço melhor do que o mercado deu. */}
       <ResumoSaldos contas={todas} />
-
-      {dados && <SubscritorasPremium contas={todas} abrir={(ref) => ctx.abrir({ tipo: "conta", id: ref })} />}
 
       <Painel titulo="Todas as contas" sub="T2T/site, MTM Auto, WebTrader e MTM Funded — estado guardado na base, sem chamadas à MetaApi. Clica para abrir a gaveta com acções." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
         <Filtros q={q} aoMudarQ={setQ} exemplo="email, login, servidor, etiqueta, id MetaApi…" contagem={lista.length} total={todas.length}>
@@ -188,6 +172,8 @@ export default function SeccaoContas() {
           {PLATAFORMAS.map((p) => <Chip key={p} activo={plataforma === p} onClick={() => setPlataforma(p)}>{p}</Chip>)}
           <span className="mx-1 h-4 w-px bg-zinc-800" />
           {CATEGORIAS.map((c) => <Chip key={c} activo={categoria === c} onClick={() => setCategoria(categoria === c ? "" : c)}>{c}</Chip>)}
+          <span className="mx-1 h-4 w-px bg-zinc-800" />
+          <Chip activo={premium} onClick={() => setPremium(!premium)}>segue o Premium</Chip>
           {problema && <Chip activo onClick={() => setProblema("")}>filtro: {problema === "1" ? "com problema" : problema} ✕</Chip>}
         </Filtros>
         <Lista dados={dados} erro={erro} avisos={dados?.avisos} vazio={todas.length === 0} textoVazio="Nenhuma conta ligada em nenhum produto." filtrada={lista.length === 0}>
@@ -199,7 +185,8 @@ export default function SeccaoContas() {
                   <td className={td}>
                     <p className="font-mono text-zinc-100">{c.plataforma.toUpperCase()} {c.login ?? "—"}</p>
                     {c.etiquetaDoDono && <p className="truncate text-[10.5px] text-[#E9C46A]" title="etiqueta do dono">{c.etiquetaDoDono}</p>}
-                    <p className="text-[10px] text-zinc-500">{c.servidor ?? "—"}{c.rotulo ? ` · ${c.rotulo}` : ""} · {appDaConta(c.origem).nome} · {c.categoria}{c.demo ? " · demo" : ""}</p>
+                    <p className="text-[10px] text-zinc-500">{c.servidor ?? "—"}{c.rotulo ? ` · ${c.rotulo}` : ""} · {c.categoria}{c.demo ? " · demo" : ""}</p>
+                    <Ligacoes c={c} abrir={(ref) => ctx.abrir({ tipo: "conta", id: ref })} />
                   </td>
                   <td className={td}>
                     {c.userId ? (
@@ -246,7 +233,7 @@ export default function SeccaoContas() {
           Funded já estão na lista de cima; os programas, a equidade da casa e o gestor ficam aqui. */}
       <Grupo titulo="MTM Funded" nota="Programas, equidade da casa, contas emitidas e o gestor completo.">
         <Recolhivel titulo="MTM Funded · programas, contas e gestor" descricao="Equidade MTM, contas de clientes e mestres, a ficha de cada conta e o gestor (lançamento, torneios, levantamentos, certificados)." aberto={ctx.filtro.grupo === "funded"}>
-          <SeccaoFunded />
+          <SeccaoFunded aoVerContas={verFunded} />
         </Recolhivel>
       </Grupo>
     </div>
