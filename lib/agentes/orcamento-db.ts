@@ -2,11 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { calcularOrcamento, type MovimentoLido, type OrcamentoAgente } from './orcamento-agente'
 
 /**
- * Lê o orçamento de toda a equipa: as linhas (com os tetos da 207, se já existirem) e os
+ * Lê o orçamento de toda a equipa: as linhas (com os tetos da 208, se já existirem) e os
  * movimentos de dinheiro dos últimos 32 dias. Serve o painel do orçamento E a rota do motor, para
  * os dois verem o mesmo «bloqueado» com o mesmo motivo.
  *
- * Tolerante: sem a 207 aplicada lê sem tetos e diz `semTetos`; um erro nos movimentos lê-se como
+ * Tolerante: sem a 208 aplicada lê sem tetos e diz `semTetos`; um erro nos movimentos lê-se como
  * «sem movimentos» e vem em `erro` — o motor não pára por não conseguir ler o livro.
  */
 export async function orcamentosDaEquipa(db: SupabaseClient, agora: Date) {

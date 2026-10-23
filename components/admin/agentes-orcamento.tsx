@@ -75,7 +75,7 @@ export default function AgentesOrcamento() {
 
       {erro && <Aviso tom="grave">{erro}</Aviso>}
       {nota && <Aviso tom={nota.tom}>{nota.txt}</Aviso>}
-      {dados?.semTetos && <Aviso>Os tetos precisam da migração 207. Até lá dá para ver o saldo, mas não para carregar nem pôr tetos.</Aviso>}
+      {dados?.semTetos && <Aviso>Os tetos precisam da migração 208. Até lá dá para ver o saldo, mas não para carregar nem pôr tetos.</Aviso>}
 
       {dados && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

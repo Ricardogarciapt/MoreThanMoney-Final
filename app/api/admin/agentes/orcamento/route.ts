@@ -7,7 +7,7 @@ import { orcamentosDaEquipa } from '@/lib/agentes/orcamento-db'
 /**
  * O ORÇAMENTO DA EQUIPA — dar saldo, registar despesa, pôr tetos, e o livro do dinheiro.
  *
- * Os movimentos passam pela função `agentes_movimentar` (migração 207): o evento no livro e a soma
+ * Os movimentos passam pela função `agentes_movimentar` (migração 208): o evento no livro e a soma
  * na linha vão na mesma transacção. Os tetos são da linha e a mudança fica no livro como `teto`.
  */
 export const dynamic = 'force-dynamic'
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       p_detalhe: detalhe,
     })
     if (error) {
-      const falta = /agentes_movimentar|function/i.test(error.message) ? ' (a migração 207 já foi aplicada?)' : ''
+      const falta = /agentes_movimentar|function/i.test(error.message) ? ' (a migração 208 já foi aplicada?)' : ''
       return NextResponse.json({ ok: false, error: `${error.message}${falta}` }, { status: 500 })
     }
     const linha = Array.isArray(data) ? data[0] : data
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'O teto do dia não pode passar o do mês.' }, { status: 400 })
     }
     const { error } = await db.from('agentes_equipa').update({ teto_dia: d.valor, teto_mes: m.valor, atualizado_em: new Date().toISOString() }).eq('id', id)
-    if (error) return NextResponse.json({ ok: false, error: `${error.message} (a migração 207 já foi aplicada?)` }, { status: 500 })
+    if (error) return NextResponse.json({ ok: false, error: `${error.message} (a migração 208 já foi aplicada?)` }, { status: 500 })
     const txt = `dia ${d.valor ?? 'sem teto'} · mês ${m.valor ?? 'sem teto'}`
     await db.from('agentes_eventos').insert({ agente_id: id, tipo: 'teto', valor: d.valor, detalhe: `tetos: ${txt}${porque ? ` — ${porque}` : ''}` })
     return NextResponse.json({ ok: true, porque: `Tetos de «${ag.nome}»: ${txt}.` })

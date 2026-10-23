@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     listarOrdens(db, { agenteId, limite: 200 }),
   ])
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
-  if (ordens.erro) return NextResponse.json({ ok: false, error: `${ordens.erro} (a migração 207 já foi aplicada?)` }, { status: 500 })
+  if (ordens.erro) return NextResponse.json({ ok: false, error: `${ordens.erro} (a migração 208 já foi aplicada?)` }, { status: 500 })
   return NextResponse.json({ ok: true, agentes: agentes ?? [], ordens: ordens.ordens })
 }
 
