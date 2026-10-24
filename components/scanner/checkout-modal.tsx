@@ -11,9 +11,59 @@ interface CheckoutModalProps {
   product: ScannerProduct
   scannerName: string
   onClose: () => void
+  lang?: "pt" | "en"
 }
 
-export function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
+// Textos do modal; o inglês serve as landings /en/scanner/<slug>.
+const MSG = {
+  pt: {
+    checking: "A verificar sessão… tenta novamente dentro de um segundo.",
+    needTv: "O teu nome de utilizador do TradingView é necessário para activar o acesso.",
+    needEmail: "O teu email é necessário para receberes a confirmação de pagamento.",
+    badEmail: "Email inválido. Verifica e tenta novamente.",
+    network: "Erro de rede. Verifica a tua ligação e tenta novamente.",
+    email: "O teu email *",
+    emailHelp: "Recebes a confirmação de compra e as instruções de acesso neste email.",
+    tv: "Nome de utilizador TradingView *",
+    tvPh: "O teu @username no TradingView",
+    tvHelp: "Após o pagamento recebes um email com as instruções de acesso ao script no TradingView.",
+    sponsor: "Código do patrocinador",
+    optional: "(opcional)",
+    sponsorPh: "Username de quem te indicou",
+    checkingBtn: "A verificar sessão...",
+    processing: "A processar...",
+    go: "Avançar para Pagamento",
+    secure: "Pagamento seguro via Stripe · SSL encriptado",
+  },
+  en: {
+    checking: "Checking your session… try again in a second.",
+    needTv: "Your TradingView username is required to activate access.",
+    needEmail: "Your email is required to receive the payment confirmation.",
+    badEmail: "Invalid email. Check it and try again.",
+    network: "Network error. Check your connection and try again.",
+    email: "Your email *",
+    emailHelp: "You get the purchase confirmation and access instructions at this email.",
+    tv: "TradingView username *",
+    tvPh: "Your TradingView @username",
+    tvHelp: "After payment you get an email with the instructions to access the script on TradingView.",
+    sponsor: "Referral code",
+    optional: "(optional)",
+    sponsorPh: "Username of who referred you",
+    checkingBtn: "Checking session...",
+    processing: "Processing...",
+    go: "Continue to payment",
+    secure: "Secure payment via Stripe · SSL encrypted",
+  },
+}
+const EN_PRICE = (p: string) => p.replace(/^(\d+)€\/mês$/, "€$1/month").replace(/^(\d+)€$/, "€$1")
+const EN_NOTE: Record<string, string> = {
+  "6 meses de acesso": "6 months of access",
+  "Pagamento único": "One-time payment",
+  "Todos os scanners · cancelas quando quiseres": "Every scanner · cancel anytime",
+}
+
+export function CheckoutModal({ product, scannerName, onClose, lang = "pt" }: CheckoutModalProps) {
+  const m = MSG[lang]
   const [tvUsername, setTvUsername] = useState("")
   const [guestEmail, setGuestEmail] = useState("")
   const [sponsorCode, setSponsorCode] = useState("")
@@ -30,11 +80,11 @@ export function CheckoutModal({ product, scannerName, onClose }: CheckoutModalPr
 
   const handleCheckout = async () => {
     if (isGuest === null) {
-      setError("A verificar sessão… tenta novamente dentro de um segundo.")
+      setError(m.checking)
       return
     }
     if (!tvUsername.trim()) {
-      setError("O teu nome de utilizador do TradingView é necessário para activar o acesso.")
+      setError(m.needTv)
       return
     }
     setError("")
@@ -67,12 +117,12 @@ export function CheckoutModal({ product, scannerName, onClose }: CheckoutModalPr
       } else {
         const email = guestEmail.trim()
         if (!email) {
-          setError("O teu email é necessário para receberes a confirmação de pagamento.")
+          setError(m.needEmail)
           setIsLoading(false)
           return
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          setError("Email inválido. Verifica e tenta novamente.")
+          setError(m.badEmail)
           setIsLoading(false)
           return
         }
@@ -96,7 +146,7 @@ export function CheckoutModal({ product, scannerName, onClose }: CheckoutModalPr
         window.location.href = data.url
       }
     } catch {
-      setError("Erro de rede. Verifica a tua ligação e tenta novamente.")
+      setError(m.network)
       setIsLoading(false)
     }
   }
@@ -110,54 +160,54 @@ export function CheckoutModal({ product, scannerName, onClose }: CheckoutModalPr
 
         <div className="mb-6">
           <h3 className="text-xl font-bold text-white mb-1">{scannerName}</h3>
-          <div className="text-2xl font-black text-[#D2A63C]">{product.price}</div>
-          {product.priceNote && <div className="text-xs text-gray-400 mt-0.5">{product.priceNote}</div>}
+          <div className="text-2xl font-black text-[#D2A63C]">{lang === "en" ? EN_PRICE(product.price) : product.price}</div>
+          {product.priceNote && <div className="text-xs text-gray-400 mt-0.5">{lang === "en" ? EN_NOTE[product.priceNote] ?? product.priceNote : product.priceNote}</div>}
         </div>
 
         {/* Campo email — apenas para visitantes sem conta */}
         {isGuest && (
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              O teu email *
+              {m.email}
             </label>
             <Input
               type="email"
               value={guestEmail}
               onChange={e => setGuestEmail(e.target.value)}
-              placeholder="exemplo@email.com"
+              placeholder={lang === "en" ? "example@email.com" : "exemplo@email.com"}
               className="bg-gray-800 border-gray-700 text-white"
               disabled={isLoading}
             />
             <p className="text-xs text-gray-500 mt-1.5">
-              Recebes a confirmação de compra e as instruções de acesso neste email.
+              {m.emailHelp}
             </p>
           </div>
         )}
 
         <div className="mb-5">
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            Nome de utilizador TradingView *
+            {m.tv}
           </label>
           <Input
             value={tvUsername}
             onChange={e => setTvUsername(e.target.value)}
-            placeholder="O teu @username no TradingView"
+            placeholder={m.tvPh}
             className="bg-gray-800 border-gray-700 text-white"
             disabled={isLoading}
           />
           <p className="text-xs text-gray-500 mt-1.5">
-            Após o pagamento recebes um email com as instruções de acesso ao script no TradingView.
+            {m.tvHelp}
           </p>
         </div>
 
         <div className="mb-5">
           <label className="block text-sm font-medium text-gray-400 mb-2">
-            Código do patrocinador <span className="text-gray-600 font-normal">(opcional)</span>
+            {m.sponsor} <span className="text-gray-600 font-normal">{m.optional}</span>
           </label>
           <Input
             value={sponsorCode}
             onChange={e => setSponsorCode(e.target.value)}
-            placeholder="Username de quem te indicou"
+            placeholder={m.sponsorPh}
             className="bg-gray-800 border-gray-700 text-white"
             disabled={isLoading}
           />
@@ -176,16 +226,16 @@ export function CheckoutModal({ product, scannerName, onClose }: CheckoutModalPr
           size="lg"
         >
           {isGuest === null ? (
-            <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A verificar sessão...</>
+            <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{m.checkingBtn}</>
           ) : isLoading ? (
-            <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A processar...</>
+            <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{m.processing}</>
           ) : (
-            <>Avançar para Pagamento <ArrowRight className="ml-2 h-5 w-5" /></>
+            <>{m.go} <ArrowRight className="ml-2 h-5 w-5" /></>
           )}
         </Button>
 
         <p className="text-xs text-gray-500 text-center mt-3">
-          Pagamento seguro via Stripe · SSL encriptado
+          {m.secure}
         </p>
       </div>
     </div>

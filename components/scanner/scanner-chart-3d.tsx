@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState, type MutableRefObject } from "react"
 import s from "./scanner-landing.module.css"
+import { UI, type Lang } from "./landing-i18n"
 
 type Legend = { color: string; label: string }
 type Info = { caption: string | null; panel: { title: string; rows: { label: string; value: string }[] } | null }
@@ -13,7 +14,7 @@ const CYCLE = 18 // segundos de animação
 const HOLD = 3 // segundos parados no fim antes de recomeçar
 
 /** Sem `progress` anima em ciclo; com `progress` (0–1, ex.: posição do scroll) segue esse valor. */
-export function ScannerChart3D({ slug, progress, tall }: { slug: string; progress?: MutableRefObject<number>; tall?: boolean }) {
+export function ScannerChart3D({ slug, progress, tall, lang = "pt" }: { slug: string; progress?: MutableRefObject<number>; tall?: boolean; lang?: Lang }) {
   const wrap = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const [info, setInfo] = useState<Info>({ caption: null, panel: null })
@@ -65,11 +66,11 @@ export function ScannerChart3D({ slug, progress, tall }: { slug: string; progres
         visible = entry.isIntersecting
         if (visible && !scene) {
           try {
-            const [{ createScannerScene }, { simulate }] = await Promise.all([import("./sim/scanner-3d"), import("./sim/scanner-sim")])
+            const [{ createScannerScene }, { simulate }, { tr }] = await Promise.all([import("./sim/scanner-3d"), import("./sim/scanner-sim"), import("./sim/i18n")])
             if (disposed) return
             const sim = simulate(slug)
-            setLegend(sim.legend ?? [])
-            scene = createScannerScene({ canvas: cv, sim })
+            setLegend((sim.legend ?? []).map((l: Legend) => ({ ...l, label: tr(lang, l.label) })))
+            scene = createScannerScene({ canvas: cv, sim, lang })
             scene.resize(el.clientWidth, el.clientHeight)
             ro.observe(el)
             if (reduce) {
@@ -93,14 +94,14 @@ export function ScannerChart3D({ slug, progress, tall }: { slug: string; progres
       ro.disconnect()
       scene?.dispose()
     }
-  }, [slug, progress])
+  }, [slug, progress, lang])
 
   if (failed) return null
 
   return (
     <div className={s.sim}>
       <div ref={wrap} className={`${s.simStage} ${tall ? s.simStageTall : ""}`}>
-        <canvas ref={canvas} className={s.simCanvas} aria-label="Animação 3D do scanner a desenhar no gráfico" role="img" />
+        <canvas ref={canvas} className={s.simCanvas} aria-label={UI[lang].simAria} role="img" />
         {info.caption && (
           <p key={info.caption} className={s.simCaption}>
             {info.caption}
@@ -127,7 +128,7 @@ export function ScannerChart3D({ slug, progress, tall }: { slug: string; progres
             </li>
           ))}
         </ul>
-        <p className={s.simNote}>Simulação com preços gerados para mostrar o comportamento do scanner. Não é histórico real.</p>
+        <p className={s.simNote}>{UI[lang].simNote}</p>
       </div>
     </div>
   )

@@ -2,6 +2,7 @@
 // Tudo depende só de (progresso, tempo): a landing anima-a em ciclo e o vídeo procura qualquer
 // instante da timeline e obtém sempre o mesmo fotograma.
 import * as THREE from 'three'
+import { tr } from './i18n.js'
 
 const DX = 0.16
 const H = 9
@@ -54,9 +55,10 @@ const easeOutBack = (x) => {
 const clamp01 = (x) => Math.max(0, Math.min(1, x))
 
 /**
- * @param {{canvas: HTMLCanvasElement, sim: any, capture?: boolean, background?: string|null}} opts
+ * @param {{canvas: HTMLCanvasElement, sim: any, capture?: boolean, background?: string|null, lang?: string}} opts
  */
-export function createScannerScene({ canvas, sim, capture = false, background = null }) {
+export function createScannerScene({ canvas, sim, capture = false, background = null, lang = 'pt' }) {
+  const T = (s) => tr(lang, s)
   const N = sim.candles.length
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: !background, preserveDrawingBuffer: capture })
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1))
@@ -199,7 +201,7 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
     }
     let label = null
     if (z.label && z.label.length > 1) {
-      label = makeSprite(z.label, z.color, { outline: true, size: 34 }, 0.34)
+      label = makeSprite(T(z.label), z.color, { outline: true, size: 34 }, 0.34)
       disposables.push(label.material, label.material.map)
       g.add(label)
     }
@@ -220,7 +222,7 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
       d.position.set(X(s.i0) + (k + 0.5) * (len / n), Y(s.price), 0.3)
       g.add(d)
     }
-    const label = makeSprite(s.label, s.color, { outline: true, size: 32 }, 0.32)
+    const label = makeSprite(T(s.label), s.color, { outline: true, size: 32 }, 0.32)
     disposables.push(label.material, label.material.map)
     label.position.set((X(s.i0) + X(s.i1)) / 2, Y(s.price) + 0.32, 0.35)
     g.add(label)
@@ -230,7 +232,7 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
 
   // Marcadores de sinal.
   const markers = (sim.markers || []).map((m) => {
-    const sp = makeSprite(m.text, m.color, { fg: '#ffffff', size: m.small ? 38 : 44 }, m.small ? 0.42 : 0.56)
+    const sp = makeSprite(T(m.text), m.color, { fg: '#ffffff', size: m.small ? 38 : 44 }, m.small ? 0.42 : 0.56)
     disposables.push(sp.material, sp.material.map)
     const off = m.up ? -0.55 : 0.55
     sp.position.set(X(m.i), Y(m.price) + off, 0.45)
@@ -258,7 +260,7 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
     if (sl) addFill(sl.price, '#ef4b5a')
     const items = gr.items.map((it) => {
       const bar = new THREE.Mesh(boxGeo, track(new THREE.MeshBasicMaterial({ color: it.color })))
-      const label = makeSprite(it.label, it.color, { fg: '#0b0b0d', size: 40 }, 0.44)
+      const label = makeSprite(T(it.label), it.color, { fg: '#0b0b0d', size: 40 }, 0.44)
       disposables.push(label.material, label.material.map)
       g.add(bar, label)
       return { it, bar, label }
@@ -381,8 +383,8 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
     const cur = curAt(progress)
     const ci = Math.min(N - 1, Math.floor(cur))
     let caption = null
-    for (const c of sim.captions || []) if (c.i <= cur) caption = c.text
-    const panel = sim.panel ? { title: sim.panel.title, rows: sim.panel.rows.map((r) => ({ label: r.label, value: r.states[ci] })) } : null
+    for (const c of sim.captions || []) if (c.i <= cur) caption = T(c.text)
+    const panel = sim.panel ? { title: T(sim.panel.title), rows: sim.panel.rows.map((r) => ({ label: T(r.label), value: r.states[ci] === 'ok' ? 'ok' : T(r.states[ci]) })) } : null
     return { cur, caption, panel }
   }
 

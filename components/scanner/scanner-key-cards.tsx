@@ -5,15 +5,17 @@
 
 import { useEffect, useRef } from "react"
 import { CARD_TEXT } from "./sim/scanner-sim"
+import { CARD_TEXT_EN } from "./sim/i18n"
+import { UI, type Lang } from "./landing-i18n"
 import s from "./scanner-landing.module.css"
 
 const REVEAL = 3.2 // segundos a desenhar o recorte
 const HOLD = 2.4 // segundos parado antes de recomeçar
 
-export function ScannerKeyCards({ slug, numClass }: { slug: string; numClass: string }) {
+export function ScannerKeyCards({ slug, numClass, lang = "pt" }: { slug: string; numClass: string; lang?: Lang }) {
   const refs = useRef<(HTMLCanvasElement | null)[]>([])
   const wrap = useRef<HTMLDivElement>(null)
-  const texts = (CARD_TEXT as Record<string, { title: string; text: string }[]>)[slug] ?? []
+  const texts = ((lang === "en" ? CARD_TEXT_EN : CARD_TEXT) as Record<string, { title: string; text: string }[]>)[slug] ?? []
 
   useEffect(() => {
     const el = wrap.current
@@ -21,7 +23,7 @@ export function ScannerKeyCards({ slug, numClass }: { slug: string; numClass: st
     let raf = 0
     let cards: { win: [number, number] }[] | null = null
     let sim: unknown = null
-    let draw: ((c: HTMLCanvasElement, sim: unknown, card: unknown, p: number) => void) | null = null
+    let draw: ((c: HTMLCanvasElement, sim: unknown, card: unknown, p: number, lang: string) => void) | null = null
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     const t0 = performance.now()
     const visible = new Set<number>()
@@ -34,7 +36,7 @@ export function ScannerKeyCards({ slug, numClass }: { slug: string; numClass: st
         if (!cv || !visible.has(k)) return
         // Desfasa cada cartão para não andarem todos ao mesmo tempo.
         const local = (t + k * 0.7) % (REVEAL + HOLD)
-        draw!(cv, sim, cards![k], reduce ? 1 : Math.min(1, local / REVEAL))
+        draw!(cv, sim, cards![k], reduce ? 1 : Math.min(1, local / REVEAL), lang)
       })
       if (!reduce && visible.size) raf = requestAnimationFrame(frame)
     }
@@ -61,7 +63,7 @@ export function ScannerKeyCards({ slug, numClass }: { slug: string; numClass: st
       cancelAnimationFrame(raf)
       io.disconnect()
     }
-  }, [slug])
+  }, [slug, lang])
 
   return (
     <div ref={wrap} className={s.keyCards}>
@@ -75,7 +77,7 @@ export function ScannerKeyCards({ slug, numClass }: { slug: string; numClass: st
               data-k={k}
               className={s.keyCanvas}
               role="img"
-              aria-label={`Ilustração: ${c.title}`}
+              aria-label={UI[lang].cardAria(c.title)}
             />
           </div>
           <div className={s.keyText}>

@@ -344,6 +344,11 @@
 .buyBarText span { color: var(--text-2); font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 520px) { .buyBarText span { display: none; } }
 
+/* Seletor de idioma */
+.langSwitch { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 20px; border-radius: 999px; border: 1px solid var(--border-strong); background: rgba(255, 255, 255, 0.04); }
+.langSwitch a { padding: 6px 14px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; color: var(--text-2); }
+.langSwitch a[aria-current="page"] { background: var(--gold); color: #120e04; }
+
 /* Movimento: só quando o sistema o permite */
 @media (prefers-reduced-motion: no-preference) {
   .rise { animation: rise 1.1s var(--ease) both; }

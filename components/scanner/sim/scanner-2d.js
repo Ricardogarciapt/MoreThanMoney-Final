@@ -1,6 +1,8 @@
 // Desenho 2D (canvas) de um recorte da simulação: é o que aparece em cada cartão de
 // "pontos-chave", só com as camadas que explicam aquele ponto do script.
 
+import { tr } from './i18n.js'
+
 const UP = '#22c58b'
 const DN = '#ef4b5a'
 
@@ -40,7 +42,8 @@ const pick = (spec, item, kind) => {
  * Desenha o cartão `card` da simulação `sim` em `canvas` com `progress` 0–1 (revela as velas).
  * O tamanho em CSS vem do próprio canvas; a densidade de píxeis é tratada aqui.
  */
-export function drawCard(canvas, sim, card, progress = 1) {
+export function drawCard(canvas, sim, card, progress = 1, lang = 'pt') {
+  const T = (s) => tr(lang, s)
   const dpr = Math.min(2, window.devicePixelRatio || 1)
   const W = canvas.clientWidth, H = canvas.clientHeight
   if (!W || !H) return
@@ -105,7 +108,7 @@ export function drawCard(canvas, sim, card, progress = 1) {
       ctx.beginPath(); ctx.moveTo(x0, Y(z.edge)); ctx.lineTo(x1, Y(z.edge)); ctx.stroke()
       ctx.globalAlpha = 1
     }
-    if (z.label && z.label.length > 1) pill(ctx, x0 + 2, Y(z.top) - 9, z.label, '#e9c46a', { outline: true, size: 9 })
+    if (z.label && z.label.length > 1) pill(ctx, x0 + 2, Y(z.top) - 9, T(z.label), '#e9c46a', { outline: true, size: 9 })
   }
 
   // Velas.
@@ -154,7 +157,7 @@ export function drawCard(canvas, sim, card, progress = 1) {
     const x0 = X(Math.max(a, sg.i0)), x1 = X(Math.min(b, sg.i1))
     ctx.beginPath(); ctx.moveTo(x0, Y(sg.price)); ctx.lineTo(x1, Y(sg.price)); ctx.stroke()
     ctx.setLineDash([])
-    pill(ctx, (x0 + x1) / 2, Y(sg.price) - 10, sg.label, sg.color, { outline: true, size: 9, align: 'center' })
+    pill(ctx, (x0 + x1) / 2, Y(sg.price) - 10, T(sg.label), sg.color, { outline: true, size: 9, align: 'center' })
   }
 
   // Grupo de níveis em destaque.
@@ -177,13 +180,13 @@ export function drawCard(canvas, sim, card, progress = 1) {
     }
     labels.sort((p, q) => q.y - p.y)
     for (let k = 1; k < labels.length; k++) if (labels[k].y > labels[k - 1].y - 17) labels[k].y = labels[k - 1].y - 17
-    for (const l of labels) pill(ctx, x1 + 4, l.y, l.it.label, l.it.color, { size: 10 })
+    for (const l of labels) pill(ctx, x1 + 4, l.y, T(l.it.label), l.it.color, { size: 10 })
   }
 
   // Marcadores.
   for (const m of sim.markers || []) {
     if (!L.markers || m.i > cur || m.i < a || m.i > b) continue
-    pill(ctx, X(m.i), Y(m.price) + (m.up ? 14 : -14), m.text, m.color, { fg: '#fff', size: m.small ? 9 : 10, align: 'center' })
+    pill(ctx, X(m.i), Y(m.price) + (m.up ? 14 : -14), T(m.text), m.color, { fg: '#fff', size: m.small ? 9 : 10, align: 'center' })
   }
 
   // Painel (tabela de tendência ou confirmações).
@@ -200,17 +203,17 @@ export function drawCard(canvas, sim, card, progress = 1) {
     ctx.textBaseline = 'middle'
     ctx.font = '700 10px Inter, system-ui, sans-serif'
     ctx.fillStyle = '#e9c46a'
-    ctx.fillText(sim.panel.title, px + 10, py + 12)
+    ctx.fillText(T(sim.panel.title), px + 10, py + 12)
     rows.forEach((r, k) => {
       const v = r.states[ci]
       const on = v === 'ok' || v === 'Alta' || v === 'Acima'
       ctx.font = '500 9.5px Inter, system-ui, sans-serif'
       ctx.fillStyle = '#a9a7a0'
-      ctx.fillText(r.label, px + 10, py + 30 + k * rh)
+      ctx.fillText(T(r.label), px + 10, py + 30 + k * rh)
       ctx.font = '700 9.5px Inter, system-ui, sans-serif'
       ctx.fillStyle = on ? UP : DN
       ctx.textAlign = 'right'
-      ctx.fillText(v === 'ok' ? '✓' : v, px + pw - 10, py + 30 + k * rh)
+      ctx.fillText(v === 'ok' ? '✓' : T(v), px + pw - 10, py + 30 + k * rh)
       ctx.textAlign = 'left'
     })
   }
