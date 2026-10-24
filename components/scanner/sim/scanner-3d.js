@@ -2,6 +2,7 @@
 // Tudo depende só de (progresso, tempo): a landing anima-a em ciclo e o vídeo procura qualquer
 // instante da timeline e obtém sempre o mesmo fotograma.
 import * as THREE from 'three'
+import { tr } from './i18n.js'
 
 const DX = 0.16
 const H = 9
@@ -54,9 +55,10 @@ const easeOutBack = (x) => {
 const clamp01 = (x) => Math.max(0, Math.min(1, x))
 
 /**
- * @param {{canvas: HTMLCanvasElement, sim: any, capture?: boolean, background?: string|null}} opts
+ * @param {{canvas: HTMLCanvasElement, sim: any, capture?: boolean, background?: string|null, lang?: string}} opts
  */
-export function createScannerScene({ canvas, sim, capture = false, background = null }) {
+export function createScannerScene({ canvas, sim, capture = false, background = null, lang = 'pt' }) {
+  const T = (s) => tr(lang, s)
   const N = sim.candles.length
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: !background, preserveDrawingBuffer: capture })
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1))
@@ -82,6 +84,14 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
   pmin -= pad
   pmax += pad
   const X = (i) => (i - (N - 1) / 2) * DX
+  // Mínimo e máximo das últimas 60 velas até cada índice, para a câmara enquadrar o preço visível.
+  const runLow = [], runHigh = []
+  for (let i = 0; i < N; i++) {
+    let l = Infinity, h = -Infinity
+    for (let k = Math.max(0, i - 60); k <= i; k++) { l = Math.min(l, sim.candles[k].l); h = Math.max(h, sim.candles[k].h) }
+    runLow.push(l)
+    runHigh.push(h)
+  }
   const Y = (p) => ((p - pmin) / (pmax - pmin)) * H - H / 2
 
   const disposables = []
@@ -153,7 +163,7 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
     return { g, per }
   }
-  const lines = sim.lines.map((l) => {
+  const lines = sim.lines.filter((l) => !l.hidden3d).map((l) => {
     const { g, per } = ribbon(l.pts, l.width, l.step)
     const mesh = new THREE.Mesh(g, track(new THREE.MeshBasicMaterial({ color: l.color, side: THREE.DoubleSide })))
     mesh.position.z = l.z
@@ -186,12 +196,12 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
     g.add(fill)
     let edge = null
     if (z.edge != null) {
-      edge = new THREE.Mesh(boxGeo, track(new THREE.MeshBasicMaterial({ color: z.color, transparent: true, opacity: Math.min(1, z.opacity * 3.2) })))
+      edge = new THREE.Mesh(boxGeo, track(new THREE.MeshBasicMaterial({ color: z.color, transparent: true, opacity: Math.min(1, z.opacity * 6) })))
       g.add(edge)
     }
     let label = null
     if (z.label && z.label.length > 1) {
-      label = makeSprite(z.label, z.color, { outline: true, size: 34 }, 0.34)
+      label = makeSprite(T(z.label), z.color, { outline: true, size: 34 }, 0.34)
       disposables.push(label.material, label.material.map)
       g.add(label)
     }
@@ -212,7 +222,7 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
       d.position.set(X(s.i0) + (k + 0.5) * (len / n), Y(s.price), 0.3)
       g.add(d)
     }
-    const label = makeSprite(s.label, s.color, { outline: true, size: 32 }, 0.32)
+    const label = makeSprite(T(s.label), s.color, { outline: true, size: 32 }, 0.32)
     disposables.push(label.material, label.material.map)
     label.position.set((X(s.i0) + X(s.i1)) / 2, Y(s.price) + 0.32, 0.35)
     g.add(label)
@@ -222,7 +232,7 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
 
   // Marcadores de sinal.
   const markers = (sim.markers || []).map((m) => {
-    const sp = makeSprite(m.text, m.color, { fg: '#ffffff', size: m.small ? 38 : 44 }, m.small ? 0.42 : 0.56)
+    const sp = makeSprite(T(m.text), m.color, { fg: '#ffffff', size: m.small ? 38 : 44 }, m.small ? 0.42 : 0.56)
     disposables.push(sp.material, sp.material.map)
     const off = m.up ? -0.55 : 0.55
     sp.position.set(X(m.i), Y(m.price) + off, 0.45)
@@ -250,7 +260,7 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
     if (sl) addFill(sl.price, '#ef4b5a')
     const items = gr.items.map((it) => {
       const bar = new THREE.Mesh(boxGeo, track(new THREE.MeshBasicMaterial({ color: it.color })))
-      const label = makeSprite(it.label, it.color, { fg: '#0b0b0d', size: 40 }, 0.44)
+      const label = makeSprite(T(it.label), it.color, { fg: '#0b0b0d', size: 40 }, 0.44)
       disposables.push(label.material, label.material.map)
       g.add(bar, label)
       return { it, bar, label }
@@ -343,6 +353,13 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
         it.bar.position.set(l2 + ww / 2, Y(it.it.price), 0.32)
         it.label.position.set(l2 + ww + it.label.scale.x / 2 + 0.08, Y(it.it.price), 0.36)
       }
+      // Níveis muito próximos: afasta as etiquetas na vertical para não se taparem.
+      const shown = g.items.filter((it) => it.label.visible).sort((p, q) => p.label.position.y - q.label.position.y)
+      const gap = 0.46
+      for (let k = 1; k < shown.length; k++) {
+        const prev = shown[k - 1].label.position.y
+        if (shown[k].label.position.y < prev + gap) shown[k].label.position.y = prev + gap
+      }
     })
 
     // Câmara: órbita lenta, perto do preço e a acompanhar a vela atual.
@@ -350,10 +367,10 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
     const t = time
     const theta = -0.42 + 0.16 * Math.sin(t * 0.18) + progress * 0.22
     const phi = 0.16 + 0.04 * Math.sin(t * 0.13)
-    const dist = (narrow ? 30 : 19.5) - progress * 1.5
-    const last = sim.candles[Math.min(N - 1, ci)]
+    const dist = (narrow ? 30 : 22) - progress * 1.5
+    const lo = runLow[Math.min(N - 1, ci)], hi = runHigh[Math.min(N - 1, ci)]
     const tx = X(cur) * 0.55 - 1.2
-    const ty = Y(last.c) * 0.45
+    const ty = ((Y(lo) + Y(hi)) / 2) * 0.85
     const target = new THREE.Vector3(tx, ty, 0)
     camera.position.set(target.x + Math.sin(theta) * dist, target.y + Math.sin(phi) * dist + 0.4, Math.cos(theta) * dist)
     camera.lookAt(target)
@@ -366,8 +383,8 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
     const cur = curAt(progress)
     const ci = Math.min(N - 1, Math.floor(cur))
     let caption = null
-    for (const c of sim.captions || []) if (c.i <= cur) caption = c.text
-    const panel = sim.panel ? { title: sim.panel.title, rows: sim.panel.rows.map((r) => ({ label: r.label, value: r.states[ci] })) } : null
+    for (const c of sim.captions || []) if (c.i <= cur) caption = T(c.text)
+    const panel = sim.panel ? { title: T(sim.panel.title), rows: sim.panel.rows.map((r) => ({ label: T(r.label), value: r.states[ci] === 'ok' ? 'ok' : T(r.states[ci]) })) } : null
     return { cur, caption, panel }
   }
 

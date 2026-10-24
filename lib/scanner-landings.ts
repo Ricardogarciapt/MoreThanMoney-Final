@@ -15,6 +15,10 @@ export interface ScannerLanding {
   specs?: string[]
   description?: string
   metaDescription: string
+  /** Versão inglesa (/en/scanner/<slug>); o que faltar cai no português. */
+  en?: Partial<Pick<ScannerLanding, "title" | "sub" | "markets" | "features" | "specs" | "description" | "metaDescription">>
+  videoEn?: string
+  posterEn?: string
 }
 
 export const SCANNER_LANDINGS: ScannerLanding[] = [
@@ -138,6 +142,89 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
       "MTM Sensei: confluência de estrutura SMC, DEMA, POC, banda Sensei e order flow. Incluído no Pack Scanners por 35€/mês.",
   },
 ]
+
+const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
+  "gold-killer": {
+    title: ["Gold,", "with clear targets."],
+    sub: "SuperTrend for the trend, plus target and drawdown levels built from previous price legs.",
+    markets: ["Gold (XAUUSD)", "Day trading", "Swing trading", "TradingView"],
+    description:
+      "Gold Killer follows the trend with an ATR SuperTrend. On every turn it records how far price went for and against you in the previous leg and turns that history into target and drawdown levels by percentile, drawn from the entry.",
+    specs: [
+      "Choice of price source, including a smoothed version",
+      "Adjustable ATR multiplier and length",
+      "Configurable history window and percentile",
+      "Buy and sell alerts on the turn, ready for webhooks",
+      "Analysis tool: it does not place orders",
+    ],
+    metaDescription: "MTM Gold Killer: SuperTrend plus percentile target and drawdown levels for gold on TradingView. €50 per six months or €350 lifetime.",
+  },
+  "aurum-flow": {
+    title: ["Break the range.", "With fixed risk."],
+    sub: "Opening Range Breakout on gold and perpetuals: session boxes, entry on the breakout and the stop on the opposite edge.",
+    markets: ["Gold (XAUUSD)", "Crypto perpetuals", "Pre London", "London", "New York"],
+    description:
+      "Aurum Flow marks the opening range of each session and waits for price to break it with the underlying trend. The stop sits on the opposite edge, four targets in multiples of risk, and the panel tells you the position size for the dollar risk you chose. Underneath runs the same SMC structure engine as Sensei.",
+    specs: [
+      "Markets: gold (lots) and crypto perpetuals (notional and leverage)",
+      "Configurable sessions, in the time zone you choose",
+      "ORB engine, SMC reversal engine or both",
+      "Mandatory regime: higher-timeframe 200 EMA and a volatility band",
+      "JSON alerts on candle close, ready for webhooks",
+    ],
+    metaDescription: "MTM Aurum Flow: Opening Range Breakout on gold and crypto perpetuals, with the stop on the range and four targets in R. €50 per six months or €350 lifetime.",
+  },
+  "mtm-scanner": {
+    title: ["Read the structure", "before you enter."],
+    sub: "Three DEMAs, the volume POC and market structure, with an ATR stop and targets up to 1:6.",
+    markets: ["Forex", "Indices", "Gold", "Crypto"],
+    description:
+      "MTM Scanner combines three DEMAs, the volume POC and market structure. When the close crosses the POC it fires the signal and immediately draws the entry, a 1 ATR stop and three targets in multiples of risk.",
+    specs: [
+      "Stop and targets by ATR or by percentage, with custom entry",
+      "Momentum and trend-exhaustion phases",
+      "Buy and sell alerts with entry, stop and targets",
+      "Works on any TradingView timeframe",
+      "Analysis tool: it does not place orders",
+    ],
+    metaDescription: "MTM Scanner: DEMA 15/50/238, volume POC and market structure on TradingView. €50 per six months or €350 lifetime.",
+  },
+  trendshot: {
+    title: ["Trend and risk", "on one chart."],
+    sub: "EMAs, a six-timeframe trend table, volume POC and entry, stop and target projections on TradingView.",
+    markets: ["Forex", "Gold (XAUUSD)", "Indices", "Crypto"],
+    description:
+      "A multi-purpose technical analysis indicator combining trend following, multi-timeframe analysis, volume price levels and automatic risk/reward projections: a structured read of the market right on your TradingView chart.",
+    specs: [
+      "Entry, stop loss and up to 4 take profits after a confirmed cross",
+      "Fixed SL or by the previous support/resistance structure",
+      "Session filter (08:00 to 21:00 by default)",
+      "TradingView alerts for bullish and bearish crosses",
+      "Educational tool: it does not place orders or guarantee results",
+    ],
+    metaDescription: "TrendShot by MTM: trend, structure and risk/reward on TradingView. €50 per six months or €350 lifetime.",
+  },
+  sensei: {
+    title: ["Many readings.", "One confluence."],
+    sub: "SMC structure, DEMAs, POC, the Sensei band and order flow. It only signals when the confirmations agree.",
+    markets: ["SMC structure", "Order flow", "Sensei band", "POC"],
+    description:
+      "Sensei brings together the SMC structure engine, the DEMAs and POC from MTM Scanner, the Sensei band and volume delta. Each criterion counts as a confirmation and the signal only appears with enough of them, with trend and anti-chop filters. Levels stay fixed on the signal candle.",
+    specs: [
+      "Ready-made styles (Aggressive, Scalp, Intraday, Swing, Conservative) or custom",
+      "Higher-timeframe trend, session and ADX anti-chop filters",
+      "Signals on candle close only, no repaint",
+      "Confirmations, rules and trade panels on the chart",
+      "Alerts for entry, breakeven, exits and stop",
+    ],
+    metaDescription: "MTM Sensei: confluence of SMC structure, DEMAs, POC, the Sensei band and order flow. Included in the Scanner Pack for €35/month.",
+  },
+}
+for (const l of SCANNER_LANDINGS) {
+  l.en = EN[l.slug]
+  l.videoEn = `/scanners/${l.slug}/apresentacao-en.mp4`
+  l.posterEn = `/scanners/${l.slug}/poster-en.jpg`
+}
 
 export function getScannerLanding(slug: string) {
   return SCANNER_LANDINGS.find((l) => l.slug === slug)

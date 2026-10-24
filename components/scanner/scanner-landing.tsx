@@ -1,18 +1,23 @@
 "use client"
 
-// Landing de venda de um scanner (/scanner/<slug>), no estilo evolutivo do studify-site: o vídeo
-// cresce ao descer, a simulação 3D fica presa e desenha o mercado com o scroll, e as
-// funcionalidades passam num pan horizontal. O movimento sai do scroll (variável --p), não de
-// listeners, e desliga com prefers-reduced-motion.
+// Landing de venda de um scanner (/scanner/<slug>), no estilo evolutivo do studify-site e
+// pensada como funil: promessa e vídeo, porquê um scanner, demonstração 3D presa ao scroll,
+// pontos-chave do script ilustrados, sem vs com, como funciona, preço e fecho, com uma barra de
+// compra fixa pelo meio. O movimento sai do scroll (variável --p), sem listeners de scroll, e
+// desliga com prefers-reduced-motion.
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Unbounded } from "next/font/google"
-import { ArrowUpRight, Asterisk, Play, Volume2, VolumeX, Check, Plus } from "lucide-react"
+import { ArrowUpRight, ArrowDown, Asterisk, BellRing, Check, Layers, Play, Plus, Ruler, Target, Volume2, VolumeX, X as XIcon } from "lucide-react"
 import type { ScannerData, ScannerProduct } from "@/lib/scanners-catalog"
 import type { ScannerLanding } from "@/lib/scanner-landings"
 import { CheckoutModal } from "@/components/scanner/checkout-modal"
 import { ScannerChart3D } from "@/components/scanner/scanner-chart-3d"
+import { ScannerKeyCards } from "@/components/scanner/scanner-key-cards"
+import { CARD_TEXT } from "@/components/scanner/sim/scanner-sim"
+import { CARD_TEXT_EN } from "@/components/scanner/sim/i18n"
+import { UI, priceFor, type Lang } from "@/components/scanner/landing-i18n"
 import { useScrollProgress } from "@/components/scanner/use-scroll-progress"
 import s from "./scanner-landing.module.css"
 
@@ -27,24 +32,7 @@ const PACK: ScannerProduct = {
   planId: "scanners_monthly",
 }
 
-const FAQ = [
-  {
-    q: "Como recebo o acesso?",
-    a: "No pagamento indicas o teu nome de utilizador do TradingView. O acesso ao script é dado a essa conta e recebes as instruções por email.",
-  },
-  {
-    q: "Preciso de conta paga no TradingView?",
-    a: "Não. O script funciona numa conta gratuita do TradingView; alguns limites de alertas e de indicadores por gráfico dependem do teu plano lá.",
-  },
-  {
-    q: "O scanner abre ordens sozinho?",
-    a: "Não. É uma ferramenta de análise: mostra a leitura do mercado e os níveis no gráfico. A decisão e a execução são tuas.",
-  },
-  {
-    q: "Qual é a diferença entre semestral, vitalício e pack?",
-    a: "O semestral dá 6 meses deste scanner. O vitalício é um pagamento único com acesso sem prazo. O pack dá todos os scanners MTM por 35€/mês e cancelas quando quiseres.",
-  },
-]
+const WHY_ICONS = [Target, Ruler, BellRing, Layers]
 
 function useReveal() {
   const ref = useRef<HTMLDivElement>(null)
@@ -73,20 +61,43 @@ export function ScannerLandingView({
   scanner,
   landing,
   others,
+  lang = "pt",
 }: {
   scanner: ScannerData
   landing: ScannerLanding
   others: { slug: string; name: string }[]
+  lang?: Lang
 }) {
+  const u = UI[lang]
+  const L = lang === "en" && landing.en ? { ...landing, ...landing.en } : landing
+  const P = (x: string) => priceFor(lang, x)
+  const base = lang === "en" ? "/en" : ""
+  const videoSrc = lang === "en" ? landing.videoEn ?? landing.video : landing.video
+  const posterSrc = (lang === "en" ? landing.posterEn : undefined) ?? landing.poster ?? scanner.image
   const root = useReveal()
+  const video = useRef<HTMLVideoElement>(null)
+  const heroRef = useRef<HTMLElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const simRef = useRef<HTMLElement>(null)
   const panRef = useRef<HTMLElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
+  const priceRef = useRef<HTMLElement>(null)
+  const [muted, setMuted] = useState(true)
+  const [checkout, setCheckout] = useState<{ product: ScannerProduct; name: string } | null>(null)
   const [panDist, setPanDist] = useState(0)
+  const [barOn, setBarOn] = useState(false)
   useScrollProgress(stageRef, "enter")
   const simProgress = useScrollProgress(simRef, "pin")
   useScrollProgress(panRef, "pin")
+
+  const plans = scanner.products
+  const mainPlan = plans.find((p) => p.highlight) ?? plans[0] ?? PACK
+  const buy = (product: ScannerProduct = mainPlan) =>
+    setCheckout({ product, name: product === PACK ? "Pack Scanners" : scanner.name })
+  const buyLabel = plans.length ? u.wantIt(scanner.name.replace(/^MTM /, "")) : u.wantPack
+  const gallery = scanner.gallery?.length ? scanner.gallery : [scanner.image]
+  const cardTitles = (((lang === "en" ? CARD_TEXT_EN : CARD_TEXT) as Record<string, { title: string }[]>)[landing.slug] ?? []).map((c) => c.title)
+  const goTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
 
   // Distância do pan = largura do trilho menos o ecrã; só em ecrãs largos (no telemóvel é scroll lateral).
   useEffect(() => {
@@ -105,18 +116,23 @@ export function ScannerLandingView({
       window.removeEventListener("resize", measure)
     }
   }, [])
-  const video = useRef<HTMLVideoElement>(null)
-  const [muted, setMuted] = useState(true)
-  const [checkout, setCheckout] = useState<{ product: ScannerProduct; name: string } | null>(null)
 
-  const plans = scanner.products
-  const mainPlan = plans.find((p) => p.highlight) ?? plans[0] ?? PACK
-  const buy = (product: ScannerProduct = mainPlan) =>
-    setCheckout({ product, name: product === PACK ? "Pack Scanners" : scanner.name })
-  const buyLabel = plans.length ? `Comprar por ${mainPlan.price}` : `Pack por ${PACK.price}`
-
-  const gallery = scanner.gallery?.length ? scanner.gallery : [scanner.image]
-  const features = landing.features ?? scanner.features
+  // Barra de compra: aparece depois do hero e esconde-se quando a secção de preços está à vista.
+  useEffect(() => {
+    const hero = heroRef.current, price = priceRef.current
+    if (!hero || !price) return
+    let pastHero = false, atPrice = false
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.target === hero) pastHero = !e.isIntersecting
+        if (e.target === price) atPrice = e.isIntersecting
+      }
+      setBarOn(pastHero && !atPrice)
+    }, { threshold: 0 })
+    io.observe(hero)
+    io.observe(price)
+    return () => io.disconnect()
+  }, [])
 
   const playWithSound = () => {
     const v = video.current
@@ -137,30 +153,32 @@ export function ScannerLandingView({
   return (
     <div ref={root} className={s.page}>
       {checkout && (
-        <CheckoutModal product={checkout.product} scannerName={checkout.name} onClose={() => setCheckout(null)} />
+        <CheckoutModal product={checkout.product} scannerName={checkout.name} onClose={() => setCheckout(null)} lang={lang} />
       )}
       <div className={s.grain} aria-hidden="true" />
 
       {/* HERO */}
-      <section className={s.hero}>
+      <section ref={heroRef} className={s.hero}>
         <div className={s.heroGlow} aria-hidden="true" />
         <div className={`${s.container} ${s.heroGrid}`}>
           <h1 className={`${display.className} ${s.heroTitle}`}>
-            <span className={s.line}><span className={s.rise}>{landing.title[0]}</span></span>
-            <span className={s.line}><span className={`${s.rise} ${s.gold}`}>{landing.title[1]}</span></span>
+            <span className={s.line}><span className={s.rise}>{L.title[0]}</span></span>
+            <span className={s.line}><span className={`${s.rise} ${s.gold}`}>{L.title[1]}</span></span>
           </h1>
           <div className={s.heroSide}>
-            <p className={`${s.heroSub} ${s.fadeIn}`}>{landing.sub}</p>
+            <nav className={`${s.langSwitch} ${s.fadeIn}`} aria-label="Idioma / Language">
+              <Link href={`/scanner/${landing.slug}`} hrefLang="pt-PT" aria-current={lang === "pt" ? "page" : undefined}>PT</Link>
+              <Link href={`/en/scanner/${landing.slug}`} hrefLang="en" aria-current={lang === "en" ? "page" : undefined}>EN</Link>
+            </nav>
+            <p className={`${s.heroSub} ${s.fadeIn}`}>{L.sub}</p>
             <div className={`${s.ctas} ${s.fadeIn}`}>
-              <button type="button" className={s.btnGold} onClick={() => buy()}>
+              <button type="button" className={s.btnGold} onClick={() => goTo("comprar")}>
                 {buyLabel}
                 <span className={s.btnIcon}><ArrowUpRight size={16} strokeWidth={2.2} /></span>
               </button>
-              {landing.video && (
-                <button type="button" className={s.btnGlass} onClick={playWithSound}>
-                  <Play size={16} fill="currentColor" /> Ver com som
-                </button>
-              )}
+              <button type="button" className={s.btnGlass} onClick={() => goTo("demo")}>
+                {u.seeDemo} <ArrowDown size={16} />
+              </button>
             </div>
           </div>
         </div>
@@ -168,26 +186,31 @@ export function ScannerLandingView({
         <div ref={stageRef} className={s.stage}>
           <div className={`${s.frame} ${s.stageFrame}`}>
             <div className={s.core}>
-              {landing.video ? (
+              {videoSrc ? (
                 <>
                   <video
                     ref={video}
-                    src={landing.video}
-                    poster={landing.poster ?? scanner.image}
+                    src={videoSrc}
+                    poster={posterSrc}
                     autoPlay
                     muted
                     loop
                     playsInline
                     preload="metadata"
-                    aria-label={`Vídeo de apresentação do ${scanner.name}`}
+                    aria-label={u.videoLabel(scanner.name)}
                   />
-                  <button type="button" className={s.soundBtn} onClick={toggleSound} aria-label={muted ? "Ligar o som" : "Desligar o som"}>
+                  {muted && (
+                    <button type="button" className={s.playBig} onClick={playWithSound}>
+                      <Play size={18} fill="currentColor" /> {u.watchSound}
+                    </button>
+                  )}
+                  <button type="button" className={s.soundBtn} onClick={toggleSound} aria-label={muted ? u.soundOn : u.soundOff}>
                     {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                   </button>
                 </>
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={scanner.image} alt={`${scanner.name} no gráfico do TradingView`} />
+                <img src={scanner.image} alt={u.chartAlt(scanner.name)} />
               )}
             </div>
           </div>
@@ -195,51 +218,97 @@ export function ScannerLandingView({
       </section>
 
       {/* FAIXA DE MERCADOS */}
-      <div className={s.marquee} aria-label={landing.markets.join(", ")}>
+      <div className={s.marquee} aria-label={L.markets.join(", ")}>
         <div className={s.marqueeTrack} aria-hidden="true">
-          {[...landing.markets, ...landing.markets, ...landing.markets, ...landing.markets].map((m, i) => (
+          {[...L.markets, ...L.markets, ...L.markets, ...L.markets].map((m, i) => (
             <span key={i}>{m}<Asterisk size={18} strokeWidth={2.5} /></span>
           ))}
         </div>
       </div>
 
-      {/* SIMULAÇÃO 3D: fica presa ao ecrã e o scanner desenha o mercado à medida que desces */}
-      <section ref={simRef} className={s.simPin} aria-label={`Simulação 3D do ${scanner.name}`}>
-        <div className={s.simSticky}>
-          <div className={s.container}>
-            <h2 className={`${display.className} ${s.simTitle}`}>
-              Vê-o <span className={s.gold}>a trabalhar.</span>
-            </h2>
-            <ScannerChart3D slug={landing.slug} progress={simProgress} tall />
+      {/* PORQUÊ UM SCANNER */}
+      <section className={s.section}>
+        <div className={s.container}>
+          <h2 className={`${display.className} ${s.sectionTitle} ${s.reveal}`}>
+            {u.whyTitle[0]} <span className={s.gold}>{u.whyTitle[1]}</span>
+          </h2>
+          <div className={s.why}>
+            {u.why.map(({ title, text }, k) => {
+              const Icon = WHY_ICONS[k]
+              return (
+              <div key={title} className={`${s.whyItem} ${s.reveal}`}>
+                <span className={s.whyIcon}><Icon size={22} strokeWidth={1.8} /></span>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </div>
+              )
+            })}
           </div>
         </div>
       </section>
 
-      {/* POR DENTRO: pan horizontal com as funcionalidades e os ecrãs reais */}
+      {/* DEMONSTRAÇÃO 3D: fica presa ao ecrã e o scanner desenha o mercado à medida que desces */}
+      <section id="demo" ref={simRef} className={s.simPin} aria-label={u.demoAria(scanner.name)}>
+        <div className={s.simSticky}>
+          <div className={s.container}>
+            <h2 className={`${display.className} ${s.simTitle}`}>
+              {u.demoTitle[0]} <span className={s.gold}>{u.demoTitle[1]}</span>
+            </h2>
+            <ScannerChart3D slug={landing.slug} progress={simProgress} tall lang={lang} />
+          </div>
+        </div>
+      </section>
+
+      {/* PONTOS-CHAVE DO SCRIPT: pan horizontal com cada ponto ilustrado */}
       <section ref={panRef} className={s.pan} style={{ ["--dist" as string]: `${panDist}px`, height: panDist ? `calc(100dvh + ${panDist}px)` : undefined }}>
         <div className={s.panSticky}>
           <div ref={trackRef} className={s.panTrack}>
             <div className={s.panIntro}>
               <h2 className={`${display.className} ${s.sectionTitle}`}>
-                O que vês <span className={s.gold}>no gráfico.</span>
+                {u.keyTitle[0]} <span className={s.gold}>{u.keyTitle[1]}</span>
               </h2>
-              <p className={s.body}>{landing.sub}</p>
+              <p className={s.body}>{L.description ?? scanner.description}</p>
             </div>
-            {features.map((f, i) => (
-              <article key={f} className={`${s.panCard} ${i % 2 ? s.panCardAlt : ""}`}>
-                <span className={`${display.className} ${s.panNum}`}>{String(i + 1).padStart(2, "0")}</span>
-                <p>{f}</p>
-              </article>
-            ))}
+            <ScannerKeyCards slug={landing.slug} numClass={`${display.className} ${s.panNum}`} lang={lang} />
             {gallery.map((src, i) => (
               <figure key={src} className={`${s.frame} ${s.panShot}`}>
                 <div className={s.core}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={`${scanner.name} no TradingView, exemplo ${i + 1}`} loading="lazy" />
+                  <img src={src} alt={u.shotAlt(scanner.name, i + 1)} loading="lazy" />
                 </div>
-                <figcaption>No TradingView, com dados reais.</figcaption>
+                <figcaption>{u.realShot}</figcaption>
               </figure>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SEM vs COM */}
+      <section className={s.section}>
+        <div className={s.container}>
+          <h2 className={`${display.className} ${s.sectionTitle} ${s.reveal}`}>
+            {u.vsTitle[0]} <span className={s.gold}>{u.vsTitle[1]}</span>
+          </h2>
+          <div className={s.versus}>
+            <div className={`${s.vsCol} ${s.reveal}`}>
+              <h3>{u.without}</h3>
+              <ul>
+                {u.sem.map((t) => (
+                  <li key={t}><XIcon size={18} className={s.vsNo} /> {t}</li>
+                ))}
+              </ul>
+            </div>
+            <div className={`${s.vsCol} ${s.vsWith} ${s.reveal}`}>
+              <h3>{u.withIt(scanner.name)}</h3>
+              <ul>
+                {cardTitles.map((t) => (
+                  <li key={t}><Check size={18} className={s.gold} /> {t}</li>
+                ))}
+              </ul>
+              <button type="button" className={s.btnGold} onClick={() => goTo("comprar")}>
+                {u.seePlans} <span className={s.btnIcon}><ArrowUpRight size={16} strokeWidth={2.2} /></span>
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -248,22 +317,16 @@ export function ScannerLandingView({
       <section className={`${s.section} ${s.how}`}>
         <div className={`${s.container} ${s.howGrid}`}>
           <div className={s.howSticky}>
-            <h2 className={`${display.className} ${s.sectionTitle} ${s.reveal}`}>Do pagamento ao gráfico.</h2>
-            <p className={`${s.body} ${s.reveal}`}>{landing.description ?? scanner.description}</p>
+            <h2 className={`${display.className} ${s.sectionTitle} ${s.reveal}`}>{u.howTitle}</h2>
+            <p className={`${s.body} ${s.reveal}`}>{u.howSub}</p>
           </div>
           <ol className={s.steps}>
-            <li className={`${s.step} ${s.reveal}`}>
-              <h3 className={display.className}>Escolhes o plano.</h3>
-              <p>{plans.length ? "Semestral, vitalício ou o pack com todos os scanners." : "O Sensei vem no Pack Scanners, com todos os scanners MTM."} Pagas com segurança pelo Stripe.</p>
-            </li>
-            <li className={`${s.step} ${s.reveal}`}>
-              <h3 className={display.className}>Dás o teu TradingView.</h3>
-              <p>Indicas o teu nome de utilizador no pagamento. É a essa conta que o acesso é dado.</p>
-            </li>
-            <li className={`${s.step} ${s.reveal}`}>
-              <h3 className={display.className}>Abres o gráfico.</h3>
-              <p>Recebes as instruções por email e o script aparece nos teus indicadores, pronto a usar.</p>
-            </li>
+            {u.steps(plans.length > 0).map((st) => (
+              <li key={st.t} className={`${s.step} ${s.reveal}`}>
+                <h3 className={display.className}>{st.t}</h3>
+                <p>{st.p}</p>
+              </li>
+            ))}
           </ol>
         </div>
       </section>
@@ -272,10 +335,10 @@ export function ScannerLandingView({
       <section className={s.section}>
         <div className={s.container}>
           <h2 className={`${display.className} ${s.sectionTitle} ${s.reveal}`}>
-            Os detalhes <span className={s.gold}>técnicos.</span>
+            {u.specsTitle[0]} <span className={s.gold}>{u.specsTitle[1]}</span>
           </h2>
           <ul className={s.specs}>
-            {(landing.specs ?? scanner.techSpecs).map((t) => (
+            {(L.specs ?? scanner.techSpecs).map((t) => (
               <li key={t} className={s.reveal}>
                 <Check size={18} className={s.gold} /> {t}
               </li>
@@ -285,40 +348,52 @@ export function ScannerLandingView({
       </section>
 
       {/* PREÇO */}
-      <section className={s.section} id="comprar">
+      <section ref={priceRef} className={s.section} id="comprar">
         <div className={s.container}>
           <h2 className={`${display.className} ${s.sectionTitle} ${s.reveal}`}>
-            Escolhe <span className={s.gold}>o teu acesso.</span>
+            {u.priceTitle[0]} <span className={s.gold}>{u.priceTitle[1]}</span>
           </h2>
           <div className={s.pricing}>
             {plans.map((p) => (
               <div key={p.id} className={`${s.plan} ${p.highlight ? s.planHi : ""} ${s.reveal}`}>
-                <span className={s.planLabel}>{p.label}</span>
-                <span className={`${display.className} ${s.planPrice}`}>{p.price}</span>
-                <span className={s.planNote}>{p.priceNote}</span>
+                {p.highlight && <span className={s.planBadge}>{u.noExpiry}</span>}
+                <span className={s.planLabel}>{u.planLabel(p.label)}</span>
+                <span className={`${display.className} ${s.planPrice}`}>{P(p.price)}</span>
+                <span className={s.planNote}>{u.planNote(p.priceNote)}</span>
+                <ul className={s.planList}>
+                  {u.planIncl(scanner.name).map((x) => (
+                    <li key={x}><Check size={16} /> {x}</li>
+                  ))}
+                </ul>
                 <button type="button" className={p.highlight ? s.btnGold : s.btnGlass} onClick={() => buy(p)}>
-                  Comprar {p.label.toLowerCase()}
+                  {u.buyPlan(u.planLabel(p.label))}
                 </button>
               </div>
             ))}
             <div className={`${s.plan} ${plans.length ? "" : s.planHi} ${s.reveal}`}>
               <span className={s.planLabel}>Pack Scanners</span>
-              <span className={`${display.className} ${s.planPrice}`}>{PACK.price}</span>
-              <span className={s.planNote}>{PACK.priceNote}</span>
+              <span className={`${display.className} ${s.planPrice}`}>{P(PACK.price)}</span>
+              <span className={s.planNote}>{u.packNote}</span>
+              <ul className={s.planList}>
+                {u.packIncl.map((x) => (
+                  <li key={x}><Check size={16} /> {x}</li>
+                ))}
+              </ul>
               <button type="button" className={plans.length ? s.btnGlass : s.btnGold} onClick={() => buy(PACK)}>
-                Assinar o pack
+                {u.subscribePack}
               </button>
             </div>
           </div>
+          <p className={s.payNote}>{u.payNote}</p>
         </div>
       </section>
 
       {/* FAQ */}
       <section className={s.section}>
         <div className={`${s.container} ${s.faqWrap}`}>
-          <h2 className={`${display.className} ${s.sectionTitle} ${s.reveal}`}>Perguntas.</h2>
+          <h2 className={`${display.className} ${s.sectionTitle} ${s.reveal}`}>{u.faqTitle}</h2>
           <div>
-            {FAQ.map((f) => (
+            {u.faq.map((f) => (
               <details key={f.q} className={`${s.faq} ${s.reveal}`}>
                 <summary>
                   {f.q} <Plus size={18} />
@@ -332,23 +407,38 @@ export function ScannerLandingView({
 
       {/* FECHO */}
       <section className={s.final}>
+        <div className={s.finalGlow} aria-hidden="true" />
         <div className={s.container}>
           <h2 className={`${display.className} ${s.finalTitle} ${s.reveal}`}>{scanner.name}</h2>
-          <button type="button" className={`${s.btnGold} ${s.reveal}`} onClick={() => buy()}>
+          <p className={`${s.finalSub} ${s.reveal}`}>{L.sub}</p>
+          <button type="button" className={`${s.btnGold} ${s.reveal}`} onClick={() => goTo("comprar")}>
             {buyLabel}
             <span className={s.btnIcon}><ArrowUpRight size={16} strokeWidth={2.2} /></span>
           </button>
-          <nav className={s.others} aria-label="Outros scanners">
+          <nav className={s.others} aria-label={u.others}>
             {others.map((o) => (
-              <Link key={o.slug} href={`/scanner/${o.slug}`}>{o.name}</Link>
+              <Link key={o.slug} href={`${base}/scanner/${o.slug}`}>{o.name}</Link>
             ))}
-            <Link href="/scanner">Todos os scanners</Link>
+            <Link href="/scanner">{u.allScanners}</Link>
           </nav>
           <p className={s.disclaimer}>
-            Ferramenta educativa de análise técnica. Não executa ordens nem garante resultados. Trading envolve risco de perda de capital.
+            {u.disclaimer}
           </p>
         </div>
       </section>
+
+      {/* BARRA DE COMPRA FIXA */}
+      <div className={`${s.buyBar} ${barOn ? s.buyBarOn : ""}`} aria-hidden={!barOn}>
+        <div className={s.buyBarInner}>
+          <div className={s.buyBarText}>
+            <b>{scanner.name}</b>
+            <span>{plans.length ? u.barFrom(P(plans[0].price), P(mainPlan.price)) : u.barPack(P(PACK.price))}</span>
+          </div>
+          <button type="button" className={s.btnGold} onClick={() => goTo("comprar")} tabIndex={barOn ? 0 : -1}>
+            Ver planos <span className={s.btnIcon}><ArrowUpRight size={16} strokeWidth={2.2} /></span>
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
