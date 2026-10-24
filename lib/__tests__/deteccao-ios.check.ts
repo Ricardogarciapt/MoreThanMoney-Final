@@ -120,3 +120,15 @@ if (falhas) {
   process.exit(1)
 }
 console.log(`  ok  detecção iOS: ${UAS.length} user-agents, as três funções com o mesmo veredicto (iPad «Macintosh» incluído)`)
+
+// Build com o cripto visível de origem (marca MTMCripto/1): mostra cripto; as aprovadas antes não.
+import { buildComCripto, semCripto } from '../ios-sem-cripto'
+{
+  const antiga = 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MTMNativeApp/1.0'
+  const nova = `${antiga} MTMCripto/1`
+  assert.equal(buildComCripto(antiga), false)
+  assert.equal(semCripto(antiga), true, 'build aprovada sem a marca continua sem cripto')
+  assert.equal(buildComCripto(nova), true)
+  assert.equal(semCripto(nova), false, 'build nova com a marca mostra cripto')
+  console.log('deteccao-ios: gate por build ok')
+}

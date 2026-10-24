@@ -60,9 +60,22 @@ export function ehAppIos(ua?: string | null): boolean {
   return /MTMNativeApp/i.test(u) && /iPhone|iPad|iPod|Macintosh/i.test(u)
 }
 
+/**
+ * A build nativa traz o cripto VISÍVEL de origem? (marca `MTMCripto/1` no user-agent)
+ *
+ * É assim que o cripto volta ao iOS sem reactivar nada escondido: a marca só existe nas builds
+ * compiladas com `MTMCripto.disponivel = true`, que vão à revisão da Apple JÁ com o cripto à vista.
+ * As builds aprovadas antes não a trazem e continuam exactamente como foram revistas — por isso
+ * esta função não mexe em `CRIPTO_NO_IOS`, que liga tudo em todas as builds ao mesmo tempo.
+ */
+export function buildComCripto(ua?: string | null): boolean {
+  const u = ua ?? (typeof navigator !== "undefined" ? navigator.userAgent : "")
+  return /\bMTMCripto\/1\b/.test(u ?? "")
+}
+
 /** Esconder cripto neste ecrã? (só no cliente; no servidor devolve false). */
 export function semCripto(ua?: string | null): boolean {
-  return !CRIPTO_NO_IOS && ehAppIos(ua)
+  return !CRIPTO_NO_IOS && ehAppIos(ua) && !buildComCripto(ua)
 }
 
 /**
