@@ -18,7 +18,8 @@
  *
  * Os tectos: no máximo 2 posts (feed) por dia por conta e 1 história por dia por conta, contando
  * só o que os AGENTES puseram na fila (`created_by` = `agente:<código>`), no dia de Lisboa da
- * hora agendada.
+ * hora agendada. Os reels (decisão do dono de 24/10: 10 reels curtos por dia, a partir dos vídeos
+ * das estratégias com a voz dele) têm o seu próprio tecto, de 10, e não comem o dos posts.
  */
 import { normalizar } from './atribuicao'
 
@@ -30,10 +31,12 @@ export interface ConfigAutoPublicar {
   ligado: boolean
   posts_dia_conta: number
   historias_dia_conta: number
+  reels_dia_conta: number
 }
-export const AUTO_PADRAO: ConfigAutoPublicar = { ligado: false, posts_dia_conta: 2, historias_dia_conta: 1 }
+export const AUTO_PADRAO: ConfigAutoPublicar = { ligado: false, posts_dia_conta: 2, historias_dia_conta: 1, reels_dia_conta: 10 }
+export const TIPOS_DOS_AGENTES = ['IMAGE', 'CAROUSEL', 'STORIES', 'REELS'] as const
 
-/** Lê o setting. Ilegível = desligado. Os tectos nunca sobem acima do que o dono decidiu (2 / 1). */
+/** Lê o setting. Ilegível = desligado. Os tectos nunca sobem acima do que o dono decidiu (2 / 1 / 10). */
 export function lerAutoPublicar(v: unknown): ConfigAutoPublicar {
   const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>
   const n = (x: unknown, d: number) => {
@@ -44,6 +47,7 @@ export function lerAutoPublicar(v: unknown): ConfigAutoPublicar {
     ligado: o.ligado === true,
     posts_dia_conta: n(o.posts_dia_conta, AUTO_PADRAO.posts_dia_conta),
     historias_dia_conta: n(o.historias_dia_conta, AUTO_PADRAO.historias_dia_conta),
+    reels_dia_conta: n(o.reels_dia_conta, AUTO_PADRAO.reels_dia_conta),
   }
 }
 
@@ -110,8 +114,8 @@ export type Veredicto = { ok: true } | { ok: false; motivo: string }
 export function guardaDaMarca(p: PostDoAgente): Veredicto {
   if (!eDoSocial(p.agente_codigo)) return { ok: false, motivo: `«${p.agente_codigo}» não é o agente Social — só ele publica.` }
   if (p.ig_account_id !== CONTA_MARCA) return { ok: false, motivo: 'Só a conta @morethanmoney.pt recebe posts dos agentes.' }
-  if (!['IMAGE', 'CAROUSEL', 'STORIES'].includes(String(p.media_type).toUpperCase())) {
-    return { ok: false, motivo: `Tipo «${p.media_type}» não é dos agentes (IMAGE, CAROUSEL ou STORIES).` }
+  if (!(TIPOS_DOS_AGENTES as readonly string[]).includes(String(p.media_type).toUpperCase())) {
+    return { ok: false, motivo: `Tipo «${p.media_type}» não é dos agentes (${TIPOS_DOS_AGENTES.join(', ')}).` }
   }
   const paleta = Array.isArray(p.paleta) ? p.paleta : []
   if (!paleta.length) return { ok: false, motivo: 'Paleta não declarada — não se aprova uma imagem que não se sabe de que cor é.' }
@@ -136,6 +140,10 @@ export function eHistoria(mediaType: string): boolean {
   return String(mediaType).toUpperCase() === 'STORIES'
 }
 
+export function eReel(mediaType: string): boolean {
+  return String(mediaType).toUpperCase() === 'REELS'
+}
+
 /** Dia de Lisboa (AAAA-MM-DD) de um instante. */
 export function diaLisboa(iso: string | Date): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso
@@ -145,6 +153,8 @@ export function diaLisboa(iso: string | Date): string {
 export interface Contagem {
   posts: number
   historias: number
+  /** Opcional para quem só conta posts e histórias; sem ele, os reels contam 0. */
+  reels?: number
 }
 
 /**
@@ -160,7 +170,11 @@ export function decidirEntrada(
   if (!g.ok) return { status: 'draft', motivo: `Guarda da marca: ${g.motivo}` }
   if (!cfg.ligado) return { status: 'draft', motivo: 'Auto-publicar dos agentes desligado — fica para o dono aprovar.' }
   if (!contagem) return { status: 'draft', motivo: 'Não consegui contar os posts do dia — não se aprova às cegas.' }
-  if (eHistoria(post.media_type)) {
+  if (eReel(post.media_type)) {
+    if ((contagem.reels ?? 0) >= cfg.reels_dia_conta) {
+      return { status: 'draft', motivo: `Tecto diário de reels (${cfg.reels_dia_conta}) atingido nessa conta.` }
+    }
+  } else if (eHistoria(post.media_type)) {
     if (contagem.historias >= cfg.historias_dia_conta) {
       return { status: 'draft', motivo: `Tecto diário de histórias (${cfg.historias_dia_conta}) atingido nessa conta.` }
     }
