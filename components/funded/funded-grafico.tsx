@@ -7,7 +7,7 @@ import { scannersPermitidos } from "@/lib/mtmfunded/acesso"
 import { ESTUDOS_WEBTRADER, type ChaveEstudoWebtrader } from "@/lib/scanners/estudos"
 import type { Direcao } from "@/lib/mtmfunded/simulado/matematica"
 import { px } from "./api"
-import { type GraficoProps, type Tf, TIMEFRAMES, TV } from "./grafico-tipos"
+import { type GraficoProps, type Tf, type TipoGrafico, TIMEFRAMES, TIPOS_GRAFICO, TV } from "./grafico-tipos"
 import GraficoLeve from "./grafico-leve"
 import { useSinaisEstudos } from "./use-sinais-estudos"
 import { useGraficoVisivel } from "./grafico-visivel"
@@ -57,6 +57,7 @@ export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
 const CHAVE_ESTUDOS = "mtmfunded_estudos"
 const CHAVE_NEGOCIOS = "mtmfunded_grafico_negocios"
 const CHAVE_ASK = "mtmfunded_grafico_ask"
+const CHAVE_TIPO = "mtmfunded_grafico_tipo"
 const CHAVE_TF = "mtmfunded_tf"
 
 /** Ecrã inteiro do gráfico: `api` (Fullscreen API do documento + ocupar a janela) ou `janela` (só ocupar a janela). */
@@ -124,7 +125,12 @@ export default function FundedGrafico(props: GraficoProps) {
   // O que o gráfico mostra além das velas (guardado no browser, como os estudos).
   const [verNegocios, setVerNegocios] = useState(true)
   const [verAsk, setVerAsk] = useState(false)
-  useEffect(() => { setVerNegocios(ler(CHAVE_NEGOCIOS, true)); setVerAsk(ler(CHAVE_ASK, false)) }, [])
+  const [tipoGrafico, setTipoGrafico] = useState<TipoGrafico>("velas")
+  useEffect(() => {
+    setVerNegocios(ler(CHAVE_NEGOCIOS, true)); setVerAsk(ler(CHAVE_ASK, false))
+    const t = ler<string>(CHAVE_TIPO, "velas")
+    if (TIPOS_GRAFICO.some(([k]) => k === t)) setTipoGrafico(t as TipoGrafico)
+  }, [])
 
   useEffect(() => {
     setEstudos(ler<ChaveEstudoWebtrader[]>(CHAVE_ESTUDOS, ["Goldkiller"]))
@@ -229,6 +235,10 @@ export default function FundedGrafico(props: GraficoProps) {
             {t.rotulo}
           </button>
         ))}
+        <select aria-label="Tipo de gráfico" value={tipoGrafico} onChange={(e) => { const v = e.target.value as TipoGrafico; setTipoGrafico(v); guardar(CHAVE_TIPO, v) }}
+          className="ml-1 shrink-0 rounded border bg-transparent px-1.5 py-1 text-[11.5px]" style={{ borderColor: TV.borda, color: TV.texto, colorScheme: "dark" }}>
+          {TIPOS_GRAFICO.map(([k, nome]) => <option key={k} value={k}>{nome}</option>)}
+        </select>
         <span className="mx-1 h-4 w-px shrink-0" style={{ background: TV.borda }} />
         {permitidos.length === 0 ? (
           <span className="flex shrink-0 items-center gap-1 text-[11px]" style={{ color: TV.textoFraco }}><Lock className="h-3 w-3" /> Estudos MTM para membros</span>
@@ -299,7 +309,7 @@ export default function FundedGrafico(props: GraficoProps) {
       <div className={mostrar ? "contents" : "hidden"}>
       {/* A trade ativa do Sensei já tem as linhas ENTRY/SL/EXIT do próprio estudo e o GoldKiller os
           seus níveis: só o alerta (não o sinal local) leva as linhas ténues de referência. */}
-      <GraficoLeve {...props} negocios={verNegocios ? props.negocios : []} linhaAsk={verAsk} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} trendshot={configTS} tf={tf} modo={modo} setModo={setModo} />
+      <GraficoLeve {...props} negocios={verNegocios ? props.negocios : []} linhaAsk={verAsk} tipoGrafico={tipoGrafico} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} trendshot={configTS} tf={tf} modo={modo} setModo={setModo} />
       </div>
     </div>
   )

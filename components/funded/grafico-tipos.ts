@@ -60,6 +60,15 @@ export function marcasDosNegocios(negocios: NegocioGrafico[], tf: string, limite
     })
 }
 
+/** Como se desenham os preços (o MT5 e o TradingView dão os quatro). */
+export type TipoGrafico = "velas" | "barras" | "linha" | "area"
+export const TIPOS_GRAFICO: Array<[TipoGrafico, string]> = [["velas", "Velas"], ["barras", "Barras"], ["linha", "Linha"], ["area", "Área"]]
+
+/** Uma vela para a série do tipo escolhido: barras levam OHLC; linha e área só o fecho. */
+export function pontoDoTipo(tipo: TipoGrafico, v: { time: number; open: number; high: number; low: number; close: number }) {
+  return tipo === "barras" ? { time: v.time, open: v.open, high: v.high, low: v.low, close: v.close } : { time: v.time, value: v.close }
+}
+
 export interface GraficoProps {
   simbolo: SimboloFicha
   preco?: PrecoVivo
@@ -83,6 +92,8 @@ export interface GraficoProps {
   alertas?: AlertaGrafico[]
   /** Negociações já feitas neste símbolo (vazio = nada a desenhar). */
   negocios?: NegocioGrafico[]
+  /** Velas (por omissão), barras, linha ou área. */
+  tipoGrafico?: TipoGrafico
   /** Linha do Ask no gráfico (o preço das velas é o Bid). */
   linhaAsk?: boolean
   /**
