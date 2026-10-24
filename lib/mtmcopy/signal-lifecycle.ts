@@ -17,6 +17,7 @@
  */
 
 import { outcomeFrom } from './trade-outcome'
+import { precoTexto } from '../sinais/formato-sinal'
 
 export type SignalEvent =
   /** A ordem encheu — a posição existe. */
@@ -185,9 +186,17 @@ export function headline(c: LifecycleContext, evento?: SignalEvent): string {
 const EVENTS: Record<SignalEvent, EventDef> = {
   entry_hit: {
     emoji: '✅',
-    title: (c) => `ENTRY HIT · ${headline(c)}`,
+    /**
+     * Sem desfecho no cabeçalho: a posição ACABOU de abrir. O «+71 pontos» que aqui aparecia era
+     * a distância entre o preço do sinal e o do enchimento — lia-se como lucro de uma trade com
+     * zero segundos (Perps BTCUSD, 23/10). Os pips começam a contar a partir daqui.
+     */
+    title: (c) => `ENTRY HIT · ${`${c.symbol} ${dirTxt(c.direction)}`.trim()}`,
     body: (c) =>
-      [c.price ? `Posição aberta @ ${c.price}` : 'Posição aberta', 'Gestão automática por preço: parciais, break-even e trailing.']
+      [
+        c.price && Number.isFinite(c.price) ? `Posição aberta @ ${precoTexto(Number(c.price.toPrecision(8)))}` : 'Posição aberta',
+        'Gestão automática por preço: parciais, break-even e trailing.',
+      ]
         .filter(Boolean)
         .join(' · '),
     closes: false,

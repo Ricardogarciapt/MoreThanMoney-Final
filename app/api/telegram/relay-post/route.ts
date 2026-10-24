@@ -1,4 +1,5 @@
 import { premiumParaFormatoUnico } from '@/lib/sinais/premium-formato'
+import { forexSwingsParaFormatoUnico } from '@/lib/sinais/forex-swings-formato'
 import { NextRequest, NextResponse } from 'next/server'
 import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
@@ -386,12 +387,14 @@ export async function POST(req: NextRequest) {
           .maybeSingle()
         if (!dup) {
           const paiId = await resolveThreadParent(slug, replyToDest, execText)
+          // Entradas no formato único de todos os chats de ideias; seguimentos ficam literais.
+          const conteudo = (!paiId && slug === 'ideias-e-sinais' ? forexSwingsParaFormatoUnico(execText) : null) ?? execText
           const { data: msg } = await supabase
             .from('chat_messages')
             .insert({
               channel_slug: slug,
               user_id: null,
-              content: execText,
+              content: conteudo,
               message_type: 'telegram_forward',
               telegram_sender: null,
               telegram_message_id: r.messageId,

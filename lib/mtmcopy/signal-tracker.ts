@@ -26,7 +26,7 @@ import { placeOrdersSequential, getMarketPrice } from './metaapi'
 import { isMarketOpen, podeSaltarLeitura } from './market-hours'
 import { slComMinimo, stopDoLadoErrado } from './source-risk-rules'
 import { gravarDesfechoUnico } from './desfecho-unico'
-import { descarteSilencioso, entradaEncheu, horasAteDesistir, tipoDaEntrada, type TipoEntrada } from './tracker-entrada'
+import { descarteSilencioso, entradaDoSeguimento, entradaEncheu, horasAteDesistir, tipoDaEntrada, type TipoEntrada } from './tracker-entrada'
 
 /**
  * Conta que ABRE todos os sinais do Tap to Trade — «All tap to trade Signals», PU Prime Demo,
@@ -211,16 +211,17 @@ async function admitirNovos(): Promise<number> {
     }
     // O tipo da entrada (limite/stop/mercado) decide-se AGORA, contra o preço deste instante.
     const precoAgora = await referencePrice(p.symbol).catch(() => null)
-    const entradaSinal = p.entry ?? null
+    const sourceKey = t2tSourceKey(m.channel_slug, m.content)
+    const entradaSinal = entradaDoSeguimento({ sourceKey, entrada: p.entry ?? null, zonaPrimeiro: p.zoneFirst ?? null })
     novos.push({
       preco_admissao: precoAgora,
       tipo_entrada: tipoDaEntrada({ direcao: p.direction, entrada: entradaSinal, preco: precoAgora }),
       chat_message_id: m.id,
       channel_slug: m.channel_slug,
-      source_key: t2tSourceKey(m.channel_slug, m.content),
+      source_key: sourceKey,
       symbol: p.symbol,
       direction: p.direction,
-      entry: p.entry ?? null,
+      entry: entradaSinal,
       sl: p.sl,
       // O stop que a FONTE publicou, guardado à parte. `sl` move-se para a entrada no primeiro
       // alvo e deixa de servir para medir risco; este não se mexe nunca. Ver a migração 148.
@@ -522,13 +523,26 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
         // isso, por isso duas sobrepõem-se: sem o `eq('status','pending')` ambas viam a linha por
         // encher e ABRIAM a mesma trade duas vezes na conta-espelho — aconteceu no USDCAD das
         // 16:57, duas posições idênticas com 5 segundos de intervalo. Quem não muda a linha, sai.
+        /**
+         * ENTRADA A MERCADO SEM PREÇO («Set & forget» do Forex Swings, «🎯 Entrada: Mercado»):
+         * a entrada passa a ser o preço a que o tracker a viu encher. Sem isto `l.entry` ficava
+         * null para sempre e cada medição fazia `preço − preço` — zero pips flutuantes, nenhum
+         * desfecho, e o fecho no chat sem número. É o mesmo preço que a conta-espelho apanha.
+         */
+        const entradaFixada = l.entry == null || !(l.entry > 0) ? price : null
         const { data: ganhou } = await admin
           .from('mtmcopy_signal_tracking')
-          .update({ status: 'active', entry_hit_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .update({
+            status: 'active',
+            entry_hit_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            ...(entradaFixada != null ? { entry: entradaFixada } : {}),
+          })
           .eq('id', l.id)
           .eq('status', 'pending')
           .select('id')
         if (!ganhou?.length) continue
+        if (entradaFixada != null) l.entry = entradaFixada
         // Fontes só de leitura/fechadas (Ideias de Forex, Forex Swings) medem-se e anunciam-se, mas
         // não abrem ordem em lado nenhum — ver CANAIS_SO_SEGUIMENTO.
         if (!fonteSoMedida(l.source_key)) {
