@@ -94,6 +94,15 @@ async function main() {
   // ── validação comum do pedido ───────────────────────────────────────────────────────────────
   assert.deepEqual(validarPedido({ symbol: 'xauusd', direcao: 'buy', volume: 0.1 }), { symbol: 'XAUUSD', direcao: 'buy', tipo: 'mercado', volume: 0.1, preco: null, sl: null, tp: null })
   assert.throws(() => validarPedido({ symbol: 'XAUUSD', direcao: 'buy', volume: 0 }), ErroCorretora)
+  // Stop Limit: stop e limite obrigatórios, limite do lado certo do stop, SL/TP contra o limite.
+  assert.deepEqual(validarPedido({ symbol: 'EURUSD', direcao: 'buy', tipo: 'stop_limit', volume: 0.01, preco: 1.1, precoLimite: 1.099, sl: 1.09 }),
+    { symbol: 'EURUSD', direcao: 'buy', tipo: 'stop_limit', volume: 0.01, preco: 1.1, precoLimite: 1.099, sl: 1.09, tp: null })
+  assert.throws(() => validarPedido({ symbol: 'EURUSD', direcao: 'buy', tipo: 'stop_limit', volume: 0.01, preco: 1.1 }), /preço limite/)
+  assert.throws(() => validarPedido({ symbol: 'EURUSD', direcao: 'buy', tipo: 'stop_limit', volume: 0.01, preco: 1.1, precoLimite: 1.101 }), /stop ou abaixo/)
+  assert.throws(() => validarPedido({ symbol: 'EURUSD', direcao: 'sell', tipo: 'stop_limit', volume: 0.01, preco: 1.1, precoLimite: 1.099 }), /stop ou acima/)
+  assert.throws(() => validarPedido({ symbol: 'EURUSD', direcao: 'buy', tipo: 'stop_limit', volume: 0.01, preco: 1.1, precoLimite: 1.099, sl: 1.0995 }), ErroCorretora)
+  assert.equal(CAPACIDADES.mt5.stopLimit, true)
+  assert.equal(CAPACIDADES.tradelocker.stopLimit, false)
   assert.throws(() => validarPedido({ symbol: 'XAUUSD', direcao: 'buy', volume: 0.1, tipo: 'limit' }), ErroCorretora)
   assert.throws(() => validarPedido({ symbol: 'XAUUSD', direcao: 'buy', volume: 0.1, tipo: 'limit', preco: 2400, sl: 2410 }), /stop fica abaixo/)
   assert.throws(() => validarPedido({ symbol: "X'; drop", direcao: 'buy', volume: 0.1 }), ErroCorretora)
@@ -281,6 +290,11 @@ async function main() {
   await mt5.modificar({ alvo: 'ordem', id: '77', preco: 2385 })
   assert.equal(trades()[6].actionType, 'ORDER_MODIFY')
   assert.equal(trades()[6].openPrice, 2385)
+  // Stop Limit: openPrice = stop, stopLimitPrice = limite (só MT5).
+  await mt5.enviarOrdem({ symbol: 'XAUUSD', direcao: 'buy', tipo: 'stop_limit', volume: 0.1, preco: 2420, precoLimite: 2418 })
+  assert.equal(trades()[7].actionType, 'ORDER_TYPE_BUY_STOP_LIMIT')
+  assert.equal(trades()[7].openPrice, 2420)
+  assert.equal(trades()[7].stopLimitPrice, 2418)
 
   respostaTrade = { numericCode: 10018, stringCode: 'TRADE_RETCODE_MARKET_CLOSED', message: 'Market is closed' }
   const e5 = await lanca(mt5.enviarOrdem({ symbol: 'XAUUSD', direcao: 'sell', volume: 0.1 }), 422)

@@ -38,7 +38,7 @@ export function numeroDoCampo(texto: string): number | null {
 }
 
 export type TicketReal =
-  | { ok: true; volume: number; preco: number | null; sl: number | null; tp: number | null }
+  | { ok: true; volume: number; preco: number | null; precoLimite: number | null; sl: number | null; tp: number | null }
   | { ok: false; erro: string }
 
 /**
@@ -47,8 +47,10 @@ export type TicketReal =
  * números a sério, lote positivo, no passo e acima do mínimo, e o preço da pendente.
  */
 export function validarTicketReal(c: {
-  tipo: 'mercado' | 'limit' | 'stop'
+  tipo: 'mercado' | 'limit' | 'stop' | 'stop_limit'
   volume: string; preco: string; sl: string; tp: string
+  /** Só na Stop Limit. */
+  precoLimite?: string
   volumeMin: number; passo: number
 }): TicketReal {
   const volume = numeroDoCampo(c.volume)
@@ -63,9 +65,14 @@ export function validarTicketReal(c: {
     preco = numeroDoCampo(c.preco)
     if (preco == null || !Number.isFinite(preco) || !(preco > 0)) return { ok: false, erro: 'Indica o preço da ordem pendente.' }
   }
+  let precoLimite: number | null = null
+  if (c.tipo === 'stop_limit') {
+    precoLimite = numeroDoCampo(c.precoLimite ?? '')
+    if (precoLimite == null || !Number.isFinite(precoLimite) || !(precoLimite > 0)) return { ok: false, erro: 'Indica o preço limite da Stop Limit.' }
+  }
   const sl = numeroDoCampo(c.sl)
   if (sl != null && !(Number.isFinite(sl) && sl > 0)) return { ok: false, erro: 'O SL não é um preço válido (deixa em branco para não pôr).' }
   const tp = numeroDoCampo(c.tp)
   if (tp != null && !(Number.isFinite(tp) && tp > 0)) return { ok: false, erro: 'O TP não é um preço válido (deixa em branco para não pôr).' }
-  return { ok: true, volume: volumeNoPasso, preco, sl, tp }
+  return { ok: true, volume: volumeNoPasso, preco, precoLimite, sl, tp }
 }

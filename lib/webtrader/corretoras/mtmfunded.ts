@@ -78,6 +78,7 @@ export function adaptadorMtmFunded(conta: Conta, modo: ModoSessao): AdaptadorCor
 
     enviarOrdem: (bruto) => comErros(async () => {
       const p = validarPedido(bruto)
+      if (p.tipo === 'stop_limit') throw new ErroCorretora(400, 'As contas MTM Funded não têm ordens Stop Limit.')
       const c = await escrever()
       if (p.tipo === 'mercado') {
         const r = await abrirPosicao(c, { symbol: p.symbol, direcao: p.direcao, volume: p.volume, sl: p.sl, tp: p.tp, origem: 'manual' })

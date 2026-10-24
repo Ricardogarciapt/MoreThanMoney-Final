@@ -140,8 +140,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       }
       case 'ordem':
         return NextResponse.json(await a.enviarOrdem({
-          symbol: String(b.symbol ?? ''), direcao: b.direcao as 'buy' | 'sell', tipo: (b.tipo as 'mercado' | 'limit' | 'stop') ?? 'mercado',
-          volume: Number(b.volume), preco: numero(b.preco), sl: numero(b.sl), tp: numero(b.tp),
+          symbol: String(b.symbol ?? ''), direcao: b.direcao as 'buy' | 'sell', tipo: (b.tipo as 'mercado' | 'limit' | 'stop' | 'stop_limit') ?? 'mercado',
+          volume: Number(b.volume), preco: numero(b.preco), precoLimite: numero(b.precoLimite), sl: numero(b.sl), tp: numero(b.tp),
         }))
       case 'modificar': {
         const id = String(b.id ?? '')
