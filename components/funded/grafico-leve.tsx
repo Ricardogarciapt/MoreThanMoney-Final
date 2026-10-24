@@ -8,6 +8,7 @@ import LegendaGoldKiller from "@/lib/estudos/goldkiller/legenda"
 import type { InputsGoldKiller, ResultadoGoldKiller } from "@/lib/estudos/goldkiller/tipos"
 import LegendaMTMScanner from "@/lib/estudos/mtmscanner/legenda"
 import type { InputsMTMScanner, ResultadoMTMScanner } from "@/lib/estudos/mtmscanner/tipos"
+import type { ResultadoTrendShot } from "@/lib/estudos/trendshot/motor"
 import type { InputsSensei, ResultadoSensei, Vela } from "@/lib/estudos/sensei/tipos"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
@@ -182,6 +183,11 @@ export default function GraficoLeve(props: GraficoProps & {
     /** Cada resultado novo (null ao desligar) — alimenta o «Usar este sinal». */
     aoCalcular?: (r: ResultadoMTMScanner | null) => void
   } | null
+  /** TrendShot desenhado no gráfico (null/undefined = desligado) — lib/estudos/trendshot. */
+  trendshot?: {
+    /** Cada resultado novo (null ao desligar) — alimenta o «Usar este sinal». */
+    aoCalcular?: (r: ResultadoTrendShot | null) => void
+  } | null
 }) {
   const { simbolo, preco, precos, volume, posicoes, ordens, podeNegociar, tf, modo, setModo } = props
   const [estadoVelas, setEstadoVelas] = useState<"a_carregar" | "historico" | "ao_vivo" | "erro">("a_carregar")
@@ -265,6 +271,11 @@ export default function GraficoLeve(props: GraficoProps & {
   const calcularMS = useCalculadoraMTMScanner()
   const aoCalcularMSRef = useRef(props.mtmscanner?.aoCalcular)
   aoCalcularMSRef.current = props.mtmscanner?.aoCalcular
+  const tsRef = useRef<import("@/lib/estudos/trendshot/lightweight").TrendShotLW | null>(null)
+  const [tsPronto, setTsPronto] = useState(false)
+  const trendshotLigado = Boolean(props.trendshot)
+  const aoCalcularTSRef = useRef(props.trendshot?.aoCalcular)
+  aoCalcularTSRef.current = props.trendshot?.aoCalcular
   // Telemóvel: os painéis começam fechados (tapavam o gráfico todo); abrem-se no botão.
   useEffect(() => { try { if (window.matchMedia("(max-width: 767px)").matches) setPaineisAbertos(false) } catch { /* ok */ } }, [])
 
@@ -746,6 +757,31 @@ export default function GraficoLeve(props: GraficoProps & {
     })()
     return () => { vivo = false }
   }, [gkPronto, versaoVelas, historicoCompleto, chaveInputsGK, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── TrendShot ── (EMAs: cálculo leve, sem Web Worker)
+  useEffect(() => {
+    if (!pronto || !trendshotLigado) return
+    let vivo = true
+    import("@/lib/estudos/trendshot/lightweight").then((mod) => {
+      if (!vivo || !graficoRef.current || !serieRef.current) return
+      tsRef.current = mod.anexarTrendShot(graficoRef.current, serieRef.current, { simbolo: simbolo.symbol, etiquetasEixo: !props.compacto })
+      setTsPronto(true)
+    }).catch(() => { /* sem estudo — o gráfico continua */ })
+    return () => {
+      vivo = false
+      try { tsRef.current?.remove() } catch { /* o gráfico já foi removido */ }
+      tsRef.current = null
+      setTsPronto(false)
+      aoCalcularTSRef.current?.(null)
+    }
+  }, [pronto, trendshotLigado, simbolo.symbol, tf]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!tsPronto || !tsRef.current || estadoVelas === "a_carregar") return
+    const snapshot = velasRef.current.slice()
+    if (snapshot.length < 60) return
+    aoCalcularTSRef.current?.(tsRef.current.update(snapshot))
+  }, [tsPronto, versaoVelas, historicoCompleto, estadoVelas])
 
   // ── MTM Scanner ──
   useEffect(() => {
