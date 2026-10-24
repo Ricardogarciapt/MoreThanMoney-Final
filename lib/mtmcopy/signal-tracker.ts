@@ -212,7 +212,7 @@ async function admitirNovos(): Promise<number> {
     // O tipo da entrada (limite/stop/mercado) decide-se AGORA, contra o preço deste instante.
     const precoAgora = await referencePrice(p.symbol).catch(() => null)
     const sourceKey = t2tSourceKey(m.channel_slug, m.content)
-    const entradaSinal = entradaDoSeguimento({ sourceKey, entrada: p.entry ?? null, zona: p.zone ?? null })
+    const entradaSinal = entradaDoSeguimento({ sourceKey, entrada: p.entry ?? null, zonaPrimeiro: p.zoneFirst ?? null })
     novos.push({
       preco_admissao: precoAgora,
       tipo_entrada: tipoDaEntrada({ direcao: p.direction, entrada: entradaSinal, preco: precoAgora }),

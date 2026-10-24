@@ -44,7 +44,7 @@ assert.ok(/\+37 pips/.test(fecho.title), `fecho com pips: ${fecho.title}`)
 
 console.log('harmonizacao-seguimentos: ok')
 
-// 4. Premium: o tracker segue a MESMA entrada da mestre (meio da zona), não a ponta.
+// 4. Premium: o tracker segue o 1.º valor da zona (onde a mestre e o trader entram), não a ponta.
 import { entradaDoSeguimento } from '../../mtmcopy/tracker-entrada'
 import { t2tSourceKey } from '../../mtmcopy/t2t-source'
 const PREMIUM =
@@ -52,6 +52,6 @@ const PREMIUM =
 const pp = parseSignal(PREMIUM)!
 const sk = t2tSourceKey('premium-ideas', PREMIUM)
 assert.equal(sk, 'premium')
-assert.equal(entradaDoSeguimento({ sourceKey: sk, entrada: pp.entry ?? null, zona: pp.zone ?? null }), 4134)
-assert.equal(entradaDoSeguimento({ sourceKey: 'goldkiller', entrada: 4000, zona: null }), 4000)
+assert.equal(entradaDoSeguimento({ sourceKey: sk, entrada: pp.entry ?? null, zonaPrimeiro: pp.zoneFirst ?? null }), 4131)
+assert.equal(entradaDoSeguimento({ sourceKey: 'goldkiller', entrada: 4000, zonaPrimeiro: null }), 4000)
 console.log('harmonizacao-seguimentos (premium): ok')
