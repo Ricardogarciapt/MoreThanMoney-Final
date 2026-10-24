@@ -55,9 +55,14 @@ export interface OrdemWT {
   symbol: string
   simboloCorretora: string
   direcao: DirecaoWT
-  tipo: 'limit' | 'stop'
+  /**
+   * `stop_limit` (só MT5): chega a `preco` (o stop) e põe uma limit em `precoLimite`. Mostra-se e
+   * cancela-se; mover e criar novas ainda não (mexer no stop sem o limite partia a ordem).
+   */
+  tipo: 'limit' | 'stop' | 'stop_limit'
   volume: number
   preco: number
+  precoLimite?: number | null
   sl: number | null
   tp: number | null
   criadaEm: string | null

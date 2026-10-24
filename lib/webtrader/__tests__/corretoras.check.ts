@@ -250,7 +250,12 @@ async function main() {
   assert.equal(rest.filter((r) => r.caminho === '/positions').length, 1, 'MT5: no máximo 1 leitura de posições a cada 5 s')
   const o5 = await mt5.ordens()
   assert.equal(o5[0].tipo, 'limit')
-  assert.equal(ordemMt5({ id: '1', symbol: 'X', type: 'ORDER_TYPE_BUY_STOP_LIMIT' }), null)
+  // Stop Limit já não se esconde: aparece com o preço do stop e o limite (só ver e cancelar).
+  const sl5 = ordemMt5({ id: '1', symbol: 'X', type: 'ORDER_TYPE_BUY_STOP_LIMIT', openPrice: 1.1, stopLimitPrice: 1.099 } as never)
+  assert.equal(sl5?.tipo, 'stop_limit')
+  assert.equal(sl5?.preco, 1.1)
+  assert.equal(sl5?.precoLimite, 1.099)
+  assert.equal(ordemMt5({ id: '2', symbol: 'X', type: 'ORDER_TYPE_SELL_LIMIT', openPrice: 2 })?.tipo, 'limit')
   assert.equal(posicaoMt5({ id: '1', symbol: 'GOLD', type: 'POSITION_TYPE_BUY', openPrice: 1 }).symbol, 'XAUUSD')
   const h5 = await mt5.historico(7)
   assert.equal(h5.length, 1, 'movimentos de saldo não são negócios')
