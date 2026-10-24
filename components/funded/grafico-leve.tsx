@@ -12,6 +12,7 @@ import type { ResultadoTrendShot } from "@/lib/estudos/trendshot/motor"
 import type { InputsSensei, ResultadoSensei, Vela } from "@/lib/estudos/sensei/tipos"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
+import DesenhosGrafico from "./desenhos-grafico"
 import { type GraficoProps, type Tf, TV, inicioDaVela, marcasDosNegocios } from "./grafico-tipos"
 import { TF_SEG_GRAFICO } from "@/lib/webtrader/timeframes"
 import PainelFerramenta from "./painel-ferramenta"
@@ -1012,6 +1013,8 @@ export default function GraficoLeve(props: GraficoProps & {
   const aoPressionar = (e: React.PointerEvent<HTMLDivElement>) => {
     // Os botões das etiquetas («×», menu) tratam-se sozinhos — não começam arrasto.
     if ((e.target as HTMLElement).closest("[data-linha-botao]")) return
+    // A barra e a camada dos desenhos tratam os seus cliques (desenhos-grafico.tsx).
+    if ((e.target as HTMLElement).closest("[data-desenhos]")) return
     setMenu(null)
     const r = e.currentTarget.getBoundingClientRect()
     const y = e.clientY - r.top
@@ -1131,6 +1134,9 @@ export default function GraficoLeve(props: GraficoProps & {
         onContextMenu={aoMenuContexto}
       >
         <div ref={caixaRef} className="absolute inset-0" />
+        {pronto && !props.compacto && graficoRef.current && serieRef.current && (
+          <DesenhosGrafico chart={graficoRef.current} serie={serieRef.current} symbol={simbolo.symbol} />
+        )}
         {/* Sobreposição: só as etiquetas (as linhas e as zonas estão no canvas do gráfico). Não
             apanha toques — quem os apanha é a caixa por cima, na fase de captura. Só os botões das
             etiquetas («×») são clicáveis. */}
