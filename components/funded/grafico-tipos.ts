@@ -94,6 +94,8 @@ export interface GraficoProps {
   negocios?: NegocioGrafico[]
   /** Velas (por omissão), barras, linha ou área. */
   tipoGrafico?: TipoGrafico
+  /** Eventos do calendário económico das moedas do símbolo (lib/webtrader/calendario.ts). */
+  eventos?: import("@/lib/webtrader/calendario").EventoCalendario[]
   /** Linha do Ask no gráfico (o preço das velas é o Bid). */
   linhaAsk?: boolean
   /**
