@@ -12,7 +12,7 @@ import type { ResultadoTrendShot } from "@/lib/estudos/trendshot/motor"
 import type { InputsSensei, ResultadoSensei, Vela } from "@/lib/estudos/sensei/tipos"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
-import { type GraficoProps, type Tf, TV, inicioDaVela, marcasDosNegocios } from "./grafico-tipos"
+import { type GraficoProps, type Tf, type TipoGrafico, TV, inicioDaVela, marcasDosNegocios, pontoDoTipo } from "./grafico-tipos"
 import { TF_SEG_GRAFICO } from "@/lib/webtrader/timeframes"
 import PainelFerramenta from "./painel-ferramenta"
 import { carregarExtrasSensei, useCalculadoraSensei } from "./sensei-estudo"
@@ -211,6 +211,22 @@ export default function GraficoLeve(props: GraficoProps & {
   // As negociações já feitas têm o seu próprio conjunto de marcas: as setas dos estudos não as apagam.
   const negociosRef = useRef<any>(null)
   const linhaAskRef = useRef<any>(null)
+  /**
+   * Barras, linha e área: uma série POR CIMA da das velas, que fica transparente mas continua a ser
+   * a dona das linhas (posições, ordens, rascunho), das marcas e dos estudos — trocar de tipo não
+   * mexe em nada disso. `espelhar` mantém-na igual às velas (histórico e tick a tick).
+   */
+  const tipoRef = useRef<TipoGrafico>("velas")
+  const sobreRef = useRef<any>(null)
+  type VelaLW = { time: number; open: number; high: number; low: number; close: number; volume?: number }
+  const espelhar = (dados: VelaLW | VelaLW[]) => {
+    const s = sobreRef.current
+    if (!s || tipoRef.current === "velas") return
+    try {
+      if (Array.isArray(dados)) s.setData(dados.map((v) => pontoDoTipo(tipoRef.current, v)))
+      else s.update(pontoDoTipo(tipoRef.current, dados))
+    } catch { /* série a ser recriada */ }
+  }
   const marcaAguaRef = useRef<any>(null)
   const zonasRef = useRef<ZonasFerramenta | null>(null)
   const etiquetasEixoRef = useRef<Map<string, { pl: any; assinatura: string }>>(new Map())
@@ -351,6 +367,7 @@ export default function GraficoLeve(props: GraficoProps & {
       graficoRef.current = null
       serieRef.current = null
       marcasRef.current = null
+      sobreRef.current = null
       negociosRef.current = null
       linhaAskRef.current = null
       marcaAguaRef.current = null
@@ -423,6 +440,7 @@ export default function GraficoLeve(props: GraficoProps & {
       const cor = cores.size ? cores.get(c.time) : undefined
       return cor ? { ...c, color: cor, wickColor: cor, borderColor: cor } : c
     }))
+    espelhar(velas)
     ultimaVelaRef.current = velas.length ? velas[velas.length - 1] : null
     vivaDoPrecoRef.current = Boolean(viva && ultimaVelaRef.current && viva.time === ultimaVelaRef.current.time)
     velasRef.current = velas.map((v) => ({ t: v.time, o: v.open, h: v.high, l: v.low, c: v.close, v: v.volume }))
@@ -565,6 +583,7 @@ export default function GraficoLeve(props: GraficoProps & {
     try {
       // O volume de ticks continua a contar (os estudos usam-no — o POC do MTM Scanner); só não se desenha.
       serie.update({ time: nova.time, open: nova.open, high: nova.high, low: nova.low, close: nova.close })
+      espelhar(nova)
       const abriuVela = !u || t > u.time
       ultimaVelaRef.current = nova
       vivaDoPrecoRef.current = true
@@ -660,6 +679,30 @@ export default function GraficoLeve(props: GraficoProps & {
     if (!m || !pronto || estadoVelas === "a_carregar") return
     try { m.setMarkers(marcasDosNegocios(props.negocios ?? [], tf)) } catch { /* tempo fora das velas carregadas */ }
   }, [props.negocios, pronto, estadoVelas, tf])
+
+  // O tipo de gráfico: velas = a própria série; os outros = série por cima e velas transparentes.
+  const tipo = props.tipoGrafico ?? "velas"
+  useEffect(() => {
+    const chart = graficoRef.current, serie = serieRef.current
+    if (!chart || !serie || !pronto) return
+    tipoRef.current = tipo
+    if (sobreRef.current) { try { chart.removeSeries(sobreRef.current) } catch { /* ok */ } sobreRef.current = null }
+    const transparente = "rgba(0,0,0,0)"
+    serie.applyOptions(tipo === "velas"
+      ? { upColor: TV.sobe, downColor: TV.desce, wickUpColor: TV.sobe, wickDownColor: TV.desce, lastValueVisible: true }
+      : { upColor: transparente, downColor: transparente, wickUpColor: transparente, wickDownColor: transparente, lastValueVisible: false })
+    if (tipo === "velas") return
+    carregarLW().then((LW) => {
+      if (tipoRef.current !== tipo || !graficoRef.current) return
+      const precisao = { priceFormat: { type: "price" as const, precision: simbolo.digits, minMove: Math.pow(10, -simbolo.digits) }, priceLineVisible: false }
+      sobreRef.current = tipo === "barras"
+        ? graficoRef.current.addSeries(LW.BarSeries, { ...precisao, upColor: TV.sobe, downColor: TV.desce, thinBars: false })
+        : tipo === "linha"
+          ? graficoRef.current.addSeries(LW.LineSeries, { ...precisao, color: "#2962FF", lineWidth: 2 })
+          : graficoRef.current.addSeries(LW.AreaSeries, { ...precisao, lineColor: "#2962FF", topColor: "rgba(41,98,255,0.28)", bottomColor: "rgba(41,98,255,0.02)", lineWidth: 2 })
+      espelhar(velasRef.current.map((v) => ({ time: v.t, open: v.o, high: v.h, low: v.l, close: v.c })))
+    }).catch(() => { /* fica em velas */ })
+  }, [tipo, pronto, simbolo.digits]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // A linha do Ask (as velas são o Bid): tracejada, com o preço no eixo.
   const ask = preco?.ask
