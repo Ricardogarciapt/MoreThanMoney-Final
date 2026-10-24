@@ -478,6 +478,7 @@ export async function fecharPosicao(conta: Conta, positionId: string, volume?: n
     if (error) throw new ErroOrdem(500, 'não foi possível fechar a posição')
     if (!ganhou) throw new ErroOrdem(409, 'a posição já foi fechada entretanto')
     const { data: fechada } = await db.from('funded_positions').select('*').eq('id', pos.id).maybeSingle()
+    await seguidorasAcompanham(conta, linha, 1, motivo)
     return { fechada, plano }
   }
 
@@ -493,7 +494,22 @@ export async function fecharPosicao(conta: Conta, positionId: string, volume?: n
     db.from('funded_positions').select('*').eq('id', String(filhaId)).maybeSingle(),
     db.from('funded_positions').select('*').eq('id', pos.id).maybeSingle(),
   ])
+  await seguidorasAcompanham(conta, linha, Number(pos.volume) > 0 ? plano.volumeFechado / Number(pos.volume) : 0, motivo)
   return { fechada: filha, restante, plano }
+}
+
+/**
+ * Fecho à mão numa MESTRE → as seguidoras do mesmo sinal fecham na mesma proporção
+ * (lib/mestres/fecho-manual.ts). Import dinâmico: o cano dos sinais importa este ficheiro.
+ */
+async function seguidorasAcompanham(conta: Conta, linha: Record<string, unknown>, fracao: number, motivo: string) {
+  if (motivo !== 'manual') return
+  const { fecharSeguidorasDoFechoManual } = await import('@/lib/mestres/servidor/fecho-manual')
+  await fecharSeguidorasDoFechoManual({
+    contaMestreId: conta.id,
+    posicao: { id: String(linha.id), origem: (linha.origem as string | null) ?? null, ideia_ref: (linha.ideia_ref as string | null) ?? null },
+    fracao, motivo,
+  })
 }
 
 // ── modificar ─────────────────────────────────────────────────────────────
