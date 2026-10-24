@@ -18,6 +18,7 @@ import {
 import { contaInicial, montarSeletor, pastilhaDaConta, type EntradaSeletor } from "@/lib/webtrader/seletor"
 import { ehContaMestre } from "@/lib/webtrader/filtro-contas"
 import { moverConta, ordenarEntradas } from "@/lib/webtrader/ordem-contas"
+import { agruparContas } from "@/lib/webtrader/grupos-contas"
 import {
   contarPorTipo, filtrarEntradas, juntarOrdemFiltrada, normalizarFiltro, temDoisTipos,
   FILTRO_POR_OMISSAO, type FiltroContas,
@@ -369,12 +370,18 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                 </div>
                 {comFiltro && <BarraFiltro filtro={filtro} contagem={contagem} escolher={trocarFiltro} />}
                 {erroEtiqueta && <p className="border-b border-white/5 px-3 py-1.5 text-[10.5px] text-rose-300">{erroEtiqueta}</p>}
-                {visiveis.map((t) => t.real ? (
+                {/* Um cabeçalho por corretora e servidor, como nas plataformas de corretora. A organizar,
+                    a lista fica corrida: arrastar entre grupos tem de continuar a funcionar. */}
+                {(organizar ? [{ chave: "todas", titulo: "", contas: visiveis }] : agruparContas(visiveis)).map((g) => (
+                <div key={g.chave} role="group" aria-label={g.titulo || undefined}>
+                {g.titulo && <p className="px-3 pb-1 pt-2.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{g.titulo}</p>}
+                {g.contas.map((t) => t.real ? (
                   <div key={t.id} data-conta-id={t.id} className={`flex min-h-[44px] items-center gap-1.5 px-3 py-1 text-[12.5px] ${organizar && estaOculta(ocultas, t.id) ? "opacity-40" : ""} ${arrasto.aArrastar === t.id ? "bg-white/15 opacity-70" : t.id === ativa ? "bg-white/10" : "hover:bg-white/5"}`}>
                     <Pega id={t.id} arrasto={arrasto} />
                     {organizar && <Olho oculta={estaOculta(ocultas, t.id)} aberta={t.id === ativa} alternar={() => alternarOcultaConta(t.id)} />}
                     <button role="option" aria-selected={t.id === ativa} disabled={Boolean(t.real.bloqueada)} title={t.real.bloqueada ?? undefined} className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left disabled:opacity-50" onClick={() => escolher(t.id)}>
                       <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-black" style={{ background: COR_PLATAFORMA[t.real.plataforma] }}>{t.etiqueta}</span>
+                      <span className={`rounded px-1 text-[9.5px] font-bold ${t.real.demo ? "bg-violet-500/20 text-violet-300" : "bg-sky-500/20 text-sky-300"}`}>{t.real.demo ? "DEMO" : "LIVE"}</span>
                       <span className="rounded px-1.5 text-[10.5px] font-bold" style={{ color: corDoEstado(t.estadoCurto) }}>{t.estadoCurto}</span>
                       <span className="font-mono">{t.login ?? "—"}</span>
                       {t.etiquetaDoDono
@@ -416,6 +423,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                       <button type="button" aria-label="Sair desta conta" title="Sair desta conta" onClick={() => { apagarSessao(t.id); void carregar() }} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-white/5 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"><X className="h-4 w-4" /></button>
                     )}
                   </div>
+                ))}
+                </div>
                 ))}
                 <button onClick={() => { setMostrarEntrada(true); setSeletorAberto(false) }} className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-[12.5px] text-[#D2A63C]">
                   <LogIn className="h-4 w-4" /> {temSessaoMtm ? "Ligar ou entrar noutra conta" : "Entrar com a conta MTM ou credenciais"}
