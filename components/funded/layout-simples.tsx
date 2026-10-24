@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { usePathname } from "next/navigation"
+import { ehAppNativaPorUA } from "@/lib/app-nativa"
 import { BarChart3, CandlestickChart, ChevronDown, Layers, List, Loader2, Minus, Plus, User, X, type LucideIcon } from "lucide-react"
 import { normalizarVolume } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
@@ -45,7 +46,8 @@ const CALENDARIO = "__calendario"
  * gaveta, «Mais», resumo da conta): a barra só escolhe qual ocupa o ecrã.
  *
  * Dentro da app-mobile NÃO aparece: a app já tem a sua barra de separadores (e as apps nativas a do
- * sistema) — duas barras empilhadas era a mesma função duas vezes. Aí fica a gaveta, que tem as
+ * sistema) — duas barras empilhadas era a mesma função duas vezes. O mesmo nas apps nativas que abrem
+ * o /webtrader numa WebView com a barra delas (MTM Auto, MTM System — lib/app-nativa.ts). Aí fica a gaveta, que tem as
  * mesmas secções em separadores.
  */
 type Seccao = "mercados" | "grafico" | "negociacoes" | "insights" | "conta"
@@ -130,7 +132,9 @@ function Conteudo({ t }: { t: TraderBase }) {
   const aoLado = useMediaQuery(MQ_PAINEL_AO_LADO) && graficoVisivel
   // Gráfico escondido (ou gaveta ao lado): a gaveta fica aberta e com o espaço todo (sem pega).
   // Só no /webtrader sozinho (ver SECCOES); no tablet deitado a gaveta já fica ao lado.
-  const comSeccoes = (usePathname() ?? "").startsWith("/webtrader") && !aoLado
+  const [nativa, setNativa] = useState(false)
+  useEffect(() => { setNativa(ehAppNativaPorUA()) }, [])
+  const comSeccoes = (usePathname() ?? "").startsWith("/webtrader") && !aoLado && !nativa
   const [seccao, setSeccao] = useState<Seccao>("grafico")
   const cheia = !graficoVisivel || aoLado || (comSeccoes && seccao !== "grafico")
 
