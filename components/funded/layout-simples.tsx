@@ -4,10 +4,11 @@ import dynamic from "next/dynamic"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { usePathname } from "next/navigation"
 import { ehAppNativaPorUA } from "@/lib/app-nativa"
-import { BarChart3, CandlestickChart, ChevronDown, Layers, List, Loader2, Minus, Plus, User, X, type LucideIcon } from "lucide-react"
+import { BarChart3, CandlestickChart, ChevronDown, Layers, List, Loader2, User, X, type LucideIcon } from "lucide-react"
 import { normalizarVolume } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
 import AnelMargem from "./anel-margem"
+import LoteEditavel from "./lote-editavel"
 import FundedWatchlist from "./funded-watchlist"
 import { EstadoMercado, Sentimento } from "./estado-mercado"
 import { useRascunho } from "./rascunho-ordem"
@@ -162,10 +163,6 @@ function Conteudo({ t }: { t: TraderBase }) {
   }
 
   const passo = s.volume_step || 0.01
-  const mudarVolume = (delta: number) => {
-    const v = normalizarVolume(s, Math.max(s.volume_min, Math.round((t.volume + delta) / passo) * passo))
-    if (v != null) t.setVolume(v)
-  }
   const carregar = (lado: "buy" | "sell") => {
     if (umClique.ligado) {
       if (k.aEnviar || umClique.ocupado || envio) return
@@ -223,29 +220,26 @@ function Conteudo({ t }: { t: TraderBase }) {
 
   // A margem que esta ordem prende, antes de carregar: a mesma conta do ticket (rascunho), não outra.
   const margemOrdem = k.resumo.margem
+  // Barra de ordem à maneira das apps de corretora: a margem por cima; VENDER (bid) | lotes | COMPRAR
+  // (ask) com o preço grande e o lado por baixo; o lote escreve-se à mão (LoteEditavel).
   const botoes = t.podeNegociar && (
-    <>
-    <div className="flex shrink-0 items-center justify-center gap-1 border-t border-[#2A2E39] bg-[#131722] pt-1 text-[11px] text-zinc-400">
-      Margem da ordem: <span className="font-mono text-zinc-200">{margemOrdem == null ? "—" : `≈ ${usd(margemOrdem)} $`}</span>
-      {k.erros.margem && <span className="text-rose-300">· insuficiente</span>}
-    </div>
-    {/* SELL | volume | BUY — 44 px de altura no mínimo (dedo) */}
-    <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-stretch gap-1.5 bg-[#131722] px-2 py-1.5">
-      <button disabled={semPreco || ocupado} onClick={() => carregar("sell")} aria-label={`Vender ${t.volume} ${s.symbol}${umClique.ligado ? " (num clique)" : ""}`} className="min-h-[48px] rounded-xl bg-[#F23645] py-2 text-white active:brightness-90 disabled:opacity-40">
-        <span className="block text-[11px] font-bold tracking-wide">SELL</span>
-        <span className="block font-mono text-[15px] font-semibold">{px(preco?.bid, s.digits)}</span>
-      </button>
-      <div className="flex items-center gap-0.5 rounded-xl bg-white/5 px-1">
-        <button onClick={() => mudarVolume(-passo)} aria-label="menos volume" className="grid h-11 w-10 place-items-center text-zinc-300"><Minus className="h-4 w-4" /></button>
-        <span className="min-w-[3.2rem] text-center font-mono text-[13px] text-white" aria-label="volume em lotes">{t.volume}</span>
-        <button onClick={() => mudarVolume(passo)} aria-label="mais volume" className="grid h-11 w-10 place-items-center text-zinc-300"><Plus className="h-4 w-4" /></button>
+    <div className="shrink-0 border-t border-[#2A2E39] bg-[#131722] px-2 pb-1.5 pt-1">
+      <div className="flex items-center justify-center gap-1 pb-1 text-[11.5px] text-zinc-400">
+        Margem inicial: <span className="font-mono font-semibold text-zinc-100">{margemOrdem == null ? "—" : `~${usd(margemOrdem)} $`}</span>
+        {k.erros.margem && <span className="text-rose-300">· insuficiente</span>}
       </div>
-      <button disabled={semPreco || ocupado} onClick={() => carregar("buy")} aria-label={`Comprar ${t.volume} ${s.symbol}${umClique.ligado ? " (num clique)" : ""}`} className="min-h-[48px] rounded-xl bg-[#089981] py-2 text-white active:brightness-90 disabled:opacity-40">
-        <span className="block text-[11px] font-bold tracking-wide">BUY</span>
-        <span className="block font-mono text-[15px] font-semibold">{px(preco?.ask, s.digits)}</span>
-      </button>
+      <div className="grid grid-cols-[1fr_1.35fr_1fr] items-stretch gap-1.5">
+        <button disabled={semPreco || ocupado} onClick={() => carregar("sell")} aria-label={`Vender ${t.volume} ${s.symbol}${umClique.ligado ? " (num clique)" : ""}`} className="flex min-h-[52px] flex-col items-center justify-center rounded-xl bg-[#F23645] px-1 text-white active:brightness-90 disabled:bg-white/[0.06] disabled:text-zinc-500">
+          <span className="font-mono text-[15px] font-semibold leading-tight">{px(preco?.bid, s.digits)}</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider opacity-90">Vender</span>
+        </button>
+        <LoteEditavel volume={t.volume} passo={passo} simbolo={s.symbol} normalizar={(v) => normalizarVolume(s, Math.max(s.volume_min, v))} onMudar={t.setVolume} />
+        <button disabled={semPreco || ocupado} onClick={() => carregar("buy")} aria-label={`Comprar ${t.volume} ${s.symbol}${umClique.ligado ? " (num clique)" : ""}`} className="flex min-h-[52px] flex-col items-center justify-center rounded-xl bg-[#089981] px-1 text-white active:brightness-90 disabled:bg-white/[0.06] disabled:text-zinc-500">
+          <span className="font-mono text-[15px] font-semibold leading-tight">{px(preco?.ask, s.digits)}</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider opacity-90">Comprar</span>
+        </button>
+      </div>
     </div>
-    </>
   )
 
   const gavetaEl = (
