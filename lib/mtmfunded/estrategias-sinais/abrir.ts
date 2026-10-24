@@ -19,6 +19,7 @@ import {
   type ConfigSinais, type PonteAberta,
 } from './calculo'
 import type { Direcao } from '../simulado/matematica'
+import { loteDaCamada } from '@/lib/mestres/premium'
 
 export interface PedidoAbrir {
   accountId: string
@@ -38,6 +39,11 @@ export interface PedidoAbrir {
   loteFixo?: number | null
   /** lote MÍNIMO por conta (mtm_trading_accounts.lote_minimo, 197): o lote por saldo nunca fica abaixo disto */
   loteMinimo?: number | null
+  /**
+   * Premium em duas camadas (24/10): a parte do lote desta camada. Ausente = lote inteiro.
+   * Quando a conta não parte o lote em dois, a 2.ª camada é recusada e a 1.ª leva o lote todo.
+   */
+  camada?: { camada: 1 | 2; fracao: number } | null
 }
 
 export interface ResultadoAbrir {
@@ -169,7 +175,9 @@ export async function abrirSinalNaConta(p: PedidoAbrir): Promise<ResultadoAbrir>
     const volumeBase = p.loteFixo && p.loteFixo > 0
       ? Math.max(s.volume_min, Math.round(p.loteFixo / s.volume_step) * s.volume_step)
       : loteParaConta(Number(conta.sim_saldo ?? conta.saldo_inicial ?? 0), p.cfg, s)
-    const volume = aplicarLoteMinimo(volumeBase, p.loteMinimo, s)
+    const volumeCheio = aplicarLoteMinimo(volumeBase, p.loteMinimo, s)
+    const volume = p.camada ? loteDaCamada(volumeCheio, p.camada, s, p.loteMinimo) : volumeCheio
+    if (volume == null) throw new Error('o lote desta conta não parte em duas camadas: fica só a 1.ª, com o lote inteiro')
     const niveis = niveisAncorados({ direcao: p.direcao, entrada: p.entrada, sl: p.sl, tps: p.tps }, precoExec, s.digits)
     const { gestao, tpFinal } = gestaoDoSinal({ simbolo: s, direcao: p.direcao, precoExecucao: precoExec, volume, sl: niveis.sl, tps: niveis.tps, cfg: p.cfg })
 

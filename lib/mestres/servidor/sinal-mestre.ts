@@ -21,7 +21,7 @@ import { colocarPendenteDoSinal } from '@/lib/mtmfunded/estrategias-sinais/pende
 import { chaveDoSinal, configDoProvider, gestaoDoSinal, impressaoDoTrade, loteParaConta } from '@/lib/mtmfunded/estrategias-sinais/calculo'
 import { lerTravas, temTravas, travasDaMestre } from '@/lib/copia-contas/mestre-travas'
 import { lerConfigGlobal, lerEstrategiaMestre, type ModoEstrategia } from '../tipos'
-import { COMENTARIO_PREMIUM, SLUG_PREMIUM } from '../premium'
+import { chaveDaCamada, COMENTARIO_PREMIUM, SLUG_PREMIUM } from '../premium'
 
 export interface AlvoDaFonte {
   slug: string
@@ -116,6 +116,8 @@ export interface SinalWebhook {
    * gravada; o motor do VPS enche-a e expira-a. Ausente = a mercado, como sempre.
    */
   limite?: { preco: number; expiraEm: string } | null
+  /** Premium em duas camadas (24/10): esta camada e a sua parte do lote. Ausente = lote inteiro. */
+  camada?: { camada: 1 | 2; fracao: number; total: number } | null
 }
 
 export interface ResultadoSinalMestre {
@@ -161,7 +163,10 @@ export async function encaminharSinalParaMestre(s: SinalWebhook): Promise<Result
     // chave fixa `tv:` que juntava sinais diferentes.
     // Calculada AQUI, antes dos travões, para que uma não-execução também possa ficar em
     // `mestres_sinais` com a mesma chave que a execução teria tido (defeito 2, 24/09).
-    const chave = chaveDoSinal({ fonte: est.slug, msgId: s.externalRef && s.externalRef !== '0' ? `${alvo.prefixo ?? 'tv'}:${s.externalRef}` : null, symbol: s.symbol, direcao: s.direcao, entrada: ref, sl: s.sl })
+    const chaveSinal = chaveDoSinal({ fonte: est.slug, msgId: s.externalRef && s.externalRef !== '0' ? `${alvo.prefixo ?? 'tv'}:${s.externalRef}` : null, symbol: s.symbol, direcao: s.direcao, entrada: ref, sl: s.sl })
+    // Cada camada é uma trade com chave própria (a 2.ª fica com a de sempre — é a que os seguimentos já procuram).
+    const chave = s.camada ? chaveDaCamada(chaveSinal, s.camada.camada, s.camada.total) : chaveSinal
+    const camadaLote = s.camada ? { camada: s.camada.camada, fracao: s.camada.fracao } : null
     const impressao = impressaoDoTrade({ symbol: s.symbol, direcao: s.direcao, entrada: ref })
     /** Deixa o motivo da não-execução onde ele se procura: na linha do sinal desta estratégia. */
     const gravarNaoExecucao = async (motivo: string): Promise<void> => {
@@ -285,10 +290,12 @@ export async function encaminharSinalParaMestre(s: SinalWebhook): Promise<Result
         ? colocarPendenteDoSinal({
           accountId, estrategia: est.slug, chave, fonte: est.slug, comentario: alvo.comentario,
           symbol: s.symbol, direcao: s.direcao, preco: s.limite.preco, expiraEm: s.limite.expiraEm, sl: s.sl, tps: s.tps, cfg,
+          camada: camadaLote,
         })
         : abrirSinalNaConta({
           accountId, estrategia: est.slug, chave, impressao, fonte: est.slug, comentario: alvo.comentario,
           symbol: s.symbol, direcao: s.direcao, entrada: s.entrada, sl: s.sl, tps: s.tps, cfg,
+          camada: camadaLote,
         }))))))
     }
     await db.from('mestres_sinais').upsert({

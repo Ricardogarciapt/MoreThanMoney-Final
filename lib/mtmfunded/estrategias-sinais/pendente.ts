@@ -16,6 +16,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { aplicarLoteMinimo, gestaoDoSinal, loteParaConta, type ConfigSinais } from './calculo'
 import type { ResultadoAbrir } from './abrir'
 import type { Direcao } from '../simulado/matematica'
+import { loteDaCamada } from '@/lib/mestres/premium'
 
 export interface PedidoPendente {
   accountId: string
@@ -36,6 +37,11 @@ export interface PedidoPendente {
    * da CONTA e vale em qualquer caminho de entrada (a mercado em abrir.ts, por limite aqui).
    */
   loteMinimo?: number | null
+  /**
+   * Premium em duas camadas (24/10): a parte do lote desta camada. Ausente = lote inteiro.
+   * Quando a conta não parte o lote em dois, a 2.ª camada é recusada e a 1.ª leva o lote todo.
+   */
+  camada?: { camada: 1 | 2; fracao: number } | null
 }
 
 /** `lote_minimo` da conta (197); sem a coluna ou sem valor → null. Nunca lança. */
@@ -85,7 +91,9 @@ export async function colocarPendenteDoSinal(p: PedidoPendente): Promise<Resulta
     const s = simbolos[symbol]
 
     const minimo = p.loteMinimo !== undefined ? p.loteMinimo : await loteMinimoDaConta(p.accountId)
-    const volume = aplicarLoteMinimo(loteParaConta(Number(conta.sim_saldo ?? conta.saldo_inicial ?? 0), p.cfg, s), minimo, s)
+    const volumeCheio = aplicarLoteMinimo(loteParaConta(Number(conta.sim_saldo ?? conta.saldo_inicial ?? 0), p.cfg, s), minimo, s)
+    const volume = p.camada ? loteDaCamada(volumeCheio, p.camada, s, minimo) : volumeCheio
+    if (volume == null) throw new Error('o lote desta conta não parte em duas camadas: fica só a 1.ª, com o lote inteiro')
     const niveis = niveisDaLimite(p.direcao, p.preco, p.sl, p.tps)
     if (niveis.sl == null) throw new Error(`SL ${p.sl} do lado errado da limite ${p.preco}`)
     // A gestão mede-se a partir do preço da LIMITE — é a esse preço que a posição nasce.

@@ -227,8 +227,11 @@ export function bloqueioPelaAnterior(abertas: PosicaoMestrePremium[], symbol: st
  * errado do preço é recusada pela corretora (e pelo simulador), e esperar seria pior do que o mercado.
  */
 export const PREMIUM_ENTRADA_PADRAO = {
-  /** 'zona' = limite no meio da zona; 'mercado' = como era até 07/10 */
-  modo: 'zona' as 'zona' | 'mercado',
+  /**
+   * 'camadas' = metade do lote no 1.º valor da zona e metade no meio (24/10, decisão do dono);
+   * 'zona' = limite no meio da zona (07/10); 'mercado' = como era até 07/10.
+   */
+  modo: 'camadas' as 'camadas' | 'zona' | 'mercado',
   /** validade da limite — 60 min medidos (30–120 dão o mesmo sinal; 15 perde enchimentos) */
   validadeMin: 60,
   /** posições + pendentes Premium vivas ao mesmo tempo na mestre (o trader faz camadas) */
@@ -241,7 +244,7 @@ export function lerEntradaPremium(sinaisConfig: unknown): EntradaPremiumConfig {
   const c = (sinaisConfig && typeof sinaisConfig === 'object' ? (sinaisConfig as Record<string, unknown>).entradaPremium : null) as Record<string, unknown> | null
   const out = { ...PREMIUM_ENTRADA_PADRAO }
   if (!c || typeof c !== 'object') return out
-  if (c.modo === 'zona' || c.modo === 'mercado') out.modo = c.modo
+  if (c.modo === 'camadas' || c.modo === 'zona' || c.modo === 'mercado') out.modo = c.modo
   const v = Number(c.validadeMin)
   if (Number.isFinite(v) && v >= 5 && v <= 240) out.validadeMin = Math.round(v)
   const m = Number(c.maxVivas)
@@ -267,12 +270,16 @@ export function entradaPremium(p: {
   cfg: EntradaPremiumConfig
   agora: Date
   digits?: number
+  /** Preço-alvo da limite em vez do meio da zona (a 1.ª camada usa o 1.º valor da zona). */
+  alvo?: number | null
 }): EntradaPremium {
   if (p.cfg.modo === 'mercado') return { tipo: 'mercado', motivo: 'entradaPremium.modo = mercado' }
   const z = p.zona
   if (!z || !(Number(z[0]) > 0) || !(Number(z[1]) > 0)) return { tipo: 'mercado', motivo: 'sinal sem zona' }
   const f = Math.pow(10, p.digits ?? 2)
-  const meio = Math.round(((Number(z[0]) + Number(z[1])) / 2) * f) / f
+  const meio = p.alvo != null && p.alvo > 0
+    ? Math.round(p.alvo * f) / f
+    : Math.round(((Number(z[0]) + Number(z[1])) / 2) * f) / f
   const lado = p.direcao === 'buy' ? 1 : -1
   // O meio tem de ficar entre o SL e o TP1 — senão a zona foi mal lida e a limite seria um disparate.
   if ((meio - p.sl) * lado <= 0) return { tipo: 'recusar', motivo: `meio da zona (${meio}) do lado errado do SL (${p.sl})` }
@@ -286,6 +293,90 @@ export function entradaPremium(p: {
     }
   }
   return { tipo: 'limite', preco: meio, expiraEm: new Date(p.agora.getTime() + p.cfg.validadeMin * 60_000).toISOString() }
+}
+
+/** Uma camada da entrada: que parte do lote leva e onde entra. */
+export interface CamadaPremium {
+  /** 1 = 1.º valor da zona (onde o trader começa); 2 = meio da zona */
+  camada: 1 | 2
+  fracao: number
+  entrada: EntradaPremium
+}
+
+/**
+ * DUAS CAMADAS (24/10, decisão do dono): metade do lote no 1.º valor da zona — a ponta que o preço
+ * toca primeiro e de onde o trader conta os pips — e metade no meio, onde a mestre entrava desde 07/10.
+ *
+ * Porque: nos 61 sinais de 07/10 a 23/10 (velas de 5 min da OANDA, gestão 50/25/25 com BE no TP1) o
+ * meio entrou em 37 sinais (+690 pips) e o 1.º valor em 58 (+606). O trader anunciava resultado nos
+ * sinais em que a mestre ficava de fora, e era essa a distância que os clientes viam. Em camadas
+ * entra em 58 e dá +648 em lote cheio. A camada que ainda não encheu cai quando a outra chega ao TP1
+ * (`camadasParaAnular`), e ao fim da validade como qualquer limite.
+ *
+ * Fora do modo 'camadas', ou quando as duas camadas coincidem, é uma entrada só com o lote inteiro.
+ */
+export function entradasPremium(p: Parameters<typeof entradaPremium>[0]): CamadaPremium[] {
+  const meio = entradaPremium({ ...p, alvo: null })
+  const z = p.zona
+  if (p.cfg.modo !== 'camadas' || !z || !(Number(z[0]) > 0) || !(Number(z[1]) > 0) || Number(z[0]) === Number(z[1])) {
+    return [{ camada: 2, fracao: 1, entrada: meio }]
+  }
+  const primeiro = p.direcao === 'buy' ? Math.max(Number(z[0]), Number(z[1])) : Math.min(Number(z[0]), Number(z[1]))
+  const ponta = entradaPremium({ ...p, cfg: { ...p.cfg, modo: 'zona' }, alvo: primeiro })
+  // O preço já passou o meio: as duas camadas seriam a mercado ao mesmo preço — é uma entrada só.
+  if (meio.tipo === 'recusar') return [{ camada: 2, fracao: 1, entrada: meio }]
+  if (meio.tipo === 'mercado' && ponta.tipo !== 'limite') return [{ camada: 2, fracao: 1, entrada: meio }]
+  if (ponta.tipo === 'recusar') return [{ camada: 2, fracao: 1, entrada: meio }]
+  return [
+    { camada: 1, fracao: 0.5, entrada: ponta },
+    { camada: 2, fracao: 0.5, entrada: meio },
+  ]
+}
+
+/**
+ * Lote de uma camada: a fracção do lote cheio no passo do símbolo. `null` = a conta não parte o lote
+ * em duas (metade abaixo do mínimo dela) — fica só a 1.ª camada com o lote inteiro, para não DOBRAR
+ * o risco de quem opera com o lote mínimo. Pura.
+ */
+export function loteDaCamada(
+  loteCheio: number,
+  c: { camada: 1 | 2; fracao: number },
+  s: { volume_min: number; volume_step: number },
+  loteMinimo?: number | null,
+): number | null {
+  if (c.fracao >= 1) return loteCheio
+  const minimo = Math.max(s.volume_min, Number(loteMinimo) > 0 ? Number(loteMinimo) : 0)
+  const passos = Math.floor((loteCheio * c.fracao) / s.volume_step + 1e-9)
+  const parte = Math.round(passos * s.volume_step * 100) / 100
+  if (parte + 1e-9 < minimo) return c.camada === 1 ? loteCheio : null
+  // A 1.ª leva o resto quando o lote é ímpar no passo (0,05 → 0,03 + 0,02): soma sempre o lote cheio.
+  return c.camada === 1 ? Math.round((loteCheio - parte) * 100) / 100 : parte
+}
+
+/** Sufixo da chave do sinal por camada (a 2.ª camada guarda a chave de sempre). */
+export function chaveDaCamada(chave: string, camada: 1 | 2, total: number): string {
+  return total > 1 && camada === 1 ? `${chave}:c1` : chave
+}
+
+/**
+ * Que camadas pendentes anular? Pura. Uma camada que ainda não abriu cai quando a OUTRA camada do
+ * mesmo sinal está aberta e o preço já chegou ao TP1 desse sinal (regra do dono, 24/10).
+ */
+export function camadasParaAnular(p: {
+  pendentes: { id: string; base: string }[]
+  abertas: { base: string; direcao: 'buy' | 'sell'; tp1: number | null }[]
+  preco: (base: string) => { bid: number; ask: number } | null
+}): string[] {
+  const out: string[] = []
+  for (const o of p.pendentes) {
+    const a = p.abertas.find((x) => x.base === o.base && x.tp1 != null)
+    if (!a) continue
+    const px = p.preco(o.base)
+    if (!px) continue
+    const tocou = a.direcao === 'buy' ? px.bid >= (a.tp1 as number) : px.ask <= (a.tp1 as number)
+    if (tocou) out.push(o.id)
+  }
+  return out
 }
 
 /**

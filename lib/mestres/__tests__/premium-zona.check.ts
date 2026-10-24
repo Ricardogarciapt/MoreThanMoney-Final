@@ -93,10 +93,10 @@ t('tg:11589 SELL «4181 – 4186»: vendeu a 4181,64 (fundo da zona) — agora l
 })
 
 console.log('\n3. configuração')
-t('padrão: zona, 60 min, 2 vivas', () => assert.deepEqual(lerEntradaPremium(null), { modo: 'zona', validadeMin: 60, maxVivas: 2 }))
+t('padrão: camadas (24/10), 60 min, 2 vivas', () => assert.deepEqual(lerEntradaPremium(null), { modo: 'camadas', validadeMin: 60, maxVivas: 2 }))
 t('lê sinais_config.entradaPremium e sanea o que vier torto', () => {
   assert.deepEqual(lerEntradaPremium({ entradaPremium: { modo: 'mercado', validadeMin: 30, maxVivas: 3 } }), { modo: 'mercado', validadeMin: 30, maxVivas: 3 })
-  assert.deepEqual(lerEntradaPremium({ entradaPremium: { modo: 'x', validadeMin: 0, maxVivas: 99 } }), { modo: 'zona', validadeMin: 60, maxVivas: 2 })
+  assert.deepEqual(lerEntradaPremium({ entradaPremium: { modo: 'x', validadeMin: 0, maxVivas: 99 } }), { modo: 'camadas', validadeMin: 60, maxVivas: 2 })
 })
 
 console.log('\n4. exposição (camadas)')
@@ -132,10 +132,10 @@ t('gestão medida a partir da LIMITE (BE a +25 pips da limite, parcial no TP1 do
 })
 
 console.log('\n7. o cano')
-t('servidor/premium.ts: regra de exposição + entradaPremium + limite passada à mestre; já não usa bloqueioPelaAnterior', () => {
+t('servidor/premium.ts: regra de exposição + entradasPremium (camadas) + limite passada à mestre; já não usa bloqueioPelaAnterior', () => {
   const s = ler('lib/mestres/servidor/premium.ts')
   assert.match(s, /bloqueioPorExposicao\(/)
-  assert.match(s, /entradaPremium\(\{/)
+  assert.match(s, /entradasPremium\(\{/)
   assert.match(s, /limite: entrada\.tipo === 'limite'/)
   assert.doesNotMatch(s, /bloqueioPelaAnterior\(/)
   assert.match(s, /saidaDoTraderPremium\(p\.texto\)/)
