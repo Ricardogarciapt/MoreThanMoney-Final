@@ -22,9 +22,11 @@ import {
   resolvedPerpsChatId,
 } from '@/lib/telegram-channel-ids'
 
-/** Grupo «Ideias e sinais - Scanner TrendShot» (env; sem env → não publica no Telegram). */
+/** Grupo «Ideias e sinais - Scanner TrendShot». Env se definido; senão o id canónico. */
 export function grupoTelegramTrendshot(): string | null {
-  return normalizeEnvChatId(process.env.TELEGRAM_CHANNEL_TRENDSHOT ?? process.env.TELEGRAM_TRENDSHOT_CHAT_ID)
+  const c = CANONICAL_TELEGRAM_CHANNELS.trendshot
+  const env = c.envVars.map((k) => process.env[k]).find((v) => v?.trim())
+  return normalizeEnvChatId(env) ?? c.chatId
 }
 
 /** Canal da app → grupo Telegram que recebe o seguimento. */

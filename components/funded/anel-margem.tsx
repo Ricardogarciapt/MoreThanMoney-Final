@@ -1,7 +1,7 @@
 "use client"
 
 // `React` em âmbito: o teste desenha o anel com `npx tsx` (JSX clássico), sem o compilador do Next.
-import React from "react" // eslint-disable-line @typescript-eslint/no-unused-vars
+import React from "react"
 
 /**
  * O nível de margem num anel, para o topo do SIMPLE (no PRO o número já vai na barra de métricas).

@@ -5,6 +5,9 @@ import { Loader2, Plus, Radio, Route, Send, Users } from 'lucide-react'
 import { Aviso, Azulejo, BotaoLer, Chip, Faixa, Filtros, Painel, Pilula, Sparkline, Vazio, fmtNum, fmtQuando } from '@/components/admin/centro/ui'
 import type { EstadoPulso, RotaObservada } from '@/lib/telegram/painel-logica'
 import type { GrupoClassificado } from '@/lib/prospecao/dialogos'
+import TelegramForwarder from '@/components/admin/telegram-forwarder'
+import TelegramMenuBot from '@/components/admin/telegram-menu-bot'
+import TelegramGruposNovos from '@/components/admin/telegram-grupos-novos'
 
 /**
  * GESTÃO → TELEGRAM — os bots MTProto da VPS (relays de sinais e o mapa dos grupos) vistos do
@@ -181,6 +184,12 @@ export default function TelegramPainel() {
               })}
             </div>
           </Painel>
+
+          <TelegramForwarder grupos={dados.grupos.ok ? dados.grupos.lista : []} />
+
+          <TelegramMenuBot />
+
+          <TelegramGruposNovos />
 
           <Painel titulo="Rotas" icone={<Route className="h-3.5 w-3.5 text-[#D2A63C]" />} sub="O que cada fonte publicou no destino, nos últimos 30 dias. O gráfico mostra 14 dias.">
             {dados.rotas.length === 0 ? (

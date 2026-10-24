@@ -19,6 +19,8 @@ import { PopoverInputsGoldKiller, sinalDoGoldKiller, useInputsGoldKiller } from 
 import type { ResultadoGoldKiller } from "@/lib/estudos/goldkiller/tipos"
 import { PopoverInputsMTMScanner, sinalDoMTMScanner, useInputsMTMScanner } from "./mtmscanner-estudo"
 import type { ResultadoMTMScanner } from "@/lib/estudos/mtmscanner/tipos"
+import { sinalDoTrendShot } from "./trendshot-estudo"
+import type { ResultadoTrendShot } from "@/lib/estudos/trendshot/motor"
 
 export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
 
@@ -53,6 +55,8 @@ export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
  */
 
 const CHAVE_ESTUDOS = "mtmfunded_estudos"
+const CHAVE_NEGOCIOS = "mtmfunded_grafico_negocios"
+const CHAVE_ASK = "mtmfunded_grafico_ask"
 const CHAVE_TF = "mtmfunded_tf"
 
 /** Ecrã inteiro do gráfico: `api` (Fullscreen API do documento + ocupar a janela) ou `janela` (só ocupar a janela). */
@@ -117,6 +121,10 @@ export default function FundedGrafico(props: GraficoProps) {
   const setModo = (d: Direcao | null) => (rascunho ? rascunho.setFerramenta(d) : setModoLocal(d))
   const [tf, setTfEstado] = useState<Tf>("M5")
   const [estudos, setEstudos] = useState<ChaveEstudoWebtrader[]>(["Goldkiller"])
+  // O que o gráfico mostra além das velas (guardado no browser, como os estudos).
+  const [verNegocios, setVerNegocios] = useState(true)
+  const [verAsk, setVerAsk] = useState(false)
+  useEffect(() => { setVerNegocios(ler(CHAVE_NEGOCIOS, true)); setVerAsk(ler(CHAVE_ASK, false)) }, [])
 
   useEffect(() => {
     setEstudos(ler<ChaveEstudoWebtrader[]>(CHAVE_ESTUDOS, ["Goldkiller"]))
@@ -150,16 +158,19 @@ export default function FundedGrafico(props: GraficoProps) {
   const msLocal = ativos.includes("MTMScanner")
   const { inputs: inputsMS, definir: definirMS, repor: reporMS } = useInputsMTMScanner(user?.id)
   const [resultadoMS, setResultadoMS] = useState<ResultadoMTMScanner | null>(null)
+  const tsLocal = ativos.includes("TrendShot")
+  const [resultadoTS, setResultadoTS] = useState<ResultadoTrendShot | null>(null)
   const estudosSetas = useMemo(
-    () => ativos.filter((c) => !(senseiLocal && c === "Sensei") && !(gkLocal && c === "Goldkiller") && !(msLocal && c === "MTMScanner")),
-    [ativos, senseiLocal, gkLocal, msLocal],
+    () => ativos.filter((c) => !(senseiLocal && c === "Sensei") && !(gkLocal && c === "Goldkiller") && !(msLocal && c === "MTMScanner") && !(tsLocal && c === "TrendShot")),
+    [ativos, senseiLocal, gkLocal, msLocal, tsLocal],
   )
   const { sinais, ultimoAtivo: ultimoAlerta } = useSinaisEstudos(simbolo.symbol, estudosSetas)
   const sinalSensei = useMemo(() => (senseiLocal ? sinalDoSensei(resultadoSensei, simbolo.symbol) : null), [senseiLocal, resultadoSensei, simbolo.symbol])
   const sinalGK = useMemo(() => (gkLocal ? sinalDoGoldKiller(resultadoGK, simbolo.symbol) : null), [gkLocal, resultadoGK, simbolo.symbol])
   const sinalMS = useMemo(() => (msLocal ? sinalDoMTMScanner(resultadoMS, simbolo.symbol) : null), [msLocal, resultadoMS, simbolo.symbol])
-  // O sinal em jogo: o mais recente entre a trade ativa do Sensei, a viragem do GoldKiller, o B/S do MTM Scanner e o último alerta ativo.
-  const ultimoAtivo = [sinalSensei, sinalGK, sinalMS, ultimoAlerta].reduce<typeof ultimoAlerta>((melhor, x) => (x && (!melhor || x.em > melhor.em) ? x : melhor), null)
+  const sinalTS = useMemo(() => (tsLocal ? sinalDoTrendShot(resultadoTS, simbolo.symbol) : null), [tsLocal, resultadoTS, simbolo.symbol])
+  // O sinal em jogo: o mais recente entre a trade ativa do Sensei, a viragem do GoldKiller, o B/S do MTM Scanner, o cruzamento do TrendShot e o último alerta ativo.
+  const ultimoAtivo = [sinalSensei, sinalGK, sinalMS, sinalTS, ultimoAlerta].reduce<typeof ultimoAlerta>((melhor, x) => (x && (!melhor || x.em > melhor.em) ? x : melhor), null)
   const configSensei = useMemo(
     () => (senseiLocal ? { inputs: inputsSensei, paineis: true, aoCalcular: setResultadoSensei } : null),
     [senseiLocal, JSON.stringify(inputsSensei)], // eslint-disable-line react-hooks/exhaustive-deps
@@ -174,10 +185,12 @@ export default function FundedGrafico(props: GraficoProps) {
     [msLocal, JSON.stringify(inputsMS)], // eslint-disable-line react-hooks/exhaustive-deps
   )
 
+  const configTS = useMemo(() => (tsLocal ? { aoCalcular: setResultadoTS } : null), [tsLocal])
+
   const usarSinal = () => {
     // Só pré-preenche: nunca envia, nem com a negociação num clique ligada.
     if (!ultimoAtivo || !rascunho) return
-    const local = ultimoAtivo.id.startsWith("sensei-local:") || ultimoAtivo.id.startsWith("goldkiller-local:") || ultimoAtivo.id.startsWith("mtmscanner-local:")
+    const local = ultimoAtivo.id.startsWith("sensei-local:") || ultimoAtivo.id.startsWith("goldkiller-local:") || ultimoAtivo.id.startsWith("mtmscanner-local:") || ultimoAtivo.id.startsWith("trendshot-local:")
     rascunho.aplicar({ lado: ultimoAtivo.direcao, entrada: ultimoAtivo.entrada, sl: ultimoAtivo.sl, tp: ultimoAtivo.tp, origem: "scanner", ideiaRef: local ? null : ultimoAtivo.id, escolhido: false })
   }
 
@@ -224,7 +237,7 @@ export default function FundedGrafico(props: GraficoProps) {
           const completo = true
           return (
             <span key={e.chave} className="flex shrink-0 items-center gap-1">
-              <button onClick={() => alternarEstudo(e.chave)} title={completo ? (e.chave === "Sensei" ? "MTM Sensei completo no gráfico (DEMAs, cloud, estrutura, OB, sinais e painéis)" : e.chave === "Goldkiller" ? "MTM GoldKiller completo no gráfico (níveis HLCC4, faixas, BUY/SELL)" : "MTM Scanner V3.5 completo no gráfico (DEMAs, POC, B/S, Entry/Stop/TP, estrutura)") : `Setas dos sinais ${e.rotulo} no gráfico`} className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[11px]"
+              <button onClick={() => alternarEstudo(e.chave)} title={completo ? (e.chave === "Sensei" ? "MTM Sensei completo no gráfico (DEMAs, cloud, estrutura, OB, sinais e painéis)" : e.chave === "Goldkiller" ? "MTM GoldKiller completo no gráfico (níveis HLCC4, faixas, BUY/SELL)" : e.chave === "MTMScanner" ? "MTM Scanner V3.5 completo no gráfico (DEMAs, POC, B/S, Entry/Stop/TP, estrutura)" : "TrendShot no gráfico (EMA 20/50/238, sinais no cruzamento dentro do horário 08–21, Entry/SL/TP1–4)") : `Setas dos sinais ${e.rotulo} no gráfico`} className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[11px]"
                 style={on ? { borderColor: e.cor, color: e.cor, background: `${e.cor}1f` } : { borderColor: TV.borda, color: TV.textoFraco }}>
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: on ? e.cor : TV.textoFraco }} /> {e.rotulo}
               </button>
@@ -235,6 +248,13 @@ export default function FundedGrafico(props: GraficoProps) {
           )
         })}
         <div className="ml-auto flex shrink-0 gap-1 pl-2">
+          {([["Negociações", verNegocios, () => { setVerNegocios(!verNegocios); guardar(CHAVE_NEGOCIOS, !verNegocios) }, "Mostrar no gráfico as últimas 100 negociações deste símbolo"],
+             ["Ask", verAsk, () => { setVerAsk(!verAsk); guardar(CHAVE_ASK, !verAsk) }, "Mostrar a linha do preço Ask (as velas são o Bid)"]] as const).map(([nome, on, alternar, titulo]) => (
+            <button key={nome} type="button" onClick={alternar} title={titulo} aria-pressed={on} className={`${botao} text-[11px]`}
+              style={on ? { borderColor: TV.azul, color: "#fff", background: "rgba(41,98,255,0.2)" } : { borderColor: TV.borda, color: TV.textoFraco }}>
+              {nome}
+            </button>
+          ))}
           <button type="button" onClick={() => (cheio ? sair() : void entrar())} className={botao}
             title={cheio ? "Sair do ecrã inteiro (Esc)" : "Gráfico em ecrã inteiro"} aria-label={cheio ? "sair do ecrã inteiro" : "gráfico em ecrã inteiro"} aria-pressed={Boolean(cheio)}
             style={cheio ? { borderColor: TV.azul, color: "#fff", background: "rgba(41,98,255,0.2)" } : { borderColor: TV.borda, color: TV.texto }}>
@@ -279,7 +299,7 @@ export default function FundedGrafico(props: GraficoProps) {
       <div className={mostrar ? "contents" : "hidden"}>
       {/* A trade ativa do Sensei já tem as linhas ENTRY/SL/EXIT do próprio estudo e o GoldKiller os
           seus níveis: só o alerta (não o sinal local) leva as linhas ténues de referência. */}
-      <GraficoLeve {...props} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} tf={tf} modo={modo} setModo={setModo} />
+      <GraficoLeve {...props} negocios={verNegocios ? props.negocios : []} linhaAsk={verAsk} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} trendshot={configTS} tf={tf} modo={modo} setModo={setModo} />
       </div>
     </div>
   )

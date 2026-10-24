@@ -16,15 +16,20 @@ A leitura faz-se com a `GMI_SESSION_STRING` — sessão do UTILIZADOR. Gerar/ren
 ```
 A conta tem de ESTAR nos canais-fonte. A string é a sessão da conta — só no .env do VPS.
 
-## Rotas (`RELAY_ROUTES` no .env — JSON numa linha)
+## Rotas — no backoffice (desde 23/10/2026)
+As rotas editam-se em **Gestão → Telegram → Forwarder** (tabela `telegram_rotas`). O relay pede-as a
+`/api/telegram/relay-rotas` de 2 em 2 min (`RELAY_ROTAS_SEC`) com o `RELAY_SECRET`. Se o site falhar,
+fica com as que tinha; no arranque sem site usa o `RELAY_ROUTES` abaixo. `RELAY_ROTAS_SITE=0` desliga.
+Rota nova criada no painel começa na última mensagem da fonte (não republica histórico).
+
+## Rotas de recurso (`RELAY_ROUTES` no .env — JSON numa linha)
 ```json
-[{"name":"gold-did","source":-1003452689502,"dest":"-1002424441843","filter":"gold"}]
+[{"name":"signal-master-elite","source":-1003671953091,"dest":"-1002424441843","filter":"gold"}]
 ```
 - `source`: id numérico OU título/username (resolvido dos diálogos da sessão no arranque).
 - `dest`: chat MTM onde o bot publica; o relay-post deriva daí o canal da app/motor.
-- `filter`: `gold` (setups/TP/SL/pips) ou `all`; `header` opcional; `enabled:false` desliga.
+- `filter`: `gold` (setups/TP/SL/pips), `all` ou `astro`; `header` opcional; `enabled:false` desliga.
 - Sem `RELAY_ROUTES`, o modo legado `GMI_SOURCE_ID`/`GMI_DEST_CHAT` continua a funcionar.
-- O state antigo migra sozinho para a rota `gold-did` (não repete histórico).
 
 ## O que é publicado
 Só conteúdo de trading (filtro `gold`): `GOLD BUY/SELL SETUP|NOW|ZONE`, `HIT TP/SL`,
@@ -42,3 +47,14 @@ journalctl -u gmi-relay -f              # ver logs
 ```
 
 Ir live: pôr `GMI_DRY_RUN=0` no `.env` e `sudo systemctl restart gmi-relay`.
+
+## Grupos e canais novos (desde 23/10)
+
+Gestão → Telegram → Grupos e bots novos grava pedidos em `telegram_grupos_novos`. A cada leitura
+das rotas, o relay pede os pendentes a `/api/telegram/relay-pedidos?max=N` (mesmo segredo), cria-os
+com a sessão pessoal (`CreateChannelRequest`), põe o bot escolhido como administrador, exporta o
+link de convite e devolve o resultado por POST ao mesmo endpoint.
+
+- `RELAY_GRUPOS_MAX_DIA` (omissão 3): limite contado no state do relay, além do limite do site.
+- `RELAY_GRUPOS_SITE=0` desliga. Com `GMI_DRY_RUN=1` nunca cria nada.
+- Um pedido reservado que falhe a meio fica `a_criar` e não volta a sair: nunca se cria duas vezes.

@@ -3,8 +3,8 @@
  *
  * Caminho próprio e curto, à parte dos gates dos outros scanners: o alerta do Trendshot traz só a
  * direcção (e o `{{close}}`), e os níveis saem de `niveisTrendshot`. Publica no chat da app
- * `sinais-trendshot` e no grupo Telegram «Ideias e sinais - Scanner TrendShot» (env
- * TELEGRAM_CHANNEL_TRENDSHOT). O acompanhamento por preço (alvos/BE/stop no chat e no Telegram) é o
+ * `sinais-trendshot` e no grupo Telegram «Ideias e sinais - Scanner TrendShot» (id canónico em
+ * lib/telegram-channel-ids, env TELEGRAM_CHANNEL_TRENDSHOT sobrepõe). O acompanhamento por preço (alvos/BE/stop no chat e no Telegram) é o
  * do tracker — o canal está em CANAIS_SO_SEGUIMENTO. A entrada vai também à mestre «MTM Auto
  * Trendshot» pelo mesmo `encaminharSinalParaMestre` das outras estratégias: sem linha em
  * mestres_estrategias, ou em `sinal_modo` desligado, não abre nada (o motivo fica no registo).

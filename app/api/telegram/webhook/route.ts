@@ -919,7 +919,14 @@ export async function POST(request: NextRequest) {
         const { tratarComandoDeEquipa } = await import("@/lib/backoffice-telegram")
         const r = await tratarComandoDeEquipa(supabase, chatId, text, body.message?.from?.username ?? null)
         if (r) await sendMessage(r.texto, r.teclado)
-        else await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.")
+        else {
+          // Os comandos extra criados em Gestão → Telegram → Menu do bot (lib/telegram/menu-bot.ts).
+          const { lerMenu } = await import("@/lib/telegram/menu-bot-servidor")
+          const { respostaDoExtra } = await import("@/lib/telegram/menu-bot")
+          const extra = respostaDoExtra(await lerMenu(supabase), text)
+          if (extra) await sendMessage(extra.texto, extra.teclado)
+          else await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.")
+        }
       }
 
       // Mensagem LIVRE (não-comando) em DM → ADMIN fala com a IA do site · OU UID da corretora · OU funil IA persona

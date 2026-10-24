@@ -3,6 +3,7 @@
 import type { Direcao, MapaPrecos } from "@/lib/mtmfunded/simulado/matematica"
 import type { SimboloFicha, PrecoVivo } from "./api"
 import type { SinalEstudo } from "./use-sinais-estudos"
+import { inicioDaVela } from "@/lib/webtrader/timeframes"
 
 /**
  * O CONTRATO DOS GRÁFICOS DO WEBTRADER.
@@ -22,6 +23,42 @@ export interface PosicaoGrafico {
 export interface AlertaGrafico { id: string; preco: number; nota?: string | null }
 export interface OrdemGrafico { id: string; direcao: Direcao; tipo: "limit" | "stop"; volume: number; preco: number; sl: number | null; tp: number | null }
 export interface Ferramenta { direcao: Direcao; entrada: number; sl: number; tp: number }
+
+/**
+ * Uma negociação JÁ FEITA, para desenhar no gráfico (como as plataformas de corretora mostram as
+ * últimas 100): a entrada ou a saída, na vela em que aconteceu, com o resultado na saída.
+ */
+export interface NegocioGrafico {
+  id: string
+  /** Segundos unix. */
+  em: number
+  preco: number | null
+  /** Lado da POSIÇÃO (uma saída de um buy é um buy com tipo «saida»). */
+  direcao: Direcao
+  tipo: "entrada" | "saida"
+  lucro?: number | null
+}
+
+/** Do histórico para o gráfico — puro, testado em __tests__/negocios-grafico.check.ts. */
+export function marcasDosNegocios(negocios: NegocioGrafico[], tf: string, limite = 100): Array<{
+  time: number; position: "belowBar" | "aboveBar"; color: string; shape: "arrowUp" | "arrowDown" | "circle"; text: string
+}> {
+  return [...negocios]
+    .filter((n) => Number.isFinite(n.em))
+    .sort((a, b) => a.em - b.em)
+    .slice(-limite)
+    .map((n) => {
+      const compra = n.direcao === "buy"
+      if (n.tipo === "entrada") {
+        return { time: inicioDaVela(n.em, tf), position: compra ? "belowBar" : "aboveBar", color: compra ? "#089981" : "#F23645", shape: compra ? "arrowUp" : "arrowDown", text: compra ? "B" : "S" }
+      }
+      const l = n.lucro
+      return {
+        time: inicioDaVela(n.em, tf), position: compra ? "aboveBar" : "belowBar", color: l == null ? "#787B86" : l >= 0 ? "#089981" : "#F23645", shape: "circle",
+        text: l == null ? "×" : `${l >= 0 ? "+" : ""}${l.toFixed(2)}`,
+      }
+    })
+}
 
 export interface GraficoProps {
   simbolo: SimboloFicha
@@ -44,6 +81,10 @@ export interface GraficoProps {
   /** Sufixo da chave do timeframe guardado — cada gráfico do multi-gráfico lembra o seu. */
   chaveTf?: string
   alertas?: AlertaGrafico[]
+  /** Negociações já feitas neste símbolo (vazio = nada a desenhar). */
+  negocios?: NegocioGrafico[]
+  /** Linha do Ask no gráfico (o preço das velas é o Bid). */
+  linhaAsk?: boolean
   /**
    * As acções sobre a conta. Devolvem a promessa do pedido: o gráfico passa-as pela negociação num
    * clique (um-clique.tsx), que confirma ou não, e repõe a linha se falhar ou for cancelada.
