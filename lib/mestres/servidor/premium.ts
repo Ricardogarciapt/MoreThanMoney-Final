@@ -19,8 +19,8 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
-  accaoSeguimentoPremium, bloqueioPorExposicao, decidirSinalPremium, entradaPremium, lerEntradaPremium, legadoPremiumCortado,
-  saidaDoTraderPremium, SLUG_PREMIUM, type SinalLido,
+  accaoSeguimentoPremium, bloqueioPorExposicao, decidirSinalPremium, entradasPremium, lerEntradaPremium, legadoPremiumCortado,
+  camadasParaAnular, saidaDoTraderPremium, SLUG_PREMIUM, type SinalLido,
 } from '../premium'
 import type { ModoEstrategia } from '../tipos'
 import { encaminharSinalParaMestre } from './sinal-mestre'
@@ -79,14 +79,16 @@ export function limparCachePremium(): void {
 async function vivasPremiumDaMestre(contaMestreId: string): Promise<number> {
   const db = getSupabaseAdmin()
   const [pos, ord] = await Promise.all([
-    db.from('funded_positions').select('id', { count: 'exact', head: true })
-      .eq('account_id', contaMestreId).eq('estado', 'aberta').like('ideia_ref', `sinal:${SLUG_PREMIUM}:%`).is('mae_id', null),
-    db.from('funded_orders').select('id', { count: 'exact', head: true })
-      .eq('account_id', contaMestreId).eq('estado', 'pendente').like('ideia_ref', `sinal:${SLUG_PREMIUM}:%`),
+    db.from('funded_positions').select('ideia_ref')
+      .eq('account_id', contaMestreId).eq('estado', 'aberta').like('ideia_ref', `sinal:${SLUG_PREMIUM}:%`).is('mae_id', null).limit(200),
+    db.from('funded_orders').select('ideia_ref')
+      .eq('account_id', contaMestreId).eq('estado', 'pendente').like('ideia_ref', `sinal:${SLUG_PREMIUM}:%`).limit(200),
   ])
   if (pos.error) throw new Error(`posições da mestre: ${pos.error.message}`)
   if (ord.error) throw new Error(`pendentes da mestre: ${ord.error.message}`)
-  return (pos.count ?? 0) + (ord.count ?? 0)
+  // Conta SINAIS, não ordens: as duas camadas de um sinal (24/10) são uma exposição só.
+  const sinais = new Set([...(pos.data ?? []), ...(ord.data ?? [])].map((r) => String(r.ideia_ref ?? '').replace(/:c1$/, '')))
+  return sinais.size
 }
 
 let cacheCfg: { v: unknown; em: number } | null = null
@@ -117,11 +119,18 @@ async function sairDoSinal(contaMestreId: string, paiMessageId: number, tudo: bo
   const padrao = tudo ? `sinal:${SLUG_PREMIUM}:%` : ref
   const contas = await contasDoPremium(contaMestreId)
   const ex = await import('@/lib/mtmfunded/simulado/execucao')
-  // `like` sem curingas é igualdade: o mesmo filtro serve aos dois casos.
-  const { data: ordens } = await db.from('funded_orders').update({ estado: 'cancelada' })
-    .in('account_id', contas).eq('estado', 'pendente').like('ideia_ref', padrao).select('id')
-  const { data: posicoes } = await db.from('funded_positions').select('id, account_id')
-    .in('account_id', contas).eq('estado', 'aberta').like('ideia_ref', padrao)
+  // Um sinal em duas camadas tem duas referências: a de sempre e a da 1.ª camada (`:c1`).
+  const refs = [ref, `${ref}:c1`]
+  const { data: ordens } = tudo
+    ? await db.from('funded_orders').update({ estado: 'cancelada' })
+      .in('account_id', contas).eq('estado', 'pendente').like('ideia_ref', padrao).select('id')
+    : await db.from('funded_orders').update({ estado: 'cancelada' })
+      .in('account_id', contas).eq('estado', 'pendente').in('ideia_ref', refs).select('id')
+  const { data: posicoes } = tudo
+    ? await db.from('funded_positions').select('id, account_id')
+      .in('account_id', contas).eq('estado', 'aberta').like('ideia_ref', padrao)
+    : await db.from('funded_positions').select('id, account_id')
+      .in('account_id', contas).eq('estado', 'aberta').in('ideia_ref', refs)
   let fechadas = 0
   for (const p of posicoes ?? []) {
     try {
@@ -219,33 +228,97 @@ export async function premiumPeloMotor(p: PedidoPremiumMotor): Promise<Resultado
       const px = precos[decisao.sinal.symbol]
       if (px && precoFresco(em[decisao.sinal.symbol])) tick = { bid: px.bid, ask: px.ask }
     } catch { /* sem tick → decide pela zona */ }
-    const entrada = entradaPremium({
+    // Duas camadas (24/10): metade no 1.º valor da zona e metade no meio — ver `entradasPremium`.
+    const camadas = entradasPremium({
       direcao: decisao.sinal.direcao, zona: decisao.sinal.zona, sl: decisao.sinal.sl, tp1: decisao.sinal.tps[0] ?? null,
       preco: tick, cfg: cfgEntrada, agora: new Date(),
     })
-    if (entrada.tipo === 'recusar') return await recusar(entrada.motivo)
+    const recusada = camadas.find((c) => c.entrada.tipo === 'recusar')
+    if (recusada && recusada.entrada.tipo === 'recusar') return await recusar(recusada.entrada.motivo)
 
-    const r = await encaminharSinalParaMestre({
-      fonte: 'premium',
-      symbol: decisao.sinal.symbol,
-      direcao: decisao.sinal.direcao,
-      // níveis ABSOLUTOS do trader (como a rota antiga: sl/tp «from_room»); a entrada é a limite no
-      // meio da zona, ou o mercado quando o preço já está do lado bom dela.
-      entrada: null,
-      entradaReferencia: decisao.sinal.referencia,
-      sl: decisao.sinal.sl,
-      tps: decisao.sinal.tps,
-      externalRef: msgRef,
-      limite: entrada.tipo === 'limite' ? { preco: entrada.preco, expiraEm: entrada.expiraEm } : null,
-    })
-    const contas = r.contas ?? []
-    const abertas = contas.filter((c) => c.estado === 'aberta').length
-    const pendentes = contas.filter((c) => c.estado === 'pendente').length
-    const detalhe = r.modo === 'live'
-      ? `mestre SIM: ${abertas} aberta(s), ${pendentes} limite(s) @${entrada.tipo === 'limite' ? entrada.preco : 'mercado'} de ${contas.length} conta(s)${r.motivo ? ` (${r.motivo})` : ''}`
-      : `mestre SIM ${r.modo}${r.motivo ? ` (${r.motivo})` : ''}`
+    const partes: string[] = []
+    let modo: ModoEstrategia = est.sinalModo
+    for (const c of camadas) {
+      const entrada = c.entrada
+      const r = await encaminharSinalParaMestre({
+        fonte: 'premium',
+        symbol: decisao.sinal.symbol,
+        direcao: decisao.sinal.direcao,
+        // níveis ABSOLUTOS do trader (como a rota antiga: sl/tp «from_room»); a entrada é a limite da
+        // camada, ou o mercado quando o preço já está do lado bom dela.
+        entrada: null,
+        entradaReferencia: decisao.sinal.referencia,
+        sl: decisao.sinal.sl,
+        tps: decisao.sinal.tps,
+        externalRef: msgRef,
+        limite: entrada.tipo === 'limite' ? { preco: entrada.preco, expiraEm: entrada.expiraEm } : null,
+        camada: camadas.length > 1 ? { camada: c.camada, fracao: c.fracao, total: camadas.length } : null,
+      })
+      modo = r.modo
+      const contas = r.contas ?? []
+      const abertas = contas.filter((x) => x.estado === 'aberta').length
+      const pendentes = contas.filter((x) => x.estado === 'pendente').length
+      const onde = entrada.tipo === 'limite' ? entrada.preco : 'mercado'
+      partes.push(r.modo === 'live'
+        ? `${camadas.length > 1 ? `camada ${c.camada}: ` : ''}${abertas} aberta(s), ${pendentes} limite(s) @${onde} de ${contas.length} conta(s)${r.motivo ? ` (${r.motivo})` : ''}`
+        : `${camadas.length > 1 ? `camada ${c.camada} ` : ''}${r.modo}${r.motivo ? ` (${r.motivo})` : ''}`)
+    }
+    const detalhe = modo === 'live' ? `mestre SIM: ${partes.join(' · ')}` : `mestre SIM ${partes.join(' · ')}`
     return { ...base, detalhe }
   } catch (e) {
     return { ...base, detalhe: `erro: ${e instanceof Error ? e.message : String(e)}` }
+  }
+}
+
+/**
+ * DUAS CAMADAS — a que não abriu cai quando a outra chega ao TP1 (regra do dono, 24/10).
+ *
+ * Corre de minuto a minuto (cron do signal-tracker, do lado da Vercel). Para cada limite Premium
+ * ainda pendente procura a OUTRA camada do mesmo sinal: se ela está aberta numa conta e o preço já
+ * chegou ao TP1 desse sinal, a pendente é cancelada — entrar agora seria comprar o movimento que a
+ * primeira camada já apanhou. Idempotente; nunca lança.
+ */
+export async function anularCamadasAoTp1(): Promise<number> {
+  try {
+    const db = getSupabaseAdmin()
+    const { data: ordens } = await db.from('funded_orders').select('id, account_id, symbol, ideia_ref')
+      .eq('estado', 'pendente').like('ideia_ref', `sinal:${SLUG_PREMIUM}:%`).limit(2000)
+    if (!ordens?.length) return 0
+    const base = (ref: string) => ref.replace(/:c1$/, '')
+    const outra = (ref: string) => (ref.endsWith(':c1') ? base(ref) : `${ref}:c1`)
+    const outras = [...new Set(ordens.map((o) => outra(String(o.ideia_ref))))]
+    const { data: posicoes } = await db.from('funded_positions').select('ideia_ref, symbol')
+      .eq('estado', 'aberta').in('ideia_ref', outras).limit(2000)
+    if (!posicoes?.length) return 0
+    const abertasRefs = new Set(posicoes.map((p) => String(p.ideia_ref)))
+    // TP1 e direcção do sinal: da ponte da camada aberta (níveis absolutos do trader).
+    const chaves = [...abertasRefs].map((r) => r.replace(/^sinal:/, ''))
+    const { data: pontes } = await db.from('funded_sinal_posicoes').select('chave, direcao, tps')
+      .eq('estrategia', SLUG_PREMIUM).in('chave', chaves).limit(2000)
+    const nivel = new Map<string, { direcao: 'buy' | 'sell'; tp1: number | null }>()
+    for (const p of pontes ?? []) {
+      const tps = Array.isArray(p.tps) ? (p.tps as unknown[]).map(Number).filter((n) => n > 0) : []
+      nivel.set(base(`sinal:${p.chave}`), { direcao: p.direcao === 'sell' ? 'sell' : 'buy', tp1: tps[0] ?? null })
+    }
+    const simbolos = [...new Set(posicoes.map((p) => String(p.symbol)))]
+    const { carregarPrecos } = await import('@/lib/mtmfunded/simulado/execucao')
+    const { precos } = await carregarPrecos(simbolos, [])
+    const simboloDe = new Map(posicoes.map((p) => [base(String(p.ideia_ref)), String(p.symbol)]))
+    const anular = camadasParaAnular({
+      pendentes: ordens.filter((o) => abertasRefs.has(outra(String(o.ideia_ref)))).map((o) => ({ id: String(o.id), base: base(String(o.ideia_ref)) })),
+      abertas: [...nivel.entries()].map(([b, n]) => ({ base: b, ...n })),
+      preco: (b) => {
+        const px = precos[simboloDe.get(b) ?? '']
+        return px ? { bid: px.bid, ask: px.ask } : null
+      },
+    })
+    if (!anular.length) return 0
+    const { data: canceladas } = await db.from('funded_orders').update({ estado: 'cancelada' })
+      .in('id', anular).eq('estado', 'pendente').select('id')
+    if (canceladas?.length) console.log(`[premium camadas] ${canceladas.length} camada(s) por abrir anulada(s) ao TP1`)
+    return canceladas?.length ?? 0
+  } catch (e) {
+    console.warn('[premium camadas] anular ao TP1 falhou:', e instanceof Error ? e.message : String(e))
+    return 0
   }
 }

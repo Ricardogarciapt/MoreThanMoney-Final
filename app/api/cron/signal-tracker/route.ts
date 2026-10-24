@@ -15,6 +15,10 @@ export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // Premium em duas camadas: a que não abriu cai quando a outra chega ao TP1. Corre sempre aqui,
+  // esteja o tracker no VPS ou não (o bundle do VPS só a teria depois de ser recompilado).
+  const { anularCamadasAoTp1 } = await import('@/lib/mestres/servidor/premium')
+  await anularCamadasAoTp1()
   // Corre no VPS (mtm-vigias) enquanto o pulso estiver fresco — aqui só sai.
   if (await vigiaNaVps('signal-tracker')) return NextResponse.json({ ok: true, vps: true })
   try {
