@@ -111,7 +111,7 @@ export default function LayoutPro({ t }: { t: TraderBase }) {
   return (
     <ProvedorRascunho t={t} ficha={simbolo} volume={t.volume} setVolume={t.setVolume}>
       <AplicarPrefill prefill={t.prefill} simboloInicial={t.simboloInicial} />
-      <BarraPro t={t} layout={layout} setLayout={setLayout} onF9={abrirTicket} />
+      <BarraPro t={t} layout={layout} setLayout={setLayout} onF9={abrirTicket} semMetricas={!estreito} />
       {t.avisos}
       <FaixaPrefill t={t} />
       <div className="min-h-0 flex-1">
@@ -152,7 +152,7 @@ export default function LayoutPro({ t }: { t: TraderBase }) {
               </Panel>
               {puxador(true)}
               <Panel id="baixo" order={2} defaultSize={40} minSize={10} collapsible collapsedSize={4}>
-                <PainelInferior paineis={t.paineis} chaveGuardar={t.chavePaineis} />
+                <PainelInferior paineis={t.paineis} chaveGuardar={t.chavePaineis} metricas={metricasDaConta(t)} />
               </Panel>
             </PanelGroup>
           ) : (
@@ -162,7 +162,7 @@ export default function LayoutPro({ t }: { t: TraderBase }) {
               <div className="min-h-0 flex-1 border-t border-[#2A2E39]">
                 <PanelGroup direction="horizontal" autoSaveId={tablet ? "mtmfunded-pro2-sem-grafico-tablet" : "mtmfunded-pro2-sem-grafico"}>
                   <Panel id="baixo" order={1} defaultSize={tablet ? 60 : 72} minSize={30}>
-                    <PainelInferior paineis={t.paineis} chaveGuardar={t.chavePaineis} />
+                    <PainelInferior paineis={t.paineis} chaveGuardar={t.chavePaineis} metricas={metricasDaConta(t)} />
                   </Panel>
                   {puxador()}
                   {direita}
@@ -176,8 +176,15 @@ export default function LayoutPro({ t }: { t: TraderBase }) {
   )
 }
 
-function BarraPro({ t, layout, setLayout, onF9 }: { t: TraderBase; layout: Layout; setLayout: (l: Layout) => void; onF9: () => void }) {
-  const escolhidas = t.metricas.filter(([k]) => ["Saldo", "Equity", "Flutuante", "Margem livre", "Nível margem", "Perda diária restante", "Perda máx. restante", "Objetivo"].includes(k))
+/** O resumo da conta que o PRO mostra (a barra de cima no estreito, a linha de baixo no largo). */
+function metricasDaConta(t: TraderBase) {
+  return t.metricas.filter(([k]) => ["Saldo", "Equity", "Flutuante", "Margem", "Margem livre", "Nível margem", "Perda diária restante", "Perda máx. restante", "Objetivo", "Contribuído", "Valor de mercado", "Resultado", "Resultado %"].includes(k))
+}
+
+function BarraPro({ t, layout, setLayout, onF9, semMetricas }: { t: TraderBase; layout: Layout; setLayout: (l: Layout) => void; onF9: () => void; semMetricas: boolean }) {
+  // No PRO largo o resumo vai para a linha dos separadores de baixo (metricasDaConta): aqui só fica
+  // no estreito, onde o painel de baixo não tem espaço para ele.
+  const escolhidas = semMetricas ? [] : metricasDaConta(t)
   const layouts: Array<[Layout, string, typeof Square]> = [["1", "1 gráfico (Alt+1)", Square], ["2h", "2 lado a lado (Alt+2)", Columns2], ["2v", "2 em pilha (Alt+3)", Rows2], ["4", "4 gráficos (Alt+4)", Grid2x2]]
   return (
     <div className="flex shrink-0 items-center gap-3 overflow-x-auto border-b border-[#2A2E39] bg-[#1E222D] px-2.5 py-1 text-[11.5px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
