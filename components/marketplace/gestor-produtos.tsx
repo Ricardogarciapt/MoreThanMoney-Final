@@ -46,6 +46,8 @@ type Produto = {
   tipo: string; imagem_url: string | null; imagens: string[] | null; preco_cents: number; moeda: string
   recorrente: boolean; periodicidade: string; requer_morada: boolean
   conteudo_url: string | null; conteudo_nota: string | null
+  /** 211 — vídeo público de apresentação. */
+  video_url?: string | null
   estado: string; activo: boolean; dono: string; educator_id: string | null
   partilha_pct: number | null; stripe_price_id: string | null; checkout_externo_url: string | null
   campanha_pct: number | null; campanha_inicio: string | null; campanha_fim: string | null
@@ -93,7 +95,7 @@ const VAZIO = {
   // `periodicidadeParaGravar`, que a põe em «unica» se não houver recorrência — e é aí que a
   // coerência com a restrição da 157 se garante, e não na memória do formulário.
   periodicidade: "mensal",
-  conteudo_url: "", conteudo_nota: "", imagem_url: "",
+  conteudo_url: "", conteudo_nota: "", imagem_url: "", video_url: "",
   /** A galeria, SEM a capa. A capa é `imagem_url` e não se repete aqui. */
   imagens: [] as string[],
   campanha_pct: 0, campanha_inicio: "", campanha_fim: "", campanha_tier: "app_member",
@@ -162,6 +164,7 @@ export default function GestorProdutos() {
       // de pagamento único abre em «mensal» — o que ele passaria a ser se alguém ligasse a caixa.
       periodicidade: p.periodicidade && p.periodicidade !== "unica" ? p.periodicidade : "mensal",
       conteudo_url: p.conteudo_url ?? "", conteudo_nota: p.conteudo_nota ?? "", imagem_url: p.imagem_url ?? "",
+      video_url: p.video_url ?? "",
       imagens: Array.isArray(p.imagens) ? p.imagens : [],
       campanha_pct: Number(p.campanha_pct ?? 0),
       campanha_inicio: paraInput(p.campanha_inicio), campanha_fim: paraInput(p.campanha_fim),
@@ -191,6 +194,7 @@ export default function GestorProdutos() {
         periodicidade: periodicidadeParaGravar(form.recorrente, form.periodicidade),
         conteudo_url: form.conteudo_url || null, conteudo_nota: form.conteudo_nota || null,
         imagem_url: form.imagem_url || null,
+        video_url: form.video_url.trim() || null,
         // Limpo AQUI e outra vez na rota. Não por desconfiança do servidor: é para o tecto de 8 e a
         // ausência da capa serem a mesma regra nos dois lados — a versão do ecrã existe para a
         // pessoa ver o que vai gravar, a do servidor para valer para quem não passe por este ecrã.
@@ -788,6 +792,19 @@ export default function GestorProdutos() {
                 maioria compra.
               </span>
             </div>
+
+            <label className="sm:col-span-2 block">
+              <span className="text-xs text-zinc-400">Vídeo de apresentação (opcional)</span>
+              <input
+                value={form.video_url}
+                onChange={(e) => setForm({ ...form, video_url: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-100"
+                placeholder="https://…mp4 ou link do YouTube"
+              />
+              <span className="mt-1 block text-[11px] text-zinc-500">
+                Público: aparece na ficha por cima da descrição. Não é o conteúdo pago.
+              </span>
+            </label>
 
             <label className="sm:col-span-2 block">
               <span className="text-xs text-zinc-400">Link do conteúdo — para onde vai o comprador depois de pagar</span>

@@ -11,6 +11,8 @@ import { LmsImageUploadField } from "@/components/admin/lms-image-upload-field"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { ScheduleEditor } from "@/components/live/schedule-editor"
+import { MateriaisDaSalaAdmin } from "@/components/admin/materiais-da-sala-admin"
+import type { MaterialDaSala } from "@/lib/lms/aulas"
 import { ptWallTimeToUtcIso, toNaiveLocalWall } from "@/lib/pt-time"
 import { LMS_LANGUAGES, DEFAULT_LMS_LANGUAGE } from "@/lib/lms/languages"
 import { toast } from "sonner"
@@ -52,6 +54,8 @@ type Stream = {
   playlist_url?: string | null
   playlist_title?: string | null
   playlist_access_tier?: "free" | "all" | "app_member" | "premium" | "vip" | null
+  /** Anexos da sala (211): guias em PDF, playlists a mais, links. */
+  materiais?: MaterialDaSala[]
   academy?: { name: string }
   educator?: { display_name: string }
 }
@@ -1184,6 +1188,8 @@ export default function LiveSessionsManager() {
                   </select>
                 </div>
               </div>
+
+              <MateriaisDaSalaAdmin streamId={s.id} materiais={s.materiais} onChange={load} />
 
               <ScheduleEditor streamId={s.id} apiBase="/api/admin/live-sessions/schedules" title="Horário semanal desta sala" />
               {(s.category || s.scheduled_start_at) && (

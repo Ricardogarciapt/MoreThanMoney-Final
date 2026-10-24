@@ -6,7 +6,7 @@
  * Três coisas que falham caladas: uma sala desaparecer, uma sala fechada ser escondida (e deixar
  * de se vender), e gravações pagas ficarem com cadeado porque alguém juntou os dois níveis.
  */
-import { SEM_ACADEMIA, oQuePodeFazer, ordenarSalas, porAcademia, resolverAcademia, temGravacoes, type SalaDeAula } from './aulas'
+import { SEM_ACADEMIA, entregarMateriais, materialParaGravar, oQuePodeFazer, ordenarSalas, porAcademia, resolverAcademia, temGravacoes, type MaterialDaSala, type SalaDeAula } from './aulas'
 
 const falhas: string[] = []
 const teste = (nome: string, condicao: boolean) => { if (!condicao) falhas.push(nome) }
@@ -210,9 +210,36 @@ const CRIPTO = { name: 'Criptomoedas', slug: 'criptomoedas' }
   teste('«Outras salas» também abre', resolverAcademia(SEM_ACADEMIA, comOrfa)?.salas.length === 1)
 }
 
+// ── OS MATERIAIS DA SALA (211) ──────────────────────────────────────────────
+{
+  /**
+   * O CASO MAU: o PDF de uma sala Premium a sair com o link para quem não pagou. O título fica
+   * (é montra); o `url` não.
+   */
+  const guias: MaterialDaSala[] = [
+    { id: '2', titulo: 'Guia B', url: 'https://x/b.pdf', tipo: 'pdf', ordem: 2 },
+    { id: '1', titulo: 'Guia A', url: 'https://x/a.pdf', tipo: 'pdf', ordem: 1 },
+  ]
+  const fechados = entregarMateriais(guias, false)
+  teste('sem nível, nenhum link sai', fechados.every((m) => m.url === null && m.bloqueado))
+  teste('mas os títulos continuam na montra', fechados.length === 2)
+  const abertos = entregarMateriais(guias, true)
+  teste('com nível, os links chegam', abertos.every((m) => Boolean(m.url)))
+  teste('pela ordem do admin', abertos[0].id === '1')
+  teste('entregar não mexe na lista original', guias[0].id === '2' && guias[0].url === 'https://x/b.pdf')
+
+  // A escrita do admin.
+  teste('http não entra', !materialParaGravar({ titulo: 'x', url: 'http://x/a.pdf', tipo: 'pdf' }).ok)
+  teste('javascript: não entra', !materialParaGravar({ titulo: 'x', url: 'javascript:alert(1)', tipo: 'link' }).ok)
+  teste('sem título não entra', !materialParaGravar({ titulo: '  ', url: 'https://x/a.pdf', tipo: 'pdf' }).ok)
+  teste('tipo inventado não entra', !materialParaGravar({ titulo: 'x', url: 'https://x/a.pdf', tipo: 'zip' }).ok)
+  const bom = materialParaGravar({ titulo: ' Guia ', url: 'https://x/a.pdf', tipo: 'PDF', ordem: -3 })
+  teste('um material certo entra limpo', bom.ok && bom.material.titulo === 'Guia' && bom.material.tipo === 'pdf' && bom.material.ordem === 0)
+}
+
 if (falhas.length) {
   console.error(`lms/aulas: ${falhas.length} falha(s)`)
   for (const f of falhas) console.error('  · ' + f)
   process.exit(1)
 }
-console.log('lms/aulas: nenhuma sala se perde, as pastas vazias abrem, slug ruim cai na grelha, e as gravações têm nível próprio ✓')
+console.log('lms/aulas: nenhuma sala se perde, as pastas vazias abrem, slug ruim cai na grelha, as gravações têm nível próprio, e os materiais fechados não levam link ✓')

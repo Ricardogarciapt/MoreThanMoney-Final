@@ -30,6 +30,7 @@ import Sufixo from "@/components/marketplace/sufixo-periodo"
 import { CaixaConsentimentoEmail } from "@/components/consentimento-email-caixa"
 import { CAIXA_PRE_MARCADA } from "@/lib/captacao-consentimento"
 import { ordenarVariantes, poupancaPct, varianteInicial } from "@/lib/marketplace/grupos"
+import { comoMostrarVideo } from "@/lib/marketplace/video"
 
 type Preco = {
   baseCents: number; cents: number; descontoPct: number
@@ -41,6 +42,8 @@ type Produto = {
   periodicidade: string
   /** A galeria, SEM a capa — a capa é `imagem_url`. Ver `galeriaDoProduto`. */
   imagens: string[] | null
+  /** 211 — vídeo público de apresentação (mp4 ou YouTube). */
+  video_url?: string | null
   educador: { display_name: string; specialty: string | null } | null
   /** Nome de marca do vendedor. Nulo = assina o educador. */
   vendedor_nome?: string | null
@@ -309,6 +312,31 @@ export default function FichaProduto({ slug }: { slug: string }) {
               </p>
             )}
           </div>
+
+          {/* O VÍDEO DE APRESENTAÇÃO (211), por cima da descrição: quem não lê, vê. mp4 vai para
+              o <video> nativo (metadata só, para a ficha abrir depressa no telemóvel); YouTube vai
+              para o embed. Um link que a ficha não sabe desenhar não desenha nada. */}
+          {(() => {
+            const video = comoMostrarVideo(p.video_url)
+            if (!video) return null
+            return (
+              <div className="overflow-hidden rounded-xl border border-zinc-800 bg-black">
+                {video.tipo === "youtube" ? (
+                  <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
+                    <iframe
+                      src={video.embed}
+                      title={`Apresentação · ${p.titulo}`}
+                      className="absolute inset-0 h-full w-full"
+                      allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <video src={video.url} controls playsInline preload="metadata" className="w-full" />
+                )}
+              </div>
+            )
+          })()}
 
           {p.descricao && (
             <div className="space-y-3 text-sm leading-relaxed text-zinc-300">

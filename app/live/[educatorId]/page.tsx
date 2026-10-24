@@ -10,6 +10,7 @@ import EducatorRatingsSection from "@/components/live/educator-ratings-section"
 import EducatorCoursesCard, { type CourseItem } from "@/components/live/educator-courses-card"
 import { useAuth } from "@/contexts/auth-context"
 import { Badge } from "@/components/ui/badge"
+import type { MaterialDaSala } from "@/lib/lms/aulas"
 
 type EducatorPublic = {
   id: string
@@ -123,14 +124,25 @@ export default function LiveByEducatorPage() {
           fetch(`/api/live-sessions/educators/${educatorId}/ratings`).then((r) => r.json()),
           fetch(`/api/live-sessions/streams?educatorId=${educatorId}`).then((r) => r.json()).catch(() => ({ data: [] })),
         ])
-        const roomList: CourseItem[] = (allStreamsRes.data || [])
-          .filter((s: { playlist_url?: string | null }) => s.playlist_url)
-          .map((s: { id: string; title?: string; playlist_url: string; playlist_title?: string | null; playlist_access_tier?: string | null }) => ({
+        type SalaComCurso = {
+          id: string
+          title?: string
+          playlist_url?: string | null
+          playlist_title?: string | null
+          playlist_access_tier?: string | null
+          materiais?: MaterialDaSala[] | null
+        }
+        // Uma sala entra no card se tiver playlist OU materiais (211): os guias de uma estratégia
+        // podem chegar antes das aulas gravadas.
+        const roomList: CourseItem[] = ((allStreamsRes.data || []) as SalaComCurso[])
+          .filter((s) => s.playlist_url || s.materiais?.length)
+          .map((s) => ({
             id: `room-${s.id}`,
             title: s.playlist_title || `${s.title ?? "Sala"} · Aulas`,
-            url: s.playlist_url,
+            url: s.playlist_url ?? "",
             tier: s.playlist_access_tier ?? "all",
             origin: "room" as const,
+            materiais: s.materiais ?? [],
           }))
         setRoomCourses(roomList)
         const first = (streamsRes.data || [])[0]

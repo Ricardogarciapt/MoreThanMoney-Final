@@ -29,6 +29,75 @@ export interface SalaDeAula {
   educator?: { id?: string; display_name?: string | null; avatar_url?: string | null } | null
   academy?: { id?: string; name?: string | null; slug?: string | null } | null
   scheduled_start_at?: string | null
+  /** Os anexos da sala (211). Chegam na mesma resposta que a sala — ver `entregarMateriais`. */
+  materiais?: MaterialDaSala[] | null
+}
+
+/** O que um anexo de sala pode ser (211). Igual ao `check` da coluna `tipo`. */
+export const TIPOS_DE_MATERIAL = ['pdf', 'video', 'link'] as const
+export type TipoDeMaterial = (typeof TIPOS_DE_MATERIAL)[number]
+
+/**
+ * UM ANEXO DE UMA SALA — o guia em PDF de uma estratégia, uma playlist a mais, um link.
+ *
+ * `url: null` quer dizer FECHADO: o servidor tirou o link porque a pessoa não tem o nível das
+ * gravações da sala. O título fica — é montra, como a sala fechada que se mostra com cadeado.
+ */
+export interface MaterialDaSala {
+  id: string
+  titulo: string
+  descricao?: string | null
+  url: string | null
+  tipo: TipoDeMaterial
+  ordem?: number | null
+  bloqueado?: boolean
+}
+
+/**
+ * Valida o que o admin escreveu antes de ir para a base.
+ *
+ * Só https: um `http://` abre com aviso de inseguro no telemóvel, e um `javascript:` posto num
+ * `href` corria no browser de quem carregasse. O tipo desconhecido não se adivinha — recusa-se.
+ */
+export function materialParaGravar(
+  b: Record<string, unknown>,
+): { ok: true; material: { titulo: string; descricao: string | null; url: string; tipo: TipoDeMaterial; ordem: number } } | { ok: false; erro: string } {
+  const titulo = String(b?.titulo ?? '').trim().slice(0, 200)
+  if (!titulo) return { ok: false, erro: 'Dá um título ao material.' }
+  const url = String(b?.url ?? '').trim()
+  let valido = false
+  try { valido = new URL(url).protocol === 'https:' } catch { valido = false }
+  if (!valido) return { ok: false, erro: 'O link tem de começar por https://' }
+  const tipo = String(b?.tipo ?? '').trim().toLowerCase() as TipoDeMaterial
+  if (!TIPOS_DE_MATERIAL.includes(tipo)) return { ok: false, erro: 'Tipo inválido (pdf, video ou link).' }
+  const n = Math.round(Number(b?.ordem))
+  return {
+    ok: true,
+    material: {
+      titulo,
+      descricao: String(b?.descricao ?? '').trim().slice(0, 500) || null,
+      url,
+      tipo,
+      ordem: Number.isFinite(n) ? Math.min(999, Math.max(0, n)) : 0,
+    },
+  }
+}
+
+/**
+ * Os materiais de uma sala, já com o nível aplicado — a decisão que a rota toma por linha.
+ *
+ * Usa o MESMO nível das gravações (`playlist_access_tier ?? access_tier`, como `oQuePodeFazer`):
+ * o guia em PDF acompanha as aulas gravadas, e abrir um sem o outro não faz sentido. Quem não tem
+ * o nível recebe o título com `url: null` — o link nunca sai do servidor para quem não o pagou.
+ */
+export function entregarMateriais(
+  materiais: MaterialDaSala[],
+  podeRever: boolean,
+): MaterialDaSala[] {
+  const ordenados = [...materiais].sort(
+    (a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || String(a.titulo).localeCompare(String(b.titulo), 'pt'),
+  )
+  return podeRever ? ordenados : ordenados.map((m) => ({ ...m, url: null, bloqueado: true }))
 }
 
 export interface AcademiaComSalas {
