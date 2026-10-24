@@ -62,7 +62,6 @@ import {
   Globe,
   Settings,
   BarChart3,
-  Bell,
   ZoomIn,
   ZoomOut,
   Minimize,
@@ -1347,19 +1346,6 @@ export default function ScannerMobile({
             <CandlestickChart style={{ width: 13, height: 13 }} />
             Negociar no Web trader
           </Link>
-        </div>
-      )}
-
-      {/* Alertas MTM — acesso centralizado (webview app iOS/Android) */}
-      {!isFullscreen && !isDesktop && (
-        <div className="px-4 pt-3">
-          <a
-            href="/app-mobile?tab=trading-alerts"
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D2A63C]/50 bg-[#D2A63C]/10 py-2.5 text-sm font-semibold text-[#D2A63C] transition-colors hover:bg-[#D2A63C]/20"
-          >
-            <Bell style={{ width: 16, height: 16 }} />
-            {t("scanner.mtmAlertsConfigure")}
-          </a>
         </div>
       )}
 
