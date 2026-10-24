@@ -100,13 +100,18 @@ export default function ScannerPage() {
                 {/* Content */}
                 <div className="w-full md:w-1/2">
                   <div className="mb-4">
-                    <h2 className="text-2xl font-bold text-white">{scanner.name}</h2>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-2xl font-bold text-white">{scanner.name}</h2>
+                      {landingSlug(scanner.key) && (
+                        <Link
+                          href={`/scanner/${landingSlug(scanner.key)}`}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-[#D2A63C]/60 bg-[#D2A63C]/10 px-3.5 py-1.5 text-sm font-semibold text-[#E9C46A] transition-colors hover:bg-[#D2A63C] hover:text-black"
+                        >
+                          Saber aqui como funciona <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      )}
+                    </div>
                     <p className="text-[#D2A63C] font-medium text-sm mt-0.5">{scanner.subtitle}</p>
-                    {landingSlug(scanner.key) && (
-                      <Link href={`/scanner/${landingSlug(scanner.key)}`} className="inline-flex items-center gap-1 text-sm text-gray-300 hover:text-[#E9C46A] mt-2">
-                        Ver apresentação <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    )}
                   </div>
 
                   <p className="text-gray-300 mb-5 leading-relaxed">{scanner.description}</p>
