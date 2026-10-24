@@ -392,7 +392,8 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
   const t: TraderBase = {
     accountId: `wt:${contaRef}`,
     posicoes: posicoes.map((p) => ({ id: p.id, symbol: p.symbol, direcao: p.direcao, volume: p.volume, preco_entrada: p.precoEntrada, sl: p.sl, tp: p.tp })),
-    ordens: ordens.map((o) => ({ id: o.id, symbol: o.symbol, direcao: o.direcao, tipo: o.tipo, volume: o.volume, preco: o.preco, sl: o.sl, tp: o.tp })),
+    // Stop Limit fica fora do gráfico: arrastar a linha mexia no stop sem o limite. Vê-se e cancela-se no painel.
+    ordens: ordens.flatMap((o) => o.tipo === "stop_limit" ? [] : [{ id: o.id, symbol: o.symbol, direcao: o.direcao, tipo: o.tipo, volume: o.volume, preco: o.preco, sl: o.sl, tp: o.tp }]),
     mapa, vivos, fichas, simbolo: ficha, volume, setVolume, podeNegociar,
     selecionar, selecionarPorNome, obterFicha, executar, enviarPedido, setVisiveis, setExtras,
     prefill, simboloInicial, metricas,
@@ -715,11 +716,11 @@ function TabelaOrdens({ ordens, digitos, podeNegociar, onCancelar, onModificar }
         {ordens.map((o) => (
           <tr key={o.id} className="border-t border-white/5">
             <td className="px-2 py-1"><b>{o.symbol}</b> <span className="font-mono text-zinc-500">{o.simboloCorretora}</span></td>
-            <td>{o.direcao.toUpperCase()} {o.tipo}</td>
+            <td>{o.direcao.toUpperCase()} {o.tipo === "stop_limit" ? <>stop limit{o.precoLimite != null && <span className="text-zinc-500"> → {o.precoLimite.toFixed(digitos)}</span>}</> : o.tipo}</td>
             <td className="font-mono">{o.volume}</td>
-            <td><CelulaNivel rotulo={`Preço da ordem ${o.symbol}`} valor={o.preco} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(o, v, o.sl, o.tp).catch(() => {})} /></td>
-            <td><CelulaNivel rotulo={`SL da ordem ${o.symbol}`} valor={o.sl} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(o, o.preco, v, o.tp).catch(() => {})} /></td>
-            <td><CelulaNivel rotulo={`TP da ordem ${o.symbol}`} valor={o.tp} digitos={digitos} podeNegociar={podeNegociar} onMudar={(v) => void onModificar(o, o.preco, o.sl, v).catch(() => {})} /></td>
+            <td><CelulaNivel rotulo={`Preço da ordem ${o.symbol}`} valor={o.preco} digitos={digitos} podeNegociar={podeNegociar && o.tipo !== "stop_limit"} onMudar={(v) => void onModificar(o, v, o.sl, o.tp).catch(() => {})} /></td>
+            <td><CelulaNivel rotulo={`SL da ordem ${o.symbol}`} valor={o.sl} digitos={digitos} podeNegociar={podeNegociar && o.tipo !== "stop_limit"} onMudar={(v) => void onModificar(o, o.preco, v, o.tp).catch(() => {})} /></td>
+            <td><CelulaNivel rotulo={`TP da ordem ${o.symbol}`} valor={o.tp} digitos={digitos} podeNegociar={podeNegociar && o.tipo !== "stop_limit"} onMudar={(v) => void onModificar(o, o.preco, o.sl, v).catch(() => {})} /></td>
             <td className="pr-2 text-right">{podeNegociar && <button onClick={() => void onCancelar(o).catch(() => {})} className="rounded bg-white/10 px-2 py-1">Cancelar</button>}</td>
           </tr>
         ))}

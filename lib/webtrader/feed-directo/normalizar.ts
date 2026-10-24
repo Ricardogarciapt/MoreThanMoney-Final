@@ -180,7 +180,7 @@ export interface PosicaoMetaApiMinima {
 }
 export interface OrdemMetaApiMinima {
   id: string | number; symbol: string; type: string; openPrice?: number; volume?: number; currentVolume?: number
-  stopLoss?: number; takeProfit?: number; time?: Date | string
+  stopLoss?: number; takeProfit?: number; time?: Date | string; stopLimitPrice?: number
 }
 export interface ContaMetaApiMinima {
   balance?: number; equity?: number; margin?: number; freeMargin?: number; marginLevel?: number; currency?: string
@@ -197,12 +197,12 @@ export function posicaoDeMetaApi(p: PosicaoMetaApiMinima, mapa: MapaSimbolos): P
 
 export function ordemDeMetaApi(o: OrdemMetaApiMinima, mapa: MapaSimbolos): OrdemWT | null {
   const t = String(o.type ?? '').toUpperCase()
-  if (t.includes('STOP_LIMIT')) return null
-  const tipo = t.includes('LIMIT') ? 'limit' : t.includes('STOP') ? 'stop' : null
+  const tipo = t.includes('STOP_LIMIT') ? 'stop_limit' : t.includes('LIMIT') ? 'limit' : t.includes('STOP') ? 'stop' : null
   if (!tipo) return null
   return {
     id: String(o.id), symbol: canonico(mapa, o.symbol), simboloCorretora: o.symbol, direcao: t.includes('SELL') ? 'sell' : 'buy', tipo,
     volume: Number(o.currentVolume ?? o.volume ?? 0), preco: Number(o.openPrice ?? 0),
+    precoLimite: tipo === 'stop_limit' ? num(o.stopLimitPrice) : null,
     sl: num(o.stopLoss) || null, tp: num(o.takeProfit) || null, criadaEm: iso(o.time),
   }
 }

@@ -164,11 +164,14 @@ export function posicaoMt5(p: MetaApiPosition): PosicaoWT {
 
 export function ordemMt5(o: MetaApiPendingOrder & { volume?: number; currentVolume?: number }): OrdemWT | null {
   const t = String(o.type ?? '').toUpperCase()
-  const tipo = t.includes('LIMIT') ? 'limit' : t.includes('STOP') ? 'stop' : null
-  if (!tipo || t.includes('STOP_LIMIT')) return null
+  // STOP_LIMIT antes de LIMIT: o nome contém os dois. Antes escondia-se — a ordem existia na conta e
+  // o WebTrader não a mostrava.
+  const tipo = t.includes('STOP_LIMIT') ? 'stop_limit' : t.includes('LIMIT') ? 'limit' : t.includes('STOP') ? 'stop' : null
+  if (!tipo) return null
   return {
     id: String(o.id), symbol: canonicoDe(o.symbol), simboloCorretora: o.symbol, direcao: t.includes('SELL') ? 'sell' : 'buy', tipo,
     volume: Number(o.currentVolume ?? o.volume ?? 0), preco: Number(o.openPrice ?? 0),
+    precoLimite: tipo === 'stop_limit' ? numOuNull((o as { stopLimitPrice?: number }).stopLimitPrice) : null,
     sl: numOuNull(o.stopLoss) || null, tp: numOuNull(o.takeProfit) || null, criadaEm: isoDe(o.time),
   }
 }
