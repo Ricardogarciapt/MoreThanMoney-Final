@@ -42,6 +42,8 @@ export default function FundedWatchlist(props: {
   detalhe?: boolean
   /** Ocupar a altura do painel (sem o máximo de 52vh do telemóvel). */
   preencher?: boolean
+  /** Abrir já com o cursor na pesquisa (a lupa do SIMPLE). */
+  focarPesquisa?: boolean
 }) {
   const [q, setQ] = useState("")
   const [classe, setClasse] = useState("fav")
@@ -125,7 +127,7 @@ export default function FundedWatchlist(props: {
       <div className="space-y-2 border-b border-white/10 p-2">
         <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black px-2">
           <Search className="h-4 w-4 text-zinc-500" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar símbolo" aria-label="Procurar símbolo" className="h-10 w-full bg-transparent text-[16px] text-white outline-none sm:h-9 sm:text-[13px]" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} autoFocus={props.focarPesquisa} enterKeyHint="search" type="search" placeholder="Procurar ativo (ex.: XAUUSD, EURUSD, US30)" aria-label="Procurar símbolo" className="h-10 w-full bg-transparent text-[16px] text-white outline-none sm:h-9 sm:text-[13px]" />
           {aCarregar && <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" />}
         </div>
         <div className="flex gap-1 overflow-x-auto text-[11px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

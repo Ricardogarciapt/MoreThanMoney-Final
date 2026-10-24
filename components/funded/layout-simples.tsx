@@ -4,7 +4,7 @@ import dynamic from "next/dynamic"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { usePathname } from "next/navigation"
 import { ehAppNativaPorUA } from "@/lib/app-nativa"
-import { BarChart3, CandlestickChart, ChevronDown, Layers, List, Loader2, User, X, type LucideIcon } from "lucide-react"
+import { BarChart3, CandlestickChart, ChevronDown, Layers, List, Loader2, Search, User, X, type LucideIcon } from "lucide-react"
 import { normalizarVolume } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
 import AnelMargem from "./anel-margem"
@@ -37,7 +37,7 @@ const CalendarioEconomico = dynamic(() => import("./calendario-economico"), { ss
  * com Esc, ou a tocar fora.
  */
 
-type FolhaAberta = null | "ticket" | "mercado" | "conta"
+type FolhaAberta = null | "ticket" | "mercado" | "pesquisa" | "conta"
 /** O calendário não é da conta (é do mercado): o SIMPLE junta-o sempre aos painéis «Mais». */
 const CALENDARIO = "__calendario"
 
@@ -189,6 +189,10 @@ function Conteudo({ t }: { t: TraderBase }) {
     <>
       {/* Topo: símbolo (→ lista) · preço · estado · equity (→ conta) */}
       <div className="flex shrink-0 items-center gap-2 border-b border-[#2A2E39] bg-[#131722] px-2.5 py-1.5">
+        {/* A lupa à vista, como nas apps de corretora: o símbolo também abre a lista, mas ninguém o adivinhava. */}
+        <button onClick={() => setFolha("pesquisa")} className="-ml-1 grid h-11 w-10 shrink-0 place-items-center rounded-lg text-zinc-300 active:bg-white/5" aria-label="Procurar ativo">
+          <Search className="h-5 w-5" />
+        </button>
         <button onClick={() => setFolha("mercado")} className="flex min-h-[44px] min-w-0 items-center gap-1 rounded-lg px-1 py-0.5 text-left active:bg-white/5" aria-label="escolher símbolo">
           <span className="text-[16px] font-bold text-white">{s.symbol}</span>
           <ChevronDown className="h-4 w-4 text-zinc-500" />
@@ -333,6 +337,11 @@ function Conteudo({ t }: { t: TraderBase }) {
             {t.ticket}
           </Folha>
         )}
+        {(folha === "mercado" || folha === "pesquisa") && (
+          <Folha titulo={folha === "pesquisa" ? "Procurar ativo" : "Mercado"} onFechar={() => setFolha(null)}>
+            <FundedWatchlist precos={t.vivos} selecionado={s.symbol} onSelecionar={(x) => { t.selecionar(x); setFolha(null); setSeccao("grafico") }} onVisiveis={t.setVisiveis} focarPesquisa={folha === "pesquisa"} />
+          </Folha>
+        )}
       </>
     )
   }
@@ -355,9 +364,9 @@ function Conteudo({ t }: { t: TraderBase }) {
           {t.ticket}
         </Folha>
       )}
-      {folha === "mercado" && (
-        <Folha titulo="Mercado" onFechar={() => setFolha(null)}>
-          <FundedWatchlist precos={t.vivos} selecionado={s.symbol} onSelecionar={(x) => { t.selecionar(x); setFolha(null) }} onVisiveis={t.setVisiveis} />
+      {(folha === "mercado" || folha === "pesquisa") && (
+        <Folha titulo={folha === "pesquisa" ? "Procurar ativo" : "Mercado"} onFechar={() => setFolha(null)}>
+          <FundedWatchlist precos={t.vivos} selecionado={s.symbol} onSelecionar={(x) => { t.selecionar(x); setFolha(null) }} onVisiveis={t.setVisiveis} focarPesquisa={folha === "pesquisa"} />
         </Folha>
       )}
       {folha === "conta" && (
