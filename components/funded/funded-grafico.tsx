@@ -55,6 +55,8 @@ export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
  */
 
 const CHAVE_ESTUDOS = "mtmfunded_estudos"
+const CHAVE_NEGOCIOS = "mtmfunded_grafico_negocios"
+const CHAVE_ASK = "mtmfunded_grafico_ask"
 const CHAVE_TF = "mtmfunded_tf"
 
 /** Ecrã inteiro do gráfico: `api` (Fullscreen API do documento + ocupar a janela) ou `janela` (só ocupar a janela). */
@@ -119,6 +121,10 @@ export default function FundedGrafico(props: GraficoProps) {
   const setModo = (d: Direcao | null) => (rascunho ? rascunho.setFerramenta(d) : setModoLocal(d))
   const [tf, setTfEstado] = useState<Tf>("M5")
   const [estudos, setEstudos] = useState<ChaveEstudoWebtrader[]>(["Goldkiller"])
+  // O que o gráfico mostra além das velas (guardado no browser, como os estudos).
+  const [verNegocios, setVerNegocios] = useState(true)
+  const [verAsk, setVerAsk] = useState(false)
+  useEffect(() => { setVerNegocios(ler(CHAVE_NEGOCIOS, true)); setVerAsk(ler(CHAVE_ASK, false)) }, [])
 
   useEffect(() => {
     setEstudos(ler<ChaveEstudoWebtrader[]>(CHAVE_ESTUDOS, ["Goldkiller"]))
@@ -242,6 +248,13 @@ export default function FundedGrafico(props: GraficoProps) {
           )
         })}
         <div className="ml-auto flex shrink-0 gap-1 pl-2">
+          {([["Negociações", verNegocios, () => { setVerNegocios(!verNegocios); guardar(CHAVE_NEGOCIOS, !verNegocios) }, "Mostrar no gráfico as últimas 100 negociações deste símbolo"],
+             ["Ask", verAsk, () => { setVerAsk(!verAsk); guardar(CHAVE_ASK, !verAsk) }, "Mostrar a linha do preço Ask (as velas são o Bid)"]] as const).map(([nome, on, alternar, titulo]) => (
+            <button key={nome} type="button" onClick={alternar} title={titulo} aria-pressed={on} className={`${botao} text-[11px]`}
+              style={on ? { borderColor: TV.azul, color: "#fff", background: "rgba(41,98,255,0.2)" } : { borderColor: TV.borda, color: TV.textoFraco }}>
+              {nome}
+            </button>
+          ))}
           <button type="button" onClick={() => (cheio ? sair() : void entrar())} className={botao}
             title={cheio ? "Sair do ecrã inteiro (Esc)" : "Gráfico em ecrã inteiro"} aria-label={cheio ? "sair do ecrã inteiro" : "gráfico em ecrã inteiro"} aria-pressed={Boolean(cheio)}
             style={cheio ? { borderColor: TV.azul, color: "#fff", background: "rgba(41,98,255,0.2)" } : { borderColor: TV.borda, color: TV.texto }}>
@@ -286,7 +299,7 @@ export default function FundedGrafico(props: GraficoProps) {
       <div className={mostrar ? "contents" : "hidden"}>
       {/* A trade ativa do Sensei já tem as linhas ENTRY/SL/EXIT do próprio estudo e o GoldKiller os
           seus níveis: só o alerta (não o sinal local) leva as linhas ténues de referência. */}
-      <GraficoLeve {...props} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} trendshot={configTS} tf={tf} modo={modo} setModo={setModo} />
+      <GraficoLeve {...props} negocios={verNegocios ? props.negocios : []} linhaAsk={verAsk} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} trendshot={configTS} tf={tf} modo={modo} setModo={setModo} />
       </div>
     </div>
   )

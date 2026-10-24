@@ -9,7 +9,7 @@ import { gestaoDaLinha } from "@/lib/mtmfunded/simulado/avancadas"
 import { type PrecoVivo, type SimboloFicha, corDoEstado, usd } from "./api"
 import FundedGrafico from "./funded-grafico"
 import type { Prefill } from "./funded-ticket"
-import type { AlertaGrafico, OrdemGrafico, PosicaoGrafico } from "./grafico-tipos"
+import type { AlertaGrafico, NegocioGrafico, OrdemGrafico, PosicaoGrafico } from "./grafico-tipos"
 import { RascunhoProvider, useRascunho, type PedidoOrdem } from "./rascunho-ordem"
 import ModalSinal from "./modal-sinal"
 import ModalTravas from "./modal-travas"
@@ -99,6 +99,8 @@ export interface TraderBase {
     /** Equity ÷ margem usada, em %. null sem posições (não há margem a medir). */
     nivelMargem: number | null
   }
+  /** Negociações já feitas (entradas e saídas), para o gráfico as desenhar — vazio se não houver. */
+  negocios: Array<NegocioGrafico & { symbol: string }>
   /** Linhas de alerta no gráfico — vazio nas contas que não têm alertas. */
   alertasGrafico: (symbol: string) => AlertaGrafico[]
   /** Faixas de aviso por baixo da barra (só leitura, conta travada, conta REAL, sem preço…). */
@@ -134,6 +136,23 @@ export const ordensSimuladas = (dados: Estado): OrdemTrader[] =>
     sl: o.sl == null ? null : Number(o.sl), tp: o.tp == null ? null : Number(o.tp),
   }))
 
+/**
+ * As últimas fechadas da conta simulada (o `historico` do estado, `select *` de funded_positions):
+ * a entrada em `aberta_em` e a saída em `fechada_em`, com o resultado.
+ */
+export const negociosSimulados = (historico: unknown): TraderBase["negocios"] => {
+  const seg = (x: unknown) => (typeof x === "string" ? Math.floor(new Date(x).getTime() / 1000) : NaN)
+  const num = (x: unknown) => (x == null || x === "" ? null : Number(x))
+  return (Array.isArray(historico) ? historico : []).flatMap((h: Record<string, unknown>) => {
+    const base = { symbol: String(h.symbol), direcao: (h.direcao === "sell" ? "sell" : "buy") as PosicaoTrader["direcao"] }
+    const out: TraderBase["negocios"] = []
+    const aberta = seg(h.aberta_em)
+    if (Number.isFinite(aberta)) out.push({ ...base, id: `${h.id}:e`, em: aberta, preco: num(h.preco_entrada), tipo: "entrada" })
+    const fechada = seg(h.fechada_em)
+    if (Number.isFinite(fechada)) out.push({ ...base, id: `${h.id}:s`, em: fechada, preco: num(h.preco_fecho), tipo: "saida", lucro: num(h.pnl) })
+    return out
+  })
+}
 export const posicoesDoGrafico = (t: TraderBase, symbol: string): PosicaoGrafico[] => t.posicoes.filter((p) => p.symbol === symbol)
 export const ordensDoGrafico = (t: TraderBase, symbol: string): OrdemGrafico[] => t.ordens.filter((o) => o.symbol === symbol)
 
@@ -163,6 +182,7 @@ export function GraficoConta({ t, ficha, chaveTf, preencher, alturaClasse }: { t
       simbolo={ficha} preco={t.vivos[ficha.symbol]} precos={t.mapa} volume={t.volume} ferramenta={t.ferramentaGrafico}
       posicoes={posicoesDoGrafico(t, ficha.symbol)} ordens={ordensDoGrafico(t, ficha.symbol)} podeNegociar={t.podeNegociar}
       preencher={preencher} alturaClasse={alturaClasse} chaveTf={chaveTf} alertas={t.alertasGrafico(ficha.symbol)}
+      negocios={t.negocios.filter((n) => n.symbol === ficha.symbol)}
       onModificarPosicao={(id, sl, tp) => t.executar("modificar", { positionId: id, sl, tp })}
       onModificarPendente={(id, preco, sl, tp) => t.executar("modificar_pendente", { orderId: id, preco, sl, tp })}
       onFecharPosicao={(id) => t.executar("fechar", { positionId: id })}

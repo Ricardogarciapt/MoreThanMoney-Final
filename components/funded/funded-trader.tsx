@@ -19,7 +19,7 @@ import { UmCliqueProvider } from "./um-clique"
 import { useModoWebtrader } from "./modo-webtrader"
 import { useAlertas } from "./funded-alertas"
 import { useDiario } from "./funded-diario"
-import { AvisosConta, ordensSimuladas, posicoesSimuladas, type Estado, type PainelTrader, type Trader } from "./trader-contexto"
+import { AvisosConta, negociosSimulados, ordensSimuladas, posicoesSimuladas, type Estado, type PainelTrader, type Trader } from "./trader-contexto"
 import FundedTicket from "./funded-ticket"
 import ListaPosicoes from "./lista-posicoes"
 import FundedDiario from "./funded-diario"
@@ -346,6 +346,7 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
       alavancagem: dados.conta.alavancagem, margemLivre: vivo.margemLivre, saldo: dados.estado.saldo,
       equity: vivo.equity, flutuante: vivo.flutuante, nivelMargem: vivo.nivelMargemPct,
     },
+    negocios: negociosSimulados(dados.historico),
     alertasGrafico: (symbol) => (alertas.alertas ?? []).filter((a) => a.ativo && a.symbol === symbol).map((a) => ({ id: a.id, preco: a.preco, nota: a.nota })),
     avisos: <AvisosConta dados={dados} vivo={vivo} />,
     paineis, chavePaineis: "mtmfunded_pro_separador",
