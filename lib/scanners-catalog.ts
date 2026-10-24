@@ -139,12 +139,12 @@ export const SCANNERS: ScannerData[] = [
     image: "/MTM%20Sensei%20Preview.png",
     badge: "Novo",
     description:
-      "O scanner mais sofisticado da MTM. O Sensei usa inteligência artificial para identificar confluências entre múltiplas metodologias — Smart Money, Goldenzone, SR MTM e KillShot — gerando sinais de alta precisão para traders profissionais.",
+      "O scanner mais sofisticado da MTM. O Sensei usa inteligência artificial para identificar confluências entre múltiplas metodologias — Smart Money, Goldenzone, SR MTM e TrendShot — gerando sinais de alta precisão para traders profissionais.",
     features: [
       "IA multi-confluência com Smart Money Concepts",
       "Integração com metodologia Goldenzone MTM",
       "Identificação automática de zonas SR (Suporte/Resistência)",
-      "KillShot — sinal de alta probabilidade com confirmação múltipla",
+      "TrendShot — sinal com confirmação múltipla",
       "Dashboard de performance em tempo real",
     ],
     techSpecs: [
