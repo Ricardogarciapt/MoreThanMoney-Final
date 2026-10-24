@@ -402,6 +402,13 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
       equity: c.equity, flutuante: c.flutuante, nivelMargem: c.nivelMargem ?? null,
     },
     // Regras de prop firm, diário e alertas não existem nesta conta: nada a desenhar no gráfico.
+    // As negociações do histórico (quando o painel o pediu): cada uma é uma entrada ou uma saída.
+    negocios: (historico?.linhas ?? []).flatMap((n) => {
+      const em = n.em ? Math.floor(new Date(n.em).getTime() / 1000) : NaN
+      if (!n.direcao || !Number.isFinite(em)) return []
+      const saida = n.estado === "fechado"
+      return [{ id: n.id, symbol: n.symbol, em, preco: n.preco, direcao: n.direcao, tipo: saida ? "saida" as const : "entrada" as const, lucro: saida ? n.lucro : null }]
+    }),
     alertasGrafico: () => [],
     avisos: (
       <>

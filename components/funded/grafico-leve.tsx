@@ -12,7 +12,7 @@ import type { ResultadoTrendShot } from "@/lib/estudos/trendshot/motor"
 import type { InputsSensei, ResultadoSensei, Vela } from "@/lib/estudos/sensei/tipos"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
-import { type GraficoProps, type Tf, TV, inicioDaVela } from "./grafico-tipos"
+import { type GraficoProps, type Tf, TV, inicioDaVela, marcasDosNegocios } from "./grafico-tipos"
 import { TF_SEG_GRAFICO } from "@/lib/webtrader/timeframes"
 import PainelFerramenta from "./painel-ferramenta"
 import { carregarExtrasSensei, useCalculadoraSensei } from "./sensei-estudo"
@@ -208,6 +208,9 @@ export default function GraficoLeve(props: GraficoProps & {
   const graficoRef = useRef<any>(null)
   const serieRef = useRef<any>(null)
   const marcasRef = useRef<any>(null)
+  // As negociações já feitas têm o seu próprio conjunto de marcas: as setas dos estudos não as apagam.
+  const negociosRef = useRef<any>(null)
+  const linhaAskRef = useRef<any>(null)
   const marcaAguaRef = useRef<any>(null)
   const zonasRef = useRef<ZonasFerramenta | null>(null)
   const etiquetasEixoRef = useRef<Map<string, { pl: any; assinatura: string }>>(new Map())
@@ -331,6 +334,7 @@ export default function GraficoLeve(props: GraficoProps & {
         lines: [{ text: simbolo.symbol, color: "rgba(120,123,134,0.10)", fontSize: props.compacto ? 28 : 44 }],
       })
       marcasRef.current = LW.createSeriesMarkers(serie, [])
+      negociosRef.current = LW.createSeriesMarkers(serie, [])
       const zonas = new ZonasFerramenta()
       serie.attachPrimitive(zonas as any)
       zonasRef.current = zonas
@@ -347,6 +351,8 @@ export default function GraficoLeve(props: GraficoProps & {
       graficoRef.current = null
       serieRef.current = null
       marcasRef.current = null
+      negociosRef.current = null
+      linhaAskRef.current = null
       marcaAguaRef.current = null
       zonasRef.current = null
       etiquetasEixoRef.current = new Map()
@@ -646,6 +652,27 @@ export default function GraficoLeve(props: GraficoProps & {
     })).sort((a, b) => a.time - b.time)
     try { m.setMarkers(marcas) } catch { /* tempo fora das velas carregadas */ }
   }, [props.sinais, pronto, estadoVelas, tf])
+
+  // Negociações já feitas (as últimas 100), como nas plataformas de corretora: entrada com seta, saída
+  // com o resultado. Desligam-se no botão «Negociações» da barra do gráfico.
+  useEffect(() => {
+    const m = negociosRef.current
+    if (!m || !pronto || estadoVelas === "a_carregar") return
+    try { m.setMarkers(marcasDosNegocios(props.negocios ?? [], tf)) } catch { /* tempo fora das velas carregadas */ }
+  }, [props.negocios, pronto, estadoVelas, tf])
+
+  // A linha do Ask (as velas são o Bid): tracejada, com o preço no eixo.
+  const ask = preco?.ask
+  useEffect(() => {
+    const serie = serieRef.current
+    if (!serie || !pronto) return
+    if (!props.linhaAsk || ask == null || !Number.isFinite(ask)) {
+      if (linhaAskRef.current) { try { serie.removePriceLine(linhaAskRef.current) } catch { /* ok */ } linhaAskRef.current = null }
+      return
+    }
+    if (linhaAskRef.current) linhaAskRef.current.applyOptions({ price: ask })
+    else linhaAskRef.current = serie.createPriceLine({ price: ask, color: "#2962FF", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "Ask" })
+  }, [props.linhaAsk, ask, pronto])
 
   // ── MTM Sensei ──
   // Anexar/retirar o adaptador (séries das DEMAs, primitivo de desenho, marcadores) com o estudo.
