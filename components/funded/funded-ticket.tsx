@@ -330,7 +330,7 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
           <div className="flex gap-2 pt-1">
             <button onClick={() => k.set({ escolhido: false })} className="flex-1 rounded-lg border border-white/10 py-2 text-zinc-300">Cancelar</button>
             <button disabled={k.aEnviar || umClique.ocupado || k.temErros || semPreco} onClick={() => void k.enviar()} className={`flex-[2] rounded-lg py-2 font-bold text-white disabled:opacity-40 ${r.lado === "buy" ? "bg-[#089981]" : "bg-[#F23645]"}`}>
-              {k.aEnviar ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : `Confirmar ${r.lado === "buy" ? "compra" : "venda"}${r.tipo === "mercado" ? "" : ` ${r.tipo}`}`}
+              {k.aEnviar ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : `${r.lado === "buy" ? "Comprar" : "Vender"} ${volume}${r.tipo === "mercado" ? "" : ` ${r.tipo}`}${k.entrada != null ? ` @ ${px(k.entrada, s.digits)}` : ""}`}
             </button>
           </div>
         </div>
