@@ -61,6 +61,17 @@ export class AccaoCancelada extends Error {
 
 export interface ResultadoAccao { precoExecucao?: number | null; precoFecho?: number | null }
 
+/**
+ * O REGISTO (separador «Registo», como os Logs do TradeLocker): cada acção desta conta nesta página —
+ * ordem, fecho, mudança de SL/TP, cancelamento — com o resultado ou o erro que a corretora devolveu e
+ * quanto demorou. Fica só na memória (sai ao recarregar) e guarda as últimas 100.
+ */
+export interface EntradaRegisto { id: number; em: number; descricao: string; ok: boolean; texto: string; ms: number }
+export const MAX_REGISTO = 100
+export function juntarAoRegisto(registo: EntradaRegisto[], e: EntradaRegisto): EntradaRegisto[] {
+  return [e, ...registo].slice(0, MAX_REGISTO)
+}
+
 interface Valor {
   ligado: boolean
   /** Uma acção está a correr — os botões de ordem ficam desactivados. */
@@ -68,6 +79,7 @@ interface Valor {
   pedirLigar: () => void
   desligar: () => void
   executar: <T>(descricao: string, fn: () => Promise<T>, opcoes: { confirmar: boolean; digitos?: number }) => Promise<T>
+  registo: EntradaRegisto[]
 }
 
 const Contexto = createContext<Valor | null>(null)
@@ -82,6 +94,7 @@ const SEM_PROVIDER: Valor = {
     if (confirmar && typeof window !== "undefined" && !window.confirm(`${descricao}?`)) throw new AccaoCancelada()
     return fn()
   },
+  registo: [],
 }
 
 export function useUmClique(): Valor {
@@ -101,6 +114,8 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
   const [confirmacao, setConfirmacao] = useState<{ descricao: string; ok: () => void; nao: () => void } | null>(null)
   const [aviso, setAviso] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null)
   const [emCurso, setEmCurso] = useState(0)
+  const [registo, setRegisto] = useState<EntradaRegisto[]>([])
+  const seqRegisto = useRef(0)
   const ultimas = useRef<Map<string, { em: number; promessa: Promise<unknown> | null }>>(new Map())
   /** Quantos `executar` estão a correr: > 0 quando chega outro = esse outro é aninhado. */
   const profundidade = useRef(0)
@@ -178,6 +193,9 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
         throw new AccaoCancelada()
       }
       profundidade.current++
+      const t0 = Date.now()
+      const registar = (ok: boolean, texto: string) =>
+        setRegisto((r) => juntarAoRegisto(r, { id: ++seqRegisto.current, em: t0, descricao, ok, texto, ms: Date.now() - t0 }))
       const promessa = fn()
       ultimas.current.set(descricao, { em: Date.now(), promessa })
       setEmCurso((n) => n + 1)
@@ -185,10 +203,13 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
         const r = await promessa
         const res = (r ?? {}) as { plano?: ResultadoAccao }
         const preco = res.plano?.precoExecucao ?? res.plano?.precoFecho
-        setAviso({ tipo: "ok", texto: `${descricao} — feito${preco != null ? ` @ ${opcoes.digitos != null ? Number(preco).toFixed(opcoes.digitos) : preco}` : ""}` })
+        const feito = `feito${preco != null ? ` @ ${opcoes.digitos != null ? Number(preco).toFixed(opcoes.digitos) : preco}` : ""}`
+        setAviso({ tipo: "ok", texto: `${descricao} — ${feito}` })
+        registar(true, feito)
         return r
       } catch (e) {
         setAviso({ tipo: "erro", texto: `${descricao}: ${(e as Error).message}` })
+        if (!(e instanceof AccaoCancelada)) registar(false, (e as Error).message || "erro sem mensagem")
         throw e
       } finally {
         profundidade.current--
@@ -207,7 +228,7 @@ export function UmCliqueProvider({ accountId, investor, real = false, children }
   }, [ligado])
 
   return (
-    <Contexto.Provider value={{ ligado, ocupado: emCurso > 0, pedirLigar, desligar, executar }}>
+    <Contexto.Provider value={{ ligado, ocupado: emCurso > 0, pedirLigar, desligar, executar, registo }}>
       {children}
 
       {aAceitar && (

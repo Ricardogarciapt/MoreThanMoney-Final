@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic"
 import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { BarChart3, Bell, BookOpen, History, ListOrdered, Loader2, User, Wallet } from "lucide-react"
+import { BarChart3, Bell, BookOpen, History, ListOrdered, Loader2, ScrollText, User, Wallet } from "lucide-react"
+import PainelRegisto from "./painel-registo"
 import { type MapaPrecos, estadoDaConta } from "@/lib/mtmfunded/simulado/matematica"
 import { limitesDaConta, posicaoDaLinha, simbolosParaMedir } from "@/lib/mtmfunded/simulado/ordens"
 import { type SimboloFicha, type PrecoVivo, pedir, ordem, usd } from "./api"
@@ -333,6 +334,7 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
       chave: "alertas", nome: "Alertas", icone: Bell, contagem: (alertas.alertas ?? []).filter((a) => a.ativo).length,
       conteudo: () => <FundedAlertas accountId={accountId} simbolo={simbolo} preco={simbolo ? vivos[simbolo.symbol] : undefined} podeCriar={dados.modo === "master"} estado={alertas} onSelecionarSimbolo={(x) => void selecionarPorNome(x)} />,
     },
+    { chave: "registo", nome: "Registo", icone: ScrollText, conteudo: () => <PainelRegisto /> },
     { chave: "conta", nome: "A minha conta", icone: User, conteudo: () => <PainelConta t={t} /> },
   ]
 

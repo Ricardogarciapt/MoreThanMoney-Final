@@ -2,7 +2,8 @@
 
 import dynamic from "next/dynamic"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { AlertTriangle, History, Info, ListOrdered, Loader2, Search, User, Wallet, X } from "lucide-react"
+import { AlertTriangle, History, Info, ListOrdered, Loader2, ScrollText, Search, User, Wallet, X } from "lucide-react"
+import PainelRegisto from "@/components/funded/painel-registo"
 import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
 import type { PlataformaWT, CapacidadesWT, ContaWT, NegocioWT, OrdemWT, PosicaoWT, SimboloWT } from "@/lib/webtrader/corretoras/tipos"
 import type { MapaPrecos } from "@/lib/mtmfunded/simulado/matematica"
@@ -360,6 +361,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
       chave: "simbolos", nome: "Símbolos da corretora", icone: Search,
       conteudo: () => <div className="p-2"><PesquisaSimbolo plataforma={plataforma} contaRef={contaRef} atual={symbol} lista={directo ? feed.simbolosCorretora : null} onEscolher={(s) => void selecionarPorNome(s)} /></div>,
     },
+    { chave: "registo", nome: "Registo", icone: ScrollText, conteudo: () => <PainelRegisto /> },
     {
       chave: "conta", nome: "A minha conta", icone: User,
       conteudo: () => (
