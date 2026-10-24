@@ -444,8 +444,26 @@ export async function POST(request: NextRequest) {
         channel_key: message.channel_slug, telegram_message_id: message.telegram_message_id ?? null,
       })
       if (claimErr) {
-        if ((claimErr as { code?: string }).code === '23505') return { account: label, connectionId: conn.id, ok: false, skipped: true, error: 'já aceite' }
-        console.error('[tap-to-trade] claim error:', claimErr)
+        if ((claimErr as { code?: string }).code === '23505') {
+          /**
+           * REACEITAR o que nunca chegou à corretora. A reserva ficava para sempre e uma aceitação
+           * que falhou ANTES da ordem (mercado fechado, sessão TradeLocker, lote abaixo do mínimo)
+           * respondia «Já aceitaste este sinal» a cada nova tentativa. Só se retoma uma linha
+           * com detalhe `T2T…` (escrito antes de qualquer ordem) e sem posição; uma falha DA
+           * corretora («Tap to Trade… falhou») ou um `pending` (pode ter aberto e o pedido ter
+           * morrido) continua a bloquear — aí abrir outra vez podia dar duas posições.
+           */
+          const { data: antiga } = await supabase.from('mtmcopy_signal_log').select('id, status, detail, broker_position_id')
+            .eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id).maybeSingle()
+          const retomavel = Boolean(antiga && !antiga.broker_position_id && (antiga.status === 'error' || antiga.status === 'skipped') && /^T2T\b/.test(String(antiga.detail ?? '')))
+          const { data: retomada } = retomavel
+            ? await supabase.from('mtmcopy_signal_log').update({ status: 'pending', detail: null })
+                .eq('id', antiga!.id).eq('status', antiga!.status).select('id')
+            : { data: null }
+          if (!retomada?.length) return { account: label, connectionId: conn.id, ok: false, skipped: true, error: 'já aceite' }
+        } else {
+          console.error('[tap-to-trade] claim error:', claimErr)
+        }
       }
       /**
        * Sizing T2T próprio (não usa o sizing da cópia), e por FONTE quando a há.
@@ -566,6 +584,9 @@ export async function POST(request: NextRequest) {
       // Gate de horário: não tentar abrir com o mercado fechado (fim de semana / rollover).
       const mh = isMarketOpen(sSymbol)
       if (!mh.open) {
+        // Sem isto a reserva ficava `pending` e o sinal não se podia voltar a aceitar com o mercado aberto.
+        await supabase.from('mtmcopy_signal_log').update({ status: 'error', detail: `T2T: mercado fechado (${mh.reason})` })
+          .eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id).then(undefined, () => undefined)
         return { account: label, connectionId: conn.id, ok: false, symbol: sSymbol, error: `mercado fechado (${mh.reason})` }
       }
       const orderReq: OrderRequest = { accountId: conn.metaapi_account_id ?? '', symbol: sSymbol, direction: sDirection, volume: lotFinal, orderType, openPrice, stopLoss: orderSl, takeProfit: orderTp, comment: 'TapToTrade MTM' }
