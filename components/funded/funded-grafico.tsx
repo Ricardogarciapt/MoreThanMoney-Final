@@ -8,6 +8,7 @@ import { ESTUDOS_WEBTRADER, type ChaveEstudoWebtrader } from "@/lib/scanners/est
 import type { Direcao } from "@/lib/mtmfunded/simulado/matematica"
 import { px } from "./api"
 import { type GraficoProps, type Tf, type TipoGrafico, TIMEFRAMES, TIPOS_GRAFICO, TV } from "./grafico-tipos"
+import { proximoEvento, type EventoCalendario } from "@/lib/webtrader/calendario"
 import GraficoLeve from "./grafico-leve"
 import { useSinaisEstudos } from "./use-sinais-estudos"
 import { useGraficoVisivel } from "./grafico-visivel"
@@ -58,6 +59,7 @@ const CHAVE_ESTUDOS = "mtmfunded_estudos"
 const CHAVE_NEGOCIOS = "mtmfunded_grafico_negocios"
 const CHAVE_ASK = "mtmfunded_grafico_ask"
 const CHAVE_TIPO = "mtmfunded_grafico_tipo"
+const CHAVE_EVENTOS = "mtmfunded_grafico_eventos"
 const CHAVE_TF = "mtmfunded_tf"
 
 /** Ecrã inteiro do gráfico: `api` (Fullscreen API do documento + ocupar a janela) ou `janela` (só ocupar a janela). */
@@ -126,6 +128,23 @@ export default function FundedGrafico(props: GraficoProps) {
   const [verNegocios, setVerNegocios] = useState(true)
   const [verAsk, setVerAsk] = useState(false)
   const [tipoGrafico, setTipoGrafico] = useState<TipoGrafico>("velas")
+  // Eventos do calendário económico das moedas do símbolo (rota /api/webtrader/calendario, Finnhub).
+  const [verEventos, setVerEventos] = useState(true)
+  const [eventos, setEventos] = useState<EventoCalendario[]>([])
+  useEffect(() => { setVerEventos(ler(CHAVE_EVENTOS, true)) }, [])
+  useEffect(() => {
+    if (!verEventos) { setEventos([]); return }
+    let vivo = true
+    const carregar = () => fetch(`/api/webtrader/calendario?symbol=${encodeURIComponent(simbolo.symbol)}`)
+      .then((r) => r.json()).then((d) => { if (vivo) setEventos(Array.isArray(d?.eventos) ? d.eventos : []) })
+      .catch(() => { /* sem eventos — o gráfico continua */ })
+    void carregar()
+    const id = setInterval(carregar, 30 * 60_000)
+    return () => { vivo = false; clearInterval(id) }
+  }, [simbolo.symbol, verEventos])
+  const [agora, setAgora] = useState(() => Math.floor(Date.now() / 1000))
+  useEffect(() => { const id = setInterval(() => setAgora(Math.floor(Date.now() / 1000)), 60_000); return () => clearInterval(id) }, [])
+  const proximo = verEventos ? proximoEvento(eventos, agora) : null
   useEffect(() => {
     setVerNegocios(ler(CHAVE_NEGOCIOS, true)); setVerAsk(ler(CHAVE_ASK, false))
     const t = ler<string>(CHAVE_TIPO, "velas")
@@ -225,6 +244,12 @@ export default function FundedGrafico(props: GraficoProps) {
           <span style={{ color: TV.textoFraco }}>{spread ?? "—"}</span>
           <span className="rounded px-1.5 py-0.5" style={{ color: "#8FA8FF", background: "rgba(41,98,255,0.14)" }}>{px(preco?.ask, simbolo.digits)}</span>
         </div>
+        {proximo && (
+          <span className="flex min-w-0 items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px]" title={`${proximo.moeda} · ${proximo.titulo}${proximo.previsto ? ` · previsto ${proximo.previsto}` : ""}${proximo.anterior ? ` · anterior ${proximo.anterior}` : ""}`}
+            style={{ color: proximo.impacto === "alto" ? "#F7525F" : "#F5B301", background: proximo.impacto === "alto" ? "rgba(247,82,95,0.12)" : "rgba(245,179,1,0.12)" }}>
+            ● {proximo.moeda} {proximo.titulo} · {new Date(proximo.em * 1000).toLocaleString("pt-PT", { weekday: "short", hour: "2-digit", minute: "2-digit" })}
+          </span>
+        )}
         {podeNegociar && rascunho && <div className="ml-auto flex h-7 [@media(pointer:coarse)]:h-auto"><InterruptorUmClique /></div>}
       </div>
 
@@ -259,7 +284,8 @@ export default function FundedGrafico(props: GraficoProps) {
         })}
         <div className="ml-auto flex shrink-0 gap-1 pl-2">
           {([["Negociações", verNegocios, () => { setVerNegocios(!verNegocios); guardar(CHAVE_NEGOCIOS, !verNegocios) }, "Mostrar no gráfico as últimas 100 negociações deste símbolo"],
-             ["Ask", verAsk, () => { setVerAsk(!verAsk); guardar(CHAVE_ASK, !verAsk) }, "Mostrar a linha do preço Ask (as velas são o Bid)"]] as const).map(([nome, on, alternar, titulo]) => (
+             ["Ask", verAsk, () => { setVerAsk(!verAsk); guardar(CHAVE_ASK, !verAsk) }, "Mostrar a linha do preço Ask (as velas são o Bid)"],
+             ["Notícias", verEventos, () => { setVerEventos(!verEventos); guardar(CHAVE_EVENTOS, !verEventos) }, "Eventos do calendário económico (impacto médio e alto) das moedas deste ativo"]] as const).map(([nome, on, alternar, titulo]) => (
             <button key={nome} type="button" onClick={alternar} title={titulo} aria-pressed={on} className={`${botao} text-[11px]`}
               style={on ? { borderColor: TV.azul, color: "#fff", background: "rgba(41,98,255,0.2)" } : { borderColor: TV.borda, color: TV.textoFraco }}>
               {nome}
@@ -309,7 +335,7 @@ export default function FundedGrafico(props: GraficoProps) {
       <div className={mostrar ? "contents" : "hidden"}>
       {/* A trade ativa do Sensei já tem as linhas ENTRY/SL/EXIT do próprio estudo e o GoldKiller os
           seus níveis: só o alerta (não o sinal local) leva as linhas ténues de referência. */}
-      <GraficoLeve {...props} negocios={verNegocios ? props.negocios : []} linhaAsk={verAsk} tipoGrafico={tipoGrafico} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} trendshot={configTS} tf={tf} modo={modo} setModo={setModo} />
+      <GraficoLeve {...props} negocios={verNegocios ? props.negocios : []} linhaAsk={verAsk} tipoGrafico={tipoGrafico} eventos={verEventos ? eventos : []} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} trendshot={configTS} tf={tf} modo={modo} setModo={setModo} />
       </div>
     </div>
   )

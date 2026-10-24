@@ -211,6 +211,7 @@ export default function GraficoLeve(props: GraficoProps & {
   const marcasRef = useRef<any>(null)
   // As negociações já feitas têm o seu próprio conjunto de marcas: as setas dos estudos não as apagam.
   const negociosRef = useRef<any>(null)
+  const eventosRef = useRef<any>(null)
   const linhaAskRef = useRef<any>(null)
   /**
    * Barras, linha e área: uma série POR CIMA da das velas, que fica transparente mas continua a ser
@@ -352,6 +353,7 @@ export default function GraficoLeve(props: GraficoProps & {
       })
       marcasRef.current = LW.createSeriesMarkers(serie, [])
       negociosRef.current = LW.createSeriesMarkers(serie, [])
+      eventosRef.current = LW.createSeriesMarkers(serie, [])
       const zonas = new ZonasFerramenta()
       serie.attachPrimitive(zonas as any)
       zonasRef.current = zonas
@@ -370,6 +372,7 @@ export default function GraficoLeve(props: GraficoProps & {
       marcasRef.current = null
       sobreRef.current = null
       negociosRef.current = null
+      eventosRef.current = null
       linhaAskRef.current = null
       marcaAguaRef.current = null
       zonasRef.current = null
@@ -704,6 +707,20 @@ export default function GraficoLeve(props: GraficoProps & {
       espelhar(velasRef.current.map((v) => ({ time: v.t, open: v.o, high: v.h, low: v.l, close: v.c })))
     }).catch(() => { /* fica em velas */ })
   }, [tipo, pronto, simbolo.digits]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Eventos do calendário económico (como no MT5): um quadrado por cima da vela em que saíram, vermelho
+  // para impacto alto e âmbar para médio. Os que ainda não saíram não têm vela — vão no aviso da barra.
+  useEffect(() => {
+    const m = eventosRef.current
+    if (!m || !pronto || estadoVelas === "a_carregar") return
+    const ultima = ultimaVelaRef.current?.time ?? 0
+    const marcas = (props.eventos ?? []).filter((e) => e.em <= ultima).map((e) => ({
+      time: inicioDaVela(e.em, tf), position: "aboveBar", shape: "square", size: 0.6,
+      color: e.impacto === "alto" ? "#F23645" : "#F5B301",
+      text: `${e.moeda} ${e.titulo.length > 18 ? `${e.titulo.slice(0, 17)}…` : e.titulo}`,
+    }))
+    try { m.setMarkers(marcas) } catch { /* tempo fora das velas carregadas */ }
+  }, [props.eventos, pronto, estadoVelas, tf, versaoVelas])
 
   // A linha do Ask (as velas são o Bid): tracejada, com o preço no eixo.
   const ask = preco?.ask
