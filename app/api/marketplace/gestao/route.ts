@@ -53,6 +53,7 @@ import {
 import { garantirVendedor, lerDefinicoes, vendasDoEducador } from '@/lib/marketplace/servidor'
 import { arquivarNoStripe, sincronizarPrecoNoStripe, lerPrecoDoStripe } from '@/lib/marketplace/stripe-preco'
 import { gerarDescricao, gerarImagemDoProduto } from '@/lib/marketplace/ia'
+import { videoParaGravar } from '@/lib/marketplace/video'
 
 export const dynamic = 'force-dynamic'
 
@@ -169,6 +170,10 @@ export async function POST(request: NextRequest) {
     slug = `${base}-${Math.random().toString(36).slice(2, 6)}`
   }
 
+  // 211 — o vídeo de apresentação é público: só https, recusado aqui com uma frase e não na montra.
+  const video = videoParaGravar(b.video_url)
+  if (!video.ok) return NextResponse.json({ error: video.erro }, { status: 400 })
+
   const tipo = tipoValido(b.tipo)
   const sug = sugestaoDaCategoria(tipo)
   const recorrenteNovo = typeof b.recorrente === 'boolean' ? b.recorrente : sug.recorrente
@@ -197,6 +202,7 @@ export async function POST(request: NextRequest) {
       requer_morada: typeof b.requer_morada === 'boolean' ? b.requer_morada : sug.requerMorada,
       conteudo_url: b.conteudo_url ?? null,
       conteudo_nota: b.conteudo_nota ?? null,
+      video_url: video.url,
       estado: 'rascunho', // nasce sempre em rascunho: publicar é um acto separado.
     })
     .select(COLUNAS_GESTAO)
@@ -335,6 +341,12 @@ export async function PATCH(request: NextRequest) {
         )
       }
       patch.grupo_subtitulo = t
+      continue
+    }
+    if (campo === 'video_url') {
+      const video = videoParaGravar(b.video_url)
+      if (!video.ok) return NextResponse.json({ error: video.erro }, { status: 400 })
+      patch.video_url = video.url
       continue
     }
     if (campo === 'recorrente' || campo === 'requer_morada' || campo === 'activo') {

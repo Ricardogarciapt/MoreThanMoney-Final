@@ -3,7 +3,9 @@ import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
 import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-auth"
 import { resolveViewerPlayback } from "@/lib/lms-playback"
-import { aplicarAcessoAReproducao, criarLeitorDeEspectador } from "@/lib/live-acesso-servidor"
+import { aplicarAcessoAReproducao, criarLeitorDeEspectador, type Espectador } from "@/lib/live-acesso-servidor"
+import { podeVerReproducaoDaSala } from "@/lib/perfil-ui"
+import { entregarMateriais, type MaterialDaSala } from "@/lib/lms/aulas"
 
 const supabase = getSupabaseAdmin()
 
@@ -45,6 +47,30 @@ const STREAM_SELECT_EDUCATOR = `
   academy:lms_academies(id, slug, name),
   educator:lms_educators(id, display_name, bio, avatar_url, is_active, specialty)
 `
+
+/**
+ * OS MATERIAIS DAS SALAS (211), lidos aqui para o ecrã não ter de fazer outro pedido por sala.
+ *
+ * Uma só query para todas as salas da resposta. Se a tabela ainda não existir (migração 211 por
+ * aplicar) ou a leitura falhar, as salas saem sem materiais — nunca sem salas.
+ */
+async function materiaisDasSalas(ids: string[]): Promise<Map<string, MaterialDaSala[]>> {
+  const porSala = new Map<string, MaterialDaSala[]>()
+  if (!ids.length) return porSala
+  const { data, error } = await supabase
+    .from("lms_stream_materiais")
+    .select("id, stream_id, titulo, descricao, url, tipo, ordem")
+    .in("stream_id", ids)
+    .order("ordem", { ascending: true })
+  if (error || !data) return porSala
+  for (const m of data as Array<MaterialDaSala & { stream_id: string }>) {
+    const { stream_id, ...material } = m
+    const lista = porSala.get(stream_id) ?? []
+    lista.push(material)
+    porSala.set(stream_id, lista)
+  }
+  return porSala
+}
 
 function sanitizePublicRow(row: Record<string, unknown>) {
   const copy: Record<string, unknown> = { ...row }
@@ -135,10 +161,29 @@ export async function GET(request: NextRequest) {
     // O CADEADO A SÉRIO. A reprodução (playback_url / HLS, que leva a chave da sala) só vai a quem
     // tem acesso ao nível da sala — `free` é público, o resto segue podeAcederAoTier; a equipa
     // (educador autenticado, admin) vê sempre. A lista continua completa: é a montra das salas.
-    const entregues = canSeeSecrets
+    const lerEspectador = criarLeitorDeEspectador(request)
+    const entregues = (canSeeSecrets
       ? safeMapped
-      : await aplicarAcessoAReproducao(safeMapped as Record<string, unknown>[], criarLeitorDeEspectador(request))
-    return NextResponse.json({ success: true, data: entregues })
+      : await aplicarAcessoAReproducao(safeMapped as Record<string, unknown>[], lerEspectador)) as Record<string, unknown>[]
+
+    // OS MATERIAIS, com o nível das GRAVAÇÕES da sala (o mesmo que a playlist usa no ecrã:
+    // `playlist_access_tier ?? access_tier`). A diferença é que aqui o link fechado não sai do
+    // servidor — o título sim, para a sala continuar a mostrar o que tem.
+    const materiais = await materiaisDasSalas(entregues.map((r) => String(r.id)))
+    const podeRever = async (tier: string | null): Promise<boolean> => {
+      if (canSeeSecrets || podeVerReproducaoDaSala(null, tier)) return true
+      const quem: Espectador = await lerEspectador()
+      return podeVerReproducaoDaSala(quem.perfil, tier, { equipa: quem.equipa })
+    }
+    const comMateriais = await Promise.all(
+      entregues.map(async (r) => {
+        const lista = materiais.get(String(r.id))
+        if (!lista?.length) return { ...r, materiais: [] }
+        const tier = ((r.playlist_access_tier ?? r.access_tier) as string | null | undefined) ?? null
+        return { ...r, materiais: entregarMateriais(lista, await podeRever(tier)) }
+      }),
+    )
+    return NextResponse.json({ success: true, data: comMateriais })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })
   }

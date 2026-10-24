@@ -44,7 +44,9 @@ export const COLUNAS_VITRINE =
   // 195 — variantes agrupadas: a montra desenha um cartão por grupo, a ficha um selector.
   'grupo, variante_nome, variante_ordem, ' +
   // 196 — a frase do cartão de grupo (sem periodicidade).
-  'grupo_subtitulo'
+  'grupo_subtitulo, ' +
+  // 211 — o vídeo de apresentação. É PÚBLICO de propósito; o conteúdo pago continua fora daqui.
+  'video_url'
 
 export type ProdutoVitrine = {
   id: string
@@ -82,6 +84,8 @@ export type ProdutoVitrine = {
   variante_nome: string | null
   variante_ordem: number
   grupo_subtitulo: string | null
+  /** 211 — vídeo público de apresentação. */
+  video_url?: string | null
   educador?: { id: string; display_name: string; avatar_url: string | null; specialty: string | null } | null
   jaComprou?: boolean
 }

@@ -37,6 +37,7 @@ import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
 import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { LmsPlaylistSection } from "@/components/live/lms-playlist-section"
+import MateriaisDaSala from "@/components/live/materiais-da-sala"
 import {
   PARAM_ACADEMIA,
   oQuePodeFazer,
@@ -44,6 +45,7 @@ import {
   resolverAcademia,
   type AcademiaComSalas,
   type AcademiaDoCatalogo,
+  type MaterialDaSala,
   type SalaDeAula,
 } from "@/lib/lms/aulas"
 import { notifyXpFromResponse } from "@/lib/xp-client"
@@ -65,6 +67,8 @@ type StreamListItem = {
   playlist_url?: string | null
   playlist_title?: string | null
   playlist_access_tier?: "all" | "app_member" | "premium" | "vip" | null
+  /** Anexos da sala (211), já com o nível decidido pelo servidor. */
+  materiais?: MaterialDaSala[] | null
 }
 
 type TimetableApiSession = {
@@ -575,6 +579,11 @@ export default function LiveSessionsMobile({
     () => porAcademia(todasAsSalas as unknown as SalaDeAula[], catalogo),
     [todasAsSalas, catalogo],
   )
+  // Os anexos da sala aberta no modal, tirados da lista que já cá está (211).
+  const materiaisDoModal = useMemo(
+    () => (stream?.id ? todasAsSalas.find((x) => x.id === stream.id)?.materiais ?? [] : []),
+    [stream?.id, todasAsSalas],
+  )
   /**
    * AS ACADEMIAS SÃO PASTAS, e não chips de filtro.
    *
@@ -869,6 +878,14 @@ export default function LiveSessionsMobile({
                       />
                     </div>
                   )}
+
+                  {/* Os guias da sala (211). Sempre à vista: são poucos, e o cadeado é do servidor. */}
+                  {Boolean((s as StreamListItem).materiais?.length) && (
+                    <MateriaisDaSala
+                      materiais={(s as StreamListItem).materiais}
+                      className="border-t border-zinc-800/80 px-2.5 pb-2.5 pt-2"
+                    />
+                  )}
                 </div>
               )
             })}
@@ -953,6 +970,14 @@ export default function LiveSessionsMobile({
                 }
               />
             </div>
+          )}
+
+          {/* Os materiais vêm da LISTA (a rota da sala aberta não os traz): sem pedido a mais. */}
+          {materiaisDoModal.length > 0 && (
+            <MateriaisDaSala
+              materiais={materiaisDoModal}
+              className="shrink-0 border-b border-gray-800/70 bg-black/30 px-2 py-2 sm:px-3"
+            />
           )}
 
           <div

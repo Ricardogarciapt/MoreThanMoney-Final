@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { GraduationCap, Lock, PlayCircle, ChevronDown } from "lucide-react"
 import { LmsPlaylistSection } from "@/components/live/lms-playlist-section"
 import { podeAcederAoTier } from "@/lib/perfil-ui"
+import MateriaisDaSala from "@/components/live/materiais-da-sala"
+import type { MaterialDaSala } from "@/lib/lms/aulas"
 
 /**
  * CARD DE CURSOS do educador — junta as playlists PRÓPRIAS do educador
@@ -21,6 +23,8 @@ export interface CourseItem {
   image?: string | null
   /** 'educator' = curso próprio · 'room' = playlist de uma sala. */
   origin: "educator" | "room"
+  /** Os anexos da sala (211), já com o nível decidido pelo servidor. Só nas salas. */
+  materiais?: MaterialDaSala[]
 }
 
 /**
@@ -153,14 +157,19 @@ export default function EducatorCoursesCard({
         </div>
       )}
 
-      <LmsPlaylistSection
-        key={current.id}
-        defaultOpen={defaultOpen || courses.length === 1}
-        playlistUrl={current.url}
-        playlistTitle={current.title}
-        canAccess={canAccess}
-        tierLabel={tierLabel(current.tier)}
-      />
+      {/* Uma sala pode ter só materiais (os guias de uma estratégia sem aulas gravadas ainda). */}
+      {current.url && (
+        <LmsPlaylistSection
+          key={current.id}
+          defaultOpen={defaultOpen || courses.length === 1}
+          playlistUrl={current.url}
+          playlistTitle={current.title}
+          canAccess={canAccess}
+          tierLabel={tierLabel(current.tier)}
+        />
+      )}
+
+      <MateriaisDaSala materiais={current.materiais} className="mt-3" />
 
       {courses.length > 1 && (
         <p className="mt-2 flex items-center gap-1 text-[11px] text-zinc-500">

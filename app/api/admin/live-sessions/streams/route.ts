@@ -51,7 +51,25 @@ export async function GET(request: NextRequest) {
     .order("updated_at", { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true, data: data || [] })
+
+  // Os materiais de cada sala (211), numa só leitura. Sem a tabela (migração por aplicar) a lista
+  // de salas sai igual, só sem materiais — o admin não pode ficar sem salas por causa disto.
+  const salas = (data || []) as Array<Record<string, unknown> & { id: string }>
+  const { data: mats } = salas.length
+    ? await supabase
+        .from("lms_stream_materiais")
+        .select("id, stream_id, titulo, descricao, url, tipo, ordem")
+        .in("stream_id", salas.map((s) => s.id))
+        .order("ordem", { ascending: true })
+    : { data: [] }
+  const porSala = new Map<string, unknown[]>()
+  for (const m of (mats || []) as Array<{ stream_id: string }>) {
+    porSala.set(m.stream_id, [...(porSala.get(m.stream_id) ?? []), m])
+  }
+  return NextResponse.json({
+    success: true,
+    data: salas.map((s) => ({ ...s, materiais: porSala.get(s.id) ?? [] })),
+  })
 }
 
 export async function POST(request: NextRequest) {

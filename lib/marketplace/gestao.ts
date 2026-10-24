@@ -94,6 +94,8 @@ export type ProdutoGerido = {
   requer_morada: boolean
   conteudo_url: string | null
   conteudo_nota: string | null
+  /** 211 — o vídeo PÚBLICO de apresentação (mp4 ou YouTube). Ver `lib/marketplace/video.ts`. */
+  video_url: string | null
   estado: string
   activo: boolean
   partilha_pct: number | null
@@ -125,7 +127,7 @@ export const COLUNAS_GESTAO =
   'recorrente, periodicidade, requer_morada, conteudo_url, conteudo_nota, estado, activo, partilha_pct, ' +
   'stripe_product_id, stripe_price_id, checkout_externo_url, vendedor_nome, campanha_pct, campanha_inicio, ' +
   'campanha_fim, campanha_tier, campanha_stripe_coupon_id, motivo_recusa, publicado_em, created_at, updated_at, ' +
-  'subcategoria, grupo, variante_nome, variante_ordem, grupo_subtitulo'
+  'subcategoria, grupo, variante_nome, variante_ordem, grupo_subtitulo, video_url'
 
 /**
  * Esta pessoa pode mexer NESTE produto? — a função pura, para se poder testar o caso mau.
@@ -235,6 +237,8 @@ export const CAMPOS_DO_EDUCADOR = [
   // pergunta a `podeAgrupar` antes de gravar, com os membros reais do grupo lidos da base. Num
   // produto da casa nem lá chega, porque `podeGerir` já o recusou.
   'grupo', 'variante_nome', 'variante_ordem', 'grupo_subtitulo',
+  // 211 — o vídeo de apresentação é montra do produto dele, como a capa. O https é imposto na rota.
+  'video_url',
 ] as const
 
 export const CAMPOS_SO_DO_ADMIN = [
