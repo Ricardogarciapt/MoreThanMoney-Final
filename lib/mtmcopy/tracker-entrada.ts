@@ -47,6 +47,28 @@ export function entradaEncheu(p: { direcao: 'buy' | 'sell'; entrada: number | nu
   return sobe ? p.preco >= p.entrada : p.preco <= p.entrada
 }
 
+/**
+ * A ENTRADA QUE O TRACKER SEGUE — a mesma da mestre.
+ *
+ * No Premium a mestre entra no MEIO da zona (`entradaPremium`, lib/mestres/premium.ts), mas o
+ * tracker seguia a ponta mais vantajosa (venda = topo, compra = fundo). O chat dizia «Ideia
+ * descartada» em sinais em que a mestre tinha entrado e o trader anunciava TP2, e quando a ponta
+ * enchia contava um risco que ninguém correu. Medido em 61 sinais de 07/10 a 23/10 (velas de 5 min
+ * da OANDA): ponta 35 entradas e +100 pips; meio 37 entradas e +690 pips. Fora do Premium, ou sem
+ * zona, fica a entrada do sinal.
+ */
+export function entradaDoSeguimento(p: {
+  sourceKey: string | null | undefined
+  entrada: number | null | undefined
+  zona: [number, number] | null | undefined
+}): number | null {
+  const z = p.zona
+  if (String(p.sourceKey ?? '').toLowerCase() === 'premium' && z && Number(z[0]) > 0 && Number(z[1]) > 0 && z[0] !== z[1]) {
+    return Math.round(((Number(z[0]) + Number(z[1])) / 2) * 100) / 100
+  }
+  return p.entrada ?? null
+}
+
 /** Horas que um setup espera pela entrada antes de ser descartado, por fonte. */
 export function horasAteDesistir(sourceKey: string | null | undefined, padraoHoras: number): number {
   if (String(sourceKey ?? '').toLowerCase() === 'premium') return PREMIUM_ENTRADA_PADRAO.validadeMin / 60
