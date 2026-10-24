@@ -28,6 +28,8 @@ import {
   Globe,
   CandlestickChart,
   Store,
+  Compass,
+  PlayCircle,
 } from "lucide-react"
 import Image from "next/image"
 import { SiteLogo } from "@/components/site-logo"
@@ -336,6 +338,36 @@ export default function MobileSidebar({
                   )
                 })}
               </nav>
+            </div>
+
+            {/* Começar — o onboarding tem de estar à mão, não só no primeiro arranque */}
+            <div className="p-4 border-b border-gray-800">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">Começar</h3>
+              <div className="space-y-1">
+                <Link
+                  href="/onboarding"
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
+                >
+                  <Compass className="w-5 h-5 text-[#D2A63C]" />
+                  <span className="flex-1 text-left font-medium">Onboarding</span>
+                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                </Link>
+                <button
+                  onClick={() => {
+                    // O mesmo gesto das Definições: limpa a marca e o tutorial volta a abrir.
+                    try {
+                      localStorage.removeItem("mtm_onboarding_done")
+                    } catch {}
+                    onClose()
+                    window.dispatchEvent(new Event("mtm-replay-tutorial"))
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
+                >
+                  <PlayCircle className="w-5 h-5" />
+                  <span className="flex-1 text-left font-medium">Tutorial da app</span>
+                </button>
+              </div>
             </div>
 
             {/* Comunicação */}
