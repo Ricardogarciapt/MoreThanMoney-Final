@@ -161,7 +161,7 @@ export function createScannerScene({ canvas, sim, capture = false, background = 
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
     return { g, per }
   }
-  const lines = sim.lines.map((l) => {
+  const lines = sim.lines.filter((l) => !l.hidden3d).map((l) => {
     const { g, per } = ribbon(l.pts, l.width, l.step)
     const mesh = new THREE.Mesh(g, track(new THREE.MeshBasicMaterial({ color: l.color, side: THREE.DoubleSide })))
     mesh.position.z = l.z

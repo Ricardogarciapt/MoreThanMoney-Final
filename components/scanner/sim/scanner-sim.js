@@ -126,6 +126,7 @@ function trim(sim, warm) {
     segments: (sim.segments || []).filter((s) => keep(s.i1)).map((s) => ({ ...s, i0: Math.max(0, cut(s.i0)), i1: cut(s.i1) })),
     markers: (sim.markers || []).filter((m) => keep(m.i)).map((m) => ({ ...m, i: cut(m.i) })),
     groups: (sim.groups || []).filter((g) => keep(g.i0)).map((g) => ({ ...g, i0: cut(g.i0), items: g.items.map((it) => ({ ...it, from: it.from != null ? cut(it.from) : undefined, to: it.to != null ? cut(it.to) : undefined })) })),
+    alertGroups: (sim.alertGroups || []).filter((g) => keep(g.i0)).map((g) => ({ ...g, i0: cut(g.i0) })),
     panel: sim.panel ? { ...sim.panel, rows: sim.panel.rows.map((r) => ({ ...r, states: r.states.slice(warm) })) } : undefined,
     captions: (sim.captions || []).filter((c) => c.i >= warm).map((c) => ({ ...c, i: cut(c.i) })).sort((a, b) => a.i - b.i),
   }
@@ -205,10 +206,27 @@ function goldKiller() {
     })
   })
   const shown = legs.filter((l) => l.i >= warm)
+  // Alerta do script: entrada = linha central, SL = drawdown 50, TP1/2/3 = ganhos 50/75/100.
+  const alertGroups = legs.filter((l) => l.levels && l.levels.every((v) => isFinite(v.gain) && isFinite(v.dd))).map((l) => ({
+    i0: l.i,
+    items: [
+      { price: l.entry, color: GOLD_L, label: 'Entrada' },
+      { price: l.levels[3].dd, color: RED, label: 'SL' },
+      { price: l.levels[3].gain, color: GREEN, label: 'TP1' },
+      { price: l.levels[2].gain, color: GREEN, label: 'TP2' },
+      { price: l.levels[0].gain, color: GREEN, label: 'TP3' },
+    ],
+  }))
+  const smooth = ema(ema(cs.map((b) => (b.h + b.l + b.c) / 3), 4), 4)
   const sim = {
     name: 'Gold Killer',
     candles: cs,
-    lines: [{ name: 'Linha central', color: GREY, width: 0.05, z: 0.25, step: true, pts: center }],
+    alertGroups,
+    lines: [
+      { name: 'Linha central', color: GREY, width: 0.05, z: 0.25, step: true, pts: center },
+      { name: 'SuperTrend', color: GOLD, width: 0.05, z: 0.24, step: true, pts: st, hidden3d: true },
+      { name: 'Preço suavizado', color: GOLD_L, width: 0.05, z: 0.24, pts: smooth, hidden3d: true },
+    ],
     zones,
     markers,
     captions: [
@@ -528,6 +546,119 @@ function sensei() {
     ],
     legend: [{ color: GOLD, label: 'Banda Sensei' }, { color: '#ff9a3c', label: 'POC' }, { color: '#ffce2b', label: 'DEMA 238' }],
   }, warm)
+}
+
+// ───────────────────────── Cartões de pontos-chave ─────────────────────────
+// Texto de cada cartão (vem do código Pine) e, à parte, o recorte da simulação que o ilustra.
+export const CARD_TEXT = {
+  'gold-killer': [
+    { title: 'Viragem do SuperTrend', text: 'SuperTrend de ATR (10 × 3) sobre o preço. Quando a linha muda de lado, sai o sinal de compra ou de venda.' },
+    { title: 'Alvos e drawdowns por percentil', text: 'Os níveis verdes e vermelhos saem do histórico: até onde o preço foi a favor e contra nas pernas anteriores.' },
+    { title: 'Recalcula em cada viragem', text: 'Cada nova perna começa na linha central, a entrada, e os níveis desenham-se outra vez a partir dela.' },
+    { title: 'Alerta com entrada, stop e alvos', text: 'O alerta leva a entrada, o stop no drawdown 50 e três alvos nos ganhos 50, 75 e 100, pronto para webhook.' },
+    { title: 'Fonte de preço suavizada', text: 'Podes ler o fecho, o HLCC4 ou uma versão suavizada do preço, que corta o ruído das velas.' },
+  ],
+  'mtm-scanner': [
+    { title: 'Três DEMA, três prazos', text: 'DEMA 15, 50 e 238: curto, médio e longo prazo. Quando estão alinhadas, a tendência está clara.' },
+    { title: 'POC de volume', text: 'A linha laranja marca o preço com mais volume nas últimas velas: onde o mercado mais negociou.' },
+    { title: 'Sinal no cruzamento do POC', text: 'Quando o fecho atravessa o POC, aparece o B ou o S no gráfico, com alerta.' },
+    { title: 'Stop e alvos por ATR', text: 'Stop a 1 ATR da entrada e alvos a 2, 4 e 6 vezes esse risco, desenhados logo no sinal.' },
+    { title: 'Estrutura de mercado', text: 'CHoCH quando a estrutura muda de lado, com BOS, inducements e sweeps por cima do preço.' },
+  ],
+  'aurum-flow': [
+    { title: 'Caixas de sessão', text: 'Pre London, London e Nova Iorque: cada caixa guarda o máximo, o mínimo e a range da abertura.' },
+    { title: 'Rompimento a favor', text: 'O sinal só sai quando o fecho rompe a caixa no sentido da tendência de fundo.' },
+    { title: 'Stop na aresta oposta', text: 'O stop fica do outro lado da range, com uma folga de ATR e um teto de risco por trade.' },
+    { title: 'Quatro alvos em R, em dólares', text: 'TP1 a TP4 em múltiplos do risco, com o valor em $ para o risco por trade que escolheste.' },
+    { title: 'Regime obrigatório', text: 'Uma média de tendência filtra o lado: compras acima, vendas abaixo. Mercado parado não conta.' },
+  ],
+  trendshot: [
+    { title: 'Cruzamento das EMAs', text: 'EMA 20, 50 e 238. O cruzamento confirmado no fecho da vela dá o sinal de compra ou venda.' },
+    { title: 'Tendência em seis timeframes', text: 'A tabela mostra a tendência de vários timeframes ao mesmo tempo, sem mudares de gráfico.' },
+    { title: 'Suporte e resistência', text: 'Zonas a partir dos pivots, com a altura limitada pelo ATR para não ocuparem o gráfico todo.' },
+    { title: 'Entrada, stop e até quatro alvos', text: 'Depois do sinal, os níveis ficam fixos na zona da entrada: SL e TP1 a TP4.' },
+    { title: 'Tendência de fundo', text: 'A EMA 238 mostra o lado do mercado. Operar a favor dela é a primeira regra.' },
+  ],
+  sensei: [
+    { title: 'Painel de confirmações', text: 'Cada leitura acende no painel. O sinal só sai quando há confirmações suficientes.' },
+    { title: 'Banda Sensei', text: 'Média de 89 com um desvio padrão: mostra se o preço está esticado ou dentro do normal.' },
+    { title: 'Estrutura SMC', text: 'CHoCH, BOS, sweeps e order blocks: o motor de estrutura que lê quem está a mandar no mercado.' },
+    { title: 'Quatro saídas em R', text: 'Saídas a 1:1,5, 1:2,5, 1:4 e 1:6, com níveis fixos na vela do sinal.' },
+    { title: 'Stop para a entrada', text: 'Quando a primeira saída é tocada, o stop sobe para o preço de entrada.' },
+  ],
+}
+
+const around = (i, before, after, N) => [Math.max(0, i - before), Math.min(N - 1, i + after)]
+const CARD_VIEWS = {
+  'gold-killer': (s) => {
+    const N = s.candles.length
+    const m = s.markers
+    const g = s.alertGroups[1] ?? s.alertGroups[0]
+    return [
+      { win: around(m[0]?.i ?? 40, 30, 22, N), layers: { candles: true, markers: true, lines: ['SuperTrend'] } },
+      { win: around(m[1]?.i ?? 80, 8, 40, N), layers: { candles: true, zones: true, lines: ['Linha central'] } },
+      { win: [Math.max(0, (m[0]?.i ?? 20) - 4), Math.min(N - 1, (m[2]?.i ?? N - 1) + 6)], layers: { candles: true, zones: true, markers: true, lines: ['Linha central'] } },
+      { win: around(g?.i0 ?? 60, 6, 30, N), layers: { candles: true, groups: true, markers: true }, group: g },
+      { win: [10, 80], layers: { candles: true, dimCandles: true, lines: ['Preço suavizado'] } },
+    ]
+  },
+  'mtm-scanner': (s) => {
+    const N = s.candles.length
+    const g = s.groups[s.groups.length - 2] ?? s.groups[0]
+    const seg = s.segments[0]
+    return [
+      { win: [0, N - 1], layers: { candles: true, dimCandles: true, lines: ['DEMA 15', 'DEMA 50', 'DEMA 238'] } },
+      { win: around(70, 40, 30, N), layers: { candles: true, lines: ['POC'] } },
+      { win: around(g.i0, 25, 15, N), layers: { candles: true, lines: ['POC'], markers: true } },
+      { win: around(g.i0, 10, 28, N), layers: { candles: true, groups: true, markers: true }, group: g },
+      { win: seg ? [Math.max(0, seg.i0 - 10), Math.min(N - 1, seg.i1 + 15)] : [0, N - 1], layers: { candles: true, segments: true } },
+    ]
+  },
+  'aurum-flow': (s) => {
+    const N = s.candles.length
+    const z = s.zones.filter((q) => q.label)
+    const g = s.groups[s.groups.length - 1]
+    const m = s.markers[s.markers.length - 1]
+    return [
+      { win: around(z[0]?.i0 ?? 10, 6, 40, N), layers: { candles: true, zones: (q) => !!q.label } },
+      { win: around(m.i, 30, 10, N), layers: { candles: true, zones: (q) => !!q.label, markers: true } },
+      { win: around(g.i0, 20, 16, N), layers: { candles: true, zones: (q) => !!q.label, groups: true }, group: { ...g, items: g.items.slice(0, 2) } },
+      { win: around(g.i0, 8, 26, N), layers: { candles: true, groups: true }, group: g },
+      { win: [0, N - 1], layers: { candles: true, dimCandles: true, lines: ['EMA de regime'] } },
+    ]
+  },
+  trendshot: (s) => {
+    const N = s.candles.length
+    const m = s.markers
+    const g = s.groups[s.groups.length - 1]
+    return [
+      { win: around(m[0]?.i ?? 50, 30, 20, N), layers: { candles: true, markers: true, lines: ['EMA 20', 'EMA 50'] } },
+      { win: [Math.max(0, N - 90), N - 1], layers: { candles: true, dimCandles: true, panel: true } },
+      { win: [0, N - 1], layers: { candles: true, zones: true } },
+      { win: around(g.i0, 10, 24, N), layers: { candles: true, groups: true, markers: true }, group: g },
+      { win: [0, N - 1], layers: { candles: true, dimCandles: true, lines: ['EMA 238'] } },
+    ]
+  },
+  sensei: (s) => {
+    const N = s.candles.length
+    const g = s.groups[0]
+    const seg = s.segments[s.segments.length - 1]
+    const be = g.items.find((it) => it.from != null)
+    return [
+      { win: around(g.i0, 40, 6, N), layers: { candles: true, dimCandles: true, panel: true, markers: true } },
+      { win: [0, N - 1], layers: { candles: true, areas: true } },
+      { win: seg ? [Math.max(0, seg.i0 - 10), Math.min(N - 1, seg.i1 + 12)] : [0, N - 1], layers: { candles: true, segments: true } },
+      { win: around(g.i0, 8, 22, N), layers: { candles: true, groups: true, markers: true }, group: { ...g, items: g.items.filter((it) => it.from == null).map((it) => ({ ...it, to: undefined })) } },
+      { win: around(be?.from ?? g.i0 + 4, 10, 18, N), layers: { candles: true, groups: true }, group: g },
+    ]
+  },
+}
+
+/** Cartões de pontos-chave de um scanner: texto + recorte da simulação. */
+export function scannerCards(slug) {
+  const sim = simulate(slug)
+  const views = CARD_VIEWS[slug](sim)
+  return CARD_TEXT[slug].map((t, k) => ({ ...t, ...views[k] }))
 }
 
 const BUILDERS = { 'gold-killer': goldKiller, 'mtm-scanner': mtmScanner, 'aurum-flow': aurumFlow, trendshot: trendShot, sensei }
