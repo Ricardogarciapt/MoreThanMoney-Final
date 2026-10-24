@@ -275,7 +275,7 @@ export function adaptadorMt5(accountId: string, opcoes: { podeNegociar: boolean 
       let sl = p.sl ?? undefined
       let tp = p.tp ?? undefined
       if ((sl != null || tp != null) && s?.stopsLevel) {
-        let ref = p.tipo === 'mercado' ? null : p.preco ?? null
+        let ref = p.tipo === 'mercado' ? null : p.tipo === 'stop_limit' ? p.precoLimite ?? null : p.preco ?? null
         if (ref == null) {
           const q = (await deps.rest(accountId, `/symbols/${encodeURIComponent(simbolo)}/current-price`).catch(() => null)) as { bid?: number; ask?: number } | null
           ref = p.direcao === 'buy' ? q?.ask ?? null : q?.bid ?? null
@@ -288,6 +288,8 @@ export function adaptadorMt5(accountId: string, opcoes: { podeNegociar: boolean 
         const r = await trade({
           actionType: tipoMt5, symbol: simbolo, volume,
           ...(p.tipo !== 'mercado' ? { openPrice: p.preco } : {}),
+          // Stop Limit: openPrice é o stop; a limit que a corretora põe ao chegar lá fica em stopLimitPrice.
+          ...(p.tipo === 'stop_limit' ? { stopLimitPrice: p.precoLimite } : {}),
           ...(sl != null ? { stopLoss: sl } : {}), ...(tp != null ? { takeProfit: tp } : {}),
           ...(comentario ? { comment: comentario } : {}),
         })

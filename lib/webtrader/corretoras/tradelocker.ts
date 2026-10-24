@@ -117,6 +117,7 @@ export function adaptadorTradeLocker(sessao: TradeLockerSessao, opcoes: { podeNe
     enviarOrdem: (bruto) => comErros(async () => {
       exigir()
       const p = validarPedido(bruto)
+      if (p.tipo === 'stop_limit') throw new ErroCorretora(400, 'A TradeLocker não tem ordens Stop Limit.')
       const r = await colocarOrdemTL(sessao, {
         symbol: p.symbol, direction: p.direcao, volume: p.volume,
         orderType: p.tipo === 'mercado' ? 'market' : p.tipo, openPrice: p.preco ?? null, stopLoss: p.sl ?? null, takeProfit: p.tp ?? null,

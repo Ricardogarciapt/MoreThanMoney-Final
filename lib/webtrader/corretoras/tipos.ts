@@ -108,9 +108,11 @@ export interface PrecoWT {
 export interface PedidoOrdemWT {
   symbol: string
   direcao: DirecaoWT
-  tipo: 'mercado' | 'limit' | 'stop'
+  /** `stop_limit` só nas contas MT5 (`capacidades.stopLimit`): `preco` é o stop e `precoLimite` a limit. */
+  tipo: 'mercado' | 'limit' | 'stop' | 'stop_limit'
   volume: number
   preco?: number | null
+  precoLimite?: number | null
   sl?: number | null
   tp?: number | null
 }
@@ -137,6 +139,8 @@ export interface CapacidadesWT {
   mercado: boolean
   limit: boolean
   stop: boolean
+  /** Buy/Sell Stop Limit (só MT5). */
+  stopLimit: boolean
   slTp: boolean
   fechoParcial: boolean
   modificarPendente: boolean
@@ -151,9 +155,9 @@ export interface CapacidadesWT {
 }
 
 export const CAPACIDADES: Record<PlataformaWT, CapacidadesWT> = {
-  mtmfunded: { mercado: true, limit: true, stop: true, slTp: true, fechoParcial: true, modificarPendente: true, historico: true, bracketTps: true, trailing: true, oco: true, regras: true, diario: true, alertas: true },
-  tradelocker: { mercado: true, limit: true, stop: true, slTp: true, fechoParcial: true, modificarPendente: true, historico: true, bracketTps: false, trailing: false, oco: false, regras: false, diario: false, alertas: false },
-  mt5: { mercado: true, limit: true, stop: true, slTp: true, fechoParcial: true, modificarPendente: true, historico: true, bracketTps: false, trailing: false, oco: false, regras: false, diario: false, alertas: false },
+  mtmfunded: { mercado: true, limit: true, stop: true, stopLimit: false, slTp: true, fechoParcial: true, modificarPendente: true, historico: true, bracketTps: true, trailing: true, oco: true, regras: true, diario: true, alertas: true },
+  tradelocker: { mercado: true, limit: true, stop: true, stopLimit: false, slTp: true, fechoParcial: true, modificarPendente: true, historico: true, bracketTps: false, trailing: false, oco: false, regras: false, diario: false, alertas: false },
+  mt5: { mercado: true, limit: true, stop: true, stopLimit: true, slTp: true, fechoParcial: true, modificarPendente: true, historico: true, bracketTps: false, trailing: false, oco: false, regras: false, diario: false, alertas: false },
 }
 
 /** Conta real (dinheiro a sério) vs simulada. */
@@ -197,21 +201,30 @@ export function validarPedido(p: Partial<PedidoOrdemWT>): PedidoOrdemWT {
   if (!/^[A-Z0-9._#+-]{2,24}$/.test(symbol)) throw new ErroCorretora(400, 'símbolo inválido')
   if (p.direcao !== 'buy' && p.direcao !== 'sell') throw new ErroCorretora(400, 'direcção inválida')
   const tipo = p.tipo ?? 'mercado'
-  if (tipo !== 'mercado' && tipo !== 'limit' && tipo !== 'stop') throw new ErroCorretora(400, 'tipo de ordem inválido')
+  if (tipo !== 'mercado' && tipo !== 'limit' && tipo !== 'stop' && tipo !== 'stop_limit') throw new ErroCorretora(400, 'tipo de ordem inválido')
   const volume = Number(p.volume)
   if (!(volume > 0) || volume > 100) throw new ErroCorretora(400, 'volume inválido')
   const pos = (v: unknown) => (v == null || v === '' ? null : Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : NaN)
   const preco = pos(p.preco)
   const sl = pos(p.sl)
   const tp = pos(p.tp)
-  if ([preco, sl, tp].some((v) => Number.isNaN(v))) throw new ErroCorretora(400, 'preço, SL ou TP inválido')
+  const precoLimite = tipo === 'stop_limit' ? pos(p.precoLimite) : null
+  if ([preco, sl, tp, precoLimite].some((v) => Number.isNaN(v))) throw new ErroCorretora(400, 'preço, SL ou TP inválido')
   if (tipo !== 'mercado' && preco == null) throw new ErroCorretora(400, 'falta o preço da ordem pendente')
+  if (tipo === 'stop_limit') {
+    if (precoLimite == null) throw new ErroCorretora(400, 'falta o preço limite da Stop Limit')
+    // Ao chegar ao stop, a corretora põe uma limit: a de compra fica no stop ou abaixo, a de venda no stop ou acima.
+    if (p.direcao === 'buy' ? precoLimite > Number(preco) : precoLimite < Number(preco)) {
+      throw new ErroCorretora(400, p.direcao === 'buy' ? 'numa buy stop limit o limite fica no stop ou abaixo' : 'numa sell stop limit o limite fica no stop ou acima')
+    }
+  }
   // Os níveis contra o preço da pendente — a MESMA regra do ticket e do motor simulado
   // (lib/webtrader/regras-ordem.ts). A mercado não há referência fiável aqui: é a corretora que valida.
-  const ref = tipo === 'mercado' ? null : preco
+  // Numa Stop Limit a entrada é o limite.
+  const ref = tipo === 'mercado' ? null : tipo === 'stop_limit' ? precoLimite : preco
   if (ref != null) {
     const erro = erroDosNiveis(p.direcao, ref, sl, tp)
     if (erro) throw new ErroCorretora(400, erro)
   }
-  return { symbol, direcao: p.direcao, tipo, volume, preco, sl, tp }
+  return { symbol, direcao: p.direcao, tipo, volume, preco, ...(tipo === 'stop_limit' ? { precoLimite } : {}), sl, tp }
 }

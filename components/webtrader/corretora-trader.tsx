@@ -429,7 +429,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
       symbol={symbol} digitos={digitos} volumeMin={ficha?.volume_min ?? 0.01} passo={ficha?.volume_step ?? 0.01}
       bid={vivos[symbol]?.bid} ask={vivos[symbol]?.ask} podeNegociar={podeNegociar} capacidades={capacidades} prefill={prefill}
       onEnviar={(p) => semCancelar(accao(
-        `${p.direcao === "buy" ? "Comprar" : "Vender"} ${p.volume} ${symbol}${p.tipo !== "mercado" ? ` ${p.tipo} @ ${p.preco}` : " a mercado"}`,
+        `${p.direcao === "buy" ? "Comprar" : "Vender"} ${p.volume} ${symbol}${p.tipo === "stop_limit" ? ` stop limit @ ${p.preco} → ${p.precoLimite}` : p.tipo !== "mercado" ? ` ${p.tipo} @ ${p.preco}` : " a mercado"}`,
         "ordem", { symbol, ...p },
       ))}
     />,
@@ -587,9 +587,10 @@ function PesquisaSimbolo({ plataforma, contaRef, atual, lista: listaFeed, onEsco
 function TicketReal({ symbol, digitos, volumeMin, passo, bid, ask, podeNegociar, capacidades, prefill, onEnviar }: {
   symbol: string; digitos: number; volumeMin: number; passo: number; bid?: number; ask?: number; podeNegociar: boolean; capacidades: CapacidadesWT
   prefill: Prefill | null
-  onEnviar: (p: { direcao: "buy" | "sell"; tipo: "mercado" | "limit" | "stop"; volume: number; preco: number | null; sl: number | null; tp: number | null }) => Promise<unknown>
+  onEnviar: (p: { direcao: "buy" | "sell"; tipo: "mercado" | "limit" | "stop" | "stop_limit"; volume: number; preco: number | null; precoLimite: number | null; sl: number | null; tp: number | null }) => Promise<unknown>
 }) {
-  const [tipo, setTipo] = useState<"mercado" | "limit" | "stop">("mercado")
+  const [tipo, setTipo] = useState<"mercado" | "limit" | "stop" | "stop_limit">("mercado")
+  const [precoLimite, setPrecoLimite] = useState("")
   const [volume, setVolume] = useState(String(volumeMin))
   const [preco, setPreco] = useState("")
   const [sl, setSl] = useState(prefill?.sl ? String(prefill.sl) : "")
@@ -604,24 +605,25 @@ function TicketReal({ symbol, digitos, volumeMin, passo, bid, ask, podeNegociar,
     setErro(null)
     // Números com vírgula ou ponto; lixo («abc», «1,2,3») dá erro aqui em vez de seguir como null
     // (um SL mal escrito saía SEM SL para a corretora). Lote no passo e acima do mínimo.
-    const v = validarTicketReal({ tipo, volume, preco, sl, tp, volumeMin, passo })
+    const v = validarTicketReal({ tipo, volume, preco, precoLimite, sl, tp, volumeMin, passo })
     if (!v.ok) return setErro(v.erro)
     setAEnviar(true)
-    try { await onEnviar({ direcao, tipo, volume: v.volume, preco: v.preco, sl: v.sl, tp: v.tp }) } catch (e) { setErro((e as Error).message) } finally { setAEnviar(false) }
+    try { await onEnviar({ direcao, tipo, volume: v.volume, preco: v.preco, precoLimite: v.precoLimite, sl: v.sl, tp: v.tp }) } catch (e) { setErro((e as Error).message) } finally { setAEnviar(false) }
   }
   const input = "h-9 w-full rounded-md border border-white/10 bg-black px-2 font-mono text-[12.5px] text-white"
   const realce = (l: "buy" | "sell") => (lado === l ? " ring-2 ring-white/70" : "")
   return (
     <div className="space-y-2 rounded-lg border border-white/10 bg-[#0d0f15] p-2.5 text-[12px]">
       <div className="flex items-center justify-between"><span className="font-semibold">{symbol}</span><span className="text-[10.5px] text-rose-300">ordem real</span></div>
-      <div className="grid grid-cols-3 gap-1 rounded-md bg-black/40 p-0.5">
-        {(["mercado", "limit", "stop"] as const).filter((x) => (x === "mercado" ? capacidades.mercado : capacidades[x])).map((x) => (
-          <button key={x} onClick={() => setTipo(x)} className={`rounded py-1 ${tipo === x ? "bg-white/10 text-white" : "text-zinc-500"}`}>{x === "mercado" ? "Mercado" : x === "limit" ? "Limit" : "Stop"}</button>
+      <div className={`grid ${capacidades.stopLimit ? "grid-cols-4" : "grid-cols-3"} gap-1 rounded-md bg-black/40 p-0.5`}>
+        {(["mercado", "limit", "stop", "stop_limit"] as const).filter((x) => (x === "mercado" ? capacidades.mercado : x === "stop_limit" ? capacidades.stopLimit : capacidades[x])).map((x) => (
+          <button key={x} onClick={() => setTipo(x)} className={`rounded py-1 ${tipo === x ? "bg-white/10 text-white" : "text-zinc-500"}`}>{x === "mercado" ? "Mercado" : x === "limit" ? "Limit" : x === "stop" ? "Stop" : "Stop Limit"}</button>
         ))}
       </div>
       <div className="grid grid-cols-2 gap-1.5">
         <label className="text-zinc-400">Volume (lotes)<input inputMode="decimal" value={volume} onChange={(e) => setVolume(e.target.value)} aria-label="volume em lotes" className={input} /></label>
-        {tipo !== "mercado" && <label className="text-zinc-400">Preço<input inputMode="decimal" value={preco} onChange={(e) => setPreco(e.target.value)} className={input} /></label>}
+        {tipo !== "mercado" && <label className="text-zinc-400">{tipo === "stop_limit" ? "Preço stop" : "Preço"}<input inputMode="decimal" value={preco} onChange={(e) => setPreco(e.target.value)} className={input} /></label>}
+        {tipo === "stop_limit" && <label className="text-zinc-400" title="Quando o preço chega ao stop, a corretora põe uma limit a este preço">Preço limite<input inputMode="decimal" value={precoLimite} onChange={(e) => setPrecoLimite(e.target.value)} className={input} /></label>}
         <label className="text-zinc-400">SL<input inputMode="decimal" value={sl} onChange={(e) => setSl(e.target.value)} placeholder="opcional" className={input} /></label>
         <label className="text-zinc-400">TP<input inputMode="decimal" value={tp} onChange={(e) => setTp(e.target.value)} placeholder="opcional" className={input} /></label>
       </div>
