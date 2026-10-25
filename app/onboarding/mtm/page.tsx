@@ -17,8 +17,8 @@ export const metadata: Metadata = {
  * public/ só para não partir links velhos que apontem directamente para ele.
  */
 
-/** O vídeo de 2 minutos da abertura de conta, quando estiver renderizado (ex.: '/videos/abrir-conta-pu-prime.mp4'). */
-const VIDEO_ABRIR_CONTA: string | null = null
+/** O vídeo de 2 minutos da abertura de conta (16:9; a versão 9:16 é para as redes). */
+const VIDEO_ABRIR_CONTA: string | null = '/videos/abrir-conta-pu-prime.mp4'
 
 export default function OnboardingMtm() {
   return (
