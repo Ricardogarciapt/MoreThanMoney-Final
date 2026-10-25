@@ -68,14 +68,14 @@ export function Gerador({ tipos }: { tipos: Tipo[] }) {
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-gray-800 bg-gray-900/40 p-5">
+    <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-5">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="mb-1 block text-xs uppercase tracking-wide text-gray-500">Tipo de peça</span>
+          <span className="mb-1 block text-xs uppercase tracking-wide text-zinc-500">Tipo de peça</span>
           <select
             value={tipo}
             onChange={(e) => setTipo(e.target.value)}
-            className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-100 focus:border-[#D2A63C] focus:outline-none"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-[#D2A63C] focus:outline-none"
           >
             {tipos.map((t) => (
               <option key={t.chave} value={t.chave}>
@@ -85,7 +85,7 @@ export function Gerador({ tipos }: { tipos: Tipo[] }) {
           </select>
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs uppercase tracking-wide text-gray-500">Sobre o quê</span>
+          <span className="mb-1 block text-xs uppercase tracking-wide text-zinc-500">Sobre o quê</span>
           <input
             value={tema}
             onChange={(e) => setTema(e.target.value)}
@@ -93,18 +93,18 @@ export function Gerador({ tipos }: { tipos: Tipo[] }) {
             placeholder={
               tipo === 'argumentario' ? 'a objecção: «é caro»' : 'ex.: quem já perdeu dinheiro a operar sozinho'
             }
-            className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-[#D2A63C] focus:outline-none"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-[#D2A63C] focus:outline-none"
           />
         </label>
       </div>
 
-      {escolhido && <p className="text-xs leading-relaxed text-gray-500">{escolhido.descricao}</p>}
+      {escolhido && <p className="text-xs leading-relaxed text-zinc-500">{escolhido.descricao}</p>}
 
       <button
         type="button"
         onClick={gerar}
         disabled={aGerar || tema.trim().length < 3}
-        className="rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-gray-950 transition-opacity hover:opacity-90 disabled:opacity-40"
+        className="rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-zinc-950 transition-opacity hover:opacity-90 disabled:opacity-40"
       >
         {aGerar ? 'a escrever…' : 'Gerar material'}
       </button>
@@ -127,7 +127,7 @@ export function Gerador({ tipos }: { tipos: Tipo[] }) {
 
       {texto && (
         <div className="space-y-2">
-          <div className="whitespace-pre-wrap rounded-lg border border-gray-700 bg-gray-950 p-4 text-sm leading-relaxed text-gray-100">
+          <div className="whitespace-pre-wrap rounded-lg border border-zinc-700 bg-zinc-950 p-4 text-sm leading-relaxed text-zinc-100">
             {texto}
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -138,7 +138,7 @@ export function Gerador({ tipos }: { tipos: Tipo[] }) {
             >
               {copiado ? 'copiado ✓' : 'Copiar'}
             </button>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-zinc-500">
               Lê antes de publicar. Isto é um rascunho com o tom da casa — quem assina és tu.
             </span>
           </div>

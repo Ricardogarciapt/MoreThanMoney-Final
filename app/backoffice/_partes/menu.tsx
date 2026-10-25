@@ -40,7 +40,7 @@ export function MenuBackoffice({ seccoes }: { seccoes: SeccaoMenu[] }) {
       <nav className={`${aberto ? 'block' : 'hidden'} space-y-5 lg:block`}>
         {seccoes.filter((s) => s.itens.length).map((s) => (
           <div key={s.titulo}>
-            <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500">{s.titulo}</p>
+            <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{s.titulo}</p>
             <ul className="space-y-0.5">
               {s.itens.map((i) => (
                 <li key={i.href}>
@@ -50,7 +50,7 @@ export function MenuBackoffice({ seccoes }: { seccoes: SeccaoMenu[] }) {
                     className={`block rounded-lg px-3 py-1.5 text-sm transition-colors ${
                       activo(i.href)
                         ? 'bg-[#D2A63C]/15 font-medium text-[#E9C46A]'
-                        : 'text-gray-400 hover:bg-white/[0.03] hover:text-gray-100'
+                        : 'text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-100'
                     }`}
                   >
                     {i.label}

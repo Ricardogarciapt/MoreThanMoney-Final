@@ -39,13 +39,13 @@ export function Paginacao({
   if (pagina.pagina === 1 && !haMais) return null
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-800 pt-3">
-      <span className="text-xs text-gray-500">{descreverPagina(pagina, mostradas, haMais)}</span>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-3">
+      <span className="text-xs text-zinc-500">{descreverPagina(pagina, mostradas, haMais)}</span>
       <div className="flex gap-2">
         {pagina.pagina > 1 && (
           <a
             href={enderecoDaPagina(base, params, pagina.pagina - 1)}
-            className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:border-gray-600"
+            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-600"
           >
             ← Anteriores
           </a>
@@ -77,16 +77,16 @@ export function Filtros({
   children: React.ReactNode
 }) {
   return (
-    <form method="get" action={base} className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+    <form method="get" action={base} className="flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.06] bg-zinc-950/70 p-4">
       {children}
       <button
         type="submit"
-        className="rounded-lg bg-[#D2A63C] px-4 py-2 text-xs font-semibold text-gray-950 transition-opacity hover:opacity-90"
+        className="rounded-lg bg-[#D2A63C] px-4 py-2 text-xs font-semibold text-zinc-950 transition-opacity hover:opacity-90"
       >
         Filtrar
       </button>
       {activo && (
-        <a href={base} className="px-2 py-2 text-xs text-gray-400 underline hover:text-gray-200">
+        <a href={base} className="px-2 py-2 text-xs text-zinc-400 underline hover:text-zinc-200">
           limpar
         </a>
       )}
@@ -97,7 +97,7 @@ export function Filtros({
 /** Um campo de filtro com etiqueta. A etiqueta é obrigatória: um campo sem nome adivinha-se. */
 export function Campo({ nome, children }: { nome: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-xs text-gray-500">
+    <label className="flex flex-col gap-1 text-xs text-zinc-500">
       <span className="uppercase tracking-wide">{nome}</span>
       {children}
     </label>
@@ -106,4 +106,4 @@ export function Campo({ nome, children }: { nome: string; children: React.ReactN
 
 /** O aspecto comum dos controlos, para não haver três caixas de texto diferentes em três páginas. */
 export const ESTILO_CAMPO =
-  'rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-[#D2A63C] focus:outline-none'
+  'rounded-lg border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-[#D2A63C] focus:outline-none'

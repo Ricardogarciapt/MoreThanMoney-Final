@@ -82,21 +82,21 @@ export default async function BackofficeLayout({ children }: { children: React.R
   ]
 
   return (
-    <div className="min-h-screen bg-[#07090d] text-gray-100">
+    <div className="min-h-screen bg-[#07090d] text-zinc-100">
       <div className="mx-auto flex max-w-[1600px] flex-col gap-6 px-4 py-4 lg:flex-row lg:py-6">
         <aside className="shrink-0 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:w-60 lg:overflow-y-auto">
           <a href="/backoffice" className="mb-3 flex items-center gap-2.5 lg:mb-6">
             <Image src="/logo-mtm-transparent.png" alt="" width={32} height={32} className="h-8 w-8 object-contain" />
             <span className="leading-tight">
               <span className="block text-sm font-bold tracking-wide text-[#D2A63C]">MoreThanMoney</span>
-              <span className="block text-[10px] uppercase tracking-[0.22em] text-gray-500">Backoffice</span>
+              <span className="block text-[10px] uppercase tracking-[0.22em] text-zinc-500">Backoffice</span>
             </span>
           </a>
           {entra && <MenuBackoffice seccoes={seccoes} />}
           {etiquetas.length > 0 && (
             <div className="mt-6 hidden flex-wrap gap-1.5 border-t border-white/[0.06] pt-4 lg:flex">
               {etiquetas.map((e) => (
-                <span key={e} className={`rounded-full border px-2 py-0.5 text-[10.5px] ${e === 'Dono' ? 'border-[#D2A63C]/40 text-[#D2A63C]' : 'border-gray-700 text-gray-300'}`}>
+                <span key={e} className={`rounded-full border px-2 py-0.5 text-[10.5px] ${e === 'Dono' ? 'border-[#D2A63C]/40 text-[#D2A63C]' : 'border-zinc-700 text-zinc-300'}`}>
                   {e}
                 </span>
               ))}

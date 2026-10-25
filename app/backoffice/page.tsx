@@ -26,14 +26,14 @@ export default async function BackofficeEntradaPage() {
 
   if (!ctx || !pode(ctx.capacidades, 'bo.entrar')) {
     return (
-      <div className="mx-auto max-w-xl space-y-4 rounded-xl border border-gray-800 bg-gray-900/40 p-6">
+      <div className="mx-auto max-w-xl space-y-4 rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-6">
         <h1 className="text-xl font-bold text-white">Esta conta não faz parte da equipa</h1>
-        <p className="text-sm leading-relaxed text-gray-400">
+        <p className="text-sm leading-relaxed text-zinc-400">
           O backoffice é para quem trabalha nas vendas da MoreThanMoney: afiliados, setters, closers,
           prospectores e responsáveis de equipa. A tua conta existe e está válida — só não tem nenhum
           desses papéis atribuído.
         </p>
-        <p className="text-sm leading-relaxed text-gray-400">
+        <p className="text-sm leading-relaxed text-zinc-400">
           Se devias ter acesso, fala com o Ricardo para te atribuir o papel. Se és cliente, é na{' '}
           <a href="https://www.morethanmoney.pt/member-area" className="text-[#D2A63C] hover:underline">
             área de membro
@@ -47,13 +47,13 @@ export default async function BackofficeEntradaPage() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
           {new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Lisbon' })}
         </p>
         <h1 className="mt-1 text-2xl font-bold text-white">
           Hoje{ctx.papeis.length ? ` · ${ctx.papeis.map((p) => PAPEL_NOME[p]).join(' · ')}` : ''}
         </h1>
-        <p className="mt-2 text-sm text-gray-400">
+        <p className="mt-2 text-sm text-zinc-400">
           O que tens para fazer agora, por ordem. O teu percurso, as tuas tarefas e o teu extracto — o teu, e só o teu.
         </p>
       </div>
@@ -82,24 +82,24 @@ export default async function BackofficeEntradaPage() {
       {/* O que cada papel dá, escrito à pessoa. Saber o que se pode ver evita metade das perguntas,
           e torna visível um papel que falta (ou um que sobra) sem ninguém ter de ir à base. */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Os teus papéis</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Os teus papéis</h2>
         {ctx.papeis.length === 0 && ctx.admin && (
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-zinc-400">
             Não tens papéis atribuídos — vês tudo porque és o dono da casa.
           </p>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
           {ctx.atribuicoes.map((a) => (
-            <div key={a.papel} className="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+            <div key={a.papel} className="rounded-xl border border-white/[0.06] bg-zinc-950/70 p-4">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="font-semibold text-[#D2A63C]">{PAPEL_NOME[a.papel]}</span>
                 {a.atribuidoAt && (
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-zinc-500">
                     desde {new Date(a.atribuidoAt).toLocaleDateString('pt-PT')}
                   </span>
                 )}
               </div>
-              <ul className="mt-2 space-y-0.5 text-xs text-gray-400">
+              <ul className="mt-2 space-y-0.5 text-xs text-zinc-400">
                 {capacidadesDoPapel(a.papel).map((c) => (
                   <li key={c}>· {c}</li>
                 ))}
@@ -118,14 +118,14 @@ export default async function BackofficeEntradaPage() {
         O que substitui não é publicidade: é a distinção que fica sempre por explicar, e que tem de
         estar dita no primeiro ecrã porque é a que dá discussões — um negócio ganho não é dinheiro.
       */}
-      <section className="space-y-2 rounded-lg border border-gray-800 bg-gray-900/20 p-4 text-sm leading-relaxed text-gray-400">
+      <section className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-900/20 p-4 text-sm leading-relaxed text-zinc-400">
         <p>
           As páginas em cima lêem da base a sério: o pipeline são os negócios em que participas, as
           tarefas são as tuas, o extracto é o teu. Tudo filtrado pelo teu papel — ninguém vê o
           trabalho nem o dinheiro de quem não lidera.
         </p>
         <p>
-          <span className="text-gray-300">Ganho não é pago.</span> Mover um negócio para «ganho»
+          <span className="text-zinc-300">Ganho não é pago.</span> Mover um negócio para «ganho»
           muda o negócio e mais nada; a comissão nasce do pagamento confirmado, e é aí que aparece no
           teu extracto.
         </p>

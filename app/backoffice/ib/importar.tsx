@@ -61,10 +61,10 @@ export function Importar() {
   }
 
   return (
-    <section className="space-y-3 rounded-xl border border-gray-800 bg-gray-900/40 p-5">
+    <section className="space-y-3 rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-5">
       <div>
         <h2 className="font-semibold text-white">Importar exportação de corretora</h2>
-        <p className="mt-1 text-sm leading-relaxed text-gray-400">
+        <p className="mt-1 text-sm leading-relaxed text-zinc-400">
           Cola a exportação tal como sai do painel da corretora, <strong>com a linha dos títulos</strong>.
           Uma corretora de cada vez. Reconheço a PU Prime, a Infinox (clientes e referências), a
           Hantec e a VT Markets.
@@ -77,7 +77,7 @@ export function Importar() {
         rows={6}
         spellCheck={false}
         placeholder="Cola aqui…"
-        className="w-full rounded-lg border border-gray-700 bg-black/40 p-3 font-mono text-xs text-gray-200 outline-none focus:border-[#D2A63C]"
+        className="w-full rounded-lg border border-zinc-700 bg-black/40 p-3 font-mono text-xs text-zinc-200 outline-none focus:border-[#D2A63C]"
       />
 
       <div className="flex items-center gap-3">
@@ -94,7 +94,7 @@ export function Importar() {
         )}
       </div>
 
-      <p className="text-xs leading-relaxed text-gray-600">
+      <p className="text-xs leading-relaxed text-zinc-600">
         Reimportar é seguro: os saldos e volumes são actualizados, mas o estado da migração e as
         notas que a equipa escreveu ficam como estão. A corretora sabe os números; quem sabe que a
         pessoa já disse que sim é quem falou com ela.

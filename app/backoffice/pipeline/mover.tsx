@@ -20,7 +20,7 @@ import { useRouter } from 'next/navigation'
 import { ESTADOS_PIPELINE, ESTADO_PIPELINE_NOME, type EstadoPipeline } from '@/lib/backoffice-vista'
 
 const CAMPO =
-  'rounded-lg border border-gray-700 bg-gray-950/60 px-2 py-1.5 text-xs text-gray-100 placeholder:text-gray-600 focus:border-[#D2A63C] focus:outline-none'
+  'rounded-lg border border-zinc-700 bg-zinc-950/60 px-2 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-[#D2A63C] focus:outline-none'
 
 export function Mover({ id, estado, nome }: { id: string; estado: EstadoPipeline; nome: string }) {
   const router = useRouter()
@@ -80,7 +80,7 @@ export function Mover({ id, estado, nome }: { id: string; estado: EstadoPipeline
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="mt-3 rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:border-[#D2A63C]/60 hover:text-[#D2A63C]"
+        className="mt-3 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-[#D2A63C]/60 hover:text-[#D2A63C]"
       >
         Mover
       </button>
@@ -90,7 +90,7 @@ export function Mover({ id, estado, nome }: { id: string; estado: EstadoPipeline
   return (
     <div className="mt-3 space-y-2 rounded-lg border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-gray-500">{nome} passa a</span>
+        <span className="text-xs text-zinc-500">{nome} passa a</span>
         <select value={destino} onChange={(e) => setDestino(e.target.value as EstadoPipeline)} className={CAMPO}>
           <option value="">escolhe…</option>
           {destinos.map((e) => (
@@ -126,7 +126,7 @@ export function Mover({ id, estado, nome }: { id: string; estado: EstadoPipeline
         >
           {aGuardar ? 'a mover…' : 'Guardar'}
         </button>
-        <button type="button" onClick={() => setAberto(false)} className="text-xs text-gray-500 underline hover:text-gray-300">
+        <button type="button" onClick={() => setAberto(false)} className="text-xs text-zinc-500 underline hover:text-zinc-300">
           cancelar
         </button>
         {erro && <span className="text-xs text-red-400">{erro}</span>}

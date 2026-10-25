@@ -84,13 +84,13 @@ export default async function MaterialPage() {
       />
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">O teu código</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">O teu código</h2>
         {falhouCodigo || !codigo ? (
           <Falhou oQue="Não consegui obter o teu código de afiliado." />
         ) : (
           <div className="rounded-xl border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-5">
             <div className="font-mono text-2xl font-bold tracking-wider text-[#D2A63C]">{codigo}</div>
-            <p className="mt-2 text-xs leading-relaxed text-gray-400">
+            <p className="mt-2 text-xs leading-relaxed text-zinc-400">
               É o mesmo código que o site usa. Quem se registar pelo teu link fica ligado a ti — e é
               essa ligação que faz nascer as linhas do teu extracto quando houver uma venda.
             </p>
@@ -99,10 +99,10 @@ export default async function MaterialPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Links</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Links</h2>
         <ul className="space-y-2">
           {links.map((l) => (
-            <li key={l.nome} className="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+            <li key={l.nome} className="rounded-xl border border-white/[0.06] bg-zinc-950/70 p-4">
               <div className="font-medium text-white">{l.nome}</div>
               <a
                 href={l.url}
@@ -112,7 +112,7 @@ export default async function MaterialPage() {
               >
                 {l.url}
               </a>
-              <p className="mt-1 text-xs leading-relaxed text-gray-500">{l.quando}</p>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-500">{l.quando}</p>
             </li>
           ))}
         </ul>
@@ -121,11 +121,11 @@ export default async function MaterialPage() {
       {/* O que se pode dizer sobre a oferta, lido da fonte. Está aqui para a pessoa não ter de
           decorar preços: um preço decorado sobrevive à campanha que o criou. */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">A oferta, como ela é hoje</h2>
-        <div className="space-y-2 rounded-lg border border-gray-800 bg-gray-900/40 p-4 text-sm leading-relaxed text-gray-300">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">A oferta, como ela é hoje</h2>
+        <div className="space-y-2 rounded-xl border border-white/[0.06] bg-zinc-950/70 p-4 text-sm leading-relaxed text-zinc-300">
           <p>{escadaNumaLinha()}</p>
-          <p className="text-gray-400">{bonusNumaLinha()}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-zinc-400">{bonusNumaLinha()}</p>
+          <p className="text-xs text-zinc-500">
             Estes valores são lidos do sistema no momento em que abres a página. Não os decores nem
             os copies para nenhum texto guardado — se mudarem, o que ficou escrito passa a estar
             errado sem ninguém dar por isso.
@@ -134,8 +134,8 @@ export default async function MaterialPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Escrever uma peça</h2>
-        <p className="max-w-3xl text-sm leading-relaxed text-gray-400">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Escrever uma peça</h2>
+        <p className="max-w-3xl text-sm leading-relaxed text-zinc-400">
           Escolhe o que queres e diz sobre o quê. O texto sai com o tom da casa e com a oferta certa,
           e é revisto antes de te chegar: se trouxer um número que não venha do sistema, ou uma
           promessa de ganhos, é recusado e não o vês. É um rascunho — lê antes de publicar.
@@ -144,7 +144,7 @@ export default async function MaterialPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Peças prontas</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Peças prontas</h2>
         <Vazio
           titulo="Ainda não há materiais gráficos guardados no sistema."
           seguinte="Quando houver uma biblioteca (cartazes, vídeos, carrosséis), aparece aqui. Até lá, o gerador acima escreve o texto e o visual pede-se ao Ricardo."

@@ -17,7 +17,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 
 const CAMPO =
-  'rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-[#D2A63C] focus:outline-none'
+  'rounded-lg border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-[#D2A63C] focus:outline-none'
 
 export function TarefaNova({ negocioId }: { negocioId?: string }) {
   const router = useRouter()
@@ -61,7 +61,7 @@ export function TarefaNova({ negocioId }: { negocioId?: string }) {
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-gray-950 transition-opacity hover:opacity-90"
+        className="rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-zinc-950 transition-opacity hover:opacity-90"
       >
         + Nova tarefa
       </button>
@@ -72,7 +72,7 @@ export function TarefaNova({ negocioId }: { negocioId?: string }) {
     <form onSubmit={criar} className="space-y-3 rounded-lg border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-4">
       <div className="flex flex-wrap gap-3">
         <input name="titulo" required autoFocus placeholder="O que há para fazer" className={`min-w-[240px] flex-1 ${CAMPO}`} />
-        <label className="flex flex-col gap-1 text-xs text-gray-500">
+        <label className="flex flex-col gap-1 text-xs text-zinc-500">
           <span className="uppercase tracking-wide">Prazo (opcional)</span>
           <input name="prazo" type="date" className={CAMPO} />
         </label>
@@ -82,11 +82,11 @@ export function TarefaNova({ negocioId }: { negocioId?: string }) {
         <button
           type="submit"
           disabled={aGuardar}
-          className="rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-gray-950 transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-zinc-950 transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {aGuardar ? 'a criar…' : 'Criar'}
         </button>
-        <button type="button" onClick={() => setAberto(false)} className="text-xs text-gray-400 underline hover:text-gray-200">
+        <button type="button" onClick={() => setAberto(false)} className="text-xs text-zinc-400 underline hover:text-zinc-200">
           cancelar
         </button>
         {erro && <span className="text-xs text-red-400">{erro}</span>}

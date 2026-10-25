@@ -55,8 +55,8 @@ export default function Modulo({ slug }: { slug: string }) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Gestão · {m.grupo}</p>
-          <h1 className="text-lg font-semibold text-gray-100">{m.nome}</h1>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Gestão · {m.grupo}</p>
+          <h1 className="text-lg font-semibold text-zinc-100">{m.nome}</h1>
         </div>
         {m.vistas && (
           <div className="ml-auto flex gap-1 rounded-lg border border-white/[0.08] p-0.5 text-xs">
@@ -65,7 +65,7 @@ export default function Modulo({ slug }: { slug: string }) {
                 key={v.id}
                 type="button"
                 onClick={() => router.replace(`${caminho}?v=${v.id}`, { scroll: false })}
-                className={`rounded-md px-2.5 py-1 ${v.id === vista ? 'bg-[#D2A63C]/15 text-[#E9C46A]' : 'text-gray-400 hover:text-gray-200'}`}
+                className={`rounded-md px-2.5 py-1 ${v.id === vista ? 'bg-[#D2A63C]/15 text-[#E9C46A]' : 'text-zinc-400 hover:text-zinc-200'}`}
               >
                 {v.nome}
               </button>
