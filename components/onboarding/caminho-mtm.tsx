@@ -5,6 +5,8 @@ import Link from "next/link"
 import { Check, ChevronDown } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { ehIosNativo } from "@/lib/app-nativa"
+import { useI18n } from "@/components/i18n-provider"
+import { LINGUAS, NOME_LINGUA, TEXTOS, type Lingua, type Textos } from "./caminho-textos"
 
 /**
  * O CAMINHO DO ECOSSISTEMA — os cinco passos do onboarding MTM, por ordem.
@@ -22,6 +24,9 @@ import { ehIosNativo } from "@/lib/app-nativa"
  *  · Os números (preços, depósito, bónus) chegam por props de quem os tem: `escada-precos` e
  *    `broker/deposito-minimo`. Nada de valores escritos à mão neste ficheiro.
  *
+ * As línguas (PT, EN, FR, DE, IT, como no guia antigo) vivem em `caminho-textos.tsx`; a escolha
+ * é a mesma do resto do site (useI18n) e um link com ?lang= abre já na língua certa.
+ *
  * O progresso fica no telemóvel (localStorage) e é ajudado pelo que se sabe da conta: com sessão,
  * o passo 1 está feito; com o UID da corretora guardado no perfil, o passo 3 também.
  */
@@ -34,7 +39,7 @@ export type DadosCaminho = {
   linkAgendarOnboarding: string
   /** O vídeo de 2 minutos da abertura de conta. `null` enquanto não estiver renderizado. */
   videoAbrirConta: string | null
-  /** A mesma explicação em inglês, para quem vem de fora de Portugal e do Brasil. */
+  /** A mesma explicação em inglês. Serve o EN e, até haver voz própria, o FR, o DE e o IT. */
   videoAbrirContaEn: string | null
 }
 
@@ -60,8 +65,23 @@ export default function CaminhoMtm({ dados }: { dados: DadosCaminho }) {
   const [ios, setIos] = useState(false)
   const [feitos, setFeitos] = useState<number[]>([])
   const [aberto, setAberto] = useState<number | null>(1)
+  const { lang: langSite, setLang: setLangSite } = useI18n()
+  const [lingua, setLingua] = useState<Lingua>("pt")
+  const t = TEXTOS[lingua]
+
+  // A língua do site manda (é a do seletor do cabeçalho e a do perfil); esta página só tem cinco,
+  // por isso uma língua que não tenha cai no português (espanhol) ou no inglês (as restantes).
+  useEffect(() => {
+    setLingua(linguaDe(langSite) ?? (langSite === "pt" || langSite === "es" ? "pt" : "en"))
+  }, [langSite])
 
   useEffect(() => {
+    // Um link com ?lang= (o que se partilha com quem é de fora) abre já nessa língua.
+    const daUrl = linguaDe(new URLSearchParams(window.location.search).get("lang"))
+    if (daUrl) {
+      setLingua(daUrl)
+      setLangSite(daUrl)
+    }
     const noIos = ehIosNativo()
     setIos(noIos)
     const base = lerFeitos()
@@ -90,7 +110,18 @@ export default function CaminhoMtm({ dados }: { dados: DadosCaminho }) {
         setAberto((a) => (a === 1 ? [1, 2, 3, 4, 5].find((n) => !auto.includes(n) && !base.includes(n)) ?? null : a))
       } catch {}
     })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const mudarLingua = (l: Lingua) => {
+    setLingua(l)
+    setLangSite(l)
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.set("lang", l)
+      window.history.replaceState(null, "", url.toString())
+    } catch {}
+  }
 
   const alternarFeito = (n: number) => {
     setFeitos((f) => {
@@ -102,164 +133,194 @@ export default function CaminhoMtm({ dados }: { dados: DadosCaminho }) {
   }
 
   const n = feitos.filter((x) => x >= 1 && x <= TOTAL).length
+  const pct = Math.round((n / TOTAL) * 100)
+  const comum = {
+    ios,
+    feitos,
+    aberto,
+    jaFiz: t.jaFiz,
+    desfazer: t.desfazer,
+    onAbrir: (p: number) => setAberto(aberto === p ? null : p),
+    onFeito: alternarFeito,
+  }
+  // PT vê o vídeo em português; as outras línguas veem o inglês até haver voz própria.
+  const video = lingua === "pt" ? dados.videoAbrirConta : dados.videoAbrirContaEn ?? dados.videoAbrirConta
 
   return (
-    <div className="mt-8">
-      <div className="flex items-center justify-between text-[13px] text-[#8a8a95]">
-        <span>
-          {n === TOTAL ? "Está tudo montado." : `${n} de ${TOTAL} passos feitos`}
-        </span>
-        <span className="tabular-nums">{Math.round((n / TOTAL) * 100)}%</span>
-      </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#1b1d24]">
-        <div
-          className="h-full rounded-full bg-[#D2A63C] transition-[width] duration-500"
-          style={{ width: `${(n / TOTAL) * 100}%` }}
-        />
+    <div lang={lingua}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link href="/onboarding" className="text-[13px] text-[#8a8a95] hover:text-white">
+          ← Onboarding
+        </Link>
+        <SeletorLingua atual={lingua} onMudar={mudarLingua} />
       </div>
 
-      <ol className="mt-8 space-y-3">
-        <Passo
-          n={1}
-          titulo="Cria a tua conta MTM"
-          resumo={ios ? "Já entraste com a tua conta." : "3 dias de Premium sem pagar nada."}
-          feito={feitos.includes(1)}
-          aberto={aberto === 1}
-          onAbrir={() => setAberto(aberto === 1 ? null : 1)}
-          onFeito={() => alternarFeito(1)}
-        >
+      <header className="relative mt-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-3xl"
+          style={{ background: "radial-gradient(circle, rgba(210,166,60,0.22), transparent 70%)" }}
+        />
+        <p className="relative text-[12px] font-semibold uppercase tracking-[0.18em] text-[#D2A63C]">{t.eyebrow}</p>
+        <h1 className="relative mt-3 text-[34px] font-bold leading-[1.1] tracking-tight text-white sm:text-5xl">
+          {t.titulo}
+        </h1>
+        <p className="relative mt-4 max-w-xl text-[15px] leading-relaxed text-[#b9b9c3]">{t.intro}</p>
+        <ul className="relative mt-5 flex flex-wrap gap-2">
+          {t.factos.map((f) => (
+            <li
+              key={f}
+              className="rounded-full border border-[#D2A63C]/30 bg-[#D2A63C]/[0.06] px-3 py-1 text-[12px] font-medium text-[#E9C46A]"
+            >
+              {f}
+            </li>
+          ))}
+        </ul>
+      </header>
+
+      <section
+        aria-live="polite"
+        className="mt-8 flex items-center gap-4 rounded-2xl border border-[#23262F] bg-[#101217] p-4"
+      >
+        <Anel pct={pct} />
+        <div className="flex-1">
+          <p className="text-[15px] font-semibold text-white">{n === TOTAL ? t.tudoFeito : t.progresso(n, TOTAL)}</p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#1b1d24]">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-[#D2A63C] to-[#E9C46A] transition-[width] duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      </section>
+
+      <ol className="relative mt-8 space-y-3 before:absolute before:bottom-6 before:left-[35px] before:top-6 before:w-px before:bg-gradient-to-b before:from-[#D2A63C]/50 before:via-[#23262F] before:to-[#23262F]">
+        <Passo n={1} titulo={t.p1.titulo} resumo={ios ? t.p1.resumoIos : t.p1.resumo} {...comum}>
           {ios ? (
-            <p>Estás na app com a tua conta, por isso este passo já está feito. Segue para o passo 3.</p>
+            <p>{t.p1.ios}</p>
           ) : (
             <>
-              <p>
-                Regista-te e escolhe <b>«Grátis 3 dias»</b>. Ficas com o Premium inteiro: sinais, aulas ao
-                vivo, scanners e a comunidade.
-              </p>
+              <p>{t.p1.corpo}</p>
               <ul className="mt-3 space-y-1.5">
-                <Item>O cartão fica registado, mas nos 3 dias não é cobrado nada.</Item>
-                <Item>
-                  Se continuares, o 1.º mês fica a {dados.premium1oMes} e depois {dados.premiumMensal}.
-                </Item>
-                <Item>Cancelas na tua conta quando quiseres, sem teres de falar com ninguém.</Item>
+                {t.p1.itens(dados).map((i) => (
+                  <Item key={i}>{i}</Item>
+                ))}
               </ul>
-              <Dica>
-                Usa o mesmo email aqui, na app e na corretora. É por ele que ligamos as três coisas à tua
-                conta.
-              </Dica>
-              <Botao href="/register">Criar conta com 3 dias grátis</Botao>
+              <Dica>{t.p1.dica}</Dica>
+              <Botao href="/register">{t.p1.cta}</Botao>
             </>
           )}
         </Passo>
 
-        <Passo
-          n={2}
-          titulo="Instala a app MTM System"
-          resumo="No telemóvel, no computador, ou nos dois."
-          feito={feitos.includes(2)}
-          aberto={aberto === 2}
-          onAbrir={() => setAberto(aberto === 2 ? null : 2)}
-          onFeito={() => alternarFeito(2)}
-        >
-          <p>
-            É a mesma conta em todo o lado. Começas no telemóvel e continuas no computador, e está tudo
-            sincronizado.
-          </p>
+        <Passo n={2} titulo={t.p2.titulo} resumo={t.p2.resumo} {...comum}>
+          <p>{t.p2.corpo}</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <Plataforma titulo="iPhone e iPad" href="https://apps.apple.com/app/id6778558643" cta="App Store" />
+            <Plataforma titulo={t.p2.iphone} href="https://apps.apple.com/app/id6778558643" cta="App Store" />
             <Plataforma
-              titulo="Android"
+              titulo={t.p2.android}
               href="/downloads/MoreThanMoney.apk"
-              cta="Descarregar APK"
-              nota="Se o telemóvel pedir, autoriza instalar desta fonte."
+              cta={t.p2.ctaApk}
+              nota={t.p2.notaApk}
             />
-            <Plataforma titulo="Computador" href="/app-mobile" cta="Abrir no browser" nota="Sem instalar nada." />
+            <Plataforma titulo={t.p2.computador} href="/app-mobile" cta={t.p2.ctaBrowser} nota={t.p2.notaBrowser} />
           </div>
-          <Dica>
-            Quando a app pedir para enviar notificações, aceita. É por aí que chegam os alertas e o aviso de
-            que uma aula começou.
-          </Dica>
+          <Dica>{t.p2.dica}</Dica>
         </Passo>
 
-        <Passo
-          n={3}
-          titulo="Abre a tua conta na corretora"
-          resumo="O passo que põe o «ganha enquanto aprendes» a funcionar."
-          destaque
-          feito={feitos.includes(3)}
-          aberto={aberto === 3}
-          onAbrir={() => setAberto(aberto === 3 ? null : 3)}
-          onFeito={() => alternarFeito(3)}
-        >
-          {ios ? (
-            <p>A abertura de conta na corretora faz-se no nosso site, fora da app.</p>
-          ) : (
-            <PassoCorretora dados={dados} />
-          )}
+        <Passo n={3} titulo={t.p3.titulo} resumo={t.p3.resumo} destaque {...comum}>
+          {ios ? <p>{t.p3.ios}</p> : <PassoCorretora dados={dados} t={t} video={video} />}
         </Passo>
 
-        <Passo
-          n={4}
-          titulo="Liga os sinais à tua conta"
-          resumo="Cópia automática ou alertas para executares tu."
-          feito={feitos.includes(4)}
-          aberto={aberto === 4}
-          onAbrir={() => setAberto(aberto === 4 ? null : 4)}
-          onFeito={() => alternarFeito(4)}
-        >
-          <p>Há duas maneiras de usar os sinais. Escolhe uma agora e mudas quando quiseres.</p>
+        <Passo n={4} titulo={t.p4.titulo} resumo={t.p4.resumo} {...comum}>
+          <p>{t.p4.corpo}</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <Escolha
-              titulo="MTM Auto"
-              texto="Os sinais copiam-se sozinhos para a tua conta MT5 ou MT4, com o risco que definires. Também é lá que vive o Tap to Trade, para aprovares cada sinal com um toque."
-              para="Para quem está a começar ou não tem tempo para estar ao ecrã."
-              href="/onboarding/mtm-auto"
-              cta="Configurar o MTM Auto"
-            />
-            <Escolha
-              titulo="Alertas MTM"
-              texto="Recebes cada sinal com entrada, stop e alvos, e abres tu a operação na corretora."
-              para="Para quem já opera, ou quer aprender a executar à mão."
-              href="/alertas-mtm"
-              cta="Abrir os alertas"
-            />
+            <Escolha {...t.p4.auto} href="/onboarding/mtm-auto" />
+            <Escolha {...t.p4.alertas} href="/alertas-mtm" />
           </div>
-          <Dica>
-            A cópia automática abre operações reais na tua conta. Começa com risco baixo (por exemplo 0,5% por
-            operação) e afina-o na chamada de onboarding.
-          </Dica>
+          <Dica>{t.p4.dica}</Dica>
         </Passo>
 
-        <Passo
-          n={5}
-          titulo="Entra nas aulas e marca a tua chamada"
-          resumo="A parte do «aprendes». E 30 minutos connosco para fechar tudo."
-          feito={feitos.includes(5)}
-          aberto={aberto === 5}
-          onAbrir={() => setAberto(aberto === 5 ? null : 5)}
-          onFeito={() => alternarFeito(5)}
-        >
-          <p>
-            Na app, o separador <b>Aulas</b> tem as academias, as salas ao vivo e as gravações. Se nunca
-            operaste, começa pela sala <b>Básicos de Trading</b>.
-          </p>
+        <Passo n={5} titulo={t.p5.titulo} resumo={t.p5.resumo} {...comum}>
+          <p>{t.p5.corpo}</p>
           <ul className="mt-3 space-y-1.5">
-            <Item>Forex e metais, com o Ricardo Garcia</Item>
-            <Item>Criptomoedas, com o Ruben Pereira</Item>
-            <Item>Ações e ETF, Imobiliário, Social Media e UGC</Item>
+            {t.p5.academias.map((a) => (
+              <Item key={a}>{a}</Item>
+            ))}
           </ul>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Botao href="/live-sessions">Ver as academias</Botao>
+            <Botao href="/live-sessions">{t.p5.ctaAcademias}</Botao>
             <Botao href={dados.linkAgendarOnboarding} secundario>
-              Marcar a chamada de onboarding
+              {t.p5.ctaChamada}
             </Botao>
           </div>
-          <p className="mt-4 text-[13px] text-[#8a8a95]">
-            Na chamada confirmamos a conta, a app, a corretora e o teu risco, e saímos com um plano de estudo
-            para as primeiras semanas.
-          </p>
+          <p className="mt-4 text-[13px] text-[#8a8a95]">{t.p5.nota}</p>
         </Passo>
       </ol>
+
+      <p className="mt-10 text-[13px] leading-relaxed text-[#8a8a95]">
+        {t.duvidas(
+          <a href="https://instagram.com/morethanmoney.pt" className="text-[#D2A63C]">
+            @morethanmoney.pt
+          </a>,
+          <a href="mailto:morethanmoneypt@gmail.com" className="text-[#D2A63C]">
+            morethanmoneypt@gmail.com
+          </a>,
+        )}
+      </p>
+      <p className="mt-6 text-[13px] leading-relaxed text-[#7a7a84]">{t.aviso}</p>
+    </div>
+  )
+}
+
+function linguaDe(v: string | null | undefined): Lingua | null {
+  const l = (v || "").slice(0, 2).toLowerCase()
+  return (LINGUAS as readonly string[]).includes(l) ? (l as Lingua) : null
+}
+
+function SeletorLingua({ atual, onMudar }: { atual: Lingua; onMudar: (l: Lingua) => void }) {
+  return (
+    <div role="group" aria-label="Idioma / Language" className="flex rounded-full border border-[#23262F] bg-[#101217] p-1">
+      {LINGUAS.map((l) => (
+        <button
+          key={l}
+          type="button"
+          onClick={() => onMudar(l)}
+          aria-pressed={atual === l}
+          title={NOME_LINGUA[l]}
+          className={`min-h-[32px] rounded-full px-3 text-[12px] font-semibold uppercase tracking-wide transition-colors ${
+            atual === l ? "bg-[#D2A63C] text-black" : "text-[#8a8a95] hover:text-white"
+          }`}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function Anel({ pct }: { pct: number }) {
+  const r = 20
+  const c = 2 * Math.PI * r
+  return (
+    <div className="relative h-14 w-14 shrink-0">
+      <svg viewBox="0 0 48 48" className="h-full w-full -rotate-90" aria-hidden="true">
+        <circle cx="24" cy="24" r={r} fill="none" stroke="#1b1d24" strokeWidth="4" />
+        <circle
+          cx="24"
+          cy="24"
+          r={r}
+          fill="none"
+          stroke="#D2A63C"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - pct / 100)}
+          className="transition-[stroke-dashoffset] duration-500"
+        />
+      </svg>
+      <span className="absolute inset-0 grid place-items-center text-[12px] font-bold tabular-nums text-white">
+        {pct}%
+      </span>
     </div>
   )
 }
@@ -269,79 +330,51 @@ export default function CaminhoMtm({ dados }: { dados: DadosCaminho }) {
  * conta real depois, depósito no fim. É a ordem em que a corretora deixa fazer as coisas, e quem a
  * tenta saltar fica parado num ecrã sem perceber porquê.
  */
-function PassoCorretora({ dados }: { dados: DadosCaminho }) {
+function PassoCorretora({ dados, t, video }: { dados: DadosCaminho; t: Textos; video: string | null }) {
   return (
     <>
-      <p>
-        O <b>ganha enquanto aprendes</b> precisa de uma conta tua. É nela que os sinais e o MTM Auto
-        trabalham enquanto tu estudas. O dinheiro fica em teu nome na PU Prime, a nossa corretora parceira,
-        e a MTM nunca lhe toca.
-      </p>
+      <p>{t.p3.intro}</p>
 
-      {dados.videoAbrirConta && (
-        <video
-          className="mt-4 aspect-video w-full rounded-xl border border-[#23262F] bg-black"
-          src={dados.videoAbrirConta}
-          controls
-          playsInline
-          preload="metadata"
-        />
+      {video && (
+        <div className="mt-4 overflow-hidden rounded-xl border border-[#3a2f17] bg-black shadow-[0_0_40px_-12px_rgba(210,166,60,0.35)]">
+          <video
+            key={video}
+            className="aspect-video w-full"
+            src={video}
+            controls
+            playsInline
+            preload="metadata"
+          />
+        </div>
       )}
-      {dados.videoAbrirContaEn && (
-        <a
-          href={dados.videoAbrirContaEn}
-          target="_blank"
-          rel="noopener noreferrer"
-          lang="en"
-          className="mt-2 inline-block text-[13px] text-[#8a8a95] underline-offset-4 hover:text-white hover:underline"
-        >
-          Watch in English →
-        </a>
-      )}
+      {video && t.p3.notaVideo && <p className="mt-2 text-[12px] text-[#8a8a95]">{t.p3.notaVideo}</p>}
 
-      <ol className="mt-4 space-y-3">
-        <SubPasso n="a" titulo="Abre o registo pelo nosso link">
-          Tem de ser por este link. Uma conta aberta diretamente no site da PU Prime não fica ligada à MTM, e
-          aí não te conseguimos dar o acesso pela corretora.
-        </SubPasso>
-        <SubPasso n="b" titulo="Cria o perfil e verifica a identidade">
-          Nome, email, telemóvel e país. Depois o Cartão de Cidadão ou passaporte e um comprovativo de morada
-          recente. A verificação demora entre uns minutos e 24 horas, e sem ela não dá para depositar.
-        </SubPasso>
-        <SubPasso n="c" titulo="Abre uma conta real (Live)">
-          Tipo <b>Standard</b>, plataforma <b>MT5</b>, moeda <b>USD</b>. A corretora envia-te por email o
-          número da conta, a palavra-passe e o servidor. Guarda esse email.
-        </SubPasso>
-        <SubPasso n="d" titulo="Faz o primeiro depósito">
-          A partir de {dados.depositoMinimoUsd} $ ficas com o bónus de {dados.bonusPct}% da PU Prime e com
-          direito ao Premium sem mensalidade, enquanto mantiveres esse saldo. Deposita só dinheiro de que não
-          precisas.
-        </SubPasso>
-        <SubPasso n="e" titulo="Guarda o número da conta na MTM">
-          Na app, em <b>Abrir conta</b>, colas o teu UID (o número da conta PU Prime). Depois envia o mesmo UID
-          ao nosso bot no Telegram: é lá que se valida o depósito e se ativa o Premium sem mensalidade.
-        </SubPasso>
+      <ol className="mt-5 space-y-3">
+        {t.p3.sub.map((s, i) => (
+          <SubPasso key={s.titulo} n={"abcde"[i]} titulo={s.titulo}>
+            {s.texto(dados)}
+          </SubPasso>
+        ))}
       </ol>
 
-      <div className="mt-4 rounded-xl border border-[#3a2f17] bg-[#17140c] p-4 text-[13px] leading-relaxed text-[#d9cfb6]">
-        <p className="font-semibold text-[#E9C46A]">Os enganos que mais vemos</p>
+      <div className="mt-5 rounded-xl border border-[#3a2f17] bg-[#17140c] p-4 text-[13px] leading-relaxed text-[#d9cfb6]">
+        <p className="font-semibold text-[#E9C46A]">{t.p3.enganosTitulo}</p>
         <ul className="mt-2 space-y-1">
-          <li>Registar fora do nosso link.</li>
-          <li>Usar na corretora um email diferente do da MTM.</li>
-          <li>Abrir uma conta Demo e depositar à espera de que seja real.</li>
-          <li>Deixar a verificação a meio e não conseguir depositar.</li>
+          {t.p3.enganos.map((e) => (
+            <li key={e}>{e}</li>
+          ))}
         </ul>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Botao href="/abrir-conta" externo>
-          Abrir conta na PU Prime
+          {t.p3.ctaAbrir}
         </Botao>
         <Botao href="/app-mobile/accountopen" secundario>
-          Guardar o meu UID
+          {t.p3.ctaUid}
         </Botao>
         <Botao href="https://t.me/MoreThanMoney_aibot?start=lead" secundario>
-          Validar no Telegram
+          {t.p3.ctaTelegram}
         </Botao>
       </div>
     </>
@@ -352,9 +385,11 @@ function Passo({
   n,
   titulo,
   resumo,
-  feito,
-  aberto,
+  feitos,
+  aberto: qualAberto,
   destaque = false,
+  jaFiz,
+  desfazer,
   onAbrir,
   onFeito,
   children,
@@ -362,24 +397,29 @@ function Passo({
   n: number
   titulo: string
   resumo: string
-  feito: boolean
-  aberto: boolean
+  feitos: number[]
+  aberto: number | null
   destaque?: boolean
-  onAbrir: () => void
-  onFeito: () => void
+  ios: boolean
+  jaFiz: string
+  desfazer: string
+  onAbrir: (n: number) => void
+  onFeito: (n: number) => void
   children: React.ReactNode
 }) {
+  const feito = feitos.includes(n)
+  const aberto = qualAberto === n
   return (
     <li
-      className="overflow-hidden rounded-2xl border transition-colors"
+      className="relative overflow-hidden rounded-2xl border transition-colors"
       style={{
         borderColor: destaque ? "rgba(210,166,60,0.45)" : "#23262F",
-        background: destaque ? "rgba(210,166,60,0.05)" : "#12141A",
+        background: destaque ? "#16140E" : "#12141A",
       }}
     >
       <button
         type="button"
-        onClick={onAbrir}
+        onClick={() => onAbrir(n)}
         aria-expanded={aberto}
         className="flex w-full items-center gap-4 px-5 py-4 text-left"
       >
@@ -406,10 +446,14 @@ function Passo({
           {children}
           <button
             type="button"
-            onClick={onFeito}
-            className="mt-5 text-[13px] font-medium text-[#8a8a95] underline-offset-4 hover:text-white hover:underline"
+            onClick={() => onFeito(n)}
+            className={`mt-5 inline-flex min-h-[40px] items-center gap-2 rounded-lg px-3 text-[13px] font-medium ${
+              feito
+                ? "text-[#8a8a95] hover:text-white"
+                : "border border-[#D2A63C]/40 text-[#E9C46A] hover:bg-[#D2A63C]/10"
+            }`}
           >
-            {feito ? "Afinal ainda não fiz isto" : "Já fiz este passo"}
+            {feito ? desfazer : jaFiz}
           </button>
         </div>
       )}
