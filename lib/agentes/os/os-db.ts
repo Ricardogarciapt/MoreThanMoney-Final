@@ -58,6 +58,20 @@ export function quotaSegura(q: Partial<Quota> | null | undefined): Quota {
   }
 }
 
+/** Puro: o ciclo registado não chegou a correr (sem contrato, limite, subscrição bloqueada). */
+export function cicloFalhado(detalhe: unknown): boolean {
+  return /SEM CONTRATO|session limit|weekly limit|subscription access|erro/i.test(String(detalhe ?? '').slice(0, 200))
+}
+
+/**
+ * Puro: de quando se conta a vida do agente — a criação, ou o renascimento (`ciclo_meta.renasceu_em`,
+ * escrito quando o dono restaura um arquivado). Dá-lhe a graça de recém-nascido outra vez.
+ */
+export function nascimento(a: { criado_em: string; ciclo_meta?: { renasceu_em?: string } | null }): string {
+  const r = a.ciclo_meta?.renasceu_em
+  return r && Number.isFinite(Date.parse(r)) && r > a.criado_em ? r : a.criado_em
+}
+
 /** Custo de oportunidade de um ciclo do claude -p, em €: subscrição mensal ÷ ciclos do mês. */
 export function custoCicloEur(o: Objectivos, q: Quota): number {
   return Number((o.recursos.custoSubscricaoMensalEur / Math.max(1, q.capacidade * 30)).toFixed(4))
@@ -83,7 +97,7 @@ export interface LinhaOs {
   criado_em: string
   ciclo: Ciclo
   ciclo_desde: string | null
-  ciclo_meta: { tentativas?: number; reteste?: boolean } | null
+  ciclo_meta: { tentativas?: number; reteste?: boolean; renasceu_em?: string } | null
   familia: string | null
   especializacao: string | null
   geracao: number | null
@@ -150,7 +164,7 @@ export async function medir(db: Db, agentes: LinhaOs[], cfg: ConfigOs, quota: Qu
   const diasValor = new Map<string, Set<string>>()
   const idDe = (codigo: unknown) => porCodigo.get(String(codigo ?? '').toUpperCase())
   for (const a of agentes) {
-    const idade = (agora.getTime() - Date.parse(a.criado_em)) / 3_600_000
+    const idade = (agora.getTime() - Date.parse(nascimento(a))) / 3_600_000
     medidas.set(a.id, {
       familia: (a.familia ?? (eCeo(a) ? 'CEO' : 'SALES')) as Familia,
       idadeHoras: Number.isFinite(idade) ? idade : 0,
@@ -197,13 +211,18 @@ export async function medir(db: Db, agentes: LinhaOs[], cfg: ConfigOs, quota: Qu
     x.retencao = elegiveis > 0 ? renovaram / elegiveis : null
   }
   // Custo (quota do claude -p como custo de oportunidade + gasto registado) e erro.
+  const renasceu = new Map(agentes.map((a) => [a.id, nascimento(a)]))
   for (const e of eventos) {
     const x = m(String(e.agente_id))
     if (!x) continue
+    // Um agente reencarnado não paga a vida passada (25/10).
+    if (String(e.criado_em) < (renasceu.get(String(e.agente_id)) ?? '')) continue
     if (e.tipo === 'ciclo') {
       x.ciclos += 1
-      x.custoEur += custoCiclo
-      if (/SEM CONTRATO|session limit|erro/i.test(String(e.detalhe ?? '').slice(0, 200))) x.erros += 1
+      // 25/10: um ciclo que não correu (subscrição bloqueada, limite) não gastou quota nenhuma. Entre
+      // 08/10 e 23/10 foram 2000 ciclos assim, cobrados como custo — e arquivaram 9 agentes por isso.
+      if (cicloFalhado(e.detalhe)) x.erros += 1
+      else x.custoEur += custoCiclo
     } else x.custoEur += Math.abs(num(e.valor))
   }
   // Valor diferido medido.
