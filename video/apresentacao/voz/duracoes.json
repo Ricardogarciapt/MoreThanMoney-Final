@@ -1,0 +1,37 @@
+{
+  "voz": "fish.audio 1e0fa8b490c744acba94da72710e6db2",
+  "modelo": "s2.1-pro-free",
+  "velocidade": "normal",
+  "pt": {
+    "s01-gancho": 9.46,
+    "s02-problema": 13.95,
+    "s03-quem": 10.24,
+    "s04-aprender": 13.48,
+    "s05-scanners": 12.51,
+    "s06-app": 14.05,
+    "s07-execucao": 13.24,
+    "s08-ganha": 13.3,
+    "s09-prova": 15.49,
+    "s10-objecoes": 11.55,
+    "s11-oferta": 14.05,
+    "s12-cta": 10.79,
+    "s13-afiliado": 11.81,
+    "s14-fecho": 2.95
+  },
+  "en": {
+    "s01-gancho": 9.06,
+    "s02-problema": 14.08,
+    "s03-quem": 10.08,
+    "s04-aprender": 14.05,
+    "s05-scanners": 13.48,
+    "s06-app": 13.48,
+    "s07-execucao": 13.01,
+    "s08-ganha": 14.13,
+    "s09-prova": 14.13,
+    "s10-objecoes": 10.97,
+    "s11-oferta": 13.82,
+    "s12-cta": 10.37,
+    "s13-afiliado": 10.37,
+    "s14-fecho": 3.13
+  }
+}
