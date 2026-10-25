@@ -144,13 +144,22 @@ export default function LiveSessionsLobby() {
     return () => clearInterval(t)
   }, [loadAll])
 
-  // Salas públicas: tudo menos as de gravação. Em direto primeiro — é a razão de estar no lobby.
+  /**
+   * Salas públicas: tudo menos a «Introdução». Em direto primeiro — é a razão de estar no lobby.
+   *
+   * O filtro era `!nunca_ao_vivo`, e isso tirava da montra QUALQUER sala de gravação — incluindo a
+   * «Estratégias MTM» da Academia Forex (as playlists e os guias PDF das seis estratégias), que
+   * ficava semeada e invisível. Só a «Introdução» tem lugar próprio («Por onde começar»), e é a
+   * única sala de gravação sem educador (ver lib/lms-sala-introducao.ts). As outras entram na
+   * pasta da academia como qualquer sala, com o selo de gravações em vez de «Offline».
+   */
+  const salaIntroId = configIntro?.curso?.salaId ?? null
   const salas = useMemo(
     () =>
       streams
-        .filter((s) => !s.nunca_ao_vivo)
+        .filter((s) => s.id !== salaIntroId && !(s.nunca_ao_vivo && !s.educator?.id))
         .sort((a, b) => Number(b.is_live) - Number(a.is_live)),
-    [streams]
+    [streams, salaIntroId]
   )
   const liveStreams = useMemo(() => salas.filter((s) => s.is_live), [salas])
   const liveCount = liveStreams.length
@@ -645,7 +654,12 @@ function StreamMarketCard({
         )}
         {!stream.is_live && (
           <div className="absolute left-3 top-3">
-            <Badge className="bg-gray-900/90 text-gray-300 border-gray-700">{t("live.offline")}</Badge>
+            {/* Uma sala de gravação nunca vai ao ar: «Offline» dizia que estava parada, e ela está sempre pronta. */}
+            {stream.nunca_ao_vivo ? (
+              <Badge className="bg-[#D2A63C]/90 text-black border-[#D2A63C]">{t("live.recordedBadge")}</Badge>
+            ) : (
+              <Badge className="bg-gray-900/90 text-gray-300 border-gray-700">{t("live.offline")}</Badge>
+            )}
           </div>
         )}
         {stream.access_tier === "premium" && (
