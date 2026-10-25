@@ -76,4 +76,14 @@ ff.stdin.end()
 await new Promise(r => ff.on('close', r))
 await browser.close()
 fs.writeFileSync(path.join(out, `linha-${lang}.json`), JSON.stringify(TL.map(({ audio, ...c }) => c), null, 1))
-console.log('feito:', mp4)
+
+// Velocidade aprovada pelo Ricardo para os vídeos com a voz dele: 1,12× (o tom mantém-se).
+const VELOCIDADE = 1.12
+if (temVoz && !preview) {
+  const final = path.join(out, `apresentacao-${lang}-final.mp4`)
+  execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', mp4, '-filter_complex', `[0:v]setpts=PTS/${VELOCIDADE}[v];[0:a]atempo=${VELOCIDADE}[a]`,
+    '-map', '[v]', '-map', '[a]', '-r', String(FPS), '-c:v', 'libx264', '-preset', 'slow', '-crf', '23', '-pix_fmt', 'yuv420p',
+    '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', final])
+  execFileSync('ffmpeg', ['-y', '-v', 'error', '-ss', String((TL[TL.length - 1].ini + 2) / VELOCIDADE), '-i', final, '-frames:v', '1', '-vf', 'scale=1280:-1', '-q:v', '3', path.join(out, `poster-${lang}.jpg`)])
+  console.log('feito:', final)
+} else console.log('feito:', mp4)
