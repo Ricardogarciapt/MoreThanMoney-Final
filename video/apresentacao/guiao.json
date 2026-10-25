@@ -1,0 +1,100 @@
+{
+  "voz": "fish.audio, modelo 1e0fa8b490c744acba94da72710e6db2 (clone do Ricardo Garcia)",
+  "cenas": [
+    {
+      "id": "s01-gancho",
+      "pt": "Se trabalhas quarenta horas por semana e no fim do mês sobra pouco, o problema não é o teu esforço. É não teres um sistema. Dá-me quatro minutos e eu mostro-te o que construímos para mudar isso.",
+      "en": "If you work forty hours a week and there's little left at the end of the month, the problem isn't your effort. It's that you don't have a system. Give me four minutes and I'll show you what we built to change that."
+    },
+    {
+      "id": "s02-problema",
+      "pt": "A maioria das pessoas tenta aprender a investir sozinha. Vê vídeos soltos, segue dicas de desconhecidos, abre uma conta, perde dinheiro e desiste. Eu sei, porque também passei por aí. O problema nunca foi a vontade. Foi não haver método, nem ferramentas, nem ninguém ao lado.",
+      "en": "Most people try to learn investing on their own. Random videos, tips from strangers, they open an account, lose money and give up. I know, because I've been there too. The problem was never willpower. It was having no method, no tools and nobody by your side."
+    },
+    {
+      "id": "s03-quem",
+      "pt": "Eu sou o Ricardo Garcia, e a MoreThanMoney nasceu disso. Não é um curso que compras e esqueces. É um ecossistema: aprendes, aplicas e acompanhas tudo no mesmo sítio, com uma comunidade que fala a tua língua.",
+      "en": "I'm Ricardo Garcia, and that's where MoreThanMoney came from. It's not a course you buy and forget. It's an ecosystem: you learn, you apply and you follow everything in one place, with a community that speaks your language."
+    },
+    {
+      "id": "s04-markets",
+      "pt": "Começas por aprender, e há dois pilares. O primeiro é a MTM Markets: os mercados e o dinheiro. Academias de forex e metais, criptomoedas, ações e ETF, e imobiliário. Salas ao vivo todas as semanas, e as gravações organizadas em curso para quem não pode estar.",
+      "en": "You start by learning, and there are two pillars. The first is MTM Markets: markets and money. Academies for forex and metals, crypto, stocks and ETFs, and real estate. Live rooms every week, and recordings organised into a course for when you can't make it."
+    },
+    {
+      "id": "s04-content",
+      "pt": "O segundo é a MTM Content and Business: construir audiência e construir negócio. Social media e UGC, faceless marketing, inteligência artificial, network marketing, e mindset e liderança, que abres sem pagar nada. Começas do zero, ao teu ritmo.",
+      "en": "The second is MTM Content and Business: building an audience and building a business. Social media and UGC, faceless marketing, artificial intelligence, network marketing, and mindset and leadership, which you can open for free. You start from zero, at your own pace."
+    },
+    {
+      "id": "s05-scanners",
+      "pt": "Depois, aplicas. Os nossos scanners são estudos escritos por nós. Leem o mercado e mostram-te a tendência, as zonas e o risco antes de entrares. Correm no telemóvel e no TradingView. Deixas de adivinhar e passas a ter um checklist.",
+      "en": "Then, you apply. Our scanners are studies we wrote ourselves. They read the market and show you the trend, the zones and the risk before you get in. They run on your phone and on TradingView. You stop guessing and start working from a checklist."
+    },
+    {
+      "id": "s06-app",
+      "pt": "E tudo isto cabe no teu bolso. A app MTM System junta o feed da comunidade, o chat, as aulas ao vivo, os alertas com entrada, stop e alvos, e o Mentor AI, que te responde a qualquer hora. Recebes o alerta, vês o gráfico, e quem decide és tu.",
+      "en": "And all of this fits in your pocket. The MTM System app brings together the community feed, the chat, the live classes, alerts with entry, stop and targets, and the AI Mentor that answers you at any hour. You get the alert, you see the chart, and you make the call."
+    },
+    {
+      "id": "s06b-alertas",
+      "pt": "Os alertas são o dia a dia da casa. Cada um chega com a fonte, o par, a direção, a entrada, o stop e os alvos. Quando o preço toca um alvo, recebes a notificação. Quando o stop sobe para a entrada, também. E tudo fica no histórico, à vista de toda a gente.",
+      "en": "Alerts are the day-to-day of the house. Each one comes with the source, the pair, the direction, the entry, the stop and the targets. When price hits a target, you get a notification. When the stop moves to entry, you do too. And everything stays in the history, in plain sight."
+    },
+    {
+      "id": "s06c-ferramentas",
+      "pt": "E as ferramentas não acabam aí. Tens o Terminal com inteligência artificial para analisares qualquer ativo, os portefólios com DCA, e o MTM Funded, onde pões o teu método à prova numa conta simulada, antes de arriscares o teu dinheiro.",
+      "en": "And the tools don't stop there. There's the AI Terminal to analyse any asset, portfolios with DCA, and MTM Funded, where you put your method to the test on a simulated account before you risk your own money."
+    },
+    {
+      "id": "s07-execucao",
+      "pt": "Quando decides que sim, o Tap to Trade abre a ordem na tua conta com um toque, e a gestão da posição fica com o sistema. Se preferes não estar a olhar para gráficos, o MTM Auto copia as estratégias da casa para a tua conta. A conta é sempre tua. Nós nunca tocamos no teu dinheiro.",
+      "en": "When you decide yes, Tap to Trade opens the order in your account with one tap, and the system manages the position. If you'd rather not stare at charts, MTM Auto copies the house strategies to your account. The account is always yours. We never touch your money."
+    },
+    {
+      "id": "s07b-social",
+      "pt": "Se o teu caminho é o negócio, a app tem o estúdio MTM Social para criares as tuas peças com a tua marca, o programa de criadores e o material de marketing pronto a usar. Aprendes a vender aqui dentro, sem abrir uma única ordem.",
+      "en": "If your path is business, the app has the MTM Social studio to create your own posts with your brand, the creator programme and ready-to-use marketing material. You learn to sell in here, without opening a single trade."
+    },
+    {
+      "id": "s08-ganha",
+      "pt": "É aqui que entra a ideia que nos define: ganhar enquanto aprendes. Abres a tua conta numa corretora regulada, a PU Prime, pelo nosso link. Começas pequeno, aplicas o que viste na sala e acompanhas cada passo com a comunidade. Aprender e praticar, ao mesmo tempo.",
+      "en": "This is where the idea that defines us comes in: earn while you learn. You open your own account with a regulated broker, PU Prime, through our link. You start small, apply what you saw in class and follow every step with the community. Learning and practising, at the same time."
+    },
+    {
+      "id": "s09-prova",
+      "pt": "Não te vou mostrar carros nem promessas de lucro. Aqui mostra-se processo: as posições ficam registadas, os alertas ficam no histórico, e a comunidade está lá para confirmar. Como escreveu um dos nossos membros: o melhor resultado não é o saldo da conta, é o poder que ganhamos ao saber proteger capital.",
+      "en": "I'm not going to show you cars or promises of profit. Here we show process: positions are logged, alerts stay in the history, and the community is there to check. As one of our members wrote: the best result isn't the account balance, it's the power you gain from knowing how to protect capital."
+    },
+    {
+      "id": "s09b-avaliacoes",
+      "pt": "E não precisas de acreditar em mim. Lê o que os membros escrevem no chat: grato por estar na melhor comunidade de educação financeira do país. Máquinas, vocês dão um up tão grande. Bora, grato pela confiança.",
+      "en": "And you don't have to take my word for it. Read what members write in the chat: grateful to be in the best financial education community in the country. Legends, you give us such a boost. Let's go, grateful for the trust."
+    },
+    {
+      "id": "s10-objecoes",
+      "pt": "Não tens tempo? Os alertas chegam ao telemóvel e as aulas ficam gravadas. Já perdeste dinheiro? Então percebes porque é que começamos pela gestão de risco. Não sabes nada de trading? É precisamente por isso que a academia começa do zero.",
+      "en": "No time? The alerts come to your phone and the classes are recorded. Lost money before? Then you understand why we start with risk management. Know nothing about trading? That's exactly why the academy starts from zero."
+    },
+    {
+      "id": "s11-oferta",
+      "pt": "Por isso tornámos a decisão fácil. Experimentas o Premium três dias grátis, sem cobrança nesses três dias. Se ficares, o primeiro mês custa trinta e quatro euros e noventa e nove. Os planos mensais têm sete dias de garantia, sem fidelização, e cancelas quando quiseres.",
+      "en": "So we made the decision easy. You try Premium free for three days, with no charge during those three days. If you stay, the first month is thirty-four ninety-nine euros. Monthly plans come with a seven-day guarantee, no lock-in, and you cancel whenever you want."
+    },
+    {
+      "id": "s12-cta",
+      "pt": "O próximo passo é simples. Entra em morethanmoney ponto pt, barra onboarding. Crias a tua conta, instalas a app, abres a tua conta na corretora e entras na primeira aula. Nós guiamos-te em cada passo.",
+      "en": "The next step is simple. Go to morethanmoney dot pt, slash onboarding. Create your account, install the app, open your broker account and join your first class. We'll guide you through every step."
+    },
+    {
+      "id": "s13-afiliado",
+      "pt": "E se gostares tanto disto que queiras partilhar, há um plano de afiliado: trinta por cento na primeira mensalidade e dez por cento em cada renovação, enquanto a pessoa que trouxeste ficar. Mas isso fica para depois. Primeiro, aprende.",
+      "en": "And if you like it so much you want to share it, there's an affiliate plan: thirty percent on the first month and ten percent on every renewal, for as long as the person you brought stays. But that comes later. First, learn."
+    },
+    {
+      "id": "s14-fecho",
+      "pt": "Mais do que dinheiro. Um sistema. Vemo-nos lá dentro.",
+      "en": "More than money. A system. See you inside."
+    }
+  ]
+}
