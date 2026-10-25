@@ -20,8 +20,8 @@ const CAMINHOS = [
     href: '/onboarding/mtm',
     titulo: 'O ecossistema MoreThanMoney',
     nota:
-      'Sinais Premium, sessões ao vivo, formação, certificações e a comunidade. O MTM Auto vem incluído na adesão.',
-    cta: 'Ver o guia completo',
+      'Sinais, aulas ao vivo, academias e a comunidade, com o MTM Auto incluído. Cinco passos por ordem, a começar por 3 dias de Premium grátis.',
+    cta: 'Começar os 5 passos',
     destaque: true,
   },
   {
@@ -42,8 +42,8 @@ export default function Onboarding() {
         Por onde queres começar?
       </h1>
       <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[#b9b9c3]">
-        Dois caminhos diferentes, e nenhum é melhor do que o outro — depende do que vieste buscar.
-        Podes mudar de ideias a qualquer momento.
+        Dois caminhos, e servem tanto a quem nunca operou como a quem já opera. Depende do que vieste
+        buscar, e podes mudar de ideias a qualquer momento.
       </p>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
@@ -74,8 +74,8 @@ export default function Onboarding() {
       <CursoIntroducao feitio="bloco" className="mt-10" />
 
       <p className="mt-10 text-[13px] leading-relaxed text-[#7a7a84]">
-        Operar com produtos alavancados tem risco elevado de perda. Conteúdo educativo, não é
-        aconselhamento financeiro.
+        Operar com produtos alavancados tem risco elevado de perda. Conteúdo educativo, não constitui
+        consultoria financeira.
       </p>
     </main>
   )
