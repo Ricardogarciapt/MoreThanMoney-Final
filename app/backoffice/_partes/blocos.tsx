@@ -12,8 +12,9 @@
 export function Cabecalho({ titulo, sub }: { titulo: string; sub: string }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold text-white">{titulo}</h1>
-      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-400">{sub}</p>
+      <div className="mb-3 h-0.5 w-10 rounded-full bg-gradient-to-r from-[#D2A63C] to-[#E9C46A]" />
+      <h1 className="text-2xl font-bold tracking-tight text-white">{titulo}</h1>
+      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-400">{sub}</p>
     </div>
   )
 }
@@ -39,10 +40,10 @@ export function Numero({
   const cor =
     tom === 'destaque' ? 'text-[#D2A63C]' : tom === 'negativo' ? 'text-red-400' : 'text-white'
   return (
-    <div className="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
-      <div className="text-xs uppercase tracking-wide text-gray-500">{nome}</div>
+    <div className="rounded-xl border border-white/[0.06] bg-zinc-950/70 p-4">
+      <div className="text-xs uppercase tracking-wide text-zinc-500">{nome}</div>
       <div className={`mt-1 text-2xl font-bold ${cor}`}>{valor}</div>
-      {nota && <div className="mt-1 text-xs leading-relaxed text-gray-500">{nota}</div>}
+      {nota && <div className="mt-1 text-xs leading-relaxed text-zinc-500">{nota}</div>}
     </div>
   )
 }
@@ -56,9 +57,9 @@ export function Numero({
  */
 export function Vazio({ titulo, seguinte }: { titulo: string; seguinte: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-gray-800 bg-gray-900/20 p-6 text-center">
-      <p className="text-sm font-medium text-gray-300">{titulo}</p>
-      <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-gray-500">{seguinte}</p>
+    <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/20 p-6 text-center">
+      <p className="text-sm font-medium text-zinc-300">{titulo}</p>
+      <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-zinc-500">{seguinte}</p>
     </div>
   )
 }
@@ -66,7 +67,7 @@ export function Vazio({ titulo, seguinte }: { titulo: string; seguinte: string }
 /** Um aviso que a pessoa precisa de ler para não interpretar mal o que está a ver. */
 export function Aviso({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-4 text-sm leading-relaxed text-gray-300">
+    <div className="rounded-lg border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-4 text-sm leading-relaxed text-zinc-300">
       {children}
     </div>
   )
@@ -81,7 +82,7 @@ export function Etiqueta({ children, tom = 'neutro' }: { children: React.ReactNo
         ? 'border-red-800/60 text-red-300'
         : tom === 'aviso'
           ? 'border-[#D2A63C]/50 text-[#D2A63C]'
-          : 'border-gray-700 text-gray-400'
+          : 'border-zinc-700 text-zinc-400'
   return <span className={`rounded-full border px-2 py-0.5 text-xs whitespace-nowrap ${cor}`}>{children}</span>
 }
 

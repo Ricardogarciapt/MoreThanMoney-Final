@@ -67,9 +67,9 @@ export default async function IbPage() {
 
   if (!souIb && !ctx.admin) {
     return (
-      <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-6">
+      <div className="rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-6">
         <h1 className="text-xl font-bold text-white">Esta área é da rede de IBs</h1>
-        <p className="mt-2 text-sm text-gray-400">
+        <p className="mt-2 text-sm text-zinc-400">
           Aqui estão contas de clientes de corretora — nome, contacto e saldo. Só quem faz parte da
           rede de IBs tem acesso. Se devias ter, fala com o Ricardo.
         </p>
@@ -136,11 +136,11 @@ export default async function IbPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-white">Rede de IBs</h1>
-        <p className="mt-2 text-sm leading-relaxed text-gray-400">
+        <p className="mt-2 text-sm leading-relaxed text-zinc-400">
           As contas de corretora da rede, e o que falta trazer para casa. A PU Prime é a casa; o que
           está nas outras corretoras é volume que ainda paga comissão a terceiros.
         </p>
-        <p className="mt-1 text-xs text-gray-600">
+        <p className="mt-1 text-xs text-zinc-600">
           {membros.length} {membros.length === 1 ? 'pessoa' : 'pessoas'} na rede ·{' '}
           {membros.filter((m) => m.nivel === 'master').length} master ·{' '}
           {membros.filter((m) => !m.ib_externo).length} ainda sem identificador próprio na corretora
@@ -148,25 +148,25 @@ export default async function IbPage() {
       </div>
 
       {todas.length === 0 ? (
-        <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-5">
+        <div className="rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-5">
           <h2 className="font-semibold text-white">Ainda não há contas importadas</h2>
-          <p className="mt-2 text-sm leading-relaxed text-gray-400">
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400">
             Descarrega a exportação de cada corretora e cola-a na caixa em baixo — uma de cada vez,
             com a linha dos títulos. O formato é reconhecido sozinho.
           </p>
         </div>
       ) : (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Por corretora</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Por corretora</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[...porCorretora.entries()].map(([cor, a]) => (
-              <div key={cor} className="rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+              <div key={cor} className="rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-4">
                 <p className="text-sm font-semibold text-white">
                   {CORRETORA_NOME[cor as Corretora] ?? cor}
                 </p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-[#D2A63C]">{a.contas}</p>
-                <p className="text-xs text-gray-500">contas</p>
-                <dl className="mt-3 space-y-1 text-xs text-gray-400">
+                <p className="text-xs text-zinc-500">contas</p>
+                <dl className="mt-3 space-y-1 text-xs text-zinc-400">
                   <div className="flex justify-between gap-2">
                     <dt>Lotes</dt>
                     <dd className="tabular-nums">{num(a.lotes)}</dd>
@@ -191,14 +191,14 @@ export default async function IbPage() {
       {aTrabalhar.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
               Trazer para casa
             </h2>
-            <span className="text-xs text-gray-600">pelos que mais volume têm</span>
+            <span className="text-xs text-zinc-600">pelos que mais volume têm</span>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-gray-800">
+          <div className="overflow-x-auto rounded-xl border border-zinc-800">
             <table className="w-full min-w-[42rem] text-sm">
-              <thead className="bg-gray-900/60 text-left text-xs uppercase tracking-wide text-gray-500">
+              <thead className="bg-zinc-900/60 text-left text-xs uppercase tracking-wide text-zinc-500">
                 <tr>
                   <th className="px-3 py-2 font-medium">Cliente</th>
                   <th className="px-3 py-2 font-medium">Contacto</th>
@@ -208,12 +208,12 @@ export default async function IbPage() {
                   <th className="px-3 py-2 text-right font-medium">Depósitos</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-zinc-800">
                 {aTrabalhar.map((l) => (
-                  <tr key={l.id} className="text-gray-300">
+                  <tr key={l.id} className="text-zinc-300">
                     <td className="px-3 py-2">
                       <span className="text-white">{l.cliente_nome ?? l.conta}</span>
-                      <span className="block text-xs text-gray-600">conta {l.conta}</span>
+                      <span className="block text-xs text-zinc-600">conta {l.conta}</span>
                       {jaNoPipeline.has(`ib:${l.corretora}:${l.conta}`) && (
                         <span className="mt-1 inline-block rounded bg-[#D2A63C]/15 px-1.5 py-0.5 text-[10px] font-medium text-[#D2A63C]">
                           no pipeline · {jaNoPipeline.get(`ib:${l.corretora}:${l.conta}`)}
@@ -234,10 +234,10 @@ export default async function IbPage() {
                         </a>
                       ) : null}
                       {!l.cliente_email && !l.cliente_telefone && (
-                        <span className="text-xs text-gray-700">sem contacto</span>
+                        <span className="text-xs text-zinc-700">sem contacto</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-gray-400">
+                    <td className="px-3 py-2 text-zinc-400">
                       {CORRETORA_NOME[l.corretora] ?? l.corretora}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{num(l.volume_lotes)}</td>
@@ -248,10 +248,10 @@ export default async function IbPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-zinc-600">
             Estado: {Object.entries(ESTADO_NOME).map(([k, v]) => `${v} (${todas.filter((l) => l.estado_migracao === k).length})`).join(' · ')}
           </p>
-          <p className="text-xs leading-relaxed text-gray-600">
+          <p className="text-xs leading-relaxed text-zinc-600">
             {aTrabalhar.filter((l) => l.cliente_email || l.cliente_telefone).length} destas têm
             contacto e entram sozinhas no pipeline de manhã, pelas que mais volume têm. As que não
             têm email nem telefone ficam de fora — um lead a que não se consegue chegar não é um

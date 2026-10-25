@@ -175,9 +175,9 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
       )}
 
       {agentesVivos.length > 0 && (
-        <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Agentes IA no pipeline</div>
-          <p className="mt-1 text-xs leading-relaxed text-gray-500">
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Agentes IA no pipeline</div>
+          <p className="mt-1 text-xs leading-relaxed text-zinc-500">
             Trabalham os leads da bolsa ao teu lado: criam, qualificam, movem, agendam follow-ups e passam-te o
             negócio quando é preciso uma pessoa. Num negócio que é teu só podem deixar notas. Não enviam mensagens
             por aqui, não marcam «ganho» e não mexem em dinheiro.
@@ -231,7 +231,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                 <span
                   key={e}
                   className={`rounded-lg border px-3 py-1.5 text-xs ${
-                    n === 0 ? 'border-gray-800 text-gray-600' : 'border-[#D2A63C]/40 text-gray-200'
+                    n === 0 ? 'border-zinc-800 text-zinc-600' : 'border-[#D2A63C]/40 text-zinc-200'
                   }`}
                 >
                   {ESTADO_PIPELINE_NOME[e]} <strong className="ml-1">{n}</strong>
@@ -242,7 +242,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
 
           {/* A contagem é DESTA PÁGINA e diz-se que é: um total que na verdade conta 50 linhas de
               300 é o mesmo erro do limite silencioso, agora escrito por extenso. */}
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-zinc-400">
             {emAberto === 0
               ? 'Nada em aberto nesta página — o que aqui está está ganho ou perdido.'
               : `${emAberto} negócio${emAberto === 1 ? '' : 's'} em aberto ${haMais || pagina.pagina > 1 ? 'nesta página' : 'em total'}.`}
@@ -255,18 +255,18 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
             return (
               <section key={estado} className="space-y-3">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
                     {ESTADO_PIPELINE_NOME[estado]}
                   </h2>
-                  <span className="text-xs text-gray-600">{lista.length}</span>
+                  <span className="text-xs text-zinc-600">{lista.length}</span>
                 </div>
 
                 {/* O apoio: o movimento, a razão dele, e por onde abrir. A razão está lá porque uma
                     sugestão sem razão é uma ordem, e uma ordem sem razão ignora-se. */}
                 <div className="rounded-lg border border-[#D2A63C]/25 bg-[#D2A63C]/5 p-4">
                   <div className="text-sm font-semibold text-[#D2A63C]">Passo seguinte: {sugestao.passo}</div>
-                  <p className="mt-1 text-xs leading-relaxed text-gray-400">{sugestao.porque}</p>
-                  <p className="mt-2 text-xs leading-relaxed text-gray-300">{sugestao.abrir}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-400">{sugestao.porque}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-zinc-300">{sugestao.abrir}</p>
                 </div>
 
                 <div className="space-y-2">
@@ -282,13 +282,13 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                         // negócio em vez do topo da lista. O anel dourado fica porque, depois de
                         // rolar, a pessoa tem de saber QUAL das linhas é a dela.
                         id={`negocio-${n.id}`}
-                        className={`scroll-mt-20 rounded-lg border bg-gray-900/40 p-4 ${
-                          emFoco ? 'border-[#D2A63C] ring-1 ring-[#D2A63C]/40' : 'border-gray-800'
+                        className={`scroll-mt-20 rounded-lg border bg-zinc-900/40 p-4 ${
+                          emFoco ? 'border-[#D2A63C] ring-1 ring-[#D2A63C]/40' : 'border-zinc-800'
                         }`}
                       >
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
                           <span className="font-semibold text-white">{n.nome}</span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-zinc-500">
                             mexeu {dataCurta(n.atualizado_em)}
                             {dias !== null && dias > 0 ? ` · há ${dias} dia${dias === 1 ? '' : 's'}` : ''}
                           </span>
@@ -323,26 +323,26 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                           {n.origem && <Etiqueta>via {n.origem}</Etiqueta>}
                         </div>
                         {n.motivo_perda && (
-                          <p className="mt-2 text-xs text-gray-400">
-                            <span className="text-gray-500">Motivo: </span>
+                          <p className="mt-2 text-xs text-zinc-400">
+                            <span className="text-zinc-500">Motivo: </span>
                             {n.motivo_perda}
                           </p>
                         )}
-                        {n.nota && <p className="mt-2 text-xs leading-relaxed text-gray-400">{n.nota}</p>}
+                        {n.nota && <p className="mt-2 text-xs leading-relaxed text-zinc-400">{n.nota}</p>}
                         {n.agente_qualificacao && (
-                          <p className="mt-2 text-xs leading-relaxed text-gray-400">
-                            <span className="text-gray-500">Qualificação do agente: </span>
+                          <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+                            <span className="text-zinc-500">Qualificação do agente: </span>
                             {n.agente_qualificacao}
                           </p>
                         )}
                         {(accoes[n.id] ?? []).length > 0 && (
                           <ul className="mt-2 space-y-1 border-l border-[#D2A63C]/30 pl-3">
                             {(accoes[n.id] ?? []).map((a, i) => (
-                              <li key={i} className="text-[11.5px] leading-snug text-gray-400">
+                              <li key={i} className="text-[11.5px] leading-snug text-zinc-400">
                                 <span className="text-[#D2A63C]">Agente IA · {agentes[a.agente_id]?.papel ?? 'agente'}</span>{' '}
                                 {NOME_DA_ACCAO[a.accao] ?? a.accao}
-                                <span className="text-gray-600"> · {dataCurta(a.criado_em)}</span>
-                                {a.texto && <span className="text-gray-500"> — {a.texto.slice(0, 220)}</span>}
+                                <span className="text-zinc-600"> · {dataCurta(a.criado_em)}</span>
+                                {a.texto && <span className="text-zinc-500"> — {a.texto.slice(0, 220)}</span>}
                               </li>
                             ))}
                           </ul>
@@ -361,7 +361,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                             return (
                               <p className="text-[12.5px] leading-snug">
                                 <span className="font-medium text-[#E9C46A]">{passo.accao}</span>
-                                <span className="text-gray-500"> — {passo.porque}</span>
+                                <span className="text-zinc-500"> — {passo.porque}</span>
                               </p>
                             )
                           })()}
@@ -376,7 +376,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                             uma escrita que o servidor recusa, e a recusa parece avaria. */}
                         {estaSemDono(n) ? (
                           <div className="mt-3 space-y-2">
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-zinc-500">
                               Este lead não é de ninguém. Pega nele e passa a ser teu.
                             </p>
                             <Pegar id={n.id} nome={n.nome} />
@@ -422,7 +422,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
         </>
       )}
 
-      <p className="text-xs leading-relaxed text-gray-600">
+      <p className="text-xs leading-relaxed text-zinc-600">
         Os contactos desta página são da empresa e estão aqui porque fazes parte do negócio deles.
         Não se copiam para fora, e «ganho» não quer dizer que entrou dinheiro — isso é a venda
         confirmada, e é ela que faz nascer a comissão no teu extracto.

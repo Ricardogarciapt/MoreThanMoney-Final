@@ -77,7 +77,7 @@ export function Historico({ id }: { id: string }) {
       <button
         type="button"
         onClick={() => void abrir()}
-        className="mt-2 text-xs text-gray-500 underline transition-colors hover:text-[#D2A63C]"
+        className="mt-2 text-xs text-zinc-500 underline transition-colors hover:text-[#D2A63C]"
       >
         Histórico
       </button>
@@ -85,24 +85,24 @@ export function Historico({ id }: { id: string }) {
   }
 
   return (
-    <div className="mt-2 space-y-2 rounded-lg border border-gray-800 bg-black/20 p-3">
+    <div className="mt-2 space-y-2 rounded-lg border border-zinc-800 bg-black/20 p-3">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-gray-500">Histórico</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Histórico</span>
         <button
           type="button"
           onClick={() => setAberto(false)}
-          className="text-xs text-gray-500 underline hover:text-gray-300"
+          className="text-xs text-zinc-500 underline hover:text-zinc-300"
         >
           fechar
         </button>
       </div>
 
-      {aLer && <p className="text-xs text-gray-500">a ler…</p>}
+      {aLer && <p className="text-xs text-zinc-500">a ler…</p>}
 
       {erro && <p className="text-xs text-red-400">{erro}</p>}
 
       {!aLer && !erro && eventos !== null && eventos.length === 0 && (
-        <p className="text-xs leading-relaxed text-gray-500">
+        <p className="text-xs leading-relaxed text-zinc-500">
           Este negócio ainda não tem movimentos gravados. O primeiro aparece aqui quando alguém o
           mover ou ocupar um papel nele.
         </p>
@@ -111,22 +111,22 @@ export function Historico({ id }: { id: string }) {
       {eventos !== null && eventos.length > 0 && (
         <ol className="space-y-1.5">
           {eventos.map((e) => (
-            <li key={e.id} className="text-xs leading-relaxed text-gray-400">
-              <span className="text-gray-500">{quando(e.em)}</span>
+            <li key={e.id} className="text-xs leading-relaxed text-zinc-400">
+              <span className="text-zinc-500">{quando(e.em)}</span>
               {' · '}
               {/* Um evento sem `de` é o nascimento do negócio — não veio de estado nenhum. */}
-              <span className="text-gray-300">
+              <span className="text-zinc-300">
                 {e.de ? `${estado(e.de)} → ${estado(e.para)}` : estado(e.para)}
               </span>
-              {e.quem && <span className="text-gray-500"> por {e.quem}</span>}
-              {e.nota && <span className="text-gray-500"> — {e.nota}</span>}
+              {e.quem && <span className="text-zinc-500"> por {e.quem}</span>}
+              {e.nota && <span className="text-zinc-500"> — {e.nota}</span>}
             </li>
           ))}
         </ol>
       )}
 
       {haMais && (
-        <p className="text-xs text-gray-600">
+        <p className="text-xs text-zinc-600">
           Só os 100 movimentos mais recentes. Se precisares do resto, fala com o Ricardo.
         </p>
       )}

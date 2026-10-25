@@ -22,7 +22,7 @@ import { useRouter } from 'next/navigation'
 import { PAPEL_NOME, type Papel, PAPEIS } from '@/lib/backoffice-papeis'
 
 const CAMPO =
-  'w-full rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-[#D2A63C] focus:outline-none'
+  'w-full rounded-lg border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-[#D2A63C] focus:outline-none'
 
 export function NegocioNovo({ papeis, ehDono }: { papeis: Papel[]; ehDono: boolean }) {
   const router = useRouter()
@@ -73,7 +73,7 @@ export function NegocioNovo({ papeis, ehDono }: { papeis: Papel[]; ehDono: boole
     // Sem nenhum dos cinco papéis não há coluna onde pôr a pessoa — e um negócio órfão é um negócio
     // que ela não voltava a ver. Dizê-lo é melhor do que oferecer um botão que dá erro.
     return (
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-zinc-500">
         Para lançares negócios precisas de um dos papéis de vendas (prospector, setter, closer,
         responsável ou afiliado). Fala com o Ricardo.
       </p>
@@ -85,7 +85,7 @@ export function NegocioNovo({ papeis, ehDono }: { papeis: Papel[]; ehDono: boole
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-gray-950 transition-opacity hover:opacity-90"
+        className="rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-zinc-950 transition-opacity hover:opacity-90"
       >
         + Lançar um lead
       </button>
@@ -95,12 +95,12 @@ export function NegocioNovo({ papeis, ehDono }: { papeis: Papel[]; ehDono: boole
   return (
     <form onSubmit={criar} className="space-y-3 rounded-lg border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="space-y-1 text-xs text-gray-400">
-          <span className="uppercase tracking-wide text-gray-500">Nome *</span>
+        <label className="space-y-1 text-xs text-zinc-400">
+          <span className="uppercase tracking-wide text-zinc-500">Nome *</span>
           <input name="nome" required autoFocus className={CAMPO} placeholder="Como se chama" />
         </label>
-        <label className="space-y-1 text-xs text-gray-400">
-          <span className="uppercase tracking-wide text-gray-500">Entras como *</span>
+        <label className="space-y-1 text-xs text-zinc-400">
+          <span className="uppercase tracking-wide text-zinc-500">Entras como *</span>
           <select value={papel} onChange={(e) => setPapel(e.target.value as Papel)} className={CAMPO}>
             {disponiveis.map((p) => (
               <option key={p} value={p}>
@@ -109,29 +109,29 @@ export function NegocioNovo({ papeis, ehDono }: { papeis: Papel[]; ehDono: boole
             ))}
           </select>
         </label>
-        <label className="space-y-1 text-xs text-gray-400">
-          <span className="uppercase tracking-wide text-gray-500">Email</span>
+        <label className="space-y-1 text-xs text-zinc-400">
+          <span className="uppercase tracking-wide text-zinc-500">Email</span>
           <input name="email" type="email" className={CAMPO} placeholder="opcional" />
         </label>
-        <label className="space-y-1 text-xs text-gray-400">
-          <span className="uppercase tracking-wide text-gray-500">Telefone</span>
+        <label className="space-y-1 text-xs text-zinc-400">
+          <span className="uppercase tracking-wide text-zinc-500">Telefone</span>
           <input name="telefone" className={CAMPO} placeholder="opcional" />
         </label>
-        <label className="space-y-1 text-xs text-gray-400">
-          <span className="uppercase tracking-wide text-gray-500">Origem</span>
+        <label className="space-y-1 text-xs text-zinc-400">
+          <span className="uppercase tracking-wide text-zinc-500">Origem</span>
           <input name="origem" className={CAMPO} placeholder="instagram, indicação, evento…" />
         </label>
-        <label className="space-y-1 text-xs text-gray-400">
-          <span className="uppercase tracking-wide text-gray-500">Pack previsto</span>
+        <label className="space-y-1 text-xs text-zinc-400">
+          <span className="uppercase tracking-wide text-zinc-500">Pack previsto</span>
           <input name="pack_previsto" className={CAMPO} placeholder="o que se espera vender" />
         </label>
       </div>
-      <label className="block space-y-1 text-xs text-gray-400">
-        <span className="uppercase tracking-wide text-gray-500">Nota</span>
+      <label className="block space-y-1 text-xs text-zinc-400">
+        <span className="uppercase tracking-wide text-zinc-500">Nota</span>
         <textarea name="nota" rows={2} className={CAMPO} placeholder="o que já sabes desta pessoa" />
       </label>
 
-      <p className="text-xs leading-relaxed text-gray-500">
+      <p className="text-xs leading-relaxed text-zinc-500">
         O negócio nasce em «Lead» e com o teu nome na atribuição de {papel ? PAPEL_NOME[papel] : '—'}.
         Fechá-lo mais tarde como «ganho» não cria venda nem comissão: isso nasce do pagamento
         confirmado.
@@ -141,11 +141,11 @@ export function NegocioNovo({ papeis, ehDono }: { papeis: Papel[]; ehDono: boole
         <button
           type="submit"
           disabled={aGuardar}
-          className="rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-gray-950 transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-zinc-950 transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {aGuardar ? 'a criar…' : 'Criar'}
         </button>
-        <button type="button" onClick={() => setAberto(false)} className="text-xs text-gray-400 underline hover:text-gray-200">
+        <button type="button" onClick={() => setAberto(false)} className="text-xs text-zinc-400 underline hover:text-zinc-200">
           cancelar
         </button>
         {erro && <span className="text-xs text-red-400">{erro}</span>}

@@ -135,7 +135,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
       </Filtros>
 
       {abertas.length > 0 && (
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-zinc-400">
           {abertas.length} por fazer
           {atrasadas > 0 && <span className="text-red-400"> · {atrasadas} atrasada{atrasadas === 1 ? '' : 's'}</span>}
           {paraHoje > 0 && <span className="text-[#D2A63C]"> · {paraHoje} para hoje</span>}
@@ -152,10 +152,10 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
           {porUrgencia.map((t) => {
             const situacao = situacaoDoPrazo(t.prazo)
             return (
-              <li key={t.id} className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+              <li key={t.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-white/[0.06] bg-zinc-950/70 p-4">
                 <div className="min-w-[200px] flex-1">
                   <div className="font-medium text-white">{t.titulo}</div>
-                  {t.descricao && <p className="mt-1 text-xs leading-relaxed text-gray-400">{t.descricao}</p>}
+                  {t.descricao && <p className="mt-1 text-xs leading-relaxed text-zinc-400">{t.descricao}</p>}
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     <Etiqueta tom={situacao === 'atrasada' ? 'mau' : situacao === 'hoje' ? 'aviso' : 'neutro'}>
                       {SITUACAO_PRAZO_NOME[situacao]}
@@ -184,14 +184,14 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
 
       {canceladas.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Canceladas ({canceladas.length})</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Canceladas ({canceladas.length})</h2>
           <ul className="space-y-1.5">
             {canceladas.map((t) => (
-              <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-800/60 bg-gray-900/20 px-4 py-2.5">
-                <span className="text-sm text-gray-500">{t.titulo}</span>
+              <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800/60 bg-zinc-900/20 px-4 py-2.5">
+                <span className="text-sm text-zinc-500">{t.titulo}</span>
                 {/* Uma cancelada não se reabre daqui: se voltou a ser precisa, cria-se outra, e
                     assim fica rasto de que houve uma decisão. */}
-                <span className="text-xs text-gray-600">cancelada</span>
+                <span className="text-xs text-zinc-600">cancelada</span>
               </li>
             ))}
           </ul>
@@ -200,18 +200,18 @@ export default async function TarefasPage({ searchParams }: { searchParams: Prom
 
       {feitas.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Já feitas ({feitas.length})</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Já feitas ({feitas.length})</h2>
           <ul className="space-y-1.5">
             {feitas.map((t) => (
-              <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-800/60 bg-gray-900/20 px-4 py-2.5">
-                <span className="text-sm text-gray-500 line-through">
+              <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800/60 bg-zinc-900/20 px-4 py-2.5">
+                <span className="text-sm text-zinc-500 line-through">
                   {t.titulo}
                   {t.responsavel_id !== ctx.userId && (
                     <span className="ml-2 no-underline">— {dono(t)}</span>
                   )}
                 </span>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-600">{dataCurta(t.feita_em)}</span>
+                  <span className="text-xs text-zinc-600">{dataCurta(t.feita_em)}</span>
                   {/* A mesma regra da lista de cima, que aqui faltava: o botão só aparece nas dela.
                       O servidor aceita um responsável a reabrir a tarefa de um liderado — mas
                       desmarcar o trabalho de outra pessoa a partir de uma lista onde ela não tem

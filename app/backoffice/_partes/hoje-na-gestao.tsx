@@ -65,7 +65,7 @@ export async function HojeNaGestao({ capacidades }: { capacidades: ReadonlySet<C
 
   return (
     <section>
-      <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Hoje na casa</h2>
+      <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Hoje na casa</h2>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {cartoes.map((c) => (
           <Link
@@ -73,9 +73,9 @@ export async function HojeNaGestao({ capacidades }: { capacidades: ReadonlySet<C
             href={c.href}
             className={`rounded-xl border p-3 transition-colors hover:border-[#D2A63C]/50 ${c.urgente ? 'border-amber-400/40 bg-amber-400/[0.05]' : 'border-white/[0.07] bg-white/[0.02]'}`}
           >
-            <p className="text-[11px] text-gray-400">{c.titulo}</p>
+            <p className="text-[11px] text-zinc-400">{c.titulo}</p>
             <p className={`mt-1 text-2xl font-bold ${c.urgente ? 'text-amber-300' : 'text-[#E9C46A]'}`}>{c.valor == null ? '—' : c.valor}</p>
-            <p className="mt-0.5 text-[10.5px] text-gray-500">{c.nota}</p>
+            <p className="mt-0.5 text-[10.5px] text-zinc-500">{c.nota}</p>
           </Link>
         ))}
       </div>

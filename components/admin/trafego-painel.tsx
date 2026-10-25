@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Loader2, Pause, Play, RefreshCw } from 'lucide-react'
 import type { CampanhaMeta, LeituraMeta, PeriodoMeta } from '@/lib/trafego/meta'
 import { diagnosticar, type Gravidade } from '@/lib/trafego/diagnostico'
-import EstudioAnuncios from './trafego-estudio'
 
 /**
  * GESTÃO DE TRÁFEGO — o que a Meta diz que se gastou e gerou, ao lado do que entrou de facto no CRM
@@ -193,7 +192,9 @@ export default function TrafegoPainel() {
         </div>
       )}
       {meta?.configurado && meta.erros.length > 0 && <p className="text-[11px] text-rose-300">{meta.erros.join(' · ')}</p>}
-      <EstudioAnuncios />
+      <a href="/backoffice/gestao/marketing?v=estudio" className="block rounded-xl border border-[#D2A63C]/20 bg-[#D2A63C]/[0.03] px-4 py-3 text-xs text-zinc-300 hover:border-[#D2A63C]/40">
+        <span className="font-semibold text-[#E9C46A]">Criar anúncios →</span> o Estúdio (Meta, Google, TikTok, optimizadores) e o Assistente de marketing vivem em Gestão → Marketing. Campanhas novas nascem em pausa.
+      </a>
 
       <p className="text-[10.5px] text-zinc-600">
         {dados?.podeEscrever ? 'Pausar, reactivar e mudar o orçamento diário escrevem na Meta (precisa de ads_management no token). ' : 'As acções sobre campanhas são só do dono. '}
