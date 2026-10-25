@@ -21,7 +21,7 @@ import { calcularProof, CONFIG_PROOF_PADRAO, lerConfigProof, type Medidas } from
 import { CICLOS, transicao, type Ciclo, type EntradaCiclo } from './ciclo-vida'
 import { nClones, planearClonagem, procuraCiclos, type AgenteClonavel } from './clonagem'
 import { CATEGORIAS_HUMANAS, categoriaHumana, validarAccaoCeo } from './ceo-economico'
-import { correrOs } from './os-db'
+import { cicloFalhado, correrOs, nascimento } from './os-db'
 
 let falhas = 0
 let total = 0
@@ -210,6 +210,12 @@ void (async () => {
   teste('a ficha do arquivo tem receita, clones, descendentes, melhor geração e ROI', chamadas.some((c) => c.t === 'agentes_arquivo' && ['receita_total', 'clones', 'descendentes', 'melhor_geracao', 'roi_medio'].every((k) => k in ((c.dados as { ficha?: object }).ficha ?? {}))))
   teste('arquivar não escreve na genealogia (fica como estava)', !chamadas.some((c) => c.t === 'agentes_genealogia' && c.op !== 'insert'))
   teste('o CEO, nas mesmas condições, NÃO é arquivado', !r.arquivados.includes('CEO') && !chamadas.some((c) => c.t === 'agentes_equipa' && c.op === 'update' && (c.dados as { ciclo?: string }).ciclo === 'ARCHIVED' && JSON.stringify(c).includes('"CEO"')))
+
+  // 25/10 — reencarnação: as falhas de infraestrutura não são custo; o renascido tem graça outra vez.
+  teste('ciclo sem contrato (subscrição bloqueada) é falha', cicloFalhado('Passo: SEM CONTRATO\nResumo: Your organization has disabled Claude subscription access'))
+  teste('ciclo com trabalho não é falha', !cicloFalhado('Passo: rever o pipeline\nResumo: 3 leads novos'))
+  teste('renasceu_em manda na idade', nascimento({ criado_em: '2026-10-01T00:00:00Z', ciclo_meta: { renasceu_em: '2026-10-25T21:00:00Z' } }) === '2026-10-25T21:00:00Z')
+  teste('sem renascimento conta a criação', nascimento({ criado_em: '2026-10-01T00:00:00Z', ciclo_meta: null }) === '2026-10-01T00:00:00Z')
 
   console.log(`\n${total - falhas}/${total} provas passaram.`)
   if (falhas) { console.log(`${falhas} FALHARAM`); process.exit(1) }

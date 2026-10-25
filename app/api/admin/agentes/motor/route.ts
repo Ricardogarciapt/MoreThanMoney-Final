@@ -15,6 +15,7 @@ import type { TipoEnvio } from '@/lib/envios-aprovacao'
 import { executarAccaoPipeline, retratoPipeline } from '@/lib/agentes/pipeline-agentes-db'
 import { correrOs, executarAccaoCeo, lerConfigOs, orcamentos, pedirClonagem, pnl, tectosContactoDb, type Quota } from '@/lib/agentes/os/os-db'
 import { orcamentosDaEquipa } from '@/lib/agentes/orcamento-db'
+import { lerValor } from '@/lib/agentes/orcamento-agente'
 import { programacaoDoAgente } from '@/lib/agentes/programacao'
 import { listarOrdens, marcarOrdem } from '@/lib/agentes/ordens'
 
@@ -55,6 +56,7 @@ const ACCOES_DO_MOTOR = [
   'ceo_accao',       // 07/10 OS v2: criar_missao | alocar_recursos | escalar | arquivar | suspender | retomar | fechar_missao
   'pedir_clonagem',  // 07/10 OS v2: REQUEST_CLONING de um agente, com evidência (o CEO valida)
   'ordem',           // 23/10: marcar uma ordem do dono (entregue / em_curso / feita / recusada + resposta)
+  'gasto_api',       // 25/10: um ciclo correu pela API paga (a subscrição falhou) — soma ao gasto do agente no livro
 ] as const
 
 /** A quota do claude -p que o motor mediu (motor/regras.py `capacidade_ciclos`). */
@@ -217,6 +219,20 @@ export async function POST(request: NextRequest) {
     if (ensaio) return NextResponse.json({ ok: true, ensaio })
     const r = await marcarOrdem(db, { id: String(corpo.ordem_id ?? ''), agenteId, estado: String(corpo.estado ?? ''), resposta: corpo.resposta == null ? null : String(corpo.resposta) })
     return NextResponse.json(r.ok ? r : { ok: false, erro: r.erro }, { status: r.ok ? 200 : 400 })
+  }
+
+  if (acao === 'gasto_api') {
+    // O dinheiro já foi gasto (o pedido à API correu): regista-se sempre, para o livro dizer a
+    // verdade. O bloqueio por saldo/teto acontece no acordar seguinte (orcamento_bloqueio).
+    const v = lerValor(corpo.valor)
+    if (!agenteId || !v.ok) return NextResponse.json({ ok: false, erro: v.ok ? 'Falta o agente.' : v.erro }, { status: 400 })
+    if (v.valor > 1) return NextResponse.json({ ok: false, erro: 'Um ciclo não custa mais de 1 €: valor recusado.' }, { status: 400 })
+    if (ensaio) return NextResponse.json({ ok: true, ensaio })
+    const { data, error } = await db.rpc('agentes_movimentar', {
+      p_agente: agenteId, p_tipo: 'gastou', p_valor: v.valor,
+      p_detalhe: String(corpo.detalhe ?? 'ciclo pela API paga').slice(0, 300),
+    })
+    return NextResponse.json(error ? { ok: false, erro: error.message } : { ok: true, linha: Array.isArray(data) ? data[0] : data }, { status: error ? 500 : 200 })
   }
 
   if (acao === 'evento') {
