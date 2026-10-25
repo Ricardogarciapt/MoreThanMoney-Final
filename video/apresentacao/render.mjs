@@ -32,7 +32,7 @@ const TL = guiao.filter(c => !so || c.id === so).map(c => {
   const tot = frases.reduce((a, s) => a + s.length, 0)
   let fi = t
   const fr = frases.map(s => { const d = fala * s.length / tot; const o = { t: s, ini: fi, fim: fi + d }; fi += d; return o })
-  const cena = { id: c.id, ini: t, dur: fala + RESPIRO, fala, frases: fr, audio: f }
+  const cena = { id: c.id, ini: t, dur: fala + (c.id === 's14-fecho' ? 3.5 : RESPIRO), fala, frases: fr, audio: f }
   t += cena.dur
   return cena
 })
