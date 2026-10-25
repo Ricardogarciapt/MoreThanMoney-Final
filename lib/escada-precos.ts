@@ -12,11 +12,11 @@
  * sente enganado no momento em que chega ao pagamento. Por isso o número vive aqui e os textos
  * leem-no; quem quiser mudar o preço muda-o num sítio.
  *
- * O depósito da corretora NÃO se repete aqui — reexporta-se de `telegram-broker-gate`, que é
- * onde a validação o lê. Duas constantes com o mesmo nome divergem no dia em que alguém muda
+ * O depósito da corretora NÃO se repete aqui — reexporta-se de `broker/deposito-minimo`, o mesmo
+ * número que a validação do `telegram-broker-gate` lê. Duas constantes com o mesmo nome divergem no dia em que alguém muda
  * uma delas.
  */
-import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
+import { MIN_DEPOSIT } from '@/lib/broker/deposito-minimo'
 export { MIN_DEPOSIT }
 
 /** Formata um valor em euros à portuguesa (vírgula decimal, sem casas quando é redondo). */

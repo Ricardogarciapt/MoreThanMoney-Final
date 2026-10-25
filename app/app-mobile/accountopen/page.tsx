@@ -23,6 +23,7 @@ import {
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { MIN_DEPOSIT } from "@/lib/broker/deposito-minimo"
 
 // Corretora de registo. PU Prime por defeito (site + Android + web); VT Markets só
 // no app iOS nativo (que tem o seu próprio fluxo nativo — isto é rede de segurança).
@@ -31,7 +32,9 @@ const BROKERS: Record<string, Broker> = {
   puprime: {
     key: "puprime",
     name: "PU Prime",
-    referral: "https://www.puprime.com/campaign?cs=morethanmoney",
+    // Pelo /abrir-conta e não pelo link fixo: é lá que roda o IB do dia e se contam os cliques.
+    // Um link da PU Prime escrito aqui à mão fazia todos os registos desta página caírem no mesmo IB.
+    referral: "https://www.morethanmoney.pt/abrir-conta",
     blurb: "Spreads competitivos, execução rápida, MT4/MT5 e depósitos flexíveis. Suporte em português.",
     tags: ["MT4 / MT5", "Execução rápida", "Suporte PT", "Spreads baixos"],
   },
@@ -49,14 +52,23 @@ function pickBroker(): Broker {
   return BROKERS.puprime
 }
 
+/** O passo do UID — é o último, e é o único que o perfil consegue confirmar sozinho. */
+const ID_UID = 7
+
+/**
+ * A ordem é a do registo na PU Prime: perfil e verificação primeiro, conta real depois, depósito no
+ * fim. O passo da conta Live entrou a 25/10/2026: sem ele havia quem depositasse numa conta Demo,
+ * ou ficasse à procura de onde se escolhe a plataforma.
+ */
 function makeSteps(b: string) {
   return [
-    { id: 1, icon: ExternalLink, title: `Acede ao site da ${b}`, description: `Clica no botão abaixo para abrir o registo oficial da ${b} com o nosso link de parceiro.`, detail: "Ao usares o nosso link garantes que a conta fica associada ao grupo MTM — isso dá-te acesso às melhores condições de suporte.", action: "open_link" as const },
-    { id: 2, icon: User, title: "Cria a tua conta", description: "Preenche os teus dados pessoais: nome completo, email, data de nascimento e país de residência.", detail: `Usa dados reais — a ${b} é uma corretora regulada e vai verificar a tua identidade.`, action: null },
-    { id: 3, icon: FileText, title: "Verificação de identidade (KYC)", description: "Faz upload do teu documento de identificação (CC ou Passaporte) e um comprovativo de morada.", detail: "A verificação demora normalmente entre 30 minutos e 24 horas. Tens de a completar antes de poderes depositar.", action: null },
-    { id: 4, icon: CreditCard, title: "Faz o teu primeiro depósito", description: "O depósito mínimo recomendado é de €100. Podes depositar via transferência bancária, cartão ou Skrill.", detail: "Recomendamos começar com um valor com que te sintas confortável. Não há pressão — podes começar com o mínimo.", action: null },
-    { id: 5, icon: Smartphone, title: "Instala a plataforma MetaTrader", description: `Descarrega o MetaTrader 4 ou 5 (MT4/MT5) disponível no site da ${b} ou na App Store / Play Store.`, detail: `A ${b} fornece-te os dados de login (servidor, número de conta e password) assim que a conta estiver ativa.`, action: null },
-    { id: 6, icon: TrendingUp, title: "Regista o teu UID na MTM", description: `Após criares a conta, copia o teu número de conta ${b} (UID) e guarda-o aqui.`, detail: `O UID é o número da tua conta na ${b} (ex: 12345678). Vais encontrá-lo no painel da ${b} após o login. Este passo desbloqueia as salas exclusivas de Trade Ideas.`, action: "save_uid" as const },
+    { id: 1, icon: ExternalLink, title: `Abre o registo da ${b} pelo nosso link`, description: `Clica no botão abaixo. Tem de ser por este link: uma conta aberta diretamente no site da ${b} não fica ligada à MTM.`, detail: "Usa o mesmo email que tens na MTM. É por ele que confirmamos que a conta é tua e do grupo MTM.", action: "open_link" as const },
+    { id: 2, icon: User, title: "Cria o teu perfil", description: "Nome completo, email, telemóvel e país de residência.", detail: `Usa dados reais: a ${b} é uma corretora regulada e vai confirmar a tua identidade.`, action: null },
+    { id: 3, icon: FileText, title: "Verifica a identidade", description: "Envia o Cartão de Cidadão ou o passaporte e um comprovativo de morada recente (fatura ou extrato).", detail: "Demora entre uns minutos e 24 horas. Sem a verificação concluída não consegues depositar.", action: null },
+    { id: 4, icon: Shield, title: "Abre uma conta real (Live)", description: "No painel, escolhe abrir conta Live: tipo Standard, plataforma MT5, moeda USD.", detail: `A ${b} envia-te por email o número da conta, a palavra-passe e o servidor. Guarda esse email: vais precisar dele para ligar a conta à MTM.`, action: null },
+    { id: 5, icon: CreditCard, title: "Faz o primeiro depósito", description: `A partir de ${MIN_DEPOSIT} $ ficas com o bónus da ${b} e direito ao Premium MTM sem mensalidade (valida o UID no nosso bot do Telegram), enquanto mantiveres esse saldo.`, detail: "Podes depositar por transferência, cartão ou carteiras digitais. Deposita só dinheiro de que não precisas.", action: null },
+    { id: 6, icon: Smartphone, title: "Instala o MetaTrader 5", description: "Descarrega o MT5 na App Store, na Play Store ou no site da corretora, e entra com os dados do email.", detail: "Se usares o MTM Auto, a ligação faz-se lá dentro com esses mesmos dados.", action: null },
+    { id: ID_UID, icon: TrendingUp, title: "Guarda o teu UID na MTM", description: `Copia o número da tua conta ${b} (UID) e guarda-o aqui.`, detail: `O UID é o número da tua conta na ${b} (ex: 12345678), no painel da ${b} depois de entrares. Este passo desbloqueia as salas exclusivas de Trade Ideas.`, action: "save_uid" as const },
   ]
 }
 
@@ -122,8 +134,8 @@ export default function AccountOpenPage() {
       if (data?.broker_uid) {
         setSavedUid(data.broker_uid)
         setUid(data.broker_uid)
-        // Auto-mark step 6 as done if UID already saved
-        setCompletedSteps(prev => prev.includes(6) ? prev : [...prev, 6])
+        // O UID já guardado dá o último passo por feito
+        setCompletedSteps(prev => prev.includes(ID_UID) ? prev : [...prev, ID_UID])
       }
     } catch {}
   }
@@ -169,7 +181,7 @@ export default function AccountOpenPage() {
         .eq("id", session.user.id)
       if (error) throw error
       setSavedUid(uid.trim())
-      markStepDone(6)
+      markStepDone(ID_UID)
       toast({
         title: "UID guardado!",
         description: "O teu número de conta foi registado com sucesso.",
@@ -399,7 +411,7 @@ export default function AccountOpenPage() {
                       </div>
                     )}
 
-                    {/* Step 6 — save UID */}
+                    {/* Último passo — guardar o UID */}
                     {step.action === "save_uid" && (
                       <div className="space-y-3">
                         {savedUid && (
