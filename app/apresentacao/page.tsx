@@ -1,98 +1,26 @@
-"use client"
+import { MEMBRO_MENSAL_EUR, PREMIUM_1O_MES_EUR, PREMIUM_MENSAL_EUR } from "@/lib/escada-precos"
+import { TRIAL_DAYS } from "@/lib/trial-access"
+import ApresentacaoVsl from "@/components/apresentacao/apresentacao-vsl"
 
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
-
+/**
+ * /apresentacao — a página que um membro manda a um lead depois da conversa.
+ *
+ * Antes era só um iframe para o deck de 13 slides (public/apresentacoes/mtm-oportunidade.html),
+ * que mistura produto e plano de carreira e acaba num «Começar Agora» sem destino claro. Agora
+ * abre com o vídeo (PT e EN, voz do Ricardo) e tem um só caminho: /onboarding, com o trial.
+ * O deck continua para quem apresenta numa chamada, ligado no fim da página.
+ *
+ * Os números vêm das fontes (escada-precos, trial-access): esta página não escreve preços à mão.
+ */
 export default function ApresentacaoPage() {
-  const router = useRouter()
-  const { user } = useAuth()
-
   return (
-    <div style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", background: "#080808", overflow: "hidden" }}>
-      {/* Minimal header — Voltar + Login */}
-      <div
-        style={{
-          flexShrink: 0,
-          height: "44px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 20px",
-          background: "rgba(8,8,8,0.92)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(210,166,60,0.15)",
-          zIndex: 50,
-        }}
-      >
-        <button
-          onClick={() => router.back()}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            color: "#D2A63C",
-            fontSize: "13px",
-            fontWeight: 600,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            letterSpacing: "0.02em",
-          }}
-        >
-          <ArrowLeft size={15} />
-          Voltar
-        </button>
-
-        {!user ? (
-          <Link
-            href="/login"
-            style={{
-              fontSize: "12px",
-              fontWeight: 700,
-              color: "#D2A63C",
-              padding: "6px 16px",
-              background: "rgba(210,166,60,0.1)",
-              border: "1px solid rgba(210,166,60,0.3)",
-              borderRadius: "8px",
-              textDecoration: "none",
-              letterSpacing: "0.04em",
-            }}
-          >
-            Entrar
-          </Link>
-        ) : (
-          <Link
-            href="/member-area"
-            style={{
-              fontSize: "12px",
-              fontWeight: 700,
-              color: "#D2A63C",
-              padding: "6px 16px",
-              background: "rgba(210,166,60,0.1)",
-              border: "1px solid rgba(210,166,60,0.3)",
-              borderRadius: "8px",
-              textDecoration: "none",
-            }}
-          >
-            Área de Membro
-          </Link>
-        )}
-      </div>
-
-      {/* Presentation iframe — fills remaining height */}
-      <iframe
-        src="/apresentacoes/mtm-oportunidade.html?v=18"
-        style={{
-          flex: 1,
-          width: "100%",
-          border: "none",
-          display: "block",
-        }}
-        title="MoreThanMoney — Apresentação de Oportunidade 2026"
-        allow="fullscreen"
-      />
-    </div>
+    <ApresentacaoVsl
+      precos={{
+        trialDias: TRIAL_DAYS,
+        premium1oMes: PREMIUM_1O_MES_EUR,
+        premiumMes: PREMIUM_MENSAL_EUR,
+        membroMes: MEMBRO_MENSAL_EUR,
+      }}
+    />
   )
 }

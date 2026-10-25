@@ -1,0 +1,396 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: Anton; src: url(../../public/fonts/Anton-Regular.ttf); }
+@font-face { font-family: Serif; src: url(fonts/instrument-serif-latin-400-italic.woff2); font-style: italic; }
+@font-face { font-family: Serif; src: url(fonts/instrument-serif-latin-400-normal.woff2); }
+:root { --ouro:#D2A63C; --ouro2:#E9C46A; --carvao:#0b0a08; --tinta:#f3ede1; --cinza:#8f887a; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { width:1920px; height:1080px; overflow:hidden; background:var(--carvao); color:var(--tinta); font-family:Inter, sans-serif; }
+#palco { position:absolute; inset:0; overflow:hidden;
+  background: radial-gradient(1200px 700px at 70% 30%, rgba(210,166,60,.10), transparent 60%), radial-gradient(900px 600px at 10% 90%, rgba(210,166,60,.06), transparent 60%), #0b0a08; }
+.cena { position:absolute; inset:0; opacity:0; }
+.abs { position:absolute; }
+.marca { position:absolute; left:80px; top:60px; font:600 18px Inter; letter-spacing:.32em; color:var(--ouro); text-transform:uppercase; z-index:20; }
+.capitulo { position:absolute; right:80px; top:60px; font:500 18px 'JetBrains Mono'; color:var(--cinza); letter-spacing:.08em; z-index:20; }
+.legenda { position:absolute; left:50%; bottom:34px; transform:translateX(-50%); max-width:1500px; text-align:center;
+  font:500 30px/1.35 Inter; color:#fff; text-shadow:0 2px 12px rgba(0,0,0,.9); z-index:30; padding:10px 26px; background:rgba(8,8,8,.55); border-radius:10px; }
+#barra { position:absolute; left:0; bottom:0; height:4px; background:var(--ouro); z-index:40; }
+#grao { position:absolute; inset:0; z-index:50; opacity:.07; pointer-events:none; mix-blend-mode:overlay; }
+#vinheta { position:absolute; inset:0; z-index:45; pointer-events:none; background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.65) 100%); }
+.anton { font-family:Anton; letter-spacing:.01em; }
+.serif { font-family:Serif; font-style:italic; }
+.ouro { color:var(--ouro); }
+.cartao { background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border:1px solid rgba(210,166,60,.22); border-radius:22px; }
+.chip { display:inline-block; padding:14px 26px; border-radius:999px; border:1px solid rgba(210,166,60,.35); background:rgba(210,166,60,.08); font:600 30px Inter; color:var(--ouro2); }
+.telefone { position:absolute; width:430px; height:880px; border-radius:62px; background:#111; border:3px solid #2a2722; box-shadow:0 40px 120px rgba(0,0,0,.7), 0 0 0 10px #050505; overflow:hidden; }
+.telefone img { width:100%; display:block; }
+.vivo { display:inline-flex; align-items:center; gap:10px; font:700 18px Inter; color:#ff5a4f; letter-spacing:.12em; }
+.vivo i { width:12px; height:12px; border-radius:50%; background:#ff5a4f; display:inline-block; }
+</style>
+</head>
+<body>
+<div id="palco"></div>
+<div class="marca">MoreThanMoney</div>
+<div class="capitulo" id="capitulo"></div>
+<div class="legenda" id="legenda" style="display:none"></div>
+<div id="barra"></div>
+<div id="vinheta"></div>
+<canvas id="grao" width="960" height="540"></canvas>
+<script>
+// ---------------------------------------------------------------- utilidades
+const clamp = (x,a=0,b=1)=>Math.max(a,Math.min(b,x))
+const ease = x=>{ x=clamp(x); return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2 }
+const out = x=>{ x=clamp(x); return 1-Math.pow(1-x,3) }
+const prog = (t,a,b)=>clamp((t-a)/(b-a))
+const lerp=(a,b,k)=>a+(b-a)*k
+function el(tag, cls, html, css){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; if(css) Object.assign(e.style,css); return e }
+function entra(e, k, dy=40){ e.style.opacity=out(k); e.style.transform=`translateY(${(1-out(k))*dy}px)` }
+function rng(seed){ let s=seed>>>0; return ()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296 } }
+
+const params = new URLSearchParams(location.search)
+const LANG = params.get('lang')||'pt'
+
+// ---------------------------------------------------------------- textos de ecrã
+const T = {
+ pt: {
+  cap:['O problema','O problema','Quem somos','Aprendes','Aplicas','A app','Execução','Ganha enquanto aprendes','Prova','Objeções','A oferta','O próximo passo','Partilhar','MoreThanMoney'],
+  semana:'por semana', esforco:'Esforço não te falta.', sistema:'Falta-te um sistema.',
+  ruido:['dica 🔥 compra já','grupo VIP grátis','«sinal certeiro»','vídeo de 12 min','print de lucro','curso milagre','segue este guru','tutorial aleatório'],
+  falta:['método','ferramentas','alguém ao lado'],
+  quem:'Fundador da MoreThanMoney', eco:['Aprender','Aplicar','Acompanhar'], ecoSub:'Um ecossistema. Não um curso.',
+  aprendes:'Aprendes', salas:[['Forex e ouro','XAU/USD e pares principais'],['Criptomoedas','DCA e perpétuos'],['Ações e ETF','carteira a preço ao vivo'],['Social Media','marca pessoal e UGC'],['Mindset','disciplina e liderança'],['Gravações','organizadas em curso']], aoVivo:'AO VIVO', zero:'Do zero, ao teu ritmo.',
+  aplicas:'Aplicas', check:['Tendência','Zona','Momentum','Risco definido'], estudos:'Estudos MTM · telemóvel e TradingView', entrada:'ENTRADA', stop:'STOP', alvo:'ALVO',
+  app:'MTM System', appSub:'tudo no teu bolso', chips:['Feed da comunidade','Chat','Aulas ao vivo','Alertas com entrada, stop e alvos','Mentor AI 24/7'], decides:'Quem decide és tu.',
+  compra:'COMPRA', tap:'Tap to Trade', aberta:'Ordem aberta na tua conta', gestao:'gestão da posição: sistema', auto:'MTM Auto', autoSub:'copia as estratégias da casa para a tua conta', conta:'A conta é tua.', dinheiro:'Nunca tocamos no teu dinheiro.',
+  ganha:'Ganha enquanto aprendes', passos:[['Abres a tua conta','PU Prime · corretora regulada · pelo nosso link'],['Começas pequeno','aplicas o que viste na sala'],['Praticas com a comunidade','cada passo acompanhado']], risco:'O trading envolve risco de perda de capital.',
+  sem:['Sem carros.','Sem promessas de lucro.'], processo:'Processo.', proc:['posições registadas','alertas no histórico','comunidade a confirmar'],
+  testemunhos:['Grato por estar na melhor comunidade, ecossistema de educação financeira do país.','Fechei os Futuros que tinha em compra. Guardei lucros.'],
+  citacao:'O melhor resultado que podemos ter não é o saldo das contas… mas sim o poder que ganhamos ao saber proteger capital.', membro:'— membro da comunidade MTM',
+  obj:[['Não tenho tempo.','Alertas no telemóvel. Aulas gravadas.'],['Já perdi dinheiro.','Começamos pela gestão de risco.'],['Não sei nada de trading.','A academia começa do zero.']],
+  gratis:'3 dias grátis', premium:'Premium', oferta:['Sem cartão · sem cobrança nos 3 dias','1.º mês: 34,99 €','Depois: 65 €/mês','7 dias de garantia nos mensais','Sem fidelização · cancelas quando quiseres'],
+  url:'morethanmoney.pt/onboarding', passosOn:['Cria a tua conta','Instala a app','Abre a conta na corretora','Entra na primeira aula'], guiamos:'Guiamos-te em cada passo.',
+  afil:'Plano de afiliado', primeira:'na 1.ª mensalidade', renov:'em cada renovação', enquanto:'enquanto a pessoa que trouxeste ficar', depois:'Primeiro, aprende.',
+  fecho1:'Mais do que dinheiro.', fecho2:'Um sistema.', aviso:'Conteúdo educativo, não constitui aconselhamento financeiro. O trading envolve risco de perda de capital. Resultados passados não garantem resultados futuros.'
+ },
+ en: {
+  cap:['The problem','The problem','Who we are','You learn','You apply','The app','Execution','Earn while you learn','Proof','Objections','The offer','Next step','Share','MoreThanMoney'],
+  semana:'a week', esforco:"You don't lack effort.", sistema:'You lack a system.',
+  ruido:['hot tip 🔥 buy now','free VIP group','«sure-shot signal»','12-min video','profit screenshot','miracle course','follow this guru','random tutorial'],
+  falta:['method','tools','someone by your side'],
+  quem:'Founder of MoreThanMoney', eco:['Learn','Apply','Follow'], ecoSub:'An ecosystem. Not a course.',
+  aprendes:'You learn', salas:[['Forex & gold','XAU/USD and major pairs'],['Crypto','DCA and perpetuals'],['Stocks & ETFs','live-priced portfolio'],['Social media','personal brand and UGC'],['Mindset','discipline and leadership'],['Recordings','organised into a course']], aoVivo:'LIVE', zero:'From zero, at your own pace.',
+  aplicas:'You apply', check:['Trend','Zone','Momentum','Defined risk'], estudos:'MTM studies · phone and TradingView', entrada:'ENTRY', stop:'STOP', alvo:'TARGET',
+  app:'MTM System', appSub:'all in your pocket', chips:['Community feed','Chat','Live classes','Alerts with entry, stop and targets','AI Mentor 24/7'], decides:'You make the call.',
+  compra:'BUY', tap:'Tap to Trade', aberta:'Order opened in your account', gestao:'position management: system', auto:'MTM Auto', autoSub:'copies the house strategies to your account', conta:'The account is yours.', dinheiro:'We never touch your money.',
+  ganha:'Earn while you learn', passos:[['You open your account','PU Prime · regulated broker · through our link'],['You start small','apply what you saw in class'],['You practise with the community','every step followed']], risco:'Trading involves risk of capital loss.',
+  sem:['No cars.','No profit promises.'], processo:'Process.', proc:['positions logged','alerts kept in history','community to check'],
+  testemunhos:['Grateful to be in the best community, the best financial education ecosystem in the country.','Closed the futures I was holding. Took profits.'],
+  citacao:"The best result we can have isn't the account balance… it's the power we gain from knowing how to protect capital.", membro:'— MTM community member (translated)',
+  obj:[["I don't have time.",'Alerts on your phone. Recorded classes.'],['I lost money before.','We start with risk management.'],['I know nothing about trading.','The academy starts from zero.']],
+  gratis:'3 days free', premium:'Premium', oferta:['No card · no charge during the 3 days','1st month: €34.99','Then: €65/month','7-day guarantee on monthly plans','No lock-in · cancel whenever you want'],
+  url:'morethanmoney.pt/onboarding', passosOn:['Create your account','Install the app','Open your broker account','Join your first class'], guiamos:"We'll guide you every step.",
+  afil:'Affiliate plan', primeira:'on the 1st month', renov:'on every renewal', enquanto:'for as long as the person you brought stays', depois:'First, learn.',
+  fecho1:'More than money.', fecho2:'A system.', aviso:'Educational content, not financial advice. Trading involves risk of capital loss. Past results do not guarantee future results.'
+ }
+}[LANG]
+
+// ---------------------------------------------------------------- cenas
+// Cada cena: build(root) -> estado; update(estado, k) com k = progresso 0..1 na cena, s = segundos na cena
+const CENAS = {}
+
+CENAS['s01-gancho'] = {
+ build(r){
+  const n = el('div','abs anton',null,{left:'0',right:'0',top:'250px',textAlign:'center',fontSize:'330px',lineHeight:'1',color:'#f3ede1'}); r.append(n)
+  const sub = el('div','abs',T.semana,{left:'0',right:'0',top:'600px',textAlign:'center',font:'500 44px Inter',color:'#8f887a',letterSpacing:'.2em',textTransform:'uppercase'}); r.append(sub)
+  const a = el('div','abs serif',T.esforco,{left:'0',right:'0',top:'330px',textAlign:'center',fontSize:'110px',color:'#cfc6b5'}); r.append(a)
+  const b = el('div','abs anton ouro',T.sistema,{left:'0',right:'0',top:'500px',textAlign:'center',fontSize:'150px'}); r.append(b)
+  const linha = el('div','abs',null,{left:'50%',top:'680px',height:'6px',background:'#D2A63C',transform:'translateX(-50%)'}); r.append(linha)
+  return {n,sub,a,b,linha}
+ },
+ update(o,k){
+  const c = out(prog(k,0,.32)); o.n.textContent = Math.round(c*40)+'h'
+  const sai = prog(k,.42,.5)
+  o.n.style.opacity = 1-sai; o.sub.style.opacity = (1-sai)*out(prog(k,.05,.15)); o.n.style.transform=`scale(${1+sai*.15})`
+  entra(o.a, prog(k,.5,.6)); o.a.style.opacity = out(prog(k,.5,.6))*(1-.6*prog(k,.68,.75))
+  entra(o.b, prog(k,.66,.76))
+  o.linha.style.width = (ease(prog(k,.74,.9))*900)+'px'
+ }
+}
+
+CENAS['s02-problema'] = {
+ build(r){
+  const R = rng(7), cartoes=[]
+  T.ruido.forEach((txt,i)=>{ const c=el('div','abs cartao',txt,{left:(140+R()*1400)+'px',top:(170+R()*560)+'px',padding:'20px 30px',font:'600 30px Inter',color:'#d9d2c3',transform:`rotate(${(R()-.5)*12}deg)`}); c.dataset.d=i; r.append(c); cartoes.push({c,ph:R()*6,amp:6+R()*10}) })
+  const cv = el('canvas','abs',null,{left:'0',top:'0'}); cv.width=1920; cv.height=1080; r.append(cv)
+  const R2=rng(3), pts=[]; let y=330; for(let i=0;i<=120;i++){ y += (R2()-.35)*14; pts.push(y) }
+  const lista = el('div','abs',null,{left:'0',right:'0',top:'330px',textAlign:'center'}); r.append(lista)
+  const itens = T.falta.map(t=>{ const d=el('div','anton',`<span style="color:#ff5a4f">✕</span> ${t}`,{fontSize:'120px',lineHeight:'1.2',opacity:0}); lista.append(d); return d })
+  return {cartoes,cv,pts,itens}
+ },
+ update(o,k,s){
+  const fade = 1-prog(k,.56,.64)
+  o.cartoes.forEach((c,i)=>{ const a=out(prog(k,i*.04,i*.04+.08)); c.c.style.opacity=a*fade; c.c.style.marginTop=(Math.sin(s*1.3+c.ph)*c.amp)+'px' })
+  const g=o.cv.getContext('2d'); g.clearRect(0,0,1920,1080); g.globalAlpha=fade
+  const n=Math.floor(ease(prog(k,.1,.55))*o.pts.length)
+  g.strokeStyle='#ff5a4f'; g.lineWidth=6; g.beginPath(); for(let i=0;i<n;i++){ const x=100+i*14.4, y=o.pts[i]; i?g.lineTo(x,y):g.moveTo(x,y) } g.stroke()
+  o.itens.forEach((d,i)=>entra(d, prog(k,.64+i*.08,.72+i*.08)))
+ }
+}
+
+CENAS['s03-quem'] = {
+ build(r){
+  const nome=el('div','abs serif',"Ricardo Garcia",{left:'0',right:'0',top:'250px',textAlign:'center',fontSize:'170px'}); r.append(nome)
+  const f=el('div','abs',T.quem,{left:'0',right:'0',top:'450px',textAlign:'center',font:'500 34px Inter',color:'#D2A63C',letterSpacing:'.25em',textTransform:'uppercase'}); r.append(f)
+  const eco=el('div','abs',null,{left:'0',right:'0',top:'600px',display:'flex',justifyContent:'center',alignItems:'center',gap:'40px'}); r.append(eco)
+  const nos=T.eco.map((t,i)=>{ const d=el('div','chip',t,{fontSize:'44px',padding:'18px 40px'}); eco.append(d); if(i<2){ const s=el('div','',null,{width:'120px',height:'3px',background:'#D2A63C',transformOrigin:'left'}); eco.append(s); d.seta=s } return d })
+  const sub=el('div','abs anton',T.ecoSub,{left:'0',right:'0',top:'740px',textAlign:'center',fontSize:'70px'}); r.append(sub)
+  return {nome,f,nos,sub}
+ },
+ update(o,k){
+  const sobe = ease(prog(k,.42,.55))
+  entra(o.nome,prog(k,0,.12)); o.nome.style.transform=`translateY(${-sobe*120}px)`
+  entra(o.f,prog(k,.08,.2)); o.f.style.transform=`translateY(${-sobe*120}px)`
+  o.nos.forEach((d,i)=>{ entra(d,prog(k,.5+i*.1,.58+i*.1),20); if(d.seta) d.seta.style.transform=`scaleX(${ease(prog(k,.55+i*.1,.63+i*.1))})` })
+  entra(o.sub,prog(k,.8,.9))
+ }
+}
+
+CENAS['s04-aprender'] = {
+ build(r){
+  const tit=el('div','abs anton ouro',T.aprendes,{left:'120px',top:'150px',fontSize:'120px'}); r.append(tit)
+  const grid=el('div','abs',null,{left:'120px',right:'120px',top:'340px',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'30px'}); r.append(grid)
+  const cs=T.salas.map(([a,b],i)=>{ const c=el('div','cartao',`<div style="font:700 44px Inter;color:#f3ede1">${a}</div><div style="font:400 28px Inter;color:#8f887a;margin-top:10px">${b}</div><div style="margin-top:26px">${i<5?`<span class="vivo"><i></i>${T.aoVivo}</span>`:'<span style="font:600 18px JetBrains Mono;color:#D2A63C;letter-spacing:.1em">▶ REPLAY</span>'}</div>`,{padding:'38px 40px',minHeight:'230px'}); grid.append(c); return c })
+  const z=el('div','abs serif',T.zero,{left:'0',right:'0',top:'850px',textAlign:'center',fontSize:'64px',color:'#cfc6b5'}); r.append(z)
+  return {tit,cs,z,r}
+ },
+ update(o,k,s){
+  entra(o.tit,prog(k,0,.1))
+  o.cs.forEach((c,i)=>entra(c,prog(k,.08+i*.07,.18+i*.07)))
+  o.r.querySelectorAll('.vivo i').forEach(i=>i.style.opacity=.35+.65*Math.abs(Math.sin(s*3)))
+  entra(o.z,prog(k,.78,.88))
+ }
+}
+
+CENAS['s05-scanners'] = {
+ build(r){
+  const tit=el('div','abs anton ouro',T.aplicas,{left:'120px',top:'150px',fontSize:'120px'}); r.append(tit)
+  const box=el('div','abs cartao',null,{left:'120px',top:'320px',width:'1100px',height:'600px',overflow:'hidden'}); r.append(box)
+  const cv=el('canvas','abs',null,{left:'0',top:'0'}); cv.width=1100; cv.height=600; box.append(cv)
+  const lab=el('div','abs',`XAU/USD · 15m`,{left:'30px',top:'22px',font:'600 24px JetBrains Mono',color:'#8f887a'}); box.append(lab)
+  const R=rng(11), velas=[]; let p=100
+  for(let i=0;i<60;i++){ const tend = i<24? -1.1 : (i<34? (R()-.5)*.6 : 1.5); const o=p, c=p + tend + (R()-.5)*3.4; const h=Math.max(o,c)+R()*1.2, l=Math.min(o,c)-R()*1.2; velas.push({o,c,h,l}); p=c }
+  const mn=Math.min(...velas.map(v=>v.l)), mx=Math.max(...velas.map(v=>v.h))
+  const Y=v=>70+(mx+4-v)/(mx+4-(mn-3))*490
+  const base=velas.slice(24,34), zt=Math.max(...base.map(v=>Math.max(v.o,v.c))), zb=Math.min(...base.map(v=>v.l))
+  const lista=el('div','abs',null,{left:'1290px',top:'340px',width:'520px'}); r.append(lista)
+  const its=T.check.map(t=>{ const d=el('div','',`<span class="v" style="display:inline-block;width:54px;color:#3ddc84">✓</span>${t}`,{font:'600 46px Inter',padding:'22px 0',borderBottom:'1px solid rgba(210,166,60,.18)'}); lista.append(d); return d })
+  const est=el('div','abs',T.estudos,{left:'1290px',top:'820px',width:'520px',font:'500 26px Inter',color:'#8f887a'}); r.append(est)
+  return {tit,box,cv,velas,its,est,Y,zt,zb,mn,mx}
+ },
+ update(o,k){
+  entra(o.tit,prog(k,0,.08)); entra(o.box,prog(k,.03,.12))
+  const g=o.cv.getContext('2d'); g.clearRect(0,0,1100,600)
+  const n=Math.floor(ease(prog(k,.08,.6))*o.velas.length), Y=o.Y, w=12, x0=40, dx=16.5
+  const zk=prog(k,.35,.45); if(zk>0){ g.fillStyle=`rgba(210,166,60,${.16*zk})`; g.fillRect(x0+24*dx,Y(o.zt),1100,Y(o.zb)-Y(o.zt)); g.fillStyle='#D2A63C'; g.font='600 20px JetBrains Mono'; g.globalAlpha=zk; g.fillText('ZONA MTM',x0+24*dx+8,Y(o.zb)+26); g.globalAlpha=1 }
+  for(let i=0;i<n;i++){ const v=o.velas[i], x=x0+i*dx, up=v.c>v.o; g.fillStyle=up?'#3ddc84':'#ff5a4f'; g.fillRect(x+w/2-1,Y(v.h),2,Y(v.l)-Y(v.h)); g.fillRect(x,Y(Math.max(v.o,v.c)),w,Math.max(2,Y(Math.min(v.o,v.c))-Y(Math.max(v.o,v.c)))) }
+  const nk=prog(k,.6,.7)
+  if(nk>0){ g.globalAlpha=nk; const lv=[[T.alvo,o.mx-1,'#3ddc84'],[T.entrada,o.zt,'#E9C46A'],[T.stop,o.zb-1.5,'#ff5a4f']]
+   lv.forEach(([t,yy,c])=>{ g.strokeStyle=c; g.setLineDash([10,8]); g.lineWidth=2; g.beginPath(); g.moveTo(x0+33*dx,Y(yy)); g.lineTo(1080,Y(yy)); g.stroke(); g.setLineDash([]); g.fillStyle=c; g.font='700 22px JetBrains Mono'; g.fillText(t,950,Y(yy)-10) }); g.globalAlpha=1 }
+  o.its.forEach((d,i)=>{ const kk=prog(k,.45+i*.08,.52+i*.08); entra(d,kk,20); d.querySelector('.v').style.transform=`scale(${.4+.6*out(kk)})` })
+  entra(o.est,prog(k,.82,.9))
+ }
+}
+
+CENAS['s06-app'] = {
+ build(r){
+  const tel=el('div','telefone',null,{left:'745px',top:'110px'}); r.append(tel)
+  const img=el('img','',null); img.src='../../public/email/app-trading-alerts.png'; tel.append(img)
+  const img2=el('img','',null,{position:'absolute',left:0,top:0,opacity:0}); img2.src='../../public/email/app-sensei-chart.png'; tel.append(img2)
+  const tit=el('div','abs anton ouro',T.app,{left:'120px',top:'170px',fontSize:'96px',width:'560px'}); r.append(tit)
+  const sub=el('div','abs serif',T.appSub,{left:'120px',top:'290px',fontSize:'60px',color:'#cfc6b5'}); r.append(sub)
+  const pos=[[120,470],[120,580],[1250,300],[1250,420],[1250,540]]
+  const chips=T.chips.map((t,i)=>{ const c=el('div','abs chip',t,{left:pos[i][0]+'px',top:pos[i][1]+'px',maxWidth:'560px'}); r.append(c); return c })
+  const dec=el('div','abs anton',T.decides,{left:'1250px',top:'760px',fontSize:'72px',width:'600px'}); r.append(dec)
+  return {tel,img,img2,tit,sub,chips,dec}
+ },
+ update(o,k){
+  const t=ease(prog(k,0,.12)); o.tel.style.opacity=t; o.tel.style.transform=`translateY(${(1-t)*120}px) rotate(${(1-t)*-4}deg)`
+  o.img.style.transform=`translateY(${-ease(prog(k,.1,.55))*700}px) scale(1.3)`; o.img.style.transformOrigin='top center'
+  o.img2.style.opacity=ease(prog(k,.55,.62)); o.img2.style.transform=`translateY(${-ease(prog(k,.62,.95))*520}px) scale(1.3)`; o.img2.style.transformOrigin='top center'
+  entra(o.tit,prog(k,.03,.12)); entra(o.sub,prog(k,.08,.16))
+  o.chips.forEach((c,i)=>entra(c,prog(k,.14+i*.1,.22+i*.1),24))
+  entra(o.dec,prog(k,.84,.93))
+ }
+}
+
+CENAS['s07-execucao'] = {
+ build(r){
+  const tel=el('div','telefone',null,{left:'200px',top:'110px',background:'#0d0d0d',padding:'90px 28px'}); r.append(tel)
+  tel.innerHTML=`<div class="cartao" style="padding:28px;border-radius:26px">
+   <div style="display:flex;justify-content:space-between;align-items:center"><b style="font:800 34px Inter">XAU/USD</b><span style="font:700 20px Inter;color:#3ddc84;border:1px solid #3ddc84;border-radius:999px;padding:6px 14px">${T.compra}</span></div>
+   <div style="font:500 22px JetBrains Mono;color:#8f887a;margin:20px 0 8px">${T.entrada} <span style="float:right;color:#f3ede1">zona MTM</span></div>
+   <div style="font:500 22px JetBrains Mono;color:#ff5a4f;margin:8px 0">${T.stop} <span style="float:right">definido</span></div>
+   <div style="font:500 22px JetBrains Mono;color:#3ddc84;margin:8px 0">${T.alvo} 1·2·3 <span style="float:right">parciais</span></div></div>
+   <div id="tapbtn" style="margin-top:34px;height:96px;border-radius:24px;background:#D2A63C;color:#111;font:800 34px Inter;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">${T.tap}<span id="onda" style="position:absolute;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.6);left:50%;top:50%;transform:translate(-50%,-50%) scale(0)"></span></div>
+   <div id="toast" class="cartao" style="margin-top:34px;padding:24px;font:700 26px Inter;color:#3ddc84;opacity:0">✓ ${T.aberta}<div style="font:500 20px JetBrains Mono;color:#8f887a;margin-top:10px">${T.gestao}</div></div>`
+  const dir=el('div','abs',null,{left:'820px',top:'150px',width:'950px'}); r.append(dir)
+  const tap=el('div','anton ouro',T.tap,{fontSize:'130px'}); dir.append(tap)
+  const auto=el('div','',`<div class="anton" style="font-size:110px;color:#f3ede1">${T.auto}</div><div class="serif" style="font-size:56px;color:#cfc6b5">${T.autoSub}</div>`,{marginTop:'40px',opacity:0}); dir.append(auto)
+  const conta=el('div','abs',`<div class="anton ouro" style="font-size:96px">${T.conta}</div><div style="font:600 46px Inter;margin-top:10px">${T.dinheiro}</div>`,{left:'820px',top:'680px'}); r.append(conta)
+  return {tel,tap,auto,conta}
+ },
+ update(o,k){
+  const t=ease(prog(k,0,.1)); o.tel.style.opacity=t; o.tel.style.transform=`translateY(${(1-t)*100}px)`
+  entra(o.tap,prog(k,.03,.12))
+  const tk=prog(k,.18,.26), onda=o.tel.querySelector('#onda'), btn=o.tel.querySelector('#tapbtn')
+  onda.style.transform=`translate(-50%,-50%) scale(${tk*14})`; onda.style.opacity=1-tk; btn.style.transform=`scale(${1-.05*Math.sin(Math.PI*tk)})`
+  entra(o.tel.querySelector('#toast'),prog(k,.25,.32),20)
+  entra(o.auto,prog(k,.48,.58))
+  entra(o.conta,prog(k,.76,.85))
+ }
+}
+
+CENAS['s08-ganha'] = {
+ build(r){
+  const tit=el('div','abs anton ouro',T.ganha,{left:'0',right:'0',top:'170px',textAlign:'center',fontSize:'130px'}); r.append(tit)
+  const linha=el('div','abs',null,{left:'330px',top:'560px',height:'3px',width:'1260px',background:'#D2A63C',transformOrigin:'left'}); r.append(linha)
+  const ps=T.passos.map(([a,b],i)=>{ const c=el('div','abs cartao',`<div class="anton" style="font-size:64px;color:#D2A63C">0${i+1}</div><div style="font:700 40px Inter;margin-top:12px">${a}</div><div style="font:400 26px Inter;color:#8f887a;margin-top:10px">${b}</div>`,{left:(150+i*560)+'px',top:'420px',width:'500px',padding:'36px 40px',background:'#12100c'}); r.append(c); return c })
+  const ri=el('div','abs',T.risco,{left:'0',right:'0',top:'840px',textAlign:'center',font:'500 26px Inter',color:'#8f887a'}); r.append(ri)
+  return {tit,linha,ps,ri}
+ },
+ update(o,k){
+  entra(o.tit,prog(k,0,.12)); o.linha.style.transform=`scaleX(${ease(prog(k,.15,.75))})`
+  o.ps.forEach((c,i)=>entra(c,prog(k,.25+i*.18,.35+i*.18)))
+  entra(o.ri,prog(k,.8,.9))
+ }
+}
+
+CENAS['s09-prova'] = {
+ build(r){
+  const sem=el('div','abs',null,{left:'0',right:'0',top:'300px',textAlign:'center'}); r.append(sem)
+  const ls=T.sem.map(t=>{ const d=el('div','anton',`<span style="position:relative">${t}<i style="position:absolute;left:-10px;right:-10px;top:52%;height:8px;background:#ff5a4f;transform-origin:left;transform:scaleX(0);display:block"></i></span>`,{fontSize:'120px',color:'#cfc6b5'}); sem.append(d); return d })
+  const proc=el('div','abs',`<div class="anton ouro" style="font-size:150px">${T.processo}</div>`+T.proc.map(p=>`<span class="chip" style="margin:10px">${p}</span>`).join(''),{left:'0',right:'0',top:'300px',textAlign:'center',opacity:0}); r.append(proc)
+  const bolhas=el('div','abs',null,{left:'200px',right:'200px',top:'200px'}); r.append(bolhas)
+  const bs=T.testemunhos.map((t,i)=>{ const b=el('div','cartao',`“${t}”`,{padding:'28px 36px',font:'500 36px/1.4 Inter',maxWidth:'1100px',marginLeft:i%2?'auto':'0',marginBottom:'28px',opacity:0}); bolhas.append(b); return b })
+  const cit=el('div','abs',`<div class="serif" style="font-size:72px;line-height:1.2">“${T.citacao}”</div><div style="font:500 28px Inter;color:#D2A63C;margin-top:30px">${T.membro}</div>`,{left:'200px',right:'200px',top:'520px',opacity:0}); r.append(cit)
+  return {sem,ls,proc,bolhas,bs,cit}
+ },
+ update(o,k){
+  o.ls.forEach((d,i)=>{ entra(d,prog(k,i*.05,.06+i*.05)); d.querySelector('i').style.transform=`scaleX(${ease(prog(k,.1+i*.05,.16+i*.05))})` })
+  o.sem.style.opacity=1-prog(k,.2,.25)
+  const pk=prog(k,.25,.32); o.proc.style.opacity=out(pk)*(1-prog(k,.48,.53))
+  o.bs.forEach((b,i)=>{ entra(b,prog(k,.53+i*.06,.6+i*.06),20); b.style.opacity=out(prog(k,.53+i*.06,.6+i*.06))*(1-.8*prog(k,.66,.72)) })
+  entra(o.cit,prog(k,.66,.76))
+  o.bolhas.style.transform=`translateY(${-ease(prog(k,.66,.76))*60}px)`
+ }
+}
+
+CENAS['s10-objecoes'] = {
+ build(r){
+  const box=el('div','abs',null,{left:'180px',right:'180px',top:'150px'}); r.append(box)
+  const ls=T.obj.map(([q,a])=>{ const d=el('div','',`<div class="q" style="font:500 46px Inter;color:#8f887a">${q}</div><div class="a anton" style="font-size:84px;color:#E9C46A;margin-top:6px">${a}</div>`,{padding:'18px 0',borderBottom:'1px solid rgba(210,166,60,.18)'}); box.append(d); return d })
+  return {ls}
+ },
+ update(o,k){
+  o.ls.forEach((d,i)=>{ const a=.04+i*.31; entra(d.querySelector('.q'),prog(k,a,a+.06),20); entra(d.querySelector('.a'),prog(k,a+.1,a+.18),20) })
+ }
+}
+
+CENAS['s11-oferta'] = {
+ build(r){
+  const c=el('div','abs cartao',null,{left:'460px',top:'110px',width:'1000px',padding:'44px 70px',background:'linear-gradient(180deg,#1a160d,#0f0d09)',border:'2px solid rgba(210,166,60,.55)'}); r.append(c)
+  c.innerHTML=`<div style="font:700 26px Inter;letter-spacing:.3em;color:#D2A63C">${T.premium.toUpperCase()}</div><div class="anton" style="font-size:140px;line-height:1.05;margin:6px 0 20px">${T.gratis}</div>`+T.oferta.map((t,i)=>`<div class="lin" style="font:${i==1?'800':'500'} 36px Inter;padding:12px 0;border-top:1px solid rgba(210,166,60,.18);color:${i==1?'#E9C46A':'#f3ede1'}">✓ ${t}</div>`).join('')
+  return {c}
+ },
+ update(o,k){
+  const t=ease(prog(k,0,.12)); o.c.style.opacity=t; o.c.style.transform=`scale(${.92+.08*t})`
+  o.c.querySelectorAll('.lin').forEach((d,i)=>entra(d,prog(k,.12+i*.13,.2+i*.13),16))
+ }
+}
+
+CENAS['s12-cta'] = {
+ build(r){
+  const nav=el('div','abs cartao',null,{left:'260px',top:'190px',width:'1400px',height:'120px',display:'flex',alignItems:'center',padding:'0 44px',gap:'26px',borderRadius:'60px'}); r.append(nav)
+  nav.innerHTML=`<span style="width:20px;height:20px;border-radius:50%;background:#3ddc84;display:inline-block"></span><span id="url" style="font:600 56px JetBrains Mono;color:#f3ede1"></span><span id="cur" style="width:4px;height:60px;background:#D2A63C;display:inline-block"></span>`
+  const lista=el('div','abs',null,{left:'360px',top:'400px',width:'1200px'}); r.append(lista)
+  const its=T.passosOn.map((t,i)=>{ const d=el('div','',`<span class="b" style="display:inline-flex;width:70px;height:70px;border-radius:18px;border:2px solid #D2A63C;align-items:center;justify-content:center;font:800 36px Inter;color:#111;margin-right:34px;vertical-align:middle"></span>${t}`,{font:'600 52px Inter',padding:'18px 0'}); lista.append(d); return d })
+  const g=el('div','abs serif',T.guiamos,{left:'0',right:'0',top:'880px',textAlign:'center',fontSize:'60px',color:'#E9C46A'}); r.append(g)
+  return {nav,its,g}
+ },
+ update(o,k,s){
+  entra(o.nav,prog(k,0,.08))
+  const u=T.url, n=Math.floor(prog(k,.06,.3)*u.length); o.nav.querySelector('#url').innerHTML=u.slice(0,n).replace('morethanmoney.pt','<span style="color:#8f887a">morethanmoney.pt</span>')
+  o.nav.querySelector('#cur').style.opacity = (Math.floor(s*2)%2)?1:0
+  o.its.forEach((d,i)=>{ const a=.35+i*.13; entra(d,prog(k,a,a+.06),20); const b=d.querySelector('.b'), kk=prog(k,a+.06,a+.1); b.style.background=kk>0?'#D2A63C':'transparent'; b.textContent=kk>0?'✓':'' })
+  entra(o.g,prog(k,.88,.96))
+ }
+}
+
+CENAS['s13-afiliado'] = {
+ build(r){
+  const tit=el('div','abs',T.afil,{left:'0',right:'0',top:'170px',textAlign:'center',font:'700 34px Inter',letterSpacing:'.3em',color:'#D2A63C',textTransform:'uppercase'}); r.append(tit)
+  const a=el('div','abs',null,{left:'260px',top:'270px',width:'640px',textAlign:'center'}); r.append(a)
+  a.innerHTML=`<div class="anton n" style="font-size:280px;line-height:1"></div><div style="font:600 40px Inter">${T.primeira}</div>`
+  const b=el('div','abs',null,{left:'1020px',top:'270px',width:'640px',textAlign:'center'}); r.append(b)
+  b.innerHTML=`<div class="anton n ouro" style="font-size:280px;line-height:1"></div><div style="font:600 40px Inter">${T.renov}</div>`
+  const e=el('div','abs',T.enquanto,{left:'0',right:'0',top:'720px',textAlign:'center',font:'400 36px Inter',color:'#8f887a'}); r.append(e)
+  const d=el('div','abs serif',T.depois,{left:'0',right:'0',top:'820px',textAlign:'center',fontSize:'80px',color:'#E9C46A'}); r.append(d)
+  return {tit,a,b,e,d}
+ },
+ update(o,k){
+  entra(o.tit,prog(k,0,.08))
+  const ka=prog(k,.08,.3), kb=prog(k,.3,.5)
+  entra(o.a,ka); o.a.querySelector('.n').textContent=Math.round(out(ka)*30)+'%'
+  entra(o.b,kb); o.b.querySelector('.n').textContent=Math.round(out(kb)*10)+'%'
+  entra(o.e,prog(k,.5,.6)); entra(o.d,prog(k,.78,.88))
+ }
+}
+
+CENAS['s14-fecho'] = {
+ build(r){
+  const logo=el('img','abs',null,{left:'835px',top:'90px',width:'250px'}); logo.src='../../public/logo-mtm-transparent.png'; r.append(logo)
+  const a=el('div','abs anton',T.fecho1,{left:'0',right:'0',top:'370px',textAlign:'center',fontSize:'120px'}); r.append(a)
+  const b=el('div','abs anton ouro',T.fecho2,{left:'0',right:'0',top:'510px',textAlign:'center',fontSize:'120px'}); r.append(b)
+  const u=el('div','abs',T.url,{left:'0',right:'0',top:'690px',textAlign:'center',font:'600 46px JetBrains Mono',color:'#f3ede1'}); r.append(u)
+  const av=el('div','abs',T.aviso,{left:'260px',right:'260px',top:'800px',textAlign:'center',font:'400 22px/1.5 Inter',color:'#8f887a'}); r.append(av)
+  return {logo,a,b,u,av}
+ },
+ update(o,k){
+  const t=out(prog(k,0,.3)); o.logo.style.opacity=t; o.logo.style.filter=`blur(${(1-t)*12}px)`
+  entra(o.a,prog(k,.1,.3)); entra(o.b,prog(k,.25,.45)); entra(o.u,prog(k,.4,.55)); entra(o.av,prog(k,.5,.65))
+ }
+}
+
+// ---------------------------------------------------------------- linha do tempo
+// window.TL = [{id, ini, dur, frases:[{t, ini, fim}]}]  (segundos absolutos)
+const palco=document.getElementById('palco'), montadas={}
+function montar(){ for(const c of window.TL){ const r=el('div','cena'); palco.append(r); montadas[c.id]={r,o:CENAS[c.id].build(r),c} } }
+const grao=document.getElementById('grao'), gg=grao.getContext('2d'), img=gg.createImageData(960,540)
+function ruido(seed){ const R=rng(seed); for(let i=0;i<img.data.length;i+=4){ const v=R()*255; img.data[i]=img.data[i+1]=img.data[i+2]=v; img.data[i+3]=255 } gg.putImageData(img,0,0) }
+let ultimoGrao=-1
+window.renderAt = function(t){
+ const total=window.TL[window.TL.length-1].ini+window.TL[window.TL.length-1].dur
+ let atual=null
+ window.TL.forEach((c,i)=>{ const m=montadas[c.id], s=t-c.ini, X=.45
+  const vis = s>-X && s<c.dur+X
+  m.r.style.display=vis?'block':'none'
+  if(!vis) return
+  const fin = (i<window.TL.length-1)? 1-prog(s,c.dur-.05,c.dur+X) : 1
+  m.r.style.opacity = Math.min(prog(s,-X,.05), fin)
+  m.r.style.transform = `scale(${1+.03*prog(s,0,c.dur)})`
+  CENAS[c.id].update(m.o, clamp(s/c.dur), s)
+  if(s>=0 && s<c.dur) atual={c,s,i}
+ })
+ const cap=document.getElementById('capitulo'), leg=document.getElementById('legenda')
+ if(atual){ cap.textContent=String(atual.i+1).padStart(2,'0')+' · '+T.cap[atual.i]
+  const f=atual.c.frases.find(f=>t>=f.ini && t<f.fim); if(f && window.LEGENDAS){ leg.style.display='block'; leg.textContent=f.t } else leg.style.display='none' }
+ document.getElementById('barra').style.width=(t/total*100)+'%'
+ const fr=Math.floor(t*12); if(fr!==ultimoGrao){ ruido(fr+1); ultimoGrao=fr }
+}
+window.iniciar = function(tl, legendas){ window.TL=tl; window.LEGENDAS=legendas; montar(); window.renderAt(0) }
+</script>
+</body>
+</html>
