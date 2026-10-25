@@ -34,6 +34,8 @@ export type DadosCaminho = {
   linkAgendarOnboarding: string
   /** O vídeo de 2 minutos da abertura de conta. `null` enquanto não estiver renderizado. */
   videoAbrirConta: string | null
+  /** A mesma explicação em inglês, para quem vem de fora de Portugal e do Brasil. */
+  videoAbrirContaEn: string | null
 }
 
 const CHAVE = "mtm_onboarding_passos"
@@ -284,6 +286,17 @@ function PassoCorretora({ dados }: { dados: DadosCaminho }) {
           playsInline
           preload="metadata"
         />
+      )}
+      {dados.videoAbrirContaEn && (
+        <a
+          href={dados.videoAbrirContaEn}
+          target="_blank"
+          rel="noopener noreferrer"
+          lang="en"
+          className="mt-2 inline-block text-[13px] text-[#8a8a95] underline-offset-4 hover:text-white hover:underline"
+        >
+          Watch in English →
+        </a>
       )}
 
       <ol className="mt-4 space-y-3">

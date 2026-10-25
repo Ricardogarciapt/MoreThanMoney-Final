@@ -19,6 +19,8 @@ export const metadata: Metadata = {
 
 /** O vídeo de 2 minutos da abertura de conta (16:9; a versão 9:16 é para as redes). */
 const VIDEO_ABRIR_CONTA: string | null = '/videos/abrir-conta-pu-prime.mp4'
+/** A versão em inglês do mesmo vídeo. `null` enquanto não estiver renderizada. */
+const VIDEO_ABRIR_CONTA_EN: string | null = null
 
 export default function OnboardingMtm() {
   return (
@@ -42,6 +44,7 @@ export default function OnboardingMtm() {
           bonusPct: BONUS_PUPRIME_PCT,
           linkAgendarOnboarding: LINK_AGENDAR_ONBOARDING,
           videoAbrirConta: VIDEO_ABRIR_CONTA,
+          videoAbrirContaEn: VIDEO_ABRIR_CONTA_EN,
         }}
       />
 
