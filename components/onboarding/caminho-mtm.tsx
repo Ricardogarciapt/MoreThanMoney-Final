@@ -300,13 +300,13 @@ function PassoCorretora({ dados }: { dados: DadosCaminho }) {
           número da conta, a palavra-passe e o servidor. Guarda esse email.
         </SubPasso>
         <SubPasso n="d" titulo="Faz o primeiro depósito">
-          A partir de {dados.depositoMinimoUsd} $ ficas com o bónus de {dados.bonusPct}% da PU Prime e o
-          Premium passa a ser pago pela corretora em vez de por ti, enquanto mantiveres esse saldo. Deposita
-          só dinheiro de que não precisas.
+          A partir de {dados.depositoMinimoUsd} $ ficas com o bónus de {dados.bonusPct}% da PU Prime e com
+          direito ao Premium sem mensalidade, enquanto mantiveres esse saldo. Deposita só dinheiro de que não
+          precisas.
         </SubPasso>
         <SubPasso n="e" titulo="Guarda o número da conta na MTM">
-          Na app, em <b>Abrir conta</b>, colas o teu UID (o número da conta PU Prime). É assim que confirmamos
-          que a conta é do grupo MTM.
+          Na app, em <b>Abrir conta</b>, colas o teu UID (o número da conta PU Prime). Depois envia o mesmo UID
+          ao nosso bot no Telegram: é lá que se valida o depósito e se ativa o Premium sem mensalidade.
         </SubPasso>
       </ol>
 
@@ -326,6 +326,9 @@ function PassoCorretora({ dados }: { dados: DadosCaminho }) {
         </Botao>
         <Botao href="/app-mobile/accountopen" secundario>
           Guardar o meu UID
+        </Botao>
+        <Botao href="https://t.me/MoreThanMoney_aibot?start=lead" secundario>
+          Validar no Telegram
         </Botao>
       </div>
     </>
