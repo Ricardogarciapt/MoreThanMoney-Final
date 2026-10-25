@@ -17,9 +17,14 @@
       "en": "I'm Ricardo Garcia, and that's where MoreThanMoney came from. It's not a course you buy and forget. It's an ecosystem: you learn, you apply and you follow everything in one place, with a community that speaks your language."
     },
     {
-      "id": "s04-aprender",
-      "pt": "Primeiro, aprendes. Há salas ao vivo todas as semanas: forex e ouro, cripto, ações e ETF, redes sociais, mindset e liderança. Se não puderes estar, as aulas ficam gravadas e organizadas em curso. Começas do zero, ao teu ritmo.",
-      "en": "First, you learn. There are live rooms every week: forex and gold, crypto, stocks and ETFs, social media, mindset and leadership. If you can't make it, the classes are recorded and organised into a course. You start from zero, at your own pace."
+      "id": "s04-markets",
+      "pt": "Começas por aprender, e há dois pilares. O primeiro é a MTM Markets: os mercados e o dinheiro. Academias de forex e metais, criptomoedas, ações e ETF, e imobiliário. Salas ao vivo todas as semanas, e as gravações organizadas em curso para quem não pode estar.",
+      "en": "You start by learning, and there are two pillars. The first is MTM Markets: markets and money. Academies for forex and metals, crypto, stocks and ETFs, and real estate. Live rooms every week, and recordings organised into a course for when you can't make it."
+    },
+    {
+      "id": "s04-content",
+      "pt": "O segundo é a MTM Content and Business: construir audiência e construir negócio. Social media e UGC, faceless marketing, inteligência artificial, network marketing, e mindset e liderança, que abres sem pagar nada. Começas do zero, ao teu ritmo.",
+      "en": "The second is MTM Content and Business: building an audience and building a business. Social media and UGC, faceless marketing, artificial intelligence, network marketing, and mindset and leadership, which you can open for free. You start from zero, at your own pace."
     },
     {
       "id": "s05-scanners",
@@ -32,9 +37,24 @@
       "en": "And all of this fits in your pocket. The MTM System app brings together the community feed, the chat, the live classes, alerts with entry, stop and targets, and the AI Mentor that answers you at any hour. You get the alert, you see the chart, and you make the call."
     },
     {
+      "id": "s06b-alertas",
+      "pt": "Os alertas são o dia a dia da casa. Cada um chega com a fonte, o par, a direção, a entrada, o stop e os alvos. Quando o preço toca um alvo, recebes a notificação. Quando o stop sobe para a entrada, também. E tudo fica no histórico, à vista de toda a gente.",
+      "en": "Alerts are the day-to-day of the house. Each one comes with the source, the pair, the direction, the entry, the stop and the targets. When price hits a target, you get a notification. When the stop moves to entry, you do too. And everything stays in the history, in plain sight."
+    },
+    {
+      "id": "s06c-ferramentas",
+      "pt": "E as ferramentas não acabam aí. Tens o Terminal com inteligência artificial para analisares qualquer ativo, os portefólios com DCA, e o MTM Funded, onde pões o teu método à prova numa conta simulada, antes de arriscares o teu dinheiro.",
+      "en": "And the tools don't stop there. There's the AI Terminal to analyse any asset, portfolios with DCA, and MTM Funded, where you put your method to the test on a simulated account before you risk your own money."
+    },
+    {
       "id": "s07-execucao",
       "pt": "Quando decides que sim, o Tap to Trade abre a ordem na tua conta com um toque, e a gestão da posição fica com o sistema. Se preferes não estar a olhar para gráficos, o MTM Auto copia as estratégias da casa para a tua conta. A conta é sempre tua. Nós nunca tocamos no teu dinheiro.",
       "en": "When you decide yes, Tap to Trade opens the order in your account with one tap, and the system manages the position. If you'd rather not stare at charts, MTM Auto copies the house strategies to your account. The account is always yours. We never touch your money."
+    },
+    {
+      "id": "s07b-social",
+      "pt": "Se o teu caminho é o negócio, a app tem o estúdio MTM Social para criares as tuas peças com a tua marca, o programa de criadores e o material de marketing pronto a usar. Aprendes a vender aqui dentro, sem abrir uma única ordem.",
+      "en": "If your path is business, the app has the MTM Social studio to create your own posts with your brand, the creator programme and ready-to-use marketing material. You learn to sell in here, without opening a single trade."
     },
     {
       "id": "s08-ganha",
@@ -45,6 +65,11 @@
       "id": "s09-prova",
       "pt": "Não te vou mostrar carros nem promessas de lucro. Aqui mostra-se processo: as posições ficam registadas, os alertas ficam no histórico, e a comunidade está lá para confirmar. Como escreveu um dos nossos membros: o melhor resultado não é o saldo da conta, é o poder que ganhamos ao saber proteger capital.",
       "en": "I'm not going to show you cars or promises of profit. Here we show process: positions are logged, alerts stay in the history, and the community is there to check. As one of our members wrote: the best result isn't the account balance, it's the power you gain from knowing how to protect capital."
+    },
+    {
+      "id": "s09b-avaliacoes",
+      "pt": "E não precisas de acreditar em mim. Lê o que os membros escrevem no chat: grato por estar na melhor comunidade de educação financeira do país. Máquinas, vocês dão um up tão grande. Bora, grato pela confiança.",
+      "en": "And you don't have to take my word for it. Read what members write in the chat: grateful to be in the best financial education community in the country. Legends, you give us such a boost. Let's go, grateful for the trust."
     },
     {
       "id": "s10-objecoes",
