@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   const db = getSupabaseAdmin()
 
   const [{ data: linhas, error }, orc] = await Promise.all([
-    db.from('agentes_equipa').select('id, nome, pilar, estado, pausado').order('pilar').order('criado_em'),
+    db.from('agentes_equipa').select('id, nome, pilar, estado, pausado, receita, chave_receita').order('pilar').order('criado_em'),
     orcamentosDaEquipa(db, new Date()),
   ])
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   const agentes = (linhas ?? []).flatMap((l) => {
     const o = orc.orcamentos.get(String(l.id))
-    return o ? [{ id: String(l.id), nome: String(l.nome ?? ''), pilar: String(l.pilar ?? ''), estado: String(l.estado ?? ''), pausado: l.pausado === true, ...o }] : []
+    return o ? [{ id: String(l.id), nome: String(l.nome ?? ''), pilar: String(l.pilar ?? ''), estado: String(l.estado ?? ''), pausado: l.pausado === true, receita: Number(l.receita ?? 0), codigo: l.chave_receita ?? null, ...o }] : []
   })
   const totais = agentes.reduce(
     (t, a) => ({ saldo: t.saldo + a.saldo, gasto_dia: t.gasto_dia + a.gasto_dia, gasto_mes: t.gasto_mes + a.gasto_mes, bloqueados: t.bloqueados + (a.bloqueado ? 1 : 0) }),

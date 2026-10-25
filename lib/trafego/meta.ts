@@ -168,3 +168,110 @@ export async function mudarCampanha(campanhaId: string, m: MudancaCampanha): Pro
     return { ok: false, erro: e instanceof Error ? e.message : String(e) }
   }
 }
+
+// ── CRIAR (sempre em pausa) ─────────────────────────────────────────────────────────────────────
+
+export interface NovaCampanhaMeta {
+  conta: string
+  nome: string
+  /** Euros por dia, no conjunto de anúncios. */
+  orcamentoDiario: number
+  paises: string[]
+  texto: string
+  titulo: string
+  descricao: string
+  link: string
+  cta: 'LEARN_MORE' | 'SIGN_UP' | 'BOOK_TRAVEL' | 'CONTACT_US' | 'SUBSCRIBE' | 'APPLY_NOW' | 'GET_QUOTE'
+  /** URL público de uma imagem (Feed 1:1 ou 4:5). Sem ela a Meta usa a pré-visualização do link. */
+  imagem?: string
+}
+
+/** Validação pura — o que a rota recusa antes de gastar um pedido à Meta. Testada em `meta.check.ts`. */
+export function validarNovaCampanha(c: Partial<NovaCampanhaMeta>, contas = contasConfiguradas()): string[] {
+  const erros: string[] = []
+  if (!c.conta || !contas.includes(String(c.conta).replace(/^act_/, ''))) erros.push('conta de anúncios fora das configuradas')
+  if (!c.nome || c.nome.trim().length < 3) erros.push('nome da campanha')
+  if (!Number.isFinite(c.orcamentoDiario) || c.orcamentoDiario! < 1 || c.orcamentoDiario! > 500) erros.push('orçamento diário entre 1 e 500')
+  if (!c.paises?.length || !c.paises.every((p) => /^[A-Z]{2}$/.test(p))) erros.push('países (códigos de 2 letras, ex.: PT, BR)')
+  if (!c.texto?.trim() || c.texto.length > 2000) erros.push('texto principal')
+  if (!c.titulo?.trim() || c.titulo.length > 255) erros.push('título')
+  if (!c.link || !/^https:\/\/(www\.)?morethanmoney\.pt(\/|$)/.test(c.link)) erros.push('link (tem de ser https://www.morethanmoney.pt/…)')
+  return erros
+}
+
+/**
+ * Cria campanha → conjunto → criativo → anúncio, TUDO em `PAUSED`. Nada gasta um cêntimo até o dono
+ * activar a campanha em Gestão → Tráfego (ou no Gestor de Anúncios). É o `create_campaign`,
+ * `create_adset`, `create_ad_creative` e `create_ad` do meta-ads-mcp, feitos directamente na Graph
+ * API. Educação financeira/trading cai na categoria especial FINANCIAL_PRODUCTS_SERVICES, que limita
+ * a segmentação: idade 18-65 fixa, sem género — por isso a campanha só escolhe países.
+ *
+ * Precisa de META_ADS_ACCESS_TOKEN com `ads_management` e de META_PAGE_ID (a página do Facebook
+ * ligada ao Instagram @morethanmoney.pt). Se um passo falhar a meio, o que já foi criado fica em
+ * pausa e o erro diz em que passo parou.
+ */
+export async function criarCampanhaPausada(c: NovaCampanhaMeta): Promise<
+  { ok: true; campanhaId: string; conjuntoId: string; anuncioId: string } | { ok: false; erro: string; criados: Record<string, string> }
+> {
+  const token = process.env.META_ADS_ACCESS_TOKEN
+  const pagina = process.env.META_PAGE_ID
+  const criados: Record<string, string> = {}
+  if (!token) return { ok: false, erro: 'META_ADS_ACCESS_TOKEN não está configurado.', criados }
+  if (!pagina) return { ok: false, erro: 'META_PAGE_ID não está configurado (id da página do Facebook ligada ao Instagram).', criados }
+  const conta = `act_${c.conta.replace(/^act_/, '')}`
+
+  const post = async (caminho: string, campos: Record<string, unknown>): Promise<string> => {
+    const corpo = new URLSearchParams({ access_token: token })
+    for (const [k, v] of Object.entries(campos)) corpo.set(k, typeof v === 'string' ? v : JSON.stringify(v))
+    const r = await fetch(`https://graph.facebook.com/${VERSAO}/${caminho}`, { method: 'POST', body: corpo, cache: 'no-store' })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok || d.error || !d.id) throw new Error(d?.error?.error_user_msg ?? d?.error?.message ?? `HTTP ${r.status}`)
+    return String(d.id)
+  }
+
+  let passo = 'campanha'
+  try {
+    criados.campanha = await post(`${conta}/campaigns`, {
+      name: c.nome,
+      objective: 'OUTCOME_LEADS',
+      status: 'PAUSED',
+      special_ad_categories: ['FINANCIAL_PRODUCTS_SERVICES'],
+      buying_type: 'AUCTION',
+    })
+    passo = 'conjunto de anúncios'
+    criados.conjunto = await post(`${conta}/adsets`, {
+      name: `${c.nome} · conjunto`,
+      campaign_id: criados.campanha,
+      status: 'PAUSED',
+      daily_budget: String(Math.round(c.orcamentoDiario * 100)),
+      billing_event: 'IMPRESSIONS',
+      optimization_goal: 'LINK_CLICKS',
+      bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+      destination_type: 'WEBSITE',
+      targeting: { geo_locations: { countries: c.paises }, age_min: 18, age_max: 65 },
+    })
+    passo = 'criativo'
+    const linkData: Record<string, unknown> = {
+      message: c.texto,
+      link: c.link,
+      name: c.titulo,
+      description: c.descricao,
+      call_to_action: { type: c.cta, value: { link: c.link } },
+    }
+    if (c.imagem) linkData.picture = c.imagem
+    criados.criativo = await post(`${conta}/adcreatives`, {
+      name: `${c.nome} · criativo`,
+      object_story_spec: { page_id: pagina, link_data: linkData },
+    })
+    passo = 'anúncio'
+    criados.anuncio = await post(`${conta}/ads`, {
+      name: `${c.nome} · anúncio`,
+      adset_id: criados.conjunto,
+      creative: { creative_id: criados.criativo },
+      status: 'PAUSED',
+    })
+    return { ok: true, campanhaId: criados.campanha, conjuntoId: criados.conjunto, anuncioId: criados.anuncio }
+  } catch (e) {
+    return { ok: false, erro: `Parou no passo «${passo}»: ${e instanceof Error ? e.message : String(e)}`, criados }
+  }
+}

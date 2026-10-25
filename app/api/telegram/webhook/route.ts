@@ -904,6 +904,41 @@ export async function POST(request: NextRequest) {
       }
 
       /**
+       * /marketing <pedido> — o assistente de marketing (Gestão → Marketing → Assistente) no bolso.
+       *
+       * O mesmo `perguntarAoAssistente` do ecrã: router → especialista com ferramentas → revisor.
+       * O que ele PROPÕE (kit de lançamento, campanha Meta) fica em rascunho; aplicar continua a
+       * ser um botão no backoffice. Só o dono, com a resposta de sempre a quem não é.
+       */
+      else if (/^\/marketing\b/.test(text)) {
+        const { ehChatDeAdmin } = await import("@/lib/telegram-admin-menu")
+        if (!(await ehChatDeAdmin(supabase, chatId))) {
+          await sendMessage("🤔 Não conheço esse comando. Escreve /ajuda para ver o que sei fazer.")
+        } else {
+          const pedido = text.replace(/^\/marketing(@\w+)?/, "").trim()
+          if (!pedido) {
+            await sendMessage(
+              "Escreve <code>/marketing &lt;pedido&gt;</code>. Ex.: <code>/marketing lança um produto novo: workshop de gestão de risco a 29 €</code>\n\n" +
+              "Respondem os especialistas (estratégia, tráfego, funis, conteúdo, email, concorrência). O que propuserem fica em Gestão → Marketing → Rascunhos.",
+            )
+          } else {
+            const { perguntarAoAssistente, mensagemIndisponivel } = await import("@/lib/marketing/assistente")
+            const { paraHtmlTelegram } = await import("@/lib/marketing/regras")
+            try {
+              const r = await perguntarAoAssistente(pedido)
+              const rodape = [
+                r.rascunhos.length ? `📝 ${r.rascunhos.length} rascunho(s) à tua espera em Gestão → Marketing → Rascunhos.` : "",
+                r.alertas.length ? `⚠️ Rever: ${r.alertas.join(" · ")}` : "",
+              ].filter(Boolean).join("\n")
+              await sendMessage(`<b>${r.nomeEspecialista}</b>\n\n${paraHtmlTelegram(r.resposta)}${rodape ? `\n\n${paraHtmlTelegram(rodape)}` : ""}`.slice(0, 4000))
+            } catch (e) {
+              await sendMessage(`⚠️ ${mensagemIndisponivel(e)}`)
+            }
+          }
+        }
+      }
+
+      /**
        * OS COMANDOS DE QUEM TRABALHA NO BACKOFFICE — setters, closers, prospectores, afiliados e
        * responsáveis de equipa.
        *

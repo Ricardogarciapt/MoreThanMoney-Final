@@ -27,6 +27,10 @@ const ECRAS: Record<string, React.ComponentType> = {
   leads: dynamic(() => import('@/app/admin/social/leads/page'), { ssr: false, loading: carregar }),
   formularios: dynamic(() => import('@/components/admin/formularios-admin'), { ssr: false, loading: carregar }),
   trafego: dynamic(() => import('@/components/admin/trafego-painel'), { ssr: false, loading: carregar }),
+  'marketing:assistente': dynamic(() => import('@/components/admin/marketing/assistente'), { ssr: false, loading: carregar }),
+  'marketing:estudio': dynamic(() => import('@/components/admin/marketing/estudio'), { ssr: false, loading: carregar }),
+  'marketing:marca': dynamic(() => import('@/components/admin/marketing/marca'), { ssr: false, loading: carregar }),
+  'marketing:rascunhos': dynamic(() => import('@/components/admin/marketing/rascunhos'), { ssr: false, loading: carregar }),
   // O portão do /admin/coupons é «só admin»; aqui quem guarda é a página no servidor (`exige`).
   cupoes: () => <CuponsSemGuarda guarda={false} />,
   'agentes:painel': dynamic(() => import('@/components/admin/agentes-equipa'), { ssr: false, loading: carregar }),
