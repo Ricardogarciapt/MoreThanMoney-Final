@@ -9,9 +9,9 @@ export const dynamic = 'force-dynamic'
  * ler antes de pagar, e nesta EA em particular há coisas que é melhor saber ANTES — que perde a
  * maior parte das trades por desenho, e que não leva stop loss fixo.
  *
- * Ao contrário do guia do AllInOne, este não traz números da conta provider: a Scalp é uma
- * ferramenta nova e não tem histórico real publicável. Pôr aqui resultados de backtest era
- * exactamente o que decidimos não fazer na página de vendas.
+ * Ao contrário do guia do AllInOne, este não traz números da conta provider: só se publicam
+ * resultados de conta real, em pips e com origem declarada. Sem testes nem demo no texto — o
+ * produto está validado e opera sem restrições.
  */
 export async function GET() {
   try {

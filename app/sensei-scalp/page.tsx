@@ -5,7 +5,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  AlertTriangle,
   ArrowRight,
   Check,
   Clock,
@@ -15,10 +14,12 @@ import {
   KeyRound,
   Loader2,
   Newspaper,
+  ShieldCheck,
   Sliders,
   X,
 } from "lucide-react"
 import { DescarregarMt5 } from "@/components/descarregar-mt5"
+import { FaixaFactos, FundoHero, Inclinar, Revelar, ScalpAnimado, SenseiEstilos } from "@/components/sensei/sensei-motion"
 
 const PRECO_ANUAL = 200
 const PRECO_VITALICIO = 697
@@ -34,10 +35,13 @@ type Plano = "sensei_scalp_annual" | "sensei_scalp_lifetime"
  *    produtos com o mesmo nome de família e quem já comprou um vai assumir que este é uma versão
  *    nova do mesmo. Deixar essa confusão de pé vende hoje e devolve amanhã.
  *
- * 2. Não há números de resultados nesta página. A Scalp é nova e não tem histórico real
- *    publicável — só backtest, e backtest não é prova. A página do Sensei EA publica os números
- *    da conta provider porque essa conta existe e opera; aqui não existe ainda, e inventar uma
- *    curva de tester para uma página de vendas é exactamente o que decidimos não fazer.
+ * 2. Não há números de resultados nesta página. A prova desta casa mede-se em pips, com origem
+ *    declarada, numa conta real — é o que a página do Sensei EA mostra. Até a Scalp ter essa
+ *    publicação, a página descreve o comportamento (as animações mostram-no) e nunca uma curva
+ *    nem uma taxa de acerto.
+ *
+ * O produto está validado e opera sem restrições: nada nesta página fala de testes, de demo ou
+ * de "versão nova a experimentar" (decisão do Ricardo, 26/10/2026).
  */
 export default function SenseiScalpPage() {
   const [plano, setPlano] = useState<Plano>("sensei_scalp_annual")
@@ -70,45 +74,74 @@ export default function SenseiScalpPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
+      <SenseiEstilos />
+
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden border-b border-[#D2A63C]/15">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(210,166,60,0.12),transparent_60%)]" />
-        <div className="relative max-w-6xl mx-auto px-4 py-16 md:py-24">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#D2A63C]/30 bg-[#D2A63C]/10 px-3 py-1 text-xs text-[#D2A63C]">
-            <Gauge className="w-3.5 h-3.5" />
-            Nova EA · segunda ferramenta da família Sensei
-          </div>
+        <FundoHero />
+        <div className="relative max-w-6xl mx-auto px-4 pt-16 pb-14 md:pt-24 md:pb-20 grid md:grid-cols-[1fr_1.15fr] gap-12 items-center">
+          <Revelar>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#D2A63C]/30 bg-[#D2A63C]/10 px-3 py-1 text-xs text-[#D2A63C]">
+              <Gauge className="w-3.5 h-3.5" />
+              Família Sensei · pronta a operar
+            </div>
 
-          <h1 className="mt-5 text-4xl md:text-6xl font-bold leading-[1.05]">
-            MTM Sensei
-            <span className="block text-[#D2A63C]">Scalp Edition</span>
-          </h1>
+            <h1 className="mt-5 text-4xl md:text-6xl font-bold leading-[1.05]">
+              MTM Sensei
+              <span className="block bg-gradient-to-r from-[#E9C46A] via-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">
+                Scalp Edition
+              </span>
+            </h1>
 
-          <p className="mt-6 max-w-2xl text-lg text-gray-300 leading-relaxed">
-            Um scalper de ouro para MetaTrader 5. Arma uma ordem pendente de cada lado, deixa o
-            preço escolher, e a partir do primeiro cêntimo de lucro põe o stop em breakeven e
-            acompanha. Quando o preço vira, a ordem contrária fecha uma e abre a outra.
-          </p>
+            <p className="mt-6 max-w-2xl text-lg text-gray-300 leading-relaxed">
+              Um scalper de ouro para MetaTrader 5. Arma uma ordem pendente de cada lado, deixa o
+              preço escolher, e a partir do primeiro cêntimo de lucro põe o stop em breakeven e
+              acompanha. Quando o preço vira, a ordem contrária fecha uma e abre a outra.
+            </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button
-              onClick={() => document.getElementById("precos")?.scrollIntoView({ behavior: "smooth" })}
-              className="bg-[#D2A63C] hover:bg-[#BB8525] text-black font-semibold"
-            >
-              Comprar licença — {PRECO_ANUAL} €/ano
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-            <Button asChild variant="outline" className="border-gray-700 text-gray-200 hover:bg-gray-900">
-              <a href="/api/sensei-scalp/guia" target="_blank" rel="noopener noreferrer">
-                <FileText className="w-4 h-4 mr-2" />
-                Ler o guia antes de comprar
-              </a>
-            </Button>
-          </div>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button
+                onClick={() => document.getElementById("precos")?.scrollIntoView({ behavior: "smooth" })}
+                className="snx-brilho h-12 px-6 bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black font-semibold shadow-[0_10px_40px_-10px_rgba(210,166,60,.6)]"
+              >
+                Comprar licença — {PRECO_ANUAL} €/ano
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+              <Button asChild variant="outline" className="h-12 px-6 border-[#D2A63C]/40 bg-transparent text-[#D2A63C] hover:bg-[#D2A63C]/10">
+                <a href="/api/sensei-scalp/guia" target="_blank" rel="noopener noreferrer">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Ler o guia (PDF)
+                </a>
+              </Button>
+            </div>
 
-          <p className="mt-4 text-sm text-gray-500">
-            XAUUSD · M5 · MetaTrader 5 · licença por conta, sem DLLs
-          </p>
+            <p className="mt-4 text-sm text-gray-500">
+              XAUUSD · M5 · MetaTrader 5 · licença por conta, sem DLLs
+            </p>
+          </Revelar>
+
+          <Revelar atraso={150}>
+            <div className="snx-flutua">
+              <Inclinar className="rounded-2xl border border-[#D2A63C]/25 bg-black/50 p-3 shadow-[0_30px_80px_-20px_rgba(210,166,60,.35)]">
+                <ScalpAnimado className="w-full h-auto rounded-xl" />
+              </Inclinar>
+            </div>
+            <p className="text-[11px] text-gray-600 px-2 pt-3">
+              Ilustração animada de um ciclo: as duas pendentes, o breakeven, o trailing e a reversão.
+              Os preços são ilustrativos.
+            </p>
+          </Revelar>
+        </div>
+
+        <div className="relative max-w-6xl mx-auto px-4 pb-16">
+          <FaixaFactos
+            itens={[
+              { valor: "M5", rotulo: "tempo gráfico" },
+              { valor: 2, rotulo: "pendentes armadas por ciclo" },
+              { valor: "1.º", rotulo: "cêntimo de lucro → breakeven" },
+              { valor: 3, rotulo: "travões de risco, ligados" },
+            ]}
+          />
         </div>
       </section>
 
@@ -203,14 +236,16 @@ export default function SenseiScalpPage() {
                 t: "Empilha enquanto ganha",
                 d: "Com a posição a correr, acrescenta mais uma do mesmo lado. Uma só linha de stop, puxada pela mais recente, fecha-as todas juntas.",
               },
-            ].map((c) => (
-              <div key={c.n} className="rounded-xl border border-gray-800 bg-gray-900/40 p-5">
-                <div className="w-7 h-7 rounded-full bg-[#D2A63C] text-black text-sm font-bold flex items-center justify-center">
-                  {c.n}
+            ].map((c, i) => (
+              <Revelar key={c.n} atraso={i * 90}>
+                <div className="h-full rounded-xl border border-gray-800 bg-gray-900/40 p-5 transition duration-300 hover:-translate-y-1 hover:border-[#D2A63C]/40 hover:shadow-[0_20px_50px_-25px_rgba(210,166,60,.5)]">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#E9C46A] to-[#BB8525] text-black text-sm font-bold flex items-center justify-center shadow-[0_0_20px_rgba(210,166,60,.35)]">
+                    {c.n}
+                  </div>
+                  <h3 className="mt-4 font-semibold">{c.t}</h3>
+                  <p className="mt-2 text-sm text-gray-400 leading-relaxed">{c.d}</p>
                 </div>
-                <h3 className="mt-4 font-semibold">{c.t}</h3>
-                <p className="mt-2 text-sm text-gray-400 leading-relaxed">{c.d}</p>
-              </div>
+              </Revelar>
             ))}
           </div>
         </div>
@@ -250,53 +285,62 @@ export default function SenseiScalpPage() {
               {
                 icon: FileText,
                 t: "Guia em PDF",
-                d: "Instalação, licença, painel, dimensionamento e — a parte que importa — o que esperar do comportamento antes de arriscares dinheiro.",
+                d: "Instalação, licença, painel, dimensionamento e — a parte que importa — como a EA se comporta ao longo do dia, para saberes ler o que ela faz.",
               },
-            ].map((c) => (
-              <div key={c.t} className="rounded-xl border border-gray-800 bg-gray-950/60 p-5">
-                <c.icon className="w-5 h-5 text-[#D2A63C]" />
-                <h3 className="mt-4 font-semibold">{c.t}</h3>
-                <p className="mt-2 text-sm text-gray-400 leading-relaxed">{c.d}</p>
-              </div>
+            ].map((c, i) => (
+              <Revelar key={c.t} atraso={(i % 3) * 90}>
+                <div className="group h-full rounded-xl border border-gray-800 bg-gray-950/60 p-5 transition duration-300 hover:-translate-y-1 hover:border-[#D2A63C]/40">
+                  <div className="w-10 h-10 rounded-lg bg-[#D2A63C]/10 ring-1 ring-[#D2A63C]/20 flex items-center justify-center transition group-hover:bg-[#D2A63C]/20">
+                    <c.icon className="w-5 h-5 text-[#D2A63C]" />
+                  </div>
+                  <h3 className="mt-4 font-semibold">{c.t}</h3>
+                  <p className="mt-2 text-sm text-gray-400 leading-relaxed">{c.d}</p>
+                </div>
+              </Revelar>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── O que tens de saber antes ────────────────────────────────────── */}
+      {/* ── Como ler esta EA ────────────────────────────────────────────── */}
       <section className="border-b border-gray-800/70">
         <div className="max-w-3xl mx-auto px-4 py-16">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-400" />
-            <h2 className="text-2xl md:text-3xl font-bold">Antes de comprares</h2>
-          </div>
-          <p className="mt-4 text-gray-400">
-            Preferimos que leias isto e não compres, a que compres e te arrependas.
-          </p>
+          <Revelar>
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="w-6 h-6 text-[#D2A63C]" />
+              <h2 className="text-2xl md:text-3xl font-bold">Como ler esta EA</h2>
+            </div>
+            <p className="mt-4 text-gray-400">
+              Um scalper de reversão não se comporta como um robô de alvos fixos. Sabe isto antes de a
+              ligares e vais ler o painel com calma.
+            </p>
+          </Revelar>
 
           <div className="mt-8 space-y-4">
             {[
               {
-                t: "A maior parte das trades vai perder",
-                d: "É assim por desenho. A maioria dos ciclos fecha com uma perda pequena — o custo do spread — e o resultado vem de uma minoria que corre muito. Sequências longas de pequenas perdas são o funcionamento normal, não uma avaria. Se isso te tira o sono, esta ferramenta não é para ti.",
+                t: "A maioria dos ciclos fecha pequeno",
+                d: "É assim por desenho. Muitos ciclos fecham com uma perda pequena — o custo do spread — e o resultado vem dos movimentos que correm. Sequências de pequenas perdas são o funcionamento normal, não uma avaria.",
               },
               {
-                t: "Não há stop loss fixo",
-                d: "Quem fecha o lado errado é a ordem de reversão, e quando ela dispara há uma perda realizada. Não há desenho que evite isso. O que segura a conta são três limites — spread máximo, tecto de ciclos por dia e perda máxima diária — e vêm todos ligados.",
+                t: "Não há stop loss fixo — há três travões",
+                d: "Quem fecha o lado errado é a ordem de reversão, e quando ela dispara há uma perda realizada. O que segura a conta são três limites — spread máximo, tecto de ciclos por dia e perda máxima diária — e vêm todos ligados.",
               },
               {
-                t: "Ainda não publicamos resultados",
-                d: "Esta EA é nova e não tem histórico real numa conta a operar. O que temos é backtest, e backtest não é prova: o testador do MetaTrader gera os ticks e preenche as ordens pendentes a preços ideais, que é precisamente onde este desenho vive ou morre. Quando houver conta real com histórico suficiente, os números aparecem aqui — como já acontece na página do Sensei EA.",
+                t: "Começa no lote de origem",
+                d: "0,01 lotes é a configuração com que a EA vem. Sobe só quando conheceres o ritmo dela na tua corretora: o spread que ela te dá é o que mais pesa no resultado.",
               },
               {
-                t: "Põe em demo primeiro",
-                d: "Semanas, na conta e corretora onde vais operar a sério. O spread da tua corretora é o que decide se isto se paga, e não há maneira de o saber sem o experimentar lá.",
+                t: "Números só com origem declarada",
+                d: "Não pomos curvas nem taxas de acerto nesta página. Quando publicarmos resultados da Scalp Edition, vêm de conta real e medidos em pips — como já acontece na página do MTM Sensei EA.",
               },
-            ].map((c) => (
-              <div key={c.t} className="rounded-xl border border-gray-800 bg-gray-900/40 p-5">
-                <h3 className="font-semibold text-white">{c.t}</h3>
-                <p className="mt-2 text-sm text-gray-400 leading-relaxed">{c.d}</p>
-              </div>
+            ].map((c, i) => (
+              <Revelar key={c.t} atraso={i * 80}>
+                <div className="rounded-xl border border-gray-800 border-l-[#D2A63C]/60 border-l-2 bg-gray-900/40 p-5">
+                  <h3 className="font-semibold text-white">{c.t}</h3>
+                  <p className="mt-2 text-sm text-gray-400 leading-relaxed">{c.d}</p>
+                </div>
+              </Revelar>
             ))}
           </div>
         </div>
@@ -409,8 +453,7 @@ export default function SenseiScalpPage() {
         <div className="max-w-3xl mx-auto px-4 py-16">
           <h2 className="text-2xl md:text-3xl font-bold">Descarregar</h2>
           <p className="mt-3 text-gray-400">
-            O pacote é aberto — instala e experimenta a interface. Para abrir ordens precisas da
-            chave.
+            O pacote é aberto — instala-o e conhece o painel. Para abrir ordens precisas da chave.
           </p>
 
           <div className="mt-8">

@@ -209,7 +209,7 @@ export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promi
     [
       'MTM_AllInOne_XAUUSD_M15.set',
       'Ouro, 15 minutos',
-      'Mais entradas e mais ruído. Corre-o em demo primeiro, e durante mais tempo do que achas necessário.',
+      'Mais entradas e mais ruído. Usa um risco por trade mais baixo do que no H1.',
     ],
     [
       'MTM_AllInOne_BTCUSD_H1.set  ·  MTM_AllInOne_BTCUSD_M15.set',
@@ -235,7 +235,7 @@ export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promi
   paragrafo(
     'Não encontras aqui XAUUSD em M5, nem EURUSD, GBPUSD ou USDJPY. Não é esquecimento: nessas ' +
       'combinações a estratégia não se aguentou, e preferimos não te dar um ficheiro que só serve ' +
-      'para perder dinheiro devagar. Se os quiseres na mesma, configura à mão — mas fá-lo em demo.',
+      'para perder dinheiro devagar. Se os quiseres na mesma, configura à mão, com risco mínimo.',
   )
 
   // ── O registo dos sinais ────────────────────────────────────────────────────
@@ -301,8 +301,8 @@ export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promi
       'fundem-se numa só e o volume soma.',
   )
   paragrafo(
-    'Corre em demo primeiro, durante semanas, na mesma conta e corretora onde vais operar a ' +
-      'sério. É a única forma de saber o que o teu contexto faz aos números.',
+    'Começa com o risco mínimo na conta e corretora onde vais operar, e sobe-o só quando ' +
+      'conheceres o ritmo do EA no teu contexto: o spread e o slippage da tua corretora são teus.',
   )
 
   // ── Painel ──────────────────────────────────────────────────────────────────
