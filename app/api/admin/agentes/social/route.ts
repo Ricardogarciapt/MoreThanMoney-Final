@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
     media_type: mediaType, media_urls: mediaUrls, caption: marcada.legenda, scheduled_at: quando, status: d.status,
     approved_by: d.status === 'approved' ? 'auto:agentes' : null, approved_at: d.status === 'approved' ? agora : null,
     error: d.status === 'draft' ? d.motivo : null, created_by: `agente:${codigo}`,
-    agente_codigo: codigo, agente_motivo: d.motivo, agente_links_marcados: marcada.marcados,
+    agente_codigo: codigo, agente_motivo: null, agente_links_marcados: marcada.marcados,
   }).select('id, status, scheduled_at').single()
   if (error) return NextResponse.json({ ok: false, erro: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, post: data, decisao: d, media_urls: mediaUrls })
