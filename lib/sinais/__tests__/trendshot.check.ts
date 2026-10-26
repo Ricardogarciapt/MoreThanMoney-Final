@@ -19,9 +19,9 @@ assert.equal(direcaoTrendshot('Trendshot: BUY signal'), 'buy')
 assert.equal(direcaoTrendshot('Trendshot: SELL signal'), 'sell')
 assert.equal(direcaoTrendshot('Trendshot'), null)
 
-// Ouro: SL 20,00 · TP 0,3/0,6/1,0/1,5
-assert.deepEqual(niveisTrendshot('XAUUSD', 'buy', 4000), { sl: 3980, tps: [4006, 4012, 4020, 4030] })
-assert.deepEqual(niveisTrendshot('XAUUSD', 'sell', 4000), { sl: 4020, tps: [3994, 3988, 3980, 3970] })
+// Ouro: SL 100 pips = 10,00 (26/10) · TP 0,3/0,6/1,0/1,5
+assert.deepEqual(niveisTrendshot('XAUUSD', 'buy', 4000), { sl: 3990, tps: [4003, 4006, 4010, 4015] })
+assert.deepEqual(niveisTrendshot('XAUUSD', 'sell', 4000), { sl: 4010, tps: [3997, 3994, 3990, 3985] })
 // Forex: SL 100 pips · TP 0,3/0,5/1,0/1,5
 assert.deepEqual(niveisTrendshot('EURUSD', 'buy', 1.1), { sl: 1.09, tps: [1.103, 1.105, 1.11, 1.115] })
 assert.deepEqual(niveisTrendshot('USDJPY', 'sell', 150), { sl: 151, tps: [149.7, 149.5, 149, 148.5] })
@@ -36,8 +36,8 @@ assert.equal(isT2TEntrySignal(CANAL_TRENDSHOT, cartao), false, 'Trendshot não �
 const p = parseSignal(cartao)
 assert.equal(p?.symbol, 'XAUUSD')
 assert.equal(p?.direction, 'buy')
-assert.equal(p?.sl, 3980)
-assert.deepEqual(p?.tp, [4006, 4012, 4020, 4030])
+assert.equal(p?.sl, 3990)
+assert.deepEqual(p?.tp, [4003, 4006, 4010, 4015])
 console.log('trendshot.check: OK')
 
 // 23/10: o TrendShot é uma estratégia própria nos alertas e no WebTrader, e tem mestre no webhook.
