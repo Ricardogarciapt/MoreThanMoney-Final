@@ -34,36 +34,7 @@ export const metadata = {
  * e lê a lista completa.
  */
 export default async function TradingTournamentPage() {
-  const db = getSupabaseAdmin()
-
-  // TECTO: sem torneio a página desenha-se na mesma (`torneio?.regras ?? {}` mais abaixo). Sem ele,
-  // uma base lenta fazia a geração estática estoirar aos 60s e derrubava o deploy do site.
-  const { data: torneio } = await comTecto(
-    db
-      .from('mtm_tournaments')
-      .select('id, slug, nome, estado, comeca_em, acaba_em, inscricoes_fecham_em, saldo_inicial, regras, premios')
-      .eq('publicado', true)
-      .order('comeca_em', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then((r) => ({ data: r.data })),
-    { data: null },
-    TECTO_PAGINA_MS,
-  )
-
-  const { data: linhas } = torneio
-    ? await comTecto(
-        db
-          .from('mtm_tournament_participants')
-          .select('nome_publico, email, estado, posicao, resultado_pct, metricas, updated_at')
-          .eq('tournament_id', torneio.id)
-          .order('posicao', { ascending: true, nullsFirst: false })
-          .limit(100)
-          .then((r) => ({ data: r.data })),
-        { data: null },
-        TECTO_PAGINA_MS,
-      )
-    : { data: null }
+  const { torneio, linhas } = await lerTorneio()
 
   const regras = (torneio?.regras ?? {}) as Record<string, number | string>
   const premios = (torneio?.premios ?? []) as Array<{ posicao: number; premio: string }>
@@ -262,4 +233,53 @@ function Cartao({ titulo, valor }: { titulo: string; valor: React.ReactNode }) {
       <p className="mt-1.5 text-xl font-semibold">{valor}</p>
     </div>
   )
+}
+
+/**
+ * As leituras da página, sem poder de veto sobre o build.
+ *
+ * Com ISR a página é gerada durante a compilação, e nas pré-visualizações não há
+ * `SUPABASE_SERVICE_ROLE_KEY`: `getSupabaseAdmin()` lança, e um lançamento aqui abortava o
+ * deploy inteiro. Sai a página sem torneio, e a primeira revalidação em produção preenche-a.
+ */
+async function lerTorneio() {
+  try {
+    const db = getSupabaseAdmin()
+
+    // TECTO: sem torneio a página desenha-se na mesma (`torneio?.regras ?? {}` mais abaixo). Sem ele,
+    // uma base lenta fazia a geração estática estoirar aos 60s e derrubava o deploy do site.
+    const { data: torneio } = await comTecto(
+      db
+        .from('mtm_tournaments')
+        .select('id, slug, nome, estado, comeca_em, acaba_em, inscricoes_fecham_em, saldo_inicial, regras, premios')
+        .eq('publicado', true)
+        .order('comeca_em', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then((r) => ({ data: r.data })),
+      { data: null },
+      TECTO_PAGINA_MS,
+    )
+
+    const { data: linhas } = torneio
+      ? await comTecto(
+          db
+            .from('mtm_tournament_participants')
+            .select('nome_publico, email, estado, posicao, resultado_pct, metricas, updated_at')
+            .eq('tournament_id', torneio.id)
+            .order('posicao', { ascending: true, nullsFirst: false })
+            .limit(100)
+            .then((r) => ({ data: r.data })),
+          { data: null },
+          TECTO_PAGINA_MS,
+        )
+      : { data: null }
+    return { torneio, linhas }
+  } catch (e) {
+    // Fora do build, lançar é o que se quer: numa revalidação falhada o Next mantém a versão
+    // boa anterior em vez de publicar uma página vazia por 5 minutos.
+    if (process.env.NEXT_PHASE !== 'phase-production-build') throw e
+    console.error('[tradingtournament] leitura falhou no build:', e instanceof Error ? e.message : e)
+    return { torneio: null, linhas: null }
+  }
 }
