@@ -271,14 +271,16 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
   const [lang, setLang] = useState<Lang>("pt")
   const [query, setQuery] = useState("")
 
-  // Idioma: ?lang= ganha, depois a última escolha. O ref de quem partilhou segue até ao onboarding.
+  // Idioma: ?lang= ganha, depois a última escolha, depois a língua do navegador. O ref de quem partilhou segue até ao onboarding.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
     const pedido = q.get("lang")
     let guardado: string | null = null
     try { guardado = localStorage.getItem("mtm_apresentacao_lang") } catch {}
     const valida = (v: string | null): v is Lang => !!v && (LINGUAS as string[]).includes(v)
-    const l: Lang = valida(pedido) ? pedido : valida(guardado) ? guardado : "pt"
+    // Sem ?lang nem escolha guardada, segue a língua do navegador (pt-BR → pt, de-AT → de…).
+    const doNavegador = (navigator.languages || [navigator.language]).map((x) => x.slice(0, 2).toLowerCase()).find(valida)
+    const l: Lang = valida(pedido) ? pedido : valida(guardado) ? guardado : doNavegador ?? "pt"
     setLang(l)
     const ref = q.get("ref")
     if (ref) setQuery(`?ref=${encodeURIComponent(ref)}`)
