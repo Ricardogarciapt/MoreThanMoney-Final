@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export const dynamic = 'force-dynamic'
@@ -191,6 +192,9 @@ export async function POST(request: NextRequest) {
    */
   const { enviarConfirmacaoInscricao } = await import('@/lib/mtmfunded/envios')
   await enviarConfirmacaoInscricao(participante.id).catch(() => undefined)
+
+  // Quem se acabou de inscrever tem de se ver na classificação, que é servida da CDN.
+  revalidatePath('/mtmfunded/tradingtournament')
 
   return NextResponse.json({
     ok: true,

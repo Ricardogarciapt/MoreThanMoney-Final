@@ -6,25 +6,21 @@ import DataLocal from '@/components/mtmfunded/data-local'
 import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
 import { comTecto, TECTO_PAGINA_MS } from "@/lib/com-tecto"
 
-// Cache de 60s em vez de render por pedido: a classificação actualiza de hora a hora e os
-// programas mudam raramente. Sem isto, cada visita esperava pela base de dados antes do
-// primeiro pixel — e numa página de vendas isso são visitas perdidas.
 /**
- * FORA DA PRÉ-GERAÇÃO, de propósito.
+ * SERVIDA DA CDN, refeita de 5 em 5 minutos (ISR) — e não desenhada a cada visita.
  *
- * Estas páginas lêem a base de dados, e uma compilação não pode depender de a base estar boa —
- * a 25/09 dois deploys seguidos abortaram por isso, e a correcção do 504 ficou retida enquanto
- * membros com conta eram mandados registar-se.
+ * 26/10: estava em `force-dynamic`, com duas leituras SEGUIDAS à base antes do primeiro byte,
+ * em todas as visitas. A classificação só muda quando o cron horário a reordena (e quando
+ * alguém se inscreve — ambos chamam `revalidatePath` desta página), por isso pagar uma função
+ * e duas idas ao Supabase por visita era lentidão e custo sem ganho nenhum.
  *
- * Aqui não se usa o truque das outras páginas (construir com valores de recuo e deixar a
- * revalidação preencher): a /mtmfunded decide um REDIRECCIONAMENTO a partir da configuração, e
- * construí-la sem poder lê-la deixaria esse redireccionamento cozido no ficheiro gerado. Uma
- * página que redirecciona para o torneio porque a base estava lenta durante o build é pior do
- * que uma página que demora um pouco mais a abrir.
- *
- * As leituras têm tecto (ver `comTecto`), por isso uma base lenta atrasa-as — não as pendura.
+ * O medo que a tinha posto dinâmica era o da /mtmfunded: lá a página decide um
+ * REDIRECCIONAMENTO a partir da base, e construí-la com a base lenta cozia o desvio errado no
+ * ficheiro. Aqui não há desvio nenhum. Se a base estiver lenta durante o build, as leituras têm
+ * tecto (`comTecto`) e a página sai com «sem torneio» no máximo até à primeira revalidação — e
+ * uma revalidação que falhe mantém a versão boa anterior, não a apaga.
  */
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 export const metadata = {
   title: 'Trading Tournament · More Than Money',
   description: 'Torneio trimestral de trading da More Than Money. Trade · Evolve · Earn.',
@@ -38,36 +34,7 @@ export const metadata = {
  * e lê a lista completa.
  */
 export default async function TradingTournamentPage() {
-  const db = getSupabaseAdmin()
-
-  // TECTO: sem torneio a página desenha-se na mesma (`torneio?.regras ?? {}` mais abaixo). Sem ele,
-  // uma base lenta fazia a geração estática estoirar aos 60s e derrubava o deploy do site.
-  const { data: torneio } = await comTecto(
-    db
-      .from('mtm_tournaments')
-      .select('id, slug, nome, estado, comeca_em, acaba_em, inscricoes_fecham_em, saldo_inicial, regras, premios')
-      .eq('publicado', true)
-      .order('comeca_em', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then((r) => ({ data: r.data })),
-    { data: null },
-    TECTO_PAGINA_MS,
-  )
-
-  const { data: linhas } = torneio
-    ? await comTecto(
-        db
-          .from('mtm_tournament_participants')
-          .select('nome_publico, email, estado, posicao, resultado_pct, metricas, updated_at')
-          .eq('tournament_id', torneio.id)
-          .order('posicao', { ascending: true, nullsFirst: false })
-          .limit(100)
-          .then((r) => ({ data: r.data })),
-        { data: null },
-        TECTO_PAGINA_MS,
-      )
-    : { data: null }
+  const { torneio, linhas } = await lerTorneio()
 
   const regras = (torneio?.regras ?? {}) as Record<string, number | string>
   const premios = (torneio?.premios ?? []) as Array<{ posicao: number; premio: string }>
@@ -75,18 +42,24 @@ export default async function TradingTournamentPage() {
 
   return (
     <main className="text-white">
+      {/*
+        O PRIMEIRO ECRÃ NÃO USA A REVELAÇÃO POR SCROLL (`.r`). Essa classe nasce com opacidade 0
+        e só aparece quando o JavaScript da página acorda e o observador a marca — no telemóvel
+        isso eram segundos de ecrã escuro com o título já no HTML. O que está abaixo da dobra
+        continua a revelar-se ao descer.
+      */}
       <section className="mx-auto max-w-5xl px-5 py-20 sm:py-24">
-        <p className="kicker r"><T k="tt.kicker" /></p>
-        <h1 className="r d1 mt-4 text-[clamp(38px,7vw,68px)] font-extrabold">
+        <p className="kicker"><T k="tt.kicker" /></p>
+        <h1 className="mt-4 text-[clamp(38px,7vw,68px)] font-extrabold">
           Trading{' '}
           <span className="bg-gradient-to-r from-[#8fb6ff] to-[#4B8BFF] bg-clip-text text-transparent">
             Tournament
           </span>
         </h1>
-        <p className="r d2 mt-3 text-sm uppercase tracking-[0.25em] text-[#7b756a]"><T k="tt.lema" /></p>
+        <p className="mt-3 text-sm uppercase tracking-[0.25em] text-[#7b756a]"><T k="tt.lema" /></p>
 
         {torneio && inscricoesAbertas(torneio) && (
-          <div className="r d3 mt-7 inline-flex items-center gap-2.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-400">
+          <div className="mt-7 inline-flex items-center gap-2.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-400">
             <span className="pulso h-2 w-2 rounded-full bg-emerald-400" />
             <T k="tt.abertas" />
             {torneio.inscricoes_fecham_em && (
@@ -255,9 +228,58 @@ function Passo({ n, titulo, texto }: { n: number; titulo: string; texto: string 
 
 function Cartao({ titulo, valor }: { titulo: string; valor: React.ReactNode }) {
   return (
-    <div className="vidro r p-5">
+    <div className="vidro p-5">
       <p className="text-xs uppercase tracking-widest text-[#7b756a]"><T k={titulo} /></p>
       <p className="mt-1.5 text-xl font-semibold">{valor}</p>
     </div>
   )
+}
+
+/**
+ * As leituras da página, sem poder de veto sobre o build.
+ *
+ * Com ISR a página é gerada durante a compilação, e nas pré-visualizações não há
+ * `SUPABASE_SERVICE_ROLE_KEY`: `getSupabaseAdmin()` lança, e um lançamento aqui abortava o
+ * deploy inteiro. Sai a página sem torneio, e a primeira revalidação em produção preenche-a.
+ */
+async function lerTorneio() {
+  try {
+    const db = getSupabaseAdmin()
+
+    // TECTO: sem torneio a página desenha-se na mesma (`torneio?.regras ?? {}` mais abaixo). Sem ele,
+    // uma base lenta fazia a geração estática estoirar aos 60s e derrubava o deploy do site.
+    const { data: torneio } = await comTecto(
+      db
+        .from('mtm_tournaments')
+        .select('id, slug, nome, estado, comeca_em, acaba_em, inscricoes_fecham_em, saldo_inicial, regras, premios')
+        .eq('publicado', true)
+        .order('comeca_em', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then((r) => ({ data: r.data })),
+      { data: null },
+      TECTO_PAGINA_MS,
+    )
+
+    const { data: linhas } = torneio
+      ? await comTecto(
+          db
+            .from('mtm_tournament_participants')
+            .select('nome_publico, email, estado, posicao, resultado_pct, metricas, updated_at')
+            .eq('tournament_id', torneio.id)
+            .order('posicao', { ascending: true, nullsFirst: false })
+            .limit(100)
+            .then((r) => ({ data: r.data })),
+          { data: null },
+          TECTO_PAGINA_MS,
+        )
+      : { data: null }
+    return { torneio, linhas }
+  } catch (e) {
+    // Fora do build, lançar é o que se quer: numa revalidação falhada o Next mantém a versão
+    // boa anterior em vez de publicar uma página vazia por 5 minutos.
+    if (process.env.NEXT_PHASE !== 'phase-production-build') throw e
+    console.error('[tradingtournament] leitura falhou no build:', e instanceof Error ? e.message : e)
+    return { torneio: null, linhas: null }
+  }
 }
