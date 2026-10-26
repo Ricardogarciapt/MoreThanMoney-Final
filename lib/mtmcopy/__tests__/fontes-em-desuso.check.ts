@@ -185,10 +185,21 @@ for (const { ficheiro, padrao, porque } of OBRIGATORIOS) {
 }
 
 // As rotas das fontes que saíram ficam a devolver 410 (não desaparecem em silêncio nem voltam a executar).
-for (const rota of ['app/api/telegram/primeverse-exec/route.ts', 'app/api/telegram/forex-swings-exec/route.ts']) {
+// 26/10: a primeverse-exec saiu desta lista — o dono religou a MTM Auto Edge pelos 2 top traders PV.
+for (const rota of ['app/api/telegram/forex-swings-exec/route.ts']) {
   const src = semComentarios(readFileSync(join(RAIZ, rota), 'utf-8'))
   if (!/status:\s*410/.test(src)) regista(`${rota} já não devolve 410 — ou voltou a executar, ou desapareceu sem explicar`)
   if (/placeOrder|computeRiskLot|encaminharPrimeverse/.test(src)) regista(`${rota} voltou a ter caminho de execução`)
+}
+
+// 26/10 — a primeverse-exec volta a executar, mas SÓ a MTM Auto Edge, pela mestre (fonte `edge`), e só os
+// traders do top (nada de trader fixo nem de execução directa MT5).
+{
+  const src = semComentarios(readFileSync(join(RAIZ, 'app/api/telegram/primeverse-exec/route.ts'), 'utf-8'))
+  if (/placeOrder|computeRiskLot|encaminharPrimeverse/.test(src)) regista('primeverse-exec ganhou um caminho de execução fora da mestre')
+  const fontes = [...src.matchAll(/encaminharSinalParaMestre\(\{\s*fonte:\s*'([^']+)'/g)].map((m) => m[1])
+  if (fontes.length !== 1 || fontes[0] !== 'edge') regista(`primeverse-exec tem de abrir só pela fonte «edge» (encontrei: ${fontes.join(', ') || 'nenhuma'})`)
+  if (!/estrategiaDoTraderPv/.test(src)) regista('primeverse-exec deixou de exigir que o trader esteja no top')
 }
 
 assert.equal(falhas, 0, `${falhas} regressão(ões) às fontes em desuso — ver acima`)
