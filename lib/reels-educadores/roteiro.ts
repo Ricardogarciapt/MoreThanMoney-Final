@@ -46,6 +46,7 @@ Cenas, por esta ordem:
 1. {"tipo":"gancho","dur":2.6,"palavras":["2 a 4 blocos curtos","em maiúsculas não é preciso"],"destaque":<índice do bloco a dourado>}
    Cada bloco tem no máximo 14 caracteres. O gancho tem de parar o scroll: tensão, contraste, pergunta, erro comum.
 2. Uma {"tipo":"demo",...} de 4.4 a 5.4 segundos. Ou uma demo assinatura do educador ({"tipo":"demo","dur":5,"demo":"<nome>"}), ou uma genérica:
+   O campo "demo" leva SÓ o nome da demo (nunca o nome do educador).
    · {"demo":"versus","titulo":"...","tituloMau":"ERRO","tituloBom":"CERTO","mau":["3 itens curtos"],"bom":["3 itens curtos"],"sub":"frase final"}
    · {"demo":"lista","titulo":"...","itens":["3 ou 4 itens curtos"],"sub":"..."}
    · {"demo":"contador","titulo":"...","de":0,"ate":15,"sufixo":"","rotulo":"minutos","sub":"..."}
@@ -76,7 +77,11 @@ export function validarRoteiro(bruto: unknown, ed: EducadorReel): Omit<Roteiro, 
   const demosOk = new Set<string>([...DEMOS_GENERICAS, ...ed.demos])
   for (const c of cenas) {
     c.dur = Math.min(6, Math.max(1.8, Number(c.dur) || 2.5))
-    if (c.tipo === 'demo' && !demosOk.has(String(c.demo))) throw new Error(`demo desconhecida: ${String(c.demo)}`)
+    // A IA às vezes põe o nome do educador no campo: cai na primeira demo assinatura dele.
+    if (c.tipo === 'demo' && !demosOk.has(String(c.demo))) {
+      if (!ed.demos.length) throw new Error(`demo desconhecida: ${String(c.demo)}`)
+      c.demo = ed.demos[0]
+    }
     if (c.tipo === 'ponto' && !String(c.texto ?? '').trim()) throw new Error('ponto sem texto')
   }
   // O CTA é nosso, não da IA: a palavra tem de ser a que o funil atende.
@@ -91,8 +96,9 @@ export function validarRoteiro(bruto: unknown, ed: EducadorReel): Omit<Roteiro, 
   if (!legenda.includes('não constitui consultoria')) legenda += `\n\n${AVISO}`
   if (!legenda.includes('#morethanmoney')) legenda += `\n\n${ed.hashtags}`
 
-  const proibido = /garantid|taxa de acerto|\d+\s?% de acerto|lucro garantido|win ?rate/i
-  if (proibido.test(JSON.stringify(semCta)) || proibido.test(legenda)) throw new Error('promessa ou taxa de acerto no roteiro')
+  // O próprio aviso diz «resultados não garantidos»: tira-se antes de procurar promessas.
+  const proibido = /(?<!não (?:são )?)garantid|taxa de acerto|\d+\s?% de acerto|win ?rate/i
+  if (proibido.test(JSON.stringify(semCta)) || proibido.test(legenda.replace(AVISO, ''))) throw new Error('promessa ou taxa de acerto no roteiro')
 
   return { educador: ed.slug, tema: String(o.tema ?? '').slice(0, 120), aviso: AVISO, cenas: semCta, legenda }
 }
