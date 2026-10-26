@@ -4,7 +4,8 @@
  * O alerta do TradingView só diz «Trendshot: BUY signal» / «SELL signal» (cruzamento EMA20/EMA50,
  * sessão 08:00–21:00). Os níveis replicam o modo AUTO do Pine (pedido do dono, 23/10/2026):
  *
- *   stop:  ouro 2000 pontos (×0,01 = 20,00) · forex 100 pips · resto 10 000 pontos (×0,01 = 100)
+ *   stop:  100 pips em tudo (pedido do dono, 26/10) — ouro 10,00 · forex 100 pips · resto 100 pontos
+ *          (até 26/10 o ouro usava 2000 pontos = 20,00, como o modo AUTO do Pine)
  *   alvos: TP1 0,3×SL · TP2 0,5×SL (ouro 0,6×SL) · TP3 1,0×SL · TP4 1,5×SL
  *
  * O stop por estrutura do Pine (opcional, desligado por omissão) não se reproduz aqui: precisa das
@@ -29,7 +30,7 @@ export function classeTrendshot(simbolo: string): ClasseTrendshot {
 /** Distância do stop, em preço. */
 export function distanciaStopTrendshot(simbolo: string): number {
   const c = classeTrendshot(simbolo)
-  if (c === 'ouro') return 2000 * 0.01
+  if (c === 'ouro') return 100 * pipSizeForSymbol(simbolo)
   if (c === 'forex') return 100 * pipSizeForSymbol(simbolo)
   return 10000 * 0.01
 }

@@ -37,7 +37,7 @@ caso('cruzamento para cima dá um BUY na vela do cruzamento, com os níveis do s
   const esperado = niveisTrendshot('XAUUSD', 'buy', s.entrada)
   assert.equal(s.sl, esperado.sl)
   assert.deepEqual(s.tps, esperado.tps)
-  assert.equal(s.sl, s.entrada - 20)
+  assert.equal(s.sl, s.entrada - 10)
 })
 
 caso('fora da sessão o cruzamento não conta', () => {
@@ -65,10 +65,10 @@ caso('o último sinal sabe se já tocou no SL ou nos TPs (SL primeiro na mesma v
   const r = calcularTrendShot(velas(vale), { simbolo: 'XAUUSD', sessaoInicio: 0, sessaoFim: 24 })
   const u = r.ultima!
   assert.equal(u.sinal.direcao, 'buy')
-  // Depois do BUY o preço sobe 2 por vela até ao fim: TP1 (+6), TP2 (+12), TP3 (+20) e TP4 (+30) tocados.
+  // Depois do BUY o preço sobe 2 por vela até ao fim: TP1 (+3), TP2 (+6), TP3 (+10) e TP4 (+15) tocados.
   assert.equal(u.slTocado, false)
   assert.deepEqual(u.tpTocado, [true, true, true, true])
-  const queda = [...vale.slice(0, u.sinal.i + 1), vale[u.sinal.i] - 25, vale[u.sinal.i] - 26]
+  const queda = [...vale.slice(0, u.sinal.i + 1), vale[u.sinal.i] - 12, vale[u.sinal.i] - 13]
   const r2 = calcularTrendShot(velas(queda), { simbolo: 'XAUUSD', sessaoInicio: 0, sessaoFim: 24, incluirVelaAberta: false })
   assert.equal(r2.ultima?.slTocado, true)
   assert.deepEqual(r2.ultima?.tpTocado, [false, false, false, false])

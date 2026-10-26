@@ -52,9 +52,11 @@ import {
   type Ligacao,
 } from "@/lib/sinais/identidade"
 import { urlDoChat, urlDoTapToTrade } from "@/lib/notificacao-destino"
-import { lifecycleMessage, stopFoiProtegido } from "@/lib/mtmcopy/signal-lifecycle"
+import { lifecycleMessage, stopFoiProtegido, type LifecycleContext, type SignalEvent } from "@/lib/mtmcopy/signal-lifecycle"
 import { formatarSeguimento, formatarSinal } from "@/lib/sinais/formato-sinal"
+import { decidirPublicacaoGenerica } from "@/lib/sinais/publicacao-generica"
 import { eAlertaTrendshot } from "@/lib/sinais/trendshot"
+import { TIMEFRAMES_POR_ESTRATEGIA, slFixo, timeframeAceite } from "@/lib/sinais/sl-por-estrategia"
 import { marcaDaEstrategia } from "@/lib/sinais/grafico-estrategia"
 import { enviarGraficoTelegram, legendaDoGrafico, urlDoGraficoDoSinal } from "@/lib/sinais/grafico-publicar"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -316,6 +318,12 @@ function composeGenericPost(
     `🔎 Validação: ${Math.round((v.confidence || 0) * 100)}%`,
     DISCLAIMER,
   ].filter(Boolean).join("\n")
+}
+
+/** Seguimento do caminho genérico: o vocabulário canónico, a responder à entrada. */
+function composeGenericFollowup(route: SignalRoute, evento: SignalEvent, c: LifecycleContext): string {
+  const { text } = lifecycleMessage(evento, c)
+  return [formatarSeguimento(text, estrategiaDoRemetente(route.sender)), DISCLAIMER].join("\n")
 }
 
 async function sendTelegram(token: string, chatId: string, text: string, replyToMessageId?: number | null): Promise<number> {
@@ -829,6 +837,7 @@ async function processarAlerta(request: NextRequest) {
    */
   const ESTADOS_ABERTOS = ["active", "pending", "be", "exit_1", "exit_2", "exit_3"]
   let ligacaoSeg: Ligacao | null = null
+  let entradaDuplicada = false
   if (logId && estrategia && chaveTrade) {
     try {
       const { data: abertas } = await supabase
@@ -843,7 +852,10 @@ async function processarAlerta(request: NextRequest) {
       const lista = (abertas ?? []) as EntradaComIdentidade[]
       if (initSignalKind === "entry") {
         const original = entradaOriginal(lista, { id: logId, estrategia, chave: chaveTrade })
-        if (original) await supabase.from("tradingview_signals").update({ entrada_id: original, ligacao: "duplicada" }).eq("id", logId)
+        if (original) {
+          entradaDuplicada = true
+          await supabase.from("tradingview_signals").update({ entrada_id: original, ligacao: "duplicada" }).eq("id", logId)
+        }
       } else {
         ligacaoSeg = ligarSeguimento(lista, { estrategia, chave: chaveTrade })
       }
@@ -926,6 +938,32 @@ async function processarAlerta(request: NextRequest) {
     return NextResponse.json({ ok: true, valid: false, reason: v.reasoning, confidence: v.confidence })
   }
 
+  /**
+   * Stop fixo e timeframe por estratégia (pedido do dono, 26/10 — lib/sinais/sl-por-estrategia):
+   * MTM Scanner 100 pips; Sensei só 15m (Sensei/GoldKiller mantêm o stop do Pine). Só nas ENTRADAS; os seguimentos
+   * continuam ligados à entrada pela chave, que já foi calculada com o stop do alerta.
+   */
+  const entradaDoAlerta = initSignalKind === "entry" && !mgmtStatus
+  if (entradaDoAlerta && !timeframeAceite(estrategia, timeframe ?? activeSensei?.timeframe ?? null)) {
+    const motivo = `timeframe ${timeframe ?? activeSensei?.timeframe} fora do aceite para ${estrategia} (${TIMEFRAMES_POR_ESTRATEGIA[String(estrategia ?? "").toLowerCase()]?.join("/") ?? "—"})`
+    if (logId) await supabase.from("tradingview_signals").update({ chat_status: "rejected", telegram_status: "rejected", ai_error: `rejeitado: ${motivo}` }).eq("id", logId)
+    return NextResponse.json({ ok: true, valid: false, reason: motivo })
+  }
+  const slDaEstrategia = entradaDoAlerta
+    ? slFixo(estrategia, v.symbol ?? activeSensei?.symbol ?? ticker, v.direction ?? activeSensei?.direction ?? null, v.entry ?? activeSensei?.entry ?? price)
+    : null
+  if (slDaEstrategia != null) {
+    v.sl = slDaEstrategia
+    if (activeSensei) activeSensei = { ...activeSensei, sl: slDaEstrategia }
+    if (logId) {
+      await supabase
+        .from("tradingview_signals")
+        .update({ sl: slDaEstrategia, raw_payload: { ...payload, sl: slDaEstrategia, sl_do_alerta: sl } })
+        .eq("id", logId)
+        .then(undefined, (e) => console.error("[tradingview-webhook] gravar stop fixo:", e))
+    }
+  }
+
   // Ativos sem canal dedicado (stocks/ETFs/outros) → só sistema de Alertas MTM (sem chat/Telegram)
   if (!route.channel) {
     if (logId) await supabase.from("tradingview_signals").update({ chat_status: "filtered", telegram_status: "filtered" }).eq("id", logId)
@@ -944,6 +982,8 @@ async function processarAlerta(request: NextRequest) {
       orderType: (v.entry ?? price) != null ? "limit" : "market",
       raw,
     } as ParsedSignal)
+
+  if (slDaEstrategia != null && parsedForExec) parsedForExec.sl = slDaEstrategia
 
   // Forex (conta MTM Auto Forex): entrar a MERCADO (fill garantido) em vez de limit/pullback —
   // o trailing dinâmico da conta trata do resto. (Sensei gold/btc já é forçado a market no processor.)
@@ -1460,9 +1500,46 @@ async function processarAlerta(request: NextRequest) {
     }
   }
 
-  const post =
-    assetClass === "gold_btc" && !isGoldKiller
-      ? composePost(v, activeSensei, msgCtx)
+  /**
+   * O caminho GENÉRICO (perpétuos cripto, forex, índices, GoldKiller) só desenhava cartões de
+   * entrada — os seguimentos do Sensei X em BTCUSDT.P saíam como «Novo sinal» com o stop já movido
+   * para a entrada, e o T2T oferecia-os para abrir (25-26/10). Agora: seguimento responde à entrada
+   * ou não sai; entrada repetida ou com stop impossível não sai (lib/sinais/publicacao-generica.ts).
+   */
+  const caminhoGenerico = !(assetClass === "gold_btc" && !isGoldKiller)
+  const decisaoGenerica = caminhoGenerico
+    ? decidirPublicacaoGenerica({
+        seguimento: isFollowup,
+        alertType: activeSensei?.alertType ?? initAlertType ?? null,
+        tpLevel: activeSensei?.tpLevel ?? null,
+        entradaChatId: entradaChatMessageId,
+        slProtegido,
+        duplicada: entradaDuplicada,
+        classe: assetClass,
+        direcao: v.direction,
+        entrada: v.entry,
+        sl: v.sl,
+        tp1: v.tp?.[0] ?? null,
+      })
+    : null
+  const recusaGenerica = decisaoGenerica?.publicar === null ? decisaoGenerica.motivo : null
+  const publicavel = alertOk && !recusaGenerica
+  const post = !caminhoGenerico
+    ? composePost(v, activeSensei, msgCtx)
+    : decisaoGenerica?.publicar === "seguimento"
+      ? composeGenericFollowup(route, decisaoGenerica.evento, {
+          symbol: activeSensei?.symbol ?? v.symbol ?? ticker ?? "—",
+          direction: linkedIdea?.direction ?? null,
+          entry: msgCtx?.entry ?? null,
+          level: activeSensei?.tpLevel ?? null,
+          price:
+            decisaoGenerica.evento === "partial" || decisaoGenerica.evento === "target_final"
+              ? msgCtx?.tp?.[(activeSensei?.tpLevel ?? 1) - 1] ?? null
+              : decisaoGenerica.evento === "stop_loss" || decisaoGenerica.evento === "stop_protegido"
+                ? v.sl ?? activeSensei?.sl ?? null
+                : null,
+          slOriginal: msgCtx?.slOriginal ?? null,
+        })
       : composeGenericPost(route, v, timeframe)
   const replyToTelegramId = isFollowup ? linkedIdea?.telegramMessageId ?? null : null
   /** Gráfico da estratégia — só nas entradas (os seguimentos respondem à entrada, que já o tem). */
@@ -1505,11 +1582,18 @@ async function processarAlerta(request: NextRequest) {
     }
   } else if (!alertOk) {
     if (logId) await supabase.from("tradingview_signals").update({ chat_status: "suppressed", telegram_status: "suppressed" }).eq("id", logId)
+  } else if (recusaGenerica) {
+    if (logId) {
+      await supabase
+        .from("tradingview_signals")
+        .update({ chat_status: "suppressed", telegram_status: "suppressed", ai_error: `não publicado: ${recusaGenerica}`.slice(0, 300) })
+        .eq("id", logId)
+    }
   } else {
     try {
       // Threading no chat da app: os follow-ups (TP/BE/SL/exit) respondem à mensagem da ENTRADA
       // (linkedIdea.chatMessageId) — senão aparecem todos ao mesmo nível, como acontecia no Premium.
-      const parentChatId = isFollowup ? linkedIdea?.chatMessageId ?? null : null
+      const parentChatId = isFollowup ? linkedIdea?.chatMessageId ?? entradaChatMessageId ?? null : null
       const { data: msg, error } = await supabase
         .from("chat_messages")
         .insert({
@@ -1538,7 +1622,7 @@ async function processarAlerta(request: NextRequest) {
   // Perpétuos cripto: push/execução em 30m e 1H; outros TF ficam bloqueados (overtrading/ruído).
   // Segue o timeframe do alerta: sem bloqueio por TF nos perps (15m/5m/1H — o que o alarme mandar).
   const cryptoPerpBlocked = false
-  if (alertOk && initSignalKind === "entry" && !cryptoPerpBlocked && (!publicacaoMestre || chatId)) {
+  if (publicavel && initSignalKind === "entry" && !cryptoPerpBlocked && (!publicacaoMestre || chatId)) {
     const dir =
       v.direction === "buy"
         ? "COMPRA"
@@ -1596,7 +1680,7 @@ async function processarAlerta(request: NextRequest) {
   // vai à rota edge /api/bybit/place (fra1) porque este webhook corre em iad1 (EUA) e a
   // Bybit geo-bloqueia. A rota é gated por BYBIT_PERPS_EXEC_ENABLED (default OFF → skipped),
   // por isso é seguro chamar sempre; só dispara ordem real quando ligares a flag.
-  if (assetClass === "crypto_perp" && alertOk && initSignalKind === "entry" && !cryptoPerpBlocked) {
+  if (assetClass === "crypto_perp" && publicavel && initSignalKind === "entry" && !cryptoPerpBlocked) {
     const cronSecret = process.env.CRON_SECRET
     // Lado robusto: v.direction OU o campo `action` do payload (evita colocar BUY num SELL se v.direction vier null).
     const dirResolved =
@@ -1758,7 +1842,7 @@ async function processarAlerta(request: NextRequest) {
   // Relay Telegram → grupo correspondente à classe (Ouro/BTC: -1003853860780, Forex: -1003716578747)
   const relayChatId = route.telegram
   // Canal publicado pela mestre: o Telegram já recebeu o MESMO texto do publicador.
-  const relayOn = Boolean(alertOk && relayChatId && AIBOT_TOKEN && !RELAY_DISABLED && !publicacaoMestre)
+  const relayOn = Boolean(publicavel && relayChatId && AIBOT_TOKEN && !RELAY_DISABLED && !publicacaoMestre)
   let tgOk = false
   let telegramMid: number | null = null
   if (relayOn && relayChatId) {
@@ -1795,7 +1879,7 @@ async function processarAlerta(request: NextRequest) {
     } catch (err) {
       if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "error", telegram_chat_id: relayChatId, telegram_error: String(err) }).eq("id", logId)
     }
-  } else if (logId && !publicacaoMestre) {
+  } else if (logId && !publicacaoMestre && !recusaGenerica) {
     // (Canal publicado pela mestre: o estado do Telegram já ficou escrito acima — «sent» quando o
     // publicador o enviou, «mestre» quando não — e não pode ser trocado por «relay desligado».)
     /**
