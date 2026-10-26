@@ -3,7 +3,7 @@
  *
  * PROSPECTOR: varre os comentários dos posts/reels e deteta INTENÇÃO por palavra-chave
  *   (as CTAs dos reels: MUNDO, EU VOU, DISCIPLINA, PREMIUM, SINAIS, APP...).
- * SETTER: tenta uma DM PRIVADA (Graph `private_replies`) com a oferta + link; se o scope de DM
+ * SETTER: tenta uma DM PRIVADA (`respostaPrivada`: me/messages com recipient.comment_id) com a oferta + link; se o scope de DM
  *   faltar (app sem `instagram_manage_messages`), cai para RESPOSTA PÚBLICA
  *   QUE JÁ LEVA O LINK. Regista o lead em `ig_leads`.
  * CLOSER: o fecho NÃO é no IG — o link leva ao funil do Telegram
@@ -11,6 +11,7 @@
  *   self-serve). Toda a conversa/close é nativa (Telegram/site); quando a DM chega, responde o
  *   `dm-closer.ts` pelo webhook /api/webhooks/instagram. Nenhuma ferramenta externa pelo meio.
  */
+import { respostaPrivada } from "./resposta-privada"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { prepararMensagem } from "@/lib/agentes/mensagem-saida"
 import { agenteDoPostComentado, registarMensagemDeAgente } from "@/lib/agentes/mensagem-livro"
@@ -308,7 +309,7 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
       const dmText = marcadaDm.texto
       /**
        * SETTER: DM só dentro da janela de 7 dias (regra da Meta). Fora → fica `window_expired` e
-       * segue-se à mão. Dentro → `private_replies`; se falhar, responde-se em PÚBLICO.
+       * segue-se à mão. Dentro → `respostaPrivada` (me/messages com comment_id); se falhar, responde-se em PÚBLICO.
        *
        * A resposta pública LEVA O LINK, e leva-o de propósito — ver os `pub()` de cada intenção.
        * (Este comentário dizia «resposta pública sem link» e estava errado desde que os `pub()`
@@ -322,7 +323,7 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
       let dm_status = "window_expired"
       let dm_error: string | null = null
       if (withinWindow) {
-        const dm = await gpost(`${c.id}/private_replies`, { message: dmText }, token)
+        const dm = await respostaPrivada(c.id, dmText, token)
         if (dm.ok) { dm_status = "sent"; res.dmsSent++ }
         else {
           dm_status = "public_fallback"

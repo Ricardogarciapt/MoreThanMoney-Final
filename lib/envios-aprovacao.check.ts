@@ -80,7 +80,7 @@ caso('o setter pergunta a podeSair (dm_ao_comentador, com as horas) ANTES de cad
   let desde = 0
   let dms = 0
   for (;;) {
-    const i = src.indexOf('private_replies`', desde)
+    const i = src.indexOf('respostaPrivada(', desde)
     if (i < 0) break
     dms++
     const antes = src.slice(Math.max(0, i - 2500), i)

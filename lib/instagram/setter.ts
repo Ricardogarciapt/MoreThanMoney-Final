@@ -30,6 +30,7 @@ import { prepararMensagem } from '@/lib/agentes/mensagem-saida'
 import { agenteDoPostComentado, registarMensagemDeAgente } from '@/lib/agentes/mensagem-livro'
 import { pensar } from '@/lib/funis-ia'
 import { isAutoPublishBlocked, tokenForAccount } from './publish'
+import { respostaPrivada } from './resposta-privada'
 import { dmExpirada, podeSair } from '@/lib/envios-aprovacao'
 import { ehDaCasa, handlesDaCasa } from './setter-casa'
 import {
@@ -353,7 +354,7 @@ export async function tratarComentario(
   const temDm = dm.pode && !!textoDm
   let enviouDm = false
   if (temDm && chaves.enviar_dm && podeSair({ tipo: 'dm_ao_comentador', horasDesdeComentario: horas }).pode) {
-    const r = await gpost(`${c.commentId}/private_replies`, { message: textoDm as string }, token)
+    const r = await respostaPrivada(c.commentId, textoDm as string, token)
     if (r.ok) enviouDm = true
     else erros.push(`dm: ${String(r.json?.error?.message ?? 'erro').slice(0, 150)}`)
     await registarMensagemDeAgente({
@@ -427,7 +428,7 @@ export async function reenviarDm(commentId: string): Promise<ResultadoDoReenvio>
   if (!token) return { ok: false, estado: String(row.estado), erro: 'sem token da conta' }
   if (isAutoPublishBlocked(row.ig_account_id)) return { ok: false, estado: String(row.estado), erro: 'conta não escreve sozinha' }
 
-  const d = await gpost(`${commentId}/private_replies`, { message: String(row.texto_dm) }, token)
+  const d = await respostaPrivada(commentId, String(row.texto_dm), token)
   await registarMensagemDeAgente({
     canal: 'instagram', destino: row.commenter ?? commentId, funil: 'instagram:setter', tipo: 'dm',
     texto: String(row.texto_dm), estado: d.ok ? 'enviada' : 'falhou',
