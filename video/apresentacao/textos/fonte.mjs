@@ -18,17 +18,19 @@ const comum = {
 const cores = { portLeg: ['#D2A63C', '#E9C46A', '#8f887a'], pesos: [.5, .3, .2], emojisM: ['📈', '🪙', '📊', '🏠'], emojisC: ['📱', '🎭', '🤖', '🤝', '🧠'] }
 const ac = (lista, emojis) => lista.map(([a, b], i) => i === 4 ? [a, b, emojis[i], true] : [a, b, emojis[i]])
 const port = nomes => nomes.map((n, i) => [n, cores.portLeg[i], cores.pesos[i]])
-const capDe = v => Object.fromEntries(['s01-gancho', 's02-problema', 's03-quem', 's03b-liberdade', 's04-markets', 's04-content', 's05-scanners', 's06-app', 's06b-alertas', 's06c-ferramentas', 's07-execucao', 's07b-social', 's08-ganha', 's09-prova', 's09b-avaliacoes', 's10-objecoes', 's11-oferta', 's12-cta', 's13-afiliado', 's14-fecho'].map((k, i) => [k, v[i]]))
+const capDe = v => Object.fromEntries([['s00-abertura', 'MoreThanMoney']].concat(['s01-gancho', 's02-problema', 's03-quem', 's03b-liberdade', 's04-markets', 's04-content', 's05-scanners', 's06-app', 's06b-alertas', 's06c-ferramentas', 's07-execucao', 's07b-social', 's08-ganha', 's09-prova', 's09b-avaliacoes', 's10-objecoes', 's11-oferta', 's12-cta', 's13-afiliado', 's14-fecho'].map((k, i) => [k, v[i]])))
 
 // v3 em PT e EN: Tap to Trade no MTM Auto, cena da liberdade, oferta sem preços no ecrã
 const v3 = {
   pt: {
+    abertura: ['Tempo.', 'Escolha.', 'Método.', 'Liberdade.'],
     cap: capDe(['O problema', 'O problema', 'Quem somos', 'Liberdade', 'Pilar · MTM Markets', 'Pilar · Content & Business', 'Aplicas', 'A app', 'Alertas', 'Ferramentas', 'Execução · MTM Auto', 'Negócio', 'Ganha enquanto aprendes', 'Prova', 'Avaliações', 'Objeções', 'A oferta', 'O próximo passo', 'Partilhar', 'MoreThanMoney']),
     liberdade: 'Liberdade é escolher.', libPal: ['Tempo', 'Família', 'Lugares', 'Escolha'], libFim: 'Um passo de cada vez.',
     zonaMtm: 'zona MTM', definido: 'definido', parciais: 'parciais',
     gratis: 'Experimenta grátis', oferta: ['Sem cartão', 'Sem cobrança nos dias de teste', 'Garantia nos planos mensais', 'Sem fidelização', 'Cancelas quando quiseres'],
   },
   en: {
+    abertura: ['Time.', 'Choice.', 'Method.', 'Freedom.'],
     cap: capDe(['The problem', 'The problem', 'Who we are', 'Freedom', 'Pillar · MTM Markets', 'Pillar · Content & Business', 'You apply', 'The app', 'Alerts', 'Tools', 'Execution · MTM Auto', 'Business', 'Earn while you learn', 'Proof', 'Reviews', 'Objections', 'The offer', 'Next step', 'Share', 'MoreThanMoney']),
     liberdade: 'Freedom is choice.', libPal: ['Time', 'Family', 'Places', 'Choice'], libFim: 'One step at a time.',
     zonaMtm: 'MTM zone', definido: 'set', parciais: 'partials',
@@ -38,6 +40,7 @@ const v3 = {
 
 const novas = {
   es: {
+    abertura: ['Tiempo.', 'Elección.', 'Método.', 'Libertad.'],
     cap: capDe(['El problema', 'El problema', 'Quiénes somos', 'Libertad', 'Pilar · MTM Markets', 'Pilar · Content & Business', 'Aplicas', 'La app', 'Alertas', 'Herramientas', 'Ejecución · MTM Auto', 'Negocio', 'Gana mientras aprendes', 'Prueba', 'Opiniones', 'Objeciones', 'La oferta', 'El siguiente paso', 'Compartir', 'MoreThanMoney']),
     semana: 'a la semana', esforco: 'Esfuerzo no te falta.', sistema: 'Te falta un sistema.',
     ruido: ['consejo 🔥 compra ya', 'grupo VIP gratis', '«señal segura»', 'vídeo de 12 min', 'captura de beneficios', 'curso milagro', 'sigue a este gurú', 'tutorial al azar'],
@@ -78,6 +81,7 @@ const novas = {
     liberdade: 'Libertad es elegir.', libPal: ['Tiempo', 'Familia', 'Lugares', 'Elección'], libFim: 'Paso a paso.', zonaMtm: 'zona MTM', definido: 'definido', parciais: 'parciales',
   },
   de: {
+    abertura: ['Zeit.', 'Wahl.', 'Methode.', 'Freiheit.'],
     cap: capDe(['Das Problem', 'Das Problem', 'Wer wir sind', 'Freiheit', 'Säule · MTM Markets', 'Säule · Content & Business', 'Du wendest an', 'Die App', 'Alerts', 'Werkzeuge', 'Ausführung · MTM Auto', 'Business', 'Verdienen beim Lernen', 'Beweis', 'Bewertungen', 'Einwände', 'Das Angebot', 'Der nächste Schritt', 'Teilen', 'MoreThanMoney']),
     semana: 'pro Woche', esforco: 'An Einsatz fehlt es dir nicht.', sistema: 'Dir fehlt ein System.',
     ruido: ['Tipp 🔥 jetzt kaufen', 'gratis VIP-Gruppe', '«sicheres Signal»', '12-Minuten-Video', 'Gewinn-Screenshot', 'Wunderkurs', 'folge diesem Guru', 'zufälliges Tutorial'],
@@ -118,6 +122,7 @@ const novas = {
     liberdade: 'Freiheit heißt wählen.', libPal: ['Zeit', 'Familie', 'Orte', 'Wahl'], libFim: 'Schritt für Schritt.', zonaMtm: 'MTM-Zone', definido: 'gesetzt', parciais: 'Teilziele',
   },
   it: {
+    abertura: ['Tempo.', 'Scelta.', 'Metodo.', 'Libertà.'],
     cap: capDe(['Il problema', 'Il problema', 'Chi siamo', 'Libertà', 'Pilastro · MTM Markets', 'Pilastro · Content & Business', 'Applichi', "L'app", 'Alert', 'Strumenti', 'Esecuzione · MTM Auto', 'Business', 'Guadagna mentre impari', 'Prova', 'Recensioni', 'Obiezioni', "L'offerta", 'Il prossimo passo', 'Condividi', 'MoreThanMoney']),
     semana: 'a settimana', esforco: "L'impegno non ti manca.", sistema: 'Ti manca un sistema.',
     ruido: ['dritta 🔥 compra ora', 'gruppo VIP gratis', '«segnale sicuro»', 'video di 12 min', 'screenshot di profitti', 'corso miracoloso', 'segui questo guru', 'tutorial a caso'],
@@ -158,6 +163,7 @@ const novas = {
     liberdade: 'Libertà è scegliere.', libPal: ['Tempo', 'Famiglia', 'Luoghi', 'Scelta'], libFim: 'Un passo alla volta.', zonaMtm: 'zona MTM', definito: undefined, definido: 'definito', parciais: 'parziali',
   },
   nl: {
+    abertura: ['Tijd.', 'Keuze.', 'Methode.', 'Vrijheid.'],
     cap: capDe(['Het probleem', 'Het probleem', 'Wie we zijn', 'Vrijheid', 'Pijler · MTM Markets', 'Pijler · Content & Business', 'Je past toe', 'De app', 'Alerts', 'Tools', 'Uitvoering · MTM Auto', 'Business', 'Verdienen terwijl je leert', 'Bewijs', 'Reviews', 'Bezwaren', 'Het aanbod', 'De volgende stap', 'Delen', 'MoreThanMoney']),
     semana: 'per week', esforco: 'Aan inzet ontbreekt het je niet.', sistema: 'Je mist een systeem.',
     ruido: ['tip 🔥 koop nu', 'gratis VIP-groep', '«zeker signaal»', 'video van 12 min', 'winst-screenshot', 'wondercursus', 'volg deze goeroe', 'willekeurige tutorial'],
@@ -198,6 +204,7 @@ const novas = {
     liberdade: 'Vrijheid is kiezen.', libPal: ['Tijd', 'Gezin', 'Plekken', 'Keuze'], libFim: 'Stap voor stap.', zonaMtm: 'MTM-zone', definido: 'bepaald', parciais: 'deelwinsten',
   },
   pl: {
+    abertura: ['Czas.', 'Wybór.', 'Metoda.', 'Wolność.'],
     cap: capDe(['Problem', 'Problem', 'Kim jesteśmy', 'Wolność', 'Filar · MTM Markets', 'Filar · Content & Business', 'Stosujesz', 'Aplikacja', 'Alerty', 'Narzędzia', 'Realizacja · MTM Auto', 'Biznes', 'Zarabiaj, ucząc się', 'Dowód', 'Opinie', 'Obiekcje', 'Oferta', 'Następny krok', 'Udostępnij', 'MoreThanMoney']),
     semana: 'tygodniowo', esforco: 'Wysiłku ci nie brakuje.', sistema: 'Brakuje ci systemu.',
     ruido: ['cynk 🔥 kupuj teraz', 'darmowa grupa VIP', '«pewny sygnał»', 'film na 12 min', 'screen z zyskiem', 'cudowny kurs', 'słuchaj tego guru', 'przypadkowy tutorial'],

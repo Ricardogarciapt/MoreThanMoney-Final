@@ -25,6 +25,11 @@ const duracao = f => Number(execFileSync('ffprobe', ['-v', 'error', '-show_entri
 // linha do tempo a partir das durações reais da voz (ou estimadas)
 let t = ABRE, temVoz = true
 const TL = guiao.filter(c => !so || c.id === so).map(c => {
+  if (c.semVoz) { // abertura só com imagem e música
+    const cena = { id: c.id, ini: t, dur: c.semVoz, fala: 0, frases: [], audio: null }
+    t += cena.dur
+    return cena
+  }
   const f = path.join(vozDir, `${c.id}.mp3`)
   let fala
   if (fs.existsSync(f)) fala = duracao(f)
@@ -38,6 +43,7 @@ const TL = guiao.filter(c => !so || c.id === so).map(c => {
   return cena
 })
 const total = t + 1.2
+if (!TL.some(c => c.audio)) temVoz = false
 console.log(`[${lang}] ${TL.length} cenas, ${total.toFixed(1)} s${temVoz ? '' : ' (durações estimadas, sem voz)'}`)
 
 // áudio: cada fala no seu início, num só ficheiro
@@ -46,12 +52,17 @@ fs.mkdirSync(out, { recursive: true })
 const audio = path.join(out, `voz-${lang}${so ? '-' + so : ''}.wav`)
 if (temVoz) {
   const ins = [], filt = []
-  TL.forEach((c, i) => { ins.push('-i', c.audio); filt.push(`[${i}:a]aresample=48000,adelay=${Math.round(c.ini * 1000)}:all=1[a${i}]`) })
+  const falas = TL.filter(c => c.audio)
+  falas.forEach((c, i) => { ins.push('-i', c.audio); filt.push(`[${i}:a]aresample=48000,adelay=${Math.round(c.ini * 1000)}:all=1[a${i}]`) })
   const musica = path.join(DIR, 'musica.mp3'), temMusica = fs.existsSync(musica) && !so
-  filt.push(`${TL.map((_, i) => `[a${i}]`).join('')}amix=inputs=${TL.length}:normalize=0,apad=whole_dur=${total.toFixed(2)},loudnorm=I=-16:TP=-1.5,aresample=48000${temMusica ? '[voz]' : '[out]'}`)
-  if (temMusica) { // música por baixo da voz, a cerca de -22 dB, com entrada e saída suaves
-    ins.push('-stream_loop', '-1', '-i', musica)
-    filt.push(`[${TL.length}:a]aresample=48000,atrim=0:${total.toFixed(2)},loudnorm=I=-16,aresample=48000,volume=0.11,afade=t=in:d=2,afade=t=out:st=${(total - 4).toFixed(2)}:d=4[m]`, `[voz][m]amix=inputs=2:normalize=0:duration=first[out]`)
+  filt.push(`${falas.map((_, i) => `[a${i}]`).join('')}amix=inputs=${falas.length}:normalize=0,apad=whole_dur=${total.toFixed(2)},loudnorm=I=-16:TP=-1.5,aresample=48000${temMusica ? ',asplit[voz][chave]' : '[out]'}`)
+  if (temMusica) {
+    // Música com energia: cheia na abertura e nas pausas, baixa sozinha por baixo da voz (ducking pela própria voz).
+    // Nível de base ~-20 LUFS; com voz desce cerca de 10 dB, para a fala ficar sempre à frente.
+    ins.push('-i', musica)
+    filt.push(`[${falas.length}:a]aresample=48000,atrim=0:${total.toFixed(2)},loudnorm=I=-16,aresample=48000,volume=0.6,afade=t=in:d=0.3,afade=t=out:st=${(total - 4).toFixed(2)}:d=4[m]`,
+      `[m][chave]sidechaincompress=threshold=0.015:ratio=10:attack=15:release=450:makeup=1[md]`,
+      `[voz][md]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.89[out]`)
   }
   execFileSync('ffmpeg', ['-y', '-v', 'error', ...ins, '-filter_complex', filt.join(';'), '-map', '[out]', '-ac', '2', audio])
 }

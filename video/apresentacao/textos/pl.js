@@ -1,6 +1,7 @@
 // gerado por fonte.mjs — não editar à mão
 window.TXT = {
  "cap": {
+  "s00-abertura": "MoreThanMoney",
   "s01-gancho": "Problem",
   "s02-problema": "Problem",
   "s03-quem": "Kim jesteśmy",
@@ -337,6 +338,12 @@ window.TXT = {
  "estrategias": "Strategie",
  "seguir": "Obserwuj",
  "contaLigada": "Konto PU Prime · połączone",
+ "abertura": [
+  "Czas.",
+  "Wybór.",
+  "Metoda.",
+  "Wolność."
+ ],
  "liberdade": "Wolność to wybór.",
  "libPal": [
   "Czas",

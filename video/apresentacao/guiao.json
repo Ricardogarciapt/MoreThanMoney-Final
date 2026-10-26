@@ -68,6 +68,10 @@
  },
  "cenas": [
   {
+   "id": "s00-abertura",
+   "semVoz": 6.4
+  },
+  {
    "id": "s01-gancho",
    "pt": "Se trabalhas quarenta horas por semana e no fim do mês sobra pouco, o problema não é o teu esforço. É não teres um sistema. Dá-me uns minutos e eu mostro-te o que construímos para mudar isso.",
    "en": "If you work forty hours a week and there's little left at the end of the month, the problem isn't your effort. It's that you don't have a system. Give me a few minutes and I'll show you what we built to change that.",

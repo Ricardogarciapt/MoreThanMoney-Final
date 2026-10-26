@@ -18,7 +18,7 @@ for (const lang of langs) {
   const dir = path.join(DIR, 'voz', lang)
   fs.mkdirSync(dir, { recursive: true })
   const falar = s => (G.pronuncia[lang] || []).reduce((t, [a, b]) => t.split(a).join(b), s)
-  for (const c of G.cenas) {
+  for (const c of G.cenas.filter(c => !c.semVoz)) {
     const mp3 = path.join(dir, `${c.id}.mp3`), marca = mp3 + '.txt', chave = `${voz}\n${c[lang]}`
     if (fs.existsSync(mp3) && fs.existsSync(marca) && fs.readFileSync(marca, 'utf8') === chave) continue
     for (let tentativa = 1; ; tentativa++) {

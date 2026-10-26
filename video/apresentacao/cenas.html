@@ -101,11 +101,24 @@ const T = window.TXT
 // ---------------------------------------------------------------- b-roll (stock com licença livre, ver MTM-Assets/stock/LICENCAS.md)
 // Fotogramas JPEG a 30 fps extraídos dos elementos de 15 s: broll/<elemento>/0001.jpg…
 const BROLL = {
+ 's00-abertura':{seq:[['dubai',0.3,0.9],['liberdade',1.2,0.9],['aprender',4.6,0.8],['viajar',4.4,0.8],['liberdade',8.2,0.8],['dubai',9.6,9]],op:1},
  's01-gancho':{el:'rotina-para-sistema',de:0,op:.30}, 's02-problema':{el:'rotina-para-sistema',de:3.8,op:.26},
  's03b-liberdade':{el:'liberdade',de:0,op:1}, 's04-markets':{el:'aprender',de:0,op:.16},
  's08-ganha':{el:'aprender',de:7.4,op:.18}, 's12-cta':{el:'viajar',de:0,op:.14}, 's14-fecho':{el:'dubai',de:0,op:.42},
 }
 const BROLL_N = {}  // nº de fotogramas por elemento, preenchido pelo render
+// Capturas reais (MTM-Assets/capturas → capturas/) em telemóvel, por cima da cena, numa janela de progresso [de, ate].
+const INSERTOS = {
+ 's05-scanners':{de:.02, ate:.4, fundo:true, tels:[['gold-killer-topo','Gold Killer'],['aurum-flow-topo','Aurum Flow'],['trendshot-topo','TrendShot'],['mtm-scanner-topo','MTM Scanner']]},
+ 's07-execucao':{de:.46, ate:1.1, tels:[['auto-sessao-1-sinais','']], x:200},
+}
+function insertosDe(r, id){ const d=INSERTOS[id]; if(!d||!d.tels.length) return null
+ const cx=el('div','abs',null,{inset:0,zIndex:15,opacity:0,background:d.fundo?'radial-gradient(ellipse at center, rgba(11,10,8,.92), rgba(11,10,8,.98))':'transparent'}); r.append(cx)
+ const n=d.tels.length, w=n>1?360:430, gap=60, x0=d.x!=null?d.x:(1920-(n*w+(n-1)*gap))/2
+ const tels=d.tels.map(([img,nome],i)=>{ const t=el('div','telefone',null,{left:(x0+i*(w+gap))+'px',top:n>1?'90px':'110px',width:w+'px',height:(n>1?Math.round(w*852/393):880)+'px'}); t.innerHTML=`<img src="capturas/${img}.jpg" style="width:100%;height:100%;object-fit:cover;object-position:top">`; cx.append(t)
+  if(nome){ const l=el('div','abs anton ouro',nome,{left:(x0+i*(w+gap))+'px',width:w+'px',top:'880px',textAlign:'center',fontSize:'52px'}); cx.append(l); t.lab=l }
+  return t })
+ return {cx,tels,d} }
 function brollDe(r, id){ const b=BROLL[id]; if(!b) return null
  const i=el('img','abs',null,{left:0,top:0,width:'1920px',height:'1080px',objectFit:'cover',opacity:b.op,zIndex:0}); r.prepend(i)
  const v=el('div','abs',null,{inset:0,zIndex:0,background:b.op<1?'radial-gradient(ellipse at center, rgba(11,10,8,.35), rgba(11,10,8,.85))':'linear-gradient(180deg, rgba(11,10,8,.15), rgba(11,10,8,.65))'}); i.after(v)
@@ -115,6 +128,25 @@ function brollDe(r, id){ const b=BROLL[id]; if(!b) return null
 // Cada cena: build(root) -> estado; update(estado, k) com k = progresso 0..1 na cena, s = segundos na cena
 const CENAS = {}
 
+CENAS['s00-abertura'] = {
+ build(r){
+  const flash=el('div','abs',null,{inset:0,background:'#E9C46A',opacity:0,zIndex:5}); r.append(flash)
+  const pal=T.abertura.map(p=>{ const d=el('div','abs anton',p,{left:0,right:0,top:'380px',textAlign:'center',fontSize:'210px',color:'#f3ede1',opacity:0,zIndex:6,textShadow:'0 10px 50px rgba(0,0,0,.7)',letterSpacing:'.02em'}); r.append(d); return d })
+  const logo=el('img','abs',null,{left:'810px',top:'250px',width:'300px',opacity:0,zIndex:6}); logo.src='../../public/logo-mtm-transparent.png'; r.append(logo)
+  const a=el('div','abs anton',T.fecho1,{left:0,right:0,top:'600px',textAlign:'center',fontSize:'110px',opacity:0,zIndex:6}); r.append(a)
+  const b=el('div','abs anton ouro',T.fecho2,{left:0,right:0,top:'730px',textAlign:'center',fontSize:'110px',opacity:0,zIndex:6}); r.append(b)
+  const veu=el('div','abs',null,{inset:0,background:'rgba(11,10,8,.55)',opacity:0,zIndex:4}); r.append(veu)
+  return {flash,pal,logo,a,b,veu}
+ },
+ update(o,k,s){
+  // cortes a 0,9 s com flash dourado; palavras curtas a bater nos cortes; depois logótipo e assinatura
+  const cortes=[0.9,1.8,2.6,3.4,4.2]; let f=0; cortes.forEach(c=>{ const d=Math.abs(s+.45-c); if(d<.12) f=Math.max(f,(1-d/.12)*.55) }); o.flash.style.opacity=f
+  o.pal.forEach((p,i)=>{ const ini=.95+i*.85, fim=ini+.75, v=prog(s,ini,ini+.12)*(1-prog(s,fim-.12,fim)); p.style.opacity=v; p.style.transform=`scale(${1.12-.12*out(prog(s,ini,fim))})` })
+  const z=prog(s,4.4,5.0); o.veu.style.opacity=z
+  o.logo.style.opacity=out(prog(s,4.5,5.1)); o.logo.style.filter=`blur(${(1-out(prog(s,4.5,5.1)))*14}px)`
+  entra(o.a,prog(s,4.9,5.4)); entra(o.b,prog(s,5.2,5.7))
+ }
+}
 CENAS['s01-gancho'] = {
  build(r){
   const n = el('div','abs anton',null,{left:'0',right:'0',top:'250px',textAlign:'center',fontSize:'330px',lineHeight:'1',color:'#f3ede1'}); r.append(n)
@@ -523,7 +555,7 @@ CENAS['s09b-avaliacoes'] = {
 // ---------------------------------------------------------------- linha do tempo
 // window.TL = [{id, ini, dur, frases:[{t, ini, fim}]}]  (segundos absolutos)
 const palco=document.getElementById('palco'), montadas={}
-function montar(){ for(const c of window.TL){ const r=el('div','cena'); palco.append(r); montadas[c.id]={r,o:CENAS[c.id].build(r),c,br:brollDe(r,c.id)} } }
+function montar(){ for(const c of window.TL){ const r=el('div','cena'); palco.append(r); montadas[c.id]={r,o:CENAS[c.id].build(r),c,br:brollDe(r,c.id),ins:insertosDe(r,c.id)} } }
 const grao=document.getElementById('grao'), gg=grao.getContext('2d'), img=gg.createImageData(960,540)
 function ruido(seed){ const R=rng(seed); for(let i=0;i<img.data.length;i+=4){ const v=R()*255; img.data[i]=img.data[i+1]=img.data[i+2]=v; img.data[i+3]=255 } gg.putImageData(img,0,0) }
 let ultimoGrao=-1
@@ -539,7 +571,11 @@ window.renderAt = async function(t){
   m.r.style.opacity = Math.min(prog(s,-X,.05), fin)
   m.r.style.transform = `scale(${1+.03*prog(s,0,c.dur)})`
   CENAS[c.id].update(m.o, clamp(s/c.dur), s)
-  if(m.br){ const n=BROLL_N[m.br.b.el]||450, f=String(1+Math.min(n-1,Math.max(0,Math.floor((s+X+m.br.b.de)*30)))).padStart(4,'0'), src=`broll/${m.br.b.el}/${f}.jpg`; if(m.br.ult!==src){ m.br.ult=src; m.br.i.src=src; esperar.push(m.br.i.decode().catch(()=>{})) } }
+  if(m.ins){ const k=clamp(s/c.dur), d=m.ins.d, a=prog(k,d.de,d.de+.04)*(1-prog(k,d.ate-.04,d.ate)); m.ins.cx.style.opacity=a
+   m.ins.tels.forEach((t,i)=>{ const e=out(prog(k,d.de+i*.03,d.de+.06+i*.03)); t.style.transform=`translateY(${(1-e)*120}px) rotate(${(i-(m.ins.tels.length-1)/2)*1.2*(1-e)}deg)`; t.style.opacity=e; if(t.lab) t.lab.style.opacity=e }) }
+  if(m.br){ let elx=m.br.b.el, de=m.br.b.de, ss=s+X
+   if(m.br.b.seq){ let acc=0; for(const [e,d,dur] of m.br.b.seq){ elx=e; de=d-acc; if(ss<acc+dur) break; acc+=dur } }
+   const n=BROLL_N[elx]||450, f=String(1+Math.min(n-1,Math.max(0,Math.floor((ss+de)*30)))).padStart(4,'0'), src=`broll/${elx}/${f}.jpg`; if(m.br.ult!==src){ m.br.ult=src; m.br.i.src=src; esperar.push(m.br.i.decode().catch(()=>{})) } }
   if(s>=0 && s<c.dur) atual={c,s,i}
  })
  const cap=document.getElementById('capitulo'), leg=document.getElementById('legenda')
