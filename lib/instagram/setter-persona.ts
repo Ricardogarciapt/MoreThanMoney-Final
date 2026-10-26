@@ -16,7 +16,7 @@
  *
  * FASE 1 — resposta PÚBLICA ao comentário (`POST /{comment-id}/replies`). Curta, valida o que a
  *   pessoa disse, avisa que foi material por privado. Nunca vende nem qualifica em público.
- * FASE 2 — a DM (`POST /{comment-id}/private_replies`). Entrega o que foi prometido, e faz UMA
+ * FASE 2 — a DM (resposta privada: `POST /me/messages` com `recipient.comment_id`, ver resposta-privada.ts). Entrega o que foi prometido, e faz UMA
  *   pergunta. Uma só.
  *
  * As duas fases não competem por orçamento nenhum: são endpoints distintos. O que é escasso é a
