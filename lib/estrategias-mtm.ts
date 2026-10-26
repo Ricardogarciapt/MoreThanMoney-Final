@@ -78,4 +78,32 @@ export const ESTRATEGIAS_MTM: EstrategiaMtm[] = [
     playlist: { pt: "https://www.youtube.com/playlist?list=PLC18FgHeGfwU", en: "https://www.youtube.com/playlist?list=PLRSOqGU2KHfg" },
     guia: guias("quantum"),
   },
+  {
+    slug: "goldkiller",
+    nome: "GoldKiller",
+    resumo: { pt: "O ouro com alvos claros: SuperTrend e níveis por percentil.", en: "Gold with clear targets: SuperTrend and percentile levels." },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLaFlVNVMxKd8", en: "https://www.youtube.com/playlist?list=PLUX3Y_8ueY5s" },
+    guia: guias("goldkiller"),
+  },
+  {
+    slug: "aurum-flow",
+    nome: "Aurum Flow",
+    resumo: { pt: "Rompimento da range de abertura, com stop na aresta oposta.", en: "Opening range breakout, with the stop on the opposite edge." },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLdRz7aeu-CNM", en: "https://www.youtube.com/playlist?list=PLSwVkYotrvXo" },
+    guia: guias("aurum-flow"),
+  },
+  {
+    slug: "mtm-scanner",
+    nome: "MTM Scanner",
+    resumo: { pt: "Médias duplas, POC de volume e estrutura de mercado.", en: "Double averages, the volume POC and market structure." },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLW79pgIVtPKY", en: "https://www.youtube.com/playlist?list=PLDwF4mDMsFvU" },
+    guia: guias("mtm-scanner"),
+  },
+  {
+    slug: "sensei",
+    nome: "Sensei",
+    resumo: { pt: "Confluência de leituras: só dá sinal com confirmações suficientes.", en: "A confluence of readings: it only signals with enough confirmations." },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLPP0wxYO-Kv8", en: "https://www.youtube.com/playlist?list=PLNc_hqTepzIc" },
+    guia: guias("sensei"),
+  },
 ]
