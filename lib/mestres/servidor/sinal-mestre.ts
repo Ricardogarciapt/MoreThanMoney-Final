@@ -63,6 +63,12 @@ export const ESTRATEGIA_DO_WEBHOOK: Record<string, AlvoDaFonte> = {
    * nasce em sombra pelo «Registar na cadeia» do admin, e o provider (9e178a77) está desligado.
    */
   trendshot: { slug: 'mtm-auto-trendshot', comentario: 'MTM Auto Trendshot' },
+  /**
+   * MTM Auto Edge (26/10, pedido do dono): estratégia individual, alimentada pelo pv-relay com os 2
+   * top traders do canal PrimeVerse (lib/mestres/edge-pv.ts). Cada ENTRY HIT é uma trade — a chave é
+   * o id da mensagem do SETUP (`tg:<id>`), que é também o que os seguimentos do trader citam.
+   */
+  edge: { slug: 'mtm-auto-edge', comentario: 'MTM Auto Edge', prefixo: 'tg' },
   // Premium (relay-post → processador → lib/mestres/servidor/premium.ts), não o webhook TradingView.
   premium: { slug: SLUG_PREMIUM, comentario: COMENTARIO_PREMIUM, ignoraProviderAtivo: true, permitirDuplicado: true, prefixo: 'tg' },
 }

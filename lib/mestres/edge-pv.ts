@@ -25,6 +25,17 @@
  *
  * DUPLICADOS: pelo id da mensagem (quando vem) e pela chave do setup — o mesmo ENTRY HIT do mesmo
  * setup só conta uma vez. Atrasados e repetidos respondem `ok` para o relay avançar.
+ *
+ * 26/10 — OS 2 TOP TRADERS (decisão do dono: «Edge continua individual, ativando sinais pela fonte PV
+ * seguindo sempre os 2 top traders do Telegram da PrimeVerse»). O trader deixa de ser fixo (fxedge):
+ *  · o relay lê o canal inteiro e faz o RANKING por pips líquidos dos resultados anunciados pelos
+ *    próprios traders (TRADE CLOSED / SL HIT) numa janela móvel (14 dias por omissão) — ver
+ *    services/pv-relay/relay.py › ranking;
+ *  · manda o ranking à rota (`kind: 'ranking'`), que o guarda em site_settings.pv_top_traders;
+ *  · um ENTRY HIT só executa se o trader estiver nos 2 primeiros desse ranking E o ranking for
+ *    recente (≤ 36 h — um ranking velho quer dizer relay morto, e aí ninguém executa);
+ *  · os seguimentos (cancel/close/BE/SL) de uma entrada que JÁ abriu continuam a ser seguidos mesmo
+ *    que o trader saia do top entretanto — fechar o que se abriu nunca depende do ranking.
  */
 
 export const ATRASO_MAX_S = 180
@@ -37,6 +48,46 @@ export const KINDS_PV: readonly KindPv[] = ['setup', 'entry_hit', 'cancel', 'clo
 
 /** A estratégia que o pedido pode tocar. Só a Edge executa; o resto é recusado aqui. */
 export const SLUG_EDGE = 'mtm-auto-edge'
+
+export const TOP_N = 2
+export const CHAVE_TOP = 'pv_top_traders'
+export const TOP_VALIDADE_H = 36
+
+export interface TraderNoTop { trader: string; pips: number; trades: number }
+export interface TopTraders { top: TraderNoTop[]; janelaDias: number; em: string }
+
+const normTrader = (t: unknown): string => String(t ?? '').trim().toLowerCase().replace(/^@/, '')
+
+/** O ranking guardado (site_settings.pv_top_traders) ou o que o relay mandou — validado. */
+export function lerTopTraders(v: unknown): TopTraders | null {
+  if (!v || typeof v !== 'object') return null
+  const o = v as Record<string, unknown>
+  const lista = Array.isArray(o.top) ? o.top : null
+  if (!lista) return null
+  const top: TraderNoTop[] = []
+  for (const x of lista) {
+    const r = (x && typeof x === 'object' ? x : { trader: x }) as Record<string, unknown>
+    const trader = normTrader(r.trader)
+    if (!trader || !/^[a-z0-9_.\-]{2,40}$/.test(trader) || top.some((t) => t.trader === trader)) continue
+    top.push({ trader, pips: Number(r.pips) || 0, trades: Math.max(0, Math.round(Number(r.trades) || 0)) })
+  }
+  const em = String(o.em ?? o.atualizado_em ?? '')
+  if (!Number.isFinite(Date.parse(em))) return null
+  return { top, janelaDias: Math.max(1, Math.round(Number(o.janelaDias ?? o.janela_dias) || 14)), em }
+}
+
+/** Os traders que a Edge segue AGORA (vazio = ranking ausente ou velho → ninguém executa). */
+export function tradersDaEdge(t: TopTraders | null, agora: Date): string[] {
+  if (!t) return []
+  if (agora.getTime() - Date.parse(t.em) > TOP_VALIDADE_H * 3600_000) return []
+  return t.top.slice(0, TOP_N).map((x) => x.trader)
+}
+
+/** A estratégia que um SETUP/ENTRY HIT deste trader toca: a Edge, se ele estiver no top; senão nenhuma. */
+export function estrategiaDoTraderPv(trader: unknown, t: TopTraders | null, agora: Date): string | null {
+  const n = normTrader(trader)
+  return n && tradersDaEdge(t, agora).includes(n) ? SLUG_EDGE : null
+}
 
 /** A data da mensagem, se o relay a mandar (ISO ou epoch em s/ms). */
 export function dataDoPedido(b: Record<string, unknown>): Date | null {
