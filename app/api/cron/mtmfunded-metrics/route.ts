@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { avaliarConta, ordenarClassificacao, type RegrasConta } from '@/lib/mtmfunded/regras'
 
@@ -372,7 +373,12 @@ export async function GET(request: NextRequest) {
         margemLivre: snap.margemLivre ?? null,
         nivelMargem: snap.nivelMargem ?? null,
         historico: empilhar(anterior.historico, snap),
-        lidoEm: new Date().toISOString(),
+        /**
+         * A hora da LEITURA, não a desta passagem. Numa conta lida pelo VPS quem lê é o leitor; se
+         * aqui se carimbasse «agora», um leitor parado parecia vivo — foi assim que a paragem de
+         * 25/10 22:16 passou um dia inteiro com `lidoEm` fresco e números de véspera.
+         */
+        lidoEm: doVps && typeof guardadoVps.lidoEm === 'string' ? guardadoVps.lidoEm : new Date().toISOString(),
       }
 
       if (veredicto.quebrou) {
@@ -453,7 +459,7 @@ export async function GET(request: NextRequest) {
       }
 
       await db.from('mtm_trading_accounts')
-        .update({ metricas, metricas_lidas_em: new Date().toISOString() })
+        .update({ metricas, metricas_lidas_em: metricas.lidoEm })
         .eq('id', conta.id as string)
 
       linhas.push({
@@ -488,6 +494,10 @@ export async function GET(request: NextRequest) {
 
     notas.push(`${torneio.slug}: ${ordenadas.length} participantes ordenados`)
   }
+
+  // A página do torneio é servida da CDN (ISR): refaz-se já com a classificação nova, em vez de
+  // esperar pelos 5 minutos dela.
+  if (torneios?.length) revalidatePath('/mtmfunded/tradingtournament')
 
   // ── os desafios MT5, que não têm participante nenhum a apontar para eles ──
   // Mesmo vigia do cron de 10 min (lib/mtmfunded/leitura-mt5-servidor.ts): só REST, respeita a
