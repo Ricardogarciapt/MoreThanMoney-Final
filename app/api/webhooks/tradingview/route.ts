@@ -929,7 +929,7 @@ async function processarAlerta(request: NextRequest) {
 
   /**
    * Stop fixo e timeframe por estratégia (pedido do dono, 26/10 — lib/sinais/sl-por-estrategia):
-   * Sensei 200 pips e só 15m; GoldKiller, MTM Scanner 100 pips. Só nas ENTRADAS; os seguimentos
+   * MTM Scanner 100 pips; Sensei só 15m (Sensei/GoldKiller mantêm o stop do Pine). Só nas ENTRADAS; os seguimentos
    * continuam ligados à entrada pela chave, que já foi calculada com o stop do alerta.
    */
   const entradaDoAlerta = initSignalKind === "entry" && !mgmtStatus

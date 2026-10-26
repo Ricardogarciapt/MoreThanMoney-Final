@@ -1,6 +1,8 @@
 /**
  * STOP FIXO POR ESTRATÉGIA (pedido do dono, 26/10/2026):
- *   Sensei 200 pips (e só 15m) · GoldKiller 100 pips · MTM Scanner 100 pips · Trendshot 100 pips.
+ *   MTM Scanner 100 pips · Trendshot 100 pips. O Sensei só aceita 15m.
+ *   Sensei (200) e GoldKiller (100) ficaram com o stop do Pine: no backtest de 30 dias pioravam
+ *   (/mnt/project-files/sinais/backtest-sl-por-estrategia.md) — decisão do dono, 26/10.
  *
  * O stop do alerta Pine é substituído por este, à mesma distância da entrada, em todo o lado: o
  * cartão do chat e do Telegram, a mestre e o T2T. Os alvos ficam os do Pine (o Trendshot calcula os
@@ -14,8 +16,6 @@
 import { pipSizeForSymbol } from '@/lib/mtmcopy/trade-outcome'
 
 export const SL_PIPS_POR_ESTRATEGIA: Record<string, number> = {
-  sensei: 200,
-  goldkiller: 100,
   'mtm-scanner': 100,
   trendshot: 100,
 }
