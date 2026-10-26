@@ -7,16 +7,33 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   ArrowRight,
+  BellRing,
   Check,
   Download,
   FileText,
   KeyRound,
+  LayoutDashboard,
+  ListChecks,
   Loader2,
+  Newspaper,
+  ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
+  Target,
+  TrendingUp,
 } from "lucide-react"
 import { MockupGrafico, MockupPainel, MockupConfirmacoes } from "@/components/sensei-ea-mockups"
 import { SenseiResultadosLive } from "@/components/sensei-resultados-live"
 import { DescarregarMt5 } from "@/components/descarregar-mt5"
+import {
+  ConfirmacoesAnimadas,
+  FaixaFactos,
+  FundoHero,
+  GraficoEaAnimado,
+  Inclinar,
+  Revelar,
+  SenseiEstilos,
+} from "@/components/sensei/sensei-motion"
 
 const PRECO_ANUAL = 297
 const PRECO_VITALICIO = 1000
@@ -54,32 +71,35 @@ export default function SenseiEaPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
+      <SenseiEstilos />
+
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden border-b border-[#D2A63C]/15">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(210,166,60,0.12),transparent_60%)]" />
-        <div className="relative max-w-6xl mx-auto px-4 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-center">
-          <div>
+        <FundoHero />
+        <div className="relative max-w-6xl mx-auto px-4 pt-16 pb-14 md:pt-24 md:pb-20 grid md:grid-cols-[1fr_1.15fr] gap-12 items-center">
+          <Revelar>
             <span className="inline-flex items-center gap-2 rounded-full border border-[#D2A63C]/30 bg-[#D2A63C]/10 px-3 py-1 text-xs text-[#D2A63C]">
               <Sparkles className="w-3.5 h-3.5" />
-              MetaTrader 5 · Expert Advisor
+              MetaTrader 5 · Expert Advisor · pronto a operar
             </span>
-            <h1 className="mt-5 text-4xl md:text-5xl font-bold leading-tight">
-              O <span className="text-[#D2A63C]">MTM Sensei</span> a correr sozinho no teu MetaTrader
+            <h1 className="mt-5 text-4xl md:text-6xl font-bold leading-[1.05]">
+              O <span className="bg-gradient-to-r from-[#E9C46A] via-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">MTM Sensei</span>{" "}
+              a correr sozinho no teu MetaTrader
             </h1>
-            <p className="mt-5 text-gray-400 text-lg leading-relaxed">
+            <p className="mt-6 text-gray-300 text-lg leading-relaxed">
               A mesma leitura que fazemos à mão — estrutura, order blocks, liquidez, sessões —
               transformada num robô que lê, entra, tira parciais e faz trailing. Vinte confirmações
               antes de cada entrada, e o painel no gráfico para tomares conta quando quiseres.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a href="#comprar">
-                <Button className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black font-semibold h-12 px-6">
+                <Button className="snx-brilho bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black font-semibold h-12 px-6 shadow-[0_10px_40px_-10px_rgba(210,166,60,.6)]">
                   Comprar licença
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </a>
               <a href="/api/sensei-ea/guia" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" className="border-[#D2A63C]/40 text-[#D2A63C] h-12 px-6">
+                <Button variant="outline" className="border-[#D2A63C]/40 text-[#D2A63C] h-12 px-6 bg-transparent hover:bg-[#D2A63C]/10">
                   <FileText className="w-4 h-4 mr-2" />
                   Ler o guia (PDF)
                 </Button>
@@ -88,79 +108,156 @@ export default function SenseiEaPage() {
             <p className="mt-4 text-sm text-gray-500">
               Incluído sem custo para membros Premium, VIP e Fundador.
             </p>
-          </div>
+          </Revelar>
 
-          <div className="rounded-2xl border border-[#D2A63C]/20 bg-black/40 p-3 shadow-2xl">
-            <MockupGrafico className="w-full h-auto rounded-lg" />
-            <p className="text-[11px] text-gray-600 px-2 pt-2">
-              Ilustração dos traçados que o EA desenha no gráfico.
+          <Revelar atraso={150}>
+            <div className="snx-flutua">
+              <Inclinar className="rounded-2xl border border-[#D2A63C]/25 bg-black/50 p-3 shadow-[0_30px_80px_-20px_rgba(210,166,60,.35)]">
+                <GraficoEaAnimado className="w-full h-auto rounded-xl" />
+              </Inclinar>
+            </div>
+            <p className="text-[11px] text-gray-600 px-2 pt-3">
+              Ilustração animada do comportamento do EA. As velas e os preços são ilustrativos.
             </p>
-          </div>
+          </Revelar>
+        </div>
+
+        <div className="relative max-w-6xl mx-auto px-4 pb-16">
+          <FaixaFactos
+            itens={[
+              { valor: 20, rotulo: "confirmações por entrada" },
+              { valor: 4, rotulo: "saídas parciais" },
+              { valor: 3, rotulo: "instrumentos com preset" },
+              { valor: 72, sufixo: " h", rotulo: "a operar sem internet" },
+            ]}
+          />
+        </div>
+      </section>
+
+      {/* ── Do sinal à saída ─────────────────────────────────────────────── */}
+      <section className="border-b border-gray-800/70 bg-gray-900/30">
+        <div className="max-w-6xl mx-auto px-4 py-20 grid md:grid-cols-2 gap-12 items-center">
+          <Revelar>
+            <h2 className="text-3xl md:text-4xl font-bold">
+              Do sinal à saída, <span className="text-[#D2A63C]">sem tirares os olhos da tua vida</span>
+            </h2>
+            <ol className="mt-8 space-y-6">
+              {[
+                {
+                  icon: ListChecks,
+                  t: "Lê",
+                  d: "A cada vela fechada corre as vinte confirmações do Sensei. Cada entrada traz o seu score — vês porque é que entrou.",
+                },
+                {
+                  icon: Target,
+                  t: "Entra",
+                  d: "A mercado, quando o setup confirma, já com stop loss e quatro alvos na corretora. Nada fica só na memória do terminal.",
+                },
+                {
+                  icon: TrendingUp,
+                  t: "Gere até ao fim",
+                  d: "Parciais nos alvos, breakeven automático e trailing por ATR ou por pontos. Deixa um runner a correr ou fecha tudo na quarta saída.",
+                },
+              ].map(({ icon: Icon, t, d }, i) => (
+                <li key={t} className="flex gap-4">
+                  <div className="relative">
+                    <div className="w-11 h-11 rounded-xl bg-[#D2A63C]/10 ring-1 ring-[#D2A63C]/30 flex items-center justify-center">
+                      <Icon className="w-5 h-5 text-[#D2A63C]" />
+                    </div>
+                    {i < 2 && <div className="absolute left-1/2 top-12 h-8 w-px -translate-x-1/2 bg-gradient-to-b from-[#D2A63C]/40 to-transparent" />}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white text-lg">{t}</h3>
+                    <p className="mt-1 text-sm text-gray-400 leading-relaxed">{d}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Revelar>
+          <Revelar atraso={150}>
+            <ConfirmacoesAnimadas />
+          </Revelar>
         </div>
       </section>
 
       {/* ── O que faz ────────────────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-4 py-16">
-        <h2 className="text-2xl md:text-3xl font-bold mb-3">O que está lá dentro</h2>
-        <p className="text-gray-400 max-w-2xl">
-          Um só ficheiro para anexar ao gráfico. O indicador corre dentro do robô — não precisas de
-          instalar nada por fora nem de ligar dois ficheiros um ao outro.
-        </p>
+      <section className="max-w-6xl mx-auto px-4 py-20">
+        <Revelar>
+          <h2 className="text-3xl md:text-4xl font-bold mb-3">O que está lá dentro</h2>
+          <p className="text-gray-400 max-w-2xl">
+            Um só ficheiro para anexar ao gráfico. O indicador corre dentro do robô — não precisas de
+            instalar nada por fora nem de ligar dois ficheiros um ao outro.
+          </p>
+        </Revelar>
 
-        <div className="grid md:grid-cols-3 gap-6 mt-10">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10">
           {[
             {
+              icon: ListChecks,
               t: "Vinte confirmações",
               d: "Tendência de tempo superior, EMA 200 fechada, estrutura (BOS/CHoCH), order blocks, sweeps de liquidez, POC, RSI, ADX, fluxo de ordens e sessão. Cada entrada traz o seu score.",
             },
             {
+              icon: Target,
               t: "Gestão até ao fim",
               d: "Quatro saídas parciais configuráveis, breakeven automático e trailing por ATR ou por pontos. Podes deixar um runner a correr ou fechar tudo na quarta saída.",
             },
             {
+              icon: LayoutDashboard,
               t: "Painel no gráfico",
               d: "Automático on/off, comprar e vender à mão, risco em % ou lotes, parcial imediato, trailing, fechar tudo, estilo de trading, PT/EN. Painéis arrastáveis.",
             },
             {
+              icon: Newspaper,
               t: "Filtro de notícias",
               d: "Calendário do MetaTrader ou fonte externa por CSV/URL. Define a antecedência e o tempo depois do evento, e o robô fica quieto.",
             },
             {
+              icon: ShieldCheck,
               t: "Modo prop firm",
               d: "Perda diária, perda total e alvo de lucro, medidos por saldo ou por equity. Trava o dia quando o limite é tocado e volta a abrir no dia seguinte.",
             },
             {
+              icon: SlidersHorizontal,
               t: "Presets prontos",
-              d: "Ficheiros .set com par, tempo gráfico e horário já afinados. O guia diz qual usar e — mais importante — quais evitar.",
+              d: "Ficheiros .set com par, tempo gráfico e horário já afinados. O guia diz qual usar em cada instrumento.",
             },
             {
+              icon: Download,
               t: "Instalador automático",
               d: "Windows e macOS. Encontra o teu MetaTrader — mesmo com dois instalados de corretoras diferentes — copia tudo para o sítio certo e abre o guia.",
             },
             {
+              icon: BellRing,
               t: "Avisos de versão",
               d: "O EA diz-te quando sai uma versão nova e o que mudou, e pode descarregá-la para a pasta Files. Afinações de risco e trailing podem chegar do servidor, se autorizares.",
             },
-          ].map(({ t, d }) => (
-            <div key={t} className="rounded-xl border border-gray-800 bg-gray-900/50 p-6">
-              <div className="rounded-lg bg-[#D2A63C]/10 w-9 h-9 flex items-center justify-center ring-1 ring-[#D2A63C]/20 mb-4">
-                <Check className="w-4 h-4 text-[#D2A63C]" />
+          ].map(({ icon: Icon, t, d }, i) => (
+            <Revelar key={t} atraso={(i % 4) * 90}>
+              <div className="group h-full rounded-xl border border-gray-800 bg-gray-900/50 p-6 transition duration-300 hover:-translate-y-1 hover:border-[#D2A63C]/40 hover:shadow-[0_20px_50px_-25px_rgba(210,166,60,.5)]">
+                <div className="rounded-lg bg-[#D2A63C]/10 w-10 h-10 flex items-center justify-center ring-1 ring-[#D2A63C]/20 mb-4 transition group-hover:bg-[#D2A63C]/20">
+                  <Icon className="w-5 h-5 text-[#D2A63C]" />
+                </div>
+                <h3 className="font-semibold text-white mb-2">{t}</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">{d}</p>
               </div>
-              <h3 className="font-semibold text-white mb-2">{t}</h3>
-              <p className="text-sm text-gray-400 leading-relaxed">{d}</p>
-            </div>
+            </Revelar>
           ))}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mt-10">
-          <div className="rounded-2xl border border-[#D2A63C]/20 bg-black/40 p-3">
-            <MockupPainel className="w-full h-auto rounded-lg" />
+        <div className="grid md:grid-cols-2 gap-6 mt-14">
+          <Revelar>
+            <Inclinar className="rounded-2xl border border-[#D2A63C]/20 bg-black/40 p-3">
+              <MockupPainel className="w-full h-auto rounded-lg" />
+            </Inclinar>
             <p className="text-[11px] text-gray-600 px-2 pt-2">Painel de controlo, sobre o gráfico.</p>
-          </div>
-          <div className="rounded-2xl border border-[#D2A63C]/20 bg-black/40 p-3">
-            <MockupConfirmacoes className="w-full h-auto rounded-lg" />
+          </Revelar>
+          <Revelar atraso={120}>
+            <Inclinar className="rounded-2xl border border-[#D2A63C]/20 bg-black/40 p-3">
+              <MockupConfirmacoes className="w-full h-auto rounded-lg" />
+            </Inclinar>
             <p className="text-[11px] text-gray-600 px-2 pt-2">Confirmações em tempo real.</p>
-          </div>
+          </Revelar>
         </div>
       </section>
 
@@ -326,7 +423,7 @@ export default function SenseiEaPage() {
             },
             {
               q: "Posso usar a licença em duas contas?",
-              a: "Não. Cada licença vale para uma conta MT5, real ou demo. Precisas de outra conta, compras outra licença — ou pedes para libertar a que tens, se mudaste de corretora.",
+              a: "Não. Cada licença vale para uma conta MT5. Precisas de outra conta, compras outra licença — ou pedes para libertar a que tens, se mudaste de corretora.",
             },
             {
               q: "O que acontece se cancelar a anual?",

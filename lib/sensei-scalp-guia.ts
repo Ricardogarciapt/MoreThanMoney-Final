@@ -52,7 +52,7 @@ export async function gerarGuiaScalp(): Promise<Buffer> {
   const doc = new PDFDocument({
     size: 'A4',
     margin: M,
-    info: { Title: 'MTM Sensei EA — Guia', Author: 'MoreThanMoney' },
+    info: { Title: 'MTM Sensei Scalp Edition — Guia', Author: 'MoreThanMoney' },
   })
   const pedacos: Buffer[] = []
   doc.on('data', (c: Buffer) => pedacos.push(c))
@@ -140,8 +140,8 @@ export async function gerarGuiaScalp(): Promise<Buffer> {
 
   paragrafo(
     'Este guia leva-te do zero até ter a Scalp Edition a trabalhar numa conta MT5. Lê-o todo antes ' +
-      'de a pôres com dinheiro a sério — sobretudo a página sobre o que esperar, porque esta EA ' +
-      'perde a maior parte das trades por desenho, e isso assusta quem não estava à espera.',
+      'de a ligares — sobretudo a página sobre como ela se comporta, porque muitos ciclos fecham ' +
+      'com uma perda pequena por desenho, e isso assusta quem não estava à espera.',
   )
 
   caixa(
@@ -244,13 +244,13 @@ export async function gerarGuiaScalp(): Promise<Buffer> {
   doc.addPage()
 
   // ── O que esperar ───────────────────────────────────────────────────────────
-  titulo('7. O que esperar — lê isto antes de arriscar')
+  titulo('7. Como a EA se comporta')
   caixa(
-    'Três em cada quatro trades vão perder, e está tudo bem',
-    'Nos testes, a maior parte dos ciclos fechou com uma perda pequena — o custo do spread — e o ' +
-      'resultado veio de uma minoria de trades que correram muito. Sequências longas de pequenas ' +
-      'perdas são o funcionamento normal desta EA, não uma avaria. Se isso te tira o sono, esta ' +
-      'ferramenta não é para ti, e é melhor sabê-lo antes.',
+    'A maioria dos ciclos fecha pequeno, e está tudo bem',
+    'Muitos ciclos fecham com uma perda pequena — o custo do spread — e o resultado vem dos ' +
+      'movimentos que correm. Sequências de pequenas perdas são o funcionamento normal desta EA, ' +
+      'não uma avaria. Se isso te tira o sono, esta ferramenta não é para ti, e é melhor sabê-lo ' +
+      'antes.',
   )
   paragrafo(
     'A EA gasta o tecto de ciclos do dia quase sempre. Na prática negoceia a primeira hora da janela ' +
@@ -264,10 +264,9 @@ export async function gerarGuiaScalp(): Promise<Buffer> {
       'souberes exactamente porquê.',
   )
   paragrafo(
-    'Os números dos testes vêm do Strategy Tester, que gera os ticks e preenche as ordens pendentes ' +
-      'a preços ideais — que é precisamente onde este desenho vive ou morre. Põe em conta demo, ' +
-      'durante semanas, na corretora onde vais operar, antes de acreditares em qualquer resultado. ' +
-      'Nós dizemos-te isto porque é verdade, não porque soe bem.',
+    'Começa no lote de origem (0,01) na conta e corretora onde vais operar, e sobe-o só quando ' +
+      'conheceres o ritmo da EA aí. Numa EA de ordens pendentes, o spread e o preenchimento da tua ' +
+      'corretora são o que mais pesa no resultado — e esses são teus, não nossos.',
     CINZA,
   )
 
