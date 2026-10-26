@@ -60,6 +60,8 @@ import { TIMEFRAMES_POR_ESTRATEGIA, slFixo, timeframeAceite } from "@/lib/sinais
 import { marcaDaEstrategia } from "@/lib/sinais/grafico-estrategia"
 import { enviarGraficoTelegram, legendaDoGrafico, urlDoGraficoDoSinal } from "@/lib/sinais/grafico-publicar"
 import { stopNaoFoiTocado } from "@/lib/sinais/stop-tocado"
+import { simboloAceite } from "@/lib/sinais/sensei-simbolos"
+import { RR_MINIMO, alvoComRRMinimo } from "@/lib/sinais/saida-tp1"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
@@ -980,6 +982,13 @@ async function processarAlerta(request: NextRequest) {
     if (logId) await supabase.from("tradingview_signals").update({ chat_status: "rejected", telegram_status: "rejected", ai_error: `rejeitado: ${motivo}` }).eq("id", logId)
     return NextResponse.json({ ok: true, valid: false, reason: motivo })
   }
+  // O Sensei só manda BTCUSD e XAUUSD (pedido do dono, 26/10 — lib/sinais/sensei-simbolos.ts).
+  const simboloDoAlerta = v.symbol ?? activeSensei?.symbol ?? ticker
+  if (entradaDoAlerta && !simboloAceite(estrategia, simboloDoAlerta)) {
+    const motivo = `símbolo ${simboloDoAlerta} fora do Sensei (só BTCUSD e XAUUSD)`
+    if (logId) await supabase.from("tradingview_signals").update({ chat_status: "rejected", telegram_status: "rejected", ai_error: `rejeitado: ${motivo}` }).eq("id", logId)
+    return NextResponse.json({ ok: true, valid: false, reason: motivo })
+  }
   const slDaEstrategia = entradaDoAlerta
     ? slFixo(estrategia, v.symbol ?? activeSensei?.symbol ?? ticker, v.direction ?? activeSensei?.direction ?? null, v.entry ?? activeSensei?.entry ?? price)
     : null
@@ -1770,14 +1779,26 @@ async function processarAlerta(request: NextRequest) {
           stopsSaos: stopsSane(entradaAurum, sl),
           perpsGate,
         })
-        if (d.vai && d.simbolo) {
+        const tpsDoAlerta = [tp, tp2, tp3].filter((n): n is number => typeof n === "number" && n > 0)
+        // Sensei X: a posição inteira sai no 1.º alvo com ≥ 1,5R (lib/sinais/saida-tp1.ts, 26/10).
+        const alvoSensei =
+          estrategia === "sensei"
+            ? alvoComRRMinimo(execDirForGate === "sell" ? "sell" : "buy", entradaAurum, sl ?? null, tpsDoAlerta)
+            : null
+        if (d.vai && d.simbolo && estrategia === "sensei" && alvoSensei == null) {
+          if (logId) {
+            await supabase.from("tradingview_signals")
+              .update({ ai_error: `mestre aurum: nenhum alvo paga ${RR_MINIMO}R — não abre`.slice(0, 300) })
+              .eq("id", logId)
+          }
+        } else if (d.vai && d.simbolo) {
           const m = await encaminharSinalParaMestre({
             fonte: "aurum",
             symbol: d.simbolo,
             direcao: execDirForGate === "sell" ? "sell" : "buy",
             entrada: entradaAurum,
             sl: sl ?? null,
-            tps: [tp, tp2, tp3].filter((n): n is number => typeof n === "number" && n > 0),
+            tps: alvoSensei != null ? [alvoSensei] : tpsDoAlerta,
             externalRef: String(logId ?? ""),
           })
           aurumNaMestreSim = m.substituiMt5
