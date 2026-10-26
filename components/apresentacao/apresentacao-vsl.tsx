@@ -5,11 +5,15 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Check, X, PlayCircle } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { OUTRAS, textosOutra, extrasOutra, TESTEMUNHOS_OUTRAS, type Outra } from "./textos-linguas"
 
-type Lang = "pt" | "en"
+type Lang = "pt" | "en" | Outra
+const LINGUAS: Lang[] = ["pt", "en", "es", "de", "it", "nl", "pl"]
+const HTML_LANG: Record<Lang, string> = { pt: "pt-PT", en: "en", es: "es", de: "de", it: "it", nl: "nl", pl: "pl" }
+const eOutra = (l: Lang): l is Outra => (OUTRAS as string[]).includes(l)
 type Precos = { trialDias: number; premium1oMes: number; premiumMes: number; membroMes: number }
 
-const eur = (v: number, lang: Lang) =>
+const eur = (v: number, lang: "pt" | "en") =>
   lang === "pt" ? `${String(v).replace(".", ",")} €` : `€${v}`
 
 /**
@@ -18,6 +22,7 @@ const eur = (v: number, lang: Lang) =>
  * Os testemunhos ficam verbatim em português; em inglês mostra-se a tradução por baixo.
  */
 function textos(lang: Lang, p: Precos) {
+  if (eOutra(lang)) return textosOutra(lang, p)
   const d = p.trialDias
   if (lang === "en")
     return {
@@ -36,7 +41,7 @@ function textos(lang: Lang, p: Precos) {
         ["You learn", "Weekly live rooms — forex & gold, crypto, stocks & ETFs, social media, mindset — and every class recorded and organised into a course. From zero, at your pace."],
         ["You apply", "Scanners written by us read trend, zones and risk before you get in. On your phone and on TradingView. A checklist instead of a guess."],
         ["You follow", "The MTM System app: community feed, chat, live classes, alerts with entry, stop and targets, and the AI Mentor 24/7. You make the call."],
-        ["You execute", "Tap to Trade opens the order in your account with one tap and the system manages it. MTM Auto copies the house strategies. The account is always yours."],
+        ["You execute", "In the MTM Auto app, Tap to Trade opens the order in your account with one tap and the system manages it. MTM Auto also copies the house strategies. The account is always yours."],
       ],
       ganhaT: "Earn while you learn",
       ganha: [
@@ -92,7 +97,7 @@ function textos(lang: Lang, p: Precos) {
       ["Aprendes", "Salas ao vivo todas as semanas — forex e ouro, cripto, ações e ETF, redes sociais, mindset — e cada aula gravada e organizada em curso. Do zero, ao teu ritmo."],
       ["Aplicas", "Scanners escritos por nós leem a tendência, as zonas e o risco antes de entrares. No telemóvel e no TradingView. Um checklist em vez de um palpite."],
       ["Acompanhas", "A app MTM System: feed da comunidade, chat, aulas ao vivo, alertas com entrada, stop e alvos, e o Mentor AI 24/7. Quem decide és tu."],
-      ["Executas", "O Tap to Trade abre a ordem na tua conta com um toque e o sistema gere a posição. O MTM Auto copia as estratégias da casa. A conta é sempre tua."],
+      ["Executas", "Na app MTM Auto, o Tap to Trade abre a ordem na tua conta com um toque e o sistema gere a posição. O MTM Auto também copia as estratégias da casa. A conta é sempre tua."],
     ],
     ganhaT: "Ganha enquanto aprendes",
     ganha: [
@@ -155,8 +160,10 @@ const TESTEMUNHOS: { pt: string; en: string }[] = [
  * Os pilares e as áreas seguem lib/pilares.ts (a mesma lista de /mtmmarkets e /contentbussiness).
  */
 function extras(lang: Lang) {
+  if (eOutra(lang)) return extrasOutra(lang)
   const en = lang === "en"
   return {
+    pilar: en ? "Pillar" : "Pilar",
     appT: en ? "Inside the MTM System app" : "Por dentro da app MTM System",
     appSub: en ? "Real screens from the app, not mock-ups." : "Ecrãs reais da app, não maquetas.",
     telas: [
@@ -264,13 +271,16 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
   const [lang, setLang] = useState<Lang>("pt")
   const [query, setQuery] = useState("")
 
-  // Idioma: ?lang= ganha, depois a última escolha. O ref de quem partilhou segue até ao onboarding.
+  // Idioma: ?lang= ganha, depois a última escolha, depois a língua do navegador. O ref de quem partilhou segue até ao onboarding.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
     const pedido = q.get("lang")
     let guardado: string | null = null
     try { guardado = localStorage.getItem("mtm_apresentacao_lang") } catch {}
-    const l = pedido === "en" || pedido === "pt" ? pedido : guardado === "en" ? "en" : "pt"
+    const valida = (v: string | null): v is Lang => !!v && (LINGUAS as string[]).includes(v)
+    // Sem ?lang nem escolha guardada, segue a língua do navegador (pt-BR → pt, de-AT → de…).
+    const doNavegador = (navigator.languages || [navigator.language]).map((x) => x.slice(0, 2).toLowerCase()).find(valida)
+    const l: Lang = valida(pedido) ? pedido : valida(guardado) ? guardado : doNavegador ?? "pt"
     setLang(l)
     const ref = q.get("ref")
     if (ref) setQuery(`?ref=${encodeURIComponent(ref)}`)
@@ -302,7 +312,7 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
   )
 
   return (
-    <div className="min-h-screen text-[#f3ede1]" style={{ background: "#0b0a08" }} lang={lang === "pt" ? "pt-PT" : "en"}>
+    <div className="min-h-screen text-[#f3ede1]" style={{ background: "#0b0a08" }} lang={HTML_LANG[lang]}>
       <header
         className="sticky top-0 z-50 flex h-14 items-center justify-between px-4 sm:px-6"
         style={{ background: "rgba(11,10,8,.88)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(210,166,60,.15)" }}
@@ -311,13 +321,22 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
           <ArrowLeft size={15} /> {t.voltar}
         </button>
         <div className="flex items-center gap-3">
-          <div className="flex rounded-lg border p-0.5 text-[12px] font-bold" style={{ borderColor: "rgba(210,166,60,.3)" }} role="group" aria-label="Idioma / Language">
-            {(["pt", "en"] as Lang[]).map((l) => (
+          <select
+            value={lang}
+            onChange={(e) => mudar(e.target.value as Lang)}
+            aria-label="Idioma / Language"
+            className="rounded-lg border bg-transparent px-2 py-1 text-[12px] font-bold uppercase md:hidden"
+            style={{ borderColor: "rgba(210,166,60,.3)", color: OURO }}
+          >
+            {LINGUAS.map((l) => <option key={l} value={l} style={{ background: "#0b0a08" }}>{l.toUpperCase()}</option>)}
+          </select>
+          <div className="hidden rounded-lg border p-0.5 text-[12px] font-bold md:flex" style={{ borderColor: "rgba(210,166,60,.3)" }} role="group" aria-label="Idioma / Language">
+            {LINGUAS.map((l) => (
               <button
                 key={l}
                 onClick={() => mudar(l)}
                 aria-pressed={lang === l}
-                className="rounded-md px-2.5 py-1 uppercase"
+                className="rounded-md px-2 py-1 uppercase sm:px-2.5"
                 style={lang === l ? { background: OURO, color: "#111" } : { color: OURO }}
               >
                 {l}
@@ -345,6 +364,7 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
           <div className="mx-auto mt-9 overflow-hidden rounded-2xl border" style={{ borderColor: "rgba(210,166,60,.3)", boxShadow: "0 30px 90px rgba(0,0,0,.6)" }}>
             <video key={t.video} className="aspect-video w-full bg-black" controls playsInline preload="metadata" poster={t.poster}>
               <source src={t.video} type="video/mp4" />
+              <track kind="subtitles" src={t.video.replace(/\.mp4$/, ".vtt")} srcLang={lang} label={lang.toUpperCase()} />
             </video>
           </div>
           <div className="mt-9"><Cta grande /></div>
@@ -397,7 +417,7 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
               {x.pilares.map((pl, k) => (
                 <Revela key={pl.nome} atraso={k * 150}>
                   <div className="group h-full rounded-3xl border p-7 transition-transform duration-300 hover:-translate-y-1" style={{ borderColor: "rgba(210,166,60,.3)", background: "linear-gradient(180deg,#16130c,#0e0c09)" }}>
-                    <p className="font-mono text-[12px] uppercase tracking-[.25em] text-[#8f887a]">{lang === "en" ? "Pillar" : "Pilar"} {k + 1}</p>
+                    <p className="font-mono text-[12px] uppercase tracking-[.25em] text-[#8f887a]">{x.pilar} {k + 1}</p>
                     <h3 className="mt-2 text-2xl font-extrabold sm:text-3xl" style={{ color: OURO }}>{pl.nome}</h3>
                     <p className="mt-3 text-[15px] leading-relaxed text-[#c9c1b1]">{pl.def}</p>
                     <p className="mt-5 text-[12px] font-bold uppercase tracking-[.2em] text-[#8f887a]">{x.academias}</p>
@@ -458,7 +478,7 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
               <Revela key={i} atraso={i * 120}>
               <figure className="rounded-2xl border p-6" style={{ borderColor: "rgba(210,166,60,.18)", background: "rgba(255,255,255,.02)" }}>
                 <blockquote className={i === 0 ? "text-xl italic leading-snug sm:text-2xl" : "text-[16px]"} lang="pt-PT">“{m.pt}”</blockquote>
-                {lang === "en" && <p className="mt-2 text-[13px] text-[#8f887a]">{m.en} ({t.traduzido})</p>}
+                {lang !== "pt" && <p className="mt-2 text-[13px] text-[#8f887a]">{eOutra(lang) ? TESTEMUNHOS_OUTRAS[lang][i] : m.en} ({t.traduzido})</p>}
               </figure>
               </Revela>
             ))}

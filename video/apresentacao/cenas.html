@@ -6,6 +6,12 @@
 @font-face { font-family: Anton; src: url(../../public/fonts/Anton-Regular.ttf); }
 @font-face { font-family: Serif; src: url(fonts/instrument-serif-latin-400-italic.woff2); font-style: italic; }
 @font-face { font-family: Serif; src: url(fonts/instrument-serif-latin-400-normal.woff2); }
+@font-face { font-family: Serif; src: url(fonts/instrument-serif-latin-ext-400-italic.woff2); font-style: italic; unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: Serif; src: url(fonts/instrument-serif-latin-ext-400-normal.woff2); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: Inter; src: url(fonts/inter-latin-wght-normal.woff2); font-weight: 100 900; }
+@font-face { font-family: Inter; src: url(fonts/inter-latin-ext-wght-normal.woff2); font-weight: 100 900; unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'JetBrains Mono'; src: url(fonts/jetbrains-mono-latin-wght-normal.woff2); font-weight: 100 800; }
+@font-face { font-family: 'JetBrains Mono'; src: url(fonts/jetbrains-mono-latin-ext-wght-normal.woff2); font-weight: 100 800; unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
 :root { --ouro:#D2A63C; --ouro2:#E9C46A; --carvao:#0b0a08; --tinta:#f3ede1; --cinza:#8f887a; }
 * { box-sizing:border-box; margin:0; padding:0; }
 html,body { width:1920px; height:1080px; overflow:hidden; background:var(--carvao); color:var(--tinta); font-family:Inter, sans-serif; }
@@ -73,6 +79,7 @@ html,body { width:1920px; height:1080px; overflow:hidden; background:var(--carva
 <div id="barra"></div>
 <div id="vinheta"></div>
 <canvas id="grao" width="960" height="540"></canvas>
+<script>document.write('<script src="textos/'+(new URLSearchParams(location.search).get('lang')||'pt')+'.js"><\/script>')</script>
 <script>
 // ---------------------------------------------------------------- utilidades
 const clamp = (x,a=0,b=1)=>Math.max(a,Math.min(b,x))
@@ -88,114 +95,58 @@ const params = new URLSearchParams(location.search)
 const LANG = params.get('lang')||'pt'
 
 // ---------------------------------------------------------------- textos de ecrã
-const T = {
- pt: {
-  cap:['O problema','O problema','Quem somos','Aprendes','Aplicas','A app','Execução','Ganha enquanto aprendes','Prova','Objeções','A oferta','O próximo passo','Partilhar','MoreThanMoney'],
-  semana:'por semana', esforco:'Esforço não te falta.', sistema:'Falta-te um sistema.',
-  ruido:['dica 🔥 compra já','grupo VIP grátis','«sinal certeiro»','vídeo de 12 min','print de lucro','curso milagre','segue este guru','tutorial aleatório'],
-  falta:['método','ferramentas','alguém ao lado'],
-  quem:'Fundador da MoreThanMoney', eco:['Aprender','Aplicar','Acompanhar'], ecoSub:'Um ecossistema. Não um curso.',
-  aprendes:'Aprendes', salas:[['Forex e ouro','XAU/USD e pares principais'],['Criptomoedas','DCA e perpétuos'],['Ações e ETF','carteira a preço ao vivo'],['Social Media','marca pessoal e UGC'],['Mindset','disciplina e liderança'],['Gravações','organizadas em curso']], aoVivo:'AO VIVO', zero:'Do zero, ao teu ritmo.',
-  aplicas:'Aplicas', check:['Tendência','Zona','Momentum','Risco definido'], estudos:'Estudos MTM · telemóvel e TradingView', entrada:'ENTRADA', stop:'STOP', alvo:'ALVO',
-  app:'MTM System', appSub:'tudo no teu bolso', chips:['Feed da comunidade','Chat','Aulas ao vivo','Alertas com entrada, stop e alvos','Mentor AI 24/7'], decides:'Quem decide és tu.',
-  compra:'COMPRA', tap:'Tap to Trade', aberta:'Ordem aberta na tua conta', gestao:'gestão da posição: sistema', auto:'MTM Auto', autoSub:'copia as estratégias da casa para a tua conta', conta:'A conta é tua.', dinheiro:'Nunca tocamos no teu dinheiro.',
-  ganha:'Ganha enquanto aprendes', passos:[['Abres a tua conta','PU Prime · corretora regulada · pelo nosso link'],['Começas pequeno','aplicas o que viste na sala'],['Praticas com a comunidade','cada passo acompanhado']], risco:'O trading envolve risco de perda de capital.',
-  sem:['Sem carros.','Sem promessas de lucro.'], processo:'Processo.', proc:['posições registadas','alertas no histórico','comunidade a confirmar'],
-  testemunhos:['Grato por estar na melhor comunidade, ecossistema de educação financeira do país.','Fechei os Futuros que tinha em compra. Guardei lucros.'],
-  citacao:'O melhor resultado que podemos ter não é o saldo das contas… mas sim o poder que ganhamos ao saber proteger capital.', membro:'— membro da comunidade MTM',
-  obj:[['Não tenho tempo.','Alertas no telemóvel. Aulas gravadas.'],['Já perdi dinheiro.','Começamos pela gestão de risco.'],['Não sei nada de trading.','A academia começa do zero.']],
-  gratis:'3 dias grátis', premium:'Premium', oferta:['Sem cartão · sem cobrança nos 3 dias','1.º mês: 34,99 €','Depois: 65 €/mês','7 dias de garantia nos mensais','Sem fidelização · cancelas quando quiseres'],
-  url:'morethanmoney.pt/onboarding', passosOn:['Cria a tua conta','Instala a app','Abre a conta na corretora','Entra na primeira aula'], guiamos:'Guiamos-te em cada passo.',
-  afil:'Plano de afiliado', primeira:'na 1.ª mensalidade', renov:'em cada renovação', enquanto:'enquanto a pessoa que trouxeste ficar', depois:'Primeiro, aprende.',
-  fecho1:'Mais do que dinheiro.', fecho2:'Um sistema.', aviso:'Conteúdo educativo, não constitui aconselhamento financeiro. O trading envolve risco de perda de capital. Resultados passados não garantem resultados futuros.'
- },
- en: {
-  cap:['The problem','The problem','Who we are','You learn','You apply','The app','Execution','Earn while you learn','Proof','Objections','The offer','Next step','Share','MoreThanMoney'],
-  semana:'a week', esforco:"You don't lack effort.", sistema:'You lack a system.',
-  ruido:['hot tip 🔥 buy now','free VIP group','«sure-shot signal»','12-min video','profit screenshot','miracle course','follow this guru','random tutorial'],
-  falta:['method','tools','someone by your side'],
-  quem:'Founder of MoreThanMoney', eco:['Learn','Apply','Follow'], ecoSub:'An ecosystem. Not a course.',
-  aprendes:'You learn', salas:[['Forex & gold','XAU/USD and major pairs'],['Crypto','DCA and perpetuals'],['Stocks & ETFs','live-priced portfolio'],['Social media','personal brand and UGC'],['Mindset','discipline and leadership'],['Recordings','organised into a course']], aoVivo:'LIVE', zero:'From zero, at your own pace.',
-  aplicas:'You apply', check:['Trend','Zone','Momentum','Defined risk'], estudos:'MTM studies · phone and TradingView', entrada:'ENTRY', stop:'STOP', alvo:'TARGET',
-  app:'MTM System', appSub:'all in your pocket', chips:['Community feed','Chat','Live classes','Alerts with entry, stop and targets','AI Mentor 24/7'], decides:'You make the call.',
-  compra:'BUY', tap:'Tap to Trade', aberta:'Order opened in your account', gestao:'position management: system', auto:'MTM Auto', autoSub:'copies the house strategies to your account', conta:'The account is yours.', dinheiro:'We never touch your money.',
-  ganha:'Earn while you learn', passos:[['You open your account','PU Prime · regulated broker · through our link'],['You start small','apply what you saw in class'],['You practise with the community','every step followed']], risco:'Trading involves risk of capital loss.',
-  sem:['No cars.','No profit promises.'], processo:'Process.', proc:['positions logged','alerts kept in history','community to check'],
-  testemunhos:['Grateful to be in the best community, the best financial education ecosystem in the country.','Closed the futures I was holding. Took profits.'],
-  citacao:"The best result we can have isn't the account balance… it's the power we gain from knowing how to protect capital.", membro:'— MTM community member (translated)',
-  obj:[["I don't have time.",'Alerts on your phone. Recorded classes.'],['I lost money before.','We start with risk management.'],['I know nothing about trading.','The academy starts from zero.']],
-  gratis:'3 days free', premium:'Premium', oferta:['No card · no charge during the 3 days','1st month: €34.99','Then: €65/month','7-day guarantee on monthly plans','No lock-in · cancel whenever you want'],
-  url:'morethanmoney.pt/onboarding', passosOn:['Create your account','Install the app','Open your broker account','Join your first class'], guiamos:"We'll guide you every step.",
-  afil:'Affiliate plan', primeira:'on the 1st month', renov:'on every renewal', enquanto:'for as long as the person you brought stays', depois:'First, learn.',
-  fecho1:'More than money.', fecho2:'A system.', aviso:'Educational content, not financial advice. Trading involves risk of capital loss. Past results do not guarantee future results.'
- }
-}[LANG]
+// Um ficheiro por língua em textos/<lang>.js (window.TXT). Nomes de produtos, scanners e cursos não se traduzem.
+const T = window.TXT
 
-// ---------------------------------------------------------------- textos de ecrã da v2 (pilares, alertas, ferramentas, social, avaliações)
-Object.assign(T, {
- pt: {
-  cap:{'s01-gancho':'O problema','s02-problema':'O problema','s03-quem':'Quem somos','s04-markets':'Pilar · MTM Markets','s04-content':'Pilar · Content & Business','s05-scanners':'Aplicas','s06-app':'A app','s06b-alertas':'Alertas','s06c-ferramentas':'Ferramentas','s07-execucao':'Execução','s07b-social':'Negócio','s08-ganha':'Ganha enquanto aprendes','s09-prova':'Prova','s09b-avaliacoes':'Avaliações','s10-objecoes':'Objeções','s11-oferta':'A oferta','s12-cta':'O próximo passo','s13-afiliado':'Partilhar','s14-fecho':'MoreThanMoney'},
-  tabs:['Feed','Chat','Aulas','Alertas','Trading','Mais'], venda:'VENDA', ativo:'ATIVO', pendente:'PENDENTE',
-  pilar:'Pilar 1', pilar2:'Pilar 2', markets:'MTM Markets', marketsDef:'Os mercados e o dinheiro: aprender a operá-los, e as ferramentas que os operam por ti quando não podes estar.',
-  acMarkets:[['Forex e metais','tendências e scanners, ao vivo','📈'],['Criptomoedas','portefólios e DCA','🪙'],['Ações e ETF','carteira a preço ao vivo','📊'],['Imobiliário','comprar, arrendar, viver de rendas','🏠']],
-  content:'MTM Content & Business', contentDef:'Construir audiência e construir negócio: marca pessoal, conteúdo, e as formas de ganhar aqui sem abrir uma ordem.',
-  acContent:[['Social Media e UGC','marca pessoal e conteúdo','📱'],['Faceless Marketing','vender sem mostrar a cara','🎭'],['Inteligência Artificial','a IA a trabalhar por ti','🤖'],['Network Marketing','prospetar e duplicar','🤝'],['Mindset e Liderança','disciplina e pessoas','🧠',true]],
-  gratisTag:'GRÁTIS', aoVivoSemana:'Salas desta semana', gravacoes:'Gravações · em curso', academias:'Academias', percurso:'módulo a módulo',
-  salasVivo:[['Forex & Ouro','sala ao vivo'],['Criptomoedas','análise e DCA'],['Ações e ETF','carteira ao vivo'],['Imobiliário','percurso guiado']],
-  modulos:['Introdução ao mercado','Gestão de risco','Ler tendências','Zonas e entradas'],
-  appLabs:['Feed','Chat','Alertas','Mentor AI'],
-  post1:'Sala de hoje: plano da semana no ouro e gestão de risco. Traz as tuas dúvidas 👊', post2:'Primeira semana a seguir o checklist antes de entrar. Muito mais calma.', post3:'Alguém na sala de cripto logo? Quero rever o meu DCA.', membroNome:'Membro MTM',
-  chat1:'Novo alerta no ouro. Vejam o gráfico antes de entrar.', chat2:'Visto. Risco definido ✔',
-  mentorQ:'Onde ponho o stop numa compra de ouro?', mentorA:'Abaixo da zona que validou a entrada. Depois ajusta o lote ao risco que aceitas perder nessa operação.',
-  alertasTit:'Alertas', campos:['Fonte','Par','Direção','Entrada','Stop','Alvos'], historico:'Histórico',
-  histLinhas:[['XAU/USD · Premium','TP2 ✓','#3ddc84'],['EUR/USD · Scanner V3.4','BE 🛡','#8ab4ff'],['US30 · Sensei X','SL ✕','#ff5a4f']],
-  notif:['🔔 <b>Novo alerta</b> · EUR/USD · VENDA','🎯 <b>XAU/USD</b> · TP1 atingido','🛡️ <b>US30</b> · stop movido para a entrada'],
-  ferrTit:'E não acaba aí', terminal:'Terminal com IA', termQ:'Analisa NVDA no diário', termA:[['Tendência','de alta no diário'],['Zona','suporte a ser testado'],['Momentum','a abrandar'],['Risco','define o stop antes de entrar']],
-  portefolio:'Portefólios e DCA', portLeg:[['ETF','#D2A63C',.5],['Cripto','#E9C46A',.3],['Ações','#8f887a',.2]], dca:'Exemplo de carteira · reforço mensal onde vale a pena',
-  simulada:'Conta simulada · desafio', regras:['Objetivo do desafio','Perda diária','Dias de trading'],
-  socialTit:'Estúdio MTM Social', socialSub:'Para quem quer construir negócio, dentro da app.', pecaTit:'Mais do que dinheiro.', pecaSub:'A tua mensagem, com a tua marca.', modelos:'Modelos', exportar:'Exportar para Reels e Stories',
-  socialItens:[['Estúdio MTM Social','cria as tuas peças com a tua marca'],['Programa de criadores','faz conteúdo connosco'],['Material de marketing','pronto a usar'],['Convida e ganha','partilha com quem te importa']],
-  semOrdem:'Ganhar aqui, sem abrir uma ordem.',
-  avalTit:'O que dizem os membros', avaliacoes:['Grato por estar na melhor comunidade, ecossistema de educação financeira do país.','Máquinas!!!! Vocês dão um up tão grande e uma força para que isto aconteça!! Obrigado 🙏','Bora let\'s go, grato pela confiança.'],
-  reacoes:['Boas Maltinha. Fechei os Futuros que tinha em compra. Guardei lucros.','O melhor Resultado que podemos ter não é o Saldo das contas... mas sim o poder que ganhamos ao saber proteger capital.','🙏🔥','Bora let\'s go, grato pela confiança.'],
-  verbatim:'Mensagens reais do chat da comunidade, transcritas sem edição.',
-  autoSub2:'Escolhes a estratégia. Ligas. A conta continua tua.', estrategias:'Estratégias', seguir:'Seguir', contaLigada:'Conta PU Prime · ligada'
- },
- en: {
-  cap:{'s01-gancho':'The problem','s02-problema':'The problem','s03-quem':'Who we are','s04-markets':'Pillar · MTM Markets','s04-content':'Pillar · Content & Business','s05-scanners':'You apply','s06-app':'The app','s06b-alertas':'Alerts','s06c-ferramentas':'Tools','s07-execucao':'Execution','s07b-social':'Business','s08-ganha':'Earn while you learn','s09-prova':'Proof','s09b-avaliacoes':'Reviews','s10-objecoes':'Objections','s11-oferta':'The offer','s12-cta':'Next step','s13-afiliado':'Share','s14-fecho':'MoreThanMoney'},
-  tabs:['Feed','Chat','Classes','Alerts','Trading','More'], venda:'SELL', ativo:'ACTIVE', pendente:'PENDING',
-  pilar:'Pillar 1', pilar2:'Pillar 2', markets:'MTM Markets', marketsDef:'Markets and money: learning to trade them, and the tools that trade them for you when you can’t be there.',
-  acMarkets:[['Forex & metals','trends and scanners, live','📈'],['Crypto','portfolios and DCA','🪙'],['Stocks & ETFs','live-priced portfolio','📊'],['Real estate','buy, rent, live off rent','🏠']],
-  content:'MTM Content & Business', contentDef:'Building an audience and building a business: personal brand, content, and ways to earn here without opening a trade.',
-  acContent:[['Social media & UGC','personal brand and content','📱'],['Faceless marketing','sell without showing your face','🎭'],['Artificial intelligence','AI working for you','🤖'],['Network marketing','prospect and duplicate','🤝'],['Mindset & leadership','discipline and people','🧠',true]],
-  gratisTag:'FREE', aoVivoSemana:'This week’s rooms', gravacoes:'Recordings · as a course', academias:'Academies', percurso:'module by module',
-  salasVivo:[['Forex & Gold','live room'],['Crypto','analysis and DCA'],['Stocks & ETFs','live portfolio'],['Real estate','guided path']],
-  modulos:['Intro to the market','Risk management','Reading trends','Zones and entries'],
-  appLabs:['Feed','Chat','Alerts','AI Mentor'],
-  post1:'Today’s room: this week’s gold plan and risk management. Bring your questions 👊', post2:'First week following the checklist before getting in. So much calmer.', post3:'Anyone in the crypto room later? Want to review my DCA.', membroNome:'MTM member',
-  chat1:'New gold alert. Check the chart before getting in.', chat2:'Seen it. Risk defined ✔',
-  mentorQ:'Where do I put the stop on a gold buy?', mentorA:'Below the zone that validated the entry. Then size the lot to the risk you accept losing on that trade.',
-  alertasTit:'Alerts', campos:['Source','Pair','Direction','Entry','Stop','Targets'], historico:'History',
-  histLinhas:[['XAU/USD · Premium','TP2 ✓','#3ddc84'],['EUR/USD · Scanner V3.4','BE 🛡','#8ab4ff'],['US30 · Sensei X','SL ✕','#ff5a4f']],
-  notif:['🔔 <b>New alert</b> · EUR/USD · SELL','🎯 <b>XAU/USD</b> · TP1 hit','🛡️ <b>US30</b> · stop moved to entry'],
-  ferrTit:'And it doesn’t stop there', terminal:'AI Terminal', termQ:'Analyse NVDA on the daily', termA:[['Trend','up on the daily'],['Zone','support being tested'],['Momentum','slowing'],['Risk','set the stop before you get in']],
-  portefolio:'Portfolios & DCA', portLeg:[['ETFs','#D2A63C',.5],['Crypto','#E9C46A',.3],['Stocks','#8f887a',.2]], dca:'Example portfolio · monthly top-up where it makes sense',
-  simulada:'Simulated account · challenge', regras:['Challenge target','Daily loss','Trading days'],
-  socialTit:'MTM Social Studio', socialSub:'For those who want to build a business, inside the app.', pecaTit:'More than money.', pecaSub:'Your message, with your brand.', modelos:'Templates', exportar:'Export to Reels and Stories',
-  socialItens:[['MTM Social Studio','create your posts with your brand'],['Creator programme','make content with us'],['Marketing material','ready to use'],['Invite & earn','share with people you care about']],
-  semOrdem:'Earning here, without opening a trade.',
-  avalTit:'What members say', avaliacoes:['Grateful to be in the best community, the best financial education ecosystem in the country.','Legends!!!! You give us such a boost and the strength to make this happen!! Thank you 🙏','Let’s go, grateful for the trust.'],
-  reacoes:['Hi folks. Closed the futures I was holding. Took profits.','The best result we can have isn’t the account balance... it’s the power we gain from knowing how to protect capital.','🙏🔥','Let’s go, grateful for the trust.'],
-  verbatim:'Real messages from the community chat, translated from Portuguese.',
-  autoSub2:'You pick the strategy. Switch it on. The account stays yours.', estrategias:'Strategies', seguir:'Follow', contaLigada:'PU Prime account · connected'
- }
-}[LANG])
-
+// ---------------------------------------------------------------- b-roll (stock com licença livre, ver MTM-Assets/stock/LICENCAS.md)
+// Fotogramas JPEG a 30 fps extraídos dos elementos de 15 s: broll/<elemento>/0001.jpg…
+const BROLL = {
+ 's00-abertura':{seq:[['dubai',0.3,0.9],['liberdade',1.2,0.9],['aprender',4.6,0.8],['viajar',4.4,0.8],['liberdade',8.2,0.8],['dubai',9.6,9]],op:1},
+ 's01-gancho':{el:'rotina-para-sistema',de:0,op:.30}, 's02-problema':{el:'rotina-para-sistema',de:3.8,op:.26},
+ 's03b-liberdade':{el:'liberdade',de:0,op:1}, 's04-markets':{el:'aprender',de:0,op:.16},
+ 's08-ganha':{el:'aprender',de:7.4,op:.18}, 's12-cta':{el:'viajar',de:0,op:.14}, 's14-fecho':{el:'dubai',de:0,op:.42},
+}
+const BROLL_N = {}  // nº de fotogramas por elemento, preenchido pelo render
+// Capturas reais (MTM-Assets/capturas → capturas/) em telemóvel, por cima da cena, numa janela de progresso [de, ate].
+const INSERTOS = {
+ 's05-scanners':{de:.02, ate:.4, fundo:true, tels:[['gold-killer-topo','Gold Killer'],['aurum-flow-topo','Aurum Flow'],['trendshot-topo','TrendShot'],['mtm-scanner-topo','MTM Scanner']]},
+ 's07-execucao':{de:.46, ate:1.1, tels:[['auto-sessao-1-sinais','']], x:200},
+}
+function insertosDe(r, id){ const d=INSERTOS[id]; if(!d||!d.tels.length) return null
+ const cx=el('div','abs',null,{inset:0,zIndex:15,opacity:0,background:d.fundo?'radial-gradient(ellipse at center, rgba(11,10,8,.92), rgba(11,10,8,.98))':'transparent'}); r.append(cx)
+ const n=d.tels.length, w=n>1?360:430, gap=60, x0=d.x!=null?d.x:(1920-(n*w+(n-1)*gap))/2
+ const tels=d.tels.map(([img,nome],i)=>{ const t=el('div','telefone',null,{left:(x0+i*(w+gap))+'px',top:n>1?'90px':'110px',width:w+'px',height:(n>1?Math.round(w*852/393):880)+'px'}); t.innerHTML=`<img src="capturas/${img}.jpg" style="width:100%;height:100%;object-fit:cover;object-position:top">`; cx.append(t)
+  if(nome){ const l=el('div','abs anton ouro',nome,{left:(x0+i*(w+gap))+'px',width:w+'px',top:'880px',textAlign:'center',fontSize:'52px'}); cx.append(l); t.lab=l }
+  return t })
+ return {cx,tels,d} }
+function brollDe(r, id){ const b=BROLL[id]; if(!b) return null
+ const i=el('img','abs',null,{left:0,top:0,width:'1920px',height:'1080px',objectFit:'cover',opacity:b.op,zIndex:0}); r.prepend(i)
+ const v=el('div','abs',null,{inset:0,zIndex:0,background:b.op<1?'radial-gradient(ellipse at center, rgba(11,10,8,.35), rgba(11,10,8,.85))':'linear-gradient(180deg, rgba(11,10,8,.15), rgba(11,10,8,.65))'}); i.after(v)
+ return {i,b,ult:''} }
 
 // ---------------------------------------------------------------- cenas
 // Cada cena: build(root) -> estado; update(estado, k) com k = progresso 0..1 na cena, s = segundos na cena
 const CENAS = {}
 
+CENAS['s00-abertura'] = {
+ build(r){
+  const flash=el('div','abs',null,{inset:0,background:'#E9C46A',opacity:0,zIndex:5}); r.append(flash)
+  const pal=T.abertura.map(p=>{ const d=el('div','abs anton',p,{left:0,right:0,top:'380px',textAlign:'center',fontSize:'210px',color:'#f3ede1',opacity:0,zIndex:6,textShadow:'0 10px 50px rgba(0,0,0,.7)',letterSpacing:'.02em'}); r.append(d); return d })
+  const logo=el('img','abs',null,{left:'810px',top:'250px',width:'300px',opacity:0,zIndex:6}); logo.src='../../public/logo-mtm-transparent.png'; r.append(logo)
+  const a=el('div','abs anton',T.fecho1,{left:0,right:0,top:'600px',textAlign:'center',fontSize:'110px',opacity:0,zIndex:6}); r.append(a)
+  const b=el('div','abs anton ouro',T.fecho2,{left:0,right:0,top:'730px',textAlign:'center',fontSize:'110px',opacity:0,zIndex:6}); r.append(b)
+  const veu=el('div','abs',null,{inset:0,background:'rgba(11,10,8,.55)',opacity:0,zIndex:4}); r.append(veu)
+  return {flash,pal,logo,a,b,veu}
+ },
+ update(o,k,s){
+  // cortes a 0,9 s com flash dourado; palavras curtas a bater nos cortes; depois logótipo e assinatura
+  const cortes=[0.9,1.8,2.6,3.4,4.2]; let f=0; cortes.forEach(c=>{ const d=Math.abs(s+.45-c); if(d<.12) f=Math.max(f,(1-d/.12)*.55) }); o.flash.style.opacity=f
+  o.pal.forEach((p,i)=>{ const ini=.95+i*.85, fim=ini+.75, v=prog(s,ini,ini+.12)*(1-prog(s,fim-.12,fim)); p.style.opacity=v; p.style.transform=`scale(${1.12-.12*out(prog(s,ini,fim))})` })
+  const z=prog(s,4.4,5.0); o.veu.style.opacity=z
+  o.logo.style.opacity=out(prog(s,4.5,5.1)); o.logo.style.filter=`blur(${(1-out(prog(s,4.5,5.1)))*14}px)`
+  entra(o.a,prog(s,4.9,5.4)); entra(o.b,prog(s,5.2,5.7))
+ }
+}
 CENAS['s01-gancho'] = {
  build(r){
   const n = el('div','abs anton',null,{left:'0',right:'0',top:'250px',textAlign:'center',fontSize:'330px',lineHeight:'1',color:'#f3ede1'}); r.append(n)
@@ -286,11 +237,11 @@ CENAS['s05-scanners'] = {
 CENAS['s07-execucao'] = {
  build(r){
   const tel=el('div','telefone',null,{left:'200px',top:'110px',background:'#0d0d0d',padding:'90px 28px'}); r.append(tel)
-  tel.innerHTML=`<div class="cartao" style="padding:28px;border-radius:26px">
+  tel.innerHTML=`<div style="display:flex;align-items:center;gap:14px;margin:-50px 0 26px"><img src="../../public/images/mtm/logo-mtm-auto.png" style="height:34px;max-width:150px;object-fit:contain"><b style="font:700 24px Inter;color:#E9C46A;white-space:nowrap">MTM Auto</b></div><div class="cartao" style="padding:28px;border-radius:26px">
    <div style="display:flex;justify-content:space-between;align-items:center"><b style="font:800 34px Inter">XAU/USD</b><span style="font:700 20px Inter;color:#3ddc84;border:1px solid #3ddc84;border-radius:999px;padding:6px 14px">${T.compra}</span></div>
-   <div style="font:500 22px JetBrains Mono;color:#8f887a;margin:20px 0 8px">${T.entrada} <span style="float:right;color:#f3ede1">zona MTM</span></div>
-   <div style="font:500 22px JetBrains Mono;color:#ff5a4f;margin:8px 0">${T.stop} <span style="float:right">definido</span></div>
-   <div style="font:500 22px JetBrains Mono;color:#3ddc84;margin:8px 0">${T.alvo} 1·2·3 <span style="float:right">parciais</span></div></div>
+   <div style="font:500 22px JetBrains Mono;color:#8f887a;margin:20px 0 8px">${T.entrada} <span style="float:right;color:#f3ede1">${T.zonaMtm}</span></div>
+   <div style="font:500 22px JetBrains Mono;color:#ff5a4f;margin:8px 0">${T.stop} <span style="float:right">${T.definido}</span></div>
+   <div style="font:500 22px JetBrains Mono;color:#3ddc84;margin:8px 0">${T.alvo} 1·2·3 <span style="float:right">${T.parciais}</span></div></div>
    <div id="tapbtn" style="margin-top:34px;height:96px;border-radius:24px;background:#D2A63C;color:#111;font:800 34px Inter;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">${T.tap}<span id="onda" style="position:absolute;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.6);left:50%;top:50%;transform:translate(-50%,-50%) scale(0)"></span></div>
    <div id="toast" class="cartao" style="margin-top:34px;padding:24px;font:700 26px Inter;color:#3ddc84;opacity:0">✓ ${T.aberta}<div style="font:500 20px JetBrains Mono;color:#8f887a;margin-top:10px">${T.gestao}</div></div>`
   const dir=el('div','abs',null,{left:'820px',top:'150px',width:'950px'}); r.append(dir)
@@ -362,7 +313,7 @@ CENAS['s10-objecoes'] = {
 CENAS['s11-oferta'] = {
  build(r){
   const c=el('div','abs cartao',null,{left:'460px',top:'110px',width:'1000px',padding:'44px 70px',background:'linear-gradient(180deg,#1a160d,#0f0d09)',border:'2px solid rgba(210,166,60,.55)'}); r.append(c)
-  c.innerHTML=`<div style="font:700 26px Inter;letter-spacing:.3em;color:#D2A63C">${T.premium.toUpperCase()}</div><div class="anton" style="font-size:140px;line-height:1.05;margin:6px 0 20px">${T.gratis}</div>`+T.oferta.map((t,i)=>`<div class="lin" style="font:${i==1?'800':'500'} 36px Inter;padding:12px 0;border-top:1px solid rgba(210,166,60,.18);color:${i==1?'#E9C46A':'#f3ede1'}">✓ ${t}</div>`).join('')
+  c.innerHTML=`<div style="font:700 26px Inter;letter-spacing:.3em;color:#D2A63C">${T.premium.toUpperCase()}</div><div class="anton" style="font-size:118px;line-height:1.05;margin:6px 0 20px">${T.gratis}</div>`+T.oferta.map((t,i)=>`<div class="lin" style="font:${i==1?'800':'500'} 36px Inter;padding:12px 0;border-top:1px solid rgba(210,166,60,.18);color:${i==1?'#E9C46A':'#f3ede1'}">✓ ${t}</div>`).join('')
   return {c}
  },
  update(o,k){
@@ -470,6 +421,20 @@ function cenaPilar(nome, def, academias, rotulo, extra){
    o.cs.forEach((c,i)=>entra(c,prog(k,.18+i*.08,.26+i*.08),24))
    o.lado.update(k,s)
   }
+ }
+}
+CENAS['s03b-liberdade'] = {
+ build(r){
+  const t=el('div','abs serif',T.liberdade,{left:'0',right:'0',top:'300px',textAlign:'center',fontSize:'190px',color:'#f3ede1',textShadow:'0 8px 40px rgba(0,0,0,.6)',zIndex:2}); r.append(t)
+  const fila=el('div','abs',null,{left:'0',right:'0',top:'560px',display:'flex',justifyContent:'center',gap:'28px',zIndex:2}); r.append(fila)
+  const pal=T.libPal.map(p=>{ const d=el('div','chip',p,{fontSize:'40px',background:'rgba(11,10,8,.55)',backdropFilter:'blur(6px)'}); fila.append(d); return d })
+  const fim=el('div','abs anton ouro',T.libFim,{left:'0',right:'0',top:'740px',textAlign:'center',fontSize:'92px',textShadow:'0 6px 30px rgba(0,0,0,.7)',zIndex:2}); r.append(fim)
+  return {t,pal,fim}
+ },
+ update(o,k){
+  entra(o.t,prog(k,.02,.14)); o.t.style.opacity=out(prog(k,.02,.14))*(1-.35*prog(k,.7,.8))
+  o.pal.forEach((d,i)=>entra(d,prog(k,.2+i*.09,.28+i*.09),24))
+  entra(o.fim,prog(k,.72,.84))
  }
 }
 CENAS['s04-markets'] = cenaPilar(T.markets, T.marketsDef, T.acMarkets, T.pilar, r=>{
@@ -590,11 +555,12 @@ CENAS['s09b-avaliacoes'] = {
 // ---------------------------------------------------------------- linha do tempo
 // window.TL = [{id, ini, dur, frases:[{t, ini, fim}]}]  (segundos absolutos)
 const palco=document.getElementById('palco'), montadas={}
-function montar(){ for(const c of window.TL){ const r=el('div','cena'); palco.append(r); montadas[c.id]={r,o:CENAS[c.id].build(r),c} } }
+function montar(){ for(const c of window.TL){ const r=el('div','cena'); palco.append(r); montadas[c.id]={r,o:CENAS[c.id].build(r),c,br:brollDe(r,c.id),ins:insertosDe(r,c.id)} } }
 const grao=document.getElementById('grao'), gg=grao.getContext('2d'), img=gg.createImageData(960,540)
 function ruido(seed){ const R=rng(seed); for(let i=0;i<img.data.length;i+=4){ const v=R()*255; img.data[i]=img.data[i+1]=img.data[i+2]=v; img.data[i+3]=255 } gg.putImageData(img,0,0) }
 let ultimoGrao=-1
-window.renderAt = function(t){
+window.renderAt = async function(t){
+ const esperar=[]
  const total=window.TL[window.TL.length-1].ini+window.TL[window.TL.length-1].dur
  let atual=null
  window.TL.forEach((c,i)=>{ const m=montadas[c.id], s=t-c.ini, X=.45
@@ -605,6 +571,11 @@ window.renderAt = function(t){
   m.r.style.opacity = Math.min(prog(s,-X,.05), fin)
   m.r.style.transform = `scale(${1+.03*prog(s,0,c.dur)})`
   CENAS[c.id].update(m.o, clamp(s/c.dur), s)
+  if(m.ins){ const k=clamp(s/c.dur), d=m.ins.d, a=prog(k,d.de,d.de+.04)*(1-prog(k,d.ate-.04,d.ate)); m.ins.cx.style.opacity=a
+   m.ins.tels.forEach((t,i)=>{ const e=out(prog(k,d.de+i*.03,d.de+.06+i*.03)); t.style.transform=`translateY(${(1-e)*120}px) rotate(${(i-(m.ins.tels.length-1)/2)*1.2*(1-e)}deg)`; t.style.opacity=e; if(t.lab) t.lab.style.opacity=e }) }
+  if(m.br){ let elx=m.br.b.el, de=m.br.b.de, ss=s+X
+   if(m.br.b.seq){ let acc=0; for(const [e,d,dur] of m.br.b.seq){ elx=e; de=d-acc; if(ss<acc+dur) break; acc+=dur } }
+   const n=BROLL_N[elx]||450, f=String(1+Math.min(n-1,Math.max(0,Math.floor((ss+de)*30)))).padStart(4,'0'), src=`broll/${elx}/${f}.jpg`; if(m.br.ult!==src){ m.br.ult=src; m.br.i.src=src; esperar.push(m.br.i.decode().catch(()=>{})) } }
   if(s>=0 && s<c.dur) atual={c,s,i}
  })
  const cap=document.getElementById('capitulo'), leg=document.getElementById('legenda')
@@ -612,8 +583,11 @@ window.renderAt = function(t){
   const f=atual.c.frases.find(f=>t>=f.ini && t<f.fim); if(f && window.LEGENDAS){ leg.style.display='block'; leg.textContent=f.t } else leg.style.display='none' }
  document.getElementById('barra').style.width=(t/total*100)+'%'
  const fr=Math.floor(t*12); if(fr!==ultimoGrao){ ruido(fr+1); ultimoGrao=fr }
+ await Promise.all(esperar)
 }
-window.iniciar = function(tl, legendas){ window.TL=tl; window.LEGENDAS=legendas; montar(); window.renderAt(0) }
+window.iniciar = async function(tl, legendas, n){ window.TL=tl; window.LEGENDAS=legendas; Object.assign(BROLL_N,n||{})
+ await Promise.all(['400 20px Inter','600 20px Inter','800 20px Inter','500 20px "JetBrains Mono"','italic 20px Serif','20px Serif','20px Anton'].map(f=>document.fonts.load(f,'Aaąłśßéü')))
+ montar(); return window.renderAt(0) }
 </script>
 </body>
 </html>
