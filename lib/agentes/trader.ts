@@ -94,6 +94,9 @@ export const TECTO_POR_PASSAGEM = 3
 export const PREFIXO_CHAVE = 'agente-trader:'
 
 /** A chave desta posição, como fica gravada. Um único sítio para os dois lados. */
+/** As posições de exploração levam este prefixo (começa pelo do agente, para as métricas as contarem). */
+export const PREFIXO_EXPLORA = `${PREFIXO_CHAVE}explora:`
+
 export function chaveDoAgente(chaveDoSinal: string): string {
   return `${PREFIXO_CHAVE}${chaveDoSinal}`
 }
@@ -209,6 +212,8 @@ export interface Decisao {
   motivo: MotivoRecusa | null
   /** Em português, para o painel e para o registo. */
   porque: string
+  /** Abre como exploração: combinação ainda sem amostra, lote reduzido. */
+  exploracao?: boolean
 }
 
 const PORQUES: Record<MotivoRecusa, string> = {
@@ -275,6 +280,7 @@ export function decidirOperacoes(entrada: {
       .flatMap((a) => {
         const bruta = String(a.chave ?? '').trim()
         if (!bruta) return []
+        if (bruta.startsWith(PREFIXO_EXPLORA)) return [bruta, bruta.slice(PREFIXO_EXPLORA.length)]
         return bruta.startsWith(PREFIXO_CHAVE) ? [bruta, bruta.slice(PREFIXO_CHAVE.length)] : [bruta]
       }),
   )
@@ -285,6 +291,7 @@ export function decidirOperacoes(entrada: {
     porSimbolo.set(k, (porSimbolo.get(k) ?? 0) + 1)
   }
 
+  let exploracoesAbertas = entrada.abertas.filter((a) => String(a.chave ?? '').startsWith(PREFIXO_EXPLORA)).length
   let abertasAgora = entrada.abertas.length
   let abertosNestaPassagem = 0
   const vistosNestaLeitura = new Set<string>()
@@ -294,6 +301,7 @@ export function decidirOperacoes(entrada: {
   )
 
   const decisoes: Decisao[] = []
+  const paraExplorar = new Set<SinalDoTrader>()
   const recusar = (sinal: SinalDoTrader, motivo: MotivoRecusa): Decisao => ({
     sinal, abrir: false, motivo, porque: PORQUES[motivo],
   })
@@ -348,7 +356,13 @@ export function decidirOperacoes(entrada: {
         continue
       }
       const v = entrada.vantagens.get(chaveCombo(s.estrategia, symbol))
-      if (!v?.aprovada) {
+      const explorar = !v?.aprovada &&
+        regua.exploracao > 0 &&
+        (v?.n ?? 0) < regua.minAmostra &&
+        rr >= regua.exploracaoMinRR &&
+        exploracoesAbertas < regua.exploracaoMax
+      if (explorar) paraExplorar.add(s)
+      else if (!v?.aprovada) {
         decisoes.push({
           ...recusar(s, 'sem_vantagem'),
           porque: v ? v.porque : `Sem histórico medido de ${s.estrategia} em ${symbol}.`,
@@ -375,13 +389,19 @@ export function decidirOperacoes(entrada: {
     porSimbolo.set(k, (porSimbolo.get(k) ?? 0) + 1)
     abertasAgora++
     abertosNestaPassagem++
+    const exploracao = paraExplorar.has(s)
+    if (exploracao) exploracoesAbertas++
+    const medida = entrada.vantagens?.get(chaveCombo(s.estrategia, symbol))
     decisoes.push({
       sinal: s,
       abrir: true,
       motivo: null,
-      porque:
-        `Abre: ${symbol} ${s.direcao} de ${s.estrategia}, com SL em ${s.sl}.` +
-        (entrada.vantagens ? ` ${entrada.vantagens.get(chaveCombo(s.estrategia, symbol))?.porque ?? ''}` : ''),
+      exploracao,
+      porque: exploracao
+        ? `Explora: ${symbol} ${s.direcao} de ${s.estrategia}, SL em ${s.sl}, lote a ${regua.exploracaoLote * 100}% ` +
+          `para medir (${medida?.n ?? 0} de ${regua.minAmostra} trades).`
+        : `Abre: ${symbol} ${s.direcao} de ${s.estrategia}, com SL em ${s.sl}.` +
+          (entrada.vantagens ? ` ${medida?.porque ?? ''}` : ''),
     })
   }
 
@@ -400,7 +420,7 @@ export interface ResultadoTrader {
   armado: boolean
   /** O que o portão de segurança disse. Aparece sempre, mesmo quando corre bem. */
   seguranca: string
-  decisoes: Array<{ chave: string; symbol: string; direcao: string; abrir: boolean; porque: string }>
+  decisoes: Array<{ chave: string; symbol: string; direcao: string; abrir: boolean; porque: string; exploracao?: boolean }>
   abertas: Array<{ chave: string; estado: string; motivo?: string }>
   erros: string[]
   /** O desempenho do próprio agente em papel (só factos medidos). */
@@ -546,7 +566,7 @@ export async function correrTrader(
           estrategia: d.sinal.estrategia,
           // A chave do agente é PRÓPRIA, com prefixo: assim a ponte dele nunca colide com a que
           // `todos-os-sinais.ts` cria para o mesmo sinal na mesma conta.
-          chave: chaveDoAgente(d.sinal.chave),
+          chave: d.exploracao ? `${PREFIXO_EXPLORA}${d.sinal.chave}` : chaveDoAgente(d.sinal.chave),
           impressao: null,
           fonte: 'agente-trader',
           comentario: 'Agente Trader',
@@ -555,7 +575,9 @@ export async function correrTrader(
           entrada: d.sinal.entrada ?? null,
           sl: d.sinal.sl ?? null,
           tps: d.sinal.tps ?? [],
-          cfg: CONFIG_PADRAO,
+          cfg: d.exploracao
+            ? { ...CONFIG_PADRAO, lotePor1000: CONFIG_PADRAO.lotePor1000 * regua.exploracaoLote }
+            : CONFIG_PADRAO,
         })
         feitas.push({ chave: d.sinal.chave, estado: r.estado, motivo: r.motivo })
         if (!r.ok && r.estado === 'erro') erros.push(`${d.sinal.chave}: ${r.motivo ?? 'erro'}`)
@@ -577,6 +599,7 @@ export async function correrTrader(
         : ` Desarmado: decide e relata sem abrir. Para armar: site_settings.${CHAVE_INTERRUPTOR} = {"armado": true}.`),
     decisoes: decisoes.map((d) => ({
       chave: d.sinal.chave, symbol: d.sinal.symbol, direcao: d.sinal.direcao, abrir: d.abrir, porque: d.porque,
+      ...(d.exploracao ? { exploracao: true } : {}),
     })),
     abertas: feitas,
     erros,

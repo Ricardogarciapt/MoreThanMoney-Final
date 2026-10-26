@@ -72,6 +72,20 @@ export const REGUA_PADRAO = {
   minRR: 1,
   /** Perda do dia (fracção do saldo) que fecha a porta até amanhã. */
   perdaDiariaMax: 0.02,
+  /**
+   * EXPLORAÇÃO (26/10/2026, ordem do Ricardo: «põe o agente a trabalhar, com scalping»). 1 = ligada.
+   * Uma combinação sem amostra suficiente (menos de `minAmostra` trades fechados) nunca tinha como
+   * ganhar vantagem medida, porque o agente nunca a negociava. Com a exploração ligada abre-a com
+   * lote reduzido e alvo exigente, para medir. Assim que chega à amostra, manda o veredicto medido:
+   * se estiver a perder, fica fechada como as outras. Só vale na conta de papel.
+   */
+  exploracao: 0,
+  /** RR mínimo ao último TP para uma posição de exploração. */
+  exploracaoMinRR: 1.5,
+  /** Fracção do lote normal numa posição de exploração. */
+  exploracaoLote: 0.25,
+  /** Máximo de posições de exploração abertas ao mesmo tempo. */
+  exploracaoMax: 2,
 } as const
 
 export type Regua = { -readonly [K in keyof typeof REGUA_PADRAO]: number }

@@ -57,6 +57,35 @@ teste('sem saldo não trava às cegas', !travaoDiario(-10, 0))
   teste('sem régua fica a padrão', lerRegua({ armado: true }).minAmostra === REGUA_PADRAO.minAmostra)
 }
 
+// ── a exploração (26/10: scalping na conta de papel) ──
+{
+  const vantagens = vantagemPorCombo([
+    { estrategia: 'mtm-scanner', symbol: 'NZDCHF', n: 79, ganhos: 12, pnl: -84.8, risco: 130, somaR: -51.8, somaR2: 70 },
+    { estrategia: 'sensei', symbol: 'XAUUSD', n: 5, ganhos: 2, pnl: -3, risco: 50, somaR: -0.3, somaR2: 4 },
+  ])
+  const regua = { ...REGUA_PADRAO, exploracao: 1 }
+  const base = { abertas: [], agora: AGORA, vantagens, regua }
+  const rr2 = { tps: [1.105, 1.12] } // RR 2 ao último TP
+  const [a] = decidirOperacoes({ ...base, sinais: [sinal({ estrategia: 'goldkiller', symbol: 'XAUUSD', chave: 'g:1', ...rr2 })] })
+  teste('sem histórico explora', a.abrir && a.exploracao === true)
+  const [b] = decidirOperacoes({ ...base, sinais: [sinal({ estrategia: 'sensei', symbol: 'XAUUSD', chave: 's:1', ...rr2 })] })
+  teste('amostra curta explora', b.abrir && b.exploracao === true)
+  const [c] = decidirOperacoes({ ...base, sinais: [sinal({ symbol: 'NZDCHF', chave: 'n:1', ...rr2 })] })
+  teste('medido a perder não explora', !c.abrir && c.motivo === 'sem_vantagem')
+  const [d] = decidirOperacoes({ ...base, sinais: [sinal({ estrategia: 'goldkiller', symbol: 'XAUUSD', chave: 'g:2' })] })
+  teste('exploração pede RR 1,5', !d.abrir && d.motivo === 'sem_vantagem')
+  const cheias = [
+    { symbol: 'EURJPY', direcao: 'buy' as const, chave: 'agente-trader:explora:a:1' },
+    { symbol: 'GBPJPY', direcao: 'buy' as const, chave: 'agente-trader:explora:a:2' },
+  ]
+  const [e] = decidirOperacoes({ ...base, abertas: cheias, sinais: [sinal({ estrategia: 'goldkiller', symbol: 'XAUUSD', chave: 'g:3', ...rr2 })] })
+  teste('máximo de explorações respeitado', !e.abrir)
+  const [f] = decidirOperacoes({ ...base, abertas: cheias, sinais: [sinal({ estrategia: 'a', chave: 'a:1', symbol: 'USDCAD', ...rr2 })] })
+  teste('exploração aberta conta como já aberta', !f.abrir && f.motivo === 'ja_aberto')
+  const [g] = decidirOperacoes({ ...base, regua: { ...REGUA_PADRAO }, sinais: [sinal({ estrategia: 'goldkiller', symbol: 'XAUUSD', chave: 'g:4', ...rr2 })] })
+  teste('exploração desligada por omissão', !g.abrir)
+}
+
 // ── a decisão com disciplina ──
 {
   const vantagens = vantagemPorCombo([
