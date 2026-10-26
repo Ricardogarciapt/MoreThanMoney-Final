@@ -24,10 +24,21 @@ export const metadata: Metadata = {
  */
 const VIDEOS_ABRIR_CONTA = {
   pt: '/videos/abrir-conta-pu-prime.mp4',
-  en: '/videos/open-account-pu-prime-en.mp4',
+  en: '/videos/open-account-pu-prime-en-nativo.mp4',
+  es: '/videos/abrir-conta-pu-prime-es.mp4',
+  fr: '/videos/abrir-conta-pu-prime-fr.mp4',
+  de: '/videos/abrir-conta-pu-prime-de.mp4',
+  it: '/videos/abrir-conta-pu-prime-it.mp4',
 }
-/** O vídeo curto com os cinco passos. Vazio até os renders chegarem. */
-const VIDEOS_PASSOS = {}
+/** O vídeo curto (~1 min) com os cinco passos. */
+const VIDEOS_PASSOS = {
+  pt: '/videos/onboarding-5-passos-pt.mp4',
+  en: '/videos/onboarding-5-passos-en.mp4',
+  es: '/videos/onboarding-5-passos-es.mp4',
+  fr: '/videos/onboarding-5-passos-fr.mp4',
+  de: '/videos/onboarding-5-passos-de.mp4',
+  it: '/videos/onboarding-5-passos-it.mp4',
+}
 
 export default function OnboardingMtm() {
   return (
