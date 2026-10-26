@@ -21,9 +21,10 @@ export const maxDuration = 300
  */
 
 function autorizado(request: NextRequest): boolean {
-  const esperado = process.env.LMS_CAPTION_WORKER_SECRET?.trim()
-  if (!esperado) return false
-  return request.headers.get('x-caption-secret')?.trim() === esperado
+  const dado = request.headers.get('x-caption-secret')?.trim()
+  if (!dado) return false
+  // O robô diário dos reels corre no GitHub, que só tem o CRON_SECRET: aceita-se também esse.
+  return [process.env.LMS_CAPTION_WORKER_SECRET, process.env.CRON_SECRET].some((s) => s?.trim() && s.trim() === dado)
 }
 
 /**
@@ -195,6 +196,17 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+
+  // Os vídeos do robô dos reels diários não precisam de pré-visualização: ninguém escolhe à mão,
+  // o planeador aprova os melhores pela nota. Fazê-las era descarregar a sessão outra vez.
+  if (semPreview) {
+    const { data: dono } = await db.from('videocliper_jobs').select('criado_por').eq('id', semPreview.job_id as string).maybeSingle()
+    if (String(dono?.criado_por ?? '').startsWith('auto:')) {
+      await db.from('videocliper_clips').update({ preview_estado: 'feito' })
+        .eq('job_id', semPreview.job_id as string).is('preview_estado', null)
+      return NextResponse.json({ tipo: 'nada', repetir: true })
+    }
+  }
 
   if (semPreview) {
     const jobId = semPreview.job_id as string
