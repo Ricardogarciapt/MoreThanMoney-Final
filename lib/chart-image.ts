@@ -93,6 +93,7 @@ export async function renderSignalChartPng(sig: ChartImgSignal): Promise<ArrayBu
  */
 let quotaEsgotadaAte = 0
 const QUOTA_ESPERA_MS = 30 * 60_000
+const CHAVE_RECUSADA_ESPERA_MS = 6 * 60 * 60_000
 
 /** O chart-img está de quarentena por quota esgotada? (usado pela rota da imagem do sinal) */
 export function chartImgEmQuarentena(): boolean {
@@ -103,7 +104,7 @@ export function chartImgEmQuarentena(): boolean {
 export async function renderSignalChart(sig: ChartImgSignal): Promise<{ png: ArrayBuffer | null; error?: string; body?: unknown }> {
   const key = process.env.CHARTIMG_API_KEY
   if (!key) return { png: null, error: "sem CHARTIMG_API_KEY" }
-  if (chartImgEmQuarentena()) return { png: null, error: "quota esgotada (429) — em quarentena" }
+  if (chartImgEmQuarentena()) return { png: null, error: "chart-img em quarentena (429 quota ou 401/403 chave)" }
 
   // Só o gráfico real + linhas Entry/SL/Exits com etiqueta de texto (sem studies).
   // 5 linhas cabem no limite de drawings do PRO.
@@ -136,8 +137,15 @@ export async function renderSignalChart(sig: ChartImgSignal): Promise<{ png: Arr
     })
     if (!res.ok) {
       const t = (await res.text()).slice(0, 400)
-      if (res.status === 429) quotaEsgotadaAte = Date.now() + QUOTA_ESPERA_MS
-      console.error("[chart-image] chart-img erro", res.status, t)
+      // 401/403 = chave recusada (desde 28/09 é 403 a cada pedido: 3 500 erros em 4 semanas).
+      // Não volta sozinha — espera longa e um só registo por quarentena, não um por imagem.
+      const recusada = res.status === 401 || res.status === 403
+      if (res.status === 429 || recusada) {
+        quotaEsgotadaAte = Date.now() + (recusada ? CHAVE_RECUSADA_ESPERA_MS : QUOTA_ESPERA_MS)
+        console.warn("[chart-image] chart-img", res.status, "— em quarentena", recusada ? "(chave recusada: rever CHARTIMG_API_KEY)" : "(quota)")
+      } else {
+        console.error("[chart-image] chart-img erro", res.status, t)
+      }
       return { png: null, error: `${res.status} ${t}`, body }
     }
     quotaEsgotadaAte = 0

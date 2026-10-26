@@ -54,6 +54,9 @@ import {
 import { urlDoChat, urlDoTapToTrade } from "@/lib/notificacao-destino"
 import { lifecycleMessage, stopFoiProtegido } from "@/lib/mtmcopy/signal-lifecycle"
 import { formatarSeguimento, formatarSinal } from "@/lib/sinais/formato-sinal"
+import { eAlertaTrendshot } from "@/lib/sinais/trendshot"
+import { marcaDaEstrategia } from "@/lib/sinais/grafico-estrategia"
+import { enviarGraficoTelegram, legendaDoGrafico, urlDoGraficoDoSinal } from "@/lib/sinais/grafico-publicar"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
@@ -495,9 +498,11 @@ async function processarAlerta(request: NextRequest) {
 
   // MTM Auto Trendshot (23/10): caminho próprio — o alerta só traz a direcção e o preço; os níveis
   // calculam-se como no Pine. Fica à parte dos gates dos outros scanners.
-  if ((url.searchParams.get("strategy") || "").toLowerCase().trim() === "trendshot") {
+  // Também sem `?strategy`: o alerta «Trendshot: BUY/SELL signal» que caía no URL genérico ia parar
+  // ao MTM Scanner e era recusado por falta de símbolo (369 vezes entre 12 e 25/10).
+  if (eAlertaTrendshot(url.searchParams.get("strategy"), payload, rawBody)) {
     const { processarTrendshot } = await import("@/lib/sinais/trendshot-webhook")
-    return NextResponse.json(await processarTrendshot(payload, rawBody))
+    return NextResponse.json(await processarTrendshot(payload, rawBody, url.searchParams))
   }
 
   // Campos do alerta TradingView
@@ -1460,6 +1465,8 @@ async function processarAlerta(request: NextRequest) {
       ? composePost(v, activeSensei, msgCtx)
       : composeGenericPost(route, v, timeframe)
   const replyToTelegramId = isFollowup ? linkedIdea?.telegramMessageId ?? null : null
+  /** Gráfico da estratégia — só nas entradas (os seguimentos respondem à entrada, que já o tem). */
+  const graficoDaEntrada = !isFollowup && initSignalKind === "entry" && logId ? urlDoGraficoDoSinal(logId, { origem: url.origin }) : null
   // Ideia cuja mensagem de entrada/activação guardamos para os follow-ups responderem
   const entryIdeaId = savedIdea?.id ?? entryTradeIdea?.id ?? null
 
@@ -1512,6 +1519,8 @@ async function processarAlerta(request: NextRequest) {
           telegram_sender: route.sender,
           user_id: null,
           ...(parentChatId ? { reply_to_id: parentChatId } : {}),
+          // A entrada leva o gráfico da estratégia (velas + indicadores do scanner).
+          ...(graficoDaEntrada ? { image_url: graficoDaEntrada } : {}),
         })
         .select("id").single()
       if (error) throw error
@@ -1773,6 +1782,16 @@ async function processarAlerta(request: NextRequest) {
           .then(() => {}, () => {})
       }
       if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "sent", telegram_chat_id: relayChatId, telegram_message_id: mid, relayed_at: new Date().toISOString() }).eq("id", logId)
+      if (graficoDaEntrada && logId && mid) {
+        const marca = marcaDaEstrategia(estrategia, alertName)
+        await enviarGraficoTelegram(
+          AIBOT_TOKEN,
+          relayChatId,
+          urlDoGraficoDoSinal(logId, { origem: url.origin, png: true }),
+          legendaDoGrafico(marca.nome, v.symbol ?? ticker ?? "", timeframe),
+          mid,
+        )
+      }
     } catch (err) {
       if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "error", telegram_chat_id: relayChatId, telegram_error: String(err) }).eq("id", logId)
     }

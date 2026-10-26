@@ -27,6 +27,7 @@ import {
   reescalar,
 } from '@/lib/mercado/referencias'
 import { buscarVelasRef } from '@/lib/mercado/velas-referencia'
+import { linhasDaEstrategia, type LinhaEstrategia, type MarcaEstrategia } from '@/lib/sinais/grafico-estrategia'
 
 const GOLD = '#D2A63C'
 const GREEN = '#16b981'
@@ -55,6 +56,12 @@ export interface SinalGrafico {
   alertName?: string | null
   largura?: number
   altura?: number
+  /** Marca da estratégia (nome + cor) — lib/sinais/grafico-estrategia. */
+  marca?: MarcaEstrategia
+  /** Indicadores da estratégia, um valor por vela desenhada. */
+  linhas?: LinhaEstrategia[]
+  /** Velas a mais pedidas ANTES da janela (aquecimento dos indicadores). */
+  historico?: number
 }
 
 /** Timeframe do alerta TradingView ("15", "60", "240", "1D") → timeframe das referências. */
@@ -107,6 +114,12 @@ function fmt(v: number | null | undefined, d?: number): string {
   if (v == null || !Number.isFinite(v)) return '—'
   return v.toFixed(d ?? casas(v))
 }
+/** Largura aproximada de um texto em negrito (maiúsculas são mais largas) — só para encostar rótulos. */
+function larguraTexto(t: string, tam: number): number {
+  let em = 0
+  for (const ch of t) em += ch === ' ' ? 0.28 : /[A-Z0-9]/.test(ch) ? 0.66 : 0.54
+  return Math.round(em * tam)
+}
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -127,7 +140,7 @@ export async function velasDoSinal(sig: SinalGrafico): Promise<VelaRef[]> {
   const ancora = sig.entry != null && sig.entry > 0 ? { preco: sig.entry, emSeg: sig.emSeg } : null
 
   for (const ref of refs) {
-    const velas = await pedirVelas(ref, tf, ate)
+    const velas = await pedirVelas(ref, tf, ate, VELAS + Math.max(0, sig.historico ?? 0))
     if (velas.length < VELAS_MINIMAS) continue
     // Folga da âncora: normalmente 4 velas. Nos índices e acções a referência é o índice à vista,
     // que fecha horas antes do CFD (GER40 tem sinais às 16:45 UTC e o ^GDAXI fecha às 15:30) — aí
@@ -140,15 +153,59 @@ export async function velasDoSinal(sig: SinalGrafico): Promise<VelaRef[]> {
   return []
 }
 
-function pedirVelas(ref: RefMercado, tf: string, ateSeg: number): Promise<VelaRef[]> {
+function pedirVelas(ref: RefMercado, tf: string, ateSeg: number, limite: number): Promise<VelaRef[]> {
   // `ateSeg` no futuro (sinal fresco) é inofensivo: as fontes limitam ao presente.
-  return buscarVelasRef(ref, tf, VELAS, ateSeg).catch(() => [])
+  return buscarVelasRef(ref, tf, limite, ateSeg).catch(() => [])
+}
+
+/** Velas de aquecimento pedidas antes da janela, para as médias da estratégia já virem formadas. */
+const AQUECIMENTO = 160
+
+/**
+ * Velas + indicadores da estratégia do sinal, já cortados à janela desenhada. Sem marca de
+ * estratégia com indicadores, é o mesmo que `velasDoSinal`.
+ */
+export async function graficoDaEstrategia(
+  sig: SinalGrafico & { marca: MarcaEstrategia },
+): Promise<{ velas: VelaRef[]; linhas: LinhaEstrategia[] }> {
+  const todas = await velasDoSinal({ ...sig, historico: AQUECIMENTO })
+  if (todas.length < VELAS_MINIMAS) return { velas: [], linhas: [] }
+  const linhas = linhasDaEstrategia(sig.marca, todas, simboloBase(sig.ticker))
+  const corte = Math.max(0, todas.length - VELAS)
+  return {
+    velas: todas.slice(corte),
+    linhas: linhas.map((l) => ({ ...l, valores: l.valores.slice(corte) })),
+  }
 }
 
 interface Nivel { preco: number; cor: string; texto: string }
 
-/** SVG do gráfico: velas + linhas da trade + rodapé com os parâmetros e a marca MTM. */
-export function svgVelasSinal(sig: SinalGrafico, velas: VelaRef[]): string {
+/**
+ * Um texto do desenho. Vem também à parte porque o PNG (Satori/resvg) não tem fontes para os
+ * <text> de um SVG embebido — saíam todos em branco; lá desenham-se como texto do próprio Satori.
+ */
+export interface TextoSvg {
+  x: number
+  /** linha de base, como no SVG */
+  y: number
+  texto: string
+  cor: string
+  tam: number
+  peso?: number
+  espacamento?: number
+  ancora?: 'start' | 'middle' | 'end'
+}
+
+export interface DesenhoVelas {
+  largura: number
+  altura: number
+  svg: string
+  svgSemTexto: string
+  textos: TextoSvg[]
+}
+
+/** O desenho completo (SVG com texto, SVG sem texto e os textos à parte). */
+export function desenhoVelasSinal(sig: SinalGrafico, velas: VelaRef[]): DesenhoVelas {
   const W = sig.largura ?? 1200
   const H = sig.altura ?? 760
   const RODAPE = 140
@@ -183,6 +240,14 @@ export function svgVelasSinal(sig: SinalGrafico, velas: VelaRef[]): string {
   const dirTxt = sig.direcao === 'sell' ? 'VENDA' : 'COMPRA'
 
   const partes: string[] = []
+  const textos: TextoSvg[] = []
+  const txt = (t: TextoSvg) => {
+    textos.push(t)
+    const a = t.ancora && t.ancora !== 'start' ? ` text-anchor="${t.ancora}"` : ''
+    const p = t.peso ? ` font-weight="${t.peso}"` : ''
+    const e = t.espacamento ? ` letter-spacing="${t.espacamento}"` : ''
+    partes.push(`<text x="${+t.x.toFixed(1)}" y="${+t.y.toFixed(1)}" fill="${t.cor}" font-size="${t.tam}"${p}${e}${a} font-family="system-ui,-apple-system,Segoe UI,sans-serif">${esc(t.texto)}</text>`)
+  }
   partes.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="${INK}"/>`)
 
   // ── grelha + eixo dos preços ────────────────────────────────────────────────
@@ -193,7 +258,7 @@ export function svgVelasSinal(sig: SinalGrafico, velas: VelaRef[]): string {
     const pv = max - (span * i) / 4
     partes.push(`<line x1="${areaX0}" y1="${py.toFixed(1)}" x2="${areaX1}" y2="${py.toFixed(1)}" stroke="${GRID}" stroke-width="1"/>`)
     if (yNiveis.some((yn) => Math.abs(yn - py) < 17)) continue
-    partes.push(`<text x="${areaX1 + 8}" y="${(py + 4).toFixed(1)}" fill="${MUTED}" font-size="15" font-family="system-ui,-apple-system,Segoe UI,sans-serif">${fmt(pv, dec)}</text>`)
+    txt({ x: areaX1 + 8, y: py + 4, cor: MUTED, tam: 15, texto: fmt(pv, dec) })
   }
 
   // ── velas ───────────────────────────────────────────────────────────────────
@@ -210,6 +275,40 @@ export function svgVelasSinal(sig: SinalGrafico, velas: VelaRef[]): string {
     partes.push(`<rect x="${(cx - corpo / 2).toFixed(1)}" y="${topo.toFixed(1)}" width="${corpo.toFixed(1)}" height="${alt.toFixed(1)}" fill="${cor}" opacity="0.9"/>`)
   }
 
+  // ── indicadores da estratégia ───────────────────────────────────────────────
+  // Recortados à área das velas: uma média fora da escala não pode invadir o eixo nem o rodapé.
+  const linhas = (sig.linhas ?? []).filter((l) => l.valores.length === velas.length)
+  if (linhas.length) {
+    partes.push(`<defs><clipPath id="area"><rect x="${areaX0}" y="${areaY0}" width="${areaW}" height="${areaH}"/></clipPath></defs>`)
+    for (const l of linhas) {
+      const troços: string[][] = [[]]
+      l.valores.forEach((v, i) => {
+        if (!Number.isFinite(v)) {
+          if (troços[troços.length - 1].length) troços.push([])
+          return
+        }
+        troços[troços.length - 1].push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`)
+      })
+      for (const t of troços) {
+        if (t.length < 2) continue
+        partes.push(
+          `<polyline clip-path="url(#area)" points="${t.join(' ')}" fill="none" stroke="${l.cor}" stroke-width="${l.espessura ?? 2}"${l.tracejada ? ' stroke-dasharray="6 5"' : ''} stroke-linejoin="round" opacity="0.95"/>`,
+        )
+      }
+    }
+    // Legenda dos indicadores, no canto INFERIOR esquerdo da área, sobre uma placa: em cima
+    // pisava os rótulos do SL/TP quando o nível calhava junto ao topo.
+    const larguraLegenda = linhas.reduce((acc, l) => acc + 40 + Math.round(l.nome.length * 8.2), 0)
+    const ly = areaY1 - 12
+    partes.push(`<rect x="${areaX0 + 4}" y="${ly - 20}" width="${larguraLegenda + 8}" height="28" rx="6" fill="${PANEL}" opacity="0.88"/>`)
+    let lx = areaX0 + 10
+    for (const l of linhas) {
+      partes.push(`<line x1="${lx}" y1="${ly - 5}" x2="${lx + 22}" y2="${ly - 5}" stroke="${l.cor}" stroke-width="3"${l.tracejada ? ' stroke-dasharray="5 4"' : ''}/>`)
+      txt({ x: lx + 28, y: ly, cor: l.cor, tam: 14, peso: 600, texto: l.nome })
+      lx += 40 + Math.round(l.nome.length * 8.2)
+    }
+  }
+
   // ── momento do sinal (vertical tracejada) ───────────────────────────────────
   const iSinal = indiceDoInstante(velas, sig.emSeg)
   if (iSinal >= 0) {
@@ -222,21 +321,24 @@ export function svgVelasSinal(sig: SinalGrafico, velas: VelaRef[]): string {
     const py = y(n.preco)
     if (py < areaY0 - 2 || py > areaY1 + 2) continue
     partes.push(`<line x1="${areaX0}" y1="${py.toFixed(1)}" x2="${areaX1}" y2="${py.toFixed(1)}" stroke="${n.cor}" stroke-width="2"/>`)
-    partes.push(`<text x="${areaX0 + 8}" y="${(py - 6).toFixed(1)}" fill="${n.cor}" font-size="16" font-weight="600" font-family="system-ui,-apple-system,Segoe UI,sans-serif">${esc(n.texto)}</text>`)
+    txt({ x: areaX0 + 8, y: py - 6, cor: n.cor, tam: 16, peso: 600, texto: n.texto })
     partes.push(`<rect x="${areaX1}" y="${(py - 12).toFixed(1)}" width="${EIXO}" height="24" fill="${n.cor}"/>`)
-    partes.push(`<text x="${areaX1 + 8}" y="${(py + 5).toFixed(1)}" fill="#08131a" font-size="15" font-weight="700" font-family="system-ui,-apple-system,Segoe UI,sans-serif">${fmt(n.preco, dec)}</text>`)
+    txt({ x: areaX1 + 8, y: py + 5, cor: '#08131a', tam: 15, peso: 700, texto: fmt(n.preco, dec) })
   }
 
   // ── cabeçalho ───────────────────────────────────────────────────────────────
   partes.push(`<rect x="0" y="0" width="${W}" height="${TOPO}" fill="${PANEL}"/>`)
-  partes.push(`<text x="18" y="36" fill="#ffffff" font-size="24" font-weight="700" font-family="system-ui,-apple-system,Segoe UI,sans-serif">${esc(sig.ticker.toUpperCase())}</text>`)
+  // Faixa da cor da estratégia: é por ela que o membro reconhece o scanner antes de ler.
+  if (sig.marca) partes.push(`<rect x="0" y="0" width="${W}" height="4" fill="${sig.marca.cor}"/>`)
+  txt({ x: 18, y: 36, cor: '#ffffff', tam: 24, peso: 700, texto: sig.ticker.toUpperCase() })
   // Largura aproximada do ticker a 24px bold (~14,2 px por letra) + folga, para o crachá não pisar.
   const largTicker = 18 + Math.round(sig.ticker.trim().length * 14.2) + 14
   partes.push(`<rect x="${largTicker}" y="15" width="92" height="26" rx="6" fill="${dirCor}"/>`)
-  partes.push(`<text x="${largTicker + 46}" y="34" fill="#08131a" font-size="15" font-weight="800" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif">${dirTxt}</text>`)
-  const legenda = `${sig.alertName || 'MTM'} · ${rotuloTf(sig.timeframe)}`
-  partes.push(`<text x="${largTicker + 108}" y="35" fill="${MUTED}" font-size="16" font-family="system-ui,-apple-system,Segoe UI,sans-serif">${esc(legenda)}</text>`)
-  partes.push(`<text x="${W - 18}" y="35" fill="${GOLD}" font-size="17" font-weight="800" letter-spacing="2" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif">MORE THAN MONEY</text>`)
+  txt({ x: largTicker + 46, y: 34, cor: '#08131a', tam: 15, peso: 800, ancora: 'middle', texto: dirTxt })
+  const nomeEstrategia = sig.marca?.nome || sig.alertName || 'MTM'
+  txt({ x: largTicker + 108, y: 35, cor: sig.marca?.cor ?? MUTED, tam: 17, peso: 700, texto: nomeEstrategia })
+  txt({ x: largTicker + 108 + larguraTexto(nomeEstrategia, 17) + 6, y: 35, cor: MUTED, tam: 17, texto: `· ${rotuloTf(sig.timeframe)}` })
+  txt({ x: W - 18, y: 35, cor: GOLD, tam: 17, peso: 800, espacamento: 2, ancora: 'end', texto: 'MORE THAN MONEY' })
 
   // ── rodapé com os parâmetros ────────────────────────────────────────────────
   partes.push(`<rect x="0" y="${H - RODAPE}" width="${W}" height="${RODAPE}" fill="${PANEL}"/>`)
@@ -251,13 +353,25 @@ export function svgVelasSinal(sig: SinalGrafico, velas: VelaRef[]): string {
     const cx = 20 + largChip * i
     const cy = H - RODAPE + 36
     partes.push(`<rect x="${cx}" y="${cy - 22}" width="3" height="56" fill="${c.cor}"/>`)
-    partes.push(`<text x="${cx + 14}" y="${cy - 4}" fill="${MUTED}" font-size="15" letter-spacing="1" font-family="system-ui,-apple-system,Segoe UI,sans-serif">${c.rotulo}</text>`)
-    partes.push(`<text x="${cx + 14}" y="${cy + 26}" fill="${c.cor}" font-size="25" font-weight="700" font-family="system-ui,-apple-system,Segoe UI,sans-serif">${c.valor}</text>`)
+    txt({ x: cx + 14, y: cy - 4, cor: MUTED, tam: 15, espacamento: 1, texto: c.rotulo })
+    txt({ x: cx + 14, y: cy + 26, cor: c.cor, tam: 25, peso: 700, texto: c.valor })
   })
-  partes.push(`<text x="20" y="${H - 16}" fill="${MUTED}" font-size="14" font-family="system-ui,-apple-system,Segoe UI,sans-serif">@morethanmoney.pt</text>`)
-  partes.push(`<text x="${W - 20}" y="${H - 16}" fill="${MUTED}" font-size="14" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif">Material educativo · Não é aconselhamento financeiro · Trading tem risco</text>`)
+  txt({ x: 20, y: H - 16, cor: MUTED, tam: 14, texto: '@morethanmoney.pt' })
+  txt({ x: W - 20, y: H - 16, cor: MUTED, tam: 14, ancora: 'end', texto: 'Material educativo · Não é aconselhamento financeiro · Trading tem risco' })
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">${partes.join('')}</svg>`
+  const abrir = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">`
+  return {
+    largura: W,
+    altura: H,
+    svg: `${abrir}${partes.join('')}</svg>`,
+    svgSemTexto: `${abrir}${partes.filter((p) => !p.startsWith('<text')).join('')}</svg>`,
+    textos,
+  }
+}
+
+/** SVG do gráfico: velas + linhas da trade + rodapé com os parâmetros e a marca MTM. */
+export function svgVelasSinal(sig: SinalGrafico, velas: VelaRef[]): string {
+  return desenhoVelasSinal(sig, velas).svg
 }
 
 /** Índice da vela que contém o instante (−1 se estiver fora da janela desenhada). */
