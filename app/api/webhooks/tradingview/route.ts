@@ -59,6 +59,7 @@ import { eAlertaTrendshot } from "@/lib/sinais/trendshot"
 import { TIMEFRAMES_POR_ESTRATEGIA, slFixo, timeframeAceite } from "@/lib/sinais/sl-por-estrategia"
 import { marcaDaEstrategia } from "@/lib/sinais/grafico-estrategia"
 import { enviarGraficoTelegram, legendaDoGrafico, urlDoGraficoDoSinal } from "@/lib/sinais/grafico-publicar"
+import { stopNaoFoiTocado } from "@/lib/sinais/stop-tocado"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
@@ -877,6 +878,36 @@ async function processarAlerta(request: NextRequest) {
   }
   /** A entrada deste seguimento (só quando a ligação é inequívoca). */
   const entradaLigada = ligacaoSeg?.ok ? ligacaoSeg.entrada : null
+
+  /**
+   * O «SL» que não foi stop (lib/sinais/stop-tocado.ts): o Sensei X manda `state: "SL"` também
+   * quando só mexe no stop. Com o preço longe do stop, do lado do lucro, a trade continua viva —
+   * não se marca perda, não se apagam ordens dos seguidores e não se publica nada. Os TP que vêm a
+   * seguir voltam a encontrar a entrada aberta.
+   */
+  if ((activeSensei?.alertType ?? initAlertType) === "sl_hit" && entradaLigada?.id && logId) {
+    const { data: ent } = await supabase
+      .from("tradingview_signals")
+      .select("action, price, sl")
+      .eq("id", entradaLigada.id)
+      .maybeSingle()
+    const acaoEnt = String(ent?.action ?? "")
+    const dirEnt = /sell|short|venda/i.test(acaoEnt) ? "sell" : /buy|long|compra/i.test(acaoEnt) ? "buy" : null
+    const entradaPx = Number(ent?.price) > 0 ? Number(ent?.price) : activeSensei?.entry ?? null
+    const slAlerta = activeSensei?.sl ?? sl ?? null
+    if (stopNaoFoiTocado({ direcao: dirEnt, entrada: entradaPx, slOriginal: Number(ent?.sl) || null, sl: slAlerta, preco: price })) {
+      await supabase
+        .from("tradingview_signals")
+        .update({
+          trade_status: "sl_movido",
+          chat_status: "suppressed",
+          telegram_status: "suppressed",
+          ai_error: `SL do Pine com o preço ${price} longe do stop ${slAlerta}: stop movido, não tocado — a trade continua`.slice(0, 300),
+        })
+        .eq("id", logId)
+      return NextResponse.json({ ok: true, followup: true, ignored: "sl_movido", signal_id: logId })
+    }
+  }
 
   // Imagem do sinal (só entradas): aponta o cartão para a rota lazy, que renderiza o gráfico
   // TradingView REAL (chart-img) com as linhas da trade na 1.ª visualização (CDN cacheia por
