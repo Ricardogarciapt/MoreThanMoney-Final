@@ -8,6 +8,7 @@ import { T2T_SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
 import { urlDoChat, urlDoTapToTrade } from '@/lib/notificacao-destino'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { atualizarDesfechosDoCanal } from '@/lib/mtmcopy/signal-outcomes'
+import { after } from 'next/server'
 
 /** Encerra mesmo a ideia — o mesmo teste do motor de desfechos. */
 const TERMINAL_RE =
@@ -123,7 +124,13 @@ export async function sendTelegramChannelPush(opts: {
   if (opts.chatMessageId && isT2TEntrySignal(slug, opts.content)) {
     try {
       const enabled = await tapToTradeEnabledChannels()
-      if (enabled?.has(slug)) t2tUsers = modoSeguir ? [] : await activeT2TUserIds(slug, opts.content ?? null)
+      if (enabled?.has(slug)) {
+        t2tUsers = modoSeguir ? [] : await activeT2TUserIds(slug, opts.content ?? null)
+        // Em paralelo com o push do MTM System; `after` segura a função viva até acabar. Fora de
+        // um pedido (crons, scripts) o `after` não existe e espera-se aqui.
+        const avisoMtmAuto = avisarAppMtmAuto(opts.chatMessageId)
+        try { after(() => avisoMtmAuto) } catch { await avisoMtmAuto }
+      }
     } catch {
       // segue como push normal
     }
@@ -232,4 +239,27 @@ export async function sendTelegramChannelPush(opts: {
     },
     tag,
   })
+}
+
+/**
+ * A app MTM AUTO também avisa a entrada T2T (26/10, pedido do Ricardo).
+ *
+ * Desde 23/09 não avisava nada: era o motor próprio dela que mandava as notificações, e foi
+ * desligado quando os sinais passaram a viver aqui. A MTM Auto relê a mensagem na base, decide
+ * quem tem acesso e notificações ligadas, e manda cada sinal uma vez só (APNs no iPhone, web push
+ * no Android e no browser). Esperado com prazo curto: aqui é uma função serverless, e o que fica a
+ * correr depois da resposta é cortado. Falhar não segura o push do MTM System.
+ */
+async function avisarAppMtmAuto(chatMessageId: string): Promise<void> {
+  const base = (process.env.MTM_AUTO_URL ?? '').trim() || 'https://mtm-auto.vercel.app'
+  try {
+    await fetch(`${base}/api/auto/avisos/sinal`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatMessageId }),
+      signal: AbortSignal.timeout(8_000),
+    })
+  } catch {
+    /* a MTM Auto em baixo não pode atrasar o aviso da MTM System */
+  }
 }
