@@ -6,8 +6,8 @@
  * materiais (seis guias e seis playlists) apareciam numa lista corrida. Agora a sala tem a sua
  * própria secção, com capa, e um cartão por estratégia.
  *
- * Os nomes das estratégias não se traduzem. As playlists EN ficam a null até existirem: o cartão
- * mostra só a versão PT enquanto isso.
+ * Os nomes das estratégias não se traduzem. Uma playlist EN a null faz o cartão mostrar só a
+ * versão PT.
  */
 
 export type Lingua = "pt" | "en"
@@ -40,42 +40,42 @@ export const ESTRATEGIAS_MTM: EstrategiaMtm[] = [
     slug: "golden-zone",
     nome: "Golden Zone",
     resumo: { pt: "Scalping de ouro em 5 minutos, com entrada no reteste da zona.", en: "Gold scalping on 5 minutes, entering on the zone retest." },
-    playlist: { pt: "https://www.youtube.com/playlist?list=PLV0hwsHYlTJI", en: null },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLV0hwsHYlTJI", en: "https://www.youtube.com/playlist?list=PLOnYKkVYh2E0" },
     guia: guias("golden-zone"),
   },
   {
     slug: "momentum",
     nome: "Momentum",
     resumo: { pt: "Seguimento de direção por cores, com cinco confirmações.", en: "Direction-following by colour, with five confirmations." },
-    playlist: { pt: "https://www.youtube.com/playlist?list=PLN4Z40YVHXW0", en: null },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLN4Z40YVHXW0", en: "https://www.youtube.com/playlist?list=PLNZCUz3dWgiE" },
     guia: guias("momentum"),
   },
   {
     slug: "trendshot",
     nome: "TrendShot",
     resumo: { pt: "Scalping a favor da tendência: médias, estrelas e risco 1:2.", en: "Scalping with the trend: averages, stars and 1:2 risk." },
-    playlist: { pt: "https://www.youtube.com/playlist?list=PLS4JA-NSNXVA", en: null },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLS4JA-NSNXVA", en: "https://www.youtube.com/playlist?list=PLDAQ5Kn2spv4" },
     guia: guias("trendshot"),
   },
   {
     slug: "supernova",
     nome: "Supernova",
     resumo: { pt: "Reversões impulsivas: estrela, três velas e rompimento.", en: "Impulsive reversals: star, three candles and a break." },
-    playlist: { pt: "https://www.youtube.com/playlist?list=PLI8Wz5hgwPPM", en: null },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLI8Wz5hgwPPM", en: "https://www.youtube.com/playlist?list=PLfY_QCrNls3Q" },
     guia: guias("supernova"),
   },
   {
     slug: "sniper-pro",
     nome: "Sniper Pro",
     resumo: { pt: "Intradiário em 15 minutos, com a tendência das 4 horas a decidir.", en: "Intraday on 15 minutes, with the 4 hour trend deciding." },
-    playlist: { pt: "https://www.youtube.com/playlist?list=PLCTmB_PinI90", en: null },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLCTmB_PinI90", en: "https://www.youtube.com/playlist?list=PLYuP_cXkwqok" },
     guia: guias("sniper-pro"),
   },
   {
     slug: "quantum",
     nome: "Quantum",
     resumo: { pt: "Tendência e recuos, com o painel de força por timeframe.", en: "Trend and pullbacks, with the strength panel per timeframe." },
-    playlist: { pt: "https://www.youtube.com/playlist?list=PLC18FgHeGfwU", en: null },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLC18FgHeGfwU", en: "https://www.youtube.com/playlist?list=PLRSOqGU2KHfg" },
     guia: guias("quantum"),
   },
 ]
