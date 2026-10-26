@@ -15,7 +15,7 @@ const so = (process.argv.find(a => a.startsWith('--so=')) || '').slice(5)
 const legendas = !process.argv.includes('--sem-legendas')
 const FPS = preview ? 12 : 30
 const W = 1920, H = 1080
-const ABRE = 0.4, RESPIRO = 0.55 // segundos antes da 1.ª fala e entre cenas
+const ABRE = 0.6, RESPIRO = 1.1 // segundos antes da 1.ª fala e entre cenas
 
 const guiao = JSON.parse(fs.readFileSync(path.join(DIR, 'guiao.json'), 'utf8')).cenas
 const vozDir = path.join(DIR, 'voz', lang)
@@ -77,8 +77,9 @@ await new Promise(r => ff.on('close', r))
 await browser.close()
 fs.writeFileSync(path.join(out, `linha-${lang}.json`), JSON.stringify(TL.map(({ audio, ...c }) => c), null, 1))
 
-// Velocidade aprovada pelo Ricardo para os vídeos com a voz dele: 1,12× (o tom mantém-se).
-const VELOCIDADE = 1.12
+// O vídeo de vendas vai à velocidade normal: a 1,12× o Ricardo achou-o rápido (25/10, 20:16).
+// Os tutoriais curtos continuam a 1,12× (ver memória videos-voz-velocidade).
+const VELOCIDADE = 1
 if (temVoz && !preview) {
   const final = path.join(out, `apresentacao-${lang}-final.mp4`)
   execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', mp4, '-filter_complex', `[0:v]setpts=PTS/${VELOCIDADE}[v];[0:a]atempo=${VELOCIDADE}[a]`,

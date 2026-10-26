@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Check, X, PlayCircle } from "lucide-react"
@@ -145,7 +145,116 @@ const TESTEMUNHOS: { pt: string; en: string }[] = [
     en: "Grateful to be in the best community, the best financial education ecosystem in the country.",
   },
   { pt: "Boas Maltinha. Fechei os Futuros que tinha em compra. Guardei lucros.", en: "Hi folks. Closed the futures I was holding. Took profits." },
+  { pt: "Máquinas!!!! Vocês dão um up tão grande e uma força para que isto aconteça!! Obrigado 🙏", en: "Legends!!!! You give us such a boost and the strength to make this happen!! Thank you 🙏" },
+  { pt: "Bora let's go, grato pela confiança.", en: "Let's go, grateful for the trust." },
 ]
+
+/**
+ * Dentro da app e os dois pilares. Os prints são do Ricardo (25/10/2026), com o win rate, o saldo e o
+ * número de conta desfocados — a página não mostra números de desempenho.
+ * Os pilares e as áreas seguem lib/pilares.ts (a mesma lista de /mtmmarkets e /contentbussiness).
+ */
+function extras(lang: Lang) {
+  const en = lang === "en"
+  return {
+    appT: en ? "Inside the MTM System app" : "Por dentro da app MTM System",
+    appSub: en ? "Real screens from the app, not mock-ups." : "Ecrãs reais da app, não maquetas.",
+    telas: [
+      ["/images/apresentacao/app-feed.jpg", "Feed", en ? "The community and the founder's posts, by topic." : "A comunidade e as publicações do fundador, por tema."],
+      ["/images/apresentacao/app-chat.jpg", "Chat", en ? "Open channels per market, and the signals & ideas channels." : "Canais abertos por mercado, e os canais de sinais e ideias."],
+      ["/images/apresentacao/app-aulas.jpg", en ? "Classes" : "Aulas", en ? "Every academy, live rooms and the weekly schedule." : "Todas as academias, salas ao vivo e a grelha da semana."],
+      ["/images/apresentacao/app-alertas.jpg", en ? "Alerts" : "Alertas", en ? "Entry, stop and targets on the chart, with push notifications." : "Entrada, stop e alvos no gráfico, com notificação no telemóvel."],
+      ["/images/apresentacao/app-scanner.jpg", "Scanner", en ? "Our scanners on the chart: GoldKiller, MTM, Sensei and more." : "Os nossos scanners no gráfico: GoldKiller, MTM, Sensei e mais."],
+      ["/images/apresentacao/app-webtrader.jpg", "WebTrader", en ? "MTM Funded: practise on a simulated account inside the app." : "MTM Funded: praticas numa conta simulada dentro da app."],
+    ] as [string, string, string][],
+    fita: en
+      ? ["Live classes", "Trading Alerts", "Tap to Trade", "MTM Auto", "Scanners", "AI Terminal", "Portfolios & DCA", "MTM Funded", "AI Mentor", "MTM Social Studio", "Community chat", "Certification"]
+      : ["Aulas ao vivo", "Trading Alerts", "Tap to Trade", "MTM Auto", "Scanners", "Terminal com IA", "Portefólios e DCA", "MTM Funded", "Mentor AI", "Estúdio MTM Social", "Chat da comunidade", "Certificação"],
+    pilaresT: en ? "Two pillars, one system" : "Dois pilares, um sistema",
+    pilares: [
+      {
+        nome: "MTM Markets", href: "/mtmmarkets",
+        def: en ? "Markets and money: learning to trade them, and the tools that trade them for you when you can't be there." : "Os mercados e o dinheiro: aprender a operá-los, e as ferramentas que os operam por ti quando não podes estar.",
+        areas: en ? ["Forex & metals", "Crypto", "Stocks & ETFs", "Real estate"] : ["Forex e metais", "Criptomoedas", "Ações e ETF", "Imobiliário"],
+        mais: en ? ["Alerts & Tap to Trade", "MTM Auto", "Scanners", "AI Terminal", "MTM Funded"] : ["Alertas e Tap to Trade", "MTM Auto", "Scanners", "Terminal com IA", "MTM Funded"],
+      },
+      {
+        nome: "MTM Content & Business", href: "/contentbussiness",
+        def: en ? "Building an audience and building a business: personal brand, content, and ways to earn here without opening a trade." : "Construir audiência e construir negócio: marca pessoal, conteúdo, e as formas de ganhar aqui sem abrir uma ordem.",
+        areas: en ? ["Social media & UGC", "Faceless marketing", "Artificial intelligence", "Network marketing", "Mindset & leadership"] : ["Social Media e UGC", "Faceless Marketing", "Inteligência Artificial", "Network Marketing", "Mindset e Liderança"],
+        mais: en ? ["MTM Social Studio", "Creator programme", "Invite & earn", "Marketing material"] : ["Estúdio MTM Social", "Programa de criadores", "Convida e ganha", "Material de marketing"],
+      },
+    ],
+    academias: en ? "Academies" : "Academias",
+    ferramentas: en ? "Tools" : "Ferramentas",
+    verPilar: en ? "See the pillar" : "Ver o pilar",
+  }
+}
+
+/** Aparece ao entrar no ecrã. Sem animação para quem pediu menos movimento. */
+function Revela({ children, atraso = 0, className = "" }: { children: ReactNode; atraso?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visto, setVisto] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (typeof IntersectionObserver === "undefined" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setVisto(true); return }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisto(true); io.disconnect() } }, { threshold: 0.15 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-700 ease-out motion-reduce:transition-none ${visto ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"} ${className}`}
+      style={{ transitionDelay: `${atraso}ms` }}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** Os ecrãs da app, um de cada vez, a passar sozinhos até alguém tocar num. */
+function CarrosselApp({ telas }: { telas: [string, string, string][] }) {
+  const [i, setI] = useState(0)
+  const [parado, setParado] = useState(false)
+  useEffect(() => {
+    if (parado || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    const id = setInterval(() => setI((x) => (x + 1) % telas.length), 3800)
+    return () => clearInterval(id)
+  }, [parado, telas.length])
+  return (
+    <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto_1fr]">
+      <ul className="order-2 space-y-2 lg:order-1">
+        {telas.slice(0, 3).map(([, n, d], k) => (
+          <ItemTela key={n} n={n} d={d} ativo={i === k} onClick={() => { setI(k); setParado(true) }} />
+        ))}
+      </ul>
+      <div className="relative order-1 mx-auto h-[540px] w-[260px] overflow-hidden rounded-[44px] border-[3px] lg:order-2" style={{ borderColor: "#2a2722", boxShadow: "0 30px 90px rgba(0,0,0,.7), 0 0 0 8px #050505, 0 0 80px rgba(210,166,60,.18)" }}>
+        {telas.map(([src, n], k) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={src} src={src} alt={n} loading="lazy" className="absolute inset-0 h-full w-full object-cover object-top transition-all duration-700" style={{ opacity: i === k ? 1 : 0, transform: i === k ? "scale(1)" : "scale(1.04)" }} />
+        ))}
+      </div>
+      <ul className="order-3 space-y-2">
+        {telas.slice(3).map(([, n, d], k) => (
+          <ItemTela key={n} n={n} d={d} ativo={i === k + 3} onClick={() => { setI(k + 3); setParado(true) }} />
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function ItemTela({ n, d, ativo, onClick }: { n: string; d: string; ativo: boolean; onClick: () => void }) {
+  return (
+    <li>
+      <button onClick={onClick} className="w-full rounded-2xl border p-4 text-left transition-all duration-300" style={{ borderColor: ativo ? "rgba(210,166,60,.6)" : "rgba(210,166,60,.15)", background: ativo ? "rgba(210,166,60,.10)" : "transparent" }}>
+        <p className="text-[15px] font-bold" style={{ color: ativo ? OURO : "#f3ede1" }}>{n}</p>
+        <p className="mt-1 text-[13px] leading-snug text-[#a39b8b]">{d}</p>
+      </button>
+    </li>
+  )
+}
 
 const OURO = "#D2A63C"
 
@@ -176,6 +285,7 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
   }
 
   const t = useMemo(() => textos(lang, precos), [lang, precos])
+  const x = useMemo(() => extras(lang), [lang])
   const destino = `/onboarding${query}`
 
   const Cta = ({ grande }: { grande?: boolean }) => (
@@ -240,6 +350,14 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
           <div className="mt-9"><Cta grande /></div>
         </section>
 
+        {/* Fita das funcionalidades */}
+        <div className="relative overflow-hidden border-y py-4" style={{ borderColor: "rgba(210,166,60,.15)" }} aria-hidden>
+          <div className="mtm-fita flex w-max gap-10 whitespace-nowrap text-[15px] font-semibold uppercase tracking-[.2em]" style={{ color: OURO }}>
+            {[...x.fita, ...x.fita].map((f, k) => <span key={k}>✦ {f}</span>)}
+          </div>
+          <style>{`@keyframes mtmFita{from{transform:translateX(0)}to{transform:translateX(-50%)}}.mtm-fita{animation:mtmFita 40s linear infinite}@media (prefers-reduced-motion: reduce){.mtm-fita{animation:none}}`}</style>
+        </div>
+
         {/* O problema */}
         <section className="border-y px-4 py-14 sm:px-6" style={{ borderColor: "rgba(210,166,60,.12)", background: "rgba(255,255,255,.015)" }}>
           <div className="mx-auto max-w-4xl text-center">
@@ -260,12 +378,52 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
           <h2 className="text-center text-2xl font-bold sm:text-3xl">{t.comoT}</h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {t.como.map(([titulo, txt], i) => (
-              <div key={titulo} className="rounded-2xl border p-6" style={{ borderColor: "rgba(210,166,60,.2)", background: "linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01))" }}>
+              <Revela key={titulo} atraso={i * 120}>
+              <div className="h-full rounded-2xl border p-6 transition-transform duration-300 hover:-translate-y-1" style={{ borderColor: "rgba(210,166,60,.2)", background: "linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01))" }}>
                 <p className="font-mono text-[13px]" style={{ color: OURO }}>0{i + 1}</p>
                 <h3 className="mt-2 text-xl font-bold">{titulo}</h3>
                 <p className="mt-2 text-[14px] leading-relaxed text-[#b9b1a1]">{txt}</p>
               </div>
+              </Revela>
             ))}
+          </div>
+        </section>
+
+        {/* Os dois pilares */}
+        <section className="px-4 py-16 sm:px-6" style={{ background: "radial-gradient(900px 420px at 50% 0%, rgba(210,166,60,.08), transparent 70%)" }}>
+          <div className="mx-auto max-w-6xl">
+            <Revela><h2 className="text-center text-2xl font-bold sm:text-3xl">{x.pilaresT}</h2></Revela>
+            <div className="mt-10 grid gap-5 lg:grid-cols-2">
+              {x.pilares.map((pl, k) => (
+                <Revela key={pl.nome} atraso={k * 150}>
+                  <div className="group h-full rounded-3xl border p-7 transition-transform duration-300 hover:-translate-y-1" style={{ borderColor: "rgba(210,166,60,.3)", background: "linear-gradient(180deg,#16130c,#0e0c09)" }}>
+                    <p className="font-mono text-[12px] uppercase tracking-[.25em] text-[#8f887a]">{lang === "en" ? "Pillar" : "Pilar"} {k + 1}</p>
+                    <h3 className="mt-2 text-2xl font-extrabold sm:text-3xl" style={{ color: OURO }}>{pl.nome}</h3>
+                    <p className="mt-3 text-[15px] leading-relaxed text-[#c9c1b1]">{pl.def}</p>
+                    <p className="mt-5 text-[12px] font-bold uppercase tracking-[.2em] text-[#8f887a]">{x.academias}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {pl.areas.map((a) => <span key={a} className="rounded-full border px-3 py-1.5 text-[13px] font-semibold" style={{ borderColor: "rgba(210,166,60,.35)", color: "#E9C46A" }}>{a}</span>)}
+                    </div>
+                    <p className="mt-4 text-[12px] font-bold uppercase tracking-[.2em] text-[#8f887a]">{x.ferramentas}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {pl.mais.map((a) => <span key={a} className="rounded-full bg-white/5 px-3 py-1.5 text-[13px] text-[#d9d2c3]">{a}</span>)}
+                    </div>
+                    <Link href={pl.href} className="mt-6 inline-block text-[14px] font-semibold underline underline-offset-4" style={{ color: OURO }}>{x.verPilar} →</Link>
+                  </div>
+                </Revela>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Por dentro da app */}
+        <section className="border-y px-4 py-16 sm:px-6" style={{ borderColor: "rgba(210,166,60,.12)", background: "rgba(255,255,255,.015)" }}>
+          <div className="mx-auto max-w-6xl">
+            <Revela>
+              <h2 className="text-center text-2xl font-bold sm:text-3xl">{x.appT}</h2>
+              <p className="mt-2 text-center text-[15px] text-[#b9b1a1]">{x.appSub}</p>
+            </Revela>
+            <Revela atraso={150} className="mt-10"><CarrosselApp telas={x.telas} /></Revela>
           </div>
         </section>
 
@@ -275,11 +433,13 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
             <h2 className="text-3xl font-extrabold sm:text-4xl" style={{ color: OURO }}>{t.ganhaT}</h2>
             <div className="mt-10 grid gap-4 text-left sm:grid-cols-3">
               {t.ganha.map(([a, b], i) => (
-                <div key={a} className="rounded-2xl border p-6" style={{ borderColor: "rgba(210,166,60,.25)", background: "#12100c" }}>
+                <Revela key={a} atraso={i * 150}>
+                <div className="h-full rounded-2xl border p-6" style={{ borderColor: "rgba(210,166,60,.25)", background: "#12100c" }}>
                   <p className="text-3xl font-black" style={{ color: OURO }}>0{i + 1}</p>
                   <h3 className="mt-2 text-lg font-bold">{a}</h3>
                   <p className="mt-1 text-[14px] text-[#b9b1a1]">{b}</p>
                 </div>
+                </Revela>
               ))}
             </div>
             <Link href="/abrir-conta" className="mt-7 inline-block text-[14px] font-semibold underline underline-offset-4" style={{ color: OURO }}>
@@ -295,10 +455,12 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
           <p className="mx-auto mt-3 max-w-2xl text-center text-[15px] leading-relaxed text-[#b9b1a1]">{t.prova}</p>
           <div className="mt-8 space-y-4">
             {TESTEMUNHOS.map((m, i) => (
-              <figure key={i} className="rounded-2xl border p-6" style={{ borderColor: "rgba(210,166,60,.18)", background: "rgba(255,255,255,.02)" }}>
+              <Revela key={i} atraso={i * 120}>
+              <figure className="rounded-2xl border p-6" style={{ borderColor: "rgba(210,166,60,.18)", background: "rgba(255,255,255,.02)" }}>
                 <blockquote className={i === 0 ? "text-xl italic leading-snug sm:text-2xl" : "text-[16px]"} lang="pt-PT">“{m.pt}”</blockquote>
                 {lang === "en" && <p className="mt-2 text-[13px] text-[#8f887a]">{m.en} ({t.traduzido})</p>}
               </figure>
+              </Revela>
             ))}
           </div>
         </section>

@@ -29,6 +29,40 @@ html,body { width:1920px; height:1080px; overflow:hidden; background:var(--carva
 .telefone img { width:100%; display:block; }
 .vivo { display:inline-flex; align-items:center; gap:10px; font:700 18px Inter; color:#ff5a4f; letter-spacing:.12em; }
 .vivo i { width:12px; height:12px; border-radius:50%; background:#ff5a4f; display:inline-block; }
+.tel2 { position:absolute; width:400px; height:840px; border-radius:58px; background:#0a0a09; border:3px solid #2a2722; box-shadow:0 40px 120px rgba(0,0,0,.7), 0 0 0 9px #050505; overflow:hidden; font:400 19px/1.35 Inter; color:#f3ede1; }
+.tel2 .sb { height:48px; display:flex; justify-content:space-between; align-items:flex-end; padding:0 34px 6px; font:600 16px Inter; color:#ddd; }
+.tel2 .hd { height:64px; display:flex; align-items:center; gap:14px; padding:0 22px; border-bottom:1px solid rgba(210,166,60,.15); font:700 22px Inter; }
+.tel2 .ct { position:absolute; left:0; right:0; top:112px; bottom:84px; padding:16px; overflow:hidden; }
+.tel2 .tb { position:absolute; left:0; right:0; bottom:0; height:84px; display:flex; justify-content:space-around; align-items:center; border-top:1px solid rgba(210,166,60,.15); background:#0d0c0a; font:600 13px Inter; color:#6f695d; }
+.tel2 .tb span { display:flex; flex-direction:column; align-items:center; gap:6px; } .tel2 .tb i { width:22px; height:22px; border-radius:7px; border:2px solid currentColor; display:block; }
+.tel2 .tb .on { color:#D2A63C; }
+.tel2 .notif { position:absolute; left:12px; right:12px; top:52px; padding:16px 18px; border-radius:22px; background:rgba(40,36,28,.96); border:1px solid rgba(210,166,60,.35); font:500 18px Inter; transform:translateY(-170px); opacity:0; z-index:5; box-shadow:0 12px 30px rgba(0,0,0,.6); }
+.tel2 .mut, .mut { color:#8f887a; }
+.tel2 .sec { font:700 14px Inter; letter-spacing:.18em; text-transform:uppercase; color:#8f887a; margin:4px 0 12px; }
+.tel2 .sala { display:flex; align-items:center; gap:14px; padding:14px; border-radius:18px; background:#15130f; border:1px solid rgba(210,166,60,.14); margin-bottom:12px; position:relative; }
+.tel2 .sala .thumb { width:58px; height:58px; border-radius:14px; background:#221e15; display:flex; align-items:center; justify-content:center; font-size:30px; flex:none; }
+.tel2 .sala b { font:700 19px Inter; } .tel2 .sala .mut { font-size:16px; }
+.vivo2 { position:absolute; right:12px; top:12px; display:inline-flex; gap:6px; align-items:center; font:800 12px Inter; color:#ff5a4f; } .vivo2 i { width:9px; height:9px; border-radius:50%; background:#ff5a4f; display:inline-block; }
+.tel2 .mod { padding:12px 6px; border-bottom:1px solid rgba(255,255,255,.06); font:500 18px Inter; } .tel2 .mod span { color:#D2A63C; display:inline-block; width:30px; }
+.tel2 .post { padding:14px; border-radius:18px; background:#15130f; border:1px solid rgba(210,166,60,.12); margin-bottom:12px; }
+.tel2 .au { display:flex; gap:10px; align-items:center; margin-bottom:8px; } .tel2 .au i { width:34px; height:34px; border-radius:50%; background:#2b2618; color:#D2A63C; font:700 16px Inter; font-style:normal; display:flex; align-items:center; justify-content:center; }
+.tel2 .mini { margin-top:10px; height:110px; border-radius:12px; background:linear-gradient(160deg,#1c180f,#0f0e0b); display:flex; align-items:flex-end; padding:10px; font:600 14px JetBrains Mono; color:#D2A63C; }
+.tel2 .canal { font:700 16px JetBrains Mono; color:#8f887a; margin-bottom:10px; }
+.bol { background:#1b1913; border:1px solid rgba(255,255,255,.06); border-radius:18px 18px 18px 6px; padding:12px 14px; margin:0 40px 12px 0; font:400 18px/1.35 Inter; }
+.bol.eu { background:#3a2f12; border-color:rgba(210,166,60,.35); border-radius:18px 18px 6px 18px; margin:0 0 12px 40px; }
+.bol.ia { border-color:rgba(210,166,60,.25); }
+.digita { display:flex; gap:6px; padding:8px 14px; } .digita i { width:10px; height:10px; border-radius:50%; background:#D2A63C; display:block; }
+.al { padding:14px; border-radius:18px; background:#14120e; border:1px solid rgba(210,166,60,.22); margin-bottom:12px; }
+.alh { display:flex; justify-content:space-between; align-items:center; } .alh .fonte { font:700 15px Inter; color:#E9C46A; } .alh .est { font:800 13px Inter; border:1px solid; border-radius:999px; padding:3px 10px; }
+.niv { display:flex; justify-content:space-between; font:500 16px JetBrains Mono; color:#cfc6b5; margin-top:6px; }
+.t2t { margin-top:12px; height:42px; border-radius:12px; background:#D2A63C; color:#111; font:800 17px Inter; display:flex; align-items:center; justify-content:center; }
+.hl { display:flex; justify-content:space-between; font:600 26px Inter; padding:14px 0; border-bottom:1px solid rgba(210,166,60,.14); }
+.termo div { font:500 24px/1.5 JetBrains Mono; margin-top:12px; color:#e6dfd0; }
+.barra { height:12px; border-radius:6px; background:#221e15; margin-top:8px; overflow:hidden; } .barra i { display:block; height:100%; background:#D2A63C; width:0; }
+.peca { height:330px; border-radius:20px; padding:30px 26px; position:relative; border:1px solid rgba(210,166,60,.35); margin-bottom:18px; } .peca .assin { position:absolute; left:26px; bottom:22px; font:600 16px JetBrains Mono; color:#D2A63C; }
+.mods { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; } .mods i { height:90px; border-radius:12px; display:block; border:1px solid rgba(255,255,255,.08); }
+.exp { margin-top:18px; height:52px; border-radius:14px; border:1px solid #D2A63C; color:#E9C46A; font:700 18px Inter; display:flex; align-items:center; justify-content:center; }
+.si { display:flex; align-items:baseline; gap:22px; padding:20px 0; border-bottom:1px solid rgba(210,166,60,.18); } .si b { font:700 40px Inter; min-width:430px; } .si span { font:400 28px Inter; color:#8f887a; }
 </style>
 </head>
 <body>
@@ -97,6 +131,67 @@ const T = {
  }
 }[LANG]
 
+// ---------------------------------------------------------------- textos de ecrã da v2 (pilares, alertas, ferramentas, social, avaliações)
+Object.assign(T, {
+ pt: {
+  cap:{'s01-gancho':'O problema','s02-problema':'O problema','s03-quem':'Quem somos','s04-markets':'Pilar · MTM Markets','s04-content':'Pilar · Content & Business','s05-scanners':'Aplicas','s06-app':'A app','s06b-alertas':'Alertas','s06c-ferramentas':'Ferramentas','s07-execucao':'Execução','s07b-social':'Negócio','s08-ganha':'Ganha enquanto aprendes','s09-prova':'Prova','s09b-avaliacoes':'Avaliações','s10-objecoes':'Objeções','s11-oferta':'A oferta','s12-cta':'O próximo passo','s13-afiliado':'Partilhar','s14-fecho':'MoreThanMoney'},
+  tabs:['Feed','Chat','Aulas','Alertas','Trading','Mais'], venda:'VENDA', ativo:'ATIVO', pendente:'PENDENTE',
+  pilar:'Pilar 1', pilar2:'Pilar 2', markets:'MTM Markets', marketsDef:'Os mercados e o dinheiro: aprender a operá-los, e as ferramentas que os operam por ti quando não podes estar.',
+  acMarkets:[['Forex e metais','tendências e scanners, ao vivo','📈'],['Criptomoedas','portefólios e DCA','🪙'],['Ações e ETF','carteira a preço ao vivo','📊'],['Imobiliário','comprar, arrendar, viver de rendas','🏠']],
+  content:'MTM Content & Business', contentDef:'Construir audiência e construir negócio: marca pessoal, conteúdo, e as formas de ganhar aqui sem abrir uma ordem.',
+  acContent:[['Social Media e UGC','marca pessoal e conteúdo','📱'],['Faceless Marketing','vender sem mostrar a cara','🎭'],['Inteligência Artificial','a IA a trabalhar por ti','🤖'],['Network Marketing','prospetar e duplicar','🤝'],['Mindset e Liderança','disciplina e pessoas','🧠',true]],
+  gratisTag:'GRÁTIS', aoVivoSemana:'Salas desta semana', gravacoes:'Gravações · em curso', academias:'Academias', percurso:'módulo a módulo',
+  salasVivo:[['Forex & Ouro','sala ao vivo'],['Criptomoedas','análise e DCA'],['Ações e ETF','carteira ao vivo'],['Imobiliário','percurso guiado']],
+  modulos:['Introdução ao mercado','Gestão de risco','Ler tendências','Zonas e entradas'],
+  appLabs:['Feed','Chat','Alertas','Mentor AI'],
+  post1:'Sala de hoje: plano da semana no ouro e gestão de risco. Traz as tuas dúvidas 👊', post2:'Primeira semana a seguir o checklist antes de entrar. Muito mais calma.', post3:'Alguém na sala de cripto logo? Quero rever o meu DCA.', membroNome:'Membro MTM',
+  chat1:'Novo alerta no ouro. Vejam o gráfico antes de entrar.', chat2:'Visto. Risco definido ✔',
+  mentorQ:'Onde ponho o stop numa compra de ouro?', mentorA:'Abaixo da zona que validou a entrada. Depois ajusta o lote ao risco que aceitas perder nessa operação.',
+  alertasTit:'Alertas', campos:['Fonte','Par','Direção','Entrada','Stop','Alvos'], historico:'Histórico',
+  histLinhas:[['XAU/USD · Premium','TP2 ✓','#3ddc84'],['EUR/USD · Scanner V3.4','BE 🛡','#8ab4ff'],['US30 · Sensei X','SL ✕','#ff5a4f']],
+  notif:['🔔 <b>Novo alerta</b> · EUR/USD · VENDA','🎯 <b>XAU/USD</b> · TP1 atingido','🛡️ <b>US30</b> · stop movido para a entrada'],
+  ferrTit:'E não acaba aí', terminal:'Terminal com IA', termQ:'Analisa NVDA no diário', termA:[['Tendência','de alta no diário'],['Zona','suporte a ser testado'],['Momentum','a abrandar'],['Risco','define o stop antes de entrar']],
+  portefolio:'Portefólios e DCA', portLeg:[['ETF','#D2A63C',.5],['Cripto','#E9C46A',.3],['Ações','#8f887a',.2]], dca:'Exemplo de carteira · reforço mensal onde vale a pena',
+  simulada:'Conta simulada · desafio', regras:['Objetivo do desafio','Perda diária','Dias de trading'],
+  socialTit:'Estúdio MTM Social', socialSub:'Para quem quer construir negócio, dentro da app.', pecaTit:'Mais do que dinheiro.', pecaSub:'A tua mensagem, com a tua marca.', modelos:'Modelos', exportar:'Exportar para Reels e Stories',
+  socialItens:[['Estúdio MTM Social','cria as tuas peças com a tua marca'],['Programa de criadores','faz conteúdo connosco'],['Material de marketing','pronto a usar'],['Convida e ganha','partilha com quem te importa']],
+  semOrdem:'Ganhar aqui, sem abrir uma ordem.',
+  avalTit:'O que dizem os membros', avaliacoes:['Grato por estar na melhor comunidade, ecossistema de educação financeira do país.','Máquinas!!!! Vocês dão um up tão grande e uma força para que isto aconteça!! Obrigado 🙏','Bora let\'s go, grato pela confiança.'],
+  reacoes:['Boas Maltinha. Fechei os Futuros que tinha em compra. Guardei lucros.','O melhor Resultado que podemos ter não é o Saldo das contas... mas sim o poder que ganhamos ao saber proteger capital.','🙏🔥','Bora let\'s go, grato pela confiança.'],
+  verbatim:'Mensagens reais do chat da comunidade, transcritas sem edição.',
+  autoSub2:'Escolhes a estratégia. Ligas. A conta continua tua.', estrategias:'Estratégias', seguir:'Seguir', contaLigada:'Conta PU Prime · ligada'
+ },
+ en: {
+  cap:{'s01-gancho':'The problem','s02-problema':'The problem','s03-quem':'Who we are','s04-markets':'Pillar · MTM Markets','s04-content':'Pillar · Content & Business','s05-scanners':'You apply','s06-app':'The app','s06b-alertas':'Alerts','s06c-ferramentas':'Tools','s07-execucao':'Execution','s07b-social':'Business','s08-ganha':'Earn while you learn','s09-prova':'Proof','s09b-avaliacoes':'Reviews','s10-objecoes':'Objections','s11-oferta':'The offer','s12-cta':'Next step','s13-afiliado':'Share','s14-fecho':'MoreThanMoney'},
+  tabs:['Feed','Chat','Classes','Alerts','Trading','More'], venda:'SELL', ativo:'ACTIVE', pendente:'PENDING',
+  pilar:'Pillar 1', pilar2:'Pillar 2', markets:'MTM Markets', marketsDef:'Markets and money: learning to trade them, and the tools that trade them for you when you can’t be there.',
+  acMarkets:[['Forex & metals','trends and scanners, live','📈'],['Crypto','portfolios and DCA','🪙'],['Stocks & ETFs','live-priced portfolio','📊'],['Real estate','buy, rent, live off rent','🏠']],
+  content:'MTM Content & Business', contentDef:'Building an audience and building a business: personal brand, content, and ways to earn here without opening a trade.',
+  acContent:[['Social media & UGC','personal brand and content','📱'],['Faceless marketing','sell without showing your face','🎭'],['Artificial intelligence','AI working for you','🤖'],['Network marketing','prospect and duplicate','🤝'],['Mindset & leadership','discipline and people','🧠',true]],
+  gratisTag:'FREE', aoVivoSemana:'This week’s rooms', gravacoes:'Recordings · as a course', academias:'Academies', percurso:'module by module',
+  salasVivo:[['Forex & Gold','live room'],['Crypto','analysis and DCA'],['Stocks & ETFs','live portfolio'],['Real estate','guided path']],
+  modulos:['Intro to the market','Risk management','Reading trends','Zones and entries'],
+  appLabs:['Feed','Chat','Alerts','AI Mentor'],
+  post1:'Today’s room: this week’s gold plan and risk management. Bring your questions 👊', post2:'First week following the checklist before getting in. So much calmer.', post3:'Anyone in the crypto room later? Want to review my DCA.', membroNome:'MTM member',
+  chat1:'New gold alert. Check the chart before getting in.', chat2:'Seen it. Risk defined ✔',
+  mentorQ:'Where do I put the stop on a gold buy?', mentorA:'Below the zone that validated the entry. Then size the lot to the risk you accept losing on that trade.',
+  alertasTit:'Alerts', campos:['Source','Pair','Direction','Entry','Stop','Targets'], historico:'History',
+  histLinhas:[['XAU/USD · Premium','TP2 ✓','#3ddc84'],['EUR/USD · Scanner V3.4','BE 🛡','#8ab4ff'],['US30 · Sensei X','SL ✕','#ff5a4f']],
+  notif:['🔔 <b>New alert</b> · EUR/USD · SELL','🎯 <b>XAU/USD</b> · TP1 hit','🛡️ <b>US30</b> · stop moved to entry'],
+  ferrTit:'And it doesn’t stop there', terminal:'AI Terminal', termQ:'Analyse NVDA on the daily', termA:[['Trend','up on the daily'],['Zone','support being tested'],['Momentum','slowing'],['Risk','set the stop before you get in']],
+  portefolio:'Portfolios & DCA', portLeg:[['ETFs','#D2A63C',.5],['Crypto','#E9C46A',.3],['Stocks','#8f887a',.2]], dca:'Example portfolio · monthly top-up where it makes sense',
+  simulada:'Simulated account · challenge', regras:['Challenge target','Daily loss','Trading days'],
+  socialTit:'MTM Social Studio', socialSub:'For those who want to build a business, inside the app.', pecaTit:'More than money.', pecaSub:'Your message, with your brand.', modelos:'Templates', exportar:'Export to Reels and Stories',
+  socialItens:[['MTM Social Studio','create your posts with your brand'],['Creator programme','make content with us'],['Marketing material','ready to use'],['Invite & earn','share with people you care about']],
+  semOrdem:'Earning here, without opening a trade.',
+  avalTit:'What members say', avaliacoes:['Grateful to be in the best community, the best financial education ecosystem in the country.','Legends!!!! You give us such a boost and the strength to make this happen!! Thank you 🙏','Let’s go, grateful for the trust.'],
+  reacoes:['Hi folks. Closed the futures I was holding. Took profits.','The best result we can have isn’t the account balance... it’s the power we gain from knowing how to protect capital.','🙏🔥','Let’s go, grateful for the trust.'],
+  verbatim:'Real messages from the community chat, translated from Portuguese.',
+  autoSub2:'You pick the strategy. Switch it on. The account stays yours.', estrategias:'Strategies', seguir:'Follow', contaLigada:'PU Prime account · connected'
+ }
+}[LANG])
+
+
 // ---------------------------------------------------------------- cenas
 // Cada cena: build(root) -> estado; update(estado, k) com k = progresso 0..1 na cena, s = segundos na cena
 const CENAS = {}
@@ -158,22 +253,6 @@ CENAS['s03-quem'] = {
  }
 }
 
-CENAS['s04-aprender'] = {
- build(r){
-  const tit=el('div','abs anton ouro',T.aprendes,{left:'120px',top:'150px',fontSize:'120px'}); r.append(tit)
-  const grid=el('div','abs',null,{left:'120px',right:'120px',top:'340px',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'30px'}); r.append(grid)
-  const cs=T.salas.map(([a,b],i)=>{ const c=el('div','cartao',`<div style="font:700 44px Inter;color:#f3ede1">${a}</div><div style="font:400 28px Inter;color:#8f887a;margin-top:10px">${b}</div><div style="margin-top:26px">${i<5?`<span class="vivo"><i></i>${T.aoVivo}</span>`:'<span style="font:600 18px JetBrains Mono;color:#D2A63C;letter-spacing:.1em">▶ REPLAY</span>'}</div>`,{padding:'38px 40px',minHeight:'230px'}); grid.append(c); return c })
-  const z=el('div','abs serif',T.zero,{left:'0',right:'0',top:'850px',textAlign:'center',fontSize:'64px',color:'#cfc6b5'}); r.append(z)
-  return {tit,cs,z,r}
- },
- update(o,k,s){
-  entra(o.tit,prog(k,0,.1))
-  o.cs.forEach((c,i)=>entra(c,prog(k,.08+i*.07,.18+i*.07)))
-  o.r.querySelectorAll('.vivo i').forEach(i=>i.style.opacity=.35+.65*Math.abs(Math.sin(s*3)))
-  entra(o.z,prog(k,.78,.88))
- }
-}
-
 CENAS['s05-scanners'] = {
  build(r){
   const tit=el('div','abs anton ouro',T.aplicas,{left:'120px',top:'150px',fontSize:'120px'}); r.append(tit)
@@ -204,28 +283,6 @@ CENAS['s05-scanners'] = {
  }
 }
 
-CENAS['s06-app'] = {
- build(r){
-  const tel=el('div','telefone',null,{left:'745px',top:'110px'}); r.append(tel)
-  const img=el('img','',null); img.src='../../public/email/app-trading-alerts.png'; tel.append(img)
-  const img2=el('img','',null,{position:'absolute',left:0,top:0,opacity:0}); img2.src='../../public/email/app-sensei-chart.png'; tel.append(img2)
-  const tit=el('div','abs anton ouro',T.app,{left:'120px',top:'170px',fontSize:'96px',width:'560px'}); r.append(tit)
-  const sub=el('div','abs serif',T.appSub,{left:'120px',top:'290px',fontSize:'60px',color:'#cfc6b5'}); r.append(sub)
-  const pos=[[120,470],[120,580],[1250,300],[1250,420],[1250,540]]
-  const chips=T.chips.map((t,i)=>{ const c=el('div','abs chip',t,{left:pos[i][0]+'px',top:pos[i][1]+'px',maxWidth:'560px'}); r.append(c); return c })
-  const dec=el('div','abs anton',T.decides,{left:'1250px',top:'760px',fontSize:'72px',width:'600px'}); r.append(dec)
-  return {tel,img,img2,tit,sub,chips,dec}
- },
- update(o,k){
-  const t=ease(prog(k,0,.12)); o.tel.style.opacity=t; o.tel.style.transform=`translateY(${(1-t)*120}px) rotate(${(1-t)*-4}deg)`
-  o.img.style.transform=`translateY(${-ease(prog(k,.1,.55))*700}px) scale(1.3)`; o.img.style.transformOrigin='top center'
-  o.img2.style.opacity=ease(prog(k,.55,.62)); o.img2.style.transform=`translateY(${-ease(prog(k,.62,.95))*520}px) scale(1.3)`; o.img2.style.transformOrigin='top center'
-  entra(o.tit,prog(k,.03,.12)); entra(o.sub,prog(k,.08,.16))
-  o.chips.forEach((c,i)=>entra(c,prog(k,.14+i*.1,.22+i*.1),24))
-  entra(o.dec,prog(k,.84,.93))
- }
-}
-
 CENAS['s07-execucao'] = {
  build(r){
   const tel=el('div','telefone',null,{left:'200px',top:'110px',background:'#0d0d0d',padding:'90px 28px'}); r.append(tel)
@@ -239,8 +296,10 @@ CENAS['s07-execucao'] = {
   const dir=el('div','abs',null,{left:'820px',top:'150px',width:'950px'}); r.append(dir)
   const tap=el('div','anton ouro',T.tap,{fontSize:'130px'}); dir.append(tap)
   const auto=el('div','',`<div class="anton" style="font-size:110px;color:#f3ede1">${T.auto}</div><div class="serif" style="font-size:56px;color:#cfc6b5">${T.autoSub}</div>`,{marginTop:'40px',opacity:0}); dir.append(auto)
-  const conta=el('div','abs',`<div class="anton ouro" style="font-size:96px">${T.conta}</div><div style="font:600 46px Inter;margin-top:10px">${T.dinheiro}</div>`,{left:'820px',top:'680px'}); r.append(conta)
-  return {tel,tap,auto,conta}
+  const conta=el('div','abs',`<div class="anton ouro" style="font-size:96px">${T.conta}</div><div style="font:600 46px Inter;margin-top:10px">${T.dinheiro}</div>`,{left:'820px',top:'700px'}); r.append(conta)
+  const autoTel=telApp(r,200,110,{logo:'../../public/images/mtm/logo-mtm-auto.png',titulo:'',semTabs:true,html:`<div class="sec">${T.estrategias}</div>`+[['💎 Premium · Ouro',true],['📡 MTM Scanner V3.4',true],['🥋 Sensei X',false]].map(([n,on])=>`<div class="sala"><div><b>${n}</b><div class="mut">${T.seguir}</div></div><span class="sw" style="margin-left:auto;width:58px;height:32px;border-radius:16px;background:${on?'#D2A63C':'#2a2722'};position:relative;display:block"><i style="position:absolute;top:4px;${on?'right':'left'}:4px;width:24px;height:24px;border-radius:50%;background:#fff;display:block"></i></span></div>`).join('')+`<div class="al" style="margin-top:18px"><div class="alh"><span class="fonte">✓ ${T.contaLigada}</span></div><div class="mut" style="margin-top:8px;font-size:16px">${T.autoSub2}</div></div>`})
+  autoTel.style.opacity=0
+  return {tel,tap,auto,conta,autoTel}
  },
  update(o,k){
   const t=ease(prog(k,0,.1)); o.tel.style.opacity=t; o.tel.style.transform=`translateY(${(1-t)*100}px)`
@@ -249,6 +308,7 @@ CENAS['s07-execucao'] = {
   onda.style.transform=`translate(-50%,-50%) scale(${tk*14})`; onda.style.opacity=1-tk; btn.style.transform=`scale(${1-.05*Math.sin(Math.PI*tk)})`
   entra(o.tel.querySelector('#toast'),prog(k,.25,.32),20)
   entra(o.auto,prog(k,.48,.58))
+  const ak=ease(prog(k,.44,.54)); o.tel.style.opacity=Math.min(o.tel.style.opacity,1-ak); o.autoTel.style.opacity=ak; o.autoTel.style.transform=`translateY(${(1-ak)*80}px)`
   entra(o.conta,prog(k,.76,.85))
  }
 }
@@ -364,6 +424,169 @@ CENAS['s14-fecho'] = {
  }
 }
 
+// ---------------------------------------------------------------- kit de telemóvel (ecrãs da app, desenhados)
+// tel(r, x, y, {titulo, tab, html, esc}) — um MTM System com barra de estado, cabeçalho e separadores.
+function telApp(r, x, y, o={}){
+ const t=el('div','tel2',null,{left:x+'px',top:y+'px'}); if(o.esc) t.style.transform=`scale(${o.esc})`
+ const tabs=o.tabs||T.tabs
+ t.innerHTML=`<div class="sb"><span>9:41</span><span>●●● ▮</span></div>
+  <div class="hd">${o.logo?`<img src="${o.logo}" style="height:52px">`:'<b class="ouro anton" style="font-size:30px">MTM</b>'}<span>${o.titulo||''}</span></div>
+  <div class="ct">${o.html||''}</div>
+  ${o.semTabs?'':`<div class="tb">${tabs.map((n,i)=>`<span class="${i===o.tab?'on':''}"><i></i>${n}</span>`).join('')}</div>`}
+  <div class="notif"></div>`
+ r.append(t); return t
+}
+function printTel(r, x, y, nome){ const t=el('div','tel2',null,{left:x+'px',top:y+'px'}); t.innerHTML=`<img class="pr" src="prints/${nome}.jpg" style="width:100%;display:block"><div class="notif"></div>`; r.append(t); return t }
+function notificar(t, html, k){ const n=t.querySelector('.notif'); if(html!=null && n.dataset.h!==html){ n.innerHTML=html; n.dataset.h=html } n.style.transform=`translateY(${(out(k)-1)*170}px)`; n.style.opacity=out(k) }
+function alertaHTML(a){
+ const cor=a.dir===T.compra?'#3ddc84':'#ff5a4f'
+ return `<div class="al"><div class="alh"><span class="fonte">${a.fonte}</span><span class="est" style="color:${a.estCor||'#8f887a'};border-color:${a.estCor||'#3a362e'}">${a.estado}</span></div>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px"><b style="font:800 26px Inter">${a.par}</b><span style="font:800 17px Inter;color:${cor}">${a.dir}</span></div>
+  <div class="niv"><span>${T.entrada}</span><b>${a.ent}</b></div><div class="niv" style="color:#ff8a80"><span>SL</span><b>${a.sl}</b></div>
+  <div class="niv" style="color:#7ee2a8"><span>TP</span><b>${a.tps}</b></div>
+  <div class="t2t">⚡ Tap to Trade</div></div>`
+}
+const ALERTAS=()=>[
+ {fonte:'💎 Premium',par:'XAU/USD',dir:T.compra,ent:'4 012.50',sl:'4 004.00',tps:'4 018 · 4 025 · 4 040',estado:'TP1 ✓',estCor:'#3ddc84'},
+ {fonte:'📡 MTM Scanner V3.4',par:'EUR/USD',dir:T.venda,ent:'1.16420',sl:'1.16710',tps:'1.16180 · 1.15900',estado:T.ativo,estCor:'#E9C46A'},
+ {fonte:'🥋 Sensei X',par:'US30',dir:T.compra,ent:'46 210',sl:'46 080',tps:'46 330 · 46 480',estado:'BE 🛡',estCor:'#8ab4ff'},
+ {fonte:'🪙 GoldKiller',par:'XAU/USD',dir:T.venda,ent:'4 031.20',sl:'4 039.00',tps:'4 024 · 4 015',estado:T.pendente,estCor:'#8f887a'},
+]
+
+// ---------------------------------------------------------------- pilares
+function cenaPilar(nome, def, academias, rotulo, extra){
+ return {
+  build(r){
+   const tag=el('div','abs',rotulo,{left:'120px',top:'150px',font:'700 24px Inter',letterSpacing:'.35em',color:'#8f887a',textTransform:'uppercase'}); r.append(tag)
+   const tit=el('div','abs anton ouro',nome,{left:'120px',top:'190px',fontSize:'112px',whiteSpace:'nowrap'}); r.append(tit)
+   const d=el('div','abs serif',def,{left:'120px',top:'335px',width:'1150px',fontSize:'40px',lineHeight:'1.2',color:'#cfc6b5'}); r.append(d)
+   const grid=el('div','abs',null,{left:'120px',top:'520px',width:'1080px',display:'grid',gridTemplateColumns:`repeat(${academias.length>4?3:2},1fr)`,gap:'22px'}); r.append(grid)
+   const cs=academias.map(([a,b,ic,gr])=>{ const c=el('div','cartao',`<div style="font-size:40px">${ic}</div><div style="font:700 32px Inter;margin-top:10px">${a}</div><div style="font:400 22px Inter;color:#8f887a;margin-top:6px">${b}</div>${gr?`<span style="position:absolute;right:18px;top:18px;font:800 16px Inter;color:#111;background:#3ddc84;border-radius:999px;padding:5px 12px">${T.gratisTag}</span>`:''}`,{padding:'26px 28px',position:'relative',minHeight:academias.length>4?'170px':'180px'}); grid.append(c); return c })
+   const lado=extra(r)
+   return {tag,tit,d,cs,lado}
+  },
+  update(o,k,s){
+   entra(o.tag,prog(k,0,.06)); entra(o.tit,prog(k,.02,.1)); entra(o.d,prog(k,.08,.16))
+   o.cs.forEach((c,i)=>entra(c,prog(k,.18+i*.08,.26+i*.08),24))
+   o.lado.update(k,s)
+  }
+ }
+}
+CENAS['s04-markets'] = cenaPilar(T.markets, T.marketsDef, T.acMarkets, T.pilar, r=>{
+ const t=printTel(r,1360,110,'app-aulas'), im=t.querySelector('.pr')
+ return {update(k){ const a=ease(prog(k,.05,.18)); t.style.opacity=a; t.style.transform=`translateY(${(1-a)*140}px)`; im.style.transformOrigin='top center'; im.style.transform=`scale(${1+.08*ease(prog(k,.5,1))})` }}
+})
+CENAS['s04-content'] = cenaPilar(T.content, T.contentDef, T.acContent, T.pilar2, r=>{
+ const z=el('div','abs serif',T.zero,{left:'1290px',top:'880px',width:'560px',fontSize:'54px',color:'#E9C46A',textAlign:'center'}); r.append(z)
+ const t=printTel(r,1370,110,'app-chat'), im=t.querySelector('.pr'); t.style.transformOrigin='top center'
+ return {update(k){ const a=ease(prog(k,.05,.18)); t.style.opacity=a; t.style.transform=`scale(${.88}) translateY(${(1-a)*140}px)`; im.style.transformOrigin='top center'; im.style.transform=`scale(${1+.08*ease(prog(k,.3,1))})`; entra(z,prog(k,.84,.92)) }}
+})
+
+// ---------------------------------------------------------------- a app: vários ecrãs
+CENAS['s06-app'] = {
+ build(r){
+  const tit=el('div','abs anton ouro',T.app,{left:'0',right:'0',top:'120px',textAlign:'center',fontSize:'92px'}); r.append(tit)
+  const sub=el('div','abs serif',T.appSub,{left:'0',right:'0',top:'225px',textAlign:'center',fontSize:'50px',color:'#cfc6b5'}); r.append(sub)
+  const X=[150,580,1010,1440], Y=350
+  const feed=printTel(r,X[0],Y,'app-feed'), chat=printTel(r,X[1],Y,'app-chat'); const _f=telApp(r,-2000,Y,{titulo:'Feed',tab:0,html:`<div class="post"><div class="au"><i>R</i><b>Ricardo Garcia</b><span class="mut">· 2h</span></div><div>${T.post1}</div><div class="mini">📊 XAU/USD · H1</div><div class="mut" style="margin-top:8px">❤️ 🔥 💬</div></div><div class="post"><div class="au"><i>M</i><b>${T.membroNome}</b></div><div>${T.post2}</div></div><div class="post"><div class="au"><i>M</i><b>${T.membroNome}</b></div><div>${T.post3}</div></div>`})
+  const _c=telApp(r,-2000,Y,{titulo:'Chat',tab:1,html:`<div class="canal"># premium-ideas</div><div class="bol">${T.chat1}</div>${alertaHTML(ALERTAS()[0])}<div class="bol eu">${T.chat2}</div>`})
+  const real=el('div','tel2',null,{left:X[2]+'px',top:Y+'px'}); r.append(real)
+  const img=el('img','',null,{width:'100%',display:'block'}); img.src='prints/app-alertas.jpg'; real.append(img)
+  const mentor=telApp(r,X[3],Y,{titulo:'Mentor AI',tab:5,html:`<div class="bol eu">${T.mentorQ}</div><div class="bol ia"><b class="ouro">Mentor AI</b><br>${T.mentorA}</div><div class="digita"><i></i><i></i><i></i></div>`})
+  const tels=[feed,chat,real,mentor]; tels.forEach(t=>t.style.transformOrigin='top left')
+  const labs=T.appLabs.map((t,i)=>{ const c=el('div','abs',t,{left:X[i]+'px',top:(Y-46)+'px',width:'288px',textAlign:'center',font:'700 22px Inter',letterSpacing:'.18em',color:'#D2A63C',textTransform:'uppercase'}); r.append(c); return c })
+  return {tit,sub,tels,img,labs}
+ },
+ update(o,k,s){
+  entra(o.tit,prog(k,0,.08)); entra(o.sub,prog(k,.04,.12))
+  o.tels.forEach((t,i)=>{ const a=ease(prog(k,.1+i*.12,.22+i*.12)); t.style.opacity=a; t.style.transform=`scale(.72) translateY(${(1-a)*200+Math.sin(s*.8+i)*8}px)` })
+  o.labs.forEach((l,i)=>entra(l,prog(k,.14+i*.12,.24+i*.12),14))
+  
+  o.tels[3].querySelectorAll('.digita i').forEach((d,i)=>d.style.opacity=.3+.7*Math.abs(Math.sin(s*4+i)))
+ }
+}
+
+CENAS['s06b-alertas'] = {
+ build(r){
+  const tit=el('div','abs anton ouro',T.alertasTit,{left:'120px',top:'150px',fontSize:'110px'}); r.append(tit)
+  const lista=['fonte','par','direcao','entrada','stop','alvos'].map((_,i)=>T.campos[i])
+  const camp=el('div','abs',lista.map(c=>`<span class="chip" style="font-size:28px;padding:10px 22px;margin:0 12px 14px 0">${c}</span>`).join(''),{left:'120px',top:'300px',width:'860px'}); r.append(camp)
+  const t=printTel(r,1100,110,'app-alertas')
+  const hist=el('div','abs cartao',`<div style="font:700 22px Inter;letter-spacing:.2em;color:#8f887a;text-transform:uppercase">${T.historico}</div>`+T.histLinhas.map(([p,e,c])=>`<div class="hl"><span>${p}</span><b style="color:${c}">${e}</b></div>`).join(''),{left:'120px',top:'560px',width:'860px',padding:'28px 34px'}); r.append(hist)
+  return {tit,camp,t,hist}
+ },
+ update(o,k,s){
+  entra(o.tit,prog(k,0,.06))
+  o.camp.querySelectorAll('.chip').forEach((c,i)=>entra(c,prog(k,.06+i*.04,.12+i*.04),16))
+  const a=ease(prog(k,.02,.14)); o.t.style.opacity=a; o.t.style.transform=`translateY(${(1-a)*140}px)`
+  o.t.querySelector('.pr').style.transformOrigin='center 60%'; o.t.querySelector('.pr').style.transform=`scale(${1+.25*ease(prog(k,.3,.75))})`
+  const n=[[.36,.5,T.notif[0]],[.5,.64,T.notif[1]],[.64,.78,T.notif[2]]].find(([a,b])=>k>=a&&k<b)
+  if(n) notificar(o.t,n[2],Math.min(prog(k,n[0],n[0]+.03),1-prog(k,n[1]-.03,n[1]))); else notificar(o.t,null,0)
+  o.hist.style.opacity=out(prog(k,.3,.38)); o.hist.querySelectorAll('.hl').forEach((d,i)=>entra(d,prog(k,.34+i*.06,.4+i*.06),12))
+ }
+}
+
+CENAS['s06c-ferramentas'] = {
+ build(r){
+  const tit=el('div','abs anton ouro',T.ferrTit,{left:'0',right:'0',top:'130px',textAlign:'center',fontSize:'96px'}); r.append(tit)
+  const box=(x,cab,html)=>{ const b=el('div','abs cartao',`<div style="font:700 22px Inter;letter-spacing:.2em;color:#D2A63C;text-transform:uppercase;margin-bottom:18px">${cab}</div>${html}`,{left:x+'px',top:'290px',width:'540px',height:'620px',padding:'34px',overflow:'hidden',background:'#100e0a'}); r.append(b); return b }
+  const term=box(110,T.terminal,`<div class="bol eu" style="margin-left:0">${T.termQ}</div><div class="termo">${T.termA.map(([a,b])=>`<div><span class="ouro">▸ ${a}</span> ${b}</div>`).join('')}</div>`)
+  const port=box(690,T.portefolio,`<canvas width="240" height="240" style="display:block;margin:0 auto"></canvas><div style="margin-top:20px">${T.portLeg.map(([n,c])=>`<div class="hl"><span><i style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${c};margin-right:10px"></i>${n}</span></div>`).join('')}</div><div class="mut" style="margin-top:16px;font-size:20px">${T.dca}</div>`)
+  const fund=box(1270,'MTM Funded · WebTrader',`<div class="mut" style="font-size:20px">${T.simulada}</div><div style="margin-top:14px;height:470px;overflow:hidden;border-radius:16px;border:1px solid rgba(210,166,60,.25)"><img src="prints/app-webtrader.jpg" style="width:100%;display:block;margin-top:-60px"></div>`)
+  const R=rng(5), velas=[]; let p=50; for(let i=0;i<40;i++){ const o=p, c=p+(R()-.42)*4; velas.push({o,c,h:Math.max(o,c)+R()*1.5,l:Math.min(o,c)-R()*1.5}); p=c }
+  return {tit,term,port,fund,velas}
+ },
+ update(o,k){
+  entra(o.tit,prog(k,0,.08))
+  ;[o.term,o.port,o.fund].forEach((b,i)=>entra(b,prog(k,[.04,.3,.55][i],[.14,.4,.65][i]),40))
+  o.term.querySelectorAll('.termo div').forEach((d,i)=>entra(d,prog(k,.12+i*.05,.17+i*.05),10))
+  const g=o.port.querySelector('canvas').getContext('2d'); g.clearRect(0,0,240,240); let a0=-Math.PI/2; const tot=ease(prog(k,.36,.55))
+  T.portLeg.forEach(([n,c,v])=>{ const a1=a0+v*2*Math.PI*tot; g.beginPath(); g.strokeStyle=c; g.lineWidth=34; g.arc(120,120,90,a0,a1); g.stroke(); a0=a1 })
+  const fc=o.fund.querySelector('canvas'); if(fc){ const f=fc.getContext('2d'); f.clearRect(0,0,472,200); const n=Math.floor(ease(prog(k,.6,.85))*o.velas.length)
+  const mn=Math.min(...o.velas.map(v=>v.l)), mx=Math.max(...o.velas.map(v=>v.h)), Y=v=>10+(mx-v)/(mx-mn)*180
+  for(let i=0;i<n;i++){ const v=o.velas[i], x=6+i*11.6; f.fillStyle=v.c>v.o?'#3ddc84':'#ff5a4f'; f.fillRect(x+3,Y(v.h),1.5,Y(v.l)-Y(v.h)); f.fillRect(x,Y(Math.max(v.o,v.c)),8,Math.max(2,Y(Math.min(v.o,v.c))-Y(Math.max(v.o,v.c)))) }
+  }
+  o.fund.querySelectorAll('.barra i').forEach((b,i)=>b.style.width=(ease(prog(k,.7+i*.05,.85+i*.05))*[62,25,40][i])+'%')
+ }
+}
+
+CENAS['s07b-social'] = {
+ build(r){
+  const tit=el('div','abs anton ouro',T.socialTit,{left:'120px',top:'150px',fontSize:'104px'}); r.append(tit)
+  const sub=el('div','abs serif',T.socialSub,{left:'120px',top:'280px',width:'900px',fontSize:'50px',color:'#cfc6b5'}); r.append(sub)
+  const t=telApp(r,1300,110,{titulo:'MTM Social',tab:-1,semTabs:true,html:`<div class="peca"><div class="anton" style="font-size:44px;line-height:1.05">${T.pecaTit}</div><div style="font:500 18px Inter;margin-top:10px;color:#cfc6b5">${T.pecaSub}</div><div class="assin">@tu.marca</div></div><div class="sec">${T.modelos}</div><div class="mods">${['#D2A63C','#1f1b13','#f3ede1','#3ddc84','#8ab4ff','#E9C46A'].map(c=>`<i style="background:${c}"></i>`).join('')}</div><div class="exp">⬇ ${T.exportar}</div>`})
+  const ls=el('div','abs',T.socialItens.map(([a,b])=>`<div class="si"><b>${a}</b><span>${b}</span></div>`).join(''),{left:'120px',top:'430px',width:'1000px'}); r.append(ls)
+  const sem=el('div','abs anton',T.semOrdem,{left:'120px',top:'830px',width:'1100px',fontSize:'56px'}); r.append(sem)
+  return {tit,sub,t,ls,sem}
+ },
+ update(o,k){
+  entra(o.tit,prog(k,0,.08)); entra(o.sub,prog(k,.05,.13))
+  const a=ease(prog(k,.04,.16)); o.t.style.opacity=a; o.t.style.transform=`translateY(${(1-a)*140}px)`
+  const p=o.t.querySelector('.peca'); p.style.background=`linear-gradient(135deg, #1a160d, ${['#3a2d0e','#2b2412','#4a3a12'][Math.floor(prog(k,.2,.6)*2.99)]})`
+  o.ls.querySelectorAll('.si').forEach((d,i)=>entra(d,prog(k,.2+i*.12,.28+i*.12),20))
+  entra(o.sem,prog(k,.82,.9))
+ }
+}
+
+CENAS['s09b-avaliacoes'] = {
+ build(r){
+  const tit=el('div','abs anton ouro',T.avalTit,{left:'160px',top:'130px',width:'1100px',fontSize:'90px'}); r.append(tit)
+  const col=el('div','abs',null,{left:'160px',top:'280px',width:'1000px'}); r.append(col)
+  const bs=T.avaliacoes.map((q,i)=>{ const b=el('div','cartao',`<div style="display:flex;gap:16px;align-items:center;margin-bottom:10px"><i style="width:44px;height:44px;border-radius:50%;background:#2b2618;display:inline-flex;align-items:center;justify-content:center;font:700 20px Inter;color:#D2A63C;font-style:normal">M</i><b style="font:700 22px Inter">${T.membroNome}</b><span class="mut" style="font-size:18px">· chat MTM</span></div><div style="font:500 32px/1.35 Inter">“${q}”</div>`,{padding:'22px 30px',marginBottom:'20px',marginLeft:(i%2?80:0)+'px'}); col.append(b); return b })
+  const t=telApp(r,1320,150,{titulo:'Chat',tab:1,esc:.9,html:T.reacoes.map((m,i)=>`<div class="bol ${i%3===2?'eu':''}">${m}</div>`).join('')})
+  t.style.transformOrigin='top left'
+  const nota=el('div','abs',T.verbatim,{left:'160px',top:'800px',font:'500 22px Inter',color:'#8f887a'}); r.append(nota)
+  return {tit,col,bs,t,nota}
+ },
+ update(o,k,s){
+  entra(o.tit,prog(k,0,.08))
+  o.bs.forEach((b,i)=>entra(b,prog(k,.1+i*.12,.18+i*.12),24))
+  const a=ease(prog(k,.05,.16)); o.t.style.opacity=a; o.t.style.transform=`scale(.9) translateY(${(1-a)*140}px)`
+  o.t.querySelectorAll('.bol').forEach((b,i)=>entra(b,prog(k,.15+i*.09,.2+i*.09),14))
+  entra(o.nota,prog(k,.5,.6))
+ }
+}
+
 // ---------------------------------------------------------------- linha do tempo
 // window.TL = [{id, ini, dur, frases:[{t, ini, fim}]}]  (segundos absolutos)
 const palco=document.getElementById('palco'), montadas={}
@@ -385,7 +608,7 @@ window.renderAt = function(t){
   if(s>=0 && s<c.dur) atual={c,s,i}
  })
  const cap=document.getElementById('capitulo'), leg=document.getElementById('legenda')
- if(atual){ cap.textContent=String(atual.i+1).padStart(2,'0')+' · '+T.cap[atual.i]
+ if(atual){ cap.textContent=String(atual.i+1).padStart(2,'0')+' · '+(T.cap[atual.c.id]||'')
   const f=atual.c.frases.find(f=>t>=f.ini && t<f.fim); if(f && window.LEGENDAS){ leg.style.display='block'; leg.textContent=f.t } else leg.style.display='none' }
  document.getElementById('barra').style.width=(t/total*100)+'%'
  const fr=Math.floor(t*12); if(fr!==ultimoGrao){ ruido(fr+1); ultimoGrao=fr }

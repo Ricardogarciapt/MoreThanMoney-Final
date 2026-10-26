@@ -21,7 +21,7 @@ import { useRouter } from 'next/navigation'
 import { PAPEL_NOME, type Papel } from '@/lib/backoffice-papeis'
 
 const CAMPO =
-  'w-full rounded-lg border border-gray-700 bg-gray-950/60 px-2 py-1.5 text-xs text-gray-100 placeholder:text-gray-600 focus:border-[#D2A63C] focus:outline-none'
+  'w-full rounded-lg border border-zinc-700 bg-zinc-950/60 px-2 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-[#D2A63C] focus:outline-none'
 
 export function Trabalhar({
   id,
@@ -73,7 +73,7 @@ export function Trabalhar({
           <button
             type="button"
             onClick={() => setAEditarNota(true)}
-            className="rounded-lg border border-gray-700 px-2 py-1 text-xs text-gray-400 transition-colors hover:border-gray-600"
+            className="rounded-lg border border-zinc-700 px-2 py-1 text-xs text-zinc-400 transition-colors hover:border-zinc-600"
           >
             {nota ? 'Editar nota' : 'Escrever nota'}
           </button>
@@ -106,7 +106,7 @@ export function Trabalhar({
               void pedir({ atribuicoes: { [p]: null } }, `largar-${p}`)
             }}
             disabled={aGuardar !== null}
-            className="rounded-lg border border-gray-800 px-2 py-1 text-xs text-gray-500 transition-colors hover:border-red-900/60 hover:text-red-300 disabled:opacity-50"
+            className="rounded-lg border border-zinc-800 px-2 py-1 text-xs text-zinc-500 transition-colors hover:border-red-900/60 hover:text-red-300 disabled:opacity-50"
           >
             {aGuardar === `largar-${p}` ? 'a largar…' : `Largar ${PAPEL_NOME[p]}`}
           </button>
@@ -137,7 +137,7 @@ export function Trabalhar({
                 setTexto(nota ?? '')
                 setAEditarNota(false)
               }}
-              className="text-xs text-gray-500 underline hover:text-gray-300"
+              className="text-xs text-zinc-500 underline hover:text-zinc-300"
             >
               cancelar
             </button>

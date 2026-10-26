@@ -169,9 +169,9 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
 
   if (!tarefas.length) {
     return (
-      <section className="rounded-xl border border-gray-800 bg-gray-900/40 p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">O teu dia</h2>
-        <p className="mt-3 text-sm text-gray-400">
+      <section className="rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">O teu dia</h2>
+        <p className="mt-3 text-sm text-zinc-400">
           Nada por fazer hoje. Se isto te parecer estranho, é porque é — fala com o Ricardo para
           confirmar que o motor do dia está ligado.
         </p>
@@ -182,8 +182,8 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
   return (
     <section className="space-y-3">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">O teu dia</h2>
-        <span className="text-xs text-gray-600">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">O teu dia</h2>
+        <span className="text-xs text-zinc-600">
           {/* O número total aparece SEMPRE, e não só o das 20 mostradas: esconder a dívida não a
               paga, e quem só vê vinte não sabe que precisa de ajuda. */}
           {brutas.length} por fazer{atrasadas ? ` · ${atrasadas} de dias anteriores` : ''} · {hoje}
@@ -192,7 +192,7 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
 
       <ol className="space-y-3">
         {tarefas.map((t, i) => (
-          <li key={t.id} className="rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+          <li key={t.id} className="rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-4">
             <div className="flex items-start gap-3">
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#D2A63C]/15 text-xs font-semibold text-[#D2A63C]">
                 {i + 1}
@@ -203,7 +203,7 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
                   <p className="text-xs text-[#D2A63C]">de alguém da tua equipa</p>
                 )}
                 {t.descricao && (
-                  <p className="text-sm leading-relaxed text-gray-400">{t.descricao}</p>
+                  <p className="text-sm leading-relaxed text-zinc-400">{t.descricao}</p>
                 )}
 
                 {/* O QUE FAZER E PORQUÊ. O motivo aparece sempre: um painel que manda fazer sem
@@ -211,25 +211,25 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
                 {t.accao && (
                   <div className="rounded-lg border border-[#D2A63C]/25 bg-[#D2A63C]/[0.06] px-3 py-2">
                     <p className="text-[13px] font-medium text-[#E9C46A]">{t.accao}</p>
-                    {t.porque && <p className="mt-0.5 text-[11.5px] leading-relaxed text-gray-400">{t.porque}</p>}
+                    {t.porque && <p className="mt-0.5 text-[11.5px] leading-relaxed text-zinc-400">{t.porque}</p>}
                   </div>
                 )}
 
                 {t.pessoa && <Contactar pessoa={t.pessoa} />}
 
                 {t.atrasada && (
-                  <p className="text-[11px] text-gray-600">Ficou de {t.prazo}</p>
+                  <p className="text-[11px] text-zinc-600">Ficou de {t.prazo}</p>
                 )}
 
                 {t.rascunho && (
-                  <div className="space-y-2 rounded-lg border border-gray-800 bg-black/30 p-3">
+                  <div className="space-y-2 rounded-lg border border-zinc-800 bg-black/30 p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
                         Rascunho — lê, corrige, envia
                       </span>
                       <Copiar texto={t.rascunho} />
                     </div>
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-300">
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
                       {t.rascunho}
                     </p>
                   </div>
@@ -262,9 +262,9 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
         ))}
       </ol>
 
-      <p className="text-xs text-gray-600">
+      <p className="text-xs text-zinc-600">
         Isto é o que tem prazo até hoje. O resto — sem prazo, feitas, canceladas — está em{' '}
-        <a href="/backoffice/tarefas" className="text-gray-400 hover:underline">
+        <a href="/backoffice/tarefas" className="text-zinc-400 hover:underline">
           Tarefas
         </a>
         .

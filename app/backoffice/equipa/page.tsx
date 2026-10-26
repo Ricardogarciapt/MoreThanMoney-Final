@@ -165,8 +165,8 @@ export default async function EquipaPage() {
       />
 
       {respondeA && (
-        <p className="text-sm text-gray-400">
-          Tu respondes a <strong className="text-gray-200">{respondeA.equipa.nome}</strong>. O que
+        <p className="text-sm text-zinc-400">
+          Tu respondes a <strong className="text-zinc-200">{respondeA.equipa.nome}</strong>. O que
           vês nesta página é a equipa que responde a ti, não a de cima.
         </p>
       )}
@@ -203,15 +203,15 @@ export default async function EquipaPage() {
           </div>
 
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
               Quem responde a ti ({membros.length})
             </h2>
             <div className="space-y-3">
               {doEcra.map((m) => (
-                <div key={m.id} className="rounded-lg border border-gray-800 bg-gray-900/40 p-5">
+                <div key={m.id} className="rounded-xl border border-white/[0.06] bg-zinc-950/70 p-5">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="font-semibold text-white">{m.nome}</span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-zinc-500">
                       {m.equipaNome}
                       {m.desde ? ` · desde ${dataCurta(m.desde)}` : ''}
                     </span>
@@ -226,21 +226,21 @@ export default async function EquipaPage() {
 
                   <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
                     <div>
-                      <dt className="text-xs uppercase tracking-wide text-gray-600">Em aberto</dt>
-                      <dd className="text-gray-200">
+                      <dt className="text-xs uppercase tracking-wide text-zinc-600">Em aberto</dt>
+                      <dd className="text-zinc-200">
                         {vePipelineEquipa ? `${m.emAberto.length} negócio${m.emAberto.length === 1 ? '' : 's'}` : '—'}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs uppercase tracking-wide text-gray-600">Tarefas</dt>
-                      <dd className={m.atrasadas > 0 ? 'text-red-400' : 'text-gray-200'}>
+                      <dt className="text-xs uppercase tracking-wide text-zinc-600">Tarefas</dt>
+                      <dd className={m.atrasadas > 0 ? 'text-red-400' : 'text-zinc-200'}>
                         {m.tarefasAbertas.length} por fazer
                         {m.atrasadas > 0 ? ` · ${m.atrasadas} atrasada${m.atrasadas === 1 ? '' : 's'}` : ''}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs uppercase tracking-wide text-gray-600">A receber</dt>
-                      <dd className="text-gray-200">
+                      <dt className="text-xs uppercase tracking-wide text-zinc-600">A receber</dt>
+                      <dd className="text-zinc-200">
                         {veExtractoEquipa ? centimosEmEuros(m.saldoCents) : '—'}
                       </dd>
                     </div>
@@ -251,19 +251,19 @@ export default async function EquipaPage() {
                   {vePipelineEquipa && m.emAberto.length > 0 && (
                     <ul className="mt-3 space-y-1.5">
                       {m.emAberto.slice(0, 6).map((n) => (
-                        <li key={n.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-gray-800/70 bg-gray-900/30 px-3 py-2">
-                          <span className="text-sm text-gray-300">{n.nome}</span>
+                        <li key={n.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-800/70 bg-zinc-900/30 px-3 py-2">
+                          <span className="text-sm text-zinc-300">{n.nome}</span>
                           <span className="flex items-center gap-2">
                             {n.pack_previsto && <Etiqueta>{n.pack_previsto}</Etiqueta>}
                             <Etiqueta tom="aviso">
                               {ehEstadoPipeline(n.estado) ? ESTADO_PIPELINE_NOME[n.estado] : n.estado}
                             </Etiqueta>
-                            <span className="text-xs text-gray-600">mexeu {dataCurta(n.atualizado_em)}</span>
+                            <span className="text-xs text-zinc-600">mexeu {dataCurta(n.atualizado_em)}</span>
                           </span>
                         </li>
                       ))}
                       {m.emAberto.length > 6 && (
-                        <li className="px-3 text-xs text-gray-600">
+                        <li className="px-3 text-xs text-zinc-600">
                           e mais {m.emAberto.length - 6} — a lista toda está no teu pipeline.
                         </li>
                       )}
@@ -278,8 +278,8 @@ export default async function EquipaPage() {
               antes de ela começar — o líder precisa de ver de onde veio cada euro para ajudar. */}
           {veExtractoEquipa && (
             <section className="space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                O que a equipa ganhou {extractoEquipa.length > 0 && <span className="text-gray-600">({extractoEquipa.length} movimentos)</span>}
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                O que a equipa ganhou {extractoEquipa.length > 0 && <span className="text-zinc-600">({extractoEquipa.length} movimentos)</span>}
               </h2>
               {extracto === null ? (
                 <Aviso>
@@ -292,9 +292,9 @@ export default async function EquipaPage() {
                   seguinte="As comissões aparecem aqui quando uma venda de um liderado é confirmada — o pagamento tem de entrar primeiro. O teu próprio extracto não conta para esta lista: está em «O meu extracto»."
                 />
               ) : (
-                <div className="overflow-x-auto rounded-lg border border-gray-800">
+                <div className="overflow-x-auto rounded-lg border border-zinc-800">
                   <table className="w-full min-w-[720px] text-sm">
-                    <thead className="bg-gray-900/60 text-left text-xs uppercase tracking-wide text-gray-500">
+                    <thead className="bg-zinc-900/60 text-left text-xs uppercase tracking-wide text-zinc-500">
                       <tr>
                         <th className="px-3 py-2 font-medium">Data</th>
                         <th className="px-3 py-2 font-medium">Pessoa</th>
@@ -304,14 +304,14 @@ export default async function EquipaPage() {
                         <th className="px-3 py-2 text-right font-medium">Valor</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-800/70">
+                    <tbody className="divide-y divide-zinc-800/70">
                       {extractoEquipa.map((l: LinhaExtracto) => {
                         const valor = valorComSinal(l)
                         const estado = estadoComissao(String(l.estado))
                         return (
-                          <tr key={`${l.origem}-${l.id}`} className="text-gray-300">
-                            <td className="whitespace-nowrap px-3 py-2 text-gray-400">{dataCurta(l.em)}</td>
-                            <td className="px-3 py-2 text-gray-400">{(l.pessoa_id && nomes.get(l.pessoa_id)) || '—'}</td>
+                          <tr key={`${l.origem}-${l.id}`} className="text-zinc-300">
+                            <td className="whitespace-nowrap px-3 py-2 text-zinc-400">{dataCurta(l.em)}</td>
+                            <td className="px-3 py-2 text-zinc-400">{(l.pessoa_id && nomes.get(l.pessoa_id)) || '—'}</td>
                             <td className="px-3 py-2">
                               <Etiqueta tom={l.origem === 'mlm' ? 'neutro' : 'aviso'}>{ORIGEM_NOME[l.origem]}</Etiqueta>
                             </td>
@@ -319,7 +319,7 @@ export default async function EquipaPage() {
                             <td className="px-3 py-2">
                               <Etiqueta tom={TOM_ESTADO[estado]}>{ESTADO_COMISSAO_NOME[estado]}</Etiqueta>
                             </td>
-                            <td className={`whitespace-nowrap px-3 py-2 text-right font-mono ${valor < 0 ? 'text-red-400' : 'text-gray-100'}`}>
+                            <td className={`whitespace-nowrap px-3 py-2 text-right font-mono ${valor < 0 ? 'text-red-400' : 'text-zinc-100'}`}>
                               {centimosEmEuros(valor)}
                             </td>
                           </tr>
@@ -329,7 +329,7 @@ export default async function EquipaPage() {
                   </table>
                 </div>
               )}
-              <p className="text-xs leading-relaxed text-gray-600">
+              <p className="text-xs leading-relaxed text-zinc-600">
                 Esta lista é a dos teus liderados. O teu próprio dinheiro está em «O meu extracto» —
                 separados de propósito, para a conta da equipa não te incluir a ti.
               </p>
@@ -345,7 +345,7 @@ export default async function EquipaPage() {
         </>
       )}
 
-      <p className="text-xs leading-relaxed text-gray-600">
+      <p className="text-xs leading-relaxed text-zinc-600">
         Só vês os membros DIRECTOS das equipas que lideras. Se um deles liderar a sua própria
         equipa, essa equipa não aparece aqui — foi uma decisão explícita, para ninguém ver linhas de
         gente que nunca conheceu. Esta página mostra; montar equipas faz-se no admin.

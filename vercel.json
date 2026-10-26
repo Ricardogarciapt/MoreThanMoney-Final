@@ -18,7 +18,7 @@
     },
     {
       "path": "/api/cron/mtmcopy-master-poll",
-      "schedule": "*/2 * * * *"
+      "schedule": "*/10 * * * *"
     },
     {
       "path": "/api/cron/mtmcopy-orders-sweep",
@@ -34,23 +34,23 @@
     },
     {
       "path": "/api/cron/perps-position-monitor",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/t2t-price-monitor",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/webtrader-gestao-auto",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/signal-tracker",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/mestre-publicar",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/nightly-tp-sl",
@@ -110,11 +110,11 @@
     },
     {
       "path": "/api/cron/premium-price-monitor",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/premium-zone-monitor",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/telegram-leads-content",
@@ -194,7 +194,7 @@
     },
     {
       "path": "/api/cron/funis",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/mtmcopy-reconciliar",

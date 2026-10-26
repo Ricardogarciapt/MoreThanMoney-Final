@@ -60,6 +60,7 @@ export const COMANDOS_DO_DONO = [
   '/comissoes',
   '/comissões',
   '/mlm',
+  '/marketing',
 ] as const
 
 /** Os botões do painel do dono. O lado da equipa usa `bo:` e nunca toca nestes. */

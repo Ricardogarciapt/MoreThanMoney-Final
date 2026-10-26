@@ -62,7 +62,7 @@ export function CanaisDoNegocio({ id, ehDono }: { id: string; ehDono: boolean })
 
   if (!aberto) {
     return (
-      <button type="button" onClick={() => void abrir()} className="mt-2 ml-3 text-xs text-gray-500 underline transition-colors hover:text-[#D2A63C]">
+      <button type="button" onClick={() => void abrir()} className="mt-2 ml-3 text-xs text-zinc-500 underline transition-colors hover:text-[#D2A63C]">
         Canais
       </button>
     )
@@ -70,24 +70,24 @@ export function CanaisDoNegocio({ id, ehDono }: { id: string; ehDono: boolean })
 
   const comAlgo = canais ? (Object.keys(DESCREVER) as Array<keyof Canais>).filter((k) => (canais[k] ?? []).length > 0) : []
   return (
-    <div className="mt-2 space-y-2 rounded-lg border border-gray-800 bg-black/20 p-3">
+    <div className="mt-2 space-y-2 rounded-lg border border-zinc-800 bg-black/20 p-3">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-gray-500">Canais</span>
-        <button type="button" onClick={() => setAberto(false)} className="text-xs text-gray-500 underline hover:text-gray-300">fechar</button>
+        <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Canais</span>
+        <button type="button" onClick={() => setAberto(false)} className="text-xs text-zinc-500 underline hover:text-zinc-300">fechar</button>
       </div>
-      {aLer && <p className="text-xs text-gray-500">a ler…</p>}
+      {aLer && <p className="text-xs text-zinc-500">a ler…</p>}
       {erro && <p className="text-xs text-red-400">{erro}</p>}
       {canais && comAlgo.length === 0 && (
-        <p className="text-xs leading-relaxed text-gray-500">Ainda não há registos desta pessoa noutros canais (pelo email, telefone, Instagram ou Telegram deste negócio).</p>
+        <p className="text-xs leading-relaxed text-zinc-500">Ainda não há registos desta pessoa noutros canais (pelo email, telefone, Instagram ou Telegram deste negócio).</p>
       )}
       {canais && comAlgo.map((k) => (
         <div key={k}>
-          <p className="text-[11px] font-semibold text-gray-400">
+          <p className="text-[11px] font-semibold text-zinc-400">
             {DESCREVER[k].nome}
             {ehDono && DESCREVER[k].href && <a href={DESCREVER[k].href} className="ml-2 font-normal text-[#D2A63C] underline">abrir</a>}
           </p>
           <ul className="mt-0.5 space-y-0.5">
-            {canais[k].map((l, i) => <li key={i} className="text-xs text-gray-400">{DESCREVER[k].linha(l)}</li>)}
+            {canais[k].map((l, i) => <li key={i} className="text-xs text-zinc-400">{DESCREVER[k].linha(l)}</li>)}
           </ul>
         </div>
       ))}

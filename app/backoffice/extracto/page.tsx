@@ -157,7 +157,7 @@ export default async function ExtractoPage({ searchParams }: { searchParams: Pro
       )}
 
       {(desde || ate) && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-zinc-500">
           Os totais em cima contam só os movimentos deste período. Limpa o filtro para verem o
           extracto inteiro.
         </p>
@@ -166,23 +166,23 @@ export default async function ExtractoPage({ searchParams }: { searchParams: Pro
       {/* De onde vem o dinheiro. Duas origens que não se misturam: o trabalho na equipa e a rede.
           Somadas sem se distinguirem, a pessoa não saberia qual das duas vale a pena trabalhar. */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">De onde veio</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">De onde veio</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {(['papel', 'mlm'] as const).map((o) => (
-            <div key={o} className="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+            <div key={o} className="rounded-xl border border-white/[0.06] bg-zinc-950/70 p-4">
               <div className="font-semibold text-[#D2A63C]">{ORIGEM_NOME[o]}</div>
-              <dl className="mt-2 space-y-1 text-sm text-gray-400">
+              <dl className="mt-2 space-y-1 text-sm text-zinc-400">
                 <div className="flex justify-between gap-4">
                   <dt>Ganho</dt>
-                  <dd className="text-gray-200">{centimosEmEuros(porOrigem[o].ganho_cents)}</dd>
+                  <dd className="text-zinc-200">{centimosEmEuros(porOrigem[o].ganho_cents)}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt>Por pagar</dt>
-                  <dd className="text-gray-200">{centimosEmEuros(porOrigem[o].por_pagar_cents)}</dd>
+                  <dd className="text-zinc-200">{centimosEmEuros(porOrigem[o].por_pagar_cents)}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt>Pago</dt>
-                  <dd className="text-gray-200">{centimosEmEuros(porOrigem[o].pago_cents)}</dd>
+                  <dd className="text-zinc-200">{centimosEmEuros(porOrigem[o].pago_cents)}</dd>
                 </div>
               </dl>
             </div>
@@ -191,8 +191,8 @@ export default async function ExtractoPage({ searchParams }: { searchParams: Pro
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Movimentos {linhas.length > 0 && <span className="text-gray-600">({linhas.length})</span>}
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+          Movimentos {linhas.length > 0 && <span className="text-zinc-600">({linhas.length})</span>}
         </h2>
 
         {daPagina.linhas.length === 0 ? (
@@ -205,9 +205,9 @@ export default async function ExtractoPage({ searchParams }: { searchParams: Pro
             }
           />
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-800">
+          <div className="overflow-x-auto rounded-lg border border-zinc-800">
             <table className="w-full min-w-[720px] text-sm">
-              <thead className="bg-gray-900/60 text-left text-xs uppercase tracking-wide text-gray-500">
+              <thead className="bg-zinc-900/60 text-left text-xs uppercase tracking-wide text-zinc-500">
                 <tr>
                   <th className="px-3 py-2 font-medium">Data</th>
                   {pessoas.length > 1 && <th className="px-3 py-2 font-medium">Pessoa</th>}
@@ -218,26 +218,26 @@ export default async function ExtractoPage({ searchParams }: { searchParams: Pro
                   <th className="px-3 py-2 text-right font-medium">Valor</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800/70">
+              <tbody className="divide-y divide-zinc-800/70">
                 {daPagina.linhas.map((l) => {
                   const valor = valorComSinal(l)
                   const estado = estadoComissao(String(l.estado))
                   return (
-                    <tr key={`${l.origem}-${l.id}`} className="text-gray-300">
-                      <td className="whitespace-nowrap px-3 py-2 text-gray-400">{dataCurta(l.em)}</td>
+                    <tr key={`${l.origem}-${l.id}`} className="text-zinc-300">
+                      <td className="whitespace-nowrap px-3 py-2 text-zinc-400">{dataCurta(l.em)}</td>
                       {pessoas.length > 1 && (
-                        <td className="px-3 py-2 text-gray-400">{(l.pessoa_id && nomes[l.pessoa_id]) || '—'}</td>
+                        <td className="px-3 py-2 text-zinc-400">{(l.pessoa_id && nomes[l.pessoa_id]) || '—'}</td>
                       )}
                       <td className="px-3 py-2">
                         <Etiqueta tom={l.origem === 'mlm' ? 'neutro' : 'aviso'}>{ORIGEM_NOME[l.origem]}</Etiqueta>
                       </td>
                       <td className="px-3 py-2">{l.detalhe || '—'}</td>
-                      <td className="px-3 py-2 text-gray-400">{l.pack || '—'}</td>
+                      <td className="px-3 py-2 text-zinc-400">{l.pack || '—'}</td>
                       <td className="px-3 py-2">
                         <Etiqueta tom={TOM_ESTADO[estado]}>{ESTADO_COMISSAO_NOME[estado]}</Etiqueta>
                       </td>
                       <td
-                        className={`whitespace-nowrap px-3 py-2 text-right font-mono ${valor < 0 ? 'text-red-400' : 'text-gray-100'}`}
+                        className={`whitespace-nowrap px-3 py-2 text-right font-mono ${valor < 0 ? 'text-red-400' : 'text-zinc-100'}`}
                       >
                         {centimosEmEuros(valor)}
                       </td>
@@ -252,7 +252,7 @@ export default async function ExtractoPage({ searchParams }: { searchParams: Pro
         <Paginacao base={BASE} params={params} pagina={pagina} mostradas={daPagina.linhas.length} haMais={daPagina.haMais} />
 
         {totais.cancelado_cents > 0 && (
-          <p className="text-xs leading-relaxed text-gray-500">
+          <p className="text-xs leading-relaxed text-zinc-500">
             Há {centimosEmEuros(totais.cancelado_cents)} em comissões canceladas ou devolvidas antes
             de serem pagas. Não contam para nada: nunca saiu dinheiro por elas, por isso não são
             ganho nem dívida.
@@ -260,7 +260,7 @@ export default async function ExtractoPage({ searchParams }: { searchParams: Pro
         )}
       </section>
 
-      <p className="text-xs leading-relaxed text-gray-600">
+      <p className="text-xs leading-relaxed text-zinc-600">
         Esta página mostra; não mexe. Aprovar e pagar comissões é um acto humano e faz-se no admin —
         o que aqui aparece como «por pagar» é uma proposta do sistema, não uma transferência feita.
       </p>

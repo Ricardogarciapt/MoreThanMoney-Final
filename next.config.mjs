@@ -2,6 +2,11 @@ import { withOpinlyConfig } from '@opinly/next'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Os vídeos de public/ são servidos estáticos pela CDN; nenhuma função os lê. Sem isto o
+  // rastreio de ficheiros mete-os nas funções que tocam em process.cwd() e passam os 250 MB.
+  outputFileTracingExcludes: {
+    '*': ['public/videos/**', 'public/**/*.mp4', 'public/**/*.mov'],
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },

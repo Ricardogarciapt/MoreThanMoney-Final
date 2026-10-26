@@ -73,11 +73,11 @@ export function LigarTelegram({ nomeDoBot }: { nomeDoBot: string }) {
   const minutos = estado?.validade_minutos ?? 15
 
   return (
-    <section className="space-y-3 rounded-xl border border-gray-800 bg-gray-900/40 p-5">
+    <section className="space-y-3 rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Telegram</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Telegram</h2>
         {estado && (
-          <span className={`text-xs ${estado.ligado ? 'text-emerald-400' : 'text-gray-500'}`}>
+          <span className={`text-xs ${estado.ligado ? 'text-emerald-400' : 'text-zinc-500'}`}>
             {estado.ligado
               ? `ligado${estado.username ? ` · @${estado.username}` : ''}${estado.avisos_ligados ? '' : ' · avisos desligados'}`
               : 'não ligado'}
@@ -85,7 +85,7 @@ export function LigarTelegram({ nomeDoBot }: { nomeDoBot: string }) {
         )}
       </div>
 
-      <p className="text-sm leading-relaxed text-gray-400">
+      <p className="text-sm leading-relaxed text-zinc-400">
         Liga o teu Telegram e recebes aqui o teu dia de manhã. Pelo bot também vês as tuas tarefas,
         riscas o que está feito, lês o rascunho da mensagem e consultas o teu pipeline e o teu
         extracto.
@@ -97,7 +97,7 @@ export function LigarTelegram({ nomeDoBot }: { nomeDoBot: string }) {
             <code className="select-all font-mono text-2xl tracking-widest text-[#D2A63C]">{codigo}</code>
             <Copiar texto={`/ligar ${codigo}`} />
           </div>
-          <p className="text-xs leading-relaxed text-gray-400">
+          <p className="text-xs leading-relaxed text-zinc-400">
             Abre a conversa com{' '}
             <a
               href={`https://t.me/${nomeDoBot}`}
@@ -107,9 +107,9 @@ export function LigarTelegram({ nomeDoBot }: { nomeDoBot: string }) {
             >
               @{nomeDoBot}
             </a>{' '}
-            e escreve <code className="text-gray-300">/ligar {codigo}</code>.
+            e escreve <code className="text-zinc-300">/ligar {codigo}</code>.
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-zinc-500">
             Serve uma vez e expira em {minutos} minutos. <b>Não o passes a ninguém</b> — quem o tiver
             recebe o teu trabalho e vê o teu extracto.
           </p>
@@ -123,7 +123,7 @@ export function LigarTelegram({ nomeDoBot }: { nomeDoBot: string }) {
           type="button"
           onClick={gerar}
           disabled={aTrabalhar}
-          className="rounded-md border border-gray-700 px-3 py-1.5 text-xs text-gray-200 transition hover:border-[#D2A63C] hover:text-[#D2A63C] disabled:opacity-50"
+          className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 transition hover:border-[#D2A63C] hover:text-[#D2A63C] disabled:opacity-50"
         >
           {aTrabalhar ? 'a gerar…' : estado?.ligado ? 'Gerar código novo' : 'Gerar código'}
         </button>
@@ -132,7 +132,7 @@ export function LigarTelegram({ nomeDoBot }: { nomeDoBot: string }) {
             type="button"
             onClick={desligar}
             disabled={aTrabalhar}
-            className="rounded-md border border-gray-800 px-3 py-1.5 text-xs text-gray-400 transition hover:border-red-500/60 hover:text-red-400 disabled:opacity-50"
+            className="rounded-md border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition hover:border-red-500/60 hover:text-red-400 disabled:opacity-50"
           >
             Desligar
           </button>

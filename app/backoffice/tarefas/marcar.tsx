@@ -72,7 +72,7 @@ export function Marcar({
           disabled={aGuardar !== null}
           className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
             feita
-              ? 'border-gray-700 text-gray-400 hover:border-gray-600'
+              ? 'border-zinc-700 text-zinc-400 hover:border-zinc-600'
               : 'border-[#D2A63C]/50 text-[#D2A63C] hover:bg-[#D2A63C]/10'
           }`}
         >
@@ -85,7 +85,7 @@ export function Marcar({
               type="button"
               onClick={() => setAMudarPrazo((v) => !v)}
               disabled={aGuardar !== null}
-              className="rounded-lg border border-gray-700 px-2 py-1.5 text-xs text-gray-400 transition-colors hover:border-gray-600 disabled:opacity-50"
+              className="rounded-lg border border-zinc-700 px-2 py-1.5 text-xs text-zinc-400 transition-colors hover:border-zinc-600 disabled:opacity-50"
             >
               Prazo
             </button>
@@ -97,7 +97,7 @@ export function Marcar({
                 void pedir({ estado: 'cancelada' }, 'cancelar')
               }}
               disabled={aGuardar !== null}
-              className="rounded-lg border border-gray-800 px-2 py-1.5 text-xs text-gray-500 transition-colors hover:border-red-900/60 hover:text-red-300 disabled:opacity-50"
+              className="rounded-lg border border-zinc-800 px-2 py-1.5 text-xs text-zinc-500 transition-colors hover:border-red-900/60 hover:text-red-300 disabled:opacity-50"
             >
               {aGuardar === 'cancelar' ? 'a cancelar…' : 'Cancelar'}
             </button>
@@ -111,7 +111,7 @@ export function Marcar({
             type="date"
             defaultValue={prazo ? String(prazo).slice(0, 10) : ''}
             onChange={(e) => void pedir({ prazo: e.target.value || null }, 'prazo')}
-            className="rounded-lg border border-gray-700 bg-gray-950/60 px-2 py-1 text-xs text-gray-100 focus:border-[#D2A63C] focus:outline-none"
+            className="rounded-lg border border-zinc-700 bg-zinc-950/60 px-2 py-1 text-xs text-zinc-100 focus:border-[#D2A63C] focus:outline-none"
           />
           {/* Limpar o prazo é legítimo: a tarefa passa para o fim da lista, que é onde vive o «quando
               der». Escondê-lo obrigava a inventar uma data para deixar de haver urgência. */}
@@ -119,7 +119,7 @@ export function Marcar({
             type="button"
             onClick={() => void pedir({ prazo: null }, 'prazo')}
             disabled={aGuardar !== null}
-            className="text-xs text-gray-500 underline hover:text-gray-300 disabled:opacity-50"
+            className="text-xs text-zinc-500 underline hover:text-zinc-300 disabled:opacity-50"
           >
             sem prazo
           </button>

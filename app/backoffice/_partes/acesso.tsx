@@ -37,15 +37,15 @@ export async function abrirPagina(capacidade: Capacidade): Promise<Acesso> {
 export function SemAcesso({ motivo, oQue }: { motivo: 'sem_sessao' | 'sem_papel'; oQue: string }) {
   if (motivo === 'sem_sessao') {
     return (
-      <div className="mx-auto max-w-xl space-y-4 rounded-xl border border-gray-800 bg-gray-900/40 p-6">
+      <div className="mx-auto max-w-xl space-y-4 rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-6">
         <h1 className="text-xl font-bold text-white">Entra primeiro</h1>
-        <p className="text-sm leading-relaxed text-gray-400">
+        <p className="text-sm leading-relaxed text-zinc-400">
           A tua sessão expirou ou nunca começou neste endereço. O backoffice usa o mesmo login do
           site.
         </p>
         <a
           href="/login"
-          className="inline-block rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-gray-950 transition-opacity hover:opacity-90"
+          className="inline-block rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-zinc-950 transition-opacity hover:opacity-90"
         >
           Entrar
         </a>
@@ -54,12 +54,12 @@ export function SemAcesso({ motivo, oQue }: { motivo: 'sem_sessao' | 'sem_papel'
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-4 rounded-xl border border-gray-800 bg-gray-900/40 p-6">
+    <div className="mx-auto max-w-xl space-y-4 rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-6">
       <h1 className="text-xl font-bold text-white">Esta página não é para o teu papel</h1>
-      <p className="text-sm leading-relaxed text-gray-400">
+      <p className="text-sm leading-relaxed text-zinc-400">
         {oQue} A tua conta está válida — só não tem o papel que abre esta parte.
       </p>
-      <p className="text-sm leading-relaxed text-gray-400">
+      <p className="text-sm leading-relaxed text-zinc-400">
         Se devias ter acesso, fala com o Ricardo. O que a tua conta abre hoje está na{' '}
         <a href="/backoffice" className="text-[#D2A63C] hover:underline">
           entrada do backoffice

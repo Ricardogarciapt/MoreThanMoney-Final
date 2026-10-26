@@ -30,7 +30,7 @@ export function Copiar({ texto }: { texto: string }) {
     <button
       type="button"
       onClick={copiar}
-      className="shrink-0 rounded-md border border-gray-700 px-2 py-1 text-xs text-gray-300 transition hover:border-[#D2A63C] hover:text-[#D2A63C]"
+      className="shrink-0 rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 transition hover:border-[#D2A63C] hover:text-[#D2A63C]"
     >
       {estado === 'copiado' ? 'copiado' : estado === 'falhou' ? 'copia à mão' : 'copiar'}
     </button>

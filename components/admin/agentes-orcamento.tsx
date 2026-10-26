@@ -18,6 +18,8 @@ type Agente = {
   id: string; nome: string; pilar: string; estado: string; pausado: boolean
   orcamento: number; gasto: number; saldo: number; gasto_dia: number; gasto_mes: number
   teto_dia: number | null; teto_mes: number | null; bloqueado: string | null
+  /** Receita atribuída de sempre (compras com o código `?ag=` do agente). */
+  receita: number; codigo: string | null
 }
 type Movimento = { id: string; agente_id: string; tipo: string; valor: number | null; detalhe: string | null; criado_em: string }
 type Dados = {
@@ -88,13 +90,14 @@ export default function AgentesOrcamento() {
 
       <Painel titulo="Por agente" icone={<Wallet className="h-3.5 w-3.5 text-[#D2A63C]" />}>
         {!dados ? <Vazio>A ler…</Vazio> : dados.agentes.length === 0 ? <Vazio>Ainda não há agentes.</Vazio> : (
-          <Tabela min={820}>
+          <Tabela min={960}>
             <thead>
               <tr>
                 <th className={th}>Agente</th>
                 <th className={th}>Saldo</th>
                 <th className={th}>Hoje</th>
                 <th className={th}>Mês</th>
+                <th className={th} title="Receita atribuída (link ?ag=) menos o gasto de sempre">Receita · resultado</th>
                 <th className={th}>Estado</th>
                 <th className={th} />
               </tr>
@@ -115,6 +118,12 @@ export default function AgentesOrcamento() {
                   </td>
                   <td className={`${td} font-mono`}>
                     {din(a.gasto_mes)}<span className="text-zinc-600"> / {a.teto_mes != null ? din(a.teto_mes) : "∞"}</span>
+                  </td>
+                  <td className={`${td} font-mono`}>
+                    {din(a.receita)}
+                    <span className={a.receita - a.gasto >= 0 ? "text-emerald-300" : "text-rose-300"}> {a.receita - a.gasto >= 0 ? "+" : ""}{din(a.receita - a.gasto)}</span>
+                    {a.gasto > 0 && <span className="text-zinc-600"> · ROI {fmtNum(((a.receita - a.gasto) / a.gasto) * 100, 0)}%</span>}
+                    {a.codigo && <p className="text-[10px] text-zinc-500">?ag={a.codigo}</p>}
                   </td>
                   <td className={td}>
                     {a.bloqueado ? <Pilula tom="aviso" title={a.bloqueado}>bloqueado</Pilula> : <Pilula tom="ok">pode gastar</Pilula>}
