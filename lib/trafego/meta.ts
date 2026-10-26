@@ -11,8 +11,24 @@
  *   META_ADS_ACCESS_TOKEN  token de utilizador de sistema com `ads_read` (e `ads_management` para as
  *                          escritas). O mesmo cuidado do WhatsApp: tipo SYSTEM_USER e `expires_at: 0`
  *   META_AD_ACCOUNT_IDS    ids das contas de anúncios, separados por vírgula (sem `act_`)
+ *
+ * Sem estas variáveis, o painel usa o que a casa já tem: o token de Página do Instagram guardado em
+ * `site_settings.instagram_tokens` (app «Agente de Conteudo», `ads_management`, sem prazo) e as duas
+ * contas de anúncios conhecidas. As variáveis continuam a mandar quando existirem.
  */
 const VERSAO = 'v21.0'
+const CONTAS_DA_CASA = ['237752214', '1088102417270979']
+
+async function tokenAnuncios(): Promise<string | undefined> {
+  const doAmbiente = process.env.META_ADS_ACCESS_TOKEN?.trim()
+  if (doAmbiente) return doAmbiente
+  try {
+    const { tokenForAccount, IG_BRAND_ID } = await import('@/lib/instagram/publish')
+    return await tokenForAccount(IG_BRAND_ID)
+  } catch {
+    return undefined
+  }
+}
 
 export type PeriodoMeta = 'today' | 'yesterday' | 'last_7d' | 'last_30d' | 'this_month' | 'last_month'
 export const PERIODOS: PeriodoMeta[] = ['today', 'yesterday', 'last_7d', 'last_30d', 'this_month', 'last_month']
@@ -51,14 +67,15 @@ const ACCOES_DE_LEAD = new Set([
 const num = (v: unknown) => (v == null || v === '' ? 0 : Number(v) || 0)
 
 export function contasConfiguradas(): string[] {
-  return (process.env.META_AD_ACCOUNT_IDS ?? '')
+  const doAmbiente = (process.env.META_AD_ACCOUNT_IDS ?? '')
     .split(',')
     .map((s) => s.trim().replace(/^act_/, ''))
     .filter((s) => /^\d+$/.test(s))
+  return doAmbiente.length ? doAmbiente : CONTAS_DA_CASA
 }
 
 export async function lerCampanhasMeta(periodo: PeriodoMeta): Promise<LeituraMeta> {
-  const token = process.env.META_ADS_ACCESS_TOKEN
+  const token = await tokenAnuncios()
   const contas = contasConfiguradas()
   const falta = [!token && 'META_ADS_ACCESS_TOKEN', !contas.length && 'META_AD_ACCOUNT_IDS'].filter(Boolean) as string[]
   if (falta.length) return { configurado: false, falta }
@@ -149,7 +166,7 @@ export type MudancaCampanha = { acao: 'pausar' } | { acao: 'activar' } | { acao:
  * `ads_management`, orçamento abaixo do mínimo, orçamento nos conjuntos e não na campanha…).
  */
 export async function mudarCampanha(campanhaId: string, m: MudancaCampanha): Promise<{ ok: true } | { ok: false; erro: string }> {
-  const token = process.env.META_ADS_ACCESS_TOKEN
+  const token = await tokenAnuncios()
   if (!token) return { ok: false, erro: 'META_ADS_ACCESS_TOKEN não está configurado.' }
   if (!/^\d+$/.test(campanhaId)) return { ok: false, erro: 'Campanha inválida.' }
   const corpo = new URLSearchParams({ access_token: token })
@@ -213,7 +230,7 @@ export function validarNovaCampanha(c: Partial<NovaCampanhaMeta>, contas = conta
 export async function criarCampanhaPausada(c: NovaCampanhaMeta): Promise<
   { ok: true; campanhaId: string; conjuntoId: string; anuncioId: string } | { ok: false; erro: string; criados: Record<string, string> }
 > {
-  const token = process.env.META_ADS_ACCESS_TOKEN
+  const token = await tokenAnuncios()
   const pagina = process.env.META_PAGE_ID
   const criados: Record<string, string> = {}
   if (!token) return { ok: false, erro: 'META_ADS_ACCESS_TOKEN não está configurado.', criados }
