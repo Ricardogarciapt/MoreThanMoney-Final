@@ -8,7 +8,8 @@ import {
   prepareBrandedEmailHtml,
   brandedMailAttachments,
 } from "@/lib/mail-transport"
-import { buildBroadcast } from "@/lib/broadcast-emails"
+import { buildBroadcast, type BroadcastEmail } from "@/lib/broadcast-emails"
+import { estrategiasEmail, linguaDoMembro, type LinguaEmail } from "@/lib/broadcast-estrategias"
 
 /**
  * Transporter POOLED: uma única ligação/login reutilizado para todo o lote.
@@ -36,7 +37,7 @@ export const maxDuration = 300
  * POST /api/admin/broadcast
  * Envio em massa à comunidade (profiles com email) via Gmail (credenciais da Vercel).
  * Auth: token interno OU sessão admin.
- * Body: { template?: "app_review"|"monthly_challenge", dryRun?, test?, testTo?, offset?, limit? }
+ * Body: { template?: "app_review"|"monthly_challenge"|"estrategias_mtm", dryRun?, test?, testTo?, testLang?, offset?, limit? }
  * - dryRun: só conta destinatários.
  * - test: envia 1 email (testTo ou GMAIL_USER).
  * - offset/limit: processa um lote (default: todos). Devolve nextOffset/done p/ repetir.
@@ -44,6 +45,12 @@ export const maxDuration = 300
 function firstName(p: { full_name?: string | null; username?: string | null }): string {
   const n = (p.full_name || p.username || "").trim()
   return n ? n.split(/\s+/)[0] : "Malta"
+}
+
+/** O email das estratégias vai na língua de cada membro; os outros templates são só PT. */
+function montar(template: string, nome: string, lingua: LinguaEmail): BroadcastEmail {
+  if (template === "estrategias_mtm") return estrategiasEmail(nome, lingua)
+  return buildBroadcast(template, nome)
 }
 
 export async function POST(request: NextRequest) {
@@ -72,7 +79,7 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, username, conversion_deadline, stripe_subscription_id, subscription_platform, mtmcopy_subscription_active")
+    .select("id, email, full_name, username, preferred_language, detected_language, conversion_deadline, stripe_subscription_id, subscription_platform, mtmcopy_subscription_active")
     .not("email", "is", null)
     .order("id", { ascending: true })
 
@@ -106,16 +113,26 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Todos os membros, ativos e inativos, menos os endereços de teste.
+  if (template === "estrategias_mtm") {
+    filtered = filtered.filter((p: any) => !/@test\.|@example\./i.test(String(p.email)))
+  }
+
   const total = filtered.length
 
   if (dryRun) {
-    return NextResponse.json({ success: true, dryRun: true, total, template, segment })
+    const porLingua: Record<string, number> = {}
+    for (const p of filtered) {
+      const l = linguaDoMembro(p)
+      porLingua[l] = (porLingua[l] || 0) + 1
+    }
+    return NextResponse.json({ success: true, dryRun: true, total, porLingua, template, segment })
   }
 
   const transporter = createPooledTransporter()
 
   if (test) {
-    const mail = buildBroadcast(template, "Ricardo")
+    const mail = montar(template, "Ricardo", linguaDoMembro({ preferred_language: body.testLang }))
     await transporter.sendMail({
       from: mailFrom(),
       to: testTo,
@@ -135,7 +152,7 @@ export async function POST(request: NextRequest) {
 
   for (const p of batch) {
     try {
-      const mail = buildBroadcast(template, firstName(p))
+      const mail = montar(template, firstName(p), linguaDoMembro(p))
       await transporter.sendMail({
         from: mailFrom(),
         to: p.email,
