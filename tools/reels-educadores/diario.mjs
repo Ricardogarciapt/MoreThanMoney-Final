@@ -80,15 +80,23 @@ async function desenhar(browser, item, pasta) {
   return { mp4, capa, total: info.total }
 }
 
+/** Os roteiros saem aos poucos (a IA gratuita limita por minuto): pede-se o plano até vir completo. */
 async function animados() {
-  const plano = await api('GET')
-  log(`dia ${plano.dia}: ${plano.renders.length} reel(s) por desenhar · ${plano.metricas} nota(s) lidas do Instagram`)
-  for (const n of plano.notas || []) log('·', n)
-  if (!plano.renders.length || SECO) return
+  for (let volta = 1; volta <= 6; volta++) {
+    const plano = await api('GET')
+    log(`dia ${plano.dia} (volta ${volta}): ${plano.renders.length} reel(s) por desenhar · ${plano.metricas} nota(s) lidas do Instagram`)
+    for (const n of plano.notas || []) log('·', n)
+    if (plano.renders.length && !SECO) await desenharTodos(plano.renders)
+    if (plano.completo !== false || SECO) return
+    await new Promise((r) => setTimeout(r, 60_000))
+  }
+}
+
+async function desenharTodos(renders) {
   const { chromium } = createRequire(import.meta.url)('playwright')
   const browser = await chromium.launch()
   try {
-    for (const item of plano.renders) {
+    for (const item of renders) {
       const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'reel-'))
       try {
         const { mp4, capa, total } = await desenhar(browser, item, pasta)

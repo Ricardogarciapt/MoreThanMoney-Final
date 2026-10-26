@@ -52,13 +52,31 @@ async function historico(db: Db, slug: string): Promise<Historico[]> {
   return (data ?? []).map((r) => ({ tema: r.tema as string | null, gancho: String(r.gancho ?? ''), nota: r.nota == null ? null : Number(r.nota) }))
 }
 
-async function novoRoteiro(db: Db, dia: string, slot: number, ed: EducadorReel, estado: 'roteiro'): Promise<void> {
+/**
+ * O orçamento de IA de uma chamada ao plano. Os fornecedores gratuitos limitam por minuto (o Groq
+ * dá 8000 tokens/min, ~2 roteiros), por isso os roteiros saem espaçados e uma chamada só escreve o
+ * que cabe em ~3 minutos; o robô volta a pedir o plano até ele dizer `completo`.
+ */
+interface Orcamento { fim: number; ultima: number; parado: boolean }
+const PAUSA_ENTRE_ROTEIROS = 25_000
+
+async function novoRoteiro(db: Db, dia: string, slot: number, ed: EducadorReel, orc: Orcamento): Promise<boolean> {
+  if (orc.parado) return false
+  const espera = orc.ultima + PAUSA_ENTRE_ROTEIROS - Date.now()
+  if (orc.ultima && Date.now() + Math.max(0, espera) + 60_000 > orc.fim) { orc.parado = true; return false }
+  if (orc.ultima && espera > 0) await new Promise((r) => setTimeout(r, espera))
+  orc.ultima = Date.now()
   const id = `${ed.slug}-${dia}-${slot}`
   try {
     const r = await gerarRoteiro(ed, await historico(db, ed.slug), id)
-    await db.from('reels_auto').insert({ dia, slot, tipo: 'animado', educador: ed.slug, tema: r.tema, gancho: textoDoGancho(r), roteiro: r, estado })
+    await db.from('reels_auto').insert({ dia, slot, tipo: 'animado', educador: ed.slug, tema: r.tema, gancho: textoDoGancho(r), roteiro: r, estado: 'roteiro' })
+    return true
   } catch (e) {
-    await db.from('reels_auto').insert({ dia, slot, tipo: 'animado', educador: ed.slug, estado: 'erro', erro: e instanceof Error ? e.message : String(e) })
+    const erro = e instanceof Error ? e.message : String(e)
+    // Fornecedores esgotados: parar já, em vez de queimar o resto do minuto com pedidos recusados.
+    if (/indispon/i.test(erro)) orc.parado = true
+    await db.from('reels_auto').insert({ dia, slot, tipo: 'animado', educador: ed.slug, estado: 'erro', erro: erro.slice(0, 1000) })
+    return false
   }
 }
 
@@ -74,10 +92,13 @@ async function jaNaFila(db: Db, dia: string): Promise<Set<string>> {
 }
 
 /** Planeia o dia e devolve o que falta desenhar. */
-export async function planearDia(dia: string): Promise<{ dia: string; renders: ParaRender[]; notas: string[] }> {
+export async function planearDia(dia: string): Promise<{ dia: string; renders: ParaRender[]; notas: string[]; completo: boolean }> {
   const db = getSupabaseAdmin()
   const notas: string[] = []
+  const orc: Orcamento = { fim: Date.now() + 200_000, ultima: 0, parado: false }
   const pub = await publicaveis(db)
+  // Roteiros que falharam numa corrida anterior voltam a tentar-se (o slot fica livre).
+  await db.from('reels_auto').delete().eq('dia', dia).eq('tipo', 'animado').eq('estado', 'erro').is('post_id', null)
   const { data: existentes } = await db.from('reels_auto').select('slot, educador').eq('dia', dia)
   const usados = new Set((existentes ?? []).map((r) => Number(r.slot)))
 
@@ -91,7 +112,7 @@ export async function planearDia(dia: string): Promise<{ dia: string; renders: P
     const slot = i + 1
     if (usados.has(slot)) continue
     const ed = doDia[i % Math.max(1, doDia.length)]
-    if (ed) await novoRoteiro(db, dia, slot, ed, 'roteiro')
+    if (ed) await novoRoteiro(db, dia, slot, ed, orc)
   }
   if (ja.size) notas.push(`${ja.size} reel(s) de educadores já estavam na fila: ${[...ja].join(', ')}`)
 
@@ -99,10 +120,12 @@ export async function planearDia(dia: string): Promise<{ dia: string; renders: P
   for (const ed of EDUCADORES.filter((e) => !pub.has(e.slug))) {
     const { count } = await db.from('reels_auto').select('id', { count: 'exact', head: true })
       .eq('educador', ed.slug).in('estado', ['roteiro', 'rascunho'])
-    for (let n = count ?? 0, k = 0; n < RASCUNHOS_POR_EDUCADOR && k < 5; k++) {
+    for (let n = count ?? 0, k = 0; n < RASCUNHOS_POR_EDUCADOR && k < 5 && !orc.parado; k++) {
       const slot = 100 + EDUCADORES.indexOf(ed) * 10 + k
       if (usados.has(slot)) continue
-      await novoRoteiro(db, dia, slot, ed, 'roteiro'); usados.add(slot); n++
+      usados.add(slot)
+      if (await novoRoteiro(db, dia, slot, ed, orc)) n++
+      else break
     }
   }
 
@@ -116,7 +139,8 @@ export async function planearDia(dia: string): Promise<{ dia: string; renders: P
     if (!ed || !r.roteiro) continue
     renders.push({ id: r.id as string, roteiro: r.roteiro as Roteiro, educador: { nome: ed.nome, area: ed.area, marca: ed.marca, foto: ed.foto } })
   }
-  return { dia, renders, notas }
+  if (orc.parado) notas.push('roteiros por acabar: a IA está no limite ou o tempo acabou; o robô volta a pedir')
+  return { dia, renders, notas, completo: !orc.parado }
 }
 
 /** Depois de o robô subir o vídeo: entra na fila (aprovado) ou fica como rascunho. */
