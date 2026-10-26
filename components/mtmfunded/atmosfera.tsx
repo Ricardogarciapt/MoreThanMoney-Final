@@ -80,6 +80,13 @@ export default function Atmosfera({ children }: { children: React.ReactNode }) {
     const no = raiz.current
     if (!no) return
 
+    // Sem observador (browsers antigos, algumas WebViews) mostra-se tudo: um bloco invisível
+    // para sempre é pior do que um bloco sem animação.
+    if (typeof IntersectionObserver === 'undefined') {
+      no.querySelectorAll('.r').forEach((el) => el.classList.add('on'))
+      return
+    }
+
     // Revelação por scroll. `unobserve` depois de revelar: um bloco que já apareceu não
     // precisa de voltar a ser observado, e observadores que ficam a correr numa página longa
     // custam no telemóvel.
@@ -93,7 +100,29 @@ export default function Atmosfera({ children }: { children: React.ReactNode }) {
         }),
       { threshold: 0.12, rootMargin: '0px 0px -6% 0px' },
     )
-    no.querySelectorAll('.r').forEach((el) => io.observe(el))
+    const observar = (raizBusca: ParentNode) =>
+      raizBusca.querySelectorAll('.r:not(.on)').forEach((el) => io.observe(el))
+    observar(no)
+
+    /**
+     * AS PÁGINAS QUE CHEGAM DEPOIS — 26/10: a classificação do torneio aparecia VAZIA.
+     *
+     * Este layout monta uma vez e fica montado enquanto se navega dentro do /mtmfunded. Quem
+     * vinha da /mtmfunded e carregava em «Torneio» recebia a página nova sem recarregar, e os
+     * blocos `.r` dela — a tabela incluída — nasciam com opacidade 0 e nunca eram observados,
+     * porque a procura só tinha corrido na primeira montagem. O HTML estava lá; não se via.
+     * Agora cada `.r` que entra na árvore é observado quando entra.
+     */
+    const mo = new MutationObserver((mudancas) => {
+      for (const m of mudancas) {
+        m.addedNodes.forEach((n) => {
+          if (!(n instanceof Element)) return
+          if (n.matches('.r:not(.on)')) io.observe(n)
+          observar(n)
+        })
+      }
+    })
+    mo.observe(no, { childList: true, subtree: true })
 
     // Quem chega por âncora já vem a meio da página: o que está acima mostra-se feito, em vez
     // de ficar invisível à espera de um scroll que já aconteceu.
@@ -101,7 +130,10 @@ export default function Atmosfera({ children }: { children: React.ReactNode }) {
       no.querySelectorAll('.r').forEach((el) => el.classList.add('on'))
     }
 
-    return () => io.disconnect()
+    return () => {
+      mo.disconnect()
+      io.disconnect()
+    }
   }, [])
 
   return (
