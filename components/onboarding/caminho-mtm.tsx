@@ -6,6 +6,7 @@ import { Check, ChevronDown } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { ehIosNativo } from "@/lib/app-nativa"
 import { useI18n } from "@/components/i18n-provider"
+import Caminho3D from "./caminho-3d"
 import { LINGUAS, NOME_LINGUA, TEXTOS, type Lingua, type Textos } from "./caminho-textos"
 
 /**
@@ -24,7 +25,7 @@ import { LINGUAS, NOME_LINGUA, TEXTOS, type Lingua, type Textos } from "./caminh
  *  · Os números (preços, depósito, bónus) chegam por props de quem os tem: `escada-precos` e
  *    `broker/deposito-minimo`. Nada de valores escritos à mão neste ficheiro.
  *
- * As línguas (PT, EN, FR, DE, IT, como no guia antigo) vivem em `caminho-textos.tsx`; a escolha
+ * As línguas (PT, EN, ES, FR, DE, IT) vivem em `caminho-textos.tsx`; a escolha
  * é a mesma do resto do site (useI18n) e um link com ?lang= abre já na língua certa.
  *
  * O progresso fica no telemóvel (localStorage) e é ajudado pelo que se sabe da conta: com sessão,
@@ -37,10 +38,20 @@ export type DadosCaminho = {
   depositoMinimoUsd: number
   bonusPct: number
   linkAgendarOnboarding: string
-  /** O vídeo de 2 minutos da abertura de conta. `null` enquanto não estiver renderizado. */
-  videoAbrirConta: string | null
-  /** A mesma explicação em inglês. Serve o EN e, até haver voz própria, o FR, o DE e o IT. */
-  videoAbrirContaEn: string | null
+  /**
+   * O vídeo de 2 minutos da abertura de conta, por língua. Uma língua sem vídeo próprio mostra o
+   * inglês, com uma nota a dizê-lo.
+   */
+  videosAbrirConta: Partial<Record<Lingua, string>>
+  /** O vídeo curto com os cinco passos, por língua. Sem nenhum, o bloco não aparece. */
+  videosPassos: Partial<Record<Lingua, string>>
+}
+
+/** O vídeo de uma língua, ou o inglês quando ela ainda não tem o seu (e então `emOutraLingua`). */
+function videoPara(videos: Partial<Record<Lingua, string>>, l: Lingua) {
+  if (videos[l]) return { src: videos[l]!, emOutraLingua: false }
+  if (videos.en) return { src: videos.en, emOutraLingua: true }
+  return null
 }
 
 const CHAVE = "mtm_onboarding_passos"
@@ -69,10 +80,10 @@ export default function CaminhoMtm({ dados }: { dados: DadosCaminho }) {
   const [lingua, setLingua] = useState<Lingua>("pt")
   const t = TEXTOS[lingua]
 
-  // A língua do site manda (é a do seletor do cabeçalho e a do perfil); esta página só tem cinco,
-  // por isso uma língua que não tenha cai no português (espanhol) ou no inglês (as restantes).
+  // A língua do site manda (é a do seletor do cabeçalho e a do perfil); uma que esta página não
+  // tenha cai no inglês.
   useEffect(() => {
-    setLingua(linguaDe(langSite) ?? (langSite === "pt" || langSite === "es" ? "pt" : "en"))
+    setLingua(linguaDe(langSite) ?? (langSite === "pt" ? "pt" : "en"))
   }, [langSite])
 
   useEffect(() => {
@@ -87,6 +98,7 @@ export default function CaminhoMtm({ dados }: { dados: DadosCaminho }) {
     const base = lerFeitos()
     if (noIos && !base.includes(2)) base.push(2)
     setFeitos(base)
+    setAberto([1, 2, 3, 4, 5].find((n) => !base.includes(n)) ?? null)
 
     void (async () => {
       try {
@@ -107,7 +119,7 @@ export default function CaminhoMtm({ dados }: { dados: DadosCaminho }) {
           return novo
         })
         // Abre o primeiro passo que falta, em vez de obrigar a fechar os que já estão feitos.
-        setAberto((a) => (a === 1 ? [1, 2, 3, 4, 5].find((n) => !auto.includes(n) && !base.includes(n)) ?? null : a))
+        setAberto([1, 2, 3, 4, 5].find((n) => !auto.includes(n) && !base.includes(n)) ?? null)
       } catch {}
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,11 +155,12 @@ export default function CaminhoMtm({ dados }: { dados: DadosCaminho }) {
     onAbrir: (p: number) => setAberto(aberto === p ? null : p),
     onFeito: alternarFeito,
   }
-  // PT vê o vídeo em português; as outras línguas veem o inglês até haver voz própria.
-  const video = lingua === "pt" ? dados.videoAbrirConta : dados.videoAbrirContaEn ?? dados.videoAbrirConta
+  const video = videoPara(dados.videosAbrirConta, lingua)
+  const videoPassos = videoPara(dados.videosPassos, lingua)
 
   return (
     <div lang={lingua}>
+      <style>{ANIMACOES}</style>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/onboarding" className="text-[13px] text-[#8a8a95] hover:text-white">
           ← Onboarding
@@ -155,44 +168,68 @@ export default function CaminhoMtm({ dados }: { dados: DadosCaminho }) {
         <SeletorLingua atual={lingua} onMudar={mudarLingua} />
       </div>
 
-      <header className="relative mt-8">
+      <header className="relative mt-6 grid items-center gap-2 sm:mt-8 sm:grid-cols-[1fr_250px]">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-3xl"
           style={{ background: "radial-gradient(circle, rgba(210,166,60,0.22), transparent 70%)" }}
         />
-        <p className="relative text-[12px] font-semibold uppercase tracking-[0.18em] text-[#D2A63C]">{t.eyebrow}</p>
-        <h1 className="relative mt-3 text-[34px] font-bold leading-[1.1] tracking-tight text-white sm:text-5xl">
-          {t.titulo}
-        </h1>
-        <p className="relative mt-4 max-w-xl text-[15px] leading-relaxed text-[#b9b9c3]">{t.intro}</p>
-        <ul className="relative mt-5 flex flex-wrap gap-2">
-          {t.factos.map((f) => (
-            <li
-              key={f}
-              className="rounded-full border border-[#D2A63C]/30 bg-[#D2A63C]/[0.06] px-3 py-1 text-[12px] font-medium text-[#E9C46A]"
-            >
-              {f}
-            </li>
-          ))}
-        </ul>
+        <Caminho3D
+          feitos={feitos}
+          className="absolute -top-4 right-0 h-[240px] w-[200px] opacity-40 sm:relative sm:opacity-100 sm:right-auto sm:top-auto sm:order-2 sm:h-[300px] sm:w-full"
+        />
+        <div className="relative">
+          <p className="mtm-sobe text-[12px] font-semibold uppercase tracking-[0.18em] text-[#D2A63C]">{t.eyebrow}</p>
+          <h1
+            className="mtm-sobe mt-3 bg-gradient-to-br from-white via-white to-[#E9C46A] bg-clip-text text-[34px] font-bold leading-[1.1] tracking-tight text-transparent sm:text-[44px]"
+            style={{ animationDelay: "80ms" }}
+          >
+            {t.titulo}
+          </h1>
+          <p className="mtm-sobe mt-4 max-w-xl text-[15px] leading-relaxed text-[#b9b9c3]" style={{ animationDelay: "160ms" }}>
+            {t.intro}
+          </p>
+          <ul className="mtm-sobe mt-5 flex flex-wrap gap-2" style={{ animationDelay: "240ms" }}>
+            {t.factos.map((f) => (
+              <li
+                key={f}
+                className="rounded-full border border-[#D2A63C]/30 bg-[#D2A63C]/[0.06] px-3 py-1 text-[12px] font-medium text-[#E9C46A] backdrop-blur-sm"
+              >
+                {f}
+              </li>
+            ))}
+          </ul>
+        </div>
       </header>
 
       <section
         aria-live="polite"
-        className="mt-8 flex items-center gap-4 rounded-2xl border border-[#23262F] bg-[#101217] p-4"
+        className="mtm-sobe relative mt-8 flex items-center gap-4 rounded-2xl border border-[#23262F] bg-[#101217]/90 p-4 backdrop-blur"
+        style={{ animationDelay: "320ms" }}
       >
         <Anel pct={pct} />
         <div className="flex-1">
           <p className="text-[15px] font-semibold text-white">{n === TOTAL ? t.tudoFeito : t.progresso(n, TOTAL)}</p>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#1b1d24]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#D2A63C] to-[#E9C46A] transition-[width] duration-500"
+              className="mtm-brilho h-full rounded-full transition-[width] duration-700"
               style={{ width: `${pct}%` }}
             />
           </div>
         </div>
       </section>
+
+      {videoPassos && (
+        <section className="mtm-sobe mt-6" style={{ animationDelay: "380ms" }}>
+          <p className="mb-2 text-[13px] font-semibold text-[#E9C46A]">{t.videoPassos}</p>
+          <div className="overflow-hidden rounded-2xl border border-[#3a2f17] bg-black shadow-[0_0_60px_-18px_rgba(210,166,60,0.45)]">
+            <video key={videoPassos.src} className="aspect-video w-full" src={videoPassos.src} controls playsInline preload="metadata" />
+          </div>
+          {videoPassos.emOutraLingua && t.p3.notaVideo && (
+            <p className="mt-2 text-[12px] text-[#8a8a95]">{t.p3.notaVideo.split(".")[0]}.</p>
+          )}
+        </section>
+      )}
 
       <ol className="relative mt-8 space-y-3 before:absolute before:bottom-6 before:left-[35px] before:top-6 before:w-px before:bg-gradient-to-b before:from-[#D2A63C]/50 before:via-[#23262F] before:to-[#23262F]">
         <Passo n={1} titulo={t.p1.titulo} resumo={ios ? t.p1.resumoIos : t.p1.resumo} {...comum}>
@@ -272,6 +309,25 @@ export default function CaminhoMtm({ dados }: { dados: DadosCaminho }) {
   )
 }
 
+/**
+ * As animações da página, todas em CSS: entrada em cascata, cartões que inclinam, o número que
+ * salta quando o passo fica feito e o brilho da barra. Com `prefers-reduced-motion` param todas.
+ */
+const ANIMACOES = `
+@keyframes mtm-sobe{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes mtm-desce{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes mtm-pop{0%{transform:scale(.5)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes mtm-brilho{from{background-position:200% 0}to{background-position:-200% 0}}
+.mtm-sobe{animation:mtm-sobe .7s cubic-bezier(.2,.7,.2,1) both}
+.mtm-desce{animation:mtm-desce .35s ease-out both}
+.mtm-pop{animation:mtm-pop .45s cubic-bezier(.3,1.6,.5,1) both}
+.mtm-brilho{background:linear-gradient(90deg,#D2A63C 0%,#E9C46A 40%,#fff3c8 50%,#E9C46A 60%,#D2A63C 100%);background-size:200% 100%;animation:mtm-brilho 3.5s linear infinite}
+.mtm-cartao{--rx:0deg;--ry:0deg;transform:perspective(900px) rotateX(var(--rx)) rotateY(var(--ry));transition:transform .25s ease-out,border-color .3s,box-shadow .3s}
+.mtm-cartao:hover{box-shadow:0 18px 40px -24px rgba(210,166,60,.45)}
+.mtm-aberto{box-shadow:0 24px 60px -30px rgba(210,166,60,.5)}
+@media (prefers-reduced-motion:reduce){.mtm-sobe,.mtm-desce,.mtm-pop,.mtm-brilho{animation:none}.mtm-cartao{transform:none;transition:none}}
+`
+
 function linguaDe(v: string | null | undefined): Lingua | null {
   const l = (v || "").slice(0, 2).toLowerCase()
   return (LINGUAS as readonly string[]).includes(l) ? (l as Lingua) : null
@@ -330,7 +386,15 @@ function Anel({ pct }: { pct: number }) {
  * conta real depois, depósito no fim. É a ordem em que a corretora deixa fazer as coisas, e quem a
  * tenta saltar fica parado num ecrã sem perceber porquê.
  */
-function PassoCorretora({ dados, t, video }: { dados: DadosCaminho; t: Textos; video: string | null }) {
+function PassoCorretora({
+  dados,
+  t,
+  video,
+}: {
+  dados: DadosCaminho
+  t: Textos
+  video: { src: string; emOutraLingua: boolean } | null
+}) {
   return (
     <>
       <p>{t.p3.intro}</p>
@@ -338,16 +402,16 @@ function PassoCorretora({ dados, t, video }: { dados: DadosCaminho; t: Textos; v
       {video && (
         <div className="mt-4 overflow-hidden rounded-xl border border-[#3a2f17] bg-black shadow-[0_0_40px_-12px_rgba(210,166,60,0.35)]">
           <video
-            key={video}
+            key={video.src}
             className="aspect-video w-full"
-            src={video}
+            src={video.src}
             controls
             playsInline
             preload="metadata"
           />
         </div>
       )}
-      {video && t.p3.notaVideo && <p className="mt-2 text-[12px] text-[#8a8a95]">{t.p3.notaVideo}</p>}
+      {video?.emOutraLingua && t.p3.notaVideo && <p className="mt-2 text-[12px] text-[#8a8a95]">{t.p3.notaVideo}</p>}
 
       <ol className="mt-5 space-y-3">
         {t.p3.sub.map((s, i) => (
@@ -409,12 +473,26 @@ function Passo({
 }) {
   const feito = feitos.includes(n)
   const aberto = qualAberto === n
+  // Inclinação 3D ao passar o rato, só com o cartão fechado e só com rato (no toque não há hover).
+  const inclinar = (e: React.PointerEvent<HTMLLIElement>) => {
+    if (aberto || e.pointerType !== "mouse") return
+    const r = e.currentTarget.getBoundingClientRect()
+    e.currentTarget.style.setProperty("--rx", `${(0.5 - (e.clientY - r.top) / r.height) * 6}deg`)
+    e.currentTarget.style.setProperty("--ry", `${((e.clientX - r.left) / r.width - 0.5) * 8}deg`)
+  }
+  const endireitar = (e: React.PointerEvent<HTMLLIElement>) => {
+    e.currentTarget.style.setProperty("--rx", "0deg")
+    e.currentTarget.style.setProperty("--ry", "0deg")
+  }
   return (
     <li
-      className="relative overflow-hidden rounded-2xl border transition-colors"
+      onPointerMove={inclinar}
+      onPointerLeave={endireitar}
+      className={`mtm-sobe mtm-cartao relative overflow-hidden rounded-2xl border ${aberto ? "mtm-aberto" : ""}`}
       style={{
-        borderColor: destaque ? "rgba(210,166,60,0.45)" : "#23262F",
+        borderColor: destaque || aberto ? "rgba(210,166,60,0.45)" : "#23262F",
         background: destaque ? "#16140E" : "#12141A",
+        animationDelay: `${420 + n * 70}ms`,
       }}
     >
       <button
@@ -424,10 +502,12 @@ function Passo({
         className="flex w-full items-center gap-4 px-5 py-4 text-left"
       >
         <span
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[14px] font-bold"
+          key={feito ? "feito" : "por-fazer"}
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-[14px] font-bold ${feito ? "mtm-pop" : ""}`}
           style={{
-            background: feito ? "#D2A63C" : "rgba(210,166,60,0.12)",
+            background: feito ? "linear-gradient(135deg,#E9C46A,#D2A63C)" : "rgba(210,166,60,0.12)",
             color: feito ? "#0b0b0e" : "#D2A63C",
+            boxShadow: feito ? "0 0 18px rgba(210,166,60,0.55)" : "inset 0 0 0 1px rgba(210,166,60,0.25)",
           }}
         >
           {feito ? <Check className="h-4 w-4" aria-hidden="true" /> : n}
@@ -442,7 +522,7 @@ function Passo({
         />
       </button>
       {aberto && (
-        <div className="border-t border-[#23262F] px-5 pb-5 pt-4 text-[14px] leading-relaxed text-[#b9b9c3]">
+        <div className="mtm-desce border-t border-[#23262F] px-5 pb-5 pt-4 text-[14px] leading-relaxed text-[#b9b9c3]">
           {children}
           <button
             type="button"

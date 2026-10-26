@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 
 /**
- * Os textos do caminho MTM nas cinco línguas que o guia antigo também servia (PT, EN, FR, DE, IT).
+ * Os textos do caminho MTM em seis línguas: PT, EN, ES, FR, DE e IT.
  *
  * Os números não moram aqui: chegam em `n` (preços, depósito, bónus) para que uma mudança em
  * `escada-precos` apareça em todas as línguas de uma vez. Os nomes de botões e separadores da app
@@ -9,12 +9,13 @@ import type { ReactNode } from "react"
  * que a pessoa os vai ver escritos no ecrã.
  */
 
-export const LINGUAS = ["pt", "en", "fr", "de", "it"] as const
+export const LINGUAS = ["pt", "en", "es", "fr", "de", "it"] as const
 export type Lingua = (typeof LINGUAS)[number]
 
 export const NOME_LINGUA: Record<Lingua, string> = {
   pt: "Português",
   en: "English",
+  es: "Español",
   fr: "Français",
   de: "Deutsch",
   it: "Italiano",
@@ -34,6 +35,8 @@ export type Textos = {
   titulo: string
   intro: string
   factos: [string, string, string]
+  /** Título do vídeo curto com os cinco passos, por cima do progresso. */
+  videoPassos: string
   progresso: (feitos: number, total: number) => string
   tudoFeito: string
   jaFiz: string
@@ -94,6 +97,7 @@ const pt: Textos = {
   intro:
     "Cinco passos, por esta ordem. Numa tarde fica tudo montado: a tua conta, a app, a corretora, os sinais e as aulas. Se já fizeste algum, marca-o e passa ao seguinte.",
   factos: ["5 passos", "Uma tarde", "3 dias de Premium grátis"],
+  videoPassos: "Os 5 passos num minuto",
   progresso: (f, t) => `${f} de ${t} passos feitos`,
   tudoFeito: "Está tudo montado.",
   jaFiz: "Já fiz este passo",
@@ -241,6 +245,7 @@ const en: Textos = {
   intro:
     "Five steps, in this order. One afternoon is enough to set everything up: your account, the app, the broker, the signals and the classes. If you have already done one, tick it and move on.",
   factos: ["5 steps", "One afternoon", "3 days of Premium free"],
+  videoPassos: "The 5 steps in one minute",
   progresso: (f, t) => `${f} of ${t} steps done`,
   tudoFeito: "You're all set.",
   jaFiz: "I've done this step",
@@ -258,7 +263,7 @@ const en: Textos = {
     ),
     itens: (n) => [
       "Your card is registered, but nothing is charged during the 3 days.",
-      `If you stay, the first month is ${n.premium1oMes} and then ${n.premiumMensal}.`,
+      `If you stay, the first month is ${n.premium1oMes} and then ${n.premiumMensal.replace("/mês", "/month")}.`,
       "Cancel from your account whenever you like, without talking to anyone.",
     ],
     dica: "Use the same email here, in the app and at the broker. That is how we link all three to your account.",
@@ -387,6 +392,7 @@ const fr: Textos = {
   intro:
     "Cinq étapes, dans cet ordre. Un après-midi suffit pour tout mettre en place : ton compte, l'app, le courtier, les signaux et les cours. Si tu en as déjà fait une, coche-la et passe à la suivante.",
   factos: ["5 étapes", "Un après-midi", "3 jours de Premium offerts"],
+  videoPassos: "Les 5 étapes en une minute",
   progresso: (f, t) => `${f} étape${f > 1 ? "s" : ""} sur ${t} terminée${f > 1 ? "s" : ""}`,
   tudoFeito: "Tout est en place.",
   jaFiz: "J'ai fait cette étape",
@@ -404,7 +410,7 @@ const fr: Textos = {
     ),
     itens: (n) => [
       "Ta carte est enregistrée, mais rien n'est prélevé pendant les 3 jours.",
-      `Si tu continues, le 1er mois coûte ${n.premium1oMes}, puis ${n.premiumMensal}.`,
+      `Si tu continues, le 1er mois coûte ${n.premium1oMes}, puis ${n.premiumMensal.replace("/mês", "/mois")}.`,
       "Tu résilies depuis ton compte quand tu veux, sans devoir parler à qui que ce soit.",
     ],
     dica: "Utilise le même e-mail ici, dans l'app et chez le courtier. C'est grâce à lui que nous relions les trois à ton compte.",
@@ -535,6 +541,7 @@ const de: Textos = {
   intro:
     "Fünf Schritte, in dieser Reihenfolge. An einem Nachmittag ist alles eingerichtet: dein Konto, die App, der Broker, die Signale und die Kurse. Wenn du einen Schritt schon erledigt hast, hak ihn ab und mach mit dem nächsten weiter.",
   factos: ["5 Schritte", "Ein Nachmittag", "3 Tage Premium gratis"],
+  videoPassos: "Die 5 Schritte in einer Minute",
   progresso: (f, t) => `${f} von ${t} Schritten erledigt`,
   tudoFeito: "Alles ist eingerichtet.",
   jaFiz: "Diesen Schritt habe ich erledigt",
@@ -552,7 +559,7 @@ const de: Textos = {
     ),
     itens: (n) => [
       "Deine Karte wird hinterlegt, aber in den 3 Tagen wird nichts abgebucht.",
-      `Wenn du bleibst, kostet der 1. Monat ${n.premium1oMes} und danach ${n.premiumMensal}.`,
+      `Wenn du bleibst, kostet der 1. Monat ${n.premium1oMes} und danach ${n.premiumMensal.replace("/mês", "/Monat")}.`,
       "Du kündigst jederzeit in deinem Konto, ohne mit jemandem sprechen zu müssen.",
     ],
     dica: "Verwende hier, in der App und beim Broker dieselbe E-Mail. Darüber verbinden wir alle drei mit deinem Konto.",
@@ -682,6 +689,7 @@ const it: Textos = {
   intro:
     "Cinque passi, in quest'ordine. In un pomeriggio è tutto pronto: il tuo account, l'app, il broker, i segnali e le lezioni. Se ne hai già fatto uno, segnalo e passa al successivo.",
   factos: ["5 passi", "Un pomeriggio", "3 giorni di Premium gratis"],
+  videoPassos: "I 5 passi in un minuto",
   progresso: (f, t) => `${f} di ${t} passi completati`,
   tudoFeito: "È tutto pronto.",
   jaFiz: "Ho fatto questo passo",
@@ -699,7 +707,7 @@ const it: Textos = {
     ),
     itens: (n) => [
       "La carta viene registrata, ma nei 3 giorni non viene addebitato nulla.",
-      `Se continui, il 1° mese costa ${n.premium1oMes} e poi ${n.premiumMensal}.`,
+      `Se continui, il 1° mese costa ${n.premium1oMes} e poi ${n.premiumMensal.replace("/mês", "/mese")}.`,
       "Disdici dal tuo account quando vuoi, senza dover parlare con nessuno.",
     ],
     dica: "Usa la stessa email qui, nell'app e presso il broker. È così che colleghiamo tutte e tre le cose al tuo account.",
@@ -822,4 +830,151 @@ const it: Textos = {
     "Contenuto educativo, non costituisce consulenza finanziaria. Operare con prodotti a leva comporta un rischio elevato di perdita e i risultati passati non garantiscono risultati futuri. L'automazione esegue ordini sul tuo conto secondo le regole che definisci tu.",
 }
 
-export const TEXTOS: Record<Lingua, Textos> = { pt, en, fr, de, it }
+const es: Textos = {
+  eyebrow: "Onboarding MTM",
+  titulo: "Empieza en MoreThanMoney",
+  intro:
+    "Cinco pasos, en este orden. En una tarde lo tienes todo listo: tu cuenta, la app, el bróker, las señales y las clases. Si ya has hecho alguno, márcalo y pasa al siguiente.",
+  factos: ["5 pasos", "Una tarde", "3 días de Premium gratis"],
+  videoPassos: "Los 5 pasos en un minuto",
+  progresso: (f, t) => `${f} de ${t} pasos hechos`,
+  tudoFeito: "Ya está todo listo.",
+  jaFiz: "Ya he hecho este paso",
+  desfazer: "En realidad todavía no lo he hecho",
+  p1: {
+    titulo: "Crea tu cuenta MTM",
+    resumo: "3 días de Premium sin pagar nada.",
+    resumoIos: "Ya has entrado con tu cuenta.",
+    ios: "Estás en la app con tu cuenta, así que este paso ya está hecho. Sigue con el paso 3.",
+    corpo: (
+      <>
+        Regístrate y elige <b>«Grátis 3 dias»</b> (3 días gratis). Tienes el Premium completo: señales, clases en
+        directo, escáneres y la comunidad.
+      </>
+    ),
+    itens: (n) => [
+      "La tarjeta queda registrada, pero durante los 3 días no se cobra nada.",
+      `Si sigues, el 1.er mes cuesta ${n.premium1oMes} y después ${n.premiumMensal.replace("/mês", "/mes")}.`,
+      "Cancelas desde tu cuenta cuando quieras, sin tener que hablar con nadie.",
+    ],
+    dica: "Usa el mismo email aquí, en la app y en el bróker. Es con él como unimos las tres cosas a tu cuenta.",
+    cta: "Crear cuenta con 3 días gratis",
+  },
+  p2: {
+    titulo: "Instala la app MTM System",
+    resumo: "En el móvil, en el ordenador, o en los dos.",
+    corpo: "Es la misma cuenta en todas partes. Empiezas en el móvil, sigues en el ordenador y todo queda sincronizado.",
+    iphone: "iPhone y iPad",
+    android: "Android",
+    computador: "Ordenador",
+    ctaApk: "Descargar APK",
+    ctaBrowser: "Abrir en el navegador",
+    notaApk: "Si el móvil lo pide, permite instalar desde esta fuente.",
+    notaBrowser: "Sin instalar nada.",
+    dica: "Cuando la app pida enviar notificaciones, acepta. Por ahí llegan las alertas y el aviso de que ha empezado una clase.",
+  },
+  p3: {
+    titulo: "Abre tu cuenta en el bróker",
+    resumo: "El paso que hace funcionar el «gana mientras aprendes».",
+    ios: "La cuenta en el bróker se abre en nuestra web, fuera de la app.",
+    intro: (
+      <>
+        <b>Ganar mientras aprendes</b> necesita una cuenta tuya. Es en ella donde las señales y MTM Auto trabajan
+        mientras tú estudias. El dinero está a tu nombre en PU Prime, nuestro bróker colaborador, y MTM nunca lo toca.
+      </>
+    ),
+    notaVideo: "El vídeo está en inglés. Los pasos de abajo dicen lo mismo, en español.",
+    sub: [
+      {
+        titulo: "Regístrate con nuestro enlace",
+        texto: () =>
+          "Tiene que ser con este enlace. Una cuenta abierta directamente en la web de PU Prime no queda vinculada a MTM, y entonces no podemos darte el acceso a través del bróker.",
+      },
+      {
+        titulo: "Crea el perfil y verifica tu identidad",
+        texto: () =>
+          "Nombre, email, teléfono y país. Después el DNI o pasaporte y un justificante de domicilio reciente. La verificación tarda entre unos minutos y 24 horas, y sin ella no puedes depositar.",
+      },
+      {
+        titulo: "Abre una cuenta real (Live)",
+        texto: () => (
+          <>
+            Tipo <b>Standard</b>, plataforma <b>MT5</b>, divisa <b>USD</b>. El bróker te envía por email el número
+            de cuenta, la contraseña y el servidor. Guarda ese email.
+          </>
+        ),
+      },
+      {
+        titulo: "Haz tu primer depósito",
+        texto: (n) =>
+          `A partir de ${n.depositoMinimoUsd} $ tienes el bono del ${n.bonusPct}% de PU Prime y el Premium sin cuota mensual, mientras mantengas ese saldo. Deposita solo dinero que no necesites.`,
+      },
+      {
+        titulo: "Guarda el número de cuenta en MTM",
+        texto: () => (
+          <>
+            En la app, en <b>«Abrir conta»</b> (abrir cuenta), pega tu UID (el número de tu cuenta PU Prime). Después
+            envía el mismo UID a nuestro bot de Telegram: allí se valida el depósito y se activa el Premium sin cuota
+            mensual.
+          </>
+        ),
+      },
+    ],
+    enganosTitulo: "Los errores que más vemos",
+    enganos: [
+      "Registrarse fuera de nuestro enlace.",
+      "Usar en el bróker un email distinto al de MTM.",
+      "Abrir una cuenta Demo y depositar pensando que es real.",
+      "Dejar la verificación a medias y no poder depositar.",
+    ],
+    ctaAbrir: "Abrir cuenta en PU Prime",
+    ctaUid: "Guardar mi UID",
+    ctaTelegram: "Validar en Telegram",
+  },
+  p4: {
+    titulo: "Conecta las señales a tu cuenta",
+    resumo: "Copia automática o alertas para que operes tú.",
+    corpo: "Hay dos maneras de usar las señales. Elige una ahora y cambia cuando quieras.",
+    auto: {
+      titulo: "MTM Auto",
+      texto:
+        "Las señales se copian solas en tu cuenta MT5 o MT4, con el riesgo que definas. Ahí está también Tap to Trade, para aprobar cada señal con un toque.",
+      para: "Para quien empieza o no tiene tiempo de estar delante de la pantalla.",
+      cta: "Configurar MTM Auto",
+    },
+    alertas: {
+      titulo: "Alertas MTM",
+      texto: "Recibes cada señal con entrada, stop y objetivos, y abres tú la operación en el bróker.",
+      para: "Para quien ya opera, o quiere aprender a ejecutar a mano.",
+      cta: "Abrir las alertas",
+    },
+    dica: "La copia automática abre operaciones reales en tu cuenta. Empieza con un riesgo bajo (por ejemplo 0,5% por operación) y ajústalo en la llamada de onboarding.",
+  },
+  p5: {
+    titulo: "Entra en las clases y reserva tu llamada",
+    resumo: "La parte del «aprendes». Y 30 minutos con nosotros para cerrarlo todo.",
+    corpo: (
+      <>
+        En la app, la pestaña <b>«Aulas»</b> (clases) tiene las academias, las salas en directo y las grabaciones. Si
+        nunca has operado, empieza por la sala <b>«Básicos de Trading»</b> (lo básico del trading).
+      </>
+    ),
+    academias: [
+      "Forex y metales, con Ricardo Garcia",
+      "Criptomonedas, con Ruben Pereira",
+      "Acciones y ETF, Inmobiliario, Redes sociales y UGC",
+    ],
+    ctaAcademias: "Ver las academias",
+    ctaChamada: "Reservar la llamada de onboarding",
+    nota: "En la llamada revisamos tu cuenta, la app, el bróker y tu riesgo, y sales con un plan de estudio para las primeras semanas. Las clases y la llamada son en portugués.",
+  },
+  duvidas: (ig, mail) => (
+    <>
+      ¿Dudas por el camino? Escríbenos en Instagram {ig} o a {mail}.
+    </>
+  ),
+  aviso:
+    "Contenido educativo, no constituye asesoramiento financiero. Operar con productos apalancados conlleva un riesgo elevado de pérdida y los resultados pasados no garantizan resultados futuros. La automatización ejecuta órdenes en tu cuenta según las reglas que tú defines.",
+}
+
+export const TEXTOS: Record<Lingua, Textos> = { pt, en, es, fr, de, it }

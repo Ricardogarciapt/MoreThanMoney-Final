@@ -18,10 +18,16 @@ export const metadata: Metadata = {
  * Cabeçalho, textos e aviso legal estão dentro do CaminhoMtm porque mudam com a língua escolhida.
  */
 
-/** O vídeo de 2 minutos da abertura de conta (16:9; a versão 9:16 é para as redes). */
-const VIDEO_ABRIR_CONTA: string | null = '/videos/abrir-conta-pu-prime.mp4'
-/** A versão em inglês do mesmo vídeo (mesma voz, mesmo ritmo). Serve também FR, DE e IT. */
-const VIDEO_ABRIR_CONTA_EN: string | null = '/videos/open-account-pu-prime-en.mp4'
+/**
+ * Os vídeos por língua (16:9; as versões 9:16 são para as redes). Uma língua sem o seu vídeo mostra
+ * o inglês, com uma nota. PT tem a voz do Ricardo; as outras línguas têm vozes nativas.
+ */
+const VIDEOS_ABRIR_CONTA = {
+  pt: '/videos/abrir-conta-pu-prime.mp4',
+  en: '/videos/open-account-pu-prime-en.mp4',
+}
+/** O vídeo curto com os cinco passos. Vazio até os renders chegarem. */
+const VIDEOS_PASSOS = {}
 
 export default function OnboardingMtm() {
   return (
@@ -33,8 +39,8 @@ export default function OnboardingMtm() {
           depositoMinimoUsd: MIN_DEPOSIT,
           bonusPct: BONUS_PUPRIME_PCT,
           linkAgendarOnboarding: LINK_AGENDAR_ONBOARDING,
-          videoAbrirConta: VIDEO_ABRIR_CONTA,
-          videoAbrirContaEn: VIDEO_ABRIR_CONTA_EN,
+          videosAbrirConta: VIDEOS_ABRIR_CONTA,
+          videosPassos: VIDEOS_PASSOS,
         }}
       />
     </main>
