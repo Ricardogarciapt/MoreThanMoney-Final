@@ -15,6 +15,7 @@ import {
   APPLE_COMISSAO_PCT,
   CATEGORIAS,
   DEFINICOES_PADRAO,
+  destinoComAgente,
   donoValido,
   modoStripe,
   precoEfectivo,
@@ -801,3 +802,18 @@ if (falhas.length) {
 }
 assert.equal(falhas.length, 0, `${falhas.length} invariante(s) do marketplace partida(s)`)
 console.log(`✅ marketplace: ${ok} verificações passaram`)
+
+// ── O código do agente segue no link de uma compra lá fora ──────────────────────────────────
+{
+  assert.equal(destinoComAgente('https://sheis.pt/daily/app/', null), 'https://sheis.pt/daily/app/')
+  assert.equal(destinoComAgente('/upgrade?plan=premium_monthly', 'AG-SOCIAL'), '/upgrade?plan=premium_monthly')
+  const u = new URL(destinoComAgente('https://sheis.pt/studio/criar/#planos', 'AG-SOCIAL'))
+  assert.equal(u.searchParams.get('mtm_agente'), 'AG-SOCIAL')
+  assert.equal(u.searchParams.get('utm_campaign'), 'ag-social')
+  assert.equal(u.hash, '#planos')
+  // O que o link já traz (o afiliado da Ledger) nunca é reescrito.
+  const l = new URL(destinoComAgente('https://shop.ledger.com/x?r=abc&utm_source=ledger', 'AG-SITE'))
+  assert.equal(l.searchParams.get('r'), 'abc')
+  assert.equal(l.searchParams.get('utm_source'), 'ledger')
+  console.log('ok — destinoComAgente')
+}

@@ -925,6 +925,38 @@ export function destinoDeCompraDoProduto(produto: {
   return destinoDeCompraValido(url) ? url : null
 }
 
+/**
+ * O DESTINO DE COMPRA, COM O CÓDIGO DO AGENTE QUE TROUXE A PESSOA.
+ *
+ * Numa compra que acontece lá fora (She Is Daily, She Is Studio, a academia da Maria Costa), o
+ * dinheiro não passa pelo nosso webhook e o `agente_codigo` nunca chegava ao livro de vendas: o
+ * agente que fez a venda ficava sem ela. Por isso o código viaja no próprio link — `mtm_agente`
+ * para o parceiro ler e reportar, e as `utm_*` para qualquer analítica do outro lado o ver sem
+ * configuração nenhuma.
+ *
+ * Só em endereços ABSOLUTOS. Um caminho interno (`/upgrade?plan=…`) é um fluxo da casa que já
+ * lê o código pelo cookie, e mexer-lhe no endereço era arriscar parti-lo. Parâmetros que o link já
+ * traga (o `r=` de afiliado da Ledger, por exemplo) nunca são reescritos.
+ */
+export function destinoComAgente(destino: string, agenteCodigo: string | null | undefined): string {
+  const codigo = String(agenteCodigo ?? '').trim()
+  if (!codigo || !/^https?:\/\//i.test(destino)) return destino
+  let url: URL
+  try {
+    url = new URL(destino)
+  } catch {
+    return destino
+  }
+  const juntar = (k: string, v: string) => {
+    if (!url.searchParams.has(k)) url.searchParams.set(k, v)
+  }
+  juntar('mtm_agente', codigo)
+  juntar('utm_source', 'morethanmoney')
+  juntar('utm_medium', 'marketplace')
+  juntar('utm_campaign', codigo.toLowerCase())
+  return url.toString()
+}
+
 /** O nome da casa, quando é ela que vende. Escrito uma vez para os três ecrãs o dizerem igual. */
 export const NOME_DA_CASA = 'MoreThanMoney'
 

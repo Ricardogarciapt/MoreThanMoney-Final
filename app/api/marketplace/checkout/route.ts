@@ -56,7 +56,7 @@ import { getStripeClient } from '@/lib/stripe-client'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { destinoDeCompraDoProduto, donoValido, modoStripe, podeComprarAqui, precoEfectivo } from '@/lib/marketplace/regras'
+import { destinoComAgente, destinoDeCompraDoProduto, donoValido, modoStripe, podeComprarAqui, precoEfectivo } from '@/lib/marketplace/regras'
 import { normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 import {
   AMBITO_MARKETPLACE, TEXTO_RECUSA, descontoQueVale, normalizarCodigo, validarCupao,
@@ -227,7 +227,37 @@ export async function POST(request: NextRequest) {
     // de um campo de texto do painel.
     // A regra de quem pode mandar o comprador para onde vive em `destinoDeCompraDoProduto` —
     // um sítio só, porque já divergiu daqui uma vez e os catorze botões da montra pararam.
-    const externo = destinoDeCompraDoProduto(produto) ?? ''
+    /**
+     * QUEM TROUXE ESTA COMPRA — o código do agente, se houver.
+     *
+     * Vem do link `?ag=` que o browser guardou. NÃO é o cupão: o cupão dá desconto e esta compra
+     * só tem um; isto é só medição, e vive numa coluna própria (migração 173). Quem entra por um
+     * link de agente e tem um desconto a sério usa os dois.
+     *
+     * ═══ UM CÓDIGO INVÁLIDO NÃO TRAVA A VENDA ═════════════════════════════════════════════
+     *
+     * Ao contrário do cupão, que é recusado alto — se falhasse em silêncio a pessoa pagava o preço
+     * inteiro convencida de que tinha desconto —, um código de atribuição errado apenas não conta.
+     * A venda vale mais do que a medição dela, e quem compra não tem culpa de um link mal copiado.
+     * A venda fica como «sem código», que é exactamente o que ela é.
+     *
+     * Confirma-se contra `agentes_equipa` e não contra `coupons`: o crédito é de um AGENTE, e um
+     * código que já não pertence a ninguém não deve creditar coisa nenhuma.
+     *
+     * Lê-se ANTES do caminho externo porque é o mesmo código nos dois: numa compra lá fora ele
+     * segue no link para o parceiro (`destinoComAgente`) e fica gravado no funil.
+     */
+    let agenteCodigo: string | null = normalizarAgente(corpo?.agenteCodigo)
+    if (agenteCodigo) {
+      const { data: agente } = await db
+        .from('agentes_equipa')
+        .select('id')
+        .eq('chave_receita', agenteCodigo)
+        .maybeSingle()
+      if (!agente?.id) agenteCodigo = null
+    }
+
+    const externo = destinoComAgente(destinoDeCompraDoProduto(produto) ?? '', agenteCodigo)
     if (externo) {
       await registarPasso({
         etapa: 'iniciou_checkout',
@@ -236,7 +266,8 @@ export async function POST(request: NextRequest) {
         email: quem.email,
         telefone: typeof corpo?.telefone === 'string' ? corpo.telefone : null,
         origem: 'checkout_externo',
-        contexto: { destino: externo },
+        // O agente fica no funil: numa compra lá fora é a única prova cá dentro de quem a trouxe.
+        contexto: { destino: externo, agente_codigo: agenteCodigo },
       })
       return NextResponse.json({ externo })
     }
@@ -316,33 +347,6 @@ export async function POST(request: NextRequest) {
         )
       }
       referralId = r.userId
-    }
-
-    /**
-     * QUEM TROUXE ESTA COMPRA — o código do agente, se houver.
-     *
-     * Vem do link `?ag=` que o browser guardou. NÃO é o cupão: o cupão dá desconto e esta compra
-     * só tem um; isto é só medição, e vive numa coluna própria (migração 173). Quem entra por um
-     * link de agente e tem um desconto a sério usa os dois.
-     *
-     * ═══ UM CÓDIGO INVÁLIDO NÃO TRAVA A VENDA ═════════════════════════════════════════════
-     *
-     * Ao contrário do cupão, que é recusado alto — se falhasse em silêncio a pessoa pagava o preço
-     * inteiro convencida de que tinha desconto —, um código de atribuição errado apenas não conta.
-     * A venda vale mais do que a medição dela, e quem compra não tem culpa de um link mal copiado.
-     * A venda fica como «sem código», que é exactamente o que ela é.
-     *
-     * Confirma-se contra `agentes_equipa` e não contra `coupons`: o crédito é de um AGENTE, e um
-     * código que já não pertence a ninguém não deve creditar coisa nenhuma.
-     */
-    let agenteCodigo: string | null = normalizarAgente(corpo?.agenteCodigo)
-    if (agenteCodigo) {
-      const { data: agente } = await db
-        .from('agentes_equipa')
-        .select('id')
-        .eq('chave_receita', agenteCodigo)
-        .maybeSingle()
-      if (!agente?.id) agenteCodigo = null
     }
 
     // O cupão do Stripe: o da campanha quando é ela que vale, um ad-hoc quando é o código.
