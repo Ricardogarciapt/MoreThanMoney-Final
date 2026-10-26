@@ -56,6 +56,20 @@
  */
 
 /** A conta de papel do agente. Está aqui em vez de num env para poder ser lida nos checks. */
+import {
+  REGUA_PADRAO,
+  chaveCombo,
+  lerRegua,
+  metricasDoAgente,
+  riscoRecompensa,
+  travaoDiario,
+  vantagemPorCombo,
+  type HistoricoCombo,
+  type MetricasAgente,
+  type Regua,
+  type Vantagem,
+} from './trader-disciplina'
+
 export const CONTA_PAPEL_LOGIN = '77549217'
 
 /** Quantas posições o agente pode ter abertas ao mesmo tempo. */
@@ -185,6 +199,9 @@ export type MotivoRecusa =
   | 'conta_cheia'
   | 'tecto_da_passagem'
   | 'dados_incompletos'
+  | 'travao_diario'
+  | 'rr_baixo'
+  | 'sem_vantagem'
 
 export interface Decisao {
   sinal: SinalDoTrader
@@ -203,6 +220,9 @@ const PORQUES: Record<MotivoRecusa, string> = {
   conta_cheia: 'A conta já tem o máximo de posições abertas.',
   tecto_da_passagem: 'Tecto de aberturas desta passagem atingido — fica para a próxima.',
   dados_incompletos: 'Falta símbolo ou direcção.',
+  travao_diario: 'Limite de perda do dia atingido — a porta fica fechada até amanhã.',
+  rr_baixo: 'A recompensa até ao alvo não paga o risco até ao stop.',
+  sem_vantagem: 'Esta estratégia neste símbolo não tem vantagem medida no histórico.',
 }
 
 /**
@@ -216,6 +236,8 @@ const PORQUES: Record<MotivoRecusa, string> = {
  *     próprio, na base, com índice único — este existe para não lhe mandar trabalho inútil nem
  *     gastar o tecto da passagem com pedidos que vão ser recusados;
  *  4. símbolo cheio e conta cheia: os limites de exposição;
+ *  4a. a DISCIPLINA (day-trader-skill, ver `trader-disciplina.ts`), só quando se lhe passam os
+ *     dados: travão do dia, recompensa face ao risco e vantagem medida no histórico real;
  *  5. o tecto da passagem é o ÚLTIMO, para que a contagem reflicta o que realmente se ia abrir.
  *
  * Os mais recentes decidem-se primeiro: se o tecto cortar, corta o sinal mais velho, que é o que
@@ -229,12 +251,18 @@ export function decidirOperacoes(entrada: {
   maxPorSimbolo?: number
   tecto?: number
   frescuraMinutos?: number
+  /** O histórico por estratégia+símbolo. Sem ele, o filtro de vantagem não corre. */
+  vantagens?: Map<string, Vantagem>
+  regua?: Regua
+  /** O travão do dia já disparou. */
+  travado?: boolean
 }): Decisao[] {
   const agora = entrada.agora ?? new Date()
   const maxAbertas = entrada.maxAbertas ?? MAX_ABERTAS
   const maxPorSimbolo = entrada.maxPorSimbolo ?? MAX_POR_SIMBOLO
   const tecto = entrada.tecto ?? TECTO_POR_PASSAGEM
   const frescura = entrada.frescuraMinutos ?? FRESCURA_MINUTOS
+  const regua = entrada.regua ?? { ...REGUA_PADRAO }
 
   /**
    * As chaves já abertas, com o prefixo TIRADO quando é nossa. Assim compara-se igual com igual:
@@ -304,6 +332,31 @@ export function decidirOperacoes(entrada: {
       continue
     }
 
+    if (entrada.travado) {
+      decisoes.push(recusar(s, 'travao_diario'))
+      continue
+    }
+    if (entrada.vantagens) {
+      const rr = riscoRecompensa(s)
+      if (rr == null || rr < regua.minRR) {
+        decisoes.push({
+          ...recusar(s, 'rr_baixo'),
+          porque: rr == null
+            ? 'Não dá para medir a recompensa: falta entrada, ou não há TP do lado certo.'
+            : `Recompensa de ${rr.toFixed(2)}R até ao último TP (mínimo ${regua.minRR}R).`,
+        })
+        continue
+      }
+      const v = entrada.vantagens.get(chaveCombo(s.estrategia, symbol))
+      if (!v?.aprovada) {
+        decisoes.push({
+          ...recusar(s, 'sem_vantagem'),
+          porque: v ? v.porque : `Sem histórico medido de ${s.estrategia} em ${symbol}.`,
+        })
+        continue
+      }
+    }
+
     const k = `${symbol}:${s.direcao}`
     if ((porSimbolo.get(k) ?? 0) >= maxPorSimbolo) {
       decisoes.push(recusar(s, 'simbolo_cheio'))
@@ -326,7 +379,9 @@ export function decidirOperacoes(entrada: {
       sinal: s,
       abrir: true,
       motivo: null,
-      porque: `Abre: ${symbol} ${s.direcao} de ${s.estrategia}, com SL em ${s.sl}.`,
+      porque:
+        `Abre: ${symbol} ${s.direcao} de ${s.estrategia}, com SL em ${s.sl}.` +
+        (entrada.vantagens ? ` ${entrada.vantagens.get(chaveCombo(s.estrategia, symbol))?.porque ?? ''}` : ''),
     })
   }
 
@@ -348,6 +403,11 @@ export interface ResultadoTrader {
   decisoes: Array<{ chave: string; symbol: string; direcao: string; abrir: boolean; porque: string }>
   abertas: Array<{ chave: string; estado: string; motivo?: string }>
   erros: string[]
+  /** O desempenho do próprio agente em papel (só factos medidos). */
+  metricas?: MetricasAgente
+  /** As combinações que hoje têm vantagem medida — o que ele está disposto a negociar. */
+  aprovadas?: string[]
+  regua?: Regua
 }
 
 const CHAVE_INTERRUPTOR = 'agente_trader'
@@ -393,16 +453,22 @@ export async function correrTrader(
   // Só o booleano `true` arma. Ler qualquer coisa "verdadeira" abria isto com um `"sim"` distraído.
   const armado = (bruto as { armado?: unknown } | null)?.armado === true
   const ensaio = opcoes.ensaio === true || !armado
+  const regua = lerRegua(bruto)
 
   // ── Os factos ────────────────────────────────────────────────────────────────────────────
   const desde = new Date(agora.getTime() - FRESCURA_MINUTOS * 60_000 * 2).toISOString()
-  const [sinaisQ, pontesQ] = await Promise.all([
+  const [sinaisQ, pontesQ, vantagemQ, minhasQ] = await Promise.all([
     db.from('mestres_sinais')
       .select('estrategia, chave, modo, symbol, direcao, entrada, sl, tps, criado_em')
       .gte('criado_em', desde).order('criado_em', { ascending: false }).limit(200),
     db.from('funded_sinal_posicoes')
       .select('chave, symbol, direcao, estado')
       .eq('account_id', contaId).in('estado', ['a_abrir', 'aberta']).limit(500),
+    db.from('agente_trader_vantagem')
+      .select('estrategia, symbol, n, ganhos, pnl, risco, soma_r, soma_r2').limit(1000),
+    db.from('funded_sinal_posicoes')
+      .select('funded_position_id')
+      .eq('account_id', contaId).like('chave', `${PREFIXO_CHAVE}%`).limit(2000),
   ])
   if (sinaisQ.error) erros.push(`mestres_sinais: ${sinaisQ.error.message ?? 'erro'}`)
   if (pontesQ.error) erros.push(`funded_sinal_posicoes: ${pontesQ.error.message ?? 'erro'}`)
@@ -432,7 +498,37 @@ export async function correrTrader(
     chave: (r.chave as string | null) ?? null,
   }))
 
-  const decisoes = decidirOperacoes({ sinais, abertas, agora })
+  /**
+   * A máquina do tempo. Se a vista falhar, o mapa fica VAZIO e nada tem vantagem: na dúvida não se
+   * abre. O erro vai para a lista para o painel o mostrar.
+   */
+  if (vantagemQ.error) erros.push(`agente_trader_vantagem: ${vantagemQ.error.message ?? 'erro'}`)
+  const historico: HistoricoCombo[] = ((vantagemQ.data ?? []) as Record<string, unknown>[]).map((r) => ({
+    estrategia: String(r.estrategia ?? ''),
+    symbol: String(r.symbol ?? ''),
+    n: Number(r.n) || 0,
+    ganhos: Number(r.ganhos) || 0,
+    pnl: Number(r.pnl) || 0,
+    risco: Number(r.risco) || 0,
+    somaR: Number(r.soma_r) || 0,
+    somaR2: Number(r.soma_r2) || 0,
+  }))
+  const vantagens = vantagemPorCombo(historico, regua)
+
+  // As métricas dele: as posições que ELE abriu (chave com prefixo), fechadas ou não.
+  const ids = ((minhasQ.data ?? []) as Record<string, unknown>[])
+    .map((r) => String(r.funded_position_id ?? '')).filter(Boolean)
+  let metricas: MetricasAgente = metricasDoAgente([], agora)
+  if (ids.length) {
+    const { data: pos, error: erroPos } = await db
+      .from('funded_positions').select('estado, pnl, risco_inicial, fechada_em').in('id', ids.slice(0, 1000))
+    if (erroPos) erros.push(`funded_positions: ${erroPos.message ?? 'erro'}`)
+    metricas = metricasDoAgente((pos ?? []) as Record<string, string | null>[], agora)
+  }
+  const saldo = Number((conta as ContaDoTrader).sim_saldo) || 0
+  const travado = travaoDiario(metricas.pnlHoje, saldo, regua)
+
+  const decisoes = decidirOperacoes({ sinais, abertas, agora, vantagens, regua, travado })
 
   // ── A execução, pelo caminho que já existe ───────────────────────────────────────────────
   const feitas: ResultadoTrader['abertas'] = []
@@ -484,6 +580,9 @@ export async function correrTrader(
     })),
     abertas: feitas,
     erros,
+    metricas,
+    aprovadas: [...vantagens.values()].filter((v) => v.aprovada).map((v) => `${v.estrategia} ${v.symbol}: ${v.porque}`),
+    regua,
   }
 }
 
@@ -516,6 +615,21 @@ export async function registarDecisoesNoLivro(
       `${abrir.length} a abrir, ${nao.length} recusado(s). ${resultado.armado ? 'ARMADO' : 'desarmado (decide e relata)'}.`,
     `Portão: ${resultado.seguranca}`,
   ]
+  if (resultado.metricas) {
+    const m = resultado.metricas
+    linhas.push(
+      `Desempenho em papel: ${m.fechadas} fechada(s)` +
+        (m.acerto == null ? '' : `, ${(m.acerto * 100).toFixed(1)}% de acerto`) +
+        `, PnL ${m.pnl.toFixed(2)}` + (m.rTotal == null ? '' : ` (${m.rTotal}R)`) + `, hoje ${m.pnlHoje.toFixed(2)}.`,
+    )
+  }
+  if (resultado.aprovadas) {
+    linhas.push(
+      resultado.aprovadas.length
+        ? `Com vantagem medida: ${resultado.aprovadas.slice(0, 5).join(' · ')}`
+        : 'Nenhuma estratégia+símbolo com vantagem medida no histórico: o agente fica de fora (ficar de fora também protege a conta).',
+    )
+  }
   // O detalhe de cada decisão, com tecto: um detalhe de 50 KB não se lê, e o que interessa são as
   // primeiras. O número total fica na primeira linha, por isso nada se perde de medível.
   for (const d of resultado.decisoes.slice(0, 12)) {

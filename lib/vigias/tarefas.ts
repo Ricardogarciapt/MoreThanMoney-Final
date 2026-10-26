@@ -20,6 +20,10 @@ export const TAREFAS_VIGIAS = [
   'mestre-publicar',
   'funis',
   'mtmcopy-master-poll',
+  /** O agente trader na conta de papel 77549217. Na Vercel só corria às 06:00 com sinais de 15 min:
+   *  nunca via um sinal fresco. Aqui corre de minuto a minuto. Sem cron Vercel de reserva — se o VPS
+   *  parar, o agente simplesmente não abre (é papel; a passagem das 06:00 continua a registar). */
+  'agente-trader',
 ] as const
 
 export type TarefaVigia = (typeof TAREFAS_VIGIAS)[number]

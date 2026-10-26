@@ -27,9 +27,10 @@ import { publicarTodasAsMestres } from '../../lib/mestres/servidor/publicar'
 import { correrPercursos } from '../../lib/funis-motor'
 import { bracosReais, motorLigado } from '../../lib/funis-bracos'
 import { pollMasterAccounts } from '../../lib/mtmcopy/master-poll'
+import { correrTrader, registarDecisoesNoLivro } from '../../lib/agentes/trader'
 import { SERVICO_VIGIAS, TAREFAS_VIGIAS, type EstadoTarefa, type TarefaVigia } from '../../lib/vigias/tarefas'
 
-const VERSAO = 'vigias-001'
+const VERSAO = 'vigias-002'
 
 const CORRER: Record<TarefaVigia, () => Promise<unknown>> = {
   'webtrader-gestao-auto': () => correrGestaoAutoDeTodas(),
@@ -41,6 +42,14 @@ const CORRER: Record<TarefaVigia, () => Promise<unknown>> = {
   'mestre-publicar': () => publicarTodasAsMestres(),
   funis: async () => ((await motorLigado()) ? correrPercursos(bracosReais) : { ligado: false }),
   'mtmcopy-master-poll': () => pollMasterAccounts(),
+  // Só escreve no livro quando abriu alguma coisa: uma linha por minuto a dizer «nada» enchia o
+  // livro sem informar. A passagem diária (cron agentes, 06:00) continua a registar sempre.
+  'agente-trader': async () => {
+    const db = getSupabaseAdmin()
+    const r = await correrTrader(db)
+    if (r.abertas.length) await registarDecisoesNoLivro(db, r)
+    return r
+  },
 }
 
 /** Os mesmos ritmos mínimos da Vercel onde o trabalho é caro (master-poll era de 2 em 2 min). */
@@ -48,6 +57,7 @@ const INTERVALO_MIN_MS: Partial<Record<TarefaVigia, number>> = {
   'mtmcopy-master-poll': 120_000,
   'mestre-publicar': 60_000,
   funis: 60_000,
+  'agente-trader': 60_000,
 }
 
 function log(...a: unknown[]) {
