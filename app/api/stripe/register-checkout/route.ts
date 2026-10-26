@@ -9,6 +9,7 @@ import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import type Stripe from 'stripe'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 import { registarConsentimentoDaCompra } from '@/lib/captacao-consentimento-registo'
+import { CUPAO_INTRO_PREMIUM, DIAS_TRIAL_PREMIUM, pareceCupao, recolhaCompleta } from '@/lib/stripe-checkout-premium'
 
 /**
  * POST /api/stripe/register-checkout
@@ -21,7 +22,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(IOS_IAP_REQUIRED, { status: 403 })
     }
     const body = await request.json()
-    const { planId, email, fullName, username, phone, regToken, sponsorUsername, couponCode, trial } = body
+    const { planId, email, fullName, username, phone, regToken, sponsorUsername, trial } = body
+    // Um email (ou lixo do preenchimento automático) no campo do cupão não é um cupão.
+    const couponCode = pareceCupao(body.couponCode) ? body.couponCode.trim().toUpperCase() : ''
 
     if (!planId || !email || !fullName || !username) {
       return NextResponse.json({ error: 'planId, email, fullName e username são obrigatórios' }, { status: 400 })
@@ -39,9 +42,9 @@ export async function POST(request: NextRequest) {
     const descontinuado = recusaPlanoDescontinuado(planId)
     if (descontinuado) return NextResponse.json(descontinuado, { status: 410 })
 
-    // Trial de 3 dias COM cartão: recolhe o método de pagamento no registo, não cobra
-    // nos 3 dias, e ao fim cobra o 1º mês a 34,99€ (intro). Cancela quando quiser.
-    const isTrial = trial === true && planId === 'premium_monthly'
+    // Premium mensal tem duas portas (ver lib/stripe-checkout-premium.ts):
+    // trial de 3 dias COM cartão e depois 65€/mês, ou ativar já com o 1º mês a 35€.
+    const isTrial = trial === true && planId === 'premium_monthly' && !couponCode
 
     const priceId = requireStripePriceId(planId)
     const stripe = getStripeClient()
@@ -50,6 +53,7 @@ export async function POST(request: NextRequest) {
     const customer = await stripe.customers.create({
       email,
       name: fullName,
+      ...(phone ? { phone } : {}),
       metadata: { pending_registration: 'true', reg_token: regToken || '' },
     })
 
@@ -66,6 +70,9 @@ export async function POST(request: NextRequest) {
         new_user: '1',
       }),
       cancel_url: buildStripeReturnUrl('/register', {}, { includeSessionPlaceholder: false }),
+      // Morada, telemóvel e a nota de porque é que o cartão é obrigatório.
+      ...recolhaCompleta(isTrial),
+      payment_method_collection: 'always',
       metadata: {
         pending_registration: 'true',
         reg_token: regToken || '',
@@ -84,17 +91,15 @@ export async function POST(request: NextRequest) {
         ...(request.cookies.get('opinly_anon_id')?.value ? { opinly_anon_id: request.cookies.get('opinly_anon_id')!.value } : {}),
         phone: phone || '',
         sponsor_username: sponsorUsername || '',
-        coupon_code: couponCode || '',
+        coupon_code: couponCode,
         is_trial: isTrial ? '1' : '',
       },
     }
 
     if (isTrial) {
-      // 3 dias grátis (sem cobrança) → depois 1º mês 34,99€ (INTRO_PREMIUM_1M), renova 65€.
+      // 3 dias grátis (sem cobrança) → depois 65€/mês. Sem cupão: o desconto é de quem ativa já.
       // Cartão obrigatório para poder cobrar ao fim dos 3 dias.
-      sessionParams.subscription_data = { trial_period_days: 3 }
-      sessionParams.discounts = [{ coupon: 'INTRO_PREMIUM_1M' }]
-      sessionParams.payment_method_collection = 'always'
+      sessionParams.subscription_data = { trial_period_days: DIAS_TRIAL_PREMIUM }
     } else if (couponCode) {
       const promoId = await resolveStripePromotionCode(couponCode)
       if (promoId) {
@@ -122,6 +127,12 @@ export async function POST(request: NextRequest) {
           sessionParams.subscription_data = { trial_period_days: months * 30 }
         }
       }
+    }
+
+    // Ativar já o Premium mensal: 1º mês a 35€, renova a 65€ — também quando o cupão escrito
+    // não deu desconto nenhum (um cupão inválido não pode sair mais caro do que nenhum).
+    if (!isTrial && planId === 'premium_monthly' && !sessionParams.discounts && !sessionParams.subscription_data) {
+      sessionParams.discounts = [{ coupon: CUPAO_INTRO_PREMIUM }]
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams)

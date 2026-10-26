@@ -503,6 +503,7 @@ export default function AppMobileRegisterPage() {
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value)}
                         disabled={isLoading}
+                        autoComplete="off"
                         className="pl-9 bg-gray-800 border-gray-700 text-white uppercase tracking-wider"
                         autoFocus
                       />

@@ -28,8 +28,8 @@ function eur(valor: number): string {
 
 export const MEMBRO_MENSAL_EUR = 35
 export const PREMIUM_MENSAL_EUR = 65
-/** Oferta de entrada do Premium: só o 1º mês. Vive no Stripe como INTRO_PREMIUM_1M. */
-export const PREMIUM_1O_MES_EUR = 34.99
+/** Oferta de entrada do Premium (ativar já, sem trial): só o 1º mês. Vive no Stripe como INTRO_PREMIUM_35. */
+export const PREMIUM_1O_MES_EUR = 35
 /** O degrau de cima, anual. planId `elite_annual` (ver {@link NOME_DEGRAU_TOPO}). */
 export const TOPO_ANUAL_EUR = 597
 /** O bónus que a PU Prime dá sobre o depósito, em percentagem. */

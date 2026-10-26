@@ -8,6 +8,7 @@ import { buildStripeReturnUrl } from '@/lib/site-url'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 import { registarConsentimentoDaCompra } from '@/lib/captacao-consentimento-registo'
+import { CUPAO_INTRO_PREMIUM, DIAS_TRIAL_PREMIUM, recolhaCompleta } from '@/lib/stripe-checkout-premium'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
 
-    const { planId, email, tradingview_username, sponsorCode, consentimentoEmail } = await request.json()
+    const { planId, email, tradingview_username, sponsorCode, consentimentoEmail, trial } = await request.json()
 
     // A caixa «lembretes e novidades por email» (opcional, desmarcada — 06/10 F4). O email é o da
     // sessão, nunca o do corpo: com sessão, a identidade não vem do pedido.
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
     // Obter ou criar customer Stripe
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('stripe_customer_id, email, full_name, mlm_sponsor_username, subscription_platform, subscription_status, member_category')
+      .select('stripe_customer_id, email, full_name, phone, mlm_sponsor_username, subscription_platform, subscription_status, member_category, stripe_subscription_id')
       .eq('id', user.id)
       .single()
 
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
       const customer = await stripe.customers.create({
         email: email || profile?.email || user.email,
         name: profile?.full_name,
+        ...(profile?.phone ? { phone: profile.phone } : {}),
         metadata: { user_id: user.id },
       })
       customerId = customer.id
@@ -127,11 +129,21 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    // Intro offer: 1º mês Premium a 34,99€ (desconto único), só no plano premium mensal
-    // e só para quem nunca foi Premium: quem renova depois de uma pausa paga o preço normal.
-    if (planId === 'premium_monthly' && profile?.subscription_status !== 'active' &&
-        profile?.member_category !== 'premium' && profile?.member_category !== 'vip') {
-      sessionParams.discounts = [{ coupon: 'INTRO_PREMIUM_1M' }]
+    // Premium mensal para quem nunca foi Premium: duas portas (lib/stripe-checkout-premium.ts).
+    //   trial → 3 dias sem cobrança, cartão obrigatório, depois 65€/mês;
+    //   já    → 1º mês a 35€ (desconto único), depois 65€/mês.
+    // Quem renova depois de uma pausa (já teve subscrição) paga o preço normal, sem trial.
+    const primeiraVezPremium = planId === 'premium_monthly' && profile?.subscription_status !== 'active' &&
+      profile?.member_category !== 'premium' && profile?.member_category !== 'vip'
+    const isTrial = primeiraVezPremium && trial === true && !profile?.stripe_subscription_id
+    if (mode === 'subscription') {
+      Object.assign(sessionParams, recolhaCompleta(isTrial), { payment_method_collection: 'always' })
+    }
+    if (isTrial) {
+      sessionParams.subscription_data = { trial_period_days: DIAS_TRIAL_PREMIUM }
+      sessionParams.metadata = { ...sessionParams.metadata, is_trial: '1' }
+    } else if (primeiraVezPremium) {
+      sessionParams.discounts = [{ coupon: CUPAO_INTRO_PREMIUM }]
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams)

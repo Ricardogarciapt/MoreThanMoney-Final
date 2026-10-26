@@ -228,11 +228,11 @@ export default function UpgradeClient({ topo }: { topo: OfertaTopo | null }) {
    * do `billing` aqui dentro: o card mostra um preço e manda exactamente o plano desse preço.
    * É o MESMO caminho para os três packs — sem rota nem URL próprios para o Elite.
    */
-  const handleCheckout = async (planId: string) => {
+  const handleCheckout = async (planId: string, trial = false) => {
     setError('')
     if (!user) { router.push('/login?redirect=/upgrade'); return }
 
-    setLoading(planId)
+    setLoading(trial ? `${planId}:trial` : planId)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) { router.push('/login?redirect=/upgrade'); return }
@@ -240,7 +240,7 @@ export default function UpgradeClient({ topo }: { topo: OfertaTopo | null }) {
       const res = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ planId, email: user.email, consentimentoEmail }),
+        body: JSON.stringify({ planId, email: user.email, consentimentoEmail, trial }),
       })
       const data = await res.json()
       if (!res.ok || !data.url) {
@@ -395,7 +395,33 @@ export default function UpgradeClient({ topo }: { topo: OfertaTopo | null }) {
                   </ul>
 
                   {/* CTA */}
-                  {isActive ? (
+                  {isPremiumCard && billing === 'monthly' && !isActive && !isPremium && user?.member_category !== 'vip' ? (
+                    // Duas portas do Premium mensal (lib/stripe-checkout-premium.ts): testar 3 dias
+                    // e depois 65€/mês, ou ativar já com o 1º mês a 35€.
+                    <div className="space-y-2">
+                      <Button
+                        onClick={() => handleCheckout(pricing.planId, true)}
+                        disabled={!!loading}
+                        className="w-full font-bold py-5 text-black"
+                        style={{ background: 'linear-gradient(135deg, #D2A63C, #BB8525)' }}
+                      >
+                        {loading === `${pricing.planId}:trial`
+                          ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('upgrade.processing')}</>
+                          : t('upgrade.trialOption')}
+                      </Button>
+                      <Button
+                        onClick={() => handleCheckout(pricing.planId)}
+                        disabled={!!loading}
+                        className="w-full font-bold py-5"
+                        style={{ background: `linear-gradient(135deg, ${plan.color}, #5B21B6)`, color: '#fff' }}
+                      >
+                        {loading === pricing.planId
+                          ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('upgrade.processing')}</>
+                          : t('upgrade.payNowOption')}
+                      </Button>
+                      <p className="text-[11px] leading-relaxed text-gray-400 text-center">{t('upgrade.cardRequiredNote')}</p>
+                    </div>
+                  ) : isActive ? (
                     <div className="w-full py-3 rounded-xl border text-center text-sm font-semibold text-gray-400"
                       style={{ borderColor: plan.color + '60' }}>
                       ✓ {t('upgrade.planActive')}

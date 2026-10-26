@@ -187,15 +187,24 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     // Trial de 3 dias COM cartão (Stripe): recolhe o método de pagamento, 3 dias sem
-    // cobrança, e ao fim cobra o 1º mês a 34,99€ (intro). Cancela quando quiser.
-    // Um cupão (ex.: broker MTM-BROKER-*) sobrepõe-se ao trial-intro de 3 dias:
-    // aplica o cupão (acesso Premium grátis) em vez de recolher cartão.
-    const hasCoupon = formData.couponCode.trim().length > 0
+    // cobrança, e ao fim cobra 65€/mês. Quem ativa já paga o 1º mês a 35€.
+    // Um cupão VÁLIDO (ex.: broker MTM-BROKER-*) sobrepõe-se ao trial de 3 dias. Só conta o que
+    // a validação aceitou: o preenchimento automático metia o email no campo e desligava o trial.
+    let cupao = couponStatus
+    if (formData.couponCode.trim() && !cupao) {
+      // Escreveu o cupão e carregou logo no botão: a validação do blur ainda não voltou.
+      cupao = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: formData.couponCode.trim() }),
+      }).then((r) => r.json()).catch(() => null)
+    }
+    const hasCoupon = formData.couponCode.trim().length > 0 && cupao?.valid === true
     const isTrialFlow = mode === 'trial' && !hasCoupon
 
     // Cupão de PARCERIA (creator/UGC, ex.: MTMCREATOR/CREATOR60): concede Premium+VIP pelo prazo
     // do cupão SEM cartão. Cria a conta (sem pagamento) e resgata direto — NÃO vai ao Stripe.
-    const isPartnershipCoupon = hasCoupon && couponStatus?.valid === true && couponStatus?.type === 'partnership'
+    const isPartnershipCoupon = hasCoupon && cupao?.type === 'partnership'
     if (isPartnershipCoupon) {
       try {
         const reg = await fetch('/api/auth/register-trial', {
@@ -252,7 +261,7 @@ export default function RegisterPage() {
         phone: formData.phone || '',
         whatsapp: formData.whatsapp || '',
         sponsor_username: formData.sponsorUsername || '',
-        coupon_code: formData.couponCode.trim().toUpperCase(),
+        coupon_code: hasCoupon ? formData.couponCode.trim().toUpperCase() : '',
         plan: mode === 'trial' ? 'premium' : selectedPlan,
         billing: 'monthly',
         created_at: Date.now(),
@@ -271,7 +280,7 @@ export default function RegisterPage() {
           sponsorUsername: formData.sponsorUsername || '',
           country: formData.country || null,
           preferred_language: uiLang,
-          couponCode: formData.couponCode.trim().toUpperCase(),
+          couponCode: hasCoupon ? formData.couponCode.trim().toUpperCase() : '',
           trial: isTrialFlow,
           consentimentoEmail,
         }),
@@ -498,7 +507,10 @@ export default function RegisterPage() {
                   <span className="text-gray-400 font-normal text-sm ml-2">{t('register.formTitleTrialNote')}</span></>
               ) : (
                 <>{t('register.formTitlePrefix')} <span style={{ color: activePlan.color }}>{activePlan.name}</span>
-                  <span className="text-gray-400 font-normal text-sm ml-2">({activePricing.label})</span></>
+                  <span className="text-gray-400 font-normal text-sm ml-2">({activePricing.label})</span>
+                  {activePricing.id === 'premium_monthly' && (
+                    <span className="block mt-1 text-xs font-bold text-[#D2A63C]">{t('register.premiumFirstMonth')}</span>
+                  )}</>
               )}
             </CardTitle>
           </CardHeader>
@@ -615,6 +627,7 @@ export default function RegisterPage() {
                     id="couponCode"
                     name="couponCode"
                     type="text"
+                    autoComplete="off"
                     value={formData.couponCode}
                     onChange={handleInputChange}
                     onBlur={() => validateCoupon(formData.couponCode)}
@@ -683,6 +696,10 @@ export default function RegisterPage() {
                   <>{t('register.submitPay')} {activePlan.name}</>
                 )}
               </Button>
+
+              <p className="text-xs text-center text-gray-500 -mt-1">
+                {t('register.cardRequiredNote')}
+              </p>
 
               <p className="text-xs text-center text-gray-500 -mt-1">
                 {mode === 'trial'
