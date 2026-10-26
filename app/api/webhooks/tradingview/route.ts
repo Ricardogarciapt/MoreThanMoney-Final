@@ -56,6 +56,7 @@ import { lifecycleMessage, stopFoiProtegido } from "@/lib/mtmcopy/signal-lifecyc
 import { formatarSeguimento, formatarSinal } from "@/lib/sinais/formato-sinal"
 import { eAlertaTrendshot } from "@/lib/sinais/trendshot"
 import { TIMEFRAMES_POR_ESTRATEGIA, slFixo, timeframeAceite } from "@/lib/sinais/sl-por-estrategia"
+import { avaliarEntradaTardiaAoVivo } from "@/lib/sinais/filtro-entrada-tardia"
 import { marcaDaEstrategia } from "@/lib/sinais/grafico-estrategia"
 import { enviarGraficoTelegram, legendaDoGrafico, urlDoGraficoDoSinal } from "@/lib/sinais/grafico-publicar"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -951,6 +952,30 @@ async function processarAlerta(request: NextRequest) {
         .eq("id", logId)
         .then(undefined, (e) => console.error("[tradingview-webhook] gravar stop fixo:", e))
     }
+  }
+
+  /**
+   * GoldKiller: filtro de entrada tardia EM SOMBRA (26/10 — lib/sinais/filtro-entrada-tardia). Não
+   * bloqueia nem atrasa nada: corre depois de o sinal estar tratado e só marca
+   * raw_payload.filtro_sombra (quanto o preço já tinha andado a favor nas 4 h e se teria saído).
+   */
+  if (entradaDoAlerta && logId && estrategia === "Goldkiller") {
+    const idSombra = logId
+    const simboloSombra = v.symbol ?? ticker
+    const dirSombra = v.direction ?? action
+    const entradaSombra = v.entry ?? price
+    const emSegSombra = Math.floor(Date.now() / 1000)
+    after(async () => {
+      const a = await avaliarEntradaTardiaAoVivo(String(simboloSombra ?? ""), String(dirSombra ?? ""), entradaSombra ?? null, emSegSombra)
+      if (!a) return
+      const { data } = await supabase.from("tradingview_signals").select("raw_payload").eq("id", idSombra).maybeSingle()
+      const atual = (data?.raw_payload ?? {}) as Record<string, unknown>
+      await supabase
+        .from("tradingview_signals")
+        .update({ raw_payload: { ...atual, filtro_sombra: a } })
+        .eq("id", idSombra)
+        .then(undefined, (e) => console.error("[tradingview-webhook] filtro sombra:", e))
+    })
   }
 
   // Ativos sem canal dedicado (stocks/ETFs/outros) → só sistema de Alertas MTM (sem chat/Telegram)
