@@ -4,8 +4,8 @@ import { verifyAgentAccess } from '@/lib/agent-site-api'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { marcarConteudo } from '@/lib/agentes/marca-conteudo'
 import {
-  CHAVE_AUTO_PUBLICAR, CONTA_MARCA, HANDLE_MARCA, PALETA_CARTAO_CASA, decidirEntrada, diaLisboa, eDoSocial, eHistoria,
-  lerAutoPublicar, type Contagem,
+  CHAVE_AUTO_PUBLICAR, CONTA_MARCA, HANDLE_MARCA, PALETA_CARTAO_CASA, TIPOS_DOS_AGENTES, decidirEntrada, diaLisboa, eDoSocial,
+  eHistoria, eReel, lerAutoPublicar, type Contagem,
 } from '@/lib/agentes/social-agente'
 
 /**
@@ -14,8 +14,10 @@ import {
  * Auth: Bearer AGENT_SITE_API_KEY (motor do AIOS, painel do AIOS) ou sessão de admin (/admin/social).
  *  GET   → o botão «Auto-publicar posts dos agentes», as contagens de hoje e os últimos posts dos agentes.
  *  PATCH → { ligado: boolean } — o botão (único: o mesmo no AIOS e em /admin/social).
- *  POST  → um post: { agente_codigo, media_type IMAGE|CAROUSEL|STORIES, caption, scheduled_at?,
+ *  POST  → um post: { agente_codigo, media_type IMAGE|CAROUSEL|STORIES|REELS, caption, scheduled_at?,
  *          cartao?: { hook, cta?, laminas?: string[] } (template da casa, renderizado aqui) | media_urls + paleta }.
+ *          REELS: media_urls = [o mp4 vertical], com a paleta declarada; um mp4 já no nosso bucket
+ *          `uploads` não é re-hospedado.
  *          A legenda leva o ?ag= do agente; a guarda da marca e o tecto diário decidem aprovado/rascunho.
  */
 export const runtime = 'nodejs'
@@ -33,6 +35,7 @@ async function lerCfg(db: Db) {
   const { data } = await db.from('site_settings').select('value').eq('key', CHAVE_AUTO_PUBLICAR).maybeSingle()
   const cfg = lerAutoPublicar(data?.value)
   // OS v2 (07/10): posts/histórias por dia DINÂMICOS (chão 2/1 sem dados; tecto duro 6/10 por conta).
+  // Os reels ficam fora disto: o tecto deles é o do dono (10/dia, 24/10).
   if ((await lerConfigOs(db)).ligado) {
     const o = await orcamentoSocialDb(db)
     return { ...cfg, posts_dia_conta: o.posts.valor, historias_dia_conta: o.historias.valor }
@@ -56,8 +59,9 @@ async function contar(db: Db, conta: string, quando: string): Promise<Contagem |
   if (error) return null
   const doDia = (data ?? []).filter((r) => r.scheduled_at && diaLisboa(r.scheduled_at) === dia)
   return {
-    posts: doDia.filter((r) => !eHistoria(r.media_type)).length,
+    posts: doDia.filter((r) => !eHistoria(r.media_type) && !eReel(r.media_type)).length,
     historias: doDia.filter((r) => eHistoria(r.media_type)).length,
+    reels: doDia.filter((r) => eReel(r.media_type)).length,
   }
 }
 
@@ -104,7 +108,8 @@ export async function POST(req: NextRequest) {
   const codigo = String(b.agente_codigo ?? '').trim().toUpperCase()
   if (!eDoSocial(codigo)) return NextResponse.json({ ok: false, erro: 'Só o agente Social (AG-SOCIAL) põe posts aqui.' }, { status: 403 })
   const mediaType = String(b.media_type ?? 'IMAGE').toUpperCase()
-  if (!['IMAGE', 'CAROUSEL', 'STORIES'].includes(mediaType)) return NextResponse.json({ ok: false, erro: 'media_type IMAGE|CAROUSEL|STORIES' }, { status: 400 })
+  if (!(TIPOS_DOS_AGENTES as readonly string[]).includes(mediaType)) return NextResponse.json({ ok: false, erro: `media_type ${TIPOS_DOS_AGENTES.join('|')}` }, { status: 400 })
+  if (mediaType === 'REELS' && b.cartao) return NextResponse.json({ ok: false, erro: 'REELS leva media_urls com o mp4, não cartao' }, { status: 400 })
   const conta = CONTA_MARCA // a conta pessoal nunca recebe automação
   const db = getSupabaseAdmin()
 
@@ -137,7 +142,11 @@ export async function POST(req: NextRequest) {
     } else {
       const urls: string[] = (Array.isArray(b.media_urls) ? b.media_urls : []).map(String).filter((u: string) => /^https:\/\//.test(u)).slice(0, 10)
       if (!urls.length) return NextResponse.json({ ok: false, erro: 'falta cartao ou media_urls' }, { status: 400 })
-      for (const u of urls) mediaUrls.push(await rehostMedia(u, { prefix: 'agentes' }))
+      if (mediaType === 'REELS' && !/\.mp4(\?|$)/i.test(urls[0])) return NextResponse.json({ ok: false, erro: 'REELS precisa de um .mp4' }, { status: 400 })
+      const nosso = `${(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://iwscxotvmtkphajmasof.supabase.co').trim()}/storage/v1/object/public/uploads/`
+      for (const u of mediaType === 'REELS' ? urls.slice(0, 1) : urls) {
+        mediaUrls.push(u.startsWith(nosso) ? u : await rehostMedia(u, { prefix: 'agentes' }))
+      }
       paleta = (Array.isArray(b.paleta) ? b.paleta : []).map(String)
     }
   } catch (e) {

@@ -2,7 +2,8 @@
  * GUARDA DOS POSTS DOS AGENTES (07/10).   npx tsx lib/agentes/social-agente.check.ts
  *
  * Os casos MAUS primeiro: um post fora da marca NÃO fica aprovado (paleta creme/terracota, promessa
- * de lucro, euros ganhos, «+340%», pips sem origem, @ errado, sem ?ag=, conta pessoal, outro agente),
+ * de lucro, euros ganhos, «+340%», pips sem origem, @ errado, sem ?ag=, conta pessoal, outro agente,
+ * tipo desconhecido), os reels (24/10) entram com tecto próprio de 10
  * e o tecto diário (2 posts + 1 história por conta) é respeitado. Depois o bom: entra aprovado.
  */
 import { readFileSync } from 'fs'
@@ -48,7 +49,6 @@ naoAprova('sem ?ag=', com({ caption: 'Disciplina antes do gráfico. morethanmone
 naoAprova('?ag= de outro agente', com({ caption: marcarConteudo({ legenda: 'Vê em morethanmoney.pt/register', codigoExplicito: 'AG-SAAS' }).legenda }))
 naoAprova('conta pessoal', com({ ig_account_id: '17841405656956716' }))
 naoAprova('agente que não é o Social', com({ agente_codigo: 'AG-SAAS' }))
-naoAprova('reel não é dos agentes', com({ media_type: 'REELS' }))
 
 // ── O tecto diário ──────────────────────────────────────────────────────────────────────────
 teste('3.º post do dia fica rascunho', decidirEntrada(bom, ligado, { posts: 2, historias: 0 }).status === 'draft')
@@ -57,6 +57,15 @@ teste('2.ª história do dia fica rascunho', decidirEntrada(com({ media_type: 'S
 teste('1.ª história passa mesmo com 2 posts', decidirEntrada(com({ media_type: 'STORIES' }), ligado, { posts: 2, historias: 0 }).status === 'approved')
 teste('contagem ilegível não aprova', decidirEntrada(bom, ligado, null).status === 'draft')
 teste('tecto nunca sobe acima de 2/1', (() => { const c = lerAutoPublicar({ ligado: true, posts_dia_conta: 50, historias_dia_conta: 9 }); return c.posts_dia_conta === 2 && c.historias_dia_conta === 1 })())
+// Reels (24/10): tecto próprio de 10 por dia, que não come o dos posts.
+const reel = com({ media_type: 'REELS' })
+teste('reel da marca entra aprovado', decidirEntrada(reel, ligado, zero).status === 'approved')
+teste('reel não conta no tecto dos posts', decidirEntrada(reel, ligado, { posts: 2, historias: 1, reels: 0 }).status === 'approved')
+teste('11.º reel do dia fica rascunho', decidirEntrada(reel, ligado, { posts: 0, historias: 0, reels: 10 }).status === 'draft')
+teste('post continua preso aos 2 mesmo com reels', decidirEntrada(bom, ligado, { posts: 2, historias: 0, reels: 3 }).status === 'draft')
+teste('tecto dos reels nunca sobe acima de 10', lerAutoPublicar({ ligado: true, reels_dia_conta: 40 }).reels_dia_conta === 10)
+naoAprova('reel com promessa', com({ media_type: 'REELS', caption: legendaBoa + '\nLucro garantido.' }))
+naoAprova('tipo desconhecido', com({ media_type: 'VIDEO' }))
 teste('setting ilegível = desligado', lerAutoPublicar('lixo').ligado === false)
 
 // ── Pausa do dono: botão desligado → nada aprova ─────────────────────────────────────────────
@@ -85,4 +94,4 @@ if (falhas.length) {
   console.error(`✗ ${falhas.length} falha(s):\n - ` + falhas.join('\n - '))
   process.exit(1)
 }
-console.log('✓ guarda social: fora da marca fica rascunho (paleta, promessas, números, @, ?ag=), tecto 2 posts + 1 história por conta/dia, pausa do dono respeitada')
+console.log('✓ guarda social: fora da marca fica rascunho (paleta, promessas, números, @, ?ag=), tecto 2 posts + 1 história + 10 reels por conta/dia, pausa do dono respeitada')
