@@ -31,7 +31,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ providers: [], channels: [], error: e instanceof Error ? e.message : 'erro' })
   }
 
-  const active = routes.filter((r) => r.tap_to_trade === true && r.enabled !== false)
+  // Só o interruptor do T2T manda, como em tapToTradeEnabledChannels: uma estratégia com a cópia
+  // automática pausada (enabled=false) pode continuar no Tap to Trade — ex.: GoldKiller (26/10).
+  const active = routes.filter((r) => r.tap_to_trade === true)
 
   const channelSet = new Set<string>()
   // Fontes sem conta provedora nossa (as «Ideias de Forex», por exemplo): dão botão na app, mas
