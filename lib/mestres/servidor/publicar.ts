@@ -24,6 +24,7 @@ import { lifecycleMessage, stopFoiProtegido, type SignalEvent } from '@/lib/mtmc
 import { computeOutcome } from '@/lib/mtmcopy/trade-outcome'
 import { gravarDesfechoUnico } from '@/lib/mtmcopy/desfecho-unico'
 import { formatarSeguimento, formatarSinal } from '@/lib/sinais/formato-sinal'
+import { enviarGraficoTelegram, legendaDoGrafico, urlDoGrafico, type ParametrosGrafico } from '@/lib/sinais/grafico-publicar'
 import { estrategiasPublicadasPelaMestre, type EstrategiaPublicada } from './canais-publicados'
 
 const TG_TOKEN = () => (process.env.TELEGRAM_AIBOT_TOKEN || '').trim()
@@ -133,6 +134,7 @@ async function publicar(
   est: EstrategiaPublicada,
   texto: string,
   resposta: { chatId: string; telegramId: number | null } | null,
+  grafico: ParametrosGrafico | null = null,
 ): Promise<{ chatId: string | null; telegramId: number | null }> {
   const db = getSupabaseAdmin()
   const insert: Record<string, unknown> = {
@@ -145,12 +147,17 @@ async function publicar(
     notified: true,
   }
   if (resposta?.chatId) insert.reply_to_id = resposta.chatId
+  if (grafico) insert.image_url = urlDoGrafico(grafico)
   const { data, error } = await db.from('chat_messages').insert(insert).select('id').single()
   if (error || !data?.id) return { chatId: null, telegramId: null }
   const chatId = String(data.id)
   const tg = est.telegram()
   const telegramId = tg ? await enviarTelegram(tg, texto, resposta?.telegramId ?? null) : null
   if (telegramId) await db.from('chat_messages').update({ telegram_message_id: telegramId }).eq('id', chatId)
+  const token = TG_TOKEN()
+  if (grafico && tg && telegramId && token) {
+    await enviarGraficoTelegram(token, tg, urlDoGrafico(grafico, { png: true }), legendaDoGrafico(est.etiqueta, grafico.simbolo, grafico.timeframe), telegramId)
+  }
   return { chatId, telegramId }
 }
 
@@ -200,17 +207,30 @@ export async function publicarEntradaDaMestre(
   const chave = `mestre-pub:${p.id}:entrada`
   if (!(await claimSignalOnce(chave, TTL_RECLAMACAO_S))) return null
 
+  const sl = ponte?.sl ?? p.sl
+  const tps = alvosDaMestre(p, ponte?.tps ?? [])
   const texto = formatarSinal({
     estrategia: est.etiqueta,
     simbolo: p.symbol,
     direcao: p.direcao,
     entrada: p.preco_entrada,
-    sl: ponte?.sl ?? p.sl,
-    tps: alvosDaMestre(p, ponte?.tps ?? []),
+    sl,
+    tps,
     quando: p.aberta_em,
     estado: 'Entrada executada',
   })
-  const { chatId } = await publicar(est, texto, null)
+  // O gráfico da estratégia vai com a entrada (as duas mestres publicadas operam em M15).
+  const grafico: ParametrosGrafico = {
+    simbolo: p.symbol,
+    direcao: p.direcao,
+    timeframe: '15',
+    entrada: p.preco_entrada,
+    sl,
+    tps,
+    estrategia: est.estrategia,
+    quando: p.aberta_em,
+  }
+  const { chatId } = await publicar(est, texto, null, grafico)
   if (!chatId) {
     await db.from('mtmcopy_signal_dedup').delete().eq('key', chave)
     return null

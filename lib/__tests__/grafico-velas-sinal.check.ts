@@ -16,6 +16,7 @@ import { join } from 'node:path'
 import type { VelaRef } from '@/lib/mercado/referencias'
 import { limparCacheReferencias } from '@/lib/mercado/velas-referencia'
 import { VELAS_MINIMAS, simboloBase, svgVelasSinal, tfParaRef, velasDoSinal } from '@/lib/sinais/grafico-velas'
+import { linhasDaEstrategia, marcaDaEstrategia } from '@/lib/sinais/grafico-estrategia'
 
 let ok = 0, ko = 0
 function t(nome: string, real: unknown, esperado: unknown) {
@@ -128,10 +129,36 @@ async function main() {
 
   // ─── a rota tem mesmo os três degraus ──────────────────────────────────────
   const rota = ler('app/api/signals/chart-image/route.tsx')
-  t('rota pede velas nossas quando o chart-img falha', /velasDoSinal\(/.test(rota), true)
+  // Desde 26/10 o gráfico da estratégia (velas nossas + indicadores) é o 1.º degrau, antes do chart-img.
+  t('rota pede o gráfico da estratégia antes do chart-img', rota.indexOf('graficoDaEstrategia(') > 0 && rota.indexOf('graficoDaEstrategia(') < rota.indexOf('renderSignalChart({'), true)
   t('rota devolve SVG antes de cair no cartão sintético', rota.indexOf('image/svg+xml') < rota.indexOf('NextResponse.redirect(ogUrl'), true)
   const libImg = ler('lib/chart-image.ts')
   t('429 põe o chart-img de quarentena', /res\.status === 429/.test(libImg), true)
+  t('401/403 também põe o chart-img de quarentena', /res\.status === 403/.test(libImg), true)
+
+  // ─── a marca e os indicadores de cada estratégia ───────────────────────────
+  const longa = serie(4000, 270, 0.004)
+  const esperado: Record<string, string[]> = {
+    trendshot: ['EMA 20', 'EMA 50'],
+    goldkiller: ['Supertrend', 'Linha central'],
+    'mtm-scanner': ['DEMA 15', 'DEMA 50', 'POC'],
+    sensei: ['Cloud rápida', 'Cloud lenta', 'POC'],
+  }
+  const nomes = new Set<string>()
+  const cores = new Set<string>()
+  for (const [estrategia, linhasEsperadas] of Object.entries(esperado)) {
+    const marca = marcaDaEstrategia(estrategia)
+    nomes.add(marca.nome); cores.add(marca.cor)
+    const linhas = linhasDaEstrategia(marca, longa, 'XAUUSD')
+    t(`${estrategia}: indicadores próprios`, linhas.map((l) => l.nome), linhasEsperadas)
+    t(`${estrategia}: uma série por vela`, linhas.every((l) => l.valores.length === longa.length), true)
+    const svg = svgVelasSinal({ ticker: 'XAUUSD', timeframe: '15', direcao: 'buy', entry: 4000, sl: 3980, tps: [4006, 4012], emSeg: T0, marca, linhas: linhas.map((l) => ({ ...l, valores: l.valores.slice(-110) })) }, longa.slice(-110))
+    t(`${estrategia}: SVG com o nome e as linhas da estratégia`, svg.includes(marca.nome) && (svg.match(/<polyline/g) ?? []).length >= linhasEsperadas.length, true)
+  }
+  t('cada estratégia tem nome e cor próprios', nomes.size === 4 && cores.size === 4, true)
+  t('alert_name sem coluna estrategia', marcaDaEstrategia(null, 'MTM Sensei X').nome, 'MTM Auto Sensei')
+  t('Trendshot nunca traduzido', marcaDaEstrategia('trendshot').nome, 'MTM Auto Trendshot')
+  t('linhas de outro comprimento não se desenham', (svgVelasSinal({ ticker: 'XAUUSD', timeframe: '15', direcao: 'buy', entry: 4000, sl: 3980, tps: [], emSeg: T0, linhas: [{ nome: 'x', cor: '#fff', valores: [1, 2] }] }, longa.slice(-110)).match(/<polyline/g) ?? []).length, 0)
 
   globalThis.fetch = fetchOriginal
   console.log(`\n${ok} passaram, ${ko} falharam`)
