@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
       deadline: p?.trial_expires_at,
       daysLeft,
       offer: expired
-        ? { title: "O teu trial terminou — desbloqueia Premium por 34,99€", plan: "premium" }
-        : { title: `Faltam ${daysLeft} dia${daysLeft === 1 ? "" : "s"} do teu Premium grátis — garante já 34,99€`, plan: "premium" },
+        ? { title: "O teu trial terminou — 1.º mês Premium a 35€", plan: "premium" }
+        : { title: `Faltam ${daysLeft} dia${daysLeft === 1 ? "" : "s"} do teu Premium grátis — ativa já com o 1.º mês a 35€`, plan: "premium" },
     })
   }
 
@@ -71,6 +71,6 @@ export async function GET(request: NextRequest) {
     // Premium grátis → mantém Premium com Fundador; Membro grátis → sobe/continua
     offer: isPremiumFree
       ? { title: "Continua Premium com 50% Fundador", coupon: "FOUNDER50", plan: "premium" }
-      : { title: "Passa a Premium — 1º mês 34,99€", plan: "premium" },
+      : { title: "Passa a Premium — 1º mês 35€", plan: "premium" },
   })
 }

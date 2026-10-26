@@ -33,7 +33,7 @@ import { MENSAGENS, substituir, valoresPadrao } from '@/lib/mensagens-funil'
 // ── Formatação portuguesa ────────────────────────────────────────────────────────────────────
 assert.equal(PRECO_MEMBRO, '35€/mês')
 assert.equal(PRECO_PREMIUM, '65€/mês')
-assert.equal(PRECO_PREMIUM_1O_MES, '34,99€', 'o 1º mês escreve-se com vírgula, não com ponto')
+assert.equal(PRECO_PREMIUM_1O_MES, '35€')
 assert.equal(PRECO_TOPO, '597€/ano')
 assert.equal(TOPO_ANUAL_EUR, 597)
 
