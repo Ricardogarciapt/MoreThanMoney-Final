@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import CursoIntroducao from '@/components/intro/curso-introducao'
+import VideoMtmAuto from '@/components/onboarding/video-mtm-auto'
 
 export const metadata: Metadata = {
   title: 'Começar no MTM Auto · MoreThanMoney',
@@ -49,6 +50,8 @@ export default function OnboardingMtmAuto() {
       <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[#b9b9c3]">
         Os sinais da MTM a copiar na tua conta, com o teu risco. Quatro passos, uma vez só.
       </p>
+
+      <VideoMtmAuto className="mt-8" />
 
       <ol className="mt-10 space-y-5">
         {PASSOS.map((p) => (
