@@ -60,6 +60,9 @@ import { TIMEFRAMES_POR_ESTRATEGIA, slFixo, timeframeAceite } from "@/lib/sinais
 import { avaliarEntradaTardiaAoVivo } from "@/lib/sinais/filtro-entrada-tardia"
 import { marcaDaEstrategia } from "@/lib/sinais/grafico-estrategia"
 import { enviarGraficoTelegram, legendaDoGrafico, urlDoGraficoDoSinal } from "@/lib/sinais/grafico-publicar"
+import { stopNaoFoiTocado } from "@/lib/sinais/stop-tocado"
+import { simboloAceite } from "@/lib/sinais/sensei-simbolos"
+import { RR_MINIMO, alvoComRRMinimo } from "@/lib/sinais/saida-tp1"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
@@ -879,6 +882,36 @@ async function processarAlerta(request: NextRequest) {
   /** A entrada deste seguimento (só quando a ligação é inequívoca). */
   const entradaLigada = ligacaoSeg?.ok ? ligacaoSeg.entrada : null
 
+  /**
+   * O «SL» que não foi stop (lib/sinais/stop-tocado.ts): o Sensei X manda `state: "SL"` também
+   * quando só mexe no stop. Com o preço longe do stop, do lado do lucro, a trade continua viva —
+   * não se marca perda, não se apagam ordens dos seguidores e não se publica nada. Os TP que vêm a
+   * seguir voltam a encontrar a entrada aberta.
+   */
+  if ((activeSensei?.alertType ?? initAlertType) === "sl_hit" && entradaLigada?.id && logId) {
+    const { data: ent } = await supabase
+      .from("tradingview_signals")
+      .select("action, price, sl")
+      .eq("id", entradaLigada.id)
+      .maybeSingle()
+    const acaoEnt = String(ent?.action ?? "")
+    const dirEnt = /sell|short|venda/i.test(acaoEnt) ? "sell" : /buy|long|compra/i.test(acaoEnt) ? "buy" : null
+    const entradaPx = Number(ent?.price) > 0 ? Number(ent?.price) : activeSensei?.entry ?? null
+    const slAlerta = activeSensei?.sl ?? sl ?? null
+    if (stopNaoFoiTocado({ direcao: dirEnt, entrada: entradaPx, slOriginal: Number(ent?.sl) || null, sl: slAlerta, preco: price })) {
+      await supabase
+        .from("tradingview_signals")
+        .update({
+          trade_status: "sl_movido",
+          chat_status: "suppressed",
+          telegram_status: "suppressed",
+          ai_error: `SL do Pine com o preço ${price} longe do stop ${slAlerta}: stop movido, não tocado — a trade continua`.slice(0, 300),
+        })
+        .eq("id", logId)
+      return NextResponse.json({ ok: true, followup: true, ignored: "sl_movido", signal_id: logId })
+    }
+  }
+
   // Imagem do sinal (só entradas): aponta o cartão para a rota lazy, que renderiza o gráfico
   // TradingView REAL (chart-img) com as linhas da trade na 1.ª visualização (CDN cacheia por
   // sinal → quota só gasta em sinais vistos) e cai no card sintético /api/og/signal se falhar.
@@ -947,6 +980,13 @@ async function processarAlerta(request: NextRequest) {
   const entradaDoAlerta = initSignalKind === "entry" && !mgmtStatus
   if (entradaDoAlerta && !timeframeAceite(estrategia, timeframe ?? activeSensei?.timeframe ?? null)) {
     const motivo = `timeframe ${timeframe ?? activeSensei?.timeframe} fora do aceite para ${estrategia} (${TIMEFRAMES_POR_ESTRATEGIA[String(estrategia ?? "").toLowerCase()]?.join("/") ?? "—"})`
+    if (logId) await supabase.from("tradingview_signals").update({ chat_status: "rejected", telegram_status: "rejected", ai_error: `rejeitado: ${motivo}` }).eq("id", logId)
+    return NextResponse.json({ ok: true, valid: false, reason: motivo })
+  }
+  // O Sensei só manda BTCUSD e XAUUSD (pedido do dono, 26/10 — lib/sinais/sensei-simbolos.ts).
+  const simboloDoAlerta = v.symbol ?? activeSensei?.symbol ?? ticker
+  if (entradaDoAlerta && !simboloAceite(estrategia, simboloDoAlerta)) {
+    const motivo = `símbolo ${simboloDoAlerta} fora do Sensei (só BTCUSD e XAUUSD)`
     if (logId) await supabase.from("tradingview_signals").update({ chat_status: "rejected", telegram_status: "rejected", ai_error: `rejeitado: ${motivo}` }).eq("id", logId)
     return NextResponse.json({ ok: true, valid: false, reason: motivo })
   }
@@ -1764,14 +1804,26 @@ async function processarAlerta(request: NextRequest) {
           stopsSaos: stopsSane(entradaAurum, sl),
           perpsGate,
         })
-        if (d.vai && d.simbolo) {
+        const tpsDoAlerta = [tp, tp2, tp3].filter((n): n is number => typeof n === "number" && n > 0)
+        // Sensei X: a posição inteira sai no 1.º alvo com ≥ 1,5R (lib/sinais/saida-tp1.ts, 26/10).
+        const alvoSensei =
+          estrategia === "sensei"
+            ? alvoComRRMinimo(execDirForGate === "sell" ? "sell" : "buy", entradaAurum, sl ?? null, tpsDoAlerta)
+            : null
+        if (d.vai && d.simbolo && estrategia === "sensei" && alvoSensei == null) {
+          if (logId) {
+            await supabase.from("tradingview_signals")
+              .update({ ai_error: `mestre aurum: nenhum alvo paga ${RR_MINIMO}R — não abre`.slice(0, 300) })
+              .eq("id", logId)
+          }
+        } else if (d.vai && d.simbolo) {
           const m = await encaminharSinalParaMestre({
             fonte: "aurum",
             symbol: d.simbolo,
             direcao: execDirForGate === "sell" ? "sell" : "buy",
             entrada: entradaAurum,
             sl: sl ?? null,
-            tps: [tp, tp2, tp3].filter((n): n is number => typeof n === "number" && n > 0),
+            tps: alvoSensei != null ? [alvoSensei] : tpsDoAlerta,
             externalRef: String(logId ?? ""),
           })
           aurumNaMestreSim = m.substituiMt5
