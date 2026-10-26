@@ -6,7 +6,9 @@ import {
   buildChartImgSymbol,
   tfToChartImgInterval,
 } from "@/lib/chart-image"
-import { VELAS_MINIMAS, svgVelasSinal, velasDoSinal } from "@/lib/sinais/grafico-velas"
+import { VELAS_MINIMAS, desenhoVelasSinal, graficoDaEstrategia } from "@/lib/sinais/grafico-velas"
+import { pngDoDesenho } from "@/lib/sinais/grafico-png"
+import { marcaDaEstrategia } from "@/lib/sinais/grafico-estrategia"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 30
@@ -21,6 +23,20 @@ const INK = "#0b0d12"
 const PANEL = "#12151d"
 const MUTED = "#9AA0AA"
 
+interface SinalDaImagem {
+  ticker: string | null
+  exchange: string | null
+  timeframe: string | null
+  action: string | null
+  price: unknown
+  sl: unknown
+  tp: unknown
+  raw_payload: unknown
+  alert_name: string | null
+  received_at: string | null
+  estrategia: string | null
+}
+
 function num(v: unknown): number | null {
   if (v == null) return null
   const x = Number(v)
@@ -34,35 +50,57 @@ function fmt(v: number | null): string {
 /**
  * GET /api/signals/chart-image?id=<signalId>
  *
- * Escada de três degraus para a imagem do alerta, sempre com a MESMA composição (gráfico +
- * rodapé com os parâmetros e a marca MTM):
- *   1. gráfico TradingView real (chart-img) — o melhor, mas tem quota diária por plano;
- *   2. gráfico de VELAS nosso (lib/sinais/grafico-velas) a partir das referências públicas
- *      Binance/Yahoo — é o que garante que há sempre velas, sem quota nem chave;
- *   3. só se nem houver velas: 302 para o cartão sintético /api/og/signal.
- *
- * O degrau 2 nasceu de uma regressão: o chart-img esgota a quota diária (429 «Limit Exceeded»)
- * quase todos os dias com o volume de sinais que temos, e a partir daí TODOS os alertas ficavam
- * com o cartão do degrau 3 — sem uma única vela.
+ * Escada de três degraus para a imagem do alerta:
+ *   1. o gráfico DA ESTRATÉGIA (lib/sinais/grafico-estrategia + grafico-velas): velas das
+ *      referências públicas Binance/Yahoo, com a cor, o nome e os indicadores do scanner que deu
+ *      o sinal. `&f=png` devolve o mesmo desenho em PNG (o Telegram não aceita SVG nas fotos);
+ *   2. gráfico TradingView (chart-img) — só quando não há velas; tem quota diária e, desde 28/09,
+ *      responde 403 à chave que temos;
+ *   3. nem isso: 302 para o cartão sintético /api/og/signal.
  */
 export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id")
   const origin = req.nextUrl.origin
-  if (!id) return NextResponse.json({ error: "id em falta" }, { status: 400 })
+  const q = req.nextUrl.searchParams
 
-  const { data: sig } = await supabase
-    .from("tradingview_signals")
-    .select("ticker, exchange, timeframe, action, price, sl, raw_payload, alert_name, received_at")
-    .eq("id", id)
-    .maybeSingle()
+  // Com `id`: o sinal gravado. Sem `id`: os parâmetros no URL (urlDoGrafico) — é assim que o
+  // publicador da mestre, que não tem linha em tradingview_signals, pede o gráfico da entrada.
+  let sig: SinalDaImagem | null = null
+  if (id) {
+    const { data } = await supabase
+      .from("tradingview_signals")
+      .select("ticker, exchange, timeframe, action, price, sl, tp, raw_payload, alert_name, received_at, estrategia")
+      .eq("id", id)
+      .maybeSingle()
+    sig = (data as SinalDaImagem | null) ?? null
+  } else if (q.get("s")) {
+    const tpsQ = (q.get("tp") || "").split(",").map((x) => num(x)).filter((x): x is number => x != null && x > 0)
+    sig = {
+      ticker: q.get("s"),
+      exchange: null,
+      timeframe: q.get("tf"),
+      action: q.get("d"),
+      price: num(q.get("en")),
+      sl: num(q.get("sl")),
+      tp: tpsQ[0] ?? null,
+      raw_payload: Object.fromEntries(tpsQ.map((t, i) => [`tp${i + 1}`, t])),
+      alert_name: null,
+      received_at: num(q.get("t")) != null ? new Date(Number(q.get("t")) * 1000).toISOString() : null,
+      estrategia: q.get("e"),
+    }
+  } else {
+    return NextResponse.json({ error: "id em falta" }, { status: 400 })
+  }
   if (!sig?.ticker) return NextResponse.json({ error: "sinal não encontrado" }, { status: 404 })
 
   const rp = (sig.raw_payload || {}) as Record<string, unknown>
   const entry = num(rp.entry) ?? num(sig.price)
   const slv = num(sig.sl) ?? num(rp.sl)
-  const tps = [num(rp.tp1) ?? num(rp.take_profit_1), num(rp.tp2), num(rp.tp3)].filter(
+  const tpsPayload = [num(rp.tp1) ?? num(rp.take_profit_1), num(rp.tp2), num(rp.tp3), num(rp.tp4)].filter(
     (x): x is number => x != null && x > 0,
   )
+  // O Trendshot calcula os níveis no servidor: no payload não há tp1..4, só a coluna `tp`.
+  const tps = tpsPayload.length ? tpsPayload : [num(sig.tp)].filter((x): x is number => x != null && x > 0)
   const dir = String(sig.action || "").toLowerCase() === "sell" ? "sell" : "buy"
   const slpct = num(rp.sl_pct)
   const tppcts = [num(rp.tp1_pct), num(rp.tp2_pct), num(rp.tp3_pct)]
@@ -70,12 +108,37 @@ export async function GET(req: NextRequest) {
   // Fallback OG
   const og = new URLSearchParams()
   const put = (k: string, v: unknown) => { if (v != null && v !== "") og.set(k, String(v)) }
-  put("sym", sig.ticker); put("dir", dir); put("tf", sig.timeframe); put("strat", sig.alert_name || "MTM")
+  put("sym", sig.ticker); put("dir", dir); put("tf", sig.timeframe); put("strat", marcaDaEstrategia(sig.estrategia, sig.alert_name).nome)
   put("entry", entry); put("sl", slv); tps.forEach((t, i) => put(`tp${i + 1}`, t))
   put("slpct", slpct); put("tp1pct", tppcts[0]); put("tp2pct", tppcts[1]); put("tp3pct", tppcts[2])
   put("lev", num(rp.leverage)); put("cost", num(rp.fee_cost)); put("acct", num(rp.account))
   const ogUrl = `${origin}/api/og/signal?${og.toString()}`
 
+  // Degrau 1: o gráfico DA ESTRATÉGIA — velas nossas + os indicadores e a cor do scanner
+  // (lib/sinais/grafico-estrategia). Vem primeiro desde 26/10: o chart-img responde 403 desde 28/09
+  // e, mesmo quando servia, desenhava o mesmo gráfico para todas as estratégias.
+  const marca = marcaDaEstrategia(sig.estrategia, sig.alert_name)
+  const emSeg = Math.floor(new Date(String(sig.received_at ?? Date.now())).getTime() / 1000)
+  const base = { ticker: sig.ticker, timeframe: sig.timeframe, direcao: dir, entry, sl: slv, tps, emSeg, alertName: sig.alert_name, marca } as const
+  const { velas, linhas } = await graficoDaEstrategia(base).catch(() => ({ velas: [], linhas: [] }))
+  const querPng = req.nextUrl.searchParams.get("f") === "png"
+
+  if (req.nextUrl.searchParams.get("debug") === "1") {
+    return NextResponse.json({ ok: velas.length >= VELAS_MINIMAS, estrategia: marca.nome, velas: velas.length, linhas: linhas.map((l) => l.nome) })
+  }
+  if (velas.length >= VELAS_MINIMAS) {
+    const desenho = desenhoVelasSinal({ ...base, linhas }, velas)
+    // Um sinal com mais de dois dias já não muda; um fresco ainda ganha velas novas.
+    const velho = Date.now() / 1000 - emSeg > 2 * 86400
+    const cache = velho
+      ? "public, s-maxage=31536000, max-age=86400, immutable"
+      : "public, s-maxage=600, max-age=300, stale-while-revalidate=86400"
+    // PNG para quem não lê SVG (o Telegram, nas fotos): o mesmo desenho, rasterizado.
+    if (querPng) return pngDoDesenho(desenho, cache)
+    return new NextResponse(desenho.svg, { headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": cache } })
+  }
+
+  // Degrau 2: gráfico TradingView (chart-img), só quando as referências públicas não deram velas.
   const r = await renderSignalChart({
     symbol: buildChartImgSymbol(sig.ticker, sig.exchange),
     interval: tfToChartImgInterval(sig.timeframe),
@@ -87,44 +150,8 @@ export async function GET(req: NextRequest) {
     width: 1200,
     height: 620,
   })
-
-  // Degrau 2: velas nossas. Só se pedem quando o chart-img não serviu (poupa a ida de rede).
-  const emSeg = Math.floor(new Date(String(sig.received_at ?? Date.now())).getTime() / 1000)
-  const velas = r.png
-    ? []
-    : await velasDoSinal({
-        ticker: sig.ticker,
-        timeframe: sig.timeframe,
-        direcao: dir,
-        entry,
-        sl: slv,
-        tps,
-        emSeg,
-        alertName: sig.alert_name,
-      }).catch(() => [])
-
-  if (req.nextUrl.searchParams.get("debug") === "1") {
-    return NextResponse.json({ ok: !!r.png, error: r.error, velas: velas.length, body: r.body })
-  }
-  if (!r.png) {
-    if (velas.length >= VELAS_MINIMAS) {
-      const svg = svgVelasSinal(
-        { ticker: sig.ticker, timeframe: sig.timeframe, direcao: dir, entry, sl: slv, tps, emSeg, alertName: sig.alert_name },
-        velas,
-      )
-      // Um sinal com mais de dois dias já não muda; um fresco ainda ganha velas novas.
-      const velho = Date.now() / 1000 - emSeg > 2 * 86400
-      return new NextResponse(svg, {
-        headers: {
-          "Content-Type": "image/svg+xml; charset=utf-8",
-          "Cache-Control": velho
-            ? "public, s-maxage=31536000, max-age=86400, immutable"
-            : "public, s-maxage=600, max-age=300, stale-while-revalidate=86400",
-        },
-      })
-    }
-    return NextResponse.redirect(ogUrl, { status: 302, headers: { "Cache-Control": "public, max-age=120" } })
-  }
+  // Degrau 3: cartão sintético.
+  if (!r.png) return NextResponse.redirect(ogUrl, { status: 302, headers: { "Cache-Control": "public, max-age=120" } })
 
   const chartDataUri = `data:image/png;base64,${Buffer.from(r.png).toString("base64")}`
   const dirColor = dir === "sell" ? RED : GREEN

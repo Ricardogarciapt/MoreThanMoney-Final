@@ -13,6 +13,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
 import { grupoTelegramTrendshot } from '@/lib/telegram-seguimento'
 import { normalizeSymbol } from '@/lib/mtmcopy/signal-parser'
+import { velasDoSinal } from '@/lib/sinais/grafico-velas'
+import { enviarGraficoTelegram, legendaDoGrafico, urlDoGraficoDoSinal } from '@/lib/sinais/grafico-publicar'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { formatarSinal } from '@/lib/sinais/formato-sinal'
 import { encaminharSinalParaMestre } from '@/lib/mestres/servidor/sinal-mestre'
@@ -41,16 +43,54 @@ function numero(v: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
-export async function processarTrendshot(payload: Json, rawBody: string): Promise<{ ok: boolean; [k: string]: unknown }> {
+/**
+ * Preço de mercado quando o alerta não traz `{{close}}`: o último fecho da referência pública
+ * (Binance/Yahoo, as mesmas velas do WebTrader). Só serve uma referência que já esteja ao nível da
+ * corretora — sem âncora não se reescala, e um preço errado dá níveis errados.
+ */
+async function precoDeReferencia(simbolo: string, timeframe: string | null): Promise<number | null> {
+  try {
+    const velas = await velasDoSinal({
+      ticker: simbolo,
+      timeframe: timeframe ?? '15',
+      direcao: 'buy',
+      entry: null,
+      sl: null,
+      tps: [],
+      emSeg: Math.floor(Date.now() / 1000),
+    })
+    const ultima = velas[velas.length - 1]
+    if (!ultima || Date.now() / 1000 - ultima.t > 3 * 3600) return null
+    return numero(ultima.c)
+  } catch {
+    return null
+  }
+}
+
+export async function processarTrendshot(
+  payloadBruto: Json,
+  rawBody: string,
+  query?: URLSearchParams,
+): Promise<{ ok: boolean; [k: string]: unknown }> {
   const supabase = getSupabaseAdmin()
+  // Par e timeframe também pelo URL (`&ticker=XAUUSD&tf=15`): os alertas do tipo «alert() function
+  // call» não deixam editar a mensagem, e a mensagem do Pine só diz «Trendshot: BUY signal».
+  const payload: Json = { ...payloadBruto }
+  for (const [k, nomes] of [['ticker', ['ticker', 'symbol']], ['timeframe', ['tf', 'timeframe', 'interval']]] as const) {
+    if (primeiro(payload, [...nomes]) != null) continue
+    const v = nomes.map((n) => query?.get(n)).find((x) => x && x.trim())
+    if (v) payload[k] = v.trim()
+  }
   const tickerBruto = String(primeiro(payload, ['ticker', 'symbol', 'pair', 'instrument']) ?? '')
   const simbolo = normalizeSymbol(tickerBruto.split(':').pop() ?? '')
   const texto = [primeiro(payload, ['action', 'side', 'signal']), primeiro(payload, ['alert_name', 'alert', 'name']), primeiro(payload, ['message', 'comment', 'text']), rawBody]
     .map((x) => String(x ?? ''))
     .join(' ')
   const direcao = direcaoTrendshot(texto)
-  const entrada = numero(primeiro(payload, ['price', 'close', 'entry']))
   const timeframe = String(primeiro(payload, ['timeframe', 'interval', 'tf']) ?? '') || null
+  const precoDoAlerta = numero(primeiro(payload, ['price', 'close', 'entry']))
+  const entrada = precoDoAlerta ?? (simbolo ? await precoDeReferencia(simbolo, timeframe) : null)
+  if (entrada && !precoDoAlerta) payload.preco_origem = 'referencia'
 
   const { data: log } = await supabase
     .from('tradingview_signals')
@@ -74,9 +114,9 @@ export async function processarTrendshot(payload: Json, rawBody: string): Promis
     return { ok: true, skipped: motivo }
   }
 
-  if (!simbolo) return falha('sem ticker')
+  if (!simbolo) return falha('sem ticker — a mensagem do alerta tem de mandar "ticker":"{{ticker}}" (ou o URL &ticker=PAR)')
   if (!direcao) return falha('sem direcção (BUY/SELL)')
-  if (!entrada) return falha('sem preço — o alerta tem de mandar {{close}}')
+  if (!entrada) return falha('sem preço — o alerta tem de mandar {{close}} (e não houve referência de mercado)')
 
   // Mesmo par, mesma direcção, há menos de 10 min → é repetição do TradingView.
   const desde = new Date(Date.now() - JANELA_DUPLICADO_MS).toISOString()
@@ -109,6 +149,7 @@ export async function processarTrendshot(payload: Json, rawBody: string): Promis
       content: texto_,
       telegram_sender: `📈 ${ESTRATEGIA_TRENDSHOT}`,
       user_id: null,
+      ...(logId ? { image_url: urlDoGraficoDoSinal(logId) } : {}),
     })
     .select('id')
     .single()
@@ -133,6 +174,14 @@ export async function processarTrendshot(payload: Json, rawBody: string): Promis
     }
   }
   if (telegramMessageId) await supabase.from('chat_messages').update({ telegram_message_id: telegramMessageId }).eq('id', chatId)
+  if (logId) {
+    // A coluna `tp` só guarda o TP1: o gráfico lê os quatro alvos do payload.
+    payload.tp1 = tps[0]; payload.tp2 = tps[1]; payload.tp3 = tps[2]; payload.tp4 = tps[3]; payload.sl = sl; payload.entry = entrada
+    await supabase.from('tradingview_signals').update({ raw_payload: payload, chart_image_url: urlDoGraficoDoSinal(logId) }).eq('id', logId)
+  }
+  if (telegramMessageId && grupo && token && logId) {
+    await enviarGraficoTelegram(token, grupo, urlDoGraficoDoSinal(logId, { png: true }), legendaDoGrafico(ESTRATEGIA_TRENDSHOT, simbolo, timeframe), telegramMessageId)
+  }
   if (logId) {
     await supabase
       .from('tradingview_signals')

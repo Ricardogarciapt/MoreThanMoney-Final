@@ -65,3 +65,21 @@ export function niveisTrendshot(simbolo: string, direcao: 'buy' | 'sell', entrad
     tps: [r(entrada + k * d * 0.3), r(entrada + k * d * mult2), r(entrada + k * d), r(entrada + k * d * 1.5)],
   }
 }
+
+/**
+ * Este alerta é do Trendshot? `?strategy=Trendshot` decide; sem `strategy`, decide o texto do
+ * próprio alerta («Trendshot: BUY signal», `alert_name` com Trendshot). Um `strategy` de outra
+ * estratégia nunca é desviado para aqui.
+ */
+export function eAlertaTrendshot(
+  strategy: string | null | undefined,
+  payload: Record<string, unknown>,
+  rawBody: string,
+): boolean {
+  const s = String(strategy ?? '').toLowerCase().trim()
+  if (s) return s === 'trendshot'
+  const campos = [payload.message, payload.alert_name, payload.name, payload.strategy, payload.comment, payload.text]
+    .map((x) => String(x ?? '').trim())
+  if (campos.some((c) => /^\s*(mtm\s*auto\s*)?trend\s*shot\b/i.test(c))) return true
+  return /^\s*"?\s*trend\s*shot\s*:/i.test(rawBody)
+}

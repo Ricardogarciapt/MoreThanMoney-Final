@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { classeTrendshot, direcaoTrendshot, niveisTrendshot, CANAL_TRENDSHOT, ESTRATEGIA_TRENDSHOT } from '../trendshot'
+import { classeTrendshot, direcaoTrendshot, eAlertaTrendshot, niveisTrendshot, CANAL_TRENDSHOT, ESTRATEGIA_TRENDSHOT } from '../trendshot'
 import { formatarSinal } from '../formato-sinal'
 import { isEntradaParaSeguimento, isT2TEntrySignal } from '../../mtmcopy/t2t-source'
 import { parseSignal } from '../../mtmcopy/signal-parser'
@@ -48,3 +48,13 @@ console.log('trendshot.check: OK')
   assert.ok(ESTUDOS_WEBTRADER.some((e) => e.chave === 'TrendShot' && e.alerta === 'trendshot'))
   assert.equal(ESTRATEGIA_DO_WEBHOOK.trendshot?.slug, 'mtm-auto-trendshot')
 }
+
+// Encaminhamento: `?strategy` decide; sem ele, o texto do alerta.
+assert.equal(eAlertaTrendshot('Trendshot', {}, ''), true)
+assert.equal(eAlertaTrendshot('mtmscanner', { message: 'Trendshot: BUY signal' }, ''), false)
+assert.equal(eAlertaTrendshot(null, { message: 'Trendshot: SELL signal' }, '{"message": "Trendshot: SELL signal"}'), true)
+assert.equal(eAlertaTrendshot(null, { message: 'Trendshot: BUY signal' }, 'Trendshot: BUY signal'), true)
+assert.equal(eAlertaTrendshot(null, { alert_name: 'MTM Auto Trendshot' }, ''), true)
+assert.equal(eAlertaTrendshot(null, { message: 'MTMScanner BUY XAUUSD' }, ''), false)
+assert.equal(eAlertaTrendshot('', { ticker: 'XAUUSD', action: 'buy' }, ''), false)
+console.log('eAlertaTrendshot ok')
