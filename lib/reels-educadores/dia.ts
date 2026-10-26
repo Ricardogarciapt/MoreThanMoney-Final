@@ -235,6 +235,11 @@ async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: stri
     .eq('tipo', 'corte').gte('dia', dia).in('estado', ['a_render', 'agendado'])
   const emCurso = (jobs ?? []).some((j) => ['pedido', 'a_descarregar', 'a_transcrever', 'a_analisar', 'pronto'].includes(String(j.estado)))
   if ((futuros ?? 0) >= 3 || emCurso) return
+  // Uma sessão falhou nas últimas 20 h (DVR já apagado, YouTube a recusar o IP do robô): esperar
+  // pelo dia seguinte em vez de gastar todas as sessões gravadas numa só corrida.
+  const { count: falhas } = await db.from('videocliper_jobs').select('id', { count: 'exact', head: true })
+    .like('criado_por', 'auto:%').eq('estado', 'erro').gte('updated_at', new Date(Date.now() - 20 * 3600_000).toISOString())
+  if (falhas) { notas.push('cortes: a última sessão pedida falhou; tenta-se outra amanhã'); return }
   const fonte = await proximaSessao(db, pub)
   if (!fonte) { notas.push('cortes: não há mais sessões gravadas por cortar'); return }
   await db.from('videocliper_jobs').insert({
