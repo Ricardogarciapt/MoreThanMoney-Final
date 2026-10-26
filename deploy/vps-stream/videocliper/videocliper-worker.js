@@ -26,7 +26,8 @@ const path = require("node:path")
 const { spawn } = require("node:child_process")
 
 const API = (process.env.MTM_API_BASE || "https://www.morethanmoney.pt").replace(/\/+$/, "")
-const SEGREDO = process.env.LMS_CAPTION_WORKER_SECRET || ""
+// No robô diário do GitHub só existe o CRON_SECRET; o balcão aceita os dois.
+const SEGREDO = process.env.LMS_CAPTION_WORKER_SECRET || process.env.CRON_SECRET || ""
 const ESPERA = Number(process.env.POLL_SECONDS || 20) * 1000
 const NOME = process.env.WORKER_NAME || `vps-${os.hostname()}`
 
@@ -68,6 +69,24 @@ function cookiesDoYoutube() {
  * que nao depende de ninguem.
  */
 async function descarregarDeLink(url, destino, seccao) {
+  /**
+   * A CACHE do robô do GitHub (`VIDEOCLIPER_CACHE`): uma sessão de uma hora tem 1 GB e dá sete
+   * clips. Sem cache descarregava-se sete vezes; com ela, uma.
+   */
+  const cache = process.env.VIDEOCLIPER_CACHE
+  if (cache && !seccao) {
+    fs.mkdirSync(cache, { recursive: true })
+    const guardado = path.join(cache, require("node:crypto").createHash("sha1").update(url).digest("hex") + ".mp4")
+    if (!fs.existsSync(guardado)) {
+      const parcial = guardado + ".parcial"
+      if (/\.(mp4|mov|m4v|webm)(\?|$)/i.test(url)) await correr("curl", ["-fsSL", "--retry", "3", "-o", parcial, url])
+      else await correr(YTDLP, ["-f", "bv*[height<=1080]+ba/b[height<=1080]/b", "--merge-output-format", "mp4", ...cookiesDoYoutube(), "-o", parcial, url])
+      // O yt-dlp pode acrescentar a extensão ao nome que lhe damos.
+      fs.renameSync(fs.existsSync(parcial) ? parcial : parcial + ".mp4", guardado)
+    }
+    fs.copyFileSync(guardado, destino)
+    return
+  }
   const directo = /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url)
   if (directo) {
     log("a puxar ficheiro directo")
@@ -707,6 +726,24 @@ async function transcrever(trabalho) {
       body: JSON.stringify({ resultado: "progresso", jobId: trabalho.jobId, progresso: "a transcrever" }),
     })
 
+    /**
+     * Sem chave de ASR (o robô do GitHub), transcreve-se aqui mesmo com o faster-whisper: mais
+     * lento, mas de graça e sem segredo nenhum a mais. Mesmo formato: tempos por palavra.
+     */
+    if (!ASR_KEY) {
+      const saidaAsr = path.join(tmp, "asr.json")
+      await correr("python3", [path.join(__dirname, "asr-local.py"), audio, saidaAsr, trabalho.idioma || ""])
+      const j = JSON.parse(fs.readFileSync(saidaAsr, "utf8"))
+      if (!j.words?.length) throw new Error("o ASR local não devolveu palavras")
+      await api("/api/videocliper/worker", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ resultado: "transcricao", jobId: trabalho.jobId, palavras: j.words, duracaoSeg: Math.round(j.duration), titulo: trabalho.titulo || undefined }),
+      })
+      log(`transcrito (local): ${j.words.length} palavras`)
+      return
+    }
+
     const form = new FormData()
     form.append("file", new Blob([fs.readFileSync(audio)]), "audio.m4a")
     form.append("model", (trabalho.asr && trabalho.asr.modelo) || ASR_MODELO)
@@ -961,7 +998,7 @@ async function umaPassagem() {
   const r = await api(`/api/videocliper/worker?worker=${encodeURIComponent(NOME)}`)
   if (!r.ok) { log("balcão devolveu", r.status); return }
   const t = await r.json()
-  if (t.tipo === "nada") return
+  if (t.tipo === "nada") return t.repetir ? "repetir" : "nada"
 
   log("trabalho:", t.tipo, t.jobId || t.clipId)
   try {
@@ -1028,6 +1065,22 @@ async function ciclo() {
   }
 }
 
+/**
+ * UMA RONDA e sai — o modo do robô diário no GitHub. Trabalha até o balcão dizer «nada» ou até
+ * acabar o tempo (`--minutos=N`), em vez de ficar à escuta para sempre como no VPS.
+ */
+async function ronda() {
+  if (!SEGREDO) { console.error("sem segredo (LMS_CAPTION_WORKER_SECRET ou CRON_SECRET)"); process.exit(1) }
+  const arg = process.argv.find((a) => a.startsWith("--minutos="))
+  const fim = Date.now() + Number(arg ? arg.slice(10) : 40) * 60_000
+  while (Date.now() < fim) {
+    const r = await umaPassagem().catch((e) => { log("passagem falhou:", e.message); return "erro" })
+    if (r === "nada") break
+    await new Promise((x) => setTimeout(x, r === "repetir" ? 1000 : 3000))
+  }
+  log("ronda terminada")
+}
+
 // Importado (testes, harness de pré-visualização) não arranca o ciclo.
-if (require.main === module) ciclo()
+if (require.main === module) (process.argv.includes("--ronda") ? ronda() : ciclo())
 module.exports = { construirASS, ecrasDaLegenda, planoDeZoom, argsDaMontagem, imagensDoBroll, temAudio, correr }

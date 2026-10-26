@@ -1,0 +1,319 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: Anton; src: url(fonts/Anton-Regular.ttf); }
+:root { --ouro:#D2A63C; --ouro2:#E9C46A; --carvao:#0b0a08; --tinta:#f3ede1; --cinza:#9a9283; --verm:#ff5a4f; --verde:#3ddc84; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { width:1080px; height:1920px; overflow:hidden; background:var(--carvao); color:var(--tinta); font-family:Inter,'Helvetica Neue',Arial,sans-serif; }
+#palco { position:absolute; inset:0; overflow:hidden; background:radial-gradient(900px 900px at 80% 10%, rgba(210,166,60,.16), transparent 60%), radial-gradient(800px 700px at 10% 95%, rgba(210,166,60,.08), transparent 60%), #0b0a08; }
+#grelha { position:absolute; inset:-200px; background-image:linear-gradient(rgba(210,166,60,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(210,166,60,.05) 1px, transparent 1px); background-size:90px 90px; }
+#foto { position:absolute; inset:0; background-size:cover; background-position:center top; }
+#foto::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(11,10,8,.05) 0%, rgba(11,10,8,.25) 45%, rgba(11,10,8,.92) 72%, #0b0a08 100%); }
+#flash { position:absolute; inset:0; background:#fff; opacity:0; z-index:60; pointer-events:none; }
+#luz { position:absolute; top:-400px; width:260px; height:2800px; background:linear-gradient(90deg, transparent, rgba(233,196,106,.22), transparent); transform:rotate(18deg); z-index:55; opacity:0; }
+.p { position:absolute; width:8px; height:8px; border-radius:50%; background:var(--ouro2); box-shadow:0 0 12px var(--ouro2); }
+#chip { position:absolute; top:90px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:18px; padding:12px 30px 12px 12px; border-radius:60px; background:rgba(11,10,8,.72); border:2px solid rgba(210,166,60,.45); z-index:50; opacity:0; white-space:nowrap; }
+#chip i { width:76px; height:76px; border-radius:50%; background-size:cover; background-position:center 12%; border:3px solid var(--ouro2); }
+#chip b { font:800 32px Inter,'Helvetica Neue',Arial,sans-serif; }
+#chip span { display:block; font:600 22px Inter,'Helvetica Neue',Arial,sans-serif; letter-spacing:.18em; color:var(--ouro2); text-transform:uppercase; }
+#barra { position:absolute; left:0; top:0; height:8px; background:linear-gradient(90deg,var(--ouro),var(--ouro2)); z-index:70; }
+.cena { position:absolute; inset:0; opacity:0; z-index:10; }
+.pal { position:absolute; left:50px; right:50px; text-align:center; font-family:Anton; font-size:150px; line-height:1.02; text-transform:uppercase; text-shadow:0 10px 40px rgba(0,0,0,.9); }
+.pal.d { color:var(--ouro2); }
+.marca { position:absolute; left:0; right:0; bottom:300px; text-align:center; font:800 34px Inter,'Helvetica Neue',Arial,sans-serif; letter-spacing:.3em; color:var(--ouro2); text-transform:uppercase; }
+.dtit { position:absolute; left:70px; right:70px; top:250px; text-align:center; font-family:Anton; font-size:90px; line-height:1.05; text-transform:uppercase; }
+.dsub { position:absolute; left:70px; right:70px; top:1600px; text-align:center; font:700 46px Inter,'Helvetica Neue',Arial,sans-serif; line-height:1.25; }
+svg { position:absolute; left:0; top:0; }
+.num { position:absolute; left:0; right:0; top:420px; text-align:center; font-family:Anton; font-size:520px; line-height:1; color:transparent; -webkit-text-stroke:4px rgba(233,196,106,.55); }
+.ptxt { position:absolute; left:80px; right:80px; top:1000px; text-align:center; font-family:Anton; font-size:112px; line-height:1.08; text-transform:uppercase; }
+.ptxt span { display:inline-block; margin:0 .14em; }
+.psub { position:absolute; left:100px; right:100px; top:1420px; text-align:center; font:600 42px Inter,'Helvetica Neue',Arial,sans-serif; color:var(--cinza); line-height:1.3; }
+.bolha { position:absolute; left:70px; right:70px; top:760px; height:200px; border-radius:100px; background:#1b1915; border:3px solid rgba(233,196,106,.6); display:flex; align-items:center; padding:0 40px 0 30px; gap:28px; box-shadow:0 30px 90px rgba(210,166,60,.25); }
+.bolha i { width:130px; height:130px; flex:none; border-radius:50%; background:linear-gradient(135deg,var(--ouro2),var(--ouro)); }
+.bolha .esc { font-family:Anton; font-size:120px; color:var(--tinta); letter-spacing:.02em; white-space:nowrap; }
+.bolha .cur { display:inline-block; width:8px; height:110px; background:var(--ouro2); vertical-align:middle; margin-left:6px; }
+.c1 { position:absolute; left:0; right:0; top:560px; text-align:center; font-family:Anton; font-size:120px; text-transform:uppercase; }
+.c2 { position:absolute; left:90px; right:90px; top:1050px; text-align:center; font:700 50px Inter,'Helvetica Neue',Arial,sans-serif; line-height:1.3; }
+.seta { position:absolute; left:50%; top:1250px; width:0; height:0; margin-left:-50px; border-left:50px solid transparent; border-right:50px solid transparent; border-top:70px solid var(--ouro2); }
+#aviso { position:absolute; left:70px; right:70px; bottom:60px; text-align:center; font:500 24px Inter,'Helvetica Neue',Arial,sans-serif; color:rgba(243,237,225,.6); line-height:1.35; z-index:65; }
+#vinheta { position:absolute; inset:0; z-index:58; pointer-events:none; background:radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,.6) 100%); }
+</style>
+</head>
+<body>
+<div id="palco"><div id="grelha"></div><div id="foto"></div><div id="part"></div><div id="cenas"></div><div id="chip"><i></i><div><b></b><span></span></div></div><div id="luz"></div><div id="flash"></div><div id="aviso"></div><div id="barra"></div><div id="vinheta"></div></div>
+<script>
+// Reel v2: gancho com a cara do educador, demonstração animada do tema, um ponto por ecrã e CTA a escrever.
+const $ = (h) => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstChild }
+const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x))
+const ease = (x) => 1 - Math.pow(1 - cl(x), 3)
+const io = (x) => { x = cl(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2 }
+const pop = (x) => { x = cl(x); const s = 1.9; return 1 + (s + 1) * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2) }
+const NS = 'http://www.w3.org/2000/svg'
+let D, TL = [], TOTAL = 0, PART = [], FOTO
+const W = 1080, H = 1920
+
+// ── demonstrações: cada uma devolve { el, at(k, dur) } ─────────────────────────────────────────
+function svg(h) { const s = document.createElementNS(NS, 'svg'); s.setAttribute('width', W); s.setAttribute('height', H); s.innerHTML = h; return s }
+const DEMO = {
+  risco(c) {
+    const el = $(`<div class="cena"><div class="dtit">5 perdas seguidas</div><div class="dsub"></div></div>`)
+    const s = svg(`
+      <text x="290" y="1450" fill="#ff5a4f" font-family="Anton" font-size="56" text-anchor="middle">RISCO 10%</text>
+      <text x="790" y="1450" fill="#E9C46A" font-family="Anton" font-size="56" text-anchor="middle">RISCO 1%</text>
+      <rect id="ba" x="170" width="240" rx="18" fill="url(#ga)"/><rect id="bb" x="670" width="240" rx="18" fill="url(#gb)"/>
+      <text id="va" x="290" font-family="Anton" font-size="120" fill="#ff5a4f" text-anchor="middle"></text>
+      <text id="vb" x="790" font-family="Anton" font-size="120" fill="#E9C46A" text-anchor="middle"></text>
+      <g id="pp"></g>
+      <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7a70"/><stop offset="1" stop-color="#7a2620"/></linearGradient>
+      <linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E9C46A"/><stop offset="1" stop-color="#6b5216"/></linearGradient></defs>`)
+    el.appendChild(s)
+    const pp = s.querySelector('#pp')
+    for (let i = 0; i < 5; i++) pp.innerHTML += `<g opacity=".25" id="p${i}"><rect x="${110 + i * 175}" y="1490" width="155" height="64" rx="16" fill="rgba(255,90,79,.18)" stroke="#ff5a4f" stroke-width="3"/><text x="${187 + i * 175}" y="1534" fill="#ff5a4f" font-family="Inter" font-weight="800" font-size="28" text-anchor="middle">PERDA ${i + 1}</text></g>`
+    const base = 1370, alt = 820
+    return { el, at(k, dur) {
+      const n = cl((k - .5) / (dur - 1.4)) * 5, fa = Math.pow(.9, n), fb = Math.pow(.99, n)
+      for (let i = 0; i < 5; i++) s.querySelector('#p' + i).setAttribute('opacity', n > i ? 1 : .25)
+      const ha = alt * fa, hb = alt * fb
+      s.querySelector('#ba').setAttribute('y', base - ha); s.querySelector('#ba').setAttribute('height', ha)
+      s.querySelector('#bb').setAttribute('y', base - hb); s.querySelector('#bb').setAttribute('height', hb)
+      const va = s.querySelector('#va'), vb = s.querySelector('#vb')
+      va.textContent = Math.round(100 * fa) + '%'; va.setAttribute('y', base - ha - 30)
+      vb.textContent = Math.round(100 * fb) + '%'; vb.setAttribute('y', base - hb - 30)
+      el.querySelector('.dsub').innerHTML = n >= 5 ? 'Mesma estratégia. <span style="color:var(--ouro2)">Outro risco.</span>' : ''
+      el.querySelector('.dsub').style.opacity = ease((k - dur + .9) / .3)
+    } }
+  },
+  relogio(c) {
+    const el = $(`<div class="cena"><div class="dtit">O teu dia de trading</div><div class="dsub"></div></div>`)
+    const R = 300, L = 2 * Math.PI * R
+    const s = svg(`<circle cx="540" cy="860" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="44"/>
+      <circle id="arc" cx="540" cy="860" r="${R}" fill="none" stroke="url(#go)" stroke-width="44" stroke-linecap="round" transform="rotate(-90 540 860)" stroke-dasharray="${L}" stroke-dashoffset="${L}"/>
+      <text id="tm" x="540" y="905" font-family="Anton" font-size="170" fill="#f3ede1" text-anchor="middle">00:00</text>
+      <text x="540" y="990" font-family="Inter" font-weight="700" font-size="34" fill="#9a9283" text-anchor="middle" letter-spacing="6">MINUTOS</text>
+      <defs><linearGradient id="go"><stop offset="0" stop-color="#E9C46A"/><stop offset="1" stop-color="#D2A63C"/></linearGradient></defs>`)
+    el.appendChild(s)
+    return { el, at(k, dur) {
+      const x = io((k - .3) / (dur - 1.5)), m = 15 * x
+      s.querySelector('#arc').setAttribute('stroke-dashoffset', L * (1 - x))
+      s.querySelector('#tm').textContent = String(Math.floor(m)).padStart(2, '0') + ':' + String(Math.floor((m % 1) * 60)).padStart(2, '0')
+      const d = el.querySelector('.dsub'); d.innerHTML = 'Chega. <span style="color:var(--ouro2)">Com regras.</span>'; d.style.opacity = ease((k - dur + 1) / .35)
+    } }
+  },
+  dca(c) {
+    const el = $(`<div class="cena"><div class="dtit">Comprar todos os meses</div><div class="dsub"></div></div>`)
+    // Caminho ilustrativo fixo (não é o preço de nenhum activo): cai, anda de lado, recupera.
+    const Y = [0, .18, .1, .32, .45, .38, .55, .5, .42, .3, .35, .2, .12, .05]
+    const pts = Y.map((y, i) => [110 + i * 66, 620 + y * 620])
+    const s = svg(`<polyline id="ln" fill="none" stroke="#f3ede1" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+      <line id="med" x1="110" x2="970" stroke="#E9C46A" stroke-width="6" stroke-dasharray="22 16" opacity="0"/>
+      <text id="medt" x="970" font-family="Inter" font-weight="800" font-size="36" fill="#E9C46A" text-anchor="end" opacity="0">PREÇO MÉDIO</text><g id="dots"></g>`)
+    el.appendChild(s)
+    const med = 620 + (Y.reduce((a, b) => a + b, 0) / Y.length) * 620
+    return { el, at(k, dur) {
+      const x = cl((k - .3) / (dur - 1.6)), n = x * (pts.length - 1), i = Math.floor(n)
+      const vis = pts.slice(0, i + 1); if (i < pts.length - 1) { const f = n - i; vis.push([pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f]) }
+      s.querySelector('#ln').setAttribute('points', vis.map(p => p.join(',')).join(' '))
+      s.querySelector('#dots').innerHTML = pts.slice(0, i + 1).map(([a, b]) => `<circle cx="${a}" cy="${b}" r="16" fill="#E9C46A" stroke="#0b0a08" stroke-width="5"/>`).join('')
+      const m = ease((k - dur + 1.3) / .4)
+      s.querySelector('#med').setAttribute('y1', med); s.querySelector('#med').setAttribute('y2', med); s.querySelector('#med').setAttribute('opacity', m)
+      s.querySelector('#medt').setAttribute('y', med - 26); s.querySelector('#medt').setAttribute('opacity', m)
+      const d = el.querySelector('.dsub'); d.innerHTML = 'Cada ponto é uma compra.<br><span style="color:var(--ouro2)">Sem adivinhar o fundo.</span>'; d.style.opacity = ease((k - dur + .9) / .35)
+    } }
+  },
+  alavancagem(c) {
+    const el = $(`<div class="cena"><div class="dtit">Compraste. O preço caiu.</div><div class="dsub"></div></div>`)
+    const s = svg(`<line x1="80" x2="1000" y1="1020" y2="1020" stroke="#E9C46A" stroke-width="6" stroke-dasharray="20 14"/>
+      <text x="1000" y="1000" font-family="Inter" font-weight="800" font-size="38" fill="#E9C46A" text-anchor="end">STOP</text>
+      <line x1="80" x2="1000" y1="1340" y2="1340" stroke="#ff5a4f" stroke-width="6" stroke-dasharray="20 14"/>
+      <text x="1000" y="1320" font-family="Inter" font-weight="800" font-size="38" fill="#ff5a4f" text-anchor="end">LIQUIDAÇÃO</text>
+      <polyline id="ln" fill="none" stroke="#f3ede1" stroke-width="10" stroke-linejoin="round"/>
+      <circle id="pt" r="20" fill="#f3ede1"/><text id="st" x="540" y="1180" font-family="Anton" font-size="96" text-anchor="middle"></text>`)
+    el.appendChild(s)
+    const P = [[80, 640], [200, 720], [300, 680], [420, 860], [520, 820], [640, 1020], [760, 1150], [880, 1260], [960, 1340]]
+    return { el, at(k, dur) {
+      const x = cl((k - .3) / (dur - 1.2)), n = x * (P.length - 1), i = Math.floor(n)
+      const vis = P.slice(0, i + 1); if (i < P.length - 1) { const f = n - i; vis.push([P[i][0] + (P[i + 1][0] - P[i][0]) * f, P[i][1] + (P[i + 1][1] - P[i][1]) * f]) }
+      s.querySelector('#ln').setAttribute('points', vis.map(p => p.join(',')).join(' '))
+      const l = vis[vis.length - 1]; s.querySelector('#pt').setAttribute('cx', l[0]); s.querySelector('#pt').setAttribute('cy', l[1])
+      const st = s.querySelector('#st')
+      if (l[1] >= 1335) { st.textContent = 'CONTA A ZERO'; st.setAttribute('fill', '#ff5a4f'); s.querySelector('#pt').setAttribute('fill', '#ff5a4f') }
+      else if (l[1] >= 1020) { st.textContent = 'O STOP TIRAVA-TE AQUI'; st.setAttribute('fill', '#E9C46A') }
+      else st.textContent = ''
+      const d = el.querySelector('.dsub'); d.innerHTML = 'Liquidação <span style="color:var(--verm)">não é</span> um stop.'; d.style.opacity = ease((k - dur + .8) / .3)
+    } }
+  },
+  faceless(c) {
+    const el = $(`<div class="cena"><div class="dtit">O teu feed. Sem a tua cara.</div><div class="dsub"></div></div>`)
+    const cores = ['#D2A63C', '#2a2620', '#E9C46A', '#3a332a', '#b8902f', '#1e1b17', '#E9C46A', '#2a2620', '#D2A63C']
+    const ic = ['☕', '✍️', '💡', '📈', '🎧', '📚', '🌙', '🧭', '✨']
+    const s = svg(`<rect x="250" y="450" width="580" height="1000" rx="70" fill="#141210" stroke="#E9C46A" stroke-width="6"/>
+      <rect x="470" y="475" width="140" height="30" rx="15" fill="#0b0a08"/><g id="tiles"></g>`)
+    el.appendChild(s)
+    return { el, at(k, dur) {
+      s.querySelector('#tiles').innerHTML = cores.map((c, i) => {
+        const x = ease((k - .3 - i * .28) / .35); if (x <= 0) return ''
+        const cx = 290 + (i % 3) * 170, cy = 560 + Math.floor(i / 3) * 170
+        return `<g transform="translate(${cx + 77} ${cy + 77}) scale(${.4 + .6 * pop(x)}) translate(${-77} ${-77})" opacity="${x}"><rect width="154" height="154" rx="16" fill="${c}"/><text x="77" y="98" font-size="64" text-anchor="middle">${ic[i]}</text></g>`
+      }).join('')
+      const d = el.querySelector('.dsub'); d.innerHTML = 'Voz · cores · estilo.<br><span style="color:var(--ouro2)">A marca fala por ti.</span>'; d.style.opacity = ease((k - dur + 1) / .35)
+    } }
+  },
+  studio(c) {
+    const el = $(`<div class="cena"><div class="dtit">Entra um PDF. Sai isto.</div><div class="dsub"></div></div>`)
+    const s = svg(`<g id="pdf"><rect x="400" y="500" width="280" height="360" rx="20" fill="#f3ede1"/><rect x="440" y="560" width="200" height="16" rx="8" fill="#c9c2b4"/><rect x="440" y="600" width="170" height="16" rx="8" fill="#c9c2b4"/><rect x="440" y="640" width="190" height="16" rx="8" fill="#c9c2b4"/><rect x="430" y="780" width="110" height="50" rx="10" fill="#ff5a4f"/><text x="485" y="815" font-family="Inter" font-weight="900" font-size="28" fill="#fff" text-anchor="middle">PDF</text></g>
+      <g id="out"></g>`)
+    el.appendChild(s)
+    const F = [['POST', 120, 1040, 260, 260], ['STORY', 410, 960, 230, 410], ['CARROSSEL', 690, 1040, 270, 260]]
+    return { el, at(k, dur) {
+      const sh = ease((k - 1) / .5)
+      s.querySelector('#pdf').setAttribute('transform', `translate(540 680) scale(${1 - .35 * sh}) translate(-540 -680) translate(0 ${-140 * sh})`)
+      s.querySelector('#out').innerHTML = F.map(([n, x, y, w, h], i) => {
+        const a = ease((k - 1.4 - i * .35) / .4); if (a <= 0) return ''
+        return `<g opacity="${a}" transform="translate(0 ${(1 - a) * 80})"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="22" fill="url(#gs${i})" stroke="#E9C46A" stroke-width="4"/><text x="${x + w / 2}" y="${y + h + 56}" font-family="Inter" font-weight="800" font-size="32" fill="#E9C46A" text-anchor="middle" letter-spacing="3">${n}</text><text x="${x + w / 2}" y="${y + h / 2 + 22}" font-family="Anton" font-size="64" fill="#0b0a08" text-anchor="middle">Aa</text></g>
+          <defs><linearGradient id="gs${i}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9C46A"/><stop offset="1" stop-color="#b8902f"/></linearGradient></defs>`
+      }).join('')
+      const d = el.querySelector('.dsub'); d.innerHTML = 'Com a tua marca.<br><span style="color:var(--ouro2)">Em 2 minutos.</span>'; d.style.opacity = ease((k - dur + .9) / .35)
+    } }
+  },
+  daily(c) {
+    const el = $(`<div class="cena"><div class="dtit">30 dias. 10 minutos.</div><div class="dsub"></div></div>`)
+    const s = svg(`<g id="g"></g><text id="dia" x="540" y="1380" font-family="Anton" font-size="110" fill="#f3ede1" text-anchor="middle"></text>`)
+    el.appendChild(s)
+    return { el, at(k, dur) {
+      const n = Math.floor(cl((k - .3) / (dur - 1.5)) * 30)
+      let h = ''
+      for (let i = 0; i < 30; i++) { const x = 150 + (i % 6) * 135, y = 480 + Math.floor(i / 6) * 135, on = i < n
+        h += `<rect x="${x}" y="${y}" width="110" height="110" rx="24" fill="${on ? '#E9C46A' : 'rgba(255,255,255,.06)'}" stroke="${on ? '#E9C46A' : 'rgba(233,196,106,.3)'}" stroke-width="3"/>` + (on ? `<path d="M${x + 30} ${y + 58} l20 20 l34 -40" stroke="#0b0a08" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : '') }
+      s.querySelector('#g').innerHTML = h; s.querySelector('#dia').textContent = 'DIA ' + Math.max(1, n)
+      const d = el.querySelector('.dsub'); d.innerHTML = 'Pequenos passos.<br><span style="color:var(--ouro2)">Uma versão mais tua.</span>'; d.style.opacity = ease((k - dur + .9) / .35)
+    } }
+  },
+  // ── genéricas, preenchidas pelo roteiro (os valores são sempre ilustrativos e declarados) ──
+  barras(c) {
+    const el = $(`<div class="cena"><div class="dtit">${c.titulo || ''}</div><div class="dsub"></div></div>`)
+    const A = c.a || {}, B = c.b || {}, mx = Math.max(Math.abs(A.val || 0), Math.abs(B.val || 0), 1)
+    const s = svg(`<text x="290" y="1450" fill="#ff5a4f" font-family="Anton" font-size="52" text-anchor="middle">${A.rot || ''}</text>
+      <text x="790" y="1450" fill="#E9C46A" font-family="Anton" font-size="52" text-anchor="middle">${B.rot || ''}</text>
+      <rect id="ba" x="170" width="240" rx="18" fill="#a83a32"/><rect id="bb" x="670" width="240" rx="18" fill="#D2A63C"/>
+      <text id="va" x="290" font-family="Anton" font-size="110" fill="#ff5a4f" text-anchor="middle"></text>
+      <text id="vb" x="790" font-family="Anton" font-size="110" fill="#E9C46A" text-anchor="middle"></text>`)
+    el.appendChild(s)
+    const base = 1370, alt = 820, suf = c.sufixo || ''
+    return { el, at(k, dur) {
+      const x = io((k - .3) / (dur - 1.4))
+      ;[['a', A], ['b', B]].forEach(([id, v]) => {
+        const h = Math.max(6, alt * Math.abs(v.val || 0) / mx * x)
+        s.querySelector('#b' + id).setAttribute('y', base - h); s.querySelector('#b' + id).setAttribute('height', h)
+        const t = s.querySelector('#v' + id); t.textContent = Math.round((v.val || 0) * x) + suf; t.setAttribute('y', base - h - 30)
+      })
+      const d = el.querySelector('.dsub'); d.innerHTML = c.sub || ''; d.style.opacity = ease((k - dur + .9) / .3)
+    } }
+  },
+  contador(c) {
+    const el = $(`<div class="cena"><div class="dtit">${c.titulo || ''}</div><div class="dsub"></div></div>`)
+    const s = svg(`<text id="n" x="540" y="1020" font-family="Anton" font-size="330" fill="#E9C46A" text-anchor="middle"></text>
+      <text x="540" y="1130" font-family="Inter" font-weight="800" font-size="40" fill="#9a9283" text-anchor="middle" letter-spacing="6">${(c.rotulo || '').toUpperCase()}</text>
+      <circle id="r" cx="540" cy="900" r="420" fill="none" stroke="rgba(233,196,106,.35)" stroke-width="4"/>`)
+    el.appendChild(s)
+    return { el, at(k, dur) {
+      const x = io((k - .3) / (dur - 1.5)), v = (c.de || 0) + ((c.ate || 0) - (c.de || 0)) * x
+      s.querySelector('#n').textContent = (Number.isInteger(c.ate) ? Math.round(v) : v.toFixed(1)) + (c.sufixo || '')
+      s.querySelector('#r').setAttribute('r', 380 + 40 * Math.sin(k * 4))
+      const d = el.querySelector('.dsub'); d.innerHTML = c.sub || ''; d.style.opacity = ease((k - dur + 1) / .35)
+    } }
+  },
+  lista(c) {
+    const it = (c.itens || []).slice(0, 4)
+    const el = $(`<div class="cena"><div class="dtit">${c.titulo || ''}</div>${it.map((t, i) => `<div class="li" style="position:absolute;left:110px;right:90px;top:${560 + i * 230}px;display:flex;align-items:center;gap:36px;font:800 54px Inter,'Helvetica Neue',Arial,sans-serif;line-height:1.15"><i style="flex:none;width:110px;height:110px;border-radius:30px;border:4px solid #E9C46A;display:flex;align-items:center;justify-content:center;font-style:normal;font-family:Anton;font-size:64px;color:#0b0a08"></i><span>${t}</span></div>`).join('')}<div class="dsub"></div></div>`)
+    return { el, at(k, dur) {
+      const passo = (dur - 1.2) / Math.max(1, it.length)
+      el.querySelectorAll('.li').forEach((e, i) => { const a = k - .3 - i * passo, x = ease(a / .35)
+        e.style.opacity = x; e.style.transform = `translateX(${(1 - x) * 160}px)`
+        const b = e.querySelector('i'); const ok = a > .25; b.style.background = ok ? '#E9C46A' : 'transparent'; b.textContent = ok ? '✓' : '' })
+      const d = el.querySelector('.dsub'); d.innerHTML = c.sub || ''; d.style.opacity = ease((k - dur + .8) / .3)
+    } }
+  },
+  versus(c) {
+    const m = (c.mau || []).slice(0, 3), b = (c.bom || []).slice(0, 3)
+    const col = (arr, x, cor, tit) => `<div style="position:absolute;left:${x}px;width:440px;top:470px;text-align:center"><div style="font-family:Anton;font-size:84px;color:${cor}">${tit}</div>${arr.map((t) => `<div class="vi" style="margin-top:42px;padding:34px 22px;border-radius:28px;border:3px solid ${cor};background:rgba(255,255,255,.04);font:800 44px Inter,'Helvetica Neue',Arial,sans-serif;line-height:1.2">${t}</div>`).join('')}</div>`
+    const el = $(`<div class="cena"><div class="dtit">${c.titulo || ''}</div>${col(m, 60, '#ff5a4f', c.tituloMau || 'ERRO')}${col(b, 580, '#E9C46A', c.tituloBom || 'CERTO')}<div class="dsub"></div></div>`)
+    return { el, at(k, dur) {
+      const v = el.querySelectorAll('.vi'), n = v.length, passo = (dur - 1.2) / Math.max(1, n)
+      // alterna: erro 1, certo 1, erro 2, certo 2…
+      const ordem = []; for (let i = 0; i < 3; i++) { if (i < m.length) ordem.push(i); if (i < b.length) ordem.push(m.length + i) }
+      ordem.forEach((idx, j) => { const x = ease((k - .3 - j * passo) / .3); v[idx].style.opacity = x; v[idx].style.transform = `scale(${.8 + .2 * pop((k - .3 - j * passo) / .3)})` })
+      const d = el.querySelector('.dsub'); d.innerHTML = c.sub || ''; d.style.opacity = ease((k - dur + .8) / .3)
+    } }
+  },
+}
+
+const MONTA = {
+  gancho: (c) => ({ el: $(`<div class="cena">${c.palavras.map((p, i) => `<div class="pal${i >= (c.destaque ?? c.palavras.length - 1) ? ' d' : ''}" style="top:${1040 + i * 150 - (c.palavras.length - 1) * 75}px">${p}</div>`).join('')}<div class="marca">${D.educador.nome}</div></div>`) }),
+  demo: (c) => DEMO[c.demo](c),
+  ponto: (c) => ({ el: $(`<div class="cena"><div class="num">${c.n}</div><div class="ptxt">${c.texto.split(' ').map(w => `<span>${w}</span>`).join('')}</div>${c.sub ? `<div class="psub">${c.sub}</div>` : ''}</div>`) }),
+  cta: (c) => ({ el: $(`<div class="cena"><div class="c1">${c.antes || 'Comenta'}</div><div class="bolha"><i></i><div class="esc"><span class="t"></span><span class="cur"></span></div></div><div class="c2">${c.depois}</div><div class="seta"></div></div>`) }),
+}
+
+window.iniciar = (dados, foto) => {
+  D = dados; FOTO = foto
+  document.getElementById('foto').style.backgroundImage = `url(${foto})`
+  document.querySelector('#chip i').style.backgroundImage = `url(${foto})`
+  document.querySelector('#chip b').textContent = dados.educador.nome
+  document.querySelector('#chip span').textContent = dados.educador.area
+  document.getElementById('aviso').textContent = dados.aviso
+  let t = 0
+  TL = dados.cenas.map((c) => { const m = MONTA[c.tipo](c); document.getElementById('cenas').appendChild(m.el); const s = { ...c, ...m, ini: t }; t += c.dur; return s })
+  TOTAL = t
+  const part = document.getElementById('part')
+  for (let i = 0; i < 26; i++) { const p = $(`<div class="p"></div>`); part.appendChild(p); PART.push({ el: p, x: (i * 397) % 1080, y: (i * 733) % 1920, v: 18 + (i * 7) % 40, f: i * 0.7 }) }
+  return { total: TOTAL, cortes: TL.map(c => c.ini), palavras: TL.filter(c => c.tipo === 'gancho').flatMap(c => c.palavras.map((_, i) => c.ini + 0.08 + i * 0.32)) }
+}
+
+window.renderAt = (t) => {
+  document.getElementById('barra').style.width = `${(t / TOTAL) * 100}%`
+  PART.forEach((p) => { const y = (p.y - t * p.v + 1920) % 1920; p.el.style.transform = `translate(${p.x + Math.sin(t + p.f) * 20}px, ${y}px)`; p.el.style.opacity = .2 + .3 * Math.sin(t * 2 + p.f) ** 2 })
+  const g = TL[0], depois = t > g.ini + g.dur
+  const foto = document.getElementById('foto')
+  // A cara enche o ecrã no gancho (com um «punch» de zoom) e depois fica como fundo escuro.
+  const punch = 1 + .12 * (1 - ease(t / .5))
+  foto.style.transform = `scale(${(depois ? 1.15 : 1.02 + t * .02) * punch})`
+  foto.style.opacity = depois ? Math.max(.12, 1 - ease((t - g.dur) / .35) * .88) : 1
+  foto.style.filter = depois ? 'blur(6px)' : 'none'
+  const chip = document.getElementById('chip'); const kc = ease((t - g.dur - .2) / .4)
+  chip.style.opacity = kc; chip.style.transform = `translateX(-50%) translateY(${(1 - kc) * -40}px)`
+  let fl = 0, lz = -1
+  TL.forEach((c, idx) => {
+    const k = t - c.ini, vis = k >= 0 && k < c.dur
+    if (k >= 0 && k < .12) fl = Math.max(fl, (idx === 0 ? .9 : .35) * (1 - k / .12))
+    if (k >= 0 && k < .6) lz = k / .6
+    if (!vis) { c.el.style.opacity = 0; return }
+    // entrada com «whip»: desliza e desfoca; saída rápida
+    const e = ease(k / .28), sai = cl((c.dur - k) / .18)
+    c.el.style.opacity = Math.min(e, sai)
+    c.el.style.transform = `translateX(${(1 - e) * 220 - (1 - sai) * 220}px)`
+    c.el.style.filter = `blur(${(1 - e) * 14 + (1 - sai) * 10}px)`
+    if (c.tipo === 'gancho') c.el.querySelectorAll('.pal').forEach((p, i) => { const a = k - .08 - i * .32; p.style.opacity = cl(a / .08); p.style.transform = `scale(${a < 0 ? 0 : .3 + .7 * pop(a / .3)}) rotate(${(i % 2 ? 1 : -1) * (1 - ease(a / .3)) * 6}deg)` })
+    if (c.tipo === 'gancho') { const m = c.el.querySelector('.marca'); m.style.opacity = ease((k - 1.2) / .4) }
+    if (c.tipo === 'demo') c.at(k, c.dur)
+    if (c.tipo === 'ponto') {
+      const n = c.el.querySelector('.num'); n.style.transform = `scale(${.6 + .4 * ease(k / .5)})`; n.style.opacity = ease(k / .4)
+      c.el.querySelectorAll('.ptxt span').forEach((w, i) => { const a = k - .15 - i * .1; w.style.opacity = cl(a / .1); w.style.transform = `translateY(${(1 - ease(a / .25)) * 60}px)`; w.style.color = i === c.destaque ? 'var(--ouro2)' : '' })
+      const sb = c.el.querySelector('.psub'); if (sb) sb.style.opacity = ease((k - .9) / .4)
+    }
+    if (c.tipo === 'cta') {
+      const n = Math.floor(cl((k - .5) / 1.0) * c.palavra.length)
+      c.el.querySelector('.t').textContent = c.palavra.slice(0, n)
+      c.el.querySelector('.cur').style.opacity = Math.floor(k * 3) % 2 ? 1 : .2
+      const b = c.el.querySelector('.bolha'); b.style.transform = `scale(${n >= c.palavra.length ? 1 + .03 * Math.sin(k * 7) : .92 + .08 * ease(k / .4)})`
+      c.el.querySelector('.c2').style.opacity = ease((k - 1.6) / .4)
+      const s = c.el.querySelector('.seta'); s.style.opacity = ease((k - 1.9) / .3); s.style.transform = `translateY(${Math.sin(k * 6) * 16}px)`
+    }
+  })
+  document.getElementById('flash').style.opacity = fl
+  const luz = document.getElementById('luz'); luz.style.opacity = lz >= 0 ? .9 * Math.sin(lz * Math.PI) : 0; luz.style.left = `${-400 + lz * 1900}px`
+}
+</script>
+</body>
+</html>

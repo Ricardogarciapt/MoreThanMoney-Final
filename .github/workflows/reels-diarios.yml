@@ -1,0 +1,61 @@
+name: Reels diários dos educadores
+
+# Todos os dias: 3 reels animados (um por educador publicável) + 1 corte de uma sessão gravada,
+# para o @morethanmoney.pt. O site escreve os roteiros e decide; esta máquina desenha e corta.
+# Ver tools/reels-educadores/diario.mjs. Só precisa do CRON_SECRET (o mesmo da Vercel).
+
+on:
+  schedule:
+    - cron: '15 5 * * *'   # 05:15 UTC → prepara o dia seguinte
+  workflow_dispatch:
+    inputs:
+      dia:
+        description: 'Dia a preparar (AAAA-MM-DD); vazio = amanhã'
+        required: false
+        default: ''
+
+concurrency:
+  group: reels-diarios
+  cancel-in-progress: false
+
+jobs:
+  reels:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/reels-educadores
+            deploy/vps-stream/videocliper
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Dependências (ffmpeg, fontes, Playwright, numpy, faster-whisper)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-montserrat
+          pip install -q numpy faster-whisper yt-dlp
+          sudo ln -sf "$(which yt-dlp)" /usr/local/bin/yt-dlp
+          cd tools/reels-educadores
+          npm init -y >/dev/null
+          npm i --no-audit --no-fund playwright@1.48.2
+          npx playwright install --with-deps chromium
+
+      - name: Modelo de voz (cache)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: whisper-small-v1
+
+      - name: Correr o robô
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          ASR_LOCAL_MODELO: small
+        run: node tools/reels-educadores/diario.mjs ${{ inputs.dia && format('--dia={0}', inputs.dia) || '' }}
