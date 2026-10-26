@@ -319,7 +319,16 @@ export default function ApresentacaoVsl({ precos }: { precos: Precos }) {
           <ArrowLeft size={15} /> {t.voltar}
         </button>
         <div className="flex items-center gap-3">
-          <div className="flex rounded-lg border p-0.5 text-[12px] font-bold" style={{ borderColor: "rgba(210,166,60,.3)" }} role="group" aria-label="Idioma / Language">
+          <select
+            value={lang}
+            onChange={(e) => mudar(e.target.value as Lang)}
+            aria-label="Idioma / Language"
+            className="rounded-lg border bg-transparent px-2 py-1 text-[12px] font-bold uppercase md:hidden"
+            style={{ borderColor: "rgba(210,166,60,.3)", color: OURO }}
+          >
+            {LINGUAS.map((l) => <option key={l} value={l} style={{ background: "#0b0a08" }}>{l.toUpperCase()}</option>)}
+          </select>
+          <div className="hidden rounded-lg border p-0.5 text-[12px] font-bold md:flex" style={{ borderColor: "rgba(210,166,60,.3)" }} role="group" aria-label="Idioma / Language">
             {LINGUAS.map((l) => (
               <button
                 key={l}
