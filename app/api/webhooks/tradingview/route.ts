@@ -55,6 +55,7 @@ import { urlDoChat, urlDoTapToTrade } from "@/lib/notificacao-destino"
 import { lifecycleMessage, stopFoiProtegido } from "@/lib/mtmcopy/signal-lifecycle"
 import { formatarSeguimento, formatarSinal } from "@/lib/sinais/formato-sinal"
 import { eAlertaTrendshot } from "@/lib/sinais/trendshot"
+import { TIMEFRAMES_POR_ESTRATEGIA, slFixo, timeframeAceite } from "@/lib/sinais/sl-por-estrategia"
 import { marcaDaEstrategia } from "@/lib/sinais/grafico-estrategia"
 import { enviarGraficoTelegram, legendaDoGrafico, urlDoGraficoDoSinal } from "@/lib/sinais/grafico-publicar"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -926,6 +927,32 @@ async function processarAlerta(request: NextRequest) {
     return NextResponse.json({ ok: true, valid: false, reason: v.reasoning, confidence: v.confidence })
   }
 
+  /**
+   * Stop fixo e timeframe por estratégia (pedido do dono, 26/10 — lib/sinais/sl-por-estrategia):
+   * MTM Scanner 100 pips; Sensei só 15m (Sensei/GoldKiller mantêm o stop do Pine). Só nas ENTRADAS; os seguimentos
+   * continuam ligados à entrada pela chave, que já foi calculada com o stop do alerta.
+   */
+  const entradaDoAlerta = initSignalKind === "entry" && !mgmtStatus
+  if (entradaDoAlerta && !timeframeAceite(estrategia, timeframe ?? activeSensei?.timeframe ?? null)) {
+    const motivo = `timeframe ${timeframe ?? activeSensei?.timeframe} fora do aceite para ${estrategia} (${TIMEFRAMES_POR_ESTRATEGIA[String(estrategia ?? "").toLowerCase()]?.join("/") ?? "—"})`
+    if (logId) await supabase.from("tradingview_signals").update({ chat_status: "rejected", telegram_status: "rejected", ai_error: `rejeitado: ${motivo}` }).eq("id", logId)
+    return NextResponse.json({ ok: true, valid: false, reason: motivo })
+  }
+  const slDaEstrategia = entradaDoAlerta
+    ? slFixo(estrategia, v.symbol ?? activeSensei?.symbol ?? ticker, v.direction ?? activeSensei?.direction ?? null, v.entry ?? activeSensei?.entry ?? price)
+    : null
+  if (slDaEstrategia != null) {
+    v.sl = slDaEstrategia
+    if (activeSensei) activeSensei = { ...activeSensei, sl: slDaEstrategia }
+    if (logId) {
+      await supabase
+        .from("tradingview_signals")
+        .update({ sl: slDaEstrategia, raw_payload: { ...payload, sl: slDaEstrategia, sl_do_alerta: sl } })
+        .eq("id", logId)
+        .then(undefined, (e) => console.error("[tradingview-webhook] gravar stop fixo:", e))
+    }
+  }
+
   // Ativos sem canal dedicado (stocks/ETFs/outros) → só sistema de Alertas MTM (sem chat/Telegram)
   if (!route.channel) {
     if (logId) await supabase.from("tradingview_signals").update({ chat_status: "filtered", telegram_status: "filtered" }).eq("id", logId)
@@ -944,6 +971,8 @@ async function processarAlerta(request: NextRequest) {
       orderType: (v.entry ?? price) != null ? "limit" : "market",
       raw,
     } as ParsedSignal)
+
+  if (slDaEstrategia != null && parsedForExec) parsedForExec.sl = slDaEstrategia
 
   // Forex (conta MTM Auto Forex): entrar a MERCADO (fill garantido) em vez de limit/pullback —
   // o trailing dinâmico da conta trata do resto. (Sensei gold/btc já é forçado a market no processor.)
