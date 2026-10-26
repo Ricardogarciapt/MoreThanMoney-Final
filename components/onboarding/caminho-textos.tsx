@@ -375,7 +375,7 @@ const en: Textos = {
     ],
     ctaAcademias: "See the academies",
     ctaChamada: "Book the onboarding call",
-    nota: "On the call we check your account, the app, the broker and your risk, and you leave with a study plan for the first weeks. Classes and the call are in Portuguese.",
+    nota: "On the call we check your account, the app, the broker and your risk, and you leave with a study plan for the first weeks. Classes are given in Portuguese; in live classes, tap the CC button on the player for subtitles in English. The call is in Portuguese.",
   },
   duvidas: (ig, mail) => (
     <>
@@ -524,7 +524,7 @@ const fr: Textos = {
     ],
     ctaAcademias: "Voir les académies",
     ctaChamada: "Réserver l'appel d'onboarding",
-    nota: "Pendant l'appel, nous vérifions ton compte, l'app, le courtier et ton risque, et tu repars avec un plan d'étude pour les premières semaines. Les cours et l'appel sont en portugais.",
+    nota: "Pendant l'appel, nous vérifions ton compte, l'app, le courtier et ton risque, et tu repars avec un plan d'étude pour les premières semaines. Les cours sont en portugais ; pendant les cours en direct, appuie sur le bouton CC du lecteur pour les sous-titres en français. L'appel est en portugais.",
   },
   duvidas: (ig, mail) => (
     <>
@@ -672,7 +672,7 @@ const de: Textos = {
     ],
     ctaAcademias: "Akademien ansehen",
     ctaChamada: "Onboarding-Gespräch buchen",
-    nota: "Im Gespräch prüfen wir dein Konto, die App, den Broker und dein Risiko, und du gehst mit einem Lernplan für die ersten Wochen. Kurse und Gespräch sind auf Portugiesisch.",
+    nota: "Im Gespräch prüfen wir dein Konto, die App, den Broker und dein Risiko, und du gehst mit einem Lernplan für die ersten Wochen. Die Kurse sind auf Portugiesisch; in Live-Kursen tippst du im Player auf CC für deutsche Untertitel. Das Gespräch ist auf Portugiesisch.",
   },
   duvidas: (ig, mail) => (
     <>
@@ -819,7 +819,7 @@ const it: Textos = {
     ],
     ctaAcademias: "Vedi le accademie",
     ctaChamada: "Prenota la chiamata di onboarding",
-    nota: "Nella chiamata controlliamo il tuo account, l'app, il broker e il tuo rischio, e ne esci con un piano di studio per le prime settimane. Le lezioni e la chiamata sono in portoghese.",
+    nota: "Nella chiamata controlliamo il tuo account, l'app, il broker e il tuo rischio, e ne esci con un piano di studio per le prime settimane. Le lezioni sono in portoghese; nelle lezioni dal vivo tocca il pulsante CC del player per i sottotitoli in italiano. La chiamata è in portoghese.",
   },
   duvidas: (ig, mail) => (
     <>
@@ -966,7 +966,7 @@ const es: Textos = {
     ],
     ctaAcademias: "Ver las academias",
     ctaChamada: "Reservar la llamada de onboarding",
-    nota: "En la llamada revisamos tu cuenta, la app, el bróker y tu riesgo, y sales con un plan de estudio para las primeras semanas. Las clases y la llamada son en portugués.",
+    nota: "En la llamada revisamos tu cuenta, la app, el bróker y tu riesgo, y sales con un plan de estudio para las primeras semanas. Las clases son en portugués; en las clases en directo, pulsa el botón CC del reproductor para ver subtítulos en español. La llamada es en portugués.",
   },
   duvidas: (ig, mail) => (
     <>
