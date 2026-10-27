@@ -112,23 +112,22 @@ Todos com a mesma execução, simulada em M5 com as velas reais da corretora, de
 - Com spread e comissão, que no ouro são cerca de 2–3 pips por trade, nenhuma das variantes tem vantagem
   comprovada. Não se publicam taxas de acerto nem resultados destes números.
 
-## 7. Saída no TP1: só break-even (27/10, pedido do Ricardo)
+## 7. Gestão das saídas (27/10)
 
-Por omissão, o TP1 já não fecha parcial: quando o preço lá chega, o SL passa para a entrada e a posição
-sai a meias no TP2 e no TP3. A % do TP1 continua editável (33 repõe a gestão anterior).
+Simulação M5 com BE depois do TP1 em todas as linhas. Os valores são pips por trade e, entre
+parênteses, a % de trades que fecham positivos.
 
-Medido com a mesma simulação M5:
+| Saída TP1/TP2/TP3 | Maioria, tudo | Maioria, set–out | Unânime, tudo | Unânime, set–out | Originais |
+|---|---|---|---|---|---|
+| 33/33/34 | +1,2 (52 %) | −1,2 | +4,8 (54 %) | −1,3 | −9,3 |
+| **50/25/25 (por omissão)** | **+1,8 (52 %)** | **−0,5** | **+5,2 (54 %)** | **−0,8** | **−8,4** |
+| 50/0/50 | +1,7 | −0,8 | +5,6 | −0,4 | −8,2 |
+| 100/0/0 | +3,6 (52 %) | +1,4 | +6,2 (54 %) | +0,5 | −5,5 |
+| 0/50/50 (só BE no TP1) | 0,0 (29 %) | −2,5 | +4,1 (30 %) | −2,2 | −11,2 |
 
-| | 33/33/34 (anterior) | 0/50/50 com BE no TP1 |
-|---|---|---|
-| Scanner Maioria, tudo | +1,2/trade | 0,0/trade |
-| Scanner Maioria, set–out | −1,2 | −2,5 |
-| Scanner Unânime, tudo | +4,8 | +4,1 |
-| Scanner Unânime, set–out | −1,3 | −2,2 |
-| Sinais Premium originais (limite) | −9,3 | −11,2 |
-
-Sem a parcial no TP1, perde-se o ganho dos trades que tocam o TP1 e depois voltam à entrada. Em todas
-as variantes medidas, o resultado fica um pouco pior.
+O 100 % no TP1 é o melhor medido, mas deixa de haver TP2 e TP3, que são a forma dos sinais
+originais. O 50/25/25 fica perto disso e mantém os três alvos, por isso é o que vem por omissão.
+Tirar a parcial no TP1 é a pior opção: com o mesmo número de trades, só ~30 % fecham positivos.
 
 ## 8. Webhook em sombra
 

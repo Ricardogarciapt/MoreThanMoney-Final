@@ -5,8 +5,8 @@
 // Mesma lógica do indicador docs/pine/mtm-premium-scanner.pine, com execução:
 //  · Ordem limite no meio da zona, válida 4 velas (1 h em 15m) — como o modo «zona»
 //    do MTM Auto Premium.
-//  · Partes (% editáveis) no TP1, TP2 e TP3 (ou TP4, a correr). Por omissão o TP1 não fecha
-//    nada (0 %): só passa o SL para a entrada, e a posição sai a meias no TP2 e no TP3.
+//  · Partes (% editáveis) no TP1, TP2 e TP3 (ou TP4, a correr). Por omissão fecha 50 % no TP1
+//    e passa o SL do resto para a entrada; 25 % no TP2 e 25 % no TP3.
 //    Entrada, SL e TPs desenhados como no TrendShot.
 //  · Um grupo de cada vez (enquanto há posição, sinais novos só aparecem no gráfico).
 // Números medidos e limites: docs/premium-scanner-engenharia-reversa.md
@@ -37,11 +37,11 @@ largZ    = input.float(5.0, "Largura da zona de entrada $", minval=0, step=0.5, 
 validade = input.int(4, "Ordem limite válida (velas)", minval=1, group=gR)
 distSL   = input.float(5.0, "SL: $ para lá da zona", minval=0.5, step=0.5, group=gR)
 tp1D     = input.float(5.0,  "TP1: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t1")
-pct1     = input.int(0, "saída %", minval=0, maxval=100, group=gR, inline="t1", tooltip="0 = no TP1 não fecha nada: só passa o SL para a entrada.")
+pct1     = input.int(50, "saída %", minval=0, maxval=100, group=gR, inline="t1", tooltip="Parte que fecha no TP1 (o SL do resto passa para a entrada). 0 = no TP1 só passa o SL para a entrada.")
 tp2D     = input.float(10.0, "TP2: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t2")
-pct2     = input.int(50, "saída %", minval=0, maxval=100, group=gR, inline="t2")
+pct2     = input.int(25, "saída %", minval=0, maxval=100, group=gR, inline="t2")
 tp3D     = input.float(15.0, "TP3: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t3")
-pct3     = input.int(50, "saída %", minval=0, maxval=100, group=gR, inline="t3")
+pct3     = input.int(25, "saída %", minval=0, maxval=100, group=gR, inline="t3")
 usarTP4  = input.bool(false, "Última parte sai no TP4 (a correr)", group=gR, inline="t4")
 tp4D     = input.float(20.0, "$ da borda", minval=0.5, step=0.5, group=gR, inline="t4")
 usarBE   = input.bool(true, "SL para a entrada depois do TP1", group=gR)
