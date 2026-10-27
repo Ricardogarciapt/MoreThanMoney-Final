@@ -24,12 +24,17 @@ LOG="$HOME/Library/Logs/mtm-videocliper.log"
 
 echo "→ dependências (Homebrew: ffmpeg, yt-dlp, node)"
 command -v brew >/dev/null || { echo "Falta o Homebrew: https://brew.sh"; exit 1; }
-for p in ffmpeg yt-dlp node; do brew list --formula "$p" >/dev/null 2>&1 || brew install "$p"; done
+for p in ffmpeg yt-dlp node python@3.12; do brew list --formula "$p" >/dev/null 2>&1 || brew install "$p"; done
 brew upgrade yt-dlp >/dev/null 2>&1 || true   # o YouTube muda; o yt-dlp acompanha
 
 echo "→ transcrição local (faster-whisper, sem custo)"
 mkdir -p "$DEST"
-[[ -x "$DEST/venv/bin/python3" ]] || python3 -m venv "$DEST/venv"
+# O python do macOS (3.9) não tem rodas do PyAV: obrigava a compilar e falhava. O do Homebrew tem.
+PY="$(brew --prefix python@3.12)/bin/python3.12"
+if [[ -x "$DEST/venv/bin/python3" ]] && ! "$DEST/venv/bin/python3" -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
+  rm -rf "$DEST/venv"
+fi
+[[ -x "$DEST/venv/bin/python3" ]] || "$PY" -m venv "$DEST/venv"
 "$DEST/venv/bin/pip" install -q --upgrade pip faster-whisper numpy
 
 echo "→ worker"
