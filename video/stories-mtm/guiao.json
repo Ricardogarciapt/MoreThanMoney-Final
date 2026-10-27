@@ -1,0 +1,46 @@
+{
+  "vozes": {
+    "pt": "1e0fa8b490c744acba94da72710e6db2",
+    "en": "536d3a5e000945adb7038665781a4aca",
+    "de": "10dcf0acb2cb416b898c516cd5a4143f"
+  },
+  "pronuncia": {
+    "pt": [["morethanmoney.pt/criadores", "morethanmoney ponto pt, barra criadores"], ["morethanmoney.pt/onboarding", "morethanmoney ponto pt, barra onboarding"], ["morethanmoney.pt", "morethanmoney ponto pt"], ["80%", "oitenta por cento"], ["350 $", "trezentos e cinquenta dólares"], ["UID", "U I D"]],
+    "en": [["morethanmoney.pt/criadores", "morethanmoney dot p t, slash criadores"], ["morethanmoney.pt/onboarding", "morethanmoney dot p t, slash onboarding"], ["morethanmoney.pt", "morethanmoney dot p t"], ["80%", "eighty percent"], ["$350", "three hundred and fifty dollars"]],
+    "de": [["morethanmoney.pt/criadores", "morethanmoney punkt p t, slash criadores"], ["morethanmoney.pt/onboarding", "morethanmoney punkt p t, slash onboarding"], ["morethanmoney.pt", "morethanmoney punkt p t"], ["80 %", "achtzig Prozent"], ["350 $", "dreihundertfünfzig Dollar"], ["UID", "U I D"]]
+  },
+  "pecas": {
+    "criadores": [
+      { "id": "c01", "pt": "Tens uma comunidade de trading?", "en": "Got a trading community?", "de": "Du hast eine Trading-Community?" },
+      { "id": "c02", "pt": "Partilhas o sinal… e eles desaparecem.", "en": "You post the signal… and they disappear.", "de": "Du teilst das Signal… und sie verschwinden." },
+      { "id": "c03", "pt": "Sinais há em todo o lado. Qualquer um os copia.", "en": "Signals are everywhere. Anyone can copy them.", "de": "Signale gibt es überall. Jeder kann sie kopieren." },
+      { "id": "c04", "pt": "Cursos, lives, uma app, cobranças… tudo sozinho? Isso é um segundo negócio.", "en": "Courses, live sessions, an app, payments… all alone? That's a second business.", "de": "Kurse, Live-Sessions, eine App, Zahlungen… alles allein? Das ist ein zweites Business." },
+      { "id": "c05", "pt": "Na MoreThanMoney, a plataforma já está feita.", "en": "At MoreThanMoney, the platform is already built.", "de": "Bei MoreThanMoney steht die Plattform schon." },
+      { "id": "c06", "pt": "Área de membros e app. Checkout e faturação. Site, redes e email a vender por ti. Tudo num só sítio.", "en": "Members area and app. Checkout and invoicing. Website, social and email selling for you. All in one place.", "de": "Mitgliederbereich und App. Checkout und Rechnungen. Website, Social Media und E-Mail verkaufen für dich. Alles an einem Ort." },
+      { "id": "c07", "pt": "Tu crias o conteúdo. Nós promovemos, cobramos e damos suporte.", "en": "You create the content. We promote it, take the payments and handle support.", "de": "Du erstellst den Inhalt. Wir bewerben ihn, kassieren und machen den Support." },
+      { "id": "c08", "pt": "E ficas com 80% de tudo o que vendes.", "en": "And you keep 80% of everything you sell.", "de": "Und du behältst 80 % von allem, was du verkaufst." },
+      { "id": "c09", "pt": "Zero euros de entrada. Sem mensalidade. Sem exclusividade.", "en": "Zero to start. No monthly fee. No exclusivity.", "de": "Null Euro Startkosten. Keine Monatsgebühr. Keine Exklusivität." },
+      { "id": "c10", "pt": "Dá-lhes uma razão para ficar. Candidata-te em morethanmoney.pt/criadores.", "en": "Give them a reason to stay. Apply at morethanmoney.pt/criadores.", "de": "Gib ihnen einen Grund zu bleiben. Bewirb dich auf morethanmoney.pt/criadores." }
+    ],
+    "membros": [
+      { "id": "m01", "pt": "Passas horas a olhar para gráficos… e continuas sem saber quando entrar?", "en": "Hours staring at charts… and you still don't know when to get in?", "de": "Stundenlang auf Charts starren… und immer noch nicht wissen, wann du einsteigen sollst?" },
+      { "id": "m02", "pt": "Não é falta de esforço. É falta de método.", "en": "It's not a lack of effort. It's a lack of method.", "de": "Es liegt nicht an der Mühe. Es fehlt die Methode." },
+      { "id": "m03", "pt": "Na MoreThanMoney tens scanners que marcam as zonas no gráfico por ti.", "en": "At MoreThanMoney, our scanners mark the zones on the chart for you.", "de": "Bei MoreThanMoney markieren unsere Scanner die Zonen im Chart für dich." },
+      { "id": "m04", "pt": "Alertas no telemóvel quando há uma ideia de entrada. E o MTM Auto, se quiseres que execute por ti, com as regras que tu defines.", "en": "Alerts on your phone when there's a trade idea. And MTM Auto, if you want it executed for you, with the rules you set.", "de": "Alerts auf dem Handy, wenn es eine Trade-Idee gibt. Und MTM Auto, wenn es für dich ausführen soll, mit deinen eigenen Regeln." },
+      { "id": "m05", "pt": "Aulas ao vivo, academias e uma comunidade que te puxa para cima.", "en": "Live classes, academies and a community that lifts you up.", "de": "Live-Unterricht, Akademien und eine Community, die dich nach vorne bringt." },
+      { "id": "m06", "pt": "O pack MTM junta todos os scanners num só plano.", "en": "The MTM pack puts every scanner in one plan.", "de": "Das MTM-Paket bündelt alle Scanner in einem Plan." },
+      { "id": "m07", "pt": "Experimenta três dias de Premium. Grátis.", "en": "Try three days of Premium. Free.", "de": "Teste drei Tage Premium. Kostenlos." },
+      { "id": "m08", "pt": "Comenta QUERO, ou entra em morethanmoney.pt.", "en": "Comment QUERO, or go to morethanmoney.pt.", "de": "Kommentiere QUERO oder geh auf morethanmoney.pt." }
+    ],
+    "corretora": [
+      { "id": "b01", "pt": "E se aprender trading não te custasse nem um euro por mês?", "en": "What if learning to trade didn't cost you a single euro a month?", "de": "Was wäre, wenn Trading lernen dich keinen Euro im Monat kostet?" },
+      { "id": "b02", "pt": "Abres a tua conta na PU Prime, a nossa corretora parceira, pelo nosso link.", "en": "You open your account with PU Prime, our partner broker, through our link.", "de": "Du eröffnest dein Konto bei PU Prime, unserem Partner-Broker, über unseren Link." },
+      { "id": "b03", "pt": "O dinheiro fica em teu nome. A MoreThanMoney nunca lhe toca.", "en": "The money stays in your name. MoreThanMoney never touches it.", "de": "Das Geld bleibt auf deinen Namen. MoreThanMoney fasst es nie an." },
+      { "id": "b04", "pt": "Depositas a partir de 350 $ e envias o teu UID ao nosso bot no Telegram.", "en": "You deposit from $350 and send your UID to our Telegram bot.", "de": "Du zahlst ab 350 $ ein und schickst deine UID an unseren Telegram-Bot." },
+      { "id": "b05", "pt": "Validamos… e desbloqueias o Premium sem mensalidade, enquanto mantiveres esse saldo.", "en": "We verify it… and you unlock Premium with no monthly fee, as long as you keep that balance.", "de": "Wir prüfen es… und du schaltest Premium ohne Monatsgebühr frei, solange du dieses Guthaben hältst." },
+      { "id": "b06", "pt": "Academias com educadores parceiros: forex e metais, cripto, marketing faceless e muito mais.", "en": "Academies with partner educators: forex and metals, crypto, faceless marketing and much more.", "de": "Akademien mit Partner-Educators: Forex und Metalle, Krypto, Faceless Marketing und vieles mehr." },
+      { "id": "b07", "pt": "Sinais, scanners e a app MTM System. Tudo incluído.", "en": "Signals, scanners and the MTM System app. All included.", "de": "Signale, Scanner und die MTM System App. Alles inklusive." },
+      { "id": "b08", "pt": "Começa hoje em morethanmoney.pt/onboarding.", "en": "Start today at morethanmoney.pt/onboarding.", "de": "Starte heute auf morethanmoney.pt/onboarding." }
+    ]
+  }
+}
