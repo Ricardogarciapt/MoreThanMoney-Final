@@ -29,7 +29,8 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
 // nos perpétuos o botão não abre ordem, marca o sinal como seguido). Sem isto o fallback
 // rejeitava-os com 'provider_off' quando a configuração de rotas não estivesse disponível.
 // 'ideias-e-sinais' (Forex Swings) saiu a 04/10/2026: o canal fechou com a fonte (fs-relay).
-export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'aurum-flow', 'cripto-perps']
+// 'sinais-premium-ii' (27/10): MTM Auto Premium II, só Tap to Trade para os clientes, como o GoldKiller.
+export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'aurum-flow', 'cripto-perps', 'sinais-premium-ii']
 
 /**
  * Canais ACOMPANHADOS pelo motor de seguimento (`signal-tracker`) — quais sinais são MEDIDOS.

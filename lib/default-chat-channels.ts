@@ -143,6 +143,13 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
     position: 16,
   },
   {
+    slug: 'sinais-premium-ii',
+    name: 'MTM Auto Premium II',
+    description: 'Alertas do indicador MTM Premium Scanner (XAUUSD 15m) — Tap to Trade',
+    parent_slug: 'sinais',
+    position: 18,
+  },
+  {
     // O slug é histórico: o canal é o da estratégia MTM Auto Edge (a Wolf e a King saíram).
     slug: 'sinais-scanner-mtm',
     name: 'MTM Auto Edge',
