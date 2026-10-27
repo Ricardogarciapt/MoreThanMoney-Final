@@ -1,5 +1,6 @@
 /**
- * Puxa velas XAUUSD (M5 e M15) da MetaApi desde 01/06/2026 para a tabela _bt_velas_xau,
+ * Puxa velas XAUUSD (M5 e M15) da MetaApi desde 01/06/2026 para a tabela _bt_velas
+ * (sym XAUUSD_M5_P e XAUUSD_M15_P; apaga as anteriores com esses nomes antes de gravar),
  * para o estudo do MTM Premium Scanner (scripts/estudos/premium-scanner-check.py).
  *
  *   npx tsx scripts/estudos/premium-velas-puxar.ts [desde=2026-06-01]
@@ -35,6 +36,8 @@ async function main() {
   console.log(`conta ${conta.slice(0, 8)}… símbolo ${fonte}`)
 
   for (const tf of ['15m', '5m']) {
+    const sym = tf === '5m' ? 'XAUUSD_M5_P' : 'XAUUSD_M15_P'
+    await sb.from('_bt_velas').delete().eq('sym', sym)
     let ate = Date.now(), total = 0
     while (ate > desde) {
       const url = `${MERCADO}/users/current/accounts/${conta}/historical-market-data/symbols/${encodeURIComponent(fonte)}/timeframes/${tf}/candles?startTime=${new Date(ate).toISOString()}&limit=1000`
@@ -43,11 +46,10 @@ async function main() {
       const lote = (await r.json()) as Array<Record<string, unknown>>
       if (!lote.length) break
       const linhas = lote.map((v) => ({
-        tf, t: Math.floor(Date.parse(String(v.time)) / 1000),
-        o: +v.open!, h: +v.high!, l: +v.low!, c: +v.close!, v: Number(v.tickVolume ?? v.volume ?? 0),
-      })).filter((x) => x.t * 1000 >= desde)
+        sym, t: Math.floor(Date.parse(String(v.time)) / 1000), h: +v.high!, l: +v.low!, c: +v.close!,
+      })).filter((x) => x.t * 1000 >= desde && x.t * 1000 < ate)
       if (linhas.length) {
-        const { error } = await sb.from('_bt_velas_xau').upsert(linhas, { onConflict: 'tf,t' })
+        const { error } = await sb.from('_bt_velas').insert(linhas)
         if (error) throw error
       }
       total += linhas.length
