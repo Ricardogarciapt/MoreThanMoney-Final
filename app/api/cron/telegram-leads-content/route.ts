@@ -162,6 +162,47 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Fila de vídeos nativos (sendVideo) para o grupo de leads: site_settings.telegram_leads_video_queue
+  // = { items: [{ video, legenda, botoes: [[texto, url]], apos }] }. Um vídeo por ronda, só depois de `apos`.
+  {
+    const qKey = "telegram_leads_video_queue"
+    const { data: q } = await supabase.from("site_settings").select("value").eq("key", qKey).maybeSingle()
+    type VideoItem = { video: string; legenda: string; botoes?: [string, string][]; apos?: string }
+    const items = (q?.value as { items?: VideoItem[] } | null)?.items ?? []
+    const next = items[0]
+    if (next && (!next.apos || new Date(next.apos).getTime() <= Date.now())) {
+      const r = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          video: next.video,
+          caption: next.legenda,
+          parse_mode: "HTML",
+          supports_streaming: true,
+          width: 1080,
+          height: 1920,
+          reply_markup: next.botoes?.length
+            ? { inline_keyboard: next.botoes.map(([text, url]) => [{ text, url }]) }
+            : undefined,
+        }),
+      })
+      const j = await r.json().catch(() => ({} as { description?: string }))
+      if (r.ok) {
+        await supabase.from("site_settings").upsert(
+          {
+            key: qKey,
+            value: { items: items.slice(1), ultimo: { video: next.video, at: new Date().toISOString() } },
+            description: "Fila de vídeos nativos para o grupo de leads do Telegram",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "key" },
+        )
+      }
+      return NextResponse.json({ ok: r.ok, type: "video", video: next.video, detail: j?.description ?? null })
+    }
+  }
+
   // Roda o post pelo slot (dois por dia: 11:00 e 18:00 UTC), determinístico e sem repetir seguidos
   const dayOfYear = Math.floor((Date.now() - Date.UTC(new Date().getUTCFullYear(), 0, 0)) / 864e5)
   const slot = Math.floor(Date.now() / 864e5) * 2 + (new Date().getUTCHours() >= 15 ? 1 : 0)
