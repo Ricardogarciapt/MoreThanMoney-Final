@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { tokenForAccount } from '@/lib/instagram/publish'
 import { AVISO, EDUCADORES, HORA_CORTE, HORAS_ANIMADOS, educador, type EducadorReel } from './config'
 import { gerarRoteiro, textoDoGancho, type Historico, type Roteiro } from './roteiro'
+import { listarAulas } from './aulas'
 
 /**
  * O DIA DOS REELS — o que o robô do GitHub pede de manhã e o que entrega no fim.
@@ -16,8 +17,14 @@ import { gerarRoteiro, textoDoGancho, type Historico, type Roteiro } from './rot
 const IG = { channel: 'instagram', ig_account_id: '17841474872672009', ig_username: 'morethanmoney.pt' }
 const SLOT_CORTE = 9
 const RASCUNHOS_POR_EDUCADOR = 2
-/** Os clips de uma sessão aprovam-se de uma vez: o ficheiro do DVR é reescrito na sessão seguinte. */
-const CLIPS_POR_SESSAO = 7
+/** Os melhores momentos de cada aula que viram corte: 4 dão variedade sem gastar a aula numa semana. */
+const CLIPS_POR_AULA = 4
+/** Cortes futuros de reserva: os publicáveis (um por dia às 21:00) e os rascunhos de cada educador por ligar. */
+const RESERVA_PUBLICAVEIS = 3
+const RESERVA_RASCUNHOS = 2
+/** O slot do corte: 9 para os publicáveis; 1x9 para os rascunhos de cada educador (139, 149…). */
+const slotDoCorte = (slug: string, pub: Set<string>) =>
+  pub.has(slug) ? SLOT_CORTE : 100 + Math.max(0, EDUCADORES.findIndex((e) => e.slug === slug)) * 10 + 9
 
 type Db = ReturnType<typeof getSupabaseAdmin>
 
@@ -119,7 +126,7 @@ export async function planearDia(dia: string): Promise<{ dia: string; renders: P
   // ── rascunhos dos educadores ainda não publicáveis ──
   for (const ed of EDUCADORES.filter((e) => !pub.has(e.slug))) {
     const { count } = await db.from('reels_auto').select('id', { count: 'exact', head: true })
-      .eq('educador', ed.slug).in('estado', ['roteiro', 'rascunho'])
+      .eq('educador', ed.slug).eq('tipo', 'animado').in('estado', ['roteiro', 'rascunho'])
     for (let n = count ?? 0, k = 0; n < RASCUNHOS_POR_EDUCADOR && k < 5 && !orc.parado; k++) {
       const slot = 100 + EDUCADORES.indexOf(ed) * 10 + k
       if (usados.has(slot)) continue
@@ -174,16 +181,19 @@ export async function entregar(id: string, videoUrl: string, capaUrl: string | n
 }
 
 /**
- * OS CORTES DAS SESSÕES — pelo videocliper que já existe.
+ * OS CORTES DAS AULAS — as playlists do site, cortadas pelo videocliper.
  *
- * Uma sessão dá 10 momentos propostos; aprovam-se os 7 melhores de uma vez (o ficheiro do DVR é
- * reescrito na sessão seguinte, e um clipe cortado mais tarde sairia de outra aula) e cada um fica
- * com o seu dia. O robô corta-os e, quando estão prontos, entram na fila às 21:00.
+ * O YouTube só deixa descarregar de um IP de casa, por isso quem corta estas aulas é o Mac
+ * (o worker com `VIDEOCLIPER_YOUTUBE=1`). Este plano só decide: pede uma aula de cada vez, aprova
+ * os melhores momentos quando a análise acaba e mete os cortes prontos na fila. O Mac pode estar
+ * desligado umas horas — a reserva de 3 dias é para isso.
+ *
+ * Educadores por publicar (Rodrigo, Luis) têm cortes na mesma, como RASCUNHO e noutro slot.
  */
 async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: string[]): Promise<void> {
   const agora = new Date().toISOString()
 
-  // 1. clips cortados → fila
+  // 1. clips cortados → fila (aprovados ou rascunho, conforme o educador)
   const { data: prontos } = await db.from('reels_auto').select('id, dia, clip_id, educador').eq('tipo', 'corte').eq('estado', 'a_render')
   for (const r of prontos ?? []) {
     const { data: c } = await db.from('videocliper_clips').select('estado, video_url, thumbnail_url, caption, titulo, hook, erro').eq('id', r.clip_id as string).maybeSingle()
@@ -191,6 +201,7 @@ async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: stri
     if (c.estado === 'erro') { await db.from('reels_auto').update({ estado: 'erro', erro: c.erro, updated_at: agora }).eq('id', r.id); continue }
     if (c.estado !== 'renderizado' || !c.video_url) continue
     const ed = educador(String(r.educador))
+    const vai = pub.has(String(r.educador))
     let caption = String(c.caption ?? c.titulo ?? '').trim()
     if (ed && !caption.includes(ed.nome)) caption = `${ed.nome} · ${ed.area}\n\n${caption}`
     if (!caption.includes('não constitui consultoria')) caption += `\n\n${AVISO}`
@@ -198,59 +209,74 @@ async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: stri
     const { data: post, error } = await db.from('social_scheduled_posts').insert({
       ...IG, pillar: 'reels-educadores', media_type: 'REELS', media_urls: [c.video_url], caption,
       scheduled_at: quando(String(r.dia), HORA_CORTE).toISOString(),
-      status: 'approved', approved_by: 'reels-auto', approved_at: agora, created_by: 'reels-auto', agente_codigo: 'AG-SOCIAL',
+      status: vai ? 'approved' : 'draft', approved_by: vai ? 'reels-auto' : null, approved_at: vai ? agora : null,
+      created_by: 'reels-auto', agente_codigo: 'AG-SOCIAL',
     }).select('id').single()
     if (error) { notas.push(`corte ${r.id}: ${error.message}`); continue }
     await db.from('videocliper_clips').update({ ig_post_id: post.id, estado: 'agendado', updated_at: agora }).eq('id', r.clip_id as string)
-    await db.from('reels_auto').update({ estado: 'agendado', video_url: c.video_url, capa_url: c.thumbnail_url, post_id: post.id, gancho: c.hook, tema: c.titulo, updated_at: agora }).eq('id', r.id)
+    await db.from('reels_auto').update({ estado: vai ? 'agendado' : 'rascunho', video_url: c.video_url, capa_url: c.thumbnail_url, post_id: post.id, gancho: c.hook, tema: c.titulo, updated_at: agora }).eq('id', r.id)
   }
 
-  // 2. sessões analisadas → aprovar os melhores momentos e dar-lhes dias
-  const { data: jobs } = await db.from('videocliper_jobs').select('id, estado, reels_educador, erro')
+  // 2. aulas analisadas → aprovar os melhores momentos e dar-lhes dias
+  const { data: jobs } = await db.from('videocliper_jobs').select('id, estado, reels_educador, erro, created_at, updated_at')
     .like('criado_por', 'auto:%').order('created_at')
   for (const j of jobs ?? []) {
     if (j.estado !== 'pronto') continue
+    const slug = String(j.reels_educador ?? 'mtm')
+    const slot = slotDoCorte(slug, pub)
     const { data: clips } = await db.from('videocliper_clips').select('id, score, inicio_seg, fim_seg, estado')
       .eq('job_id', j.id).eq('estado', 'proposto').order('score', { ascending: false })
-    const { count: jaUsados } = await db.from('videocliper_clips').select('id', { count: 'exact', head: true })
-      .eq('job_id', j.id).neq('estado', 'proposto')
     const escolhidos: Array<{ id: string; i: number; f: number }> = []
     for (const c of clips ?? []) {
-      if (escolhidos.length + (jaUsados ?? 0) >= CLIPS_POR_SESSAO) break
+      if (escolhidos.length >= CLIPS_POR_AULA) break
       const i = Number(c.inicio_seg), f = Number(c.fim_seg)
       if (escolhidos.some((e) => i < e.f && f > e.i)) continue
       escolhidos.push({ id: c.id as string, i, f })
     }
     for (const c of escolhidos) {
-      const d = await proximoDiaDeCorte(db, dia)
-      const { error } = await db.from('reels_auto').insert({ dia: d, slot: SLOT_CORTE, tipo: 'corte', educador: j.reels_educador ?? 'mtm', estado: 'a_render', clip_id: c.id })
+      const d = await proximoDiaDeCorte(db, dia, slot)
+      const { error } = await db.from('reels_auto').insert({ dia: d, slot, tipo: 'corte', educador: slug, estado: 'a_render', clip_id: c.id })
       if (error) break
       await db.from('videocliper_clips').update({ estado: 'aprovado', updated_at: agora }).eq('id', c.id)
     }
     await db.from('videocliper_jobs').update({ estado: 'concluido', updated_at: agora }).eq('id', j.id)
   }
 
-  // 3. pouca reserva e nenhuma sessão a ser analisada → pedir a próxima
-  const { count: futuros } = await db.from('reels_auto').select('id', { count: 'exact', head: true })
-    .eq('tipo', 'corte').gte('dia', dia).in('estado', ['a_render', 'agendado'])
-  const emCurso = (jobs ?? []).some((j) => ['pedido', 'a_descarregar', 'a_transcrever', 'a_analisar', 'pronto'].includes(String(j.estado)))
-  if ((futuros ?? 0) >= 3 || emCurso) return
-  // Uma sessão falhou nas últimas 20 h (DVR já apagado, YouTube a recusar o IP do robô): esperar
-  // pelo dia seguinte em vez de gastar todas as sessões gravadas numa só corrida.
+  // 3. uma aula de cada vez: enquanto houver uma pedida ou a meio, espera-se por ela
+  const emCurso = (jobs ?? []).find((j) => ['pedido', 'a_descarregar', 'a_transcrever', 'a_analisar', 'pronto'].includes(String(j.estado)))
+  if (emCurso) {
+    const horas = (Date.now() - new Date(String(emCurso.updated_at ?? emCurso.created_at)).getTime()) / 3600_000
+    if (emCurso.estado === 'pedido' && horas > 12) notas.push(`cortes: a aula pedida espera há ${Math.round(horas)} h pelo cortador do Mac — está ligado?`)
+    return
+  }
   const { count: falhas } = await db.from('videocliper_jobs').select('id', { count: 'exact', head: true })
     .like('criado_por', 'auto:%').eq('estado', 'erro').gte('updated_at', new Date(Date.now() - 20 * 3600_000).toISOString())
-  if (falhas) { notas.push('cortes: a última sessão pedida falhou; tenta-se outra amanhã'); return }
-  const fonte = await proximaSessao(db, pub)
-  if (!fonte) { notas.push('cortes: não há mais sessões gravadas por cortar'); return }
+  if (falhas && falhas >= 2) { notas.push('cortes: duas aulas falharam nas últimas 20 h; tenta-se outra amanhã'); return }
+
+  // Quem precisa de cortes: primeiro os publicáveis (o slot das 21:00), depois os rascunhos.
+  const reserva = async (slug: string) => {
+    const { count } = await db.from('reels_auto').select('id', { count: 'exact', head: true })
+      .eq('tipo', 'corte').eq('educador', slug).gte('dia', dia).in('estado', ['a_render', 'agendado', 'rascunho'])
+    return count ?? 0
+  }
+  const { count: futurosPub } = await db.from('reels_auto').select('id', { count: 'exact', head: true })
+    .eq('tipo', 'corte').eq('slot', SLOT_CORTE).gte('dia', dia).in('estado', ['a_render', 'agendado'])
+  const precisam: string[] = []
+  if ((futurosPub ?? 0) < RESERVA_PUBLICAVEIS) precisam.push(...EDUCADORES.filter((e) => pub.has(e.slug)).map((e) => e.slug))
+  for (const e of EDUCADORES.filter((x) => !pub.has(x.slug))) if ((await reserva(e.slug)) < RESERVA_RASCUNHOS) precisam.push(e.slug)
+  if (!precisam.length) return
+
+  const aula = await proximaAula(db, precisam).catch((e) => { notas.push(`cortes: não li as playlists (${e instanceof Error ? e.message : e})`); return null })
+  if (!aula) { notas.push('cortes: não há aulas por cortar nas playlists destes educadores'); return }
   await db.from('videocliper_jobs').insert({
-    origem: 'youtube', youtube_url: fonte.url, titulo: fonte.titulo, estado: 'pedido',
-    criado_por: `auto:${fonte.chave}`, reels_educador: fonte.educador, idioma: 'pt',
+    origem: 'youtube', youtube_url: aula.url, youtube_video_id: aula.videoId, titulo: aula.titulo, estado: 'pedido',
+    criado_por: `auto:aula:${aula.videoId}`, reels_educador: aula.educador, idioma: 'pt',
   })
-  notas.push(`cortes: pedida a sessão «${fonte.titulo}» (${fonte.educador})`)
+  notas.push(`cortes: pedida a aula «${aula.titulo}» (${aula.educador}, ${aula.playlist})`)
 }
 
-async function proximoDiaDeCorte(db: Db, desde: string): Promise<string> {
-  const { data } = await db.from('reels_auto').select('dia').eq('slot', SLOT_CORTE).gte('dia', desde)
+async function proximoDiaDeCorte(db: Db, desde: string, slot: number): Promise<string> {
+  const { data } = await db.from('reels_auto').select('dia').eq('slot', slot).gte('dia', desde)
   const ocupados = new Set((data ?? []).map((r) => String(r.dia)))
   const d = new Date(`${desde}T12:00:00Z`)
   while (ocupados.has(d.toISOString().slice(0, 10))) d.setUTCDate(d.getUTCDate() + 1)
@@ -258,37 +284,28 @@ async function proximoDiaDeCorte(db: Db, desde: string): Promise<string> {
 }
 
 /**
- * A próxima sessão gravada por cortar: primeiro o ficheiro do DVR (descarrega-se sempre — é
- * nosso), depois as gravações no YouTube (que podem recusar o IP do robô; se recusarem, passa à
- * seguinte no dia seguinte). Só de educadores publicáveis, e nunca a mesma duas vezes.
+ * A próxima aula: do educador (entre os que precisam) cujo último corte foi pedido há mais tempo,
+ * e dentro dele a primeira aula da playlist que ainda não foi cortada. Nunca a mesma duas vezes.
  */
-async function proximaSessao(db: Db, pub: Set<string>): Promise<{ url: string; titulo: string; educador: string; chave: string } | null> {
-  const { data: eds } = await db.from('lms_educators').select('id, display_name')
-  const slugDe = new Map((eds ?? []).map((e) => [e.id as string, EDUCADORES.find((x) => x.nome === e.display_name)?.slug]))
-  const { data: dvr } = await db.from('lms_dvr_jobs')
-    .select('educator_id, download_url, youtube_video_url, duration_s, requested_at, stream_id')
-    .eq('status', 'ready').order('requested_at', { ascending: false })
-  const { data: feitos } = await db.from('videocliper_jobs').select('criado_por').like('criado_por', 'auto:%')
-  const usadas = new Set((feitos ?? []).map((j) => String(j.criado_por).slice(5)))
-  const { data: streams } = await db.from('lms_streams').select('id, title')
-  const tituloDe = new Map((streams ?? []).map((s) => [s.id as string, String(s.title ?? 'Sessão')]))
-
-  const vistos = new Set<string>()
-  const candidatos: Array<{ url: string; titulo: string; educador: string; chave: string }> = []
-  // O ficheiro do DVR guarda só a ÚLTIMA sessão de cada chave: vale a linha mais recente.
-  for (const r of dvr ?? []) {
-    const slug = slugDe.get(r.educator_id as string)
-    if (!slug || !pub.has(slug) || !r.download_url || vistos.has(r.download_url as string)) continue
-    vistos.add(r.download_url as string)
-    if (Number(r.duration_s) < 600) continue
-    candidatos.push({ url: r.download_url as string, titulo: tituloDe.get(r.stream_id as string) ?? 'Sessão', educador: slug, chave: `dvr:${r.download_url}:${r.requested_at}` })
+async function proximaAula(db: Db, precisam: string[]) {
+  const aulas = (await listarAulas()).filter((a) => precisam.includes(a.educador))
+  if (!aulas.length) return null
+  const { data: feitos } = await db.from('videocliper_jobs').select('youtube_video_id, criado_por, reels_educador, created_at')
+    .order('created_at', { ascending: false }).limit(500)
+  const usados = new Set((feitos ?? []).map((j) => String(j.youtube_video_id ?? '')).filter(Boolean))
+  const ultimo = new Map<string, number>()
+  for (const j of feitos ?? []) {
+    if (!String(j.criado_por ?? '').startsWith('auto:aula:')) continue
+    const t = new Date(String(j.created_at)).getTime()
+    const e = String(j.reels_educador ?? '')
+    if (!ultimo.has(e) || t > (ultimo.get(e) ?? 0)) ultimo.set(e, t)
   }
-  for (const r of dvr ?? []) {
-    const slug = slugDe.get(r.educator_id as string)
-    if (!slug || !pub.has(slug) || !r.youtube_video_url || Number(r.duration_s) < 600) continue
-    candidatos.push({ url: r.youtube_video_url as string, titulo: tituloDe.get(r.stream_id as string) ?? 'Sessão', educador: slug, chave: `yt:${r.youtube_video_url}` })
+  const ordem = [...new Set(precisam)].sort((a, b) => (ultimo.get(a) ?? 0) - (ultimo.get(b) ?? 0))
+  for (const slug of ordem) {
+    const a = aulas.find((x) => x.educador === slug && !usados.has(x.videoId))
+    if (a) return a
   }
-  return candidatos.find((c) => !usadas.has(c.chave)) ?? null
+  return null
 }
 
 /**

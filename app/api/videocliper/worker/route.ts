@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { estiloParaWorker, estiloValido, ganchoParaEcra } from '@/lib/videocliper/estilos'
+import type { ContextoDoEducador } from '@/lib/videocliper/analise'
+import { educador } from '@/lib/reels-educadores/config'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -78,6 +80,35 @@ async function comColunasNovas<T>(
   return null
 }
 
+/**
+ * Um vídeo do YouTube sem ficheiro nosso só se descarrega de um IP de casa: o YouTube recusa os
+ * servidores («confirma que não és um robô»). O Mac diz que pode (`youtube=1`); o VPS e o robô do
+ * GitHub não, e para eles estes vídeos nem aparecem — tentar só os punha a falhar.
+ */
+function precisaDeCasa(job: { youtube_url?: unknown; dvr_job_id?: unknown; dvr_ficheiro?: unknown } | null | undefined): boolean {
+  if (!job || job.dvr_job_id || job.dvr_ficheiro) return false
+  return /(?:youtube\.com|youtu\.be)\//i.test(String(job.youtube_url ?? ''))
+}
+
+/**
+ * O educador de uma aula pedida pelo robô dos reels, e o que os cortes dele já ensinaram (nota do
+ * Instagram). Vídeos pedidos à mão no painel sem educador analisam-se como sempre.
+ */
+async function contextoDoEducador(db: ReturnType<typeof getSupabaseAdmin>, jobId: string): Promise<ContextoDoEducador | null> {
+  const { data: job } = await db.from('videocliper_jobs').select('reels_educador').eq('id', jobId).maybeSingle()
+  const ed = job?.reels_educador ? educador(String(job.reels_educador)) : undefined
+  if (!ed) return null
+  const { data: h } = await db.from('reels_auto').select('gancho, nota')
+    .eq('tipo', 'corte').not('nota', 'is', null).not('gancho', 'is', null)
+    .order('nota', { ascending: false }).limit(40)
+  const comNota = (h ?? []).map((r) => String(r.gancho)).filter(Boolean)
+  return {
+    nome: ed.nome, area: ed.area, marca: ed.marca, palavra: ed.palavra, depois: ed.depois,
+    melhores: comNota.slice(0, 4),
+    piores: comNota.length > 8 ? comNota.slice(-3) : [],
+  }
+}
+
 /** Um trabalho reclamado há mais do que isto foi abandonado — a máquina morreu a meio. */
 const MINUTOS_ATE_DESISTIR = 40
 
@@ -86,7 +117,20 @@ export async function GET(request: NextRequest) {
 
   const db = getSupabaseAdmin()
   const quem = request.nextUrl.searchParams.get('worker') ?? 'vps'
+  const temCasa = request.nextUrl.searchParams.get('youtube') === '1'
+  const serve = (job: Parameters<typeof precisaDeCasa>[0]) => temCasa || !precisaDeCasa(job)
   const agora = new Date()
+
+  // O painel mostra se o cortador do Mac está ligado. Uma escrita a cada 2 min chega.
+  if (temCasa) {
+    const { data: visto } = await db.from('site_settings').select('updated_at').eq('key', 'videocliper_mac').maybeSingle()
+    if (!visto || agora.getTime() - new Date(String(visto.updated_at)).getTime() > 120_000) {
+      await db.from('site_settings').upsert(
+        { key: 'videocliper_mac', value: { worker: quem, visto: agora.toISOString() }, updated_at: agora.toISOString(), description: 'Último contacto do cortador do Mac (videocliper com YouTube)' },
+        { onConflict: 'key' },
+      )
+    }
+  }
 
   /**
    * Devolver trabalhos abandonados à fila.
@@ -107,20 +151,22 @@ export async function GET(request: NextRequest) {
   // pode esperar. Se a ordem fosse ao contrário, uma tarde de análises deixava as aprovações
   // paradas atrás delas.
   type LinhaClip = Record<string, unknown> & { id: string; job_id: string }
-  const clip = await comColunasNovas<LinhaClip>((extra) => db
+  const aprovados = await comColunasNovas<LinhaClip[]>((extra) => db
     .from('videocliper_clips')
     .select(`id, job_id, ordem, titulo, hook, inicio_seg, fim_seg, duracao_seg, legendas, caption, cta_palavra, broll${extra}`)
     .eq('estado', 'aprovado')
     .order('score', { ascending: false })
-    .limit(1)
-    .maybeSingle() as unknown as PromiseLike<{ data: LinhaClip | null; error: { message: string } | null }>, ', estilo, enfase')
-
-  if (clip) {
-    const job = await comColunasNovas<Record<string, unknown>>((extra) => db
+    .limit(20) as unknown as PromiseLike<{ data: LinhaClip[] | null; error: { message: string } | null }>, ', estilo, enfase')
+  const jobsDosAprovados = aprovados?.length
+    ? (await comColunasNovas<Record<string, unknown>[]>((extra) => db
       .from('videocliper_jobs')
       .select(`id, origem, youtube_url, youtube_video_id, dvr_job_id, dvr_ficheiro, titulo${extra}`)
-      .eq('id', clip.job_id as string)
-      .maybeSingle() as unknown as PromiseLike<{ data: Record<string, unknown> | null; error: { message: string } | null }>, ', estilo')
+      .in('id', [...new Set(aprovados.map((c) => c.job_id))]) as unknown as PromiseLike<{ data: Record<string, unknown>[] | null; error: { message: string } | null }>, ', estilo')) ?? []
+    : []
+  const clip = (aprovados ?? []).find((c) => serve(jobsDosAprovados.find((j) => j.id === c.job_id)))
+
+  if (clip) {
+    const job = jobsDosAprovados.find((j) => j.id === clip.job_id) ?? null
 
     const ficheiroLocal = await ficheiroDoDvr(job?.dvr_job_id as string | null, job?.dvr_ficheiro as string | null)
 
@@ -148,6 +194,8 @@ export async function GET(request: NextRequest) {
       // O cartão do topo (≤7 palavras) e as palavras-chave que a legenda destaca.
       gancho: ganchoParaEcra(clip.hook as string | null),
       enfase: Array.isArray(clip.enfase) ? clip.enfase : [],
+      // A palavra do funil, pequena no fim (efeito «ctaSubtil»).
+      ctaSubtil: (clip.cta_palavra as string | null) ?? '',
       /**
        * O Short vai do VPS, não daqui.
        *
@@ -188,14 +236,20 @@ export async function GET(request: NextRequest) {
     .eq('preview_estado', 'a_fazer')
     .lt('updated_at', new Date(agora.getTime() - MINUTOS_ATE_DESISTIR * 60_000).toISOString())
 
-  const { data: semPreview } = await db
+  const { data: candidatosPreview } = await db
     .from('videocliper_clips')
     .select('job_id')
     .is('preview_estado', null)
     .in('estado', ['proposto', 'rejeitado', 'erro'])
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    .limit(30)
+  let semPreview: { job_id: string } | null = null
+  if (candidatosPreview?.length) {
+    const ids = [...new Set(candidatosPreview.map((c) => c.job_id as string))]
+    const { data: js } = await db.from('videocliper_jobs').select('id, youtube_url, dvr_job_id, dvr_ficheiro').in('id', ids)
+    const id = ids.find((i) => serve((js ?? []).find((j) => j.id === i)))
+    semPreview = id ? { job_id: id } : null
+  }
 
   // Os vídeos do robô dos reels diários não precisam de pré-visualização: ninguém escolhe à mão,
   // o planeador aprova os melhores pela nota. Fazê-las era descarregar a sessão outra vez.
@@ -217,7 +271,7 @@ export async function GET(request: NextRequest) {
         .select(`id, origem, youtube_url, dvr_job_id, dvr_ficheiro${extra}`)
         .eq('id', jobId).maybeSingle() as unknown as Resp<Linha>, ', estilo'),
       comColunasNovas<Linha[]>((extra) => db.from('videocliper_clips')
-        .select(`id, hook, inicio_seg, fim_seg, legendas, broll${extra}`)
+        .select(`id, hook, inicio_seg, fim_seg, legendas, broll, cta_palavra${extra}`)
         .eq('job_id', jobId)
         .is('preview_estado', null)
         .in('estado', ['proposto', 'rejeitado', 'erro'])
@@ -243,6 +297,7 @@ export async function GET(request: NextRequest) {
           broll: c.broll ?? [],
           gancho: ganchoParaEcra(c.hook as string | null),
           enfase: Array.isArray(c.enfase) ? c.enfase : [],
+          ctaSubtil: (c.cta_palavra as string | null) ?? '',
           // Um clipe com estilo próprio sobrepõe o do vídeo; sem isso o worker usa o do trabalho.
           ...(estiloValido(c.estilo) ? { estilo: estiloParaWorker(c.estilo, 540, 960) } : {}),
         })),
@@ -254,7 +309,7 @@ export async function GET(request: NextRequest) {
   }
 
   // ── 3. vídeos por processar ───────────────────────────────────────────────
-  const { data: job } = await db
+  const { data: pedidos } = await db
     .from('videocliper_jobs')
     .select('id, origem, youtube_url, youtube_video_id, dvr_job_id, dvr_ficheiro, titulo, idioma')
     .eq('estado', 'pedido')
@@ -262,8 +317,8 @@ export async function GET(request: NextRequest) {
     // transformava um vídeo por descarregar num erro.
     .or('ponte_estado.is.null,ponte_estado.eq.feito')
     .order('created_at')
-    .limit(1)
-    .maybeSingle()
+    .limit(20)
+  const job = (pedidos ?? []).find((j) => serve(j)) ?? null
 
   if (!job) return NextResponse.json({ tipo: 'nada' })
 
@@ -344,7 +399,8 @@ export async function POST(request: NextRequest) {
      */
     try {
       const { analisarTranscricao, guardarPropostas } = await import('@/lib/videocliper/analise')
-      const clips = await analisarTranscricao({ palavras, titulo: corpo?.titulo ?? null })
+      const contexto = await contextoDoEducador(db, jobId)
+      const clips = await analisarTranscricao({ palavras, titulo: corpo?.titulo ?? null, contexto })
       const quantos = await guardarPropostas(jobId, clips, palavras)
       await db.from('videocliper_jobs')
         .update({ estado: 'pronto', progresso: `${quantos} clips propostos`, updated_at: agora })

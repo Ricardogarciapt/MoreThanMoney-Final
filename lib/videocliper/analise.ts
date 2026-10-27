@@ -85,6 +85,19 @@ O QUE NÃO SERVE, e o primeiro ponto é o mais importante:
 2. Cumprimentos, logística da sessão, responder a uma pergunta que não se ouve.
 3. Qualquer coisa que comece a meio de um raciocínio.
 4. Menções a preços de entrada concretos de uma posição aberta naquele momento.
+5. TEMPOS MORTOS: «deixa-me partilhar o ecrã», «estão a ouvir?», ler o chat, esperar que um
+   gráfico carregue, problemas técnicos, silêncios longos, repetições da mesma ideia. Um trecho
+   com fala densa vale mais do que um trecho com a ideia certa e meio minuto de hesitação.
+6. Frases que não prendem: definições de manual, introduções («hoje vamos falar de…»),
+   resumos do que já foi dito. Se o gancho não faria ninguém parar o dedo, o momento não serve.
+
+O FECHO — o CTA que não parece CTA:
+· O clipe acaba numa frase que deixa a pessoa a querer MAIS deste educador: uma consequência
+  que fica a ecoar, uma pergunta aberta, «é isto que trabalhamos na sala», um «e o resto é
+  disciplina». Nunca um pedido de compra, nunca «comprem», nunca «link na bio» dito em voz.
+· De preferência, a última frase volta ao gancho (fecha o círculo): quem chega ao fim tem
+  vontade de ver outra vez.
+· A legenda acaba num convite leve a comentar a palavra — curiosidade, não pressão.
 
 REGRAS DURAS:
 · A duração é 15, 30 ou 60 segundos. Nada pelo meio.
@@ -158,10 +171,23 @@ export function transcricaoParaTexto(palavras: Palavra[], segundosPorLinha = 12)
   return linhas.join('\n')
 }
 
+/** Quem dá a aula e o que já se aprendeu com os cortes publicados — vem do robô dos reels. */
+export interface ContextoDoEducador {
+  nome: string
+  area: string
+  marca?: string
+  palavra: string
+  depois: string
+  /** Ganchos dos cortes com melhor e pior nota no Instagram. */
+  melhores: string[]
+  piores: string[]
+}
+
 export async function analisarTranscricao(input: {
   palavras: Palavra[]
   titulo?: string | null
   quantos?: number
+  contexto?: ContextoDoEducador | null
 }): Promise<ClipeProposto[]> {
   const texto = transcricaoParaTexto(input.palavras)
   if (texto.length < 200) throw new Error('transcrição demasiado curta para analisar')
@@ -169,11 +195,20 @@ export async function analisarTranscricao(input: {
   const quantos = input.quantos ?? 10
   // Uma sessão de duas horas dá uma transcrição maior do que a janela do modelo compensa. O
   // corte é generoso mas existe: mais do que isto é gastar tokens em logística de sessão.
-  const recortado = texto.length > 120_000 ? texto.slice(0, 120_000) : texto
+  // 90 mil caracteres cabem no limite por minuto da IA gratuita (Gemini); uma aula de hora e meia cabe.
+  const recortado = texto.length > 90_000 ? texto.slice(0, 90_000) : texto
+  const ctx = input.contexto
+  const ctas = ctx ? [ctx.palavra] : [...CTAS_VALIDOS]
 
   const pedido =
-    `Sessão: ${input.titulo ?? 'sem título'}\n\n` +
-    `Escolhe os ${quantos} melhores momentos. Palavras de CTA disponíveis: ${CTAS_VALIDOS.join(', ')}.\n\n` +
+    `Sessão: ${input.titulo ?? 'sem título'}\n` +
+    (ctx
+      ? `Educador: ${ctx.nome} — ${ctx.area}${ctx.marca ? ` (${ctx.marca})` : ''}. É uma AULA gravada; o clipe sai no @morethanmoney.pt com a cara dele.\n` +
+        `A palavra de comentário é SEMPRE ${ctx.palavra} (quem comenta ${ctx.depois}).\n` +
+        (ctx.melhores.length ? `Ganchos de cortes que RESULTARAM (procura momentos com esta energia, não estas frases):\n${ctx.melhores.map((g) => `· «${g}»`).join('\n')}\n` : '') +
+        (ctx.piores.length ? `Ganchos que NÃO resultaram (evita momentos deste tipo):\n${ctx.piores.map((g) => `· «${g}»`).join('\n')}\n` : '')
+      : '') +
+    `\nEscolhe os ${quantos} melhores momentos. Palavras de CTA disponíveis: ${ctas.join(', ')}.\n\n` +
     `TRANSCRIÇÃO (o número entre parêntesis é o segundo em que a linha começa):\n\n${recortado}`
 
   // Porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic). O formato é delimitado
@@ -194,7 +229,7 @@ export async function analisarTranscricao(input: {
     throw new Error(mensagemIndisponivel(e))
   }
 
-  return interpretar(bruto, input.palavras)
+  return interpretar(bruto, input.palavras, ctas)
 }
 
 /**
@@ -205,7 +240,7 @@ export async function analisarTranscricao(input: {
  * que rebenta no ffmpeg ou uma legenda a pedir um comentário que ninguém atende — e as duas
  * falham tarde, já depois de publicadas.
  */
-function interpretar(bruto: string, palavras: Palavra[]): ClipeProposto[] {
+function interpretar(bruto: string, palavras: Palavra[], ctas: readonly string[] = CTAS_VALIDOS): ClipeProposto[] {
   const fimDoVideo = palavras.length ? palavras[palavras.length - 1].fim : 0
   const blocos = bruto.split('===CLIPE===').slice(1)
   const saida: ClipeProposto[] = []
@@ -231,7 +266,7 @@ function interpretar(bruto: string, palavras: Palavra[]): ClipeProposto[] {
     // Um tempo para lá do fim do vídeo é o modelo a extrapolar. Cortar aí dava um clipe que
     // acaba em preto — ou um ffmpeg a falhar.
     if (fimDoVideo > 0 && fim > fimDoVideo + 2) continue
-    if (!CTAS_VALIDOS.includes(cta as (typeof CTAS_VALIDOS)[number])) continue
+    if (!ctas.includes(cta)) continue
     if (!titulo || caption.length < 20) continue
 
     saida.push({

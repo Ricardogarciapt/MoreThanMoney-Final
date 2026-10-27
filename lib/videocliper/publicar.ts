@@ -34,7 +34,7 @@ export interface ResultadoPublicacao {
   youtube?: { videoId?: string; url?: string; erro?: string }
 }
 
-async function tokenDoYoutube(): Promise<string> {
+export async function tokenDoYoutube(): Promise<string> {
   const cid = process.env.YOUTUBE_CLIENT_ID?.trim()
   const secret = process.env.YOUTUBE_CLIENT_SECRET?.trim()
   const refresh = process.env.YOUTUBE_REFRESH_TOKEN?.trim()
