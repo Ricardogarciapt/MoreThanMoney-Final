@@ -21,6 +21,7 @@ import type { EscritorDestino, PosicaoDestinoLida } from '../motor'
 import type { ContextoDestino, Direcao, PosicaoOrigem } from '../tipos'
 import { db } from './base'
 import { lerContaPorRef, tokenDaConta, type ContaPorRef } from './refs'
+import { chaveDoSaldo, guardarSaldoLido } from './saldos-lidos'
 
 /**
  * OS ESCRITORES DE DESTINO — a única porta por onde a cópia entre contas toca numa corretora.
@@ -57,6 +58,8 @@ async function infoMt(accountId: string, deps: DepsMt5) {
   const i = (await deps.rest(accountId, '/account-information')) as Record<string, unknown> | null
   const v = { equity: i?.equity == null ? null : Number(i.equity), saldo: i?.balance == null ? null : Number(i.balance), moeda: (i?.currency as string) ?? null }
   cacheInfo.set(accountId, { v, em: Date.now() })
+  // A cópia já leu a conta: o saldo fica guardado para as listas do admin (1×/min por conta).
+  void guardarSaldoLido({ chave: accountId, saldo: v.saldo, equity: v.equity, moeda: v.moeda, origem: 'copia' })
   return v
 }
 
@@ -271,27 +274,56 @@ export async function escritorPara(destinoRef: string): Promise<EscritorDestino 
  * sem poder negociar. Os mesmos adaptadores do WebTrader com `podeNegociar:false`; MT5 por REST com o
  * limitador de 5 s (nunca RPC), só leitura, na chave da conta.
  */
+/** O adaptador SÓ DE LEITURA de uma conta (o mesmo do WebTrader). null = sem forma de a ler. */
+async function adaptadorDeLeitura(conta: ContaPorRef): Promise<{ adaptador: AdaptadorCorretora | null; erro?: string }> {
+  if ((conta.plataforma === 'mt4' || conta.plataforma === 'mt5') && conta.metaapiAccountId) {
+    const t = await tokenDaConta(conta)
+    if (!t) return { adaptador: null, erro: 'Conta de equipa sem chave MetaApi utilizável.' }
+    return { adaptador: adaptadorMt5(conta.metaapiAccountId, { podeNegociar: false }, depsDoToken(t)) }
+  }
+  if (conta.plataforma === 'tradelocker') {
+    const sessao = await sessaoTradeLocker(conta)
+    return { adaptador: sessao ? adaptadorTradeLocker(sessao, { podeNegociar: false }) : null }
+  }
+  if (conta.plataforma === 'mtmfunded') {
+    const c = await lerConta(conta.fundedAccountId ?? lerRef(conta.ref)!.id)
+    return { adaptador: c ? adaptadorMtmFunded(c, 'investor') : null }
+  }
+  return { adaptador: null }
+}
+
 export async function vistaAdminConta(ref: string) {
   const conta = await lerContaPorRef(ref)
   if (!conta) return { erro: 'Conta não encontrada.' }
-  let adaptador: AdaptadorCorretora | null = null
-  if ((conta.plataforma === 'mt4' || conta.plataforma === 'mt5') && conta.metaapiAccountId) {
-    const t = await tokenDaConta(conta)
-    if (!t) return { erro: 'Conta de equipa sem chave MetaApi utilizável.' }
-    adaptador = adaptadorMt5(conta.metaapiAccountId, { podeNegociar: false }, depsDoToken(t))
-  } else if (conta.plataforma === 'tradelocker') {
-    const sessao = await sessaoTradeLocker(conta)
-    if (sessao) adaptador = adaptadorTradeLocker(sessao, { podeNegociar: false })
-  } else if (conta.plataforma === 'mtmfunded') {
-    const c = await lerConta(conta.fundedAccountId ?? lerRef(conta.ref)!.id)
-    if (c) adaptador = adaptadorMtmFunded(c, 'investor')
-  }
-  if (!adaptador) return { erro: 'Sem forma de ler esta conta (sem conta MetaApi ou credenciais).' }
+  const { adaptador, erro } = await adaptadorDeLeitura(conta)
+  if (!adaptador) return { erro: erro ?? 'Sem forma de ler esta conta (sem conta MetaApi ou credenciais).' }
   try {
     const [info, posicoes] = await Promise.all([adaptador.conta(), adaptador.posicoes()])
+    const chave = chaveDoSaldo(conta)
+    if (chave) await guardarSaldoLido({ chave, ref: conta.ref, saldo: info.saldo, equity: info.equity, moeda: info.moeda, origem: 'vista' })
     return { plataforma: adaptador.plataforma, real: adaptador.real, conta: info, posicoes }
   } catch (e) {
     return { erro: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+/**
+ * Lê SÓ o saldo e a equity de uma conta de corretora (1 pedido: account-information / estado TL) e
+ * guarda-os. É o que o botão «Actualizar saldos» do Centro chama, em lotes pequenos.
+ */
+export async function lerEGuardarSaldo(ref: string): Promise<{ ok: true; saldo: number | null; equity: number | null } | { ok: false; erro: string }> {
+  const conta = await lerContaPorRef(ref)
+  if (!conta) return { ok: false, erro: 'Conta não encontrada.' }
+  const chave = chaveDoSaldo(conta)
+  if (!chave) return { ok: false, erro: 'Esta conta não tem saldo de corretora para ler.' }
+  const { adaptador, erro } = await adaptadorDeLeitura(conta)
+  if (!adaptador) return { ok: false, erro: erro ?? 'Sem forma de ler esta conta.' }
+  try {
+    const info = await adaptador.conta()
+    await guardarSaldoLido({ chave, ref: conta.ref, saldo: info.saldo, equity: info.equity, moeda: info.moeda, origem: 'actualizar' })
+    return { ok: true, saldo: info.saldo, equity: info.equity }
+  } catch (e) {
+    return { ok: false, erro: (e instanceof Error ? e.message : String(e)).slice(0, 200) }
   }
 }
 

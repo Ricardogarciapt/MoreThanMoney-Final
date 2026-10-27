@@ -529,7 +529,7 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
           className="text-xs text-[#D2A63C] hover:underline">Limpar</button>
       )}
     </div>
-    <Tabela cabecalhos={['Dono', 'Tipo', 'Login', 'Servidor', 'Saldo', 'Estado', 'Acções']}>
+    <Tabela cabecalhos={['Dono', 'Tipo', 'Login', 'Servidor', 'Capital', 'Equity', 'Estado', 'Acções']}>
       {visiveis.map((c) => {
         const dono = c.dono as { nome: string; email: string; username?: string | null } | null
         const pedido = c.pedido as { estado: string; erro?: string; tentativas: number } | null
@@ -561,22 +561,26 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
               })()}
             </td>
             <td className="px-3 py-2 text-xs text-gray-500">{(c.servidor as string) ?? '—'}</td>
-            <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">
-              {(() => {
-                // Saldo e equity pela fonte única; % sobre a equity (o «Retorno» que o dono vê no WebTrader).
-                const { saldo, equity, pct } = saldoEPct(c)
-                if (saldo == null) return <span className="text-gray-600">—</span>
-                const cor = pct == null || Math.abs(pct) < 0.005 ? 'text-gray-400' : pct > 0 ? 'text-emerald-400' : 'text-red-400'
-                const f = (v: number) => v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                return (
-                  <>
-                    <p className="text-gray-200">{f(saldo)} $</p>
-                    {equity != null && Math.abs(equity - saldo) >= 0.01 && <p className="text-gray-500">eq {f(equity)}</p>}
+            {(() => {
+              // Capital e equity pela fonte única, cada um na sua coluna; a % sobre a equity (o «Retorno»
+              // que o dono vê no WebTrader) fica por baixo da equity, com o flutuante.
+              const { saldo, equity, pct } = saldoEPct(c)
+              const cor = pct == null || Math.abs(pct) < 0.005 ? 'text-gray-400' : pct > 0 ? 'text-emerald-400' : 'text-red-400'
+              const f = (v: number) => v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              const flutuante = equity != null && saldo != null ? equity - saldo : null
+              return (
+                <>
+                  <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">
+                    {saldo == null ? <span className="text-gray-600">—</span> : <p className="text-gray-200">{f(saldo)} $</p>}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">
+                    {equity == null ? <span className="text-gray-600">—</span> : <p className="text-gray-200">{f(equity)} $</p>}
+                    {flutuante != null && Math.abs(flutuante) >= 0.01 && <p className={flutuante > 0 ? 'text-emerald-400/80' : 'text-red-400/80'} title="equity − capital: posições abertas">{flutuante > 0 ? '+' : ''}{f(flutuante)}</p>}
                     {pct != null && <p className={cor}>{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</p>}
-                  </>
-                )
-              })()}
-            </td>
+                  </td>
+                </>
+              )
+            })()}
             <td className="px-3 py-2 text-xs">
               <span
                 className="rounded px-1.5 py-0.5 text-[11px] font-semibold"

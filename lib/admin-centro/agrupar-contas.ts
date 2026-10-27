@@ -57,6 +57,7 @@ export function agruparContas(contas: ContaCentro[]): ContaAgrupada[] {
       ativa: ordenadas.some((o) => o.ativa),
       saldo: s.saldo,
       saldoFonte: s.saldoFonte,
+      saldoLidoEm: s.saldoLidoEm ?? null,
       saldoInicial: s.saldoInicial,
       linhaDeAgua: s.linhaDeAgua,
       proveniencia: s.proveniencia,

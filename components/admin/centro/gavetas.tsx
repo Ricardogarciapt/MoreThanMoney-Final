@@ -60,6 +60,8 @@ function GavetaConta({ refConta }: { refConta: string }) {
     setVista("a-ler")
     const r = await pedirCentro<Record<string, unknown>>(`/api/admin/mtmauto-copia/contas?vista=${encodeURIComponent(refConta)}`)
     setVista(r.success && r.data ? r.data : { erro: r.error ?? "falhou" })
+    // A leitura ao vivo fica guardada (216): a ficha e a lista passam a mostrar este capital/equity.
+    if (r.success) recarregar()
   }
 
   return (
@@ -90,7 +92,7 @@ function GavetaConta({ refConta }: { refConta: string }) {
             <Campo rotulo="Quota MetaApi">{c.contaMetaApi ? `${c.quota.emUso}/${c.quota.limite ?? "∞"}${c.quota.acima ? " (acima)" : ""}` : "não conta"}</Campo>
             <Campo rotulo="Conta MetaApi"><span className="font-mono">{c.metaapiAccountId ?? "—"}</span></Campo>
             <Campo rotulo="Estado guardado">{c.metaapi.guardado ?? "—"} {c.metaapi.streaming ? `· streaming ${c.metaapi.streaming}` : ""}</Campo>
-            <Campo rotulo="Saldo · equity">{fmtNum(c.saldo, 2)} · {fmtNum(c.equity, 2)}</Campo>
+            <Campo rotulo="Capital · equity">{fmtNum(c.saldo, 2)} · {fmtNum(c.equity, 2)}{c.saldoFonte === "lido" && c.saldoLidoEm ? <span className="ml-1 text-[10px] text-zinc-500">(lido há {fmtIdade(idadeDe(c.saldoLidoEm))})</span> : null}</Campo>
             <Campo rotulo="Última actividade">{c.ultimaActividade ? `${fmtQuando(c.ultimaActividade)} (há ${fmtIdade(idadeDe(c.ultimaActividade))})` : "—"}</Campo>
             <Campo rotulo="Criada">{fmtQuando(c.criadaEm)}</Campo>
             <Campo rotulo="Actualizada">{fmtQuando(c.atualizadaEm)}</Campo>
@@ -149,7 +151,7 @@ function GavetaConta({ refConta }: { refConta: string }) {
                   <Botao onClick={() => operar("undeploy")} disabled={Boolean(aCorrer)}>Undeploy</Botao>
                 </>
               )}
-              {(c.plataforma === "mt4" || c.plataforma === "mt5") && c.metaapiAccountId && <Botao onClick={verPosicoes} title="Lê a conta ao vivo (adaptador do WebTrader)">Ver posições (ao vivo)</Botao>}
+              {(((c.plataforma === "mt4" || c.plataforma === "mt5") && c.metaapiAccountId) || c.plataforma === "tradelocker") && <Botao onClick={verPosicoes} title="Lê a conta ao vivo (adaptador do WebTrader) e guarda o capital/equity para a lista">Ver posições (ao vivo)</Botao>}
               <Link href="/webtrader" target="_blank" className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800">WebTrader <ExternalLink className="h-3 w-3" /></Link>
               {c.origem !== "funded" && <Botao tom="perigo" onClick={() => operar("remover")} disabled={Boolean(aCorrer)}>Remover…</Botao>}
               <Botao onClick={() => ctx.irPara("copia", { userId: c.userId ?? "" })}>Rotas de cópia do dono</Botao>
