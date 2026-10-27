@@ -58,11 +58,32 @@ export async function playlistsDasAulas(): Promise<Array<{ id: string; titulo: s
   return [...saida.values()]
 }
 
+/**
+ * A LISTA QUE O MAC TROUXE.
+ *
+ * Sem as credenciais do YouTube na Vercel, quem lê as playlists é o cortador do Mac (yt-dlp, do
+ * IP de casa) e deixa a lista em `site_settings.reels_aulas`. Serve até 3 dias: depois disso é
+ * melhor não cortar do que cortar de uma lista que pode já não existir.
+ */
+export const CHAVE_AULAS = 'reels_aulas'
+
+async function aulasDoMac(): Promise<Aula[]> {
+  const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', CHAVE_AULAS).maybeSingle()
+  const v = (data?.value ?? null) as { em?: string; aulas?: Aula[] } | null
+  if (!v?.aulas?.length || !v.em || Date.now() - new Date(v.em).getTime() > 3 * 86400_000) return []
+  return v.aulas.filter((a) => a.duracaoSeg >= MIN_SEG && a.duracaoSeg <= MAX_SEG)
+}
+
 /** Todas as aulas das playlists, com duração. Uma playlist que falhe não estraga as outras. */
 export async function listarAulas(): Promise<Aula[]> {
   const playlists = await playlistsDasAulas()
   if (!playlists.length) return []
-  const token = await tokenDoYoutube()
+  let token: string
+  try {
+    token = await tokenDoYoutube()
+  } catch {
+    return aulasDoMac()
+  }
   const auth = { headers: { Authorization: `Bearer ${token}` } }
 
   const vistas = new Map<string, Aula>()
