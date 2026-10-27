@@ -317,6 +317,14 @@ export async function POST(request: NextRequest) {
      */
     if (body.chat_member) {
       after(async () => {
+        // A porta dos grupos de sinais vem primeiro e à parte: um erro no registo de membros não
+        // pode deixar entrar quem não tem validação, nem o contrário.
+        try {
+          const { tratarEntradaDireta } = await import("@/lib/telegram-porta-sinais")
+          await tratarEntradaDireta(supabase, body.chat_member)
+        } catch (e) {
+          console.error("[tg porta-sinais]", e)
+        }
         try {
           const { lerChatMember } = await import("@/lib/telegram-grupo-membros")
           const mudanca = lerChatMember(body.chat_member)
@@ -325,6 +333,21 @@ export async function POST(request: NextRequest) {
           await registarMudancasDeMembros(supabase, [mudanca])
         } catch (e) {
           console.error("[tg chat_member]", e)
+        }
+      })
+    }
+
+    /**
+     * PEDIDOS DE ADESÃO aos grupos de sinais (links com «aprovar novos membros»): só entra quem tem
+     * a corretora validada ou é membro MTM. Ver `lib/telegram-porta-sinais.ts`.
+     */
+    if (body.chat_join_request) {
+      after(async () => {
+        try {
+          const { tratarPedidoDeAdesao } = await import("@/lib/telegram-porta-sinais")
+          await tratarPedidoDeAdesao(supabase, body.chat_join_request)
+        } catch (e) {
+          console.error("[tg chat_join_request]", e)
         }
       })
     }
@@ -631,6 +654,16 @@ export async function POST(request: NextRequest) {
             await perguntarCaminho()
           }
         }
+      }
+
+      // /membro email · /codigo 123456 — confirmar que é membro MTM para entrar nos grupos de sinais
+      else if (/^\/(membro|c[oó]digo)(@\w+)?(\s|$)/i.test(text)) {
+        const regra = await import("@/lib/telegram-porta-sinais-regra")
+        const porta = await import("@/lib/telegram-porta-sinais")
+        const quem = String(body.message?.from?.id ?? chatId)
+        const membro = regra.lerComandoMembro(text)
+        if (membro) await sendMessage(await porta.pedirCodigoDeMembro(supabase, quem, membro.email))
+        else await sendMessage(await porta.confirmarCodigoDeMembro(supabase, quem, regra.lerComandoCodigo(text)?.codigo ?? null))
       }
 
       // /start sem token
