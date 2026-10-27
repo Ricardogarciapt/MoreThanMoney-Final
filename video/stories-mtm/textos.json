@@ -523,5 +523,172 @@
    "url": "morethanmoney.pt/onboarding",
    "aviso": "Bildungsinhalt, keine Finanzberatung. Gehebeltes Trading birgt ein hohes Verlustrisiko."
   }
+ },
+ "parceiros": {
+  "pt": {
+   "hook": [
+    "TENS UMA COMUNIDADE",
+    "QUE JÁ FAZ TRADING?"
+   ],
+   "tu": [
+    "TU TRAZES",
+    "A COMUNIDADE"
+   ],
+   "nos": [
+    "NÓS TRAZEMOS",
+    "A PLATAFORMA"
+   ],
+   "ganhas": "GANHAS",
+   "comissao": "COMISSÃO",
+   "consoante": "consoante",
+   "c1": [
+    "ATIVIDADE DE TRADING",
+    "das contas que trouxeste"
+   ],
+   "c2": [
+    "PAINEL PRÓPRIO",
+    "vês as contas e o que rendem"
+   ],
+   "acesso": [
+    "O ACESSO COMEÇA",
+    "COM EDUCAÇÃO GRÁTIS"
+   ],
+   "degraus": [
+    "Academias gratuitas",
+    "Sinais",
+    "App MTM System completa",
+    "Aulas ao vivo"
+   ],
+   "plano": "BROKER VALIDATED",
+   "premium": [
+    "PREMIUM",
+    "SEM MENSALIDADE"
+   ],
+   "cond": "depósito validado · enquanto mantiverem o saldo",
+   "nada": [
+    "SEM VALORES",
+    "GARANTIDOS"
+   ],
+   "dep": "depende de quem trazes e de como fazem trading",
+   "passos": [
+    "Falas connosco",
+    "Vemos se encaixa na tua comunidade",
+    "Começas o onboarding IB"
+   ],
+   "cta": "FALA CONNOSCO",
+   "url": "@MoreThanMoney_aibot",
+   "sub": "Parceria IB MoreThanMoney",
+   "aviso": "Conteúdo educativo, não constitui consultoria financeira. Trading com alavancagem tem risco elevado de perda. Comissões não garantidas."
+  },
+  "en": {
+   "hook": [
+    "GOT A COMMUNITY",
+    "THAT ALREADY TRADES?"
+   ],
+   "tu": [
+    "YOU BRING",
+    "THE COMMUNITY"
+   ],
+   "nos": [
+    "WE BRING",
+    "THE PLATFORM"
+   ],
+   "ganhas": "YOU EARN",
+   "comissao": "COMMISSION",
+   "consoante": "based on",
+   "c1": [
+    "TRADING ACTIVITY",
+    "of the accounts you brought"
+   ],
+   "c2": [
+    "YOUR OWN DASHBOARD",
+    "see the accounts and what they earn"
+   ],
+   "acesso": [
+    "ACCESS STARTS",
+    "WITH FREE EDUCATION"
+   ],
+   "degraus": [
+    "Free academies",
+    "Signals",
+    "Full MTM System app",
+    "Live classes"
+   ],
+   "plano": "BROKER VALIDATED",
+   "premium": [
+    "PREMIUM",
+    "NO MONTHLY FEE"
+   ],
+   "cond": "validated deposit · while they keep their balance",
+   "nada": [
+    "NOTHING",
+    "GUARANTEED"
+   ],
+   "dep": "it depends on who you bring and how they trade",
+   "passos": [
+    "Talk to us",
+    "We check it fits your community",
+    "Start your IB onboarding"
+   ],
+   "cta": "TALK TO US",
+   "url": "@MoreThanMoney_aibot",
+   "sub": "MoreThanMoney IB partnership",
+   "aviso": "Educational content, not financial advice. Leveraged trading carries a high risk of loss. Commissions are not guaranteed."
+  },
+  "de": {
+   "hook": [
+    "HAST DU EINE COMMUNITY,",
+    "DIE SCHON TRADET?"
+   ],
+   "tu": [
+    "DU BRINGST",
+    "DIE COMMUNITY"
+   ],
+   "nos": [
+    "WIR BRINGEN",
+    "DIE PLATTFORM"
+   ],
+   "ganhas": "DU VERDIENST",
+   "comissao": "PROVISION",
+   "consoante": "je nach",
+   "c1": [
+    "TRADING-AKTIVITÄT",
+    "deiner gebrachten Konten"
+   ],
+   "c2": [
+    "EIGENES DASHBOARD",
+    "Konten und Ertrag im Blick"
+   ],
+   "acesso": [
+    "DER ZUGANG BEGINNT",
+    "MIT GRATIS-AUSBILDUNG"
+   ],
+   "degraus": [
+    "Kostenlose Akademien",
+    "Signale",
+    "Komplette MTM System App",
+    "Live-Kurse"
+   ],
+   "plano": "BROKER VALIDATED",
+   "premium": [
+    "PREMIUM",
+    "OHNE MONATSGEBÜHR"
+   ],
+   "cond": "verifizierte Einzahlung · solange das Guthaben bleibt",
+   "nada": [
+    "NICHTS IST",
+    "GARANTIERT"
+   ],
+   "dep": "es hängt davon ab, wen du bringst und wie sie traden",
+   "passos": [
+    "Sprich mit uns",
+    "Wir prüfen, ob es passt",
+    "Starte dein IB-Onboarding"
+   ],
+   "cta": "SCHREIB UNS",
+   "url": "@MoreThanMoney_aibot",
+   "sub": "MoreThanMoney IB-Partnerschaft",
+   "aviso": "Bildungsinhalt, keine Finanzberatung. Gehebeltes Trading birgt ein hohes Verlustrisiko. Provisionen nicht garantiert."
+  }
  }
 }

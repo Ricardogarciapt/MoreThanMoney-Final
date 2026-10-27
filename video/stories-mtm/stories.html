@@ -59,6 +59,8 @@ canvas#po { position: absolute; inset: 0; }
 .edu b { font-family: Anton; font-size: 56px; font-weight: 400; display: block; } .edu span { font-size: 34px; color: var(--ouro2); font-weight: 700; }
 .aviso { font-size: 24px; color: rgba(246,241,228,.55); padding: 0 120px; line-height: 1.35; }
 .cadeado { width: 200px; height: 220px; }
+.degrau { display: inline-flex; align-items: center; gap: 22px; padding: 20px 34px 20px 22px; font-size: 40px; font-weight: 700; border-radius: 22px; white-space: nowrap; }
+.degrau .n { font-family: Anton; font-size: 44px; color: #120f08; background: linear-gradient(180deg, #f6dc8f, var(--ouro)); width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 24px rgba(233,196,106,.5); }
 svg.fios { position: absolute; left: 0; top: 0; }
 </style></head>
 <body><div id="palco"><div id="luz"></div><div id="feixe"></div><canvas id="po" width="1080" height="1920"></canvas><div id="cenas"></div><div id="vinheta"></div></div>
@@ -247,8 +249,46 @@ function corretora(c, D) {
   el(s, `<div class="aviso">${c.aviso}</div>`, 1560, 1.2, 'up', { fixo: 1 })
 }
 
+// ——— Peça 4: Parceiros IB (plano Broker Validated no funil) ———
+function parceiros(c, D) {
+  let s = cena(...D.i01)
+  el(s, `<div class="h" style="font-size:96px">${palavras(c.hook[0])}<br>${palavras(c.hook[1], 'ouro')}</div>`, 300, .05, 'words')
+  for (let i = 0; i < 6; i++) el(s, ICONE, 760, .9 + i * .1, 'pop', { x: 150 + i * 132, w: 110 })
+  s = cena(...D.i02); const d2 = s.o - s.a, m2 = d2 * .45
+  el(s, `<div class="h">${palavras(c.tu[0])}<br>${palavras(c.tu[1], 'ouro')}</div>`, 200, .05, 'words')
+  for (let i = 0; i < 4; i++) el(s, ICONE, 520, .5 + i * .1, 'pop', { x: 290 + i * 132, w: 110 })
+  el(s, `<svg class="fios" width="1080" height="200" viewBox="0 0 1080 200"><path d="M540 0 V190" fill="none" stroke="#E9C46A" stroke-width="6" pathLength="1" stroke-dasharray="1"/></svg>`, 690, m2 - .4, 'draw')
+  el(s, `<img src="assets/emblema.png" style="width:170px;filter:drop-shadow(0 0 40px rgba(233,196,106,.6))">`, 900, m2, 'spin')
+  el(s, `<div class="h">${palavras(c.nos[0])}<br>${palavras(c.nos[1], 'ouro')}</div>`, 1110, m2 + .3, 'words')
+  s = cena(...D.i03)
+  el(s, `<div class="lbl" style="font-size:52px;letter-spacing:8px">${c.ganhas}</div>`, 190, .05, 'up')
+  el(s, `<div class="big ouro" style="font-size:170px">${c.comissao}</div>`, 270, .3, 'blur')
+  el(s, `<div class="dim">${c.consoante}</div>`, 480, .8, 'up')
+  el(s, `<div class="no vidro" style="min-width:640px"><b style="font-size:54px">📊 ${c.c1[0]}</b><span>${c.c1[1]}</span></div>`, 570, 1.2, 'flip')
+  el(s, `<div class="no vidro" style="min-width:640px;border-color:rgba(233,196,106,.8);box-shadow:0 0 60px rgba(233,196,106,.35)"><b style="font-size:54px">◎ ${c.c2[0]}</b><span>${c.c2[1]}</span></div>`, 800, (s.o - s.a) * .62, 'flip')
+  s = cena(...D.i04); const d4 = s.o - s.a
+  el(s, `<div class="h" style="font-size:84px">${palavras(c.acesso[0])}<br>${palavras(c.acesso[1], 'ouro')}</div>`, 170, .05, 'words')
+  c.degraus.forEach((t, i) => el(s, `<div class="degrau vidro"><span class="n">${i + 1}</span>${t}</div>`, 1080 - i * 150, .9 + i * (d4 - 1.6) / 4, 'left', { x: 70 + i * 60, w: 900 }))
+  s = cena(...D.i05)
+  el(s, `<div class="carimbo" style="font-size:96px">${c.plano} ✓</div>`, 260, .1, 'stamp')
+  el(s, `<div class="big ouro">${c.premium[0]}</div>`, 560, .8, 'blur')
+  el(s, `<div class="h" style="font-size:96px">${palavras(c.premium[1])}</div>`, 760, 1.2, 'words')
+  el(s, `<div class="dim">${c.cond}</div>`, 930, 1.8, 'up')
+  s = cena(...D.i06)
+  el(s, `<div class="h dor" style="font-size:120px">${palavras(c.nada[0])}<br>${palavras(c.nada[1])}</div>`, 420, .05, 'words')
+  el(s, `<div class="sub" style="color:var(--dim)">${c.dep}</div>`, 760, .9, 'up')
+  s = cena(...D.i07); const d7 = s.o - s.a
+  c.passos.forEach((t, i) => el(s, `<div class="degrau vidro"><span class="n">${i + 1}</span>${t}</div>`, 420 + i * 170, .1 + i * (d7 - .8) / 3, 'left', { x: 90, w: 900 }))
+  s = cena(...D.i08, true)
+  el(s, `<div class="lbl" style="font-size:40px;letter-spacing:6px">${c.sub}</div>`, 300, .05, 'up')
+  el(s, `<div class="botao">${c.cta}</div>`, 420, .3, 'pop', { pulso: 1 })
+  el(s, `<div class="url">${c.url}</div>`, 680, .8, 'up')
+  el(s, `<img src="assets/emblema.png" style="width:220px">`, 830, 1.1, 'spin')
+  el(s, `<div class="aviso">${c.aviso}</div>`, 1560, 1.4, 'up', { fixo: 1 })
+}
+
 window.iniciar = function (peca, textos, D) {
-  ;({ criadores, membros, corretora })[peca](textos, D)
+  ;({ criadores, membros, corretora, parceiros })[peca](textos, D)
   for (let i = 0; i < 70; i++) ESP.push([Math.random() * 1080, Math.random() * 1920, .6 + Math.random() * 2.4, .2 + Math.random() * .8, Math.random() * 6.28])
   ULTIMA = Math.max(...CEN.map((c) => c.o))
   return { total: ULTIMA }
