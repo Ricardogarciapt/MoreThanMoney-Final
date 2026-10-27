@@ -49,9 +49,9 @@ loteTot  = input.float(1.0, "Lote total (contratos)", minval=0.01, step=0.01, gr
 caixaW   = input.int(20, "Largura do desenho (velas)", minval=4, group=gR)
 
 emSess(s) => not na(time(timeframe.period, s, "UTC"))
-inLdn = useLdn  and emSess(sessLdn)
-inNy  = useNy   and emSess(sessNy)
-inAs  = useAsia and emSess(sessAs)
+inLdn = emSess(sessLdn) and useLdn   // v6: and/or avaliam só o necessário, por isso time() vem primeiro
+inNy  = emSess(sessNy)  and useNy
+inAs  = emSess(sessAs)  and useAsia
 inAny = inLdn or inNy or inAs
 nomeSess = inLdn ? "LDN" : inNy ? "NY" : inAs ? "ASIA" : ""
 

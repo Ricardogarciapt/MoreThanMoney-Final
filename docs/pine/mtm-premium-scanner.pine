@@ -63,9 +63,9 @@ chave    = input.string("PremiumScanner", "strategy (chave no webhook)", group=g
 
 // ── Sessão actual ────────────────────────────────────────────────────────────
 emSess(s) => not na(time(timeframe.period, s, "UTC"))
-inLdn = useLdn  and emSess(sessLdn)
-inNy  = useNy   and emSess(sessNy)
-inAs  = useAsia and emSess(sessAs)
+inLdn = emSess(sessLdn) and useLdn   // v6: and/or avaliam só o necessário, por isso time() vem primeiro
+inNy  = emSess(sessNy)  and useNy
+inAs  = emSess(sessAs)  and useAsia
 inAny = inLdn or inNy or inAs
 nomeSess = inLdn ? "LDN" : inNy ? "NY" : inAs ? "ASIA" : ""
 
