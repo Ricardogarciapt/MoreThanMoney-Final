@@ -5,8 +5,9 @@
 // Mesma lógica do indicador docs/pine/mtm-premium-scanner.pine, com execução:
 //  · Ordem limite no meio da zona, válida 4 velas (1 h em 15m) — como o modo «zona»
 //    do MTM Auto Premium.
-//  · 3 partes (% editáveis): TP1, TP2 e TP3 (ou TP4, a correr). Depois do TP1 o SL das
-//    outras passa para a entrada. Entrada, SL e TPs desenhados como no TrendShot.
+//  · Partes (% editáveis) no TP1, TP2 e TP3 (ou TP4, a correr). Por omissão o TP1 não fecha
+//    nada (0 %): só passa o SL para a entrada, e a posição sai a meias no TP2 e no TP3.
+//    Entrada, SL e TPs desenhados como no TrendShot.
 //  · Um grupo de cada vez (enquanto há posição, sinais novos só aparecem no gráfico).
 // Números medidos e limites: docs/premium-scanner-engenharia-reversa.md
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,11 +37,11 @@ largZ    = input.float(5.0, "Largura da zona de entrada $", minval=0, step=0.5, 
 validade = input.int(4, "Ordem limite válida (velas)", minval=1, group=gR)
 distSL   = input.float(5.0, "SL: $ para lá da zona", minval=0.5, step=0.5, group=gR)
 tp1D     = input.float(5.0,  "TP1: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t1")
-pct1     = input.int(33, "saída %", minval=1, maxval=100, group=gR, inline="t1")
+pct1     = input.int(0, "saída %", minval=0, maxval=100, group=gR, inline="t1", tooltip="0 = no TP1 não fecha nada: só passa o SL para a entrada.")
 tp2D     = input.float(10.0, "TP2: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t2")
-pct2     = input.int(33, "saída %", minval=1, maxval=100, group=gR, inline="t2")
+pct2     = input.int(50, "saída %", minval=0, maxval=100, group=gR, inline="t2")
 tp3D     = input.float(15.0, "TP3: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t3")
-pct3     = input.int(34, "saída %", minval=1, maxval=100, group=gR, inline="t3")
+pct3     = input.int(50, "saída %", minval=0, maxval=100, group=gR, inline="t3")
 usarTP4  = input.bool(false, "Última parte sai no TP4 (a correr)", group=gR, inline="t4")
 tp4D     = input.float(20.0, "$ da borda", minval=0.5, step=0.5, group=gR, inline="t4")
 usarBE   = input.bool(true, "SL para a entrada depois do TP1", group=gR)
@@ -85,6 +86,7 @@ var float gTP3     = na
 var float gTP4     = na
 var int   gDesde   = na
 var bool  gCompra  = true
+var bool  gTP1Ok   = false
 
 semPosicao = strategy.position_size == 0 and strategy.opentrades == 0
 
@@ -98,11 +100,15 @@ if sinal and semPosicao and na(gDesde)
     gTP3     := zPerto + sg * tp3D
     gTP4     := zPerto + sg * tp4D
     gDesde   := bar_index
+    gTP1Ok   := false
     d = dirCompra ? strategy.long : strategy.short
-    somaPct = pct1 + pct2 + pct3
-    strategy.entry("P1", d, qty=loteTot * pct1 / somaPct, limit=gEntrada)
-    strategy.entry("P2", d, qty=loteTot * pct2 / somaPct, limit=gEntrada)
-    strategy.entry("P3", d, qty=loteTot * pct3 / somaPct, limit=gEntrada)
+    somaPct = math.max(pct1 + pct2 + pct3, 1)
+    if pct1 > 0
+        strategy.entry("P1", d, qty=loteTot * pct1 / somaPct, limit=gEntrada)
+    if pct2 > 0
+        strategy.entry("P2", d, qty=loteTot * pct2 / somaPct, limit=gEntrada)
+    if pct3 > 0
+        strategy.entry("P3", d, qty=loteTot * pct3 / somaPct, limit=gEntrada)
 
 // Limite expira sem entrar
 if not na(gDesde) and semPosicao and bar_index - gDesde >= validade
@@ -111,11 +117,14 @@ if not na(gDesde) and semPosicao and bar_index - gDesde >= validade
     strategy.cancel("P3")
     gDesde := na
 
-// Saídas (o SL das partes 2 e 3 sobe para a entrada depois do TP1)
-tp1Feito = not na(gDesde) and strategy.position_size != 0 and strategy.opentrades < 3
-stopResto = usarBE and tp1Feito ? gEntrada : gSL
+// Saídas: depois de o preço tocar no TP1, o SL do que resta passa para a entrada
+// (com ou sem parcial no TP1 — o toque conta mesmo com 0 %).
+if not na(gDesde) and strategy.position_size != 0 and not gTP1Ok
+    gTP1Ok := gCompra ? high >= gTP1 : low <= gTP1
+stopResto = usarBE and gTP1Ok ? gEntrada : gSL
 if not na(gDesde)
-    strategy.exit("S1", "P1", limit=gTP1, stop=gSL)
+    if pct1 > 0
+        strategy.exit("S1", "P1", limit=gTP1, stop=gSL)
     strategy.exit("S2", "P2", limit=gTP2, stop=stopResto)
     strategy.exit("S3", "P3", limit=usarTP4 ? gTP4 : gTP3, stop=stopResto)
 
@@ -157,7 +166,7 @@ if showSLTP and not na(gDesde) and gDesde == bar_index
     array.push(trBoxes, box.new(x1, math.max(gEntrada, gSL),   x2, math.min(gEntrada, gSL),   border_color=na, bgcolor=color.new(C_SL, 88)))
     array.push(trBoxes, box.new(x1, zHi, x2, zLo, border_color=color.new(C_ENTRY, 40), bgcolor=color.new(C_ENTRY, 80)))
     f_level(x1, x2, gEntrada, (gCompra ? "COMPRA" : "VENDA") + " · Zona: " + f_fmt(zLo) + " – " + f_fmt(zHi) + " · Entrada: " + f_fmt(gEntrada), C_ENTRY)
-    f_level(x1, x2, gTP1, "TP1: " + f_fmt(gTP1) + " · " + str.tostring(pct1) + "%" + (usarBE ? " → SL na entrada" : ""), C_TP)
+    f_level(x1, x2, gTP1, "TP1: " + f_fmt(gTP1) + (pct1 > 0 ? " · " + str.tostring(pct1) + "%" : "") + (usarBE ? " → SL na entrada" : ""), C_TP)
     f_level(x1, x2, gTP2, "TP2: " + f_fmt(gTP2) + " · " + str.tostring(pct2) + "%", C_TP)
     if usarTP4
         f_level(x1, x2, gTP4, "TP4: " + f_fmt(gTP4) + " · " + str.tostring(pct3) + "%", C_TP)

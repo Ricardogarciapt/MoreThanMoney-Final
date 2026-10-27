@@ -112,10 +112,33 @@ Todos com a mesma execução, simulada em M5 com as velas reais da corretora, de
 - Com spread e comissão, que no ouro são cerca de 2–3 pips por trade, nenhuma das variantes tem vantagem
   comprovada. Não se publicam taxas de acerto nem resultados destes números.
 
-## 7. Próximos passos
+## 7. Saída no TP1: só break-even (27/10, pedido do Ricardo)
 
-1. **Sombra**: o alerta envia `strategy:"PremiumScanner"`, e o webhook ainda não conhece essa chave. Primeiro
-   regista-se durante 2–4 semanas, lado a lado com os sinais Premium reais, e só depois se liga uma mestre.
-2. **Gestão**: o resultado depende mais da saída do que da entrada. Vale testar com estes dados TP1 a 100 %,
-   trailing e TP4.
+Por omissão, o TP1 já não fecha parcial: quando o preço lá chega, o SL passa para a entrada e a posição
+sai a meias no TP2 e no TP3. A % do TP1 continua editável (33 repõe a gestão anterior).
+
+Medido com a mesma simulação M5:
+
+| | 33/33/34 (anterior) | 0/50/50 com BE no TP1 |
+|---|---|---|
+| Scanner Maioria, tudo | +1,2/trade | 0,0/trade |
+| Scanner Maioria, set–out | −1,2 | −2,5 |
+| Scanner Unânime, tudo | +4,8 | +4,1 |
+| Scanner Unânime, set–out | −1,3 | −2,2 |
+| Sinais Premium originais (limite) | −9,3 | −11,2 |
+
+Sem a parcial no TP1, perde-se o ganho dos trades que tocam o TP1 e depois voltam à entrada. Em todas
+as variantes medidas, o resultado fica um pouco pior.
+
+## 8. Webhook em sombra
+
+O alerta do indicador vai para `/api/webhooks/tradingview?secret=…` com `"strategy":"PremiumScanner"`
+(ou com `&strategy=premiumscanner` no URL). A rota grava em `tradingview_signals` com
+`estrategia='premium-scanner'`, `signal_kind='sombra'` e `trade_status='filtered'`. Por isso o alerta não
+notifica, não aparece nas MTM Alerts nem nos chats e não executa (`lib/sinais/premium-scanner-webhook.ts`).
+
+## 9. Próximos passos
+
+1. **Sombra**: regista-se durante 2–4 semanas, lado a lado com os sinais Premium reais, e só depois se liga uma mestre.
+2. **Gestão**: o resultado depende mais da saída do que da entrada. Falta testar o trailing e o TP4.
 3. **Limpeza**: os dados de `dados-estudo/` saem da branch antes do merge, se o Ricardo preferir não os guardar no repo.

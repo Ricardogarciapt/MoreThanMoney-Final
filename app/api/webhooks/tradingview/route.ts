@@ -56,6 +56,7 @@ import { lifecycleMessage, stopFoiProtegido, type LifecycleContext, type SignalE
 import { formatarSeguimento, formatarSinal } from "@/lib/sinais/formato-sinal"
 import { decidirPublicacaoGenerica } from "@/lib/sinais/publicacao-generica"
 import { eAlertaTrendshot } from "@/lib/sinais/trendshot"
+import { eAlertaPremiumScanner } from "@/lib/sinais/premium-scanner-webhook"
 import { TIMEFRAMES_POR_ESTRATEGIA, slFixo, timeframeAceite } from "@/lib/sinais/sl-por-estrategia"
 import { avaliarEntradaTardiaAoVivo } from "@/lib/sinais/filtro-entrada-tardia"
 import { marcaDaEstrategia } from "@/lib/sinais/grafico-estrategia"
@@ -515,6 +516,12 @@ async function processarAlerta(request: NextRequest) {
   if (eAlertaTrendshot(url.searchParams.get("strategy"), payload, rawBody)) {
     const { processarTrendshot } = await import("@/lib/sinais/trendshot-webhook")
     return NextResponse.json(await processarTrendshot(payload, rawBody, url.searchParams))
+  }
+
+  // MTM Premium Scanner (27/10): só sombra — regista os níveis do Pine, não publica nem executa.
+  if (eAlertaPremiumScanner(url.searchParams.get("strategy"), payload)) {
+    const { processarPremiumScanner } = await import("@/lib/sinais/premium-scanner-webhook")
+    return NextResponse.json(await processarPremiumScanner(payload))
   }
 
   // Campos do alerta TradingView
