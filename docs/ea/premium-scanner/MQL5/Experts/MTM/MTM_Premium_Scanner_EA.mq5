@@ -61,6 +61,7 @@ input group                "=== ENTRADA, SL E SAIDAS (em $ do ouro; 1 $ = 10 pip
 input double   InpRecuo         = 4.0;     // Meio da zona a X $ contra o preco
 input double   InpLargura       = 5.0;     // Largura da zona $
 input int      InpValidade      = 4;       // Ordem limite valida (velas)
+input int      InpCamadas       = 1;       // Camadas na zona (1 = so o meio; 3 = borda proxima, meio e borda afastada)
 input double   InpDistSL        = 5.0;     // SL: $ para la da zona
 input double   InpTP1           = 5.0;     // TP1: $ da borda da zona
 input int      InpPct1          = 50;      //   % que sai no TP1
@@ -325,14 +326,14 @@ void DesenharGrupo(const datetime t1)
 //+------------------------------------------------------------------+
 //| Abrir o grupo: tres pernas, mesma entrada e mesmo SL             |
 //+------------------------------------------------------------------+
-bool Perna(const int idx,const double vol,const double tp)
+bool Perna(const int idx,const double vol,const double tp,const double entrada,const int camada=0)
   {
    if(vol<=0) return(true);
-   string com="MTM PS "+IntegerToString(idx);
+   string com="MTM PS "+IntegerToString(idx)+(camada>0? "c"+IntegerToString(camada) : "");
    double ask=SymbolInfoDouble(_Symbol,SYMBOL_ASK);
    double bid=SymbolInfoDouble(_Symbol,SYMBOL_BID);
    double nivelMin=(double)SymbolInfoInteger(_Symbol,SYMBOL_TRADE_STOPS_LEVEL)*_Point;
-   double e=NormalizeDouble(gEntrada,_Digits);
+   double e=NormalizeDouble(entrada,_Digits);
    double sl=NormalizeDouble(gSL,_Digits);
    double t =NormalizeDouble(tp,_Digits);
    bool ok;
@@ -386,9 +387,22 @@ void AbrirGrupo(const bool compra,const double fecho,const datetime tBarra)
                compra?"COMPRA":"VENDA",Fmt(MathMin(zPerto,zLonge)),Fmt(MathMax(zPerto,zLonge)),Fmt(gEntrada),Fmt(gSL),
                Fmt(gTP1),Fmt(gTP2),Fmt(InpUsarTP4?gTP4:gTP3),v1,v2,v3);
 
-   Perna(1,v1,gTP1);
-   Perna(2,v2,gTP2);
-   Perna(3,v3,InpUsarTP4? gTP4 : gTP3);
+   int nc=MathMax(1,MathMin(InpCamadas,5));
+   if(nc==1)
+     {
+      Perna(1,v1,gTP1,gEntrada);
+      Perna(2,v2,gTP2,gEntrada);
+      Perna(3,v3,InpUsarTP4? gTP4 : gTP3,gEntrada);
+      return;
+     }
+   //--- layering: as mesmas tres pernas repetidas em nc precos pela zona, cada uma com 1/nc do volume
+   for(int c=0;c<nc;c++)
+     {
+      double preco=zPerto+(zLonge-zPerto)*c/(nc-1);
+      Perna(1,v1>0? MathMax(NormalizarLote(v1/nc),minimo) : 0,gTP1,preco,c+1);
+      Perna(2,v2>0? MathMax(NormalizarLote(v2/nc),minimo) : 0,gTP2,preco,c+1);
+      Perna(3,v3>0? MathMax(NormalizarLote(v3/nc),minimo) : 0,InpUsarTP4? gTP4 : gTP3,preco,c+1);
+     }
   }
 
 //+------------------------------------------------------------------+
@@ -459,6 +473,8 @@ void NovaVela()
          ApagarPendentes();
          gAtivo=false;
         }
+      else if(InpCamadas>1 && nPend>0 && g_barN-gDesdeN>=InpValidade)
+         ApagarPendentes();   // camadas que ficaram por preencher expiram com a validade
      }
    else if(nPos==0 && nPend>0)
       ApagarPendentes();   // restos de um arranque anterior
