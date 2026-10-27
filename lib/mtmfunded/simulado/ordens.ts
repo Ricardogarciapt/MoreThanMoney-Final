@@ -303,7 +303,8 @@ export function tipoDeEntrada(direcao: Direcao, nivel: number, preco: Preco, tol
  */
 export const APELIDOS: Record<string, string> = {
   GOLD: 'XAUUSD', SILVER: 'XAGUSD', XAUUSDT: 'XAUUSD',
-  SPX500: 'US500', SPX: 'US500', US500USD: 'US500', SPX500USD: 'US500', ES1: 'US500',
+  // SP500: o TrendShot manda-o assim (27/10: 4 alertas recusados com «SP500 não existe no MTM Funded»).
+  SP500: 'US500', SPX500: 'US500', SPX: 'US500', US500USD: 'US500', SPX500USD: 'US500', ES1: 'US500',
   NDX: 'NAS100', US100: 'NAS100', NAS100USD: 'NAS100', USTEC: 'NAS100', NQ1: 'NAS100',
   DJI: 'US30', US30USD: 'US30', DJ30: 'US30', YM1: 'US30',
   DE40: 'GER40', DE30: 'GER40', GER30: 'GER40', DAX: 'GER40', DE30EUR: 'GER40', DE40EUR: 'GER40',

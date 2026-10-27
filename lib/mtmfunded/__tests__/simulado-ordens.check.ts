@@ -132,6 +132,7 @@ eq('BINANCE:BTCUSDT → BTCUSD', candidatosDeTicker('BINANCE:BTCUSDT').includes(
 eq('EURUSD.pro → EURUSD', candidatosDeTicker('PEPPERSTONE:EURUSD.pro')[0], 'EURUSD')
 eq('XAUUSDm → XAUUSD', candidatosDeTicker('XAUUSDm').includes('XAUUSD'), true)
 eq('SPX500 → US500', candidatosDeTicker('OANDA:SPX500USD').includes('US500'), true)
+eq('SP500 (TrendShot) → US500', candidatosDeTicker('SP500').includes('US500'), true)
 eq('GER30 → GER40', candidatosDeTicker('ger30').includes('GER40'), true)
 
 // ── webhook: sincronizar ao position_size ─────────────────────────────────

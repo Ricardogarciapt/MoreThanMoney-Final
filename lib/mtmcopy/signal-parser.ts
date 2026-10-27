@@ -47,9 +47,12 @@ const SYMBOL_ALIASES: Record<string, string> = {
   BTCUSDT: 'BTCUSD',
   ETH: 'ETHUSD',
   ETHEREUM: 'ETHUSD',
-  US500: 'NAS100',
+  // O S&P 500 é o US500 (nome do catálogo MTM Funded; o symbol-resolver traduz para a corretora).
+  // Até 27/10 caía no NAS100 — um sinal do S&P a ~7.700 abria no Nasdaq a ~29.000.
+  US500: 'US500',
+  SPX500: 'US500',
+  SP500: 'US500',
   USTEC: 'NAS100',
-  SPX500: 'NAS100',
   US100: 'NAS100',
   DOW: 'US30',
   DJ30: 'US30',
@@ -142,7 +145,7 @@ function isValidTradingSymbol(symbol: string): boolean {
   // palavra inglesa de gestão é um instrumento — abriam posições inválidas (símbolo TRADEACTIVE no log).
   if (/TRADE|ACTIVE|RUNNING|CLOSE|BREAKEVEN|HIT|POSITION|STANDBY|SECURED|PROFIT|PIPS|SETUP/.test(symbol)) return false
   if (symbol.length >= 6) return true
-  return ['XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD', 'NAS100', 'US30', 'GER40', 'UK100', 'WTI', 'UKOIL', 'USOIL'].includes(
+  return ['XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD', 'NAS100', 'US30', 'US500', 'GER40', 'UK100', 'WTI', 'UKOIL', 'USOIL'].includes(
     symbol,
   )
 }
