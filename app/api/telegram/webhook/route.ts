@@ -747,10 +747,20 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // /grupos — acesso aos grupos é BROKER-GATED (conta PU Prime + depósito $300)
+      // /grupos — acesso aos grupos é BROKER-GATED (conta PU Prime + depósito $300) ou de membro MTM.
+      // Quem já tem direito recebe os botões «Entra aqui» (lib/telegram-porta-sinais).
       else if (text === "/grupos" || text === "/sinal" || text === "/acesso") {
-        const { brokerStepMessageEditavel } = await import("@/lib/telegram-broker-gate")
-        await sendMessage(await brokerStepMessageEditavel())
+        const porta = await import("@/lib/telegram-porta-sinais")
+        const quem = String(body.message?.from?.id ?? chatId)
+        if ((await porta.podeEntrarNosSinais(supabase, quem)).pode) {
+          await porta.enviarBotoesDosGrupos(quem, "Carrega em <b>Entra aqui</b> em cada grupo de sinais — aprovo-te na hora. 👇")
+        } else {
+          const { brokerStepMessageEditavel } = await import("@/lib/telegram-broker-gate")
+          await sendMessage(
+            (await brokerStepMessageEditavel()) +
+              "\n\nJá és membro MTM (pack ou Premium)? Escreve <code>/membro o-teu-email</code>.",
+          )
+        }
       }
 
       // /premium — ser Premium

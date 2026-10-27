@@ -74,6 +74,58 @@ export function ehGrupoDeSinais(chatId: unknown): boolean {
   return chatId != null && gruposDeSinais().has(String(chatId))
 }
 
+/**
+ * Os grupos com nome e link de recurso, pela ordem em que aparecem nos botões. O recurso só se usa
+ * se o bot não conseguir gerar o link com pedido (não é administrador do grupo).
+ *
+ * O FOREX swings fica de fora dos botões de propósito: desde 07/10 é só fonte de publicação e não se
+ * convida para ele (guarda lib/mtmcopy/__tests__/fontes-em-desuso). A porta continua a guardá-lo.
+ */
+function gruposComNome(): { label: string; chatId: string; recurso: string | null }[] {
+  const c = CANONICAL_TELEGRAM_CHANNELS
+  return [
+    { label: '👑 Premium', chatId: resolvedPremiumSignalsChatId(), recurso: process.env.TELEGRAM_PREMIUM_LINK || 'https://t.me/MTMgold' },
+    { label: '🧠 Sensei', chatId: resolvedTradeIdeasChatId(), recurso: process.env.TELEGRAM_SENSEI_LINK || 'https://t.me/+mbqBggXniu5lNTBk' },
+    { label: '💱 Ideias de Forex', chatId: resolvedForexIdeasChatId(), recurso: process.env.TELEGRAM_FOREX_LINK || 'https://t.me/+cVcMbCRt2rlmNzg0' },
+    { label: '🥇 GoldKiller', chatId: resolvedGoldkillerScannerChatId(), recurso: process.env.TELEGRAM_GOLDKILLER_LINK || null },
+    { label: '📈 TrendShot', chatId: envOu(c.trendshot.envVars, c.trendshot.chatId), recurso: process.env.TELEGRAM_TRENDSHOT_LINK || null },
+    { label: '🪙 Perpétuos Cripto', chatId: resolvedPerpsChatId() ?? '', recurso: process.env.TELEGRAM_PERPS_LINK || 'https://t.me/+ue9JuMRwMv0zMGQ0' },
+  ].filter((g) => g.chatId)
+}
+
+/**
+ * Os botões «Entra aqui» de cada grupo, para quem JÁ está validado.
+ *
+ * Cada botão é um link com pedido de adesão: a pessoa carrega, o pedido chega ao webhook e a porta
+ * aprova-o na hora porque a pessoa tem direito. Um link reencaminhado a outra pessoa não a deixa
+ * entrar — o pedido dela fica pendente.
+ */
+export async function tecladoEntrarNosGrupos(tgUserId: string): Promise<{ inline_keyboard: { text: string; url: string }[][] }> {
+  const linhas: { text: string; url: string }[][] = []
+  for (const g of gruposComNome()) {
+    const r = (await tg('createChatInviteLink', {
+      chat_id: g.chatId,
+      creates_join_request: true,
+      name: `membro ${tgUserId}`.slice(0, 32),
+    })) as { result?: { invite_link?: string } } | null
+    const url = r?.result?.invite_link || g.recurso
+    if (url) linhas.push([{ text: `✅ Entra aqui · ${g.label}`, url }])
+  }
+  return { inline_keyboard: linhas }
+}
+
+/** Manda a mensagem de acesso com os botões dos grupos. */
+export async function enviarBotoesDosGrupos(tgUserId: string, texto: string): Promise<void> {
+  const teclado = await tecladoEntrarNosGrupos(tgUserId)
+  await tg('sendMessage', {
+    chat_id: tgUserId,
+    text: texto,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    ...(teclado.inline_keyboard.length ? { reply_markup: teclado } : {}),
+  })
+}
+
 async function tg(method: string, body: Record<string, unknown>): Promise<{ ok?: boolean; description?: string } | null> {
   const token = getMtmcopyBotToken()
   if (!token) return null
@@ -375,7 +427,10 @@ export async function confirmarCodigoDeMembro(db: Supa, tgUserId: string, codigo
   await db.from(T_CODIGOS).delete().eq('tg_user_id', tgUserId)
   await db.from(T_LIGADOS).upsert({ tg_user_id: tgUserId, profile_id: c.profile_id, ligado_em: new Date().toISOString() }, { onConflict: 'tg_user_id' })
   const aprovados = await aprovarPedidosPendentes(db, tgUserId)
-  return aprovados
-    ? `✅ Confirmado, és membro MTM. Já te aprovei em ${aprovados} grupo(s) de sinais. Bons trades! 🚀`
-    : `✅ Confirmado, és membro MTM. A partir de agora os teus pedidos para entrar nos grupos de sinais são aprovados na hora.`
+  await enviarBotoesDosGrupos(
+    tgUserId,
+    (aprovados ? `Já te aprovei em ${aprovados} grupo(s). ` : '') +
+      `Carrega em <b>Entra aqui</b> em cada grupo que quiseres — aprovo-te na hora. 👇`,
+  )
+  return `✅ Confirmado, és membro MTM.`
 }
