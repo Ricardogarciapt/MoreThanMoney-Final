@@ -51,6 +51,7 @@ const PACKS_CONHECIDOS = [
   'scanners_semestral',
   'trendshot_semestral',
   'trendshot_lifetime',
+  'premium_scanner_lifetime',
 ]
 
 const PAPEIS_ORDEM: Papel[] = ['afiliado', 'setter', 'closer', 'prospector', 'team_leader']

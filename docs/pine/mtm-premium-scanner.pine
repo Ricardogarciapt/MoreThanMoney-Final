@@ -1,0 +1,163 @@
+//@version=6
+// ─────────────────────────────────────────────────────────────────────────────
+// MTM Premium Scanner — indicador (alertas para o site MTM)
+//
+// Reconstruído a partir dos sinais Premium publicados (871 sinais únicos de 04/06 a
+// 27/10/2026, todos XAUUSD). Medição e números: docs/premium-scanner-engenharia-reversa.md
+//
+// O QUE APRENDEMOS DOS SINAIS ORIGINAIS (e este script copia):
+//  · Geometria fixa: zona de 5 $, SL 5 $ para lá da zona, TP1/TP2/TP3 a 5/10/15 $ da
+//    borda da zona, TP4 a correr. A zona fica ~4 $ CONTRA o preço (entrada em recuo).
+//    Tudo isto é editável no grupo «Entrada, SL e saídas» e aparece no gráfico como no TrendShot.
+//  · Horário: de junho a agosto operava Ásia, Londres e NY; em outubro só Londres
+//    (07:00–11:00 UTC). O minuto de cada sinal é manual (não segue o fecho da vela).
+//  · Direcção: segue o movimento. O voto de 5 (preço vs abertura da sessão, vs 1 h,
+//    vs 4 h, vs EMA200, vs EMA9) acerta a direcção em 66 % dos 833 sinais válidos
+//    (vender sempre acertava 57 %).
+//  · Cadência: vários sinais seguidos na mesma direcção (85 % repetem a anterior).
+//
+// USAR: gráfico XAUUSD em 15 minutos. Alerta → "Any alert() function call", "Once Per
+// Bar Close", webhook do site MTM. O servidor deve começar em SOMBRA (só registar).
+// ─────────────────────────────────────────────────────────────────────────────
+indicator("MTM Premium Scanner", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=500)
+
+// ═══════════ SESSÕES (UTC) ═══════════
+gS = "═══ Sessões (UTC) ═══"
+useLdn  = input.bool(true,  "Londres", inline="l", group=gS)
+sessLdn = input.session("0700-1100", "", inline="l", group=gS)
+useNy   = input.bool(true,  "Nova Iorque", inline="n", group=gS)
+sessNy  = input.session("1300-1600", "", inline="n", group=gS)
+useAsia = input.bool(true,  "Ásia", inline="a", group=gS)
+sessAs  = input.session("0000-0600", "", inline="a", group=gS)
+
+// ═══════════ DIRECÇÃO E CADÊNCIA ═══════════
+gD = "═══ Direcção e cadência ═══"
+lenCurto = input.int(4,  "Momento curto (velas)", minval=1, group=gD)   // 4 × 15m = 1 h
+lenLongo = input.int(16, "Momento longo (velas)", minval=2, group=gD)   // 16 × 15m = 4 h
+modo     = input.string("Maioria", "Direcção", options=["Maioria", "Unânime"], group=gD, tooltip="Maioria = réplica dos sinais Premium. Unânime = só quando os 5 votos concordam (menos sinais).")
+pausa    = input.int(2,  "Pausa entre sinais (velas)", minval=1, group=gD)
+maxSess  = input.int(6,  "Máx. sinais por sessão", minval=1, group=gD)
+
+// ═══════════ ENTRADA, SL E SAÍDAS (em $ do ouro; 1 $ = 10 pips) ═══════════
+gR = "═══ Entrada, SL e saídas ═══"
+showSLTP = input.bool(true, "Mostrar entrada, SL e TPs no gráfico", group=gR)
+showHist = input.bool(false, "Manter os sinais anteriores desenhados", group=gR)
+recuo    = input.float(4.0, "Entrada: meio da zona a X $ contra o preço", minval=0, step=0.5, group=gR, tooltip="Os sinais Premium põem a zona ~4 $ contra o preço (entrada em recuo). 0 = entrada ao preço do fecho.")
+largZ    = input.float(5.0, "Largura da zona de entrada $", minval=0, step=0.5, group=gR)
+distSL   = input.float(5.0, "SL: $ para lá da zona", minval=0.5, step=0.5, group=gR)
+tp1D     = input.float(5.0,  "TP1: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t1")
+pct1     = input.int(50, "saída %", minval=0, maxval=100, group=gR, inline="t1", tooltip="Parte que fecha no TP1 (o SL do resto passa para a entrada). 0 = no TP1 só passa o SL para a entrada.")
+tp2D     = input.float(10.0, "TP2: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t2")
+pct2     = input.int(25, "saída %", minval=0, maxval=100, group=gR, inline="t2")
+tp3D     = input.float(15.0, "TP3: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t3")
+pct3     = input.int(25, "saída %", minval=0, maxval=100, group=gR, inline="t3")
+showTP4  = input.bool(true, "TP4 (deixar correr)", group=gR, inline="t4")
+tp4D     = input.float(20.0, "$ da borda", minval=0.5, step=0.5, group=gR, inline="t4")
+beTP1    = input.bool(true, "SL para a entrada depois do TP1", group=gR)
+caixaW   = input.int(20, "Largura do desenho (velas)", minval=4, group=gR)
+
+// ═══════════ ALERTAS ═══════════
+gA = "═══ Alertas MTM ═══"
+alertsOn = input.bool(true, "Emitir alertas para o site MTM", group=gA)
+chave    = input.string("PremiumScanner", "strategy (chave no webhook)", group=gA)
+
+// ── Sessão actual ────────────────────────────────────────────────────────────
+emSess(s) => not na(time(timeframe.period, s, "UTC"))
+inLdn = emSess(sessLdn) and useLdn   // v6: and/or avaliam só o necessário, por isso time() vem primeiro
+inNy  = emSess(sessNy)  and useNy
+inAs  = emSess(sessAs)  and useAsia
+inAny = inLdn or inNy or inAs
+nomeSess = inLdn ? "LDN" : inNy ? "NY" : inAs ? "ASIA" : ""
+
+// Abertura da sessão: open da primeira vela de cada sessão
+var float abSess = na
+var int   nSess  = 0
+var int   ultimo = -1000
+novaSess = inAny and (not inAny[1] or nomeSess != nomeSess[1])
+if novaSess
+    abSess := open
+    nSess  := 0
+
+// ── Direcção: voto de 5 (sessão, 1 h, 4 h, EMA200, EMA9) ──────────────────────────────────────────────────────
+voto = (close > abSess ? 1 : -1) + (close > close[lenCurto] ? 1 : -1) + (close > close[lenLongo] ? 1 : -1) +
+     (close > ta.ema(close, 200) ? 1 : -1) + (close > ta.ema(close, 9) ? 1 : -1)
+dirCompra = voto > 0
+votoOk = modo == "Maioria" or math.abs(voto) == 5
+
+// ── Disparo ──────────────────────────────────────────────────────────────────
+podeDisparar = inAny and votoOk and barstate.isconfirmed and not na(abSess) and nSess < maxSess and bar_index - ultimo >= pausa
+sinal = podeDisparar
+if sinal
+    nSess  := nSess + 1
+    ultimo := bar_index
+
+sg      = dirCompra ? 1.0 : -1.0
+meio    = close - sg * recuo
+zPerto  = meio + sg * largZ / 2       // borda do lado do alvo
+zLonge  = meio - sg * largZ / 2       // borda do lado do SL
+sl      = zLonge - sg * distSL
+tp1     = zPerto + sg * tp1D
+tp2     = zPerto + sg * tp2D
+tp3     = zPerto + sg * tp3D
+tp4     = zPerto + sg * tp4D
+
+f_num(x) => str.tostring(math.round_to_mintick(x))
+f_json(_dir) =>
+    '{"strategy":"' + chave + '","ticker":"' + syminfo.ticker + '","exchange":"' + syminfo.prefix +
+     '","timeframe":"' + timeframe.period + '","session":"' + nomeSess + '","action":"' + _dir +
+     '","close":' + f_num(close) +
+     ',"entry":' + f_num(meio) +
+     ',"zone_low":' + f_num(math.min(zPerto, zLonge)) +
+     ',"zone_high":' + f_num(math.max(zPerto, zLonge)) +
+     ',"sl":' + f_num(sl) +
+     ',"tp1":' + f_num(tp1) + ',"tp2":' + f_num(tp2) + ',"tp3":' + f_num(tp3) +
+     (showTP4 ? ',"tp4":' + f_num(tp4) : '') +
+     ',"exit_pct_tp1":' + str.tostring(pct1) + ',"exit_pct_tp2":' + str.tostring(pct2) + ',"exit_pct_tp3":' + str.tostring(pct3) +
+     ',"be_after_tp1":' + (beTP1 ? 'true' : 'false') + '}'
+
+if alertsOn and sinal
+    alert(f_json(dirCompra ? "buy" : "sell"), alert.freq_once_per_bar_close)
+
+// ── Visual ───────────────────────────────────────────────────────────────────
+bgcolor(inLdn ? color.new(#D2A63C, 92) : inNy ? color.new(#E9C46A, 94) : inAs ? color.new(color.gray, 94) : na)
+plotshape(sinal and dirCompra,     "Compra", shape.labelup,   location.belowbar, color.new(color.green, 0), text="BUY",  textcolor=color.white, size=size.tiny)
+plotshape(sinal and not dirCompra, "Venda",  shape.labeldown, location.abovebar, color.new(color.red, 0),   text="SELL", textcolor=color.white, size=size.tiny)
+
+// ── Entrada, SL e TPs no gráfico (estilo TrendShot) ─────────────────────────
+const color C_ENTRY = #D2A63C
+const color C_TP    = #12B886
+const color C_SL    = #D6401F
+var array<line>  trLines  = array.new<line>()
+var array<label> trLabels = array.new<label>()
+var array<box>   trBoxes  = array.new<box>()
+f_fmt(x) => str.tostring(math.round_to_mintick(x))
+f_clear() =>
+    while array.size(trLines) > 0
+        line.delete(array.pop(trLines))
+    while array.size(trLabels) > 0
+        label.delete(array.pop(trLabels))
+    while array.size(trBoxes) > 0
+        box.delete(array.pop(trBoxes))
+f_level(x1, x2, y, txt, col) =>
+    array.push(trLines, line.new(x1, y, x2, y, color=col, width=1))
+    array.push(trLabels, label.new(x2 + 1, y, txt, style=label.style_label_left, color=col, textcolor=color.white, size=size.small))
+
+if showSLTP and sinal
+    if not showHist
+        f_clear()
+    x1 = bar_index
+    x2 = bar_index + caixaW
+    tpUlt = showTP4 ? tp4 : tp3
+    array.push(trBoxes, box.new(x1, math.max(meio, tpUlt), x2, math.min(meio, tpUlt), border_color=na, bgcolor=color.new(C_TP, 88)))
+    array.push(trBoxes, box.new(x1, math.max(meio, sl),    x2, math.min(meio, sl),    border_color=na, bgcolor=color.new(C_SL, 88)))
+    array.push(trBoxes, box.new(x1, math.max(zPerto, zLonge), x2, math.min(zPerto, zLonge), border_color=color.new(C_ENTRY, 40), bgcolor=color.new(C_ENTRY, 80)))
+    f_level(x1, x2, meio, (dirCompra ? "COMPRA" : "VENDA") + " · Zona: " + f_fmt(math.min(zPerto, zLonge)) + " – " + f_fmt(math.max(zPerto, zLonge)) + " · Entrada: " + f_fmt(meio), C_ENTRY)
+    f_level(x1, x2, tp1, "TP1: " + f_fmt(tp1) + (pct1 > 0 ? " · " + str.tostring(pct1) + "%" : "") + (beTP1 ? " → SL na entrada" : ""), C_TP)
+    f_level(x1, x2, tp2, "TP2: " + f_fmt(tp2) + " · " + str.tostring(pct2) + "%", C_TP)
+    f_level(x1, x2, tp3, "TP3: " + f_fmt(tp3) + " · " + str.tostring(pct3) + "%", C_TP)
+    if showTP4
+        f_level(x1, x2, tp4, "TP4: " + f_fmt(tp4) + " · deixar correr", C_TP)
+    f_level(x1, x2, sl, "SL: " + f_fmt(sl), C_SL)
+
+alertcondition(sinal and dirCompra,     "MTM Premium Scanner COMPRA", "Premium Scanner BUY")
+alertcondition(sinal and not dirCompra, "MTM Premium Scanner VENDA",  "Premium Scanner SELL")

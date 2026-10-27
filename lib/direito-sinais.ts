@@ -71,7 +71,7 @@ export interface AlertaClassificavel {
  */
 export function alertaDeSinalPago(a: AlertaClassificavel): boolean {
   const scanner = scannerKeyFromStrategy(a.strategy || a.alertName)
-  if (scanner === 'goldkiller') return true
+  if (scanner === 'goldkiller' || scanner === 'premiumscanner') return true
   if (scanner === 'sensei') return a.assetClass !== 'forex' && a.assetClass !== 'crypto_perp'
   return false
 }

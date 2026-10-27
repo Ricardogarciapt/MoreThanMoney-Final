@@ -158,6 +158,7 @@ const STRATEGY_STUDIES: Record<string, string[]> = {
   MTMScanner: scannerStudies.MTMScanner,
   AurumFlow: scannerStudies.AurumFlow,
   Sensei: ["PUB;25c2231a331e413b8e7498364c5b94ab"],
+  PremiumScanner: scannerStudies.PremiumScanner,
 }
 const DEFAULT_STUDIES = STRATEGY_STUDIES.MTMScanner
 
@@ -169,6 +170,7 @@ function studiesForStrategy(strategy: string | null): string[] {
   if (norm.includes("aurum")) return STRATEGY_STUDIES.AurumFlow
   if (norm.includes("sensei")) return STRATEGY_STUDIES.Sensei
   if (norm.includes("goldkiller") || (norm.includes("gold") && norm.includes("kill"))) return STRATEGY_STUDIES.Goldkiller
+  if (norm.includes("premiumscanner")) return STRATEGY_STUDIES.PremiumScanner // antes do genérico: o nome contém "scanner"
   if (norm.includes("scanner") || norm.includes("mtmscanner")) return STRATEGY_STUDIES.MTMScanner
   return DEFAULT_STUDIES
 }

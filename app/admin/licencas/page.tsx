@@ -48,6 +48,7 @@ import { useToast } from "@/hooks/use-toast"
 const PRODUTOS = [
   { id: "sensei_ea", nome: "MTM Sensei EA", curto: "Sensei EA" },
   { id: "sensei_scalp", nome: "MTM Sensei Scalp Edition", curto: "Scalp" },
+  { id: "premium_scanner_ea", nome: "MTM Premium Scanner EA", curto: "Premium Scanner" },
 ] as const
 
 function nomeProduto(id: string | null | undefined, curto = false) {

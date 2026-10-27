@@ -66,6 +66,7 @@ const SCANNER_PLAN_NAMES: Record<string, string> = {
   aurumflow_lifetime: 'Scanner Aurum Flow Cripto (Vitalício)',
   trendshot_semestral: 'TrendShot by MTM (Semestral)',
   trendshot_lifetime: 'TrendShot by MTM (Vitalício)',
+  premium_scanner_lifetime: 'MTM Premium Scanner (Vitalício)',
   mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
   mtm_scanner_semestral: 'Scanner MTM V3.4 (Semestral)',
   mtm_scanner_lifetime: 'Scanner MTM V3.4 (Vitalício)',
@@ -310,6 +311,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       agenteCodigo: session.metadata?.agente_codigo ?? null,
     })
     return
+  }
+
+  // O vitalício do Premium Scanner é o pacote com a EA: a compra também emite a licença da EA
+  // (idempotente pelo id do pagamento, por isso o Stripe repetir o webhook não duplica a chave).
+  if (session.metadata?.plan === 'premium_scanner_lifetime') {
+    try {
+      await emitirLicencaDoCheckout(session)
+    } catch (err) {
+      console.error('[LICENCAS] Falhou a licença da EA do pacote Premium Scanner:', err)
+    }
   }
 
   // Checkout guest de scanner (sem conta MTM)
