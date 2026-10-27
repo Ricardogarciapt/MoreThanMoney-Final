@@ -149,6 +149,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // O Mac lê as playlists das aulas (o YouTube só lhe responde a ele) e devolve a lista no POST.
+  if (request.nextUrl.searchParams.get('playlists') === '1') {
+    const { playlistsDasAulas } = await import('@/lib/reels-educadores/aulas')
+    return NextResponse.json({ playlists: await playlistsDasAulas() })
+  }
+
   const noAr = await emDirecto(db)
 
   /**
@@ -398,6 +404,27 @@ export async function POST(request: NextRequest) {
   const db = getSupabaseAdmin()
   const corpo = await request.json().catch(() => ({}))
   const resultado = String(corpo?.resultado ?? '')
+
+  if (resultado === 'aulas') {
+    const { CHAVE_AULAS } = await import('@/lib/reels-educadores/aulas')
+    const aulas = (Array.isArray(corpo?.aulas) ? corpo.aulas : [])
+      .filter((a: Record<string, unknown>) => /^[A-Za-z0-9_-]{11}$/.test(String(a?.videoId ?? '')))
+      .slice(0, 2000)
+      .map((a: Record<string, unknown>) => ({
+        videoId: String(a.videoId),
+        url: `https://www.youtube.com/watch?v=${String(a.videoId)}`,
+        titulo: String(a.titulo ?? '').slice(0, 200),
+        educador: String(a.educador ?? ''),
+        playlist: String(a.playlist ?? '').slice(0, 200),
+        duracaoSeg: Math.max(0, Math.round(Number(a.duracaoSeg) || 0)),
+      }))
+    const agora = new Date().toISOString()
+    const { error } = await db.from('site_settings').upsert(
+      { key: CHAVE_AULAS, value: { em: agora, aulas }, updated_at: agora, description: 'Aulas das playlists, lidas pelo cortador do Mac' },
+      { onConflict: 'key' },
+    )
+    return NextResponse.json({ ok: !error, aulas: aulas.length })
+  }
   const agora = new Date().toISOString()
 
   // ── progresso, para o painel não ficar mudo ───────────────────────────────

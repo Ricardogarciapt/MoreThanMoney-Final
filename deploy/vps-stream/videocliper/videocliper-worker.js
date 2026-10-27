@@ -1224,11 +1224,55 @@ function limparPonte() {
   }
 }
 
+/**
+ * AS AULAS DAS PLAYLISTS, lidas daqui.
+ *
+ * O site não tem credenciais do YouTube e o YouTube não responde a servidores; o Mac, do IP de
+ * casa, lê cada playlist com o yt-dlp (só a lista, nada é descarregado) e devolve-a ao site.
+ * De 12 em 12 horas chega: as playlists mudam quando há aula nova, não de minuto a minuto.
+ */
+let ultimasAulas = 0
+async function lerPlaylists() {
+  if (process.env.VIDEOCLIPER_YOUTUBE !== "1" || pausado) return
+  if (Date.now() - ultimasAulas < 12 * 3600_000) return
+  ultimasAulas = Date.now()
+  try {
+    const r = await api("/api/videocliper/worker?playlists=1")
+    if (!r.ok) { log("playlists: balcão devolveu", r.status); return }
+    const { playlists = [] } = await r.json()
+    const aulas = []
+    for (const pl of playlists) {
+      const saida = await new Promise((resolve) => {
+        const p = spawn(YTDLP, ["--flat-playlist", "-J", ...cookiesDoYoutube(), `https://www.youtube.com/playlist?list=${pl.id}`], { stdio: ["ignore", "pipe", "ignore"] })
+        let txt = ""
+        p.stdout.on("data", (d) => { txt += d })
+        p.on("close", () => resolve(txt))
+        p.on("error", () => resolve(""))
+      })
+      let j
+      try { j = JSON.parse(saida) } catch { log("playlists: não li", pl.id); continue }
+      for (const e of j.entries || []) {
+        if (!e?.id || /^\[(private|deleted) video\]$/i.test(String(e.title || ""))) continue
+        aulas.push({ videoId: e.id, titulo: e.title || "", educador: pl.educador, playlist: pl.titulo, duracaoSeg: Number(e.duration) || 0 })
+      }
+    }
+    const res = await api("/api/videocliper/worker", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ resultado: "aulas", aulas }),
+    }).then((x) => x.json()).catch(() => null)
+    log(`playlists: ${playlists.length} lidas, ${res?.aulas ?? 0} aulas enviadas ao site`)
+  } catch (e) {
+    log("playlists falharam:", e.message)
+  }
+}
+
 async function ciclo() {
   if (!SEGREDO) { console.error("LMS_CAPTION_WORKER_SECRET em falta"); process.exit(1) }
   log(`a correr · ${API} · de ${ESPERA / 1000}s em ${ESPERA / 1000}s`)
   for (;;) {
     limparPonte()
+    await lerPlaylists()
     // Uma passagem que rebenta não pode matar o ciclo: a máquina ficaria parada até alguém dar
     // por isso, e ninguém dá por isso.
     await umaPassagem().catch((e) => log("passagem falhou:", e.message))
