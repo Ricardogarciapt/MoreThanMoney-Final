@@ -8,23 +8,12 @@ import {
 } from '@/lib/notification-preferences'
 import { canalDeSinaisPago } from '@/lib/direito-sinais'
 import { filtrarComDireitoSinaisPagos } from '@/lib/direito-sinais-servidor'
+import { lerContaFirebase } from '@/lib/firebase-conta'
 
 const supabase = getSupabaseAdmin()
 
-/** Parse FIREBASE_SERVICE_ACCOUNT_KEY — suporta JSON com newlines literais na private key. */
-function parseFirebaseServiceAccount(raw: string): Record<string, unknown> | null {
-  const trimmed = raw.trim()
-  if (!trimmed) return null
-  try {
-    return JSON.parse(trimmed) as Record<string, unknown>
-  } catch {
-    try {
-      return JSON.parse(trimmed.replace(/\n/g, '\\n')) as Record<string, unknown>
-    } catch {
-      return null
-    }
-  }
-}
+/** Parse FIREBASE_SERVICE_ACCOUNT_KEY — ver lib/firebase-conta.ts (o `\\n` literal no fim da variável). */
+const parseFirebaseServiceAccount = (raw: string) => lerContaFirebase(raw)
 
 /** Evita executar firebase-admin no import do módulo (build / collect page data). */
 async function getFirebaseAdmin() {
