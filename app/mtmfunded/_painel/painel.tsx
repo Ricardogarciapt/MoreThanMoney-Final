@@ -26,6 +26,7 @@ import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
 import { ordemParaMostrar } from '@/lib/mtmfunded/regras'
 import CredenciaisConta from '@/components/funded/credenciais-conta'
 import { SECCOES_DO_CLIENTE, SECCOES_DO_TORNEIO } from './seccoes'
+import { fmtDinheiro } from '@/lib/format/dinheiro'
 
 /**
  * O painel de admin aqui é o MESMO componente do /admin, e não uma cópia.
@@ -64,6 +65,8 @@ interface Participante {
 interface Conta {
   id: string; tipo: string; login: string | null; servidor: string | null
   saldoInicial: number | null; alavancagem: number | null; estado: string
+  /** Capital e equity actuais (lib/mtmfunded/numeros-conta.ts) — os mesmos números do WebTrader e do admin. */
+  capital?: number | null; equity?: number | null
   metricas: Record<string, unknown>; quebrouRegra: string | null
   /** O QR do MetaTrader, em data URI. Entra na app com um toque. */
   qrcode: string | null
@@ -477,6 +480,7 @@ function Dashboard({ torneio, participante, contas, nome, perfil }: {
           <Linha rotulo="Login" valor={conta.login ?? 'a emitir'} />
           <Linha rotulo="Servidor" valor={conta.servidor ?? '—'} />
           <Linha rotulo="Saldo inicial" valor={conta.saldoInicial ? `${conta.saldoInicial.toLocaleString('pt-PT')} USD` : '—'} />
+          <LinhasCapitalEquity conta={conta} />
           {!conta.login && (
             <p className="mt-3 text-xs text-zinc-500">
               A conta está a ser emitida. Recebes os dados por email assim que estiver pronta.
@@ -578,6 +582,21 @@ function Barra({ rotulo, restante }: { rotulo: string; restante: number }) {
         <div className={`h-full ${perto ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: perto ? '100%' : '35%' }} />
       </div>
     </div>
+  )
+}
+
+/**
+ * Capital e equity actuais, em todas as listas de contas: antes só aparecia a equity guardada nas
+ * métricas (que nas contas SIM fica parada) e nunca o capital. Valor e «USD» nunca se separam.
+ */
+function LinhasCapitalEquity({ conta }: { conta: Conta }) {
+  const equity = conta.equity ?? (typeof conta.metricas.equity === 'number' ? (conta.metricas.equity as number) : null)
+  if (conta.capital == null && equity == null) return null
+  return (
+    <>
+      <Linha rotulo="Capital" valor={fmtDinheiro(conta.capital, 'USD')} />
+      <Linha rotulo="Equity" valor={fmtDinheiro(equity, 'USD')} />
+    </>
   )
 }
 
@@ -711,9 +730,7 @@ function Contas({ contas, abrir, ehAdmin, filtroInicial }: {
           <Linha rotulo="Servidor" valor={c.servidor ?? '—'} />
           <Linha rotulo="Saldo inicial" valor={c.saldoInicial ? `${c.saldoInicial.toLocaleString('pt-PT')} USD` : '—'} />
           <Linha rotulo="Alavancagem" valor={c.alavancagem ? `1:${c.alavancagem}` : '—'} />
-          {typeof c.metricas.equity === 'number' && (
-            <Linha rotulo="Equity" valor={`${(c.metricas.equity as number).toLocaleString('pt-PT')} USD`} />
-          )}
+          <LinhasCapitalEquity conta={c} />
 
           {/* Só há desempenho para ver depois de a conta existir no MetaTrader. */}
           {c.login && (
@@ -935,9 +952,7 @@ function ModalApagarConta({ conta, aoFechar, aoApagar }: {
           <Linha rotulo="Login" valor={conta.login ?? 'a emitir'} />
           <Linha rotulo="Servidor" valor={conta.servidor ?? '—'} />
           <Linha rotulo="Saldo inicial" valor={conta.saldoInicial ? `${conta.saldoInicial.toLocaleString('pt-PT')} USD` : '—'} />
-          {typeof conta.metricas.equity === 'number' && (
-            <Linha rotulo="Equity" valor={`${(conta.metricas.equity as number).toLocaleString('pt-PT')} USD`} />
-          )}
+          <LinhasCapitalEquity conta={conta} />
         </div>
 
         {!plano && !erro && <p className="mt-4 text-sm text-zinc-500">A ver o que está ligado a esta conta…</p>}

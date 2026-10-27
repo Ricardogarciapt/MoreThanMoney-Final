@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ehContaMetaApi } from '@/lib/contas/quota-metaapi'
 import { etiquetaDaLinha } from '@/lib/contas/etiqueta'
 import { rotuloUsoT2T } from '@/lib/mtmcopy/alvo-t2t'
+import { chaveDoSaldo } from '@/lib/copia-contas/servidor/saldos-lidos'
 
 /**
  * «As minhas contas» — a lista única de contas de um utilizador, dos dois produtos.
@@ -34,6 +35,10 @@ export interface ContaUnificada {
   /** Para que serve: «Tap to Trade», «MTM Auto · Premium Gold», «Destino do copiador MTM Funded»… */
   usos: string[]
   saldo: number | null
+  /** Equity: MTM Funded pelo motor; corretora pela última leitura guardada (216 · contas_saldo_lido). */
+  equity: number | null
+  /** Quando o capital/equity da corretora foi lido (216). null = MTM Funded ou nunca lido. */
+  saldoLidoEm: string | null
   acoes: {
     editarCredenciais: boolean
     pausar: boolean
@@ -82,6 +87,8 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
   const destinoCopiador = new Set((copiadores ?? []).map((c) => `${c.destino_tipo}:${c.destino_id}`))
 
   const contas: ContaUnificada[] = []
+  // Para o capital/equity no fim: a conta MetaApi (chave do saldo lido) e a conta MTM Funded ligada.
+  const extra = new Map<string, { metaapiAccountId: string | null; fundedAccountId: string | null }>()
 
   for (const c of (site ?? []) as Record<string, unknown>[]) {
     const plataforma = plataformaDe(c.mt5_platform)
@@ -102,6 +109,7 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
       plataforma,
       estado: txt(c.mt5_status),
     })
+    extra.set(`site:${c.id}`, { metaapiAccountId: txt(c.metaapi_account_id), fundedAccountId: txt(c.funded_account_id) })
     contas.push({
       chave: `site:${c.id}`,
       id: String(c.id),
@@ -117,6 +125,8 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
       contaMetaApi: metaApi,
       usos,
       saldo: typeof c.balance === 'number' ? c.balance : null,
+      equity: null,
+      saldoLidoEm: null,
       acoes: {
         editarCredenciais: plataforma === 'mt5' || plataforma === 'mt4',
         pausar: ativa && !soLeitura,
@@ -138,6 +148,7 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
     }
     if (destinoCopiador.has(`mtmauto:${c.id}`)) usos.push('Destino do copiador MTM Funded')
     const metaTrader = plataforma === 'mt5' || plataforma === 'mt4'
+    extra.set(`auto:${c.id}`, { metaapiAccountId: txt(c.metaapi_account_id), fundedAccountId: txt(c.funded_account_id) })
     contas.push({
       chave: `auto:${c.id}`,
       id: String(c.id),
@@ -158,6 +169,8 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
       }),
       usos,
       saldo: null,
+      equity: null,
+      saldoLidoEm: null,
       acoes: {
         editarCredenciais: metaTrader && Boolean(c.metaapi_account_id),
         pausar: metaTrader && ativa,
@@ -169,6 +182,7 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
   }
 
   for (const c of (webtrader.error ? [] : webtrader.data ?? []) as Record<string, unknown>[]) {
+    extra.set(`wt:${c.id}`, { metaapiAccountId: txt(c.metaapi_account_id), fundedAccountId: null })
     contas.push({
       chave: `wt:${c.id}`,
       id: String(c.id),
@@ -184,11 +198,47 @@ export async function listarContasUnificadas(userId: string): Promise<ContaUnifi
       contaMetaApi: ehContaMetaApi({ metaapi_account_id: txt(c.metaapi_account_id), login: txt(c.login), plataforma: 'mt5', estado: txt(c.estado) }),
       usos: ['WebTrader'],
       saldo: null,
+      equity: null,
+      saldoLidoEm: null,
       acoes: { editarCredenciais: false, pausar: false, retomar: false, remover: true, gerirNaAppMtmAuto: false },
     })
   }
 
+  await juntarCapitalEquity(contas, extra)
   return contas
+}
+
+/**
+ * Capital e equity em todas as linhas, sem chamar a MetaApi: MTM Funded pelo motor
+ * (`sim_saldo`/`sim_equity`), corretora pela última leitura guardada (216). As MESMAS fontes do
+ * Centro e do /admin/mtmcopy, para os números baterem entre ecrãs. Falhar aqui nunca parte a lista.
+ */
+async function juntarCapitalEquity(contas: ContaUnificada[], extra: Map<string, { metaapiAccountId: string | null; fundedAccountId: string | null }>) {
+  const db = getSupabaseAdmin()
+  const num = (v: unknown) => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v))
+  const chaveDe = (c: ContaUnificada) => chaveDoSaldo({ ref: c.chave, plataforma: c.plataforma, metaapiAccountId: extra.get(c.chave)?.metaapiAccountId })
+  const chaves = [...new Set(contas.map(chaveDe).filter((k): k is string => Boolean(k)))]
+  const fundedIds = [...new Set(contas.filter((c) => c.plataforma === 'mtmfunded').map((c) => extra.get(c.chave)?.fundedAccountId).filter((x): x is string => Boolean(x)))]
+  try {
+    const [lidos, funded] = await Promise.all([
+      chaves.length ? db.from('contas_saldo_lido').select('chave, saldo, equity, lido_em').in('chave', chaves) : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+      fundedIds.length ? db.from('mtm_trading_accounts').select('id, sim_saldo, sim_equity').in('id', fundedIds) : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+    ])
+    const porChave = new Map(((lidos.data ?? []) as Record<string, unknown>[]).map((l) => [String(l.chave), l]))
+    const porFunded = new Map(((funded.data ?? []) as Record<string, unknown>[]).map((f) => [String(f.id), f]))
+    for (const c of contas) {
+      if (c.plataforma === 'mtmfunded') {
+        const f = porFunded.get(extra.get(c.chave)?.fundedAccountId ?? '')
+        if (f) Object.assign(c, { saldo: num(f.sim_saldo) ?? c.saldo, equity: num(f.sim_equity) ?? num(f.sim_saldo) })
+        continue
+      }
+      const k = chaveDe(c)
+      const l = k ? porChave.get(k) : undefined
+      if (l) Object.assign(c, { saldo: num(l.saldo) ?? c.saldo, equity: num(l.equity), saldoLidoEm: txt(l.lido_em) })
+    }
+  } catch {
+    // Sem 216 aplicada ou base lenta: a lista sai na mesma, só sem capital/equity.
+  }
 }
 
 /** Parte `site:<uuid>` / `auto:<uuid>` / `wt:<uuid>`. */

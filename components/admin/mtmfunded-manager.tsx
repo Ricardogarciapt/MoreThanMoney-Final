@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { tipoCurto, estadoCurto, COR_DO_ESTADO } from '@/lib/mtmfunded/etiquetas'
 import ContaModal from './mtmfunded-conta-modal'
 import ContasDoUtilizador, { type NumerosLinha } from './contas-do-utilizador'
+import { fmtDinheiro, fmtFlutuante } from '@/lib/format/dinheiro'
 import {
   Loader2, Power, Trophy, Users, Wallet, AlertTriangle, Award,
   Shield, RefreshCw, Mail, KeyRound, Ban, Check, Package, Plus, Banknote, ExternalLink,
@@ -566,16 +567,16 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
               // que o dono vê no WebTrader) fica por baixo da equity, com o flutuante.
               const { saldo, equity, pct } = saldoEPct(c)
               const cor = pct == null || Math.abs(pct) < 0.005 ? 'text-gray-400' : pct > 0 ? 'text-emerald-400' : 'text-red-400'
-              const f = (v: number) => v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              // fmtDinheiro: milhares e «$» com espaço que não parte — o valor nunca cai em duas linhas.
               const flutuante = equity != null && saldo != null ? equity - saldo : null
               return (
                 <>
-                  <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">
-                    {saldo == null ? <span className="text-gray-600">—</span> : <p className="text-gray-200">{f(saldo)} $</p>}
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-mono text-xs tabular-nums">
+                    {saldo == null ? <span className="text-gray-600">—</span> : <p className="text-gray-200">{fmtDinheiro(saldo)}</p>}
                   </td>
-                  <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">
-                    {equity == null ? <span className="text-gray-600">—</span> : <p className="text-gray-200">{f(equity)} $</p>}
-                    {flutuante != null && Math.abs(flutuante) >= 0.01 && <p className={flutuante > 0 ? 'text-emerald-400/80' : 'text-red-400/80'} title="equity − capital: posições abertas">{flutuante > 0 ? '+' : ''}{f(flutuante)}</p>}
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-mono text-xs tabular-nums">
+                    {equity == null ? <span className="text-gray-600">—</span> : <p className="text-gray-200">{fmtDinheiro(equity)}</p>}
+                    {flutuante != null && Math.abs(flutuante) >= 0.01 && <p className={flutuante > 0 ? 'text-emerald-400/80' : 'text-red-400/80'} title="equity − capital: posições abertas">{fmtFlutuante(flutuante)}</p>}
                     {pct != null && <p className={cor}>{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</p>}
                   </td>
                 </>
@@ -1371,12 +1372,15 @@ function EmitirAvulso({ accao, ocupado, setAviso, aoEmitir }: {
 
 // ── peças ────────────────────────────────────────────────────────────────────
 
+// As colunas de dinheiro alinham à direita, como os valores por baixo delas.
+const COLUNAS_A_DIREITA = new Set(['Capital', 'Equity'])
+
 function Tabela({ cabecalhos, children }: { cabecalhos: string[]; children: React.ReactNode }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-800">
       <table className="w-full text-left text-sm">
         <thead className="bg-black/40 text-xs uppercase tracking-wider text-gray-500">
-          <tr>{cabecalhos.map((c, i) => <th key={i} className="px-3 py-2">{c}</th>)}</tr>
+          <tr>{cabecalhos.map((c, i) => <th key={i} className={`px-3 py-2 ${COLUNAS_A_DIREITA.has(c) ? 'whitespace-nowrap text-right' : ''}`}>{c}</th>)}</tr>
         </thead>
         <tbody>{children}</tbody>
       </table>

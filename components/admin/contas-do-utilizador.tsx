@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { BookOpen, Loader2, X } from 'lucide-react'
 import { COR_DO_ESTADO, type EstadoCurto } from '@/lib/mtmfunded/etiquetas'
+import { fmtDinheiro } from '@/lib/format/dinheiro'
 
 /**
  * TODAS AS CONTAS DE UM UTILIZADOR — o «dados» do admin, com os mesmos números que o dono vê.
@@ -32,11 +33,12 @@ export interface NumerosLinha {
 interface Resposta {
   perfil: { full_name?: string; email?: string; username?: string | null } | null
   funded: Array<{ id: string; login: string | null; servidor: string | null; numeros: NumerosLinha; entradasDiario: number | null; tradesFechadas: number | null }>
-  ligadas: Array<{ chave: string; plataforma: string; rotulo: string | null; login: string | null; servidor: string | null; estado: string; demo: boolean; usos: string[]; saldo: number | null; erro: string | null }> | null
+  ligadas: Array<{ chave: string; plataforma: string; rotulo: string | null; login: string | null; servidor: string | null; estado: string; demo: boolean; usos: string[]; saldo: number | null; equity?: number | null; saldoLidoEm?: string | null; erro: string | null }> | null
   erroLigadas: boolean
 }
 
-const f2 = (v: number | null | undefined) => (v == null ? '—' : v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+// O mesmo formato das outras listas de contas: milhares e «$» com espaço que não parte.
+const f2 = (v: number | null | undefined) => fmtDinheiro(v)
 
 export default function ContasDoUtilizador({ userId, nome, aoFechar, aoAbrirConta }: {
   userId: string
@@ -83,7 +85,7 @@ export default function ContasDoUtilizador({ userId, nome, aoFechar, aoAbrirCont
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] text-xs">
                   <thead className="text-left text-gray-500"><tr>
-                    <th className="px-2 py-1">Conta</th><th className="px-2 py-1">Estado</th><th className="px-2 py-1 text-right">Saldo</th>
+                    <th className="px-2 py-1">Conta</th><th className="px-2 py-1">Estado</th><th className="px-2 py-1 text-right">Capital</th>
                     <th className="px-2 py-1 text-right">Equity</th><th className="px-2 py-1 text-right">Resultado</th><th className="px-2 py-1 text-right">Trades</th><th className="px-2 py-1 text-right">Diário</th>
                   </tr></thead>
                   <tbody>
@@ -102,8 +104,8 @@ export default function ContasDoUtilizador({ userId, nome, aoFechar, aoAbrirCont
                               : n.analise && <span className="ml-1 text-[10px] text-gray-500">análise</span>}
                           </td>
                           <td className="px-2 py-1.5"><span style={{ color: COR_DO_ESTADO[n.estadoCurto] }}>{n.estadoCurto}</span></td>
-                          <td className="px-2 py-1.5 text-right font-mono">{f2(n.saldo)}</td>
-                          <td className="px-2 py-1.5 text-right font-mono">{f2(n.equity)}</td>
+                          <td className="whitespace-nowrap px-2 py-1.5 text-right font-mono">{f2(n.saldo)}</td>
+                          <td className="whitespace-nowrap px-2 py-1.5 text-right font-mono">{f2(n.equity)}</td>
                           <td className={`px-2 py-1.5 text-right font-mono ${n.resultadoPct == null ? '' : n.resultadoPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{n.resultadoPct == null ? '—' : `${n.resultadoPct > 0 ? '+' : ''}${n.resultadoPct.toFixed(2)}%`}</td>
                           <td className="px-2 py-1.5 text-right font-mono">{c.tradesFechadas ?? '—'}</td>
                           <td className="px-2 py-1.5 text-right font-mono">{c.entradasDiario == null ? '—' : <span className="inline-flex items-center gap-1"><BookOpen className="h-3 w-3 text-gray-500" />{c.entradasDiario}</span>}</td>
@@ -128,7 +130,11 @@ export default function ContasDoUtilizador({ userId, nome, aoFechar, aoAbrirCont
                       <span className="ml-auto text-gray-400">{l.estado}</span>
                     </div>
                     <p className="mt-0.5 truncate text-gray-500">{l.rotulo ?? l.servidor ?? ''}{l.usos.length ? ` · ${l.usos.join(', ')}` : ''}</p>
-                    {l.saldo != null && <p className="font-mono text-gray-300">saldo {f2(l.saldo)}</p>}
+                    {(l.saldo != null || l.equity != null) && (
+                      <p className="whitespace-nowrap font-mono text-gray-300" title={l.saldoLidoEm ? `última leitura guardada: ${new Date(l.saldoLidoEm).toLocaleString('pt-PT')}` : undefined}>
+                        capital {f2(l.saldo)} · equity {f2(l.equity)}
+                      </p>
+                    )}
                     {l.erro && <p className="truncate text-red-400">{l.erro}</p>}
                   </div>
                 ))}

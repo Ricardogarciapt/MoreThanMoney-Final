@@ -24,6 +24,9 @@ export interface ContaReal {
   bloqueada: string | null
   origem: "ligador" | "webtrader" | "sessao"
   versao?: "mt4" | "mt5"
+  /** Capital/equity da última leitura guardada da corretora (ausente = nunca lida). */
+  saldo?: number | null
+  equity?: number | null
 }
 
 export interface SessaoTL { ref: string; token: string; expira: string; login: string; servidor: string; demo: boolean; rotulo?: string | null }
