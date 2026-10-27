@@ -15,6 +15,7 @@ const TEXTO = {
     videos: "Vídeos",
     guia: "Guia em PDF",
     semEn: "A versão em inglês está a caminho.",
+    emBreve: "Os vídeos estão a caminho.",
     aviso: "Conteúdo educativo, não é aconselhamento financeiro. O trading tem risco.",
   },
   en: {
@@ -24,6 +25,7 @@ const TEXTO = {
     videos: "Videos",
     guia: "PDF guide",
     semEn: "The English version is on its way.",
+    emBreve: "The videos are on their way.",
     aviso: "Educational content, not financial advice. Trading carries risk.",
   },
 } as const
@@ -138,7 +140,7 @@ export default function EstrategiasMtmSala({
           ) : (
             <p className="flex items-center gap-2 text-xs text-zinc-500">
               <PlayCircle className="h-4 w-4" aria-hidden />
-              {t.semEn}
+              {atual.playlist.pt || atual.playlist.en ? t.semEn : t.emBreve}
             </p>
           )}
         </div>

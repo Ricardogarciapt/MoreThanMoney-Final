@@ -75,6 +75,11 @@ const RESUMO: Record<string, Record<"es" | "fr" | "de", string>> = {
     fr: "Confluence de lectures : il ne signale qu'avec assez de confirmations.",
     de: "Konfluenz von Signalen: es meldet nur mit genug Bestätigungen.",
   },
+  "premium-scanner": {
+    es: "Zonas de oro en las tres sesiones: entrada en el medio de la zona, stop corto y objetivos cada 5 $.",
+    fr: "Zones sur l'or dans les trois sessions : entrée au milieu de la zone, stop serré et objectifs tous les 5 $.",
+    de: "Gold-Zonen in allen drei Sessions: Einstieg in der Zonenmitte, enger Stop und Ziele alle 5 $.",
+  },
 }
 
 const N = ESTRATEGIAS_MTM.length

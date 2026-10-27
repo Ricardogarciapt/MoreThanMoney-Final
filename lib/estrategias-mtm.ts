@@ -7,7 +7,7 @@
  * própria secção, com capa, e um cartão por estratégia.
  *
  * Os nomes das estratégias não se traduzem. Uma playlist EN a null faz o cartão mostrar só a
- * versão PT.
+ * versão PT; as duas a null mostram que os vídeos estão a caminho.
  */
 
 export type Lingua = "pt" | "en"
@@ -105,5 +105,13 @@ export const ESTRATEGIAS_MTM: EstrategiaMtm[] = [
     resumo: { pt: "Confluência de leituras: só dá sinal com confirmações suficientes.", en: "A confluence of readings: it only signals with enough confirmations." },
     playlist: { pt: "https://www.youtube.com/playlist?list=PLPP0wxYO-Kv8", en: "https://www.youtube.com/playlist?list=PLNc_hqTepzIc" },
     guia: guias("sensei"),
+  },
+  {
+    // 27/10: playlists criadas; os vídeos entram a 28/10, quando o YouTube reabrir o limite diário.
+    slug: "premium-scanner",
+    nome: "Premium Scanner",
+    resumo: { pt: "Zonas de ouro nas três sessões: entrada no meio da zona, stop curto e alvos de 5 em 5 $.", en: "Gold zones across the three sessions: entry in the middle of the zone, a tight stop and targets every $5." },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLYeKsTzDWWL8", en: "https://www.youtube.com/playlist?list=PLAXw9tkCzQVQ" },
+    guia: guias("premium-scanner"),
   },
 ]
