@@ -1,0 +1,114 @@
+//@version=5
+// ─────────────────────────────────────────────────────────────────────────────
+// MTM Premium Scanner — ESTRATÉGIA (backtest no TradingView)
+//
+// Mesma lógica do indicador docs/pine/mtm-premium-scanner.pine, com execução:
+//  · Ordem limite no meio da zona, válida 4 velas (1 h em 15m) — como o modo «zona»
+//    do MTM Auto Premium.
+//  · 3 partes iguais: TP1, TP2, TP3. Depois do TP1 o SL das outras passa para a entrada.
+//  · Um grupo de cada vez (enquanto há posição, sinais novos só aparecem no gráfico).
+// Números medidos e limites: docs/premium-scanner-engenharia-reversa.md
+// ─────────────────────────────────────────────────────────────────────────────
+strategy("MTM Premium Scanner — Estratégia", overlay=true, pyramiding=3,
+     default_qty_type=strategy.fixed, default_qty=1, initial_capital=10000,
+     commission_type=strategy.commission.cash_per_contract, commission_value=0, process_orders_on_close=false)
+
+gS = "═══ Sessões (UTC) ═══"
+useLdn  = input.bool(true,  "Londres", inline="l", group=gS)
+sessLdn = input.session("0700-1100", "", inline="l", group=gS)
+useNy   = input.bool(true,  "Nova Iorque", inline="n", group=gS)
+sessNy  = input.session("1300-1600", "", inline="n", group=gS)
+useAsia = input.bool(false, "Ásia", inline="a", group=gS)
+sessAs  = input.session("0000-0600", "", inline="a", group=gS)
+
+gD = "═══ Direcção e cadência ═══"
+lenCurto = input.int(4,  "Momento curto (velas)", minval=1, group=gD)
+lenLongo = input.int(16, "Momento longo (velas)", minval=2, group=gD)
+pausa    = input.int(2,  "Pausa entre sinais (velas)", minval=1, group=gD)
+maxSess  = input.int(6,  "Máx. sinais por sessão", minval=1, group=gD)
+
+gG = "═══ Geometria ═══"
+recuo   = input.float(4.0, "Zona a X $ contra o preço", step=0.5, group=gG)
+largZ   = input.float(5.0, "Largura da zona $", step=0.5, group=gG)
+distSL  = input.float(5.0, "SL para lá da zona $", step=0.5, group=gG)
+passoTP = input.float(5.0, "Passo dos TPs $", step=0.5, group=gG)
+validade = input.int(4, "Limite válido (velas)", minval=1, group=gG)
+usarBE  = input.bool(true, "Break-even depois do TP1", group=gG)
+
+emSess(s) => not na(time(timeframe.period, s, "UTC"))
+inLdn = useLdn  and emSess(sessLdn)
+inNy  = useNy   and emSess(sessNy)
+inAs  = useAsia and emSess(sessAs)
+inAny = inLdn or inNy or inAs
+nomeSess = inLdn ? "LDN" : inNy ? "NY" : inAs ? "ASIA" : ""
+
+var float abSess = na
+var int   nSess  = 0
+var int   ultimo = -1000
+if inAny and (not inAny[1] or nomeSess != nomeSess[1])
+    abSess := open
+    nSess  := 0
+
+voto = (close > abSess ? 1 : -1) + (close > close[lenCurto] ? 1 : -1) + (close > close[lenLongo] ? 1 : -1)
+dirCompra = voto > 0
+
+sinal = inAny and barstate.isconfirmed and not na(abSess) and nSess < maxSess and bar_index - ultimo >= pausa
+if sinal
+    nSess  := nSess + 1
+    ultimo := bar_index
+
+sg     = dirCompra ? 1.0 : -1.0
+meio   = close - sg * recuo
+zPerto = meio + sg * largZ / 2
+zLonge = meio - sg * largZ / 2
+
+// ── Estado do grupo em curso ─────────────────────────────────────────────────
+var float gEntrada = na
+var float gSL      = na
+var float gTP1     = na
+var float gTP2     = na
+var float gTP3     = na
+var int   gDesde   = na
+var bool  gCompra  = true
+
+semPosicao = strategy.position_size == 0 and strategy.opentrades == 0
+
+// Novo grupo só quando não há posição nem ordens à espera
+if sinal and semPosicao and na(gDesde)
+    gCompra  := dirCompra
+    gEntrada := meio
+    gSL      := zLonge - sg * distSL
+    gTP1     := zPerto + sg * passoTP
+    gTP2     := zPerto + sg * passoTP * 2
+    gTP3     := zPerto + sg * passoTP * 3
+    gDesde   := bar_index
+    d = dirCompra ? strategy.long : strategy.short
+    strategy.entry("P1", d, limit=gEntrada)
+    strategy.entry("P2", d, limit=gEntrada)
+    strategy.entry("P3", d, limit=gEntrada)
+
+// Limite expira sem entrar
+if not na(gDesde) and semPosicao and bar_index - gDesde >= validade
+    strategy.cancel("P1")
+    strategy.cancel("P2")
+    strategy.cancel("P3")
+    gDesde := na
+
+// Saídas (o SL das partes 2 e 3 sobe para a entrada depois do TP1)
+tp1Feito = not na(gDesde) and strategy.position_size != 0 and strategy.opentrades < 3
+stopResto = usarBE and tp1Feito ? gEntrada : gSL
+if not na(gDesde)
+    strategy.exit("S1", "P1", limit=gTP1, stop=gSL)
+    strategy.exit("S2", "P2", limit=gTP2, stop=stopResto)
+    strategy.exit("S3", "P3", limit=gTP3, stop=stopResto)
+
+// Grupo terminado
+if not na(gDesde) and strategy.position_size == 0 and strategy.position_size[1] != 0
+    gDesde := na
+
+bgcolor(inLdn ? color.new(#D2A63C, 92) : inNy ? color.new(#E9C46A, 94) : inAs ? color.new(color.gray, 94) : na)
+plotshape(sinal and dirCompra,     "Compra", shape.labelup,   location.belowbar, color.new(color.green, 0), text="BUY",  textcolor=color.white, size=size.tiny)
+plotshape(sinal and not dirCompra, "Venda",  shape.labeldown, location.abovebar, color.new(color.red, 0),   text="SELL", textcolor=color.white, size=size.tiny)
+plot(not na(gDesde) ? gSL  : na, "SL",  color.new(color.red, 0),   style=plot.style_linebr)
+plot(not na(gDesde) ? gTP1 : na, "TP1", color.new(color.green, 40), style=plot.style_linebr)
+plot(not na(gDesde) ? gTP3 : na, "TP3", color.new(color.green, 0),  style=plot.style_linebr)
