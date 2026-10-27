@@ -123,7 +123,7 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
     description:
       "O Premium Scanner lê o ouro nas três sessões. Em cada vela de 15 minutos vota a direção com cinco critérios: o preço contra a abertura da sessão, contra há 1 h e há 4 h, e contra a EMA200 e a EMA9. Quando há sinal, desenha a zona de entrada em recuo, o stop e os alvos como nos sinais Premium da casa, e manda tudo num alerta pronto para webhook.",
     metaDescription:
-      "MTM Premium Scanner: zonas de recuo no ouro em Londres, Nova Iorque e Ásia, com entrada, stop e alvos no TradingView. 1250€ vitalício, incluído no Premium e no Pack Scanners.",
+      "MTM Premium Scanner: zonas de recuo no ouro em Londres, Nova Iorque e Ásia, com entrada, stop e alvos no TradingView. Pacote vitalício de 1250€ com indicador, estratégia e EA MT5; o indicador vem no Premium e no Pack Scanners.",
   },
   {
     slug: "sensei",
@@ -228,7 +228,7 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
       "Webhook-ready JSON alerts, plus the strategy for backtesting",
       "Educational tool: it does not place orders or guarantee results",
     ],
-    metaDescription: "MTM Premium Scanner: pullback zones on gold in London, New York and Asia, with entry, stop and targets on TradingView. €1250 lifetime, included in Premium.",
+    metaDescription: "MTM Premium Scanner: pullback zones on gold in London, New York and Asia, with entry, stop and targets on TradingView. €1250 lifetime bundle with indicator, strategy and MT5 EA; the indicator is included in Premium and the Scanner Pack.",
   },
   sensei: {
     title: ["Many readings.", "One confluence."],

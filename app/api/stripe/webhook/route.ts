@@ -313,6 +313,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
+  // O vitalício do Premium Scanner é o pacote com a EA: a compra também emite a licença da EA
+  // (idempotente pelo id do pagamento, por isso o Stripe repetir o webhook não duplica a chave).
+  if (session.metadata?.plan === 'premium_scanner_lifetime') {
+    try {
+      await emitirLicencaDoCheckout(session)
+    } catch (err) {
+      console.error('[LICENCAS] Falhou a licença da EA do pacote Premium Scanner:', err)
+    }
+  }
+
   // Checkout guest de scanner (sem conta MTM)
   if (!userId && session.metadata?.source === 'scanner_guest_checkout') {
     const tvUsername = session.metadata?.tradingview_username

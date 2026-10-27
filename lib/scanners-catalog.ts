@@ -146,16 +146,17 @@ export const SCANNERS: ScannerData[] = [
       "Zona de entrada de 5 $ em recuo e SL 5 $ para lá da zona",
       "TP1, TP2 e TP3 a 5, 10 e 15 $ da zona, e TP4 a correr",
       "Gestão: 50 % no TP1 com o SL para a entrada, 25 % no TP2 e 25 % no TP3",
+      "No pacote vitalício: EA para MetaTrader 5 com painel, que executa a mesma regra",
     ],
     techSpecs: [
       "Gráfico: XAUUSD em 15 minutos",
       "Entrada, SL e saídas editáveis e desenhados no gráfico",
       "Modo Maioria ou Unânime, pausa e máximo de sinais por sessão",
       "Alertas JSON prontos para webhook, com a estratégia para backtest",
-      "Ferramenta educativa: não executa ordens nem garante resultados",
+      "Ferramenta educativa: não garante resultados",
     ],
     products: [
-      { id: "ps-lifetime", label: "Vitalício", price: "1250€", priceNote: "Pagamento único · incluído no Premium e no Pack Scanners", planId: "premium_scanner_lifetime", highlight: true },
+      { id: "ps-lifetime", label: "Vitalício", price: "1250€", priceNote: "Pagamento único · Indicador + Estratégia + EA MT5 · o indicador vem no Premium e no Pack", planId: "premium_scanner_lifetime", highlight: true },
     ],
   },
   {

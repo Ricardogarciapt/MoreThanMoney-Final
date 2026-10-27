@@ -6,6 +6,7 @@ import {
   normalizarLogin,
   produtoDe,
   PRODUTOS,
+  PRODUTO_PREMIUM_SCANNER,
   type PlanoLicenca,
   type ProdutoLicenca,
 } from '@/lib/licencas'
@@ -35,6 +36,8 @@ const PLANOS: Record<string, PlanoLicenca> = {
   sensei_scalp_annual: 'anual',
   sensei_scalp_lifetime: 'vitalicia',
   premium_scanner_ea_lifetime: 'vitalicia',
+  // o vitalício do /scanner é o mesmo pacote (decisão do Ricardo 27/10): também emite a chave da EA
+  premium_scanner_lifetime: 'vitalicia',
 }
 
 export function ehCheckoutDoEA(session: Stripe.Checkout.Session): boolean {
@@ -98,7 +101,7 @@ export async function emitirLicencaDoCheckout(session: Stripe.Checkout.Session):
 
   // Qual dos dois EA foi comprado. O checkout escreve-o no metadata; um checkout antigo não
   // o traz e `produtoDe` devolve o AllInOne, que era o único que existia quando foi criado.
-  const produto = produtoDe(session.metadata?.produto)
+  const produto = planId.startsWith('premium_scanner') ? PRODUTO_PREMIUM_SCANNER : produtoDe(session.metadata?.produto)
 
   const licenca = await emitirLicenca({
     userId,
@@ -121,7 +124,8 @@ export async function emitirLicencaDoCheckout(session: Stripe.Checkout.Session):
     // O pacote Premium Scanner traz também o indicador e a estratégia do TradingView (por convite):
     // o mesmo email de acesso que a compra do scanner manda, com o utilizador que o cliente deu.
     const tv = session.metadata?.tradingview_username
-    if (produto === 'premium_scanner_ea' && tv) {
+    // Só no checkout da licença: a compra pelo /scanner já manda este email no webhook geral.
+    if (produto === PRODUTO_PREMIUM_SCANNER && tv && ehCheckoutDoEA(session)) {
       try {
         const { sendScannerAccessEmail } = await import('@/lib/email-service')
         await sendScannerAccessEmail(email, nome || 'Trader', 'MTM Premium Scanner (pacote com EA)', tv)
