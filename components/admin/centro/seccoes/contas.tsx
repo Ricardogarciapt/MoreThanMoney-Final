@@ -12,6 +12,7 @@ import { agruparContas, type ContaAgrupada } from "@/lib/admin-centro/agrupar-co
 import { AVISO_SIMULADO, resumirSaldos, textoPct } from "@/lib/admin-centro/linha-de-agua"
 import { MarcaProveniencia, PctLinhaDeAgua } from "../linha-de-agua"
 import { useCentroCtx } from "../contexto"
+import { fmtDinheiro, fmtFlutuante } from "@/lib/format/dinheiro"
 import { Loader2, Wallet } from "lucide-react"
 import { Azulejo, Botao, BotaoLer, Chip, Filtros, Grupo, Lista, Painel, Pilula, Recolhivel, Tabela, fmtIdade, fmtNum, idadeDe, pedirCentro, td, th, trClic, useCentro } from "../ui"
 
@@ -55,11 +56,11 @@ export function SaldoCel({ c }: { c: ContaCentro }) {
   return (
     <div className="flex flex-col items-start gap-0.5">
       <span className="flex items-center gap-1" title={f?.titulo}>
-        {c.saldo == null ? <span className="text-zinc-600">—</span> : <span>{fmtNum(c.saldo, 2)}</span>}
+        {c.saldo == null ? <span className="text-zinc-600">—</span> : <span className="whitespace-nowrap">{fmtDinheiro(c.saldo)}</span>}
         {f?.curto ? <span className="text-[9.5px] text-zinc-500">{f.curto}</span> : null}
         <MarcaProveniencia p={c.proveniencia} />
       </span>
-      <span className="text-[10px]">
+      <span className="whitespace-nowrap text-[10px]">
         <PctLinhaDeAgua l={c.linhaDeAgua} />
         {c.saldoInicial != null && <span className="ml-1 text-zinc-600">de {fmtNum(c.saldoInicial, 0)}</span>}
       </span>
@@ -75,10 +76,10 @@ export function EquityCel({ c }: { c: ContaCentro }) {
   const flutuante = c.equity != null && c.saldo != null ? c.equity - c.saldo : null
   return (
     <div className="flex flex-col items-start gap-0.5">
-      {c.equity == null ? <span className="text-zinc-600" title="sem leitura guardada — usa «Actualizar saldos»">—</span> : <span>{fmtNum(c.equity, 2)}</span>}
-      <span className="text-[10px]">
+      {c.equity == null ? <span className="text-zinc-600" title="sem leitura guardada — usa «Actualizar saldos»">—</span> : <span className="whitespace-nowrap">{fmtDinheiro(c.equity)}</span>}
+      <span className="whitespace-nowrap text-[10px]">
         {flutuante != null && Math.abs(flutuante) >= 0.01 && (
-          <span className={flutuante > 0 ? "text-emerald-400" : "text-rose-400"} title="equity − capital: o resultado das posições abertas">{flutuante > 0 ? "+" : ""}{fmtNum(flutuante, 2)}</span>
+          <span className={flutuante > 0 ? "text-emerald-400" : "text-rose-400"} title="equity − capital: o resultado das posições abertas">{fmtFlutuante(flutuante)}</span>
         )}
         {c.saldoFonte === "lido" && c.saldoLidoEm && (
           <span className={`ml-1 ${(idadeDe(c.saldoLidoEm) ?? 0) > 3600 ? "text-amber-500/80" : "text-zinc-600"}`} title={`lido em ${new Date(c.saldoLidoEm).toLocaleString("pt-PT")}`}>há {fmtIdade(idadeDe(c.saldoLidoEm))}</span>

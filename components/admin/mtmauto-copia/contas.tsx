@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { Eye, Loader2, MoreHorizontal } from "lucide-react"
 import { Aviso, BotaoRecarregar, Etiqueta, Tabela, confirmarEscrita, pedirAdmin, quando, td, th, useDadosAdmin } from "./comum"
+import { fmtDinheiro } from "@/lib/format/dinheiro"
 
 interface ContaAdmin {
   ref: string
@@ -121,8 +122,8 @@ export default function ContasCopia({ userIdInicial, extraPorUtilizador }: { use
             <th className={th}>Estado</th>
             <th className={th}>MetaApi · quota</th>
             <th className={th}>Serve para</th>
-            <th className={th} title="saldo: MTM Funded pelo motor; corretora pela última leitura guardada">Capital</th>
-            <th className={th} title="equity e idade da leitura (clica «ver» para ler ao vivo)">Equity</th>
+            <th className={`${th} text-right`} title="saldo: MTM Funded pelo motor; corretora pela última leitura guardada">Capital</th>
+            <th className={`${th} text-right`} title="equity e idade da leitura (clica «ver» para ler ao vivo)">Equity</th>
             <th className={th}>Acções</th>
           </tr>
         </thead>
@@ -168,9 +169,9 @@ export default function ContasCopia({ userIdInicial, extraPorUtilizador }: { use
                   )}
                 </td>
                 <td className={td}><div className="flex max-w-[240px] flex-wrap gap-1">{c.usos.map((u, i) => <Etiqueta key={i}>{u}</Etiqueta>)}</div></td>
-                <td className={td}><span className="tabular-nums">{c.saldo == null ? "—" : c.saldo.toLocaleString("pt-PT", { maximumFractionDigits: 2 })}</span></td>
-                <td className={td}>
-                  <span className="tabular-nums">{c.equity == null ? "—" : c.equity.toLocaleString("pt-PT", { maximumFractionDigits: 2 })}</span>
+                <td className={`${td} whitespace-nowrap text-right`}><span className="font-mono tabular-nums">{fmtDinheiro(c.saldo)}</span></td>
+                <td className={`${td} whitespace-nowrap text-right`}>
+                  <span className="font-mono tabular-nums">{fmtDinheiro(c.equity)}</span>
                   {c.saldoLidoEm && <span className="block text-[10px] text-zinc-600" title="última leitura guardada">{quando(c.saldoLidoEm)}</span>}
                 </td>
                 <td className={td}>

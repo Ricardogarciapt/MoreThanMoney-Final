@@ -7,6 +7,7 @@ import { T2T_BROKERS } from "@/lib/mtmcopy/t2t-brokers"
 import TradeLockerConnectForm, { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-form"
 import MtmFundedConnectForm, { MtmFundedBadge, SoLeituraBadge } from "@/components/ligar-mtmfunded/mtmfunded-connect-form"
 import CopiasEntreContas from "@/components/contas/copias-entre-contas"
+import { fmtDinheiro } from "@/lib/format/dinheiro"
 
 /**
  * LIGADOR DE CONTAS — «As minhas contas». UM componente para todo o lado:
@@ -39,6 +40,9 @@ export interface ContaUnificada {
   contaMetaApi: boolean
   usos: string[]
   saldo: number | null
+  /** Equity: MTM Funded pelo motor; corretora pela última leitura guardada. */
+  equity?: number | null
+  saldoLidoEm?: string | null
   acoes: { editarCredenciais: boolean; pausar: boolean; retomar: boolean; remover: boolean; gerirNaAppMtmAuto: boolean }
 }
 
@@ -224,8 +228,14 @@ export function ListaContas({ estado, onMudou }: { estado: EstadoLigador; onMudo
                 <p className="mt-0.5 text-[11px] text-zinc-400 truncate">
                   <span className="font-mono text-zinc-300">{c.login ?? "—"}</span> · {c.servidor ?? "—"}
                   {c.etiquetaDoDono && c.rotulo ? ` · ${c.rotulo}` : ""}
-                  {typeof c.saldo === "number" ? ` · ${c.saldo.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}` : ""}
                 </p>
+                {/* Capital e equity na própria linha, como nas listas do admin — nunca partidos a meio. */}
+                {(typeof c.saldo === "number" || typeof c.equity === "number") && (
+                  <p className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-zinc-400" title={c.saldoLidoEm ? `última leitura: ${new Date(c.saldoLidoEm).toLocaleString("pt-PT")}` : undefined}>
+                    <span className="whitespace-nowrap">Capital <span className="font-mono tabular-nums text-zinc-200">{fmtDinheiro(c.saldo)}</span></span>
+                    <span className="whitespace-nowrap">Equity <span className="font-mono tabular-nums text-zinc-200">{fmtDinheiro(c.equity)}</span></span>
+                  </p>
+                )}
               </div>
               <BadgeEstado estado={c.estado} />
             </div>

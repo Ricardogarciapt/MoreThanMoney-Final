@@ -5,6 +5,7 @@ import { createServerClient } from '@supabase/ssr'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { papelMtmFunded, SCANNERS_TORNEIO } from '@/lib/mtmfunded/acesso'
 import { etiquetaDaLinha } from '@/lib/contas/etiqueta'
+import { numerosDaConta, type LinhaContaNumeros } from '@/lib/mtmfunded/numeros-conta'
 // A MESMA regra do seletor do WebTrader — uma conta mestre é `tipo === 'provider'` e o filtro tem
 // os mesmos três estados. Só de leitura: não se duplica a regra, reaproveita-se.
 import { ehContaMestre, normalizarFiltro } from '@/lib/webtrader/filtro-contas'
@@ -82,7 +83,7 @@ export default async function PaginaPainel({ variante }: { variante: VariantePai
   const { data: contas } = await db
     .from('mtm_trading_accounts')
     // `etiqueta` (113) = a etiqueta do DONO, a mesma coluna que o lápis do WebTrader grava.
-    .select('id, tipo, mt5_login, servidor, saldo_inicial, alavancagem, estado, metricas, quebrou_regra, quebrada_em, qrcode_url, etiqueta, created_at')
+    .select('id, tipo, mt5_login, servidor, saldo_inicial, alavancagem, estado, metricas, quebrou_regra, quebrada_em, qrcode_url, etiqueta, created_at, motor, sim_saldo, sim_equity')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -152,6 +153,8 @@ export default async function PaginaPainel({ variante }: { variante: VariantePai
         servidor: (c.servidor as string) ?? null,
         saldoInicial: c.saldo_inicial == null ? null : Number(c.saldo_inicial),
         alavancagem: c.alavancagem as number | null,
+        // Capital e equity pela fonte única (a mesma do WebTrader e do admin): motor SIM ou métricas MT5.
+        ...(() => { const x = numerosDaConta(c as LinhaContaNumeros); return { capital: x.saldo, equity: x.equity } })(),
         estado: c.estado as string,
         metricas: (c.metricas ?? {}) as Record<string, unknown>,
         quebrouRegra: (c.quebrou_regra as string) ?? null,

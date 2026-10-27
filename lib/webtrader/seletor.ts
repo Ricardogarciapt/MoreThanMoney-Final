@@ -69,6 +69,9 @@ export interface ContaRealSeletor {
   bloqueada: string | null
   origem: 'ligador' | 'webtrader' | 'sessao'
   versao?: 'mt4' | 'mt5'
+  /** Última leitura guardada da corretora (216); ausente = nunca lida. */
+  saldo?: number | null
+  equity?: number | null
 }
 
 export interface SessaoTLSeletor { ref: string; login: string; servidor: string; demo: boolean; rotulo?: string | null }

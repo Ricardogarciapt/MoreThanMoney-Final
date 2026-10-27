@@ -387,6 +387,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                       {t.etiquetaDoDono
                         ? <span className="ml-auto max-w-[130px] truncate text-[11px] font-semibold text-[#E9C46A]" title={t.etiquetaDoDono}>{t.etiquetaDoDono}</span>
                         : <span className="ml-auto truncate text-[10.5px] text-zinc-500">{t.real.rotulo ?? t.real.servidor ?? ""}</span>}
+                      {/* Equity como nas MTM Funded, da última leitura guardada da corretora — nunca partida a meio. */}
+                      {(t.real.equity ?? t.real.saldo) != null && <span className="shrink-0 whitespace-nowrap font-mono text-zinc-400" title={`capital ${usd(t.real.saldo)} $ · equity ${usd(t.real.equity)} $ (última leitura)`}>{usd(t.real.equity ?? t.real.saldo)} $</span>}
                     </button>
                     {t.podeEtiquetar && <Estrela marcada={favorita === t.id} alternar={() => void alternarFavorita(t)} />}
                     <CampoEtiqueta
@@ -408,7 +410,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                       <span className="rounded px-1.5 text-[10.5px]" style={{ color: corDoEstado(t.estadoCurto) }}>{t.estadoCurto}</span>
                       <span className="font-mono">{t.login}</span>
                       {t.etiquetaDoDono && <span className="max-w-[120px] truncate text-[11px] font-semibold text-[#E9C46A]" title={t.etiquetaDoDono}>{t.etiquetaDoDono}</span>}
-                      {t.saldo != null && <span className="ml-auto font-mono text-zinc-400">{usd(t.equity ?? t.saldo)} $</span>}
+                      {t.saldo != null && <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-zinc-400" title={`capital ${usd(t.saldo)} $ · equity ${usd(t.equity ?? t.saldo)} $`}>{usd(t.equity ?? t.saldo)}{"\u00a0"}$</span>}
                       {!t.propria && <span className="ml-auto text-[10.5px] text-sky-300">{t.modo}</span>}
                     </button>
                     {t.propria && <Estrela marcada={favorita === t.id} alternar={() => void alternarFavorita(t)} />}

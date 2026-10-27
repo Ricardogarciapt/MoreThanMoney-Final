@@ -51,6 +51,9 @@ export interface ContaListadaWT {
   origem: 'ligador' | 'webtrader'
   /** 113 — a etiqueta que o DONO pôs nesta conta (null = sem etiqueta, mostra-se o nome de sempre). */
   etiquetaDoDono: string | null
+  /** Capital/equity da última leitura guardada (216 · contas_saldo_lido) — para o seletor de contas. */
+  saldo?: number | null
+  equity?: number | null
 }
 
 const txt = (v: unknown) => (v == null || v === '' ? null : String(v))
@@ -157,7 +160,36 @@ export async function listarContasReais(userId: string): Promise<ContaListadaWT[
     vistos.add(String(c.metaapi_account_id))
     out.push({ ref: `mt5:wt:${c.id}`, plataforma: 'mt5', versao: c.plataforma === 'mt4' ? 'mt4' : 'mt5', etiquetaDoDono: etiquetaDaLinha(c), rotulo: txt(c.rotulo), login: txt(c.login), servidor: txt(c.servidor), demo: demoPeloNome(c.servidor), real: true, bloqueada: acesso(String(c.metaapi_account_id)), origem: 'webtrader' })
   }
+  await juntarSaldosLidos(out, brutas)
   return out
+}
+
+/**
+ * Capital/equity no seletor, como nas MTM Funded: a última leitura GUARDADA da corretora (216), a
+ * mesma chave que a cópia e o admin escrevem — id MetaApi no MT4/MT5, `site:`/`auto:` no TradeLocker.
+ * Nenhuma chamada à corretora; sem leitura guardada a linha fica como estava.
+ */
+async function juntarSaldosLidos(out: ContaListadaWT[], brutas: ContasBrutas): Promise<void> {
+  const chaveDe = (c: ContaListadaWT): string | null => {
+    const m = /^(mt5|tradelocker):(site|auto|wt):(.+)$/.exec(c.ref)
+    if (!m) return null
+    if (m[1] === 'tradelocker') return `${m[2]}:${m[3]}`
+    return metaApiDaRefNasBrutas(brutas, m[2] as 'site' | 'auto' | 'wt', m[3])
+  }
+  const chaves = new Map(out.map((c) => [c.ref, chaveDe(c)]))
+  const lista = [...new Set([...chaves.values()].filter((k): k is string => Boolean(k)))]
+  if (!lista.length) return
+  try {
+    const { data } = await getSupabaseAdmin().from('contas_saldo_lido').select('chave, saldo, equity').in('chave', lista)
+    const n = (v: unknown) => (v == null || !Number.isFinite(Number(v)) ? null : Number(v))
+    const porChave = new Map((data ?? []).map((l) => [String(l.chave), l]))
+    for (const c of out) {
+      const l = porChave.get(chaves.get(c.ref) ?? '')
+      if (l) { c.saldo = n(l.saldo); c.equity = n(l.equity) }
+    }
+  } catch {
+    // 216 por aplicar: o seletor sai sem números, como antes.
+  }
 }
 
 /**
