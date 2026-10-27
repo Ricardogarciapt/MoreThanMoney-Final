@@ -198,6 +198,12 @@ export async function POST(request: NextRequest) {
     if (body.message?.chat?.type === "supergroup" || body.message?.chat?.type === "group") {
       after(() => handleTelegramChannelMessage(supabase, body.message).catch((e) => console.error("[tg group]", e)))
 
+      // O bot a conversar no grupo de leads «MTM System» — sai logo em qualquer outro grupo.
+      after(async () => {
+        const { conversarNoGrupoDeLeads } = await import("@/lib/telegram-leads-conversa")
+        await conversarNoGrupoDeLeads(supabase, body.message)
+      })
+
       /**
        * RADAR DE PROSPEÇÃO — apanhar quem nos toca e não chega ao funil.
        *
