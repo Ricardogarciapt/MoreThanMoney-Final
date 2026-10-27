@@ -64,6 +64,20 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
     }
   }
 
+  // Grupo de entrada livre (FOREX swings): lá também há conversa e conversão do bot. Para a app só
+  // passam os sinais, os seguimentos e os charts (em resposta a um sinal já espelhado).
+  {
+    const { canalSoSinais, passaParaAApp } = await import("@/lib/telegram-espelho-filtro")
+    if (canalSoSinais(slug)) {
+      const { resolveReplyToChatMessageId } = await import("@/lib/telegram-reply-thread")
+      const pai = await resolveReplyToChatMessageId(slug, message.reply_to_message?.message_id ?? null)
+      if (!passaParaAApp(content, { respondeAMensagemDoChat: Boolean(pai) })) {
+        console.log(`[Telegram] ${slug}: mensagem ${telegramMessageId} não é sinal nem seguimento — fica no grupo`)
+        return
+      }
+    }
+  }
+
   // Handle photo: pick highest resolution
   if (message.photo && message.photo.length > 0) {
     const bestPhoto = message.photo[message.photo.length - 1]
@@ -640,7 +654,18 @@ export async function POST(request: NextRequest) {
           // validação de corretora. Mandá-lo para as boas-vindas genéricas era fazê-lo procurar
           // outra vez aquilo em que já tinha carregado.
           const t = token.toLowerCase()
-          if (t === "broker" || t === "corretora") {
+          if (t === "grupos" || t === "sinais") {
+            // Do botão «Entrar nos grupos» (ex.: posts do FOREX swings): quem tem direito recebe os
+            // botões «Entra aqui»; os outros, os dois caminhos.
+            const porta = await import("@/lib/telegram-porta-sinais")
+            const quem = String(body.message?.from?.id ?? chatId)
+            if ((await porta.podeEntrarNosSinais(supabase, quem)).pode) {
+              await porta.enviarBotoesDosGrupos(quem, "Carrega em <b>Entra aqui</b> em cada grupo de sinais — aprovo-te na hora. 👇")
+            } else {
+              const { textoDoPedidoPendente } = await import("@/lib/telegram-porta-sinais-regra")
+              await sendMessage(textoDoPedidoPendente(null, MTMCOPY_BOT_USERNAME()))
+            }
+          } else if (t === "broker" || t === "corretora") {
             const { brokerStepMessageEditavel } = await import("@/lib/telegram-broker-gate")
             await sendMessage(await brokerStepMessageEditavel())
           } else if (t === "mtmauto" || t === "auto") {

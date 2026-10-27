@@ -53,8 +53,9 @@ function envOu(chaves: string[], omissao: string): string {
 }
 
 /**
- * Os 7 grupos de sinais: Sensei, Ideias de Forex (MTM Scanner), GoldKiller, TrendShot, Perps,
- * FOREX swings e Premium. O grupo de leads (MTM System) NÃO está aqui: é a porta de entrada aberta.
+ * Os 6 grupos de sinais fechados: Sensei, Ideias de Forex (MTM Scanner), GoldKiller, TrendShot, Perps e
+ * Premium. NÃO estão aqui: o grupo de leads (MTM System) e o FOREX swings, que desde 27/10/2026 é de
+ * entrada livre (decisão do dono) e serve para converter para os packs — ver `grupoDeEntradaLivre`.
  */
 export function gruposDeSinais(): Set<string> {
   const c = CANONICAL_TELEGRAM_CHANNELS
@@ -65,7 +66,6 @@ export function gruposDeSinais(): Set<string> {
     resolvedPremiumSignalsChatId(),
     resolvedPerpsChatId() ?? '',
     envOu(c.trendshot.envVars, c.trendshot.chatId),
-    envOu(c.forexSwings.envVars, c.forexSwings.chatId),
   ]
   return new Set(ids.map((s) => String(s).trim()).filter((s) => /^-?\d+$/.test(s)))
 }
@@ -74,12 +74,17 @@ export function ehGrupoDeSinais(chatId: unknown): boolean {
   return chatId != null && gruposDeSinais().has(String(chatId))
 }
 
+/** O FOREX swings: entrada livre — qualquer pedido de adesão é aprovado. */
+export function grupoDeEntradaLivre(chatId: unknown): boolean {
+  const c = CANONICAL_TELEGRAM_CHANNELS
+  return chatId != null && String(chatId) === envOu(c.forexSwings.envVars, c.forexSwings.chatId)
+}
+
 /**
  * Os grupos com nome e link de recurso, pela ordem em que aparecem nos botões. O recurso só se usa
  * se o bot não conseguir gerar o link com pedido (não é administrador do grupo).
  *
- * O FOREX swings fica de fora dos botões de propósito: desde 07/10 é só fonte de publicação e não se
- * convida para ele (guarda lib/mtmcopy/__tests__/fontes-em-desuso). A porta continua a guardá-lo.
+ * O FOREX swings fica de fora: é de entrada livre (27/10) e não precisa de botão de validado.
  */
 function gruposComNome(): { label: string; chatId: string; recurso: string | null }[] {
   const c = CANONICAL_TELEGRAM_CHANNELS
@@ -241,7 +246,13 @@ async function garantirLead(db: Supa, tgUserId: string, nome: string | null, use
 export async function tratarPedidoDeAdesao(db: Supa, pedido: PedidoDeAdesao): Promise<boolean> {
   const grupoId = pedido.chat?.id != null ? String(pedido.chat.id) : ''
   const uid = pedido.from?.id != null ? String(pedido.from.id) : ''
-  if (!grupoId || !uid || pedido.from?.is_bot || !ehGrupoDeSinais(grupoId)) return false
+  if (!grupoId || !uid || pedido.from?.is_bot) return false
+  if (grupoDeEntradaLivre(grupoId)) {
+    // Entrada livre: aprova-se. O lead nasce pelo `chat_member` da entrada (lib/telegram-grupo-entradas).
+    await tg('approveChatJoinRequest', { chat_id: grupoId, user_id: Number(uid) })
+    return true
+  }
+  if (!ehGrupoDeSinais(grupoId)) return false
 
   const nome = nomeDe(pedido.from)
   const username = pedido.from?.username ?? null
