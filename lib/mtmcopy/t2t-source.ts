@@ -78,6 +78,9 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
   // que fica enquanto houver mensagens publicadas com ele.
   if (channelSlug === 'aurum-flow' || channelSlug === 'golden-moves') return 'aurum'
   if (channelSlug === 'sensei-scanner') return 'sensei'
+  // MTM Auto Premium II (27/10): ouro do Premium Scanner. Fica na chave 'premium' para quem já
+  // escolheu seguir o Premium o receber sem mexer nas preferências.
+  if (channelSlug === 'sinais-premium-ii') return 'premium'
   if (channelSlug === 'sinais-goldkiller' || /gold\s*killer|goldkiller/i.test(c)) return 'goldkiller'
   // Canal FECHADO a 04/10/2026 — só para resolver a fonte das mensagens antigas (tracker/prova).
   if (channelSlug === 'ideias-e-sinais') return /forex\s*swings/i.test(c) ? 'james' : null
