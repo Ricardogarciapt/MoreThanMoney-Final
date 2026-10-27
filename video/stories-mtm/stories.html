@@ -1,0 +1,310 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<!-- Stories MTM 9:16 desenhados frame a frame: window.iniciar(peca, textos, D) e window.renderAt(t).
+     D = { idDaCena: [início, fim] } em segundos, vindo da duração de cada fala. -->
+<style>
+@font-face { font-family: Anton; src: url(assets/Anton-Regular.ttf); }
+:root { --ouro:#D2A63C; --ouro2:#E9C46A; --fundo:#0a0907; --txt:#f6f1e4; --dim:#a39a88; --dor:#ff7a6b; --sh: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--fundo); }
+#palco { position: relative; width: 1080px; height: 1920px; overflow: hidden; font-family: Inter, sans-serif; color: var(--txt); background: var(--fundo); }
+#luz { position: absolute; inset: -200px; background: radial-gradient(800px 640px at 50% 34%, rgba(210,166,60,.20), rgba(210,166,60,0) 70%); }
+#feixe { position: absolute; left: -400px; top: -300px; width: 700px; height: 2600px; background: linear-gradient(90deg, rgba(233,196,106,0), rgba(233,196,106,.07), rgba(233,196,106,0)); transform: rotate(18deg); }
+canvas#po { position: absolute; inset: 0; }
+#vinheta { position: absolute; inset: 0; background: radial-gradient(1200px 1700px at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.65)); pointer-events: none; z-index: 50; }
+#cenas { position: absolute; inset: 0; }
+.cena { position: absolute; inset: 0; transform-origin: 50% 45%; }
+.el { position: absolute; left: 0; right: 0; display: flex; justify-content: center; text-align: center; }
+.h { font-family: Anton; font-size: 100px; line-height: 1.04; letter-spacing: 1px; padding: 0 70px; text-wrap: balance; text-shadow: 0 0 34px rgba(233,196,106,.22); }
+.h .w { display: inline-block; white-space: pre; }
+.ouro { background: linear-gradient(100deg, #c9962c 0%, #f3d98c calc(var(--sh) * 1% - 12%), #fff6d8 calc(var(--sh) * 1%), #f3d98c calc(var(--sh) * 1% + 12%), #c9962c 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(233,196,106,.45)); }
+.dor { color: var(--dor); text-shadow: 0 0 30px rgba(255,122,107,.45); }
+.big { font-family: Anton; font-size: 180px; line-height: 1; }
+.huge { font-family: Anton; font-size: 420px; line-height: 1; }
+.sub { font-size: 42px; font-weight: 700; padding: 0 80px; line-height: 1.25; }
+.lbl { font-size: 38px; font-weight: 800; letter-spacing: 4px; color: var(--ouro2); text-transform: uppercase; }
+.dim { font-size: 34px; color: var(--dim); font-weight: 500; padding: 0 90px; line-height: 1.3; }
+.vidro { background: linear-gradient(160deg, rgba(40,34,22,.92), rgba(16,14,10,.94)); border: 2px solid rgba(233,196,106,.35); box-shadow: 0 30px 80px rgba(0,0,0,.55), 0 0 50px rgba(210,166,60,.16), inset 0 1px 0 rgba(255,255,255,.06); border-radius: 30px; }
+.chip { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 18px 26px; border-radius: 20px; }
+.chip small { font-size: 24px; color: var(--dim); font-weight: 600; }
+.chip b { font-size: 32px; font-weight: 800; } .chip b i { font-style: normal; color: var(--ouro2); }
+.cartao { width: 780px; padding: 34px; text-align: left; }
+.item { display: flex; align-items: center; gap: 22px; border-radius: 20px; padding: 22px 30px; font-size: 42px; font-weight: 700; width: 680px; }
+.caixa { width: 40px; height: 40px; border: 4px solid var(--dor); border-radius: 9px; flex: none; }
+.no { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 26px 34px; min-width: 320px; }
+.no b { font-family: Anton; font-size: 66px; color: var(--ouro2); font-weight: 400; } .no span { font-size: 28px; color: var(--dim); font-weight: 600; }
+.pill { display: inline-flex; align-items: center; gap: 16px; border: 2px solid rgba(233,196,106,.6); background: rgba(210,166,60,.10); border-radius: 999px; padding: 22px 46px; font-size: 46px; font-weight: 800; letter-spacing: 1px; box-shadow: 0 0 30px rgba(210,166,60,.18); }
+.pill::before { content: ''; width: 18px; height: 18px; border-radius: 50%; background: var(--ouro2); box-shadow: 0 0 14px var(--ouro2); }
+.botao { background: linear-gradient(180deg, #f6dc8f, var(--ouro)); color: #120f08; font-family: Anton; font-size: 96px; padding: 30px 90px; border-radius: 999px; box-shadow: 0 0 70px rgba(233,196,106,.6), inset 0 2px 0 rgba(255,255,255,.5); letter-spacing: 2px; }
+.url { font-size: 50px; font-weight: 800; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 22px; }
+.tile { height: 190px; border-radius: 20px; background: linear-gradient(160deg, rgba(210,166,60,.45), rgba(20,18,13,1) 70%); border: 1px solid rgba(210,166,60,.35); display: flex; align-items: flex-end; padding: 18px; font-family: Anton; font-size: 40px; }
+.linha { display: flex; align-items: center; justify-content: space-between; padding: 22px 6px; border-bottom: 1px solid rgba(210,166,60,.15); font-size: 40px; font-weight: 700; }
+.linha:last-child { border-bottom: 0; }
+.ok { color: var(--ouro2); font-weight: 800; }
+.ponto { display: inline-flex; align-items: center; gap: 12px; color: var(--ouro2); font-size: 32px; font-weight: 700; }
+.ponto::before { content: ''; width: 16px; height: 16px; border-radius: 50%; background: var(--ouro2); box-shadow: 0 0 12px var(--ouro2); }
+.topo { font-size: 30px; color: var(--dim); font-weight: 600; display: flex; justify-content: space-between; }
+.icone { width: 96px; height: 120px; }
+.foto { border-radius: 26px; overflow: hidden; border: 3px solid rgba(233,196,106,.55); box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 60px rgba(210,166,60,.2); }
+.foto img { display: block; width: 100%; }
+.notif { display: flex; gap: 22px; align-items: center; width: 820px; padding: 26px 30px; text-align: left; border-radius: 34px; }
+.notif .app { width: 92px; height: 92px; border-radius: 22px; background: #000; display: flex; align-items: center; justify-content: center; flex: none; border: 1px solid rgba(233,196,106,.4); }
+.notif .app img { width: 74px; }
+.notif b { font-size: 34px; display: block; } .notif span { font-size: 32px; color: var(--dim); }
+.passo { font-family: Anton; font-size: 60px; color: #120f08; background: linear-gradient(180deg, #f6dc8f, var(--ouro)); width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 40px rgba(233,196,106,.5); }
+.carimbo { font-family: Anton; font-size: 120px; color: var(--ouro2); border: 10px solid var(--ouro2); border-radius: 28px; padding: 6px 50px; text-shadow: 0 0 30px rgba(233,196,106,.6); box-shadow: 0 0 50px rgba(233,196,106,.35), inset 0 0 30px rgba(233,196,106,.2); }
+.edu { display: flex; align-items: center; gap: 30px; width: 820px; padding: 22px 26px; text-align: left; }
+.edu img { width: 150px; height: 150px; border-radius: 50%; border: 4px solid var(--ouro2); }
+.edu b { font-family: Anton; font-size: 56px; font-weight: 400; display: block; } .edu span { font-size: 34px; color: var(--ouro2); font-weight: 700; }
+.aviso { font-size: 24px; color: rgba(246,241,228,.55); padding: 0 120px; line-height: 1.35; }
+.cadeado { width: 200px; height: 220px; }
+svg.fios { position: absolute; left: 0; top: 0; }
+</style></head>
+<body><div id="palco"><div id="luz"></div><div id="feixe"></div><canvas id="po" width="1080" height="1920"></canvas><div id="cenas"></div><div id="vinheta"></div></div>
+<script>
+const palco = document.getElementById('palco'), CENAS = document.getElementById('cenas')
+const po = document.getElementById('po').getContext('2d')
+const ELS = [], CEN = [], ESP = []
+const ease = (x) => 1 - Math.pow(1 - x, 3)
+const back = (x) => { const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2) }
+const cl = (x) => Math.max(0, Math.min(1, x))
+const OFF = 140
+let ULTIMA = 0
+
+const ICONE = `<svg class="icone" viewBox="0 0 96 120"><circle cx="48" cy="34" r="20" fill="none" stroke="#E9C46A" stroke-width="6"/><path d="M12 112c0-26 16-44 36-44s36 18 36 44z" fill="none" stroke="#E9C46A" stroke-width="6" stroke-linejoin="round"/></svg>`
+const palavras = (txt, cls = '') => txt.split(' ').map((w) => `<span class="w ${cls}">${w} </span>`).join('')
+
+// Uma cena = uma <div> que entra com zoom e sai a atravessar a câmara.
+function cena(a, o, ultima = false) {
+  const d = document.createElement('div'); d.className = 'cena'; CENAS.appendChild(d)
+  const c = { d, a, o, ultima }; CEN.push(c); return c
+}
+// el(c, html, top, rel, anim, extra) — rel = segundos depois do início da cena
+function el(c, html, top, rel, anim = 'up', extra = {}) {
+  const d = document.createElement('div')
+  d.className = 'el'; d.style.top = (top + (extra.fixo ? 0 : OFF)) + 'px'; d.innerHTML = html
+  if (extra.x != null) { d.style.left = extra.x + 'px'; d.style.right = 'auto'; d.style.width = (extra.w || 400) + 'px' }
+  c.d.appendChild(d)
+  const e = { d, c, a: c.a + rel, anim, ...extra, ate: extra.ate != null ? c.a + extra.ate : null }
+  if (anim === 'words') e.ws = [...d.querySelectorAll('.w')]
+  ELS.push(e); return d
+}
+
+// ——— Peça 1: MTM Creators ———
+function criadores(c, D) {
+  let s = cena(...D.c01)
+  el(s, `<div class="h">${palavras(c.hook)}</div>`, 260, .1, 'words')
+  for (let i = 0; i < 7; i++) el(s, ICONE, 600, .6 + i * .1, 'pop', { x: 90 + i * 132, w: 110 })
+  s = cena(...D.c02)
+  for (let i = 0; i < 7; i++) el(s, ICONE, 600, 0, 'sai', { x: 90 + i * 132, w: 110, saiEm: 1.0 + i * .16 })
+  el(s, `<div class="chip vidro"><small>${c.chip[0]}</small><b><i>XAUUSD</i> BUY</b></div>`, 790, .1, 'pop')
+  el(s, `<div class="h">${palavras(c.leave, 'ouro')}</div>`, 1030, .9, 'words')
+  s = cena(...D.c03)
+  el(s, `<div class="h">${palavras(c.s3[0])}<br>${palavras(c.s3[1], 'ouro')}</div>`, 240, .05, 'words')
+  el(s, `<div class="chip vidro" style="width:460px"><small>${c.chip[0]}</small><b><i>XAUUSD</i> BUY · 4062</b></div>`, 720, .3, 'pop')
+  ;[[60, 940], [520, 1070], [110, 1200], [560, 1330]].forEach(([x, y], i) => el(s, `<div class="chip vidro"><small>${c.other[0]}</small><b><i>XAUUSD</i> ${c.other[1]}</b></div>`, y, .7 + i * .3, 'pop', { x, w: 460 }))
+  s = cena(...D.c04)
+  c.todo.forEach((t, i) => el(s, `<div class="item vidro"><span class="caixa"></span>${t}</div>`, 250 + i * 130, .1 + i * .35, 'left'))
+  el(s, `<div class="big ouro">${c.alone}</div>`, 830, 1.9, 'blur')
+  el(s, `<div class="h dor" style="font-size:84px">${palavras(c.second)}</div>`, 1040, 2.6, 'words')
+  s = cena(...D.c05)
+  el(s, `<img src="assets/emblema.png" style="width:300px;filter:drop-shadow(0 0 40px rgba(233,196,106,.6))">`, 260, .05, 'spin')
+  el(s, `<div class="lbl" style="font-size:58px;letter-spacing:12px">MTM CREATORS</div>`, 640, .5, 'up')
+  el(s, `<div class="h">${palavras(c.built[0])}<br>${palavras(c.built[1], 'ouro')}</div>`, 760, .9, 'words')
+  s = cena(...D.c06); const d6 = s.o - s.a
+  el(s, `<div class="big ouro" style="font-size:150px">${c.one}</div>`, 200, .05, 'blur')
+  const p1 = .3, p2 = d6 * .34, p3 = d6 * .67
+  el(s, `<div class="lbl">${c.f1}</div>`, 420, p1, 'up', { ate: p2 })
+  el(s, `<div class="cartao vidro"><div class="topo"><span>MTM · App</span><span class="ponto">${c.on}</span></div><div class="tiles">${c.tiles.map((t) => `<div class="tile">${t}</div>`).join('')}</div></div>`, 520, p1 + .15, 'flip', { ate: p2 })
+  el(s, `<div class="lbl">${c.f2}</div>`, 420, p2, 'up', { ate: p3 })
+  el(s, `<div class="cartao vidro">${c.pay.map((t) => `<div class="linha"><span>${t}</span><span class="ok">✓</span></div>`).join('')}</div>`, 580, p2 + .15, 'flip', { ate: p3 })
+  el(s, `<div class="lbl" style="padding:0 60px">${c.f3}</div>`, 420, p3, 'up')
+  el(s, `<div class="cartao vidro">${c.chan.map((t) => `<div class="linha"><span>${t}</span><span class="ponto">${c.on}</span></div>`).join('')}</div>`, 580, p3 + .15, 'flip')
+  s = cena(...D.c07)
+  el(s, `<div class="lbl" style="font-size:52px;letter-spacing:6px">${c.behind}</div>`, 240, .05, 'up')
+  el(s, `<div class="no vidro"><b>${c.you[0]}</b><span>${c.you[1]}</span></div>`, 420, .2, 'pop', { x: 80, w: 420 })
+  el(s, `<div class="no vidro"><b>${c.mtm[0]}</b><span>${c.mtm[1]}</span></div>`, 420, .5, 'pop', { x: 580, w: 420 })
+  el(s, `<svg class="fios" width="1080" height="420" viewBox="0 0 1080 420"><path d="M290 0 C290 140 540 120 540 230" fill="none" stroke="#E9C46A" stroke-width="6" pathLength="1" stroke-dasharray="1"/><path d="M790 0 C790 140 540 120 540 230" fill="none" stroke="#E9C46A" stroke-width="6" pathLength="1" stroke-dasharray="1"/></svg>`, 620, .8, 'draw')
+  el(s, `<div class="no vidro" style="min-width:540px"><b style="font-size:74px">${c.school}</b></div>`, 850, 1.3, 'pop')
+  c.does.forEach((t, i) => el(s, `<div class="pill" style="font-size:38px;padding:16px 36px">${t}</div>`, 1090 + i * 120, 1.7 + i * .3, 'up'))
+  s = cena(...D.c08)
+  el(s, `<div class="h" style="font-size:116px">${palavras(c.keep)}</div>`, 400, .05, 'words')
+  el(s, `<div class="huge ouro"><span class="conta">0</span>%</div>`, 540, .3, 'count', { alvo: 80, dur: 1.3 })
+  el(s, `<div class="sub">${c.cut}</div>`, 1020, 1.8, 'up')
+  s = cena(...D.c09)
+  c.pills.forEach((t, i) => el(s, `<div class="pill">${t}</div>`, 560 + i * 170, .1 + i * .45, 'pop'))
+  s = cena(...D.c10, true)
+  el(s, `<div class="h" style="font-size:104px">${palavras(c.reason[0])}<br>${palavras(c.reason[1], 'ouro')}</div>`, 300, .05, 'words')
+  el(s, `<div class="botao">${c.cta}</div>`, 800, .9, 'pop', { pulso: 1 })
+  el(s, `<div class="url">morethanmoney.pt/criadores</div>`, 1030, 1.3, 'up')
+  el(s, `<div class="dim">${c.dm}</div>`, 1115, 1.6, 'up')
+  el(s, `<img src="assets/emblema.png" style="width:150px;opacity:.95">`, 1600, 1.9, 'up', { fixo: 1 })
+}
+
+// ——— Peça 2: Membros e packs ———
+function velas(n, seed) {
+  let r = seed, p = 100; const v = []
+  const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280
+  for (let i = 0; i < n; i++) { const o = p; p += (rnd() - .48) * 4 + (i > n * .55 ? 1.1 : (i > n * .35 ? -.9 : .2)); v.push([o, p, Math.max(o, p) + rnd() * 2, Math.min(o, p) - rnd() * 2]) }
+  return v
+}
+function grafico(id, n, comZona) {
+  return `<div class="vidro" style="width:900px;height:620px;padding:20px;position:relative"><canvas id="${id}" width="860" height="580" data-n="${n}" data-zona="${comZona ? 1 : 0}"></canvas></div>`
+}
+function desenharGrafico(cv, p, pz) {
+  const g = cv.getContext('2d'), W = cv.width, H = cv.height, n = +cv.dataset.n
+  const v = velas(n, 7), lo = Math.min(...v.map((x) => x[3])), hi = Math.max(...v.map((x) => x[2]))
+  const y = (val) => H - 40 - (val - lo) / (hi - lo) * (H - 80), bw = W / n
+  g.clearRect(0, 0, W, H)
+  g.strokeStyle = 'rgba(233,196,106,.08)'; g.lineWidth = 1
+  for (let i = 1; i < 6; i++) { g.beginPath(); g.moveTo(0, i * H / 6); g.lineTo(W, i * H / 6); g.stroke() }
+  if (+cv.dataset.zona && pz > 0) {
+    const i0 = Math.floor(n * .35), i1 = Math.floor(n * .55), zt = y(Math.max(...v.slice(i0, i1).map((x) => x[3])) + .8), zb = y(Math.min(...v.slice(i0, i1).map((x) => x[3])) - .5)
+    const x0 = i0 * bw, x1 = x0 + (W - x0) * ease(pz)
+    g.fillStyle = 'rgba(233,196,106,.16)'; g.fillRect(x0, zt, x1 - x0, zb - zt)
+    g.strokeStyle = '#E9C46A'; g.lineWidth = 3; g.setLineDash([12, 8]); g.strokeRect(x0, zt, x1 - x0, zb - zt); g.setLineDash([])
+    g.globalAlpha = cl(pz * 2); g.fillStyle = '#E9C46A'; g.font = '800 28px Inter'; g.fillText(cv.dataset.rot || '', x0 + 14, zt - 14); g.globalAlpha = 1
+  }
+  const k = Math.floor(n * p)
+  for (let i = 0; i < k; i++) {
+    const [o, c, h, l] = v[i], x = i * bw + bw / 2, sobe = c >= o
+    g.strokeStyle = g.fillStyle = sobe ? '#E9C46A' : '#7d7466'
+    g.lineWidth = 2; g.beginPath(); g.moveTo(x, y(h)); g.lineTo(x, y(l)); g.stroke()
+    g.fillRect(x - bw * .32, y(Math.max(o, c)), bw * .64, Math.max(2, Math.abs(y(o) - y(c))))
+  }
+}
+function membros(c, D) {
+  let s = cena(...D.m01)
+  el(s, `<div class="h">${palavras(c.hook[0])}<br>${palavras(c.hook[1], 'ouro')}</div>`, 200, .05, 'words')
+  el(s, grafico('g1', 70, false), 560, .3, 'flip', { chart: 'g1', cdur: 2.2 })
+  el(s, `<div class="h dor" style="font-size:80px">${palavras(c.q)}</div>`, 1240, 1.6, 'words')
+  s = cena(...D.m02)
+  el(s, `<div class="h" style="font-size:90px;opacity:.75">${palavras(c.no)}</div>`, 480, .05, 'words')
+  el(s, `<div class="big ouro" style="font-size:150px;padding:0 60px;line-height:1.02">${c.yes}</div>`, 760, 1.2, 'blur')
+  s = cena(...D.m03)
+  el(s, `<div class="lbl" style="font-size:46px;padding:0 70px;line-height:1.3">${c.scan}</div>`, 190, .05, 'up')
+  el(s, grafico('g2', 60, true), 400, .2, 'flip', { chart: 'g2', cdur: 1.0, zona: 1.1, rot: c.zona })
+  ;['goldkiller', 'mtm-scanner', 'trendshot', 'sensei'].forEach((f, i) => el(s, `<div class="foto" style="width:520px"><img src="assets/${f}.jpg"></div>`, 1080, 1.4 + i * .5, 'carrossel', { idx: i }))
+  s = cena(...D.m04)
+  el(s, `<div class="notif vidro"><div class="app"><img src="assets/emblema.png"></div><div><b>${c.alerta[0]}</b><span>${c.alerta[1]}</span></div></div>`, 220, .1, 'cai')
+  el(s, `<div class="big ouro" style="font-size:150px">${c.auto[0]}</div>`, 560, 1.3, 'blur')
+  el(s, `<div class="sub" style="color:var(--dim)">${c.auto[1]}</div>`, 740, 1.6, 'up')
+  c.regras.forEach((t, i) => el(s, `<div class="item vidro" style="width:760px"><span class="ok" style="font-size:44px">✓</span>${t}</div>`, 880 + i * 130, 2.0 + i * .35, 'left'))
+  s = cena(...D.m05)
+  c.aulas.forEach((t, i) => el(s, `<div class="big ${i === 1 ? 'ouro' : ''}" style="font-size:150px">${t}</div>`, 380 + i * 230, .1 + i * .55, 'blur'))
+  el(s, ['ricardo-garcia', 'ruben-pereira', 'maria-costa'].map((p) => `<img src="assets/${p}.jpg" style="width:170px;height:170px;border-radius:50%;border:4px solid #E9C46A;margin:0 14px">`).join(''), 1140, 1.8, 'pop')
+  s = cena(...D.m06)
+  el(s, `<div class="lbl" style="font-size:60px;letter-spacing:12px">${c.pack[0]}</div>`, 260, .05, 'up')
+  ;['goldkiller', 'mtm-scanner', 'trendshot', 'sensei'].forEach((f, i) => el(s, `<div class="foto" style="width:420px"><img src="assets/${f}.jpg"></div>`, 420 + Math.floor(i / 2) * 290, .2 + i * .18, 'pop', { x: 90 + (i % 2) * 480, w: 420 }))
+  el(s, `<div class="h">${palavras(c.pack[1])}<br>${palavras(c.pack[2], 'ouro')}</div>`, 1040, 1.1, 'words')
+  s = cena(...D.m07)
+  el(s, `<div class="huge ouro">${c.trial[0].split(' ')[0]}</div>`, 380, .05, 'blur')
+  el(s, `<div class="h" style="font-size:96px">${palavras(c.trial[0].split(' ').slice(1).join(' ') + ' ' + c.trial[1])}</div>`, 830, .5, 'words')
+  s = cena(...D.m08, true)
+  el(s, `<div class="botao" style="font-size:88px">${c.cta}</div>`, 500, .1, 'pop', { pulso: 1 })
+  el(s, `<div class="url">${c.url}</div>`, 760, .6, 'up')
+  el(s, `<img src="assets/emblema.png" style="width:220px">`, 900, .9, 'spin')
+  el(s, `<div class="aviso">${c.aviso}</div>`, 1560, 1.2, 'up', { fixo: 1 })
+}
+
+// ——— Peça 3: Clientes novos pela corretora ———
+function corretora(c, D) {
+  let s = cena(...D.b01)
+  el(s, `<div class="h" style="font-size:110px">${palavras(c.hook[0])}<br>${palavras(c.hook[1], 'ouro')}</div>`, 330, .05, 'words')
+  el(s, `<div class="huge ouro" style="font-size:300px">0 €</div>`, 800, 1.2, 'stamp')
+  const passo = (s, n, t) => {
+    el(s, `<div class="passo">${n}</div>`, 220, .05, 'spin')
+    el(s, `<div class="lbl">${c.passo} ${n}</div>`, 370, .2, 'up')
+    el(s, `<div class="h" style="font-size:86px">${palavras(t[0])}</div>`, 450, .3, 'words')
+    el(s, `<div class="sub" style="color:var(--dim)">${t[1]}</div>`, 700, .9, 'up')
+  }
+  s = cena(...D.b02); passo(s, 1, c.p1)
+  el(s, `<div class="vidro" style="width:640px;padding:40px;display:flex;flex-direction:column;gap:24px;align-items:center"><div style="font-family:Anton;font-size:72px">PU PRIME</div><div class="pill" style="font-size:34px">Live · MT5 · USD</div></div>`, 860, 1.2, 'flip')
+  s = cena(...D.b03)
+  el(s, `<svg class="cadeado" viewBox="0 0 200 220"><path d="M50 100 V70 a50 50 0 0 1 100 0 V100" fill="none" stroke="#E9C46A" stroke-width="16"/><rect x="25" y="100" width="150" height="110" rx="22" fill="#1a160e" stroke="#E9C46A" stroke-width="8"/><circle cx="100" cy="150" r="16" fill="#E9C46A"/></svg>`, 300, .05, 'pop')
+  el(s, `<div class="h" style="font-size:110px">${palavras(c.teu[0], 'ouro')}</div>`, 640, .4, 'words')
+  el(s, `<div class="sub" style="color:var(--dim)">${c.teu[1]}</div>`, 900, 1.2, 'up')
+  s = cena(...D.b04); passo(s, 2, c.p2)
+  el(s, `<div class="vidro cartao" style="width:760px">${[c.bot[0]].map((t) => `<div class="topo" style="margin-bottom:10px"><span>${t}</span><span class="ponto">online</span></div>`).join('')}${c.bot.slice(1).map((t, i) => `<div class="linha bot${i}"><span>${t}</span><span class="ok">✓</span></div>`).join('')}</div>`, 860, 1.4, 'flip')
+  s = cena(...D.b05)
+  el(s, `<div class="carimbo">${c.valid} ✓</div>`, 230, .1, 'stamp')
+  el(s, `<svg class="cadeado" viewBox="0 0 200 220"><path d="M50 100 V70 a50 50 0 0 1 100 0" fill="none" stroke="#E9C46A" stroke-width="16" class="arco"/><rect x="25" y="100" width="150" height="110" rx="22" fill="#1a160e" stroke="#E9C46A" stroke-width="8"/><circle cx="100" cy="150" r="16" fill="#E9C46A"/></svg>`, 520, .5, 'abre')
+  el(s, `<div class="big ouro">${c.premium[0]}</div>`, 800, 1.1, 'blur')
+  el(s, `<div class="h" style="font-size:96px">${palavras(c.premium[1])}</div>`, 990, 1.5, 'words')
+  el(s, `<div class="dim">${c.cond}</div>`, 1130, 2.1, 'up')
+  s = cena(...D.b06)
+  el(s, `<div class="lbl" style="font-size:44px;padding:0 70px;line-height:1.3">${c.acad}</div>`, 200, .05, 'up')
+  c.edu.forEach(([n, a], i) => el(s, `<div class="edu vidro"><img src="assets/${['ricardo-garcia', 'ruben-pereira', 'maria-costa'][i]}.jpg"><div><b>${n}</b><span>${a}</span></div></div>`, 380 + i * 250, .3 + i * .45, 'left'))
+  el(s, `<div class="dim">${c.mais}</div>`, 1150, 1.8, 'up')
+  s = cena(...D.b07)
+  c.tudo.forEach((t, i) => el(s, `<div class="pill" style="font-size:56px;padding:26px 56px">${t}</div>`, 340 + i * 180, .1 + i * .35, 'pop'))
+  el(s, `<div class="big ouro" style="font-size:150px">${c.incl}</div>`, 960, 1.3, 'blur')
+  s = cena(...D.b08, true)
+  el(s, `<div class="botao">${c.cta}</div>`, 460, .1, 'pop', { pulso: 1 })
+  el(s, `<div class="url">${c.url}</div>`, 720, .6, 'up')
+  el(s, `<img src="assets/emblema.png" style="width:220px">`, 860, .9, 'spin')
+  el(s, `<div class="aviso">${c.aviso}</div>`, 1560, 1.2, 'up', { fixo: 1 })
+}
+
+window.iniciar = function (peca, textos, D) {
+  ;({ criadores, membros, corretora })[peca](textos, D)
+  for (let i = 0; i < 70; i++) ESP.push([Math.random() * 1080, Math.random() * 1920, .6 + Math.random() * 2.4, .2 + Math.random() * .8, Math.random() * 6.28])
+  ULTIMA = Math.max(...CEN.map((c) => c.o))
+  return { total: ULTIMA }
+}
+
+window.renderAt = function (t) {
+  palco.style.setProperty('--sh', ((t * 45) % 160 - 30).toFixed(1))
+  document.getElementById('feixe').style.transform = `translateX(${((t * 160) % 2400) - 200}px) rotate(18deg)`
+  document.getElementById('luz').style.transform = `translate(${Math.sin(t * .4) * 60}px, ${Math.cos(t * .3) * 80}px) scale(${1 + .06 * Math.sin(t * .8)})`
+  po.clearRect(0, 0, 1080, 1920)
+  for (const [x, y, r, a, f] of ESP) {
+    const yy = (y - t * 30 * a + 1920 * 4) % 1920, xx = x + Math.sin(t * .6 + f) * 26
+    po.globalAlpha = a * (.5 + .5 * Math.sin(t * 2 + f)); po.fillStyle = '#E9C46A'
+    po.beginPath(); po.arc(xx, yy, r, 0, 6.283); po.fill()
+  }
+  po.globalAlpha = 1
+  for (const c of CEN) {
+    const vis = t >= c.a - .02 && (c.ultima || t < c.o + .02)
+    c.d.style.display = vis ? 'block' : 'none'
+    if (!vis) continue
+    const pi = ease(cl((t - c.a) / .45)), po_ = c.ultima ? 0 : cl((t - (c.o - .32)) / .32)
+    c.d.style.opacity = Math.min(cl((t - c.a) / .2), 1 - po_)
+    c.d.style.transform = `scale(${(.94 + .06 * pi) * (1 + .25 * po_ * po_) * (1 + .015 * (t - c.a))})`
+    c.d.style.filter = po_ > .02 ? `blur(${po_ * 18}px)` : 'none'
+  }
+  for (const e of ELS) {
+    if (e.c.d.style.display === 'none') continue
+    const fim = e.ate
+    const vis = t >= e.a - .01 && (fim == null || t < fim + .01)
+    e.d.style.visibility = vis ? 'visible' : 'hidden'
+    if (!vis) continue
+    const p = cl((t - e.a) / .5), pi = ease(p), pf = fim == null ? 0 : cl((t - (fim - .3)) / .3)
+    let tr = '', op = pi, bl = 0
+    switch (e.anim) {
+      case 'up': tr = `translateY(${(1 - pi) * 70}px)`; break
+      case 'left': tr = `translateX(${(1 - pi) * -160}px)`; break
+      case 'blur': bl = (1 - pi) * 24; tr = `scale(${1.15 - .15 * pi})`; break
+      case 'pop': tr = `scale(${.5 + .5 * back(p)})`; op = cl(p * 2.2); break
+      case 'spin': tr = `scale(${.4 + .6 * back(p)}) rotate(${(1 - pi) * -120}deg)`; op = cl(p * 2); break
+      case 'stamp': { const q = cl((t - e.a) / .35); tr = `scale(${2.2 - 1.2 * ease(q)}) rotate(${-8 * (1 - q) - 4}deg)`; op = cl(q * 3); break }
+      case 'flip': tr = `perspective(1400px) rotateX(${(1 - pi) * 35}deg) translateY(${(1 - pi) * 120}px)`; break
+      case 'cai': tr = `translateY(${(1 - back(p)) * -260}px)`; op = cl(p * 2); break
+      case 'sai': { const q = ease(cl((t - (e.c.a + e.saiEm)) / .45)); tr = `translateY(${q * 120}px) scale(${1 - .3 * q})`; op = 1 - q; bl = q * 10; break }
+      case 'count': { bl = (1 - pi) * 16; const q = ease(cl((t - e.a) / e.dur)); e.d.querySelector('.conta').textContent = Math.round(q * e.alvo); tr = `scale(${1 + .08 * Math.max(0, 1 - Math.abs((t - e.a - e.dur) / .25))})`; break }
+      case 'draw': { const q = ease(cl((t - e.a) / .7)); e.d.querySelectorAll('path').forEach((pa) => pa.style.strokeDashoffset = 1 - q); op = 1; break }
+      case 'carrossel': { const q = ease(cl((t - e.a) / .45)), nxt = ease(cl((t - (e.a + .5)) / .45)); tr = `perspective(1400px) translateX(${(1 - q) * 700 - nxt * 700}px) rotateY(${(1 - q) * -40 + nxt * 40}deg)`; op = q * (1 - nxt * (e.idx < 3 ? 1 : 0)); break }
+      case 'abre': { const q = ease(cl((t - e.a - .3) / .5)); tr = `scale(${.6 + .4 * back(p)})`; op = cl(p * 2); const arco = e.d.querySelector('.arco'); if (arco) arco.setAttribute('transform', `translate(0 ${-q * 34}) rotate(${-q * 25} 150 100)`); break }
+      case 'words': {
+        e.ws.forEach((w, i) => { const q = ease(cl((t - e.a - i * .07) / .4)); w.style.opacity = q; w.style.transform = `translateY(${(1 - q) * 50}px)`; w.style.filter = q < .98 ? `blur(${(1 - q) * 14}px)` : '' })
+        op = 1; break
+      }
+    }
+    if (e.pulso && p >= 1) tr += ` scale(${1 + .035 * Math.sin((t - e.a) * 5)})`
+    if (e.chart) { const cv = document.getElementById(e.chart); cv.dataset.rot = e.rot || ''; desenharGrafico(cv, cl((t - e.a) / e.cdur), e.zona ? cl((t - e.a - e.zona) / .8) : 0) }
+    op *= 1 - pf; bl += pf * 14
+    e.d.style.opacity = op; e.d.style.transform = tr; e.d.style.filter = bl > .3 ? `blur(${bl}px)` : 'none'
+  }
+}
+</script></body></html>

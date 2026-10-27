@@ -1,0 +1,527 @@
+{
+ "criadores": {
+  "pt": {
+   "hook": "TENS UMA COMUNIDADE DE TRADING?",
+   "chip": [
+    "Partilhas o sinal",
+    "XAUUSD BUY"
+   ],
+   "leave": "…E ELES DESAPARECEM.",
+   "s3": [
+    "SINAIS HÁ EM TODO O LADO.",
+    "QUALQUER UM OS COPIA."
+   ],
+   "other": [
+    "Outro grupo",
+    "NOVO SINAL"
+   ],
+   "todo": [
+    "Criar cursos",
+    "Fazer lives",
+    "Montar uma app",
+    "Cobrar e faturar"
+   ],
+   "alone": "SOZINHO?",
+   "second": "É UM SEGUNDO NEGÓCIO.",
+   "built": [
+    "A PLATAFORMA",
+    "JÁ ESTÁ FEITA."
+   ],
+   "one": "UM SÓ SÍTIO",
+   "f1": "ÁREA DE MEMBROS + APP",
+   "tiles": [
+    "Mindset",
+    "Gestão de risco",
+    "Lives",
+    "Comunidade"
+   ],
+   "f2": "CHECKOUT E FATURAÇÃO",
+   "pay": [
+    "Pagamento confirmado",
+    "Fatura enviada",
+    "Acesso libertado"
+   ],
+   "f3": "SITE, REDES E EMAIL A VENDER POR TI",
+   "chan": [
+    "Site",
+    "Instagram",
+    "Email"
+   ],
+   "on": "ativo",
+   "behind": "NOS BASTIDORES",
+   "you": [
+    "TU",
+    "crias o conteúdo"
+   ],
+   "mtm": [
+    "MTM",
+    "vende por ti"
+   ],
+   "school": "A TUA ACADEMIA",
+   "does": [
+    "PROMOÇÃO",
+    "PAGAMENTOS",
+    "SUPORTE"
+   ],
+   "keep": "FICAS COM",
+   "cut": "20% para a MTM — só quando vendes.",
+   "pills": [
+    "0€ DE ENTRADA",
+    "SEM MENSALIDADE",
+    "SEM EXCLUSIVIDADE"
+   ],
+   "reason": [
+    "DÁ-LHES UMA RAZÃO",
+    "PARA FICAR."
+   ],
+   "cta": "CANDIDATA-TE",
+   "dm": "ou manda DM · @morethanmoney.pt"
+  },
+  "en": {
+   "hook": "GOT A TRADING COMMUNITY?",
+   "chip": [
+    "You post the signal",
+    "XAUUSD BUY"
+   ],
+   "leave": "…AND THEY DISAPPEAR.",
+   "s3": [
+    "SIGNALS ARE EVERYWHERE.",
+    "ANYONE CAN COPY THEM."
+   ],
+   "other": [
+    "Another group",
+    "NEW SIGNAL"
+   ],
+   "todo": [
+    "Build courses",
+    "Run live sessions",
+    "Build an app",
+    "Payments & invoices"
+   ],
+   "alone": "ALL ALONE?",
+   "second": "THAT'S A SECOND BUSINESS.",
+   "built": [
+    "THE PLATFORM",
+    "IS ALREADY BUILT."
+   ],
+   "one": "ONE PLACE",
+   "f1": "MEMBERS AREA + APP",
+   "tiles": [
+    "Mindset",
+    "Risk management",
+    "Live sessions",
+    "Community"
+   ],
+   "f2": "CHECKOUT & INVOICING",
+   "pay": [
+    "Payment confirmed",
+    "Invoice sent",
+    "Access unlocked"
+   ],
+   "f3": "SITE, SOCIAL & EMAIL SELLING FOR YOU",
+   "chan": [
+    "Website",
+    "Instagram",
+    "Email"
+   ],
+   "on": "live",
+   "behind": "BEHIND THE SCENES",
+   "you": [
+    "YOU",
+    "create the content"
+   ],
+   "mtm": [
+    "MTM",
+    "sells it for you"
+   ],
+   "school": "YOUR ACADEMY",
+   "does": [
+    "PROMOTION",
+    "PAYMENTS",
+    "SUPPORT"
+   ],
+   "keep": "YOU KEEP",
+   "cut": "20% to MTM — only when you sell.",
+   "pills": [
+    "€0 TO START",
+    "NO MONTHLY FEE",
+    "NO EXCLUSIVITY"
+   ],
+   "reason": [
+    "GIVE THEM A REASON",
+    "TO STAY."
+   ],
+   "cta": "APPLY NOW",
+   "dm": "or DM us · @morethanmoney.pt"
+  },
+  "de": {
+   "hook": "DU HAST EINE TRADING-COMMUNITY?",
+   "chip": [
+    "Du teilst das Signal",
+    "XAUUSD BUY"
+   ],
+   "leave": "…UND SIE VERSCHWINDEN.",
+   "s3": [
+    "SIGNALE GIBT ES ÜBERALL.",
+    "JEDER KANN SIE KOPIEREN."
+   ],
+   "other": [
+    "Andere Gruppe",
+    "NEUES SIGNAL"
+   ],
+   "todo": [
+    "Kurse erstellen",
+    "Live-Sessions halten",
+    "Eine App bauen",
+    "Zahlungen & Rechnungen"
+   ],
+   "alone": "ALLES ALLEIN?",
+   "second": "DAS IST EIN ZWEITES BUSINESS.",
+   "built": [
+    "DIE PLATTFORM",
+    "STEHT SCHON."
+   ],
+   "one": "EIN EINZIGER ORT",
+   "f1": "MITGLIEDERBEREICH + APP",
+   "tiles": [
+    "Mindset",
+    "Risikomanagement",
+    "Live-Sessions",
+    "Community"
+   ],
+   "f2": "CHECKOUT & RECHNUNGEN",
+   "pay": [
+    "Zahlung bestätigt",
+    "Rechnung gesendet",
+    "Zugang freigeschaltet"
+   ],
+   "f3": "WEBSITE, SOCIAL & E-MAIL VERKAUFEN FÜR DICH",
+   "chan": [
+    "Website",
+    "Instagram",
+    "E-Mail"
+   ],
+   "on": "aktiv",
+   "behind": "HINTER DEN KULISSEN",
+   "you": [
+    "DU",
+    "erstellst den Inhalt"
+   ],
+   "mtm": [
+    "MTM",
+    "verkauft für dich"
+   ],
+   "school": "DEINE ACADEMY",
+   "does": [
+    "WERBUNG",
+    "ZAHLUNGEN",
+    "SUPPORT"
+   ],
+   "keep": "DU BEHÄLTST",
+   "cut": "20 % für MTM — nur wenn du verkaufst.",
+   "pills": [
+    "0 € STARTKOSTEN",
+    "KEINE MONATSGEBÜHR",
+    "KEINE EXKLUSIVITÄT"
+   ],
+   "reason": [
+    "GIB IHNEN EINEN GRUND",
+    "ZU BLEIBEN."
+   ],
+   "cta": "JETZT BEWERBEN",
+   "dm": "oder schreib uns · @morethanmoney.pt"
+  }
+ },
+ "membros": {
+  "pt": {
+   "hook": [
+    "HORAS A OLHAR",
+    "PARA GRÁFICOS…"
+   ],
+   "q": "E QUANDO É QUE ENTRO?",
+   "no": "NÃO É FALTA DE ESFORÇO.",
+   "yes": "É FALTA DE MÉTODO.",
+   "scan": "SCANNERS QUE MARCAM A ZONA POR TI",
+   "zona": "ZONA DE ENTRADA",
+   "alerta": [
+    "MTM · Alerta",
+    "XAUUSD · ideia de entrada"
+   ],
+   "auto": [
+    "MTM AUTO",
+    "executa com as tuas regras"
+   ],
+   "regras": [
+    "Risco por trade",
+    "Stop obrigatório",
+    "Liga e desliga quando quiseres"
+   ],
+   "aulas": [
+    "AULAS AO VIVO",
+    "ACADEMIAS",
+    "COMUNIDADE"
+   ],
+   "pack": [
+    "PACK MTM",
+    "TODOS OS SCANNERS",
+    "NUM SÓ PLANO"
+   ],
+   "trial": [
+    "3 DIAS",
+    "DE PREMIUM GRÁTIS"
+   ],
+   "cta": "COMENTA QUERO",
+   "url": "morethanmoney.pt",
+   "aviso": "Conteúdo educativo. Trading com alavancagem tem risco elevado de perda."
+  },
+  "en": {
+   "hook": [
+    "HOURS STARING",
+    "AT CHARTS…"
+   ],
+   "q": "SO WHEN DO I GET IN?",
+   "no": "IT'S NOT A LACK OF EFFORT.",
+   "yes": "IT'S A LACK OF METHOD.",
+   "scan": "SCANNERS THAT MARK THE ZONE FOR YOU",
+   "zona": "ENTRY ZONE",
+   "alerta": [
+    "MTM · Alert",
+    "XAUUSD · trade idea"
+   ],
+   "auto": [
+    "MTM AUTO",
+    "executes with your rules"
+   ],
+   "regras": [
+    "Risk per trade",
+    "Stop loss always on",
+    "Switch it on and off anytime"
+   ],
+   "aulas": [
+    "LIVE CLASSES",
+    "ACADEMIES",
+    "COMMUNITY"
+   ],
+   "pack": [
+    "MTM PACK",
+    "EVERY SCANNER",
+    "IN ONE PLAN"
+   ],
+   "trial": [
+    "3 DAYS",
+    "OF FREE PREMIUM"
+   ],
+   "cta": "COMMENT QUERO",
+   "url": "morethanmoney.pt",
+   "aviso": "Educational content. Leveraged trading carries a high risk of loss."
+  },
+  "de": {
+   "hook": [
+    "STUNDENLANG",
+    "AUF CHARTS STARREN…"
+   ],
+   "q": "UND WANN STEIGE ICH EIN?",
+   "no": "ES LIEGT NICHT AN DER MÜHE.",
+   "yes": "ES FEHLT DIE METHODE.",
+   "scan": "SCANNER MARKIEREN DIE ZONE FÜR DICH",
+   "zona": "EINSTIEGSZONE",
+   "alerta": [
+    "MTM · Alert",
+    "XAUUSD · Trade-Idee"
+   ],
+   "auto": [
+    "MTM AUTO",
+    "führt mit deinen Regeln aus"
+   ],
+   "regras": [
+    "Risiko pro Trade",
+    "Stop-Loss immer aktiv",
+    "Jederzeit an- und ausschalten"
+   ],
+   "aulas": [
+    "LIVE-UNTERRICHT",
+    "AKADEMIEN",
+    "COMMUNITY"
+   ],
+   "pack": [
+    "MTM-PAKET",
+    "ALLE SCANNER",
+    "IN EINEM PLAN"
+   ],
+   "trial": [
+    "3 TAGE",
+    "PREMIUM GRATIS"
+   ],
+   "cta": "KOMMENTIERE QUERO",
+   "url": "morethanmoney.pt",
+   "aviso": "Bildungsinhalt. Gehebeltes Trading birgt ein hohes Verlustrisiko."
+  }
+ },
+ "corretora": {
+  "pt": {
+   "hook": [
+    "APRENDER TRADING",
+    "POR 0 € AO MÊS?"
+   ],
+   "passo": "PASSO",
+   "p1": [
+    "ABRE CONTA NA PU PRIME",
+    "pelo nosso link"
+   ],
+   "teu": [
+    "O DINHEIRO É TEU",
+    "em teu nome · a MTM nunca lhe toca"
+   ],
+   "p2": [
+    "DEPOSITA A PARTIR DE 350 $",
+    "e envia o UID ao bot do Telegram"
+   ],
+   "bot": [
+    "MTM System · bot",
+    "UID recebido",
+    "Depósito confirmado"
+   ],
+   "valid": "VALIDADO",
+   "premium": [
+    "PREMIUM",
+    "SEM MENSALIDADE"
+   ],
+   "cond": "enquanto mantiveres o saldo",
+   "acad": "ACADEMIAS COM EDUCADORES PARCEIROS",
+   "edu": [
+    [
+     "Ricardo Garcia",
+     "Forex e metais"
+    ],
+    [
+     "Ruben Pereira",
+     "Criptomoedas"
+    ],
+    [
+     "Maria Costa",
+     "Faceless marketing"
+    ]
+   ],
+   "mais": "+ ações, ETF, imobiliário e social media",
+   "tudo": [
+    "SINAIS",
+    "SCANNERS",
+    "APP MTM SYSTEM"
+   ],
+   "incl": "TUDO INCLUÍDO",
+   "cta": "COMEÇA HOJE",
+   "url": "morethanmoney.pt/onboarding",
+   "aviso": "Conteúdo educativo, não constitui consultoria financeira. Trading com alavancagem tem risco elevado de perda."
+  },
+  "en": {
+   "hook": [
+    "LEARN TO TRADE",
+    "FOR €0 A MONTH?"
+   ],
+   "passo": "STEP",
+   "p1": [
+    "OPEN A PU PRIME ACCOUNT",
+    "through our link"
+   ],
+   "teu": [
+    "THE MONEY IS YOURS",
+    "in your name · MTM never touches it"
+   ],
+   "p2": [
+    "DEPOSIT FROM $350",
+    "and send your UID to our Telegram bot"
+   ],
+   "bot": [
+    "MTM System · bot",
+    "UID received",
+    "Deposit confirmed"
+   ],
+   "valid": "VERIFIED",
+   "premium": [
+    "PREMIUM",
+    "NO MONTHLY FEE"
+   ],
+   "cond": "as long as you keep the balance",
+   "acad": "ACADEMIES WITH PARTNER EDUCATORS",
+   "edu": [
+    [
+     "Ricardo Garcia",
+     "Forex & metals"
+    ],
+    [
+     "Ruben Pereira",
+     "Crypto"
+    ],
+    [
+     "Maria Costa",
+     "Faceless marketing"
+    ]
+   ],
+   "mais": "+ stocks, ETFs, real estate and social media",
+   "tudo": [
+    "SIGNALS",
+    "SCANNERS",
+    "MTM SYSTEM APP"
+   ],
+   "incl": "ALL INCLUDED",
+   "cta": "START TODAY",
+   "url": "morethanmoney.pt/onboarding",
+   "aviso": "Educational content, not financial advice. Leveraged trading carries a high risk of loss."
+  },
+  "de": {
+   "hook": [
+    "TRADING LERNEN",
+    "FÜR 0 € IM MONAT?"
+   ],
+   "passo": "SCHRITT",
+   "p1": [
+    "ERÖFFNE EIN PU PRIME KONTO",
+    "über unseren Link"
+   ],
+   "teu": [
+    "DAS GELD GEHÖRT DIR",
+    "auf deinen Namen · MTM fasst es nie an"
+   ],
+   "p2": [
+    "EINZAHLUNG AB 350 $",
+    "und UID an unseren Telegram-Bot senden"
+   ],
+   "bot": [
+    "MTM System · Bot",
+    "UID erhalten",
+    "Einzahlung bestätigt"
+   ],
+   "valid": "GEPRÜFT",
+   "premium": [
+    "PREMIUM",
+    "OHNE MONATSGEBÜHR"
+   ],
+   "cond": "solange du das Guthaben hältst",
+   "acad": "AKADEMIEN MIT PARTNER-EDUCATORS",
+   "edu": [
+    [
+     "Ricardo Garcia",
+     "Forex & Metalle"
+    ],
+    [
+     "Ruben Pereira",
+     "Krypto"
+    ],
+    [
+     "Maria Costa",
+     "Faceless Marketing"
+    ]
+   ],
+   "mais": "+ Aktien, ETFs, Immobilien und Social Media",
+   "tudo": [
+    "SIGNALE",
+    "SCANNER",
+    "MTM SYSTEM APP"
+   ],
+   "incl": "ALLES INKLUSIVE",
+   "cta": "STARTE HEUTE",
+   "url": "morethanmoney.pt/onboarding",
+   "aviso": "Bildungsinhalt, keine Finanzberatung. Gehebeltes Trading birgt ein hohes Verlustrisiko."
+  }
+ }
+}
