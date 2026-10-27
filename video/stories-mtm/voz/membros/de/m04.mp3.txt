@@ -1,0 +1,2 @@
+10dcf0acb2cb416b898c516cd5a4143f
+Alerts auf dem Handy, wenn es eine Trade-Idee gibt. Und MTM Auto, wenn es für dich ausführen soll, mit deinen eigenen Regeln.
