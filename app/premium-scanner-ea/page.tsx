@@ -9,6 +9,7 @@ import {
   BarChart3,
   Bot,
   Check,
+  Download,
   FileText,
   Gauge,
   KeyRound,
@@ -304,10 +305,18 @@ export default function PremiumScannerEaPage() {
         <div className="max-w-3xl mx-auto px-4 py-16">
           <h2 className="text-2xl md:text-3xl font-bold">Instalar</h2>
           <p className="mt-3 text-gray-400">
-            O pacote da EA e o guia seguem no email da compra, com a chave.
+            O pacote é aberto — instala-o e conhece o painel. Para abrir ordens precisas da chave, que segue no email da compra.
           </p>
           <div className="mt-8">
             <DescarregarMt5 />
+          </div>
+          <div className="mt-4">
+            <Button asChild variant="outline" className="w-full border-gray-700 text-gray-200 hover:bg-gray-900 h-12">
+              <a href="/downloads/MTM-Premium-Scanner-EA.zip">
+                <Download className="w-4 h-4 mr-2" />
+                Pacote da EA (MetaTrader 5)
+              </a>
+            </Button>
           </div>
           <div className="mt-8 rounded-xl border border-gray-800 bg-gray-950/40 p-5">
             <h3 className="font-semibold flex items-center gap-2">

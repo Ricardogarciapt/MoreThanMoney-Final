@@ -13,8 +13,8 @@ LICENCA
 
 INSTALAR (a mao)
 
+  No MetaTrader: Ficheiro > Abrir pasta de dados > MQL5, e copia para la:
   MQL5\Experts\MTM\          MTM_Premium_Scanner_EA.ex5
-  MQL5\Include\MTMPremium\   MTMPS_Painel.mqh + MTMPS_Licenca.mqh
   MQL5\Presets\              MTM_PremiumScanner_XAUUSD_M15.set
   Depois, no MetaTrader: Ficheiro > Actualizar pastas.
 
