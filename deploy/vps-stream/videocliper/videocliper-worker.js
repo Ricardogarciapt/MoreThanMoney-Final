@@ -257,7 +257,7 @@ function correr(cmd, args, opcoes = {}) {
     if (pausado) { try { p.kill("SIGSTOP") } catch {} }
     p.on("close", () => FILHOS.delete(p))
     let err = ""
-    p.stderr.on("data", (d) => { err += d.toString().slice(0, 2000) })
+    p.stderr.on("data", (d) => { err = (err + d.toString()).slice(-4000) })
     p.on("error", reject)
     p.on("close", (code) =>
       code === 0 ? resolve() : reject(new Error(`${cmd} saiu com ${code}: ${err.slice(-600)}`)),
