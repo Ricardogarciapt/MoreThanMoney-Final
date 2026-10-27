@@ -3,6 +3,9 @@ import Link from 'next/link'
 import CursoIntroducao from '@/components/intro/curso-introducao'
 import VideoMtmAuto from '@/components/onboarding/video-mtm-auto'
 
+/** O link público do TestFlight da MTM Auto (App Store Connect › TestFlight › «MTM Auto — Público»). */
+const TESTFLIGHT_MTM_AUTO = 'https://testflight.apple.com/join/JzUY538h'
+
 export const metadata: Metadata = {
   title: 'Começar no MTM Auto · MoreThanMoney',
   description: 'Quatro passos para ter os sinais da MTM a copiar na tua conta.',
@@ -87,6 +90,16 @@ export default function OnboardingMtmAuto() {
         >
           Descarregar app Android (APK)
         </a>
+        {/* iPhone pelo TestFlight (grupo público «MTM Auto — Público») enquanto a App Store revê. */}
+        <a
+          href={TESTFLIGHT_MTM_AUTO}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-xl border px-6 py-3 text-[15px] font-semibold text-white"
+          style={{ borderColor: '#D2A63C' }}
+        >
+          iPhone (TestFlight)
+        </a>
         <Link
           href="/mtmauto"
           className="rounded-xl border px-6 py-3 text-[15px] font-semibold text-white"
@@ -96,8 +109,8 @@ export default function OnboardingMtmAuto() {
         </Link>
       </div>
       <p className="mt-3 text-[13px] leading-relaxed text-[#8a8a95]">
-        Android: se já tinhas a app instalada, desinstala-a antes de instalar esta versão. iPhone: a app
-        está em revisão na App Store; até lá, usa o «Abrir o MTM Auto» e junta-o ao ecrã principal.
+        Android: se já tinhas a app instalada, desinstala-a antes de instalar esta versão. iPhone:
+        instala primeiro a app TestFlight da Apple e depois abre o link.
       </p>
 
       {/*
