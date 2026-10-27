@@ -78,6 +78,15 @@ export default function OnboardingMtmAuto() {
         >
           Abrir o MTM Auto →
         </a>
+        {/* A app Android descarrega-se daqui (27/10, pedido do Ricardo): a 1.1 traz as notificações
+            dos sinais, e quem chega ao onboarding é quem mais precisa de a instalar. */}
+        <a
+          href="/downloads/MTMAuto.apk"
+          className="rounded-xl border px-6 py-3 text-[15px] font-semibold text-white"
+          style={{ borderColor: '#D2A63C' }}
+        >
+          Descarregar app Android (APK)
+        </a>
         <Link
           href="/mtmauto"
           className="rounded-xl border px-6 py-3 text-[15px] font-semibold text-white"
@@ -86,6 +95,10 @@ export default function OnboardingMtmAuto() {
           Ver como funciona
         </Link>
       </div>
+      <p className="mt-3 text-[13px] leading-relaxed text-[#8a8a95]">
+        Android: se já tinhas a app instalada, desinstala-a antes de instalar esta versão. iPhone: a app
+        está em revisão na App Store; até lá, usa o «Abrir o MTM Auto» e junta-o ao ecrã principal.
+      </p>
 
       {/*
         Também para quem só quer a app.
