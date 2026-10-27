@@ -137,6 +137,7 @@ export const SCANNERS: ScannerData[] = [
     name: "MTM Premium Scanner",
     subtitle: "Ouro · Zonas de recuo por sessão",
     image: "/scanners/premium-scanner.png",
+    gallery: ["/scanners/premium-scanner.png", "/scanners/premium-scanner-ny.png", "/scanners/premium-scanner-asia.png"],
     badge: "Novo",
     description:
       "O scanner das sessões de ouro da MTM. Em Londres, Nova Iorque e Ásia lê a direção do movimento e desenha logo a zona de entrada em recuo, o stop e os alvos, com a mesma geometria dos sinais Premium da casa. Assenta no método de zonas de recuo por sessão, usado por traders de topo em todo o mundo e por vários programas de IB nos seus sinais de ouro.",
