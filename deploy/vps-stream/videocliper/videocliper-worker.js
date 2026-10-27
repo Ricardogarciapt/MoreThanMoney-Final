@@ -234,9 +234,28 @@ function api(caminho, opcoes = {}) {
   })
 }
 
+/**
+ * PAUSA DURANTE OS DIRECTOS.
+ *
+ * Os processos pesados (yt-dlp, ffmpeg, Whisper) ficam aqui registados. Se um educador entra em
+ * directo a meio de um trabalho, são CONGELADOS (SIGSTOP) — não mortos: retomam do sítio onde
+ * estavam (SIGCONT) quando a sessão acaba, sem repetir uma transcrição de meia hora.
+ */
+const FILHOS = new Set()
+let pausado = false
+function congelar(sim) {
+  if (sim === pausado) return
+  pausado = sim
+  log(sim ? "educador em directo — trabalho em pausa" : "directo acabou — a retomar")
+  for (const p of FILHOS) { try { p.kill(sim ? "SIGSTOP" : "SIGCONT") } catch {} }
+}
+
 function correr(cmd, args, opcoes = {}) {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"], ...opcoes })
+    FILHOS.add(p)
+    if (pausado) { try { p.kill("SIGSTOP") } catch {} }
+    p.on("close", () => FILHOS.delete(p))
     let err = ""
     p.stderr.on("data", (d) => { err += d.toString().slice(0, 2000) })
     p.on("error", reject)
@@ -1137,9 +1156,19 @@ async function umaPassagem() {
   const r = await api(`/api/videocliper/worker?worker=${encodeURIComponent(NOME)}${yt}`)
   if (!r.ok) { log("balcão devolveu", r.status); return }
   const t = await r.json()
-  if (t.tipo === "nada") return t.repetir ? "repetir" : "nada"
+  if (t.tipo === "nada") {
+    if (t.emDireto) log("educador em directo — sem trabalhos novos")
+    return t.repetir ? "repetir" : "nada"
+  }
 
   log("trabalho:", t.tipo, t.jobId || t.clipId)
+  // O pulso do trabalho: pausa se houver directo e diz ao balcão que esta máquina continua viva.
+  const pulso = setInterval(() => {
+    api(`/api/videocliper/worker?pausa=1&worker=${encodeURIComponent(NOME)}${yt}`)
+      .then((x) => (x.ok ? x.json() : null))
+      .then((j) => { if (j) congelar(Boolean(j.emDireto)) })
+      .catch(() => {})
+  }, 60_000)
   try {
     if (t.tipo === "transcrever") await transcrever(t)
     else if (t.tipo === "render") await render(t)
@@ -1167,6 +1196,9 @@ async function umaPassagem() {
         erro: e.message,
       }),
     }).catch(() => {})
+  } finally {
+    clearInterval(pulso)
+    congelar(false)
   }
 }
 
