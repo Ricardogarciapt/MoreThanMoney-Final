@@ -232,6 +232,7 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "tt.resultado": "Resultado",
     "tt.estado": "Estado",
     "tt.quebrada": "conta quebrada",
+    "tt.desclassificada": "Desclassificada",
     "tt.aContar": "a contar",
     "tt.porClassificar": "por classificar",
 
@@ -585,6 +586,7 @@ export const MTMFUNDED_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
     "tt.resultado": "Result",
     "tt.estado": "Status",
     "tt.quebrada": "account breached",
+    "tt.desclassificada": "Disqualified",
     "tt.aContar": "counting",
     "tt.porClassificar": "unranked",
 

@@ -4,6 +4,7 @@ import { censurarEmail } from '@/lib/mtmfunded/acesso'
 import T from '@/components/mtmfunded/t'
 import DataLocal from '@/components/mtmfunded/data-local'
 import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
+import { ordemParaMostrar } from '@/lib/mtmfunded/regras'
 import { comTecto, TECTO_PAGINA_MS } from "@/lib/com-tecto"
 
 /**
@@ -170,21 +171,27 @@ export default async function TradingTournamentPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/[0.06]">
-                      {(linhas ?? []).map((l, i) => {
+                      {ordemParaMostrar(linhas ?? []).map((l, i) => {
                         const m = (l.metricas ?? {}) as Record<string, unknown>
                         const r = l.resultado_pct == null ? null : Number(l.resultado_pct)
+                        const desclassificada = l.estado === 'quebrado'
                         return (
-                          <tr key={`${l.nome_publico}-${i}`} className={l.estado === 'quebrado' ? 'opacity-50' : ''}>
-                            <td className="px-4 py-3 font-mono text-zinc-500">{l.posicao ?? '—'}</td>
+                          <tr key={`${l.nome_publico}-${i}`} className={desclassificada ? 'opacity-60' : ''}>
+                            <td className="px-4 py-3 font-mono text-zinc-500">{desclassificada ? '—' : (l.posicao ?? '—')}</td>
                             <td className="px-4 py-3">{l.nome_publico}</td>
                             <td className="px-4 py-3 font-mono text-xs text-zinc-500">{censurarEmail(l.email)}</td>
-                            <td className={`px-4 py-3 text-right font-mono ${r == null ? 'text-zinc-600' : r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {desclassificada ? (
+                              // Desclassificada diz só isso: nem resultado, nem lugar, nem motivo.
+                              <td colSpan={2} className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-red-400">
+                                <T k="tt.desclassificada" />
+                              </td>
+                            ) : (
+                            <>
+                            <td className={`px-4 py-3 text-right font-mono ${r == null ? 'text-zinc-600' : r > 0 ? 'text-emerald-400' : r < 0 ? 'text-red-400' : 'text-zinc-400'}`}>
                               {r == null ? '—' : `${r > 0 ? '+' : ''}${r.toFixed(2)}%`}
                             </td>
                             <td className="px-4 py-3 text-xs">
-                              {l.estado === 'quebrado' ? (
-                                <span className="text-red-400"><T k="tt.quebrada" /></span>
-                              ) : m.elegivel === true ? (
+                              {m.elegivel === true ? (
                                 <span className="text-emerald-400"><T k="tt.aContar" /></span>
                               ) : (
                                 // Quem ainda não conta aparece com o motivo à vista. Escondê-lo
@@ -194,6 +201,8 @@ export default async function TradingTournamentPage() {
                                 </span>
                               )}
                             </td>
+                            </>
+                            )}
                           </tr>
                         )
                       })}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { censurarEmail } from '@/lib/mtmfunded/acesso'
+import { ordemParaMostrar } from '@/lib/mtmfunded/regras'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,14 +40,17 @@ export async function GET(request: NextRequest) {
     .order('posicao', { ascending: true, nullsFirst: false })
     .limit(500)
 
-  const classificacao = (linhas ?? []).map((p) => {
+  const classificacao = ordemParaMostrar(linhas ?? []).map((p) => {
     const m = (p.metricas ?? {}) as Record<string, unknown>
+    // Desclassificada diz só isso: sem lugar e sem resultado.
+    const desclassificada = p.estado === 'quebrado'
     return {
-      posicao: p.posicao,
+      posicao: desclassificada ? null : p.posicao,
       nome: p.nome_publico,
       email: censurarEmail(p.email),
       estado: p.estado,
-      resultadoPct: p.resultado_pct == null ? null : Number(p.resultado_pct),
+      desclassificada,
+      resultadoPct: desclassificada || p.resultado_pct == null ? null : Number(p.resultado_pct),
       // Só o que é seguro mostrar. O saldo, o login e o número de trades ficam de fora:
       // são a mão do participante e não são de ninguém a não ser dele.
       elegivel: m.elegivel === true,

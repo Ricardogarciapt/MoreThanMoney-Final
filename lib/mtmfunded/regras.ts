@@ -163,13 +163,31 @@ export interface LinhaClassificacao {
   elegivel: boolean
   quebrou: boolean
   drawdownPct?: number
+  /**
+   * Sem conta a negociar (por emitir ou cancelada): não tem resultado nenhum. Antes entrava com
+   * 0% e ficava À FRENTE de quem estava a perder dinheiro de verdade — o Simão e o Helder, sem
+   * conta, apareciam em 2.º e 3.º. Vai para depois de todos os que negoceiam.
+   */
+  semResultado?: boolean
 }
 
 export function ordenarClassificacao<T extends LinhaClassificacao>(linhas: T[]): T[] {
   return [...linhas].sort((a, b) => {
-    const grupo = (x: LinhaClassificacao) => (x.quebrou ? 2 : x.elegivel ? 0 : 1)
+    const grupo = (x: LinhaClassificacao) => (x.quebrou ? 3 : x.semResultado ? 2 : x.elegivel ? 0 : 1)
     if (grupo(a) !== grupo(b)) return grupo(a) - grupo(b)
     if (b.resultadoPct !== a.resultadoPct) return b.resultadoPct - a.resultadoPct
     return (a.drawdownPct ?? 0) - (b.drawdownPct ?? 0)
   })
+}
+
+/**
+ * A ordem em que a classificação se MOSTRA, a partir do que a base guarda.
+ *
+ * Quem tem posição vem por posição. Depois quem não tem resultado, e por fim os desclassificados
+ * — estes já não têm posição (o cron limpa-a), e sem esta ordem o Postgres punha-os onde calhava
+ * no meio dos «sem posição».
+ */
+export function ordemParaMostrar<T extends { posicao?: number | null; estado?: string | null }>(linhas: T[]): T[] {
+  const grupo = (x: T) => (x.estado === 'quebrado' ? 2 : x.posicao == null ? 1 : 0)
+  return [...linhas].sort((a, b) => grupo(a) - grupo(b) || (a.posicao ?? 0) - (b.posicao ?? 0))
 }
