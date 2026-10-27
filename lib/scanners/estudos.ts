@@ -78,6 +78,8 @@ export const ESTUDOS_WEBTRADER = [
   { chave: "Sensei", rotulo: "Sensei", alerta: "sensei", acesso: "Sensei", curto: "Sensei", cor: "#F472B6" },
   { chave: "MTMScanner", rotulo: "MTM Scanner", alerta: "mtmscanner", acesso: "MTMScanner", curto: "MTM", cor: "#A78BFA" },
   { chave: "TrendShot", rotulo: "TrendShot", alerta: "trendshot", acesso: "TrendShot", curto: "TS", cor: "#38BDF8" },
+  // Premium Scanner (27/10): só cálculo local (os alertas dele ficam em sombra, sem setas por webhook).
+  { chave: "PremiumScanner", rotulo: "Premium Scanner", alerta: "premiumscanner", acesso: "PremiumScanner", curto: "PS", cor: "#E9C46A" },
 ] as const
 
 export type EstudoWebtrader = (typeof ESTUDOS_WEBTRADER)[number]
