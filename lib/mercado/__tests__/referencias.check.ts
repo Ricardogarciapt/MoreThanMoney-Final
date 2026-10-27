@@ -33,6 +33,12 @@ caso('forex → XXXYYY=X ao mesmo nível (USDJPY=X, não JPY=X)', () => {
   assert.equal(primeiro('USDJPY', 'forex').symbol, 'USDJPY=X')
   assert.equal(primeiro('EURUSD.s').symbol, 'EURUSD=X', 'sufixo .s da corretora sai; classe adivinha-se')
 })
+caso('outros nomes dos índices (SP500 do TrendShot, USTEC, DE40…) seguem o índice certo', () => {
+  assert.deepEqual(referenciasPara('SP500').map((r) => r.symbol), ['ES=F', '^GSPC'])
+  assert.deepEqual(referenciasPara('USTEC').map((r) => r.symbol), ['NQ=F', '^NDX'])
+  assert.deepEqual(referenciasPara('WS30').map((r) => r.symbol), ['YM=F', '^DJI'])
+  assert.equal(primeiro('DE40').symbol, '^GDAXI')
+})
 caso('índices → futuros primeiro (≈23 h), índice à vista de reserva; fora do nosso nível', () => {
   assert.deepEqual(referenciasPara('US30', 'indice').map((r) => r.symbol), ['YM=F', '^DJI'])
   assert.deepEqual(referenciasPara('NAS100', 'indice').map((r) => r.symbol), ['NQ=F', '^NDX'])
