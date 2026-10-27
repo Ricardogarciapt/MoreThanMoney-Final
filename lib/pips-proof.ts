@@ -50,6 +50,8 @@ function limparSimbolo(s: string | undefined | null): string {
 export interface TradeExecutada {
   positionId: string
   symbol: string
+  /** Compra ou venda. Só a conta-espelho simulada o sabe dizer. */
+  direcao?: 'buy' | 'sell'
   /** Que estratégia gerou a trade. Só existe quando a leitura vem do registo de saídas. */
   fonte?: string | null
   /** Pips realizados, já com o peso de cada saída parcial. */
@@ -393,6 +395,7 @@ async function computeExecutadasDoEspelhoSim(
       trades.push({
         positionId: raiz,
         symbol: mae.symbol,
+        direcao: mae.dir === -1 ? 'sell' : 'buy',
         fonte: chaveDaFonteDoEspelho(fonteDaRaiz.get(raiz)),
         pips,
         dinheiro: 0, // o dinheiro depende do lote de cada conta — aqui só se mede o movimento
@@ -430,6 +433,31 @@ function chaveDaFonteDoEspelho(rotulo: string | undefined | null): string | null
   if (r === 'aurum flow') return 'goldenmoves'
   if (r === 'perps') return 'perps'
   return null
+}
+
+/**
+ * As trades GANHAS mais recentes da conta-espelho, uma por sinal — para mostrar uma de cada vez.
+ *
+ * Só fontes MTM (as de terceiros não servem de montra, ver `FONTES_MTM`) e só depois da fronteira
+ * do viés de preço. Há duas contas-espelho a abrir o mesmo sinal: a mesma trade chega duas vezes,
+ * e por isso desduplica-se pelo par fonte+símbolo+direcção+minuto do fecho.
+ *
+ * Mostrar uma vencedora sozinha é escolher — quem a publica diz ao lado que nem todas fecham
+ * assim (ver `lib/telegram-leads-posts.ts`). Isto só devolve o que aconteceu.
+ */
+export async function tradesGanhasRecentes(dias = 3): Promise<TradeExecutada[]> {
+  const { trades } = await computeExecutadasDoEspelhoSim(dias)
+  const fronteira = Date.parse(FRONTEIRA_VIES_PRECO)
+  const vistas = new Set<string>()
+  return trades
+    .filter((t) => t.pips > 0 && fonteEhMtm(t.fonte) && t.fechadaEm && Date.parse(t.fechadaEm) > fronteira)
+    .sort((a, b) => String(b.fechadaEm).localeCompare(String(a.fechadaEm)))
+    .filter((t) => {
+      const k = `${t.fonte}|${t.symbol}|${t.direcao}|${String(t.fechadaEm).slice(0, 16)}`
+      if (vistas.has(k)) return false
+      vistas.add(k)
+      return true
+    })
 }
 
 /**
