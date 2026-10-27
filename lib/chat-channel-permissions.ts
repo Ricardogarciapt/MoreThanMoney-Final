@@ -33,7 +33,7 @@ export const NIVEIS_ESCRITA: readonly NivelEscrita[] = ["membros", "vip", "ningu
 
 /** Regra de sempre (sem configuração): canais pagos. */
 // 23/10 (dono): espelha chat_channels.leitura — a base manda; isto só vale quando a coluna falta.
-const LEITURA_PREMIUM_POR_OMISSAO = new Set(["premium-ideas", "sensei-scanner", "aurum-flow", "sinais-scanner-mtm"])
+const LEITURA_PREMIUM_POR_OMISSAO = new Set(["premium-ideas", "sensei-scanner", "aurum-flow", "sinais-scanner-mtm", "sinais-premium-ii"])
 
 /** Canais de sinais: Premium · Ouro, Sensei Scanner e Ideias de Índices — publicam admin e VIP. */
 export const SIGNAL_PUBLISH_CHANNELS = ["premium-ideas", "sensei-scanner", "trade-ideas"] as const
@@ -44,6 +44,7 @@ const SO_SISTEMA_POR_OMISSAO = new Set([
   "ideias-e-sinais", // Forex Swings — reaberto a 07/10, só o sistema publica
   "sinais-goldkiller",
   "sinais-scanner-mtm",
+  "sinais-premium-ii",
 ])
 
 /** Canais de comunidade abertos a todos os membros ativos (ler e publicar). */
@@ -97,7 +98,8 @@ export function isReadOnlyChannel(slug: string, cfg?: ChatChannelConfig | null) 
     slug === "premium-ideas" ||
     slug === "sensei-scanner" ||
     slug === "sinais-goldkiller" ||
-    slug === "sinais-scanner-mtm"
+    slug === "sinais-scanner-mtm" ||
+    slug === "sinais-premium-ii"
   )
 }
 

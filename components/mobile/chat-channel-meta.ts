@@ -83,6 +83,17 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
     ],
     tips: ["Ativa push para não perder entradas"],
   },
+  "sinais-premium-ii": {
+    emoji: "💎",
+    accent: "#E9C46A",
+    tag: "Premium II",
+    rules: [
+      "Sinais automáticos do indicador MTM Premium Scanner (XAUUSD 15m)",
+      "Só leitura — as entradas chegam automaticamente",
+      "Aceitar: no separador Tap to Trade (aqui é só leitura)",
+    ],
+    tips: ["Ativa push para não perder entradas"],
+  },
   "sinais-goldkiller": {
     emoji: "🥇",
     accent: "#D2A63C",

@@ -16,6 +16,7 @@ export const CANAL_POR_FONTE_MTM: Record<string, string> = {
   sensei: 'sensei-scanner',
   goldkiller: 'sinais-goldkiller',
   mtmscanner: 'trade-ideas-setup',
+  premiumscanner: 'sinais-premium-ii',
 }
 
 /** Os três de antes (05/10): só valem quando nenhum provider reclama o canal. */
