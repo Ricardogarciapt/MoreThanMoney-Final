@@ -1,119 +1,121 @@
 # MTM Premium Scanner — engenharia reversa dos sinais Premium
 
-27/10/2026 · pedido do Ricardo: estudar todos os sinais Premium desde o início, montar um indicador e uma estratégia
-em Pine que dêem resultados parecidos e preparar o scanner para as 3 sessões.
+27/10/2026, a pedido do Ricardo. O objetivo foi estudar todos os sinais Premium desde o início e construir em Pine
+um indicador e uma estratégia que se comportem como esses sinais, nas 3 sessões.
 
-Ficheiros:
-- `docs/pine/mtm-premium-scanner.pine`: o indicador, com alertas JSON para o webhook.
-- `docs/pine/mtm-premium-scanner-estrategia.pine`: a estratégia, para fazer backtest no TradingView.
-- `scripts/estudos/premium-scanner-check.py`: refaz todas as medições abaixo.
+**Ficheiros**
+- `docs/pine/mtm-premium-scanner.pine`: o indicador, com alertas em JSON para o webhook.
+- `docs/pine/mtm-premium-scanner-estrategia.pine`: a estratégia, para fazer o backtest no TradingView.
+- `scripts/estudos/premium-scanner-check.py`: refaz todas as medições a partir dos dados em `dados-estudo/`.
+- `scripts/estudos/premium-velas-puxar.ts --csv`: puxa as velas da MetaApi. Só lê, não escreve na Supabase.
 
-## 1. Os dados
+## 1. Dados
 
 | | |
 |---|---|
-| Sinais lidos (`chat_messages`, canal `premium-ideas`) | 926 com zona, SL e TP1 |
-| Sinais únicos, sem repetições no espaço de 3 min | **871**, de 04/06 a 27/10/2026 |
-| Activo | só XAUUSD |
-| Direcção | 489 vendas e 382 compras |
-| Velas para medir (`_bt_velas`, XAUUSD M15) | só existem de 04/09 a 26/10 → **221 sinais** com preço |
+| Sinais Premium (`chat_messages`, `premium-ideas`) | 871 únicos, de 04/06 a 27/10/2026, todos XAUUSD |
+| Sinais com geometria válida | **833**. Os outros 38 têm gralhas, por exemplo TP1 4223 em vez de 4323. |
+| Velas | XAUUSD M15 (9 752) e M5 (29 253), de 01/06 a 27/10, MetaApi conta 166531ed… |
+| Desvio entre o preço dos sinais e estas velas | mediana −0,2 $ (IQR ±3 $). É o mesmo feed. |
 
-Os sinais de junho a agosto (650) servem para medir horários e geometria. Não servem para testar o scanner, porque
-não há velas desse período na base.
+O primeiro estudo usou as velas `_bt_velas`. Esse feed tinha um desvio de cerca de 10 $ em relação aos sinais, por isso
+os números deste documento substituem os do primeiro.
 
 ## 2. O que os sinais têm em comum
 
-**A geometria é sempre a mesma.**
-- A zona tem 5 a 6 $ (841 dos 871 sinais).
-- O SL fica 5 $ para lá da zona (817 dos 871).
-- O TP1 fica a 5 $ da borda da zona (819 dos 871), e o TP2 e o TP3 seguem de 5 em 5 $.
-- A zona fica cerca de 4 $ contra o preço do momento. A entrada é feita num recuo.
+**Geometria fixa**
+- A zona tem 5 $ de largura.
+- O SL fica 5 $ para lá da zona.
+- O TP1, o TP2 e o TP3 ficam a 5, 10 e 15 $ da borda da zona. O TP4 é deixado correr.
+- O meio da zona fica 4 $ contra o preço do momento, ou seja, a entrada é num recuo.
 
-**O horário (UTC) é concentrado.**
+**Horário: a fonte mudou ao longo do tempo** (sessões com sinais / dias úteis)
 
-| Janela | Sinais | % |
-|---|---|---|
-| Londres 07–11h | 459 | 53 % |
-| NY 13–16h | 290 | 33 % |
-| Ásia 00–06h | 66 | 8 % |
+| Mês | Ásia | Londres | NY |
+|---|---|---|---|
+| Junho | 12/22 | 17/22 | 19/22 |
+| Julho | 12/23 | 15/23 | 14/23 |
+| Agosto | 1/21 | 15/21 | 12/21 |
+| Setembro | 0/22 | 21/22 | 10/22 |
+| Outubro | 0/19 | 19/19 | 0/19 |
 
-Entre setembro e outubro foi quase tudo em Londres: houve sinais em 35 de 36 dias de Londres e só em 6 dias de NY.
+Em média há 4 a 6 sinais por sessão activa. O minuto do sinal é manual: está espalhado pelos 60 minutos da hora e
+não acompanha o fecho da vela.
 
-**A direcção segue o movimento.**
-- 85 % dos sinais repetem a direcção do sinal anterior do mesmo dia.
-- As compras surgem depois de subidas: em mediana, +11 $ em 4 h e o preço acima da abertura do dia. As vendas surgem depois de descidas.
+**Direcção: segue o movimento**
+- 85 % dos sinais repetem a direcção do anterior do mesmo dia.
+- O melhor resultado foi um voto de 5 critérios, todos medidos no fecho M15:
+  - preço contra a abertura da sessão;
+  - preço contra o de há 1 h;
+  - preço contra o de há 4 h;
+  - preço contra a EMA200;
+  - preço contra a EMA9.
+- Esse voto acerta a direcção em **66 % dos 833 sinais**. Vender sempre acertava 57 %.
+- Uma regressão logística com 11 variáveis não fez melhor fora da amostra: 56 a 66 %. Com dados de preço, este é
+  o tecto. O resto da decisão é discricionário.
 
-## 3. O scanner (lógica do Pine)
+## 3. O scanner
 
-- **Sessões**:
-  - Londres 07:00–11:00 UTC e NY 13:00–16:00 UTC estão ligadas.
-  - A Ásia 00:00–06:00 está desligada por omissão (ver ponto 4).
-  - Cada sessão tem o seu interruptor.
-- **Direcção**: voto de 3 critérios, no fecho da vela M15:
-  - o preço contra a abertura da sessão;
-  - o preço contra o de há 1 h;
-  - o preço contra o de há 4 h.
-- **Cadência**: um sinal no máximo a cada 2 velas (30 min) e até 6 por sessão.
-- **Geometria**: a mesma dos sinais originais (zona de 5 $ a 4 $ contra o preço, SL a 5 $, TPs de 5 em 5 $).
+- **Sessões**: Ásia 00–06, Londres 07–11 e NY 13–16 UTC. Cada uma tem o seu interruptor e vêm todas ligadas.
+- **Direcção**: voto de 5.
+  - `Maioria`, a opção por omissão, é a réplica dos sinais.
+  - `Unânime` só dispara quando os 5 critérios concordam.
+- **Cadência**: no máximo 1 sinal a cada 30 min e 6 por sessão.
+- **Geometria**: a mesma dos sinais originais.
 - **Estratégia**:
-  - Entra com uma ordem limite no meio da zona, válida 1 h.
-  - Divide a posição em 3 partes, uma para cada TP.
-  - Depois do TP1, o SL das outras partes passa para o break-even.
+  - Entrada com ordem limite no meio da zona, válida 1 h.
+  - A posição divide-se em 3 partes, uma para cada TP.
+  - Depois do TP1, o SL passa para break-even.
 
-## 4. Semelhança medida (04/09–26/10, mesmas velas M15)
+## 4. Semelhança medida
 
-**Timing e direcção, só em Londres**
+Contámos só as sessões em que a fonte operou. Um sinal conta como apanhado se houver outro na mesma direcção a ±30 min.
 
-| | Treino (set.) | Teste (out., nunca visto) |
+| | Jun–ago | Set–out |
 |---|---|---|
-| Sinais originais com sinal do scanner na mesma direcção a ±30 min | 65/132 (49 %) | 49/89 (55 %) |
-| Sinais do scanner com sinal original na mesma direcção a ±30 min | 56/108 (52 %) | 52/108 (48 %) |
-| Direcção certa no instante de cada sinal original | 64 % | 70 % |
+| Originais apanhados pelo scanner (Maioria) | 347/562 (62 %) | 180/271 (66 %) |
+| Sinais do scanner com original ao lado (Maioria) | 302/702 (43 %) | 153/300 (51 %) |
+| Originais apanhados (Unânime) | 239/562 (43 %) | 116/271 (43 %) |
+| Sinais do scanner com original ao lado (Unânime) | 187/423 (44 %) | 89/158 (56 %) |
 
-A direcção é o ponto fraco. Neste período 60 % dos sinais foram vendas, por isso «vender sempre» já acertava 60 %.
-O voto de 3 acerta 66 %, o que é pouca vantagem. O momento do sinal é, na prática, a cadência dentro de Londres.
+## 5. Resultados
 
-**Resultado (mesma execução: limite no meio da zona válida 1 h, 3 partes, break-even depois do TP1)**
+Todos com a mesma execução, simulada em M5 com as velas reais da corretora, de 01/06 a 27/10.
 
-| | Trades | TP1 | SL cheio | Pips líquidos |
+| | Trades | TP1 | SL cheio | Pips | Por trade |
+|---|---|---|---|---|---|
+| **Sinais Premium originais** (limite na zona) | 619 | 46 % | 54 % | **−5 764** | −9,3 |
+| Sinais Premium originais (a mercado) | 833 | 47 % | 53 % | −3 145 | −3,8 |
+| Scanner Maioria, Ásia | 463 | 55 % | 45 % | +1 558 | +3,4 |
+| Scanner Maioria, Londres | 412 | 48 % | 51 % | −474 | −1,2 |
+| Scanner Maioria, NY | 484 | 53 % | 47 % | +541 | +1,1 |
+| Scanner Unânime, Ásia | 318 | 54 % | 46 % | +1 808 | +5,7 |
+| Scanner Unânime, Londres | 223 | 52 % | 48 % | +448 | +2,0 |
+| Scanner Unânime, NY | 265 | 55 % | 45 % | +1 636 | +6,2 |
+
+**Por período** (o scanner foi escolhido em jun–ago, e set–out funciona como teste)
+
+| Sessão | Maioria jun–ago | Maioria set–out | Unânime jun–ago | Unânime set–out |
 |---|---|---|---|---|
-| Sinais Premium originais | 151 | 50 % | 50 % | **−925** (−6,1/trade) |
-| Seguimento real na base (`mtmcopy_signal_tracking`) | 150 com entrada | — | 119 | **−1 373** (−9,2/trade) |
-| Scanner, Londres | 124 | 49 % | 51 % | **+108** (+0,9/trade) |
-| Scanner, NY | 159 | 56 % | 44 % | **+342** (+2,1/trade) |
-| Scanner, Ásia | 147 | 48 % | 52 % | **−1 550** (−10,5/trade) |
+| Ásia | +6,1/trade | −1,0 | +8,2 | +1,8 |
+| Londres | −5,1 | +5,1 | +3,1 | +0,5 |
+| NY | +6,0 | −6,8 | +12,9 | −7,6 |
 
-**Leitura**
+## 6. Leitura honesta
 
-- Em Londres o scanner dá o mesmo perfil dos sinais originais: cerca de metade chega ao TP1 e a outra metade leva o SL.
-  O resultado líquido fica perto de zero nos dois. Nesse sentido, os resultados são «idênticos».
-- Só que o original, medido aqui, perdeu. O nosso próprio seguimento mostra −1 373 pips no mesmo período. Os totais
-  diários que a fonte publica («Total Net … PIPS») não se reproduzem quando se mede pelo preço.
-- A Ásia perde de forma clara e por isso fica desligada. NY é a melhor das três, mas a fonte quase não deu sinais
-  em NY desde setembro, por isso há pouco com que comparar.
-- Os valores são todos em pips de ouro (1 $ = 10 pips), sem spread nem comissão. As velas M15 não têm abertura
-  (usa-se o fecho anterior). Quando o SL e o TP caem na mesma vela, conta-se o SL.
+- O scanner reproduz o comportamento dos sinais Premium. Apanha cerca de 2 em cada 3 sinais na mesma direcção,
+  tem a mesma geometria e a mesma taxa de TP1, que fica em torno dos 50 %.
+- Os sinais originais, medidos pelo preço, perderam: −5 764 pips em 619 trades com entrada na zona. Os totais
+  diários que a fonte publica («Total Net … PIPS») não se reproduzem.
+- O scanner fica perto de zero por trade. O `Unânime` sai melhor no total (+4,8/trade), mas no teste
+  (set–out) fica em −1,3/trade, e o `Maioria` em −1,2/trade. NY inverteu de sinal entre os dois períodos.
+- Com spread e comissão, que no ouro são cerca de 2–3 pips por trade, nenhuma das variantes tem vantagem
+  comprovada. Não se publicam taxas de acerto nem resultados destes números.
 
-## 5. Limites e próximos passos
+## 7. Próximos passos
 
-1. **Mais histórico.**
-   - Há velas só para 221 dos 871 sinais.
-   - Para testar com junho a agosto (650 sinais, incluindo o bloco de NY às 14h), é preciso puxar velas M5/M15
-     desse período pela MetaApi (mesmo método de `scripts/estudos/sensei-check.ts`) e voltar a correr o script.
-2. **Sombra antes de execução.**
-   - O alerta envia `strategy:"PremiumScanner"`. O webhook ainda não conhece essa chave, por isso nada é executado.
-   - O passo seguinte é registar os alertas em sombra durante 2 semanas, ao lado dos sinais Premium reais, e só
-     depois ligar uma mestre.
-3. **Não se prometem taxas de acerto.** Os números acima são medições num período curto e com o preço de um só
-   feed.
-
-## SQL usado
-
-```sql
--- sinais (deduplicar depois: mesma direcção, |SL| ≤ 1 e < 3 min)
-select created_at, content from chat_messages
-where channel_slug = 'premium-ideas' and coalesce(is_deleted, false) = false
-  and content ~* 'SL\s*:?\s*[0-9]' and content ~* 'TP1';
--- velas
-select t, h, l, c from _bt_velas where sym = 'XAUUSD' order by t;
-```
+1. **Sombra**: o alerta envia `strategy:"PremiumScanner"`, e o webhook ainda não conhece essa chave. Primeiro
+   regista-se durante 2–4 semanas, lado a lado com os sinais Premium reais, e só depois se liga uma mestre.
+2. **Gestão**: o resultado depende mais da saída do que da entrada. Vale testar com estes dados TP1 a 100 %,
+   trailing e TP4.
+3. **Limpeza**: os dados de `dados-estudo/` saem da branch antes do merge, se o Ricardo preferir não os guardar no repo.

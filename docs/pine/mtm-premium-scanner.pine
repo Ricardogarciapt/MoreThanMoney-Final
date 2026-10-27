@@ -8,11 +8,11 @@
 // O QUE APRENDEMOS DOS SINAIS ORIGINAIS (e este script copia):
 //  · Geometria fixa: zona de 5 $, SL 5 $ para lá da zona, TP1/TP2/TP3 a 5/10/15 $ da
 //    borda da zona, TP4 a correr. A zona fica ~4 $ CONTRA o preço (entrada em recuo).
-//  · Horário: Londres 07:00–11:00 UTC concentra a maioria; NY 13:00–16:00 UTC aparece de
-//    junho a agosto. Ásia quase nunca.
-//  · Direcção: segue o movimento. Compra depois de subida, vende depois de queda. O voto
-//    de 3 (preço vs abertura da sessão, vs 1 h atrás, vs 4 h atrás) acerta a direcção
-//    em ~65–70 % dos sinais originais.
+//  · Horário: de junho a agosto operava Ásia, Londres e NY; em outubro só Londres
+//    (07:00–11:00 UTC). O minuto de cada sinal é manual (não segue o fecho da vela).
+//  · Direcção: segue o movimento. O voto de 5 (preço vs abertura da sessão, vs 1 h,
+//    vs 4 h, vs EMA200, vs EMA9) acerta a direcção em 66 % dos 833 sinais válidos
+//    (vender sempre acertava 57 %).
 //  · Cadência: vários sinais seguidos na mesma direcção (85 % repetem a anterior).
 //
 // USAR: gráfico XAUUSD em 15 minutos. Alerta → "Any alert() function call", "Once Per
@@ -26,13 +26,14 @@ useLdn  = input.bool(true,  "Londres", inline="l", group=gS)
 sessLdn = input.session("0700-1100", "", inline="l", group=gS)
 useNy   = input.bool(true,  "Nova Iorque", inline="n", group=gS)
 sessNy  = input.session("1300-1600", "", inline="n", group=gS)
-useAsia = input.bool(false, "Ásia (medido negativo — ver doc)", inline="a", group=gS)
+useAsia = input.bool(true,  "Ásia", inline="a", group=gS)
 sessAs  = input.session("0000-0600", "", inline="a", group=gS)
 
 // ═══════════ DIRECÇÃO E CADÊNCIA ═══════════
 gD = "═══ Direcção e cadência ═══"
 lenCurto = input.int(4,  "Momento curto (velas)", minval=1, group=gD)   // 4 × 15m = 1 h
 lenLongo = input.int(16, "Momento longo (velas)", minval=2, group=gD)   // 16 × 15m = 4 h
+modo     = input.string("Maioria", "Direcção", options=["Maioria", "Unânime"], group=gD, tooltip="Maioria = réplica dos sinais Premium. Unânime = só quando os 5 votos concordam (menos sinais).")
 pausa    = input.int(2,  "Pausa entre sinais (velas)", minval=1, group=gD)
 maxSess  = input.int(6,  "Máx. sinais por sessão", minval=1, group=gD)
 
@@ -65,12 +66,14 @@ if novaSess
     abSess := open
     nSess  := 0
 
-// ── Direcção: voto de 3 ──────────────────────────────────────────────────────
-voto = (close > abSess ? 1 : -1) + (close > close[lenCurto] ? 1 : -1) + (close > close[lenLongo] ? 1 : -1)
+// ── Direcção: voto de 5 (sessão, 1 h, 4 h, EMA200, EMA9) ──────────────────────────────────────────────────────
+voto = (close > abSess ? 1 : -1) + (close > close[lenCurto] ? 1 : -1) + (close > close[lenLongo] ? 1 : -1) +
+     (close > ta.ema(close, 200) ? 1 : -1) + (close > ta.ema(close, 9) ? 1 : -1)
 dirCompra = voto > 0
+votoOk = modo == "Maioria" or math.abs(voto) == 5
 
 // ── Disparo ──────────────────────────────────────────────────────────────────
-podeDisparar = inAny and barstate.isconfirmed and not na(abSess) and nSess < maxSess and bar_index - ultimo >= pausa
+podeDisparar = inAny and votoOk and barstate.isconfirmed and not na(abSess) and nSess < maxSess and bar_index - ultimo >= pausa
 sinal = podeDisparar
 if sinal
     nSess  := nSess + 1
