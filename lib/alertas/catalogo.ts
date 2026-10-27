@@ -61,6 +61,7 @@ export function chaveDeSubscricao(valor: unknown): ScannerKey | null {
   if (n === 'goldkiller') return 'goldkiller'
   if (n === 'mtmscanner' || n === 'scanner') return 'mtmscanner'
   if (n === 'trendshot' || n === 'mtmautotrendshot') return 'trendshot'
+  if (n === 'premium' || n === 'mtmautopremium' || n === 'mtmpremium') return 'premium'
   if (n === 'aurum' || n === 'aurumflow' || n === 'mtmaurumflow' || n === 'mtmaurumflowcripto') return 'aurum'
   return null
 }

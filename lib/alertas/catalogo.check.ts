@@ -41,7 +41,7 @@ const teste = (nome: string, condicao: boolean) => { if (!condicao) falhas.push(
 {
   teste('«7 de 22», não «(7)»', cabecalhoDoSelector('Ativos', 7, TOTAL_DE_ACTIVOS) === `Ativos · 7 de ${TOTAL_DE_ACTIVOS}`)
   teste('zero seleccionados = todos', cabecalhoDoSelector('Estratégias', 0, 4) === 'Estratégias · todos (4)')
-  teste('há 4 estratégias no catálogo, as mesmas de lib/mtm-alerts/scanners', ESTRATEGIAS.length === SCANNER_ORDER.length)
+  teste('as estratégias do catálogo são as mesmas de lib/mtm-alerts/scanners', ESTRATEGIAS.length === SCANNER_ORDER.length)
   teste('5 grupos no selector de activos', GRUPOS_DE_ACTIVOS.length === 5)
   teste('o selector tem Ações com 6 (eram geradas num spread e o grep contava 1)', GRUPOS_DE_ACTIVOS.find((g) => g.chave === 'stock')?.simbolos.length === 6)
   teste('5 classes para filtrar alertas', CLASSES_DE_ACTIVOS.length === 5)

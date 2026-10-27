@@ -8,6 +8,8 @@ import { userIdDoPedido } from "@/lib/sessao-do-pedido"
 import { alertaDeSinalPago, ocultarConteudoDoAlerta } from "@/lib/direito-sinais"
 import { classifyAssetClass, type AlertAssetClass as MtmAlertAssetClass } from "@/lib/mtm-alerts/asset-class"
 import { temDireitoSinaisPagosUtilizador } from "@/lib/direito-sinais-servidor"
+import { lerSinal } from "@/lib/sinais/formato-sinal"
+import { graficoDoFormatoUnico, urlDoGrafico } from "@/lib/sinais/grafico-publicar"
 
 /**
  * Alertas MTM — lê os sinais gerados pelo webhook TradingView existente
@@ -260,6 +262,79 @@ function extractChartImage(raw: Record<string, unknown>, message: string | null)
   return null
 }
 
+/**
+ * OS SINAIS PREMIUM NOS ALERTAS (27/10, pedido do dono). O Premium não passa pelo TradingView: as
+ * entradas vivem no chat `premium-ideas`, no formato único e com o gráfico em `image_url`. Lêem-se
+ * daí — só as raízes (entradas), nunca os seguimentos — e o desfecho é o que o chat já guardou em
+ * `outcome`. Ids com prefixo `premium-` para não chocarem com os de tradingview_signals.
+ */
+const PREFIXO_PREMIUM = "premium-"
+const JANELA_PREMIUM_MS = 14 * 24 * 3600_000
+
+async function alertasPremium(
+  admin: ReturnType<typeof getSupabaseAdmin>,
+  opts: { id?: string; simbolo?: string; limite: number },
+): Promise<MtmAlert[]> {
+  let q = admin
+    .from("chat_messages")
+    .select("id, content, image_url, outcome, created_at")
+    .eq("channel_slug", "premium-ideas")
+    .is("reply_to_id", null)
+    .or("is_deleted.is.null,is_deleted.eq.false")
+  if (opts.id) q = q.eq("id", opts.id)
+  else q = q.gte("created_at", new Date(Date.now() - JANELA_PREMIUM_MS).toISOString())
+  if (opts.simbolo) q = q.ilike("content", `%${opts.simbolo}%`)
+  const { data, error } = await q.order("created_at", { ascending: false }).limit(Math.max(opts.limite * 3, 30))
+  if (error) {
+    console.warn("[MTM ALERTS] premium:", error.message)
+    return []
+  }
+  const out: MtmAlert[] = []
+  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+    const s = lerSinal(row.content as string | null)
+    if (!s || s.sl == null || !s.tps.length) continue
+    const cls = classifyAssetClass(s.simbolo)
+    const sl = slInfo(s.simbolo, s.entrada, s.sl, cls)
+    const o = (row.outcome && typeof row.outcome === "object" ? row.outcome : null) as { pips?: number | null; pct?: number | null } | null
+    const pips = typeof o?.pips === "number" ? o.pips : null
+    const estado = o ? (pips == null ? "closed" : pips < 0 ? "loss" : pips === 0 ? "be" : "closed") : "active"
+    const grafico = graficoDoFormatoUnico(row.content as string, "premium", { timeframe: "15", quando: row.created_at as string })
+    out.push({
+      id: `${PREFIXO_PREMIUM}${row.id}`,
+      ticker: s.simbolo,
+      tvSymbol: buildTvSymbol(s.simbolo, null),
+      exchange: null,
+      timeframe: s.timeframe ? s.timeframe.replace(/^M/, "") : "15",
+      action: s.direcao,
+      direction: s.direcao,
+      entry: s.entrada,
+      stopLoss: s.sl,
+      takeProfits: s.tps,
+      alertName: "MTM Auto Premium",
+      strategy: "MTM Auto Premium",
+      session: null,
+      confirmations: [],
+      message: row.content as string,
+      aiAnalysis: null,
+      chartImageUrl: (row.image_url as string | null) || (grafico ? urlDoGrafico(grafico) : null),
+      createdAt: row.created_at as string,
+      status: null,
+      tradeStatus: estado,
+      assetClass: cls,
+      slDistance: sl.slDistance,
+      slPercent: sl.slPercent,
+      slPips: sl.slPips,
+      slUnit: sl.slUnit,
+      crypto: null,
+      outcomePips: pips,
+      outcomePct: typeof o?.pct === "number" ? o.pct : null,
+      outcomeUnit: unitFor(s.simbolo),
+    })
+    if (out.length >= opts.limite) break
+  }
+  return out
+}
+
 export async function GET(request: NextRequest) {
   const userId = await userIdDoPedido(request)
   if (!userId) {
@@ -278,7 +353,9 @@ export async function GET(request: NextRequest) {
     let data: unknown[] | null = null
     let error: { message: string } | null = null
 
-    if (idFilter) {
+    if (idFilter.startsWith(PREFIXO_PREMIUM)) {
+      data = []
+    } else if (idFilter) {
       // Sinal específico (deep-link da notificação) — para abrir o modal do alerta.
       const res = await admin.from("tradingview_signals").select(SELECT).eq("id", idFilter).limit(1)
       data = res.data
@@ -376,7 +453,22 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // SINAIS PAGOS (Sensei, GoldKiller) só com direito — a mesma regra do chat desses canais.
+    // Premium: junta-se ao feed pela hora (ver alertasPremium).
+    const idPremium = idFilter.startsWith(PREFIXO_PREMIUM) ? idFilter.slice(PREFIXO_PREMIUM.length) : null
+    const premium =
+      idFilter && !idPremium
+        ? []
+        : await alertasPremium(admin, {
+            id: idPremium ?? undefined,
+            simbolo: symbolFilter || undefined,
+            limite: idPremium ? 1 : 12,
+          }).catch(() => [] as MtmAlert[])
+    if (premium.length) {
+      alerts.push(...premium)
+      alerts.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    }
+
+    // SINAIS PAGOS (Sensei, GoldKiller, Premium) só com direito — a mesma regra do chat desses canais.
     // Quem não o tem continua a ver a linha (ativo, scanner, hora, desfecho), sem entrada/stop/alvos.
     // O direito só se pergunta se houver algum sinal pago na resposta.
     const algumPago = alerts.some((a) => alertaDeSinalPago(a))

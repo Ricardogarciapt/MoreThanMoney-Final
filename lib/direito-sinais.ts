@@ -71,6 +71,8 @@ export interface AlertaClassificavel {
  */
 export function alertaDeSinalPago(a: AlertaClassificavel): boolean {
   const scanner = scannerKeyFromStrategy(a.strategy || a.alertName)
+  // O Premium é o canal pago `premium-ideas` (leitura premium desde 23/10).
+  if (scanner === 'premium') return true
   if (scanner === 'goldkiller') return true
   if (scanner === 'sensei') return a.assetClass !== 'forex' && a.assetClass !== 'crypto_perp'
   return false

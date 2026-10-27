@@ -43,6 +43,14 @@ export const PUBLICACOES: Record<string, PublicacaoDaMestre> = {
     telegram: () => resolvedGoldkillerScannerChatId() || null,
     etiqueta: 'MTM Auto GoldKiller',
   },
+  // 27/10 (dono): a Edge passa a ter as entradas e os seguimentos no chat «MTM Auto Edge», com o
+  // gráfico, contados pela mestre. Não tem grupo Telegram da casa: a fonte vive no PrimeVerse.
+  'mtm-auto-edge': {
+    estrategia: 'mtm-auto-edge',
+    canal: 'sinais-scanner-mtm',
+    telegram: () => null,
+    etiqueta: 'MTM Auto Edge',
+  },
 }
 
 export interface EstrategiaPublicada extends PublicacaoDaMestre {
