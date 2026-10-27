@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripeClient } from '@/lib/stripe-client'
-import { requireStripePriceId } from '@/lib/stripe-prices'
+import { resolverPrecoStripe } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { getAuthenticatedUser } from '@/lib/admin-api-helpers'
-import { normalizarLogin, PRODUTO_EA, PRODUTO_SCALP, PRODUTOS } from '@/lib/licencas'
+import { normalizarLogin, PRODUTO_EA, PRODUTO_PREMIUM_SCANNER, PRODUTO_SCALP, PRODUTOS } from '@/lib/licencas'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +17,7 @@ const PLANOS = {
   sensei_ea_lifetime:    { modo: 'payment'      as const, produto: PRODUTO_EA,    nome: 'Licença vitalícia' },
   sensei_scalp_annual:   { modo: 'subscription' as const, produto: PRODUTO_SCALP, nome: 'Licença anual' },
   sensei_scalp_lifetime: { modo: 'payment'      as const, produto: PRODUTO_SCALP, nome: 'Licença vitalícia' },
+  premium_scanner_ea_lifetime: { modo: 'payment' as const, produto: PRODUTO_PREMIUM_SCANNER, nome: 'Pacote vitalício' },
 }
 
 /**
@@ -46,11 +47,12 @@ export async function POST(request: NextRequest) {
     }
 
     // a página de retorno é a do produto que se comprou, não a do outro
-    const pagina = plano.produto === PRODUTO_SCALP ? 'sensei-scalp' : 'sensei-ea'
+    const pagina = plano.produto === PRODUTO_SCALP ? 'sensei-scalp' : plano.produto === PRODUTO_PREMIUM_SCANNER ? 'premium-scanner-ea' : 'sensei-ea'
     void PRODUTOS // registo único dos dois produtos
 
-    const priceId = requireStripePriceId(planId)
     const stripe = getStripeClient()
+    // lookup_key primeiro (preço novo sem redeploy), variável de ambiente depois
+    const priceId = await resolverPrecoStripe(stripe, planId)
 
     const metadata: Record<string, string> = {
       source: 'sensei_ea_checkout',

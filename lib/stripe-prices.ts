@@ -27,6 +27,7 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   sensei_ea_lifetime: 'STRIPE_PRICE_SENSEI_EA_LIFETIME',
   sensei_scalp_annual: 'STRIPE_PRICE_SENSEI_SCALP_ANNUAL',
   sensei_scalp_lifetime: 'STRIPE_PRICE_SENSEI_SCALP_LIFETIME',
+  premium_scanner_ea_lifetime: 'STRIPE_PRICE_PREMIUM_SCANNER_EA_LIFETIME',
   // Elite / Fundador anual (€597) — acesso Premium + estatuto VIP + perks Elite
   // (isenção de fees, PAMM, negócios digitais, acompanhamento direto).
   elite_annual: 'STRIPE_PRICE_ELITE_ANNUAL',

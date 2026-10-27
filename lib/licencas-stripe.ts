@@ -34,6 +34,7 @@ const PLANOS: Record<string, PlanoLicenca> = {
   sensei_ea_lifetime: 'vitalicia',
   sensei_scalp_annual: 'anual',
   sensei_scalp_lifetime: 'vitalicia',
+  premium_scanner_ea_lifetime: 'vitalicia',
 }
 
 export function ehCheckoutDoEA(session: Stripe.Checkout.Session): boolean {
