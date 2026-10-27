@@ -15,6 +15,7 @@ import { isCronAuthorized } from "@/lib/cron-auth"
 import {
   getMtmcopyWebhookInfo,
   registerMtmcopyTelegramWebhook,
+  TELEGRAM_ALLOWED_UPDATES,
   sendTelegramChannelMessage,
 } from "@/lib/mtmcopy/telegram-bot"
 import { getSiteOrigin } from "@/lib/site-url"
@@ -50,10 +51,20 @@ export async function GET(request: NextRequest) {
     /* url malformada → conta como drift */
   }
 
+  // Também conta como desvio pedir menos updates do que os que o código trata (chat_member,
+  // chat_join_request): sem eles a porta dos grupos de sinais fica cega.
+  const pedidos = new Set(info?.allowed_updates ?? [])
+  const faltamUpdates = info?.allowed_updates != null && TELEGRAM_ALLOWED_UPDATES.some((u) => !pedidos.has(u))
+
   const drifted =
     !currentUrl ||
     currentHost !== expectedHost ||
     !currentPath.startsWith("/api/telegram/webhook")
+
+  if (!drifted && faltamUpdates) {
+    const reset = await registerMtmcopyTelegramWebhook(site)
+    return NextResponse.json({ ok: reset.ok, drifted: false, updatesRepostos: true, description: reset.description ?? null })
+  }
 
   if (!drifted) {
     return NextResponse.json({

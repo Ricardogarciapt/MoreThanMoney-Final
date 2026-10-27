@@ -55,7 +55,29 @@ const RESUMO: Record<string, Record<"es" | "fr" | "de", string>> = {
     fr: "Tendance et replis, avec le panneau de force par timeframe.",
     de: "Trend und Rücksetzer, mit dem Stärke-Panel je Timeframe.",
   },
+  goldkiller: {
+    es: "El oro con objetivos claros: SuperTrend y niveles por percentil.",
+    fr: "L'or avec des objectifs clairs : SuperTrend et niveaux par percentile.",
+    de: "Gold mit klaren Zielen: SuperTrend und Perzentil-Levels.",
+  },
+  "aurum-flow": {
+    es: "Ruptura del rango de apertura, con el stop en el borde opuesto.",
+    fr: "Cassure du range d'ouverture, avec le stop sur le bord opposé.",
+    de: "Ausbruch aus der Eröffnungsrange, Stop an der gegenüberliegenden Kante.",
+  },
+  "mtm-scanner": {
+    es: "Medias dobles, POC de volumen y estructura de mercado.",
+    fr: "Moyennes doubles, POC de volume et structure de marché.",
+    de: "Doppelte Durchschnitte, Volumen-POC und Marktstruktur.",
+  },
+  sensei: {
+    es: "Confluencia de lecturas: solo da señal con confirmaciones suficientes.",
+    fr: "Confluence de lectures : il ne signale qu'avec assez de confirmations.",
+    de: "Konfluenz von Signalen: es meldet nur mit genug Bestätigungen.",
+  },
 }
+
+const N = ESTRATEGIAS_MTM.length
 
 const PLATAFORMAS = "Iqonic, Jifu, AkasHX, Evo e IM Mastery Academy"
 const PLATAFORMAS_EN = "Iqonic, Jifu, AkasHX, Evo and IM Mastery Academy"
@@ -83,11 +105,11 @@ const T: Record<LinguaEmail, Texto> = {
   pt: {
     assunto: "📘 Aprende uma estratégia MTM em minutos (guias em PDF + sala)",
     ola: (n) => `Olá, ${n}! 👋`,
-    intro: "Juntámos numa só sala as <b>6 estratégias</b> que estão por trás dos scanners MTM. Cada uma tem 3 vídeos curtos e um <b>guia em PDF</b> com a checklist, para aprenderes uma estratégia em minutos.",
+    intro: `Juntámos numa só sala as <b>${N} estratégias</b> que estão por trás dos scanners MTM. Cada uma tem 3 vídeos curtos e um <b>guia em PDF</b> com a checklist, para aprenderes uma estratégia em minutos.`,
     origem: `Todas estas estratégias fazem parte de produtos que desenvolvemos antes para outras plataformas, como a ${PLATAFORMAS}. Foi aí que os scanners da MTM deram provas, e é essa experiência que continua em cada scanner que vendemos, hoje e no futuro.`,
     sala: "Tudo está na sala <b>Estratégias MTM</b>:",
     botaoSala: "Abrir a sala Estratégias MTM",
-    estrategiasTitulo: "As 6 estratégias",
+    estrategiasTitulo: `As ${N} estratégias`,
     guia: "Guia em PDF",
     scannersTitulo: "Uma espreitadela aos scanners",
     scannersSub: "É assim que os scanners MTM marcam a entrada, o stop e os alvos no gráfico. Imagens de exemplo, com fim educativo.",
@@ -101,11 +123,11 @@ const T: Record<LinguaEmail, Texto> = {
   en: {
     assunto: "📘 Learn an MTM strategy in minutes (PDF guides + room)",
     ola: (n) => `Hi ${n}! 👋`,
-    intro: "We put the <b>6 strategies</b> behind the MTM scanners into one room. Each one has 3 short videos and a <b>PDF guide</b> with the checklist, so you can learn a strategy in minutes.",
+    intro: `We put the <b>${N} strategies</b> behind the MTM scanners into one room. Each one has 3 short videos and a <b>PDF guide</b> with the checklist, so you can learn a strategy in minutes.`,
     origem: `All these strategies are part of products we previously built for other platforms, such as ${PLATAFORMAS_EN}. That is where the MTM scanners proved themselves, and that experience carries on in every scanner we sell, now and in the future.`,
     sala: "Everything is in the <b>MTM Strategies</b> room:",
     botaoSala: "Open the MTM Strategies room",
-    estrategiasTitulo: "The 6 strategies",
+    estrategiasTitulo: `The ${N} strategies`,
     guia: "PDF guide",
     scannersTitulo: "A quick look at the scanners",
     scannersSub: "This is how the MTM scanners mark the entry, the stop and the targets on the chart. Example images, for educational purposes.",
@@ -119,11 +141,11 @@ const T: Record<LinguaEmail, Texto> = {
   es: {
     assunto: "📘 Aprende una estrategia MTM en minutos (guías en PDF + sala)",
     ola: (n) => `¡Hola, ${n}! 👋`,
-    intro: "Reunimos en una sola sala las <b>6 estrategias</b> que hay detrás de los scanners MTM. Cada una tiene 3 vídeos cortos y una <b>guía en PDF</b> con la checklist, para que aprendas una estrategia en minutos.",
+    intro: `Reunimos en una sola sala las <b>${N} estrategias</b> que hay detrás de los scanners MTM. Cada una tiene 3 vídeos cortos y una <b>guía en PDF</b> con la checklist, para que aprendas una estrategia en minutos.`,
     origem: `Todas estas estrategias forman parte de productos que desarrollamos antes para otras plataformas, como ${PLATAFORMAS_EN.replace(" and ", " y ")}. Fue allí donde los scanners de MTM demostraron su valor, y esa experiencia sigue en cada scanner que vendemos, hoy y en el futuro.`,
     sala: "Todo está en la sala <b>Estratégias MTM</b>:",
     botaoSala: "Abrir la sala Estratégias MTM",
-    estrategiasTitulo: "Las 6 estrategias",
+    estrategiasTitulo: `Las ${N} estrategias`,
     guia: "Guía en PDF (inglés)",
     scannersTitulo: "Un vistazo a los scanners",
     scannersSub: "Así marcan los scanners MTM la entrada, el stop y los objetivos en el gráfico. Imágenes de ejemplo, con fines educativos.",
@@ -137,11 +159,11 @@ const T: Record<LinguaEmail, Texto> = {
   fr: {
     assunto: "📘 Apprends une stratégie MTM en quelques minutes (guides PDF + salle)",
     ola: (n) => `Salut ${n} ! 👋`,
-    intro: "Nous avons réuni dans une seule salle les <b>6 stratégies</b> derrière les scanners MTM. Chacune a 3 courtes vidéos et un <b>guide PDF</b> avec la checklist, pour apprendre une stratégie en quelques minutes.",
+    intro: `Nous avons réuni dans une seule salle les <b>${N} stratégies</b> derrière les scanners MTM. Chacune a 3 courtes vidéos et un <b>guide PDF</b> avec la checklist, pour apprendre une stratégie en quelques minutes.`,
     origem: `Toutes ces stratégies font partie de produits que nous avons développés auparavant pour d'autres plateformes, comme ${PLATAFORMAS_EN.replace(" and ", " et ")}. C'est là que les scanners MTM ont fait leurs preuves, et cette expérience se retrouve dans chaque scanner que nous vendons, aujourd'hui et demain.`,
     sala: "Tout est dans la salle <b>Estratégias MTM</b> :",
     botaoSala: "Ouvrir la salle Estratégias MTM",
-    estrategiasTitulo: "Les 6 stratégies",
+    estrategiasTitulo: `Les ${N} stratégies`,
     guia: "Guide PDF (anglais)",
     scannersTitulo: "Un aperçu des scanners",
     scannersSub: "Voici comment les scanners MTM marquent l'entrée, le stop et les objectifs sur le graphique. Images d'exemple, à but éducatif.",
@@ -155,11 +177,11 @@ const T: Record<LinguaEmail, Texto> = {
   de: {
     assunto: "📘 Lerne eine MTM-Strategie in Minuten (PDF-Guides + Raum)",
     ola: (n) => `Hallo ${n}! 👋`,
-    intro: "Wir haben die <b>6 Strategien</b> hinter den MTM-Scannern in einem Raum gesammelt. Jede hat 3 kurze Videos und einen <b>PDF-Guide</b> mit Checkliste, damit du eine Strategie in Minuten lernst.",
+    intro: `Wir haben die <b>${N} Strategien</b> hinter den MTM-Scannern in einem Raum gesammelt. Jede hat 3 kurze Videos und einen <b>PDF-Guide</b> mit Checkliste, damit du eine Strategie in Minuten lernst.`,
     origem: `Alle diese Strategien sind Teil von Produkten, die wir zuvor für andere Plattformen entwickelt haben, etwa ${PLATAFORMAS_EN.replace(" and ", " und ")}. Dort haben sich die MTM-Scanner bewährt, und diese Erfahrung steckt in jedem Scanner, den wir verkaufen, heute und in Zukunft.`,
     sala: "Alles findest du im Raum <b>Estratégias MTM</b>:",
     botaoSala: "Raum Estratégias MTM öffnen",
-    estrategiasTitulo: "Die 6 Strategien",
+    estrategiasTitulo: `Die ${N} Strategien`,
     guia: "PDF-Guide (Englisch)",
     scannersTitulo: "Ein Blick auf die Scanner",
     scannersSub: "So markieren die MTM-Scanner Einstieg, Stop und Ziele im Chart. Beispielbilder, zu Lernzwecken.",

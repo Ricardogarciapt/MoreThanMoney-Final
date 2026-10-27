@@ -5,6 +5,7 @@
 
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getOrganizationUplineUserIds } from '@/lib/mlm-uplines'
+import { lerContaFirebase } from '@/lib/firebase-conta'
 
 const supabase = getSupabaseAdmin()
 
@@ -52,10 +53,10 @@ async function getMessaging(): Promise<any | null> {
     const mod = (await import('firebase-admin')) as unknown as { default?: any } & Record<string, any>
     const admin = mod.default ?? mod
     if (!admin.apps?.length) {
-      const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim()
+      const key = lerContaFirebase()
       if (key) {
         try {
-          admin.initializeApp({ credential: admin.credential.cert(JSON.parse(key)) })
+          admin.initializeApp({ credential: admin.credential.cert(key as never) })
         } catch {
           // Já inicializado
         }

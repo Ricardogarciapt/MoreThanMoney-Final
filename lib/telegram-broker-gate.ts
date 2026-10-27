@@ -333,9 +333,11 @@ export async function grantBrokerAccess(supabase: Supa, chatId: string): Promise
   if ((lead as { stage?: string } | null)?.stage === 'granted') return
   const uid = (lead as { broker_uid?: string } | null)?.broker_uid ?? null
 
-  // Link de convite pessoal (one-time) por grupo; fallback estático se o grupo não gerar.
+  // Link de convite por grupo, com PEDIDO de adesão: um link reencaminhado a outra pessoa já não
+  // a deixa entrar — o pedido passa pela porta dos sinais (lib/telegram-porta-sinais), que só aprova
+  // quem está validado. Fallback estático se o grupo não gerar.
   const mkLink = async (chat: string) => {
-    const r = await tg('createChatInviteLink', { chat_id: chat, member_limit: 1, name: `lead ${chatId}` })
+    const r = await tg('createChatInviteLink', { chat_id: chat, creates_join_request: true, name: `lead ${chatId}`.slice(0, 32) })
     return (r as { result?: { invite_link?: string } } | null)?.result?.invite_link ?? null
   }
   const linkLines: string[] = []
@@ -351,11 +353,19 @@ export async function grantBrokerAccess(supabase: Supa, chatId: string): Promise
     .update({ stage: 'granted', coupon_code: coupon, granted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('chat_id', chatId)
 
+  // Quem já tinha pedido para entrar num grupo de sinais é aprovado agora, sem ter de pedir outra vez.
+  try {
+    const { aprovarPedidosPendentes } = await import('@/lib/telegram-porta-sinais')
+    await aprovarPedidosPendentes(supabase, chatId)
+  } catch {
+    /* os links de baixo continuam a servir */
+  }
+
   const links = linkLines.join('\n')
   await send(
     chatId,
     `🎉 <b>Acesso libertado!</b>\n\n` +
-      `Entra nos grupos de sinais (links pessoais):\n${links}\n\n` +
+      `Entra nos grupos de sinais (carrega no link e pede para entrar — aprovo-te na hora):\n${links}\n\n` +
       (coupon
         ? `📲 O teu cupão Premium para a app: <code>${coupon}</code>\n` +
           `Descarrega a app, cria conta e usa o cupão para ativar + fazer onboarding: https://www.morethanmoney.pt/register\n\n`
