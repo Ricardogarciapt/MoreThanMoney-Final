@@ -229,6 +229,7 @@ export async function getMtmcopyWebhookInfo(): Promise<{
   url?: string
   pending_update_count?: number
   last_error_message?: string | null
+  allowed_updates?: string[]
 } | null> {
   const token = getMtmcopyBotToken()
   if (!token) return null
@@ -248,11 +249,30 @@ export async function getMtmcopyWebhookInfo(): Promise<{
         typeof data.result.last_error_message === 'string'
           ? data.result.last_error_message
           : null,
+      allowed_updates: Array.isArray(data.result.allowed_updates)
+        ? data.result.allowed_updates.map(String)
+        : undefined,
     }
   } catch {
     return null
   }
 }
+
+/**
+ * O que o webhook pede ao Telegram. `chat_member` (entradas por convite) e `chat_join_request`
+ * (pedidos de adesão aos grupos de sinais, ver lib/telegram-porta-sinais) só chegam se forem pedidos
+ * aqui — o guarda do webhook repõe a lista quando falta alguma.
+ */
+export const TELEGRAM_ALLOWED_UPDATES = [
+  'message',
+  'edited_message',
+  'channel_post',
+  'edited_channel_post',
+  'callback_query',
+  'my_chat_member',
+  'chat_member',
+  'chat_join_request',
+] as const
 
 export async function registerMtmcopyTelegramWebhook(
   siteUrl: string,
@@ -270,7 +290,7 @@ export async function registerMtmcopyTelegramWebhook(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       url: webhookUrl,
-      allowed_updates: ['message', 'edited_message', 'channel_post', 'edited_channel_post', 'callback_query', 'my_chat_member'],
+      allowed_updates: TELEGRAM_ALLOWED_UPDATES,
       drop_pending_updates: false,
     }),
   })
