@@ -34,6 +34,10 @@ export interface EfeitosVideo {
   whoosh: boolean
   /** Assinatura pequena (@conta) no topo. */
   assinatura: boolean
+  /** Tira as pausas e as bengalas («hum», «ãã») com cortes secos; o zoom alterna em cada corte. */
+  semPausas: boolean
+  /** A palavra de comentário do educador, pequena, nos últimos ~2,5 s — sem «COMENTA» aos gritos. */
+  ctaSubtil: boolean
   /** Emoji por cima das palavras-chave. DESLIGADO: o VPS não tem fonte de emoji a cores e o libass desenha-os a preto e branco. */
   emojis: boolean
 }
@@ -85,6 +89,8 @@ const EFEITOS_POR_OMISSAO: EfeitosVideo = {
   grade: true,
   whoosh: true,
   assinatura: true,
+  semPausas: true,
+  ctaSubtil: true,
   emojis: false,
 }
 

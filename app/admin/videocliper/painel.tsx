@@ -3,7 +3,8 @@
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LISTA_ESTILOS } from '@/lib/videocliper/estilos'
-import { Loader2, Scissors, Check, X, Send, RefreshCw, Youtube, Instagram, Clock, ChevronUp, ChevronDown, Play, Download, Trash2 } from 'lucide-react'
+import { EDUCADORES } from '@/lib/reels-educadores/config'
+import { Loader2, Scissors, Check, X, Send, RefreshCw, Youtube, Instagram, Clock, ChevronUp, ChevronDown, Play, Download, Trash2, GraduationCap, Laptop } from 'lucide-react'
 
 /**
  * O PAINEL DO VIDEOCLIPER.
@@ -31,7 +32,20 @@ interface Job {
   publicados?: number
   aprovados?: number
   estilo?: string
+  reels_educador?: string | null
 }
+
+interface Aula {
+  videoId: string
+  url: string
+  titulo: string
+  educador: string
+  playlist: string
+  duracaoSeg: number
+  usada: boolean
+}
+
+const nomeDoEducador = (slug?: string | null) => EDUCADORES.find((e) => e.slug === slug)?.nome ?? null
 
 interface Clip {
   id: string
@@ -85,13 +99,29 @@ export default function PainelVideocliper() {
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [emFoco, setEmFoco] = useState<number | null>(null)
+  const [macVisto, setMacVisto] = useState<string | null>(null)
+  const [aulas, setAulas] = useState<Aula[] | null>(null)
+  const [filtroAulas, setFiltroAulas] = useState('')
   useEffect(() => { setEmFoco((x) => (x !== null && x >= clips.length ? (clips.length ? clips.length - 1 : null) : x)) }, [clips.length])
 
   const carregar = useCallback(async () => {
     const r = await fetch('/api/admin/videocliper', { cache: 'no-store' })
     const j = await r.json()
     setJobs(j.jobs ?? [])
+    setMacVisto(j.macVisto ?? null)
   }, [])
+
+  const verAulas = async () => {
+    setOcupado('aulas')
+    try {
+      const r = await fetch('/api/admin/videocliper?aulas=1', { cache: 'no-store' })
+      const j = await r.json()
+      if (j.erro) setErro(j.erro)
+      setAulas(j.aulas ?? [])
+    } finally {
+      setOcupado(null)
+    }
+  }
 
   const abrir = useCallback(async (id: string) => {
     setAberto(id)
@@ -179,6 +209,58 @@ export default function PainelVideocliper() {
         </button>
       </div>
 
+      {/* ── o cortador do Mac e as aulas das playlists ───────────────────── */}
+      <div className="space-y-3 rounded-lg border border-neutral-800 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="flex items-center gap-2 text-[13px] text-neutral-300">
+            <Laptop className="h-4 w-4 text-neutral-500" />
+            {(() => {
+              const min = macVisto ? Math.round((Date.now() - new Date(macVisto).getTime()) / 60_000) : null
+              if (min === null) return <span className="text-neutral-500">Cortador do Mac ainda não se ligou — os vídeos do YouTube esperam por ele.</span>
+              return min <= 5
+                ? <span className="text-emerald-400">Cortador do Mac ligado</span>
+                : <span className="text-amber-400">Cortador do Mac visto há {min < 120 ? `${min} min` : `${Math.round(min / 60)} h`}</span>
+            })()}
+          </p>
+          <button
+            onClick={() => void (aulas ? setAulas(null) : verAulas())}
+            disabled={ocupado === 'aulas'}
+            className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-[13px] text-neutral-200 hover:bg-neutral-900 disabled:opacity-40"
+          >
+            {ocupado === 'aulas' ? <Loader2 className="h-4 w-4 animate-spin" /> : <GraduationCap className="h-4 w-4" />}
+            {aulas ? 'Fechar aulas' : 'Aulas das playlists'}
+          </button>
+        </div>
+        {aulas && (
+          <div className="space-y-2">
+            <input value={filtroAulas} onChange={(e) => setFiltroAulas(e.target.value)} placeholder="Procurar aula ou educador…" className={campo} />
+            {!aulas.length && <p className="text-[12px] text-neutral-500">Nenhuma aula encontrada nas playlists dos educadores.</p>}
+            <div className="max-h-80 space-y-1 overflow-y-auto">
+              {aulas
+                .filter((a) => `${a.titulo} ${a.playlist} ${nomeDoEducador(a.educador) ?? ''}`.toLowerCase().includes(filtroAulas.toLowerCase()))
+                .map((a) => (
+                  <div key={a.videoId} className={`flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-neutral-900/60 ${a.usada ? 'opacity-50' : ''}`}>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] text-neutral-100">{a.titulo}</p>
+                      <p className="truncate text-[11px] text-neutral-500">
+                        {nomeDoEducador(a.educador)} · {a.playlist} · {relogio(a.duracaoSeg)}{a.usada ? ' · já clipada' : ''}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => void accao({ accao: 'clipar', url: a.url, titulo: a.titulo, educador: a.educador }, `aula-${a.videoId}`).then(() => setAulas((l) => l?.map((x) => (x.videoId === a.videoId ? { ...x, usada: true } : x)) ?? l))}
+                      disabled={a.usada || ocupado === `aula-${a.videoId}`}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-500 px-2.5 py-1 text-[12px] font-semibold text-black hover:bg-amber-400 disabled:opacity-30"
+                    >
+                      {ocupado === `aula-${a.videoId}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scissors className="h-3.5 w-3.5" />}
+                      Clipar
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {erro && <p className="text-sm text-red-400">{erro}</p>}
 
       {/* ── vídeos ────────────────────────────────────────────────────────── */}
@@ -198,6 +280,7 @@ export default function PainelVideocliper() {
                   </p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-neutral-500">
                     <span className={e.cor}>{e.texto}</span>
+                    {nomeDoEducador(j.reels_educador) && <span className="text-amber-300/80">· {nomeDoEducador(j.reels_educador)}</span>}
                     {/* Parado, o texto de progresso fica velho (dizia «10 clips» depois de eles serem
                         apagados); a contagem vem das linhas que existem. */}
                     {j.progresso && !['pronto', 'concluido'].includes(j.estado) && <span>· {j.progresso}</span>}

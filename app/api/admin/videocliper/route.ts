@@ -33,6 +33,19 @@ export async function GET(req: NextRequest) {
   const db = getSupabaseAdmin()
   const jobId = req.nextUrl.searchParams.get('job')
 
+  // As aulas das playlists do site, para clipar com um toque (e saber quais já foram).
+  if (req.nextUrl.searchParams.get('aulas')) {
+    try {
+      const { listarAulas } = await import('@/lib/reels-educadores/aulas')
+      const aulas = await listarAulas()
+      const { data: feitos } = await db.from('videocliper_jobs').select('youtube_video_id').not('youtube_video_id', 'is', null)
+      const usados = new Set((feitos ?? []).map((f) => String(f.youtube_video_id)))
+      return NextResponse.json({ aulas: aulas.map((a) => ({ ...a, usada: usados.has(a.videoId) })) })
+    } catch (e) {
+      return NextResponse.json({ aulas: [], erro: e instanceof Error ? e.message : 'não li as playlists' })
+    }
+  }
+
   if (jobId) {
     const BASE_JOB = 'id, origem, youtube_url, titulo, duracao_seg, estado, erro, progresso, idioma, created_at'
     const BASE_CLIPS = 'id, ordem, titulo, hook, score, porque, inicio_seg, fim_seg, duracao_seg, caption, cta_palavra, estado, erro, video_url, thumbnail_url, ig_permalink, youtube_short_url, legendas, preview_url, preview_estado, preview_erro, broll'
@@ -54,9 +67,10 @@ export async function GET(req: NextRequest) {
   // o título e o estado.
   const { data: jobs } = await db
     .from('videocliper_jobs')
-    .select('id, origem, youtube_url, titulo, duracao_seg, estado, erro, progresso, ponte_estado, created_at')
+    .select('id, origem, youtube_url, titulo, duracao_seg, estado, erro, progresso, ponte_estado, reels_educador, created_at')
     .order('created_at', { ascending: false })
     .limit(30)
+  const { data: mac } = await db.from('site_settings').select('value').eq('key', 'videocliper_mac').maybeSingle()
 
   const ids = (jobs ?? []).map((j) => j.id)
   const { data: contagens } = ids.length
@@ -64,6 +78,7 @@ export async function GET(req: NextRequest) {
     : { data: [] as Array<{ job_id: string; estado: string }> }
 
   return NextResponse.json({
+    macVisto: (mac?.value as { visto?: string } | null)?.visto ?? null,
     jobs: (jobs ?? []).map((j) => {
       const meus = (contagens ?? []).filter((c) => c.job_id === j.id)
       return {
@@ -262,9 +277,11 @@ export async function POST(req: NextRequest) {
     const { data: ja } = videoId
       ? await db.from('videocliper_jobs').select('id, estado').eq('youtube_video_id', videoId).maybeSingle()
       : await db.from('videocliper_jobs').select('id, estado').eq('youtube_url', url).maybeSingle()
-    // YouTube recusa o IP do servidor; o vídeo passa pela PONTE do Mac (IP de casa), que o
-    // descarrega e o põe no disco do VPS. Outros sites continuam a ir direto ao VPS.
-    const pelaPonte = Boolean(videoId)
+    // YouTube recusa o IP do servidor: quem o descarrega, transcreve e corta é o cortador do Mac
+    // (IP de casa, `VIDEOCLIPER_YOUTUBE=1`) — o balcão só lhe dá estes vídeos a ele. A antiga
+    // ponte (Mac → disco do VPS) fica desligada para os vídeos novos.
+    const pelaPonte = false
+    const reelsEducador = typeof corpo?.educador === 'string' && corpo.educador ? String(corpo.educador).slice(0, 60) : null
 
     if (ja) {
       // Pedir outra vez um vídeo que falhou é pedir para tentar de novo.
@@ -287,6 +304,7 @@ export async function POST(req: NextRequest) {
       estado: 'pedido',
       ponte_estado: pelaPonte ? 'pendente' : null,
       criado_por: 'admin',
+      ...(reelsEducador ? { reels_educador: reelsEducador, idioma: 'pt' } : {}),
     }).select('id').single()
     if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
 
