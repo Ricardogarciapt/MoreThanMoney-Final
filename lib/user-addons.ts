@@ -12,6 +12,7 @@ export const SCANNER_ADDON_PLANS = [
   { id: 'aurumflow_lifetime', label: 'Aurum Flow Vitalício', recurring: false },
   { id: 'trendshot_semestral', label: 'TrendShot Semestral', recurring: false },
   { id: 'trendshot_lifetime', label: 'TrendShot Vitalício', recurring: false },
+  { id: 'premium_scanner_lifetime', label: 'Premium Scanner Vitalício', recurring: false },
   { id: 'mtm_scanner_semestral', label: 'MTM Scanner Semestral', recurring: false },
 ] as const
 

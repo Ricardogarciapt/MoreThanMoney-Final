@@ -1053,6 +1053,7 @@ const PLANOS_SCANNER: Record<string, Record<string, string>> = {
   aurumflow: { semestral: 'aurumflow_semestral', vitalicio: 'aurumflow_lifetime' },
   'mtm-scanner': { semestral: 'mtm_scanner_semestral', vitalicio: 'mtm_scanner_lifetime' },
   trendshot: { semestral: 'trendshot_semestral', vitalicio: 'trendshot_lifetime' },
+  'premium-scanner': { vitalicio: 'premium_scanner_lifetime' },
   pack: { mensal: 'scanners_monthly' },
 }
 

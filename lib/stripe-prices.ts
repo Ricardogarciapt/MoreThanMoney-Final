@@ -13,6 +13,8 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   aurumflow_lifetime: 'STRIPE_PRICE_AURUMFLOW_LIFETIME',
   trendshot_semestral: 'STRIPE_PRICE_TRENDSHOT_SEMESTRAL',
   trendshot_lifetime: 'STRIPE_PRICE_TRENDSHOT_LIFETIME',
+  // MTM Premium Scanner (27/10/2026): só vitalício, 1250 €. Incluído no Premium.
+  premium_scanner_lifetime: 'STRIPE_PRICE_PREMIUM_SCANNER_LIFETIME',
   mtm_scanner_monthly: 'STRIPE_PRICE_MTM_SCANNER_MONTHLY',
   mtm_scanner_semestral: 'STRIPE_PRICE_MTM_SCANNER_SEMESTRAL',
   mtm_scanner_lifetime: 'STRIPE_PRICE_MTM_SCANNER_LIFETIME',

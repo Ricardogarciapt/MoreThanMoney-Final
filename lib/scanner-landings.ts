@@ -115,6 +115,17 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
       "TrendShot by MTM: tendência, estrutura e risco/retorno no TradingView. 50€ por semestre ou 350€ vitalício.",
   },
   {
+    slug: "premium-scanner",
+    key: "premium-scanner",
+    title: ["O ouro em sessão,", "com a zona marcada."],
+    sub: "Direção por voto de cinco critérios, zona de entrada em recuo, stop e três alvos desenhados no gráfico, em Londres, Nova Iorque e Ásia.",
+    markets: ["Ouro (XAUUSD)", "15 minutos", "3 sessões", "TradingView"],
+    description:
+      "O Premium Scanner lê o ouro nas três sessões. Em cada vela de 15 minutos vota a direção com cinco critérios: o preço contra a abertura da sessão, contra há 1 h e há 4 h, e contra a EMA200 e a EMA9. Quando há sinal, desenha a zona de entrada em recuo, o stop e os alvos como nos sinais Premium da casa, e manda tudo num alerta pronto para webhook.",
+    metaDescription:
+      "MTM Premium Scanner: zonas de recuo no ouro em Londres, Nova Iorque e Ásia, com entrada, stop e alvos no TradingView. 1250€ vitalício, incluído no Premium.",
+  },
+  {
     slug: "sensei",
     video: "/scanners/sensei/apresentacao.mp4",
     poster: "/scanners/sensei/poster.jpg",
@@ -204,6 +215,21 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
     ],
     metaDescription: "TrendShot by MTM: trend, structure and risk/reward on TradingView. €50 per six months or €350 lifetime.",
   },
+  "premium-scanner": {
+    title: ["Gold in session,", "with the zone marked."],
+    sub: "Direction by a five-criteria vote, a pullback entry zone, stop and three targets drawn on the chart, in London, New York and Asia.",
+    markets: ["Gold (XAUUSD)", "15 minutes", "3 sessions", "TradingView"],
+    description:
+      "Premium Scanner reads gold across the three sessions. On every 15-minute candle it votes the direction with five criteria: price against the session open, against 1 h and 4 h ago, and against the EMA200 and EMA9. On a signal it draws the pullback entry zone, the stop and the targets like the house's Premium signals, and sends it all in a webhook-ready alert.",
+    specs: [
+      "Chart: XAUUSD on 15 minutes",
+      "Editable entry, SL and exits, drawn on the chart",
+      "Majority or Unanimous mode, pause and max signals per session",
+      "Webhook-ready JSON alerts, plus the strategy for backtesting",
+      "Educational tool: it does not place orders or guarantee results",
+    ],
+    metaDescription: "MTM Premium Scanner: pullback zones on gold in London, New York and Asia, with entry, stop and targets on TradingView. €1250 lifetime, included in Premium.",
+  },
   sensei: {
     title: ["Many readings.", "One confluence."],
     sub: "SMC structure, DEMAs, POC, the Sensei band and order flow. It only signals when the confirmations agree.",
@@ -222,6 +248,8 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
 }
 for (const l of SCANNER_LANDINGS) {
   l.en = EN[l.slug]
+  // Sem vídeo PT ainda não há versão EN: o hero cai na imagem do scanner.
+  if (!l.video) continue
   l.videoEn = `/scanners/${l.slug}/apresentacao-en.mp4`
   l.posterEn = `/scanners/${l.slug}/poster-en.jpg`
 }

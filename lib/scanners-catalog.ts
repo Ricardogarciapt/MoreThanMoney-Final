@@ -133,6 +133,32 @@ export const SCANNERS: ScannerData[] = [
     ],
   },
   {
+    key: "premium-scanner",
+    name: "MTM Premium Scanner",
+    subtitle: "Ouro · Zonas de recuo por sessão",
+    image: "/scanners/premium-scanner.png",
+    badge: "Novo",
+    description:
+      "O scanner das sessões de ouro da MTM. Em Londres, Nova Iorque e Ásia lê a direção do movimento e desenha logo a zona de entrada em recuo, o stop e os alvos, com a mesma geometria dos sinais Premium da casa. Assenta no método de zonas de recuo por sessão, usado por traders de topo em todo o mundo e por vários programas de IB nos seus sinais de ouro.",
+    features: [
+      "Sessões de Londres, Nova Iorque e Ásia, cada uma com o seu interruptor",
+      "Direção por voto de cinco critérios: abertura da sessão, 1 h, 4 h, EMA200 e EMA9",
+      "Zona de entrada de 5 $ em recuo e SL 5 $ para lá da zona",
+      "TP1, TP2 e TP3 a 5, 10 e 15 $ da zona, e TP4 a correr",
+      "Gestão: 50 % no TP1 com o SL para a entrada, 25 % no TP2 e 25 % no TP3",
+    ],
+    techSpecs: [
+      "Gráfico: XAUUSD em 15 minutos",
+      "Entrada, SL e saídas editáveis e desenhados no gráfico",
+      "Modo Maioria ou Unânime, pausa e máximo de sinais por sessão",
+      "Alertas JSON prontos para webhook, com a estratégia para backtest",
+      "Ferramenta educativa: não executa ordens nem garante resultados",
+    ],
+    products: [
+      { id: "ps-lifetime", label: "Vitalício", price: "1250€", priceNote: "Pagamento único · incluído no Premium", planId: "premium_scanner_lifetime", highlight: true },
+    ],
+  },
+  {
     key: "sensei",
     name: "MTM Sensei",
     subtitle: "Inteligência Artificial Avançada",
