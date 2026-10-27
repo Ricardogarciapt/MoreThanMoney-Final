@@ -8,7 +8,7 @@
  *
  * Módulo PURO (sem imports) — pode ser usado no cliente e no servidor.
  */
-export type ScannerKey = "sensei" | "goldkiller" | "mtmscanner" | "aurum" | "trendshot"
+export type ScannerKey = "sensei" | "goldkiller" | "mtmscanner" | "aurum" | "trendshot" | "premiumscanner"
 
 /**
  * Nomes mostrados ao utilizador. "Sensei" (NÃO "Sensei X" — decisão Ricardo 2026-08-19).
@@ -21,10 +21,11 @@ export const SCANNER_LABELS: Record<ScannerKey, string> = {
   mtmscanner: "MTM Scanner",
   aurum: "MTM Aurum Flow Cripto",
   trendshot: "TrendShot",
+  premiumscanner: "Premium Scanner",
 }
 
 /** Ordem de apresentação nos filtros. */
-export const SCANNER_ORDER: ScannerKey[] = ["sensei", "goldkiller", "mtmscanner", "aurum", "trendshot"]
+export const SCANNER_ORDER: ScannerKey[] = ["sensei", "goldkiller", "mtmscanner", "aurum", "trendshot", "premiumscanner"]
 
 /**
  * Normaliza o `strategy` cru de um alerta para o scanner canónico.
@@ -33,6 +34,7 @@ export const SCANNER_ORDER: ScannerKey[] = ["sensei", "goldkiller", "mtmscanner"
 export function scannerKeyFromStrategy(strategy: string | null | undefined): ScannerKey {
   const n = (strategy ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
   if (!n) return "mtmscanner"
+  if (n.includes("premiumscanner") || n.includes("premiumii")) return "premiumscanner" // «MTM Premium II» (27/10)
   if (n.includes("trendshot")) return "trendshot"                          // "MTM Auto Trendshot" (23/10)
   if (n.includes("aurum")) return "aurum"                                  // ORB, v8, base
   if (n.includes("sensei")) return "sensei"                                // "MTM Sensei X" → Sensei

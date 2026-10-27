@@ -197,11 +197,12 @@ export function isT2TEntrySignal(channelSlug?: string | null, content?: string |
 /**
  * Canais cujas entradas se SEGUEM por preço (cartões de alvo/BE/stop no chat e no Telegram) sem
  * serem negociáveis: «Ideias de Forex» (MTM Scanner, só leitura desde 29/09) e «MTM Auto FOREX
- * swings» (reaberto a 07/10 só para publicar) e «MTM Auto Trendshot» (nasce a 23/10). Pedido do
+ * swings» (reaberto a 07/10 só para publicar), «MTM Auto Trendshot» (nasce a 23/10) e «MTM Premium II»
+ * (27/10). Pedido do
  * dono, 23/10/2026. Nenhuma ordem nasce daqui — o tracker não abre a conta-espelho para estas
  * fontes (`fonteSoMedida`; o Trendshot nem tem chave T2T, por isso fica de fora à partida).
  */
-export const CANAIS_SO_SEGUIMENTO: readonly string[] = ['trade-ideas-setup', 'ideias-e-sinais', 'sinais-trendshot']
+export const CANAIS_SO_SEGUIMENTO: readonly string[] = ['trade-ideas-setup', 'ideias-e-sinais', 'sinais-trendshot', 'sinais-premium-scanner']
 
 /** Entrada que o tracker de preço acompanha: T2T negociável OU entrada de um canal só de seguimento. */
 export function isEntradaParaSeguimento(channelSlug?: string | null, content?: string | null): boolean {

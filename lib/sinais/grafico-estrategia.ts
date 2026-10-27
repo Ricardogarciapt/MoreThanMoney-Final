@@ -18,7 +18,7 @@ import { calcularTrendShot } from '@/lib/estudos/trendshot/motor'
 import type { Vela } from '@/lib/estudos/comum/velas'
 import { ESTUDOS_WEBTRADER } from '@/lib/scanners/estudos'
 
-export type ChaveGrafico = 'sensei' | 'goldkiller' | 'mtm-scanner' | 'trendshot' | 'aurum' | 'perps' | 'outro'
+export type ChaveGrafico = 'sensei' | 'goldkiller' | 'mtm-scanner' | 'trendshot' | 'premium-scanner' | 'aurum' | 'perps' | 'outro'
 
 export interface MarcaEstrategia {
   chave: ChaveGrafico
@@ -44,6 +44,8 @@ const MARCAS: Record<ChaveGrafico, MarcaEstrategia> = {
   goldkiller: { chave: 'goldkiller', nome: 'MTM Auto GoldKiller', cor: corDoEstudo('Goldkiller', '#EAB308') },
   'mtm-scanner': { chave: 'mtm-scanner', nome: 'MTM Scanner', cor: corDoEstudo('MTMScanner', '#A78BFA') },
   trendshot: { chave: 'trendshot', nome: 'MTM Auto Trendshot', cor: corDoEstudo('TrendShot', '#38BDF8') },
+  // Sem linhas: o Premium Scanner desenha zona/alvos, que já são as linhas Entry/SL/TP do gráfico.
+  'premium-scanner': { chave: 'premium-scanner', nome: 'MTM Premium II', cor: corDoEstudo('PremiumScanner', '#E9C46A') },
   aurum: { chave: 'aurum', nome: 'MTM Aurum Flow Cripto', cor: '#F59E0B' },
   perps: { chave: 'perps', nome: 'MTM Perps', cor: '#FB923C' },
   outro: { chave: 'outro', nome: 'MTM', cor: '#D2A63C' },
@@ -57,6 +59,7 @@ export function marcaDaEstrategia(estrategia: string | null | undefined, alertNa
   const e = String(estrategia ?? '').toLowerCase()
   const a = String(alertName ?? '').toLowerCase()
   const t = `${e} ${a}`
+  if (/premium[\s-]*(scanner|ii)/.test(t)) return MARCAS['premium-scanner']
   if (/trend\s*shot/.test(t)) return MARCAS.trendshot
   if (/gold\s*killer/.test(t)) return MARCAS.goldkiller
   if (/sensei/.test(t)) return MARCAS.sensei
