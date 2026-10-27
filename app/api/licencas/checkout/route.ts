@@ -60,6 +60,8 @@ export async function POST(request: NextRequest) {
       produto: plano.produto,
       email,
       mt5_login: mt5Login,
+      // pacote Premium Scanner: o indicador e a estratégia vão por convite para este utilizador
+      ...(body.tradingviewUsername ? { tradingview_username: String(body.tradingviewUsername).trim().slice(0, 60) } : {}),
       ...(sessao.userId ? { user_id: sessao.userId } : {}),
     }
 

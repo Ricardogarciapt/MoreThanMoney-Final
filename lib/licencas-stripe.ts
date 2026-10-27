@@ -118,6 +118,17 @@ export async function emitirLicencaDoCheckout(session: Stripe.Checkout.Session):
   if (email) {
     const nome = session.customer_details?.name || ''
     await enviarEmailDaLicenca(email, nome, licenca.chave, plano, licenca.mt5_login, licenca.expira_em, produto)
+    // O pacote Premium Scanner traz também o indicador e a estratégia do TradingView (por convite):
+    // o mesmo email de acesso que a compra do scanner manda, com o utilizador que o cliente deu.
+    const tv = session.metadata?.tradingview_username
+    if (produto === 'premium_scanner_ea' && tv) {
+      try {
+        const { sendScannerAccessEmail } = await import('@/lib/email-service')
+        await sendScannerAccessEmail(email, nome || 'Trader', 'MTM Premium Scanner (pacote com EA)', tv)
+      } catch (e) {
+        console.error('[LICENCAS] Falhou o email de acesso ao TradingView:', e)
+      }
+    }
   }
 
   console.log(`✅ [LICENCAS] Licença ${licenca.chave} (${PRODUTOS[produto].nome}, ${plano}) emitida para ${email || userId}`)
