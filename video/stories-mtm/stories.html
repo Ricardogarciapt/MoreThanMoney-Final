@@ -254,7 +254,7 @@ function parceiros(c, D) {
   let s = cena(...D.i01)
   el(s, `<div class="h" style="font-size:96px">${palavras(c.hook[0])}<br>${palavras(c.hook[1], 'ouro')}</div>`, 300, .05, 'words')
   for (let i = 0; i < 6; i++) el(s, ICONE, 760, .9 + i * .1, 'pop', { x: 150 + i * 132, w: 110 })
-  s = cena(...D.i02); const d2 = s.o - s.a, m2 = d2 * .45
+  s = cena(...D.i02); const d2 = s.o - s.a, m2 = d2 * .4
   el(s, `<div class="h">${palavras(c.tu[0])}<br>${palavras(c.tu[1], 'ouro')}</div>`, 200, .05, 'words')
   for (let i = 0; i < 4; i++) el(s, ICONE, 520, .5 + i * .1, 'pop', { x: 290 + i * 132, w: 110 })
   el(s, `<svg class="fios" width="1080" height="200" viewBox="0 0 1080 200"><path d="M540 0 V190" fill="none" stroke="#E9C46A" stroke-width="6" pathLength="1" stroke-dasharray="1"/></svg>`, 690, m2 - .4, 'draw')

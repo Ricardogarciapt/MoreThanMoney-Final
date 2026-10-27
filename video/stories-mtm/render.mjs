@@ -31,7 +31,7 @@ function linhaDoTempo(peca, lang) {
     const mp3 = path.join(DIR, 'voz', peca, lang, `${c.id}.mp3`)
     const tem = fs.existsSync(mp3)
     const dur = tem ? durMp3(mp3) : c[lang].length / 14
-    const len = Math.max(2.4, ENTRA + dur + RESPIRO) + (i === cenas.length - 1 ? FECHO : 0)
+    const len = Math.max(2.4, ENTRA + dur + RESPIRO) + (c.extra || 0) + (i === cenas.length - 1 ? FECHO : 0)
     D[c.id] = [s, s + len]
     if (tem) falas.push([mp3, s + ENTRA])
     s += len

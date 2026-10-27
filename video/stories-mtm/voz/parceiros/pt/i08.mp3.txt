@@ -1,0 +1,2 @@
+1e0fa8b490c744acba94da72710e6db2
+Manda mensagem ao nosso bot no Telegram e falamos.
