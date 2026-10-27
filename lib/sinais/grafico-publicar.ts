@@ -7,6 +7,7 @@
  * como raiz da thread. Uma foto que falhe não apaga nem atrasa o sinal — só fica sem gráfico.
  */
 import { getSiteOrigin } from '@/lib/site-url'
+import { lerSinal } from '@/lib/sinais/formato-sinal'
 
 export interface ParametrosGrafico {
   simbolo: string
@@ -44,6 +45,39 @@ export function urlDoGrafico(p: ParametrosGrafico, opts: { png?: boolean; origem
   q.set('e', p.estrategia)
   if (opts.png) q.set('f', 'png')
   return `${o}/api/signals/chart-image?${q.toString()}`
+}
+
+/** «M15» → «15», «H4» → «240», «D1» → «1D» (o cartão escreve-o assim; o gráfico lê minutos). */
+function minutosDoTf(tf: string | null): string | null {
+  const m = String(tf ?? '').trim().toUpperCase().match(/^([MHD])(\d{1,4})$/)
+  if (!m) return null
+  const n = Number(m[2])
+  return m[1] === 'M' ? String(n) : m[1] === 'H' ? String(n * 60) : '1D'
+}
+
+/**
+ * Os parâmetros do gráfico a partir de uma ENTRADA no formato único (lib/sinais/formato-sinal) —
+ * para as fontes que chegam como texto (Premium, Forex Swings) e não têm linha em
+ * tradingview_signals. `null` se o texto não for uma entrada com SL e alvos.
+ */
+export function graficoDoFormatoUnico(
+  texto: string | null | undefined,
+  estrategia: string,
+  opts: { timeframe?: string | null; quando?: number | string | null } = {},
+): ParametrosGrafico | null {
+  const s = lerSinal(texto)
+  if (!s || s.sl == null || !s.tps.length) return null
+  return {
+    simbolo: s.simbolo,
+    direcao: s.direcao,
+    timeframe: minutosDoTf(s.timeframe) ?? opts.timeframe ?? null,
+    // Entrada a mercado: o gráfico desenha a linha no fecho da última vela.
+    entrada: s.entrada,
+    sl: s.sl,
+    tps: s.tps,
+    estrategia,
+    quando: opts.quando ?? null,
+  }
 }
 
 /**

@@ -84,6 +84,18 @@ const INDICES: Record<string, RefMercado[]> = {
 for (const [ft, base] of [['DJ30FT', 'US30'], ['NAS100FT', 'NAS100'], ['SP500FT', 'US500'], ['GER40FT', 'GER40'], ['UK100FT', 'UK100'], ['JPN225FT', 'JPN225'], ['FRA40FT', 'FRA40'], ['HK50FT', 'HK50']] as const) {
   INDICES[ft] = INDICES[base]
 }
+/**
+ * Outros nomes do mesmo índice, como chegam dos alertas TradingView (o TrendShot manda `SP500`).
+ * Sem isto o gráfico do sinal não tinha velas e caía no cartão sintético.
+ */
+for (const [alias, base] of [
+  ['SP500', 'US500'], ['SPX500', 'US500'], ['SPX', 'US500'], ['US500USD', 'US500'],
+  ['DJ30', 'US30'], ['DJI30', 'US30'], ['WS30', 'US30'], ['US30USD', 'US30'],
+  ['US100', 'NAS100'], ['USTEC', 'NAS100'], ['NDX100', 'NAS100'], ['NAS100USD', 'NAS100'],
+  ['DE40', 'GER40'], ['GER30', 'GER40'], ['DAX40', 'GER40'], ['FTSE100', 'UK100'],
+] as const) {
+  INDICES[alias] = INDICES[base]
+}
 
 const METAIS: Record<string, RefMercado[]> = {
   // PAXG = 1 onça, arbitrado ao spot (tempo real, 24/7 → filtra-se o fim de semana); GC=F atrasa 10 min.

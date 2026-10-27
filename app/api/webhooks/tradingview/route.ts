@@ -1224,8 +1224,13 @@ async function processarAlerta(request: NextRequest) {
    * do Pine e o espelho de fecho — passam a contar só o que a conta-mestre abre, gere e fecha.
    * Reversível pela base (sinal_modo), sem deploy.
    */
+  // A estratégia também tem de bater: o canal «MTM Auto Edge» (sinais-scanner-mtm) é publicado pela
+  // mestre da Edge, mas o MTM Scanner de ouro/BTC ainda lá cai pela rota antiga — não pode abrir
+  // nem publicar pela mestre de outra estratégia.
   const publicacaoMestre = route.channel
-    ? (await estrategiasPublicadasPelaMestre()).find((e) => e.canal === route.channel) ?? null
+    ? (await estrategiasPublicadasPelaMestre()).find(
+        (e) => e.canal === route.channel && e.estrategia === String(estrategia ?? "").toLowerCase(),
+      ) ?? null
     : null
   let mestrePositionId: string | null = null
 

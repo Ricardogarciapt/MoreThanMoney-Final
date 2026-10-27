@@ -18,7 +18,18 @@ import { calcularTrendShot } from '@/lib/estudos/trendshot/motor'
 import type { Vela } from '@/lib/estudos/comum/velas'
 import { ESTUDOS_WEBTRADER } from '@/lib/scanners/estudos'
 
-export type ChaveGrafico = 'sensei' | 'goldkiller' | 'mtm-scanner' | 'trendshot' | 'premium-scanner' | 'aurum' | 'perps' | 'outro'
+export type ChaveGrafico =
+  | 'sensei'
+  | 'goldkiller'
+  | 'mtm-scanner'
+  | 'trendshot'
+  | 'premium-scanner'
+  | 'aurum'
+  | 'perps'
+  | 'premium'
+  | 'forex-swings'
+  | 'edge'
+  | 'outro'
 
 export interface MarcaEstrategia {
   chave: ChaveGrafico
@@ -48,6 +59,10 @@ const MARCAS: Record<ChaveGrafico, MarcaEstrategia> = {
   'premium-scanner': { chave: 'premium-scanner', nome: 'MTM Auto Premium II', cor: corDoEstudo('PremiumScanner', '#E9C46A') },
   aurum: { chave: 'aurum', nome: 'MTM Aurum Flow Cripto', cor: '#F59E0B' },
   perps: { chave: 'perps', nome: 'MTM Perps', cor: '#FB923C' },
+  // Fontes sem indicador próprio (27/10): o gráfico leva só a marca e as linhas da trade.
+  premium: { chave: 'premium', nome: 'MTM Auto Premium', cor: '#D2A63C' },
+  'forex-swings': { chave: 'forex-swings', nome: 'MTM Auto Forex Swings', cor: '#2DD4BF' },
+  edge: { chave: 'edge', nome: 'MTM Auto Edge', cor: '#60A5FA' },
   outro: { chave: 'outro', nome: 'MTM', cor: '#D2A63C' },
 }
 
@@ -66,6 +81,9 @@ export function marcaDaEstrategia(estrategia: string | null | undefined, alertNa
   if (/aurum/.test(t)) return MARCAS.aurum
   if (/mtm[\s-]*scanner|mtmscanner/.test(t)) return MARCAS['mtm-scanner']
   if (/perp/.test(t)) return MARCAS.perps
+  if (/premium/.test(t)) return MARCAS.premium
+  if (/forex[\s-]*swings?/.test(t)) return MARCAS['forex-swings']
+  if (/\bedge\b|mtm-auto-edge/.test(t)) return MARCAS.edge
   if (alertName && alertName.trim()) return { ...MARCAS.outro, nome: alertName.trim() }
   return MARCAS.outro
 }

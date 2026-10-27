@@ -8,7 +8,7 @@
  *
  * Módulo PURO (sem imports) — pode ser usado no cliente e no servidor.
  */
-export type ScannerKey = "sensei" | "goldkiller" | "mtmscanner" | "aurum" | "trendshot" | "premiumscanner"
+export type ScannerKey = "sensei" | "goldkiller" | "mtmscanner" | "aurum" | "trendshot" | "premiumscanner" | "premium"
 
 /**
  * Nomes mostrados ao utilizador. "Sensei" (NÃO "Sensei X" — decisão Ricardo 2026-08-19).
@@ -22,10 +22,13 @@ export const SCANNER_LABELS: Record<ScannerKey, string> = {
   aurum: "MTM Aurum Flow Cripto",
   trendshot: "TrendShot",
   premiumscanner: "Premium Scanner",
+  // Os sinais do canal MTM Auto Premium entram nos alertas desde 27/10 (não vêm do TradingView:
+  // lêem-se das entradas do chat, com o gráfico — ver app/api/mtm-alerts).
+  premium: "MTM Auto Premium",
 }
 
 /** Ordem de apresentação nos filtros. */
-export const SCANNER_ORDER: ScannerKey[] = ["sensei", "goldkiller", "mtmscanner", "aurum", "trendshot", "premiumscanner"]
+export const SCANNER_ORDER: ScannerKey[] = ["premium", "sensei", "goldkiller", "mtmscanner", "aurum", "trendshot", "premiumscanner"]
 
 /**
  * Normaliza o `strategy` cru de um alerta para o scanner canónico.
@@ -35,6 +38,7 @@ export function scannerKeyFromStrategy(strategy: string | null | undefined): Sca
   const n = (strategy ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
   if (!n) return "mtmscanner"
   if (n.includes("premiumscanner") || n.includes("premiumii")) return "premiumscanner" // «MTM Auto Premium II» (27/10)
+  if (n.includes("premium")) return "premium"                              // "MTM Auto Premium" (27/10)
   if (n.includes("trendshot")) return "trendshot"                          // "MTM Auto Trendshot" (23/10)
   if (n.includes("aurum")) return "aurum"                                  // ORB, v8, base
   if (n.includes("sensei")) return "sensei"                                // "MTM Sensei X" → Sensei

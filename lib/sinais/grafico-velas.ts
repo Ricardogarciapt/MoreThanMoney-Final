@@ -19,6 +19,7 @@
  */
 import {
   TF_SEG,
+  agregarRef,
   type RefMercado,
   type VelaRef,
   fatorAncorado,
@@ -134,13 +135,18 @@ export async function velasDoSinal(sig: SinalGrafico): Promise<VelaRef[]> {
   if (!refs.length) return []
 
   const tf = tfParaRef(sig.timeframe)
-  const seg = TF_SEG[tf] ?? 3600
+  const segRef = TF_SEG[tf] ?? 3600
+  // Timeframes que as referências não têm (o TrendShot corre em M3): pedem-se velas do degrau
+  // abaixo e agregam-se, para a imagem ter as velas do gráfico do alerta e não as de M1.
+  const k = fatorDeAgregacao(sig.timeframe, segRef)
+  const seg = segRef * k
   // Janela: ~75 velas antes do sinal e ~35 depois (mostra também o que a trade fez).
   const ate = sig.emSeg + VELAS_DEPOIS * seg
   const ancora = sig.entry != null && sig.entry > 0 ? { preco: sig.entry, emSeg: sig.emSeg } : null
 
   for (const ref of refs) {
-    const velas = await pedirVelas(ref, tf, ate, VELAS + Math.max(0, sig.historico ?? 0))
+    const brutas = await pedirVelas(ref, tf, ate, (VELAS + Math.max(0, sig.historico ?? 0)) * k)
+    const velas = k > 1 ? agregarRef(brutas, seg) : brutas
     if (velas.length < VELAS_MINIMAS) continue
     // Folga da âncora: normalmente 4 velas. Nos índices e acções a referência é o índice à vista,
     // que fecha horas antes do CFD (GER40 tem sinais às 16:45 UTC e o ^GDAXI fecha às 15:30) — aí
@@ -151,6 +157,17 @@ export async function velasDoSinal(sig: SinalGrafico): Promise<VelaRef[]> {
     if (ref.sameLevel) return velas
   }
   return []
+}
+
+/**
+ * Quantas velas da referência fazem uma vela do alerta: «3» sobre M1 → 3, «30» sobre M15 → 2.
+ * 1 quando o timeframe já existe nas referências ou não é múltiplo exacto (até 4, pelo limite dos pedidos).
+ */
+export function fatorDeAgregacao(tf: string | null | undefined, segRef: number): number {
+  const min = Number(String(tf ?? '').trim())
+  if (!Number.isFinite(min) || min <= 0 || min >= 1440) return 1
+  const k = (min * 60) / segRef
+  return Number.isInteger(k) && k > 1 && k <= 4 ? k : 1
 }
 
 function pedirVelas(ref: RefMercado, tf: string, ateSeg: number, limite: number): Promise<VelaRef[]> {
@@ -387,6 +404,8 @@ function indiceDoInstante(velas: VelaRef[], emSeg: number): number {
 
 /** "15" → "M15", "240" → "H4" (só para escrever no cabeçalho). */
 export function rotuloTf(tf: string | null | undefined): string {
-  const r = tfParaRef(tf)
-  return r
+  // O rótulo é o do alerta (M3, M30, H2), não o degrau das referências de onde vieram as velas.
+  const min = Number(String(tf ?? '').trim())
+  if (Number.isFinite(min) && min > 0 && min < 1440) return min % 60 === 0 ? `H${min / 60}` : `M${min}`
+  return tfParaRef(tf)
 }

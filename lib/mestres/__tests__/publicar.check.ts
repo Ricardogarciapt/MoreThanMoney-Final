@@ -48,9 +48,14 @@ t('estratégia/manual → Posição fechada', () => assert.equal(eventoDeFecho({
 
 console.log('\n4. os outros escritores calam-se')
 t('Sensei publicado no canal certo', () => assert.equal(PUBLICACOES.sensei.canal, 'sensei-scanner'))
+t('Edge publicada no chat «MTM Auto Edge», sem Telegram', () => {
+  assert.equal(PUBLICACOES['mtm-auto-edge'].canal, 'sinais-scanner-mtm')
+  assert.equal(PUBLICACOES['mtm-auto-edge'].telegram(), null)
+})
 const WEBHOOK = ler('app/api/webhooks/tradingview/route.ts')
 t('webhook: cartão, espelho de fecho, avisos e relay Telegram passam pelo publicador', () => {
-  assert.match(WEBHOOK, /estrategiasPublicadasPelaMestre\(\)\)\.find\(\(e\) => e\.canal === route\.channel\)/)
+  // 27/10: o canal E a estratégia (o MTM Scanner ouro/BTC cai no canal publicado pela mestre da Edge).
+  assert.match(WEBHOOK, /estrategiasPublicadasPelaMestre\(\)\)\.find\(\s*\(e\) => e\.canal === route\.channel && e\.estrategia === String\(estrategia/)
   assert.match(WEBHOOK, /if \(publicacaoMestre\) \{[\s\S]{0,600}publicarEntradaDaMestre\(/)
   assert.match(WEBHOOK, /route\.channel && !publicacaoMestre( && entradaChatMessageId)?\) \{/) // 199: o fecho T2T exige a entrada por id
   assert.match(WEBHOOK, /!RELAY_DISABLED && !publicacaoMestre\)/)
