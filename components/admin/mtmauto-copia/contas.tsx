@@ -28,6 +28,8 @@ interface ContaAdmin {
   contaMetaApi: boolean
   usos: string[]
   saldo: number | null
+  equity?: number | null
+  saldoLidoEm?: string | null
   plano: string
   motivoDireito: string
   quota: { emUso: number; limite: number | null; acima: boolean }
@@ -80,6 +82,8 @@ export default function ContasCopia({ userIdInicial, extraPorUtilizador }: { use
     setVista({ ref: c.ref, dados: null })
     const r = await pedirAdmin<Record<string, unknown>>(`/api/admin/mtmauto-copia/contas?vista=${encodeURIComponent(c.ref)}`)
     setVista({ ref: c.ref, dados: r.success ? r.data ?? {} : { erro: r.error } })
+    // A leitura ficou guardada (216): a linha passa a mostrar este capital/equity.
+    if (r.success) void recarregar()
   }
 
   const porUtilizador = useMemo(() => {
@@ -117,7 +121,8 @@ export default function ContasCopia({ userIdInicial, extraPorUtilizador }: { use
             <th className={th}>Estado</th>
             <th className={th}>MetaApi · quota</th>
             <th className={th}>Serve para</th>
-            <th className={th}>Saldo</th>
+            <th className={th} title="saldo: MTM Funded pelo motor; corretora pela última leitura guardada">Capital</th>
+            <th className={th} title="equity e idade da leitura (clica «ver» para ler ao vivo)">Equity</th>
             <th className={th}>Acções</th>
           </tr>
         </thead>
@@ -164,6 +169,10 @@ export default function ContasCopia({ userIdInicial, extraPorUtilizador }: { use
                 </td>
                 <td className={td}><div className="flex max-w-[240px] flex-wrap gap-1">{c.usos.map((u, i) => <Etiqueta key={i}>{u}</Etiqueta>)}</div></td>
                 <td className={td}><span className="tabular-nums">{c.saldo == null ? "—" : c.saldo.toLocaleString("pt-PT", { maximumFractionDigits: 2 })}</span></td>
+                <td className={td}>
+                  <span className="tabular-nums">{c.equity == null ? "—" : c.equity.toLocaleString("pt-PT", { maximumFractionDigits: 2 })}</span>
+                  {c.saldoLidoEm && <span className="block text-[10px] text-zinc-600" title="última leitura guardada">{quando(c.saldoLidoEm)}</span>}
+                </td>
                 <td className={td}>
                   <div className="flex flex-wrap items-center gap-1">
                     {ocupado && <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-400" />}

@@ -21,12 +21,15 @@ export const revalidate = 60
 // query intacta) — a app continua a viver na Vercel, mas quem partilha o link partilha a MTM.
 const APP_URL = "https://www.morethanmoney.pt/mtmautoapp"
 
+/** O link público do TestFlight da MTM Auto (grupo «MTM Auto — Público»), enquanto a App Store revê. */
+const TESTFLIGHT_PUBLICO = "https://testflight.apple.com/join/JzUY538h"
+
 /**
  * Os links de descarga mudam a cada versão — ficam na base de dados para não obrigarem a um
  * deploy do site sempre que sai um build novo.
  */
 async function linksDeDescarga() {
-  if (ehCompilacao()) return { apk: "/downloads/MTMAuto.apk", testflight: null }
+  if (ehCompilacao()) return { apk: "/downloads/MTMAuto.apk", testflight: TESTFLIGHT_PUBLICO }
   try {
     const { data } = await getSupabaseAdmin()
       .from("site_settings")
@@ -36,10 +39,10 @@ async function linksDeDescarga() {
     const texto = (v: unknown) => (typeof v === "string" ? v : (v as { url?: string })?.url ?? null)
     return {
       apk: texto(mapa.get("mtmauto_apk_url")) ?? "/downloads/MTMAuto.apk",
-      testflight: texto(mapa.get("mtmauto_testflight_url")),
+      testflight: texto(mapa.get("mtmauto_testflight_url")) ?? TESTFLIGHT_PUBLICO,
     }
   } catch {
-    return { apk: "/downloads/MTMAuto.apk", testflight: null }
+    return { apk: "/downloads/MTMAuto.apk", testflight: TESTFLIGHT_PUBLICO }
   }
 }
 
@@ -306,7 +309,7 @@ export default async function MtmAutoPage() {
   const [links, estrategias] = await comTecto(
     Promise.all([linksDeDescarga(), estrategiasVivas()]),
     // O mesmo recuo que o `catch` de cada uma já usava — sem resposta não é pior do que com erro.
-    [{ apk: "/downloads/MTMAuto.apk", testflight: null }, []] as [
+    [{ apk: "/downloads/MTMAuto.apk", testflight: TESTFLIGHT_PUBLICO }, []] as [
       Awaited<ReturnType<typeof linksDeDescarga>>,
       Awaited<ReturnType<typeof estrategiasVivas>>,
     ],

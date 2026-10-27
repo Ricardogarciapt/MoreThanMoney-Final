@@ -235,10 +235,10 @@ export default function ScannerPage() {
                   Pack <span className="text-[#D2A63C]">Scanners.</span>
                 </h2>
                 <p className="mt-4 max-w-[48ch] text-[#a9a7a0]">
-                  Todos os scanners MTM num só pack, por 35€/mês: Gold Killer, Aurum Flow, Scanner MTM, TrendShot e Sensei.
+                  Todos os scanners MTM num só pack, por 35€/mês: Gold Killer, Aurum Flow, Scanner MTM, TrendShot, Sensei e Premium Scanner.
                 </p>
                 <ul className="mt-6 grid gap-2 sm:grid-cols-2">
-                  {["MTM Gold Killer V2.1", "Aurum Flow", "Scanner MTM", "TrendShot by MTM", "Sensei", "Atualizações incluídas", "Suporte prioritário", "Acesso TradingView"].map((name) => (
+                  {["MTM Gold Killer V2.1", "Aurum Flow", "Scanner MTM", "TrendShot by MTM", "Sensei", "MTM Premium Scanner", "Atualizações incluídas", "Suporte prioritário", "Acesso TradingView"].map((name) => (
                     <li key={name} className="flex items-center gap-2 text-sm text-[#c9c7c0]">
                       <Check className="h-4 w-4 text-[#D2A63C]" /> {name}
                     </li>

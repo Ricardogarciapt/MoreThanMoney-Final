@@ -1,0 +1,53 @@
+MTM PREMIUM SCANNER EA — PACOTE
+================================================================
+
+A mesma regra do MTM Premium Scanner do TradingView (indicador e estrategia),
+a negociar no MetaTrader 5. Ouro (XAUUSD), tempo grafico M15.
+
+LICENCA
+
+  Cola a chave que recebeste por email no parametro "Chave" e autoriza o
+  endereco no MetaTrader: Ferramentas > Opcoes > Consultores > "Permitir
+  WebRequest para os seguintes URLs" > https://www.morethanmoney.pt
+  A chave so abre esta EA e fica presa a primeira conta MT5 onde a usares.
+
+INSTALAR (a mao)
+
+  No MetaTrader: Ficheiro > Abrir pasta de dados > MQL5, e copia para la:
+  MQL5\Experts\MTM\          MTM_Premium_Scanner_EA.ex5
+  MQL5\Presets\              MTM_PremiumScanner_XAUUSD_M15.set
+  Depois, no MetaTrader: Ficheiro > Actualizar pastas.
+
+POR A TRABALHAR
+
+  1. Grafico XAUUSD, M15.
+  2. Arrasta Consultores > MTM > MTM_Premium_Scanner_EA para o grafico.
+     Separador Comum: permitir negociacao automatica.
+  3. Parametros > Carregar > MTM_PremiumScanner_XAUUSD_M15.set
+  4. Le o log (aba Especialistas): tem de dizer o fuso do servidor
+     ("UTC+2" ou "UTC+3" na maioria das corretoras). As sessoes sao em UTC.
+  5. A EA arranca PARADA. Carrega em INICIAR no painel.
+
+O QUE FAZ
+
+  · Asia 00–06, Londres 07–11, Nova Iorque 13–16 (UTC), cada uma liga/desliga.
+  · Direccao por voto de 5 no fecho da vela: abertura da sessao, ha 1 h,
+    ha 4 h, EMA200, EMA9. Maioria (replica) ou Unanime (5 de 5) no painel.
+  · Ordem limite no meio da zona de recuo, valida 4 velas.
+  · SL 5 $ para la da zona; TP1/TP2/TP3 a 5/10/15 $ da borda.
+  · 50 % sai no TP1 e o SL das outras pernas passa para a entrada;
+    25 % no TP2 e 25 % no TP3.
+  · Um grupo de cada vez. Perda maxima do dia e spread maximo nos parametros.
+
+  Lote: o "Lote TOTAL" reparte-se pelas tres pernas. Com 0,04 ficam
+  0,02 / 0,01 / 0,01. Com 0,01 nao da para repartir e cada perna sobe ao
+  minimo da corretora — o log avisa.
+
+TESTADOR DE ESTRATEGIAS
+
+  No testador o MetaTrader nao sabe o fuso do servidor: poe o parametro
+  "Fuso do servidor" com o da tua corretora (normalmente 2 no inverno e
+  3 no verao). Modelo: "Cada tick baseado em ticks reais".
+
+Ferramenta educativa. Nao e consultoria financeira e nao garante resultados.
+Resultados passados nao garantem resultados futuros. Testa primeiro em demo.

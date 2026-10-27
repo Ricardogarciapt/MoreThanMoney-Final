@@ -1,0 +1,175 @@
+//@version=6
+// ─────────────────────────────────────────────────────────────────────────────
+// MTM Premium Scanner — ESTRATÉGIA (backtest no TradingView)
+//
+// Mesma lógica do indicador docs/pine/mtm-premium-scanner.pine, com execução:
+//  · Ordem limite no meio da zona, válida 4 velas (1 h em 15m) — como o modo «zona»
+//    do MTM Auto Premium.
+//  · Partes (% editáveis) no TP1, TP2 e TP3 (ou TP4, a correr). Por omissão fecha 50 % no TP1
+//    e passa o SL do resto para a entrada; 25 % no TP2 e 25 % no TP3.
+//    Entrada, SL e TPs desenhados como no TrendShot.
+//  · Um grupo de cada vez (enquanto há posição, sinais novos só aparecem no gráfico).
+// Números medidos e limites: docs/premium-scanner-engenharia-reversa.md
+// ─────────────────────────────────────────────────────────────────────────────
+strategy("MTM Premium Scanner — Estratégia", overlay=true, pyramiding=3, max_labels_count=500, max_lines_count=500, max_boxes_count=500,
+     default_qty_type=strategy.fixed, default_qty_value=1, initial_capital=10000,
+     commission_type=strategy.commission.cash_per_contract, commission_value=0, process_orders_on_close=false)
+
+gS = "═══ Sessões (UTC) ═══"
+useLdn  = input.bool(true,  "Londres", inline="l", group=gS)
+sessLdn = input.session("0700-1100", "", inline="l", group=gS)
+useNy   = input.bool(true,  "Nova Iorque", inline="n", group=gS)
+sessNy  = input.session("1300-1600", "", inline="n", group=gS)
+useAsia = input.bool(true,  "Ásia", inline="a", group=gS)
+sessAs  = input.session("0000-0600", "", inline="a", group=gS)
+
+gD = "═══ Direcção e cadência ═══"
+lenCurto = input.int(4,  "Momento curto (velas)", minval=1, group=gD)
+lenLongo = input.int(16, "Momento longo (velas)", minval=2, group=gD)
+modo     = input.string("Maioria", "Direcção", options=["Maioria", "Unânime"], group=gD, tooltip="Maioria = réplica dos sinais Premium. Unânime = só quando os 5 votos concordam (menos sinais).")
+pausa    = input.int(2,  "Pausa entre sinais (velas)", minval=1, group=gD)
+maxSess  = input.int(6,  "Máx. sinais por sessão", minval=1, group=gD)
+
+gR = "═══ Entrada, SL e saídas (em $ do ouro; 1 $ = 10 pips) ═══"
+showSLTP = input.bool(true, "Mostrar entrada, SL e TPs no gráfico", group=gR)
+recuo    = input.float(4.0, "Entrada: meio da zona a X $ contra o preço", minval=0, step=0.5, group=gR)
+largZ    = input.float(5.0, "Largura da zona de entrada $", minval=0, step=0.5, group=gR)
+validade = input.int(4, "Ordem limite válida (velas)", minval=1, group=gR)
+distSL   = input.float(5.0, "SL: $ para lá da zona", minval=0.5, step=0.5, group=gR)
+tp1D     = input.float(5.0,  "TP1: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t1")
+pct1     = input.int(50, "saída %", minval=0, maxval=100, group=gR, inline="t1", tooltip="Parte que fecha no TP1 (o SL do resto passa para a entrada). 0 = no TP1 só passa o SL para a entrada.")
+tp2D     = input.float(10.0, "TP2: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t2")
+pct2     = input.int(25, "saída %", minval=0, maxval=100, group=gR, inline="t2")
+tp3D     = input.float(15.0, "TP3: $ da borda da zona", minval=0.5, step=0.5, group=gR, inline="t3")
+pct3     = input.int(25, "saída %", minval=0, maxval=100, group=gR, inline="t3")
+usarTP4  = input.bool(false, "Última parte sai no TP4 (a correr)", group=gR, inline="t4")
+tp4D     = input.float(20.0, "$ da borda", minval=0.5, step=0.5, group=gR, inline="t4")
+usarBE   = input.bool(true, "SL para a entrada depois do TP1", group=gR)
+loteTot  = input.float(1.0, "Lote total (contratos)", minval=0.01, step=0.01, group=gR)
+caixaW   = input.int(20, "Largura do desenho (velas)", minval=4, group=gR)
+
+emSess(s) => not na(time(timeframe.period, s, "UTC"))
+inLdn = emSess(sessLdn) and useLdn   // v6: and/or avaliam só o necessário, por isso time() vem primeiro
+inNy  = emSess(sessNy)  and useNy
+inAs  = emSess(sessAs)  and useAsia
+inAny = inLdn or inNy or inAs
+nomeSess = inLdn ? "LDN" : inNy ? "NY" : inAs ? "ASIA" : ""
+
+var float abSess = na
+var int   nSess  = 0
+var int   ultimo = -1000
+if inAny and (not inAny[1] or nomeSess != nomeSess[1])
+    abSess := open
+    nSess  := 0
+
+voto = (close > abSess ? 1 : -1) + (close > close[lenCurto] ? 1 : -1) + (close > close[lenLongo] ? 1 : -1) +
+     (close > ta.ema(close, 200) ? 1 : -1) + (close > ta.ema(close, 9) ? 1 : -1)
+dirCompra = voto > 0
+votoOk = modo == "Maioria" or math.abs(voto) == 5
+
+sinal = inAny and votoOk and barstate.isconfirmed and not na(abSess) and nSess < maxSess and bar_index - ultimo >= pausa
+if sinal
+    nSess  := nSess + 1
+    ultimo := bar_index
+
+sg     = dirCompra ? 1.0 : -1.0
+meio   = close - sg * recuo
+zPerto = meio + sg * largZ / 2
+zLonge = meio - sg * largZ / 2
+
+// ── Estado do grupo em curso ─────────────────────────────────────────────────
+var float gEntrada = na
+var float gSL      = na
+var float gTP1     = na
+var float gTP2     = na
+var float gTP3     = na
+var float gTP4     = na
+var int   gDesde   = na
+var bool  gCompra  = true
+var bool  gTP1Ok   = false
+
+semPosicao = strategy.position_size == 0 and strategy.opentrades == 0
+
+// Novo grupo só quando não há posição nem ordens à espera
+if sinal and semPosicao and na(gDesde)
+    gCompra  := dirCompra
+    gEntrada := meio
+    gSL      := zLonge - sg * distSL
+    gTP1     := zPerto + sg * tp1D
+    gTP2     := zPerto + sg * tp2D
+    gTP3     := zPerto + sg * tp3D
+    gTP4     := zPerto + sg * tp4D
+    gDesde   := bar_index
+    gTP1Ok   := false
+    d = dirCompra ? strategy.long : strategy.short
+    somaPct = math.max(pct1 + pct2 + pct3, 1)
+    if pct1 > 0
+        strategy.entry("P1", d, qty=loteTot * pct1 / somaPct, limit=gEntrada)
+    if pct2 > 0
+        strategy.entry("P2", d, qty=loteTot * pct2 / somaPct, limit=gEntrada)
+    if pct3 > 0
+        strategy.entry("P3", d, qty=loteTot * pct3 / somaPct, limit=gEntrada)
+
+// Limite expira sem entrar
+if not na(gDesde) and semPosicao and bar_index - gDesde >= validade
+    strategy.cancel("P1")
+    strategy.cancel("P2")
+    strategy.cancel("P3")
+    gDesde := na
+
+// Saídas: depois de o preço tocar no TP1, o SL do que resta passa para a entrada
+// (com ou sem parcial no TP1 — o toque conta mesmo com 0 %).
+if not na(gDesde) and strategy.position_size != 0 and not gTP1Ok
+    gTP1Ok := gCompra ? high >= gTP1 : low <= gTP1
+stopResto = usarBE and gTP1Ok ? gEntrada : gSL
+if not na(gDesde)
+    if pct1 > 0
+        strategy.exit("S1", "P1", limit=gTP1, stop=gSL)
+    strategy.exit("S2", "P2", limit=gTP2, stop=stopResto)
+    strategy.exit("S3", "P3", limit=usarTP4 ? gTP4 : gTP3, stop=stopResto)
+
+// Grupo terminado
+if not na(gDesde) and strategy.position_size == 0 and strategy.position_size[1] != 0
+    gDesde := na
+
+bgcolor(inLdn ? color.new(#D2A63C, 92) : inNy ? color.new(#E9C46A, 94) : inAs ? color.new(color.gray, 94) : na)
+plotshape(sinal and dirCompra,     "Compra", shape.labelup,   location.belowbar, color.new(color.green, 0), text="BUY",  textcolor=color.white, size=size.tiny)
+plotshape(sinal and not dirCompra, "Venda",  shape.labeldown, location.abovebar, color.new(color.red, 0),   text="SELL", textcolor=color.white, size=size.tiny)
+
+// ── Entrada, SL e TPs no gráfico (estilo TrendShot) ─────────────────────────
+const color C_ENTRY = #D2A63C
+const color C_TP    = #12B886
+const color C_SL    = #D6401F
+var array<line>  trLines  = array.new<line>()
+var array<label> trLabels = array.new<label>()
+var array<box>   trBoxes  = array.new<box>()
+f_fmt(x) => str.tostring(math.round_to_mintick(x))
+f_clear() =>
+    while array.size(trLines) > 0
+        line.delete(array.pop(trLines))
+    while array.size(trLabels) > 0
+        label.delete(array.pop(trLabels))
+    while array.size(trBoxes) > 0
+        box.delete(array.pop(trBoxes))
+f_level(x1, x2, y, txt, col) =>
+    array.push(trLines, line.new(x1, y, x2, y, color=col, width=1))
+    array.push(trLabels, label.new(x2 + 1, y, txt, style=label.style_label_left, color=col, textcolor=color.white, size=size.small))
+
+if showSLTP and not na(gDesde) and gDesde == bar_index
+    f_clear()
+    x1 = bar_index
+    x2 = bar_index + caixaW
+    zLo = gEntrada - largZ / 2
+    zHi = gEntrada + largZ / 2
+    tpUlt = usarTP4 ? gTP4 : gTP3
+    array.push(trBoxes, box.new(x1, math.max(gEntrada, tpUlt), x2, math.min(gEntrada, tpUlt), border_color=na, bgcolor=color.new(C_TP, 88)))
+    array.push(trBoxes, box.new(x1, math.max(gEntrada, gSL),   x2, math.min(gEntrada, gSL),   border_color=na, bgcolor=color.new(C_SL, 88)))
+    array.push(trBoxes, box.new(x1, zHi, x2, zLo, border_color=color.new(C_ENTRY, 40), bgcolor=color.new(C_ENTRY, 80)))
+    f_level(x1, x2, gEntrada, (gCompra ? "COMPRA" : "VENDA") + " · Zona: " + f_fmt(zLo) + " – " + f_fmt(zHi) + " · Entrada: " + f_fmt(gEntrada), C_ENTRY)
+    f_level(x1, x2, gTP1, "TP1: " + f_fmt(gTP1) + (pct1 > 0 ? " · " + str.tostring(pct1) + "%" : "") + (usarBE ? " → SL na entrada" : ""), C_TP)
+    f_level(x1, x2, gTP2, "TP2: " + f_fmt(gTP2) + " · " + str.tostring(pct2) + "%", C_TP)
+    if usarTP4
+        f_level(x1, x2, gTP4, "TP4: " + f_fmt(gTP4) + " · " + str.tostring(pct3) + "%", C_TP)
+    else
+        f_level(x1, x2, gTP3, "TP3: " + f_fmt(gTP3) + " · " + str.tostring(pct3) + "%", C_TP)
+    f_level(x1, x2, gSL, "SL: " + f_fmt(gSL), C_SL)

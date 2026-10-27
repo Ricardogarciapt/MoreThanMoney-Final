@@ -234,9 +234,28 @@ function api(caminho, opcoes = {}) {
   })
 }
 
+/**
+ * PAUSA DURANTE OS DIRECTOS.
+ *
+ * Os processos pesados (yt-dlp, ffmpeg, Whisper) ficam aqui registados. Se um educador entra em
+ * directo a meio de um trabalho, são CONGELADOS (SIGSTOP) — não mortos: retomam do sítio onde
+ * estavam (SIGCONT) quando a sessão acaba, sem repetir uma transcrição de meia hora.
+ */
+const FILHOS = new Set()
+let pausado = false
+function congelar(sim) {
+  if (sim === pausado) return
+  pausado = sim
+  log(sim ? "educador em directo — trabalho em pausa" : "directo acabou — a retomar")
+  for (const p of FILHOS) { try { p.kill(sim ? "SIGSTOP" : "SIGCONT") } catch {} }
+}
+
 function correr(cmd, args, opcoes = {}) {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"], ...opcoes })
+    FILHOS.add(p)
+    if (pausado) { try { p.kill("SIGSTOP") } catch {} }
+    p.on("close", () => FILHOS.delete(p))
     let err = ""
     p.stderr.on("data", (d) => { err += d.toString().slice(0, 2000) })
     p.on("error", reject)
@@ -462,6 +481,19 @@ function construirASS(palavras, estilo, extras = {}) {
     )
   }
 
+  // ── o CTA subtil, no fim ─────────────────────────────────────────────────────
+  // Sem «COMENTA» aos gritos: a palavra do educador aparece pequena, no terço de cima, nos
+  // últimos segundos, enquanto a frase acaba. Quem chegou ao fim lê-a sem sentir que lhe vendem.
+  const cta = String(extras.cta || "").replace(/[{}\\]/g, "").trim()
+  if (ef.ctaSubtil && cta && extras.duracao > 6) {
+    const ini = Math.max(0, extras.duracao - 2.6)
+    const cy = Math.round(A * 0.3)
+    linhas.push(
+      `Dialogue: 3,${tempo(ini)},${tempo(extras.duracao + 0.5)},Gancho,,0,0,0,,` +
+      `{\\an5\\pos(${cx},${cy})\\fad(260,0)\\fscx55\\fscy55\\t(0,260,\\fscx62\\fscy62)}${cta}`,
+    )
+  }
+
   // ── a assinatura, discreta ──────────────────────────────────────────────────
   if (ef.assinatura && estilo.assinatura && extras.duracao) {
     const ay = Math.round(A * 0.1)
@@ -485,16 +517,20 @@ function construirASS(palavras, estilo, extras = {}) {
  * Tudo em trapézios e degraus somados, sem `if` encadeados: uma expressão longa de somas avalia
  * depressa e não rebenta o analisador do ffmpeg com parêntesis a mais.
  */
-function planoDeZoom(palavras, estilo, enfase, duracao) {
+function planoDeZoom(palavras, estilo, enfase, duracao, cortesDaMontagem = []) {
   const termos = []
   const ecras = ecrasDaLegenda(palavras, estilo, enfase)
 
   // Degraus: procura o início de ecrã mais próximo de cada múltiplo de 5s.
   const inicios = ecras.map((e) => e.inicio).filter((t) => t > 1.5 && t < duracao - 1)
   const cortes = []
-  for (let alvo = 5; alvo < duracao - 1.5; alvo += 5) {
-    const perto = inicios.reduce((m, t) => (Math.abs(t - alvo) < Math.abs(m - alvo) ? t : m), alvo)
-    if (Math.abs(perto - alvo) <= 1.5 && (!cortes.length || perto - cortes[cortes.length - 1] >= 3)) cortes.push(perto)
+  // Com pausas tiradas, o degrau cai em cima de cada corte seco: é aí que o salto da imagem
+  // tem de parecer intencional. Sem eles, a grelha dos 5 s de sempre.
+  const alvos = cortesDaMontagem.length ? cortesDaMontagem : Array.from({ length: Math.floor(duracao / 5) }, (_, i) => (i + 1) * 5)
+  for (const alvo of alvos) {
+    if (alvo <= 1.5 || alvo >= duracao - 1.5) continue
+    const perto = cortesDaMontagem.length ? alvo : inicios.reduce((m, t) => (Math.abs(t - alvo) < Math.abs(m - alvo) ? t : m), alvo)
+    if (Math.abs(perto - alvo) <= 1.5 && (!cortes.length || perto - cortes[cortes.length - 1] >= (cortesDaMontagem.length ? 1.8 : 3))) cortes.push(perto)
   }
   cortes.push(duracao + 1)
   for (let i = 0; i < cortes.length - 1; i += 2) {
@@ -516,6 +552,111 @@ function planoDeZoom(palavras, estilo, enfase, duracao) {
   }
   if (!termos.length) return null
   return `min(1.2,1+${termos.join("+")})`.replace(/T/g, "(on/30)")
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * SEM TEMPOS MORTOS — cortes secos nas pausas e nas bengalas («hum», «ãã»).
+ *
+ * Numa aula fala-se a pensar: meio segundo aqui, um «hum» ali. Num clipe de 30 s isso soma três
+ * ou quatro segundos em que nada acontece — e é aí que o dedo desliza. Os tempos por palavra
+ * dizem exactamente onde a voz pára; corta-se lá, com uma folga para a sílaba não ficar comida.
+ *
+ * Faz-se num passo antes da montagem (um ficheiro só com os pedaços que ficam) e todos os tempos
+ * — legendas, B-roll — passam para a linha nova. Os pontos de corte voltam para o zoom: cada
+ * salto alterna o enquadramento, que é o que faz um corte seco parecer edição e não um erro.
+ * ────────────────────────────────────────────────────────────────────────────*/
+const BENGALAS = new Set(["hum", "humm", "hmm", "hm", "a", "aa", "aaa", "e", "ee", "eee", "eh", "ehh", "ah", "ahh", "uh", "uhm", "um", "er", "erm"])
+const PAUSA_MAX = 0.42
+const FOLGA = 0.1
+
+function planoSemPausas(palavras, duracao) {
+  const ditas = (palavras || []).filter((p) => Number.isFinite(p.inicio) && Number.isFinite(p.fim) && p.fim > p.inicio)
+  if (ditas.length < 4) return null
+  // «a» e «e» são palavras a sério; só contam como bengala quando arrastadas (> 0,35 s) e sozinhas.
+  const eBengala = (p) => {
+    const n = normalizar(p.palavra)
+    if (!BENGALAS.has(n)) return false
+    return n.length > 1 || p.fim - p.inicio > 0.35
+  }
+  const fala = ditas.filter((p) => !eBengala(p))
+  if (!fala.length) return null
+
+  const segs = []
+  for (const p of fala) {
+    const ini = Math.max(0, p.inicio - FOLGA)
+    const fim = Math.min(duracao, p.fim + FOLGA)
+    const ult = segs[segs.length - 1]
+    if (ult && ini - ult.fim <= PAUSA_MAX - 2 * FOLGA) ult.fim = Math.max(ult.fim, fim)
+    else segs.push({ ini, fim })
+  }
+  // O primeiro pedaço começa no zero se a fala começa quase logo; o último segura o fim da frase.
+  if (segs[0].ini < 0.3) segs[0].ini = 0
+  const ultimo = segs[segs.length - 1]
+  ultimo.fim = Math.min(duracao, ultimo.fim + 0.25)
+
+  const novaDuracao = segs.reduce((s, g) => s + (g.fim - g.ini), 0)
+  if (duracao - novaDuracao < 0.6 || segs.length < 2) return null
+
+  // Tempo antigo → tempo novo. Um instante cortado encosta ao início do pedaço seguinte.
+  const mapa = (t) => {
+    let acc = 0
+    for (const g of segs) {
+      if (t < g.ini) return acc
+      if (t <= g.fim) return acc + (t - g.ini)
+      acc += g.fim - g.ini
+    }
+    return acc
+  }
+  const cortes = []
+  let acc = 0
+  for (const g of segs.slice(0, -1)) { acc += g.fim - g.ini; cortes.push(Math.round(acc * 100) / 100) }
+
+  const legendas = ditas
+    .filter((p) => !eBengala(p))
+    .map((p) => ({ ...p, inicio: Math.round(mapa(p.inicio) * 100) / 100, fim: Math.round(mapa(p.fim) * 100) / 100 }))
+    .filter((p) => p.fim > p.inicio)
+  return { segs, mapa, cortes, legendas, duracao: Math.round(novaDuracao * 100) / 100 }
+}
+
+/**
+ * Aplica o plano: escreve `excerto.mp4` só com o que fica e devolve a fonte, as legendas e o
+ * B-roll na linha de tempo nova. Sem nada para cortar, devolve tudo como estava.
+ */
+async function semTemposMortos({ fonte, recuo, duracao, legendas, broll, estilo, pasta, audio, rapido = false }) {
+  const ef = (estilo && estilo.efeitos) || {}
+  const plano = ef.semPausas ? planoSemPausas(legendas, duracao) : null
+  if (!plano) return { fonte, recuo, duracao, legendas, broll, cortes: [] }
+
+  const excerto = path.join(pasta, "excerto.mp4")
+  const partes = []
+  // Com o `-ss` antes do `-i`, os tempos dentro do filtro começam no zero do excerto.
+  plano.segs.forEach((g, i) => {
+    const a = g.ini.toFixed(3)
+    const b = g.fim.toFixed(3)
+    partes.push(`[0:v]trim=start=${a}:end=${b},setpts=PTS-STARTPTS[v${i}]`)
+    // 15 ms de fade em cada ponta: sem eles, cada corte dá um estalido.
+    if (audio) partes.push(`[0:a]atrim=start=${a}:end=${b},asetpts=PTS-STARTPTS,afade=t=in:d=0.015,areverse,afade=t=in:d=0.015,areverse[a${i}]`)
+  })
+  const n = plano.segs.length
+  const juntos = plano.segs.map((_, i) => (audio ? `[v${i}][a${i}]` : `[v${i}]`)).join("")
+  partes.push(`${juntos}concat=n=${n}:v=1:a=${audio ? 1 : 0}[v]${audio ? "[a]" : ""}`)
+  await correr("ffmpeg", [
+    "-y", "-ss", String(recuo), "-t", String(duracao + 0.5), "-i", fonte,
+    "-filter_complex", partes.join(";"),
+    "-map", "[v]", ...(audio ? ["-map", "[a]"] : []),
+    "-c:v", "libx264", "-preset", rapido ? "ultrafast" : "veryfast", "-crf", rapido ? "26" : "16",
+    ...(audio ? ["-c:a", "aac", "-b:a", "192k"] : []),
+    excerto,
+  ])
+
+  const brollNovo = (broll || []).map((b) => {
+    const inicio = Math.round(plano.mapa(b.inicio) * 100) / 100
+    const fim = Math.round(plano.mapa(b.fim) * 100) / 100
+    return { ...b, inicio, fim }
+  }).filter((b) => b.fim - b.inicio >= 1.2 && b.inicio >= 2.5 && b.fim <= plano.duracao - 2)
+
+  log(`sem tempos mortos: ${duracao.toFixed(1)} s → ${plano.duracao.toFixed(1)} s (${plano.cortes.length} cortes)`)
+  return { fonte: excerto, recuo: 0, duracao: plano.duracao, legendas: plano.legendas, broll: brollNovo, cortes: plano.cortes }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -583,6 +724,12 @@ function temAudio(fonte) {
  * Tudo num único filter_complex e num único encode: dois passes custavam o dobro da CPU num VPS
  * de dois núcleos que ainda grava as sessões.
  */
+/**
+ * A voz ao mesmo volume em todos os clips: −14 LUFS, o alvo do Instagram e do YouTube. Uma aula
+ * gravada baixinho saía a meio volume ao lado dos outros reels, e quem não ouve desliza.
+ */
+const VOZ = "highpass=f=70,loudnorm=I=-14:TP=-1.5:LRA=11"
+
 function argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll, estilo = {}, zoom = null, audio = true }) {
   const ef = estilo.efeitos || {}
   const acento = String(estilo.corAcento || estilo.corDestaque || "#FFD700").replace("#", "0x")
@@ -676,9 +823,12 @@ function argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll, estilo = {}, 
       partes.push(`[w${i}]adelay=delays=${ms}|${ms}[wd${i}]`)
     })
     partes.push(
-      `[0:a]aformat=channel_layouts=stereo[voz];[voz]${whooshes.map((_, i) => `[wd${i}]`).join("")}` +
+      `[0:a]aformat=channel_layouts=stereo,${VOZ}[voz];[voz]${whooshes.map((_, i) => `[wd${i}]`).join("")}` +
       `amix=inputs=${n + 1}:duration=first:normalize=0[aout]`,
     )
+    mapa.push("-map", "[aout]")
+  } else if (audio) {
+    partes.push(`[0:a]${VOZ}[aout]`)
     mapa.push("-map", "[aout]")
   } else {
     mapa.push("-map", "0:a?")
@@ -812,9 +962,13 @@ async function render(trabalho) {
     }
 
     const estilo = trabalho.estilo || {}
-    const extras = { gancho: trabalho.gancho || "", enfase: trabalho.enfase || [], duracao }
+    const audio = await temAudio(fonte)
+    const limpo = await semTemposMortos({
+      fonte, recuo, duracao, legendas: trabalho.legendas || [], broll: trabalho.broll || [], estilo, pasta: tmp, audio,
+    })
+    const extras = { gancho: trabalho.gancho || "", enfase: trabalho.enfase || [], duracao: limpo.duracao, cta: trabalho.ctaSubtil || "" }
     const ass = path.join(tmp, "legendas.ass")
-    fs.writeFileSync(ass, construirASS(trabalho.legendas || [], estilo, extras), "utf8")
+    fs.writeFileSync(ass, construirASS(limpo.legendas, estilo, extras), "utf8")
 
     const saida = path.join(tmp, "clipe.mp4")
     const L = estilo.largura || 1080
@@ -828,12 +982,11 @@ async function render(trabalho) {
      * enquadramento de sessão — e um corte que engana às vezes é melhor do que barras que
      * estragam sempre.
      */
-    const broll = await imagensDoBroll(trabalho.broll, tmp, L, A)
-    const zoom = planoDeZoom(trabalho.legendas || [], estilo, extras.enfase, duracao)
-    const audio = await temAudio(fonte)
+    const broll = await imagensDoBroll(limpo.broll, tmp, L, A)
+    const zoom = planoDeZoom(limpo.legendas, estilo, extras.enfase, limpo.duracao, limpo.cortes)
     await correr("ffmpeg", [
       "-y",
-      ...argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll, estilo, zoom, audio }),
+      ...argsDaMontagem({ fonte: limpo.fonte, recuo: limpo.recuo, duracao: limpo.duracao, L, A, ass, broll, estilo, zoom, audio }),
       "-c:v", "libx264", "-preset", "medium", "-crf", "21",
       "-c:a", "aac", "-b:a", "128k",
       "-movflags", "+faststart",
@@ -954,18 +1107,21 @@ async function previews(trabalho) {
 
         // O estilo pode vir por clipe (sobrepõe o do vídeo) ou do trabalho inteiro.
         const estilo = c.estilo || trabalho.estilo || {}
-        const extras = { gancho: c.gancho || "", enfase: c.enfase || [], duracao }
+        const audio = await temAudio(fonte)
+        const limpo = await semTemposMortos({
+          fonte, recuo, duracao, legendas: c.legendas || [], broll: c.broll || [], estilo, pasta, audio, rapido: true,
+        })
+        const extras = { gancho: c.gancho || "", enfase: c.enfase || [], duracao: limpo.duracao, cta: c.ctaSubtil || "" }
         const ass = path.join(pasta, "legendas.ass")
-        fs.writeFileSync(ass, construirASS(c.legendas || [], estilo, extras), "utf8")
+        fs.writeFileSync(ass, construirASS(limpo.legendas, estilo, extras), "utf8")
         const L = estilo.largura || 540
         const A = estilo.altura || 960
 
         const saida = path.join(pasta, "preview.mp4")
-        const broll = await imagensDoBroll(c.broll, pasta, L, A)
-        const zoom = planoDeZoom(c.legendas || [], estilo, extras.enfase, duracao)
-        const audio = await temAudio(fonte)
+        const broll = await imagensDoBroll(limpo.broll, pasta, L, A)
+        const zoom = planoDeZoom(limpo.legendas, estilo, extras.enfase, limpo.duracao, limpo.cortes)
         await correr("ffmpeg", [
-          "-y", ...argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll, estilo, zoom, audio }),
+          "-y", ...argsDaMontagem({ fonte: limpo.fonte, recuo: limpo.recuo, duracao: limpo.duracao, L, A, ass, broll, estilo, zoom, audio }),
           "-c:v", "libx264", "-preset", "veryfast", "-crf", "30",
           "-c:a", "aac", "-b:a", "64k", "-ac", "1",
           "-movflags", "+faststart", saida,
@@ -973,7 +1129,7 @@ async function previews(trabalho) {
 
         // O frame vem a 1,5s: já com a primeira legenda no ecrã, como o cartão do painel mostra.
         const frame = path.join(pasta, "frame.jpg")
-        await correr("ffmpeg", ["-y", "-ss", String(Math.min(1.5, duracao / 2)), "-i", saida, "-frames:v", "1", "-q:v", "4", frame])
+        await correr("ffmpeg", ["-y", "-ss", String(Math.min(1.5, limpo.duracao / 2)), "-i", saida, "-frames:v", "1", "-q:v", "4", frame])
 
         const previewUrl = await subirDireto(saida, "mp4", "previews")
         const frameUrl = await subirDireto(frame, "jpg", "previews")
@@ -995,12 +1151,24 @@ async function previews(trabalho) {
  * O CICLO
  * ────────────────────────────────────────────────────────────────────────────*/
 async function umaPassagem() {
-  const r = await api(`/api/videocliper/worker?worker=${encodeURIComponent(NOME)}`)
+  // Só uma máquina com IP de casa (o Mac) diz que descarrega do YouTube; o balcão guarda-lhe as aulas.
+  const yt = process.env.VIDEOCLIPER_YOUTUBE === "1" ? "&youtube=1" : ""
+  const r = await api(`/api/videocliper/worker?worker=${encodeURIComponent(NOME)}${yt}`)
   if (!r.ok) { log("balcão devolveu", r.status); return }
   const t = await r.json()
-  if (t.tipo === "nada") return t.repetir ? "repetir" : "nada"
+  if (t.tipo === "nada") {
+    if (t.emDireto) log("educador em directo — sem trabalhos novos")
+    return t.repetir ? "repetir" : "nada"
+  }
 
   log("trabalho:", t.tipo, t.jobId || t.clipId)
+  // O pulso do trabalho: pausa se houver directo e diz ao balcão que esta máquina continua viva.
+  const pulso = setInterval(() => {
+    api(`/api/videocliper/worker?pausa=1&worker=${encodeURIComponent(NOME)}${yt}`)
+      .then((x) => (x.ok ? x.json() : null))
+      .then((j) => { if (j) congelar(Boolean(j.emDireto)) })
+      .catch(() => {})
+  }, 60_000)
   try {
     if (t.tipo === "transcrever") await transcrever(t)
     else if (t.tipo === "render") await render(t)
@@ -1028,6 +1196,9 @@ async function umaPassagem() {
         erro: e.message,
       }),
     }).catch(() => {})
+  } finally {
+    clearInterval(pulso)
+    congelar(false)
   }
 }
 
@@ -1083,4 +1254,4 @@ async function ronda() {
 
 // Importado (testes, harness de pré-visualização) não arranca o ciclo.
 if (require.main === module) (process.argv.includes("--ronda") ? ronda() : ciclo())
-module.exports = { construirASS, ecrasDaLegenda, planoDeZoom, argsDaMontagem, imagensDoBroll, temAudio, correr }
+module.exports = { construirASS, ecrasDaLegenda, planoDeZoom, argsDaMontagem, imagensDoBroll, temAudio, correr, planoSemPausas, semTemposMortos }

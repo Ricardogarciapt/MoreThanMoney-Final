@@ -5,6 +5,7 @@
 
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getOrganizationUplineUserIds } from '@/lib/mlm-uplines'
+import { lerContaFirebase } from '@/lib/firebase-conta'
 
 const supabase = getSupabaseAdmin()
 
@@ -34,6 +35,7 @@ export function planLabel(planId: string): string {
     aurumflow_lifetime: 'Scanner Aurum Flow Cripto (Vitalício)',
     trendshot_semestral: 'TrendShot by MTM (Semestral)',
     trendshot_lifetime: 'TrendShot by MTM (Vitalício)',
+    premium_scanner_lifetime: 'MTM Premium Scanner (Vitalício)',
     mtm_scanner_semestral: 'Scanner MTM V3.4 (Semestral)',
     mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
     mtm_scanner_lifetime: 'Scanner MTM V3.4 (Vitalício)',
@@ -52,10 +54,10 @@ async function getMessaging(): Promise<any | null> {
     const mod = (await import('firebase-admin')) as unknown as { default?: any } & Record<string, any>
     const admin = mod.default ?? mod
     if (!admin.apps?.length) {
-      const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim()
+      const key = lerContaFirebase()
       if (key) {
         try {
-          admin.initializeApp({ credential: admin.credential.cert(JSON.parse(key)) })
+          admin.initializeApp({ credential: admin.credential.cert(key as never) })
         } catch {
           // Já inicializado
         }

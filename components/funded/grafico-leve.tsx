@@ -9,6 +9,7 @@ import type { InputsGoldKiller, ResultadoGoldKiller } from "@/lib/estudos/goldki
 import LegendaMTMScanner from "@/lib/estudos/mtmscanner/legenda"
 import type { InputsMTMScanner, ResultadoMTMScanner } from "@/lib/estudos/mtmscanner/tipos"
 import type { ResultadoTrendShot } from "@/lib/estudos/trendshot/motor"
+import type { ResultadoPremium } from "@/lib/estudos/premium-scanner/motor"
 import type { InputsSensei, ResultadoSensei, Vela } from "@/lib/estudos/sensei/tipos"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
@@ -189,6 +190,10 @@ export default function GraficoLeve(props: GraficoProps & {
     /** Cada resultado novo (null ao desligar) — alimenta o «Usar este sinal». */
     aoCalcular?: (r: ResultadoTrendShot | null) => void
   } | null
+  /** MTM Premium Scanner desenhado no gráfico (null/undefined = desligado) — lib/estudos/premium-scanner. */
+  premium?: {
+    aoCalcular?: (r: ResultadoPremium | null) => void
+  } | null
 }) {
   const { simbolo, preco, precos, volume, posicoes, ordens, podeNegociar, tf, modo, setModo } = props
   const [estadoVelas, setEstadoVelas] = useState<"a_carregar" | "historico" | "ao_vivo" | "erro">("a_carregar")
@@ -297,6 +302,11 @@ export default function GraficoLeve(props: GraficoProps & {
   const trendshotLigado = Boolean(props.trendshot)
   const aoCalcularTSRef = useRef(props.trendshot?.aoCalcular)
   aoCalcularTSRef.current = props.trendshot?.aoCalcular
+  const psRef = useRef<import("@/lib/estudos/premium-scanner/lightweight").PremiumLW | null>(null)
+  const [psPronto, setPsPronto] = useState(false)
+  const premiumLigado = Boolean(props.premium)
+  const aoCalcularPSRef = useRef(props.premium?.aoCalcular)
+  aoCalcularPSRef.current = props.premium?.aoCalcular
   // Telemóvel: os painéis começam fechados (tapavam o gráfico todo); abrem-se no botão.
   useEffect(() => { try { if (window.matchMedia("(max-width: 767px)").matches) setPaineisAbertos(false) } catch { /* ok */ } }, [])
 
@@ -870,6 +880,31 @@ export default function GraficoLeve(props: GraficoProps & {
     if (snapshot.length < 60) return
     aoCalcularTSRef.current?.(tsRef.current.update(snapshot))
   }, [tsPronto, versaoVelas, historicoCompleto, estadoVelas])
+
+  // ── Premium Scanner ── (voto de 5 e níveis fixos: cálculo leve, sem Web Worker)
+  useEffect(() => {
+    if (!pronto || !premiumLigado) return
+    let vivo = true
+    import("@/lib/estudos/premium-scanner/lightweight").then((mod) => {
+      if (!vivo || !graficoRef.current || !serieRef.current) return
+      psRef.current = mod.anexarPremium(graficoRef.current, serieRef.current, { simbolo: simbolo.symbol, etiquetasEixo: !props.compacto })
+      setPsPronto(true)
+    }).catch(() => { /* sem estudo — o gráfico continua */ })
+    return () => {
+      vivo = false
+      try { psRef.current?.remove() } catch { /* o gráfico já foi removido */ }
+      psRef.current = null
+      setPsPronto(false)
+      aoCalcularPSRef.current?.(null)
+    }
+  }, [pronto, premiumLigado, simbolo.symbol, tf]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!psPronto || !psRef.current || estadoVelas === "a_carregar") return
+    const snapshot = velasRef.current.slice()
+    if (snapshot.length < 220) return
+    aoCalcularPSRef.current?.(psRef.current.update(snapshot))
+  }, [psPronto, versaoVelas, historicoCompleto, estadoVelas])
 
   // ── MTM Scanner ──
   useEffect(() => {

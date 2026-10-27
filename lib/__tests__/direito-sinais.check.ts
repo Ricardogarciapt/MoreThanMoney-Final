@@ -93,6 +93,7 @@ assert.equal(alertaDeSinalPago({ strategy: 'MTM Sensei X', assetClass: 'forex' }
 assert.equal(alertaDeSinalPago({ strategy: 'MTM Sensei X', assetClass: 'crypto_perp' }), false, 'perps são abertos')
 assert.equal(alertaDeSinalPago({ strategy: 'GoldKiller', assetClass: 'gold_btc' }), true)
 assert.equal(alertaDeSinalPago({ strategy: null, alertName: 'GoldKiller XAUUSD', assetClass: 'gold_btc' }), true, 'o nome do alerta também conta')
+assert.equal(alertaDeSinalPago({ strategy: null, alertName: 'MTM Premium Scanner', assetClass: 'gold_btc' }), true, 'Premium Scanner é pago')
 assert.equal(alertaDeSinalPago({ strategy: 'MTMScanner', assetClass: 'gold_btc' }), false)
 assert.equal(alertaDeSinalPago({ strategy: 'MTM Aurum Flow ORB', assetClass: 'crypto_perp' }), false)
 assert.equal(alertaDeSinalPago({ strategy: null, alertName: null, assetClass: 'forex' }), false)

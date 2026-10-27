@@ -10,13 +10,6 @@ import { avaliarUidLead, validarUidBroker } from '@/lib/broker/dados-corretora'
 import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { MIN_DEPOSIT } from '@/lib/broker/deposito-minimo'
-import {
-  resolvedForexIdeasChatId,
-  resolvedTradeIdeasChatId,
-  resolvedPremiumSignalsChatId,
-  resolvedGoldkillerScannerChatId,
-  resolvedPerpsChatId,
-} from '@/lib/telegram-channel-ids'
 
 type Supa = ReturnType<typeof getSupabaseAdmin>
 
@@ -27,24 +20,6 @@ export { MIN_DEPOSIT }
 // deixou de conseguir gerar os convites dos grupos. O token canónico é o do @MoreThanMoney_aibot,
 // que é o MESMO bot que o funil já anuncia; getMtmcopyBotToken() tenta-o primeiro.
 const BOT = () => getMtmcopyBotToken()
-
-/**
- * Os grupos de sinais libertados após validação. chatId canónico (resolvido por env) +
- * link estático de fallback (para grupos que não geram convite pessoal, ex.: Basic group).
- */
-// O «Grupo Forex Swings» («MTM Auto FOREX swings») saiu desta lista a 04/10/2026: o grupo fechou por
-// decisão do dono e um convite para um grupo fechado é uma porta pintada na parede.
-function accessGroups(): { label: string; chatId: string; fallback: string | null }[] {
-  return [
-    { label: '💱 Grupo Forex', chatId: resolvedForexIdeasChatId(), fallback: process.env.TELEGRAM_FOREX_LINK || 'https://t.me/+cVcMbCRt2rlmNzg0' },
-    { label: '🧠 Grupo Sensei', chatId: resolvedTradeIdeasChatId(), fallback: process.env.TELEGRAM_SENSEI_LINK || 'https://t.me/+mbqBggXniu5lNTBk' },
-    { label: '👑 Grupo Premium', chatId: resolvedPremiumSignalsChatId(), fallback: process.env.TELEGRAM_PREMIUM_LINK || 'https://t.me/MTMgold' },
-    { label: '🥇 Grupo GoldKiller', chatId: resolvedGoldkillerScannerChatId(), fallback: process.env.TELEGRAM_GOLDKILLER_LINK || null },
-    // Perpétuos cripto: faz parte da comunidade agrupada no Telegram, por isso entra no MESMO
-    // gate. Um grupo que existe mas não é libertado é um grupo que ninguém encontra.
-    { label: '🪙 Ideias de Perpétuos Cripto', chatId: resolvedPerpsChatId() ?? '', fallback: process.env.TELEGRAM_PERPS_LINK || 'https://t.me/+ue9JuMRwMv0zMGQ0' },
-  ]
-}
 
 async function tg(method: string, body: Record<string, unknown>) {
   const token = BOT()
@@ -333,17 +308,6 @@ export async function grantBrokerAccess(supabase: Supa, chatId: string): Promise
   if ((lead as { stage?: string } | null)?.stage === 'granted') return
   const uid = (lead as { broker_uid?: string } | null)?.broker_uid ?? null
 
-  // Link de convite pessoal (one-time) por grupo; fallback estático se o grupo não gerar.
-  const mkLink = async (chat: string) => {
-    const r = await tg('createChatInviteLink', { chat_id: chat, member_limit: 1, name: `lead ${chatId}` })
-    return (r as { result?: { invite_link?: string } } | null)?.result?.invite_link ?? null
-  }
-  const linkLines: string[] = []
-  for (const g of accessGroups()) {
-    const url = (await mkLink(g.chatId)) || g.fallback
-    if (url) linkLines.push(`<a href="${url}">${g.label}</a>`)
-  }
-
   const coupon = (lead as { coupon_code?: string } | null)?.coupon_code || (await createPremiumCoupon(supabase, chatId, uid))
 
   await supabase
@@ -351,11 +315,21 @@ export async function grantBrokerAccess(supabase: Supa, chatId: string): Promise
     .update({ stage: 'granted', coupon_code: coupon, granted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('chat_id', chatId)
 
-  const links = linkLines.join('\n')
-  await send(
+  // Quem já tinha pedido para entrar num grupo de sinais é aprovado agora, sem ter de pedir outra vez.
+  try {
+    const { aprovarPedidosPendentes } = await import('@/lib/telegram-porta-sinais')
+    await aprovarPedidosPendentes(supabase, chatId)
+  } catch {
+    /* os links de baixo continuam a servir */
+  }
+
+  // Os botões «Entra aqui» de cada grupo: links com pedido de adesão, que a porta dos sinais aprova
+  // na hora porque a pessoa já está validada (lib/telegram-porta-sinais).
+  const { enviarBotoesDosGrupos } = await import('@/lib/telegram-porta-sinais')
+  await enviarBotoesDosGrupos(
     chatId,
     `🎉 <b>Acesso libertado!</b>\n\n` +
-      `Entra nos grupos de sinais (links pessoais):\n${links}\n\n` +
+      `Carrega em <b>Entra aqui</b> em cada grupo de sinais que quiseres — aprovo-te na hora. 👇\n\n` +
       (coupon
         ? `📲 O teu cupão Premium para a app: <code>${coupon}</code>\n` +
           `Descarrega a app, cria conta e usa o cupão para ativar + fazer onboarding: https://www.morethanmoney.pt/register\n\n`
