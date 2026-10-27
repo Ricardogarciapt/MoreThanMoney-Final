@@ -31,8 +31,10 @@ import { carregarDireitos } from '@/lib/entitlements'
  */
 export const PRODUTO_EA = 'sensei_ea'
 export const PRODUTO_SCALP = 'sensei_scalp'
+/** EA do MTM Premium Scanner (27/10/2026): vende-se no pacote com o indicador e a estratégia. */
+export const PRODUTO_PREMIUM_SCANNER = 'premium_scanner_ea'
 
-export type ProdutoLicenca = typeof PRODUTO_EA | typeof PRODUTO_SCALP
+export type ProdutoLicenca = typeof PRODUTO_EA | typeof PRODUTO_SCALP | typeof PRODUTO_PREMIUM_SCANNER
 
 export interface DefinicaoProduto {
   id: ProdutoLicenca
@@ -70,11 +72,23 @@ export const PRODUTOS: Record<ProdutoLicenca, DefinicaoProduto> = {
     envAnual: 'STRIPE_PRICE_SENSEI_SCALP_ANNUAL',
     envVitalicio: 'STRIPE_PRICE_SENSEI_SCALP_LIFETIME',
   },
+  [PRODUTO_PREMIUM_SCANNER]: {
+    id: PRODUTO_PREMIUM_SCANNER,
+    nome: 'MTM Premium Scanner EA',
+    pagina: 'morethanmoney.pt/premium-scanner-ea',
+    // Só vitalícia, dentro do pacote (indicador + estratégia + EA). Sem plano anual.
+    precoAnual: 0,
+    precoVitalicio: 1250,
+    incluidaEmMembro: false,
+    envAnual: 'STRIPE_PRICE_PREMIUM_SCANNER_EA_ANNUAL',
+    envVitalicio: 'STRIPE_PRICE_PREMIUM_SCANNER_EA_LIFETIME',
+  },
 }
 
 /** Um identificador vindo do EA ou de um query string, reduzido a um produto conhecido. */
 export function produtoDe(v: unknown): ProdutoLicenca {
-  return v === PRODUTO_SCALP ? PRODUTO_SCALP : PRODUTO_EA
+  if (v === PRODUTO_SCALP || v === PRODUTO_PREMIUM_SCANNER) return v
+  return PRODUTO_EA
 }
 
 export const PRECO_ANUAL_EUR = PRODUTOS[PRODUTO_EA].precoAnual

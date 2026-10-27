@@ -109,6 +109,23 @@ async function contextoDoEducador(db: ReturnType<typeof getSupabaseAdmin>, jobId
   }
 }
 
+/**
+ * HÁ UM EDUCADOR EM DIRECTO?
+ *
+ * Enquanto há sessão no ar o cortador não pega em nada: o Mac e o VPS são as mesmas máquinas
+ * que levam o stream, e um Whisper ou um ffmpeg a meio fazem cair frames a quem está a ver.
+ * Um `is_live` esquecido a true (sala que não fechou) não pode parar o cortador para sempre:
+ * só conta se a sala mexeu nas últimas 8 horas.
+ */
+async function emDirecto(db: ReturnType<typeof getSupabaseAdmin>): Promise<boolean> {
+  const desde = new Date(Date.now() - 8 * 3600_000).toISOString()
+  const { count, error } = await db.from('lms_streams')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_live', true)
+    .or(`live_started_at.gte.${desde},updated_at.gte.${desde}`)
+  return !error && (count ?? 0) > 0
+}
+
 /** Um trabalho reclamado há mais do que isto foi abandonado — a máquina morreu a meio. */
 const MINUTOS_ATE_DESISTIR = 40
 
@@ -131,6 +148,24 @@ export async function GET(request: NextRequest) {
       )
     }
   }
+
+  const noAr = await emDirecto(db)
+
+  /**
+   * O PULSO DE UM TRABALHO A MEIO (`?pausa=1`), a cada minuto.
+   *
+   * Responde se há directo (o worker congela os processos e retoma quando acabar) e renova o
+   * `reclamado_em` dos trabalhos desta máquina: uma aula longa, ou uma pausa por directo, não
+   * pode parecer abandono e ser entregue a outra máquina enquanto esta ainda a tem.
+   */
+  if (request.nextUrl.searchParams.get('pausa') === '1') {
+    await db.from('videocliper_jobs')
+      .update({ reclamado_em: agora.toISOString() })
+      .eq('reclamado_por', quem)
+      .in('estado', ['a_descarregar', 'a_transcrever', 'a_analisar', 'a_render'])
+    return NextResponse.json({ emDireto: noAr })
+  }
+  if (noAr) return NextResponse.json({ tipo: 'nada', emDireto: true })
 
   /**
    * Devolver trabalhos abandonados à fila.

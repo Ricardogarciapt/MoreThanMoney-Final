@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { VelaRef } from '@/lib/mercado/referencias'
 import { limparCacheReferencias } from '@/lib/mercado/velas-referencia'
-import { VELAS_MINIMAS, simboloBase, svgVelasSinal, tfParaRef, velasDoSinal } from '@/lib/sinais/grafico-velas'
+import { VELAS_MINIMAS, fatorDeAgregacao, rotuloTf, simboloBase, svgVelasSinal, tfParaRef, velasDoSinal } from '@/lib/sinais/grafico-velas'
 import { linhasDaEstrategia, marcaDaEstrategia } from '@/lib/sinais/grafico-estrategia'
 
 let ok = 0, ko = 0
@@ -160,6 +160,11 @@ async function main() {
   t('Trendshot nunca traduzido', marcaDaEstrategia('trendshot').nome, 'MTM Auto Trendshot')
   t('linhas de outro comprimento não se desenham', (svgVelasSinal({ ticker: 'XAUUSD', timeframe: '15', direcao: 'buy', entry: 4000, sl: 3980, tps: [], emSeg: T0, linhas: [{ nome: 'x', cor: '#fff', valores: [1, 2] }] }, longa.slice(-110)).match(/<polyline/g) ?? []).length, 0)
 
+  t('M3 do TrendShot: 3 velas M1 por vela', fatorDeAgregacao('3', 60), 3)
+  t('M30: 2 velas M15', fatorDeAgregacao('30', 900), 2)
+  t('M15 já existe: sem agregar', fatorDeAgregacao('15', 900), 1)
+  t('M7 não é múltiplo de M5: sem agregar', fatorDeAgregacao('7', 300), 1)
+  t('rótulo é o do alerta', [rotuloTf('3'), rotuloTf('15'), rotuloTf('120'), rotuloTf('1D')].join(','), 'M3,M15,H2,D1')
   globalThis.fetch = fetchOriginal
   console.log(`\n${ok} passaram, ${ko} falharam`)
   process.exit(ko ? 1 : 0)

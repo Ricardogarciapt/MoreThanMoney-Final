@@ -21,6 +21,7 @@ export const scannerOrder = [
   "Goldkiller",
   "MTMScanner",
   "Sensei",
+  "PremiumScanner",
 ] as const
 
 export type ScannerKey = (typeof scannerOrder)[number]
@@ -46,6 +47,8 @@ export const scannerStudies: Record<ScannerKey, string[]> = {
   Goldkiller: ["PUB;a3eaa6af54de4202a2c2f807fd8baa08"],
   MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
   Sensei: ["PUB;0aba45d8eeed42368922a344f547eeb6"],
+  // MTM Premium Scanner (27/10/2026): zonas de recuo no ouro por sessão — docs/pine/mtm-premium-scanner.pine
+  PremiumScanner: ["PUB;37deee45abee4dcea91b381f3c4d10b9"],
 }
 
 export const scannerLabels: Record<ScannerKey, string> = {
@@ -59,6 +62,7 @@ export const scannerLabels: Record<ScannerKey, string> = {
   Goldkiller: "GoldKiller",
   MTMScanner: "MTM",
   Sensei: "Sensei",
+  PremiumScanner: "Premium Scanner",
 }
 
 /**
@@ -74,6 +78,8 @@ export const ESTUDOS_WEBTRADER = [
   { chave: "Sensei", rotulo: "Sensei", alerta: "sensei", acesso: "Sensei", curto: "Sensei", cor: "#F472B6" },
   { chave: "MTMScanner", rotulo: "MTM Scanner", alerta: "mtmscanner", acesso: "MTMScanner", curto: "MTM", cor: "#A78BFA" },
   { chave: "TrendShot", rotulo: "TrendShot", alerta: "trendshot", acesso: "TrendShot", curto: "TS", cor: "#38BDF8" },
+  // Premium Scanner (27/10): só cálculo local (os alertas dele ficam em sombra, sem setas por webhook).
+  { chave: "PremiumScanner", rotulo: "Premium Scanner", alerta: "premiumscanner", acesso: "PremiumScanner", curto: "PS", cor: "#E9C46A" },
 ] as const
 
 export type EstudoWebtrader = (typeof ESTUDOS_WEBTRADER)[number]

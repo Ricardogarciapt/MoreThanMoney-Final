@@ -12,7 +12,8 @@ import { agruparContas, type ContaAgrupada } from "@/lib/admin-centro/agrupar-co
 import { AVISO_SIMULADO, resumirSaldos, textoPct } from "@/lib/admin-centro/linha-de-agua"
 import { MarcaProveniencia, PctLinhaDeAgua } from "../linha-de-agua"
 import { useCentroCtx } from "../contexto"
-import { Azulejo, BotaoLer, Chip, Filtros, Grupo, Lista, Painel, Pilula, Recolhivel, Tabela, fmtIdade, fmtNum, idadeDe, td, th, trClic, useCentro } from "../ui"
+import { Loader2, Wallet } from "lucide-react"
+import { Azulejo, Botao, BotaoLer, Chip, Filtros, Grupo, Lista, Painel, Pilula, Recolhivel, Tabela, fmtIdade, fmtNum, idadeDe, pedirCentro, td, th, trClic, useCentro } from "../ui"
 
 export type DadosContas = { contas: ContaCentro[]; avisos: string[]; lidaEm: string }
 
@@ -39,6 +40,7 @@ export function ehPremium(c: ContaCentro) {
 
 const FONTE_SALDO: Record<string, { curto: string; titulo: string }> = {
   atual: { curto: "", titulo: "saldo actual (motor MTM Funded)" },
+  lido: { curto: "", titulo: "saldo da corretora, última leitura guardada (vista ao vivo, cópia ou «Actualizar saldos»)" },
   referencia: { curto: "ref.", titulo: "saldo de referência guardado ao ligar a conta — não é o actual" },
   maximo: { curto: "máx.", titulo: "o saldo mais alto já visto (MTM Auto) — não é o actual" },
 }
@@ -60,6 +62,27 @@ export function SaldoCel({ c }: { c: ContaCentro }) {
       <span className="text-[10px]">
         <PctLinhaDeAgua l={c.linhaDeAgua} />
         {c.saldoInicial != null && <span className="ml-1 text-zinc-600">de {fmtNum(c.saldoInicial, 0)}</span>}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * A equity ao lado do capital: o número, a diferença para o saldo (= o flutuante das posições abertas)
+ * e há quanto tempo foi lida, quando vem da corretora. Sem leitura guardada, diz-se em vez de inventar.
+ */
+export function EquityCel({ c }: { c: ContaCentro }) {
+  const flutuante = c.equity != null && c.saldo != null ? c.equity - c.saldo : null
+  return (
+    <div className="flex flex-col items-start gap-0.5">
+      {c.equity == null ? <span className="text-zinc-600" title="sem leitura guardada — usa «Actualizar saldos»">—</span> : <span>{fmtNum(c.equity, 2)}</span>}
+      <span className="text-[10px]">
+        {flutuante != null && Math.abs(flutuante) >= 0.01 && (
+          <span className={flutuante > 0 ? "text-emerald-400" : "text-rose-400"} title="equity − capital: o resultado das posições abertas">{flutuante > 0 ? "+" : ""}{fmtNum(flutuante, 2)}</span>
+        )}
+        {c.saldoFonte === "lido" && c.saldoLidoEm && (
+          <span className={`ml-1 ${(idadeDe(c.saldoLidoEm) ?? 0) > 3600 ? "text-amber-500/80" : "text-zinc-600"}`} title={`lido em ${new Date(c.saldoLidoEm).toLocaleString("pt-PT")}`}>há {fmtIdade(idadeDe(c.saldoLidoEm))}</span>
+        )}
       </span>
     </div>
   )
@@ -126,6 +149,20 @@ export default function SeccaoContas() {
   useEffect(() => { setProblema(ctx.filtro.problema ?? "") }, [ctx.filtro])
 
   const [premium, setPremium] = useState(false)
+  const [ordem, setOrdem] = useState<"" | "capital" | "equity">("")
+  // «Actualizar saldos»: lotes de 25 contas de corretora com leitura velha, 3 de cada vez, no servidor.
+  const [aLerSaldos, setALerSaldos] = useState(false)
+  const [notaSaldos, setNotaSaldos] = useState<string | null>(null)
+  const actualizarSaldos = async () => {
+    setALerSaldos(true)
+    setNotaSaldos(null)
+    const r = await pedirCentro<{ lidas: number; falhas: { ref: string; erro: string }[]; restantes: number }>("/api/admin/centro/contas", { method: "POST", body: { acao: "saldos" } })
+    setALerSaldos(false)
+    if (!r.success || !r.data) { setNotaSaldos(`Falhou: ${r.error ?? "erro"}`); return }
+    const d = r.data
+    setNotaSaldos(`${d.lidas} lida(s)${d.falhas.length ? ` · ${d.falhas.length} sem leitura` : ""}${d.restantes ? ` · faltam ${d.restantes} (carrega outra vez)` : " · tudo em dia"}`)
+    recarregar()
+  }
   // `ligacoes` = cada caminho por onde a conta chega (T2T, MTM Auto, WebTrader, Funded); `todas` = a
   // conta uma vez só. Quota e MetaApi contam-se por ligação (cada uma é uma conta MetaApi); o resto
   // conta-se por conta — senão a mesma conta somava o saldo duas vezes.
@@ -134,7 +171,7 @@ export default function SeccaoContas() {
   const lista = useMemo(() => {
     const t = q.trim().toLowerCase()
     const alguma = (c: ContaAgrupada, f: (l: ContaCentro) => boolean) => c.ligacoes.some(f)
-    return todas.filter((c) => {
+    const filtradas = todas.filter((c) => {
       if (plataforma && c.plataforma !== plataforma) return false
       if (categoria && !alguma(c, (l) => l.categoria === categoria)) return false
       if (premium && (!ehPremium(c) || c.categoria === "mestre")) return false
@@ -144,7 +181,11 @@ export default function SeccaoContas() {
       if (t && !c.ligacoes.some((l) => [l.email, l.nome, l.login, l.servidor, l.rotulo, l.etiquetaDoDono, l.metaapiAccountId, l.ref].some((x) => x && x.toLowerCase().includes(t)))) return false
       return true
     })
-  }, [todas, q, plataforma, categoria, problema, premium])
+    if (!ordem) return filtradas
+    // Sem valor vai para o fim, por qualquer ordem.
+    const v = (c: ContaAgrupada) => (ordem === "capital" ? c.saldo : c.equity)
+    return [...filtradas].sort((a, b) => { const x = v(a), y = v(b); return x == null ? (y == null ? 0 : 1) : y == null ? -1 : y - x })
+  }, [todas, q, plataforma, categoria, problema, premium, ordem])
 
   const graves = todas.filter((c) => c.ligacoes.some((l) => tomEstadoConta(l) === "grave")).length
   const premiumLista = todas.filter((c) => ehPremium(c) && c.categoria !== "mestre")
@@ -166,7 +207,15 @@ export default function SeccaoContas() {
           passaria por prova, porque o simulado entra a preço melhor do que o mercado deu. */}
       <ResumoSaldos contas={todas} />
 
-      <Painel titulo="Todas as contas" sub="T2T/site, MTM Auto, WebTrader e MTM Funded — estado guardado na base, sem chamadas à MetaApi. Clica para abrir a gaveta com acções." accao={<BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />}>
+      <Painel titulo="Todas as contas" sub="T2T/site, MTM Auto, WebTrader e MTM Funded — estado, capital e equity guardados na base, sem chamadas à MetaApi por linha. Clica para abrir a gaveta com acções." accao={(
+        <div className="flex items-center gap-1.5">
+          <Botao onClick={actualizarSaldos} disabled={aLerSaldos} title="Lê saldo e equity das contas MT4/MT5/TradeLocker com leitura de mais de 10 min (25 de cada vez). As MTM Funded já vêm do motor.">
+            {aLerSaldos ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wallet className="h-3 w-3" />}Actualizar saldos
+          </Botao>
+          <BotaoLer onClick={recarregar} aCarregar={aCarregar} lidoEm={lidoEm} />
+        </div>
+      )}>
+        {notaSaldos && <p className="mb-2 text-[11px] text-zinc-400">{notaSaldos}</p>}
         <Filtros q={q} aoMudarQ={setQ} exemplo="email, login, servidor, etiqueta, id MetaApi…" contagem={lista.length} total={todas.length}>
           <Chip activo={!plataforma} onClick={() => setPlataforma("")}>todas</Chip>
           {PLATAFORMAS.map((p) => <Chip key={p} activo={plataforma === p} onClick={() => setPlataforma(p)}>{p}</Chip>)}
@@ -177,8 +226,8 @@ export default function SeccaoContas() {
           {problema && <Chip activo onClick={() => setProblema("")}>filtro: {problema === "1" ? "com problema" : problema} ✕</Chip>}
         </Filtros>
         <Lista dados={dados} erro={erro} avisos={dados?.avisos} vazio={todas.length === 0} textoVazio="Nenhuma conta ligada em nenhum produto." filtrada={lista.length === 0}>
-          <Tabela min={1100}>
-            <thead><tr><th className={th}>Conta</th><th className={th}>Dono · direito</th><th className={th}>Estado</th><th className={th}>MetaApi · quota</th><th className={th}>Usos</th><th className={th} title="saldo actual · linha de água (contra saldo_inicial) · «SIM» = conta simulada">Saldo · linha de água</th><th className={th}>Actividade</th><th className={th} /></tr></thead>
+          <Tabela min={1200}>
+            <thead><tr><th className={th}>Conta</th><th className={th}>Dono · direito</th><th className={th}>Estado</th><th className={th}>MetaApi · quota</th><th className={th}>Usos</th><th className={th} title="saldo actual · linha de água (contra saldo_inicial) · «SIM» = conta simulada · clica para ordenar"><button type="button" onClick={() => setOrdem(ordem === "capital" ? "" : "capital")} className="uppercase tracking-wider hover:text-[#E9C46A]">Capital{ordem === "capital" ? " ↓" : ""}</button></th><th className={th} title="equity · flutuante (equity − capital) · idade da leitura · clica para ordenar"><button type="button" onClick={() => setOrdem(ordem === "equity" ? "" : "equity")} className="uppercase tracking-wider hover:text-[#E9C46A]">Equity{ordem === "equity" ? " ↓" : ""}</button></th><th className={th}>Actividade</th><th className={th} /></tr></thead>
             <tbody>
               {lista.slice(0, 500).map((c) => (
                 <tr key={c.ref} className={trClic} onClick={() => ctx.abrir({ tipo: "conta", id: c.ref })}>
@@ -211,6 +260,7 @@ export default function SeccaoContas() {
                   </td>
                   <td className={`${td} max-w-[240px] text-[10.5px] text-zinc-400`}>{[...c.usos, ...c.estrategias.filter((e) => !c.usos.some((u) => u.includes(e)))].join(" · ")}</td>
                   <td className={`${td} font-mono`}><SaldoCel c={c} /></td>
+                  <td className={`${td} font-mono`}><EquityCel c={c} /></td>
                   <td className={`${td} font-mono`}>{c.ultimaActividade ? fmtIdade(idadeDe(c.ultimaActividade)) : "—"}</td>
                   <td className={td}>
                     <span className="rounded-md border border-[#D2A63C]/40 px-2 py-1 text-[10.5px] font-medium text-[#E9C46A]">Gerir</span>

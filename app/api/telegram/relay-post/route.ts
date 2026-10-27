@@ -1,12 +1,45 @@
 import { premiumParaFormatoUnico } from '@/lib/sinais/premium-formato'
 import { forexSwingsParaFormatoUnico } from '@/lib/sinais/forex-swings-formato'
-import { NextRequest, NextResponse } from 'next/server'
-import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
+import { NextRequest, NextResponse, after } from 'next/server'
+import { getMtmcopyBotToken, sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { resolveAppChannelSlug } from '@/lib/telegram-app-channels'
 import { resolveThreadParent } from '@/lib/telegram-reply-thread'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { fonteSoPublicacaoDoCanal } from '@/lib/sinais/identidade'
+import {
+  enviarGraficoTelegram,
+  graficoDoFormatoUnico,
+  legendaDoGrafico,
+  urlDoGrafico,
+  type ParametrosGrafico,
+} from '@/lib/sinais/grafico-publicar'
+
+/**
+ * O GRÁFICO DA ENTRADA nas fontes que chegam como texto (27/10, pedido do dono): Premium e Forex
+ * Swings passam a levar a imagem como o GoldKiller — no chat da app (`image_url`) e no Telegram,
+ * como foto em resposta ao texto. A foto vai DEPOIS da resposta (`after`): o Telegram demora a ir
+ * buscar o PNG e o relay do VPS desiste aos 20 s; uma foto que falhe não toca no sinal.
+ */
+const GRAFICO_DO_CANAL: Record<string, { estrategia: string; nome: string; timeframe: string }> = {
+  'premium-ideas': { estrategia: 'premium', nome: 'MTM Auto Premium', timeframe: '15' },
+  'ideias-e-sinais': { estrategia: 'forex-swings', nome: 'MTM Auto Forex Swings', timeframe: '60' },
+}
+
+function graficoDaEntrada(slug: string, conteudo: string): ParametrosGrafico | null {
+  const g = GRAFICO_DO_CANAL[slug]
+  return g ? graficoDoFormatoUnico(conteudo, g.estrategia, { timeframe: g.timeframe, quando: Date.now() }) : null
+}
+
+function fotoNoTelegram(slug: string, chatId: string, grafico: ParametrosGrafico, responderA: number) {
+  const token = getMtmcopyBotToken()
+  const g = GRAFICO_DO_CANAL[slug]
+  if (!token || !g) return
+  after(() =>
+    enviarGraficoTelegram(token, chatId, urlDoGrafico(grafico, { png: true }), legendaDoGrafico(g.nome, grafico.simbolo, grafico.timeframe), responderA)
+      .then(() => undefined),
+  )
+}
 
 /**
  * Fontes com chat próprio na app: espelham no chat, geram cartão T2T e executam na CONTA
@@ -321,13 +354,16 @@ export async function POST(req: NextRequest) {
           .eq('telegram_message_id', r.messageId)
           .maybeSingle()
         if (!dup) {
+          // Entradas no formato único (com as notas do trader); o resto fica literal.
+          const conteudo = premiumParaFormatoUnico(execText) ?? execText
+          const grafico = graficoDaEntrada(slug, conteudo)
           const { data: msg } = await supabase
             .from('chat_messages')
             .insert({
               channel_slug: slug,
               user_id: null,
-              // Entradas no formato único (com as notas do trader); o resto fica literal.
-              content: premiumParaFormatoUnico(execText) ?? execText,
+              content: conteudo,
+              ...(grafico ? { image_url: urlDoGrafico(grafico) } : {}),
               message_type: 'telegram_forward',
               telegram_sender: null,
               telegram_message_id: r.messageId,
@@ -341,6 +377,7 @@ export async function POST(req: NextRequest) {
             .select('id')
             .single()
           await sendTelegramChannelPush({ slug, content: execText, chatMessageId: msg?.id as string, telegramMessageId: r.messageId }).catch(() => {})
+          if (grafico) fotoNoTelegram(slug, chatId, grafico, r.messageId)
         }
       }
     } catch (e) {
@@ -389,12 +426,14 @@ export async function POST(req: NextRequest) {
           const paiId = await resolveThreadParent(slug, replyToDest, execText)
           // Entradas no formato único de todos os chats de ideias; seguimentos ficam literais.
           const conteudo = (!paiId && slug === 'ideias-e-sinais' ? forexSwingsParaFormatoUnico(execText) : null) ?? execText
+          const grafico = paiId ? null : graficoDaEntrada(slug, conteudo)
           const { data: msg } = await supabase
             .from('chat_messages')
             .insert({
               channel_slug: slug,
               user_id: null,
               content: conteudo,
+              ...(grafico ? { image_url: urlDoGrafico(grafico) } : {}),
               message_type: 'telegram_forward',
               telegram_sender: null,
               telegram_message_id: r.messageId,
@@ -404,6 +443,7 @@ export async function POST(req: NextRequest) {
             .select('id')
             .single()
           await sendTelegramChannelPush({ slug, content: execText, chatMessageId: msg?.id as string, telegramMessageId: r.messageId }).catch(() => {})
+          if (grafico) fotoNoTelegram(slug, chatId, grafico, r.messageId)
         }
       }
     } catch (e) {

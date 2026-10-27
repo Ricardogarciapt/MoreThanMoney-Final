@@ -1,7 +1,8 @@
 import { ehContaMetaApi } from '@/lib/contas/quota-metaapi'
 import { CONTAS_MOTOR_TEMPO_REAL } from '@/lib/mtmcopy/provider-constants'
 import { direitosEmLote } from '@/lib/copia-contas/servidor/direitos-lote'
-import { emCache } from '../cache'
+import { emCache, esquecerCache } from '../cache'
+import { chaveDoSaldo } from '@/lib/copia-contas/servidor/saldos-lidos'
 import { erroActual } from '../regras'
 import { CONTAS_METAAPI_APAGADAS } from '@/lib/mtmcopy/metaapi-inexistentes'
 import { ehErroDeQuotaTexto } from '@/lib/mtmcopy/erro-historico'
@@ -56,9 +57,12 @@ export interface ContaCentro {
   usos: string[]
   estrategias: string[]
   saldo: number | null
-  /** De onde vem o saldo: `atual` (motor MTM Funded), `referencia` (baseline_balance da ligação,
+  /** De onde vem o saldo: `atual` (motor MTM Funded), `lido` (saldo da corretora guardado da última
+   *  leitura — vista ao vivo, cópia ou «Actualizar saldos»), `referencia` (baseline_balance da ligação,
    *  guardado ao ligar) ou `maximo` (o mais alto já visto — MTM Auto, serve para a isenção). */
-  saldoFonte: 'atual' | 'referencia' | 'maximo' | null
+  saldoFonte: 'atual' | 'lido' | 'referencia' | 'maximo' | null
+  /** `lido`: quando o saldo/equity da corretora foi lido (216 · contas_saldo_lido). null nas outras fontes. */
+  saldoLidoEm?: string | null
   /** `mtm_trading_accounts.saldo_inicial` — a linha de partida. null = a conta não declara nenhuma. */
   saldoInicial: number | null
   /** «real» ou «simulado»: uma conta SIM entra ao preço do sinal e o saldo dela não é prova. */
@@ -112,7 +116,7 @@ function saldoAuto(
 async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; lidaEm: string }> {
   const avisos: string[] = []
   const agora = Date.now()
-  const [site, auto, wt, funded, subs, rotas, tenants, providers, infra] = await Promise.all([
+  const [site, auto, wt, funded, subs, rotas, tenants, providers, infra, lidos] = await Promise.all([
     ler(db().from('mtmcopy_connections').select('id, user_id, account_label, mt5_login, mt5_server, mt5_platform, mt5_status, is_active, last_error, last_signal_at, metaapi_account_id, purpose, t2t_enabled, account_role, copyfactory_strategy_pick, copyfactory_subscribed, copy_method, baseline_balance, tl_env, tl_acc_num, tl_server, tl_last_error, funded_account_id, created_at, updated_at').neq('mt5_status', 'disconnected').limit(3000)),
     ler(db().from('mtmauto_accounts').select('id, user_id, metaapi_account_id, login, servidor, corretora, plataforma, estado, erro, tl_last_error, copia_ativa, rotulo, demo, saldo_maximo, saldo_visto_em, funded_account_id, created_at, updated_at').limit(3000)),
     ler(db().from('webtrader_contas_mt5').select('id, user_id, metaapi_account_id, plataforma, login, servidor, rotulo, estado, erro, created_at, updated_at').limit(3000)),
@@ -122,6 +126,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     ler(db().from('mtmauto_users').select('user_id, tenant_id').not('tenant_id', 'is', null).limit(3000)),
     lerProviders(),
     carregarInfra(),
+    ler(db().from('contas_saldo_lido').select('chave, saldo, equity, lido_em').limit(5000)),
   ])
   // As etiquetas (113) vêm à PARTE e nunca falham a lista: juntá-las aos selects acima faria o
   // `ler()` tratar a coluna em falta como tabela em falta e o painel aparecia sem contas nenhumas.
@@ -145,6 +150,7 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     ['subscrições', subs], ['rotas de cópia', rotas], ['equipas', tenants],
   ] as const) if (x.erro) avisos.push(`${n}: ${x.erro}`)
   if (wt.semTabela) avisos.push('WebTrader MT5 (076) por aplicar')
+  if (lidos.semTabela) avisos.push('Saldos lidos (216) por aplicar — Capital/Equity das contas de corretora ficam vazios')
 
   const nomeProv = new Map(providers.map((p) => [String(p.id), String(p.nome ?? p.slug ?? '—')]))
   const contasProvider = new Set(providers.map((p) => txt(p.metaapi_account_id)).filter(Boolean) as string[])
@@ -267,6 +273,17 @@ async function lerContas(): Promise<{ contas: ContaCentro[]; avisos: string[]; l
     })
   }
 
+  // Saldo e equity LIDOS da corretora (216): ganham à referência e ao máximo, nunca ao motor MTM Funded
+  // (`atual`). Vêm guardados — zero chamadas à MetaApi por linha.
+  const saldoLido = new Map(lidos.linhas.map((l) => [String(l.chave), l]))
+  for (const c of base) {
+    if (c.saldoFonte === 'atual') continue
+    const k = chaveDoSaldo(c)
+    const l = k ? saldoLido.get(k) : undefined
+    if (!l || (num(l.saldo) == null && num(l.equity) == null)) continue
+    Object.assign(c, { saldo: num(l.saldo), equity: num(l.equity), saldoFonte: 'lido', saldoInicial: null, proveniencia: 'real', saldoLidoEm: txt(l.lido_em) })
+  }
+
   const ids = [...new Set(base.map((c) => c.userId).filter((x): x is string => Boolean(x)))]
   const direitos = await direitosEmLote(ids)
   const uso = new Map<string, Set<string>>()
@@ -301,6 +318,43 @@ async function lerFunded() {
   const com = await ler(db().from('mtm_trading_accounts').select(`${cols}, conta_casa, recolhe_todos_sinais`).order('created_at', { ascending: false }).limit(3000))
   if (!semEsquema(com)) return com
   return ler(db().from('mtm_trading_accounts').select(cols).order('created_at', { ascending: false }).limit(3000))
+}
+
+/**
+ * «Actualizar saldos»: lê saldo/equity das contas de corretora com leitura velha (ou nunca lida),
+ * em lotes pequenos e com pouca concorrência — 1 pedido por conta física, nunca por ligação. Contas
+ * inexistentes na MetaApi ficam de fora. Devolve quantas faltam para o botão poder continuar.
+ */
+const LOTE_SALDOS = 25
+const CONCORRENCIA_SALDOS = 3
+const IDADE_SALDO_MS = 10 * 60_000
+
+export async function actualizarSaldos(refs?: string[]): Promise<{ lidas: number; falhas: { ref: string; erro: string }[]; restantes: number }> {
+  const { lerEGuardarSaldo } = await import('@/lib/copia-contas/servidor/escritores')
+  const { contas } = await carregarContas()
+  const agora = Date.now()
+  const pedidas = refs?.length ? new Set(refs) : null
+  const porChave = new Map<string, ContaCentro>()
+  for (const c of contas) {
+    if (pedidas && !pedidas.has(c.ref)) continue
+    if (c.saldoFonte === 'atual' || c.metaapi.inexistente) continue
+    const k = chaveDoSaldo(c)
+    if (!k || porChave.has(k)) continue
+    // Sem `refs`, só as velhas; pedidas uma a uma lêem-se sempre.
+    if (!pedidas && c.saldoLidoEm && agora - Date.parse(c.saldoLidoEm) < IDADE_SALDO_MS) continue
+    porChave.set(k, c)
+  }
+  // As nunca lidas primeiro, depois as mais velhas.
+  const fila = [...porChave.values()].sort((a, b) => Date.parse(a.saldoLidoEm ?? '1970-01-01') - Date.parse(b.saldoLidoEm ?? '1970-01-01'))
+  const lote = fila.slice(0, LOTE_SALDOS)
+  const falhas: { ref: string; erro: string }[] = []
+  let lidas = 0
+  for (let i = 0; i < lote.length; i += CONCORRENCIA_SALDOS) {
+    const r = await Promise.all(lote.slice(i, i + CONCORRENCIA_SALDOS).map(async (c) => ({ c, r: await lerEGuardarSaldo(c.ref) })))
+    for (const { c, r: x } of r) { if (x.ok) lidas++; else falhas.push({ ref: c.ref, erro: x.erro }) }
+  }
+  esquecerCache('centro:contas')
+  return { lidas, falhas, restantes: Math.max(0, fila.length - lote.length) }
 }
 
 export type { Linha }

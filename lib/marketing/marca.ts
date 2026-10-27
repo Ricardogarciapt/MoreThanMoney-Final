@@ -40,7 +40,7 @@ export const MARCA_BASE: Marca = {
   provas: 'A prova mede-se em pips, com origem declarada (resultados semanais publicados). Nunca percentagens nem ganhos em euros inventados.',
   produtos: [
     { nome: 'Mentoria Premium', descricao: 'Comunidade, sinais educativos, app MTM System e acompanhamento.', preco: '', link: 'https://www.morethanmoney.pt/apresentacao' },
-    { nome: 'Pack de scanners', descricao: 'Todos os scanners TradingView (GoldKiller, TrendShot, Sensei X…).', preco: '35 €/mês', link: 'https://www.morethanmoney.pt/scanners' },
+    { nome: 'Pack de scanners', descricao: 'Todos os scanners TradingView (GoldKiller, TrendShot, Sensei X, Premium Scanner…).', preco: '35 €/mês', link: 'https://www.morethanmoney.pt/scanners' },
     { nome: 'Scanner individual', descricao: 'Um scanner TradingView à escolha.', preco: '50 €/semestre ou 350 € vitalício', link: 'https://www.morethanmoney.pt/scanners' },
   ],
   concorrentes: '',

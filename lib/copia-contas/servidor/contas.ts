@@ -12,6 +12,7 @@ import type { PlataformaCopia } from '../tipos'
 import { db, esquecerFotografiaMetaApi, metaApiFotografia } from './base'
 import { direitosEmLote } from './direitos-lote'
 import { lerContaPorRef } from './refs'
+import { chaveDoSaldo } from './saldos-lidos'
 import { lerEtiquetas } from '@/lib/contas/etiquetas-servidor'
 import { lerMestresPorConta } from '@/lib/mestres/servidor/painel-leitura'
 import { rotuloUsoT2T } from '@/lib/mtmcopy/alvo-t2t'
@@ -55,6 +56,10 @@ export interface ContaAdmin {
   chaveFisica: string | null
   usos: string[]
   saldo: number | null
+  /** Equity: MTM Funded pelo motor; corretora pela última leitura guardada (216). */
+  equity?: number | null
+  /** Quando o saldo/equity da corretora foi lido (216). null = MTM Funded ou nunca lido. */
+  saldoLidoEm?: string | null
   plano: string
   motivoDireito: string
   quota: { emUso: number; limite: number | null; acima: boolean }
@@ -112,14 +117,14 @@ export async function listarContasAdmin(filtro: { userId?: string | null } = {})
     const x = lerRef(ref)
     if (x?.origem === 'funded') fundedIds.add(x.id)
   }
-  let fundedQ = db().from('mtm_trading_accounts').select('id, user_id, mt5_login, estado, sim_saldo, segue_estrategia, tipo, created_at').eq('motor', 'sim')
+  let fundedQ = db().from('mtm_trading_accounts').select('id, user_id, mt5_login, estado, sim_saldo, sim_equity, segue_estrategia, tipo, created_at').eq('motor', 'sim')
   if (filtro.userId) fundedQ = fundedQ.eq('user_id', filtro.userId)
   const { data: fundedTodas } = filtro.userId
     ? await fundedQ
     : fundedIds.size
       ? await fundedQ.in('id', [...fundedIds].slice(0, 500))
       : { data: [] as Record<string, unknown>[] }
-  const { data: seguidoras } = filtro.userId ? { data: [] } : await db().from('mtm_trading_accounts').select('id, user_id, mt5_login, estado, sim_saldo, segue_estrategia, tipo, created_at').eq('motor', 'sim').not('segue_estrategia', 'is', null).limit(500)
+  const { data: seguidoras } = filtro.userId ? { data: [] } : await db().from('mtm_trading_accounts').select('id, user_id, mt5_login, estado, sim_saldo, sim_equity, segue_estrategia, tipo, created_at').eq('motor', 'sim').not('segue_estrategia', 'is', null).limit(500)
   const funded = new Map<string, Record<string, unknown>>()
   for (const f of [...(fundedTodas ?? []), ...(seguidoras ?? [])] as Record<string, unknown>[]) if (f.user_id) funded.set(String(f.id), f)
 
@@ -193,8 +198,19 @@ export async function listarContasAdmin(filtro: { userId?: string | null } = {})
       metaapiAccountId: null, metaapiEstado: null, metaapiLigacao: null, chaveEquipa: false, contaMetaApi: false,
       chaveFisica: `mtmfunded:${String(f.id).toLowerCase()}`,
       usos: [...(f.segue_estrategia ? [`Segue ${f.segue_estrategia}`] : []), ...(copiadores.data ?? []).filter((c) => String(c.account_id) === String(f.id)).map(() => 'Origem copiador 068'), ...(usosRota.get(ref) ?? [])],
-      saldo: f.sim_saldo == null ? null : Number(f.sim_saldo), criadaEm: txt(f.created_at),
+      saldo: f.sim_saldo == null ? null : Number(f.sim_saldo), equity: f.sim_equity == null ? null : Number(f.sim_equity), criadaEm: txt(f.created_at),
     })
+  }
+
+  // Saldo/equity das contas de corretora: a última leitura GUARDADA (216), nunca uma chamada por linha.
+  const chaves = [...new Set(contas.map((c) => chaveDoSaldo(c)).filter((k): k is string => Boolean(k)))]
+  const { data: lidos } = chaves.length ? await db().from('contas_saldo_lido').select('chave, saldo, equity, lido_em').in('chave', chaves.slice(0, 3000)) : { data: [] }
+  const saldoLido = new Map((lidos ?? []).map((l) => [String(l.chave), l]))
+  for (const c of contas) {
+    if (c.origem === 'funded') continue
+    const k = chaveDoSaldo(c)
+    const l = k ? saldoLido.get(k) : undefined
+    if (l) Object.assign(c, { saldo: l.saldo == null ? null : Number(l.saldo), equity: l.equity == null ? null : Number(l.equity), saldoLidoEm: txt(l.lido_em) })
   }
 
   const direitos = await direitosEmLote(contas.map((c) => c.userId))

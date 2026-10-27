@@ -3,6 +3,8 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
 import { getWeeklyFlyerStats, fmtSigned, fmtPt } from "@/lib/mtm-flyer/weekly-stats"
+import { tradesGanhasRecentes } from "@/lib/pips-proof"
+import { postDoSlot, type DadosPosts } from "@/lib/telegram-leads-posts"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -10,15 +12,13 @@ export const dynamic = "force-dynamic"
 /**
  * Conteúdo automático no GRUPO DE LEADS — publica em horário posts que mostram
  * resultados reais + sistemas + prova, e puxam o lead para a app/grupos/DM.
- * Roda o tipo de post por dia. Métricas reais (executado) + provas vetadas
- * (docs/mtm-sales-brain.md). NUNCA promete lucro.
+ * Roda o ângulo por slot (trade ganha real, certificados, criar conta, corretora, dúvida, packs —
+ * `lib/telegram-leads-posts.ts`). Só dados reais, sem taxas de acerto. NUNCA promete lucro.
  */
 
 const BOT_USER = process.env.TELEGRAM_BOT_USERNAME?.replace(/^@/, "") || "MoreThanMoney_aibot"
 const CTA_DM = { text: "💬 Falar com o assistente MTM", url: `https://t.me/${BOT_USER}?start=lead` }
 const CTA_TRIAL = { text: "📲 Testar grátis", url: "https://www.morethanmoney.pt/register" }
-const CTA_FOREX = { text: "💱 Grupo Forex", url: "https://t.me/+cVcMbCRt2rlmNzg0" }
-const CTA_SENSEI = { text: "🧠 Grupo Sensei", url: "https://t.me/+mbqBggXniu5lNTBk" }
 
 /** Último post do Instagram @morethanmoney.pt via Graph API (se houver token). */
 async function latestIgPost(): Promise<{ caption: string; permalink: string; media_url: string; is_video: boolean } | null> {
@@ -60,54 +60,41 @@ async function latestIgPost(): Promise<{ caption: string; permalink: string; med
   }
 }
 
-/** Win rate real das estratégias-mestre nos últimos 30d (fallback = prova vetada). */
-async function recentWinRate(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<number | null> {
-  try {
-    const { data } = await supabase
-      .from("trading_plan_trades")
-      .select("pnl")
-      .eq("trade_source", "strategy")
-      .not("pnl", "is", null)
-      .gte("opened_at", new Date(Date.now() - 30 * 864e5).toISOString())
-      .limit(2000)
-    if (!data || data.length < 20) return null
-    const wins = data.filter((t) => Number(t.pnl) > 0).length
-    return Math.round((wins / data.length) * 1000) / 10
-  } catch {
-    return null
-  }
-}
-
-function buildPost(idx: number, winRate: number | null): { text: string; buttons: Array<{ text: string; url: string }>[] } {
-  const wr = winRate ?? 63
-  const posts = [
-    {
-      text:
-        "📊 <b>Resultados reais da comunidade</b>\n\n" +
-        `Mostramos o que os sinais fazem em <b>pips e percentagem</b> — a mesma medida para quem opera 0,01 ou 1 lote.\n` +
-        `Estratégias-mestre nos últimos 30 dias: <b>~${wr}% de acerto</b>.\n\n` +
-        "Não prometemos lucro — mostramos <b>processo real</b>. Entra nos grupos e acompanha ao vivo. 👇",
-      buttons: [[CTA_FOREX, CTA_SENSEI], [CTA_DM]],
-    },
-    {
-      text:
-        "🛰️ <b>O que tens dentro da MoreThanMoney</b>\n\n" +
-        "• <b>Scanner</b> — as melhores oportunidades em tempo real\n" +
-        "• <b>Trading Alerts</b> — entrada, SL e alvos em cada sinal\n" +
-        "• <b>Tap to Trade</b> — copia com 1 toque · <b>MTM Copy</b> — automático\n\n" +
-        "Testa tudo grátis 3 dias, sem cartão. 👇",
-      buttons: [[CTA_TRIAL], [CTA_DM]],
-    },
-    {
-      text:
-        "💬 <b>Da nossa comunidade:</b>\n\n" +
-        "<i>“O melhor resultado não é o saldo das contas… é o poder de saber proteger capital.”</i>\n\n" +
-        "356 membros a aprender e a partilhar todos os dias. Queres sinais para copiar à mão, " +
-        "Tap to Trade ou algo automático? Fala comigo e digo-te o melhor caminho. 👇",
-      buttons: [[CTA_DM], [CTA_TRIAL]],
-    },
-  ]
-  return posts[idx % posts.length]
+/**
+ * Os dados REAIS do dia para os posts: vencedoras recentes da conta-espelho, certificados emitidos
+ * (só contagens) e o número público de membros. Cada leitura falha sozinha — um ângulo sem dados
+ * sai da roda, os outros continuam.
+ */
+async function dadosDoDia(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<DadosPosts> {
+  const [ganhas, certificados, membros] = await Promise.all([
+    tradesGanhasRecentes(3).catch(() => []),
+    (async () => {
+      const desde = new Date(Date.now() - 30 * 864e5).toISOString()
+      const [f, f30, a, a30, ultF, ultA] = await Promise.all([
+        supabase.from("mtm_certificates").select("id", { count: "exact", head: true }),
+        supabase.from("mtm_certificates").select("id", { count: "exact", head: true }).gte("emitido_em", desde),
+        supabase.from("assessment_attempts").select("id", { count: "exact", head: true }).eq("passed", true),
+        supabase.from("assessment_attempts").select("id", { count: "exact", head: true }).eq("passed", true).gte("created_at", desde),
+        supabase.from("mtm_certificates").select("tipo, emitido_em").order("emitido_em", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("assessment_attempts").select("created_at").eq("passed", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      ])
+      const total = (f.count ?? 0) + (a.count ?? 0)
+      if (!total) return null
+      const uf = ultF.data as { tipo?: string; emitido_em?: string } | null
+      const ua = ultA.data as { created_at?: string } | null
+      const ultimo =
+        uf?.emitido_em && (!ua?.created_at || uf.emitido_em > ua.created_at)
+          ? { ultimoTipo: uf.tipo ?? null, ultimoEm: uf.emitido_em }
+          : { ultimoTipo: ua?.created_at ? "avaliacao" : null, ultimoEm: ua?.created_at ?? null }
+      return { total, ultimos30d: (f30.count ?? 0) + (a30.count ?? 0), ...ultimo }
+    })().catch(() => null),
+    (async () => {
+      const { data } = await supabase.from("site_settings").select("value").eq("key", "membros_publicos").maybeSingle()
+      const n = Number(data?.value)
+      return Number.isFinite(n) && n > 0 ? n : null
+    })().catch(() => null),
+  ])
+  return { bot: BOT_USER, ganhas, certificados, membros }
 }
 
 export async function GET(request: NextRequest) {
@@ -175,9 +162,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const wr = await recentWinRate(supabase)
-  // Roda o post pelo dia do ano (determinístico, sem repetir seguidos)
+  // Roda o post pelo slot (dois por dia: 11:00 e 18:00 UTC), determinístico e sem repetir seguidos
   const dayOfYear = Math.floor((Date.now() - Date.UTC(new Date().getUTCFullYear(), 0, 0)) / 864e5)
+  const slot = Math.floor(Date.now() / 864e5) * 2 + (new Date().getUTCHours() >= 15 ? 1 : 0)
 
   // Slot Instagram (1 em cada 4 dias, se houver token): último post do @morethanmoney.pt
   if (process.env.INSTAGRAM_TOKEN && dayOfYear % 4 === 3) {
@@ -204,19 +191,19 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const post = buildPost(dayOfYear, wr)
+  const post = postDoSlot(await dadosDoDia(supabase), slot)
 
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       chat_id: chatId,
-      text: post.text,
+      text: post.texto,
       parse_mode: "HTML",
       disable_web_page_preview: true,
-      reply_markup: { inline_keyboard: post.buttons },
+      reply_markup: { inline_keyboard: post.botoes },
     }),
   })
   const j = await res.json().catch(() => ({}))
-  return NextResponse.json({ ok: res.ok, posted: res.ok, day: dayOfYear, winRate: wr, detail: j?.description ?? null })
+  return NextResponse.json({ ok: res.ok, posted: res.ok, tipo: post.tipo, slot, detail: j?.description ?? null })
 }

@@ -35,6 +35,7 @@ export function planLabel(planId: string): string {
     aurumflow_lifetime: 'Scanner Aurum Flow Cripto (Vitalício)',
     trendshot_semestral: 'TrendShot by MTM (Semestral)',
     trendshot_lifetime: 'TrendShot by MTM (Vitalício)',
+    premium_scanner_lifetime: 'MTM Premium Scanner (Vitalício)',
     mtm_scanner_semestral: 'Scanner MTM V3.4 (Semestral)',
     mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
     mtm_scanner_lifetime: 'Scanner MTM V3.4 (Vitalício)',

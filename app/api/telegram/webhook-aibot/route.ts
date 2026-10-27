@@ -77,6 +77,17 @@ async function mirrorToApp(message: TelegramChannelMessage) {
   if (ik && !(await isIntakeEnabled(ik))) return
 
   const content = message.text || message.caption || null
+  {
+    // Grupo de entrada livre: só sinais, seguimentos e charts vão para a app (lib/telegram-espelho-filtro).
+    const { canalSoSinais, passaParaAApp } = await import("@/lib/telegram-espelho-filtro")
+    if (canalSoSinais(slug)) {
+      const pai = await resolveReplyToChatMessageId(
+        slug,
+        (message as { reply_to_message?: { message_id?: number } }).reply_to_message?.message_id ?? null,
+      )
+      if (!passaParaAApp(content, { respondeAMensagemDoChat: Boolean(pai) })) return
+    }
+  }
   const imageUrl = await resolveTelegramImageUrl(message)
   if (!content && !imageUrl) return
 

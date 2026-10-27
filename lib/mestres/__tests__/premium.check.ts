@@ -201,8 +201,10 @@ const guardas: Array<[string, RegExp]> = [
 for (const [f, re] of guardas) t(`${f}`, () => assert.match(ler(f), re))
 t('o relay-post continua a escrever o literal/formato único no chat ANTES do processador (texto intocado)', () => {
   const r = ler('app/api/telegram/relay-post/route.ts')
-  const chat = r.indexOf('content: premiumParaFormatoUnico(execText) ?? execText')
-  assert.ok(chat > 0 && chat < r.lastIndexOf('await processMtmcopyTelegramMessage({'))
+  // Desde 27/10 o texto vai numa variável (o gráfico lê o mesmo conteúdo): `conteudo`.
+  const def = r.indexOf('const conteudo = premiumParaFormatoUnico(execText) ?? execText')
+  const chat = r.indexOf('content: conteudo', def)
+  assert.ok(def > 0 && chat > def && chat < r.lastIndexOf('await processMtmcopyTelegramMessage({'))
   assert.ok(!/mestres/.test(r), 'o relay-post não conhece o motor: a execução decide-se no processador')
 })
 t('Premium não é publicado pela mestre (o chat Premium fica com o literal do Telegram)', () => {

@@ -1589,7 +1589,7 @@ export const licencaSenseiEmailTemplate = (
   mt5Login: string | null,
   expiraEm: string | null,
   siteUrl?: string,
-  produto: 'sensei_ea' | 'sensei_scalp' = 'sensei_ea',
+  produto: 'sensei_ea' | 'sensei_scalp' | 'premium_scanner_ea' = 'sensei_ea',
 ) => {
   const base = resolveSiteUrl(siteUrl)
   // São duas EA diferentes e o email tem de dizer qual, senão quem tem as duas não sabe onde
@@ -1597,7 +1597,9 @@ export const licencaSenseiEmailTemplate = (
   const ea =
     produto === 'sensei_scalp'
       ? { nome: 'MTM Sensei Scalp Edition', pagina: '/sensei-scalp' }
-      : { nome: 'MTM Sensei EA', pagina: '/sensei-ea' }
+      : produto === 'premium_scanner_ea'
+        ? { nome: 'MTM Premium Scanner EA', pagina: '/premium-scanner-ea' }
+        : { nome: 'MTM Sensei EA', pagina: '/sensei-ea' }
   const nomePlano =
     plano === 'vitalicia' ? 'Vitalícia' : plano === 'anual' ? 'Anual' : 'Incluída na subscrição'
   const validade = expiraEm

@@ -113,6 +113,7 @@ const NOME_DO_PLANO: Record<string, string> = {
   goldkiller_semestral: 'GoldKiller (semestral)',
   trendshot_lifetime: 'TrendShot (vitalício)',
   trendshot_semestral: 'TrendShot (semestral)',
+  premium_scanner_lifetime: 'Premium Scanner (vitalício)',
 }
 
 /**
