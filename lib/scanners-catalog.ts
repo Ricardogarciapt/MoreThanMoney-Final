@@ -155,7 +155,7 @@ export const SCANNERS: ScannerData[] = [
       "Ferramenta educativa: não executa ordens nem garante resultados",
     ],
     products: [
-      { id: "ps-lifetime", label: "Vitalício", price: "1250€", priceNote: "Pagamento único · incluído no Premium", planId: "premium_scanner_lifetime", highlight: true },
+      { id: "ps-lifetime", label: "Vitalício", price: "1250€", priceNote: "Pagamento único · incluído no Premium e no Pack Scanners", planId: "premium_scanner_lifetime", highlight: true },
     ],
   },
   {

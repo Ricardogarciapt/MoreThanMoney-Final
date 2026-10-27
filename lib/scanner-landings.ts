@@ -123,7 +123,7 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
     description:
       "O Premium Scanner lê o ouro nas três sessões. Em cada vela de 15 minutos vota a direção com cinco critérios: o preço contra a abertura da sessão, contra há 1 h e há 4 h, e contra a EMA200 e a EMA9. Quando há sinal, desenha a zona de entrada em recuo, o stop e os alvos como nos sinais Premium da casa, e manda tudo num alerta pronto para webhook.",
     metaDescription:
-      "MTM Premium Scanner: zonas de recuo no ouro em Londres, Nova Iorque e Ásia, com entrada, stop e alvos no TradingView. 1250€ vitalício, incluído no Premium.",
+      "MTM Premium Scanner: zonas de recuo no ouro em Londres, Nova Iorque e Ásia, com entrada, stop e alvos no TradingView. 1250€ vitalício, incluído no Premium e no Pack Scanners.",
   },
   {
     slug: "sensei",
