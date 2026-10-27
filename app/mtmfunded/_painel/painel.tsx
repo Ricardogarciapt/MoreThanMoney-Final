@@ -23,6 +23,7 @@ import { Contratos, Levantamentos } from '@/components/mtmfunded/contratos-e-lev
 import { useT } from '@/components/i18n-provider'
 import ModalMetricas from '@/components/mtmfunded/modal-metricas'
 import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
+import { ordemParaMostrar } from '@/lib/mtmfunded/regras'
 import CredenciaisConta from '@/components/funded/credenciais-conta'
 import { SECCOES_DO_CLIENTE, SECCOES_DO_TORNEIO } from './seccoes'
 
@@ -440,7 +441,7 @@ function Dashboard({ torneio, participante, contas, nome, perfil }: {
           valor={participante.resultadoPct == null ? '—' : `${participante.resultadoPct > 0 ? '+' : ''}${participante.resultadoPct.toFixed(2)}%`}
           cor={participante.resultadoPct == null ? undefined : participante.resultadoPct >= 0 ? 'text-emerald-400' : 'text-red-400'}
         />
-        <Metrica titulo="Estado" valor={participante.estado === 'quebrado' ? 'Conta quebrada' : participante.estado === 'ativo' ? 'Em prova' : 'Inscrito'} />
+        <Metrica titulo="Estado" valor={participante.estado === 'quebrado' ? 'Desclassificada' : participante.estado === 'ativo' ? 'Em prova' : 'Inscrito'} />
       </div>
 
       {/* As margens são o que evita que alguém quebre sem perceber. Mostrar o resultado sem
@@ -1196,13 +1197,17 @@ function Classificacao({ linhas }: { linhas: LinhaTabela[] }) {
             <tr><th className="py-2">#</th><th className="py-2">Trader</th><th className="py-2 text-right">Resultado</th></tr>
           </thead>
           <tbody className="divide-y divide-zinc-900">
-            {linhas.map((l, i) => (
-              <tr key={i} className={l.estado === 'quebrado' ? 'opacity-50' : ''}>
-                <td className="py-2.5 font-mono text-zinc-500">{l.posicao ?? '—'}</td>
+            {ordemParaMostrar(linhas).map((l, i) => (
+              <tr key={i} className={l.estado === 'quebrado' ? 'opacity-60' : ''}>
+                <td className="py-2.5 font-mono text-zinc-500">{l.estado === 'quebrado' ? '—' : (l.posicao ?? '—')}</td>
                 <td className="py-2.5">{l.nome}</td>
-                <td className={`py-2.5 text-right font-mono ${l.resultadoPct == null ? 'text-zinc-600' : l.resultadoPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {l.resultadoPct == null ? '—' : `${l.resultadoPct > 0 ? '+' : ''}${l.resultadoPct.toFixed(2)}%`}
-                </td>
+                {l.estado === 'quebrado' ? (
+                  <td className="py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-red-400">Desclassificada</td>
+                ) : (
+                  <td className={`py-2.5 text-right font-mono ${l.resultadoPct == null ? 'text-zinc-600' : l.resultadoPct > 0 ? 'text-emerald-400' : l.resultadoPct < 0 ? 'text-red-400' : 'text-zinc-400'}`}>
+                    {l.resultadoPct == null ? '—' : `${l.resultadoPct > 0 ? '+' : ''}${l.resultadoPct.toFixed(2)}%`}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

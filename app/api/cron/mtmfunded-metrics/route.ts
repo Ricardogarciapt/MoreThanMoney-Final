@@ -264,6 +264,9 @@ export async function GET(request: NextRequest) {
       elegivel: boolean
       quebrou: boolean
       drawdownPct?: number
+      semResultado?: boolean
+      /** O porquê de uma linha sem resultado — fica à vista na coluna «Estado». */
+      semResultadoPorque?: string
       veredicto: ReturnType<typeof avaliarConta> | null
     }> = []
 
@@ -305,11 +308,13 @@ export async function GET(request: NextRequest) {
       const guardadoVps = (conta?.metricas ?? {}) as Record<string, unknown>
       const doVps = !metaapiId && guardadoVps.fonte === 'leitor-mt5' && typeof guardadoVps.equity === 'number'
 
-      // Sem conta emitida ainda: fica no fundo, sem resultado. Não é quebra.
+      // Sem conta emitida ainda (ou cancelada): fica no fundo, SEM resultado — e não com 0%, que
+      // a punha à frente de quem negoceia e está a perder. Não é quebra.
       if (!conta || (!metaapiId && !doVps) || conta.estado !== 'ativa') {
         linhas.push({
           participanteId: p.id, accountId: p.account_id, resultadoPct: 0,
-          elegivel: false, quebrou: false, veredicto: null,
+          elegivel: false, quebrou: false, veredicto: null, semResultado: true,
+          semResultadoPorque: conta?.estado === 'cancelada' ? 'conta cancelada' : 'conta por emitir',
         })
         continue
       }
@@ -328,12 +333,20 @@ export async function GET(request: NextRequest) {
         semResposta++
         // Mantém-se o que se sabia da última leitura. Uma leitura falhada não é uma perda.
         const m = (conta.metricas ?? {}) as Record<string, unknown>
+        const resultadoPct = Number(m.resultadoPct ?? 0)
+        const n = (x: unknown) => (typeof x === 'number' ? x : null)
         linhas.push({
           participanteId: p.id, accountId: p.account_id,
-          resultadoPct: Number(m.resultadoPct ?? 0),
+          resultadoPct,
           elegivel: m.elegivel === true, quebrou: false,
-          drawdownPct: typeof m.drawdownPct === 'number' ? m.drawdownPct : undefined,
-          veredicto: null,
+          drawdownPct: n(m.drawdownPct) ?? undefined,
+          // Com veredicto, as métricas do participante acompanham o resultado. Sem ele ficavam
+          // presas na leitura antiga: o Rui tinha −1,04% na coluna e +0,19% nas métricas.
+          veredicto: {
+            quebrou: false, resultadoPct, elegivel: m.elegivel === true,
+            naoElegivelPorque: typeof m.naoElegivelPorque === 'string' ? m.naoElegivelPorque : undefined,
+            margemDiaria: n(m.margemDiaria) ?? 0, margemTotal: n(m.margemTotal) ?? 0,
+          },
         })
         continue
       }
@@ -469,14 +482,25 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Ordena e grava as posições. Uma escrita por participante: são dezenas, não milhares.
+    /**
+     * Ordena e grava as posições. Uma escrita por participante: são dezenas, não milhares.
+     *
+     * SÓ QUEM NEGOCEIA TEM LUGAR. Desclassificados e contas sem resultado ficam sem posição
+     * (a página mostra «—»). Os desclassificados nem passam por este ciclo — o filtro de cima só
+     * lê inscritos e activos — e por isso guardavam a posição da véspera: o Mohit continuava
+     * em 8.º, empatado com o Rui. A limpeza a seguir trata deles.
+     */
     const ordenadas = ordenarClassificacao(linhas)
-    for (let i = 0; i < ordenadas.length; i++) {
-      const l = ordenadas[i]
+    let lugar = 0
+    for (const l of ordenadas) {
+      const comLugar = !l.quebrou && !l.semResultado
       const patch: Record<string, unknown> = {
-        posicao: i + 1,
-        resultado_pct: l.resultadoPct,
+        posicao: comLugar ? ++lugar : null,
+        resultado_pct: l.semResultado ? null : l.resultadoPct,
         updated_at: new Date().toISOString(),
+      }
+      if (l.semResultado) {
+        patch.metricas = { elegivel: false, naoElegivelPorque: l.semResultadoPorque ?? null }
       }
       if (l.veredicto && !l.quebrou) {
         patch.estado = 'ativo'
@@ -491,6 +515,11 @@ export async function GET(request: NextRequest) {
       }
       await db.from('mtm_tournament_participants').update(patch).eq('id', l.participanteId)
     }
+    await db.from('mtm_tournament_participants')
+      .update({ posicao: null })
+      .eq('tournament_id', torneio.id)
+      .eq('estado', 'quebrado')
+      .not('posicao', 'is', null)
 
     notas.push(`${torneio.slug}: ${ordenadas.length} participantes ordenados`)
   }
