@@ -45,7 +45,7 @@ const MARCAS: Record<ChaveGrafico, MarcaEstrategia> = {
   'mtm-scanner': { chave: 'mtm-scanner', nome: 'MTM Scanner', cor: corDoEstudo('MTMScanner', '#A78BFA') },
   trendshot: { chave: 'trendshot', nome: 'MTM Auto Trendshot', cor: corDoEstudo('TrendShot', '#38BDF8') },
   // Sem linhas: o Premium Scanner desenha zona/alvos, que já são as linhas Entry/SL/TP do gráfico.
-  'premium-scanner': { chave: 'premium-scanner', nome: 'MTM Premium II', cor: corDoEstudo('PremiumScanner', '#E9C46A') },
+  'premium-scanner': { chave: 'premium-scanner', nome: 'MTM Auto Premium II', cor: corDoEstudo('PremiumScanner', '#E9C46A') },
   aurum: { chave: 'aurum', nome: 'MTM Aurum Flow Cripto', cor: '#F59E0B' },
   perps: { chave: 'perps', nome: 'MTM Perps', cor: '#FB923C' },
   outro: { chave: 'outro', nome: 'MTM', cor: '#D2A63C' },

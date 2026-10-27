@@ -27,7 +27,7 @@ import { scannerKeyFromStrategy } from '@/lib/mtm-alerts/scanners'
 // chat_channels.leitura='membros'; aqui deixa de contar como canal pago para os avisos.
 // 23/10 (dono): Premium e superior = MTM Auto Premium, Sensei, Ideias de Cripto e MTM Auto Edge
 // (chat_channels.leitura='premium'); GoldKiller e o resto passam a membro 35 €.
-export const CANAIS_SINAIS_PAGOS = ['premium-ideas', 'sensei-scanner', 'aurum-flow', 'sinais-scanner-mtm', 'sinais-premium-scanner'] as const
+export const CANAIS_SINAIS_PAGOS = ['premium-ideas', 'sensei-scanner', 'aurum-flow', 'sinais-scanner-mtm'] as const
 
 export function canalDeSinaisPago(slug?: string | null): boolean {
   return (CANAIS_SINAIS_PAGOS as readonly string[]).includes(String(slug ?? '').trim())

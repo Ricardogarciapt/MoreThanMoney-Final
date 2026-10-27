@@ -34,7 +34,7 @@ export const SCANNER_ORDER: ScannerKey[] = ["sensei", "goldkiller", "mtmscanner"
 export function scannerKeyFromStrategy(strategy: string | null | undefined): ScannerKey {
   const n = (strategy ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
   if (!n) return "mtmscanner"
-  if (n.includes("premiumscanner") || n.includes("premiumii")) return "premiumscanner" // «MTM Premium II» (27/10)
+  if (n.includes("premiumscanner") || n.includes("premiumii")) return "premiumscanner" // «MTM Auto Premium II» (27/10)
   if (n.includes("trendshot")) return "trendshot"                          // "MTM Auto Trendshot" (23/10)
   if (n.includes("aurum")) return "aurum"                                  // ORB, v8, base
   if (n.includes("sensei")) return "sensei"                                // "MTM Sensei X" → Sensei

@@ -4,26 +4,22 @@
  * 27/10/2026, pedido do dono: deixa de ser só sombra. Cada alerta do indicador (XAUUSD 15m, «Any
  * alert() function call», «Once Per Bar Close») segue o caminho do Trendshot:
  *   · registo em `tradingview_signals` como `entry` → MTM Alerts (gatilho notify_signal_subscribers);
- *   · publicação no chat pago `sinais-premium-scanner` («MTM Premium II») com o gráfico do sinal;
- *     o tracker segue alvos/BE/stop por preço (CANAIS_SO_SEGUIMENTO);
- *   · mestre SIM 10K «MTM Premium II» pelo `encaminharSinalParaMestre` (fonte `premiumscanner`),
+ *   · gráfico do sinal em `chart_image_url` (o que as MTM Alerts mostram);
+ *   · mestre SIM 10K «MTM Auto Premium II» pelo `encaminharSinalParaMestre` (fonte `premiumscanner`),
  *     por ordem limite no meio da zona válida 1 h (4 velas de 15m, como a EA).
- * Sem grupo Telegram próprio: não há nenhum criado para este scanner.
+ * Sem canal no chat nem grupo Telegram (decisão do dono, 27/10: «não cries já um canal do chat»).
  *
  * Os níveis vêm todos do Pine (entry = meio da zona, sl, tp1..tp4). Alerta incompleto não publica.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { normalizeSymbol } from '@/lib/mtmcopy/signal-parser'
 import { urlDoGraficoDoSinal } from '@/lib/sinais/grafico-publicar'
-import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
-import { formatarSinal } from '@/lib/sinais/formato-sinal'
 import { encaminharSinalParaMestre } from '@/lib/mestres/servidor/sinal-mestre'
 
 type Json = Record<string, unknown>
 
 export const ESTRATEGIA_PREMIUM_SCANNER = 'premium-scanner'
-export const NOME_PREMIUM_SCANNER = 'MTM Premium II'
-export const CANAL_PREMIUM_SCANNER = 'sinais-premium-scanner'
+export const NOME_PREMIUM_SCANNER = 'MTM Auto Premium II'
 
 /** Janela em que o mesmo par na mesma direcção é o mesmo alerta (o TradingView repete-se). */
 const JANELA_DUPLICADO_MS = 10 * 60_000
@@ -90,49 +86,21 @@ export async function processarPremiumScanner(payload: Json): Promise<{ ok: bool
     .select('id')
     .eq('estrategia', ESTRATEGIA_PREMIUM_SCANNER)
     .eq('action', direcao)
-    .eq('chat_status', 'sent')
+    .not('processed_at', 'is', null)
+    .neq('id', logId ?? '')
     .ilike('ticker', `%${simbolo.slice(0, 6)}%`)
     .gte('received_at', desde)
     .limit(1)
   if (recentes?.length) return falha('duplicado (mesmo par e direcção há <10 min)')
 
-  const zona = [numero(payload.zone_low), numero(payload.zone_high)]
-  const texto = formatarSinal({
-    estrategia: NOME_PREMIUM_SCANNER, simbolo, direcao, entrada, sl, tps, timeframe,
-    ...(zona[0] && zona[1] ? { zona: [zona[0], zona[1]] as [number, number] } : {}),
-  })
-  const grafico = logId ? urlDoGraficoDoSinal(logId) : null
-
-  const { data: msg, error } = await supabase
-    .from('chat_messages')
-    .insert({
-      channel_slug: CANAL_PREMIUM_SCANNER,
-      message_type: 'telegram_forward',
-      content: texto,
-      telegram_sender: `💎 ${NOME_PREMIUM_SCANNER}`,
-      user_id: null,
-      ...(grafico ? { image_url: grafico } : {}),
-    })
-    .select('id')
-    .single()
-  if (error || !msg) return falha(`chat: ${error?.message ?? 'sem id'}`)
-  const chatId = msg.id as string
-
   if (logId) {
     await supabase
       .from('tradingview_signals')
-      .update({
-        chart_image_url: grafico,
-        chat_status: 'sent',
-        chat_message_id: chatId,
-        telegram_status: 'skipped',
-        processed_at: new Date().toISOString(),
-      })
+      .update({ chart_image_url: urlDoGraficoDoSinal(logId), chat_status: 'skipped', telegram_status: 'skipped', processed_at: new Date().toISOString() })
       .eq('id', logId)
   }
-  await sendTelegramChannelPush({ slug: CANAL_PREMIUM_SCANNER, content: texto, chatMessageId: chatId }).catch(() => undefined)
 
-  // Mestre: a publicação já saiu; uma falha aqui fica escrita e não parte o webhook.
+  // Mestre: o alerta já está registado; uma falha aqui fica escrita e não parte o webhook.
   let mestre: string | null = null
   try {
     const m = await encaminharSinalParaMestre({
@@ -152,5 +120,5 @@ export async function processarPremiumScanner(payload: Json): Promise<{ ok: bool
     console.error('[premium-scanner] mestre:', motivo)
     if (logId) await supabase.from('tradingview_signals').update({ ai_error: `mestre premium II: erro ao encaminhar: ${motivo}`.slice(0, 300) }).eq('id', logId)
   }
-  return { ok: true, estrategia: ESTRATEGIA_PREMIUM_SCANNER, simbolo, direcao, entrada, sl, tps, chatId, mestre }
+  return { ok: true, estrategia: ESTRATEGIA_PREMIUM_SCANNER, simbolo, direcao, entrada, sl, tps, mestre }
 }

@@ -81,7 +81,7 @@ for (const [nome, perfil] of casosSemDireito) {
 
 // ── 3. Que sinais são pagos ────────────────────────────────────────────────────────────────
 // 23/10 (dono): Premium e superior = Premium, Sensei, Ideias de Cripto (aurum-flow) e Edge.
-for (const pago of ['premium-ideas', 'sensei-scanner', 'aurum-flow', 'sinais-scanner-mtm', 'sinais-premium-scanner']) {
+for (const pago of ['premium-ideas', 'sensei-scanner', 'aurum-flow', 'sinais-scanner-mtm']) {
   assert.equal(canalDeSinaisPago(pago), true, `canal ${pago} é Premium`)
 }
 for (const aberto of ['sinais-goldkiller', 'trade-ideas', 'trade-ideas-setup', 'ideias-e-sinais', 'sinais-trendshot', 'cripto-perps', 'geral', '', null]) {

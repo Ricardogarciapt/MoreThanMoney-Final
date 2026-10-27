@@ -64,11 +64,11 @@ export const ESTRATEGIA_DO_WEBHOOK: Record<string, AlvoDaFonte> = {
    */
   trendshot: { slug: 'mtm-auto-trendshot', comentario: 'MTM Auto Trendshot' },
   /**
-   * MTM Premium II (27/10, pedido do dono): os alertas do indicador MTM Premium Scanner
-   * (?strategy=premiumscanner) abrem na mestre SIM 10K «MTM Premium II» com a gestão do Premium
+   * MTM Auto Premium II (27/10, pedido do dono): os alertas do indicador MTM Premium Scanner
+   * (?strategy=premiumscanner) abrem na mestre SIM 10K «MTM Auto Premium II» com a gestão do Premium
    * (sinais_config copiado do premium-ouro), por ordem limite no meio da zona.
    */
-  premiumscanner: { slug: 'mtm-premium-ii', comentario: 'MTM Premium II' },
+  premiumscanner: { slug: 'mtm-auto-premium-ii', comentario: 'MTM Auto Premium II' },
   /**
    * MTM Auto Edge (26/10, pedido do dono): estratégia individual, alimentada pelo pv-relay com os 2
    * top traders do canal PrimeVerse (lib/mestres/edge-pv.ts). Cada ENTRY HIT é uma trade — a chave é
