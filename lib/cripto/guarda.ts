@@ -113,7 +113,11 @@ export function guardar(e: EntradaGuarda): { ordem: OrdemAprovada | null; recusa
   const recusas: string[] = []
   const nao = (m: string) => recusas.push(m)
 
-  if (!d) return { ordem: null, recusas: ['A IA não devolveu um JSON válido: vale HOLD.'] }
+  if (!d) {
+    // Com veto, a IA nem chega a ser chamada: a recusa é o veto, não «a IA falhou».
+    const vetos = e.pareceres.filter((p) => p.veto).map((p) => `Veto de ${p.agente}: ${p.nota}`)
+    return { ordem: null, recusas: vetos.length ? vetos : ['A IA não devolveu um JSON válido: vale HOLD.'] }
+  }
   if (d.action === 'HOLD' || d.action === 'ERROR') return { ordem: null, recusas: [`AG-TRADER: ${d.action} (${d.rationale.technical_trigger}).`] }
 
   const esperada = ACAO_ESPERADA[`${g.mercado}:${g.lado}` as keyof typeof ACAO_ESPERADA]

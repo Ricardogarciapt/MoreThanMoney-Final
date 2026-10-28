@@ -80,6 +80,7 @@ teste('sem-IA: em papel a guarda aprova com alavancagem 1', guardar(base({ decis
 teste('sem-IA: veto do filtro de rug continua a chumbar', !guardar(base({ decisao: semIA, pareceres: [{ agente: 'filtro-rug', favor: -1, nota: 'Freeze authority ativa.', veto: true }] })).ordem)
 teste('sem-IA: reconhece o veto de IA em baixo e só esse', iaEmBaixo({ agente: 'noticias-sentimento', favor: 0, nota: 'IA indisponível (503).', veto: true }) && !iaEmBaixo({ agente: 'filtro-rug', favor: -1, nota: 'Liquidez baixa.', veto: true }))
 teste('sem-IA: medido à parte na régua', PREFIXO_SEM_IA === 'sem-ia:')
+teste('guarda: sem decisão por veto mostra o veto', guardar(base({ decisao: null, pareceres: [{ agente: 'filtro-rug', favor: -1, nota: 'Honeypot.', veto: true }] })).recusas.join() === 'Veto de filtro-rug: Honeypot.')
 teste('guarda: sem JSON = HOLD', !guardar(base({ decisao: null })).ordem)
 teste('guarda: HOLD não abre', !guardar(base({ decisao: decisao({ action: 'HOLD' }) })).ordem)
 teste('guarda: acção contrária ao gatilho recusa', !guardar(base({ decisao: decisao({ action: 'SHORT_PERP' }) })).ordem)
