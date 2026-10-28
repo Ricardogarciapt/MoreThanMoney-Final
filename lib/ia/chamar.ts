@@ -44,6 +44,13 @@ export async function chamarIA(p: PedidoIA): Promise<RespostaIA> {
   return executarCadeia(p, CADEIA, livroSupabase)
 }
 
+/** Só os fornecedores grátis. Para quem prefere não decidir a pagar: falham todos → ErroIA. */
+export const CADEIA_GRATIS: Fornecedor[] = [groq, gemini, ollama]
+
+export async function chamarIAGratis(p: PedidoIA): Promise<RespostaIA> {
+  return executarCadeia(p, CADEIA_GRATIS, livroSupabase)
+}
+
 /**
  * Mensagem honesta para mostrar ao utilizador quando a IA falhou. Quem chama decide o resto
  * (HTTP, ecrã); isto garante que nunca vai um JSON cru de um fornecedor para a página.

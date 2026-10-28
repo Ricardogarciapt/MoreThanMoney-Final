@@ -16,15 +16,15 @@
  * `node cripto-executor.js --exportar-chave` imprime a chave privada UMA vez no terminal, para a
  * cópia de segurança do dono. Nunca é chamado pelo serviço.
  */
-import { PublicKey } from '@solana/web3.js'
+import { Keypair, PublicKey } from '@solana/web3.js'
 import { getSupabaseAdmin } from '../../lib/supabase-admin-client'
 import { inicioDaSessao } from '../../lib/cripto/papel'
 import { abrirPerp, bybitAgenteConfigurada, fecharPerp, levantarUsdtSolana, posicaoPerp, saldoBybit, ultimoFecho } from './bybit-agente'
 import { abrirOuCriarCarteira, chaveEmTexto } from './cofre'
-import { USDC, enviarUsdc, ligacao, precosJupiter, saldoSol, saldoToken, swapUltra } from './solana'
-import { equityBybitDoAgente, juntarPartes, lerTectos, parOcupadoNaMestre, valorAEnviar, verificarPendente } from '../../lib/cripto/tectos'
+import { USDC, transferirUsdc, ligacao, precosJupiter, saldoSol, saldoToken, swapUltra } from './solana'
+import { TIPOS_SNIPER, equityBybitDoAgente, juntarPartes, lerTectos, parOcupadoNaMestre, planoRebalanco, valorAEnviar, verificarMovimento, verificarPendente, type Movimento } from '../../lib/cripto/tectos'
 
-const VERSAO = 'cripto-executor-002'
+const VERSAO = 'cripto-executor-003'
 const CAMINHO_COFRE = process.env.CRIPTO_COFRE || '/var/lib/mtm-cripto/solana.json'
 const log = (...a: unknown[]) => console.log(new Date().toISOString(), ...a)
 
@@ -32,9 +32,23 @@ const tectos = lerTectos(process.env)
 const db = getSupabaseAdmin()
 const sol = ligacao()
 const { carteira, nova } = abrirOuCriarCarteira(CAMINHO_COFRE, process.env.CRIPTO_COFRE_FRASE || '')
+/** 2.ª carteira («sniper»), só com CRIPTO_SNIPER=1: mesmo cofre, mesma frase, outro ficheiro. */
+const sniper = tectos.sniper ? abrirOuCriarCarteira(process.env.CRIPTO_COFRE_SNIPER || '/var/lib/mtm-cripto/solana-sniper.json', process.env.CRIPTO_COFRE_FRASE || '') : null
+/** As carteiras deste executor. Os movimentos internos só podem ir para estas. */
+const PROPRIAS = new Set([carteira.publicKey.toBase58(), ...(sniper ? [sniper.carteira.publicKey.toBase58()] : [])])
+const CARTEIRAS: Keypair[] = [carteira, ...(sniper ? [sniper.carteira] : [])]
+
+/** A carteira de uma posição: a que a abriu (execucao.carteira) ou, ao abrir, a do tipo de gatilho. */
+function carteiraDe(p: { gatilho_tipo?: string; execucao?: Record<string, unknown> }): Keypair {
+  const usada = String(p.execucao?.carteira ?? '')
+  if (usada) return CARTEIRAS.find((k) => k.publicKey.toBase58() === usada) ?? carteira
+  return sniper && TIPOS_SNIPER.has(String(p.gatilho_tipo)) ? sniper.carteira : carteira
+}
 
 if (process.argv.includes('--exportar-chave')) {
-  console.log(`Endereço: ${carteira.publicKey.toBase58()}\nChave privada (guarda no gestor de palavras-passe e fecha o terminal):\n${chaveEmTexto(carteira)}`)
+  for (const [nome, k] of [['principal', carteira], ...(sniper ? [['sniper', sniper.carteira]] : [])] as [string, Keypair][]) {
+    console.log(`Carteira ${nome}: ${k.publicKey.toBase58()}\nChave privada (guarda no gestor de palavras-passe e fecha o terminal):\n${chaveEmTexto(k)}\n`)
+  }
   process.exit(0)
 }
 
@@ -53,6 +67,7 @@ interface Linha {
   estado: string
   fechar_pedido: string | null
   aberta_em: string
+  gatilho_tipo?: string
   execucao: Record<string, unknown>
 }
 
@@ -66,21 +81,26 @@ async function modoDaBase(): Promise<'papel' | 'real'> {
 async function lerSaldos(spotAbertos: Linha[]) {
   const dono = carteira.publicKey
   const comBybit = bybitAgenteConfigurada() && !tectos.soSpot
-  const [usdc, solQt, contaBybit, agenteBybit] = await Promise.all([
-    saldoToken(sol, dono, USDC), saldoSol(sol, dono), comBybit ? saldoBybit() : Promise.resolve(null), contasDoAgenteNaBybit(),
+  const [usdcP, solP, usdcS, solS, contaBybit, agenteBybit] = await Promise.all([
+    saldoToken(sol, dono, USDC), saldoSol(sol, dono),
+    sniper ? saldoToken(sol, sniper.carteira.publicKey, USDC) : Promise.resolve({ ui: 0 }),
+    sniper ? saldoSol(sol, sniper.carteira.publicKey) : Promise.resolve(0),
+    comBybit ? saldoBybit() : Promise.resolve(null), contasDoAgenteNaBybit(),
   ])
+  const usdc = { ui: usdcP.ui + usdcS.ui }
+  const solQt = solP + solS
   const bybit = comBybit ? equityBybitDoAgente(tectos, contaBybit, agenteBybit.pnlRealizado, agenteBybit.margemAberta) : null
   const mints = [...new Set(spotAbertos.map((p) => p.id_ativo))]
   const precos = await precosJupiter(['So11111111111111111111111111111111111111112', ...mints])
   let memes = 0
-  for (const m of mints) memes += (await saldoToken(sol, dono, m)).ui * (precos[m] ?? 0)
+  for (const m of mints) for (const k of CARTEIRAS) memes += (await saldoToken(sol, k.publicKey, m)).ui * (precos[m] ?? 0)
   const solUsd = solQt * (precos['So11111111111111111111111111111111111111112'] ?? 0)
   const solanaParte = { equity: usdc.ui + solUsd + memes, livre: usdc.ui }
   // Só memecoins: a parte da AURUM vem da última linha gravada pela Vercel.
   const { data: ultimo } = await db.from('cripto_saldos').select('detalhe').order('em', { ascending: false }).limit(1).maybeSingle()
   const t = juntarPartes({ solana: solanaParte, ...(bybit ? { bybit } : {}) }, (ultimo?.detalhe as { partes?: unknown } | null)?.partes)
-  await db.from('cripto_saldos').insert({ equity_usd: Math.round(t.equity * 100) / 100, livre_usd: Math.round(t.livre * 100) / 100, detalhe: { partes: { solana: t.solana, bybit: t.bybit }, usdc: usdc.ui, sol: solQt, memesUsd: memes, soSpot: tectos.soSpot, versao: VERSAO } })
-  return { equity: t.equity, solanaEquity: t.solana.equity, usdcLivre: usdc.ui, bybitLivre: bybit?.livre ?? 0 }
+  await db.from('cripto_saldos').insert({ equity_usd: Math.round(t.equity * 100) / 100, livre_usd: Math.round(t.livre * 100) / 100, detalhe: { partes: { solana: t.solana, bybit: t.bybit }, usdc: usdc.ui, sol: solQt, memesUsd: memes, soSpot: tectos.soSpot, carteiras: { principal: { usdc: usdcP.ui, sol: solP }, ...(sniper ? { sniper: { usdc: usdcS.ui, sol: solS } } : {}) }, versao: VERSAO } })
+  return { equity: t.equity, solanaEquity: t.solana.equity, usdcLivre: usdcP.ui, usdcSniper: usdcS.ui, bybitLivre: bybit?.livre ?? 0 }
 }
 
 /** PnL realizado e margem aberta das trades perp REAIS do agente (para o modo mestre). */
@@ -127,13 +147,14 @@ async function cumprirPendente(p: Linha, exposicao: number, agora: Date) {
     log('[aberta]', p.ativo, p.lado, p.nocional_usd)
     return
   }
+  const k = carteiraDe(p)
   const raw = String(Math.floor(Number(p.nocional_usd) * 1e6))
-  const r = await swapUltra(carteira, USDC, p.id_ativo, raw, Number(p.slippage_max_pct) * 100)
+  const r = await swapUltra(k, USDC, p.id_ativo, raw, Number(p.slippage_max_pct) * 100)
   if (!r.ok) return falhar(p, `Jupiter: ${r.erro}`)
   const tokens = Number(r.saidaRaw)
-  const dec = (await saldoToken(sol, carteira.publicKey, p.id_ativo)).decimais
+  const dec = (await saldoToken(sol, k.publicKey, p.id_ativo)).decimais
   const entrada = tokens > 0 ? Number(p.nocional_usd) / (tokens / Math.pow(10, dec)) : Number(p.entrada)
-  await db.from('cripto_posicoes').update({ estado: 'aberta', entrada, execucao: { ...p.execucao, compraTx: r.assinatura, tokensRaw: r.saidaRaw, usdcRaw: r.entradaRaw } }).eq('id', p.id)
+  await db.from('cripto_posicoes').update({ estado: 'aberta', entrada, execucao: { ...p.execucao, carteira: k.publicKey.toBase58(), compraTx: r.assinatura, tokensRaw: r.saidaRaw, usdcRaw: r.entradaRaw } }).eq('id', p.id)
   log('[aberta]', p.ativo, 'spot', p.nocional_usd, r.assinatura)
 }
 
@@ -151,13 +172,14 @@ async function fecharPedido(p: Linha) {
     await db.from('cripto_posicoes').update({ estado: 'fechada', motivo_fecho: p.fechar_pedido, saida: f?.saida ?? null, pnl_usd: f?.pnl ?? null, fechada_em: agora }).eq('id', p.id)
     return
   }
-  const saldo = await saldoToken(sol, carteira.publicKey, p.id_ativo)
+  const k = carteiraDe(p)
+  const saldo = await saldoToken(sol, k.publicKey, p.id_ativo)
   if (saldo.raw <= BigInt(0)) {
     await db.from('cripto_posicoes').update({ estado: 'fechada', motivo_fecho: `${p.fechar_pedido} (sem saldo)`, pnl_usd: -Number(p.nocional_usd), fechada_em: agora }).eq('id', p.id)
     return
   }
   // Na saída aceita-se mais escorregamento: preso numa memecoin a cair é pior do que vender mal.
-  const r = await swapUltra(carteira, p.id_ativo, USDC, saldo.raw.toString(), Math.max(Number(p.slippage_max_pct) * 100, 500))
+  const r = await swapUltra(k, p.id_ativo, USDC, saldo.raw.toString(), Math.max(Number(p.slippage_max_pct) * 100, 500))
   if (!r.ok) return log('[venda falhou]', p.ativo, r.erro)
   const usdc = Number(r.saidaRaw) / 1e6
   await db.from('cripto_posicoes').update({
@@ -176,7 +198,51 @@ async function sincronizarPerp(p: Linha) {
   await db.from('cripto_posicoes').update({ estado: 'fechada', motivo_fecho: 'exchange (SL/TP)', saida: f?.saida ?? null, pnl_usd: f?.pnl ?? null, fechada_em: new Date().toISOString() }).eq('id', p.id).eq('estado', 'aberta')
 }
 
-async function enviarLucros(saldos: { equity: number; solanaEquity: number; usdcLivre: number; bybitLivre: number }) {
+type Saldos = { equity: number; solanaEquity: number; usdcLivre: number; usdcSniper: number; bybitLivre: number }
+
+async function movidoHoje(agora: Date): Promise<number> {
+  const { data } = await db.from('cripto_movimentos').select('valor').eq('estado', 'feito').eq('motivo', 'rebalanço').gte('em', inicioDaSessao(agora).toISOString())
+  return (data ?? []).reduce((s: number, x: { valor: number }) => s + (Number(x.valor) || 0), 0)
+}
+
+/**
+ * O ÚNICO caminho por onde sai USDC de uma carteira do agente. Verifica (verificarMovimento),
+ * regista SEMPRE em cripto_movimentos (feito, recusado ou falhado) e só então transfere.
+ */
+async function movimentar(m: Movimento, de: Keypair, agora: Date): Promise<string> {
+  const recusa = verificarMovimento(m, tectos, { proprias: PROPRIAS, movidoHojeUsd: m.motivo === 'rebalanço' ? await movidoHoje(agora) : 0 })
+  const base = { de: m.de, para: m.para, token: 'USDC', valor: m.valorUsd, motivo: m.motivo }
+  if (recusa) {
+    await db.from('cripto_movimentos').insert({ ...base, estado: 'recusado', erro: recusa })
+    log('[ALERTA movimento recusado]', m.motivo, m.valorUsd, m.para, recusa)
+    throw new Error(recusa)
+  }
+  try {
+    const tx = await transferirUsdc(sol, de, m.para, m.valorUsd)
+    await db.from('cripto_movimentos').insert({ ...base, estado: 'feito', tx })
+    log('[movimento]', m.motivo, m.valorUsd, m.para, tx)
+    return tx
+  } catch (e) {
+    await db.from('cripto_movimentos').insert({ ...base, estado: 'falhado', erro: String((e as Error)?.message ?? e).slice(0, 300) })
+    throw e
+  }
+}
+
+/** Repõe a sniper a partir da principal quando ela desce abaixo de metade do alvo. */
+async function rebalancear(saldos: Saldos, agora: Date) {
+  if (!sniper) return
+  const usd = planoRebalanco(tectos, saldos.usdcLivre, saldos.usdcSniper)
+  if (usd < 1) return
+  try {
+    await movimentar({ de: carteira.publicKey.toBase58(), para: sniper.carteira.publicKey.toBase58(), valorUsd: usd, motivo: 'rebalanço' }, carteira, agora)
+    saldos.usdcLivre -= usd
+    saldos.usdcSniper += usd
+  } catch (e) {
+    log('[rebalanço falhou]', String((e as Error)?.message ?? e).slice(0, 200))
+  }
+}
+
+async function enviarLucros(saldos: Saldos) {
   const { data: sessoes } = await db.from('cripto_sessoes').select('inicio').eq('modo', 'real').eq('varredura_estado', 'pedida').order('inicio').limit(1)
   const s = sessoes?.[0]
   if (!s) return
@@ -191,7 +257,7 @@ async function enviarLucros(saldos: { equity: number; solanaEquity: number; usdc
   const daBybit = Math.round((plano.usd - doSolana) * 100) / 100
   const txs: string[] = []
   try {
-    if (doSolana >= 1) txs.push(await enviarUsdc(sol, carteira, tectos.destinoLucros!, doSolana))
+    if (doSolana >= 1) txs.push(await movimentar({ de: carteira.publicKey.toBase58(), para: tectos.destinoLucros!, valorUsd: doSolana, motivo: 'lucros' }, carteira, new Date()))
     if (daBybit >= 10 && tectos.varrerBybit) {
       const w = await levantarUsdtSolana(tectos.destinoLucros!, daBybit)
       if (!w.ok) throw new Error(w.erro)
@@ -205,7 +271,7 @@ async function enviarLucros(saldos: { equity: number; solanaEquity: number; usdc
 }
 
 let ultimoSaldo = 0
-let saldos = { equity: 0, solanaEquity: 0, usdcLivre: 0, bybitLivre: 0 }
+let saldos: Saldos = { equity: 0, solanaEquity: 0, usdcLivre: 0, usdcSniper: 0, bybitLivre: 0 }
 
 async function passagem() {
   const agora = new Date()
@@ -227,6 +293,7 @@ async function passagem() {
     if (p.fechar_pedido) await fecharPedido(p)
     else if (p.mercado === 'perp') await sincronizarPerp(p)
   }
+  await rebalancear(saldos, agora)
   await enviarLucros(saldos)
 }
 
@@ -234,7 +301,9 @@ async function main() {
   const endereco = carteira.publicKey.toBase58()
   new PublicKey(endereco) // valida
   await db.from('cripto_carteiras').upsert({ rede: 'solana', endereco, papel: 'trading' }, { onConflict: 'rede,endereco', ignoreDuplicates: true })
-  log(`[executor] ${VERSAO} · carteira ${endereco}${nova ? ' (NOVA: financia com USDC + ~0,05 SOL)' : ''} · real=${tectos.real}${tectos.soSpot ? ' · só memecoins (perps na Vercel)' : ''} · bybit=${bybitAgenteConfigurada() ? (tectos.bybitMestre ? 'MESTRE do Copy Trading (seguidores copiam)' : 'subconta') : 'não'} · destino=${tectos.destinoLucros ? 'definido' : 'EM FALTA'}`)
+  const enderecoSniper = sniper?.carteira.publicKey.toBase58()
+  if (enderecoSniper) await db.from('cripto_carteiras').upsert({ rede: 'solana', endereco: enderecoSniper, papel: 'sniper' }, { onConflict: 'rede,endereco', ignoreDuplicates: true })
+  log(`[executor] ${VERSAO} · carteira ${endereco}${nova ? ' (NOVA: financia com USDC + ~0,05 SOL)' : ''} · real=${tectos.real}${tectos.soSpot ? ' · só memecoins (perps na Vercel)' : ''} · bybit=${bybitAgenteConfigurada() ? (tectos.bybitMestre ? 'MESTRE do Copy Trading (seguidores copiam)' : 'subconta') : 'não'} · destino=${tectos.destinoLucros ? 'definido' : 'EM FALTA'}${enderecoSniper ? ` · sniper ${enderecoSniper}${sniper!.nova ? ' (NOVA)' : ''}` : ''}`)
   let ocupado = false
   setInterval(async () => {
     if (ocupado) return

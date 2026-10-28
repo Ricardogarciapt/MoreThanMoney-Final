@@ -9,15 +9,18 @@
  * chaves) que a cumpre, depois de voltar a verificar os tectos com os limites DELE.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { chamarIA } from '../ia/chamar'
+import { chamarIAGratis } from '../ia/chamar'
 import { vantagemPorCombo, lerRegua } from '../agentes/trader-disciplina'
-import { candidatosMeme, dadosRug, fundingBybit, livroBybit, titulosDoAtivo, titulosNoticias, velasBybit, velasPool } from './fontes'
-import { guardar, lerLimites, type EstadoConta, type VantagemGatilho } from './guarda'
+import { candidatosMeme, dadosRug, fundingBybit, livroBybit, perpsVolateis, snapshotsDex, titulosDoAtivo, titulosNoticias, velasBybit, type CandidatoMeme } from './fontes'
+import { passarCarteiras } from './espertas'
+import { ePump, gatilhoCarteira, gatilhoMeme, naCurva, retratoDeSnapshot } from './memes'
+import { PREFIXO_SEM_IA, decisaoSemIA, guardar, iaEmBaixo, lerLimites, type EstadoConta, type VantagemGatilho } from './guarda'
 import { detectarGatilho, pareceresNumericos, retratoDeVelas } from './indicadores'
+import { ESTUDOS_SCALP, REGIME_PADRAO, eScalp, gatilhosScalp, type TipoScalp } from './scalp'
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd, precoComEscorregamento } from './papel'
-import { avaliarRug } from './rug'
+import { LIMIARES_RUG, LIMIARES_RUG_PUMP, avaliarRug } from './rug'
 import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
-import type { Gatilho, Modo, Parecer, PosicaoAberta, Retrato, Vela } from './tipos'
+import type { DecisaoIA, Gatilho, Modo, Parecer, PosicaoAberta, Retrato, Vela } from './tipos'
 
 export const CHAVE_CONFIG = 'agente_cripto'
 
@@ -39,6 +42,20 @@ export interface ConfigCripto {
   /** Real: o capital que o dono entregou. Só o que estiver acima disto é lucro. O executor confirma com o seu. */
   capitalBaseRealUsd: number
   limites?: Record<string, unknown>
+  /**
+   * Scalping com os estudos da casa (scalp.ts) nos perps. Desligado por omissão: o backtest de
+   * 30 dias a 1 ano (lib/cripto/scalp-backtest.ts) deu vantagem bruta perto de zero e líquida
+   * negativa em todos. Só corre com os perps em PAPEL, para medir; nunca abre real.
+   */
+  scalp: boolean
+  /** Que estudos entram no scalping (omissão: todos). */
+  estudosScalp: TipoScalp[]
+  /** Além dos `perps`, os N perps mais voláteis do momento entram no scalping (0 = só os fixos). */
+  scalpVolateis: number
+  /** Velas do scalping, em minutos. */
+  scalpTf: 1 | 5
+  /** Filtro de alta volatilidade: ATR actual ≥ k × mediana das últimas 200 velas (0 = sem filtro). */
+  scalpRegimeK: number
 }
 
 export function lerConfig(bruto: unknown): ConfigCripto {
@@ -59,11 +76,20 @@ export function lerConfig(bruto: unknown): ConfigCripto {
     varreduraMinUsd: n(b.varreduraMinUsd, 10),
     capitalBaseRealUsd: n(b.capitalBaseRealUsd, 0),
     limites: b.limites && typeof b.limites === 'object' ? (b.limites as Record<string, unknown>) : undefined,
+    scalp: b.scalp === true,
+    estudosScalp: Array.isArray(b.estudosScalp) ? ESTUDOS_SCALP.filter((t) => (b.estudosScalp as unknown[]).includes(t)) : [...ESTUDOS_SCALP],
+    scalpVolateis: Math.min(15, Math.floor(n(b.scalpVolateis, 5))),
+    scalpTf: Number(b.scalpTf) === 5 ? 5 : 1,
+    scalpRegimeK: Math.min(5, n(b.scalpRegimeK, REGIME_PADRAO.k)),
   }
 }
 
 /** Mesmo ativo e tipo de gatilho decidido há menos disto: não se volta a gastar IA. */
 const ESPERA_MESMO_GATILHO_MS = 30 * 60_000
+/** No scalping a janela é curta: o regime de alta volatilidade dura minutos, não meia hora. */
+const ESPERA_SCALP_MS = 5 * 60_000
+/** Memecoins com gatilho que pagam o filtro de rug por passagem (2 pedidos cada). */
+const MAX_RUG_POR_PASSAGEM = 6
 
 /** O modo em que corre cada mercado nesta passagem. */
 export function modoDoMercado(cfg: ConfigCripto, mercado: 'perp' | 'spot'): Modo {
@@ -103,7 +129,7 @@ export interface ResultadoPassagem {
   erros: string[]
 }
 
-export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = chamarIA, agora = new Date()): Promise<ResultadoPassagem> {
+export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = chamarIAGratis, agora = new Date()): Promise<ResultadoPassagem> {
   const res: ResultadoPassagem = { ligado: false, fechadas: 0, gatilhos: 0, aprovadas: 0, erros: [] }
   const { data: cfgRow } = await db.from('site_settings').select('value').eq('key', CHAVE_CONFIG).maybeSingle()
   const cfg = lerConfig(cfgRow?.value)
@@ -118,8 +144,11 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
     .in('estado', ['aberta', 'pendente'])
   const abertas = (abertasRaw ?? []) as LinhaPosicao[]
 
-  const memes = cfg.memecoins ? await candidatosMeme(15, agora) : []
+  const memes = cfg.memecoins ? await candidatosMeme(60, agora) : []
   const precoMeme = new Map(memes.map((m) => [m.mint, m.precoUsd]))
+  // Memecoins abertas que já saíram do destaque: o preço vem na mesma da DexScreener (senão nunca fechavam).
+  const emFalta = abertas.filter((p) => p.mercado === 'spot' && !precoMeme.has(p.id_ativo)).map((p) => p.id_ativo)
+  if (emFalta.length) for (const [mint, sn] of await snapshotsDex(emFalta, agora)) precoMeme.set(mint, sn.precoUsd)
 
   for (const p of abertas.filter((x) => x.estado === 'aberta')) {
     try {
@@ -161,28 +190,52 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
   /* ── 3. AG-SCANNER: gatilhos em código ── */
   type Candidato = { r: Retrato; g: Gatilho; velas: Vela[]; social: string[]; rugParecer?: Parecer }
   const candidatos: Candidato[] = []
-  for (const symbol of cfg.perps) {
+  // Scalping: só com os perps em papel. Universo = perps fixos + os mais voláteis do momento.
+  const comScalp = cfg.scalp && modoDoMercado(cfg, 'perp') === 'papel'
+  const volateis = comScalp && cfg.scalpVolateis > 0 ? await perpsVolateis(cfg.scalpVolateis) : []
+  const regime = cfg.scalpRegimeK > 0 ? { ...REGIME_PADRAO, k: cfg.scalpRegimeK } : null
+  for (const symbol of [...new Set([...cfg.perps, ...volateis])]) {
     try {
+      const fixo = cfg.perps.includes(symbol)
       const velas = await velasBybit(symbol)
       const [livro, funding] = await Promise.all([livroBybit(symbol), fundingBybit(symbol)])
       const r = retratoDeVelas({ ativo: symbol, mercado: 'perp', id: symbol, velas5m: velas, livro, fundingPct: funding, agora })
-      const g = r && detectarGatilho(r, velas)
-      if (r && g) candidatos.push({ r, g, velas, social: [] })
+      if (!r) continue
+      const g = fixo ? detectarGatilho(r, velas) : null
+      if (g) candidatos.push({ r, g, velas, social: [] })
+      if (comScalp) {
+        // 600 velas: a EMA 238 do TrendShot e a janela de 200 do regime precisam de história.
+        const vs = await velasBybit(symbol, 600, cfg.scalpTf)
+        for (const gs of gatilhosScalp(r, vs, cfg.estudosScalp, regime)) candidatos.push({ r, g: gs, velas, social: [] })
+      }
     } catch (e) {
       res.erros.push(`scanner ${symbol}: ${String((e as Error)?.message ?? e).slice(0, 120)}`)
     }
   }
-  for (const m of memes) {
+  // Memecoins: retrato da DexScreener (sem velas) → gatilho → filtro de rug. O rug custa 2 pedidos
+  // por token (RugCheck + cotação de venda na Jupiter), por isso só os MAX_RUG mais fortes o pagam.
+  const comGatilho = memes
+    .map((m) => ({ m, r: retratoDeSnapshot(m, agora) }))
+    .map((x) => ({ ...x, g: gatilhoMeme(x.m, x.r) }))
+    .filter((x): x is { m: CandidatoMeme; r: Retrato; g: Gatilho } => x.g != null)
+    .sort((a, b) => (b.r.volumeRelativo ?? 0) - (a.r.volumeRelativo ?? 0))
+    .slice(0, MAX_RUG_POR_PASSAGEM)
+  // Carteiras espertas: seguir quem ganha dinheiro; a compra de uma «esperta» é gatilho próprio.
+  if (cfg.memecoins) {
+    const esp = await passarCarteiras(db, memes, agora)
+    res.erros.push(...esp.erros)
+    for (const { snap, carteira } of esp.gatilhos) {
+      const r = retratoDeSnapshot(snap, agora)
+      const g = gatilhoCarteira(snap, r, carteira)
+      if (g && !comGatilho.some((x) => x.m.mint === snap.mint) && comGatilho.length < MAX_RUG_POR_PASSAGEM + 2) comGatilho.push({ m: snap, r, g })
+    }
+  }
+  for (const { m, r, g } of comGatilho) {
     try {
-      const velas = await velasPool(m.pool)
-      const r = retratoDeVelas({ ativo: m.simbolo, mercado: 'spot', id: m.mint, velas5m: velas, liquidezUsd: m.liquidezUsd, agora })
-      if (!r) continue
-      // O rug só se consulta quando há gatilho (são 2 pedidos por token).
-      const g = detectarGatilho(r, velas)
-      if (!g) continue
-      const rug = avaliarRug(await dadosRug(m))
+      const pumpGraduado = g.tipo === 'pump-graduado' || (ePump(m) && !naCurva(m) && (m.idadeHoras ?? 99) <= 6)
+      const rug = avaliarRug(await dadosRug(m), pumpGraduado ? LIMIARES_RUG_PUMP : LIMIARES_RUG)
       r.rug = rug
-      candidatos.push({ r, g, velas, social: m.social, rugParecer: { agente: 'filtro-rug', favor: rug.aprovado ? 0.3 : -1, nota: rug.aprovado ? 'Passou o filtro de scam/rug.' : rug.motivos.join(' '), veto: !rug.aprovado } })
+      candidatos.push({ r, g, velas: [], social: m.social, rugParecer: { agente: 'filtro-rug', favor: rug.aprovado ? 0.3 : -1, nota: rug.aprovado ? 'Passou o filtro de scam/rug.' : rug.motivos.join(' '), veto: !rug.aprovado } })
     } catch (e) {
       res.erros.push(`scanner ${m.simbolo}: ${String((e as Error)?.message ?? e).slice(0, 120)}`)
     }
@@ -209,18 +262,22 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
 
   /* ── 5. Sub-agentes + AG-TRADER + apoio + guarda ── */
   const desde = new Date(agora.getTime() - ESPERA_MESMO_GATILHO_MS).toISOString()
-  const { data: recentes } = await db.from('cripto_decisoes').select('ativo, gatilho').gte('em', desde)
-  const jaVisto = new Set((recentes ?? []).map((d: { ativo: string; gatilho: { tipo?: string } }) => `${d.ativo}|${d.gatilho?.tipo}`))
+  const { data: recentes } = await db.from('cripto_decisoes').select('ativo, gatilho, em').gte('em', desde)
+  const jaVisto = new Set(
+    (recentes ?? [])
+      .filter((d: { gatilho: { tipo?: string }; em: string }) => !eScalp(String(d.gatilho?.tipo)) || agora.getTime() - new Date(d.em).getTime() < ESPERA_SCALP_MS)
+      .map((d: { ativo: string; gatilho: { tipo?: string } }) => `${d.ativo}|${d.gatilho?.tipo}`),
+  )
   const titulos = await titulosNoticias()
 
   let usados = 0
   for (const c of candidatos) {
     if (jaVisto.has(`${c.r.ativo}|${c.g.tipo}`)) continue
     if (usados >= cfg.maxGatilhosPorPassagem) break
-    const pareceres: Parecer[] = [...pareceresNumericos(c.r, c.g)]
+    let pareceres: Parecer[] = [...pareceresNumericos(c.r, c.g)]
     if (c.rugParecer) pareceres.push(c.rugParecer)
 
-    let decisao = null
+    let decisao: DecisaoIA | null = null
     let fornecedor: string | null = null
     // Veto de código já decidido: não se gasta IA com um token que o filtro de rug chumbou.
     if (!pareceres.some((p) => p.veto)) {
@@ -238,8 +295,20 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
     }
 
     const modo = modoDoMercado(cfg, c.r.mercado)
+    // IA em baixo (notícias/apoio sem resposta, ou trader sem JSON) e mais nenhum veto: em PAPEL decide
+    // o código; no real não (decisaoSemIA devolve null).
+    let tipoMedido: string = c.g.tipo
+    if (!pareceres.some((p) => p.veto && !iaEmBaixo(p)) && (!decisao || pareceres.some(iaEmBaixo))) {
+      const d = decisaoSemIA(c.g, modo, limites)
+      if (d) {
+        decisao = d
+        fornecedor = 'sem-IA'
+        pareceres = pareceres.filter((p) => !iaEmBaixo(p))
+        tipoMedido = `${PREFIXO_SEM_IA}${c.g.tipo}`
+      }
+    }
     const conta = contas[modo]
-    const { ordem, recusas } = guardar({ modo, agora, retrato: c.r, gatilho: c.g, decisao, pareceres, conta, vantagem: vantagemDe(c.g.tipo), limites })
+    const { ordem, recusas } = guardar({ modo, agora, retrato: c.r, gatilho: c.g, decisao, pareceres, conta, vantagem: vantagemDe(tipoMedido), limites })
     const { data: dec, error } = await db.from('cripto_decisoes').insert({
       modo, ativo: c.r.ativo, mercado: c.r.mercado, gatilho: c.g, retrato: c.r, pareceres, decisao_ia: decisao, fornecedor_ia: fornecedor, recusas, aprovada: !!ordem,
     }).select('id').single()
@@ -249,7 +318,7 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
     const entrada = modo === 'papel' ? precoComEscorregamento(ordem.entrada, ordem.mercado, ordem.lado, true) : ordem.entrada
     const riscoUsd = ordem.nocionalUsd * (Math.abs(ordem.entrada - ordem.sl) / ordem.entrada)
     const { error: ePos } = await db.from('cripto_posicoes').insert({
-      decisao_id: dec.id, modo, ativo: ordem.ativo, mercado: ordem.mercado, id_ativo: ordem.id, gatilho_tipo: c.g.tipo, lado: ordem.lado,
+      decisao_id: dec.id, modo, ativo: ordem.ativo, mercado: ordem.mercado, id_ativo: ordem.id, gatilho_tipo: tipoMedido, lado: ordem.lado,
       nocional_usd: ordem.nocionalUsd, alavancagem: ordem.alavancagem, entrada, sl: ordem.sl, tp: ordem.tp, risco_usd: Math.round(riscoUsd * 100) / 100,
       slippage_max_pct: ordem.slippageMaxPct, exploracao: ordem.exploracao, estado: modo === 'papel' ? 'aberta' : 'pendente',
     })
