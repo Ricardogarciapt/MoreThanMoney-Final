@@ -35,6 +35,7 @@ import {
   Mail,
   Menu,
   X,
+  Bitcoin,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -120,6 +121,7 @@ const GRUPOS: Grupo[] = [
       { tipo: "tab", id: "mtmfunded", rotulo: "MTM Funded & Torneios", icone: Trophy },
       { tipo: "link", href: "/admin/licencas", rotulo: "Licenças do EA", icone: KeyRound },
       { tipo: "link", href: "/admin/portfolios", rotulo: "Portfolios", icone: Wallet },
+      { tipo: "link", href: "/admin/cripto", rotulo: "Agente Cripto", icone: Bitcoin },
     ],
   },
   {

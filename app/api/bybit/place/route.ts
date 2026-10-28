@@ -75,6 +75,19 @@ export async function POST(req: NextRequest) {
   const symbol = toBybitSymbol(String(b.symbol || ""))
   if (!symbol) return NextResponse.json({ ok: false, error: "symbol em falta" }, { status: 400 })
   const side = String(b.side || "").toLowerCase() === "sell" ? "sell" : "buy"
+
+  // O agente cripto também opera nesta mestre (escolha do dono, 28/10). Conta one-way: uma entrada
+  // do Aurum num par onde o agente está fundia as duas posições e mexia no SL/TP dele. Salta.
+  try {
+    const { getSupabaseAdmin } = await import("@/lib/supabase-admin-client")
+    const { data: doAgente } = await getSupabaseAdmin()
+      .from("cripto_posicoes").select("id").eq("modo", "real").eq("mercado", "perp").eq("id_ativo", symbol).in("estado", ["pendente", "aberta"]).limit(1)
+    if (doAgente?.length) {
+      return NextResponse.json({ ok: false, skipped: true, reason: `${symbol}: o agente cripto tem posição aberta neste par na mestre` })
+    }
+  } catch {
+    /* sem tabela/BD → segue como antes */
+  }
   const num = (v: unknown) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null)
   const entry = num(b.entry) ?? num(b.price)
   const sl = num(b.sl)

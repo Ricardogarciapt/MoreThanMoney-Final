@@ -46,6 +46,37 @@ O dashboard está em `/admin/cripto`.
 4. **Financiar:** USDC + ~0,05 SOL no endereço da carteira (aparece no dashboard) e/ou USDT na subconta Bybit.
 5. **Ligar:** no env `CRIPTO_CAPITAL_BASE_USD=<o que puseste>`, `CRIPTO_DESTINO_LUCROS=<o teu endereço Solana>`, `CRIPTO_REAL=1` → `sudo systemctl restart mtm-cripto-executor`; no dashboard «Passar a real» (escrever REAL) e o mesmo capital base.
 
+## 2a. Real na AURUM pela Vercel (o caminho em uso desde 28/10)
+
+Os perps reais correm em `app/api/cron/cripto-executar` (cron de 1 min, fra1), com a chave que a
+Vercel já tem (`BYBIT_API_KEY`, subconta AURUM, mestre do Copy Trading). Nada de chaves na VPS.
+Ligar: `CRIPTO_REAL=1` no env de Production da Vercel **e** «real» no /admin/cripto. Tectos por
+env da Vercel (`CRIPTO_CAPITAL_BYBIT_USD`, por omissão 100; ordem 25, exposição 100, perda do dia
+10, alavancagem 3). Memecoins reais não correm aqui. Não activar também o executor da VPS com a
+mesma conta.
+
+## 2b. Real na MESTRE do Copy Trading (escolha do Ricardo, 28/10)
+
+Em vez da subconta, o agente usa a conta-mestre do Copy Trading. **Os seguidores copiam cada trade
+do agente.** Para isso:
+
+1. Na mestre, criar uma chave **nova** só para o agente: *Contracts → Orders/Positions*, **sem
+   Withdraw**, presa ao IP da VPS. Não reutilizar a BYBIT_API_KEY da Vercel: assim revoga-se uma sem
+   parar a outra.
+2. No env: `BYBIT_AGENTE_API_KEY/SECRET` = essa chave, `CRIPTO_BYBIT_MESTRE=1`,
+   `CRIPTO_CAPITAL_BYBIT_USD=<parte da mestre que o agente pode usar>`, e
+   `CRIPTO_CAPITAL_BASE_USD` = esse valor + o que estiver na carteira Solana.
+3. O resto igual ao passo 2 (arrancar com `CRIPTO_REAL=0`, ver os saldos no dashboard, depois `1`).
+
+O que muda neste modo:
+- O agente **não entra** num par onde a mestre já tem posição (o Aurum), e o Aurum **salta** a
+  entrada num par onde o agente está (`/api/bybit/place`). A conta é one-way: as posições fundiam-se.
+- Fecha só a quantidade que abriu.
+- O tamanho das ordens sai de `CRIPTO_CAPITAL_BYBIT_USD` + PnL realizado do agente, nunca do saldo
+  da mestre.
+- **Nunca levanta da Bybit**: o lucro dos perps fica na mestre e aparece no dashboard. Só o lucro
+  da carteira Solana é enviado para `CRIPTO_DESTINO_LUCROS`.
+
 ## Fechaduras
 
 - A chave privada nasce na VPS, cifrada (scrypt + AES-256-GCM) em `/var/lib/mtm-cripto/solana.json` 0600. Nunca vai para a Supabase, o Vercel, logs ou IA.

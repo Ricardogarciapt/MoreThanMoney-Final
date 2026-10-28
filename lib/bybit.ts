@@ -555,6 +555,19 @@ export async function placeBybitOrder(o: BybitOrderInput) {
   return signedRequest("POST", "/v5/order/create", body)
 }
 
+/** Reduz `qty` de uma posição a mercado (reduce-only): nunca abre nem inverte. `lado` = lado da POSIÇÃO. */
+export async function reduceBybitPosition(symbol: string, lado: "long" | "short", qty: string) {
+  return signedRequest("POST", "/v5/order/create", {
+    category: "linear",
+    symbol,
+    side: lado === "long" ? "Sell" : "Buy",
+    orderType: "Market",
+    qty,
+    reduceOnly: true,
+    positionIdx: 0,
+  })
+}
+
 /**
  * Define SL + TP na POSIÇÃO (tpslMode Full → aparecem no cartão da posição). Mais fiável que
  * pôr tp/sl nos parâmetros da ordem de mercado (a Bybit às vezes só aplica o SL). Faz 1 retry

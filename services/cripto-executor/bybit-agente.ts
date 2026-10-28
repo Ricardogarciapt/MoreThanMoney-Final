@@ -1,5 +1,7 @@
 /**
- * Bybit do AGENTE: uma SUBCONTA própria, com chave própria (BYBIT_AGENTE_API_KEY/SECRET).
+ * Bybit do AGENTE: por omissão uma SUBCONTA própria, com chave própria (BYBIT_AGENTE_API_KEY/SECRET).
+ * Com CRIPTO_BYBIT_MESTRE=1 a chave é a da mestre do Copy Trading (escolha do dono, 28/10) e os
+ * travões de tectos.ts (par ocupado, capital atribuído, sem levantamentos) passam a valer.
  *
  * Não se usa a BYBIT_API_KEY do copy de perps: essa é a conta-mestre Aurum, que os clientes copiam.
  * Na mesma conta, uma posição do agente em BTCUSDT fundia-se com a da mestre (modo one-way) e os
@@ -91,10 +93,15 @@ export async function posicaoPerp(symbol: string): Promise<{ tamanho: number; pr
   return { tamanho: Number(l?.size) || 0, precoMedio: Number(l?.avgPrice) || 0 }
 }
 
-export async function fecharPerp(symbol: string, lado: 'long' | 'short') {
+/**
+ * Fecha a mercado, reduce-only. `qtyMax` (modo mestre) limita ao que o agente abriu: se o Aurum
+ * tiver entrado no mesmo par depois, a parte dele fica.
+ */
+export async function fecharPerp(symbol: string, lado: 'long' | 'short', qtyMax?: number) {
   const pos = await posicaoPerp(symbol)
   if (!pos || pos.tamanho <= 0) return { ok: true, jaFechada: true }
-  const r = await pedido('POST', '/v5/order/create', { category: 'linear', symbol, side: lado === 'long' ? 'Sell' : 'Buy', orderType: 'Market', qty: String(pos.tamanho), reduceOnly: true, positionIdx: 0 })
+  const qty = qtyMax != null && qtyMax > 0 ? Math.min(qtyMax, pos.tamanho) : pos.tamanho
+  const r = await pedido('POST', '/v5/order/create', { category: 'linear', symbol, side: lado === 'long' ? 'Sell' : 'Buy', orderType: 'Market', qty: String(qty), reduceOnly: true, positionIdx: 0 })
   return r.retCode === 0 ? { ok: true } : { ok: false, erro: r.retMsg }
 }
 
