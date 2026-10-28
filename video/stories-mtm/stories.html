@@ -287,8 +287,42 @@ function parceiros(c, D) {
   el(s, `<div class="aviso">${c.aviso}</div>`, 1560, 1.4, 'up', { fixo: 1 })
 }
 
+// ——— Peça 5: História que vende (stories do @morethanmoney.pt) ———
+// O herói é quem vê; a MTM é o guia. Dor → culpa tirada → guia → plano → transformação → CTA.
+function historia(c, D) {
+  let s = cena(...D.h01)
+  el(s, `<div class="huge ouro" style="font-size:300px">${c.hora}</div>`, 260, .05, 'blur')
+  el(s, `<div class="h" style="font-size:104px">${palavras(c.hook[0])}<br>${palavras(c.hook[1], 'dor')}</div>`, 700, 1.4, 'words')
+  s = cena(...D.h02); const d2 = s.o - s.a
+  c.caos.forEach((t, i) => el(s, `<div class="chip vidro" style="padding:24px 34px"><small style="font-size:28px">notificação</small><b style="font-size:46px">${t}</b></div>`, 160 + i * 190, .1 + i * (d2 - 1.6) / c.caos.length, 'cai', { x: i % 2 ? 330 : 110, w: 640 }))
+  el(s, `<div class="h dor" style="font-size:96px">${palavras(c.sozinho[0])}<br>${palavras(c.sozinho[1])}</div>`, 1180, d2 - 1.3, 'words')
+  s = cena(...D.h03)
+  el(s, `<div class="h" style="font-size:120px">${palavras(c.naoes[0])}<br>${palavras(c.naoes[1], 'ouro')}</div>`, 300, .05, 'words')
+  c.falta.forEach((t, i) => el(s, `<div class="sub" style="color:var(--dim)">${t}</div>`, 760 + i * 90, 1.4 + i * .6, 'up'))
+  s = cena(...D.h04)
+  el(s, `<img src="assets/emblema.png" style="width:180px;filter:drop-shadow(0 0 40px rgba(233,196,106,.6))">`, 150, .05, 'spin')
+  el(s, `<div class="big ouro" style="font-size:150px">${c.casa.join(' ')}</div>`, 360, .4, 'blur')
+  c.edu.forEach(([n, a], i) => el(s, `<div class="edu vidro"><img src="assets/${['ricardo-garcia', 'ruben-pereira', 'maria-costa'][i]}.jpg"><div><b>${n}</b><span>${a}</span></div></div>`, 600 + i * 240, 1.0 + i * .5, 'left'))
+  s = cena(...D.h05); const d5 = s.o - s.a
+  el(s, `<div class="lbl" style="font-size:56px;letter-spacing:10px">${c.caminho}</div>`, 200, .05, 'up')
+  c.passos.forEach((t, i) => el(s, `<div class="degrau vidro"><span class="n">${i + 1}</span>${t}</div>`, 420 + i * 200, .9 + i * (d5 - 1.8) / 3, 'left', { x: 70, w: 940 }))
+  el(s, `<div class="foto" style="width:640px"><img src="assets/mtm-scanner.jpg"></div>`, 1060, .9 + (d5 - 1.8) / 3, 'flip')
+  s = cena(...D.h06)
+  el(s, `<div class="huge ouro" style="font-size:340px">${c.min[0]}</div>`, 160, .05, 'blur')
+  el(s, `<div class="lbl" style="font-size:52px;letter-spacing:8px">${c.min[1]}</div>`, 560, .4, 'up')
+  c.regras.forEach((t, i) => el(s, `<div class="item vidro" style="width:820px"><span class="ok" style="font-size:44px">✓</span>${t}</div>`, 700 + i * 140, 1.0 + i * .45, 'left'))
+  el(s, `<div class="big ouro" style="font-size:140px">${c.metodo}</div>`, 1160, 2.6, 'stamp')
+  s = cena(...D.h07, true)
+  el(s, `<div class="lbl" style="font-size:46px;letter-spacing:6px">${c.responde}</div>`, 300, .05, 'up')
+  el(s, `<div class="botao" style="font-size:130px">${c.cta}</div>`, 420, .3, 'pop', { pulso: 1 })
+  el(s, `<div class="sub">${c.depois}</div>`, 720, .8, 'up')
+  el(s, `<div class="url" style="color:var(--ouro2)">${c.url}</div>`, 840, 1.1, 'up')
+  el(s, `<img src="assets/emblema.png" style="width:200px">`, 980, 1.3, 'spin')
+  el(s, `<div class="aviso">${c.aviso}</div>`, 1560, 1.5, 'up', { fixo: 1 })
+}
+
 window.iniciar = function (peca, textos, D) {
-  ;({ criadores, membros, corretora, parceiros })[peca](textos, D)
+  ;({ criadores, membros, corretora, parceiros, historia })[peca](textos, D)
   for (let i = 0; i < 70; i++) ESP.push([Math.random() * 1080, Math.random() * 1920, .6 + Math.random() * 2.4, .2 + Math.random() * .8, Math.random() * 6.28])
   ULTIMA = Math.max(...CEN.map((c) => c.o))
   return { total: ULTIMA }

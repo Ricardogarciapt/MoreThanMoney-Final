@@ -37,6 +37,10 @@
       [
         "IB",
         "I B"
+      ],
+      [
+        "QUERO",
+        "quero"
       ]
     ],
     "en": [
@@ -316,6 +320,36 @@
         "pt": "Manda mensagem ao nosso bot no Telegram e falamos.",
         "en": "Message our bot on Telegram and let's talk.",
         "de": "Schreib unserem Bot auf Telegram und lass uns reden."
+      }
+    ],
+    "historia": [
+      {
+        "id": "h01",
+        "pt": "São seis da tarde. Sais do trabalho cansado… e o mês ainda nem chegou a meio."
+      },
+      {
+        "id": "h02",
+        "pt": "Já tentaste aprender trading sozinho. Vídeos de três horas, sinais sem explicação, um grupo novo todas as semanas."
+      },
+      {
+        "id": "h03",
+        "pt": "O problema não és tu. É fazer isto sem plano e sem ninguém ao teu lado."
+      },
+      {
+        "id": "h04",
+        "pt": "Foi por isso que o Ricardo Garcia juntou educadores numa só casa: a MoreThanMoney."
+      },
+      {
+        "id": "h05",
+        "pt": "O caminho tem três passos. Abres a tua conta na corretora. Ligas os alertas dos scanners. E aprendes connosco nas aulas ao vivo."
+      },
+      {
+        "id": "h06",
+        "pt": "Quinze minutos por dia, com regras de risco claras. Sem promessas de ganhos. Com método."
+      },
+      {
+        "id": "h07",
+        "pt": "Responde QUERO a este story e mandamos-te o primeiro passo."
       }
     ]
   }
