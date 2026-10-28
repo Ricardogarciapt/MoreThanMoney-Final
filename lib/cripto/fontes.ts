@@ -38,8 +38,8 @@ const num = (x: unknown): number | null => {
 
 const BYBIT = 'https://api.bybit.com'
 
-export async function velasBybit(symbol: string, limite = 300): Promise<Vela[]> {
-  const j = (await json(`${BYBIT}/v5/market/kline?category=linear&symbol=${encodeURIComponent(symbol)}&interval=5&limit=${limite}`)) as
+export async function velasBybit(symbol: string, limite = 300, intervaloMin: 1 | 5 = 5): Promise<Vela[]> {
+  const j = (await json(`${BYBIT}/v5/market/kline?category=linear&symbol=${encodeURIComponent(symbol)}&interval=${intervaloMin}&limit=${limite}`)) as
     | { result?: { list?: string[][] } }
     | null
   const l = j?.result?.list ?? []
@@ -49,6 +49,30 @@ export async function velasBybit(symbol: string, limite = 300): Promise<Vela[]> 
     .map((x) => ({ t: Number(x[0]), o: Number(x[1]), h: Number(x[2]), l: Number(x[3]), c: Number(x[4]), v: Number(x[5]) }))
     .filter((v) => Number.isFinite(v.c))
     .reverse()
+}
+
+/**
+ * Os perps lineares USDT MAIS VOLÁTEIS agora, para o scalping de alta volatilidade. Só entram os
+ * com liquidez a sério (turnover 24 h ≥ `minTurnoverUsd`), ordenados pelo range de 24 h em % do
+ * preço. Cache de 5 min em memória: o ciclo corre ao minuto e a lista não muda tão depressa.
+ */
+let cacheVolateis: { em: number; chave: string; lista: string[] } | null = null
+export async function perpsVolateis(n: number, minTurnoverUsd = 50_000_000): Promise<string[]> {
+  const chave = `${n}|${minTurnoverUsd}`
+  if (cacheVolateis && cacheVolateis.chave === chave && Date.now() - cacheVolateis.em < 5 * 60_000) return cacheVolateis.lista
+  const j = (await json(`${BYBIT}/v5/market/tickers?category=linear`)) as
+    | { result?: { list?: Array<Record<string, string>> } }
+    | null
+  const lista = (j?.result?.list ?? [])
+    .filter((t) => /^[A-Z0-9]{2,20}USDT$/.test(t.symbol ?? ''))
+    .map((t) => ({ s: t.symbol, turnover: num(t.turnover24h) ?? 0, alto: num(t.highPrice24h), baixo: num(t.lowPrice24h), preco: num(t.lastPrice) }))
+    .filter((t) => t.turnover >= minTurnoverUsd && t.alto != null && t.baixo != null && t.preco != null && t.preco > 0)
+    .sort((a, b) => (b.alto! - b.baixo!) / b.preco! - (a.alto! - a.baixo!) / a.preco!)
+    .slice(0, n)
+    .map((t) => t.s)
+  // Falha da Bybit: fica a lista anterior (ou nenhuma), nunca uma lista inventada.
+  if (lista.length) cacheVolateis = { em: Date.now(), chave, lista }
+  return lista.length ? lista : cacheVolateis?.lista ?? []
 }
 
 export async function livroBybit(symbol: string): Promise<Livro | null> {

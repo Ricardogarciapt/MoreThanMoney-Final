@@ -11,10 +11,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chamarIA } from '../ia/chamar'
 import { vantagemPorCombo, lerRegua } from '../agentes/trader-disciplina'
-import { candidatosMeme, dadosRug, fundingBybit, livroBybit, titulosDoAtivo, titulosNoticias, velasBybit, velasPool } from './fontes'
+import { candidatosMeme, dadosRug, fundingBybit, livroBybit, perpsVolateis, titulosDoAtivo, titulosNoticias, velasBybit, velasPool } from './fontes'
 import { guardar, lerLimites, type EstadoConta, type VantagemGatilho } from './guarda'
 import { detectarGatilho, pareceresNumericos, retratoDeVelas } from './indicadores'
-import { ESTUDOS_SCALP, gatilhosScalp, type TipoScalp } from './scalp'
+import { ESTUDOS_SCALP, REGIME_PADRAO, eScalp, gatilhosScalp, type TipoScalp } from './scalp'
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd, precoComEscorregamento } from './papel'
 import { avaliarRug } from './rug'
 import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
@@ -48,6 +48,12 @@ export interface ConfigCripto {
   scalp: boolean
   /** Que estudos entram no scalping (omissão: todos). */
   estudosScalp: TipoScalp[]
+  /** Além dos `perps`, os N perps mais voláteis do momento entram no scalping (0 = só os fixos). */
+  scalpVolateis: number
+  /** Velas do scalping, em minutos. */
+  scalpTf: 1 | 5
+  /** Filtro de alta volatilidade: ATR actual ≥ k × mediana das últimas 200 velas (0 = sem filtro). */
+  scalpRegimeK: number
 }
 
 export function lerConfig(bruto: unknown): ConfigCripto {
@@ -70,11 +76,16 @@ export function lerConfig(bruto: unknown): ConfigCripto {
     limites: b.limites && typeof b.limites === 'object' ? (b.limites as Record<string, unknown>) : undefined,
     scalp: b.scalp === true,
     estudosScalp: Array.isArray(b.estudosScalp) ? ESTUDOS_SCALP.filter((t) => (b.estudosScalp as unknown[]).includes(t)) : [...ESTUDOS_SCALP],
+    scalpVolateis: Math.min(15, Math.floor(n(b.scalpVolateis, 5))),
+    scalpTf: Number(b.scalpTf) === 5 ? 5 : 1,
+    scalpRegimeK: Math.min(5, n(b.scalpRegimeK, REGIME_PADRAO.k)),
   }
 }
 
 /** Mesmo ativo e tipo de gatilho decidido há menos disto: não se volta a gastar IA. */
 const ESPERA_MESMO_GATILHO_MS = 30 * 60_000
+/** No scalping a janela é curta: o regime de alta volatilidade dura minutos, não meia hora. */
+const ESPERA_SCALP_MS = 5 * 60_000
 
 /** O modo em que corre cada mercado nesta passagem. */
 export function modoDoMercado(cfg: ConfigCripto, mercado: 'perp' | 'spot'): Modo {
@@ -172,16 +183,24 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
   /* ── 3. AG-SCANNER: gatilhos em código ── */
   type Candidato = { r: Retrato; g: Gatilho; velas: Vela[]; social: string[]; rugParecer?: Parecer }
   const candidatos: Candidato[] = []
-  for (const symbol of cfg.perps) {
+  // Scalping: só com os perps em papel. Universo = perps fixos + os mais voláteis do momento.
+  const comScalp = cfg.scalp && modoDoMercado(cfg, 'perp') === 'papel'
+  const volateis = comScalp && cfg.scalpVolateis > 0 ? await perpsVolateis(cfg.scalpVolateis) : []
+  const regime = cfg.scalpRegimeK > 0 ? { ...REGIME_PADRAO, k: cfg.scalpRegimeK } : null
+  for (const symbol of [...new Set([...cfg.perps, ...volateis])]) {
     try {
-      // O scalping precisa de mais história (a EMA 238 do TrendShot, o POC do MTM Scanner).
-      const comScalp = cfg.scalp && modoDoMercado(cfg, 'perp') === 'papel'
-      const velas = await velasBybit(symbol, comScalp ? 600 : 300)
+      const fixo = cfg.perps.includes(symbol)
+      const velas = await velasBybit(symbol)
       const [livro, funding] = await Promise.all([livroBybit(symbol), fundingBybit(symbol)])
       const r = retratoDeVelas({ ativo: symbol, mercado: 'perp', id: symbol, velas5m: velas, livro, fundingPct: funding, agora })
-      const g = r && detectarGatilho(r, velas)
-      if (r && g) candidatos.push({ r, g, velas, social: [] })
-      if (r && comScalp) for (const gs of gatilhosScalp(r, velas, cfg.estudosScalp)) candidatos.push({ r, g: gs, velas, social: [] })
+      if (!r) continue
+      const g = fixo ? detectarGatilho(r, velas) : null
+      if (g) candidatos.push({ r, g, velas, social: [] })
+      if (comScalp) {
+        // 600 velas: a EMA 238 do TrendShot e a janela de 200 do regime precisam de história.
+        const vs = await velasBybit(symbol, 600, cfg.scalpTf)
+        for (const gs of gatilhosScalp(r, vs, cfg.estudosScalp, regime)) candidatos.push({ r, g: gs, velas, social: [] })
+      }
     } catch (e) {
       res.erros.push(`scanner ${symbol}: ${String((e as Error)?.message ?? e).slice(0, 120)}`)
     }
@@ -223,8 +242,12 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
 
   /* ── 5. Sub-agentes + AG-TRADER + apoio + guarda ── */
   const desde = new Date(agora.getTime() - ESPERA_MESMO_GATILHO_MS).toISOString()
-  const { data: recentes } = await db.from('cripto_decisoes').select('ativo, gatilho').gte('em', desde)
-  const jaVisto = new Set((recentes ?? []).map((d: { ativo: string; gatilho: { tipo?: string } }) => `${d.ativo}|${d.gatilho?.tipo}`))
+  const { data: recentes } = await db.from('cripto_decisoes').select('ativo, gatilho, em').gte('em', desde)
+  const jaVisto = new Set(
+    (recentes ?? [])
+      .filter((d: { gatilho: { tipo?: string }; em: string }) => !eScalp(String(d.gatilho?.tipo)) || agora.getTime() - new Date(d.em).getTime() < ESPERA_SCALP_MS)
+      .map((d: { ativo: string; gatilho: { tipo?: string } }) => `${d.ativo}|${d.gatilho?.tipo}`),
+  )
   const titulos = await titulosNoticias()
 
   let usados = 0

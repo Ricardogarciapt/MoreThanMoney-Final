@@ -101,15 +101,47 @@ export function sinaisDoEstudo(tipo: TipoScalp, velas: Vela[], simbolo: string):
   return out.filter(planoValido)
 }
 
-/** Todos os estudos ligados, sobre o mesmo histórico. */
-export function sinaisScalp(velas: Vela[], simbolo: string, tipos: readonly TipoScalp[] = ESTUDOS_SCALP): SinalScalp[] {
-  return tipos.flatMap((t) => {
+/**
+ * FILTRO DE REGIME (alta volatilidade): o ATR(14) desta vela tem de estar pelo menos `k` vezes
+ * acima da MEDIANA do ATR das `janela` velas anteriores. É o único relógio do scalping: corre
+ * 24 h, fins de semana incluídos, e só dispara quando o mercado acelera.
+ */
+export interface Regime {
+  k: number
+  janela: number
+}
+export const REGIME_PADRAO: Regime = { k: 1.5, janela: 200 }
+
+export function emRegime(atrs: (number | null)[], i: number, r: Regime = REGIME_PADRAO): boolean {
+  const a = atrs[i]
+  if (a == null || !(a > 0) || i < r.janela) return false
+  const ant = atrs.slice(i - r.janela, i).filter((x): x is number => x != null && x > 0).sort((x, y) => x - y)
+  if (ant.length < r.janela / 2) return false
+  const mediana = ant[Math.floor(ant.length / 2)]
+  return a >= r.k * mediana
+}
+
+/**
+ * Todos os estudos ligados, sobre o mesmo histórico. Com `regime`, só ficam os sinais em alta
+ * volatilidade e o SL/TP passa a ser medido nesse ATR (o do estudo foi feito para mercado calmo).
+ */
+export function sinaisScalp(velas: Vela[], simbolo: string, tipos: readonly TipoScalp[] = ESTUDOS_SCALP, regime: Regime | null = null): SinalScalp[] {
+  const todos = tipos.flatMap((t) => {
     try {
       return sinaisDoEstudo(t, velas, simbolo)
     } catch {
       return []
     }
   })
+  if (!regime) return todos
+  const atrs = atrSerie(velas)
+  return todos
+    .filter((x) => emRegime(atrs, x.i, regime))
+    .map((x) => {
+      const a = atrs[x.i]!
+      const k = x.lado === 'long' ? 1 : -1
+      return { ...x, sl: x.entrada - k * PLANO_ATR.sl * a, tp: x.entrada + k * PLANO_ATR.tp * a }
+    })
 }
 
 /**
@@ -117,11 +149,11 @@ export function sinaisScalp(velas: Vela[], simbolo: string, tipos: readonly Tipo
  * actual, e o SL/TP desloca-se com ela (mantém as distâncias do estudo), porque a ordem entra agora
  * e não ao fecho da vela do sinal.
  */
-export function gatilhosScalp(r: Retrato, velas: Vela[], tipos: readonly TipoScalp[] = ESTUDOS_SCALP): Gatilho[] {
+export function gatilhosScalp(r: Retrato, velas: Vela[], tipos: readonly TipoScalp[] = ESTUDOS_SCALP, regime: Regime | null = null): Gatilho[] {
   if (velas.length < 260 || !(r.preco > 0)) return []
   const ultima = velas.length - 1
   const out: Gatilho[] = []
-  for (const s of sinaisScalp(velas, r.ativo, tipos)) {
+  for (const s of sinaisScalp(velas, r.ativo, tipos, regime)) {
     if (s.i !== ultima) continue
     const dSl = s.entrada - s.sl
     const dTp = s.tp - s.entrada
@@ -134,7 +166,7 @@ export function gatilhosScalp(r: Retrato, velas: Vela[], tipos: readonly TipoSca
       entrada: r.preco,
       sl: r.preco - dSl,
       tp: r.preco + dTp,
-      porque: `${NOME[s.tipo]} deu ${s.lado === 'long' ? 'COMPRA' : 'VENDA'} ao fecho da vela (SL a ${pct(dSl, s.entrada)}, TP a ${pct(dTp, s.entrada)}).`,
+      porque: `${NOME[s.tipo]} deu ${s.lado === 'long' ? 'COMPRA' : 'VENDA'} ao fecho da vela${regime ? ' em alta volatilidade' : ''} (SL a ${pct(dSl, s.entrada)}, TP a ${pct(dTp, s.entrada)}).`,
     })
   }
   return out

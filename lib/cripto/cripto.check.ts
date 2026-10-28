@@ -13,7 +13,7 @@ import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd } from './papel'
 import { avaliarRug } from './rug'
 import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
 import { lerConfig, modoDoMercado } from './ciclo'
-import { eScalp, gatilhosScalp, simularScalp, sinaisScalp } from './scalp'
+import { eScalp, emRegime, gatilhosScalp, simularScalp, sinaisScalp } from './scalp'
 import type { DecisaoIA, Gatilho, Retrato, Vela } from './tipos'
 
 const falhas: string[] = []
@@ -137,6 +137,16 @@ teste('config: símbolo estranho fica de fora', lerConfig({ perps: ['BTCUSDT', '
   teste('simulação: SL e TP na mesma vela conta como SL', tr?.motivo === 'sl' && tr.pct < -1)
   const [tp] = simularScalp([velasSim[0], { t: 1, o: 100, h: 103, l: 99.5, c: 102, v: 1 }], [{ tipo: 'scalp-goldkiller', i: 0, lado: 'long', entrada: 100, sl: 99, tp: 102 }], { mercado: 'perp', velasMax: 10, umaDeCadaVez: true })
   teste('simulação: TP líquido fica abaixo dos 2% brutos (taxas)', tp?.motivo === 'tp' && tp.pct < 2 && tp.pct > 1.8)
+  // Regime: 300 velas calmas e depois uma a abrir 5× o range → só a última está em regime.
+  const calmas: (number | null)[] = Array.from({ length: 301 }, (_, i) => (i < 14 ? null : 1))
+  calmas[300] = 3
+  teste('regime: ATR 3× a mediana dispara', emRegime(calmas, 300, { k: 1.5, janela: 200 }))
+  teste('regime: ATR normal não dispara', !emRegime(calmas, 299, { k: 1.5, janela: 200 }))
+  teste('regime: sem 200 velas de história não dispara', !emRegime(calmas, 150, { k: 1.5, janela: 200 }))
+  const comRegime = sinaisScalp(vs, 'BTCUSDT', undefined, { k: 0.5, janela: 200 })
+  teste('regime: SL/TP passam a ser medidos no ATR (1,5 / 2,5)', comRegime.every((x) => Math.abs(Math.abs(x.tp - x.entrada) / Math.abs(x.entrada - x.sl) - 2.5 / 1.5) < 1e-6))
+  teste('config scalp alta volatilidade: 5 voláteis, 1 min, k 1,5 por omissão', (() => { const c = lerConfig({}); return c.scalpVolateis === 5 && c.scalpTf === 1 && c.scalpRegimeK === 1.5 })())
+  teste('config scalp: tf estranho volta a 1, voláteis no máximo 15', lerConfig({ scalpTf: 3, scalpVolateis: 99 }).scalpTf === 1 && lerConfig({ scalpVolateis: 99 }).scalpVolateis === 15)
   teste('config: scalping desligado por omissão', lerConfig({}).scalp === false && lerConfig({ scalp: true }).scalp === true)
   teste('config: estudo desconhecido fica de fora', lerConfig({ estudosScalp: ['scalp-sensei', 'xpto'] }).estudosScalp.join() === 'scalp-sensei')
 }
