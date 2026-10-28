@@ -37,6 +37,16 @@ const EN = {
   'Alta': 'Up', 'Baixa': 'Down', 'Acima': 'Above', 'Abaixo': 'Below',
   'DEMA 15 acima da 50': 'DEMA 15 above 50', 'DEMA 50 acima da 238': 'DEMA 50 above 238', 'Preço acima do POC': 'Price above POC',
   'Acima da banda Sensei': 'Above the Sensei band', 'Estrutura em alta (CHoCH)': 'Bullish structure (CHoCH)', 'ADX acima de 15': 'ADX above 15',
+  // Premium Scanner
+  'Ouro em 15 minutos, nas sessões de Ásia, Londres e Nova Iorque': 'Gold on 15 minutes, in the Asia, London and New York sessions',
+  'Cada vela vota a direção com cinco critérios': 'Every candle votes on direction with five criteria',
+  'Maioria de acordo: sinal Premium': 'Majority in agreement: Premium signal',
+  'Zona de entrada em recuo, stop e três alvos no gráfico': 'Pullback entry zone, stop and three targets on the chart',
+  'O preço volta à zona e a ordem entra': 'Price comes back to the zone and the order fills',
+  'TP1 tocado: o stop passa para a entrada': 'TP1 hit: the stop moves to entry',
+  'Zona de entrada': 'Entry zone', 'PREMIUM COMPRA': 'PREMIUM BUY', 'PREMIUM VENDA': 'PREMIUM SELL',
+  'LONDRES': 'LONDON', 'NOVA IORQUE': 'NEW YORK', 'ÁSIA': 'ASIA',
+  'Voto da direção': 'Direction vote', 'Abertura da sessão': 'Session open', 'Há 1 h': '1 h ago', 'Há 4 h': '4 h ago',
 }
 
 const RULES = [[/^Rompimento da caixa (.+) a favor da tendência$/, (m) => `Breakout of the ${m[1]} box with the trend`]]
@@ -86,5 +96,12 @@ export const CARD_TEXT_EN = {
     { title: 'SMC structure', text: 'CHoCH, BOS, sweeps and order blocks: the structure engine that reads who is in control.' },
     { title: 'Four exits in R', text: 'Exits at 1:1.5, 1:2.5, 1:4 and 1:6, with levels fixed on the signal candle.' },
     { title: 'Stop to entry', text: 'When the first exit is hit, the stop moves up to the entry price.' },
+  ],
+  'premium-scanner': [
+    { title: 'Five-criteria vote', text: 'Price against the session open, against 1 h and 4 h ago, and against the EMA200 and EMA9. The majority sets the direction.' },
+    { title: 'Three gold sessions', text: 'Asia, London and New York. Outside the sessions the scanner stays quiet.' },
+    { title: 'Pullback entry', text: 'The entry zone sits a few dollars against price: you wait for gold to come back to you instead of chasing it.' },
+    { title: 'Stop and three fixed targets', text: 'Stop beyond the zone and TP1, TP2 and TP3 at $5, $10 and $15, with the part that closes at each one.' },
+    { title: 'Stop to entry', text: 'When TP1 is hit, the stop on the rest moves to the entry price.' },
   ],
 }

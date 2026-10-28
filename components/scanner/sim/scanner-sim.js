@@ -548,6 +548,113 @@ function sensei() {
   }, warm)
 }
 
+// ───────────────────────── Premium Scanner ─────────────────────────
+// Ouro em 15 min, nas sessões de Ásia, Londres e Nova Iorque. Cada vela vota a direção com 5
+// critérios (abertura da sessão, há 1 h, há 4 h, EMA200, EMA9); com maioria, desenha a zona de
+// entrada 4 $ em recuo, com 5 $ de largura, o stop 5 $ para lá dela e TP1–TP3 a 5, 10 e 15 $.
+function premiumScanner() {
+  const warm = 220
+  const startHour = 0 // vela 0 abre às 00:00; com warm = 220 a 1.ª vela visível abre às 07:00 do 3.º dia
+  const cs = makeCandles(61, 3985, [
+    { len: 200, drift: 0.00002, vol: 0.0011 }, { len: 24, drift: -0.0001, vol: 0.001 },
+    { len: 30, drift: 0.0005, vol: 0.0011 }, { len: 26, drift: 0.0, vol: 0.001 },
+    { len: 40, drift: -0.0007, vol: 0.0011 }, { len: 40, drift: 0.0004, vol: 0.001 },
+  ])
+  const close = cs.map((b) => b.c)
+  const e200 = ema(close, 200), e9 = ema(close, 9)
+  const hourAt = (i) => (startHour + i * 0.25) % 24
+  const sessions = [{ name: 'ÁSIA', a: 0, b: 6 }, { name: 'LONDRES', a: 7, b: 11 }, { name: 'NOVA IORQUE', a: 13, b: 16 }]
+  const sessOf = (i) => sessions.find((s) => hourAt(i) >= s.a && hourAt(i) < s.b)
+  // Abertura da sessão em curso para cada vela.
+  const abertura = []
+  for (let i = 0; i < cs.length; i++) {
+    const s = sessOf(i)
+    abertura.push(!s ? NaN : hourAt(i) === s.a || isNaN(abertura[i - 1] ?? NaN) ? cs[i].o : abertura[i - 1])
+  }
+  const checks = [
+    ['Abertura da sessão', (i) => close[i] > abertura[i]],
+    ['Há 1 h', (i) => close[i] > close[Math.max(0, i - 4)]],
+    ['Há 4 h', (i) => close[i] > close[Math.max(0, i - 16)]],
+    ['EMA200', (i) => close[i] > e200[i]],
+    ['EMA9', (i) => close[i] > e9[i]],
+  ]
+  const rows = checks.map(([label, fn]) => ({ label, states: cs.map((_, i) => (sessOf(i) ? (fn(i) ? 'Alta' : 'Baixa') : '–')) }))
+  const zones = []
+  for (let i = 0; i < cs.length; i++) {
+    const s = sessOf(i)
+    if (!s || hourAt(i) !== s.a) continue
+    const n = (s.b - s.a) * 4
+    const win = cs.slice(i, Math.min(cs.length, i + n))
+    zones.push({ i0: i, i1: Math.min(cs.length - 1, i + n - 1), top: Math.max(...win.map((b) => b.h)), bot: Math.min(...win.map((b) => b.l)), color: GOLD, opacity: 0.06, label: s.name, reveal: i, grow: i + n - 1 })
+  }
+  const markers = []
+  const groups = []
+  const usadas = new Set()
+  for (let i = warm + 10; i < cs.length - 8; i++) {
+    const s = sessOf(i)
+    if (!s || hourAt(i) - s.a < 1) continue
+    if (markers.length && i - markers[markers.length - 1].i < 16) continue
+    const chave = `${s.name}-${Math.floor(i / 96)}`
+    if (usadas.has(chave)) continue // na demonstração, um sinal por sessão
+    const voto = checks.reduce((acc, [, fn]) => acc + (fn(i) ? 1 : -1), 0)
+    if (Math.abs(voto) < 3) continue // maioria clara para a demonstração ler bem
+    const up = voto > 0, sg = up ? 1 : -1
+    const meio = close[i] - sg * 4
+    const perto = meio + sg * 2.5, longe = meio - sg * 2.5
+    const sl = longe - sg * 5
+    const tps = [5, 10, 15].map((d) => perto + sg * d)
+    // A ordem é limite: só conta se o preço voltar à zona na hora seguinte.
+    let fill = null
+    for (let k = i + 1; k <= Math.min(cs.length - 1, i + 4); k++) if (up ? cs[k].l <= perto : cs[k].h >= perto) { fill = k; break }
+    if (fill == null) continue
+    usadas.add(chave)
+    let hit = null
+    for (let k = fill + 1; k < Math.min(cs.length, fill + 60); k++) {
+      if (up ? cs[k].l <= sl : cs[k].h >= sl) break
+      if (up ? cs[k].h >= tps[0] : cs[k].l <= tps[0]) { hit = k; break }
+    }
+    markers.push({ i, price: up ? cs[i].l : cs[i].h, text: up ? 'PREMIUM COMPRA' : 'PREMIUM VENDA', color: up ? GREEN : RED, up })
+    zones.push({ i0: i, i1: Math.min(cs.length - 1, i + 20), top: Math.max(perto, longe), bot: Math.min(perto, longe), color: GOLD_L, opacity: 0.28, reveal: i, entry: true })
+    groups.push({
+      i0: i,
+      fill,
+      items: [
+        { price: meio, color: GOLD_L, label: 'Entrada' },
+        { price: sl, color: RED, label: 'SL', to: hit ?? undefined },
+        ...(hit ? [{ price: meio, color: GOLD_L, label: 'SL em BE', from: hit }] : []),
+        { price: tps[0], color: GREEN, label: 'TP1  50%' },
+        { price: tps[1], color: GREEN, label: 'TP2  25%' },
+        { price: tps[2], color: GREEN, label: 'TP3  25%' },
+      ],
+    })
+  }
+  const first = groups.find((g) => g.i0 >= warm)
+  const be = first?.items.find((it) => it.from != null)
+  // Na demonstração tudo acontece em poucas velas: afasta as legendas para darem tempo de leitura.
+  const espacar = (lista) => lista.reduce((acc, c) => [...acc, { ...c, i: acc.length ? Math.max(c.i, acc[acc.length - 1].i + 3) : c.i }], [])
+  return trim({
+    name: 'Premium Scanner',
+    candles: cs,
+    lines: [
+      { name: 'EMA9', color: BLUE, width: 0.04, z: 0.22, pts: e9 },
+      { name: 'EMA200', color: GOLD, width: 0.06, z: 0.24, pts: e200 },
+    ],
+    zones,
+    markers,
+    groups,
+    panel: { title: 'Voto da direção', rows },
+    captions: espacar([
+      { i: warm, text: 'Ouro em 15 minutos, nas sessões de Ásia, Londres e Nova Iorque' },
+      { i: warm + 5, text: 'Cada vela vota a direção com cinco critérios' },
+      ...(first ? [{ i: first.i0, text: 'Maioria de acordo: sinal Premium' }] : []),
+      ...(first ? [{ i: first.i0 + 1, text: 'Zona de entrada em recuo, stop e três alvos no gráfico' }] : []),
+      ...(first && first.fill > first.i0 + 1 ? [{ i: first.fill, text: 'O preço volta à zona e a ordem entra' }] : []),
+      ...(be && be.from > (first?.fill ?? 0) ? [{ i: be.from, text: 'TP1 tocado: o stop passa para a entrada' }] : []),
+    ]),
+    legend: [{ color: GOLD_L, label: 'Zona de entrada' }, { color: GOLD, label: 'EMA200' }, { color: BLUE, label: 'EMA9' }],
+  }, warm)
+}
+
 // ───────────────────────── Cartões de pontos-chave ─────────────────────────
 // Texto de cada cartão (vem do código Pine) e, à parte, o recorte da simulação que o ilustra.
 export const CARD_TEXT = {
@@ -585,6 +692,13 @@ export const CARD_TEXT = {
     { title: 'Estrutura SMC', text: 'CHoCH, BOS, sweeps e order blocks: o motor de estrutura que lê quem está a mandar no mercado.' },
     { title: 'Quatro saídas em R', text: 'Saídas a 1:1,5, 1:2,5, 1:4 e 1:6, com níveis fixos na vela do sinal.' },
     { title: 'Stop para a entrada', text: 'Quando a primeira saída é tocada, o stop sobe para o preço de entrada.' },
+  ],
+  'premium-scanner': [
+    { title: 'Voto de cinco critérios', text: 'O preço contra a abertura da sessão, contra há 1 h e há 4 h, e contra a EMA200 e a EMA9. A maioria dá a direção.' },
+    { title: 'Três sessões do ouro', text: 'Ásia, Londres e Nova Iorque. Fora das sessões o scanner fica calado.' },
+    { title: 'Entrada em recuo', text: 'A zona de entrada fica uns dólares contra o preço: esperas que o ouro volte a ti em vez de o perseguires.' },
+    { title: 'Stop e três alvos fixos', text: 'Stop para lá da zona e TP1, TP2 e TP3 a 5, 10 e 15 $, com a parte que fecha em cada um.' },
+    { title: 'Stop para a entrada', text: 'Quando o TP1 é tocado, o stop do resto passa para o preço de entrada.' },
   ],
 }
 
@@ -652,6 +766,18 @@ const CARD_VIEWS = {
       { win: around(be?.from ?? g.i0 + 4, 10, 18, N), layers: { candles: true, groups: true }, group: g },
     ]
   },
+  'premium-scanner': (s) => {
+    const N = s.candles.length
+    const g = s.groups[0]
+    const be = g.items.find((it) => it.from != null)
+    return [
+      { win: around(g.i0, 40, 6, N), layers: { candles: true, dimCandles: true, panel: true, markers: true } },
+      { win: [0, N - 1], layers: { candles: true, zones: (q) => !!q.label } },
+      { win: around(g.i0, 12, 22, N), layers: { candles: true, zones: (q) => q.entry && q.i0 === g.i0, markers: true } },
+      { win: around(g.i0, 8, 26, N), layers: { candles: true, groups: true, markers: true }, group: { ...g, items: g.items.filter((it) => it.from == null).map((it) => ({ ...it, to: undefined })) } },
+      { win: around(be?.from ?? g.i0 + 4, 10, 18, N), layers: { candles: true, groups: true }, group: g },
+    ]
+  },
 }
 
 /** Cartões de pontos-chave de um scanner: texto + recorte da simulação. */
@@ -661,7 +787,7 @@ export function scannerCards(slug) {
   return CARD_TEXT[slug].map((t, k) => ({ ...t, ...views[k] }))
 }
 
-const BUILDERS = { 'gold-killer': goldKiller, 'mtm-scanner': mtmScanner, 'aurum-flow': aurumFlow, trendshot: trendShot, sensei }
+const BUILDERS = { 'gold-killer': goldKiller, 'mtm-scanner': mtmScanner, 'aurum-flow': aurumFlow, trendshot: trendShot, sensei, 'premium-scanner': premiumScanner }
 const cache = {}
 /** Simulação de um scanner pelo slug da landing. */
 export function simulate(slug) {
