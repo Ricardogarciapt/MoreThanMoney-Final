@@ -7,8 +7,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const DIR = path.dirname(fileURLToPath(import.meta.url))
-const ENV = fs.readFileSync('/Volumes/Disco externo/Ollama para a MTM/MTM-Videoframes-projetos/educador-estrategias/.env.local', 'utf8')
-const env = k => (ENV.match(new RegExp(`^${k}=(.+)$`, 'm'))?.[1] ?? '').trim().replace(/^["']|["']$/g, '')
+// O serviço semanal do Mac (services/social-mac) passa a chave no ambiente; à mão lê-se do disco.
+const ENV_F = '/Volumes/Disco externo/Ollama para a MTM/MTM-Videoframes-projetos/educador-estrategias/.env.local'
+const ENV = process.env.FISH_API_KEY ? '' : fs.readFileSync(ENV_F, 'utf8')
+const env = k => process.env[k] || (ENV.match(new RegExp(`^${k}=(.+)$`, 'm'))?.[1] ?? '').trim().replace(/^["']|["']$/g, '')
 const G = JSON.parse(fs.readFileSync(path.join(DIR, 'guiao.json'), 'utf8'))
 const langs = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(G.vozes)
 
