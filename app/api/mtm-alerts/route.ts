@@ -269,6 +269,23 @@ function extractChartImage(raw: Record<string, unknown>, message: string | null)
  * `outcome`. Ids com prefixo `premium-` para não chocarem com os de tradingview_signals.
  */
 const PREFIXO_PREMIUM = "premium-"
+
+/**
+ * O desfecho do chat (`outcome`, escrito pelo tracker) → o `tradeStatus` que os separadores
+ * entendem (lib/mtm-alerts/outcome). Antes: «Ideia descartada» (0 pips) virava «be», que conta
+ * como trade VIVA — ficava em «Ativos» para sempre — e «Parciais + break-even» contava como
+ * ganho completo.
+ */
+function estadoPremium(o: { label?: string | null } | null, pips: number | null, alvos: number): string {
+  if (!o) return "active"
+  const label = String(o.label ?? "").toLowerCase()
+  if (label.includes("descartad")) return "discarded"
+  if (label.includes("stop") || (pips != null && pips < 0)) return "loss"
+  if (label.includes("alvo final")) return `exit_${Math.max(alvos, 1)}`
+  if (label.includes("parcia")) return "exit_1"
+  if (pips != null && pips > 0) return "closed"
+  return "expired"
+}
 const JANELA_PREMIUM_MS = 14 * 24 * 3600_000
 
 async function alertasPremium(
@@ -295,9 +312,9 @@ async function alertasPremium(
     if (!s || s.sl == null || !s.tps.length) continue
     const cls = classifyAssetClass(s.simbolo)
     const sl = slInfo(s.simbolo, s.entrada, s.sl, cls)
-    const o = (row.outcome && typeof row.outcome === "object" ? row.outcome : null) as { pips?: number | null; pct?: number | null } | null
+    const o = (row.outcome && typeof row.outcome === "object" ? row.outcome : null) as { pips?: number | null; pct?: number | null; label?: string | null } | null
     const pips = typeof o?.pips === "number" ? o.pips : null
-    const estado = o ? (pips == null ? "closed" : pips < 0 ? "loss" : pips === 0 ? "be" : "closed") : "active"
+    const estado = estadoPremium(o, pips, s.tps.length)
     const grafico = graficoDoFormatoUnico(row.content as string, "premium", { timeframe: "15", quando: row.created_at as string })
     out.push({
       id: `${PREFIXO_PREMIUM}${row.id}`,
@@ -407,6 +424,10 @@ export async function GET(request: NextRequest) {
         return st !== "discarded" && st !== "filtered"
       })
     }
+
+    // Sem ticker não há sinal nem gráfico: são alertas de desenho («US30, 1 Cruzando raio
+    // horizontal») que chegam ao webhook do TrendShot. Eram os cartões partidos da página (28/10).
+    if (data) data = (data as any[]).filter((row) => String(row.ticker ?? "").trim() !== "")
 
     const alerts: MtmAlert[] = (data || []).map((row: any) => {
       const raw = (row.raw_payload && typeof row.raw_payload === "object" ? row.raw_payload : {}) as Record<string, unknown>

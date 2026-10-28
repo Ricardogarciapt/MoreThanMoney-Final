@@ -110,7 +110,8 @@ export async function processarTrendshot(
     .single()
   const logId = (log?.id as string | undefined) ?? null
   const falha = async (motivo: string) => {
-    if (logId) await supabase.from('tradingview_signals').update({ ai_error: `trendshot: ${motivo}` }).eq('id', logId)
+    // 'filtered': nunca foi sinal, por isso não ocupa vaga no feed dos Alertas MTM (migração 221).
+    if (logId) await supabase.from('tradingview_signals').update({ ai_error: `trendshot: ${motivo}`, trade_status: 'filtered' }).eq('id', logId)
     return { ok: true, skipped: motivo }
   }
 

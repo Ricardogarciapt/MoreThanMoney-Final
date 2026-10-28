@@ -461,6 +461,8 @@ function AlertCard({
               alt={`Gráfico ${alert.ticker}`}
               className="max-h-96 w-full bg-gray-900 object-contain"
               loading="lazy"
+              // Imagem que não carrega → o gráfico ao vivo, em vez de um ícone partido.
+              onError={() => alert.tvSymbol && setShowChart(true)}
             />
           </a>
         ) : null}
