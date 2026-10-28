@@ -1,7 +1,7 @@
 /**
  * Os TECTOS DO EXECUTOR: a última fechadura antes do dinheiro. Puros.
  *
- * Vêm do env da VPS (só o dono os muda, por SSH), não da Supabase. A guarda do vigia já aprovou a
+ * Vêm do env (VPS, ou Vercel para os perps da AURUM: app/api/cron/cripto-executar), nunca da Supabase. A guarda do vigia já aprovou a
  * ordem, mas a Supabase pode ser escrita por qualquer processo com a service key (Vercel incluída):
  * se alguém lá metesse uma posição `pendente` de 50 000 $, era aqui que morria.
  */
@@ -96,4 +96,17 @@ export function parOcupadoNaMestre(t: Tectos, tamanhoNaConta: number | null): st
   if (!t.bybitMestre) return null
   if (tamanhoNaConta == null) return 'Não consegui ler a posição da mestre neste par.'
   return tamanhoNaConta > 0 ? 'A mestre já tem posição neste par (Aurum): o agente não entra por cima.' : null
+}
+
+/**
+ * Tectos do executor da VERCEL (perps na AURUM, mestre do Copy Trading). Sempre em modo mestre e
+ * sem levantamentos; se o env não disser nada, 100 $ de capital do agente. Os restantes valores
+ * por omissão já são pequenos (ordem 25 $, exposição 100 $, perda do dia 10 $, alavancagem 3).
+ */
+export function tectosDaVercel(env: Record<string, string | undefined>): Tectos {
+  const t = lerTectos(env)
+  const capital = env.CRIPTO_CAPITAL_BYBIT_USD != null && env.CRIPTO_CAPITAL_BYBIT_USD !== '' ? t.capitalBybitUsd : 100
+  // O cron corre de minuto a minuto e o vigia também: um pedido pode ter até ~2 min quando chega.
+  const pendente = env.CRIPTO_PENDENTE_MAX_S ? t.pendenteMaxIdadeMs : 150_000
+  return { ...t, bybitMestre: true, varrerBybit: false, capitalBybitUsd: capital, pendenteMaxIdadeMs: pendente }
 }

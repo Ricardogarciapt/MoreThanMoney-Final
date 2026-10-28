@@ -22,7 +22,7 @@ import { inicioDaSessao } from '../../lib/cripto/papel'
 import { abrirPerp, bybitAgenteConfigurada, fecharPerp, levantarUsdtSolana, posicaoPerp, saldoBybit, ultimoFecho } from './bybit-agente'
 import { abrirOuCriarCarteira, chaveEmTexto } from './cofre'
 import { USDC, enviarUsdc, ligacao, precosJupiter, saldoSol, saldoToken, swapUltra } from './solana'
-import { equityBybitDoAgente, lerTectos, parOcupadoNaMestre, valorAEnviar, verificarPendente } from './tectos'
+import { equityBybitDoAgente, lerTectos, parOcupadoNaMestre, valorAEnviar, verificarPendente } from '../../lib/cripto/tectos'
 
 const VERSAO = 'cripto-executor-002'
 const CAMINHO_COFRE = process.env.CRIPTO_COFRE || '/var/lib/mtm-cripto/solana.json'

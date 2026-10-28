@@ -46,6 +46,15 @@ O dashboard está em `/admin/cripto`.
 4. **Financiar:** USDC + ~0,05 SOL no endereço da carteira (aparece no dashboard) e/ou USDT na subconta Bybit.
 5. **Ligar:** no env `CRIPTO_CAPITAL_BASE_USD=<o que puseste>`, `CRIPTO_DESTINO_LUCROS=<o teu endereço Solana>`, `CRIPTO_REAL=1` → `sudo systemctl restart mtm-cripto-executor`; no dashboard «Passar a real» (escrever REAL) e o mesmo capital base.
 
+## 2a. Real na AURUM pela Vercel (o caminho em uso desde 28/10)
+
+Os perps reais correm em `app/api/cron/cripto-executar` (cron de 1 min, fra1), com a chave que a
+Vercel já tem (`BYBIT_API_KEY`, subconta AURUM, mestre do Copy Trading). Nada de chaves na VPS.
+Ligar: `CRIPTO_REAL=1` no env de Production da Vercel **e** «real» no /admin/cripto. Tectos por
+env da Vercel (`CRIPTO_CAPITAL_BYBIT_USD`, por omissão 100; ordem 25, exposição 100, perda do dia
+10, alavancagem 3). Memecoins reais não correm aqui. Não activar também o executor da VPS com a
+mesma conta.
+
 ## 2b. Real na MESTRE do Copy Trading (escolha do Ricardo, 28/10)
 
 Em vez da subconta, o agente usa a conta-mestre do Copy Trading. **Os seguidores copiam cada trade

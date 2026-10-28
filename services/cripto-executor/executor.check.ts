@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { abrirOuCriarCarteira } from './cofre'
 import { enderecoValido } from './solana'
-import { equityBybitDoAgente, lerTectos, parOcupadoNaMestre, valorAEnviar, verificarPendente } from './tectos'
+import { equityBybitDoAgente, lerTectos, tectosDaVercel, parOcupadoNaMestre, valorAEnviar, verificarPendente } from '../../lib/cripto/tectos'
 
 const falhas: string[] = []
 const teste = (nome: string, c: boolean) => { if (!c) falhas.push(nome) }
@@ -61,6 +61,11 @@ const em = equityBybitDoAgente(m, { equity: 50_000, livre: 40_000 }, -20, 50)
 teste('mestre: equity é o capital atribuído + PnL, não o saldo da mestre', em.equity === 280 && em.livre === 230)
 teste('mestre: perda maior que o capital dá 0', equityBybitDoAgente(m, { equity: 50_000, livre: 40_000 }, -400, 0).equity === 0)
 teste('subconta: equity é o saldo da conta', equityBybitDoAgente(t, { equity: 500, livre: 400 }, -20, 50).equity === 500)
+const tv = tectosDaVercel({})
+teste('vercel: sem CRIPTO_REAL não executa', !tv.real)
+teste('vercel: sempre mestre e sem levantamentos', tv.bybitMestre && !lerTectos({}).varrerBybit && !tectosDaVercel({ CRIPTO_VARRER_BYBIT: '1' }).varrerBybit)
+teste('vercel: capital do agente 100 $ por omissão', tv.capitalBybitUsd === 100 && tectosDaVercel({ CRIPTO_CAPITAL_BYBIT_USD: '250' }).capitalBybitUsd === 250)
+teste('vercel: tectos pequenos por omissão', tv.ordemMaxUsd === 25 && tv.perdaDiaMaxUsd === 10 && tv.alavancagemMax === 3)
 
 if (falhas.length) {
   console.error(`✗ ${falhas.length} falha(s):\n  - ${falhas.join('\n  - ')}`)
