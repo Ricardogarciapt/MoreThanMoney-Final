@@ -13,8 +13,8 @@ export const maxDuration = 60
  * Mesmo horário do radar (de meia em meia hora, 9h–17h), desfasado um quarto de hora para
  * apanhar o que o radar acabou de encontrar: `15,45 9-16 * * *` no vercel.json.
  *
- * Só ESCREVE. Publicar é sempre o dono, à mão, no Instagram: a Graph API não comenta em posts
- * de terceiros e automatizar o browser põe a conta em risco. No máximo 20 por dia.
+ * Só ESCREVE, no máximo 20 por dia. Quem publica é o agente no Mac, que regista cada um em
+ * /api/operador/fila-comentarios; este código nunca fala com o Instagram.
  */
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

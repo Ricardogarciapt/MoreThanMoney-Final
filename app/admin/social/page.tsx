@@ -47,6 +47,7 @@ import { ProspecaoTelegram } from "@/components/admin/prospecao-telegram"
 import { ConversasBot } from "@/components/admin/conversas-bot"
 import { EstudioCartoes } from "@/components/admin/estudio-cartoes"
 import { AutoPublicarAgentes } from "@/components/admin/auto-publicar-agentes"
+import { RegistoOperador } from "@/components/admin/registo-operador"
 
 interface Post {
   id: string
@@ -336,7 +337,8 @@ export default function AdminSocialPage() {
                 <Instagram className="h-6 w-6" /> Conteúdo &amp; Agendamento
               </h1>
               <p className="text-sm text-neutral-400">
-                Publicação nativa nas 2 contas. Nada sai sem a tua aprovação.
+                Publicação nativa nas 2 contas. No @morethanmoney.pt os agentes aprovam o que passa nas
+                regras da casa e deixam tudo no registo; no @ricardogarciapt só sai o que tu aprovares.
               </p>
             </div>
           </div>
@@ -359,6 +361,10 @@ export default function AdminSocialPage() {
         </div>
 
         <AutoPublicarAgentes />
+
+        <div className="mb-4">
+          <RegistoOperador />
+        </div>
 
         {/* Os três separadores: a fila do que sai, os factos que vão dentro dos cartões e o
             funil de onde vêm as pessoas. Aprovar um post sem ver o número que vai na imagem é
@@ -1025,7 +1031,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
             Piloto automático: <b>{painel.conteudo.autopilot ? "ligado" : "desligado"}</b>
             {painel.conteudo.autopilot
               ? " — os posts com imagem publicam sem passar por ti."
-              : " — nada sai sem a tua aprovação."}
+              : " — os rascunhos esperam; o AG-OPERADOR aprova os que passam nas regras e regista-os em cima."}
           </p>
         </div>
 
