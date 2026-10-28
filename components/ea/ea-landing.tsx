@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import Link from "next/link"
 import { Unbounded } from "next/font/google"
-import { ArrowDown, ArrowRight, ArrowUpRight, Asterisk, Check, Download, FileText, KeyRound, Loader2, Plus, type LucideIcon } from "lucide-react"
+import { ArrowDown, ArrowRight, ArrowUpRight, Asterisk, Check, Download, FileText, KeyRound, Loader2, Play, Plus, Volume2, VolumeX, type LucideIcon } from "lucide-react"
 import s from "@/components/scanner/scanner-landing.module.css"
 import e from "./ea-landing.module.css"
 
@@ -32,6 +32,9 @@ export interface EaLandingData {
   sub: string
   markets: string[]
   hero: ReactNode
+  /** Vídeo de apresentação: quando existe, ocupa o palco do hero (como nas landings dos scanners). */
+  video?: string
+  poster?: string
   heroCaption?: string
   heroNote?: ReactNode
   guia?: string
@@ -105,6 +108,22 @@ export function EaLanding({ data: d }: { data: EaLandingData }) {
   const [erro, setErro] = useState("")
   const [aEnviar, setAEnviar] = useState(false)
   const [barOn, setBarOn] = useState(false)
+  const [muted, setMuted] = useState(true)
+  const video = useRef<HTMLVideoElement>(null)
+  const playWithSound = () => {
+    const v = video.current
+    if (!v) return
+    v.currentTime = 0
+    v.muted = false
+    setMuted(false)
+    v.play().catch(() => {})
+  }
+  const toggleSound = () => {
+    const v = video.current
+    if (!v) return
+    v.muted = !v.muted
+    setMuted(v.muted)
+  }
   const chosen = d.plans.find((p) => p.planId === plan) ?? d.plans[0]
   const goTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
 
@@ -193,9 +212,23 @@ export function EaLanding({ data: d }: { data: EaLandingData }) {
 
         <div className={s.stage}>
           <div className={`${s.frame} ${s.stageFrame}`}>
-            <div className={`${s.core} ${e.heroVisual}`}>{d.hero}</div>
+            {d.video ? (
+              <div className={s.core}>
+                <video ref={video} src={d.video} poster={d.poster} autoPlay muted loop playsInline preload="metadata" aria-label={`Vídeo de apresentação do ${d.name}`} />
+                {muted && (
+                  <button type="button" className={s.playBig} onClick={playWithSound}>
+                    <Play size={18} fill="currentColor" /> Ver com som
+                  </button>
+                )}
+                <button type="button" className={s.soundBtn} onClick={toggleSound} aria-label={muted ? "Ligar o som" : "Desligar o som"}>
+                  {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+              </div>
+            ) : (
+              <div className={`${s.core} ${e.heroVisual}`}>{d.hero}</div>
+            )}
           </div>
-          {d.heroCaption && <p className={e.caption}>{d.heroCaption}</p>}
+          {!d.video && d.heroCaption && <p className={e.caption}>{d.heroCaption}</p>}
           <div className={e.facts}>
             {d.facts.map((f) => (
               <div key={f.rotulo} className={`${e.fact} ${s.reveal}`}>
