@@ -15,6 +15,8 @@ const DATA: EaLandingData = {
   title: ["MTM Sensei", "Scalp Edition"],
   sub: "Um scalper de ouro para MetaTrader 5. Arma uma ordem pendente de cada lado, deixa o preço escolher, e a partir do primeiro cêntimo de lucro põe o stop em breakeven e acompanha. Quando o preço vira, a ordem contrária fecha uma e abre a outra.",
   markets: ["XAUUSD", "M5", "MetaTrader 5", "Licença por conta", "Sem DLLs"],
+  video: "/ea/sensei-scalp/apresentacao.mp4",
+  poster: "/ea/sensei-scalp/poster.jpg",
   hero: (
     <>
       <SenseiEstilos />
