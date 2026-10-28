@@ -1,0 +1,7 @@
+{
+  "//": "Fora do tsconfig da raiz: as dependências Solana só existem aqui (npm ci nesta pasta), não na Vercel.",
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "noEmit": true, "target": "ES2020", "typeRoots": ["../../node_modules/@types"], "types": ["node"] },
+  "include": ["./*.ts", "../../lib/cripto/*.ts", "../../types/**/*.d.ts", "../../next-env.d.ts"],
+  "exclude": ["node_modules"]
+}

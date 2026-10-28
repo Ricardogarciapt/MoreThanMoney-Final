@@ -1,0 +1,68 @@
+/**
+ * Os TECTOS DO EXECUTOR: a última fechadura antes do dinheiro. Puros.
+ *
+ * Vêm do env da VPS (só o dono os muda, por SSH), não da Supabase. A guarda do vigia já aprovou a
+ * ordem, mas a Supabase pode ser escrita por qualquer processo com a service key (Vercel incluída):
+ * se alguém lá metesse uma posição `pendente` de 50 000 $, era aqui que morria.
+ */
+
+export interface Tectos {
+  real: boolean
+  ordemMaxUsd: number
+  exposicaoMaxUsd: number
+  perdaDiaMaxUsd: number
+  alavancagemMax: number
+  pendenteMaxIdadeMs: number
+  capitalBaseUsd: number
+  varreduraMaxUsd: number
+  destinoLucros: string | null
+  varrerBybit: boolean
+}
+
+export function lerTectos(env: Record<string, string | undefined>): Tectos {
+  const n = (k: string, d: number) => {
+    const v = Number(env[k])
+    return env[k] != null && env[k] !== '' && Number.isFinite(v) && v >= 0 ? v : d
+  }
+  return {
+    real: env.CRIPTO_REAL === '1',
+    ordemMaxUsd: n('CRIPTO_ORDEM_MAX_USD', 25),
+    exposicaoMaxUsd: n('CRIPTO_EXPOSICAO_MAX_USD', 100),
+    perdaDiaMaxUsd: n('CRIPTO_PERDA_DIA_MAX_USD', 10),
+    alavancagemMax: Math.min(5, n('CRIPTO_ALAVANCAGEM_MAX', 3)),
+    pendenteMaxIdadeMs: n('CRIPTO_PENDENTE_MAX_S', 120) * 1000,
+    capitalBaseUsd: n('CRIPTO_CAPITAL_BASE_USD', 0),
+    varreduraMaxUsd: n('CRIPTO_VARREDURA_MAX_USD', 500),
+    destinoLucros: env.CRIPTO_DESTINO_LUCROS?.trim() || null,
+    varrerBybit: env.CRIPTO_VARRER_BYBIT === '1',
+  }
+}
+
+export interface Pendente {
+  nocional_usd: number
+  alavancagem: number
+  aberta_em: string
+}
+
+export function verificarPendente(p: Pendente, t: Tectos, ctx: { exposicaoAbertaUsd: number; perdaHojeUsd: number; agora: Date }): string | null {
+  if (!t.real) return 'CRIPTO_REAL não está a 1 nesta VPS.'
+  const idade = ctx.agora.getTime() - new Date(p.aberta_em).getTime()
+  if (!(idade >= 0 && idade <= t.pendenteMaxIdadeMs)) return `Pedido com ${Math.round(idade / 1000)} s: o preço já não é o da decisão.`
+  if (!(Number(p.nocional_usd) > 0)) return 'Nocional inválido.'
+  if (Number(p.nocional_usd) > t.ordemMaxUsd) return `Nocional ${p.nocional_usd} $ acima do tecto da VPS (${t.ordemMaxUsd} $).`
+  if (ctx.exposicaoAbertaUsd + Number(p.nocional_usd) > t.exposicaoMaxUsd) return `Exposição passaria de ${t.exposicaoMaxUsd} $.`
+  if (ctx.perdaHojeUsd >= t.perdaDiaMaxUsd) return `Perda de hoje ${ctx.perdaHojeUsd.toFixed(2)} $ já no tecto (${t.perdaDiaMaxUsd} $).`
+  if (!(p.alavancagem >= 1 && p.alavancagem <= t.alavancagemMax)) return `Alavancagem ${p.alavancagem} fora do tecto (${t.alavancagemMax}).`
+  return null
+}
+
+/** Quanto enviar no fim da sessão, com os números DO EXECUTOR (saldos que ele próprio leu). */
+export function valorAEnviar(t: Tectos, equityUsd: number, livreSolanaUsd: number, minimoUsd: number): { usd: number; porque: string } {
+  if (!t.destinoLucros) return { usd: 0, porque: 'CRIPTO_DESTINO_LUCROS não definido na VPS.' }
+  if (!(t.capitalBaseUsd > 0)) return { usd: 0, porque: 'CRIPTO_CAPITAL_BASE_USD não definido na VPS.' }
+  const lucro = equityUsd - t.capitalBaseUsd
+  if (lucro <= 0) return { usd: 0, porque: `Sem lucro acima da base (${lucro.toFixed(2)} $).` }
+  const usd = Math.floor(Math.min(lucro, livreSolanaUsd, t.varreduraMaxUsd) * 100) / 100
+  if (usd < minimoUsd) return { usd: 0, porque: `Lucro enviável ${usd.toFixed(2)} $ abaixo do mínimo.` }
+  return { usd, porque: `Lucro acima da base: ${usd.toFixed(2)} $.` }
+}

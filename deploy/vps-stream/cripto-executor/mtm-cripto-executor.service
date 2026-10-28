@@ -1,0 +1,31 @@
+[Unit]
+Description=MTM Cripto - executor real do agente cripto (unico processo com a carteira)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Env 0600 do root: chaves Bybit da SUBCONTA, frase do cofre, tectos e destino dos lucros.
+EnvironmentFile=/etc/mtm-cripto/executor.env
+# Utilizador fixo (nao DynamicUser): o cofre tem de sobreviver a reinicios com o mesmo dono.
+User=mtm-cripto
+Group=mtm-cripto
+StateDirectory=mtm-cripto
+StateDirectoryMode=0700
+WorkingDirectory=/var/lib/mtm-cripto
+ExecStart=/usr/bin/node --max-old-space-size=384 /opt/mtm/cripto-executor/executor.js
+Restart=always
+RestartSec=15
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+UMask=0077
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target
