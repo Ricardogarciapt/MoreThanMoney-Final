@@ -26,6 +26,15 @@ echo "→ dependências (Homebrew: ffmpeg, yt-dlp, node)"
 command -v brew >/dev/null || { echo "Falta o Homebrew: https://brew.sh"; exit 1; }
 for p in ffmpeg yt-dlp node python@3.12; do brew list --formula "$p" >/dev/null 2>&1 || brew install "$p"; done
 brew upgrade yt-dlp >/dev/null 2>&1 || true   # o YouTube muda; o yt-dlp acompanha
+# O ffmpeg do Homebrew vem sem libass nem freetype: as legendas (filtro ass) e os textos
+# (drawtext) falham com «saiu com 8». O ffmpeg-full traz os dois; fica à frente no PATH do worker.
+FFMPEG_BIN="$(dirname "$(command -v ffmpeg)")"
+if ! ffmpeg -hide_banner -filters 2>/dev/null | grep -qE ' ass +V'; then
+  brew list --formula ffmpeg-full >/dev/null 2>&1 || brew install ffmpeg-full
+  FFMPEG_BIN="$(brew --prefix ffmpeg-full)/bin"
+fi
+"$FFMPEG_BIN/ffmpeg" -hide_banner -filters 2>/dev/null | grep -qE ' ass +V' \
+  || { echo "O ffmpeg em $FFMPEG_BIN continua sem o filtro ass (libass)."; exit 1; }
 
 echo "→ transcrição local (faster-whisper, sem custo)"
 mkdir -p "$DEST"
@@ -79,7 +88,7 @@ cat > "$PLIST" <<EOF
   <key>ProgramArguments</key>
   <array>
     <string>/bin/zsh</string><string>-c</string>
-    <string>source "$ENV_F"; export YTDLP_BIN="$BREW_BIN/yt-dlp"; export PATH="$DEST/venv/bin:$BREW_BIN:/usr/bin:/bin"; exec "$NODE" "$DEST/worker/videocliper-worker.js"</string>
+    <string>source "$ENV_F"; export YTDLP_BIN="$BREW_BIN/yt-dlp"; export PATH="$DEST/venv/bin:$FFMPEG_BIN:$BREW_BIN:/usr/bin:/bin"; exec "$NODE" "$DEST/worker/videocliper-worker.js"</string>
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>

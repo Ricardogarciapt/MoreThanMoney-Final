@@ -252,7 +252,9 @@ function congelar(sim) {
 
 function correr(cmd, args, opcoes = {}) {
   return new Promise((resolve, reject) => {
-    const p = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"], ...opcoes })
+    // Sem o cabeçalho de versão do ffmpeg: ocupava o espaço todo do erro e a causa ficava cortada.
+    const a = cmd === "ffmpeg" && !args.includes("-hide_banner") ? ["-hide_banner", ...args] : args
+    const p = spawn(cmd, a, { stdio: ["ignore", "pipe", "pipe"], ...opcoes })
     FILHOS.add(p)
     if (pausado) { try { p.kill("SIGSTOP") } catch {} }
     p.on("close", () => FILHOS.delete(p))

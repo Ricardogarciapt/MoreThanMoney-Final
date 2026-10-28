@@ -569,7 +569,10 @@ export async function POST(request: NextRequest) {
   if (resultado === 'erro') {
     const clipId = corpo?.clipId ? String(corpo.clipId) : null
     const jobId = corpo?.jobId ? String(corpo.jobId) : null
-    const erro = String(corpo?.erro ?? 'erro no worker').slice(0, 500)
+    // A causa de um erro de ffmpeg/yt-dlp vem no FIM do stderr: guarda-se o início (quem falhou)
+    // e o fim (porquê), nunca só o princípio.
+    const bruto = String(corpo?.erro ?? 'erro no worker')
+    const erro = bruto.length > 500 ? `${bruto.slice(0, 80)} … ${bruto.slice(-410)}` : bruto
     if (clipId) {
       await db.from('videocliper_clips').update({ estado: 'erro', erro, updated_at: agora }).eq('id', clipId)
     } else if (jobId) {
