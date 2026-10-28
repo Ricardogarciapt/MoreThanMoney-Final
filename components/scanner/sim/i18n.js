@@ -25,6 +25,14 @@ const EN = {
   'Todas de acordo: sinal Sensei': 'All in agreement: Sensei signal',
   'Quatro saídas em R: 1:1,5, 1:2,5, 1:4 e 1:6': 'Four exits in R: 1:1.5, 1:2.5, 1:4 and 1:6',
   'Exit 1 tocado: o stop passa para breakeven': 'Exit 1 hit: the stop moves to breakeven',
+  'Ouro em 15 minutos, nas sessões da Ásia, Londres e Nova Iorque': 'Gold on 15 minutes, in the Asia, London and New York sessions',
+  'Cinco perguntas decidem a direção: a maioria manda': 'Five questions decide the direction: the majority rules',
+  'Sinal: a zona de entrada fica 4 $ contra o preço': 'Signal: the entry zone sits $4 against price',
+  'Stop 5 $ para lá da zona e alvos a 5, 10 e 15 $': 'Stop $5 beyond the zone, targets at $5, $10 and $15',
+  'TP1: sai metade e o stop passa para a entrada': 'TP1: half comes off and the stop moves to entry',
+  'Zona de entrada': 'Entry zone', 'Zona': 'Zone', 'Voto de cinco': 'Five-point vote', 'SL na entrada': 'SL at entry',
+  'TP4 a correr': 'TP4 runner',
+  'Abertura da sessão': 'Session open', 'Há 1 hora': '1 hour ago', 'Há 4 horas': '4 hours ago',
   // Legenda das cores
   'Níveis de alvo': 'Target levels', 'Níveis de drawdown': 'Drawdown levels', 'Entrada (linha central)': 'Entry (center line)',
   'Caixas de sessão': 'Session boxes', 'Alvos TP1 a TP4': 'Targets TP1 to TP4', 'Stop': 'Stop', 'Banda Sensei': 'Sensei band',
@@ -86,5 +94,12 @@ export const CARD_TEXT_EN = {
     { title: 'SMC structure', text: 'CHoCH, BOS, sweeps and order blocks: the structure engine that reads who is in control.' },
     { title: 'Four exits in R', text: 'Exits at 1:1.5, 1:2.5, 1:4 and 1:6, with levels fixed on the signal candle.' },
     { title: 'Stop to entry', text: 'When the first exit is hit, the stop moves up to the entry price.' },
+  ],
+  'premium-scanner': [
+    { title: 'Three gold sessions', text: 'Asia, London and New York, each with its own switch. Outside them, the scanner stays quiet.' },
+    { title: 'Five-point vote', text: 'Price against the session open, 1 h and 4 h ago, the 200 EMA and the 9 EMA. The majority decides.' },
+    { title: 'Pullback entry zone', text: 'A $5 zone placed $4 against price: you enter with a limit order when price comes back, without chasing it.' },
+    { title: 'Stop and four targets', text: 'Stop $5 beyond the zone, TP1, TP2 and TP3 at $5, $10 and $15 from the edge, and a TP4 to let it run.' },
+    { title: 'Half at TP1, stop to entry', text: 'At the first target half the position comes off and the stop on the rest moves to the entry price.' },
   ],
 }
