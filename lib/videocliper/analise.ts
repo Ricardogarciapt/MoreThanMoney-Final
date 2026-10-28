@@ -192,7 +192,10 @@ export async function analisarTranscricao(input: {
   const texto = transcricaoParaTexto(input.palavras)
   if (texto.length < 200) throw new Error('transcrição demasiado curta para analisar')
 
-  const quantos = input.quantos ?? 10
+  // Seis chegam: sai um corte por dia e o resto fica de reserva. Pedir dez obrigava a uma
+  // resposta tão longa que o Gemini (o único grátis que aguenta uma aula inteira; o Groq grátis
+  // tem tecto de 8 mil tokens por minuto) passava os 2 minutos a escrevê-la — visto a 28/10.
+  const quantos = input.quantos ?? 6
   // Uma sessão de duas horas dá uma transcrição maior do que a janela do modelo compensa. O
   // corte é generoso mas existe: mais do que isto é gastar tokens em logística de sessão.
   // 90 mil caracteres cabem no limite por minuto da IA gratuita (Gemini); uma aula de hora e meia cabe.
@@ -220,9 +223,10 @@ export async function analisarTranscricao(input: {
       tarefa: 'videocliper-analise',
       sistema: SISTEMA,
       mensagens: [{ role: 'user', content: pedido }],
-      maxTokens: 12000,
+      maxTokens: 8000,
       preferencia: 'qualidade',
-      timeoutMs: 120_000,
+      // A função tem 300 s; o Groq recusa em 1 s quando a aula não cabe, sobra tempo de folga.
+      timeoutMs: 200_000,
     })
     bruto = r.texto
   } catch (e) {
