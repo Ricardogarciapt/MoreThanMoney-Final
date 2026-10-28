@@ -12,12 +12,44 @@ import { CHAVE_CONFIG, lerConfig } from '@/lib/cripto/ciclo'
  * ordem.
  */
 export const dynamic = 'force-dynamic'
+// A Bybit recusa pedidos de algumas regiões (EUA): o preço ao vivo das abertas lê-se de Frankfurt.
+export const preferredRegion = 'fra1'
+
+/** Preço de agora das abertas, para o PnL por realizar: Bybit (perps) e Jupiter (spot), públicos. */
+async function precosAgora(abertas: { mercado: string; id_ativo: string }[]): Promise<Record<string, number>> {
+  const out: Record<string, number> = {}
+  if (!abertas.length) return out
+  const sinal = AbortSignal.timeout(4000)
+  const perps = [...new Set(abertas.filter((a) => a.mercado === 'perp').map((a) => a.id_ativo))]
+  const mints = [...new Set(abertas.filter((a) => a.mercado === 'spot').map((a) => a.id_ativo))]
+  await Promise.all([
+    perps.length
+      ? fetch('https://api.bybit.com/v5/market/tickers?category=linear', { signal: sinal, cache: 'no-store' })
+          .then((r) => r.json())
+          .then((j: { result?: { list?: { symbol: string; lastPrice: string }[] } }) => {
+            for (const t of j.result?.list ?? []) if (perps.includes(t.symbol)) out[t.symbol] = Number(t.lastPrice)
+          })
+          .catch(() => undefined)
+      : undefined,
+    mints.length
+      ? fetch(`https://lite-api.jup.ag/price/v3?ids=${mints.join(',')}`, { signal: sinal, cache: 'no-store' })
+          .then((r) => r.json())
+          .then((j: Record<string, { usdPrice?: number }>) => {
+            for (const m of mints) if (Number(j?.[m]?.usdPrice) > 0) out[m] = Number(j[m].usdPrice)
+          })
+          .catch(() => undefined)
+      : undefined,
+  ])
+  return out
+}
 
 export async function GET(request: NextRequest) {
   const negado = await requireAdmin(request)
   if (negado) return negado
   const db = getSupabaseAdmin()
-  const [cfg, carteiras, saldo, abertas, fechadas, decisoes, sessoes, vantagem, pulso] = await Promise.all([
+  const desde90 = new Date(Date.now() - 90 * 86_400_000).toISOString()
+  const desde7 = new Date(Date.now() - 7 * 86_400_000).toISOString()
+  const [cfg, carteiras, saldo, abertas, fechadas, decisoes, sessoes, vantagem, pulso, historico, saldos, funil] = await Promise.all([
     db.from('site_settings').select('value').eq('key', CHAVE_CONFIG).maybeSingle(),
     db.from('cripto_carteiras').select('*'),
     db.from('cripto_saldos').select('*').order('em', { ascending: false }).limit(1).maybeSingle(),
@@ -27,9 +59,15 @@ export async function GET(request: NextRequest) {
     db.from('cripto_sessoes').select('*').order('inicio', { ascending: false }).limit(30),
     db.from('cripto_vantagem').select('*'),
     db.from('servicos_pulso').select('estado, em, versao').eq('servico', 'mtm-vigias').maybeSingle(),
+    // Para os gráficos: as fechadas de 90 dias (curva, evolução, projecção), os saldos reais de 7
+    // dias (a curva medida no exchange/carteira) e as decisões de 24 h, só as colunas do funil.
+    db.from('cripto_posicoes').select('modo, ativo, mercado, lado, gatilho_tipo, nocional_usd, risco_usd, pnl_usd, aberta_em, fechada_em').eq('estado', 'fechada').not('pnl_usd', 'is', null).gte('fechada_em', desde90).order('fechada_em', { ascending: true }).limit(3000),
+    db.from('cripto_saldos').select('em, equity_usd').gte('em', desde7).order('em', { ascending: true }).limit(3000),
+    db.from('cripto_decisoes').select('modo, pareceres, decisao_ia, aprovada').gte('em', new Date(Date.now() - 86_400_000).toISOString()).limit(5000),
   ])
   const erro = [carteiras, abertas, fechadas, decisoes, sessoes, vantagem].find((r) => r.error)?.error
   if (erro) return NextResponse.json({ ok: false, error: erro.message, dica: 'A migração 220 já foi aplicada?' }, { status: 500 })
+  const precos = await precosAgora((abertas.data ?? []).filter((a) => a.estado === 'aberta'))
   const tarefa = (pulso.data?.estado as { tarefas?: Record<string, unknown> } | null)?.tarefas?.['agente-cripto'] ?? null
   return NextResponse.json({
     ok: true,
@@ -41,6 +79,15 @@ export async function GET(request: NextRequest) {
     decisoes: decisoes.data,
     sessoes: sessoes.data,
     vantagem: vantagem.data,
+    precos,
+    historico: historico.data ?? [],
+    saldos: saldos.data ?? [],
+    funil: (funil.data ?? []).map((x) => ({
+      modo: x.modo,
+      veto: Array.isArray(x.pareceres) && x.pareceres.some((p: { veto?: boolean }) => p?.veto),
+      acao: (x.decisao_ia as { action?: string } | null)?.action ?? null,
+      aprovada: x.aprovada,
+    })),
     vigia: { tarefa, pulsoEm: pulso.data?.em ?? null, versao: pulso.data?.versao ?? null },
   })
 }

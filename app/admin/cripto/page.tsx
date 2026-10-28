@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
+import CriptoGraficos from "@/components/admin/cripto-graficos"
 import { ArrowLeft, Copy, Loader2, Power, RefreshCw, ShieldAlert, ShieldCheck, Wallet, X } from "lucide-react"
 
 type Linha = Record<string, any>
@@ -65,7 +66,7 @@ export default function AdminCriptoPage() {
   useEffect(() => {
     if (!montado || !isAdmin) return
     void carregar()
-    const t = setInterval(() => void carregar(), 30_000)
+    const t = setInterval(() => void carregar(), 15_000)
     return () => clearInterval(t)
   }, [montado, isAdmin, carregar])
 
@@ -146,6 +147,8 @@ export default function AdminCriptoPage() {
           <div className={CAIXA}><p className="text-[11px] uppercase tracking-wider text-gray-500">Acerto</p><p className="mt-1 text-lg font-semibold">{resumo.acerto == null ? "—" : `${resumo.acerto.toFixed(0)}%`}</p><p className="text-[11px] text-gray-500">medido, não prometido</p></div>
           <div className={CAIXA}><p className="text-[11px] uppercase tracking-wider text-gray-500">Lucros enviados</p><p className="mt-1 text-lg font-semibold">{usd(resumo.enviado)}</p><p className="text-[11px] text-gray-500">{vista === "papel" ? "simulados" : "para o teu endereço"}</p></div>
         </div>
+
+        <CriptoGraficos d={d} vista={vista} capitalInicial={vista === "real" ? Number(cfg.capitalBaseRealUsd) || Number(d.saldos?.[0]?.equity_usd) || 0 : Number(cfg.capitalPapelUsd) || 0} />
 
         <div className="mb-6 grid gap-3 md:grid-cols-2">
           <div className={CAIXA}>
