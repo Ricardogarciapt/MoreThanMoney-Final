@@ -28,9 +28,10 @@ import { correrPercursos } from '../../lib/funis-motor'
 import { bracosReais, motorLigado } from '../../lib/funis-bracos'
 import { pollMasterAccounts } from '../../lib/mtmcopy/master-poll'
 import { correrTrader, registarDecisoesNoLivro } from '../../lib/agentes/trader'
+import { correrAgenteCripto } from '../../lib/cripto/ciclo'
 import { SERVICO_VIGIAS, TAREFAS_VIGIAS, type EstadoTarefa, type TarefaVigia } from '../../lib/vigias/tarefas'
 
-const VERSAO = 'vigias-002'
+const VERSAO = 'vigias-003'
 
 const CORRER: Record<TarefaVigia, () => Promise<unknown>> = {
   'webtrader-gestao-auto': () => correrGestaoAutoDeTodas(),
@@ -50,6 +51,7 @@ const CORRER: Record<TarefaVigia, () => Promise<unknown>> = {
     if (r.abertas.length) await registarDecisoesNoLivro(db, r)
     return r
   },
+  'agente-cripto': () => correrAgenteCripto(getSupabaseAdmin()),
 }
 
 /** Os mesmos ritmos mínimos da Vercel onde o trabalho é caro (master-poll era de 2 em 2 min). */
@@ -58,6 +60,8 @@ const INTERVALO_MIN_MS: Partial<Record<TarefaVigia, number>> = {
   'mestre-publicar': 60_000,
   funis: 60_000,
   'agente-trader': 60_000,
+  // Velas de 5 min: de minuto a minuto chega. O GeckoTerminal aceita ~30 pedidos/min.
+  'agente-cripto': 60_000,
 }
 
 function log(...a: unknown[]) {

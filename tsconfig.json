@@ -27,6 +27,7 @@
     "node_modules",
     "app/mtmcopy/telegram-to-mt5-develop/**",
     "supabase/functions/**",
-    "mtmcopy-engine/**"
+    "mtmcopy-engine/**",
+    "services/cripto-executor/**"
   ]
 }

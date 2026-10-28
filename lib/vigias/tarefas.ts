@@ -24,6 +24,10 @@ export const TAREFAS_VIGIAS = [
    *  nunca via um sinal fresco. Aqui corre de minuto a minuto. Sem cron Vercel de reserva — se o VPS
    *  parar, o agente simplesmente não abre (é papel; a passagem das 06:00 continua a registar). */
   'agente-trader',
+  /** O agente cripto (lib/cripto/ciclo.ts): AG-SCANNER + sub-agentes + AG-TRADER + guarda. Em papel
+   *  abre e fecha posições simuladas; em real só escreve pedidos `pendente` para o executor da VPS,
+   *  que é outro processo. Sem cron Vercel de reserva (os hosts de dados só respondem à VPS). */
+  'agente-cripto',
 ] as const
 
 export type TarefaVigia = (typeof TAREFAS_VIGIAS)[number]
