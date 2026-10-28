@@ -13,6 +13,7 @@ import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd } from './papel'
 import { avaliarRug } from './rug'
 import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
 import { lerConfig, modoDoMercado } from './ciclo'
+import { eScalp, gatilhosScalp, simularScalp, sinaisScalp } from './scalp'
 import type { DecisaoIA, Gatilho, Retrato, Vela } from './tipos'
 
 const falhas: string[] = []
@@ -110,6 +111,35 @@ teste('sem realMercados: real vale para os dois (como antes)', modoDoMercado(ler
 teste('modo papel: nada é real', modoDoMercado(lerConfig({ modo: 'papel', realMercados: ['spot'] }), 'spot') === 'papel')
 teste('config: desligado por omissão', lerConfig(null).ligado === false && lerConfig(null).modo === 'papel')
 teste('config: símbolo estranho fica de fora', lerConfig({ perps: ['BTCUSDT', 'rm -rf'] }).perps.join() === 'BTCUSDT')
+
+/* ── Scalping com os estudos (scalp.ts) ── */
+{
+  // Tendência limpa com recuos: dá cruzamentos de EMA e viragens, sem depender da rede.
+  const vs: Vela[] = Array.from({ length: 700 }, (_, i) => {
+    const base = 100 + i * 0.05 + Math.sin(i / 9) * 2
+    return { t: 1_700_000_000_000 + i * 300_000, o: base, h: base + 0.4, l: base - 0.4, c: base + Math.sin(i / 3) * 0.2, v: 100 + (i % 7) * 10 }
+  })
+  const sinais = sinaisScalp(vs, 'BTCUSDT')
+  teste('scalp: os estudos dão sinais numa série com tendência', sinais.length > 0)
+  teste('scalp: todo o sinal tem SL e TP do lado certo', sinais.every((x) => (x.lado === 'long' ? x.sl < x.entrada && x.tp > x.entrada : x.sl > x.entrada && x.tp < x.entrada)))
+  teste('scalp: cada estudo é um tipo de gatilho próprio', sinais.every((x) => eScalp(x.tipo)))
+  const r0 = { ...retrato, preco: vs[vs.length - 1].c }
+  const ao = gatilhosScalp(r0, vs)
+  teste('scalp ao vivo: só sinais da ÚLTIMA vela fechada', ao.length === sinais.filter((x) => x.i === vs.length - 1).length)
+  teste('scalp ao vivo: poucas velas = nada', gatilhosScalp(r0, vs.slice(0, 100)).length === 0)
+
+  // Simulação: SL antes de TP na mesma vela, e os custos entram sempre.
+  const velasSim: Vela[] = [
+    { t: 0, o: 100, h: 100, l: 100, c: 100, v: 1 },
+    { t: 1, o: 100, h: 103, l: 98, c: 100, v: 1 },
+  ]
+  const [tr] = simularScalp(velasSim, [{ tipo: 'scalp-goldkiller', i: 0, lado: 'long', entrada: 100, sl: 99, tp: 102 }], { mercado: 'perp', velasMax: 10, umaDeCadaVez: true })
+  teste('simulação: SL e TP na mesma vela conta como SL', tr?.motivo === 'sl' && tr.pct < -1)
+  const [tp] = simularScalp([velasSim[0], { t: 1, o: 100, h: 103, l: 99.5, c: 102, v: 1 }], [{ tipo: 'scalp-goldkiller', i: 0, lado: 'long', entrada: 100, sl: 99, tp: 102 }], { mercado: 'perp', velasMax: 10, umaDeCadaVez: true })
+  teste('simulação: TP líquido fica abaixo dos 2% brutos (taxas)', tp?.motivo === 'tp' && tp.pct < 2 && tp.pct > 1.8)
+  teste('config: scalping desligado por omissão', lerConfig({}).scalp === false && lerConfig({ scalp: true }).scalp === true)
+  teste('config: estudo desconhecido fica de fora', lerConfig({ estudosScalp: ['scalp-sensei', 'xpto'] }).estudosScalp.join() === 'scalp-sensei')
+}
 
 /* ── Sub-agentes de IA (com IA falsa) ── */
 const iaQue = (texto: string): ChamarIA => async () => ({ texto, fornecedor: 'groq', modelo: 'teste', custoCents: 0, emReserva: false, tentativas: [] })

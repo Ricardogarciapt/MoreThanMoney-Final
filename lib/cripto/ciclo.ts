@@ -14,6 +14,7 @@ import { vantagemPorCombo, lerRegua } from '../agentes/trader-disciplina'
 import { candidatosMeme, dadosRug, fundingBybit, livroBybit, titulosDoAtivo, titulosNoticias, velasBybit, velasPool } from './fontes'
 import { guardar, lerLimites, type EstadoConta, type VantagemGatilho } from './guarda'
 import { detectarGatilho, pareceresNumericos, retratoDeVelas } from './indicadores'
+import { ESTUDOS_SCALP, gatilhosScalp, type TipoScalp } from './scalp'
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd, precoComEscorregamento } from './papel'
 import { avaliarRug } from './rug'
 import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
@@ -39,6 +40,14 @@ export interface ConfigCripto {
   /** Real: o capital que o dono entregou. Só o que estiver acima disto é lucro. O executor confirma com o seu. */
   capitalBaseRealUsd: number
   limites?: Record<string, unknown>
+  /**
+   * Scalping com os estudos da casa (scalp.ts) nos perps. Desligado por omissão: o backtest de
+   * 30 dias a 1 ano (lib/cripto/scalp-backtest.ts) deu vantagem bruta perto de zero e líquida
+   * negativa em todos. Só corre com os perps em PAPEL, para medir; nunca abre real.
+   */
+  scalp: boolean
+  /** Que estudos entram no scalping (omissão: todos). */
+  estudosScalp: TipoScalp[]
 }
 
 export function lerConfig(bruto: unknown): ConfigCripto {
@@ -59,6 +68,8 @@ export function lerConfig(bruto: unknown): ConfigCripto {
     varreduraMinUsd: n(b.varreduraMinUsd, 10),
     capitalBaseRealUsd: n(b.capitalBaseRealUsd, 0),
     limites: b.limites && typeof b.limites === 'object' ? (b.limites as Record<string, unknown>) : undefined,
+    scalp: b.scalp === true,
+    estudosScalp: Array.isArray(b.estudosScalp) ? ESTUDOS_SCALP.filter((t) => (b.estudosScalp as unknown[]).includes(t)) : [...ESTUDOS_SCALP],
   }
 }
 
@@ -163,11 +174,14 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
   const candidatos: Candidato[] = []
   for (const symbol of cfg.perps) {
     try {
-      const velas = await velasBybit(symbol)
+      // O scalping precisa de mais história (a EMA 238 do TrendShot, o POC do MTM Scanner).
+      const comScalp = cfg.scalp && modoDoMercado(cfg, 'perp') === 'papel'
+      const velas = await velasBybit(symbol, comScalp ? 600 : 300)
       const [livro, funding] = await Promise.all([livroBybit(symbol), fundingBybit(symbol)])
       const r = retratoDeVelas({ ativo: symbol, mercado: 'perp', id: symbol, velas5m: velas, livro, fundingPct: funding, agora })
       const g = r && detectarGatilho(r, velas)
       if (r && g) candidatos.push({ r, g, velas, social: [] })
+      if (r && comScalp) for (const gs of gatilhosScalp(r, velas, cfg.estudosScalp)) candidatos.push({ r, g: gs, velas, social: [] })
     } catch (e) {
       res.erros.push(`scanner ${symbol}: ${String((e as Error)?.message ?? e).slice(0, 120)}`)
     }

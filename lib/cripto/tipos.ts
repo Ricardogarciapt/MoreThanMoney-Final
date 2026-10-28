@@ -69,8 +69,18 @@ export interface Retrato {
 }
 
 /** Um gatilho determinístico do AG-SCANNER. Sem gatilho, a IA nem é chamada. */
+/** Os gatilhos de código e, `scalp-*`, os estudos da casa (ver scalp.ts). Cada um é medido à parte. */
+export type TipoGatilho =
+  | 'rompimento'
+  | 'rsi-extremo'
+  | 'meme-momento'
+  | 'scalp-mtm-scanner'
+  | 'scalp-sensei'
+  | 'scalp-goldkiller'
+  | 'scalp-trendshot'
+
 export interface Gatilho {
-  tipo: 'rompimento' | 'rsi-extremo' | 'meme-momento'
+  tipo: TipoGatilho
   lado: Lado
   ativo: string
   mercado: Mercado
