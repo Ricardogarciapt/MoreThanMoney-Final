@@ -690,5 +690,72 @@
    "sub": "MoreThanMoney IB-Partnerschaft",
    "aviso": "Bildungsinhalt, keine Finanzberatung. Gehebeltes Trading birgt ein hohes Verlustrisiko. Provisionen nicht garantiert."
   }
+ },
+ "historia": {
+  "pt": {
+   "hora": "18:00",
+   "hook": [
+    "E O MÊS",
+    "AINDA VAI A MEIO."
+   ],
+   "caos": [
+    "Vídeo de 3 h",
+    "Sinal sem explicação",
+    "Grupo novo",
+    "Mais um curso",
+    "Outro “guru”"
+   ],
+   "sozinho": [
+    "SOZINHO,",
+    "NINGUÉM APRENDE."
+   ],
+   "naoes": [
+    "O PROBLEMA",
+    "NÃO ÉS TU."
+   ],
+   "falta": [
+    "Falta um plano.",
+    "Falta alguém ao teu lado."
+   ],
+   "casa": [
+    "UMA SÓ",
+    "CASA"
+   ],
+   "edu": [
+    [
+     "Ricardo Garcia",
+     "Trading · Scanners"
+    ],
+    [
+     "Ruben Pereira",
+     "Cripto"
+    ],
+    [
+     "Maria Costa",
+     "Negócio digital"
+    ]
+   ],
+   "caminho": "O CAMINHO",
+   "passos": [
+    "Abres a conta na corretora",
+    "Ligas os alertas dos scanners",
+    "Aprendes nas aulas ao vivo"
+   ],
+   "min": [
+    "15",
+    "MINUTOS POR DIA"
+   ],
+   "regras": [
+    "Risco definido antes de entrar",
+    "Stop loss em todas as operações",
+    "Sem promessas de ganhos"
+   ],
+   "metodo": "COM MÉTODO.",
+   "responde": "RESPONDE A ESTE STORY",
+   "cta": "QUERO",
+   "depois": "e mandamos-te o primeiro passo",
+   "url": "morethanmoney.pt/onboarding",
+   "aviso": "Conteúdo educativo, não constitui consultoria financeira. Trading envolve risco de perda; resultados não garantidos."
+  }
  }
 }
