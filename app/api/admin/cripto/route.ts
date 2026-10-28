@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     db.from('servicos_pulso').select('estado, em, versao').eq('servico', 'mtm-vigias').maybeSingle(),
     // Para os gráficos: as fechadas de 90 dias (curva, evolução, projecção), os saldos reais de 7
     // dias (a curva medida no exchange/carteira) e as decisões de 24 h, só as colunas do funil.
-    db.from('cripto_posicoes').select('modo, ativo, mercado, lado, gatilho_tipo, nocional_usd, risco_usd, pnl_usd, aberta_em, fechada_em').eq('estado', 'fechada').not('pnl_usd', 'is', null).gte('fechada_em', desde90).order('fechada_em', { ascending: true }).limit(3000),
+    db.from('cripto_posicoes').select('modo, ativo, mercado, id_ativo, lado, gatilho_tipo, nocional_usd, risco_usd, entrada, saida, motivo_fecho, pnl_usd, aberta_em, fechada_em').eq('estado', 'fechada').not('pnl_usd', 'is', null).gte('fechada_em', desde90).order('fechada_em', { ascending: true }).limit(3000),
     db.from('cripto_saldos').select('em, equity_usd').gte('em', desde7).order('em', { ascending: true }).limit(3000),
     db.from('cripto_decisoes').select('modo, pareceres, decisao_ia, aprovada').gte('em', new Date(Date.now() - 86_400_000).toISOString()).limit(5000),
   ])
