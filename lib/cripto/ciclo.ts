@@ -9,7 +9,7 @@
  * chaves) que a cumpre, depois de voltar a verificar os tectos com os limites DELE.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { chamarIA } from '../ia/chamar'
+import { chamarIAGratis } from '../ia/chamar'
 import { vantagemPorCombo, lerRegua } from '../agentes/trader-disciplina'
 import { candidatosMeme, dadosRug, fundingBybit, livroBybit, perpsVolateis, titulosDoAtivo, titulosNoticias, velasBybit, velasPool } from './fontes'
 import { guardar, lerLimites, type EstadoConta, type VantagemGatilho } from './guarda'
@@ -125,7 +125,7 @@ export interface ResultadoPassagem {
   erros: string[]
 }
 
-export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = chamarIA, agora = new Date()): Promise<ResultadoPassagem> {
+export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = chamarIAGratis, agora = new Date()): Promise<ResultadoPassagem> {
   const res: ResultadoPassagem = { ligado: false, fechadas: 0, gatilhos: 0, aprovadas: 0, erros: [] }
   const { data: cfgRow } = await db.from('site_settings').select('value').eq('key', CHAVE_CONFIG).maybeSingle()
   const cfg = lerConfig(cfgRow?.value)
