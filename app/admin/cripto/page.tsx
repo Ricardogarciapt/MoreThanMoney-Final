@@ -20,7 +20,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import CriptoGraficos from "@/components/admin/cripto-graficos"
-import { ArrowLeft, Copy, Loader2, Power, RefreshCw, ShieldAlert, ShieldCheck, Wallet, X } from "lucide-react"
+import CriptoCarteiras from "@/components/admin/cripto-carteiras"
+import { ArrowLeft, Loader2, Power, RefreshCw, ShieldAlert, ShieldCheck, Wallet, X } from "lucide-react"
 
 type Linha = Record<string, any>
 
@@ -170,15 +171,21 @@ export default function AdminCriptoPage() {
             )}
           </div>
           <div className={CAIXA}>
-            <p className="mb-3 flex items-center gap-2 text-sm font-medium"><Wallet className="h-4 w-4 text-[#D2A63C]" /> Carteira do agente (Solana)</p>
-            {carteira ? (
-              <div className="flex items-center gap-2">
-                <code className="truncate rounded bg-black px-2 py-1 text-xs text-[#E9C46A]">{carteira.endereco}</code>
-                <Button size="sm" variant="ghost" onClick={() => { void navigator.clipboard.writeText(carteira.endereco); toast({ title: "Endereço copiado" }) }}><Copy className="h-4 w-4" /></Button>
-              </div>
-            ) : (
-              <p className="text-xs text-gray-500">Ainda não criada: nasce no 1.º arranque do executor na VPS. A chave privada nunca sai de lá.</p>
-            )}
+            <p className="mb-3 flex items-center gap-2 text-sm font-medium"><Wallet className="h-4 w-4 text-[#D2A63C]" /> Dinheiro real: onde e quanto</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-500">Em real{cfg.modo !== "real" ? " (quando passares a real)" : ""}:</span>
+              {([["spot", "Memecoins · Pump.fun / Jupiter"], ["perp", "Perps · AURUM"]] as const).map(([m, n]) => {
+                const on = (cfg.realMercados ?? ["perp", "spot"]).includes(m)
+                return (
+                  <button key={m} onClick={() => void mudar({ acao: "realMercados", valor: on ? (cfg.realMercados ?? ["perp", "spot"]).filter((x: string) => x !== m) : [...(cfg.realMercados ?? []), m] }, "Mercados reais actualizados")}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] ${on ? "border-red-500/40 bg-red-500/10 text-red-200" : "border-gray-700 text-gray-400"}`}>
+                    {on ? "● " : "○ "}{n}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-1 text-[11px] text-gray-500">O mercado que não estiver aqui continua em papel, a aprender. Carteira, QR e tokens: secção Carteiras, abaixo.</p>
+            {!carteira && <p className="mt-2 text-xs text-gray-500">A carteira Solana ainda não existe: nasce no 1.º arranque do executor na VPS.</p>}
             {d.saldoReal?.detalhe && (
               <p className="mt-2 text-xs text-gray-400">Carteira Solana {usd(d.saldoReal.detalhe.partes?.solana?.equity)} · AURUM (parte do agente) {usd(d.saldoReal.detalhe.partes?.bybit?.equity ?? d.saldoReal.detalhe.bybit?.equity)}</p>
             )}
@@ -190,6 +197,8 @@ export default function AdminCriptoPage() {
             <p className="mt-1 text-[11px] text-gray-500">Só o que estiver acima da base é lucro e é enviado no fim da sessão (00:00 UTC). O executor confirma com o seu próprio valor.</p>
           </div>
         </div>
+
+        <CriptoCarteiras />
 
         <Seccao titulo="Posições abertas">
           <Tabela cab={["Ativo", "Lado", "Nocional", "Entrada", "SL", "TP", "Estado", "Desde", ""]} vazio="Sem posições abertas." linhas={doModo(d.abertas).map((p) => [

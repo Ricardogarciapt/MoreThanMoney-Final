@@ -24,6 +24,11 @@ export const CHAVE_CONFIG = 'agente_cripto'
 export interface ConfigCripto {
   ligado: boolean
   modo: Modo
+  /**
+   * Com `modo: 'real'`, os mercados que vão MESMO a real; os outros continuam em papel (o
+   * laboratório não pára). Ex.: ['spot'] = memecoins reais na carteira, perps em papel.
+   */
+  realMercados: Array<'perp' | 'spot'>
   capitalPapelUsd: number
   perps: string[]
   memecoins: boolean
@@ -43,6 +48,9 @@ export function lerConfig(bruto: unknown): ConfigCripto {
   return {
     ligado: b.ligado === true,
     modo: b.modo === 'real' ? 'real' : 'papel',
+    realMercados: Array.isArray(b.realMercados)
+      ? (['perp', 'spot'] as const).filter((m) => (b.realMercados as unknown[]).includes(m))
+      : ['perp', 'spot'],
     capitalPapelUsd: n(b.capitalPapelUsd, 1000),
     perps,
     memecoins: b.memecoins !== false,
@@ -57,8 +65,14 @@ export function lerConfig(bruto: unknown): ConfigCripto {
 /** Mesmo ativo e tipo de gatilho decidido há menos disto: não se volta a gastar IA. */
 const ESPERA_MESMO_GATILHO_MS = 30 * 60_000
 
+/** O modo em que corre cada mercado nesta passagem. */
+export function modoDoMercado(cfg: ConfigCripto, mercado: 'perp' | 'spot'): Modo {
+  return cfg.modo === 'real' && cfg.realMercados.includes(mercado) ? 'real' : 'papel'
+}
+
 interface LinhaPosicao {
   id: string
+  modo: Modo
   ativo: string
   mercado: 'perp' | 'spot'
   id_ativo: string
@@ -100,8 +114,8 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
 
   /* ── 1. Posições abertas ── */
   const { data: abertasRaw } = await db
-    .from('cripto_posicoes').select('id, ativo, mercado, id_ativo, lado, nocional_usd, entrada, sl, tp, estado, aberta_em, fechar_pedido')
-    .eq('modo', cfg.modo).in('estado', ['aberta', 'pendente'])
+    .from('cripto_posicoes').select('id, modo, ativo, mercado, id_ativo, lado, nocional_usd, entrada, sl, tp, estado, aberta_em, fechar_pedido')
+    .in('estado', ['aberta', 'pendente'])
   const abertas = (abertasRaw ?? []) as LinhaPosicao[]
 
   const memes = cfg.memecoins ? await candidatosMeme(15, agora) : []
@@ -113,9 +127,10 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
       if (preco == null) continue
       const pos = { mercado: p.mercado, lado: p.lado, entrada: Number(p.entrada), nocionalUsd: Number(p.nocional_usd), sl: Number(p.sl), tp: Number(p.tp), abertaEm: p.aberta_em }
       // `fechar_pedido` = alguém carregou em «fechar» no dashboard (papel fecha aqui, real no executor).
-      const motivo = (cfg.modo === 'papel' ? p.fechar_pedido : null) ?? motivoDeFecho(pos, preco, agora)
+      // Cada posição gere-se no modo em que nasceu, mesmo que o dono tenha mudado o modo depois.
+      const motivo = (p.modo === 'papel' ? p.fechar_pedido : null) ?? motivoDeFecho(pos, preco, agora)
       if (!motivo) continue
-      if (cfg.modo === 'papel') {
+      if (p.modo === 'papel') {
         // No SL conta o pior dos dois (se o preço saltou o stop, sai-se onde o preço está).
         const noSl = p.lado === 'long' ? Math.min(pos.sl, preco) : Math.max(pos.sl, preco)
         const saida = precoComEscorregamento(motivo === 'sl' ? noSl : motivo === 'tp' ? pos.tp : preco, p.mercado, p.lado, false)
@@ -132,9 +147,16 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
     }
   }
 
-  /* ── 2. Estado da conta ── */
-  const conta = await estadoConta(db, cfg, agora)
-  conta.abertas = abertas.map((p) => ({ ativo: p.ativo, mercado: p.mercado, lado: p.lado, nocionalUsd: Number(p.nocional_usd), entrada: Number(p.entrada), sl: Number(p.sl), tp: Number(p.tp) }))
+  /* ── 2. Estado da conta (uma por modo em uso: papel e real nunca partilham capital) ── */
+  const emUso = new Set<Modo>(['papel'])
+  if (cfg.perps.length) emUso.add(modoDoMercado(cfg, 'perp'))
+  if (cfg.memecoins) emUso.add(modoDoMercado(cfg, 'spot'))
+  const contas = {} as Record<Modo, EstadoConta>
+  for (const m of emUso) {
+    contas[m] = await estadoConta(db, cfg, m, agora)
+    contas[m].abertas = abertas.filter((p) => p.modo === m).map((p) => ({ ativo: p.ativo, mercado: p.mercado, lado: p.lado, nocionalUsd: Number(p.nocional_usd), entrada: Number(p.entrada), sl: Number(p.sl), tp: Number(p.tp) }))
+  }
+  const fecharSessoes = async () => { for (const m of emUso) await fecharSessaoSePreciso(db, cfg, m, contas[m], agora) }
 
   /* ── 3. AG-SCANNER: gatilhos em código ── */
   type Candidato = { r: Retrato; g: Gatilho; velas: Vela[]; social: string[]; rugParecer?: Parecer }
@@ -167,7 +189,7 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
   }
   res.gatilhos = candidatos.length
   if (!candidatos.length) {
-    await fecharSessaoSePreciso(db, cfg, conta, agora)
+    await fecharSessoes()
     return res
   }
 
@@ -215,37 +237,39 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
       }
     }
 
-    const { ordem, recusas } = guardar({ modo: cfg.modo, agora, retrato: c.r, gatilho: c.g, decisao, pareceres, conta, vantagem: vantagemDe(c.g.tipo), limites })
+    const modo = modoDoMercado(cfg, c.r.mercado)
+    const conta = contas[modo]
+    const { ordem, recusas } = guardar({ modo, agora, retrato: c.r, gatilho: c.g, decisao, pareceres, conta, vantagem: vantagemDe(c.g.tipo), limites })
     const { data: dec, error } = await db.from('cripto_decisoes').insert({
-      modo: cfg.modo, ativo: c.r.ativo, mercado: c.r.mercado, gatilho: c.g, retrato: c.r, pareceres, decisao_ia: decisao, fornecedor_ia: fornecedor, recusas, aprovada: !!ordem,
+      modo, ativo: c.r.ativo, mercado: c.r.mercado, gatilho: c.g, retrato: c.r, pareceres, decisao_ia: decisao, fornecedor_ia: fornecedor, recusas, aprovada: !!ordem,
     }).select('id').single()
     if (error) { res.erros.push(`gravar decisão: ${error.message}`); continue }
     if (!ordem) continue
 
-    const entrada = cfg.modo === 'papel' ? precoComEscorregamento(ordem.entrada, ordem.mercado, ordem.lado, true) : ordem.entrada
+    const entrada = modo === 'papel' ? precoComEscorregamento(ordem.entrada, ordem.mercado, ordem.lado, true) : ordem.entrada
     const riscoUsd = ordem.nocionalUsd * (Math.abs(ordem.entrada - ordem.sl) / ordem.entrada)
     const { error: ePos } = await db.from('cripto_posicoes').insert({
-      decisao_id: dec.id, modo: cfg.modo, ativo: ordem.ativo, mercado: ordem.mercado, id_ativo: ordem.id, gatilho_tipo: c.g.tipo, lado: ordem.lado,
+      decisao_id: dec.id, modo, ativo: ordem.ativo, mercado: ordem.mercado, id_ativo: ordem.id, gatilho_tipo: c.g.tipo, lado: ordem.lado,
       nocional_usd: ordem.nocionalUsd, alavancagem: ordem.alavancagem, entrada, sl: ordem.sl, tp: ordem.tp, risco_usd: Math.round(riscoUsd * 100) / 100,
-      slippage_max_pct: ordem.slippageMaxPct, exploracao: ordem.exploracao, estado: cfg.modo === 'papel' ? 'aberta' : 'pendente',
+      slippage_max_pct: ordem.slippageMaxPct, exploracao: ordem.exploracao, estado: modo === 'papel' ? 'aberta' : 'pendente',
     })
     if (ePos) { res.erros.push(`gravar posição: ${ePos.message}`); continue }
     res.aprovadas++
     conta.abertas.push({ ativo: ordem.ativo, mercado: ordem.mercado, lado: ordem.lado, nocionalUsd: ordem.nocionalUsd, entrada, sl: ordem.sl, tp: ordem.tp })
   }
 
-  await fecharSessaoSePreciso(db, cfg, conta, agora)
+  await fecharSessoes()
   return res
 }
 
 /** Capital, pico e PnL de hoje. Papel: base + PnL fechado. Real: o último saldo lido pelo executor. */
-async function estadoConta(db: SupabaseClient, cfg: ConfigCripto, agora: Date): Promise<EstadoConta> {
-  const { data: fechadas } = await db.from('cripto_posicoes').select('pnl_usd, fechada_em').eq('modo', cfg.modo).eq('estado', 'fechada').order('fechada_em', { ascending: true })
+async function estadoConta(db: SupabaseClient, cfg: ConfigCripto, modo: Modo, agora: Date): Promise<EstadoConta> {
+  const { data: fechadas } = await db.from('cripto_posicoes').select('pnl_usd, fechada_em').eq('modo', modo).eq('estado', 'fechada').order('fechada_em', { ascending: true })
   const hoje = inicioDaSessao(agora, cfg.horaFechoSessaoUtc).getTime()
   let pnlHoje = 0
   let capital = cfg.capitalPapelUsd
   let pico = capital
-  if (cfg.modo === 'papel') {
+  if (modo === 'papel') {
     // O lucro "enviado" em papel sai da conta, como sairia no real; senão era enviado todos os dias.
     const { data: env } = await db.from('cripto_sessoes').select('varredura_usd').eq('modo', 'papel').eq('varredura_estado', 'simulada')
     capital -= (env ?? []).reduce((s: number, x: { varredura_usd: number }) => s + (Number(x.varredura_usd) || 0), 0)
@@ -256,13 +280,21 @@ async function estadoConta(db: SupabaseClient, cfg: ConfigCripto, agora: Date): 
     pico = Math.max(pico, capital)
     if (new Date(f.fechada_em).getTime() >= hoje) pnlHoje += Number(f.pnl_usd) || 0
   }
-  if (cfg.modo === 'real') {
-    const { data: s } = await db.from('cripto_saldos').select('equity_usd, em').order('em', { ascending: false }).limit(1).maybeSingle()
+  if (modo === 'real') {
+    const { data: s } = await db.from('cripto_saldos').select('equity_usd, em, detalhe').order('em', { ascending: false }).limit(1).maybeSingle()
     // Sem saldo lido há menos de 10 min, o capital é 0: a guarda recusa tudo.
     const fresco = s && agora.getTime() - new Date(s.em).getTime() < 10 * 60_000
-    capital = fresco ? Number(s.equity_usd) : 0
-    const { data: picoRow } = await db.from('cripto_saldos').select('equity_usd').order('equity_usd', { ascending: false }).limit(1).maybeSingle()
-    pico = Math.max(capital, Number(picoRow?.equity_usd) || 0)
+    // Só um mercado em real: conta só a parte desse executor (a AURUM não financia memecoins).
+    const partes = (s?.detalhe as { partes?: Record<string, { equity?: number }> } | null)?.partes
+    const so = cfg.realMercados.length === 1 ? (cfg.realMercados[0] === 'spot' ? 'solana' : 'bybit') : null
+    capital = !fresco ? 0 : so && partes?.[so] ? Number(partes[so].equity) || 0 : Number(s.equity_usd)
+    if (so) {
+      const { data: hist } = await db.from('cripto_saldos').select('detalhe').order('em', { ascending: false }).limit(3000)
+      pico = Math.max(capital, ...(hist ?? []).map((h: { detalhe: { partes?: Record<string, { equity?: number }> } }) => Number(h.detalhe?.partes?.[so]?.equity) || 0))
+    } else {
+      const { data: picoRow } = await db.from('cripto_saldos').select('equity_usd').order('equity_usd', { ascending: false }).limit(1).maybeSingle()
+      pico = Math.max(capital, Number(picoRow?.equity_usd) || 0)
+    }
   }
   return { capitalUsd: capital, picoUsd: pico, pnlHojeUsd: pnlHoje, abertas: [] }
 }
@@ -271,20 +303,20 @@ async function estadoConta(db: SupabaseClient, cfg: ConfigCripto, agora: Date): 
  * Fecha a sessão anterior uma vez (chave modo+início). Papel: o envio fica `simulada`. Real: fica
  * `pedida`, e o executor da VPS envia para o endereço que só ELE conhece (env da VPS).
  */
-async function fecharSessaoSePreciso(db: SupabaseClient, cfg: ConfigCripto, conta: EstadoConta, agora: Date): Promise<void> {
+async function fecharSessaoSePreciso(db: SupabaseClient, cfg: ConfigCripto, modo: Modo, conta: EstadoConta, agora: Date): Promise<void> {
   const inicioActual = inicioDaSessao(agora, cfg.horaFechoSessaoUtc)
   const inicioAnterior = new Date(inicioActual.getTime() - 24 * 3600_000)
-  const { data: ja } = await db.from('cripto_sessoes').select('inicio').eq('modo', cfg.modo).eq('inicio', inicioAnterior.toISOString()).maybeSingle()
+  const { data: ja } = await db.from('cripto_sessoes').select('inicio').eq('modo', modo).eq('inicio', inicioAnterior.toISOString()).maybeSingle()
   if (ja) return
-  const { data: fechadas } = await db.from('cripto_posicoes').select('pnl_usd').eq('modo', cfg.modo).eq('estado', 'fechada')
+  const { data: fechadas } = await db.from('cripto_posicoes').select('pnl_usd').eq('modo', modo).eq('estado', 'fechada')
     .gte('fechada_em', inicioAnterior.toISOString()).lt('fechada_em', inicioActual.toISOString())
   const pnl = (fechadas ?? []).reduce((s: number, f: { pnl_usd: number }) => s + (Number(f.pnl_usd) || 0), 0)
   const margem = conta.abertas.reduce((s, p) => s + p.nocionalUsd, 0)
-  const base = cfg.modo === 'papel' ? cfg.capitalPapelUsd : cfg.capitalBaseRealUsd
+  const base = modo === 'papel' ? cfg.capitalPapelUsd : cfg.capitalBaseRealUsd
   const plano = planoVarredura({ capitalBaseUsd: base, equityUsd: conta.capitalUsd, livreUsd: Math.max(0, conta.capitalUsd - margem), minimoUsd: cfg.varreduraMinUsd })
   await db.from('cripto_sessoes').upsert({
-    modo: cfg.modo, inicio: inicioAnterior.toISOString(), fim: inicioActual.toISOString(), equity_fim_usd: Math.round(conta.capitalUsd * 100) / 100,
+    modo: modo, inicio: inicioAnterior.toISOString(), fim: inicioActual.toISOString(), equity_fim_usd: Math.round(conta.capitalUsd * 100) / 100,
     pnl_usd: Math.round(pnl * 100) / 100, trades: (fechadas ?? []).length,
-    varredura_estado: plano.enviarUsd > 0 ? (cfg.modo === 'papel' ? 'simulada' : 'pedida') : 'nada', varredura_usd: plano.enviarUsd, porque: plano.porque,
+    varredura_estado: plano.enviarUsd > 0 ? (modo === 'papel' ? 'simulada' : 'pedida') : 'nada', varredura_usd: plano.enviarUsd, porque: plano.porque,
   }, { onConflict: 'modo,inicio', ignoreDuplicates: true })
 }
