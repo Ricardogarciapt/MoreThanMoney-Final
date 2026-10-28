@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { juntarBloco } from '@/lib/youtube/descricao'
 
 /**
  * PUBLICAR UM CLIPE — Shorts e Reels a partir do mesmo ficheiro.
@@ -104,7 +105,7 @@ async function subirShort(
     snippet: {
       // O `#Shorts` no título é o que faz o YouTube tratá-lo como Short. Não há campo para isso.
       title: `${titulo.slice(0, 90)} #Shorts`,
-      description: descricao.slice(0, 4900),
+      description: descricao.slice(0, 5000),
       categoryId: '22',
     },
     status: { privacyStatus: 'public', selfDeclaredMadeForKids: false },
@@ -192,7 +193,8 @@ export async function publicarClipe(
         const resposta = await fetch(clip.video_url as string)
         if (!resposta.ok) throw new Error(`o clipe não se deixou ler (HTTP ${resposta.status})`)
         const video = Buffer.from(new Uint8Array(await resposta.arrayBuffer() as ArrayBuffer))
-        const { videoId } = await subirShort(token, video, String(clip.titulo ?? 'Corte MTM'), caption)
+        // Os cortes são das aulas em português: levam o bloco PT (registo, ebook, Telegram, corretora).
+        const { videoId } = await subirShort(token, video, String(clip.titulo ?? 'Corte MTM'), juntarBloco(caption, 'pt'))
 
         const playlist = await garantirPlaylist(token)
         if (playlist) {
