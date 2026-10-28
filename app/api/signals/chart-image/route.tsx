@@ -121,7 +121,12 @@ export async function GET(req: NextRequest) {
   const emSeg = Math.floor(new Date(String(sig.received_at ?? Date.now())).getTime() / 1000)
   const base = { ticker: sig.ticker, timeframe: sig.timeframe, direcao: dir, entry, sl: slv, tps, emSeg, alertName: sig.alert_name, marca } as const
   const { velas, linhas } = await graficoDaEstrategia(base).catch(() => ({ velas: [], linhas: [] }))
-  const querPng = req.nextUrl.searchParams.get("f") === "png"
+  // PNG quando pedido (`&f=png`, o Telegram) OU quando quem pede não diz que lê SVG. Os browsers
+  // mandam `image/svg+xml` no Accept de um <img>; a app iOS nativa (UIImage, chats da MTM System)
+  // manda `*/*` e não lê SVG — via o cartão cinzento vazio (print do Ricardo, 28/10). `Vary: Accept`
+  // para a CDN guardar as duas versões em separado.
+  const formato = req.nextUrl.searchParams.get("f")
+  const querPng = formato === "png" || (formato !== "svg" && !(req.headers.get("accept") || "").includes("image/svg+xml"))
 
   if (req.nextUrl.searchParams.get("debug") === "1") {
     return NextResponse.json({ ok: velas.length >= VELAS_MINIMAS, estrategia: marca.nome, velas: velas.length, linhas: linhas.map((l) => l.nome) })
@@ -135,7 +140,7 @@ export async function GET(req: NextRequest) {
       : "public, s-maxage=600, max-age=300, stale-while-revalidate=86400"
     // PNG para quem não lê SVG (o Telegram, nas fotos): o mesmo desenho, rasterizado.
     if (querPng) return pngDoDesenho(desenho, cache)
-    return new NextResponse(desenho.svg, { headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": cache } })
+    return new NextResponse(desenho.svg, { headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": cache, Vary: "Accept" } })
   }
 
   // Degrau 2: gráfico TradingView (chart-img), só quando as referências públicas não deram velas.

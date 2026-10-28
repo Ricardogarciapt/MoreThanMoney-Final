@@ -35,6 +35,6 @@ export function pngDoDesenho(d: DesenhoVelas, cache: string) {
         })}
       </div>
     ),
-    { width: d.largura, height: d.altura, headers: { "Cache-Control": cache } },
+    { width: d.largura, height: d.altura, headers: { "Cache-Control": cache, Vary: "Accept" } },
   )
 }
