@@ -125,6 +125,10 @@ export function avaliarComentario(texto: string): Avaliacao {
   const cliche = CLICHES.find((c) => baixo.includes(c))
   if (cliche) problemas.push(`cliché de IA ("${cliche}")`)
 
+  // A conta é de marca: nada de vivências inventadas na primeira pessoa nem de promessas (28/10,
+  // o Ricardo cortou dois comentários assim).
+  if (/\b(comecei|quando eu|eu também|já perdi|já ganhei|na minha experiência|aconteceu-me)\b/i.test(t)) problemas.push('experiência pessoal inventada')
+  if (/(garant|lucro certo|ficar rico|dinheiro fácil|liberdade financeira)/i.test(t)) problemas.push('promessa de ganhos')
   // Números de desempenho: não os temos para dar, e num comentário parecem anúncio.
   if (/\d+([.,]\d+)?\s?(%|€|\$|eur\b|euros\b|pips\b|usd\b)/i.test(t)) problemas.push('números de desempenho')
 
@@ -162,7 +166,8 @@ export const SISTEMA_COMENTARIO =
   '· nada de elogio genérico («ótimo post», «concordo plenamente», «conteúdo de valor»);\n' +
   '· nada de palavras de folheto («crucial», «fundamental», «jornada», «no mundo do trading», «hoje em dia»);\n' +
   '· nada de listas de três coisas, nem de «não é só X, é Y», nem de conclusão moral no fim;\n' +
-  '· pode ser uma pergunta concreta, uma experiência curta tua, ou um ponto que a pessoa não disse mas que encaixa.\n\n' +
+  '· pode ser uma pergunta concreta ou um ponto que a pessoa não disse mas que encaixa;\n' +
+  '· nunca inventes experiências pessoais («comecei», «quando eu», «já perdi») nem resultados, e nunca prometas ganhos.\n\n' +
   'Devolve SÓ o texto do comentário, sem aspas e sem explicação.\n' +
   'O objectivo é uma pessoa ler e ter vontade de ver quem escreveu. Mais nada.'
 

@@ -306,7 +306,11 @@ function historia(c, D) {
   s = cena(...D.h05); const d5 = s.o - s.a
   el(s, `<div class="lbl" style="font-size:56px;letter-spacing:10px">${c.caminho}</div>`, 200, .05, 'up')
   c.passos.forEach((t, i) => el(s, `<div class="degrau vidro"><span class="n">${i + 1}</span>${t}</div>`, 420 + i * 200, .9 + i * (d5 - 1.8) / 3, 'left', { x: 70, w: 940 }))
-  el(s, `<div class="foto" style="width:640px"><img src="assets/mtm-scanner.jpg"></div>`, 1060, .9 + (d5 - 1.8) / 3, 'flip')
+  // Com `prova` (stories semanais), entra o flyer real da semana no lugar da imagem do scanner.
+  if (c.prova) {
+    el(s, `<div class="foto" style="width:330px"><img src="assets/prova.jpg"></div>`, 1000, .9 + (d5 - 1.8) / 3, 'flip')
+    el(s, `<div class="dim" style="font-size:26px">${c.prova}</div>`, 1610, 1.2 + (d5 - 1.8) / 3, 'up')
+  } else el(s, `<div class="foto" style="width:640px"><img src="assets/mtm-scanner.jpg"></div>`, 1060, .9 + (d5 - 1.8) / 3, 'flip')
   s = cena(...D.h06)
   el(s, `<div class="huge ouro" style="font-size:340px">${c.min[0]}</div>`, 160, .05, 'blur')
   el(s, `<div class="lbl" style="font-size:52px;letter-spacing:8px">${c.min[1]}</div>`, 560, .4, 'up')
