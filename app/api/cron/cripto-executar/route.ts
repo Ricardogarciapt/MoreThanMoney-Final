@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getBybitInstrumentInfo, getBybitLastClosedPnl, getBybitPositions, getBybitWallet, placeBybitOrder, reduceBybitPosition, setBybitLeverage } from '@/lib/bybit'
 import { inicioDaSessao } from '@/lib/cripto/papel'
-import { equityBybitDoAgente, parOcupadoNaMestre, tectosDaVercel, verificarPendente } from '@/lib/cripto/tectos'
+import { equityBybitDoAgente, juntarPartes, parOcupadoNaMestre, tectosDaVercel, verificarPendente } from '@/lib/cripto/tectos'
 
 /**
  * EXECUTOR REAL DOS PERPS DO AGENTE CRIPTO — na Vercel, na AURUM (mestre do Copy Trading).
@@ -13,8 +13,9 @@ import { equityBybitDoAgente, parOcupadoNaMestre, tectosDaVercel, verificarPende
  *
  * Modo mestre sempre: não entra em par onde a AURUM já tem posição (o Aurum, por sua vez, salta os
  * pares do agente em /api/bybit/place), fecha só a quantidade que abriu, mede-se pelo capital que
- * lhe foi atribuído e nunca levanta dinheiro: o lucro fica na AURUM. Memecoins (spot Solana) não
- * correm aqui: um pedido real de spot é recusado.
+ * lhe foi atribuído e nunca levanta dinheiro: o lucro fica na AURUM. As memecoins (carteira
+ * Solana via Jupiter/Pump.fun) são do executor da VPS (CRIPTO_SO_SPOT=1), que guarda a chave da
+ * carteira; aqui só se recusa um pedido de spot que ninguém executou a tempo.
  */
 export const runtime = 'edge'
 export const preferredRegion = 'fra1'
@@ -63,7 +64,7 @@ export async function GET(req: NextRequest) {
 
   // Saldo do agente (capital atribuído + PnL realizado), de 4 em 4 min: a guarda do vigia só
   // dimensiona com um saldo com menos de 10 min.
-  const { data: ultimo } = await db.from('cripto_saldos').select('em').order('em', { ascending: false }).limit(1).maybeSingle()
+  const { data: ultimo } = await db.from('cripto_saldos').select('em, detalhe').order('em', { ascending: false }).limit(1).maybeSingle()
   if (!ultimo || agora.getTime() - new Date(ultimo.em).getTime() > 4 * 60_000) {
     const [wallet, { data: perps }] = await Promise.all([
       getBybitWallet(),
@@ -78,9 +79,11 @@ export async function GET(req: NextRequest) {
     const conta = wallet.equity != null ? { equity: wallet.equity, livre: wallet.available ?? 0 } : null
     const ag = equityBybitDoAgente(tectos, conta, pnl, margem)
     if (conta) {
+      // A parte da carteira Solana vem da última linha do executor da VPS.
+      const t = juntarPartes({ bybit: ag }, (ultimo?.detalhe as { partes?: unknown } | null)?.partes)
       await db.from('cripto_saldos').insert({
-        equity_usd: Math.round(ag.equity * 100) / 100, livre_usd: Math.round(ag.livre * 100) / 100,
-        detalhe: { bybit: ag, conta: 'AURUM (mestre)', capitalAtribuido: tectos.capitalBybitUsd, pnlRealizado: pnl, versao: VERSAO },
+        equity_usd: Math.round(t.equity * 100) / 100, livre_usd: Math.round(t.livre * 100) / 100,
+        detalhe: { partes: { solana: t.solana, bybit: t.bybit }, conta: 'AURUM (mestre)', capitalAtribuido: tectos.capitalBybitUsd, pnlRealizado: pnl, versao: VERSAO },
       })
       feito.push('saldo')
     }
@@ -106,12 +109,17 @@ export async function GET(req: NextRequest) {
   }
 
   for (const p of linhas.filter((x) => x.estado === 'pendente')) {
+    if (p.mercado !== 'perp') {
+      // Memecoins: são da VPS. Só se fecha o pedido se ficou velho sem ninguém lhe pegar.
+      const idade = agora.getTime() - new Date(p.aberta_em).getTime()
+      if (idade > tectos.pendenteMaxIdadeMs + 120_000 && !p.execucao?.reservadaEm) await falhar(p, 'A carteira Solana (VPS) não executou a tempo.')
+      continue
+    }
     const motivo = verificarPendente(p, tectos, { exposicaoAbertaUsd: exposicao, perdaHojeUsd: perdaHoje, agora })
     if (motivo) { await falhar(p, motivo); continue }
     const { data: reservada } = await db.from('cripto_posicoes').update({ execucao: { reservadaEm: agora.toISOString(), versao: VERSAO } })
       .eq('id', p.id).eq('estado', 'pendente').is('execucao->>reservadaEm', null).select('id')
     if (!reservada?.length) continue
-    if (p.mercado !== 'perp') { await falhar(p, 'Memecoins reais ainda não estão ligadas: só em papel.'); continue }
     const ocupado = parOcupadoNaMestre(tectos, naConta(p.id_ativo))
     if (ocupado) { await falhar(p, ocupado); continue }
     const inst = await getBybitInstrumentInfo(p.id_ativo)

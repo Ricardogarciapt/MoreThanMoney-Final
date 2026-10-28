@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { abrirOuCriarCarteira } from './cofre'
 import { enderecoValido } from './solana'
-import { equityBybitDoAgente, lerTectos, tectosDaVercel, parOcupadoNaMestre, valorAEnviar, verificarPendente } from '../../lib/cripto/tectos'
+import { equityBybitDoAgente, juntarPartes, lerTectos, tectosDaVercel, parOcupadoNaMestre, valorAEnviar, verificarPendente } from '../../lib/cripto/tectos'
 
 const falhas: string[] = []
 const teste = (nome: string, c: boolean) => { if (!c) falhas.push(nome) }
@@ -66,6 +66,10 @@ teste('vercel: sem CRIPTO_REAL não executa', !tv.real)
 teste('vercel: sempre mestre e sem levantamentos', tv.bybitMestre && !lerTectos({}).varrerBybit && !tectosDaVercel({ CRIPTO_VARRER_BYBIT: '1' }).varrerBybit)
 teste('vercel: capital do agente 100 $ por omissão', tv.capitalBybitUsd === 100 && tectosDaVercel({ CRIPTO_CAPITAL_BYBIT_USD: '250' }).capitalBybitUsd === 250)
 teste('vercel: tectos pequenos por omissão', tv.ordemMaxUsd === 25 && tv.perdaDiaMaxUsd === 10 && tv.alavancagemMax === 3)
+teste('só memecoins: CRIPTO_SO_SPOT=1', lerTectos({ CRIPTO_SO_SPOT: '1' }).soSpot && !lerTectos({}).soSpot)
+const j = juntarPartes({ bybit: { equity: 110, livre: 90 } }, { solana: { equity: 50, livre: 20 }, bybit: { equity: 100, livre: 100 } })
+teste('saldo: junta a parte nova com a última do outro executor', j.equity === 160 && j.livre === 110 && j.solana.equity === 50)
+teste('saldo: sem linha anterior conta só a parte nova', juntarPartes({ solana: { equity: 40, livre: 40 } }, null).equity === 40)
 
 if (falhas.length) {
   console.error(`✗ ${falhas.length} falha(s):\n  - ${falhas.join('\n  - ')}`)

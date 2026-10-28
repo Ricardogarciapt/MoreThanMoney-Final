@@ -7,7 +7,9 @@
  * o AG-TRADER pediu, o que a guarda recusou e porquê, as posições, as sessões e o envio dos lucros.
  *
  * Os interruptores aqui são só os do dono (ligar, papel/real, memecoins, capital base, fechar).
- * Tectos, chaves e o destino dos lucros vivem no env da VPS e não aparecem nem se mudam aqui.
+ * Execução real: perps na AURUM (Bybit, mestre do Copy Trading) pela Vercel; memecoins na carteira
+ * Solana (Jupiter, incl. Pump.fun) pela VPS. Tectos, chaves e destino dos lucros vivem no env de cada
+ * um e não aparecem nem se mudam aqui.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -127,6 +129,12 @@ export default function AdminCriptoPage() {
           </div>
         </div>
 
+        <div className="mb-4 flex flex-wrap gap-2 text-[11px]">
+          <span className="rounded-full border border-gray-800 px-2 py-0.5 text-gray-400">Perps → Bybit AURUM (mestre do Copy Trading) · Vercel</span>
+          <span className="rounded-full border border-gray-800 px-2 py-0.5 text-gray-400">Memecoins → carteira Solana · Jupiter / Pump.fun · VPS</span>
+          <span className="rounded-full border border-gray-800 px-2 py-0.5 text-gray-400">Lucro da AURUM fica lá · lucro da carteira vai para o teu endereço às 00:00 UTC</span>
+        </div>
+
         <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
           <div className={CAIXA}>
             <p className="text-[11px] uppercase tracking-wider text-gray-500">Capital {vista}</p>
@@ -150,7 +158,7 @@ export default function AdminCriptoPage() {
             </div>
             {cfg.modo !== "real" && (
               <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/5 p-3">
-                <p className="mb-2 text-xs text-red-200/90">Passar a dinheiro real é a 1.ª de duas chaves. A 2.ª é <code>CRIPTO_REAL=1</code> no executor da VPS. Escreve REAL para confirmar.</p>
+                <p className="mb-2 text-xs text-red-200/90">Passar a dinheiro real é a 1.ª de duas chaves. A 2.ª é <code>CRIPTO_REAL=1</code> na Vercel (perps na AURUM) e na VPS (memecoins na carteira). Escreve REAL para confirmar.</p>
                 <div className="flex gap-2">
                   <Input value={confirmo} onChange={(e) => setConfirmo(e.target.value)} placeholder="REAL" className="h-8 max-w-[120px] border-gray-700 bg-black" />
                   <Button size="sm" disabled={confirmo !== "REAL"} className="bg-red-600 hover:bg-red-500" onClick={() => void mudar({ acao: "modo", valor: "real", confirmo }, "Modo real pedido")}>Passar a real</Button>
@@ -169,7 +177,7 @@ export default function AdminCriptoPage() {
               <p className="text-xs text-gray-500">Ainda não criada: nasce no 1.º arranque do executor na VPS. A chave privada nunca sai de lá.</p>
             )}
             {d.saldoReal?.detalhe && (
-              <p className="mt-2 text-xs text-gray-400">USDC {Number(d.saldoReal.detalhe.usdc ?? 0).toFixed(2)} · SOL {Number(d.saldoReal.detalhe.sol ?? 0).toFixed(4)} · memecoins {usd(d.saldoReal.detalhe.memesUsd)} · Bybit {usd(d.saldoReal.detalhe.bybit?.equity)}</p>
+              <p className="mt-2 text-xs text-gray-400">Carteira Solana {usd(d.saldoReal.detalhe.partes?.solana?.equity)} · AURUM (parte do agente) {usd(d.saldoReal.detalhe.partes?.bybit?.equity ?? d.saldoReal.detalhe.bybit?.equity)}</p>
             )}
             <div className="mt-3 flex items-center gap-2">
               <span className="text-xs text-gray-500">Capital base real</span>

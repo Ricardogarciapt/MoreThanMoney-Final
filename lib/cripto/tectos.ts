@@ -25,6 +25,11 @@ export interface Tectos {
    */
   bybitMestre: boolean
   capitalBybitUsd: number
+  /**
+   * Só memecoins (carteira Solana/Jupiter, incluindo tokens da Pump.fun). Os perps correm na Vercel
+   * (app/api/cron/cripto-executar) com a chave da AURUM; o executor da VPS não lhes toca.
+   */
+  soSpot: boolean
 }
 
 export function lerTectos(env: Record<string, string | undefined>): Tectos {
@@ -46,6 +51,7 @@ export function lerTectos(env: Record<string, string | undefined>): Tectos {
     varrerBybit: env.CRIPTO_VARRER_BYBIT === '1' && env.CRIPTO_BYBIT_MESTRE !== '1',
     bybitMestre: env.CRIPTO_BYBIT_MESTRE === '1',
     capitalBybitUsd: n('CRIPTO_CAPITAL_BYBIT_USD', 0),
+    soSpot: env.CRIPTO_SO_SPOT === '1',
   }
 }
 
@@ -109,4 +115,22 @@ export function tectosDaVercel(env: Record<string, string | undefined>): Tectos 
   // O cron corre de minuto a minuto e o vigia também: um pedido pode ter até ~2 min quando chega.
   const pendente = env.CRIPTO_PENDENTE_MAX_S ? t.pendenteMaxIdadeMs : 150_000
   return { ...t, bybitMestre: true, varrerBybit: false, capitalBybitUsd: capital, pendenteMaxIdadeMs: pendente }
+}
+
+/**
+ * O saldo do agente tem duas partes, lidas por dois executores: a carteira Solana (VPS) e a parte
+ * dele na AURUM (Vercel). Cada um grava a sua e repete a última do outro, para que a última linha
+ * de cripto_saldos (a que a guarda do vigia lê) tenha sempre o total.
+ */
+export interface PartesSaldo { solana: { equity: number; livre: number }; bybit: { equity: number; livre: number } }
+
+export function juntarPartes(nova: Partial<PartesSaldo>, anterior: unknown): PartesSaldo & { equity: number; livre: number } {
+  const ant = (anterior && typeof anterior === 'object' ? anterior : {}) as Partial<PartesSaldo>
+  const parte = (x: unknown) => {
+    const o = (x && typeof x === 'object' ? x : {}) as { equity?: unknown; livre?: unknown }
+    return { equity: Number(o.equity) || 0, livre: Number(o.livre) || 0 }
+  }
+  const solana = parte(nova.solana ?? ant.solana)
+  const bybit = parte(nova.bybit ?? ant.bybit)
+  return { solana, bybit, equity: solana.equity + bybit.equity, livre: solana.livre + bybit.livre }
 }
