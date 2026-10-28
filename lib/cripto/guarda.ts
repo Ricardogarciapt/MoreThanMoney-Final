@@ -32,6 +32,8 @@ export const LIMITES_PADRAO = {
   slippageMaxPctPerp: 0.5,
   slippageMaxPctSpot: 3,
   liquidezMinUsd: 50_000,
+  /** Tokens da Pump.fun já graduados (perfil «pump» do filtro de rug). */
+  liquidezMinPumpUsd: 15_000,
   /** Abaixo disto não vale a pena (taxas comem tudo). */
   nocionalMinUsd: 10,
   /** Sem vantagem medida ainda: abre com esta fracção do tamanho, para medir. 0 = não abre. */
@@ -82,6 +84,27 @@ export interface EntradaGuarda {
 
 const ACAO_ESPERADA = { 'perp:long': 'LONG_PERP', 'perp:short': 'SHORT_PERP', 'spot:long': 'BUY_SPOT' } as const
 
+/**
+ * PAPEL SEM IA. Quando a cadeia grátis de IA está em baixo, o papel não pára: decide o código (o
+ * plano do gatilho, com confiança no mínimo da guarda) e a guarda faz o resto — filtro de rug,
+ * tectos, travões, tamanho. A posição fica marcada (`sem-ia:<tipo>`) para a régua a medir à parte.
+ * No REAL devolve sempre null: dinheiro a sério só com a IA a responder.
+ */
+export const PREFIXO_SEM_IA = 'sem-ia:'
+export const iaEmBaixo = (p: Parecer) => !!p.veto && /^IA indisponível/.test(p.nota)
+
+export function decisaoSemIA(g: Gatilho, modo: Modo, L: Limites = { ...LIMITES_PADRAO }): DecisaoIA | null {
+  if (modo !== 'papel') return null
+  const action = ACAO_ESPERADA[`${g.mercado}:${g.lado}` as keyof typeof ACAO_ESPERADA]
+  if (!action) return null
+  return {
+    action,
+    execution_details: { leverage: 1, max_slippage_pct: g.mercado === 'perp' ? L.slippageMaxPctPerp : L.slippageMaxPctSpot },
+    rationale: { technical_trigger: `Sem IA (papel): decide o gatilho ${g.tipo}. ${g.porque}`.slice(0, 400), confidence_score: L.confiancaMin },
+    risk_check: { stop_loss_price: g.sl, take_profit_price: g.tp, is_within_safety_limits: true },
+  }
+}
+
 export function guardar(e: EntradaGuarda): { ordem: OrdemAprovada | null; recusas: string[] } {
   const L = e.limites ?? { ...LIMITES_PADRAO }
   const g = e.gatilho
@@ -90,7 +113,11 @@ export function guardar(e: EntradaGuarda): { ordem: OrdemAprovada | null; recusa
   const recusas: string[] = []
   const nao = (m: string) => recusas.push(m)
 
-  if (!d) return { ordem: null, recusas: ['A IA não devolveu um JSON válido: vale HOLD.'] }
+  if (!d) {
+    // Com veto, a IA nem chega a ser chamada: a recusa é o veto, não «a IA falhou».
+    const vetos = e.pareceres.filter((p) => p.veto).map((p) => `Veto de ${p.agente}: ${p.nota}`)
+    return { ordem: null, recusas: vetos.length ? vetos : ['A IA não devolveu um JSON válido: vale HOLD.'] }
+  }
   if (d.action === 'HOLD' || d.action === 'ERROR') return { ordem: null, recusas: [`AG-TRADER: ${d.action} (${d.rationale.technical_trigger}).`] }
 
   const esperada = ACAO_ESPERADA[`${g.mercado}:${g.lado}` as keyof typeof ACAO_ESPERADA]
@@ -114,7 +141,9 @@ export function guardar(e: EntradaGuarda): { ordem: OrdemAprovada | null; recusa
   const slMax = g.mercado === 'perp' ? L.slMaxPctPerp : L.slMaxPctSpot
   if (distSlPct > slMax) nao(`SL a ${distSlPct.toFixed(2)}% (máx. ${slMax}%).`)
 
-  if (g.mercado === 'spot' && !((r.liquidezUsd ?? 0) >= L.liquidezMinUsd)) nao(`Liquidez ${Math.round(r.liquidezUsd ?? 0)} $ < ${L.liquidezMinUsd} $.`)
+  // Pump.fun graduado (perfil «pump» do rug): também quando o gatilho é uma carteira esperta num token pump.
+  const liqMin = g.tipo === 'pump-graduado' || (g.tipo === 'carteira-esperta' && g.id.endsWith('pump')) ? L.liquidezMinPumpUsd : L.liquidezMinUsd
+  if (g.mercado === 'spot' && !((r.liquidezUsd ?? 0) >= liqMin)) nao(`Liquidez ${Math.round(r.liquidezUsd ?? 0)} $ < ${liqMin} $.`)
 
   const c = e.conta
   if (!(c.capitalUsd > 0)) nao('Sem capital.')

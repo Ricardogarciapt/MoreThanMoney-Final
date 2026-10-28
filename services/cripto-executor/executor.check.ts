@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { abrirOuCriarCarteira } from './cofre'
 import { enderecoValido } from './solana'
-import { equityBybitDoAgente, juntarPartes, lerTectos, tectosDaVercel, parOcupadoNaMestre, valorAEnviar, verificarPendente } from '../../lib/cripto/tectos'
+import { TIPOS_SNIPER, equityBybitDoAgente, juntarPartes, lerTectos, tectosDaVercel, parOcupadoNaMestre, planoRebalanco, valorAEnviar, verificarMovimento, verificarPendente } from '../../lib/cripto/tectos'
 
 const falhas: string[] = []
 const teste = (nome: string, c: boolean) => { if (!c) falhas.push(nome) }
@@ -50,6 +50,28 @@ teste('lucros: sem destino não envia', valorAEnviar(lerTectos({ CRIPTO_CAPITAL_
 teste('lucros: conta a perder não envia', valorAEnviar(t, 180, 180, 10).usd === 0)
 teste('lucros: envia só acima da base', valorAEnviar(t, 260, 500, 10).usd === 60)
 teste('lucros: tecto de envio respeitado', valorAEnviar({ ...t, varreduraMaxUsd: 30 }, 260, 500, 10).usd === 30)
+
+// Movimentos: só entre carteiras do agente (as do cofre) e lucros só para o destino do env.
+const P = a.carteira.publicKey.toBase58()
+const S = abrirOuCriarCarteira(join(dir, 'sniper.json'), FRASE).carteira.publicKey.toBase58()
+const proprias = new Set([P, S])
+const tm = lerTectos({ CRIPTO_REAL: '1', CRIPTO_DESTINO_LUCROS: 'Dest111', CRIPTO_SNIPER: '1', CRIPTO_SNIPER_CAPITAL_USD: '40' })
+const mov = (x: Partial<Parameters<typeof verificarMovimento>[0]>, hoje = 0) => verificarMovimento({ de: P, para: S, valorUsd: 20, motivo: 'rebalanço', ...x }, tm, { proprias, movidoHojeUsd: hoje })
+teste('movimento: principal → sniper passa', mov({}) === null)
+teste('movimento: para endereço de fora recusa', mov({ para: 'Ladrao1111111111111111111111111111111111111' }) !== null)
+teste('movimento: de carteira que não é do agente recusa', mov({ de: 'Outra111' }) !== null)
+teste('movimento: acima do tecto por movimento (50) recusa', mov({ valorUsd: 51 }) !== null)
+teste('movimento: acima do tecto do dia (200) recusa', mov({ valorUsd: 20 }, 190) !== null)
+teste('movimento: sem CRIPTO_REAL recusa', verificarMovimento({ de: P, para: S, valorUsd: 20, motivo: 'rebalanço' }, lerTectos({}), { proprias, movidoHojeUsd: 0 }) !== null)
+teste('lucros: só para o destino do env', mov({ para: 'Dest111', motivo: 'lucros' }) === null && mov({ para: S, motivo: 'lucros' }) !== null)
+teste('lucros: o rebalanço não pode ir para o destino dos lucros', mov({ para: 'Dest111' }) !== null)
+teste('lucros: acima do tecto da varredura recusa', mov({ para: 'Dest111', motivo: 'lucros', valorUsd: 501 }) !== null)
+teste('rebalanço: sniper abaixo de metade do alvo recebe o que falta', planoRebalanco(tm, 100, 10) === 30)
+teste('rebalanço: sniper acima de metade não mexe', planoRebalanco(tm, 100, 25) === 0)
+teste('rebalanço: sem sniper não mexe', planoRebalanco(t, 100, 0) === 0)
+teste('rebalanço: limitado ao que a principal tem', planoRebalanco(tm, 5, 0) === 5)
+teste('sniper: Pump.fun e carteiras espertas vão para a sniper', TIPOS_SNIPER.has('pump-graduado') && TIPOS_SNIPER.has('carteira-esperta') && !TIPOS_SNIPER.has('meme-fluxo'))
+teste('cofre: sniper é outra carteira', S !== P)
 
 const m = lerTectos({ CRIPTO_BYBIT_MESTRE: '1', CRIPTO_CAPITAL_BYBIT_USD: '300', CRIPTO_VARRER_BYBIT: '1' })
 teste('mestre: nunca levanta da Bybit', m.bybitMestre && !m.varrerBybit)
