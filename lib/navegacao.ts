@@ -106,8 +106,8 @@ export const DESTINOS_NAVEGACAO: DestinoNavegacao[] = [
   { id: 'scanners', href: '/scanner', chave: 'navfooter.subOurScanners', rotuloPt: 'Os nossos Scanners', grupo: 'trading', seccaoPt: 'Sinais e análise', comoUsar: 'os nossos scanners' },
   { id: 'portfolios', href: '/portfolios', chave: 'navfooter.subPortfolios', rotuloPt: 'Portefólios', grupo: 'trading', seccaoPt: 'Sinais e análise', comoUsar: 'os portefólios' },
 
-  { id: 'sensei-ea', href: '/sensei-ea', rotuloPt: 'MTM Sensei EA', grupo: 'trading', seccaoPt: 'Ferramentas e programas', comoUsar: 'o MTM Sensei EA' },
-  { id: 'sensei-scalp', href: '/sensei-scalp', rotuloPt: 'Sensei Scalp Edition', grupo: 'trading', seccaoPt: 'Ferramentas e programas', comoUsar: 'o Sensei Scalp Edition' },
+  // Os EAs entram por uma só porta: a /ea apresenta os três e leva à página de cada um.
+  { id: 'ea', href: '/ea', rotuloPt: 'EAs para MT5', grupo: 'trading', seccaoPt: 'Ferramentas e programas', comoUsar: 'os nossos EAs para MetaTrader 5' },
   // A entrada para o MTM Funded existe aqui, mas só neste sentido: lá dentro a marca é outra, com
   // navegação e rodapé próprios e sem caminho de volta. São dois negócios.
   { id: 'mtmfunded', href: '/mtmfunded', rotuloPt: 'MTM Funded', grupo: 'trading', seccaoPt: 'Ferramentas e programas', comoUsar: 'o MTM Funded' },
