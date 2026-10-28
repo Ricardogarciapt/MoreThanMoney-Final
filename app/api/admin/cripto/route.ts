@@ -112,6 +112,12 @@ export async function POST(request: NextRequest) {
       if (b.valor === 'real' && b.confirmo !== 'REAL') return NextResponse.json({ ok: false, error: 'Para passar a real escreve REAL na confirmação.' }, { status: 400 })
       novo.modo = b.valor === 'real' ? 'real' : 'papel'
       break
+    case 'realMercados': {
+      const v = Array.isArray(b.valor) ? (['perp', 'spot'] as const).filter((m) => (b.valor as unknown[]).includes(m)) : null
+      if (!v) return NextResponse.json({ ok: false, error: 'Lista de mercados inválida.' }, { status: 400 })
+      novo.realMercados = v
+      break
+    }
     case 'capitalBaseReal': {
       const v = Number(b.valor)
       if (!(Number.isFinite(v) && v >= 0 && v <= 1_000_000)) return NextResponse.json({ ok: false, error: 'Valor inválido.' }, { status: 400 })

@@ -12,7 +12,7 @@ import { atr, desequilibrioLivro, detectarGatilho, retratoDeVelas, rsi } from '.
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd } from './papel'
 import { avaliarRug } from './rug'
 import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
-import { lerConfig } from './ciclo'
+import { lerConfig, modoDoMercado } from './ciclo'
 import type { DecisaoIA, Gatilho, Retrato, Vela } from './tipos'
 
 const falhas: string[] = []
@@ -105,6 +105,9 @@ teste('sessão: 12:00 pertence à sessão das 00:00', inicioDaSessao(AGORA).toIS
 teste('sessão: fecho às 21 h, 12:00 pertence à de ontem às 21 h', inicioDaSessao(AGORA, 21).toISOString() === '2026-10-27T21:00:00.000Z')
 
 /* ── Config ── */
+teste('real só nas memecoins: perps continuam em papel', modoDoMercado(lerConfig({ modo: 'real', realMercados: ['spot'] }), 'perp') === 'papel' && modoDoMercado(lerConfig({ modo: 'real', realMercados: ['spot'] }), 'spot') === 'real')
+teste('sem realMercados: real vale para os dois (como antes)', modoDoMercado(lerConfig({ modo: 'real' }), 'perp') === 'real')
+teste('modo papel: nada é real', modoDoMercado(lerConfig({ modo: 'papel', realMercados: ['spot'] }), 'spot') === 'papel')
 teste('config: desligado por omissão', lerConfig(null).ligado === false && lerConfig(null).modo === 'papel')
 teste('config: símbolo estranho fica de fora', lerConfig({ perps: ['BTCUSDT', 'rm -rf'] }).perps.join() === 'BTCUSDT')
 
