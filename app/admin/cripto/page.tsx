@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import CriptoGraficos from "@/components/admin/cripto-graficos"
 import CriptoCarteiras from "@/components/admin/cripto-carteiras"
+import CriptoGraficoAoVivo from "@/components/admin/cripto-grafico-ao-vivo"
 import { ArrowLeft, Loader2, Power, RefreshCw, ShieldAlert, ShieldCheck, Wallet, X } from "lucide-react"
 
 type Linha = Record<string, any>
@@ -148,6 +149,8 @@ export default function AdminCriptoPage() {
           <div className={CAIXA}><p className="text-[11px] uppercase tracking-wider text-gray-500">Acerto</p><p className="mt-1 text-lg font-semibold">{resumo.acerto == null ? "—" : `${resumo.acerto.toFixed(0)}%`}</p><p className="text-[11px] text-gray-500">medido, não prometido</p></div>
           <div className={CAIXA}><p className="text-[11px] uppercase tracking-wider text-gray-500">Lucros enviados</p><p className="mt-1 text-lg font-semibold">{usd(resumo.enviado)}</p><p className="text-[11px] text-gray-500">{vista === "papel" ? "simulados" : "para o teu endereço"}</p></div>
         </div>
+
+        <CriptoGraficoAoVivo d={d} vista={vista} />
 
         <CriptoGraficos d={d} vista={vista} capitalInicial={vista === "real" ? Number(cfg.capitalBaseRealUsd) || Number(d.saldos?.[0]?.equity_usd) || 0 : Number(cfg.capitalPapelUsd) || 0} />
 
