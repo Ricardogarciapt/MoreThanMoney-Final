@@ -7,7 +7,7 @@
  * sabe, uma guarda que aceita o tamanho da IA, um envio de lucros que levanta capital de uma conta a
  * perder. Cada bloco é uma dessas portas.
  */
-import { LIMITES_PADRAO, guardar, lerLimites, type EntradaGuarda } from './guarda'
+import { LIMITES_PADRAO, PREFIXO_SEM_IA, decisaoSemIA, guardar, iaEmBaixo, lerLimites, type EntradaGuarda } from './guarda'
 import { atr, desequilibrioLivro, detectarGatilho, retratoDeVelas, rsi } from './indicadores'
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd } from './papel'
 import { LIMIARES_RUG_PUMP, avaliarRug } from './rug'
@@ -72,6 +72,14 @@ teste('guarda: caso limpo aprova', !!ok.ordem && ok.recusas.length === 0)
 teste('guarda: tamanho pelo risco, não pela IA', ok.ordem?.nocionalUsd === 333.33)
 teste('guarda: alavancagem cortada a 3 (a IA pediu 5)', ok.ordem?.alavancagem === 3)
 teste('guarda: escorregamento cortado ao tecto dos perps', ok.ordem?.slippageMaxPct === LIMITES_PADRAO.slippageMaxPctPerp)
+// Papel sem IA: decide o código, a guarda continua a mandar; no real nunca.
+const semIA = decisaoSemIA(gatilho, 'papel')
+teste('sem-IA: no REAL não há decisão de código', decisaoSemIA(gatilho, 'real') === null)
+teste('sem-IA: em papel a acção e o plano são os do gatilho', semIA?.action === 'LONG_PERP' && semIA.risk_check.stop_loss_price === 97 && semIA.risk_check.take_profit_price === 105)
+teste('sem-IA: em papel a guarda aprova com alavancagem 1', guardar(base({ decisao: semIA })).ordem?.alavancagem === 1)
+teste('sem-IA: veto do filtro de rug continua a chumbar', !guardar(base({ decisao: semIA, pareceres: [{ agente: 'filtro-rug', favor: -1, nota: 'Freeze authority ativa.', veto: true }] })).ordem)
+teste('sem-IA: reconhece o veto de IA em baixo e só esse', iaEmBaixo({ agente: 'noticias-sentimento', favor: 0, nota: 'IA indisponível (503).', veto: true }) && !iaEmBaixo({ agente: 'filtro-rug', favor: -1, nota: 'Liquidez baixa.', veto: true }))
+teste('sem-IA: medido à parte na régua', PREFIXO_SEM_IA === 'sem-ia:')
 teste('guarda: sem JSON = HOLD', !guardar(base({ decisao: null })).ordem)
 teste('guarda: HOLD não abre', !guardar(base({ decisao: decisao({ action: 'HOLD' }) })).ordem)
 teste('guarda: acção contrária ao gatilho recusa', !guardar(base({ decisao: decisao({ action: 'SHORT_PERP' }) })).ordem)

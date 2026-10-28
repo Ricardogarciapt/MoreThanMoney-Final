@@ -14,13 +14,13 @@ import { vantagemPorCombo, lerRegua } from '../agentes/trader-disciplina'
 import { candidatosMeme, dadosRug, fundingBybit, livroBybit, perpsVolateis, snapshotsDex, titulosDoAtivo, titulosNoticias, velasBybit, type CandidatoMeme } from './fontes'
 import { passarCarteiras } from './espertas'
 import { ePump, gatilhoCarteira, gatilhoMeme, naCurva, retratoDeSnapshot } from './memes'
-import { guardar, lerLimites, type EstadoConta, type VantagemGatilho } from './guarda'
+import { PREFIXO_SEM_IA, decisaoSemIA, guardar, iaEmBaixo, lerLimites, type EstadoConta, type VantagemGatilho } from './guarda'
 import { detectarGatilho, pareceresNumericos, retratoDeVelas } from './indicadores'
 import { ESTUDOS_SCALP, REGIME_PADRAO, eScalp, gatilhosScalp, type TipoScalp } from './scalp'
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd, precoComEscorregamento } from './papel'
 import { LIMIARES_RUG, LIMIARES_RUG_PUMP, avaliarRug } from './rug'
 import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
-import type { Gatilho, Modo, Parecer, PosicaoAberta, Retrato, Vela } from './tipos'
+import type { DecisaoIA, Gatilho, Modo, Parecer, PosicaoAberta, Retrato, Vela } from './tipos'
 
 export const CHAVE_CONFIG = 'agente_cripto'
 
@@ -274,10 +274,10 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
   for (const c of candidatos) {
     if (jaVisto.has(`${c.r.ativo}|${c.g.tipo}`)) continue
     if (usados >= cfg.maxGatilhosPorPassagem) break
-    const pareceres: Parecer[] = [...pareceresNumericos(c.r, c.g)]
+    let pareceres: Parecer[] = [...pareceresNumericos(c.r, c.g)]
     if (c.rugParecer) pareceres.push(c.rugParecer)
 
-    let decisao = null
+    let decisao: DecisaoIA | null = null
     let fornecedor: string | null = null
     // Veto de código já decidido: não se gasta IA com um token que o filtro de rug chumbou.
     if (!pareceres.some((p) => p.veto)) {
@@ -295,8 +295,20 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
     }
 
     const modo = modoDoMercado(cfg, c.r.mercado)
+    // IA em baixo (notícias/apoio sem resposta, ou trader sem JSON) e mais nenhum veto: em PAPEL decide
+    // o código; no real não (decisaoSemIA devolve null).
+    let tipoMedido: string = c.g.tipo
+    if (!pareceres.some((p) => p.veto && !iaEmBaixo(p)) && (!decisao || pareceres.some(iaEmBaixo))) {
+      const d = decisaoSemIA(c.g, modo, limites)
+      if (d) {
+        decisao = d
+        fornecedor = 'sem-IA'
+        pareceres = pareceres.filter((p) => !iaEmBaixo(p))
+        tipoMedido = `${PREFIXO_SEM_IA}${c.g.tipo}`
+      }
+    }
     const conta = contas[modo]
-    const { ordem, recusas } = guardar({ modo, agora, retrato: c.r, gatilho: c.g, decisao, pareceres, conta, vantagem: vantagemDe(c.g.tipo), limites })
+    const { ordem, recusas } = guardar({ modo, agora, retrato: c.r, gatilho: c.g, decisao, pareceres, conta, vantagem: vantagemDe(tipoMedido), limites })
     const { data: dec, error } = await db.from('cripto_decisoes').insert({
       modo, ativo: c.r.ativo, mercado: c.r.mercado, gatilho: c.g, retrato: c.r, pareceres, decisao_ia: decisao, fornecedor_ia: fornecedor, recusas, aprovada: !!ordem,
     }).select('id').single()
@@ -306,7 +318,7 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
     const entrada = modo === 'papel' ? precoComEscorregamento(ordem.entrada, ordem.mercado, ordem.lado, true) : ordem.entrada
     const riscoUsd = ordem.nocionalUsd * (Math.abs(ordem.entrada - ordem.sl) / ordem.entrada)
     const { error: ePos } = await db.from('cripto_posicoes').insert({
-      decisao_id: dec.id, modo, ativo: ordem.ativo, mercado: ordem.mercado, id_ativo: ordem.id, gatilho_tipo: c.g.tipo, lado: ordem.lado,
+      decisao_id: dec.id, modo, ativo: ordem.ativo, mercado: ordem.mercado, id_ativo: ordem.id, gatilho_tipo: tipoMedido, lado: ordem.lado,
       nocional_usd: ordem.nocionalUsd, alavancagem: ordem.alavancagem, entrada, sl: ordem.sl, tp: ordem.tp, risco_usd: Math.round(riscoUsd * 100) / 100,
       slippage_max_pct: ordem.slippageMaxPct, exploracao: ordem.exploracao, estado: modo === 'papel' ? 'aberta' : 'pendente',
     })

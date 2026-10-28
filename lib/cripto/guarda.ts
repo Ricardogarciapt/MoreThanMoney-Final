@@ -84,6 +84,27 @@ export interface EntradaGuarda {
 
 const ACAO_ESPERADA = { 'perp:long': 'LONG_PERP', 'perp:short': 'SHORT_PERP', 'spot:long': 'BUY_SPOT' } as const
 
+/**
+ * PAPEL SEM IA. Quando a cadeia grátis de IA está em baixo, o papel não pára: decide o código (o
+ * plano do gatilho, com confiança no mínimo da guarda) e a guarda faz o resto — filtro de rug,
+ * tectos, travões, tamanho. A posição fica marcada (`sem-ia:<tipo>`) para a régua a medir à parte.
+ * No REAL devolve sempre null: dinheiro a sério só com a IA a responder.
+ */
+export const PREFIXO_SEM_IA = 'sem-ia:'
+export const iaEmBaixo = (p: Parecer) => !!p.veto && /^IA indisponível/.test(p.nota)
+
+export function decisaoSemIA(g: Gatilho, modo: Modo, L: Limites = { ...LIMITES_PADRAO }): DecisaoIA | null {
+  if (modo !== 'papel') return null
+  const action = ACAO_ESPERADA[`${g.mercado}:${g.lado}` as keyof typeof ACAO_ESPERADA]
+  if (!action) return null
+  return {
+    action,
+    execution_details: { leverage: 1, max_slippage_pct: g.mercado === 'perp' ? L.slippageMaxPctPerp : L.slippageMaxPctSpot },
+    rationale: { technical_trigger: `Sem IA (papel): decide o gatilho ${g.tipo}. ${g.porque}`.slice(0, 400), confidence_score: L.confiancaMin },
+    risk_check: { stop_loss_price: g.sl, take_profit_price: g.tp, is_within_safety_limits: true },
+  }
+}
+
 export function guardar(e: EntradaGuarda): { ordem: OrdemAprovada | null; recusas: string[] } {
   const L = e.limites ?? { ...LIMITES_PADRAO }
   const g = e.gatilho
