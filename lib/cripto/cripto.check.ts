@@ -10,10 +10,13 @@
 import { LIMITES_PADRAO, guardar, lerLimites, type EntradaGuarda } from './guarda'
 import { atr, desequilibrioLivro, detectarGatilho, retratoDeVelas, rsi } from './indicadores'
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd } from './papel'
-import { avaliarRug } from './rug'
+import { LIMIARES_RUG_PUMP, avaliarRug } from './rug'
 import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
 import { lerConfig, modoDoMercado } from './ciclo'
 import { eScalp, emRegime, gatilhosScalp, simularScalp, sinaisScalp } from './scalp'
+import { gatilhoCarteira, gatilhoMeme, retratoDeSnapshot } from './memes'
+import { compradoresCedo, comprasDaTransacao, estadoDaCarteira, pontuar, retornoPct } from './carteiras'
+import type { SnapshotMeme } from './fontes'
 import type { DecisaoIA, Gatilho, Retrato, Vela } from './tipos'
 
 const falhas: string[] = []
@@ -149,6 +152,47 @@ teste('config: símbolo estranho fica de fora', lerConfig({ perps: ['BTCUSDT', '
   teste('config scalp: tf estranho volta a 1, voláteis no máximo 15', lerConfig({ scalpTf: 3, scalpVolateis: 99 }).scalpTf === 1 && lerConfig({ scalpVolateis: 99 }).scalpVolateis === 15)
   teste('config: scalping desligado por omissão', lerConfig({}).scalp === false && lerConfig({ scalp: true }).scalp === true)
   teste('config: estudo desconhecido fica de fora', lerConfig({ estudosScalp: ['scalp-sensei', 'xpto'] }).estudosScalp.join() === 'scalp-sensei')
+}
+
+/* ── Memecoins pela DexScreener e carteiras espertas ── */
+{
+  const snap = (x: Partial<SnapshotMeme> = {}): SnapshotMeme => ({
+    mint: 'Mint111pump', simbolo: 'TESTE', pool: 'Pool1', dexId: 'pumpswap', precoUsd: 0.001, liquidezUsd: 40_000, fdvUsd: 500_000, idadeHoras: 2,
+    var5mPct: 6, var1hPct: 20, var24hPct: 80, vol5mUsd: 20_000, vol1hUsd: 60_000, compras5m: 120, vendas5m: 40, compras1h: 900, vendas1h: 500, social: [], ...x,
+  })
+  const g1 = gatilhoMeme(snap(), retratoDeSnapshot(snap()))
+  teste('meme: Pump.fun graduado há 2 h a subir com compradores = pump-graduado', g1?.tipo === 'pump-graduado' && g1.lado === 'long')
+  teste('meme: SL 10% e TP 18% (RR 1,8)', !!g1 && Math.abs(g1.sl / 0.001 - 0.9) < 1e-9 && Math.abs(g1.tp / 0.001 - 1.18) < 1e-9)
+  teste('meme: ainda na curva da Pump.fun = nada', gatilhoMeme(snap({ dexId: 'pumpfun' }), retratoDeSnapshot(snap({ dexId: 'pumpfun' }))) === null)
+  const velho = snap({ mint: 'Mint222', dexId: 'raydium', idadeHoras: 100 })
+  teste('meme: fluxo comprador com volume 4× = meme-fluxo', gatilhoMeme(velho, retratoDeSnapshot(velho))?.tipo === 'meme-fluxo')
+  const vendedores = snap({ mint: 'Mint333', dexId: 'raydium', idadeHoras: 100, compras5m: 30, vendas5m: 60 })
+  teste('meme: vendedores a dominar = nada', gatilhoMeme(vendedores, retratoDeSnapshot(vendedores)) === null)
+  teste('meme: retrato tem volume relativo e fluxo', Math.abs((retratoDeSnapshot(snap()).volumeRelativo ?? 0) - 4) < 1e-9 && Math.abs((retratoDeSnapshot(snap()).desequilibrioLivro ?? 0) - 0.5) < 1e-9)
+  teste('rug pump: liquidez 20 k e 1 h passam, o resto igual', avaliarRug({ mint: 'x', rugcheckScore: 10, rugcheckRiscos: [], mintAuthorityAtiva: false, freezeAuthorityAtiva: false, top10Fraccao: 0.2, lpBloqueadaFraccao: 1, liquidezUsd: 20_000, idadeHoras: 1, impactoVendaPct: 2 }, LIMIARES_RUG_PUMP).aprovado)
+  teste('rug pump: freeze authority continua a chumbar', !avaliarRug({ mint: 'x', rugcheckScore: 10, rugcheckRiscos: [], mintAuthorityAtiva: false, freezeAuthorityAtiva: true, top10Fraccao: 0.2, lpBloqueadaFraccao: 1, liquidezUsd: 20_000, idadeHoras: 1, impactoVendaPct: 2 }, LIMIARES_RUG_PUMP).aprovado)
+  teste('carteira esperta: gatilho próprio fora da curva', gatilhoCarteira(snap(), retratoDeSnapshot(snap()), 'Carteira1111')?.tipo === 'carteira-esperta' && gatilhoCarteira(snap({ dexId: 'pumpfun' }), retratoDeSnapshot(snap()), 'C') === null)
+
+  teste('espertas: 6 compras, 4 ganhas, média +12% = esperta', estadoDaCarteira(pontuar([30, 20, 15, 10, -8, 5])) === 'esperta')
+  teste('espertas: poucas compras continua candidata', estadoDaCarteira(pontuar([50, 40])) === 'candidata')
+  teste('espertas: 12 compras sem vantagem = descartada', estadoDaCarteira(pontuar(Array.from({ length: 12 }, (_, i) => (i % 2 ? 5 : -10)))) === 'descartada')
+  teste('espertas: retorno limitado a [−100, 500]', retornoPct(1, 100) === 500 && retornoPct(1, 0) === -100 && retornoPct(0, 1) === null)
+  const trades = [
+    { kind: 'buy' as const, carteira: 'Cedo1', precoUsd: 0.0004, volumeUsd: 500, em: 't1' },
+    { kind: 'buy' as const, carteira: 'Tarde', precoUsd: 0.0009, volumeUsd: 500, em: 't2' },
+    { kind: 'buy' as const, carteira: 'Pequena', precoUsd: 0.0004, volumeUsd: 20, em: 't3' },
+    { kind: 'sell' as const, carteira: 'Vendeu', precoUsd: 0.0004, volumeUsd: 500, em: 't4' },
+  ]
+  teste('espertas: descoberta só apanha quem comprou cedo e com dinheiro', compradoresCedo(trades, 0.001).map((x) => x.carteira).join() === 'Cedo1')
+  const W = 'Carteira111'
+  const tx = (x: Record<string, unknown> = {}) => ({
+    meta: { err: null, fee: 5000, preBalances: [2e9], postBalances: [1.5e9], preTokenBalances: [], postTokenBalances: [{ mint: 'Token1', owner: W, uiTokenAmount: { uiAmount: 1000 } }], ...x },
+    transaction: { message: { accountKeys: [{ pubkey: W }] } },
+  })
+  teste('espertas: pagou SOL e recebeu token = compra', comprasDaTransacao(tx(), W).map((c) => c.mint).join() === 'Token1')
+  teste('espertas: recebeu sem pagar (airdrop) = não é compra', comprasDaTransacao(tx({ postBalances: [2e9 - 5000] }), W).length === 0)
+  teste('espertas: transacção falhada = nada', comprasDaTransacao(tx({ err: { x: 1 } }), W).length === 0)
+  teste('espertas: token de outra carteira = nada', comprasDaTransacao(tx(), 'Outra').length === 0)
 }
 
 /* ── Sub-agentes de IA (com IA falsa) ── */

@@ -30,6 +30,13 @@ export interface Tectos {
    * (app/api/cron/cripto-executar) com a chave da AURUM; o executor da VPS não lhes toca.
    */
   soSpot: boolean
+  /** 2.ª carteira do agente («sniper»), para os tokens da Pump.fun e as carteiras espertas. */
+  sniper: boolean
+  /** Quanto a sniper deve ter em USDC; abaixo de metade, a principal repõe-na (0 = não repõe). */
+  sniperCapitalUsd: number
+  /** Movimentos ENTRE carteiras do agente: tecto por movimento e por dia. Os lucros têm o seu. */
+  movimentoMaxUsd: number
+  movimentosDiaMaxUsd: number
 }
 
 export function lerTectos(env: Record<string, string | undefined>): Tectos {
@@ -52,8 +59,52 @@ export function lerTectos(env: Record<string, string | undefined>): Tectos {
     bybitMestre: env.CRIPTO_BYBIT_MESTRE === '1',
     capitalBybitUsd: n('CRIPTO_CAPITAL_BYBIT_USD', 0),
     soSpot: env.CRIPTO_SO_SPOT === '1',
+    sniper: env.CRIPTO_SNIPER === '1',
+    sniperCapitalUsd: n('CRIPTO_SNIPER_CAPITAL_USD', 0),
+    movimentoMaxUsd: n('CRIPTO_MOVIMENTO_MAX_USD', 50),
+    movimentosDiaMaxUsd: n('CRIPTO_MOVIMENTOS_DIA_MAX_USD', 200),
   }
 }
+
+/**
+ * A FECHADURA DOS MOVIMENTOS. Para onde pode ir dinheiro do agente:
+ *  · `rebalanço`: só entre carteiras DO PRÓPRIO AGENTE (as que este executor tem no cofre da VPS,
+ *    nunca uma lista lida da Supabase), com tecto por movimento e por dia;
+ *  · `lucros`: só para CRIPTO_DESTINO_LUCROS (env da VPS) e até ao tecto da varredura.
+ * Qualquer outro destino é recusado (e o executor regista e alerta).
+ */
+export interface Movimento {
+  de: string
+  para: string
+  valorUsd: number
+  motivo: 'rebalanço' | 'lucros'
+}
+
+export function verificarMovimento(m: Movimento, t: Tectos, ctx: { proprias: Set<string>; movidoHojeUsd: number }): string | null {
+  if (!t.real) return 'CRIPTO_REAL não está a 1 nesta VPS.'
+  if (!(m.valorUsd > 0) || !Number.isFinite(m.valorUsd)) return 'Valor inválido.'
+  if (!ctx.proprias.has(m.de)) return 'A origem não é uma carteira deste executor.'
+  if (m.de === m.para) return 'Origem e destino iguais.'
+  if (m.motivo === 'lucros') {
+    if (!t.destinoLucros || m.para !== t.destinoLucros) return 'Lucros só vão para CRIPTO_DESTINO_LUCROS.'
+    if (m.valorUsd > t.varreduraMaxUsd) return `Envio de ${m.valorUsd} $ acima do tecto da varredura (${t.varreduraMaxUsd} $).`
+    return null
+  }
+  if (!ctx.proprias.has(m.para)) return 'Destino fora das carteiras do agente: recusado.'
+  if (m.valorUsd > t.movimentoMaxUsd) return `Movimento de ${m.valorUsd} $ acima do tecto (${t.movimentoMaxUsd} $).`
+  if (ctx.movidoHojeUsd + m.valorUsd > t.movimentosDiaMaxUsd) return `Movimentos de hoje passariam de ${t.movimentosDiaMaxUsd} $.`
+  return null
+}
+
+/** Repor a sniper: se tiver menos de metade do alvo, a principal manda o que falta (com tecto). */
+export function planoRebalanco(t: Tectos, usdcPrincipal: number, usdcSniper: number): number {
+  if (!t.sniper || !(t.sniperCapitalUsd > 0) || usdcSniper >= t.sniperCapitalUsd / 2) return 0
+  const falta = t.sniperCapitalUsd - usdcSniper
+  return Math.floor(Math.max(0, Math.min(falta, usdcPrincipal, t.movimentoMaxUsd)) * 100) / 100
+}
+
+/** Os gatilhos que, com a sniper ligada, usam a sniper (Pump.fun e carteiras espertas). */
+export const TIPOS_SNIPER = new Set(['pump-graduado', 'carteira-esperta'])
 
 export interface Pendente {
   nocional_usd: number

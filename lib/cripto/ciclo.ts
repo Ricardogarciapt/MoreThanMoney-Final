@@ -11,12 +11,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chamarIAGratis } from '../ia/chamar'
 import { vantagemPorCombo, lerRegua } from '../agentes/trader-disciplina'
-import { candidatosMeme, dadosRug, fundingBybit, livroBybit, perpsVolateis, titulosDoAtivo, titulosNoticias, velasBybit, velasPool } from './fontes'
+import { candidatosMeme, dadosRug, fundingBybit, livroBybit, perpsVolateis, snapshotsDex, titulosDoAtivo, titulosNoticias, velasBybit, type CandidatoMeme } from './fontes'
+import { passarCarteiras } from './espertas'
+import { ePump, gatilhoCarteira, gatilhoMeme, naCurva, retratoDeSnapshot } from './memes'
 import { guardar, lerLimites, type EstadoConta, type VantagemGatilho } from './guarda'
 import { detectarGatilho, pareceresNumericos, retratoDeVelas } from './indicadores'
 import { ESTUDOS_SCALP, REGIME_PADRAO, eScalp, gatilhosScalp, type TipoScalp } from './scalp'
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd, precoComEscorregamento } from './papel'
-import { avaliarRug } from './rug'
+import { LIMIARES_RUG, LIMIARES_RUG_PUMP, avaliarRug } from './rug'
 import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
 import type { Gatilho, Modo, Parecer, PosicaoAberta, Retrato, Vela } from './tipos'
 
@@ -86,6 +88,8 @@ export function lerConfig(bruto: unknown): ConfigCripto {
 const ESPERA_MESMO_GATILHO_MS = 30 * 60_000
 /** No scalping a janela é curta: o regime de alta volatilidade dura minutos, não meia hora. */
 const ESPERA_SCALP_MS = 5 * 60_000
+/** Memecoins com gatilho que pagam o filtro de rug por passagem (2 pedidos cada). */
+const MAX_RUG_POR_PASSAGEM = 6
 
 /** O modo em que corre cada mercado nesta passagem. */
 export function modoDoMercado(cfg: ConfigCripto, mercado: 'perp' | 'spot'): Modo {
@@ -140,8 +144,11 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
     .in('estado', ['aberta', 'pendente'])
   const abertas = (abertasRaw ?? []) as LinhaPosicao[]
 
-  const memes = cfg.memecoins ? await candidatosMeme(15, agora) : []
+  const memes = cfg.memecoins ? await candidatosMeme(60, agora) : []
   const precoMeme = new Map(memes.map((m) => [m.mint, m.precoUsd]))
+  // Memecoins abertas que já saíram do destaque: o preço vem na mesma da DexScreener (senão nunca fechavam).
+  const emFalta = abertas.filter((p) => p.mercado === 'spot' && !precoMeme.has(p.id_ativo)).map((p) => p.id_ativo)
+  if (emFalta.length) for (const [mint, sn] of await snapshotsDex(emFalta, agora)) precoMeme.set(mint, sn.precoUsd)
 
   for (const p of abertas.filter((x) => x.estado === 'aberta')) {
     try {
@@ -205,17 +212,30 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
       res.erros.push(`scanner ${symbol}: ${String((e as Error)?.message ?? e).slice(0, 120)}`)
     }
   }
-  for (const m of memes) {
+  // Memecoins: retrato da DexScreener (sem velas) → gatilho → filtro de rug. O rug custa 2 pedidos
+  // por token (RugCheck + cotação de venda na Jupiter), por isso só os MAX_RUG mais fortes o pagam.
+  const comGatilho = memes
+    .map((m) => ({ m, r: retratoDeSnapshot(m, agora) }))
+    .map((x) => ({ ...x, g: gatilhoMeme(x.m, x.r) }))
+    .filter((x): x is { m: CandidatoMeme; r: Retrato; g: Gatilho } => x.g != null)
+    .sort((a, b) => (b.r.volumeRelativo ?? 0) - (a.r.volumeRelativo ?? 0))
+    .slice(0, MAX_RUG_POR_PASSAGEM)
+  // Carteiras espertas: seguir quem ganha dinheiro; a compra de uma «esperta» é gatilho próprio.
+  if (cfg.memecoins) {
+    const esp = await passarCarteiras(db, memes, agora)
+    res.erros.push(...esp.erros)
+    for (const { snap, carteira } of esp.gatilhos) {
+      const r = retratoDeSnapshot(snap, agora)
+      const g = gatilhoCarteira(snap, r, carteira)
+      if (g && !comGatilho.some((x) => x.m.mint === snap.mint) && comGatilho.length < MAX_RUG_POR_PASSAGEM + 2) comGatilho.push({ m: snap, r, g })
+    }
+  }
+  for (const { m, r, g } of comGatilho) {
     try {
-      const velas = await velasPool(m.pool)
-      const r = retratoDeVelas({ ativo: m.simbolo, mercado: 'spot', id: m.mint, velas5m: velas, liquidezUsd: m.liquidezUsd, agora })
-      if (!r) continue
-      // O rug só se consulta quando há gatilho (são 2 pedidos por token).
-      const g = detectarGatilho(r, velas)
-      if (!g) continue
-      const rug = avaliarRug(await dadosRug(m))
+      const pumpGraduado = g.tipo === 'pump-graduado' || (ePump(m) && !naCurva(m) && (m.idadeHoras ?? 99) <= 6)
+      const rug = avaliarRug(await dadosRug(m), pumpGraduado ? LIMIARES_RUG_PUMP : LIMIARES_RUG)
       r.rug = rug
-      candidatos.push({ r, g, velas, social: m.social, rugParecer: { agente: 'filtro-rug', favor: rug.aprovado ? 0.3 : -1, nota: rug.aprovado ? 'Passou o filtro de scam/rug.' : rug.motivos.join(' '), veto: !rug.aprovado } })
+      candidatos.push({ r, g, velas: [], social: m.social, rugParecer: { agente: 'filtro-rug', favor: rug.aprovado ? 0.3 : -1, nota: rug.aprovado ? 'Passou o filtro de scam/rug.' : rug.motivos.join(' '), veto: !rug.aprovado } })
     } catch (e) {
       res.erros.push(`scanner ${m.simbolo}: ${String((e as Error)?.message ?? e).slice(0, 120)}`)
     }

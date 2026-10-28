@@ -18,7 +18,14 @@ export const LIMIARES_RUG = {
   impactoVendaMaxPct: 5,
 } as const
 
-export function avaliarRug(d: DadosRug, l = LIMIARES_RUG): { aprovado: boolean; motivos: string[] } {
+/**
+ * Perfil «pump»: tokens da Pump.fun JÁ GRADUADOS (fora da curva, numa pool). Nascem novos e com
+ * pouca liquidez, por isso só a liquidez e a idade mínimas descem; autoridades, concentração, LP
+ * bloqueada, RugCheck e o teste de honeypot ficam iguais.
+ */
+export const LIMIARES_RUG_PUMP = { ...LIMIARES_RUG, liquidezMinUsd: 15_000, idadeMinHoras: 0.25 } as const
+
+export function avaliarRug(d: DadosRug, l: typeof LIMIARES_RUG | typeof LIMIARES_RUG_PUMP = LIMIARES_RUG): { aprovado: boolean; motivos: string[] } {
   const m: string[] = []
   const desconhecido = (x: unknown) => x === undefined || x === null || (typeof x === 'number' && !Number.isFinite(x))
 

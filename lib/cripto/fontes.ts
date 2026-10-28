@@ -11,6 +11,7 @@
  * Corre na VPS (o container da cloud não chega a estes hosts). Cada função devolve `null`/[] em
  * falha: dado em falta conta contra na guarda e no filtro de rug, nunca a favor.
  */
+import type { TradePool, TransacaoRpc } from './carteiras'
 import type { DadosRug, Livro, Vela } from './tipos'
 
 const USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
@@ -94,48 +95,114 @@ export async function fundingBybit(symbol: string): Promise<number | null> {
 
 /* ─── Memecoins Solana ─── */
 
-export interface CandidatoMeme {
+/** Retrato instantâneo de uma memecoin pela DexScreener (sem velas: a GeckoTerminal limita a ~30/min). */
+export interface SnapshotMeme {
   mint: string
   simbolo: string
   pool: string
+  /** pumpfun = ainda na curva da Pump.fun; pumpswap/raydium/meteora/orca = já em pool. */
+  dexId: string
   precoUsd: number
   liquidezUsd: number | null
+  fdvUsd: number | null
   idadeHoras: number | null
+  var5mPct: number | null
+  var1hPct: number | null
+  var24hPct: number | null
+  vol5mUsd: number | null
+  vol1hUsd: number | null
+  compras5m: number
+  vendas5m: number
+  compras1h: number
+  vendas1h: number
   social: string[]
 }
 
-/** Os tokens Solana em destaque no DexScreener, com o par de maior liquidez de cada um. */
-export async function candidatosMeme(max = 15, agora = new Date()): Promise<CandidatoMeme[]> {
-  const top = (await json('https://api.dexscreener.com/token-boosts/top/v1')) as { chainId?: string; tokenAddress?: string }[] | null
-  const mints = [...new Set((top ?? []).filter((t) => t.chainId === 'solana' && t.tokenAddress).map((t) => t.tokenAddress!))].slice(0, max)
-  const out: CandidatoMeme[] = []
-  for (const mint of mints) {
-    const pares = (await json(`https://api.dexscreener.com/token-pairs/v1/solana/${mint}`)) as
-      | {
-          pairAddress?: string
-          baseToken?: { address?: string; symbol?: string }
-          priceUsd?: string
-          liquidity?: { usd?: number }
-          pairCreatedAt?: number
-          info?: { socials?: { type?: string; url?: string }[]; websites?: { url?: string }[] }
-        }[]
-      | null
-    const p = (pares ?? [])
-      .filter((x) => x.baseToken?.address === mint && x.pairAddress)
-      .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0]
-    const preco = num(p?.priceUsd)
-    if (!p || preco == null) continue
-    out.push({
-      mint,
-      simbolo: String(p.baseToken?.symbol ?? mint.slice(0, 6)).slice(0, 16),
-      pool: p.pairAddress!,
-      precoUsd: preco,
-      liquidezUsd: num(p.liquidity?.usd),
-      idadeHoras: p.pairCreatedAt ? (agora.getTime() - p.pairCreatedAt) / 3600_000 : null,
-      social: [...(p.info?.socials ?? []).map((s) => `${s.type}: ${s.url}`), ...(p.info?.websites ?? []).map((w) => `site: ${w.url}`)].slice(0, 5),
-    })
+export type CandidatoMeme = SnapshotMeme
+
+type ParDex = {
+  dexId?: string
+  pairAddress?: string
+  baseToken?: { address?: string; symbol?: string }
+  priceUsd?: string
+  liquidity?: { usd?: number }
+  fdv?: number
+  pairCreatedAt?: number
+  priceChange?: { m5?: number; h1?: number; h24?: number }
+  volume?: { m5?: number; h1?: number }
+  txns?: { m5?: { buys?: number; sells?: number }; h1?: { buys?: number; sells?: number } }
+  info?: { socials?: { type?: string; url?: string }[]; websites?: { url?: string }[] }
+}
+
+/**
+ * Retratos de até 30 mints por pedido (`/tokens/v1/solana/a,b,c`, ~300 pedidos/min grátis). Por
+ * mint fica o par com mais liquidez; na curva da Pump.fun a liquidez vem vazia e fica `null`.
+ */
+export async function snapshotsDex(mints: string[], agora = new Date()): Promise<Map<string, SnapshotMeme>> {
+  const out = new Map<string, SnapshotMeme>()
+  const unicos = [...new Set(mints)]
+  for (let i = 0; i < unicos.length; i += 30) {
+    const lote = unicos.slice(i, i + 30)
+    const pares = ((await json(`https://api.dexscreener.com/tokens/v1/solana/${lote.join(',')}`)) as ParDex[] | null) ?? []
+    for (const mint of lote) {
+      const p = pares
+        .filter((x) => x.baseToken?.address === mint && x.pairAddress)
+        .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0) || (b.volume?.h1 ?? 0) - (a.volume?.h1 ?? 0))[0]
+      const preco = num(p?.priceUsd)
+      if (!p || preco == null || !(preco > 0)) continue
+      out.set(mint, {
+        mint,
+        simbolo: String(p.baseToken?.symbol ?? mint.slice(0, 6)).slice(0, 16),
+        pool: p.pairAddress!,
+        dexId: String(p.dexId ?? ''),
+        precoUsd: preco,
+        liquidezUsd: num(p.liquidity?.usd),
+        fdvUsd: num(p.fdv),
+        idadeHoras: p.pairCreatedAt ? (agora.getTime() - p.pairCreatedAt) / 3600_000 : null,
+        var5mPct: num(p.priceChange?.m5),
+        var1hPct: num(p.priceChange?.h1),
+        var24hPct: num(p.priceChange?.h24),
+        vol5mUsd: num(p.volume?.m5),
+        vol1hUsd: num(p.volume?.h1),
+        compras5m: num(p.txns?.m5?.buys) ?? 0,
+        vendas5m: num(p.txns?.m5?.sells) ?? 0,
+        compras1h: num(p.txns?.h1?.buys) ?? 0,
+        vendas1h: num(p.txns?.h1?.sells) ?? 0,
+        social: [...(p.info?.socials ?? []).map((s) => `${s.type}: ${s.url}`), ...(p.info?.websites ?? []).map((w) => `site: ${w.url}`)].slice(0, 5),
+      })
+    }
   }
   return out
+}
+
+/**
+ * Mints Solana em destaque agora, de várias fontes grátis: boosts (top e recentes) e perfis novos da
+ * DexScreener (muitos são da Pump.fun) e as pools em tendência da GeckoTerminal (1 pedido, cache de
+ * 5 min, porque a GeckoTerminal corta a ~30 pedidos/min). Uma fonte em baixo não pára as outras.
+ */
+let cacheTendencia: { em: number; mints: string[] } | null = null
+export async function mintsEmDestaque(max = 60): Promise<string[]> {
+  const doDex = async (url: string) =>
+    (((await json(url)) as { chainId?: string; tokenAddress?: string }[] | null) ?? []).filter((t) => t.chainId === 'solana' && t.tokenAddress).map((t) => t.tokenAddress!)
+  const [top, recentes, perfis] = await Promise.all([
+    doDex('https://api.dexscreener.com/token-boosts/top/v1'),
+    doDex('https://api.dexscreener.com/token-boosts/latest/v1'),
+    doDex('https://api.dexscreener.com/token-profiles/latest/v1'),
+  ])
+  if (!cacheTendencia || Date.now() - cacheTendencia.em > 5 * 60_000) {
+    const j = (await json('https://api.geckoterminal.com/api/v2/networks/solana/trending_pools?page=1')) as
+      | { data?: { relationships?: { base_token?: { data?: { id?: string } } } }[] }
+      | null
+    const mints = (j?.data ?? []).map((d) => String(d.relationships?.base_token?.data?.id ?? '').replace(/^solana_/, '')).filter((m) => m.length >= 32)
+    if (mints.length) cacheTendencia = { em: Date.now(), mints }
+  }
+  return [...new Set([...perfis, ...recentes, ...(cacheTendencia?.mints ?? []), ...top])].slice(0, max)
+}
+
+/** As memecoins candidatas desta passagem, já com o retrato da DexScreener. */
+export async function candidatosMeme(max = 60, agora = new Date()): Promise<CandidatoMeme[]> {
+  const snaps = await snapshotsDex(await mintsEmDestaque(max), agora)
+  return [...snaps.values()]
 }
 
 export async function velasPool(pool: string, limite = 300): Promise<Vela[]> {
@@ -149,6 +216,45 @@ export async function velasPool(pool: string, limite = 300): Promise<Vela[]> {
 }
 
 /** Junta RugCheck + cotação de venda Jupiter. Campos que falharem ficam `null` (contam contra). */
+/* ─── Carteiras espertas: negociações de uma pool e transacções de uma carteira ─── */
+
+/** Últimas negociações de uma pool (GeckoTerminal, grátis, ~30 pedidos/min: usar com conta). */
+export async function tradesPool(pool: string): Promise<TradePool[]> {
+  const j = (await json(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${pool}/trades?trade_volume_in_usd_greater_than=100`)) as
+    | { data?: { attributes?: { kind?: string; tx_from_address?: string; price_to_in_usd?: string; volume_in_usd?: string; block_timestamp?: string } }[] }
+    | null
+  return (j?.data ?? [])
+    .map((d) => d.attributes ?? {})
+    .filter((a) => (a.kind === 'buy' || a.kind === 'sell') && a.tx_from_address)
+    .map((a) => ({ kind: a.kind as 'buy' | 'sell', carteira: a.tx_from_address!, precoUsd: num(a.price_to_in_usd) ?? 0, volumeUsd: num(a.volume_in_usd) ?? 0, em: String(a.block_timestamp ?? '') }))
+}
+
+const RPC = () => process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com'
+
+async function rpc(metodo: string, params: unknown[]): Promise<unknown> {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 10_000)
+  try {
+    const r = await fetch(RPC(), { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: metodo, params }) })
+    if (!r.ok) return null
+    return ((await r.json()) as { result?: unknown }).result ?? null
+  } catch {
+    return null
+  } finally {
+    clearTimeout(t)
+  }
+}
+
+/** Assinaturas mais recentes de uma carteira (as mais novas primeiro), até `ate` (exclusive). */
+export async function assinaturasDe(carteira: string, ate?: string | null, limite = 10): Promise<{ assinatura: string; falhou: boolean }[]> {
+  const r = (await rpc('getSignaturesForAddress', [carteira, { limit: limite, ...(ate ? { until: ate } : {}) }])) as { signature?: string; err?: unknown }[] | null
+  return (r ?? []).filter((x) => x.signature).map((x) => ({ assinatura: x.signature!, falhou: x.err != null }))
+}
+
+export async function transacaoRpc(assinatura: string): Promise<TransacaoRpc | null> {
+  return (await rpc('getTransaction', [assinatura, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0, commitment: 'confirmed' }])) as TransacaoRpc | null
+}
+
 export async function dadosRug(c: CandidatoMeme, valorTesteUsd = 100): Promise<DadosRug> {
   const rep = (await json(`https://api.rugcheck.xyz/v1/tokens/${c.mint}/report`, 12_000)) as
     | {

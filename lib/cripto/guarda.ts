@@ -32,6 +32,8 @@ export const LIMITES_PADRAO = {
   slippageMaxPctPerp: 0.5,
   slippageMaxPctSpot: 3,
   liquidezMinUsd: 50_000,
+  /** Tokens da Pump.fun já graduados (perfil «pump» do filtro de rug). */
+  liquidezMinPumpUsd: 15_000,
   /** Abaixo disto não vale a pena (taxas comem tudo). */
   nocionalMinUsd: 10,
   /** Sem vantagem medida ainda: abre com esta fracção do tamanho, para medir. 0 = não abre. */
@@ -114,7 +116,9 @@ export function guardar(e: EntradaGuarda): { ordem: OrdemAprovada | null; recusa
   const slMax = g.mercado === 'perp' ? L.slMaxPctPerp : L.slMaxPctSpot
   if (distSlPct > slMax) nao(`SL a ${distSlPct.toFixed(2)}% (máx. ${slMax}%).`)
 
-  if (g.mercado === 'spot' && !((r.liquidezUsd ?? 0) >= L.liquidezMinUsd)) nao(`Liquidez ${Math.round(r.liquidezUsd ?? 0)} $ < ${L.liquidezMinUsd} $.`)
+  // Pump.fun graduado (perfil «pump» do rug): também quando o gatilho é uma carteira esperta num token pump.
+  const liqMin = g.tipo === 'pump-graduado' || (g.tipo === 'carteira-esperta' && g.id.endsWith('pump')) ? L.liquidezMinPumpUsd : L.liquidezMinUsd
+  if (g.mercado === 'spot' && !((r.liquidezUsd ?? 0) >= liqMin)) nao(`Liquidez ${Math.round(r.liquidezUsd ?? 0)} $ < ${liqMin} $.`)
 
   const c = e.conta
   if (!(c.capitalUsd > 0)) nao('Sem capital.')

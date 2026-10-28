@@ -92,13 +92,14 @@ export async function swapUltra(carteira: Keypair, inputMint: string, outputMint
 }
 
 /**
- * O ENVIO DOS LUCROS. O destino vem SÓ do argumento, que o executor lê de CRIPTO_DESTINO_LUCROS
- * (env da VPS). Nenhum campo da base de dados chega aqui: quem conseguisse escrever na Supabase não
- * conseguiria mudar para onde vai o dinheiro.
+ * Transferir USDC de uma carteira do agente para `destino`. Para ONDE pode ir é decidido antes, no
+ * executor, por `verificarMovimento` (lib/cripto/tectos.ts): só carteiras do próprio agente (as do
+ * cofre da VPS) ou CRIPTO_DESTINO_LUCROS do env. Nenhum campo da base de dados chega aqui como
+ * destino: quem conseguisse escrever na Supabase não conseguiria mudar para onde vai o dinheiro.
  */
-export async function enviarUsdc(c: Connection, carteira: Keypair, destino: string, usd: number): Promise<string> {
-  if (!enderecoValido(destino)) throw new Error('Destino dos lucros inválido.')
-  if (destino === carteira.publicKey.toBase58()) throw new Error('O destino dos lucros não pode ser a própria carteira do agente.')
+export async function transferirUsdc(c: Connection, carteira: Keypair, destino: string, usd: number): Promise<string> {
+  if (!enderecoValido(destino)) throw new Error('Destino inválido.')
+  if (destino === carteira.publicKey.toBase58()) throw new Error('Origem e destino são a mesma carteira.')
   if (!(usd > 0)) throw new Error('Valor a enviar inválido.')
   const mint = new PublicKey(USDC)
   const origem = await getAssociatedTokenAddress(mint, carteira.publicKey)
