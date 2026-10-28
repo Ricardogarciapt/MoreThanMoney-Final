@@ -121,6 +121,7 @@ export async function GET(request: NextRequest) {
         status: "published",
         permalink: res.permalink,
       })
+      if (row.media_type === "REELS") await agendarReelEmStory(supabase, row)
     } catch (e: any) {
       if (e instanceof MediaNotReadyError) {
         // Container ainda a processar — guarda e retoma na próxima ronda.
@@ -153,4 +154,38 @@ export async function GET(request: NextRequest) {
 
   const published = results.filter((r) => r.status === "published").length
   return NextResponse.json({ ok: true, published, processed: results.length, results })
+}
+
+/**
+ * Cada reel publicado volta a sair em story 20 minutos depois, com o mesmo vídeo (pedido do
+ * Ricardo a 28/10). Fica com o mesmo `created_by`, por isso o botão que pausa os agentes também
+ * o pára. Se já houver uma story com esse vídeo na mesma conta, não se repete.
+ */
+async function agendarReelEmStory(supabase: ReturnType<typeof getSupabaseAdmin>, row: Record<string, any>) {
+  const video = (row.media_urls || [])[0]
+  if (!video) return
+  const { count } = await supabase
+    .from("social_scheduled_posts")
+    .select("id", { count: "exact", head: true })
+    .eq("ig_account_id", row.ig_account_id)
+    .eq("media_type", "STORIES")
+    .contains("media_urls", [video])
+  if (count) return
+  const agora = new Date()
+  const { error } = await supabase.from("social_scheduled_posts").insert({
+    channel: row.channel ?? "instagram",
+    ig_account_id: row.ig_account_id,
+    ig_username: row.ig_username,
+    pillar: row.pillar ?? "reel-em-story",
+    media_type: "STORIES",
+    media_urls: [video],
+    caption: row.caption,
+    scheduled_at: new Date(agora.getTime() + 20 * 60_000).toISOString(),
+    status: "approved",
+    approved_by: row.approved_by ?? "reel publicado",
+    approved_at: agora.toISOString(),
+    created_by: row.created_by,
+    agente_codigo: row.agente_codigo ?? null,
+  })
+  if (error) console.error("[ig-publish] reel→story:", error.message)
 }
