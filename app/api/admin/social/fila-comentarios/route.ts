@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * As acções do dono sobre a fila. Nenhuma publica: «aberto» e «publicado» registam o que o
- * dono fez à mão no Instagram.
+ * dono fez no Instagram. O agente do Mac usa /api/operador/fila-comentarios.
  */
 export async function POST(req: NextRequest) {
   const guard = await requireAdmin(req)

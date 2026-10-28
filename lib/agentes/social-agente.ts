@@ -110,6 +110,17 @@ export interface PostDoAgente {
 
 export type Veredicto = { ok: true } | { ok: false; motivo: string }
 
+/** A parte da guarda que só lê a legenda. Também a usa o agente operador (lib/operador/regras.ts). */
+export function guardaDaLegenda(t: string): Veredicto {
+  if (!t.trim()) return { ok: false, motivo: 'Legenda vazia.' }
+  if (PROMESSA.test(t)) return { ok: false, motivo: 'Promessa de lucro na legenda.' }
+  if (DINHEIRO_GANHO.test(t)) return { ok: false, motivo: 'Resultado em dinheiro na legenda — a prova da casa é em pips, com origem.' }
+  if (PERCENTAGEM_RESULTADO.test(t)) return { ok: false, motivo: 'Número de resultado em percentagem — não se inventam números.' }
+  if (PIPS_COM_NUMERO.test(t) && !ORIGEM.test(t)) return { ok: false, motivo: 'Prova em pips sem origem declarada («Fonte: …»).' }
+  if (HANDLE_ERRADO.test(t)) return { ok: false, motivo: 'Handle errado — o Instagram da marca é @morethanmoney.pt.' }
+  return { ok: true }
+}
+
 /** A guarda da marca. Pura. `caption` já deve vir marcada (marcarConteudo com o código do agente). */
 export function guardaDaMarca(p: PostDoAgente): Veredicto {
   if (!eDoSocial(p.agente_codigo)) return { ok: false, motivo: `«${p.agente_codigo}» não é o agente Social — só ele publica.` }
@@ -123,12 +134,8 @@ export function guardaDaMarca(p: PostDoAgente): Veredicto {
   if (fora.length) return { ok: false, motivo: `Fora da paleta da casa (ouro sobre carvão): ${fora.join(', ')}.` }
 
   const t = String(p.caption ?? '')
-  if (!t.trim()) return { ok: false, motivo: 'Legenda vazia.' }
-  if (PROMESSA.test(t)) return { ok: false, motivo: 'Promessa de lucro na legenda.' }
-  if (DINHEIRO_GANHO.test(t)) return { ok: false, motivo: 'Resultado em dinheiro na legenda — a prova da casa é em pips, com origem.' }
-  if (PERCENTAGEM_RESULTADO.test(t)) return { ok: false, motivo: 'Número de resultado em percentagem — não se inventam números.' }
-  if (PIPS_COM_NUMERO.test(t) && !ORIGEM.test(t)) return { ok: false, motivo: 'Prova em pips sem origem declarada («Fonte: …»).' }
-  if (HANDLE_ERRADO.test(t)) return { ok: false, motivo: 'Handle errado — o Instagram da marca é @morethanmoney.pt.' }
+  const legenda = guardaDaLegenda(t)
+  if (!legenda.ok) return legenda
 
   const codigo = normalizar(p.agente_codigo)
   const temAg = new RegExp(`morethanmoney\\.pt[^\\s]*[?&]ag=${codigo}(?![\\w-])`, 'i').test(t)

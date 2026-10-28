@@ -20,7 +20,7 @@ import {
  * A parte da fila que fala com a IA e com a base.
  *
  * Nada aqui fala com o Instagram. Lê-se o que o radar já guardou (`ig_radar_prospetos`), escreve-se
- * o comentário, guarda-se na fila. Publicar é sempre o dono, à mão — a guarda
+ * o comentário, guarda-se na fila. Quem publica é o agente no Mac (ou o dono) — a guarda
  * `fila-comentarios.check.ts` lê este ficheiro e falha se aparecer um caminho que publique.
  */
 
@@ -30,7 +30,7 @@ import {
  *
  * Duas tentativas. Se a primeira trouxer link, pitch ou cliché, a segunda leva o motivo da recusa
  * no pedido. Se a segunda também falhar, não se guarda nada: um comentário mau na fila é pior do
- * que um a menos, porque o dono cola-o sem ler.
+ * que um a menos, porque sai sem ninguém o ler.
  */
 export async function escreverComentarioRadar(p: { hashtag?: string | null; legenda?: string | null }): Promise<string> {
   let evitar: string[] | undefined
@@ -185,7 +185,7 @@ export async function marcarAberto(db: SupabaseClient, id: string) {
     .in('estado', ['pronto', 'aberto'])
 }
 
-/** «Publiquei»: o dono publicou à mão. Fica quem escreveu, a hora e o post. */
+/** «Publiquei»: o agente do Mac ou o dono publicou. Fica quem escreveu, a hora e o post. */
 export async function marcarPublicado(db: SupabaseClient, id: string) {
   const { data: item } = await db
     .from('ig_fila_comentarios')

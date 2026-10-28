@@ -5,6 +5,7 @@ import { BrokerDadosPanel } from "@/components/admin/broker-dados-panel"
 import { BrokerLinksPanel } from "@/components/admin/broker-links-panel"
 import { PrimeGatePanel } from "@/components/admin/primegate-panel"
 import { B2BProspeccaoPanel } from "@/components/admin/b2b-prospeccao-panel"
+import { RegistoOperador } from "@/components/admin/registo-operador"
 
 /**
  * Painel MÁQUINA DE VENDAS (/admin/sales-machine) — consome o hub /api/sales-machine (sessão-admin).
@@ -101,6 +102,9 @@ export default function SalesMachinePage() {
 
       {flash && <div className="rounded-lg bg-emerald-900/40 px-3 py-2 text-sm text-emerald-300">{flash}</div>}
       {err && <div className="rounded-lg bg-red-900/40 px-3 py-2 text-sm text-red-300">{err}</div>}
+
+      {/* O que os agentes fizeram sozinhos (posts, mensagens, comentários) — para auditar e desfazer. */}
+      <RegistoOperador compacto />
 
       {/* Canva Connect (visuais reais dos teus templates) */}
       <div className={`${card} flex items-center justify-between`}>

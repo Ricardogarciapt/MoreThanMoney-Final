@@ -197,6 +197,10 @@
       "schedule": "15,45 9-16 * * *"
     },
     {
+      "path": "/api/cron/operador",
+      "schedule": "5,35 8-21 * * *"
+    },
+    {
       "path": "/api/cron/funis",
       "schedule": "*/5 * * * *"
     },

@@ -4,14 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Check, ExternalLink, Loader2, RefreshCw, SkipForward, Sparkles } from "lucide-react"
 
 /**
- * Modo «Fila» do radar: o agente Prospector (AG-PROSPECTOR) deixou os comentários prontos, o dono
- * só tem de colar e publicar. Objectivo: ~10 segundos por comentário.
+ * A fila de comentários do radar. O Prospector (AG-PROSPECTOR) escreve; desde 28/10 o agente no
+ * Mac publica no @morethanmoney.pt e regista cada um (API /api/operador/fila-comentarios), e o
+ * AG-OPERADOR tira os velhos. Tudo aparece no registo do operador.
  *
- *   «Próximo» → copia o comentário, abre o post num separador novo, marca «aberto».
+ * Os botões ficam para quando o dono quer publicar um à mão:
+ *   «Publicar eu» → copia o comentário, abre o post num separador novo, marca «aberto».
  *   Ao voltar → «Publiquei» (fica o agente, a hora e o post) ou «Saltar».
  *
- * Publicar é sempre à mão, no Instagram. Este ecrã nunca publica: a Graph API não comenta em
- * posts de terceiros e automatizar o browser põe a conta em risco.
+ * Este ecrã nunca publica: a Graph API não comenta em posts de terceiros.
  */
 
 interface Item {
@@ -127,8 +128,10 @@ export function FilaComentarios({ onMudou }: { onMudou?: () => void }) {
             <Sparkles className="h-4 w-4" aria-hidden="true" /> Fila de comentários
           </h2>
           <p className="mt-0.5 max-w-xl text-[12px] leading-relaxed text-neutral-400">
-            O Prospector (AG-PROSPECTOR) escreve-os sozinho, no máximo {cont?.tecto ?? 20} por dia. Tu colas e
-            publicas no Instagram, à mão — isto nunca publica por ti.
+            O Prospector escreve até {cont?.tecto ?? 20} por dia e o agente do Mac publica-os no
+            @morethanmoney.pt, com 2 a 4 minutos entre cada um. Os que ficam mais de 3 dias saem da fila
+            sozinhos. Vês tudo no registo «O que os agentes fizeram por ti». Se quiseres publicar um tu,
+            usa o botão em baixo.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -205,7 +208,7 @@ export function FilaComentarios({ onMudou }: { onMudou?: () => void }) {
                 className="mt-3 flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl text-base font-semibold text-black transition-colors duration-150 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40"
                 style={{ background: OURO, outlineColor: OURO_CLARO }}
               >
-                Próximo · copiar e abrir <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                Publicar eu · copiar e abrir <ExternalLink className="h-4 w-4" aria-hidden="true" />
               </button>
             ) : (
               <div className="mt-3 grid grid-cols-[2fr_1fr] gap-2">

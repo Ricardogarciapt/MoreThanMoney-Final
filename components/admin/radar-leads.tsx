@@ -7,10 +7,10 @@ import { FilaComentarios } from "./fila-comentarios"
 /**
  * O radar: as conversas do nicho por onde vale a pena entrar hoje.
  *
- * Encontrar é automático; comentar é teu. Não é preguiça do sistema — a API do Instagram não
- * deixa comentar em posts de terceiros, e fazê-lo por fora (a conduzir a app como se fosse uma
- * pessoa) é o caminho mais rápido para a conta ser banida. O que desaparece aqui é a hora de
- * PROCURAR, que é onde ela se perdia.
+ * Tudo automático desde 28/10: o radar encontra, o Prospector escreve o comentário, o agente no Mac
+ * publica-o no @morethanmoney.pt (Chrome, 2 a 4 minutos entre cada um) e o AG-OPERADOR tira da fila
+ * o que arrefeceu. O dono audita no registo do operador. A Graph API continua sem comentar em posts
+ * de terceiros: por isso quem publica é o Mac, devagar, e nunca este código.
  */
 
 interface Prospeto {
@@ -60,8 +60,7 @@ export function RadarLeads() {
 
   return (
     <div className="space-y-3">
-      {/* Modo «Fila»: os comentários que o Prospector já deixou prontos. Vem primeiro porque é
-          onde o tempo do dono rende mais — colar e publicar, sem escolher nem escrever. */}
+      {/* A fila: os comentários que o Prospector deixou prontos e que o agente do Mac publica. */}
       <FilaComentarios onMudou={() => void buscar()} />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -70,9 +69,9 @@ export function RadarLeads() {
             <Radar className="h-4 w-4" /> Radar de leads
           </h2>
           <p className="mt-0.5 text-[11px] text-neutral-400">
-            Corre sozinho de meia em meia hora, das 9h às 17h. A IA escreve o comentário; colar e publicar
-            é contigo — a Graph API não tem endpoint para comentar em posts de terceiros, e fazê-lo
-            por fora (conduzir a app como uma pessoa) é o caminho mais curto para a conta ser banida.
+            Procura de meia em meia hora, das 9h às 17h, e só guarda posts com menos de 3 dias. Os
+            melhores passam para a fila de cima, onde o Prospector escreve o comentário. Para comentar
+            um post daqui fora da fila, usa «Escrever comentário».
           </p>
         </div>
         <div className="flex items-center gap-2">
