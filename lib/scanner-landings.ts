@@ -117,6 +117,8 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
   {
     slug: "premium-scanner",
     key: "premium-scanner",
+    video: "/scanners/premium-scanner/apresentacao.mp4",
+    poster: "/scanners/premium-scanner/poster.jpg",
     title: ["O ouro em sessão,", "com a zona marcada."],
     sub: "Direção por voto de cinco critérios, zona de entrada em recuo, stop e três alvos desenhados no gráfico, em Londres, Nova Iorque e Ásia.",
     markets: ["Ouro (XAUUSD)", "15 minutos", "3 sessões", "TradingView"],
