@@ -407,6 +407,7 @@ function MobileAlertCard({
           alt={alert.ticker || "chart"}
           className="mt-2 w-full rounded-lg border border-gray-700 object-contain"
           loading="lazy"
+          onError={() => alert.tvSymbol && setShowChart(true)}
         />
       ) : alert.tvSymbol ? (
         <LazyAlertChart tvSymbol={alert.tvSymbol} timeframe={alert.timeframe} strategy={alert.strategy} />
