@@ -17,6 +17,14 @@ export interface Tectos {
   varreduraMaxUsd: number
   destinoLucros: string | null
   varrerBybit: boolean
+  /**
+   * A chave Bybit é a da conta-MESTRE do Copy Trading (escolha do dono, 28/10): cada ordem do
+   * agente é copiada pelos seguidores. Nesse modo o executor não abre em pares com posição da
+   * mestre, só fecha a quantidade que ele próprio abriu, mede o capital do agente pelo
+   * CRIPTO_CAPITAL_BYBIT_USD (nunca pelo saldo da mestre) e NUNCA levanta dinheiro da Bybit.
+   */
+  bybitMestre: boolean
+  capitalBybitUsd: number
 }
 
 export function lerTectos(env: Record<string, string | undefined>): Tectos {
@@ -34,7 +42,10 @@ export function lerTectos(env: Record<string, string | undefined>): Tectos {
     capitalBaseUsd: n('CRIPTO_CAPITAL_BASE_USD', 0),
     varreduraMaxUsd: n('CRIPTO_VARREDURA_MAX_USD', 500),
     destinoLucros: env.CRIPTO_DESTINO_LUCROS?.trim() || null,
-    varrerBybit: env.CRIPTO_VARRER_BYBIT === '1',
+    // Da mestre não sai dinheiro, diga o env o que disser.
+    varrerBybit: env.CRIPTO_VARRER_BYBIT === '1' && env.CRIPTO_BYBIT_MESTRE !== '1',
+    bybitMestre: env.CRIPTO_BYBIT_MESTRE === '1',
+    capitalBybitUsd: n('CRIPTO_CAPITAL_BYBIT_USD', 0),
   }
 }
 
@@ -65,4 +76,24 @@ export function valorAEnviar(t: Tectos, equityUsd: number, livreSolanaUsd: numbe
   const usd = Math.floor(Math.min(lucro, livreSolanaUsd, t.varreduraMaxUsd) * 100) / 100
   if (usd < minimoUsd) return { usd: 0, porque: `Lucro enviável ${usd.toFixed(2)} $ abaixo do mínimo.` }
   return { usd, porque: `Lucro acima da base: ${usd.toFixed(2)} $.` }
+}
+
+/**
+ * Equity Bybit QUE É DO AGENTE. Na subconta é o saldo da conta. Na mestre é o capital atribuído
+ * mais o PnL realizado das trades do agente: o saldo da mestre é dinheiro do Aurum e, se entrasse
+ * aqui, o agente dimensionava ordens pelo capital dos outros.
+ */
+export function equityBybitDoAgente(t: Tectos, saldoConta: { equity: number; livre: number } | null, pnlRealizadoAgenteUsd: number, margemAbertaUsd: number): { equity: number; livre: number } {
+  if (!t.bybitMestre) return saldoConta ?? { equity: 0, livre: 0 }
+  if (!saldoConta) return { equity: 0, livre: 0 }
+  const equity = Math.max(0, t.capitalBybitUsd + pnlRealizadoAgenteUsd)
+  const livre = Math.max(0, Math.min(equity - margemAbertaUsd, saldoConta.livre))
+  return { equity, livre }
+}
+
+/** Na mestre, um par com posição que não é do agente fica de fora (one-way: as posições fundiam-se). */
+export function parOcupadoNaMestre(t: Tectos, tamanhoNaConta: number | null): string | null {
+  if (!t.bybitMestre) return null
+  if (tamanhoNaConta == null) return 'Não consegui ler a posição da mestre neste par.'
+  return tamanhoNaConta > 0 ? 'A mestre já tem posição neste par (Aurum): o agente não entra por cima.' : null
 }

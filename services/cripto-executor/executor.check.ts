@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { abrirOuCriarCarteira } from './cofre'
 import { enderecoValido } from './solana'
-import { lerTectos, valorAEnviar, verificarPendente } from './tectos'
+import { equityBybitDoAgente, lerTectos, parOcupadoNaMestre, valorAEnviar, verificarPendente } from './tectos'
 
 const falhas: string[] = []
 const teste = (nome: string, c: boolean) => { if (!c) falhas.push(nome) }
@@ -51,8 +51,19 @@ teste('lucros: conta a perder não envia', valorAEnviar(t, 180, 180, 10).usd ===
 teste('lucros: envia só acima da base', valorAEnviar(t, 260, 500, 10).usd === 60)
 teste('lucros: tecto de envio respeitado', valorAEnviar({ ...t, varreduraMaxUsd: 30 }, 260, 500, 10).usd === 30)
 
+const m = lerTectos({ CRIPTO_BYBIT_MESTRE: '1', CRIPTO_CAPITAL_BYBIT_USD: '300', CRIPTO_VARRER_BYBIT: '1' })
+teste('mestre: nunca levanta da Bybit', m.bybitMestre && !m.varrerBybit)
+teste('mestre: par com posição do Aurum fica de fora', parOcupadoNaMestre(m, 0.5) !== null)
+teste('mestre: posição ilegível fica de fora', parOcupadoNaMestre(m, null) !== null)
+teste('mestre: par vazio passa', parOcupadoNaMestre(m, 0) === null)
+teste('subconta: não verifica par', parOcupadoNaMestre(t, 0.5) === null)
+const em = equityBybitDoAgente(m, { equity: 50_000, livre: 40_000 }, -20, 50)
+teste('mestre: equity é o capital atribuído + PnL, não o saldo da mestre', em.equity === 280 && em.livre === 230)
+teste('mestre: perda maior que o capital dá 0', equityBybitDoAgente(m, { equity: 50_000, livre: 40_000 }, -400, 0).equity === 0)
+teste('subconta: equity é o saldo da conta', equityBybitDoAgente(t, { equity: 500, livre: 400 }, -20, 50).equity === 500)
+
 if (falhas.length) {
   console.error(`✗ ${falhas.length} falha(s):\n  - ${falhas.join('\n  - ')}`)
   process.exit(1)
 }
-console.log('✓ executor: cofre, endereços, tectos e envio de lucros')
+console.log('✓ executor: cofre, endereços, tectos, envio de lucros e modo mestre')

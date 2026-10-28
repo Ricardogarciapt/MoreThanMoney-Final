@@ -22,9 +22,9 @@ import { inicioDaSessao } from '../../lib/cripto/papel'
 import { abrirPerp, bybitAgenteConfigurada, fecharPerp, levantarUsdtSolana, posicaoPerp, saldoBybit, ultimoFecho } from './bybit-agente'
 import { abrirOuCriarCarteira, chaveEmTexto } from './cofre'
 import { USDC, enviarUsdc, ligacao, precosJupiter, saldoSol, saldoToken, swapUltra } from './solana'
-import { lerTectos, valorAEnviar, verificarPendente } from './tectos'
+import { equityBybitDoAgente, lerTectos, parOcupadoNaMestre, valorAEnviar, verificarPendente } from './tectos'
 
-const VERSAO = 'cripto-executor-001'
+const VERSAO = 'cripto-executor-002'
 const CAMINHO_COFRE = process.env.CRIPTO_COFRE || '/var/lib/mtm-cripto/solana.json'
 const log = (...a: unknown[]) => console.log(new Date().toISOString(), ...a)
 
@@ -65,7 +65,10 @@ async function modoDaBase(): Promise<'papel' | 'real'> {
 /** Equity = USDC + SOL + memecoins em carteira + Bybit. Grava em cripto_saldos. */
 async function lerSaldos(spotAbertos: Linha[]) {
   const dono = carteira.publicKey
-  const [usdc, solQt, bybit] = await Promise.all([saldoToken(sol, dono, USDC), saldoSol(sol, dono), bybitAgenteConfigurada() ? saldoBybit() : Promise.resolve(null)])
+  const [usdc, solQt, contaBybit, agenteBybit] = await Promise.all([
+    saldoToken(sol, dono, USDC), saldoSol(sol, dono), bybitAgenteConfigurada() ? saldoBybit() : Promise.resolve(null), contasDoAgenteNaBybit(),
+  ])
+  const bybit = bybitAgenteConfigurada() ? equityBybitDoAgente(tectos, contaBybit, agenteBybit.pnlRealizado, agenteBybit.margemAberta) : null
   const mints = [...new Set(spotAbertos.map((p) => p.id_ativo))]
   const precos = await precosJupiter(['So11111111111111111111111111111111111111112', ...mints])
   let memes = 0
@@ -73,8 +76,21 @@ async function lerSaldos(spotAbertos: Linha[]) {
   const solUsd = solQt * (precos['So11111111111111111111111111111111111111112'] ?? 0)
   const equity = usdc.ui + solUsd + memes + (bybit?.equity ?? 0)
   const livre = usdc.ui + (bybit?.livre ?? 0)
-  await db.from('cripto_saldos').insert({ equity_usd: Math.round(equity * 100) / 100, livre_usd: Math.round(livre * 100) / 100, detalhe: { usdc: usdc.ui, sol: solQt, memesUsd: memes, bybit, versao: VERSAO } })
+  await db.from('cripto_saldos').insert({ equity_usd: Math.round(equity * 100) / 100, livre_usd: Math.round(livre * 100) / 100, detalhe: { usdc: usdc.ui, sol: solQt, memesUsd: memes, bybit, bybitMestre: tectos.bybitMestre, versao: VERSAO } })
   return { equity, usdcLivre: usdc.ui, bybitLivre: bybit?.livre ?? 0 }
+}
+
+/** PnL realizado e margem aberta das trades perp REAIS do agente (para o modo mestre). */
+async function contasDoAgenteNaBybit(): Promise<{ pnlRealizado: number; margemAberta: number }> {
+  if (!tectos.bybitMestre) return { pnlRealizado: 0, margemAberta: 0 }
+  const { data } = await db.from('cripto_posicoes').select('estado, pnl_usd, nocional_usd, alavancagem').eq('modo', 'real').eq('mercado', 'perp').in('estado', ['aberta', 'fechada'])
+  let pnlRealizado = 0
+  let margemAberta = 0
+  for (const x of (data ?? []) as { estado: string; pnl_usd: number | null; nocional_usd: number; alavancagem: number }[]) {
+    if (x.estado === 'fechada') pnlRealizado += Number(x.pnl_usd) || 0
+    else margemAberta += Number(x.nocional_usd) / Math.max(1, Number(x.alavancagem) || 1)
+  }
+  return { pnlRealizado, margemAberta }
 }
 
 async function perdaDeHoje(agora: Date): Promise<number> {
@@ -95,7 +111,12 @@ async function cumprirPendente(p: Linha, exposicao: number, agora: Date) {
   if (!reservada?.length) return
 
   if (p.mercado === 'perp') {
-    if (!bybitAgenteConfigurada()) return falhar(p, 'Subconta Bybit do agente sem chave.')
+    if (!bybitAgenteConfigurada()) return falhar(p, 'Conta Bybit do agente sem chave.')
+    if (tectos.bybitMestre) {
+      const naConta = await posicaoPerp(p.id_ativo)
+      const ocupado = parOcupadoNaMestre(tectos, naConta ? naConta.tamanho : null)
+      if (ocupado) return falhar(p, ocupado)
+    }
     const r = await abrirPerp({ symbol: p.id_ativo, lado: p.lado, nocionalUsd: Number(p.nocional_usd), preco: Number(p.entrada), alavancagem: p.alavancagem, sl: Number(p.sl), tp: Number(p.tp), idOrdem: p.id })
     if (!r.ok) return falhar(p, `Bybit: ${r.erro}`)
     const pos = await posicaoPerp(p.id_ativo)
@@ -121,7 +142,7 @@ async function falhar(p: Linha, motivo: string) {
 async function fecharPedido(p: Linha) {
   const agora = new Date().toISOString()
   if (p.mercado === 'perp') {
-    const r = await fecharPerp(p.id_ativo, p.lado)
+    const r = await fecharPerp(p.id_ativo, p.lado, tectos.bybitMestre ? Number(p.execucao?.qty) || undefined : undefined)
     if (!r.ok) return log('[fecho falhou]', p.ativo, r.erro)
     const f = await ultimoFecho(p.id_ativo)
     await db.from('cripto_posicoes').update({ estado: 'fechada', motivo_fecho: p.fechar_pedido, saida: f?.saida ?? null, pnl_usd: f?.pnl ?? null, fechada_em: agora }).eq('id', p.id)
@@ -147,6 +168,7 @@ async function fecharPedido(p: Linha) {
 async function sincronizarPerp(p: Linha) {
   const pos = await posicaoPerp(p.id_ativo)
   if (!pos || pos.tamanho > 0) return
+  // Na mestre o SL/TP é da posição inteira; como o agente só entra em par vazio, posição a zero = fechou a dele.
   const f = await ultimoFecho(p.id_ativo)
   await db.from('cripto_posicoes').update({ estado: 'fechada', motivo_fecho: 'exchange (SL/TP)', saida: f?.saida ?? null, pnl_usd: f?.pnl ?? null, fechada_em: new Date().toISOString() }).eq('id', p.id).eq('estado', 'aberta')
 }
@@ -206,7 +228,7 @@ async function main() {
   const endereco = carteira.publicKey.toBase58()
   new PublicKey(endereco) // valida
   await db.from('cripto_carteiras').upsert({ rede: 'solana', endereco, papel: 'trading' }, { onConflict: 'rede,endereco', ignoreDuplicates: true })
-  log(`[executor] ${VERSAO} · carteira ${endereco}${nova ? ' (NOVA: financia com USDC + ~0,05 SOL)' : ''} · real=${tectos.real} · bybit=${bybitAgenteConfigurada()} · destino=${tectos.destinoLucros ? 'definido' : 'EM FALTA'}`)
+  log(`[executor] ${VERSAO} · carteira ${endereco}${nova ? ' (NOVA: financia com USDC + ~0,05 SOL)' : ''} · real=${tectos.real} · bybit=${bybitAgenteConfigurada() ? (tectos.bybitMestre ? 'MESTRE do Copy Trading (seguidores copiam)' : 'subconta') : 'não'} · destino=${tectos.destinoLucros ? 'definido' : 'EM FALTA'}`)
   let ocupado = false
   setInterval(async () => {
     if (ocupado) return
