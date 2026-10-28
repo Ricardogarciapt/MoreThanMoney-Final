@@ -13,6 +13,7 @@ import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd } from './papel'
 import { LIMIARES_RUG_PUMP, avaliarRug } from './rug'
 import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
 import { lerConfig, modoDoMercado } from './ciclo'
+import { emParalelo } from './paralelo'
 import { eScalp, emRegime, gatilhosScalp, simularScalp, sinaisScalp } from './scalp'
 import { gatilhoCarteira, gatilhoMeme, retratoDeSnapshot } from './memes'
 import { compradoresCedo, comprasDaTransacao, estadoDaCarteira, pontuar, retornoPct } from './carteiras'
@@ -217,7 +218,22 @@ async function sub() {
   teste('notícias: evento de risco = veto', (await parecerContexto(iaQue('{"sentimento":0,"evento_de_risco":true,"nota":"hack"}'), retrato, [], [])).veto === true)
 }
 
-sub().then(() => {
+async function paralelo() {
+  let ativos = 0
+  let pico = 0
+  const r = await emParalelo([5, 1, 4, 2, 3], 2, async (x) => {
+    ativos++
+    pico = Math.max(pico, ativos)
+    await new Promise((ok) => setTimeout(ok, x * 3))
+    ativos--
+    return x * 10
+  })
+  teste('paralelo: resultados na ordem dos itens', r.join() === '50,10,40,20,30')
+  teste('paralelo: nunca mais do que n ao mesmo tempo', pico === 2)
+  teste('paralelo: lista vazia', (await emParalelo([], 3, async (x) => x)).length === 0)
+}
+
+paralelo().then(sub).then(() => {
   if (falhas.length) {
     console.error(`✗ ${falhas.length} falha(s):\n  - ${falhas.join('\n  - ')}`)
     process.exit(1)
