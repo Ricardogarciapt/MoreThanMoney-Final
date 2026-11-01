@@ -371,7 +371,7 @@ export const LANDING_CSS = String.raw`
 .l2 .vm__f{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;border:1px solid var(--line2);
   background:#000;box-shadow:0 40px 100px rgba(0,0,0,.75)}
 .l2 .vm__f img{width:100%;height:100%;object-fit:cover;display:block;opacity:.72}
-.l2 .vm__f iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.l2 .vm__f iframe,.l2 .vm__f video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .l2 .vm__p{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;
   background:linear-gradient(0deg,rgba(8,8,10,.6),transparent 55%)}
 .l2 .vm__p span{width:74px;height:74px;border-radius:50%;background:var(--gold);color:#08080a;display:flex;
