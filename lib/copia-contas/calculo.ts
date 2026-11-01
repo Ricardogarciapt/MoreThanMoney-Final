@@ -37,6 +37,12 @@ export interface EntradaLote {
   /** risco_pct: distância do SL em preço e valor de 1,0 de preço por lote no destino */
   distanciaSl?: number | null
   valorPorPrecoPorLote?: number | null
+  /**
+   * Risco máximo por trade da conta de destino, em % da equity (copia_rotas.risco_max_pct). Só
+   * pesa num símbolo cujo mínimo da corretora é maior do que 0,01 (índices): abre-se no mínimo
+   * quando o risco que isso dá cabe neste tecto; senão recusa e diz o risco que daria.
+   */
+  riscoMaxPct?: number | null
 }
 
 export type Lote =
@@ -49,6 +55,14 @@ export type Lote =
  * Lote no destino. Nunca se sobe um lote minúsculo até ao mínimo da corretora quando isso passa do
  * DOBRO do pedido: numa conta pequena recusa-se, em vez de abrir várias vezes o risco escolhido.
  */
+/** Risco em % da equity que um dado volume teria, com o SL e o valor do ponto da entrada (null = não se sabe). */
+function riscoPctNoVolume(volume: number, e: EntradaLote): number | null {
+  const dist = e.distanciaSl, vpl = e.valorPorPrecoPorLote, eq = e.equityDestino
+  if (!(dist != null && dist > 0 && vpl != null && vpl > 0 && eq != null && eq > 0)) return null
+  const r = (volume * dist * vpl) / eq * 100
+  return Number.isFinite(r) ? r : null
+}
+
 export function calcularLote(e: EntradaLote): Lote {
   const valor = Number.isFinite(e.valor) ? Number(e.valor) : NaN
   let bruto: number
@@ -101,8 +115,26 @@ export function calcularLote(e: EntradaLote): Lote {
    */
   const SUBIDA_ATE = 0.01
   const abaixoDoMinimo = bruto < min
-  if (abaixoDoMinimo && min > SUBIDA_ATE && bruto < min / 2) {
-    return { ok: false, motivo: `lote ${bruto.toFixed(4)} abaixo de metade do mínimo ${min} (subir ao mínimo só vai até ${SUBIDA_ATE})` }
+  if (abaixoDoMinimo && min > SUBIDA_ATE) {
+    /**
+     * ÍNDICES COM TECTO CONHECIDO (dono, 01/11): quando a rota sabe o risco máximo por trade da
+     * conta, a pergunta deixa de ser «é mais do que o dobro?» e passa a ser «abrir no mínimo cabe
+     * no que o cliente aceitou arriscar por trade?» — em qualquer das bandas, acima ou abaixo de
+     * metade do mínimo. Cabe → abre no mínimo e fica marcado que subiu.
+     * Não cabe → recusa, com o risco que daria, para o cliente perceber que é a conta que é pequena.
+     */
+    const riscoNoMinimo = riscoPctNoVolume(min, e)
+    if (e.riscoMaxPct != null && e.riscoMaxPct > 0 && riscoNoMinimo != null) {
+      if (riscoNoMinimo <= e.riscoMaxPct + 1e-9) {
+        let v = min
+        if (e.loteMax != null && e.loteMax > 0 && v > e.loteMax) return { ok: false, motivo: `lote máximo ${e.loteMax} abaixo do mínimo da corretora ${min}` }
+        if (r.max != null && r.max > 0 && v > r.max) v = arredondarAoStep(r.max, r, 'baixo')
+        return { ok: true, volume: Number(v.toFixed(casasDo(r.step > 0 ? r.step : 0.01))), bruto, subiuAoMinimo: true }
+      }
+      return { ok: false, motivo: `lote ${bruto.toFixed(4)} abaixo do mínimo ${min}: abrir no mínimo arriscava ${riscoNoMinimo.toFixed(2)} % da conta (máximo por trade ${e.riscoMaxPct} %)` }
+    }
+    // Sem tecto conhecido: a regra de sempre — até metade do mínimo sobe, abaixo disso recusa.
+    if (bruto < min / 2) return { ok: false, motivo: `lote ${bruto.toFixed(4)} abaixo de metade do mínimo ${min} (subir ao mínimo só vai até ${SUBIDA_ATE})` }
   }
   // Risco %: arredonda PARA BAIXO — um arredondamento nunca pode subir o risco escolhido.
   // (Excepto quando o próprio mínimo da corretora obriga a subir: ver acima.)

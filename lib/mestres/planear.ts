@@ -103,6 +103,8 @@ export interface RotaDesejada {
   modo_lote: LoteDaRota['modo_lote']
   valor: number
   lote_max: number | null
+  /** risco máximo por trade da conta de destino (%); null = sem tecto → regra antiga do lote mínimo */
+  risco_max_pct: number | null
   copiar_sl: boolean
   copiar_tp: boolean
   filtro_simbolos: string[]
@@ -294,6 +296,7 @@ export interface RotaExistente {
   copiar_tp: boolean
   filtro_simbolos: string[] | null
   max_abertas: number | null
+  risco_max_pct?: number | string | null
   pausada_motivo: string | null
   copiar_parciais?: boolean
   copiar_modificacoes?: boolean
@@ -326,6 +329,7 @@ export function planoDeEscrita(desejadas: RotaDesejada[], existentes: RotaExiste
     if (r.copiar_tp !== d.copiar_tp) patch.copiar_tp = d.copiar_tp
     if (!iguaisArr(r.filtro_simbolos, d.filtro_simbolos)) patch.filtro_simbolos = d.filtro_simbolos
     if ((r.max_abertas ?? null) !== (d.max_abertas ?? null)) patch.max_abertas = d.max_abertas
+    if (r.risco_max_pct !== undefined && (r.risco_max_pct == null ? null : Number(r.risco_max_pct)) !== (d.risco_max_pct ?? null)) patch.risco_max_pct = d.risco_max_pct ?? null
     if ((r.pausada_motivo ?? null) !== d.pausada_motivo) patch.pausada_motivo = d.pausada_motivo
     // F3: os interruptores do cliente mudam as flags da rota na sincronização seguinte
     if (r.copiar_parciais != null && r.copiar_parciais !== d.copiar_parciais) patch.copiar_parciais = d.copiar_parciais

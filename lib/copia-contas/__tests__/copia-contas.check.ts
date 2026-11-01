@@ -55,6 +55,38 @@ caso('subir ao mínimo vai só até 0,01: num símbolo de mínimo 0,1 recusa', (
   assert.equal(r.ok, false)
   assert.match(!r.ok ? r.motivo : '', /só vai até 0\.01/)
 })
+caso('índice com tecto por trade conhecido: sobe ao mínimo quando o risco no mínimo cabe no tecto (dono, 01/11)', () => {
+  // Conta de 500 $, risco 0,4 % num NAS100 com SL de 100 pontos a 2,8 $/ponto/lote → 0,0071 lotes.
+  // Mínimo 0,1 → 28 $ de risco = 5,6 % … não cabe em 1 %; cabe em 6 %.
+  const INDICE = { min: 0.1, max: 20, step: 0.1 }
+  const base = { modo: 'risco_pct' as const, valor: 0.4, volumeOrigem: 0.1, saldoOrigem: null, equityDestino: 500, loteMax: null, regra: INDICE, distanciaSl: 100, valorPorPrecoPorLote: 2.8 }
+  const cabe = calcularLote({ ...base, riscoMaxPct: 6 })
+  assert.equal(cabe.ok && cabe.volume, 0.1)
+  assert.equal(cabe.ok && cabe.subiuAoMinimo, true)
+  const naoCabe = calcularLote({ ...base, riscoMaxPct: 1 })
+  assert.equal(naoCabe.ok, false)
+  assert.match(!naoCabe.ok ? naoCabe.motivo : '', /arriscava 5\.60 % da conta \(máximo por trade 1 %\)/)
+})
+caso('índice sem tecto conhecido mantém a regra antiga (recusa abaixo de metade do mínimo)', () => {
+  const INDICE = { min: 0.1, max: 20, step: 0.1 }
+  const r = calcularLote({ modo: 'risco_pct', valor: 0.4, volumeOrigem: 0.1, saldoOrigem: null, equityDestino: 310, loteMax: null, regra: INDICE, distanciaSl: 100, valorPorPrecoPorLote: 2.8, riscoMaxPct: null })
+  assert.equal(r.ok, false)
+  assert.match(!r.ok ? r.motivo : '', /só vai até 0\.01/)
+})
+caso('a Maria (310 $, tecto 1 %) continua recusada no NAS100 — é a conta que é pequena, e a mensagem diz o risco', () => {
+  const INDICE = { min: 0.1, max: 20, step: 0.1 }
+  const r = calcularLote({ modo: 'risco_pct', valor: 0.4, volumeOrigem: 0.1, saldoOrigem: null, equityDestino: 310, loteMax: null, regra: INDICE, distanciaSl: 100, valorPorPrecoPorLote: 2.8, riscoMaxPct: 1 })
+  assert.equal(r.ok, false)
+  assert.match(!r.ok ? r.motivo : '', /arriscava 9\.03 %/)
+})
+caso('o tecto por trade não mexe no que já subia até 0,01 (forex) nem no lote_max', () => {
+  const r = calcularLote({ modo: 'risco_pct', valor: 0.4, volumeOrigem: 0.1, saldoOrigem: null, equityDestino: 310, loteMax: null, regra: FX, distanciaSl: 10, valorPorPrecoPorLote: 100, riscoMaxPct: 1 })
+  assert.equal(r.ok && r.volume, 0.01)
+  assert.equal(r.ok && r.subiuAoMinimo, true)
+  const INDICE = { min: 0.1, max: 20, step: 0.1 }
+  const tecto = calcularLote({ modo: 'risco_pct', valor: 0.4, volumeOrigem: 0.1, saldoOrigem: null, equityDestino: 5_000, loteMax: 0.05, regra: INDICE, distanciaSl: 100, valorPorPrecoPorLote: 2.8, riscoMaxPct: 6 })
+  assert.equal(tecto.ok, false)
+})
 caso('… mas entre metade e o mínimo continua a subir, como sempre fez', () => {
   const INDICE = { min: 0.1, max: 20, step: 0.1 }
   const r = calcularLote({ modo: 'proporcional_saldo', valor: 1, volumeOrigem: 1.4, saldoOrigem: 100_000, equityDestino: 5_000, loteMax: null, regra: INDICE })
