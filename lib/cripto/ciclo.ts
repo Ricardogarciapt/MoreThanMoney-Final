@@ -20,7 +20,7 @@ import { detectarGatilho, pareceresNumericos, retratoDeVelas } from './indicador
 import { ESTUDOS_SCALP, REGIME_PADRAO, eScalp, gatilhosScalp, type TipoScalp } from './scalp'
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd, precoComEscorregamento } from './papel'
 import { LIMIARES_RUG, LIMIARES_RUG_PUMP, avaliarRug } from './rug'
-import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
+import { IA_INDISPONIVEL, decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
 import type { DecisaoIA, Gatilho, Modo, Parecer, PosicaoAberta, Retrato, Vela } from './tipos'
 
 export const CHAVE_CONFIG = 'agente_cripto'
@@ -283,6 +283,7 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
 
     let decisao: DecisaoIA | null = null
     let fornecedor: string | null = null
+    let traderEmBaixo = false
     // Veto de código já decidido: não se gasta IA com um token que o filtro de rug chumbou.
     if (!pareceres.some((p) => p.veto)) {
       usados++
@@ -293,7 +294,9 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
         return out
       }
       if (!pareceres.some((p) => p.veto)) {
-        decisao = await decisaoTrader(iaComFornecedor, c.r, c.g, pareceres)
+        const d = await decisaoTrader(iaComFornecedor, c.r, c.g, pareceres)
+        traderEmBaixo = d === IA_INDISPONIVEL
+        decisao = d === IA_INDISPONIVEL ? null : d
         if (decisao && decisao.action !== 'HOLD' && decisao.action !== 'ERROR') pareceres.push(await parecerApoio(ia, c.r, c.g, decisao, pareceres))
       }
     }
@@ -302,7 +305,8 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
     // IA em baixo (notícias/apoio sem resposta, ou trader sem JSON) e mais nenhum veto: em PAPEL decide
     // o código; no real não (decisaoSemIA devolve null).
     let tipoMedido: string = c.g.tipo
-    if (!pareceres.some((p) => p.veto && !iaEmBaixo(p)) && (!decisao || pareceres.some(iaEmBaixo))) {
+    // Só quando a IA NÃO RESPONDEU: uma resposta mal formatada é tratada como HOLD (holdSolto) ou recusa.
+    if (!pareceres.some((p) => p.veto && !iaEmBaixo(p)) && (traderEmBaixo || pareceres.some(iaEmBaixo))) {
       const d = decisaoSemIA(c.g, modo, limites)
       if (d) {
         decisao = d

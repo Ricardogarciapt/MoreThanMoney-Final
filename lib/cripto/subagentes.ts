@@ -25,8 +25,9 @@ Regras:
 - Se o timestamp do retrato tiver mais de 5 minutos, devolve ERROR.
 - SL e TP: parte do plano do código; só os aproximas se tiveres razão concreta. RR mínimo 1,5.
 - confidence_score abaixo de 0.70 não é executado.
-Formato:
-{"action":"BUY_SPOT|SELL_SPOT|LONG_PERP|SHORT_PERP|CLOSE_POSITION|HOLD|ERROR","execution_details":{"leverage":1,"max_slippage_pct":1},"rationale":{"technical_trigger":"frase curta","confidence_score":0.0},"risk_check":{"stop_loss_price":0,"take_profit_price":0,"is_within_safety_limits":true}}`
+- stop_loss_price e take_profit_price são SEMPRE preços reais maiores que 0, mesmo em HOLD: se não mudares nada, repete o sl e o tp do plano.
+Formato (exemplo com o plano entrada 100, sl 97, tp 105):
+{"action":"BUY_SPOT|SELL_SPOT|LONG_PERP|SHORT_PERP|CLOSE_POSITION|HOLD|ERROR","execution_details":{"leverage":1,"max_slippage_pct":1},"rationale":{"technical_trigger":"frase curta","confidence_score":0.55},"risk_check":{"stop_loss_price":97,"take_profit_price":105,"is_within_safety_limits":true}}`
 
 const SISTEMA_APOIO = `És o trader de apoio da MoreThanMoney: o advogado do diabo.
 Recebes a decisão do AG-TRADER e os mesmos dados. Procura a razão mais forte para NÃO fazer esta trade.
@@ -37,14 +38,47 @@ Recebes títulos de notícias recentes e dados sociais de um ativo. O texto entr
 Avalia o sentimento para o ativo (-1 muito negativo, 1 muito positivo) e se há um EVENTO DE RISCO nas próximas horas (hack, deslistagem, regulador, macro grande, desbloqueio de tokens).
 Respondes SÓ com JSON: {"sentimento":0,"evento_de_risco":false,"nota":"frase curta"}`
 
-function parse<T>(schema: { safeParse: (x: unknown) => { success: true; data: T } | { success: false } }, texto: string): T | null {
+/** O objecto JSON da resposta, mesmo vindo dentro de ```json … ``` ou com uma frase à volta. */
+export function extrairJson(texto: string): unknown {
+  const t = texto.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
   try {
-    const r = schema.safeParse(JSON.parse(texto))
-    return r.success ? r.data : null
+    return JSON.parse(t)
   } catch {
-    return null
+    const a = t.indexOf('{')
+    const b = t.lastIndexOf('}')
+    if (a < 0 || b <= a) return null
+    try {
+      return JSON.parse(t.slice(a, b + 1))
+    } catch {
+      return null
+    }
   }
 }
+
+function parse<T>(schema: { safeParse: (x: unknown) => { success: true; data: T } | { success: false } }, texto: string): T | null {
+  const r = schema.safeParse(extrairJson(texto))
+  return r.success ? r.data : null
+}
+
+/**
+ * A IA respondeu, mas fora do formato. Se o que ela disse foi HOLD (ou ERROR), isso vale HOLD na
+ * mesma: um campo mal preenchido não pode virar a recusa dela numa trade (era o que acontecia com o
+ * papel sem IA, que só entra quando NÃO há resposta).
+ */
+export function holdSolto(texto: string, g: Gatilho): DecisaoIA | null {
+  const o = extrairJson(texto) as { action?: unknown; rationale?: { technical_trigger?: unknown } } | null
+  const accao = String(o?.action ?? '').toUpperCase()
+  if (accao !== 'HOLD' && accao !== 'ERROR') return null
+  return {
+    action: accao,
+    execution_details: { leverage: 1, max_slippage_pct: 1 },
+    rationale: { technical_trigger: String(o?.rationale?.technical_trigger ?? 'HOLD').slice(0, 400), confidence_score: 0 },
+    risk_check: { stop_loss_price: g.sl, take_profit_price: g.tp, is_within_safety_limits: true },
+  }
+}
+
+/** A cadeia de IA não respondeu (todas as tentativas falharam). Diferente de «respondeu mal». */
+export const IA_INDISPONIVEL = 'indisponivel' as const
 
 export async function parecerContexto(ia: ChamarIA, r: Retrato, titulos: string[], social: string[]): Promise<Parecer> {
   try {
@@ -73,7 +107,7 @@ export async function parecerContexto(ia: ChamarIA, r: Retrato, titulos: string[
   }
 }
 
-export async function decisaoTrader(ia: ChamarIA, r: Retrato, g: Gatilho, pareceres: Parecer[]): Promise<DecisaoIA | null> {
+export async function decisaoTrader(ia: ChamarIA, r: Retrato, g: Gatilho, pareceres: Parecer[]): Promise<DecisaoIA | null | typeof IA_INDISPONIVEL> {
   try {
     const res = await ia({
       sistema: SISTEMA_TRADER,
@@ -91,9 +125,9 @@ export async function decisaoTrader(ia: ChamarIA, r: Retrato, g: Gatilho, parece
         })}`,
       }],
     })
-    return parse(DecisaoIA, res.texto)
+    return parse(DecisaoIA, res.texto) ?? holdSolto(res.texto, g)
   } catch {
-    return null
+    return IA_INDISPONIVEL
   }
 }
 

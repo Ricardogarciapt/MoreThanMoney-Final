@@ -11,7 +11,7 @@ import { LIMITES_PADRAO, PREFIXO_SEM_IA, decisaoSemIA, guardar, iaEmBaixo, lerLi
 import { atr, desequilibrioLivro, detectarGatilho, retratoDeVelas, rsi } from './indicadores'
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd } from './papel'
 import { LIMIARES_RUG_PUMP, avaliarRug } from './rug'
-import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
+import { IA_INDISPONIVEL, decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
 import { lerConfig, modoDoMercado } from './ciclo'
 import { emParalelo } from './paralelo'
 import { eScalp, emRegime, gatilhosScalp, simularScalp, sinaisScalp } from './scalp'
@@ -210,8 +210,16 @@ const iaQue = (texto: string): ChamarIA => async () => ({ texto, fornecedor: 'gr
 const iaQueFalha: ChamarIA = async () => { throw new Error('429') }
 async function sub() {
   teste('trader: prosa em vez de JSON = null', (await decisaoTrader(iaQue('compra já'), retrato, gatilho, [])) === null)
-  teste('trader: JSON válido passa', (await decisaoTrader(iaQue(JSON.stringify(decisao())), retrato, gatilho, []))?.action === 'LONG_PERP')
+  const dv = await decisaoTrader(iaQue(JSON.stringify(decisao())), retrato, gatilho, [])
+  teste('trader: JSON válido passa', dv !== null && dv !== IA_INDISPONIVEL && dv.action === 'LONG_PERP')
   teste('trader: alavancagem 10 fora do esquema = null', (await decisaoTrader(iaQue(JSON.stringify(decisao({ execution_details: { leverage: 10, max_slippage_pct: 1 } }))), retrato, gatilho, [])) === null)
+  teste('trader: IA em baixo = indisponível (não é HOLD nem trade)', (await decisaoTrader(iaQueFalha, retrato, gatilho, [])) === IA_INDISPONIVEL)
+  const holdComZeros = '{"action":"HOLD","rationale":{"technical_trigger":"volume fraco","confidence_score":0.4},"risk_check":{"stop_loss_price":0,"take_profit_price":0,"is_within_safety_limits":true}}'
+  const h = await decisaoTrader(iaQue(holdComZeros), retrato, gatilho, [])
+  teste('trader: HOLD com SL 0 continua a ser HOLD (antes virava «sem JSON» e abria sem IA)', h !== null && h !== IA_INDISPONIVEL && h.action === 'HOLD')
+  const cercado = '```json\n' + JSON.stringify(decisao()) + '\n```'
+  const dc = await decisaoTrader(iaQue(cercado), retrato, gatilho, [])
+  teste('trader: JSON dentro de ```json``` passa', dc !== null && dc !== IA_INDISPONIVEL && dc.action === 'LONG_PERP')
   teste('apoio: IA em baixo = veto', (await parecerApoio(iaQueFalha, retrato, gatilho, decisao(), [])).veto === true)
   teste('apoio: discorda = veto', (await parecerApoio(iaQue('{"concorda":false,"motivo":"funding alto"}'), retrato, gatilho, decisao(), [])).veto === true)
   teste('notícias: IA em baixo = veto', (await parecerContexto(iaQueFalha, retrato, [], [])).veto === true)
