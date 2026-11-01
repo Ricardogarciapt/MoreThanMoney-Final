@@ -814,23 +814,27 @@ export default function NewLandingPage() {
               <button type="button" className="vm__x" aria-label={t("l2.close")} onClick={() => setVideo(false)}>✕</button>
             </div>
             <div className="vm__f">
+              {/* vídeo de entrada alojado em public/videos (editado a 01/11/2026: original + pilares, scanners, app e MTM Auto com a voz do Ricardo) */}
               {playing ? (
-                <iframe
-                  src="https://www.youtube.com/embed/dgd0-mLIrMw?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3"
+                <video
+                  src="/videos/entrada-new-landing.mp4"
+                  poster="/videos/entrada-new-landing-poster.jpg"
+                  controls
+                  autoPlay
+                  playsInline
+                  preload="metadata"
                   title={t("l2.videoTitle")}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
                 />
               ) : (
                 <>
-                  <img src="https://i.ytimg.com/vi/dgd0-mLIrMw/maxresdefault.jpg" alt={t("l2.videoTitle")} />
+                  <img src="/videos/entrada-new-landing-poster.jpg" alt={t("l2.videoTitle")} />
                   <div className="vm__p" onClick={() => setPlaying(true)}><span>▶</span></div>
                 </>
               )}
             </div>
             <p className="vm__l">
               {t("l2.videoFallback")}{" "}
-              <a href="https://www.youtube.com/watch?v=dgd0-mLIrMw" target="_blank" rel="noopener noreferrer">
+              <a href="/videos/entrada-new-landing.mp4" target="_blank" rel="noopener noreferrer">
                 {t("l2.videoFallbackLink")}
               </a>.
             </p>

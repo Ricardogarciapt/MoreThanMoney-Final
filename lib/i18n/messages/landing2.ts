@@ -23,13 +23,13 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.heroFact1": "A conta é tua",
     "l2.heroFact2": "Sem fidelização",
     "l2.heroFact3": "Aulas ao vivo todas as semanas",
-    "l2.heroVideo": "Bem-vindo à MoreThanMoney · 2 min",
+    "l2.heroVideo": "Bem-vindo à MoreThanMoney · 3 min",
     "l2.scrollHint": "desce",
 
     "l2.videoTitle": "Bem-vindo à MoreThanMoney",
-    "l2.videoSub": "Dois minutos com o Ricardo, antes de decidires alguma coisa.",
+    "l2.videoSub": "Três minutos com o Ricardo: quem somos, os dois pilares, os scanners, a app e o MTM Auto.",
     "l2.videoFallback": "Se o vídeo não abrir aqui,",
-    "l2.videoFallbackLink": "vê-o no YouTube",
+    "l2.videoFallbackLink": "abre-o aqui",
     "l2.close": "Fechar",
 
 
@@ -96,7 +96,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.jump1": "Estes números correm todos os dias, com ou sem ti.",
     "l2.jump1Sub": "A diferença é se a tua conta está ligada ou não.",
     "l2.jump1Cta": "Ligar a minha conta",
-    "l2.jumpVideo": "Ver o vídeo · 2 min",
+    "l2.jumpVideo": "Ver o vídeo · 3 min",
 
     "l2.narLabel2": "Ricardo Garcia · quem está do outro lado",
     "l2.narQuote2":
@@ -383,13 +383,13 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.heroFact1": "The account is yours",
     "l2.heroFact2": "No lock-in",
     "l2.heroFact3": "Live classes every week",
-    "l2.heroVideo": "Welcome to MoreThanMoney · 2 min",
+    "l2.heroVideo": "Welcome to MoreThanMoney · 3 min",
     "l2.scrollHint": "scroll",
 
     "l2.videoTitle": "Welcome to MoreThanMoney",
-    "l2.videoSub": "Two minutes with Ricardo, before you decide anything.",
+    "l2.videoSub": "Three minutes with Ricardo: who we are, the two pillars, the scanners, the app and MTM Auto.",
     "l2.videoFallback": "If the video doesn't open here,",
-    "l2.videoFallbackLink": "watch it on YouTube",
+    "l2.videoFallbackLink": "open it here",
     "l2.close": "Close",
 
 
@@ -455,7 +455,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
     "l2.jump1": "These numbers run every day, with or without you.",
     "l2.jump1Sub": "The difference is whether your account is connected.",
     "l2.jump1Cta": "Connect my account",
-    "l2.jumpVideo": "Watch the video · 2 min",
+    "l2.jumpVideo": "Watch the video · 3 min",
 
     "l2.narLabel2": "Ricardo Garcia · who is on the other side",
     "l2.narQuote2":
