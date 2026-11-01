@@ -24,6 +24,21 @@ export interface Aula {
 }
 
 const API = 'https://www.googleapis.com/youtube/v3'
+
+/**
+ * PLAYLISTS QUE NUNCA SE CORTAM (ordem do dono, 1/11/2026). Compara-se pelo início do id: a lista
+ * que o Ricardo mandou vem como aparece no site (encurtada), e assim apanha-se a mesma nas duas formas.
+ */
+export const PLAYLISTS_EXCLUIDAS = ['PLU8H3a3NmFZQ'] as const
+
+export function playlistExcluida(id: string): boolean {
+  return PLAYLISTS_EXCLUIDAS.some((p) => id.startsWith(p))
+}
+
+/** Os educadores cujas aulas entram no cortador — sem os que o dono tirou (`cortes: false`). */
+export function educadoresComCortes() {
+  return EDUCADORES.filter((e) => e.cortes !== false)
+}
 const MIN_SEG = 5 * 60
 const MAX_SEG = 3 * 3600
 
@@ -46,12 +61,13 @@ export async function playlistsDasAulas(): Promise<Array<{ id: string; titulo: s
     db.from('lms_streams').select('educator_id, playlist_url, playlist_title, title'),
     db.from('lms_educator_playlists').select('educator_id, url, title').eq('is_active', true),
   ])
-  const slugDe = new Map((eds ?? []).map((e) => [e.id as string, EDUCADORES.find((x) => x.nome === e.display_name)?.slug]))
+  const comCortes = educadoresComCortes()
+  const slugDe = new Map((eds ?? []).map((e) => [e.id as string, comCortes.find((x) => x.nome === e.display_name)?.slug]))
   const saida = new Map<string, { id: string; titulo: string; educador: string }>()
   const juntar = (educatorId: unknown, url: unknown, titulo: unknown) => {
     const slug = slugDe.get(String(educatorId ?? ''))
     const id = idDaPlaylist(String(url ?? ''))
-    if (slug && id && !saida.has(id)) saida.set(id, { id, titulo: String(titulo ?? 'Aulas'), educador: slug })
+    if (slug && id && !playlistExcluida(id) && !saida.has(id)) saida.set(id, { id, titulo: String(titulo ?? 'Aulas'), educador: slug })
   }
   for (const s of salas ?? []) juntar(s.educator_id, s.playlist_url, s.playlist_title ?? s.title)
   for (const c of cursos ?? []) juntar(c.educator_id, c.url, c.title)
@@ -71,7 +87,9 @@ async function aulasDoMac(): Promise<Aula[]> {
   const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', CHAVE_AULAS).maybeSingle()
   const v = (data?.value ?? null) as { em?: string; aulas?: Aula[] } | null
   if (!v?.aulas?.length || !v.em || Date.now() - new Date(v.em).getTime() > 3 * 86400_000) return []
-  return v.aulas.filter((a) => a.duracaoSeg >= MIN_SEG && a.duracaoSeg <= MAX_SEG)
+  // A lista do Mac pode ter sido lida antes de uma exclusão: filtra-se também aqui.
+  const permitidos = new Set(educadoresComCortes().map((e) => e.slug))
+  return v.aulas.filter((a) => permitidos.has(a.educador) && a.duracaoSeg >= MIN_SEG && a.duracaoSeg <= MAX_SEG)
 }
 
 /** Todas as aulas das playlists, com duração. Uma playlist que falhe não estraga as outras. */

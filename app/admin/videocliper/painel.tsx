@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { LISTA_ESTILOS } from '@/lib/videocliper/estilos'
+import { ESTILO_POR_OMISSAO, LISTA_ESTILOS } from '@/lib/videocliper/estilos'
 import { EDUCADORES } from '@/lib/reels-educadores/config'
 import { Loader2, Scissors, Check, X, Send, RefreshCw, Youtube, Instagram, Clock, ChevronUp, ChevronDown, Play, Download, Trash2, GraduationCap, Laptop } from 'lucide-react'
 
@@ -330,7 +330,7 @@ export default function PainelVideocliper() {
                       </select>
                       <span
                         className="inline-block h-3 w-3 rounded-full border border-neutral-700"
-                        style={{ background: LISTA_ESTILOS.find((e) => e.id === (job.estilo ?? 'ricardogarciapt'))?.cor }}
+                        style={{ background: LISTA_ESTILOS.find((e) => e.id === (job.estilo ?? ESTILO_POR_OMISSAO))?.cor }}
                       />
                       {ocupado === `estilo-${j.id}` && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                       <span className="text-neutral-600">muda as pré-visualizações e os cortes que ainda não foram feitos</span>

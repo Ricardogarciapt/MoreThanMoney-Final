@@ -20,6 +20,11 @@ export interface EducadorReel {
   /** O que a palavra entrega, dito no CTA do reel. */
   depois: string
   publicar: boolean
+  /**
+   * `false` → as aulas deste educador NÃO entram no cortador (nem as playlists são lidas, nem se
+   * pedem cortes). Decisão do dono a 1/11/2026 para o Luis Pinto e o Rodrigo Jasmins.
+   */
+  cortes?: boolean
   /** Os temas de onde o roteiro escolhe; o gerador evita repetir os dos últimos dias. */
   temas: string[]
   /** As demonstrações «assinatura» já desenhadas para este educador. */
@@ -89,6 +94,7 @@ export const EDUCADORES: EducadorReel[] = [
     slug: 'rodrigo-jasmins',
     nome: 'Rodrigo Jasmins',
     area: 'Forex e Análise Técnica',
+    cortes: false,
     foto: 'https://iwscxotvmtkphajmasof.supabase.co/storage/v1/object/public/lms-assets/educators/59127909-670a-4222-93ca-31d7faa3d83c/1792434878512-b4a06a9d.jpg',
     palavra: 'QUERO',
     depois: 'e recebes o primeiro passo',
@@ -104,6 +110,7 @@ export const EDUCADORES: EducadorReel[] = [
     slug: 'luis-pinto',
     nome: 'Luis Pinto',
     area: 'IA e Literacia Financeira',
+    cortes: false,
     foto: 'https://iwscxotvmtkphajmasof.supabase.co/storage/v1/object/public/lms-assets/educators/6972009a-e07c-4367-b2f9-526dcdf57ab1/1792526820168-7ad76893.png',
     palavra: 'QUERO',
     depois: 'e recebes o primeiro passo',
