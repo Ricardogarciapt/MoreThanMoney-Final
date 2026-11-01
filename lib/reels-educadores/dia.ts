@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { tokenForAccount } from '@/lib/instagram/publish'
+import { ESTILO_POR_OMISSAO } from '@/lib/videocliper/estilos'
 import { AVISO, EDUCADORES, HORA_CORTE, HORAS_ANIMADOS, educador, type EducadorReel } from './config'
 import { gerarRoteiro, textoDoGancho, type Historico, type Roteiro } from './roteiro'
 import { listarAulas } from './aulas'
@@ -262,8 +263,8 @@ async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: stri
   const { count: futurosPub } = await db.from('reels_auto').select('id', { count: 'exact', head: true })
     .eq('tipo', 'corte').eq('slot', SLOT_CORTE).gte('dia', dia).in('estado', ['a_render', 'agendado'])
   const precisam: string[] = []
-  if ((futurosPub ?? 0) < RESERVA_PUBLICAVEIS) precisam.push(...EDUCADORES.filter((e) => pub.has(e.slug)).map((e) => e.slug))
-  for (const e of EDUCADORES.filter((x) => !pub.has(x.slug))) if ((await reserva(e.slug)) < RESERVA_RASCUNHOS) precisam.push(e.slug)
+  if ((futurosPub ?? 0) < RESERVA_PUBLICAVEIS) precisam.push(...EDUCADORES.filter((e) => pub.has(e.slug) && e.cortes !== false).map((e) => e.slug))
+  for (const e of EDUCADORES.filter((x) => !pub.has(x.slug) && x.cortes !== false)) if ((await reserva(e.slug)) < RESERVA_RASCUNHOS) precisam.push(e.slug)
   if (!precisam.length) return
 
   const aula = await proximaAula(db, precisam).catch((e) => { notas.push(`cortes: não li as playlists (${e instanceof Error ? e.message : e})`); return null })
@@ -271,6 +272,8 @@ async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: stri
   await db.from('videocliper_jobs').insert({
     origem: 'youtube', youtube_url: aula.url, youtube_video_id: aula.videoId, titulo: aula.titulo, estado: 'pedido',
     criado_por: `auto:aula:${aula.videoId}`, reels_educador: aula.educador, idioma: 'pt',
+    // Os cortes das aulas saem na conta da casa: cores e @ da MoreThanMoney, nunca os pessoais.
+    estilo: ESTILO_POR_OMISSAO,
   })
   notas.push(`cortes: pedida a aula «${aula.titulo}» (${aula.educador}, ${aula.playlist})`)
 }

@@ -8,11 +8,11 @@
  * Os valores estão escritos para 1080×1920. `estiloParaWorker` escala-os para a resolução pedida
  * (a pré-visualização sai a 540×960), para a legenda ocupar a mesma proporção nas duas.
  *
- * ── porque é que o primeiro é o do @ricardogarciapt ─────────────────────────
+ * ── o estilo por omissão é o da MARCA: @morethanmoney.pt, ouro #D2A63C ──────
  *
- * É o mesmo desenho do estúdio de cartões (`cartaoRicardo` em lib/social-card.tsx): Anton
- * condensada em itálico, maiúsculas, ciano #0097b2 e branco, a assinatura por baixo. Um Reel e
- * um cartão da mesma conta têm de parecer da mesma pessoa.
+ * Os cortes das aulas publicam-se na conta da casa; têm de parecer da casa (decisão do dono,
+ * 1/11/2026). O ciano do @ricardogarciapt (o desenho de `cartaoRicardo` em lib/social-card.tsx)
+ * continua disponível no painel, por vídeo, para o que for da conta pessoal — mas nunca por engano.
  */
 
 export type EstiloId = 'ricardogarciapt' | 'morethanmoney'
@@ -153,7 +153,7 @@ export const ESTILOS: Record<EstiloId, EstiloVideo> = {
   },
 }
 
-export const ESTILO_POR_OMISSAO: EstiloId = 'ricardogarciapt'
+export const ESTILO_POR_OMISSAO: EstiloId = 'morethanmoney'
 
 export const LISTA_ESTILOS = Object.values(ESTILOS).map((e) => ({ id: e.id, nome: e.nome, cor: e.corAcento }))
 
