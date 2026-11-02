@@ -31,7 +31,24 @@ export interface ContaWT {
    */
   nivelMargem: number | null
   flutuante: number | null
+  /**
+   * Crédito/bónus da corretora (MetaTrader `credit`). Entra na equity mas não é dinheiro do cliente:
+   * sem esta coluna, equity < saldo lia-se como posições em perda quando era só o bónus a sair.
+   * `null` onde a plataforma não o diz.
+   */
+  credito: number | null
   moeda: string | null
+}
+
+/** Um movimento de conta que não é uma trade: depósito, levantamento, crédito, comissão, ajuste. */
+export interface MovimentoWT {
+  id: string
+  em: string | null
+  tipo: 'deposito' | 'levantamento' | 'credito' | 'comissao' | 'ajuste'
+  valor: number | null
+  /** o tipo cru da corretora (DEAL_TYPE_BALANCE…) */
+  tipoCorretora: string
+  comentario: string | null
 }
 
 export interface PosicaoWT {
@@ -174,6 +191,8 @@ export interface AdaptadorCorretora {
   posicoes(): Promise<PosicaoWT[]>
   ordens(): Promise<OrdemWT[]>
   historico(dias?: number): Promise<NegocioWT[]>
+  /** Depósitos, levantamentos, créditos e comissões (deals que não são trades). Só onde a plataforma os dá. */
+  movimentos?(dias?: number): Promise<MovimentoWT[]>
   enviarOrdem(p: EntradaOrdemWT): Promise<ResultadoWT>
   modificar(m: ModificacaoWT): Promise<ResultadoWT>
   /** volume em lotes; sem volume = fecha tudo. */

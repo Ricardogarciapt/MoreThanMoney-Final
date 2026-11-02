@@ -238,10 +238,12 @@ export function adaptadorMt5(accountId: string, opcoes: { podeNegociar: boolean 
       const i = (await limitador.ler(`${k}info`, intervalo, () => deps.rest(accountId, '/account-information'))) as Record<string, unknown> | null
       const saldo = numOuNull(i?.balance)
       const equity = numOuNull(i?.equity)
+      const credito = numOuNull(i?.credit)
       return {
         saldo, equity, margem: numOuNull(i?.margin), margemLivre: numOuNull(i?.freeMargin),
-        nivelMargem: numOuNull(i?.marginLevel),
-        flutuante: saldo != null && equity != null ? Number((equity - saldo).toFixed(2)) : null, moeda: (i?.currency as string) ?? null,
+        nivelMargem: numOuNull(i?.marginLevel), credito,
+        // equity = saldo + crédito + flutuante: o bónus não é resultado de posições.
+        flutuante: saldo != null && equity != null ? Number((equity - saldo - (credito ?? 0)).toFixed(2)) : null, moeda: (i?.currency as string) ?? null,
       }
     },
     posicoes: async () => (await posicoesCruas()).map(posicaoMt5),
@@ -265,6 +267,28 @@ export function adaptadorMt5(accountId: string, opcoes: { podeNegociar: boolean 
           lucro: x.profit == null ? null : Number(((x.profit ?? 0) + (x.commission ?? 0) + (x.swap ?? 0)).toFixed(2)),
           em: isoDe(x.time), estado: /OUT/i.test(String(x.entryType ?? '')) ? 'fechado' : 'aberto',
         }))
+    },
+
+    movimentos: async (dias = 90) => {
+      const d = Math.min(365, Math.max(1, dias))
+      const deals = await limitador.ler(`${k}movimentos:${d}`, INTERVALO_HISTORICO_MS, async () => {
+        const de = encodeURIComponent(new Date(Date.now() - d * 86_400_000).toISOString())
+        const ate = encodeURIComponent(new Date().toISOString())
+        const r = (await deps.rest(accountId, `/history-deals/time/${de}/${ate}`)) as MetaApiDeal[] | { deals?: MetaApiDeal[] } | null
+        return Array.isArray(r) ? r : (r?.deals ?? [])
+      })
+      return deals
+        .filter((x) => !/DEAL_TYPE_(BUY|SELL)$/i.test(String(x.type ?? '')))
+        .map((x) => {
+          const t = String(x.type ?? '')
+          const valor = numOuNull(x.profit)
+          const tipo = /BALANCE/i.test(t) ? (valor != null && valor < 0 ? 'levantamento' as const : 'deposito' as const)
+            : /CREDIT|BONUS/i.test(t) ? 'credito' as const
+            : /COMMISSION/i.test(t) ? 'comissao' as const
+            : 'ajuste' as const
+          return { id: String(x.id ?? `${t}-${x.time}`), em: isoDe(x.time), tipo, valor, tipoCorretora: t, comentario: x.comment ? String(x.comment).slice(0, 120) : null }
+        })
+        .sort((a, b) => String(b.em ?? '').localeCompare(String(a.em ?? '')))
     },
 
     enviarOrdem: async (bruto) => {
