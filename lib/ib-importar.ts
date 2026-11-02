@@ -28,7 +28,20 @@ export const CORRETORA_NOME: Record<Corretora, string> = {
 /** A casa. As contas que estão aqui não têm de ser trazidas para lado nenhum. */
 export const CORRETORA_DA_CASA: Corretora = 'pu_prime'
 
-export type Formato = 'pu_prime' | 'vtmarkets' | 'hantec' | 'infinox_clientes' | 'infinox_referencias'
+/**
+ * `pu_prime_contas_abertas` e `pu_prime_fundos` são as duas folhas do «IB report» mensal da PU Prime
+ * (portal IB → Reports → IB report → Excel). A primeira é uma lista de contas (vai para ib_contas);
+ * a segunda é uma lista de MOVIMENTOS — depósitos e levantamentos por dia — e vai para ib_movimentos
+ * por `importarMovimentos`, não por `importar`.
+ */
+export type Formato =
+  | 'pu_prime'
+  | 'pu_prime_contas_abertas'
+  | 'pu_prime_fundos'
+  | 'vtmarkets'
+  | 'hantec'
+  | 'infinox_clientes'
+  | 'infinox_referencias'
 
 export interface ContaImportada {
   corretora: Corretora
@@ -87,6 +100,28 @@ export function numero(bruto: string | undefined, virgulaDecimal: boolean): numb
   return Number.isFinite(n) ? n : null
 }
 
+/**
+ * Um número sem saber a vírgula de antemão — para o que vem colado do Excel.
+ *
+ * O Excel não cola separadores de milhares, só o decimal da máquina de quem copia: «168,273» num
+ * Windows em português, «168.273» no mesmo ficheiro noutra máquina. Com `numero(…, true)` o segundo
+ * dava 168273 — mil vezes o depósito — e ninguém dava por isso. Regra: o ÚLTIMO separador é o decimal.
+ */
+export function numeroAuto(bruto: string | undefined): number | null {
+  const s = (bruto ?? '').trim()
+  if (!s || s === '-' || s.toUpperCase() === 'N/A') return null
+  const limpo = s.replace(/\([^)]*\)/g, '').replace(/[^\d.,\-]/g, '').trim()
+  if (!limpo) return null
+  const ultimaVirgula = limpo.lastIndexOf(',')
+  const ultimoPonto = limpo.lastIndexOf('.')
+  const decimal = ultimaVirgula > ultimoPonto ? ',' : '.'
+  const normal = decimal === ','
+    ? limpo.replace(/\./g, '').replace(',', '.')
+    : limpo.replace(/,/g, '')
+  const n = Number(normal)
+  return Number.isFinite(n) ? n : null
+}
+
 /** Uma data em AAAA-MM-DD, venha ela com hora ou sem ela. Vazio e `N/A` são nulo, não hoje. */
 export function data(bruto: string | undefined): string | null {
   const s = (bruto ?? '').trim()
@@ -112,6 +147,9 @@ function texto(bruto: string | undefined): string | null {
  */
 export function detectarFormato(cabecalho: string): Formato | null {
   const c = cabecalho.toLowerCase()
+  // As folhas do IB report primeiro: são mais específicas do que a exportação geral da PU Prime.
+  if (c.includes('net deposit') && (c.includes('depósitos') || c.includes('depositos'))) return 'pu_prime_fundos'
+  if (c.includes('saldo disponível') || c.includes('saldo disponivel')) return 'pu_prime_contas_abertas'
   if (c.includes('id de afiliado superior') || c.includes('proprietário da conta')) return 'pu_prime'
   if (c.includes('account journey') && c.includes('campaign source')) return 'vtmarkets'
   if (c.includes('comm. unpaid') || (c.includes('ib id') && c.includes('vol. traded'))) return 'hantec'
@@ -122,6 +160,8 @@ export function detectarFormato(cabecalho: string): Formato | null {
 
 const CORRETORA_DO_FORMATO: Record<Formato, Corretora> = {
   pu_prime: 'pu_prime',
+  pu_prime_contas_abertas: 'pu_prime',
+  pu_prime_fundos: 'pu_prime',
   vtmarkets: 'vtmarkets',
   hantec: 'hantec',
   infinox_clientes: 'infinox',
@@ -172,6 +212,16 @@ export function importar(textoBruto: string): Resultado {
     }
   }
 
+  if (formato === 'pu_prime_fundos') {
+    return {
+      formato,
+      corretora: 'pu_prime',
+      linhas: [],
+      ignoradas: 0,
+      erro: 'Esta folha é de movimentos (depósitos/levantamentos) — vai para importarMovimentos.',
+    }
+  }
+
   const corretora = CORRETORA_DO_FORMATO[formato]
   const cab = colunas(linhasTexto[0])
   const virgula = formato === 'pu_prime' || formato === 'vtmarkets'
@@ -194,7 +244,10 @@ export function importar(textoBruto: string): Resultado {
 function lerConta(formato: Formato, cab: string[], c: string[]): string | null {
   switch (formato) {
     case 'pu_prime':
+    case 'pu_prime_contas_abertas':
       return texto(c[indice(cab, 'Conta')])
+    case 'pu_prime_fundos':
+      return null
     case 'vtmarkets':
       return texto(c[indice(cab, 'Account')])
     case 'hantec':
@@ -274,6 +327,24 @@ function lerLinha(
         credito: n('Crédito'),
         ultimo_instrumento: t('Último Instrumento Negociado'),
       }
+
+    // A folha «opened accounts» do IB report: só o que ela traz. O «saldo disponível» vem na
+    // moeda base da conta, e no Excel da PU Prime aparece com ponto decimal mesmo em PT.
+    case 'pu_prime_contas_abertas':
+      return {
+        ...base,
+        cliente_nome: t('Nome'),
+        tipo_conta: t('TIPO DE CONTA'),
+        plataforma: t('PLATAFORMA'),
+        moeda: t('MOEDA BASE'),
+        saldo: numeroAuto(c[indice(cab, 'saldo disponível', 'saldo disponivel')]),
+        registo: d('DATA'),
+        cliente_externo_id: t('ID de usuário', 'ID de usuario'),
+        campanha: t('Fonte da campanha'),
+      }
+
+    case 'pu_prime_fundos':
+      return base
 
     case 'vtmarkets':
       return {
@@ -364,6 +435,71 @@ export type EstadoMigracao = 'na_casa' | 'a_transitar' | 'a_fechar' | 'perdido' 
  * `perdido` não se atribui automaticamente: quem tenta e não consegue é que o marca, e escreve
  * porquê. Um sistema que desiste sozinho de uma pessoa esconde a razão de ter desistido.
  */
+// ── Movimentos (folha «fund report» do IB report da PU Prime) ───────────────
+
+export interface MovimentoImportado {
+  corretora: Corretora
+  conta: string
+  cliente_externo_id: string | null
+  data: string
+  depositos: number
+  levantamentos: number
+  net: number
+  campanha: string | null
+}
+
+export interface ResultadoMovimentos {
+  formato: Formato | null
+  corretora: Corretora | null
+  linhas: MovimentoImportado[]
+  ignoradas: number
+  erro?: string
+}
+
+/**
+ * Lê a folha «fund report»: um movimento por linha. Linhas sem conta ou sem data não são
+ * movimentos de ninguém e ficam de fora, contadas.
+ */
+export function importarMovimentos(textoBruto: string): ResultadoMovimentos {
+  const linhasTexto = textoBruto
+    .split('\n')
+    .map((l) => l.replace(/\r$/, ''))
+    .filter((l) => l.trim().length > 0)
+  if (linhasTexto.length < 2) {
+    return { formato: null, corretora: null, linhas: [], ignoradas: 0, erro: 'Faltam linhas — cola o cabeçalho e os dados.' }
+  }
+  const formato = detectarFormato(linhasTexto[0])
+  if (formato !== 'pu_prime_fundos') {
+    return { formato, corretora: null, linhas: [], ignoradas: 0, erro: 'Este cabeçalho não é o da folha de movimentos (fund report).' }
+  }
+  const cab = colunas(linhasTexto[0])
+  const linhas: MovimentoImportado[] = []
+  let ignoradas = 0
+  for (const bruta of linhasTexto.slice(1)) {
+    const c = colunas(bruta)
+    const conta = texto(c[indice(cab, 'Conta')])
+    const dia = data(c[indice(cab, 'DATA')])
+    if (!conta || !dia) {
+      ignoradas++
+      continue
+    }
+    const depositos = numeroAuto(c[indice(cab, 'DEPÓSITOS', 'DEPOSITOS')]) ?? 0
+    const levantamentos = numeroAuto(c[indice(cab, 'LEVANTAR', 'LEVANTAMENTOS')]) ?? 0
+    const net = numeroAuto(c[indice(cab, 'Net Deposit')]) ?? depositos - levantamentos
+    linhas.push({
+      corretora: 'pu_prime',
+      conta,
+      cliente_externo_id: texto(c[indice(cab, 'ID de usuário', 'ID de usuario')]),
+      data: dia,
+      depositos,
+      levantamentos,
+      net,
+      campanha: texto(c[indice(cab, 'Fonte da campanha')]),
+    })
+  }
+  return { formato, corretora: 'pu_prime', linhas, ignoradas }
+}
+
 export function estadoInicial(c: ContaImportada): EstadoMigracao {
   if (c.corretora === CORRETORA_DA_CASA) return 'na_casa'
   const mexeu = (c.volume_lotes ?? 0) > 0 || (c.depositos_usd ?? 0) > 0 || (c.comissao_usd ?? 0) > 0

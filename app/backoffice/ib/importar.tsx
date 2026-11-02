@@ -34,15 +34,29 @@ export function Importar() {
       })
       const d = (await r.json()) as {
         error?: string
+        tipo?: string
         corretora?: string
         guardadas?: number
+        lidas?: number
         novas?: number
         atualizadas?: number
         semConta?: number
+        periodo?: string | null
+        depositos?: number
+        levantamentos?: number
       }
       if (!r.ok) {
         setFalhou(true)
         setResposta(d.error ?? 'Não deu para importar.')
+      } else if (d.tipo === 'movimentos') {
+        setResposta(
+          `${d.corretora}: ${d.lidas} movimentos lidos, ${d.guardadas} novos guardados` +
+            (d.periodo ? ` · ${d.periodo}` : '') +
+            ` · depósitos ${Math.round(d.depositos ?? 0)} · levantamentos ${Math.round(d.levantamentos ?? 0)}` +
+            (d.semConta ? ` · ${d.semConta} linhas sem conta/data, ignoradas` : ''),
+        )
+        setTexto('')
+        router.refresh()
       } else {
         setResposta(
           `${d.corretora}: ${d.guardadas} contas guardadas` +
@@ -66,8 +80,9 @@ export function Importar() {
         <h2 className="font-semibold text-white">Importar exportação de corretora</h2>
         <p className="mt-1 text-sm leading-relaxed text-zinc-400">
           Cola a exportação tal como sai do painel da corretora, <strong>com a linha dos títulos</strong>.
-          Uma corretora de cada vez. Reconheço a PU Prime, a Infinox (clientes e referências), a
-          Hantec e a VT Markets.
+          Uma corretora de cada vez. Reconheço a PU Prime (exportação de contas e as duas folhas do
+          IB report mensal: «opened accounts» e «fund report»), a Infinox (clientes e referências),
+          a Hantec e a VT Markets.
         </p>
       </div>
 

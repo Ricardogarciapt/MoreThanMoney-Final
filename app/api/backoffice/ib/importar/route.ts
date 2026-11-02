@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCapacidade } from '@/lib/backoffice-sessao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { CORRETORA_NOME, estadoInicial, importar } from '@/lib/ib-importar'
+import { importar, importarMovimentos, detectarFormato, estadoInicial, CORRETORA_NOME } from '@/lib/ib-importar'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -49,6 +49,32 @@ export async function POST(request: NextRequest) {
   const texto = typeof corpo.texto === 'string' ? corpo.texto : ''
   if (texto.trim().length < 20) {
     return NextResponse.json({ error: 'Cola a exportação, com a linha dos títulos.' }, { status: 400 })
+  }
+
+  // A folha «fund report» do IB report da PU Prime são movimentos, não contas: tabela própria.
+  const primeiraLinha = texto.split('\n').find((l) => l.trim().length > 0) ?? ''
+  if (detectarFormato(primeiraLinha) === 'pu_prime_fundos') {
+    const mov = importarMovimentos(texto)
+    if (mov.erro || mov.linhas.length === 0) {
+      return NextResponse.json({ error: mov.erro ?? 'A folha de movimentos veio vazia.' }, { status: 400 })
+    }
+    const { error, count } = await db
+      .from('ib_movimentos')
+      .upsert(mov.linhas, { onConflict: 'corretora,conta,data,depositos,levantamentos', ignoreDuplicates: true, count: 'exact' })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const dias = mov.linhas.map((l) => l.data).sort()
+    return NextResponse.json({
+      ok: true,
+      tipo: 'movimentos',
+      corretora: CORRETORA_NOME.pu_prime,
+      formato: mov.formato,
+      guardadas: count ?? mov.linhas.length,
+      lidas: mov.linhas.length,
+      semConta: mov.ignoradas,
+      periodo: dias.length ? `${dias[0]} a ${dias[dias.length - 1]}` : null,
+      depositos: mov.linhas.reduce((a, l) => a + l.depositos, 0),
+      levantamentos: mov.linhas.reduce((a, l) => a + l.levantamentos, 0),
+    })
   }
 
   const lido = importar(texto)
