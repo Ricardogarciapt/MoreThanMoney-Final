@@ -183,6 +183,7 @@ export default function PaginaEstrategia({ refEstrategia }: { refEstrategia: str
                 ))}
               </div>
             )}
+            <p className="mb-2 text-[10.5px] text-zinc-500">Risco, lote, BE/trailing e limites de cada conta afinam-se na ficha da conta (clica no destino → «Cópia e risco desta conta»); as rotas são derivadas dessa escolha.</p>
             {f.rotas.length === 0 ? <Vazio>Nenhuma rota — ninguém recebe esta estratégia pelo motor.</Vazio> : (
               <Tabela min={860}>
                 <thead><tr><th className={th}>Destino</th><th className={th}>Tipo</th><th className={th}>Agora</th><th className={th}>Estado</th><th className={th}>Lote</th><th className={th}>Abertas</th><th className={th}>Último evento</th><th className={th}>Direito</th><th className={th} /></tr></thead>
