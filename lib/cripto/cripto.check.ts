@@ -223,6 +223,11 @@ async function sub() {
   teste('apoio: IA em baixo = veto', (await parecerApoio(iaQueFalha, retrato, gatilho, decisao(), [])).veto === true)
   teste('apoio: discorda = veto', (await parecerApoio(iaQue('{"concorda":false,"motivo":"funding alto"}'), retrato, gatilho, decisao(), [])).veto === true)
   teste('notícias: IA em baixo = veto', (await parecerContexto(iaQueFalha, retrato, [], [])).veto === true)
+  const hack = '{"sentimento":-0.8,"evento_de_risco":true,"nota":"hack na Binance"}'
+  teste('notícias: hack trava o long', (await parecerContexto(iaQue(hack), retrato, [], [], 'long')).veto === true)
+  const ps = await parecerContexto(iaQue(hack), retrato, [], [], 'short')
+  teste('notícias: hack (negativo) não trava o short e conta a favor dele', ps.veto === false && ps.favor > 0)
+  teste('notícias: evento positivo continua a travar o short', (await parecerContexto(iaQue('{"sentimento":0.6,"evento_de_risco":true,"nota":"ETF aprovado"}'), retrato, [], [], 'short')).veto === true)
   teste('notícias: evento de risco = veto', (await parecerContexto(iaQue('{"sentimento":0,"evento_de_risco":true,"nota":"hack"}'), retrato, [], [])).veto === true)
 }
 

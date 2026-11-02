@@ -80,7 +80,17 @@ export function holdSolto(texto: string, g: Gatilho): DecisaoIA | null {
 /** A cadeia de IA não respondeu (todas as tentativas falharam). Diferente de «respondeu mal». */
 export const IA_INDISPONIVEL = 'indisponivel' as const
 
-export async function parecerContexto(ia: ChamarIA, r: Retrato, titulos: string[], social: string[]): Promise<Parecer> {
+/**
+ * Evento de risco nas notícias trava as COMPRAS. Um short só é travado se o evento não for
+ * negativo (sentimento ≥ 0): um hack ou uma deslistagem empurram o preço para baixo, que é o lado
+ * do short (decisão do dono, 02/11). O short continua a passar pela IA e pela guarda.
+ */
+export function vetoDeNoticias(eventoDeRisco: boolean, sentimento: number, lado: Gatilho['lado']): boolean {
+  if (!eventoDeRisco) return false
+  return lado === 'long' || sentimento >= 0
+}
+
+export async function parecerContexto(ia: ChamarIA, r: Retrato, titulos: string[], social: string[], lado: Gatilho['lado'] = 'long'): Promise<Parecer> {
   try {
     const res = await ia({
       sistema: SISTEMA_CONTEXTO,
@@ -100,7 +110,9 @@ export async function parecerContexto(ia: ChamarIA, r: Retrato, titulos: string[
     })
     const p = parse(ParecerContexto, res.texto)
     if (!p) return { agente: 'noticias-sentimento', favor: 0, nota: 'Resposta fora do formato: ignorada.' }
-    return { agente: 'noticias-sentimento', favor: p.sentimento, nota: p.nota, veto: p.evento_de_risco }
+    const veto = vetoDeNoticias(p.evento_de_risco, p.sentimento, lado)
+    const nota = p.evento_de_risco && !veto ? `${p.nota} (evento negativo: não trava o short)` : p.nota
+    return { agente: 'noticias-sentimento', favor: lado === 'short' ? -p.sentimento : p.sentimento, nota, veto }
   } catch (e) {
     // Sem leitura de notícias não se sabe se há evento de risco: conta contra (veto).
     return { agente: 'noticias-sentimento', favor: 0, nota: `IA indisponível (${String((e as Error)?.message ?? e).slice(0, 80)}).`, veto: true }

@@ -287,7 +287,7 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
     // Veto de código já decidido: não se gasta IA com um token que o filtro de rug chumbou.
     if (!pareceres.some((p) => p.veto)) {
       usados++
-      pareceres.push(await parecerContexto(ia, c.r, titulosDoAtivo(titulos, c.r.ativo), c.social))
+      pareceres.push(await parecerContexto(ia, c.r, titulosDoAtivo(titulos, c.r.ativo), c.social, c.g.lado))
       const iaComFornecedor: ChamarIA = async (p) => {
         const out = await ia(p)
         fornecedor = `${out.fornecedor}/${out.modelo}`
