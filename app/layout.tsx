@@ -14,6 +14,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import XpUpdateListener from "@/components/xp-update-listener"
 import Script from "next/script"
 import OpinlyIdentify from "@/components/opinly-identify"
+import RecuperarChunks from "@/components/recuperar-chunks"
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
@@ -87,6 +88,9 @@ export default function RootLayout({
       <body className="notranslate" translate="no" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <ThemeInitializer />
+          {/* Um ficheiro JS do build que não carrega (deploy novo com o separador aberto) recarrega
+              a página uma vez em vez de deixar o ecrã em branco. Ver lib/chunks/recuperar.ts. */}
+          <RecuperarChunks />
           <AuthProvider>
             <I18nProvider>
               <Suspense fallback={null}>
