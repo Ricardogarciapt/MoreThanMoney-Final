@@ -7,7 +7,7 @@
  * travão do dia fecha a porta. E que sem estes dados o agente se comporta como antes.
  */
 import { decidirOperacoes, type SinalDoTrader } from './trader'
-import { REGUA_PADRAO, lerRegua, metricasDoAgente, riscoRecompensa, travaoDiario, vantagemPorCombo } from './trader-disciplina'
+import { REGUA_PADRAO, aplicarAprovadasManuais, lerAprovadasManuais, lerRegua, metricasDoAgente, riscoRecompensa, travaoDiario, vantagemPorCombo } from './trader-disciplina'
 
 const falhas: string[] = []
 const teste = (nome: string, c: boolean) => { if (!c) falhas.push(nome) }
@@ -55,6 +55,25 @@ teste('sem saldo não trava às cegas', !travaoDiario(-10, 0))
   teste('régua lida', r.minAmostra === 40 && r.minRR === 1.5)
   teste('negativo ignorado', r.perdaDiariaMax === REGUA_PADRAO.perdaDiariaMax)
   teste('sem régua fica a padrão', lerRegua({ armado: true }).minAmostra === REGUA_PADRAO.minAmostra)
+}
+
+// ── as aprovadas pelo dono (02/11) ──
+{
+  const manuais = lerAprovadasManuais({ armado: true, aprovadas: ['mtm-auto-premium-ii|XAUUSD', 'lixo', 42, '|X'] })
+  teste('lê só as chaves bem formadas', manuais.size === 1 && manuais.has('mtm-auto-premium-ii|XAUUSD'))
+  teste('sem lista fica vazio', lerAprovadasManuais({ armado: true }).size === 0)
+  const medidas = vantagemPorCombo([
+    { estrategia: 'mtm-auto-premium-ii', symbol: 'XAUUSD', n: 10, ganhos: 7, pnl: 11.3, risco: 60, somaR: 1.9, somaR2: 6 },
+  ])
+  teste('medida sozinha é amostra curta', medidas.get('mtm-auto-premium-ii|XAUUSD')?.aprovada === false)
+  const v = aplicarAprovadasManuais(medidas, manuais)
+  const p = v.get('mtm-auto-premium-ii|XAUUSD')
+  teste('manual aprova e guarda a medição', p?.aprovada === true && p.n === 10 && p.porque.includes('Amostra curta'))
+  const [a] = decidirOperacoes({
+    abertas: [], agora: AGORA, vantagens: v, regua: { ...REGUA_PADRAO, exploracao: 1 },
+    sinais: [sinal({ estrategia: 'mtm-auto-premium-ii', symbol: 'XAUUSD', chave: 'p:1' })],
+  })
+  teste('aprovada à mão abre com lote inteiro, não como exploração', a.abrir && !a.exploracao)
 }
 
 // ── a exploração (26/10: scalping na conta de papel) ──
