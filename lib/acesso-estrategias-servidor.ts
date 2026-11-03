@@ -24,13 +24,19 @@ export async function perfisAcessoEstrategia(userIds: string[]): Promise<Map<str
   if (!ids.length) return out
   const db = getSupabaseAdmin()
 
-  const [perfis, autos, claims, contasAuto, ligacoes] = await Promise.all([
+  const [perfis, autos, claims, contasAuto, ligacoes, concedidos] = await Promise.all([
     db.from('profiles').select('id, email, user_type, member_category, membership_level, subscription_plan, is_active, broker_verified').in('id', ids),
     db.from('mtmauto_users').select('user_id, papel, isento, motivo_isencao, subscricao, apple_estado, apple_expira_em').in('user_id', ids),
     db.from('mtmauto_broker_claims').select('user_id, corretora, aprovado').in('user_id', ids).eq('aprovado', true),
     db.from('mtmauto_accounts').select('user_id, servidor, demo, plataforma').in('user_id', ids),
     db.from('mtmcopy_connections').select('user_id, mt5_server, mt5_status').in('user_id', ids),
+    db.from('acesso_estrategias_concedido').select('user_id, estrategia_slug').in('user_id', ids),
   ])
+  const concedidasDe = new Map<string, string[]>()
+  for (const c of (concedidos.data ?? []) as Linha[]) {
+    const k = String(c.user_id)
+    concedidasDe.set(k, [...(concedidasDe.get(k) ?? []), String(c.estrategia_slug)])
+  }
   if (perfis.error) throw new Error(`profiles: ${perfis.error.message}`)
 
   const emails = (perfis.data ?? []).map((p) => String((p as Linha).email ?? '').trim().toLowerCase()).filter(Boolean)
@@ -70,6 +76,7 @@ export async function perfisAcessoEstrategia(userIds: string[]): Promise<Map<str
       premiumOuMais: podeAcederPremiumUi(p as never),
       puPrimeValidado: Boolean(puPrimeValidado),
       corretoraValidada: Boolean(puPrimeValidado || isentoParceira || parceira.has(id)),
+      concedidas: concedidasDe.get(id) ?? [],
     })
   }
   return out

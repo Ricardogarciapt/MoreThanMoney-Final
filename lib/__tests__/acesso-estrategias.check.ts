@@ -48,6 +48,11 @@ t('sincronização (site e script) passa o acesso ao planeador', () => {
   assert.match(readFileSync('lib/mestres/servidor/sincronizar-rotas.ts', 'utf8'), /semAcesso,/)
   assert.match(readFileSync('scripts/mestres/sincronizar-rotas.ts', 'utf8'), /semAcesso,/)
 })
+t('acesso concedido pelo admin passa o nível', () => {
+  assert.equal(acessoEstrategia('mtm-auto-premium-ii', { concedidas: ['mtm-auto-premium-ii'] }).pode, true)
+  assert.equal(acessoEstrategia('mtm-auto-premium-ii', { concedidas: ['mtm-auto-premium-ii'] }).motivo, 'concedido')
+  assert.equal(acessoEstrategia('mtm-auto-edge', { concedidas: ['mtm-auto-premium-ii'] }).pode, false)
+})
 t('o grupo Premium II é destino, nunca fonte', async () => {
   const { detectSlugFromChannelTitle } = await import('../telegram-app-channels')
   const { channelKeyFromTitle } = await import('../telegram-channel-ids')
