@@ -42,9 +42,11 @@ export interface PerfilAcessoEstrategia {
   corretoraValidada?: boolean
   /** PU Prime validada (UID confirmado, validação aprovada ou conta real PU Prime ligada). */
   puPrimeValidado?: boolean
+  /** Estratégias concedidas à mão pelo admin (tabela acesso_estrategias_concedido) — passam qualquer nível. */
+  concedidas?: string[]
 }
 
-export type MotivoAcessoEstrategia = 'livre' | 'admin' | 'premium' | 'corretora' | 'puprime' | 'falta_premium_ou_corretora' | 'falta_puprime'
+export type MotivoAcessoEstrategia = 'livre' | 'admin' | 'premium' | 'corretora' | 'puprime' | 'falta_premium_ou_corretora' | 'falta_puprime' | 'concedido'
 
 export interface AcessoEstrategia {
   pode: boolean
@@ -56,6 +58,8 @@ export function acessoEstrategia(slug: string | null | undefined, p: PerfilAcess
   const nivel = nivelDaEstrategia(slug)
   if (nivel === 'membros') return { pode: true, motivo: 'livre', nivel }
   if (p?.admin) return { pode: true, motivo: 'admin', nivel }
+  const chave = String(slug ?? '').trim().toLowerCase()
+  if (p?.concedidas?.some((c) => String(c).trim().toLowerCase() === chave)) return { pode: true, motivo: 'concedido', nivel }
   if (nivel === 'puprime_validado') {
     return p?.puPrimeValidado ? { pode: true, motivo: 'puprime', nivel } : { pode: false, motivo: 'falta_puprime', nivel }
   }
