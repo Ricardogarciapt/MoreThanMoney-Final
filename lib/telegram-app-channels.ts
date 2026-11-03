@@ -6,6 +6,7 @@ import {
   resolvedPerpsChatId,
   resolvedPremiumSignalsChatId,
   resolvedTradeIdeasChatId,
+  tituloPremiumII,
 } from '@/lib/telegram-channel-ids'
 
 export type AppChatChannelSlug =
@@ -26,7 +27,9 @@ const map = new Map<string, AppChatChannelSlug>()
  * de sinais SÓ para publicação — mapeia por id para `ideias-e-sinais` em buildAppChannelMap (antes
  * do fallback pelo título, que o mandava para «Ideias de Forex» com a etiqueta errada).
  */
-const GRUPOS_FECHADOS = new Set<string>([])
+// 03/11: o grupo «MTM Auto Premium II» recebe o espelho do chat `sinais-premium-ii`; o que lá se
+// escreve não volta à app (caía em premium-ideas pelo título — duas mensagens vazias a 03/11 09:20).
+const GRUPOS_FECHADOS = new Set<string>([CANONICAL_TELEGRAM_CHANNELS.premiumII.chatId])
 
 function registerChatId(raw: string | undefined, slug: AppChatChannelSlug) {
   if (!raw?.trim()) return
@@ -71,6 +74,7 @@ export function buildAppChannelMap(): Map<string, AppChatChannelSlug> {
 /** Detecta slug pelo título do canal Telegram quando o ID não está no mapa. */
 export function detectSlugFromChannelTitle(title: string | null | undefined): AppChatChannelSlug | null {
   if (!title) return null
+  if (tituloPremiumII(title)) return null
   const t = title.toLowerCase()
   if (t.includes('premium') || t.includes('mtmgold')) return 'premium-ideas'
   // Perpétuos ANTES do fallback genérico 'ideias'/'scanner' (o título "Ideias de Perpétuos Cripto"
