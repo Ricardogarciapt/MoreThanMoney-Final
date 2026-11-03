@@ -20,6 +20,9 @@ const PUSH_TITLES: Record<string, string> = {
   'premium-ideas': '💎 Nova Ideia Premium!',
 }
 
+/** Chats com espelho para Telegram (lib/telegram-espelho-canal › ESPELHOS). */
+const CANAIS_ESPELHADOS = new Set<string>(['sinais-premium-ii'])
+
 type PushResult = { ok: boolean; status?: number; error?: string }
 
 /** user_ids com conta Tap to Trade ATIVA (ligada). */
@@ -94,6 +97,11 @@ export async function sendTelegramChannelPush(opts: {
   chatMessageId?: string
 }): Promise<PushResult> {
   const slug = opts.slug
+  // Chat espelhado num grupo Telegram (03/11: «MTM Auto Premium II») → a mensagem sai já lá também.
+  if (CANAIS_ESPELHADOS.has(slug)) {
+    const espelho = import('@/lib/telegram-espelho-canal').then((m) => m.espelharCanaisParaTelegram()).catch(() => undefined)
+    try { after(() => espelho) } catch { await espelho }
+  }
   const firstLine = (opts.content ?? '').split('\n')[0]?.trim() ?? ''
 
   // Um fecho acabou de entrar no canal → grava já os pips e a percentagem na mensagem de

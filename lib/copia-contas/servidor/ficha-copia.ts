@@ -10,6 +10,8 @@
  * estratégia tocada (a mesma função do script e do quadro de cópias). Ligar/desligar reutiliza
  * `ligarSubscritor` do quadro — uma regra, duas portas. Tudo relido e auditado.
  */
+import { acessoEstrategia, EXPLICACAO_ACESSO_ESTRATEGIA } from '@/lib/acesso-estrategias'
+import { perfisAcessoEstrategia } from '@/lib/acesso-estrategias-servidor'
 import { esquecerCache } from '@/lib/admin-centro/cache'
 import { db } from '@/lib/admin-centro/servidor/base'
 import { registarAuditoria } from '@/lib/admin-centro/servidor/outros'
@@ -107,6 +109,28 @@ async function lerLimites(chave: string | null, ref: string, userId: string | nu
 const previsao = (r: ReturnType<typeof loteDaLigacaoSite>): EstrategiaDaFicha['lotePrevisto'] =>
   r.ok ? { ok: true, texto: textoLote(r.lote.modo_lote, r.lote.valor), origem: r.lote.origem } : { ok: false, motivo: r.motivo }
 
+/**
+ * Acesso por estratégia (03/11, dono): Premium II só Premium (65 €) ou corretora validada, Edge só
+ * PU Prime validada. A ficha diz ao admin quais as estratégias que esta pessoa NÃO pode seguir — e,
+ * se já as segue, que a rota não abre (o planeador ignora-a com o mesmo motivo).
+ */
+async function avisosDeAcesso(userId: string | null | undefined, estrategias: EstrategiaDaFicha[]): Promise<string[]> {
+  if (!userId) return []
+  try {
+    const perfis = await perfisAcessoEstrategia([userId])
+    const perfil = perfis.get(userId) ?? null
+    const out: string[] = []
+    for (const e of estrategias) {
+      const a = acessoEstrategia(e.slug, perfil)
+      if (a.pode) continue
+      out.push(`${e.nome}: ${EXPLICACAO_ACESSO_ESTRATEGIA[a.nivel]}${e.segue ? ' Esta conta segue-a mas a rota NÃO abre.' : ''}`)
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
 export async function lerFichaCopia(ref: string): Promise<FichaCopia | null> {
   const x = lerRef(ref)
   if (!x || (x.origem !== 'site' && x.origem !== 'auto')) return null
@@ -140,6 +164,7 @@ export async function lerFichaCopia(ref: string): Promise<FichaCopia | null> {
       }
     })
     if (lig.purpose === 'tap_to_trade') avisos.push('Ligação só de Tap to Trade: só segue por cópia se tiver uma estratégia escolhida.')
+    avisos.push(...await avisosDeAcesso(lig.user_id, estrategias))
     return {
       ref, fonte: 'site', userId: lig.user_id ?? null, plataforma, chave,
       naoEDestino: !plataforma ? 'conta MTM Funded (segue pelo espelho simulado)' : lig.funded_somente_leitura ? 'só leitura' : lig.mt5_status === 'disconnected' ? 'ligação desligada' : null,
@@ -182,6 +207,7 @@ export async function lerFichaCopia(ref: string): Promise<FichaCopia | null> {
       rota: rotas.get(e.slug.toLowerCase()) ?? null,
     }
   })
+  avisos.push(...await avisosDeAcesso(conta.user_id, estrategias))
   if (conta.copia_ativa === false) avisos.push('Cópia pausada na conta (copia_ativa=false): as rotas ficam pausadas, o que está aberto continua a ser gerido.')
   return {
     ref, fonte: 'auto', userId: conta.user_id ?? null, plataforma, chave,
