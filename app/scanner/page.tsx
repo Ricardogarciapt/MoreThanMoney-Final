@@ -6,7 +6,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Unbounded } from "next/font/google"
+import { unbounded } from "@/lib/fonts/unbounded"
 import Breadcrumbs from "@/components/breadcrumbs"
 import { ArrowRight, ArrowDown, BarChart3, Check, Lock, Shield, Zap } from "lucide-react"
 
@@ -14,7 +14,7 @@ import { SCANNERS, type ScannerProduct } from "@/lib/scanners-catalog"
 import { CheckoutModal } from "@/components/scanner/checkout-modal"
 import { SCANNER_LANDINGS } from "@/lib/scanner-landings"
 
-const display = Unbounded({ subsets: ["latin"], weight: ["600", "800"], display: "swap" })
+const display = unbounded
 
 const landingOf = (key: string) => SCANNER_LANDINGS.find((l) => l.key === key)
 
