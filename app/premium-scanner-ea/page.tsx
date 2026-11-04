@@ -83,6 +83,7 @@ const DATA: EaLandingData = {
   faq: [
     { q: "Preciso de deixar o computador ligado?", a: "Sim, ou de uma VPS. A EA corre dentro do MetaTrader — se o terminal fechar, não abre ordens novas. As posições abertas ficam com o stop e os alvos na corretora." },
     { q: "O que recebo no TradingView?", a: "O indicador e a estratégia, por convite ao utilizador que indicares na compra. O indicador mostra os sinais e os níveis; a estratégia deixa-te testar a regra com os custos da tua corretora." },
+    { q: "Posso testar a EA antes de a usar em conta real?", a: "Sim. Em conta demo e no testador de estratégias do MetaTrader a EA negoceia sem chave de licença e arranca já ligada. A licença só é pedida em conta real." },
     { q: "Posso usar a licença em duas contas MT5?", a: "Não. A licença da EA vale para uma conta MT5. Se mudaste de corretora, pedes e libertamos a que tens." },
     { q: "Há renovação?", a: "Não. O pacote é pago uma vez e as actualizações estão incluídas." },
   ],

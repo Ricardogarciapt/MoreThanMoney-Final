@@ -11,6 +11,9 @@ LICENCA
   WebRequest para os seguintes URLs" > https://www.morethanmoney.pt
   A chave so abre esta EA e fica presa a primeira conta MT5 onde a usares.
 
+  Em conta DEMO e no testador de estrategias a EA negoceia sem chave e
+  arranca ja ligada. A chave so e pedida em conta real.
+
 INSTALAR (a mao)
 
   No MetaTrader: Ficheiro > Abrir pasta de dados > MQL5, e copia para la:
@@ -26,7 +29,8 @@ POR A TRABALHAR
   3. Parametros > Carregar > MTM_PremiumScanner_XAUUSD_M15.set
   4. Le o log (aba Especialistas): tem de dizer o fuso do servidor
      ("UTC+2" ou "UTC+3" na maioria das corretoras). As sessoes sao em UTC.
-  5. A EA arranca PARADA. Carrega em INICIAR no painel.
+  5. Em conta real a EA arranca PARADA: carrega em INICIAR no painel.
+     Em demo e no testador ja arranca ligada.
 
 O QUE FAZ
 

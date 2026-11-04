@@ -25,16 +25,16 @@
 //+------------------------------------------------------------------+
 #property copyright "RicardoGarciaPT / MoreThanMoney"
 #property link      "https://www.morethanmoney.pt"
-#property version   "1.00"
+#property version   "1.01"
 
 #include <Trade/Trade.mqh>
 
 input group                "=== LICENCA ==="
-input string   InpLicenseKey    = "";      // Chave (MTM-XXXX-XXXX-XXXX)
+input string   InpLicenseKey    = "";      // Chave (MTM-XXXX-XXXX-XXXX) - so em conta real; testador e demo dispensam
 input string   InpLicenseUrl    = "https://www.morethanmoney.pt"; // Servidor (permitir em Opcoes > Consultores)
 
 input group                "=== EXECUCAO ==="
-input bool     InpComecarLigado = false;   // Comecar a negociar logo ao anexar (senao: botao INICIAR)
+input bool     InpComecarLigado = false;   // Comecar a negociar logo ao anexar em conta real (testador e demo arrancam sempre ligadas)
 input long     InpMagic         = 770303;  // Numero magico (muda se correres duas copias)
 
 input group                "=== SESSOES (UTC) ==="
@@ -114,6 +114,17 @@ double   gEntrada = 0, gSL = 0, gTP1 = 0, gTP2 = 0, gTP3 = 0, gTP4 = 0;
 long     gDesdeN  = 0;
 
 #define PSD "MTMPSD_"   // prefixo dos desenhos no grafico
+
+//+------------------------------------------------------------------+
+//| Modo de teste: testador, optimizacao ou conta demo.               |
+//| Nenhum trade real sai daqui, por isso negoceia sem chave.         |
+//| Em conta real (ou concurso) a licenca continua obrigatoria.       |
+//+------------------------------------------------------------------+
+bool ModoTeste()
+  {
+   if(MQLInfoInteger(MQL_TESTER) || MQLInfoInteger(MQL_OPTIMIZATION)) return(true);
+   return(AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO);
+  }
 
 //+------------------------------------------------------------------+
 //| Relogio                                                          |
@@ -523,7 +534,7 @@ void PainelRefrescar()
       grupo=StringFormat("%s @ %s · %s",gCompra?"COMPRA":"VENDA",Fmt(gEntrada),
                          nPos==0? "a espera da zona" : (gTP1Ok? StringFormat("%d perna(s), SL na entrada",nPos) : StringFormat("%d perna(s) abertas",nPos)));
      }
-   string lic = g_licOk? ("licenca valida"+(g_licPlano!=""? " · "+g_licPlano : "")) : g_licMsg;
+   string lic = ModoTeste()? g_licMsg : g_licOk? ("licenca valida"+(g_licPlano!=""? " · "+g_licPlano : "")) : g_licMsg;
    string rod = StringFormat("fuso do servidor UTC%+d · spread %d pts",FusoSegundos()/3600,(int)SymbolInfoInteger(_Symbol,SYMBOL_SPREAD));
    PsPainelRefresh(g_sessAct,g_votoAct,g_nSess,InpMaxSessao,ResultadoDoDia(),grupo,lic,g_licOk,rod);
    ChartRedraw(0);
@@ -544,13 +555,23 @@ int OnInit()
    h_ema9  =iMA(_Symbol,_Period,9,0,MODE_EMA,PRICE_CLOSE);
    if(h_ema200==INVALID_HANDLE || h_ema9==INVALID_HANDLE) return(INIT_FAILED);
 
-   g_psLigado   =InpComecarLigado;
+   //--- no testador nao ha botao para carregar: arranca sempre ligada.
+   //    Em demo tambem, para testar sem cliques (o botao PARAR continua a funcionar).
+   g_psLigado   =InpComecarLigado || ModoTeste();
    g_unanime    =InpUnanime;
    g_loteModoPct=InpRiscoPorPct;
    g_lote       =InpLote;
    g_riscoPct   =InpRiscoPct;
 
-   LicInit(InpLicenseKey,InpLicenseUrl);
+   if(ModoTeste())
+     {
+      g_licOk=true;
+      g_licPlano="";
+      g_licMsg=MQLInfoInteger(MQL_TESTER)? "Testador - sem licenca" : "Conta demo - sem licenca";
+      Print("MTM Premium Scanner: ",g_licMsg," · arranca ligada (em conta real a chave e obrigatoria)");
+     }
+   else
+      LicInit(InpLicenseKey,InpLicenseUrl);
 
    PrintFormat("MTM Premium Scanner: %s %s · fuso do servidor UTC%+d · sessoes Asia %02d–%02d, Londres %02d–%02d, NY %02d–%02d (UTC)",
                _Symbol,EnumToString(_Period),FusoSegundos()/3600,InpAsiaIni,InpAsiaFim,InpLdnIni,InpLdnFim,InpNyIni,InpNyFim);
@@ -585,7 +606,7 @@ void OnDeinit(const int reason)
 
 void OnTick()
   {
-   LicTick(InpLicenseKey,InpLicenseUrl);
+   if(!ModoTeste()) LicTick(InpLicenseKey,InpLicenseUrl);
 
    datetime t0=iTime(_Symbol,_Period,0);
    if(t0!=g_ultBarra)
