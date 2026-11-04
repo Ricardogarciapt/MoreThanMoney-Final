@@ -7,6 +7,9 @@
 > [`lib/escada-precos.ts`](../lib/escada-precos.ts); a prova vive em
 > [`lib/pips-proof.ts`](../lib/pips-proof.ts), medida. Ver §9 — *Onde vivem os números*.
 >
+> **Desde 04/11/2026** o enquadramento estratégico (modelo híbrido, tom anti-pirâmide, setter/closer,
+> MTM Funded) está no [MTM Master Framework](mtm-master-framework.md) — `lib/framework-mtm.ts`.
+>
 > Regra de ouro: **conteúdo educativo, NÃO é aconselhamento financeiro**; nunca prometer ganhos.
 
 ---

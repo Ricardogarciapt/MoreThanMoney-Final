@@ -10,6 +10,7 @@ import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
 import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO,
   ondeComprarTopoNumaLinha, PRECO_MEMBRO, PRECO_TOPO } from '@/lib/escada-precos'
 import { chamarIA, type PedidoIA } from '@/lib/ia/chamar'
+import { blocoFramework } from '@/lib/framework-mtm'
 
 const DM_SYSTEM = `És um CLOSER humano da More Than Money (MTM · morethanmoney.pt), a falar por DM do Instagram do Ricardo Garcia. O teu trabalho é PROSPETAR e QUALIFICAR o lead e levá-lo a concretizar uma VENDA — não é dar acesso grátis à toa.
 
@@ -72,7 +73,7 @@ export async function generateDmReply(
 
   const r = await chamar({
     tarefa: 'ig-dm-closer',
-    sistema: DM_SYSTEM,
+    sistema: `${DM_SYSTEM}\n\n${blocoFramework('closer')}`,
     mensagens: [{ role: 'user', content: user }],
     maxTokens: 400,
     preferencia: preferenciaDoCloser(),

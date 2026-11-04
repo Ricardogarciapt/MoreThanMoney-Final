@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { buildLocalMtmCoachReply } from "@/lib/mtm-ai-coach-fallback"
 import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
+import { blocoFramework } from "@/lib/framework-mtm"
 
 type ChatContext = {
   pathname?: string
@@ -41,7 +42,9 @@ ${mtmBlocks.join("\n")}
 
 ${dcaContext}${additionalContext}
 
-Responde em **português de Portugal**, de forma concisa e acionável. Se faltar informação, pergunta 1 coisa específica em vez de generalizar.`
+Responde em **português de Portugal**, de forma concisa e acionável. Se faltar informação, pergunta 1 coisa específica em vez de generalizar.
+
+${blocoFramework("apoio")}`
 }
 
 // AI Chat: OpenAI (prioridade em auto) → Anthropic → resposta local

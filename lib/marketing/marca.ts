@@ -36,7 +36,7 @@ export const MARCA_BASE: Marca = {
   publico: 'Adultos 25-45 anos em Portugal e no Brasil, presos na armadilha das 40h/semana, que querem aprender a investir e fazer trading com consciência, 15 minutos por dia.',
   dores: 'Pouco tempo, medo de perder dinheiro, já tentaram sozinhos e desistiram, não sabem em quem confiar.',
   promessa: 'Educação financeira e trading consciente com método, ferramentas próprias (scanners, app MTM System, MTM Auto) e acompanhamento — sem promessas de lucro.',
-  tom: 'PT-PT, "tu", autêntico, próximo, inspirador, pouco técnico, emojis moderados.',
+  tom: 'PT-PT, "tu", científico e transparente, focado em dados, assumidamente anti-pirâmide; próximo, pouco técnico, emojis moderados. Ganchos pelo custo de oportunidade (MTM Master Framework, lib/framework-mtm.ts).',
   provas: 'A prova mede-se em pips, com origem declarada (resultados semanais publicados). Nunca percentagens nem ganhos em euros inventados.',
   produtos: [
     { nome: 'Mentoria Premium', descricao: 'Comunidade, sinais educativos, app MTM System e acompanhamento.', preco: '', link: 'https://www.morethanmoney.pt/apresentacao' },
@@ -44,7 +44,7 @@ export const MARCA_BASE: Marca = {
     { nome: 'Scanner individual', descricao: 'Um scanner TradingView à escolha.', preco: '50 €/semestre ou 350 € vitalício', link: 'https://www.morethanmoney.pt/scanners' },
   ],
   concorrentes: '',
-  evitar: 'Jifu, Golden Era, Trendwave, KillShot; nomear a plataforma dos cursos; números de desempenho sem origem.',
+  evitar: 'Jifu, Golden Era, Trendwave, KillShot; nomear concorrentes ou redes de marketing multinível concretas; nomear a plataforma dos cursos; números de desempenho sem origem; prometer retornos ou lucros certos; chamar prop firm ao MTM Funded.',
 }
 
 const texto = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
+import { blocoFramework } from "@/lib/framework-mtm"
 
 const MTM_MENTOR_SYSTEM_PROMPT = `És o Mentor MTM — o assistente de inteligência artificial da More Than Money (MTM). Acompanhas cada membro no seu percurso, com um princípio: PRIMEIRO cliente com resultados, DEPOIS distribuidor se (e só se) o quiser.
 
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
 - Tarefas pendentes: ${pendingTasks.length > 0 ? pendingTasks.join(", ") : "Nenhuma"}`
     }
 
-    const systemPrompt = MTM_MENTOR_SYSTEM_PROMPT + contextBlock
+    const systemPrompt = MTM_MENTOR_SYSTEM_PROMPT + contextBlock + `\n\n${blocoFramework("apoio")}`
 
     // SSE — o cliente continua a receber `text`/`done`/`error` como antes. A diferença (04/10):
     // a resposta vem pela porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic) em vez
