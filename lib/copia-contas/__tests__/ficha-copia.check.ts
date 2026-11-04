@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict'
 import { ligacaoSegueEstrategia, ligacaoSegueGrupoTelegram } from '../../mestres/planear'
 import {
-  lerPedidoFicha, patchContaAuto, patchLigacaoSite, patchMestresConta, patchRetirarSite, patchSubscricaoAuto, textoLote,
+  lerPedidoFicha, patchContaAuto, patchLigacaoSite, patchMestresConta, patchRetirarSite, patchSubscricaoAuto, textoLote, contaPequenaPassouLimiar,
 } from '../ficha-copia-regras'
 
 let n = 0
@@ -94,3 +94,18 @@ ok(() => {
 })
 
 console.log(`ficha-copia: ${n} grupos OK`)
+
+// ── conta pequena (231, dono 04/11) ─────────────────────────────────────────
+{
+  const ligar = patchMestresConta({ conta_pequena_ate: 1000, max_posicoes: 3 })
+  if (!ligar.ok) throw new Error('ligar conta pequena devia passar')
+  if (ligar.patch.lote_fixo_forcado !== 0.01 || ligar.patch.max_posicoes !== 200 || ligar.patch.max_risco_total_pct !== 50) throw new Error('preset de conta pequena errado')
+  if (ligar.patch.conta_pequena_lembrete_em !== null) throw new Error('ligar tem de rearmar o aviso')
+  const desligar = patchMestresConta({ conta_pequena_ate: null })
+  if (!desligar.ok || desligar.patch.lote_fixo_forcado !== null || desligar.patch.max_posicoes !== 10) throw new Error('desligar conta pequena errado')
+  if (!contaPequenaPassouLimiar({ ate: 1000, lembreteEm: null, equity: 1000 })) throw new Error('1000 ≥ 1000 devia avisar')
+  if (contaPequenaPassouLimiar({ ate: 1000, lembreteEm: null, equity: 999.99 })) throw new Error('abaixo do limiar não avisa')
+  if (contaPequenaPassouLimiar({ ate: 1000, lembreteEm: '2026-11-04T18:00:00Z', equity: 5000 })) throw new Error('já avisado não repete')
+  if (contaPequenaPassouLimiar({ ate: 1000, lembreteEm: null, equity: null })) throw new Error('sem equity não avisa')
+  console.log('conta pequena: 7 verificações certas')
+}
