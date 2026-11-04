@@ -248,14 +248,14 @@ f_addKey(float px) =>
         int n = kHits.get(found)
         kPx.set(found, (kPx.get(found) * n + px) / (n + 1))
         kHits.set(found, n + 1)
-    else
+    if found < 0
         kPx.push(px)
         kHits.push(1)
         kBar.push(bar_index - pivStr)
-        if kPx.size() > 120
-            kPx.remove(0)
-            kHits.remove(0)
-            kBar.remove(0)
+    if kPx.size() > 120
+        kPx.remove(0)
+        kHits.remove(0)
+        kBar.remove(0)
     found
 
 if not na(kH)
