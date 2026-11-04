@@ -1,28 +1,29 @@
 //@version=6
 // ─────────────────────────────────────────────────────────────────────────────
-// DEFY — bandas de exaustão, níveis-chave, nuvem de tendência e gestão de ideia
+// DEFY — níveis-chave, bandas de previsão, trend tracker e fichas de pontuação
 //
-// Implementação PRÓPRIA da MoreThanMoney. Os menus e o aspecto seguem o que se vê
-// nas capturas do «DEFY by IQONIC» (código fechado); a lógica foi escrita de raiz a
-// partir do comportamento visível e dos guias «Precision Execution» e «Strategy
-// Operating System». Nenhum código de terceiros foi copiado.
+// QUATRO COMPONENTES
+//  1. Níveis-chave: zonas onde o preço reagiu antes (pivots agrupados). Mostra os N
+//     mais próximos do preço; acima a cor bear, abaixo a cor bull.
+//  2. Bandas de previsão (comprimento 89): interior, média e exterior à volta de uma
+//     média suave, com projecção tracejada para a direita.
+//  3. Trend tracker: velas bull / transição / bear pela nuvem; setas = média do
+//     momento a favor, X = contra.
+//  4. Fichas de pontuação: uma ideia nasce quando há VELA VÁLIDA + fecho a romper o
+//     fractal anterior + pelo menos 3 confluências. A pontuação começa em +3 e sobe
+//     uma por confluência (15 possíveis). +6–7 ★ · +8–9 ★★ · +10 ★★★.
+//     A vela dourada soma +1; vela dourada numa ideia ★★★ = 👑 King.
 //
-// COMO LER:
-//  · Bandas (comprimento 89): três envelopes de desvio à volta de uma média suave.
-//    Tocar a interior = +3, a do meio = +4, a exterior (zona preenchida) = +5.
-//  · Confirmações: 19 verificações (bandas, rejeição, RSI, divergência, níveis-chave,
-//    volume, momento, extremo de 100 velas…). 6–7 = ★, 8–9 = ★★, 10+ = ★★★.
-//  · 👑 King Idea: 15+ confirmações + vela amarela (forte) + momento alinhado + ★★★.
-//  · Velas: cor da tendência; CINZENTA = rejeição na banda (aviso de reversão);
-//    AMARELA = vela forte (Valid Candle).
-//  · Gestão: ENTRY (fecho da vela ou recuo de 50 %), SL, WARNING a 75 % do caminho
-//    para o SL, TP1/TP2/TP3 em múltiplos do risco conforme o Target Mode.
+// GESTÃO: ENTRY no fecho (Candle Close) ou a 50 % da vela de sinal (Candle Pullback).
+// A vela de sinal desenha a zona de momento; a linha WARNING é o extremo dessa vela e o
+// SL fica logo a seguir. Alvos: Squeeze (bandas, cai para Standard se comprimido),
+// Standard 1:1–1:3, Stretch 1:2–1:6, Swing 1:3–1:9.
 //
-// ALERTAS: "Any alert() function call", "Once Per Bar Close" (JSON com a ideia), ou
-// as condições «DEFY Compra» / «DEFY Venda».
+// ALERTAS: Adicionar alerta → condição «Any alert() function call», «Once Per Bar
+// Close». O alerta respeita o Idea Filter. Também há «DEFY Compra» / «DEFY Venda».
 // Conteúdo educativo, não constitui consultoria financeira.
 // ─────────────────────────────────────────────────────────────────────────────
-indicator("DEFY", "DEFY", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=200, max_bars_back=500)
+indicator("DEFY", "DEFY", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=200, max_bars_back=1000)
 
 // ═══════════ DEFY • THEME ═══════════
 gT = "DEFY • THEME"
@@ -39,22 +40,22 @@ cBearLd = input.color(#5B16D8, "Bear",          inline="ld", group=gT)
 // ═══════════ DEFY • LEVELS ═══════════
 gL = "DEFY • LEVELS"
 showLevels = input.bool(true, "Show DEFY Levels", group=gL)
-numLevels  = input.int(10, "Number of Levels", minval=1, maxval=40, group=gL)
+numLevels  = input.int(10, "Number of Levels", minval=1, maxval=30, group=gL, tooltip="Quantos níveis-chave mostrar, os mais próximos do preço actual (acima e abaixo).")
 lvlColor   = input.color(#787B86, "Line Settings", inline="ls", group=gL)
 lvlStyleS  = input.string("Dashed", "", options=["Solid", "Dashed", "Dotted"], inline="ls", group=gL)
 lvlWidth   = input.int(1, "", minval=1, maxval=4, inline="ls", group=gL)
-zoneTransp = input.int(90, "Zone Settings", minval=0, maxval=100, inline="zs", group=gL, tooltip="1.º: transparência da zona. 2.º: força do pivot (velas de cada lado) que define o nível.")
-pivStr     = input.int(10, "", minval=2, maxval=50, inline="zs", group=gL)
+zoneTransp = input.int(90, "Zone Settings", minval=0, maxval=100, inline="zs", group=gL, tooltip="1.º: opacidade da zona (transparência). 2.º: largura da zona (10 ≈ meio ATR).")
+zoneWidth  = input.int(10, "", minval=1, maxval=100, inline="zs", group=gL)
 
 // ═══════════ DEFY • VALID CANDLE ═══════════
 gV = "DEFY • VALID CANDLE"
-profile   = input.string("Strict", "Profile", options=["Strict", "Relaxed"], group=gV)
-expansion = input.string("Soft", "Expansion", options=["Off", "Soft", "Hard"], group=gV)
+profile   = input.string("Strict", "Profile", options=["Strict", "Relaxed"], group=gV, tooltip="Strict: corpo robusto e impulso forte (menos ideias, mais qualidade). Relaxed: estrutura mais flexível.")
+expansion = input.string("Soft", "Expansion", options=["Off", "Soft", "Hard"], group=gV, tooltip="Soft: a vela tem de expandir face às anteriores. Hard: expansão forte, tipo institucional.")
 strongCol = input.color(#FFD600, "Strong Candle Color", group=gV)
 
 // ═══════════ DEFY • CORE ═══════════
 gC = "DEFY • CORE"
-bandLen = input.int(89, "Band Length", minval=10, maxval=400, group=gC)
+bandLen = input.int(89, "Band Length", minval=5, maxval=400, group=gC, tooltip="21–34: mais ideias e movimentos curtos. 50–89: equilibrado. 150+: menos ideias, movimentos maiores.")
 
 // ═══════════ DEFY • BANDS ═══════════
 gB = "DEFY • BANDS"
@@ -83,25 +84,25 @@ ma3Len  = input.int(233, "Length", minval=1, inline="m3", group=gM)
 
 // ═══════════ DEFY • TREND FILTER ═══════════
 gF = "DEFY • TREND FILTER"
-arrowTun    = input.int(5, "Set Arrow Tuning", minval=1, maxval=50, group=gF)
+arrowTun    = input.int(5, "Set Arrow Tuning", minval=1, maxval=50, group=gF, tooltip="Mais baixo = setas mais rápidas. Mais alto = setas mais lentas e consistentes.")
 showArrows  = input.bool(true, "Show Directional Arrows", group=gF)
 arrowTransp = input.int(0, "Set Arrow Transparency", minval=0, maxval=100, group=gF)
 maxArrows   = input.int(250, "Set Max Arrow Labels", minval=0, maxval=300, group=gF)
-arrowMode   = input.string("Track", "Set Arrow Mode", options=["Track", "Flip"], group=gF, tooltip="Track: seta em cada vela que acompanha a tendência com momento. Flip: só quando esse estado começa.")
+arrowMode   = input.string("Track", "Set Arrow Mode", options=["Track", "Continuous", "Reversal Only"], group=gF, tooltip="Track: depois de uma ideia, seta quando o momento está a favor e X quando vira contra. Continuous: todas as setas. Reversal Only: só quando o momento inverte.")
 arrowSizeS  = input.string("Small", "Set Arrow Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=gF)
 
 // ═══════════ DEFY • CLOUD ═══════════
 gN = "DEFY • CLOUD"
-perfType        = input.string("Active", "Performance Type", options=["Active", "Steady", "Smooth"], group=gN)
+perfType        = input.string("Active", "Performance Type", options=["Active", "Steady", "Smooth"], group=gN, tooltip="Active: reage depressa. Steady: equilibrado. Smooth: transições lentas.")
 showCloud       = input.bool(true, "Show Cloud", group=gN)
 showCandleColor = input.bool(true, "Show Candle Coloring", group=gN)
 
 // ═══════════ DEFY • VOLUME BREAKS ═══════════
 gW = "DEFY • VOLUME BREAKS"
-showVol     = input.bool(true, "Show Volume Data", group=gW)
-maxVolS     = input.string("1", "Set Max Labels", options=["1", "2", "4", "6"], group=gW)
-volSizeS    = input.string("Normal", "Set Label Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=gW)
-volTextCol  = input.color(#E6B800, "Set Volume Text Color", group=gW)
+showVol    = input.bool(true, "Show Volume Data", group=gW)
+maxVolS    = input.string("1", "Set Max Labels", options=["1", "2", "4", "6"], group=gW, tooltip="Quantas quebras recentes mostrar de cada lado.")
+volSizeS   = input.string("Normal", "Set Label Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=gW)
+volTextCol = input.color(#E6B800, "Set Volume Text Color", group=gW)
 
 // ═══════════ DEFY • TRADE MANAGEMENT ═══════════
 gX = "DEFY • TRADE MANAGEMENT"
@@ -109,7 +110,7 @@ tradeDisplay = input.string("Full Display", "Trade Display", options=["Full Disp
 ideaFilter   = input.string("+5 and Above", "Idea Filter", options=["+3 and Above", "+4 and Above", "+5 and Above", "★ and Above", "★★ and Above", "★★★ and Above", "👑 Only"], group=gX)
 ideaSizeS    = input.string("Normal", "Idea Label Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=gX)
 entryMode    = input.string("Candle Close", "Entry Mode", options=["Candle Close", "Candle Pullback"], group=gX)
-targetMode   = input.string("Squeeze", "Target Mode", options=["Squeeze", "Standard", "Stretch", "Swing"], group=gX, tooltip="Squeeze: SL curto, alvos 1R/2R/3R (hiperscalping). Standard: SL normal, 1R/2R/3R. Stretch: 1.5R/3R/4.5R. Swing: SL largo, 2R/4R/6R.")
+targetMode   = input.string("Squeeze", "Target Mode", options=["Squeeze", "Standard", "Stretch", "Swing"], group=gX, tooltip="Squeeze: alvos nas bandas (rotação até à média); se estiver comprimido usa Standard. Standard 1:1–1:3. Stretch 1:2–1:6. Swing 1:3–1:9.")
 
 // ═══════════ AUXILIARES ═══════════
 f_size(string s) =>
@@ -137,7 +138,7 @@ bull = themeMode == "Classic" ? cBullCl : themeMode == "Dark" ? cBullDk : themeM
 bear = themeMode == "Classic" ? cBearCl : themeMode == "Dark" ? cBearDk : themeMode == "Light" ? cBearLt : cBearLd
 neutral = #9AA0A6
 
-// ═══════════ BANDAS ═══════════
+// ═══════════ BANDAS DE PREVISÃO ═══════════
 const float M1 = 1.382
 const float M2 = 2.0
 const float M3 = 2.618
@@ -150,7 +151,6 @@ lo1 = basis - dev * M1
 lo2 = basis - dev * M2
 lo3 = basis - dev * M3
 
-// inclinação amortecida para a projecção
 f_slope(float v) =>
     (v - v[5]) / 5.0 * 0.5
 sB  = f_slope(basis)
@@ -161,139 +161,216 @@ sL1 = f_slope(lo1)
 sL2 = f_slope(lo2)
 sL3 = f_slope(lo3)
 
-// ═══════════ NUVEM E TENDÊNCIA ═══════════
+// ═══════════ NUVEM, VELAS E MOMENTO ═══════════
 fastLen = perfType == "Active" ? 8 : perfType == "Steady" ? 13 : 21
 slowLen = perfType == "Active" ? 21 : perfType == "Steady" ? 34 : 55
 fast = ta.ema(close, fastLen)
 slow = ta.ema(close, slowLen)
-dir  = fast >= slow ? 1 : -1
-dirCol = dir == 1 ? bull : bear
+cloudUp = fast >= slow
+trendState = close > fast and fast > slow ? 1 : close < fast and fast < slow ? -1 : 0   // bull / transição / bear
+momAvg = ta.ema(close - close[arrowTun], arrowTun)
+momUp  = momAvg > momAvg[1]
 
-// ═══════════ INDICADORES DE APOIO ═══════════
-atr   = ta.atr(14)
-rsi   = ta.rsi(close, 14)
-stK   = ta.sma(ta.stoch(close, high, low, 14), 3)
-mom   = close - close[arrowTun]
-body  = math.abs(close - open)
-rng   = high - low
+// ═══════════ APOIO ═══════════
+atr    = ta.atr(14)
+atrL   = ta.atr(200)
+rsi    = ta.rsi(close, 14)
+body   = math.abs(close - open)
+rng    = high - low
 upWick = high - math.max(open, close)
 dnWick = math.min(open, close) - low
 avgBody = ta.sma(body, 20)
 hasVol = not na(volume) and volume > 0
 avgVol = ta.sma(nz(volume), 20)
-volHi  = hasVol and avgVol > 0 and volume > avgVol * 1.2
+ma1 = ta.ema(close, ma1Len)
+ma2 = ta.ema(close, ma2Len)
+ma3 = ta.ema(close, ma3Len)
 
-hh20  = ta.highest(high, 20)[1]
-ll20  = ta.lowest(low, 20)[1]
-rsiH20 = ta.highest(rsi, 20)[1]
-rsiL20 = ta.lowest(rsi, 20)[1]
-hh100 = ta.highest(high, 100)[1]
-ll100 = ta.lowest(low, 100)[1]
-divBear = high >= hh20 and rsi < rsiH20
-divBull = low <= ll20 and rsi > rsiL20
+// ═══════════ VELA VÁLIDA E VELA DOURADA ═══════════
+ratioMin = profile == "Strict" ? 0.6 : 0.45
+bodyMult = profile == "Strict" ? 1.3 : 1.0
+hiRng5 = ta.highest(rng, 5)[1]
+expOk = expansion == "Off" ? true : expansion == "Soft" ? rng > rng[1] and body > body[1] : rng >= hiRng5 and rng >= atr * 1.2
+validCandle = rng > 0 and body / rng >= ratioMin and body >= avgBody * bodyMult and expOk
+validBull = validCandle and close > open
+validBear = validCandle and close < open
+golden = validCandle and (hasVol ? volume > avgVol * 1.5 and body / rng >= 0.6 : rng >= atr * 1.5)
 
-// ═══════════ VALID CANDLE (vela forte = amarela) ═══════════
-ratioMin = profile == "Strict" ? 0.65 : 0.5
-bodyMult = profile == "Strict" ? 1.5 : 1.2
-expMult  = expansion == "Off" ? 0.0 : expansion == "Soft" ? 1.0 : 1.5
-strong = rng > 0 and body / rng >= ratioMin and body >= avgBody * bodyMult and (expMult == 0.0 or rng >= atr * expMult)
-strongBull = strong and close > open
-strongBear = strong and close < open
+// ═══════════ FRACTAIS (2-2) ═══════════
+fH = ta.pivothigh(high, 2, 2)
+fL = ta.pivotlow(low, 2, 2)
+var float lastFH = na
+var float lastFL = na
+var float prevFH = na
+var float prevFL = na
+var bool fhUsed = true
+var bool flUsed = true
+if not na(fH)
+    prevFH := lastFH
+    lastFH := fH
+    fhUsed := false
+if not na(fL)
+    prevFL := lastFL
+    lastFL := fL
+    flUsed := false
+breakUp = not fhUsed and not na(lastFH) and close > lastFH
+breakDn = not flUsed and not na(lastFL) and close < lastFL
+if breakUp
+    fhUsed := true
+if breakDn
+    flUsed := true
 
-// ═══════════ NÍVEIS-CHAVE (pivots) ═══════════
-var array<float> lvlPx  = array.new<float>()
-var array<line>  lvlLn  = array.new<line>()
-var array<box>   lvlBx  = array.new<box>()
-ph = ta.pivothigh(high, pivStr, pivStr)
-pl = ta.pivotlow(low, pivStr, pivStr)
-zh = nz(atr, 0.0) * 0.3
+// ═══════════ NÍVEIS-CHAVE (pivots agrupados por reacção) ═══════════
+pivStr = 10
+var array<float> kPx = array.new<float>()
+var array<int>   kHits = array.new<int>()
+var array<int>   kBar = array.new<int>()
+kH = ta.pivothigh(high, pivStr, pivStr)
+kL = ta.pivotlow(low, pivStr, pivStr)
+mergeTol = nz(atrL, atr) * 0.5
 
-f_addLevel(float px, color c) =>
-    lvlPx.push(px)
-    if showLevels
-        lvlLn.push(line.new(bar_index - pivStr, px, bar_index, px, extend=extend.right, color=lvlColor, style=f_lineStyle(lvlStyleS), width=lvlWidth))
-        lvlBx.push(box.new(bar_index - pivStr, px + zh / 2, bar_index, px - zh / 2, border_color=na, bgcolor=color.new(c, zoneTransp), extend=extend.right))
-    if lvlPx.size() > numLevels
-        lvlPx.shift()
-    if lvlLn.size() > numLevels
-        line.delete(lvlLn.shift())
-    if lvlBx.size() > numLevels
-        box.delete(lvlBx.shift())
+f_addKey(float px) =>
+    int found = -1
+    if kPx.size() > 0
+        for i = 0 to kPx.size() - 1
+            if math.abs(kPx.get(i) - px) <= mergeTol
+                found := i
+                break
+    if found >= 0
+        int n = kHits.get(found)
+        kPx.set(found, (kPx.get(found) * n + px) / (n + 1))
+        kHits.set(found, n + 1)
+    else
+        kPx.push(px)
+        kHits.push(1)
+        kBar.push(bar_index - pivStr)
+        if kPx.size() > 120
+            kPx.shift()
+            kHits.shift()
+            kBar.shift()
 
-if not na(ph)
-    f_addLevel(ph, bear)
-if not na(pl)
-    f_addLevel(pl, bull)
+if not na(kH)
+    f_addKey(kH)
+if not na(kL)
+    f_addKey(kL)
 
-f_nearLevel(float px) =>
+f_nearKey(float px) =>
     bool near = false
-    if lvlPx.size() > 0
-        for p in lvlPx
-            if math.abs(px - p) <= atr * 0.5
+    if kPx.size() > 0
+        for p in kPx
+            if math.abs(px - p) <= atr * 0.6
                 near := true
     near
 
-nearRes = f_nearLevel(high)
-nearSup = f_nearLevel(low)
+// desenhar os N níveis mais próximos do preço (só na última vela)
+var array<line> keyLines = array.new<line>()
+var array<box>  keyBoxes = array.new<box>()
+if barstate.islast
+    for l in keyLines
+        line.delete(l)
+    keyLines.clear()
+    for b in keyBoxes
+        box.delete(b)
+    keyBoxes.clear()
+    if showLevels and kPx.size() > 0
+        array<float> dists = array.new<float>()
+        for p in kPx
+            dists.push(math.abs(p - close))
+        array<int> idxs = dists.sort_indices(order.ascending)
+        float zh = nz(atrL, atr) * zoneWidth / 20.0
+        int shown = math.min(numLevels, idxs.size())
+        for j = 0 to shown - 1
+            int idx = idxs.get(j)
+            float p = kPx.get(idx)
+            int x0 = math.max(kBar.get(idx), bar_index - 4999)
+            color zc = p >= close ? bear : bull
+            keyLines.push(line.new(x0, p, bar_index, p, extend=extend.right, color=lvlColor, style=f_lineStyle(lvlStyleS), width=lvlWidth))
+            keyBoxes.push(box.new(x0, p + zh / 2, bar_index, p - zh / 2, border_color=na, bgcolor=color.new(zc, zoneTransp), extend=extend.right))
 
-// ═══════════ CONFIRMAÇÕES (19 de cada lado) ═══════════
-cntSell = b2i(high >= up1) + b2i(high >= up2) + b2i(high >= up3) + b2i(close < up1) + b2i(close < open) +
-     b2i(upWick >= body) + b2i(rsi >= 70) + b2i(rsi < rsi[1]) + b2i(divBear) + b2i(nearRes) +
-     b2i(volHi) + b2i(mom < mom[1]) + b2i(high - basis >= atr * 2) + b2i(stK >= 80) + b2i(high[1] >= up1[1]) +
-     b2i(strongBear) + b2i(fast < fast[1]) + b2i(close > slow) + b2i(high >= hh100)
-cntBuy = b2i(low <= lo1) + b2i(low <= lo2) + b2i(low <= lo3) + b2i(close > lo1) + b2i(close > open) +
-     b2i(dnWick >= body) + b2i(rsi <= 30) + b2i(rsi > rsi[1]) + b2i(divBull) + b2i(nearSup) +
-     b2i(volHi) + b2i(mom > mom[1]) + b2i(basis - low >= atr * 2) + b2i(stK <= 20) + b2i(low[1] <= lo1[1]) +
-     b2i(strongBull) + b2i(fast > fast[1]) + b2i(close < slow) + b2i(low <= ll100)
+// ═══════════ VOLUME BREAKS (pico de volume + quebra de Supertrend) ═══════════
+[stLine, stDir] = ta.supertrend(3.0, 10)
+stFlipUp = stDir < 0 and stDir[1] > 0
+stFlipDn = stDir > 0 and stDir[1] < 0
+volSpike = hasVol and avgVol > 0 and volume > avgVol * 1.3
+vbBull = volSpike and stFlipUp
+vbBear = volSpike and stFlipDn
 
-lvlSell = high >= up3 ? 5 : high >= up2 ? 4 : high >= up1 ? 3 : 0
-lvlBuy  = low <= lo3 ? 5 : low <= lo2 ? 4 : low <= lo1 ? 3 : 0
+// ═══════════ CONFLUÊNCIAS (15 possíveis de cada lado) ═══════════
+// compra
+tIn1B  = ta.lowest(low - lo1, 5) <= 0
+tIn2B  = ta.lowest(low - lo2, 5) <= 0
+tIn3B  = ta.lowest(low - lo3, 5) <= 0
+keyB   = f_nearKey(ta.lowest(low, 5))
+cldB   = cloudUp
+momB   = momUp
+maOrdB = close > ma1 and close > ma2
+maBncB = ta.lowest(low - ma1, 3) <= 0 or ta.lowest(low - ma2, 3) <= 0
+maXB   = ta.barssince(ta.crossover(ma1, ma2)) <= 10
+engB   = close > open and close[1] < open[1] and close >= open[1] and open <= close[1]
+wickB  = ta.highest(dnWick - body, 3) >= 0
+volB   = ta.barssince(vbBull) <= 3
+fvgB   = ta.barssince(low > high[2]) <= 5
+rsiB   = ta.lowest(rsi, 8) <= 35
+hlB    = not na(prevFL) and lastFL > prevFL
+// venda
+tIn1S  = ta.highest(high - up1, 5) >= 0
+tIn2S  = ta.highest(high - up2, 5) >= 0
+tIn3S  = ta.highest(high - up3, 5) >= 0
+keyS   = f_nearKey(ta.highest(high, 5))
+cldS   = not cloudUp
+momS   = not momUp
+maOrdS = close < ma1 and close < ma2
+maBncS = ta.highest(high - ma1, 3) >= 0 or ta.highest(high - ma2, 3) >= 0
+maXS   = ta.barssince(ta.crossunder(ma1, ma2)) <= 10
+engS   = close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
+wickS  = ta.highest(upWick - body, 3) >= 0
+volS   = ta.barssince(vbBear) <= 3
+fvgS   = ta.barssince(high < low[2]) <= 5
+rsiS   = ta.highest(rsi, 8) >= 65
+lhS    = not na(prevFH) and lastFH < prevFH
 
-f_stars(int c) =>
-    c >= 10 ? 3 : c >= 8 ? 2 : c >= 6 ? 1 : 0
+confB = b2i(tIn1B) + b2i(tIn2B) + b2i(tIn3B) + b2i(keyB) + b2i(cldB) + b2i(momB) + b2i(maOrdB) + b2i(maBncB) +
+     b2i(maXB) + b2i(engB) + b2i(wickB) + b2i(volB) + b2i(fvgB) + b2i(rsiB) + b2i(hlB)
+confS = b2i(tIn1S) + b2i(tIn2S) + b2i(tIn3S) + b2i(keyS) + b2i(cldS) + b2i(momS) + b2i(maOrdS) + b2i(maBncS) +
+     b2i(maXS) + b2i(engS) + b2i(wickS) + b2i(volS) + b2i(fvgS) + b2i(rsiS) + b2i(lhS)
 
-starsSell = f_stars(cntSell)
-starsBuy  = f_stars(cntBuy)
-momSell = rsi < rsi[1] and mom < mom[1]
-momBuy  = rsi > rsi[1] and mom > mom[1]
-kingSell = cntSell >= 15 and strongBear and momSell and starsSell == 3
-kingBuy  = cntBuy >= 15 and strongBull and momBuy and starsBuy == 3
+scoreB = confB + b2i(golden and validBull)
+scoreS = confS + b2i(golden and validBear)
 
-f_pass(int lvl, int stars, bool king) =>
+f_stars(int s) =>
+    s >= 10 ? 3 : s >= 8 ? 2 : s >= 6 ? 1 : 0
+
+starsB = f_stars(scoreB)
+starsS = f_stars(scoreS)
+kingB = confB >= 10 and golden and validBull
+kingS = confS >= 10 and golden and validBear
+
+f_pass(int sc, int stars, bool king) =>
     switch ideaFilter
-        "+3 and Above"  => lvl >= 3
-        "+4 and Above"  => lvl >= 4
-        "+5 and Above"  => lvl >= 5
+        "+3 and Above"  => sc >= 3
+        "+4 and Above"  => sc >= 4
+        "+5 and Above"  => sc >= 5
         "★ and Above"   => stars >= 1
         "★★ and Above"  => stars >= 2
         "★★★ and Above" => stars >= 3
         "👑 Only"       => king
         => true
 
-// gatilho: tocou a banda e fechou de volta para dentro, com vela a favor
-rejSell = lvlSell >= 3 and close < up1
-rejBuy  = lvlBuy >= 3 and close > lo1
-var int lastSellBar = -1000
-var int lastBuyBar  = -1000
-rawSell = barstate.isconfirmed and rejSell and close < open and bar_index - lastSellBar > arrowTun
-rawBuy  = barstate.isconfirmed and rejBuy and close > open and bar_index - lastBuyBar > arrowTun
-sigSell = rawSell and f_pass(lvlSell, starsSell, kingSell)
-sigBuy  = rawBuy and f_pass(lvlBuy, starsBuy, kingBuy)
-if rawSell
-    lastSellBar := bar_index
-if rawBuy
-    lastBuyBar := bar_index
+// núcleo: vela válida + fecho a romper o fractal + ≥3 confluências
+coreB = barstate.isconfirmed and validBull and breakUp and confB >= 3
+coreS = barstate.isconfirmed and validBear and breakDn and confS >= 3
+sigBuy  = coreB and f_pass(scoreB, starsB, kingB)
+sigSell = coreS and f_pass(scoreS, starsS, kingS)
 
-// ═══════════ PLOTS: BANDAS, NUVEM, MÉDIAS ═══════════
-pU1 = plot(showInner ? up1 : na, "Upper BB1", color.new(bear, bandTransp), bandWidth)
-pL1 = plot(showInner ? lo1 : na, "Lower BB1", color.new(bull, bandTransp), bandWidth)
-pU2 = plot(showMid ? up2 : na, "Upper BB2", color.new(bear, bandTransp), bandWidth)
-pL2 = plot(showMid ? lo2 : na, "Lower BB2", color.new(bull, bandTransp), bandWidth)
-pU3 = plot(showOuter ? up3 : na, "Upper BB3", color.new(bear, bandTransp), bandWidth)
-pL3 = plot(showOuter ? lo3 : na, "Lower BB3", color.new(bull, bandTransp), bandWidth)
+// ═══════════ PLOTS ═══════════
+plot(showInner ? up1 : na, "Upper BB1", color.new(bear, bandTransp), bandWidth)
+plot(showInner ? lo1 : na, "Lower BB1", color.new(bull, bandTransp), bandWidth)
+plot(showMid ? up2 : na, "Upper BB2", color.new(bear, bandTransp), bandWidth)
+plot(showMid ? lo2 : na, "Lower BB2", color.new(bull, bandTransp), bandWidth)
+plot(showOuter ? up3 : na, "Upper BB3", color.new(bear, bandTransp), bandWidth)
+plot(showOuter ? lo3 : na, "Lower BB3", color.new(bull, bandTransp), bandWidth)
 plot(showCenter ? basis : na, "Centerline", color.new(neutral, bandTransp), 1, plot.style_circles)
 
-// zona exterior preenchida (âncoras invisíveis para não depender das linhas visíveis)
 aU2 = plot(up2, "anchor U2", color=na, editable=false, display=display.none)
 aU3 = plot(up3, "anchor U3", color=na, editable=false, display=display.none)
 aL2 = plot(lo2, "anchor L2", color=na, editable=false, display=display.none)
@@ -301,56 +378,47 @@ aL3 = plot(lo3, "anchor L3", color=na, editable=false, display=display.none)
 fill(aU2, aU3, showFill ? color.new(bear, fillTransp) : na, "Upper Zone")
 fill(aL2, aL3, showFill ? color.new(bull, fillTransp) : na, "Lower Zone")
 
-plot(showMa1 ? ta.ema(close, ma1Len) : na, "MA 1", color.new(neutral, 0), 1)
-plot(showMa2 ? ta.ema(close, ma2Len) : na, "MA 2", color.new(#B2B5BE, 0), 1)
-plot(showMa3 ? ta.ema(close, ma3Len) : na, "MA 3", color.new(#5D606B, 0), 2)
+plot(showMa1 ? ma1 : na, "MA 1", color.new(neutral, 0), 1)
+plot(showMa2 ? ma2 : na, "MA 2", color.new(#B2B5BE, 0), 1)
+plot(showMa3 ? ma3 : na, "MA 3", color.new(#5D606B, 0), 2)
 
-pF = plot(showCloud ? fast : na, "Cloud Fast", dirCol, 2)
-pS = plot(showCloud ? slow : na, "Cloud Slow", color.new(dirCol, 40), 1)
-fill(pF, pS, showCloud ? color.new(dirCol, 75) : na, "Cloud")
+cloudCol = cloudUp ? bull : bear
+pF = plot(showCloud ? fast : na, "Cloud Fast", cloudCol, 2)
+pS = plot(showCloud ? slow : na, "Cloud Slow", color.new(cloudCol, 40), 1)
+fill(pF, pS, showCloud ? color.new(cloudCol, 75) : na, "Cloud")
 
-// ═══════════ VELAS ═══════════
-greyBar = rejSell or rejBuy
-candleCol = strong ? strongCol : greyBar ? neutral : dirCol
+candleCol = golden ? strongCol : trendState == 1 ? bull : trendState == -1 ? bear : neutral
 barcolor(showCandleColor ? candleCol : na, title="Bar Color")
 
-// ═══════════ SETAS DIRECCIONAIS ═══════════
-var array<label> arrows = array.new<label>()
-upTrack = dir == 1 and mom > 0 and close > fast and close > open
-dnTrack = dir == -1 and mom < 0 and close < fast and close < open
-arrUp = arrowMode == "Track" ? upTrack : upTrack and not upTrack[1]
-arrDn = arrowMode == "Track" ? dnTrack : dnTrack and not dnTrack[1]
-if showArrows and maxArrows > 0 and barstate.isconfirmed
-    if arrUp
-        arrows.push(label.new(bar_index, low, "▲", yloc=yloc.belowbar, style=label.style_none, textcolor=color.new(bull, arrowTransp), size=f_size(arrowSizeS)))
-    if arrDn
-        arrows.push(label.new(bar_index, high, "▼", yloc=yloc.abovebar, style=label.style_none, textcolor=color.new(bear, arrowTransp), size=f_size(arrowSizeS)))
-    while arrows.size() > maxArrows
-        label.delete(arrows.shift())
-
-// ═══════════ VOLUME BREAKS ═══════════
-var array<label> volLbls = array.new<label>()
-volBreak = hasVol and avgVol > 0 and volume > avgVol * 1.8
-if showVol and volBreak and barstate.isconfirmed
+// ═══════════ VOLUME BREAK LABELS ═══════════
+var array<label> volBull = array.new<label>()
+var array<label> volBear = array.new<label>()
+maxVol = int(str.tonumber(maxVolS))
+if showVol and barstate.isconfirmed and (vbBull or vbBear)
     pct = (volume / avgVol - 1.0) * 100.0
-    bool isUp = close >= open
-    volLbls.push(label.new(bar_index, isUp ? low - atr * 0.6 : high + atr * 0.6, "Vol: " + str.tostring(pct, "#.#") + "%", style=label.style_none, textcolor=volTextCol, size=f_size(volSizeS)))
-    while volLbls.size() > int(str.tonumber(maxVolS))
-        label.delete(volLbls.shift())
+    string vt = "Vol: " + str.tostring(pct, "#.#") + "%"
+    if vbBull
+        volBull.push(label.new(bar_index, low - atr * 0.8, vt, style=label.style_none, textcolor=volTextCol, size=f_size(volSizeS)))
+        while volBull.size() > maxVol
+            label.delete(volBull.shift())
+    if vbBear
+        volBear.push(label.new(bar_index, high + atr * 0.8, vt, style=label.style_none, textcolor=volTextCol, size=f_size(volSizeS)))
+        while volBear.size() > maxVol
+            label.delete(volBear.shift())
 
 // ═══════════ IDEA CARDS ═══════════
 var array<label> ideaLbls = array.new<label>()
-f_ideaTxt(int lvl, int stars, bool king) =>
-    (king ? "👑 " : "") + "+" + str.tostring(lvl) + (stars > 0 ? "\n" + str.repeat("★", stars) : "")
+f_ideaTxt(int sc, int stars, bool king) =>
+    king ? "👑" : "+" + str.tostring(sc) + (stars > 0 ? "\n" + str.repeat("★", stars) : "")
 
 if sigSell
-    ideaLbls.push(label.new(bar_index, high, f_ideaTxt(lvlSell, starsSell, kingSell), style=label.style_label_down, color=kingSell ? strongCol : bear, textcolor=kingSell ? color.black : color.white, size=f_size(ideaSizeS)))
+    ideaLbls.push(label.new(bar_index, high, f_ideaTxt(scoreS, starsS, kingS), style=label.style_label_down, color=kingS ? strongCol : bear, textcolor=kingS ? color.black : color.white, size=f_size(ideaSizeS)))
 if sigBuy
-    ideaLbls.push(label.new(bar_index, low, f_ideaTxt(lvlBuy, starsBuy, kingBuy), style=label.style_label_up, color=kingBuy ? strongCol : bull, textcolor=kingBuy ? color.black : color.white, size=f_size(ideaSizeS)))
+    ideaLbls.push(label.new(bar_index, low, f_ideaTxt(scoreB, starsB, kingB), style=label.style_label_up, color=kingB ? strongCol : bull, textcolor=kingB ? color.black : color.white, size=f_size(ideaSizeS)))
 while ideaLbls.size() > 150
     label.delete(ideaLbls.shift())
 
-// ═══════════ GESTÃO DA IDEIA (ENTRY / SL / WARNING / TP1-3) ═══════════
+// ═══════════ GESTÃO (ENTRY / SL / WARNING / TP1-3) ═══════════
 type Trade
     int dir
     float entry
@@ -369,11 +437,12 @@ type Trade
     array<label> lbs
 
 var Trade cur = na
+var int lastIdeaDir = 0
+var int lastIdeaBar = -1
 
-kSL = targetMode == "Squeeze" ? 0.5 : targetMode == "Standard" ? 1.0 : targetMode == "Stretch" ? 1.0 : 1.5
-r1  = targetMode == "Stretch" ? 1.5 : targetMode == "Swing" ? 2.0 : 1.0
-r2  = targetMode == "Stretch" ? 3.0 : targetMode == "Swing" ? 4.0 : 2.0
-r3  = targetMode == "Stretch" ? 4.5 : targetMode == "Swing" ? 6.0 : 3.0
+rA = targetMode == "Stretch" ? 2.0 : targetMode == "Swing" ? 3.0 : 1.0
+rB = targetMode == "Stretch" ? 4.0 : targetMode == "Swing" ? 6.0 : 2.0
+rC = targetMode == "Stretch" ? 6.0 : targetMode == "Swing" ? 9.0 : 3.0
 
 f_clear(Trade t) =>
     if not na(t)
@@ -383,28 +452,48 @@ f_clear(Trade t) =>
         for lb in t.lbs
             label.delete(lb)
 
+// alvos Squeeze: as bandas seguintes na direcção; se faltarem ou estiverem perto demais → Standard
+f_targets(int d, float e, float rk) =>
+    float t1 = e + d * rk * rA
+    float t2 = e + d * rk * rB
+    float t3 = e + d * rk * rC
+    if targetMode == "Squeeze"
+        array<float> cand = d == 1 ? array.from(lo1, basis, up1, up2, up3) : array.from(up1, basis, lo1, lo2, lo3)
+        array<float> ok = array.new<float>()
+        for c in cand
+            if not na(c) and (c - e) * d >= rk * 0.8
+                ok.push(c)
+        if ok.size() >= 3
+            t1 := ok.get(0)
+            t2 := ok.get(1)
+            t3 := ok.get(2)
+    [t1, t2, t3]
+
 f_new(int d) =>
     float e = entryMode == "Candle Close" ? close : (high + low) / 2.0
-    float edge = d == -1 ? high - e : e - low
-    float rk = math.max(edge, atr * kSL) + atr * 0.1
-    Trade t = Trade.new(d, e, e - d * rk, e - d * rk * 0.75, e + d * rk * r1, e + d * rk * r2, e + d * rk * r3, rk, bar_index, entryMode != "Candle Close", entryMode == "Candle Close", 0, na, array.new<line>(), array.new<label>())
+    float w = d == 1 ? low : high                     // WARNING = extremo da vela de sinal
+    float sl = w - d * math.max(atr * 0.25, syminfo.mintick * 2)
+    float rk = math.abs(e - sl)
+    [t1, t2, t3] = f_targets(d, e, rk)
+    Trade t = Trade.new(d, e, sl, w, t1, t2, t3, rk, bar_index, entryMode != "Candle Close", entryMode == "Candle Close", 0, na, array.new<line>(), array.new<label>())
     color cDir = d == 1 ? bull : bear
     color cOpp = d == 1 ? bear : bull
     int x2 = bar_index + 10
-    t.zone := box.new(bar_index, math.max(e, t.sl), x2, math.min(e, t.sl), border_color=na, bgcolor=color.new(cDir, 70))
-    t.lns.push(line.new(bar_index, t.sl,   x2, t.sl,   color=cOpp, style=line.style_dotted, width=2))
-    t.lns.push(line.new(bar_index, t.warn, x2, t.warn, color=cOpp, style=line.style_solid,  width=1))
-    t.lns.push(line.new(bar_index, e,      x2, e,      color=cDir, style=line.style_solid,  width=2))
-    t.lns.push(line.new(bar_index, t.tp1,  x2, t.tp1,  color=cDir, style=line.style_dotted, width=2))
-    t.lns.push(line.new(bar_index, t.tp2,  x2, t.tp2,  color=cDir, style=line.style_dotted, width=2))
-    t.lns.push(line.new(bar_index, t.tp3,  x2, t.tp3,  color=cDir, style=line.style_dotted, width=2))
+    // zona de momento = corpo-a-extremo da vela de sinal
+    t.zone := box.new(bar_index, math.max(e, w), x2, math.min(e, w), border_color=na, bgcolor=color.new(cDir, 65))
+    t.lns.push(line.new(bar_index, sl,   x2, sl,   color=cOpp, style=line.style_dotted, width=2))
+    t.lns.push(line.new(bar_index, w,    x2, w,    color=cOpp, style=line.style_solid,  width=1))
+    t.lns.push(line.new(bar_index, e,    x2, e,    color=cDir, style=line.style_solid,  width=2))
+    t.lns.push(line.new(bar_index, t1,   x2, t1,   color=cDir, style=line.style_dotted, width=2))
+    t.lns.push(line.new(bar_index, t2,   x2, t2,   color=cDir, style=line.style_dotted, width=2))
+    t.lns.push(line.new(bar_index, t3,   x2, t3,   color=cDir, style=line.style_dotted, width=2))
     string entTxt = (entryMode == "Candle Close" ? "ENTRY: " : "50% PULLBACK ENTRY: ") + str.tostring(e, format.mintick)
-    t.lbs.push(label.new(x2, t.sl,   f_lvlTxt("SL", rk, t.sl), style=label.style_label_left, color=cOpp, textcolor=color.white, size=size.small))
-    t.lbs.push(label.new(x2, t.warn, "WARNING: " + str.tostring(t.warn, format.mintick), style=label.style_label_left, color=cOpp, textcolor=color.white, size=size.small))
-    t.lbs.push(label.new(x2, e,      entTxt, style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
-    t.lbs.push(label.new(x2, t.tp1,  f_lvlTxt("TP 1", rk * r1, t.tp1), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
-    t.lbs.push(label.new(x2, t.tp2,  f_lvlTxt("TP 2", rk * r2, t.tp2), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
-    t.lbs.push(label.new(x2, t.tp3,  f_lvlTxt("TP 3", rk * r3, t.tp3), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
+    t.lbs.push(label.new(x2, sl, f_lvlTxt("SL", rk, sl), style=label.style_label_left, color=cOpp, textcolor=color.white, size=size.small))
+    t.lbs.push(label.new(x2, w,  "WARNING: " + str.tostring(w, format.mintick), style=label.style_label_left, color=cOpp, textcolor=color.white, size=size.small))
+    t.lbs.push(label.new(x2, e,  entTxt, style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
+    t.lbs.push(label.new(x2, t1, f_lvlTxt("TP 1", math.abs(t1 - e), t1), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
+    t.lbs.push(label.new(x2, t2, f_lvlTxt("TP 2", math.abs(t2 - e), t2), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
+    t.lbs.push(label.new(x2, t3, f_lvlTxt("TP 3", math.abs(t3 - e), t3), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
     t
 
 f_extend(Trade t) =>
@@ -415,7 +504,6 @@ f_extend(Trade t) =>
     for lb in t.lbs
         label.set_x(lb, x2)
 
-// actualizar a ideia aberta (antes de criar uma nova nesta vela)
 if not na(cur) and (cur.active or cur.pending) and bar_index > cur.startBar
     if cur.pending
         bool touched = cur.dir == 1 ? low <= cur.entry : high >= cur.entry
@@ -432,21 +520,48 @@ if not na(cur) and (cur.active or cur.pending) and bar_index > cur.startBar
             cur.active := false
         else
             array<float> tps = array.from(cur.tp1, cur.tp2, cur.tp3)
-            array<float> rs  = array.from(r1, r2, r3)
             for k = cur.hits to 2
                 float tp = tps.get(k)
                 bool hit = cur.dir == 1 ? high >= tp : low <= tp
                 if hit
                     cur.hits := k + 1
-                    label.set_text(cur.lbs.get(3 + k), f_lvlTxt("TP " + str.tostring(k + 1), cur.risk * rs.get(k), tp) + " ✓")
+                    label.set_text(cur.lbs.get(3 + k), f_lvlTxt("TP " + str.tostring(k + 1), math.abs(tp - cur.entry), tp) + " ✓")
             if cur.hits >= 3
                 cur.active := false
     if cur.active or cur.pending
         f_extend(cur)
 
-if tradeDisplay == "Full Display" and (sigSell or sigBuy)
-    f_clear(cur)
-    cur := f_new(sigBuy ? 1 : -1)
+if sigSell or sigBuy
+    lastIdeaDir := sigBuy ? 1 : -1
+    lastIdeaBar := bar_index
+    if tradeDisplay == "Full Display"
+        f_clear(cur)
+        cur := f_new(lastIdeaDir)
+
+// ═══════════ TREND TRACKER (setas e X) ═══════════
+var array<label> arrows = array.new<label>()
+momFlipUp = momUp and not momUp[1]
+momFlipDn = not momUp and momUp[1]
+inTrack = lastIdeaDir != 0 and bar_index > lastIdeaBar and bar_index - lastIdeaBar <= 60
+f_arrow(bool up, bool isX) =>
+    color c = color.new(up ? bull : bear, arrowTransp)
+    string s = isX ? "✕" : up ? "▲" : "▼"
+    arrows.push(label.new(bar_index, up ? low : high, s, yloc=up ? yloc.belowbar : yloc.abovebar, style=label.style_none, textcolor=c, size=f_size(arrowSizeS)))
+
+if showArrows and maxArrows > 0 and barstate.isconfirmed
+    if arrowMode == "Continuous"
+        f_arrow(momUp, false)
+    else if arrowMode == "Reversal Only"
+        if momFlipUp
+            f_arrow(true, false)
+        if momFlipDn
+            f_arrow(false, false)
+    else if inTrack
+        bool aligned = lastIdeaDir == 1 ? momUp : not momUp
+        // a favor: seta na direcção da ideia; contra: X na cor oposta
+        f_arrow(aligned ? lastIdeaDir == 1 : lastIdeaDir != 1, not aligned)
+    while arrows.size() > maxArrows
+        label.delete(arrows.shift())
 
 // ═══════════ PROJECÇÃO TRACEJADA ═══════════
 var array<line> projLines = array.new<line>()
@@ -483,17 +598,19 @@ if barstate.islast
 alertcondition(sigBuy,  "DEFY Compra", "DEFY: ideia de COMPRA em {{ticker}} a {{close}}")
 alertcondition(sigSell, "DEFY Venda",  "DEFY: ideia de VENDA em {{ticker}} a {{close}}")
 
-f_json(int d, int lvl, int stars, bool king, int cnt) =>
+f_json(int d, int sc, int stars, bool king) =>
     float e = entryMode == "Candle Close" ? close : (high + low) / 2.0
-    float edge = d == -1 ? high - e : e - low
-    float rk = math.max(edge, atr * kSL) + atr * 0.1
+    float w = d == 1 ? low : high
+    float sl = w - d * math.max(atr * 0.25, syminfo.mintick * 2)
+    float rk = math.abs(e - sl)
+    [t1, t2, t3] = f_targets(d, e, rk)
     '{"source":"defy","ticker":"' + syminfo.ticker + '","side":"' + (d == 1 ? "buy" : "sell") +
-     '","level":' + str.tostring(lvl) + ',"stars":' + str.tostring(stars) + ',"king":' + (king ? "true" : "false") +
-     ',"confirmations":' + str.tostring(cnt) + ',"entry":' + str.tostring(e) + ',"sl":' + str.tostring(e - d * rk) +
-     ',"tp1":' + str.tostring(e + d * rk * r1) + ',"tp2":' + str.tostring(e + d * rk * r2) + ',"tp3":' + str.tostring(e + d * rk * r3) +
+     '","score":' + str.tostring(sc) + ',"stars":' + str.tostring(stars) + ',"king":' + (king ? "true" : "false") +
+     ',"entry":' + str.tostring(e) + ',"warning":' + str.tostring(w) + ',"sl":' + str.tostring(sl) +
+     ',"tp1":' + str.tostring(t1) + ',"tp2":' + str.tostring(t2) + ',"tp3":' + str.tostring(t3) +
      ',"tf":"' + timeframe.period + '"}'
 
 if sigBuy
-    alert(f_json(1, lvlBuy, starsBuy, kingBuy, cntBuy), alert.freq_once_per_bar_close)
+    alert(f_json(1, scoreB, starsB, kingB), alert.freq_once_per_bar_close)
 if sigSell
-    alert(f_json(-1, lvlSell, starsSell, kingSell, cntSell), alert.freq_once_per_bar_close)
+    alert(f_json(-1, scoreS, starsS, kingS), alert.freq_once_per_bar_close)
