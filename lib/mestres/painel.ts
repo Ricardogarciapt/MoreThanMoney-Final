@@ -173,7 +173,7 @@ export interface ContaPainel {
   bloqueioMotivo: string | null
   ultimaFalha: string | null
   ultimaFalhaEm: string | null
-  limites: { maxPosicoes: number; maxRiscoTotalPct: number; maxLoteTotal: number | null; loteFixoForcado: number | null }
+  limites: { maxPosicoes: number; maxRiscoTotalPct: number; maxLoteTotal: number | null; loteFixoForcado: number | null; contaPequenaAte?: number | null }
 }
 
 export type EstadoMotor = 'kill' | 'desligado' | 'sem-pulso' | 'sombra' | 'live'
@@ -312,7 +312,7 @@ export function resumirPainel(x: EntradaPainel): PainelMestres {
     contaChave: c.contaChave, contaRef: c.contaRef, modo: c.modo, etiqueta: c.etiqueta, descricao: c.descricao, email: c.email,
     estrategias: estrategias.flatMap((e) => e.rotas.filter((r) => r.contaChave === c.contaChave).map((r) => ({ slug: e.slug, tipo: r.tipo, efectivo: r.efectivo }))),
     falhasSeguidas: c.falhasSeguidas, bloqueada: c.bloqueada, bloqueioMotivo: c.bloqueioMotivo, ultimaFalha: c.ultimaFalha, ultimaFalhaEm: c.ultimaFalhaEm,
-    limites: { maxPosicoes: c.maxPosicoes, maxRiscoTotalPct: c.maxRiscoTotalPct, maxLoteTotal: c.maxLoteTotal, loteFixoForcado: c.loteFixoForcado },
+    limites: { maxPosicoes: c.maxPosicoes, maxRiscoTotalPct: c.maxRiscoTotalPct, maxLoteTotal: c.maxLoteTotal, loteFixoForcado: c.loteFixoForcado, contaPequenaAte: c.contaPequenaAte ?? null },
   }))
   // contas que só aparecem nas rotas (sem linha em mestres_contas: sombra por omissão)
   for (const e of estrategias) for (const r of e.rotas) {

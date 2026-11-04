@@ -48,6 +48,10 @@ export interface ContaMestres {
   falhasSeguidas: number
   bloqueada: boolean
   bloqueioMotivo: string | null
+  /** Conta pequena (231): lote mínimo sem máx. de posições até a equity chegar aqui. null = desligada. */
+  contaPequenaAte?: number | null
+  /** quando o vigia avisou que a conta passou o limiar (null = ainda não) */
+  contaPequenaLembreteEm?: string | null
 }
 
 export const LIMITES_POR_OMISSAO = { maxPosicoes: 10, maxRiscoTotalPct: 6, maxLoteTotal: null as number | null }
@@ -93,6 +97,8 @@ export function lerContaMestres(r: Record<string, unknown>): ContaMestres {
     falhasSeguidas: n(r.falhas_seguidas) ?? 0,
     bloqueada: Boolean(r.bloqueada_em),
     bloqueioMotivo: r.bloqueio_motivo ? String(r.bloqueio_motivo) : null,
+    contaPequenaAte: n(r.conta_pequena_ate),
+    contaPequenaLembreteEm: r.conta_pequena_lembrete_em ? String(r.conta_pequena_lembrete_em) : null,
   }
 }
 

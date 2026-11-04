@@ -191,9 +191,35 @@ const REGRAS_LIMITES: Record<string, Regra> = {
   max_posicoes: { tipo: 'num', min: 1, max: 200, casas: 0 },
   max_risco_total_pct: { tipo: 'num', min: 0.1, max: 50, casas: 2 },
   max_lote_total: { tipo: 'num', min: 0.01, max: 1000, casas: 2, nulo: true },
+  conta_pequena_ate: { tipo: 'num', min: 1, max: 1_000_000, casas: 2, nulo: true },
 }
 export const NOMES_LIMITES: Record<string, string> = {
   lote_fixo_forcado: 'Lote fixo forçado (contas com bónus)', max_posicoes: 'Máx. posições na conta', max_risco_total_pct: 'Risco total máx. %', max_lote_total: 'Lote total máx.',
+  conta_pequena_ate: 'Lote mínimo até saldo',
+}
+
+/**
+ * CONTA PEQUENA (dono, 04/11): «não coloques máximo de posições nem percentagem de risco quando
+ * as contas estão abaixo de 1000 $». Ligar a regra é um preset sobre os limites do motor:
+ * lote forçado no mínimo (0,01), máx. de posições e risco total no topo das check constraints
+ * (200 e 50 %), sem tecto de lote total. Desligar devolve os valores por omissão (10 posições,
+ * 6 %) e tira o lote forçado — a partir daí vale o risco % da fonte, que o admin acerta na ficha.
+ * O aviso de que a conta passou o limiar volta a armar-se sempre que a regra é gravada.
+ */
+export const LOTE_MINIMO_CONTA_PEQUENA = 0.01
+export function presetContaPequena(ate: number | null): Record<string, unknown> {
+  if (ate == null) {
+    return { conta_pequena_ate: null, conta_pequena_lembrete_em: null, lote_fixo_forcado: null, max_posicoes: 10, max_risco_total_pct: 6 }
+  }
+  return {
+    conta_pequena_ate: ate, conta_pequena_lembrete_em: null,
+    lote_fixo_forcado: LOTE_MINIMO_CONTA_PEQUENA, max_posicoes: 200, max_risco_total_pct: 50, max_lote_total: null,
+  }
+}
+
+/** O vigia avisa quando a equity chegou ao limiar e ainda não avisou desde que a regra foi gravada. */
+export function contaPequenaPassouLimiar(x: { ate: number | null | undefined; lembreteEm: string | null | undefined; equity: number | null | undefined }): boolean {
+  return x.ate != null && x.ate > 0 && !x.lembreteEm && x.equity != null && Number.isFinite(x.equity) && x.equity >= x.ate
 }
 
 export function patchLigacaoSite(campos: Record<string, unknown>): Patch {
@@ -224,7 +250,19 @@ export function patchSubscricaoAuto(campos: Record<string, unknown>): Patch {
 
 export function patchMestresConta(campos: Record<string, unknown>): Patch {
   if ('notas' in campos) return { ok: false, erro: 'as notas não se editam por aqui' }
-  return aplicarRegras(campos, REGRAS_LIMITES, NOMES_LIMITES)
+  const r = aplicarRegras(campos, REGRAS_LIMITES, NOMES_LIMITES)
+  if (!r.ok) return r
+  // A regra «conta pequena» manda nos limites que ela própria define: o preset ganha a quaisquer
+  // valores desses campos enviados no mesmo pedido (ligar a regra e pôr máx. 3 posições ao mesmo
+  // tempo contradiz-se).
+  if ('conta_pequena_ate' in r.patch) {
+    const ate = typeof r.patch.conta_pequena_ate === 'number' ? r.patch.conta_pequena_ate : null
+    r.patch = { ...r.patch, ...presetContaPequena(ate) }
+    r.avisos.push(ate == null
+      ? 'regra de conta pequena desligada: sem lote forçado, 10 posições, risco total 6 % — acerta o risco % na fonte'
+      : `conta pequena: lote mínimo ${LOTE_MINIMO_CONTA_PEQUENA} sem máx. de posições até a equity chegar a ${ate}; o admin é avisado nessa altura`)
+  }
+  return r
 }
 
 /**

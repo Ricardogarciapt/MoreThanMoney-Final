@@ -258,6 +258,7 @@ function FormLimites({ f, ocupado, escrever, depois }: { f: FichaCopia; ocupado:
         <Entrada rotulo={NOMES_LIMITES.max_lote_total} valor={txt(val("max_lote_total", l.maxLoteTotal))} aoMudar={(x) => setV({ ...v, max_lote_total: x })} largura="w-20" />
         <Botao tom="ouro" disabled={ocupado != null || !Object.keys(v).length || !f.chave} onClick={async () => { if (await escrever("limites", { accao: "limites", campos: v })) setV({}) }}>Gravar limites</Botao>
       </div>
+      <ContaPequena f={f} ocupado={ocupado} escrever={escrever} />
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[10.5px] text-zinc-500">Modo desta conta no motor: <b className="text-zinc-300">{l.modo}</b>{l.existe ? "" : " (sem linha — omissão)"}. Vale para todas as estratégias; o live efectivo exige também a estratégia em live.</span>
         {l.modo === "live"
@@ -265,6 +266,41 @@ function FormLimites({ f, ocupado, escrever, depois }: { f: FichaCopia; ocupado:
           : <Botao tom="perigo" disabled={aMudarModo || !f.chave} onClick={() => void mudarModo("live")}>Pôr em LIVE…</Botao>}
       </div>
       <p className="text-[10.5px] text-zinc-500">Lote fixo forçado = contas com bónus (Monaxa 20X): o risco % sobre um saldo inflacionado não serve. Vazio = desligado. O risco total máx. é o «saldo de risco» da conta: a soma do risco de todas as posições abertas não passa daqui.</p>
+    </div>
+  )
+}
+
+/**
+ * CONTA PEQUENA (dono, 04/11): abaixo de um saldo a conta copia no lote mínimo, sem máx. de
+ * posições e sem risco %. Quando a equity passa o limiar, o vigia horário avisa o admin no
+ * Telegram e a ficha mostra o aviso — passar a risco % é decisão do admin (botão abaixo + risco
+ * na fonte).
+ */
+function ContaPequena({ f, ocupado, escrever }: { f: FichaCopia; ocupado: string | null; escrever: Escrever }) {
+  const l = f.limites
+  const ate = l.contaPequenaAte ?? null
+  const [valor, setValor] = useState<string>(ate != null ? String(ate) : "1000")
+  const gravar = (x: number | null) => escrever("limites", { accao: "limites", campos: { conta_pequena_ate: x } })
+  return (
+    <div className={`rounded-lg border px-3 py-2 ${ate != null ? "border-[#D2A63C]/40 bg-[#D2A63C]/[0.06]" : "border-zinc-800 bg-zinc-900/40"}`}>
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-semibold text-zinc-200">
+            Conta pequena — lote mínimo até saldo {ate != null ? <span className="ml-1 rounded bg-[#D2A63C]/20 px-1.5 py-0.5 text-[10.5px] text-[#E9C46A]">ligada · até {ate}</span> : <span className="ml-1 text-[10.5px] text-zinc-500">desligada</span>}
+          </p>
+          <p className="text-[10.5px] text-zinc-500">
+            Enquanto a equity estiver abaixo do limiar: lote {`0,01`}, sem máximo de posições e sem risco %. Ao passar o limiar o admin é avisado (Telegram) para passar a conta a risco %.
+          </p>
+          {ate != null && l.contaPequenaLembreteEm ? (
+            <p className="mt-1 text-[11px] font-semibold text-[#E9C46A]">
+              A conta passou {ate} — aviso enviado a {new Date(l.contaPequenaLembreteEm).toLocaleString("pt-PT")}. Desliga a regra e acerta o risco % na fonte.
+            </p>
+          ) : null}
+        </div>
+        <Entrada rotulo="Até saldo" valor={valor} aoMudar={(x) => setValor(String(x ?? ""))} largura="w-24" />
+        <Botao tom="ouro" disabled={ocupado != null || !f.chave || !(Number(valor) > 0)} onClick={() => void gravar(Number(valor))}>{ate != null ? "Actualizar" : "Ligar"}</Botao>
+        {ate != null ? <Botao disabled={ocupado != null || !f.chave} onClick={() => void gravar(null)}>Passar a risco %</Botao> : null}
+      </div>
     </div>
   )
 }

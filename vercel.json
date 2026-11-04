@@ -249,6 +249,10 @@
       "schedule": "0 8-20/2 * * *"
     },
     {
+      "path": "/api/cron/contas-pequenas",
+      "schedule": "25 * * * *"
+    },
+    {
       "path": "/api/cron/backoffice-dia",
       "schedule": "0 7 * * 1-5"
     },

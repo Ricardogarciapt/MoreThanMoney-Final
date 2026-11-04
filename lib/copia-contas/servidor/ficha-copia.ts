@@ -322,7 +322,7 @@ async function aplicar(adminId: string, ficha: FichaCopia, p: PedidoFicha): Prom
       const sinc = 'lote_fixo_forcado' in v.patch ? await ressincronizar(await slugsATocar(ficha)) : {}
       return {
         ok: true, status: 200,
-        mensagem: `Limites do motor para ${ficha.chave}: lote forçado ${agoraL.loteFixoForcado ?? '—'} · máx. ${agoraL.maxPosicoes} posições · risco total ${agoraL.maxRiscoTotalPct} % · lote total ${agoraL.maxLoteTotal ?? '—'}. Valem para TODAS as estratégias desta conta. ${resumoSinc(sinc)}`,
+        mensagem: `Limites do motor para ${ficha.chave}: lote forçado ${agoraL.loteFixoForcado ?? '—'} · máx. ${agoraL.maxPosicoes} posições · risco total ${agoraL.maxRiscoTotalPct} % · lote total ${agoraL.maxLoteTotal ?? '—'}${agoraL.contaPequenaAte != null ? ` · lote mínimo até ${agoraL.contaPequenaAte}` : ''}. Valem para TODAS as estratégias desta conta. ${v.avisos.join(' ')} ${resumoSinc(sinc)}`.replace(/\s+/g, ' ').trim(),
         detalhe: { limites: agoraL, sincronizacao: sinc },
       }
     }
