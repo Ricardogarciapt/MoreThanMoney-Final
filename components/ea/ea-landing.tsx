@@ -7,12 +7,12 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import Link from "next/link"
-import { Unbounded } from "next/font/google"
+import { unbounded } from "@/lib/fonts/unbounded"
 import { ArrowDown, ArrowRight, ArrowUpRight, Asterisk, Check, Download, FileText, KeyRound, Loader2, Play, Plus, Volume2, VolumeX, type LucideIcon } from "lucide-react"
 import s from "@/components/scanner/scanner-landing.module.css"
 import e from "./ea-landing.module.css"
 
-const display = Unbounded({ subsets: ["latin"], weight: ["600", "800"], display: "swap" })
+const display = unbounded
 
 export interface EaPlan {
   planId: string
