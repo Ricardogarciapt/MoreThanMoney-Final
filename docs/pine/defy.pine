@@ -253,9 +253,10 @@ f_addKey(float px) =>
         kHits.push(1)
         kBar.push(bar_index - pivStr)
         if kPx.size() > 120
-            kPx.shift()
-            kHits.shift()
-            kBar.shift()
+            kPx.remove(0)
+            kHits.remove(0)
+            kBar.remove(0)
+    found
 
 if not na(kH)
     f_addKey(kH)
@@ -460,6 +461,7 @@ f_clear(Trade t) =>
             line.delete(l)
         for lb in t.lbs
             label.delete(lb)
+    true
 
 // alvos Squeeze: as bandas seguintes na direcção; se faltarem ou estiverem perto demais → Standard
 f_targets(int d, float e, float rk) =>
@@ -522,6 +524,7 @@ f_evt(Trade t, string ev, float px) =>
          '","price":' + str.tostring(px) + ',"entry":' + str.tostring(t.entry) + ',"sl":' + str.tostring(t.sl) +
          ',"hits":' + str.tostring(t.hits) + ',"timeframe":"' + timeframe.period + '"}'
         alert(j, alert.freq_once_per_bar_close)
+    true
 
 if not na(cur) and (cur.active or cur.pending) and bar_index > cur.startBar
     if cur.pending
