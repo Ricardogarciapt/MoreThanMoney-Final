@@ -15,7 +15,7 @@
  *   · `cancel`    → o pullback não foi tocado em 10 velas: ideia descartada.
  * Os seguimentos publicam-se como RESPOSTA (reply_to_id) ao cartão da entrada com o mesmo `id`, e o
  * registo liga-se à entrada (`entrada_id`, `chave_trade` = par:id) — se a entrada não existir, fica escrito e não sai.
- * Telegram: o chat é espelhado para o grupo cujo id estiver em TELEGRAM_CHANNEL_DEFY (sem env, só app).
+ * Telegram: o chat é espelhado para o grupo «MoreThanMoney Defy Signals» (lib/telegram-channel-ids).
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { normalizeSymbol } from '@/lib/mtmcopy/signal-parser'

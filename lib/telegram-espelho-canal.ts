@@ -28,7 +28,7 @@ const MAX_POR_PASSAGEM = 20
 /** chat da app → grupo Telegram de destino. */
 export const ESPELHOS: Array<{ canal: string; telegram: () => string | null }> = [
   { canal: 'sinais-premium-ii', telegram: resolvedPremiumIIChatId },
-  // DEFY (04/11): só com grupo em TELEGRAM_CHANNEL_DEFY; sem env fica só na app.
+  // DEFY (04/11): grupo «MoreThanMoney Defy Signals».
   { canal: 'sinais-defy', telegram: resolvedDefyChatId },
 ]
 
