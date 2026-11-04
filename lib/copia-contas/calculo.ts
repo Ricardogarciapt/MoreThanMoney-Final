@@ -86,7 +86,19 @@ export function calcularLote(e: EntradaLote): Lote {
       if (!(valor > 0 && valor <= 10)) return { ok: false, motivo: 'risco % inválido (0–10)' }
       if (!(e.distanciaSl != null && e.distanciaSl > 0)) return { ok: false, motivo: 'risco % precisa de SL na posição de origem' }
       if (!(e.equityDestino != null && e.equityDestino > 0)) return { ok: false, motivo: 'equity do destino desconhecida' }
-      if (!(e.valorPorPrecoPorLote != null && e.valorPorPrecoPorLote > 0)) return { ok: false, motivo: 'sem valor do tick no destino' }
+      if (!(e.valorPorPrecoPorLote != null && e.valorPorPrecoPorLote > 0)) {
+        /**
+         * SEM VALOR DO TICK → LOTE MÍNIMO (dono, 04/11): «executam com a percentagem definida ou
+         * com o lote mínimo — todas executam sempre que possível». A corretora às vezes não devolve
+         * o tickValue (Maria 36561707 perdia metade dos sinais do Premium II por isto). Sem ele não
+         * se mede o risco, por isso abre-se no mínimo — mas só quando o mínimo é 0,01, a mesma
+         * fronteira da subida ao mínimo abaixo: num índice com mínimo 0,1/1 continua a recusar.
+         */
+        const minSemTick = e.regra.min > 0 ? e.regra.min : 0.01
+        if (minSemTick > 0.01) return { ok: false, motivo: 'sem valor do tick no destino' }
+        if (e.loteMax != null && e.loteMax > 0 && minSemTick > e.loteMax) return { ok: false, motivo: `lote máximo ${e.loteMax} abaixo do mínimo da corretora ${minSemTick}` }
+        return { ok: true, volume: minSemTick, bruto: minSemTick, subiuAoMinimo: true }
+      }
       bruto = (e.equityDestino * valor / 100) / (e.distanciaSl * e.valorPorPrecoPorLote)
       break
     }

@@ -92,6 +92,16 @@ caso('… mas entre metade e o mínimo continua a subir, como sempre fez', () =>
   const r = calcularLote({ modo: 'proporcional_saldo', valor: 1, volumeOrigem: 1.4, saldoOrigem: 100_000, equityDestino: 5_000, loteMax: null, regra: INDICE })
   assert.equal(r.ok && r.volume, 0.1)
 })
+caso('sem valor do tick no destino: abre no lote mínimo 0,01 em vez de recusar (dono, 04/11)', () => {
+  const FX = { min: 0.01, max: 100, step: 0.01 }
+  const r = calcularLote({ modo: 'risco_pct', valor: 1, volumeOrigem: 1.15, saldoOrigem: null, equityDestino: 2_600, loteMax: null, regra: FX, distanciaSl: 7.5, valorPorPrecoPorLote: null })
+  assert.equal(r.ok && r.volume, 0.01)
+  assert.equal(r.ok && r.subiuAoMinimo, true)
+  const INDICE = { min: 0.1, max: 20, step: 0.1 }
+  const i = calcularLote({ modo: 'risco_pct', valor: 1, volumeOrigem: 1, saldoOrigem: null, equityDestino: 2_600, loteMax: null, regra: INDICE, distanciaSl: 50, valorPorPrecoPorLote: null })
+  assert.equal(i.ok, false)
+  assert.match(!i.ok ? i.motivo : '', /sem valor do tick/)
+})
 caso('lote acima do mínimo NÃO leva a marca de subida', () => {
   const r = calcularLote({ modo: 'proporcional_saldo', valor: 1, volumeOrigem: 1, saldoOrigem: 100_000, equityDestino: 5_000, loteMax: null, regra: FX })
   assert.equal(r.ok && r.subiuAoMinimo, undefined)
