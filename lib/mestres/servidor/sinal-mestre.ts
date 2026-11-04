@@ -70,6 +70,11 @@ export const ESTRATEGIA_DO_WEBHOOK: Record<string, AlvoDaFonte> = {
    */
   premiumscanner: { slug: 'mtm-auto-premium-ii', comentario: 'MTM Auto Premium II' },
   /**
+   * MTM Auto DEFY (04/11, pedido do dono): alertas do indicador DEFY (?strategy=defy). Sem linha em
+   * mestres_estrategias nada abre — começa em sombra, como as outras estratégias novas.
+   */
+  defy: { slug: 'mtm-auto-defy', comentario: 'MTM Auto DEFY' },
+  /**
    * MTM Auto Edge (26/10, pedido do dono): estratégia individual, alimentada pelo pv-relay com os 2
    * top traders do canal PrimeVerse (lib/mestres/edge-pv.ts). Cada ENTRY HIT é uma trade — a chave é
    * o id da mensagem do SETUP (`tg:<id>`), que é também o que os seguimentos do trader citam.

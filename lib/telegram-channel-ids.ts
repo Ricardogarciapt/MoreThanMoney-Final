@@ -196,6 +196,11 @@ export function resolvedPremiumIIChatId(): string | null {
   )
 }
 
+/** Grupo Telegram do DEFY (04/11): só por env (TELEGRAM_CHANNEL_DEFY). null = só na app. */
+export function resolvedDefyChatId(): string | null {
+  return normalizeEnvChatId(readEnv(['TELEGRAM_CHANNEL_DEFY', 'TELEGRAM_DEFY_CHAT_ID']))
+}
+
 /** O título é de um grupo MTM Auto Premium II (destino, nunca fonte)? */
 export function tituloPremiumII(title: string | null | undefined): boolean {
   return /premium\s*(ii|2)\b/i.test(String(title ?? ''))

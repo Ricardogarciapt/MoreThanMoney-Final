@@ -19,8 +19,13 @@
 // SL fica logo a seguir. Alvos: Squeeze (bandas, cai para Standard se comprimido),
 // Standard 1:1–1:3, Stretch 1:2–1:6, Swing 1:3–1:9.
 //
-// ALERTAS: Adicionar alerta → condição «Any alert() function call», «Once Per Bar
-// Close». O alerta respeita o Idea Filter. Também há «DEFY Compra» / «DEFY Venda».
+// ALERTAS / WEBHOOK MTM: Adicionar alerta → condição «Any alert() function call»,
+// «Once Per Bar Close», Webhook URL:
+//   https://www.morethanmoney.pt/api/webhooks/tradingview?strategy=defy&secret=<secret>
+// Cada ideia (respeita o Idea Filter) sai em JSON com os níveis; depois seguem os
+// seguimentos da MESMA trade (mesmo "id"): entry_hit (só no Pullback), tp1, tp2, tp3,
+// sl e cancel (pullback não tocado em 10 velas). Os seguimentos só existem com
+// Trade Display = Full Display. Também há «DEFY Compra» / «DEFY Venda».
 // Conteúdo educativo, não constitui consultoria financeira.
 // ─────────────────────────────────────────────────────────────────────────────
 indicator("DEFY", "DEFY", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=200, max_bars_back=1000)
@@ -111,6 +116,9 @@ ideaFilter   = input.string("+5 and Above", "Idea Filter", options=["+3 and Abov
 ideaSizeS    = input.string("Normal", "Idea Label Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=gX)
 entryMode    = input.string("Candle Close", "Entry Mode", options=["Candle Close", "Candle Pullback"], group=gX)
 targetMode   = input.string("Squeeze", "Target Mode", options=["Squeeze", "Standard", "Stretch", "Swing"], group=gX, tooltip="Squeeze: alvos nas bandas (rotação até à média); se estiver comprimido usa Standard. Standard 1:1–1:3. Stretch 1:2–1:6. Swing 1:3–1:9.")
+
+chave        = input.string("DEFY", "strategy (chave no webhook)", group=gX)
+followUps    = input.bool(true, "Enviar seguimentos (TP / SL)", group=gX)
 
 // ═══════════ AUXILIARES ═══════════
 f_size(string s) =>
@@ -435,6 +443,7 @@ type Trade
     box zone
     array<line> lns
     array<label> lbs
+    int sigTime = 0
 
 var Trade cur = na
 var int lastIdeaDir = 0
@@ -494,6 +503,7 @@ f_new(int d) =>
     t.lbs.push(label.new(x2, t1, f_lvlTxt("TP 1", math.abs(t1 - e), t1), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
     t.lbs.push(label.new(x2, t2, f_lvlTxt("TP 2", math.abs(t2 - e), t2), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
     t.lbs.push(label.new(x2, t3, f_lvlTxt("TP 3", math.abs(t3 - e), t3), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
+    t.sigTime := time
     t
 
 f_extend(Trade t) =>
@@ -504,13 +514,24 @@ f_extend(Trade t) =>
     for lb in t.lbs
         label.set_x(lb, x2)
 
+// seguimento da trade para o webhook: o "id" é a hora da vela de sinal (igual ao da entrada)
+f_evt(Trade t, string ev, float px) =>
+    if followUps
+        string j = '{"strategy":"' + chave + '","event":"' + ev + '","id":"' + str.tostring(t.sigTime) +
+         '","ticker":"' + syminfo.ticker + '","exchange":"' + syminfo.prefix + '","action":"' + (t.dir == 1 ? "buy" : "sell") +
+         '","price":' + str.tostring(px) + ',"entry":' + str.tostring(t.entry) + ',"sl":' + str.tostring(t.sl) +
+         ',"hits":' + str.tostring(t.hits) + ',"timeframe":"' + timeframe.period + '"}'
+        alert(j, alert.freq_once_per_bar_close)
+
 if not na(cur) and (cur.active or cur.pending) and bar_index > cur.startBar
     if cur.pending
         bool touched = cur.dir == 1 ? low <= cur.entry : high >= cur.entry
         if touched
             cur.pending := false
             cur.active := true
+            f_evt(cur, "entry_hit", cur.entry)
         else if bar_index - cur.startBar > 10
+            f_evt(cur, "cancel", close)
             f_clear(cur)
             cur.pending := false
     if cur.active
@@ -518,6 +539,7 @@ if not na(cur) and (cur.active or cur.pending) and bar_index > cur.startBar
         if slHit
             label.set_text(cur.lbs.get(0), f_lvlTxt("SL", cur.risk, cur.sl) + " ✗")
             cur.active := false
+            f_evt(cur, "sl", cur.sl)
         else
             array<float> tps = array.from(cur.tp1, cur.tp2, cur.tp3)
             for k = cur.hits to 2
@@ -525,6 +547,7 @@ if not na(cur) and (cur.active or cur.pending) and bar_index > cur.startBar
                 bool hit = cur.dir == 1 ? high >= tp : low <= tp
                 if hit
                     cur.hits := k + 1
+                    f_evt(cur, "tp" + str.tostring(k + 1), tp)
                     label.set_text(cur.lbs.get(3 + k), f_lvlTxt("TP " + str.tostring(k + 1), math.abs(tp - cur.entry), tp) + " ✓")
             if cur.hits >= 3
                 cur.active := false
@@ -604,7 +627,11 @@ f_json(int d, int sc, int stars, bool king) =>
     float sl = w - d * math.max(atr * 0.25, syminfo.mintick * 2)
     float rk = math.abs(e - sl)
     [t1, t2, t3] = f_targets(d, e, rk)
-    '{"source":"defy","ticker":"' + syminfo.ticker + '","side":"' + (d == 1 ? "buy" : "sell") +
+    string act = d == 1 ? "buy" : "sell"
+    // "id" = hora da vela de sinal: os seguimentos (tp1..tp3, sl) trazem o mesmo id
+    '{"strategy":"' + chave + '","event":"entry","id":"' + str.tostring(time) + '","source":"defy","ticker":"' + syminfo.ticker +
+     '","exchange":"' + syminfo.prefix + '","action":"' + act + '","side":"' + act + '","timeframe":"' + timeframe.period +
+     '","entry_mode":"' + (entryMode == "Candle Close" ? "close" : "pullback") +
      '","score":' + str.tostring(sc) + ',"stars":' + str.tostring(stars) + ',"king":' + (king ? "true" : "false") +
      ',"entry":' + str.tostring(e) + ',"warning":' + str.tostring(w) + ',"sl":' + str.tostring(sl) +
      ',"tp1":' + str.tostring(t1) + ',"tp2":' + str.tostring(t2) + ',"tp3":' + str.tostring(t3) +

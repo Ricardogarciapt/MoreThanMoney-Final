@@ -18,7 +18,7 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { claimSignalOnce } from '@/lib/mtmcopy/premium-single'
-import { resolvedPremiumIIChatId } from '@/lib/telegram-channel-ids'
+import { resolvedPremiumIIChatId, resolvedDefyChatId } from '@/lib/telegram-channel-ids'
 
 const TG_TOKEN = () => (process.env.TELEGRAM_AIBOT_TOKEN || '').trim()
 const JANELA_MS = 30 * 60_000
@@ -28,6 +28,8 @@ const MAX_POR_PASSAGEM = 20
 /** chat da app → grupo Telegram de destino. */
 export const ESPELHOS: Array<{ canal: string; telegram: () => string | null }> = [
   { canal: 'sinais-premium-ii', telegram: resolvedPremiumIIChatId },
+  // DEFY (04/11): só com grupo em TELEGRAM_CHANNEL_DEFY; sem env fica só na app.
+  { canal: 'sinais-defy', telegram: resolvedDefyChatId },
 ]
 
 interface Mensagem {

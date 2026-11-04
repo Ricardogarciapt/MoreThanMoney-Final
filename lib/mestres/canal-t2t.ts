@@ -17,6 +17,7 @@ export const CANAL_POR_FONTE_MTM: Record<string, string> = {
   goldkiller: 'sinais-goldkiller',
   mtmscanner: 'trade-ideas-setup',
   premiumscanner: 'sinais-premium-ii',
+  defy: 'sinais-defy',
 }
 
 /** Os três de antes (05/10): só valem quando nenhum provider reclama o canal. */

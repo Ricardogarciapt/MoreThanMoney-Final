@@ -8,7 +8,7 @@
  *
  * Módulo PURO (sem imports) — pode ser usado no cliente e no servidor.
  */
-export type ScannerKey = "sensei" | "goldkiller" | "mtmscanner" | "aurum" | "trendshot" | "premiumscanner" | "premium"
+export type ScannerKey = "sensei" | "goldkiller" | "mtmscanner" | "aurum" | "trendshot" | "premiumscanner" | "premium" | "defy"
 
 /**
  * Nomes mostrados ao utilizador. "Sensei" (NÃO "Sensei X" — decisão Ricardo 2026-08-19).
@@ -25,10 +25,11 @@ export const SCANNER_LABELS: Record<ScannerKey, string> = {
   // Os sinais do canal MTM Auto Premium entram nos alertas desde 27/10 (não vêm do TradingView:
   // lêem-se das entradas do chat, com o gráfico — ver app/api/mtm-alerts).
   premium: "MTM Auto Premium",
+  defy: "DEFY", // 04/11: docs/pine/defy.pine (?strategy=defy)
 }
 
 /** Ordem de apresentação nos filtros. */
-export const SCANNER_ORDER: ScannerKey[] = ["premium", "sensei", "goldkiller", "mtmscanner", "aurum", "trendshot", "premiumscanner"]
+export const SCANNER_ORDER: ScannerKey[] = ["premium", "sensei", "goldkiller", "mtmscanner", "aurum", "trendshot", "premiumscanner", "defy"]
 
 /**
  * Normaliza o `strategy` cru de um alerta para o scanner canónico.
@@ -37,6 +38,7 @@ export const SCANNER_ORDER: ScannerKey[] = ["premium", "sensei", "goldkiller", "
 export function scannerKeyFromStrategy(strategy: string | null | undefined): ScannerKey {
   const n = (strategy ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
   if (!n) return "mtmscanner"
+  if (n === "defy" || n.startsWith("mtmautodefy") || n.startsWith("defy")) return "defy" // DEFY (04/11)
   if (n.includes("premiumscanner") || n.includes("premiumii")) return "premiumscanner" // «MTM Auto Premium II» (27/10)
   if (n.includes("premium")) return "premium"                              // "MTM Auto Premium" (27/10)
   if (n.includes("trendshot")) return "trendshot"                          // "MTM Auto Trendshot" (23/10)
