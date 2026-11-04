@@ -76,4 +76,17 @@ Uma IA nova escolhe a superfície e cola o bloco. Mudar a forma de pensar é mud
 | «Educação de borla se validar a conta com depósito» | Mantém a regra já existente (rota corretora desbloqueia Premium; vem no fim da escada) | Condicionar formação a depósito numa corretora é o ponto mais sensível para a CMVM/ESMA (incentivo). Fica como está até o Ricardo decidir. |
 | Gancho «as tuas ferramentas passam a ser grátis» | Reescrito: «esse dinheiro, numa conta tua, é capital teu — e as ferramentas vêm com ele» | A casa não lidera com o grátis (`docs/mtm-sales-brain.md` §5). |
 | «Rede neural» nos scanners | «Filtros algorítmicos» | Os scanners são Pine/algoritmos; chamar-lhes rede neural em marketing é uma alegação que não se prova. |
-| Scripts de activação PU Prime / Skool | Não feitos | Só se o Ricardo pedir. |
+| Scripts de activação PU Prime / Skool | Feito (04/11, ronda 2): a validação PU Prime já existia (PrimeGate, `broker-gate-renew`); o que faltava era a comunidade. `lib/rota-corretora-skool.ts` pede o acesso aos admins quando o Premium da rota é renovado com saldo, e a remoção quando é revogado | A plataforma da comunidade não tem API: fica pendente em Utilizadores, como no Stripe. |
+
+## 7. Decisões do Ricardo (04/11/2026, 23:00)
+
+1. Concorrentes e pessoas pelo nome ficam fora: **OK**.
+2. MTM Funded como Patrocínio de Desempenho, não prop firm: **OK**.
+3. Formação condicionada a depósito: **depende de converter vendas**. Mantém-se a regra existente; rever com números de conversão.
+4. Progressão de distribuidor (ranks, pernas PE/CV, 3-way) **removida** do mentor, do coach de recurso, do plano 72h e das metas da vista do mentor. Os códigos das tarefas e os campos da API mantêm-se para não partir a app.
+
+## 8. Kit dos papéis no backoffice
+
+Backoffice → Materiais → «O teu kit» (`lib/backoffice-kit-papeis.ts`, guarda `.check.ts`): prospector,
+setter, closer e afiliado, cada um com missão, passos, guiões para copiar, objecções e «o que nunca
+se diz». Cada pessoa vê o kit do seu papel; o dono e o team leader vêem todos. O Pipeline aponta para lá.

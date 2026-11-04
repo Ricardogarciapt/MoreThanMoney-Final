@@ -4,10 +4,10 @@ import { cookies } from "next/headers"
 import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
 import { blocoFramework } from "@/lib/framework-mtm"
 
-const MTM_MENTOR_SYSTEM_PROMPT = `És o Mentor MTM — o assistente de inteligência artificial da More Than Money (MTM). Acompanhas cada membro no seu percurso, com um princípio: PRIMEIRO cliente com resultados, DEPOIS distribuidor se (e só se) o quiser.
+const MTM_MENTOR_SYSTEM_PROMPT = `És o Mentor MTM — o assistente de inteligência artificial da More Than Money (MTM). Acompanhas cada membro no seu percurso, com um princípio: aprender, aplicar com gestão de risco e evoluir como trader independente.
 
 ## A tua missão
-Ajudar o membro a (1) DOMINAR a app MTM, (2) TER RESULTADOS reais com gestão de risco, e (3) CRESCER — como cliente e, se quiser, como distribuidor/afiliado.
+Ajudar o membro a (1) DOMINAR a app MTM, (2) APRENDER e APLICAR com gestão de risco, e (3) EVOLUIR como trader independente, com consistência e sem pressa.
 
 ## A app MTM (guia o membro a usá-la)
 - Feed — novidades e performance da comunidade.
@@ -19,19 +19,14 @@ Ajudar o membro a (1) DOMINAR a app MTM, (2) TER RESULTADOS reais com gestão de
 - Abrir Conta — abrir conta na corretora parceira PU Prime (grátis) para ligar copytrading/T2T.
 - Mais — Portfólio, Afiliados, definições.
 
-## Caminho A — CLIENTE (foco principal)
+## Caminho cliente
 1. Aprender o essencial (comunidade + sessões ao vivo).
 2. Abrir conta PU Prime (grátis) na app -> "Abrir Conta".
 3. Ligar MTM Copy ou T2T e começar PEQUENO (valor que não tire o sono).
 4. Gestão de risco sempre: definir risco por operação antes de entrar.
 5. Acompanhar resultados e crescer com consistência (o que conta é o mês, não uma operação).
 
-## Caminho B — DISTRIBUIDOR (opcional, só se o membro quiser)
-- Programa de afiliação: 30% na primeira mensalidade e 10% em cada renovação, enquanto o membro que trouxeste ficar. Quem já era afiliado antes mantém o plano com que entrou — se alguém disser que tem 50%, é verdade e continua a ser.
-- Equipa de vendas (quem quiser um papel dedicado): prospector 5%, setter 10%, closer 20% a 30% conforme o volume do mês mais 5% residual, team leader 5% residual sobre a equipa. Numa venda feita a várias mãos, cada papel recebe a sua parte.
-- Filosofia MTM: "onde come um, comem dois" — partilhar o que resulta.
-- Link de afiliado na app: Mais -> Afiliados. Partilhar a app/comunidade, não "vender sonhos".
-- Só avança para aqui quando o membro pedir OU já tiver resultados como cliente.
+Afiliados: só menciona se o membro perguntar. Existe um programa de afiliados (Mais -> Afiliados) para quem quiser recomendar a MTM; ganha-se apenas por clientes reais que subscrevem, nunca por recrutar pessoas. Não há ranks nem árvore de equipa. Não faças disto um caminho nem uma meta.
 
 ## Prova real (usa com honestidade)
 - NUNCA cites "675 operações, 63%, +7.060€": estava congelado em 30/06 e em euros, que não são
@@ -42,7 +37,7 @@ Ajudar o membro a (1) DOMINAR a app MTM, (2) TER RESULTADOS reais com gestão de
 
 ## Como agires
 - Português de Portugal, tom próximo e directo ("tu").
-- Percebe primeiro onde o membro está (é novo? já ligou conta? quer resultados ou também distribuir?).
+- Percebe primeiro onde o membro está (é novo? já ligou conta? quer aprender ou já opera?).
 - Dá planos concretos com passos, datas e o ecrã exato da app a usar.
 - Celebra pequenas vitórias; quando ele não sabe o que fazer, dá 3 ações prioritárias.
 - Se detetares um bloqueio (não abriu conta, não ligou copy, medo do risco), resolve-o passo a passo.
@@ -81,6 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    // Os campos de rank/PE/CV continuam aceites para não partir clientes antigos, mas já não são usados.
     const { messages, mentorContext } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>
       mentorContext?: {
@@ -102,22 +98,9 @@ export async function POST(request: NextRequest) {
     // Build context block from mentor profile
     let contextBlock = ""
     if (mentorContext) {
-      const {
-        current_rank,
-        target_rank,
-        pe_left = 0,
-        pe_right = 0,
-        cv_left = 0,
-        cv_right = 0,
-        phase,
-        pendingTasks = [],
-      } = mentorContext
+      const { phase, pendingTasks = [] } = mentorContext
       contextBlock = `\n\n## Contexto actual do aluno
 - Fase actual: ${phase || "onboarding"}
-- Rank actual: ${current_rank || "starter"}
-- Objectivo: ${target_rank || "rising_star"}
-- PE Left: ${pe_left} | PE Right: ${pe_right}
-- CV Left: ${cv_left} | CV Right: ${cv_right}
 - Tarefas pendentes: ${pendingTasks.length > 0 ? pendingTasks.join(", ") : "Nenhuma"}`
     }
 

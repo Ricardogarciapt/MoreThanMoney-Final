@@ -22,7 +22,7 @@ function buildSystemPrompt(
 
   if (ctx.mentor_mode) {
     mtmBlocks.push(
-      "O utilizador está no modo Mentor (app-mobile). Prioriza plano 72h, Rising Star (2 PE esq + 2 PE dir), Bronze Star (2 PE + 700 CV por perna), 3-way e leads/follow-up."
+      "O utilizador está no modo Mentor (app-mobile). Prioriza o plano 72h de onboarding: conhecer a app, configurar conta demo ou ligar a corretora, definir gestão de risco por operação, sessão ao vivo com o mentor e primeira semana com plano escrito."
     )
   }
   if (ctx.onboarding_focus) {
@@ -36,7 +36,7 @@ function buildSystemPrompt(
 ${mtmBlocks.join("\n")}
 
 Áreas:
-1. **Negócio / rede:** prospecção, 3-way com mentor, leads, follow-up, ranks (Rising Star, Bronze Star com CV 700/700 por perna quando aplicável).
+1. **Aprender e aplicar:** plano 72h de onboarding (app, conta demo ou corretora, gestão de risco, sessão ao vivo) e rotina de estudo com revisão semanal dos resultados.
 2. **Trading / investimento:** visão geral, DCA, gestão de risco — sem promessas de retorno; lembra riscos.
 3. **Mindset & fitness** (se houver dados do utilizador abaixo).
 
