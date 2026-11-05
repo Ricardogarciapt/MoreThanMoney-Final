@@ -67,7 +67,7 @@ const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } })
 await page.goto('file://' + path.join(DIR, 'cenas.html'))
 const cenas = Object.fromEntries(V.cenas.map(c => [c.id, c]))
 await page.evaluate(([tl, leg, dados, tot]) => { window.TOTAL = tot; window.iniciar(tl, leg, dados) },
-  [TL, process.argv.includes('--legendas'), { cenas, ui: G.ui, cores: G.cores, marca: `${G.marca} · ${V.rotulo}`, nome: G.estrategia }, total])
+  [TL, process.argv.includes('--legendas'), { cenas, ui: G.ui, cores: G.cores, marca: `${G.marca} · ${V.rotulo}`, nome: G.estrategia, plano: G.plano }, total])
 await page.evaluate(() => document.fonts.ready)
 await page.waitForTimeout(400)
 
