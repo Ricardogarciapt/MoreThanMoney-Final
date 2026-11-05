@@ -662,7 +662,7 @@
       "Só no fecho da vela, com Apenas Fecho de Vela ligado",
       "E só se o placar passar o mínimo do estilo"
      ],
-     "fala": "Um setup de compra pode nascer de duas maneiras. A primeira é o cruzamento do POC: o preço fecha acima de um ponto de controlo que estava por baixo dele. A segunda é uma fase. O Sensei conta sequências de velas, e quando a contagem fecha, a fase dispara. Há duas contagens. Uma é a do Momentum, em que o setup se completa numa sequência de nove velas por omissão, e que procura continuação. A outra é a do Exaustão, um countdown de treze velas que procura reversões. Mas um setup não é ainda um sinal. Para o sinal sair, o placar tem de passar o mínimo, a vela não pode ter fluxo a contrariar a compra, e tem de passar os filtros de volume e de volatilidade. E com o filtro de fecho ligado, o indicador só avalia a vela depois de ela fechar."
+     "fala": "Um setup de compra pode nascer de duas maneiras. A primeira é o cruzamento do POC: o preço fecha acima de um ponto de controlo que estava por baixo dele. A segunda é uma fase. O Sensei conta sequências de velas, e quando a contagem fecha, a fase dispara. Há duas contagens. Uma é a do Momentum, em que o setup se completa numa sequência de nove velas por omissão, e que procura continuação. A outra é a da Exaustão, um countdown de treze velas que procura reversões. Mas um setup não é ainda um sinal. Para o sinal sair, o placar tem de passar o mínimo, a vela não pode ter fluxo a contrariar a compra, e tem de passar os filtros de volume e de volatilidade. E com o filtro de fecho ligado, o indicador só avalia a vela depois de ela fechar."
     },
     {
      "id": "v2-04",
@@ -680,7 +680,7 @@
        "d": "Dispara no fim do countdown completo. Procura reversões. Usado nos estilos de swing e conservador."
       }
      ],
-     "fala": "Há dois modos de fase, e a escolha depende do estilo. O Momentum é a continuação: dispara quando a sequência de nove velas se completa, o que acontece quando o movimento continua a ganhar tracção. O Exaustão é a reversão: exige o countdown completo de treze velas, e procura o ponto em que o movimento anterior se esgota. Nos estilos de scalp e intradiário, o indicador usa o Momentum. Nos de swing e conservador, o Exaustão. E no modo otimizado, cada par e timeframe pode ter o seu. A regra é a mesma de sempre: não mudes de modo todas as semanas, porque assim o teu diário não consegue dizer-te o que está a funcionar."
+     "fala": "Há dois modos de fase, e a escolha depende do estilo. O Momentum é a continuação: dispara quando a sequência de nove velas se completa, o que acontece quando o movimento continua a ganhar tracção. A Exaustão é a reversão: exige o countdown completo de treze velas, e procura o ponto em que o movimento anterior se esgota. Nos estilos de scalp e intradiário, o indicador usa o Momentum. Nos de swing e conservador, a Exaustão. E no modo otimizado, cada par e timeframe pode ter o seu. A regra é a mesma de sempre: não mudes de modo todas as semanas, porque assim o teu diário não consegue dizer-te o que está a funcionar."
     },
     {
      "id": "v2-05",
