@@ -49,6 +49,8 @@ import {
   NOME_DEGRAU_TOPO,
   MIN_DEPOSIT,
 } from '@/lib/escada-precos'
+import { blocoFramework } from '@/lib/framework-mtm'
+import { LINK_AGENDAR_ONBOARDING } from '@/lib/agenda/link'
 
 // ═════════════════════════ 1. OS LIMITES DA META, EM CÓDIGO ═════════════════════════
 
@@ -310,7 +312,8 @@ export function guiaoFase2(passo: PassoDeQualificacao): string {
     `A REGRA DA UMA PERGUNTA: fazes UMA pergunta por mensagem. Uma. Duas perguntas seguidas é um ` +
     `questionário, e a pessoa fecha a conversa em vez de responder a um formulário.\n\n` +
     `O PASSO ONDE ESTÁS AGORA: ${DESCRICAO_DO_PASSO[passo]}\n\n` +
-    `Responde SÓ com a mensagem a enviar. Texto simples, sem aspas, sem prefixos.`
+    `Responde SÓ com a mensagem a enviar. Texto simples, sem aspas, sem prefixos.\n\n` +
+    blocoFramework('setter', { linkAgendar: LINK_AGENDAR_ONBOARDING })
   )
 }
 

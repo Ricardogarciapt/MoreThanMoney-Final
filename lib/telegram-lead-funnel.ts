@@ -22,6 +22,7 @@ import { MIN_DEPOSIT, TRIAL_CODE } from '@/lib/telegram-broker-gate'
 import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO, ondeComprarTopoNumaLinha, PRECO_MEMBRO, PRECO_PREMIUM, PRECO_PREMIUM_1O_MES, PRECO_TOPO } from '@/lib/escada-precos'
 // O preço do MTM Auto vem de quem o anuncia no funil dele — escrito à mão aqui, divergia.
 import { MTMAUTO_PRECO } from '@/lib/telegram-mtmauto-funnel'
+import { blocoFramework } from '@/lib/framework-mtm'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 /**
  * A VISÃO DA CASA vem de um sítio só.
@@ -190,7 +191,7 @@ export async function runLeadFunnelReply(input: {
         'x-api-key': key,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify({ model, max_tokens: 350, system: systemPrompt, messages }),
+      body: JSON.stringify({ model, max_tokens: 350, system: `${systemPrompt}\n\n${blocoFramework('closer')}`, messages }),
     })
     if (res.ok) {
       const data = await res.json()

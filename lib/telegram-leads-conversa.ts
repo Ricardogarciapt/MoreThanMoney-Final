@@ -25,6 +25,7 @@ import { escadaNumaLinha, bonusNumaLinha } from '@/lib/escada-precos'
 import { MIN_DEPOSIT } from '@/lib/broker/deposito-minimo'
 import { REGRAS_CASA, peneira } from '@/lib/marketing/regras'
 import { DISCLAIMER } from '@/lib/telegram-leads-posts'
+import { blocoFramework } from '@/lib/framework-mtm'
 
 type Supa = ReturnType<typeof getSupabaseAdmin>
 
@@ -109,7 +110,9 @@ Resultados medidos: ${prova ? `${prova} — se citares, usa só isto, tal como e
 ${REGRAS_CASA}
 - Responde no idioma de quem pergunta.
 - Se a pergunta não é sobre a MTM, trading ou finanças, responde numa frase simpática e não vendas.
-- Devolve só o texto da resposta.`
+- Devolve só o texto da resposta.
+
+${blocoFramework('setter')}`
 }
 
 async function lerProva(db: Supa): Promise<string | null> {

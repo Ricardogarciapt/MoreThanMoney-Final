@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { chamarIA } from "@/lib/ia/chamar"
+import { blocoFramework } from "@/lib/framework-mtm"
 import { CONTA_MARCA } from "@/lib/operador/regras"
 import {
   SISTEMA_GUIAO,
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
       json: true,
       maxTokens: 2048,
       preferencia: "qualidade",
-      sistema: SISTEMA_GUIAO,
+      sistema: `${SISTEMA_GUIAO}\n\n${blocoFramework("conteudo")}`,
       mensagens: [{ role: "user", content: pedidoGuiao(angulo) + (evitar.length ? `\nA tentativa anterior foi recusada por: ${evitar.join("; ")}.` : "") }],
     })
     let bruto: unknown

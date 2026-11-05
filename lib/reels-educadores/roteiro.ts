@@ -1,4 +1,5 @@
 import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
+import { blocoFramework } from '@/lib/framework-mtm'
 import { AVISO, DEMOS_GENERICAS, type EducadorReel } from './config'
 
 /**
@@ -125,7 +126,7 @@ export async function gerarRoteiro(ed: EducadorReel, historico: Historico[], id:
     try {
       const r = await chamarIA({
         tarefa: 'reels-educadores-roteiro',
-        sistema: SISTEMA,
+        sistema: `${SISTEMA}\n\n${blocoFramework('conteudo')}`,
         mensagens: [{ role: 'user', content: pedido + (ultimoErro ? `\n\nA versão anterior foi recusada: ${ultimoErro}. Corrige.` : '') }],
         json: true,
         maxTokens: 2500,
