@@ -24,7 +24,17 @@
   ["H4", "H four"],
   ["H1", "H one"],
   ["TP1", "T P one"],
-  ["TP2", "T P two"]
+  ["TP2", "T P two"],
+  ["R1", "R one"],
+  ["R2", "R two"],
+  ["R3", "R three"],
+  ["R4", "R four"],
+  ["R5", "R five"],
+  ["S1", "S one"],
+  ["S2", "S two"],
+  ["S3", "S three"],
+  ["S4", "S four"],
+  ["S5", "S five"]
  ],
  "plano": {
   "warning": false,
@@ -383,7 +393,7 @@
       ["TP2", "Second target, about one to two in the example", "tp"],
       ["Pivots", "Extra targets, if you want to use them", "tp"]
      ],
-     "fala": "When the signal is printed, the scanner draws the plan. The stop sits above the high of the signal, on a sell. The targets are TP1 and TP2. In the EURGBP example, the guide shows a sell with a plus eight, with the stop and the two targets drawn. The TP1 did not even reach one to one, and the TP2 gave about one to two, which was enough to take the trade. The chart's position tool showed a risk to reward ratio of two point one. Notice that the distance of the targets is the one the scanner draws on each signal, and that the values in this drawing are illustrative. The pivots can serve as extra targets. And the guide is clear on one point: risk management is your own responsibility. Calculate your position size before you enter, and not after you see where the stop ended up."
+     "fala": "When the signal is printed, the scanner draws the plan. The stop sits above the high of the signal, on a sell. The targets are TP1 and TP2. In the EURGBP example, the guide shows a sell with a plus eight, with the stop and the two targets drawn. The TP1 did not even reach one to one, and the TP2 gave about one to two, which was enough to take the trade. The chart's position tool showed a risk to reward ratio of two point one. Notice that the distance of the targets is the one the scanner draws on each signal, not a fixed value you can copy. The pivots can serve as extra targets. And the guide is clear on one point: risk management is your own responsibility. Calculate your position size before you enter, and not after you see where the stop ended up."
     },
     {
      "id": "v2-08",

@@ -24,7 +24,17 @@
   ["H4", "H quatro"],
   ["H1", "H um"],
   ["TP1", "T P um"],
-  ["TP2", "T P dois"]
+  ["TP2", "T P dois"],
+  ["R1", "R um"],
+  ["R2", "R dois"],
+  ["R3", "R três"],
+  ["R4", "R quatro"],
+  ["R5", "R cinco"],
+  ["S1", "S um"],
+  ["S2", "S dois"],
+  ["S3", "S três"],
+  ["S4", "S quatro"],
+  ["S5", "S cinco"]
  ],
  "plano": {
   "warning": false,
@@ -383,7 +393,7 @@
       ["TP2", "Segundo alvo, perto de um para dois no exemplo", "tp"],
       ["Pivots", "Alvos extra, se os quiseres usar", "tp"]
      ],
-     "fala": "Quando o sinal é impresso, o scanner desenha o plano. O stop fica acima do máximo do sinal, numa venda. Os alvos são TP1 e TP2. No exemplo do EURGBP, o guia mostra uma venda de mais oito, com o stop e os dois alvos desenhados. O TP1 nem chegava a um para um, e o TP2 dava cerca de um para dois, o que chegou para tomar o trade. A ferramenta de posição do gráfico mostrou um risco para retorno de dois vírgula um. Repara que a distância dos alvos é a que o scanner desenha em cada sinal, e que os valores deste desenho são ilustrativos. Os pivots podem servir como alvos extra. E o guia é claro num ponto: a gestão de risco é de cada um. Calcula o teu tamanho de posição antes de entrar, e não depois de ver onde ficou o stop."
+     "fala": "Quando o sinal é impresso, o scanner desenha o plano. O stop fica acima do máximo do sinal, numa venda. Os alvos são TP1 e TP2. No exemplo do EURGBP, o guia mostra uma venda de mais oito, com o stop e os dois alvos desenhados. O TP1 nem chegava a um para um, e o TP2 dava cerca de um para dois, o que chegou para tomar o trade. A ferramenta de posição do gráfico mostrou um risco para retorno de dois vírgula um. Repara que a distância dos alvos é a que o scanner desenha em cada sinal, e não um valor fixo que possas copiar. Os pivots podem servir como alvos extra. E o guia é claro num ponto: a gestão de risco é de cada um. Calcula o teu tamanho de posição antes de entrar, e não depois de ver onde ficou o stop."
     },
     {
      "id": "v2-08",
