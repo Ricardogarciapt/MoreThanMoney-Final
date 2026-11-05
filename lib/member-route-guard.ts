@@ -7,6 +7,7 @@ export function isMemberProtectedPath(pathname: string): boolean {
   }
   if (pathname.startsWith("/app-mobile")) return true
   if (pathname.startsWith("/member-area")) return true
+  if (pathname === "/conteudomagnetico" || pathname.startsWith("/conteudomagnetico/")) return true
   return false
 }
 
