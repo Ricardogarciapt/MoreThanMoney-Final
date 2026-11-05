@@ -33,13 +33,13 @@ export default function GuiasEstrategias({ pesquisa = "" }: { pesquisa?: string 
         <span className="text-xs text-gray-500 shrink-0">{lista.length} guias</span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {lista.map((e) => (
           <article
             key={e.slug}
             className="flex flex-col rounded-xl overflow-hidden border border-[#D2A63C]/25 bg-gray-900/70 hover:border-[#D2A63C]/60 transition-colors"
           >
-            <a href={e.guia.pt} target="_blank" rel="noopener noreferrer" className="block aspect-[3/4] bg-black">
+            <a href={e.guia.pt} target="_blank" rel="noopener noreferrer" className="block aspect-video bg-black">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={capaEstrategia(e.slug, "pt")}

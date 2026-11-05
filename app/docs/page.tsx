@@ -233,7 +233,8 @@ export default function DocsPage() {
   }
 
   const filterDocuments = () => {
-    let filtered = documents
+    // Os guias das estratégias já aparecem na secção própria (GuiasEstrategias): não os repetir na grelha.
+    let filtered = documents.filter(doc => !doc.file_url?.includes('/educador/estrategias/'))
 
     // Filtro por categoria
     if (selectedCategory !== 'all') {
