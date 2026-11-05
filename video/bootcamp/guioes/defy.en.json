@@ -1,0 +1,1444 @@
+{
+ "estrategia": "DEFY",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#1E4FD8",
+  "bear": "#C0262D"
+ },
+ "ui": {
+  "nivel": "Level",
+  "compra": "Buy",
+  "venda": "Sell",
+  "entrada": "Entry",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  [
+   "TradingView",
+   "Trading View"
+  ],
+  [
+   "ATR",
+   "A T R"
+  ],
+  [
+   "TP1",
+   "T P one"
+  ],
+  [
+   "TP2",
+   "T P two"
+  ],
+  [
+   "TP3",
+   "T P three"
+  ],
+  [
+   "RSI",
+   "R S I"
+  ],
+  [
+   "FVG",
+   "F V G"
+  ]
+ ],
+ "videos": [
+  {
+   "rotulo": "DEFY Bootcamp · 1/3",
+   "titulo": "Fundamentals: the four readings",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 1 of 3",
+     "titulo": "DEFY",
+     "sub": "Fundamentals: the four readings of the chart",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "A tool does not decide for you. <span class='ouro'>It organizes</span> the way you decide.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Hello, I'm Ricardo Garcia, and this is the DEFY Bootcamp from MoreThanMoney. Before we start, I want to make one thing very clear: no indicator decides for you. What a good tool does is organize the way you make your decisions. It gathers information that would otherwise be scattered across five or six windows, and puts it on one chart, with fixed rules. That is what DEFY does. Over these three modules you'll understand every piece of the indicator, you'll learn how to read an idea from start to finish, and in the last module you'll see how to manage risk and build a fifteen-minute daily routine around it."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "The bootcamp plan",
+     "titulo": "Three modules, one method",
+     "itens": [
+      "Module 1 · The four readings of the chart",
+      "Module 2 · From confirmations to the trade plan",
+      "Module 3 · Risk, management and daily routine"
+     ],
+     "fala": "The bootcamp is split into three modules. In this first one, which you're watching right now, we'll build the foundation: what DEFY is, how you put it on the chart, and what each of the four readings it draws means. In the second module we get into the engine of the indicator: how an idea is born, how the confirmation score works, what the stars and the King Idea mean, and how the trade plan is drawn with entry, Warning, stop and three targets. In the third module we move on to practice: position size, trade management, when not to enter, and a simple routine you can use every day. I suggest you watch the modules in order, because each one builds on the one before."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · What is DEFY",
+     "numero": "01",
+     "titulo": "What is DEFY",
+     "sub": "Four readings, one decision process",
+     "fala": "Let's move on to the first chapter. So what exactly is DEFY?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "camadas3d",
+     "cap": "01 · What is DEFY",
+     "kicker": "One layer at a time",
+     "titulo": "Four readings on the same chart",
+     "itens": [
+      "Bands",
+      "Key levels",
+      "Cloud",
+      "Idea and plan"
+     ],
+     "fala": "DEFY is an indicator for TradingView that brings four technical readings together on one chart. Imagine four layers of glass, stacked on top of each other. The first are the exhaustion bands, which show you when price is stretched. The second are the key levels, zones where price has already reacted in the past. The third is the trend cloud, which tells you which way the market is pulling. And the fourth is the decision layer: the confirmation score, the stars and the trade plan drawn on the chart. Separately, each of these readings gives you one piece of the story. When you put them together, and only when they agree, you have an idea with context. Notice this word: agree. The whole of DEFY is built around agreement between different readings."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "pontos",
+     "cap": "01 · What is DEFY",
+     "kicker": "The logic in three steps",
+     "titulo": "Stretch, turn, confirm",
+     "itens": [
+      "Price stretches out to the exhaustion bands",
+      "It turns with a strong candle that closes beyond the previous fractal",
+      "Enough confirmations line up and DEFY draws the plan"
+     ],
+     "fala": "The logic of DEFY fits into three steps. First, price stretches. It moves away from its average and reaches the exhaustion bands, which is where moves tend to lose strength. Second, price turns. A strong candle appears, with a real body, that closes beyond the previous fractal. In other words, a wick touching a line isn't enough; you need a candle that shows intent. Third, DEFY counts the confirmations. If at least three agree, it marks the idea and draws the full plan. If not, it draws nothing. And this matters: often the best work the indicator does is simply not showing you anything, because it saves you from weak entries."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "pontos",
+     "cap": "01 · What is DEFY",
+     "kicker": "Where it works",
+     "titulo": "Markets and timeframes",
+     "itens": [
+      "Forex, gold, indices and crypto",
+      "Scalp from 1 to 15 minutes",
+      "Intraday on the 1-hour chart",
+      "Swing on the 4-hour chart"
+     ],
+     "fala": "DEFY works on forex, gold, indices and crypto, and on any timeframe. In practice, there are three ways to use it. In scalping, on charts from one to fifteen minutes, where ideas are more frequent and targets are shorter. In intraday, on the one-hour chart, which is a good balance for someone with a job who can look at the market two or three times a day. And in swing, on the four-hour chart, with fewer ideas but bigger moves. Distances appear in pips on forex and in points on gold, indices and crypto, so the plan reads the same way in any market. If you're just starting, my suggestion is to choose one market and one timeframe for your first few weeks."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "capitulo",
+     "cap": "02 · Putting DEFY on the chart",
+     "numero": "02",
+     "titulo": "Putting DEFY on the chart",
+     "sub": "Access, installation and a first look",
+     "fala": "Second chapter: how you put DEFY on your chart."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "pontos",
+     "cap": "02 · Putting DEFY on the chart",
+     "kicker": "Access",
+     "titulo": "From request to chart",
+     "itens": [
+      "DEFY is an invite-only script on TradingView",
+      "You send your TradingView username to MTM",
+      "After access: Indicators › Invite-only scripts › DEFY by MTM",
+      "One click and the indicator appears on the chart"
+     ],
+     "fala": "DEFY is an invite-only script on TradingView. That means you won't find it in the public search: access is granted to your TradingView username. So the first step is sending your TradingView username through your member area, or through MoreThanMoney support. Once access is active, you open a chart, click on Indicators, go to the invite-only scripts tab and choose DEFY by MTM. One click and the indicator appears. You don't need any paid TradingView plan for this, although a paid plan helps if you want many alerts running at the same time."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "grafico",
+     "cap": "02 · Putting DEFY on the chart",
+     "kicker": "First look",
+     "titulo": "The chart with everything switched on",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "niveis",
+      "nuvem",
+      "cores",
+      "sinal",
+      "plano",
+      "setas",
+      "volume"
+     ],
+     "camadas": [],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "This is what the chart looks like with everything switched on. At first glance it seems like a lot, and that's normal. But in a few minutes you'll look at this screen and read each element in seconds. You can see the bands around price, the horizontal key-level zones, the cloud changing colour, the coloured candles, the golden signal candle, the idea card and the plan lines. A note about the charts you'll see in this bootcamp: they are illustrative animations, designed to explain how things work. They are not real results or historical market data. Now let's switch everything off and turn on one layer at a time."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "comparar",
+     "cap": "02 · Putting DEFY on the chart",
+     "kicker": "Settings",
+     "titulo": "The colour themes",
+     "cartoes": [
+      {
+       "t": "Classic",
+       "d": "Blue for buy, red for sell. The recommended starting point."
+      },
+      {
+       "t": "Dark",
+       "d": "White and purple, for people who work on a dark background."
+      },
+      {
+       "t": "Light",
+       "d": "Purple and grey, for a light background."
+      },
+      {
+       "t": "Ladies",
+       "d": "Pink and violet. Same logic, different palette."
+      }
+     ],
+     "fala": "Before we get into the readings, one practical point: themes. In DEFY's settings, right at the top, you have the colour mode. Classic uses blue for the buying side and red for the selling side, and it's what I'll use throughout this bootcamp. Dark switches to white and purple, Light to purple and grey, and Ladies to pink and violet. The logic is always the same, only the palette changes. Pick one theme and don't keep switching, because your eye gets used to the colours and that makes reading much faster."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "capitulo",
+     "cap": "03 · Exhaustion bands",
+     "numero": "03",
+     "titulo": "Reading 1: the exhaustion bands",
+     "sub": "Where price is stretched",
+     "fala": "Third chapter, and first reading: the exhaustion bands."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "grafico",
+     "cap": "03 · Exhaustion bands",
+     "kicker": "Reading 1",
+     "titulo": "Inner, middle and outer",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [],
+     "camadas": [
+      "bandas"
+     ],
+     "ate": [
+      0.55,
+      0.6
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "The exhaustion bands are three pairs of lines drawn around a smooth central line. By default, that central line uses eighty-nine candles. Above it you have the bands in the selling colour, below it the ones in the buying colour, and between each pair there is an inner band, a middle band and an outer band. The zone between the middle and outer band is shaded, and that's where you should pay the most attention. The idea behind the bands is statistical: most of the time price stays close to its average. When it moves far away, it enters a zone where moves tend to slow down. That doesn't mean price will turn right away. It means the stretch is already large, and the risk of chasing the move has gone up."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "pontos",
+     "cap": "03 · Exhaustion bands",
+     "kicker": "How to read it",
+     "titulo": "What each band tells you",
+     "itens": [
+      "Inner band: the first stretch, still normal",
+      "Middle band: the move is already strong",
+      "Outer band: exhaustion, the zone where reversals happen most",
+      "DEFY requires a touch of the bands before an idea"
+     ],
+     "fala": "How do you read each band? The inner band is the first stretch, still within normal behaviour. The middle band tells you the move is already strong. And the outer band is the exhaustion zone, where reversals are most frequent. By default, DEFY only accepts an idea after price has touched the bands on the opposite side. In other words, for a buy idea, price has to have dropped down to the lower bands. This rule is called Require Band Touch, and it's switched on by default. If you turn it off, you'll get more ideas, including ideas in the middle of the bands, but you lose the stretch filter. To start, leave it on."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "comparar",
+     "cap": "03 · Exhaustion bands",
+     "kicker": "Band Length",
+     "titulo": "The length of the bands",
+     "cartoes": [
+      {
+       "t": "21 to 34",
+       "d": "More ideas, short moves. For scalping."
+      },
+      {
+       "t": "50 to 89",
+       "d": "Balanced. 89 is the default."
+      },
+      {
+       "t": "150 or more",
+       "d": "Fewer ideas, bigger moves. For swing."
+      }
+     ],
+     "fala": "Band Length changes the character of the indicator. Between twenty-one and thirty-four, the bands sit closer to price, more ideas appear, and the moves are shorter. That's a choice for scalping. Between fifty and eighty-nine, you get a balance, and eighty-nine is the default. At one hundred and fifty or more, the bands widen, ideas become rarer, and the moves you catch tend to be bigger. One rule that will save you a lot of headaches: change one parameter at a time, and watch for at least a few weeks before drawing conclusions."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "pontos",
+     "cap": "03 · Exhaustion bands",
+     "kicker": "No repainting",
+     "titulo": "The dashed projection",
+     "itens": [
+      "The bands are centred on the past, so they stay smooth",
+      "The most recent part appears dashed and faded",
+      "Signals use causal values, with no look-ahead",
+      "An idea marked at a candle close does not disappear"
+     ],
+     "fala": "There's a technical detail I want you to understand well, because this is where many indicators mislead you. DEFY's bands are centred on the past, which makes them smooth and good-looking. But a centred line needs candles on both sides, and the future candles don't exist yet. So the most recent part of the bands appears dashed and faded, like a projection. Signals don't use that projection. They use causal values, calculated only from candles that have already closed. In practice, this means that an idea that appears at the close of a candle stays there. It doesn't disappear, it doesn't move, it isn't redrawn later."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "capitulo",
+     "cap": "04 · Key levels",
+     "numero": "04",
+     "titulo": "Reading 2: the key levels",
+     "sub": "Where price has already reacted",
+     "fala": "Fourth chapter, second reading: the key levels."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "grafico",
+     "cap": "04 · Key levels",
+     "kicker": "Reading 2",
+     "titulo": "Zones where the market has already reacted",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas"
+     ],
+     "camadas": [
+      "niveis"
+     ],
+     "ate": [
+      0.6,
+      0.6
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Key levels are horizontal zones where price has already reacted in the past. DEFY finds the pivots, meaning the swing highs and lows, and groups them into zones. Then it shows only the ones closest to the current price, spaced apart so they don't fill the chart with lines. Zones above the price appear in the selling colour, because that's where selling could happen, and zones below appear in the buying colour. By default you see ten levels, but you can go anywhere from one to thirty. The width of each zone also adjusts: a setting of ten corresponds roughly to half an ATR, which is a measure of the average volatility of each candle."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "pontos",
+     "cap": "04 · Key levels",
+     "kicker": "How to use it",
+     "titulo": "Context, not a trigger",
+     "itens": [
+      "A key level near the idea adds one confirmation",
+      "A buy idea born on a lower level: strong context",
+      "An idea born right under an upper level: be careful",
+      "Levels also help you read the targets"
+     ],
+     "fala": "Key levels are not an entry trigger. They are context. When a buy idea is born on top of a lower level, two things agree: price has stretched down to the bands, and at the same time it's in a zone where buyers have stepped in before. That adds one confirmation to the score. On the other hand, if a buy idea is born right under an upper level, the path to the first target may be blocked. It's not forbidden to enter, but it's a signal to be more selective. Levels also help you read the targets: if the second target sits right on top of a strong level, it's natural for price to hesitate there."
+    },
+    {
+     "id": "v1-19",
+     "tipo": "capitulo",
+     "cap": "05 · Trend",
+     "numero": "05",
+     "titulo": "Reading 3: the cloud and the candles",
+     "sub": "Which way the market is pulling",
+     "fala": "Fifth chapter, third reading: the trend tracker."
+    },
+    {
+     "id": "v1-20",
+     "tipo": "grafico",
+     "cap": "05 · Trend",
+     "kicker": "Reading 3",
+     "titulo": "The trend cloud",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas"
+     ],
+     "camadas": [
+      "nuvem",
+      "cores"
+     ],
+     "ate": [
+      0.62,
+      0.95
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "The trend tracker has two parts. The first is the cloud, formed by a fast moving average and a slow one. When the cloud is blue, the short-term trend is bullish. When it's red, it's bearish. The second part is the colour of the candles. Candles turn blue when the trend is bullish, red when it's bearish, and grey when the market is in transition, with no clear direction. Look at what's happening now on the chart: price falls, the cloud turns red, price stretches down to the lower bands, and suddenly a golden candle appears. Golden candles mark strong bodies with above-normal volume. They're candles with intent."
+    },
+    {
+     "id": "v1-21",
+     "tipo": "comparar",
+     "cap": "05 · Trend",
+     "kicker": "Performance Type",
+     "titulo": "The speed of the cloud",
+     "cartoes": [
+      {
+       "t": "Active",
+       "d": "Reacts quickly. More colour changes, sooner."
+      },
+      {
+       "t": "Steady",
+       "d": "Balanced. Filters out some of the noise."
+      },
+      {
+       "t": "Smooth",
+       "d": "Slow transitions. For people following long trends."
+      }
+     ],
+     "fala": "The speed of the cloud is chosen in Performance Type. On Active, which is the default, the cloud reacts quickly and changes colour sooner. On Steady, it filters out some of the noise. On Smooth, the transitions are slow, which is useful if you want to follow longer trends. There isn't one correct option. There's the option that fits your timeframe and your style. On scalping, Active usually makes sense. On swing, many people prefer Steady or Smooth."
+    },
+    {
+     "id": "v1-22",
+     "tipo": "pontos",
+     "cap": "05 · Trend",
+     "kicker": "Reversal or continuation",
+     "titulo": "The cloud and the idea",
+     "itens": [
+      "Idea with the cloud: continuation, simpler context",
+      "Idea against the cloud: reversal, needs outer bands",
+      "Grey candles: no direction, more caution",
+      "Follow arrows: only after an idea, for 15 candles"
+     ],
+     "fala": "How does the cloud enter the decision? An idea in the direction of the cloud is a continuation idea, and the context is simpler. An idea against the cloud is a reversal, and there you ask for more: you want to see price at the outer bands and a very clear signal candle. Grey candles, with no direction, call for more caution. Finally, the follow arrows. They only appear after an idea, for fifteen candles, and only while momentum agrees with it. In Track mode, which is the default, an arrow appears when momentum is in favour and an X when it turns against. It's a support for management, which we'll use in the third module."
+    },
+    {
+     "id": "v1-23",
+     "tipo": "capitulo",
+     "cap": "06 · Volume",
+     "numero": "06",
+     "titulo": "Volume breaks",
+     "sub": "When the move has fuel",
+     "fala": "Sixth chapter: volume breaks."
+    },
+    {
+     "id": "v1-24",
+     "tipo": "grafico",
+     "cap": "06 · Volume",
+     "kicker": "Volume Breaks",
+     "titulo": "Vol: +x%",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "nuvem",
+      "cores"
+     ],
+     "camadas": [
+      "volume",
+      "toque"
+     ],
+     "ate": [
+      0.64,
+      0.66
+     ],
+     "zoom": [
+      0,
+      0.6
+     ],
+     "fala": "When a volume spike coincides with a trend break, DEFY writes a yellow label, for example Vol plus one hundred and eighty-four percent. The number tells you how far above average the volume was on that candle. Why does this matter? Because a move without volume is often a move without fuel. A reversal candle with volume well above average shows that real participation came in. On spot forex, TradingView's volume is the broker's tick volume, not the total volume of the market, so read it as a relative indication. On indices and crypto, it's a more direct reading."
+    },
+    {
+     "id": "v1-25",
+     "tipo": "capitulo",
+     "cap": "07 · Putting it together",
+     "numero": "07",
+     "titulo": "Putting the readings together",
+     "sub": "The first full example",
+     "fala": "Seventh chapter: let's put everything together in one example."
+    },
+    {
+     "id": "v1-26",
+     "tipo": "grafico",
+     "cap": "07 · Putting it together",
+     "kicker": "Illustrative example",
+     "titulo": "A buy idea, step by step",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "niveis",
+      "nuvem",
+      "cores"
+     ],
+     "camadas": [
+      "toque",
+      "volume",
+      "sinal",
+      "plano",
+      "setas"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "fala": "Let's read this example calmly. Price is coming down, with the cloud red and the candles red. It stretches down to the lower bands, and notice that it touches the outer band, marked here with the circle. It's also sitting on a key level. Then a golden candle appears, with volume well above average, closing beyond the previous fractal. The readings agree, and DEFY marks the idea: DEFY Buy, score plus eight, two stars. At the same time it draws the plan: the entry, the Warning below the candle, the stop one ATR further down, and the three targets. After that, the follow arrows track the move as long as momentum stays in favour. In the second module we'll break down each of these numbers."
+    },
+    {
+     "id": "v1-27",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Module 1 summary",
+     "titulo": "What you need to know how to read",
+     "itens": [
+      "Bands: where price is stretched",
+      "Key levels: where price has already reacted",
+      "Cloud and candles: which way the market is pulling",
+      "Volume: whether the move has fuel",
+      "Ideas only appear when the readings agree"
+     ],
+     "fala": "Summing up the first module. The bands show you where price is stretched. The key levels show you where price has already reacted. The cloud and the candles tell you which way the market is pulling. Volume tells you whether the move has fuel. And ideas only appear when these readings agree."
+    },
+    {
+     "id": "v1-28",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before module 2",
+     "titulo": "Your homework",
+     "itens": [
+      "Put DEFY on one market and one timeframe",
+      "Switch everything off and turn on one layer at a time",
+      "Mark five stretches into the outer bands",
+      "Note what price did next, without trading"
+     ],
+     "fala": "Before you move on to the second module, I have an exercise for you. Put DEFY on one market and one timeframe. Switch everything off and turn on one layer at a time, as we did here. Then search the history for five moments when price reached the outer bands, and note what happened next. Without trading, just observing. This simple exercise will train your eye more than any video. In the next module we'll see how an idea is born, how the score is counted, and how the plan gets fixed on the signal candle."
+    },
+    {
+     "id": "v1-29",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "See you at module 2",
+     "sub": "From confirmations to the trade plan",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this is educational content, not financial advice. Trading carries risk, and you can lose money. Practise on a demo account first. See you in module two.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "DEFY Bootcamp · 2/3",
+   "titulo": "From confirmations to the trade plan",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 2 of 3",
+     "titulo": "DEFY",
+     "sub": "From confirmations to the trade plan",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "In this module",
+     "titulo": "DEFY's engine",
+     "itens": [
+      "How an idea is born",
+      "The confirmation score",
+      "Stars, King Idea and the Idea Filter",
+      "Entry, Warning, stop and targets",
+      "Alerts and follow-ups"
+     ],
+     "fala": "Welcome to the second module of the DEFY Bootcamp. In the first module you learned to read the four layers of the chart. Now we're going to open up the engine. You'll understand exactly how an idea is born, how the confirmation score is counted, what the stars and the King Idea mean, and how the Idea Filter works. Then we move on to the trade plan: the entry mode, the Warning line, the stop and the four target modes. Finally, we look at the alerts and follow-ups, which tell you when a target or the stop has been hit. It's the most technical module of the bootcamp, so take it slowly, and rewind whenever you need to."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · Anatomy of an idea",
+     "numero": "01",
+     "titulo": "Anatomy of an idea",
+     "sub": "Three conditions, no exceptions",
+     "fala": "First chapter: the anatomy of an idea."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "pontos",
+     "cap": "01 · Anatomy of an idea",
+     "kicker": "Minimum conditions",
+     "titulo": "What an idea needs",
+     "itens": [
+      "A valid candle, with body and expansion",
+      "A close beyond the previous fractal",
+      "At least three confirmations",
+      "By default, a prior touch of the bands"
+     ],
+     "fala": "For DEFY to mark an idea, three conditions must be met at the same time. The first is a valid candle. It's not just any candle: it needs a body, meaning a clear gap between the open and the close, and it has to expand compared with the previous candles. The second is a close beyond the previous fractal. A fractal is a small local high or low. When a buy candle closes above the last swing high, it shows that buyers have gained ground. The third condition is at least three confirmations. And, as we saw in the previous module, by default DEFY also requires that price has touched the bands beforehand. If any one of these pieces is missing, there is no idea."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "comparar",
+     "cap": "01 · Anatomy of an idea",
+     "kicker": "Candle filters",
+     "titulo": "Profile and Expansion",
+     "cartoes": [
+      {
+       "t": "Strict",
+       "d": "Robust body and strong momentum. Fewer ideas, higher quality. This is the default."
+      },
+      {
+       "t": "Relaxed",
+       "d": "More flexible structure. More ideas, more noise."
+      },
+      {
+       "t": "Expansion",
+       "d": "Off, Soft or Hard. Soft asks for expansion compared with the previous candles. Hard asks for strong expansion, of an institutional kind."
+      }
+     ],
+     "fala": "There are two parameters that control how demanding DEFY is about the signal candle. The first is Profile. On Strict, which is the default, DEFY asks for a robust body and strong momentum, so fewer ideas appear, but cleaner ones. On Relaxed, it accepts more flexible structures, which gives you more ideas and also more noise. The second is Expansion. On Off, there is no expansion requirement. On Soft, which is the default, the candle has to be larger than the previous ones. On Hard, the expansion has to be strong, the kind of candle that shows institutional participation. My recommendation is simple: start with Strict and Soft, and only change these once you know your market's behaviour well."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "grafico",
+     "cap": "01 · Anatomy of an idea",
+     "kicker": "Fractal",
+     "titulo": "The close that changes the structure",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "cores"
+     ],
+     "camadas": [
+      "toque",
+      "sinal"
+     ],
+     "ate": [
+      0.58,
+      0.63
+     ],
+     "zoom": [
+      0.4,
+      0.95
+     ],
+     "fala": "Look at the example. Price falls to the outer band, touches it, and for a few candles still hesitates. The swing highs keep stepping down, which is typical of a decline. Then the golden candle appears, closing above the last swing high. This close changes the short-term structure, and that's why DEFY requires this condition. Notice too that the signal only appears when the candle closes. While the candle is forming, price can go up and down freely. DEFY waits for the close, and that's what guarantees the signal won't disappear afterwards."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "capitulo",
+     "cap": "02 · The score",
+     "numero": "02",
+     "titulo": "The confirmation score",
+     "sub": "From +3 to +15",
+     "fala": "Second chapter: the confirmation score."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "pontuacao",
+     "cap": "02 · The score",
+     "kicker": "Each reading adds one point",
+     "titulo": "The count",
+     "inicio": 3,
+     "itens": [
+      "Inner band",
+      "Middle band",
+      "Outer band",
+      "Key level",
+      "Cloud",
+      "Momentum",
+      "Moving average order",
+      "Bounce and cross",
+      "Engulfing",
+      "Wick rejection",
+      "Volume",
+      "FVG",
+      "RSI",
+      "Structure"
+     ],
+     "fala": "The score starts at plus three, because those are the three minimum confirmations. From there, it goes up one point for each extra confluence. Let's go through the list. A touch of the inner band, the middle band and the outer band, which count separately. A key level nearby. The cloud on the side of the idea. Momentum in favour. The order of the moving averages. A bounce and cross in the averages. An engulfing candle. A wick rejection, meaning a long shadow that shows price was turned away. Volume above average. A fair value gap, that empty space of liquidity left by a very fast candle. The RSI. And market structure. Fourteen possible readings, and DEFY counts them for you on every candle."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "pontos",
+     "cap": "02 · The score",
+     "kicker": "How to think about the score",
+     "titulo": "Agreement, not certainty",
+     "itens": [
+      "More points = more readings in agreement",
+      "It is not a probability or a promise",
+      "Weak ideas exist: the filter hides them",
+      "Always read the context above the number"
+     ],
+     "fala": "I want you to think about the score the right way. A high score means many different readings agree at the same time. It doesn't mean the idea will work. It is not a probability, and certainly not a promise. There are ideas at plus eleven that fail, and ideas at plus six that go very well. What the score gives you is an objective way to compare ideas and decide which ones deserve your attention. Your part is still to read the context: the bigger trend, the news of the day, and whether price has already moved far from the entry."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "capitulo",
+     "cap": "03 · Stars and King",
+     "numero": "03",
+     "titulo": "Stars and the King Idea",
+     "sub": "And the Idea Filter",
+     "fala": "Third chapter: the stars, the King Idea and the Idea Filter."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "plano",
+     "cap": "03 · Stars and King",
+     "kicker": "Scale",
+     "titulo": "From score to stars",
+     "linhas": [
+      [
+       "+3 to +5",
+       "Base idea, no stars",
+       ""
+      ],
+      [
+       "+6 to +7",
+       "★  base idea",
+       "entrada"
+      ],
+      [
+       "+8 to +9",
+       "★★  strong idea",
+       "entrada"
+      ],
+      [
+       "+10 or more",
+       "★★★  exceptional idea",
+       "tp"
+      ],
+      [
+       "👑 King Idea",
+       "10+ on a gold candle",
+       "tp"
+      ]
+     ],
+     "fala": "The score translates into stars. From plus three to plus five, the idea appears without stars. From plus six to plus seven, it has one star: it's a base idea. From plus eight to plus nine, two stars: a strong idea. From plus ten upwards, three stars: an exceptional idea, with many readings in agreement. And then there's the King Idea, with the crown. The King appears when there are ten or more confirmations on a gold candle, in other words a candle with a strong body and high volume. It's rare, and that's why it deserves the crown. But, once again: rare doesn't mean guaranteed."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "comparar",
+     "cap": "03 · Stars and King",
+     "kicker": "Idea Filter",
+     "titulo": "What you want to see on the chart",
+     "cartoes": [
+      {
+       "t": "+3 to +5",
+       "d": "You see almost everything. Useful for studying the indicator."
+      },
+      {
+       "t": "★ to ★★★",
+       "d": "Only ideas with stars. The middle ground for trading."
+      },
+      {
+       "t": "👑 Only",
+       "d": "King Ideas only. Very few, for people who want ultra-selectivity."
+      }
+     ],
+     "fala": "The Idea Filter decides which ideas appear on the chart and which trigger alerts. It runs from plus three upwards, where you see practically everything, to King only, where you see very little. The default is plus five and above. One way to use this: when you're studying the indicator, lower the filter so you see every idea and understand which ones fail and why. When you're trading, raise the filter to one or two stars and above. That way your phone only buzzes when it's worth looking. The filter doesn't change the quality of the ideas, it only changes what is shown to you."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "capitulo",
+     "cap": "04 · The trade plan",
+     "numero": "04",
+     "titulo": "The trade plan",
+     "sub": "Fixed on the signal candle",
+     "fala": "Fourth chapter, and perhaps the most important: the trade plan."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "grafico",
+     "cap": "04 · The trade plan",
+     "kicker": "Full plan",
+     "titulo": "Entry, Warning, SL and three targets",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.64,
+      0.64
+     ],
+     "zoom": [
+      0.7,
+      0.7
+     ],
+     "rx": 0,
+     "ry": 0,
+     "fala": "When an idea appears, DEFY draws the full plan and fixes it to the signal candle. This means the levels don't move afterwards. You have the entry, in yellow. The Warning, in orange and dashed, which sits at the extreme of the signal candle: the bottom of the candle for a buy, and the top for a sell. The stop loss, in red, one ATR beyond the Warning. And three targets, in green. The labels show the distance of each line in pips on forex and in points on gold, indices and crypto. Having the plan drawn before you enter is half the discipline. You know where you get in, where you're wrong and where you take profit, before risking a single cent."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "comparar",
+     "cap": "04 · The trade plan",
+     "kicker": "Entry Mode",
+     "titulo": "Two entry modes",
+     "cartoes": [
+      {
+       "t": "Candle Close",
+       "d": "You enter at the close of the signal candle. Simpler and safer: you never miss the idea."
+      },
+      {
+       "t": "Candle Pullback",
+       "d": "You wait for price to come back to 50% of the signal candle. More precise entry, proportionally shorter stop. Cancels if it doesn't return within 10 candles."
+      }
+     ],
+     "fala": "There are two entry modes. The first is Candle Close, the default: you enter at the close of the signal candle. It's the simplest and the safest, in the sense that you never miss an idea. The second is Candle Pullback: you wait for price to return to the halfway point of the signal candle. The entry is more precise and the distance to the stop is shorter, but some ideas take off without coming back, and you miss those. If price doesn't return to the fifty percent zone within ten candles, the idea is cancelled, and DEFY sends a cancellation notice. Neither mode is better in absolute terms. Choose one, use it consistently, and compare the results in your journal."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "pontos",
+     "cap": "04 · The trade plan",
+     "kicker": "The most important line",
+     "titulo": "The Warning",
+     "itens": [
+      "It sits at the extreme of the signal candle",
+      "If price rejects it, the idea has failed",
+      "You exit without waiting for the stop",
+      "The stop sits 1 ATR further away, as insurance"
+     ],
+     "fala": "Now, the line I like most in DEFY: the Warning. The Warning sits at the extreme of the signal candle. The logic is this: the signal candle was the candle that showed intent. If price moves back beyond the extreme of that candle and gets rejected there, the intent has disappeared, and the idea has failed. At that moment you exit, without waiting for the stop. The stop, one ATR further away, exists as insurance, for fast moves where you don't have time to react. When you exit at the Warning, you lose less than the total risk you had planned. This is management, not magic: it's simply exiting when the reason for the entry has stopped existing."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "plano",
+     "cap": "04 · The trade plan",
+     "kicker": "Target Mode",
+     "titulo": "Four target modes",
+     "linhas": [
+      [
+       "Standard",
+       "1R · 2R · 3R",
+       "entrada"
+      ],
+      [
+       "Squeeze",
+       "Next bands · quick scalp",
+       "warning"
+      ],
+      [
+       "Stretch",
+       "2R · 4R · 6R",
+       "tp"
+      ],
+      [
+       "Swing",
+       "3R · 6R · 9R",
+       "tp"
+      ]
+     ],
+     "fala": "There are four modes for targets. First, a concept: R is your risk, the distance from the entry to the stop. A target at two R sits at twice that distance. The Standard mode, the default, places the targets at one, two and three R. Squeeze uses the next bands as targets, in other words a rotation back to the average, and it's designed for quick scalps. If the bands are compressed, switch back to Standard. Stretch places the targets at two, four and six R, and Swing at three, six and nine R. Targets further away mean you need fewer hits to offset your losses, but also that each target is reached less often. There's no free lunch."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "plano",
+     "cap": "04 · The trade plan",
+     "kicker": "Calculation example",
+     "titulo": "A buy in round numbers",
+     "linhas": [
+      [
+       "Entry",
+       "2,000.0",
+       "entrada"
+      ],
+      [
+       "Warning",
+       "1,996.0",
+       "warning"
+      ],
+      [
+       "Stop (1 ATR below)",
+       "1,993.0  ·  R = 7.0",
+       "sl"
+      ],
+      [
+       "TP1  (1R)",
+       "2,007.0",
+       "tp"
+      ],
+      [
+       "TP2  (2R)",
+       "2,014.0",
+       "tp"
+      ],
+      [
+       "TP3  (3R)",
+       "2,021.0",
+       "tp"
+      ]
+     ],
+     "fala": "Let's do the maths with round numbers, in an invented gold example. The entry is at two thousand. The signal candle has its low at one thousand nine hundred and ninety-six, which is the Warning. Imagine the ATR is three points: the stop sits at one thousand nine hundred and ninety-three. The distance from the entry to the stop is seven points, and that is your R. In Standard mode, the first target sits at one R, at two thousand and seven. The second at two R, at two thousand and fourteen. And the third at three R, at two thousand and twenty-one. DEFY does these calculations for you, but it's important that you understand where they come from, so you trust the plan and can calculate position size, which is the subject of the next module."
+    },
+    {
+     "id": "v2-17b",
+     "tipo": "capitulo",
+     "cap": "05 · Reading a sell",
+     "numero": "05",
+     "titulo": "Reading a sell",
+     "sub": "The same process, in reverse",
+     "fala": "Before the alerts, let's read a sell idea, so you can see that the process is exactly the same, just in reverse."
+    },
+    {
+     "id": "v2-17c",
+     "tipo": "grafico",
+     "cap": "05 · Reading a sell",
+     "kicker": "Illustrative example",
+     "titulo": "A sell idea, step by step",
+     "cenario": "venda",
+     "seed": 11,
+     "base": [
+      "bandas",
+      "niveis",
+      "nuvem",
+      "cores"
+     ],
+     "camadas": [
+      "toque",
+      "sinal",
+      "plano",
+      "setas"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "estrelas": "+7  ★",
+     "fala": "Price is rising, with the cloud blue. It stretches up to the upper bands and touches the outer band. Then a selling candle appears, with a body, closing below the last swing low. DEFY counts the confirmations and marks the idea: DEFY Sell, plus seven, one star. The plan appears inverted: the Warning sits at the top of the signal candle, the stop one ATR above, and the three targets point downward. Notice one detail: this idea is against the cloud, which was still blue. It's a reversal. So here, I want to see the touch on the outer band and a very clear signal candle, and that's exactly what we have. If the candle were small, or if the touch were only on the inner band, this would be an idea to let go by."
+    },
+    {
+     "id": "v2-17d",
+     "tipo": "comparar",
+     "cap": "05 · Reading a sell",
+     "kicker": "Pips and points",
+     "titulo": "The same plan in different markets",
+     "cartoes": [
+      {
+       "t": "Forex",
+       "d": "Distances in pips. A pair like EURUSD is read in pips up to the stop and the targets."
+      },
+      {
+       "t": "Gold",
+       "d": "Distances in price points. Gold moves in dollars per ounce."
+      },
+      {
+       "t": "Indices and crypto",
+       "d": "Also in points. R works the same way: only the unit changes."
+      }
+     ],
+     "fala": "One last note before the alerts. The plan's labels show distances in pips on forex, and in points on gold, indices and crypto. This changes nothing about the logic: an R is always the distance from the entry to the stop, whether it's fifteen pips on a currency pair or twenty points on an index. What changes is the monetary value of each pip or point, which depends on the instrument and on your broker. That's precisely why, in the next module, we'll calculate position size from the risk in money, and not from a fixed number of lots."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "capitulo",
+     "cap": "06 · Alerts",
+     "numero": "06",
+     "titulo": "Alerts and follow-ups",
+     "sub": "DEFY working for you",
+     "fala": "Sixth chapter: alerts."
+    },
+    {
+     "id": "v2-19",
+     "tipo": "pontos",
+     "cap": "06 · Alerts",
+     "kicker": "Set up",
+     "titulo": "One alert, all ideas",
+     "itens": [
+      "Create alert › Condition: DEFY",
+      "Choose “Any alert() function call”",
+      "Frequency: once per bar close",
+      "Optional: webhook to receive the JSON"
+     ],
+     "fala": "To receive ideas without being glued to the screen, you create an alert on TradingView. In the condition you choose DEFY, and then the option any alert function call. The frequency should be once per bar close, to respect the candle close rule. With a single alert you receive every idea that passes the Idea Filter, on that chart. If you only want the simple signals, there are also the DEFY Buy and DEFY Sell conditions. And if you use webhooks, each alert carries a complete message in JSON format, with the direction, the score, the stars, the King flag, and all the levels of the plan."
+    },
+    {
+     "id": "v2-20",
+     "tipo": "pontos",
+     "cap": "06 · Alerts",
+     "kicker": "Follow-ups",
+     "titulo": "The idea followed through to the end",
+     "itens": [
+      "Entry hit, in pullback mode",
+      "TP1, TP2 and TP3",
+      "Stop loss",
+      "Cancellation",
+      "All with the same identifier as the idea"
+     ],
+     "fala": "After the idea, DEFY keeps tracking it. It sends follow-ups when the entry is hit, in pullback mode, when each of the three targets is touched, when the stop is hit, and when the idea is cancelled. All follow-ups carry the same identifier as the original idea, so any system receiving them knows which idea they belong to. This is how, at MoreThanMoney, DEFY ideas reach the alerts channel in the app, with the follow-ups linked to each one. And it's also why you can keep an honest journal: every idea has its beginning, middle and end recorded."
+    },
+    {
+     "id": "v2-21",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Module 2 summary",
+     "titulo": "The engine, in five sentences",
+     "itens": [
+      "Idea = valid candle + close beyond the fractal + 3 confirmations",
+      "The score measures agreement, not certainty",
+      "Stars and the filter decide what you see",
+      "The plan is fixed: entry, Warning, stop, 3 targets",
+      "Respect the Warning: exit when the reason disappears"
+     ],
+     "fala": "Summing up module two. An idea needs a valid candle, a close beyond the fractal, and at least three confirmations. The score measures agreement, not certainty. The stars and the filter decide what you see. The plan is fixed on the signal candle, with entry, Warning, stop and three targets. And the Warning is your exit line when the reason for the entry disappears."
+    },
+    {
+     "id": "v2-22",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before module 3",
+     "titulo": "Your homework",
+     "itens": [
+      "Lower the filter to +3 and above",
+      "Go through the history and find ten ideas",
+      "For each one: score, stars and what happened to the Warning",
+      "Note how many rejected the Warning before the stop"
+     ],
+     "fala": "This module's exercise: lower the Idea Filter to plus three and above, go through the history of your market, and find ten ideas. For each one, note the score, the stars, and what happened: did it hit the first target? Did it reject the Warning? Did it go to the stop? At the end, count how many of the ones that failed rejected the Warning before reaching the stop. This number is yours, measured by you, and it's worth more than any statistic I could give you. In the third module we'll take this and turn it into risk management."
+    },
+    {
+     "id": "v2-23",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "See you at module 3",
+     "sub": "Risk, management and daily routine",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts and numbers in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this is educational content, not financial advice. The numbers in this video are examples. Practise on a demo account before risking money. See you in module three.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "DEFY Bootcamp · 3/3",
+   "titulo": "Risk, management and daily routine",
+   "cenas": [
+    {
+     "id": "v3-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 3 of 3",
+     "titulo": "DEFY",
+     "sub": "Risk, management and daily routine",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v3-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "The indicator finds the idea. <span class='ouro'>Management</span> decides the result.",
+     "autor": "DEFY Bootcamp · Module 3",
+     "fala": "Welcome to the third and final module of the DEFY Bootcamp. Up to now you've learned to read the chart, and to understand how an idea is born and how the plan is drawn. Now comes the part that separates people who learn a tool from people who use it consistently: management. The indicator finds the idea. Management decides the result. In this module we'll talk about risk per trade, position size, how to manage an idea from start to finish, when not to enter, and a simple routine you can use every day. At the end, you'll have a complete, written process that you can follow on a demo account starting tomorrow."
+    },
+    {
+     "id": "v3-02",
+     "tipo": "capitulo",
+     "cap": "01 · Risk per trade",
+     "numero": "01",
+     "titulo": "Risk per trade",
+     "sub": "The only variable you truly control",
+     "fala": "First chapter: risk per trade."
+    },
+    {
+     "id": "v3-03",
+     "tipo": "pontos",
+     "cap": "01 · Risk per trade",
+     "kicker": "The principle",
+     "titulo": "Decide how much you lose before deciding how much you win",
+     "itens": [
+      "You don't control the market. You control how much you risk",
+      "Define risk as a percentage of the account, per idea",
+      "Many traders use between 0.5% and 1%",
+      "Keep the same risk, idea after idea"
+     ],
+     "fala": "There's one thing you have to accept from day one: you don't control the market. You don't control whether price goes to the first target or to the stop. The only thing you truly control is how much you risk on each idea. So the first decision isn't where to enter, it's how much you're willing to lose if you're wrong. That amount is defined as a percentage of the account, per idea. Many traders use between half a percent and one percent. It's not a magic rule, it's a way of making sure that a run of losses, which will happen, doesn't take you out of the game. And keep the same risk, idea after idea. Someone who increases risk after a loss, to win it back, is doing exactly the opposite of what they should."
+    },
+    {
+     "id": "v3-04",
+     "tipo": "plano",
+     "cap": "01 · Risk per trade",
+     "kicker": "Why small risk matters",
+     "titulo": "Ten losses in a row",
+     "linhas": [
+      [
+       "1% risk per idea",
+       "account at about 90%",
+       "entrada"
+      ],
+      [
+       "2% risk per idea",
+       "account at about 82%",
+       "warning"
+      ],
+      [
+       "5% risk per idea",
+       "account at about 60%",
+       "sl"
+      ],
+      [
+       "10% risk per idea",
+       "account at about 35%",
+       "sl"
+      ]
+     ],
+     "fala": "Look at what happens over a run of ten losses in a row, which is something any strategy can go through in a difficult month. With one percent risk per idea, you're left with about ninety percent of the account. With two percent, about eighty-two. With five percent, you're left with about sixty. And with ten percent, you're left with about thirty-five percent of the account. Notice that from there, to get back to the start, you need to almost triple what's left. This is just mathematics, and it's the reason small risk isn't cowardice, it's survival."
+    },
+    {
+     "id": "v3-05",
+     "tipo": "capitulo",
+     "cap": "02 · Position size",
+     "numero": "02",
+     "titulo": "Position size",
+     "sub": "From cash risk to lots",
+     "fala": "Second chapter: position size."
+    },
+    {
+     "id": "v3-06",
+     "tipo": "pontos",
+     "cap": "02 · Position size",
+     "kicker": "The formula",
+     "titulo": "Size = cash risk ÷ (R × value per unit)",
+     "itens": [
+      "Cash risk: account × percentage",
+      "R: the distance to the stop, which DEFY shows",
+      "Value per unit: what one pip or point is worth per lot",
+      "The lot comes from the numbers, not from intuition"
+     ],
+     "fala": "Position size is calculated with a simple formula. First, the cash risk: the value of the account times the percentage you've decided to risk. Second, R, the distance from the entry to the stop, which DEFY already shows you in pips or points. Third, the value per unit: how much one pip, or one point, is worth per lot, on your instrument and with your broker. Size is the cash risk divided by R times the value per unit. The important consequence is this: the lot changes from idea to idea. When the stop is close, the lot is bigger. When the stop is far, the lot is smaller. What stays the same is the cash risk."
+    },
+    {
+     "id": "v3-07",
+     "tipo": "plano",
+     "cap": "02 · Position size",
+     "kicker": "Example with round numbers",
+     "titulo": "A five thousand account",
+     "linhas": [
+      [
+       "Account",
+       "5,000",
+       "entrada"
+      ],
+      [
+       "Risk per idea (1%)",
+       "50",
+       "warning"
+      ],
+      [
+       "Stop distance (R)",
+       "25 pips",
+       "sl"
+      ],
+      [
+       "Pip value per standard lot",
+       "10",
+       "entrada"
+      ],
+      [
+       "Size = 50 ÷ (25 × 10)",
+       "0.20 lots",
+       "tp"
+      ]
+     ],
+     "fala": "An example with round numbers, on a forex pair. The account has five thousand. You decide to risk one percent, that is fifty. DEFY shows that the stop is twenty-five pips from the entry. On a pair where one pip is worth ten per standard lot, the calculation is fifty divided by twenty-five times ten, which gives zero point two lots. If the stop were fifty pips away, the lot would be zero point one. The cash risk always stays at fifty. Always confirm the pip value on your platform, because it changes with the pair and with the account currency. And if the calculated lot is smaller than your broker's minimum, the idea simply doesn't fit your account. Let it pass."
+    },
+    {
+     "id": "v3-08",
+     "tipo": "capitulo",
+     "cap": "03 · Managing the idea",
+     "numero": "03",
+     "titulo": "Managing the idea",
+     "sub": "Before, during and after",
+     "fala": "Third chapter: how to manage an idea from start to finish."
+    },
+    {
+     "id": "v3-09",
+     "tipo": "pontos",
+     "cap": "03 · Managing the idea",
+     "kicker": "Before entering",
+     "titulo": "Thirty-second check",
+     "itens": [
+      "Did the idea pass your star filter?",
+      "Is the bigger trend in favour, or is it a reversal at the outer bands?",
+      "Is there high-impact news in the next few minutes?",
+      "Is price still close to the entry?",
+      "Does the lot fit your risk?"
+     ],
+     "fala": "Before entering, do a thirty-second check. Did the idea pass your star filter? Is the bigger trend in favour, or, if it's a reversal, did it happen at the outer bands? Is there any high-impact news in the next few minutes? Is price still close to the entry, or has it already run away? And does the lot fit your risk? If any answer is no, you let it pass. Other ideas will come. An idea you didn't enter has never cost you money."
+    },
+    {
+     "id": "v3-10",
+     "tipo": "grafico",
+     "cap": "03 · Managing the idea",
+     "kicker": "During",
+     "titulo": "Protect at TP1, follow with the arrows",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "cores",
+      "sinal",
+      "plano"
+     ],
+     "camadas": [
+      "setas"
+     ],
+     "ate": [
+      0.63,
+      1
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "fala": "During the trade, management has three moments. Until the first target, your only job is to watch the Warning. If price rejects it, you exit. At the first target, you protect the position. There are two common ways: close part of it, for example half, or move the stop to the entry. Either one turns the idea into a risk-free idea, or nearly so. After the first target, you follow through to the second and third as long as the follow arrows and the cloud stay in your favour. If an X appears, which is the sign that momentum has turned against you, it's a good moment to close the rest, or tighten the stop. What you should never do is move the stop further away. Never."
+    },
+    {
+     "id": "v3-11",
+     "tipo": "grafico",
+     "cap": "03 · Managing the idea",
+     "kicker": "When it fails",
+     "titulo": "The Warning doing its job",
+     "cenario": "falha",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "cores",
+      "sinal",
+      "plano"
+     ],
+     "camadas": [],
+     "ate": [
+      0.62,
+      0.9
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "estrelas": "+6  ★",
+     "fala": "And when the idea fails? Look at this example. The idea appears with one star, price rises a little, but doesn't reach the first target. It turns back, touches the Warning and is rejected in that zone. This is the moment to exit. You don't wait for the stop, you don't wait for it to come back, you don't change your mind. The reason for the entry was the signal candle, and price has just cancelled that candle. Exiting here costs you a fraction of the R. Waiting for the stop costs you the whole R. Over many ideas, this difference is enormous. Losing a little on the ideas that fail is part of the process, not a failure."
+    },
+    {
+     "id": "v3-12",
+     "tipo": "pontos",
+     "cap": "03 · Managing the idea",
+     "kicker": "Afterwards",
+     "titulo": "The trading journal",
+     "itens": [
+      "Date, market, timeframe and direction",
+      "Score, stars and entry mode",
+      "Result in R, not in money",
+      "Did you follow the plan? Yes or no",
+      "One sentence: what you learned"
+     ],
+     "fala": "After each idea, whether it went well or badly, you write in your journal. Date, market, timeframe and direction. The score, the stars and the entry mode. The result measured in R, not in money, because R is comparable between ideas. The most important question: did you follow the plan, yes or no? And one sentence about what you learned. After thirty or forty ideas, your journal will tell you things no video can tell you: in which market and at which times DEFY works best for you, and where you, not the indicator, are going wrong."
+    },
+    {
+     "id": "v3-13",
+     "tipo": "capitulo",
+     "cap": "04 · When not to enter",
+     "numero": "04",
+     "titulo": "When not to enter",
+     "sub": "The ideas you let go by",
+     "fala": "Fourth chapter: when not to enter."
+    },
+    {
+     "id": "v3-14",
+     "tipo": "checklist",
+     "cap": "04 · When not to enter",
+     "kicker": "Let it pass when",
+     "titulo": "Five situations",
+     "itens": [
+      "Score at the minimum and no touch of the bands",
+      "Price already far from the entry",
+      "Against a strong cloud, with no clear reversal at the outer bands",
+      "High-impact news",
+      "The Warning has already been rejected"
+     ],
+     "fala": "There are five situations in which you should let the idea pass. First: the score is at the minimum and there was no touch of the bands. Second: price is already far from the entry. If you arrived late, you arrived late, and chasing price ruins the relationship between risk and targets. In pullback mode, the idea even cancels itself. Third: the idea is against a strong cloud, without a clear reversal at the outer bands. Fourth: there's high-impact news, such as interest rate decisions or employment data, where price can jump through your levels. And fifth: the Warning has already been rejected. At that point the idea has already failed, even if the card is still on the chart."
+    },
+    {
+     "id": "v3-15",
+     "tipo": "capitulo",
+     "cap": "05 · Choosing your profile",
+     "numero": "05",
+     "titulo": "Your profile",
+     "sub": "Scalp, intraday or swing",
+     "fala": "Fifth chapter: choosing your profile."
+    },
+    {
+     "id": "v3-16",
+     "tipo": "comparar",
+     "cap": "05 · Choosing your profile",
+     "kicker": "Three ways to use DEFY",
+     "titulo": "Choose one and stick with it",
+     "cartoes": [
+      {
+       "t": "Scalp",
+       "d": "1 to 15 min. Bands 21 to 34, Squeeze or Standard targets. Needs time in front of the screen."
+      },
+      {
+       "t": "Intraday",
+       "d": "1 hour. Bands 89, Standard targets. Two or three checks a day."
+      },
+      {
+       "t": "Swing",
+       "d": "4 hours. Bands 89 to 150, Stretch or Swing targets. Few ideas, more patience."
+      }
+     ],
+     "fala": "There are three typical profiles. Scalping, between one and fifteen minutes, with shorter bands, between twenty-one and thirty-four, and Squeeze or Standard targets. It gives many ideas, but demands time in front of the screen and quick decisions. Intraday, on the one-hour chart, with the bands at the default, eighty-nine, and Standard targets. This is what I recommend to people with a job: two or three checks a day are enough. And swing, on the four-hour chart, with bands from eighty-nine to one hundred and fifty and Stretch or Swing targets. Few ideas, trades that last days, and a lot of patience. Choose a profile and stick with it for at least a month before changing."
+    },
+    {
+     "id": "v3-17",
+     "tipo": "capitulo",
+     "cap": "06 · The fifteen-minute routine",
+     "numero": "06",
+     "titulo": "The fifteen-minute routine",
+     "sub": "Consistency beats intensity",
+     "fala": "Sixth chapter: the fifteen-minute daily routine."
+    },
+    {
+     "id": "v3-18",
+     "tipo": "checklist",
+     "cap": "06 · The fifteen-minute routine",
+     "kicker": "Every day",
+     "titulo": "Fifteen minutes, five steps",
+     "itens": [
+      "Check the day's economic calendar",
+      "Open your market on your timeframe",
+      "Read the cloud and the nearest key levels",
+      "Review the alerts received and the open ideas",
+      "Update the journal"
+     ],
+     "fala": "The routine is simple, and it fits into fifteen minutes. First, you check the day's economic calendar, so you know what time high-impact news is due. Second, you open your market on your timeframe, always the same ones. Third, you read the cloud and the nearest key levels: which way is the market pulling, and where might it hesitate? Fourth, you review the alerts you received and the ideas you have open, and apply the management we've seen. Fifth, you update your journal. For the rest of the day, the alerts work for you. You don't need to stay glued to the screen. You need to be consistent."
+    },
+    {
+     "id": "v3-19",
+     "tipo": "pontos",
+     "cap": "06 · The fifteen-minute routine",
+     "kicker": "In the MTM ecosystem",
+     "titulo": "DEFY in the app",
+     "itens": [
+      "Ideas reach the app's alerts channel",
+      "With the follow-ups linked to each idea",
+      "Practise on a demo account first",
+      "Questions: the MTM community and live sessions"
+     ],
+     "fala": "At MoreThanMoney, DEFY ideas also reach the app's alerts channel, with the follow-ups linked to each idea, so you can keep track of everything on your phone. My recommendation is clear: before using real money, spend at least a few weeks on a demo account, with the routine, the journal and fixed risk. If you have questions, bring your ideas to the community and to MTM's live sessions. Learning as a group, with real and discussed cases, speeds up the process a lot."
+    },
+    {
+     "id": "v3-19b",
+     "tipo": "capitulo",
+     "cap": "07 · The trader's mind",
+     "numero": "07",
+     "titulo": "The trader's mind",
+     "sub": "The mistakes no indicator fixes",
+     "fala": "Seventh chapter: the trader's mind. Because there are mistakes no indicator can fix."
+    },
+    {
+     "id": "v3-19c",
+     "tipo": "pontos",
+     "cap": "07 · The trader's mind",
+     "kicker": "The four classic mistakes",
+     "titulo": "Recognise them in yourself",
+     "itens": [
+      "Revenge: raising risk to win back a loss",
+      "Fear of missing out: entering late, far from the entry",
+      "Overconfidence: skipping the check after winning",
+      "Moving the stop further away"
+     ],
+     "fala": "There are four classic mistakes, and almost everyone goes through them. The first is revenge: you lose an idea and raise the risk on the next one to win it back. It's the fastest way to turn a bad day into a bad week. The second is fear of missing out: you see an idea running well, you enter late, far from the entry, and your stop ends up in the wrong place. The third is overconfidence: after three or four good ideas in a row, you skip the thirty-second check because you think you don't need it anymore. And the fourth, the most dangerous, is moving the stop further away when price approaches it. If you recognise yourself in any of these, don't feel bad. Write it in your journal. Seeing the pattern written down is the first step to breaking it."
+    },
+    {
+     "id": "v3-19d",
+     "tipo": "pontos",
+     "cap": "07 · The trader's mind",
+     "kicker": "Protection rules",
+     "titulo": "Limits you set with a clear head",
+     "itens": [
+      "A maximum number of losses per day",
+      "Once reached, you close the platform",
+      "A mandatory break after a big loss",
+      "A weekly journal review, always on the same day"
+     ],
+     "fala": "The best way to protect yourself from these mistakes is to set rules with a clear head, before you open the chart. For example: a maximum number of losses per day, after which you close the platform, whatever happens. A mandatory break after a loss bigger than usual. And a weekly journal review, always on the same day, in which you look at the numbers in R and at the answers to the question did you follow the plan. These rules seem simple, and they are. The hard part is keeping them on the days when the market tests you. That's why you write them down beforehand."
+    },
+    {
+     "id": "v3-19e",
+     "tipo": "capitulo",
+     "cap": "08 · Frequently asked questions",
+     "numero": "08",
+     "titulo": "Frequently asked questions",
+     "sub": "What students ask most",
+     "fala": "Eighth chapter: the questions students ask most often."
+    },
+    {
+     "id": "v3-19f",
+     "tipo": "pontos",
+     "cap": "08 · Frequently asked questions",
+     "kicker": "Questions and answers",
+     "titulo": "Common questions",
+     "itens": [
+      "Does DEFY repaint? No: ideas lock at the candle close",
+      "Can I use several timeframes? Yes, but trade only one",
+      "What's the best market? The one you know and follow",
+      "Do I need a paid TradingView plan? Not to start"
+     ],
+     "fala": "First question: does DEFY repaint? No. Ideas and levels stay fixed at the candle close, and signals only use values calculated from closed candles. The dashed part of the bands is a visual projection, and it's identified as such. Second: can I use several timeframes? You can look at a higher timeframe to read the trend, but trade on just one, so you don't contradict yourself. Third: what's the best market? It's the one you know, whose hours suit you, and that you follow every day. Fourth: do I need a paid TradingView plan? Not to start. A paid plan helps when you want alerts on many charts at the same time."
+    },
+    {
+     "id": "v3-19g",
+     "tipo": "pontos",
+     "cap": "08 · Frequently asked questions",
+     "kicker": "Questions and answers",
+     "titulo": "More common questions",
+     "itens": [
+      "Should I change the parameters? Only after weeks of journaling",
+      "What if I fail several in a row? Normal: check whether you followed the plan",
+      "Can I trade only King Ideas? You can, but there will be very few",
+      "How long until I'm ready? Your journal tells you"
+     ],
+     "fala": "Four more questions. Should I change the parameters? Only after a few weeks of journaling, and one at a time, so you know the effect of each change. And what if several ideas in a row fail? It's normal, it happens with any method. The right question isn't whether the indicator has stopped working, it's whether you followed the plan on each one of them. Can I trade only King Ideas? You can, but there will be very few, and you'll need patience to wait weeks for one. And finally: how long until I'm ready for real money? There's no set number. Your journal tells you: when you follow the plan consistently for several weeks, with fixed risk, you're treating this as a process. That is the goal."
+    },
+    {
+     "id": "v3-20",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Pocket checklist",
+     "titulo": "The full DEFY process",
+     "itens": [
+      "Clear trend or reversal",
+      "Touch of the bands",
+      "Key level nearby",
+      "Candle closed",
+      "Score and stars",
+      "Size by risk",
+      "Watch the Warning",
+      "Protect at TP1"
+     ],
+     "fala": "To finish, the DEFY pocket checklist. Trend in favour, or a clear reversal. A touch of the bands. A key level nearby. Candle closed. Score and stars that pass your filter. Size calculated from risk. Watch the Warning. And protect at the first target. Eight steps. If you always follow them, even when it's boring, you're already ahead of most people who try to trade without a method."
+    },
+    {
+     "id": "v3-21",
+     "tipo": "frase",
+     "cap": "Closing",
+     "texto": "More than money: <span class='ouro'>method, time and freedom</span>.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "We've reached the end of the DEFY Bootcamp. Thank you for getting through all three modules. Remember what I told you at the start: DEFY doesn't decide for you, it organizes the way you decide. The rest is process, patience and controlled risk. Do the exercises, practise on a demo, write your journal, and bring your questions to the community. I'm Ricardo Garcia, and this is MoreThanMoney."
+    },
+    {
+     "id": "v3-22",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "DEFY Bootcamp complete",
+     "sub": "morethanmoney.pt",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts and numbers in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Educational content, not financial advice. Trading carries risk, and you can lose money. Until next time.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}
