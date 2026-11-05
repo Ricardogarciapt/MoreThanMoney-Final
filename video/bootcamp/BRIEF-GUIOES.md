@@ -44,3 +44,13 @@ Todas as cenas com voz têm `id` único ("v1-01", …) e `cap` (capítulo mostra
 - Estrutura sugerida (longo): M1 fundamentos e leitura de cada peça do gráfico; M2 como nasce o sinal, confirmações,
   plano e alertas; M3 risco, tamanho da posição, gestão, quando não entrar, perfis, rotina, diário, psicologia, FAQ.
   (curto): V1 o que é e como se lê; V2 sinal, plano, gestão e rotina.
+
+## Bootcamp curto (2 vídeos, ≤10 min cada)
+- Ficheiros `guioes/<slug>.pt.json` e `guioes/<slug>.en.json`, 2 módulos (ids v1-…, v2-…), ~1700 palavras de `fala`
+  por módulo (1500–1900). Rótulo "Bootcamp <Nome> · n/2".
+- Fonte: `pdftotext -layout public/educador/estrategias/<slug>-guia.pdf -` (e o Pine em docs/pine/ se existir).
+- `plano` tirado do guia: `slAtr` (ou 1 se o stop não for por ATR), `alvos` em R, `rotulos` como o guia lhes chama;
+  `warning:false` salvo se a estratégia tiver uma linha de aviso.
+- Camadas de gráfico genéricas: medias, cores, estrutura, niveis, poc (só se a estratégia usar POC), banda (só Sensei),
+  sinal, plano, setas, volume. Nunca "bandas" (é do DEFY).
+- Escolhe `cores` {bull,bear} que façam sentido com o guia; o fundo e o ouro da marca não mudam.
