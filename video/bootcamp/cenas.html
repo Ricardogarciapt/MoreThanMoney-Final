@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>Bootcamp MTM</title>
+<style>
+@font-face { font-family: Anton; src: url(../../public/fonts/Anton-Regular.ttf); }
+@font-face { font-family: Serif; src: url(../apresentacao/fonts/instrument-serif-latin-400-italic.woff2); font-style: italic; }
+@font-face { font-family: Serif; src: url(../apresentacao/fonts/instrument-serif-latin-ext-400-italic.woff2); font-style: italic; unicode-range: U+0100-02BA,U+1E00-1E9F; }
+@font-face { font-family: Inter; src: url(../apresentacao/fonts/inter-latin-wght-normal.woff2); font-weight: 100 900; }
+@font-face { font-family: Inter; src: url(../apresentacao/fonts/inter-latin-ext-wght-normal.woff2); font-weight: 100 900; unicode-range: U+0100-02BA,U+1E00-1E9F; }
+@font-face { font-family: 'JetBrains Mono'; src: url(../apresentacao/fonts/jetbrains-mono-latin-wght-normal.woff2); font-weight: 100 800; }
+:root { --ouro:#D2A63C; --ouro2:#E9C46A; --carvao:#0b0a08; --tinta:#f3ede1; --cinza:#8f887a; --bull:#1E4FD8; --bear:#C0262D; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { width:1920px; height:1080px; overflow:hidden; background:var(--carvao); color:var(--tinta); font-family:Inter, sans-serif; }
+#palco { position:absolute; inset:0; overflow:hidden; perspective:2200px;
+  background: radial-gradient(1200px 700px at 70% 30%, rgba(210,166,60,.10), transparent 60%), radial-gradient(900px 600px at 10% 90%, rgba(210,166,60,.06), transparent 60%), #0b0a08; }
+#grelha { position:absolute; left:-50%; right:-50%; bottom:-30%; height:90%; transform:rotateX(72deg); transform-origin:50% 100%;
+  background-image:linear-gradient(rgba(210,166,60,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(210,166,60,.10) 1px, transparent 1px); background-size:80px 80px;
+  -webkit-mask-image:linear-gradient(to top, #000 0%, transparent 85%); opacity:.55; }
+.cena { position:absolute; inset:0; opacity:0; transform-style:preserve-3d; }
+.abs { position:absolute; }
+.marca { position:absolute; left:80px; top:56px; font:600 18px Inter; letter-spacing:.32em; color:var(--ouro); text-transform:uppercase; z-index:20; display:flex; gap:18px; align-items:center; }
+.marca img { height:38px; }
+.capitulo { position:absolute; right:80px; top:60px; font:500 18px 'JetBrains Mono'; color:var(--cinza); letter-spacing:.08em; z-index:20; }
+.legenda { position:absolute; left:50%; bottom:34px; transform:translateX(-50%); max-width:1500px; text-align:center;
+  font:500 30px/1.35 Inter; color:#fff; text-shadow:0 2px 12px rgba(0,0,0,.9); z-index:30; padding:10px 26px; background:rgba(8,8,8,.6); border-radius:10px; }
+#barra { position:absolute; left:0; bottom:0; height:4px; background:var(--ouro); z-index:40; }
+#vinheta { position:absolute; inset:0; z-index:45; pointer-events:none; background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.65) 100%); }
+.anton { font-family:Anton; letter-spacing:.01em; }
+.serif { font-family:Serif; font-style:italic; }
+.ouro { color:var(--ouro); }
+.cartao { background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); border:1px solid rgba(210,166,60,.25); border-radius:22px; box-shadow:0 30px 80px rgba(0,0,0,.45); }
+.h1 { font:400 120px/1 Anton; } .h2 { font:400 76px/1.05 Anton; } .sub { font:400 44px/1.25 Serif; font-style:italic; color:var(--ouro2); }
+.kicker { font:700 22px Inter; letter-spacing:.3em; text-transform:uppercase; color:var(--ouro); }
+.item { display:flex; gap:26px; align-items:flex-start; padding:22px 0; border-bottom:1px solid rgba(210,166,60,.16); font:500 36px/1.3 Inter; }
+.item b.n { font:700 26px 'JetBrains Mono'; color:var(--ouro); min-width:62px; padding-top:6px; }
+.check { width:46px; height:46px; border-radius:12px; border:2px solid var(--ouro); flex:none; display:flex; align-items:center; justify-content:center; font:800 30px Inter; color:#111; }
+.chip { display:inline-block; padding:12px 24px; border-radius:999px; border:1px solid rgba(210,166,60,.4); background:rgba(210,166,60,.10); font:600 28px Inter; color:var(--ouro2); margin:8px; }
+.mono { font-family:'JetBrains Mono'; }
+.carta3d { position:absolute; transform-style:preserve-3d; }
+.deco { position:absolute; right:-40px; top:640px; font:400 300px/1 Anton; color:transparent; -webkit-text-stroke:2px rgba(210,166,60,.22); transform-style:preserve-3d; white-space:nowrap; }
+.plano-l { display:flex; justify-content:space-between; align-items:center; padding:18px 30px; border-radius:16px; margin:12px 0; font:600 34px Inter; border:1px solid; }
+</style>
+</head>
+<body>
+<div id="palco"><div id="grelha"></div></div>
+<div class="marca"><img src="../../public/logo-mtm-transparent.png" onerror="this.remove()"><span id="marcaTxt">MoreThanMoney · Bootcamp</span></div>
+<div class="capitulo" id="capitulo"></div>
+<div class="legenda" id="legenda" style="display:none"></div>
+<div id="barra"></div>
+<div id="vinheta"></div>
+<script>
+// ---------------------------------------------------------------- utilidades
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x))
+const ease=x=>{ x=clamp(x); return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2 }
+const out=x=>{ x=clamp(x); return 1-Math.pow(1-x,3) }
+const prog=(t,a,b)=>clamp((t-a)/(b-a))
+const lerp=(a,b,k)=>a+(b-a)*k
+function el(tag,cls,html,css){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; if(css) Object.assign(e.style,css); return e }
+function entra(e,k,dy=40){ e.style.opacity=out(k); e.style.transform=`translateY(${(1-out(k))*dy}px)` }
+function rng(seed){ let s=seed>>>0; return ()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296 } }
+const palco=document.getElementById('palco')
+let COR={bull:'#1E4FD8',bear:'#C0262D'}
+const estrelas=n=>'★'.repeat(n)
+
+// ---------------------------------------------------------------- mercado sintético (ilustrativo, não é histórico real)
+function serie(cenario,seed,N=150){
+  const R=rng(seed), c=[]; let p=100
+  const sig=Math.round(N*0.62)
+  for(let i=0;i<N;i++){
+    let drift=0, vol=.55
+    if(cenario==='compra'||cenario==='falha'){ if(i<sig-28) drift=Math.sin(i/9)*.18-.02; else if(i<sig) drift=-.42; else if(i===sig) drift=2.1; else drift=cenario==='falha'?(i<sig+6?.25:-.55):.34 }
+    else if(cenario==='venda'){ if(i<sig-28) drift=Math.sin(i/9)*.18+.02; else if(i<sig) drift=.42; else if(i===sig) drift=-2.1; else drift=-.34 }
+    else { drift=.16+Math.sin(i/14)*.12 } // tendencia
+    const o=p, cl=o+drift+(R()-.5)*vol*(i===sig?.2:1)
+    const hi=Math.max(o,cl)+R()*.45, lo=Math.min(o,cl)-R()*.45
+    const v=40+R()*30+(i===sig?120:0)+(Math.abs(drift)>.4?25:0)
+    c.push({o,h:hi,l:lo,c:cl,v}); p=cl
+  }
+  const L=34, ema=(k,src)=>{ const a=2/(k+1); let e=src[0]; return src.map(x=>e=e+a*(x-e)) }
+  const cl=c.map(x=>x.c), mid=ema(L,cl)
+  const dev=cl.map((_,i)=>{ const s=cl.slice(Math.max(0,i-L+1),i+1), m=s.reduce((a,b)=>a+b,0)/s.length; return Math.sqrt(s.reduce((a,b)=>a+(b-m)**2,0)/s.length)+.3 })
+  const fast=ema(9,cl), slow=ema(21,cl)
+  const atr=2.4
+  const s=c[sig], dir=cenario==='venda'?-1:1
+  const entrada=s.c, warning=dir>0?s.l:s.h, sl=warning-dir*atr, R1=Math.abs(entrada-sl)
+  const plano={sig,dir,entrada,warning,sl,tp:[1,2,3].map(m=>entrada+dir*R1*m)}
+  // níveis-chave: dois pivots antigos
+  const niveis=[mid[40]-dev[40]*1.6, mid[60]+dev[60]*1.4, s.l-0.15].map(x=>+x.toFixed(2))
+  return {c,mid,dev,fast,slow,plano,niveis,N}
+}
+
+// gráfico em canvas; camadas mostradas com opacidade
+function grafico(r,o){
+  const W=o.w||1560,H=o.h||780
+  const wrap=el('div','carta3d cartao',null,{left:(1920-W)/2+'px',top:(o.top||200)+'px',width:W+'px',height:H+'px',overflow:'hidden'})
+  const cv=el('canvas'); cv.width=W; cv.height=H; wrap.append(cv); r.append(wrap)
+  const g=cv.getContext('2d'), D=serie(o.cenario||'compra',o.seed||7)
+  function desenha(vis,ate,zoom){
+    const n=Math.max(5,Math.round(D.N*ate)); g.clearRect(0,0,W,H)
+    g.fillStyle='#0d0c0a'; g.fillRect(0,0,W,H)
+    const ini=Math.max(0,Math.round(lerp(0,D.plano.sig-45,zoom)))
+    const fim=Math.max(n, Math.round(lerp(D.N,Math.min(D.N,D.plano.sig+40),zoom)))
+    const vis_=D.c.slice(ini,fim)
+    let lo=Math.min(...vis_.map(x=>x.l)), hi=Math.max(...vis_.map(x=>x.h))
+    for(let i=ini;i<fim;i++){ lo=Math.min(lo,D.mid[i]-D.dev[i]*3); hi=Math.max(hi,D.mid[i]+D.dev[i]*3) }
+    if(vis.plano){ lo=Math.min(lo,...D.plano.tp,D.plano.sl); hi=Math.max(hi,...D.plano.tp,D.plano.sl) }
+    const pad=(hi-lo)*.08; lo-=pad; hi+=pad
+    const X=i=>60+(i-ini)/(fim-ini)*(W-260), Y=p=>H-40-(p-lo)/(hi-lo)*(H-90), bw=(W-260)/(fim-ini)*.62
+    g.strokeStyle='rgba(255,255,255,.05)'; g.lineWidth=1; for(let k=0;k<8;k++){ const y=50+k*(H-90)/7; g.beginPath(); g.moveTo(0,y); g.lineTo(W,y); g.stroke() }
+    const linha=(arr,cor,a,w=2,dash)=>{ if(!a) return; g.globalAlpha=a; g.strokeStyle=cor; g.lineWidth=w; g.setLineDash(dash||[]); g.beginPath(); for(let i=ini;i<n&&i<fim;i++){ const y=Y(arr(i)); i===ini?g.moveTo(X(i),y):g.lineTo(X(i),y) } g.stroke(); g.setLineDash([]); g.globalAlpha=1 }
+    if(vis.bandas){ const a=vis.bandas
+      g.globalAlpha=a*.16; g.fillStyle=COR.bear; g.beginPath(); for(let i=ini;i<n&&i<fim;i++) g.lineTo(X(i),Y(D.mid[i]+D.dev[i]*2)); for(let i=Math.min(n,fim)-1;i>=ini;i--) g.lineTo(X(i),Y(D.mid[i]+D.dev[i]*3)); g.fill()
+      g.fillStyle=COR.bull; g.beginPath(); for(let i=ini;i<n&&i<fim;i++) g.lineTo(X(i),Y(D.mid[i]-D.dev[i]*2)); for(let i=Math.min(n,fim)-1;i>=ini;i--) g.lineTo(X(i),Y(D.mid[i]-D.dev[i]*3)); g.fill(); g.globalAlpha=1
+      for(const m of [1,2,3]){ linha(i=>D.mid[i]+D.dev[i]*m,COR.bear,a,m===3?2.5:1.5); linha(i=>D.mid[i]-D.dev[i]*m,COR.bull,a,m===3?2.5:1.5) }
+      linha(i=>D.mid[i],'#9AA0A6',a,1.5,[8,6]) }
+    if(vis.nuvem){ const a=vis.nuvem
+      for(let i=Math.max(ini,1);i<n&&i<fim;i++){ const up=D.fast[i]>=D.slow[i]; g.globalAlpha=a*.28; g.fillStyle=up?COR.bull:COR.bear; g.beginPath(); g.moveTo(X(i-1),Y(D.fast[i-1])); g.lineTo(X(i),Y(D.fast[i])); g.lineTo(X(i),Y(D.slow[i])); g.lineTo(X(i-1),Y(D.slow[i-1])); g.fill() } g.globalAlpha=1 }
+    if(vis.niveis){ g.globalAlpha=vis.niveis; D.niveis.forEach((p,k)=>{ const y=Y(p), cor=p>D.c[Math.min(n,fim)-1].c?COR.bear:COR.bull; g.fillStyle=cor+'22'; g.fillRect(0,y-10,W-200,20); g.strokeStyle='#787B86'; g.setLineDash([10,8]); g.beginPath(); g.moveTo(0,y); g.lineTo(W-200,y); g.stroke(); g.setLineDash([]); g.fillStyle='#b9b2a3'; g.font='600 18px JetBrains Mono'; g.fillText((window.T&&T.nivel||'Nível')+' '+(k+1),14,y-14) }); g.globalAlpha=1 }
+    // velas
+    for(let i=ini;i<n&&i<fim;i++){ const v=D.c[i], up=v.c>=v.o; let cor=up?'#d9d4c7':'#5c5649'
+      if(vis.cores){ const t=D.fast[i]>=D.slow[i]; cor=Math.abs(D.fast[i]-D.slow[i])<.08?'#9AA0A6':(t?COR.bull:COR.bear); if(i===D.plano.sig) cor='#FFD600' }
+      g.strokeStyle=cor; g.fillStyle=cor; g.lineWidth=1.5; g.beginPath(); g.moveTo(X(i),Y(v.h)); g.lineTo(X(i),Y(v.l)); g.stroke()
+      const y1=Y(Math.max(v.o,v.c)), y2=Y(Math.min(v.o,v.c)); g.fillRect(X(i)-bw/2,y1,bw,Math.max(2,y2-y1)) }
+    if(vis.volume && n>D.plano.sig){ g.globalAlpha=vis.volume; const x=X(D.plano.sig), y=Y(D.c[D.plano.sig].h)-70; g.fillStyle='#E6B800'; g.font='700 22px Inter'; g.fillText('Vol: +184%',x-60,y) ; g.globalAlpha=1 }
+    if(vis.toque){ g.globalAlpha=vis.toque; const i=D.plano.sig-2; g.strokeStyle='#E9C46A'; g.lineWidth=3; g.beginPath(); g.arc(X(i),Y(D.plano.dir>0?D.c[i].l:D.c[i].h),26,0,7); g.stroke(); g.globalAlpha=1 }
+    if(vis.sinal && n>D.plano.sig){ const a=vis.sinal, i=D.plano.sig, x=X(i), y=D.plano.dir>0?Y(D.c[i].l)+40:Y(D.c[i].h)-130
+      g.globalAlpha=a; g.fillStyle=D.plano.dir>0?COR.bull:COR.bear; g.beginPath(); g.roundRect(x-120,y,240,92,14); g.fill(); g.fillStyle='#fff'; g.font='800 26px Inter'; g.textAlign='center'
+      g.fillText((o.rotulo||('DEFY '+(D.plano.dir>0?(T.compra||'Compra'):(T.venda||'Venda')))),x,y+38); g.font='700 24px Inter'; g.fillStyle='#FFD600'; g.fillText(o.estrelas||'+8  ★★',x,y+74); g.textAlign='left'; g.globalAlpha=1 }
+    if(vis.plano && n>D.plano.sig){ const a=vis.plano, x0=X(D.plano.sig), P=D.plano
+      const L=[[T.tp3||'TP3',P.tp[2],'#3ecf8e'],[T.tp2||'TP2',P.tp[1],'#3ecf8e'],[T.tp1||'TP1',P.tp[0],'#3ecf8e'],[T.entrada||'Entrada',P.entrada,'#E9C46A'],['Warning',P.warning,'#ff9f43'],['SL',P.sl,'#ff5a4f']]
+      g.globalAlpha=a; g.fillStyle=(P.dir>0?'#3ecf8e':'#3ecf8e')+'18'; g.fillRect(x0,Y(Math.max(P.entrada,P.tp[2])),W-200-x0,Math.abs(Y(P.tp[2])-Y(P.entrada)))
+      g.fillStyle='#ff5a4f18'; g.fillRect(x0,Y(Math.max(P.entrada,P.sl)),W-200-x0,Math.abs(Y(P.sl)-Y(P.entrada)))
+      L.forEach(([nm,p,cor])=>{ const y=Y(p); g.strokeStyle=cor; g.lineWidth=2; g.setLineDash(nm==='Warning'?[6,6]:[]); g.beginPath(); g.moveTo(x0,y); g.lineTo(W-200,y); g.stroke(); g.setLineDash([]); g.fillStyle=cor; g.font='700 20px JetBrains Mono'; g.fillText(nm,W-190,y+7) }); g.globalAlpha=1 }
+    if(vis.setas && n>D.plano.sig+3){ g.globalAlpha=vis.setas; for(let i=D.plano.sig+3;i<Math.min(n,fim,D.plano.sig+18);i+=3){ const up=D.plano.dir>0, x=X(i), y=up?Y(D.c[i].l)+34:Y(D.c[i].h)-34; g.fillStyle=up?COR.bull:COR.bear; g.beginPath(); if(up){g.moveTo(x,y-14);g.lineTo(x-11,y+6);g.lineTo(x+11,y+6)} else {g.moveTo(x,y+14);g.lineTo(x-11,y-6);g.lineTo(x+11,y-6)} g.fill() } g.globalAlpha=1 }
+  }
+  return {wrap,desenha,D}
+}
+
+function deco(r){ const d=el('div','deco',window.NOME||''); r.append(d); return k=>{ d.style.opacity=out(k/2)*.9; d.style.transform=`perspective(1400px) rotateY(${-38+Math.sin(k/6)*8}deg) translateZ(${-200+k*3}px)` } }
+// ---------------------------------------------------------------- tipos de cena
+const TIPOS={
+  abertura(r,s){ const b=el('div','abs',null,{left:0,right:0,top:'250px',textAlign:'center',transformStyle:'preserve-3d'})
+    b.innerHTML=`<div class="kicker">${s.kicker||''}</div><div class="h1" style="font-size:190px;margin-top:26px">${s.titulo}</div><div class="sub" style="margin-top:18px">${s.sub||''}</div><div class="mono" style="margin-top:46px;font-size:26px;color:var(--cinza)">${s.rodape||''}</div>`
+    r.append(b); return (k,d)=>{ b.style.opacity=out(k/1.2)*(1-prog(k,d-.6,d)); b.style.transform=`rotateX(${(1-out(k/1.6))*35}deg) translateZ(${(1-out(k/1.6))*-400+k*6}px)` } },
+  capitulo(r,s){ const b=el('div','abs',null,{left:'200px',top:'300px',transformStyle:'preserve-3d'})
+    b.innerHTML=`<div class="anton" style="font-size:260px;line-height:.9;color:transparent;-webkit-text-stroke:2px var(--ouro)">${s.numero||''}</div><div class="h2" style="margin-top:20px;max-width:1400px">${s.titulo}</div><div class="sub" style="margin-top:14px">${s.sub||''}</div>`
+    r.append(b); return k=>{ b.style.opacity=out(k/.9); b.style.transform=`rotateY(${(1-out(k/1.4))*-28}deg) translateX(${(1-out(k/1.4))*-120}px)` } },
+  pontos(r,s){ const dc=deco(r); const b=el('div','abs',null,{left:'160px',top:'190px',width:'1600px'})
+    b.innerHTML=`<div class="kicker">${s.kicker||''}</div><div class="h2" style="margin:18px 0 30px">${s.titulo}</div>`
+    const its=(s.itens||[]).map((t,i)=>{ const e=el('div','item',`<b class="n">${String(i+1).padStart(2,'0')}</b><span>${t}</span>`); b.append(e); return e })
+    r.append(b); return (k,d,f)=>{ entra(b.firstChild,k/.8); entra(b.children[1],(k-.2)/.8); const span=Math.max(1,(f||d)-1.5); its.forEach((e,i)=>entra(e,(k-1-i*span/its.length)/.7,30)); dc(k) } },
+  checklist(r,s){ const b=el('div','abs',null,{left:'260px',top:'180px',width:'1400px'})
+    b.innerHTML=`<div class="kicker">${s.kicker||''}</div><div class="h2" style="margin:18px 0 26px">${s.titulo}</div>`
+    const its=(s.itens||[]).map(t=>{ const e=el('div','item',`<span class="check"></span><span>${t}</span>`,{fontSize:'34px',padding:'16px 0'}); b.append(e); return e })
+    r.append(b); return (k,d,f)=>{ entra(b.firstChild,k/.8); entra(b.children[1],(k-.2)/.8); const span=Math.max(1,(f||d)-1.5); its.forEach((e,i)=>{ const kk=k-1-i*span/its.length; entra(e,kk/.6,20); const c=e.firstChild; const on=kk>.5; c.style.background=on?'var(--ouro)':'transparent'; c.textContent=on?'✓':'' }) } },
+  grafico(r,s){ const G=grafico(r,{cenario:s.cenario,seed:s.seed,rotulo:s.rotulo,estrelas:s.estrelas})
+    const tit=el('div','abs',`<span class="kicker">${s.kicker||''}</span><div style="font:700 40px Inter;margin-top:8px">${s.titulo||''}</div>`,{left:'180px',top:'110px'}); r.append(tit)
+    const base=s.base||[], novas=s.camadas||[], [a0,a1]=s.ate||[1,1], [z0,z1]=s.zoom||[0,0]
+    return (k,d,f)=>{ entra(tit,k/.8); const vis={}; base.forEach(x=>vis[x]=1); const span=Math.max(1,(f||d)*.8)
+      novas.forEach((x,i)=>vis[x]=out((k-.8-i*span/Math.max(1,novas.length))/1.2))
+      const kk=ease(k/Math.max(1,d)); G.desenha(vis,lerp(a0,a1,kk),lerp(z0,z1,kk))
+      const rx=lerp(s.rx??14,0,out(k/3)), ry=lerp(s.ry??-12,-2,out(k/3)); G.wrap.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg) scale(${lerp(.92,1,out(k/3))})`; G.wrap.style.opacity=out(k/.8) } },
+  camadas3d(r,s){ const nomes=s.itens||[], cam=['bandas','niveis','nuvem','sinal'], ps=[]
+    nomes.forEach((nm,i)=>{ const G=grafico(r,{cenario:'compra',seed:s.seed||7,w:1100,h:560,top:300}); const vis={}; vis[cam[i%4]]=1; if(cam[i%4]==='sinal'){vis.plano=1} G.desenha(vis,1,0); G.wrap.style.background='rgba(13,12,10,.55)'
+      const lab=el('div','abs',nm,{left:'-330px',top:'230px',width:'300px',textAlign:'right',font:'700 34px Inter',color:'var(--ouro2)'}); G.wrap.style.overflow='visible'; G.wrap.append(lab); ps.push(G) })
+    const tit=el('div','abs',`<div class="kicker">${s.kicker||''}</div><div class="h2" style="margin-top:12px;font-size:64px">${s.titulo||''}</div>`,{left:'160px',top:'110px'}); r.append(tit)
+    return (k,d)=>{ entra(tit,k/.8); const sep=out(k/2.5)*(1-ease(prog(k,d-4,d-1)))
+      ps.forEach((G,i)=>{ G.wrap.style.opacity=out((k-i*.4)/.8); G.wrap.querySelector('canvas').style.opacity=1; G.wrap.style.transform=`translateX(220px) rotateX(58deg) rotateZ(-28deg) translateZ(${(i-(ps.length-1)/2)*-170*sep}px)` }) } },
+  pontuacao(r,s){ const b=el('div','abs',null,{left:0,right:0,top:'180px',textAlign:'center'})
+    b.innerHTML=`<div class="kicker">${s.kicker||''}</div><div class="h2" style="margin-top:14px">${s.titulo||''}</div><div class="anton" id="sc" style="font-size:240px;color:var(--ouro);margin-top:10px">+3</div><div id="st" style="font-size:70px;color:#FFD600;height:80px"></div><div id="ch" style="margin:30px auto 0;max-width:1500px"></div>`
+    r.append(b); const sc=b.querySelector('#sc'), st=b.querySelector('#st'), ch=b.querySelector('#ch')
+    const chips=(s.itens||[]).map(t=>{ const c=el('span','chip',t); ch.append(c); return c })
+    return (k,d,f)=>{ entra(b.children[0],k/.8); entra(b.children[1],(k-.2)/.8); const span=Math.max(1,(f||d)-2); let n=0
+      chips.forEach((c,i)=>{ const kk=(k-1.2-i*span/chips.length); c.style.opacity=out(kk/.4); c.style.transform=`scale(${lerp(.6,1,out(kk/.4))})`; if(kk>.2) n++ })
+      const v=(s.inicio??3)+n; sc.textContent='+'+v; st.textContent=v>=10?(s.rei&&n===chips.length?'👑 ★★★':'★★★'):v>=8?'★★':v>=6?'★':'' } },
+  plano(r,s){ const b=el('div','abs',null,{left:'200px',top:'170px',width:'1520px'})
+    b.innerHTML=`<div class="kicker">${s.kicker||''}</div><div class="h2" style="margin:14px 0 26px">${s.titulo||''}</div>`
+    const cores={tp:'#3ecf8e',entrada:'#E9C46A',warning:'#ff9f43',sl:'#ff5a4f'}
+    const ls=(s.linhas||[]).map(([nm,val,tipo])=>{ const e=el('div','plano-l',`<span>${nm}</span><span class="mono" style="font-size:30px">${val}</span>`,{borderColor:cores[tipo]||'#555',color:cores[tipo]||'#ddd',background:(cores[tipo]||'#555')+'14'}); b.append(e); return e })
+    r.append(b); return (k,d,f)=>{ entra(b.children[0],k/.8); entra(b.children[1],(k-.2)/.8); const span=Math.max(1,(f||d)-1.5); ls.forEach((e,i)=>{ const kk=(k-1-i*span/ls.length)/.6; e.style.opacity=out(kk); e.style.transform=`perspective(1200px) rotateX(${(1-out(kk))*70}deg)` }) } },
+  comparar(r,s){ const cols=s.cartoes||[], n=cols.length, w=Math.min(520,(1600-(n-1)*36)/n)
+    const tit=el('div','abs',`<div class="kicker">${s.kicker||''}</div><div class="h2" style="margin-top:14px">${s.titulo||''}</div>`,{left:'160px',top:'150px'}); r.append(tit)
+    const cs=cols.map((c,i)=>{ const e=el('div','cartao abs',`<div class="anton" style="font-size:52px;color:var(--ouro)">${c.t}</div><div style="font:500 30px/1.4 Inter;margin-top:18px;color:#ddd5c4">${c.d}</div>`,{left:(1920-(n*w+(n-1)*36))/2+i*(w+36)+'px',top:'420px',width:w+'px',minHeight:'420px',padding:'40px 36px'}); r.append(e); return e })
+    return (k,d,f)=>{ entra(tit,k/.8); const span=Math.max(1,(f||d)-1.5); cs.forEach((e,i)=>{ const kk=(k-.8-i*span/cs.length)/.8; e.style.opacity=out(kk); e.style.transform=`perspective(1600px) rotateY(${(1-out(kk))*-60}deg) translateZ(${(1-out(kk))*-200}px)` }) } },
+  frase(r,s){ const b=el('div','abs',null,{left:'220px',right:'220px',top:'330px',textAlign:'center'})
+    b.innerHTML=`<div class="serif" style="font-size:88px;line-height:1.15">${s.texto||''}</div><div class="kicker" style="margin-top:40px">${s.autor||''}</div>`
+    r.append(b); return k=>{ entra(b,k/1.2,30); b.style.transform+=` scale(${1+k*.004})` } },
+  aviso(r,s){ const b=el('div','abs',null,{left:'240px',right:'240px',top:'200px',textAlign:'center'})
+    b.innerHTML=`<img src="../../public/logo-mtm-transparent.png" style="height:120px" onerror="this.remove()"><div class="h2" style="margin-top:30px">${s.titulo||''}</div><div class="sub" style="margin-top:16px">${s.sub||''}</div><div style="margin-top:60px;font:400 26px/1.5 Inter;color:var(--cinza)">${s.texto||''}</div>`
+    r.append(b); return k=>entra(b,k/1,20) },
+}
+
+// ---------------------------------------------------------------- linha do tempo
+const montadas={}
+window.iniciar=(tl,legendas,dados)=>{ window.NOME=dados.nome||''; window.TL=tl; window.LEG=legendas; window.T=dados.ui||{}; if(dados.cores) COR=dados.cores
+  document.getElementById('marcaTxt').textContent=dados.marca||'MoreThanMoney · Bootcamp'
+  for(const c of tl){ const r=el('div','cena'); palco.append(r); const s=dados.cenas[c.id]; montadas[c.id]={r,u:TIPOS[s.tipo](r,s),c,s} } }
+window.renderAt=t=>{ let leg=''
+  for(const id in montadas){ const {r,u,c,s}=montadas[id]; const k=t-c.ini, ativo=k>=-.5&&k<=c.dur+.5
+    if(!ativo){ r.style.opacity=0; r.style.display='none'; continue } r.style.display=''
+    r.style.opacity=clamp(Math.min((k+.5)/.5,(c.dur+.5-k)/.5)); u(Math.max(0,k),c.dur,c.fala)
+    if(k>=0&&k<c.dur){ document.getElementById('capitulo').textContent=s.cap||''; const f=c.frases.find(f=>t>=f.ini&&t<f.fim); if(f) leg=f.t } }
+  const L=document.getElementById('legenda'); if(window.LEG&&leg){ L.style.display=''; L.textContent=leg } else L.style.display='none'
+  document.getElementById('barra').style.width=(t/window.TOTAL*100)+'%' }
+</script>
+</body>
+</html>

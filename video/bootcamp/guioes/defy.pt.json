@@ -1,0 +1,1440 @@
+{
+ "estrategia": "DEFY",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#1E4FD8",
+  "bear": "#C0262D"
+ },
+ "ui": {
+  "nivel": "Nível",
+  "compra": "Compra",
+  "venda": "Venda",
+  "entrada": "Entrada",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  [
+   "TradingView",
+   "Trading View"
+  ],
+  [
+   "ATR",
+   "A T R"
+  ],
+  [
+   "TP1",
+   "T P um"
+  ],
+  [
+   "TP2",
+   "T P dois"
+  ],
+  [
+   "TP3",
+   "T P três"
+  ],
+  [
+   "RSI",
+   "R S I"
+  ]
+ ],
+ "videos": [
+  {
+   "rotulo": "Bootcamp DEFY · 1/3",
+   "titulo": "Fundamentos: as quatro leituras",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 1 de 3",
+     "titulo": "DEFY",
+     "sub": "Fundamentos: as quatro leituras do gráfico",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "Uma ferramenta não decide por ti. <span class='ouro'>Organiza</span> a forma como decides.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Olá, sou o Ricardo Garcia e este é o Bootcamp DEFY da MoreThanMoney. Antes de começarmos, quero deixar uma ideia muito clara: nenhum indicador decide por ti. O que uma boa ferramenta faz é organizar a forma como tu decides. Ela junta informação que, de outra forma, estaria espalhada por cinco ou seis janelas, e põe-na num só gráfico, com regras fixas. É isso que o DEFY faz. Ao longo destes três módulos vais perceber cada peça do indicador, vais aprender a ler uma ideia do princípio ao fim e, no último módulo, vais ver como se gere o risco e como se constrói uma rotina de quinze minutos por dia à volta disto."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "O plano do bootcamp",
+     "titulo": "Três módulos, um método",
+     "itens": [
+      "Módulo 1 · As quatro leituras do gráfico",
+      "Módulo 2 · Das confirmações ao plano de trade",
+      "Módulo 3 · Risco, gestão e rotina diária"
+     ],
+     "fala": "O bootcamp está dividido em três módulos. Neste primeiro, que estás a ver agora, vamos montar a base: o que é o DEFY, como o pões no gráfico e o que significa cada uma das quatro leituras que ele desenha. No segundo módulo entramos no motor do indicador: como nasce uma ideia, como funciona a pontuação de confirmações, o que querem dizer as estrelas e a King Idea, e como o plano de trade fica desenhado com entrada, Warning, stop e três alvos. No terceiro módulo passamos à prática: tamanho de posição, gestão do trade, quando não entrar, e uma rotina simples para usares todos os dias. Sugiro que vejas os módulos por ordem, porque cada um assenta no anterior."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · O que é o DEFY",
+     "numero": "01",
+     "titulo": "O que é o DEFY",
+     "sub": "Quatro leituras, um processo de decisão",
+     "fala": "Vamos então ao primeiro capítulo. O que é, afinal, o DEFY?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "camadas3d",
+     "cap": "01 · O que é o DEFY",
+     "kicker": "Uma camada de cada vez",
+     "titulo": "Quatro leituras no mesmo gráfico",
+     "itens": [
+      "Bandas",
+      "Níveis-chave",
+      "Nuvem",
+      "Ideia e plano"
+     ],
+     "fala": "O DEFY é um indicador para o TradingView que junta quatro leituras técnicas num só gráfico. Imagina quatro camadas de vidro, empilhadas umas sobre as outras. A primeira são as bandas de exaustão, que te mostram quando o preço está esticado. A segunda são os níveis-chave, zonas onde o preço já reagiu no passado. A terceira é a nuvem de tendência, que te diz para que lado o mercado está a puxar. E a quarta é a camada de decisão: a pontuação de confirmações, as estrelas e o plano de trade desenhado no gráfico. Separadas, cada uma destas leituras dá-te um pedaço da história. Quando as juntas, e só quando elas concordam, tens uma ideia com contexto. Repara nesta palavra: concordam. Todo o DEFY está construído à volta da concordância entre leituras diferentes."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "pontos",
+     "cap": "01 · O que é o DEFY",
+     "kicker": "A lógica em três passos",
+     "titulo": "Esticar, virar, confirmar",
+     "itens": [
+      "O preço estica até às bandas de exaustão",
+      "Vira com uma vela forte que fecha para lá do fractal anterior",
+      "Junta confirmações suficientes e o DEFY desenha o plano"
+     ],
+     "fala": "A lógica do DEFY cabe em três passos. Primeiro, o preço estica. Afasta-se da sua média e chega às bandas de exaustão, que é onde os movimentos costumam perder força. Segundo, o preço vira. Aparece uma vela forte, com corpo, que fecha para lá do fractal anterior. Ou seja, não basta uma sombra a tocar numa linha, é preciso uma vela que mostre intenção. Terceiro, o DEFY conta as confirmações. Se houver pelo menos três a concordar, marca a ideia e desenha o plano completo. Se não houver, não marca nada. E isto é importante: muitas vezes o melhor trabalho do indicador é exactamente não te mostrar nada, porque te poupa a entradas fracas."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "pontos",
+     "cap": "01 · O que é o DEFY",
+     "kicker": "Onde funciona",
+     "titulo": "Mercados e timeframes",
+     "itens": [
+      "Forex, ouro, índices e cripto",
+      "Scalp de 1 a 15 minutos",
+      "Intradiário em 1 hora",
+      "Swing em 4 horas"
+     ],
+     "fala": "O DEFY funciona em forex, ouro, índices e cripto, e em qualquer timeframe. Na prática, há três formas de o usar. Em scalp, nos gráficos de um a quinze minutos, onde as ideias são mais frequentes e os alvos mais curtos. Em intradiário, no gráfico de uma hora, que é um bom equilíbrio para quem tem um emprego e pode olhar para o mercado duas ou três vezes por dia. E em swing, no gráfico de quatro horas, com menos ideias mas movimentos maiores. As distâncias aparecem em pips no forex e em pontos no ouro, nos índices e na cripto, por isso o plano lê-se da mesma maneira em qualquer mercado. Se estás a começar, a minha sugestão é escolheres um só mercado e um só timeframe durante as primeiras semanas."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "capitulo",
+     "cap": "02 · Pôr o DEFY no gráfico",
+     "numero": "02",
+     "titulo": "Pôr o DEFY no gráfico",
+     "sub": "Acesso, instalação e primeiro olhar",
+     "fala": "Segundo capítulo: como pões o DEFY no teu gráfico."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "pontos",
+     "cap": "02 · Pôr o DEFY no gráfico",
+     "kicker": "Acesso",
+     "titulo": "Do pedido ao gráfico",
+     "itens": [
+      "O DEFY é um script por convite no TradingView",
+      "Envias o teu utilizador do TradingView à MTM",
+      "Depois do acesso: Indicadores › Só por convite › DEFY by MTM",
+      "Um clique e o indicador aparece no gráfico"
+     ],
+     "fala": "O DEFY é um script por convite no TradingView. Isto quer dizer que não o encontras na pesquisa pública: o acesso é dado ao teu utilizador do TradingView. Por isso, o primeiro passo é enviares o teu nome de utilizador do TradingView pela tua área de membro, ou pelo suporte da MoreThanMoney. Quando o acesso estiver activo, abres um gráfico, clicas em Indicadores, vais ao separador dos scripts só por convite e escolhes DEFY by MTM. Um clique e o indicador aparece. Não precisas de nenhum plano pago do TradingView para isto, embora um plano pago ajude se quiseres muitos alertas ao mesmo tempo."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "grafico",
+     "cap": "02 · Pôr o DEFY no gráfico",
+     "kicker": "Primeiro olhar",
+     "titulo": "O gráfico com tudo ligado",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "niveis",
+      "nuvem",
+      "cores",
+      "sinal",
+      "plano",
+      "setas",
+      "volume"
+     ],
+     "camadas": [],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Este é o aspecto do gráfico com tudo ligado. À primeira vista parece muita coisa, e é normal sentires isso. Mas daqui a uns minutos vais olhar para este ecrã e ler cada elemento em segundos. Vês as bandas à volta do preço, as zonas horizontais dos níveis-chave, a nuvem a mudar de cor, as velas coloridas, a vela dourada do sinal, o cartão da ideia e as linhas do plano. Uma nota sobre estes gráficos que vais ver no bootcamp: são animações ilustrativas, desenhadas para explicar o funcionamento. Não são resultados reais nem históricos de mercado. Vamos agora desligar tudo e ligar uma camada de cada vez."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "comparar",
+     "cap": "02 · Pôr o DEFY no gráfico",
+     "kicker": "Definições",
+     "titulo": "Os temas de cor",
+     "cartoes": [
+      {
+       "t": "Classic",
+       "d": "Azul para compra, vermelho para venda. O ponto de partida recomendado."
+      },
+      {
+       "t": "Dark",
+       "d": "Branco e roxo, para quem trabalha em fundo escuro."
+      },
+      {
+       "t": "Light",
+       "d": "Roxo e cinzento, para fundo claro."
+      },
+      {
+       "t": "Ladies",
+       "d": "Rosa e violeta. Mesma lógica, outra paleta."
+      }
+     ],
+     "fala": "Antes de entrarmos nas leituras, um ponto prático: os temas. Nas definições do DEFY, logo no topo, tens o modo de tema. O Classic usa azul para o lado comprador e vermelho para o lado vendedor, e é o que vou usar em todo o bootcamp. O Dark troca para branco e roxo, o Light para roxo e cinzento, e o Ladies para rosa e violeta. A lógica é sempre a mesma, só muda a paleta. Escolhe um tema e não andes a trocar, porque o teu olho vai habituar-se às cores e isso torna a leitura muito mais rápida."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "capitulo",
+     "cap": "03 · Bandas de exaustão",
+     "numero": "03",
+     "titulo": "Leitura 1: as bandas de exaustão",
+     "sub": "Onde o preço está esticado",
+     "fala": "Terceiro capítulo, e primeira leitura: as bandas de exaustão."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "grafico",
+     "cap": "03 · Bandas de exaustão",
+     "kicker": "Leitura 1",
+     "titulo": "Interior, média e exterior",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [],
+     "camadas": [
+      "bandas"
+     ],
+     "ate": [
+      0.55,
+      0.6
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "As bandas de exaustão são três pares de linhas desenhadas à volta de uma linha central suave. Por omissão, essa linha central usa oitenta e nove velas. Para cima tens as bandas de cor vendedora, para baixo as de cor compradora, e entre cada par há uma banda interior, uma média e uma exterior. A zona entre a banda média e a exterior aparece preenchida, e é aí que deves prestar mais atenção. A ideia por trás das bandas é estatística: a maior parte do tempo o preço anda perto da sua média. Quando se afasta muito, entra numa zona onde os movimentos costumam abrandar. Não quer dizer que o preço vá virar logo, quer dizer que o esticão já é grande e que o risco de continuar a perseguir o movimento aumentou."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "pontos",
+     "cap": "03 · Bandas de exaustão",
+     "kicker": "Como ler",
+     "titulo": "O que cada banda te diz",
+     "itens": [
+      "Banda interior: o primeiro esticão, ainda normal",
+      "Banda média: o movimento já é forte",
+      "Banda exterior: exaustão, a zona onde mais se vira",
+      "O DEFY exige um toque nas bandas antes da ideia"
+     ],
+     "fala": "Como se lê cada banda? A banda interior é o primeiro esticão, ainda dentro do comportamento normal. A banda média diz-te que o movimento já é forte. E a banda exterior é a zona de exaustão, onde as reversões são mais frequentes. Por omissão, o DEFY só aceita uma ideia depois de o preço ter tocado nas bandas do lado contrário. Ou seja, para uma ideia de compra, o preço tem de ter descido até às bandas de baixo. Esta regra chama-se Require Band Touch e está ligada de origem. Se a desligares, vais ter mais ideias, incluindo ideias a meio das bandas, mas perdes o filtro do esticão. Para começar, deixa-a ligada."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "comparar",
+     "cap": "03 · Bandas de exaustão",
+     "kicker": "Band Length",
+     "titulo": "O comprimento das bandas",
+     "cartoes": [
+      {
+       "t": "21 a 34",
+       "d": "Mais ideias, movimentos curtos. Para scalp."
+      },
+      {
+       "t": "50 a 89",
+       "d": "Equilibrado. O 89 é a omissão."
+      },
+      {
+       "t": "150 ou mais",
+       "d": "Menos ideias, movimentos maiores. Para swing."
+      }
+     ],
+     "fala": "O comprimento das bandas, o Band Length, muda o carácter do indicador. Entre vinte e um e trinta e quatro, as bandas ficam mais próximas do preço, aparecem mais ideias e os movimentos são mais curtos. É uma escolha para scalp. Entre cinquenta e oitenta e nove, tens um equilíbrio, e o oitenta e nove é a omissão. Com cento e cinquenta ou mais, as bandas ficam largas, as ideias rareiam e os movimentos que apanhas tendem a ser maiores. Uma regra que te vai poupar muitas dores de cabeça: muda um parâmetro de cada vez, e observa pelo menos algumas semanas antes de tirares conclusões."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "pontos",
+     "cap": "03 · Bandas de exaustão",
+     "kicker": "Sem repintar",
+     "titulo": "A projecção tracejada",
+     "itens": [
+      "As bandas são centradas no passado, para ficarem suaves",
+      "A parte mais recente aparece tracejada e a esbater",
+      "Os sinais usam os valores causais, sem olhar para o futuro",
+      "Uma ideia marcada no fecho da vela não desaparece"
+     ],
+     "fala": "Há um pormenor técnico que quero que percebas bem, porque é aí que muitos indicadores enganam. As bandas do DEFY são centradas no passado, o que as torna suaves e bonitas. Mas uma linha centrada precisa de velas dos dois lados, e as velas do futuro ainda não existem. Por isso, a parte mais recente das bandas aparece tracejada e a esbater, como uma projecção. Os sinais não usam essa projecção. Usam os valores causais, calculados só com velas que já fecharam. Na prática, isto quer dizer que uma ideia que aparece no fecho de uma vela fica lá. Não desaparece, não muda de sítio, não se redesenha depois."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "capitulo",
+     "cap": "04 · Níveis-chave",
+     "numero": "04",
+     "titulo": "Leitura 2: os níveis-chave",
+     "sub": "Onde o preço já reagiu",
+     "fala": "Quarto capítulo, segunda leitura: os níveis-chave."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "grafico",
+     "cap": "04 · Níveis-chave",
+     "kicker": "Leitura 2",
+     "titulo": "Zonas onde o mercado já reagiu",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas"
+     ],
+     "camadas": [
+      "niveis"
+     ],
+     "ate": [
+      0.6,
+      0.6
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Os níveis-chave são zonas horizontais onde o preço já reagiu no passado. O DEFY encontra os pivots, ou seja, os topos e fundos de oscilação, e agrupa-os em zonas. Depois mostra só os mais próximos do preço actual, espaçados entre si para não encherem o gráfico de linhas. As zonas acima do preço aparecem na cor vendedora, porque é onde pode haver venda, e as zonas abaixo aparecem na cor compradora. Por omissão vês dez níveis, mas podes ir de um a trinta. A largura da zona também se ajusta: o valor dez corresponde mais ou menos a meio ATR, que é uma medida da volatilidade média de cada vela."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "pontos",
+     "cap": "04 · Níveis-chave",
+     "kicker": "Como usar",
+     "titulo": "Contexto, não gatilho",
+     "itens": [
+      "Um nível-chave perto da ideia soma uma confirmação",
+      "Ideia de compra a nascer num nível de baixo: contexto forte",
+      "Ideia a nascer mesmo debaixo de um nível de cima: cuidado",
+      "Os níveis também ajudam a ler os alvos"
+     ],
+     "fala": "Os níveis-chave não são um gatilho de entrada. São contexto. Quando uma ideia de compra nasce em cima de um nível de baixo, tens duas coisas a concordar: o preço esticou até às bandas e, ao mesmo tempo, está numa zona onde já houve compradores. Isso soma uma confirmação na pontuação. Ao contrário, se uma ideia de compra nasce mesmo debaixo de um nível de cima, o caminho até ao primeiro alvo pode estar bloqueado. Não é proibido entrar, mas é um sinal para seres mais selectivo. Os níveis também ajudam a ler os alvos: se o segundo alvo está mesmo em cima de um nível forte, é natural que o preço hesite aí."
+    },
+    {
+     "id": "v1-19",
+     "tipo": "capitulo",
+     "cap": "05 · Tendência",
+     "numero": "05",
+     "titulo": "Leitura 3: a nuvem e as velas",
+     "sub": "Para que lado o mercado puxa",
+     "fala": "Quinto capítulo, terceira leitura: o rastreador de tendência."
+    },
+    {
+     "id": "v1-20",
+     "tipo": "grafico",
+     "cap": "05 · Tendência",
+     "kicker": "Leitura 3",
+     "titulo": "A nuvem de tendência",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas"
+     ],
+     "camadas": [
+      "nuvem",
+      "cores"
+     ],
+     "ate": [
+      0.62,
+      0.95
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "O rastreador de tendência tem duas partes. A primeira é a nuvem, formada por uma média rápida e uma média lenta. Quando a nuvem está azul, a tendência de curto prazo é compradora. Quando está vermelha, é vendedora. A segunda parte é a cor das velas. As velas ficam azuis quando a tendência é compradora, vermelhas quando é vendedora, e cinzentas quando o mercado está em transição, sem uma direcção clara. Repara no que acontece agora no gráfico: o preço desce, a nuvem fica vermelha, o preço estica até às bandas de baixo, e de repente aparece uma vela dourada. As velas douradas marcam corpos fortes com volume acima do normal. São velas com intenção."
+    },
+    {
+     "id": "v1-21",
+     "tipo": "comparar",
+     "cap": "05 · Tendência",
+     "kicker": "Performance Type",
+     "titulo": "A velocidade da nuvem",
+     "cartoes": [
+      {
+       "t": "Active",
+       "d": "Reage depressa. Mais mudanças de cor, mais cedo."
+      },
+      {
+       "t": "Steady",
+       "d": "Equilibrado. Filtra parte do ruído."
+      },
+      {
+       "t": "Smooth",
+       "d": "Transições lentas. Para quem segue tendências longas."
+      }
+     ],
+     "fala": "A velocidade da nuvem escolhe-se no Performance Type. Em Active, que é a omissão, a nuvem reage depressa e muda de cor mais cedo. Em Steady, filtra parte do ruído. Em Smooth, as transições são lentas, o que é útil para quem quer seguir tendências mais longas. Não há uma opção certa. Há a opção que combina com o teu timeframe e com o teu estilo. Em scalp, Active costuma fazer sentido. Em swing, muita gente prefere Steady ou Smooth."
+    },
+    {
+     "id": "v1-22",
+     "tipo": "pontos",
+     "cap": "05 · Tendência",
+     "kicker": "Reversão ou continuação",
+     "titulo": "A nuvem e a ideia",
+     "itens": [
+      "Ideia a favor da nuvem: continuação, contexto mais simples",
+      "Ideia contra a nuvem: reversão, exige bandas exteriores",
+      "Velas cinzentas: mercado sem direcção, mais cautela",
+      "Setas de seguimento: só depois de uma ideia, durante 15 velas"
+     ],
+     "fala": "Como é que a nuvem entra na decisão? Uma ideia a favor da nuvem é uma ideia de continuação, e o contexto é mais simples. Uma ideia contra a nuvem é uma reversão, e aí exiges mais: queres ver o preço nas bandas exteriores e uma vela de sinal muito clara. Velas cinzentas, sem direcção, pedem mais cautela. Por fim, as setas de seguimento. Só aparecem depois de uma ideia, durante quinze velas, e só enquanto o momento concorda com ela. No modo Track, que é a omissão, aparece uma seta quando o momento está a favor e um X quando vira contra. É um apoio para a gestão, que vamos usar no terceiro módulo."
+    },
+    {
+     "id": "v1-23",
+     "tipo": "capitulo",
+     "cap": "06 · Volume",
+     "numero": "06",
+     "titulo": "Quebras de volume",
+     "sub": "Quando o movimento tem combustível",
+     "fala": "Sexto capítulo: as quebras de volume."
+    },
+    {
+     "id": "v1-24",
+     "tipo": "grafico",
+     "cap": "06 · Volume",
+     "kicker": "Volume Breaks",
+     "titulo": "Vol: +x%",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "nuvem",
+      "cores"
+     ],
+     "camadas": [
+      "volume",
+      "toque"
+     ],
+     "ate": [
+      0.64,
+      0.66
+     ],
+     "zoom": [
+      0,
+      0.6
+     ],
+     "fala": "Quando um pico de volume coincide com uma quebra de tendência, o DEFY escreve uma etiqueta amarela, por exemplo Vol mais cento e oitenta e quatro por cento. O número diz-te quanto acima da média estava o volume nessa vela. Porque é que isto importa? Porque um movimento sem volume é, muitas vezes, um movimento sem combustível. Uma vela de reversão com volume muito acima da média mostra que houve participação real. Num mercado de forex à vista, o volume do TradingView é o volume de ticks da corretora, e não o volume total do mercado, por isso lê-o como uma indicação relativa. Nos índices e na cripto, é uma leitura mais directa."
+    },
+    {
+     "id": "v1-25",
+     "tipo": "capitulo",
+     "cap": "07 · Juntar tudo",
+     "numero": "07",
+     "titulo": "Juntar as leituras",
+     "sub": "O primeiro exemplo completo",
+     "fala": "Sétimo capítulo: vamos juntar tudo num exemplo."
+    },
+    {
+     "id": "v1-26",
+     "tipo": "grafico",
+     "cap": "07 · Juntar tudo",
+     "kicker": "Exemplo ilustrativo",
+     "titulo": "Uma ideia de compra, passo a passo",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "niveis",
+      "nuvem",
+      "cores"
+     ],
+     "camadas": [
+      "toque",
+      "volume",
+      "sinal",
+      "plano",
+      "setas"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "fala": "Vamos ler este exemplo com calma. O preço vem a descer, com a nuvem vermelha e velas vermelhas. Estica até às bandas de baixo, e repara que toca na banda exterior, marcada aqui com o círculo. Está também em cima de um nível-chave. Depois aparece uma vela dourada, com volume bem acima da média, que fecha para lá do fractal anterior. As leituras concordam, e o DEFY marca a ideia: DEFY Compra, pontuação mais oito, duas estrelas. Ao mesmo tempo desenha o plano: a entrada, o Warning por baixo da vela, o stop um ATR mais abaixo, e os três alvos. A seguir, as setas de seguimento acompanham o movimento enquanto o momento continua a favor. No segundo módulo vamos desmontar cada um destes números."
+    },
+    {
+     "id": "v1-27",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Resumo do módulo 1",
+     "titulo": "O que tens de saber ler",
+     "itens": [
+      "Bandas: onde o preço está esticado",
+      "Níveis-chave: onde o preço já reagiu",
+      "Nuvem e velas: para que lado o mercado puxa",
+      "Volume: se o movimento tem combustível",
+      "As ideias só aparecem quando as leituras concordam"
+     ],
+     "fala": "Resumindo o primeiro módulo. As bandas mostram-te onde o preço está esticado. Os níveis-chave mostram-te onde o preço já reagiu. A nuvem e as velas dizem-te para que lado o mercado está a puxar. O volume diz-te se o movimento tem combustível. E as ideias só aparecem quando estas leituras concordam."
+    },
+    {
+     "id": "v1-28",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Antes do módulo 2",
+     "titulo": "O teu trabalho de casa",
+     "itens": [
+      "Põe o DEFY num só mercado e num só timeframe",
+      "Desliga tudo e liga uma camada de cada vez",
+      "Marca cinco esticões nas bandas exteriores",
+      "Anota o que o preço fez a seguir, sem operar"
+     ],
+     "fala": "Antes de passares ao segundo módulo, tenho um exercício para ti. Põe o DEFY num só mercado e num só timeframe. Desliga tudo e liga uma camada de cada vez, como fizemos aqui. Depois procura no histórico cinco momentos em que o preço chegou às bandas exteriores, e anota o que aconteceu a seguir. Sem operar, só a observar. Este exercício simples vai treinar o teu olho mais do que qualquer vídeo. No próximo módulo vemos como nasce uma ideia, como se conta a pontuação e como o plano fica fixo na vela do sinal."
+    },
+    {
+     "id": "v1-29",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao módulo 2",
+     "sub": "Das confirmações ao plano de trade",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Treina primeiro em conta demo. Vemo-nos no módulo dois.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp DEFY · 2/3",
+   "titulo": "Das confirmações ao plano de trade",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 2 de 3",
+     "titulo": "DEFY",
+     "sub": "Das confirmações ao plano de trade",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "Neste módulo",
+     "titulo": "O motor do DEFY",
+     "itens": [
+      "Como nasce uma ideia",
+      "A pontuação de confirmações",
+      "Estrelas, King Idea e o Filtro de Ideias",
+      "Entrada, Warning, stop e alvos",
+      "Alertas e seguimentos"
+     ],
+     "fala": "Bem-vindo ao segundo módulo do Bootcamp DEFY. No primeiro módulo aprendeste a ler as quatro camadas do gráfico. Agora vamos abrir o motor. Vais perceber exactamente como nasce uma ideia, como se conta a pontuação de confirmações, o que significam as estrelas e a King Idea, e como funciona o Filtro de Ideias. Depois passamos ao plano de trade: o modo de entrada, a linha de Warning, o stop e os quatro modos de alvos. Por fim, vemos os alertas e os seguimentos, que te avisam quando um alvo ou o stop é atingido. É o módulo mais técnico do bootcamp, por isso vai com calma, e volta atrás sempre que precisares."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · Anatomia de uma ideia",
+     "numero": "01",
+     "titulo": "Anatomia de uma ideia",
+     "sub": "Três condições, sem excepções",
+     "fala": "Primeiro capítulo: a anatomia de uma ideia."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "pontos",
+     "cap": "01 · Anatomia de uma ideia",
+     "kicker": "Condições mínimas",
+     "titulo": "O que uma ideia precisa",
+     "itens": [
+      "Uma vela válida, com corpo e expansão",
+      "Um fecho para lá do fractal anterior",
+      "Pelo menos três confirmações",
+      "Por omissão, um toque prévio nas bandas"
+     ],
+     "fala": "Para o DEFY marcar uma ideia, três condições têm de se cumprir ao mesmo tempo. A primeira é uma vela válida. Não é uma vela qualquer: tem de ter corpo, ou seja, uma diferença clara entre a abertura e o fecho, e tem de expandir face às velas anteriores. A segunda é um fecho para lá do fractal anterior. Um fractal é um pequeno topo ou fundo local. Quando uma vela de compra fecha acima do último fractal de topo, está a mostrar que os compradores ganharam terreno. A terceira condição são pelo menos três confirmações. E, como vimos no módulo anterior, por omissão o DEFY também exige que o preço tenha tocado nas bandas antes. Se faltar uma destas peças, não há ideia."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "comparar",
+     "cap": "01 · Anatomia de uma ideia",
+     "kicker": "Filtros da vela",
+     "titulo": "Profile e Expansion",
+     "cartoes": [
+      {
+       "t": "Strict",
+       "d": "Corpo robusto e impulso forte. Menos ideias, mais qualidade. É a omissão."
+      },
+      {
+       "t": "Relaxed",
+       "d": "Estrutura mais flexível. Mais ideias, mais ruído."
+      },
+      {
+       "t": "Expansion",
+       "d": "Off, Soft ou Hard. Soft pede expansão face às velas anteriores. Hard pede expansão forte, de tipo institucional."
+      }
+     ],
+     "fala": "Há dois parâmetros que controlam a exigência sobre a vela de sinal. O primeiro é o Profile. Em Strict, que é a omissão, o DEFY pede um corpo robusto e um impulso forte, por isso aparecem menos ideias mas mais limpas. Em Relaxed, aceita estruturas mais flexíveis, o que dá mais ideias e também mais ruído. O segundo é a Expansion. Em Off, não há exigência de expansão. Em Soft, que é a omissão, a vela tem de ser maior do que as anteriores. Em Hard, a expansão tem de ser forte, daquelas velas que mostram participação institucional. A minha recomendação é simples: começa com Strict e Soft, e só mexe aqui depois de conheceres bem o comportamento do teu mercado."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "grafico",
+     "cap": "01 · Anatomia de uma ideia",
+     "kicker": "Fractal",
+     "titulo": "O fecho que muda a estrutura",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "cores"
+     ],
+     "camadas": [
+      "toque",
+      "sinal"
+     ],
+     "ate": [
+      0.58,
+      0.63
+     ],
+     "zoom": [
+      0.4,
+      0.95
+     ],
+     "fala": "Vê o exemplo. O preço desce até à banda exterior, toca-a, e durante umas velas ainda hesita. Os fractais de topo vão descendo, o que é próprio de uma descida. Depois aparece a vela dourada, que fecha acima do último fractal de topo. Este fecho muda a estrutura de curto prazo, e é por isso que o DEFY exige esta condição. Repara também que o sinal só aparece quando a vela fecha. Durante a formação da vela, o preço pode subir e descer à vontade. O DEFY espera pelo fecho, e é isso que garante que o sinal não desaparece depois."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "capitulo",
+     "cap": "02 · A pontuação",
+     "numero": "02",
+     "titulo": "A pontuação de confirmações",
+     "sub": "De +3 a +15",
+     "fala": "Segundo capítulo: a pontuação de confirmações."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "pontuacao",
+     "cap": "02 · A pontuação",
+     "kicker": "Cada leitura soma um ponto",
+     "titulo": "A contagem",
+     "inicio": 3,
+     "itens": [
+      "Banda interior",
+      "Banda média",
+      "Banda exterior",
+      "Nível-chave",
+      "Nuvem",
+      "Momento",
+      "Ordem das médias",
+      "Ressalto e cruzamento",
+      "Engolfo",
+      "Rejeição no pavio",
+      "Volume",
+      "FVG",
+      "RSI",
+      "Estrutura"
+     ],
+     "fala": "A pontuação começa em mais três, porque essas são as três confirmações mínimas. A partir daí, sobe um ponto por cada confluência extra. Vamos percorrer a lista. Toque na banda interior, na média e na exterior, que contam separadamente. Um nível-chave por perto. A nuvem do lado da ideia. O momento a favor. A ordem das médias móveis. Um ressalto e cruzamento nas médias. Uma vela de engolfo. Uma rejeição no pavio, ou seja, uma sombra longa que mostra que o preço foi recusado. Volume acima da média. Um fair value gap, aquele vazio de liquidez deixado por uma vela muito rápida. O RSI. E a estrutura de mercado. Catorze leituras possíveis, e o DEFY conta-as por ti em cada vela."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "pontos",
+     "cap": "02 · A pontuação",
+     "kicker": "Como pensar na pontuação",
+     "titulo": "Concordância, não certeza",
+     "itens": [
+      "Mais pontos = mais leituras de acordo",
+      "Não é uma probabilidade nem uma promessa",
+      "Ideias fracas existem: o filtro esconde-as",
+      "Lê sempre o contexto por cima do número"
+     ],
+     "fala": "Quero que penses na pontuação da forma certa. Uma pontuação alta quer dizer que muitas leituras diferentes estão de acordo ao mesmo tempo. Não quer dizer que a ideia vai resultar. Não é uma probabilidade, e muito menos uma promessa. Há ideias de mais onze que falham, e ideias de mais seis que correm muito bem. O que a pontuação te dá é uma forma objectiva de comparar ideias e de decidir quais merecem a tua atenção. A tua parte continua a ser ler o contexto: a tendência maior, as notícias do dia, e se o preço já está longe da entrada."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "capitulo",
+     "cap": "03 · Estrelas e King",
+     "numero": "03",
+     "titulo": "Estrelas e King Idea",
+     "sub": "E o Filtro de Ideias",
+     "fala": "Terceiro capítulo: as estrelas, a King Idea e o Filtro de Ideias."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "plano",
+     "cap": "03 · Estrelas e King",
+     "kicker": "Escala",
+     "titulo": "Da pontuação às estrelas",
+     "linhas": [
+      [
+       "+3 a +5",
+       "Ideia base, sem estrelas",
+       ""
+      ],
+      [
+       "+6 a +7",
+       "★  ideia base",
+       "entrada"
+      ],
+      [
+       "+8 a +9",
+       "★★  ideia forte",
+       "entrada"
+      ],
+      [
+       "+10 ou mais",
+       "★★★  ideia excepcional",
+       "tp"
+      ],
+      [
+       "👑 King Idea",
+       "10+ numa vela dourada",
+       "tp"
+      ]
+     ],
+     "fala": "A pontuação traduz-se em estrelas. De mais três a mais cinco, a ideia aparece sem estrelas. De mais seis a mais sete, tem uma estrela: é a ideia base. De mais oito a mais nove, duas estrelas: uma ideia forte. De mais dez para cima, três estrelas: uma ideia excepcional, com muitas leituras de acordo. E depois há a King Idea, com a coroa. A King aparece quando há dez ou mais confirmações numa vela dourada, ou seja, numa vela de corpo forte e volume alto. É rara, e é por isso que merece a coroa. Mas, mais uma vez: rara não quer dizer garantida."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "comparar",
+     "cap": "03 · Estrelas e King",
+     "kicker": "Idea Filter",
+     "titulo": "O que queres ver no gráfico",
+     "cartoes": [
+      {
+       "t": "+3 a +5",
+       "d": "Vês quase tudo. Útil para estudar o indicador."
+      },
+      {
+       "t": "★ a ★★★",
+       "d": "Só ideias com estrelas. O meio-termo para operar."
+      },
+      {
+       "t": "👑 Only",
+       "d": "Só King Ideas. Muito poucas, para quem quer ultra-selecção."
+      }
+     ],
+     "fala": "O Filtro de Ideias decide quais ideias aparecem no gráfico e quais disparam alertas. Vai de mais três e acima, onde vês praticamente tudo, até só King, onde vês muito pouco. A omissão é mais cinco e acima. Uma forma de usar isto: quando estás a estudar o indicador, baixa o filtro para veres todas as ideias e perceberes quais falham e porquê. Quando estás a operar, sobe o filtro para uma ou duas estrelas e acima. Assim o teu telemóvel só toca quando vale a pena olhar. O filtro não muda a qualidade das ideias, muda só o que te é mostrado."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "capitulo",
+     "cap": "04 · O plano de trade",
+     "numero": "04",
+     "titulo": "O plano de trade",
+     "sub": "Fixo na vela do sinal",
+     "fala": "Quarto capítulo, e talvez o mais importante: o plano de trade."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "grafico",
+     "cap": "04 · O plano de trade",
+     "kicker": "Plano completo",
+     "titulo": "Entrada, Warning, SL e três alvos",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.64,
+      0.64
+     ],
+     "zoom": [
+      0.7,
+      0.7
+     ],
+     "rx": 0,
+     "ry": 0,
+     "fala": "Quando uma ideia aparece, o DEFY desenha o plano completo, e fixa-o na vela do sinal. Isto quer dizer que os níveis não se mexem depois. Tens a entrada, a amarelo. O Warning, a laranja e tracejado, que fica no extremo da vela de sinal: no fundo da vela, numa compra, e no topo, numa venda. O stop loss, a vermelho, a um ATR para lá do Warning. E três alvos, a verde. As etiquetas mostram a distância de cada linha em pips no forex e em pontos no ouro, nos índices e na cripto. Ter o plano desenhado antes de entrar é metade da disciplina. Sabes onde entras, onde estás errado e onde realizas, antes de arriscar um cêntimo."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "comparar",
+     "cap": "04 · O plano de trade",
+     "kicker": "Entry Mode",
+     "titulo": "Dois modos de entrada",
+     "cartoes": [
+      {
+       "t": "Candle Close",
+       "d": "Entras no fecho da vela de sinal. Mais simples e mais seguro: nunca perdes a ideia."
+      },
+      {
+       "t": "Candle Pullback",
+       "d": "Esperas que o preço volte a 50% da vela de sinal. Entrada mais precisa, stop proporcionalmente mais curto. Cancela se não voltar em 10 velas."
+      }
+     ],
+     "fala": "Há dois modos de entrada. O primeiro é Candle Close, a omissão: entras no fecho da vela de sinal. É o modo mais simples e o mais seguro, no sentido em que nunca perdes uma ideia. O segundo é Candle Pullback: esperas que o preço volte a metade da vela de sinal. A entrada é mais precisa e a distância até ao stop fica mais curta, mas há ideias que arrancam sem voltar atrás, e essas perdes. Se o preço não voltar à zona dos cinquenta por cento em dez velas, a ideia é cancelada, e o DEFY envia um aviso de cancelamento. Nenhum dos modos é melhor em absoluto. Escolhe um, usa-o de forma consistente, e compara os resultados no teu diário."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "pontos",
+     "cap": "04 · O plano de trade",
+     "kicker": "A linha mais importante",
+     "titulo": "O Warning",
+     "itens": [
+      "Fica no extremo da vela de sinal",
+      "Se o preço o rejeitar, a ideia falhou",
+      "Sais sem esperar pelo stop",
+      "O stop fica 1 ATR mais longe, como seguro"
+     ],
+     "fala": "Agora, a linha de que mais gosto no DEFY: o Warning. O Warning fica no extremo da vela de sinal. A lógica é esta: a vela de sinal foi a vela que mostrou intenção. Se o preço volta para lá do extremo dessa vela e é rejeitado aí, a intenção desapareceu, e a ideia falhou. Nesse momento sais, sem esperar pelo stop. O stop, um ATR mais longe, existe como seguro, para os movimentos rápidos em que não tens tempo de reagir. Quando sais no Warning, perdes menos do que o risco total que tinhas previsto. Isto é gestão, não é magia: é só sair quando o motivo da entrada deixou de existir."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "plano",
+     "cap": "04 · O plano de trade",
+     "kicker": "Target Mode",
+     "titulo": "Quatro modos de alvos",
+     "linhas": [
+      [
+       "Standard",
+       "1R · 2R · 3R",
+       "entrada"
+      ],
+      [
+       "Squeeze",
+       "Bandas seguintes · scalp rápido",
+       "warning"
+      ],
+      [
+       "Stretch",
+       "2R · 4R · 6R",
+       "tp"
+      ],
+      [
+       "Swing",
+       "3R · 6R · 9R",
+       "tp"
+      ]
+     ],
+     "fala": "Para os alvos, há quatro modos. Primeiro, um conceito: R é o teu risco, a distância da entrada ao stop. Um alvo de dois R está a duas vezes essa distância. O modo Standard, a omissão, põe os alvos a um, dois e três R. O Squeeze usa as bandas seguintes como alvos, ou seja, uma rotação até à média, e é pensado para scalps rápidos. Se as bandas estiverem comprimidas, volta ao Standard. O Stretch põe os alvos a dois, quatro e seis R, e o Swing a três, seis e nove R. Alvos mais longe significam que precisas de menos acertos para compensar as perdas, mas também que cada alvo é atingido menos vezes. Não há almoços grátis."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "plano",
+     "cap": "04 · O plano de trade",
+     "kicker": "Exemplo de cálculo",
+     "titulo": "Uma compra em números redondos",
+     "linhas": [
+      [
+       "Entrada",
+       "2 000,0",
+       "entrada"
+      ],
+      [
+       "Warning",
+       "1 996,0",
+       "warning"
+      ],
+      [
+       "Stop (1 ATR abaixo)",
+       "1 993,0  ·  R = 7,0",
+       "sl"
+      ],
+      [
+       "TP1  (1R)",
+       "2 007,0",
+       "tp"
+      ],
+      [
+       "TP2  (2R)",
+       "2 014,0",
+       "tp"
+      ],
+      [
+       "TP3  (3R)",
+       "2 021,0",
+       "tp"
+      ]
+     ],
+     "fala": "Vamos fazer as contas com números redondos, num exemplo inventado em ouro. A entrada está em dois mil. A vela de sinal tem o fundo em mil novecentos e noventa e seis, que é o Warning. Imagina que o ATR é de três pontos: o stop fica em mil novecentos e noventa e três. A distância da entrada ao stop é de sete pontos, e esse é o teu R. No modo Standard, o primeiro alvo fica a um R, em dois mil e sete. O segundo a dois R, em dois mil e catorze. E o terceiro a três R, em dois mil e vinte e um. O DEFY faz estas contas por ti, mas é importante que percebas de onde vêm, para confiares no plano e para calculares o tamanho da posição, que é o tema do próximo módulo."
+    },
+    {
+     "id": "v2-17b",
+     "tipo": "capitulo",
+     "cap": "05 · Ler uma venda",
+     "numero": "05",
+     "titulo": "Ler uma venda",
+     "sub": "O mesmo processo, ao contrário",
+     "fala": "Antes dos alertas, vamos ler uma ideia de venda, para veres que o processo é exactamente o mesmo, só que ao contrário."
+    },
+    {
+     "id": "v2-17c",
+     "tipo": "grafico",
+     "cap": "05 · Ler uma venda",
+     "kicker": "Exemplo ilustrativo",
+     "titulo": "Uma ideia de venda, passo a passo",
+     "cenario": "venda",
+     "seed": 11,
+     "base": [
+      "bandas",
+      "niveis",
+      "nuvem",
+      "cores"
+     ],
+     "camadas": [
+      "toque",
+      "sinal",
+      "plano",
+      "setas"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "estrelas": "+7  ★",
+     "fala": "O preço vem a subir, com a nuvem azul. Estica até às bandas de cima e toca na banda exterior. Depois aparece uma vela vendedora, com corpo, que fecha abaixo do último fractal de fundo. O DEFY conta as confirmações e marca a ideia: DEFY Venda, mais sete, uma estrela. O plano aparece invertido: o Warning fica no topo da vela de sinal, o stop um ATR acima, e os três alvos para baixo. Repara num pormenor: esta ideia é contra a nuvem, que ainda estava azul. É uma reversão. Por isso, aqui, quero ver o toque na banda exterior e uma vela de sinal muito clara, e é exactamente o que temos. Se a vela fosse pequena, ou se o toque fosse só na banda interior, esta seria uma ideia para deixar passar."
+    },
+    {
+     "id": "v2-17d",
+     "tipo": "comparar",
+     "cap": "05 · Ler uma venda",
+     "kicker": "Pips e pontos",
+     "titulo": "O mesmo plano em mercados diferentes",
+     "cartoes": [
+      {
+       "t": "Forex",
+       "d": "Distâncias em pips. Um par como o EURUSD lê-se em pips até ao stop e aos alvos."
+      },
+      {
+       "t": "Ouro",
+       "d": "Distâncias em pontos de preço. O ouro move-se em dólares por onça."
+      },
+      {
+       "t": "Índices e cripto",
+       "d": "Também em pontos. O R funciona igual: só muda a unidade."
+      }
+     ],
+     "fala": "Uma última nota antes dos alertas. As etiquetas do plano mostram as distâncias em pips no forex, e em pontos no ouro, nos índices e na cripto. Isto não muda nada na lógica: um R é sempre a distância da entrada ao stop, seja ela de quinze pips num par de moedas ou de vinte pontos num índice. O que muda é o valor monetário de cada pip ou de cada ponto, que depende do instrumento e da tua corretora. É precisamente por isso que, no próximo módulo, vamos calcular o tamanho da posição a partir do risco em dinheiro, e não a partir de um número fixo de lotes."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "capitulo",
+     "cap": "06 · Alertas",
+     "numero": "06",
+     "titulo": "Alertas e seguimentos",
+     "sub": "O DEFY a trabalhar por ti",
+     "fala": "Sexto capítulo: os alertas."
+    },
+    {
+     "id": "v2-19",
+     "tipo": "pontos",
+     "cap": "06 · Alertas",
+     "kicker": "Configurar",
+     "titulo": "Um alerta, todas as ideias",
+     "itens": [
+      "Criar alerta › Condição: DEFY",
+      "Escolher «Qualquer chamada da função alert()»",
+      "Frequência: uma vez por fecho de barra",
+      "Opcional: webhook para receber o JSON"
+     ],
+     "fala": "Para receberes as ideias sem estares agarrado ao ecrã, crias um alerta no TradingView. Na condição escolhes o DEFY, e depois a opção qualquer chamada da função alert. A frequência deve ser uma vez por fecho de barra, para respeitar a regra do fecho da vela. Com um único alerta recebes todas as ideias que passam o Filtro de Ideias, nesse gráfico. Se só quiseres os sinais simples, há também as condições DEFY Compra e DEFY Venda. E se usares webhooks, cada alerta traz uma mensagem completa em formato JSON, com a direcção, a pontuação, as estrelas, a marca de King, e todos os níveis do plano."
+    },
+    {
+     "id": "v2-20",
+     "tipo": "pontos",
+     "cap": "06 · Alertas",
+     "kicker": "Seguimentos",
+     "titulo": "A ideia acompanhada até ao fim",
+     "itens": [
+      "Entrada atingida, no modo pullback",
+      "TP1, TP2 e TP3",
+      "Stop loss",
+      "Cancelamento",
+      "Todos com o mesmo identificador da ideia"
+     ],
+     "fala": "Depois da ideia, o DEFY continua a acompanhá-la. Envia seguimentos quando a entrada é atingida, no modo pullback, quando cada um dos três alvos é tocado, quando o stop é atingido, e quando a ideia é cancelada. Todos os seguimentos levam o mesmo identificador da ideia original, por isso qualquer sistema que os receba sabe a que ideia pertencem. É assim que, na MoreThanMoney, as ideias do DEFY chegam ao canal de alertas na app, com os seguimentos ligados a cada uma. E é também por isso que consegues fazer um diário honesto: cada ideia tem princípio, meio e fim registados."
+    },
+    {
+     "id": "v2-21",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Resumo do módulo 2",
+     "titulo": "O motor, em cinco frases",
+     "itens": [
+      "Ideia = vela válida + fecho para lá do fractal + 3 confirmações",
+      "A pontuação mede concordância, não certeza",
+      "Estrelas e filtro decidem o que vês",
+      "O plano fica fixo: entrada, Warning, stop, 3 alvos",
+      "Respeita o Warning: sai quando o motivo desaparece"
+     ],
+     "fala": "Resumindo o módulo dois. Uma ideia precisa de uma vela válida, de um fecho para lá do fractal e de pelo menos três confirmações. A pontuação mede concordância, não certeza. As estrelas e o filtro decidem o que vês. O plano fica fixo na vela do sinal, com entrada, Warning, stop e três alvos. E o Warning é a tua linha de saída quando o motivo da entrada desaparece."
+    },
+    {
+     "id": "v2-22",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Antes do módulo 3",
+     "titulo": "O teu trabalho de casa",
+     "itens": [
+      "Baixa o filtro para +3 e acima",
+      "Percorre o histórico e encontra dez ideias",
+      "Para cada uma: pontuação, estrelas e o que aconteceu ao Warning",
+      "Anota quantas rejeitaram o Warning antes do stop"
+     ],
+     "fala": "O exercício deste módulo: baixa o Filtro de Ideias para mais três e acima, percorre o histórico do teu mercado e encontra dez ideias. Para cada uma, anota a pontuação, as estrelas, e o que aconteceu: tocou no primeiro alvo? Rejeitou o Warning? Foi ao stop? No fim, conta quantas das que falharam rejeitaram o Warning antes de chegar ao stop. Este número é teu, medido por ti, e vale mais do que qualquer estatística que eu te pudesse dar. No terceiro módulo pegamos nisto e transformamos em gestão de risco."
+    },
+    {
+     "id": "v2-23",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao módulo 3",
+     "sub": "Risco, gestão e rotina diária",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos e números deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. Os números deste vídeo são exemplos. Treina em conta demo antes de arriscar dinheiro. Vemo-nos no módulo três.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp DEFY · 3/3",
+   "titulo": "Risco, gestão e rotina diária",
+   "cenas": [
+    {
+     "id": "v3-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 3 de 3",
+     "titulo": "DEFY",
+     "sub": "Risco, gestão e rotina diária",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v3-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "O indicador encontra a ideia. <span class='ouro'>A gestão</span> decide o resultado.",
+     "autor": "Bootcamp DEFY · Módulo 3",
+     "fala": "Bem-vindo ao terceiro e último módulo do Bootcamp DEFY. Até aqui aprendeste a ler o gráfico e a perceber como nasce uma ideia e como o plano é desenhado. Agora vem a parte que separa quem aprende uma ferramenta de quem a usa com consistência: a gestão. O indicador encontra a ideia. A gestão decide o resultado. Neste módulo vamos falar de risco por trade, de tamanho de posição, de como gerir uma ideia do princípio ao fim, de quando não entrar, e de uma rotina simples para usares todos os dias. No fim, vais ter um processo completo, escrito, que podes seguir em conta demo a partir de amanhã."
+    },
+    {
+     "id": "v3-02",
+     "tipo": "capitulo",
+     "cap": "01 · Risco por trade",
+     "numero": "01",
+     "titulo": "Risco por trade",
+     "sub": "A única variável que controlas de verdade",
+     "fala": "Primeiro capítulo: o risco por trade."
+    },
+    {
+     "id": "v3-03",
+     "tipo": "pontos",
+     "cap": "01 · Risco por trade",
+     "kicker": "O princípio",
+     "titulo": "Decide quanto perdes antes de decidir quanto ganhas",
+     "itens": [
+      "Não controlas o mercado. Controlas quanto arriscas",
+      "Define o risco em percentagem da conta, por ideia",
+      "Muitos traders usam entre 0,5% e 1%",
+      "Mantém o mesmo risco, ideia após ideia"
+     ],
+     "fala": "Há uma coisa que tens de aceitar desde o primeiro dia: não controlas o mercado. Não controlas se o preço vai ao primeiro alvo ou ao stop. A única coisa que controlas de verdade é quanto arriscas em cada ideia. Por isso, a primeira decisão não é onde entrar, é quanto estás disposto a perder se estiveres errado. Esse valor define-se em percentagem da conta, por ideia. Muitos traders usam entre meio por cento e um por cento. Não é uma regra mágica, é uma forma de garantir que uma sequência de perdas, que vai acontecer, não te tira do jogo. E mantém o mesmo risco ideia após ideia. Quem aumenta o risco depois de perder, para recuperar, está a fazer exactamente o contrário do que devia."
+    },
+    {
+     "id": "v3-04",
+     "tipo": "plano",
+     "cap": "01 · Risco por trade",
+     "kicker": "Porque é que o risco pequeno importa",
+     "titulo": "Dez perdas seguidas",
+     "linhas": [
+      [
+       "Risco de 1% por ideia",
+       "conta a cerca de 90%",
+       "entrada"
+      ],
+      [
+       "Risco de 2% por ideia",
+       "conta a cerca de 82%",
+       "warning"
+      ],
+      [
+       "Risco de 5% por ideia",
+       "conta a cerca de 60%",
+       "sl"
+      ],
+      [
+       "Risco de 10% por ideia",
+       "conta a cerca de 35%",
+       "sl"
+      ]
+     ],
+     "fala": "Vê o que acontece numa sequência de dez perdas seguidas, que é algo que qualquer estratégia pode ter num mês difícil. Com um por cento de risco por ideia, ficas com cerca de noventa por cento da conta. Com dois por cento, com cerca de oitenta e dois. Com cinco por cento, ficas com cerca de sessenta. E com dez por cento, ficas com cerca de trinta e cinco por cento da conta. Repara que, a partir daí, para voltares ao início precisas de quase triplicar o que te resta. Isto é só matemática, e é a razão pela qual o risco pequeno não é cobardia, é sobrevivência."
+    },
+    {
+     "id": "v3-05",
+     "tipo": "capitulo",
+     "cap": "02 · Tamanho da posição",
+     "numero": "02",
+     "titulo": "Tamanho da posição",
+     "sub": "Do risco em dinheiro aos lotes",
+     "fala": "Segundo capítulo: o tamanho da posição."
+    },
+    {
+     "id": "v3-06",
+     "tipo": "pontos",
+     "cap": "02 · Tamanho da posição",
+     "kicker": "A fórmula",
+     "titulo": "Tamanho = risco em dinheiro ÷ (R × valor por unidade)",
+     "itens": [
+      "Risco em dinheiro: conta × percentagem",
+      "R: a distância até ao stop, que o DEFY mostra",
+      "Valor por unidade: quanto vale um pip ou um ponto por lote",
+      "O lote sai das contas, não da intuição"
+     ],
+     "fala": "O tamanho da posição calcula-se com uma fórmula simples. Primeiro, o risco em dinheiro: o valor da conta vezes a percentagem que decidiste arriscar. Segundo, o R, a distância da entrada ao stop, que o DEFY já te mostra em pips ou em pontos. Terceiro, o valor por unidade: quanto vale um pip, ou um ponto, por cada lote, no teu instrumento e na tua corretora. O tamanho é o risco em dinheiro dividido pelo R vezes o valor por unidade. A consequência importante é esta: o lote muda de ideia para ideia. Quando o stop está perto, o lote é maior. Quando o stop está longe, o lote é menor. O que fica igual é o risco em dinheiro."
+    },
+    {
+     "id": "v3-07",
+     "tipo": "plano",
+     "cap": "02 · Tamanho da posição",
+     "kicker": "Exemplo com números redondos",
+     "titulo": "Uma conta de 5 000",
+     "linhas": [
+      [
+       "Conta",
+       "5 000",
+       "entrada"
+      ],
+      [
+       "Risco por ideia (1%)",
+       "50",
+       "warning"
+      ],
+      [
+       "Distância ao stop (R)",
+       "25 pips",
+       "sl"
+      ],
+      [
+       "Valor do pip por lote padrão",
+       "10",
+       "entrada"
+      ],
+      [
+       "Tamanho = 50 ÷ (25 × 10)",
+       "0,20 lotes",
+       "tp"
+      ]
+     ],
+     "fala": "Um exemplo com números redondos, num par de forex. A conta tem cinco mil. Decides arriscar um por cento, ou seja, cinquenta. O DEFY mostra que o stop está a vinte e cinco pips da entrada. Num par em que um pip vale dez por cada lote padrão, a conta é cinquenta a dividir por vinte e cinco vezes dez, o que dá zero vírgula dois lotes. Se o stop estivesse a cinquenta pips, o lote seria zero vírgula um. O risco em dinheiro fica sempre nos cinquenta. Confirma sempre o valor do pip na tua plataforma, porque muda com o par e com a moeda da conta. E se o lote calculado for menor do que o mínimo da corretora, a ideia simplesmente não cabe na tua conta. Deixa-a passar."
+    },
+    {
+     "id": "v3-08",
+     "tipo": "capitulo",
+     "cap": "03 · Gerir a ideia",
+     "numero": "03",
+     "titulo": "Gerir a ideia",
+     "sub": "Antes, durante e depois",
+     "fala": "Terceiro capítulo: como se gere uma ideia do princípio ao fim."
+    },
+    {
+     "id": "v3-09",
+     "tipo": "pontos",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Antes de entrar",
+     "titulo": "Trinta segundos de verificação",
+     "itens": [
+      "A ideia passou o teu filtro de estrelas?",
+      "A tendência maior está a favor, ou é reversão nas bandas exteriores?",
+      "Há notícia de alto impacto nos próximos minutos?",
+      "O preço ainda está perto da entrada?",
+      "O lote cabe no teu risco?"
+     ],
+     "fala": "Antes de entrar, faz uma verificação de trinta segundos. A ideia passou o teu filtro de estrelas? A tendência maior está a favor, ou, se é uma reversão, aconteceu nas bandas exteriores? Há alguma notícia de alto impacto nos próximos minutos? O preço ainda está perto da entrada, ou já fugiu? E o lote cabe no teu risco? Se alguma resposta for não, deixas passar. Vão aparecer outras ideias. Uma ideia que não entraste nunca te fez perder dinheiro."
+    },
+    {
+     "id": "v3-10",
+     "tipo": "grafico",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Durante",
+     "titulo": "Proteger no TP1, seguir com as setas",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "cores",
+      "sinal",
+      "plano"
+     ],
+     "camadas": [
+      "setas"
+     ],
+     "ate": [
+      0.63,
+      1
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "fala": "Durante o trade, a gestão tem três momentos. Até ao primeiro alvo, a tua única tarefa é vigiar o Warning. Se o preço o rejeitar, sais. No primeiro alvo, proteges a posição. Há duas formas comuns: fechar uma parte, por exemplo metade, ou mover o stop para a entrada. Qualquer uma delas transforma a ideia numa ideia sem risco, ou quase. Depois do primeiro alvo, segues para o segundo e o terceiro enquanto as setas de seguimento e a nuvem estiverem a favor. Se aparecer um X, que é o sinal de que o momento virou contra, é uma boa altura para fechar o resto, ou apertar o stop. O que não deves fazer é mexer no stop para mais longe. Nunca."
+    },
+    {
+     "id": "v3-11",
+     "tipo": "grafico",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Quando falha",
+     "titulo": "O Warning a fazer o seu trabalho",
+     "cenario": "falha",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "cores",
+      "sinal",
+      "plano"
+     ],
+     "camadas": [],
+     "ate": [
+      0.62,
+      0.9
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "estrelas": "+6  ★",
+     "fala": "E quando a ideia falha? Vê este exemplo. A ideia aparece com uma estrela, o preço sobe um pouco, mas não chega ao primeiro alvo. Volta para trás, toca no Warning e é rejeitado nessa zona. Este é o momento de sair. Não esperas pelo stop, não esperas que volte, não mudas de ideia. A razão da entrada era a vela de sinal, e o preço acabou de anular essa vela. Sair aqui custa-te uma fracção do R. Esperar pelo stop custa-te o R inteiro. Ao longo de muitas ideias, esta diferença é enorme. Perder pouco nas ideias que falham faz parte do processo, não é um fracasso."
+    },
+    {
+     "id": "v3-12",
+     "tipo": "pontos",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Depois",
+     "titulo": "O diário de trading",
+     "itens": [
+      "Data, mercado, timeframe e direcção",
+      "Pontuação, estrelas e modo de entrada",
+      "Resultado em R, não em dinheiro",
+      "Seguiste o plano? Sim ou não",
+      "Uma frase: o que aprendeste"
+     ],
+     "fala": "Depois de cada ideia, quer tenha corrido bem ou mal, escreves no teu diário. Data, mercado, timeframe e direcção. A pontuação, as estrelas e o modo de entrada. O resultado medido em R, e não em dinheiro, porque o R é comparável entre ideias. A pergunta mais importante: seguiste o plano, sim ou não? E uma frase sobre o que aprendeste. Ao fim de trinta ou quarenta ideias, o teu diário vai dizer-te coisas que nenhum vídeo te pode dizer: em que mercado e em que horário o DEFY funciona melhor para ti, e onde é que tu, e não o indicador, estás a falhar."
+    },
+    {
+     "id": "v3-13",
+     "tipo": "capitulo",
+     "cap": "04 · Quando não entrar",
+     "numero": "04",
+     "titulo": "Quando não entrar",
+     "sub": "As ideias que deixas passar",
+     "fala": "Quarto capítulo: quando não entrar."
+    },
+    {
+     "id": "v3-14",
+     "tipo": "checklist",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Deixa passar quando",
+     "titulo": "Cinco situações",
+     "itens": [
+      "Pontuação no mínimo e sem toque nas bandas",
+      "Preço já longe da entrada",
+      "Contra uma nuvem forte, sem reversão clara nas bandas exteriores",
+      "Notícias de alto impacto",
+      "O Warning já foi rejeitado"
+     ],
+     "fala": "Há cinco situações em que deves deixar a ideia passar. Primeira: a pontuação está no mínimo e não houve toque nas bandas. Segunda: o preço já está longe da entrada. Se chegaste tarde, chegaste tarde, e perseguir o preço estraga a relação entre o risco e os alvos. No modo pullback, a ideia até se cancela sozinha. Terceira: a ideia é contra uma nuvem forte, sem uma reversão clara nas bandas exteriores. Quarta: há notícias de alto impacto, como decisões de juros ou dados de emprego, em que o preço pode saltar os teus níveis. E quinta: o Warning já foi rejeitado. Aí a ideia já falhou, mesmo que o cartão continue no gráfico."
+    },
+    {
+     "id": "v3-15",
+     "tipo": "capitulo",
+     "cap": "05 · Escolher o teu perfil",
+     "numero": "05",
+     "titulo": "O teu perfil",
+     "sub": "Scalp, intradiário ou swing",
+     "fala": "Quinto capítulo: escolher o teu perfil."
+    },
+    {
+     "id": "v3-16",
+     "tipo": "comparar",
+     "cap": "05 · Escolher o teu perfil",
+     "kicker": "Três formas de usar o DEFY",
+     "titulo": "Escolhe uma e fica com ela",
+     "cartoes": [
+      {
+       "t": "Scalp",
+       "d": "1 a 15 min. Bandas 21 a 34, alvos Squeeze ou Standard. Exige tempo ao ecrã."
+      },
+      {
+       "t": "Intradiário",
+       "d": "1 hora. Bandas 89, alvos Standard. Duas ou três verificações por dia."
+      },
+      {
+       "t": "Swing",
+       "d": "4 horas. Bandas 89 a 150, alvos Stretch ou Swing. Poucas ideias, mais paciência."
+      }
+     ],
+     "fala": "Há três perfis típicos. O scalp, entre um e quinze minutos, com bandas mais curtas, entre vinte e um e trinta e quatro, e alvos Squeeze ou Standard. Dá muitas ideias, mas exige tempo ao ecrã e decisões rápidas. O intradiário, no gráfico de uma hora, com as bandas na omissão, oitenta e nove, e alvos Standard. É o que recomendo a quem tem um emprego: duas ou três verificações por dia chegam. E o swing, no gráfico de quatro horas, com bandas de oitenta e nove a cento e cinquenta e alvos Stretch ou Swing. Poucas ideias, trades que duram dias, e muita paciência. Escolhe um perfil e fica com ele pelo menos um mês, antes de mudares."
+    },
+    {
+     "id": "v3-17",
+     "tipo": "capitulo",
+     "cap": "06 · A rotina de 15 minutos",
+     "numero": "06",
+     "titulo": "A rotina de 15 minutos",
+     "sub": "Consistência ganha à intensidade",
+     "fala": "Sexto capítulo: a rotina de quinze minutos por dia."
+    },
+    {
+     "id": "v3-18",
+     "tipo": "checklist",
+     "cap": "06 · A rotina de 15 minutos",
+     "kicker": "Todos os dias",
+     "titulo": "Quinze minutos, cinco passos",
+     "itens": [
+      "Ver o calendário económico do dia",
+      "Abrir o teu mercado no teu timeframe",
+      "Ler a nuvem e os níveis-chave mais próximos",
+      "Rever os alertas recebidos e as ideias abertas",
+      "Actualizar o diário"
+     ],
+     "fala": "A rotina é simples, e cabe em quinze minutos. Primeiro, vês o calendário económico do dia, para saberes a que horas há notícias de alto impacto. Segundo, abres o teu mercado no teu timeframe, sempre os mesmos. Terceiro, lês a nuvem e os níveis-chave mais próximos: o mercado está a puxar para que lado, e onde é que pode hesitar? Quarto, revês os alertas que recebeste e as ideias que tens abertas, e aplicas a gestão que vimos. Quinto, actualizas o diário. O resto do dia, os alertas trabalham por ti. Não precisas de estar agarrado ao ecrã. Precisas de ser consistente."
+    },
+    {
+     "id": "v3-19",
+     "tipo": "pontos",
+     "cap": "06 · A rotina de 15 minutos",
+     "kicker": "No ecossistema MTM",
+     "titulo": "O DEFY na app",
+     "itens": [
+      "As ideias chegam ao canal de alertas da app",
+      "Com os seguimentos ligados a cada ideia",
+      "Treina primeiro em conta demo",
+      "Dúvidas: comunidade e sessões ao vivo da MTM"
+     ],
+     "fala": "Na MoreThanMoney, as ideias do DEFY também chegam ao canal de alertas da app, com os seguimentos ligados a cada ideia, por isso consegues acompanhar tudo no telemóvel. A minha recomendação é clara: antes de usares dinheiro real, passa pelo menos algumas semanas em conta demo, com a rotina, o diário e o risco fixo. Se tiveres dúvidas, traz as tuas ideias para a comunidade e para as sessões ao vivo da MTM. Aprender em grupo, com casos reais e discutidos, acelera muito o processo."
+    },
+    {
+     "id": "v3-19b",
+     "tipo": "capitulo",
+     "cap": "07 · A cabeça do trader",
+     "numero": "07",
+     "titulo": "A cabeça do trader",
+     "sub": "Os erros que nenhum indicador corrige",
+     "fala": "Sétimo capítulo: a cabeça do trader. Porque há erros que nenhum indicador corrige."
+    },
+    {
+     "id": "v3-19c",
+     "tipo": "pontos",
+     "cap": "07 · A cabeça do trader",
+     "kicker": "Os quatro erros clássicos",
+     "titulo": "Reconhece-os em ti",
+     "itens": [
+      "Vingança: aumentar o risco para recuperar uma perda",
+      "Medo de ficar de fora: entrar tarde, longe da entrada",
+      "Excesso de confiança: saltar a verificação depois de ganhar",
+      "Mexer no stop para mais longe"
+     ],
+     "fala": "Há quatro erros clássicos, e quase toda a gente passa por eles. O primeiro é a vingança: perdes uma ideia e aumentas o risco na seguinte para recuperar. É a forma mais rápida de transformar um dia mau numa semana má. O segundo é o medo de ficar de fora: vês uma ideia a correr bem, entras tarde, longe da entrada, e o teu stop fica no sítio errado. O terceiro é o excesso de confiança: depois de três ou quatro ideias boas seguidas, saltas a verificação de trinta segundos porque achas que já não precisas. E o quarto, o mais perigoso, é mexer o stop para mais longe quando o preço se aproxima dele. Se te reconheceres num destes erros, não te sintas mal. Escreve-o no diário. Ver o padrão escrito é o primeiro passo para o quebrar."
+    },
+    {
+     "id": "v3-19d",
+     "tipo": "pontos",
+     "cap": "07 · A cabeça do trader",
+     "kicker": "Regras de protecção",
+     "titulo": "Limites que decides com a cabeça fria",
+     "itens": [
+      "Um número máximo de perdas por dia",
+      "Depois de atingido, fechas a plataforma",
+      "Uma pausa obrigatória depois de uma perda grande",
+      "Revisão semanal do diário, sempre no mesmo dia"
+     ],
+     "fala": "A melhor forma de te protegeres destes erros é decidires regras com a cabeça fria, antes de abrires o gráfico. Por exemplo: um número máximo de perdas por dia, a partir do qual fechas a plataforma, aconteça o que acontecer. Uma pausa obrigatória depois de uma perda maior do que o normal. E uma revisão semanal do diário, sempre no mesmo dia, em que olhas para os números em R e para as respostas à pergunta seguiste o plano. Estas regras parecem simples, e são. O difícil é cumpri-las nos dias em que o mercado te testa. É por isso que as escreves antes."
+    },
+    {
+     "id": "v3-19e",
+     "tipo": "capitulo",
+     "cap": "08 · Perguntas frequentes",
+     "numero": "08",
+     "titulo": "Perguntas frequentes",
+     "sub": "O que os alunos mais perguntam",
+     "fala": "Oitavo capítulo: as perguntas que os alunos mais fazem."
+    },
+    {
+     "id": "v3-19f",
+     "tipo": "pontos",
+     "cap": "08 · Perguntas frequentes",
+     "kicker": "Perguntas e respostas",
+     "titulo": "Dúvidas comuns",
+     "itens": [
+      "O DEFY repinta? Não: as ideias fixam no fecho da vela",
+      "Posso usar vários timeframes? Sim, mas opera num só",
+      "Qual o melhor mercado? O que conheces e acompanhas",
+      "Preciso de um plano pago do TradingView? Não para começar"
+     ],
+     "fala": "Primeira pergunta: o DEFY repinta? Não. As ideias e os níveis ficam fixos no fecho da vela, e os sinais usam só valores calculados com velas fechadas. A parte tracejada das bandas é uma projecção visual, e está identificada como tal. Segunda: posso usar vários timeframes? Podes olhar para um timeframe maior para leres a tendência, mas opera num só, para não te contradizeres. Terceira: qual é o melhor mercado? É aquele que conheces, cujo horário te dá jeito, e que acompanhas todos os dias. Quarta: preciso de um plano pago do TradingView? Não para começar. Um plano pago ajuda quando quiseres ter alertas em muitos gráficos ao mesmo tempo."
+    },
+    {
+     "id": "v3-19g",
+     "tipo": "pontos",
+     "cap": "08 · Perguntas frequentes",
+     "kicker": "Perguntas e respostas",
+     "titulo": "Mais dúvidas comuns",
+     "itens": [
+      "Devo mudar os parâmetros? Só depois de semanas de diário",
+      "E se falhar várias seguidas? Normal: confirma se seguiste o plano",
+      "Posso operar só King Ideas? Podes, mas serão muito poucas",
+      "Quanto tempo até estar pronto? O diário diz-te"
+     ],
+     "fala": "Mais quatro perguntas. Devo mudar os parâmetros? Só depois de algumas semanas de diário, e um de cada vez, para saberes o efeito de cada mudança. E se falhar várias ideias seguidas? É normal, acontece em qualquer método. A pergunta certa não é se o indicador deixou de funcionar, é se tu seguiste o plano em cada uma delas. Posso operar só King Ideas? Podes, mas vão ser muito poucas, e precisas de paciência para esperar semanas por uma. E por fim: quanto tempo até estar pronto para dinheiro real? Não há um número. O teu diário diz-te: quando seguires o plano de forma consistente durante várias semanas, com o risco fixo, estás a tratar isto como um processo. É esse o objectivo."
+    },
+    {
+     "id": "v3-20",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Checklist de bolso",
+     "titulo": "O processo DEFY completo",
+     "itens": [
+      "Tendência ou reversão clara",
+      "Toque nas bandas",
+      "Nível-chave por perto",
+      "Vela fechada",
+      "Pontuação e estrelas",
+      "Tamanho pelo risco",
+      "Vigiar o Warning",
+      "Proteger no TP1"
+     ],
+     "fala": "Para fechar, a checklist de bolso do DEFY. Tendência a favor, ou reversão clara. Toque nas bandas. Um nível-chave por perto. Vela fechada. Pontuação e estrelas que passem o teu filtro. Tamanho calculado pelo risco. Vigiar o Warning. E proteger no primeiro alvo. Oito passos. Se os seguires sempre, mesmo quando é aborrecido, já estás à frente da maior parte das pessoas que tentam operar sem método."
+    },
+    {
+     "id": "v3-21",
+     "tipo": "frase",
+     "cap": "Fecho",
+     "texto": "Mais do que dinheiro: <span class='ouro'>método, tempo e liberdade</span>.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Chegámos ao fim do Bootcamp DEFY. Obrigado por teres feito os três módulos até aqui. Lembra-te do que te disse no início: o DEFY não decide por ti, organiza a forma como decides. O resto é processo, paciência e risco controlado. Faz os exercícios, treina em demo, escreve o teu diário, e traz as tuas dúvidas para a comunidade. Eu sou o Ricardo Garcia, e isto é a MoreThanMoney."
+    },
+    {
+     "id": "v3-22",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Bootcamp DEFY concluído",
+     "sub": "morethanmoney.pt",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos e números deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Até à próxima.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}
