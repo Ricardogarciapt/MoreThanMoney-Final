@@ -31,17 +31,6 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        // DEFY (05/11/2026): o link partilhado é /scanner/Defy, mas as rotas são em minúsculas.
-        source: '/scanner/Defy',
-        destination: '/scanner/defy',
-        permanent: true,
-      },
-      {
-        source: '/en/scanner/Defy',
-        destination: '/en/scanner/defy',
-        permanent: true,
-      },
-      {
         // AIOS saiu do site (decisão do dono 06/10): links guardados de /aios e /jarvis vão para
         // o admin em vez de dar 404. O AIOS vive agora só localmente.
         source: '/aios/:path*',

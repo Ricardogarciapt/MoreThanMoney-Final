@@ -97,6 +97,15 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
+  // Landings dos scanners em minúsculas (05/11/2026): o link partilhado é /scanner/Defy. Não pode ser
+  // um redirect do next.config, porque esses comparam sem distinguir maiúsculas e /scanner/defy
+  // redireccionava para si próprio.
+  if (/^\/(?:en\/)?scanner\/[^/]*[A-Z]/.test(pathname)) {
+    const url = request.nextUrl.clone()
+    url.pathname = pathname.toLowerCase()
+    return NextResponse.redirect(url, 308)
+  }
+
   // Excluir ficheiros estáticos (imagens, etc.) — sair cedo, sem tocar em auth
   const staticExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.pdf', '.mp4', '.mp3', '.woff', '.woff2', '.ttf', '.eot']
   if (staticExtensions.some(ext => pathname.toLowerCase().endsWith(ext))) {
