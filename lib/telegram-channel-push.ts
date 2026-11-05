@@ -21,7 +21,7 @@ const PUSH_TITLES: Record<string, string> = {
 }
 
 /** Chats com espelho para Telegram (lib/telegram-espelho-canal › ESPELHOS). */
-const CANAIS_ESPELHADOS = new Set<string>(['sinais-premium-ii'])
+const CANAIS_ESPELHADOS = new Set<string>(['sinais-premium-ii', 'sinais-defy'])
 
 type PushResult = { ok: boolean; status?: number; error?: string }
 

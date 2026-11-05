@@ -77,6 +77,7 @@ import {
   Share2,
   CandlestickChart,
   Gem,
+  Flame,
 } from "lucide-react"
 
 // Checklist Types
@@ -109,6 +110,7 @@ const scannerLogos: Record<ScannerKey, { icon: any; color: string; bgColor: stri
   MTMScanner: { icon: Brain, color: "text-violet-300", bgColor: "bg-gradient-to-r from-violet-600 to-purple-500" },
   Sensei: { icon: TrendingUp, color: "text-rose-300", bgColor: "bg-gradient-to-r from-rose-600 to-pink-500" },
   PremiumScanner: { icon: Gem, color: "text-[#E9C46A]", bgColor: "bg-gradient-to-r from-[#D2A63C] to-[#E9C46A]" },
+  Defy: { icon: Flame, color: "text-[#E9C46A]", bgColor: "bg-gradient-to-r from-[#8A6A1F] to-[#D2A63C]" },
 }
 
 declare global {

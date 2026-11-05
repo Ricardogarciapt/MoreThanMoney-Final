@@ -161,6 +161,33 @@ export const SCANNERS: ScannerData[] = [
     ],
   },
   {
+    key: "defy",
+    name: "DEFY by MTM",
+    subtitle: "Bandas de exaustão · Confirmações · Estrelas",
+    image: "/scanners/defy/poster.jpg",
+    badge: "Novo",
+    description:
+      "O DEFY lê a estrutura do mercado com bandas de exaustão, níveis-chave, uma nuvem de tendência e uma pontuação de confirmações. Quando há confirmações suficientes, marca a ideia com estrelas e desenha o plano completo no gráfico: entrada, Warning, stop e três alvos.",
+    features: [
+      "Bandas de exaustão interior, média e exterior, com projecção tracejada",
+      "Níveis-chave onde o preço já reagiu, espaçados entre si",
+      "Pontuação +3 a +15 com estrelas (★ a ★★★) e King Idea na vela dourada",
+      "Entrada no fecho ou em pullback de 50 %, Warning e stop a 1 ATR",
+      "Alvos a 1R, 2R e 3R (ou modos Squeeze, Stretch e Swing), com a distância em pips",
+    ],
+    techSpecs: [
+      "Nuvem de tendência, velas coloridas e setas de seguimento",
+      "Etiquetas de quebra de volume",
+      "Alertas JSON com a ideia e os seguimentos (entrada, TP1 a TP3, stop)",
+      "Forex, ouro, índices e cripto, em qualquer timeframe",
+      "Ferramenta educativa: não executa ordens nem garante resultados",
+    ],
+    products: [
+      { id: "defy-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "defy_semestral" },
+      { id: "defy-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "defy_lifetime", highlight: true },
+    ],
+  },
+  {
     key: "sensei",
     name: "MTM Sensei",
     subtitle: "Inteligência Artificial Avançada",

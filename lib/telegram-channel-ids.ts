@@ -196,9 +196,20 @@ export function resolvedPremiumIIChatId(): string | null {
   )
 }
 
+/**
+ * Grupo Telegram «MoreThanMoney Defy Signals» (04/11/2026, pedido do dono; o bot é admin). Só DESTINO
+ * do espelho do chat `sinais-defy` — o que lá se escreve não volta à app. Env TELEGRAM_CHANNEL_DEFY sobrepõe.
+ */
+export const DEFY_TELEGRAM_CHAT_ID = '-1004428544639'
+
+export function resolvedDefyChatId(): string | null {
+  return normalizeEnvChatId(readEnv(['TELEGRAM_CHANNEL_DEFY', 'TELEGRAM_DEFY_CHAT_ID'])) ?? DEFY_TELEGRAM_CHAT_ID
+}
+
 /** O título é de um grupo MTM Auto Premium II (destino, nunca fonte)? */
 export function tituloPremiumII(title: string | null | undefined): boolean {
-  return /premium\s*(ii|2)\b/i.test(String(title ?? ''))
+  // Também o grupo do DEFY (04/11): destino do espelho, nunca fonte.
+  return /premium\s*(ii|2)\b|\bdefy\b/i.test(String(title ?? ''))
 }
 
 /** Canal Telegram dos Perpétuos Cripto. Env se definido; senão o chatId canónico; null se ambos vazios

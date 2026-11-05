@@ -1,0 +1,708 @@
+//@version=6
+// ─────────────────────────────────────────────────────────────────────────────
+// DEFY — níveis-chave, bandas de previsão, trend tracker e fichas de pontuação
+//
+// QUATRO COMPONENTES
+//  1. Níveis-chave: zonas onde o preço reagiu antes (pivots agrupados). Mostra os N
+//     mais próximos do preço; acima a cor bear, abaixo a cor bull.
+//  2. Bandas de previsão (comprimento 89): interior, média e exterior à volta de uma
+//     média suave, com projecção tracejada para a direita.
+//  3. Trend tracker: velas bull / transição / bear pela nuvem; setas = média do
+//     momento a favor, X = contra.
+//  4. Fichas de pontuação: uma ideia nasce quando há VELA VÁLIDA + fecho a romper o
+//     fractal anterior + pelo menos 3 confluências. A pontuação começa em +3 e sobe
+//     uma por confluência (15 possíveis). +6–7 ★ · +8–9 ★★ · +10 ★★★.
+//     A vela dourada soma +1; vela dourada numa ideia ★★★ = 👑 King.
+//
+// GESTÃO: ENTRY no fecho (Candle Close) ou a 50 % da vela de sinal (Candle Pullback).
+// A vela de sinal desenha a zona de momento; a linha WARNING é o extremo dessa vela e o
+// SL fica logo a seguir. Alvos: Squeeze (bandas, cai para Standard se comprimido),
+// Standard 1:1–1:3, Stretch 1:2–1:6, Swing 1:3–1:9.
+//
+// ALERTAS / WEBHOOK MTM: Adicionar alerta → condição «Any alert() function call»,
+// «Once Per Bar Close», Webhook URL:
+//   https://www.morethanmoney.pt/api/webhooks/tradingview?strategy=defy&secret=<secret>
+// Cada ideia (respeita o Idea Filter) sai em JSON com os níveis; depois seguem os
+// seguimentos da MESMA trade (mesmo "id"): entry_hit (só no Pullback), tp1, tp2, tp3,
+// sl e cancel (pullback não tocado em 10 velas). Os seguimentos só existem com
+// Trade Display = Full Display. Também há «DEFY Compra» / «DEFY Venda».
+// Conteúdo educativo, não constitui consultoria financeira.
+// ─────────────────────────────────────────────────────────────────────────────
+indicator("DEFY", "DEFY", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=200, max_polylines_count=60, max_bars_back=1000)
+
+// ═══════════ DEFY • THEME ═══════════
+gT = "DEFY • THEME"
+themeMode = input.string("Classic", "Theme Mode", options=["Classic", "Dark", "Light", "Ladies"], group=gT)
+cBullCl = input.color(#1E4FD8, "Classic   Bull", inline="cl", group=gT)
+cBearCl = input.color(#C0262D, "Bear",          inline="cl", group=gT)
+cBullDk = input.color(#F5F5F5, "Dark       Bull", inline="dk", group=gT)
+cBearDk = input.color(#7C3AED, "Bear",          inline="dk", group=gT)
+cBullLt = input.color(#7C3AED, "Light      Bull", inline="lt", group=gT)
+cBearLt = input.color(#3A3A3A, "Bear",          inline="lt", group=gT)
+cBullLd = input.color(#D21FC6, "Ladies    Bull", inline="ld", group=gT)
+cBearLd = input.color(#5B16D8, "Bear",          inline="ld", group=gT)
+
+// ═══════════ DEFY • LEVELS ═══════════
+gL = "DEFY • LEVELS"
+showLevels = input.bool(true, "Show DEFY Levels", group=gL)
+numLevels  = input.int(10, "Number of Levels", minval=1, maxval=30, group=gL, tooltip="Quantos níveis-chave mostrar, os mais próximos do preço actual (acima e abaixo).")
+lvlColor   = input.color(#787B86, "Line Settings", inline="ls", group=gL)
+lvlStyleS  = input.string("Dashed", "", options=["Solid", "Dashed", "Dotted"], inline="ls", group=gL)
+lvlWidth   = input.int(1, "", minval=1, maxval=4, inline="ls", group=gL)
+zoneTransp = input.int(90, "Zone Settings", minval=0, maxval=100, inline="zs", group=gL, tooltip="1.º: opacidade da zona (transparência). 2.º: largura da zona (10 ≈ meio ATR).")
+zoneWidth  = input.int(10, "", minval=1, maxval=100, inline="zs", group=gL)
+
+// ═══════════ DEFY • VALID CANDLE ═══════════
+gV = "DEFY • VALID CANDLE"
+profile   = input.string("Strict", "Profile", options=["Strict", "Relaxed"], group=gV, tooltip="Strict: corpo robusto e impulso forte (menos ideias, mais qualidade). Relaxed: estrutura mais flexível.")
+expansion = input.string("Soft", "Expansion", options=["Off", "Soft", "Hard"], group=gV, tooltip="Soft: a vela tem de expandir face às anteriores. Hard: expansão forte, tipo institucional.")
+strongCol = input.color(#FFD600, "Strong Candle Color", group=gV)
+
+// ═══════════ DEFY • CORE ═══════════
+gC = "DEFY • CORE"
+bandLen = input.int(89, "Band Length", minval=5, maxval=400, group=gC, tooltip="21–34: mais ideias e movimentos curtos. 50–89: equilibrado. 150+: menos ideias, movimentos maiores.")
+
+// ═══════════ DEFY • BANDS ═══════════
+gB = "DEFY • BANDS"
+showInner  = input.bool(true, "Show Inner Band", group=gB)
+showMid    = input.bool(true, "Show Mid Band", group=gB)
+showOuter  = input.bool(true, "Show Outter Band", group=gB)
+showCenter = input.bool(true, "Show Center Line", group=gB)
+showFill   = input.bool(true, "Show Band Fill", group=gB)
+bandWidth  = input.int(1, "Set Band Width", minval=1, maxval=5, group=gB)
+bandTransp = input.int(0, "Set Band Transparency", minval=0, maxval=100, group=gB)
+fillTransp = input.int(75, "Set Fill Transparency", minval=0, maxval=100, group=gB)
+
+// ═══════════ DEFY • PROJECTION ═══════════
+gP = "DEFY • PROJECTION"
+dashedProj = input.bool(true, "Dashed Projection", group=gP)
+projGrad   = input.bool(true, "Projection Gradient", group=gP)
+
+// ═══════════ DEFY • MOVING AVERAGES ═══════════
+gM = "DEFY • MOVING AVERAGES"
+showMa1 = input.bool(false, "Show MA 1 |", inline="m1", group=gM)
+ma1Len  = input.int(34, "Length", minval=1, inline="m1", group=gM)
+showMa2 = input.bool(false, "Show MA 2 |", inline="m2", group=gM)
+ma2Len  = input.int(55, "Length", minval=1, inline="m2", group=gM)
+showMa3 = input.bool(false, "Show MA 3 |", inline="m3", group=gM)
+ma3Len  = input.int(233, "Length", minval=1, inline="m3", group=gM)
+
+// ═══════════ DEFY • TREND FILTER ═══════════
+gF = "DEFY • TREND FILTER"
+arrowTun    = input.int(5, "Set Arrow Tuning", minval=1, maxval=50, group=gF, tooltip="Mais baixo = setas mais rápidas. Mais alto = setas mais lentas e consistentes.")
+showArrows  = input.bool(true, "Show Directional Arrows", group=gF)
+arrowTransp = input.int(0, "Set Arrow Transparency", minval=0, maxval=100, group=gF)
+maxArrows   = input.int(250, "Set Max Arrow Labels", minval=0, maxval=300, group=gF)
+arrowMode   = input.string("Track", "Set Arrow Mode", options=["Track", "Continuous", "Reversal Only"], group=gF, tooltip="Track: depois de uma ideia, seta quando o momento está a favor e X quando vira contra. Continuous: todas as setas. Reversal Only: só quando o momento inverte.")
+arrowSizeS  = input.string("Small", "Set Arrow Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=gF)
+
+// ═══════════ DEFY • CLOUD ═══════════
+gN = "DEFY • CLOUD"
+perfType        = input.string("Active", "Performance Type", options=["Active", "Steady", "Smooth"], group=gN, tooltip="Active: reage depressa. Steady: equilibrado. Smooth: transições lentas.")
+showCloud       = input.bool(true, "Show Cloud", group=gN)
+showCandleColor = input.bool(true, "Show Candle Coloring", group=gN)
+
+// ═══════════ DEFY • VOLUME BREAKS ═══════════
+gW = "DEFY • VOLUME BREAKS"
+showVol    = input.bool(true, "Show Volume Data", group=gW)
+maxVolS    = input.string("1", "Set Max Labels", options=["1", "2", "4", "6"], group=gW, tooltip="Quantas quebras recentes mostrar de cada lado.")
+volSizeS   = input.string("Normal", "Set Label Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=gW)
+volTextCol = input.color(#E6B800, "Set Volume Text Color", group=gW)
+
+// ═══════════ DEFY • TRADE MANAGEMENT ═══════════
+gX = "DEFY • TRADE MANAGEMENT"
+tradeDisplay = input.string("Full Display", "Trade Display", options=["Full Display", "Idea Cards Only"], group=gX)
+ideaFilter   = input.string("+5 and Above", "Idea Filter", options=["+3 and Above", "+4 and Above", "+5 and Above", "★ and Above", "★★ and Above", "★★★ and Above", "👑 Only"], group=gX)
+ideaSizeS    = input.string("Normal", "Idea Label Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=gX)
+entryMode    = input.string("Candle Close", "Entry Mode", options=["Candle Close", "Candle Pullback"], group=gX)
+targetMode   = input.string("Standard", "Target Mode", options=["Squeeze", "Standard", "Stretch", "Swing"], group=gX, tooltip="Squeeze: alvos nas bandas (rotação até à média); se estiver comprimido usa Standard. Standard 1:1–1:3. Stretch 1:2–1:6. Swing 1:3–1:9.")
+
+needTouch    = input.bool(true, "Require Band Touch", group=gX, tooltip="Só há ideia depois de o preço tocar a banda interior do lado contrário (esticão). Desligado = mais ideias, também a meio das bandas.")
+chave        = input.string("DEFY", "strategy (chave no webhook)", group=gX)
+followUps    = input.bool(true, "Enviar seguimentos (TP / SL)", group=gX)
+
+// ═══════════ AUXILIARES ═══════════
+f_size(string s) =>
+    switch s
+        "Tiny"   => size.tiny
+        "Small"  => size.small
+        "Large"  => size.large
+        "Huge"   => size.huge
+        => size.normal
+
+f_lineStyle(string s) =>
+    s == "Solid" ? line.style_solid : s == "Dotted" ? line.style_dotted : line.style_dashed
+
+b2i(bool b) =>
+    b ? 1 : 0
+
+// forex (cotação < 1 de distância) em pips; ouro / índices / cripto em pontos
+f_dist(float d) =>
+    float pip = syminfo.mintick * 10
+    d >= 1 ? str.tostring(d, "#.#") : str.tostring(d / pip, "#.#")
+
+f_lvlTxt(string name, float d, float p) =>
+    name + ": " + f_dist(d) + " - " + str.tostring(p, format.mintick)
+
+// ═══════════ TEMA ═══════════
+bull = themeMode == "Classic" ? cBullCl : themeMode == "Dark" ? cBullDk : themeMode == "Light" ? cBullLt : cBullLd
+bear = themeMode == "Classic" ? cBearCl : themeMode == "Dark" ? cBearDk : themeMode == "Light" ? cBearLt : cBearLd
+neutral = #9AA0A6
+
+// ═══════════ BANDAS DE PREVISÃO ═══════════
+const float M1 = 1.382
+const float M2 = 2.0
+const float M3 = 2.618
+basis = ta.alma(hlc3, bandLen, 0.75, 6)
+dev   = ta.ema(ta.stdev(hlc3, bandLen), 5)
+up1 = basis + dev * M1
+up2 = basis + dev * M2
+up3 = basis + dev * M3
+lo1 = basis - dev * M1
+lo2 = basis - dev * M2
+lo3 = basis - dev * M3
+
+// bandas desenhadas: centradas (deslocadas meia janela para trás); as últimas h velas são a
+// projecção tracejada mais abaixo. Os sinais continuam a usar as bandas causais acima.
+h = int(math.floor((bandLen - 1) / 2))
+cBasis = ta.alma(hlc3, bandLen, 0.5, 6)
+cDev   = ta.stdev(hlc3, bandLen)
+
+f_slope(float v) =>
+    (v - v[5]) / 5.0 * 0.5
+sB  = f_slope(basis)
+sU1 = f_slope(up1)
+sU2 = f_slope(up2)
+sU3 = f_slope(up3)
+sL1 = f_slope(lo1)
+sL2 = f_slope(lo2)
+sL3 = f_slope(lo3)
+
+// ═══════════ NUVEM, VELAS E MOMENTO ═══════════
+fastLen = perfType == "Active" ? 8 : perfType == "Steady" ? 13 : 21
+slowLen = perfType == "Active" ? 21 : perfType == "Steady" ? 34 : 55
+fast = ta.ema(close, fastLen)
+slow = ta.ema(close, slowLen)
+cloudUp = fast >= slow
+trendState = close > fast and fast > slow ? 1 : close < fast and fast < slow ? -1 : 0   // bull / transição / bear
+momAvg = ta.ema(close - close[arrowTun], arrowTun)
+momUp  = momAvg > momAvg[1]
+
+// ═══════════ APOIO ═══════════
+atr    = ta.atr(14)
+atrL   = ta.atr(200)
+rsi    = ta.rsi(close, 14)
+body   = math.abs(close - open)
+rng    = high - low
+upWick = high - math.max(open, close)
+dnWick = math.min(open, close) - low
+avgBody = ta.sma(body, 20)
+hasVol = not na(volume) and volume > 0
+avgVol = ta.sma(nz(volume), 20)
+ma1 = ta.ema(close, ma1Len)
+ma2 = ta.ema(close, ma2Len)
+ma3 = ta.ema(close, ma3Len)
+
+// ═══════════ VELA VÁLIDA E VELA DOURADA ═══════════
+ratioMin = profile == "Strict" ? 0.6 : 0.45
+bodyMult = profile == "Strict" ? 1.3 : 1.0
+hiRng5 = ta.highest(rng, 5)[1]
+expOk = expansion == "Off" ? true : expansion == "Soft" ? rng > rng[1] and body > body[1] : rng >= hiRng5 and rng >= atr * 1.2
+validCandle = rng > 0 and body / rng >= ratioMin and body >= avgBody * bodyMult and expOk
+validBull = validCandle and close > open
+validBear = validCandle and close < open
+golden = validCandle and (hasVol ? volume > avgVol * 1.5 and body / rng >= 0.6 : rng >= atr * 1.5)
+
+// ═══════════ FRACTAIS (2-2) ═══════════
+fH = ta.pivothigh(high, 2, 2)
+fL = ta.pivotlow(low, 2, 2)
+var float lastFH = na
+var float lastFL = na
+var float prevFH = na
+var float prevFL = na
+var bool fhUsed = true
+var bool flUsed = true
+if not na(fH)
+    prevFH := lastFH
+    lastFH := fH
+    fhUsed := false
+if not na(fL)
+    prevFL := lastFL
+    lastFL := fL
+    flUsed := false
+breakUp = not fhUsed and not na(lastFH) and close > lastFH
+breakDn = not flUsed and not na(lastFL) and close < lastFL
+if breakUp
+    fhUsed := true
+if breakDn
+    flUsed := true
+
+// ═══════════ NÍVEIS-CHAVE (pivots agrupados por reacção) ═══════════
+pivStr = 10
+var array<float> kPx = array.new<float>()
+var array<int>   kHits = array.new<int>()
+var array<int>   kBar = array.new<int>()
+kH = ta.pivothigh(high, pivStr, pivStr)
+kL = ta.pivotlow(low, pivStr, pivStr)
+mergeTol = nz(atrL, atr) * 0.5
+
+f_addKey(float px) =>
+    int found = -1
+    if kPx.size() > 0
+        for i = 0 to kPx.size() - 1
+            if math.abs(kPx.get(i) - px) <= mergeTol
+                found := i
+                break
+    if found >= 0
+        int n = kHits.get(found)
+        kPx.set(found, (kPx.get(found) * n + px) / (n + 1))
+        kHits.set(found, n + 1)
+    if found < 0
+        kPx.push(px)
+        kHits.push(1)
+        kBar.push(bar_index - pivStr)
+    if kPx.size() > 120
+        kPx.remove(0)
+        kHits.remove(0)
+        kBar.remove(0)
+    found
+
+if not na(kH)
+    f_addKey(kH)
+if not na(kL)
+    f_addKey(kL)
+
+f_nearKey(float px) =>
+    bool near = false
+    if kPx.size() > 0
+        for p in kPx
+            if math.abs(px - p) <= atr * 0.6
+                near := true
+    near
+
+// desenhar os N níveis mais próximos do preço (só na última vela)
+var array<line> keyLines = array.new<line>()
+var array<box>  keyBoxes = array.new<box>()
+if barstate.islast
+    for l in keyLines
+        line.delete(l)
+    keyLines.clear()
+    for b in keyBoxes
+        box.delete(b)
+    keyBoxes.clear()
+    if showLevels and kPx.size() > 0
+        array<float> dists = array.new<float>()
+        for p in kPx
+            dists.push(math.abs(p - close))
+        array<int> idxs = dists.sort_indices(order.ascending)
+        float zh = nz(atrL, atr) * zoneWidth / 20.0
+        // níveis espaçados: salta os que ficam colados a um já escolhido
+        float minGap = nz(atrL, atr) * 2
+        array<float> picked = array.new<float>()
+        for j = 0 to idxs.size() - 1
+            if picked.size() >= numLevels
+                break
+            int idx = idxs.get(j)
+            float p = kPx.get(idx)
+            bool near = false
+            for q in picked
+                if math.abs(q - p) < minGap
+                    near := true
+            if near
+                continue
+            picked.push(p)
+            int x0 = math.max(kBar.get(idx), bar_index - 4999)
+            color zc = p >= close ? bear : bull
+            keyLines.push(line.new(x0, p, bar_index, p, extend=extend.right, color=lvlColor, style=f_lineStyle(lvlStyleS), width=lvlWidth))
+            keyBoxes.push(box.new(x0, p + zh / 2, bar_index, p - zh / 2, border_color=na, bgcolor=color.new(zc, zoneTransp), extend=extend.right))
+
+// ═══════════ VOLUME BREAKS (pico de volume + quebra de Supertrend) ═══════════
+[stLine, stDir] = ta.supertrend(3.0, 10)
+stFlipUp = stDir < 0 and stDir[1] > 0
+stFlipDn = stDir > 0 and stDir[1] < 0
+volSpike = hasVol and avgVol > 0 and volume > avgVol * 1.3
+vbBull = volSpike and stFlipUp
+vbBear = volSpike and stFlipDn
+
+// ═══════════ CONFLUÊNCIAS (15 possíveis de cada lado) ═══════════
+// compra
+tIn1B  = ta.lowest(low - lo1, 5) <= 0
+tIn2B  = ta.lowest(low - lo2, 5) <= 0
+tIn3B  = ta.lowest(low - lo3, 5) <= 0
+keyB   = f_nearKey(ta.lowest(low, 5))
+cldB   = cloudUp
+momB   = momUp
+maOrdB = close > ma1 and close > ma2
+maBncB = ta.lowest(low - ma1, 3) <= 0 or ta.lowest(low - ma2, 3) <= 0
+maXB   = ta.barssince(ta.crossover(ma1, ma2)) <= 10
+engB   = close > open and close[1] < open[1] and close >= open[1] and open <= close[1]
+wickB  = ta.highest(dnWick - body, 3) >= 0
+volB   = ta.barssince(vbBull) <= 3
+fvgB   = ta.barssince(low > high[2]) <= 5
+rsiB   = ta.lowest(rsi, 8) <= 35
+hlB    = not na(prevFL) and lastFL > prevFL
+// venda
+tIn1S  = ta.highest(high - up1, 5) >= 0
+tIn2S  = ta.highest(high - up2, 5) >= 0
+tIn3S  = ta.highest(high - up3, 5) >= 0
+keyS   = f_nearKey(ta.highest(high, 5))
+cldS   = not cloudUp
+momS   = not momUp
+maOrdS = close < ma1 and close < ma2
+maBncS = ta.highest(high - ma1, 3) >= 0 or ta.highest(high - ma2, 3) >= 0
+maXS   = ta.barssince(ta.crossunder(ma1, ma2)) <= 10
+engS   = close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
+wickS  = ta.highest(upWick - body, 3) >= 0
+volS   = ta.barssince(vbBear) <= 3
+fvgS   = ta.barssince(high < low[2]) <= 5
+rsiS   = ta.highest(rsi, 8) >= 65
+lhS    = not na(prevFH) and lastFH < prevFH
+
+confB = b2i(tIn1B) + b2i(tIn2B) + b2i(tIn3B) + b2i(keyB) + b2i(cldB) + b2i(momB) + b2i(maOrdB) + b2i(maBncB) +
+     b2i(maXB) + b2i(engB) + b2i(wickB) + b2i(volB) + b2i(fvgB) + b2i(rsiB) + b2i(hlB)
+confS = b2i(tIn1S) + b2i(tIn2S) + b2i(tIn3S) + b2i(keyS) + b2i(cldS) + b2i(momS) + b2i(maOrdS) + b2i(maBncS) +
+     b2i(maXS) + b2i(engS) + b2i(wickS) + b2i(volS) + b2i(fvgS) + b2i(rsiS) + b2i(lhS)
+
+scoreB = confB + b2i(golden and validBull)
+scoreS = confS + b2i(golden and validBear)
+
+f_stars(int s) =>
+    s >= 10 ? 3 : s >= 8 ? 2 : s >= 6 ? 1 : 0
+
+starsB = f_stars(scoreB)
+starsS = f_stars(scoreS)
+kingB = confB >= 10 and golden and validBull
+kingS = confS >= 10 and golden and validBear
+
+f_pass(int sc, int stars, bool king) =>
+    switch ideaFilter
+        "+3 and Above"  => sc >= 3
+        "+4 and Above"  => sc >= 4
+        "+5 and Above"  => sc >= 5
+        "★ and Above"   => stars >= 1
+        "★★ and Above"  => stars >= 2
+        "★★★ and Above" => stars >= 3
+        "👑 Only"       => king
+        => true
+
+// núcleo: vela válida + fecho a romper o fractal + ≥3 confluências
+// a ideia nasce de um esticão: o preço tem de ter tocado a banda interior do lado contrário (5 velas)
+coreB = barstate.isconfirmed and validBull and breakUp and confB >= 3 and (not needTouch or tIn1B)
+coreS = barstate.isconfirmed and validBear and breakDn and confS >= 3 and (not needTouch or tIn1S)
+sigBuy  = coreB and f_pass(scoreB, starsB, kingB)
+sigSell = coreS and f_pass(scoreS, starsS, kingS)
+
+// ═══════════ PLOTS ═══════════
+plot(showInner ? cBasis + cDev * M1 : na, "Upper BB1", color.new(bear, bandTransp), bandWidth, offset=-h)
+plot(showInner ? cBasis - cDev * M1 : na, "Lower BB1", color.new(bull, bandTransp), bandWidth, offset=-h)
+plot(showMid ? cBasis + cDev * M2 : na, "Upper BB2", color.new(bear, bandTransp), bandWidth, offset=-h)
+plot(showMid ? cBasis - cDev * M2 : na, "Lower BB2", color.new(bull, bandTransp), bandWidth, offset=-h)
+plot(showOuter ? cBasis + cDev * M3 : na, "Upper BB3", color.new(bear, bandTransp), bandWidth, offset=-h)
+plot(showOuter ? cBasis - cDev * M3 : na, "Lower BB3", color.new(bull, bandTransp), bandWidth, offset=-h)
+plot(showCenter ? cBasis : na, "Centerline", color.new(neutral, bandTransp), 1, offset=-h)
+
+aU2 = plot(cBasis + cDev * M2, "anchor U2", color=na, editable=false, display=display.none, offset=-h)
+aU3 = plot(cBasis + cDev * M3, "anchor U3", color=na, editable=false, display=display.none, offset=-h)
+aL2 = plot(cBasis - cDev * M2, "anchor L2", color=na, editable=false, display=display.none, offset=-h)
+aL3 = plot(cBasis - cDev * M3, "anchor L3", color=na, editable=false, display=display.none, offset=-h)
+fill(aU2, aU3, showFill ? color.new(bear, fillTransp) : na, "Upper Zone")
+fill(aL2, aL3, showFill ? color.new(bull, fillTransp) : na, "Lower Zone")
+
+plot(showMa1 ? ma1 : na, "MA 1", color.new(neutral, 0), 1)
+plot(showMa2 ? ma2 : na, "MA 2", color.new(#B2B5BE, 0), 1)
+plot(showMa3 ? ma3 : na, "MA 3", color.new(#5D606B, 0), 2)
+
+cloudCol = cloudUp ? bull : bear
+pF = plot(showCloud ? fast : na, "Cloud Fast", cloudCol, 2)
+pS = plot(showCloud ? slow : na, "Cloud Slow", color.new(cloudCol, 40), 1)
+fill(pF, pS, showCloud ? color.new(cloudCol, 75) : na, "Cloud")
+
+candleCol = golden ? strongCol : trendState == 1 ? bull : trendState == -1 ? bear : neutral
+barcolor(showCandleColor ? candleCol : na, title="Bar Color")
+
+// ═══════════ VOLUME BREAK LABELS ═══════════
+var array<label> volBull = array.new<label>()
+var array<label> volBear = array.new<label>()
+maxVol = int(str.tonumber(maxVolS))
+if showVol and barstate.isconfirmed and (vbBull or vbBear)
+    pct = (volume / avgVol - 1.0) * 100.0
+    string vt = "Vol: " + str.tostring(pct, "#.#") + "%"
+    if vbBull
+        volBull.push(label.new(bar_index, low - atr * 0.8, vt, style=label.style_none, textcolor=volTextCol, size=f_size(volSizeS)))
+        while volBull.size() > maxVol
+            label.delete(volBull.shift())
+    if vbBear
+        volBear.push(label.new(bar_index, high + atr * 0.8, vt, style=label.style_none, textcolor=volTextCol, size=f_size(volSizeS)))
+        while volBear.size() > maxVol
+            label.delete(volBear.shift())
+
+// ═══════════ IDEA CARDS ═══════════
+var array<label> ideaLbls = array.new<label>()
+f_ideaTxt(int sc, int stars, bool king) =>
+    king ? "👑" : "+" + str.tostring(sc) + (stars > 0 ? "\n" + str.repeat("★", stars) : "")
+
+if sigSell
+    ideaLbls.push(label.new(bar_index, high, f_ideaTxt(scoreS, starsS, kingS), style=label.style_label_down, color=kingS ? strongCol : bear, textcolor=kingS ? color.black : color.white, size=f_size(ideaSizeS)))
+if sigBuy
+    ideaLbls.push(label.new(bar_index, low, f_ideaTxt(scoreB, starsB, kingB), style=label.style_label_up, color=kingB ? strongCol : bull, textcolor=kingB ? color.black : color.white, size=f_size(ideaSizeS)))
+while ideaLbls.size() > 150
+    label.delete(ideaLbls.shift())
+
+// ═══════════ GESTÃO (ENTRY / SL / WARNING / TP1-3) ═══════════
+type Trade
+    int dir
+    float entry
+    float sl
+    float warn
+    float tp1
+    float tp2
+    float tp3
+    float risk
+    int startBar
+    bool pending
+    bool active
+    int hits
+    box zone
+    array<line> lns
+    array<label> lbs
+    int sigTime = 0
+
+var Trade cur = na
+var int lastIdeaDir = 0
+var int lastIdeaBar = -1
+
+rA = targetMode == "Stretch" ? 2.0 : targetMode == "Swing" ? 3.0 : 1.0
+rB = targetMode == "Stretch" ? 4.0 : targetMode == "Swing" ? 6.0 : 2.0
+rC = targetMode == "Stretch" ? 6.0 : targetMode == "Swing" ? 9.0 : 3.0
+
+f_clear(Trade t) =>
+    if not na(t)
+        box.delete(t.zone)
+        for l in t.lns
+            line.delete(l)
+        for lb in t.lbs
+            label.delete(lb)
+    true
+
+// alvos Squeeze: as bandas seguintes na direcção; se faltarem ou estiverem perto demais → Standard
+f_targets(int d, float e, float rk) =>
+    float t1 = e + d * rk * rA
+    float t2 = e + d * rk * rB
+    float t3 = e + d * rk * rC
+    if targetMode == "Squeeze"
+        array<float> cand = d == 1 ? array.from(lo1, basis, up1, up2, up3) : array.from(up1, basis, lo1, lo2, lo3)
+        array<float> ok = array.new<float>()
+        for c in cand
+            if not na(c) and (c - e) * d >= rk * 0.8
+                ok.push(c)
+        if ok.size() >= 3
+            t1 := ok.get(0)
+            t2 := ok.get(1)
+            t3 := ok.get(2)
+    [t1, t2, t3]
+
+f_new(int d) =>
+    float e = entryMode == "Candle Close" ? close : (high + low) / 2.0
+    float w = d == 1 ? low : high                     // WARNING = extremo da vela de sinal
+    float sl = w - d * math.max(atr, syminfo.mintick * 2)   // SL = 1 ATR para lá do WARNING
+    float rk = math.abs(e - sl)
+    [t1, t2, t3] = f_targets(d, e, rk)
+    Trade t = Trade.new(d, e, sl, w, t1, t2, t3, rk, bar_index, entryMode != "Candle Close", entryMode == "Candle Close", 0, na, array.new<line>(), array.new<label>())
+    color cDir = d == 1 ? bull : bear
+    color cOpp = d == 1 ? bear : bull
+    int x2 = bar_index + 10
+    // zona de momento = corpo-a-extremo da vela de sinal
+    t.zone := box.new(bar_index, math.max(e, w), x2, math.min(e, w), border_color=na, bgcolor=color.new(cDir, 65))
+    t.lns.push(line.new(bar_index, sl,   x2, sl,   color=cOpp, style=line.style_dotted, width=2))
+    t.lns.push(line.new(bar_index, w,    x2, w,    color=cOpp, style=line.style_solid,  width=1))
+    t.lns.push(line.new(bar_index, e,    x2, e,    color=cDir, style=line.style_solid,  width=2))
+    t.lns.push(line.new(bar_index, t1,   x2, t1,   color=cDir, style=line.style_dotted, width=2))
+    t.lns.push(line.new(bar_index, t2,   x2, t2,   color=cDir, style=line.style_dotted, width=2))
+    t.lns.push(line.new(bar_index, t3,   x2, t3,   color=cDir, style=line.style_dotted, width=2))
+    string entTxt = (entryMode == "Candle Close" ? "ENTRY: " : "50% PULLBACK ENTRY: ") + str.tostring(e, format.mintick)
+    t.lbs.push(label.new(x2, sl, f_lvlTxt("SL", rk, sl), style=label.style_label_left, color=cOpp, textcolor=color.white, size=size.small))
+    t.lbs.push(label.new(x2, w,  "WARNING: " + str.tostring(w, format.mintick), style=label.style_label_left, color=cOpp, textcolor=color.white, size=size.small))
+    t.lbs.push(label.new(x2, e,  entTxt, style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
+    t.lbs.push(label.new(x2, t1, f_lvlTxt("TP 1", math.abs(t1 - e), t1), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
+    t.lbs.push(label.new(x2, t2, f_lvlTxt("TP 2", math.abs(t2 - e), t2), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
+    t.lbs.push(label.new(x2, t3, f_lvlTxt("TP 3", math.abs(t3 - e), t3), style=label.style_label_left, color=cDir, textcolor=color.white, size=size.small))
+    t.sigTime := time
+    t
+
+f_extend(Trade t) =>
+    int x2 = bar_index + 10
+    box.set_right(t.zone, x2)
+    for l in t.lns
+        line.set_x2(l, x2)
+    for lb in t.lbs
+        label.set_x(lb, x2)
+
+// seguimento da trade para o webhook: o "id" é a hora da vela de sinal (igual ao da entrada)
+f_evt(Trade t, string ev, float px) =>
+    if followUps
+        string j = '{"strategy":"' + chave + '","event":"' + ev + '","id":"' + str.tostring(t.sigTime) +
+         '","ticker":"' + syminfo.ticker + '","exchange":"' + syminfo.prefix + '","action":"' + (t.dir == 1 ? "buy" : "sell") +
+         '","price":' + str.tostring(px) + ',"entry":' + str.tostring(t.entry) + ',"sl":' + str.tostring(t.sl) +
+         ',"hits":' + str.tostring(t.hits) + ',"timeframe":"' + timeframe.period + '"}'
+        alert(j, alert.freq_once_per_bar_close)
+    true
+
+if not na(cur) and (cur.active or cur.pending) and bar_index > cur.startBar
+    if cur.pending
+        bool touched = cur.dir == 1 ? low <= cur.entry : high >= cur.entry
+        if touched
+            cur.pending := false
+            cur.active := true
+            f_evt(cur, "entry_hit", cur.entry)
+        else if bar_index - cur.startBar > 10
+            f_evt(cur, "cancel", close)
+            f_clear(cur)
+            cur.pending := false
+    if cur.active
+        bool slHit = cur.dir == 1 ? low <= cur.sl : high >= cur.sl
+        if slHit
+            label.set_text(cur.lbs.get(0), f_lvlTxt("SL", cur.risk, cur.sl) + " ✗")
+            cur.active := false
+            f_evt(cur, "sl", cur.sl)
+        else
+            array<float> tps = array.from(cur.tp1, cur.tp2, cur.tp3)
+            for k = cur.hits to 2
+                float tp = tps.get(k)
+                bool hit = cur.dir == 1 ? high >= tp : low <= tp
+                if hit
+                    cur.hits := k + 1
+                    f_evt(cur, "tp" + str.tostring(k + 1), tp)
+                    label.set_text(cur.lbs.get(3 + k), f_lvlTxt("TP " + str.tostring(k + 1), math.abs(tp - cur.entry), tp) + " ✓")
+            if cur.hits >= 3
+                cur.active := false
+    if cur.active or cur.pending
+        f_extend(cur)
+
+if sigSell or sigBuy
+    lastIdeaDir := sigBuy ? 1 : -1
+    lastIdeaBar := bar_index
+    if tradeDisplay == "Full Display"
+        f_clear(cur)
+        cur := f_new(lastIdeaDir)
+
+// ═══════════ TREND TRACKER (setas e X) ═══════════
+var array<label> arrows = array.new<label>()
+momFlipUp = momUp and not momUp[1]
+momFlipDn = not momUp and momUp[1]
+inTrack = lastIdeaDir != 0 and bar_index > lastIdeaBar and bar_index - lastIdeaBar <= 15
+f_arrow(bool up, bool isX) =>
+    color c = color.new(up ? bull : bear, arrowTransp)
+    string s = isX ? "✕" : up ? "↑" : "↓"
+    arrows.push(label.new(bar_index, up ? low : high, s, yloc=up ? yloc.belowbar : yloc.abovebar, style=label.style_none, textcolor=c, size=f_size(arrowSizeS)))
+
+if showArrows and maxArrows > 0 and barstate.isconfirmed
+    if arrowMode == "Continuous"
+        f_arrow(momUp, false)
+    else if arrowMode == "Reversal Only"
+        if momFlipUp
+            f_arrow(true, false)
+        if momFlipDn
+            f_arrow(false, false)
+    else if inTrack
+        bool aligned = lastIdeaDir == 1 ? momUp : not momUp
+        // só setas a favor da ideia, nas 15 velas seguintes
+        if aligned
+            f_arrow(lastIdeaDir == 1, false)
+    while arrows.size() > maxArrows
+        label.delete(arrows.shift())
+
+// ═══════════ PROJECÇÃO TRACEJADA (últimas h velas) ═══════════
+// As bandas centradas acabam h velas antes do fim; daí até à vela actual a média é estimada com a
+// janela truncada (mesmos pesos gaussianos da ALMA) e desenhada a tracejado, a desvanecer.
+var array<polyline> projPolys = array.new<polyline>()
+f_poly(array<chart.point> pts, color c) =>
+    if pts.size() > 1
+        projPolys.push(polyline.new(pts, line_color=c, line_style=line.style_dashed, line_width=bandWidth))
+    true
+
+if barstate.islast
+    for pl in projPolys
+        polyline.delete(pl)
+    projPolys.clear()
+    if dashedProj and bar_index > bandLen
+        float sg = bandLen / 6.0
+        int chunks = 4
+        int csz = math.max(1, int(math.ceil((h + 1) / chunks)))
+        for c = 0 to chunks - 1
+            array<chart.point> pB  = array.new<chart.point>()
+            array<chart.point> pU1 = array.new<chart.point>()
+            array<chart.point> pL1 = array.new<chart.point>()
+            array<chart.point> pU2 = array.new<chart.point>()
+            array<chart.point> pL2 = array.new<chart.point>()
+            array<chart.point> pU3 = array.new<chart.point>()
+            array<chart.point> pL3 = array.new<chart.point>()
+            // j = velas para trás a partir da actual; o bloco c vai de h - c*csz até h - (c+1)*csz (com sobreposição de 1)
+            int jHi = h - c * csz
+            int jLo = math.max(0, h - (c + 1) * csz)
+            if jHi >= 0
+                for j = jHi to jLo
+                    float ws = 0.0
+                    float sm = 0.0
+                    float sq = 0.0
+                    int kMin = math.max(0, j - h)
+                    for k = kMin to j + h
+                        float wk = math.exp(-math.pow(k - j, 2) / (2 * sg * sg))
+                        float v = hlc3[k]
+                        ws += wk
+                        sm += wk * v
+                    float m = sm / ws
+                    int cnt = 0
+                    for k = kMin to j + h
+                        sq += math.pow(hlc3[k] - m, 2)
+                        cnt += 1
+                    float sd = math.sqrt(sq / cnt)
+                    int x = bar_index - j
+                    pB.push(chart.point.from_index(x, m))
+                    pU1.push(chart.point.from_index(x, m + sd * M1))
+                    pL1.push(chart.point.from_index(x, m - sd * M1))
+                    pU2.push(chart.point.from_index(x, m + sd * M2))
+                    pL2.push(chart.point.from_index(x, m - sd * M2))
+                    pU3.push(chart.point.from_index(x, m + sd * M3))
+                    pL3.push(chart.point.from_index(x, m - sd * M3))
+                int tr = projGrad ? math.min(90, bandTransp + c * 20) : bandTransp
+                if showCenter
+                    f_poly(pB, color.new(neutral, tr))
+                if showInner
+                    f_poly(pU1, color.new(bear, tr))
+                    f_poly(pL1, color.new(bull, tr))
+                if showMid
+                    f_poly(pU2, color.new(bear, tr))
+                    f_poly(pL2, color.new(bull, tr))
+                if showOuter
+                    f_poly(pU3, color.new(bear, tr))
+                    f_poly(pL3, color.new(bull, tr))
+
+// ═══════════ MARCA ═══════════
+var table brand = table.new(position.bottom_right, 1, 1)
+if barstate.islast
+    table.cell(brand, 0, 0, "DEFY", text_color=color.new(#8E44EC, 0), text_size=size.normal)
+
+// ═══════════ ALERTAS ═══════════
+alertcondition(sigBuy,  "DEFY Compra", "DEFY: ideia de COMPRA em {{ticker}} a {{close}}")
+alertcondition(sigSell, "DEFY Venda",  "DEFY: ideia de VENDA em {{ticker}} a {{close}}")
+
+f_json(int d, int sc, int stars, bool king) =>
+    float e = entryMode == "Candle Close" ? close : (high + low) / 2.0
+    float w = d == 1 ? low : high
+    float sl = w - d * math.max(atr, syminfo.mintick * 2)   // SL = 1 ATR para lá do WARNING
+    float rk = math.abs(e - sl)
+    [t1, t2, t3] = f_targets(d, e, rk)
+    string act = d == 1 ? "buy" : "sell"
+    // "id" = hora da vela de sinal: os seguimentos (tp1..tp3, sl) trazem o mesmo id
+    '{"strategy":"' + chave + '","event":"entry","id":"' + str.tostring(time) + '","source":"defy","ticker":"' + syminfo.ticker +
+     '","exchange":"' + syminfo.prefix + '","action":"' + act + '","side":"' + act + '","timeframe":"' + timeframe.period +
+     '","entry_mode":"' + (entryMode == "Candle Close" ? "close" : "pullback") +
+     '","score":' + str.tostring(sc) + ',"stars":' + str.tostring(stars) + ',"king":' + (king ? "true" : "false") +
+     ',"entry":' + str.tostring(e) + ',"warning":' + str.tostring(w) + ',"sl":' + str.tostring(sl) +
+     ',"tp1":' + str.tostring(t1) + ',"tp2":' + str.tostring(t2) + ',"tp3":' + str.tostring(t3) +
+     ',"tf":"' + timeframe.period + '"}'
+
+if sigBuy
+    alert(f_json(1, scoreB, starsB, kingB), alert.freq_once_per_bar_close)
+if sigSell
+    alert(f_json(-1, scoreS, starsS, kingS), alert.freq_once_per_bar_close)

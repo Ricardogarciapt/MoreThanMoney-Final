@@ -22,6 +22,7 @@ export const scannerOrder = [
   "MTMScanner",
   "Sensei",
   "PremiumScanner",
+  "Defy",
 ] as const
 
 export type ScannerKey = (typeof scannerOrder)[number]
@@ -49,6 +50,8 @@ export const scannerStudies: Record<ScannerKey, string[]> = {
   Sensei: ["PUB;0aba45d8eeed42368922a344f547eeb6"],
   // MTM Premium Scanner (27/10/2026): zonas de recuo no ouro por sessão — docs/pine/mtm-premium-scanner.pine
   PremiumScanner: ["PUB;37deee45abee4dcea91b381f3c4d10b9"],
+  // DEFY by MTM (05/11/2026): docs/pine/defy.pine
+  Defy: ["PUB;1dc8e6e75c9649dd952ddaeedabe6835"],
 }
 
 export const scannerLabels: Record<ScannerKey, string> = {
@@ -63,6 +66,7 @@ export const scannerLabels: Record<ScannerKey, string> = {
   MTMScanner: "MTM",
   Sensei: "Sensei",
   PremiumScanner: "Premium Scanner",
+  Defy: "DEFY",
 }
 
 /**

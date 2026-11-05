@@ -655,6 +655,125 @@ function premiumScanner() {
   }, warm)
 }
 
+// ───────────────────────── DEFY ─────────────────────────
+// Bandas de exaustão (interior 1,382 · média 2 · exterior 2,618 desvios) à volta de uma média
+// suave, nuvem rápida/lenta e níveis-chave. Uma ideia nasce quando o preço estica até às bandas,
+// vira com uma vela forte que fecha para lá da vela anterior e junta pelo menos 6 confirmações.
+// Plano fixo na vela de sinal: entrada no fecho, WARNING no extremo da vela, SL 1 ATR para lá e
+// alvos a 1R, 2R e 3R.
+function defy() {
+  const warm = 240
+  const cs = makeCandles(83, 1.0845, [
+    { len: 200, drift: 0.0, vol: 0.0007 }, { len: 40, drift: 0.00012, vol: 0.0007 },
+    { len: 36, drift: 0.0004, vol: 0.0008 }, { len: 34, drift: -0.0006, vol: 0.0008 },
+    { len: 30, drift: 0.0005, vol: 0.0008 }, { len: 40, drift: -0.0001, vol: 0.0007 },
+  ])
+  const close = cs.map((b) => b.c)
+  const hlc3 = cs.map((b) => (b.h + b.l + b.c) / 3)
+  const len = 55
+  const basis = ema(hlc3, len)
+  const dev = ema(stdev(hlc3, len), 5)
+  const band = (m) => basis.map((b, i) => b + dev[i] * m)
+  const up1 = band(1.382), up2 = band(2), up3 = band(2.618)
+  const lo1 = band(-1.382), lo2 = band(-2), lo3 = band(-2.618)
+  const fast = ema(close, 8), slow = ema(close, 21)
+  const atr = atrOf(cs, 14)
+  const vAvg = sma(cs.map((b) => b.v), 20)
+  const body = cs.map((b) => Math.abs(b.c - b.o))
+  const bAvg = sma(body, 20)
+  // Níveis-chave: pivots de 10 velas, espaçados entre si.
+  const zones = []
+  const look = 10
+  for (let i = warm - 120; i < cs.length - look; i++) {
+    const win = cs.slice(i - look, i + look + 1)
+    const isH = cs[i].h === Math.max(...win.map((b) => b.h))
+    const isL = cs[i].l === Math.min(...win.map((b) => b.l))
+    if (!isH && !isL) continue
+    const px = isH ? cs[i].h : cs[i].l
+    if (zones.some((z) => Math.abs((z.top + z.bot) / 2 - px) < atr[i] * 2.5)) continue
+    zones.push({ i0: i, i1: cs.length - 1, top: px + atr[i] * 0.25, bot: px - atr[i] * 0.25, color: isH ? RED : BLUE, opacity: 0.14, reveal: i + look, level: true })
+  }
+  const nearLevel = (i, px) => zones.some((z) => z.reveal <= i && px >= z.bot - atr[i] * 0.3 && px <= z.top + atr[i] * 0.3)
+  const touch = (i, arr, dir) => { for (let k = Math.max(0, i - 5); k <= i; k++) if (dir > 0 ? cs[k].l <= arr[k] : cs[k].h >= arr[k]) return true; return false }
+  const checksFor = (dir) => [
+    ['Toque na banda interior', (i) => touch(i, dir > 0 ? lo1 : up1, dir)],
+    ['Toque na banda média', (i) => touch(i, dir > 0 ? lo2 : up2, dir)],
+    ['Toque na banda exterior', (i) => touch(i, dir > 0 ? lo3 : up3, dir)],
+    ['Nível-chave por perto', (i) => nearLevel(i, dir > 0 ? cs[i].l : cs[i].h)],
+    ['Vela forte a favor', (i) => (cs[i].c - cs[i].o) * dir > 0 && body[i] >= bAvg[i]],
+    ['Volume acima da média', (i) => cs[i].v > vAvg[i]],
+    ['Momento a virar', (i) => (close[i] - close[i - 3]) * dir > 0],
+    ['Rejeição com pavio', (i) => (dir > 0 ? Math.min(cs[i].o, cs[i].c) - cs[i].l : cs[i].h - Math.max(cs[i].o, cs[i].c)) > body[i] * 0.4],
+  ]
+  const buyChecks = checksFor(1), sellChecks = checksFor(-1)
+  const markers = []
+  const groups = []
+  let last = -99
+  for (let i = warm - 40; i < cs.length - 2; i++) {
+    if (i - last < 12) continue
+    for (const dir of [1, -1]) {
+      const breaks = dir > 0 ? cs[i].c > Math.max(cs[i - 1].h, cs[i - 2].h) : cs[i].c < Math.min(cs[i - 1].l, cs[i - 2].l)
+      if (!breaks) continue
+      const checks = dir > 0 ? buyChecks : sellChecks
+      if (!checks[0][1](i)) continue // sem esticão até à banda interior não há ideia
+      const n = checks.filter(([, fn]) => fn(i)).length
+      const score = 3 + n
+      if (score < 6) continue
+      const stars = score >= 10 ? 3 : score >= 8 ? 2 : 1
+      const e = close[i], w = dir > 0 ? cs[i].l : cs[i].h
+      const sl = w - dir * atr[i]
+      const R = Math.abs(e - sl)
+      markers.push({ i, price: dir > 0 ? cs[i].l : cs[i].h, text: `+${score} ${'★'.repeat(stars)}`, color: dir > 0 ? BLUE : RED, up: dir > 0 })
+      groups.push({
+        i0: i,
+        dir,
+        items: [
+          { price: e, color: GOLD_L, label: 'Entrada' },
+          { price: w, color: '#ff9a3c', label: 'Warning' },
+          { price: sl, color: RED, label: 'SL' },
+          { price: e + dir * R, color: GREEN, label: 'TP1  1R' },
+          { price: e + dir * R * 2, color: GREEN, label: 'TP2  2R' },
+          { price: e + dir * R * 3, color: GREEN, label: 'TP3  3R' },
+        ],
+      })
+      last = i
+      break
+    }
+  }
+  const rows = buyChecks.map(([label], k) => ({ label, states: cs.map((_, i) => (i > 2 && (buyChecks[k][1](i) || sellChecks[k][1](i)) ? 'ok' : '–')) }))
+  const first = groups.find((g) => g.i0 >= warm)
+  const second = groups.find((g) => first && g.i0 > first.i0)
+  const espacar = (lista) => lista.reduce((acc, c) => [...acc, { ...c, i: acc.length ? Math.max(c.i, acc[acc.length - 1].i + 3) : c.i }], [])
+  return trim({
+    name: 'DEFY',
+    candles: cs,
+    lines: [
+      { name: 'Centro', color: GREY, width: 0.03, z: 0.2, pts: basis },
+      { name: 'Banda interior', color: RED, width: 0.03, z: 0.21, pts: up1 },
+      { name: 'Banda interior baixa', color: BLUE, width: 0.03, z: 0.21, pts: lo1 },
+      { name: 'Nuvem rápida', color: GOLD, width: 0.05, z: 0.23, pts: fast },
+      { name: 'Nuvem lenta', color: GOLD_L, width: 0.035, z: 0.22, pts: slow },
+    ],
+    areas: [
+      { upper: up3, lower: up2, color: RED, opacity: 0.22, z: 0.05 },
+      { upper: lo2, lower: lo3, color: BLUE, opacity: 0.22, z: 0.05 },
+    ],
+    zones,
+    markers,
+    groups,
+    panel: { title: 'Confirmações', rows },
+    captions: espacar([
+      { i: warm, text: 'Bandas de exaustão à volta de uma média suave' },
+      { i: warm + 8, text: 'Níveis-chave: onde o preço já reagiu antes' },
+      ...(first ? [{ i: first.i0 - 4, text: 'O preço estica até às bandas e as confirmações somam-se' }] : []),
+      ...(first ? [{ i: first.i0, text: 'Vela forte a virar: nasce a ideia, com a pontuação e as estrelas' }] : []),
+      ...(first ? [{ i: first.i0 + 2, text: 'Entrada, Warning, stop a 1 ATR e alvos a 1R, 2R e 3R' }] : []),
+      ...(second ? [{ i: second.i0, text: 'Do outro lado, a mesma leitura dá a ideia contrária' }] : []),
+    ]),
+    legend: [{ color: RED, label: 'Bandas de cima' }, { color: BLUE, label: 'Bandas de baixo' }, { color: GOLD, label: 'Nuvem DEFY' }],
+  }, warm)
+}
+
 // ───────────────────────── Cartões de pontos-chave ─────────────────────────
 // Texto de cada cartão (vem do código Pine) e, à parte, o recorte da simulação que o ilustra.
 export const CARD_TEXT = {
@@ -699,6 +818,13 @@ export const CARD_TEXT = {
     { title: 'Entrada em recuo', text: 'A zona de entrada fica uns dólares contra o preço: esperas que o ouro volte a ti em vez de o perseguires.' },
     { title: 'Stop e três alvos fixos', text: 'Stop para lá da zona e TP1, TP2 e TP3 a 5, 10 e 15 $, com a parte que fecha em cada um.' },
     { title: 'Stop para a entrada', text: 'Quando o TP1 é tocado, o stop do resto passa para o preço de entrada.' },
+  ],
+  defy: [
+    { title: 'Bandas de exaustão', text: 'Banda interior, média e exterior à volta de uma média suave. Quanto mais o preço estica, mais forte é a leitura.' },
+    { title: 'Níveis-chave', text: 'Zonas onde o preço já reagiu antes, espaçadas entre si: possíveis pontos de inversão.' },
+    { title: 'Confirmações e estrelas', text: 'Cada leitura soma um ponto. +6 dá uma estrela, +8 duas, +10 três. Com vela dourada, é King Idea.' },
+    { title: 'Entrada, Warning e stop', text: 'Entrada no fecho ou a 50 % da vela. O Warning é o extremo da vela de sinal e o stop fica 1 ATR para lá.' },
+    { title: 'Alvos em R', text: 'TP1, TP2 e TP3 a 1R, 2R e 3R, com a distância em pips. Há modos para scalp e para swing.' },
   ],
 }
 
@@ -778,6 +904,18 @@ const CARD_VIEWS = {
       { win: around(be?.from ?? g.i0 + 4, 10, 18, N), layers: { candles: true, groups: true }, group: g },
     ]
   },
+  defy: (s) => {
+    const N = s.candles.length
+    const g = s.groups.find((q) => q.i0 > 20) ?? s.groups[0]
+    const m = s.markers.find((q) => q.i === g.i0)
+    return [
+      { win: [0, N - 1], layers: { candles: true, areas: true, lines: ['Centro', 'Banda interior', 'Banda interior baixa'] } },
+      { win: [0, N - 1], layers: { candles: true, dimCandles: true, zones: (q) => !!q.level } },
+      { win: around(m?.i ?? g.i0, 40, 6, N), layers: { candles: true, dimCandles: true, panel: true, markers: true, areas: true } },
+      { win: around(g.i0, 8, 22, N), layers: { candles: true, groups: true, markers: true }, group: { ...g, items: g.items.slice(0, 3) } },
+      { win: around(g.i0, 8, 26, N), layers: { candles: true, groups: true, markers: true }, group: g },
+    ]
+  },
 }
 
 /** Cartões de pontos-chave de um scanner: texto + recorte da simulação. */
@@ -787,7 +925,7 @@ export function scannerCards(slug) {
   return CARD_TEXT[slug].map((t, k) => ({ ...t, ...views[k] }))
 }
 
-const BUILDERS = { 'gold-killer': goldKiller, 'mtm-scanner': mtmScanner, 'aurum-flow': aurumFlow, trendshot: trendShot, sensei, 'premium-scanner': premiumScanner }
+const BUILDERS = { 'gold-killer': goldKiller, 'mtm-scanner': mtmScanner, 'aurum-flow': aurumFlow, trendshot: trendShot, sensei, 'premium-scanner': premiumScanner, defy }
 const cache = {}
 /** Simulação de um scanner pelo slug da landing. */
 export function simulate(slug) {

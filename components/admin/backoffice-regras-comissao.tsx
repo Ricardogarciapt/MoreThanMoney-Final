@@ -51,6 +51,8 @@ const PACKS_CONHECIDOS = [
   'scanners_semestral',
   'trendshot_semestral',
   'trendshot_lifetime',
+  'defy_semestral',
+  'defy_lifetime',
   'premium_scanner_lifetime',
 ]
 

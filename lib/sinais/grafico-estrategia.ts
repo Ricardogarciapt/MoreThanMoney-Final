@@ -24,6 +24,7 @@ export type ChaveGrafico =
   | 'mtm-scanner'
   | 'trendshot'
   | 'premium-scanner'
+  | 'defy'
   | 'aurum'
   | 'perps'
   | 'premium'
@@ -57,6 +58,8 @@ const MARCAS: Record<ChaveGrafico, MarcaEstrategia> = {
   trendshot: { chave: 'trendshot', nome: 'MTM Auto Trendshot', cor: corDoEstudo('TrendShot', '#38BDF8') },
   // Sem linhas: o Premium Scanner desenha zona/alvos, que já são as linhas Entry/SL/TP do gráfico.
   'premium-scanner': { chave: 'premium-scanner', nome: 'MTM Auto Premium II', cor: corDoEstudo('PremiumScanner', '#E9C46A') },
+  // DEFY (04/11): o cartão leva a marca e as linhas da trade (ENTRY/SL/TP do Pine).
+  defy: { chave: 'defy', nome: 'MTM Auto DEFY', cor: '#8E44EC' },
   aurum: { chave: 'aurum', nome: 'MTM Aurum Flow Cripto', cor: '#F59E0B' },
   perps: { chave: 'perps', nome: 'MTM Perps', cor: '#FB923C' },
   // Fontes sem indicador próprio (27/10): o gráfico leva só a marca e as linhas da trade.
@@ -74,6 +77,7 @@ export function marcaDaEstrategia(estrategia: string | null | undefined, alertNa
   const e = String(estrategia ?? '').toLowerCase()
   const a = String(alertName ?? '').toLowerCase()
   const t = `${e} ${a}`
+  if (/\bdefy\b/.test(t)) return MARCAS.defy
   if (/premium[\s-]*(scanner|ii)/.test(t)) return MARCAS['premium-scanner']
   if (/trend\s*shot/.test(t)) return MARCAS.trendshot
   if (/gold\s*killer/.test(t)) return MARCAS.goldkiller

@@ -7,6 +7,7 @@ import {
   resolvedPremiumSignalsChatId,
   resolvedTradeIdeasChatId,
   tituloPremiumII,
+  DEFY_TELEGRAM_CHAT_ID,
 } from '@/lib/telegram-channel-ids'
 
 export type AppChatChannelSlug =
@@ -29,7 +30,7 @@ const map = new Map<string, AppChatChannelSlug>()
  */
 // 03/11: o grupo «MTM Auto Premium II» recebe o espelho do chat `sinais-premium-ii`; o que lá se
 // escreve não volta à app (caía em premium-ideas pelo título — duas mensagens vazias a 03/11 09:20).
-const GRUPOS_FECHADOS = new Set<string>([CANONICAL_TELEGRAM_CHANNELS.premiumII.chatId])
+const GRUPOS_FECHADOS = new Set<string>([CANONICAL_TELEGRAM_CHANNELS.premiumII.chatId, DEFY_TELEGRAM_CHAT_ID])
 
 function registerChatId(raw: string | undefined, slug: AppChatChannelSlug) {
   if (!raw?.trim()) return

@@ -47,6 +47,17 @@ const EN = {
   'Zona de entrada': 'Entry zone', 'PREMIUM COMPRA': 'PREMIUM BUY', 'PREMIUM VENDA': 'PREMIUM SELL',
   'LONDRES': 'LONDON', 'NOVA IORQUE': 'NEW YORK', 'ÁSIA': 'ASIA',
   'Voto da direção': 'Direction vote', 'Abertura da sessão': 'Session open', 'Há 1 h': '1 h ago', 'Há 4 h': '4 h ago',
+  // DEFY
+  'Bandas de exaustão à volta de uma média suave': 'Exhaustion bands around a smooth average',
+  'Níveis-chave: onde o preço já reagiu antes': 'Key levels: where price has reacted before',
+  'O preço estica até às bandas e as confirmações somam-se': 'Price stretches into the bands and confirmations add up',
+  'Vela forte a virar: nasce a ideia, com a pontuação e as estrelas': 'A strong turning candle: the idea is born, with its score and stars',
+  'Entrada, Warning, stop a 1 ATR e alvos a 1R, 2R e 3R': 'Entry, Warning, a 1 ATR stop and targets at 1R, 2R and 3R',
+  'Do outro lado, a mesma leitura dá a ideia contrária': 'On the other side, the same reading gives the opposite idea',
+  'Bandas de cima': 'Upper bands', 'Bandas de baixo': 'Lower bands', 'Nuvem DEFY': 'DEFY cloud',
+  'Toque na banda interior': 'Inner band touch', 'Toque na banda média': 'Mid band touch', 'Toque na banda exterior': 'Outer band touch',
+  'Nível-chave por perto': 'Key level nearby', 'Vela forte a favor': 'Strong candle in favour', 'Volume acima da média': 'Volume above average',
+  'Momento a virar': 'Momentum turning', 'Rejeição com pavio': 'Wick rejection',
 }
 
 const RULES = [[/^Rompimento da caixa (.+) a favor da tendência$/, (m) => `Breakout of the ${m[1]} box with the trend`]]
@@ -103,5 +114,12 @@ export const CARD_TEXT_EN = {
     { title: 'Pullback entry', text: 'The entry zone sits a few dollars against price: you wait for gold to come back to you instead of chasing it.' },
     { title: 'Stop and three fixed targets', text: 'Stop beyond the zone and TP1, TP2 and TP3 at $5, $10 and $15, with the part that closes at each one.' },
     { title: 'Stop to entry', text: 'When TP1 is hit, the stop on the rest moves to the entry price.' },
+  ],
+  defy: [
+    { title: 'Exhaustion bands', text: 'Inner, mid and outer bands around a smooth average. The further price stretches, the stronger the reading.' },
+    { title: 'Key levels', text: 'Zones where price has reacted before, spaced apart: possible turning points.' },
+    { title: 'Confirmations and stars', text: 'Each reading adds a point. +6 gives one star, +8 two, +10 three. With a gold candle it is a King Idea.' },
+    { title: 'Entry, Warning and stop', text: 'Entry on the close or at 50% of the candle. The Warning is the signal candle extreme and the stop sits 1 ATR beyond it.' },
+    { title: 'Targets in R', text: 'TP1, TP2 and TP3 at 1R, 2R and 3R, with the distance in pips. There are modes for scalps and swings.' },
   ],
 }

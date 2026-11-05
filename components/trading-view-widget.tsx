@@ -32,6 +32,7 @@ import {
   Star,
   Bitcoin,
   Gem,
+  Flame,
 } from "lucide-react"
 import { exitDocumentFullscreen, getFullscreenElement, requestElementFullscreen } from "@/lib/browser-compat"
 import { Button } from "@/components/ui/button"
@@ -72,6 +73,7 @@ const scannerOrder = [
   "MTMScanner",
   "Sensei",
   "PremiumScanner",
+  "Defy",
 ] as const
 
 type ScannerKey = (typeof scannerOrder)[number]
@@ -93,6 +95,7 @@ const scannerLabels: Record<ScannerKey, string> = {
   MTMScanner: "MTM",
   Sensei: "Sensei",
   PremiumScanner: "Premium Scanner",
+  Defy: "DEFY",
 }
 
 const scannerLogos: Record<ScannerKey, { icon: any; color: string; bgColor: string }> = {
@@ -108,6 +111,7 @@ const scannerLogos: Record<ScannerKey, { icon: any; color: string; bgColor: stri
   MTMScanner: { icon: Brain, color: "text-violet-300", bgColor: "bg-gradient-to-r from-violet-600 to-purple-500" },
   Sensei: { icon: Star, color: "text-rose-300", bgColor: "bg-gradient-to-r from-rose-600 to-pink-500" },
   PremiumScanner: { icon: Gem, color: "text-[#E9C46A]", bgColor: "bg-gradient-to-r from-[#D2A63C] to-[#E9C46A]" },
+  Defy: { icon: Flame, color: "text-[#E9C46A]", bgColor: "bg-gradient-to-r from-[#8A6A1F] to-[#D2A63C]" },
 }
 
 // Categorias de ativos
