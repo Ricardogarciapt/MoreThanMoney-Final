@@ -29,6 +29,7 @@
  * para VENDER a clientes, não para recrutar. Foi uma decisão, não um esquecimento — ver o relatório.
  */
 import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO } from '@/lib/escada-precos'
+import { blocoFramework } from '@/lib/framework-mtm'
 
 // ═══════════════════════ Os tipos de peça ═══════════════════════
 //
@@ -181,7 +182,7 @@ export function enquadramentoDaMarca(opcoes: { linhaDeProva?: string | null; res
       : 'PROVA: hoje não há prova publicável. Não vais buscar números antigos nem inventas nenhum — falas de método, de comunidade e de processo.',
     '',
     'Devolves APENAS o texto da peça, pronto a usar. Sem preâmbulos, sem aspas à volta, sem explicações.',
-  ].join('\n')
+  ].join('\n') + `\n\n${blocoFramework('closer')}`
 }
 
 /**

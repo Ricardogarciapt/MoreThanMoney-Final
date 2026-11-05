@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { agentError, agentOk, requireAgentAccess } from "@/lib/agent-site-api"
 import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
+import { blocoFramework } from "@/lib/framework-mtm"
 
 /**
  * POST /api/agent/v1/agents  { agent, message, context? }
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     try {
       const r = await chamarIA({
         tarefa: `agente-site:${agent}`,
-        sistema: persona,
+        sistema: `${persona}\n\n${blocoFramework("backoffice")}`,
         mensagens: [{ role: "user", content: userMsg }],
         maxTokens: 700,
         preferencia: "qualidade",
