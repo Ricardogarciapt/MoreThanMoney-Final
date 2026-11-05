@@ -128,6 +128,19 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
       "MTM Premium Scanner: zonas de recuo no ouro em Londres, Nova Iorque e Ásia, com entrada, stop e alvos no TradingView. Pacote vitalício de 1250€ com indicador, estratégia e EA MT5; o indicador vem no Premium e no Pack Scanners.",
   },
   {
+    slug: "defy",
+    key: "defy",
+    video: "/scanners/defy/apresentacao.mp4",
+    poster: "/scanners/defy/poster.jpg",
+    title: ["Desafia o mercado.", "Com método."],
+    sub: "Bandas de exaustão, níveis-chave e uma pontuação de confirmações. Cada ideia chega com estrelas, entrada, Warning, stop e três alvos.",
+    markets: ["Forex", "Ouro (XAUUSD)", "Índices", "Cripto"],
+    description:
+      "O DEFY junta quatro leituras no mesmo gráfico: bandas de exaustão à volta de uma média suave, níveis-chave onde o preço já reagiu, uma nuvem de tendência e uma pontuação de confirmações. A ideia só nasce quando o preço estica até às bandas, vira com uma vela forte e junta pelo menos três confirmações; quantas mais, mais estrelas. O plano fica fixo na vela de sinal.",
+    metaDescription:
+      "DEFY by MTM: bandas de exaustão, níveis-chave e confirmações com estrelas no TradingView, com entrada, Warning, stop e três alvos. 50€ por semestre ou 350€ vitalício.",
+  },
+  {
     slug: "sensei",
     video: "/scanners/sensei/apresentacao.mp4",
     poster: "/scanners/sensei/poster.jpg",
@@ -231,6 +244,28 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
       "Educational tool: it does not place orders or guarantee results",
     ],
     metaDescription: "MTM Premium Scanner: pullback zones on gold in London, New York and Asia, with entry, stop and targets on TradingView. €1250 lifetime bundle with indicator, strategy and MT5 EA; the indicator is included in Premium and the Scanner Pack.",
+  },
+  defy: {
+    title: ["Defy the market.", "With a method."],
+    sub: "Exhaustion bands, key levels and a confirmation score. Every idea comes with stars, entry, Warning, stop and three targets.",
+    markets: ["Forex", "Gold (XAUUSD)", "Indices", "Crypto"],
+    description:
+      "DEFY brings four readings onto one chart: exhaustion bands around a smooth average, key levels where price has reacted before, a trend cloud and a confirmation score. An idea is only born when price stretches into the bands, turns with a strong candle and gathers at least three confirmations; the more it gathers, the more stars it gets. The plan stays fixed on the signal candle.",
+    features: [
+      "Inner, mid and outer exhaustion bands, with a dashed projection",
+      "Key levels where price has reacted, spaced apart",
+      "A +3 to +15 score with stars (★ to ★★★) and a King Idea on the gold candle",
+      "Entry on the close or on a 50% pullback, Warning and a 1 ATR stop",
+      "Targets at 1R, 2R and 3R (or Squeeze, Stretch and Swing modes), with the distance in pips",
+    ],
+    specs: [
+      "Trend cloud, coloured candles and follow-up arrows",
+      "Volume break labels",
+      "JSON alerts with the idea and its follow-ups (entry, TP1 to TP3, stop)",
+      "Forex, gold, indices and crypto, on any timeframe",
+      "Educational tool: it does not place orders or guarantee results",
+    ],
+    metaDescription: "DEFY by MTM: exhaustion bands, key levels and confirmations with stars on TradingView, with entry, Warning, stop and three targets. €50 per six months or €350 lifetime.",
   },
   sensei: {
     title: ["Many readings.", "One confluence."],

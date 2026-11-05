@@ -114,4 +114,12 @@ export const ESTRATEGIAS_MTM: EstrategiaMtm[] = [
     playlist: { pt: "https://www.youtube.com/playlist?list=PLYeKsTzDWWL8", en: "https://www.youtube.com/playlist?list=PLAXw9tkCzQVQ" },
     guia: guias("premium-scanner"),
   },
+  {
+    // 05/11/2026: só o guia por agora; as playlists entram quando os vídeos estiverem no YouTube.
+    slug: "defy",
+    nome: "DEFY",
+    resumo: { pt: "Bandas de exaustão, níveis-chave e confirmações com estrelas: entrada, Warning, stop e três alvos fixos na vela.", en: "Exhaustion bands, key levels and confirmations with stars: entry, Warning, stop and three targets fixed on the candle." },
+    playlist: { pt: null, en: null },
+    guia: guias("defy"),
+  },
 ]
