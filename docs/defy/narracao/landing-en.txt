@@ -1,0 +1,7 @@
+This is DEFY, the MoreThanMoney scanner that helps you defy the market with a method.
+DEFY draws exhaustion bands around a smooth average. When price stretches into the bands and turns with a strong candle, an idea is born.
+But that is not enough. DEFY adds up confirmations: key levels where price has reacted before, the trend cloud and volume. With three or more, the idea earns stars.
+And the plan stays on the chart: entry, Warning, a one ATR stop and three targets, with the distance in pips.
+It works on forex, gold, indices and crypto, on any timeframe.
+See the demo at morethanmoney dot pt slash scanner slash defy.
+Educational content. Not financial advice, and results are not guaranteed.

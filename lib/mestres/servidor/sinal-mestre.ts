@@ -298,6 +298,10 @@ export async function encaminharSinalParaMestre(s: SinalWebhook): Promise<Result
     }
 
     const ids = [...contas]
+    // Pontes de limites anteriores (cheias ou expiradas) arrumadas antes da ordem nova (05/11): o
+    // Premium II não passa por publicarDaMestre, e ficaram 127 pontes «aberta / pendente» sem posição.
+    if (s.limite) await import('@/lib/mtmfunded/estrategias-sinais/pendente')
+      .then((m) => m.arrumarPontesPendentes(ids, est.slug)).catch(() => undefined)
     const resultados: ResultadoAbrir[] = []
     // A partir da primeira ordem enviada, um erro mais à frente já não pode devolver o sinal à
     // mestre MT5 — ver o `catch` no fim.
