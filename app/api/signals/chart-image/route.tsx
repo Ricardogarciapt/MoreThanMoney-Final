@@ -132,9 +132,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: velas.length >= VELAS_MINIMAS, estrategia: marca.nome, velas: velas.length, linhas: linhas.map((l) => l.nome) })
   }
   if (velas.length >= VELAS_MINIMAS) {
-    // `&offset=a|b` — espaço livre à direita da última vela (05/11, escolha do Ricardo pendente).
+    // Espaço livre à direita da última vela: 'a' por defeito (escolha do Ricardo, 05/11).
+    // `&offset=b` mostra a variante com zonas; `&offset=0` o desenho antigo, encostado.
     const off = q.get("offset")
-    const desenho = desenhoVelasSinal({ ...base, linhas, offset: off === "a" || off === "b" ? off : null }, velas)
+    const desenho = desenhoVelasSinal({ ...base, linhas, offset: off === "0" ? null : off === "b" ? "b" : "a" }, velas)
     // Um sinal com mais de dois dias já não muda; um fresco ainda ganha velas novas.
     const velho = Date.now() / 1000 - emSeg > 2 * 86400
     const cache = velho

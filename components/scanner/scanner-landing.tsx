@@ -9,9 +9,10 @@
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Unbounded } from "next/font/google"
-import { ArrowUpRight, ArrowDown, Asterisk, BellRing, Check, Layers, Play, Plus, Ruler, Target, Volume2, VolumeX, X as XIcon } from "lucide-react"
+import { ArrowUpRight, ArrowDown, Asterisk, BellRing, Check, Download, Layers, Play, Plus, Ruler, Target, Volume2, VolumeX, X as XIcon } from "lucide-react"
 import type { ScannerData, ScannerProduct } from "@/lib/scanners-catalog"
 import type { ScannerLanding } from "@/lib/scanner-landings"
+import { ESTRATEGIAS_MTM, capaEstrategia } from "@/lib/estrategias-mtm"
 import { CheckoutModal } from "@/components/scanner/checkout-modal"
 import { ScannerChart3D } from "@/components/scanner/scanner-chart-3d"
 import { ScannerKeyCards } from "@/components/scanner/scanner-key-cards"
@@ -70,6 +71,8 @@ export function ScannerLandingView({
 }) {
   const u = UI[lang]
   const L = lang === "en" && landing.en ? { ...landing, ...landing.en } : landing
+  // A landing usa "gold-killer"; a sala das estratégias usa "goldkiller".
+  const guia = ESTRATEGIAS_MTM.find((e) => e.slug === landing.slug.replace(/-/g, "") || e.slug === landing.slug) ?? null
   const P = (x: string) => priceFor(lang, x)
   const base = lang === "en" ? "/en" : ""
   const videoSrc = lang === "en" ? landing.videoEn ?? landing.video : landing.video
@@ -346,6 +349,24 @@ export function ScannerLandingView({
           </ul>
         </div>
       </section>
+
+      {/* GUIA DA ESTRATÉGIA (05/11, pedido do Ricardo: o PDF de cada estratégia na própria landing) */}
+      {guia && (
+        <section className={s.section}>
+          <div className={`${s.container} ${s.guia} ${s.reveal}`}>
+            <img src={capaEstrategia(guia.slug, lang)} alt="" className={s.guiaCapa} loading="lazy" />
+            <div className={s.guiaTexto}>
+              <h2 className={`${display.className} ${s.sectionTitle}`}>
+                {lang === "en" ? "The strategy" : "O guia da"} <span className={s.gold}>{lang === "en" ? "guide." : "estratégia."}</span>
+              </h2>
+              <p>{guia.resumo[lang]}</p>
+              <a href={guia.guia[lang]} target="_blank" rel="noopener" className={s.btnGlass}>
+                <Download size={18} /> {lang === "en" ? "Download the PDF guide" : "Descarregar o guia em PDF"}
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* PREÇO */}
       <section ref={priceRef} className={s.section} id="comprar">
