@@ -16,6 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import ProtectedPage from "@/components/protected-page"
+import GuiasEstrategias from "@/components/docs/guias-estrategias"
 import { supabase } from "@/lib/supabase"
 import {
   FileText,
@@ -386,6 +387,10 @@ export default function DocsPage() {
               )}
             </div>
           </div>
+
+          {(selectedCategory === 'all' || selectedCategory === 'estrategia') && (
+            <GuiasEstrategias pesquisa={searchTerm} />
+          )}
 
           {/* Grid de Documentos */}
           {filteredDocuments.length === 0 ? (
