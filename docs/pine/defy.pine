@@ -28,7 +28,7 @@
 // Trade Display = Full Display. Também há «DEFY Compra» / «DEFY Venda».
 // Conteúdo educativo, não constitui consultoria financeira.
 // ─────────────────────────────────────────────────────────────────────────────
-indicator("DEFY", "DEFY", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=200, max_polylines_count=20, max_bars_back=1000)
+indicator("DEFY", "DEFY", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=200, max_polylines_count=60, max_bars_back=1000)
 
 // ═══════════ DEFY • THEME ═══════════
 gT = "DEFY • THEME"
@@ -68,10 +68,10 @@ showInner  = input.bool(true, "Show Inner Band", group=gB)
 showMid    = input.bool(true, "Show Mid Band", group=gB)
 showOuter  = input.bool(true, "Show Outter Band", group=gB)
 showCenter = input.bool(true, "Show Center Line", group=gB)
-showFill   = input.bool(false, "Show Band Fill", group=gB)
+showFill   = input.bool(true, "Show Band Fill", group=gB)
 bandWidth  = input.int(1, "Set Band Width", minval=1, maxval=5, group=gB)
 bandTransp = input.int(0, "Set Band Transparency", minval=0, maxval=100, group=gB)
-fillTransp = input.int(85, "Set Fill Transparency", minval=0, maxval=100, group=gB)
+fillTransp = input.int(75, "Set Fill Transparency", minval=0, maxval=100, group=gB)
 
 // ═══════════ DEFY • PROJECTION ═══════════
 gP = "DEFY • PROJECTION"
@@ -115,7 +115,7 @@ tradeDisplay = input.string("Full Display", "Trade Display", options=["Full Disp
 ideaFilter   = input.string("+5 and Above", "Idea Filter", options=["+3 and Above", "+4 and Above", "+5 and Above", "★ and Above", "★★ and Above", "★★★ and Above", "👑 Only"], group=gX)
 ideaSizeS    = input.string("Normal", "Idea Label Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=gX)
 entryMode    = input.string("Candle Close", "Entry Mode", options=["Candle Close", "Candle Pullback"], group=gX)
-targetMode   = input.string("Squeeze", "Target Mode", options=["Squeeze", "Standard", "Stretch", "Swing"], group=gX, tooltip="Squeeze: alvos nas bandas (rotação até à média); se estiver comprimido usa Standard. Standard 1:1–1:3. Stretch 1:2–1:6. Swing 1:3–1:9.")
+targetMode   = input.string("Standard", "Target Mode", options=["Squeeze", "Standard", "Stretch", "Swing"], group=gX, tooltip="Squeeze: alvos nas bandas (rotação até à média); se estiver comprimido usa Standard. Standard 1:1–1:3. Stretch 1:2–1:6. Swing 1:3–1:9.")
 
 needTouch    = input.bool(true, "Require Band Touch", group=gX, tooltip="Só há ideia depois de o preço tocar a banda interior do lado contrário (esticão). Desligado = mais ideias, também a meio das bandas.")
 chave        = input.string("DEFY", "strategy (chave no webhook)", group=gX)
@@ -136,8 +136,10 @@ f_lineStyle(string s) =>
 b2i(bool b) =>
     b ? 1 : 0
 
+// forex (cotação < 1 de distância) em pips; ouro / índices / cripto em pontos
 f_dist(float d) =>
-    d >= 1 ? str.tostring(d, "#.#") : str.tostring(d, format.mintick)
+    float pip = syminfo.mintick * 10
+    d >= 1 ? str.tostring(d, "#.#") : str.tostring(d / pip, "#.#")
 
 f_lvlTxt(string name, float d, float p) =>
     name + ": " + f_dist(d) + " - " + str.tostring(p, format.mintick)
@@ -159,6 +161,12 @@ up3 = basis + dev * M3
 lo1 = basis - dev * M1
 lo2 = basis - dev * M2
 lo3 = basis - dev * M3
+
+// bandas desenhadas: centradas (deslocadas meia janela para trás); as últimas h velas são a
+// projecção tracejada mais abaixo. Os sinais continuam a usar as bandas causais acima.
+h = int(math.floor((bandLen - 1) / 2))
+cBasis = ta.alma(hlc3, bandLen, 0.5, 6)
+cDev   = ta.stdev(hlc3, bandLen)
 
 f_slope(float v) =>
     (v - v[5]) / 5.0 * 0.5
@@ -288,10 +296,21 @@ if barstate.islast
             dists.push(math.abs(p - close))
         array<int> idxs = dists.sort_indices(order.ascending)
         float zh = nz(atrL, atr) * zoneWidth / 20.0
-        int shown = math.min(numLevels, idxs.size())
-        for j = 0 to shown - 1
+        // níveis espaçados: salta os que ficam colados a um já escolhido
+        float minGap = nz(atrL, atr) * 2
+        array<float> picked = array.new<float>()
+        for j = 0 to idxs.size() - 1
+            if picked.size() >= numLevels
+                break
             int idx = idxs.get(j)
             float p = kPx.get(idx)
+            bool near = false
+            for q in picked
+                if math.abs(q - p) < minGap
+                    near := true
+            if near
+                continue
+            picked.push(p)
             int x0 = math.max(kBar.get(idx), bar_index - 4999)
             color zc = p >= close ? bear : bull
             keyLines.push(line.new(x0, p, bar_index, p, extend=extend.right, color=lvlColor, style=f_lineStyle(lvlStyleS), width=lvlWidth))
@@ -374,18 +393,18 @@ sigBuy  = coreB and f_pass(scoreB, starsB, kingB)
 sigSell = coreS and f_pass(scoreS, starsS, kingS)
 
 // ═══════════ PLOTS ═══════════
-plot(showInner ? up1 : na, "Upper BB1", color.new(bear, bandTransp), bandWidth, display=display.data_window)
-plot(showInner ? lo1 : na, "Lower BB1", color.new(bull, bandTransp), bandWidth, display=display.data_window)
-plot(showMid ? up2 : na, "Upper BB2", color.new(bear, bandTransp), bandWidth, display=display.data_window)
-plot(showMid ? lo2 : na, "Lower BB2", color.new(bull, bandTransp), bandWidth, display=display.data_window)
-plot(showOuter ? up3 : na, "Upper BB3", color.new(bear, bandTransp), bandWidth, display=display.data_window)
-plot(showOuter ? lo3 : na, "Lower BB3", color.new(bull, bandTransp), bandWidth, display=display.data_window)
-plot(showCenter ? basis : na, "Centerline", color.new(neutral, bandTransp), 1, display=display.data_window)
+plot(showInner ? cBasis + cDev * M1 : na, "Upper BB1", color.new(bear, bandTransp), bandWidth, offset=-h)
+plot(showInner ? cBasis - cDev * M1 : na, "Lower BB1", color.new(bull, bandTransp), bandWidth, offset=-h)
+plot(showMid ? cBasis + cDev * M2 : na, "Upper BB2", color.new(bear, bandTransp), bandWidth, offset=-h)
+plot(showMid ? cBasis - cDev * M2 : na, "Lower BB2", color.new(bull, bandTransp), bandWidth, offset=-h)
+plot(showOuter ? cBasis + cDev * M3 : na, "Upper BB3", color.new(bear, bandTransp), bandWidth, offset=-h)
+plot(showOuter ? cBasis - cDev * M3 : na, "Lower BB3", color.new(bull, bandTransp), bandWidth, offset=-h)
+plot(showCenter ? cBasis : na, "Centerline", color.new(neutral, bandTransp), 1, offset=-h)
 
-aU2 = plot(up2, "anchor U2", color=na, editable=false, display=display.none)
-aU3 = plot(up3, "anchor U3", color=na, editable=false, display=display.none)
-aL2 = plot(lo2, "anchor L2", color=na, editable=false, display=display.none)
-aL3 = plot(lo3, "anchor L3", color=na, editable=false, display=display.none)
+aU2 = plot(cBasis + cDev * M2, "anchor U2", color=na, editable=false, display=display.none, offset=-h)
+aU3 = plot(cBasis + cDev * M3, "anchor U3", color=na, editable=false, display=display.none, offset=-h)
+aL2 = plot(cBasis - cDev * M2, "anchor L2", color=na, editable=false, display=display.none, offset=-h)
+aL3 = plot(cBasis - cDev * M3, "anchor L3", color=na, editable=false, display=display.none, offset=-h)
 fill(aU2, aU3, showFill ? color.new(bear, fillTransp) : na, "Upper Zone")
 fill(aL2, aL3, showFill ? color.new(bull, fillTransp) : na, "Lower Zone")
 
@@ -485,7 +504,7 @@ f_targets(int d, float e, float rk) =>
 f_new(int d) =>
     float e = entryMode == "Candle Close" ? close : (high + low) / 2.0
     float w = d == 1 ? low : high                     // WARNING = extremo da vela de sinal
-    float sl = w - d * math.max(atr * 0.05, syminfo.mintick * 2)
+    float sl = w - d * math.max(atr, syminfo.mintick * 2)   // SL = 1 ATR para lá do WARNING
     float rk = math.abs(e - sl)
     [t1, t2, t3] = f_targets(d, e, rk)
     Trade t = Trade.new(d, e, sl, w, t1, t2, t3, rk, bar_index, entryMode != "Candle Close", entryMode == "Candle Close", 0, na, array.new<line>(), array.new<label>())
@@ -570,10 +589,10 @@ if sigSell or sigBuy
 var array<label> arrows = array.new<label>()
 momFlipUp = momUp and not momUp[1]
 momFlipDn = not momUp and momUp[1]
-inTrack = lastIdeaDir != 0 and bar_index > lastIdeaBar and bar_index - lastIdeaBar <= 60
+inTrack = lastIdeaDir != 0 and bar_index > lastIdeaBar and bar_index - lastIdeaBar <= 15
 f_arrow(bool up, bool isX) =>
     color c = color.new(up ? bull : bear, arrowTransp)
-    string s = isX ? "✕" : up ? "▲" : "▼"
+    string s = isX ? "✕" : up ? "↑" : "↓"
     arrows.push(label.new(bar_index, up ? low : high, s, yloc=up ? yloc.belowbar : yloc.abovebar, style=label.style_none, textcolor=c, size=f_size(arrowSizeS)))
 
 if showArrows and maxArrows > 0 and barstate.isconfirmed
@@ -586,82 +605,77 @@ if showArrows and maxArrows > 0 and barstate.isconfirmed
             f_arrow(false, false)
     else if inTrack
         bool aligned = lastIdeaDir == 1 ? momUp : not momUp
-        // a favor: seta na direcção da ideia; contra: X na cor oposta
-        f_arrow(aligned ? lastIdeaDir == 1 : lastIdeaDir != 1, not aligned)
+        // só setas a favor da ideia, nas 15 velas seguintes
+        if aligned
+            f_arrow(lastIdeaDir == 1, false)
     while arrows.size() > maxArrows
         label.delete(arrows.shift())
 
-// ═══════════ BANDAS A TRACEJADO (histórico) ═══════════
-// As bandas desenham-se como linhas tracejadas finas (polyline), como no gráfico de referência;
-// os plots acima ficam só na janela de dados (para alertas e para o preenchimento opcional).
-histBars = 400
-var array<polyline> bandPolys = array.new<polyline>()
-// os pontos lêem-se no âmbito global (up1[i] etc.): dentro de uma função chamada só na última vela
-// o histórico do parâmetro estaria vazio
+// ═══════════ PROJECÇÃO TRACEJADA (últimas h velas) ═══════════
+// As bandas centradas acabam h velas antes do fim; daí até à vela actual a média é estimada com a
+// janela truncada (mesmos pesos gaussianos da ALMA) e desenhada a tracejado, a desvanecer.
+var array<polyline> projPolys = array.new<polyline>()
 f_poly(array<chart.point> pts, color c) =>
     if pts.size() > 1
-        bandPolys.push(polyline.new(pts, line_color=c, line_style=line.style_dashed, line_width=bandWidth))
+        projPolys.push(polyline.new(pts, line_color=c, line_style=line.style_dashed, line_width=bandWidth))
     true
 
 if barstate.islast
-    for pl in bandPolys
+    for pl in projPolys
         polyline.delete(pl)
-    bandPolys.clear()
-    array<chart.point> pB  = array.new<chart.point>()
-    array<chart.point> pU1 = array.new<chart.point>()
-    array<chart.point> pL1 = array.new<chart.point>()
-    array<chart.point> pU2 = array.new<chart.point>()
-    array<chart.point> pL2 = array.new<chart.point>()
-    array<chart.point> pU3 = array.new<chart.point>()
-    array<chart.point> pL3 = array.new<chart.point>()
-    int n = math.min(histBars, bar_index)
-    for i = n to 0
-        if not na(basis[i])
-            int x = bar_index - i
-            pB.push(chart.point.from_index(x, basis[i]))
-            pU1.push(chart.point.from_index(x, up1[i]))
-            pL1.push(chart.point.from_index(x, lo1[i]))
-            pU2.push(chart.point.from_index(x, up2[i]))
-            pL2.push(chart.point.from_index(x, lo2[i]))
-            pU3.push(chart.point.from_index(x, up3[i]))
-            pL3.push(chart.point.from_index(x, lo3[i]))
-    if showCenter
-        f_poly(pB, color.new(neutral, bandTransp))
-    if showInner
-        f_poly(pU1, color.new(bear, bandTransp))
-        f_poly(pL1, color.new(bull, bandTransp))
-    if showMid
-        f_poly(pU2, color.new(bear, bandTransp))
-        f_poly(pL2, color.new(bull, bandTransp))
-    if showOuter
-        f_poly(pU3, color.new(bear, bandTransp))
-        f_poly(pL3, color.new(bull, bandTransp))
-
-// ═══════════ PROJECÇÃO TRACEJADA ═══════════
-var array<line> projLines = array.new<line>()
-f_proj(float v, float s, color c) =>
-    int seg = 5
-    for i = 0 to 5
-        int x1 = bar_index + i * seg
-        int tr = projGrad ? math.min(95, bandTransp + (i + 1) * 13) : bandTransp
-        projLines.push(line.new(x1, v + s * i * seg, x1 + seg, v + s * (i + 1) * seg, color=color.new(c, tr), style=line.style_dashed, width=1))
-
-if barstate.islast
-    for l in projLines
-        line.delete(l)
-    projLines.clear()
-    if dashedProj
-        if showCenter
-            f_proj(basis, sB, neutral)
-        if showInner
-            f_proj(up1, sU1, bear)
-            f_proj(lo1, sL1, bull)
-        if showMid
-            f_proj(up2, sU2, bear)
-            f_proj(lo2, sL2, bull)
-        if showOuter
-            f_proj(up3, sU3, bear)
-            f_proj(lo3, sL3, bull)
+    projPolys.clear()
+    if dashedProj and bar_index > bandLen
+        float sg = bandLen / 6.0
+        int chunks = 4
+        int csz = math.max(1, int(math.ceil((h + 1) / chunks)))
+        for c = 0 to chunks - 1
+            array<chart.point> pB  = array.new<chart.point>()
+            array<chart.point> pU1 = array.new<chart.point>()
+            array<chart.point> pL1 = array.new<chart.point>()
+            array<chart.point> pU2 = array.new<chart.point>()
+            array<chart.point> pL2 = array.new<chart.point>()
+            array<chart.point> pU3 = array.new<chart.point>()
+            array<chart.point> pL3 = array.new<chart.point>()
+            // j = velas para trás a partir da actual; o bloco c vai de h - c*csz até h - (c+1)*csz (com sobreposição de 1)
+            int jHi = h - c * csz
+            int jLo = math.max(0, h - (c + 1) * csz)
+            if jHi >= 0
+                for j = jHi to jLo
+                    float ws = 0.0
+                    float sm = 0.0
+                    float sq = 0.0
+                    int kMin = math.max(0, j - h)
+                    for k = kMin to j + h
+                        float wk = math.exp(-math.pow(k - j, 2) / (2 * sg * sg))
+                        float v = hlc3[k]
+                        ws += wk
+                        sm += wk * v
+                    float m = sm / ws
+                    int cnt = 0
+                    for k = kMin to j + h
+                        sq += math.pow(hlc3[k] - m, 2)
+                        cnt += 1
+                    float sd = math.sqrt(sq / cnt)
+                    int x = bar_index - j
+                    pB.push(chart.point.from_index(x, m))
+                    pU1.push(chart.point.from_index(x, m + sd * M1))
+                    pL1.push(chart.point.from_index(x, m - sd * M1))
+                    pU2.push(chart.point.from_index(x, m + sd * M2))
+                    pL2.push(chart.point.from_index(x, m - sd * M2))
+                    pU3.push(chart.point.from_index(x, m + sd * M3))
+                    pL3.push(chart.point.from_index(x, m - sd * M3))
+                int tr = projGrad ? math.min(90, bandTransp + c * 20) : bandTransp
+                if showCenter
+                    f_poly(pB, color.new(neutral, tr))
+                if showInner
+                    f_poly(pU1, color.new(bear, tr))
+                    f_poly(pL1, color.new(bull, tr))
+                if showMid
+                    f_poly(pU2, color.new(bear, tr))
+                    f_poly(pL2, color.new(bull, tr))
+                if showOuter
+                    f_poly(pU3, color.new(bear, tr))
+                    f_poly(pL3, color.new(bull, tr))
 
 // ═══════════ MARCA ═══════════
 var table brand = table.new(position.bottom_right, 1, 1)
@@ -675,7 +689,7 @@ alertcondition(sigSell, "DEFY Venda",  "DEFY: ideia de VENDA em {{ticker}} a {{c
 f_json(int d, int sc, int stars, bool king) =>
     float e = entryMode == "Candle Close" ? close : (high + low) / 2.0
     float w = d == 1 ? low : high
-    float sl = w - d * math.max(atr * 0.05, syminfo.mintick * 2)
+    float sl = w - d * math.max(atr, syminfo.mintick * 2)   // SL = 1 ATR para lá do WARNING
     float rk = math.abs(e - sl)
     [t1, t2, t3] = f_targets(d, e, rk)
     string act = d == 1 ? "buy" : "sell"
