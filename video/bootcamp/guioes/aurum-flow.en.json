@@ -1,0 +1,833 @@
+{
+ "estrategia": "Aurum Flow",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#2F9E8F",
+  "bear": "#C0262D"
+ },
+ "ui": {
+  "nivel": "Level",
+  "compra": "Buy",
+  "venda": "Sell",
+  "entrada": "Entry",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  [
+   "Aurum",
+   "Aurum"
+  ],
+  [
+   "ORB",
+   "O R B"
+  ],
+  [
+   "EMA",
+   "E M A"
+  ],
+  [
+   "RSI",
+   "R S I"
+  ],
+  [
+   "ATR",
+   "A T R"
+  ],
+  [
+   "TradingView",
+   "Trading View"
+  ],
+  [
+   "NYFX",
+   "N Y F X"
+  ],
+  [
+   "UTC",
+   "U T C"
+  ]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [
+   3,
+   6,
+   10,
+   16
+  ],
+  "rotulos": [
+   "Exit 1",
+   "Exit 2",
+   "Exit 3",
+   "Exit 4"
+  ]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Aurum Flow · 1/2",
+   "titulo": "Fundamentals: the box, the regime and the breakout",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 1 of 2",
+     "titulo": "Aurum Flow",
+     "sub": "What it is, and how to read every element",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "The session draws the box. <span class='ouro'>The trend picks the side.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Hi, I'm Ricardo Garcia, and this is the Aurum Flow Bootcamp from MoreThanMoney. Before we start, one idea that will run through both videos: no scanner decides for you. Aurum Flow does three concrete things. It draws the box of each session, it waits for price to break that box in the direction of the underlying trend, and it shows the entry, the stop and the targets with the risk in dollars. It is simple to describe and demanding to execute. So we will go slowly, and we will not promise anything the chart does not show."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "The plan for this bootcamp",
+     "titulo": "Two videos, one method",
+     "itens": [
+      "Video 1 · The box, the regime, the breakout and the targets",
+      "Video 2 · Confirmations, entry, management and routine"
+     ],
+     "fala": "The bootcamp has two videos. In this first one, we go through the strategy and each piece of the chart: the session box, the regime that picks the side, the breakout that gives the signal, and the stop and targets measured in R. In the second video we get into the process: the five conditions the scanner requires, how to enter from the panel, how to manage the position, when not to enter, and a short routine for every day. Watch both in order. The second one uses the language of the first, and does not make sense without it."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · What Aurum Flow is",
+     "numero": "01",
+     "titulo": "What Aurum Flow is",
+     "sub": "Opening range breakout",
+     "fala": "First chapter. So what is Aurum Flow, exactly?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · What Aurum Flow is",
+     "kicker": "In a few words",
+     "titulo": "A box, a side, a signal",
+     "itens": [
+      "Opening range breakout (ORB) of each session",
+      "Regime: 200 exponential moving average on the four-hour chart",
+      "The signal only comes on the candle close",
+      "Main market: crypto perpetuals. Gold, secondary mode"
+     ],
+     "fala": "Aurum Flow marks the opening range of each session, and waits for price to break it in the direction of the underlying trend. This method is called an opening range breakout, or ORB. The underlying trend comes from the two-hundred-period exponential moving average on the four-hour chart. Above it, only buys. Below it, only sells. The signal comes only on the close of the candle, never in the middle. The stop sits on the opposite edge of the box, with a small margin, and the targets are multiples of the risk. The guide lists crypto perpetuals as the main market, and gold as a secondary mode. The reference chart is the fifteen-minute chart."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "grafico",
+     "cap": "01 · What Aurum Flow is",
+     "kicker": "First look",
+     "titulo": "The chart with everything on",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal",
+      "plano",
+      "setas"
+     ],
+     "camadas": [],
+     "ate": [
+      0.55,
+      0.55
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "This is what the chart looks like with everything switched on. You can see the coloured candles, the box drawn over the session's move, the signal candle, and the plan lines. At first glance it may look like a lot, but we will read one piece at a time. Before that, a note about every chart in this bootcamp: they are illustrative, drawn to explain how the strategy works. They are not real market history, and they are not the results of any trade. So let us start with the first piece, which is the box."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "capitulo",
+     "cap": "02 · The session box",
+     "numero": "02",
+     "titulo": "The session box",
+     "sub": "The first hour, and the reference for the day",
+     "fala": "Second chapter: the session box."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "pontos",
+     "cap": "02 · The session box",
+     "kicker": "How to read it",
+     "titulo": "High, low and range",
+     "itens": [
+      "The high and low of the first hour of the session",
+      "During that hour, the box grows with price",
+      "After the hour, it is fixed and becomes the reference for the day",
+      "Times are shown in Lisbon time, and the panel adjusts them to your time zone"
+     ],
+     "fala": "The box is the starting point. In each session, the scanner looks at the first hour and stores the high and the low of that interval. The range is the distance between the two. During that hour, the box grows as price explores the interval. When the hour ends, the box is fixed, and it becomes the reference for the day for that session. Here is a practical detail: times are shown in Lisbon time, but the panel adjusts them to your own time zone. If your chart is set to a different time, check that the box you see is the same one the guide describes."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · The session box",
+     "kicker": "Reading 1",
+     "titulo": "The box and its hour",
+     "cenario": "tendencia",
+     "seed": 7,
+     "base": [],
+     "camadas": [
+      "cores"
+     ],
+     "ate": [
+      0.4,
+      0.6
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Watch the box forming. The session has started, price moves back and forth, and the box grows with the high and low of the hour. This is the moment to observe, not to trade. Notice that the box is not yet a fixed reference. It is still being built. When the hour closes, its outline stops changing, and from then on price can only be read against a box that no longer moves. That fixed box is what the scanner uses to look for the breakout. If someone tells you the box is already giving a signal before the hour is over, they are giving you an incomplete reading."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "comparar",
+     "cap": "02 · The session box",
+     "kicker": "The sessions",
+     "titulo": "Each session, its own box",
+     "cartoes": [
+      {
+       "t": "Pre London",
+       "d": "The first session of the day, with its own box."
+      },
+      {
+       "t": "London",
+       "d": "The London session, with its own independent box."
+      },
+      {
+       "t": "New York",
+       "d": "The New York session, also with its own box."
+      }
+     ],
+     "fala": "The guide uses three sessions: Pre London, London and New York. Each one draws its own box, from the first hour of that session. They are not boxes added together, and they are not one box for the whole day. They are three separate references, and each one can be switched on or off in the panel. The idea is simple: each session opening brings its own range reading. If you are just starting, the sensible thing is to study one session at a time, and only then add the others. Learning three sessions at once is a way of never mastering any of them."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "capitulo",
+     "cap": "03 · The regime",
+     "numero": "03",
+     "titulo": "The regime",
+     "sub": "The two-hundred average picks the side",
+     "fala": "Third chapter: the regime, which decides which side you can trade."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "grafico",
+     "cap": "03 · The regime",
+     "kicker": "Reading 2",
+     "titulo": "Only buys above, only sells below",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [],
+     "camadas": [
+      "cores"
+     ],
+     "ate": [
+      0.6,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "The regime is the underlying trend, and it comes from the two-hundred exponential moving average on the four-hour chart. Above it, the scanner only looks for buys. Below it, it only looks for sells. It is not a signal in itself. It is a filter for the side. Look at this chart: while price is above the average, the breaks upwards are the ones that count, and breaks downwards are ignored. When price crosses the average and stays on the other side, the side the scanner looks for changes. Before you look at the box, always ask: which side is the regime on?"
+    },
+    {
+     "id": "v1-12",
+     "tipo": "pontos",
+     "cap": "03 · The regime",
+     "kicker": "How to use it",
+     "titulo": "Regime first, box second",
+     "itens": [
+      "Above the four-hour 200 average: buys only",
+      "Below the four-hour 200 average: sells only",
+      "The regime is a side filter, not a signal",
+      "If the regime does not agree with the breakout, there is no signal"
+     ],
+     "fala": "Let us sum up the regime. Above the two-hundred average on the four-hour chart, buys only. Below it, sells only. The regime does not tell you when to enter. It only tells you which side the underlying current is on. It has a very important practical effect: if the breakout happens against the regime, the scanner gives no signal, even if the box looks perfect. Many people waste time trying to find a buy in a downtrend. Aurum Flow was designed to spare you that argument."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "capitulo",
+     "cap": "04 · The breakout",
+     "numero": "04",
+     "titulo": "The breakout",
+     "sub": "The candle that closes outside the box",
+     "fala": "Fourth chapter: the breakout, which is what gives the signal."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "grafico",
+     "cap": "04 · The breakout",
+     "kicker": "Reading 3",
+     "titulo": "A breakout in the direction of the regime",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal"
+     ],
+     "ate": [
+      0.6,
+      0.66
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Here is a breakout. The session box is fixed, the regime is above the two-hundred average, and a candle closes above the top of the box. It is an upward breakout, on the side of the underlying trend, and the scanner marks the buy. Notice what is not here: there is no entry before the close. A wick that pokes above the box is not enough. Price hovering near the top during the session is not enough either. It is the candle that closes outside the box that counts. If the candle closes inside, there is no breakout, however tempting it looks."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "pontos",
+     "cap": "04 · The breakout",
+     "kicker": "Breakout rules",
+     "titulo": "Closed outside, on the right side",
+     "itens": [
+      "Buy: the candle closes above the top of the box",
+      "Sell: the candle closes below the bottom of the box",
+      "Only the close counts, never the wick",
+      "It must be on the side of the regime"
+     ],
+     "fala": "The breakout rules fit in one sentence. To buy, a candle has to close above the top of the box. To sell, a candle has to close below the bottom. Only the close counts. A wick that crosses the box and comes back inside is a failed signal before it exists, not a half confirmation. And, as we saw, the breakout only counts if it is on the side of the regime. Those three conditions together are the backbone of the method. If any of them fails, there is no signal, and the chart is just a chart."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "capitulo",
+     "cap": "05 · Stop and targets in R",
+     "numero": "05",
+     "titulo": "Stop and targets in R",
+     "sub": "Risk is a distance",
+     "fala": "Fifth chapter: the stop and the targets, measured in R."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "grafico",
+     "cap": "05 · Stop and targets in R",
+     "kicker": "The plan",
+     "titulo": "Stop on the opposite edge, targets in R",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "fala": "When the signal appears, the panel draws the plan. The entry is at the signal. The stop sits on the opposite edge of the box, with a small margin so that a wick does not take it out. The distance between the entry and the stop is your R, your unit of risk. The targets sit at multiples of that R: three, six, ten and sixteen. So the first target is three times the risk, the second is six, and so on. You are not measuring profits in money. You are measuring everything in R, which is how you compare trades of different sizes."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "comparar",
+     "cap": "05 · Stop and targets in R",
+     "kicker": "The targets",
+     "titulo": "Four exits in R",
+     "cartoes": [
+      {
+       "t": "3 R",
+       "d": "First target. Here the stop moves to the entry."
+      },
+      {
+       "t": "6 R",
+       "d": "Second target. The position keeps running."
+      },
+      {
+       "t": "10 R and 16 R",
+       "d": "Third and fourth targets, for the part that lets the trend run."
+      }
+     ],
+     "fala": "Four targets, in multiples of the risk. The first, at three R, is the most important in practice. When price reaches it, the guide asks you to move the stop to the entry. From then on, the trade can no longer lose money. The second target, at six R, and the next ones, at ten and sixteen R, are for the part of the position you let run with the trend. You can also scale out at each target. Either option is valid, but it has to be the one you chose before entering, not the one you decide in the middle of the trade, while price is moving."
+    },
+    {
+     "id": "v1-19",
+     "tipo": "pontos",
+     "cap": "05 · Stop and targets in R",
+     "kicker": "The panel",
+     "titulo": "The panel does the maths",
+     "itens": [
+      "Calculates the size from the risk you define",
+      "On perpetuals: notional and leverage",
+      "On gold: lots",
+      "Shows the entry, the stop, the targets and the risk in dollars"
+     ],
+     "fala": "The panel does the maths for you, but it is important to know what it calculates. It takes the risk you set as a percentage of your account, and calculates the size of the position so that, if the stop is hit, you lose that amount. On crypto perpetuals, the panel shows the notional and the leverage. On gold, it shows lots. And in every case, it shows the risk in dollars. That is the number you should read before entering. If the cash risk does not feel right, do not increase the size to compensate. Change the account, or let the idea pass."
+    },
+    {
+     "id": "v1-20",
+     "tipo": "pontos",
+     "cap": "05 · Stop and targets in R",
+     "kicker": "A reading layer",
+     "titulo": "The structure underneath",
+     "itens": [
+      "The Sensei structure engine runs underneath",
+      "Breaks and structure changes, for reading only",
+      "Not an entry condition in this method",
+      "It helps you read the story of the move"
+     ],
+     "fala": "Underneath Aurum Flow runs the same structure engine that Sensei uses: the breaks and the structure changes in price. In this method, it is for reading only. It helps you understand the story of the move: whether price is making higher tops and bottoms, or the opposite. It is not an entry condition, and it should not be treated as one. When you read a breakout, looking at the structure gives you context. But the decision is still taken by the rules of the box, the regime and the close."
+    },
+    {
+     "id": "v1-21",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Module 1 summary",
+     "titulo": "What you need to know how to read",
+     "itens": [
+      "Box: the first hour of the session, fixed afterwards",
+      "Regime: the four-hour 200 average picks the side",
+      "Breakout: a close outside the box, on the right side",
+      "Stop on the opposite edge, targets in R"
+     ],
+     "fala": "Summing up the first video. The box is the first hour of each session, and it is fixed afterwards. The regime, the two-hundred average on the four-hour chart, picks the side. The breakout is a close outside the box, on the right side. And the stop sits on the opposite edge, with the targets measured in R. Read these pieces together. Each one alone says little. Together, they tell you whether there is a signal or not."
+    },
+    {
+     "id": "v1-22",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before video 2",
+     "titulo": "Your homework",
+     "itens": [
+      "Choose one session and one market only",
+      "Mark five boxes and note which side the regime was on",
+      "For each box, note whether there was a breakout, and on which side",
+      "Do not trade yet: just observe"
+     ],
+     "fala": "Before the second video, the exercise. Choose one session and one market only. Look back through history for five boxes, and for each one note which side the regime was on. Then note whether there was a breakout with a close, and on which side. Do not trade yet. This exercise trains your eye on what really matters: the box, the side and the close. In the second video, we take these readings and turn them into decisions."
+    },
+    {
+     "id": "v1-23",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Until video 2",
+     "sub": "Confirmations, entry and management",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this is educational content, and it is not financial advice. Trading perpetuals and other assets carries risk, and you can lose part or all of your capital. Practise on a demo account first. See you in the second video.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Aurum Flow · 2/2",
+   "titulo": "Confirmations, entry, management and routine",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 2 of 2",
+     "titulo": "Aurum Flow",
+     "sub": "Confirmations, entry, management and routine",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "In this video",
+     "titulo": "From breakout to routine",
+     "itens": [
+      "The five conditions the scanner requires",
+      "Entry from the panel",
+      "Management: 3 R, stop to entry, the later targets",
+      "When not to enter",
+      "A short routine for every day"
+     ],
+     "fala": "Welcome to the second video of the Aurum Flow Bootcamp. In the first one you learned to read the box, the regime, the breakout and the targets in R. Now we will look at what the scanner requires before it gives a signal, how to enter from the panel, how to manage the position once you are in, and when it is better not to enter. At the end, I will leave you a short routine for every day. This video is more technical on the conditions, and more practical on management. Take your time, and go back whenever you need to."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · Confirmations",
+     "numero": "01",
+     "titulo": "The five conditions",
+     "sub": "The scanner only signals when everything lines up",
+     "fala": "First chapter: the confirmations the scanner requires before it gives a signal."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "checklist",
+     "cap": "01 · Confirmations",
+     "kicker": "Five conditions",
+     "titulo": "Everything has to line up",
+     "itens": [
+      "Regime: on the right side of the four-hour 200 average",
+      "Normal volatility: not dead, not an extreme spike",
+      "Momentum: relative strength index above 55 for buys, below 45 for sells",
+      "No exhaustion candle: at most two and a half times average volatility",
+      "Stop above cost: at least 9 times the fee cost, and never more than 3.5% of price"
+     ],
+     "fala": "The guide lists five conditions, and all of them have to hold at the same time. The first is the regime, which we already know: on the right side of the four-hour two-hundred average. The second is normal volatility. Not a dead market, where the box has no life, and not an extreme spike, where the move may already be exhausted. The third is momentum, measured with the relative strength index, the RSI. For buys, it has to be above fifty-five. For sells, below forty-five. The fourth is a candle without exhaustion: the breakout candle cannot be more than two and a half times the average volatility. And the fifth is the stop above cost. The stop has to be at least nine times the cost of the entry and exit fees, and it never goes beyond three point five per cent of the price. If any condition fails, the scanner gives no signal, and you should not give one either."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "pontos",
+     "cap": "01 · Confirmations",
+     "kicker": "Volatility",
+     "titulo": "Not dead, not at the peak",
+     "itens": [
+      "Dead market: the box has no room to run",
+      "Extreme peak: the move may already be exhausted",
+      "The guide asks for normal volatility",
+      "If the panel gives no signal, the reading is clear: let it pass"
+     ],
+     "fala": "Volatility is a condition many people treat as a detail, and it is not. In a dead market, the box is small, and the breakout has no room to run to the targets. In an extreme spike, the move may already have spent its energy, and the candle that breaks out is often the last one of the impulse. The guide asks for normal volatility, and that is the state you are looking for. When the panel gives no signal because of volatility, there is nothing to fix. The reading is telling you that this is not the moment."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "grafico",
+     "cap": "01 · Confirmations",
+     "kicker": "Example",
+     "titulo": "Momentum in favour",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal"
+     ],
+     "ate": [
+      0.6,
+      0.66
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "In this buy breakout, the conditions are in favour. The regime is on the buying side, the box was fixed, and the candle closes above the top. The relative strength index is above fifty-five, so the momentum goes with the breakout. And the candle is not an exhaustion candle. It has a real body, but it stays inside the limit the guide sets. Notice that you do not need to guess anything. Each condition is a test, and it either passes or it does not."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "comparar",
+     "cap": "01 · Confirmations",
+     "kicker": "Costs and exhaustion",
+     "titulo": "Two conditions that hide traps",
+     "cartoes": [
+      {
+       "t": "Exhaustion candle",
+       "d": "More than two and a half times average volatility: the candle may be the end of the impulse."
+      },
+      {
+       "t": "Stop above cost",
+       "d": "At least nine times the fee cost. A stop that is too short lets fees eat the risk."
+      },
+      {
+       "t": "3.5% ceiling",
+       "d": "The stop never goes beyond three point five per cent of the price."
+      }
+     ],
+     "fala": "There are two conditions that sound technical, but they protect you from concrete traps. The first is the exhaustion candle. A candle much bigger than average can be the last of the move, not the first. The guide cuts it out. The second is cost. If the stop is too tight, the entry and exit fees become a large part of the risk, and the numbers stop working. So the stop has to sit at least nine times above the cost of the fees. And there is a ceiling: the stop never goes beyond three point five per cent of the price. If the trade only works with a stop wider than that, the idea is not for you."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "capitulo",
+     "cap": "02 · Entry",
+     "numero": "02",
+     "titulo": "Entry",
+     "sub": "From the closed box to the panel",
+     "fala": "Second chapter: how to enter, from the panel."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "plano",
+     "cap": "02 · Entry",
+     "kicker": "Steps",
+     "titulo": "Four steps to the order",
+     "linhas": [
+      [
+       "Box",
+       "Closed, after the first hour",
+       "entrada"
+      ],
+      [
+       "Regime",
+       "Only on the side of the 200 average",
+       "entrada"
+      ],
+      [
+       "Signal",
+       "On the close, validated by the scanner",
+       "entrada"
+      ],
+      [
+       "Size",
+       "What the panel calculates, nothing more",
+       "warning"
+      ]
+     ],
+     "fala": "Entry follows four steps, in the order the guide presents them. First, you wait for the session box to close. Second, you confirm the regime, and you only look for the breakout on the side of the four-hour two-hundred average. Third, you let the scanner validate the signal on the close of the candle. Fourth, you read the entry, the stop, the targets and the risk in dollars on the panel, and you enter with the size it calculated. Notice that there is no fifth step of improvisation. The size is what the panel says, no more and no less."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "pontos",
+     "cap": "02 · Entry",
+     "kicker": "The panel",
+     "titulo": "Read before you enter",
+     "itens": [
+      "Entry, stop and targets, in that order",
+      "The risk in dollars, before anything else",
+      "The size calculated from the risk you defined",
+      "You enter with that size, not with another"
+     ],
+     "fala": "Before you click anything, read the panel from top to bottom. First, the entry and the stop: the distance between them is your R. Then, the targets, which sit at multiples of that R. Next, the risk in dollars, which is the most important number, because it is what you will lose if the stop is hit. And finally, the size. You enter with the size the panel calculated, not with another one that looks more attractive. If you think you should risk more, you are not being brave. You are leaving the plan."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "grafico",
+     "cap": "02 · Entry",
+     "kicker": "In practice",
+     "titulo": "Entry from the panel",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      0.85
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Look at the plan drawn over the chart. The signal appears on the candle close, and the panel fixes the entry. The stop sits on the opposite edge of the box. The targets lie ahead, at multiples of the R. From here on, the chart does not change the plan: what is drawn is what you manage. Having the plan drawn before you enter is half the work, because it forces you to know where you are wrong and where you exit, before you risk a single cent."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "capitulo",
+     "cap": "03 · Management",
+     "numero": "03",
+     "titulo": "Management",
+     "sub": "Three R, stop to entry, and letting it run",
+     "fala": "Third chapter: managing the trade once you are in."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "pontos",
+     "cap": "03 · Management",
+     "kicker": "Step by step",
+     "titulo": "Managing the position",
+     "itens": [
+      "Watch the stop, on the opposite edge of the box",
+      "At 3 R, the stop moves to the entry",
+      "Let the rest run to 6, 10 and 16 R",
+      "Or scale out at each target",
+      "Never move the stop further away"
+     ],
+     "fala": "Management has a clear sequence. Until three R, your job is to watch the stop, which sits on the opposite edge of the box. When price reaches three R, the guide asks you to move the stop to the entry. From that moment, the position can no longer lose money. After that, you have two ways to exit, and both are in the guide. You can let the rest run to six, ten and sixteen R. Or you can scale out at each target. The one rule that does not change, in either option, is this: never move the stop further away. Never. If price comes back into the box, the answer is to exit, or to leave the stop where it is."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "grafico",
+     "cap": "03 · Management",
+     "kicker": "Protect",
+     "titulo": "At three R, the stop goes to entry",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano",
+      "setas"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "fala": "See what changes when price reaches three R. The first target has been hit, and the stop moves to the entry. From here, the rest of the position runs without risk. Price can come back, and the trade can close with no loss. But if the trend continues, the position heads for the next target. Notice that the decision to move the stop does not depend on hunches. It depends on a written rule: it reached three R, the stop goes to the entry."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "comparar",
+     "cap": "03 · Management",
+     "kicker": "Two ways out",
+     "titulo": "Let it run, or scale out",
+     "cartoes": [
+      {
+       "t": "Let it run",
+       "d": "To 6, 10 and 16 R, with the stop at entry after 3 R."
+      },
+      {
+       "t": "Scale out",
+       "d": "Close one part at each target, and let the rest run."
+      },
+      {
+       "t": "Choose beforehand",
+       "d": "The way you exit is decided before entering, not in the middle of the trade."
+      }
+     ],
+     "fala": "There are two ways to exit, and both are in the guide. Letting it run means holding the position to the next targets, six, ten and sixteen R, with the stop protected at the entry. Scaling out means closing a fraction of the position at each target. There is no single right way for everyone. There is the way you chose before entering, and the one you can actually stick to. If you choose to let it run, the position stays exposed to the trend until the next target, with no fixed profit in sight. If you choose to scale out, each fraction leaves at its own target, but if the trade reaches sixteen R, your final result is smaller than that of someone who let everything run. That trade-off is yours."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "capitulo",
+     "cap": "04 · When not to enter",
+     "numero": "04",
+     "titulo": "When not to enter",
+     "sub": "The cases where the guide says wait",
+     "fala": "Fourth chapter: when not to enter."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "checklist",
+     "cap": "04 · When not to enter",
+     "kicker": "Let it go when",
+     "titulo": "Five situations",
+     "itens": [
+      "Before the box closes",
+      "Breakout against the four-hour 200 average",
+      "Too many candles since the box closed",
+      "Size bigger than the panel calculated",
+      "Stop moved further away when price returns to the box"
+     ],
+     "fala": "The guide lists five situations where you do not enter. First: before the box closes. The box is still being built, and any breakout is premature. Second: the breakout goes against the four-hour two-hundred average. Third: too many candles have passed since the box closed. In that case, the range has lost its validity, and the breakout no longer means the same thing. Fourth: the size you are thinking of is bigger than the one the panel calculated. And fifth: you want to move the stop further away when price returns to the box. Any one of these situations is enough to let the idea pass. There is no excuse of timing, and no excuse of intuition."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "grafico",
+     "cap": "04 · When not to enter",
+     "kicker": "False breakout",
+     "titulo": "Closes outside, falls back inside",
+     "cenario": "falha",
+     "seed": 11,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.62,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Look at this breakout. A candle closes outside the box, on the right side, and the signal appears. But the price does not follow through. It falls back inside the box and, instead of staying with the current, it crosses the whole box until it reaches the stop on the other side. This is a false breakout, and it is the most frequent source of loss with this method. Notice what was planned: you lose one R, exactly what the panel showed before you entered. There is no surprise, and there is no improvisation. The risk was already defined."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "capitulo",
+     "cap": "05 · When it fails",
+     "numero": "05",
+     "titulo": "When it fails",
+     "sub": "Losing one R, as planned",
+     "fala": "Fifth chapter: what happens when the idea fails."
+    },
+    {
+     "id": "v2-19",
+     "tipo": "pontos",
+     "cap": "05 · When it fails",
+     "kicker": "Sequence",
+     "titulo": "What happens in a false breakout",
+     "itens": [
+      "Price closes outside the box, and the signal appears",
+      "It does not follow through: it falls back inside the box",
+      "It crosses the box until it reaches the stop on the other side",
+      "You lose 1 R, as planned"
+     ],
+     "fala": "Let us go through the sequence again, slowly. Price closes outside the box, on the right side, and the signal appears. You enter at the size on the panel. But price does not follow through. It falls back inside the box and crosses it until it reaches the stop on the other side. At that point, you lose one R. Not more, because the stop was there from the start. And not less, because the guide does not let you move it to try to save the trade. In a method like this, a false breakout is not an execution error. It is part of the plan. What matters is that the loss is small, predictable, and the same size as the others."
+    },
+    {
+     "id": "v2-20",
+     "tipo": "pontos",
+     "cap": "05 · When it fails",
+     "kicker": "Journal",
+     "titulo": "Measure in R, not in money",
+     "itens": [
+      "Date, market, session and direction",
+      "Side of the regime, and which of the five conditions held",
+      "Result in R",
+      "Did you follow the plan? Yes or no"
+     ],
+     "fala": "After each trade, log it. Write down the date, the market, the session and the direction. Write down which side the regime was on, and which of the five conditions were met. Measure the result in R, because R is comparable between trades of different sizes. And answer the most important question: did you follow the plan? After a few dozen trades, the journal tells you which session works best for you, and where the mistake lies in execution rather than in the method."
+    },
+    {
+     "id": "v2-21",
+     "tipo": "capitulo",
+     "cap": "06 · Routine",
+     "numero": "06",
+     "titulo": "A short routine",
+     "sub": "Consistency beats intensity",
+     "fala": "Sixth chapter: the routine for every day."
+    },
+    {
+     "id": "v2-22",
+     "tipo": "checklist",
+     "cap": "06 · Routine",
+     "kicker": "Every day",
+     "titulo": "Fifteen minutes, five steps",
+     "itens": [
+      "Check the economic calendar for the day",
+      "Look at the boxes of today's sessions",
+      "Confirm the regime on the four-hour chart",
+      "Review open signals and orders",
+      "Update the journal"
+     ],
+     "fala": "The routine fits in fifteen minutes. First, you check the economic calendar for the day, to see whether high-impact news is coming. Second, you look at the boxes of today's sessions, and whether the first hour of each one has already closed. Third, you confirm the regime on the four-hour chart. Fourth, you review the signals and open orders, and apply the management we have seen. Fifth, you update the journal. For the rest of the day, the scanner works for you. You do not need to be glued to the screen. You need to be consistent."
+    },
+    {
+     "id": "v2-23",
+     "tipo": "pontos",
+     "cap": "Summary",
+     "kicker": "Pocket checklist",
+     "titulo": "The complete Aurum Flow process",
+     "itens": [
+      "Box closed",
+      "Regime in favour",
+      "Signal on the close, with the five conditions met",
+      "Size from the panel",
+      "Stop on the opposite edge, and at 3 R to entry",
+      "Let it run to 6, 10 and 16 R, or scale out"
+     ],
+     "fala": "To finish, the pocket checklist. Box closed. Regime in favour. Signal on the close, with the five conditions met. Size from the panel. Stop on the opposite edge, and at three R, stop to entry. And then, let it run to six, ten and sixteen R, or scale out. If you follow these steps every time, even on days when it is tedious, you are ahead of many people who trade without a process. There are no promises in this list. There is discipline, and discipline is the part that depends on you."
+    },
+    {
+     "id": "v2-24",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Aurum Flow Bootcamp complete",
+     "sub": "morethanmoney.pt",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Educational content, not financial advice. Trading carries risk, and you can lose money. Define your risk before each entry and practise on a demo account. See you next time.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

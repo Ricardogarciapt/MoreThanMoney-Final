@@ -1,0 +1,856 @@
+{
+ "estrategia": "Premium Scanner",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#2F80ED",
+  "bear": "#E5484D"
+ },
+ "ui": {
+  "nivel": "Level",
+  "compra": "Buy",
+  "venda": "Sell",
+  "entrada": "Entry",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  [
+   "XAUUSD",
+   "X A U U S D"
+  ],
+  [
+   "EMA",
+   "E M A"
+  ],
+  [
+   "TradingView",
+   "Trading View"
+  ],
+  [
+   "TP1",
+   "T P one"
+  ],
+  [
+   "TP2",
+   "T P two"
+  ],
+  [
+   "TP3",
+   "T P three"
+  ],
+  [
+   "TP4",
+   "T P four"
+  ],
+  [
+   "UTC",
+   "U T C"
+  ],
+  [
+   "GMT",
+   "G M T"
+  ]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [
+   1,
+   1.67,
+   2.33,
+   3
+  ],
+  "rotulos": [
+   "TP1",
+   "TP2",
+   "TP3",
+   "TP4"
+  ]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Premium Scanner · 1/2",
+   "titulo": "Fundamentals: sessions, vote, zone and targets",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 1 of 2",
+     "titulo": "Premium Scanner",
+     "sub": "What it is, and how to read every element",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "Turning signals into rules. <span class='ouro'>Every piece has a reason.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Hi, I'm Ricardo Garcia, and this is the Premium Scanner Bootcamp from MoreThanMoney. Before we start, one idea for both videos: a signal is only useful if you can explain why it appeared. This scanner came out of a study. We took the gold signals published in the Premium room and measured each one: the direction, the time, the zone, the stop and the targets. Then we turned what they had in common into rules. In this bootcamp we will look at each rule, one at a time, and why it is there. No promised results. Just logic you can check for yourself."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "The plan for this bootcamp",
+     "titulo": "Two videos, one method",
+     "itens": [
+      "Video 1 · Sessions, the five-question vote, zone, stop and targets",
+      "Video 2 · Confirmations, limit order, exits and routine"
+     ],
+     "fala": "The bootcamp has two videos. In this first one, we look at what the scanner is and at each piece of the chart: the three sessions it works in, the five-question vote that decides the direction, the gold zone where the entry happens, and the stop and the four targets. In the second video we get practical: the confirmations before each signal, the limit order, how to scale out, when not to enter, and a short routine for every day. Watch both in order. The second depends on the rules of the first."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · What Premium Scanner is",
+     "numero": "01",
+     "titulo": "What Premium Scanner is",
+     "sub": "Gold signals, turned into rules",
+     "fala": "First chapter. So what is Premium Scanner, exactly?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · What Premium Scanner is",
+     "kicker": "In a few words",
+     "titulo": "Gold, fifteen minutes, three sessions",
+     "itens": [
+      "Works only on gold, XAUUSD",
+      "Fifteen-minute chart",
+      "Only gives signals inside three sessions",
+      "Entry on a pullback, into a five-dollar zone",
+      "Fixed stop and four targets"
+     ],
+     "fala": "Premium Scanner works only on gold, XAUUSD, and only on the fifteen-minute chart. It does not look for signals all day. It only looks at the market inside three sessions: Asia, London and New York. When it decides a direction, it does not tell you to enter at the market price. It draws a five-dollar gold zone and waits for price to pull back into it. The stop always sits at the same distance, and so do the targets. All of this is drawn on the chart with the price of each level, and it can be sent as an alert. The scanner does not place orders. You are the one who decides."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "grafico",
+     "cap": "01 · What Premium Scanner is",
+     "kicker": "First look",
+     "titulo": "The chart with everything on",
+     "cenario": "tendencia",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal",
+      "plano",
+      "setas"
+     ],
+     "camadas": [],
+     "ate": [
+      0.55,
+      0.55
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "This is what the chart looks like with everything switched on. You can see the candles, the signal marker, the gold zone, and the stop and targets drawn to the right of the entry. Before we go on, a note about every chart in this bootcamp: they are illustrative, drawn to explain how the strategy works. They are not real market history, and they are not the results of any trade. We will read one piece at a time, starting with the simplest, which is time. Why does the scanner only look at certain hours?"
+    },
+    {
+     "id": "v1-06",
+     "tipo": "capitulo",
+     "cap": "02 · The sessions",
+     "numero": "02",
+     "titulo": "The sessions",
+     "sub": "You only trade inside defined hours",
+     "fala": "Second chapter: the sessions, and why time matters."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "pontos",
+     "cap": "02 · The sessions",
+     "kicker": "Hours in UTC",
+     "titulo": "Three working windows",
+     "itens": [
+      "Asia: 00:00 to 06:00 UTC",
+      "London: 07:00 to 11:00 UTC",
+      "New York: 13:00 to 16:00 UTC",
+      "Outside these windows, the scanner gives no signals"
+     ],
+     "fala": "The scanner's hours are shown in UTC, universal time, which avoids confusion with the clock changes in each country. The Asian session runs from midnight to six in the morning. London runs from seven to eleven. And New York runs from one in the afternoon to four. Notice that there are gaps with no session. Outside these windows, the scanner gives no signals. That is not a defect. It is a rule: the guide only works in the periods where the rules were studied. If your clock is not on UTC, convert before you look at the chart."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · The sessions",
+     "kicker": "Reading 1",
+     "titulo": "Inside and outside the session",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [
+      "cores"
+     ],
+     "camadas": [],
+     "ate": [
+      0.4,
+      0.6
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Look at this stretch of market. There is movement, there are candles, there is a trend. But if you are not inside an active session, the scanner stays silent. There can be a good visual reading, and still no signal. This is one of the simplest and, at the same time, hardest lessons in the bootcamp: a chart can look attractive outside hours, and the strategy is not working in those hours. When you see a strong move outside the session, do not treat it as a signal you missed. Treat it as a move that does not belong to this method."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "comparar",
+     "cap": "02 · The sessions",
+     "kicker": "Switches",
+     "titulo": "Each session, its own switch",
+     "cartoes": [
+      {
+       "t": "Asia",
+       "d": "Switch it on or off in the panel. Outside the window, no signals."
+      },
+      {
+       "t": "London",
+       "d": "Switch it on or off in the panel. Outside the window, no signals."
+      },
+      {
+       "t": "New York",
+       "d": "Switch it on or off in the panel. Outside the window, no signals."
+      }
+     ],
+     "fala": "Each session has its own switch in the settings. You can turn all three on, or turn one off. If you switch off the London session, for example, the scanner keeps working in the Asian and New York sessions, but gives nothing between seven and eleven. Changing the switches is a decision to study calmly, not something to do halfway through the day. If you are just starting, I suggest you leave all three on, and first study how each one behaves."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "capitulo",
+     "cap": "03 · The direction",
+     "numero": "03",
+     "titulo": "The direction",
+     "sub": "A vote of five questions",
+     "fala": "Third chapter: how the scanner decides the direction."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "pontos",
+     "cap": "03 · The direction",
+     "kicker": "The five questions",
+     "titulo": "Five readings of the same price",
+     "itens": [
+      "Price against the session open",
+      "Price against the price one hour ago",
+      "Price against the price four hours ago",
+      "Price against the 200 average",
+      "Price against the 9 average"
+     ],
+     "fala": "The direction comes from a vote of five questions. Each question compares the current price with a reference. The first compares it with the session open. The second with the price one hour ago. The third with the price four hours ago. The fourth with the two-hundred exponential average. And the fifth with the nine-period exponential average. Each one answers buy or sell. No question matters more than the others. What counts is the set, because the scanner is measuring whether the move is consistent across several time scales, not just at one instant."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "comparar",
+     "cap": "03 · The direction",
+     "kicker": "Vote modes",
+     "titulo": "Majority or unanimous",
+     "cartoes": [
+      {
+       "t": "Majority",
+       "d": "A majority of the five questions is enough. It is the replica of the Premium signals."
+      },
+      {
+       "t": "Unanimous",
+       "d": "Only when all five agree. Fewer signals, more demanding."
+      },
+      {
+       "t": "Choice",
+       "d": "Decide before you start, and keep it for weeks."
+      }
+     ],
+     "fala": "The vote has two modes. In Majority mode, it is enough for a majority of the five questions to point the same way. This is the mode that replicates the signals we studied. In Unanimous mode, all five have to agree. It gives fewer signals, and it is more demanding. There is no single right mode for everyone. Pick one, and keep it for several weeks, so that your journal can compare results fairly. Changing mode every two days is the best way never to know what you are testing."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "grafico",
+     "cap": "03 · The direction",
+     "kicker": "Reading 2",
+     "titulo": "The vote decides a buy",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal"
+     ],
+     "ate": [
+      0.6,
+      0.66
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Here the vote decided a buy. The price is above the session open, above where it was an hour ago, and above where it was four hours ago. It is above the two-hundred average, and also above the nine-period average. The five questions point up, or at least most of them do, and the scanner marks the direction. Notice that the signal appears on the close of the fifteen-minute candle. It is not the price moving that triggers it. It is the closed candle, with the vote decided."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "capitulo",
+     "cap": "04 · The zone and the stop",
+     "numero": "04",
+     "titulo": "The zone and the stop",
+     "sub": "Enter on a pullback, do not chase",
+     "fala": "Fourth chapter: the zone, the stop, and the logic of the pullback."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "grafico",
+     "cap": "04 · The zone and the stop",
+     "kicker": "The plan",
+     "titulo": "Gold zone, stop and targets",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "fala": "When the signal appears, the scanner does not tell you to enter at the closing price. It draws a gold zone, and waits for price to return to it. The zone is five dollars wide. The middle of the zone sits four dollars against the price, so the entry is on a pullback. The stop sits five dollars beyond the zone, and the targets are measured from the edge of the zone. The reason is simple: someone who chases price enters far from the point that produced the signal, and the risk becomes bigger than the one drawn. Someone who waits for the pullback enters closer, with a stop that was already defined."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "pontos",
+     "cap": "04 · The zone and the stop",
+     "kicker": "The measures",
+     "titulo": "Five-dollar zone, five-dollar stop",
+     "itens": [
+      "Gold zone five dollars wide",
+      "Middle of the zone four dollars against the price",
+      "Stop five dollars beyond the zone",
+      "The distances can be edited in the settings"
+     ],
+     "fala": "Let us fix the measures. The gold zone is five dollars wide. The middle of the zone sits four dollars against the signal price, and that is where you place the order. The stop sits five dollars beyond the zone, and it does not move with the entry. These distances are the defaults, but they can be edited in the settings. If you change one of them, you change the whole idea. So the first thing to do is keep the guide's measures and watch how the scanner behaves for several weeks, before you touch any number."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "comparar",
+     "cap": "04 · The zone and the stop",
+     "kicker": "The targets",
+     "titulo": "Four targets from the zone",
+     "cartoes": [
+      {
+       "t": "TP1 · 5 $",
+       "d": "Five dollars from the edge of the zone. Half comes out here, and the stop goes to entry."
+      },
+      {
+       "t": "TP2 · 10 $",
+       "d": "Ten dollars from the edge of the zone. A quarter of the position comes out."
+      },
+      {
+       "t": "TP3 and TP4 · 15 $ and 20 $",
+       "d": "The third target at fifteen, and a fourth target at twenty to let the rest run."
+      }
+     ],
+     "fala": "Four targets, always measured from the edge of the zone. The first is five dollars ahead. The second, ten. The third, fifteen. And the fourth, twenty, is there to let the final part of the position run. Each of these targets has an exit percentage attached, which is also editable. By default, half comes out at the first target, and the stop on the remaining part moves to the entry price. We will talk about management later. For now, the important point is that the targets are not random: they are the same distance, measured the same way, on every signal."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "pontos",
+     "cap": "04 · The zone and the stop",
+     "kicker": "Where the rules come from",
+     "titulo": "Study, not a hunch",
+     "itens": [
+      "We measured each signal from the Premium room",
+      "Direction, time, zone, stop and targets",
+      "We turned what they had in common into rules",
+      "The panel applies the rules, not a hunch"
+     ],
+     "fala": "It is worth saying where these rules come from. We took the gold signals published in the Premium room, and measured each one: the direction, the time, the zone, the stop and the targets. Then we looked for what they had in common, and turned that into rules the scanner applies on its own. It is not somebody's opinion about the market. It is a set of measures, with explicit rules, that you can see on the chart and check. That guarantees nothing about the future. But it gives you something many indicators do not: a declared origin, and rules you can read."
+    },
+    {
+     "id": "v1-19",
+     "tipo": "grafico",
+     "cap": "04 · The zone and the stop",
+     "kicker": "Read it yourself first",
+     "titulo": "A sell, read by you",
+     "cenario": "venda",
+     "seed": 11,
+     "base": [
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      0.62
+     ],
+     "zoom": [
+      0,
+      0.3
+     ],
+     "fala": "Now it is your turn. Pause the video and read this chart on your own. Are you inside an active session? Which side is the price on, compared with the session open? And compared with the two-hundred average? How many of the five questions point down? Where would the gold zone sit, and where would the stop go? Answer these questions before you carry on. Done? You are inside a session. Most of the questions point down. The zone sits above the price, because it is a sell on a pullback, and the stop sits five dollars beyond it. Did you get the same reading? Good. In the second video, you will see what comes next."
+    },
+    {
+     "id": "v1-20",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Module 1 summary",
+     "titulo": "What you need to know how to read",
+     "itens": [
+      "Gold, fifteen minutes, inside a session",
+      "Vote of five questions, majority or unanimous",
+      "Five-dollar gold zone, entry on a pullback",
+      "Fixed stop, five dollars beyond the zone",
+      "Four targets, from the edge of the zone"
+     ],
+     "fala": "Summing up the first video. The scanner works only on gold, on the fifteen-minute chart, and only inside the three sessions. The vote of five questions decides the direction, in majority or unanimous mode. The entry happens on a pullback, into a five-dollar gold zone. The stop is fixed, five dollars beyond the zone. And the four targets are measured from the edge of the zone. If you can read these five pieces on the chart, you are ready for the second video."
+    },
+    {
+     "id": "v1-21",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before video 2",
+     "titulo": "Your homework",
+     "itens": [
+      "Choose one session and watch only that one",
+      "Note the five-question vote on ten signals",
+      "For each one, note whether price reached the zone",
+      "Do not trade yet: just observe"
+     ],
+     "fala": "Before the second video, the exercise. Choose one session, and watch only that one. Look back through history for ten signals. For each one, note the five-question vote, and whether price reached the gold zone. Then note whether the stop was hit before the first target. Do not trade yet. This exercise trains your eye to see the vote and the zone the way the scanner sees them, which is worth more than any written explanation."
+    },
+    {
+     "id": "v1-22",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Until video 2",
+     "sub": "Confirmations, entry and management",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this is educational content, and it is not financial advice. Trading gold carries risk, and you can lose part or all of your capital. Practise on a demo account first. See you in the second video.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Premium Scanner · 2/2",
+   "titulo": "Confirmations, order, exits and routine",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 2 of 2",
+     "titulo": "Premium Scanner",
+     "sub": "Confirmations, order, exits and routine",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "In this video",
+     "titulo": "From signal to exit",
+     "itens": [
+      "The four conditions before each signal",
+      "The limit order in the middle of the zone",
+      "Scaling out and stop to entry",
+      "When not to enter",
+      "A short routine for every day"
+     ],
+     "fala": "Welcome to the second video of the Premium Scanner Bootcamp. In the first one, you learned the vote, the zone, the stop and the targets. Now we get practical. We will look at the conditions the scanner requires before each signal, how to place the limit order, what to do if the order is not filled, how to scale out, when not to enter, and a short routine for every day. This is the video with the most rules in sequence. Pause whenever you need to, and go back to the first video's rules when something does not add up."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · Confirmations",
+     "numero": "01",
+     "titulo": "Confirmations",
+     "sub": "Four conditions for every signal",
+     "fala": "First chapter: the conditions a signal has to meet."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "checklist",
+     "cap": "01 · Confirmations",
+     "kicker": "Four conditions",
+     "titulo": "Everything has to line up",
+     "itens": [
+      "You are inside an active session",
+      "The vote is decided: majority, or all five in unanimous mode",
+      "At least half an hour has passed since the previous signal",
+      "There have not yet been six signals in this session"
+     ],
+     "fala": "The scanner only fires when the four conditions are met, on the close of the fifteen-minute candle. The first is that you are inside an active session, whether Asia, London or New York. The second is that the vote is decided. In Majority mode, a majority of the five questions is enough. In Unanimous mode, all five have to agree. The third is that at least half an hour has passed since the previous signal. And the fourth is that there have not yet been six signals in this session. If any of these conditions fails, the scanner gives no signal, and your attention should go elsewhere."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "pontos",
+     "cap": "01 · Confirmations",
+     "kicker": "Pauses and limits",
+     "titulo": "A pause and a cap per session",
+     "itens": [
+      "Half an hour between signals, counted in fifteen-minute candles",
+      "Six signals per session, at most",
+      "The cap is a limit, not a target",
+      "Both values are in the settings"
+     ],
+     "fala": "There are two spacing rules that many people ignore. The pause means you wait at least half an hour between one signal and the next. And the cap means you do not go beyond six signals in the same session. The cap is a limit, not a target. If the scanner gives six signals, that does not mean you should look for more. It means the session has done what it had to do. Both values are in the settings, and they can be adjusted. Before you adjust them, remember that they exist to make the process more predictable, not more aggressive."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "grafico",
+     "cap": "01 · Confirmations",
+     "kicker": "Example",
+     "titulo": "The vote decided, the candle closed",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal"
+     ],
+     "ate": [
+      0.55,
+      0.62
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Look at this buy signal, and go through the conditions. You are inside an active session, because the candle sits in the London window. The vote is decided, because most of the five questions point up. The previous signal was more than half an hour ago, and there have not yet been six signals in this session. And the signal appears on the close of the fifteen-minute candle. Notice that the reading is mechanical. There is nothing to guess. Either the four conditions are met, or they are not."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "comparar",
+     "cap": "01 · Confirmations",
+     "kicker": "Vote modes",
+     "titulo": "Fewer signals, more demanding",
+     "cartoes": [
+      {
+       "t": "Majority",
+       "d": "The replica of the Premium signals. More signals, more noise."
+      },
+      {
+       "t": "Unanimous",
+       "d": "All five questions in agreement. Fewer signals, more demanding."
+      },
+      {
+       "t": "Fair comparison",
+       "d": "Compare one mode only with itself, over weeks."
+      }
+     ],
+     "fala": "Remember the two vote modes. Majority replicates the signals we studied, so it gives more signals. Unanimous requires total agreement, so it gives fewer. Neither is better in absolute terms. The common mistake is to switch mode whenever a signal fails, and then have no data to compare. If you chose Unanimous, stay with Unanimous, and note it in the journal. If you chose Majority, do the same. Only after several weeks with the same mode can you tell whether the vote works for you, at your hours and in your style."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "capitulo",
+     "cap": "02 · Entry",
+     "numero": "02",
+     "titulo": "Entry",
+     "sub": "The limit order in the middle of the zone",
+     "fala": "Second chapter: the entry, with a limit order, on a pullback."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "plano",
+     "cap": "02 · Entry",
+     "kicker": "Steps",
+     "titulo": "From the candle to the order",
+     "linhas": [
+      [
+       "Signal",
+       "Close of the fifteen-minute candle",
+       "entrada"
+      ],
+      [
+       "Order",
+       "Limit in the middle of the gold zone",
+       "entrada"
+      ],
+      [
+       "Validity",
+       "Cancelled if not filled within one hour",
+       "warning"
+      ],
+      [
+       "Lot",
+       "Calculated from the risk you accept to lose",
+       "entrada"
+      ]
+     ],
+     "fala": "Entry follows a clear sequence. The signal appears on the close of the fifteen-minute candle. With the signal, you place a limit order in the middle of the gold zone. That order has a time limit: if it is not filled within four candles, which is one hour, you cancel it. And the lot is calculated from the risk you accept to lose at the stop, not from a fixed number. Notice that these steps are designed so that you do not chase price. The order is already waiting in the right place, and the stop is defined before you enter."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "pontos",
+     "cap": "02 · Entry",
+     "kicker": "The limit order",
+     "titulo": "In the middle of the zone, with a deadline",
+     "itens": [
+      "Place the limit order in the middle of the gold zone",
+      "If it is not filled in four candles, cancel it",
+      "Four fifteen-minute candles make one hour",
+      "After the first hour, that signal has passed"
+     ],
+     "fala": "Let us fix the limit order. You place it in the middle of the gold zone, not at the edge. If price does not reach that level in four candles, which is one hour, you cancel the order. The rule is simple, but it has an important consequence: after the first hour, the signal has passed. If the order was not filled in that time, do not leave it waiting, and do not move it to a more favourable price. Accepting that a signal has passed is part of the discipline, and it is one of the hardest things to train."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "grafico",
+     "cap": "02 · Entry",
+     "kicker": "In practice",
+     "titulo": "Filled in the zone",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Look at the order that was filled. The signal appeared on the candle close, and the limit order waited in the middle of the gold zone. Price pulled back to it, and the order was executed. The stop sits five dollars beyond the zone, and the targets are drawn ahead. From this point on, the chart does not change the plan. What is drawn is what you manage. The entry was on a pullback, not a chase. That difference is what keeps the risk equal to the risk that was planned."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "capitulo",
+     "cap": "03 · Management and exits",
+     "numero": "03",
+     "titulo": "Management and exits",
+     "sub": "Half at the first target, the rest running",
+     "fala": "Third chapter: management, and exits in parts."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "pontos",
+     "cap": "03 · Management and exits",
+     "kicker": "Exits",
+     "titulo": "In parts, with the stop following",
+     "itens": [
+      "Half at the first target, five dollars out",
+      "After TP1, the stop on the remaining part goes to entry",
+      "A quarter at the second target, ten dollars out",
+      "A quarter at the third, fifteen, or let it run to the fourth"
+     ],
+     "fala": "The exit follows a rule in parts, in the order the guide gives. At the first target, five dollars from the edge of the zone, you close half of the position, and the stop on the part that remains moves to the entry price. From here, the remaining part can no longer lose money. At the second target, ten dollars out, you close a quarter. And at the third, fifteen dollars out, you close the last quarter, or you let it run to the fourth target, at twenty dollars. The percentages are editable in the settings. The order of the exits, however, is the one that keeps the position most protected along the way."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "grafico",
+     "cap": "03 · Management and exits",
+     "kicker": "First target",
+     "titulo": "First target, and exit at entry",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano",
+      "setas"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "fala": "See what happens at the first target. Half the position leaves with a profit, and the stop on the remaining part moves to the entry price. Price still pulls back, and reaches the entry. Because the stop was already there, the remaining part exits with no loss. This is one of the situations the guide describes: the first target reached, and an exit at the entry. The final result keeps the part that left at the target, and the remaining position cannot lose money. It is not a trick. It is the sequence written before you entered."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "comparar",
+     "cap": "03 · Management and exits",
+     "kicker": "Stop and settings",
+     "titulo": "Where the stop sits, and what you can adjust",
+     "cartoes": [
+      {
+       "t": "Initial stop",
+       "d": "Five dollars beyond the zone. It is never moved further away."
+      },
+      {
+       "t": "Stop to entry",
+       "d": "After the first target. The remaining part no longer risks anything."
+      },
+      {
+       "t": "Percentages",
+       "d": "Editable in the settings. Change one at a time, with a journal."
+      }
+     ],
+     "fala": "Three points about the stop and the settings. The initial stop sits five dollars beyond the zone, and it is never moved further away, under any circumstances. After the first target, the stop on the remaining part moves to the entry, and that is where the position stops carrying risk. And the exit percentages are editable. If you want to change one, change one at a time, and record the change in the journal. Changing everything at once stops you from knowing what worked and what did not."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "capitulo",
+     "cap": "04 · When not to enter",
+     "numero": "04",
+     "titulo": "When not to enter",
+     "sub": "The cases where the guide says wait",
+     "fala": "Fourth chapter: when not to enter."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "checklist",
+     "cap": "04 · When not to enter",
+     "kicker": "Let it go when",
+     "titulo": "Five situations",
+     "itens": [
+      "On another asset, or another timeframe than fifteen-minute gold",
+      "Outside the sessions, or in a session you switched off",
+      "The order was not filled in the first hour",
+      "With a fixed lot, instead of a lot calculated by risk",
+      "On a real account, before you have trained the rules on demo"
+     ],
+     "fala": "The guide lists five situations where you do not enter. First: on another asset, or on another timeframe. The distances are measured for fifteen-minute gold, and they are not useful for anything else without a new measurement. Second: outside the sessions, or in a session you switched off. Third: when the order was not filled in the first hour. That signal has passed. Fourth: with a fixed lot, instead of a lot calculated by risk. And fifth: on a real account, before you have trained the rules on demo. Any one of these situations is enough not to enter."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "grafico",
+     "cap": "04 · When not to enter",
+     "kicker": "Stop",
+     "titulo": "Filled, but never reaching the target",
+     "cenario": "falha",
+     "seed": 11,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.62,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "See what happens when the trade fails. The sell is filled in the zone, but price does not reach the first target. Instead, it rises and hits the stop, five dollars beyond the zone. The loss was defined before the entry. There is no surprise, and no improvisation. The stop was not moved, and the loss is exactly the one the panel showed. In a method like this, a stop being hit is not an execution error. It is one of the planned outcomes."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "pontos",
+     "cap": "04 · When not to enter",
+     "kicker": "Two possible outcomes",
+     "titulo": "Stop or target, no surprises",
+     "itens": [
+      "The order fills, but price does not reach TP1",
+      "The stop is hit, and the loss was defined",
+      "If TP1 was reached, the rest exits at entry",
+      "In neither case does the stop move further away"
+     ],
+     "fala": "There are two typical outcomes, and both were planned. In the first, the order is filled, but price does not reach the first target, and it hits the stop. You lose what was defined before the entry. In the second, price reaches the first target, half comes out with a profit, and the rest returns to the entry without a loss. In both cases, the stop does not move further away. This is the rule that protects the process most, and the one that creates the most temptation when a trade is going badly. Do not break it."
+    },
+    {
+     "id": "v2-19",
+     "tipo": "grafico",
+     "cap": "04 · When not to enter",
+     "kicker": "Up to the third target",
+     "titulo": "When the trend keeps going",
+     "cenario": "compra",
+     "seed": 21,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "plano",
+      "setas"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "fala": "This is the case where the trend keeps going. The order is filled in the zone, price rises, and the first target is reached. Half comes out, and the stop on the remaining part moves to the entry. Price keeps going, reaches the second target, and then the third. At each step, the decision had already been taken. There is no improvisation, and no change of rules in the middle. The position closes as the plan said, and the result is the sum of the parts. This only works if every step was written down before you entered."
+    },
+    {
+     "id": "v2-20",
+     "tipo": "pontos",
+     "cap": "05 · Journal",
+     "kicker": "Log",
+     "titulo": "Measure in R, and log the mode",
+     "itens": [
+      "Date, time, session and direction",
+      "Vote mode and the five questions",
+      "Result in R, and whether you followed the plan",
+      "How many signals there were in that session"
+     ],
+     "fala": "After each trade, log it in the journal. Write down the date, the time, the session and the direction. Write down the vote mode, and which side the five questions were on. Measure the result in R, because it is comparable from one trade to the next. Answer whether you followed the plan. And write down how many signals there were in that session, because the cap of six can change the reading of the day. After a few weeks, the journal tells you which session and which mode serve you best. Nobody can give you that number. Only your journal can."
+    },
+    {
+     "id": "v2-21",
+     "tipo": "capitulo",
+     "cap": "05 · Routine",
+     "numero": "05",
+     "titulo": "A short routine",
+     "sub": "Consistency beats intensity",
+     "fala": "Fifth chapter: the routine for every day."
+    },
+    {
+     "id": "v2-22",
+     "tipo": "checklist",
+     "cap": "05 · Routine",
+     "kicker": "Every day",
+     "titulo": "Fifteen minutes, five steps",
+     "itens": [
+      "Look at today's sessions, in UTC",
+      "Confirm the switches are set the way you decided",
+      "Look at the vote on the fifteen-minute chart",
+      "Review open and cancelled orders",
+      "Update the journal"
+     ],
+     "fala": "The routine fits in fifteen minutes. First, you look at today's sessions, in UTC, and which ones are switched on. Second, you confirm that the switches are set the way you decided. Third, you look at the vote on the fifteen-minute chart. Fourth, you review the open and the cancelled orders, and apply the management we have seen. Fifth, you update the journal. For the rest of the day, the scanner works on its own. You do not need to be glued to the screen. You need to be consistent, and to respect the limits you wrote down beforehand."
+    },
+    {
+     "id": "v2-23",
+     "tipo": "pontos",
+     "cap": "Summary",
+     "kicker": "Pocket checklist",
+     "titulo": "The complete Premium Scanner process",
+     "itens": [
+      "Gold on fifteen minutes, inside the session",
+      "Arrow on the close of the candle",
+      "Limit order in the middle of the zone, cancelled after one hour",
+      "Lot calculated by risk",
+      "Half at the first target, stop at entry",
+      "A quarter at the second, a quarter at the third"
+     ],
+     "fala": "To finish, the pocket checklist. Gold on fifteen minutes, inside the session. Arrow on the close of the candle. Limit order in the middle of the zone, cancelled after one hour. Lot calculated by risk. Half at the first target, with the stop at entry. And a quarter at the second, and a quarter at the third. If you follow these steps every time, even when it is tedious, you are ahead of many people who trade without a process. There are no promises in this list. There is discipline, and discipline depends on you."
+    },
+    {
+     "id": "v2-24",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Premium Scanner Bootcamp complete",
+     "sub": "morethanmoney.pt",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Educational content, not financial advice. Trading gold carries risk, and you can lose money. Define your risk before each entry and practise on a demo account. See you next time.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

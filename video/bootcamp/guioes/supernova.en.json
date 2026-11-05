@@ -1,0 +1,507 @@
+{
+ "estrategia": "Supernova",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#22A06B",
+  "bear": "#D64545"
+ },
+ "ui": {
+  "nivel": "Level",
+  "compra": "Buy",
+  "venda": "Sell",
+  "entrada": "Entry",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  ["TradingView", "Trading View"],
+  ["US30", "U S thirty"],
+  ["NAS100", "N A S one hundred"],
+  ["Sell", "Sell"],
+  ["Buy", "Buy"],
+  ["TP1", "T P one"],
+  ["TP2", "T P two"]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [2],
+  "rotulos": ["Target"]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Supernova · 1/2",
+   "titulo": "What it is and how to read it",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Video 1 of 2",
+     "titulo": "Supernova",
+     "sub": "What it is and how to read every element",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "The star gives the warning. <span class='ouro'>Three confirmations</span> give the entry.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Hi, I'm Ricardo Garcia, and this is the Supernova Bootcamp, the MoreThanMoney strategy that looks for impulsive reversals. Before we start, one idea that will run through both videos: the star gives you a warning, but it is not an entry. An entry only exists when three confirmations have happened, in order, and the signal appears with the Sell or Buy label. This bootcamp is short and practical. In the first video we look at what Supernova is and how to read every element on the chart. In the second we look at the signal, the plan, the management, the situations where you should not enter, and a routine for practising on a demo account. There are no shortcuts here. The goal is for you to be able to read the indicator before you risk a single cent. We will go step by step, and without rushing."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "The plan of the bootcamp",
+     "titulo": "Two videos, one method",
+     "itens": [
+      "Video 1 · What Supernova is and how to read it",
+      "Video 2 · Signal, plan, management and routine"
+     ],
+     "fala": "The bootcamp has two videos. This first one is the map: what Supernova is, where the name comes from, and how to read each piece of the chart, from the star to the circle on the right. The second one is the practice: how a full signal is born, how you define the plan before entering, what the source says about management, the cases where you do not enter, and a simple routine for practising on a demo account. Watch the videos in order. The second one assumes you already recognise everything in this first one. If there is a piece you do not understand, go back before moving on. Do not worry about memorising numbers or colour rules. Focus on recognising patterns, and on separating clearly what is a warning from what is a signal. That separation is, at heart, the goal of the whole bootcamp."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · What Supernova is",
+     "numero": "01",
+     "titulo": "What Supernova is",
+     "sub": "Impulsive reversals on a short timeframe",
+     "fala": "Chapter one. So what exactly is Supernova?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · What Supernova is",
+     "kicker": "In a few words",
+     "titulo": "Against the trend, on purpose",
+     "itens": [
+      "Impulsive reversals, usually against the larger trend",
+      "The name comes from the stars of the house base scanner",
+      "The stars were adapted for entries, with extra rules",
+      "A star on its own is not an entry signal"
+     ],
+     "fala": "Supernova is the MoreThanMoney indicator for TradingView that looks for impulsive reversals. Pay attention to the word impulsive. The aim is not to catch any pullback. The aim is to catch the moment when the chart starts pushing in the opposite direction with real force. Most of the time, you are trading against the larger trend. The indicator looks for the point where the dominant move loses its momentum and the opposite move gains strength. The name comes from the stars of the house base scanner. In the past, those stars were used to find the exit of a move. Now they have been adapted for entries, with extra rules designed to avoid long runs of losses. But there is one rule you need to write down right away: a star, on its own, is not an entry signal. The full signal only appears after three confirmations have been met, one after the other, and that is what separates this strategy from someone who enters on impulse."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "capitulo",
+     "cap": "02 · The chart elements",
+     "numero": "02",
+     "titulo": "Reading every element",
+     "sub": "Stars, labels, the average and the circle",
+     "fala": "Chapter two. Let us read every element on the chart, one at a time."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "grafico",
+     "cap": "02 · The chart elements",
+     "kicker": "First look",
+     "titulo": "Star and Sell label",
+     "cenario": "venda",
+     "seed": 7,
+     "base": ["cores"],
+     "camadas": ["medias", "sinal"],
+     "ate": [0.6, 0.7],
+     "zoom": [0, 0.4],
+     "estrelas": "Sell · three candles",
+     "fala": "This chart is illustrative. It is there to explain how the indicator works. It is not a real result, and it is not a market history. Let us look at a sell. At the top, a red star appears. That is the first warning, and it is not an entry yet. A few candles later, the Sell label appears, with a yellow bar on the breakout candle. That label is the full signal. Notice that the star and the label are different things. The star can appear several times while the move continues, and not all of them ever get a label. The circle on the right of the chart shows the last sell signal. In this example, there is no active signal. We will learn the rules one by one, without skipping any."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "pontos",
+     "cap": "02 · The chart elements",
+     "kicker": "Quick reading",
+     "titulo": "Five pieces on the chart",
+     "itens": [
+      "Red star above or green star below: the warning",
+      "Sell or Buy label: the full signal",
+      "Yellow bar on the breakout candle",
+      "Fifty average: the reference for the breakout",
+      "Large circle on the right: the last signal"
+     ],
+     "fala": "Let us fix the pieces, one at a time. One, the star. A red star above the chart is a sell warning, and a green star below is a buy warning. Two, the Sell or Buy label. It is the full signal, and it only appears once every confirmation has been met. Three, the yellow bar, which marks the breakout candle, the candle where the label appears. Four, the fifty average. It is the reference for the breakout. On a sell, the price has to close below it. On a buy, above it. Five, the large circle on the right. It shows the last signal: green for Buy, red for Sell. And there is one rule that sums all of this up: a star without a label is not a signal. It is the rule you will see broken most often by beginners, and also the one that protects you most from rushed entries."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "03 · The confirmations",
+     "kicker": "Sell rule",
+     "titulo": "Three candles and the break",
+     "cenario": "venda",
+     "seed": 11,
+     "base": ["cores"],
+     "camadas": ["medias", "sinal"],
+     "ate": [0.5, 0.66],
+     "zoom": [0, 0.3],
+     "estrelas": "Sell",
+     "fala": "Now the full rule for a sell. It starts with the red star. Then come three red candles in a row, within ten candles counting from the star. The star's own candle can count as one of them. Finally, the break: the price has to break and close below the fifty average. Only at that moment does the Sell label appear, on the breakout candle. Notice the order, because it matters. First the three candles, then the break and the close below the average. If the three candles arrive after the tenth candle from the star, it is already too late. If candles of the opposite colour appear between them and the break and interrupt the sequence, the move has stopped being impulsive. The rule is not a suggestion about how to read a chart. It is a sequence, and each step depends on the one before it."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "grafico",
+     "cap": "03 · The confirmations",
+     "kicker": "Buy rule",
+     "titulo": "The mirror of the sell",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["cores"],
+     "camadas": ["medias", "sinal"],
+     "ate": [0.5, 0.66],
+     "zoom": [0, 0.3],
+     "estrelas": "Buy",
+     "fala": "The mirror image of the sell is the buy. A green star below the chart. Then three green candles in a row, within ten candles counting from the star. And finally the break, with a close above the fifty average. The Buy label appears on the breakout candle. Everything is reversed, but the logic is the same. Something you should feel from the start: a buy after a drop is also a reversal, and it carries the same risks as a sell. It is not safer just because it points in the same direction as the bigger trend above it. The source applies the same rule to both sides, and you should apply the same discipline to both sides too. If you only practise one side, you are only looking at half of the indicator."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "capitulo",
+     "cap": "03 · The confirmations",
+     "numero": "03",
+     "titulo": "The three confirmations",
+     "sub": "In this order, without skipping any",
+     "fala": "Chapter three. The three confirmations, in the order they appear."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "pontos",
+     "cap": "03 · The confirmations",
+     "kicker": "The order is the rule",
+     "titulo": "Star, candles, break",
+     "itens": [
+      "Star: the warning, it can reappear while the move continues",
+      "Three candles in a row of the same colour, within ten candles of the star",
+      "Break and close of the fifty average, after the three candles",
+      "Only then does the Sell or Buy label appear"
+     ],
+     "fala": "The order is the rule. First, the star. A red star appears on a sell, or a green one on a buy. It is only a warning, and it can reappear while the move continues. Second, three candles in a row of the same colour. Three red ones on a sell, three green ones on a buy. They must sit within ten candles of the star, and the star's own candle can count. Third, the break and the close of the fifty average. On a sell, the price has to break and close below it. On a buy, above it. Only after this last confirmation does the label appear. So when you see a star, your job is not to enter. Your job is to wait, count the candles, and see whether the break happens. Often nothing happens, and that is information too. Someone who understands that the star is a warning stops chasing every single one of them."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "comparar",
+     "cap": "03 · The confirmations",
+     "kicker": "Legend",
+     "titulo": "Four pieces, four jobs",
+     "cartoes": [
+      {
+       "t": "Star",
+       "d": "Red above for a sell, green below for a buy. It is only a warning."
+      },
+      {
+       "t": "Sell or Buy label",
+       "d": "The full signal, once the three confirmations are met."
+      },
+      {
+       "t": "Reference lines",
+       "d": "Drawn by the indicator. They are chart references, not orders."
+      },
+      {
+       "t": "Circle on the right",
+       "d": "The last signal. Green for Buy, red for Sell."
+      }
+     ],
+     "fala": "Let us put the legend together in one glance. The star is the warning. It sits above the chart for a sell and below it for a buy. The Sell or Buy label is the full signal, and the yellow bar marks the breakout candle. The reference lines are drawn by the indicator, and they give you visual reference points on the chart. They are not entry orders and not exit orders. And the large circle on the right shows the last signal, green for Buy and red for Sell. If you are ever unsure about a chart, go back to this legend and ask yourself one simple question: is this a warning, a signal, or just a reference? Asking that question every time prevents most reading mistakes."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "capitulo",
+     "cap": "04 · Reading mistakes",
+     "numero": "04",
+     "titulo": "What the chart does not tell you",
+     "sub": "The most common mistakes of beginners",
+     "fala": "Chapter four. The most common reading mistakes, so you do not fall into them."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "pontos",
+     "cap": "04 · Reading mistakes",
+     "kicker": "Three traps",
+     "titulo": "What to avoid from the start",
+     "itens": [
+      "Entering just because a star appeared",
+      "Thinking that against the trend is always a reversal",
+      "Using Supernova on any asset, at any time"
+     ],
+     "fala": "Three traps come up again and again. First, entering just because a star appeared. The star is the warning, not the decision. Second, thinking that trading against the trend is always a reversal. A reversal only exists when the confirmations have been met. Without them, it is just a move that has not said anything yet, and it can carry on in exactly the same direction. Third, using Supernova on any asset and at any time of day. The source refers to its use on high-volume assets and during good-volume hours. On slower assets, the move tends to crawl, and the three candles and the break may not happen within the window the rule requires. So choose the asset and the hour carefully before you look at the first star of the day. That choice is yours, and it is part of your process, not a detail you can skip."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Video 1 summary",
+     "titulo": "Read before you act",
+     "itens": [
+      "Star: it is the warning, never the entry",
+      "Three candles of the same colour, within ten candles of the star",
+      "Break and close of the fifty average",
+      "Sell or Buy label: only then does a signal exist"
+     ],
+     "fala": "A quick recap of the first video. The star gives the warning. The three candles and the break of the fifty average are the confirmations, in that order. The Sell or Buy label is the signal, and the circle on the right shows the last one. Before we move on to the second video, here is a simple rule to keep: if you cannot point to the three confirmations on the chart, there is no signal yet, however good the star looks."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before video 2",
+     "titulo": "Your homework",
+     "itens": [
+      "Pick one asset and one hour, preferably with high volume",
+      "Find five stars in the history",
+      "For each one, check the three candles and the break",
+      "Note whether the label appeared, without trading"
+     ],
+     "fala": "Before the second video, you have an exercise. Pick one asset and one hour, preferably with high volume. Look back through the history for five stars. For each one, check whether there were three candles in a row of the same colour and a break of the fifty average, and note whether the label appeared. Do not trade. Just observe and record. Then reflect: how many stars were left without a label? What did they have in common? This exercise trains your eye to tell the difference between a warning and a signal, which is the most important part of this bootcamp. Anyone who does this work arrives at the second video with much more concrete questions, and that saves time and money."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "aviso",
+     "cap": "Warning",
+     "titulo": "Until video 2",
+     "sub": "Signal, plan, management and routine",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto carries high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this content is educational and is not financial advice. Trading carries high risk, and you can lose part or all of your capital. Always practise on a demo account first. See you in the second video.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Supernova · 2/2",
+   "titulo": "Signal, plan, management and routine",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Video 2 of 2",
+     "titulo": "Supernova",
+     "sub": "Signal, plan, management and routine",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "In this video",
+     "titulo": "From warning to decision",
+     "itens": [
+      "The full signal sequence",
+      "The plan: entry, stop and target",
+      "What the source says about management",
+      "When not to enter",
+      "A routine for practising on demo"
+     ],
+     "fala": "Welcome to the second video of the Supernova Bootcamp. In the first one, you learned to read every piece of the chart: the star, the three confirmations, the fifty average, the label and the circle. Now we are going to use that reading to make a decision. We will walk through the full sequence of a signal, from the first warning to the label. Then the plan you have to define before you enter: the entry, the stop and the target, using the example the source gives on the US30. We will talk about management, and about everything the source mentions without detailing, because there the rule has to be yours. After that, the situations where you do not enter, which are at least as important as the signals. And at the end, a simple routine for practising on a demo account before any real money is involved."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · The signal",
+     "numero": "01",
+     "titulo": "From warning to signal",
+     "sub": "Star, three candles and the break",
+     "fala": "Chapter one. How a signal is born, from start to finish."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "grafico",
+     "cap": "01 · The signal",
+     "kicker": "Full sequence",
+     "titulo": "A sell, step by step",
+     "cenario": "venda",
+     "seed": 11,
+     "base": ["cores"],
+     "camadas": ["medias", "sinal", "plano"],
+     "ate": [0.45, 0.7],
+     "zoom": [0, 0.5],
+     "estrelas": "Sell · three candles",
+     "fala": "Let us follow a sell from beginning to end. First, the warning: the red star appears at the top. From here, your job is to count. Do you see three red candles in a row? Are they within ten candles counting from the star? If so, the next step is to look at the fifty average. Does the price break it and close below? At that moment, the Sell label appears on the breakout candle, with the yellow bar. Only now does a signal exist. And this is when you draw the plan, not before. Notice that the plan comes after the signal, never before it. Before the signal, the indicator has not given you anything to plan around. This detail may look small, but it is what separates a decision from a guess."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "pontos",
+     "cap": "01 · The signal",
+     "kicker": "Step by step",
+     "titulo": "In this order",
+     "itens": [
+      "Star: it is the warning, you do nothing yet",
+      "Three candles of the same colour, within ten candles of the star",
+      "Break and close of the fifty average",
+      "Sell or Buy label: that is when a signal exists"
+     ],
+     "fala": "Let us turn the sequence into a working list. One, the star appears. You do nothing yet. Two, you count the candles. You need three candles in a row of the same colour, within ten candles counting from the star, and the star's own candle can count. If the sequence is interrupted by a candle of the opposite colour, the move is no longer impulsive, and the reading changes. Three, you wait for the break. The price has to break and close on the correct side of the fifty average. Four, the label. Only when the Sell or Buy label appears does a signal exist. None of these steps is skipped, and none is done early. The order is what gives the method its consistency."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "capitulo",
+     "cap": "02 · The plan",
+     "numero": "02",
+     "titulo": "The plan before the entry",
+     "sub": "Stop, target and size, defined in advance",
+     "fala": "Chapter two. The plan, defined before any entry."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "plano",
+     "cap": "02 · The plan",
+     "kicker": "Source example, US30",
+     "titulo": "Fifty stop, hundred target",
+     "linhas": [
+      ["Star", "Only a warning, not an entry", ""],
+      ["Signal", "Sell or Buy label on the breakout candle", "entrada"],
+      ["Stop", "Fifty pips in the US30 example", "sl"],
+      ["Target", "One hundred pips in the US30 example", "tp"]
+     ],
+     "fala": "This is the example the source gives on the US30. After the label, the entry. The stop sits at fifty pips, and the target at one hundred pips. That gives a risk to reward ratio of one to two: you risk fifty to try to make one hundred. Look carefully at what this means. It is not a promise that the target will be hit. It is a way of deciding, before you enter, how much you are willing to lose and how much you are looking to make. And there is one rule that is not negotiable: define the stop, the target and the position size before you enter, never after. Someone who changes the plan halfway through the trade is deciding with emotion, not with the method. The US30 example is a starting point. Your own numbers depend on your capital and your risk plan."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "pontos",
+     "cap": "02 · The plan",
+     "kicker": "A wide stop, on purpose",
+     "titulo": "Why the stop is wide",
+     "itens": [
+      "Against the trend, the price can pull back before it moves on",
+      "A stop that is too tight risks being caught in that pullback",
+      "Each asset has its own parameters, so test on demo",
+      "Position size comes from your risk plan"
+     ],
+     "fala": "Many people think a fifty pip stop is too wide, and that reaction is understandable. But here is the logic. Because the entry goes against the larger trend, the price can pull back to a support zone before it continues in the direction of the signal. A stop that is too tight risks being caught in that pullback, even if the idea was right. So the wide stop is a deliberate choice. But be careful: the source mentions that, on the NAS100, one educator uses a tighter stop. The source does not set rules for the other assets. Each asset behaves differently, and the only way you will get to know it is by testing on demo, with records. Finally, position size. That number comes from your risk plan, and not from wanting to win back a loss."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "capitulo",
+     "cap": "03 · Management",
+     "numero": "03",
+     "titulo": "Managing the trade",
+     "sub": "What the source says, and what it does not",
+     "fala": "Chapter three. Management, with care about what is said and what is not."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "pontos",
+     "cap": "03 · Management",
+     "kicker": "What the source mentions",
+     "titulo": "Break-even, support and trailing",
+     "itens": [
+      "Break-even: mentioned, without detailed rules",
+      "Protection near a support level: mentioned, without detail",
+      "Trailing as an alternative approach: mentioned, without detail",
+      "If you use any of these, define your rules first"
+     ],
+     "fala": "Let us be rigorous here. The source mentions three ways of managing a trade once you are in. Break-even, meaning moving the stop to the entry. Protection near a support level. And trailing, as an alternative. But the source does not detail them. It does not say when, how much, or under which conditions. And that is exactly where most beginners get lost, because each person invents their own rule at the moment the trade is going badly or very well. If you want to use any of these, write your rules down first, with the exact trigger, and test them on demo. Without your own written rules before you enter, management becomes an emotional reaction. That is not management. It is improvisation with real money."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "comparar",
+     "cap": "03 · Management",
+     "kicker": "Where the source uses it",
+     "titulo": "Assets and notes from the source",
+     "cartoes": [
+      {
+       "t": "US30",
+       "d": "Where the parameters of the main example were defined."
+      },
+      {
+       "t": "NAS100",
+       "d": "High volume. One educator uses a tighter stop."
+      },
+      {
+       "t": "Bitcoin",
+       "d": "Reversal against the trend on a high-volume asset."
+      },
+      {
+       "t": "Gold",
+       "d": "Works well, according to the source, but needs more testing."
+      }
+     ],
+     "fala": "Let us look at the assets where the source presents it, and with how much care. The US30 is where the parameters of the main example were defined. The NAS100 also appears as a high-volume asset, and one educator uses a tighter stop there. Bitcoin appears as another example of a reversal against the trend. And gold: the source says it works well, but that it needs more testing, and it recommends going slowly. Notice what this means. Being on a list is not a guarantee. Each asset needs a period of observation on demo, with records, before any decision. And remember that short timeframes and good-volume hours are part of the strategy, just like the assets are."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "capitulo",
+     "cap": "04 · When not to enter",
+     "numero": "04",
+     "titulo": "When not to enter",
+     "sub": "The most important part of the method",
+     "fala": "Chapter four. The cases where the right decision is not to enter."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "grafico",
+     "cap": "04 · When not to enter",
+     "kicker": "Failure",
+     "titulo": "A star without a signal",
+     "cenario": "falha",
+     "seed": 21,
+     "base": ["cores", "medias"],
+     "camadas": [],
+     "ate": [0.6, 0.6],
+     "zoom": [0, 0.2],
+     "estrelas": "Star without a label",
+     "fala": "This chart shows what happens with many stars. There are red and green stars, but none of them has a label. Why? Because either the three candles in a row within ten candles did not all happen, or the break and close of the fifty average did not happen in the right order. You do not enter. And the job here is to accept that most stars never turn into a signal. If you only look at the stars, it seems there are opportunities everywhere. If you look at the confirmations, you realise there are far fewer. The source says a signal is only taken after the three confirmations have been met. Without them, the chart is telling you to wait, and the best decision is exactly that. Notice, too, that a star without a label does not oblige you to do anything. You do not have to close a position, and you do not have to chase a late entry so you do not miss the move. Without a signal, there is no trade, and there is no loss to regret. Many beginners feel they are losing something when they let a star pass. They are not. They are doing exactly what the method asks."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "checklist",
+     "cap": "04 · When not to enter",
+     "kicker": "Do not enter if",
+     "titulo": "Cases where you do not enter",
+     "itens": [
+      "There is only a star, without the three candles and the break",
+      "The candles and the break do not happen in the right order",
+      "Candles of the opposite colour break the sequence",
+      "The three candles come after the tenth candle from the star",
+      "There are ten candles in a row of the same colour",
+      "You are outside good-volume hours or on a slow asset",
+      "You are on a live account without prior demo training"
+     ],
+     "fala": "Now the list of cases where you do not enter, which is one of the most useful parts of this bootcamp. Do not enter if there is only a star, without the three candles and the break. Do not enter if the candles and the break do not happen in the right order. Do not enter if candles of the opposite colour break the sequence, because the move has stopped being impulsive. Do not enter if the three candles arrive after the tenth candle from the star, because it is already too late. Do not enter if there are ten candles in a row of the same colour, because the price may already be reversing. Do not enter outside good-volume hours, or on slow assets. And do not enter a live account without prior training on demo. The list is short, but every line costs money to the people who ignore it. Print it and stick it next to your screen."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "capitulo",
+     "cap": "05 · Routine",
+     "numero": "05",
+     "titulo": "A routine on demo",
+     "sub": "Training before any real risk",
+     "fala": "Chapter five. A simple routine, designed to train before you risk anything."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "pontos",
+     "cap": "05 · Routine",
+     "kicker": "The routine",
+     "titulo": "A process you repeat",
+     "itens": [
+      "Pick a high-volume asset and a good-volume hour",
+      "Wait for the star and the three candles",
+      "Define stop, target and size before you enter",
+      "Record every signal in a notebook or spreadsheet",
+      "Only after weeks on demo, think about a live account"
+     ],
+     "fala": "Let us build a routine that fits into your day. First, pick a high-volume asset and a good-volume hour, and keep that choice for a few weeks. Then wait for the star and the three candles. If they do not appear, there is nothing to do, and that is a valid routine. When a full signal appears, define the stop, the target and the position size before you enter. Record everything in a notebook or a spreadsheet: the date, the asset, the time, the signal, the plan and what happened. Recording is the part almost nobody does, and it is the part that teaches you the most. Only after several weeks on demo, with consistent records and rules you actually followed, should you think about a live account, and even then, with a small risk that you defined in advance. And if a week goes badly, do not change the method halfway through. Look at your records, work out whether the failure was in the reading, the plan or the discipline, and only then adjust one thing at a time."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "frase",
+     "cap": "Closing",
+     "texto": "The star gives the warning. <span class='ouro'>Discipline</span> makes the entry.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "We have reached the end of the bootcamp. You are leaving with two ideas. The first: the star is a warning, and the signal only exists after the three confirmations, in order. The second: the plan, the management and the cases where you do not enter are as important as the signal, and they are what keeps your account alive. There is no shortcut, and no indicator that decides for you. What Supernova gives you is a clear reading sequence. The rest is practice, records and patience. Good luck on your path, and remember: demo first, and only then, if it makes sense, anything else."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "aviso",
+     "cap": "Warning",
+     "titulo": "End of the bootcamp",
+     "sub": "Education, not advice",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto carries high risk, and you can lose part or all of your capital. The charts in this bootcamp are illustrative. Past results do not guarantee future results.",
+     "fala": "Last warning. This content is educational and is not financial advice. Trading carries high risk, and you can lose part or all of your capital. Define your risk before every entry, and practise on a demo account first.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,655 @@
+{
+ "estrategia": "TrendShot",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#1E4FD8",
+  "bear": "#C0262D"
+ },
+ "ui": {
+  "nivel": "Nível",
+  "compra": "Compra",
+  "venda": "Venda",
+  "entrada": "Entrada",
+  "tp1": "Alvo",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  [
+   "XAUUSD",
+   "ouro dólar"
+  ],
+  [
+   "US30",
+   "U S trinta"
+  ],
+  [
+   "BTC",
+   "B T C"
+  ],
+  [
+   "POC",
+   "P O C"
+  ],
+  [
+   "TradingView",
+   "Trading View"
+  ]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [
+   2
+  ],
+  "rotulos": [
+   "Alvo"
+  ]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp TrendShot · 1/2",
+   "titulo": "O que é o TrendShot e como se lê",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 1 de 2",
+     "titulo": "TrendShot",
+     "sub": "O que é e como se lê o gráfico",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "O cruzamento dá o sinal. <span class='ouro'>A tendência dá a direção.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Olá, sou o Ricardo Garcia e este é o Bootcamp TrendShot da MoreThanMoney. São dois vídeos. Neste primeiro vamos perceber o que é o TrendShot e como se lê cada elemento do gráfico. O TrendShot é um sistema de scalping que segue a tendência. Entra sempre na direção em que o mercado já se está a mover, e trabalha sobretudo nos gráficos de um e de cinco minutos. Antes de começarmos, uma ideia que vai atravessar tudo: o sinal é o gatilho, mas não é a decisão. A decisão depende de confirmações que vais aprender a validar. Vamos por partes."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "O plano do bootcamp",
+     "titulo": "Dois vídeos, um processo",
+     "itens": [
+      "Vídeo 1 · O sistema e cada elemento do gráfico",
+      "Vídeo 2 · Sinal, confirmações, gestão e rotina"
+     ],
+     "fala": "O bootcamp tem dois vídeos. No primeiro, vais perceber o sistema, os mercados em que trabalha e o que significa cada elemento que aparece no gráfico: o triângulo do cruzamento, o histograma de fundo, as estrelas, a estrutura automática, a média 238, o POC e o volume. No segundo, entramos na decisão: as quatro confirmações, a entrada, o stop, o alvo, a gestão quando aparece uma estrela de reversão, quando não entrar e uma rotina para a tua sessão. Vê os vídeos por ordem. Cada um assenta no anterior."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · O que é o TrendShot",
+     "numero": "01",
+     "titulo": "O que é o TrendShot",
+     "sub": "Scalping a favor da tendência",
+     "fala": "Primeiro capítulo: o que é, afinal, o TrendShot?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · O que é o TrendShot",
+     "kicker": "Em poucas palavras",
+     "titulo": "Scalping que segue o movimento",
+     "itens": [
+      "Entra sempre na direção em que o mercado já se move",
+      "O guia chama-lhe pip surfing: surfar o movimento",
+      "Operações de minutos, no máximo poucas horas",
+      "Ativos: índices como o US30, ouro, BTC e pares de forex"
+     ],
+     "fala": "O TrendShot é um sistema de scalping que segue a tendência. A ideia é simples de dizer e exige disciplina para executar: entras sempre na direção em que o mercado já se está a mover. O guia chama-lhe pip surfing, que é uma forma de surfar o movimento enquanto ele dura. As operações são de minutos, no máximo de poucas horas. Não é um sistema para segurar um trade durante dias. Quanto aos ativos, o guia indica índices como o US30, o ouro, no par XAUUSD, o BTC e pares de forex. O sistema é o mesmo em todos. Muda o comportamento de cada mercado, e tu vais aprendê-lo com a prática em demonstração."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "checklist",
+     "cap": "01 · O que é o TrendShot",
+     "kicker": "Antes de começar",
+     "titulo": "O que precisas",
+     "itens": [
+      "Uma conta de demonstração na tua corretora",
+      "Acesso ao TrendShot by MTM, pela MoreThanMoney",
+      "Gráficos de 1 e de 5 minutos",
+      "Um caderno ou folha para o diário",
+      "Disponibilidade para estar presente nas sessões"
+     ],
+     "fala": "Antes de avançarmos, o que precisas. Uma conta de demonstração na tua corretora, porque tudo o que aprendes deve ser treinado sem dinheiro real primeiro. O acesso ao TrendShot by MTM, pela MoreThanMoney. Gráficos de um e de cinco minutos, porque é aí que o sistema trabalha. Um caderno ou uma folha para o diário. E disponibilidade para estar presente nas sessões, porque um sistema de scalping não se acompanha bem de passagem. Se não consegues estar presente, o TrendShot pode não ser o teu estilo, e isso é uma escolha honesta."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "capitulo",
+     "cap": "02 · Ler o gráfico",
+     "numero": "02",
+     "titulo": "Ler o gráfico, peça a peça",
+     "sub": "Cruzamento, histograma, estrelas e estrutura",
+     "fala": "Segundo capítulo: como se lê o gráfico, peça a peça."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "grafico",
+     "cap": "02 · Ler o gráfico",
+     "kicker": "Primeiro olhar",
+     "titulo": "O gráfico com tudo ligado",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "medias",
+      "cores",
+      "estrutura",
+      "poc"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.7,
+      0.7
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Cruzamento 20/50",
+     "fala": "Este é o gráfico com tudo ligado, numa compra. Uma nota que digo uma só vez neste bootcamp: os gráficos que vês são ilustrativos. Servem para explicar a leitura. Não são resultados reais nem histórico de mercado. Agora, o que vês. As duas médias exponenciais, a vermelha de vinte e a azul de cinquenta, que se cruzam para dar o sinal. O fundo colorido, que mostra a direção. As linhas horizontais, que são a estrutura automática de suportes e resistências. A linha dourada tracejada, que é o POC. E o triângulo, que marca o cruzamento. As linhas do plano aparecem depois. Vamos ver cada elemento separadamente, porque cada um responde a uma pergunta diferente."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "pontos",
+     "cap": "02 · Ler o gráfico",
+     "kicker": "O sinal",
+     "titulo": "O cruzamento 20/50",
+     "itens": [
+      "Média vermelha de 20 cruza para cima da azul de 50: triângulo azul, compra",
+      "Cruza para baixo: triângulo vermelho, venda",
+      "Cada troca marca uma mudança curta de direção",
+      "O cruzamento é o gatilho, não a decisão"
+     ],
+     "fala": "O sinal nasce do cruzamento de duas médias exponenciais. A vermelha, de vinte, e a azul, de cinquenta. Quando a vermelha cruza para cima da azul, aparece um triângulo azul: é um sinal de compra. Quando cruza para baixo, aparece um triângulo vermelho: é um sinal de venda. Cada troca marca uma mudança curta de direção, e é por isso que o sistema trabalha em minutos. Mas repara numa frase do guia que vale a pena guardar: o cruzamento é o gatilho, não a decisão. O triângulo diz-te que algo mudou. Não diz que deves entrar. A decisão só existe depois das confirmações, e são elas que vamos aprender no segundo vídeo."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "grafico",
+     "cap": "02 · Ler o gráfico",
+     "kicker": "A direção de fundo",
+     "titulo": "O histograma de fundo",
+     "cenario": "venda",
+     "seed": 11,
+     "base": [
+      "medias",
+      "cores"
+     ],
+     "camadas": [
+      "sinal"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Fundo vermelho",
+     "fala": "O histograma de fundo mostra a direção. Está azul enquanto a média de vinte está acima da de cinquenta, e é tendência de alta. Quando a de vinte passa abaixo da de cinquenta, o fundo fica vermelho, e é tendência de baixa. Com fundo azul, procuras compras. Com fundo vermelho, procuras vendas. E o guia pede que segures a operação enquanto a cor não muda. Aqui, a cor é a tua régua de paciência. Quando o fundo muda de cor, a direção de fundo mudou, e isso conta muito mais do que um movimento isolado de uma vela. Repara que este gráfico é uma venda, com o fundo vermelho e as médias na posição de baixa."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "capitulo",
+     "cap": "03 · Estrelas e estrutura",
+     "numero": "03",
+     "titulo": "Estrelas e estrutura",
+     "sub": "Avisos de reversão e onde o preço trava",
+     "fala": "Terceiro capítulo: as estrelas e a estrutura automática."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "pontos",
+     "cap": "03 · Estrelas e estrutura",
+     "kicker": "As estrelas",
+     "titulo": "Avisos que se movem com o preço",
+     "itens": [
+      "Amarela: recuo pequeno",
+      "Azul: recuo mais fundo, sem mudar a tendência",
+      "Vermelha numa subida, verde numa descida: possível viragem",
+      "Se o preço passa por cima de uma estrela, quer continuar"
+     ],
+     "fala": "As estrelas são avisos de reversão. Movem-se com o preço até se fixarem. Uma estrela amarela indica um recuo pequeno. Uma azul indica um recuo mais fundo, mas que não muda a tendência. E uma estrela vermelha, numa subida, ou uma verde, numa descida, indica possível viragem da tendência. Há uma regra de leitura simples: se o preço passa por cima de uma estrela, é porque quer continuar nessa direção. A estrela é um aviso sobre o movimento, não uma ordem. Mais à frente vais ver que o guia a trata como ordem de proteção, e não como ordem de saída. Essa diferença é importante."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "grafico",
+     "cap": "03 · Estrelas e estrutura",
+     "kicker": "Estrelas num gráfico",
+     "titulo": "Topo, venda e fundo",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [
+      "medias",
+      "cores",
+      "poc"
+     ],
+     "camadas": [
+      "sinal"
+     ],
+     "ate": [
+      0.3,
+      1
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "rotulo": "Estrela vermelha · topo",
+     "fala": "Neste gráfico, a estrela vermelha marca o topo da subida. Depois dela segue-se uma venda. Quando o movimento para baixo chega a um fundo, aparece a estrela verde, e começa uma nova subida. Repara que as estrelas não são sinais por si. São contexto, e aparecem em momentos em que o movimento pode estar a esgotar-se. Se estás comprado e aparece uma vermelha grande, é um aviso para proteger. Se estás vendido e aparece uma verde, o mesmo. O guia é claro sobre isso, e o segundo vídeo vai mostrar exatamente como se gere essa proteção."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "pontos",
+     "cap": "03 · Estrelas e estrutura",
+     "kicker": "Estrutura automática",
+     "titulo": "Resistências e suportes que se movem",
+     "itens": [
+      "Linhas verdes acima do preço são resistências",
+      "Linhas vermelhas abaixo do preço são suportes",
+      "Rompimento: a linha passa a vermelha e vira suporte",
+      "O reteste costuma ser onde médias e estrutura trabalham juntas"
+     ],
+     "fala": "A estrutura de mercado é desenhada automaticamente. As linhas verdes acima do preço são resistências, e as vermelhas abaixo são suportes. Quando o preço rompe uma resistência, a linha passa a vermelha e passa a funcionar como suporte. O reteste dessa linha costuma ser um sítio onde as médias e a estrutura trabalham juntas. Isto ajuda-te a ver onde o preço pode travar, e onde pode encontrar apoio. Não é uma garantia de que trava, mas é uma das peças que te diz se o caminho até ao alvo está limpo ou se há obstáculos à frente."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "capitulo",
+     "cap": "04 · Tabela, média 238 e POC",
+     "numero": "04",
+     "titulo": "Tabela, média 238, POC e volume",
+     "sub": "O que o canto do gráfico te diz",
+     "fala": "Quarto capítulo: a tabela de tendência, a média 238, o POC e o volume."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "pontos",
+     "cap": "04 · Tabela, média 238 e POC",
+     "kicker": "Os últimos elementos",
+     "titulo": "Quatro peças de apoio",
+     "itens": [
+      "Tabela de tendência: a direção em vários timeframes",
+      "Linha laranja: a média 238",
+      "Linha dourada tracejada: o POC, o nível com mais volume",
+      "Canto do gráfico: Good Volume ou Low Volume"
+     ],
+     "fala": "A tabela de tendência mostra a direção em vários timeframes, de uma só vez. A linha laranja é a média 238. No gráfico de um minuto, equivale à média de cinquenta do gráfico de cinco. Ela é o teu apoio de contexto mais longo. A linha dourada tracejada é o POC, o nível com mais volume negociado. E no canto aparece Good Volume ou Low Volume. O guia diz que o sistema rende mais com liquidez e movimentos rápidos. Com Low Volume não é proibido operar, mas os movimentos tendem a ser mais curtos. Repara que estas peças não dão sinal. Dão contexto, e é esse contexto que vais usar nas confirmações."
+    },
+    {
+     "id": "v1-15b",
+     "tipo": "pontos",
+     "cap": "04 · Tabela, média 238 e POC",
+     "kicker": "Juntar as peças",
+     "titulo": "Cada peça tem um papel",
+     "itens": [
+      "Cruzamento 20/50: o gatilho",
+      "Histograma de fundo: a direção",
+      "Estrelas: avisos de reversão e de proteção",
+      "Estrutura, média 238 e POC: o contexto",
+      "Nenhuma peça decide sozinha"
+     ],
+     "fala": "Vamos juntar as peças, para veres o papel de cada uma. O cruzamento 20/50 é o gatilho: diz-te que algo mudou no movimento de minutos. O histograma de fundo é a direção: diz-te de que lado estás. As estrelas são avisos de reversão, e pedem-te que protejas a operação, quando estás do lado errado da estrela. A estrutura automática, a média 238 e o POC são o contexto: dizem-te onde o preço pode travar, e se há espaço até ao alvo. Nenhuma destas peças decide sozinha. Um triângulo com fundo contra, ou com a média 238 do lado errado, não é uma entrada. É só um triângulo. O sistema só faz sentido quando as peças se leem em conjunto."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "grafico",
+     "cap": "04 · Tabela, média 238 e POC",
+     "kicker": "Lateral: fica de fora",
+     "titulo": "Zona sem trade",
+     "cenario": "falha",
+     "seed": 7,
+     "base": [
+      "medias",
+      "cores",
+      "estrutura"
+     ],
+     "camadas": [],
+     "ate": [
+      0.4,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Low Volume · lateral",
+     "fala": "Vê este exemplo. As setas alternam para um lado e para o outro, o histograma troca de cor várias vezes, e as médias estão emboladas. Isto é consolidação. O guia é claro: não se tomam estes sinais. Não há onda para apanhar. E repara no canto: Low Volume. Muitas pessoas entram aqui porque o gráfico parece estar sempre a dar sinais, e é exatamente esse o erro. Um triângulo num mercado sem direção é só mais uma marca no ecrã. Fica de fora, e deixa o próximo cruzamento com direção clara ser o teu objetivo."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Erros de leitura",
+     "titulo": "O que os principiantes fazem mal",
+     "itens": [
+      "Tratar cada estrela amarela como saída",
+      "Entrar numa zona de médias enroladas",
+      "Ler só um timeframe e ignorar a tabela",
+      "Confundir estrela de proteção com ordem de saída"
+     ],
+     "fala": "Antes de fechar este vídeo, os erros de leitura mais comuns. Primeiro, tratar cada estrela amarela como saída. O guia diz que aparecem muitas vezes e que costumam ser só recuos. Segundo, entrar numa zona de médias enroladas, onde os sinais alternam para um lado e para o outro. Terceiro, ler só um timeframe e ignorar a tabela de tendência. E quarto, confundir a estrela de proteção com uma ordem de saída. A estrela de reversão pede-te que protejas a operação. Não te manda sair. Escreve estes erros no diário quando os vires, porque são eles que mais custam a quem está a aprender."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao módulo 2",
+     "sub": "Confirmações, gestão e rotina",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar índices, ouro, cripto e forex envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros. Treina primeiro em conta de demonstração e define o teu risco antes de cada entrada.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Treina primeiro em conta de demonstração. Vemo-nos no segundo vídeo.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp TrendShot · 2/2",
+   "titulo": "Sinal, confirmações, gestão e rotina",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 2 de 2",
+     "titulo": "TrendShot",
+     "sub": "Sinal, confirmações, gestão e rotina",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "Neste vídeo",
+     "titulo": "Da leitura à decisão",
+     "itens": [
+      "As quatro confirmações, por ordem",
+      "Entrada no triângulo do cruzamento",
+      "Stop do outro lado das duas médias",
+      "Alvo a 1:2 e gestão das estrelas",
+      "Quando não entrar, e a rotina"
+     ],
+     "fala": "Bem-vindo ao segundo vídeo do Bootcamp TrendShot. No primeiro aprendeste a ler o gráfico. Agora passamos à decisão. Vamos ver as quatro confirmações, por ordem, e só depois a entrada no triângulo do cruzamento. Depois, o stop, do outro lado das duas médias, e o alvo, que o guia fixa em pelo menos o dobro do stop. Vamos ver também como gerir a operação quando aparece uma estrela de reversão, quando não entrar, e uma rotina simples para a tua sessão. O sistema é rápido. A tua preparação tem de ser ainda mais calma."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · As confirmações",
+     "numero": "01",
+     "titulo": "As quatro confirmações",
+     "sub": "Se alguma falhar, deixa passar",
+     "fala": "Primeiro capítulo: as quatro confirmações."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "checklist",
+     "cap": "01 · As confirmações",
+     "kicker": "Antes de aceitar um sinal",
+     "titulo": "Quatro confirmações",
+     "itens": [
+      "Tendência em dois timeframes acima",
+      "Média 238 atrás do preço",
+      "POC atrás do preço, ou espaço até ele",
+      "Good Volume"
+     ],
+     "fala": "Antes de aceitar um sinal, passa por quatro confirmações. A primeira é a tendência. Olha para dois timeframes acima do teu, e quer a mesma direção nos três. A segunda é a média 238. Numa compra, a linha laranja tem de estar abaixo do preço. Numa venda, acima. A terceira é o POC. Numa compra, tem de estar abaixo do preço. Numa venda, acima. Se ainda não estiver atrás de ti, confirma que há espaço suficiente até ele, e tem-no em conta no alvo. A quarta é o Good Volume. O guia diz que o sistema rende mais com liquidez e movimentos rápidos. Repara na regra final: se alguma destas confirmações falhar, deixa passar. Um sinal fraco perdido não custa nada."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "grafico",
+     "cap": "01 · As confirmações",
+     "kicker": "Quatro confirmações a favor",
+     "titulo": "Compra com as quatro peças",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "medias",
+      "cores",
+      "estrutura",
+      "poc"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "4 de 4",
+     "fala": "Vamos aplicar as quatro confirmações a uma compra. O triângulo azul marca o cruzamento da média de vinte sobre a de cinquenta. O fundo está azul, e a tabela mostra a mesma direção nos dois timeframes acima. A média 238, a laranja, está abaixo do preço. O POC, o tracejado dourado, também está abaixo. E o canto mostra Good Volume. Quatro em quatro. Repara numa coisa: as confirmações não garantem que o movimento continua. Dizem-te que o contexto está do teu lado neste momento. A decisão de entrar continua a ser um passo que dás com o plano e o risco já calculados."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "pontos",
+     "cap": "01 · As confirmações",
+     "kicker": "Tendência em dois timeframes",
+     "titulo": "Como ver a tendência acima",
+     "itens": [
+      "No gráfico de 1 minuto, confirmas o de 5 e o de 15",
+      "No gráfico de 5 minutos, confirmas o de 15 e o de 30",
+      "A mesma direção nos três, e a tabela mostra-o de uma vez",
+      "Direções diferentes na tabela: deixa passar"
+     ],
+     "fala": "A primeira confirmação merece um pormenor. No gráfico de um minuto, confirmas o de cinco e o de quinze. No gráfico de cinco minutos, confirmas o de quinze e o de trinta. Queres a mesma direção nos três. A tabela de tendência mostra isto de uma vez, e poupa-te a trocar de gráfico para ver. Se a tabela mostra direções diferentes nos timeframes acima, deixa passar. Estás a tentar fazer um movimento de minutos contra uma tendência de horas, e isso é uma briga que o sistema não recomenda. O contexto maior manda, e o sinal pequeno tem de concordar com ele."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "capitulo",
+     "cap": "02 · Entrada, stop e alvo",
+     "numero": "02",
+     "titulo": "Entrada, stop e alvo",
+     "sub": "Risco de 1 para 2",
+     "fala": "Segundo capítulo: entrada, stop e alvo."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "plano",
+     "cap": "02 · Entrada, stop e alvo",
+     "kicker": "Os níveis do plano",
+     "titulo": "Entrada, stop e alvo 1:2",
+     "linhas": [
+      [
+       "Entrada",
+       "no triângulo do cruzamento 20/50",
+       "entrada"
+      ],
+      [
+       "Stop",
+       "do outro lado das duas médias",
+       "sl"
+      ],
+      [
+       "Alvo",
+       "pelo menos o dobro do stop",
+       "tp"
+      ],
+      [
+       "Exemplo do guia",
+       "stop de 25 pips, alvo de 50 pips",
+       "warning"
+      ]
+     ],
+     "fala": "Os níveis são três, mais um exemplo do guia. A entrada é no triângulo do cruzamento, depois de passares as confirmações. O stop fica do outro lado das duas médias, a vermelha e a azul. Repara que não é uma distância fixa. É onde a leitura do cruzamento deixa de fazer sentido. O alvo é pelo menos o dobro do stop, ou seja, um risco de um para dois. O exemplo do guia é um stop de vinte e cinco pips e um alvo de cinquenta. O POC e as estrelas grandes anteriores ajudam-te a afinar o alvo. E antes de enviares a ordem, calcula o tamanho da posição com o risco que decidiste. O sistema desenha o plano, mas o lote é tu que defines."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "pontos",
+     "cap": "02 · Entrada, stop e alvo",
+     "kicker": "Passo a passo",
+     "titulo": "Do triângulo à ordem",
+     "itens": [
+      "Lê a direção: cor do histograma e tabela",
+      "Espera o triângulo do cruzamento 20/50",
+      "Confirma que não há estrelas nem resistências à frente",
+      "Passa as quatro confirmações",
+      "Stop, alvo 1:2 e tamanho, e só depois a ordem"
+     ],
+     "fala": "Vamos pôr a sequência em ordem. Um: lês a direção, pela cor do histograma e pela tabela de tendência. Dois: esperas o triângulo do cruzamento 20/50. Três: confirmas que logo a seguir não há estrelas nem resistências a bloquear o caminho. Quatro: passas as quatro confirmações, e só entras se todas estiverem cumpridas. Cinco: defines o stop do outro lado das duas médias, o alvo a pelo menos o dobro da distância, e o tamanho da posição. Só depois disto a ordem segue para a corretora. Se algum passo falhar, a operação não existe, por mais rápido que o movimento pareça."
+    },
+    {
+     "id": "v2-08b",
+     "tipo": "pontos",
+     "cap": "02 · Entrada, stop e alvo",
+     "kicker": "Afinar o alvo",
+     "titulo": "Onde o alvo encontra obstáculos",
+     "itens": [
+      "Procura o POC à frente, e tem-no em conta",
+      "Estrelas grandes anteriores ajudam a afinar o alvo",
+      "Confirma que o alvo cabe antes da próxima resistência",
+      "Não mudes o alvo a meio da operação sem uma razão do plano"
+     ],
+     "fala": "O alvo tem de ser pelo menos o dobro do stop, mas o guia também pede que olhes para o caminho. Procura o POC à frente da tua entrada. Se ele está no caminho, tem-no em conta, porque o preço pode hesitar ali. As estrelas grandes anteriores ajudam-te a afinar o alvo, porque marcam sítios onde o movimento já tinha travado. E confirma que o alvo cabe antes da próxima resistência. Se não cabe, a relação risco e alvo fica pior do que o plano previa, e isso é um motivo para deixar passar. Por fim, uma regra de disciplina: não mudes o alvo a meio da operação, sem uma razão que venha do plano. Mudar um alvo por esperança é o caminho mais curto para um diário confuso."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "capitulo",
+     "cap": "03 · Gerir a operação",
+     "numero": "03",
+     "titulo": "Gerir a operação",
+     "sub": "Quando a estrela aparece",
+     "fala": "Terceiro capítulo: como gerir a operação quando aparece uma estrela de reversão."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "pontos",
+     "cap": "03 · Gerir a operação",
+     "kicker": "A estrela de reversão",
+     "titulo": "Proteger, não sair",
+     "itens": [
+      "Comprado, e aparece uma estrela vermelha: protege",
+      "Vendido, e aparece uma estrela verde: protege",
+      "Proteger é passar o stop para a entrada, ou para lucro",
+      "A estrela é ordem de proteção, não de saída"
+     ],
+     "fala": "Esta é a parte da gestão que mais convém decorar. Se estás comprado e aparece uma estrela vermelha, ou se estás vendido e aparece uma estrela verde, o guia manda proteger a operação. Isso pode ser passar o stop para a entrada, ou para já em lucro. Repara na frase que o guia usa: a estrela é ordem de proteção, não de saída. Não estás a fechar a operação. Estás a tirar-lhe o risco, e a deixar o movimento continuar, se continuar. Muitos principiantes fecham tudo ao primeiro sinal de aviso, e perdem a parte do movimento que o alvo estava à espera. Proteger é uma decisão. Sair é outra, e só a tomas quando o plano o pede."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "grafico",
+     "cap": "03 · Gerir a operação",
+     "kicker": "Estrela na operação",
+     "titulo": "Estrela vermelha numa compra",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [
+      "medias",
+      "cores",
+      "estrutura"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Estrela vermelha · proteger",
+     "fala": "Vê este exemplo de uma compra. A operação está a correr a favor, e aparece uma estrela vermelha no caminho. É o aviso de que o movimento pode estar a perder força. A ação do guia é proteger: passar o stop para a entrada, ou para lucro. Se o preço continuar, a operação continua protegida. Se o preço virar, a proteção já está feita, e o resultado fica muito mais perto de zero do que estaria. Em todos os casos, a decisão estava tomada antes da estrela aparecer. Não houve pânico, houve um plano."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "capitulo",
+     "cap": "04 · Quando não entrar",
+     "numero": "04",
+     "titulo": "Quando não entrar",
+     "sub": "E as janelas de horário",
+     "fala": "Quarto capítulo: quando não entrar, e as janelas de horário."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "checklist",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Deixa passar quando",
+     "titulo": "Seis situações",
+     "itens": [
+      "Médias enroladas, com sinais a alternar",
+      "Sinal logo abaixo de uma resistência, sem espaço",
+      "Tabela com direções diferentes nos timeframes acima",
+      "Média 238 ou POC do lado errado, sem espaço",
+      "Estrela grande na mesma vela do sinal",
+      "Fora das janelas de maior volume"
+     ],
+     "fala": "Há seis situações em que deves deixar passar. Primeira: médias enroladas, com sinais a alternar para um lado e para o outro, ou seja, mercado lateral. Segunda: o sinal aparece logo abaixo de uma resistência, ou acima de um suporte, sem espaço até ao alvo. Terceira: a tabela de tendência mostra direções diferentes nos timeframes acima. Quarta: a média 238 ou o POC estão do lado errado, sem espaço. Quinta: o sinal de compra surge na mesma vela de uma estrela vermelha grande. O guia dá este caso como exemplo de deixar passar. Sexta: fora das janelas de maior volume, que vamos ver já a seguir. Se alguma destas situações estiver no gráfico, não tens trade."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "pontos",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Janelas de horário",
+     "titulo": "Quando o volume costuma fugir",
+     "itens": [
+      "As horas são as de Lisboa, no inverno",
+      "Evita das 16:00 às 17:30",
+      "Evita das 20:45 à meia-noite, e das 04:00 às 06:30",
+      "Confirma o relógio: a hora muda com a mudança de hora"
+     ],
+     "fala": "O guia indica janelas a evitar, fora dos períodos de maior volume. As horas são as de Lisboa, no inverno. Evita das dezasseis às dezassete e meia. Evita das vinte horas e quarenta e cinco à meia-noite. E evita das quatro às seis e meia da manhã. Vê sempre o teu relógio, porque a diferença de horas entre países muda ao longo do ano, e uma janela mal lida é uma janela mal usada. Repara que isto não é uma regra mágica. É uma forma de não operar nos momentos em que o movimento costuma ser mais lento ou mais irregular, e de estares presente quando o sistema trabalha melhor."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "checklist",
+     "cap": "04 · Rotina",
+     "kicker": "Antes de cada sessão",
+     "titulo": "A rotina em cinco passos",
+     "itens": [
+      "Ver a direção nos timeframes acima",
+      "Ver o histograma de fundo e a média 238",
+      "Ver o POC e o canto: Good Volume ou Low Volume",
+      "Ver a hora e as janelas a evitar",
+      "Anotar cada sinal e o que aconteceu"
+     ],
+     "fala": "A rotina antes da sessão é curta. Primeiro, vês a direção nos timeframes acima, pela tabela. Segundo, olhas para o histograma de fundo e para a média 238, que te dizem o contexto de cada lado. Terceiro, vês o POC e o canto do gráfico, para saber se há Good Volume ou Low Volume. Quarto, confirmas a hora, e se estás numa das janelas a evitar. E quinto, quando há sinais, anotas cada um no diário, com o que aconteceu. Durante a sessão, a tua tarefa é seguir o processo, e não reagir a cada triângulo. O TrendShot dá-te muitos sinais. Não precisas de todos."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "pontos",
+     "cap": "04 · Rotina",
+     "kicker": "O diário",
+     "titulo": "O que registar em cada sinal",
+     "itens": [
+      "Hora, timeframe e direção",
+      "As quatro confirmações, sim ou não",
+      "Se entraste: entrada, stop, alvo e tamanho",
+      "Se apareceu estrela, e se protegeste a operação",
+      "Seguiste o plano? Uma frase sobre o que aprendeste"
+     ],
+     "fala": "O diário é o que transforma o TrendShot em aprendizagem, e é especialmente importante num sistema de minutos. Para cada sinal, regista a hora, o timeframe e a direção. Depois, as quatro confirmações, uma a uma, com sim ou não. Se entraste, regista a entrada, o stop, o alvo e o tamanho que calculaste. Regista também se apareceu uma estrela e se protegeste a operação. E por fim, a pergunta mais importante: seguiste o plano? Ao fim de algumas semanas, o diário diz-te em que horas e em que mercados estás a seguir o processo, e onde estás a improvisar. Esse é o teu mapa, e não há vídeo que o substitua."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "frase",
+     "cap": "Fecho",
+     "texto": "O cruzamento avisa. <span class='ouro'>Tu confirmas.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Chegámos ao fim do Bootcamp TrendShot. Lembra-te do essencial: o cruzamento é o gatilho, e a tendência dá a direção. Só entras quando as quatro confirmações estão cumpridas, com o stop e o alvo a um para dois e o tamanho calculado. E quando aparece uma estrela de reversão, proteges, não fechas por medo. Faz os exercícios, treina em conta de demonstração, e escreve o diário desde o primeiro sinal. Se tiveres dúvidas, traz os teus casos para a comunidade e para as sessões ao vivo da MoreThanMoney. Eu sou o Ricardo Garcia. Até à próxima."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Bootcamp TrendShot concluído",
+     "sub": "morethanmoney.pt",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar índices, ouro, cripto e forex envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos e exemplos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros. Treina primeiro em conta de demonstração e define o teu risco antes de cada entrada.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Treina primeiro em conta de demonstração. Até à próxima.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,557 @@
+{
+ "estrategia": "Golden Zone",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#16A34A",
+  "bear": "#DC2626"
+ },
+ "ui": {
+  "nivel": "Nível",
+  "compra": "Compra",
+  "venda": "Venda",
+  "entrada": "Entrada",
+  "tp1": "Saída 1",
+  "tp2": "Saída 2",
+  "tp3": "Saída 3"
+ },
+ "pronuncia": [
+  [
+   "XAUUSD",
+   "ouro dólar"
+  ],
+  [
+   "TradingView",
+   "Trading View"
+  ]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [
+   1,
+   2
+  ],
+  "rotulos": [
+   "Saída 1",
+   "Saída 2"
+  ]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Golden Zone · 1/2",
+   "titulo": "O que é a Golden Zone e como se lê",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 1 de 2",
+     "titulo": "Golden Zone",
+     "sub": "O que é e como se lê o gráfico",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "Um sinal marca o sítio. <span class='ouro'>Tu decides se entras.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Olá, sou o Ricardo Garcia e este é o Bootcamp Golden Zone da MoreThanMoney. São dois vídeos. Neste primeiro vamos ver o que é a estratégia e como se lê cada elemento que aparece no gráfico. Antes de começarmos, uma ideia que vai atravessar tudo: a Golden Zone não te manda entrar a correr atrás do preço. Quando aparece um sinal, ela marca uma zona e espera que o preço volte a ela. A decisão final é tua, depois de validares as confirmações. Vamos com calma, uma peça de cada vez."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "O plano do bootcamp",
+     "titulo": "Dois vídeos, um processo",
+     "itens": [
+      "Vídeo 1 · O que é a estratégia e como se lê o gráfico",
+      "Vídeo 2 · Confirmações, entrada, plano e rotina"
+     ],
+     "fala": "O bootcamp tem dois vídeos. No primeiro, vais perceber o que é a Golden Zone, para que mercado e em que gráfico foi pensada, e o que significa cada elemento que o scanner desenha: o visto amarelo, a zona de ação, as saídas, a invalidação e a bandeira branca. No segundo vídeo entramos no processo de decisão: as quatro confirmações, a ordem limite, o stop, a gestão do trade, quando não entrar e uma rotina simples para o teu dia. Sugiro que vejas os vídeos por ordem, e que não saltes para a parte da entrada sem perceberes o gráfico primeiro."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · O que é a Golden Zone",
+     "numero": "01",
+     "titulo": "O que é a Golden Zone",
+     "sub": "Scalping de ouro, com paciência",
+     "fala": "Primeiro capítulo: o que é, afinal, a Golden Zone?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · O que é a Golden Zone",
+     "kicker": "Em poucas palavras",
+     "titulo": "Scalping com zona de espera",
+     "itens": [
+      "Scalping de ouro, no gráfico de cinco minutos",
+      "O sinal marca uma zona de ação, não uma entrada",
+      "Quem decide és tu, depois de quatro confirmações",
+      "Cada sinal novo apaga o anterior"
+     ],
+     "fala": "A Golden Zone é a estratégia de scalping da MoreThanMoney para o ouro, no símbolo XAUUSD. Trabalha no gráfico de cinco minutos, tanto para a análise como para a entrada. Scalping quer dizer que as operações são curtas: procuras movimentos pequenos, na direção em que o mercado já se está a mover. Não é uma estratégia para apanhar o topo ou o fundo do dia. A ideia central é outra. Quando aparece um sinal, o scanner não te diz para comprar ou vender já. Marca uma zona de ação e espera que o preço volte a ela. A diferença nas palavras é pequena, mas na prática é grande. Quem entra a correr atrás do preço costuma entrar longe do sítio onde o plano fazia sentido. Quem espera pelo reteste entra mais perto da zona. Esperar também tem um custo: há sinais que nunca voltam à zona, e isso faz parte da estratégia. O scanner mostra o plano com clareza. A decisão continua a ser tua."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "pontos",
+     "cap": "01 · O que é a Golden Zone",
+     "kicker": "Onde e quando",
+     "titulo": "Ativo, timeframe e acompanhamento",
+     "itens": [
+      "Ativo: ouro, no par XAUUSD",
+      "Timeframe: cinco minutos, para análise e entrada",
+      "Estilo: scalping a favor da tendência",
+      "Acompanhar ao vivo, porque cada sinal novo apaga o anterior"
+     ],
+     "fala": "A Golden Zone foi pensada para um único ativo, o ouro, no par XAUUSD. E para um único timeframe de trabalho, o gráfico de cinco minutos. É aí que vês o sinal, que confirmas a zona, que validas as confirmações e que decides a entrada. Repara num detalhe que o guia sublinha: cada sinal novo apaga o anterior. Isto quer dizer que a Golden Zone não é uma lista de ideias guardada no gráfico. É uma coisa que se acompanha ao vivo, na altura em que acontece. Se só olhares para o gráfico de hora a hora, vais perder sinais e vais perder a leitura do momento em que o preço reage. Por isso, é uma estratégia para quem consegue estar presente, mesmo que seja em blocos curtos de tempo. Se não tens esse tempo, esta talvez não seja a estratégia certa para ti. E isso não é uma falha. É uma escolha de estilo, e vale mais escolher bem do que forçar uma estratégia que não encaixa no teu dia."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "checklist",
+     "cap": "01 · O que é a Golden Zone",
+     "kicker": "Antes de começar",
+     "titulo": "O que precisas",
+     "itens": [
+      "Uma conta de demonstração na tua corretora",
+      "Acesso à Golden Zone, pela MoreThanMoney",
+      "Um gráfico de ouro, XAUUSD, em cinco minutos",
+      "Um caderno ou folha para o diário",
+      "Tempo para acompanhar o gráfico ao vivo"
+     ],
+     "fala": "Antes de avançarmos, o que precisas para tirar partido deste bootcamp. Uma conta de demonstração na tua corretora, porque tudo o que aprendes deve ser treinado sem dinheiro real primeiro. O acesso à Golden Zone, pela MoreThanMoney. Um gráfico de ouro, no par XAUUSD, em cinco minutos. Um caderno ou uma folha de cálculo para o diário, que vamos construir no segundo vídeo. E tempo para acompanhar o gráfico ao vivo, porque é assim que a estratégia se usa. Não precisas de mais nada. Se tiveres tudo isto pronto, estás preparado para o resto do bootcamp."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "capitulo",
+     "cap": "02 · Ler o gráfico",
+     "numero": "02",
+     "titulo": "Ler o gráfico, peça a peça",
+     "sub": "Visto, zona, plano e bandeira",
+     "fala": "Segundo capítulo: como se lê o gráfico, peça a peça."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · Ler o gráfico",
+     "kicker": "Primeiro olhar",
+     "titulo": "O gráfico com tudo ligado",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "medias",
+      "cores",
+      "niveis"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.7,
+      0.7
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Visto amarelo",
+     "fala": "Este é o aspecto do gráfico com tudo ligado. À primeira vista pode parecer muita coisa, e é normal. Daqui a pouco vais ler cada elemento em segundos. Uma nota importante antes de avançarmos: os gráficos que vês neste bootcamp são ilustrativos. Servem para explicar o funcionamento da estratégia. Não são resultados reais nem histórico de mercado, e não devem ser lidos como tal. Agora, o que vês. As médias exponenciais de cinquenta e de duzentos, que te dizem a tendência. As zonas horizontais, que são níveis onde o preço já reagiu no passado. As velas, coloridas pela direção. E o visto amarelo, com a caixa amarela por cima, que marca a zona de ação. As linhas de saída e de invalidação ainda não aparecem. Porquê? Porque ainda não há plano. Vamos ver isso com cada elemento separado."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "pontos",
+     "cap": "02 · Ler o gráfico",
+     "kicker": "Os elementos",
+     "titulo": "Quatro peças que tens de reconhecer",
+     "itens": [
+      "Visto amarelo: um aviso sobre a vela do sinal",
+      "Zona de ação: a caixa amarela onde esperas o preço",
+      "Saída 1 e Saída 2: os alvos, a verde",
+      "Invalidação: o stop, a vermelho. A bandeira branca marca o fim"
+     ],
+     "fala": "Vamos por partes. Primeiro, o visto amarelo. Aparece sobre a vela do sinal, acompanhado da caixa amarela, que é a zona de ação. O visto é um aviso, não é a vela de entrada. Quer dizer apenas que o scanner encontrou uma configuração que merece atenção. Ainda faltam os parâmetros, e não há trade nenhum. Segundo, a zona de ação. É a área onde, em teoria, colocas a tua ordem limite, à espera que o preço volte. Repara que a zona é uma caixa e não uma linha, porque o preço raramente respeita um valor exato. Terceiro, as saídas. Quando fecha a vela de cinco minutos seguinte ao visto, surgem a Saída 1 e a Saída 2, os dois alvos, a verde. E a invalidação, a vermelho, que é o nível onde a ideia deixa de fazer sentido. Sem estes três níveis não há trade. Quarto, a bandeira branca. Quando aparece, o trade terminou. Pode ter ganho, pode ter perdido, ou o preço pode ter ido aos alvos sem voltar à zona. Com a bandeira à vista, já não se entra. A bandeira é uma informação de fecho. Diz-te que o momento passou."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "grafico",
+     "cap": "02 · Ler o gráfico",
+     "kicker": "O mesmo raciocínio ao contrário",
+     "titulo": "Sinal de venda",
+     "cenario": "venda",
+     "seed": 11,
+     "base": [
+      "medias",
+      "cores",
+      "niveis"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Visto amarelo · venda",
+     "fala": "Agora um sinal de venda. Numa venda, tudo se inverte. A zona de ação fica acima do preço, a invalidação fica ainda mais acima, e as saídas ficam por baixo. A lógica é a mesma, só muda o sentido. O que quero que percebas é que a leitura é simétrica. Quando sabes ler uma compra, já sabes ler uma venda, desde que lembres de inverter cada peça. As médias também se leem ao contrário. Numa venda, a média de cinquenta fica abaixo da de duzentos, e é isso que dá a tendência de baixa. Aqui está um dos erros mais comuns de principiante: ler a venda como se fosse uma compra com as cores trocadas. Não basta trocar as cores. Tens de confirmar que cada peça está do lado certo. A estrutura da leitura é a mesma. Só mudam os sítios."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "capitulo",
+     "cap": "03 · Da leitura à ideia",
+     "numero": "03",
+     "titulo": "Da leitura à ideia",
+     "sub": "A sequência do visto ao plano",
+     "fala": "Terceiro capítulo: como se passa do visto ao plano, sem saltar etapas."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "pontos",
+     "cap": "03 · Da leitura à ideia",
+     "kicker": "A sequência",
+     "titulo": "Do visto ao plano",
+     "itens": [
+      "O visto aparece sobre a vela do sinal",
+      "Esperas pelo fecho da vela de cinco minutos seguinte",
+      "Só então surgem as saídas e a invalidação",
+      "Sem plano completo não há trade"
+     ],
+     "fala": "A sequência é sempre a mesma, e a ordem importa. Primeiro, aparece o visto amarelo, sobre a vela do sinal. Nesse momento ainda não tens nada para executar. Segundo, esperas pelo fecho da vela de cinco minutos seguinte. Só nesse fecho é que surgem a Saída 1, a Saída 2 e a invalidação. Antes disso, o que tens é um aviso. Terceiro, lês todos os níveis, e só depois olhas para as confirmações. A tentação é ir direto ao visto e começar a imaginar a entrada. O guia pede outra ordem: primeiro a leitura, depois a validação, e só depois o plano. Quando te habituas a esta sequência, deixas de agir por impulso. Se a vela ainda não fechou, não há plano para ler e não há decisão para tomar. Este pormenor parece pequeno, mas é ele que separa quem espera de quem se antecipa."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "checklist",
+     "cap": "03 · Da leitura à ideia",
+     "kicker": "Leitura rápida",
+     "titulo": "Cinco perguntas ao gráfico",
+     "itens": [
+      "Há visto amarelo e a vela seguinte já fechou?",
+      "A caixa amarela fica sobre a vela do sinal?",
+      "Estão desenhadas Saída 1, Saída 2 e invalidação?",
+      "Há bandeira branca no gráfico?",
+      "Estás a olhar para o sinal atual, e não para um antigo?"
+     ],
+     "fala": "Antes de olhar para as confirmações, cinco perguntas rápidas. Há visto amarelo, e a vela seguinte já fechou? A caixa amarela está sobre a vela do sinal? Estão desenhadas a Saída 1, a Saída 2 e a invalidação? Há bandeira branca no gráfico, ou seja, um trade que já terminou? E estás a olhar para o sinal atual, e não para um que já foi apagado pelo seguinte? Se a resposta a qualquer uma destas perguntas for não, pára aí. Não há trade para analisar. Só quando as cinco respostas estiverem certas é que avanças para a validação."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Erros de leitura",
+     "titulo": "O que os principiantes fazem mal",
+     "itens": [
+      "Entrar no visto, antes de haver plano",
+      "Ler a venda como uma compra com as cores trocadas",
+      "Olhar para um sinal de horas atrás, já apagado",
+      "Desenhar mais linhas do que o gráfico precisa",
+      "Dar importância a um trade que já tem bandeira branca"
+     ],
+     "fala": "Antes de fechar este vídeo, os erros de leitura mais comuns. Primeiro, entrar no visto amarelo sem esperar pelo plano. O visto é um aviso, e um aviso não é uma ordem. Segundo, ler a venda como uma compra com as cores trocadas. Já vimos que não chega. Terceiro, olhar para um sinal de há horas, que já foi apagado pelo seguinte, e tratá-lo como se ainda estivesse vivo. Quarto, desenhar mais linhas do que o gráfico precisa. A Golden Zone já te mostra o essencial, e linhas a mais só tiram atenção à zona. E quinto, dar importância a um trade que já tem bandeira branca. Quando a bandeira aparece, o assunto está arrumado. Vai para o diário e espera pelo próximo sinal."
+    },
+    {
+     "id": "v1-14b",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Trabalho de casa",
+     "titulo": "Antes do segundo vídeo",
+     "itens": [
+      "Deixa a Golden Zone num só gráfico de ouro, em cinco minutos",
+      "Procura dez vistos amarelos no histórico, sem operar",
+      "Para cada um, anota se o plano apareceu",
+      "Anota quantos acabaram com bandeira branca"
+     ],
+     "fala": "Antes do segundo vídeo, um exercício simples. Escolhe um gráfico de ouro, no par XAUUSD, em cinco minutos, e deixa a estratégia ligada só nesse. Depois, procura no histórico dez momentos em que apareceu um visto amarelo. Para cada um, anota duas coisas: se o plano chegou a aparecer, e se o preço voltou à zona de ação antes de chegar às saídas ou à bandeira branca. Não operes. Só observas e anotas. Este exercício treina o olho para aquilo que a estratégia realmente mostra, e no segundo vídeo vais perceber porque é que esta leitura importa tanto."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao módulo 2",
+     "sub": "Confirmações, entrada e rotina",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar ouro e outros ativos envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros. Treina primeiro em conta de demonstração e define o teu risco antes de cada entrada.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Treina primeiro em conta de demonstração. Vemo-nos no segundo vídeo.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Golden Zone · 2/2",
+   "titulo": "Confirmações, entrada e rotina",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 2 de 2",
+     "titulo": "Golden Zone",
+     "sub": "Confirmações, entrada e rotina",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "Neste vídeo",
+     "titulo": "Do sinal à decisão",
+     "itens": [
+      "As quatro confirmações, por ordem",
+      "A entrada dentro da zona de ação",
+      "O stop, as saídas e o tamanho da posição",
+      "Quando não entrar",
+      "Uma rotina de acompanhamento"
+     ],
+     "fala": "Bem-vindo ao segundo vídeo do Bootcamp Golden Zone. No primeiro percorremos o gráfico, peça a peça. Agora passamos à decisão. Vamos ver as quatro confirmações, pela ordem em que as deves validar. Depois, como colocar a ordem limite dentro da zona de ação, onde pôr o stop e como ler as duas saídas. Vamos também ver quando não entrar, que é tão importante como entrar. E no fim fechamos com uma rotina simples, para acompanhar a estratégia sem passar o dia no ecrã. O scanner encontra o sinal e desenha o plano. Tudo o que se segue é o teu processo, e é isso que vamos construir juntos."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · As confirmações",
+     "numero": "01",
+     "titulo": "As quatro confirmações",
+     "sub": "Por esta ordem",
+     "fala": "Primeiro capítulo: as quatro confirmações, por ordem."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "pontos",
+     "cap": "01 · As confirmações",
+     "kicker": "Ordem de validação",
+     "titulo": "Tendência, zona, vela e desequilíbrios",
+     "itens": [
+      "Tendência: média de 50 e média de 200",
+      "Suporte e resistência: a zona já reagiu no passado",
+      "Padrão de vela: um engolfo a favor da direção",
+      "Desequilíbrios: sem vazios de preço junto à invalidação"
+     ],
+     "fala": "Depois do sinal, e com o plano desenhado, valida as quatro confirmações por esta ordem. Quantas mais estiverem a favor, mais forte é o trade. A primeira é a tendência. Usa as médias exponenciais de cinquenta e de duzentos no gráfico de cinco minutos. Se a de cinquenta está acima da de duzentos, a tendência é de alta, e só consideras compras. Se está abaixo, é de baixa, e só consideras vendas. Se a tendência estiver contra o sinal, o guia é claro: deixa-o passar. A segunda é suporte e resistência. Pergunta-te se a zona de ação coincide com um sítio onde o preço já reagiu no passado. Se coincidir, marca essa área no gráfico. Uma zona que coincide com um nível antigo ganha força. A terceira é o padrão de vela. Procuras uma vela que confirme a direção. Numa compra, um engolfo de alta, em que a vela atual engole a anterior. Numa venda, um engolfo de baixa. A quarta são os desequilíbrios. Confirmas que não há vazios de preço por preencher junto à invalidação. O guia resume isto numa frase que vale a pena reter: um caminho de preço eficiente protege o teu stop."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "grafico",
+     "cap": "01 · As confirmações",
+     "kicker": "Quatro confirmações a favor",
+     "titulo": "Uma compra com contexto",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "medias",
+      "cores",
+      "niveis"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Visto amarelo · 4 de 4",
+     "fala": "Vamos aplicar as quatro confirmações a uma compra. A média de cinquenta está acima da de duzentos, por isso a tendência é de alta, e só procuras compras. A zona de ação coincide com uma área onde o preço já tinha reagido antes. É a segunda confirmação, e está marcada a roxo. Depois, a vela de sinal. É um engolfo de alta, em que a vela atual engole a anterior, e fecha com força. Terceira confirmação. Por fim, o caminho até à zona. Não há vazios de preço por preencher junto ao stop, por isso o caminho do preço é limpo. Quatro em quatro. Isto não quer dizer que o trade vai dar certo. Quer dizer que as leituras estão de acordo, e que a decisão é agora tua. Com menos confirmações, a decisão é mais fraca, e o guia pede-te mais cautela. E se a tendência estiver contra, nem sequer chegas a este ponto."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "capitulo",
+     "cap": "02 · Entrada e gestão",
+     "numero": "02",
+     "titulo": "Entrada e gestão",
+     "sub": "Ordem limite, stop e alvos",
+     "fala": "Segundo capítulo: a entrada, o stop e os alvos."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "plano",
+     "cap": "02 · Entrada e gestão",
+     "kicker": "Os níveis do plano",
+     "titulo": "Zona, saídas e invalidação",
+     "linhas": [
+      [
+       "Zona de ação",
+       "caixa amarela · ordem limite a meio",
+       "entrada"
+      ],
+      [
+       "Saída 1",
+       "alvo, a verde",
+       "tp"
+      ],
+      [
+       "Saída 2",
+       "alvo, a verde",
+       "tp"
+      ],
+      [
+       "Invalidação",
+       "stop, a vermelho",
+       "sl"
+      ]
+     ],
+     "fala": "Os níveis do plano são quatro, e cada um tem um papel. A zona de ação é a caixa amarela, onde colocas a ordem limite. O guia sugere que a coloques a meio da zona, porque costuma dar uma melhor relação entre risco e retorno. É uma sugestão, e vais medir isso no teu diário. A Saída 1 e a Saída 2 são os alvos, a verde. Se o preço lá chega, há lucro. A invalidação é o stop, a vermelho, e é o nível onde a ideia deixa de fazer sentido. Não o coloques encostado à vela de sinal. O guia pede que o stop fique para lá da invalidação e da mecha mais extrema das velas anteriores, e não só da vela do sinal. Uma mecha que passa a invalidação e tira o trade é o erro clássico do stop demasiado justo. Antes de enviares a ordem, calcula o tamanho da posição. O scanner mostra os níveis, mas o risco quem o define és tu."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "pontos",
+     "cap": "02 · Entrada e gestão",
+     "kicker": "Passo a passo",
+     "titulo": "Da leitura à ordem",
+     "itens": [
+      "Espera pelo fecho da vela seguinte ao visto",
+      "Valida as quatro confirmações",
+      "Coloca a ordem limite dentro da zona",
+      "Stop para lá da mecha mais extrema",
+      "Calcula o tamanho antes de enviar"
+     ],
+     "fala": "Vamos pôr isto em sequência, com o ritmo do guia. Um: espera pelo fecho da vela de cinco minutos seguinte ao visto. Dois: valida as quatro confirmações. Se a tendência estiver contra o sinal, deixa-o passar, e não há mais nada a fazer. Três: coloca uma ordem limite dentro da zona de ação. Não é uma ordem a mercado. Queres que o preço volte à zona e te encontre lá. Quatro: o stop. Põe-no para lá da invalidação e da mecha mais extrema das velas anteriores. Cinco: confirma os alvos, a Saída 1 e a Saída 2. E seis, o mais importante, antes de enviar a ordem: calcula o tamanho da posição em função da tua conta e do risco que decidiste. Um sinal que é bom no gráfico, mas que não cabe no teu risco, não é um trade para ti. Só depois de tudo isto é que a ordem segue para o mercado."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "grafico",
+     "cap": "02 · Entrada e gestão",
+     "kicker": "O reteste",
+     "titulo": "A ordem a meio da zona",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "medias",
+      "cores",
+      "niveis",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0.4,
+      0.9
+     ],
+     "rotulo": "Ordem a meio da zona",
+     "fala": "Aqui vês o reteste. O preço veio à zona de ação, a caixa amarela, e a ordem limite está a meio dela. O preço toca a zona e volta a subir, sem chegar à invalidação. Repara que o stop está para lá da mecha mais baixa das velas anteriores, e não encostado à vela do sinal. Isso dá-lhe espaço, sem o afastar da lógica da ideia. As saídas ficam acima, a verde. Este exemplo mostra uma execução em que a entrada foi ao sítio planeado, o stop ficou no sítio planeado, e a gestão foi a que estava escrita antes. Não é uma promessa de que o movimento se repete. Se este trade tivesse ido ao stop, a execução teria sido igualmente correta, e a perda seria a que estava prevista desde o início."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "capitulo",
+     "cap": "03 · Quando não entrar",
+     "numero": "03",
+     "titulo": "Quando não entrar",
+     "sub": "Tão importante como entrar",
+     "fala": "Terceiro capítulo: quando não entrar."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "checklist",
+     "cap": "03 · Quando não entrar",
+     "kicker": "Deixa passar quando",
+     "titulo": "Seis situações",
+     "itens": [
+      "Na vela do visto amarelo, ainda sem plano",
+      "Contra a tendência das médias de 50 e 200",
+      "Depois da bandeira branca",
+      "Preço já passou a Saída 2 sem voltar à zona",
+      "Desequilíbrios por preencher perto do stop",
+      "Stop encostado só à mecha da vela do sinal"
+     ],
+     "fala": "O guia tem uma lista clara de quando não entrar, e é a parte que mais se esquece. Primeiro: na vela do visto amarelo. Ainda não há plano, e um visto não é uma ordem. Segundo: contra a tendência das médias de cinquenta e duzentos. Se a média de cinquenta está abaixo da de duzentos, não procuras compras, por mais bonito que o visto pareça. Terceiro: depois da bandeira branca. O trade já acabou, e entrar agora é entrar noutro trade, sem plano. Quarto: quando o preço já passou a Saída 2 sem voltar à zona. Chegaste tarde, e nesse caso não há entrada. Quinto: com desequilíbrios por preencher perto do stop. Se o caminho do preço está cheio de vazios, a tua proteção fica mais fraca. E sexto: com o stop encostado só à mecha da vela do sinal. Um stop assim é justo demais, e o guia já te avisou do que acontece nesses casos. Se alguma destas situações estiver no gráfico, não tens trade. Não tens de o justificar a ninguém. É o processo a funcionar."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "grafico",
+     "cap": "03 · Quando não entrar",
+     "kicker": "Quando a zona não volta",
+     "titulo": "Bandeira branca, sem entrada",
+     "cenario": "falha",
+     "seed": 7,
+     "base": [
+      "medias",
+      "cores",
+      "niveis"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      0.95
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Bandeira branca",
+     "fala": "Vê este exemplo. Há visto amarelo, há zona e há plano. Mas o preço sobe para lá da Saída 2 e não volta à zona de ação. Não houve nenhum momento em que a entrada fosse possível, porque o preço nunca voltou lá. O scanner marca a bandeira branca. O trade terminou, sem entrada, sem ganho e sem perda. Esta é uma das situações mais úteis para um principiante, porque mostra que nem todo o sinal tem uma entrada. Há quem fique frustrado com isto, e é compreensível. Mas repara: se tivesses entrado a correr atrás do preço, terias entrado longe da zona, com um stop que já não fazia sentido. Não entrar foi coerente com o processo, mesmo que não parecesse. Regista no diário que houve sinal e que não houve trade."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "capitulo",
+     "cap": "04 · Rotina",
+     "numero": "04",
+     "titulo": "Acompanhar sem viver no ecrã",
+     "sub": "Uma rotina para a Golden Zone",
+     "fala": "Quarto capítulo: a rotina de acompanhamento."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "checklist",
+     "cap": "04 · Rotina",
+     "kicker": "Antes de cada sessão",
+     "titulo": "A rotina em cinco passos",
+     "itens": [
+      "Abrir o gráfico de cinco minutos do ouro, ao vivo",
+      "Confirmar a tendência pelas médias de 50 e 200",
+      "Ver os vistos amarelos e as zonas desenhadas",
+      "Validar as quatro confirmações antes de agir",
+      "Anotar no diário, sim ou não, e porquê"
+     ],
+     "fala": "A rotina é simples. Antes de uma sessão, abres o gráfico de cinco minutos do ouro e acompanhas ao vivo, porque cada sinal novo apaga o anterior. Confirmas a tendência pelas médias de cinquenta e duzentos. Vês se há visto amarelo e onde estão as zonas desenhadas. Quando há um sinal, validas as quatro confirmações, por ordem, sem saltar nenhuma. Se a resposta for não, deixas passar. E no fim, anotas no diário, com um sim ou não e a razão. Esta última parte é a que mais gente salta, e é a que mais te ensina. Não precisas de estar o dia inteiro no ecrã. Precisas de estar presente nos momentos em que a estratégia pode dar um sinal, e de seguir sempre o mesmo processo."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "pontos",
+     "cap": "04 · Rotina",
+     "kicker": "O diário",
+     "titulo": "O que registar em cada sinal",
+     "itens": [
+      "Hora, direção e se havia visto amarelo",
+      "As quatro confirmações, com sim ou não",
+      "Se entraste: onde, o stop e o tamanho",
+      "Resultado: Saída 1, Saída 2, stop ou bandeira branca",
+      "Seguiste o processo? O que aprendeste?"
+     ],
+     "fala": "O diário é a parte que transforma uma estratégia em aprendizagem. Para cada sinal, regista a hora, a direção e se houve visto amarelo. Depois, as quatro confirmações, uma a uma, com sim ou não. Se entraste, regista onde foi a ordem na zona, o stop e o tamanho da posição. Depois, o resultado: foi à Saída 1, à Saída 2, ao stop, ou a bandeira branca chegou antes de haver entrada. E por fim, duas perguntas que vale a pena responder com honestidade. Seguiste o processo? E o que aprendeste com este sinal? Ao fim de algumas semanas, o diário diz-te onde estás a ser consistente e onde estás a improvisar. Não te dá respostas mágicas. Dá-te o padrão do teu comportamento, escrito por ti."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "frase",
+     "cap": "Fecho",
+     "texto": "A zona espera. <span class='ouro'>Tu decides.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Chegámos ao fim do Bootcamp Golden Zone. Lembra-te do que disse no início: a estratégia não te manda entrar a correr atrás do preço. Marca uma zona e espera. Validas as confirmações, calculas o risco, e só entras quando o processo estiver completo. Faz os exercícios, treina primeiro em conta de demonstração, e escreve o diário desde o primeiro sinal, mesmo que não entres. Se tiveres dúvidas, traz os teus casos para a comunidade e para as sessões ao vivo da MoreThanMoney. Eu sou o Ricardo Garcia. Até à próxima."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Bootcamp Golden Zone concluído",
+     "sub": "morethanmoney.pt",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar ouro e outros ativos envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos e exemplos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros. Treina primeiro em conta de demonstração e define o teu risco antes de cada entrada.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Treina primeiro em conta de demonstração. Até à próxima.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}
