@@ -112,11 +112,10 @@ export default function PortfoliosPage() {
     setMounted(true)
     loadPortfolioData()
 
-    // Auto-sincronização a cada 2 minutos
+    // Auto-sincronização a cada 5 minutos: só lê a base (o cron actualiza de 15 em 15 min).
     const interval = setInterval(() => {
-      console.log('🔄 Auto-sincronização: Atualizando preços e dados...')
       loadPortfolioData()
-    }, 120000)
+    }, 300000)
 
     return () => clearInterval(interval)
   }, [])
@@ -205,46 +204,36 @@ export default function PortfoliosPage() {
 
           let merged: AssetWithPrice[] = assetsBase
 
-          console.log('💰 [PORTFOLIO] CoinGecko (lote) + IA TP/SL em sequência…')
+          // Cotações e TP/SL vêm da BASE (cron /api/cron/portfolio-cotacoes, de 15 em 15 min, fontes
+          // grátis). A página já não vai à Binance/CoinGecko nem pede IA por visitante.
+          let cotacoes: Record<string, { preco?: number | string | null; var_24h_pct?: number | string | null; tp1?: number | string | null; tp2?: number | string | null; tp3?: number | string | null; stop_loss?: number | string | null; ia_validado?: boolean }> = {}
           try {
-            const symList = [...new Set(assetsBase.map((a) => a.symbol).filter(Boolean))].join(',')
-            if (symList) {
-              const pricesResponse = await fetch(`/api/portfolio/prices-coingecko?symbols=${symList}`)
-              if (pricesResponse.ok) {
-                const pricesData = await pricesResponse.json()
-                if (pricesData.success && pricesData.prices) {
-                  merged = assetsBase.map((asset) => {
-                    const newPrice = pricesData.prices[asset.symbol] as number | undefined
-                    const dailyChange = pricesData.changes_24h?.[asset.symbol]
-                    if (newPrice) {
-                      const entryPrice = asset.entry_price || newPrice * 0.7
-                      const vsEntryPercent = ((newPrice - entryPrice) / entryPrice) * 100
-                      const has24h =
-                        typeof dailyChange === 'number' &&
-                        Number.isFinite(dailyChange) &&
-                        !Number.isNaN(dailyChange)
-                      return {
-                        ...asset,
-                        current_price: newPrice,
-                        change_24h_percent: has24h ? dailyChange : null,
-                        pnl_percent: vsEntryPercent,
-                        current_value: (asset.total_invested / entryPrice) * newPrice,
-                        pnl: (asset.total_invested / entryPrice) * newPrice - asset.total_invested,
-                        tp1: newPrice * 1.5,
-                        tp2: newPrice * 2.0,
-                        tp3: newPrice * 3.0,
-                        stop_loss: newPrice * 0.85,
-                        ai_validated: false,
-                      }
-                    }
-                    return { ...asset, change_24h_percent: null }
-                  })
-                }
-              }
-            }
+            const rc = await fetch('/api/portfolio/cotacoes')
+            if (rc.ok) cotacoes = (await rc.json())?.cotacoes ?? {}
           } catch (error) {
-            console.error('❌ [PORTFOLIO] Erro ao buscar preços CoinGecko:', error)
+            console.error('❌ [PORTFOLIO] Erro ao ler cotações:', error)
           }
+          const numOuNull = (v: unknown) => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v))
+          merged = assetsBase.map((asset) => {
+            const c = cotacoes[asset.symbol] ?? cotacoes[`${String(asset.symbol).toUpperCase().replace(/USDT$/, '')}USDT`]
+            const newPrice = numOuNull(c?.preco)
+            if (!newPrice) return { ...asset, change_24h_percent: null }
+            const entryPrice = asset.entry_price || newPrice * 0.7
+            const ia = c?.ia_validado === true && numOuNull(c?.tp1) != null
+            return {
+              ...asset,
+              current_price: newPrice,
+              change_24h_percent: numOuNull(c?.var_24h_pct),
+              pnl_percent: ((newPrice - entryPrice) / entryPrice) * 100,
+              current_value: (asset.total_invested / entryPrice) * newPrice,
+              pnl: (asset.total_invested / entryPrice) * newPrice - asset.total_invested,
+              tp1: ia ? (numOuNull(c?.tp1) as number) : newPrice * 1.5,
+              tp2: ia ? (numOuNull(c?.tp2) ?? newPrice * 2.0) : newPrice * 2.0,
+              tp3: ia ? (numOuNull(c?.tp3) ?? newPrice * 3.0) : newPrice * 3.0,
+              stop_loss: ia ? (numOuNull(c?.stop_loss) ?? newPrice * 0.85) : newPrice * 0.85,
+              ai_validated: ia,
+            }
+          })
 
           const with24h = merged.filter(
             (a) => a.change_24h_percent !== null && a.change_24h_percent !== undefined
@@ -260,37 +249,7 @@ export default function PortfoliosPage() {
             setCrypto24hCoverage(totalWithPrice > 0 ? { ok: 0, total: totalWithPrice } : null)
           }
 
-          console.log('🤖 [PORTFOLIO] IA TP/SL (paralelo por ativo)…')
-          const withAI = await Promise.all(
-            merged.map(async (asset) => {
-              if (!asset.current_price) return asset
-              try {
-                const aiResponse = await fetch(
-                  `/api/portfolio/ai-tp-sl?symbol=${encodeURIComponent(asset.symbol)}&entryPrice=${asset.entry_price || asset.current_price}`
-                )
-                if (aiResponse.ok) {
-                  const aiData = await aiResponse.json()
-                  if (aiData.success && aiData.ai_validated) {
-                    return {
-                      ...asset,
-                      tp1: aiData.take_profit_levels?.tp1?.price,
-                      tp2: aiData.take_profit_levels?.tp2?.price,
-                      tp3: aiData.take_profit_levels?.tp3?.price,
-                      stop_loss: aiData.stop_loss?.price,
-                      ai_validated: true,
-                    }
-                  }
-                }
-              } catch {
-                console.log(`⚠️ [PORTFOLIO AI] Fallback: ${asset.symbol}`)
-              }
-              return asset
-            })
-          )
-
-          console.log(
-            `🤖 [PORTFOLIO AI] Concluído: ${withAI.filter((a) => a.ai_validated).length}/${withAI.length} validados; estado único.`
-          )
+          const withAI = merged
           setCryptoAssets(withAI)
         }
 
@@ -439,7 +398,7 @@ export default function PortfoliosPage() {
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 border border-purple-500/30 rounded-full">
                 <RefreshCw className="h-3 w-3 text-purple-400 animate-spin" style={{ animationDuration: '3s' }} />
-                <span className="text-purple-400">Auto-Sync 2min</span>
+                <span className="text-purple-400">Auto-Sync 5min</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-[#D2A63C]/10 border border-[#D2A63C]/30 rounded-full">
                 <span className="text-gray-400">Última Sync:</span>

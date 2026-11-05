@@ -193,6 +193,14 @@
       "schedule": "0 10 * * 6"
     },
     {
+      "path": "/api/cron/portefolio-dca",
+      "schedule": "0 6 * * 6"
+    },
+    {
+      "path": "/api/cron/portfolio-cotacoes",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/bot-responder",
       "schedule": "* * * * *"
     },
