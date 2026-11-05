@@ -28,7 +28,7 @@
 // Trade Display = Full Display. Também há «DEFY Compra» / «DEFY Venda».
 // Conteúdo educativo, não constitui consultoria financeira.
 // ─────────────────────────────────────────────────────────────────────────────
-indicator("DEFY", "DEFY", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=200, max_bars_back=1000)
+indicator("DEFY", "DEFY", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=200, max_polylines_count=20, max_bars_back=1000)
 
 // ═══════════ DEFY • THEME ═══════════
 gT = "DEFY • THEME"
@@ -68,10 +68,10 @@ showInner  = input.bool(true, "Show Inner Band", group=gB)
 showMid    = input.bool(true, "Show Mid Band", group=gB)
 showOuter  = input.bool(true, "Show Outter Band", group=gB)
 showCenter = input.bool(true, "Show Center Line", group=gB)
-showFill   = input.bool(true, "Show Band Fill", group=gB)
+showFill   = input.bool(false, "Show Band Fill", group=gB)
 bandWidth  = input.int(1, "Set Band Width", minval=1, maxval=5, group=gB)
 bandTransp = input.int(0, "Set Band Transparency", minval=0, maxval=100, group=gB)
-fillTransp = input.int(20, "Set Fill Transparency", minval=0, maxval=100, group=gB)
+fillTransp = input.int(85, "Set Fill Transparency", minval=0, maxval=100, group=gB)
 
 // ═══════════ DEFY • PROJECTION ═══════════
 gP = "DEFY • PROJECTION"
@@ -117,6 +117,7 @@ ideaSizeS    = input.string("Normal", "Idea Label Size", options=["Tiny", "Small
 entryMode    = input.string("Candle Close", "Entry Mode", options=["Candle Close", "Candle Pullback"], group=gX)
 targetMode   = input.string("Squeeze", "Target Mode", options=["Squeeze", "Standard", "Stretch", "Swing"], group=gX, tooltip="Squeeze: alvos nas bandas (rotação até à média); se estiver comprimido usa Standard. Standard 1:1–1:3. Stretch 1:2–1:6. Swing 1:3–1:9.")
 
+needTouch    = input.bool(true, "Require Band Touch", group=gX, tooltip="Só há ideia depois de o preço tocar a banda interior do lado contrário (esticão). Desligado = mais ideias, também a meio das bandas.")
 chave        = input.string("DEFY", "strategy (chave no webhook)", group=gX)
 followUps    = input.bool(true, "Enviar seguimentos (TP / SL)", group=gX)
 
@@ -366,19 +367,20 @@ f_pass(int sc, int stars, bool king) =>
         => true
 
 // núcleo: vela válida + fecho a romper o fractal + ≥3 confluências
-coreB = barstate.isconfirmed and validBull and breakUp and confB >= 3
-coreS = barstate.isconfirmed and validBear and breakDn and confS >= 3
+// a ideia nasce de um esticão: o preço tem de ter tocado a banda interior do lado contrário (5 velas)
+coreB = barstate.isconfirmed and validBull and breakUp and confB >= 3 and (not needTouch or tIn1B)
+coreS = barstate.isconfirmed and validBear and breakDn and confS >= 3 and (not needTouch or tIn1S)
 sigBuy  = coreB and f_pass(scoreB, starsB, kingB)
 sigSell = coreS and f_pass(scoreS, starsS, kingS)
 
 // ═══════════ PLOTS ═══════════
-plot(showInner ? up1 : na, "Upper BB1", color.new(bear, bandTransp), bandWidth)
-plot(showInner ? lo1 : na, "Lower BB1", color.new(bull, bandTransp), bandWidth)
-plot(showMid ? up2 : na, "Upper BB2", color.new(bear, bandTransp), bandWidth)
-plot(showMid ? lo2 : na, "Lower BB2", color.new(bull, bandTransp), bandWidth)
-plot(showOuter ? up3 : na, "Upper BB3", color.new(bear, bandTransp), bandWidth)
-plot(showOuter ? lo3 : na, "Lower BB3", color.new(bull, bandTransp), bandWidth)
-plot(showCenter ? basis : na, "Centerline", color.new(neutral, bandTransp), 1, plot.style_circles)
+plot(showInner ? up1 : na, "Upper BB1", color.new(bear, bandTransp), bandWidth, display=display.data_window)
+plot(showInner ? lo1 : na, "Lower BB1", color.new(bull, bandTransp), bandWidth, display=display.data_window)
+plot(showMid ? up2 : na, "Upper BB2", color.new(bear, bandTransp), bandWidth, display=display.data_window)
+plot(showMid ? lo2 : na, "Lower BB2", color.new(bull, bandTransp), bandWidth, display=display.data_window)
+plot(showOuter ? up3 : na, "Upper BB3", color.new(bear, bandTransp), bandWidth, display=display.data_window)
+plot(showOuter ? lo3 : na, "Lower BB3", color.new(bull, bandTransp), bandWidth, display=display.data_window)
+plot(showCenter ? basis : na, "Centerline", color.new(neutral, bandTransp), 1, display=display.data_window)
 
 aU2 = plot(up2, "anchor U2", color=na, editable=false, display=display.none)
 aU3 = plot(up3, "anchor U3", color=na, editable=false, display=display.none)
@@ -483,7 +485,7 @@ f_targets(int d, float e, float rk) =>
 f_new(int d) =>
     float e = entryMode == "Candle Close" ? close : (high + low) / 2.0
     float w = d == 1 ? low : high                     // WARNING = extremo da vela de sinal
-    float sl = w - d * math.max(atr * 0.25, syminfo.mintick * 2)
+    float sl = w - d * math.max(atr * 0.05, syminfo.mintick * 2)
     float rk = math.abs(e - sl)
     [t1, t2, t3] = f_targets(d, e, rk)
     Trade t = Trade.new(d, e, sl, w, t1, t2, t3, rk, bar_index, entryMode != "Candle Close", entryMode == "Candle Close", 0, na, array.new<line>(), array.new<label>())
@@ -589,6 +591,52 @@ if showArrows and maxArrows > 0 and barstate.isconfirmed
     while arrows.size() > maxArrows
         label.delete(arrows.shift())
 
+// ═══════════ BANDAS A TRACEJADO (histórico) ═══════════
+// As bandas desenham-se como linhas tracejadas finas (polyline), como no gráfico de referência;
+// os plots acima ficam só na janela de dados (para alertas e para o preenchimento opcional).
+histBars = 400
+var array<polyline> bandPolys = array.new<polyline>()
+// os pontos lêem-se no âmbito global (up1[i] etc.): dentro de uma função chamada só na última vela
+// o histórico do parâmetro estaria vazio
+f_poly(array<chart.point> pts, color c) =>
+    if pts.size() > 1
+        bandPolys.push(polyline.new(pts, line_color=c, line_style=line.style_dashed, line_width=bandWidth))
+    true
+
+if barstate.islast
+    for pl in bandPolys
+        polyline.delete(pl)
+    bandPolys.clear()
+    array<chart.point> pB  = array.new<chart.point>()
+    array<chart.point> pU1 = array.new<chart.point>()
+    array<chart.point> pL1 = array.new<chart.point>()
+    array<chart.point> pU2 = array.new<chart.point>()
+    array<chart.point> pL2 = array.new<chart.point>()
+    array<chart.point> pU3 = array.new<chart.point>()
+    array<chart.point> pL3 = array.new<chart.point>()
+    int n = math.min(histBars, bar_index)
+    for i = n to 0
+        if not na(basis[i])
+            int x = bar_index - i
+            pB.push(chart.point.from_index(x, basis[i]))
+            pU1.push(chart.point.from_index(x, up1[i]))
+            pL1.push(chart.point.from_index(x, lo1[i]))
+            pU2.push(chart.point.from_index(x, up2[i]))
+            pL2.push(chart.point.from_index(x, lo2[i]))
+            pU3.push(chart.point.from_index(x, up3[i]))
+            pL3.push(chart.point.from_index(x, lo3[i]))
+    if showCenter
+        f_poly(pB, color.new(neutral, bandTransp))
+    if showInner
+        f_poly(pU1, color.new(bear, bandTransp))
+        f_poly(pL1, color.new(bull, bandTransp))
+    if showMid
+        f_poly(pU2, color.new(bear, bandTransp))
+        f_poly(pL2, color.new(bull, bandTransp))
+    if showOuter
+        f_poly(pU3, color.new(bear, bandTransp))
+        f_poly(pL3, color.new(bull, bandTransp))
+
 // ═══════════ PROJECÇÃO TRACEJADA ═══════════
 var array<line> projLines = array.new<line>()
 f_proj(float v, float s, color c) =>
@@ -627,7 +675,7 @@ alertcondition(sigSell, "DEFY Venda",  "DEFY: ideia de VENDA em {{ticker}} a {{c
 f_json(int d, int sc, int stars, bool king) =>
     float e = entryMode == "Candle Close" ? close : (high + low) / 2.0
     float w = d == 1 ? low : high
-    float sl = w - d * math.max(atr * 0.25, syminfo.mintick * 2)
+    float sl = w - d * math.max(atr * 0.05, syminfo.mintick * 2)
     float rk = math.abs(e - sl)
     [t1, t2, t3] = f_targets(d, e, rk)
     string act = d == 1 ? "buy" : "sell"
