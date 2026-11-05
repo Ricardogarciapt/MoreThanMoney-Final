@@ -1,0 +1,8 @@
+O que é o DEFY? É um indicador para o TradingView que junta quatro leituras num só gráfico.
+Primeiro, as bandas de exaustão: interior, média e exterior, à volta de uma média suave, com uma projecção tracejada para a frente.
+Segundo, os níveis-chave: zonas onde o preço já reagiu, espaçadas entre si para não encher o gráfico.
+Terceiro, a nuvem de tendência, que te diz para que lado o mercado está a puxar.
+E quarto, a pontuação de confirmações, de mais três a mais quinze, com estrelas.
+A ideia é simples: o preço estica até às bandas, vira com uma vela forte e, se houver confirmações suficientes, o DEFY marca a ideia e desenha o plano completo.
+No próximo vídeo vês como funcionam as confirmações e as estrelas.
+Conteúdo educativo. Não é aconselhamento financeiro.
