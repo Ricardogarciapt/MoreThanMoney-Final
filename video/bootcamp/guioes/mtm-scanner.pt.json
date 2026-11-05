@@ -1,0 +1,1318 @@
+{
+ "estrategia": "MTM Scanner",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#3b82f6",
+  "bear": "#ef4444"
+ },
+ "ui": {
+  "nivel": "Nível",
+  "compra": "Compra",
+  "venda": "Venda",
+  "entrada": "Entrada",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  ["TradingView", "Trading View"],
+  ["ATR", "A T R"],
+  ["POC", "P O C"],
+  ["DEMA", "D E M A"],
+  ["BOS", "B O S"],
+  ["CHoCH", "C H O C H"],
+  ["IDM", "I D M"],
+  ["XAUUSD", "X A U U S D"],
+  ["TP1", "T P um"],
+  ["TP2", "T P dois"],
+  ["TP3", "T P três"]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [2, 4, 6],
+  "rotulos": ["TP 1:2", "TP 1:4", "TP 1:6"]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp MTM Scanner · 1/3",
+   "titulo": "Fundamentos: ler antes de entrar",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 1 de 3",
+     "titulo": "MTM Scanner",
+     "sub": "Fundamentos: ler a estrutura antes de entrar",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "Lê a estrutura antes de entrar. <span class='ouro'>O gatilho vem depois.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Olá, sou o Ricardo Garcia e este é o Bootcamp do MTM Scanner, a estratégia de seguimento de tendência da MoreThanMoney. Antes de começarmos, quero ser claro numa coisa: nenhum indicador garante o que vai acontecer a seguir. O que o MTM Scanner faz é juntar, no mesmo gráfico, quatro peças que costumam andar separadas: três médias duplas, o preço com mais volume recente, a estrutura do mercado e as fases de momentum. Quando as peças estão de acordo, o scanner desenha um gatilho e um plano. Quando não estão, não desenha nada. Ao longo destes três módulos vais aprender a ler cada peça, a perceber como nasce um sinal, como o plano fica desenhado e como se gere o risco no dia a dia. No último módulo vais ver uma rotina simples, de poucos minutos, à volta de tudo isto. Vamos com calma e por ordem, porque cada módulo assenta no anterior."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "O plano do bootcamp",
+     "titulo": "Três módulos, um método",
+     "itens": [
+      "Módulo 1 · Fundamentos: médias, POC e estrutura",
+      "Módulo 2 · Do cruzamento ao plano de trade",
+      "Módulo 3 · Risco, gestão e rotina"
+     ],
+     "fala": "O bootcamp tem três módulos. Neste primeiro vamos montar a base: o que é o MTM Scanner, para que serve cada peça do gráfico e como se lê cada uma delas sozinha. No segundo módulo entramos no motor: o que é exactamente um sinal, que confirmações ajudam a filtrá-lo, como o plano de trade é desenhado com entrada, stop e três alvos, e o que dizem os alertas. No terceiro módulo passamos à prática: quanto arriscar, como gerir uma ideia do princípio ao fim, quando não entrar, que perfil escolher e uma rotina simples que cabe em quinze minutos por dia. Sugiro que vejas os módulos por ordem, porque cada um assenta no anterior. E se algum conceito te parecer confuso, volta atrás. Não há prémio por veres depressa."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · O que é o MTM Scanner",
+     "numero": "01",
+     "titulo": "O que é o MTM Scanner",
+     "sub": "Seguimento de tendência com gatilho no POC",
+     "fala": "Primeiro capítulo. O que é, afinal, o MTM Scanner?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "camadas3d",
+     "cap": "01 · O que é o MTM Scanner",
+     "kicker": "Uma peça de cada vez",
+     "titulo": "Quatro peças no mesmo gráfico",
+     "itens": [
+      "Três médias duplas",
+      "O POC de volume",
+      "A estrutura de mercado",
+      "O stop e os alvos por ATR"
+     ],
+     "fala": "O MTM Scanner é um indicador para o TradingView, e funciona em forex, ouro, índices e cripto, em qualquer ativo e em qualquer timeframe. Imagina quatro camadas de vidro empilhadas. A primeira são três médias duplas, a azul, a verde e a amarela, que te mostram o alinhamento da tendência em prazos curtos, médios e longos. A segunda é o POC, o preço com mais volume nas últimas catorze velas, que funciona como ponto de equilíbrio recente. A terceira é a estrutura de mercado, com as quebras que mostram continuação e as mudanças de carácter que mostram uma possível viragem, além das armadilhas de liquidez. A quarta é a camada de decisão: quando o fecho cruza o POC, o scanner desenha a entrada, o stop a um ATR e três alvos. Separadas, cada peça dá-te um pedaço da história. Juntas, dão-te uma leitura com contexto. Repara: o scanner não decide por ti. Dá-te uma forma organizada de decidir."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "pontos",
+     "cap": "01 · O que é o MTM Scanner",
+     "kicker": "Onde e quando",
+     "titulo": "Mercados e timeframes",
+     "itens": [
+      "Forex, índices, ouro e cripto",
+      "15 minutos como base",
+      "5 minutos para ter mais sinais",
+      "1 hora para operações mais longas"
+     ],
+     "fala": "O MTM Scanner funciona em forex, índices, ouro e cripto, e em qualquer ativo e timeframe do TradingView. Não há um mercado melhor do que outro para aprender: há o mercado que acompanhas todos os dias, e cujo horário te dá jeito. Mas a estratégia tem um quadro claro. O timeframe de base é o de quinze minutos. Se quiseres mais sinais, podes olhar para o gráfico de cinco minutos, sabendo que há mais ruído. Se quiseres operações mais longas, o gráfico de uma hora é o caminho. E o plano lê-se da mesma maneira em todos estes mercados, porque os alvos são medidos em múltiplos do risco, e não em valores fixos. Se estás a começar, escolhe um mercado e um timeframe, e fica com eles durante as primeiras semanas. Mudar tudo de cada vez é a forma mais rápida de não perceber nada."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "checklist",
+     "cap": "01 · O que é o MTM Scanner",
+     "kicker": "Antes de começar",
+     "titulo": "O que precisas",
+     "itens": [
+      "Uma conta no TradingView, a gratuita chega",
+      "O indicador MTM Scanner no teu gráfico",
+      "Uma conta demo na tua corretora",
+      "Um caderno ou folha para o diário",
+      "Quinze minutos por dia"
+     ],
+     "fala": "Antes de avançarmos, o que precisas para tirar partido deste bootcamp. Uma conta no TradingView, e a gratuita chega para começar. O indicador MTM Scanner no teu gráfico. Uma conta demo na tua corretora, porque tudo o que vais aprender deve ser treinado sem dinheiro real primeiro. Um caderno, ou uma folha de cálculo, para o diário, que vamos construir no terceiro módulo. E quinze minutos por dia. O que faz a diferença não é o tempo que passas a olhar para gráficos. É a consistência com que repetes o mesmo processo, dia após dia, durante semanas. Se tens tudo isto pronto, estás preparado para o resto do bootcamp."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "capitulo",
+     "cap": "02 · As três médias duplas",
+     "numero": "02",
+     "titulo": "As três médias duplas",
+     "sub": "Azul 15, verde 50, amarela 238",
+     "fala": "Segundo capítulo. Começamos pela primeira leitura: as três médias."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · As três médias duplas",
+     "kicker": "Leitura 1",
+     "titulo": "Três médias empilhadas",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [],
+     "camadas": ["medias"],
+     "ate": [0.4, 1],
+     "zoom": [0, 0],
+     "fala": "Antes de mais, uma nota sobre estes gráficos. São animações ilustrativas, desenhadas para explicar o funcionamento do indicador. Não são resultados reais nem históricos de mercado, e vou dizer isto mais do que uma vez, porque é importante. Dito isto, vamos às médias. São três médias exponenciais duplas, calculadas a partir de uma média exponencial e de uma segunda média exponencial sobre essa primeira. A azul é a de quinze velas, a verde a de cinquenta, e a amarela a de duzentas e trinta e oito. A azul é a mais rápida: mostra o ritmo do movimento de curto prazo. A verde mostra o médio prazo. E a amarela mostra o longo prazo, o lado da tendência maior. Quando as três estão empilhadas na mesma direcção, a tendência está alinhada em todos os prazos. Repara no gráfico: a azul acima da verde, e a verde acima da amarela. É isso que procuramos numa compra."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "pontos",
+     "cap": "02 · As três médias duplas",
+     "kicker": "Como as ler",
+     "titulo": "O que cada média te diz",
+     "itens": [
+      "Azul, 15: o ritmo de curto prazo",
+      "Verde, 50: o médio prazo",
+      "Amarela, 238: o lado da tendência maior",
+      "Empilhadas: alinhamento. Enroladas: indecisão"
+     ],
+     "fala": "Vamos ler cada uma. A azul, de quinze, é a que mais depressa reage ao preço. Se o preço acelera, ela acelera primeiro. A verde, de cinquenta, filtra um pouco mais o ruído e mostra o médio prazo. A amarela, de duzentas e trinta e oito, é lenta, e mostra para que lado está a puxar a tendência maior. Numa compra, queres ver a azul por cima da verde, e a verde por cima da amarela. Numa venda, é o contrário. Quando isto acontece, dizemos que as médias estão empilhadas. Quando as linhas se cruzam sem ordem, e a azul entra e sai da verde a toda a hora, dizemos que estão enroladas. Empilhadas dão-te contexto a favor. Enroladas dizem-te que o mercado não tem direcção, e isso vai ser decisivo no terceiro módulo, quando falarmos de quando não entrar."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "comparar",
+     "cap": "02 · As três médias duplas",
+     "kicker": "Leitura rápida",
+     "titulo": "Três estados das médias",
+     "cartoes": [
+      {"t": "Empilhadas para cima", "d": "Azul acima da verde, verde acima da amarela. Contexto de compra."},
+      {"t": "Empilhadas para baixo", "d": "Azul abaixo da verde, verde abaixo da amarela. Contexto de venda."},
+      {"t": "Enroladas", "d": "Sem ordem clara e cruzamentos constantes. Mercado de lado."}
+     ],
+     "fala": "Resumindo as médias em três estados. Empilhadas para cima, e o contexto é de compra. Empilhadas para baixo, e o contexto é de venda. E enroladas, quando as médias se cruzam umas com as outras sem ordem nenhuma. Este último estado é o mais traiçoeiro, porque parece que está sempre a acontecer alguma coisa, mas nada tem direcção. Mais à frente vamos ver que, nestes momentos, a decisão mais útil é não entrar."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "capitulo",
+     "cap": "03 · O POC",
+     "numero": "03",
+     "titulo": "O POC: o preço com mais volume",
+     "sub": "O ponto de equilíbrio recente",
+     "fala": "Terceiro capítulo. O POC, a linha dourada do gráfico."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "grafico",
+     "cap": "03 · O POC",
+     "kicker": "Leitura 2",
+     "titulo": "A linha do POC",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias"],
+     "camadas": ["poc"],
+     "ate": [0.45, 0.75],
+     "zoom": [0, 0],
+     "fala": "O POC, de point of control, é o preço com mais volume nas últimas catorze velas. Mais precisamente: o indicador olha para as últimas catorze velas, encontra a que teve mais volume, e usa o fecho dessa vela como nível. Esse nível é desenhado como uma linha dourada, e vai-se ajustando à medida que a janela de catorze velas avança. A ideia é simples: o mercado passou tempo e dinheiro a negociar perto desse preço, por isso ele funciona como um ponto de equilíbrio recente. Repara no gráfico: a linha acompanha o movimento, e quando o preço se afasta dela, ela sobe ou desce com ele, sempre um pouco atrasada. Não é uma linha mágica, nem é uma previsão. É uma referência, e o valor que lhe dás depende de como o preço reage à volta dela."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "pontos",
+     "cap": "03 · O POC",
+     "kicker": "Como o usar",
+     "titulo": "O POC é referência, não ordem",
+     "itens": [
+      "Mede o equilíbrio das últimas catorze velas",
+      "Ajusta-se a cada vela nova",
+      "Preço acima: o lado comprador ganha terreno",
+      "Preço abaixo: o lado vendedor ganha terreno"
+     ],
+     "fala": "Como se lê o POC na prática? Quando o preço está acima dele, o equilíbrio recente está do lado comprador. Quando está abaixo, está do lado vendedor. E o cruzamento, que vamos estudar a fundo no segundo módulo, é o momento em que o preço muda de lado. Mas há um cuidado que quero que tenhas desde já. O POC muda com as velas novas, por isso não é uma linha fixa, como um suporte desenhado à mão. Também não é uma ordem para entrar. É uma referência de equilíbrio que, combinada com as médias e com a estrutura, ajuda a decidir. Se alguém te disser que o POC sozinho dá uma entrada perfeita, desconfia. Sozinho, dá-te apenas um ponto de comparação. As melhores leituras vêm de olhar para ele junto com as outras peças, e de ver como o preço reage, vela após vela, quando se aproxima da linha. Ao princípio, vais achar que o POC está em todo o lado. Com o tempo, percebes que o que interessa é a relação entre o preço e a linha, e não a linha em si."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "capitulo",
+     "cap": "04 · Estrutura de mercado",
+     "numero": "04",
+     "titulo": "Leitura 3: a estrutura",
+     "sub": "Quebras, mudanças de carácter e armadilhas",
+     "fala": "Quarto capítulo, terceira leitura: a estrutura de mercado."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "pontos",
+     "cap": "04 · Estrutura de mercado",
+     "kicker": "Vocabulário",
+     "titulo": "BOS, CHoCH e armadilhas",
+     "itens": [
+      "BOS: quebra de estrutura, a favor da tendência",
+      "CHoCH: mudança de carácter, possível viragem",
+      "IDM: armadilha de liquidez, o inducement",
+      "x: varredura de liquidez, ou sweep"
+     ],
+     "fala": "A estrutura de mercado é uma leitura dos topos e dos fundos que o preço vai fazendo. O scanner marca quatro tipos de sinal nesta camada. O primeiro é o BOS, uma quebra de estrutura: o fecho ultrapassa o máximo do movimento, a favor da tendência. Mostra continuação. O segundo é o CHoCH, uma mudança de carácter: depois de uma descida, o preço quebra um topo relevante, ou depois de uma subida, quebra um fundo relevante. Mostra que a tendência pode estar a virar. O terceiro é o IDM, que vem de inducement: uma armadilha de liquidez, em que o preço espeta um pouco acima ou abaixo de um topo ou fundo recente e volta. E o quarto é o x, a varredura de liquidez, quando o preço toca um nível e o recusa logo a seguir. Estes detalhes contam. O scanner calcula a mudança de carácter com um período de cinquenta velas, e as armadilhas de liquidez com um período de três velas. Números técnicos, que mostram que estas marcas não são decoração."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "grafico",
+     "cap": "04 · Estrutura de mercado",
+     "kicker": "Leitura 3",
+     "titulo": "BOS e CHoCH no mesmo gráfico",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias", "poc"],
+     "camadas": ["estrutura"],
+     "ate": [0.3, 0.9],
+     "zoom": [0, 0],
+     "fala": "Vamos ver a estrutura no gráfico. Começa numa descida: as médias estão empilhadas para baixo e o preço fica abaixo do POC. Depois o preço sobe e fecha acima de um topo relevante. Esse é um CHoCH, uma mudança de carácter, e é o primeiro aviso de que a descida pode estar a perder força. Mais à frente, o preço volta a subir e fecha acima do máximo do movimento: aparece um BOS, uma quebra de estrutura a favor da nova tendência. Repara no que isto significa. A estrutura não te diz quando entrar. Diz-te se o caminho está livre ou se há obstáculos. Uma compra com BOS recente, na direcção certa, tem o caminho mais limpo. Uma compra logo a seguir a um CHoCH ainda está a confirmar-se, e pede mais cautela. Uma dica prática: quando estiveres a estudar a estrutura, marca os topos e os fundos que o scanner desenha, e vê se o preço os respeita ou os atravessa. Essa observação, feita no histórico, vale mais do que dez explicações."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "comparar",
+     "cap": "04 · Estrutura de mercado",
+     "kicker": "Ler a estrutura",
+     "titulo": "Continuação ou viragem?",
+     "cartoes": [
+      {"t": "BOS", "d": "Quebra a favor da tendência. Continuação, e o caminho tende a estar mais limpo."},
+      {"t": "CHoCH", "d": "Mudança de carácter. Possível viragem, exige mais cuidado e confirmação."},
+      {"t": "IDM", "d": "Armadilha de liquidez. O preço espeta e volta, muitas vezes antes de seguir."},
+      {"t": "x", "d": "Varredura. O preço toca um nível e é recusado logo a seguir."}
+     ],
+     "fala": "Resumindo a estrutura em quatro marcas. O BOS é continuação. O CHoCH é uma viragem possível. O IDM e o x são armadilhas de liquidez, onde o preço parece querer romper e depois volta para trás. A regra que vou repetir ao longo dos módulos é esta: a estrutura não substitui o cruzamento do POC nem as médias. Junta-se a eles, para confirmar que o caminho está livre ou que há um obstáculo à frente."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "pontos",
+     "cap": "04 · Estrutura de mercado",
+     "kicker": "Contexto antes do gatilho",
+     "titulo": "Três perguntas antes de qualquer sinal",
+     "itens": [
+      "Em que estado estão as médias?",
+      "De que lado do POC está o preço?",
+      "A estrutura deixa o caminho livre?"
+     ],
+     "fala": "Antes de falarmos de sinais, quero deixar-te três perguntas que vão acompanhar-te em todos os módulos. Primeira: em que estado estão as médias? Empilhadas para cima, empilhadas para baixo, ou enroladas? Segunda: de que lado do POC está o preço? Acima dele, o equilíbrio recente é comprador. Abaixo, é vendedor. Terceira: a estrutura deixa o caminho livre, ou há um topo, um fundo ou uma armadilha de liquidez a bloquear? Estas três perguntas não te dão um sinal. Dão-te contexto. E o contexto é o que separa um cruzamento que merece atenção de um cruzamento que apareceu por acaso. No segundo módulo vais ver que o sinal tem as suas próprias regras. Mas começa a habituar-te a responder às três, sempre, antes de olhar para o gatilho."
+    },
+    {
+     "id": "v1-19",
+     "tipo": "capitulo",
+     "cap": "05 · Momentum e exaustão",
+     "numero": "05",
+     "titulo": "Momentum e exaustão",
+     "sub": "Onde a tendência ganha força e onde a perde",
+     "fala": "Quinto capítulo: as fases de momentum e de exaustão."
+    },
+    {
+     "id": "v1-20",
+     "tipo": "pontos",
+     "cap": "05 · Momentum e exaustão",
+     "kicker": "A fase de momentum",
+     "titulo": "Quando o movimento ganha força",
+     "itens": [
+      "Dá a indicação do momentum inicial da tendência",
+      "Pode marcar um ponto provável de topo ou fundo",
+      "As contagens de 1 a 9 aparecem nas velas",
+      "Por omissão, estão desligadas"
+     ],
+     "fala": "A fase de momentum, no MTM Scanner, dá uma indicação do momentum inicial da tendência. A ideia é identificar, sobretudo em mercados laterais, um ponto provável de topo ou de fundo. Visualmente, o scanner conta sequências de velas e escreve pequenos números junto às velas, de um a nove, com a possibilidade de mostrar também o zero. Tens três opções de visualização. Completo mostra só as fases já concluídas. Detalhado mostra todo o processo de contagem. E Nenhum desliga as marcas. Por omissão, esta leitura está desligada. A minha sugestão é que a ligues só para estudar, e que a uses como confirmação: queres uma fase de momentum do lado do teu sinal, e não uma fase de exaustão."
+    },
+    {
+     "id": "v1-21",
+     "tipo": "pontos",
+     "cap": "05 · Momentum e exaustão",
+     "kicker": "A fase de exaustão",
+     "titulo": "Quando a tendência se cansa",
+     "itens": [
+      "Só começa depois de uma fase de momentum estabelecida",
+      "Visa identificar quando a tendência enfraquece",
+      "Pode anteceder uma reversão",
+      "Mesmas opções de visualização do momentum"
+     ],
+     "fala": "A fase de exaustão tem o objectivo de identificar quando a tendência está a enfraquecer, e a começar, possivelmente, a reverter. Há uma regra importante: esta fase só começa se uma fase de momentum já estiver estabelecida. Ou seja, a exaustão é a segunda parte da história, não o início. Tem as mesmas três opções de visualização do momentum, e também está desligada por omissão. No guia, a orientação é clara: numa entrada do MTM Scanner, queres uma fase de momentum do teu lado, e não uma fase de exaustão. Quando a exaustão aparece contra a tua ideia, é um dos motivos para não entrar, ou para sair, como vamos ver no terceiro módulo."
+    },
+    {
+     "id": "v1-22",
+     "tipo": "comparar",
+     "cap": "05 · Momentum e exaustão",
+     "kicker": "Visualização",
+     "titulo": "Três modos de mostrar as fases",
+     "cartoes": [
+      {"t": "Completo", "d": "Só as fases já concluídas. Gráfico mais limpo."},
+      {"t": "Detalhado", "d": "Todo o processo de contagem. Para estudar o indicador."},
+      {"t": "Nenhum", "d": "Desliga as marcas. A opção por omissão."}
+     ],
+     "fala": "Os três modos de visualização, resumidos. Completo mostra só as fases concluídas e deixa o gráfico mais limpo. Detalhado mostra o processo todo, o que ajuda a perceber como se conta. Nenhum desliga tudo. Para começar, usa Nenhum, e liga as fases só quando estiveres a estudar uma sequência em particular. Assim o gráfico fica com o essencial: as médias, o POC e a estrutura. Mudar a visualização não altera a lógica do sinal nem do plano. Altera apenas o que vês desenhado."
+    },
+    {
+     "id": "v1-23",
+     "tipo": "capitulo",
+     "cap": "06 · Lê tu primeiro",
+     "numero": "06",
+     "titulo": "Lê tu primeiro",
+     "sub": "Um gráfico, sem respostas",
+     "fala": "Sexto capítulo: um exercício de leitura. A tua vez."
+    },
+    {
+     "id": "v1-24",
+     "tipo": "grafico",
+     "cap": "06 · Lê tu primeiro",
+     "kicker": "Pausa o vídeo",
+     "titulo": "Lê este gráfico sozinho",
+     "cenario": "venda",
+     "seed": 11,
+     "base": ["medias", "poc", "estrutura"],
+     "camadas": [],
+     "ate": [0.6, 0.62],
+     "zoom": [0, 0.3],
+     "fala": "Agora é a tua vez. Pausa o vídeo e lê este gráfico sozinho, camada a camada. Cinco perguntas. Onde está o preço em relação ao POC? As médias estão empilhadas, enroladas, e em que direcção? Há algum BOS ou CHoCH recente, e de que lado? Há alguma armadilha de liquidez perto do preço? E as últimas velas estão a ganhar força, ou a perdê-la? Responde antes de continuares. Pronto? O preço vem de uma subida, mas já quebrou um fundo relevante. As médias estão a inclinar-se para baixo, e o preço está abaixo do POC. Há uma estrutura de descida, com um CHoCH recente. Ainda não há sinal, porque falta o cruzamento. No próximo módulo vais ver o que acontece a seguir a este gráfico."
+    },
+    {
+     "id": "v1-25",
+     "tipo": "pontos",
+     "cap": "06 · Lê tu primeiro",
+     "kicker": "Resposta",
+     "titulo": "Como se lê, por ordem",
+     "itens": [
+      "Preço abaixo do POC: lado vendedor",
+      "Médias para baixo: contexto de venda",
+      "CHoCH de descida: fundo relevante quebrado",
+      "Ainda sem sinal: falta o cruzamento"
+     ],
+     "fala": "Vamos conferir, por ordem. O preço está abaixo do POC, o que coloca o equilíbrio recente do lado vendedor. As médias estão empilhadas para baixo, por isso o contexto é de venda. A estrutura tem uma mudança de carácter de descida: o preço já quebrou um fundo relevante. Mas repara: ainda não há sinal. Um sinal exige que o fecho cruze o POC, com as médias a favor. Até lá, o que tens é um contexto, não um gatilho. Esta distinção entre contexto e gatilho é a mais importante deste bootcamp."
+    },
+    {
+     "id": "v1-26",
+     "tipo": "pontos",
+     "cap": "06 · Lê tu primeiro",
+     "kicker": "Erros de leitura",
+     "titulo": "O que os principiantes fazem mal",
+     "itens": [
+      "Entrar só porque o preço cruzou o POC",
+      "Ignorar as médias e a estrutura",
+      "Ler um sinal antes de a vela fechar",
+      "Encher o gráfico com mais indicadores",
+      "Mudar as definições todos os dias"
+     ],
+     "fala": "Antes de fecharmos este módulo, os erros de leitura mais comuns. Primeiro, entrar só porque o preço cruzou o POC. O cruzamento é uma parte da história, e sozinho não diz que as médias estão a favor, nem que a estrutura deixa passar. Segundo, ignorar as médias e a estrutura, como se fossem enfeites. Terceiro, ler um sinal antes de a vela fechar. Até ao fecho, nada está confirmado, e o gráfico pode mudar enquanto a vela se forma. Quarto, encher o gráfico com mais indicadores por cima do scanner. Ele já junta as leituras de que precisas, e mais linhas não te dão mais certeza, dão-te mais dúvidas. E quinto, mudar as definições todos os dias. Assim nunca chegas a conhecer o comportamento do indicador no teu mercado. Escolhe, fixa, observa."
+    },
+    {
+     "id": "v1-27",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Resumo do módulo 1",
+     "titulo": "O que tens de saber ler",
+     "itens": [
+      "Médias: o alinhamento da tendência",
+      "POC: o equilíbrio das últimas catorze velas",
+      "Estrutura: continuação, viragem e armadilhas",
+      "Momentum e exaustão: a força do movimento",
+      "Um sinal só existe quando o fecho cruza o POC"
+     ],
+     "fala": "Resumindo o primeiro módulo. As médias dizem-te o alinhamento da tendência. O POC diz-te onde está o equilíbrio das últimas catorze velas. A estrutura diz-te se há continuação, viragem ou armadilhas. As fases de momentum e de exaustão dizem-te se o movimento tem força ou está a cansar-se. E um sinal só existe quando o fecho cruza o POC. Tudo o resto é contexto, para decidires se esse cruzamento merece a tua atenção."
+    },
+    {
+     "id": "v1-28",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Antes do módulo 2",
+     "titulo": "O teu trabalho de casa",
+     "itens": [
+      "Põe o MTM Scanner num só mercado e num só timeframe",
+      "Liga uma peça de cada vez, começando pelas médias",
+      "Marca cinco momentos em que as médias estavam empilhadas",
+      "Anota o que o preço fez depois, sem operar"
+     ],
+     "fala": "Antes do segundo módulo, tens um exercício. Põe o scanner num só mercado e num só timeframe. Liga uma peça de cada vez, começando pelas médias, depois o POC, e depois a estrutura. Não ligues tudo ao mesmo tempo, porque o olho aprende melhor com uma peça de cada vez. Procura no histórico cinco momentos em que as médias estavam empilhadas, e anota o que aconteceu a seguir. Escreve no caderno, em duas linhas, o que vês em cada gráfico antes de passares ao seguinte. Sem operar, só a observar. Este exercício simples treina o teu olho mais do que qualquer vídeo. No próximo módulo vemos como nasce um sinal, o que confirma uma ideia, e como o plano fica desenhado no gráfico."
+    },
+    {
+     "id": "v1-29",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao módulo 2",
+     "sub": "Do cruzamento ao plano de trade",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Treina primeiro em conta demo. Vemo-nos no módulo dois.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp MTM Scanner · 2/3",
+   "titulo": "Do cruzamento ao plano de trade",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 2 de 3",
+     "titulo": "MTM Scanner",
+     "sub": "Do cruzamento ao plano de trade",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "Neste módulo",
+     "titulo": "O motor do scanner",
+     "itens": [
+      "Como nasce um sinal",
+      "As quatro confirmações",
+      "O plano: entrada, stop e três alvos",
+      "Gestão no primeiro alvo",
+      "Alertas e o que vem dentro deles"
+     ],
+     "fala": "Bem-vindo ao segundo módulo do Bootcamp MTM Scanner. No primeiro aprendeste a ler cada peça do gráfico. Agora vamos abrir o motor. Vais perceber exactamente como nasce um sinal, o que é o cruzamento do POC e porque é que só conta quando o fecho da vela o confirma. Depois vemos as quatro confirmações que filtram o sinal: as médias, o POC, a estrutura e o momentum. A seguir, o plano de trade: a entrada, o stop de um ATR, e os três alvos, a um para dois, a um para quatro e a um para seis. Por fim, vemos a gestão no primeiro alvo e os alertas, e o que vem dentro deles. É um módulo técnico. Vai com calma, e volta atrás sempre que precisares."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · Como nasce um sinal",
+     "numero": "01",
+     "titulo": "Como nasce um sinal",
+     "sub": "O fecho que cruza o POC",
+     "fala": "Primeiro capítulo. Como nasce um sinal."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "pontos",
+     "cap": "01 · Como nasce um sinal",
+     "kicker": "A regra de base",
+     "titulo": "Cruzamento, não toque",
+     "itens": [
+      "Compra: o fecho cruza para cima do POC",
+      "Venda: o fecho cruza para baixo do POC",
+      "A marca B ou S aparece no gráfico",
+      "O alerta dispara no fecho da vela"
+     ],
+     "fala": "A regra de base do sinal é um cruzamento, e não um toque. Não basta o preço encostar ao POC. É preciso que o fecho da vela fique do outro lado. Compra: o fecho cruza para cima do POC. Venda: o fecho cruza para baixo. No gráfico, aparece uma marca B, por baixo da vela, numa compra, e uma marca S, por cima, numa venda. Há um cuidado técnico que vale a pena teres presente. Enquanto uma vela se está a formar, o preço pode cruzar o POC e voltar a cruzá-lo, e a marca pode aparecer e desaparecer. O alerta, por seu lado, está configurado para disparar uma vez por fecho de vela. Por isso, a regra prática é a mesma: só consideras um sinal quando a vela fecha."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "grafico",
+     "cap": "01 · Como nasce um sinal",
+     "kicker": "O cruzamento",
+     "titulo": "Um cruzamento de compra",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias", "poc"],
+     "camadas": ["sinal"],
+     "ate": [0.55, 0.62],
+     "zoom": [0, 0],
+     "estrelas": "POC ✓",
+     "fala": "Vê este gráfico. O preço está abaixo do POC, e as médias começam a inclinar-se para cima. Depois o preço sobe, e as velas vão ficando cada vez mais perto da linha dourada. Na vela marcada, o fecho passa para cima do POC. Aparece a marca B, e o cartão do sinal mostra o POC com um visto, que confirma o cruzamento. As médias são outra peça, que tu verificas antes de entrar, como vamos ver a seguir. Não confundas as duas coisas: o visto do POC diz que o cruzamento aconteceu, e não que o contexto está todo a favor."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "pontos",
+     "cap": "01 · Como nasce um sinal",
+     "kicker": "O fecho conta",
+     "titulo": "Do lado certo do POC",
+     "itens": [
+      "Compra: fecho acima do POC",
+      "Venda: fecho abaixo do POC",
+      "Mecha que toca e volta: não é cruzamento",
+      "O POC fica para trás como apoio"
+     ],
+     "fala": "Ponto a ponto. Numa compra, o fecho tem de ficar acima do POC. Numa venda, abaixo. Uma mecha que espeta acima do POC e volta a fechar abaixo não é cruzamento: é só um toque, e o scanner não o conta como sinal. Depois do cruzamento, o POC não desaparece. Fica para trás, e o guia descreve-o como apoio. Numa compra, se o preço voltar a descer e a fechar abaixo do POC, isso é um sinal de alerta para a ideia. Esta leitura é importante quando estás a decidir se o preço ainda está perto da entrada, e é uma das razões para não entrares em qualquer cruzamento sem olhar para o resto."
+    },
+    {
+     "id": "v2-05b",
+     "tipo": "pontos",
+     "cap": "01 · Como nasce um sinal",
+     "kicker": "Erros de leitura do cruzamento",
+     "titulo": "Quatro enganos frequentes",
+     "itens": [
+      "Contar um toque como cruzamento",
+      "Entrar sem ver a estrutura à frente",
+      "Agir sobre uma vela que ainda não fechou",
+      "Mudar o plano depois de o ver desenhado"
+     ],
+     "fala": "Antes de avançarmos para as confirmações, quatro enganos que vejo com frequência. O primeiro é contar um toque como cruzamento. Uma mecha que espeta do outro lado do POC e volta não conta, e o scanner também não a conta. O segundo é entrar sem olhar para a estrutura à frente. O cruzamento pode estar perfeito, e ainda assim haver um topo importante a dois passos. O terceiro é agir sobre uma vela que ainda não fechou. Enquanto a vela se forma, nada está confirmado, e a marca pode desaparecer. E o quarto, o mais subtil, é mudar o plano depois de o ver desenhado. Se o stop estava um ATR abaixo e tu o colocas mais abaixo porque parece seguro, já não estás a seguir o plano, estás a improvisar. Cada um destes enganos parece pequeno no momento. Juntos, são a diferença entre um processo e uma sequência de decisões impulsivas."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "capitulo",
+     "cap": "02 · As confirmações",
+     "numero": "02",
+     "titulo": "As quatro confirmações",
+     "sub": "Um filtro, não uma garantia",
+     "fala": "Segundo capítulo. As quatro confirmações."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "pontos",
+     "cap": "02 · As confirmações",
+     "kicker": "Filtro, não garantia",
+     "titulo": "Quatro confirmações antes de agir",
+     "itens": [
+      "Médias empilhadas a favor",
+      "Fecho do lado certo do POC",
+      "Estrutura a favor e caminho livre",
+      "Fase de momentum, e não de exaustão"
+     ],
+     "fala": "O cruzamento é o gatilho. As confirmações são o filtro. O guia do scanner organiza-as em quatro, e a ideia é simples: um sinal com as quatro a favor tem o contexto do seu lado. Não é uma promessa, nem uma probabilidade. É uma forma de não entrares em cruzamentos feitos contra a tendência maior, ou dentro de um mercado sem direcção. Vamos percorrer cada uma. Primeira: as médias empilhadas. Segunda: o fecho do lado certo do POC, que já vimos. Terceira: a estrutura a favor e um caminho livre até ao primeiro alvo. E quarta: uma fase de momentum, e não de exaustão. Quatro peças, cada uma com a sua pergunta. Se alguma falhar, a ideia já não tem o contexto todo a favor, e deves ser mais selectivo."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "comparar",
+     "cap": "02 · As confirmações",
+     "kicker": "Quatro perguntas",
+     "titulo": "As perguntas do filtro",
+     "cartoes": [
+      {"t": "Médias", "d": "Compra: 15 acima de 50, e 50 acima de 238. Venda: ao contrário."},
+      {"t": "POC", "d": "O fecho fica do lado certo do POC, que serve de apoio."},
+      {"t": "Estrutura", "d": "BOS ou quebra recente na direcção do sinal, e caminho livre até ao 1:2."},
+      {"t": "Momentum", "d": "Fase de momentum a favor. Exaustão contra, não."}
+     ],
+     "fala": "Cada confirmação, numa pergunta. As médias estão empilhadas a favor? O fecho está do lado certo do POC? A estrutura ajuda, com uma quebra recente na direcção do sinal e espaço até ao primeiro alvo? E o momentum está a favor, e não a exaustão? Se respondes sim às quatro, o sinal tem o contexto a favor. Se respondes não a alguma, sabes exactamente o que te falta, e a decisão fica mais fácil."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "pontos",
+     "cap": "02 · As confirmações",
+     "kicker": "Médias empilhadas, em detalhe",
+     "titulo": "A ordem das três médias",
+     "itens": [
+      "Compra: 15 acima de 50",
+      "Compra: 50 acima de 238",
+      "Venda: ao contrário nas duas",
+      "O alerta envia estas comparações"
+     ],
+     "fala": "Vamos à primeira confirmação, em detalhe. Numa compra, queres a média de quinze por cima da de cinquenta, e a de cinquenta por cima da de duzentas e trinta e oito. Duas comparações, duas condições. Numa venda, é ao contrário nas duas. Esta ordem é exactamente o que o scanner envia nos alertas, em forma de comparações: a de quinze com a de cinquenta, a de cinquenta com a de duzentas e trinta e oito, e a posição do preço face ao POC. Isto quer dizer que, quando recebes um alerta, não precisas de adivinhar se as médias estavam a favor. A mensagem já traz essa leitura. Mas não deixes que a mensagem substitua o olhar. Vê o gráfico antes de entrar, porque o número é só um resumo do que está a acontecer."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "grafico",
+     "cap": "02 · As confirmações",
+     "kicker": "Confirmações a favor",
+     "titulo": "Médias empilhadas e POC",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias", "poc"],
+     "camadas": ["sinal"],
+     "ate": [0.58, 0.7],
+     "zoom": [0, 0],
+     "estrelas": "POC ✓",
+     "fala": "Aqui está uma compra com as médias empilhadas para cima. A azul por cima da verde, e a verde por cima da amarela. O preço sobe, e na vela marcada fecha acima do POC. As duas primeiras confirmações estão a favor: as médias e o fecho do lado certo. Ainda faltam a estrutura e o momentum, que vamos ver a seguir. Repara que a vela de sinal não está isolada. Está dentro de uma subida com contexto. Esse contexto é o que estas confirmações procuram, e é o que separa um cruzamento limpo de um cruzamento por acaso."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "pontos",
+     "cap": "02 · As confirmações",
+     "kicker": "Estrutura e caminho",
+     "titulo": "Estrutura a favor, caminho livre",
+     "itens": [
+      "Um BOS recente, na direcção do sinal",
+      "Sem topo ou fundo importante entre a entrada e o 1:2",
+      "Um CHoCH recente contra o sinal pede cautela",
+      "Se a estrutura bloqueia o caminho, deixa passar"
+     ],
+     "fala": "Terceira confirmação: a estrutura. Queres uma quebra recente na direcção do sinal, de preferência um BOS, que mostra que o movimento tem continuidade. E queres também um caminho livre até ao primeiro alvo. O guia é específico: não deve haver um topo ou um fundo importante entre a entrada e o um para dois. Se houver, o preço tem um obstáculo claro logo à frente. Ao contrário, um CHoCH recente contra o sinal pede cautela, porque sugere que a tendência pode estar a mudar de lado. Esta é uma das confirmações mais fáceis de esquecer, porque o cruzamento parece limpo no gráfico. Mas o gráfico tem de ser lido também para a frente, e não só para trás, a partir da vela de sinal."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "grafico",
+     "cap": "02 · As confirmações",
+     "kicker": "Estrutura a favor",
+     "titulo": "BOS antes do cruzamento",
+     "cenario": "compra",
+     "seed": 21,
+     "base": ["medias", "poc"],
+     "camadas": ["estrutura", "sinal"],
+     "ate": [0.5, 0.66],
+     "zoom": [0, 0],
+     "fala": "Este gráfico mostra a estrutura a fazer o seu papel. Primeiro, o preço quebra o máximo do movimento anterior, e aparece um BOS a favor da subida. Depois recua, mas sem voltar a perder o fundo relevante. É aí que o preço volta a subir, e na vela marcada fecha acima do POC. O sinal chega com a estrutura a favor e com o caminho até ao primeiro alvo mais limpo. Repara no que ficou para trás: a quebra, o recuo, e a retoma. A estrutura não deu o gatilho, mas disse-te que o gatilho estava a ser dado num terreno favorável."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "pontos",
+     "cap": "02 · As confirmações",
+     "kicker": "Momentum",
+     "titulo": "Fase de momentum, não de exaustão",
+     "itens": [
+      "Momentum do teu lado: o movimento está a começar",
+      "Exaustão contra a ideia: motivo para não entrar",
+      "Num mercado lateral, a fase pode marcar topo ou fundo",
+      "Visualização ligada só quando estudas"
+     ],
+     "fala": "Quarta confirmação: o momentum. Queres uma fase de momentum a favor do teu sinal, o que quer dizer que o movimento está a começar, e não a acabar. Uma fase de exaustão contra a ideia é um motivo claro para não entrar. Repara que o guia diz de forma expressa: fase de momentum, e não de exaustão. Esta confirmação depende da forma como lês as contagens no gráfico, por isso treina-a no histórico, com as fases ligadas em modo Detalhado. Só depois a usas em tempo real, com a visualização que preferires."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "capitulo",
+     "cap": "03 · O plano de trade",
+     "numero": "03",
+     "titulo": "O plano de trade",
+     "sub": "Entrada, stop e três alvos",
+     "fala": "Terceiro capítulo. O plano de trade."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "pontos",
+     "cap": "03 · O plano de trade",
+     "kicker": "A entrada",
+     "titulo": "Entrada: fecho ou abertura seguinte",
+     "itens": [
+      "O gatilho é o fecho da vela de sinal",
+      "Por omissão, a fonte da entrada é o fecho",
+      "Existe entrada customizada, se a ligares",
+      "Entra no fecho ou na abertura da vela seguinte"
+     ],
+     "fala": "Vamos ao plano. A entrada é o ponto de partida. Por omissão, o preço de entrada é o fecho da vela de sinal, porque a fonte das entradas está definida como fecho. Existe uma opção de entrada customizada, que só deves usar se souberes exactamente porque a queres. No guia, a entrada faz-se no fecho da vela do sinal ou na abertura da seguinte. E antes de entrar há uma sequência, que vamos ver no terceiro módulo: confirmas a estrutura, mediste o espaço até ao primeiro alvo, calculas o tamanho pelo risco. Só depois avanças. A entrada não é um impulso. É o último passo de uma lista que já fizeste."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "plano",
+     "cap": "03 · O plano de trade",
+     "kicker": "Plano desenhado",
+     "titulo": "Entrada, stop e alvos",
+     "linhas": [
+      ["Entrada", "fecho da vela de sinal", "entrada"],
+      ["Stop", "1 ATR do lado oposto", "sl"],
+      ["TP 1:2", "dois R", "tp"],
+      ["TP 1:4", "quatro R", "tp"],
+      ["TP 1:6", "seis R", "tp"]
+     ],
+     "fala": "Quando o sinal aparece, o scanner desenha o plano completo, com cinco linhas. A entrada, no preço do fecho da vela de sinal. O stop, a um ATR do lado oposto à entrada: numa compra, abaixo. E três alvos. O primeiro a um para dois, ou seja, duas vezes a distância da entrada até ao stop. O segundo a um para quatro, e o terceiro a um para seis. A palavra-chave é R. R é o teu risco, a distância entre a entrada e o stop. Um alvo de dois R está a duas vezes essa distância, a favor. Esta forma de medir é a mesma em qualquer mercado. Muda a unidade, pips no forex, pontos no ouro e nos índices, mas a lógica não muda. Repara num detalhe importante: o plano é recalculado enquanto o último sinal estiver activo, porque o ATR e o preço mudam. Por isso, o registo fiel é o do momento do sinal. O alerta é enviado no fecho da vela, com esses valores, e é isso que deves anotar no diário."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "pontos",
+     "cap": "03 · O plano de trade",
+     "kicker": "O stop e os alvos",
+     "titulo": "Como se calculam",
+     "itens": [
+      "ATR de 14 velas",
+      "Stop: 1 ATR, multiplicado pelo valor configurado",
+      "Alvos: a distância do stop vezes 2, 4 e 6",
+      "Opção: percentagem no lugar do ATR"
+     ],
+     "fala": "Como se calculam estes números? O ATR, de average true range, mede a amplitude média das velas. Por omissão, usa catorze velas. O stop é um ATR, multiplicado pelo multiplicador do stop, que vem definido em um. O primeiro alvo é a distância do stop vezes dois, o segundo vezes quatro, e o terceiro vezes seis, sempre a partir da entrada. Há uma alternativa: se desligares a opção de usar o ATR para risco e recompensa, o indicador passa a usar percentagens, com os seus próprios valores de stop e de alvos. O padrão é o ATR, que se adapta à volatilidade do momento. Um stop de um ATR num mercado calmo fica perto. No mesmo mercado, numa fase de volatilidade alta, fica mais longe, e o R acompanha. Esse é o ponto: o plano acompanha o ritmo do mercado."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "comparar",
+     "cap": "03 · O plano de trade",
+     "kicker": "Definições",
+     "titulo": "O que podes ajustar",
+     "cartoes": [
+      {"t": "Período do ATR", "d": "Catorze velas por omissão. Mede a amplitude média."},
+      {"t": "Multiplicador do stop", "d": "Um por omissão. Mais alto, stop mais longe."},
+      {"t": "Rácios dos alvos", "d": "Dois, quatro e seis por omissão. Podes mostrar ou esconder cada alvo."},
+      {"t": "Fonte das entradas", "d": "Fecho por omissão. Entrada customizada só com cuidado."}
+     ],
+     "fala": "Quatro grupos de definições que vais ver no painel do scanner. O período do ATR, catorze por omissão. O multiplicador do stop, um por omissão. Os rácios dos três alvos, dois, quatro e seis, e a possibilidade de mostrar ou esconder cada alvo. E a fonte das entradas, que é o fecho por omissão. Na tua primeira fase, deixa tudo na omissão. Muda um valor de cada vez, e só depois de teres observado o comportamento durante algumas semanas."
+    },
+    {
+     "id": "v2-19",
+     "tipo": "grafico",
+     "cap": "03 · O plano de trade",
+     "kicker": "Plano desenhado",
+     "titulo": "Uma compra com plano",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias", "poc"],
+     "camadas": ["sinal", "plano"],
+     "ate": [0.58, 0.9],
+     "zoom": [0, 0.5],
+     "estrelas": "POC ✓",
+     "fala": "Vamos juntar tudo numa compra. As médias estão empilhadas para cima, o fecho cruza o POC para cima, e aparece a marca B. O scanner desenha o plano: a entrada no fecho, o stop um ATR abaixo, e os três alvos acima. O primeiro a um para dois, o segundo a um para quatro, e o terceiro a um para seis, sempre medidos a partir da distância do stop. O azul marca o lado comprador, e o vermelho o lado vendedor. A partir daqui, o gráfico vai-se mexendo, e o plano é a leitura do que foi decidido no sinal. Por isso, o que tens de guardar é o momento do sinal. Vamos ver isso com cuidado no fim deste módulo."
+    },
+    {
+     "id": "v2-20",
+     "tipo": "pontos",
+     "cap": "03 · O plano de trade",
+     "kicker": "O que o plano não faz",
+     "titulo": "Um desenho, não uma ordem",
+     "itens": [
+      "Não entra por ti",
+      "Não move o teu stop",
+      "Não garante que o alvo é atingido",
+      "Não executa nada na tua corretora"
+     ],
+     "fala": "Antes dos alertas, vamos ser precisos sobre o que o plano é e o que não é. O plano é um desenho. Não entra por ti: o scanner não executa ordens na tua conta. Não move o teu stop. E não garante que o alvo é atingido, nem que o preço chega ao primeiro. É uma referência que te diz, antes de arriscares, onde estás certo, onde estás errado, e onde realizas. Quando tens isto claro, a decisão deixa de ser emocional. Já foi tomada no papel."
+    },
+    {
+     "id": "v2-21",
+     "tipo": "grafico",
+     "cap": "03 · O plano de trade",
+     "kicker": "Um sinal que falha",
+     "titulo": "Quando o cruzamento não se sustenta",
+     "cenario": "falha",
+     "seed": 7,
+     "base": ["medias", "poc"],
+     "camadas": ["sinal", "plano"],
+     "ate": [0.62, 0.9],
+     "zoom": [0.5, 0.5],
+     "estrelas": "POC ✓",
+     "fala": "Nem todos os cruzamentos chegam ao primeiro alvo. Vê este exemplo. O fecho cruzou o POC para cima, com a marca B, e o plano apareceu. Mas as médias não estavam bem empilhadas, e o preço não conseguiu afastar-se do equilíbrio. Volta para baixo, e fecha de novo do lado oposto do POC. O preço chega ao stop, e a perda fica no R que tinhas decidido antes de entrar. Esse é um custo do método. Não é um acidente, nem um sinal de que o scanner deixou de funcionar. É exactamente o que o plano previa quando a ideia não tinha o contexto todo a favor. O que importa é que a perda estava definida e era pequena. Repara: ao longo de muitas ideias, a diferença entre uma perda planeada e uma perda improvisada é o que separa um processo de um desastre."
+    },
+    {
+     "id": "v2-22",
+     "tipo": "grafico",
+     "cap": "03 · O plano de trade",
+     "kicker": "Ler uma venda",
+     "titulo": "Uma venda, ao contrário",
+     "cenario": "venda",
+     "seed": 11,
+     "base": ["medias", "poc", "estrutura"],
+     "camadas": ["sinal", "plano"],
+     "ate": [0.6, 0.85],
+     "zoom": [0, 0.5],
+     "estrelas": "POC ✓",
+     "fala": "Agora uma venda, para veres que o processo é o mesmo, ao contrário. As médias estão empilhadas para baixo: a azul abaixo da verde, e a verde abaixo da amarela. O preço está abaixo do POC, e na vela marcada, o fecho cruza para baixo. Aparece a marca S, por cima da vela, e o plano inverte-se: a entrada no fecho, o stop um ATR acima, e os três alvos para baixo. Antes de entrar, a mesma lista: médias a favor, fecho do lado certo, estrutura sem obstáculos até ao primeiro alvo, e momentum a favor. A simetria é a melhor notícia do scanner. Não tens de aprender um sistema para comprar e outro para vender. Tens um só, espelhado."
+    },
+    {
+     "id": "v2-23",
+     "tipo": "capitulo",
+     "cap": "04 · Alertas",
+     "numero": "04",
+     "titulo": "Alertas e o scanner a trabalhar",
+     "sub": "Receber o sinal sem estar agarrado ao ecrã",
+     "fala": "Quarto capítulo: os alertas."
+    },
+    {
+     "id": "v2-24",
+     "tipo": "pontos",
+     "cap": "04 · Alertas",
+     "kicker": "Configurar",
+     "titulo": "Dois caminhos de alerta",
+     "itens": [
+      "Condições simples: MTM Scanner COMPRA e VENDA",
+      "Mensagem completa: qualquer chamada da função alert",
+      "Frequência: uma vez por fecho de vela",
+      "Permite ligar ou desligar compra e venda"
+     ],
+     "fala": "Há dois caminhos para receberes sinais sem olhar para o gráfico. O primeiro são as condições simples do TradingView: MTM Scanner COMPRA e MTM Scanner VENDA, com a frequência que escolheres. O segundo é a mensagem completa: crias um alerta com a condição qualquer chamada da função alert, e a frequência uma vez por fecho de barra. Esta é a opção que traz a informação completa, em formato JSON, e que o scanner usa para emitir alertas para o site da MTM. Nas definições de alertas podes permitir ou desligar os alertas de compra e os de venda, separadamente. Quando estiveres a estudar, desliga-os. Quando estiveres a operar, liga apenas os que queres."
+    },
+    {
+     "id": "v2-25",
+     "tipo": "pontos",
+     "cap": "04 · Alertas",
+     "kicker": "A mensagem",
+     "titulo": "O que vem dentro do alerta",
+     "itens": [
+      "Estratégia, ticker, fonte e timeframe",
+      "Acção: compra ou venda",
+      "Entrada, stop e os três alvos",
+      "Confirmações: comparações das médias e do POC"
+     ],
+     "fala": "Para quem usa a mensagem completa, vale a pena saber o que vem dentro. Primeiro, a identificação: a estratégia, o ticker, a fonte, e o timeframe. Depois, a acção, compra ou venda, e o tipo de ordem configurado, que é um campo da mensagem. Depois, os níveis: a entrada, o stop, e os três alvos. E por fim, as confirmações, com três comparações: se a azul está acima da verde, se a verde está acima da amarela, e se o fecho está acima do POC, ou abaixo, numa venda. Cada uma vem em verdadeiro ou falso. Um sistema que recebe a mensagem consegue registar a ideia do início ao fim, sem precisar de desenhar o gráfico. E o campo do tipo de ordem é só uma indicação: o indicador não executa nada na tua corretora."
+    },
+    {
+     "id": "v2-26",
+     "tipo": "comparar",
+     "cap": "04 · Alertas",
+     "kicker": "Tipo de ordem",
+     "titulo": "Limit ou market, na mensagem",
+     "cartoes": [
+      {"t": "LIMIT", "d": "Indica uma ordem limite ao preço de entrada. Quem recebe decide como a executa."},
+      {"t": "MARKET", "d": "Indica uma ordem ao mercado. É a opção por omissão."}
+     ],
+     "fala": "Este campo é só uma indicação. Por omissão, a mensagem vem com MARKET. Se preferires LIMIT, mudas a opção nos alertas. Quem recebe a mensagem é que decide como a executa, e tu continuas a ser o responsável pela tua conta. Por isso, antes de automatizar seja o que for, testa em conta demo, e confirma no diário o que a mensagem diz e o que a corretora fez de facto."
+    },
+    {
+     "id": "v2-27",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Resumo do módulo 2",
+     "titulo": "O motor, em cinco frases",
+     "itens": [
+      "Sinal = fecho que cruza o POC",
+      "Quatro confirmações: médias, POC, estrutura e momentum",
+      "Plano: entrada, stop de 1 ATR e alvos a 1:2, 1:4 e 1:6",
+      "Alertas no fecho da vela, com o registo do momento",
+      "O scanner desenha; quem decide és tu"
+     ],
+     "fala": "Resumindo o módulo dois. Um sinal nasce quando o fecho cruza o POC, e só conta depois do fecho da vela. As quatro confirmações filtram o sinal: médias, POC, estrutura e momentum. O plano tem entrada, stop de um ATR e três alvos, a um para dois, um para quatro e um para seis. Os alertas enviam o registo do momento do sinal. E o scanner desenha, mas quem decide és tu."
+    },
+    {
+     "id": "v2-28",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Antes do módulo 3",
+     "titulo": "O teu trabalho de casa",
+     "itens": [
+      "Liga o scanner e lê dez cruzamentos no histórico",
+      "Para cada um: confirmações, plano e o que aconteceu",
+      "Anota quantos chegaram ao primeiro alvo antes do stop",
+      "Regista os valores do plano no momento do sinal"
+     ],
+     "fala": "O exercício deste módulo: no histórico do teu mercado, encontra dez cruzamentos do POC. Para cada um, escreve quantas confirmações estavam a favor, como estava a estrutura, e o que aconteceu. Chegou ao primeiro alvo antes do stop? Quantos ficaram pelo caminho? Repara que a pergunta não é se ganhaste ou perdeste, é se as confirmações estavam a favor no momento do sinal. Sem operar, só a observar. Os números que anotares são teus, medidos por ti, no teu mercado, e valem mais do que qualquer exemplo que eu te mostre. No terceiro módulo pegamos nisto e transformamos em gestão."
+    },
+    {
+     "id": "v2-29",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao módulo 3",
+     "sub": "Risco, gestão e rotina",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos e exemplos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. Os exemplos deste vídeo são ilustrativos. Treina em conta demo antes de arriscares dinheiro. Vemo-nos no módulo três.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp MTM Scanner · 3/3",
+   "titulo": "Risco, gestão e rotina",
+   "cenas": [
+    {
+     "id": "v3-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 3 de 3",
+     "titulo": "MTM Scanner",
+     "sub": "Risco, gestão e rotina",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v3-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "O scanner encontra o cruzamento. <span class='ouro'>A gestão decide o resultado.</span>",
+     "autor": "Bootcamp MTM Scanner · Módulo 3",
+     "fala": "Bem-vindo ao terceiro e último módulo. Até aqui, aprendeste a ler o gráfico, a perceber como nasce um sinal, como as confirmações o filtram e como o plano fica desenhado. Agora vem a parte que separa quem aprende uma ferramenta de quem a usa com consistência: a gestão. O scanner encontra o cruzamento. A gestão decide o resultado, em grande medida, porque é ela que controla aquilo que tu controlas de facto: quanto arriscas, onde entras, o que fazes no primeiro alvo, e quando não entras. Neste módulo vamos falar de risco por ideia, de tamanho de posição, de como gerir uma ideia do início ao fim, de quando deixar passar, de perfis e timeframes, de uma rotina diária e de psicologia. No fim, vais ter um processo escrito, que podes seguir em conta demo a partir de amanhã."
+    },
+    {
+     "id": "v3-02",
+     "tipo": "capitulo",
+     "cap": "01 · Risco por ideia",
+     "numero": "01",
+     "titulo": "Risco por ideia",
+     "sub": "A única variável que controlas de verdade",
+     "fala": "Primeiro capítulo. O risco por ideia."
+    },
+    {
+     "id": "v3-03",
+     "tipo": "pontos",
+     "cap": "01 · Risco por ideia",
+     "kicker": "O princípio",
+     "titulo": "Decide quanto perdes antes de decidir quanto ganhas",
+     "itens": [
+      "Não controlas o mercado. Controlas quanto arriscas",
+      "Define o risco em percentagem da conta, por ideia",
+      "Escolhe um valor pequeno e fixo",
+      "Mantém o mesmo risco, ideia após ideia"
+     ],
+     "fala": "Há uma coisa que tens de aceitar desde o primeiro dia: não controlas o mercado. Não controlas se o preço chega ao primeiro alvo ou ao stop. A única coisa que controlas de verdade é quanto arriscas em cada ideia. Por isso, a primeira decisão não é onde entrar. É quanto estás disposto a perder se estiveres errado. Esse valor define-se em percentagem da conta, e por ideia. Tu escolhes o número, mas deve ser pequeno o suficiente para que uma sequência de perdas, que vai acontecer, não te tire do jogo. E deve ser sempre o mesmo. Quem aumenta o risco depois de perder, para recuperar, faz exactamente o contrário do que um processo pede. Esse impulso tem nome, e vamos falar dele na parte da cabeça do trader."
+    },
+    {
+     "id": "v3-04",
+     "tipo": "plano",
+     "cap": "01 · Risco por ideia",
+     "kicker": "Matemática, não previsão",
+     "titulo": "Dez perdas seguidas, em cada risco",
+     "linhas": [
+      ["Risco de 1% por ideia", "a conta fica com cerca de 90%", "entrada"],
+      ["Risco de 2% por ideia", "a conta fica com cerca de 82%", "warning"],
+      ["Risco de 5% por ideia", "a conta fica com cerca de 60%", "sl"],
+      ["Risco de 10% por ideia", "a conta fica com cerca de 35%", "sl"]
+     ],
+     "fala": "Vê o que acontece numa sequência de dez perdas seguidas. Não é uma previsão. É matemática, e qualquer método pode ter um mês assim. Com um por cento de risco por ideia, ficas com cerca de noventa por cento da conta. Com dois por cento, com cerca de oitenta e dois. Com cinco, com cerca de sessenta. E com dez por cento, com cerca de trinta e cinco. Repara que, a partir de certo ponto, recuperar exige uma subida muito maior do que a descida. Quando a conta cai para metade, precisas de a duplicar para voltar ao início. Por isso, o risco pequeno não é cobardia. É a forma de estares presente quando o processo, com o tempo, começar a funcionar."
+    },
+    {
+     "id": "v3-05",
+     "tipo": "capitulo",
+     "cap": "02 · Tamanho da posição",
+     "numero": "02",
+     "titulo": "Tamanho da posição",
+     "sub": "Do risco em dinheiro aos lotes",
+     "fala": "Segundo capítulo. O tamanho da posição."
+    },
+    {
+     "id": "v3-06",
+     "tipo": "pontos",
+     "cap": "02 · Tamanho da posição",
+     "kicker": "A fórmula",
+     "titulo": "Tamanho = risco em dinheiro ÷ (R × valor por unidade)",
+     "itens": [
+      "Risco em dinheiro: conta vezes a percentagem",
+      "R: a distância da entrada ao stop, que o scanner desenha",
+      "Valor por unidade: quanto vale um pip ou um ponto por lote",
+      "O tamanho sai das contas, não da intuição"
+     ],
+     "fala": "O tamanho da posição calcula-se com uma fórmula simples. Primeiro, o risco em dinheiro: o valor da conta vezes a percentagem que decidiste arriscar. Segundo, o R, a distância entre a entrada e o stop, que o scanner já te mostra no plano, em pips no forex e em pontos no ouro, nos índices e na cripto. Terceiro, o valor por unidade, ou seja, quanto vale um pip ou um ponto por lote, no teu instrumento e na tua corretora. O tamanho é o risco em dinheiro dividido pelo R vezes o valor por unidade. A consequência é importante: o lote muda de ideia para ideia. Quando o stop está perto, o lote é maior. Quando o stop está longe, o lote é menor. O que fica igual é o risco em dinheiro, e é isso que torna duas ideias comparáveis, mesmo com lotes diferentes."
+    },
+    {
+     "id": "v3-07",
+     "tipo": "plano",
+     "cap": "02 · Tamanho da posição",
+     "kicker": "Exemplo inventado",
+     "titulo": "Uma conta de 5 000",
+     "linhas": [
+      ["Conta", "5 000", "entrada"],
+      ["Risco por ideia (1%)", "50", "warning"],
+      ["Distância ao stop (R)", "25 pips", "sl"],
+      ["Valor do pip por lote padrão", "10", "entrada"],
+      ["Tamanho = 50 ÷ (25 × 10)", "0,20 lotes", "tp"]
+     ],
+     "fala": "Um exemplo com números redondos, inventado, num par de forex. A conta tem cinco mil. Decides arriscar um por cento, ou seja, cinquenta. O scanner mostra que o stop está a vinte e cinco pips da entrada. Num par em que um pip vale dez por cada lote padrão, a conta é cinquenta a dividir por vinte e cinco vezes dez, o que dá zero vírgula dois lotes. Se o stop estivesse a cinquenta pips, o lote seria zero vírgula um, e o risco continuava nos cinquenta. Confirma sempre o valor do pip na tua plataforma e na tua corretora, porque muda com o par e com a moeda da conta. E repara: não escolheste o lote a partir de uma sensação. Escolheste-o a partir do risco. Essa é a diferença entre um processo e um palpite."
+    },
+    {
+     "id": "v3-08",
+     "tipo": "pontos",
+     "cap": "02 · Tamanho da posição",
+     "kicker": "Contas pequenas",
+     "titulo": "Quando o lote mínimo não cabe",
+     "itens": [
+      "O lote mínimo da corretora define o risco mais pequeno possível",
+      "Stop longe e conta pequena: o risco passa do teu limite",
+      "Nesse caso, a ideia não é para a tua conta",
+      "Alternativas: timeframe mais baixo, outro instrumento, ou esperar"
+     ],
+     "fala": "Uma situação comum em contas pequenas. A corretora tem um lote mínimo, e esse lote define o risco mais pequeno que consegues ter numa ideia. Se a conta é pequena e o stop está longe, mesmo o lote mínimo pode arriscar mais do que o teu limite. Quando isso acontece, a resposta honesta é: esta ideia não é para a tua conta. Não aumentas o risco para caber. As alternativas são operar num timeframe mais baixo, onde os stops tendem a ser mais curtos, escolher um instrumento com um valor por ponto mais pequeno, ou esperar pela próxima ideia que caiba. Deixar passar uma ideia que não cabe é gestão de risco a funcionar. Não é falhar."
+    },
+    {
+     "id": "v3-09",
+     "tipo": "capitulo",
+     "cap": "03 · Gerir a ideia",
+     "numero": "03",
+     "titulo": "Gerir a ideia",
+     "sub": "Antes, durante e depois",
+     "fala": "Terceiro capítulo. Como se gere uma ideia do princípio ao fim."
+    },
+    {
+     "id": "v3-10",
+     "tipo": "pontos",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Antes de entrar",
+     "titulo": "A verificação de trinta segundos",
+     "itens": [
+      "As médias estão empilhadas a favor?",
+      "O fecho está do lado certo do POC, e a vela fechou?",
+      "A estrutura ajuda, e o caminho até ao 1:2 está livre?",
+      "O momentum está a favor, e não há exaustão contra?",
+      "O tamanho calculado cabe no teu risco?"
+     ],
+     "fala": "Antes de entrar, uma verificação de trinta segundos. Cinco perguntas, na mesma ordem, sempre. As médias estão empilhadas a favor? O fecho está do lado certo do POC, e a vela já fechou? A estrutura ajuda, e o caminho até ao primeiro alvo está livre? O momentum está a favor, e não há exaustão contra? E o tamanho calculado cabe no teu risco? Se alguma resposta for não, deixas passar. Vão aparecer outras ideias. E repara na ordem: o cruzamento vem depois do contexto, e o tamanho vem por último. Quem calcula o lote primeiro costuma já ter decidido entrar, e depois procura razões."
+    },
+    {
+     "id": "v3-11",
+     "tipo": "grafico",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Antes do primeiro alvo",
+     "titulo": "Entrada no fecho, stop a proteger",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias", "poc", "estrutura"],
+     "camadas": ["sinal", "plano"],
+     "ate": [0.6, 0.9],
+     "zoom": [0.5, 0.5],
+     "estrelas": "POC ✓",
+     "fala": "Vamos gerir uma compra do princípio ao fim. Passou a verificação: médias empilhadas, fecho acima do POC, estrutura com BOS a favor, e o caminho livre. Entras no fecho da vela de sinal, com o lote que calculaste. O stop está um ATR abaixo, e é o teu limite. Até ao primeiro alvo, a tua única tarefa é deixar o plano fazer o seu trabalho. Não olhes para cada vela como se fosse uma decisão nova. Não há decisão nova a tomar enquanto o preço não chega a um dos níveis que já desenhaste. É aqui que muitos principiantes se perdem: ficam a olhar para o gráfico e começam a mexer no que já estava decidido."
+    },
+    {
+     "id": "v3-12",
+     "tipo": "pontos",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "No primeiro alvo",
+     "titulo": "Proteger no 1:2",
+     "itens": [
+      "Fecha uma parte da posição no 1:2",
+      "Passa o stop para a entrada",
+      "A parte que resta deixa de estar, em princípio, em risco",
+      "O resto segue para 1:4 e 1:6"
+     ],
+     "fala": "Quando o preço chega ao primeiro alvo, o um para dois, a gestão tem um passo claro. Fechas uma parte da posição. E passas o stop para a entrada. A partir daí, a parte que resta deixa de estar, em princípio, em risco de perder dinheiro. Em princípio, porque os saltos de preço e as execuções existem. O resto da posição segue para o um para quatro e o um para seis, enquanto as médias continuarem empilhadas. O guia é explícito sobre quando sair antes: se aparecer uma mudança de carácter contra a tua posição, ou uma fase de exaustão, fechas o resto. E também é explícito sobre o que não deves fazer: nunca afastes o stop. A gestão serve para proteger o que já ganhaste e deixar a ideia correr, não para tentar salvar uma perda."
+    },
+    {
+     "id": "v3-13",
+     "tipo": "grafico",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Quando falha",
+     "titulo": "Quando o cruzamento não se sustenta",
+     "cenario": "falha",
+     "seed": 7,
+     "base": ["medias", "poc", "estrutura"],
+     "camadas": ["sinal", "plano"],
+     "ate": [0.62, 0.9],
+     "zoom": [0.5, 0.5],
+     "estrelas": "POC ✓",
+     "fala": "E quando a ideia falha? Vê este exemplo. O fecho cruzou o POC para cima, com a marca B, e o plano apareceu. Mas as médias não estavam bem empilhadas, e o preço não conseguiu afastar-se do equilíbrio. Volta para baixo, e o stop é atingido. A perda fica no R que tinhas decidido antes de entrar, e não cresce. Esse é o custo do método, e não um sinal de que o scanner deixou de funcionar. Não mexes no stop, não esperas que volte, não mudas de ideia a meio. A razão da entrada era o cruzamento com contexto, e o contexto desapareceu. Repara: ao longo de muitas ideias, a diferença entre uma perda planeada e uma perda improvisada é enorme."
+    },
+    {
+     "id": "v3-14",
+     "tipo": "pontos",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Erros de gestão",
+     "titulo": "O que não fazer com o stop",
+     "itens": [
+      "Não afastar o stop quando o preço se aproxima",
+      "Não tirar o stop por medo e voltar a entrar mais alto",
+      "Não fechar a parcial antes do primeiro alvo",
+      "Não aumentar a posição a meio do trade"
+     ],
+     "fala": "Quatro coisas que o plano não permite. Afastar o stop quando o preço se aproxima dele. Tirar o stop por medo e, dez minutos depois, voltar a entrar mais alto, com um risco maior. Fechar a parcial antes do primeiro alvo, por impaciência. E aumentar a posição a meio do trade, porque a ideia parece boa. Cada uma destas acções muda o R que decidiste antes de entrar. E quando o R muda, deixas de conseguir ler o teu próprio diário. Por isso, o que o plano diz é o que fazes. Se queres mudar alguma coisa, muda-a no processo, antes do próximo trade, e não no meio deste."
+    },
+    {
+     "id": "v3-15",
+     "tipo": "capitulo",
+     "cap": "04 · Quando não entrar",
+     "numero": "04",
+     "titulo": "Quando não entrar",
+     "sub": "As ideias que deixas passar",
+     "fala": "Quarto capítulo. Quando não entrar."
+    },
+    {
+     "id": "v3-16",
+     "tipo": "checklist",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Deixa passar quando",
+     "titulo": "Cinco situações",
+     "itens": [
+      "Médias enroladas, com o preço de lado",
+      "Topo ou fundo importante entre a entrada e o 1:2",
+      "Numa fase de exaustão",
+      "Com o preço já muito longe do sinal",
+      "Com lote fixo, em vez de tamanho pelo risco"
+     ],
+     "fala": "Há cinco situações em que deves deixar passar. Primeira: as médias estão enroladas e o preço anda de lado. Nessa zona, o fecho cruza o POC a toda a hora, e cada cruzamento parece um sinal, mas nenhum tem tendência por trás. Segunda: há um topo ou um fundo importante entre a entrada e o primeiro alvo. Terceira: estás numa fase de exaustão. Quarta: o preço já está muito longe do sinal. Se chegaste tarde, chegaste tarde, e perseguir o preço estraga a relação entre o risco e os alvos. E quinta: estás a operar com lote fixo, em vez de calcular pelo risco. Essa última parece pequena, mas é das que mais estragam um diário, porque cada ideia passa a ter um risco diferente, e deixas de conseguir comparar."
+    },
+    {
+     "id": "v3-17",
+     "tipo": "grafico",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Médias enroladas",
+     "titulo": "Vários cruzamentos, nenhuma tendência",
+     "cenario": "falha",
+     "seed": 21,
+     "base": ["medias", "poc"],
+     "camadas": ["sinal"],
+     "ate": [0.4, 0.9],
+     "zoom": [0, 0],
+     "fala": "Este gráfico mostra o caso que o guia descreve como médias enroladas. Repara: o preço cruza o POC para cima, depois para baixo, depois para cima outra vez. As marcas B e S aparecem uma atrás da outra. Se entrasses em cada uma, pagarias o custo de cada entrada, sem nenhum contexto a favor. As médias estão enroladas, sem ordem clara, e não há tendência por trás de nenhum destes cruzamentos. A regra é simples: quando as médias se enrolam, o melhor trabalho é não entrar. Um cruzamento é um evento. Uma tendência é um estado. Só operas o estado."
+    },
+    {
+     "id": "v3-18",
+     "tipo": "capitulo",
+     "cap": "05 · Perfis e timeframes",
+     "numero": "05",
+     "titulo": "O teu perfil",
+     "sub": "Cinco, quinze ou sessenta minutos",
+     "fala": "Quinto capítulo. Escolher o teu perfil e o teu timeframe."
+    },
+    {
+     "id": "v3-19",
+     "tipo": "comparar",
+     "cap": "05 · Perfis e timeframes",
+     "kicker": "Os timeframes do guia",
+     "titulo": "Escolhe um e fica com ele",
+     "cartoes": [
+      {"t": "5 minutos", "d": "Para ter mais sinais. Mais ruído, mais tempo ao ecrã."},
+      {"t": "15 minutos", "d": "A base do guia. Equilíbrio entre sinais e ruído."},
+      {"t": "1 hora", "d": "Para operações mais longas. Menos sinais, mais paciência."}
+     ],
+     "fala": "O guia tem três referências de timeframe. Os cinco minutos servem para ter mais sinais: há mais oportunidades, mas também mais ruído, e exige mais tempo ao ecrã. Os quinze minutos são a base, o ponto de partida recomendado, com um bom equilíbrio entre quantidade e qualidade. E a hora serve para operações mais longas: há menos sinais, e as ideias tendem a durar mais, por isso precisas de mais paciência e de um horário que te permita acompanhar. Não há um timeframe certo para todos. Há o que combina com a tua vida. Quem tem um emprego e só pode olhar duas ou três vezes por dia pode preferir o quinze minutos ou a hora. Quem quer mais sinais e tem tempo para os acompanhar pode olhar para os cinco."
+    },
+    {
+     "id": "v3-20",
+     "tipo": "pontos",
+     "cap": "05 · Perfis e timeframes",
+     "kicker": "Escolher e manter",
+     "titulo": "Um perfil durante pelo menos um mês",
+     "itens": [
+      "Escolhe um mercado, um timeframe e um estilo",
+      "Mantém o mesmo perfil durante pelo menos um mês",
+      "Só depois de teres dados no diário, ajustas",
+      "Muda uma coisa de cada vez"
+     ],
+     "fala": "A escolha do perfil não é para sempre, mas deve durar o tempo suficiente para teres dados. Escolhe um mercado, um timeframe e a forma como vais gerir as ideias. Depois, fica com esse perfil pelo menos um mês. Se mudares de timeframe de três em três dias, nunca vais saber o que estava a funcionar, nem o que estava a falhar. Só depois de teres dados no diário é que faz sentido ajustar. E quando ajustares, muda uma coisa de cada vez. Se mudares cinco, não sabes qual fez a diferença. É a mesma regra das definições, aplicada à tua prática de trader."
+    },
+    {
+     "id": "v3-21",
+     "tipo": "pontos",
+     "cap": "05 · Perfis e timeframes",
+     "kicker": "Plano de quatro semanas",
+     "titulo": "Da primeira ideia à rotina",
+     "itens": [
+      "Semana 1: só ler, sem operar, e anotar os cruzamentos",
+      "Semana 2: operar em demo, com risco fixo",
+      "Semana 3: demo com gestão completa e diário todos os dias",
+      "Semana 4: rever o diário e decidir os próximos passos"
+     ],
+     "fala": "Para tornar isto concreto, um plano de quatro semanas. Na primeira semana, só lês. Abres o teu mercado, no teu timeframe, e anotas cada cruzamento que aparece, com o estado das médias, o lado do POC e a estrutura. Não operas. Na segunda semana, operas em conta demo, com o risco fixo por ideia, e sem te preocupares com a perfeição. Na terceira semana, ainda em demo, aplicas a gestão completa: a verificação de trinta segundos, a protecção no primeiro alvo, a regra do stop, e escreves o diário todos os dias. Na quarta semana, revês tudo. Quantas ideias apareceram? Em quantas seguiste o plano? Qual foi o resultado médio em R? Só depois disto decides os próximos passos. Quatro semanas parece muito, mas é o caminho mais curto para não perderes dinheiro a aprender."
+    },
+    {
+     "id": "v3-22",
+     "tipo": "capitulo",
+     "cap": "06 · A rotina de 15 minutos",
+     "numero": "06",
+     "titulo": "A rotina de quinze minutos",
+     "sub": "Consistência ganha à intensidade",
+     "fala": "Sexto capítulo. A rotina diária."
+    },
+    {
+     "id": "v3-23",
+     "tipo": "checklist",
+     "cap": "06 · A rotina de 15 minutos",
+     "kicker": "Todos os dias",
+     "titulo": "Quinze minutos, cinco passos",
+     "itens": [
+      "Abrir o teu mercado, no teu timeframe, sempre o mesmo",
+      "Ver as médias e o POC: em que estado estão?",
+      "Ler a estrutura: continuação, viragem ou armadilha?",
+      "Rever os alertas recebidos e as ideias abertas",
+      "Actualizar o diário"
+     ],
+     "fala": "A rotina é simples e cabe em quinze minutos. Primeiro, abres o teu mercado, no teu timeframe, sempre os mesmos. Segundo, olhas para as médias e para o POC: em que estado estão? Empilhadas para cima, empilhadas para baixo, ou enroladas? Terceiro, lês a estrutura: há um BOS, um CHoCH, uma armadilha perto do preço? Quarto, revês os alertas que recebeste e as ideias que tens abertas, e aplicas a gestão que vimos. Quinto, actualizas o diário. O resto do dia, os alertas trabalham por ti. Não precisas de estar agarrado ao ecrã. Precisas de ser consistente, e de não mudar o processo porque hoje o mercado parece diferente."
+    },
+    {
+     "id": "v3-24",
+     "tipo": "pontos",
+     "cap": "06 · A rotina de 15 minutos",
+     "kicker": "Uma vez por semana",
+     "titulo": "A revisão semanal",
+     "itens": [
+      "Quantas ideias apareceram e quantas operaste",
+      "Em quantas seguiste o plano",
+      "Resultado médio em R",
+      "Onde estiveram os erros: entrada, stop ou saída",
+      "Uma única mudança para a semana seguinte"
+     ],
+     "fala": "Para além da rotina diária, reserva meia hora por semana para a revisão. Conta quantas ideias apareceram e quantas operaste. Em quantas seguiste o plano. Qual foi o resultado médio em R. E onde estiveram os erros: na entrada, no stop, ou na saída? Depois decides uma única mudança para a semana seguinte. Só uma. Se mudares cinco coisas, não sabes qual delas fez diferença. A revisão semanal é o momento em que deixas de reagir ao mercado e passas a melhorar o processo. E escolhe sempre o mesmo dia para a fazer. A disciplina começa nas coisas pequenas."
+    },
+    {
+     "id": "v3-25",
+     "tipo": "capitulo",
+     "cap": "07 · O diário de trading",
+     "numero": "07",
+     "titulo": "O diário de trading",
+     "sub": "Medir em R, não em sensações",
+     "fala": "Sétimo capítulo. O diário."
+    },
+    {
+     "id": "v3-26",
+     "tipo": "pontos",
+     "cap": "07 · O diário de trading",
+     "kicker": "Depois de cada ideia",
+     "titulo": "O que escreves",
+     "itens": [
+      "Data, mercado, timeframe e direcção",
+      "Confirmações a favor, e o estado das médias",
+      "Modo de entrada e os três alvos",
+      "Resultado em R, não em dinheiro",
+      "Seguiste o plano? Sim ou não. E uma frase"
+     ],
+     "fala": "Depois de cada ideia, quer tenha corrido bem ou mal, escreves no diário. Data, mercado, timeframe e direcção. As confirmações que estavam a favor, e em que estado estavam as médias. A entrada no fecho da vela de sinal, e até que alvo chegou. O resultado medido em R, e não em dinheiro, porque o R é comparável entre ideias, contas e lotes diferentes. A pergunta mais importante: seguiste o plano, sim ou não? E uma frase sobre o que aprendeste. Ao fim de trinta ou quarenta ideias, o diário diz-te coisas que nenhum vídeo te pode dizer: em que mercado e em que horário o scanner funciona melhor para ti, e onde é que tu, e não o indicador, estás a falhar."
+    },
+    {
+     "id": "v3-27",
+     "tipo": "plano",
+     "cap": "07 · O diário de trading",
+     "kicker": "Exemplo inventado",
+     "titulo": "Uma linha do diário",
+     "linhas": [
+      ["Dia 1 · XAUUSD · 15 min · Compra", "POC ✓ · médias empilhadas", "entrada"],
+      ["Gestão", "Parcial no 1:2, stop para a entrada", "warning"],
+      ["Resultado", "+1,5 R", "tp"],
+      ["Seguiste o plano?", "Sim", "tp"],
+      ["Aprendizagem", "Esperei o fecho, sem entrar a meio da vela", "entrada"]
+     ],
+     "fala": "Assim fica uma linha do diário, num exemplo inventado. Um ouro, num gráfico de quinze minutos, compra. Cruzamento do POC no fecho, com as médias empilhadas. Na gestão: fecho parcial no primeiro alvo, e stop para a entrada. Resultado: mais um vírgula cinco R. Seguiste o plano? Sim. E a aprendizagem: esperei pelo fecho, sem entrar a meio da vela. Repara que não há valores em dinheiro. O R permite-te comparar ideias em contas diferentes, com lotes diferentes, e ao longo de meses. E repara também que a aprendizagem pode ser sobre uma coisa que correu bem. O diário não é só para os erros."
+    },
+    {
+     "id": "v3-28",
+     "tipo": "capitulo",
+     "cap": "08 · A cabeça do trader",
+     "numero": "08",
+     "titulo": "A cabeça do trader",
+     "sub": "Os erros que nenhum indicador corrige",
+     "fala": "Oitavo capítulo: a cabeça do trader. Porque há erros que nenhum indicador corrige."
+    },
+    {
+     "id": "v3-29",
+     "tipo": "pontos",
+     "cap": "08 · A cabeça do trader",
+     "kicker": "Os quatro erros clássicos",
+     "titulo": "Reconhece-os em ti",
+     "itens": [
+      "Vingança: aumentar o risco para recuperar uma perda",
+      "Medo de ficar de fora: entrar tarde, longe da entrada",
+      "Excesso de confiança: saltar a verificação depois de ganhar",
+      "Mexer no stop para mais longe"
+     ],
+     "fala": "Há quatro erros clássicos, e quase toda a gente passa por eles. O primeiro é a vingança: perdes uma ideia e aumentas o risco na seguinte para recuperar. É a forma mais rápida de transformar um dia mau numa semana má. O segundo é o medo de ficar de fora: vês um cruzamento a correr bem, entras tarde, longe da entrada, e o stop fica no sítio errado para o teu risco. O terceiro é o excesso de confiança: depois de três ou quatro ideias boas seguidas, saltas a verificação de trinta segundos, porque achas que já não precisas. E o quarto, o mais perigoso, é mexer no stop para mais longe quando o preço se aproxima dele. Se te reconheceres num destes erros, não te sintas mal. Escreve-o no diário. Ver o padrão escrito é o primeiro passo para o quebrar."
+    },
+    {
+     "id": "v3-30",
+     "tipo": "pontos",
+     "cap": "08 · A cabeça do trader",
+     "kicker": "Regras de protecção",
+     "titulo": "Limites que decides com a cabeça fria",
+     "itens": [
+      "Um número máximo de perdas por dia",
+      "Depois de atingido, fechas a plataforma",
+      "Uma pausa obrigatória depois de uma perda grande",
+      "Revisão semanal no mesmo dia, sempre"
+     ],
+     "fala": "A melhor forma de te protegeres destes erros é decidires regras com a cabeça fria, antes de abrires o gráfico. Por exemplo: um número máximo de perdas por dia, e, quando o atingires, fechas a plataforma, aconteça o que acontecer. Uma pausa obrigatória depois de uma perda maior do que o normal. E uma revisão semanal do diário, sempre no mesmo dia, em que olhas para os números em R e para a pergunta seguiste o plano. Estas regras parecem simples, e são. O difícil é cumpri-las nos dias em que o mercado te testa. É por isso que as escreves antes, e que as lês antes de começar a sessão."
+    },
+    {
+     "id": "v3-31",
+     "tipo": "capitulo",
+     "cap": "09 · Perguntas frequentes",
+     "numero": "09",
+     "titulo": "Perguntas frequentes",
+     "sub": "O que os alunos mais perguntam",
+     "fala": "Nono capítulo: as perguntas que mais se repetem."
+    },
+    {
+     "id": "v3-32",
+     "tipo": "pontos",
+     "cap": "09 · Perguntas frequentes",
+     "kicker": "Perguntas e respostas",
+     "titulo": "Dúvidas comuns",
+     "itens": [
+      "O scanner repinta? As marcas podem mudar até ao fecho",
+      "Posso usar vários timeframes? Sim, mas opera num só",
+      "Começo com todas as confirmações? Começa por ver todas",
+      "Posso operar só com alertas? Lê sempre o gráfico antes"
+     ],
+     "fala": "Primeira pergunta: o scanner repinta? Há uma distinção que tens de conhecer. Enquanto a vela está a formar-se, o preço pode cruzar o POC e voltar atrás, e a marca pode mudar. O sinal e o alerta contam-se no fecho da vela. Por isso, a regra é esperar pelo fecho. Segunda: posso usar vários timeframes? Podes olhar para um timeframe maior para ler o contexto, mas opera num só, para não te contradizeres. Terceira: começo com todas as confirmações? Começa por ver todas, mesmo que só uses algumas no início, para perceberes o que está a acontecer. Quarta: posso operar só com alertas? Podes receber os alertas, mas lê o gráfico antes de cada entrada. O alerta é um resumo do momento, e o gráfico mostra-te o contexto que o alerta não consegue resumir."
+    },
+    {
+     "id": "v3-33",
+     "tipo": "pontos",
+     "cap": "09 · Perguntas frequentes",
+     "kicker": "Mais dúvidas",
+     "titulo": "Perguntas que voltam sempre",
+     "itens": [
+      "Devo mudar os parâmetros? Só depois de semanas de diário",
+      "E se falhar várias seguidas? Confirma se seguiste o plano",
+      "Quanto tempo até estar pronto? O diário diz-te",
+      "Posso mudar a visualização? Sim, sem mudar o processo"
+     ],
+     "fala": "Mais quatro perguntas. Devo mudar os parâmetros? Só depois de algumas semanas de diário, e um de cada vez, para saberes o efeito de cada mudança. E se falhar várias ideias seguidas? É normal, acontece em qualquer método. A pergunta certa não é se o indicador deixou de funcionar. É se seguiste o plano em cada uma delas. Quanto tempo até estar pronto para dinheiro real? Não há um número mágico. O diário diz-te. Quando seguires o plano de forma consistente durante várias semanas, com o risco fixo, estás a tratar isto como um processo. E a última: posso mudar a visualização das fases? Sim, porque não altera a lógica do sinal nem do plano. Mas faz essa mudança fora do meio de uma ideia."
+    },
+    {
+     "id": "v3-34",
+     "tipo": "pontos",
+     "cap": "09 · Perguntas frequentes",
+     "kicker": "Uma última ideia",
+     "titulo": "A expectativa",
+     "itens": [
+      "Expectativa = média dos R ganhos e perdidos por ideia",
+      "Mede-se no teu diário, ao fim de muitas ideias",
+      "Positiva: o processo tem vantagem nas tuas mãos",
+      "Negativa: revê a execução antes de culpar o indicador"
+     ],
+     "fala": "Uma última ideia, que liga tudo. No fim de trinta, quarenta ou cinquenta ideias, podes calcular a tua expectativa: a média dos R ganhos e perdidos por ideia. Somas todos os resultados em R e divides pelo número de ideias. Se o número for positivo, o processo, nas tuas mãos, esteve a jogar a teu favor nessa amostra. Positivo não é garantia de nada para o futuro. Se for negativo, antes de culpares o indicador, revê a execução: seguiste o plano? Respeitaste o stop? Entraste tarde? Muitas vezes a diferença está aí. Este número é teu, medido por ti, no teu mercado, no teu timeframe. Não há vídeo, nem indicador, nem alerta que te dê esse número. Só o teu diário."
+    },
+    {
+     "id": "v3-35",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Checklist de bolso",
+     "titulo": "O processo completo",
+     "itens": [
+      "Médias empilhadas a favor",
+      "Fecho além do POC",
+      "Estrutura a favor",
+      "Caminho livre até ao 1:2",
+      "Fase de momentum",
+      "Tamanho pelo risco",
+      "Stop para a entrada no 1:2"
+     ],
+     "fala": "Para fechar, a checklist de bolso do MTM Scanner. Médias empilhadas a favor. Fecho além do POC. Estrutura a favor. Caminho livre até ao primeiro alvo. Fase de momentum, e não de exaustão. Tamanho calculado pelo risco. E, no primeiro alvo, stop para a entrada. Sete passos. Se os seguires sempre, mesmo quando é aborrecido, já estás à frente de muita gente que tenta operar sem método."
+    },
+    {
+     "id": "v3-36",
+     "tipo": "frase",
+     "cap": "Fecho",
+     "texto": "Mais do que um sinal: <span class='ouro'>método, tempo e disciplina</span>.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Chegámos ao fim do Bootcamp MTM Scanner. Obrigado por teres feito os três módulos até aqui. Lembra-te do que te disse no início: o scanner não decide por ti. Organiza as peças, e dá-te um gatilho e um plano. O resto é processo, paciência e risco controlado. Faz os exercícios, treina em conta demo, escreve o teu diário, e traz as tuas dúvidas para a comunidade e para as sessões ao vivo da MoreThanMoney. Eu sou o Ricardo Garcia, e isto é a MoreThanMoney."
+    },
+    {
+     "id": "v3-37",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Bootcamp MTM Scanner concluído",
+     "sub": "morethanmoney.pt",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos e exemplos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Até à próxima.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

@@ -135,8 +135,9 @@ function grafico(r,o){
       const y1=Y(Math.max(v.o,v.c)), y2=Y(Math.min(v.o,v.c)); g.fillRect(X(i)-bw/2,y1,bw,Math.max(2,y2-y1)) }
     if(vis.volume && n>D.plano.sig){ g.globalAlpha=vis.volume; const x=X(D.plano.sig), y=Y(D.c[D.plano.sig].h)-70; g.fillStyle='#E6B800'; g.font='700 22px Inter'; g.fillText('Vol: +184%',x-60,y) ; g.globalAlpha=1 }
     if(vis.toque){ g.globalAlpha=vis.toque; const i=D.plano.sig-2; g.strokeStyle='#E9C46A'; g.lineWidth=3; g.beginPath(); g.arc(X(i),Y(D.plano.dir>0?D.c[i].l:D.c[i].h),26,0,7); g.stroke(); g.globalAlpha=1 }
-    if(vis.sinal && n>D.plano.sig){ const a=vis.sinal, i=D.plano.sig, x=X(i), y=D.plano.dir>0?Y(D.c[i].l)+40:Y(D.c[i].h)-130
-      g.globalAlpha=a; g.fillStyle=D.plano.dir>0?COR.bull:COR.bear; g.beginPath(); g.roundRect(x-120,y,240,92,14); g.fill(); g.fillStyle='#fff'; g.font='800 26px Inter'; g.textAlign='center'
+    if(vis.sinal && n>D.plano.sig){ const a=vis.sinal, i=D.plano.sig, x=X(i), y=Math.max(12,Math.min(H-104,D.plano.dir>0?Y(D.c[i].l)+40:Y(D.c[i].h)-130))
+      const txt=(o.rotulo||((window.NOME||'DEFY')+' '+(D.plano.dir>0?(T.compra||'Compra'):(T.venda||'Venda')))); g.font='800 26px Inter'; const cw=Math.max(240,g.measureText(txt).width+48)
+      g.globalAlpha=a; g.fillStyle=D.plano.dir>0?COR.bull:COR.bear; g.beginPath(); g.roundRect(x-cw/2,y,cw,92,14); g.fill(); g.fillStyle='#fff'; g.font='800 26px Inter'; g.textAlign='center'
       g.fillText((o.rotulo||((window.NOME||'DEFY')+' '+(D.plano.dir>0?(T.compra||'Compra'):(T.venda||'Venda')))),x,y+38); g.font='700 24px Inter'; g.fillStyle='#FFD600'; g.fillText(o.estrelas||'+8  ★★',x,y+74); g.textAlign='left'; g.globalAlpha=1 }
     if(vis.plano && n>D.plano.sig){ const a=vis.plano, x0=X(D.plano.sig), P=D.plano
       const RT=(window.PLANO&&PLANO.rotulos)||['TP1','TP2','TP3'], L=P.tp.map((p,k)=>[RT[k]||('TP'+(k+1)),p,'#3ecf8e']).reverse().concat([[T.entrada||'Entrada',P.entrada,'#E9C46A']]).concat(window.PLANO&&PLANO.warning===false?[]:[['Warning',P.warning,'#ff9f43']]).concat([['SL',P.sl,'#ff5a4f']])
