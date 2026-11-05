@@ -1,0 +1,20 @@
+# /etc/systemd/system/mtm-conteudo-magnetico.service — motor de render dos reels (VPS)
+# Env em /etc/mtm-conteudo-magnetico.env: SITE_URL, CRON_SECRET, MOTOR_NOME=vps,
+# PEXELS_API_KEY (opcional), MUSICA_DIR (opcional), FFMPEG_THREADS=2
+[Unit]
+Description=MTM Conteudo Magnetico - render de reels
+After=network-online.target
+
+[Service]
+EnvironmentFile=/etc/mtm-conteudo-magnetico.env
+ExecStart=/usr/bin/node /opt/mtm/conteudo-magnetico/motor.mjs
+Restart=always
+RestartSec=10
+# Um render de cada vez, em segundo plano: os relays e o motor de cópia têm prioridade.
+Nice=10
+CPUQuota=150%
+MemoryMax=1500M
+User=ubuntu
+
+[Install]
+WantedBy=multi-user.target
