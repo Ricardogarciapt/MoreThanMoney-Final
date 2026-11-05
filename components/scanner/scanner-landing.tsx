@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { Unbounded } from "next/font/google"
+import { unbounded } from "@/lib/fonts/unbounded"
 import { ArrowUpRight, ArrowDown, Asterisk, BellRing, Check, Layers, Play, Plus, Ruler, Target, Volume2, VolumeX, X as XIcon } from "lucide-react"
 import type { ScannerData, ScannerProduct } from "@/lib/scanners-catalog"
 import type { ScannerLanding } from "@/lib/scanner-landings"
@@ -21,7 +21,7 @@ import { UI, priceFor, type Lang } from "@/components/scanner/landing-i18n"
 import { useScrollProgress } from "@/components/scanner/use-scroll-progress"
 import s from "./scanner-landing.module.css"
 
-const display = Unbounded({ subsets: ["latin"], weight: ["600", "800"], display: "swap" })
+const display = unbounded
 
 // Igual ao pack da página /scanner (35 €/mês, só mensal desde 23/10/2026).
 const PACK: ScannerProduct = {
