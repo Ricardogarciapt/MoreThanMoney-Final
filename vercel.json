@@ -177,6 +177,10 @@
       "schedule": "0 4 * * *"
     },
     {
+      "path": "/api/cron/limpeza-storage",
+      "schedule": "30 4 * * *"
+    },
+    {
       "path": "/api/cron/signal-outcomes",
       "schedule": "*/5 * * * *"
     },
