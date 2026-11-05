@@ -106,7 +106,7 @@ function grafico(r,o){
     const fim=Math.max(n, Math.round(lerp(D.N,Math.min(D.N,D.plano.sig+40),zoom)))
     const vis_=D.c.slice(ini,fim)
     let lo=Math.min(...vis_.map(x=>x.l)), hi=Math.max(...vis_.map(x=>x.h))
-    if(vis.bandas||vis.banda) for(let i=ini;i<fim;i++){ const k=vis.bandas?3:1; lo=Math.min(lo,D.mid[i]-D.dev[i]*k); hi=Math.max(hi,D.mid[i]+D.dev[i]*k) }
+    if(('bandas' in vis)||('banda' in vis)) for(let i=ini;i<fim;i++){ const k=('bandas' in vis)?3:1; lo=Math.min(lo,D.mid[i]-D.dev[i]*k); hi=Math.max(hi,D.mid[i]+D.dev[i]*k) }
     if(vis.plano){ lo=Math.min(lo,...D.plano.tp,D.plano.sl); hi=Math.max(hi,...D.plano.tp,D.plano.sl) }
     const pad=(hi-lo)*.08; lo-=pad; hi+=pad
     const X=i=>60+(i-ini)/(fim-ini)*(W-260), Y=p=>H-40-(p-lo)/(hi-lo)*(H-90), bw=(W-260)/(fim-ini)*.62
