@@ -2,7 +2,7 @@
 # Fila completa dos bootcamps (corre no Mac, na raiz do worktree).
 # Uso: nohup caffeinate -dims bash video/bootcamp/fila.sh > ~/bootcamp-fila.log 2>&1 &
 # Ver progresso: tail -f ~/bootcamp-fila.log
-# Pode ser relançada a qualquer momento: salta vídeos já feitos (marcador .v2 (versão do motor)).
+# Pode ser relançada a qualquer momento: salta vídeos já feitos (marcador .v3 (versão do motor)).
 cd "$(dirname "$0")/../.." || exit 1
 ESTS="defy mtm-scanner sensei golden-zone momentum trendshot supernova sniper-pro quantum goldkiller aurum-flow premium-scanner"
 DEST="$HOME/Documents/youtube-upload-mtm"
@@ -14,10 +14,10 @@ for est in $ESTS; do
   for lang in pt en; do
     for i in $(seq 1 "$n"); do
       out="video/bootcamp/saida/$est/bootcamp-$est-$i-$lang.mp4"
-      if [ -f "$out.v2" ]; then echo "já feito: $out"; continue; fi
+      if [ -f "$out.v3" ]; then echo "já feito: $out"; continue; fi
       rm -f "$out"
       if nice -n 10 node video/bootcamp/render.mjs "$est" "$i" "$lang"; then
-        touch "$out.v2"
+        touch "$out.v3"
         d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$out" | cut -d. -f1)
         echo "FEITO $out ${d}s $(du -h "$out" | cut -f1) $(date +%H:%M)"
       else

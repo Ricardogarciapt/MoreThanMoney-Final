@@ -16,8 +16,8 @@ const arg = n => (process.argv.find(a => a.startsWith(`--${n}=`)) || '').split('
 const preview = process.argv.includes('--preview')
 const FPS = preview ? 8 : 25
 const ABRE = 0.5, RESPIRO = 0.7
-// Velocidade da narração: o Ricardo pediu +10% (06/11). --vel=1 volta ao normal.
-const VEL = Number(arg('vel') || 1.1)
+// Velocidade da narração: +10% pedido a 06/11 15:26, depois -7% a 20:08 → 1.03. --vel=1 volta ao normal.
+const VEL = Number(arg('vel') || 1.03)
 
 const G = JSON.parse(fs.readFileSync(path.join(DIR, 'guioes', `${est}.${lang}.json`), 'utf8'))
 const V = G.videos[Number(nv) - 1]
