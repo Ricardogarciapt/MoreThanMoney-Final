@@ -8,6 +8,7 @@
  * Recomenda-se cadência de 5 em 5 minutos (ver vercel.json).
  */
 
+import { corrigirPtPt, parecePortugues } from "@/lib/pt-pt"
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isCronAuthorized } from "@/lib/cron-auth"
@@ -97,7 +98,9 @@ export async function GET(request: NextRequest) {
       ig_username: row.ig_username,
       media_type: row.media_type,
       media_urls: row.media_urls || [],
-      caption: row.caption,
+      // Última passagem antes de sair: trocas seguras de PT-BR para PT-PT na legenda (só em
+      // texto em português; os flyers EN passam intactos). Não toca no que já está publicado.
+      caption: row.caption && parecePortugues(row.caption) ? corrigirPtPt(row.caption).texto : row.caption,
       creation_id: row.creation_id,
       child_creation_ids: row.child_creation_ids,
     }

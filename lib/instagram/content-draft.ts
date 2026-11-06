@@ -1,4 +1,5 @@
 import { getProofStats } from '@/lib/proof-stats'
+import { corrigirPtPt } from '@/lib/pt-pt'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CAPTION_INTERNAL_MARK, uploadBufferToBucket } from '@/lib/instagram/publish'
@@ -152,7 +153,8 @@ export function parseDrafts(text: string): Rascunho[] {
     const vis = (body.match(/VISUAL:\s*([^\n]+)/i)?.[1] || '').trim()
     const cap = (body.split(/CAPTION:\s*/i)[1] || '').trim()
     if (!cap) continue
-    out.push({ hook: (hk || cap.split('\n')[0]).slice(0, 120), caption: cap, cta_keyword: kw, visual_brief: vis })
+    const capPt = corrigirPtPt(cap).texto
+    out.push({ hook: corrigirPtPt(hk || capPt.split('\n')[0]).texto.slice(0, 120), caption: capPt, cta_keyword: kw, visual_brief: vis })
   }
   return out
 }

@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { corrigirPtPt, regrasPtPtParaPrompt } from '@/lib/pt-pt'
 import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { EMOJIS_PERMITIDOS, lerEnfase, type Enfase } from './estilos'
 
@@ -221,7 +222,7 @@ export async function analisarTranscricao(input: {
   try {
     const r = await chamarIA({
       tarefa: 'videocliper-analise',
-      sistema: SISTEMA,
+      sistema: `${SISTEMA}\n\n${regrasPtPtParaPrompt()}`,
       mensagens: [{ role: 'user', content: pedido }],
       maxTokens: 8000,
       preferencia: 'qualidade',
@@ -262,8 +263,10 @@ function interpretar(bruto: string, palavras: Palavra[], ctas: readonly string[]
     const fim = Number(campo('FIM'))
     const duracao = Number(campo('DURACAO'))
     const cta = campo('CTA').toUpperCase().replace(/[^A-Z]/g, '')
-    const caption = campo('CAPTION')
-    const titulo = campo('TITULO')
+    // Título, gancho e legenda são texto NOSSO (da IA): passam pela régua do PT-PT. A fala do
+    // educador, essa, é dele e não se toca.
+    const caption = corrigirPtPt(campo('CAPTION')).texto
+    const titulo = corrigirPtPt(campo('TITULO')).texto
 
     if (!Number.isFinite(inicio) || !Number.isFinite(fim) || fim <= inicio) continue
     if (![15, 30, 60].includes(duracao)) continue
@@ -276,7 +279,7 @@ function interpretar(bruto: string, palavras: Palavra[], ctas: readonly string[]
     saida.push({
       ordem: saida.length + 1,
       titulo,
-      hook: campo('HOOK'),
+      hook: corrigirPtPt(campo('HOOK')).texto,
       score: Math.min(100, Math.max(0, Number(campo('SCORE')) || 50)),
       porque: campo('PORQUE'),
       inicioSeg: Math.max(0, inicio),

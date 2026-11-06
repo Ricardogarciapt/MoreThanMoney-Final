@@ -30,6 +30,7 @@
  *
  * Puro: sem base de dados, importável por rotas, crons e scripts.
  */
+import { regrasPtPtParaPrompt } from './pt-pt'
 import { TRIAL_DAYS } from './trial-access'
 
 export const FRAMEWORK_VERSAO = '2026-11-04'
@@ -110,6 +111,8 @@ export function frameworkConteudo(): string {
     '· Formato de escala: guiões curtos (Reels/TikTok) sobre a passagem de «vendedor de recrutamento» para «trader independente com método».',
     '· Mostra processo e dados reais (só os que te forem dados), nunca estilo de vida nem ganhos.',
     '· Nunca nomeies concorrentes, redes de marketing multinível concretas ou pessoas de outras empresas.',
+    '',
+    regrasPtPtParaPrompt(),
   ].join('\n')
 }
 
