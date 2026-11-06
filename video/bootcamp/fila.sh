@@ -31,5 +31,14 @@ for est in $ESTS; do
   node video/bootcamp/capa.mjs "$est" || echo "ERRO capa $est"
   mkdir -p "$DEST/bootcamp-$est"
   cp video/bootcamp/saida/$est/*.mp4 video/bootcamp/saida/$est/*.vtt video/bootcamp/saida/$est/*.txt video/bootcamp/saida/$est/*.jpg "$DEST/bootcamp-$est/" 2>/dev/null
+  node video/bootcamp/publicar-youtube.mjs || echo "publicação em pausa (quota ou erro); retoma no fim"
 done
 echo "=== FILA TERMINADA $(date) ==="
+# Publicação: a quota do YouTube dá ~5 vídeos por dia; repete de hora a hora até subir tudo.
+while true; do
+  node video/bootcamp/publicar-youtube.mjs > /tmp/bootcamp-pub.txt 2>&1; c=$?; cat /tmp/bootcamp-pub.txt
+  grep -q "publicação: 0 por publicar" /tmp/bootcamp-pub.txt && break
+  [ $c -eq 2 ] && break
+  sleep 3600
+done
+echo "=== PUBLICAÇÃO TERMINADA $(date) ==="
