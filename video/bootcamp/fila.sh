@@ -7,6 +7,8 @@ cd "$(dirname "$0")/../.." || exit 1
 ESTS="defy mtm-scanner sensei golden-zone momentum trendshot supernova sniper-pro quantum goldkiller aurum-flow premium-scanner"
 DEST="$HOME/Documents/youtube-upload-mtm"
 git pull --ff-only origin claude/project-thread-piyxkj || true
+# vídeos já feitos a 1,10× passam a 1,03× sem novo render
+node video/bootcamp/ajustar-velocidade.mjs || echo "ERRO ajuste"
 for est in $ESTS; do
   n=$(node -e "console.log(require('./video/bootcamp/guioes/$est.pt.json').videos.length)")
   echo "=== $est ($n vídeos) $(date +%H:%M) ==="
