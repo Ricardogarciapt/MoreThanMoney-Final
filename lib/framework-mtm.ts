@@ -32,6 +32,7 @@
  */
 import { regrasPtPtParaPrompt } from './pt-pt'
 import { TRIAL_DAYS } from './trial-access'
+import { CUPAO_CAMPANHA_90D, DIAS_CAMPANHA_90D } from './stripe-checkout-premium'
 
 export const FRAMEWORK_VERSAO = '2026-11-04'
 
@@ -48,8 +49,9 @@ export function frameworkIdentidade(): string {
     'IDENTIDADE MTM: More Than Money, fundada por Ricardo Garcia. Literacia financeira, tecnologia própria de trading (análise de liquidez, order blocks, fair value gaps) e trading consciente com gestão de risco.',
     'MODELO HÍBRIDO, quatro rotas para a mesma casa:',
     '· Rota corretora (PU Prime, parceira IB): o cliente abre conta pelo nosso link e financia-a com o depósito mínimo. O dinheiro é dele e fica na conta dele; enquanto a conta estiver financiada, desbloqueia o Premium.',
-    '· Membro: subscrição directa para quem quer a tecnologia e a comunidade e prefere manter a corretora que já tem.',
-    `· Premium: acesso completo (scanners, alertas, Tap to Trade, salas e aulas Premium, funcionalidades do site). Quem se regista experimenta-o ${TRIAL_DAYS} dias sem cartão.`,
+    '· Membro: subscrição directa para quem quer a tecnologia e a comunidade e prefere manter a corretora que já tem. O Membro paga logo no registo (não tem trial).',
+    `· Premium: acesso completo (scanners, alertas, Tap to Trade, salas e aulas Premium, funcionalidades do site). O trial é só do Premium: ${TRIAL_DAYS} dias grátis, SEM cartão e sem cobrança. No fim, quem quiser continuar ativa o Premium ao preço mensal normal (o acesso fecha até lá e a pessoa vê a página para inserir o método de pagamento).`,
+    `· Campanha ${DIAS_CAMPANHA_90D} dias: para quem já tem experiência noutras plataformas de educação digital, com o cupão ${CUPAO_CAMPANHA_90D} no registo. Entra como Membro (app MTM System; o MTM Auto paga-se à parte), nada é cobrado nos ${DIAS_CAMPANHA_90D} dias e no fim passa a Premium ao preço mensal normal. Nunca nomeies essas plataformas.`,
     '· MTM Funded: para quem ainda não tem capital próprio. Desafios e torneios em conta SIMULADA; quem se destaca recebe um Patrocínio de Desempenho para abrir conta própria numa corretora regulada. Não é uma prop firm e a MTM não gere dinheiro de clientes.',
     'Hub da comunidade: a comunidade MTM (nas páginas públicas não se nomeia a plataforma dos cursos).',
     'MTM System / WebTrader: motor próprio de análise e execução assistida. NÃO é um copiador cego: cada sinal passa por filtros e gestão de risco antes de chegar ao cliente.',
