@@ -129,5 +129,9 @@ export function eFalhaTecnica(erro: string | null | undefined): boolean {
   // «igualmente prováveis» = a resolução automática recusou-se a adivinhar o sufixo. É uma recusa
   // por regra, não uma avaria: repetir dá o mesmo empate, e bloquear a conta por isto seria punir
   // o cliente por falta de um mapa de símbolos.
+  // «Position not found» e «Invalid stops» = a corretora já fechou a cópia no SL/TP (ou o stop
+  // ficou demasiado perto do preço) enquanto a mestre continua a mexer no trailing. A conta está
+  // saudável: contar isto bloqueou 6 contas Premium II a 05/11 03:06 por ajustes a posições mortas.
+  if (/position not found|invalid stops/i.test(erro)) return false
   return !/não existe no destino|igualmente prováveis|abaixo de metade do mínimo|fora do filtro|máximo de \d+ posições|limite de|risco total|atraso|duplicad|não aceite|pausad|bloqueada/i.test(erro)
 }
