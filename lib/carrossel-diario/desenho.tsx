@@ -12,6 +12,7 @@
  */
 import React from 'react'
 import type { Lamina, Perfil } from './tipos'
+import { Visual, type VisualId } from './visuais'
 
 export const LARGURA = 1080
 export const ALTURA = 1350
@@ -28,7 +29,7 @@ const ESTILO: Record<Perfil, Estilo> = {
 }
 
 export type Imagens = {
-  /** Fotografia de fundo da capa e do fecho (Ricardo). */
+  /** Fotografia de fundo da capa e do fecho (Ricardo; na MTM, só a do educador). */
   foto?: string | null
   /** Fotografia redonda da cabeça das lâminas do meio (Ricardo). */
   avatar?: string | null
@@ -44,6 +45,10 @@ export type PecaCarrossel = {
   palavraChave?: string
   img: Imagens
   aviso: string
+  /** Pequena ilustração do tema (lâminas do meio escolhidas em ./visuais). */
+  visual?: VisualId
+  /** MTM com educador: «Nome · área», por cima do título da capa e do fecho. */
+  assinatura?: string
 }
 
 /** Tamanho da linha grande consoante o comprimento (Anton é condensada: cabe muito). */
@@ -146,7 +151,7 @@ function Progresso({ e, indice, total }: { e: Estilo; indice: number; total: num
   )
 }
 
-function FundoFoto({ foto }: { foto: string }) {
+function FundoFoto({ foto, cinza }: { foto: string; cinza: boolean }) {
   return (
     <div style={{ display: 'flex', position: 'absolute', top: 0, left: 0, width: LARGURA, height: ALTURA }}>
       <img
@@ -154,7 +159,7 @@ function FundoFoto({ foto }: { foto: string }) {
         src={foto}
         width={LARGURA}
         height={ALTURA}
-        style={{ position: 'absolute', top: 0, left: 0, objectFit: 'cover', objectPosition: 'center 18%', filter: 'grayscale(1) contrast(1.12)' }}
+        style={{ position: 'absolute', top: 0, left: 0, objectFit: 'cover', objectPosition: 'center 18%', filter: cinza ? 'grayscale(1) contrast(1.12)' : 'none' }}
       />
       <div
         style={{
@@ -196,10 +201,10 @@ function FundoMarca({ e, marcaDagua }: { e: Estilo; marcaDagua?: string | null }
 function CapaOuFecho(p: PecaCarrossel & { e: Estilo }) {
   const { e, lamina: l, perfil, img } = p
   const capa = p.indice === 0
-  const comFoto = perfil === 'ricardo' && !!img.foto
+  const comFoto = !!img.foto
   return (
     <div style={{ display: 'flex', position: 'relative', width: LARGURA, height: ALTURA, background: e.fundo, overflow: 'hidden' }}>
-      {comFoto ? <FundoFoto foto={img.foto as string} /> : <FundoMarca e={e} marcaDagua={img.logo} />}
+      {comFoto ? <FundoFoto foto={img.foto as string} cinza={perfil === 'ricardo'} /> : <FundoMarca e={e} marcaDagua={img.logo} />}
       <div
         style={{
           display: 'flex',
@@ -220,6 +225,13 @@ function CapaOuFecho(p: PecaCarrossel & { e: Estilo }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          {p.assinatura ? (
+            <div style={{ display: 'flex', marginBottom: 22 }}>
+              <div style={{ display: 'flex', padding: '10px 24px', borderRadius: 999, background: 'rgba(0,0,0,0.55)', border: `2px solid ${e.cor}`, color: '#ffffff', fontFamily: 'Montserrat', fontWeight: 800, fontSize: 26, letterSpacing: 1 }}>
+                {p.assinatura}
+              </div>
+            </div>
+          ) : null}
           <LinhaCor texto={l.linha} cor={e.cor2} tam={capa ? 66 : 56} />
           <div style={{ display: 'flex', marginTop: 8 }}>
             <LinhaGrande texto={l.titulo} tam={tamTitulo(l.titulo, true)} />
@@ -274,12 +286,17 @@ function Meio(p: PecaCarrossel & { e: Estilo }) {
       >
         <Cabeca e={e} img={p.img} perfil={p.perfil} indice={p.indice} total={p.total} />
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          {p.visual ? (
+            <div style={{ display: 'flex', marginBottom: 40 }}>
+              <Visual id={p.visual} cor={e.cor} cor2={e.cor2} />
+            </div>
+          ) : null}
           <LinhaCor texto={l.linha} cor={e.cor2} tam={52} />
           <div style={{ display: 'flex', marginTop: 10 }}>
             <LinhaGrande texto={l.titulo} tam={tamTitulo(l.titulo, false)} />
           </div>
           <div style={{ display: 'flex', width: 180, height: 10, marginTop: 30, marginBottom: 34, background: e.cor, borderRadius: 10, transform: 'skewX(-20deg)' }} />
-          <div style={{ display: 'flex', fontFamily: 'Montserrat', fontWeight: 500, fontSize: 44, lineHeight: 1.42, color: '#e9e9e9', maxWidth: 920 }}>{l.corpo || ''}</div>
+          <div style={{ display: 'flex', fontFamily: 'Montserrat', fontWeight: 500, fontSize: p.visual ? 40 : 44, lineHeight: 1.42, color: '#e9e9e9', maxWidth: 920 }}>{l.corpo || ''}</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           <Progresso e={e} indice={p.indice} total={p.total} />

@@ -62,7 +62,7 @@ export function normalizar(bruto: unknown, perfil: Perfil, tema: Tema, id: strin
       ? ['Guarda este post para releres antes da próxima decisão e partilha com quem precisa de o ler.', 'Segue @ricardogarciapt para mais.']
       : [`💬 Comenta «${tema.palavraChave}» e envio-te ${tema.oQue} por mensagem.`]
   const legenda = [gancho, '', ...resumo.map((r) => `▪️ ${r}`), '', ...cta, '', `⚠️ ${DISCLAIMER_PT}`, '', hashtags].join('\n')
-  const carrossel: Carrossel = { id, perfil, area: tema.area, laminas, legenda, palavraChave: tema.palavraChave }
+  const carrossel: Carrossel = { id, perfil, area: tema.area, laminas, legenda, palavraChave: tema.palavraChave, educador: tema.educador }
   return { carrossel }
 }
 
@@ -80,6 +80,9 @@ export async function gerarCarrossel(perfil: Perfil, tema: Tema, id: string): Pr
   ].join('\n\n')
   const utilizador = [
     `TEMA: ${tema.tema}`,
+    ...(tema.educador
+      ? [`Este carrossel apresenta o educador ${tema.tema.split(' ensina')[0]}: fala dele na terceira pessoa na capa e no fecho, e o conteúdo do meio é o que ele ensina. Sem inventar factos biográficos nem resultados.`]
+      : []),
     'Formato: 7 ou 8 lâminas. Lâmina 1 = capa (gancho que pára o dedo, sem corpo). Lâminas do meio = UMA ideia prática cada. Última = fecho com a ideia para levar.',
     'Cada lâmina: "linha" (frase curta, até 40 caracteres, aparece em cor), "titulo" (2 a 4 palavras FORTES, até 30 caracteres), "corpo" (1 a 2 frases, até 220 caracteres).',
     '"gancho" = primeira frase da legenda. "resumo" = 4 a 6 tópicos curtos com as ideias do carrossel.',

@@ -13,7 +13,7 @@ import { autorizadoNaPessoal, isAutoPublishBlocked, IG_PERSONAL_ID } from '@/lib
 
 // Palavras das automações de comentário activas a 06/11/2026 (mtm_automacoes, canal instagram_comentario).
 const PALAVRAS_ACTIVAS = new Set(
-  'ESTRATEGIA,ESTRATÉGIA,GUIA,CRIAR,MUNDO,DISCIPLINA,PREMIUM,APP,TRIAL,QUERO,COMEÇAR,BORA,CRIPTO,DCA,SINAIS,COPY,GRUPO'.split(','),
+  'ESTRATEGIA,ESTRATÉGIA,GUIA,CRIAR,MUNDO,DISCIPLINA,PREMIUM,APP,TRIAL,QUERO,COMEÇAR,BORA,CRIPTO,DCA,SINAIS,COPY,GRUPO,FACELESS'.split(','),
 )
 
 const ids = new Set<string>()

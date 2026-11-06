@@ -22,7 +22,8 @@ import { TEMAS, type Tema } from './temas'
 import { gerarCarrossel } from './gerar'
 import { ALTURA, LARGURA, elementoCarrossel, type Imagens } from './desenho'
 import { lerInterruptor } from './interruptor'
-import { ARROBA, CRIADO_POR, IG_ID, type Carrossel, type Perfil } from './tipos'
+import { ARROBA, CRIADO_POR, EDUCADOR_AREA, EDUCADOR_NOME, IG_ID, type Carrossel, type Educador, type Perfil } from './tipos'
+import { visuaisDoCarrossel } from './visuais'
 
 /** Hora de publicação (UTC). Lisboa está em UTC+0 no inverno e UTC+1 no verão. */
 const HORA: Record<Perfil, { h: number; m: number }> = { ricardo: { h: 19, m: 0 }, mtm: { h: 12, m: 30 } }
@@ -40,6 +41,12 @@ const FOTOS_IA = [
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261023_211306_2fa61a2a-2bfe-4faf-be47-abb3f3522c80.png',
 ]
 const AVATAR = 'capas/ref/rg-bracos.jpg'
+/** Fotografias dos educadores (as mesmas dos reels; retratos a ouro sobre preto). */
+const FOTO_EDUCADOR: Record<Educador, string> = {
+  ricardo: 'reels/educadores/fotos/ricardo-garcia.jpg',
+  ruben: 'reels/educadores/fotos/ruben-pereira.jpg',
+  maria: 'reels/educadores/fotos/maria-costa.jpg',
+}
 const LOGO = 'logo-mtm-transparent.png'
 
 function local(rel: string): string | null {
@@ -77,8 +84,11 @@ async function fotoDoDia(n: number): Promise<string | null> {
 export async function desenharCarrossel(c: Carrossel, dia: number): Promise<Buffer[]> {
   const fontes = await carregarFontes()
   const img: Imagens = { avatar: local(AVATAR), logo: local(LOGO) }
-  const fotoCapa = c.perfil === 'ricardo' ? await fotoDoDia(dia) : null
-  const fotoFecho = c.perfil === 'ricardo' ? await fotoDoDia(dia + 3) : null
+  const fotoEdu = c.perfil === 'mtm' && c.educador ? local(FOTO_EDUCADOR[c.educador]) : null
+  const fotoCapa = c.perfil === 'ricardo' ? await fotoDoDia(dia) : fotoEdu
+  const fotoFecho = c.perfil === 'ricardo' ? await fotoDoDia(dia + 3) : fotoEdu
+  const assinatura = c.perfil === 'mtm' && c.educador ? `${EDUCADOR_NOME[c.educador]} · ${EDUCADOR_AREA[c.educador]}` : undefined
+  const visuais = visuaisDoCarrossel(c)
   const total = c.laminas.length
   const out: Buffer[] = []
   for (let i = 0; i < total; i++) {
@@ -90,6 +100,8 @@ export async function desenharCarrossel(c: Carrossel, dia: number): Promise<Buff
       palavraChave: c.palavraChave,
       img: { ...img, foto: i === 0 ? fotoCapa : fotoFecho },
       aviso: DISCLAIMER_PT,
+      visual: visuais[i],
+      assinatura,
     })
     const res = new ImageResponse(el, { width: LARGURA, height: ALTURA, fonts: fontes })
     out.push(Buffer.from(await res.arrayBuffer()))
