@@ -44,6 +44,10 @@ export type Lamina = {
   destaque: string
   /** Texto de apoio (pode ser vazio na capa). */
   corpo: string
+  /** Prompt em inglês para um gerador de imagem externo (ArtCraft, Higgsfield, Canva… via MCP). */
+  prompt_visual?: string
+  /** Fundo próprio desta lâmina (já copiado para o nosso Storage). Sem ele usa-se o fundo da peça. */
+  fundo_url?: string | null
 }
 
 export type Segmento = {
@@ -58,6 +62,10 @@ export type Segmento = {
   b_roll_busca: string | null
   sfx: Sfx
   legenda_estilo: EstiloLegenda
+  /** Prompt em inglês para gerar o plano num gerador de imagem/vídeo externo (via MCP). */
+  prompt_visual: string
+  /** Imagem ou clip gerado fora (já no nosso Storage): o motor usa-o em vez do Pexels/cartão. */
+  media_url: string | null
 }
 
 export type Reel = {
@@ -111,6 +119,23 @@ function legendaDe(v: unknown): EstiloLegenda {
   return umDe(s, ESTILOS_LEGENDA, 'palavra_a_palavra')
 }
 
+/**
+ * Só aceitamos media que já está em casa (o nosso Storage ou o site). Quem traz media de fora
+ * passa por `conteudo_meter_media`, que a copia primeiro: assim o motor e o desenho nunca vão
+ * buscar endereços arbitrários.
+ */
+export function urlDeCasa(v: unknown): string | null {
+  if (typeof v !== 'string' || !v) return null
+  try {
+    const u = new URL(v)
+    if (u.protocol !== 'https:') return null
+    const h = u.hostname
+    return h.endsWith('.supabase.co') || h === 'morethanmoney.pt' || h === 'www.morethanmoney.pt' ? u.toString().slice(0, 1000) : null
+  } catch {
+    return null
+  }
+}
+
 export const LIMITES: Record<Formato, { min: number; max: number }> = {
   carrossel: { min: 3, max: 10 },
   post: { min: 1, max: 1 },
@@ -129,6 +154,8 @@ export function normalizarLamina(l: unknown, papel: Lamina['papel']): Lamina {
     titulo,
     destaque,
     corpo: txt(o.corpo ?? o.body, 320),
+    prompt_visual: txt(o.prompt_visual ?? o.image_prompt, 400),
+    fundo_url: urlDeCasa(o.fundo_url),
   }
 }
 
@@ -159,11 +186,13 @@ export function normalizarGuiao(
         id: i + 1,
         fala,
         texto_ecra: txt(so.texto_ecra, 60, fala.split(/[.!?]/)[0].slice(0, 60)).toUpperCase(),
-        visual: visual === 'b_roll' && !busca ? 'cartao' : visual,
+        visual: visual === 'b_roll' && !busca && !urlDeCasa(so.media_url) ? 'cartao' : visual,
         zoom: umDe(so.zoom ?? cv.camera_zoom, ZOOMS, 'normal'),
         b_roll_busca: visual === 'b_roll' && busca ? busca : null,
         sfx: sfxDe(so.sfx ?? so.efeito_sonoro),
         legenda_estilo: legendaDe(so.legenda_estilo),
+        prompt_visual: txt(so.prompt_visual ?? cv.prompt_visual, 400),
+        media_url: urlDeCasa(so.media_url),
       }
     }).filter((s) => s.fala)
     const dur = Number(r.duracao_estimada_segundos)

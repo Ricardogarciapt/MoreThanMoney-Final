@@ -267,7 +267,20 @@ export async function render(trabalho, saida) {
       const dur = await duracao(voz)
       const clip = path.join(pasta, `clip-${i}.mp4`)
       let feito = false
-      if (s.visual === 'b_roll') {
+      // Media gerada fora (ArtCraft, Higgsfield… via MCP), já copiada para o nosso Storage.
+      if (s.media_url) {
+        const ehVideo = /\.(mp4|mov|webm|m4v)(\?|$)/i.test(s.media_url)
+        const bruto = path.join(pasta, `media-${i}.${ehVideo ? 'mp4' : 'img'}`)
+        try {
+          await baixar(s.media_url, bruto, ehVideo ? 80_000_000 : 15_000_000)
+          if (ehVideo) await clipDeVideo(bruto, dur, clip)
+          else await clipDeImagem(bruto, dur, s.zoom, clip)
+          feito = true
+        } catch (e) {
+          log(`media do segmento ${i + 1} falhou (${e.message}): sigo sem ela`)
+        }
+      }
+      if (!feito && s.visual === 'b_roll' && s.b_roll_busca) {
         const bruto = path.join(pasta, `broll-${i}.mp4`)
         if (await pexels(s.b_roll_busca, bruto).catch(() => false)) {
           await clipDeVideo(bruto, dur, clip)
