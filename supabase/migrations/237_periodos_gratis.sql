@@ -24,6 +24,12 @@ create index if not exists periodos_gratis_estado_fim_idx on public.periodos_gra
 alter table public.periodos_gratis enable row level security;
 -- Sem policies: só o service role lê e escreve.
 
+-- Tipo novo de cupão para a campanha.
+alter table public.coupons drop constraint if exists coupons_type_check;
+alter table public.coupons add constraint coupons_type_check check (
+  type = any (array['discount_pct', 'free_months', 'free_subscription', 'partnership', 'atribuicao', 'campanha_90d'])
+);
+
 -- O cupão da campanha. O nome público não cita nenhuma plataforma.
 -- Nasce INACTIVO: com o código antigo em produção, o cupão válido dava o 1.º mês a 35 € em vez
 -- dos 90 dias. Activa-se depois do merge:
