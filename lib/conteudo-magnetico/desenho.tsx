@@ -240,36 +240,24 @@ type Fonte = { name: string; data: ArrayBuffer; weight: 400 | 500 | 800; style: 
 let fontes: Fonte[] | null = null
 
 /**
- * Montserrat (SIL OFL 1.1) vem do Google Fonts na primeira peça e fica em memória. Pede-se o CSS
- * com um user-agent antigo para o Google devolver TTF (o Satori não lê woff2). Se a rede falhar,
- * o texto de apoio sai em Anton em vez de a peça falhar.
+ * Montserrat (SIL OFL 1.1) vive em public/fonts (subconjunto latino, woff — o Satori lê woff,
+ * não woff2). Até 06/11 vinha do Google Fonts a cada arranque, mas o primeiro `src` do CSS é o
+ * subconjunto CIRÍLICO: sem letras latinas, o Satori caía na Anton e o texto de apoio saía
+ * todo condensado sem ninguém dar por isso.
  */
-async function montserrat(peso: 500 | 800): Promise<ArrayBuffer | null> {
-  try {
-    const css = await fetch(`https://fonts.googleapis.com/css2?family=Montserrat:wght@${peso}&display=swap`, {
-      headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/534.30 (KHTML, like Gecko) Safari/534.30' },
-      signal: AbortSignal.timeout(8_000),
-    }).then((r) => r.text())
-    const url = css.match(/src:\s*url\(([^)]+)\)/)?.[1]
-    if (!url) return null
-    return await fetch(url, { signal: AbortSignal.timeout(8_000) }).then((r) => (r.ok ? r.arrayBuffer() : null))
-  } catch {
-    return null
-  }
+function lerFonte(nome: string): ArrayBuffer {
+  const b = fs.readFileSync(path.join(process.cwd(), 'public/fonts', nome))
+  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer
 }
 
-async function carregarFontes(): Promise<Fonte[]> {
+export async function carregarFontes(): Promise<Fonte[]> {
   if (fontes) return fontes
-  const b = fs.readFileSync(path.join(process.cwd(), 'public/fonts/Anton-Regular.ttf'))
-  const anton = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer
-  const [m500, m800] = await Promise.all([montserrat(500), montserrat(800)])
-  const lista: Fonte[] = [{ name: 'Anton', data: anton, weight: 400, style: 'normal' }]
-  // Sem Montserrat, «Montserrat» passa a ser a Anton — o Satori não tem fonte por omissão.
-  lista.push({ name: 'Montserrat', data: m500 ?? anton, weight: 500, style: 'normal' })
-  lista.push({ name: 'Montserrat', data: m800 ?? anton, weight: 800, style: 'normal' })
-  // Só se guarda em memória quando correu tudo bem; senão tenta-se outra vez na próxima peça.
-  if (m500 && m800) fontes = lista
-  return lista
+  fontes = [
+    { name: 'Anton', data: lerFonte('Anton-Regular.ttf'), weight: 400, style: 'normal' },
+    { name: 'Montserrat', data: lerFonte('Montserrat-500.woff'), weight: 500, style: 'normal' },
+    { name: 'Montserrat', data: lerFonte('Montserrat-800.woff'), weight: 800, style: 'normal' },
+  ]
+  return fontes
 }
 
 /** Um ficheiro de `public/` como data: URI — o Satori não sabe o que é `/logo.png`. */

@@ -41,6 +41,18 @@ export function isAutoPublishBlocked(igAccountId: string | null | undefined): bo
   return String(igAccountId ?? "") === IG_PERSONAL_ID
 }
 
+/**
+ * A ÚNICA excepção, pedida pelo próprio Ricardo a 06/11/2026: «todos os dias cria-me para o
+ * Ricardo Garcia conteúdo novo de carrossel (…) e publicar no instagram @ricardogarciapt».
+ * Só os carrosséis do cron carrossel-diario (lib/carrossel-diario) passam, e só enquanto o
+ * interruptor `site_settings.carrossel_diario.ricardo` estiver ligado (o ig-publish verifica).
+ * Nada mais — funil, setter, repost, agentes — escreve ou publica na conta pessoal.
+ */
+export const CRIADOR_AUTORIZADO_PESSOAL = "carrossel-diario:ricardo"
+export function autorizadoNaPessoal(row: { created_by?: string | null; media_type?: string | null }): boolean {
+  return row.created_by === CRIADOR_AUTORIZADO_PESSOAL && row.media_type === "CAROUSEL"
+}
+
 export type IgMediaType = "IMAGE" | "CAROUSEL" | "STORIES" | "REELS"
 
 export interface ScheduledPost {

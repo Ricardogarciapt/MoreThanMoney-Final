@@ -14,7 +14,7 @@
 import { verificarPtPt } from '@/lib/pt-pt'
 
 /** Nomes que não aparecem. Nem para dizer mal — o ângulo anti-MLM fala do modelo, não de empresas. */
-export const NOMES_PROIBIDOS = ['Jifu', 'Golden Era', 'Trendwave', 'Trend Wave', 'KillShot', 'Kill Shot'] as const
+export const NOMES_PROIBIDOS = ['Jifu', 'Golden Era', 'Trendwave', 'Trend Wave', 'KillShot', 'Kill Shot', 'Akashx', 'Iqonic'] as const
 
 /** Nomes que ficam como estão, em qualquer língua. */
 export const NOMES_INTOCAVEIS = [
