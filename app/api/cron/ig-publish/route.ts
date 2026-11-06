@@ -17,9 +17,11 @@ import {
   MediaNotReadyError,
   usernameForAccount,
   isAutoPublishBlocked,
+  autorizadoNaPessoal,
   type ScheduledPost,
 } from "@/lib/instagram/publish"
 import { CHAVE_AUTO_PUBLICAR, lerAutoPublicar } from "@/lib/agentes/social-agente"
+import { lerInterruptor } from "@/lib/carrossel-diario/interruptor"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -59,6 +61,7 @@ export async function GET(request: NextRequest) {
   // ligado. O dono pausa tudo desligando-o: o que estava aprovado volta a rascunho, nada sai.
   const { data: autoRow } = await supabase.from("site_settings").select("value").eq("key", CHAVE_AUTO_PUBLICAR).maybeSingle()
   const autoAgentes = lerAutoPublicar(autoRow?.value)
+  let carrosselLigado: Record<"ricardo" | "mtm", boolean> | undefined
 
   for (const row of due) {
     if (String(row.created_by || "").startsWith("agente:") && !autoAgentes.ligado) {
@@ -69,9 +72,24 @@ export async function GET(request: NextRequest) {
       results.push({ id: row.id, status: "draft", reason: "agentes pausados" })
       continue
     }
+    // Carrossel diário (lib/carrossel-diario): o interruptor do perfil manda até ao último
+    // momento. Desligado, o que estava na fila volta a rascunho e nada sai.
+    const perfilCarrossel = String(row.created_by || "").match(/^carrossel-diario:(ricardo|mtm)$/)?.[1] as "ricardo" | "mtm" | undefined
+    if (perfilCarrossel) {
+      carrosselLigado ??= await lerInterruptor().catch(() => ({ ricardo: false, mtm: false }))
+      if (!carrosselLigado[perfilCarrossel]) {
+        await supabase
+          .from("social_scheduled_posts")
+          .update({ status: "draft", error: "Carrossel diário desligado pelo dono.", updated_at: new Date().toISOString() })
+          .eq("id", row.id)
+        results.push({ id: row.id, status: "draft", reason: "carrossel diário desligado" })
+        continue
+      }
+    }
     // O Instagram pessoal do Ricardo não é destino de automação: se alguma coisa pôs uma linha
-    // na fila para lá, morre aqui em vez de sair no perfil dele.
-    if (isAutoPublishBlocked(row.ig_account_id)) {
+    // na fila para lá, morre aqui em vez de sair no perfil dele. A única excepção é o carrossel
+    // diário que o próprio Ricardo pediu (ver autorizadoNaPessoal).
+    if (isAutoPublishBlocked(row.ig_account_id) && !autorizadoNaPessoal(row)) {
       await supabase
         .from("social_scheduled_posts")
         .update({
