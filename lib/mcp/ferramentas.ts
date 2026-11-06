@@ -10,6 +10,7 @@ import { tocaPremium, validarRota } from '@/lib/telegram/rotas'
 import { validarMenu } from '@/lib/telegram/menu-bot'
 import { gravarMenu, lerMenu } from '@/lib/telegram/menu-bot-servidor'
 import { validarPedido } from '@/lib/telegram/grupos-novos'
+import { FERRAMENTAS_CONTEUDO } from '@/lib/conteudo-magnetico/mcp'
 
 /**
  * As ferramentas que o sistema MTM expõe — a mesma camada que o painel usa.
@@ -385,6 +386,9 @@ export const FERRAMENTAS: Ferramenta[] = [
       return { dias, total: data?.length ?? 0, porEtapa: conta('estado'), porOrigem: conta('origem'), porPack: conta('pack_previsto') }
     },
   },
+
+  // MTM Conteúdo Magnético — liga-se a MCPs de imagem/vídeo (ver lib/conteudo-magnetico/mcp.ts).
+  ...FERRAMENTAS_CONTEUDO,
 ]
 
 export function ferramentaPorNome(nome: string): Ferramenta | undefined {

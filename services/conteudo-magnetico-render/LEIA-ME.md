@@ -44,3 +44,17 @@ correr ao mesmo tempo que um Xcode, um `next build` ou outro render.
   minutos por segundo de vídeo. O segmento «apresentador» usa a fotografia com zoom.
 - **Whisper:** os tempos das palavras vêm da duração real de cada fala, repartida pelo tamanho de
   cada palavra. Para guiões curtos a diferença não se vê e poupa RAM.
+
+## Ligado a outros MCPs (ArtCraft, Higgsfield, Canva, Studify…)
+
+O gerador também está no servidor MCP do site (`/api/mcp`, Bearer `MCP_TOKEN`), com as ferramentas
+`conteudo_criar_guiao`, `conteudo_listar`, `conteudo_ver`, `conteudo_editar_guiao`,
+`conteudo_meter_media`, `conteudo_desenhar` e `conteudo_pedir_video`.
+
+Fluxo: o guião traz um `prompt_visual` em inglês por lâmina e por segmento → o cliente (Claude)
+gera a imagem/clip noutro MCP → `conteudo_meter_media` copia o ficheiro para o Storage e prende-o
+→ `conteudo_desenhar` dá os PNGs; `conteudo_pedir_video` põe o reel na fila e este motor usa a
+media do segmento (`media_url`) antes do Pexels e do cartão. Só aceita media que já esteja no
+Storage da MTM ou no site. Nada é publicado pelo MCP.
+
+Dono das peças criadas pelo MCP: `MCP_CONTEUDO_USER_ID` (opcional; sem ela, o primeiro admin activo).

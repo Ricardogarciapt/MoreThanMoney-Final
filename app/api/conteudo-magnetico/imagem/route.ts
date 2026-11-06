@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       altura: dims.altura,
       indice,
       total,
-      fundo: await fundoComoDataUri(b.fundo_url),
+      fundo: await fundoComoDataUri(lamina.fundo_url || b.fundo_url),
       logo: publicoComoDataUri(marca.logo),
       palavraChave: typeof b.palavra_chave === 'string' ? b.palavra_chave.slice(0, 20) : undefined,
       aviso: b.aviso !== false,
