@@ -311,7 +311,8 @@ async function main() {
       fotografia: CFG.fotografia.includes(conta),
       intervaloCotacoesMs: CFG.cotacoesMs,
       subscreverCotacoes: CFG.cotacoesMetaApi,
-      intervaloFotoMs: num('PREMIUM_STREAMING_INTERVALO_MS', 1000),
+      // 2 s (era 1 s, 06/11): o monitor aceita fotografias até 3 s, e o batimento já é de 2 s.
+      intervaloFotoMs: num('PREMIUM_STREAMING_INTERVALO_MS', 2000),
       batimentoFotoMs: num('PREMIUM_STREAMING_BATIMENTO_MS', 2000),
       aoFalhar: (erro) => void falhouLigar(conta, tk, erro),
       aoRessincronizar: () => {
