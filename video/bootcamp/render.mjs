@@ -15,7 +15,9 @@ const [est, nv, lang = 'pt'] = process.argv.slice(2)
 const arg = n => (process.argv.find(a => a.startsWith(`--${n}=`)) || '').split('=')[1]
 const preview = process.argv.includes('--preview')
 const FPS = preview ? 8 : 25
-const ABRE = 0.5, RESPIRO = 0.9
+const ABRE = 0.5, RESPIRO = 0.7
+// Velocidade da narração: o Ricardo pediu +10% (06/11). --vel=1 volta ao normal.
+const VEL = Number(arg('vel') || 1.1)
 
 const G = JSON.parse(fs.readFileSync(path.join(DIR, 'guioes', `${est}.${lang}.json`), 'utf8'))
 const V = G.videos[Number(nv) - 1]
@@ -28,7 +30,7 @@ const TL = V.cenas.map(c => {
   const f = path.join(vozDir, `${c.id}.mp3`)
   if (!c.fala) { const cena = { id: c.id, ini: t, dur: c.semVoz || 4, fala: 0, frases: [], audio: null }; t += cena.dur; return cena }
   let fala
-  if (fs.existsSync(f)) fala = duracao(f)
+  if (fs.existsSync(f)) fala = duracao(f) / VEL
   else { temVoz = false; fala = c.fala.split(/\s+/).length / 2.5 }
   const frases = c.fala.match(/[^.!?]+[.!?]*/g).map(s => s.trim()).filter(Boolean)
   const tot = frases.reduce((a, s) => a + s.length, 0)
@@ -49,7 +51,7 @@ const falas = TL.filter(c => c.audio)
 if (falas.length) {
   // concatena em blocos para não abrir centenas de entradas no mesmo ffmpeg
   const ins = [], filt = []
-  falas.forEach((c, i) => { ins.push('-i', c.audio); filt.push(`[${i}:a]aresample=48000,adelay=${Math.round(c.ini * 1000)}:all=1[a${i}]`) })
+  falas.forEach((c, i) => { ins.push('-i', c.audio); filt.push(`[${i}:a]aresample=48000,atempo=${VEL},adelay=${Math.round(c.ini * 1000)}:all=1[a${i}]`) })
   const musica = path.join(DIR, 'musica.mp3'), temMusica = fs.existsSync(musica)
   filt.push(`${falas.map((_, i) => `[a${i}]`).join('')}amix=inputs=${falas.length}:normalize=0,apad=whole_dur=${total.toFixed(2)},loudnorm=I=-16:TP=-1.5,aresample=48000${temMusica ? ',asplit[voz][chave]' : '[out]'}`)
   if (temMusica) {
@@ -67,7 +69,7 @@ const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } })
 await page.goto('file://' + path.join(DIR, 'cenas.html'))
 const cenas = Object.fromEntries(V.cenas.map(c => [c.id, c]))
 await page.evaluate(([tl, leg, dados, tot]) => { window.TOTAL = tot; window.iniciar(tl, leg, dados) },
-  [TL, process.argv.includes('--legendas'), { cenas, ui: G.ui, cores: G.cores, marca: `${G.marca} · ${V.rotulo}`, nome: G.estrategia, plano: G.plano }, total])
+  [TL, process.argv.includes('--legendas'), { cenas, ui: G.ui, cores: G.cores, marca: `${G.marca} · ${V.rotulo}`, nome: G.estrategia, plano: G.plano, est, lang }, total])
 await page.evaluate(() => document.fonts.ready)
 await page.waitForTimeout(400)
 
