@@ -108,6 +108,9 @@ const AMOSTRA_CADA_S = 300
  * OU quando o preço andou pelo menos 1 pip desde ela. O detalhe que interessa — os picos e os
  * recuos — é exactamente o que se move, por isso é o movimento que puxa a amostra.
  */
+/** Intervalo mínimo entre escritas do resultado flutuante de uma linha activa (06/11). */
+const LIVE_MIN_MS = Number(process.env.SINAL_LIVE_MIN_MS ?? 30_000)
+
 function mereceAmostra(percurso: Amostra[], agora: number, pips: number): boolean {
   const ultima = percurso[percurso.length - 1]
   if (!ultima) return true
@@ -570,11 +573,14 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
       updated_at: new Date().toISOString(),
     }
     let subiuPico = false
+    const picoGravado = l.peak_pips
     if (lucroPips > l.peak_pips) {
-      patch.peak_pips = lucroPips
       l.peak_pips = lucroPips
       subiuPico = true
     }
+    // O pico vai SEMPRE no patch: uma passagem que sobe o pico sem escrever (ver o ritmo mais
+    // abaixo) não pode deixá-lo perdido na memória — a próxima escrita leva-o.
+    patch.peak_pips = l.peak_pips
     /**
      * GRAVAR O CAMINHO, não só o pico (migração 150).
      *
@@ -600,11 +606,22 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
     // Só se grava quando o número que o cartão mostra mudou (ou de minuto a minuto): o preço anda
     // ao tick, mas arredondado a 0,1 pip fica muitas passagens igual. Antes era uma escrita por
     // linha activa em cada passagem (85 488 em 46 h, medido 15–17/09), a maior parte a repetir o valor.
+    //
+    // 06/11: mesmo assim eram ~8 UPDATEs/s (155 mil em 5 h) — o número a 0,1 pip muda quase em
+    // todas as passagens. Isso ajudou a saturar o disco da Supabase e o login do site caiu 3 h.
+    // Agora o flutuante grava-se no máximo de `LIVE_MIN_MS` em `LIVE_MIN_MS` (30 s), e antes disso
+    // só quando há amostra nova no percurso (o preço andou ≥1 pip) ou o pico subiu ≥1 pip. SL,
+    // alvos e fecho continuam a ser decididos e gravados nesta mesma passagem, sem espera.
     const liveAtMs = l.live_at ? Date.parse(l.live_at) : NaN
-    const igual = !subiuPico && l.live_pips === patch.live_pips && l.live_pct === patch.live_pct
-      && Number.isFinite(liveAtMs) && Date.now() - liveAtMs < 60_000
-    // Uma amostra nova também é razão para escrever: o caminho é o que se está a gravar.
-    if (!igual || patch.percurso) await gravarTolerante(l.id, patch)
+    const recente = Number.isFinite(liveAtMs) && Date.now() - liveAtMs < LIVE_MIN_MS
+    const picoAndou = subiuPico && l.peak_pips - picoGravado >= 1
+    const deveGravar = !recente || picoAndou || Boolean(patch.percurso)
+    if (deveGravar) {
+      await gravarTolerante(l.id, patch)
+      l.live_at = patch.live_at as string
+      l.live_pips = patch.live_pips as number
+      l.live_pct = patch.live_pct as number | null
+    }
 
     const bateuSl = l.sl != null && (compra ? price <= l.sl : price >= l.sl)
     if (bateuSl) {
